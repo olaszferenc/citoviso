@@ -398,6 +398,12 @@ export async function moduleContentFor(
       horizonMonths: Number(b.horizonMonths ?? 12),
       leadTimeDays: Number(b.leadTimeDays ?? 0),
       ...(b.responseNote ? { responseNote: String(b.responseNote) } : {}),
+      // Csak akkor kerül be, ha a tulaj TÉNYLEG megadta — a hiány itt dől el, nem a
+      // renderelőben, így egy új fogyasztó sem tud véletlenül nullát kiírni.
+      ...(Number(b.touristTaxPerPersonNight) > 0
+        ? { touristTaxPerPersonNight: Number(b.touristTaxPerPersonNight) }
+        : {}),
+      ...(b.priceIncludes ? { priceIncludes: String(b.priceIncludes).slice(0, 200) } : {}),
     };
   }
 

@@ -89,6 +89,14 @@
     var horizon = Number(slot.getAttribute("data-cit-horizon") || 12);
     var leadDays = Number(slot.getAttribute("data-cit-lead-days") || 0);
     var ownerNote = slot.getAttribute("data-cit-note") || "";
+    /* ⛔ KONTRAKTUS ④ (design-refs/tenant-site/booking-price-clarity, tulaj 2026-09-14):
+     * az idegenforgalmi adót és azt, hogy mi van az árban, a SZÁLLÁSADÓ adja meg.
+     * Hiányzó attribútum → 0 / üres → a lap NEM SZÁMOL összeget, csak kimondja, hogy a
+     * helyszínen IFA fizetendő. Kitalált szám sehol (§B.17). */
+    var ifaPerPersonNight = Number(slot.getAttribute("data-cit-ifa") || 0) || 0;
+    var priceIncludes = slot.getAttribute("data-cit-includes") || "";
+    var hostEmail = slot.getAttribute("data-cit-email") || "";
+    var hostPhone = slot.getAttribute("data-cit-phone") || "";
 
     function shift(iso, days) {
       var d = new Date(iso + "T00:00:00Z");
@@ -261,9 +269,44 @@
           (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
           " = " + money(l.sum, cur) + "</span>";
       }).join("");
-      el.innerHTML = rows +
-        '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + money(q.total, cur) + "</b>" +
-        (q.perStay ? " (" + tr("a teljes tartózkodásra") + ")" : "") + "</span>";
+      /* ⛔ KONTRAKTUS ①–④ (booking-price-clarity, tulaj 2026-09-14: „A — nyitott
+       * bontás"). Mérve a régi lapon: az ár EGYETLEN szám volt magyarázat nélkül
+       * („Összesen: 96 000 Ft"), és sehol nem derült ki, hogy az IFA vagy a takarítás
+       * benne van-e. Az ALAP („a létszám nem befolyásolja") pedig CSAK a beadás UTÁNI
+       * nyugtán jelent meg — vagyis a vendég azután tudta meg, hogy már elküldte.
+       *
+       * Amit itt kötünk: a bontás mindig nyitva · az alap a beadás ELŐTT kimondva ·
+       * a helyszínen fizetendő KÜLÖN dobozban · és kitalált szám SEHOL. */
+      var basis = q.perStay
+        ? tr("Az ár a TELJES TARTÓZKODÁSRA szól — a létszám nem befolyásolja (jelenleg {n} fő).")
+        : pricing.unit === "per_person_night"
+          ? tr("Az ár SZEMÉLYENKÉNT és éjszakánként értendő — {n} fővel számolva.")
+          : tr("Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).");
+      var included = priceIncludes
+        ? '<span class="cit-book__qrow"><span>' + esc(priceIncludes) + "</span><b>" +
+          tr("benne van") + "</b></span>"
+        : "";
+      // A helyszíni tétel: ÖSSZEG csak akkor, ha a szállásadó megadta.
+      var onSite = ifaPerPersonNight
+        ? '<div class="cit-book__later"><b>' + tr("A helyszínen fizetendő ezen felül:") + "</b><br>" +
+          esc(
+            tr("Idegenforgalmi adó — {per} / fő / éj × {g} fő × {n} éj = {sum}")
+              .replace("{per}", money(ifaPerPersonNight, cur))
+              .replace("{g}", String(guests))
+              .replace("{n}", String(n))
+              .replace("{sum}", money(ifaPerPersonNight * guests * n, cur)),
+          ) +
+          "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") + "</div>"
+        : '<div class="cit-book__later">' +
+          tr("A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő — az összegéről a szállásadó tájékoztatja.") +
+          "</div>";
+      el.innerHTML =
+        '<span class="cit-book__qh">' + tr("Az ár") + " — " + esc(huDay(a)) + " → " + esc(huDay(b)) + "</span>" +
+        rows +
+        '<span class="cit-book__qbasis">' + esc(basis.replace("{n}", String(guests))) + "</span>" +
+        included +
+        '<span class="cit-book__qtotal">' + tr("Összesen a szállásért") + " <b>" + money(q.total, cur) + "</b></span>" +
+        onSite;
     }
     /* The guest's RECEIPT after sending (Elek FK-007, 2026-09-11): the old reply was
      * one sentence — "Elküldtük a kérését. A szállásadó hamarosan visszaigazolja." —
@@ -303,16 +346,32 @@
         ? tr("A szállásadó legkésőbb {n} órán belül válaszol. Ha addig nem dönt, a kérés lejár, és erről is e-mailt küldünk Önnek.")
             .replace("{n}", s.expireHours)
         : tr("A szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.");
+      /* ⛔ KONTRAKTUS ⑤: a nyugta TEENDŐT ad, nem csak kódot — de CSAK azt ígérheti,
+       * ami LÉTEZIK. Mérve a kódban (2026-09-14): állapot-lap NINCS, és a
+       * `/foglalas/<token>/lemondom` link CSAK visszaigazolt foglalást mond le
+       * (`cancelRequest`: status !== "accepted" → elutasít). Ezért a lemondó linket a
+       * VISSZAIGAZOLÁSHOZ kötve említjük, a függő kérés visszavonására pedig a
+       * szállásadó elérhetőségét adjuk — az tényleg működik. */
+      var reach = hostEmail
+        ? tr("írjon a szállásadónak: {email}").replace("{email}", hostEmail)
+        : hostPhone
+          ? tr("hívja a szállásadót: {phone}").replace("{phone}", hostPhone)
+          : tr("keresse a szállásadót a honlapon megadott elérhetőségen");
+      var steps =
+        "<li>" + esc(when) + "</li>" +
+        "<li>" +
+        esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
+        " " + tr("Ha nem érkezik meg, nézze meg a levélszemét mappát is.") + "</li>" +
+        "<li>" + tr("Ha visszaigazolja, a levélben kap egy lemondó linket is — azzal bármikor lemondhatja.") + "</li>" +
+        "<li>" + esc(tr("Meggondolta magát addig? Nem baj — {reach}, és visszavonja a kérést.").replace("{reach}", reach)) + "</li>";
       return '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
         "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
         '<p class="cit-book__note">' +
         tr("A foglalás még nem végleges — ez egy kérés, amit a szállásadónak vissza kell igazolnia.") +
         "</p>" +
         '<div class="cit-book__receipt">' + facts + total + "</div>" +
-        '<p class="cit-book__note">' + esc(when) + "</p>" +
-        '<p class="cit-book__note">' +
-        esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
-        "</p></div>";
+        '<p class="cit-book__steph">' + tr("Mi a következő lépés?") + "</p>" +
+        '<ol class="cit-book__steps">' + steps + "</ol></div>";
     }
     /* Bring the reply the guest just earned onto the screen. Called by BOTH the live
      * and the demo branch — the demo replaces the same tall form with the same short

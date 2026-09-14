@@ -371,6 +371,25 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         // the FIRST one doubles as the guest mails' Reply-To.
         help: "Ide küldjük az értesítést, és a vendég válasza is ide fut be. Több címet vesszővel elválasztva adhat meg (pl. recepció és tulajdonos).",
       },
+      // ⛔ KONTRAKTUS (design-refs/tenant-site/booking-price-clarity ④, tulaj 2026-09-14):
+      // a vendég-lapon KITALÁLT SZÁM SEHOL nem jelenhet meg. Az idegenforgalmi adót és
+      // azt, hogy mi van az árban, a SZÁLLÁSADÓ adja meg. Üresen hagyva a lap nem
+      // számol IFA-t — csak kimondja, hogy a helyszínen fizetendő (§B.17).
+      {
+        key: "touristTaxPerPersonNight",
+        type: "number",
+        label: "Idegenforgalmi adó",
+        min: 0,
+        max: 100000,
+        suffix: "Ft / fő / éj",
+        help: "A vendég a helyszínen fizeti, a szállásdíjon felül. Üresen hagyva a honlap csak annyit ír ki, hogy a helyszínen IFA fizetendő — összeget nem talál ki.",
+      },
+      {
+        key: "priceIncludes",
+        type: "text",
+        label: "Mi van benne az árban?",
+        help: "Pl. „takarítás, ágynemű, törölköző”. A vendég a foglalás előtt látja, a tételes ár alatt. Üresen hagyva ez a sor elmarad.",
+      },
       {
         key: "autoDeclineHours",
         type: "number",
@@ -387,6 +406,8 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
       horizonMonths: 12,
       leadTimeDays: 0,
       notifyEmail: "",
+      touristTaxPerPersonNight: 0,
+      priceIncludes: "",
       autoDeclineHours: 48,
     },
     editor: "booking",

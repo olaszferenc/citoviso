@@ -310,16 +310,22 @@
   font-weight: 700;
 }
 .cit-book__day--range { background: color-mix(in srgb, var(--cit-accent) 16%, transparent); }
+/* ⛔ KONTRAKTUS ⑦: OLVASHATÓ JELMAGYARÁZAT. Mérve a régi lapon: 11,84 px,
+   kontraszt 3,99 (az AA-küszöb 4,5), és a „szabad" minta FEHÉR A FEHÉREN egy halvány
+   1 px-es kerettel. Itt: nagyobb betű, sötétebb szöveg (a szöveg-tokenből, nem a
+   muted-ból), és MINDEN mintának erős kerete van — színvakon is elkülönül. */
 .cit-book__legend {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.74rem;
-  color: var(--cit-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--cit-ink);
 }
-.cit-book__lg { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
-.cit-book__lg--free { border: 1px solid var(--cit-line); background: var(--cit-bg); }
+.cit-book__lg { width: 15px; height: 15px; border-radius: 5px; display: inline-block;
+  border: 1.5px solid color-mix(in srgb, var(--cit-ink) 70%, transparent); }
+.cit-book__lg--free { background: var(--cit-bg); }
 .cit-book__lg--busy { background: color-mix(in srgb, var(--cit-muted) 30%, transparent); }
 .cit-book__legend .cit-book__lg--busy { margin-left: 8px; }
 
@@ -641,10 +647,50 @@ a.cit-grat:hover {
 .cit-map-pin svg { width: 34px; height: 34px; stroke: var(--cit-accent); fill: none; stroke-width: 1.6; }
 .cit-map-pin strong { font-family: var(--cit-font-display); font-size: 1.2rem; color: var(--cit-ink); }
 
-/* ── stay quote (owner decree 2026-09-06): breakdown + grand total ── */
-.cit-book__quote{display:block;margin-top:6px}
-.cit-book__qline{display:block;font-size:.8rem;color:var(--cit-muted,#60748b);line-height:1.5}
-.cit-book__qtotal{display:block;font-size:.92rem;margin-top:3px;color:var(--cit-ink,#10243a)}
+/* ── stay quote (owner decree 2026-09-06) + NYITOTT BONTÁS (tulaj 2026-09-14,
+   design-refs/tenant-site/booking-price-clarity „A"): a bontás MINDIG látszik, az alap
+   ki van mondva, és a HELYSZÍNEN fizetendő külön dobozban áll — mert nem része a
+   szállásdíjnak. ── */
+.cit-book__quote{display:block;margin-top:10px;padding:12px 13px;border-radius:12px;
+  background:var(--cit-bg);border:1.5px solid var(--cit-accent)}
+.cit-book__quote:empty{display:none;border:0;padding:0}
+.cit-book__qh{display:block;font-size:.73rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-accent);margin-bottom:8px}
+.cit-book__qline{display:block;font-size:.83rem;color:var(--cit-ink,#10243a);line-height:1.55}
+.cit-book__qbasis{display:block;font-size:.78rem;color:var(--cit-muted,#60748b);
+  line-height:1.5;margin:4px 0 6px}
+.cit-book__qrow{display:flex;justify-content:space-between;gap:12px;font-size:.83rem;
+  line-height:1.55;padding:2px 0}
+.cit-book__qtotal{display:block;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;
+  color:var(--cit-ink,#10243a);border-top:1px solid var(--cit-line)}
+.cit-book__qtotal b{float:right}
+.cit-book__later{margin-top:9px;padding:9px 11px;border-radius:10px;font-size:.81rem;
+  line-height:1.5;color:var(--cit-ink,#10243a);
+  background:color-mix(in srgb,var(--cit-accent) 8%, var(--cit-bg));
+  border:1px solid color-mix(in srgb,var(--cit-accent) 30%, transparent)}
+/* ⑤ a nyugta LÉPÉSEI — teendő, nem csak kód */
+.cit-book__steph{margin:12px 0 7px;font-size:.73rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-accent)}
+.cit-book__steps{counter-reset:citstep;list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.cit-book__steps li{counter-increment:citstep;position:relative;padding-left:32px;
+  font-size:.85rem;line-height:1.5;color:var(--cit-ink,#10243a)}
+.cit-book__steps li::before{content:counter(citstep);position:absolute;left:0;top:0;
+  width:23px;height:23px;border-radius:999px;background:var(--cit-accent);color:#fff;
+  display:grid;place-items:center;font-size:.76rem;font-weight:800}
+/* ── egy-egységes szállás: teljes szélességű panel (kontraktus ⑨) ── */
+.cit-whole{display:grid;gap:14px;border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);padding:16px}
+@media(min-width:760px){.cit-whole{grid-template-columns:1fr 1fr;align-items:start}}
+.cit-whole__img{width:100%;aspect-ratio:3/2;object-fit:cover;
+  border-radius:calc(var(--cit-radius) * 0.4)}
+.cit-whole__t{margin:0;font-size:1.05rem;font-weight:700;color:var(--cit-ink)}
+.cit-whole__note{margin:6px 0 0;font-size:.9rem;line-height:1.6;color:var(--cit-muted)}
+.cit-whole__facts{list-style:none;margin:12px 0 0;padding:0;display:grid;
+  grid-template-columns:1fr 1fr;gap:9px}
+.cit-whole__facts li{background:color-mix(in srgb,var(--cit-ink) 4%,transparent);
+  border-radius:10px;padding:9px 11px;font-size:.86rem;color:var(--cit-ink)}
+.cit-whole__facts b{display:block;font-size:.71rem;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-muted);margin-bottom:2px}
 
 /* ── the guest's RECEIPT after sending (Elek FK-007, 2026-09-11) ──
    Label/value rows so the numbers line up on a 390 px screen too: the label

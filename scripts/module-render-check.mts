@@ -136,7 +136,15 @@ const CASES: Record<string, { patch: Partial<SiteData>; needle: string }> = {
   },
 };
 
-const priced = MODULE_CATALOG.filter((m) => m.priceMonthly > 0).map((m) => m.id);
+// ⛔ A POLCRÓL LEVETT modul nem mérhető ezen az állításon: nincs oldal-szekciója,
+// mert szándékosan nem renderel (src/modules.ts › `retired`). A kivétel a KATALÓGUSBÓL
+// származik, nem kézi listából — így egy visszakapcsolás automatikusan visszahozza a
+// mérés alá, és egy újabb levétel sem felejtődik el itt.
+const retired = MODULE_CATALOG.filter((m) => m.retired).map((m) => m.id);
+const priced = MODULE_CATALOG.filter((m) => m.priceMonthly > 0 && !m.retired).map((m) => m.id);
+if (retired.length) {
+  console.log(`  – levéve a polcról (nem renderel, szándékosan): ${retired.join(", ")}\n`);
+}
 const templateIds = Object.keys(TEMPLATES);
 
 console.log(`Modul-konfig → renderelt oldal (${templateIds.length} sablon):\n`);

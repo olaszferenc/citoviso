@@ -26,9 +26,13 @@ export function domAnchorsOf(moduleId: string): readonly string[] {
   return [def.domType, ...(def.domTypesAlso ?? [])];
 }
 
-/** Catalog ids that can be previewed (the subscription catalog, spine included). */
+/**
+ * Catalog ids that can be previewed (the subscription catalog, spine included).
+ * ⛔ A `retired` modul kimarad: szándékosan nincs felülete, tehát nincs mit előnézni —
+ * egy üres előnézet azt sugallná, hogy a modul elromlott, holott le van véve a polcról.
+ */
 export function previewableIds(): readonly string[] {
-  return MODULE_CATALOG.filter((m) => m.billing !== "once").map((m) => m.id);
+  return MODULE_CATALOG.filter((m) => m.billing !== "once" && !m.retired).map((m) => m.id);
 }
 
 /**

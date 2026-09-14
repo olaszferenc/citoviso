@@ -15,6 +15,7 @@
 //
 //   npx tsx scripts/native-content-check.mts
 
+import { MODULE_CATALOG } from "../src/modules.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
@@ -235,10 +236,18 @@ console.log("\nADR-0061 — mock all-in modulok natívan; élesre semmi minta ne
     ["hours", /data-cit-module="hours"/],
     ["pricing", /data-cit-module="pricing"/],
     ["poi", /data-cit-module="poi"/],
+    // ⛔ A hírlevél LEKERÜLT A POLCRÓL (src/modules.ts › `retired`, tulaj 2026-09-14):
+    // szándékosan nem renderel, tehát az „all-in mockban minden eladható modul ott van"
+    // állítás rá NEM vonatkozik — nem eladható. A sor a KATALÓGUSBÓL szűrődik ki
+    // (lentebb), nem innen töröltem, hogy a visszakapcsolás automatikusan visszahozza
+    // a mérés alá.
     ["newsletter", /data-cit-module="newsletter"/],
     ["map", /data-cit-module="map"[^>]*data-cit-query="/],
     ["review-form", /data-cit-module="review-form"/],
   ];
+  // A polcról levett modulok kiesnek az all-in állításból — a katalógus dönt, nem lista.
+  const retiredIds = new Set(MODULE_CATALOG.filter((m) => m.retired).map((m) => m.id));
+  const LIVE_SURFACES = SURFACES.filter(([n]) => !retiredIds.has(n));
   const missing: string[] = [];
   const unmarked: string[] = [];
   const leak: string[] = [];
@@ -247,7 +256,7 @@ console.log("\nADR-0061 — mock all-in modulok natívan; élesre semmi minta ne
     const mock = renderSite(recipe(t), { ...BARE, geo: { lat: 46.88, lon: 17.55 } } as SiteData, {
       phase: "mock",
     });
-    const absent = SURFACES.filter(([, re]) => !re.test(mock)).map(([n]) => n);
+    const absent = LIVE_SURFACES.filter(([, re]) => !re.test(mock)).map(([n]) => n);
     if (absent.length) missing.push(`${t}(${absent.join(",")})`);
     // The §B.17 label lives ON the sampled sections (hours+pricing+poi at least).
     const pills = mock.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;

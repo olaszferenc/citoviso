@@ -393,6 +393,10 @@ export async function savePricing(input: PricingInput): Promise<void> {
   // Catalog modules + the multilang tier rows (ADR-0128) — the tiers are priced through
   // the same table, so the operator's save must not silently drop them.
   const priceIds = [
+    // ⚠️ A `retired` modulok SZÁNDÉKOSAN benne maradnak: akinél még fut az előfizetés,
+    // annak a sora árat igényel, és egy eltüntetett ár a MEGLÉVŐ számlát tenné
+    // olvashatatlanná. A levétel a KÍNÁLATRA szól (configurator, előnézet,
+    // subscriptionModules), nem a múltra.
     ...MODULE_CATALOG.filter((m) => !m.spine).map((m) => m.id), // spine stays 0 = in base
     ...MULTILANG_TIERS.map((t) => t.priceId),
   ];

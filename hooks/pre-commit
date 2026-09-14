@@ -450,6 +450,24 @@ if [ -f scripts/booking-screen-check.mts ] && \
   echo "[pre-commit] booking-screen-check (a szállított felület = a jóváhagyott terv)…"
   npx tsx scripts/booking-screen-check.mts >/dev/null
 fi
+# A JÓVÁHAGYOTT vendég-ár terv (design-refs/tenant-site/booking-price-clarity):
+# a bontás nyitva, az alap kimondva, a helyszíni tétel külön — és ⛔ KITALÁLT SZÁM
+# SEHOL: üres IFA-mezőnél a lap nem számol összeget. Ezt csak KÉTIRÁNYÚ méréssel lehet
+# igazolni (kitöltött ÉS üres eset), ezért mindkettőt lefuttatja, böngészőben.
+if [ -f scripts/booking-price-clarity-check.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-runtime\.js|assets/runtime/cit-modules\.css|src/engine/moduleSections\.ts|src/engine/recipe\.ts|src/tenant/editor\.ts|src/moduleConfig\.ts|src/modules\.ts|scripts/booking-price-clarity-check\.mts|assets/design-refs/tenant-site/booking-price-clarity/)'; then
+  echo "[pre-commit] booking-price-clarity-check (a vendég látja, mi van az árban)…"
+  npx tsx scripts/booking-price-clarity-check.mts >/dev/null
+fi
+# A JÓVÁHAGYOTT várólista-terv (design-refs/tenant-admin/booking-queue-urgency):
+# a SORRENDET a válasz-határidő adja, nem az érkezés napja — a mért hibában a 21 órás
+# kérés a lista harmadik helyén állt. Screenshot erre vak: minden sorrend „rendezett".
+# Geometriát is mér (nap-panel a rács fölött, naptár bal / lista jobb), piros önteszttel.
+if [ -f scripts/booking-queue-urgency-check.mts ] && \
+   changed_files | grep -qE '^(src/server/bookingViews\.ts|scripts/booking-queue-urgency-check\.mts|assets/design-refs/tenant-admin/booking-queue-urgency/)'; then
+  echo "[pre-commit] booking-queue-urgency-check (a sorrendet a határidő adja)…"
+  npx tsx scripts/booking-queue-urgency-check.mts >/dev/null
+fi
 # A foglalás-sor IGAZAT mondjon arról, mi történt (ki mondta le, döntés volt-e,
 # melyik ablak járt le), a lemondás vigye vissza a tulajt oda, ahol dolgozott, és a
 # beadás után a vendég LÁSSA a nyugtát. Az utóbbi geometriai ítélet: a kártya a DOM-ban

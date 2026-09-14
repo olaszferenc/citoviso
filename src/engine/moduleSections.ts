@@ -415,27 +415,24 @@ function locationBlock(d: SiteData, opts: { sampleMap?: boolean } = {}): string 
   );
 }
 
-function newsletterBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean } = {}): string {
-  const n = d.newsletter;
-  if (!opts.sample && (!n || (!n.title && !n.subtitle))) return "";
-  // ADR-0061: the demo form is fully try-able but never submits — the runtime
-  // intercepts and answers with the message carried in data-cit-demo.
-  const demoAttr = opts.demo
-    ? ` data-cit-demo="${esc(T(d, "Ez kipróbálás volt — az éles oldalon itt iratkozna fel a vendége."))}"`
-    : "";
-  const html =
-    `<section class="cit-modsec" data-cit-module="newsletter">` +
-    `<div class="cit-modsec__in">` +
-    `<h2>${esc(n?.title || T(d, "Maradjunk kapcsolatban"))}</h2>` +
-    (n?.subtitle ? `<p class="cit-modsec__note" style="margin-top:0">${esc(n.subtitle)}</p>` : "") +
-    `<form class="cit-news" method="POST" action="/api/hirlevel"${demoAttr}>` +
-    `<input type="email" name="email" required placeholder="${T(d, "E-mail cím")}" ` +
-    `aria-label="${T(d, "E-mail cím")}">` +
-    `<button class="cit-btn" type="submit">${T(d, "Feliratkozom")}</button>` +
-    `</form></div></section>`;
-  return opts.sample
-    ? asSample(html, d, T(d, "Minta — vásárlás után a feliratkozók e-mail címei Önhöz kerülnek."))
-    : html;
+function newsletterBlock(_d: SiteData, _opts: { demo?: boolean; sample?: boolean } = {}): string {
+  // ⛔⛔ TULAJDONOSI DÖNTÉS 2026-09-14 (kontraktus: design-refs/tenant-site/
+  // booking-price-clarity ⑩): a hírlevél-modul LEKERÜL A POLCRÓL, amíg nincs mögötte
+  // működő út. Mérve: az űrlap a `/api/hirlevel` címre POST-olt, ami a nyilvános
+  // kiszolgálón NEM LÉTEZIK (a teljes route-lista: /api/erdeklodes, /api/foglalas,
+  // /api/velemeny, /api/sms-relay/*, /api/mock-request), és feliratkozó-tábla sincs a
+  // migrációkban. A futásidő csak a `data-cit-demo` űrlapokat fogja el — élő bérlői
+  // oldalon a vendég beírta a címét, megnyomta a gombot, és elhagyta az oldalt.
+  // A modul közben 490 Ft/hó volt.
+  //
+  // ⛔ Hozzájárulás-pipát SEM teszünk rá: nem kérünk hozzájárulást olyasmihez, amit
+  // nem tudunk teljesíteni — az jogi dísz lenne egy halott úton.
+  //
+  // A korábbi törzs (űrlap + minta-keret) szándékosan TÖRÖLVE, nem elérhetetlenné
+  // téve: a holt kód ugyanúgy azt sugallná, hogy a funkció létezik. Amint a végpont +
+  // tábla + megerősítő levél + leiratkozás elkészül, ez a blokk újraírandó — a modul
+  // visszakapcsolása a `src/modules.ts` listájából indul.
+  return "";
 }
 
 /**
@@ -452,6 +449,34 @@ function newsletterBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
 function roomsBlock(d: SiteData): string {
   const rooms = d.rooms ?? [];
   if (!rooms.length) return "";
+  // ⛔ KONTRAKTUS ⑨ (ADR-0114): EGYETLEN egységnél nincs egy-kártyás rács. Mérve az
+  // éles lapon: 229 px magas „Szobák, apartmanok" szekció egyetlen apró kártyával és
+  // egy „6 fő" felirattal — a rács üzenete („válasszon a szobák közül") hamis, ha
+  // nincs miből választani. Az „egész szállás" teljes szélességű panelt kap, és CSAK
+  // azok a cellák jelennek meg, amelyekhez van adat: üres cella nem kerül ki.
+  if (rooms.length === 1) {
+    const r = rooms[0]!;
+    const facts: [string, string][] = [];
+    if (r.capacity) facts.push([T(d, "Férőhely"), r.capacity]);
+    if (r.price) facts.push([T(d, "Ár"), r.price]);
+    const cells = facts
+      .map(([k, v]) => `<li><b>${esc(k)}</b>${esc(v)}</li>`)
+      .join("");
+    return (
+      `<section class="cit-modsec" data-cit-module="rooms">` +
+      `<div class="cit-modsec__in"><h2>${T(d, "A szállás")}</h2>` +
+      `<div class="cit-whole">` +
+      (r.photo?.url
+        ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy" ` +
+          `class="cit-whole__img">`
+        : "") +
+      `<div class="cit-whole__txt"><p class="cit-whole__t">${esc(r.name)}</p>` +
+      (r.note ? `<p class="cit-whole__note">${esc(r.note)}</p>` : "") +
+      (cells ? `<ul class="cit-whole__facts">${cells}</ul>` : "") +
+      `</div></div>` +
+      `</div></section>`
+    );
+  }
   const cards = rooms
     .map(
       (r) =>
@@ -722,7 +747,13 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
       ? ` data-cit-units="${esc(JSON.stringify(b.units))}"` +
         ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
         ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
-        (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "")
+        (b.responseNote ? ` data-cit-note="${esc(b.responseNote)}"` : "") +
+        // ⛔ KONTRAKTUS ④: csak akkor kerül ki, ha a TULAJ megadta. Nincs alapértelmezett
+        // IFA — egy szám, amit nem ő írt be, nem jelenhet meg a neve mellett (§B.17).
+        (b.touristTaxPerPersonNight
+          ? ` data-cit-ifa="${esc(String(b.touristTaxPerPersonNight))}"`
+          : "") +
+        (b.priceIncludes ? ` data-cit-includes="${esc(b.priceIncludes)}"` : "")
       : b
         ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(b.units))}"` +
           ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
@@ -742,6 +773,10 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
   return (
     `<section class="cit-modsec" id="cit-booking" data-cit-module="booking-section">` +
     `<div class="cit-modsec__in">` +
+    // ⛔ KONTRAKTUS ⑧: ez volt az EGYETLEN modul-szekció cím nélkül. Mérve az éles
+    // generált lapon: 100 px üres sáv állt a kártya fölött (390-en és 1280-on is) —
+    // pontosan ott, ahol minden más szekció a saját <h2>-jét hordja.
+    `<h2>${T(d, "Foglalás")}</h2>` +
     `<div data-cit-module="booking" data-cit-variant="request" data-cit-name="${esc(d.name)}"${
       email ? ` data-cit-email="${esc(email)}"` : ""
     }${phone ? ` data-cit-phone="${esc(phone)}"` : ""}${attrs}>${fallback}</div>` +

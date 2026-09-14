@@ -22,6 +22,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
+import { MODULE_CATALOG } from "../src/modules.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
@@ -61,12 +62,21 @@ const SURFACES: [string, RegExp][] = [
   ["hours", /data-cit-module="hours"/],
   ["pricing", /data-cit-module="pricing"/],
   ["poi", /data-cit-module="poi"/],
+  // ⛔ A hírlevél LEKERÜLT A POLCRÓL (src/modules.ts › `retired`): nem eladható, tehát
+  // az „all-in mockban minden eladható modul felülete él" állítás rá nem vonatkozik.
+  // A sor marad, a szűrés a KATALÓGUSBÓL történik — visszakapcsoláskor magától
+  // visszakerül a mérés alá.
   ["newsletter", /data-cit-module="newsletter"/],
   ["map", /data-cit-module="map"[^>]*data-cit-query="/],
   ["booking-demo", /data-cit-variant="request"[^>]*data-cit-demo="1"|data-cit-demo="1"[^>]*data-cit-variant="request"/],
   ["review-form", /data-cit-module="review-form"/],
   ["gallery", /data-cit-module="gallery"/],
 ];
+
+// A polcról levett modulok kiesnek: a kínálat a katalógusból dől el, nem innen.
+const OFFERED_SURFACES = SURFACES.filter(
+  ([n]) => !MODULE_CATALOG.some((m) => m.id === n && m.retired),
+);
 
 console.log(`ADR-0061 all-in mock (${Object.keys(TEMPLATES).length} sablon):\n`);
 
@@ -75,7 +85,7 @@ for (const t of Object.keys(TEMPLATES)) {
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
   const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
 
-  const absent = SURFACES.filter(([, re]) => !re.test(bare)).map(([n]) => n);
+  const absent = OFFERED_SURFACES.filter(([, re]) => !re.test(bare)).map(([n]) => n);
   if (absent.length) missing.push(`${t}(${absent.join(",")})`);
   // The §B.17 marking lives ON the sampled sections: hours + pricing + poi at least.
   const pills = bare.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;

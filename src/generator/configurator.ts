@@ -282,8 +282,11 @@ export async function buildManifest(
   // The offered set is computed ONCE and shared with the renewal quote below —
   // the quote has to know what the client can price itself in order to sum the
   // rest, and a second filter here would be a second truth.
+  // ⛔ `retired` = LEVÉVE A POLCRÓL (src/modules.ts): a leadnek mutatott kínálatból is
+  // ki kell esnie, különben a konfigurátor olyan modult árazna és jelölne mintával,
+  // aminek nincs felülete — pontosan azt a néma ígéretet, amit a levétel megszüntet.
   const offered = MODULE_CATALOG.filter(
-    (m) => !m.tenantOnly && (m.spine || !disabledSales.has(m.id)),
+    (m) => !m.tenantOnly && !m.retired && (m.spine || !disabledSales.has(m.id)),
   );
   const renewal = await renewalQuoteForLead(
     opts.renewalLeadId ?? null,

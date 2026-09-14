@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B8 · TULAJ „A" — a sürgősség dönt</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+/* ── méret-váltó keret (NEM a lap része, csak a bemutatáshoz) ─────────────── */
+body{margin:0;background:var(--citui-surface);font-family:var(--citui-font-body,Inter,system-ui,sans-serif);
+  color:var(--citui-ink)}
+.mk-bar{position:sticky;top:0;z-index:40;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--citui-navy-900);color:var(--citui-white);padding:10px 14px;font-size:.84rem}
+.mk-btn{background:transparent;color:var(--citui-white);border:1.5px solid rgba(255,255,255,.35);
+  border-radius:var(--citui-radius-pill);padding:6px 14px;font:inherit;font-weight:700;cursor:pointer}
+.mk-btn.is-on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.mk-note{opacity:.75;font-size:.76rem;flex:1 1 100%}
+.mk-stage{margin:0 auto;padding:18px 0 60px;transition:max-width .18s}
+/* ⚠️ @container, NEM @media: a váltó egy DIV-et szűkít, az ablakot nem — media
+   query-vel a gombok csak keskenyítenének, de nem rendeznének át. */
+.mk-stage{container-type:inline-size;container-name:lap}
+.mk-stage[data-w="390"]{max-width:390px}
+.mk-stage[data-w="desk"]{width:1080px;max-width:1080px}
+/* ⛔ MÉRVE: a tulaj TELEFONON nézi. A puszta @container-váltó 390 px-es képernyőn
+   nem tud 1080-at mutatni — az „Asztali” gomb ott NEM CSINÁLT SEMMIT, vagyis a
+   döntés felét nem látta volna. A lap ezért 1080 px-en marad, és `zoom`-mal
+   kicsinyítjük a képernyőre: a konténer-lekérdezés 1080-at lát (asztali elrendezés),
+   a szem meg a telefont. */
+.mk-inner{padding:0 16px}
+
+h1.pg{font-family:var(--citui-font-display,inherit);font-size:1.6rem;margin:6px 0 2px}
+.pg-sub{color:var(--citui-muted);margin:0 0 20px;font-size:.92rem}
+.sect{font-size:.78rem;font-weight:700;color:var(--citui-muted);text-transform:uppercase;
+  letter-spacing:.06em;margin:24px 0 10px}
+
+/* csempék */
+.tiles{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:16px}
+.tile{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:14px;
+  padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;font:inherit;
+  color:inherit;cursor:pointer;width:100%;box-sizing:border-box}
+.tile:hover{border-color:var(--citui-cyan-500)}
+.tile__l{display:block;font-size:.72rem;font-weight:600;color:var(--citui-muted)}
+.tile__v{display:block;font-size:1.05rem;font-weight:800;color:var(--citui-navy-900);margin-top:2px}
+.tile__v small{font-size:.8rem;font-weight:600;color:var(--citui-muted)}
+/* ⭐ A "—" HELYETT MONDAT. Üres állapotban a csempe elmondja, mi nincs. */
+.tile__v.is-empty{font-size:.86rem;font-weight:600;color:var(--citui-muted)}
+.tile__ico{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700);font-weight:800}
+.tile--urgent{border-color:color-mix(in srgb,var(--citui-bad) 45%,transparent);
+  background:color-mix(in srgb,var(--citui-bad) 5%,var(--citui-white))}
+.tile--urgent .tile__ico{background:color-mix(in srgb,var(--citui-bad) 13%,var(--citui-white));color:var(--citui-bad)}
+
+/* naptár */
+.cal{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;padding:14px;margin-bottom:14px}
+.cal__hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.cal__hd b{font-size:1rem}
+.cal__nav{width:32px;height:32px;border:1.5px solid var(--citui-line);border-radius:9px;background:var(--citui-white);
+  font-weight:800;cursor:pointer;color:var(--citui-navy-900)}
+/* ⭐ „A" VÁLTOZAT: a NAP-PANEL a rács FÖLÉ kerül — amire koppintottál, az nem
+   csúszik a képernyő aljára. A jelmagyarázat közvetlenül a rács alatt marad. */
+.daypanel{border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);background:var(--citui-ok-soft);
+  border-radius:12px;padding:12px 13px;margin-bottom:11px}
+.daypanel b{display:block;font-size:.93rem}
+.daypanel span{display:block;font-size:.8rem;line-height:1.5}
+.daypanel .rm{margin-top:8px;background:var(--citui-bad);color:var(--citui-white);border:0;
+  border-radius:var(--citui-radius-pill);padding:8px 14px;font:inherit;font-weight:700;font-size:.78rem;cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{font-size:.68rem;font-weight:700;color:var(--citui-muted);text-align:center;padding:4px 0}
+.day{aspect-ratio:1;border-radius:9px;display:grid;place-items:center;font-size:.8rem;font-weight:600;
+  background:var(--citui-surface-2);color:var(--citui-ink);border:1.5px solid transparent;cursor:pointer;
+  font-family:inherit;padding:0;width:100%}
+.day:hover{border-color:var(--citui-cyan-500)}
+.day--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white));color:var(--citui-ok)}
+.day--sel{border-color:var(--citui-ok);box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-ok) 25%,transparent)}
+.day--manual{background:var(--citui-navy-900);color:var(--citui-white)}
+.day--past{opacity:.35;pointer-events:none}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:.73rem;color:var(--citui-muted)}
+.lg{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px}
+.lg--free{background:var(--citui-surface-2)}
+.lg--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white))}
+.lg--manual{background:var(--citui-navy-900)}
+.lg--sel{background:var(--citui-white);border:2px solid var(--citui-ok);box-sizing:border-box}
+
+/* kérés-kártyák */
+.req{border:1px solid var(--citui-line);border-radius:15px;margin-bottom:11px;background:var(--citui-white);
+  overflow:hidden}
+/* ⭐ A SÜRGŐSSÉG a kártya BAL SZÉLÉN sáv — sorrend ÉS kinézet is mutatja. */
+.req--hot{border-color:color-mix(in srgb,var(--citui-bad) 45%,transparent);
+  box-shadow:inset 4px 0 0 var(--citui-bad)}
+.req--warm{box-shadow:inset 4px 0 0 var(--citui-warn)}
+.req--cool{box-shadow:inset 4px 0 0 var(--citui-line-strong)}
+.req__hd{display:flex;gap:11px;align-items:flex-start;padding:13px 14px}
+.req__ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  background:var(--citui-surface-2);color:var(--citui-navy-700);font-weight:800}
+.req__t{flex:1;min-width:0}
+.req__t strong{display:block;font-size:.97rem}
+.req__dates{display:block;font-size:.85rem;font-weight:600;margin-top:2px}
+.req__meta{display:block;font-size:.78rem;color:var(--citui-muted);margin-top:2px;line-height:1.5}
+.dl{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;font-weight:800;border-radius:var(--citui-radius-pill);
+  padding:5px 11px;margin-top:7px}
+.dl--hot{background:color-mix(in srgb,var(--citui-bad) 13%,var(--citui-white));color:var(--citui-bad)}
+.dl--warm{background:color-mix(in srgb,var(--citui-warn) 15%,var(--citui-white));color:var(--citui-warn)}
+.dl--cool{background:var(--citui-surface-2);color:var(--citui-muted)}
+.conflict{display:block;font-size:.75rem;font-weight:700;line-height:1.45;border-radius:11px;padding:7px 11px;
+  margin-top:7px;background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));color:var(--citui-bad)}
+.req__msg{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;margin:0 14px 12px;
+  font-size:.83rem;line-height:1.55}
+.req__act{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+.btn{border-radius:var(--citui-radius-pill);padding:11px 18px;font:inherit;font-size:.85rem;font-weight:700;
+  cursor:pointer;border:0;min-height:42px}
+.btn--ok{background:var(--citui-ok);color:var(--citui-white);flex:1 1 45%}
+.btn--ghost{background:var(--citui-white);color:var(--citui-navy-900);border:1.5px solid var(--citui-line-strong);flex:1 1 45%}
+.btn--link{background:transparent;border:1.5px solid var(--citui-line-strong);color:var(--citui-navy-900);
+  padding:7px 13px;font-size:.78rem;min-height:0}
+
+/* történet */
+.hist{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border:1px solid var(--citui-line);
+  border-radius:13px;margin-bottom:8px;background:var(--citui-white);flex-wrap:wrap}
+.hist__t{flex:1 1 auto;min-width:160px}
+.hist__t strong{display:block;font-size:.88rem}
+.hist__t span{display:block;color:var(--citui-muted);font-size:.77rem;margin-top:1px}
+.chip{display:inline-block;font-size:.71rem;font-weight:800;border-radius:var(--citui-radius-pill);
+  padding:5px 10px;white-space:nowrap}
+.chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.chip--bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad)}
+/* ⭐ A LEJÁRT nem semleges hír: elveszett vendég. Borostyán jelvény, nem szürke. */
+.chip--lost{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-white));color:var(--citui-warn);
+  border:1px solid color-mix(in srgb,var(--citui-warn) 40%,transparent)}
+/* ⭐ A LEZÁRT SOR TOVÁBBVISZ A VENDÉGHEZ. */
+.reach{flex:1 1 100%;margin-top:9px;padding-top:9px;border-top:1px dashed var(--citui-line);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--citui-muted)}
+.reach a{color:var(--citui-cyan-600,var(--citui-cyan-500));font-weight:700;text-decoration:underline}
+
+/* fedés-választó */
+.ovl{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 55%,transparent);z-index:60;
+  display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
+.ovl[hidden]{display:none}
+.ovm{background:var(--citui-white);border-radius:18px;width:100%;max-width:560px;
+  max-height:calc(100dvh - 28px);overflow:auto;padding:18px 16px 0;box-sizing:border-box;margin:auto}
+.ovm h3{margin:0 0 4px;font-size:1.1rem;color:var(--citui-navy-900)}
+.ovsub{font-size:.83rem;color:var(--citui-muted);line-height:1.55;margin:0 0 12px}
+/* ⭐ HÓNAP-FEJLÉC és SZÍN→NÉV KULCS a fedés-naptáron. */
+.ovmonth{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:.92rem;
+  margin:0 0 7px;color:var(--citui-navy-900)}
+.ovkey{display:flex;gap:12px;flex-wrap:wrap;font-size:.74rem;margin:8px 0 2px}
+.ovkey span{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.ovkey i{width:13px;height:13px;border-radius:4px;display:inline-block}
+.ovgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.ovdow{font-size:.68rem;font-weight:700;color:var(--citui-muted);text-align:center;padding:4px 0}
+.ovday{aspect-ratio:1;border-radius:9px;display:grid;place-items:center;font-size:.8rem;font-weight:600;
+  background:var(--citui-surface-2)}
+.ovreq{display:flex;align-items:flex-start;gap:10px;border:1.5px solid var(--citui-line);border-radius:13px;
+  padding:11px 12px;margin-top:9px;cursor:pointer;background:var(--citui-white);width:100%;text-align:left;font:inherit}
+.ovreq.is-sel{border-color:var(--citui-ok);background:color-mix(in srgb,var(--citui-ok) 7%,var(--citui-white))}
+.ovord{flex:0 0 auto;width:26px;height:26px;border-radius:var(--citui-radius-pill);display:grid;place-items:center;
+  font-size:.78rem;font-weight:800;color:var(--citui-white)}
+.ovt{flex:1;min-width:0}
+.ovt b{display:block;font-size:.9rem}
+.ovt span{display:block;font-size:.77rem;color:var(--citui-muted);margin-top:1px}
+.ovwarn{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent);border-radius:12px;padding:12px 13px;
+  font-size:.82rem;line-height:1.6;margin-top:12px}
+.ovrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;position:sticky;bottom:0;background:var(--citui-white);
+  border-top:1px solid var(--citui-line);padding:11px 0 18px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:80;background:var(--citui-navy-900);
+  color:var(--citui-white);padding:12px 18px;border-radius:12px;font-size:.85rem;max-width:90vw}
+.toast[hidden]{display:none}
+
+/* ── ASZTALI ELRENDEZÉS — külön tervezői döntés, nem a mobil felnagyítva ──── */
+@container lap (min-width: 760px){
+  .mk-inner{padding:0 28px}
+  .tiles{grid-template-columns:repeat(3,1fr)}
+  /* Asztalon a naptár és a várólista EGYMÁS MELLETT: a tulaj egy pillantásból
+     látja, mikor van hely ahhoz a kéréshez, amit épp elbírál. */
+  .cols{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+  .col-cal{position:sticky;top:64px}
+  .req__act{flex-wrap:nowrap}
+  .btn--ok,.btn--ghost{flex:0 0 auto}
+  /* ⛔ NEM `flex-wrap:nowrap` a történet-soron: az „Írok neki" sáv 100%-os, egy
+     sorba préselve a nevet nullára nyomná (mérve: betűnként tördelt cím). */
+  .hist__t{flex:1 1 60%}
+}
+</style>
+</head>
+<body>
+
+<div class="mk-bar">
+  <b>B8 · TULAJ — „A" változat:</b>
+  <button class="mk-btn" data-w="390" type="button">Mobil 390px</button>
+  <button class="mk-btn" data-w="desk" type="button">Asztali</button>
+  <span class="mk-note">A SÜRGŐSSÉG DÖNT — a várólista a válasz-határidő szerint áll sorba. Kattintson: a
+    csempék ugranak, a naptár nyílik, a döntés-gombok működnek, a fedés-választó él.</span>
+</div>
+
+<div class="mk-stage" data-w="390" id="stage">
+<div class="mk-inner">
+
+  <h1 class="pg">Foglalások</h1>
+  <p class="pg-sub">Nyugalom Vendégház · A szállás egésze</p>
+
+  <div class="tiles">
+    <button class="tile tile--urgent" type="button" data-jump="#queue">
+      <span class="tile__ico">!</span>
+      <span><span class="tile__l">Döntésre vár</span>
+      <span class="tile__v">4 kérés <small>· a legsürgősebb 21 óra</small></span></span>
+    </button>
+    <button class="tile" type="button" data-jump="#queue">
+      <span class="tile__ico">→</span>
+      <span><span class="tile__l">Következő érkezés</span>
+      <span class="tile__v" id="arrVal">2026. 09. 20. <small>· Farkas Judit</small></span></span>
+    </button>
+    <button class="tile" type="button" data-jump="#hist">
+      <span class="tile__ico">✓</span>
+      <span><span class="tile__l">Idén visszaigazolt — jelenleg érvényes</span>
+      <span class="tile__v">1 foglalás <small>· és 3, amit később lemondtak</small></span></span>
+    </button>
+  </div>
+  <p style="margin:-6px 0 16px;font-size:.78rem;color:var(--citui-muted)">
+    <button class="btn btn--link" type="button" id="emptyToggle">Üres állapot mutatása</button>
+    — így néz ki, ha nincs mit mutatni.
+  </p>
+
+  <div class="cols">
+  <div class="col-cal">
+  <div class="cal">
+    <div class="cal__hd">
+      <button class="cal__nav" type="button" data-mon="-1">‹</button>
+      <b id="monLabel">2026. szeptember</b>
+      <button class="cal__nav" type="button" data-mon="1">›</button>
+    </div>
+    <!-- ⭐ „A": a nap-panel a rács FÖLÖTT -->
+    <div class="daypanel" id="dayPanel" hidden>
+      <b id="dpName">—</b>
+      <span id="dpWhen"></span>
+      <span id="dpMail"></span>
+      <button class="rm" type="button" id="dpCancel">Foglalás lemondása</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="legend">
+      <span><i class="lg lg--free"></i>szabad — koppintásra blokkolható</span>
+      <span><i class="lg lg--booked"></i>vendég-foglalás — koppintásra megnyílik</span>
+      <span><i class="lg lg--manual"></i>kézzel blokkolva</span>
+      <span><i class="lg lg--sel"></i>a megnyitott nap</span>
+    </div>
+  </div>
+  </div>
+
+  <div class="col-list">
+  <h2 class="sect" id="queue">Döntésre váró kérések — a legkevesebb idő elöl</h2>
+  <p style="margin:-4px 0 12px;font-size:.79rem;color:var(--citui-muted)">
+    A sorrendet a <b>válasz-határidő</b> adja. Aki hamarabb jár le, az van felül — akkor is, ha
+    később érkezne.
+  </p>
+  <div id="queueList"></div>
+
+  <h2 class="sect" id="hist">Korábbi kérések</h2>
+  <div class="hist">
+    <div class="hist__t"><strong>Horváth Réka</strong>
+      <span>2026. 09. 08. — 2026. 09. 11. · 3 éj · 2 fő · 64 000 Ft · lejárt: 2026. 09. 09.</span></div>
+    <div><span class="chip chip--lost">Lejárt — nem válaszoltunk</span></div>
+    <div class="reach">
+      <span>reka.horvath@example.com · +36 30 555 1234</span>
+      <a href="mailto:reka.horvath@example.com?subject=Nyugalom%20Vend%C3%A9gh%C3%A1z">Írok neki</a>
+      <button class="btn btn--link" type="button" data-reopen="Horváth Réka">Újranyitom a kérést</button>
+    </div>
+  </div>
+  <div class="hist">
+    <div class="hist__t"><strong>Molnár Bence</strong>
+      <span>2026. 08. 25. — 2026. 08. 28. · 3 éj · 2 fő · 64 000 Ft · döntés: 2026. 09. 06.</span></div>
+    <div><span class="chip chip--bad">Ön mondta le</span></div>
+  </div>
+  <div class="hist">
+    <div class="hist__t"><strong>Varga Dániel</strong>
+      <span>2026. 10. 28. — 2026. 10. 31. · 3 éj · 2 fő · 64 000 Ft · automatikusan: 2026. 09. 12.</span></div>
+    <div><span class="chip chip--bad">Elutasítva (automatikus)</span></div>
+    <div class="reach">
+      <span>daniel.varga@example.com</span>
+      <a href="mailto:daniel.varga@example.com">Írok neki</a>
+    </div>
+  </div>
+  </div>
+  </div>
+
+</div>
+</div>
+
+<div class="ovl" id="ovl" hidden>
+  <div class="ovm">
+    <h3>Többen kérik ugyanazt az időszakot</h3>
+    <p class="ovsub">A színek mutatják, ki melyik éjszakákat kéri. Válassza ki, KINEK igazolja
+      vissza — a többi fedésben lévő kérés automatikusan elutasításra kerül.</p>
+    <div class="ovmonth"><span>2026. október</span></div>
+    <div class="ovgrid" id="ovgrid"></div>
+    <div class="ovkey" id="ovkey"></div>
+    <div id="ovreqs"></div>
+    <div class="ovwarn" id="ovwarn"></div>
+    <div class="ovrow">
+      <button class="btn btn--ok" type="button" id="ovOk">Visszaigazolom — a többit elutasítom</button>
+      <button class="btn btn--ghost" type="button" id="ovNo">Mégsem</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  var DESK_W = 1080;
+  var stage = document.getElementById("stage");
+  var btns = document.querySelectorAll(".mk-btn");
+  function setW(w) {
+    stage.setAttribute("data-w", w);
+    btns.forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-w") === w); });
+    fit();
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { setW(b.getAttribute("data-w")); }); });
+  // A `zoom` a HASZNÁLT szélességet tartja (a @container 1080-at lát), csak a festést
+  // kicsinyíti — ezért telefonon is a VALÓDI asztali elrendezés látszik.
+  function fit() {
+    if (stage.getAttribute("data-w") !== "desk") { stage.style.zoom = ""; return; }
+    var avail = document.documentElement.clientWidth;
+    stage.style.zoom = avail < DESK_W ? String(Math.max(0.3, avail / DESK_W)) : "";
+  }
+  window.addEventListener("resize", fit);
+  // Telefonon mobil módban indul, gépen asztaliban.
+  setW(window.innerWidth < 760 ? "390" : "desk");
+
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(t._h); t._h = setTimeout(function () { t.hidden = true; }, 3200);
+  }
+  function huDay(iso) { return iso.slice(0,4) + ". " + iso.slice(5,7) + ". " + iso.slice(8,10) + "."; }
+
+  var REQS = [
+    { id:"r3", name:"Tóth Eszter",  from:"2026-10-28", to:"2026-11-01", guests:6, nights:4, total:"160 000 Ft",
+      mail:"eszter.toth@example.com", phone:"+36 20 111 2233", left:21,
+      msg:"Két család jönne, a nagyobb szobát kérnénk.", clash:["Szabó Gábor"] },
+    { id:"r4", name:"Szabó Gábor",  from:"2026-10-28", to:"2026-10-31", guests:3, nights:3, total:"120 000 Ft",
+      mail:"gabor.szabo@example.com", phone:"+36 30 444 5566", left:28, msg:"", clash:["Tóth Eszter"] },
+    { id:"r2", name:"Nagy Péter",   from:"2026-10-12", to:"2026-10-14", guests:2, nights:2, total:"48 000 Ft",
+      mail:"peter.nagy@example.com", phone:"+36 70 777 8899", left:34, msg:"", clash:[] },
+    { id:"r1", name:"Kovács Anna",  from:"2026-10-05", to:"2026-10-08", guests:4, nights:3, total:"96 000 Ft",
+      mail:"anna.kovacs@example.com", phone:"+36 30 123 4567", left:46,
+      msg:"Van a háznál parkoló? Kutyával érkeznénk.", clash:[] }
+  ];
+  // ⭐ EZ A VÁLTOZAT LÉNYEGE: a rendezés a HATÁRIDŐ, nem az érkezés napja.
+  REQS.sort(function (a, b) { return a.left - b.left; });
+
+  function heat(h) { return h <= 24 ? "hot" : h <= 36 ? "warm" : "cool"; }
+  function heatWord(h) { return h <= 24 ? "Ma lejár" : h <= 36 ? "Holnap lejár" : "Van még idő"; }
+
+  function reqCard(r) {
+    var k = heat(r.left);
+    return '<div class="req req--' + k + '" id="req-' + r.id + '">' +
+      '<div class="req__hd"><span class="req__ico">' + r.name.slice(0,1) + '</span>' +
+      '<div class="req__t"><strong>' + r.name + '</strong>' +
+      '<span class="req__dates">' + huDay(r.from) + ' → ' + huDay(r.to) + ' · ' + r.nights +
+        ' éj · ' + r.guests + ' fő · <b>' + r.total + '</b></span>' +
+      '<span class="req__meta">' + r.mail + ' · ' + r.phone + '</span>' +
+      '<span class="dl dl--' + k + '">' + heatWord(r.left) + ' — még ' + r.left + ' óra a válaszra</span>' +
+      (r.clash.length ? '<span class="conflict">Fedés: az időszakot ' + r.clash.join(", ") +
+        ' is kéri — visszaigazoláskor választani kell.</span>' : '') +
+      '</div></div>' +
+      (r.msg ? '<div class="req__msg">„' + r.msg + '”</div>' : '') +
+      '<div class="req__act">' +
+      '<button class="btn btn--ok" type="button" data-ok="' + r.id + '">Visszaigazolom</button>' +
+      '<button class="btn btn--ghost" type="button" data-no="' + r.id + '">Elutasítom</button>' +
+      '</div></div>';
+  }
+  var list = document.getElementById("queueList");
+  list.innerHTML = REQS.map(reqCard).join("");
+
+  list.addEventListener("click", function (e) {
+    var ok = e.target.closest("[data-ok]"), no = e.target.closest("[data-no]");
+    if (!ok && !no) return;
+    var id = (ok || no).getAttribute(ok ? "data-ok" : "data-no");
+    var r = REQS.filter(function (x) { return x.id === id; })[0];
+    if (ok && r.clash.length) { openOverlap(r); return; }
+    var card = document.getElementById("req-" + id);
+    card.innerHTML = '<div class="req__hd"><span class="req__ico">' + (ok ? "✓" : "×") + '</span>' +
+      '<div class="req__t"><strong>' + r.name + '</strong><span class="req__meta">' +
+      (ok ? "Visszaigazolva — a vendég e-mailt kapott naptár-melléklettel."
+          : "Elutasítva — a vendég udvarias e-mailt kapott. A napok szabadok maradtak.") +
+      '</span></div></div>';
+    card.className = "req";
+    toast(ok ? r.name + " visszaigazolva." : r.name + " elutasítva.");
+  });
+
+  var BOOKED = { "2026-09-20":1, "2026-09-21":1, "2026-09-22":1 };
+  var MANUAL = { "2026-09-26":1 };
+  // ⭐ Egy foglalt nap ELŐRE megnyitva: az A és a B változat különbsége pont a
+  // nap-panel HELYE, és azt csak nyitott állapotban lehet a képen megítélni.
+  var sel = "2026-09-20", month = 8;
+  var MON = ["január","február","március","április","május","június","július","augusztus",
+             "szeptember","október","november","december"];
+  function drawCal() {
+    document.getElementById("monLabel").textContent = "2026. " + MON[month];
+    var first = new Date(Date.UTC(2026, month, 1));
+    var lead = (first.getUTCDay() + 6) % 7;
+    var days = new Date(Date.UTC(2026, month + 1, 0)).getUTCDate();
+    var h = ["H","K","Sze","Cs","P","Szo","V"].map(function (d) {
+      return '<span class="dow">' + d + '</span>'; }).join("");
+    for (var i = 0; i < lead; i++) h += "<span></span>";
+    for (var d = 1; d <= days; d++) {
+      var iso = "2026-" + String(month + 1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+      var cls = "day" + (BOOKED[iso] ? " day--booked" : "") + (MANUAL[iso] ? " day--manual" : "") +
+        (iso === sel ? " day--sel" : "") + (iso < "2026-09-14" ? " day--past" : "");
+      h += '<button class="' + cls + '" type="button" data-day="' + iso + '">' + d + "</button>";
+    }
+    document.getElementById("grid").innerHTML = h;
+  }
+  document.querySelectorAll("[data-mon]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      month = Math.min(11, Math.max(0, month + Number(b.getAttribute("data-mon"))));
+      drawCal();
+    });
+  });
+  document.getElementById("grid").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-day]"); if (!b) return;
+    var iso = b.getAttribute("data-day");
+    var p = document.getElementById("dayPanel");
+    if (BOOKED[iso]) {
+      sel = iso; drawCal();
+      p.hidden = false;
+      document.getElementById("dpName").textContent = "Farkas Judit";
+      document.getElementById("dpWhen").textContent =
+        "2026. 09. 20. — 2026. 09. 23. · 3 éj · 2 fő · 64 000 Ft";
+      document.getElementById("dpMail").textContent = "judit.farkas@example.com · +36 30 222 3344";
+      p.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } else if (MANUAL[iso]) {
+      delete MANUAL[iso]; drawCal(); toast("Kézi blokk feloldva: " + huDay(iso));
+    } else if (iso >= "2026-09-14") {
+      MANUAL[iso] = 1; drawCal(); toast("Nap kézi blokkolva: " + huDay(iso));
+    }
+  });
+  document.getElementById("dpCancel").addEventListener("click", function () {
+    document.getElementById("dayPanel").hidden = true;
+    delete BOOKED["2026-09-20"]; delete BOOKED["2026-09-21"]; delete BOOKED["2026-09-22"];
+    sel = null; drawCal();
+    // ⭐ A naptár NYITVA marad, és ott, ahol a tulaj dolgozott.
+    toast("Farkas Judit foglalása lemondva — a naptár itt maradt, a napok felszabadultak.");
+  });
+  (function initPanel() {
+    var p = document.getElementById("dayPanel");
+    p.hidden = false;
+    document.getElementById("dpName").textContent = "Farkas Judit";
+    document.getElementById("dpWhen").textContent = "2026. 09. 20. — 2026. 09. 23. · 3 éj · 2 fő · 64 000 Ft";
+    document.getElementById("dpMail").textContent = "judit.farkas@example.com · +36 30 222 3344";
+  })();
+  drawCal();
+
+  var empty = false;
+  document.getElementById("emptyToggle").addEventListener("click", function () {
+    empty = !empty;
+    var v = document.getElementById("arrVal");
+    if (empty) { v.className = "tile__v is-empty"; v.textContent = "Nincs bejelentett érkezés"; }
+    else { v.className = "tile__v"; v.innerHTML = '2026. 09. 20. <small>· Farkas Judit</small>'; }
+    this.textContent = empty ? "Vissza az adatos állapotra" : "Üres állapot mutatása";
+  });
+
+  document.querySelectorAll("[data-jump]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelector(b.getAttribute("data-jump")).scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+  document.addEventListener("click", function (e) {
+    var r = e.target.closest("[data-reopen]");
+    if (r) toast(r.getAttribute("data-reopen") + " kérése újranyitva — visszakerült a várólistára.");
+  });
+
+  var COL = ["var(--citui-cyan-500)","var(--citui-warn)","var(--citui-navy-700)"];
+  var group = [], chosen = null;
+  function openOverlap(r) {
+    group = [r].concat(REQS.filter(function (x) { return r.clash.indexOf(x.name) >= 0; }));
+    chosen = r.id;
+    renderOverlap();
+    document.getElementById("ovl").hidden = false;
+  }
+  function renderOverlap() {
+    var cover = {};
+    group.forEach(function (g, i) {
+      var d = new Date(g.from + "T00:00:00Z"), end = Date.parse(g.to + "T00:00:00Z");
+      while (d.getTime() < end) {
+        var k = d.toISOString().slice(0,10);
+        (cover[k] = cover[k] || []).push(i);
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+    });
+    var lead = (new Date(Date.UTC(2026, 9, 1)).getUTCDay() + 6) % 7;
+    var h = ["H","K","Sze","Cs","P","Szo","V"].map(function (d) {
+      return '<span class="ovdow">' + d + '</span>'; }).join("");
+    for (var i = 0; i < lead; i++) h += "<span></span>";
+    for (var d2 = 1; d2 <= 31; d2++) {
+      var iso = "2026-10-" + String(d2).padStart(2,"0"), cv = cover[iso] || [], st = "";
+      if (cv.length === 1) st = 'background:color-mix(in srgb,' + COL[cv[0]%3] + ' 32%,var(--citui-white));font-weight:800';
+      else if (cv.length > 1) st = 'background:linear-gradient(135deg,color-mix(in srgb,' + COL[cv[0]%3] +
+        ' 34%,var(--citui-white)) 50%,color-mix(in srgb,' + COL[cv[1]%3] + ' 34%,var(--citui-white)) 50%);font-weight:800';
+      h += '<span class="ovday" style="' + st + '">' + d2 + '</span>';
+    }
+    document.getElementById("ovgrid").innerHTML = h;
+    // ⭐ a kulcs: melyik szín kié
+    document.getElementById("ovkey").innerHTML = group.map(function (g, i) {
+      return '<span><i style="background:color-mix(in srgb,' + COL[i%3] + ' 32%,var(--citui-white));' +
+        'border:1px solid ' + COL[i%3] + '"></i>' + g.name + '</span>';
+    }).join("") + '<span><i style="background:linear-gradient(135deg,' +
+      'color-mix(in srgb,' + COL[0] + ' 34%,var(--citui-white)) 50%,' +
+      'color-mix(in srgb,' + COL[1] + ' 34%,var(--citui-white)) 50%)"></i>mindkettő kéri</span>';
+    document.getElementById("ovreqs").innerHTML = group.map(function (g, i) {
+      return '<button class="ovreq' + (g.id === chosen ? " is-sel" : "") + '" type="button" data-pick="' + g.id + '">' +
+        '<span class="ovord" style="background:' + COL[i%3] + '">' + (i+1) + '.</span>' +
+        '<span class="ovt"><b>' + g.name + '</b><span>' + huDay(g.from) + ' → ' + huDay(g.to) +
+        ' · ' + g.nights + ' éj · ' + g.guests + ' fő</span></span>' +
+        '<span>' + (g.id === chosen ? "✓ Ő kapja" : "Ezt választom") + '</span></button>';
+    }).join("");
+    var losers = group.filter(function (g) { return g.id !== chosen; });
+    document.getElementById("ovwarn").innerHTML = '<b>' + losers.length +
+      ' kérés automatikusan elutasításra kerül:</b> ' +
+      losers.map(function (g) { return g.name; }).join(", ") +
+      '. A vendégek udvarias e-mailt kapnak arról, hogy az időszak betelt.';
+  }
+  document.getElementById("ovreqs").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pick]"); if (!b) return;
+    chosen = b.getAttribute("data-pick"); renderOverlap();
+  });
+  document.getElementById("ovNo").addEventListener("click", function () {
+    document.getElementById("ovl").hidden = true;
+  });
+  document.getElementById("ovOk").addEventListener("click", function () {
+    document.getElementById("ovl").hidden = true;
+    var win = group.filter(function (g) { return g.id === chosen; })[0];
+    toast(win.name + " visszaigazolva, a fedésben lévő kérés(ek) elutasítva.");
+  });
+})();
+</script>
+</body>
+</html>

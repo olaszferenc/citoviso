@@ -274,6 +274,14 @@ export interface SiteData {
     readonly leadTimeDays: number;
     /** What the owner promises about answering; shown under the form. */
     readonly responseNote?: string;
+    /**
+     * Tourist tax the guest pays ON SITE, Ft/person/night — the OWNER's number.
+     * ⛔ 0/absent means we do NOT print an amount (contract §4, §B.17): a figure the
+     * owner never gave must never appear next to their name.
+     */
+    readonly touristTaxPerPersonNight?: number;
+    /** What the nightly price already covers ("takarítás, ágynemű") — owner's words. */
+    readonly priceIncludes?: string;
   };
 }
 

@@ -63,6 +63,15 @@ export interface ModuleDef {
    * a provisioned site with saved content (there is nothing to translate before).
    */
   readonly tenantOnly?: boolean;
+  /**
+   * ⛔ LEVÉVE A POLCRÓL — nem kínáljuk, amíg nincs mögötte működő út.
+   *
+   * A katalógus-sor MARAD (a meglévő jogosultság-sorok és számlák továbbra is fel
+   * tudják oldani a nevét és az árát — egy törölt id „undefined" lenne a bérlő
+   * számláján), de a modul nem kerül be a kínálatba, az ALL-IN halmazba és az
+   * előfizetés-matekba. Ez a KÍNÁLAT levétele, nem a múlt átírása.
+   */
+  readonly retired?: boolean;
 }
 
 // ⚠️ DEFAULT prices (HUF/month) — the SEED used until the owner sets real values
@@ -87,7 +96,14 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   // No `domType` on purpose: the anchor is enquiry's, so detectPresentModules must
   // not report both as present from the same tag. Presence comes from entitlement.
   { id: "booking", label: "Foglalás (upsell)", publicLabel: "Online foglalás", publicDesc: "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére.", group: "extra", domType: "booking-section", supersedes: ["enquiry"], priceMonthly: 990 },
-  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", publicDesc: "Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el.", group: "extra", domType: "newsletter", priceMonthly: 490 },
+  // ⛔⛔ LEVÉVE A POLCRÓL (tulajdonosi döntés, 2026-09-14). Mérve: az űrlap a
+  // `/api/hirlevel` címre POST-olt, ami a nyilvános kiszolgálón NEM LÉTEZIK, és
+  // feliratkozó-tábla sincs — a vendég beírta a címét, megnyomta a gombot, és
+  // elhagyta az oldalt, miközben a modul 490 Ft/hó volt. A sor azért marad benne,
+  // hogy a MEGLÉVŐ jogosultság- és számla-sorok fel tudják oldani a nevét; a
+  // `retired` kapcsoló veszi ki a kínálatból, az ALL-IN halmazból és a matekból.
+  // Visszakapcsolás: végpont + tábla + megerősítő levél + leiratkozás után.
+  { id: "newsletter", label: "Hírlevél-CTA (upsell)", publicLabel: "Hírlevél feliratkozás", publicDesc: "Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el.", group: "extra", domType: "newsletter", priceMonthly: 490, retired: true },
   // Custom e-mail address on the tenant's own/subdomain (e.g. info@<domain>). The mailbox
   // provisioning is a later slice (like the SMS transport); this is the sellable entitlement.
   { id: "email", label: "Egyedi e-mail cím (upsell)", publicLabel: "Saját e-mail cím (pl. info@…)", publicDesc: "Saját, a webcíméhez tartozó e-mail cím (pl. info@…) — professzionális megjelenés minden levélben.", group: "extra", priceMonthly: 390 },
@@ -142,7 +158,7 @@ export function isOneTimeModule(id: string): boolean {
 
 /** Catalog ids that join the SUBSCRIPTION math and the prospect configurator. */
 export function subscriptionModules(): readonly ModuleDef[] {
-  return MODULE_CATALOG.filter((m) => m.billing !== "once" && !m.tenantOnly);
+  return MODULE_CATALOG.filter((m) => m.billing !== "once" && !m.tenantOnly && !m.retired);
 }
 
 /**
