@@ -186,9 +186,10 @@ const MIME: Record<string, string> = {
  * Pixelnek a webshop MINDEN oldalán ott kell lennie, ezért a beillesztés itt, a
  * közös kimeneten történik — nem oldalanként, ahol egy új route könnyen kimaradna.
  *
- * ⛔ CSAK A SAJÁT OLDALUNKON. A jelölőt a kérés-kezelő teszi ki, MIUTÁN a
- * tenant-ág (serveTenantHost) már kilépett — a generált szállás-oldalakra ez nem
- * kerülhet: ott a vendég nem nálunk fizet, semmi nem indokolná a követését.
+ * ⛔ CSAK A SAJÁT OLDALUNKON — és a „saját" azt jelenti, hogy NEKÜNK szól, nem azt,
+ * hogy mi adjuk ki. A hatókört a `PAGE_AUDIENCE` mondja ki (ld. ott): a tenant
+ * VENDÉGÉNEK szóló lapokra nem kerülhet, mert ott a vendég nem nálunk fizet, semmi
+ * nem indokolná a követését.
  * ⛔ Azonosító nélkül üres string: sáv sincs, Pixel sincs (§B.17 — nem kérünk
  * hozzájárulást olyan követésre, ami meg sem történik).
  *
@@ -240,15 +241,62 @@ function consentAssetVersion(file: string): string {
 const CONSENT_JS_VERSION = consentAssetVersion("cit-consent.js");
 const CONSENT_CSS_VERSION = consentAssetVersion("cit-consent.css");
 
-/** Marks THIS response as our own page (not a tenant site) — see consentSnippet. */
-const OWN_PAGE = Symbol.for("cit.ownPage");
+/**
+ * KINEK SZÓL EZ A LAP — a süti-sáv és a Barion Pixel EGYETLEN hatókör-szabálya.
+ *
+ * ⛔ A HIBAOSZTÁLY: „hol húzódik a határ". A korábbi jelölő egy BOOLEAN volt, amit
+ * egy adott SORBAN tettünk ki — a hatókör tehát attól függött, hogy egy route a
+ * jelölő fölött vagy alatt áll. Ez MÉRTEN kétszer volt rossz:
+ *   · 2026-09-14 (ADR-0145): a `/t/<slug>` dev-ág a jelölő ALATT volt → a vendég-oldal
+ *     megkapta a sávot és a Pixelt. A javítás: az ág a jelölő FÖLÉ került.
+ *   · 2026-09-14 (Elek FK-007 Z5): a vendég LEMONDÓ lapjai a jelölő alatt élnek, ezért
+ *     ugyanúgy megkapták — és velük együtt (mérve) a `/site/<token>` és a `/m/<token>`,
+ *     vagyis UGYANAZ a generált szállás-oldal két további kiszolgálási úton.
+ * Egy pozíciótól függő szabály minden új route-nál újra eldőlhet rosszul, ezért a
+ * címzett mostantól KIMONDOTT tény a válaszon, a határ pedig EGY olvasható lista.
+ *
+ * A szabály (ADR-0145 logikája szerint, nem a tünet szerint): a sáv+Pixel a MI
+ * webshopunk lapjaira való — ahol a látogató a mi (leendő) ügyfelünk, és ahol a mi
+ * fizetési utunk futhat (landing, belépés, jogi lapok, tenant-admin, a tulaj
+ * egy-kattintásos döntés-lapjai). Kimarad MINDEN lap, amelynek CÍMZETTJE a tenant
+ * VENDÉGE — függetlenül attól, melyik úton szolgáljuk ki.
+ *
+ * ⭐ A sáv és a Pixel EGYÜTT mozog: mindkettő ugyanabból az egy `consentSnippet()`-ből
+ * kerül ki, ezért „vegyük ki a sávot, de hagyjuk a Pixelt" szerkezetileg lehetetlen
+ * (ADR-0145 ③ ezt mondta ki a tenant-adminra; itt ugyanez tartja a vendég-oldalt).
+ */
+const PAGE_AUDIENCE = Symbol.for("cit.pageAudience");
+type PageAudience = "own" | "guest";
+
+/**
+ * A VENDÉGNEK szóló lapok — a határ, egy helyen.
+ *
+ * ⚠️ A minták NEVESÍTVE vannak, és a route-ok UGYANEZEKET használják lentebb: egy
+ * szabály két példányban két igazság, és a lemondó-útvonal mintája már eddig is két
+ * helyen élt. Aki új vendég-lapot vesz fel, ide is beírja — és az őr
+ * (`scripts/consent-style-check.mts`) a RENDERELT lapon méri, hogy sikerült-e.
+ */
+const RE_MOCK_PREVIEW = /^\/m\/([a-f0-9]{8,64})$/;
+const RE_PREVIEW_SITE = /^\/site\/([A-Za-z0-9_-]{10,64})$/;
+const RE_GUEST_CANCEL = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/;
+const GUEST_PAGE_ROUTES: readonly RegExp[] = [
+  // A generált szállás-oldal MAGA, csak másik ajtón: a `/site/<preview_token>` ugyanazt
+  // a `sites/<tenant>/index.html`-t adja ki, amit a tenant-host (mérve: bájtazonos
+  // forrás), a `/m/<token>` pedig annak a bemutató-változatát — amit ráadásul HIDEG
+  // megkeresésben kap meg valaki, aki semmit nem kért tőlünk.
+  RE_PREVIEW_SITE,
+  RE_MOCK_PREVIEW,
+  // A vendég lemondó lapjai (GET megerősítés + POST eredmény). Itt a vendég a saját
+  // foglalását mondja le a szállásadónál — nálunk semmit nem fizet.
+  RE_GUEST_CANCEL,
+];
 
 function send(res: http.ServerResponse, code: number, body: string | Buffer, type = "text/html; charset=utf-8"): void {
   let out = body;
   if (
     typeof out === "string" &&
     type.startsWith("text/html") &&
-    (res as unknown as Record<symbol, boolean>)[OWN_PAGE] &&
+    (res as unknown as Record<symbol, PageAudience | undefined>)[PAGE_AUDIENCE] === "own" &&
     out.includes("</body>")
   ) {
     const snippet = consentSnippet();
@@ -1615,12 +1663,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
   // Dev-only slug path (never on the platform — see DEV_SLUG_PATH).
   //
-  // ⛔ EZ AZ ÁG A SAJÁT-LAP JELÖLŐ ELŐTT VAN (2026-09-14). Korábban utána állt,
+  // ⛔ EZ AZ ÁG A CÍMZETT-DEKLARÁCIÓ ELŐTT VAN (2026-09-14). Korábban utána állt,
   // ezért a `/t/<slug>` dev-úton kiszolgált VENDÉG-OLDAL megkapta a süti-sávot és
   // a Barion Pixelt — pont amit a befagyasztott terv kizár („a vendég nem nálunk
   // fizet"). A host-úton (`<slug>.citoviso.com`) helyes volt, és a `consent-check`
   // ④ szabálya CSAK azt az utat mérte — a dev-út a vakfoltjában volt, miközben
   // Elek a vendég-oldalt ezen az úton látja (FK-007 H2).
+  // ⚠️ A pozíció ma már nem az EGYETLEN védelem: a címzett alapértelmezése „nem a
+  // miénk", a vendég-lapoké pedig kimondott (`GUEST_PAGE_ROUTES`).
   if (DEV_SLUG_PATH && pathname.startsWith("/t/")) {
     const rest = pathname.slice(3);
     const slash = rest.indexOf("/");
@@ -1630,9 +1680,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!devSite) return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
     return serveTenantHost(req, res, devSite, inner);
   }
-  // Innentől a SAJÁT oldalunkat szolgáljuk ki — csak ide kerülhet a süti-sáv és a
-  // Barion Pixel (MINDKÉT tenant-ág, a host- és a dev-slug-út is, fentebb kilépett).
-  (res as unknown as Record<symbol, boolean>)[OWN_PAGE] = true;
+  // ── A LAP CÍMZETTJE (ld. PAGE_AUDIENCE) ─────────────────────────────────────
+  // Idáig a két tenant-ág (host- és dev-slug-út) már kilépett, ott a címzett soha
+  // nem lesz „own" — az alapértelmezés a NEM-követés, tehát egy fentebb kilépő új ág
+  // sem tud véletlenül Pixelt kapni. Innen a saját webshopunk lapjai jönnek, KIVÉVE
+  // azt a néhány útvonalat, amely ugyaninnen szolgálja ki a tenant VENDÉGÉT.
+  (res as unknown as Record<symbol, PageAudience>)[PAGE_AUDIENCE] = GUEST_PAGE_ROUTES.some(
+    (re) => re.test(pathname),
+  )
+    ? "guest"
+    : "own";
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   if (isUnclaimedTenantHost(req)) {
     return send(
@@ -2304,8 +2361,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
   // POST /foglalas/<token>/lemondom — the GUEST's cancel (approved plan, 2026-09-06).
   // No login: the single-use token from the confirmation mail IS the authorization.
-  const guestCancel =
-    req.method === "POST" && /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/.exec(pathname);
+  const guestCancel = req.method === "POST" && RE_GUEST_CANCEL.exec(pathname);
   if (guestCancel) {
     const form = await readFormBody(req);
     const r = await cancelRequest({
@@ -2584,10 +2640,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   }
 
   if (req.method === "GET") {
-    const m = pathname.match(/^\/m\/([a-f0-9]{8,64})$/);
+    const m = RE_MOCK_PREVIEW.exec(pathname);
     if (m) return servePreview(res, m[1]);
 
-    const site = pathname.match(/^\/site\/([A-Za-z0-9_-]{10,64})$/);
+    const site = RE_PREVIEW_SITE.exec(pathname);
     if (site) return servePreviewSite(res, site[1]);
 
     // Tenant-uploaded assets: /uploads/<tenantUuid>/<file>
@@ -2627,7 +2683,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // GET /foglalas/<token>/lemondom — the guest's cancel link from the confirmation
     // mail (approved plan C, 2026-09-06). GET only CONFIRMS: prefetching clients must
     // never cancel a stay; the actual cancel is the POST below.
-    const cancelMatch = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/.exec(pathname);
+    const cancelMatch = RE_GUEST_CANCEL.exec(pathname);
     if (cancelMatch) {
       const v = await peekCancelView(cancelMatch[1]!);
       return send(

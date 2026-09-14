@@ -28,21 +28,42 @@
 //   · KONTRASZT a gomb-feliratokon: a „link-szabály megeszi a gomb színét" hiba
 //     (cián a ciánon, 1.16) gépi „láthatóan" átment — a kontrasztot MÉRNI kell.
 //
-// ⛔ A HATÓKÖRT IS MÉRI, MINDKÉT ÚTON. A befagyasztott terv kizárja a sávot a
+// ⛔ A HATÓKÖRT IS MÉRI, MINDEN ÚTON. A befagyasztott terv kizárja a sávot a
 // generált tenant-oldalról; ez a host-úton (`<slug>.citoviso.com`) igaz volt, a
 // `/t/<slug>` DEV-úton viszont NEM — és Elek a vendég-oldalt ezen az úton látja.
 // A `consent-check` ④ szabálya csak a host-utat mérte, ezért a rés a vakfoltjában ült.
 //
-// --self-test: a mérőeszközt bizonyítja, nem a kódot. Két szándékos rontás —
+// ⛔⛔ A HATÓKÖR NEM KÉT ÚTVONAL KÉRDÉSE, HANEM A CÍMZETTÉ (Elek FK-007 Z5, 2026-09-14).
+// A `/t/<slug>` javítása a TÜNETET vitte el: a jelölő egy SORBAN dőlt el, tehát minden
+// alatta élő vendég-lap ugyanúgy megkapta a sávot. MÉRVE, ugyanabban a futásban:
+//   · `/foglalas/<token>/lemondom` GET és POST  → SÁV + PIXEL (a bejelentett lelet)
+//   · `/site/<preview_token>`                   → SÁV + PIXEL (UGYANAZ a
+//      `sites/<tenant>/index.html`, amit a tenant-host ad ki — harmadik ajtó)
+//   · `/m/<token>` mock-előnézet                → SÁV + PIXEL (a szállás-oldal
+//      bemutató-változata, HIDEG megkeresés címzettjének)
+// Ezért ez a szakasz mostantól a CÍMZETT szerint mér, és MINDKÉT irányban: a
+// vendég-lapokon NINCS sáv/Pixel, a saját lapjainkon VAN (különben egy néma
+// mérőeszköz is „zöld" volna), és a kettő EGYÜTT mozog.
+//
+// ⚠️ AMIT EZ AZ ŐR NEM TUD MEGMÉRNI: a `/m/<token>` mock-előnézethez `mock_request`
+// sor + lemezen lévő artefaktum kell; a közös dev-parkban ez gyakran 0 (mérve:
+// 0 sor / 3 artefaktum, mind hiányzó fájllal). Ilyenkor a sor KIMONDOTTAN kimarad,
+// nem „zöld, mert nem volt dolga". A javítás kézzel, önmagát takarító fixture-rel
+// MÉRVE lett (2026-09-14: előtte SÁV+PIXEL 873 bájt, utána tiszta 527 bájt).
+//
+// --self-test: a mérőeszközt bizonyítja, nem a kódot. Három szándékos rontás —
 // (1) a `cit-consent.css` kérését ELDOBJUK → minden stílus-állításnak PIROSNAK kell
 // lennie, (2) a tenant vendég-oldalba BEINJEKTÁLUNK egy sávot → a hatókör-állításnak
-// pirosnak kell lennie. Egy őr, amit sosem láttunk pirosnak, nem bizonyíték.
+// pirosnak kell lennie, (3) a nyers-HTTP hatókör-mérésbe BEHAMISÍTJUK a sáv+Pixel
+// sorát → a vendég-lapok állításainak pirosnak kell lenniük. Egy őr, amit sosem
+// láttunk pirosnak, nem bizonyíték.
 
 process.env.PUBLIC_PORT = "0";
 // A screenshot/őr-futás SOHA ne indítson AI nyelvi-csomag töltést vagy DB-írást.
 process.env.CIT_SHOT = "1";
 
 import { once } from "node:events";
+import { request as httpReq } from "node:http";
 
 import { chromium, type Browser, type Page } from "playwright-core";
 
@@ -97,6 +118,20 @@ const liveSite = await db
   .where("status", "=", "live")
   .where("slug", "is not", null)
   .executeTakeFirst();
+
+// A `/site/<preview_token>` UGYANAZT a pillanatképet adja ki, amit a tenant-host —
+// csak token-nel, bejelentkezés nélkül. Ettől még a VENDÉG lapja.
+const previewSite = await db
+  .selectFrom("site")
+  .select(["preview_token"])
+  .where("preview_token", "is not", null)
+  .executeTakeFirst();
+
+// A vendég lemondó lapja ISMERETLEN tokennel is teljes értékű lapot renderel
+// („A link már nem él" zsákutca, `guestPageShell`) — ezért mérhető adat és
+// mellékhatás nélkül. A POST ugyanezzel a tokennel nem mond le semmit.
+const DEAD_CANCEL_TOKEN = "cit-consent-check-nincs-ilyen-token";
+const GUEST_CANCEL_PATH = `/foglalas/${DEAD_CANCEL_TOKEN}/lemondom`;
 
 interface Viewport {
   label: string;
@@ -357,6 +392,20 @@ if (liveSite?.slug) {
     expectBar: false,
   });
 }
+if (previewSite?.preview_token) {
+  surfaces.push({
+    name: `tenant vendég-oldal (ELŐNÉZET /site/<token>)`,
+    host: PLATFORM_DOMAIN,
+    path: `/site/${previewSite.preview_token}`,
+    expectBar: false,
+  });
+}
+surfaces.push({
+  name: "vendég lemondó lap (/foglalas/<token>/lemondom)",
+  host: PLATFORM_DOMAIN,
+  path: GUEST_CANCEL_PATH,
+  expectBar: false,
+});
 
 // ⚠️ A Host fejlécet NEM lehet kézzel beállítani: a Chromium tiltott fejlécként
 // ERR_INVALID_ARGUMENT-tal elhasal rajta (mérve), a `fetch` pedig némán eldobja.
@@ -508,6 +557,142 @@ for (const s of surfaces.filter((x) => !x.expectBar)) {
 }
 
 await browser.close();
+
+// ── ⭐⭐ CÍMZETT-HATÓKÖR (nyers HTTP, MINDKÉT IRÁNYBAN) ─────────────────────────
+// Miért nem elég a fenti böngésző-ág: (1) a `page.goto` csak GET, a lemondó lap
+// EREDMÉNY-oldala viszont POST — az Elek-lelet éppen ott is élt; (2) egy tiltás
+// annyit ér, amennyit a mérőeszköz LÁTNI tud, ezért ugyanitt POZITÍV kontrollt is
+// mérünk: a saját lapjainkon MEG KELL jelennie a sávnak és a Pixelnek. Ha a probe
+// néma volna (rossz port, rossz Host, üres válasz), a pozitív sorok buknának —
+// „nem találtam sávot" nem lehet siker.
+console.log("\n── ⭐⭐ Kinek szól a lap: a sáv+Pixel hatóköre ──────────────────────");
+
+const raw = (path: string, method: "GET" | "POST", host = PLATFORM_DOMAIN): Promise<string> =>
+  new Promise((resolve) => {
+    const req = httpReq(
+      {
+        host: "127.0.0.1",
+        port: PORT,
+        path,
+        method,
+        headers: { Host: host, "content-type": "application/x-www-form-urlencoded", "content-length": "0" },
+      },
+      (res) => {
+        let b = "";
+        res.setEncoding("utf8");
+        res.on("data", (d) => (b += d));
+        res.on("end", () => resolve(b));
+      },
+    );
+    req.on("error", () => resolve(""));
+    req.end();
+  });
+
+interface ScopeCase {
+  readonly label: string;
+  readonly path: string;
+  readonly method: "GET" | "POST";
+  readonly host?: string;
+  /** "own" = a mi webshopunk lapja (sáv+Pixel jár) · "guest" = a tenant vendégéé (tilos) */
+  readonly audience: "own" | "guest";
+}
+
+const scopeCases: ScopeCase[] = [
+  // A VENDÉGÉ — egyiken sem indul nálunk fizetés.
+  { label: "vendég lemondó — megerősítés (GET)", path: GUEST_CANCEL_PATH, method: "GET", audience: "guest" },
+  { label: "vendég lemondó — eredmény (POST)", path: GUEST_CANCEL_PATH, method: "POST", audience: "guest" },
+  // A MIÉNK — a látogató a (leendő) ügyfelünk, innen indulhat a mi fizetési utunk.
+  { label: "saját landing /", path: "/", method: "GET", audience: "own" },
+  { label: "saját jogi lap /adatvedelem", path: "/adatvedelem", method: "GET", audience: "own" },
+  { label: "saját belépés /login", path: "/login", method: "GET", audience: "own" },
+  // ⭐ A tulaj (a mi ÜGYFELÜNK) egy-kattintásos döntés-lapja a levélből: a HATÁR
+  // MÁSIK OLDALA. Ha ez is „vendég" lenne, túlkorrigáltunk volna.
+  {
+    label: "tulaj döntés-lapja /foglalas/<token>/elfogadom",
+    path: `/foglalas/${DEAD_CANCEL_TOKEN}/elfogadom`,
+    method: "GET",
+    audience: "own",
+  },
+];
+if (liveSite?.slug) {
+  scopeCases.push({
+    label: `tenant vendég-oldal HOST (${liveSite.slug}.${PLATFORM_DOMAIN})`,
+    path: "/",
+    method: "GET",
+    host: `${liveSite.slug}.${PLATFORM_DOMAIN}`,
+    audience: "guest",
+  });
+  scopeCases.push({
+    label: `tenant vendég-oldal DEV (/t/${liveSite.slug})`,
+    path: `/t/${liveSite.slug}`,
+    method: "GET",
+    audience: "guest",
+  });
+}
+if (previewSite?.preview_token) {
+  scopeCases.push({
+    label: "tenant vendég-oldal ELŐNÉZET (/site/<token>)",
+    path: `/site/${previewSite.preview_token}`,
+    method: "GET",
+    audience: "guest",
+  });
+} else {
+  console.log("  ⚠️  KIMARAD: nincs `preview_token` a parkban — a /site/<token> ág nem mérhető.");
+}
+
+// ⚠️ A `/m/<token>` mock-előnézet mérhetőségét KIMONDJUK. Fixture-t NEM gyártunk hozzá:
+// a dev-park KÖZÖS, és egy őr, ami minden commitnál sorokat ír bele, más szálak
+// méréseit billenti meg.
+const mockReady = await db
+  .selectFrom("mock_request")
+  .innerJoin("mock_artifact", "mock_artifact.id", "mock_request.artifact_id")
+  .select(["mock_request.token as token"])
+  .where("mock_artifact.path", "is not", null)
+  .executeTakeFirst();
+if (mockReady?.token) {
+  scopeCases.push({
+    label: "mock-előnézet (/m/<token>) — hideg megkeresés címzettjének",
+    path: `/m/${mockReady.token}`,
+    method: "GET",
+    audience: "guest",
+  });
+} else {
+  console.log(
+    "  ⚠️  KIMARAD: nincs artefaktumos `mock_request` a parkban — a /m/<token> ág nem mérhető\n" +
+      "      (kézzel, önmagát takarító fixture-rel MÉRVE 2026-09-14: javítás előtt SÁV+PIXEL, utána tiszta).",
+  );
+}
+
+for (const c of scopeCases) {
+  let body = await raw(c.path, c.method, c.host);
+  if (SELF_TEST && c.audience === "guest") {
+    // RONTÁS ③: a vendég-lap válaszába BEHAMISÍTJUK a sáv+Pixel sorát — ha az
+    // állítás ettől nem megy pirosra, a mérés nem néz oda, ahová mondja.
+    body += `<script src="/assets/runtime/cit-consent.js"></script><img src="https://pixel.barion.com/a.gif">`;
+  }
+  const hasLoader = /cit-consent\.js/.test(body);
+  const hasCss = /cit-consent\.css/.test(body);
+  const hasPixel = /pixel\.barion\.com/.test(body);
+  const tag = `${c.method} ${c.label}`;
+  if (!check(body.length > 0, `${tag}: a lap egyáltalán válaszol`, "üres válasz — a mérés nem ér semmit")) continue;
+  if (c.audience === "guest") {
+    check(!hasLoader, `⭐ ${tag}: a VENDÉG lapja nem kap hozzájárulás-kezelőt`);
+    check(!hasCss, `⭐ ${tag}: a VENDÉG lapja a sáv stíluslapját sem kapja meg`);
+    check(!hasPixel, `⭐⭐ ${tag}: a VENDÉG lapja NEM kap Barion Pixelt`);
+  } else {
+    check(hasLoader, `${tag}: a SAJÁT lapunk megkapja a sávot (pozitív kontroll)`);
+    check(hasPixel, `${tag}: a SAJÁT lapunk megkapja a Pixelt (pozitív kontroll)`);
+  }
+  // ⭐ A KETTŐ EGYÜTT MOZOG. „Vegyük ki a sávot, de hagyjuk a Pixelt" jogszerűtlen
+  // volna (ADR-0145 ③) — szerkezetileg ugyanabból az egy snippetből jönnek, és ez
+  // az állítás őrzi, hogy az is maradjon.
+  check(
+    hasLoader === hasPixel,
+    `${tag}: a sáv és a Pixel EGYÜTT mozog`,
+    `sáv=${hasLoader} · pixel=${hasPixel}`,
+  );
+}
+
 server.close();
 await db.destroy();
 
@@ -519,6 +704,9 @@ if (SELF_TEST) {
     /NEM natív böngésző-gomb/,
     /lekerekített/,
     /NINCS süti-sáv/,
+    // RONTÁS ③ — a címzett-hatókör mindkét vendég-lapján, GET-en ÉS POST-on.
+    /GET vendég lemondó — megerősítés \(GET\): a VENDÉG lapja NEM kap Barion Pixelt/,
+    /POST vendég lemondó — eredmény \(POST\): a VENDÉG lapja NEM kap Barion Pixelt/,
   ];
   const missed = wantedReds.filter((re) => !reds.some((r) => re.test(r)));
   if (missed.length) {

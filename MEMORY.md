@@ -1,7 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🗣️ a kód-komment ellentmondott a kódnak: natív `confirm()` a lemondáson — ADR-0150)
+Utolsó frissítés: 2026-09-14 (🍪 a süti-sáv hatóköre a lap CÍMZETTJE — ADR-0151)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🍪 ADR-0151 — A SÜTI-SÁV HATÓKÖRE A LAP CÍMZETTJE, NEM AZ ÚTVONALA.**
+Session-jegyzet: `_planning/memory/2026-09-14_consent_scope_is_audience.md`. **Élesítés NINCS.**
+Elek FK-007 Z5: a vendég **lemondó** lapjain ott maradt a Barion-süti-sáv — olyan lapon, ahol
+nincs kártyás fizetés.
+
+- ⛔⛔ **A tegnapi ADR-0145 a TÜNETET vitte el.** A jelölő egy **boolean volt, egy SORBAN**: a
+  hatókör attól függött, hogy egy route a jelölő fölött vagy alatt áll — és ez **egy nap alatt
+  kétszer** dőlt el rosszul. Ezért nem a két bejelentett sort javítottam, hanem **megmértem a
+  jelölő utáni ÖSSZES HTML-t adó útvonalat**.
+- **Két TOVÁBBI ajtó volt nyitva** a bejelentett kettőn kívül: a **`/site/<preview_token>`**
+  (⭐ ugyanaz a `sites/<tenant>/index.html`, amit a tenant-host ad ki — a nyers fájlban **0**
+  hivatkozás, tehát a kiszolgálás teszi rá: a vendég-oldal **harmadik** ajtaja, miközben a másik
+  kettőt tegnap becsuktuk) és a **`/m/<token>` mock-előnézet** (hideg megkeresés címzettjének).
+  Mérve előtte/utána: lemondó GET+POST 924 → 578 B · `/m/` 873 → 527 B · `/site/` SÁV+PIXEL → tiszta.
+- **A szabály** (az ADR-0145 ③ saját logikájából): a sáv+Pixel a MI webshopunk lapjaira való —
+  ahol a látogató a mi (leendő) ügyfelünk, és ahol a mi fizetési utunk futhat. Kimarad minden lap,
+  amelynek **CÍMZETTJE a tenant VENDÉGE**, akármelyik úton szolgáljuk ki.
+- **A határ MÁSIK oldala szándékosan változatlan:** landing/jogi/belépés/admin + a tulaj levélből
+  nyíló döntés-lapjai (`/foglalas/<token>/elfogadom`, `/velemeny/<token>/…`) megtartják a sávot —
+  az őr ezeket **pozitív kontrollként** tűzi ki, hogy a javítás ne csapjon át túlkorrigálásba.
+- **Megvalósítás:** `PAGE_AUDIENCE: "own" | "guest"` a boolean helyén, a **nem deklarált
+  alapértelmezés a nem-követés**; a vendég-útvonalak EGY listában (`GUEST_PAGE_ROUTES`),
+  nevesített mintákkal, amelyeket a route-ok is használnak — a lemondó-minta eddig **két
+  példányban** élt. ⭐ A sáv és a Pixel **együtt mozog** (egy `consentSnippet()`), és az őr ezt
+  külön állításként tűzi ki.
+- **Őr, mindkét irányban:** a `consent-style-check.mts` a RENDERELT lapon mér, a POST-ágat nyers
+  HTTP-vel (a `page.goto` csak GET — a lelet ott is élt). **Piros önteszt kétszer:** beépített
+  `--self-test` 115 → **127** piros; a VALÓDI szabályt visszarontva **17 bukás, exit 1**.
+- ⚠️ **Kimondott mérési rés:** a `/m/<token>`-hez `mock_request` sor + lemez-artefaktum kell, a
+  közös parkban ez most 0 — az őr **hangosan kihagyja**, és szándékosan NEM gyárt fixture-t
+  (a park közös). Kézzel, önmagát takarító fixture-rel mérve; a park utána igazoltan érintetlen.
+
+## Előző szál (2026-09-14) — natív confirm() a lemondáson (ADR-0150)
 
 **🗣️ ADR-0150 — A KOMMENT AZT ÁLLÍTOTTA, HOGY NINCS NATÍV `confirm()`. VOLT.**
 Session-jegyzet: `_planning/memory/2026-09-14_cancel_native_confirm.md`. **Élesítés NINCS.**
