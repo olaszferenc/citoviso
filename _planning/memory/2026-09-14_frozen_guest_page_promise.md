@@ -130,8 +130,14 @@ tiltások értelmesek.
 - `scripts/i18n-sources.mjs` — `suspendedPage.ts` felvéve · `src/i18n/catalog.json` (+4)
 - `hooks/pre-commit` — az őr triggerei (⚠️ rebase-konfliktus: egy párhuzamos szál
   ugyanide tette a `^scripts/frozen-claim-check` triggert — IKER-javítás, mindkettő bent)
-- `_planning/DECISIONS.md` — ADR-0157 (a 0150–0152 közben elkelt; a számot `git fetch`
-  után, közvetlenül írás előtt foglaltam)
+- `_planning/DECISIONS.md` — **ADR-0157**. ⚠️ A szám KÉTSZER csúszott, és a második a
+  LAND pillanatában: íráskor a 0150–0152 volt elkelve, ezért 0153-at foglaltam `git fetch`
+  után, közvetlenül írás előtt — mire a landolási rebase lefutott, a **0153–0156 is elkelt**
+  (a 0153-at egy másik szál vitte el). Tehát a „fetch után, közvetlenül írás előtt" NEM
+  elég: a számot a land UTÁN is igazolni kell. A közös doksit ilyenkor az `origin/main`-ről
+  ÉPÍTETTEM ÚJRA + a saját blokkom, nem hunk-szintű konfliktus-feloldással, és a saját
+  hivatkozásaimat csak a SAJÁT fájljaimban írtam át (előbb megmérve, hogy egyikben sincs
+  idegen ADR-0153).
 - `assets/design-refs/console/freeze-state/{README.md,freeze-state-A.html}` — a
   kontraktus 5. pontja átírva, a fejléc kimondja, MI változott és miért
 - `elek/scenarios/FK-006a-dunning-frozen.md` — `cél:` + 2 módosított + 3 új `várd:`
