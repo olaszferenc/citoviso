@@ -1,7 +1,58 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🎛️ Modulok fül — egy irány-hazugság javítva, 13 lelet a §2b terv-kapunál)
+Utolsó frissítés: 2026-09-14 (🛡️ 21 árva őr bekötése — a kapu-rendszert semmi nem mérte, ADR-0152)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🛡️ ADR-0152 — EGY ŐR, AMIT SEMMI NEM HÍV MEG, NEM ŐR.**
+Session-jegyzet: `_planning/memory/2026-09-14_orphan_guards_wiring.md`. **Élesítés NINCS**
+(a kapu-réteg nem éles komponens). **Termék-kód NEM változott** (mérve: `git diff -- src/
+assets/ public/ migrations/` üres).
+
+- **A bejelentés kettőről szólt, a leltár 21-et talált.** A 95 `scripts/*-check.mts`-ből **21
+  volt árva**: létezik, zöld, a fejlécében megnevezi az ÉLES hibát, amit lezár — és sem a
+  `hooks/pre-commit`, sem a `land.sh` nem hívta meg. A forrásban **7 komment** hivatkozik
+  `Guard: scripts/…-check.mts`-re, ami soha nem futott le.
+- ⛔ **Miért nem vette észre EGYETLEN kapu sem: minden kapu a TERMÉKET méri, egyik sem a
+  KAPU-RENDSZERT.** A hiba nem „elfelejtettünk bekötni valamit", hanem hogy a bekötetlenség
+  nem volt MÉRHETŐ állapot.
+- **Mind a 21 lefuttatva:** 10 zöld és önhordó → **bekötve** (köztük a bejelentett
+  `renewal-date-coherence-check` és `room-card-overflow-check`) · 7 **park-függő** (ebből
+  **4 MA IS PIROS**, egyik sem a kód miatt: ENOENT a közös `sites/` mockjára, hiányzó lead,
+  lokátor-timeout) · 1 kézi (valódi ismétlődő kártyaterhelés, 3DS) · 1 telepítés-mérő ·
+  **2 ELROHADT**.
+- ⛔⛔ **A park-függők közül kettő ZÖLD, de üres parkon SZÁNDÉKOSAN pirosra megy**
+  (`ad-banner-render-check` anti-vakuum · `booking-price-coherence-check`: „nincs vizsgálható
+  oldal") — bekötve pont a purge után állítanák meg mindenki landolását, ahogy 09-13-án már
+  megtörtént. Kimondva, nem elnyelve.
+- ⭐ **A mérés a bejelentésnél szélesebb osztályt talált:** ① az ADR-0147 ③ szabálya (az őr
+  saját fájlja triggerelje magát) **pontosan EGY helyen érvényesült** — az 50 diff-scope-olt
+  blokkból **48 nem tartalmazta a saját fájlját**; mind javítva. ② **5 bekötött őr NÉMÁN
+  kimaradt a LANDOLÁSBÓL**, mert nyersen a `git diff --cached`-et olvasta a `changed_files`
+  helyett, az pedig `LAND_RANGE` mellett (üres index) mindig üres — mind az 5 külön mérve
+  zöld, ezért az átkapcsolás nem visz be új pirosat.
+- ⛔⛔ **A legfontosabb: egy árva őr egy ÉLŐ hibát takart.** A `lead-page-surface-check` ma
+  piros az `origin/main`-en, és NEM fixture-rohadás: `aurora`/mobil a lebegő pirula
+  (y=769, 195×83) a **„Szabad időpontok megtekintése" CTA 23 %-át takarja** (vh=844) — **pont
+  az a hiba, amiért az őr készült (Elek FK-004b ②).** Van róla mérésünk, és nincs róla
+  tudomásunk. Az árva őr nem elmaradt munka: kiszállított hiba.
+- **Szállítva:** `scripts/guard-wiring-check.mts` — ① bekötve-vagy-indokolt-kivétel ·
+  ② ön-trigger · ③ `changed_files`-hatókör · ④ élő kivétel-lista · ⑤ **a kivétel MÉRT**
+  (`kind`: kézi·telepítés·park·elrohadt + dátum + mit adott a futás). „Lassú" nem lehet indok
+  — arra a diff-scope a válasz. **MINDIG fut, diff-scope nélkül** (egy új árva úgy keletkezik,
+  hogy valaki `*-check.mts`-t ír és a hookot meg sem nyitja), és a 2 ELROHADT sort minden
+  futásban kiírja, hogy a „minden zöld" ne olvasódjon rendben lévő állapotnak.
+- **Bizonyítva, nem állítva:** ⓐ bekötetlen őr staged → valódi `git commit` **exit 1**, HEAD
+  nem mozdult · ⓑ a `render.ts` kitöltője visszarontva → **9/114 mérés bukik** · ⓒ a
+  `nextChargeDate` visszarontva „ma+12 hó"-ra → az őr reprodukálja az EREDETI leletet
+  (`képernyő 2027-09-14 · current_period_end 2027-09-11`), **miközben az „első vásárlás" ág
+  zöld marad** — megkülönböztet, nem vakon tör · + piros önteszt + álpozitív-kontroll.
+- **NYITOTT:** ① a `lead-page-surface-check` TERMÉK-hibája (aurora/mobil pirula-ütközés) ·
+  ② a `module-config-check` elrohadt fixture-je (`source:"booking:xyz"` vs UUID, + a
+  foglalás-slot mai `cit-enquiry` markupja) — mindkettő javítás után BEKÖTENDŐ, a kivétel-sor
+  akkor törlendő · ③ a 7 park-függő őrhöz önhordó fixture kell · ④ a `*-lint.mts` /
+  `*-selftest.mts` család leltározatlan, a meta-őr ma csak a `*-check.mts` mintára szól.
+
+## Előző szál (2026-09-14) — 🎛️ Modulok fül — egy irány-hazugság javítva, 13 lelet a §2b terv-kapunál
 
 **🎛️ MODULOK FÜL (Elek FK-002, B5) — EGY IRÁNY-HAZUGSÁG JAVÍTVA, 13 LELET A §2b KAPUNÁL.**
 Session-jegyzet: `_planning/memory/2026-09-14_modules_tab_plan_gate.md`. **Élesítés NINCS.**
