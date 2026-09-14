@@ -91,10 +91,34 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
   északi part" sweep-címkéből "az északi parton" tagline lett egy DÉLI parti szállásról.)
 - Nincs emoji, nincs klisé.`;
 
+/**
+ * The prompt's region lines — ONE source, because the brief call and the brief+copy call
+ * both open with them and a rule that lives twice drifts.
+ *
+ * ⛔ WHEN THERE IS NO AREA NAME, THE PHRASE IS DROPPED, NOT PARAPHRASED (owner's rule,
+ * 2026-09-14). The tempting alternatives are both lies: echoing the scrape key writes
+ * "…_test szívében", and substituting the console's state word writes "…nincs besorolás
+ * szívében". A fact we do not have is omitted, and the model is TOLD it is missing —
+ * silence alone would let it invent a region from the photos (§B.17).
+ */
+export function regionLines(region?: string, regionContext?: string): string {
+  if (!region) {
+    return (
+      "Régió: NINCS ADAT — ehhez a szálláshoz nem tartozik megnevezett terület.\n" +
+      "Ezért régiót, tájegységet, partoldalt vagy környéket SEMMILYEN formában NE említs:\n" +
+      "se a taglineben, se az introban, se a kiemelésekben. A szöveg a szállás SAJÁT\n" +
+      "adottságairól szóljon. Ne találd ki a helyet a képekből.\n"
+    );
+  }
+  return `Régió: ${region}\nKontextus: ${regionContext ?? ""}\n`;
+}
+
 export async function generateBrief(input: {
   name: string;
-  region: string;
-  regionContext: string;
+  /** The area's NAME, or undefined when no `region` record backs it (`resolveRegion().known
+   *  === false`). Undefined means the prompt states there is no region — see regionLines(). */
+  region?: string;
+  regionContext?: string;
   imageUrls?: string[];
   /** Free-text curator guidance (tone/emphasis/audience). VOICE steering only — the §B.17
    *  fact contract still governs: guidance can never add a fact the sources don't carry. */
@@ -115,7 +139,7 @@ export async function generateBrief(input: {
   content.push({
     type: "text",
     text:
-      `Szállás: ${input.name}\nRégió: ${input.region}\nKontextus: ${input.regionContext}\n\n` +
+      `Szállás: ${input.name}\n${regionLines(input.region, input.regionContext)}\n` +
       (images.length
         ? "A képek erről a szállásról készültek. Belőlük vezesd le a palettát, a hangulatot és az illő elrendezést, és írd meg a szöveget a láthatókra építve."
         : "Nincs kép — a régióra jellemző, biztonságos palettát és szöveget adj.") +
@@ -241,8 +265,10 @@ export function explainAiFailure(): string | null {
  */
 export async function generateBriefAndCopy(input: {
   name: string;
-  region: string;
-  regionContext: string;
+  /** See generateBrief: undefined = no area NAME exists, so the prompt says so instead of
+   *  echoing the scrape key (`bs`, `_test`) at the copywriter as a place. */
+  region?: string;
+  regionContext?: string;
   address?: string | null;
   /** REAL numbers the editorial may use verbatim (e.g. the A4-gated Google rating). */
   realStats?: readonly { value: string; label: string }[];
@@ -290,7 +316,7 @@ export async function generateBriefAndCopy(input: {
     content.push({
       type: "text",
       text:
-        `Szállás: ${input.name}\nRégió: ${input.region}\nKontextus: ${input.regionContext}\n` +
+        `Szállás: ${input.name}\n${regionLines(input.region, input.regionContext)}` +
         (input.address ? `Cím: ${input.address}\n` : "") +
         (input.realStats?.length
           ? `Valós számok (CSAK ezeket használhatod számként): ${input.realStats.map((s) => `${s.value} ${s.label}`).join(" · ")}\n`

@@ -1,7 +1,39 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (💱 egy összeg, egy írásmód — a pénz megjelenítése egy szabály, ADR-0162)
+Utolsó frissítés: 2026-09-14 (🗺️ ADR-0163: ha nincs megnevezett terület, a régió-fordulat ELMARAD)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🗺️ ADR-0163 — HA NINCS MEGNEVEZETT TERÜLET, A RÉGIÓ-FORDULAT ELMARAD.**
+Session-jegyzet: `_planning/memory/2026-09-14_region_phrase_drop.md`. **Élesítés NINCS** (§0.3).
+Tulaj-döntés az ADR-0143 ③ nyitott tételére: „hagyja el a régió-fordulatot".
+
+- **A lyuk:** a `resolveRegion()` `?? id` fallbackja ismeretlen azonosítónál **a scrape-KULCSOT
+  adta megjelenítendő névként** — próbával `bs`→„bs", `_test`→„_test", `Balaton`→„Balaton"
+  (ez utóbbi a legmegtévesztőbb: hibátlan helynévnek látszik).
+- **Hova ment az ÉLŐ úton** (a konzol a `generateEngineMock`-ot hívja): ① a **copywriter
+  promptjába** a szállás régiójaként · ② a **tény-kapu forrás-listájára** — és az **LICENC,
+  nem leírás**: amit felsorol, azt a lap ÁLLÍTHATJA, tehát „_test szívében" a kapu
+  **áldásával** ment volna ki · ③ a tárolt `inputs.region`-be, ahonnan a `rerender-mock.mts`
+  ÚJRA renderel (az ADR-0143 ① pont ezt a hurkot zárta).
+- **A szabály:** `known:false` → a fordulat **elmarad, nem helyettesítődik**. A kulcs
+  visszhangja és a konzol állapot-szava („…*nincs besorolás* szívében") EGYFORMÁN hamis
+  mondat — egy tényt, amink nincs, elhagyunk. **De a hiányt KIMONDJUK** a modellnek (különben
+  a fotókból találná ki a helyet), egy forrásból (`regionLines()`); a tény-kapu is a hiányt
+  kapja, nem a csendet → FLAG, nem licenc. Az újraírás (`recopy.ts`) ugyanezt követi.
+- **Őr:** `scripts/region-phrase-drop-check.mts` — 20 zöld, AI/hálózat/DB nélkül, négy
+  rétegben; köztük **szerkezeti iker** (egyetlen élő hívó sem adhat át feltétel nélküli
+  `region: region.label`-t) + ellen-állítás, hogy a mérés ne legyen ÜRESEN zöld.
+  **Önteszt: 10 piros**, mind a négy rétegen.
+- ⛔⛔ **MÁSODSZOR ugyanabban a szálban rontottam el ugyanazt:** az ADR-0143 ③-ba a
+  `render.ts:81/154/…` sorokat írtam bizonyítékként — **mérve azok a `generateMock()`-hoz
+  tartoznak, amit ma SENKI nem hív** (hívási hely: 0). A hibát jó irányba jelentettem, a
+  bizonyítékom halott ágra mutatott; helyesbítve az ADR-ben és a jegyzetben is. **A grep
+  megtalálja a MINTÁT, de nem mondja meg, hogy az az út ÉL-e.**
+- **NYITVA (kimondva):** a `getRegionContext()` ismeretlen területnél üres `tagline`-t ad, és
+  AI-szöveg hiányában az a hero-alcím fallbackja; a `wordmarkGrow` őrizetlen `<p>`-be teszi.
+  A változás ELŐTT is így volt, csak a copy-hívás bukásakor látszik — külön kör.
+
+## Előző szál (2026-09-14) — 💱 egy összeg, egy írásmód — a pénz megjelenítése egy szabály, ADR-0162
 
 **💱 ADR-0162 — EGY ÖSSZEG, EGY ÍRÁSMÓD: A PÉNZ MEGJELENÍTÉSE EGY SZABÁLY.**
 Session-jegyzet: `_planning/memory/2026-09-14_money_format_unification.md`.

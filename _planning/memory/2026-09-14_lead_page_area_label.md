@@ -60,13 +60,17 @@ rövid kulcs), valódi DOM, DB nélkül.
 
 ## Nyitott / átadva
 
-- 🔴 **A SÚLYOSABB, külön kör:** a `resolveRegion()` (`generate.ts:136`) utolsó sora
-  `label: REGIONS[id]?.label ?? id`, tehát ismeretlen azonosítónál **a kulcs lesz a címke** —
-  közvetlen próbával: `bs` → `"bs"`, `_test` → `"_test"`. Ez a **VEVŐ** lapjára megy
-  (`render.ts:81/154/161/170/211`, `renderVaried.ts:34/78/141/238/245`), pl. „Otthonos pihenés,
-  *_test* szívében". ⚠️ **Kirenderelt lapon NEM figyeltem meg** (nincs besorolatlan területű
-  leadhez legyártott mock; a mechanizmus igazolt, a megvalósult eset nem). A javítás NEM a
-  „nincs besorolás" kiírása — az ott ugyanúgy hamis —, ezért tulaj-döntést és ADR-t igényel.
+- ✅ **LEZÁRVA ugyanaznap → ADR-0163** (tulaj-döntés: „hagyja el a régió-fordulatot").
+  A `resolveRegion()` `?? id` fallbackja ismeretlen azonosítónál **a kulcsot adta címkeként**
+  (`bs` → `"bs"`, `_test` → `"_test"`).
+  ⛔⛔ **HELYESBÍTÉS a fenti első változatomhoz:** ide azt írtam, hogy ez a
+  `render.ts:81/154/161/170/211` sorokon megy a vevő lapjára — **mérve azok a sorok a
+  `generateMock()`-hoz tartoznak, amit MA SENKI NEM HÍV** (a konzol a `generateEngineMock`-ot
+  hívja; hívási hely: 0). A hibát a helyes irányba jelentettem, de a BIZONYÍTÉKOM halott ágra
+  mutatott — **másodszor ugyanabban a szálban** (előbb a „3 szivárog / 592 rendben", amit a kép
+  cáfolt). Az ÉLŐ út más és rosszabb: a címke a **copywriter promptjába** és a **tény-kapu
+  forrás-listájára** ment, az utóbbi pedig LICENC („amit felsorol, azt a lap állíthatja"),
+  tehát a kapu ÁLDÁSÁVAL került volna ki. ⚠️ Kirenderelt lapon egyik úton sem figyeltem meg.
 - ⚪ `superseded_by:<uuid>` (`data.ts:568` → a kártya „Döntés:" sora): nyers UUID az operátor
   előtt. Nem hamis, de cselekvésre kész tartalma nincs.
 - **Nem mértem:** lead CSV-export (nem találtam ilyet), tenant-admin felületek.

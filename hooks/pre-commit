@@ -660,6 +660,19 @@ if [ -f scripts/artifact-label-quote-check.mts ] && \
   echo "[pre-commit] artifact-label-quote-check (a tárolt pillanatkép nem idéz visszavont terület-nevet)…"
   npx tsx scripts/artifact-label-quote-check.mts >/dev/null
 fi
+# Ha nincs megnevezett terület, a régió-fordulat ELMARAD (tulaj-döntés, 2026-09-14).
+# A `resolveRegion()` `?? id` fallbackja a SCRAPE KULCSOT adta vissza megjelenítendő névként
+# (mérve: `bs` → "bs", `_test` → "_test"), és az a string ment a COPYWRITER promptjába a
+# szállás régiójaként ÉS a TÉNY-KAPU forrás-listájára igazolt igazságként — vagyis a kapu
+# ÁLDÁSÁVAL kerülhetett „_test" a vendégnek szóló prózába. Az őr méri a `known` zászlót, a
+# két prompt-szöveget, ÉS szerkezetileg, hogy egyetlen élő hívó se adja át feltétel nélkül.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+# Se AI, se hálózat, se DB (~2s).
+if [ -f scripts/region-phrase-drop-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(generate|generateEngine|recopy|brief|factCheck)\.ts$|^src/scraper/regions\.ts$|^scripts/region-phrase-drop-check\.mts$'; then
+  echo "[pre-commit] region-phrase-drop-check (nincs terület-név → nincs régió-fordulat)…"
+  npx tsx scripts/region-phrase-drop-check.mts >/dev/null
+fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
 # lies. Measures the shipped sentence against the cells of the column it names, plus the

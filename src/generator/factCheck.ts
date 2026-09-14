@@ -15,10 +15,34 @@ import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
 
+/**
+ * The `region:` line of the source-fact block — exported so the rule is measurable without
+ * an API call.
+ *
+ * ⛔ Say the ABSENCE out loud. A silently missing line reads to the verifier as "not
+ * mentioned"; this reads as "may not be claimed". The difference decides whether a page
+ * asserting a region on a lead we cannot place gets flagged or waved through.
+ */
+export function regionSourceLine(region?: string): string {
+  return region
+    ? `region: ${region}`
+    : "region: NINCS ADAT — a szálláshoz nem tartozik megnevezett terület, ezért BÁRMILYEN " +
+        "régióra/tájegységre/partoldalra utaló állítás MEGALAPOZATLAN";
+}
+
 /** The only source facts a HARD claim may be grounded on (besides visible photos). */
 export interface FactSource {
   readonly name: string;
-  readonly region: string;
+  /**
+   * The area's NAME — omitted when no `region` record backs the scrape area.
+   *
+   * ⛔ THIS LIST IS A LICENCE, not a description: everything on it is something the page
+   * MAY assert. Passing `resolveRegion()`'s `?? id` fallback therefore handed the gate a
+   * scrape KEY (`bs`, `_test`) as a groundable truth about the property — a page claiming
+   * it would have passed the fact gate. Absent = "we hold no region fact", so any regional
+   * claim in the copy is ungrounded and gets flagged, which is the point.
+   */
+  readonly region?: string;
   readonly address?: string | null;
   readonly phone?: string | null;
   readonly email?: string | null;
@@ -181,7 +205,7 @@ export async function verifyFactuality(input: {
 
     const sourceLines = [
       `name: ${input.lead.name}`,
-      `region: ${input.lead.region}`,
+      regionSourceLine(input.lead.region),
       `address: ${input.lead.address ?? "nincs"}`,
       `phone: ${input.lead.phone ?? "nincs"}`,
       `email: ${input.lead.email ?? "nincs"}`,

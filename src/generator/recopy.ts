@@ -152,8 +152,10 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   const photoUrls = siteData.photos.slice(0, 4).map((p) => p.url);
   const briefInput = {
     name: lead.name,
-    region: region.label,
-    regionContext: ctx.tagline,
+    // Same rule as the first generation (generateEngine): no `region` record → no area
+    // NAME, so the phrase is dropped rather than filled with the scrape key. A rewrite
+    // that re-introduced it would undo the fix on the very next "szöveg újraírása".
+    ...(region.known ? { region: region.label, regionContext: ctx.tagline } : {}),
     address: lead.address,
     realStats: (siteData.stats ?? []).map((s) => ({ value: s.value, label: s.label })),
     ...(amenities.length || descriptions.length
@@ -243,7 +245,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
       html,
       lead: {
         name: lead.name,
-        region: region.label,
+        ...(region.known ? { region: region.label } : {}),
         address: lead.address,
         phone: lead.phone,
         email: lead.email,

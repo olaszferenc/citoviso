@@ -115,26 +115,41 @@ export interface GenerateResult {
  * no fabricated facts, structural variety, region anti-collision. Falls back to the
  * parametric template (keyless, no photos, or on AI failure).
  */
-/** Resolve region id + display label: explicit id wins, else the geo bbox that
- * contains the lead's coords (regions.ts), else a neutral fallback. */
+/**
+ * Resolve region id + display label: explicit id wins, else the geo bbox that
+ * contains the lead's coords (regions.ts), else a neutral fallback.
+ *
+ * ⛔ `known` IS THE POINT, not a convenience flag. The last branch's `?? id` echoes the
+ * SCRAPE KEY back as if it were a place name, and nothing downstream could tell the two
+ * apart — measured 2026-09-14: `resolveRegion("bs")` → label `"bs"`, `resolveRegion("_test")`
+ * → `"_test"`. That string is handed to the COPYWRITER as the property's region and to the
+ * FACT GATE as a verified truth about the lead, so an unregistered scrape definition could
+ * put "_test" into guest-facing prose with the gate's blessing.
+ *
+ * `known: false` means "we have no region NAME for this lead" — and per the owner's rule
+ * (2026-09-14) the answer is then to DROP THE REGION PHRASE entirely, not to substitute a
+ * state word: "Otthonos pihenés, nincs besorolás szívében" is exactly as false as the key.
+ * A missing fact is omitted, never paraphrased.
+ */
 export function resolveRegion(
   regionId: string | undefined,
   lat: number | null | undefined,
   lon: number | null | undefined,
-): { id: string; label: string } {
+): { id: string; label: string; known: boolean } {
   if (regionId && GEO_REGIONS[regionId]) {
-    return { id: regionId, label: GEO_REGIONS[regionId].label };
+    return { id: regionId, label: GEO_REGIONS[regionId].label, known: true };
   }
   if (lat != null && lon != null) {
     for (const r of Object.values(GEO_REGIONS)) {
       const [s, w, n, e] = r.bbox;
       if (lat >= s && lat <= n && lon >= w && lon <= e) {
-        return { id: r.id, label: r.label };
+        return { id: r.id, label: r.label, known: true };
       }
     }
   }
   const id = regionId ?? "badacsony";
-  return { id, label: REGIONS[id]?.label ?? id };
+  const known = REGIONS[id] !== undefined;
+  return { id, label: known ? REGIONS[id]!.label : id, known };
 }
 
 /** Regional "mag" context for an id, or a neutral fallback carrying the display label.

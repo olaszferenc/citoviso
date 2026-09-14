@@ -7681,14 +7681,21 @@ mögötte terület-rekord, és a lapon minden más mező „–".
 A `resolveRegion()` (`src/generator/generate.ts:136`) utolsó sora `label: REGIONS[id]?.label ?? id`,
 azaz **ismeretlen terület-azonosítónál a KULCS lesz a megjelenítendő címke**. Közvetlen próbával
 mérve: `bs` → `"bs"`, `_test` → `"_test"` (a `balaton-north` és a `badacsony` helyesen ad nevet).
-Ez a címke a vevőnek mutatott lapon landol: `render.ts:81` `<title>`, `:154` márka-sor, `:161`
-eyebrow, `:170` „Otthonos pihenés, **{régió}** szívében", `:211` lábazat (+ `renderVaried.ts:34/78/141/238/245`).
-**Nem figyeltem meg kirenderelt lapon** — a jelenlegi korpuszban nincs besorolatlan területű
-leadhez tartozó legyártott mock (az egyetlen ilyen artefaktum `path`-ja NULL), a másik két mock
-HTML-je pedig nincs a lemezen; tehát a MECHANIZMUS igazolt, a megvalósult eset nem.
+⛔⛔ **HELYESBÍTÉS (2026-09-14, ugyanaznap, az ADR-0163 mérése közben) — EZ A BEKEZDÉS ROSSZ
+ÚTVONALAT NEVEZETT MEG.** Eredetileg azt írtam ide, hogy a címke a `render.ts:81/154/161/170/211`
+(+ `renderVaried.ts`) sorokon landol a vevő lapján. **Mérve: azokat a sorokat a `generateMock()`
+használja, amit MA SENKI NEM HÍV** (a konzol a `generateEngineMock`-ot hívja; a
+`generateMock`/`generateMockFor` hívási helye nulla, a `run.ts` is az engine-t indítja) — vagyis
+a legacy AI-HTML út. A hibát a helyes irányba jelentettem, de a BIZONYÍTÉKOM egy halott ágra
+mutatott; ugyanaz a hiba, amit ebben a szálban már egyszer elkövettem (a „3 szivárog / 592
+rendben" állítás, amit a kép cáfolt). **Az ÉLŐ út más — és rosszabb:** a címke a
+`generateEngine.ts`-ben a **copywriter promptjába** (`brief.ts`) megy a szállás régiójaként, ÉS a
+**tény-kapu forrás-listájára** (`factCheck.ts` `FactSource`) igazolt igazságként, tehát a kapu
+ÁLDÁSÁVAL kerülhetett volna „_test" a vendégnek szóló prózába. **Nem figyeltem meg kirenderelt
+lapon** — a korpuszban nincs besorolatlan területű leadhez legyártott mock (az egyetlen ilyen
+artefaktum `path`-ja NULL): a MECHANIZMUS igazolt, a megvalósult eset nem.
 ⚠️ A javítás **NEM** a „nincs besorolás" kiírása: „Otthonos pihenés, *nincs besorolás* szívében"
-ugyanúgy hamis. Ez tulaj-döntést igényel (megtagadja a generálást? elhagyja a régió-fordulatot?),
-ezért ADR-t érdemel, nem egy gyors sort.
+ugyanúgy hamis. **Tulajdonosi döntés (2026-09-14): elhagyja a régió-fordulatot → ADR-0163.**
 
 **⚠️ FELSOROLVA, ZAJ:** `superseded_by:<uuid>` (`data.ts:568` → a kártya „Döntés:" sora) nyers
 artefaktum-UUID-t tesz az operátor elé. Nem hamis, de semmi cselekvésre kész tartalma nincs
@@ -9103,3 +9110,69 @@ valódi viselkedés-változás a nem-HUF eseteké.
 **Visszafordíthatóság:** 🔄 felirat-szintű, adatmigráció nincs. ⚠️ A 6 i18n-katalógus-kulcs
 megváltozott (`{amount} {currency}` → `{amount}`), tehát a nem-magyar csomagok ezt a 6 mondatot
 újrafordítják a `ensureLanguagePack` első futásán.
+## ADR-0163 — Ha nincs megnevezett terület, a régió-fordulat ELMARAD (2026-09-14)
+
+**Kiváltó.** Az ADR-0143 ③ utószálának nyitott tétele, tulajdonosi döntéssel lezárva
+(„hagyja el a régió-fordulatot"). Az ADR-0143 a KONZOL felületén tiltotta ki a nyers
+gyűjtési kulcsot; ez a döntés a GENERÁTORRA viszi végig ugyanazt.
+
+**Mérés (nem becslés).**
+
+- A `resolveRegion()` (`src/generator/generate.ts`) utolsó sora `label: REGIONS[id]?.label ?? id`
+  volt: ismeretlen terület-azonosítónál **a SCRAPE KULCS lett a megjelenítendő név**, és
+  onnantól semmi nem tudta megkülönböztetni egy valódi helynévtől. Közvetlen próbával:
+  `bs` → `"bs"`, `_test` → `"_test"`, `Balaton` → `"Balaton"` (ez utóbbi a legmegtévesztőbb:
+  hibátlan helynévnek látszik). A `balaton-north` és a `badacsony` helyesen ad nevet.
+- **Hova ment ez a string az ÉLŐ úton** (a konzol a `generateEngineMock`-ot hívja):
+  ① a **copywriter promptjába** a szállás régiójaként (`brief.ts` „Régió: …"), ahonnan a
+  vendégnek szóló prózába kerülhet; ② a **tény-kapu forrás-listájára** (`factCheck.ts`
+  `FactSource.region`) — az a lista pedig **LICENC, nem leírás**: amit felsorol, azt a lap
+  ÁLLÍTHATJA. Vagyis egy „_test szívében" mondat a kapu ÁLDÁSÁVAL ment volna át;
+  ③ a tárolt `mock_artifact.inputs.region`-be, amiből a `rerender-mock.mts` ÚJRA renderel —
+  tehát a kulcs a következő újrarendereléskor feltámadt volna (az ADR-0143 ① pont ezt a
+  hurkot zárta).
+- ⛔⛔ **A saját ADR-0143 ③ bekezdésem ROSSZ ÚTVONALAT nevezett meg** (`render.ts:81/154/…`):
+  azok a sorok a `generateMock()`-hoz tartoznak, amit **ma senki nem hív** (hívási hely: 0).
+  A hibát a helyes irányba jelentettem, a bizonyítékom viszont halott ágra mutatott —
+  helyesbítve ott is. **Kirenderelt lapon egyik úton sem figyeltem meg**: a korpuszban nincs
+  besorolatlan területű leadhez legyártott mock. A mechanizmus igazolt, a megvalósult eset nem.
+
+**Döntés.**
+
+1. **A forrás megkülönbözteti a NEVET a KULCSTÓL.** A `resolveRegion()` mostantól
+   `{ id, label, known }`-t ad: `known:false` = „nincs NEVÜNK erre a területre". A mező
+   additív, tehát egyik meglévő fogyasztó sem törik el.
+2. **`known:false` → a régió-fordulat ELMARAD, nem helyettesítődik.** ⛔ A két kézenfekvő
+   pótlás EGYFORMÁN hamis mondatot szül: a kulcs visszhangja („…*_test* szívében") és a
+   konzol állapot-szava („…*nincs besorolás* szívében"). **Egy tényt, amink nincs, elhagyunk.**
+   (Ez a §B.17 egyenes következménye: a felület ne állítson többet, mint amit tud.)
+3. **De a hiányt KIMONDJUK a modellnek.** A néma kihagyás nem elég: a copywriter a fotókból
+   találná ki a helyet. A prompt ezért expliciten közli, hogy nincs megnevezett terület, és
+   megtiltja a régió/tájegység/partoldal/környék említését — **egy forrásból**
+   (`brief.regionLines()`), mert a szabály két hívási helyen él és két példányban elcsúszna.
+4. **A tény-kapu is a hiányt kapja, nem a csendet.** A `FactSource.region` opcionális lett,
+   és hiányában a forrás-sor kimondja, hogy bármilyen régió-utalás **MEGALAPOZATLAN** — így
+   a kapu FLAG-el, ahelyett hogy licencet adna. (`factCheck.regionSourceLine()`.)
+5. **A tárolt pillanatkép sem kapja meg.** `known:false` esetén az `inputs`-ból kimarad a
+   `region` NÉV-mező; a `regionId` (gépi azonosság) marad, mert abból dolgozik a `persist.ts`
+   és a `rerender-mock.mts`.
+6. **Az újraírás (`recopy.ts`) ugyanezt a szabályt követi** — különben a legközelebbi
+   „szöveg újraírása" visszahozná a kulcsot.
+
+**Őr (`scripts/region-phrase-drop-check.mts`, pre-commit).** 20 zöld állítás, AI/hálózat/DB
+nélkül, négy rétegben: ① a `known` zászló a VALÓDI kulcsokon (bejegyzett ÉS nem bejegyzett
+eset is kötelezően a mintában); ② a prompt ismert névvel tartalmazza, ismeretlennel
+**egyetlen nyers kulcsot sem**, nem ír `undefined`-ot, kimondja a hiányt, és **nem tolja
+oda a konzol állapot-szavát**; ③ a tény-horgony ugyanez; ④ **SZERKEZETI IKER**: egyetlen
+ÉLŐ hívó sem adhat át feltétel nélküli `region: region.label`-t — plusz egy ellen-állítás,
+hogy a fájl TÉNYLEG a `region.known`-ra őrzi (különben egy régiót nem is említő fájl üresen
+lenne zöld). **Önteszt: 10 piros**, mind a négy rétegen, a kiszállított viselkedést
+visszaírva.
+
+**Amit ez NEM old meg (kimondva).** A `getRegionContext()` ismeretlen területnél üres
+`tagline`-t ad, és AI-szöveg hiányában az a hero-alcím fallbackja (`siteData.ts`) — egy
+sablon (`wordmarkGrow`) őrizetlen `<p>`-be teszi. Ez a változás előtt is így volt, és csak
+a copy-hívás bukásakor látszik; külön kör, az üres-sáv doktrína alá tartozik.
+
+**Visszafordíthatóság:** 🔄 additív mező + feltételes átadás; nulla migráció, nulla
+adat-mozdulat. Élesítés NINCS (§0.3).

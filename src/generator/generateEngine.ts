@@ -374,8 +374,11 @@ async function generateEngineMockInner(
   // headings; the photos/name/contact still render. Never fails generation.
   const briefInput = {
     name: lead.name,
-    region: region.label,
-    regionContext: ctx.tagline,
+    // ⛔ An area with no `region` record has NO NAME, and `resolveRegion` would otherwise
+    // hand the copywriter the scrape key as one (`bs`, `_test`). Omitted, not substituted:
+    // `regionLines()` then TELLS the model there is no region and forbids inventing one
+    // (owner's rule, 2026-09-14 — "hagyja el a régió-fordulatot").
+    ...(region.known ? { region: region.label, regionContext: ctx.tagline } : {}),
     address: lead.address,
     realStats: stats.map((s) => ({ value: s.value, label: s.label })),
     ...(sourcedAmenities.length || sourcedDescriptions.length || guestVoice.length
@@ -617,7 +620,9 @@ async function generateEngineMockInner(
       html,
       lead: {
         name: lead.name,
-        region: region.label,
+        // No `region` record → no region FACT. Omitted so the gate cannot licence a claim
+        // built on a scrape key (see FactSource.region).
+        ...(region.known ? { region: region.label } : {}),
         address: lead.address,
         phone: lead.phone,
         email: lead.email,
@@ -663,7 +668,11 @@ async function generateEngineMockInner(
       archetype: finalRecipe.archetype,
       recipe: finalRecipe as unknown as Record<string, unknown>,
       siteData: siteData as unknown as Record<string, unknown>,
-      region: region.label,
+      // `inputs` is not an archive — `rerender-mock.mts` RE-RENDERS from it (ADR-0143 ①).
+      // Persisting the key under the `region` NAME field would resurrect the scrape key on
+      // the next re-render, which is the exact loop that ADR closed. `regionId` keeps the
+      // machine-side identity either way.
+      ...(region.known ? { region: region.label } : {}),
       regionId: region.id,
       photos: photos.length,
       recipeSource: source,
