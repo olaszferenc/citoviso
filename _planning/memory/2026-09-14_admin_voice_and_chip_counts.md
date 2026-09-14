@@ -89,3 +89,61 @@ külön dimenzió. **Kattintás után várni kell, és a teljes visszaállás a 
 A `TERV-KESZ.md` ⑦ pontja (8 nyitott kérdés) — a tulaj egy körben dönt, az orchestrátoron át.
 A `_drafts/` a `land.sh`-val törlődik; a vázlat egy paranccsal újragenerálható
 (`npx tsx assets/design-refs/_drafts/build-mocks.mts`).
+
+---
+
+# MÁSODIK KÖR (ugyanaznap) — a tulaj döntött: „C — Ügyek, nem levelek"
+
+A §2b kör lezárult: a tulaj a **C** változatot választotta, és vele együtt jóváhagyta,
+hogy a túlhaladott üzenet NEM olvasatlan, és hogy az előnézet a tartalmat mutassa.
+Kontraktus befagyasztva: `assets/design-refs/tenant-admin/uzenetek-ugyek/`.
+
+## ⚠️ A JÓVÁHAGYÁSKOR ELHANGZOTT SZÁM NEM AZ, AMIT A SZABÁLY AD
+
+„71 sor → ~12 ügy" hangzott el. **Megmérve: 71 → 22 felső szintű sor.** A különbség a
+**19 SZÁMLA**, amit az ADR-0125 szándékosan nem szálasít (egy új számla nem teszi
+valótlanná a régit) — és amihez a tulaj ugyanabban a mondatban mondta, hogy ne nyúljak.
+A nyereség tehát **50 dunning-sor → 1 ügy-sor**. Ezt a kontraktus 0b pontja kimondja,
+hogy ne várjunk tőle többet, mint amit tud.
+
+## A KONTRAKTUS-ŐR A FELADATLISTÁM VOLT
+
+A README befagyasztása után a `contract-drift-check` azonnal **8 bukást** jelentett —
+a `**„…"**` alakban jelölt kötő feliratok még nem léteztek a kódban. Gépi feladatlista,
+nem emlékezet. ⚠️ Egy hibát is elkövettem benne: a RÉGI feliratot (`Mind olvasott (71)`)
+is `**„…"**`-ban írtam, vagyis az őr épp azt követelte volna meg, amit lecserélünk —
+a régi alakot azóta `kód`-jelöléssel idézi a README.
+
+## AMIT A SAJÁT ŐRÖM TALÁLT A SAJÁT KÓDOMBAN
+
+- ⛔ **Egysoros SMS-nél az előnézet MEGISMÉTELTE a címet.** Tárgy nélküli SMS-t a lista a
+  törzs első sorából címez, és a „következő érdemi sor" ugyanaz a sor volt — a kártya
+  mindent kétszer mondott. Javítva: ha nincs MÁS mondanivaló, az előnézet ÜRES.
+- ⛔ **A saját őröm INDEX szerint párosított** sort a fixture-höz. Az ügy-nézet a lépéseket
+  a fejük alá csoportosítja, tehát a renderelt sorrend már nem a fixture sorrendje: az őr
+  m5-öt m4 markupjához mérte, és a hibát a TERMÉKRE fogta volna. Azonosító szerint párosít.
+- ⛔ **A fixture nem mérte a szabályt:** a számla-üzenet törzse `"…"` helyőrző volt, tehát
+  nem volt benne összeg-sor — az előnézet-szabály MEGMÉRETLEN maradt. Valódi törzs került be.
+- ⛔ **A `scripts/` nincs típus-ellenőrizve:** az új mezők hiánya a guard-fixture-ökben csak
+  FUTÁSIDŐBEN derült ki (`Cannot read properties of undefined (reading 'join')`).
+
+## KÉT MAGYARTALANSÁG, AMIT MAGAM GYÁRTOTTAM
+
+- „Megjelölöm olvasottként **mind a 1** üzenetet" — a számnév előtti magyar névelő a
+  kimondott alaktól függ (az 1, a 2, az 5, a 6…). Ez pontosan a gépi **„a(z)"**-csapda,
+  amit az Elek külön leletként jelentett. A mondatok úgy épülnek, hogy a névelő NE a
+  számhoz tapadjon („— {n} üzenet", „a következő {n} üzenetet").
+- „▴ **A(z)** {subject} korábbi lépéseinek elrejtése" — ugyanaz. Átírva névelő nélkülire.
+
+## Mérve a szállított kódon
+
+- olvasatlan **65 → 21** (a 44 túlhaladott már nem riaszt);
+- **66 üzenet → 22 sor** csukva, **66** kinyitva — a találat-szám mindkét állapotban 66;
+- a keresés a CSUKOTT ügy lépésére is talál (az őr külön állítása).
+
+## Őr
+
+`admin-list-labels-check`: +3 blokk (⑨ ügy-csukás · ⑩ olvasatlan-szabály · ⑪ előnézet),
+**9 új állítás, mind PIROSRA megy** az öntesztben (összesen 31 sértés a visszarontott
+nézeten). A visszarontás mindháromnál a FIX ELŐTTI állapotot állítja vissza: nincs
+csoportosítás, a régi olvasatlan-szabály, és a törzs első sora az előnézetben.

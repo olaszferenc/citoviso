@@ -359,6 +359,29 @@ Session-jegyzet: `_planning/memory/2026-09-14_elek_mobile_blind_spot.md`. **Éle
 
 ## Párhuzamos szál (2026-09-14) — B4: tenant-admin Üzenetek + Dokumentumok
 
+**⭐ MÁSODIK KÖR — A TULAJ DÖNTÖTT: „C — Ügyek, nem levelek" ÉL LOKÁLBAN.**
+Kontraktus: `assets/design-refs/tenant-admin/uzenetek-ugyek/` (README + működő terv + képek).
+**Élesítés NINCS.** Mérve a szállított kódon: olvasatlan **65 → 21**, **66 üzenet → 22 sor**
+csukva (kinyitva mind a 66; a találat-szám mindkét állapotban 66).
+
+- **Az ÜGY a sor:** az előfizetés-szál EGY soron áll a mai állapotával, a korábbi lépések egy
+  MEGNEVEZETT nyitó mögött. ⛔ A csukás semmit nem vesz el: a keresés a csukott ügy lépésére
+  is talál (az őr külön állítása).
+- **A túlhaladott NEM olvasatlan** — egy predikátum adja a bal menü jelvényét, az „Olvasatlan"
+  chipet és a tömeges jelölés hatókörét. A `countUnreadMessages` emiatt már nem SQL-COUNT.
+- **Az előnézet a TARTALOM:** a szabály a KÜLDŐ `T()`-sorainak listájából származik, nem
+  szöveg-heurisztikából (`src/tenant/messagePreview.ts`), így nyelvfüggetlen.
+- ⚠️ **A jóváhagyáskor „~12 ügy" hangzott el, a szabály 22-t ad** — a különbség a 19 SZÁMLA,
+  amit az ADR-0125 szándékosan nem szálasít. A kontraktus 0b pontja ezt kimondja.
+- ⛔⛔ **A saját őröm találta a saját hibáimat:** egysoros SMS-nél az előnézet MEGISMÉTELTE a
+  címet · az őr INDEX szerint párosított sort a fixture-höz (a csoportosítás után elcsúszott,
+  és a TERMÉKRE fogta volna) · a fixture `"…"` törzse miatt az előnézet-szabály MÉRETLEN volt.
+- ⛔ **Két magyartalanságot magam gyártottam:** „mind a 1 üzenetet" és „A(z) {tárgy}" — a
+  számnév/tárgy előtti névelő ugyanaz a gépi csapda, amit az Elek külön leletként jelentett.
+
+### Első kör — apró javítások és a hangnem-őr
+
+
 **🗣️ AZ ŐR ZÖLD VOLT, ÉS NEM TÉVEDETT — MÁS KÉRDÉSRE VÁLASZOLT.**
 Session-jegyzet: `_planning/memory/2026-09-14_admin_voice_and_chip_counts.md`. **Élesítés NINCS**;
 a kinézeti rész a §2b kapunál áll (`TERV-KESZ.md` a `wt/uzenetekdok` munkafa gyökerében).

@@ -30,6 +30,8 @@ import {
   type InvoiceItemPeriod,
 } from "../billing/invoiceItem.js";
 import { threadSubjectLabel, type ThreadPosition } from "../tenant/messageThreads.js";
+import { isUnread, type MessageKind } from "../tenant/messages.js";
+import { messagePreview } from "../tenant/messagePreview.js";
 import {
   MESSAGE_TOPICS,
   isMessageTopic,
@@ -2479,6 +2481,13 @@ export interface DocumentsAdminData {
   readonly q: string;
   /** Next renewal day, when there is a subscription — shown in the summary strip. */
   readonly nextRenewal: Date | null;
+  /**
+   * Amit MOST kell kifizetni (kontraktus ⑦) — a `subscription.arrears` mért összege.
+   * ⛔ `null`, ha nincs előfizetés, tehát a kérdés fel sem tehető: ilyenkor a cella
+   * KIMARAD, nem írunk oda 0-t. Egy ki nem számolt nulla ugyanolyan állítás, mint egy
+   * rossz szám (feedback_outage_is_not_a_finding).
+   */
+  readonly owed: number | null;
 }
 
 /** Címke egy szerződés-fajtához. A kulcs stabil, a felirat fordul (ADR-0036). */
@@ -2557,10 +2566,27 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
   const total = issued.reduce((s, i) => s + i.gross, 0);
   const currency = issued[0]?.currency ?? "HUF";
   const summary =
+    // ── Elek FK-001 Z6: az összegző MEGNEVEZI MAGÁT (kontraktus ⑦) ────────────
+    // A képernyő legnagyobb, legfeltűnőbb száma „Összesen 1 224 450 Ft" volt,
+    // időszak és jelentés nélkül — a valaha KIÁLLÍTOTT számlák halmozott összege.
+    // Egy tartozás-értesítők közül idetévedő tulaj ezt fizetendőnek olvassa, és a
+    // legnagyobb szám a képernyőn ne az legyen, amit NEM kell kifizetnie.
+    // ⛔ A „fizetendő" MÉRT adat (`subscription.arrears`), nem a számla-listából
+    // következtetett nulla: ha nem tudjuk, nem írjuk ki (§B.17).
     `<div class="adm-docsum">` +
     `<div><div class="l">${d.year === "mind" ? T(lang, "Kiállított számla") : T(lang, "{year}-ben", { year: d.year })}</div>` +
     `<div class="v">${T(lang, "{n} db", { n: issued.length })}</div></div>` +
-    `<div><div class="l">${T(lang, "Összesen")}</div><div class="v">${esc(fmtMoney(total, currency, lang))}</div></div>` +
+    `<div><div class="l">${T(lang, "Eddig kifizetett")}</div><div class="v">${esc(fmtMoney(total, currency, lang))}</div>` +
+    `<div class="n">${T(lang, "a {n} kiállított számla összege — nem tartozás", { n: issued.length })}</div></div>` +
+    (d.owed === null
+      ? ""
+      : `<div><div class="l">${T(lang, "Jelenleg fizetendő")}</div>` +
+        `<div class="v">${esc(fmtMoney(d.owed, currency, lang))}</div>` +
+        `<div class="n">${
+          d.owed > 0
+            ? T(lang, "rendezetlen díj — a honlapja emiatt felfüggesztésre kerülhet")
+            : T(lang, "minden kiállított számla rendezve")
+        }</div></div>`) +
     (d.nextRenewal
       ? `<div><div class="l">${T(lang, "Következő fordulónap")}</div><div class="v">${esc(fmtDate(d.nextRenewal, lang))}</div></div>`
       : "") +
@@ -2710,6 +2736,8 @@ export interface MessagesAdminData {
   readonly messages: readonly {
     readonly id: string;
     readonly channel: "email" | "sms";
+    /** Kontraktus ③: az előnézet-szabály KIND-függő (számlánál az ÖSSZEG áll ott). */
+    readonly kind: MessageKind;
     readonly subject: string | null;
     readonly bodyText: string;
     readonly recipient: string;
@@ -2732,6 +2760,14 @@ export interface MessagesAdminData {
   /** The „Olvasatlan" toggle. */
   readonly unreadOnly: boolean;
   readonly q: string;
+  /**
+   * Which state threads the reader has opened (`?sz=` — comma separated keys).
+   * Kontraktus ①: a szál csukva áll, de SEMMI nem tűnik el; ez a lista mondja meg,
+   * melyik ügy lépései látszanak éppen.
+   */
+  readonly openThreads: readonly string[];
+  /** `?olv=1` — a tömeges jelölés MEGERŐSÍTŐ lépése (kontraktus ⑤). */
+  readonly confirmRead: boolean;
   /** Every message before filtering — the „/ N" of the count line. */
   readonly total: number;
   /** The numbers printed on the chips, each already reflecting the OTHER filters. */
@@ -2760,6 +2796,9 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
       c: m.channel,
       u: m.unreadOnly ? "1" : "",
       q: m.q,
+      // ⚠️ A kinyitott ÜGY is állapot: enélkül egy szál LÉPÉSÉRE kattintva a szál
+      // becsukódna, és a tulaj elveszítené a helyét a listán.
+      sz: m.openThreads.join(","),
       ...over,
     });
     for (const [k, v] of [...sp.entries()]) if (!v) sp.delete(k);
@@ -2786,10 +2825,17 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
   // üres listára vitt — de ezt a felület nem mondta meg előre, miközben a kártya
   // bevezetője „e-mailben és SMS-ben"-t ígér. A szám UGYANABBÓL a predikátumból jön,
   // mint a lista (contract ③): egy chip nem ígérhet mást, mint amit a kattintás ad.
+  //
+  // ⛔ HÁROM SOR, HÁROM KÉRDÉS (kontraktus ⑥). Az eddigi „Szűkítés" sor KÉT KÜLÖNBÖZŐ
+  // FAJTÁT kevert: szállítási csatornát (E-mail/SMS) és olvasottsági állapotot —
+  // az Elek Z2 ezt leletként jelentette. Ez MÓDOSÍTJA az ADR-0127 ② két soros
+  // elrendezését; a tulaj a 2026-09-14-i körben a három soros tervet hagyta jóvá.
   const narrowRow =
-    `<div class="adm-frow"><span class="adm-flab">${T(lang, "Szűkítés")}</span>` +
+    `<div class="adm-frow"><span class="adm-flab">${T(lang, "Hogyan jött")}</span>` +
     chip(T(lang, "E-mail"), m.channel === "email", href({ c: m.channel === "email" ? "" : "email" }), m.channelCounts.email) +
     chip(T(lang, "SMS"), m.channel === "sms", href({ c: m.channel === "sms" ? "" : "sms" }), m.channelCounts.sms) +
+    `</div>` +
+    `<div class="adm-frow"><span class="adm-flab">${T(lang, "Állapot")}</span>` +
     chip(T(lang, "Olvasatlan"), m.unreadOnly, href({ u: m.unreadOnly ? "" : "1" }), m.unreadCount) +
     `</div>`;
 
@@ -2828,13 +2874,21 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     (activeParts.length ? esc(` — ${activeParts.join(" · ")}`) : "") +
     `</div>`;
 
-  const rows = m.messages
-    .map((x) => {
+  const renderRow = (x: MessagesAdminData["messages"][number]): string => {
+    {
       const open = x.id === m.openId;
       // SMS-nek nincs tárgya — ilyenkor a törzs első sora a cím (nem hazudunk üres tárgyat).
       const title = x.subject ?? x.bodyText.split("\n")[0]!.slice(0, 90);
-      const preview = x.bodyText.split("\n").find((l) => l.trim()) ?? "";
-      const unread = !x.readAt;
+      // ── Elek FK-001 E3: a TARTALOM, nem a megszólítás ────────────────────
+      // Eddig „a törzs első nem-üres sora" volt, az pedig a megszólítás: 19
+      // számla-értesítő előnézete betűre azonos volt („Kedves Elek Teszt!").
+      // A szabály a KÜLDŐ soraiból származik, nem szöveg-heurisztikából
+      // (src/tenant/messagePreview.ts), és a címet nem ismétli meg.
+      const preview = messagePreview(x, title, lang);
+      // ⛔ A túlhaladott sor NEM olvasatlan (kontraktus ②): a rendszer által maga-
+      // elavultnak nyilvánított értesítő nem teendő. UGYANAZ a predikátum, amiből a
+      // bal menü jelvénye és az „Olvasatlan" chip száma jön — nem egy másolata.
+      const unread = isUnread(x, x.thread);
       // A nyitó-link a TELJES szűrő-állapotot viszi tovább (ugyanaz a `href()`
       // építi, mint a chipeket) — különben egy üzenet megnyitása elejtené a
       // szűrést, és a tulaj a lista tetején találná magát.
@@ -2893,7 +2947,12 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
         `<span class="pv">${esc(preview.slice(0, 90))}</span>${marks}</span>` +
         `<span class="adm-msg__d">${esc(fmtDateTime(x.sentAt, lang))}` +
         `<span class="adm-msg__chan${x.channel === "sms" ? " adm-msg__chan--sms" : ""}">` +
-        `${esc(chanLabel)}</span></span>` +
+        `${esc(chanLabel)}</span>` +
+        // ── Elek FK-001 KK3: a sor MEGMONDJA, hogy megnyitható ──────────────
+        // A 90 karakternél csonkolt előnézet mellett semmi nem jelezte, hogy a
+        // kártya egyáltalán kattintható — a futás meg sem próbálta megnyitni.
+        `<span class="adm-msg__more">${open ? T(lang, "Bezárom ▴") : T(lang, "Megnyitom ▾")}</span>` +
+        `</span>` +
         `</a>` +
         (open
           ? `<div class="adm-msg__body"><p>${esc(x.bodyText)}</p>` +
@@ -2910,6 +2969,69 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
               : "") +
             `</div>`
           : "") +
+        `</div>`
+      );
+    }
+  };
+
+  // ── AZ ÜGY A SOR, NEM A LEVÉL (kontraktus ①, tulaj-döntés 2026-09-14) ───────
+  // Mérve (Elek FK-001 E1): a 71 soros lista 69%-a túlhaladott dunning-értesítő volt,
+  // ugyanannak az EGY előfizetés-ügynek a lépései, 9 körben ismételve — 8817px, ≈9
+  // képernyő. Egy állapot-szál mostantól EGY soron áll a mai állapotával; a korábbi
+  // lépések nem tűnnek el, hanem egy megnevezett, kinyitható csoportba kerülnek.
+  //
+  // ⛔ A csoportosítás a `thread.key`-ből jön, amit a `messageThreads.ts` ad — a nézet
+  // NEM ismétli meg a szálasítás szabályát (feedback_label_must_derive_from_predicate).
+  // ⛔ A SZŰRÉS ÉS A KERESÉS ELŐBB FUT: a csukás csak a MEGJELENÍTÉS, nem a halmaz.
+  // Ezért a találat-szám továbbra is ÜZENETET számol, nem sort — egy szűrő, ami
+  // elrejtene egy találatot, pontosan az a hibaosztály, ami ezt a kört elindította.
+  type Row = MessagesAdminData["messages"][number];
+  type Entry = { head: Row; key: string | null; rest: Row[] };
+  const entries: Entry[] = [];
+  const byKey = new Map<string, Entry>();
+  for (const x of m.messages) {
+    const key = x.thread.key;
+    if (!key) {
+      entries.push({ head: x, key: null, rest: [] });
+      continue;
+    }
+    const seen = byKey.get(key);
+    // A lista időrendben csökkenő, tehát a szál ELSŐNEK látott tagja a legfrissebb.
+    if (seen) seen.rest.push(x);
+    else {
+      const e: Entry = { head: x, key, rest: [] };
+      byKey.set(key, e);
+      entries.push(e);
+    }
+  }
+
+  const rows = entries
+    .map((e) => {
+      if (!e.key || e.rest.length === 0) return renderRow(e.head);
+      const expanded = m.openThreads.includes(e.key);
+      // A nyitó a TELJES szűrő-állapotot viszi (ugyanaz a `href()`, mint a chipeknél).
+      const toggle = href({
+        sz: expanded
+          ? m.openThreads.filter((k: string) => k !== e.key).join(",")
+          : [...m.openThreads, e.key].join(","),
+      });
+      const subject = e.head.thread.subject
+        ? threadSubjectLabel(e.head.thread.subject, lang)
+        : T(lang, "ügy");
+      return (
+        `<div class="adm-thr${expanded ? " is-open" : ""}">` +
+        renderRow(e.head) +
+        `<a class="adm-thr__more" href="${esc(toggle)}#uz-${esc(e.head.id)}">` +
+        (expanded
+          // ⚠️ NINCS „A(z)": a gépi névelő-hack a vevőnek látható mezőben saját
+          // lelet (Elek FK-006b ZAVAROS-3/4). A mondat ezért nem kezd névelővel.
+          ? T(lang, "▴ Korábbi lépések elrejtése — {subject}", { subject: esc(subject) })
+          : T(lang, "▾ Ugyanennek az ügynek a korábbi {n} lépése — {subject}", {
+              n: e.rest.length,
+              subject: esc(subject),
+            })) +
+        `</a>` +
+        (expanded ? `<div class="adm-thr__steps">${e.rest.map(renderRow).join("")}</div>` : "") +
         `</div>`
       );
     })
@@ -2932,31 +3054,53 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
     // visszakapcsolni, és a lap úgy nézne ki, mintha a postaláda lenne üres.
     (m.total === 0 && !dirty ? "" : tools) +
     (m.total === 0 && !dirty ? "" : countLine) +
-    // ── „Mind olvasott" — a SZŰRT listára hat (tulaj-döntés, 2026-09-13) ──────
-    // ⛔ Eddig szűrt lista mellett is a TELJES postaládát jelölte olvasottnak,
-    // vagyis TÖBBET tett, mint amit a képernyő állított
-    // (feedback_screen_must_not_shrink_or_decide). Most annyira hat, amennyit a
-    // lista mutat — és a FELIRAT kimondja a számot. A darabszám ugyanabból az
-    // `unreadCount`-ból jön, ami az „Olvasatlan" chipen áll, tehát a gomb
-    // szerkezetileg nem tud mást ígérni, mint amit a szűrő ad.
-    // A rejtett mezők nélkül a POST elfelejtené, mire szűrt a tulaj.
-    // ⚠️ SZŰRÉS NÉLKÜL a gomb a TELJES postaládát jelöli meg, az `unreadCount`
-    // viszont a legfrissebb 300 soros ablakból számol — 300 fölött a felirat
-    // ALUL-ÍGÉRNE. A szűretlen ág ezért a postaláda-szintű `unread`-et mondja, így
-    // mindkét ágon pontosan annyit ígér, amennyit megjelöl.
-    ((dirty ? m.unreadCount : m.unread)
-      ? `<form method="POST" action="/admin/uzenetek/olvasott" style="margin:-4px 0 12px">` +
-        (m.topic && m.topic !== "mind" ? `<input type="hidden" name="t" value="${esc(m.topic)}">` : "") +
-        (m.channel ? `<input type="hidden" name="c" value="${esc(m.channel)}">` : "") +
-        (m.unreadOnly ? `<input type="hidden" name="u" value="1">` : "") +
-        (m.q ? `<input type="hidden" name="q" value="${esc(m.q)}">` : "") +
-        `<button class="citui-btn citui-btn--ghost" type="submit">` +
-        esc(
-          dirty
-            ? T(lang, "A szűrt {n} olvasott", { n: m.unreadCount })
-            : T(lang, "Mind olvasott ({n})", { n: m.unread }),
-        ) +
-        `</button></form>`
+    // ── A TÖMEGES JELÖLÉS IGE, ÉS MEGERŐSÍTÉST KÉR (kontraktus ⑤) ────────────
+    // ⛔ A régi felirat („Mind olvasott (71)") ÁLLÍTÁS-alakú volt, ige nélkül,
+    // közvetlenül az „Olvasatlan 71" SZŰRŐ mellett — ránézésre nem dönthető el,
+    // hogy szűrő, kijelzés vagy visszavonhatatlan tömeges művelet (Elek Z4).
+    //
+    // ⛔ A SZÁM MINDKÉT ÁGON az `unreadCount`: ugyanaz, ami az „Olvasatlan" chipen
+    // áll, és amit a `markAllMessagesRead()` ténylegesen billent. Korábban a
+    // szűretlen ág a postaláda-szintű `unread`-et mondta — az a két szám azóta
+    // SZERKEZETILEG ugyanaz (mindkettő a `projectMessages()` predikátumából jön),
+    // tehát a külön ág már csak egy lehetőség lenne az elcsúszásra.
+    //
+    // A megerősítés JS NÉLKÜL működik: a gomb egy GET-link, ami ezt a lapot kéri
+    // vissza `olv=1`-gyel, és CSAK a megerősítő dobozban áll POST. A natív
+    // `confirm()` itt nem járható út — a felület stílustalan böngésző-ablakot
+    // kapna (ugyanaz a lelet, mint a foglalás-lemondásnál).
+    (m.unreadCount
+      ? m.confirmRead
+        ? `<div class="adm-confirm">` +
+          // ⚠️ „ezt a {n} üzenetet" 1-nél „ezt a 1"-et adna. A számnév előtti magyar
+          // névelő a kimondott alaktól függ (az 1, a 2, az 5, a 6…) — ez pontosan az
+          // a gépi „a(z)" csapda, amit az Elek külön leletként jelentett. A mondat
+          // ezért úgy épül, hogy a névelő NE a számhoz tapadjon.
+          `<b>${esc(T(lang, "Megjelöli olvasottként a következő {n} üzenetet?", { n: m.unreadCount }))}</b><br>` +
+          esc(
+            dirty
+              ? T(lang, "Csak a most szűrt listára hat — a többi olvasatlan marad.")
+              : T(lang, "A teljes postaládára hat."),
+          ) +
+          ` ${esc(T(lang, "Ez nem törli őket, és később bármikor visszakereshetők."))}` +
+          `<div class="adm-confirm__act">` +
+          `<form method="POST" action="/admin/uzenetek/olvasott" style="margin:0">` +
+          (m.topic && m.topic !== "mind" ? `<input type="hidden" name="t" value="${esc(m.topic)}">` : "") +
+          (m.channel ? `<input type="hidden" name="c" value="${esc(m.channel)}">` : "") +
+          (m.unreadOnly ? `<input type="hidden" name="u" value="1">` : "") +
+          (m.q ? `<input type="hidden" name="q" value="${esc(m.q)}">` : "") +
+          `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Igen, megjelölöm")}</button>` +
+          `</form>` +
+          `<a class="citui-btn citui-btn--ghost" href="${esc(href({ olv: "" }))}">${T(lang, "Mégsem")}</a>` +
+          `</div></div>`
+        : `<p style="margin:-4px 0 12px">` +
+          `<a class="citui-btn citui-btn--ghost" href="${esc(href({ olv: "1" }))}">` +
+          esc(
+            dirty
+              ? T(lang, "Megjelölöm olvasottként a szűrt {n} üzenetet", { n: m.unreadCount })
+              : T(lang, "Megjelölöm olvasottként — {n} üzenet", { n: m.unreadCount }),
+          ) +
+          `</a></p>`
       : "") +
     (rows || empty) +
     `</div>`
@@ -3286,6 +3430,7 @@ export function adminDashboard(
                 opts.documents ?? {
                   invoices: [],
                   agreements: [],
+                  owed: null,
                   sub: "szamlak",
                   year: "mind",
                   q: "",
@@ -3312,6 +3457,8 @@ export function adminDashboard(
                   topicCounts: { foglalas: 0, szamlazas: 0, honlap: 0, fiok: 0 },
                   channelCounts: { email: 0, sms: 0 },
                   unreadCount: 0,
+                  openThreads: [],
+                  confirmRead: false,
                   openId: null,
                 },
                 lang,

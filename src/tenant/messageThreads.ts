@@ -106,6 +106,16 @@ export interface ThreadableMessage {
 
 /** What the list needs to know about one row's place in its thread. */
 export interface ThreadPosition {
+  /**
+   * The thread this row belongs to, or null when it stands alone.
+   *
+   * ⛔ The VIEW groups by this (kontraktus ①: „az ÜGY a sor, nem a levél"). It is
+   * exported rather than recomputed in the view on purpose — a second copy of the
+   * threading rule in the renderer is exactly how the label and the predicate drift
+   * apart (feedback_label_must_derive_from_predicate). Null for a single-member
+   * thread too: one message is not an „ügy" with steps, it is just a message.
+   */
+  readonly key: string | null;
   /** The newer message that replaced this one, or null when still current. */
   readonly supersededBy: { readonly id: string; readonly title: string; readonly sentAt: Date } | null;
   /** True when this row is the newest of a thread that HAS older members. */
@@ -130,6 +140,7 @@ export interface ThreadPosition {
 }
 
 const NOT_THREADED: ThreadPosition = {
+  key: null,
   supersededBy: null,
   isLatestOfThread: false,
   olderCount: 0,
@@ -182,7 +193,7 @@ export function positionThreads(
   const out = new Map<string, ThreadPosition>();
   for (const m of messages) out.set(m.id, NOT_THREADED);
 
-  for (const members of threads.values()) {
+  for (const [key, members] of threads) {
     if (members.length < 2) continue;
     const sorted = [...members].sort(
       (a, b) => b.sentAt.getTime() - a.sentAt.getTime() || (a.id < b.id ? -1 : 1),
@@ -191,6 +202,7 @@ export function positionThreads(
     const subject = threadSubjectOf(latest);
     const older = sorted.slice(1);
     out.set(latest.id, {
+      key,
       supersededBy: null,
       isLatestOfThread: true,
       olderCount: older.length,
@@ -202,6 +214,7 @@ export function positionThreads(
     const by = { id: latest.id, title: messageTitleOf(latest), sentAt: latest.sentAt };
     for (const m of older) {
       out.set(m.id, {
+        key,
         supersededBy: by,
         isLatestOfThread: false,
         olderCount: 0,

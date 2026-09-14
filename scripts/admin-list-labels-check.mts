@@ -132,7 +132,13 @@ const RAW: readonly {
   rel?: string;
   relId?: string;
 }[] = [
-  { id: "m1", ch: "email", kind: "invoice", subject: "Számla OV-2026-43", body: "…", at: "11:36", rel: "invoice", relId: "i43" },
+  // ⛔ A TÖRZS VALÓDI ALAKJA (src/email/invoiceEmail.ts), nem „…" helyőrző: az E3 lelet
+  // ÉPPEN a törzs szerkezetéről szól (a megszólítás áll elöl, az összeg négy sorral
+  // lejjebb). Helyőrzővel az előnézet-szabály nem is lenne MEGMÉRVE — a fixture
+  // bizonyítsa a saját útját (feedback_fixture_must_prove_its_own_path).
+  { id: "m1", ch: "email", kind: "invoice", subject: "Számla OV-2026-43 – Honlap-előfizetés (éves)",
+    body: "Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-43\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)",
+    at: "11:36", rel: "invoice", relId: "i43" },
   { id: "m2", ch: "email", kind: "booking", subject: "Lejárt egy foglalási kérés", body: "…", at: "10:36", rel: "booking_request", relId: "b1" },
   { id: "m3", ch: "email", kind: "dunning", subject: "Honlapja újra elérhető", body: "A díjat megkaptuk…", at: "10:35" },
   { id: "m4", ch: "email", kind: "dunning", subject: "Honlapja felfüggesztve", body: "A rendezetlen díj miatt…", at: "10:34" },
@@ -176,6 +182,10 @@ function messagesFixture(broken: boolean): MessagesAdminData {
     messages: threadable.map((t) => ({
       id: t.id,
       channel: t.channel,
+      // ⚠️ A `scripts/` NINCS típus-ellenőrizve: ez a mező a nézet ELŐNÉZET-szabályához
+      // kell (kontraktus ③), és hiánya csak FUTÁSIDŐBEN derült ki
+      // (reference_scripts_are_not_typechecked).
+      kind: t.kind,
       subject: t.subject,
       bodyText: t.bodyText,
       recipient: "elek@citoviso.com",
@@ -199,6 +209,8 @@ function messagesFixture(broken: boolean): MessagesAdminData {
     channelCounts: channelTotals(RAW.map((r) => r.ch)),
     unreadCount: 0,
     openId: null,
+    openThreads: [],
+    confirmRead: false,
   };
 }
 
@@ -263,13 +275,44 @@ function projectableRows(): Parameters<typeof projectMessages>[0] {
 const UNREAD_IDS = new Set(["m1", "m3", "m5", "m8"]);
 
 /**
+ * ⛔ A GUARD SAJÁT olvasatlan-szabálya (kontraktus ②) — SZÁNDÉKOSAN nem a termék
+ * `isUnread()`-je. Egy őr, ami a vizsgálata tárgyát hívja, a visszarontott szabállyal
+ * is egyetértene (feedback_guard_must_not_borrow_its_subject: a rendezés-ellenőrzés
+ * pontosan így maradt zöld egy elrontott komparátoron).
+ *
+ * A szabály: olvasatlan = nincs `readAt` ÉS nem túlhaladott. A túlhaladottságot itt a
+ * FIXTURE-ből vezetjük le: egy szálon belül minden tag túlhaladott, kivéve a legfrissebbet.
+ */
+function refSupersededIds(): Set<string> {
+  const byThread = new Map<string, typeof RAW[number][]>();
+  for (const r of RAW) {
+    const key = r.kind === "dunning" || r.kind === "multilang"
+      ? `kind:${r.kind}`
+      : r.kind === "booking" && r.rel === "booking_request" && r.relId
+        ? `booking_request:${r.relId}`
+        : null;
+    if (!key) continue;
+    byThread.set(key, [...(byThread.get(key) ?? []), r]);
+  }
+  const out = new Set<string>();
+  for (const mem of byThread.values()) {
+    if (mem.length < 2) continue;
+    const sorted = [...mem].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : a.id < b.id ? -1 : 1));
+    for (const m of sorted.slice(1)) out.add(m.id);
+  }
+  return out;
+}
+const REF_SUPERSEDED = refSupersededIds();
+const refUnread = (id: string): boolean => UNREAD_IDS.has(id) && !REF_SUPERSEDED.has(id);
+
+/**
  * A VALÓDI adat-út + a VALÓDI nézet, DB nélkül. A `broken` ág a naiv megvalósítást
  * állítja elő: a chip-számok a TELJES postaládából jönnek, figyelmen kívül hagyva az
  * éppen aktív többi szűrőt — vagyis a chip MÁS kérdésre válaszol, mint amit a
  * kattintás szállít (feedback_label_answers_a_different_question).
  */
 function topicView(
-  query: { topic?: string; channel?: string; unread?: boolean; q?: string },
+  query: { topic?: string; channel?: string; unread?: boolean; q?: string; openThreads?: string[] },
   broken = false,
 ): MessagesAdminData {
   const res = projectMessages(projectableRows(), query);
@@ -290,7 +333,27 @@ function topicView(
     channelCounts: broken ? channelTotals(RAW.map((r) => r.ch)) : res.channelCounts,
     unreadCount: broken ? 1 : res.unreadCount,
     openId: null,
+    openThreads: query.openThreads ?? [],
+    confirmRead: false,
   };
+}
+
+/**
+ * MINDEN szál kulcsa a fixture-ből. ⛔ Kézzel beírva egy elgépelés némán „nincs
+ * kinyitva" állapotot adna, és a sor-szintű állítások üresen zöldülnének.
+ */
+function allThreadKeys(): string[] {
+  const rows = projectableRows();
+  const pos = positionThreads(
+    rows.map((r) => ({ ...r, subject: r.subject, bodyText: r.bodyText })) as never,
+  );
+  return [...new Set([...pos.values()].map((p) => p.key).filter((k): k is string => Boolean(k)))];
+}
+
+/** A találat-sor első száma: hány ÜZENET felel meg a szűrésnek (nem hány SOR). */
+function deliveredCount(html: string): number {
+  const m = /(\d+)\s*\/\s*\d+/.exec(text(html));
+  return m ? Number(m[1]) : -1;
 }
 
 /** Egy chip kirenderelt darabszáma a sávból, felirat szerint. */
@@ -373,18 +436,26 @@ console.log(
   // állítjuk vissza: kivesszük a csatorna-spant, és pontosan az a lap keletkezik,
   // amit az Elek mért (boríték-ikon, felirat nélkül). Enélkül ez az állítás soha
   // nem lenne piros, tehát nem is lenne bizonyíték.
-  const rendered = messagesSection(messagesFixture(selfTest));
+  // ⛔ A szálak ALAPBÓL CSUKVA állnak (kontraktus ①), tehát a „minden soron" típusú
+  // állításokat KINYITOTT ügyekkel kell mérni — különben az őr azt hinné, hogy a
+  // lépések eltűntek, holott csak össze vannak csukva.
+  const rendered = messagesSection({ ...messagesFixture(selfTest), openThreads: allThreadKeys() });
   const html = selfTest
     ? rendered.replace(/<span class="adm-msg__chan[^>]*>[\s\S]*?<\/span>/g, "")
     : rendered;
   const rows = rowsOf(html, "adm-msg");
   console.log("\n③ Üzenetek — csatorna-jelölés a soron (Z2)");
   check(rows.length === RAW.length, `mind a ${RAW.length} üzenet-sor kirenderelődött (${rows.length})`);
+  // ⛔ A SORT AZ AZONOSÍTÓJÁVAL PÁROSÍTJUK, nem a sorrenddel. Az ügy-nézet (kontraktus ①)
+  // a szál lépéseit a FEJÜK alá csoportosítja, tehát a renderelt sorrend már NEM a
+  // fixture sorrendje — az index-alapú párosítás m5-öt m4 markupjához mérte, és a
+  // hibát a TERMÉKRE fogta volna, pedig az őré volt.
+  const byId = new Map(rows.map((r) => [/id="uz-([^"]+)"/.exec(r)?.[1] ?? "", r]));
   let right = 0;
-  for (let i = 0; i < rows.length; i++) {
-    const want = RAW[i]!.ch === "sms" ? "SMS" : "E-mail";
-    const other = RAW[i]!.ch === "sms" ? "E-mail" : "SMS";
-    const t = text(rows[i]!);
+  for (const r of RAW) {
+    const want = r.ch === "sms" ? "SMS" : "E-mail";
+    const other = r.ch === "sms" ? "E-mail" : "SMS";
+    const t = text(byId.get(r.id) ?? "");
     // ⚠️ A csatorna-felirat a SORON kell legyen, nem a kinyitott törzs lábában:
     // a fixture csukott sorokat renderel, tehát amit itt látunk, az a lista.
     if (t.includes(want) && !t.includes(other)) right++;
@@ -398,7 +469,7 @@ console.log(
 
 /* ④ A túlhaladott állapot-üzenet jelölve van, ÉS megnevezi a felülíróját. */
 {
-  const data = messagesFixture(selfTest);
+  const data = { ...messagesFixture(selfTest), openThreads: allThreadKeys() };
   const html = messagesSection(data);
   const rows = rowsOf(html, "adm-msg");
   const byId = new Map(rows.map((r) => [/id="uz-([^"]+)"/.exec(r)?.[1] ?? "", r]));
@@ -487,7 +558,7 @@ console.log(
   );
   // A termék-úton a nézet a teljes postaládából kapott pozíciót kapja meg —
   // ezt a listTenantMessages() garantálja (szűrés a pozicionálás UTÁN).
-  const view = messagesSection({ ...messagesFixture(false), channel: "sms" });
+  const view = messagesSection({ ...messagesFixture(false), channel: "sms", openThreads: allThreadKeys() });
   const smsRow = rowsOf(view, "adm-msg").find((r) => r.includes(`id="uz-${smsId}"`));
   check(
     Boolean(smsRow && text(smsRow).includes("Túlhaladott")),
@@ -517,7 +588,13 @@ console.log(
       : clean;
     check(html.includes("adm-frow"), "a szűrő-sáv KÉT SORA kirenderelődik");
     const t = text(html);
-    check(t.includes("Miről szól") && t.includes("Szűkítés"), "mindkét sor viseli a feliratát");
+    // Kontraktus ⑥: HÁROM kérdés, három sor — a régi „Szűkítés" csatornát és
+    // olvasottságot kevert (Elek Z2), ez módosítja az ADR-0127 ② két soros tervét.
+    check(
+      t.includes("Miről szól") && t.includes("Hogyan jött") && t.includes("Állapot"),
+      "mind a HÁROM szűrő-sor viseli a saját feliratát",
+      t.slice(0, 200),
+    );
     for (const id of REF_TOPICS) {
       check(t.includes(REF_LABEL[id]!), `a „${REF_LABEL[id]}" téma-chip ott van a sávon`);
     }
@@ -550,7 +627,10 @@ console.log(
   for (const id of REF_TOPICS) {
     const want = RAW.filter((r) => REF_TOPIC_OF[r.kind] === id).length;
     const html = messagesSection(topicView({ topic: id }, selfTest));
-    const delivered = rowsOf(html, "adm-msg").length;
+    // ⛔ ÜZENETET mérünk, nem SORT: a szál-csukás a MEGJELENÍTÉS, nem a halmaz
+    // (kontraktus ①). Sorra mérve az őr a csukást hibának olvasná, és a helyes
+    // viselkedést jelentené pirosnak.
+    const delivered = deliveredCount(html);
     const promised = chipCount(html, REF_LABEL[id]!);
     check(delivered === want, `„${REF_LABEL[id]}" → ${want} sor`, `szállított: ${delivered}`);
     check(promised === delivered, `„${REF_LABEL[id]}" chip-száma (${promised}) = a szállított sorok (${delivered})`);
@@ -561,7 +641,7 @@ console.log(
   {
     const want = RAW.filter((r) => REF_TOPIC_OF[r.kind] === "szamlazas" && r.ch === "sms").length;
     const html = messagesSection(topicView({ topic: "szamlazas", channel: "sms" }, selfTest));
-    check(rowsOf(html, "adm-msg").length === want, `Számlázás ∩ SMS = ${want} sor`, `${rowsOf(html, "adm-msg").length}`);
+    check(deliveredCount(html) === want, `Számlázás ∩ SMS = ${want} üzenet`, `${deliveredCount(html)}`);
     const t = text(html);
     check(t.includes("téma: Számlázás") && t.includes("csatorna: SMS"), "a találat-sor MINDKÉT szűrést kimondja", t.slice(0, 200));
   }
@@ -571,7 +651,7 @@ console.log(
   // tehát az „Olvasatlan" mellett a „Számlázás" chipnek 1-et kell mondania, nem 4-et.
   {
     const want = RAW.filter(
-      (r) => REF_TOPIC_OF[r.kind] === "szamlazas" && UNREAD_IDS.has(r.id),
+      (r) => REF_TOPIC_OF[r.kind] === "szamlazas" && refUnread(r.id),
     ).length;
     const total = topicTotals(RAW.map((r) => r.kind)).szamlazas;
     check(want !== total, "a fixture bizonyítja az utat: a szűrt és a teljes szám KÜLÖNBÖZIK", `${want} vs ${total}`);
@@ -629,10 +709,9 @@ console.log(
       `${chipCount(withTopic, "E-mail")}`,
     );
     // ÍGÉRET = SZÁLLÍTÁS: amit a chip mond, annyi sort ad a kattintás.
-    const delivered = rowsOf(
+    const delivered = deliveredCount(
       messagesSection(topicView({ topic: "szamlazas", channel: "email" })),
-      "adm-msg",
-    ).length;
+    );
     check(
       delivered === scoped.email,
       `a „Számlázás + E-mail" kattintás ${scoped.email} sort szállít (${delivered})`,
@@ -654,7 +733,7 @@ console.log(
   // ── üres metszet: a sáv MARAD, hogy legyen mit visszakapcsolni (contract ⑦) ──
   {
     const html = messagesSection(topicView({ topic: "foglalas", channel: "sms" }, selfTest));
-    check(rowsOf(html, "adm-msg").length === 0, "Foglalások ∩ SMS = 0 sor");
+    check(deliveredCount(html) === 0, "Foglalások ∩ SMS = 0 üzenet");
     check(text(html).includes("Nincs a szűrésnek megfelelő üzenet"), "üres találatnál magyarázó szöveg");
     check(html.includes("adm-frow"), "üres találatnál is LÁTSZIK a szűrő-sáv (van mit visszakapcsolni)");
   }
@@ -665,30 +744,46 @@ console.log(
   // FELIRAT és a HATÓKÖR együtt: egy gomb, ami a helyes sorokat jelöli meg, de
   // „Mind olvasott"-at ír, ugyanúgy hazudik.
   {
-    // szűretlenül: „Mind olvasott (N)", ahol N a teljes olvasatlan
+    // ── kontraktus ⑤: a felirat IGE, és a SAJÁT számát mondja ───────────────
+    // ⛔ A RÉGI felirat („Mind olvasott (N)") állítás-alakú volt, ige nélkül, egy
+    // SZŰRŐ mellett — ránézésre nem dönthető el, hogy szűrő, kijelzés vagy tömeges
+    // művelet (Elek Z4). Az őr KIMONDJA, hogy a régi alak nem térhet vissza.
     const clean = messagesSection(topicView({}, selfTest));
-    const wantAll = projectableRows().filter((r) => r.readAt === null).length;
+    const wantAll = projectableRows().filter((r) => refUnread(r.id)).length;
+    const tc = text(clean);
     check(
-      text(clean).includes(`Mind olvasott (${wantAll})`),
-      `szűrés nélkül a gomb „Mind olvasott (${wantAll})"`,
-      text(clean).slice(0, 200),
+      tc.includes("Megjelölöm olvasottként") && tc.includes(`${wantAll} üzenet`),
+      `szűrés nélkül a gomb IGÉS és ${wantAll}-et mond`,
+      tc.slice(0, 220),
     );
+    check(!/Mind olvasott \(/.test(tc), "a régi, ige nélküli „Mind olvasott (N)” felirat NEM tér vissza");
 
     // szűrve: MEGNEVEZI, hogy csak a szűrtre hat, és a saját számát mondja
     const want = projectableRows().filter(
-      (r) => r.readAt === null && REF_TOPIC_OF[r.kind] === "szamlazas",
+      (r) => refUnread(r.id) && REF_TOPIC_OF[r.kind] === "szamlazas",
     ).length;
     const filtered = messagesSection(topicView({ topic: "szamlazas" }, selfTest));
     const t = text(filtered);
-    check(t.includes(`A szűrt ${want} olvasott`), `szűrve a gomb „A szűrt ${want} olvasott"`, t.slice(0, 200));
-    check(!t.includes("Mind olvasott"), "szűrve NEM állítja magáról, hogy mindet megjelöli");
+    check(t.includes(`a szűrt ${want} üzenetet`), `szűrve a gomb „a szűrt ${want} üzenetet”`, t.slice(0, 220));
+    // ── kontraktus ⑤: MEGERŐSÍTÉST kér, és a POST CSAK ott áll ──────────────
+    check(
+      !/action="\/admin\/uzenetek\/olvasott"/.test(filtered),
+      "a gomb ELSŐ kattintásra NEM cselekszik (nincs POST a listán, csak megerősítés-link)",
+      "egy visszavonhatatlan tömeges művelet nem sülhet el egy koppintásra",
+    );
+    const confirmed = messagesSection({ ...topicView({ topic: "szamlazas" }, selfTest), confirmRead: true });
+    const tcf = text(confirmed);
+    check(tcf.includes("Csak a most szűrt listára hat"), "a megerősítés KIMONDJA a szűkített hatókört", tcf.slice(0, 220));
     // ⛔ a POST-nak vinnie KELL a szűrést, különben a szerver az egészet törli
     check(
-      /<form method="POST" action="\/admin\/uzenetek\/olvasott"[^]*?name="t" value="szamlazas"/.test(filtered),
-      "a POST-űrlap MAGÁVAL VISZI a téma-szűrőt (rejtett mező)",
+      /<form method="POST" action="\/admin\/uzenetek\/olvasott"[^]*?name="t" value="szamlazas"/.test(confirmed),
+      "a megerősítő POST-űrlap MAGÁVAL VISZI a téma-szűrőt (rejtett mező)",
       "enélkül a szerver a teljes postaládát jelölné olvasottnak",
     );
-    const withCh = messagesSection(topicView({ topic: "szamlazas", channel: "sms" }, selfTest));
+    const withCh = messagesSection({
+      ...topicView({ topic: "szamlazas", channel: "sms" }, selfTest),
+      confirmRead: true,
+    });
     check(
       /name="c" value="sms"/.test(withCh) && /name="t" value="szamlazas"/.test(withCh),
       "a POST-űrlap MINDEN aktív dimenziót visz (téma + csatorna)",
@@ -708,7 +803,7 @@ console.log(
 
   // ── a szál-jelölés a téma-szűrőben is ott van (ADR-0125 nem sérült) ─────────
   {
-    const html = messagesSection(topicView({ topic: "foglalas" }, selfTest));
+    const html = messagesSection(topicView({ topic: "foglalas", openThreads: allThreadKeys() }, selfTest));
     const row = rowsOf(html, "adm-msg").find((r) => r.includes('id="uz-m7"'));
     check(
       Boolean(row && text(row).includes("Túlhaladott")),
@@ -741,7 +836,7 @@ console.log(
   // tárgyuk tűnik el — pontosan a bejelentett, fix ELŐTTI állapot. Enélkül ez az
   // állítás sosem lehetne piros (a ④ rontása minden jelvényt eltüntet, és egy
   // „nulla jelvény" nézeten a ⑦ üresen zöld maradna).
-  const view = messagesFixture(false);
+  const view = { ...messagesFixture(false), openThreads: allThreadKeys() };
   const rendered = messagesSection(
     selfTest
       ? {
@@ -830,6 +925,193 @@ console.log(
     strayNamed.length === 0,
     "szálon kívüli sor egyáltalán nem visel jelvényt",
     `jelvényt kapott: ${strayNamed.map(([id]) => id).join(", ")}`,
+  );
+}
+
+/* ⑨ AZ ÜGY A SOR, ÉS SEMMI NEM TŰNIK EL (kontraktus ①, tulaj-döntés 2026-09-14).
+      Mérve (Elek FK-001 E1): a 71 soros lista 69%-a ugyanannak az EGY előfizetés-ügynek
+      a túlhaladott lépése volt, 9 körben ismételve — 8817px, ≈9 képernyő.
+
+      ⛔ AMI ITT A LEGFONTOSABB: az összecsukás NEM vehet el semmit. Egy „javítás", ami
+      valós adatot rejt el, pontosan az a hibaosztály, ami miatt az ADR-0127 ① annak
+      idején ELUTASÍTOTTA a szálba csukást. Ezért az őr nem azt méri, hogy kevesebb sor
+      lett, hanem hogy a TALÁLAT-SZÁM és a KINYITOTT tartalom hiánytalan. */
+{
+  console.log("\n⑨ Az ügy a sor — és semmi nem tűnik el (kontraktus ①)");
+
+  const keys = allThreadKeys();
+  // ⛔ ÖNTESZT: a fix ELŐTTI állapot — NINCS ügy-csoportosítás, minden üzenet önálló
+  // sor, és a soron nincs megnyitó jelzés. Enélkül ez a három állítás sosem lehetne
+  // piros, tehát nem is lenne bizonyíték (feedback_fixture_must_prove_its_own_path).
+  const revert = (html: string): string =>
+    selfTest ? html.replace(/<span class="adm-msg__more">[^<]*<\/span>/g, "") : html;
+  const closed = revert(messagesSection(topicView(selfTest ? { openThreads: keys } : {})));
+  const opened = revert(messagesSection(topicView({ openThreads: keys })));
+
+  const closedRows = rowsOf(closed, "adm-msg").length;
+  const openRows = rowsOf(opened, "adm-msg").length;
+  check(keys.length > 0, `a fixture-ben van szál (${keys.length} ügy: ${keys.join(", ")})`);
+  check(
+    closedRows < openRows,
+    `csukva ${closedRows} sor, kinyitva ${openRows} — az ügy tényleg összecsukódik`,
+  );
+  check(openRows === RAW.length, `kinyitva MIND a ${RAW.length} üzenet ott van (${openRows})`);
+
+  // ⛔ A TALÁLAT-SZÁM VÁLTOZATLAN: a csukás a megjelenítés, nem a halmaz.
+  check(
+    deliveredCount(closed) === RAW.length && deliveredCount(opened) === RAW.length,
+    `a találat-szám mindkét állapotban ${RAW.length} üzenet (nem a sorokat számolja)`,
+    `csukva: ${deliveredCount(closed)}, nyitva: ${deliveredCount(opened)}`,
+  );
+
+  // A nyitó MEGNEVEZI, hány lépés van mögötte — egy néma háromszög nem mondja meg,
+  // mit rejt, és a tulaj nem tudja eldönteni, érdemes-e rákattintani.
+  const openerText = text(closed);
+  const hidden = RAW.length - closedRows;
+  check(
+    /Ugyanennek az ügynek a korábbi \d+ lépése/.test(openerText),
+    `a nyitó megnevezi a lépések SZÁMÁT (${hidden} sor van összecsukva)`,
+    openerText.slice(0, 200),
+  );
+
+  // ⛔ A KERESÉS ÁTLÁT A CSUKOTT ÜGYÖN: egy csak a lépésben előforduló szóra is
+  // találatot kell adni, különben a csukás elrejtene egy találatot.
+  {
+    const deep = RAW.find((r) => r.id === "m6")!; // „Esedékes a honlapdíj" — egy LÉPÉS, nem szálfej
+    check(REF_SUPERSEDED.has(deep.id), "a fixture bizonyítja az utat: a keresett sor egy ÖSSZECSUKOTT lépés");
+    const hit = messagesSection(topicView({ q: "Esedékes" }));
+    check(
+      deliveredCount(hit) > 0,
+      "a keresés a CSUKOTT ügy lépésére is talál",
+      `találat: ${deliveredCount(hit)}`,
+    );
+  }
+
+  // Kontraktus ④: minden soron ott a megnyitó jelzés.
+  const rowsClosed = rowsOf(closed, "adm-msg");
+  const withMore = rowsClosed.filter((r) => text(r).includes("Megnyitom")).length;
+  check(
+    withMore === rowsClosed.length,
+    `mind a ${rowsClosed.length} soron ott a „Megnyitom ▾" jelzés (${withMore})`,
+    "e nélkül a csonkolt előnézet mellett semmi nem jelzi, hogy a kártya kattintható (KK3)",
+  );
+}
+
+/* ⑩ A TÚLHALADOTT NEM OLVASATLAN (kontraktus ②).
+      Mérve (Elek FK-001 E2): a bal menü 71-et riasztott, és abból 49 olyan sor volt,
+      amit a RENDSZER MAGA nyilvánított elavultnak. Teendőnek mutattuk azt, amit mi
+      magunk zártunk le.
+
+      ⛔ A referencia FÜGGETLEN (refUnread), nem a termék isUnread()-je. */
+{
+  console.log("\n⑩ A túlhaladott üzenet NEM olvasatlan (kontraktus ②)");
+
+  const wantNew = RAW.filter((r) => refUnread(r.id)).length;
+  const wantOld = RAW.filter((r) => UNREAD_IDS.has(r.id)).length;
+  check(
+    wantNew < wantOld,
+    `a fixture kiélezi az esetet: a régi szabállyal ${wantOld}, az újjal ${wantNew} olvasatlan`,
+    "azonos számmal a régi és az új szabály megkülönböztethetetlen lenne",
+  );
+
+  // ⛔ ÖNTESZT: a RÉGI szabály — a túlhaladott sor is olvasatlanként számít, és a
+  // jelölést is megkapja. Pontosan az az állapot, amit az Elek E2 mért.
+  const base = topicView({});
+  const html = selfTest
+    ? messagesSection({ ...base, unreadCount: wantOld }).replace(
+        /class="adm-msg( is-past)?/g,
+        'class="adm-msg is-unread$1',
+      )
+    : messagesSection(base);
+  check(
+    chipCount(html, "Olvasatlan") === wantNew,
+    `az „Olvasatlan" chip ${wantNew}-et mond (a túlhaladottak nélkül)`,
+    `${chipCount(html, "Olvasatlan")}`,
+  );
+
+  // ÍGÉRET = SZÁLLÍTÁS: az „Olvasatlan" szűrő pontosan ennyit ad.
+  check(
+    deliveredCount(messagesSection(topicView({ unread: true }))) === wantNew,
+    `az „Olvasatlan" szűrő ${wantNew} üzenetet szállít`,
+  );
+
+  // ⛔ EGY SZABÁLY, EGY FORRÁS: a gomb is ugyanezt a számot mondja.
+  check(
+    text(html).includes(`${wantNew} üzenet`),
+    `a tömeges jelölés gombja UGYANEZT a ${wantNew}-et mondja`,
+    text(html).slice(0, 220),
+  );
+
+  // NEGATÍV: egyetlen túlhaladott sor sem visel olvasatlan-jelölést.
+  const openedRaw = messagesSection(topicView({ openThreads: allThreadKeys() }));
+  const opened = selfTest
+    ? openedRaw.replace(/class="adm-msg( is-past)?/g, 'class="adm-msg is-unread$1')
+    : openedRaw;
+  const badRows = rowsOf(opened, "adm-msg").filter(
+    (r) => /class="adm-msg[^"]*is-unread/.test(r) && /class="adm-msg[^"]*is-past/.test(r),
+  );
+  check(
+    badRows.length === 0,
+    "egyetlen túlhaladott sor sem visel olvasatlan-jelölést",
+    `${badRows.length} sor egyszerre túlhaladott ÉS olvasatlan`,
+  );
+}
+
+/* ⑪ AZ ELŐNÉZET A TARTALMAT MUTATJA, NEM A MEGSZÓLÍTÁST (kontraktus ③).
+      Mérve (Elek FK-001 E3): 19 számla-értesítő előnézete betűre azonos volt
+      („Kedves Elek Teszt!"), mert a szabály „a törzs első nem-üres sora" volt. */
+{
+  console.log("\n⑪ Az előnézet a tartalom, nem a megszólítás (kontraktus ③)");
+
+  // ⛔ ÖNTESZT: a RÉGI szabály — az előnézet a törzs ELSŐ nem-üres sora, ami a
+  // számla-értesítőknél a MEGSZÓLÍTÁS. Ez állítja vissza a bejelentett állapotot.
+  const bodyOf = new Map(RAW.map((r) => [r.id, r.body.split("\n").map((l) => l.trim()).find(Boolean) ?? ""]));
+  const rawHtml = messagesSection(topicView({ openThreads: allThreadKeys() }));
+  const html = selfTest
+    ? rawHtml.replace(
+        /(<div class="adm-msg[^"]*" id="uz-([^"]+)">)([^]*?)<span class="pv">[^<]*<\/span>/g,
+        (_all, head: string, id: string, mid: string) =>
+          `${head}${mid}<span class="pv">${bodyOf.get(id) ?? ""}</span>`,
+      )
+    : rawHtml;
+  const previews = [...html.matchAll(/<span class="pv">([^<]*)<\/span>/g)].map((m) => m[1]!.trim());
+  check(previews.length === RAW.length, `mind a ${RAW.length} sor kapott előnézet-helyet (${previews.length})`);
+  check(
+    !previews.some((p) => /^Kedves|^Tisztelt/.test(p)),
+    "egyetlen előnézet sem a megszólítással kezdődik",
+    previews.filter((p) => /^Kedves|^Tisztelt/.test(p)).join(" | "),
+  );
+
+  // A számla-sor előnézete az ÖSSZEG — az, ami a CÍMBŐL hiányzik.
+  const invRow = rowsOf(html, "adm-msg").find((r) => r.includes('id="uz-m1"'))!;
+  check(
+    text(invRow).includes("Összeg:"),
+    "a számla-sor előnézete az ÖSSZEGET mutatja",
+    text(invRow).slice(0, 160),
+  );
+
+  // ⛔ A SOR EGÉSZE EGYEDI: cím + előnézet együtt azonosítsa a bizonylatot.
+  const keysOfRows = rowsOf(html, "adm-msg").map((r) => {
+    const t = /<strong>([^<]*)<\/strong>/.exec(r)?.[1] ?? "";
+    const p = /<span class="pv">([^<]*)<\/span>/.exec(r)?.[1] ?? "";
+    return `${t}|${p}`;
+  });
+  check(
+    new Set(keysOfRows).size === keysOfRows.length,
+    `mind a ${keysOfRows.length} SOR egyedi (cím + előnézet együtt)`,
+    `${new Set(keysOfRows).size} különböző`,
+  );
+
+  // ⛔ AZ ELŐNÉZET NEM VISSZHANG: tárgy nélküli SMS-nél a lista a törzs első sorából
+  // címez — mérve, a naiv szabály ugyanazt a sort tette az előnézetbe is, és a
+  // kártya mindent kétszer mondott.
+  const smsRow = rowsOf(html, "adm-msg").find((r) => r.includes('id="uz-m5"'))!;
+  const smsTitle = /<strong>([^<]*)<\/strong>/.exec(smsRow)?.[1] ?? "";
+  const smsPv = /<span class="pv">([^<]*)<\/span>/.exec(smsRow)?.[1] ?? "";
+  check(
+    smsPv === "" || smsPv !== smsTitle,
+    "tárgy nélküli SMS-nél az előnézet NEM ismétli meg a címet",
+    `cím: „${smsTitle}" · előnézet: „${smsPv}"`,
   );
 }
 

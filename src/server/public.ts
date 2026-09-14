@@ -1465,6 +1465,8 @@ async function serveAdmin(
       year: params.get("f") || "mind",
       q: params.get("q") ?? "",
       nextRenewal: sub?.periodEnd ? new Date(sub.periodEnd) : null,
+      // Kontraktus ⑦: MÉRT tartozás. Nincs előfizetés → a kérdés fel sem tehető → null.
+      owed: sub ? (sub.arrears?.amount ?? 0) : null,
     };
   } else if (tab === "fiok") {
     // ADR-0110: the published legal identity, seeded from the buyer record. Loaded
@@ -1494,6 +1496,12 @@ async function serveAdmin(
     const channel = channelParam === "email" || channelParam === "sms" ? channelParam : "";
     const unreadOnly = params.get("u") === "1" || legacy === "olvasatlan";
     const q = params.get("q") ?? "";
+    // Kontraktus ①: melyik ÜGY lépései vannak kinyitva. Több is lehet egyszerre —
+    // a szál-kulcs (`kind:dunning`, `booking_request:<uuid>`) nem tartalmaz vesszőt.
+    const openThreads = (params.get("sz") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const list = await listTenantMessages(session.tenantId, { topic, channel, unread: unreadOnly, q });
     messages = {
       messages: list.rows,
@@ -1507,6 +1515,8 @@ async function serveAdmin(
       topicCounts: list.topicCounts,
       channelCounts: list.channelCounts,
       unreadCount: list.unreadCount,
+      openThreads,
+      confirmRead: params.get("olv") === "1",
       openId,
     };
   }

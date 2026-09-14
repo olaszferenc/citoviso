@@ -44,6 +44,7 @@ import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
 import { getTenantModules } from "../src/tenant/modules.js";
 import { positionThreads } from "../src/tenant/messageThreads.js";
+import { isUnread } from "../src/tenant/messages.js";
 import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
 import type { MonthView } from "../src/tenant/availability.js";
 
@@ -265,7 +266,10 @@ const messagesFixture = {
   })),
   // A nav-jelvény száma is a fixture-ből SZÁMOL — a kézzel írt 2 elcsúszott volna,
   // amint a sorok listája változik, és a súgó-kép hazudna egy darabszámot.
-  unread: messagesFixtureRows.filter((m) => m.readAt === null).length,
+  // ⛔ A TERMÉK predikátumával (isUnread), nem egy másolatával: a túlhaladott sor
+  // 2026-09-14 óta NEM olvasatlan, és egy súgó-kép, ami a régi szabállyal számol,
+  // pont azt a számot tanítaná meg, amit épp javítottunk (kontraktus ②).
+  unread: messagesFixtureRows.filter((m) => isUnread(m, messagesThreadPositions.get(m.id))).length,
   // A jóváhagyott „A" terv három független dimenziója (2026-09-13). A számlálók a
   // fixture-ből SZÁMOLNAK, nem kézzel írt konstansok: egy kézzel beírt szám a
   // súgó-képen pontosan úgy néz ki, mint egy valódi darabszám.
@@ -283,8 +287,10 @@ const messagesFixture = {
     email: messagesFixtureRows.filter((m) => m.channel === "email").length,
     sms: messagesFixtureRows.filter((m) => m.channel === "sms").length,
   },
-  unreadCount: messagesFixtureRows.filter((m) => m.readAt === null).length,
+  unreadCount: messagesFixtureRows.filter((m) => isUnread(m, messagesThreadPositions.get(m.id))).length,
   openId: null,
+  openThreads: [],
+  confirmRead: false,
 };
 
 // Representative month for the booking calendar (shot-module-config minta):

@@ -126,6 +126,29 @@ export interface MessageListResult {
   readonly unreadCount: number;
 }
 
+/**
+ * ⛔ THE ONE UNREAD RULE (kontraktus ②, tulajdonosi döntés 2026-09-14).
+ *
+ * WHY IT IS NOT JUST `readAt === null` (Elek FK-001 E2, mérve 2026-09-13): a bal menü
+ * **71**-et riasztott, és abból **49** olyan sor volt, amit a rendszer MAGA nyilvánított
+ * elavultnak — „Honlapja felfüggesztve" értesítők egy élő, kifizetett fiókon. Teendőnek
+ * mutattuk azt, amit mi magunk zártunk le.
+ *
+ * ⛔ EGY SZABÁLY, EGY FORRÁS: ezt hívja a lista szűrője, az „Olvasatlan" chip száma,
+ * a bal menü jelvénye ÉS a tömeges jelölés hatóköre. Egy külön ág bármelyikhez két
+ * igazságot tenne egy képernyőre (feedback_one_rule_two_copies) — és pontosan az a
+ * szétcsúszás termelte a bejelentett hibát.
+ *
+ * ⚠️ A `readAt` a DB-ben VÁLTOZATLANUL `null` marad a túlhaladott sorokon: nem hazudjuk
+ * azt, hogy a tulaj elolvasta őket. Csak nem RIASZTUNK rájuk.
+ */
+export function isUnread(
+  m: { readonly readAt: Date | null },
+  pos: ThreadPosition | undefined,
+): boolean {
+  return m.readAt === null && !pos?.supersededBy;
+}
+
 /** The query with every dimension resolved — the only shape the predicate sees. */
 interface ResolvedQuery {
   readonly topic: string;
@@ -143,13 +166,14 @@ interface ResolvedQuery {
  */
 function messageMatches(
   m: Omit<TenantMessageView, "thread">,
+  positions: ReadonlyMap<string, ThreadPosition>,
   query: ResolvedQuery,
   override: Partial<ResolvedQuery> = {},
 ): boolean {
   const s = { ...query, ...override };
   if (s.topic && s.topic !== "mind" && topicOfKind(m.kind) !== s.topic) return false;
   if (s.channel && m.channel !== s.channel) return false;
-  if (s.unread && m.readAt !== null) return false;
+  if (s.unread && !isUnread(m, positions.get(m.id))) return false;
   // ⚠️ The TEXT search runs in JS, not SQL. Measured: this database's collation and
   // ctype are `C`, so Postgres folds ASCII only — `lower('PRÓBA')` is `'prÓba'` and
   // `subject ILIKE '%próba%'` does NOT match `'PRÓBA'`. Every accented capital would
@@ -221,7 +245,7 @@ export function projectMessages(
   };
 
   const count = (override: Partial<ResolvedQuery>): number =>
-    all.filter((r) => messageMatches(r, resolved, override)).length;
+    all.filter((r) => messageMatches(r, positions, resolved, override)).length;
 
   const topicCounts = Object.fromEntries(
     MESSAGE_TOPICS.map((t) => [t, count({ topic: t })]),
@@ -229,7 +253,7 @@ export function projectMessages(
 
   return {
     rows: all
-      .filter((r) => messageMatches(r, resolved))
+      .filter((r) => messageMatches(r, positions, resolved))
       .map((r) => ({ ...r, thread: positions.get(r.id)! })),
     total: all.length,
     // Each number is what its own chip would DELIVER, with the other dimensions
@@ -243,15 +267,21 @@ export function projectMessages(
   };
 }
 
-/** Unread count for the nav badge. */
+/**
+ * Unread count for the nav badge.
+ *
+ * ⛔ WHY THIS IS NO LONGER A `COUNT(*) WHERE read_at IS NULL` (kontraktus ②): the badge
+ * must answer the SAME question the list answers, and „is this still the current word"
+ * is a property of the whole THREAD — not expressible in that WHERE. A SQL branch here
+ * and a JS branch in the list is the two-copies failure the filter work already hit
+ * once (feedback_one_rule_two_copies): the badge would keep saying 71 while the list
+ * showed 22, and the tenant could never clear it.
+ *
+ * The cost is one tenant's mailbox (capped at 300 rows, one indexed query) per render —
+ * the same read the Üzenetek tab already does.
+ */
 export async function countUnreadMessages(tenantId: string): Promise<number> {
-  const row = await db
-    .selectFrom("tenant_message")
-    .select((eb) => eb.fn.countAll<string>().as("n"))
-    .where("tenant_id", "=", tenantId)
-    .where("read_at", "is", null)
-    .executeTakeFirst();
-  return Number(row?.n ?? 0);
+  return (await listTenantMessages(tenantId)).unreadCount;
 }
 
 /**
@@ -290,23 +320,16 @@ export async function markAllMessagesRead(
   tenantId: string,
   query: MessageQuery = {},
 ): Promise<number> {
-  const filtering =
-    Boolean(query.topic && query.topic !== "mind") ||
-    Boolean(query.channel) ||
-    Boolean(query.unread) ||
-    Boolean(query.q?.trim());
-  if (!filtering) {
-    const res = await db
-      .updateTable("tenant_message")
-      .set({ read_at: new Date() })
-      .where("tenant_id", "=", tenantId)
-      .where("read_at", "is", null)
-      .executeTakeFirst();
-    return Number(res.numUpdatedRows ?? 0);
-  }
-
+  // ⛔ EGY ÚT, SZŰRVE ÉS SZŰRETLENÜL IS (kontraktus ②). Korábban a szűretlen ág egy
+  // vak `UPDATE … WHERE read_at IS NULL` volt. A túlhaladott sor mostantól NEM
+  // olvasatlan, tehát az a blanket UPDATE TÖBBET billentett volna, mint amennyit a
+  // gomb felirata ígért — ugyanaz a hibaosztály, mint amit ez a gomb egyszer már
+  // elkövetett, csak a másik irányba (feedback_screen_must_not_shrink_or_decide).
+  // Most mindkét esetben pontosan azok a sorok billennek, amiket megszámoltunk.
   const inScope = await listTenantMessages(tenantId, query);
-  const ids = inScope.rows.filter((r) => r.readAt === null).map((r) => r.id);
+  const ids = inScope.rows
+    .filter((r) => isUnread(r, r.thread))
+    .map((r) => r.id);
   if (ids.length === 0) return 0;
   const res = await db
     .updateTable("tenant_message")

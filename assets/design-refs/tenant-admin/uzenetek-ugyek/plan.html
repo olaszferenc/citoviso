@@ -1,0 +1,399 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Üzenetek — C — „Ügyek, nem levelek”</title><link rel="stylesheet" href="https://citoviso.com/assets/ui/citui.css"><style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-bg,#f2f7fb);font-family:var(--citui-font,system-ui,-apple-system,"Segoe UI",sans-serif);color:var(--citui-ink,#0f2434)}
+.bar{position:sticky;top:0;z-index:20;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:10px 16px;background:var(--citui-ink,#0f2434);color:#fff}
+.bar b{font-size:.95rem}
+.bar .sw{margin-left:auto;display:flex;gap:6px}
+.bar button{font:inherit;font-size:.85rem;padding:6px 14px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff}
+.bar button[aria-pressed="true"]{background:var(--citui-accent,#19b8d8);border-color:transparent;color:#04222c;font-weight:600}
+.lead{padding:14px 16px 0;max-width:980px;margin:0 auto;font-size:.9rem;line-height:1.5;color:#3d566b}
+.lead code{background:#dceaf3;padding:1px 5px;border-radius:4px;font-size:.85em}
+
+/* ⛔ @container, NEM @media: a méret-váltó egy SZŰKÍTETT div-et állít, az ablak
+   szélessége nem változik — @media-vel a váltó csak keskenyítene, de nem rendezne át. */
+.stage{padding:16px;display:flex;justify-content:center}
+.frame{container-type:inline-size;width:100%;max-width:980px;transition:max-width .2s}
+body.is-mobile .frame{max-width:390px;box-shadow:0 0 0 1px #c9dbe7,0 18px 40px rgba(15,36,52,.16);border-radius:22px;overflow:hidden;background:var(--citui-bg,#f2f7fb)}
+
+.card{background:#fff;border:1px solid #d9e6ef;border-radius:16px;overflow:hidden;margin-bottom:18px}
+.card__hd{display:flex;align-items:center;gap:10px;padding:14px 18px;background:linear-gradient(100deg,#0f2434,#173b55);color:#fff}
+.card__hd h2{margin:0;font-size:1.05rem}
+.card__hd .ico{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.14);display:grid;place-items:center}
+.card__bd{padding:16px 18px}
+.intro{margin:0 0 14px;font-size:.88rem;line-height:1.5;color:#3d566b}
+
+.search{display:flex;align-items:center;gap:8px;border:1px solid #cfe0ea;border-radius:11px;padding:9px 12px;background:#fbfdfe;margin-bottom:12px}
+.search input{border:0;outline:0;background:transparent;font:inherit;font-size:.9rem;width:100%}
+.frow{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:8px}
+.flab{font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;color:#6b8296;font-weight:700;margin-right:2px}
+.chip{font:inherit;font-size:.82rem;padding:6px 13px;border-radius:999px;border:1px solid #cfe0ea;background:#fff;cursor:pointer;display:inline-flex;gap:7px;align-items:center;color:#25455c}
+.chip em{font-style:normal;font-weight:700;color:#6b8296;font-size:.78rem}
+.chip[aria-pressed="true"]{border-color:var(--citui-accent,#19b8d8);background:#e6f8fc;color:#06384a;font-weight:600}
+.chip[aria-pressed="true"] em{color:#0d7f98}
+.chip:disabled{opacity:.45;cursor:not-allowed}
+.cnt{font-size:.78rem;color:#6b8296;margin:6px 0 12px}
+
+.act{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.btn{font:inherit;font-size:.86rem;padding:9px 16px;border-radius:10px;border:1px solid #cfe0ea;background:#fff;cursor:pointer;color:#14364b}
+.btn--go{background:var(--citui-accent,#19b8d8);border-color:transparent;color:#04222c;font-weight:600}
+.confirm{border:1px solid #f0c98a;background:#fff8ec;border-radius:11px;padding:12px 14px;margin-bottom:12px;font-size:.86rem;line-height:1.5}
+.confirm .act{margin:10px 0 0}
+.toast{border:1px solid #9fd8b4;background:#eefbf3;border-radius:11px;padding:10px 14px;margin-bottom:12px;font-size:.85rem}
+
+.msg{border:1px solid #dfeaf2;border-radius:12px;margin-bottom:9px;background:#fff;overflow:hidden}
+.msg.unread{border-color:#bfe6f2;background:#fbfeff}
+.msg.past{background:#f6f9fb;border-style:dashed}
+.msg__hd{width:100%;text-align:left;font:inherit;background:transparent;border:0;cursor:pointer;
+  display:grid;grid-template-columns:34px 1fr auto;gap:11px;padding:12px 13px;align-items:start}
+.msg__ic{width:34px;height:34px;border-radius:9px;background:#e8f4f9;display:grid;place-items:center;font-size:.9rem}
+.msg.unread .msg__ic{background:#d4f0f9;position:relative}
+.msg.unread .msg__ic::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--citui-accent,#19b8d8)}
+.msg__t strong{display:block;font-size:.9rem;line-height:1.35}
+.msg.past .msg__t strong{color:#7b93a6;text-decoration:line-through}
+.pv{display:block;font-size:.81rem;color:#67809a;margin-top:3px;line-height:1.4;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.msg__r{display:flex;flex-direction:column;align-items:flex-end;gap:5px;white-space:nowrap}
+.when{font-size:.75rem;color:#6b8296}
+.tag{font-size:.66rem;letter-spacing:.07em;font-weight:700;padding:3px 8px;border-radius:6px;background:#e8f4f9;color:#2b6a83}
+.tag--sms{background:#efe7fb;color:#5a3d95}
+.marks{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;align-items:center}
+.pill{font-size:.72rem;padding:3px 9px;border-radius:999px;font-weight:600}
+.pill--past{background:#eceff2;color:#6b8296}
+.pill--ok{background:#e3f7ec;color:#1d7a4a}
+.sup{display:block;font-size:.76rem;color:#7b93a6;margin-top:5px;line-height:1.4}
+.chev{font-size:.78rem;color:#2b6a83;font-weight:600;white-space:nowrap}
+.body{padding:2px 14px 15px 58px;border-top:1px solid #eef4f8;font-size:.86rem;line-height:1.55;white-space:pre-wrap;color:#31506a}
+.meta{margin-top:11px;font-size:.78rem;color:#6b8296}
+.empty{padding:26px 14px;text-align:center;color:#6b8296;font-size:.87rem;line-height:1.6}
+
+.grp{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:#6b8296;font-weight:700;margin:16px 0 8px;padding-top:6px;border-top:1px solid #e6eef4}
+.grp:first-child{margin-top:0;border-top:0;padding-top:0}
+.fold{width:100%;font:inherit;font-size:.83rem;text-align:left;padding:10px 13px;border:1px dashed #cfe0ea;border-radius:11px;background:#f8fbfd;cursor:pointer;color:#42627c;margin-bottom:9px}
+.more{width:100%;font:inherit;font-size:.88rem;padding:11px;border:1px solid #cfe0ea;border-radius:11px;background:#fff;cursor:pointer;margin-top:6px;color:#14364b}
+
+.nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#0f2434;color:#cfe2ee;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:.84rem}
+.nav__b{background:var(--citui-accent,#19b8d8);color:#04222c;font-weight:700;border-radius:999px;padding:2px 11px;font-size:.82rem}
+.nav__n{color:#8fb0c6;font-size:.78rem;line-height:1.35}
+.nav__n b{color:#e4f0f7}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+@container (max-width: 560px){.sum{grid-template-columns:1fr}}
+.sum>div{border:1px solid #dfeaf2;border-radius:12px;padding:11px 13px;background:#fbfdfe}
+.sum .l{font-size:.73rem;color:#6b8296;line-height:1.35}
+.sum .v{font-size:1.15rem;font-weight:700;margin-top:3px}
+.sum .n{font-size:.72rem;color:#7b93a6;margin-top:3px;line-height:1.35}
+.state{border-radius:16px;padding:16px 18px;margin-bottom:18px;border:1px solid #9fd8b4;background:#eefbf3}
+.state h2{margin:0 0 8px;font-size:1.02rem}
+.state p{margin:0 0 8px;font-size:.88rem;line-height:1.55}
+.state a.lnk{color:#0d7f98;font-weight:600}
+.inv{display:grid;grid-template-columns:34px 1fr auto;gap:11px;padding:12px 13px;border:1px solid #dfeaf2;border-radius:12px;margin-bottom:9px;align-items:center}
+@container (max-width: 560px){.msg__hd{grid-template-columns:34px 1fr}.msg__r{flex-direction:row;grid-column:1/-1;padding-left:45px;align-items:center}.body{padding-left:14px}}
+</style></head><body><div class="bar"><b>C — „Ügyek, nem levelek”</b><span class="sw"><button data-size="m" aria-pressed="true">Mobil 390px</button><button data-size="d" aria-pressed="false">Asztali</button></span></div><p class="lead"><b>Mit dönt el ez a változat:</b> A sor egy <b>ÜGY</b>, nem egy levél: az előfizetés-szál EGY soron áll a mai állapotával,
+     a korábbi lépései alatta, összecsukva. ⚠️ Ez <b>újranyitja</b> a 2026-09-12-i döntést
+     (akkor a „jelölés a soron” nyert a „szálba csukva” ellenében) — csak akkor válassza,
+     ha az azóta mért 69%-os arány meggyőzi.</p><p class="lead" style="padding-top:6px"><b>Mindháromban AZONOS</b> (itt nincs mit választani, csak jóváhagyni): „Megnyitom ▾” a soron ·
+  az előnézet a tartalomból jön, nem a megszólításból · a „Felülírta…” megnevezi az időpontot ·
+  igés gomb + megerősítés a „Mind olvasott” helyett · a visszakapcsoló sáv kimondja, mely időszak
+  van rendezve, és elvezet a számlához · a Dokumentumok összegzője megmondja, hogy <i>kifizetett</i>.</p><p class="lead" style="padding-top:6px;color:#7b6130"><b>Ez MŰKÖDIK:</b> a chipek, a kereső,
+      a megnyitás és az olvasottnak jelölés tényleg működnek, a valódi szabályokkal. Minta:
+      az ELEK-TESZT dev-park 2026-09-13-án mért 71 üzenete.</p><div class="stage"><div class="frame"><div id="app"></div></div></div><script>
+const ROWS = [{"id":"ml1","kind":"multilang","ch":"email","subject":"A honlapja idegen nyelvű változatai elavultak","body":"Kedves Partnerünk!\n\nA magyar oldal azóta módosult, ezért az idegen nyelvű változatok elavultak. Az újragenerálást a Modulok fülön indíthatja el.","at":"2026-09-12T11:30:00+02:00","read":false,"topic":"honlap"},{"id":"i18","kind":"invoice","ch":"email","subject":"Számla OV-2026-44 – Egyedi webcím — éves díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-44\nÖsszeg: 11 175 Ft\nTétel: Egyedi webcím — éves díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:28:00+02:00","read":false,"topic":"szamlazas"},{"id":"i17","kind":"invoice","ch":"email","subject":"Számla OV-2026-43 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-43\nÖsszeg: 74 925 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:27:00+02:00","read":false,"topic":"szamlazas"},{"id":"i16","kind":"invoice","ch":"email","subject":"Számla OV-2026-41 – Többnyelvű honlap — egyszeri generálási díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-41\nÖsszeg: 14 900 Ft\nTétel: Többnyelvű honlap — egyszeri generálási díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:26:00+02:00","read":false,"topic":"szamlazas"},{"id":"i15","kind":"invoice","ch":"email","subject":"Számla OV-2026-40 – Többnyelvű honlap — egyszeri generálási díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-40\nÖsszeg: 14 900 Ft\nTétel: Többnyelvű honlap — egyszeri generálási díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:25:00+02:00","read":false,"topic":"szamlazas"},{"id":"i14","kind":"invoice","ch":"email","subject":"Számla OV-2026-39 – Többnyelvű honlap — egyszeri generálási díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-39\nÖsszeg: 14 900 Ft\nTétel: Többnyelvű honlap — egyszeri generálási díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:24:00+02:00","read":false,"topic":"szamlazas"},{"id":"i13","kind":"invoice","ch":"email","subject":"Számla OV-2026-38 – Többnyelvű honlap — egyszeri generálási díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-38\nÖsszeg: 14 900 Ft\nTétel: Többnyelvű honlap — egyszeri generálási díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:23:00+02:00","read":false,"topic":"szamlazas"},{"id":"i12","kind":"invoice","ch":"email","subject":"Számla OV-2026-37 – Többnyelvű honlap — egyszeri generálási díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-37\nÖsszeg: 14 900 Ft\nTétel: Többnyelvű honlap — egyszeri generálási díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:22:00+02:00","read":false,"topic":"szamlazas"},{"id":"i11","kind":"invoice","ch":"email","subject":"Számla OV-2026-36 – Többnyelvű honlap — egyszeri generálási díj","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-36\nÖsszeg: 14 900 Ft\nTétel: Többnyelvű honlap — egyszeri generálási díj\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:21:00+02:00","read":false,"topic":"szamlazas"},{"id":"i10","kind":"invoice","ch":"email","subject":"Számla OV-2026-34 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-34\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:20:00+02:00","read":false,"topic":"szamlazas"},{"id":"i9","kind":"invoice","ch":"email","subject":"Számla OV-2026-33 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-33\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:19:00+02:00","read":false,"topic":"szamlazas"},{"id":"i8","kind":"invoice","ch":"email","subject":"Számla OV-2026-32 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-32\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:18:00+02:00","read":false,"topic":"szamlazas"},{"id":"i7","kind":"invoice","ch":"email","subject":"Számla OV-2026-31 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-31\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:17:00+02:00","read":false,"topic":"szamlazas"},{"id":"i6","kind":"invoice","ch":"email","subject":"Számla OV-2026-30 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-30\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:16:00+02:00","read":false,"topic":"szamlazas"},{"id":"i5","kind":"invoice","ch":"email","subject":"Számla OV-2026-29 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-29\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:15:00+02:00","read":false,"topic":"szamlazas"},{"id":"i4","kind":"invoice","ch":"email","subject":"Számla OV-2026-28 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-28\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:14:00+02:00","read":false,"topic":"szamlazas"},{"id":"i3","kind":"invoice","ch":"email","subject":"Számla OV-2026-27 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-27\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:13:00+02:00","read":false,"topic":"szamlazas"},{"id":"i2","kind":"invoice","ch":"email","subject":"Számla OV-2026-26 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-26\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:12:00+02:00","read":false,"topic":"szamlazas"},{"id":"i1","kind":"invoice","ch":"email","subject":"Számla OV-2026-25 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-25\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:11:00+02:00","read":false,"topic":"szamlazas"},{"id":"i0","kind":"invoice","ch":"email","subject":"Számla OV-2026-24 – Honlap-előfizetés (éves)","body":"Kedves Elek Teszt!\n\nKöszönjük az előfizetést. A fizetés megérkezett, a számlát mellékeljük.\n\nSzámla sorszáma: OV-2026-24\nÖsszeg: 99 900 Ft\nTétel: Honlap-előfizetés (éves)\n\nA számla PDF formátumban a levél mellékletében található.","at":"2026-09-12T10:10:00+02:00","read":false,"topic":"szamlazas"},{"id":"d44","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-11T11:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d43","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-11T11:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d42","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-11T11:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d41","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-11T11:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d40","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-11T11:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d39","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-11T10:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d38","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-11T10:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d37","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-11T10:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d36","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-11T10:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d35","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-11T10:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d34","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-11T09:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d33","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-11T09:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d32","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-11T09:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d31","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-11T09:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d30","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-11T09:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d49","kind":"dunning","ch":"email","subject":"Előfizetése hamarosan megújul — ELEK-TESZT Vendégház","body":"Honlap-előfizetése 2031. 09. 10-én újul meg.\n\nA megújulás díja: 99 900 HUF.\n\nA díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.","at":"2026-09-11T09:14:00+02:00","read":false,"topic":"szamlazas"},{"id":"d48","kind":"dunning","ch":"email","subject":"Előfizetése hamarosan megújul — ELEK-TESZT Vendégház","body":"Honlap-előfizetése 2030. 09. 10-én újul meg.\n\nA megújulás díja: 99 900 HUF.\n\nA díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.","at":"2026-09-11T09:13:00+02:00","read":false,"topic":"szamlazas"},{"id":"d47","kind":"dunning","ch":"email","subject":"Előfizetése hamarosan megújul — ELEK-TESZT Vendégház","body":"Honlap-előfizetése 2029. 09. 10-én újul meg.\n\nA megújulás díja: 99 900 HUF.\n\nA díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.","at":"2026-09-11T09:12:00+02:00","read":false,"topic":"szamlazas"},{"id":"d46","kind":"dunning","ch":"email","subject":"Előfizetése hamarosan megújul — ELEK-TESZT Vendégház","body":"Honlap-előfizetése 2028. 09. 10-én újul meg.\n\nA megújulás díja: 99 900 HUF.\n\nA díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.","at":"2026-09-11T09:11:00+02:00","read":false,"topic":"szamlazas"},{"id":"d45","kind":"dunning","ch":"email","subject":"Előfizetése hamarosan megújul — ELEK-TESZT Vendégház","body":"Honlap-előfizetése 2027. 09. 10-én újul meg.\n\nA megújulás díja: 99 900 HUF.\n\nA díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.","at":"2026-09-11T09:10:00+02:00","read":false,"topic":"szamlazas"},{"id":"d29","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-11T08:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d28","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-11T08:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d27","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-11T08:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d26","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-11T08:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d25","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-11T08:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d24","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-10T12:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d23","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-10T12:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d22","kind":"dunning","ch":"sms","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-10T12:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d21","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-10T12:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d20","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-10T12:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d19","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-10T11:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d18","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-10T11:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d17","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-10T11:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d16","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-10T11:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d15","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-10T11:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d14","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-10T10:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d13","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-10T10:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d12","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-10T10:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d11","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-10T10:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d10","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-10T10:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d9","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-10T09:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d8","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-10T09:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d7","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-10T09:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d6","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-10T09:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d5","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-10T09:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"d4","kind":"dunning","ch":"email","subject":"Honlapja újra elérhető — ELEK-TESZT Vendégház","body":"A díjat (99 900 HUF) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.\n\nEzzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan.\n\nAz automatikus kártyaterhelés a következő fordulónaptól újra él.","at":"2026-09-10T08:34:00+02:00","read":false,"topic":"szamlazas"},{"id":"d3","kind":"dunning","ch":"email","subject":"Honlapja felfüggesztve — ELEK-TESZT Vendégház","body":"A rendezetlen díj (99 900 HUF) miatt honlapját átmenetileg felfüggesztettük.\n\nLátogatói most egy „átmenetileg nem elérhető” oldalt látnak — a honlap tartalma nem veszett el.\n\nFizetés után a honlap automatikusan, azonnal visszakapcsol.","at":"2026-09-10T08:33:00+02:00","read":false,"topic":"szamlazas"},{"id":"d2","kind":"dunning","ch":"email","subject":"Utolsó figyelmeztetés: a honlap felfüggesztés előtt áll — ELEK-TESZT Vendégház","body":"A rendezetlen 99 900 HUF díj miatt honlapját 3 nap múlva átmenetileg felfüggesztjük.","at":"2026-09-10T08:32:00+02:00","read":false,"topic":"szamlazas"},{"id":"d1","kind":"dunning","ch":"email","subject":"Emlékeztető: rendezetlen honlapdíj — ELEK-TESZT Vendégház","body":"A 99 900 HUF díj még nincs rendezve. Kérjük, rendezze, hogy honlapja fennakadás nélkül működjön.","at":"2026-09-10T08:31:00+02:00","read":false,"topic":"szamlazas"},{"id":"d0","kind":"dunning","ch":"email","subject":"Esedékes a honlapdíj — ELEK-TESZT Vendégház","body":"Honlap-előfizetésének megújítása esedékes: 99 900 HUF.\n\nA díj a 2026. 09. 10. – 2027. 09. 10. időszakot fedi.\n\nDíj rendezése: https://citoviso.com/fizetes/…","at":"2026-09-10T08:30:00+02:00","read":false,"topic":"szamlazas"},{"id":"cr1","kind":"credentials","ch":"email","subject":"Belépési adatai – Citoviso admin","body":"A kezelőfelület elérhető a citoviso.com/login címen.\n\nFelhasználónév: elek-teszt\nJelszó: az aktiváláskor küldött jelszó.","at":"2026-09-09T14:20:00+02:00","read":true,"topic":"fiok"}];
+const VARIANT = "c";
+
+/* ── src/text/fold.ts: ékezet- és kisbetű-hajtogatás. A DB kollációja 'C', ezért
+      ez JS-ben fut a termékben is — a „szamla” megtalálja a „számlá”-t. */
+const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/* ── src/tenant/messageThreads.ts: ÁLLAPOT-SZÁL. dunning és multilang: fiókonként
+      EGY szál; a legfrissebb a hatályos szó, a többi túlhaladott. A számla és a
+      belépési adat SZÁNDÉKOSAN nem szál: egy új számla nem teszi valótlanná a régit. */
+const THREAD_OF = (r) => (r.kind === "dunning" ? "kind:dunning" : r.kind === "multilang" ? "kind:multilang" : null);
+const SUBJ_OF = { "kind:dunning": "előfizetés", "kind:multilang": "többnyelvű modul" };
+
+function position(rows){
+  const th = new Map();
+  for (const r of rows){ const k = THREAD_OF(r); if(!k) continue; (th.get(k) ?? th.set(k,[]).get(k)).push(r); }
+  const pos = new Map();
+  for (const r of rows) pos.set(r.id, {past:null, head:false, older:0, subj:null});
+  for (const [k, mem] of th){
+    if (mem.length < 2) continue;
+    const s = [...mem].sort((a,b)=> a.at < b.at ? 1 : a.at > b.at ? -1 : (a.id < b.id ? -1 : 1));
+    const head = s[0];
+    pos.set(head.id, {past:null, head:true, older:s.length-1, subj:SUBJ_OF[k]});
+    for (const m of s.slice(1)) pos.set(m.id, {past:{title:head.subject, at:head.at}, head:false, older:0, subj:SUBJ_OF[k]});
+  }
+  return pos;
+}
+const POS = position(ROWS);
+
+/* ── AZ ELŐNÉZET: az első ÉRDEMI sor. ⛔ Elek FK-001 E3: ma a törzs első nem-üres
+      sora látszik, az pedig a MEGSZÓLÍTÁS — ezért lett 19 számla-értesítő előnézete
+      betűre azonos („Kedves Elek Teszt!”). Az érdemi sor: nem megszólítás és nem
+      puszta udvariassági mondat. Számlánál a SZÁMOT hordozó sorok különböztetnek meg. */
+const GREETING = /^(kedves|tisztelt|udvozoljuk|szia|hello)\b/;
+const COURTESY = /^(koszonjuk|koszonettel|udvozlettel)\b/;
+function preview(r){
+  const lines = r.body.split("\n").map(s=>s.trim()).filter(Boolean);
+  const meat = lines.filter(l => !GREETING.test(fold(l)) && !COURTESY.test(fold(l)));
+  // ⛔ MÉRVE a saját vázlatomon: az „Összeg + Tétel” előnézet a 19 számlából csak
+  // 4-félét adott — a tétel ugyanis MÁR A CÍMBEN ott van, tehát megismételve nem
+  // különböztet. Az előnézet azt mondja el, ami a CÍMBŐL HIÁNYZIK: az összeget.
+  // A sort a cím (számlaszám) teszi egyedivé, az előnézet a döntéshez kell.
+  if (r.kind === "invoice"){
+    const amount = lines.find(l => /^Összeg:/.test(l));
+    const attach = lines.some(l => /mellékletében/.test(l));
+    if (amount) return amount + (attach ? " · a számla PDF-je mellékelve" : "");
+  }
+  return meat[0] ?? lines[0] ?? "";
+}
+
+/* ── AZ EGY PREDIKÁTUM. Minden chip száma ebből jön, egy dimenziót felülírva
+      (ADR-0127 ③): a chip szerkezetileg nem ígérhet mást, mint amit a kattintás ad. */
+const S = { topic:"mind", ch:"", unread:false, live:VARIANT==="a", q:"", page:1, open:null, confirm:false, toast:"", read:new Set(), folded:new Set() };
+const isRead = (r) => r.read || S.read.has(r.id);
+function matches(r, o){
+  const s = {...S, ...o};
+  if (s.topic !== "mind" && r.topic !== s.topic) return false;
+  if (s.ch && r.ch !== s.ch) return false;
+  if (s.unread && isRead(r)) return false;
+  if (s.live && POS.get(r.id).past) return false;
+  if (s.q && !fold(r.subject + "\n" + r.body).includes(fold(s.q))) return false;
+  return true;
+}
+const count = (o) => ROWS.filter(r => matches(r, o)).length;
+
+const TOPICS = [["foglalas","Foglalások"],["szamlazas","Számlázás"],["honlap","A honlapom"],["fiok","Fiók"]];
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (iso) => { const d = new Date(iso);
+  return d.toLocaleDateString("hu-HU",{year:"numeric",month:"2-digit",day:"2-digit"}) + " " +
+         d.toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit"}); };
+const dayKey = (iso) => iso.slice(0,10);
+const dayLabel = (k) => new Date(k+"T12:00:00").toLocaleDateString("hu-HU",{year:"numeric",month:"long",day:"numeric"});
+
+const PAGE = 20;
+
+function render(){
+  const list = ROWS.filter(r => matches(r, {}));
+  const unreadScope = list.filter(r => !isRead(r)).length;
+  const dirty = S.topic!=="mind" || S.ch || S.unread || S.q || (VARIANT==="a" && !S.live) || (VARIANT!=="a" && S.live);
+
+  const chip = (label, on, act, num, dis) =>
+    '<button class="chip" aria-pressed="'+on+'" data-act="'+act+'"'+(dis?" disabled":"")+'>'+esc(label)+
+    (num===undefined?"":'<em>'+num+'</em>')+'</button>';
+
+  let bar =
+    '<div class="search">🔍<input id="q" placeholder="Keresés az üzenetek között…" value="'+esc(S.q)+'"></div>' +
+    '<div class="frow"><span class="flab">Miről szól</span>' +
+      chip("Mind", S.topic==="mind", "t:mind", count({topic:"mind"})) +
+      TOPICS.map(([id,l]) => chip(l, S.topic===id, "t:"+id, count({topic:id}))).join("") +
+    '</div>' +
+    '<div class="frow"><span class="flab">Hogyan jött</span>' +
+      chip("E-mail", S.ch==="email", "c:email", count({ch:"email"})) +
+      chip("SMS", S.ch==="sms", "c:sms", count({ch:"sms"})) +
+    '</div>' +
+    '<div class="frow"><span class="flab">Állapot</span>' +
+      chip("Olvasatlan", S.unread, "u", count({unread:true})) +
+      (VARIANT!=="c" ? chip("Csak az érvényes", S.live, "l", count({live:true})) : "") +
+    '</div>';
+
+  const parts = [];
+  if (S.topic!=="mind") parts.push("téma: " + TOPICS.find(t=>t[0]===S.topic)[1]);
+  if (S.ch) parts.push("csatorna: " + (S.ch==="sms"?"SMS":"E-mail"));
+  if (S.unread) parts.push("csak olvasatlan");
+  if (S.live) parts.push("csak az érvényes");
+  if (S.q) parts.push('keresés: „'+S.q+'”');
+  // ⛔ Üres találatnál KELL kiút: a mai termékben ott a „Szűrés törlése”, és egy
+  // vázlat, amiből kimarad, a jóváhagyás után visszafejlődésnek látszana.
+  if (dirty) bar += '<div class="frow"><button class="btn" data-act="clear">Szűrés törlése</button></div>';
+  const shown = VARIANT==="b" ? Math.min(list.length, S.page*PAGE) : list.length;
+  // A találat-sor MINDIG a TALÁLATOT mondja elöl (nem azt, hány van kifestve):
+  // a lapozás a megjelenítés részlete, nem az eredményé.
+  let cnt = '<div class="cnt">' + list.length + " / " + ROWS.length + " üzenet" +
+    (parts.length ? " — " + esc(parts.join(" · ")) : "") +
+    (shown < list.length ? " · ebből az első " + shown + " látszik" : "") + "</div>";
+
+  // ── „Mind olvasott” — IGÉVEL és MEGERŐSÍTÉSSEL (Elek FK-001 Z4) ──────────
+  let act = "";
+  if (S.confirm){
+    act = '<div class="confirm"><b>Megjelöli olvasottként ezt a '+unreadScope+' üzenetet?</b><br>' +
+      (dirty ? "Csak a most szűrt listára hat — a többi olvasatlan marad." : "A teljes postaládára hat.") +
+      ' Ez nem törli őket, és később bármikor visszakereshetők.' +
+      '<div class="act"><button class="btn btn--go" data-act="doread">Igen, megjelölöm</button>' +
+      '<button class="btn" data-act="cancel">Mégsem</button></div></div>';
+  } else if (unreadScope){
+    act = '<div class="act"><button class="btn" data-act="askread">' +
+      (dirty ? "Megjelölöm olvasottként a szűrt "+unreadScope+" üzenetet" : "Megjelölöm olvasottként mind a "+unreadScope+" üzenetet") +
+      "</button></div>";
+  }
+  if (S.toast) act = '<div class="toast">✓ '+esc(S.toast)+'</div>' + act;
+
+  // ── A LISTA ──────────────────────────────────────────────────────────────
+  let html = "";
+  if (!list.length){
+    html = '<div class="empty">Nincs a szűrésnek megfelelő üzenet.<br>Próbáljon más szűrőt vagy keresőszót.</div>';
+  } else if (VARIANT === "c"){
+    html = renderThreaded(list);
+  } else if (VARIANT === "b"){
+    html = renderGrouped(list.slice(0, shown));
+    if (shown < list.length)
+      html += '<button class="more" data-act="more">További '+Math.min(PAGE, list.length-shown)+' üzenet betöltése ('+(list.length-shown)+' van még)</button>';
+  } else {
+    html = list.map(row).join("");
+    const hidden = ROWS.filter(r => POS.get(r.id).past && matches(r,{live:false})).length;
+    if (S.live && hidden)
+      html += '<button class="fold" data-act="l">'+hidden+' lezárt üzenet el van rejtve — ezeket egy újabb üzenet már felülírta. <b>Mutassa meg</b></button>';
+  }
+
+  document.getElementById("app").innerHTML =
+    badge() +
+    '<div class="card"><div class="card__hd"><span class="ico">✉</span><h2>Üzenetek</h2></div><div class="card__bd">' +
+    '<p class="intro">Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben. Így akkor is megtalálja, ha a levél a levélszemétbe került.</p>' +
+    bar + cnt + act + html + '</div></div>' + tail();
+  const q = document.getElementById("q");
+  if (q && S.focus){ q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+}
+
+/* ── A BAL MENÜ JELVÉNYE — Elek FK-001 E2 ────────────────────────────────────
+   Ma: „Üzenetek 71”, mert az olvasatlanság csak a readAt-ot nézi, és a rendszer által MAGA-elavultnak
+   nyilvánított 49 sor is teendőként riaszt. A három változat háromféleképp felel:
+     A — a túlhaladott NEM riaszt (a jelvény az érvényesekre szól),
+     B — riaszt, de a szám MEGMONDJA, mennyi belőle lezárt ügy,
+     C — az ügy számít, nem a levél: szálanként egy teendő.
+   Ezt a sort a tulaj látja a vázlaton, mert az E2 pont erről szól. */
+function badge(){
+  const unreadAll = ROWS.filter(r => !isRead(r)).length;
+  const unreadLive = ROWS.filter(r => !isRead(r) && !POS.get(r.id).past).length;
+  const unreadPast = unreadAll - unreadLive;
+  let n, note;
+  if (VARIANT === "a"){ n = unreadLive; note = "a "+unreadPast+" túlhaladott üzenet NEM riaszt (lezárt ügy)"; }
+  else if (VARIANT === "b"){ n = unreadAll; note = "ebből "+unreadPast+" már túlhaladott — a szám kimondja"; }
+  else {
+    const seen = new Set();
+    n = ROWS.filter(r => { if (isRead(r)) return false; const k = THREAD_OF(r);
+      if (!k) return true; if (POS.get(r.id).past) return false; if (seen.has(k)) return false; seen.add(k); return true; }).length;
+    note = "szálanként EGY teendő, a "+unreadPast+" lezárt lépés nem külön riasztás";
+  }
+  return '<div class="nav"><span class="nav__l">Bal menü ▸ <b>Üzenetek</b></span>' +
+    '<span class="nav__b">'+n+'</span><span class="nav__n">'+note+' · ma a jelvény: <b>'+unreadAll+'</b></span></div>';
+}
+
+function row(r, inThread){
+  const p = POS.get(r.id), open = S.open === r.id, unread = !isRead(r);
+  let marks = "";
+  if (p.past && !inThread){
+    marks = '<div class="marks"><span class="pill pill--past">Túlhaladott</span></div>' +
+      '<span class="sup">Felülírta a(z) <b>'+fmt(p.past.at)+'</b>-i „'+esc(p.past.title)+'” — ' +
+      'ez a szál legfrissebb üzenete.</span>';
+  } else if (p.head && p.older){
+    marks = '<div class="marks"><span class="pill pill--ok">Ez a legfrissebb — '+p.subj+'</span></div>' +
+      '<span class="sup">'+p.older+' korábbi üzenetet ír felül</span>';
+  }
+  return '<div class="msg'+(unread?" unread":"")+(p.past?" past":"")+'">' +
+    '<button class="msg__hd" data-open="'+r.id+'">' +
+      '<span class="msg__ic">'+(r.ch==="sms"?"💬":"✉")+'</span>' +
+      '<span class="msg__t"><strong>'+esc(r.subject)+'</strong>' +
+        '<span class="pv">'+esc(preview(r))+'</span>'+marks+'</span>' +
+      '<span class="msg__r"><span class="when">'+fmt(r.at)+'</span>' +
+        '<span class="tag'+(r.ch==="sms"?" tag--sms":"")+'">'+(r.ch==="sms"?"SMS":"E-MAIL")+'</span>' +
+        '<span class="chev">'+(open?"Bezárom ▴":"Megnyitom ▾")+'</span></span>' +
+    '</button>' +
+    (open ? '<div class="body">'+esc(r.body)+'<div class="meta">'+(r.ch==="sms"?"SMS":"E-mail")+' · elek@citoviso.com · '+fmt(r.at)+'</div></div>' : "") +
+  '</div>';
+}
+
+function renderGrouped(list){
+  let out = "", last = "";
+  for (const r of list){
+    const k = dayKey(r.at);
+    if (k !== last){ out += '<div class="grp">'+dayLabel(k)+'</div>'; last = k; }
+    out += row(r);
+  }
+  return out;
+}
+
+/* VARIANT C: az ÜGY a sor, nem a levél. A szál feje áll a listában, a lépései
+   összecsukva alatta — egy koppintásra kinyithatók, semmi nem tűnik el. */
+function renderThreaded(list){
+  const byThread = new Map(), out = [];
+  for (const r of list){
+    const k = THREAD_OF(r);
+    if (!k){ out.push({single:r, at:r.at}); continue; }
+    if (!byThread.has(k)) byThread.set(k, []);
+    byThread.get(k).push(r);
+  }
+  for (const [k, mem] of byThread){
+    const s = [...mem].sort((a,b)=> a.at < b.at ? 1 : -1);
+    out.push({thread:k, head:s[0], rest:s.slice(1), at:s[0].at});
+  }
+  out.sort((a,b)=> a.at < b.at ? 1 : -1);
+  return out.map(e => {
+    if (e.single) return row(e.single);
+    const openT = S.folded.has(e.thread);
+    return '<div>' + row(e.head) +
+      (e.rest.length ? '<button class="fold" data-fold="'+e.thread+'">' +
+        (openT ? "▴ A(z) "+SUBJ_OF[e.thread]+" korábbi "+e.rest.length+" lépésének elrejtése"
+               : "▾ Ugyanennek az ügynek a korábbi "+e.rest.length+" lépése") + '</button>' : "") +
+      (openT ? e.rest.map(r => row(r, true)).join("") : "") + '</div>';
+  }).join("");
+}
+
+/* ── A MÁSIK KÉT KÉPERNYŐ (mindhárom változatban AZONOS) ─────────────────── */
+function tail(){
+  const paid = ROWS.filter(r=>r.kind==="invoice").length;
+  return '<div class="state"><h2>A honlapja újra elérhető</h2>' +
+    '<p>A díjat megkaptuk — <b>2026. 09. 12.</b> óta a látogatói ismét elérik az oldalát, változatlan tartalommal.</p>' +
+    '<p><b>Ezzel a 2026. 09. 10. – 2027. 09. 10. időszak van rendezve</b> (99 900 Ft). A következő fordulónap: 2027. 09. 10.</p>' +
+    '<p>A számlát elküldtük e-mailben. <a class="lnk" href="#" data-act="doc">Megnyitom a számlát a Dokumentumok közt ▸</a></p></div>' +
+    '<div class="card"><div class="card__hd"><span class="ico">🧾</span><h2>Számlák és dokumentumok</h2></div><div class="card__bd">' +
+    '<div class="sum">' +
+      '<div><div class="l">Kiállított számla</div><div class="v">'+paid+' db</div><div class="n">a fiók indulása óta</div></div>' +
+      '<div><div class="l">Eddig kifizetett — mindösszesen</div><div class="v">1 224 450 Ft</div><div class="n">a '+paid+' kiállított számla összege, nem tartozás</div></div>' +
+      '<div><div class="l">Jelenleg fizetendő</div><div class="v">0 Ft</div><div class="n">minden számla rendezve</div></div>' +
+    '</div>' +
+    '<div class="inv"><span class="msg__ic">🧾</span><div><strong>Honlap-előfizetés (éves)</strong>' +
+      '<span class="pv">OV-2026-43 · 2026. 09. 12.</span></div><div><b>99 900 Ft</b></div></div>' +
+    '<div class="inv"><span class="msg__ic">🧾</span><div><strong>Többnyelvű honlap — egyszeri generálási díj</strong>' +
+      '<span class="pv">OV-2026-41 · 2026. 09. 12.</span></div><div><b>14 900 Ft</b></div></div>' +
+    '</div></div>';
+}
+
+document.addEventListener("click", (e) => {
+  const o = e.target.closest("[data-open]");
+  const a = e.target.closest("[data-act]");
+  const f = e.target.closest("[data-fold]");
+  S.focus = false;
+  if (f){ const k=f.dataset.fold; S.folded.has(k)?S.folded.delete(k):S.folded.add(k); return render(); }
+  if (o){ S.open = S.open === o.dataset.open ? null : o.dataset.open;
+          if (S.open) S.read.add(S.open); S.toast=""; return render(); }
+  if (!a) return;
+  const v = a.dataset.act; S.toast = "";
+  if (v.startsWith("t:")) { S.topic = v.slice(2); S.page = 1; }
+  else if (v.startsWith("c:")) { const c = v.slice(2); S.ch = S.ch === c ? "" : c; S.page = 1; }
+  else if (v === "u") { S.unread = !S.unread; S.page = 1; }
+  else if (v === "l") { S.live = !S.live; S.page = 1; }
+  else if (v === "more") S.page++;
+  else if (v === "clear"){ S.topic="mind"; S.ch=""; S.unread=false; S.live=VARIANT==="a"; S.q=""; S.page=1; }
+  else if (v === "askread") S.confirm = true;
+  else if (v === "cancel") S.confirm = false;
+  else if (v === "doread"){
+    const n = ROWS.filter(r => matches(r,{}) && !isRead(r)).length;
+    ROWS.filter(r => matches(r,{})).forEach(r => S.read.add(r.id));
+    S.confirm = false; S.unread = false;
+    S.toast = n + " üzenetet megjelöltünk olvasottként.";
+  }
+  else if (v === "doc"){ e.preventDefault(); document.querySelector(".state").scrollIntoView({behavior:"smooth"}); return; }
+  render();
+});
+document.addEventListener("input", (e) => { if (e.target.id === "q"){ S.q = e.target.value; S.page = 1; S.focus = true; render(); } });
+
+// Méret-váltó. Telefonon MOBIL módban indul (a tulaj többnyire telefonon néz).
+function setSize(m){
+  document.body.classList.toggle("is-mobile", m);
+  document.querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.size==="m")===m)));
+}
+document.querySelectorAll("[data-size]").forEach(b => b.addEventListener("click", () => setSize(b.dataset.size==="m")));
+setSize(window.innerWidth < 760);
+render();
+</script></body></html>

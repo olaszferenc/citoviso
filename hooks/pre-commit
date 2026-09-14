@@ -98,7 +98,7 @@ fi
 # minden egység-teszt zöld: az ADAT megvolt, csak nem jutott el a sorig — ezért az
 # őr a RENDERELT listát méri. Piros önteszttel (7 sértés a visszarontott nézeten).
 if [ -f scripts/admin-list-labels-check.mts ] && \
-   changed_files | grep -qE '^(src/server/adminViews\.ts|src/billing/invoiceItem\.ts|src/tenant/(messages|messageThreads|documents)\.ts)|^scripts/admin-list-labels-check'; then
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/billing/invoiceItem\.ts|src/tenant/(messages|messageThreads|messagePreview|documents)\.ts)|^scripts/admin-list-labels-check'; then
   echo "[pre-commit] admin-list-labels (tétel-név · csatorna · túlhaladottság)…"
   npx tsx scripts/admin-list-labels-check.mts
 fi
