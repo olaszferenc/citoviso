@@ -807,9 +807,13 @@ export function modulesSection(
               `<iframe title="${esc(T(lang, m.label))}" tabindex="-1" aria-hidden="true" scrolling="no"` +
               ` data-src="/admin/modules/preview?on=*#only=${encodeURIComponent(m.id)}"></iframe></div>`
             : "";
+          // Ugyanaz a szabály, mint a saját moduloknál (fent): fagyás alatt a link egy
+          // BELSŐ előnézetet nyit, nem a felfüggesztett nyilvános oldalt — az
+          // „oldalamon" szó ilyenkor elérhetőséget ígérne, holott a lap teteje épp
+          // azt mondja, hogy a honlap nem érhető el.
           const look = hasSurface
             ? `<a class="citui-btn citui-btn--ghost" data-pv="${esc(m.id)}" target="_blank" rel="noopener"` +
-              ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${T(lang, "Megnézem az oldalamon")}</span></a>`
+              ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${frozen ? T(lang, "Előnézet") : T(lang, "Megnézem az oldalamon")}</span></a>`
             : "";
           return (
             `<article class="adm-shop__card${hasSurface ? "" : " adm-shop__card--plain"}" data-modrow="${esc(m.id)}">` +
@@ -1183,7 +1187,17 @@ export function modulesSection(
     // what the switches DO before the click — a paid module appears AFTER its
     // prorated first fee is paid; cancels honour the paid period. §I: the button
     // must never surprise.
-    `<p class="adm-lead">${T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")}</p>` +
+    // ⛔ ADR-0119 ① (mérve 2026-09-13, Elek FK-006a HIBA-1): ez a bevezető KÉT
+    // elérhetőség-ígéretet tett — „meg is nézheti a saját oldalán" és „a díj
+    // kifizetése után jelenik meg az oldalán" — egy olyan lapon, amelynek a saját
+    // fejléce kimondja, hogy a honlap NEM elérhető. A fagyasztott változat ugyanazt
+    // az információt adja, csak az ígéret nélkül: az előnézet a tulaj MAGÁN nézete,
+    // és a rendezésig semmi nem jelenik meg a vendégeknek.
+    `<p class="adm-lead">${
+      frozen
+        ? T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — az előnézet ilyenkor is megmutatja őket, de csak Önnek. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. A felfüggesztés alatt új modul nem vehető fel, és a meglévők sem jelennek meg a vendégeknek. Amit lemond, a már kifizetett időszak végéig az Öné marad.")
+        : T(lang, "Ami már az Öné, azt fent találja; amit még hozzáadhat, azt alább — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")
+    }</p>` +
     appliedBox +
     blocks +
     planBar +
@@ -1488,8 +1502,14 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
           ? T(lang, "A generálás többszöri próbálkozás után sem sikerült. Munkatársunk már tud róla, és felveszi Önnel a kapcsolatot — újra fizetnie NEM kell.")
           : ml.paid.phase === "running"
             ? ml.paid.attempts > 0
-              ? T(lang, "A fordítás újraindult ({n}. próbálkozás), és készül — amint kész, a nyelvi változatok maguktól megjelennek.", { n: ml.paid.attempts })
-              : T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")
+              // ADR-0119 ①: „maguktól megjelennek" fagyás alatt hamis — a fordítás
+              // tényleg elkészül, de MEGJELENNI csak a rendezés után fog.
+              ? ml.frozen
+                ? T(lang, "A fordítás újraindult ({n}. próbálkozás), és készül — a kész nyelvi változatok a felfüggesztés rendezése után jelennek meg a vendégeknek.", { n: ml.paid.attempts })
+                : T(lang, "A fordítás újraindult ({n}. próbálkozás), és készül — amint kész, a nyelvi változatok maguktól megjelennek.", { n: ml.paid.attempts })
+              : ml.frozen
+                ? T(lang, "A fordítás készül — pár percen belül elkészül. A kész nyelvi változatok a felfüggesztés rendezése után jelennek meg a vendégeknek.")
+                : T(lang, "A fordítás készül — pár percen belül elkészül, és az oldal nyelvi változatai maguktól megjelennek.")
             : ml.paid.phase === "stalled"
               ? T(lang, "A generálás a vártnál tovább tart — a rendszer néhány percen belül automatikusan újraindítja. Újra fizetnie NEM kell.")
               : T(lang, "A generálás hibára futott — a rendszer automatikusan újrapróbálja. A díjat nem veszítette el, újra fizetnie NEM kell.")
@@ -1502,7 +1522,12 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
       : ml.state
         ? ml.state.status === "stale"
           ? `<div class="adm-saved" role="alert" ${warnBox}>${ic("alert", 18)} <strong>${T(lang, "A fordítások elavultak.")}</strong> ${T(lang, "Módosította az oldala szövegeit, ezért a nyelvi változatok ({langs}) még a korábbi tartalmat mutatják. Az újrageneráláshoz újra ki kell fizetni a generálás díját.", { langs: esc(ml.state.langNames.join(", ")) })}</div>`
-          : `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A nyelvi változatok naprakészek: {langs} (generálva: {date}).", { langs: esc(ml.state.langNames.join(", ")), date: esc(ml.state.generatedAt) })}</div>`
+          // ADR-0119 ①: „naprakészek" a TARTALOMRÓL igaz marad fagyás alatt is, de a
+          // mondat önmagában élő oldalt sugall — ezért a fagyasztott változat kimondja,
+          // hogy a vendég most egyiket sem éri el.
+          : ml.frozen
+            ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A fordítások elkészültek és naprakészek: {langs} (generálva: {date}) — a vendégek a felfüggesztés rendezéséig egyiket sem érik el.", { langs: esc(ml.state.langNames.join(", ")), date: esc(ml.state.generatedAt) })}</div>`
+            : `<div class="adm-saved">${ic("check", 18)} ${T(lang, "A nyelvi változatok naprakészek: {langs} (generálva: {date}).", { langs: esc(ml.state.langNames.join(", ")), date: esc(ml.state.generatedAt) })}</div>`
         : "");
   const links = ml.langUrls.length
     ? `<p class="citui-hint">${T(lang, "Nyelvi változatok:")} ` +
@@ -1614,7 +1639,15 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     `<form method="POST" action="/admin/multilang" id="tobbnyelvu">` +
     `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Többnyelvű honlap")}</h2>${helpLink("admin.multilang", lang)}</div>` +
-    `<p class="adm-lead">${T(lang, "Az oldala a választott nyelveken is elérhető lesz — a beírt szövegei és a teljes felület lefordítva, egyszeri díjért. Választható: {total} nyelv. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { total: ml.totalTargets })}</p>` +
+    // ⛔ ADR-0119 ① (mérve, Elek FK-006a HIBA-1): EZ volt a bejelentett mondat —
+    // „elérhető lesz" egy felfüggesztett honlapról, két hüvelykkel a „NEM elérhető"
+    // alatt. Fagyás alatt a kártya a fordításról beszél (az elkészül), nem az
+    // elérhetőségről (az a rendezésen múlik).
+    `<p class="adm-lead">${
+      ml.frozen
+        ? T(lang, "A beírt szövegeit és a teljes felületet lefordítjuk a választott nyelvekre, egyszeri díjért. Választható: {total} nyelv. A honlapja a felfüggesztés alatt a vendégek számára egyik nyelven sem érhető el — a nyelvi változatok a rendezés után válnak láthatóvá. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { total: ml.totalTargets })
+        : T(lang, "Az oldala a választott nyelveken is elérhető lesz — a beírt szövegei és a teljes felület lefordítva, egyszeri díjért. Választható: {total} nyelv. Ha később módosítja a szövegeit, a fordítások nem frissülnek maguktól: az újragenerálás újra ennyibe kerül. A nyelveket ilyenkor cserélheti is.", { total: ml.totalTargets })
+    }</p>` +
     statusBlock +
     links +
     beforePayNote +

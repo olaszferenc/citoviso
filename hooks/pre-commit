@@ -291,6 +291,18 @@ if [ -f scripts/frozen-state-check.mts ] && \
   echo "[pre-commit] frozen-state-check (a felfüggesztett lap nem mond ellent magának)…"
   npx tsx scripts/frozen-state-check.mts >/dev/null
 fi
+# ADR-0119 ①: a fenti őr SZÓ SZERINTI tűket keres — és pont ezért engedte át a
+# 2026-09-13-i leletet (Elek FK-006a HIBA-1): a többnyelvű kártya MÁS SZAVAKKAL
+# ígért elérhetőséget („Az oldala … elérhető lesz", „a nyelvi változatok maguktól
+# megjelennek") egy olyan lapon, amely fent kimondta, hogy a honlap NEM elérhető.
+# Ez az őr az ÁLLÍTÁST méri (alany + állítmány + polaritás), nem a szavakat, ezért
+# az ÚJ megfogalmazás is fennakad rajta. A katalógusból rendereli a kártyákat, így
+# egy új modul-leírás is a mérés alá esik.
+if [ -f scripts/frozen-claim-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/modules\.ts|src/tenant/multilangCard\.ts|src/tenant/modules\.ts)'; then
+  echo "[pre-commit] frozen-claim-check (fagyás alatt egyetlen kártya sem ígér elérhetőséget)…"
+  npx tsx scripts/frozen-claim-check.mts >/dev/null
+fi
 # ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
 # mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
 # EMBER kapjon szót. Injektált futtatóval mér: sem LLM-et nem éget, sem SMS-t nem küld.

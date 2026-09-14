@@ -5995,6 +5995,20 @@ a magyarázattal együtt („Nem érkezett válasz… A vendégnek elküldtük a
 fixture-rel, pre-commitban a felület/billing fájlok változásakor. `--self-test` a romlott
 állapotra futtatva **6 sértést** talál — köztük mind a négy eredetileg bejelentettet.
 
+**⑧ A SZÓ SZERINTI TŰ NEM ELÉG — AZ ÁLLÍTÁST KELL MÉRNI** (2026-09-14, Elek FK-006a HIBA-1 nyomán).
+A ⑦ őr három tűje (`nincs teendője`, `elérhető marad`, `Aktív az oldalán`) **mind ÁTMENT**, miközben
+ugyanazon a fagyasztott lapon a többnyelvű kártya azt írta: „Az oldala … **elérhető lesz**”, „a nyelvi
+változatok **maguktól megjelennek**”, feljebb pedig „**meg is nézheti a saját oldalán**”. A tű-lista
+szerkezetileg csak azt ismeri, amit egyszer már elkaptunk — **más szavakkal ugyanaz az ígéret átcsúszik**.
+Ezért az új őr (`scripts/frozen-claim-check.mts`) nem szavakat keres, hanem **állítást**: ALANY (a tulaj
+oldala / tartalma / modulja) + ÁLLÍTMÁNY (elérhető · megjelenik · látható · naprakész) + POLARITÁS
+(nem tagadott, és nem a fagyás oldja fel). Így az ÚJ megfogalmazás is fennakad rajta. A kártyákat a
+**termék katalógusából** rendereli hat többnyelvű állapotban, tehát egy új modul-leírás is a mérés alá esik.
+⛔ A termék-leírás kivételei **kimondottak és exact-match**-esek: ha a szöveg változik, a kivétel nem
+illeszkedik többé, és az őr pirosra vált — a kivétel nem tud némán tágulni. Önteszt: **19 állítás**.
+⚠️ A tagadás-vizsgálat a állítmány ELŐTTI 40 karakteren néz negátort, nem a teljes mondaton: az
+„Az oldala elérhető, nem kell tennie semmit” mondatban is ott a „nem”, mégis ígéret.
+
 **Elvetett változatok:** B („állapot-sáv minden fülön”) — kevesebb helyet foglal és mindenhol
 látszik, de halkabb; C („rendezés-kapu”) — a legerősebb, de elzárja a tulajt attól, amiért belépett.
 
