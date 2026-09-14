@@ -1,7 +1,50 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🔤 a gépies magyar alak hibaosztálya lezárva — ADR-0153)
+Utolsó frissítés: 2026-09-14 (🧊 a fagyasztott tulaj-admin: egy képernyő, egy összeg — ADR-0155)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-14)
+
+**🧊 ADR-0155 — A FAGYASZTOTT TULAJ-ADMIN: EGY KÉPERNYŐ, EGY ÖSSZEG.**
+Session-jegyzet: `_planning/memory/2026-09-14_frozen_settle_screen.md`.
+Kontraktus: `assets/design-refs/console/freeze-state-v2/`. **Élesítés NINCS** (§0.3).
+
+- **A gyökér-ok szerkezeti volt.** Az ADR-0119 ① kimondta, hogy „a fagyás ÁLLAPOT, nem doboz" —
+  a blokkot viszont EGYEDÜL a `modulesSection()` rendereltette, és a két őre (⑦/⑧) is azt az
+  EGY függvényt méri. A szabály hatóköre és az őrök hatóköre EGYÜTT szűkült be egy fülre:
+  **a hiba nem csúszott át a kapun, a kapu sosem nézett a másik 12 lapra.** Mérve: az
+  `attekintes` (belépő) fülön 0× tartozás / 0× összeg / 0× fizetés-gomb, az Üzeneteken 0×
+  bármelyik fagyás-szó — miközben a vendég 503-at kapott.
+- **A belépő lap nem hallgatott, hanem MÁST mondott:** „Az oldal még nem publikus — **a
+  Citoviso élesíti, amint minden készen áll**". Ránk hárította az okot, és nem hagyott
+  teendőt ott, ahol az egyetlen igaz válasz az, hogy fizessen. (Külön, korábbi commit.)
+- **Tulajdonosi döntés három bemutatott változat képei alapján: „B — Rendezés-képernyő".**
+  Fagyás alatt a lap EGY dologról szól: tartozás + hátralévő idő nagyban, a modul-lista
+  CSAK OLVASHATÓ. Kiesik a „Következő számla" cella (ugyanaz a 10 270, MÚLTBELI dátummal),
+  a „Jelenlegi díj" és az összegző végösszege; a részek maradnak, mert azok magyaráznak.
+- ⛔ **A kapcsolók kivétele majdnem ADATVESZTÉS lett volna:** az `applyModuleChange` a HIÁNYZÓ
+  `module` mezőt LEMONDÁSNAK olvassa, tehát a fagyasztott lap egyetlen űrlap-beküldése némán
+  lemondta volna mind a 11 modult. Rejtett megőrző mező minden modulra, darabra mérve.
+- ⛔ **A maradék eladási CTA-t a KÉP fogta meg, nem az őr:** „2 hónap ajándék évente ·
+  **102 700 Ft** · Váltok éves fizetésre" — ajánlat annak, akit épp dunningolunk. Az őröm egy
+  KONKRÉT összeget számolt, ez másik szám volt. Azóta a döntési POZÍCIÓT méri (ár + gomb).
+- ⛔ **Egy őr-próbám a SZOMSZÉD cellát mérte** (az első `.adm-sub__v--date` közben más cella
+  lett) — zöld volt, rossz elemre. Saját horog (`data-nextafter`) oldotta meg.
+- **Őrök, mind piros önteszttel:** `frozen-entry-check` (belépő fül · 5 sértés) ·
+  `frozen-settle-check` (pénz + vezérlők + megőrző mezők + 5 fül · 8 sértés, plusz 4 kötés a
+  TERMÉK visszarontásával igazolva) · `frozen-phone-check` (390×844, `elementFromPoint`,
+  GÖRGETÉS NÉLKÜL · 6 sértés — ezt szöveg-őr nem láthatja: az előző kör javított mondata
+  JELEN VOLT a lapon, miközben a fix fülsáv alatt állt, y=730 vs 658).
+- ⚠️ **Az ADR-számom KÉTSZER csúszott el landolás közben** (0153 → 0154 → **0155**): mindkétszer
+  egy párhuzamos szál landolta előbb ugyanazt a számot. A cserét mindannyiszor a SAJÁT
+  blokkomon végeztem, a közös doksit pedig az `origin/main`-ről építettem újra — az eredmény
+  **91 beszúrás / 0 törlés**, idegen ADR nem sérült. Plusz ikerjavítás-konfliktus az ADR-0153
+  (gépi magyar alak) szálával ugyanazon a cellán: az Ő `formatMonthDay` soruk + az ÉN
+  fagyás-ágaim, és lefuttattam az ő őrüket a saját új szövegeimre is (tiszta).
+- **NYITOTT:** ① az „Oldal megtekintése" gomb fagyás alatt figyelmeztetés nélkül a 503-as éles
+  címre visz (a tulaj szándékosan nem döntött; a kontraktus kimondja, hogy NEM kötött) ·
+  ② terhelés-újrapróbálás: nincs szerver-útvonal, a mock két gombja közül egy (a valódi)
+  készült el, az eltérés a kontraktusban kimondva.
+
+## Előző szál (2026-09-14)
 
 **🔤 ADR-0153 — EGY TILALOM, AMIT SEMMI NEM MÉRT, HÁROMSZOR JÖTT VISSZA.**
 Session-jegyzet: `_planning/memory/2026-09-14_hu_machine_form_class.md`. **Élesítés NINCS.**

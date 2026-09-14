@@ -302,6 +302,105 @@ export interface DomainSettleState {
  *   • payment-state banners (past_due/frozen) with the pay-link;
  *   • whole-subscription cancel in a two-step danger zone (<details> = no-JS safe).
  */
+/** Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server. */
+const hufAmount = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+
+/** Whole days from today (UTC midnight) to an ISO date — never negative. */
+function daysUntil(iso: string): number {
+  const day = 86_400_000;
+  const target = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(target)) return 0;
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.max(0, Math.round((target - today) / day));
+}
+
+/**
+ * ── ADR-0119 second round · approved plan "B — Rendezés-képernyő" ──────────────
+ *    (assets/design-refs/console/freeze-state-v2/)
+ *
+ * The suspension block. Owner ruling 2026-09-14, after seeing three variants:
+ * "Fagyás alatt a lap EGY dologról szóljon: tartozás + hátralévő idő nagyban."
+ *
+ * Two things changed against the first round (ADR-0119 ②):
+ *   ① the block now carries the DEADLINE as a figure of its own, next to the
+ *      amount — until now the T+30 date was the second bullet of a prose list,
+ *      i.e. the one fact that makes the amount urgent was the least visible one;
+ *   ② it lives in its OWN function, because it must appear on EVERY tab. The
+ *      ADR-0119 ① rule ("the freeze is a STATE, not a box") was only ever
+ *      rendered by modulesSection(), so 12 of the 13 tabs — including the one
+ *      the owner lands on and the Üzenetek tab — said nothing at all (measured
+ *      2026-09-14: 0× any freeze word on the whole Üzenetek page).
+ *
+ * `compact` drops the deadline column and shrinks the figure: on the tabs that
+ * are NOT about money the block states the situation and the way out, without
+ * taking over a screen the owner opened for something else.
+ */
+function frozenStateBlock(sub: SubscriptionAdminData, lang: string, compact: boolean): string {
+  const owed = sub.arrears ? hufAmount(sub.arrears.amount) : null;
+  // No arrears row can only mean the ladder has not minted the order yet — say
+  // that instead of printing a confident zero (§B.17).
+  const money =
+    `<div class="adm-owe">` +
+    `<div class="adm-owe__l">${T(lang, "Rendezendő tartozás")}</div>` +
+    `<div class="adm-owe__v">${owed ? esc(owed) : T(lang, "összesítés alatt")}</div>` +
+    (sub.arrears
+      ? `<div class="adm-owe__sub">${T(lang, "a {from} – {to} időszak díja", { from: esc(formatDay(sub.arrears.periodStart, lang)), to: esc(formatDay(sub.arrears.periodEnd, lang)) })}</div>`
+      : "") +
+    `</div>` +
+    (sub.payUrl
+      ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(sub.payUrl)}">` +
+        (owed ? T(lang, "Befizetem — {amount}", { amount: esc(owed) }) : T(lang, "Díj rendezése")) +
+        `</a>`
+      : "") +
+    `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A befizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
+
+  // The deadline panel. The bar fills from the freeze to the close date — both
+  // dates come from the subscription, so the bar cannot disagree with the text.
+  const left = daysUntil(sub.closesOn);
+  const total = sub.frozenOn
+    ? Math.max(1, Math.round((Date.parse(sub.closesOn) - Date.parse(sub.frozenOn)) / 86_400_000))
+    : 0;
+  const pct = total > 0 ? Math.min(100, Math.max(4, Math.round(((total - left) / total) * 100))) : 0;
+  // ⚠️ "0 nap" is not a safe default. The close date can already be BEHIND us
+  // (the cancel job runs on a schedule, so a tenant can sit past T+30 for a
+  // while), and a big "0 nap" over a sentence promising it "can still be
+  // settled until <past date>" is two claims that cannot both hold. Say which
+  // one is true instead of printing a confident zero (§B.17).
+  const expired = Date.parse(`${sub.closesOn.slice(0, 10)}T00:00:00Z`) < Date.now() - 86_400_000;
+  const leftLabel = expired
+    ? T(lang, "lejárt")
+    : left === 0
+      ? T(lang, "ma jár le")
+      : T(lang, "{n} nap", { n: String(left) });
+  const deadline =
+    compact
+      ? ""
+      : `<div class="adm-owe__dl">` +
+        `<div class="adm-owe__l">${T(lang, "Hátralévő idő")}</div>` +
+        `<div class="adm-owe__dlv">${leftLabel}</div>` +
+        `<p>${
+          expired
+            ? T(lang, "A <b>{date}</b>-i határidő letelt. Írjon nekünk, mielőtt az előfizetés lezárul.", { date: esc(formatDayStem(sub.closesOn, lang)) })
+            : T(lang, "<b>{date}</b>-ig rendezhető. Utána az előfizetés lezárul, és a honlap lekerül.", { date: esc(formatDayStem(sub.closesOn, lang)) })
+        }</p>` +
+        (total > 0
+          ? `<div class="adm-owe__bar"><i style="width:${pct}%"></i></div>`
+          : "") +
+        (sub.frozenOn
+          ? `<p>${T(lang, "{date} óta felfüggesztve — a tartalma megvan, nem veszett el.", { date: esc(formatDay(sub.frozenOn, lang)) })}</p>`
+          : "") +
+        `</div>`;
+
+  return (
+    `<section class="adm-frz${compact ? " adm-frz--compact" : ""}">` +
+    `<div class="adm-frz__head"><span class="adm-frz__dot"></span>` +
+    `<h2>${T(lang, "A honlapja jelenleg NEM elérhető")}</h2></div>` +
+    `<div class="adm-frz__grid"><div class="adm-frz__money">${money}</div>${deadline}</div>` +
+    `</section>`
+  );
+}
+
 export function modulesSection(
   mv: TenantModuleView,
   sub: SubscriptionAdminData | null,
@@ -310,8 +409,7 @@ export function modulesSection(
   domainSettle: DomainSettleState | null = null,
   lang = "hu",
 ): string {
-  // Thousand-separated HUF; toLocaleString is unreliable without full ICU on the server.
-  const huf = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} Ft`;
+  const huf = hufAmount;
   // The anniversary the owner reads a dozen times on this page. It arrives in
   // STORAGE form (`2027-09-10`) and used to be printed raw into every one of
   // those sentences — an ISO stamp in the middle of Hungarian prose, next to a
@@ -339,37 +437,7 @@ export function modulesSection(
   const frozen = sub?.status === "frozen";
   let stateCard = "";
   if (sub && frozen) {
-    const owed = sub.arrears ? huf(sub.arrears.amount) : null;
-    const money =
-      `<div class="adm-owe">` +
-      `<div class="adm-owe__l">${T(lang, "Rendezendő tartozás")}</div>` +
-      // No arrears row can only mean the ladder has not minted the order yet —
-      // say that instead of printing a confident zero (§B.17).
-      `<div class="adm-owe__v">${owed ? esc(owed) : T(lang, "összesítés alatt")}</div>` +
-      (sub.arrears
-        ? `<div class="adm-owe__sub">${T(lang, "a {from} – {to} időszak díja", { from: esc(formatDay(sub.arrears.periodStart, lang)), to: esc(formatDay(sub.arrears.periodEnd, lang)) })}</div>`
-        : "") +
-      `</div>` +
-      (sub.payUrl
-        ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(sub.payUrl)}">` +
-          (owed ? T(lang, "Befizetem — {amount}", { amount: esc(owed) }) : T(lang, "Díj rendezése")) +
-          `</a>`
-        : "") +
-      `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A befizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
-    const facts =
-      `<li>${T(lang, "A vendégek most egy udvarias, „átmenetileg nem elérhető” lapot látnak az Ön nevével és elérhetőségével — nem hibaüzenetet.")}</li>` +
-      `<li>${T(lang, "<b>{date}</b>-ig rendezhető. Utána az előfizetés lezárul és a honlap lekerül.", { date: esc(formatDayStem(sub.closesOn, lang)) })}</li>` +
-      `<li>${T(lang, "A moduljai megmaradnak, csak szünetelnek — semmi nem vész el.")}</li>`;
-    stateCard =
-      `<section class="adm-card adm-state adm-state--bad">` +
-      `<div class="adm-card__head adm-state__head"><span class="adm-sub__dot adm-state__dot"></span>` +
-      `<h2>${T(lang, "A honlapja jelenleg NEM elérhető")}</h2></div>` +
-      `<div class="adm-state__grid">` +
-      `<div class="adm-state__money">${money}</div>` +
-      `<div class="adm-state__text">` +
-      `<p>${T(lang, "{date} óta a látogatói nem érik el az oldalát. A tartalom nem veszett el.", { date: esc(formatDay(sub.frozenOn ?? renewDateISO, lang)) })}</p>` +
-      `<ul>${facts}</ul>` +
-      `</div></div></section>`;
+    stateCard = frozenStateBlock(sub, lang, false);
   } else if (sub?.restoredOn) {
     // The return is as loud as the freeze was (ADR-0080 ⑥) — same slot, same
     // weight, green. Until now the only positive signal was an absence.
@@ -429,7 +497,15 @@ export function modulesSection(
       ? T(lang, "{price}/év", { price: esc(huf(currentAnnual)) })
       : T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) });
     let periodBlock = "";
-    if (!annual && !sub.pendingAnnual && sub.status !== "cancelled" && !sub.cancelAtPeriodEnd) {
+    // ⛔ NEM FAGYÁS ALATT. A SZEMEMMEL találtam meg a szállított lapon (az őröm nem
+    // fogta): a felfüggesztés-blokk alatt ott virított a „2 hónap ajándék évente ·
+    // 102 700 Ft · Váltok éves fizetésre" ajánlat. Két baj egyszerre: ① eladási
+    // ajánlat annak, akit épp dunningolunk (ADR-0119 ⑥ szelleme: a bolt zárva), és
+    // ② egy 102 700 Ft-os szám DÖNTÉSI pozícióban, közvetlenül a rendezendő
+    // tartozás mellett — épp az a zaj, amit ez a kör megszüntetni hivatott
+    // (freeze-state-v2 ①). Az ütem-váltás ráadásul a KÖVETKEZŐ fordulónapon lépne
+    // életbe, az pedig addig nem létezik, amíg a tartozás áll.
+    if (!frozen && !annual && !sub.pendingAnnual && sub.status !== "cancelled" && !sub.cancelAtPeriodEnd) {
       periodBlock =
         `<div class="adm-annual">` +
         `<h3>${T(lang, "{n} hónap ajándék évente", { n: String(sub.annualFreeMonths) })}</h3>` +
@@ -472,7 +548,25 @@ export function modulesSection(
           `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "NEM SIKERÜLT")}</span>` +
           `<h3>${T(lang, "Az automatikus kártyaterhelés elakadt")}</h3>` +
           `<p>${T(lang, "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A fenti befizetéssel a megbízás újra él — addig a díjat Önnek kell rendeznie.")}</p>` +
-          `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>` +
+          // ⛔ Measured 2026-09-13 (Elek FK-006a): the ONLY control on this block
+          // was "Megbízás visszavonása" — on a stuck charge the single offered
+          // action was to give up. The plan (freeze-state-v2 §⑤) requires a
+          // FORWARD action.
+          //   ⚠️ It must be a REAL one. There is no server route that re-attempts
+          // a charge, and a button that quietly does nothing is worse than none
+          // (feedback_gate_must_not_refuse_the_paying_customer). What genuinely
+          // moves the tenant forward is the pay link: a stored credential can
+          // only be re-granted by a 3DS-challenged, customer-initiated payment,
+          // so the card entered THERE becomes the new mandate — which is exactly
+          // what the button says, instead of a fake retry.
+          (sub.payUrl
+            ? `<a class="citui-btn citui-btn--primary adm-mand__btn adm-mand__btn--go" href="${esc(sub.payUrl)}">${T(lang, "Másik kártyával fizetek")}</a>` +
+              `<p class="adm-mand__hint">${T(lang, "A fizetéskor megadott kártya lesz az új megbízás — a bankkártyás megerősítés miatt csak így adható meg.")}</p>`
+            : "") +
+          // The exit stays open (ADR-0119 ⑥) but it is no longer the loudest
+          // thing here — and it says out loud what it does NOT do.
+          `<p class="adm-mand__hint"><button class="adm-mand__quiet" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button> ` +
+          `<span>${T(lang, "— a rendezetlen díj ettől nem szűnik meg.")}</span></p>` +
           `</div></div>`
         : `<div class="adm-mand">` +
           `<div class="adm-mand__ico">${ic("card")}</div>` +
@@ -505,12 +599,44 @@ export function modulesSection(
       `<div class="adm-card__head"><span class="adm-sub__dot${dotCls}"></span><h2>${T(lang, "Előfizetés")}</h2>${helpLink("admin.subscription", lang)}</div>` +
       `<div class="adm-sub">` +
       `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Fordulónap")}</div><div class="adm-sub__v">${annual ? T(lang, "évente, {day}", { day: formatMonthDay(sub.renewDay, lang) }) : T(lang, "minden hónap {day}", { day: formatMonthDay(sub.renewDay, lang) })}</div></div>` +
-      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Jelenlegi díj")}</div><div class="adm-sub__v">${feeCell}</div></div>` +
-      // data-base/-mult: the live module-toggle sync recomputes THIS cell — with
-      // the annual switch armed (or an annual sub) the base is the annual total
-      // and every module delta counts 10× (ADR-0088 §8; a +490 Ft chip on a
-      // 10-month invoice would understate the change — §B.17).
-      `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.pendingAnnual || annual ? sub.annualTotal : sub.nextInvoiceTotal}" data-mult="${sub.pendingAnnual || annual ? 12 - sub.annualFreeMonths : 1}">${nextCell}</div></div>` +
+      // ⛔ Fagyás alatt ez a cella UGYANAZT a számot mondta, mint a fenti
+      // „Rendezendő tartozás" — mindkettő ugyanabból a modul-készletből jön, tehát
+      // egy havi fiókon szükségszerűen egyezik. Két azonos szám két felirat alatt =
+      // a tulaj nem tudja, egyszer vagy kétszer fizet (freeze-state-v2 ①).
+      //   A cella nem hazudott; egyszerűen NEM EZ a kérdés, amíg tartozás van.
+      // Helyette azt mondja meg, ami ilyenkor valóban érdekes: mi lesz a díj,
+      // MIUTÁN rendezte — és ehhez nem kell újra kiírni a tartozás összegét.
+      (frozen
+        ? `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "A honlapja díja")}</div>` +
+          `<div class="adm-sub__v adm-sub__v--date">${T(lang, "változatlan")}</div>` +
+          `<div class="adm-sub__note">${T(lang, "A felfüggesztés nem drágítja meg — a fenti tartozás rendezésével minden a régi.")}</div></div>`
+        : `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Jelenlegi díj")}</div><div class="adm-sub__v">${feeCell}</div></div>`) +
+      // ⛔ FAGYÁS ALATT EZ A CELLA NEM ÍRHAT KI ÖSSZEGET (tulajdonosi döntés,
+      // 2026-09-14 — freeze-state-v2 kontraktus ①). Mérve a régi kódon: a cella
+      // ugyanazt a 10 270 Ft-ot mutatta, mint a fölötte álló „Rendezendő
+      // tartozás" — és a hozzá írt dátum a `periodEnd` volt, vagyis a FAGYÁS
+      // ELŐTTI, MÁR ELMÚLT nap. Egy képernyőn két szám, az egyik „következő"
+      // néven a múltból: a tulaj nem tudta, egyszer vagy kétszer fizet.
+      //   A rendezés utáni fordulónap NEM új számítás: az `arrears.periodEnd`,
+      // vagyis pontosan az a nap, ameddig a dunningolt megújulás-order kifizetése
+      // előre viszi az előfizetést — ugyanaz a kulcs, amivel a létra dolgozik.
+      (frozen
+        ? `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "A rendezés után a következő számla")}</div>` +
+          // data-nextafter: az ŐR HORGA. A próbám először a lap ELSŐ
+          // `.adm-sub__v--date` celláját olvasta, ami azóta a „A honlapja díja /
+          // változatlan" lett — zöldet adott, de MÁS elemre. Saját horog nélkül az
+          // őr a szomszédját méri (feedback_guard_greenly_defended_the_bug).
+          `<div class="adm-sub__v adm-sub__v--date" data-nextafter>${
+            sub.arrears
+              ? esc(formatDay(sub.arrears.periodEnd, lang))
+              : T(lang, "a rendezés napjától")
+          }</div>` +
+          `<div class="adm-sub__note">${T(lang, "Addig nincs új számla — előbb a fenti tartozás rendezendő.")}</div></div>`
+        : // data-base/-mult: the live module-toggle sync recomputes THIS cell — with
+          // the annual switch armed (or an annual sub) the base is the annual total
+          // and every module delta counts 10× (ADR-0088 §8; a +490 Ft chip on a
+          // 10-month invoice would understate the change — §B.17).
+          `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő számla ({date})", { date: esc(renewDate) })}</div><div class="adm-sub__v" id="adm-next-total" data-base="${sub.pendingAnnual || annual ? sub.annualTotal : sub.nextInvoiceTotal}" data-mult="${sub.pendingAnnual || annual ? 12 - sub.annualFreeMonths : 1}">${nextCell}</div></div>`) +
       `</div>` +
       periodBlock +
       mandateBlock +
@@ -694,10 +820,22 @@ export function modulesSection(
                 : T(lang, "Aktív az oldalán.");
       // A superseded ACTIVE module must survive the batch apply — it has no visible
       // control, and "absent" would read as a cancellation.
+      //
+      // ⛔ UNDER A FREEZE THE SAME RULE APPLIES TO *EVERY* ROW. The approved plan
+      // takes the per-module switches away (owner ruling 2026-09-14: "a modul-lista
+      // CSAK OLVASHATÓ (a kapcsolók kikerülnek)"), and a row with no checkbox is
+      // read by applyModuleChange as a CANCELLATION. So the hidden input is not
+      // cosmetic here: without it, opening the frozen page and pressing anything
+      // that submits the form would silently cancel all eleven modules.
       const keep =
-        replacedBy && !m.spine ? `<input type="hidden" name="module" value="${esc(m.id)}">` : "";
+        (frozen || replacedBy) && !m.spine
+          ? `<input type="hidden" name="module" value="${esc(m.id)}">`
+          : "";
       const off =
-        m.spine || replacedBy
+        // Under a freeze the list states what comes back; it does not offer to
+        // take it away. The exit stays open, but as ONE decision at the bottom
+        // of the page (cancel the subscription), not eleven quiet ones inline.
+        frozen || m.spine || replacedBy
           ? ""
           : `<label class="citui-btn citui-btn--ghost adm-mine__off">${cb(m, !m.cancelAtPeriodEnd)}` +
             `<span class="adm-when-on">${T(lang, "Kikapcsolom")}</span>` +
@@ -708,9 +846,14 @@ export function modulesSection(
             `${ic("settings", 16)}<span>${T(lang, "Beállítás")}</span></a>`
           : "";
       return (
-        `<div class="adm-mine__row" data-modrow="${esc(m.id)}">${keep}` +
+        `<div class="adm-mine__row${frozen ? " adm-mine__row--ro" : ""}" data-modrow="${esc(m.id)}">${keep}` +
         `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}</strong><span>${state}</span></span>` +
-        priceChip(m, replacedBy ?? null) +
+        // ⛔ No price chip under a freeze. Measured on the old page: 11 rows of
+        // ALREADY-OWNED, paused modules wore a "+490 Ft/hó" sales tag — an
+        // upsell label on something the owner is being dunned for. What the
+        // modules cost is stated ONCE, in the summary below, as part of the
+        // debt — not eleven times as an offer.
+        (frozen ? "" : priceChip(m, replacedBy ?? null)) +
         // Under a freeze the link still works — it is an INTERNAL preview route,
         // not the suspended public host. Renaming it keeps that honest: what it
         // opens is a preview, not the page a guest can reach right now.
@@ -761,23 +904,37 @@ export function modulesSection(
     `<div class="adm-sumbar__l">${label}</div>` +
     `<div class="adm-sumbar__v">${esc(huf(annualCell ? monthly * annualMult : monthly))}</div>` +
     `<div class="adm-sumbar__s">${perMonthSub(monthly)}</div></div>`;
+  // ⛔ FAGYÁS ALATT A VÉGÖSSZEG-CELLA UGYANAZT A SZÁMOT MONDANÁ, mint a fenti
+  // „Rendezendő tartozás" — egy havi fiókon szükségszerűen, mert mindkettő
+  // ugyanabból a modul-készletből jön. Az őr ezt meg is mérte: a javítás első
+  // körében az összeg NÉGYSZER állt a lapon. A RÉSZEK (alapdíj, modulok) viszont
+  // KÜLÖNBÖZŐ számok, és épp azt mondják meg, MIBŐL áll a tartozás — azok
+  // maradnak (freeze-state-v2 ③). A végösszeg helyére nem másik szám kerül,
+  // hanem az, hogy ez UGYANAZ a pénz, tételekre bontva.
+  const totalCell = frozen
+    ? `<div class="adm-sumbar__c adm-sumbar__c--tot">` +
+      `<div class="adm-sumbar__l">${T(lang, "Együtt")}</div>` +
+      `<div class="adm-sumbar__v adm-sumbar__v--ref">${T(lang, "ez a fenti rendezendő tartozás")}</div>` +
+      `<div class="adm-sumbar__s">${T(lang, "Nem külön tétel — ugyanaz az összeg, tételekre bontva.")}</div>` +
+      `</div>`
+    : `<div class="adm-sumbar__c adm-sumbar__c--tot">` +
+      `<div class="adm-sumbar__l">${annualCell ? T(lang, "Éves díja összesen") : T(lang, "Havi díja összesen")}</div>` +
+      // data-base/-mult are the SAME values the "Következő számla" cell carries —
+      // sub.annualTotal, not a locally re-multiplied figure — so the two cells cannot
+      // drift apart, either on render or under the live toggle sync.
+      `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(sumTotal))}</div>` +
+      // ⛔ The total's sub-line is DERIVED FROM THE TOTAL (sumTotal ÷ multiplier), not
+      // from base+modules: if the two sources ever disagree, the guard must see it on
+      // the screen instead of us papering over it here.
+      `<div class="adm-sumbar__s" id="adm-sum-eq">${perMonthSub(
+        annualCell ? sumTotal / annualMult : sumTotal,
+      )}</div></div>`;
   const sumBar =
     `<div class="adm-sumbar" data-modsum>` +
     sumCell(T(lang, "Modulok együtt ({n} db)", { n: String(billedCount) }), modulesMonthly) +
     sumCell(T(lang, "Alapdíj (honlap + időpontkérés)"), mv.baseMonthly) +
-    `<div class="adm-sumbar__c adm-sumbar__c--tot">` +
-    `<div class="adm-sumbar__l">${annualCell ? T(lang, "Éves díja összesen") : T(lang, "Havi díja összesen")}</div>` +
-    // data-base/-mult are the SAME values the "Következő számla" cell carries —
-    // sub.annualTotal, not a locally re-multiplied figure — so the two cells cannot
-    // drift apart, either on render or under the live toggle sync.
-    `<div class="adm-sumbar__v" id="adm-sum-total" data-base="${sumTotal}" data-mult="${annualCell ? annualMult : 1}">${esc(huf(sumTotal))}</div>` +
-    // ⛔ The total's sub-line is DERIVED FROM THE TOTAL (sumTotal ÷ multiplier), not
-    // from base+modules: if the two sources ever disagree, the guard must see it on
-    // the screen instead of us papering over it here.
-    `<div class="adm-sumbar__s" id="adm-sum-eq">${perMonthSub(
-      annualCell ? sumTotal / annualMult : sumTotal,
-    )}</div></div>` +
-    (annualCell
+    totalCell +
+    (annualCell && !frozen
       ? // The gift and the true per-month cost, in their own sentence — the place
         // where a divisor may be named without competing with the row above it.
         `<p class="adm-sumbar__note" id="adm-sum-note">${T(lang, "Éves fizetésnél 12 hónap helyett {n} havi díjat számlázunk — {free} hónap ajándék, ezért a fenti éves összeg 12 hónapra elosztva {eq}/hó.", {
@@ -788,12 +945,17 @@ export function modulesSection(
       : "") +
     `</div>`;
 
+  // Under a freeze the list answers a different question, so it carries a
+  // different heading: not "what do I own and what does it cost" (that is a
+  // shopping question, and the shop is shut) but "what comes back when I pay".
+  // Approved plan B, freeze-state-v2 §③.
   const mineCard =
     `<section class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("check")}</span>` +
-    `<h2>${T(lang, "Az én moduljaim")}</h2>${helpLink("admin.modules", lang)}</div>` +
+    `<h2>${frozen ? T(lang, "Mi kapcsol vissza a befizetéssel") : T(lang, "Az én moduljaim")}</h2>${helpLink("admin.modules", lang)}</div>` +
     (frozen
-      ? `<p class="adm-lead">${T(lang, "A honlap fel van függesztve, ezért egyik modul sem jelenik meg a vendégeknek. Az előnézet csak Önnek mutatja meg őket.")}</p>`
+      ? `<p class="adm-lead">${T(lang, "A honlap fel van függesztve, ezért egyik modul sem jelenik meg a vendégeknek. Az előnézet csak Önnek mutatja meg őket.")}</p>` +
+        `<p class="adm-lead">${T(lang, "A befizetés után ezek ugyanígy, azonnal visszakapcsolnak — semmit nem kell újra beállítani. Ezek a tartozás tételei, nem új vásárlás.")}</p>`
       : "") +
     `<div class="adm-mine">${mineRows}</div>` +
     // No subscription ⇒ no billing period and no invoice to total up: an "összesen"
@@ -3383,6 +3545,16 @@ export function adminDashboard(
     ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} ${T(lang, "Oldal megtekintése")}</a>`
     : "";
 
+  // The freeze block for the OTHER tabs. `compact` on every tab that is not
+  // about money: it states the situation and the way out without taking over a
+  // screen the owner opened for something else. The Modulok tab is excluded —
+  // modulesSection() renders the full block itself, and two would be one too many.
+  const subFrozen = opts.subscription?.status === "frozen";
+  const frozenBar =
+    subFrozen && tab !== "modulok"
+      ? frozenStateBlock(opts.subscription!, lang, tab !== "attekintes")
+      : "";
+
   const section =
     tab === "sugo"
       ? helpSection(opts.help ?? { topics: [], open: null, query: "" }, lang)
@@ -3491,6 +3663,15 @@ export function adminDashboard(
       `<div class="adm-pagehead"><h1>${esc(tabLabel)}</h1>${viewBtn}</div>` +
       `<p class="adm-sub">${esc(session.displayName)}</p>` +
       savedNote +
+      // ── ADR-0119 ① reaches EVERY tab (approved plan B, freeze-state-v2 §⑥) ──
+      // The rule has always said the freeze is a STATE, not a box — but only
+      // modulesSection() ever rendered it, so 12 of the 13 tabs stayed silent.
+      // Measured 2026-09-14 on the rendered page: the Üzenetek tab contained
+      // ZERO freeze words while the site was answering 503, and the tab the
+      // owner LANDS ON showed no amount and no way to pay.
+      //   The Modulok tab renders its own (full) block inside the section, so it
+      // is excluded here — otherwise the same block would appear twice.
+      frozenBar +
       section +
       `</div></main></div>` +
       (tab === "fotok" ? UPLOAD_SCRIPT(lang) : "") +

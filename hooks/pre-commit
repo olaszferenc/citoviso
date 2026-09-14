@@ -390,6 +390,28 @@ if [ -f scripts/frozen-entry-check.mts ] && \
   echo "[pre-commit] frozen-entry-check (a belépő lap kimondja a felfüggesztést)…"
   npx tsx scripts/frozen-entry-check.mts >/dev/null
 fi
+# Jóváhagyott terv „B — Rendezés-képernyő" (2026-09-14, freeze-state-v2 kontraktus):
+# fagyás alatt a lap EGY dologról szól. Ez az őr a PÉNZT és a VEZÉRLŐKET méri —
+# hány összeg áll a képernyőn, milyen dátumot ír a rendezés-utáni cella, maradt-e
+# modul-kapcsoló / eladási cimke / eladási CTA, és megkapta-e MINDEN birtokolt modul
+# a rejtett megőrző mezőt (enélkül a kapcsolók kivétele LEMONDÁSNAK olvasódna, és
+# egy beküldés némán kinyírná a modulokat). Piros önteszt: 8 sértés, plusz a négy
+# `!selfTest`-es kötés külön, a TERMÉK visszarontásával igazolva.
+if [ -f scripts/frozen-settle-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/subscriptionAdmin\.ts|src/tenant/modules\.ts|src/payment/billing\.ts)|^scripts/frozen-settle-check'; then
+  echo "[pre-commit] frozen-settle-check (a fagyasztott lap egy dologról szól)…"
+  npx tsx scripts/frozen-settle-check.mts >/dev/null
+fi
+# …és ugyanennek a tervnek a ⑦ kötése: a blokk telefonon ELSŐ FESTÉSKOR olvasható.
+# A szöveg-alapú őrök ezt szerkezetileg nem láthatják — az előző körben a javított
+# mondat JELEN VOLT a lapon, miközben a fix alsó fülsáv alatt állt (y=730 vs 658).
+# Böngészőt indít (≈15 mp), ezért SZŰK a szűrője: csak a felület és a stíluslap
+# változására fut, vagyis pontosan akkor, amikor az elrendezés el tud csúszni.
+if [ -f scripts/frozen-phone-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|public/assets/ui/citui-admin\.css)|^scripts/frozen-phone-check'; then
+  echo "[pre-commit] frozen-phone-check (a fagyás telefonon görgetés nélkül látszik)…"
+  npx tsx scripts/frozen-phone-check.mts >/dev/null
+fi
 # ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
 # mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
 # EMBER kapjon szót. Injektált futtatóval mér: sem LLM-et nem éget, sem SMS-t nem küld.

@@ -1,3 +1,317 @@
+<!DOCTYPE html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>B változat — Rendezés-képernyő</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #60748b; /* secondary text */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #eaf2f8;
+  --citui-muted:       #8ea3b8;
+  --citui-surface:     #16283f;
+  --citui-surface-2:   #1c3450;
+  --citui-line:        rgba(255, 255, 255, 0.10);
+  --citui-line-strong: rgba(255, 255, 255, 0.20);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-navy-900);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
 /*
  * Citoviso UI — tenant-admin layer (ADR-0021 ⑤, scoped .adm-*).
  * ALL tenant-admin styling comes from the central design core (ADR-0021 ①):
@@ -325,75 +639,6 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   .adm-owe__v{font-size:2.7rem}
   .adm-owe__pay{width:auto}
 }
-
-/* ══ FREEZE BLOCK — approved plan "B — Rendezés-képernyő" ════════════════════
-   (assets/design-refs/console/freeze-state-v2/, owner ruling 2026-09-14)
-
-   Two things the first round did not do:
-   ① the DEADLINE is a figure of its own, beside the amount. It used to be the
-      second bullet of a prose list — the one fact that makes the sum urgent was
-      the least visible thing in the block.
-   ② the block appears on EVERY tab, so it is NOT an .adm-card any more: a card
-      would sit inside the page flow of screens that are about something else.
-
-   ⛔ Solid red panel, white type — the colour IS the message here, and the
-   approved plan shows it that way (feedback_approved_draft_is_the_contract).
-   Every colour comes from the design core; no raw hex (ADR-0021 ①). */
-.adm-frz{background:linear-gradient(160deg,var(--citui-bad),
-    color-mix(in srgb,var(--citui-bad) 72%,var(--citui-navy-900)));
-  color:var(--citui-white);border-radius:var(--citui-radius);
-  padding:22px;margin:0 0 18px;box-shadow:var(--citui-shadow-md)}
-.adm-frz__head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.adm-frz__head h2{font:700 1.2rem var(--citui-font-display);margin:0;color:var(--citui-white)}
-.adm-frz__dot{width:11px;height:11px;border-radius:50%;background:var(--citui-white);
-  flex:0 0 auto;box-shadow:0 0 0 4px color-mix(in srgb,var(--citui-white) 28%,transparent)}
-.adm-frz__grid{display:grid;gap:18px}
-/* The block overrides the shared .adm-owe__* tones: on the red panel the muted
-   grey label and the red figure would both be unreadable (contrast measured). */
-.adm-frz .adm-owe__l{color:color-mix(in srgb,var(--citui-white) 90%,transparent)}
-.adm-frz .adm-owe__v{color:var(--citui-white);font-size:3rem}
-.adm-frz .adm-owe__sub,
-.adm-frz .adm-owe__note{color:color-mix(in srgb,var(--citui-white) 88%,transparent)}
-/* Inverted button: white on red beats red-on-red, which the first cut produced
-   (feedback_link_rule_eats_button_label — measure the contrast, don't assume). */
-.adm-frz .adm-owe__pay{background:var(--citui-white);color:var(--citui-bad);
-  border-color:var(--citui-white);font-weight:700}
-.adm-frz .adm-owe__pay:hover{background:var(--citui-surface);color:var(--citui-bad)}
-.adm-owe__dl{background:color-mix(in srgb,var(--citui-white) 14%,transparent);
-  border-radius:var(--citui-radius-sm);padding:16px;display:flex;flex-direction:column;gap:6px}
-.adm-owe__dlv{font:700 1.7rem/1.1 var(--citui-font-display);color:var(--citui-white)}
-.adm-owe__dl p{margin:0;font-size:.8rem;line-height:1.5;
-  color:color-mix(in srgb,var(--citui-white) 92%,transparent)}
-.adm-owe__dl p b{color:var(--citui-white)}
-.adm-owe__bar{height:7px;border-radius:var(--citui-radius-pill);overflow:hidden;margin:4px 0;
-  background:color-mix(in srgb,var(--citui-white) 28%,transparent)}
-.adm-owe__bar i{display:block;height:100%;background:var(--citui-white)}
-/* Compact: the tabs that are NOT about money keep the statement and the way out,
-   but give the screen back to whatever the owner came for. */
-.adm-frz--compact{padding:16px 18px;margin-bottom:14px}
-.adm-frz--compact .adm-frz__head{margin-bottom:10px}
-.adm-frz--compact .adm-owe__v{font-size:2rem}
-.adm-frz--compact .adm-owe__note{display:none}
-@media (min-width:760px){
-  .adm-frz{padding:28px 30px}
-  .adm-frz__grid{grid-template-columns:1.1fr .9fr;gap:26px;align-items:start}
-  .adm-frz .adm-owe__v{font-size:3.6rem}
-  .adm-frz .adm-owe__pay{align-self:flex-start;display:inline-flex}
-  .adm-frz--compact .adm-frz__grid{grid-template-columns:1fr}
-  .adm-frz--compact .adm-owe__v{font-size:2.2rem}
-}
-/* Read-only module row under a freeze: no price chip, no on/off control, so the
-   row is text + preview only. The grid must not keep empty columns for controls
-   that are no longer rendered. */
-.adm-mine__row--ro{grid-template-columns:1fr auto}
-/* The next-invoice cell states a DATE under a freeze, never a second amount. */
-.adm-sub__v--date{font-size:1.05rem}
-.adm-sub__note{font-size:.78rem;color:var(--citui-muted);margin-top:4px;line-height:1.45}
-/* The forward action on the stuck-charge block, and the demoted revoke. */
-.adm-mand__btn--go{background:var(--citui-cyan-500);color:var(--citui-navy-950);
-  border-color:var(--citui-cyan-500)}
-.adm-mand__quiet{background:none;border:0;padding:0;cursor:pointer;
-  font:inherit;color:var(--citui-muted);text-decoration:underline}
 .adm-banner{border-radius:var(--citui-radius-sm);padding:12px;margin:0 0 12px;font-size:.9rem;line-height:1.5}
 .adm-banner--warn{background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white));border:1px solid var(--citui-warn)}
 .adm-banner--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));border:1px solid var(--citui-bad)}
@@ -585,40 +830,6 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   .adm-msg__d{min-width:150px}
   .adm-msg__chan{display:inline-block;margin:0 0 0 8px}
 }
-/* ── Elek FK-001 KK3: a sor MEGMONDJA, hogy megnyitható (kontraktus ④) ────────
-   A 90 karakternél csonkolt előnézet mellett semmi nem jelezte, hogy a kártya
-   kattintható; a mérő-futás meg sem próbálta megnyitni. */
-.adm-msg__more{display:block;margin-top:4px;font:600 .72rem/1 var(--citui-font-text);
-  color:var(--citui-navy-700);white-space:nowrap}
-.adm-msg__hd:hover .adm-msg__more{text-decoration:underline}
-
-/* ── AZ ÜGY A SOR (kontraktus ①) ──────────────────────────────────────────────
-   A szál feje a listában áll, a korábbi lépései EGY megnevezett nyitó mögött. A
-   csoport bal oldali vonala teszi láthatóvá, hogy a lépések EHHEZ az ügyhöz
-   tartoznak — enélkül a kinyitott sorok önálló üzeneteknek látszanának. */
-.adm-thr{margin-bottom:9px}
-.adm-thr>.adm-msg{margin-bottom:0}
-.adm-thr__more{display:block;padding:9px 13px;font-size:.8rem;
-  color:var(--citui-navy-700);background:var(--citui-surface-2);text-decoration:none;
-  border:1px dashed var(--citui-line);border-top:0;
-  border-radius:0 0 var(--citui-radius-sm) var(--citui-radius-sm)}
-.adm-thr__more:hover{background:var(--citui-surface);color:var(--citui-navy-900)}
-.adm-thr__steps{margin:7px 0 0 14px;padding-left:12px;
-  border-left:2px solid color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
-.adm-thr__steps .adm-msg{margin-bottom:7px}
-
-/* ── A tömeges jelölés MEGERŐSÍTÉSE (kontraktus ⑤) ────────────────────────────
-   JS nélkül: a gomb GET-linkje hozza vissza a lapot ezzel a dobozzal, és CSAK
-   itt áll POST. Natív confirm() nem járható út — stílustalan böngésző-ablak. */
-.adm-confirm{border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent);
-  background:color-mix(in srgb,var(--citui-warn) 8%,var(--citui-white));
-  border-radius:var(--citui-radius-sm);padding:12px 14px;margin:-4px 0 12px;
-  font-size:.85rem;line-height:1.55}
-.adm-confirm__act{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:10px}
-
-/* Az összegző harmadik, magyarázó sora (kontraktus ⑦): megmondja, MIBŐL áll a szám. */
-.adm-docsum .n{font:400 .68rem/1.35 var(--citui-font-text);color:var(--citui-muted);margin-top:3px}
-
 .adm-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6}
 
 /* ── ADR-0087 „Modulok" fül: az én moduljaim + bővítés-kirakat + előnézet ──
@@ -837,3 +1048,250 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 /* The confirm's GO is a purchase, not a danger action — the mandate modal's red
    would say the opposite of what the button does. */
 [data-fc-modal] .adm-mdl__go{border-color:var(--citui-cyan-500);background:var(--citui-cyan-500);color:var(--citui-navy-900)}
+
+/* ── mock-keret (nem a termék része) ───────────────────────────────── */
+body{margin:0;background:var(--citui-surface-2);font-family:var(--citui-font-text);color:var(--citui-ink)}
+.mk-bar{position:sticky;top:0;z-index:200;background:var(--citui-navy-950);color:var(--citui-ink-inverse);
+  padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:.85rem}
+.mk-bar b{font-family:var(--citui-font-display);font-size:.95rem}
+.mk-sw{display:flex;gap:4px;margin-left:auto;background:rgba(255,255,255,.1);border-radius:var(--citui-radius-pill);padding:3px}
+.mk-sw button{border:0;background:transparent;color:var(--citui-ink-inverse);font:600 .8rem var(--citui-font-text);
+  padding:6px 14px;border-radius:var(--citui-radius-pill);cursor:pointer}
+.mk-sw button[aria-pressed=true]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.mk-note{padding:12px 16px;background:var(--citui-white);border-bottom:1px solid var(--citui-line);
+  font-size:.85rem;line-height:1.55;color:var(--citui-muted)}
+.mk-note strong{color:var(--citui-ink)}
+/* ⚠️ @container, NEM @media: a @media az ABLAKHOZ kötődik, egy szűkített div-ben
+   nem sülne el, tehát a váltó csak keskenyítene, de nem RENDEZNE ÁT. */
+.mk-stage{container-type:inline-size;container-name:adm;margin:0 auto;background:var(--citui-surface);
+  transition:max-width .18s ease;min-height:70vh;box-shadow:var(--citui-shadow-md)}
+body[data-size=mobil] .mk-stage{max-width:390px}
+body[data-size=asztali] .mk-stage{max-width:100%}
+.adm-shell{display:block}
+.adm-side{display:none}
+.mk-tabs{display:flex;gap:2px;background:var(--citui-navy-900);padding:6px;overflow-x:auto}
+.mk-tabs button{flex:1;min-width:90px;border:0;background:transparent;color:color-mix(in srgb,var(--citui-ink-inverse) 70%,transparent);
+  font:600 .74rem var(--citui-font-text);padding:9px 6px;border-radius:10px;cursor:pointer;white-space:nowrap}
+.mk-tabs button[aria-pressed=true]{background:color-mix(in srgb,var(--citui-cyan-500) 22%,transparent);color:var(--citui-white)}
+.mk-body{padding:16px}
+@container adm (min-width:760px){ .mk-body{padding:26px 30px} }
+.mk-pane[hidden]{display:none}
+.mk-h{font:700 1.5rem/1.2 var(--citui-font-display);margin:0 0 2px}
+.mk-sub{color:var(--citui-muted);font-size:.9rem;margin:0 0 16px}
+
+.fz-hero{background:linear-gradient(160deg,var(--citui-bad),color-mix(in srgb,var(--citui-bad) 72%,var(--citui-navy-900)));
+  color:var(--citui-white);border-radius:var(--citui-radius);padding:22px;margin-bottom:18px;box-shadow:var(--citui-shadow-md)}
+.fz-hero__top{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.fz-hero__top h2{font:700 1.2rem var(--citui-font-display);margin:0}
+.fz-dot{width:11px;height:11px;border-radius:50%;background:var(--citui-white);flex:0 0 auto;
+  box-shadow:0 0 0 4px rgba(255,255,255,.28)}
+.fz-hero__grid{display:grid;gap:18px}
+.fz-amt{display:flex;flex-direction:column}
+.fz-amt__l{font-size:.78rem;opacity:.9;text-transform:uppercase;letter-spacing:.04em}
+.fz-amt__v{font:700 3rem/1 var(--citui-font-display);margin:4px 0 2px}
+.fz-amt__s{font-size:.82rem;opacity:.9}
+.fz-pay{margin-top:14px;background:var(--citui-white);color:var(--citui-bad);border-color:var(--citui-white);
+  font:700 1.05rem var(--citui-font-text);padding:14px 22px;justify-content:center;display:flex}
+.fz-pay:hover{background:var(--citui-surface);color:var(--citui-bad)}
+.fz-amt__note{font-size:.76rem;opacity:.85;margin-top:8px;line-height:1.5}
+.fz-dl{background:rgba(255,255,255,.14);border-radius:var(--citui-radius-sm);padding:16px;display:flex;flex-direction:column;gap:6px}
+.fz-dl__l{font-size:.75rem;opacity:.9;text-transform:uppercase;letter-spacing:.04em}
+.fz-dl__v{font:700 1.7rem var(--citui-font-display)}
+.fz-dl__s{font-size:.8rem;opacity:.92;line-height:1.5}
+.fz-bar{height:7px;border-radius:99px;background:rgba(255,255,255,.28);overflow:hidden;margin:4px 0}
+.fz-bar i{display:block;height:100%;background:var(--citui-white)}
+.fz-hero--compact .fz-dl{display:none}
+.fz-hero--compact .fz-amt__v{font-size:2.1rem}
+@container adm (min-width:760px){
+  .fz-hero{padding:28px 30px}
+  .fz-hero__grid{grid-template-columns:1.1fr .9fr;gap:26px;align-items:start}
+  .fz-amt__v{font-size:3.6rem}
+  .fz-pay{align-self:flex-start;display:inline-flex}
+}
+/* A modul-lista fagyás alatt READ-ONLY: nincs ár-cimke, nincs kapcsoló. */
+.fz-mods{list-style:none;padding:0;margin:12px 0;display:grid;gap:6px}
+@container adm (min-width:760px){ .fz-mods{grid-template-columns:1fr 1fr} }
+.fz-mods li{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.fz-mods li::before{content:"↻ ";color:var(--citui-ok);font-weight:700}
+.fz-back{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:14px;margin-top:8px}
+.fz-back b{display:block;font-family:var(--citui-font-display)}
+.fz-back span{font-size:.82rem;color:var(--citui-muted)}
+.fz-shut{opacity:.6}
+.adm-mand__acts{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+@container adm (min-width:760px){ .adm-mand__acts{flex-direction:row} }
+.adm-mand__hint a{color:var(--citui-muted);font-size:.82rem}
+.adm-quietcancel{margin:18px 0 0}
+.adm-quietcancel>summary{cursor:pointer;color:var(--citui-muted);font-size:.85rem;padding:8px 0}
+.adm-msg{display:flex;flex-direction:column;gap:2px;padding:12px 0;border-bottom:1px solid var(--citui-line)}
+.adm-msg span{font-size:.8rem;color:var(--citui-muted)}
+.adm-paid{background:var(--citui-ok-soft);border:1px solid var(--citui-ok);border-radius:var(--citui-radius);
+  padding:20px;margin-bottom:18px}
+.adm-paid h2{font:700 1.2rem var(--citui-font-display);margin:0 0 6px;color:var(--citui-ok)}
+
+</style></head>
+<body data-size="mobil">
+<div class="mk-bar"><b>B változat — Rendezés-képernyő</b>
+  <span class="mk-sw" role="group" aria-label="Méret">
+    <button type="button" data-size="mobil" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-size="asztali" aria-pressed="false">Asztali</button>
+  </span></div>
+<div class="mk-note"><strong>Mit dönt el:</strong> fagyás alatt a lap EGY dologról szól. A tartozás egy nagy, saját blokkot kap a <strong>határidővel együtt</strong>, a modul-lista pedig <strong>read-only</strong> lesz: nincs árcimke, nincs be/ki kapcsoló — helyette azt mondja meg, mi kapcsol vissza a befizetéssel. A kijárat (lemondás) nyitva marad, de a lap alján, halkan. <em>Kattintson: méret-váltó, fül-váltó, „Befizetem”, „Újrapróbálom”, lemondás.</em></div>
+<div class="mk-stage"><div class="adm-shell"><main class="adm-main"><div class="mk-tabs" role="group" aria-label="Fül">
+<button type="button" data-tab="attekintes" aria-pressed="true">Áttekintés</button><button type="button" data-tab="modulok" aria-pressed="false">Modulok</button><button type="button" data-tab="uzenetek" aria-pressed="false">Üzenetek</button>
+</div><div class="mk-body">
+<section class="mk-pane" data-pane="attekintes">
+  <h1 class="mk-h">Áttekintés</h1><p class="mk-sub">Nyugalom Vendégház</p>
+
+<section class="fz-hero" data-hero>
+  <div class="fz-hero__top"><span class="fz-dot"></span><h2>A honlapja jelenleg NEM elérhető</h2></div>
+  <div class="fz-hero__grid">
+    <div class="fz-amt">
+      <span class="fz-amt__l">Rendezendő tartozás</span>
+      <b class="fz-amt__v">9670 Ft</b>
+      <span class="fz-amt__s">a 2026. 08. 10. – 2026. 09. 10. időszak díja</span>
+      <a class="citui-btn fz-pay" href="#" data-pay>Befizetem — 9670 Ft</a>
+      <span class="fz-amt__note">Bankkártyával, a Barion oldalán. A befizetés után a honlap azonnal visszakapcsol.</span>
+    </div>
+    <div class="fz-dl">
+      <span class="fz-dl__l">Hátralévő idő</span>
+      <b class="fz-dl__v" data-days>20 nap</b>
+      <span class="fz-dl__s"><b>2026. 09. 09.</b>-ig rendezhető. Utána az előfizetés lezárul, és a honlap lekerül.</span>
+      <div class="fz-bar"><i style="width:33%"></i></div>
+      <span class="fz-dl__s">2026. 08. 20. óta felfüggesztve · a tartalom megvan, nem veszett el.</span>
+    </div>
+  </div>
+</section>
+<div class="adm-card"><div class="adm-card__head"><h2>Áttekintés</h2></div>
+<div class="adm-stats">
+  <div class="adm-stat"><b><span class="citui-pill" style="background:color-mix(in srgb,var(--citui-bad) 14%,var(--citui-white));border-color:var(--citui-bad);color:var(--citui-bad)">Felfüggesztve</span></b><span>Állapot</span></div>
+  <div class="adm-stat"><b style="font-size:1rem">nyugalom.citoviso.com</b><span>Az oldal címe</span></div>
+  <div class="adm-stat"><b>11 db</b><span>Modul · mind szünetel</span></div></div>
+<p class="adm-lead" style="margin-top:18px">A szerkesztés (fotók, szövegek) a felfüggesztés alatt is megy — a változtatásai megmaradnak, és a visszakapcsoláskor azonnal kikerülnek.</p>
+</div></section><section class="mk-pane" data-pane="modulok" hidden>
+  <h1 class="mk-h">Modulok</h1><p class="mk-sub">Nyugalom Vendégház</p>
+
+<section class="fz-hero" data-hero>
+  <div class="fz-hero__top"><span class="fz-dot"></span><h2>A honlapja jelenleg NEM elérhető</h2></div>
+  <div class="fz-hero__grid">
+    <div class="fz-amt">
+      <span class="fz-amt__l">Rendezendő tartozás</span>
+      <b class="fz-amt__v">9670 Ft</b>
+      <span class="fz-amt__s">a 2026. 08. 10. – 2026. 09. 10. időszak díja</span>
+      <a class="citui-btn fz-pay" href="#" data-pay>Befizetem — 9670 Ft</a>
+      <span class="fz-amt__note">Bankkártyával, a Barion oldalán. A befizetés után a honlap azonnal visszakapcsol.</span>
+    </div>
+    <div class="fz-dl">
+      <span class="fz-dl__l">Hátralévő idő</span>
+      <b class="fz-dl__v" data-days>20 nap</b>
+      <span class="fz-dl__s"><b>2026. 09. 09.</b>-ig rendezhető. Utána az előfizetés lezárul, és a honlap lekerül.</span>
+      <div class="fz-bar"><i style="width:33%"></i></div>
+      <span class="fz-dl__s">2026. 08. 20. óta felfüggesztve · a tartalom megvan, nem veszett el.</span>
+    </div>
+  </div>
+</section>
+<div class="adm-card"><div class="adm-card__head"><h2>Mi kapcsol vissza a befizetéssel</h2></div>
+<p class="adm-lead">Ez a 9670 Ft fedezi. Semmit nem kell újra beállítani — a moduljai ugyanúgy jönnek vissza, ahogy hagyta őket.</p>
+<div class="fz-back"><div><b>A honlap</b><span>nyugalom.citoviso.com · alapdíj 4880 Ft</span></div></div>
+<ul class="fz-mods"><li>Képek a szállásról</li><li>Szobák, apartmanok</li><li>Online foglalás</li><li>Vendégek véleménye</li><li>Térkép és útvonal</li><li>Gyakori kérdések</li><li>Árak és szezonok</li><li>Programok a környéken</li><li>Hírek, ajánlatok</li><li>Látnivalók</li><li>Hírlevél</li></ul>
+<p class="citui-hint">A 11 modul együtt 4790 Ft/hó — ezek a tartozás tételei, nem új vásárlás.</p>
+</div>
+
+<div class="adm-card"><div class="adm-card__head"><span class="adm-sub__dot adm-sub__dot--bad"></span><h2>Miért állt le a terhelés</h2></div>
+<div class="adm-mand"><div class="adm-mand__ico">▣</div><div class="adm-mand__txt">
+  <span class="adm-mand__pill adm-mand__pill--off">NEM SIKERÜLT</span>
+  <h3>Az automatikus kártyaterhelés elakadt</h3>
+  <p>A mentett kártyáról (•••• 4242) nem sikerült levonni a díjat, ezért a terhelés leállt.</p>
+  <div class="adm-mand__acts">
+    <button class="citui-btn citui-btn--primary adm-mand__btn" type="button" data-retry>Újrapróbálom ezzel a kártyával</button>
+    <button class="citui-btn citui-btn--ghost adm-mand__btn" type="button" data-newcard>Másik kártyát adok meg</button>
+  </div>
+  <p class="adm-mand__hint" data-retrymsg hidden></p>
+  <p class="adm-mand__hint"><a href="#" data-revoke>Megbízás visszavonása…</a></p>
+</div></div>
+<!-- ⛔ Fagyás alatt NINCS „Következő számla" cella: nincs következő számla, amíg
+     ez nincs rendezve. A fordulónap a rendezés UTÁN indul újra. -->
+<p class="citui-hint">A rendezés után a számlázás a 2026. 10. 10.-i fordulónaptól folytatódik.</p>
+</div>
+
+<div class="adm-card fz-shut"><div class="adm-card__head"><h2>Bolt</h2></div>
+<p class="adm-lead">A felfüggesztés alatt új modul nem vehető fel. <b>Rendezés után vehető fel.</b></p></div>
+
+<details class="adm-quietcancel"><summary>Mégis lemondanám az előfizetést…</summary>
+  <div class="adm-danger"><h3>Előfizetés lemondása</h3>
+  <p class="citui-hint" style="margin:0">A honlap jelenleg fel van függesztve. A lemondás nem kapcsolja vissza:
+     az oldal felfüggesztve marad, az előfizetés pedig lezárul. Visszakapcsolni a rendezetlen díj befizetésével tud.</p>
+  <button class="citui-btn adm-btn-bad" type="button" data-cancelsub style="margin-top:10px">Igen, lemondom</button>
+  <p class="citui-hint" data-cancelmsg hidden style="margin-top:8px"></p></div>
+</details></section><section class="mk-pane" data-pane="uzenetek" hidden>
+  <h1 class="mk-h">Üzenetek</h1><p class="mk-sub">Nyugalom Vendégház</p>
+
+<section class="fz-hero fz-hero--compact" data-hero>
+  <div class="fz-hero__top"><span class="fz-dot"></span><h2>A honlapja jelenleg NEM elérhető</h2></div>
+  <div class="fz-hero__grid">
+    <div class="fz-amt">
+      <span class="fz-amt__l">Rendezendő tartozás</span>
+      <b class="fz-amt__v">9670 Ft</b>
+      <span class="fz-amt__s">a 2026. 08. 10. – 2026. 09. 10. időszak díja</span>
+      <a class="citui-btn fz-pay" href="#" data-pay>Befizetem — 9670 Ft</a>
+      <span class="fz-amt__note">Bankkártyával, a Barion oldalán. A befizetés után a honlap azonnal visszakapcsol.</span>
+    </div>
+    <div class="fz-dl">
+      <span class="fz-dl__l">Hátralévő idő</span>
+      <b class="fz-dl__v" data-days>20 nap</b>
+      <span class="fz-dl__s"><b>2026. 09. 09.</b>-ig rendezhető. Utána az előfizetés lezárul, és a honlap lekerül.</span>
+      <div class="fz-bar"><i style="width:33%"></i></div>
+      <span class="fz-dl__s">2026. 08. 20. óta felfüggesztve · a tartalom megvan, nem veszett el.</span>
+    </div>
+  </div>
+</section>
+<div class="adm-card"><div class="adm-card__head"><h2>Üzenetek</h2></div>
+<div class="adm-msg"><b>Honlapja felfüggesztve — rendezetlen díj</b><span>2026. 08. 20. · e-mail</span></div>
+<div class="adm-msg"><b>Fizetési emlékeztető (3.)</b><span>2026. 08. 17. · e-mail</span></div>
+<div class="adm-msg"><b>Az automatikus kártyaterhelés nem sikerült</b><span>2026. 08. 10. · e-mail</span></div>
+</div></section>
+</div></main></div></div>
+<script>
+(function(){
+  var b=document.body;
+  document.querySelectorAll(".mk-sw button").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      b.dataset.size=btn.dataset.size;
+      document.querySelectorAll(".mk-sw button").forEach(function(o){o.setAttribute("aria-pressed",String(o===btn))});
+    });
+  });
+  document.querySelectorAll(".mk-tabs button").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      document.querySelectorAll(".mk-tabs button").forEach(function(o){o.setAttribute("aria-pressed",String(o===btn))});
+      document.querySelectorAll(".mk-pane").forEach(function(p){p.hidden = p.dataset.pane!==btn.dataset.tab});
+      window.scrollTo(0,0);
+    });
+  });
+})();
+</script>
+<script>
+(function(){
+  document.addEventListener("click",function(e){
+    if(e.target.closest("[data-pay]")){ e.preventDefault();
+      if(!confirm("Barion — 9670 Ft terhelése.\n\nA befizetés után a honlap azonnal visszakapcsol. Rendben?")) return;
+      document.querySelectorAll("[data-hero]").forEach(function(h){
+        h.outerHTML='<div class="adm-paid"><h2>A honlapja újra elérhető</h2>'+
+        '<p>A díj rendezve — a látogatói ismét elérik az oldalát, változatlan tartalommal. A számlát elküldtük e-mailben.</p></div>'; });
+      document.querySelectorAll(".fz-shut").forEach(function(s){ s.style.opacity="1";
+        s.querySelector(".adm-lead").innerHTML="A bolt nyitva — bármikor vehet fel új modult."; });
+      return; }
+    if(e.target.closest("[data-retry]")){ e.preventDefault();
+      var m=document.querySelector("[data-retrymsg]"); m.hidden=false;
+      m.textContent="Újrapróbáltuk… a bank elutasította (lejárt kártya). Adjon meg másik kártyát, vagy fizessen a fenti gombbal.";
+      m.style.color="var(--citui-bad)"; return; }
+    if(e.target.closest("[data-newcard]")){ e.preventDefault();
+      var m2=document.querySelector("[data-retrymsg]"); m2.hidden=false;
+      m2.textContent="A kártyát a fizetéskor tudja megadni — a „Befizetem” gomb a Barion oldalára visz, és az ott megadott kártya lesz az új megbízás.";
+      m2.style.color="var(--citui-muted)"; return; }
+    if(e.target.closest("[data-revoke]")){ e.preventDefault();
+      alert("Megbízás visszavonása\n\nEzután fizetési linket küldünk e-mailben.\nA rendezetlen 9670 Ft ettől nem szűnik meg."); return; }
+    if(e.target.closest("[data-cancelsub]")){ e.preventDefault();
+      var c=document.querySelector("[data-cancelmsg]"); c.hidden=false;
+      c.innerHTML="<b>Ez a mock itt megáll.</b> Élesben ez lezárná az előfizetést, és a honlap véglegesen lekerülne."; }
+  });
+})();</script>
+</body></html>

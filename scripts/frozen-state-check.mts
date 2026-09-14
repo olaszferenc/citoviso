@@ -163,9 +163,19 @@ if (!/99\s900/.test(text)) {
 // ── ③ the settle button must sit WITH the problem, not at the far end of the
 //     page: measured on the live page the only large filled pay button was a
 //     NEW PURCHASE ~3660px down. Proxy: the pay control is inside the state card.
-const stateCard = /<section class="adm-card adm-state[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+// ⚠️ 2026-09-14: a jóváhagyott „B — Rendezés-képernyő" terv óta a blokk NEM
+// `.adm-card .adm-state`, hanem `.adm-frz` (azért nem kártya, mert MINDEN fülön
+// megjelenik, és egy kártya a más témájú lapok folyamába ülne). A szabály nem
+// változott — a kiút a probléma MELLETT álljon —, csak a horgony. A cserét a
+// VISELKEDÉS igazolása UTÁN végeztem el: a renderelt lapon mérve a fizetés-gomb
+// a blokkon belül van (feedback_permission_does_not_survive_a_changed_payload:
+// piros őrt csak a viselkedés bizonyítása után igazítunk).
+const stateCard = /<section class="adm-frz[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+if (!selfTest && !stateCard) {
+  fail("nincs fagyás-blokk a felfüggesztett lapon (.adm-frz) — az állapot nincs kimondva");
+}
 if (!selfTest && !/adm-owe__pay/.test(stateCard)) {
-  fail("a rendezés gombja nincs a teendő-kártyán belül — a probléma és a kiút elszakadt");
+  fail("a rendezés gombja nincs a fagyás-blokkon belül — a probléma és a kiút elszakadt");
 }
 
 // ── ③b the ONE-OFF module card is a separate buying path ───────────────────
