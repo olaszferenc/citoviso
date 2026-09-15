@@ -59,8 +59,18 @@ const PNG_1X1 = Buffer.from(
   "base64",
 );
 
-const WORK = path.resolve(process.cwd(), "sites/_photo-gate-check");
-const FIXTURE_LEAD = "ŐR-photo-gate";
+/**
+ * ⛔⛔ A FIXTURE FUTÁSONKÉNT EGYEDI (2026-09-15). A `sites/` és a dev-DB KÖZÖS minden
+ * worktree-nek, és a név eddig állandó volt — két párhuzamos futás tehát EGYMÁS sorait
+ * és fájljait törölte a `cleanup()`-jában. Mérve: egy commit-körben a 390 px-es rész
+ * zölden lefutott, majd az 1280-as ág „nincs kapu-doboz"-t jelentett, mert közben egy
+ * MÁSIK fa ugyanezt az őrt futtatta. Egy ingadozó őr rosszabb, mint a hiányzó: a pirosát
+ * megszokják. A `pid` a folyamathoz köti a fixture-t, a takarítás pedig CSAK a sajátját
+ * viszi. (Rokon: reference_shared_sites_fixture_race.)
+ */
+const RUN_ID = String(process.pid);
+const WORK = path.resolve(process.cwd(), `sites/_photo-gate-check-${RUN_ID}`);
+const FIXTURE_LEAD = `ŐR-photo-gate-${RUN_ID}`;
 
 /**
  * ⛔⛔ A SZERKEZETI MÉRÉS A SAJÁT FÁJÁT OLVASSA, nem a cwd-ét (mérve 2026-09-14).

@@ -766,7 +766,7 @@ fi
 if [ -f scripts/console-contrast-check.mts ] && \
    changed_files | grep -qE '^public/assets/ui/citui(-console(-table)?)?\.css$|^src/console/(views|partnerViews|testLogViews|server)\.ts$|^scripts/console-contrast-check\.mts$'; then
   echo "[pre-commit] console-contrast (a jelentés-vivő felirat olvasható)…"
-  npx tsx scripts/console-contrast-check.mts >/dev/null
+  npx tsx scripts/console-contrast-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A .hu Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09). Offline és
 # gyors: a riasztót INJEKTÁLJUK, így a kapu sosem küld valódi SMS-t/levelet — de a

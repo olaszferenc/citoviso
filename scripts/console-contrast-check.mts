@@ -226,6 +226,13 @@ async function main(): Promise<void> {
   console.log(`\n① Lefedettség`);
   check(measured > 1500, `${measured} szöveg-elem megmérve ${ROUTES.length} útvonalon, 390 ÉS 1280 px-en`,
     "kevés mérés = a zöld semmit nem jelentene");
+  // ⚠️ A ZÖLD NEM MONDHAT TÖBBET, MINT AMENNYIT MÉRTÜNK. A lead-lap tartalma a KÖZÖS
+  // parktól függ (melyik leadnek van mockja, milyen panelek nyílnak ki) — mérve
+  // 2026-09-15: két futás között 44 elem jelent meg, ami az elsőben nem is renderelődött
+  // (és mind a négy VALÓDI lelet volt). Ez a kapu tehát ALSÓ becslés: amit lát, azt
+  // megbízhatóan ítéli meg, de a lefedettség nem teljes.
+  console.log(`  ⚠️  A lead-lap tartalma a KÖZÖS parktól függ — ez a mérés ALSÓ becslés,`);
+  console.log(`      nem teljes lefedettség. Amit lát, arról ítél; amit a park nem rendert, arról nem.`);
   if (skippedRoutes.length) {
     console.log(`  ⏭️  KIMARADT útvonal: ${skippedRoutes.join(" · ")} — ezekről nem állítunk semmit.`);
   }

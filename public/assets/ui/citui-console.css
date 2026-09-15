@@ -1281,10 +1281,10 @@ body.con {
 .cp-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
   border-radius: var(--citui-radius-pill); font-size: 0.8rem; border: 1px solid;
   font-family: inherit; min-height: 32px; background: none; }
-.cp-chip.used { background: var(--citui-ok-soft); color: color-mix(in srgb, var(--citui-ok) 78%, var(--citui-ink));
+.cp-chip.used { background: var(--citui-ok-soft); color: var(--citui-ok-ink);
   border-color: color-mix(in srgb, var(--citui-ok) 30%, transparent); cursor: default; }
 .cp-chip.miss { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-white));
-  color: color-mix(in srgb, var(--citui-warn) 78%, var(--citui-ink));
+  color: var(--citui-warn-ink);
   border-color: color-mix(in srgb, var(--citui-warn) 40%, transparent);
   cursor: pointer; transition: transform var(--citui-transition), box-shadow var(--citui-transition); }
 .cp-chip.miss:hover { transform: translateY(-1px); box-shadow: var(--citui-shadow-sm); }
@@ -1684,7 +1684,9 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .hp-sc { position: absolute; right: 4px; top: 4px; font-size: 0.62rem; font-weight: 700;
   padding: 2px 6px; border-radius: var(--citui-radius-pill); color: var(--citui-ink-inverse);
   background: color-mix(in srgb, var(--citui-navy-950) 78%, transparent); }
-.hp-sc.low { background: color-mix(in srgb, var(--citui-bad) 84%, transparent); }
+/* KITÖLTÖTT jelvény: itt a felirat ÜL a színen, tehát a HÁTTÉR kapja a sötétebb
+   változatot — a fehér szám a mai piroson 2,85 volt. */
+.hp-sc.low { background: var(--citui-bad-ink); }
 .hp-subj { display: block; font-size: 0.62rem; color: var(--citui-muted); padding: 3px 5px 4px; }
 .hp-form.busy { opacity: 0.6; pointer-events: none; }
 
@@ -1942,8 +1944,10 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   font-size: 11.5px; font-weight: 700; color: var(--citui-white);
   overflow: hidden; white-space: nowrap; min-width: 0;
 }
-.con .cp-bar .b1 { background: var(--citui-ok); }
-.con .cp-bar .b2 { background: var(--citui-warn); }
+/* Ugyanaz: a sáv-szeleten FEHÉR felirat ül, ezért a HÁTTÉR a szöveg-token
+   (fehér a mai zöldön 3,00, a mai sárgán még kevesebb). */
+.con .cp-bar .b1 { background: var(--citui-ok-ink); }
+.con .cp-bar .b2 { background: var(--citui-warn-ink); }
 /* Semleges, NEM ítélő szín: az ismétlés se nem jó, se nem baj — a márka-tokenből keverve. */
 .con .cp-bar .b3 { background: color-mix(in srgb, var(--citui-navy-700) 45%, var(--citui-white)); }
 .con .cp-leg { font-size: 12.5px; color: var(--citui-muted); line-height: 1.6; margin: 7px 0 0; }
@@ -2004,7 +2008,9 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-livewarn {
   margin-top: 10px; padding: 10px 12px; border-radius: 9px; font-size: 0.86rem;
   background: color-mix(in srgb, var(--citui-warn) 12%, transparent);
-  color: color-mix(in srgb, var(--citui-warn) 78%, var(--citui-ink));
+  /* A jelzés-szín keveréke a saját tintjén 3,31-et adott — a FELIRAT a szöveg-tokent
+     kapja (a háttér és a keret marad a jelzés-színen). */
+  color: var(--citui-warn-ink);
   border: 1px solid color-mix(in srgb, var(--citui-warn) 40%, transparent);
 }
 .con .con-oldlinks { margin-top: 12px; }

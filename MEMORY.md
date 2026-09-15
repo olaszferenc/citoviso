@@ -1,8 +1,42 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (💳 ADR-0172: a vevő fizetési útja Pixel nélkül futott élesben)
+Utolsó frissítés: 2026-09-15 (🎨 ADR-0173: a jelzés-szín nem felirat-szín)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
+**🎨 ADR-0173 — A DÖNTŐ GOMB FELIRATÁT NEHÉZ VOLT ELOLVASNI.**
+Session-jegyzet: `_planning/memory/2026-09-15_semantic_colour_contrast.md`.
+Kontraktus: `assets/design-refs/console/semantic-contrast/`. **Élesítés NINCS** (§0.3).
+
+- **A kiváltó:** az ADR-0156 körében mértem, hogy a kép-kapu gombja 3,91 — kimondtam, de
+  nem javítottam (házon átívelő szín-döntés). A tulaj kérte a külön kört.
+- ⭐ **A kör a bejelentésnél SOKKAL nagyobbat talált:** a ház a JELZÉS-színeket FELIRATNAK
+  is használja. **Linkek 2,41** (a konzol MINDEN linkje) · `.pill.generated/.sent` **2,15**
+  · warn **2,52** · ok **2,72–3,00** · bad **3,35–3,91**.
+  ⛔⛔ **A két legrosszabb a DÖNTŐ gombokon ült:** a vevő **„Fizetek ▸"** és a kurátor
+  **„Jóváhagyás"** gombja **3,00**-n — a gépi „látható-e" próbák közben IGAZAT mondtak.
+- **Tulajdonosi döntés** (4 állapot × 2 méret képen + élőben mérő vázlaton): **„A —
+  sötétebb felirat"** (a HUE marad, ahol JELZÉS; csak a felirat sötétedik, így a
+  destruktív gomb nem lesz hangsúlyosabb), hatókör **a jelentés-vivő színek mind**, a
+  **`--citui-muted` MARAD** (átütne a tenant-adminra és a vendég-oldalra).
+  ⛔ A „legyen tömör gomb" NEM olcsóbb: a fehér felirat a mai zöldön szintén **3,00**.
+- **Szállítva:** 4 szöveg-token a magban, minden TÉNYLEGES háttérre megoldva
+  **tartalékkal** (≥5,3) · 48 CSS-szabály + ⛔ **23 BEÉGETETT inline szín** a nézetekben,
+  ami megkerülte a CSS-t · az IKON nem felirat (a cián kézjegy marad).
+- **A MARADÉK tételesen:** `--citui-muted` **165 elem** (4,36–4,81) · **2 szándékosan
+  tompított** (`ctbl-clear`, tompítás nélkül 15,72) + 2 tompított muted · `<option>` és
+  gradiens-hátterű elem NEM MÉRT (kiírva) · **a jelentés-vivő körből 0**.
+- **Őr:** `console-contrast-check.mts` — **4224 elem**, 10 útvonal, 390 ÉS 1280 px,
+  **alfa-kompozitálva**; három KIMONDOTT csoport; ⛔ a tompítás nem kiskapu; önteszt
+  **702 piros**.
+- ⛔⛔ **Saját csapdák:** a `color-mix()` **`color(srgb 0..1)`** alakban jön (RÖGZÍTETT
+  csapda volt — újra beleestem) · a 220 ms-os `transition` miatt az azonnal olvasott szín
+  még az átmenet közepe · a gradiens nincs a `backgroundColor`-ban · **a saját előző őröm
+  bukott a saját javításomon** (beégetett hex → token-PROBE).
+- **NYITOTT:** ① a `--citui-muted` (165 elem) — külön kör · ② a `[data-citui-theme="dark"]`
+  nem írja felül a tokeneket (ma 0 használat) · ③ a tenant-admin és a vendég-oldal NINCS
+  mérve ezzel az őrrel.
+
+## Előző szál (2026-09-15) — a hatókör-szabály a processz-határon
 **💳 ADR-0172 — A VEVŐ FIZETÉSI ÚTJA PIXEL NÉLKÜL FUTOTT ÉLESBEN.**
 Session-jegyzet: `_planning/memory/2026-09-15_consent_scope_crosses_process_boundary.md`.
 ⚠️ **ÉLESÍTÉS NINCS — de a javítás csak deploy után ér ki.** Tulaj-kérésre indult: „a `/pay/mock`
