@@ -1,7 +1,35 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🧪 a kötelező indoklás-mező példája két nyelven eltűnt — javítva és őrizve)
+Utolsó frissítés: 2026-09-15 (💳 az átjáró és a bukás-lap — ADR-0175; a B1 blokk lezárva)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**💳 A FIZETÉS ÚTJÁN EGY HANGOS ÚT VAN, ÉS A KÉPERNYŐ MEGMONDJA, MIT FIZETSZ — ADR-0175.**
+Session-jegyzet: `_planning/memory/2026-09-15_pay_gateway_exit.md`. Kontraktus:
+`assets/design-refs/console/pay-gateway-exit/`. Tulaj: „A — a fizetés a főszereplő”.
+**Élesítés NINCS.** Ezzel a B1 blokk (a fizetés pillanata) lezárult.
+
+- **Mérve:** a „Fizetek ▸” és az „Elutasítom” **bájtra azonos** volt (35 px, fw 600, fehér,
+  999 px — csak a szövegszín más) · egyik lap sem nevezte meg, MIT fizet a vevő · a hivatkozási
+  azonosító csupasz `<code>` · a bukás-lapról nem vezetett nevesített út sehová.
+- **Szállítva:** gomb-hierarchia méretben, vastagságban ÉS festésben (51/42 px, 700/600) ·
+  tétel-sor mindkét lapon a `payment → order_intent → prospect → lead` úton (LEFT join; név
+  nélkül nem talál ki nevet) · másolható azonosító (a `<code>` JS nélkül is megvan) · három
+  nevesített kiút — de **üres sávot nem rajzolunk**.
+- ⛔⛔ **A KÉP fogta meg, amit a DOM-mérés nem:** a szonda 51/42 px-et és fw 700/600-at mondott
+  („kész a hierarchia”), a képen viszont **mindkét gomb sötétkék kitöltött** volt — a generikus
+  `.con button[type=submit]:not(…)` **(0,6,1)** veri a `.pay-act` szabályt **(0,3,1)**. A doboz
+  helyes volt, a **festés** nem. Az őr ezért a festést is méri.
+- ⛔⛔ **Egy őr-állításom MÁS KÉRDÉSRE válaszolt, és HELYES kódon ment pirosra:** a „nincs
+  terhelést indító gomb” szabályt `buttons.length === 0`-val mértem, így a teljesen ártalmatlan
+  **másoló gomb** buktatta a kaput. Most a `/paid`-re menő űrlapokat és a submit-gombokat
+  számolja. Egy proxy, ami helyes kódon elbukik, ugyanolyan drága, mint amelyik hibásat átenged.
+- **Őr:** `pay-exit-truth-check.mts` — 53 állítás, **18 sértés** az öntesztben, minden
+  szabály-csoportra külön visszarontással; két §B.17-fixtúra (név nélkül · kiút nélkül).
+- **Kimondott korlát:** az átjáró a MOCK átjáró; élesben a Barion lapja jön. Azért kötjük, mert
+  ezt méri az Elek, ez megy ki minden nem-Barion úton, és a tétel-sor + a másolható azonosító a
+  saját lapjainkon marad érvényes.
+
+## Előző szál (2026-09-15)
 
 **🧪 A partnerViews 8 INLINE KEZELŐJE AZ ŐRBE — ÉS A ZÖLDJÜK ATTRIBÚTUM-SORRENDEN ÁLL.**
 Session-jegyzet: `_planning/memory/2026-09-15_partner_handlers_in_guard.md`. **Élesítés NINCS.**
@@ -804,7 +832,7 @@ választotta 3 működő vázlatból).
   ⚠️ A saját képkészítőm vázát MÁSODSZOR rontottam el ebben a szálban (oldalsáv nélkül a
   `.adm-shell` rácsban a tartalom a 248 px-es oszlopba esett, ~50 px széles hasábot lőttem) —
   **a keret is része a mérésnek.**
-- ⭐ **HARMADIK UTÓKÖR (ADR-0174): a support-cím.** A tenant-admin és a belépési súgó a hideg
+- ⭐ **HARMADIK UTÓKÖR (ADR-0175): a support-cím.** A tenant-admin és a belépési súgó a hideg
   megkeresés JOGILAG KÖTELEZŐ feladó-azonosításából olvasott (§C.2) — a dev-konfigon személynév.
   Új, önálló `config.supportEmail` (= `info@citoviso.com`); három szerep, három mező.
   ⛔⛔ **A rebase egy PÁRHUZAMOS szálat hozott be, amelyik UGYANEZT javította** (`358cade`),

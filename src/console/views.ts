@@ -1620,7 +1620,61 @@ function orderIntentsPanel(
 }
 
 /** MOCK hosted pay page — stands in for the real Barion pay-link (Slice 2). */
-export function payMockPage(ref: string, amount: number, period: string, status: string): string {
+/**
+ * The item line shared by the payment screens (approved contract:
+ * assets/design-refs/console/pay-gateway-exit/, point ②).
+ *
+ * ⛔ Measured 2026-09-15: NONE of the four gateway states, and not the failure
+ * page either, said WHAT was being paid for — only an amount stood on screen.
+ * ⛔ With no name we do NOT invent one: the line narrows to the product, it does
+ * not fill in something plausible (§B.17).
+ */
+function payItemLine(lang: string, productName: string | null | undefined, sub: string): string {
+  const name = (productName ?? "").trim();
+  return `<div class="pay-item">${name ? `<b>${esc(name)}</b>` : ""}<span>${sub}</span></div>`;
+}
+
+/**
+ * The reference id, with a copy button (contract ③).
+ *
+ * ⛔ A code a buyer has to retype off a screen is not a control — and they read it
+ * at the worst possible moment, right after a decline. The `<code>` itself stays
+ * in the markup, so the reference survives with JavaScript off; only the button
+ * needs JS, and it says so by simply not reacting.
+ */
+function payRefRow(lang: string, ref: string, lead: string): string {
+  return `<p class="pay-ref">${lead} <code id="payRef">${esc(ref)}</code>
+    <button type="button" id="payRefCopy" data-copy-target="payRef">${T(lang, "Másolom")}</button></p>`;
+}
+
+/** Clipboard wiring for payRefRow — inlined so the page stays standalone. */
+function payCopyScript(lang: string): string {
+  // ⛔ Deferred: this goes into <head>, so the elements do not exist yet when it
+  // parses. `layout()` has no tail slot, and adding one would touch every console
+  // page — a wider blast radius than this needs.
+  return `<script>(function(){function w(){
+  var b=document.getElementById("payRefCopy"),c=document.getElementById("payRef");
+  if(!b||!c)return;
+  b.addEventListener("click",function(){
+    var t=(c.textContent||"").trim();
+    var done=function(){b.textContent=${jsStr(T(lang, "✓ Kimásolva"))};b.classList.add("is-done");
+      setTimeout(function(){b.textContent=${jsStr(T(lang, "Másolom"))};b.classList.remove("is-done");},1800);};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,done);
+    else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();
+      try{document.execCommand("copy");}catch(e){}document.body.removeChild(a);done();}
+  });
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",w);else w();
+})();</script>`;
+}
+
+export function payMockPage(
+  ref: string,
+  amount: number,
+  period: string,
+  status: string,
+  productName?: string | null,
+): string {
   const lang = consoleLang();
   // "oneoff" = one-time purchase: no per-period suffix (an "/ hó" on an egyszeri
   // díj was a price-truth defect — Elek FK-005b H3).
@@ -1630,11 +1684,17 @@ export function payMockPage(ref: string, amount: number, period: string, status:
       : `<span class="mut">/ ${period === "annual" ? T(lang, "év") : T(lang, "hó")}</span>`;
   // A settled payment offers NO buttons — replaying "Fizetek" on a paid ref only
   // manufactured a fake "terhelés megtörtént" page (Elek FK-005b H1).
+  // ⭐ Contract ①: ONE loud way forward, and a quieter way back.
+  // ⛔ Measured 2026-09-15 with the stylesheet loaded: "Fizetek ▸" (.ok) and
+  // "Elutasítom" (.bad) rendered BYTE-IDENTICALLY — both 35px tall, weight 600,
+  // 12.5px, white background, 999px radius. Only the text colour differed, so
+  // nothing on the screen said which one was the action and which the way back.
+  // The hierarchy is carried by SIZE and WEIGHT, not by hue alone.
   const actions =
     status === "pending"
-      ? `<div class="row" style="justify-content:center;margin-top:18px">
-      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">Fizetek ▸</button></form>
-      <form method="post" action="/pay/mock/${esc(ref)}/failed"><button class="bad" type="submit">${T(lang, "Elutasítom")}</button></form>
+      ? `<div class="pay-act">
+      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button type="submit">${T(lang, "Fizetek")} — ${fmtHuf(amount)}</button></form>
+      <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/failed"><button type="submit">${T(lang, "Mégsem fizetek most")}</button></form>
     </div>`
       : status === "paid"
         ? // ⚠️ YES, this repeats the `banner` below it — and the repetition is
@@ -1650,8 +1710,8 @@ export function payMockPage(ref: string, amount: number, period: string, status:
           // is therefore a COPY DECISION that has to move both gates with it, not
           // a small fix — it is written up for the plan round instead.
           `<p class="q-good" style="margin-top:18px"><b>${T(lang, "Ez a fizetés már rendezve van")}</b> — ${T(lang, "új terhelés nem indítható rajta.")}</p>`
-        : `<div class="row" style="justify-content:center;margin-top:18px">
-      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button class="ok" type="submit">${T(lang, "Újra próbálom — Fizetek ▸")}</button></form>
+        : `<div class="pay-act">
+      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button type="submit">${T(lang, "Újra próbálom — Fizetek")} ${fmtHuf(amount)}</button></form>
     </div>`;
   // ⛔ THE STATE MUST BE VISIBLE, not spelled in a raw DB token (Elek FK-005b H4,
   // 2026-09-11): stepping BACK after a decline gave a screen byte-identical to the
@@ -1670,15 +1730,25 @@ export function payMockPage(ref: string, amount: number, period: string, status:
       : status === "paid"
         ? T(lang, "rendezve")
         : T(lang, "fizetésre vár");
+  // Contract ②: the screen names WHAT is being paid for. The cycle rides in the
+  // same sentence, so the amount above it cannot be read against the wrong unit.
+  const cycleWord =
+    period === "oneoff"
+      ? T(lang, "egyszeri díj")
+      : period === "annual"
+        ? T(lang, "éves előfizetés")
+        : T(lang, "havi előfizetés");
   const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
     <h2>${T(lang, "Mock fizetőoldal")}</h2>
+    ${payItemLine(lang, productName, T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }))}
     <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>
     ${banner}
-    <p class="mut small" data-pay-status="${esc(status)}">${T(lang, "ref: {ref} · státusz: {status}", { ref: `<code>${esc(ref)}</code>`, status: esc(statusWord) })}</p>
+    <p class="mut small" data-pay-status="${esc(status)}">${T(lang, "státusz: {status}", { status: esc(statusWord) })}</p>
     ${actions}
+    ${payRefRow(lang, ref, T(lang, "Hivatkozás:"))}
     <p class="mut small" style="margin-top:16px">${T(lang, "Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.")}</p>
   </div>`;
-  return layout(T(lang, "Mock fizetés"), body, { chrome: false });
+  return layout(T(lang, "Mock fizetés"), body, { chrome: false, head: payCopyScript(lang) });
 }
 
 /**
@@ -1876,6 +1946,19 @@ export function payResultPage(
      * rather than filled with a plausible one (§B.17: less, never false).
      */
     supportEmail?: string | null;
+    /**
+     * The buyer's OWN admin (approved contract: pay-gateway-exit ④). An existing
+     * tenant buying an upsell had no route back from a declined payment — the page
+     * offered a retry and a mailto and nothing else. Absent = no such tenant yet
+     * (a first purchase), and then the link is simply not drawn.
+     */
+    adminUrl?: string | null;
+    /**
+     * What was being bought (contract ②). Measured 2026-09-15: neither this page
+     * nor any gateway state said WHAT the money was for — only an amount stood on
+     * screen. Empty = we do not know, and then we do not invent it (§B.17).
+     */
+    productName?: string | null;
     /** The standing obligation (checkout-fullscreen ⑪) — null = no subscription. */
     renewal?: {
       readonly date: string;
@@ -1909,18 +1992,34 @@ export function payResultPage(
         // which is exactly the "no button at all" the buyer reported.
         `<p style="margin:0 0 14px"><a class="citui-btn citui-btn--primary" href="${esc(info.retryUrl)}">${T(lang, "Újra próbálom a fizetést")}</a></p>`
       : "";
+    // Contract ③: the reference is COPYABLE. They read it at the worst possible
+    // moment — right after a decline — and retyping a code off a screen is not a
+    // control. The `<code>` stays in the markup, so it survives with JS off.
     const refLine = info?.ref
-      ? `<p class="mut small" style="margin:0 0 10px">${T(lang, "Hivatkozási azonosító: {ref}", { ref: `<code>${esc(info.ref)}</code>` })} — ${T(lang, "ha ír nekünk, kérjük idézze.")}</p>`
+      ? payRefRow(lang, info.ref, T(lang, "Hivatkozási azonosító:")) +
+        `<p class="mut small" style="margin:6px 0 0">${T(lang, "Ha ír nekünk, kérjük idézze ezt az azonosítót.")}</p>`
       : "";
+    // ⭐ Contract ④: EVERY screen offers a named way onward. Measured 2026-09-15:
+    // this page had the retry and a mailto and nothing else — an existing tenant
+    // buying an upsell had no route back to their own admin at all (ADR-0129 ③:
+    // néma zsákutca nincs).
+    const exits: string[] = [];
+    if (info?.adminUrl) exits.push(`<a href="${esc(info.adminUrl)}">${T(lang, "Vissza a kezelőfelületre")}</a>`);
+    if (info?.retryUrl) exits.push(`<a href="${esc(info.retryUrl)}">${T(lang, "Másik kártyát adok meg")}</a>`);
+    const support = (info?.supportEmail ?? "").trim();
+    if (support) exits.push(`<a href="mailto:${esc(support)}">${T(lang, "Írok egy munkatársnak")}</a>`);
+    // ⛔ No empty rail: with nothing to offer we do not draw a divider under a void.
+    const exitRow = exits.length ? `<div class="pay-exits">${exits.join("")}</div>` : "";
     return layout(
       T(lang, "Fizetés elutasítva"),
       `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center">
         <h2 class="q-bad">${T(lang, "A fizetés nem sikerült")}</h2>
         <p style="margin:0 0 14px"><b>${T(lang, "Nem történt terhelés.")}</b> ${T(lang, "A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.")}</p>
+        ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount))}` : "" }))}
         ${retry}
         ${refLine}
-        ${helpLine(T(lang, "Ha többször sem sikerül, írjon nekünk:"))}</div>`,
-      { chrome: false },
+        ${exitRow}</div>`,
+      { chrome: false, head: payCopyScript(lang) },
     );
   }
   // Payment captured but activation did NOT complete (e.g. mock not approved yet,

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Az átjáró és a bukás-lap — JÓVÁHAGYOTT TERV („A — a fizetés a főszereplő”, 2026-09-15)</title>
+<style>
+/* These two screens are served by the CONSOLE, so unlike the configurator panel
+   they DO live under --citui-*. The values below are the console tokens
+   (public/assets/ui/citui.css + citui-console.css), copied so the draft is
+   self-contained — the built version must read the tokens, not these literals. */
+:root{
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#3fd0ea; --citui-navy-900:#0e2a47;
+  --citui-ink:#16202c; --citui-muted:#5b6a7d; --citui-line:#dbe3ee;
+  --citui-line-strong:#c9d5e4; --citui-surface:#ffffff; --citui-surface-2:#f2f7fe;
+  --citui-good:#14803c; --citui-bad:#c8332f; --citui-white:#fff; --citui-radius:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f6;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--citui-ink)}
+.wrap{max-width:1400px;margin:0 auto;padding:18px}
+h1{font-size:19px;margin:0 0 4px}
+.lead{margin:0 0 6px;color:#4a5568;font-size:13.5px;max-width:82ch}
+.lead b{color:var(--citui-ink)}
+.measured{margin:0 0 14px;padding:9px 12px;border-left:3px solid #f0b429;background:#fffaf0;border-radius:0 8px 8px 0;font-size:12.5px;color:#6b5314;max-width:82ch}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px}
+.toolbar button{min-height:40px;padding:9px 16px;border:1px solid #c3ccd9;border-radius:9px;background:#fff;color:#25313f;font:600 13px/1 system-ui,sans-serif;cursor:pointer}
+.toolbar button[aria-pressed="true"]{background:var(--citui-ink);border-color:var(--citui-ink);color:#fff}
+.toolbar .sep{width:1px;height:26px;background:#c3ccd9;margin:0 4px}
+.toolbar .tag{margin-left:auto;font:600 12px/1 system-ui,sans-serif;color:var(--citui-muted)}
+
+.stage{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
+.frame{position:relative;container-type:inline-size;background:#f4f7fb;border:10px solid #202832;border-radius:22px;overflow:hidden;box-shadow:0 18px 44px rgba(16,24,40,.22)}
+body[data-size="mobile"] .frame{width:390px;height:844px}
+body[data-size="desktop"] .frame{width:1280px;height:900px}
+.caption{text-align:center;font:600 12px/1 system-ui,sans-serif;color:var(--citui-muted);margin:8px 0 0}
+
+.top{display:flex;align-items:center;gap:10px;padding:11px 18px;background:linear-gradient(90deg,#0e2a47,#123a5e);color:#fff}
+.top .mark{width:22px;height:22px;border-radius:50%;border:2px solid var(--citui-cyan-400);border-right-color:transparent}
+.top b{font:700 15px/1 system-ui,sans-serif}
+.page{padding:22px 16px;overflow-y:auto;height:calc(100% - 46px)}
+.panel{max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:20px 18px;box-shadow:0 10px 30px rgba(16,24,40,.07)}
+.panel h2{margin:0 0 10px;font-size:18px}
+.panel h2.bad{color:var(--citui-bad)}
+.mut{color:var(--citui-muted);font-size:12.5px}
+.small{font-size:12.5px}
+code{background:#eef2f8;border:1px solid var(--citui-line);border-radius:6px;padding:4px 7px;font:600 12.5px/1 ui-monospace,Menlo,monospace;color:var(--citui-ink)}
+
+/* ── the item line: the gateway never said WHAT is being paid for ─────────── */
+.what{margin:0 0 14px;padding:11px 12px;border:1px solid var(--citui-line);border-radius:11px;background:var(--citui-surface-2);text-align:left}
+.what b{display:block;font-size:14px}
+.what span{display:block;margin-top:2px;font-size:12.5px;color:var(--citui-muted)}
+.amt{font-size:26px;font-weight:800;margin:10px 0 4px}
+.amt .per{font-size:15px;font-weight:600;color:var(--citui-muted)}
+
+.state{margin:12px 0;padding:9px 11px;border-radius:10px;font-size:13.5px;font-weight:600}
+.state.good{background:#eaf7ef;color:var(--citui-good);border:1px solid #bfe4cd}
+.state.badst{background:#fdecec;color:var(--citui-bad);border:1px solid #f3c6c4}
+.state.wait{background:#f2f7fe;color:var(--citui-navy-900);border:1px solid #cfe0f5}
+
+/* ⭐ Button hierarchy. Measured defect: "Fizetek ▸" and "Elutasítom" were TWO
+   IDENTICAL outlined pills — same size, same weight, same shape, only the hue
+   differed. Nothing said which one is the action and which is the way back. */
+.acts{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.acts.stack{flex-direction:column;align-items:stretch}
+.btn{min-height:48px;padding:13px 20px;border-radius:12px;border:1px solid transparent;font:700 14.5px/1.2 system-ui,sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn--pay{background:linear-gradient(120deg,var(--citui-cyan-500),var(--citui-cyan-400));color:var(--citui-navy-900);box-shadow:0 10px 24px rgba(31,182,214,.30)}
+.btn--quiet{background:transparent;border-color:var(--citui-line-strong);color:var(--citui-muted);min-height:40px;padding:10px 14px;font-weight:600;font-size:13px}
+.btn--retry{background:linear-gradient(120deg,var(--citui-cyan-500),var(--citui-cyan-400));color:var(--citui-navy-900)}
+.btn[disabled]{background:#e6ebf1;color:#9aa6b4;box-shadow:none;cursor:not-allowed}
+
+.refrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;margin:14px 0 0;font-size:12.5px;color:var(--citui-muted)}
+.copy{min-height:34px;padding:7px 11px;border:1px solid #c3ccd9;border-radius:8px;background:#fff;color:#25313f;font:600 12px/1 system-ui,sans-serif;cursor:pointer}
+.copy.ok{border-color:var(--citui-good);color:var(--citui-good)}
+
+/* ⭐ the way out. Measured: the failure page offered a retry and an e-mail
+   address and NOTHING else — an existing customer buying an upsell had no link
+   back to their own admin, and a first-time buyer had no link anywhere. */
+.exits{margin:16px 0 0;padding-top:13px;border-top:1px solid var(--citui-line);display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+.exits a{color:var(--citui-cyan-500);text-decoration:none;font-size:13px;font-weight:600}
+.exits a:hover{text-decoration:underline}
+.exits .dot{color:var(--citui-line-strong)}
+
+@container (max-width: 899px){
+  .page{padding:16px 12px}
+  .panel{padding:17px 15px}
+  .acts{flex-direction:column;align-items:stretch}
+  .acts .btn{width:100%}
+  .exits{flex-direction:column;gap:7px}
+  .exits .dot{display:none}
+}
+</style>
+</head>
+<body data-size="mobile">
+<div class="wrap">
+  <h1>Az átjáró és a bukás-lap — jóváhagyott terv: <b>„A — a fizetés a főszereplő”</b></h1>
+  <p class="lead">Két képernyő, amit a fizető vevő biztosan lát: a fizetési átjáró, és — ha a kártya elszáll — a bukás-lap.
+    A felület <b>tereli</b> a vevőt: egy hangos, kitöltött fizetés-gomb, alatta halk visszalépés. Mindkét lap <b>megnevezi, mit fizet</b>, a hivatkozási azonosító <b>másolható</b>, és a bukás-lapról <b>nevesített kiutak</b> vezetnek tovább.</p>
+  <p class="measured"><b>Mérve (2026-09-14, betöltött stíluslappal):</b> az átjárón a „Fizetek ▸” és az „Elutasítom”
+    <b>pontosan egyforma</b> — mindkettő fehér hátterű, 999 px lekerekítésű, 7/14 px belső margójú kontúros pirula,
+    csak a szövegszín más (zöld / piros). Egyik lap sem nevezi meg, <b>mit</b> fizet a vevő — csak azt, hogy „74 925 Ft / év”.
+    A bukás-lapon a hivatkozási azonosító csupasz <code>&lt;code&gt;</code>, másoló gomb nélkül, és a kezelőfelületre nem vezet link.</p>
+
+  <div class="toolbar">
+    <button type="button" data-size-btn="mobile">Mobil 390px</button>
+    <button type="button" data-size-btn="desktop">Asztali</button>
+    <span class="tag" id="fitTag"></span>
+  </div>
+
+  <div class="stage">
+    <div>
+      <div class="frame">
+        <div class="top"><span class="mark"></span><b>Citoviso</b></div>
+        <div class="page">
+          <div class="panel" style="text-align:center">
+            <h2 style="margin-bottom:4px">Fizetés</h2>
+            <p class="mut" style="margin:0 0 14px">Biztonságos kártyás fizetés</p>
+            <div class="what">
+              <b>Nyugalom Vendégház</b>
+              <span>Citoviso honlap — éves előfizetés (12 szekció, 2 hónap ingyen)</span>
+            </div>
+            <p class="amt">74 925 Ft <span class="per">/ év</span></p>
+            <div class="state wait" id="gwState">Ez a fizetés még nem indult el.</div>
+            <div class="acts" id="gwActs"></div>
+            <p class="refrow">Hivatkozás: <code id="gwRef">CIT-7QK2M4X9</code>
+              <button type="button" class="copy" data-copy="gwRef">Másolom</button></p>
+          </div>
+        </div>
+      </div>
+      <p class="caption">① Az átjáró (a valós Barion pay-link helyén)</p>
+    </div>
+
+    <div>
+      <div class="frame">
+        <div class="top"><span class="mark"></span><b>Citoviso</b></div>
+        <div class="page">
+          <div class="panel" style="text-align:center">
+            <h2 class="bad">A fizetés nem sikerült</h2>
+            <p style="margin:0 0 12px"><b>Nem történt terhelés.</b> A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.</p>
+            <div class="what">
+              <b>Nyugalom Vendégház</b>
+              <span>Citoviso honlap — éves előfizetés · 74 925 Ft / év</span>
+            </div>
+            <div class="acts" id="failActs"></div>
+            <p class="refrow">Hivatkozási azonosító: <code id="failRef">CIT-7QK2M4X9</code>
+              <button type="button" class="copy" data-copy="failRef">Másolom</button></p>
+            <p class="mut small" style="margin:8px 0 0">Ha ír nekünk, kérjük idézze ezt az azonosítót.</p>
+            <!-- ⭐ EVERY screen in the flow needs a way onward. -->
+            <div class="exits">
+              <a href="#" data-noop>Vissza a kezelőfelületre</a>
+              <span class="dot">·</span>
+              <a href="#" data-noop>Másik kártyát adok meg</a>
+              <span class="dot">·</span>
+              <a href="mailto:olasz.ferenc@citoviso.com">Írok egy munkatársnak</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">② A bukás-lap (elutasított kártya)</p>
+    </div>
+  </div>
+</div>
+
+<script>
+var $ = function(s){ return document.querySelector(s); };
+var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+function renderActs(){
+  {
+    $("#gwActs").className = "acts stack";
+    $("#gwActs").innerHTML =
+      '<button type="button" class="btn btn--pay" id="payNow">Fizetek — 74 925 Ft</button>' +
+      '<button type="button" class="btn btn--quiet" id="declineNow">Mégsem fizetek most</button>';
+    $("#failActs").className = "acts stack";
+    $("#failActs").innerHTML = '<a href="#" class="btn btn--retry" data-noop>Újra próbálom a fizetést</a>';
+  }
+  wireGateway();
+}
+
+/* The gateway really transitions — a settled payment offers NO buttons, which is
+   the rule the shipped page already enforces (replaying "Fizetek" on a paid ref
+   used to manufacture a fake "terhelés megtörtént" screen). */
+function wireGateway(){
+  var pay = $("#payNow"), dec = $("#declineNow");
+  if (pay) pay.addEventListener("click", function(){
+    $("#gwState").className = "state good";
+    $("#gwState").textContent = "Ez a fizetés rendezve van.";
+    $("#gwActs").innerHTML = '<p class="mut small" style="margin:0">Új terhelés nem indítható rajta.</p>';
+  });
+  if (dec) dec.addEventListener("click", function(){
+    $("#gwState").className = "state badst";
+    $("#gwState").textContent = "A fizetés elutasítva — terhelés nem történt.";
+    $("#gwActs").className = "acts stack";
+    $("#gwActs").innerHTML = '<button type="button" class="btn btn--retry" id="payNow">Újra próbálom — Fizetek 74 925 Ft-ot</button>';
+    wireGateway();
+  });
+}
+
+function setSize(s){
+  document.body.setAttribute("data-size", s);
+  $$("[data-size-btn]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.getAttribute("data-size-btn") === s)); });
+  $("#fitTag").textContent = s === "mobile" ? "390 × 844" : "1280 × 900";
+}
+$$("[data-size-btn]").forEach(function(b){ b.addEventListener("click", function(){ setSize(b.getAttribute("data-size-btn")); }); });
+
+/* the reference id is COPYABLE on BOTH screens */
+$$("[data-copy]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var t = document.getElementById(b.getAttribute("data-copy")).textContent;
+    var done = function(){ b.textContent = "✓ Kimásolva"; b.classList.add("ok");
+      setTimeout(function(){ b.textContent = "Másolom"; b.classList.remove("ok"); }, 1800); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, done);
+    else { var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); done(); }
+  });
+});
+document.addEventListener("click", function(e){
+  var a = e.target.closest ? e.target.closest("[data-noop]") : null;
+  if (a) e.preventDefault();
+});
+
+renderActs();
+setSize(window.innerWidth < 900 ? "mobile" : "desktop");
+</script>
+</body>
+</html>

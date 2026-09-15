@@ -2027,3 +2027,68 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   border: 1px solid var(--citui-line-strong);
 }
 .con button.con-btn2[type="submit"]:hover { border-color: var(--citui-cyan-500); }
+
+/* ── A FIZETÉS ÁTJÁRÓJA ÉS A BUKÁS-LAP ──────────────────────────────────────────
+   Jóváhagyott terv: assets/design-refs/console/pay-gateway-exit/ („A — a fizetés
+   a főszereplő”, tulaj 2026-09-15).
+   ⛔ Mért kiindulás: a „Fizetek ▸” és az „Elutasítom” BÁJTRA AZONOS volt — mindkettő
+   35 px, `font-weight: 600`, 12,5 px, fehér háttér, 999 px lekerekítés; egyedül a
+   szövegszín tért el. Semmi nem mondta meg, melyik a művelet. */
+.con .pay-item {
+  margin: 0 0 14px; padding: 11px 12px; text-align: left;
+  border: 1px solid var(--citui-line);
+  border-radius: 11px; background: var(--citui-surface-2);
+}
+.con .pay-item b { display: block; font-size: 0.95rem; }
+.con .pay-item span { display: block; margin-top: 2px; font-size: 0.82rem; color: var(--citui-muted); }
+
+/* A művelet-blokk: EGY hangos út, alatta a halk visszaút. Oszlopban, hogy a
+   hierarchia 390 px-en se essen szét egymás melletti, egyforma pirulákká. */
+.con .pay-act { display: flex; flex-direction: column; align-items: stretch; gap: 9px; margin-top: 16px; }
+.con .pay-act form { display: flex; }
+/* ⛔ SPECIFICITÁS: a generikus `.con button[type=submit]:not(.ok):not(.bad):not(.hp-alt)
+   :not(.con-btn2)` (0,6,1) VERI a sima `.con .pay-act button[type=submit]`-et (0,3,1).
+   Mérve 2026-09-15: az első változatom mindkét gombot NAVY GRADIENSSEL festette —
+   a „halk” visszaút ugyanúgy kitöltött lett, mint a fizetés, vagyis a hierarchia,
+   amiért ez a terv készült, egyáltalán nem látszott. A DOM-mérés (magasság,
+   betűvastagság) HELYES volt; a KÉP mutatta meg, hogy a festés más.
+   Ugyanaz a csapda, mint a `.con a` link-szabály a gomb-feliraton. */
+.con .pay-act button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2) {
+  flex: 1 1 auto; min-height: 48px; padding: 13px 20px; border-radius: 12px;
+  border: 1px solid transparent; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+  background: var(--citui-cyan-500); color: var(--citui-navy-900);
+}
+.con .pay-act button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover { filter: brightness(1.06); }
+/* ⭐ A halk visszaút: MÉRHETŐEN kisebb és könnyebb — nem csak más színű. De nem
+   tűnik el, és nem megy a tapintható méret alá. */
+.con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2) {
+  min-height: 40px; padding: 10px 14px; font-weight: 600; font-size: 0.85rem;
+  background: transparent; color: var(--citui-muted);
+  border: 1px solid var(--citui-line-strong);
+}
+.con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover {
+  color: var(--citui-navy-900); border-color: var(--citui-navy-900); filter: none;
+}
+
+/* A hivatkozási azonosító MÁSOLHATÓ — egy kódot képernyőről átgépelni nem művelet. */
+.con .pay-ref {
+  display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap;
+  margin: 14px 0 0; font-size: 0.82rem; color: var(--citui-muted);
+}
+.con .pay-ref button {
+  min-height: 34px; padding: 7px 11px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--citui-line-strong);
+  background: var(--citui-white); color: var(--citui-navy-900);
+  font-weight: 600; font-size: 0.8rem;
+}
+.con .pay-ref button.is-done { border-color: var(--citui-ok); color: var(--citui-ok-ink); }
+
+/* Minden lapról vezessen tovább nevesített út — néma zsákutca nincs (ADR-0129 ③). */
+.con .pay-exits {
+  margin: 16px 0 0; padding-top: 13px; border-top: 1px solid var(--citui-line);
+  display: flex; gap: 10px 14px; flex-wrap: wrap; justify-content: center; align-items: center;
+}
+.con .pay-exits a { font-size: 0.85rem; font-weight: 600; }
+@media (max-width: 560px) {
+  .con .pay-exits { flex-direction: column; gap: 7px; }
+}

@@ -2863,6 +2863,10 @@ async function handle(
   // idempotent webhook path (Barion adapter → GetPaymentState), then show the
   // buyer the result screen.
   if (method === "GET" && path === "/pay/done") {
+  // One place for the tenant-admin base: the console serves these pages, so a
+  // relative /admin would point at OUR console, not the buyer's own admin.
+  const adminBase = (): string => config.publicSiteUrl.replace(/\/+$/, "");
+
     const ref = url.searchParams.get("paymentId") ?? url.searchParams.get("PaymentId") ?? "";
     if (ref) await handleWebhook({ paymentId: ref }, {});
     const p = ref
@@ -2883,7 +2887,16 @@ async function handle(
     const kindRow = await db
       .selectFrom("payment")
       .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
-      .select(["order_intent.kind as kind", "order_intent.tenant_id as tenantId"])
+      // The lead's name travels with it: the failure screen must say WHAT the
+      // charge was for (contract pay-gateway-exit ②). LEFT joins — a payment whose
+      // prospect/lead row is gone must still render; a missing name narrows the
+      // item line, it never blanks the page.
+      .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .leftJoin("lead", "lead.id", "prospect.lead_id")
+      .select([
+        "order_intent.kind as kind", "order_intent.tenant_id as tenantId",
+        "lead.name as leadName",
+      ])
       .where("payment.gateway_ref", "=", ref)
       .executeTakeFirst();
     if (paid && kindRow?.kind === "multilang" && kindRow.tenantId) {
@@ -2944,16 +2957,31 @@ async function handle(
         // ⛔ The empty-case behaviour above stays: no address ⇒ the offer is
         // dropped, never replaced by a plausible-looking one (§B.17).
         supportEmail: config.supportEmail || null,
+        productName: kindRow?.leadName ?? null,
+        // ⛔ Only when a tenant actually exists. A first-time buyer has no admin
+        // yet, and a link to one would be a promise we cannot keep (§B.17).
+        adminUrl: kindRow?.tenantId ? `${adminBase()}/admin` : null,
       }),
     );
   }
   // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
   const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);
   if (method === "GET" && mockPayMatch) {
+    // ⭐ The lead's name comes along: the pay screen must say WHAT is being paid
+    // for (approved contract: assets/design-refs/console/pay-gateway-exit/ ②).
+    // Measured 2026-09-15: none of the four gateway states named the product —
+    // only an amount stood on the screen where the card gets charged.
+    // LEFT joins on purpose: a payment whose prospect/lead row is gone must still
+    // render its page. A missing name narrows the item line; it never blanks it.
     const p = await db
       .selectFrom("payment")
       .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
-      .select(["payment.amount as amount", "payment.period as period", "payment.status as status", "order_intent.kind as kind"])
+      .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .leftJoin("lead", "lead.id", "prospect.lead_id")
+      .select([
+        "payment.amount as amount", "payment.period as period", "payment.status as status",
+        "order_intent.kind as kind", "lead.name as leadName",
+      ])
       .where("gateway_ref", "=", mockPayMatch[1])
       .executeTakeFirst();
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
@@ -2971,7 +2999,7 @@ async function handle(
     return send(
       res,
       200,
-      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status),
+      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status, p.leadName),
       "text/html; charset=utf-8",
       { "cache-control": "no-store, no-cache, must-revalidate", pragma: "no-cache" },
     );

@@ -74,6 +74,7 @@ function check(ok: boolean, label: string): void {
 
 const SUPPORT = "olasz.ferenc@citoviso.com";
 const BUYER = "elo@pelda.hu";
+const PROPERTY = "Nyugalom Vendégház";
 /** The literal that used to be hardcoded on all three buyer screens. */
 const GHOST_ADDRESS = "info@citoviso.com";
 
@@ -114,6 +115,25 @@ function regress(html: string, tag: string): string {
       "Ez a fizetés le van zárva",
       "a dupla-terhelés elleni őr mondatának elvesztése",
     );
+  }
+  if (tag === "gw-pending") {
+    // ⛔ THE SHIPPED DEFECT, verbatim: two identical outlined pills, distinguished
+    // only by text colour. Measured before the contract: both 35px / weight 600 /
+    // 12.5px / white / 999px.
+    sub(
+      /<form class="pay-act__quiet" /,
+      '<form ',
+      "a halk visszaút ugyanolyan súlyú lesz, mint a fizetés",
+    );
+  }
+  if (tag === "gw-paid" || tag === "gw-failed" || tag === "gw-pending") {
+    // ⑥ the page stops naming what is being paid for
+    out = out.replace(/<div class="pay-item">[\s\S]*?<\/div>/, "");
+  }
+  if (tag === "result-fail") {
+    // ⑦⑧ no copy button, no named exits — the state this page was in before
+    out = out.replace(/<button type="button" id="payRefCopy"[\s\S]*?<\/button>/, "");
+    out = out.replace(/<div class="pay-exits">[\s\S]*?<\/div>/, "");
   }
   if (tag === "gw-failed") {
     sub(
@@ -189,6 +209,26 @@ const SHAPE = `(function () {
   document.querySelectorAll('a[href^="mailto:"]').forEach(function (a) {
     out.mailtos.push((a.getAttribute("href") || "").replace("mailto:", ""));
   });
+  // ⛔ What can actually START A CHARGE — not "how many buttons are there".
+  // The first version counted ALL buttons as a proxy, and went red the moment a
+  // perfectly legitimate non-charging control (the copy button) appeared. A proxy
+  // that breaks on a correct change was asking a different question than its label.
+  out.chargeForms = document.querySelectorAll('form[action*="/paid"], form[action*="/failed"]').length;
+  out.submits = document.querySelectorAll('button[type="submit"]').length;
+  // ⑤ the hierarchy — measured in SIZE, WEIGHT and PAINT, never in hue alone.
+  function btn(sel) {
+    var e = document.querySelector(sel); if (!e) return null;
+    var c = getComputedStyle(e), r = e.getBoundingClientRect();
+    return { h: Math.round(r.height), fw: Number(c.fontWeight), fs: parseFloat(c.fontSize),
+      painted: c.backgroundImage !== "none" || (c.backgroundColor !== "rgba(0, 0, 0, 0)" && c.backgroundColor !== "transparent"),
+      text: (e.innerText || "").trim() };
+  }
+  out.loud = btn('.pay-act form:not(.pay-act__quiet) button[type="submit"]');
+  out.quiet = btn('.pay-act .pay-act__quiet button[type="submit"]');
+  out.item = (function(){ var e=document.querySelector(".pay-item"); return e?(e.innerText||"").trim():null; })();
+  out.copyBtn = !!document.getElementById("payRefCopy");
+  out.refCode = (function(){ var e=document.getElementById("payRef"); return e?(e.textContent||"").trim():null; })();
+  out.exits = Array.prototype.map.call(document.querySelectorAll(".pay-exits a"), function(a){ return (a.innerText||"").trim(); });
   return out;
 })()`;
 
@@ -196,7 +236,10 @@ interface Shape {
   text: string; cls: string; painted: boolean; padX: number; padY: number;
   radius: number; color: string; fontSize: number; h: number;
 }
-interface Probe { anchors: Shape[]; buttons: Shape[]; text: string; mailtos: string[] }
+interface Probe { anchors: Shape[]; buttons: Shape[]; text: string; mailtos: string[]; chargeForms: number; submits: number;
+  loud: { h: number; fw: number; fs: number; painted: boolean; text: string } | null;
+  quiet: { h: number; fw: number; fs: number; painted: boolean; text: string } | null;
+  item: string | null; copyBtn: boolean; refCode: string | null; exits: string[] }
 
 /** How many times a page states a given fact. Whitespace-normalised. */
 function occurrences(haystack: string, needle: string): number {
@@ -214,14 +257,25 @@ async function main(): Promise<void> {
 
   const renewal = { date: "2027-09-14", amount: 99900, period: "annual" as const };
   const pages: { tag: string; html: string }[] = [
-    { tag: "gw-pending", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "pending") },
-    { tag: "gw-failed", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "failed") },
-    { tag: "gw-paid", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "paid") },
+    { tag: "gw-pending", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "pending", PROPERTY) },
+    { tag: "gw-failed", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "failed", PROPERTY) },
+    { tag: "gw-paid", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "paid", PROPERTY) },
+    // ⛔ §B.17 fixture: with no lead name the page must NOT invent one.
+    { tag: "gw-noname", html: payMockPage("CIT-7QK2M4X9", 74925, "annual", "pending", null) },
     {
       tag: "result-fail",
       html: payResultPage(false, false, {
         ref: "CIT-7QK2M4X9", retryUrl: "/pay/mock/CIT-7QK2M4X9",
         contactEmail: BUYER, supportEmail: SUPPORT,
+        productName: PROPERTY, amount: 74925, adminUrl: "https://citoviso.com/admin",
+      }),
+    },
+    // ⛔ Nothing to offer → NO empty rail under a divider.
+    {
+      tag: "result-fail-noexit",
+      html: payResultPage(false, false, {
+        ref: "CIT-7QK2M4X9", contactEmail: BUYER, supportEmail: null,
+        productName: PROPERTY, amount: 74925, adminUrl: null, retryUrl: null,
       }),
     },
     {
@@ -326,7 +380,10 @@ async function main(): Promise<void> {
   const paid = probes.get("gw-paid")!;
   check(paid.text.includes("Ez a fizetés rendezve van"), "③ a rendezett lap hordozza az Elek-forgatókönyv idézte mondatot");
   check(paid.text.includes("Ez a fizetés már rendezve van"), "③ …és a dupla-terhelés elleni őr követelte mondatot is");
-  check(paid.buttons.length === 0, "③ a rendezett fizetésen nincs újabb terhelést indító gomb");
+  check(
+    paid.chargeForms === 0 && paid.submits === 0,
+    `③ a rendezett fizetésen nincs TERHELÉST INDÍTÓ vezérlő (űrlap: ${paid.chargeForms}, submit: ${paid.submits})`,
+  );
   // The FAILED branch carried no such pinning — there the duplication WAS removable.
   const failed = probes.get("gw-failed")!;
   check(
@@ -334,6 +391,39 @@ async function main(): Promise<void> {
     `③ az elutasítást a lap EGYSZER mondja ki (mérve: ${occurrences(failed.text, "terhelés nem történt")}×)`,
   );
   check(failed.text.includes("A fizetés elutasítva"), "③ …de ki is mondja (az állapot nem tűnt el a kettőzés törlésével)");
+
+  // ── ⑤⑥⑦⑧ the approved gateway/exit contract (pay-gateway-exit) ────────────
+  const pend = probes.get("gw-pending")!;
+  check(!!pend.loud && !!pend.quiet, "⑤ az átjárón van egy hangos és egy halk út");
+  if (pend.loud && pend.quiet) {
+    // ⛔ NOT hue. Measured 2026-09-15 BEFORE this contract: the two buttons were
+    // byte-identical (35px, weight 600, 12.5px, white, 999px) and only their text
+    // colour differed — nothing said which one was the action.
+    check(pend.loud.h > pend.quiet.h, `⑤ a fizetés MAGASABB (${pend.loud.h} vs ${pend.quiet.h} px)`);
+    check(pend.loud.fw > pend.quiet.fw, `⑤ …és VASTAGABB (${pend.loud.fw} vs ${pend.quiet.fw})`);
+    check(pend.loud.fs > pend.quiet.fs, `⑤ …és nagyobb betűs (${pend.loud.fs} vs ${pend.quiet.fs} px)`);
+    // ⛔ The PAINT, not just the box: a first attempt at this CSS lost to a more
+    // specific generic console rule and painted BOTH buttons with the same navy
+    // gradient. The DOM numbers were right; only the picture showed it.
+    check(pend.loud.painted, "⑤ a fizetés KIFESTETT");
+    check(!pend.quiet.painted, "⑤ …a visszalépés pedig NEM (kontúros, nem második tömör gomb)");
+    // …but it must not vanish or shrink below a tappable size.
+    check(pend.quiet.h >= 40, `⑤ a visszalépés tapintható marad (${pend.quiet.h} px)`);
+  }
+  for (const tag of ["gw-pending", "gw-failed", "gw-paid"]) {
+    const g = probes.get(tag)!;
+    check((g.item ?? "").includes(PROPERTY), `⑥ [${tag}] az átjáró MEGNEVEZI, mit fizet a vevő`);
+    check(g.copyBtn && g.refCode === "CIT-7QK2M4X9", `⑦ [${tag}] a hivatkozási azonosító másolható`);
+  }
+  const noName = probes.get("gw-noname")!;
+  check(!!noName.item, "⑥ név nélkül is van tétel-sor (a termék megnevezése marad)");
+  check(!/\bNyugalom\b/.test(noName.item ?? ""), `⑥ …de a lap NEM talál ki nevet (mérve: "${noName.item}")`);
+  const rf = probes.get("result-fail")!;
+  check((rf.item ?? "").includes(PROPERTY), "⑥ a bukás-lap is megnevezi, mi bukott meg");
+  check(rf.copyBtn, "⑦ a bukás-lapon is másolható az azonosító");
+  check(rf.exits.length >= 3, `⑧ a bukás-lapról nevesített kiutak vezetnek (${rf.exits.join(" · ") || "—"})`);
+  const noExit = probes.get("result-fail-noexit")!;
+  check(noExit.exits.length === 0, `⑧ …de üres sávot nem rajzolunk (mérve: ${noExit.exits.length})`);
 
   // ── ④ the multilang confirmation does not deny and promise e-mail at once ─
   const rawSrc = await readFile("src/console/views.ts", "utf8");
