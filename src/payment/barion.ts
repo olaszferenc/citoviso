@@ -198,11 +198,33 @@ export class BarionGateway implements PaymentGateway {
       this.posKey,
     )}&PaymentId=${encodeURIComponent(paymentId)}`;
     const resp = await fetch(url);
-    const data = (await resp.json()) as {
-      Status?: string;
-      TraceId?: string;
-      Errors?: unknown[];
-    };
+    // ⛔ A GATEWAY NEM-JSON VÁLASZA NEM LEHET A MI 500-ASUNK (mérve 2026-09-15).
+    // A Barion hibás kérésre HTML-lapot ad JSON helyett; a csupasz `resp.json()`
+    // ilyenkor DOB, és mivel a `/pay/done` (a Barion RedirectUrl-je) ezt a hívást
+    // szinkronban végzi, a VISSZATÉRŐ, FIZETŐ VEVŐ 500-as lapot kapott — épp abban
+    // a pillanatban, amikor a pénze már elment. A nem-JSON válasz nem ítélet a
+    // fizetésről: „nem tudjuk” a helyes felelet (null = nem végleges), és a lap a
+    // saját DB-állapotából rendereli magát tovább.
+    //
+    // ⚠️ A SZÖVEGET OLVASSUK BE, ÉS ABBÓL PARSZOLUNK — nem `resp.json()` + `clone()`.
+    //    Az első változatom pont ezt rontotta el: a `clone()` a `json()` UTÁN állt,
+    //    a törzs addigra elfogyott, így a fallback maga dobott egy
+    //    „Body has already been consumed” hibát — vagyis a naplóm a SAJÁT hibámról
+    //    beszélt, és ELTAKARTA a valódi okot. Egy fallback, ami hazudik az okról,
+    //    rosszabb, mint ha nem lenne.
+    const raw = await resp.text();
+    let data: { Status?: string; TraceId?: string; Errors?: unknown[] };
+    try {
+      data = JSON.parse(raw) as typeof data;
+    } catch {
+      console.error(
+        `[barion] GetPaymentState NEM JSON-t adott (HTTP ${resp.status}, ` +
+          `content-type: ${resp.headers.get("content-type") ?? "?"}, paymentId: ${paymentId}) — ` +
+          `a fizetés állapota ISMERETLEN marad. Válasz-részlet: ` +
+          `${raw.slice(0, 160).replace(/\s+/g, " ")}`,
+      );
+      return null; // nem végleges — se „fizetett”, se „bukott” állítást nem teszünk
+    }
     const status = data.Status ?? "";
     if (status === SUCCEEDED) {
       // 0040: the card-scheme TraceId of a token-initiating payment — the caller

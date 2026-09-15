@@ -2868,7 +2868,21 @@ async function handle(
   const adminBase = (): string => config.publicSiteUrl.replace(/\/+$/, "");
 
     const ref = url.searchParams.get("paymentId") ?? url.searchParams.get("PaymentId") ?? "";
-    if (ref) await handleWebhook({ paymentId: ref }, {});
+    // ⛔ Ez a lap a Barion RedirectUrl-je: ide a VEVŐ érkezik vissza, fizetés után.
+    // A frissítés-kísérlet KÉNYELEM, nem feltétel — az állapotot a webhook úgyis
+    // meghozza. Ha a gateway épp nem válaszol (mérve 2026-09-15: HTML-t adott JSON
+    // helyett), attól a vevő NEM kaphat 500-at; a lap a DB saját állapotából
+    // rendereli magát. ⚠️ Hangosan naplózzuk, hogy a kimaradás ne tűnjön el némán.
+    if (ref) {
+      try {
+        await handleWebhook({ paymentId: ref }, {});
+      } catch (err) {
+        console.error(
+          `[pay/done] a fizetés-állapot frissítése nem sikerült (${ref}) — a lap a TÁROLT állapotot mutatja:`,
+          err,
+        );
+      }
+    }
     const p = ref
       ? await db
           .selectFrom("payment")
