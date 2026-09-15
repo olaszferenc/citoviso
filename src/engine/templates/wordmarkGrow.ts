@@ -245,7 +245,16 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         <div class="w-fig">${card(photos[1] ?? hero, data.name)}</div>
         <div>
           <span class="w-spark">${SPARK}</span>
-          <h2 ${mo("up")}>${esc(featCopy.title ?? data.tagline)}</h2>
+          ${
+            // ⛔ Nincs szöveg → nincs elem. Az üres `<h2>` DOBOZA 0 magas, a MARGÓJA
+            // viszont helyet foglal (mérve: 527×23px kósza térköz), tehát a vendég egy
+            // megmagyarázhatatlan hézagot lát a szekció-cím helyén. A `data.tagline`
+            // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — ami a
+            // korpusz 89%-án igaz. Ugyanaz az őrzés, mint a `rest`-nél két sorral lejjebb.
+            (featCopy.title ?? data.tagline)
+              ? `<h2 ${mo("up")}>${esc(featCopy.title ?? data.tagline)}</h2>`
+              : ""
+          }
           <p ${mo("up", 90)}>${accented(lede, heroCopy.accent)}</p>
           ${rest ? `<p ${mo("up", 150)}>${esc(rest)}</p>` : ""}
           ${
@@ -299,16 +308,25 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           <div>
             <span class="w-spark">${SPARK}</span>
             <h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Képek"))}</h2>
-            <p ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>
+            ${
+              (galCopy.eyebrow ?? data.tagline)
+                ? `<p ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`
+                : ""
+            }
           </div>
         </div>
       </div>
     </section>`;
 
+  // ⛔ Az EGÉSZ sáv elmarad, ha nincs mit mondania. Ez a szekció EGYETLEN tartalma egy
+  // nagy, kiemelt mondat; szöveg nélkül egy üres `<section>` maradna a lapon (saját
+  // belső térközzel), vagyis pont az a néma hézag, amit a §2b üres-sáv tilalom tilt.
   const sayText = galCopy.title ?? data.tagline;
-  const say = `<section class="w-say"><div class="w-wrap">
+  const say = sayText
+    ? `<section class="w-say"><div class="w-wrap">
     <p class="cit-words" ${mo("in")}>${words(esc(sayText))}</p>
-  </div></section>`;
+  </div></section>`
+    : "";
 
   // Real guest quotes only — a sample review must never reach a page (§B.17).
   const quotes = (data.reviews ?? []).slice(0, 3);
@@ -351,7 +369,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="w-fgrid">
         <div>
           <div class="w-brand">${esc(data.name)}</div>
-          <p style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>
+          ${data.tagline ? `<p style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>` : ""}
         </div>
         ${c.address ? `<div><div class="w-kick">${T(data, "Cím")}</div><p>${esc(c.address)}</p></div>` : ""}
         <div><div class="w-kick">${T(data, "Kapcsolat")}</div>

@@ -314,7 +314,14 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       <div class="a-title"><h2 ${mo("up")}>${esc(featCopy.title ?? T(data, "A ház"))}</h2></div>
       <div class="a-story rev">
         <div class="a-body" ${mo("up", 90)}>
-          <p class="a-lead">${esc(featCopy.eyebrow ?? data.tagline)}</p>
+          ${
+            // ⛔ Nincs szöveg → nincs elem (mérve: 529×20px üres bekezdés). A `data.tagline`
+            // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — a korpusz
+            // 89%-án. Ugyanaz az őrzés, amit a fájl többi feltételes blokkja használ.
+            (featCopy.eyebrow ?? data.tagline)
+              ? `<p class="a-lead">${esc(featCopy.eyebrow ?? data.tagline)}</p>`
+              : ""
+          }
           ${
             highlights.length
               ? `<ul class="a-amen">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>`
@@ -377,7 +384,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       <div class="a-fgrid">
         <div>
           <div class="a-brand">${esc(data.name)}</div>
-          <p style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>
+          ${data.tagline ? `<p style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>` : ""}
         </div>
         ${c.address ? `<div><div class="a-lead" style="color:var(--cit-muted)">${T(data, "Cím")}</div><p>${esc(c.address)}</p></div>` : ""}
         <div><div class="a-lead" style="color:var(--cit-muted)">${T(data, "Kapcsolat")}</div>

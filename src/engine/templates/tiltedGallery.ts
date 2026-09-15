@@ -341,7 +341,14 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     <div class="ph">${featurePhoto ? `<img ${parallax(0.8)} src="${esc(featurePhoto.url)}" alt="${esc(featurePhoto.alt)}" loading="lazy">` : photoFill(data.name)}</div>
     <div class="tx">
       <div class="t-kick" ${mo("in")}>${esc(featCopy.eyebrow ?? T(data, "Ami csak itt van"))}</div>
-      <h2 ${mo("up", 90)}>${esc(featCopy.title ?? data.tagline)}</h2>
+      ${
+        // ⛔ Nincs szöveg → nincs elem (mérve: 512×32px üres címsor). A `data.tagline`
+        // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — a korpusz
+        // 89%-án. Ugyanaz az őrzés, mint a `highlights`-nál egy sorral lejjebb.
+        (featCopy.title ?? data.tagline)
+          ? `<h2 ${mo("up", 90)}>${esc(featCopy.title ?? data.tagline)}</h2>`
+          : ""
+      }
       ${highlights.length ? `<div class="t-chips" ${mo("up", 200)}>${highlights.map((h) => `<span>${esc(h)}</span>`).join("")}</div>` : ""}
     </div>
   </section>`;
@@ -356,7 +363,13 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
         </figure>`,
           )
           .join("")}
-        <div class="t-say"><p ${mo("up", 220)}>${esc(galCopy.title ?? data.tagline)}</p></div>
+        ${
+          // A `t-say` doboz EGYETLEN tartalma ez a mondat — szöveg nélkül üres doboz
+          // maradna a galéria alatt, saját térközzel.
+          (galCopy.title ?? data.tagline)
+            ? `<div class="t-say"><p ${mo("up", 220)}>${esc(galCopy.title ?? data.tagline)}</p></div>`
+            : ""
+        }
       </div>
     </section>`
     : "";
@@ -396,7 +409,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       <div class="t-fgrid">
         <div>
           <div class="t-brand">${esc(data.name)}</div>
-          <p style="opacity:.72;max-width:34ch">${esc(data.tagline)}</p>
+          ${data.tagline ? `<p style="opacity:.72;max-width:34ch">${esc(data.tagline)}</p>` : ""}
         </div>
         ${c.address ? `<div><div class="t-kick">${T(data, "Cím")}</div><p>${esc(c.address)}</p></div>` : ""}
         <div><div class="t-kick">${T(data, "Kapcsolat")}</div>

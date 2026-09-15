@@ -335,6 +335,19 @@ if [ -f scripts/native-content-check.mts ]; then
   echo "[pre-commit] native-content-check (ADR-0059: egy tartalomtípus egyszer)…"
   npx tsx scripts/native-content-check.mts
 fi
+# ÜRES ALCÍM → ÜRES DOBOZ (ADR-0181). A hero-alcím AI-szöveg hiányában a régió
+# taglinejéből jön, az pedig a korpusz 89%-án ÜRES (a generátor régió-szöveg táblájában
+# EGYETLEN bejegyzés van). Három sablon őrizetlen elembe tette: 7 üres `<h2>`/`<p>`,
+# 17–32px kósza térközzel — a §2b üres-sáv tilalom esete. Az őr ATTRIBÚCIÓS: minden
+# sablont KÉTSZER renderel (jelszóval / üresen), így a lelet megnevezi, MELYIK elem élt a
+# taglineból és maradt üresen. ⚠️ A MARGÓT is méri: az üres `<p>` DOBOZA 0 magas, ezért az
+# első predikátumom (`height>=1`) MINDEN sablont zöldnek mondott — hamis zöld.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②). ~14 mp.
+if [ -f scripts/empty-tagline-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(siteData|render)\.ts$|^src/generator/generate\.ts$|^scripts/empty-tagline-check\.mts$'; then
+  echo "[pre-commit] empty-tagline-check (nincs alcím → nincs üres doboz)…"
+  npx tsx scripts/empty-tagline-check.mts >"$GATE_LOG" || gate_failed
+fi
 # §B.17 a KIKÜLDÖTT mockon: a vélemény-űrlap — az egyetlen, ami nevet, e-mailt és
 # hozzájárulást kér — jelöletlen volt, és közzétételt ígért egy űrlapról, ami sehova
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt

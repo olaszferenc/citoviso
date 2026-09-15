@@ -1,7 +1,46 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (👻 ADR-0180: a fantom pirula, és két szál ugyanazon a munkán)
+Utolsó frissítés: 2026-09-15 (🫥 ADR-0181: nincs alcím → nincs elem; és a mérőeszközöm hamis zöldet adott)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**🫥 ADR-0181 — NINCS ALCÍM → NINCS ELEM: AZ ÜRES DOBOZ IS ÁLLÍTÁS.**
+Session-jegyzet: `_planning/memory/2026-09-15_empty_tagline_no_element.md`.
+**Élesítés NINCS** (§0.3). Az ADR-0163 kimondott nyitott tétele, tulaj-utasításra lezárva.
+
+- ⭐ **A mérés KITÁGÍTOTTA a saját leletemet.** Az ADR-0163-ba azt írtam, hogy ez „csak a
+  copy-hívás bukásakor látszik", és besorolatlan területhez kötöttem. Valójában a korpusz
+  **89%-a** (595-ből 532): a generátor `REGIONS` táblájában **EGYETLEN bejegyzés van**
+  (`badacsony`), miközben a `resolveRegion()` a scraper mapjából is „ismertnek" mond
+  területeket → `balaton-north` és `godollo` known=true, de a tagline ÜRES.
+- **A kár:** 7 üres, mégis helyet foglaló elem 3 sablonon (arch-frames 2, tilted-gallery 2,
+  wordmark-grow 3), 17–32 px kósza térközzel. A másik 16 sablon már helyesen őrzött.
+- **A szabály:** nincs szöveg → nincs elem. Ahol a szöveg a szekció EGYETLEN tartalma volt
+  (`w-say`, `t-say`), a teljes blokk marad el. Alcímet **nem pótolunk kitalált szöveggel** —
+  egy tényt, amink nincs, elhagyunk (ugyanaz az elv, mint az ADR-0163 régió-fordulatánál).
+- ⛔⛔ **A LEGFONTOSABB: a saját mérőeszközöm HAMIS ZÖLDET adott.** Az első predikátumom
+  `height >= 1`-et kért, és **0 hézagot jelentett mind a 19 sablonon** — egy üres `<p>`
+  DOBOZA viszont 0 magas, ami helyet foglal, az a **MARGÓJA**. A rossz mennyiséget mértem,
+  és pont azt a hibát nem láttam, amit keresni küldtem.
+- ⚠️ **Két további mérési műtermék**, amit ki kellett zárni: a wordmark-**intro overlay**
+  (az első „bizonyíték-képem" valójában az intro-animációt mutatta) és a **mozgás-réteg**
+  (programozott görgetésnél `opacity:0` marad → `reducedMotion: "reduce"` kell).
+  ⛔ Plusz: a forrás-grep 12 „őrizetlen" találatot adott, a renderelt mérés a helyes 7-et.
+- **Őr:** `scripts/empty-tagline-check.mts` (~14 mp) — **ATTRIBÚCIÓS**: minden sablon
+  KÉTSZER renderelődik (egyedi JELSZÓVAL / ÜRESEN), így a lelet megnevezi, MELYIK elem élt a
+  taglineból és maradt üresen. Ellen-állítás a vak zöld ellen (52 fogyasztó elem).
+  **Önteszt: 19 piros**, és a VALÓDI visszarontásra is piros (névvel megnevezte a
+  `tilted-gallery`-t, rc=1).
+- **§2b:** a három sablon felület-fájl, a token ZÁRVA volt. A kivételt **nem magamnak adtam**:
+  mért számokkal és a javítás pontos alakjával kérdeztem, a tulaj megadta — a szava a
+  tokenben, feltétellel („ui-shot 390 + 1280, és a képeket MEG IS NÉZED"); 6 felvételt
+  megnéztem (3 sablon × 2 méret).
+- 🔴 **NYITVA (tulaj-döntés: „csak jegyezzük fel"):** a 89% gyökéroka a `REGIONS` egyetlen
+  bejegyzése. Régió-szöveget írni TARTALMI döntés (mit állítunk egy tájegységről, §B.17
+  köti), nem hibajavítás. Három út: ① megírjuk a hiányzó bejegyzéseket; ② kivezetjük a
+  `regionTagline` tartalék-ágat, ha sosem tud őszinte lenni; ③ marad, és a sablon-őrzés véd.
+  Ez a kör ③-at szállította.
+
+## Előző szál (2026-09-15) — 👻 ADR-0180: a fantom pirula, és két szál ugyanazon a munkán
 
 **👻 ADR-0180 — AMIT EGY PÁRHUZAMOS SZÁL MÁR MEGMÉRT, AZT NE MÉRD MEG ÚJRA; ÉS A HIBAKERESŐ
 SZŰKÍTÉS NE GYÁRTSON ÁLBUKÁST.** Session-jegyzet:
