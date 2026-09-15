@@ -615,6 +615,27 @@ async function serveTenantHost(
   site: TenantHostSite,
   pathname: string,
 ): Promise<void> {
+  /**
+   * The language EVERY answer on this host must speak — the refusals included.
+   *
+   * ⛔ Mérve 2026-09-15 (az ADR-0157 ⑦ átadó-listája): ezen a hoston tizenegy
+   * válasz beégetett magyar volt — a foglalás és az érdeklődés hibaüzenetei, és
+   * minden 404-es lap. Egy horvát szállás vendége horvát oldalon kapott magyar
+   * elutasítást; a nyelv KÉZNÉL VOLT (`site.tenantId`), csak senki nem kérte el.
+   *
+   * Memoizált: több ág is kérheti egy kérésen belül, és a throttle-ág is kéri (egy
+   * eldobott kérés se váltson nyelvet), de a lekérdezés kérésenként legfeljebb
+   * egyszer fut.
+   *
+   * ⚠️ A hívási helyeken MINDIG `const lang = await tenantLang()` előzi meg a
+   * `T(lang, …)`-ot, sosem `T(await tenantLang(), …)`: a katalógus-betakarító
+   * regexe AZONOSÍTÓT vár nyelv-argumentumként, az `await …` alak nem illeszkedne
+   * rá — a string megint kimaradna a nyelvi csomagból, minden kapu zöldje mellett.
+   */
+  let langMemo: Promise<string> | null = null;
+  const tenantLang = (): Promise<string> =>
+    (langMemo ??= langForTenant(site.tenantId).then(prepareMailLang));
+
   // ── ADR-0080 billing freeze: EVERYTHING on a suspended host answers 503 ──
   // A courtesy page, not a silent 404: the guest learns the site is temporarily
   // down (in the site's own language), and Retry-After tells Google to come back
@@ -684,11 +705,14 @@ async function serveTenantHost(
   // assets/design-refs/tenant-site/enquiry-card/README.md. NOT a booking: no
   // unit, no hold — record + notify, the owner simply replies to the guest.
   if (req.method === "POST" && pathname === "/api/erdeklodes") {
+    const lang = await tenantLang();
     if (throttled(req, 5, 10 * 60_000)) {
-      return sendJson(res, 429, { errors: ["Túl sok próbálkozás. Kérjük, várjon pár percet."] });
+      return sendJson(res, 429, {
+        errors: [T(lang, "Túl sok próbálkozás. Kérjük, várjon pár percet.")],
+      });
     }
     const siteId = await tenantSiteId(site.tenantId);
-    if (!siteId) return sendJson(res, 404, { errors: ["Ismeretlen szállás."] });
+    if (!siteId) return sendJson(res, 404, { errors: [T(lang, "Ismeretlen szállás.")] });
     const form = await readFormBody(req);
     const result = await createEnquiry({
       siteId,
@@ -703,15 +727,18 @@ async function serveTenantHost(
   }
 
   if (req.method === "POST" && pathname === "/api/foglalas") {
+    const lang = await tenantLang();
     if (throttled(req, 5, 10 * 60_000)) {
-      return sendJson(res, 429, { errors: ["Túl sok próbálkozás. Kérjük, várjon pár percet."] });
+      return sendJson(res, 429, {
+        errors: [T(lang, "Túl sok próbálkozás. Kérjük, várjon pár percet.")],
+      });
     }
     const siteId = await tenantSiteId(site.tenantId);
-    if (!siteId) return sendJson(res, 404, { errors: ["Ismeretlen szállás."] });
+    if (!siteId) return sendJson(res, 404, { errors: [T(lang, "Ismeretlen szállás.")] });
     const form = await readFormBody(req);
     const unitId = form.get("unit") ?? "";
     if (!(await unitBelongsToSite(siteId, unitId))) {
-      return sendJson(res, 400, { errors: ["Ismeretlen egység."] });
+      return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
     }
     const result = await createBookingRequest(
       {
@@ -737,8 +764,10 @@ async function serveTenantHost(
     const back = `${publicBaseUrl(req) ?? ""}/`;
     // ADR-0067: this page answers the GUEST, on the tenant's own site — so it
     // speaks the SITE's language. Resolved before the throttle branch, so even the
-    // refusal is in the right language.
-    const guestLang = await prepareMailLang(await langForTenant(site.tenantId));
+    // refusal is in the right language. (A `tenantLang()` memón át: ez volt az
+    // EGYETLEN ág, ami már helyesen csinálta — most a többi is ugyanazt hívja,
+    // hogy ne legyen két mechanizmus, ami elcsúszhat.)
+    const guestLang = await tenantLang();
     if (throttled(req, 3, 10 * 60_000)) {
       return send(
         res,
@@ -871,7 +900,8 @@ ${urls}
     } catch {
       // A site provisioned before ADR-0110 has no legal snapshot yet. Saying so is
       // better than a bare 404 on a page the footer links to.
-      return send(res, 404, "<h1>Ez az oldal még nem érhető el.</h1>");
+      const lang = await tenantLang();
+      return send(res, 404, `<h1>${T(lang, "Ez az oldal még nem érhető el.")}</h1>`);
     }
   }
 
@@ -883,7 +913,8 @@ ${urls}
       const raw = await readFile(file, "utf8");
       return send(res, 200, await injectOwnerLogin(raw));
     } catch {
-      return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+      const lang = await tenantLang();
+      return send(res, 404, `<h1>${T(lang, "Nincs ilyen oldal.")}</h1>`);
     }
   }
   // ADR-0063 paid language versions: /<lang>/ and /<lang>/apartman/<slug> serve the
@@ -898,7 +929,12 @@ ${urls}
       const raw = await readFile(file, "utf8");
       return send(res, 200, await injectOwnerLogin(raw));
     } catch {
-      return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+      // ⚠️ NOT the requested `lang` prefix — we are here precisely because that
+      //    language version does not exist. The site's OWN language is the only
+      //    thing we can honestly answer in (same reasoning as ADR-0157 ③).
+      //    Külön néven, hogy ne árnyékolja a fenti URL-előtagot.
+      const siteLang = await tenantLang();
+      return send(res, 404, `<h1>${T(siteLang, "Nincs ilyen oldal.")}</h1>`);
     }
   }
   // Owner re-entry: the owner's instinct on their own site is <domain>/admin, which used to
@@ -908,9 +944,13 @@ ${urls}
     return void res.end();
   }
   if (pathname !== "/" && pathname !== "/index.html") {
-    return send(res, 404, "<h1>Nincs ilyen oldal.</h1>");
+    const lang = await tenantLang();
+    return send(res, 404, `<h1>${T(lang, "Nincs ilyen oldal.")}</h1>`);
   }
-  if (!site.path) return send(res, 404, "<h1>Az oldal még nem érhető el.</h1>");
+  if (!site.path) {
+    const lang = await tenantLang();
+    return send(res, 404, `<h1>${T(lang, "Az oldal még nem érhető el.")}</h1>`);
+  }
   try {
     const raw = await readFile(path.resolve(process.cwd(), site.path), "utf8");
     // LIVE host only — the preview/mock paths never get the login line (no account yet).
@@ -926,7 +966,8 @@ ${urls}
       isCustomDomain: !site.viaSlug,
     });
   } catch {
-    send(res, 404, "<h1>Az oldal pillanatkép nem található.</h1>");
+    const lang = await tenantLang();
+    send(res, 404, `<h1>${T(lang, "Az oldal pillanatkép nem található.")}</h1>`);
   }
 }
 

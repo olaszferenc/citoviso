@@ -8734,6 +8734,49 @@ szövegdarabja külön kör — 11 vendég-oldali, 4 lead, 8 tulaj, 4 marketing,
 (`Nincs ilyen oldal.`) ÉKEZET NÉLKÜLI, ezért a lint HU-heurisztikája (`[áéíóöőúüű]`) nem
 is látja — a következő kör az átadó-listára támaszkodjon, ne a lint kimenetére.
 
+**⑧ A VENDÉG HOSTJÁN A REFUSAL IS A VENDÉG NYELVÉN SZÓL (2026-09-15).**
+A ⑦ átadó-listájából a **11 vendég-oldali** string beburkolva: a `serveTenantHost()`
+tizenegy válasza — a foglalás és az érdeklődés hibaüzenetei, és MINDEN 404-es lap —
+beégetett magyar volt. Egy horvát szállás vendége horvát oldalon kapott magyar
+elutasítást, miközben a nyelv KÉZNÉL VOLT (`site.tenantId`); csak senki nem kérte el.
+Memoizált `tenantLang()` a függvény elején (kérésenként legfeljebb egy lekérdezés), és
+a **throttle-ág is kéri** — egy eldobott kérés se váltson nyelvet. A vélemény-ág, az
+EGYETLEN, amelyik eddig is helyesen csinálta, szintén erre a memóra került: két
+mechanizmus egy felületen garantáltan elcsúszik.
+
+⚠️ **A nyelvi-előtagos 404 a szállás SAJÁT nyelvén szól, nem a kért előtagén** — ott
+azért vagyunk, mert az a nyelvi változat nem létezik (ugyanaz a logika, mint ③-ban).
+
+⛔ **Csapda, amit a kód kommentje is kimond:** `T(await tenantLang(), "…")` alakban a
+katalógus-betakarító regexe **nem illeszkedik** (azonosítót vár nyelv-argumentumként),
+tehát a string megint kimaradna a nyelvi csomagból — minden kapu zöldje mellett. Ezért
+minden hívási helyen `const lang = await tenantLang();` előzi meg a `T(lang, …)`-ot.
+
+**Őr: `scripts/guest-host-i18n-check.mts` — FÜGGVÉNYRE mér, nem fájlra.** Ez nem
+kényelmi döntés: a `public.ts` nem vehető fel az `i18n-lint` listájára, amíg a SAJÁT
+magyar marketing-landingünk fordítása nyitott ÜZLETI kérdés (⑦). Az őr ezért pontosan
+azt a felületet méri, ahol a tenant VENDÉGE jár. ⛔ És bezár egy vakfoltot: az
+`i18n-lint` magyar-heurisztikája ÉKEZETRE néz, ezért a „Nincs ilyen oldal." — amiben
+egyetlen ékezet sincs — SOHA nem akadt volna fenn rajta.
+
+⛔⛔ **A saját őröm ELSŐ változata VAK VOLT, és az önteszt buktatta le, nem az elemzés.**
+A törzs-széles `/"…"/g` literál-regex a korábbi idézőjelekhez igazodva ELCSÚSZIK
+(regex-literálok, escape-elt idézőjelek), és a keresett stringet egyáltalán nem találta
+meg: három visszarontásból kettő átment rajta. Soronkénti pásztázásra váltva mind a
+három fennakad. Önteszt-kontraktus: a visszarontás a VALÓDI törzsbe helyettesít (ha nem
+illeszkedik, hangosan bukik), a javított törzsön 0 álpozitív, és a mért függvény
+átnevezésére az őr `exit 1`-et ad olvasható üzenettel — nem mér némán üres törzsön.
+
+⛔ **A ⑦ átadó-listám két tételt TÉVESEN képezett le** (SZÖVEG szerint deduplikáltam):
+a `Nincs ilyen oldal.` nem egyszer, hanem HÁROMSZOR szerepel a `serveTenantHost()`-ban,
+és a második `Az oldal pillanatkép nem található.` nem is a vendég hostján van, hanem a
+`servePreviewSite()`-ban. A darabszám (11) véletlenül stimmelt, az összetétel nem — a
+saját összefoglalóm lett volna a hamis premissza, ha nem olvasom vissza a kódot.
+
+**Marad nyitva:** a `public.ts` további **16** burkolatlan szövegdarabja (4 lead — ⚠️ a
+lead nyelve ISMERT, és a szöveg TEGEZ, míg a kontraktus magázást ír elő —, 8 tulaj,
+2 határeset, 2 belső log), plusz a 4 marketing sor, ami üzleti döntés, nem hibajavítás.
+
 **Elvetett változatok:** „C — tény + irány" (…„keresse közvetlenül a szállásadót") — ugyanolyan
 igaz, de két sorral hosszabb, és a kontakt-doboz amúgy is ezt mondja; „A — marad a mai szöveg"
 — ez tartotta volna az ADR-0119 ③-at, de akkor a hamis állítás KIMONDOTT kivételként került

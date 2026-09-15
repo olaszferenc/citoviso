@@ -206,7 +206,67 @@ mai 4 még egyikben sem — a land utáni szerver-újraindítás hozza be őket.
 A sorszám a `public.ts` állapota **az alábbi commitnál**; az igazi horgony a SZÖVEG
 (a sor elcsúszhat, mert több szál nyúl a fájlhoz).
 
-### ⭐ VENDÉG-oldali — 11 tétel (a tenant saját honlapján, a vendég olvassa)
+### ✅ VENDÉG-oldali — 11 tétel — **LEZÁRVA 2026-09-15** (ADR-0157 ⑦)
+
+⛔ **A lenti sorszámok és a leképezés PONTOSÍTVA a burkoláskor** — az eredeti listám
+SZÖVEG szerint deduplikált, ezért két tételt tévesen írt le: a `Nincs ilyen oldal.`
+nem egyszer, hanem **háromszor** szerepel a `serveTenantHost()`-ban (egység-lap,
+nyelvi-előtag-lap, egyéb útvonal), a `Az oldal pillanatkép nem található.` második
+előfordulása pedig NEM a vendég hostján van, hanem a `servePreviewSite()`-ban
+(token-es előnézet). A darabszám véletlenül stimmelt, az összetétel nem — ⚠️ a saját
+összefoglaló listám lett volna a hamis premissza, ha nem olvasom vissza a kódot.
+
+**A ténylegesen burkolt 11, mind a `serveTenantHost()` törzsében:**
+
+| # | szöveg | hol |
+|---|---|---|
+| 1 | `Túl sok próbálkozás. Kérjük, várjon pár percet.` | `POST /api/erdeklodes`, 429 |
+| 2 | `Ismeretlen szállás.` | `POST /api/erdeklodes`, 404 |
+| 3 | `Túl sok próbálkozás. Kérjük, várjon pár percet.` | `POST /api/foglalas`, 429 |
+| 4 | `Ismeretlen szállás.` | `POST /api/foglalas`, 404 |
+| 5 | `Ismeretlen egység.` | `POST /api/foglalas`, 400 |
+| 6 | `Ez az oldal még nem érhető el.` | jogi pillanatkép hiányzik |
+| 7 | `Nincs ilyen oldal.` | egység-lap nincs a lemezen |
+| 8 | `Nincs ilyen oldal.` | nyelvi-előtagos lap nincs a lemezen |
+| 9 | `Nincs ilyen oldal.` | egyéb útvonal a tenant hostján |
+| 10 | `Az oldal még nem érhető el.` | `site.path` nincs |
+| 11 | `Az oldal pillanatkép nem található.` | a pillanatkép olvasása hibázott |
+
+**Hogyan:** memoizált `tenantLang()` a `serveTenantHost()` elején
+(`langForTenant(site.tenantId).then(prepareMailLang)`), kérésenként legfeljebb egy
+lekérdezés — a throttle-ág is kéri, hogy egy eldobott kérés se váltson nyelvet.
+A vélemény-ág (az EGYETLEN, ami eddig is helyesen csinálta) szintén erre a memóra
+került, hogy ne legyen két mechanizmus, ami elcsúszhat.
+
+⚠️ **Csapda, amibe majdnem belesétáltam:** `T(await tenantLang(), "…")` alakban a
+katalógus-betakarító regexe **nem illeszkedik** (azonosítót vár nyelv-argumentumként),
+tehát a string megint kimaradt volna a nyelvi csomagból — minden kapu zöldje mellett.
+Ezért minden hívási helyen `const lang = await tenantLang();` előzi meg a `T(lang, …)`-ot.
+Ki is mondtam a kód kommentjében, mert a következő szerkesztő ugyanide lépne.
+
+⚠️ **A nyelvi-előtagos 404 NEM a kért előtag nyelvén szól**, hanem a szállás sajátján:
+ott azért vagyunk, mert az a nyelvi változat NEM létezik. (Ugyanaz a logika, mint az
+ADR-0157 ③-ban.) Külön néven (`siteLang`), hogy ne árnyékolja az URL-előtagot.
+
+**Őr:** `scripts/guest-host-i18n-check.mts` — nem fájlra, hanem a `serveTenantHost()`
+FÜGGVÉNYRE mér (a `public.ts` nem vehető fel a lint listájára, amíg a marketing-landing
+fordítása nyitott üzleti kérdés). ⛔ Az **ékezet nélküli** magyart is látja, amit a lint
+heurisztikája (`[áéíóöőúüű]`) sosem fogott volna meg. Piros önteszt: 3 visszarontás a
+VALÓDI törzsbe helyettesítve, mind fennakad, a javított törzsön 0 álpozitív; ha a
+visszarontás nem illeszkedik (mert a kód változott), az önteszt hangosan bukik.
+Negatív kontroll: a függvény átnevezésére az őr `exit 1`-et ad olvasható üzenettel —
+nem mér némán üres törzsön.
+
+⛔ **A saját őröm első változata VAK VOLT, és az önteszt buktatta le:** a törzs-széles
+`/"…"/g` literál-regex a korábbi idézőjelekhez igazodva ELCSÚSZIK (regex-literálok,
+escape-elt idézőjelek), és a keresett stringet egyáltalán nem találta meg — 3-ból 2
+visszarontás átment rajta. Soronkénti pásztázásra váltva mind a 3 fennakad. Ha nincs
+önteszt, egy vak őrre jelentettem volna zöldet.
+
+---
+
+#### Az EREDETI (2026-09-14-i) felmérés sorai — előzményként
+
 
 | sor | szöveg | hol |
 |---|---|---|

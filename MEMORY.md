@@ -901,11 +901,21 @@ Session-jegyzet: `_planning/memory/2026-09-14_frozen_guest_page_promise.md`.
   extractor meg kihagyta. Mindkét regex javítva. Katalógus 2663 → **2703** (+40, −0).
   ⚠️ A katalógus-tétel NEM elég: a csomagot a boot-idejű `ensureAllLanguagePacks()` tölti
   (mérve: a tegnapi vendég-lap mind a 6 élő csomagban ott van).
-- **NYITOTT (külön kör, tulajdonosi döntés):** a `public.ts` **27 BURKOLATLAN** szövegdarabja
-  — ebből **11 VENDÉG-oldali**, 4 lead, 8 tulaj, 4 marketing (üzleti döntés), 2 határeset,
-  2 belső log. **Tételes átadó-lista (fájl:sor + szöveg + hol) a session-jegyzet végén** —
-  a következő kör ne mérje újra. ⛔ Egy tétel (`Nincs ilyen oldal.`) ÉKEZET NÉLKÜLI, ezért
-  a lint HU-heurisztikája nem is látja.
+- ✅ **A 11 VENDÉG-oldali string BEBURKOLVA (2026-09-15).** Memoizált `tenantLang()` a
+  `serveTenantHost()` elején; a throttle-ág is kéri, hogy egy eldobott kérés se váltson
+  nyelvet. ⚠️ Csapda, amibe majdnem belesétáltam: `T(await tenantLang(), …)` alakban a
+  katalógus-betakarító regexe NEM illeszkedik → a string megint kimaradt volna a
+  csomagból; ezért mindenhol `const lang = await tenantLang()` előzi meg.
+  ⛔ A saját összefoglaló listám két tételt tévesen képezett le (SZÖVEG szerint deduplikált):
+  a `Nincs ilyen oldal.` háromszor van, és az egyik `pillanatkép` NEM a vendég hostján —
+  a darabszám véletlenül stimmelt, az összetétel nem. Őr: `guest-host-i18n-check.mts`,
+  ami FÜGGVÉNYRE mér (nem fájlra) és az ÉKEZET NÉLKÜLI magyart is látja.
+  ⛔⛔ Az őröm ELSŐ változata VAK volt (törzs-széles literál-regex elcsúszik a korábbi
+  idézőjeleken, 3-ból 2 visszarontás átment) — az önteszt buktatta le, nem az elemzés.
+- **NYITOTT (külön kör):** a `public.ts` maradék **16 burkolatlan** szövegdarabja — 4 lead
+  (⚠️ a lead nyelve ISMERT, és a szöveg TEGEZ, míg a kontraktus magázást ír elő), 8 tulaj,
+  2 határeset, 2 belső log — plusz a 4 MARKETING sor, ami üzleti döntés, nem hibajavítás.
+  Tételes lista a session-jegyzet végén.
 
 ## Előző szál (2026-09-14) — natív confirm() a lemondáson és a naptár-színek
 
