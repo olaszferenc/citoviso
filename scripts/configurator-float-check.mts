@@ -31,6 +31,13 @@ import { TEMPLATES } from "../src/engine/templates.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
+// ⛔ MUNKAFÁNKÉNT KÜLÖN. `assets/Temp` SYMLINK a fő fába, tehát MINDEN párhuzamos
+// session ugyanoda ír — ez az őr pedig a futás végén `rm -rf`-eli a saját
+// könyvtárát. Mérve 2026-09-15: két session futtatta ugyanazt az őrt, és amelyik
+// előbb végzett, KITÖRÖLTE a másik alól a fixture-t, ami így a NAVIGÁCIÓN szállt el.
+// A piros ilyenkor nem a termékről szól, hanem rólunk. A munkafa neve egyedi.
+const SCOPE = path.basename(path.resolve(import.meta.dirname, ".."));
+
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown): void {
   if (cond) console.log(`  ✓ ${name}`);
@@ -75,7 +82,7 @@ if (!art) {
   process.exit(1);
 }
 
-const OUT = path.resolve(import.meta.dirname, "../assets/Temp/_cfgfloat");
+const OUT = path.resolve(import.meta.dirname, `../assets/Temp/_cfgfloat-${SCOPE}`);
 await mkdir(OUT, { recursive: true });
 
 // How long the buyer may be left without a way to buy. The budgets are derived from the
@@ -157,7 +164,7 @@ async function measure(
     };
   });
   if (opts.shot)
-    await p.screenshot({ path: path.resolve(import.meta.dirname, `../assets/Temp/${opts.shot}.png`) });
+    await p.screenshot({ path: path.resolve(import.meta.dirname, `../assets/Temp/${opts.shot}-${SCOPE}.png`) });
   await ctx.close();
   return r ? { ...r, paintedMs, errs } : r;
 }
@@ -284,7 +291,7 @@ if (failures) {
   process.exit(1);
 }
 console.log(
-  "\n   📷 bizonyíték: assets/Temp/cfg-float-aurora-ELOTTE.png (páncél nélkül), -UTANA.png és -LATHATATLAN.png",
+  "\n   📷 bizonyíték: assets/Temp/cfg-float-aurora-ELOTTE-${SCOPE}.png (páncél nélkül), -UTANA.png és -LATHATATLAN.png",
 );
 console.log(
   `\n✅ configurator-float-check: a vásárlási belépő mind a ${ids.length} sablonon LÁTSZIK és kattintható (${armourStripped.length}×3 mérés + 3 önteszt + a nem-görgető látogató).`,

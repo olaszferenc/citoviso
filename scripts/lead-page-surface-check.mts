@@ -109,7 +109,14 @@ if (!art) {
   process.exit(1);
 }
 
-const OUT = path.resolve(import.meta.dirname, "../assets/Temp/_leadsurface");
+// ⛔ MUNKAFÁNKÉNT KÜLÖN. `assets/Temp` egy SYMLINK a fő fába, tehát MINDEN párhuzamos
+// session ugyanoda ír — ez az őr pedig a futás végén `rm -rf`-eli ezt a könyvtárat
+// (lásd a fájl alján). Mérve 2026-09-15: két session futtatta egyszerre, és amelyik
+// előbb végzett, KITÖRÖLTE a másik alól a fixture-t → `navigating to …/artdeco.html`
+// hibával elszállt a futás. A piros ilyenkor nem a termékről szól, hanem rólunk.
+// A munkafa neve egyedi (`~/wt/<slug>`), ezért az a hatókör-kulcs.
+const SCOPE = path.basename(path.resolve(import.meta.dirname, ".."));
+const OUT = path.resolve(import.meta.dirname, `../assets/Temp/_leadsurface-${SCOPE}`);
 await mkdir(OUT, { recursive: true });
 
 const GOOGLE_HOSTS = /(^|\.)google\.com|googleapis\.com|gstatic\.com/;
@@ -600,7 +607,7 @@ for (const [w, h, vp] of VIEWPORTS) {
     );
   }
   await p.screenshot({
-    path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-panel-${vp}.png`),
+    path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-panel-${vp}.png`),
   });
   await ctx.close();
 }
@@ -633,7 +640,7 @@ check(
     boxes,
   );
   await p.screenshot({
-    path: path.resolve(import.meta.dirname, "../assets/Temp/leadsurface-map-ELOTTE.png"),
+    path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-map-ELOTTE.png`),
   });
   await ctx.close();
 }
@@ -701,7 +708,7 @@ check(
       if (r.buried?.length) {
         caught = { template: id, viewport: vp, ...r };
         await p.screenshot({
-          path: path.resolve(import.meta.dirname, "../assets/Temp/leadsurface-pill-ELOTTE.png"),
+          path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-pill-ELOTTE.png`),
         });
       }
       await ctx.close();

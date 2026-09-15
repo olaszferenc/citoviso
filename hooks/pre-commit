@@ -605,6 +605,16 @@ fi
 # melyik ablak járt le), a lemondás vigye vissza a tulajt oda, ahol dolgozott, és a
 # beadás után a vendég LÁSSA a nyugtát. Az utóbbi geometriai ítélet: a kártya a DOM-ban
 # van és „látható", miközben a képernyő FÖLÖTT ül (mérve −651 px @390).
+# ⛔ SCRATCH-HATÓKÖR. Az `assets/Temp` SYMLINK a fő fába: MINDEN párhuzamos munkafa
+# ugyanoda ír, és több böngésző-hajtott őr a futás végén `rm -rf`-eli ott a saját
+# könyvtárát — vagyis kitörli a másik session fixture-jét. Mérve 2026-09-15: ÖT ilyen
+# őr élt, MIND bekötve, tehát véletlenszerűen ölték egymás commitjait; a lelet a
+# lap MEGNYITÁSÁN jelent meg, ezért termék-hibának látszott. Gyors, csak forrást olvas.
+if [ -f scripts/guard-scratch-scope-check.mts ] && \
+   changed_files | grep -qE '^scripts/.*\.(mts|ts)$'; then
+  echo "[pre-commit] guard-scratch-scope-check (egy őr ne törölje a másik fixture-jét)…"
+  npx tsx scripts/guard-scratch-scope-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⛔ ÁRVA ŐRÖK BEKÖTVE (ADR-0152 hatóköre egy szinttel feljebb). Mérve: négy
 # őr-viselkedésű script (állítást mér, nem-nulla kóddal bukik) él a `*-check.mts`
 # névkonvención KÍVÜL, és MIND A NÉGY árva volt — 51 állítás, amit soha semmi nem
@@ -793,7 +803,11 @@ fi
 # is ellenőrzi: a vendég-oldal MINDKÉT úton (host + /t/) sáv nélkül marad.
 if [ -f scripts/consent-style-check.mts ]; then
   echo "[pre-commit] consent-style-check (a sávnak van-e TÉNYLEGES stílusa)…"
-  npx tsx scripts/consent-style-check.mts >"$GATE_LOG" || gate_failed
+  # ⛔ MOCK ÁTJÁRÓ. A sáv egyik mért lapja a /pay/done, ami a VALÓDI átjárót hívja
+  # (handleWebhook → GetPaymentState). A park-seed fizetés-refre a sandbox HTML
+  # hibalapot ad, a JSON.parse dob, a route 500-at ad — és a STÍLUS-őr pirosra megy
+  # egy hálózati válaszon. Mérve 2026-09-15: barionnal 2 piros, mockkal 0.
+  PAYMENT_GATEWAY=mock npx tsx scripts/consent-style-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A JELENTÉS-VIVŐ FELIRAT OLVASHATÓ (tulajdonosi döntés, 2026-09-15). A konzol
 # jelzés-színeit feliratnak is használtuk: a „Fizetek ▸" és a „Jóváhagyás" gomb 3,00-n,

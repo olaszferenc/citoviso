@@ -37,6 +37,13 @@ import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
+// ⛔ MUNKAFÁNKÉNT KÜLÖN. `assets/Temp` SYMLINK a fő fába, tehát MINDEN párhuzamos
+// session ugyanoda ír — ez az őr pedig a futás végén `rm -rf`-eli a saját
+// könyvtárát. Mérve 2026-09-15: két session futtatta ugyanazt az őrt, és amelyik
+// előbb végzett, KITÖRÖLTE a másik alól a fixture-t, ami így a NAVIGÁCIÓN szállt el.
+// A piros ilyenkor nem a termékről szól, hanem rólunk. A munkafa neve egyedi.
+const SCOPE = path.basename(path.resolve(import.meta.dirname, ".."));
+
 const SELFTEST = process.argv.includes("--selftest");
 
 let failures = 0;
@@ -73,7 +80,7 @@ const recipe = (templateId: string): Recipe =>
     sections: [],
   }) as unknown as Recipe;
 
-const OUT = path.resolve(import.meta.dirname, "../assets/Temp/_pricingsample");
+const OUT = path.resolve(import.meta.dirname, `../assets/Temp/_pricingsample-${SCOPE}`);
 await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT, { recursive: true });
 
