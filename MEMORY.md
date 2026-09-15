@@ -804,9 +804,20 @@ választotta 3 működő vázlatból).
   ⚠️ A saját képkészítőm vázát MÁSODSZOR rontottam el ebben a szálban (oldalsáv nélkül a
   `.adm-shell` rácsban a tartalom a 248 px-es oszlopba esett, ~50 px széles hasábot lőttem) —
   **a keret is része a mérésnek.**
-- **NYITOTT** (a tulaj NEM döntött róluk, a kontraktus nyitottként sorolja): a fizetős felületen
-  személynevet kiíró kapcsolat-e-mail (`config.outreachSender.email`) · a „Fizetés és generálás"
-  gomb 0 nyelvvel.
+- ⭐ **HARMADIK UTÓKÖR (ADR-0174): a support-cím.** A tenant-admin és a belépési súgó a hideg
+  megkeresés JOGILAG KÖTELEZŐ feladó-azonosításából olvasott (§C.2) — a dev-konfigon személynév.
+  Új, önálló `config.supportEmail` (= `info@citoviso.com`); három szerep, három mező.
+  ⛔⛔ **A rebase egy PÁRHUZAMOS szálat hozott be, amelyik UGYANEZT javította** (`358cade`),
+  szigorúbban: cím hiányában a mondat ELMARAD, nem cserélődik hihetőre (§B.17). **Az ő
+  megoldásuk maradt**, én a SZEREPET javítottam alatta — „az enyém nyer" feloldással a
+  szigorúbb ágat töröltem volna el. **Konfliktusnál előbb OLVASD EL, mit csinált a másik.**
+  ⛔ A két premissza ellentmondott (ők: „a configban sehol" · infra-jegyzet 2026-08-03:
+  „ingyenes Zoho-alias"), és EGYIK SEM friss mérés; a kézbesíthetőség innen nem mérhető
+  (port 25 zárva) → az őr a saját HATÁRÁT kimondja a kimenetén.
+- ⛔ **EMBERI FÜGGŐSÉG:** élnie kell a Zoho-aliasnak az `info@citoviso.com` címre — enélkül a
+  fizető ügyfél levele sehova nem érkezik meg. Ezt nem tudtam megmérni.
+- **NYITOTT:** a „Fizetés és generálás" gomb 0 nyelvvel · a belépési súgón a cím SZÖVEG, nem
+  kattintható link (rögzített, nem javított lelet).
 
 ## Előző szál (2026-09-14) — a fagyasztott vendég-lap ígérete (ADR-0157)
 

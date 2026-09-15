@@ -120,8 +120,35 @@ méri, és a piros iker a feltétel nélküli feliratot teszi vissza.
 tartalom a 248 px-es oszlopba esett, és egy ~50 px széles hasábot fényképeztem. Másodszor ugyanaz
 a hiba-osztály ebben a szálban: **a keret is része a mérésnek.**
 
+## Harmadik utókör — a support-cím (ADR-0174)
+
+A tulaj: „A személynévre szóló kapcsolat-e-mailt is javítsd meg." → `info@citoviso.com`.
+
+**Mérve:** a tenant-admin és a belépési súgó a `config.outreachSender.email`-t kapta — a hideg
+megkeresés JOGILAG KÖTELEZŐ feladó-azonosítását (§C.2), ami a dev-konfigon személynév. Új,
+önálló `config.supportEmail` mező; három szerep, három mező (support · megkeresés-feladó ·
+Impresszum), szándékosan nem összevonva.
+
+⛔⛔ **A rebase egy PÁRHUZAMOS szálat hozott be, amelyik UGYANEZT a hibát javította** (`358cade`,
+„a kapcsolat-cím nem létezett"). Ők a vízvezetéket: egy forrás a hívótól + **cím hiányában a
+mondat ELMARAD**, nem cserélődik hihetőre (§B.17). **Az ő megoldásuk maradt**, én a SZEREPET
+javítottam alatta (a hívó mostantól a support-mezőt adja át, nem a megkeresés-feladót). A két
+javítás összeadódik — ha a konfliktust „az enyém nyer" alapon oldom fel, a szigorúbb §B.17-es
+ágat töröltem volna el. **Konfliktusnál előbb OLVASD EL, mit csinált a másik.**
+
+⛔ **A premisszájuk és az enyém ellentmondott:** ők azt mérték, hogy az `info@` „a
+konfigurációban SEHOL nem szerepel"; a repó infra-jegyzete (2026-08-03) szerint viszont
+**ingyenes alias ugyanarra a Zoho-postafiókra**. Mindkettő igaz a maga kérdésére (config ≠
+postafiók), és EGYIK SEM friss mérés. A kézbesíthetőséget innen nem lehet mérni: a 25-ös port
+kifelé zárva (ECONNREFUSED mind a 7 próbacímre, a biztosan létező `olasz.ferenc@`-re is).
+**Az őr ezért a saját határát kimondja a kimenetén** — nem állítja, hogy a cím működik.
+
+ℹ️ **Rögzített, NEM javított lelet:** a belépési súgón a cím SZÖVEG, nem `mailto:` link. Az
+őröm első változata emiatt lett piros egy helyes lapon — más kérdésre válaszolt volna.
+
 ## Nyitott
 
-- A kontraktus „Amit a terv NEM dönt el" szakasza: a személynévre szóló kapcsolat-e-mail;
-  a „Fizetés és generálás" gomb 0 nyelvvel.
+- A kontraktus „Amit a terv NEM dönt el" szakasza: a „Fizetés és generálás" gomb 0 nyelvvel.
+- ⛔ **EMBERI:** élnie kell a Zoho-aliasnak az `info@citoviso.com` címre.
+- A belépési súgó kattinthatósága (fenti lelet).
 - A `console-outreach-draft` KB-képének nem-determinizmusa (fenti).
