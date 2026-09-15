@@ -12,6 +12,17 @@ olvasva), nem emlékezetből. A `⚠️` jelölt sorok azok, amiket csak te tuds
 > Hiánypótláskor visszaküldik, javítás után újra bírálják. *(A korábbi „hetekben mérhető"
 > állítás forrás nélküli volt — helyesbítve.)*
 
+> ⛔ **2026-09-15 — a fenti számok 6 napig HIBÁSAK voltak, és megállították az igénylést.**
+> A Barion vissza is írta: „mind a regisztráció során, mind a honlapja ÁSZF-ében egy megszűnt
+> vállalkozás azonosítószáma lett megadva, így nem tudjuk megkezdeni a vizsgálatot". A doksi
+> első verziója az éles `.env`-ből olvasta ki az adatokat, és ott egy **megszűnt** e.v. száma
+> állt (`69646014-1-33` / `53483083`). **Tanulság: a saját konfigunkból olvasni NEM mérés —
+> az csak azt igazolja, hogy mi mit hiszünk.** Cég-azonosítónál az egyetlen forrás a
+> nyilvántartás (NAV Vállalkozói Ügysegéd → a vállalkozó adatai), ahonnan a valós, „Működő"
+> státuszú adatok jöttek: `92227011-1-33` / `62588818`, felvétel 2026.07.20.
+> ⚠️ Az ellenőrzőszám-kapunk ezt elvi okból nem foghatta meg: **mindkét szám érvényes**
+> ellenőrzőszámú — a számtan a jó ALAKOT bizonyítja, a LÉTEZÉST soha.
+
 ---
 
 ## 1. Amit az igénylőlapra másolsz
@@ -20,9 +31,9 @@ olvasva), nem emlékezetből. A `⚠️` jelölt sorok azok, amiket csak te tuds
 |---|---|
 | Cégforma | Egyéni vállalkozó |
 | Név | **Olasz Ferenc e.v.** |
-| Székhely | **2100 Gödöllő, Klebelsberg Kunó utca 6.** |
-| Nyilvántartási szám | **53483083** |
-| Adószám | **69646014-1-33** |
+| Székhely | **2100 Gödöllő, Klebelsberg Kunó utca 6. 2.** |
+| Nyilvántartási szám | **62588818** |
+| Adószám | **92227011-1-33** |
 | E-mail | **olasz.ferenc@citoviso.com** |
 | Weboldal | **https://citoviso.com** |
 | Tevékenység | Weboldal-készítés és -üzemeltetés előfizetéses formában (SaaS), kis- és középvállalkozásoknak |

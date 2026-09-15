@@ -159,8 +159,15 @@ const PLACEHOLDER_CONTACT = /0{3}[\s-]?0{4}|123[\s-]?4567|xxx/iu;
  * adószám `12345678-1-42` matching `1234567` on 2026-09-11 — ADR-0121). None of
  * the rules below asks whether a value "looks like a test": they ask whether it
  * CAN be real. `12345678-1-42` fails because its check digit is wrong, so it is
- * not a tax number at all — while the house's real `69646014-1-33` validates, and
+ * not a tax number at all — while the house's real `92227011-1-33` validates, and
  * so do 10773381-2-44 and 10537914-4-44 (measured; the self-test pins all of them).
+ *
+ * ⚠️ WHAT THIS RULE CANNOT SEE (measured 2026-09-15): the check digit proves the
+ * number is WELL-FORMED, never that the business behind it still EXISTS. The seat's
+ * former number `69646014-1-33` belonged to a TERMINATED sole trader and passed
+ * every gate here, all the way onto the live ÁSZF/Impresszum — Barion refused to
+ * even start the merchant review because of it. Registry STATUS is a NAV lookup,
+ * not arithmetic; until we do that lookup, this gate is structural only.
  *
  * ⚠️ SCOPE: only the fields the shipped surfaces actually PRINT. The letter prints
  * the signature (sender name/company/mail/phone) and the registry identification

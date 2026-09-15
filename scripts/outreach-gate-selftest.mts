@@ -344,9 +344,9 @@ const PROD_IDENTITY = {
   OUTREACH_SENDER_COMPANY: "Olasz Ferenc e.v.",
   OUTREACH_SENDER_EMAIL: "olasz.ferenc@citoviso.com",
   LEGAL_ENTITY_NAME: "Olasz Ferenc e.v.",
-  LEGAL_ENTITY_ADDRESS: "2100 Gödöllő, Klebelsberg Kunó utca 6.",
-  LEGAL_ENTITY_REG_NUMBER: "53483083",
-  LEGAL_ENTITY_TAX_NUMBER: "69646014-1-33",
+  LEGAL_ENTITY_ADDRESS: "2100 Gödöllő, Klebelsberg Kunó utca 6. 2.",
+  LEGAL_ENTITY_REG_NUMBER: "62588818",
+  LEGAL_ENTITY_TAX_NUMBER: "92227011-1-33",
   LEGAL_ENTITY_PHONE: "+36 30 516 1631",
 } as const;
 
@@ -363,7 +363,7 @@ for (const surface of ["mail", "linked-page"] as const) {
 // real registry numbers and reject the documentation sample for a structural reason.
 // Independent reference values (public registry data), so the rule is not measured
 // with its own assumptions: Magyar Telekom and OTP Bank.
-for (const tax of ["69646014-1-33", "10773381-2-44", "10537914-4-44"]) {
+for (const tax of ["92227011-1-33", "10773381-2-44", "10537914-4-44"]) {
   const ps = identityProblems("mail", { ...PROD_IDENTITY, LEGAL_ENTITY_TAX_NUMBER: tax });
   say(ps.length === 0, `valódi adószám elfogadva: ${tax}`, ps.map(identityReason).join(" | "));
 }
