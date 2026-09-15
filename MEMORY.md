@@ -1,7 +1,37 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (👻 ADR-0178: halott gomb-osztály · 💳 ADR-0179: a fizetés utáni lap és a 429)
+Utolsó frissítés: 2026-09-15 (👻 ADR-0180: a fantom pirula, és két szál ugyanazon a munkán)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**👻 ADR-0180 — AMIT EGY PÁRHUZAMOS SZÁL MÁR MEGMÉRT, AZT NE MÉRD MEG ÚJRA; ÉS A HIBAKERESŐ
+SZŰKÍTÉS NE GYÁRTSON ÁLBUKÁST.** Session-jegyzet:
+`_planning/memory/2026-09-15_phantom_pill_and_duplicated_work.md`. **Élesítés NINCS** (§0.3).
+
+- ⛔⛔ **A KAPOTT FELADAT PREMISSZÁJA HAMIS VOLT, ÉS AZ ÉN IDÉZÉSEM TERJESZTETTE.** Egy
+  **2026-09-14-i dátumú** őr-leltár sorát („a pirula a CTA 23 %-át takarja") „ma PIROS, és ez
+  TERMÉK-HIBA"-ként másoltam a záró összefoglalómba. Mérve: **38 pirula-mérés, `EXIT=0`**, a `y`
+  475–828 között szór (a kikerülő dolgozik), és az **ADR-0168 már fantomnak minősítette**. A
+  dátum ott volt a soron — a következtetés hiányzott. **A pirulához egyetlen sort sem nyúltam.**
+- ⛔⛔ **KÉT SZÁL UGYANEZT A MUNKÁT VÉGEZTE EL.** A valódi hibát (öt őr a KÖZÖS `assets/Temp`-be
+  írta ÉS törölte a scratch-jét, háromnál INDULÁSKOR) megtaláltam, megírtam, végigvittem a
+  kapukon — **és mire a land a push-ig ért, egy párhuzamos szál ugyanezt landolta** (`0ca7a93`),
+  osztály-őrrel együtt. A commit-üzenetük NEVESÍTI a szálamat. **Az ő verziójuk a bázis, a
+  duplikátumomat ELDOBTAM** (`reset --hard origin/main`); csak azt vittem tovább, ami náluk nincs.
+  ⚠️ **NYITOTT (az övék a döntés):** az ő kulcsuk **munkafa**-egyedi, ami UGYANABBAN a fában futó
+  két mérést nem védi — ma két teljes kört futtattam egyszerre, pont a verseny előállításához.
+- **Amit megtartottam:** ① `--only=<sablon>` szűkítés (20 s vs. 6 perc) — ⛔ az első változatom
+  **két önteszt-ágat buktatott egy HIBÁTLAN őrön**, ezért a ④ most **kimondottan kimarad**, és a
+  záró sor **nem mond tisztát**; ⭐ az ADR-0177 ugyanaznap ugyanerre jutott (konvergens).
+  ② **A mozgó kivágás nyugvópontban mérése** (harmadszor: ADR-0147 ②, ADR-0168 ①): 1 bukás 12
+  futásból, 10 szándékos kísérletből nulla; ⭐ a mechanizmus MÉRVE is létezik (két egymás utáni
+  kivágás **65 → 17 színt** adott). ⛔ Hamis ZÖLDET nem tud adni, ⚠️ de NEM állítom javítottnak.
+- ⚠️ **NYITOTT, IDEGEN:** a `consent-style-check` diff-scope NÉLKÜL fut, és a KÖZÖS park
+  állapotától függően véletlenszerűen **MINDEN szál MINDEN commitját** blokkolja (a `/pay/done`
+  404-es ágra fut → nincs `.panel`); bizonyíték: utána 355 zöld / 0 bukás, a felület be sem került.
+- ⭐ **Eljárás-tanulság:** ~25 szálnál a „ketten ugyanazon" nem kivétel. Bejelentett hiba előtt
+  nem csak a `DECISIONS.md` címeit kell grepelni, hanem **futó munkát is keresni**.
+
+## Előző szál (2026-09-15) — 👻 ADR-0178 — EGY GOMB-OSZTÁLY, AMIHEZ NINCS SZABÁLY, NÉMÁN AZ ELLENKEZŐJÉT CSINÁLJA
 
 **👻 ADR-0178 — EGY GOMB-OSZTÁLY, AMIHEZ NINCS SZABÁLY, NÉMÁN AZ ELLENKEZŐJÉT CSINÁLJA.**
 Tulajdonosi utasítás: „a ghost gombot is javítsd meg." Session-jegyzet:

@@ -376,7 +376,41 @@ async function settlePill(
  * thousand comparisons, not four hundred thousand. A blank box holds its fill and
  * nothing else; a map, a gradient band or a photo holds hundreds of shades.
  */
+/**
+ * A PIXELRE VÁRUNK, NEM ÓRÁRA — harmadszor ugyanaz a hibaosztály (ADR-0147 ②, ADR-0168 ①).
+ *
+ * ⚠️ MÉRT ESET, 2026-09-15: egy commit kapu-futása `aurora/asztali`-n „üres keretezett
+ * dobozt" jelentett (`colours: 1`), MIKÖZBEN ugyanazon a fán a közvetlenül előtte futott
+ * teljes kör zöld volt. **1 bukás 12 futásból**, és 10 SZÁNDÉKOS reprodukciós kísérletből
+ * (8 szűkített + 2 EGYSZERRE futó teljes kör, 33-as gépterhelésnél) egyszer sem állt elő.
+ *
+ * A mechanizmus, ami egyedül magyarázza: a `loc.screenshot()` MAGA görgeti be az elemet, a
+ * begörgetés pedig INDÍTJA a sablonok felfedő animációit (ADR-0115 mozgás-réteg). Az első
+ * kivágás így elkaphatja a doboz mögötti tartalmat `opacity: 0`-nál — az EGY szín, vagyis
+ * „üres doboz" egy ép lapon.
+ * ⭐ ÉS EZ NEM ELMÉLET: a várás élesben TÜZELT IS — ugyanarra a dobozra két egymás utáni
+ * kivágás **65 → 17 színt** adott. A kivágás-olvasás tehát bizonyítottan instabil.
+ *
+ * ⛔ EZ NEM GYENGÍTÉS, és hamis ZÖLDET nem tud adni: egy VALÓBAN üres doboz stabilan egy
+ * színű, tehát az első két mérése is egyezik, és ugyanúgy lelet marad — a várakozás csak a
+ * hamis PIROSAT szünteti meg. Bizonyítva: a ④ szakasz mindhárom piros önteszt-ága tüzel.
+ * ⚠️ ÉS NEM ÁLLÍTOM, HOGY A BUKÁS EZZEL JAVÍTVA VAN: nem tudtam előállítani, tehát a hatását
+ * nem mértem meg. Ez a MECHANIZMUS kizárása — ezért a napló mostantól megmondja, hányadik
+ * mintavételnél stabilizálódott, hogy a következő előfordulás bizonyítékot hagyjon.
+ */
 async function interiorColours(p: Page, i: number): Promise<number> {
+  let prev = -2;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const n = await sampleColours(p, i);
+    if (n === prev) return n; // két egymás utáni mérés egyezik → nyugvópont
+    if (attempt > 0) console.log(`      ⏱ a kivágás még mozgott (${prev} → ${n} szín), újramérés`);
+    prev = n;
+    await p.waitForTimeout(250);
+  }
+  return prev; // nem stabilizálódott — az UTOLSÓ mérés az ítélet, és a napló mutatja a mozgást
+}
+
+async function sampleColours(p: Page, i: number): Promise<number> {
   const loc = p.locator(`[data-cit-emptyprobe="${i}"]`);
   const buf = await loc.screenshot({ timeout: 8000 }).catch(() => null);
   if (!buf) return -1; // could not be photographed → do not accuse
@@ -439,7 +473,30 @@ async function open(
 }
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
-const ids = Object.keys(TEMPLATES);
+/**
+ * `--only=<sablon-id>` — HIBAKERESŐ szűkítés, nem futási mód.
+ *
+ * A teljes futás 19 sablon × 2 méret ≈ 5–6 perc, ami egy konkrét geometriai hiba
+ * megkereséséhez használhatatlanul lassú (egy sablon ≈ 20 s). ⛔ De a szűkített futás
+ * SOSEM verdikt: ez a szkript pontosan azért méri az ÖSSZES sablont, mert a pirula
+ * geometriája sablononként MÁS — egy „aurora zöld" mondat semmit nem állít a másik
+ * tizennyolcról. Ezért ① hangos fejlécet ír, ② a záró sorában NEM mondja ki, hogy tiszta,
+ * és ③ a pre-commit sosem adja át (ott nincs argumentum).
+ */
+const ONLY = (process.argv.find((a) => a.startsWith("--only=")) ?? "").slice(7);
+const allIds = Object.keys(TEMPLATES);
+if (ONLY && !allIds.includes(ONLY)) {
+  console.error(`⛔ --only=${ONLY}: nincs ilyen sablon. Van: ${allIds.join(", ")}`);
+  process.exit(2);
+}
+const ids = ONLY ? [ONLY] : allIds;
+if (ONLY) {
+  console.log(
+    `\n⚠️⚠️  SZŰKÍTETT, HIBAKERESŐ FUTÁS — csak a „${ONLY}" sablon.\n` +
+      `   Ez NEM verdikt: a pirula geometriája sablononként más, és a teljes kör ${allIds.length}\n` +
+      `   sablont mér. Zöld vége itt csak annyit jelent, hogy EZ az egy sablon rendben van.\n`,
+  );
+}
 const VIEWPORTS = [
   [390, 844, "mobil"],
   [1280, 900, "asztali"],
@@ -612,142 +669,153 @@ for (const [w, h, vp] of VIEWPORTS) {
   await ctx.close();
 }
 
-// ── ④ RED self-test — the halves must be able to fail ────────────────────────
-console.log("\n④ Önteszt — az őrnek pirosra kell tudnia menni:\n");
+// ⛔ A ④ ÖNTESZT A TELJES KÖRHÖZ TARTOZIK — szűkített futásban KIHAGYJUK, hangosan.
+// Az önteszt-ágak KONKRÉT sablonokra kalibráltak (`files["fullbleed"] ?? …`), mert a
+// visszarontott hibának reprodukálhatónak kell lennie. `--only=<x>` alatt a fallback a
+// szűkített sablont kapja, ahol a hiba nem áll elő — és akkor az önteszt PIROSRA MEGY EGY
+// HIBÁTLAN ŐRÖN. Élesen mérve: `--only=aurora` KÉT önteszt-ágat buktatott, miközben az ①②
+// termék-állítások zöldek voltak. Egy hibakereső flag, ami álbukást gyárt, rosszabb, mint
+// ha nem lenne: pont abban a helyzetben félrevezet, amikor egy valódi hibát keresel.
+if (!ONLY) {
+  // ── ④ RED self-test — the halves must be able to fail ────────────────────────
+  console.log("\n④ Önteszt — az őrnek pirosra kell tudnia menni:\n");
 
-// ④a the map box WITHOUT its pin card — the bug exactly as it was reported
-const victim = files["fullbleed"] ?? Object.values(files)[0]!;
-const src = await readFile(victim, "utf8");
-const bare = path.join(OUT, "_nopin.html");
-const noPin = src.replace(/<div class="cit-map-pin">[\s\S]*?<\/div>\s*<\/div>/g, "</div>");
-await writeFile(bare, noPin, "utf8");
-// ⚠️ Assert on the MARKUP, not on the class name: the inlined stylesheet also contains
-// ".cit-map-pin", so "the string is gone" was false even when the card had been cut.
-check(
-  "az önteszthez a pin-kártya tényleg kivágódott",
-  noPin !== src && !noPin.includes('<div class="cit-map-pin">'),
-);
-{
-  const { ctx, p } = await open(browser, bare, 1280, 900);
-  await p.evaluate(() => {
-    document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
-  });
-  await p.waitForTimeout(500);
-  const boxes = (await emptyBoxes(p)) as { mod?: string }[];
+  // ④a the map box WITHOUT its pin card — the bug exactly as it was reported
+  const victim = files["fullbleed"] ?? Object.values(files)[0]!;
+  const src = await readFile(victim, "utf8");
+  const bare = path.join(OUT, "_nopin.html");
+  const noPin = src.replace(/<div class="cit-map-pin">[\s\S]*?<\/div>\s*<\/div>/g, "</div>");
+  await writeFile(bare, noPin, "utf8");
+  // ⚠️ Assert on the MARKUP, not on the class name: the inlined stylesheet also contains
+  // ".cit-map-pin", so "the string is gone" was false even when the card had been cut.
   check(
-    "pin-kártya nélkül, függő keretnél a térkép-doboz ÜRESNEK mérődik (az őr él)",
-    boxes.some((b) => b.mod === "map"),
-    boxes,
+    "az önteszthez a pin-kártya tényleg kivágódott",
+    noPin !== src && !noPin.includes('<div class="cit-map-pin">'),
   );
-  await p.screenshot({
-    path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-map-ELOTTE.png`),
-  });
-  await ctx.close();
-}
-
-// ④a2 the section WITHOUT the address row outside the frame — the refused-frame state
-{
-  // ⚠️ Cut INSIDE the map section only. The unanchored pattern matched the first
-  // `cit-modsec__grid` on the page — a different module's list — so the row under the
-  // map survived and the self-test "failed" for the wrong reason.
-  const secStart = src.indexOf('<section class="cit-modsec" data-cit-module="map"');
-  const secEnd = src.indexOf("</section>", secStart);
-  const section = src.slice(secStart, secEnd);
-  const noRow =
-    secStart < 0
-      ? src
-      : src.slice(0, secStart) +
-        section.replace(/<ul class="cit-modsec__grid"[\s\S]*?<\/ul>/, "") +
-        src.slice(secEnd);
-  const bareRow = path.join(OUT, "_norow.html");
-  await writeFile(bareRow, noRow, "utf8");
-  check("az önteszthez a kereten kívüli cím-sor tényleg kivágódott", secStart >= 0 && noRow !== src);
-  const { ctx, p } = await open(browser, bareRow, 1280, 900, "refuse");
-  await p.evaluate(() => {
-    document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
-  });
-  await p.waitForTimeout(400);
-  const outside = await p.evaluate(() => {
-    const sec = document.querySelector<HTMLElement>('[data-cit-module="map"]');
-    const clone = sec?.cloneNode(true) as HTMLElement | undefined;
-    clone?.querySelectorAll("iframe, .cit-map-pin, h1, h2, h3").forEach((n) => n.remove());
-    return (clone?.textContent || "").replace(/\s+/g, " ").trim();
-  });
-  check(
-    "a kereten kívüli sor nélkül az elutasított keret NÉMA szekciót hagy (az őr él)",
-    outside.length < 8,
-    { outside },
-  );
-  await ctx.close();
-}
-
-// ④b with the avoidance block CUT OUT of the served JS, the pill must bury a button
-// again — the bug exactly as Elek photographed it. No test switch lives in the shipped
-// runtime; the block is removed from the page, the same way the float-check strips the
-// CSS armour.
-{
-  let caught: unknown = null;
-  let stripCount = 0;
-  for (const [id, file] of Object.entries(files)) {
-    const naiveSrc = (await readFile(file, "utf8")).replace(
-      /\/\* cit-cfg-avoid-start[\s\S]*?cit-cfg-avoid-end \*\//,
-      "",
+  {
+    const { ctx, p } = await open(browser, bare, 1280, 900);
+    await p.evaluate(() => {
+      document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
+    });
+    await p.waitForTimeout(500);
+    const boxes = (await emptyBoxes(p)) as { mod?: string }[];
+    check(
+      "pin-kártya nélkül, függő keretnél a térkép-doboz ÜRESNEK mérődik (az őr él)",
+      boxes.some((b) => b.mod === "map"),
+      boxes,
     );
-    if (naiveSrc.includes("cit-cfg-avoid-start")) continue; // nothing was cut — skip
-    stripCount++;
-    const naive = path.join(OUT, `${id}.noavoid.html`);
-    await writeFile(naive, naiveSrc, "utf8");
-    for (const [w, h, vp] of VIEWPORTS) {
-      const { ctx, p } = await open(browser, naive, w, h);
-      await wakePill(p);
-      // ⭐ Az öntesztnek UGYANAZZAL a mércével kell mérnie, mint a ②-nek — különben a
-      // zöldje egy másik kérdésre felelne. Kerülő nélkül a pirula meg sem mozdul, tehát
-      // azonnal nyugvó — és pont ott ül, ahol a gomb van.
-      await settlePill(p);
-      const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as { buried?: unknown[] };
-      if (r.buried?.length) {
-        caught = { template: id, viewport: vp, ...r };
-        await p.screenshot({
-          path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-pill-ELOTTE.png`),
-        });
+    await p.screenshot({
+      path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-map-ELOTTE.png`),
+    });
+    await ctx.close();
+  }
+
+  // ④a2 the section WITHOUT the address row outside the frame — the refused-frame state
+  {
+    // ⚠️ Cut INSIDE the map section only. The unanchored pattern matched the first
+    // `cit-modsec__grid` on the page — a different module's list — so the row under the
+    // map survived and the self-test "failed" for the wrong reason.
+    const secStart = src.indexOf('<section class="cit-modsec" data-cit-module="map"');
+    const secEnd = src.indexOf("</section>", secStart);
+    const section = src.slice(secStart, secEnd);
+    const noRow =
+      secStart < 0
+        ? src
+        : src.slice(0, secStart) +
+          section.replace(/<ul class="cit-modsec__grid"[\s\S]*?<\/ul>/, "") +
+          src.slice(secEnd);
+    const bareRow = path.join(OUT, "_norow.html");
+    await writeFile(bareRow, noRow, "utf8");
+    check("az önteszthez a kereten kívüli cím-sor tényleg kivágódott", secStart >= 0 && noRow !== src);
+    const { ctx, p } = await open(browser, bareRow, 1280, 900, "refuse");
+    await p.evaluate(() => {
+      document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
+    });
+    await p.waitForTimeout(400);
+    const outside = await p.evaluate(() => {
+      const sec = document.querySelector<HTMLElement>('[data-cit-module="map"]');
+      const clone = sec?.cloneNode(true) as HTMLElement | undefined;
+      clone?.querySelectorAll("iframe, .cit-map-pin, h1, h2, h3").forEach((n) => n.remove());
+      return (clone?.textContent || "").replace(/\s+/g, " ").trim();
+    });
+    check(
+      "a kereten kívüli sor nélkül az elutasított keret NÉMA szekciót hagy (az őr él)",
+      outside.length < 8,
+      { outside },
+    );
+    await ctx.close();
+  }
+
+  // ④b with the avoidance block CUT OUT of the served JS, the pill must bury a button
+  // again — the bug exactly as Elek photographed it. No test switch lives in the shipped
+  // runtime; the block is removed from the page, the same way the float-check strips the
+  // CSS armour.
+  {
+    let caught: unknown = null;
+    let stripCount = 0;
+    for (const [id, file] of Object.entries(files)) {
+      const naiveSrc = (await readFile(file, "utf8")).replace(
+        /\/\* cit-cfg-avoid-start[\s\S]*?cit-cfg-avoid-end \*\//,
+        "",
+      );
+      if (naiveSrc.includes("cit-cfg-avoid-start")) continue; // nothing was cut — skip
+      stripCount++;
+      const naive = path.join(OUT, `${id}.noavoid.html`);
+      await writeFile(naive, naiveSrc, "utf8");
+      for (const [w, h, vp] of VIEWPORTS) {
+        const { ctx, p } = await open(browser, naive, w, h);
+        await wakePill(p);
+        // ⭐ Az öntesztnek UGYANAZZAL a mércével kell mérnie, mint a ②-nek — különben a
+        // zöldje egy másik kérdésre felelne. Kerülő nélkül a pirula meg sem mozdul, tehát
+        // azonnal nyugvó — és pont ott ül, ahol a gomb van.
+        await settlePill(p);
+        const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as { buried?: unknown[] };
+        if (r.buried?.length) {
+          caught = { template: id, viewport: vp, ...r };
+          await p.screenshot({
+            path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-pill-ELOTTE.png`),
+          });
+        }
+        await ctx.close();
+        if (caught) break;
       }
-      await ctx.close();
       if (caught) break;
     }
-    if (caught) break;
-  }
-  check("a kerülő-blokk tényleg kivágódott a kiszolgált JS-ből", stripCount > 0, { stripCount });
-  check("ütközés-kerülés nélkül a pirula tényleg betemet egy gombot (az őr él)", !!caught, caught);
+    check("a kerülő-blokk tényleg kivágódott a kiszolgált JS-ből", stripCount > 0, { stripCount });
+    check("ütközés-kerülés nélkül a pirula tényleg betemet egy gombot (az őr él)", !!caught, caught);
 
-  // ④d A MEG NEM ÁLLÓ pirula is lelet — és ennek az állításnak is kell piros ikre.
-  // Enélkül a „a pirula MEGÁLL" sor csupa zöldje semmit nem bizonyítana: egy olyan
-  // várakozás, ami SOHA nem tud settled=false-t adni, nem mérés, hanem díszlet.
-  // Szintetikusan oszcilláltatjuk a pirulát (minden képkockán mozdul egyet), és
-  // elvárjuk, hogy a nyugvópont-várás a plafonig fusson és PIROSAT mondjon.
-  {
-    const victimFile = files["fullbleed"] ?? Object.values(files)[0]!;
-    const osc = path.join(OUT, "_oscillate.html");
-    await writeFile(
-      osc,
-      (await readFile(victimFile, "utf8")).replace(
-        "</body>",
-        `<script>(function(){function t(){var e=document.querySelector(".cit-cfg-launch");
-if(e){e.style.setProperty("transition","none","important");
-e.style.setProperty("bottom",(24+(Math.floor(performance.now()/16)%40))+"px","important");}
-requestAnimationFrame(t);}requestAnimationFrame(t);})();</script></body>`,
-      ),
-      "utf8",
-    );
-    const { ctx, p } = await open(browser, osc, 390, 844);
-    await wakePill(p);
-    const st = await settlePill(p);
-    await ctx.close();
-    check(
-      "⭐ oszcilláló pirulát a nyugvópont-várás PIROSNAK lát (settled=false)",
-      st.settled === false,
-      st,
-    );
+    // ④d A MEG NEM ÁLLÓ pirula is lelet — és ennek az állításnak is kell piros ikre.
+    // Enélkül a „a pirula MEGÁLL" sor csupa zöldje semmit nem bizonyítana: egy olyan
+    // várakozás, ami SOHA nem tud settled=false-t adni, nem mérés, hanem díszlet.
+    // Szintetikusan oszcilláltatjuk a pirulát (minden képkockán mozdul egyet), és
+    // elvárjuk, hogy a nyugvópont-várás a plafonig fusson és PIROSAT mondjon.
+    {
+      const victimFile = files["fullbleed"] ?? Object.values(files)[0]!;
+      const osc = path.join(OUT, "_oscillate.html");
+      await writeFile(
+        osc,
+        (await readFile(victimFile, "utf8")).replace(
+          "</body>",
+          `<script>(function(){function t(){var e=document.querySelector(".cit-cfg-launch");
+  if(e){e.style.setProperty("transition","none","important");
+  e.style.setProperty("bottom",(24+(Math.floor(performance.now()/16)%40))+"px","important");}
+  requestAnimationFrame(t);}requestAnimationFrame(t);})();</script></body>`,
+        ),
+        "utf8",
+      );
+      const { ctx, p } = await open(browser, osc, 390, 844);
+      await wakePill(p);
+      const st = await settlePill(p);
+      await ctx.close();
+      check(
+        "⭐ oszcilláló pirulát a nyugvópont-várás PIROSNAK lát (settled=false)",
+        st.settled === false,
+        st,
+      );
+    }
   }
+} else {
+  console.log("\n④ Önteszt — KIHAGYVA a szűkített futásban (csak a teljes kör méri).\n");
 }
 
 await browser.close();
@@ -757,6 +825,15 @@ await rm(OUT, { recursive: true, force: true });
 if (failures) {
   console.error(`\n❌ lead-page-surface-check: ${failures} bukás — a leadnek kiszállított lap törött`);
   process.exit(1);
+}
+if (ONLY) {
+  // ⛔ SZŰKÍTETT FUTÁS: itt nem hangzik el, hogy „tiszta". Egy hibakereső kör zöldje
+  // pontosan egy sablonról szól; a teljes kör az, ami verdiktet ad.
+  console.log(
+    `\n⚠️  SZŰKÍTETT FUTÁS VÉGE — a „${ONLY}" sablon 2 méreten hibátlan. Ez NEM a kapu verdiktje:\n` +
+      `   a teljes kör (${allIds.length} sablon) még nem futott. Futtasd argumentum nélkül.`,
+  );
+  process.exit(0);
 }
 console.log(
   `\n✅ lead-page-surface-check: ${ids.length} sablon × 2 méret — ① nincs üres keretezett doboz ` +
