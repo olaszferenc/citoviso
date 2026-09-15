@@ -147,3 +147,57 @@ a régi alakot azóta `kód`-jelöléssel idézi a README.
 **9 új állítás, mind PIROSRA megy** az öntesztben (összesen 31 sértés a visszarontott
 nézeten). A visszarontás mindháromnál a FIX ELŐTTI állapotot állítja vissza: nincs
 csoportosítás, a régi olvasatlan-szabály, és a törzs első sora az előnézetben.
+
+---
+
+# HARMADIK KÖR — a súgó, és a szál lezárása
+
+## ⛔⛔ A KB-ŐR ZÖLD VOLT, MERT MÁS KÉRDÉSRE VÁLASZOLT (megint)
+
+A `kb-check` **horgonyt és kép-frissességet** mér, nem IDÉZETET. A cikk közben három olyan
+feliratot idézett, ami már nem létezik („Mind olvasott (2)", „A szűrt 2 olvasott",
+„Szűkítés"), és egy állítása **MÁR AZ ELSŐ KÖR ÓTA hamis volt**: „Az »E-mail« és az »SMS«
+gombon nincs darabszám" — pedig az első körben épp azt tettem rá.
+→ A felirat-csere ELŐTT grepelni kell a fogyasztókat; a `kb/` a fogyasztók közé tartozik.
+   (Az Elek-forgatókönyveket ellenőriztem, ott csak KOMMENTBEN szerepelt — a KB-t nem.)
+
+⭐ **A KB-őr viszont a saját hibámat elkapta:** a félkövér idézetbe beleégettem egy konkrét
+számot („— 2 üzenet"), a forrásban helyőrző áll → label-drift hiba. Csak az ÁLLANDÓ részt
+szabad idézni.
+
+## ⛔ SZŰKÍTETTEM A KONTRAKTUST A JÓVÁHAGYOTT VÁZLATHOZ KÉPEST
+
+A tulaj által jóváhagyott `uzenetek-c.html` mutatta a **visszakapcsoló sávot** is
+(„Ezzel a 2026. 09. 10. – 2027. 09. 10. időszak van rendezve" + „Megnyitom a számlát a
+Dokumentumok közt ▸"), és a TERV-KESZ.md a közös tételek közt sorolta. A befagyasztott
+README-be viszont **nem vettem be**, és nincs megvalósítva — az `adminViews.ts` „A honlapja
+újra elérhető" sávja változatlan.
+**Ez a `feedback_approved_draft_is_the_contract` fordítottja:** nem a tervet erőltettem a
+meglévő vázba, hanem a SZERZŐDÉST szűkítettem a terv alá, csendben. A kontraktus-őr nem
+foghatta meg — csak azt méri, amit a README KÖT. Nyitott tételként jelentve.
+
+## Élesítés
+
+**NEM az én dolgom** (tulajdonosi döntés, 2026-09-15): a szálak MEGVÁRJÁK egymást, és egy
+MEGNEVEZETT VERZIÓ megy ki közösen. A munkám landolt és igazolva van, tehát része lesz a
+közös élesítésnek.
+
+## NYITOTT TÉTELEK (átadva)
+
+1. ⛔ **A visszakapcsoló sáv** (fent) — a jóváhagyott vázlat mutatta, a kontraktus nem köti,
+   a kód nem tartalmazza. `adminViews.ts` „A honlapja újra elérhető" ág. Elek FK-006b
+   ZAVAROS-1/2: nem mondja meg, MELY időszakot fizette ki, és hivatkozik a számlára, de nem
+   vezet el hozzá. **Adat MEGVAN** (`subscription.arrears.periodStart/End`, invoice id).
+2. **Azonos percen belüli sorrend** (Elek FK-006b KÉZI KELL-1) — a rendezés determinisztikus
+   (mérve), a kérdés csak az, MUTASSUNK-e másodpercet, vagy állapot-üzenet előzzön-e.
+   Tulaj-döntés kell; a TERV-KESZ ⑦ pontja volt, nem dőlt el.
+3. **A kétszer mondott képernyő-név** (`<h1>` + kártya `<h2>`, ~130px fülenként, Elek E5) —
+   MINDEN admin-fület érint, ezért szándékosan külön körbe való.
+4. **Lapozás / dátum-csoportok** — a „B" változat kínálta, a tulaj a „C"-t választotta. A
+   lista 22 sorra rövidült, de a 19 SZÁMLA-sor megmarad; ha zavaró, az külön kérdés
+   (pl. év szerinti csoportosítás), nem ezé a tervé.
+5. ⚠️ **A szűrő-sáv 390px-en 205px magas** (mérve) — ennyi megy el a telefonon, mielőtt az
+   első üzenet látszik. A kontraktus ⑥ kimondja; ha sok, összecsukható, de az külön terv-kör.
+6. ℹ️ **Az ELEK-tenant hiányzik a parkból**, ezért az FK-001 újrafuttatása ezen a felületen
+   még nem történt meg — az ügy-nézetet a `messagesSection()` közvetlen renderelésével és a
+   `kb-shot` fixture-ével mértem, nem élő végigjátszással.

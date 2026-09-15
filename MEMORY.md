@@ -1206,10 +1206,12 @@ Session-jegyzet: `_planning/memory/2026-09-14_elek_mobile_blind_spot.md`. **Éle
 
 ## Párhuzamos szál (2026-09-14) — B4: tenant-admin Üzenetek + Dokumentumok
 
-**⭐ MÁSODIK KÖR — A TULAJ DÖNTÖTT: „C — Ügyek, nem levelek" ÉL LOKÁLBAN.**
+**⭐ A TULAJ DÖNTÖTT: „C — Ügyek, nem levelek" ÉL LOKÁLBAN — ADR-0154.**
 Kontraktus: `assets/design-refs/tenant-admin/uzenetek-ugyek/` (README + működő terv + képek).
-**Élesítés NINCS.** Mérve a szállított kódon: olvasatlan **65 → 21**, **66 üzenet → 22 sor**
-csukva (kinyitva mind a 66; a találat-szám mindkét állapotban 66).
+**ÉLESÍTÉS: a szál MEGVÁRJA a többit** (tulaj-döntés 2026-09-15) — egy megnevezett verzió megy
+ki közösen; a munka landolt és igazolva van, tehát része lesz. Mérve a szállított kódon:
+olvasatlan **65 → 21**, **66 üzenet → 22 sor** csukva (kinyitva mind a 66; a találat-szám
+mindkét állapotban 66).
 
 - **Az ÜGY a sor:** az előfizetés-szál EGY soron áll a mai állapotával, a korábbi lépések egy
   MEGNEVEZETT nyitó mögött. ⛔ A csukás semmit nem vesz el: a keresés a csukott ügy lépésére
@@ -1225,6 +1227,17 @@ csukva (kinyitva mind a 66; a találat-szám mindkét állapotban 66).
   és a TERMÉKRE fogta volna) · a fixture `"…"` törzse miatt az előnézet-szabály MÉRETLEN volt.
 - ⛔ **Két magyartalanságot magam gyártottam:** „mind a 1 üzenetet" és „A(z) {tárgy}" — a
   számnév/tárgy előtti névelő ugyanaz a gépi csapda, amit az Elek külön leletként jelentett.
+- ⛔⛔ **A KB-őr ZÖLD volt, mert horgonyt és képet mér, nem IDÉZETET:** a súgó három már nem
+  létező feliratot idézett, és egy állítása MÁR AZ ELSŐ KÖR ÓTA hamis volt („az E-mail és az
+  SMS gombon nincs darabszám"). **Felirat-csere előtt a `kb/` is a fogyasztók közé tartozik.**
+- ⛔ **SZŰKÍTETTEM A KONTRAKTUST a jóváhagyott vázlathoz képest:** a mock mutatta a
+  visszakapcsoló sávot (kifizetett időszak + link a számlához), a befagyasztott README viszont
+  nem KÖTI, és a kód nem tartalmazza. A kontraktus-őr ezt nem foghatta meg — csak azt méri,
+  amit a README kimond. **NYITOTT tétel #1.**
+- **NYITOTT (a session-jegyzet végén tételesen):** ① a visszakapcsoló sáv · ② azonos percen
+  belüli sorrend (tulaj-döntés kell) · ③ a kétszer mondott képernyő-név (MINDEN admin-fül) ·
+  ④ lapozás/év-csoport a 19 számla-sorra · ⑤ a szűrő-sáv 205px 390-en · ⑥ az ELEK-tenant
+  hiányzik a parkból, így az FK-001 élő újrajátszása még nem történt meg.
 
 ### Első kör — apró javítások és a hangnem-őr
 
