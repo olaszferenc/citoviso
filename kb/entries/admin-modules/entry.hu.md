@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-09-14
+updated: 2026-09-15
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -149,6 +149,39 @@ megerősítő kártya tételesen mutatja, mit, hány hónapra és mennyiért ves
 
 Az **ingyenes** modul bekapcsolása és a lemondott modul visszakapcsolása továbbra is azonnali,
 fizetés nélkül.
+
+### Mi van, ha a fizetés nem sikerül?
+
+A fizetőoldalról visszatérve nem csak a jó végkifejlet lehetséges. A képernyő mindig
+megmondja, mi történt — és **soha nem hagyja teendő nélkül**:
+
+- „A fizetés nem sikerült” — a bank elutasította a kártyát. A lap első, kiemelt mondata az,
+  ami ilyenkor a legjobban érdekli: *„Nem történt terhelés.”* Vagyis pénz **nem mozdult**, és
+  a megrendelése sem veszett el — ugyanezen a linken újrapróbálhatja. A lapon egy
+  „Újra próbálom a fizetést” gomb áll, alatta pedig a kijáratok: vissza a kezelőfelületre,
+  másik kártya megadása, vagy írás egy munkatársnak. Áll ott egy **hivatkozási azonosító**
+  is, egyetlen koppintással másolható — **ha ír nekünk, kérjük idézze ezt**, mert ebből
+  tudjuk megmondani, pontosan melyik kísérletről van szó.
+- „Sikeres fizetés — köszönjük!”, de az oldal még nem él. A terhelés megtörtént, az oldalt
+  viszont még véglegesítjük. Ilyenkor nincs teendő: a pontos címet és a belépési adatokat
+  e-mailben küldjük, általában néhány órán belül. A lapon ott az előfizetése doboza is —
+  vagyis a következő terhelését nem a bankszámla-kivonatról tudja meg.
+- „Ezt a fizetést nem találjuk” — ez akkor jön, ha a megnyitott hivatkozáshoz nálunk nincs
+  fizetés: a link elavult, félbemaradt, vagy nem tőlünk származik.
+  ⚠️ **Fontos, és szándékosan ezt írjuk:** erről a hivatkozásról **nem tudjuk megmondani,
+  történt-e terhelés** — épp azért, mert nem ismerjük. Nem nyugtatjuk meg azzal, hogy „nem
+  terheltük meg”, és nem is ijesztjük azzal, hogy „sikertelen”: mindkettő találgatás lenne.
+  Ha biztosra akar menni, **a bankja kivonatán** ellenőrizze a terhelést. A lapról vissza
+  tud lépni a kezdőlapra, és írhat is nekünk.
+
+Ha a fizetés után a „feldolgozás alatt” képernyőn marad, az magától frissül. Ha közben a
+fizetési szolgáltatót nem értük el, azt a lap ki is írja — ilyenkor amit lát, az a **mi
+nyilvántartásunk**, nem a bank végleges válasza.
+
+> Ezek a képernyők a fizetési folyamat részei, ezért nem a kezelőfelületen élnek. A
+> feliratukat itt idézőjelben (nem félkövéren) írjuk — a súgó felirat-őre a kezelőfelület
+> forrásához méri a félkövér idézeteket, és egy máshol élő feliratot tévesen hiányzónak
+> jelezne.
 
 ## Mi történik lemondáskor?
 

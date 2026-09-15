@@ -425,6 +425,13 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-banner--warn{background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white));border:1px solid var(--citui-warn)}
 .adm-banner--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));border:1px solid var(--citui-bad)}
 .adm-banner .citui-btn{margin-top:8px}
+/* A kézi terhelés-újrapróba redirectje MAGÁRA A SÁVRA horgonyoz (`#terheles-uzenet`),
+   hogy az üzenet teljes egészében látszódjon, és a benne ülő kijárat vele együtt.
+   A `scroll-margin-top` NEM elrendezés: csak azt mondja meg, hol álljon meg a
+   horgony-görgetés — a lap statikus képe változatlan. Itt csak levegő a képernyő
+   tetejéig; a sáv MAGASSÁGA nincs beleégetve, ezért egy hosszabb vagy lefordított
+   üzenet sem tudja némán levágni a tetejét. */
+.adm-banner,.adm-saved{scroll-margin-top:16px}
 .adm-note{font-size:.8rem;line-height:1.45;margin-top:7px;border-radius:6px;padding:7px 9px}
 .adm-note--ok{background:var(--citui-ok-soft)}
 .adm-note--warn{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white))}

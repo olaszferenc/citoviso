@@ -53,7 +53,13 @@ import {
   renderTenantModulePreview,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
-import { adminDashboard, domainSettlementSection, loginHelpPage, loginPage } from "./adminViews.js";
+import {
+  adminDashboard,
+  chargeRetryAnchor,
+  domainSettlementSection,
+  loginHelpPage,
+  loginPage,
+} from "./adminViews.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -1922,7 +1928,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const r = await retryRenewalCharge(session.tenantId);
     const code = r.ok ? `t_${r.outcome}` : r.refusal;
     console.log(`[billing] kézi terhelés-újrapróba · ${session.tenantId} · ${code}`);
-    return redirect(res, `/admin?tab=modulok&ujra=${encodeURIComponent(code)}`);
+    // ⛔ A HORGONY (tulajdonosi döntés, 2026-09-15): a redirect eddig fragment
+    // nélkül tért vissza, tehát a tulaj a lap TETEJÉRE érkezett — a gombok, amikről
+    // a visszajelzés beszél, mérve ~3 600 bájttal lejjebb állnak. A horgonyt a NÉZET
+    // adja (`chargeRetryAnchor`), mert ő tudja, melyik kimenetnél melyik kiút
+    // létezik; ahol nincs teendő, ott üres, hogy ne görgessen el az üzenet elől.
+    return redirect(
+      res,
+      `/admin?tab=modulok&ujra=${encodeURIComponent(code)}${chargeRetryAnchor(code)}`,
+    );
   }
   // ADR-0088 §8 — monthly→annual switch, armed for the NEXT renewal (approved
   // B plan). Nothing is charged here; after the redirect the card re-renders

@@ -1,7 +1,54 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (💳 Barion-bírálati csomag beadva — VÁRUNK; + 🫥 ADR-0181)
+Utolsó frissítés: 2026-09-15 (🧭 ADR-0182: irány helyett NÉV, és a sáv vigye a tettet; + 💳 Barion-bírálat VÁRUNK; + 🫥 ADR-0181)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**🧭 ADR-0182 — AZ ÚTBAIGAZÍTÁS NE IRÁNY LEGYEN, HANEM NÉV; ÉS A SÁV VIGYE IS A TETTET.**
+Session-jegyzet: `_planning/memory/2026-09-15_direction_word_vs_named_action.md`.
+**Élesítés NINCS** (§0.3). A kör a `deploy-prod.sh` **GATE 1c**-t blokkoló tudásbázis-FLAG-et
+oldja (`fd4ec5ed..8f44801`, 18 commit) — a verdiktet **nem adtam meg magamnak**, azt egy friss,
+független őr ítéli meg (ADR-0132 H).
+
+- **A bejelentett hiba ÁLLT, és számmal is:** a kézi terhelés-újrapróba visszajelző sávja négy
+  ágon „a fenti gombbal" küldött; mérve a sáv a **6 660.** bájtnál áll, a gombok a
+  **10 200–10 800.**-nál — mind **lefelé** mutatott **fölfelé** szóval, a redirect meg fragmentet
+  sem vitt. A tulaj szabálya: *az irány a képernyő-magasságtól függ, a NÉV nem.*
+- ⛔ **MELLÉKLELET, amit a bejelentés nem tartalmazott:** a `nincs_kartya` ág pontosan akkor áll
+  elő, amikor `payment_method !== 'token'` — ami **bitre ugyanaz a predikátum**, mint az
+  `autoCharge` —, tehát ilyenkor a megnevezendő „Másik kártyával fizetek" gomb **meg sem
+  jelenik**. A javasolt minta-követés ezen az ágon **rossz gombra küldött volna**; ezért a név a
+  lapon MOST LÉTEZŐ kiútból származik, és ha egy sincs, a mondat nem mutat sehová.
+- ⭐ **A horgony FELEMÁS lett, és ezt kimondtam, nem nyeltem el.** Három mérés 390 px-en:
+  ① mandátum-blokkra → a gombok odakerültek, de az ÜZENET **1 201 px**-szel a képernyő fölé
+  csúszott; ② fagyás-blokkra `scroll-margin-top:130px`-szel → **levágta a sáv tetejét**, mert a
+  sáv a benne ülő gombbal 90-ről **168 px**-re nőtt (**tartalomtól függő szám** — egy lefordított
+  üzenetnél némán újra vágna); ③ a horgony **maga a sáv**, és a sáv **kattintható kijáratot
+  visel** → az üzenet és a tett **szerkezetileg** egy képernyőn van. Ellenőrizve (sáv teteje
+  y=16), a képeket megnéztem, a gomb kontrasztja **7,03**.
+- ⛔⛔ **EGY IDEGEN ŐR MÉRTE KI A MÁSOLÁS ÁRÁT.** A kijáratot előbb a befizetés-gomb **nevével**
+  vittem a sávba — az viszont viseli a **tartozás összegét**, és a `frozen-settle-check` azonnal
+  pirosra ment (**2 → 3** előfordulás; a jóváhagyott kontraktus szerint az összeg csak a
+  fagyás-blokkban állhat, különben „kétszer kell fizetni"). A sáv így **csak a TÁVOLI** kijáratot
+  duplikálja. ⚠️ Az idegen őr fixtúrájában **nincs `?ujra=` kód**, tehát erre az ágra sosem
+  látott volna rá — ezért a szabály átkerült a saját őrbe is.
+- ⛔ **ÖTÖDIK „fenti"** a mandátum-blokk saját szövegében — a 390 px-es mérés **KÉPÉRŐL**, nem
+  grepből. Tulajdonosi utasításra javítva (név és szám nélkül, mert a név az összeget hozná).
+- **Őr:** `scripts/charge-retry-note-check.mts` — hermetikus, a renderelt lapot méri 10 eseten,
+  öt szabállyal; pre-commitba kötve. **23 piros önteszt**, ami **külön megköveteli, hogy MIND AZ
+  ÖT szabály megszólaljon** (ADR-0157), plusz **negatív kontroll a TÖRTÉNETI hibára** — ⭐ ez
+  élesben is dolgozott: a ③ átírásakor az utó-feltétel kibuktatta, hogy a kontroll már **üresen
+  futna**.
+- **KB:** `admin-subscription` — „Az automatikus kártyaterhelés elakadt" (két gomb + mind a hét
+  kimenet, a 15 perc és a 4 kísérlet indoklásával) + a zöld sáv időszak-mondata és számla-linkje;
+  `admin-modules` — az elutasítás-ág és az „Ezt a fizetést nem találjuk" lap. A KB-őr elkapta,
+  hogy **behelyettesített számlaszámot idéztem félkövéren** egy sablon-feliratból.
+  **18** elavult súgó-kép újragenerálva (a `console-duplicates` az ADR-0178 után is három
+  egyforma cián gombot mutatott), **KB-fordítás-kör lefuttatva mind a 6 élő nyelvre**.
+- 🔴 **NYITOTT:** a `payResultPage`/`payUnknownRefPage` a `console/views.ts`-ben él
+  (operátor-korpusz), a cikk viszont tenant → ezek a feliratok **drift-védelem nélkül** állnak,
+  pedig a lapokat a FIZETŐ VEVŐ látja. Korpusz-kérdés, eldöntendő.
+
+---
 
 **💳 BARION-BÍRÁLAT: MINDEN BEADVA, VÁRUNK (3–5 munkanap).**
 Session-jegyzet: `_planning/memory/2026-09-15_barion_biralati_csomag.md` · leltár:

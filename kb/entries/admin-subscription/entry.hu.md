@@ -4,7 +4,7 @@ title: Előfizetés — fordulónap, számla, fizetés és lemondás
 audience: tenant
 category: billing
 anchors: admin.subscription
-updated: 2026-09-14
+updated: 2026-09-15
 ---
 
 A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
@@ -83,6 +83,23 @@ Amikor a díj beérkezik, a piros kártya helyén **zöld visszaigazolás** jele
 meg („A honlapja újra elérhető”), és erről e-mailt is küldünk — így biztosan
 tudja, hogy a honlapja tényleg visszatért.
 
+Ez a zöld kártya nem csak annyit mond, hogy „rendben”, hanem azt is, **melyik
+időszakot fizette ki**: *„Ezzel a 2031. 09. 10. – 2032. 09. 10. időszak van
+rendezve, 99 900 Ft.”* Így nem kell utánaszámolnia, meddig van rendezve a
+szolgáltatása. (Az összeg csak akkor áll ott, ha számla is igazolja; ha a
+bizonylat még nem készült el, a mondat az összeget elhagyja, vagy egészen
+elmarad — soha nem írunk oda olyan számot, amit nem tudunk igazolni.)
+
+Alatta egy sor a számláról: *„A számlát elküldtük e-mailben; az automatikus
+kártyaterhelés a következő fordulónaptól újra él.”* — és ha a számlát már
+kiállítottuk, itt egy **link is nyílik rá**. A link a saját számlaszámát viseli
+(például „CIT-2031-0042 megnyitása a Dokumentumok közt ▸”); erre koppintva
+egyenesen a **Dokumentumok** fülre jut, a számlájára szűrve — nem kell megkeresnie
+a levelet. Ha a számlaszámot még nem ismerjük, a link
+**„Megnyitom a Dokumentumok közt ▸”** felirattal áll ott; ha pedig bizonylat még
+egyáltalán nincs, link sem jelenik meg (nem ígérünk olyan lapot, amit nem tudunk
+megnyitni).
+
 ## Hogyan válthatok éves fizetésre?
 
 ![Képernyőkép: az Előfizetés kártya az éves váltás dobozával, telefonon](assets/hu/screen.png)
@@ -120,6 +137,77 @@ fizetési linkkel. A díjfizetési kötelezettség megmarad, és ha a díj nem �
 be, ugyanaz történik, mint fentebb: emlékeztetők, majd a honlap átmeneti
 felfüggesztése. A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés
 miatt a **következő fizetési link kiegyenlítésekor** adhat újra megbízást.
+
+## Az automatikus kártyaterhelés elakadt — mit tegyek?
+
+Ha a mentett kártyáról nem sikerült levonni a díjat (a leggyakoribb ok, hogy
+éppen nem volt rajta fedezet), a terhelés **leáll**, és a honlap a türelmi idő
+után felfüggesztésre kerül. Ilyenkor a **Modulok** fülön az Előfizetés kártya
+alatt a megszokott zöld „BEKAPCSOLVA” felirat helyett egy piros
+**„NEM SIKERÜLT”** jelzés áll, fölötte a címmel:
+**„Az automatikus kártyaterhelés elakadt”**.
+
+⚠️ **Fontos:** az automata **nem próbálkozik magától tovább**. Ha időközben
+feltöltötte a kártyát, attól még nem fog magától lefutni a terhelés — Önnek kell
+elindítania. Ezért van ezen a kártyán két gomb.
+
+### Melyik gombot válasszam?
+
+**„Újrapróbálom ezzel a kártyával”** — ez a kék, hangsúlyos gomb. Akkor
+válassza, ha **ugyanaz a kártya időközben használhatóvá vált**: feltöltötte,
+feloldotta a bank, vagy elhárult, ami miatt az első terhelés elakadt. Egy
+koppintás, és újra megkíséreljük a levonást — nem kell újra megadnia a
+kártyaszámot.
+
+**„Másik kártyával fizetek”** — ez a halvány, másodlagos gomb. Akkor válassza, ha
+**másik kártyát szeretne használni**, vagy ha az újrapróbálás már nem vezetett
+eredményre. Ez a fizetési oldalra visz, ahol megadja az új kártyát. A kártya
+mellett ott áll a magyarázat is: *„A »Másik kártyával fizetek« úton megadott
+kártya lesz az új megbízás — a bankkártyás megerősítés miatt csak így adható
+meg.”* Vagyis az automatikus terhelést **csak ezen az úton** tudja újra
+megadni: a bankkártyás szabályok szerint a mentett kártyát egy Ön által
+indított, megerősített fizetés hozhatja vissza.
+
+> A harmadik, halk sor — **„Megbízás visszavonása”** — nem fizetés, hanem ennek
+> az ellentéte: ezzel mondja le az automatikus terhelést. A rendezetlen díj
+> ettől **nem szűnik meg**, ezt a képernyő ki is írja.
+
+### Mit fog látni az újrapróbálás után?
+
+A gomb megnyomása után visszatér erre a lapra, és **felül egy sáv írja le, mi
+történt**. Hét különböző választ kaphat, és mindegyik mást jelent:
+
+- **Sikerült.** *„Sikerült — a díjat levontuk a kártyáról, és a honlapja újra
+  elérhető.”* Ez a jó hír: a pénz megérkezett, a honlap már megint látszik a
+  látogatóknak. Nincs további teendő.
+- **A bank még nem válaszolt.** *„A terhelés elindult, a bank még nem válaszolt.”*
+  Ilyenkor várni kell. **Nem kell nyitva tartania a lapot** — ha sikerül, a
+  honlap magától visszakapcsol, és e-mailt küldünk róla.
+- **A bank újra elutasította.** *„A bank most is elutasította a kártyát, ezért
+  NEM vontunk le semmit.”* Ez fontos: **pénz nem mozdult**, nem terheltük meg
+  kétszer. Próbálja meg később, vagy fizessen másik kártyával — a sávban ott a
+  gomb is hozzá.
+- **Még jár a türelmi idő.** *„Nemrég már próbálkoztunk ezzel a kártyával.
+  15 perc múlva újra megpróbálhatja.”* Két kézi próbálkozás között **15 percet**
+  várunk. Ennek oka van: ha a bank épp elutasított, a néhány másodperccel későbbi
+  ismétlés ugyanúgy elutasításba futna. A várakozás alatt is tud fizetni másik
+  kártyával — a sávban erre is ott a gomb.
+- **Elfogyott a próbálkozás.** *„Ezzel a kártyával már többször próbálkoztunk, a
+  bank mindannyiszor elutasította — többet nem kíséreljük meg, hogy ne terheljük
+  fölöslegesen.”* Egy megújulásra **összesen négy** automatikus levonási kísérlet
+  jut (egy az automatáé, három az Öné). Ez nem a mi szigorunk: a
+  kártyatársaságok korlátozzák egy elutasított terhelés ismétlését. Ha a bank
+  többször is elutasított, nem az ismétlés hiányzik, hanem **egy másik kártya**.
+- **Nincs mentett kártya.** *„Nincs mentett kártya, amivel újra
+  próbálkozhatnánk.”* Ilyenkor nincs mit újrapróbálni — a díjat a piros kártyán
+  lévő befizetés-gombbal rendezi, bankkártyával.
+- **Nincs mit rendezni.** *„Nincs rendezendő tartozás — nincs mit
+  újrapróbálni.”* Ez akkor jön, ha közben már beérkezett a díj (például a
+  korábbi fizetése átfutott). Nincs teendő.
+
+Ha ezektől eltérő üzenetet lát („A terhelést most nem tudtuk elindítani”),
+**írjon nekünk** — a Fiók fülön megadott e-mail-címről válaszolunk a
+leggyorsabban.
 
 ## Hogyan mondhatom le az előfizetést?
 

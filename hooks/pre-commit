@@ -145,6 +145,18 @@ if [ -f scripts/admin-list-labels-check.mts ] && \
   echo "[pre-commit] admin-list-labels (tétel-név · csatorna · túlhaladottság)…"
   npx tsx scripts/admin-list-labels-check.mts
 fi
+# A kézi terhelés-újrapróba visszajelzése IRÁNYT mondott TETT helyett: négy ág „a fenti
+# gombbal" fordulattal küldött, miközben a gombok mérve ~3 600 bájttal LEJJEBB álltak, a
+# redirect pedig fragmentet sem vitt. ⛔ És a „nincs_kartya" ág olyan gombot nevezett meg,
+# ami abban az állapotban MEG SEM JELENIK (`autoCharge:false` — bitre ugyanaz a predikátum,
+# ami a visszautasítást szüli). Az őr a RENDERELT lapon méri: irány-szó nincs (a sávban ÉS a
+# mandátum-blokkban) · minden megnevezett kijárat VALÓDI vezérlő a lapon · ahol van fizetési
+# út, ott a sáv oda is VISZ. Piros önteszt (20 sértés) + negatív kontroll a TÖRTÉNETI hibára.
+if [ -f scripts/charge-retry-note-check.mts ] && \
+   changed_files | grep -qE '^(src/server/(adminViews|public)\.ts|src/payment/retryCharge\.ts|public/assets/ui/citui-admin\.css)|^scripts/charge-retry-note-check'; then
+  echo "[pre-commit] charge-retry-note (a sáv ne IRÁNYT mondjon, hanem VIGYEN)…"
+  npx tsx scripts/charge-retry-note-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0131 ①: kép nélkül nincs páros-indítás, és a felület MONDJA KI. Az Elek FK-004
 # piszkozat-lapja feltétel nélkül linkelte az MMS-előnézetet: 404 → törött-kép ikon,
 # alatta ÉLŐ „Páros indítása" gomb valódi SIM-re. Az őr a RENDERELT lapot méri, mind a

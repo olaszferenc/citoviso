@@ -362,6 +362,73 @@ function daysUntil(iso: string): number {
  * are NOT about money the block states the situation and the way out, without
  * taking over a screen the owner opened for something else.
  */
+/**
+ * A kézi terhelés-újrapróba VISSZAJELZŐ SÁVJÁNAK horgonya — ide tér vissza a redirect.
+ *
+ * ⚠️ HÁROM MÉRÉS UTÁNI ALAK (2026-09-15, mind 390px-en).
+ *  ① Először a mandátum-blokkra mutatott, ahol a két kártya-gomb áll. A gombokat
+ *     tényleg odahozta — ⛔ de az ÜZENET közben **1 201 px-szel a képernyő fölé**
+ *     került: a tulaj két gombot látott volna anélkül, hogy megtudja, miért.
+ *  ② Aztán a fagyás-blokkra, `scroll-margin-top:130px`-szel. Ez közel járt, ⛔ de
+ *     mérve **levágta a sáv tetejét** (top=-50), mert a sáv a benne ülő gombbal
+ *     90-ről **168 px-re** nőtt — a 130 egy TARTALOMTÓL FÜGGŐ szám volt, tehát egy
+ *     hosszabb (vagy lefordított, vagy több sorba törő) üzenetnél némán újra vágna.
+ *  ③ Ezért a horgony MAGA A SÁV. A böngésző a sáv tetejét viszi a képernyő tetejére,
+ *     így az üzenet TELJESEN látszik — szerkezetileg, nem egy eltalált px-érték miatt.
+ *     A tett úgyis a sávon BELÜL van, a tartozás-kártya pedig közvetlenül alatta.
+ *
+ * ⚠️ A horgony-cél pontosan akkor létezik, amikor van `?ujra=` kód — ha nincs, a
+ * böngésző nem görget. Fail-safe.
+ */
+const RETRY_NOTE_ANCHOR = "terheles-uzenet";
+
+/**
+ * Hová vigyen a kézi terhelés-újrapróba redirectje (`#fragment`), kimenet szerint.
+ *
+ * ⛔ A leképezés AZÉRT ÁLL ITT, a horgony mellett, mert az a tudás, hogy melyik
+ * kimenetnél van-e egyáltalán TEENDŐ, a nézeté — a route-ban második példány lenne
+ * belőle (`feedback_one_rule_two_copies`).
+ *
+ * Ahol nincs tett (sikerült · a bank még nem válaszolt · nincs tartozás), ott NINCS
+ * horgony: a lap tetején álló üzenet MAGA a tartalom, és egy horgony elgörgetne
+ * előle — pont azt az információt venné el, amiért a tulaj visszaérkezett.
+ *
+ * ⚠️ Ha a blokk nincs a lapon (pl. `past_due`, ami még nem fagyás), a böngésző
+ * egyszerűen nem görget — a tulaj a lap tetején, az üzenetnél marad. Fail-safe.
+ */
+export function chargeRetryAnchor(code: string): string {
+  switch (code) {
+    case "t_paid":
+    case "t_pending":
+    case "nincs_tartozas":
+      return "";
+    default:
+      return `#${RETRY_NOTE_ANCHOR}`;
+  }
+}
+
+/**
+ * A fagyás-blokk befizetés-gombjának FELIRATA — egy forrás, két fogyasztó.
+ *
+ * ⛔ Azért nem inline literál: a kézi terhelés-újrapróba visszajelző sávja
+ * MEGNEVEZI azt a gombot, ahová küld, és egy második példány pontosan azt a hibát
+ * szülné, amit ez a kör javít — a sáv olyan feliratra hivatkozna, ami nem ezen a
+ * néven (vagy egyáltalán nem) áll a lapon (`feedback_one_rule_two_copies`,
+ * `feedback_label_change_breaks_its_quoters`).
+ *
+ * A két ág nem kozmetika: tartozás-sor nélkül nincs mit összegszerűen kiírni, és
+ * egy magabiztos nulla itt állítás lenne (§B.17).
+ */
+function settleBtnLabel(sub: SubscriptionAdminData, lang: string): string {
+  const owed = sub.arrears ? hufAmount(sub.arrears.amount) : null;
+  return owed ? T(lang, "Befizetem — {amount}", { amount: owed }) : T(lang, "Díj rendezése");
+}
+
+/** A mandátum-blokk „másik kártya" útjának felirata (ugyanaz a szerep, mint fent). */
+function otherCardBtnLabel(lang: string): string {
+  return T(lang, "Másik kártyával fizetek");
+}
+
 function frozenStateBlock(
   sub: SubscriptionAdminData,
   lang: string,
@@ -381,7 +448,7 @@ function frozenStateBlock(
     `</div>` +
     (sub.payUrl
       ? `<a class="citui-btn citui-btn--primary adm-owe__pay" href="${esc(sub.payUrl)}">` +
-        (owed ? T(lang, "Befizetem — {amount}", { amount: esc(owed) }) : T(lang, "Díj rendezése")) +
+        esc(settleBtnLabel(sub, lang)) +
         `</a>`
       : "") +
     `<p class="adm-owe__note">${T(lang, "Bankkártyával, a Barion biztonságos oldalán. A befizetés után a honlap magától, azonnal visszakapcsol.")}</p>`;
@@ -663,7 +730,19 @@ export function modulesSection(
           `<div class="adm-mand__txt">` +
           `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "NEM SIKERÜLT")}</span>` +
           `<h3>${T(lang, "Az automatikus kártyaterhelés elakadt")}</h3>` +
-          `<p>${T(lang, "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A fenti befizetéssel a megbízás újra él — addig a díjat Önnek kell rendeznie.")}</p>` +
+          // ⛔ ÖTÖDIK „fenti" (tulajdonosi utasítás, 2026-09-15). A bejelentés négy
+          // irány-szót sorolt fel a visszajelző sávban; ez az ÖTÖDIK a blokk SAJÁT
+          // szövegében ült („A fenti befizetéssel…"), és a horgony 390px-es mérésének
+          // képén bukkant elő. Ugyanaz a hibaosztály: az irány a képernyő-magasságtól függ.
+          //   ⚠️ DE ITT NEM A GOMB NEVE A MEGOLDÁS, és ezt egy IDEGEN ŐR mérte ki. Az első
+          // javításom a `settleBtnLabel`-lel nevezte meg az utat — az viszont az ÖSSZEGET is
+          // viseli („Befizetem — 10 270 Ft"), és a `frozen-settle-check` azonnal pirosra ment:
+          // a jóváhagyott „B — Rendezés-képernyő" kontraktus szerint a tartozás összege CSAK a
+          // fagyás-blokkban állhat (a nagy szám + a gomb felirata), mert egy harmadik
+          // előfordulás más felirat alatt azt kelti, hogy KÉTSZER kell fizetni. Ezért ez a
+          // mondat nem mutat és nem idéz, hanem a tényt mondja ki — irány, név és szám nélkül.
+          // A kattintható kijáratot a visszajelző sáv viszi; ott van neki helye.
+          `<p>${T(lang, "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A díj befizetésével a megbízás újra él — addig a díjat Önnek kell rendeznie.")}</p>` +
           // ⛔ Measured 2026-09-13 (Elek FK-006a): the ONLY control on this block
           // was "Megbízás visszavonása" — on a stuck charge the single offered
           // action was to give up. The plan (freeze-state-v2 §⑤) requires a
@@ -683,7 +762,7 @@ export function modulesSection(
           `<button class="citui-btn citui-btn--primary adm-mand__btn adm-mand__btn--go" type="submit">${T(lang, "Újrapróbálom ezzel a kártyával")}</button>` +
           `</form>` +
           (sub.payUrl
-            ? `<a class="citui-btn citui-btn--ghost adm-mand__btn" href="${esc(sub.payUrl)}">${T(lang, "Másik kártyával fizetek")}</a>` +
+            ? `<a class="citui-btn citui-btn--ghost adm-mand__btn" href="${esc(sub.payUrl)}">${esc(otherCardBtnLabel(lang))}</a>` +
               `<p class="adm-mand__hint">${T(lang, "A „Másik kártyával fizetek” úton megadott kártya lesz az új megbízás — a bankkártyás megerősítés miatt csak így adható meg.")}</p>`
             : "") +
           // The exit stays open (ADR-0119 ⑥) but it is no longer the loudest
@@ -3837,38 +3916,133 @@ export function adminDashboard(
   // követné el, amit ez a kör javít: nem mondaná meg, MIT TEHET a tulaj. A
   // visszautasításnak mindig van kiútja — a fizetési link —, és a sikeres ág
   // kimondja azt is, ami ilyenkor a legfontosabb: a honlap visszakapcsolt.
+  //
+  // ── JAVÍTÁS (tulajdonosi döntés, 2026-09-15): IRÁNY HELYETT NÉV ─────────────
+  // ⛔ Négy ág „a fenti gombbal" fordulattal küldött, és mérve MIND LEFELÉ mutatott:
+  // a renderelt lapon a sáv a 6 660. bájtnál állt, a hivatkozott gombok a
+  // 10 200–10 800. bájtnál. A redirect fragmentet sem vitt, tehát a tulaj a lap
+  // TETEJÉRE érkezett, és telefonon fölfelé kereste azt, ami alatta volt.
+  //   A tulaj szava: „az irány a képernyő-magasságtól függ, a NÉV nem." Ezért a
+  // mondat mostantól MEGNEVEZI az utat — a `varakozas` ág mintájára, ami ezt már
+  // eleve jól csinálta.
+  //   ⛔⛔ ÉS A NÉV NEM BEÉGETETT FELIRAT, HANEM A LAPON MOST LÉTEZŐ KIÚTBÓL
+  // SZÁRMAZIK. Mérve: a `nincs_kartya` ág pontosan akkor áll elő, amikor
+  // `payment_method !== 'token'` (retryCharge.ts) — ami BITRE ugyanaz a predikátum,
+  // mint az `autoCharge` (subscriptionAdmin.ts:251). Ilyenkor a mandátum-blokk
+  // „Másik kártyával fizetek" gombja MEG SEM JELENIK: az egyetlen létező kiút a
+  // fagyás-blokk befizetés-gombja. A `?ujra=` ráadásul MINDEN fülön olvasódik
+  // (public.ts), a két kártya-gomb viszont csak a Modulok fülön él — más fülön
+  // mérve is csak a befizetés-gomb létezik.
+  //   Ha EGY kiút sincs a lapon, a mondat NEM MUTAT SEHOVÁ: inkább nincs útbaigazítás,
+  // mint olyan gomb megnevezése, ami nincs ott (`feedback_label_must_derive_from_predicate`).
+  const retrySub = opts.subscription ?? null;
+  /** A mandátum-blokk „másik kártya" gombja — csak a Modulok fülön, fagyás alatt,
+   *  tárolt kártyával és kiadott fizetési linkkel áll ott. */
+  const wayOtherCard =
+    tab === "modulok" && retrySub?.status === "frozen" && retrySub.autoCharge && retrySub.payUrl
+      ? otherCardBtnLabel(lang)
+      : null;
+  /** A fagyás-blokk befizetés-gombja — minden fülön ott van, amíg van fizetési link. */
+  const waySettle =
+    retrySub?.status === "frozen" && retrySub.payUrl ? settleBtnLabel(retrySub, lang) : null;
+  //
+  // ── A SÁV MAGA VIGYE A TETTET (tulajdonosi döntés, 2026-09-15) ──────────────
+  // A horgony a ~1 200 px-es távolságot nem szüntette meg, csak elrejtette: a
+  // megnevezett gomb akkor is máshol van, mint az üzenet. Ezért a sáv nem csak
+  // MEGNEVEZI az utat, hanem ODA IS VISZ — így az üzenet és a tett SZERKEZETILEG
+  // egy képernyőn van, nem a görgetés szerencséjén múlik.
+  //   ⭐ Minta a házból: a zöld visszakapcsoló sáv ugyanígy visz linket
+  // („{számlaszám} megnyitása a Dokumentumok közt ▸"). Mintakövetés, nem új elrendezés.
+  //   ⛔ A felirat NEM másolat: ugyanaz az EGY forrás (`otherCardBtnLabel` /
+  // `settleBtnLabel`), amit a gomb maga is visel — különben a sáv olyan feliratra
+  // hivatkozna, amit a gomb már elhagyott.
+  //   ⚠️ Azért LINK és nem űrlap: a megnevezett két kiút („Másik kártyával fizetek",
+  // „Befizetem — …") egyaránt `<a href="{payUrl}">`. Az „Újrapróbálom ezzel a
+  // kártyával" POST-űrlap volna — de arra egyetlen sáv sem küld, és nem is küldhet:
+  // amikor a sáv megszólal, az újrapróbálás épp az, amit a szerver elutasított.
+  //   ⛔⛔ DE CSAK A TÁVOLI KIJÁRATOT MÁSOLJUK IDE, és ezt egy mérés döntötte el.
+  // A befizetés-gomb felirata viseli a TARTOZÁS ÖSSZEGÉT, és a jóváhagyott
+  // „B — Rendezés-képernyő" kontraktus szerint az összeg CSAK a fagyás-blokkban
+  // állhat (`frozen-settle-check`): egy harmadik előfordulás azt kelti, hogy kétszer
+  // kell fizetni. Mérve: a sávba tett befizetés-link a „nincs_kartya" ágon 2-ről
+  // **3-ra** vitte az összeg előfordulásait a látható lapon.
+  //   Nem is kell: 390px-en mérve a fagyás-blokk befizetés-gombja a sávval EGY
+  // KÉPERNYŐN van (a sáv teteje y=16, a gomb ugyanott látszik) — az üzenet és a tett
+  // már együtt van. A mandátum-blokk „Másik kártyával fizetek" gombja ezzel szemben
+  // ~1 200 px-szel lejjebb ül: EZT érdemes a sávba hozni, és ennek a feliratában
+  // nincs összeg.
+  const wayHref = retrySub?.payUrl ?? null;
+  /** A sáv kattintható kijárata — csak a TÁVOLI út kerül ide, üres egyébként. */
+  const wayLink =
+    wayOtherCard && wayHref
+      ? `<br><a class="citui-btn citui-btn--primary adm-banner__go" href="${esc(wayHref)}">` +
+        `${esc(wayOtherCard)} ▸</a>`
+      : "";
+  /**
+   * A KÖZELI kijárat: a fagyás-blokk befizetés-gombja, ami 390px-en mérve a sávval
+   * EGY képernyőn van. Nem másoljuk a sávba (az összeget vinné magával), de a mondat
+   * tudjon róla — különben ott küldenénk a tulajt „írjon nekünk"-re, ahol egy
+   * kattintásnyira ott a fizetés.
+   * ⛔ Irány-szó és összeg nélkül hivatkozunk rá: a tartozás számát a kontraktus a
+   * fagyás-blokkhoz köti, az irányt pedig a képernyő-magasság billentené.
+   */
+  const hasNearExit = !!waySettle;
   const retryNote = ((): string => {
     const c = opts.chargeRetry;
     if (!c) return "";
     const bad = (msg: string) =>
-      `<div class="adm-banner adm-banner--bad" role="alert">${ic("alert", 18)} ${msg}</div>`;
+      `<div id="${RETRY_NOTE_ANCHOR}" class="adm-banner adm-banner--bad" role="alert">${ic("alert", 18)} ${msg}</div>`;
     const warn = (msg: string) =>
-      `<div class="adm-banner adm-banner--warn" role="status">${msg}</div>`;
+      `<div id="${RETRY_NOTE_ANCHOR}" class="adm-banner adm-banner--warn" role="status">${msg}</div>`;
     switch (c) {
       case "t_paid":
-        return `<div class="adm-saved">${ic("check", 18)} ${T(lang, "Sikerült — a díjat levontuk a kártyáról, és a honlapja újra elérhető.")}</div>`;
+        return `<div id="${RETRY_NOTE_ANCHOR}" class="adm-saved">${ic("check", 18)} ${T(lang, "Sikerült — a díjat levontuk a kártyáról, és a honlapja újra elérhető.")}</div>`;
       case "t_pending":
         return warn(
           T(lang, "A terhelés elindult, a bank még nem válaszolt. Ha sikerül, a honlapja magától visszakapcsol, és e-mailt küldünk — ezt a lapot nem kell nyitva tartania."),
         );
       case "t_failed":
         return bad(
-          T(lang, "A bank most is elutasította a kártyát, ezért NEM vontunk le semmit. Próbálja meg később, vagy fizessen másik kártyával a fenti gombbal."),
+          (wayLink
+            ? T(lang, "A bank most is elutasította a kártyát, ezért NEM vontunk le semmit. Próbálja meg később, vagy fizessen másik kártyával:")
+            : hasNearExit
+              ? T(lang, "A bank most is elutasította a kártyát, ezért NEM vontunk le semmit. Próbálja meg később, vagy rendezze a díjat bankkártyával.")
+              : T(lang, "A bank most is elutasította a kártyát, ezért NEM vontunk le semmit. Próbálja meg később, vagy írjon nekünk.")) + wayLink,
         );
       case "varakozas":
         return warn(
-          T(lang, "Nemrég már próbálkoztunk ezzel a kártyával. {n} perc múlva újra megpróbálhatja — addig a „Másik kártyával fizetek” úton tud fizetni.", { n: String(RETRY_COOLDOWN_MINUTES) }),
+          (wayLink
+            ? T(lang, "Nemrég már próbálkoztunk ezzel a kártyával. {n} perc múlva újra megpróbálhatja — addig itt tud fizetni:", { n: String(RETRY_COOLDOWN_MINUTES) })
+            : hasNearExit
+              ? T(lang, "Nemrég már próbálkoztunk ezzel a kártyával. {n} perc múlva újra megpróbálhatja — addig a díjat bankkártyával rendezheti.", { n: String(RETRY_COOLDOWN_MINUTES) })
+              : T(lang, "Nemrég már próbálkoztunk ezzel a kártyával. {n} perc múlva újra megpróbálhatja.", { n: String(RETRY_COOLDOWN_MINUTES) })) + wayLink,
         );
       case "sorozat_vege":
         return bad(
-          T(lang, "Ezzel a kártyával már többször próbálkoztunk, a bank mindannyiszor elutasította — többet nem kíséreljük meg, hogy ne terheljük fölöslegesen. Fizessen másik kártyával a fenti gombbal."),
+          (wayLink
+            ? T(lang, "Ezzel a kártyával már többször próbálkoztunk, a bank mindannyiszor elutasította — többet nem kíséreljük meg, hogy ne terheljük fölöslegesen. A díjat így tudja rendezni:")
+            : hasNearExit
+              ? T(lang, "Ezzel a kártyával már többször próbálkoztunk, a bank mindannyiszor elutasította — többet nem kíséreljük meg, hogy ne terheljük fölöslegesen. A díjat másik bankkártyával rendezheti.")
+              : T(lang, "Ezzel a kártyával már többször próbálkoztunk, a bank mindannyiszor elutasította — többet nem kíséreljük meg, hogy ne terheljük fölöslegesen. Írjon nekünk, hogy másik kártyával rendezhesse.")) + wayLink,
         );
       case "nincs_kartya":
-        return warn(T(lang, "Nincs mentett kártya, amivel újra próbálkozhatnánk — a fenti fizetési linken tud fizetni."));
+        return warn(
+          (wayLink
+            ? T(lang, "Nincs mentett kártya, amivel újra próbálkozhatnánk — a díjat így tudja rendezni:")
+            : hasNearExit
+              ? T(lang, "Nincs mentett kártya, amivel újra próbálkozhatnánk — a díjat bankkártyával rendezheti.")
+              : T(lang, "Nincs mentett kártya, amivel újra próbálkozhatnánk — írjon nekünk, hogy rendezhesse a díjat.")) + wayLink,
+        );
       case "nincs_tartozas":
         return warn(T(lang, "Nincs rendezendő tartozás — nincs mit újrapróbálni."));
       default:
-        return bad(T(lang, "A terhelést most nem tudtuk elindítani. Fizessen a fenti gombbal, vagy írjon nekünk."));
+        return bad(
+          (wayLink
+            ? T(lang, "A terhelést most nem tudtuk elindítani. Ha nem sikerül, írjon nekünk — a díjat addig is így tudja rendezni:")
+            : hasNearExit
+              ? T(lang, "A terhelést most nem tudtuk elindítani. A díjat bankkártyával rendezheti, vagy írjon nekünk.")
+              : T(lang, "A terhelést most nem tudtuk elindítani. Írjon nekünk.")) + wayLink,
+        );
     }
   })();
 
