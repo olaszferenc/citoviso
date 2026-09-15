@@ -2545,7 +2545,7 @@ function prospectsPanel(
                      ),
                    )}')">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
-                   <button type="submit" class="con-btn2">${T(lang, "Megjelölöm kiküldöttként")}</button></form>`
+                   <button type="submit" class="ghost">${T(lang, "Megjelölöm kiküldöttként")}</button></form>`
               : ""
           }
           ${
@@ -2556,7 +2556,7 @@ function prospectsPanel(
             p.archivedAt
               ? `<form method="post" action="/prospect/${esc(p.id)}/unarchive" style="display:inline;margin:0;margin-left:auto">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">
-                   <button type="submit" class="con-btn2">${T(lang, "Visszaállítás")}</button></form>`
+                   <button type="submit" class="ghost">${T(lang, "Visszaállítás")}</button></form>`
               : `<form method="post" action="/prospect/${esc(p.id)}/archive" style="display:inline;margin:0;margin-left:auto"
                    onsubmit="return confirm('${esc(jsStr(T(lang, "Archiválod ezt a linket? A /p/… cím továbbra is megnyílik (a leadnek már kiküldhettük), de nem ez lesz az ÉLŐ, és megkeresés nem indul róla. Bármikor visszaállítható.")))}')">
                    <input type="hidden" name="leadId" value="${esc(d.id)}">

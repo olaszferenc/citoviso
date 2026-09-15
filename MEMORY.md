@@ -1,7 +1,34 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (💳 kézi terhelés-újrapróbálás — a fékek a WHERE-ben)
+Utolsó frissítés: 2026-09-15 (👻 ADR-0178: a halott gomb-osztály az ELLENKEZŐJÉT csinálta)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**👻 ADR-0178 — EGY GOMB-OSZTÁLY, AMIHEZ NINCS SZABÁLY, NÉMÁN AZ ELLENKEZŐJÉT CSINÁLJA.**
+Tulajdonosi utasítás: „a ghost gombot is javítsd meg." Session-jegyzet:
+`_planning/memory/2026-09-15_dead_button_class.md`. **Élesítés NINCS.**
+
+- **A hiba:** a konzolban hat helyen állt `class="ghost"` (szándék: halvány, másodlagos), de a
+  `.ghost`-hoz **egyetlen CSS-szabály sem tartozott** — ezért a submit-gombokra a navy gradiens
+  ült rá. ⛔ **A halott osztály nem semleges: átengedi az elemet a legszélesebb szabálynak, ami
+  illeszkedik rá — vagyis az ELLENKEZŐJÉT csinálja annak, amit a neve ígér.**
+- **A kár, mérve:** a lead-lapon 2 gomb látszott elsődlegesnek; a `/duplicates`-en a **három
+  válaszból kettő** volt ghost → **három egyforma navy gomb**, köztük az „Ugyanaz — összevonás",
+  ami lead-rekordokat VON ÖSSZE. A kurátor a képről nem tudta megmondani, melyik a fő válasz.
+- **Javítva:** a `.ghost` a dizájn-mag MEGLÉVŐ mintáját kapta (`citui-btn--ghost`: fehér,
+  line-strong szegély, navy szöveg) — nem új stílus, hanem a meglévő szándék hatályba léptetése;
+  az ADR-0169 `con-btn2`-je **beolvadt** (egy szerep = egy osztály).
+- **Az őr nem a `ghost`-ot őrzi, hanem a HIBAOSZTÁLYT:** minden gomb-osztály vagy **FEST** (van rá
+  szabály a BETÖLTÖTT stíluslapokban — nem forrás-grepből: ami nem jut el a böngészőig, nem
+  szabály), vagy **HORGONY** (a lap szkriptje `querySelector`-ral hivatkozik rá). Ami egyik sem:
+  bukik. ⭐ Rögtön talált egy MÁSODIK szabály nélküli osztályt (`.gen-go`) — az VALÓDI horgony,
+  ezért nem bukás; a felismerés **szerkezeti**, nem kézi szólista.
+  **Piros önteszt: 199 állítás.**
+- **Módszer-tanulság:** „mi látszik ma?" → a **kirajzolt háttérrel** mérve (gradiens-e), nem
+  class-névvel — épp a class-név hazudott · a kontrasztot a TÉNYLEGESEN látható háttérhez
+  (az első nem-átlátszó ős) · a teljes-lapos kép itt vak volt (a `/duplicates` 21 615 px magas),
+  a **döntés-sor kivágása** mutatta meg az előtte/utána különbséget.
+
+## Előző szál — 💳 ADR-0176
 
 **💳 ADR-0176 — KÉZI TERHELÉS-ÚJRAPRÓBÁLÁS.** A 2026-09-14-én jóváhagyott terv hiányzó
 fele. Session-jegyzet: `_planning/memory/2026-09-15_manual_charge_retry.md`.

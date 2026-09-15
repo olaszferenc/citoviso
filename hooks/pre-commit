@@ -728,6 +728,14 @@ if [ -f scripts/outreach-preview-check.mts ] && \
   echo "[pre-commit] outreach-preview-check (a piszkozat-előnézet nem vághatja le a levél jogi végét)…"
   npx tsx scripts/outreach-preview-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⛔ Halott gomb-osztály: a `class="ghost"` hónapokig szabály NÉLKÜL állt a konzolban,
+# ezért a „másodlagos" gomb navy ELSŐDLEGESNEK látszott (a /duplicates három válaszából
+# kettőn is). Az őr a hibaosztályt méri: fest vagy horgony — harmadik nincs.
+if [ -f scripts/button-weight-check.mts ] && \
+   changed_files | grep -qE '^src/console/views\.ts$|^public/assets/ui/citui-console\.css$|^public/assets/ui/citui\.css$|^scripts/button-weight-check'; then
+  echo "[pre-commit] button-weight-check (nincs halott gomb-osztály; a másodlagos nem elsődleges)…"
+  npx tsx scripts/button-weight-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Jóváhagyott terv „A": egy leadhez EGY ÉLŐ követett link, a többi a „Korábbi linkek" alatt.
 # ⚠️ A CSS is trigger (a gomb-súlyt KIRAJZOLVA mérjük), és az ŐR SAJÁT fájlja is
 # (ADR-0147 ③); a data/schema réteg is, mert az „élő" onnan van levezetve.

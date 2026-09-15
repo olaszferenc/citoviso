@@ -760,11 +760,11 @@ body.con {
 /* ⛔ `:not(.hp-alt)` — a nyitókép-választó bélyege `type="submit"`, de NEM elsődleges
    akció-gomb, hanem KÉP. Enélkül a navy gradiens ült a csempe alatt, és a feliratai
    (pontszám, tárgy, „nem tölthető be" indok) sötét háttérre estek (mérve 2026-09-11). */
-.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2) {
+.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost) {
   background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
   color: var(--citui-white); border-color: transparent;
 }
-.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover { filter: brightness(1.15); }
+.con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost):hover { filter: brightness(1.15); }
 .con button.ok { border-color: var(--citui-ok); color: var(--citui-ok-ink); }
 .con button.bad { border-color: var(--citui-bad); color: var(--citui-bad-ink); }
 /* Icon + label button (the icon set replaces the emoji these buttons once used). */
@@ -2018,15 +2018,25 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   cursor: pointer; font-size: 0.86rem; color: var(--citui-muted); padding: 6px 0;
 }
 
-/* MÁSODLAGOS gomb: állapotot ír, de nem ez a kártya fő útja — a jóváhagyott „A" terv
-   szerint kártyánként EGY elsődleges (navy) gomb van. ⚠️ A meglévő `class="ghost"`-nak
-   a konzol-lapon NINCS szabálya (mérve 2026-09-14), ezért az navy maradna; nem írom át
-   globálisan, mert az más felületek gombjait is átfestené — az külön kör. */
-.con button.con-btn2[type="submit"] {
-  background: var(--citui-white); color: var(--citui-navy-900);
+/* ── MÁSODLAGOS gomb a konzolon: `.ghost` ───────────────────────────────────
+   ⛔ EZ AZ OSZTÁLY HÓNAPOKIG HALOTT VOLT. A `class="ghost"` hat helyen szerepelt a
+   konzolban — a szándék „halvány, másodlagos" —, de a `.ghost`-hoz EGYETLEN szabály
+   sem tartozott, ezért a submit-gombok a fenti navy gradienst kapták. MÉRVE
+   (2026-09-15, valódi konzol): a lead-lapon 2 ilyen gomb, a `/duplicates`-en pedig a
+   HÁROM válaszból KETTŐ — vagyis az „Ugyanaz — összevonás" (ami lead-rekordokat von
+   össze) semmiben nem különbözött a másik két verdikttől.
+
+   A kinézet a dizájn-mag MEGLÉVŐ ghost-mintája (`.citui-btn--ghost`): fehér lap,
+   `line-strong` szegély, navy szöveg. Nem új stílus, hanem a meglévő szándék
+   hatályba léptetése. A hover a konzol saját `.con button:hover` szabályára bízva.
+
+   ⚠️ Ez EGYETLEN másodlagos osztály. Az ADR-0169-ben bevezetett `con-btn2` ide olvadt
+   be: két osztály ugyanarra a szerepre két igazság lenne ugyanazon a képernyőn. */
+.con button.ghost, .con button.ghost[type="submit"] {
+  background: var(--citui-white);
+  color: var(--citui-navy-900);
   border: 1px solid var(--citui-line-strong);
 }
-.con button.con-btn2[type="submit"]:hover { border-color: var(--citui-cyan-500); }
 
 /* ── A FIZETÉS ÁTJÁRÓJA ÉS A BUKÁS-LAP ──────────────────────────────────────────
    Jóváhagyott terv: assets/design-refs/console/pay-gateway-exit/ („A — a fizetés
@@ -2047,26 +2057,26 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .pay-act { display: flex; flex-direction: column; align-items: stretch; gap: 9px; margin-top: 16px; }
 .con .pay-act form { display: flex; }
 /* ⛔ SPECIFICITÁS: a generikus `.con button[type=submit]:not(.ok):not(.bad):not(.hp-alt)
-   :not(.con-btn2)` (0,6,1) VERI a sima `.con .pay-act button[type=submit]`-et (0,3,1).
+   :not(.ghost)` (0,6,1) VERI a sima `.con .pay-act button[type=submit]`-et (0,3,1).
    Mérve 2026-09-15: az első változatom mindkét gombot NAVY GRADIENSSEL festette —
    a „halk” visszaút ugyanúgy kitöltött lett, mint a fizetés, vagyis a hierarchia,
    amiért ez a terv készült, egyáltalán nem látszott. A DOM-mérés (magasság,
    betűvastagság) HELYES volt; a KÉP mutatta meg, hogy a festés más.
    Ugyanaz a csapda, mint a `.con a` link-szabály a gomb-feliraton. */
-.con .pay-act button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2) {
+.con .pay-act button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost) {
   flex: 1 1 auto; min-height: 48px; padding: 13px 20px; border-radius: 12px;
   border: 1px solid transparent; font-weight: 700; font-size: 0.95rem; cursor: pointer;
   background: var(--citui-cyan-500); color: var(--citui-navy-900);
 }
-.con .pay-act button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover { filter: brightness(1.06); }
+.con .pay-act button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost):hover { filter: brightness(1.06); }
 /* ⭐ A halk visszaút: MÉRHETŐEN kisebb és könnyebb — nem csak más színű. De nem
    tűnik el, és nem megy a tapintható méret alá. */
-.con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2) {
+.con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost) {
   min-height: 40px; padding: 10px 14px; font-weight: 600; font-size: 0.85rem;
   background: transparent; color: var(--citui-muted);
   border: 1px solid var(--citui-line-strong);
 }
-.con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover {
+.con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost):hover {
   color: var(--citui-navy-900); border-color: var(--citui-navy-900); filter: none;
 }
 
