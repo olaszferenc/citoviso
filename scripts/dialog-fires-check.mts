@@ -48,6 +48,26 @@
 //   ② A SZELEKTOR VÁDOLTA A TERMÉKET. A lapon három vágólap-gomb van (tárgy · SMS-szöveg ·
 //      levéltörzs); a `.first()` a TÁRGY gombját fogta, ami szándékosan nem kérdez — az őr
 //      mind a 8 nyelven „hibát" jelentett egy ép felületre. A cél most `#mailbody`.
+//
+// ⚠️⚠️ AMIT A `partnerViews` ZÖLDJE NEM JELENT (mérve 2026-09-15, az ellenséges csomagon).
+// A nyolc partner-kezelő STATIKUS, tehát az escape-osztály nem él bennük — de a MELLETTÜK
+// álló feliratok escape-eletlenül mennek attribútumba (`title=`, `aria-label=`). Az
+// ellenséges csomaggal mérve a dátum-szűrőn: `title` levágva `'`-ra, két szemét-attribútum
+// keletkezik — az `onchange` viszont TÚLÉL, mert a markupban MEGELŐZI a törött attribútumot.
+// Vagyis a zöld itt ATTRIBÚTUM-SORRENDEN áll, nem escape-elésen: ha valaki a kezelő ELÉ tesz
+// egy fordított attribútumot, a vezérlő némán meghal.
+//
+// ⚠️ A `placeholder` mérés-típus (2026-09-15, tulaj-rendelet). Repó-szinten 97 escape-eletlen
+// `T()`-attribútum volt, és HÁROM közülük ÉLESBEN tört: a piac-lezárás, a piac-megnyitás és a
+// leiratkozás-visszavonás indoklás-`placeholder`-e (`console/views.ts`). Mindhárom KÖTELEZŐ,
+// NAPLÓZOTT indoklás jogilag érzékeny műveletnél — az `en`/`it` fordítás idézőjelet tartalmaz,
+// az pedig lezárja az attribútumot, tehát épp a PÉLDA tűnik el, ami megmondja, mit írjon a
+// kezelő. A három hely javítva (`esc()`), és MOST MÁR ŐRZÖTT: a `placeholder` típus a
+// RENDERELT DOM-on méri, hogy a kiírt szöveg a teljes fordítással EGYEZIK-e, és hogy nem
+// keletkezett-e szemét-attribútum.
+// ⛔ A maradék 94 escape-eletlen hely KÜLÖN, NYITOTT kör (tulaj-döntés) — tételesen felsorolva
+// a `_planning/memory/2026-09-15_partner_handlers_in_guard.md` jegyzetben. Az őr rájuk
+// SZÁNDÉKOSAN nem terjed ki: egy ma piros őr, amit mindenki átlép, rosszabb a nincs őrnél.
 
 process.env.CIT_SHOT = "1"; // no boot self-heal, no AI calls, no DB writes
 
@@ -56,9 +76,11 @@ import { chromium, type Browser, type Page } from "playwright-core";
 import { config } from "../src/config.js";
 import { db } from "../src/db/client.js";
 import { installPack, tSync } from "../src/i18n/packs.js";
-import { leadPage, outreachDraftPage } from "../src/console/views.js";
+import { leadPage, outreachDraftPage, settingsPage } from "../src/console/views.js";
+import { documentNewPage, documentsPage, partnerPage } from "../src/console/partnerViews.js";
 import { runWithConsoleLang, setConsoleLang } from "../src/console/i18nCtx.js";
 import type { LeadDetail, ProspectView } from "../src/console/data.js";
+import type { PartnerDetail, PartnerDocuments, PartnerDocQuery } from "../src/console/partnerData.js";
 
 const selftest = process.argv.includes("--selftest");
 
@@ -175,12 +197,114 @@ function channel(emailSentAt: string | null) {
   };
 }
 
-type SurfaceId = "lead" | "draft" | "draftSent";
+/* ── partner-felületek (a 8 inline kezelő otthona) ────────────────────────
+ * ⚠️ Ezek a kezelők STATIKUSAK (`this.form.submit()` · `citDocFile(this)`), tehát a
+ * fordítás-escape osztály NEM él bennük. A kockázatuk MÁS, és ugyanúgy NÉMA:
+ *   · `this.form.submit()` egy `form="docf"` társítású mezőn — ha a `#docf` űrlap nincs
+ *     a lapon, a `this.form` NULL, a kezelő TypeError-ral hal, és a szűrő SEMMIT nem csinál;
+ *   · `citDocFile(this)` — ha a `DOC_FILE_JS` script lemarad, ReferenceError, és a
+ *     számlakép NÉMÁN nem csatolódik (a kezelő nem panaszkodik, csak nincs fájl).
+ * Mindkettő pontosan az a „csendben nem fut le" osztály, amiért ez az őr létezik. */
+
+const DOC_QUERY = {} as unknown as PartnerDocQuery;
+
+function docsFixture(): PartnerDocuments {
+  const iso = (d: number): string => new Date(Date.parse("2026-09-01T00:00:00Z") + d * 86_400_000).toISOString();
+  return {
+    rows: [
+      {
+        id: "dddd1111-0000-4000-8000-000000000001",
+        direction: "outgoing",
+        docType: "invoice",
+        documentNumber: "OR-1",
+        issueDate: iso(-20),
+        dueDate: iso(-12),
+        net: 24_900,
+        gross: 24_900,
+        currency: "HUF",
+        paid: false,
+        paidAt: null,
+        entityName: "Őr Entitás",
+        hasFile: false,
+      },
+    ],
+    totalGross: { HUF: 24_900 },
+    paidGross: {},
+    openGross: { HUF: 24_900 },
+    aging: { notDue: {}, d1to30: { HUF: 24_900 }, d31to60: {}, d61to90: {}, d90plus: {} },
+    habit: null,
+    kpi: { receivable: { HUF: 24_900 }, payable: {}, overdue: { HUF: 24_900 } },
+    total: 1,
+    page: 1,
+    pageSize: 50,
+    pageCount: 1,
+  } as unknown as PartnerDocuments;
+}
+
+const PARTNER = {
+  id: "eeee1111-0000-4000-8000-000000000001",
+  name: "Őr Teszt Kft.",
+  isCustomer: true,
+  isSupplier: false,
+  active: true,
+  taxNumber: "12345678-2-41",
+  euVatNumber: null,
+  registrationNo: "01-09-999999",
+  country: "HU",
+  zip: "1111",
+  city: "Budapest",
+  address: "Teszt u. 1.",
+  email: "or@example.test",
+  phone: null,
+  createdAt: "2026-08-01T00:00:00.000Z",
+  bankAccounts: [],
+  tenant: null,
+  receivable: { HUF: 24_900 },
+  payable: {},
+  yearSpend: {},
+  docCount: 1,
+} as unknown as PartnerDetail;
+
+const DOC_FORM_OPTS = {
+  partners: [{ id: "ffff1111-0000-4000-8000-000000000001", name: "Őr Szállító", taxNumber: null, isSupplier: true }],
+  entities: [{ id: "ffff1111-0000-4000-8000-000000000002", code: "MAIN", name: "Őr Entitás" }],
+  canBootstrapEntity: true,
+};
+
+/* ── a három indoklás-placeholder otthona (tulaj-kérés, 2026-09-15) ───────
+ * Egy NYITOTT és egy ZÁRT piac kell: a „Lezárás" és a „Megnyitás" ág KÜLÖN
+ * placeholderrel él, és mindkettő törött volt. A leiratkozás-visszavonás pedig
+ * csak akkor renderelődik, ha a prospect TÉNYLEG leiratkozott. */
+const MARKETS = [
+  { country: "PL", approved: true, approvedBy: "or", approvedAt: new Date("2026-09-01T00:00:00Z"), note: null, home: false, log: [] },
+  { country: "SK", approved: false, approvedBy: null, approvedAt: null, note: null, home: false, log: [] },
+] as never;
+
+const PROSPECT_OPTOUT = { ...PROSPECT, unsubscribedAt: "2026-09-10T08:00:00.000Z" } as unknown as ProspectView;
+
+type SurfaceId = "lead" | "leadOptout" | "draft" | "draftSent" | "docs" | "partnerDocs" | "docNew" | "settings";
 
 function render(surface: SurfaceId, lang: string): string {
   return runWithConsoleLang(() => {
     setConsoleLang(lang);
     if (surface === "lead") return leadPage(LEAD, { running: false }, null, [], [], [PROSPECT]);
+    if (surface === "leadOptout") return leadPage(LEAD, { running: false }, null, [], [], [PROSPECT_OPTOUT]);
+    if (surface === "settings") {
+      return settingsPage(
+        { username: "or", displayName: "Őr", role: "admin" },
+        null,
+        { phone: "", email: "", envPhone: "" },
+        null,
+        MARKETS,
+        null,
+      );
+    }
+    // A globális bizonylat-lap az EGYETLEN, ahol a `#docf` oszlop-szűrő űrlap létezik —
+    // a partner-fülön szándékosan csak feliratok állnak, ott a két fül-szűrő a saját
+    // űrlapjában ül. A két felület tehát KÉT KÜLÖN mérés, nem ugyanaz kétszer.
+    if (surface === "docs") return documentsPage(docsFixture(), DOC_QUERY);
+    if (surface === "partnerDocs") return partnerPage(PARTNER, "documents", [], docsFixture(), DOC_QUERY);
+    if (surface === "docNew") return documentNewPage(DOC_FORM_OPTS);
     const sent = surface === "draftSent" ? "2026-09-14T07:00:00.000Z" : null;
     return outreachDraftPage(
       PROSPECT.id,
@@ -202,21 +326,34 @@ const DEL_HU = "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük
 
 function regress(html: string, lang: string): string {
   const raw = tSync(lang, DEL_HU);
-  return html.replace(
+  const withOldConfirm = html.replace(
     /(<form method="post" action="[^"]*\/delete"[^>]*onsubmit=")[^"]*(")/,
     `$1return confirm('${raw}')$2`,
+  );
+  // A placeholder RÉGI alakja: a fordítás nyersen, escape nélkül. A `&quot;`
+  // visszaírása pontosan azt a markupot adja vissza, ami 2026-09-15 előtt élt.
+  return withOldConfirm.replace(
+    /placeholder="([^"]*&quot;[^"]*)"/g,
+    (_m, v: string) => `placeholder="${v.replaceAll("&quot;", '"')}"`,
   );
 }
 
 /* ── vezérlők ──────────────────────────────────────────────────────────────
- * `guarded` = megerősítés nélkül nem történhet meg · `plain` = nincs kérdés, de van
- * inline JS, aminek le kell futnia. A `effect` a mellékhatás mérőszáma (gomboknál). */
+ * `guarded`    = megerősítés nélkül nem történhet meg;
+ * `plain`      = nincs kérdés, de van inline JS, aminek le kell futnia;
+ * `autosubmit` = `onchange="this.form.submit()"` szűrő — a változtatásnak BE KELL
+ *                KÜLDENIE a társított űrlapot (a `form="docf"` társítás él-e), különben
+ *                a `this.form` null, a kezelő TypeError, és a szűrő némán halott;
+ * `file`       = `onchange="citDocFile(this)"` — a függvénynek LÉTEZNIE kell a lapon,
+ *                és a fájlnak tényleg be kell kerülnie a rejtett mezőbe. */
 
 interface Target {
   readonly surface: SurfaceId;
   readonly what: string;
   readonly sel: string;
-  readonly kind: "guarded" | "plain";
+  readonly kind: "guarded" | "plain" | "autosubmit" | "file" | "placeholder";
+  /** `placeholder`: a magyar FORRÁS-string — a várt szöveg ebből `tSync`-el jön. */
+  readonly huSource?: string;
   /** Gombnál: a kezelő hatása a feliratban látszik; űrlapnál a submit a hatás. */
   readonly effectIsLabel?: boolean;
 }
@@ -240,6 +377,49 @@ const TARGETS: readonly Target[] = [
   // megerősítve: a MÁSODIK PÉLDÁNY kockázata a levél szövegéhez tapad, nem a tárgysorhoz.
   { surface: "draft", what: "levél szövegének másolása (még nem ment ki)", sel: 'button[onclick*="mailbody"]', kind: "plain", effectIsLabel: true },
   { surface: "draftSent", what: "MÁR KIMENT levél szövegének másolása", sel: 'button[onclick*="mailbody"]', kind: "guarded", effectIsLabel: true },
+  // ── partnerViews.ts nyolc inline kezelője (tulaj-kérés, 2026-09-15) ──────────
+  // Öt oszlop-szűrő a globális bizonylat-lapon: `form="docf"` társítással ÜLNEK KÍVÜL
+  // az űrlapon. Ha a `#docf` eltűnik (vagy az id elgépelődik), a `this.form` NULL lesz,
+  // a kezelő TypeError-ral hal, és a szűrő NÉMÁN nem csinál semmit — a kezelő ott van,
+  // a mező kattintható, csak nem történik semmi. Ezt csak viselkedés fogja meg.
+  // ⚠️ A `dateF` helper KÉTSZER hívódik (Kelte + Fiz. határidő), tehát a forrásbeli 2
+  // `onchange` NÉGY mezőt renderel. Mind a négyet mérjük: a forrás-darabszám nem a
+  // felület darabszáma, és a kapu a FELÜLETET védi.
+  { surface: "docs", what: "oszlop-szűrő: kelte (tól)", sel: 'input[type=date][name="from"]', kind: "autosubmit" },
+  { surface: "docs", what: "oszlop-szűrő: kelte (ig)", sel: 'input[type=date][name="to"]', kind: "autosubmit" },
+  { surface: "docs", what: "oszlop-szűrő: fiz. határidő (tól)", sel: 'input[type=date][name="dueFrom"]', kind: "autosubmit" },
+  { surface: "docs", what: "oszlop-szűrő: fiz. határidő (ig)", sel: 'input[type=date][name="dueTo"]', kind: "autosubmit" },
+  { surface: "docs", what: "oszlop-szűrő: típus", sel: 'select[form="docf"][name="type"]', kind: "autosubmit" },
+  { surface: "docs", what: "oszlop-szűrő: pénznem", sel: 'select[form="docf"][name="currency"]', kind: "autosubmit" },
+  { surface: "docs", what: "oszlop-szűrő: állapot", sel: 'select[form="docf"][name="paid"]', kind: "autosubmit" },
+  // A partner-fül két szűrője a SAJÁT űrlapjában ül (nincs `form=` társítás) — külön
+  // felület, külön mérés: a globális lapon ez a kettő nem is renderelődik.
+  { surface: "partnerDocs", what: "fül-szűrő: típus", sel: 'form select[name="type"]', kind: "autosubmit" },
+  { surface: "partnerDocs", what: "fül-szűrő: fizetve", sel: 'form select[name="paid"]', kind: "autosubmit" },
+  // A számlakép base64-hídja: ha a `DOC_FILE_JS` script lemarad a lapról, a
+  // `citDocFile` ReferenceError, és a fájl NÉMÁN nem csatolódik — a kezelő nem
+  // panaszkodik, a mentés csak fájl nélkül megy el.
+  { surface: "docNew", what: "számlakép csatolása (base64-híd)", sel: "#dn-file", kind: "file" },
+  // ── a három indoklás-placeholder (tulaj-kérés, 2026-09-15) ──────────────────
+  // Mindhárom KÖTELEZŐ, NAPLÓZOTT indoklás jogilag érzékeny műveletnél. Az `en`/`it`
+  // fordítás idézőjelet tartalmaz, ami `esc()` nélkül LEZÁRJA az attribútumot: a példa
+  // eltűnik, és 5–7 szemét-attribútum keletkezik. Mérve a javítás előtt és után.
+  {
+    surface: "settings", what: "piac LEZÁRÁSA — indoklás-placeholder",
+    sel: 'form[action="/settings/markets"] input[name="reason"]', kind: "placeholder",
+    huSource: "Miért zárjuk le? (pl. „a lengyel opt-in szabályozás felülvizsgálat alatt”)",
+  },
+  {
+    surface: "settings", what: "piac MEGNYITÁSA — indoklás-placeholder",
+    sel: 'details:has(form[action="/settings/markets"] input[value="approve"]) input[name="reason"]',
+    kind: "placeholder",
+    huSource: "Mire hivatkozva? (pl. „lengyel jogi csomag 1.0, ügyvédi felülvizsgálat 2026-10-01”)",
+  },
+  {
+    surface: "leadOptout", what: "leiratkozás VISSZAVONÁSA — indoklás-placeholder",
+    sel: 'form[action$="/resubscribe"] input[name="reason"]', kind: "placeholder",
+    huSource: "Mire hivatkozva? (pl. „telefonon visszakérte a megkeresést”)",
+  },
 ];
 
 /* ── mérés ─────────────────────────────────────────────────────────────────── */
@@ -254,9 +434,19 @@ interface Outcome {
   readonly wouldProceed: boolean | null;
   /** Gombnál: megváltozott-e a felirat (a kezelő hatása). */
   readonly labelChanged: boolean | null;
+  /** autosubmit: megtalálta-e a kezelő a SAJÁT űrlapját (`form=` társítás él-e). */
+  readonly formResolved?: boolean | null;
+  /** autosubmit: MELYIK űrlapot küldte be (a helyeset-e). */
+  readonly submittedForm?: string | null;
+  /** file: tényleg bekerült-e a fájl a rejtett mezőbe. */
+  readonly fileAttached?: boolean | null;
+  /** placeholder: a kiírt szöveg CSONKÍTATLAN-e, és hány szemét-attribútum keletkezett. */
+  readonly phIntact?: boolean | null;
+  readonly phJunk?: number | null;
+  readonly phGot?: string | null;
 }
 
-async function measure(page: Page, t: Target): Promise<Outcome> {
+async function measure(page: Page, t: Target, lang: string): Promise<Outcome> {
   const errs: string[] = [];
   let dialogs = 0;
   const onErr = (e: Error): void => void errs.push(e.message);
@@ -271,7 +461,102 @@ async function measure(page: Page, t: Target): Promise<Outcome> {
   if ((await el.count()) === 0) {
     page.off("pageerror", onErr);
     page.off("dialog", onDlg as never);
-    return { found: false, dialogs: 0, pageErrors: errs, submitFired: null, wouldProceed: null, labelChanged: null };
+    return {
+      found: false, dialogs: 0, pageErrors: errs, submitFired: null,
+      wouldProceed: null, labelChanged: null, formResolved: null,
+      submittedForm: null, fileAttached: null,
+    };
+  }
+
+  // ── placeholder: a fordítás nem vághatja ketté az attribútumot ───────────
+  // ⛔ NEM a forrásra mérünk, hanem a RENDERELT DOM-ra: a kérdés az, hogy a böngésző
+  // MIT LÁT. Csonka placeholder = a kezelő elveszti az útmutatást ahhoz a kötelező,
+  // naplózott indokláshoz, amit épp be kell írnia.
+  if (t.kind === "placeholder") {
+    const want = tSync(lang, t.huSource!);
+    const r = (await page.evaluate(
+      `(function(){var e=document.querySelector(${JSON.stringify(t.sel)});
+         if(!e) return null;
+         var KNOWN=["type","name","required","minlength","placeholder","class","id","style","value"];
+         var junk=Array.prototype.map.call(e.attributes,function(a){return a.name;})
+           .filter(function(n){return KNOWN.indexOf(n)<0;});
+         return { ph: e.getAttribute("placeholder"), junk: junk.length };})()`,
+    )) as { ph: string | null; junk: number } | null;
+    page.off("pageerror", onErr);
+    page.off("dialog", onDlg as never);
+    return {
+      found: true, dialogs, pageErrors: errs, submitFired: null, wouldProceed: null,
+      labelChanged: null, formResolved: null, submittedForm: null, fileAttached: null,
+      phIntact: r?.ph === want, phJunk: r?.junk ?? null, phGot: r?.ph ?? null,
+    };
+  }
+
+  // ── autosubmit: `onchange="this.form.submit()"` ───────────────────────────
+  // Nem kattintunk: a `change` a mérendő esemény. A `this.form` a `form=` TÁRSÍTÁST
+  // követi (nem a DOM-őst), tehát pontosan az dől el, amit mérni akarunk: megtalálja-e
+  // a kezelő a saját űrlapját. ⛔ A `form.submit()` NEM süt el submit-eseményt, ezért
+  // — mint a lemondó modálnál — a PROTOTÍPUST csapdázzuk.
+  if (t.kind === "autosubmit") {
+    const r = await page.evaluate((sel) => {
+      const node = document.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null;
+      if (!node) return { sent: null as string | null, hasForm: false };
+      const w = window as unknown as { __wf: string | null };
+      w.__wf = null;
+      const orig = HTMLFormElement.prototype.submit;
+      HTMLFormElement.prototype.submit = function (this: HTMLFormElement) {
+        w.__wf = this.getAttribute("id") ?? this.getAttribute("action") ?? "(névtelen)";
+      };
+      const hasForm = Boolean(node.form);
+      if (node instanceof HTMLSelectElement) {
+        const other = Array.from(node.options).find((o) => o.value !== node.value);
+        if (other) node.value = other.value;
+      } else {
+        node.value = "2026-09-01";
+      }
+      node.dispatchEvent(new Event("change", { bubbles: true }));
+      HTMLFormElement.prototype.submit = orig;
+      return { sent: w.__wf, hasForm };
+    }, t.sel);
+    await page.waitForTimeout(60);
+    page.off("pageerror", onErr);
+    page.off("dialog", onDlg as never);
+    return {
+      found: true,
+      dialogs,
+      pageErrors: errs,
+      submitFired: r.sent !== null,
+      wouldProceed: null,
+      labelChanged: null,
+      formResolved: r.hasForm,
+      submittedForm: r.sent,
+      fileAttached: null,
+    };
+  }
+
+  // ── file: `onchange="citDocFile(this)"` ───────────────────────────────────
+  // Igazi fájllal, a kezelő IGAZI hatásán mérve: a rejtett mező megtelik-e base64
+  // dataURL-lel, és kiíródik-e a fájlnév. Hiányzó script → ReferenceError → néma.
+  if (t.kind === "file") {
+    await el.setInputFiles({ name: "or-szamla.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 őr") });
+    await page.waitForTimeout(250); // FileReader aszinkron
+    const r = await page.evaluate(() => {
+      const data = document.getElementById("dn-file-data") as HTMLInputElement | null;
+      const name = document.getElementById("dn-file-name");
+      return { data: data?.value ?? "", name: name?.textContent ?? "" };
+    });
+    page.off("pageerror", onErr);
+    page.off("dialog", onDlg as never);
+    return {
+      found: true,
+      dialogs,
+      pageErrors: errs,
+      submitFired: null,
+      wouldProceed: null,
+      labelChanged: null,
+      formResolved: null,
+      submittedForm: null,
+      fileAttached: r.data.startsWith("data:application/pdf") && r.name.includes("or-szamla.pdf"),
+    };
   }
 
   const before = t.effectIsLabel ? await el.innerText() : "";
@@ -308,6 +593,9 @@ async function measure(page: Page, t: Target): Promise<Outcome> {
     submitFired: result.fired,
     wouldProceed: result.proceed,
     labelChanged: t.effectIsLabel ? before !== after : null,
+    formResolved: null,
+    submittedForm: null,
+    fileAttached: null,
   };
 }
 
@@ -316,7 +604,7 @@ async function runLang(browser: Browser, lang: string): Promise<number> {
   console.log(`\n── nyelv: ${label}${selftest ? "  [RÉGI KEZELŐ — bukást várunk]" : ""}`);
   let measured = 0;
 
-  for (const surface of ["lead", "draft", "draftSent"] as const) {
+  for (const surface of ["lead", "leadOptout", "draft", "draftSent", "docs", "partnerDocs", "docNew", "settings"] as const) {
     const targets = TARGETS.filter((t) => t.surface === surface);
     if (!targets.length) continue;
     let html = render(surface, lang);
@@ -347,7 +635,7 @@ async function runLang(browser: Browser, lang: string): Promise<number> {
     }
 
     for (const t of targets) {
-      const o = await measure(page, t);
+      const o = await measure(page, t, lang);
       if (!check(`[${surface}] ${t.what}: a vezérlő a lapon van`, o.found)) continue;
       measured++;
       check(`[${surface}] ${t.what}: nincs JS-hiba a kezelőben`, o.pageErrors.length === 0, o.pageErrors);
@@ -365,6 +653,22 @@ async function runLang(browser: Browser, lang: string): Promise<number> {
             felirat_valtozott: o.labelChanged,
           });
         }
+      } else if (t.kind === "autosubmit") {
+        // A `form=` TÁRSÍTÁS él-e: ha nem, a `this.form` null, a kezelő TypeError-t dob,
+        // és a szűrő némán halott — a mező ott van, kattintható, csak nem történik semmi.
+        check(`[${surface}] ${t.what}: a kezelő megtalálja a saját űrlapját`, o.formResolved === true);
+        check(`[${surface}] ${t.what}: a változtatás BEKÜLDI a szűrőt`, o.submitFired === true, {
+          bekuldott_urlap: o.submittedForm,
+        });
+        check(`[${surface}] ${t.what}: nem kérdez (szűrő, nem visszafordíthatatlan)`, o.dialogs === 0, {
+          dialogs: o.dialogs,
+        });
+      } else if (t.kind === "placeholder") {
+        check(`[${surface}] ${t.what}: a placeholder CSONKÍTATLAN`, o.phIntact === true, { kapott: o.phGot });
+        check(`[${surface}] ${t.what}: nem keletkezett szemét-attribútum`, o.phJunk === 0, { szemet: o.phJunk });
+      } else if (t.kind === "file") {
+        check(`[${surface}] ${t.what}: a fájl TÉNYLEG bekerül a rejtett mezőbe`, o.fileAttached === true);
+        check(`[${surface}] ${t.what}: nem kérdez`, o.dialogs === 0, { dialogs: o.dialogs });
       } else {
         check(`[${surface}] ${t.what}: nem kérdez (nincs mit megerősíteni)`, o.dialogs === 0, { dialogs: o.dialogs });
         check(`[${surface}] ${t.what}: a kezelő hatása bekövetkezik`, o.labelChanged === true);

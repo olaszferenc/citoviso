@@ -1,7 +1,49 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🎨 ADR-0173: a jelzés-szín nem felirat-szín)
+Utolsó frissítés: 2026-09-15 (🧪 a kötelező indoklás-mező példája két nyelven eltűnt — javítva és őrizve)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**🧪 A partnerViews 8 INLINE KEZELŐJE AZ ŐRBE — ÉS A ZÖLDJÜK ATTRIBÚTUM-SORRENDEN ÁLL.**
+Session-jegyzet: `_planning/memory/2026-09-15_partner_handlers_in_guard.md`. **Élesítés NINCS.**
+Tulaj-kérés az ADR-0165 ② nyitott tételére. Új ADR nincs — az ADR-0165 őrének kiterjesztése.
+
+- **Mind a 8 kezelő STATIKUS** (`this.form.submit()` ×7, `citDocFile(this)` ×1), tehát az
+  ADR-0165 escape-predikátuma ott **ÜRESEN IGAZ** lett volna. A valódi néma halál más:
+  `form="docf"` társítás elvesztésekor a `this.form` **null** → TypeError → a szűrő SEMMIT
+  nem csinál; a `DOC_FILE_JS` lemaradásakor a **számlakép némán nem csatolódik**, és a
+  mentés fájl nélkül megy el.
+- **Két új mérés-típus:** `autosubmit` (a `change`-re a kezelő megtalálja-e a SAJÁT űrlapját,
+  és tényleg BEKÜLDI-e — a `form.submit()` nem süt el submit-eseményt, ezért a prototípus
+  csapdázva) · `file` (igazi PDF: a rejtett mező base64 dataURL-lel telik meg). Három új
+  felület, **8 → 18 vezérlő** 8 nyelven. A piros önteszt VÁLTOZATLANUL 9 bukás a megnevezett
+  halmazon — a bővítés nem hígította fel.
+- ⛔ **A forrás-darabszám nem a felület darabszáma:** a `dateF` helper KÉTSZER hívódik, tehát
+  a forrásbeli 2 `onchange` **négy** mezőt renderel. Mind a négy mérve.
+- ⚠️⚠️ **AMIT A ZÖLD NEM JELENT.** Az ellenséges csomagon mérve a partner-szűrők `title`/
+  `aria-label`-je **levágódik** és szemét-attribútumok keletkeznek — az `onchange` CSAK azért
+  él túl, mert a markupban **MEGELŐZI** a törött attribútumot. A zöld tehát
+  **attribútum-SORRENDEN** áll, nem escape-elésen.
+- 🔴 **ÚJ ÉLŐ LELET — MÉG UGYANEBBEN A KÖRBEN JAVÍTVA ÉS ŐRIZVE.** Repó-szinten **97
+  escape-eletlen `T()`-attribútum** volt, és ebből **3 élesben tört** (`console/views.ts`:
+  piac-lezárás · piac-megnyitás · leiratkozás-visszavonás indoklás-`placeholder`-e; az
+  `en`/`it` fordítás idézőjelet tartalmaz, ami LEZÁRJA az attribútumot). Mindhárom
+  **kötelező, NAPLÓZOTT indoklás** jogilag érzékeny műveletnél — épp a PÉLDA tűnt el, ami
+  megmondja, mit írjon a kezelő. Tulaj: „jogi tartozás, nem kozmetika."
+  **Mérve előtte/utána** (`en`+`it`, 3 hely): csonka + 5–7 szemét-attribútum → **teljes + 0**.
+- **ŐR-SZIGORÍTÁS (a javítás UTÁN, tulaj-rendelet):** új `placeholder` mérés-típus — a
+  RENDERELT DOM-on méri a csonkolatlanságot és a szemét-attribútumokat. Két új felület
+  (`settingsPage` nyitott+zárt piaccal · `leadPage` LEIRATKOZOTT prospecttel).
+  **21 vezérlő × 8 nyelv**, piros önteszt **27 bukás** — változatlanul a megnevezett
+  halmazon. ⭐ A tulaj indoka a sorrendre: „egy ma piros őr, amit mindenki átlép, rosszabb
+  a nincs őrnél."
+- ⛔ **A MARADÉK 94 HELY külön kör**, tételesen a session-jegyzetben (views.ts **50** ·
+  moduleConfigViews.ts **22** · partnerViews.ts **15** · adminViews.ts **7**). Ma egyik sem
+  törik, de ez szerencse: a csomagok AI-generáltak. ⚠️ A `moduleConfigViews`/`adminViews`
+  **29 helye VEVŐ- és VENDÉG-oldal** — ott a fizető ügyfél képernyőjén jelenne meg.
+- **NYITOTT:** ① a maradék 94 escape-eletlen attribútum — tulaj-döntés · ② a konzol 7
+  natív dialógusának rendszer-modálra váltása (ADR-0165 ① nyitott tétel).
+
+## Előző szál — 🎨 ADR-0173
 
 **🎨 ADR-0173 — A DÖNTŐ GOMB FELIRATÁT NEHÉZ VOLT ELOLVASNI.**
 Session-jegyzet: `_planning/memory/2026-09-15_semantic_colour_contrast.md`.

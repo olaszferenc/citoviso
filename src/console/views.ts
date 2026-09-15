@@ -380,8 +380,17 @@ function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; tex
               <form method="post" action="/settings/markets" class="mkt-form">
                 <input type="hidden" name="country" value="${esc(m.country)}">
                 <input type="hidden" name="action" value="revoke">
+                ${/* ⛔⛔ MÉRVE 2026-09-15: ez a három indoklás-placeholder `esc()` NÉLKÜL ment
+                      az attribútumba. A MAGYAR forrásban nincs `"`, A FORDÍTÁSBAN VAN — az
+                      `en`/`it` csomag idézőjellel adja vissza a PÉLDÁT, az pedig lezárja az
+                      attribútumot: mérve `placeholder` → „On what basis? (e.g. " (a példa
+                      ELTŰNIK), plusz 6 szemét-attribútum. A `name`/`required`/`minlength`
+                      csak azért él, mert MEGELŐZI. Mindhárom hely KÖTELEZŐ, NAPLÓZOTT
+                      indoklás jogilag érzékeny műveletnél (piac-kapu, opt-out visszavonás),
+                      tehát épp az az útmutatás vész el, ami megmondja, mit írjon a kezelő.
+                      Őr: scripts/dialog-fires-check.mts (a placeholder csonkolatlansága). */ ""}
                 <input type="text" name="reason" required minlength="3"
-                  placeholder="${T(lang, "Miért zárjuk le? (pl. „a lengyel opt-in szabályozás felülvizsgálat alatt”)")}">
+                  placeholder="${esc(T(lang, "Miért zárjuk le? (pl. „a lengyel opt-in szabályozás felülvizsgálat alatt”)"))}">
                 <button type="submit">${T(lang, "Lezárás")}</button>
               </form>
             </details>`
@@ -392,7 +401,7 @@ function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; tex
                 <input type="hidden" name="country" value="${esc(m.country)}">
                 <input type="hidden" name="action" value="approve">
                 <input type="text" name="reason" required minlength="3"
-                  placeholder="${T(lang, "Mire hivatkozva? (pl. „lengyel jogi csomag 1.0, ügyvédi felülvizsgálat 2026-10-01”)")}">
+                  placeholder="${esc(T(lang, "Mire hivatkozva? (pl. „lengyel jogi csomag 1.0, ügyvédi felülvizsgálat 2026-10-01”)"))}">
                 <button type="submit">${T(lang, "Megnyitás")}</button>
               </form>
             </details>`;
@@ -2099,7 +2108,7 @@ function optoutBox(p: ProspectView, leadId: string, lang: string): string {
       <form method="post" action="/prospect/${esc(p.id)}/resubscribe" class="ob-form">
         <input type="hidden" name="leadId" value="${esc(leadId)}">
         <input type="text" name="reason" required minlength="3"
-          placeholder="${T(lang, "Mire hivatkozva? (pl. „telefonon visszakérte a megkeresést”)")}">
+          placeholder="${esc(T(lang, "Mire hivatkozva? (pl. „telefonon visszakérte a megkeresést”)"))}">
         <button type="submit">${T(lang, "Visszavonás")}</button>
       </form>
     </details>
