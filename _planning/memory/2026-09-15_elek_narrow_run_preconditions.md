@@ -56,6 +56,30 @@ elindult és írt úgy, hogy az első sorban eldönthető volt, hogy nem érhet 
 - **Önteszt 31 állítás**, köztük 7 negatív kontroll. **Piros ág:** a lánc-táblából egy sort
   kivéve 6 bukás — mindkét elavulás-réteg néven nevezi a kiesett kört; `set -e` alatt rc=1.
 
+## ⛔⛔ Amit ugyanebben a körben ELRONTOTTAM (és ami a legfontosabb tanulság)
+
+A landolásom a `consent-style-check`-en bukott — egy MÁSIK szál aznap landolt őrén. Először
+tiszta `origin/main`-en futtattam, ott is piros lett, és **„nem az én fám"-ra következtettem.**
+A próba a KÓDOT zárta ki, de **ugyanazt a KÖZÖS DB-t használta** — a kérdést, amit fel kellett
+volna tennem, nem tudta eldönteni.
+
+Megmérve: az őr a park **EGYETLEN kifizetett paymentjét** választja (`gateway_ref is not null`,
+`status='paid'`), és az **az enyém volt** — a `seed-park-subscription.mts` első változata
+kitalált egy `park-seed-<id>` átjáró-hivatkozást. A `/pay/done` viszont a kapott `paymentId`-vel
+AZONNAL webhookot hív (`console/server.ts:2871`), az átjáró a kitalált azonosítóra HTML-t adott
+JSON helyett, és a fizetés-visszatérő lap elszállt (`.panel` nincs → 2 bukás).
+
+**A saját scriptem fejléce pont ez ellen szólt** („kézzel írt sor ne állítson elő olyan
+állapotot, amit a termék soha") — és ugyanaz a fájl tíz sorral lejjebb megszegte.
+
+Javítva: a seeder nem talál ki átjáró-hivatkozást (az `ensureSubscriptionForOrder` csak a
+`status='paid'` + `paid_at` párost olvassa), a park sora javítva, és a futás mostantól **kiírja,
+mit lát az a lekérdezés, amit az őrök használnak** — a közös parkba írás után nem elég a saját
+sorodat megnézni. Mindkét őr utána zöld.
+
+**A tanulság egy mondatban:** ha egy próba a saját hipotézisemet nem tudja MEGCÁFOLNI (közös
+erőforráson fut), akkor nem bizonyíték — és a „nem én voltam" a legdrágább fajta hamis zöld.
+
 ## Nyitott — a KÖVETKEZŐ körre
 
 - ⏭️ **Az FK-006 tényleges futtatása.** A park jelenleg **nem tudja mérni**: nincs ELEK-TESZT

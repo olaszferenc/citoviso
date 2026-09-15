@@ -168,7 +168,7 @@ fi
 # egy elek/ vagy src/elek/ érintetlen commit is okozhatja (új forgatókönyv-fájl).
 if [ -f scripts/elek-precondition-check.mts ]; then
   echo "[pre-commit] elek-precondition (a szűkített futás előre szól)…"
-  npx tsx scripts/elek-precondition-check.mts >/dev/null
+  npx tsx scripts/elek-precondition-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0136: a HALOTT fotó ki se kerüljön a generált lapra. A tárolt portál-URL elrohad
 # (mérve: 73-ból 59 halott, 11 lead), és eddig a NYITÓKÉP is lehetett halott URL. A

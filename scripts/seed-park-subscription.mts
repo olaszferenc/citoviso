@@ -133,6 +133,21 @@ const oi = await db
   .returning("id")
   .executeTakeFirstOrThrow();
 
+// ⛔⛔ `gateway_ref` NÉLKÜL — és ez a sor egy VALÓDI kárt zár le, nem óvatosság.
+// Az első változatom kitalált egy `park-seed-<id>` átjáró-hivatkozást. A `/pay/done`
+// viszont a kapott `paymentId`-vel AZONNAL webhookot hív (`console/server.ts:2871`),
+// az átjáró a kitalált azonosítóra HTML-t adott JSON helyett, és a fizetés-visszatérő
+// lap elszállt. Következmény MÉRVE: egy MÁSIK szál frissen landolt `consent-style-check`
+// őre pirosra ment — az őr a park EGYETLEN kifizetett paymentjét választja, és az az
+// enyém volt. A közös parkba írt „ártalmatlan" fixture így három szál landolását fogta meg.
+//
+// ⚠️ A tanulság saját magamra is áll: a fenti fejléc arról szól, hogy kézzel írt sor ne
+// állítson elő olyan állapotot, amit a termék soha — és a `gateway_ref` pont ilyen volt.
+// Az `ensureSubscriptionForOrder` csak a `status='paid'` + `paid_at` párost olvassa; az
+// átjáró-hivatkozás ennek a láncnak nem része. Amit nem tudunk igazul kitölteni, azt
+// üresen hagyjuk: egy kifizetett sor átjáró-hivatkozás nélkül pontosan azt mondja, ami
+// történt (tudjuk, hogy fizetve lett, az átjáró-fogantyú nincs meg) — és a `/pay/done`
+// oda nélküle el sem jut.
 await db
   .insertInto("payment")
   .values({
@@ -140,8 +155,7 @@ await db
     amount: price,
     currency: "HUF",
     period,
-    gateway: "mock",
-    gateway_ref: `park-seed-${oi.id}`,
+    gateway: "mock", // NOT NULL oszlop
     status: "paid",
     created_at: paidAt,
     paid_at: paidAt,
@@ -162,6 +176,19 @@ if (!made) {
   await db.destroy();
   process.exit(1);
 }
+// ⛔ A KÖZÖS PARKBA ÍRÁS UTÁN NEM ELÉG A SAJÁT SOROMAT MEGNÉZNI. A `gateway_ref`-es
+// első változatom épp azzal tört el egy másik szál őrét, hogy az a park EGYETLEN
+// kifizetett paymentjét választotta. Ezért a futás kiírja, mit LÁT MOST az a lekérdezés.
+const refPicked = await db
+  .selectFrom("payment")
+  .select(["gateway_ref"])
+  .where("gateway_ref", "is not", null)
+  .where("status", "=", "paid")
+  .executeTakeFirst();
 console.log("\n✅ LÉTREJÖTT:", made);
+console.log(
+  `   a „kifizetett, átjáró-hivatkozással" lekérdezés (ezt választják az őrök) most ezt adja: ` +
+    `${refPicked?.gateway_ref ?? "NINCS ilyen sor — a vetett payment nem nyúl bele"}`,
+);
 console.log(`   visszavonás: order_intent ${oi.id} + a payment-je + a subscription ${made.id} törlése`);
 await db.destroy();
