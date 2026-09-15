@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (👻 ADR-0178: a halott gomb-osztály az ELLENKEZŐJÉT csinálta)
+Utolsó frissítés: 2026-09-15 (👻 ADR-0178: halott gomb-osztály · 💳 ADR-0179: a fizetés utáni lap és a 429)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
@@ -23,12 +23,25 @@ Tulajdonosi utasítás: „a ghost gombot is javítsd meg." Session-jegyzet:
   bukik. ⭐ Rögtön talált egy MÁSODIK szabály nélküli osztályt (`.gen-go`) — az VALÓDI horgony,
   ezért nem bukás; a felismerés **szerkezeti**, nem kézi szólista.
   **Piros önteszt: 199 állítás.**
+- ⛔⛔ **ÉS AMI A LANDOLÁS KÖZBEN ELŐKERÜLT (ADR-0179):** a `ghost`-javítás landolását egy
+  FELTÉTEL NÉLKÜL futó őr blokkolta, és a **tünet hazudott** („hiányzik a `.panel`") — valójában
+  a `/pay/done` lap **HTTP 500**-at adott. ⛔ Az első olvasatom is hamis volt („a mock átjáró
+  HTML-t ad a seedelt refre"): a napló szerint a **VALÓDI Barion HTTP 429**-et küldött HTML
+  hibalappal, amin a nyers `resp.json()` dobott — vagyis **élesben egy FIZETŐ VEVŐ kapott volna
+  500-at közvetlenül a terhelés után**. ⚠️ **A 500 javítását egy PÁRHUZAMOS szál landolta ELŐBB** (a rebase-ben
+  szembesültem vele; az övék maradt, az enyém duplikátum volt — az ő változatuk egy ponton
+  jobb is). Az ÉN többletem: a néma átjárót a KÉPERNYŐ is kimondja · ismeretlen hivatkozás
+  valódi lapot kap, ami **nem állít semmit a terhelésről**
+  (§B.17), csak azt, hogy nem találjuk. Az őr determinisztikus lett (`orderBy`), **de ÚJ, ELSŐ
+  állítással** („a lap HIBA NÉLKÜL szolgálódik ki"), hogy a determinizmus NE fedje el a bajt.
+  ⚠️ **Nyitva:** a 429-et magát nem orvosolja semmi — minden `/pay/done` egy `GetPaymentState`-et
+  indít, és a párhuzamos szálak fogyasztják a kvótát; gyérítés (cache/backoff) külön kör.
 - **Módszer-tanulság:** „mi látszik ma?" → a **kirajzolt háttérrel** mérve (gradiens-e), nem
   class-névvel — épp a class-név hazudott · a kontrasztot a TÉNYLEGESEN látható háttérhez
   (az első nem-átlátszó ős) · a teljes-lapos kép itt vak volt (a `/duplicates` 21 615 px magas),
   a **döntés-sor kivágása** mutatta meg az előtte/utána különbséget.
 
-## Előző szál — 💳 ADR-0176
+## Előző szál (2026-09-15) — ADR-0176: a fizetés átjárója
 
 **💳 ADR-0176 — KÉZI TERHELÉS-ÚJRAPRÓBÁLÁS.** A 2026-09-14-én jóváhagyott terv hiányzó
 fele. Session-jegyzet: `_planning/memory/2026-09-15_manual_charge_retry.md`.

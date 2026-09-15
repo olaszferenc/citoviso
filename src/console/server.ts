@@ -86,7 +86,7 @@ import {
   bestActiveOfferForProspectToken,
   ensureEscalationOffer,
 } from "../payment/offers.js";
-import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage } from "./views.js";
+import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage, payUnknownRefPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
@@ -2873,10 +2873,14 @@ async function handle(
     // meghozza. Ha a gateway épp nem válaszol (mérve 2026-09-15: HTML-t adott JSON
     // helyett), attól a vevő NEM kaphat 500-at; a lap a DB saját állapotából
     // rendereli magát. ⚠️ Hangosan naplózzuk, hogy a kimaradás ne tűnjön el némán.
+    // ⭐ A jelző a KÉPERNYŐNEK kell: a „feldolgozás alatt" lap magától azt sugallná,
+    // hogy „mindjárt megjön", holott épp az a csatorna néma, amiből a válasz jönne.
+    let gatewayRefreshFailed = false;
     if (ref) {
       try {
         await handleWebhook({ paymentId: ref }, {});
       } catch (err) {
+        gatewayRefreshFailed = true;
         console.error(
           `[pay/done] a fizetés-állapot frissítése nem sikerült (${ref}) — a lap a TÁROLT állapotot mutatja:`,
           err,
@@ -2890,8 +2894,11 @@ async function handle(
           .where("gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
-    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
-    if (p.status === "pending") return send(res, 200, payPendingPage());
+    // ⛔ ISMERETLEN VAGY ELAVULT HIVATKOZÁS: a vevő ne egy csupasz 404-en kössön ki.
+    // A lap megmondja, MI TÖRTÉNT (nem találjuk ezt a fizetést), és HOVA MEHET
+    // tovább — de NEM állít semmit a fizetésről, mert nem tudunk róla semmit (§B.17).
+    if (!p) return send(res, 404, payUnknownRefPage(ref, config.supportEmail || null));
+    if (p.status === "pending") return send(res, 200, payPendingPage(gatewayRefreshFailed));
     const paid = p.status === "paid";
     // ⛔ A MULTILANG purchase is NOT an activation (measured defect, 2026-08-28):
     // the buyer already HAS a live site and login, so the generic "your site is

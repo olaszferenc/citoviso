@@ -460,11 +460,19 @@ surfaces.push({
 // ⭐ A VALÓDI fizetés-visszatérő lap: élesben EZ a Barion `RedirectUrl`-je.
 // A park saját, kifizetett rendeléséből dolgozunk — fixture-t NEM gyártunk
 // (a park KÖZÖS). Ha nincs ilyen sor, a mérés KIMONDOTTAN kimarad.
+// ⛔ DETERMINISZTIKUS VÁLASZTÁS (2026-09-15). `orderBy` nélkül az `executeTakeFirst()`
+// TETSZŐLEGES sort adott vissza, tehát futásonként MÁS fizetésre mért — egy
+// felület-őr, ami körönként más lapot néz, hol zöld, hol piros, és a bukását
+// „villódzásnak" könyveljük el. Ugyanaz a sor minden futásban.
+// ⚠️ Ez NEM a hiba elfedése: a lap HTTP-státuszát külön állítás méri (lásd lentebb),
+// tehát ha a kiválasztott fizetésen a `/pay/done` 500-at adna, az PIROS — nem kimarad.
 const paidRef = await db
   .selectFrom("payment")
   .select("gateway_ref")
   .where("gateway_ref", "is not", null)
   .where("status", "=", "paid")
+  .orderBy("created_at", "asc")
+  .orderBy("gateway_ref", "asc")
   .executeTakeFirst();
 if (paidRef?.gateway_ref) {
   surfaces.push({
@@ -526,10 +534,21 @@ const open = async (s: Surface, vp: Viewport): Promise<Page> => {
     // RONTÁS ①: a sáv stíluslapja SOSEM érkezik meg → csupasz sáv.
     await page.route("**/cit-consent.css*", (r) => r.abort());
   }
-  await page.goto(`http://${s.host}:${s.port ?? PORT}${s.path}`, { waitUntil: "domcontentloaded" });
+  const resp = await page.goto(`http://${s.host}:${s.port ?? PORT}${s.path}`, {
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForTimeout(400);
+  // ⛔ A LAP MAGA IS ÁLLÍTÁS (2026-09-15). Eddig a betöltés némán megtörtént, és egy
+  // HTTP 500-as hibalapon a sáv-mérések „hiányzó bútorzatot" jelentettek — vagyis az
+  // őr a TÜNETRŐL beszélt (nincs `.panel`), miközben a baj az volt, hogy a lap
+  // ELSZÁLLT. Mérve ezen a napon: a `/pay/done` 500-at adott, mert a fizetési átjáró
+  // HTTP 429-et küldött HTML hibalappal, és a `resp.json()` nyersen dobott.
+  lastStatus.set(s.name, resp?.status() ?? 0);
   return page;
 };
+
+/** A legutóbb betöltött lap HTTP-státusza felületenként — külön állítás méri. */
+const lastStatus = new Map<string, number>();
 
 console.log(
   `\n── Süti-sáv: van-e TÉNYLEGES stílusa ott, ahol megjelenik ──────────────────\n` +
@@ -613,6 +632,13 @@ for (const s of surfaces.filter((x) => x.expectBar)) {
     // ⭐⭐ A HOZZÁJÁRULÁS-KÉRDÉS NEM TEHETI ELÉRHETETLENNÉ A NAVIGÁCIÓT (tulaj-döntés,
     // 2026-09-14). Ez egyben a `--citui-consent-bottom` MÉRT konstansának őre: ha a
     // fül-sáv magassága elmozdul (új fül, hosszabb fordítás, harmadik sor), itt bukik.
+    // A lap egyáltalán kiszolgálódott-e? Ez az ELSŐ kérdés: hibalapon minden további
+    // mérés a rossz dologról beszélne.
+    check(
+      (lastStatus.get(s.name) ?? 0) < 400,
+      `${tag}: a lap HIBA NÉLKÜL szolgálódik ki`,
+      `HTTP ${lastStatus.get(s.name) ?? "?"}`,
+    );
     if (s.bottomFurniture) {
       const reach = await readFurnitureReach(page, s.bottomFurniture);
       check(reach.found, `${tag}: a gazdalap bútorzata megvan (${s.bottomFurniture})`);

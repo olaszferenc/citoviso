@@ -1752,16 +1752,58 @@ export function payMockPage(
 }
 
 /**
+ * ISMERETLEN VAGY ELAVULT FIZETÉS-HIVATKOZÁS (ADR: a /pay/done nem adhat 500-at).
+ *
+ * ⛔ Mérve 2026-09-15: a `/pay/done?paymentId=…` egy olyan hivatkozásra, amit nem
+ * ismerünk (vagy amelyre az átjáró HTML hibalapot ad), NYERS HTTP 500-zal válaszolt —
+ * a fizetés UTÁNI visszatérő lapon, vagyis a lehető legrosszabb helyen, ahol a vevő
+ * landolhat. A 404-es „Nincs ilyen fizetés." szintén zsákutca volt: se azt nem mondta
+ * meg, mi történt, se azt, hova menjen tovább.
+ *
+ * ⛔ AMIT EZ A LAP NEM MOND: semmit a fizetés kimeneteléről. Nem ismerjük ezt a
+ * hivatkozást, tehát nem tudjuk, történt-e terhelés — és egy megnyugtató („nem
+ * terheltük meg") vagy ijesztő („sikertelen") mondat egyaránt találgatás lenne
+ * (§B.17). A lap pontosan annyit állít, amennyit tudunk: NEM TALÁLJUK.
+ */
+export function payUnknownRefPage(ref: string, supportEmail: string | null): string {
+  const lang = consoleLang();
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
+    <h2 style="margin-top:0">${T(lang, "Ezt a fizetést nem találjuk")}</h2>
+    <p style="margin:0">${T(lang, "A megnyitott hivatkozáshoz nálunk nincs fizetés. Ez akkor fordul elő, ha a link elavult, félbemaradt, vagy nem tőlünk származik.")}</p>
+    <p class="mut small" style="margin:12px 0 0">${T(lang, "Fontos: erről a hivatkozásról NEM tudjuk megmondani, történt-e terhelés — épp azért, mert nem ismerjük. A kártyaterhelést a bankja kivonatán tudja ellenőrizni.")}</p>
+    ${ref ? `<p class="mut small" style="margin:10px 0 0;word-break:break-all">${T(lang, "A megnyitott hivatkozás:")} <code>${esc(ref.slice(0, 64))}</code></p>` : ""}
+    <div class="row" style="margin-top:18px">
+      <a class="con-linkact" href="/">${T(lang, "Vissza a kezdőlapra")}</a>
+      ${
+        // ⛔ Cím nélkül a felajánlás ELMARAD, nem helyettesítjük egy hihetőre (§B.17).
+        supportEmail
+          ? `<a class="con-linkact" href="mailto:${esc(supportEmail)}">${T(lang, "Írjon nekünk: {email}", { email: esc(supportEmail) })}</a>`
+          : ""
+      }
+    </div>
+  </div>`;
+  return layout(T(lang, "Ismeretlen fizetés"), body, { chrome: false });
+}
+
+/**
  * Buyer returned from the gateway before the final payment state landed (Barion
  * may still report InProgress for a few seconds). Auto-refresh until /pay/done
  * can render the real outcome — never leave the buyer on a dead screen.
  */
-export function payPendingPage(): string {
+export function payPendingPage(gatewayRefreshFailed = false): string {
   const lang = consoleLang();
   const body = `<div class="panel" style="max-width:560px;margin:48px auto;text-align:center">
     <h2 style="margin-top:0">${T(lang, "A fizetés feldolgozás alatt…")}</h2>
     <p class="mut" style="margin:0">Köszönjük a türelmét — az oldal néhány másodpercen
     belül automatikusan frissül. Kérjük, ne zárja be az ablakot.</p>
+    ${
+      // ⛔ HA NEM TUDTUK MEGKÉRDEZNI AZ ÁTJÁRÓT, AZT KIMONDJUK. A frissülő képernyő
+      // magától azt sugallná, hogy „dolgozunk rajta, mindjárt megjön" — holott épp
+      // az a csatorna néma, amiből a válasz jönne. A vevő ne a semmiben várjon.
+      gatewayRefreshFailed
+        ? `<p class="mut small" style="margin:14px 0 0">${T(lang, "A fizetési szolgáltatót az imént nem értük el, ezért a képernyő a saját nyilvántartásunkat mutatja. A terhelésről ez semmit nem mond — amint a szolgáltató válaszol, a lap frissül.")}</p>`
+        : ""
+    }
   </div>`;
   return layout(T(lang, "Fizetés feldolgozása"), body, {
     chrome: false,
