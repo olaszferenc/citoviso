@@ -184,10 +184,24 @@ közös élesítésnek.
 
 ## NYITOTT TÉTELEK (átadva)
 
-1. ⛔ **A visszakapcsoló sáv** (fent) — a jóváhagyott vázlat mutatta, a kontraktus nem köti,
-   a kód nem tartalmazza. `adminViews.ts` „A honlapja újra elérhető" ág. Elek FK-006b
-   ZAVAROS-1/2: nem mondja meg, MELY időszakot fizette ki, és hivatkozik a számlára, de nem
-   vezet el hozzá. **Adat MEGVAN** (`subscription.arrears.periodStart/End`, invoice id).
+1. ✅ **LEZÁRVA 2026-09-15** (a tulaj kérésére) — a visszakapcsoló sáv kimondja a kifizetett
+   időszakot, és elvezet a bizonylathoz. **A kontraktus ⑦b pontja pótolva.**
+   ⛔⛔ **A SAJÁT ÖSSZEFOGLALÓ SOROM VOLT A HAMIS PREMISSZA:** ide azt írtam, hogy „adat
+   MEGVAN (`subscription.arrears.periodStart/End`)". **Újramérve: az `arrears` csak
+   `past_due`/`frozen` állapotban él** — a sáv viszont PONT AKKOR jelenik meg, amikor a fiók
+   MÁR ÚJRA AKTÍV, tehát ott mindig `null` lett volna. A kifizetett ciklus valójában maga a
+   FOLYÓ időszak (`current_period_start/end`), mert a fizetés arra állítja. Új `settled` mező
+   épült rá, a bizonylattal (az `order_intent.renewal_period_start` kulcson).
+   ⭐ Mellékesen egy rejtett hiba is kijött: a sáv a NYERS ISO dátumot írta ki a vevőnek
+   („2026-09-13") — ugyanaz a hibaosztály, amit az ADR-0144 máshol javított.
+   ⛔ Két SAJÁT őr-hiba is: az első változatom az EGÉSZ lapon kereste a `tab=dokumentumok`-ot
+   és a BAL MENÜ linkjét találta meg; a meglévő `--self-test` pedig a FAGYASZTOTT ágat rontja
+   vissza, ami ezt a sávot meg sem érinti — enélkül az öt új állítás sosem lett volna piros.
+   Őr: +10 állítás a `frozen-settle-check`-ben, HÁROM fixtúrával (van/nincs bizonylat/nincs
+   adat), és egy állítás MEGMÉRI, hogy a link tényleg odavezet (3 sorból 1-re szűkít).
+   ℹ️ A `hu-machine-form-check` közben a KÖZÖS park hiányzó előfizetés-sorára panaszkodott
+   (feltétel nélkül fut, tehát MINDEN szál commitját blokkolta) — a saját javaslata szerint
+   pótolva: `seed-park-subscription.mts --go` (idempotens, a valódi vásárlási láncot építi).
 2. **Azonos percen belüli sorrend** (Elek FK-006b KÉZI KELL-1) — a rendezés determinisztikus
    (mérve), a kérdés csak az, MUTASSUNK-e másodpercet, vagy állapot-üzenet előzzön-e.
    Tulaj-döntés kell; a TERV-KESZ ⑦ pontja volt, nem dőlt el.

@@ -1372,7 +1372,12 @@ mindkét állapotban 66).
   visszakapcsoló sávot (kifizetett időszak + link a számlához), a befagyasztott README viszont
   nem KÖTI, és a kód nem tartalmazza. A kontraktus-őr ezt nem foghatta meg — csak azt méri,
   amit a README kimond. **NYITOTT tétel #1.**
-- **NYITOTT (a session-jegyzet végén tételesen):** ① a visszakapcsoló sáv · ② azonos percen
+- ✅ **2026-09-15: a visszakapcsoló sáv LEZÁRVA** — kimondja a kifizetett időszakot és elvezet
+  a bizonylathoz (kontraktus ⑦b pótolva). ⛔⛔ **A saját összefoglaló sorom volt a hamis
+  premissza:** „az adat megvan (`arrears`)" — újramérve az `arrears` CSAK fagyott/lejárt
+  állapotban él, a sáv viszont aktív fiókon jelenik meg. A kifizetett ciklus maga a FOLYÓ
+  időszak. **Romboló vagy ráépítő művelet előtt a saját számomat is újra kell mérni.**
+- **NYITOTT (a session-jegyzet végén tételesen):** ~~① a visszakapcsoló sáv~~ · ② azonos percen
   belüli sorrend (tulaj-döntés kell) · ③ a kétszer mondott képernyő-név (MINDEN admin-fül) ·
   ④ lapozás/év-csoport a 19 számla-sorra · ⑤ a szűrő-sáv 205px 390-en · ⑥ az ELEK-tenant
   hiányzik a parkból, így az FK-001 élő újrajátszása még nem történt meg.
