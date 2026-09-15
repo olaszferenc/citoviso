@@ -148,6 +148,51 @@ számol ④ a hírlevél-modul **lekerül a polcról**.
 - A §2b **felület-kapu** kérte a jóváhagyás rögzítését (`surface-gate.mjs approve`) — a tulaj
   szavaival, nem összefoglalva.
 
+## A SÚGÓ-FORDÍTÁSOK FRISSÍTÉSE — négy lelet egy kérés mögött (2026-09-15)
+
+A tulaj a „6 elavult fordítás" frissítését kérte. ⚠️ **A premissza mérve MÁS volt:** a landolás
+utáni szerver-újraindítás (boot self-heal) a többségét már meggyógyította; ténylegesen **5
+(nyelv, cikk) páros** volt elavult **három** nyelven, és ebből **egy** volt az én szerkesztésem.
+
+⛔⛔ **A mechanizmus NEM TUDTA megjavítani magát.** Mind az 5 újragenerálás
+„integritás-sértés"-sel hullott el, és minden újrafuttatás ugyanoda futott — a hiba ÖNMAGÁT
+tartotta életben, mert a javítási kísérlet is elbukott rajta. Két gyökér-ok:
+
+- **A SORTÖRÉS.** A `kbTranslationValid` a `**„…”**` képernyő-feliratokat NYERS sztringként
+  hasonlította. A magyar forrás tördel, ezért egy felirat átér a sor végén
+  (`**„Lemondom a\n  foglalást”**`); a fordítás egy sorba írja. A gombon látható szöveg **betűre
+  azonos** — az ellenőrzés mégis eltérést látott, és a TELJES fordítást eldobta. Mérve: a jelölt
+  25/25 feliratot, 1/1 képet és 7/7 alcímet hozott, és KIZÁRÓLAG két sortörés miatt bukott meg.
+  **11 cikkben** van ilyen tördelt felirat — nem egyedi eset. → szóköz-normalizált összehasonlítás.
+- **A TOKEN-KORLÁT + EGY HAMIS HIBAÜZENET.** A `max_tokens` 6000 volt, a két legnagyobb cikk
+  pont fölé nőtt (`admin-modules` ≈ 5 930, `admin-messages` ≈ 5 619 kimenő token). A válasz
+  elvágódott, a JSON nem záródott be — és a hívó ezt is „integritás-sértés"-nek naplózta.
+  **Más kérdésre válaszolt**, ezért a valódi ok láthatatlan maradt. → 16 000-es korlát a
+  legnagyobb cikkhez mérve, és a bukás OKA megnevezve (elvágás / JSON / hiányzó mező / integritás).
+
+⛔ **A FORRÁS MAGA is hibás volt.** Az `admin-messages` a képernyő-felirat jelölésével emelt ki
+egy MONDATTÖREDÉKET (**„a szűrt”**). Ez a fordítót félrevezeti (magyarul hagyandó gombnévnek
+látszik), az olvasó pedig nem létező gombot keresne. → a VALÓDI felirat került oda, a kódból
+(`adminViews.ts:3457`), a `kb-check` label-drift kapuja által elfogadott alakban.
+
+⛔ **A KÖLTSÉG SEHOL NEM JELENT MEG.** A `recordAiUsage` AsyncLocalStorage-gyűjtőbe ír, és
+gyűjtő nélkül ÜRESBE FUT. Sem a `packs.ts`, sem a CLI nem nyitott scope-ot — az ADR-0085
+szerint viszont minden AI-hívás mérve van. ⚠️ Az `ai-usage-lint` ezt nem foghatta meg: az a
+**hívási helyet** ellenőrzi (van-e `recordAiUsage`), nem azt, **fut-e gyűjtő körülötte**.
+→ a `--ensure` `withAiUsage` scope-ban fut, és kiírja a hívásszámot, tokent, USD-t lépésenként.
+Mérve: 4 hívás · 23 854 be / 21 269 ki · **0,651 USD**.
+
+**Eredmény:** mind a 6 nyelv × 19 cikk FRISS (mérve, nem hitből).
+**Őr:** `scripts/kb-translation-integrity-check.mts` — a sortörés mindkét irányban átmegy, de a
+szigorúság-oldal hangsúlyosabb (lefordított / kihagyott / odaköltött / egy betűnyit eltérő
+felirat, elveszett alcím, átírt kép-útvonal, üres törzs → mind bukik); a ③ szakasz a VALÓDI
+cikkeken méri, hogy mindegyik átmegy ÖNMAGÁN. Piros önteszt.
+
+⚠️ **Saját hibák:** a diagnosztikámba átmásoltam a régi 6000-es korlátot — a MÉRŐESZKÖZ vágta el
+a választ, és egy már megjavított esetet mutatott hibásnak. A hook-blokkomban `>/dev/null`-t
+írtam (régi minta), amit a `gate-output-check` elkapott: elnémított kapu bukása nem ér el az
+operátorhoz.
+
 ## Nyitva
 
 ① A 2. pont (hírlevél) tulajdonosi döntése · ② a `TERV-KESZ.md` 9 kérdése · ③ a natív `confirm()`

@@ -1001,6 +1001,16 @@ MECHANIZMUS más volt, mint a bejelentés.
   pirosra, mind a „minden eladható modulnak van felülete" állításon. A kínálat-felületeket
   EGYESÉVEL kell átnézni; az árazás-admin SZÁNDÉKOSAN kivétel (a meglévő előfizetés sora árat
   igényel). Az őrökben a kivétel a KATALÓGUSBÓL jön, nem kézi listából.
+- ✅ **A 6 NYELV SÚGÓ-FORDÍTÁSA FRISS** (2026-09-15) — de a kérés mögött **négy lelet** volt.
+  ⚠️ A premissza is mozgott: mérve 5 (nyelv, cikk) páros volt elavult 3 nyelven, nem 6 nyelv.
+  ⛔⛔ **A mechanizmus nem tudta megjavítani magát:** minden újragenerálás
+  „integritás-sértés"-sel hullott el. ① A felirat-ellenőrzés a SORTÖRÉST is eltérésnek vette
+  (a forrás tördel, a fordítás egy sorba ír — a gombon látható szöveg betűre azonos); 11 cikkben
+  van ilyen. ② A `max_tokens` 6000 volt, a két legnagyobb cikk fölé nőtt → elvágott válasz, és a
+  napló ezt is „integritás-sértés"-nek hívta: MÁS KÉRDÉSRE VÁLASZOLT. ③ A forrás a
+  képernyő-felirat jelölésével emelt ki egy MONDATTÖREDÉKET. ④ Az AI-KÖLTSÉG sehol nem jelent
+  meg: a `recordAiUsage` gyűjtő nélkül üresbe fut, és az `ai-usage-lint` a hívási helyet nézi,
+  nem azt, fut-e gyűjtő körülötte. Mostantól mérve: 4 hívás · 0,651 USD.
 - **NEM lelet (mérve):** a naptár-színek — kijelölés zöld (rgb 47,169,107), cián CSAK `:hover`,
   a múlt opacity 0,35. A natív `confirm()` a lemondáson **az A6 szálnál** van.
 
