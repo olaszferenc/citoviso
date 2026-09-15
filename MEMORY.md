@@ -1,7 +1,19 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🫥 ADR-0181: nincs alcím → nincs elem; és a mérőeszközöm hamis zöldet adott)
+Utolsó frissítés: 2026-09-15 (💳 Barion-bírálati csomag beadva — VÁRUNK; + 🫥 ADR-0181)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**💳 BARION-BÍRÁLAT: MINDEN BEADVA, VÁRUNK (3–5 munkanap).**
+Session-jegyzet: `_planning/memory/2026-09-15_barion_biralati_csomag.md` · leltár:
+`_planning/BARION-APPLICATION.md`. Deploy `prod/20260915-0927` (`fd4ec5e`): Barion-logósor +
+ÁSZF nyilv.szám/telefon élesen mérve. Éles bírálói demó E2E mérve: `citoviso.com/p/demo5b0455b4067b`
+→ rendelés → sandbox `payUrl`; tenant-belépő `nyugalom-vendeghaz`/`folyo-kikoto-79`. A tulaj 2
+észrevételt + üzenetet küldött a Barion automatikus jóváhagyási jegyére (⚠️ a Remark-mező 1000
+karakterre némán csonkol). 🔴 **TULAJ-TEENDŐ: tárca-feltöltés banki átutalással** (azonosítás).
+POSKey-érkezéskor: éles kulcs + `INVOICE_PROVIDER=szamlazz` EGYÜTT, külön engedéllyel; jóváhagyás
+után demó + „CITOVISO PRÓBA (törölhető)" teszt-rendelés purge.
+
+---
 
 **🫥 ADR-0181 — NINCS ALCÍM → NINCS ELEM: AZ ÜRES DOBOZ IS ÁLLÍTÁS.**
 Session-jegyzet: `_planning/memory/2026-09-15_empty_tagline_no_element.md`.

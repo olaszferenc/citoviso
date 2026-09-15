@@ -197,13 +197,17 @@ Ezeket a gép írja be a **prod `.env`**-be, és állítja át:
 - [x] ① Élesítés — **KÉSZ 2026-09-10** (`d9eb7dd`, `prod/20260910-1828`)
 - [x] ② Élesi ellenőrzés — **KÉSZ**, mindkét tétel mérve az élő oldalon
 - [x] ③ Barion éles bolt igénylés beadva — **KÉSZ**, státusz „Jóváhagyásra vár" (3a.)
-- [ ] ③b **Elfogadóhely URL-je kitöltve** (`https://citoviso.com`) — ma ÜRES, a bíráló enélkül nem lát semmit
-- [ ] ③c Kategória + leírás (20–200 kar.) kitöltve — ma ÜRES
-- [ ] ③d **Ismétlődő fizetés kérelme** — Ügyfélközpont-JEGY indoklással (2c.), ma „Nem"
-- [ ] ③e Teszt-belépő az **„Egyéb adatok"** mezőbe (hivatalos út, 2b.) — a vásárlás belépés mögött van
-- [ ] ③f **Barion-logósor** a főoldalra + a fizetés-lapra (2b. #2 — kimondott elutasítási ok!)
-- [ ] ③g ÁSZF-pótlás: **nyilvántartási szám + telefonszám** (2b. #5)
-- [ ] ③h Tárca-feltöltés banki átutalással a vállalkozói számláról (azonosítás, 2b. #12)
+- [x] ③b–③e **KÉSZ 2026-09-15**: az adatlap zárt volt, ezért KÉT észrevétel ment be a
+  `secure.barion.com/Remark/Create`-en („Elfogadóhely kezelése" kategória): ① adatpótlás
+  (URL + kategória + leírás) + próbavásárlási út + teszt-belépő; ② tokenes fizetés kérelme
+  indoklással. ⚠️ A Leírás-mező 1000 karakteres — a hosszú szöveg NÉMÁN csonkul (mérve).
+- [x] ③f Barion-logósor — élesen kint (deploy `prod/20260915-0927` = `fd4ec5e`)
+- [x] ③g ÁSZF-pótlás — élesen mérve: nyilv. szám 53483083 + telefon + e-mail a `/aszf`-en
+- [ ] ③h **Tárca-feltöltés banki átutalással a vállalkozói számláról** (azonosítás!) — ⚠️ TULAJ-TEENDŐ, enélkül a jóváhagyás nem zárulhat
+- [x] ③i Bírálói demó élesen (2026-09-15): vásárlás-út `https://citoviso.com/p/demo5b0455b4067b`
+  (E2E mérve a sandbox `payUrl`-ig) · tenant-belépő `nyugalom-vendeghaz` / `folyo-kikoto-79` ·
+  1 jelölt teszt-rendelés a prod DB-ben („CITOVISO PRÓBA (törölhető)", pending, sandbox) —
+  a bírálat után a demó + a teszt-rendelés kitakarítandó
 - [ ] ④ Jóváhagyás megérkezett → POSKey + Payee átadva a gépnek
 - [ ] ⑤ Prod `.env`: `PAYMENT_GATEWAY` + `BARION_URL` + `INVOICE_PROVIDER` átállítva
 - [ ] ⑥ Végigvitt éles teszt-tranzakció (fizetés → számla → élő oldal)
