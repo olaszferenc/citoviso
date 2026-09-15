@@ -15,6 +15,7 @@
 //   npx tsx scripts/kb-freshness.mts --self-test # red test on synthetic inputs
 
 import { execFileSync, execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const PROD_HOST = "178.104.3.223";
 const PROD_KEY = `${process.env.HOME}/.ssh/citoviso_hetzner`;
@@ -104,6 +105,29 @@ function checkCoverage(): void {
   }
 }
 
+/**
+ * ④ NYELVI TELJESSÉG (§J.25) — eljutott-e a súgó MINDEN élő nyelvre?
+ *
+ * ⛔ 2026-09-15-ig ez a réteg HIÁNYZOTT a söprésből, pedig a `kbCoverage()` létezett és
+ * pontosan ezt mérte — csak sehol nem volt bekötve. Az ①–③ réteg a prod-drifttel, a
+ * képek korával és a determinisztikus szerkezettel foglalkozik; EGYIK SEM nézi, hogy egy
+ * MÓDOSÍTOTT cikk lefordítódott-e. Magyar fallback nincs: a lemaradt nyelv tulaja a RÉGI
+ * (esetleg épp javított hibás) szöveget olvassa tovább.
+ */
+function checkTranslationCoverage(): void {
+  console.log("── ④ nyelvi teljesség (§J.25)");
+  try {
+    const out = execFileSync("npx", ["tsx", "scripts/kb-translation-coverage-check.mts"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    }).toString();
+    note(out.trim().split("\n").pop() ?? "zöld ✓");
+  } catch (err) {
+    const out =
+      String((err as { stdout?: Buffer }).stdout ?? "") + String((err as { stderr?: Buffer }).stderr ?? "");
+    flag(`KB-fordítás-lefedettség PIROS:\n${out.trim()}`);
+  }
+}
+
 function selfTest(): void {
   // The sweep's own red test: feed a synthetic "views newer than assets" pair and a
   // synthetic red coverage result through the same comparison logic.
@@ -116,8 +140,14 @@ function selfTest(): void {
   ok("view-ts ≤ asset-ts → zöld-ág", !(40 > 50));
   ok("kor-küszöb: 15 nap > 14 → FLAG", 15 > PROD_MAX_AGE_DAYS);
   ok("kor-küszöb: 3 nap → zöld", !(3 > PROD_MAX_AGE_DAYS));
+  // ④ — a nyelvi teljesség rétege a saját öntesztjével bizonyít; itt azt kötjük ki, hogy
+  // a söprés TÉNYLEG meghívja (egy be nem kötött réteg nem réteg — ADR-0152).
+  ok(
+    "a ④ nyelvi-teljesség réteg be van kötve a söprésbe",
+    /checkTranslationCoverage\(\);/.test(readFileSync(new URL(import.meta.url), "utf8")),
+  );
   if (failures) process.exit(1);
-  console.log("kb-freshness self-test: 🟢 4/4");
+  console.log("kb-freshness self-test: 🟢 5/5");
 }
 
 if (process.argv.includes("--self-test")) {
@@ -126,6 +156,7 @@ if (process.argv.includes("--self-test")) {
   checkProdDrift();
   checkScreenshotStaleness();
   checkCoverage();
+  checkTranslationCoverage();
   if (flags.length) {
     console.error(`\nkb-freshness: 🔴 ${flags.length} FLAG — a tudásbázis és a valóság szétcsúszhatott`);
     process.exit(1);

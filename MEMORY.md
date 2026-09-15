@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🧭 ADR-0182 irány helyett NÉV + 🖼️ ADR-0183 a súgó-kép ne ürülhessen ki némán; + 💳 Barion-bírálat VÁRUNK)
+Utolsó frissítés: 2026-09-15 (🧭 ADR-0182 irány helyett NÉV · 🖼️ ADR-0183 a súgó-kép ne ürülhessen ki · 🌍 ADR-0184 a fordítás a szerkesztés UTÁN jár; + 💳 Barion-bírálat VÁRUNK)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
@@ -65,6 +65,32 @@ független őr ítéli meg (ADR-0132 H).
 - ⚠️ **A kör tanulsága magamról:** a saját javító-körömet is meg kell mérni, nem csak azt, amit
   javítani küldtek — a 18 újragenerált képből **csak azt az egyet néztem meg**, amiért a kör
   indult.
+- ⛔⛔ **MÁSODIK UTÓIRAT — a HARMADIK őr is FLAG-et adott (ADR-0184): A SORREND VOLT A HIBA.**
+  A fordítás-kört a KB-szerkesztés **ELŐTT** futtattam, aztán a 2. őr verdiktje nyomán MÉG
+  EGYSZER hozzányúltam a cikkhez — és azt már nem fordíttattam újra. **Magyar fallback NINCS**
+  (`kbPacks.ts`: „a stale translation still serves"), ezért a lengyel és a szlovák tulaj **szó
+  szerint a két frissen javított hibát olvasta tovább** („pod kartą Abonament" — a kártya ALÁ
+  küld; „a nad nim tytułem" — a címet a pirula FÖLÉ teszi).
+- ⛔⛔ **A rés SZERKEZETI volt:** a `kbCoverage()` **létezett és pontosan ezt mérte, csak SEHOL
+  nem volt bekötve**. Ugyanaz a mintázat, mint az ADR-0183-nál: a meglévő kapuk MÁS KÉRDÉSRE
+  válaszolnak. Új: **`kb-translation-coverage-check.mts`** blokkoló kapu (megnevezi a nyelvet ÉS
+  a lemaradt cikket; DB-hiánynál HANGOSAN bukik) + **`kb-translate.mts`** javító út, mert egy
+  kapu, ami nem létező parancsot ajánl, hazudik. Bekötve a **pre-commitba** ÉS a
+  **`kb-freshness` ④** rétegébe; a söprés öntesztje azt is kiköti, hogy a réteg meg van hívva.
+- ⭐ **A VALÓDI feltételen is pirosra vittem** (egy cikk forrását elrontva mind a 6 nyelven
+  jelzett, névvel) — a szintetikus önteszt önmagában ezt nem bizonyítaná.
+  **Végállapot mérve: mind a 6 élő nyelv 19/19 friss.**
+- ⚠️ **Mérés-pontosítás a verdikthez:** mire mértem, az `sk` MÁR friss volt — egy párhuzamos
+  szál termék-folyamata (`ensureLanguagePack`) véletlenül gyógyított 5 nyelvet. Ez nem cáfolja a
+  leletet, hanem **erősíti**: a lefedettség a SZERENCSÉN múlt. A `pl` így is lemaradt, és
+  **5 kísérletből 3-szor bukott** integritás-sértéssel — a diagnózis (29/29 felirat, 1 kép,
+  9 alcím) szerint **nemdeterminizmus**, nem a cikk szerkezete.
+- ⚠️ **A KÖR TANULSÁGA MAGAMRÓL, HÁROMSZOR EGY NAPON:** a saját javító-köröm rontott el valamit,
+  és a saját kapuim zöldek maradtak (① a sáv irányt mondott tett helyett, ② a `kb-shot`
+  kiürített egy képet, ③ a fordítás lemaradt a szerkesztés mögött). Mindháromszor **létezett a
+  mérőeszköz** — csak nem arra a kérdésre felelt, vagy nem volt bekötve. **Eljárás: ha egy
+  körben MÉG EGYSZER hozzányúlok egy forráshoz, a származtatott műveleteket újra kell futtatni,
+  és a végállapotot MEGMÉRNI, nem feltételezni.**
 - 🔵 **Elhalasztva (az őr szerint NEM blokkoló):** a `payResultPage`/`payUnknownRefPage` a
   `console/views.ts`-ben él (operátor-korpusz), a cikk viszont tenant → a feliratok
   **drift-védelem nélkül** állnak, de ma pontosak. Korpusz-döntés, külön kör.

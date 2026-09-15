@@ -165,3 +165,62 @@ Ugyanaz az osztály, mint a `feedback_label_answers_a_different_question`, csak 
 
 🔵 **Elhalasztva (az őr szerint nem blokkoló):** a `payResultPage`/`payUnknownRefPage`
 felirat-drift kérdése — a feliratok ma pontosak, a korpusz-döntés külön kör.
+
+---
+
+## ⛔⛔ MÁSODIK UTÓIRAT — a HARMADIK független őr is FLAG-et adott (ADR-0184)
+
+A `legend.png`-t, az ép-őrt és a két szerkezeti pontatlanságot rendben találta. **A blokkoló a
+NYELVI TELJESSÉG volt — és megint a saját köröm okozta.**
+
+### A hiba: a SORREND
+
+A fordítás-kört **a KB-szerkesztés ELŐTT** futtattam. Aztán a 2. őr ② tételére **még egyszer
+hozzányúltam** a cikkhez — és azt már nem fordíttattam újra. A `source_hash` a magyar forrásból
+származik, tehát a szerkesztés azonnal elavulttá tette a fordítást.
+
+⛔ **És nincs magyar fallback** (`kbPacks.ts`: „a stale translation still serves"). A lengyel és
+a szlovák tulaj **szó szerint a két frissen javított hibát olvasta tovább**:
+„pod kartą Abonament" / „pod kartou Predplatné" (a kártya ALÁ küld) és „a nad nim tytułem" /
+„nad ním s nadpisom" (a címet a pirula FÖLÉ teszi). A javítás a magyar olvasónak megtörtént, a
+lengyelnek nem — és erről semmi nem szólt.
+
+### Amit a mérés a verdikthez képest pontosított (kimondva)
+
+Mire mértem, **az `sk` már friss volt** (14:48), csak a `pl` maradt elavult (13:54). Nem én
+javítottam: a `ensureLanguagePack` termék-folyamatokból is hívódik, és egy **párhuzamos szál
+munkája véletlenül meggyógyított 5 nyelvet**. ⚠️ Ez nem cáfolja a leletet, hanem **erősíti**: a
+lefedettség a szerencsén múlt, nyelvenként más időpontban — a `pl` így is lemaradt.
+
+### A `pl` kétszer bukott — és ezt kimértem, nem próbálgattam
+
+Az `ensureLanguagePack("pl")` **integritás-sértéssel** dobta el a fordítást (felirat/kép/alcím).
+Diagnosztikát írtam rá (a tényleges API-hívás + a három szabály külön-külön): **29/29 felirat,
+1/1 kép, 9/9 alcím — érvényes**. Tehát **nemdeterminizmus**, nem a cikk szerkezete. Összesítve a
+napi mérés: **5 kísérletből 3 bukott**, majd változatlan bemenettel átment. Ezért a javító kör
+**korlátos újrapróbálást** végez, és a kísérletek számát kiírja.
+
+### A szerkezeti bezárás (ADR-0184)
+
+⛔⛔ **A `kbCoverage()` LÉTEZETT és pontosan ezt mérte — csak sehol nem volt bekötve.** Ugyanaz a
+mintázat, mint az ADR-0183-nál: a meglévő kapuk MÁS KÉRDÉSRE válaszolnak.
+- `scripts/kb-translation-coverage-check.mts` — blokkoló kapu, megnevezi a nyelvet ÉS a lemaradt
+  cikket; DB-hiánynál **hangosan bukik**, nem enged át némán.
+- `scripts/kb-translate.mts` — a javító út, mert **egy kapu, ami nem létező parancsot ajánl,
+  hazudik**. Korlátos újrapróbálás + visszamérés a REGISZTERBŐL.
+- Bekötve: `hooks/pre-commit` (diff-scope a `kb/entries/**/entry.*.md`-re) **és** `kb-freshness`
+  ④; a söprés öntesztje azt is kiköti, hogy a réteg **tényleg meg van hívva** (ADR-0152).
+- ⭐ **A VALÓDI feltételen is pirosra vittem:** egy cikk forrását elrontva a kapu mind a 6
+  nyelven jelzett, névvel (`admin-photos`), majd visszaállítás után újra zöld lett. A szintetikus
+  önteszt önmagában ezt nem bizonyítaná.
+
+### A tanulság magamról — harmadszor ugyanaz az osztály
+
+**A saját javító-köröm rontott el valamit, és a saját kapuim zöldek maradtak.** Háromszor egy
+napon: ① a sáv irányt mondott tett helyett, ② a `kb-shot` kiürített egy képet, ③ a fordítás
+lemaradt a szerkesztés mögött. Mindháromszor **létezett a mérőeszköz**, csak nem arra a kérdésre
+válaszolt, vagy nem volt bekötve.
+⚠️ **Eljárás:** ha egy körben MÉG EGYSZER hozzányúlok egy forráshoz, a rá épülő származtatott
+műveleteket (fordítás, kép, katalógus) **újra kell futtatni** — és a végállapotot **megmérni**,
+nem feltételezni.
+

@@ -152,6 +152,18 @@ fi
 # ami a visszautasítást szüli). Az őr a RENDERELT lapon méri: irány-szó nincs (a sávban ÉS a
 # mandátum-blokkban) · minden megnevezett kijárat VALÓDI vezérlő a lapon · ahol van fizetési
 # út, ott a sáv oda is VISZ. Piros önteszt (20 sértés) + negatív kontroll a TÖRTÉNETI hibára.
+# ⛔⛔ §J.25 — A SÚGÓ MINDEN ÉLŐ NYELVRE ELJUSSON. Mért hiba (2026-09-15): módosítottam egy
+# cikket, lefuttattam a fordítás-kört, majd egy őr-verdikt nyomán MÉG EGYSZER hozzányúltam a
+# cikkhez — és azt már nem fordíttattam újra. A SORREND volt a hiba. Magyar fallback NINCS
+# (kbPacks.ts: „a stale translation still serves"), ezért a lengyel és a szlovák tulaj szó
+# szerint a frissen javított hibákat olvasta tovább. A rés SZERKEZETI volt: a `kbCoverage()`
+# létezett és pontosan ezt mérte, de SEHOL nem volt bekötve. ⚠️ DB-t igényel; elérhetetlen
+# adatbázisnál HANGOSAN bukik, nem enged át némán.
+if [ -f scripts/kb-translation-coverage-check.mts ] && \
+   changed_files | grep -qE '^kb/entries/.*/entry\..*\.md|^scripts/kb-translation-coverage-check'; then
+  echo "[pre-commit] kb-translation-coverage (§J.25: a súgó minden élő nyelvre eljutott-e)…"
+  npx tsx scripts/kb-translation-coverage-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⛔ A kb-shot NÉMÁN ki tudta üríteni egy súgó-kép tartalmát (legend.png: 640×2020 → 640×126,
 # a teljes oszlop-magyarázat kiesett, miközben a képaláírás „kinyitva"-t ígért). Sem a kb-check,
 # sem a kb-freshness nem fogta meg: EGYIK SEM NÉZI, VAN-E TARTALOM A KÉPEN. Azóta a kb-shot
