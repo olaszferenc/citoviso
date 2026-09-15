@@ -1,7 +1,48 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (👁️ fagyás alatt a tulaj a sajátját ELŐNÉZETKÉNT látja — és megnézheti, mit lát a világ)
+Utolsó frissítés: 2026-09-15 (💳 ADR-0172: a vevő fizetési útja Pixel nélkül futott élesben)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**💳 ADR-0172 — A VEVŐ FIZETÉSI ÚTJA PIXEL NÉLKÜL FUTOTT ÉLESBEN.**
+Session-jegyzet: `_planning/memory/2026-09-15_consent_scope_crosses_process_boundary.md`.
+⚠️ **ÉLESÍTÉS NINCS — de a javítás csak deploy után ér ki.** Tulaj-kérésre indult: „a `/pay/mock`
+lapot is nézd meg."
+
+- **A lap maga ártalmatlan** (dev-only mock; élesben `PAYMENT_GATEWAY=barion`, mérve 404) — de a
+  KONZOL processzen él, és **az egész processzről hiányzott a szabály**.
+- ⛔⛔ **Élesben mérve** (`citoviso.com`, olvasás): az nginx a domaint KÉT processz között osztja
+  fel, és a hasítás pont a vásárlási úton megy át. A **`/configure/…`** (a vásárlás indulása) és a
+  **`/pay/…`** (köztük a **`/pay/done`**, a Barion `RedirectUrl`) a konzolra megy, ahol SEM sáv,
+  SEM Pixel nem volt. A saját kódunk kommentje közben kimondja: „a Barion előírása szerint a
+  Pixelnek a webshop MINDEN oldalán ott kell lennie." Ez az **ADR-0151 tükörképe**: nem „követés
+  ott, ahol tilos", hanem „nincs követés ott, ahol kötelező".
+- **Második lelet:** a `/adatvedelem` (8636 B, sáv+Pixel) és a `/privacy` (8290 B, tiszta)
+  UGYANAZ a `privacyPage()` — és épp a `/privacy` az a cím, amit a **már kiküldött hideg levelek**
+  tartalmaznak.
+- **Szállítva:** ① a snippet + a címzett-szabály **közös modulba** (`src/server/consent.ts`); a
+  public viselkedése bájtra változatlan (269 állítás előtte-utána zöld) · ② a konzolon is a
+  CÍMZETT dönt — a hat kívülről elérhető útvonal NEM egy kategória (`/p/`, `/configure/`,
+  `/mock/`, `/site/` a **szállás oldalát** adja ki → vendég; `/pay/…`, `/admin/<token>`, jogi
+  lapok → own; a többi belső operátor-felület → nincs követés, de MÁS okból) · ③ ⛔ a konzol
+  MÉRTEN **303**-at adott a `/assets/runtime/*`-ra → a sáv csupasz lett volna, a Pixel el sem
+  indult volna; élesben ezt az nginx elfedte volna, **de egy proxy-sor nem lehet a jogi megfelelés
+  egyetlen lába** · ④ a `/pay/mock` lap `res.end()`-del **megkerülte** a `send()`-et.
+- **A kockázatot előre kimondtam és MEGMÉRTEM** (ADR-0145 ④): a VALÓDI fizetés-lapon, 390 és
+  1280 px-en a sáv a navy tokenből fest, az „Elfogadom" a ciánból, és **egyetlen vezérlőt sem
+  takar**.
+- **Őr:** mindkét processzt felhúzza; pozitív kontroll a konzol saját lapjain (köztük a VALÓDI
+  `/pay/done`), tiltás a vendég- és operátor-lapokon, **egy dokumentum = egy viselkedés** mindkét
+  processzen, és a konzol MAGA szolgálja ki a sáv eszközeit. **397 zöld**; önteszt 127 → **178**
+  piros; a valódi visszarontás **19 bukás / exit 1**.
+- ⛔ **Két saját hiba menet közben:** a takarás-vizsgálatom BÁRMILYEN takaróra pirosat adott (egy
+  soremelt inline link befoglaló dobozának középpontja a két sor KÖZÉ esik → a szülő `<p>`-t
+  találta el, miközben a sáv 362 px-rel lejjebb volt) — a verdikt mostantól „takarja-e A SÁV";
+  és az első fizetés-lap mérésem „0 vezérlő / 0 takarva" zöldet adott, mert a nem-hexa
+  hivatkozásom 404-re esett — **egy 0-ból-0 nem mérés**.
+- **NYITOTT:** ① az élesítés (jogi/elfogadóhelyi megfelelés, nem kozmetika) · ② a konzol
+  404-lapja kívülállónak is megmutatja az operátor-navigációt — külön kör.
+
+## Előző szál (2026-09-15) — 👁️ „OLDAL MEGTEKINTÉSE" FAGYÁS ALATT — ADR-0155 ⑦, freeze-state-v2 ⑨
 
 **👁️ „OLDAL MEGTEKINTÉSE" FAGYÁS ALATT — ADR-0155 ⑦, freeze-state-v2 ⑨.**
 Session-jegyzet: `_planning/memory/2026-09-15_frozen_guest_view.md`. **Élesítés NINCS.**

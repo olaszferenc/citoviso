@@ -17,6 +17,7 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { config } from "../config.js";
+import { injectConsent, markAudience } from "./consent.js";
 import { isPlatformHosting, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { esc, privacyPage } from "../console/views.js";
 import { renderSuspendedPage, suspendedLang } from "./suspendedPage.js";
@@ -184,92 +185,13 @@ const MIME: Record<string, string> = {
 };
 
 /**
- * A süti-hozzájárulás sáv + a Barion Pixel betöltője. A Barion előírása szerint a
- * Pixelnek a webshop MINDEN oldalán ott kell lennie, ezért a beillesztés itt, a
- * közös kimeneten történik — nem oldalanként, ahol egy új route könnyen kimaradna.
+ * A süti-sáv + a Barion Pixel beillesztése a KÖZÖS kimeneten.
  *
- * ⛔ CSAK A SAJÁT OLDALUNKON — és a „saját" azt jelenti, hogy NEKÜNK szól, nem azt,
- * hogy mi adjuk ki. A hatókört a `PAGE_AUDIENCE` mondja ki (ld. ott): a tenant
- * VENDÉGÉNEK szóló lapokra nem kerülhet, mert ott a vendég nem nálunk fizet, semmi
- * nem indokolná a követését.
- * ⛔ Azonosító nélkül üres string: sáv sincs, Pixel sincs (§B.17 — nem kérünk
- * hozzájárulást olyan követésre, ami meg sem történik).
- *
- * ⛔ A STÍLUS A SÁVVAL EGYÜTT UTAZIK (2026-09-14). A `#cit-consent` szabályok
- * korábban a `home.css`-ben éltek, azt viszont MÉRTEN csak a `public/index.html`
- * tölti be — így a sáv 12 saját felületből 11-en CSUPASZ, natív gombos sávként
- * jelent meg (Elek FK-005b H-1, FK-006b HIBA-2, FK-007 H2). Mivel a sávot EZ az
- * egy pont teszi ki, a stíluslapot is ez hivatkozza: egy jövőbeli saját lap nem
- * tudja „elfelejteni" behúzni.
+ * ⛔ A snippet és a CÍMZETT-szabály a `src/server/consent.ts`-ben él, mert a
+ * `citoviso.com` élesben KÉT processz között van felosztva (nginx), és a másik
+ * processz (konzol :4600) viszi a vevő fizetési útját. Egy szabály két példányban
+ * két igazság — a `/privacy` és az `/adatvedelem` pontosan ezt csinálta.
  */
-function consentSnippet(): { head: string; body: string } {
-  // A Barion azonosító alakja `BP-<10 jel>-<2 jel>` (élő webshopokban mérve). Ami nem
-  // ilyen, az el sem jut a lapra: szűrünk, nem escape-elünk — egy rossz konfig-érték
-  // így nem kerülhet HTML-be, és a sáv sem jelenik meg.
-  const pixelId = /^BP-[A-Za-z0-9]{6,20}-[A-Za-z0-9]{1,4}$/.test(config.barionPixelId)
-    ? config.barionPixelId
-    : "";
-  if (!pixelId) return { head: "", body: "" };
-  return {
-    head: `<link rel="stylesheet" href="/assets/runtime/cit-consent.css?v=${CONSENT_CSS_VERSION}">`,
-    body:
-      `<script src="/assets/runtime/cit-consent.js?v=${CONSENT_JS_VERSION}" data-pixel-id="${pixelId}" defer></script>` +
-      `<noscript><img height="1" width="1" style="display:none" alt=""` +
-      ` src="https://pixel.barion.com/a.gif?__ba_pixel_id=${pixelId}` +
-      `&ev=contentView&noscript=1"></noscript>`,
-  };
-}
-
-/**
- * Content fingerprint of a consent runtime asset — see the CDN note at withAssetVersions.
- *
- * Mindkét fájl a CDN-en át megy, tehát tartalom-ujjlenyomat kell — különben egy
- * jövőbeli javítás (a Pixel-indítás szigorítása vagy épp a sáv stílusa) órákig nem
- * érne el a látogatókhoz. A `withAssetVersions` ITT NEM SEGÍT: az MÉRTEN csak a
- * honlapra fut, a jogi/belépés/admin lapok stíluslapjai verzió nélkül hivatkozódnak.
- * Szinkron olvasás, mert a hívó ág (`send`) szinkron; a fájl a deploy után nem
- * változik, ezért egyszer számoljuk ki.
- */
-function consentAssetVersion(file: string): string {
-  try {
-    return createHash("sha1")
-      .update(readFileSync(path.join(PUBLIC_DIR, "assets/runtime", file)))
-      .digest("hex")
-      .slice(0, 8);
-  } catch {
-    return "0";
-  }
-}
-const CONSENT_JS_VERSION = consentAssetVersion("cit-consent.js");
-const CONSENT_CSS_VERSION = consentAssetVersion("cit-consent.css");
-
-/**
- * KINEK SZÓL EZ A LAP — a süti-sáv és a Barion Pixel EGYETLEN hatókör-szabálya.
- *
- * ⛔ A HIBAOSZTÁLY: „hol húzódik a határ". A korábbi jelölő egy BOOLEAN volt, amit
- * egy adott SORBAN tettünk ki — a hatókör tehát attól függött, hogy egy route a
- * jelölő fölött vagy alatt áll. Ez MÉRTEN kétszer volt rossz:
- *   · 2026-09-14 (ADR-0145): a `/t/<slug>` dev-ág a jelölő ALATT volt → a vendég-oldal
- *     megkapta a sávot és a Pixelt. A javítás: az ág a jelölő FÖLÉ került.
- *   · 2026-09-14 (Elek FK-007 Z5): a vendég LEMONDÓ lapjai a jelölő alatt élnek, ezért
- *     ugyanúgy megkapták — és velük együtt (mérve) a `/site/<token>` és a `/m/<token>`,
- *     vagyis UGYANAZ a generált szállás-oldal két további kiszolgálási úton.
- * Egy pozíciótól függő szabály minden új route-nál újra eldőlhet rosszul, ezért a
- * címzett mostantól KIMONDOTT tény a válaszon, a határ pedig EGY olvasható lista.
- *
- * A szabály (ADR-0145 logikája szerint, nem a tünet szerint): a sáv+Pixel a MI
- * webshopunk lapjaira való — ahol a látogató a mi (leendő) ügyfelünk, és ahol a mi
- * fizetési utunk futhat (landing, belépés, jogi lapok, tenant-admin, a tulaj
- * egy-kattintásos döntés-lapjai). Kimarad MINDEN lap, amelynek CÍMZETTJE a tenant
- * VENDÉGE — függetlenül attól, melyik úton szolgáljuk ki.
- *
- * ⭐ A sáv és a Pixel EGYÜTT mozog: mindkettő ugyanabból az egy `consentSnippet()`-ből
- * kerül ki, ezért „vegyük ki a sávot, de hagyjuk a Pixelt" szerkezetileg lehetetlen
- * (ADR-0145 ③ ezt mondta ki a tenant-adminra; itt ugyanez tartja a vendég-oldalt).
- */
-const PAGE_AUDIENCE = Symbol.for("cit.pageAudience");
-type PageAudience = "own" | "guest";
-
 /**
  * A VENDÉGNEK szóló lapok — a határ, egy helyen.
  *
@@ -294,24 +216,8 @@ const GUEST_PAGE_ROUTES: readonly RegExp[] = [
 ];
 
 function send(res: http.ServerResponse, code: number, body: string | Buffer, type = "text/html; charset=utf-8"): void {
-  let out = body;
-  if (
-    typeof out === "string" &&
-    type.startsWith("text/html") &&
-    (res as unknown as Record<symbol, PageAudience | undefined>)[PAGE_AUDIENCE] === "own" &&
-    out.includes("</body>")
-  ) {
-    const snippet = consentSnippet();
-    if (snippet.body) {
-      // A stíluslap a HEAD-be megy, ha van — ott nem villan fel egy pillanatra a
-      // csupasz sáv. Head nélküli (részleges) kimenetnél a body-ág elé fűzzük: a
-      // sáv stílus nélkül SOHA ne jelenjen meg, akkor sem, ha a lap szokatlan.
-      out = out.includes("</head>")
-        ? out.replace("</head>", `${snippet.head}</head>`)
-        : out.replace("</body>", `${snippet.head}</body>`);
-      out = out.replace("</body>", `${snippet.body}</body>`);
-    }
-  }
+  const out =
+    typeof body === "string" && type.startsWith("text/html") ? injectConsent(body, res) : body;
   res.writeHead(code, { "Content-Type": type });
   res.end(out);
 }
@@ -1680,11 +1586,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // nem lesz „own" — az alapértelmezés a NEM-követés, tehát egy fentebb kilépő új ág
   // sem tud véletlenül Pixelt kapni. Innen a saját webshopunk lapjai jönnek, KIVÉVE
   // azt a néhány útvonalat, amely ugyaninnen szolgálja ki a tenant VENDÉGÉT.
-  (res as unknown as Record<symbol, PageAudience>)[PAGE_AUDIENCE] = GUEST_PAGE_ROUTES.some(
-    (re) => re.test(pathname),
-  )
-    ? "guest"
-    : "own";
+  markAudience(res, GUEST_PAGE_ROUTES.some((re) => re.test(pathname)) ? "guest" : "own");
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   if (isUnclaimedTenantHost(req)) {
     return send(

@@ -153,6 +153,7 @@ import {
   elallasPage,
   impresszumPage,
 } from "../server/legalViews.js";
+import { injectConsent, markAudience, type PageAudience } from "../server/consent.js";
 
 /**
  * Legal documents are readable WITHOUT an operator session: a prospect opens the
@@ -167,6 +168,46 @@ const LEGAL_PATHS = new Set([
   "/elallas",
   "/adatfeldolgozas",
 ]);
+
+/**
+ * A tenant VENDÉGÉNEK szóló lapok EZEN a processzen — a generált szállás-oldal és
+ * annak bemutató-változatai. Ezek a lapok MAGUK a szállás oldala (artefaktum-fájl,
+ * legfeljebb a mi rétegünkkel a tetején), tehát ide sem sáv, sem Pixel nem kerül:
+ * a vendég nem nálunk fizet, és egy süti-sáv a mockon arról is hazudna, hogyan fog
+ * kinézni a kész oldal.
+ *
+ * ⚠️ A `/p/<token>`-ről a vásárlás EL TUD indulni (a konfigurátor-réteg beküldi a
+ * rendelést) — a fizetés maga viszont a `/pay/…`-on és a Barion saját lapján
+ * történik, és a Pixel ODA kell. Az artefaktum-lap attól még a szállás oldala.
+ */
+const CONSOLE_GUEST_ROUTES: readonly RegExp[] = [
+  /^\/p\//, //          követett megkeresés-link → a mock artefaktum + konfigurátor
+  /^\/configure\//, //  ugyanaz a mock, követés nélküli ikerúton
+  /^\/mock\//, //       nyers mock-előnézet (operátori link, de a lap a szállásé)
+  /^\/site\//, //       a kiépített oldal pillanatképe — UGYANAZ a fájl, ötödik ajtó
+];
+
+/**
+ * A MI vevőnknek szóló lapok ezen a processzen. ⛔ A `/pay/webhook/…` KIMARAD: az
+ * gép-gép JSON, nem lap — és a `(?!webhook)` nem stílus-kérdés, hanem azért kell,
+ * hogy a webhook válasza soha ne kapjon HTML-t.
+ */
+const CONSOLE_OWN_ROUTES: readonly RegExp[] = [
+  /^\/pay\/(?!webhook(?:\/|$))/, // a vevő teljes fizetési útja, köztük a /pay/done
+  /^\/admin\/[A-Za-z0-9_-]{16,}$/, // a tenant saját, token-es önkiszolgáló lapja
+];
+
+/**
+ * Egy lap címzettje a konzolon. A sorrend köt: előbb a vendég-lapok, hogy egy
+ * bővülő „saját" minta soha ne tudja elnyelni a szállás-oldalt.
+ * Ami egyikbe sem esik, az a BELSŐ operátor-felület — nem webshop-lap, és a saját
+ * munkatársaink követése a csalásmegelőző jelzést is hígítaná.
+ */
+function consoleAudience(path: string): PageAudience {
+  if (CONSOLE_GUEST_ROUTES.some((re) => re.test(path))) return "guest";
+  if (LEGAL_PATHS.has(path) || CONSOLE_OWN_ROUTES.some((re) => re.test(path))) return "own";
+  return "operator";
+}
 import { config } from "../config.js";
 import {
   approveMarket,
@@ -428,9 +469,11 @@ function send(
   status: number,
   body: string,
   type = "text/html; charset=utf-8",
+  headers: Record<string, string> = {},
 ): void {
-  res.writeHead(status, { "content-type": type });
-  res.end(body);
+  const out = type.startsWith("text/html") ? injectConsent(body, res) : body;
+  res.writeHead(status, { "content-type": type, ...headers });
+  res.end(out);
 }
 
 function redirect(res: http.ServerResponse, to: string): void {
@@ -832,7 +875,16 @@ async function handle(
     }
   }
   // ── Design core static files (ADR-0021: one central CSS for all surfaces). ──
-  if (method === "GET" && /^\/assets\/ui\/[a-z0-9._-]+$/i.test(path)) {
+  //
+  // ⛔ `runtime` IS BENNE (2026-09-15, ADR-0172): a süti-sáv stíluslapja és
+  // betöltője a `public/assets/runtime/`-ban él, és a konzol MÉRTEN 303-at
+  // (login-redirect) adott rájuk — vagyis a fizetés-lapra kitett sáv CSUPASZ
+  // lett volna, a Pixel pedig el sem indult volna. Élesben az nginx a `/assets/`-et
+  // a public szerverre viszi, tehát a hiba ott nem látszott volna — de a szabályt
+  // nem bízzuk egy proxy-sorra: a lapot kiszolgáló processz szolgálja ki azt is,
+  // ami nélkül a lap hazudik. Ez a szakasz az AUTH-KAPU ELŐTT van, tehát a két
+  // fájl bejelentkezés nélkül is elérhető — ahogy a sávnak kell.
+  if (method === "GET" && /^\/assets\/(?:ui|runtime)\/[a-z0-9._-]+$/i.test(path)) {
     const file = path_mod.resolve(process.cwd(), "public", path.slice(1));
     try {
       const type = path.endsWith(".css")
@@ -916,6 +968,12 @@ async function handle(
   if (!isPublicPath && !readOperatorSession(req)) {
     return redirect(res, "/login");
   }
+  // ── KINEK SZÓL EZ A LAP (ld. src/server/consent.ts) ──────────────────────────
+  // A fenti lista azt mondja meg, KI ÉRHETI EL; ez azt, KINEK SZÓL — és a kettő
+  // NEM ugyanaz. A kívülről elérhető hat útvonalból három a tenant VENDÉGÉNEK
+  // szóló szállás-oldalt adja ki (vagy annak bemutató-változatát), három pedig a
+  // MI vevőnknek szól. Ez a sor dönti el, hová kerül a süti-sáv és a Pixel.
+  markAudience(res, consoleAudience(path));
 
   // GET / — Irányítópult (module hub, owner's admin-hub mock).
   if (method === "GET" && path === "/") {
@@ -2897,13 +2955,17 @@ async function handle(
     // BACK, and the browser served this page from its history cache — a pixel-
     // perfect copy of the pre-decline screen, status "pending" and both buttons
     // live. The page renders the truth; caching was hiding it.
-    res.writeHead(200, {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store, no-cache, must-revalidate",
-      pragma: "no-cache",
-    });
-    res.end(payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status));
-    return;
+    // ⛔ A KÖZÖS KIMENETEN megy ki, nem `res.end()`-del (2026-09-15): ez a lap
+    // MEGKERÜLTE a `send()`-et, tehát a süti-sáv/Pixel beillesztése pont a
+    // fizetés-lapról maradt volna ki — ugyanaz a hibaosztály, csak egy fájllal
+    // arrébb. A no-store fejlécek a `send()` ötödik paraméterén mennek.
+    return send(
+      res,
+      200,
+      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status),
+      "text/html; charset=utf-8",
+      { "cache-control": "no-store, no-cache, must-revalidate", pragma: "no-cache" },
+    );
   }
   // POST /pay/mock/:ref/(paid|failed) — the mock pay page's buttons drive the
   // same webhook path the real gateway will (constructs the webhook body).

@@ -59,6 +59,10 @@
 // láttunk pirosnak, nem bizonyíték.
 
 process.env.PUBLIC_PORT = "0";
+// ⛔ A KONZOL IS. A `citoviso.com` élesben KÉT processz között van felosztva (nginx),
+// és a vevő fizetési útja a MÁSIKON megy — ez az őr eddig csak a public szervert
+// ismerte, ezért a rés a vakfoltjában ült (ADR-0172).
+process.env.CONSOLE_PORT = "0";
 // A screenshot/őr-futás SOHA ne indítson AI nyelvi-csomag töltést vagy DB-írást.
 process.env.CIT_SHOT = "1";
 
@@ -70,6 +74,7 @@ import { chromium, type Browser, type Page } from "playwright-core";
 const SELF_TEST = process.argv.includes("--self-test");
 
 const { server } = await import("../src/server/public.js");
+const { server: consoleServer } = await import("../src/console/server.js");
 const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
 const { db } = await import("../src/db/client.js");
 const { config } = await import("../src/config.js");
@@ -103,6 +108,8 @@ if (!PIXEL_OK) {
 if (!server.listening) await once(server, "listening");
 const addr = server.address() as { port: number };
 const PORT = addr.port;
+if (!consoleServer.listening) await once(consoleServer, "listening");
+const CONSOLE_PORT = (consoleServer.address() as { port: number }).port;
 
 const tu =
   (await db
@@ -324,6 +331,15 @@ interface Surface {
   host: string;
   path: string;
   auth?: boolean;
+  /** Melyik processz adja ki? (a konzol a vevő fizetési útját viszi) */
+  port?: number;
+  /**
+   * KINEK szól a lap. A „nem kaphat sávot" két KÜLÖNBÖZŐ okból állhat, és az
+   * indoklás nem cserélhető fel: a vendég-lap a szállásé, az operátor-lap a
+   * belső munkaeszközünk. Egy „vendég-oldal" feliratú piros egy /login-ra
+   * félrevezető lenne.
+   */
+  audience: "own" | "guest" | "operator";
   /** A sávnak MEG KELL jelennie itt? (false = a terv kizárja) */
   expectBar: boolean;
   /**
@@ -334,38 +350,55 @@ interface Surface {
   bottomFurniture?: string;
 }
 
-/** Elérhető-e KATTINTÁSSAL a gazdalap alsó bútorzatának minden eleme? */
+/**
+ * Elérhető-e KATTINTÁSSAL a gazdalap bútorzatának minden eleme — A SÁV MIATT?
+ *
+ * ⛔ A KÉRDÉS PONTOSSÁGA (javítva 2026-09-15). Ez a mérés eredetileg BÁRMILYEN
+ * takaró elemre pirosat adott, és ezzel MÁS KÉRDÉSRE válaszolt, mint amit a neve
+ * ígér. Élesben elbukott rajta a fizetés-visszatérő lap egy SOREMELT inline
+ * linkje: a kétsoros `<a>` befoglaló dobozának középpontja a két sor KÖZÉ esik,
+ * ezért az `elementFromPoint` a szülő `<p>`-t adta vissza — miközben a sáv 362
+ * px-rel LEJJEBB volt. Egy jó okból piros mérés is hamis, ha nem arra felel,
+ * amire hivatkozik.
+ *
+ * A verdikt tehát: takarja-e A SÁV. Ha más takar, azt KIÍRJUK (nem nyeljük el),
+ * de nem ennek az őrnek a verdiktje — az egy másik hibaosztály.
+ */
 const readFurnitureReach = (page: Page, selector: string) =>
   page.evaluate((sel) => {
     const nav = document.querySelector(sel) as HTMLElement | null;
-    if (!nav) return { found: false, total: 0, covered: [] as string[] };
+    if (!nav) return { found: false, total: 0, covered: [] as string[], other: [] as string[] };
     // ⚠️ A rejtett (display:none) elemeket kihagyjuk: a mobil fül-sávban a
     // márka/kiléptető blokk `display:none`, azokat nem a sáv takarja.
     const items = (Array.from(nav.querySelectorAll("a,button")) as HTMLElement[]).filter(
       (e) => e.getBoundingClientRect().height > 0,
     );
+    const bar = document.getElementById("cit-consent");
     const covered: string[] = [];
+    const other: string[] = [];
     for (const it of items) {
       const r = it.getBoundingClientRect();
       // Görgetés NÉLKÜL, viewport-koordinátában — a fixed sáv ott él.
       const hit = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
-      if (hit && hit !== it && !it.contains(hit)) {
-        covered.push(`${(it.textContent ?? "").trim().slice(0, 14)} (${hit.id || String(hit.className).slice(0, 18)})`);
-      }
+      if (!hit || hit === it || it.contains(hit)) continue;
+      const label = `${(it.textContent ?? "").trim().slice(0, 14)} (${hit.id || String(hit.className).slice(0, 18) || hit.tagName.toLowerCase()})`;
+      if (bar && (hit === bar || bar.contains(hit))) covered.push(label);
+      else other.push(label);
     }
-    return { found: true, total: items.length, covered };
+    return { found: true, total: items.length, covered, other };
   }, selector);
 
 const surfaces: Surface[] = [
-  { name: "publikus landing /", host: PLATFORM_DOMAIN, path: "/", expectBar: true },
-  { name: "jogi /adatvedelem", host: PLATFORM_DOMAIN, path: "/adatvedelem", expectBar: true },
-  { name: "jogi /aszf", host: PLATFORM_DOMAIN, path: "/aszf", expectBar: true },
-  { name: "belépés /login", host: PLATFORM_DOMAIN, path: "/login", expectBar: true },
+  { name: "publikus landing /", host: PLATFORM_DOMAIN, path: "/", audience: "own", expectBar: true },
+  { name: "jogi /adatvedelem", host: PLATFORM_DOMAIN, path: "/adatvedelem", audience: "own", expectBar: true },
+  { name: "jogi /aszf", host: PLATFORM_DOMAIN, path: "/aszf", audience: "own", expectBar: true },
+  { name: "belépés /login", host: PLATFORM_DOMAIN, path: "/login", audience: "own", expectBar: true },
   {
     name: "tenant-admin /admin",
     host: PLATFORM_DOMAIN,
     path: "/admin",
     auth: true,
+    audience: "own",
     expectBar: true,
     bottomFurniture: ".adm-side",
   },
@@ -374,6 +407,7 @@ const surfaces: Surface[] = [
     host: PLATFORM_DOMAIN,
     path: "/admin?tab=modules",
     auth: true,
+    audience: "own",
     expectBar: true,
     bottomFurniture: ".adm-side",
   },
@@ -383,12 +417,14 @@ if (liveSite?.slug) {
     name: `tenant vendég-oldal (HOST ${liveSite.slug}.${PLATFORM_DOMAIN})`,
     host: `${liveSite.slug}.${PLATFORM_DOMAIN}`,
     path: "/",
+    audience: "guest",
     expectBar: false,
   });
   surfaces.push({
     name: `tenant vendég-oldal (DEV /t/${liveSite.slug})`,
     host: PLATFORM_DOMAIN,
     path: `/t/${liveSite.slug}`,
+    audience: "guest",
     expectBar: false,
   });
 }
@@ -397,6 +433,7 @@ if (previewSite?.preview_token) {
     name: `tenant vendég-oldal (ELŐNÉZET /site/<token>)`,
     host: PLATFORM_DOMAIN,
     path: `/site/${previewSite.preview_token}`,
+    audience: "guest",
     expectBar: false,
   });
 }
@@ -404,8 +441,64 @@ surfaces.push({
   name: "vendég lemondó lap (/foglalas/<token>/lemondom)",
   host: PLATFORM_DOMAIN,
   path: GUEST_CANCEL_PATH,
+  audience: "guest",
   expectBar: false,
 });
+
+// ── A KONZOL PROCESSZ (:4600) felületei ───────────────────────────────────────
+// Élesben az nginx a `/pay/`, `/configure/`, `/p/`, `/privacy`, `/site/`, `/mock/`
+// utakat ERRE a processzre viszi — a vevő fizetési útja tehát NEM a public
+// szerveren fut. Ez az őr eddig ezt a felet nem is látta.
+surfaces.push({
+  name: "konzol jogi /aszf (a vevő a pénztárból nyitja)",
+  host: PLATFORM_DOMAIN,
+  path: "/aszf",
+  port: CONSOLE_PORT,
+  audience: "own",
+  expectBar: true,
+});
+// ⭐ A VALÓDI fizetés-visszatérő lap: élesben EZ a Barion `RedirectUrl`-je.
+// A park saját, kifizetett rendeléséből dolgozunk — fixture-t NEM gyártunk
+// (a park KÖZÖS). Ha nincs ilyen sor, a mérés KIMONDOTTAN kimarad.
+const paidRef = await db
+  .selectFrom("payment")
+  .select("gateway_ref")
+  .where("gateway_ref", "is not", null)
+  .where("status", "=", "paid")
+  .executeTakeFirst();
+if (paidRef?.gateway_ref) {
+  surfaces.push({
+    name: "konzol FIZETÉS-VISSZATÉRÉS /pay/done (Barion RedirectUrl)",
+    host: PLATFORM_DOMAIN,
+    path: `/pay/done?paymentId=${encodeURIComponent(paidRef.gateway_ref)}`,
+    port: CONSOLE_PORT,
+    audience: "own",
+    expectBar: true,
+    // ⛔ A sáv NEM takarhatja a fizetés-lap kiútjait. Az ADR-0145 ④ ugyanezt a
+    // hibát a tenant-admin fül-sávján mérte ki — fizetés-lapon súlyosabb.
+    bottomFurniture: ".panel",
+  });
+}
+// A konzol OPERÁTOR-felülete és a rajta kiszolgált VENDÉG-lapok: egyik sem kaphat
+// sávot — két külön okból, és az őr megnevezi, melyikből.
+surfaces.push({
+  name: "konzol operátor-belépés /login (belső munkaeszköz)",
+  host: PLATFORM_DOMAIN,
+  path: "/login",
+  port: CONSOLE_PORT,
+  audience: "operator",
+  expectBar: false,
+});
+if (previewSite?.preview_token) {
+  surfaces.push({
+    name: "konzol vendég-oldal /site/<token> (ÖTÖDIK ajtó ugyanarra a fájlra)",
+    host: PLATFORM_DOMAIN,
+    path: `/site/${previewSite.preview_token}`,
+    port: CONSOLE_PORT,
+    audience: "guest",
+    expectBar: false,
+  });
+}
 
 // ⚠️ A Host fejlécet NEM lehet kézzel beállítani: a Chromium tiltott fejlécként
 // ERR_INVALID_ARGUMENT-tal elhasal rajta (mérve), a `fetch` pedig némán eldobja.
@@ -433,7 +526,7 @@ const open = async (s: Surface, vp: Viewport): Promise<Page> => {
     // RONTÁS ①: a sáv stíluslapja SOSEM érkezik meg → csupasz sáv.
     await page.route("**/cit-consent.css*", (r) => r.abort());
   }
-  await page.goto(`http://${s.host}:${PORT}${s.path}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`http://${s.host}:${s.port ?? PORT}${s.path}`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(400);
   return page;
 };
@@ -522,22 +615,35 @@ for (const s of surfaces.filter((x) => x.expectBar)) {
     // fül-sáv magassága elmozdul (új fül, hosszabb fordítás, harmadik sor), itt bukik.
     if (s.bottomFurniture) {
       const reach = await readFurnitureReach(page, s.bottomFurniture);
-      check(reach.found, `${tag}: a gazdalap alsó fül-sávja megvan (${s.bottomFurniture})`);
+      check(reach.found, `${tag}: a gazdalap bútorzata megvan (${s.bottomFurniture})`);
       if (reach.found) {
         check(
           reach.covered.length === 0,
-          `${tag}: a sáv EGYETLEN fület sem takar el (${reach.total} fül)`,
+          `${tag}: a SÁV egyetlen vezérlőt sem takar el (${reach.total} vezérlő)`,
           reach.covered.length ? `takarva: ${reach.covered.join(" · ")}` : "",
         );
+        // Nem ennek az őrnek a verdiktje, de nem is nyeljük el: ha MÁS takar egy
+        // vezérlőt, azt kiírjuk — a hallgatás itt „minden rendben"-nek olvasódna.
+        if (reach.other.length) {
+          console.log(`  · ${tag}: nem a sáv, de takar valami: ${reach.other.join(" · ")}`);
+        }
       }
     }
     await page.context().close();
   }
 }
 
-// ── Hatókör: a generált tenant-oldal MINDKÉT úton sáv NÉLKÜL ──────────────────
+// ── Hatókör: ami NEM a mi webshopunk lapja, az sáv NÉLKÜL ────────────────────
+// ⚠️ A felirat a CÍMZETTBŐL származik, nem egy beégetett szóból: a „vendég-oldal"
+// indoklás egy operátor-lapon MÁS KÉRDÉSRE válaszolna (a kettő nem ugyanazért
+// marad tiszta), és egy félrecímkézett piros elviszi a keresést rossz irányba.
+const WHY_NO_BAR: Record<"guest" | "operator", string> = {
+  guest: "a vendég lapja — a vendég nem nálunk fizet",
+  operator: "belső operátor-felület — nem webshop-lap",
+};
 for (const s of surfaces.filter((x) => !x.expectBar)) {
-  console.log(`\n▸ ${s.name} — a tervnek megfelelően NEM kaphat sávot`);
+  const who = s.audience === "operator" ? "operator" : "guest";
+  console.log(`\n▸ ${s.name} — NEM kaphat sávot (${WHY_NO_BAR[who]})`);
   const page = await open(s, DESKTOP);
   if (SELF_TEST) {
     // RONTÁS ②: beinjektálunk egy sávot — a hatókör-állításnak pirosnak kell lennie.
@@ -549,10 +655,11 @@ for (const s of surfaces.filter((x) => !x.expectBar)) {
   }
   const html = await page.content();
   const f = await readBar(page);
-  check(!f.present, "⭐ a vendég-oldalon NINCS süti-sáv (a vendég nem nálunk fizet)");
-  check(!/cit-consent\.js/.test(html), "a vendég-oldal a hozzájárulás-kezelőt sem kapja meg");
-  check(!/cit-consent\.css/.test(html), "a vendég-oldal a sáv stíluslapját sem kapja meg");
-  check(!/pixel\.barion\.com/.test(html), "a vendég-oldal NEM kap Barion Pixelt");
+  const tag = s.name;
+  check(!f.present, `⭐ ${tag}: NINCS süti-sáv (${WHY_NO_BAR[who]})`);
+  check(!/cit-consent\.js/.test(html), `${tag}: a hozzájárulás-kezelőt sem kapja meg`);
+  check(!/cit-consent\.css/.test(html), `${tag}: a sáv stíluslapját sem kapja meg`);
+  check(!/pixel\.barion\.com/.test(html), `${tag}: NEM kap Barion Pixelt`);
   await page.context().close();
 }
 
@@ -567,12 +674,17 @@ await browser.close();
 // „nem találtam sávot" nem lehet siker.
 console.log("\n── ⭐⭐ Kinek szól a lap: a sáv+Pixel hatóköre ──────────────────────");
 
-const raw = (path: string, method: "GET" | "POST", host = PLATFORM_DOMAIN): Promise<string> =>
+const raw = (
+  path: string,
+  method: "GET" | "POST",
+  host = PLATFORM_DOMAIN,
+  port = PORT,
+): Promise<string> =>
   new Promise((resolve) => {
     const req = httpReq(
       {
         host: "127.0.0.1",
-        port: PORT,
+        port,
         path,
         method,
         headers: { Host: host, "content-type": "application/x-www-form-urlencoded", "content-length": "0" },
@@ -593,8 +705,14 @@ interface ScopeCase {
   readonly path: string;
   readonly method: "GET" | "POST";
   readonly host?: string;
-  /** "own" = a mi webshopunk lapja (sáv+Pixel jár) · "guest" = a tenant vendégéé (tilos) */
-  readonly audience: "own" | "guest";
+  /** Melyik processz adja ki (alapértelmezés: a public szerver). */
+  readonly port?: number;
+  /**
+   * "own"      = a mi webshopunk lapja (sáv+Pixel jár)
+   * "guest"    = a tenant vendégéé (tilos)
+   * "operator" = belső munkaeszköz (szintén tilos, de MÁS okból)
+   */
+  readonly audience: "own" | "guest" | "operator";
 }
 
 const scopeCases: ScopeCase[] = [
@@ -663,9 +781,41 @@ if (mockReady?.token) {
   );
 }
 
+// ── A KONZOL PROCESSZ ESETEI ─────────────────────────────────────────────────
+// Élesben MÉRVE (2026-09-15, citoviso.com): a `/pay/…` és a `/configure/…` az
+// nginxen a konzolra megy, és ott SEM sáv, SEM Pixel nem volt — a vevő fizetési
+// útja tehát a csalásmegelőző jelzés nélkül futott, miközben a saját kódunk
+// kommentje szerint a Pixelnek a webshop MINDEN oldalán ott kell lennie.
+scopeCases.push(
+  { label: "KONZOL jogi /aszf (a pénztárból nyílik)", path: "/aszf", method: "GET", port: CONSOLE_PORT, audience: "own" },
+  { label: "KONZOL jogi /privacy (a kiküldött levelek linkje)", path: "/privacy", method: "GET", port: CONSOLE_PORT, audience: "own" },
+  { label: "KONZOL /pay/mock/<ref> (fizetés-lap)", path: "/pay/mock/mock_00000000-0000-0000-0000-000000000000", method: "GET", port: CONSOLE_PORT, audience: "own" },
+  { label: "KONZOL /admin/<token> (a tenant önkiszolgáló lapja)", path: `/admin/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "own" },
+  // A konzolon kiszolgált VENDÉG-lapok — ugyanaz az artefaktum, további ajtókon.
+  { label: "KONZOL /p/<token> (követett megkeresés-link)", path: `/p/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "guest" },
+  { label: "KONZOL /configure/<id> (konfigurátor a mockon)", path: "/configure/00000000-0000-0000-0000-000000000000", method: "GET", port: CONSOLE_PORT, audience: "guest" },
+  { label: "KONZOL /site/<token> (a szállás pillanatképe)", path: `/site/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "guest" },
+  // A BELSŐ felület — szintén tiszta, de más okból.
+  { label: "KONZOL operátor-belépés /login", path: "/login", method: "GET", port: CONSOLE_PORT, audience: "operator" },
+);
+if (paidRef?.gateway_ref) {
+  scopeCases.push({
+    label: "KONZOL /pay/done (a Barion RedirectUrl — VALÓDI, kifizetett rendelés)",
+    path: `/pay/done?paymentId=${encodeURIComponent(paidRef.gateway_ref)}`,
+    method: "GET",
+    port: CONSOLE_PORT,
+    audience: "own",
+  });
+} else {
+  console.log(
+    "  ⚠️  KIMARAD: nincs `paid` fizetés a parkban — a /pay/done VALÓDI lapja nem mérhető\n" +
+      "      (a 404-es ága fent akkor is mérve van; fixture-t nem gyártunk, a park KÖZÖS).",
+  );
+}
+
 for (const c of scopeCases) {
-  let body = await raw(c.path, c.method, c.host);
-  if (SELF_TEST && c.audience === "guest") {
+  let body = await raw(c.path, c.method, c.host, c.port);
+  if (SELF_TEST && c.audience !== "own") {
     // RONTÁS ③: a vendég-lap válaszába BEHAMISÍTJUK a sáv+Pixel sorát — ha az
     // állítás ettől nem megy pirosra, a mérés nem néz oda, ahová mondja.
     body += `<script src="/assets/runtime/cit-consent.js"></script><img src="https://pixel.barion.com/a.gif">`;
@@ -675,10 +825,11 @@ for (const c of scopeCases) {
   const hasPixel = /pixel\.barion\.com/.test(body);
   const tag = `${c.method} ${c.label}`;
   if (!check(body.length > 0, `${tag}: a lap egyáltalán válaszol`, "üres válasz — a mérés nem ér semmit")) continue;
-  if (c.audience === "guest") {
-    check(!hasLoader, `⭐ ${tag}: a VENDÉG lapja nem kap hozzájárulás-kezelőt`);
-    check(!hasCss, `⭐ ${tag}: a VENDÉG lapja a sáv stíluslapját sem kapja meg`);
-    check(!hasPixel, `⭐⭐ ${tag}: a VENDÉG lapja NEM kap Barion Pixelt`);
+  if (c.audience !== "own") {
+    const who = c.audience === "operator" ? "BELSŐ felület" : "VENDÉG lapja";
+    check(!hasLoader, `⭐ ${tag}: a ${who} nem kap hozzájárulás-kezelőt`);
+    check(!hasCss, `⭐ ${tag}: a ${who} a sáv stíluslapját sem kapja meg`);
+    check(!hasPixel, `⭐⭐ ${tag}: a ${who} NEM kap Barion Pixelt`);
   } else {
     check(hasLoader, `${tag}: a SAJÁT lapunk megkapja a sávot (pozitív kontroll)`);
     check(hasPixel, `${tag}: a SAJÁT lapunk megkapja a Pixelt (pozitív kontroll)`);
@@ -693,7 +844,54 @@ for (const c of scopeCases) {
   );
 }
 
+// ── ⭐⭐ EGY DOKUMENTUM = EGY VISELKEDÉS, AKÁRMELYIK PROCESSZ ADJA KI ──────────
+// MÉRVE élesben (2026-09-15): a `citoviso.com/adatvedelem` sávval+Pixellel jött a
+// public szerverről, a `citoviso.com/privacy` (ugyanaz a `privacyPage()`, csak a
+// konzolról) pedig TISZTÁN — és épp a `/privacy` az a cím, amit a MÁR KIKÜLDÖTT
+// hideg levelek tartalmaznak. Egy szabály két példányban két igazság; ez a sor
+// azt őrzi, hogy a jövőben se hasadjon szét.
+console.log("\n── ⭐⭐ Ugyanaz a jogi dokumentum mindkét processzen ────────────────");
+for (const doc of ["/adatvedelem", "/aszf", "/impresszum"]) {
+  const pub = await raw(doc, "GET", PLATFORM_DOMAIN, PORT);
+  // RONTÁS ④: a konzol válaszából KIVESSZÜK a sávot — pontosan az az állapot, amit
+  // élesben mértünk (/adatvedelem sávval, /privacy anélkül). Ha az egyezés-állítás
+  // ettől nem megy pirosra, akkor nem a két processzt hasonlítja össze.
+  const con = (await raw(doc, "GET", PLATFORM_DOMAIN, CONSOLE_PORT)).replace(
+    SELF_TEST ? /cit-consent\.js|pixel\.barion\.com/g : /(?!)/g,
+    "",
+  );
+  const pubBar = /cit-consent\.js/.test(pub) && /pixel\.barion\.com/.test(pub);
+  const conBar = /cit-consent\.js/.test(con) && /pixel\.barion\.com/.test(con);
+  check(pub.length > 0 && con.length > 0, `${doc}: mindkét processz kiszolgálja`);
+  check(
+    pubBar === conBar,
+    `⭐ ${doc}: UGYANÚGY viselkedik mindkét processzen`,
+    `public=${pubBar ? "sáv+Pixel" : "tiszta"} · konzol=${conBar ? "sáv+Pixel" : "tiszta"}`,
+  );
+}
+
+// ── ⛔ A SÁV SAJÁT ESZKÖZEI — a lapot kiszolgáló processzTŐL ───────────────────
+// A konzol MÉRTEN 303-at (login-redirect) adott a `/assets/runtime/*`-ra, tehát a
+// fizetés-lapra kitett sáv CSUPASZ lett volna és a Pixel el sem indult volna.
+// Élesben az nginx a `/assets/`-et a public szerverre viszi, tehát a hiba ott nem
+// látszott volna — de a lapot kiszolgáló processz szolgálja ki azt is, ami nélkül
+// a lap hazudik magáról. Egy proxy-sor nem lehet a jogi megfelelés egyetlen lába.
+console.log("\n── ⛔ A sáv eszközei a KONZOLRÓL is elérhetők ─────────────────────");
+for (const asset of ["/assets/runtime/cit-consent.css", "/assets/runtime/cit-consent.js"]) {
+  // RONTÁS ⑤: úgy teszünk, mintha a konzol login-lapra terelné az eszközt — ez volt
+  // a MÉRT kiindulási állapot (303), és emellett a sáv csupaszon jelent volna meg.
+  const body = SELF_TEST
+    ? "<html><head><title>Belépés</title></head><body>login</body></html>"
+    : await raw(asset, "GET", PLATFORM_DOMAIN, CONSOLE_PORT);
+  check(
+    body.length > 500 && !/<title>/i.test(body),
+    `⭐ ${asset}: a konzol MAGA szolgálja ki (nem login-redirect)`,
+    `${body.length} bájt`,
+  );
+}
+
 server.close();
+consoleServer.close();
 await db.destroy();
 
 console.log("");
@@ -707,6 +905,13 @@ if (SELF_TEST) {
     // RONTÁS ③ — a címzett-hatókör mindkét vendég-lapján, GET-en ÉS POST-on.
     /GET vendég lemondó — megerősítés \(GET\): a VENDÉG lapja NEM kap Barion Pixelt/,
     /POST vendég lemondó — eredmény \(POST\): a VENDÉG lapja NEM kap Barion Pixelt/,
+    // ⑤ A MÁSIK PROCESSZ — a konzol vendég- és operátor-lapjai, a két processz
+    // egyezése, és a sáv saját eszközeinek kiszolgálása (ADR-0172).
+    /KONZOL \/p\/<token>.*NEM kap Barion Pixelt/,
+    /KONZOL \/configure\/<id>.*NEM kap Barion Pixelt/,
+    /konzol operátor-belépés \/login.*NINCS süti-sáv/,
+    /\/adatvedelem: UGYANÚGY viselkedik mindkét processzen/,
+    /cit-consent\.css: a konzol MAGA szolgálja ki/,
   ];
   const missed = wantedReds.filter((re) => !reds.some((r) => re.test(r)));
   if (missed.length) {

@@ -51,6 +51,14 @@ feltétele. Vele a „0 süti" állapot megszűnik, tehát a sáv innentől köt
   `/site/<preview_token>`), a mock-előnézet (`/m/<token>`) és a vendég lemondó lapjai
   (`/foglalas/<token>/lemondom`, GET és POST). A tulajnak (a mi ügyfelünknek) szóló lapok —
   köztük a levélből nyíló egy-kattintásos döntés-lapok — a határ MÁSIK oldalán vannak.
+  ⚠️ *Pontosítva 2026-09-15 (ADR-0172):* a hatókör a PROCESSZ-HATÁRON is átér. A `citoviso.com`
+  élesben KÉT processz között van felosztva (nginx), és a vevő fizetési útja (`/pay/…`, köztük a
+  Barion `RedirectUrl`-je, valamint a `/configure/…`) a KONZOLON fut — ott MÉRTEN sem sáv, sem
+  Pixel nem volt. A snippet és a címzett-szabály ezért közös modulban él (`src/server/consent.ts`),
+  és a konzol saját vevő-lapjai is megkapják. A konzol operátor-felülete NEM kapja meg: az nem
+  webshop-lap. ⛔ És a lapot kiszolgáló processz szolgálja ki a sáv SAJÁT eszközeit is
+  (`/assets/runtime/*`) — az nginx elfedte volna a hiányt, de egy proxy-sor nem lehet a jogi
+  megfelelés egyetlen lába.
 - A döntés után a sáv eltűnik, és többé nem kérdezünk.
 
 ## Őr
