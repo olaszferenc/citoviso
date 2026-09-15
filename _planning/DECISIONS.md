@@ -9281,8 +9281,15 @@ megnőtt tartalom mellett 390 px-en **pontosan a Havi/Éves váltóra** ült —
 a döntés a döntés helyére tett. Most a görgő ALATT, saját sávban áll: az átfedés nem
 „valószínűtlen”, hanem geometriailag lehetetlen.
 
-**Hatókör-korlát.** A modul-választó lépés csomag-kártyái továbbra is `/hó` árat írnak éves
-előválasztás mellett — az külön lelet, nem ez a döntés. Az átjáró és a bukás-lap terve (A/B) a
+**③b UTÓLAG BEHOZVA (2026-09-15, tulajdonosi utasítás).** A ③ hatálya alá tartoznak a
+**modul-választó lépés csomag-kártyái** is: ugyanazon a képernyőn állnak, mint az ütem-váltó.
+Mérve a szállított panelen: éves előválasztás mellett a kártyák „9 500 Ft/hó”-t írtak, miközben az
+összegző két blokkal lejjebb „95 000 Ft / év”-et — **tízszeres eltérés egy pillantásnyira**, és a
+vevő aznap 71 250 Ft-ot fizetett. ⛔ A kártya ára ráadásul **build-időben** dőlt el, tehát a
+közvetlenül alatta álló váltó sosem mozdította. Javítva: `presetTotal()` a választott ütemben, az
+`updateSummary()` egyetlen újraszámolásából; egy soron EGY egység. A legerősebb állítás az őrben:
+**az aktív kártya száma AZONOS az összegző áthúzott listaárával** — ugyanaz a képernyő, ugyanaz az
+alap, nem mondhatnak mást. (A régi hiba szó szerint visszarontva PIROS.) Az átjáró és a bukás-lap terve (A/B) a
 tulajnál van, ebben a körben nem épült.
 
 **Visszafordíthatóság:** 🔄 felület- és mérőeszköz-szintű, adatmigráció nincs.

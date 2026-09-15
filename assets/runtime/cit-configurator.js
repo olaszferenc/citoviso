@@ -687,6 +687,23 @@
     });
     return t;
   }
+  /**
+   * The package card's LIST price in the CURRENTLY SELECTED cycle (ADR-0164 ③).
+   *
+   * ⛔ Measured 2026-09-15 on the shipped panel: the annual cycle is preselected
+   * (`period` starts as "annual"), yet the cards read "9 500 Ft/hó" while the
+   * summary two blocks below said "95 000 Ft / év" — a TEN-fold gap on one
+   * screen, and the buyer was in fact charged 71 250 Ft that day. Worse, the
+   * card price was computed ONCE at build time, so the cycle switch — which sits
+   * in the very same footer as the cards — never moved it at all.
+   *
+   * One row, ONE unit: the annual card shows the annual figure. Never a monthly
+   * number under an annual label, and never two divisors on one line.
+   */
+  function presetTotal(p) {
+    var m = presetMonthly(p);
+    return period === "annual" ? m * (12 - PRICING.annualFreeMonths) : m;
+  }
 
   // See-the-change feedback: after ANY toggle-on (present OR sample) the page
   // scrolls to the affected section and flashes an accent outline on it — the
@@ -1761,9 +1778,10 @@
         '<span class="cit-cfg-chev" aria-hidden="true">' +
         I.chev +
         "</span></button></span>" +
-        '<span class="cit-cfg-preset__price">' +
-        fmt(presetMonthly(p)) +
-        "<small>" + tr("/hó") + "</small></span>" +
+        // Filled by syncPresetPrices() — NOT baked in here. Rendered once at
+        // build time it could never follow the cycle switch standing right below
+        // it (ADR-0164 ③).
+        '<span class="cit-cfg-preset__price"></span>' +
         '<span class="cit-cfg-preset__list" hidden>' +
         presetListHtml(p) +
         "</span></div>"
@@ -2243,6 +2261,28 @@
    * (annualTotal/monthlyTotal + offerPrice), not from a second calculation: the
    * box must not be able to disagree with the number above it.
    */
+  /**
+   * The package cards' prices, in the currently selected cycle (ADR-0164 ③).
+   *
+   * Driven from the SAME recompute as everything else, so a cycle switch or a
+   * module toggle can never leave a card advertising the other cycle's figure.
+   * The `<small>` unit is rebuilt with the number — a stale suffix under a fresh
+   * amount is the same lie in the other direction.
+   */
+  function syncPresetPrices() {
+    panel.querySelectorAll(".cit-cfg-preset").forEach(function (el) {
+      var id = el.getAttribute("data-preset");
+      var p = null;
+      PRESETS.forEach(function (x) { if (x.id === id) p = x; });
+      var slot = el.querySelector(".cit-cfg-preset__price");
+      if (!p || !slot) return;
+      slot.textContent = fmt(presetTotal(p));
+      var unit = document.createElement("small");
+      unit.textContent = period === "annual" ? tr("/év") : tr("/hó");
+      slot.appendChild(unit);
+    });
+  }
+
   function syncItemBlock() {
     var sub = panel.querySelector(".cit-cfg-item-sub");
     if (!sub) return;
@@ -2412,6 +2452,10 @@
     // …and so does the item box: contract ⑦ — switching the cycle must not leave
     // a single number on screen that belongs to the other one.
     syncItemBlock();
+    // …and the package cards: they sit in the SAME footer as the cycle switch,
+    // so a card still showing the other cycle is a contradiction the buyer can
+    // see in one glance (ADR-0164 ③).
+    syncPresetPrices();
     syncPeriodButtons();
     // The card's height moves with the offer/domain lines; on desktop it lives
     // inside the pinned action block, so the scroll affordance has to follow.

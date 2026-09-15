@@ -214,6 +214,30 @@ Az átjáró/bukás-lap döntése külön jön — ahhoz nem nyúltam.
   CSS-ben is ott volt. Egy megformázott, de ki nem tett osztály pont a keresett elcsúszás.
   A javítás után a valódi próba PIROS, visszaállítva ZÖLD.
 
-**Marad nyitva:** a modul-választó csomag-kártyái továbbra is `/hó` árat írnak éves előválasztás
-mellett (külön lelet) · az átjáró/bukás-lap terve döntésre vár · 390 px-en a számlázási űrlap
+### 2026-09-15 — a modul-kártyák `/hó` felirata is javítva (ADR-0164 ③b, tulaj-utasítás)
+
+⛔ **Mérve a friss `main`-en, mielőtt hozzányúltam** (a premissza-ellenőrzés kifizetődött: az árak
+közben változtak, tehát a tegnapi számaimat nem idézhettem volna): éves előválasztás mellett a
+kártyák **„9 500 Ft/hó”**-t írtak, az összegző ugyanazon a képernyőn **„95 000 Ft / év”**-et —
+**tízszeres eltérés**, miközben a vevő aznap 71 250 Ft-ot fizetett.
+
+⛔ **A mélyebb hiba:** a kártya ára **build-időben** dőlt el (`fmt(presetMonthly(p))` a HTML-be
+sütve), tehát a **közvetlenül alatta álló** ütem-váltó sosem mozdította. Nem „rossz felirat” volt,
+hanem egy szám, ami nem is tudott frissülni.
+
+**Javítás:** `presetTotal()` a választott ütemben + `syncPresetPrices()` az `updateSummary()`
+egyetlen újraszámolásából; a `<small>` egység a számmal EGYÜTT épül újra (egy friss szám alatt
+maradt régi utótag ugyanaz a hazugság, csak fordítva).
+
+⭐ **A legerősebb állítás az őrben:** az **aktív kártya száma AZONOS az összegző áthúzott
+listaárával** (95 000 vs 95 000 éves, 9 500 vs 9 500 havi). Ugyanaz a képernyő, ugyanaz az alap —
+nem mondhatnak mást. Plusz MÉRT túlcsordulás-ellenőrzés: az éves szám hosszabb, és egy 390 px-es
+kártyán elcsúszó ár új hiba volna, nem javítás (mérve: −1 px, azaz befér).
+
+Az őr most **5 visszarontással** bizonyítja, hogy pirosra tud menni (a kettő új: a kártya mindig
+havi · a kártya rossz egységet visel). ⚠️ A záró sora korábban „mind a három”-at mondott, miközben
+öt van — egy összefoglaló, ami a saját számát rontja el, pont az a fajta apró hazugság, amit ez a
+repó büntet: most a listából számol.
+
+**Marad nyitva:** · az átjáró/bukás-lap terve döntésre vár · 390 px-en a számlázási űrlap
 görgő-ablaka a tétel-dobozzal 173→148 px-re szűkült (a felső blokk 355 px-et visz).

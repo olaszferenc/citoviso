@@ -95,7 +95,7 @@ async function build(opts: { name?: string; offer: boolean; regress?: string }):
 }
 
 /**
- * ⛔ THREE regressions, not one. Deleting the box only ever exercised rule ①:
+ * ⛔ SEVERAL regressions, not one. Deleting the box only ever exercised rule ①:
  * with the box gone the run skips everything else, so a self-test that stopped
  * there would advertise "this gate can go red" while rules ②–⑦ had never been
  * fired at all. Each case below targets a DIFFERENT rule group.
@@ -115,6 +115,18 @@ const REGRESSIONS: Record<string, { from: RegExp; to: string; hits: string }> = 
     to: 'panel.querySelectorAll(".cit-cfg-period3 .cit-cfg-popt").forEach(function (x) {\n      var on = x.getAttribute',
     hits: "⑥",
   },
+  // ⑧ the SHIPPED bug, verbatim: the card price baked in at build time, always
+  // monthly, never following the cycle switch standing right below it.
+  "kartya-mindig-havi": {
+    from: /slot\.textContent = fmt\(presetTotal\(p\)\);/,
+    to: "slot.textContent = fmt(presetMonthly(p));",
+    hits: "⑧",
+  },
+  "kartya-rossz-egyseg": {
+    from: /unit\.textContent = period === "annual" \? tr\("\/év"\) : tr\("\/hó"\);/,
+    to: 'unit.textContent = tr("/hó");',
+    hits: "⑧",
+  },
   // ③④⑦ the box stops following the cycle → stale figures from the other cycle
   "nem-koveti-az-utemet": {
     from: /function syncItemBlock\(\) \{\n    var sub = panel\.querySelector\(".cit-cfg-item-sub"\);\n    if \(!sub\) return;/,
@@ -124,6 +136,44 @@ const REGRESSIONS: Record<string, { from: RegExp; to: string; hits: string }> = 
 };
 
 /** Walk the buyer's real path: launch → modules → §A rights → billing step. */
+/**
+ * ⑧ The MODULE STEP's package cards (ADR-0164 ③ again, one step earlier).
+ *
+ * ⛔ Measured 2026-09-15: the annual cycle is preselected, yet every card read
+ * "9 500 Ft/hó" while the summary in the SAME footer said "95 000 Ft / év" — a
+ * ten-fold gap one glance apart, on the screen where the buyer picks a package.
+ * The card price was also computed once at build time, so the cycle switch
+ * standing right below the cards never moved it at all.
+ */
+const STEP1 = `(function () {
+  var AMT = /\\d{1,3}(?:[\\u00a0 ]\\d{3})*/;
+  var cards = Array.prototype.map.call(document.querySelectorAll(".cit-cfg-preset"), function (el) {
+    var pr = el.querySelector(".cit-cfg-preset__price");
+    var small = pr ? pr.querySelector("small") : null;
+    var r = pr ? pr.getBoundingClientRect() : null;
+    var txt = pr ? (pr.innerText || "").replace(/\\s+/g, " ").trim() : "";
+    var num = txt.match(AMT);
+    return {
+      id: el.getAttribute("data-preset"),
+      active: el.classList.contains("cit-cfg-preset--on"),
+      text: txt,
+      unit: small ? (small.textContent || "").trim() : null,
+      amount: num ? Number(num[0].replace(/[^\\d]/g, "")) : null,
+      // ⛔ Overflow is MEASURED: the annual figure is longer than the monthly one,
+      // and a price that wraps or clips on a 390px card is a new defect, not a fix.
+      overflow: pr ? pr.scrollWidth - Math.ceil(r.width) : null
+    };
+  });
+  var sum = document.querySelector(".cit-cfg-sum");
+  var struck = sum ? sum.querySelector("s") : null;
+  var sn = struck ? (struck.textContent || "").match(AMT) : null;
+  return {
+    cards: cards,
+    // the summary's STRUCK list price — the same basis the cards show
+    listPrice: sn ? Number(sn[0].replace(/[^\\d]/g, "")) : null
+  };
+})()`;
+
 async function openPayStep(page: Page, file: string): Promise<void> {
   await page.goto(pathToFileURL(file).href);
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 20000 });
@@ -211,6 +261,13 @@ async function runAll(regress?: string): Promise<void> {
       const page = await browser.newPage({ viewport: { width: size.width, height: size.height } });
       const jsErrors: string[] = [];
       page.on("pageerror", (e) => jsErrors.push(e.message));
+      // ⑧ the module step FIRST — the cards live there, one screen before the pay step
+      await page.goto(pathToFileURL(withOffer).href);
+      await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 20000 });
+      await page.locator(".cit-cfg-launch").click();
+      await page.waitForTimeout(450);
+      await checkCards(page, size.tag);
+
       await openPayStep(page, withOffer);
       await page.evaluate("window.scrollTo(0,0)");
 
@@ -297,6 +354,48 @@ async function runAll(regress?: string): Promise<void> {
 }
 
 
+interface Card { id: string; active: boolean; text: string; unit: string | null; amount: number | null; overflow: number | null }
+interface Step1 { cards: Card[]; listPrice: number | null }
+
+/** ⑧ The package cards must carry the SELECTED cycle — and follow the switch. */
+async function checkCards(page: Page, tag: string): Promise<void> {
+  const T = `[${tag}]`;
+  const annual = (await page.evaluate(STEP1)) as Step1;
+  check(annual.cards.length > 0, `${T} ⑧ vannak csomag-kártyák (${annual.cards.length})`);
+  check(
+    annual.cards.every((c) => c.unit === "/év"),
+    `${T} ⑧ éves ütemben MINDEN kártya „/év” egységet visel (mérve: ${annual.cards.map((c) => c.unit).join(", ")})`,
+  );
+  check(
+    annual.cards.every((c) => (c.overflow ?? 1) <= 0),
+    `${T} ⑧ az éves szám BEFÉR a kártyába (túlcsordulás: ${annual.cards.map((c) => c.overflow).join(", ")})`,
+  );
+  // ⭐ The strongest assertion: the ACTIVE card's figure IS the summary's struck
+  // list price. Same screen, same basis — they cannot be allowed to disagree.
+  const act = annual.cards.find((c) => c.active) ?? annual.cards[0]!;
+  check(
+    act.amount !== null && act.amount === annual.listPrice,
+    `${T} ⑧ az aktív kártya ára = az összegző áthúzott listaára (${act.amount} vs ${annual.listPrice})`,
+  );
+
+  await page.locator('[data-period="monthly"]').first().click();
+  await page.waitForTimeout(350);
+  const monthly = (await page.evaluate(STEP1)) as Step1;
+  check(
+    monthly.cards.every((c) => c.unit === "/hó"),
+    `${T} ⑧ havi ütemben MINDEN kártya „/hó”-ra vált (mérve: ${monthly.cards.map((c) => c.unit).join(", ")})`,
+  );
+  const moved = monthly.cards.every((c, i) => c.amount !== annual.cards[i]!.amount);
+  check(moved, `${T} ⑧ …és a SZÁM is mozdul (${annual.cards.map((c) => c.amount).join("/")} → ${monthly.cards.map((c) => c.amount).join("/")})`);
+  const actM = monthly.cards.find((c) => c.active) ?? monthly.cards[0]!;
+  check(
+    actM.amount !== null && actM.amount === monthly.listPrice,
+    `${T} ⑧ havi ütemben is egyezik az összegzővel (${actM.amount} vs ${monthly.listPrice})`,
+  );
+  await page.locator('[data-period="annual"]').first().click();
+  await page.waitForTimeout(350);
+}
+
 async function main(): Promise<void> {
   if (!SELF_TEST) {
     await runAll();
@@ -325,7 +424,7 @@ async function main(): Promise<void> {
     }
   }
   if (!allRed) process.exit(1);
-  console.log("\n✅ ÖNTESZT: mind a három visszarontás pirosra viszi az őrt — minden szabály-csoport mérve.");
+  console.log(`\n✅ ÖNTESZT: mind a(z) ${Object.keys(REGRESSIONS).length} visszarontás pirosra viszi az őrt — minden szabály-csoport mérve.`);
 }
 
 await main();

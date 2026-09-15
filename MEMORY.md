@@ -244,8 +244,13 @@ gyökerében; két működő mock + 16 kép az `assets/design-refs/_drafts/` ala
   stíluslapokat** (mérve: a hook törlése a futtatóból zölden hagyta az őrt, mert a CSS-ben is ott
   volt). ⛔ A tétel-doboz miatt megnőtt tartalmon a lebegő görgetés-pirula 390 px-en **a Havi/Éves
   váltóra ült** — a görgő zsugorításával oldva, így az átfedés geometriailag lehetetlen.
-- **NYITOTT:** az átjáró/bukás-lap (A vagy B) döntése · a modul-kártyák `/hó` felirata éves
-  előválasztás mellett · a tulaj döntése 4 pontban (fizetőoldal A/B/C · átjáró A/B · lehet-e a tiltott gomb
+- ⭐ **2026-09-15 — a modul-kártyák `/hó` felirata is javítva (ADR-0164 ③b).** Mérve a friss
+  `main`-en: éves előválasztás mellett a kártya **9 500 Ft/hó**, az összegző ugyanazon a képernyőn
+  **95 000 Ft/év** — tízszeres eltérés. ⛔ A mélyebb ok: a kártya ára **build-időben** dőlt el, így
+  a közvetlenül alatta álló váltó sosem mozdította. Most az `updateSummary()` egyetlen
+  újraszámolásából frissül, egy soron egy egységgel. Az őr legerősebb állítása: **az aktív kártya
+  száma AZONOS az összegző áthúzott listaárával**; 5 visszarontás bizonyítja a pirosra menést.
+- **NYITOTT:** az átjáró/bukás-lap (A vagy B) döntése · a tulaj döntése 4 pontban (fizetőoldal A/B/C · átjáró A/B · lehet-e a tiltott gomb
   teljesen szürke · C-nél kiírható-e a leendő webcím a fizetés ELŐTT) · asztali A-n a görgő 13 px-t
   csordul túl · a `contract-drift-check` csak feliratot köt, szerkezetet nem (külön szál).
 
