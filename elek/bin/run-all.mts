@@ -2,7 +2,16 @@
 // nothing and walks every FK scenario in the only order that can work.
 //
 //   npx tsx elek/bin/run-all.mts            # teljes mátrix
-//   npx tsx elek/bin/run-all.mts FK-005a    # csak néhány kör (a park előáll hozzá)
+//   npx tsx elek/bin/run-all.mts FK-005a    # szűkített futás
+//
+// ⚠️ A SZŰKÍTÉS NEM ÁLLÍTJA ELŐ A PARKOT — ez a sor korábban azt ígérte, hogy „a park
+// előáll hozzá", és NEM ez történt: a `wanted()` szűrő a fel nem sorolt köröket
+// kihagyja, így a láncot TÁPLÁLÓ körök (FK-004 → követett link, FK-005a → tenant) sem
+// futnak le. Mérve 2026-09-15-én kétszer: `FK-006a FK-006b` és `FK-001` is a lánc
+// közepén állt meg (`⛔ nincs ELEK-TESZT tenant`), MIUTÁN a park-írások már megtörténtek.
+// A futás ezért most ELŐSZÖR előfeltétel-mérleget készít (lásd `src/elek/preconditions.ts`),
+// kimondja, mely körök maradnak ki és mit állítanának elő, és hiány esetén MEGNEVEZETT
+// előfeltétel-hibával áll meg — az első park-írás ELŐTT.
 //
 // WHY THIS EXISTS (measured 2026-09-10). All twelve scenarios existed and the
 // product worked, yet running them cold gave 3 green and 9 red/blocked. Nothing
@@ -97,6 +106,68 @@ function runScript(args: string[], label: string): void {
     process.exit(1);
   }
 }
+
+// ───────────────────── előfeltétel-mérleg (írás ELŐTT) ─────────────────────
+// ⛔ A HELYE NEM MINDEGY: minden park-írás ELŐTT. Egy eleve kudarcra ítélt futás ne
+// seedeljen leadet és ne állítson vissza követett linket — a közös parkon dolgozik
+// ~11 másik szál is, és a félbehagyott futás nyoma az ő mérésükben jelenik meg.
+
+step("Előfeltétel-mérleg");
+const { planRun, fixCommand, FACTS, CHAIN } = await import("../../src/elek/preconditions.js");
+
+const facts = {
+  trackedLink: !!(await db
+    .selectFrom("prospect")
+    .select("id")
+    .where("contact_email", "=", "elek@citoviso.com")
+    .executeTakeFirst()),
+  elekTenant: !!(await db
+    .selectFrom("tenant")
+    .select("id")
+    .where("display_name", "like", "ELEK%")
+    .executeTakeFirst()),
+};
+const plan = planRun(only, facts);
+
+console.log(`  kért körök: ${plan.rounds.length ? plan.rounds.join(", ") : "(teljes mátrix)"}`);
+for (const [key, spec] of Object.entries(FACTS))
+  console.log(`  ${facts[key as keyof typeof facts] ? "✓" : "✗"} ${spec.label} — ${facts[key as keyof typeof facts] ? "MEGVAN a parkban" : "NINCS a parkban"}`);
+if (plan.skipped.length) {
+  // ⛔ „Mondja ki ELŐRE, mely körök hiányoznak és mit állítanak elő" — a kihagyás
+  // eddig néma volt, és csak a tünetéből lehetett visszakövetkeztetni rá.
+  console.log(`  kihagyott körök (${plan.skipped.length}): ` + plan.skipped.map((s) => s.fk).join(", "));
+  for (const s of plan.skipped) if (s.produces) console.log(`     · ${s.fk} előállítaná: ${s.produces}`);
+}
+if (plan.unknown.length) {
+  // Elgépelt FK-név némán NULLA kört futtatna, és a futás zölden zárna — ez nem
+  // „üres eredmény", hanem mérés nélküli állapot.
+  console.error(`\n⛔ ISMERETLEN KÖR: ${plan.unknown.join(", ")}`);
+  console.error(`   a lánc körei: ${CHAIN.map((r) => r.fk).join(", ")}`);
+  await pool.end();
+  process.exit(1);
+}
+if (plan.problems.length) {
+  console.error(`\n⛔ ELŐFELTÉTEL-HIBA — a futás el sem indul (egyetlen park-írás sem történt):`);
+  for (const p of plan.problems) {
+    const spec = FACTS[p.fact];
+    console.error(
+      `   · hiányzik: ${spec.label}` +
+        (p.reason === "outOfOrder" ? " — a termelő kör a láncban HÁTRÉBB van, mint a fogyasztója" : ""),
+    );
+    console.error(`     ezt a(z) ${spec.producer} állítja elő: ${spec.produces}`);
+    console.error(`     e nélkül nem mérhető: ${p.blockedFks.join(", ")}`);
+  }
+  console.error(`\n   futtasd inkább:  ${fixCommand(only, plan.problems)}`);
+  console.error(`   ⚠️ a hiányzó körök VALÓDI munkát végeznek (kiküldés, vásárlás, LLM-generálás) — ez költség.`);
+  await pool.end();
+  process.exit(1);
+}
+if (!plan.rounds.length) {
+  console.error("\n⛔ NULLA kör maradt — nincs mit mérni (ez nem zöld futás).");
+  await pool.end();
+  process.exit(1);
+}
+console.log("  ✅ minden kért kör előfeltétele megvan");
 
 // ─────────────────────────────── park ───────────────────────────────
 

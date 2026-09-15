@@ -162,6 +162,14 @@ if [ -f scripts/elek-noise-verdict-check.mts ] && \
   echo "[pre-commit] elek-noise-verdict (a néma hiba pirosra visz)…"
   npx tsx scripts/elek-noise-verdict-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A szűkített Elek-futás ELŐRE mondja ki a hiányzó előfeltételt (mérve 2026-09-15-én
+# KÉTSZER: a lánc közepén állt meg, miután a park-írások már megtörténtek). Tiszta
+# függvényt mér, DB nélkül, ~4 mp — nincs diff-szűkítés, mert a lánc-tábla elavulását
+# egy elek/ vagy src/elek/ érintetlen commit is okozhatja (új forgatókönyv-fájl).
+if [ -f scripts/elek-precondition-check.mts ]; then
+  echo "[pre-commit] elek-precondition (a szűkített futás előre szól)…"
+  npx tsx scripts/elek-precondition-check.mts >/dev/null
+fi
 # ADR-0136: a HALOTT fotó ki se kerüljön a generált lapra. A tárolt portál-URL elrohad
 # (mérve: 73-ból 59 halott, 11 lead), és eddig a NYITÓKÉP is lehetett halott URL. A
 # kiküldés-kapu (ADR-0134) az ajtóban fog; ez a réteg azt intézi, hogy ilyen lap elő se
