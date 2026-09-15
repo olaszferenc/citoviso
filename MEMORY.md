@@ -615,8 +615,25 @@ Session-jegyzet: `_planning/memory/2026-09-14_frozen_guest_page_promise.md`.
   kapott volna idézve, amit a vendége soha nem lát. **Az idézet is FOGYASZTÓ.** Plusz egy
   MÁSIK forgatókönyv (FK-006b) a törzs-töredéket idézte, amire a grepem nem ment rá.
   Az `adminViews.ts` §2b-kapuját a TULAJ nyitotta (ADR-0068: magamnak nem adok kivételt).
-- **NYITOTT:** a `public.ts` 4 további VENDÉG-stringje (840/852/869/2728) lefedetlen az
-  i18n-katalógusban — külön kör.
+- ✅ **UTÓKÖR (2026-09-15): a 4 vendég-string LEZÁRVA, és a SZERKEZETI ok is.** Nem 4 volt,
+  hanem **46 burkolt literál 7 fájlban**, ami soha nem jutott nyelvi csomagba, mert a
+  FÁJLJUK nem volt az `I18N_SOURCES` listán. Az ok: **EGY lista szolgált KÉT őrt, amelyek
+  KÜLÖNBÖZŐ kérdést tesznek fel** — a lint ítélet-igényű („van-e burkolatlan vevő-szöveg
+  itt?" → kurált lista marad), az extraktor viszont nem az („benne van-e minden BURKOLT
+  string a katalógusban?" → aki `T()`-be tette, kimondta, hogy fordítandó). Az
+  `extract-i18n.mts` mostantól a **TELJES `src/`-t** olvassa, lista nélkül; a katalógus
+  `--check` kapuja így szerkezetileg zárja az osztályt. **Piros próbával igazolva**
+  (sosem listázott fájlba tett burkolt string → exit 1, az exit-kódot külön mérve).
+  ⛔ Egy negyedik vak alak is előkerült: `T(consoleLang(), "…")` — a nyelv-argumentum
+  HÍVÁS, nem azonosító; a lint BURKOLATLANNAK jelentette a rendesen burkolt stringet, az
+  extractor meg kihagyta. Mindkét regex javítva. Katalógus 2663 → **2703** (+40, −0).
+  ⚠️ A katalógus-tétel NEM elég: a csomagot a boot-idejű `ensureAllLanguagePacks()` tölti
+  (mérve: a tegnapi vendég-lap mind a 6 élő csomagban ott van).
+- **NYITOTT (külön kör, tulajdonosi döntés):** a `public.ts` **27 BURKOLATLAN** szövegdarabja
+  — ebből **11 VENDÉG-oldali**, 4 lead, 8 tulaj, 4 marketing (üzleti döntés), 2 határeset,
+  2 belső log. **Tételes átadó-lista (fájl:sor + szöveg + hol) a session-jegyzet végén** —
+  a következő kör ne mérje újra. ⛔ Egy tétel (`Nincs ilyen oldal.`) ÉKEZET NÉLKÜLI, ezért
+  a lint HU-heurisztikája nem is látja.
 
 ## Előző szál (2026-09-14) — natív confirm() a lemondáson és a naptár-színek
 

@@ -152,3 +152,141 @@ tiltások értelmesek.
    a lint hatókörét a `public.ts`-re vinni és végigvinni a következményeit.
 2. Az FK-006a újrafuttatása a parkban nem történt meg (a `elek-timetravel-fk006.mts`
    tiltott ebben a szálban — a KÖZÖS parkot tolná).
+
+---
+
+# UTÓKÖR (2026-09-15) — a `public.ts` 4 vendég-stringje, és a szerkezeti ok bezárása
+
+**Tulajdonosi döntés:** a 4 string + a szerkezeti zárás MOST megy; a lenti 27 burkolatlan
+szöveg KÜLÖN kör (a mai kör már 40+ commit). A lista azért van itt tételesen, hogy a
+következő kör **ne mérje újra**.
+
+## Amit a mérés talált (nem a 4, hanem 46)
+
+A bejelentett 4 string csak a tünet volt. Mérve: **46 burkolt (`T()`-be tett) literál 7
+fájlban SOHA nem jutott nyelvi csomagba**, mert a FÁJLJUK nem volt az `I18N_SOURCES`
+listán — köztük a felfüggesztett honlap teljes vendég-lapja, a **foglalási érdeklődés
+hibaüzenetei** és egy **vevőnek szóló forgalmi levél**.
+
+**A szerkezeti ok: EGY lista szolgált KÉT őrt, amelyek KÜLÖNBÖZŐ kérdést tesznek fel.**
+
+| őr | kérdés | helyes hatókör |
+|---|---|---|
+| lint | „van-e BURKOLATLAN vevő-szöveg ebben a fájlban?” | **kurált lista** — ítélet-igényű |
+| extractor | „benne van-e MINDEN BURKOLT string a katalógusban?” | **az egész `src/`** — nincs mérlegelnivaló |
+
+Aki `T()`-be tette, **kimondta**, hogy fordítandó — tehát a betakarításnak nincs dolga
+fájllistával. Az `extract-i18n.mts` mostantól a teljes `src/`-t olvassa; a lint listája
+marad kurált, mert a `public.ts` a SAJÁT magyar marketing-landingünk szövegeit is
+tartalmazza, aminek a fordítása külön, meg nem hozott üzleti döntés — a lint ide-vétele
+véletlenül döntené el ([[feedback_widening_a_shared_list_needs_per_consumer_decision]]).
+
+⭐ **A kapu innentől szerkezeti:** a katalógus `--check` frissesség-őre pirosra vált, ha
+BÁRHOL a `src/`-ben új burkolt string születik. **Piros próbával igazolva:** egy sosem
+listázott fájlba (`src/scraper/sources/portals/politeness.ts`) tett burkolt string
+`exit 1`-et adott, visszaállítás után `exit 0` — az exit-kódot külön mértem, nem a
+kimenetből következtettem.
+
+⛔ **Egy harmadik alak is vak volt:** `T(consoleLang(), "…")` — a nyelv-argumentum HÍVÁS,
+nem azonosító. A közös regex csak azonosítót fogadott el, ezért a lint egy rendesen
+BURKOLT stringet BURKOLATLANKÉNT jelentett, az extractor meg kihagyta. Mindkét regex
+javítva; ma 1 ilyen eset volt, a lényeg, hogy az alak **ábrázolhatatlan** volt.
+
+**Eredmény:** katalógus 2663 → **2703** (+40 egyedi, **−0 eltűnt** — a diffet megmértem,
+mert a hatókör-csere elvehetett volna korábban gyűjtött stringeket). A 46-ból 6 két
+fájlban is szerepelt, ezért lett a nettó 40.
+
+⚠️ **A katalógus-tétel NEM elég ahhoz, hogy a vendég lefordítva kapja** — a nyelvi
+csomagot a boot-időben futó `ensureAllLanguagePacks()` tölti fel. Mérve: a tegnap
+landolt vendég-lap szövegei mind a 6 élő csomagban (de/en/hr/it/pl/sk) ott vannak, a
+mai 4 még egyikben sem — a land utáni szerver-újraindítás hozza be őket.
+
+## ⛔ ÁTADÓ-LISTA: a `public.ts` 27 BURKOLATLAN szövegdarabja (külön kör)
+
+A sorszám a `public.ts` állapota **az alábbi commitnál**; az igazi horgony a SZÖVEG
+(a sor elcsúszhat, mert több szál nyúl a fájlhoz).
+
+### ⭐ VENDÉG-oldali — 11 tétel (a tenant saját honlapján, a vendég olvassa)
+
+| sor | szöveg | hol |
+|---|---|---|
+| 781 | `Túl sok próbálkozás. Kérjük, várjon pár percet.` | `POST /api/erdeklodes` — érdeklődés-kártya, 429 |
+| 784 | `Ismeretlen szállás.` | `POST /api/erdeklodes`, 404 |
+| 800 | `Túl sok próbálkozás. Kérjük, várjon pár percet.` | `POST /api/foglalas` — foglalás, 429 |
+| 803 | `Ismeretlen szállás.` | `POST /api/foglalas`, 404 |
+| 807 | `Ismeretlen egység.` | `POST /api/foglalas` — rossz unit, 400 |
+| 967 | `Ez az oldal még nem érhető el.` | jogi pillanatkép hiányzik a tenant hostján |
+| 1005 | `Nincs ilyen oldal.` | tenant host, ismeretlen útvonal |
+| 1006 | `Az oldal még nem érhető el.` | tenant host, `site.path` nincs |
+| 1022 | `Az oldal pillanatkép nem található.` | tenant host, snapshot olvasás-hiba |
+| 1038 | `Az oldal pillanatkép nem található.` | ugyanaz a másik ágon |
+| 1681 | `Ez az oldal még nem érhető el. Ha a sajátját keresi, írjon nekünk: …` | igényba nem vett `<slug>.citoviso.com` |
+
+⛔ **Az 1005 (`Nincs ilyen oldal.`) ÉKEZET NÉLKÜLI**, ezért a lint HU-heurisztikája
+(`[áéíóöőúüű]`) **nem is látja** — a következő kör ne a lint kimenetére támaszkodjon,
+hanem erre a listára. Ez egy negyedik vakfolt-alak.
+
+### LEAD-oldali — 4 tétel (a kiküldött előnézet-linken, `/m/<token>`)
+
+| sor | szöveg |
+|---|---|
+| 482 | `Nincs ilyen előnézet.` |
+| 487 | `Készül` (a `<title>`) |
+| 489 | `Az előnézete még készül… Néhány pillanat, és frissítsd az oldalt.` |
+| 496 | `Az előnézet fájl nem található.` |
+
+⚠️ A lead nyelve ISMERT (`langForLead`) — egy horvát lead ma magyarul olvassa.
+⚠️ A 489 **tegez** („frissítsd"), miközben a vendég-lap magáz (a kontraktus 9. pontja
+magázást ír elő) — a burkoláskor ezt is el kell dönteni, nem átmásolni.
+
+### TULAJ-oldali — 8 tétel (tenant-admin, a tulaj saját nyelvén kellene)
+
+| sor | szöveg |
+|---|---|
+| 1695 | `Hibás felhasználónév vagy jelszó.` |
+| 1711 | `A két új jelszó nem egyezik.` |
+| 1731 | `A bizonylat most nem érhető el. A számlát e-mailben is elküldtük — a melléklet…` |
+| 1920 | `a fizetési linket nem sikerült kiállítani — semmit nem rögzítettünk, próbálja…` |
+| 2145 | `A link nem érvényes webcím. Másolja be újra, teljes egészében.` |
+| 2382 | `Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.` |
+| 2818, 2820, 2833 | `Nincs ilyen kép.` (3×, KB-kép 404 a tenant felületén) |
+
+⚠️ A 2382-t első ránézésre VENDÉG-szövegnek olvastam — a kód `/admin?tab=foglalasok`-ra
+irányít, tehát a TULAJ olvassa. Kontextus nélkül osztályozni hiba lett volna.
+
+### MARKETING — 4 tétel (a MI landingünk, citoviso.com) — üzleti döntés, nem hibajavítás
+
+| sor | szöveg |
+|---|---|
+| 456 | `/ évtől` |
+| 457 | `vagy kényelmes havi konstrukcióban` |
+| 461 | `Egyedi ajánlat` |
+| 462 | `Kérd az ingyenes mintát — a pontos árat személyre szabva mutatjuk meg.` |
+
+Ezek a saját, magyar piacra szóló landingünk szövegei. Fordításuk NEM hibajavítás:
+előbb el kell dönteni, akarunk-e idegen nyelvű marketing-oldalt. **Amíg ez nyitott, a
+`public.ts` nem vehető fel a lint listájára** — ezért maradt kurált a lista.
+
+### HATÁRESET — 2 tétel
+
+| sor | szöveg | miért határeset |
+|---|---|---|
+| 2150 | `Egyéb` | nem felirat, hanem ADAT: a naptár-szolgáltató alapértelmezett NEVE, DB-be íródik |
+| 2658 | `Szállás` | fallback EGYSÉG-NÉV az `.ics` feedben — a portál/naptár mutatja |
+
+### NEM vevő-szöveg — 2 tétel (ne burkoljuk)
+
+| sor | szöveg |
+|---|---|
+| 1969 | `[subscription] periódus-váltás elutasítva (…) · tenant …` — `console.warn` |
+| 1999 | `[multilang] …: nem sikerült fizetési linket kiadni (order …)` — `console.error` |
+
+⚠️ A lint „ugyanazon a soron lévő `console.`" szűrője ezeket **többsoros** hívásnál nem
+fogja — ezért jelentek meg a mérésben. Nem hiba, csak zaj: a következő kör hagyja ki őket.
+
+### A 2652 (`Nincs ilyen naptár.`) külön eset
+`text/plain` 404 az `.ics` feeden, amit **gép (portál) kér le** — nem emberi felület.
+Burkolása felesleges, de mondjuk ki, hogy szándékos.
+
+**Összesen: 11 vendég + 4 lead + 8 tulaj + 4 marketing + 2 határeset + 2 log + 1 gépi = 32
+előfordulás, 27 egyedi szövegdarab.**

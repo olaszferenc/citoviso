@@ -8678,6 +8678,45 @@ Ezen felül kikényszeríti, hogy **mindkét fél** pirosra menjen (tulaj 18, ve
 különben a tulaj-oldal pirosa elrejtene egy vak vendég-mérőt. A nyelv-ág 7 esetre mér, és
 a régi viselkedésen bizonyítottan 3 esetet buktat.
 
+**⑦ UTÓKÖR (2026-09-15) — A BETAKARÍTÁS HATÓKÖRE NEM ÍTÉLET-KÉRDÉS, A LINTÉ IGEN.**
+A ⑥-ban jelzett „a `public.ts` 4 vendég-stringje lefedetlen” lelet mérve **46 burkolt
+literál lett 7 fájlban** — köztük a foglalási ÉRDEKLŐDÉS vendég-hibaüzenetei és egy
+vevőnek szóló forgalmi levél. A közös ok: **EGY fájllista (`I18N_SOURCES`) szolgált KÉT
+őrt, amelyek KÜLÖNBÖZŐ kérdést tesznek fel**, így a szigorúbb őr hatóköre a lazábbéra
+zsugorodott:
+
+- **lint** — „van-e ebben a fájlban BURKOLATLAN vevő-szöveg?” → **ítélet-igényű, marad
+  kurált lista.** A `public.ts` a SAJÁT magyar marketing-landingünk szövegeit is
+  tartalmazza; a fordításuk külön, meg nem hozott ÜZLETI döntés, amit a lint ide-vétele
+  véletlenül döntene el.
+- **extractor** — „benne van-e MINDEN BURKOLT string a katalógusban?” → **itt nincs
+  mérlegelnivaló: aki `T()`-be tette, KIMONDTA, hogy fordítandó.** Ezért az
+  `extract-i18n.mts` a teljes `src/`-t olvassa, fájllista nélkül.
+
+Így a katalógus `--check` frissesség-kapuja **szerkezetileg** zárja az osztályt: új
+burkolt string BÁRHOL a `src/`-ben elavulttá teszi a commitolt katalógust, és a commit
+megáll. Piros próbával igazolva (sosem listázott fájl → `exit 1`, visszaállítás után
+`exit 0`; az exit-kódot külön mérve, nem a kimenetből következtetve).
+
+⛔ **Egy NEGYEDIK vak alak is előkerült:** `T(consoleLang(), "…")` — a nyelv-argumentum
+HÍVÁS, nem azonosító. A közös regex csak azonosítót ismert, ezért a lint egy rendesen
+BURKOLT stringet BURKOLATLANKÉNT jelentett, az extractor pedig kihagyta ugyanazt.
+Mindkét regex javítva; ma egyetlen ilyen eset volt — a baj nem a darabszám, hanem hogy
+az alak **ábrázolhatatlan** volt.
+
+Katalógus: 2663 → **2703** (+40 egyedi, **−0 eltűnt**; a diff megmérve, mert a
+hatókör-csere elvehetett volna korábban gyűjtött stringeket). ⚠️ **A katalógus-tétel nem
+elég ahhoz, hogy a vendég lefordítva kapja** — a nyelvi csomagot a boot-idejű
+`ensureAllLanguagePacks()` tölti fel; mérve: a ⑤ szerinti vendég-lap mind a 6 élő
+csomagban (de/en/hr/it/pl/sk) ott van.
+
+**Ami NYITVA marad (tulajdonosi döntés, 2026-09-15):** a `public.ts` **27 BURKOLATLAN**
+szövegdarabja külön kör — 11 vendég-oldali, 4 lead, 8 tulaj, 4 marketing, 2 határeset,
+2 belső log. Tételes átadó-lista (fájl:sor + szöveg + hol + kinek szól):
+`_planning/memory/2026-09-14_frozen_guest_page_promise.md` vége. ⛔ Egy tétel
+(`Nincs ilyen oldal.`) ÉKEZET NÉLKÜLI, ezért a lint HU-heurisztikája (`[áéíóöőúüű]`) nem
+is látja — a következő kör az átadó-listára támaszkodjon, ne a lint kimenetére.
+
 **Elvetett változatok:** „C — tény + irány" (…„keresse közvetlenül a szállásadót") — ugyanolyan
 igaz, de két sorral hosszabb, és a kontakt-doboz amúgy is ezt mondja; „A — marad a mai szöveg"
 — ez tartotta volna az ADR-0119 ③-at, de akkor a hamis állítás KIMONDOTT kivételként került

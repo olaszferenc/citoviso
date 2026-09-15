@@ -1,6 +1,22 @@
-// ⛔ THE i18n doctrine's file list — the SINGLE source shared by both guards
-// (scripts/extract-i18n.mts writes the catalog from it, scripts/i18n-lint.mts
-// forbids unwrapped Hungarian in it).
+// ⛔ THE i18n doctrine's file list — the LINT's scope.
+//
+// ⚠️⚠️ 2026-09-14 (ADR-0157 utókör): ez a lista MÁR NEM az extraktoré. A két őr
+// két KÜLÖNBÖZŐ kérdést tesz fel, és egy listán osztozva a gyengébbik hatóköre
+// lett mindkettőé:
+//   · lint      — „van-e ebben a fájlban BURKOLATLAN vevő-szöveg?"  → ítélet-igényű,
+//                 ezért marad kurált lista. A `public.ts` például a SAJÁT magyar
+//                 marketing-landingünk szövegeit is tartalmazza, aminek a fordítása
+//                 külön, meg nem hozott üzleti döntés — a lint ide-vétele véletlenül
+//                 döntené el (feedback_widening_a_shared_list_needs_per_consumer_decision).
+//   · extractor — „benne van-e MINDEN BURKOLT string a katalógusban?" → itt nincs
+//                 mérlegelnivaló: aki `T()`-be tette, KIMONDTA, hogy fordítandó.
+//                 Ezért az `extract-i18n.mts` a TELJES `src/`-t olvassa, lista nélkül.
+// Mérve a szétválasztás előtt: 46 burkolt literál 7 fájlban SOHA nem jutott nyelvi
+// csomagba, mert a FÁJLJUK nem volt ezen a listán — köztük a felfüggesztett honlap
+// teljes vendég-lapja, a foglalási érdeklődés hibaüzenetei és egy vevőnek szóló
+// forgalmi levél. A katalógus `--check` frissesség-kapuja mostantól szerkezetileg
+// zárja az osztályt (piros próbával igazolva: sosem listázott fájlba tett burkolt
+// string → exit 1).
 //
 // WHY ONE LIST: it used to be two copies. The drift between them dropped every
 // ADR-0044 module-section label from the catalog — wrapped in T(), then never
@@ -87,12 +103,18 @@ export const I18N_SOURCES = [
   // ADR-0157 — a FELFÜGGESZTETT honlap VENDÉG-lapja. Mérve 2026-09-14: a szövegei
   // rendesen `T(lang, …)`-gal születtek, de a fájljuk (`public.ts`) SOHA nem volt
   // ezen a listán, tehát egyetlen string sem került a katalógusba — egy német
-  // tenant vendége magyarul kapta a lapot, MINDEN kapu zöldje mellett. Ugyanaz a
-  // hibaosztály, amit a fenti ADR-0067-megjegyzés ír le, csak egy fájllal odébb.
-  // ⚠️ A `public.ts` maga továbbra sincs itt (2 800 sor, tele belső literállal);
-  // a vendég-lap ezért ÖNÁLLÓ modul, így a lint hatóköre pont akkora, mint a
-  // vevőnek szóló felület. A public.ts-ben maradt 4 vendég-string KÜLÖN lelet.
+  // tenant vendége magyarul kapta a lapot, MINDEN kapu zöldje mellett. A katalógus
+  // oldalát a fenti extractor-szétválasztás zárta le; ez a sor a LINT hatóköre.
   "src/server/suspendedPage.ts",
+  // Ugyanabból a mérésből: burkolt szövegük volt, listájuk nem. Mind a öt TISZTÁN
+  // átment a linten (mérve 2026-09-14) — valódi vevő- és operátor-felületek, csak
+  // sosem került rájuk sor. A foglalási ÉRDEKLŐDÉS hibaüzenetei a VENDÉGNEK szólnak,
+  // a forgalmi levél a TULAJNAK megy, a modul-előnézet feliratait a vendég olvassa.
+  "src/booking/enquiry.ts",
+  "src/email/trafficEmail.ts",
+  "src/server/modulePreview.ts",
+  "src/console/testLogViews.ts",
+  "src/console/photoProxy.ts",
   // Elek FK-001 E2: the Üzenetek tab's TOPIC chip labels („Foglalások", „Számlázás",
   // „A honlapom", „Fiók") live here, NEXT TO the predicate they describe. A label
   // copied into the view and a mapping kept in the data layer are two copies that

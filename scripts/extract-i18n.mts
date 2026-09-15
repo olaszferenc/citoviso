@@ -15,14 +15,55 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 // doctrine now joins both guards or neither.
 import { I18N_SOURCES as SOURCES } from "./i18n-sources.mjs";
 
-async function main(): Promise<void> {
-  const files = [...SOURCES.map((f) => path.join(ROOT, f))];
-  for (const f of await readdir(path.join(ROOT, "src/engine/templates"))) {
-    if (f.endsWith(".ts")) files.push(path.join(ROOT, "src/engine/templates", f));
+/**
+ * ⛔⛔ THE EXTRACTOR AND THE LINT ASK TWO DIFFERENT QUESTIONS — and sharing ONE
+ * list conflated them (ADR-0157 utókör, mérve 2026-09-14).
+ *
+ *   LINT      „does this file contain UNWRAPPED customer text?"  → curated list.
+ *             Judgment call: `public.ts` also holds 46 literals of OUR OWN
+ *             Hungarian marketing landing, whose translation is a separate,
+ *             unmade decision. Widening the lint there would force that decision
+ *             by accident (feedback_widening_a_shared_list_needs_per_consumer_decision).
+ *   EXTRACTOR „is every WRAPPED string in the catalogue?"        → EVERYWHERE.
+ *             Wrapping a string in `T()` IS the declaration that it is
+ *             customer-facing and translatable. There is no such thing as a
+ *             wrapped string that must stay out of the pack — so the harvest has
+ *             no business having a file list at all.
+ *
+ * Measured before the change: 46 wrapped literals in 7 files never reached any
+ * language pack, because their FILE was not on the shared list. A German tenant's
+ * guest read them in Hungarian, with every gate green — among them the whole
+ * suspended-site page, the booking-enquiry errors and a customer traffic email.
+ * The catalogue's `--check` freshness gate now closes this class for good: a newly
+ * wrapped string anywhere under src/ makes the committed catalogue stale, and the
+ * commit stops.
+ */
+async function tsFilesUnder(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) out.push(...(await tsFilesUnder(p)));
+    else if (e.name.endsWith(".ts") || e.name.endsWith(".mts")) out.push(p);
   }
+  return out;
+}
+
+async function main(): Promise<void> {
+  // SOURCES still carries the non-src entries (client runtime JS); everything
+  // under src/ is harvested wholesale, list or no list.
+  const files = [
+    ...SOURCES.map((f) => path.join(ROOT, f)).filter((f) => !f.startsWith(path.join(ROOT, "src") + path.sep)),
+    ...(await tsFilesUnder(path.join(ROOT, "src"))),
+  ];
   const found = new Set<string>();
-  // T(x, "…") in TS templates; tr("…") in client JS. Double-quoted only (the contract).
-  const RE = /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*\s*,|tr\()\s*"((?:[^"\\]|\\.)+)"/g;
+  // T(x, "…") / T(x(), "…") in TS templates; tr("…") in client JS. Double-quoted
+  // only (the contract).
+  // ⚠️ The lang argument may be a CALL, not just an identifier: `T(consoleLang(),
+  //    "A mentés nem sikerült:")` was invisible to BOTH guards — the lint reported
+  //    it as an UNWRAPPED literal (it is wrapped) and the harvest skipped it. One
+  //    occurrence today; the point is that the shape was unrepresentable.
+  const RE =
+    /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,|tr\()\s*"((?:[^"\\]|\\.)+)"/g;
   for (const file of files) {
     const src = await readFile(file, "utf8").catch(() => "");
     for (const m of src.matchAll(RE)) {
