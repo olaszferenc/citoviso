@@ -23,8 +23,25 @@ export function kbSourceHash(entry: Pick<KbEntry, "title" | "body">): string {
   return createHash("sha256").update(`${entry.title}\n${entry.body}`).digest("hex");
 }
 
+/**
+ * A forrásban SZEREPLŐ képernyő-feliratok (`**„Mentés”**`), szóköz-normalizálva.
+ *
+ * ⛔ MÉRT HIBA (2026-09-15): a normalizálás nélkül ez az ellenőrzés HELYES fordításokat
+ * dobott el. A magyar forrás sortöréssel tördel, ezért egy felirat átér a sor végén:
+ * `**„Lemondom a\n  foglalást”**`. A fordítás ugyanazt a feliratot EGY sorba írja —
+ * a képernyőn látható szöveg betűre azonos —, a nyers sztring-összehasonlítás mégis
+ * eltérést látott, és a teljes fordítás elveszett („integritás-sértés"). Mérve: a
+ * `sk/admin-bookings` jelölt 25/25 feliratot, 1/1 képet és 7/7 alcímet hozott, és
+ * KIZÁRÓLAG két sortörés miatt bukott meg.
+ *
+ * A felirat az, amit a tulaj a GOMBON olvas — abban soha nincs sortörés. A tördelés
+ * tipográfia, nem tartalom: az ellenőrzés a feliratot mérje, ne a sortörést. A
+ * szigorúság megmarad — egy lefordított vagy megváltoztatott felirat továbbra is bukik.
+ */
 const labelsOf = (md: string): string[] =>
-  [...md.matchAll(/\*\*„([^”]+)”\*\*/g)].map((m) => m[1]!).sort();
+  [...md.matchAll(/\*\*„([^”]+)”\*\*/g)]
+    .map((m) => m[1]!.replace(/\s+/g, " ").trim())
+    .sort();
 const imagesOf = (md: string): string[] =>
   [...md.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]!).sort();
 const headingCount = (md: string): number =>
@@ -41,8 +58,23 @@ export function kbTranslationValid(sourceBody: string, candidateBody: string): b
   );
 }
 
+/**
+ * A fordítandó cikkek legnagyobbikához MÉRT kimeneti korlát.
+ *
+ * ⛔ MÉRT HIBA (2026-09-15): 6000 volt, és a két legnagyobb fordítandó cikk pont fölé
+ * nőtt — `admin-modules` (10 871 kar ≈ 5 930 kimenő token) és `admin-messages`
+ * (10 302 ≈ 5 619), a JSON-escape ráadásával átlépve. A válasz `stop_reason:
+ * "max_tokens"`-szel elvágódott, a JSON nem záródott be, és a hívó ezt
+ * „integritás-sértés"-ként naplózta — vagyis más kérdésre válaszolt, mint ami történt,
+ * így a valódi ok láthatatlan maradt. A `max_tokens` felső HATÁR, nem költség: a rövid
+ * cikkek ugyanannyiba kerülnek. ⚠️ Új, hosszabb súgó-cikknél a
+ * `kb-translation-integrity-check` ③ szakasza szól, mielőtt ez némán újra elvágna egyet.
+ */
+const MAX_TOKENS = 16_000;
+
 /** AI-translate one entry. Returns null when the response is unusable — the caller
- *  counts it as missing and the next ensure retries. */
+ *  counts it as missing and the next ensure retries; a `fail()` sor mindig MEGNEVEZI az
+ *  okot (elvágás / JSON / hiányzó mező / integritás), mert egy közös `null` elrejtette. */
 async function translateEntry(
   lang: string,
   entry: KbEntry,
@@ -52,7 +84,7 @@ async function translateEntry(
   const client = new Anthropic();
   const res = await client.messages.create({
     model: "claude-opus-4-8",
-    max_tokens: 6000,
+    max_tokens: MAX_TOKENS, // lásd a függvény fölötti mérést
     system:
       `Professzionális honosító vagy: a Citoviso szállásadói kezelőfelület SÚGÓ-cikkeit fordítod ` +
       `${langName(lang)} nyelvre, IT-kezdő szállásadóknak. Szabályok: (1) természetes, közérthető, ` +
@@ -73,17 +105,34 @@ async function translateEntry(
     ],
   });
   recordAiUsage("translateKbEntry", "claude-opus-4-8", res.usage);
+  // ⛔ A BUKÁS OKA NEVEZŐDJÖN MEG. Eddig minden út ugyanabba a `null`-ba futott, és a
+  // hívó mindet „integritás-sértés"-nek naplózta — az elvágott választ is. Így a
+  // valódi ok (túl kicsi korlát) hónapokig láthatatlan maradt, miközben minden
+  // újrafuttatás ugyanoda futott.
+  const fail = (reason: string): null => {
+    console.error(`[i18n] KB-fordítás eldobva (${lang}/${entry.id}): ${reason}`);
+    return null;
+  };
+  if (res.stop_reason === "max_tokens") {
+    return fail(
+      `a válasz ELVÁGÓDOTT a token-korlátnál (${res.usage.output_tokens} kimenő token) — ` +
+        `a cikk hosszabb, mint amennyi belefér; emeld a max_tokens-t`,
+    );
+  }
   const block = res.content.find((b) => b.type === "text");
-  if (!block || block.type !== "text") return null;
+  if (!block || block.type !== "text") return fail("a válasz nem tartalmaz szöveget");
   const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);
   let parsed: { title?: unknown; body?: unknown };
   try {
     parsed = JSON.parse(jsonText) as { title?: unknown; body?: unknown };
-  } catch {
-    return null;
+  } catch (err) {
+    return fail(`a válasz nem értelmezhető JSON (${(err as Error).message.slice(0, 80)})`);
   }
-  if (typeof parsed.title !== "string" || typeof parsed.body !== "string") return null;
-  if (!parsed.title.trim() || !kbTranslationValid(entry.body, parsed.body)) return null;
+  if (typeof parsed.title !== "string" || typeof parsed.body !== "string")
+    return fail("a JSON-ból hiányzik a title vagy a body");
+  if (!parsed.title.trim()) return fail("üres cím");
+  if (!kbTranslationValid(entry.body, parsed.body))
+    return fail("integritás-sértés (felirat / kép-útvonal / alcím-szám eltérés)");
   return { title: parsed.title.trim(), body: parsed.body };
 }
 
@@ -126,8 +175,8 @@ export async function ensureKbTranslations(lang: string): Promise<KbPackStatus> 
     try {
       const tr = await translateEntry(lang, entry);
       if (!tr) {
+        // Az OKOT a translateEntry naplózta, pontosan — itt csak a darabszám nő.
         missing++;
-        console.error(`[i18n] ⛔ KB-fordítás eldobva (${lang}/${entry.id}): integritás-sértés`);
         continue;
       }
       await db

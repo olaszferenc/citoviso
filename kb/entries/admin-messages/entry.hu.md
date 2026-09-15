@@ -175,8 +175,9 @@ meg, **hány OLVASATLAN üzenetet érint** (nem azt, hány sort lát):
 - Szűrés nélkül a **„Megjelölöm olvasottként”** felirat után a darabszám áll (például
   „— 2 üzenet”), akkor is, ha közben 5 üzenet látszik a listában. Ez a szám ugyanaz, ami
   az **„Olvasatlan”** gombon és az Üzenetek fül jelvényén szerepel.
-- Szűrt listán a felirat kimondja, hogy **„a szűrt”** üzenetekre hat — csak a szűrésnek
-  megfelelőeket érinti, a szűrésen kívüli olvasatlanok érintetlenül maradnak.
+- Szűrt listán a gomb felirata is más: **„Megjelölöm olvasottként a szűrt”** — utána a
+  darabszám („2 üzenetet”). Vagyis csak a szűrésnek megfelelőeket érinti, a szűrésen
+  kívüli olvasatlanok érintetlenül maradnak.
 
 **Egy koppintásra nem történik semmi visszafordíthatatlan:** a gomb előbb **rákérdez**
 („Megjelöli olvasottként a következő 2 üzenetet?”), és a kérdés alatt megmondja, hogy a

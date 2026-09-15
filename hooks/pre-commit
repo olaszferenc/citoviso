@@ -526,6 +526,17 @@ if [ -f scripts/booking-screen-check.mts ] && \
   echo "[pre-commit] booking-screen-check (a szállított felület = a jóváhagyott terv)…"
   npx tsx scripts/booking-screen-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A KB-fordítás integritás-ellenőrzése a FELIRATOT mérje, ne a TIPOGRÁFIÁT: a magyar
+# forrás sortöréssel tördel, a fordítás egy sorba írja — a nyers összehasonlítás emiatt
+# HELYES fordításokat dobott el, és minden újrafuttatás ugyanoda futott. Az őr a
+# szigorúságot is méri (lefordított/kihagyott/odaköltött felirat továbbra is bukik).
+if [ -f scripts/kb-translation-integrity-check.mts ] && \
+   changed_files | grep -qE '^(src/i18n/kbPacks\.ts|kb/entries/|scripts/kb-translation-integrity-check\.mts)'; then
+  echo "[pre-commit] kb-translation-integrity-check (a felirat számít, a sortörés nem)…"
+  # A mai alak: a kimenet NEM a /dev/null-ra megy, hanem a kapu-naplóba — bukáskor az
+  # operátor ELOLVASSA (gate-output-check ①). A `>/dev/null` a régi minta volt.
+  npx tsx scripts/kb-translation-integrity-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Az ÜRES mező mondja meg, mit lát a vendég MOST (tulaj kérése, 2026-09-14). A döntő
 # állítás nem az, hogy üresen látszik, hanem hogy KITÖLTVE ELTŰNIK — egy soha el nem
 # múló figyelmeztetés nemcsak zaj, hanem hazugság is. Plusz: amit az emlékeztető a
