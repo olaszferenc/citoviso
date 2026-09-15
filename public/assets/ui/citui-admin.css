@@ -374,6 +374,19 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-frz--compact .adm-frz__head{margin-bottom:10px}
 .adm-frz--compact .adm-owe__v{font-size:2rem}
 .adm-frz--compact .adm-owe__note{display:none}
+/* ⑨ „Mit lát közben a látogató" — a blokk alsó sora, a rács ALATT, teljes szélességben.
+   Ez a sor válaszol a tulaj legnagyobb félelmére (elveszítem a vendégeket?), ezért a
+   kompakt változatból sem esik ki: ott is ez a leghasznosabb mondat. */
+.adm-frz__guest{margin:16px 0 0;padding-top:14px;font-size:.85rem;line-height:1.55;
+  border-top:1px solid color-mix(in srgb,var(--citui-white) 28%,transparent);
+  color:color-mix(in srgb,var(--citui-white) 92%,transparent)}
+.adm-frz__guest b{color:var(--citui-white)}
+/* Aláhúzott, fehér link a piros panelen — a konzol `.con a` szabálya cián színt adna,
+   ami ezen a háttéren mérhetetlenül gyenge kontraszt (feedback_link_rule_eats_button_label). */
+.adm-frz__glink{color:var(--citui-white);font-weight:700;text-decoration:underline;
+  white-space:nowrap}
+.adm-frz__glink:hover{color:var(--citui-white);text-decoration:none}
+.adm-frz--compact .adm-frz__guest{margin-top:12px;padding-top:11px}
 @media (min-width:760px){
   .adm-frz{padding:28px 30px}
   .adm-frz__grid{grid-template-columns:1.1fr .9fr;gap:26px;align-items:start}

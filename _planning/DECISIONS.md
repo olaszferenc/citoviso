@@ -8477,9 +8477,26 @@ fagyás-ágak mind `frozen`-feltételhez kötöttek, tehát a nem-fagyasztott fe
 (a meglévő őrök zölden igazolják). 🚪 Egyirányú elem nincs: nem született új oszlop, sem
 kifelé tett vállalás.
 
-**NYITOTT:** az „Oldal megtekintése" gomb fagyás alatt figyelmeztetés nélkül a 503-as éles
-címre visz. A tulaj ebben a körben szándékosan nem döntött róla; a kontraktus kimondja, hogy
-ez NEM kötött.
+**⑦ A NYITOTT PONT LEZÁRVA (2026-09-15, tulajdonosi döntés: „B — Felirat + vendég-nézet").**
+⚠️ És a nyitott pont PREMISSZÁJA is hamis volt: a lelet szerint a gomb „figyelmeztetés nélkül
+visz a fagyasztott lapra" — **mérve nem**. A `public.ts` a `siteUrl`-t CSAK `live` státuszban
+adja át, fagyás alatt tehát null, és a gomb a BELSŐ előnézetre esik vissza; törött link nincs.
+A valódi baj a felirat, és az ELLENKEZŐ irányba hazudik: az „Oldal megtekintése" azt ígéri,
+hogy azt látja, ami a látogatónak megy, közben a tulaj a teljes, működő oldalát kapja — a gomb
+megnyugtat, pont amikor nem kéne. A modul-sorok ezt már megoldották („Megnézem" → „Előnézet");
+a fejléc-gomb kimaradt ugyanabból a javításból. Mostantól „Előnézet — csak Ön látja".
+⛔ **Mellékleletként a SAJÁT ⑥ refaktorom hibája:** a teendő-kártyáról rendezés-képernyőre
+váltás **némán elvitte** azt a hármas ténylistát, amiben EGYEDÜL állt, hogy a látogató nem üres
+lapot és nem nyers hibát kap. A tulaj legnagyobb félelme („elveszítem a vendégeket?") így
+válasz nélkül maradt. Pótolva — de NEM a régi mondattal: a vendég-lapból egy párhuzamos szál
+2026-09-14-én kivette az „átmenetileg"-et és a visszatérés-ígéretet (fizetés híján a 30. napon
+a honlap VÉGLEG lekerül), és ugyanazt egy szinttel feljebb sem írhatjuk vissza. Az admin sora
+ezért csak tényeket állít, és linket ad a VALÓDI 503-as lapra.
+⭐ **Az őr gerince:** amit az admin ígér a látogatói lapról, azt a `renderSuspendedPage()`
+RENDERJÉN keresi vissza (`scripts/frozen-guest-view-check.mts`) — kézzel másolt hasonmás
+helyett egy forrás. Ha a vendég-lapról eltűnik a név vagy az elérhetőség, az admin mondata
+hamissá válik, és a kapunál derül ki. Piros önteszt 2 sértés; a gerinc, a visszatérés-tilalom
+és a Modulok-fül külön útja a TERMÉK visszarontásával igazolva.
 
 ---
 

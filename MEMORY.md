@@ -1,8 +1,38 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🔇 ADR-0171: a bukó kapu kimenete nem nyelhető el)
+Utolsó frissítés: 2026-09-15 (👁️ fagyás alatt a tulaj a sajátját ELŐNÉZETKÉNT látja — és megnézheti, mit lát a világ)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
+**👁️ „OLDAL MEGTEKINTÉSE" FAGYÁS ALATT — ADR-0155 ⑦, freeze-state-v2 ⑨.**
+Session-jegyzet: `_planning/memory/2026-09-15_frozen_guest_view.md`. **Élesítés NINCS.**
+
+- **A bejelentett lelet NEM állt.** „A gomb figyelmeztetés nélkül visz a fagyasztott lapra" —
+  mérve nem: a `public.ts` a `siteUrl`-t CSAK `live` státuszban adja át, fagyás alatt null, a
+  gomb a BELSŐ előnézetre esik vissza. Törött link nincs. A valódi baj a FELIRAT, az
+  ELLENKEZŐ irányba: az „Oldal megtekintése" azt ígéri, hogy azt látja, ami a látogatónak
+  megy — közben a saját, működő oldalát kapja. A gomb megnyugtat, pont amikor nem kéne.
+  A modul-sorok ezt már megoldották („Megnézem" → „Előnézet"); a fejléc-gomb kimaradt.
+- ⛔⛔ **A második lelet a SAJÁT előző köröm hibája:** a „B — Rendezés-képernyő" refaktor
+  NÉMÁN elvitte a hármas ténylistát, amiben EGYEDÜL állt, hogy a látogató nem üres lapot és
+  nem nyers hibát kap. És amit a tulajnak jelentettem róla („állít valamit, amit nem tud
+  ellenőrizni"), ELAVULT premissza volt — a B ELŐTTI kódra igaz. A tulaj kifejezetten
+  megkért, hogy MÉRJEM; az mentett meg.
+- **A pótolt mondat NEM a régi.** Egy párhuzamos szál 2026-09-14-én kivette a vendég-lapból
+  az „átmenetileg"-et és a visszatérés-ígéretet (fizetés híján a 30. napon a honlap VÉGLEG
+  lekerül) — ugyanazt egy szinttel feljebb sem írhatom vissza. Az admin sora tényeket állít.
+- ⭐ **Az őr gerince: egy forrás, nem hasonmás.** Amit az admin ÍGÉR a látogatói lapról, azt a
+  `renderSuspendedPage()` RENDERJÉN keresi vissza (`frozen-guest-view-check`). Ha a
+  vendég-lapról eltűnik a név vagy az elérhetőség, az admin mondata hamissá válik, és a
+  kapunál derül ki. Piros önteszt 2 sértés + 3 kötés a TERMÉK visszarontásával igazolva.
+- **Mért korlát, kimondva:** a látogatói link 390-en első festéskor y=790, a fix fülsáv
+  y=658-tól → a sáv alatt; görgetés után kattintható (scrollY=230 → y=560). Elfogadott: a ⑦
+  az ÖSSZEGET és a GOMBOT köti a nyitó nézetbe (y=270/359). Az ELÉRHETŐSÉGET őr méri.
+- ⚠️ **Kétszer a saját mérőeszközöm csapott be:** a `scrollTo` után azonnal olvastam vissza a
+  pozíciót („a lap nem görget" — hamis), és a ⑨ próba először LE SEM FUTOTT, mert a fixtúrám
+  `siteUrl`-t adott `guestViewUrl` helyett. A piros próbám első hipotézise (alsó pading) sem
+  sült el — az önteszt viszont lefedi.
+
+## Előző szál
 **🔇 ADR-0171 — EGY KAPU, AMINEK A BUKÁSA NÉMA, MAJDNEM ANNYIRA HASZNÁLHATATLAN, MINT EGY MEG
 SEM HÍVOTT.** Session-jegyzet: `_planning/memory/2026-09-15_silent_gate_output.md`.
 **Élesítés NINCS** (§0.3 — fejlesztői eszköz, nulla termék-kód). Tulajdonosi utasítás a lead-lap

@@ -1066,6 +1066,16 @@ async function serveAdmin(
     site && site.status === "live"
       ? tenantSiteUrl(config.publicSiteUrl, site.slug, site.custom_domain)
       : null;
+  // ── freeze-state-v2 ⑨ (tulajdonosi döntés, 2026-09-15) ───────────────────────
+  // A felfüggesztett hoszt címe. ⛔ NEM a `siteUrl`: az kimondottan azt jelenti,
+  // hogy a lap ÉLŐ (a fejléc-gomb és a lábazat-linkek arra épülnek), és ha itt
+  // feloldanám, a fagyasztott fiók úgy viselkedne, mintha publikus volna.
+  //   Külön mező, mert külön kérdés: a tulaj azt is látni akarja, ami az ÖVÉ
+  // (belső előnézet), és azt is, amit a VILÁG lát (az 503-as udvarias lap).
+  const guestViewUrl =
+    site && site.status === "suspended"
+      ? tenantSiteUrl(config.publicSiteUrl, site.slug, site.custom_domain)
+      : null;
   const modules = await getTenantModules(session.tenantId);
   // ADR-0044/d: the Fotók tab assigns photos to units, so it needs the unit list.
   const adminUnits = site?.id
@@ -1505,6 +1515,7 @@ async function serveAdmin(
       supportEmail: config.outreachSender.email || "hello@citoviso.com",
       tab,
       siteUrl,
+      guestViewUrl,
       moduleSettingsHtml,
       units: adminUnits,
       help,

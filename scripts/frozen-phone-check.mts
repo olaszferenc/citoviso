@@ -107,7 +107,12 @@ for (const tab of ["attekintes", "modulok", "uzenetek"]) {
       tab,
       subscription: SUB as never,
       modules: { modules: MODULES, baseMonthly: 4880, totalMonthly: 10_270 } as never,
-      siteUrl: "https://nyugalom.citoviso.com",
+      // ⚠️ `siteUrl: null` + `guestViewUrl` — pontosan ahogy a public.ts teszi
+      // FELFÜGGESZTETT site-nál. Ha itt a régi `siteUrl`-t adnám, a ⑨ elérési
+      // próba NEM TUDNA elsülni (nem renderelődne link), és néma zöldet kapnék
+      // egy soha le nem futó ellenőrzésre (feedback_fixture_must_prove_its_own_path).
+      siteUrl: null,
+      guestViewUrl: "https://nyugalom.citoviso.com",
       previewToken: "tok",
       // ⚠️ TELJES fixtúra: a `scripts/` nincs típus-ellenőrizve, ezért a hiányzó
       // KÖTELEZŐ mező csak futásidőben derül ki (élesben meg is történt az
@@ -175,6 +180,39 @@ for (const { tab, path } of files) {
     return { parts: [ judge(blk.querySelector(".adm-owe__v"), "az összeg"),
                       judge(blk.querySelector(".adm-owe__pay"), "a fizetés-gomb") ] };
   })()`)) as { hiba?: string; parts?: { name: string; verdict: string; top?: number }[] };
+
+  // ── ⑨ A látogatói-nézet link ELÉRHETŐ (nem feltétlenül első festéskor) ────
+  // Mérve 2026-09-15, 390×844: a link a blokk alján, y=790-en áll, a fix alsó fülsáv
+  // pedig y=658-tól — tehát ELSŐ FESTÉSKOR a sáv alatt van. Ez ELFOGADOTT: a
+  // kontraktus ⑦ az ÖSSZEGET és a FIZETÉS-GOMBOT köti a nyitó nézetbe, a látogatói
+  // sor másodlagos. Amit viszont NEM fogadunk el: hogy egyáltalán ne lehessen
+  // elérni. A `.adm-main__inner` 208px alsó padingja teszi kigörgethetővé — ha azt
+  // valaki elveszi, a link VÉGLEG a sáv alá kerül, és erről itt kell megtudni.
+  //   ⚠️ A görgetés UTÁN mérünk, beállt elrendezésen: kétszer mértem félre azzal,
+  //   hogy a `scrollTo` után azonnal olvastam vissza a pozíciót.
+  const link = await page.$(".adm-frz__glink");
+  if (link) {
+    const reach = (await page.evaluate(`(function(){
+      var a=document.querySelector(".adm-frz__glink");
+      var start=a.getBoundingClientRect().top+scrollY;
+      window.scrollTo(0, Math.max(0, start - innerHeight*0.45));
+      return start;
+    })()`)) as number;
+    await page.waitForTimeout(150);
+    const verdict = (await page.evaluate(`(function(){
+      var a=document.querySelector(".adm-frz__glink"); var r=a.getBoundingClientRect();
+      if (r.top<0 || r.top>innerHeight) return "a görgetés után sem került a nézetbe";
+      var hit=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
+      if (hit===a || a.contains(hit)) return "OK";
+      var c=hit,cls=""; while(c){ if(c.className&&typeof c.className==="string"){cls=c.className;break;} c=c.parentNode; }
+      return "görgetés után is TAKARVA: "+cls;
+    })()`)) as string;
+    if (verdict !== "OK") {
+      fail(`[${tab}] a látogatói-nézet link ${verdict} — a tulaj nem tudja megnézni, mit lát a világ (kiindulás y=${Math.round(reach)})`);
+    } else if (!selfTest) {
+      console.log(`  ✔ [${tab}] a látogatói-nézet link kigörgethető és kattintható`);
+    }
+  }
 
   if (r.hiba) {
     fail(`[${tab}] ${r.hiba}`);

@@ -500,6 +500,16 @@ if [ -f scripts/frozen-phone-check.mts ] && \
   echo "[pre-commit] frozen-phone-check (a fagyás telefonon görgetés nélkül látszik)…"
   npx tsx scripts/frozen-phone-check.mts >"$GATE_LOG" || gate_failed
 fi
+# freeze-state-v2 ⑨ (tulajdonosi döntés, 2026-09-15): a tulaj azt is látja, ami az ÖVÉ
+# (belső előnézet), és azt is, amit a VILÁG (az 503-as udvarias lap). Az őr gerince:
+# amit az admin ÍGÉR a látogatói lapról, azt a VALÓDI vendég-lap renderjén keresi vissza
+# — kézzel másolt hasonmás helyett egy forrás. Piros önteszt 2 sértés, plusz a gerinc
+# (④), az ⑤ és a ⑥ külön, a TERMÉK visszarontásával igazolva.
+if [ -f scripts/frozen-guest-view-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/server/suspendedPage\.ts|src/server/public\.ts)|^scripts/frozen-guest-view-check'; then
+  echo "[pre-commit] frozen-guest-view-check (a tulaj látja, mit lát a világ)…"
+  npx tsx scripts/frozen-guest-view-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
 # mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
 # EMBER kapjon szót. Injektált futtatóval mér: sem LLM-et nem éget, sem SMS-t nem küld.

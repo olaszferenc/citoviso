@@ -108,6 +108,41 @@ fülsáv (`.adm-side`, mobilon `position:fixed;bottom:0`). Mérés: `elementFrom
 a blokk összeg-során, **nem** teljes-lapos képről ítélve
 (`reference_fullpage_shot_hides_dead_sticky`).
 
+### ⑨ A tulaj látja a SAJÁTJÁT és azt is, amit a VILÁG lát
+**Tulajdonosi döntés, 2026-09-15** („B — Felirat + vendég-nézet"):
+
+- A fejléc-gomb felirata fagyás alatt **„Előnézet — csak Ön látja"** (a modul-sorok már
+  meglévő mintája: ott is „Előnézet", nem „Megnézem"), és **az előnézetre visz**, nem a
+  felfüggesztett nyilvános hosztra. Felirat és cél együtt igaz vagy együtt hamis.
+- A fagyás-blokk **kimondja, mit lát közben a látogató**: **„Mit lát közben a látogató:"**
+  a szállás nevét, települését és a tulaj elérhetőségeit — és ad egy linket
+  (**„Megnézem, mit lát a látogató"**) a VALÓDI 503-as lapra.
+
+> ⛔ **Két saját hibát javít.** ① A bejelentett lelet („a gomb figyelmeztetés nélkül visz
+> a fagyasztott lapra") **mérve nem állt**: a `public.ts` a `siteUrl`-t csak `live`
+> státuszban adja át, tehát a gomb a belső előnézetre esett vissza — törött link nem volt.
+> A baj a felirat volt, az ELLENKEZŐ irányba. ② A „B — Rendezés-képernyő" refaktor
+> **némán elvitte** a hármas ténylistát, amiben egyedül állt, hogy a látogató nem üres
+> lapot kap — a tulaj legnagyobb félelmére nem volt válasz a képernyőn.
+
+**⚠️ A szöveg nem a régi mondat.** A vendég-lapot 2026-09-14-én egy párhuzamos szál
+átírta: kikerült belőle az „átmenetileg" és a visszatérés-ígéret, mert fizetés híján a
+30. napon a honlap VÉGLEG lekerül. Mérve, mit mond ma a lap:
+*„Ez az oldal jelenleg nem érhető el."* + szállásnév + település + elérhetőségek.
+Ugyanazt az ígéretet **egy szinttel feljebb sem írhatjuk vissza** — ezért az admin sora
+csak TÉNYEKET állít, ígéretet nem. Az őr tiltja az „átmenetileg", „nézzen vissza",
+„hamarosan", „dolgozunk rajta" fordulatokat ebben a sorban.
+
+**⭐ Amit az admin ígér, azt a VALÓDI vendég-lap renderjén kell visszakeresni** — nem
+kézzel másolt hasonmáson (`feedback_one_rule_two_copies`). Ha a vendég-lapról eltűnik a
+név vagy az elérhetőség, az admin mondata hamissá válik, és ezt a kapunál kell megtudni.
+
+**Mért korlát, kimondva:** 390×844-en a látogatói link első festéskor **y=790**, a fix
+alsó fülsáv pedig y=658-tól — tehát **a sáv alatt van**, és csak görgetés után
+kattintható (mérve: scrollY=230 → y=560, kattintható). Ez ELFOGADOTT: a ⑦ az ÖSSZEGET és
+a FIZETÉS-GOMBOT köti a nyitó nézetbe (y=270 / y=359), a látogatói sor másodlagos. Amit
+NEM fogadunk el: hogy egyáltalán ne lehessen elérni — ezt őr méri.
+
 ### ⑧ A visszakapcsolás ugyanilyen hangos
 Befizetés után a blokk helyére **zöld megerősítés** kerül (ADR-0119 ④), a modulok
 felirata visszaáll, és a bolt kinyílik.
@@ -118,8 +153,8 @@ felirata visszaáll, és a bolt kinyílik.
 
 - A pontos színárnyalatok a `--citui-*` tokenekből (a piros `--citui-bad`).
 - A hátralévő idő megjelenítési formája (nap-szám vs. dátum-hangsúly).
-- Az „Oldal megtekintése" gomb viselkedése fagyás alatt — **nyitott kérdés**, a tulaj
-  ebben a körben nem döntött; a mock szándékosan nem foglal állást.
+- ~~Az „Oldal megtekintése" gomb viselkedése fagyás alatt~~ — **eldöntve 2026-09-15**,
+  lásd ⑨.
 
 ## Fájlok
 

@@ -359,7 +359,12 @@ function daysUntil(iso: string): number {
  * are NOT about money the block states the situation and the way out, without
  * taking over a screen the owner opened for something else.
  */
-function frozenStateBlock(sub: SubscriptionAdminData, lang: string, compact: boolean): string {
+function frozenStateBlock(
+  sub: SubscriptionAdminData,
+  lang: string,
+  compact: boolean,
+  guestUrl: string | null = null,
+): string {
   const owed = sub.arrears ? hufAmount(sub.arrears.amount) : null;
   // No arrears row can only mean the ladder has not minted the order yet — say
   // that instead of printing a confident zero (§B.17).
@@ -415,11 +420,35 @@ function frozenStateBlock(sub: SubscriptionAdminData, lang: string, compact: boo
           : "") +
         `</div>`;
 
+  // ── ⑨ MIT LÁT KÖZBEN A VENDÉG (tulajdonosi döntés, 2026-09-15) ──────────────
+  // ⛔ Két saját hibát javít egyszerre.
+  //   ① Az „A → B" elrendezés-csere NÉMÁN elvitte azt a hármas ténylistát, amiben
+  //      egyedül szerepelt, hogy a látogató nem üres lapot és nem nyers hibát kap
+  //      (feedback_layout_swap_silently_removes_information). A tulaj legnagyobb
+  //      félelme épp ez — és a képernyő nem válaszolt rá.
+  //   ② A pótolt mondat NEM a régi szöveg: azt MEGMÉRTEM. A vendég-lap ma ezt írja:
+  //      „Ez az oldal jelenleg nem érhető el." + szállásnév + település + a tulaj
+  //      elérhetőségei. A korábbi „átmenetileg" és a visszatérés-ígéret KIKERÜLT
+  //      belőle (ADR-0119 ③ felülírása, 2026-09-14) — mert fizetés híján a 30.
+  //      napon a honlap VÉGLEG lekerül. Ugyanazt az ígéretet egy szinttel feljebb
+  //      sem írhatom vissza, ezért ez a sor csak TÉNYEKET állít, ígéretet nem.
+  //   ⚠️ A felsorolt elemek nem kézzel másolt hasonmások: az őr a VALÓDI vendég-lap
+  //      renderjén ellenőrzi, hogy amit itt ígérünk, az tényleg ott van.
+  const guest =
+    `<p class="adm-frz__guest">` +
+    `<b>${T(lang, "Mit lát közben a látogató:")}</b> ` +
+    T(lang, "a szállás nevét, települését és az Ön elérhetőségeit — hogy foglalási kérdéssel közvetlenül Önt kereshesse.") +
+    (guestUrl
+      ? ` <a class="adm-frz__glink" href="${esc(guestUrl)}" target="_blank" rel="noopener">${T(lang, "Megnézem, mit lát a látogató")}</a>`
+      : "") +
+    `</p>`;
+
   return (
     `<section class="adm-frz${compact ? " adm-frz--compact" : ""}">` +
     `<div class="adm-frz__head"><span class="adm-frz__dot"></span>` +
     `<h2>${T(lang, "A honlapja jelenleg NEM elérhető")}</h2></div>` +
     `<div class="adm-frz__grid"><div class="adm-frz__money">${money}</div>${deadline}</div>` +
+    guest +
     `</section>`
   );
 }
@@ -431,6 +460,8 @@ export function modulesSection(
   contactEmail: string,
   domainSettle: DomainSettleState | null = null,
   lang = "hu",
+  /** freeze-state-v2 ⑨: a felfüggesztett hoszt címe — amit a látogató MA lát. */
+  guestViewUrl: string | null = null,
 ): string {
   const huf = hufAmount;
   // The anniversary the owner reads a dozen times on this page. It arrives in
@@ -460,7 +491,7 @@ export function modulesSection(
   const frozen = sub?.status === "frozen";
   let stateCard = "";
   if (sub && frozen) {
-    stateCard = frozenStateBlock(sub, lang, false);
+    stateCard = frozenStateBlock(sub, lang, false, guestViewUrl);
   } else if (sub?.restoredOn) {
     // The return is as loud as the freeze was (ADR-0080 ⑥) — same slot, same
     // weight, green. Until now the only positive signal was an absence.
@@ -3649,6 +3680,14 @@ export interface AdminOpts {
   readonly tab?: string;
   /** Public URL of the live site, when published. */
   readonly siteUrl?: string | null;
+  /**
+   * freeze-state-v2 ⑨: a FELFÜGGESZTETT hoszt címe — az a lap, amit a vendég MA lát.
+   * ⛔ Külön mező, nem a `siteUrl`: az kimondottan azt jelenti, hogy a lap ÉLŐ.
+   * Fagyás alatt a tulajnak KÉT különböző kérdése van, és eddig csak az egyikre
+   * kapott választ: „mi az enyém?" (belső előnézet) és „mit lát közben a világ?"
+   * (az 503-as udvarias lap).
+   */
+  readonly guestViewUrl?: string | null;
   /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
   readonly moduleSettingsHtml?: string | null;
   /** ADR-0044/d: bookable units, so photos can be assigned to them on the Fotók tab. */
@@ -3736,18 +3775,31 @@ export function adminDashboard(
     : saved
     ? `<div class="adm-saved">${ic("check", 18)} ${T(lang, "Mentve — az oldala frissült.")}</div>`
     : "";
+  const subFrozen = opts.subscription?.status === "frozen";
+  // ── freeze-state-v2 ⑨ (tulajdonosi döntés, 2026-09-15) ──────────────────────
+  // ⚠️ A BEJELENTETT LELET NEM ÁLLT, és a mérés mást talált. A lelet szerint a gomb
+  // „figyelmeztetés nélkül visz a fagyasztott lapra" — mérve NEM: a `public.ts` a
+  // `siteUrl`-t CSAK `live` státuszban adja át, fagyás alatt tehát null, és a gomb
+  // a BELSŐ előnézetre esik vissza. Törött link nincs.
+  //   A valódi baj a felirat, és az ELLENKEZŐ irányba hazudik: az „Oldal
+  // megtekintése" azt ígéri, hogy azt látja, ami a VENDÉGNEK megy — közben a tulaj a
+  // teljes, működő oldalt kapja, a vendég meg 503-at. A gomb tehát megnyugtatja,
+  // hogy „az oldalammal minden rendben", pont amikor nincs. Ez az ADR-0119 ①
+  // osztálya, más szavakkal — és a MODUL-SOROK ezt már megoldották („Megnézem" →
+  // „Előnézet"); a fejléc-gomb csak kimaradt ugyanabból a javításból.
   const viewBtn = previewUrl
-    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} ${T(lang, "Oldal megtekintése")}</a>`
+    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} ${
+        subFrozen ? T(lang, "Előnézet — csak Ön látja") : T(lang, "Oldal megtekintése")
+      }</a>`
     : "";
 
   // The freeze block for the OTHER tabs. `compact` on every tab that is not
   // about money: it states the situation and the way out without taking over a
   // screen the owner opened for something else. The Modulok tab is excluded —
   // modulesSection() renders the full block itself, and two would be one too many.
-  const subFrozen = opts.subscription?.status === "frozen";
   const frozenBar =
     subFrozen && tab !== "modulok"
-      ? frozenStateBlock(opts.subscription!, lang, tab !== "attekintes")
+      ? frozenStateBlock(opts.subscription!, lang, tab !== "attekintes", opts.guestViewUrl ?? null)
       : "";
 
   const section =
@@ -3769,6 +3821,7 @@ export function adminDashboard(
                     supportEmail,
                     opts.domainSettle ?? null,
                     lang,
+                    opts.guestViewUrl ?? null,
                   ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.
