@@ -189,6 +189,24 @@ export const config = {
   get outreachListUnsubscribe(): boolean {
     return (env("OUTREACH_LIST_UNSUBSCRIBE", "on") || "on").toLowerCase() !== "off";
   },
+  /**
+   * Where a PAYING CUSTOMER writes us — the support role, deliberately separate
+   * from `outreachSender` below.
+   *
+   * ⛔ Owner decision, 2026-09-15. Until now the tenant-admin surfaces took their
+   * contact address from `outreachSender.email`, i.e. from the COLD-OUTREACH
+   * sender identity (§C.2, ADR-0130) — a legally mandated *sender* field, not a
+   * support desk. Measured on this config that is a PERSONAL address
+   * (olasz.ferenc@…), so a customer who had ALREADY PAID was told to write to a
+   * person, while the payment pages next door already printed `info@citoviso.com`
+   * hard-coded. Two screens, two answers to one question — the same "one rule,
+   * two copies" class this area has produced before. ONE source, every consumer.
+   *
+   * ⚠️ `legalEntity.email` (Eker.tv. 4. § Impresszum) stays its OWN field on
+   * purpose: identifying the provider and answering a support question are
+   * different duties, and may need different mailboxes.
+   */
+  supportEmail: env("SUPPORT_EMAIL") || "info@citoviso.com",
   /** Identifiable outreach sender (§C.2): real person + entity + reply contact. */
   outreachSender: {
     name: env("OUTREACH_SENDER_NAME"),

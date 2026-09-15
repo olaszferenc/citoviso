@@ -120,9 +120,31 @@ szükségképpen hamis.
 
 ---
 
+### 10. A fizető ügyfélnek mutatott cím EGY forrásból jön
+
+**Tulajdonosi döntés, 2026-09-15 (③) — ez a pont korábban NYITOTT volt, most KÖT.**
+
+A „Kérdése van a csomagról? Írjon:" link (és a belépési súgó) a
+`config.outreachSender.email`-t kapta: a HIDEG MEGKERESÉS jogilag kötelező feladó-azonosítását
+(§C.2, ADR-0130). A dev-konfigon mérve ez **személynév** (`olasz.ferenc@…`) — miközben a
+fizetés-lapok mellette már **beégetve** `info@citoviso.com`-ot írtak. Két képernyő, két válasz
+ugyanarra a kérdésre.
+
+- **Egy forrás:** `config.supportEmail` (`SUPPORT_EMAIL` env, alapértelmezés `info@citoviso.com`).
+  Fogyasztók: a Modulok fül kapcsolat-sora · a belépési súgó · a három fizetés-lap
+  (elutasított fizetés + két visszaigazolás). ⛔ Beégetett cím egyik vevő-oldali forrásban sem.
+- **Szerep-szétválasztás:** a support-cím NEM a megkeresés-feladó, és NEM az Impresszum jogi
+  címe (`legalEntity.email`, Eker.tv. 4. §) — három külön kötelezettség, három külön mező.
+- ⛔ **Amit ez NEM igazol:** hogy a postafiók fogad-e levelet. Mérve: a 25-ös port kifelé zárva
+  (ECONNREFUSED mind a 7 próbacímre, a biztosan létező `olasz.ferenc@`-re is), tehát a
+  kézbesíthetőség innen nem mérhető. **Ez emberi feladat:** élnie kell a Zoho-aliasnak.
+- ℹ️ **Rögzített, NEM javított lelet:** a belépési súgón a cím SZÖVEG, nem `mailto:` link —
+  egy kizárt ügyfélnek telefonon át kell gépelnie. Külön döntésre vár.
+
+---
+
 ## Amit a terv NEM dönt el (NYITOTT, külön körre)
 
-- ⛔ A „Kérdése van a csomagról?" link személynevet ír ki (`config.outreachSender.email`).
 - ⛔ A többnyelvű kártya „Fizetés és generálás" gombja 0 nyelvvel is aktív (szerver-oldali kapu).
 
 ---

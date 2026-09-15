@@ -2931,10 +2931,19 @@ async function handle(
         retryUrl: p.payUrl ?? null,
         // ⛔ The buyer-facing "write to us" address comes from the CONFIG — the
         // same source the tenant admin prints. Hardcoded on the page it was
-        // `info@citoviso.com`, a literal that exists nowhere in the setup, so a
+        // `info@citoviso.com`, a literal that existed nowhere in the setup, so a
         // buyer whose card had just been declined was sent to an address we do
         // not send from.
-        supportEmail: config.outreachSender.email || config.legalEntity.email || null,
+        //
+        // ⭐ 2026-09-15, owner decision: that source is now `config.supportEmail`
+        // (SUPPORT_EMAIL, default `info@citoviso.com`) — a SUPPORT role of its
+        // own. It used to be `outreachSender.email`, i.e. the legally mandated
+        // COLD-OUTREACH SENDER identity (§C.2, ADR-0130), which on this config is
+        // a personal address: a customer who had already paid was told to write
+        // to a person, while this very page printed `info@` two lines below.
+        // ⛔ The empty-case behaviour above stays: no address ⇒ the offer is
+        // dropped, never replaced by a plausible-looking one (§B.17).
+        supportEmail: config.supportEmail || null,
       }),
     );
   }

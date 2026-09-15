@@ -24,6 +24,8 @@ import { flagSvg } from "../ui/flags.js";
 import { T, langNameLocalized, langRegionName, multilangTierName } from "../i18n/mail.js";
 import { foldIncludes } from "../text/fold.js";
 import { huArticle, huArticleLower } from "../hu.js";
+// A vevőnek mutatott support-cím EGY forrása (a hívók is ezt adják át).
+import { config } from "../config.js";
 import { formatDay, formatDayStem, formatMonthDay } from "../text/day.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
@@ -3732,7 +3734,10 @@ export function adminDashboard(
     payError = false,
     previewToken = null,
     modules: mv = null,
-    supportEmail = "hello@citoviso.com",
+    // ⛔ A tartalék NEM egy negyedik beégetett cím: ugyanaz az EGY forrás, amit a
+    // hívók is adnak (config.supportEmail). A korábbi „hello@citoviso.com" sehol
+    // nem volt beállítva — egy fizető ügyfél levele oda a semmibe ment volna.
+    supportEmail = config.supportEmail,
     siteUrl = null,
   } = opts;
   // ADR-0067: the owner's own site language drives the WHOLE admin. Falls back to

@@ -214,6 +214,12 @@ if [ -f scripts/modules-annual-check.mts ]; then
   echo "[pre-commit] modules-annual-check (Modulok fül: éves árazás + összegző)…"
   npx tsx scripts/modules-annual-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A FIZETŐ ÜGYFÉLNEK mutatott support-cím EGY forrásból jöjjön, és ne a hideg-
+# megkeresés jogilag kötelező feladó-azonossága legyen (az a dev-konfigon személynév).
+if [ -f scripts/support-email-check.mts ]; then
+  echo "[pre-commit] support-email-check (a vevőnek mutatott cím egy forrásból)…"
+  npx tsx scripts/support-email-check.mts >/dev/null
+fi
 # A jóváhagyott „Csendes lista" terv (design-refs/console/modules-quiet-list):
 # rács-sor, halk lemondás, „+" csak a kirakatban, éves ár a kiemelt, fejléc-összeg.
 # BÖNGÉSZŐBEN mér, mert a kötött állítások fele vizuális.

@@ -1418,7 +1418,7 @@ async function serveAdmin(
       subscription,
       moduleApplied,
       domainSettle,
-      supportEmail: config.outreachSender.email || "hello@citoviso.com",
+      supportEmail: config.supportEmail,
       tab,
       siteUrl,
       guestViewUrl,
@@ -2632,7 +2632,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return send(
         res,
         200,
-        loginHelpPage(config.outreachSender.email || "hello@citoviso.com", loginLang),
+        loginHelpPage(config.supportEmail, loginLang),
       );
     }
     // GDPR Art. 13/14 notice. /adatvedelem is the canonical Hungarian path the
@@ -2699,7 +2699,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           tab: "modulok",
           moduleSettingsHtml: domainSettlementSection(view, content?.lang ?? "hu"),
           modules: await getTenantModules(session.tenantId),
-          supportEmail: config.outreachSender.email || "hello@citoviso.com",
+          supportEmail: config.supportEmail,
           unreadMessages: await countUnreadMessages(session.tenantId),
         }),
       );
