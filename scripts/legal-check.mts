@@ -149,6 +149,19 @@ check(
   /nem ismerjük meg|nem jutnak el/i.test(aszfText),
   "az ÁSZF kimondja, hogy a kártyaadatok nem jutnak el hozzánk",
 );
+// 2026-09-15 (Barion-checklist #5): the acquirer requires the provider's REGISTRY
+// NUMBER and PHONE inside the T&C itself — a link to the Impresszum is not
+// "included". Measured on the RENDERED page (the reviewer reads /aszf), not on
+// legal.ts: the intro is built in legalViews.ts from env-backed config fields.
+{
+  const { aszfPage } = await import("../src/server/legalViews.js");
+  const aszfHtml = aszfPage();
+  check(
+    /nyilvántartási szám:/.test(aszfHtml) && /telefon:/.test(aszfHtml) && /e-mail:/.test(aszfHtml),
+    "a renderelt /aszf közli a nyilvántartási számot, e-mailt és telefonszámot",
+    "a Barion-bíráló az ÁSZF-ben keresi őket (BARION-APPLICATION.md 2b. #5) — az Impresszum-link nem számít bele",
+  );
+}
 // ADR-0093/0094: the fixed "2 éves" term became the operator-set hűségidő, and the
 // early exit is a SETTLEMENT (kötbér + optional domain purchase), not a free walk.
 check(

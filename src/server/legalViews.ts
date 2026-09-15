@@ -91,10 +91,17 @@ export function impresszumPage(): string {
 /** ÁSZF (Eker.tv. 5. §) — the document `config.termsUrl` points at. */
 export function aszfPage(): string {
   const e = config.legalEntity;
+  // Barion acquirer checklist (2026-09-15): the T&C page itself must carry the
+  // provider's registry number, e-mail and PHONE — the reviewer reads /aszf, and
+  // a link to the Impresszum does not count as "included in the T&C".
   const intro =
     `<p class="mut">Verzió ${esc(ASZF_VERSION)} · hatályos ${esc(ASZF_EFFECTIVE_FROM)} napjától. ` +
     `Szolgáltató: ${field(e.name, "cégnév / egyéni vállalkozó neve")} ` +
-    `(székhely: ${field(e.address, "székhely címe")}, adószám: ${field(e.taxNumber, "adószám")}). ` +
+    `(székhely: ${field(e.address, "székhely címe")}, ` +
+    `nyilvántartási szám: ${field(e.regNumber, "egyéni vállalkozói nyilvántartási szám")}, ` +
+    `adószám: ${field(e.taxNumber, "adószám")}, ` +
+    `e-mail: ${field(e.email, "e-mail cím")}, ` +
+    `telefon: ${field(e.phone, "telefonszám")}). ` +
     `A Szolgáltató további adatait az <a href="/impresszum">Impresszum</a> tartalmazza.</p>` +
     `<p>A jelen Általános Szerződési Feltételek (ÁSZF) a Szolgáltató és a Megrendelő között ` +
     `a Citoviso honlap-szolgáltatás tárgyában létrejövő szerződés feltételeit tartalmazzák. ` +
