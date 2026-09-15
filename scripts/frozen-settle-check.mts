@@ -23,7 +23,8 @@
 // utasítania (a fagyás ELŐTTI, „active" ág szövegével renderelt felfüggesztett
 // lap) — egy őr, amit sosem láttunk pirosan, nem bizonyíték.
 
-import { modulesSection, adminDashboard } from "../src/server/adminViews.js";
+import { modulesSection, adminDashboard, documentsSection } from "../src/server/adminViews.js";
+import { invoiceItemKey, invoiceItemPeriod } from "../src/billing/invoiceItem.js";
 import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
 
@@ -317,6 +318,116 @@ if (!selfTest) {
   // ⚠️ A „0 nap” nem lehet néma alapértelmezés: a záró dátum mögöttünk is lehet.
   if (/adm-owe__dlv">\s*0 nap/.test(blk)) {
     fail("„0 nap” áll a blokkban — lejárt vagy ma lejáró határidőt ki kell mondani, nem nullázni");
+  }
+}
+
+/* ══ A VISSZAKAPCSOLÓ SÁV (Elek FK-006b ZAVAROS-1/2) ═══════════════════════════
+   Mérve 2026-09-13: a zöld „A honlapja újra elérhető" sáv kimondta, hogy a díj
+   rendezve, és hogy a számlát elküldtük — de SOHA nem mondta meg, MELY IDŐSZAK van
+   ezzel kifizetve, és úgy hivatkozott a bizonylatra, hogy nem vezetett el hozzá.
+   „A tulaj a visszakapcsolás után nem tudja megmondani, meddig van rendezve a
+   szolgáltatása."
+
+   ⛔ MIÉRT KELL IDE HÁROM KÜLÖN FIXTÚRA: a `settled` mező három ága három KÜLÖN
+   állítást enged meg (van bizonylat / nincs bizonylat / nincs is adat), és a §B.17
+   lényege épp az, hogy a HIÁNY se termeljen kitalált számot vagy halott linket.
+   Egyetlen „boldog úttal" a másik két ág soha nem lenne megmérve. */
+{
+  const P_START = iso(-30);
+  const P_END = iso(+335);
+  const restored = (settled: SubscriptionAdminData["settled"]): SubscriptionAdminData => ({
+    ...frozenSub(),
+    status: "active",
+    frozenOn: null,
+    arrears: null, // ⚠️ MÉRVE: aktív fiókon az arrears MINDIG null — a sáv nem építhet rá
+    restoredOn: iso(-1),
+    settled,
+  });
+  // ⛔ A SÁVOT mérjük, nem a lapot. Az első változatom az EGÉSZ HTML-ben kereste a
+  // `tab=dokumentumok`-ot, és a BAL MENÜ navigációs linkjét találta meg — vagyis a
+  // „nincs halott link" állítás mindig pirosra ment volna, a termékre fogva a saját
+  // hatókör-hibámat. Egy őr hatóköre MAGA a doktrína.
+  const bar = (sub: SubscriptionAdminData): string => {
+    const html = adminDashboard(
+      { username: "e@x.hu", displayName: "N" } as never,
+      CONTENT as never,
+      { tab: "modulok", subscription: sub as never, modules: MV, previewToken: "tok" },
+    );
+    const found = /<section class="adm-card adm-state adm-state--ok"[^]*?<\/section>/.exec(html)?.[0] ?? "";
+    // ⛔ ÖNTESZT: a FIX ELŐTTI sáv — se kifizetett időszak, se út a bizonylathoz,
+    // pontosan az az állapot, amit az Elek FK-006b mért. A meglévő --self-test a
+    // FAGYASZTOTT ágat rontja vissza, ami ezt a sávot meg sem érinti: enélkül a
+    // négy új állítás SOSEM lett volna piros, tehát nem is lenne bizonyíték
+    // (feedback_fixture_must_prove_its_own_path).
+    return selfTest
+      ? found
+          .replace(/<p class="adm-state__period">[^]*?<\/p>/g, "")
+          .replace(/<a class="adm-state__doc"[^]*?<\/a>/g, "")
+      : found;
+  };
+  const render = bar;
+
+  // ① VAN BIZONYLAT: időszak + összeg + működő út a számlához.
+  {
+    const html = render(
+      restored({ periodStart: P_START, periodEnd: P_END, amount: 99_900, invoiceId: "inv-1", invoiceNumber: "OV-2026-44" }),
+    );
+    const t = visible(html);
+    if (!/Ezzel a .* – .* időszak van rendezve/.test(t)) {
+      fail("a visszakapcsoló sáv NEM mondja meg, mely időszakot fizette ki a tulaj");
+    } else pass("a sáv kimondja a KIFIZETETT IDŐSZAKOT");
+    if (!/99\s?900/.test(t)) fail("a sáv nem mondja meg, mennyi volt a rendezett díj");
+    else pass("a sáv kimondja az összeget (bizonylattal igazolva)");
+    if (!/tab=dokumentumok/.test(html)) {
+      fail("a sáv hivatkozik a számlára, de nem VEZET EL hozzá (ZAVAROS-2)");
+    } else pass("a sáv elvezet a bizonylathoz a Dokumentumok fülre");
+    if (!/OV-2026-44/.test(t)) fail("a link nem nevezi meg, MELYIK bizonylatot nyitja meg");
+    else pass("a link megnevezi a számla sorszámát");
+    // ⛔ A LINK TÉNYLEG ODAVEZET-E? Egy horgony, ami üres listára visz, ugyanaz a
+    // hibaosztály, mint a hiányzó link — a keresőszót a Dokumentumok predikátumán
+    // MÉRJÜK, nem feltételezzük (mérve: 3 sorból 1-re szűkít).
+    const q = /[?&]q=([^"&]+)/.exec(html)?.[1] ?? "";
+    const docs = documentsSection({
+      invoices: [
+        { id: "i1", invoiceNumber: "OV-2026-44", issuedAt: new Date("2026-09-12T10:00:00+02:00"),
+          gross: 99_900, currency: "HUF", status: "issued", vatTreatment: "aam", hasPdf: true,
+          periodStart: null, periodEnd: null, year: "2026",
+          itemKey: invoiceItemKey("renewal"), itemPeriod: invoiceItemPeriod(invoiceItemKey("renewal"), "annual") },
+        { id: "i2", invoiceNumber: "OV-2026-43", issuedAt: new Date("2026-09-12T10:00:00+02:00"),
+          gross: 99_900, currency: "HUF", status: "issued", vatTreatment: "aam", hasPdf: true,
+          periodStart: null, periodEnd: null, year: "2026",
+          itemKey: invoiceItemKey("renewal"), itemPeriod: invoiceItemPeriod(invoiceItemKey("renewal"), "annual") },
+      ] as never,
+      agreements: [], owed: 0, sub: "szamlak", year: "mind",
+      q: decodeURIComponent(q), nextRenewal: new Date("2027-09-10T00:00:00+02:00"),
+    } as never);
+    const hits = (docs.match(/<div class="adm-inv(?=[\s"])/g) ?? []).length;
+    if (hits !== 1) fail(`a link keresőszava ${hits} számla-sort ad, nem pontosan azt az egyet`);
+    else pass("a link keresőszava PONTOSAN a hivatkozott bizonylatra szűkít");
+  }
+
+  // ② NINCS BIZONYLAT: időszak IGEN, de se kitalált összeg, se halott link (§B.17).
+  {
+    const html = render(
+      restored({ periodStart: P_START, periodEnd: P_END, amount: null, invoiceId: null, invoiceNumber: null }),
+    );
+    const t = visible(html);
+    if (!/Ezzel a .* – .* időszak van rendezve/.test(t)) {
+      fail("bizonylat nélkül is ki kell mondani, MELY időszak van rendezve");
+    } else pass("bizonylat nélkül is kimondja az időszakot");
+    if (/tab=dokumentumok/.test(html)) {
+      fail("bizonylat NÉLKÜL is linkel a Dokumentumokra — egy link, ami nem nyílik meg, rosszabb a hiányzónál");
+    } else pass("bizonylat nélkül NINCS link (§B.17)");
+  }
+
+  // ③ NINCS ADAT: a sáv a régi, igaz szövegével áll — kitalált időszak nélkül.
+  {
+    const t = visible(render(restored(null)));
+    if (/időszak van rendezve/.test(t)) {
+      fail("adat nélkül is állít egy KIFIZETETT IDŐSZAKOT — ez kitalált tény");
+    } else pass("adat nélkül nem állít időszakot");
+    if (!/A honlapja újra elérhető/.test(t)) fail("a visszakapcsolás ténye eltűnt");
+    else pass("a visszakapcsolás ténye változatlanul ott áll");
   }
 }
 

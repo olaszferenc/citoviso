@@ -502,8 +502,38 @@ export function modulesSection(
       `<div class="adm-card__head adm-state__head"><span class="adm-sub__dot adm-state__dot"></span>` +
       `<h2>${T(lang, "A honlapja újra elérhető")}</h2></div>` +
       `<div class="adm-state__grid"><div class="adm-state__text">` +
-      `<p>${T(lang, "A díj rendezve — {date} óta a látogatói ismét elérik az oldalát, változatlan tartalommal.", { date: esc(sub.restoredOn) })}</p>` +
-      `<p class="citui-hint">${T(lang, "A számlát elküldtük e-mailben; az automatikus kártyaterhelés a következő fordulónaptól újra él.")}</p>` +
+      `<p>${T(lang, "A díj rendezve — {date} óta a látogatói ismét elérik az oldalát, változatlan tartalommal.", { date: esc(formatDay(sub.restoredOn, lang)) })}</p>` +
+      // ── Elek FK-006b ZAVAROS-1: MELY IDŐSZAKOT fizette ki? ──────────────────
+      // A sáv eddig kimondta, hogy „rendezve", de nem azt, hogy MEDDIG — a tulaj a
+      // visszakapcsolás után nem tudta megmondani, meddig van rendezve a
+      // szolgáltatása. Az összeg csak akkor áll itt, ha BIZONYLAT igazolja (§B.17).
+      (sub.settled
+        ? `<p class="adm-state__period">` +
+          (sub.settled.amount === null
+            ? T(lang, "Ezzel a {from} – {to} időszak van rendezve.", {
+                from: esc(formatDay(sub.settled.periodStart, lang)),
+                to: esc(formatDay(sub.settled.periodEnd, lang)),
+              })
+            : T(lang, "Ezzel a {from} – {to} időszak van rendezve, {amount}.", {
+                from: esc(formatDay(sub.settled.periodStart, lang)),
+                to: esc(formatDay(sub.settled.periodEnd, lang)),
+                amount: esc(hufAmount(sub.settled.amount)),
+              })) +
+          `</p>`
+        : "") +
+      // ── Elek FK-006b ZAVAROS-2: hivatkozik a számlára, de nem vezet el hozzá ──
+      // „Ha a levél nem jött meg, a tulajnak találgatnia kell." A link CSAK akkor
+      // áll itt, ha a bizonylatot tényleg megtaláltuk — különben a mondat marad a
+      // régi, és nem ígérünk olyan lapot, amit nem tudunk megnyitni.
+      (sub.settled?.invoiceId
+        ? `<p class="citui-hint">` +
+          T(lang, "A számlát elküldtük e-mailben; az automatikus kártyaterhelés a következő fordulónaptól újra él.") +
+          `<br><a class="adm-state__doc" href="/admin?tab=dokumentumok&q=${encodeURIComponent(sub.settled.invoiceNumber ?? "")}">` +
+          (sub.settled.invoiceNumber
+            ? T(lang, "{no} megnyitása a Dokumentumok közt ▸", { no: esc(sub.settled.invoiceNumber) })
+            : T(lang, "Megnyitom a Dokumentumok közt ▸")) +
+          `</a></p>`
+        : `<p class="citui-hint">${T(lang, "A számlát elküldtük e-mailben; az automatikus kártyaterhelés a következő fordulónaptól újra él.")}</p>`) +
       `</div></div></section>`;
   }
   // The past_due warning stays a banner — but OUTSIDE the card, because the card

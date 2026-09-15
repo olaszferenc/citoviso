@@ -4,7 +4,7 @@
 <!-- ⚠️ A változat NEVÉT szándékosan NEM `**„…"**` alakban írjuk: a contract-drift-check
      azt KÖTŐ FELIRATNAK olvassa, és egy tervezői opció-nevet keresne a felületen. -->
 
-**Hatókör:** `src/server/adminViews.ts` · `src/tenant/messages.ts` · `src/tenant/messageThreads.ts` · `src/tenant/messagePreview.ts`
+**Hatókör:** `src/server/adminViews.ts` · `src/tenant/messages.ts` · `src/tenant/messageThreads.ts` · `src/tenant/messagePreview.ts` · `src/tenant/subscriptionAdmin.ts`
 
 **Döntés:** ADR-0154 (`_planning/DECISIONS.md`).
 
@@ -116,6 +116,26 @@ szándékosan nem szálasít. A nyereség tehát **50 dunning-sor → 1 ügy-sor
   **külön terv-kör**, nem csendes visszavágás.
 - Minden chip **számot visel**, és amit ígér, azt szállítja (ADR-0127 ③, már él).
 - Üres találatnál a sáv **végig látszik**, és van kiút: **„Szűrés törlése"**.
+
+### ⑦b A VISSZAKAPCSOLÓ SÁV MEGMONDJA, MELY IDŐSZAKOT FIZETTE KI — ÉS ELVEZET A SZÁMLÁHOZ
+
+<!-- ⚠️ EZ A PONT UTÓLAG KERÜLT BE (2026-09-15). A tulaj által jóváhagyott vázlat
+     MUTATTA, a kontraktus első változatába viszont nem vettem be — csendben
+     szűkítettem a szerződést a terv alá, és a kontraktus-őr emiatt nem is foghatta
+     meg. A tulaj kérésére pótolva. -->
+
+- A zöld „A honlapja újra elérhető" sáv eddig kimondta, hogy a díj rendezve, és hogy a
+  számlát elküldtük — de **nem azt, hogy MEDDIG van rendezve**, és úgy hivatkozott a
+  bizonylatra, hogy **nem vezetett el hozzá** (Elek FK-006b ZAVAROS-1/2).
+- A sáv kimondja a kifizetett időszakot: **„Ezzel a"** … időszak **„van rendezve"**,
+  és — ha bizonylat igazolja — az összeget is.
+- A bizonylat **egy koppintásra** elérhető a Dokumentumok fülön, a számla sorszámával.
+- ⛔ **§B.17 — CSAK AMIT MEGTALÁLTUNK:** ha nincs kiállított számla az időszakra, sem
+  összeg, sem link nem jelenik meg; a sáv ilyenkor az időszakot mondja el, és a szöveg
+  marad a régi. Egy link, ami nem nyílik meg, rosszabb a hiányzó linknél.
+- ⚠️ **Az `arrears` mező ERRE NEM JÓ** (mérve): az csak `past_due`/`frozen` állapotban él,
+  a sáv viszont pont akkor jelenik meg, amikor a fiók MÁR ÚJRA AKTÍV. A kifizetett ciklus
+  ilyenkor maga a FOLYÓ időszak (`current_period_start/end`), mert a fizetés arra állítja.
 
 ### ⑦ DOKUMENTUMOK — az összegző megnevezi magát
 

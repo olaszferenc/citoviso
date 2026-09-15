@@ -301,6 +301,12 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-state__text ul{margin:0;padding-left:18px;display:grid;gap:7px;
   font-size:.88rem;line-height:1.55;color:var(--citui-muted)}
 .adm-state__text ul b{color:var(--citui-ink)}
+/* ── Elek FK-006b ZAVAROS-1/2: MELY időszak van rendezve, és hol a bizonylat ──
+   A kifizetett időszak a sáv MÁSODIK legfontosabb állítása (az első az, hogy megint
+   elérhető) — ezért kiemelt, de nem hangosabb a főcímnél. */
+.adm-state__period{font-weight:600;color:var(--citui-ink)}
+.adm-state__doc{display:inline-block;margin-top:4px;font-weight:600;color:var(--citui-navy-700)}
+.adm-state__doc:hover{color:var(--citui-navy-900)}
 .adm-owe__l{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;
   font-weight:700;color:var(--citui-muted)}
 /* The figure the owner must PAY is the largest thing on the screen — the whole

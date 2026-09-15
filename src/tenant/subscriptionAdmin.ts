@@ -46,6 +46,32 @@ export interface SubscriptionAdminData {
    *  recent news. NULL once the return has been acknowledged long enough — a
    *  permanent "you are back" banner would be its own kind of noise. */
   readonly restoredOn: string | null;
+  /**
+   * WHICH cycle the owner just paid for, and the document that proves it.
+   *
+   * WHY (Elek FK-006b ZAVAROS-1/2): a zöld „újra elérhető" sáv kimondta, hogy a díj
+   * rendezve, és hogy a számlát elküldtük — de soha nem mondta meg, MELY IDŐSZAK van
+   * ezzel kifizetve, és úgy hivatkozott a bizonylatra, hogy nem vezetett el hozzá.
+   * „A tulaj a visszakapcsolás után nem tudja megmondani, meddig van rendezve a
+   * szolgáltatása."
+   *
+   * ⛔ MÉRVE, HOGY AZ `arrears` ERRE NEM JÓ: az csak `past_due`/`frozen` állapotban él
+   * (lásd az `owes` kaput lentebb), a sáv viszont pont akkor jelenik meg, amikor a fiók
+   * MÁR ÚJRA AKTÍV — ott mindig `null` volna. A kifizetett ciklus ilyenkor maga a FOLYÓ
+   * időszak: a fizetés a `current_period_start/end`-et a kifizetett rendelés időszakára
+   * állítja (`src/payment/subscription.ts`).
+   *
+   * ⚠️ §B.17: minden mező csak akkor áll benne, ha MEGTALÁLTUK. Számla nélkül nincs
+   * `invoiceId` — a felület nem ígérhet linket, amit nem tud megnyitni.
+   */
+  readonly settled: {
+    readonly periodStart: string;
+    readonly periodEnd: string;
+    /** A bizonylat bruttója; `null`, ha a számla még nem áll rendelkezésre. */
+    readonly amount: number | null;
+    readonly invoiceId: string | null;
+    readonly invoiceNumber: string | null;
+  } | null;
   /** Whole-subscription cancellation armed — closes at periodEnd. */
   readonly cancelAtPeriodEnd: boolean;
   // ── ADR-0088 §8: monthly→annual switch (approved B plan) ──
@@ -105,6 +131,9 @@ export async function getSubscriptionAdmin(
       "id",
       "status",
       "anchor_date",
+      // A KIFIZETETT időszak kezdete (a `settled` mezőhöz): fizetéskor a rendelés
+      // időszakára áll át, tehát a folyó időszak MAGA a most kifizetett ciklus.
+      "current_period_start",
       "current_period_end",
       "cancel_at_period_end",
       "billing_period",
@@ -164,6 +193,40 @@ export async function getSubscriptionAdmin(
         }
       : null;
 
+  // ── MELY IDŐSZAK VAN KIFIZETVE, ÉS HOL A BIZONYLAT (Elek FK-006b ZAVAROS-1/2) ──
+  // Csak akkor kérdezzük meg, ha a visszakapcsolás FRISS hír — különben egy fölösleges
+  // lekérdezés futna minden admin-lapon.
+  const restoredOn = recentRestore(sub.restored_at);
+  let settled: SubscriptionAdminData["settled"] = null;
+  if (restoredOn) {
+    // A kifizetett ciklus MAGA a folyó időszak: a fizetés a current_period_start/end-et
+    // a kifizetett rendelés időszakára állítja (src/payment/subscription.ts).
+    const periodStart = isoDate(new Date(sub.current_period_start as unknown as string));
+    const periodEnd = isoDate(new Date(sub.current_period_end as unknown as string));
+    // A bizonylat UGYANAZON a kulcson: a rendelés időszak-kezdete. Sztornózott számlát
+    // nem ajánlunk fel — az nem bizonyítja a kifizetést.
+    const doc = await db
+      .selectFrom("invoice")
+      .innerJoin("payment", "payment.id", "invoice.payment_id")
+      .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+      .select(["invoice.id as id", "invoice.invoice_number as no", "invoice.gross as gross"])
+      .where("order_intent.tenant_id", "=", tenantId)
+      .where("order_intent.kind", "=", "renewal")
+      .where("order_intent.renewal_period_start", "=", sub.current_period_start)
+      .where("invoice.status", "=", "issued")
+      .orderBy("invoice.issued_at", "desc")
+      .executeTakeFirst();
+    settled = {
+      periodStart,
+      periodEnd,
+      // ⚠️ §B.17: az ÖSSZEG a bizonylatról jön, nem a rendelés árából „valószínűsítve".
+      // Bizonylat nélkül nincs szám és nincs link — a sáv ilyenkor csak az időszakot mondja.
+      amount: doc?.gross ?? null,
+      invoiceId: doc?.id ?? null,
+      invoiceNumber: doc?.no ?? null,
+    };
+  }
+
   // ADR-0088 §8: the armed switch's HONEST effective date. When the upcoming
   // renewal was already minted at the monthly price (the timer runs days ahead
   // of the due date), the switch lands one cycle later — the card must say the
@@ -198,7 +261,8 @@ export async function getSubscriptionAdmin(
     arrears,
     closesOn: isoDate(addDays(periodEndDate, DUNNING_CANCEL_OFFSET_DAYS)),
     frozenOn: sub.frozen_at ? isoDate(new Date(sub.frozen_at as unknown as string)) : null,
-    restoredOn: recentRestore(sub.restored_at),
+    restoredOn,
+    settled,
     cancelAtPeriodEnd: sub.cancel_at_period_end,
     billingPeriod: sub.billing_period,
     pendingAnnual,
