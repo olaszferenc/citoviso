@@ -107,3 +107,61 @@ létezik · a sáv nem ismétli a tartozás összegét. Bekötve a `hooks/pre-co
 2. A `§2b` kivételt a tulaj adta, mért számokkal és a javítás pontos alakjával kérdezve — a
    token naplózva. A kör **nem élesít**; a kapu-verdiktet **nem adtam meg magamnak**
    (`node scripts/kb-gate.mjs pass …` NEM futott), azt egy friss, független őr ítéli meg.
+
+---
+
+## ⛔ UTÓIRAT — a független tudásbázis-őr FLAG-et adott, és igaza volt (ADR-0183)
+
+A három eredeti hiányt pótoltnak mérte, **de a `kb-shot`-köröm ÚJ RÉST nyitott**, és az
+blokkolta az élesítést. Ez a kör legfontosabb tanulsága, mert **a saját javításom rontott el
+valamit, és minden kapum zöld maradt**.
+
+### ① A fő baj: kiürítettem egy súgó-képet
+
+`kb/entries/console-leads/assets/hu/legend.png`: **640×2020 / 305 kB → 640×126 / 12 kB** (mérve,
+a köröm előtti állapothoz hasonlítva). A kép a **csukott** `details` fejléc-sávját mutatta,
+miközben a képaláírás „a jelmagyarázat **kinyitva**"-t ígér, a bekezdés pedig azt, hogy
+számítógépen nyitva fogad. **A teljes oszlop-magyarázat némán kiesett a súgóból.**
+
+Az ok **két rétegű**, és külön-külön ártalmatlannak látszott:
+- **(a)** a felvétel a SZERVER HTML-jében cserélt sztringet
+  (`<details class="con-legend">` → `… open`), a nézet viszont ma
+  `<details class="con-legend" id="leadLegend" open>`-t ad → a csere **NO-OP** volt, némán;
+- **(b)** és ha illeszkedett volna, sem ér semmit: a lap `syncOpen()`-je **700 px alatt leszedi**
+  az `open`-t, a felvétel meg **390 px**-en készül. Vagyis a szerver-oldali HTML-babrálás
+  **elvileg sem** tudta megoldani.
+
+**Javítás:** a nyitás a **DOM-on, a lap-szkript lefutása UTÁN** történik (`forceOpen`), és ha a
+szelektor nem talál, a szkript **hangosan dob** — a néma kihagyás volt maga a hiba.
+Újrafuttatva a kép **640×2448** (magasabb az eredetinél, mert a nézet azóta új sorokat kapott),
+és **megnéztem a szememmel**: a jelmagyarázat nyitva, a teljes oszlop-listával.
+
+### ② A súgó szerkezeti állítása fordítva volt
+
+A cikk a pirula és a cím **sorrendjét** fordítva írta le, és a blokkot az Előfizetés-kártya
+„**alatt**"-ra tette. Mérve: a DOM-ban a **pirula van előbb**, és a blokk a kártyán **BELÜL**,
+a **42–90 %-a** között ül. ⚠️ A „kártya alsó részén"-t sem vettem át vakon: külön megmértem
+390 és 1280 px-en, és a mondat a mért arányt tükrözi.
+**Mostantól őrzött:** `charge-retry-note-check` ⑥a (sorrend) és ⑥b (tartalmazás) — mindkettőnek
+saját piros próbája van.
+
+### ③ Az ép-őr (ADR-0183)
+
+A `kb-shot` minden felvételt összevet az ELŐZŐ képpel, és a **nagyságrendi esés PIROS**.
+⛔ Azért a generátorban: **sem a `kb-check`, sem a `kb-freshness` nem nézi, VAN-E TARTALOM a
+képen**. A megkerülhetetlenség **szerkezeti**: minden felvétel egyetlen úton (`snap()`) megy ki,
+és az önteszt a szkript **saját forrását** méri (pontosan 1 `screenshot()` hívóhely, a `snap()`-en
+belül) — ezt élesben is pirosra vittem egy szándékosan beszúrt megkerülő úttal.
+Önteszt: 7 eset, 2 piros (köztük a valódi 2020 → 126), és **pozitív kontroll** is, hogy a jogos
+rövidülés átmenjen — különben egy mindig-igaz predikátum is zöldnek látszana.
+
+### Amit ez tanít
+
+**Egy generátor, ami nem méri, amit előállított, csendben tud kárt okozni** — és a köré épített
+kapuk (`kb-check`, `kb-freshness`) mind zöldek maradhatnak, mert MÁS kérdésre válaszolnak.
+Ugyanaz az osztály, mint a `feedback_label_answers_a_different_question`, csak képen.
+⚠️ És: **a saját javító-körömet is meg kell mérni**, nem csak azt, amit javítani küldtek. A 18
+újragenerált képből egyet sem néztem meg a szememmel — csak azt az egyet, amiért a kör indult.
+
+🔵 **Elhalasztva (az őr szerint nem blokkoló):** a `payResultPage`/`payUnknownRefPage`
+felirat-drift kérdése — a feliratok ma pontosak, a korpusz-döntés külön kör.

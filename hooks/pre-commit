@@ -152,6 +152,17 @@ fi
 # ami a visszautasítást szüli). Az őr a RENDERELT lapon méri: irány-szó nincs (a sávban ÉS a
 # mandátum-blokkban) · minden megnevezett kijárat VALÓDI vezérlő a lapon · ahol van fizetési
 # út, ott a sáv oda is VISZ. Piros önteszt (20 sértés) + negatív kontroll a TÖRTÉNETI hibára.
+# ⛔ A kb-shot NÉMÁN ki tudta üríteni egy súgó-kép tartalmát (legend.png: 640×2020 → 640×126,
+# a teljes oszlop-magyarázat kiesett, miközben a képaláírás „kinyitva"-t ígért). Sem a kb-check,
+# sem a kb-freshness nem fogta meg: EGYIK SEM NÉZI, VAN-E TARTALOM A KÉPEN. Azóta a kb-shot
+# minden felvételt összevet az előzővel, és a beomlás PIROS. Ez az önteszt azt méri, hogy ez az
+# ép-őr maga ép-e: megszólal-e a valódi hibára, átengedi-e a jogos rövidülést, és nem kerülhető-e
+# meg egy új felvételi úttal (szerkezeti próba). Böngészőt NEM indít, nem fényképez.
+if [ -f scripts/kb-shot.mts ] && \
+   changed_files | grep -qE '^scripts/kb-shot\.mts'; then
+  echo "[pre-commit] kb-shot ép-őr önteszt (egy súgó-kép ne tudjon némán kiürülni)…"
+  npx tsx scripts/kb-shot.mts --self-test >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/charge-retry-note-check.mts ] && \
    changed_files | grep -qE '^(src/server/(adminViews|public)\.ts|src/payment/retryCharge\.ts|public/assets/ui/citui-admin\.css)|^scripts/charge-retry-note-check'; then
   echo "[pre-commit] charge-retry-note (a sáv ne IRÁNYT mondjon, hanem VIGYEN)…"

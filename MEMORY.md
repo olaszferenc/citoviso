@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🧭 ADR-0182: irány helyett NÉV, és a sáv vigye a tettet; + 💳 Barion-bírálat VÁRUNK; + 🫥 ADR-0181)
+Utolsó frissítés: 2026-09-15 (🧭 ADR-0182 irány helyett NÉV + 🖼️ ADR-0183 a súgó-kép ne ürülhessen ki némán; + 💳 Barion-bírálat VÁRUNK)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
@@ -44,9 +44,30 @@ független őr ítéli meg (ADR-0132 H).
   hogy **behelyettesített számlaszámot idéztem félkövéren** egy sablon-feliratból.
   **18** elavult súgó-kép újragenerálva (a `console-duplicates` az ADR-0178 után is három
   egyforma cián gombot mutatott), **KB-fordítás-kör lefuttatva mind a 6 élő nyelvre**.
-- 🔴 **NYITOTT:** a `payResultPage`/`payUnknownRefPage` a `console/views.ts`-ben él
-  (operátor-korpusz), a cikk viszont tenant → ezek a feliratok **drift-védelem nélkül** állnak,
-  pedig a lapokat a FIZETŐ VEVŐ látja. Korpusz-kérdés, eldöntendő.
+- ⛔⛔ **UTÓIRAT — a független tudásbázis-őr FLAG-et adott, és IGAZA VOLT (ADR-0183).** A három
+  eredeti hiányt pótoltnak mérte, **de a `kb-shot`-köröm ÚJ RÉST nyitott:** a
+  `console-leads/legend.png` **640×2020 / 305 kB → 640×126 / 12 kB**-ra esett — a teljes
+  oszlop-magyarázat **némán kiesett a súgóból**, miközben a képaláírás „kinyitva"-t ígért.
+  Az ok két rétegű: a felvétel a SZERVER HTML-jében cserélt sztringet, ami a nézet mai alakjára
+  már **NO-OP**; és ha illeszkedett volna, sem ér semmit, mert a lap `syncOpen()`-je **700 px
+  alatt leszedi** az `open`-t, a felvétel meg 390 px-en készül. A nyitás mostantól a **DOM-on, a
+  JS lefutása UTÁN** történik, és a néma nem-találat **dob**. Újrarenderelve 640×**2448**,
+  megnéztem a szememmel.
+- ⭐ **ADR-0183 — ÉP-ŐR:** a `kb-shot` minden felvételt összevet az ELŐZŐ képpel, és a
+  nagyságrendi esés **PIROS**. ⛔ Azért a generátorban, mert **sem a `kb-check`, sem a
+  `kb-freshness` nem nézi, VAN-E TARTALOM a képen**. A megkerülhetetlenség SZERKEZETI: minden
+  felvétel egyetlen úton (`snap()`) megy ki, és az önteszt a szkript **saját forrását** méri —
+  ezt élesben is pirosra vittem egy szándékosan beszúrt megkerülő úttal. Önteszt 7 eset / 2 piros
+  + pozitív kontroll a jogos rövidülésre.
+- **A súgó két szerkezeti állítása is javítva és ŐRZÖTT** (⑥a/⑥b): a DOM-ban a **pirula van
+  előbb**, és a mandátum-blokk a kártyán **BELÜL**, a **42–90 %-a** között ül (mérve 390 és
+  1280 px-en, nem a verdiktből átvéve).
+- ⚠️ **A kör tanulsága magamról:** a saját javító-körömet is meg kell mérni, nem csak azt, amit
+  javítani küldtek — a 18 újragenerált képből **csak azt az egyet néztem meg**, amiért a kör
+  indult.
+- 🔵 **Elhalasztva (az őr szerint NEM blokkoló):** a `payResultPage`/`payUnknownRefPage` a
+  `console/views.ts`-ben él (operátor-korpusz), a cikk viszont tenant → a feliratok
+  **drift-védelem nélkül** állnak, de ma pontosak. Korpusz-döntés, külön kör.
 
 ---
 

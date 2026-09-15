@@ -8,9 +8,17 @@
 // No server, no login: the views are pure functions (shot-module-config minta).
 //
 //   npx tsx scripts/kb-shot.mts
+//   npx tsx scripts/kb-shot.mts --self-test   # csak az ÉP-ŐR piros próbája, NEM fényképez
+//
+// ⛔ ÉP-ŐR (2026-09-15, tudásbázis-őr verdikt). Ez a szkript NÉMÁN ki tudta ürí­teni egy
+// súgó-kép tartalmát: a `legend.png` 640×2020 / 305 kB-ról 640×126 / 12 kB-ra esett, vagyis
+// a teljes oszlop-magyarázat kiesett a súgóból, miközben a képaláírás továbbra is azt írta,
+// hogy „a jelmagyarázat kinyitva". Sem a `kb-check`, sem a `kb-freshness` nem fogta meg:
+// EGYIK SEM NÉZI, VAN-E TARTALOM A KÉPEN. Ezért minden felvétel után összevetjük a kép
+// magasságát az ELŐZŐ változatéval, és a beomlás PIROS.
 
 import { chromium } from "playwright-core";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -539,6 +547,119 @@ function helpFixture(topic?: string) {
   };
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉP-ŐR: egy súgó-kép ne tudjon NÉMÁN kiürülni
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** PNG méret az IHDR-ből (a 16–24. bájt), fájl-olvasás nélküli dekódolás helyett. */
+async function pngSize(file: string): Promise<{ w: number; h: number } | null> {
+  try {
+    const buf = await readFile(file);
+    if (buf.length < 24 || buf.readUInt32BE(0) !== 0x89504e47) return null;
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Beomlott-e a kép? ⚠️ KÜLÖN FÜGGVÉNY, hogy a `--self-test` MEG TUDJA SZÓLALTATNI a
+ * szkript lefényképezése nélkül — egy őr, amit sosem láttunk pirosan, nem bizonyíték.
+ *
+ * A küszöb NEM „bármilyen csökkenés": egy súgó-kép jogosan rövidül, ha egy sor kikerül a
+ * felületről. A NAGYSÁGRENDI esés az, ami tartalom-vesztést jelent — a mért valódi hiba
+ * 2020 → 126 px volt (6 %). Ezért: az új magasság a régi HARMADA alatt van, ÉS a régi kép
+ * érdemi magasságú volt (különben egy 30 px-es csík 10 px-re zsugorodása is riasztana).
+ */
+export function captureCollapsed(
+  prev: { w: number; h: number } | null,
+  next: { w: number; h: number } | null,
+): boolean {
+  if (!prev || !next) return false;
+  return prev.h >= 300 && next.h * 3 < prev.h;
+}
+
+interface CaptureStat {
+  readonly rel: string;
+  readonly prev: { w: number; h: number } | null;
+  readonly next: { w: number; h: number } | null;
+}
+const captures: CaptureStat[] = [];
+
+/**
+ * MINDEN felvétel ezen az egy úton megy ki — ez a lényeg. Ha a hat `screenshot()`
+ * hívóhely külön-külön írna, egy új hívóhely NÉMÁN kimaradna az ellenőrzésből
+ * (`feedback_narrow_recognizer_is_a_false_green`), és a záró összesítő zölden hallgatna.
+ */
+async function snap(
+  target: { screenshot(o: { path: string }): Promise<Buffer> },
+  outPath: string,
+): Promise<void> {
+  const prev = await pngSize(outPath);
+  await target.screenshot({ path: outPath });
+  const next = await pngSize(outPath);
+  captures.push({ rel: path.relative(ROOT, outPath), prev, next });
+}
+
+// ── --self-test: az ÉP-ŐR piros próbája, fényképezés NÉLKÜL ─────────────────
+// Egy őr, amit sosem láttunk pirosan, nem bizonyíték. A teljes kb-shot-futás ehhez
+// túl drága (böngésző + ~40 felvétel), ezért a PREDIKÁTUMOT szólaltatjuk meg —
+// és pozitív kontroll is van, hogy a „nem omlott be" ág se legyen vakon zöld.
+if (process.argv.includes("--self-test")) {
+  const cases: ReadonlyArray<{ why: string; prev: { w: number; h: number } | null; next: { w: number; h: number } | null; want: boolean }> = [
+    { why: "A VALÓDI hiba: legend.png 2020 → 126 px", prev: { w: 640, h: 2020 }, next: { w: 640, h: 126 }, want: true },
+    { why: "beomlás a küszöb alatt (900 → 200)", prev: { w: 640, h: 900 }, next: { w: 640, h: 200 }, want: true },
+    { why: "jogos rövidülés (egy sor kikerült): 2020 → 1800", prev: { w: 640, h: 2020 }, next: { w: 640, h: 1800 }, want: false },
+    { why: "határeset: pont a harmada, tehát MÉG nem beomlás", prev: { w: 640, h: 900 }, next: { w: 640, h: 300 }, want: false },
+    { why: "eleve apró csík zsugorodása nem riaszt (200 → 10)", prev: { w: 640, h: 200 }, next: { w: 640, h: 10 }, want: false },
+    { why: "nincs előző kép → nincs mihez mérni", prev: null, next: { w: 640, h: 126 }, want: false },
+    { why: "olvashatatlan új kép → nem ez a szabály dolga", prev: { w: 640, h: 2020 }, next: null, want: false },
+  ];
+  let bad = 0;
+  for (const c of cases) {
+    const got = captureCollapsed(c.prev, c.next);
+    const ok = got === c.want;
+    if (!ok) bad++;
+    console.log(`  ${ok ? "✅" : "⛔"} ${c.why} → ${got ? "BEOMLOTT" : "rendben"} (várt: ${c.want ? "BEOMLOTT" : "rendben"})`);
+  }
+  // ⚠️ Nem elég, hogy „minden eset stimmel": ha a predikátum MINDIG false-t adna, a
+  // negatív esetek zöldek lennének, és a zöld összesítő elfedné a halott szabályt.
+  const firedCount = cases.filter((c) => c.want).length;
+  if (!firedCount) {
+    console.error("⛔ önteszt: egyetlen PIROS esetet sem tűztünk ki — ez nem próba.");
+    process.exit(1);
+  }
+  if (bad) {
+    console.error(`\n❌ kb-shot ép-őr önteszt: ${bad} eset nem a várt eredményt adta.`);
+    process.exit(1);
+  }
+  // ── SZERKEZETI PRÓBA: elkerülheti-e VALAKI az ép-őrt? ─────────────────────
+  // ⛔ A predikátum hibátlansága semmit nem ér, ha egy ÚJ felvételi hívóhely megkerüli.
+  // Ezért a szkript a SAJÁT forrását méri: pontosan EGY `screenshot({ path: … })`
+  // hívás létezhet, és annak a `snap()`-en belül kell lennie. Ez az az állítás, ami a
+  // „minden kép ellenőrizve" mondatot igazzá teszi (`feedback_narrow_recognizer_is_a_false_green`).
+  const src = await readFile(new URL(import.meta.url), "utf8");
+  const sites = [...src.matchAll(/\.screenshot\(\{\s*path:/g)].length;
+  const insideSnap = /async function snap\([\s\S]*?await target\.screenshot\(\{ path: outPath \}\);/.test(src);
+  if (sites !== 1 || !insideSnap) {
+    console.error(
+      `\n❌ SZERKEZETI BUKÁS: ${sites} db screenshot-hívóhely van (várt: 1, a snap()-ben; ` +
+        `snap-en belül: ${insideSnap}). Egy új felvételi út MEGKERÜLNÉ az ép-őrt, és a ` +
+        `záró „egyetlen kép sem omlott be" sor hazudna.`,
+    );
+    process.exit(1);
+  }
+  console.log(`  ✅ szerkezeti próba: mind a felvétel EGYETLEN úton megy ki (snap()).`);
+
+  console.log(
+    `\n✅ kb-shot ép-őr önteszt: ${cases.length} eset, ebből ${firedCount} PIROSRA ment — ` +
+      `a szabály képes megszólalni, a jogos rövidülést átengedi, és a felvételi út nem kerülhető meg.`,
+  );
+  console.log("ℹ️ Az önteszt NEM fényképezett — a súgó-képek érintetlenek.");
+  process.exit(0);
+}
+
 const tmp = await mkdtemp(path.join(tmpdir(), "kbshot-"));
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
 const page = await browser.newPage({
@@ -612,7 +733,7 @@ async function shoot(
     await page.addStyleTag({
       content: ".adm-side{display:none !important}.adm-mlbar{position:static !important;margin:0 0 14px !important}",
     });
-    await page.locator(viewportAt).first().screenshot({ path: outPath });
+    await snap(page.locator(viewportAt).first(), outPath);
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem, sticky feloldva: ${viewportAt})`);
     return;
   }
@@ -623,14 +744,14 @@ async function shoot(
     // two links the guide points at. Hide it for the shot only; the panel itself is
     // captured exactly as it renders.
     await page.addStyleTag({ content: ".adm-side{display:none !important}" });
-    await page.locator(scrollTo).first().screenshot({ path: outPath });
+    await snap(page.locator(scrollTo).first(), outPath);
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
     return;
   }
   await mkdir(path.dirname(outPath), { recursive: true });
   // Viewport shot, NOT fullPage: a full-page capture paints the fixed bottom nav
   // mid-image, and the guide should show what the owner first sees on the tab.
-  await page.screenshot({ path: outPath });
+  await snap(page, outPath);
   console.log(`  ✓ ${path.relative(ROOT, outPath)}`);
 }
 
@@ -1102,6 +1223,21 @@ async function shootConsole(
   outPath: string,
   hash?: string,
   scrollTo?: string,
+  /**
+   * Nyisd ki ezt az elemet a KÉP ELŐTT, de a LAP-SZKRIPT LEFUTÁSA UTÁN.
+   *
+   * ⛔ MÉRT HIBA (2026-09-15): a `legend.png` a CSUKOTT fejléc-sávot mutatta, és a teljes
+   * oszlop-magyarázat némán kiesett a súgóból — miközben a képaláírás azt írja, hogy „a
+   * jelmagyarázat kinyitva". KÉT réteg volt egyszerre:
+   *   (a) a régi megoldás a SZERVER HTML-jében cserélt sztringet
+   *       (`<details class="con-legend">` → `… open`), a nézet viszont ma
+   *       `<details class="con-legend" id="leadLegend" open>`-t ad → a csere NO-OP volt;
+   *   (b) és ha illeszkedett volna, sem ér semmit: a lap `syncOpen()`-je 700 px alatt
+   *       LESZEDI az `open`-t, a felvétel pedig 390 px-en készül.
+   * Ezért a nyitást a betöltés UTÁN, a DOM-on kell kikényszeríteni. A `syncOpen()` csak
+   * betöltéskor fut (nincs resize-figyelő), tehát ez stabilan megmarad a felvételig.
+   */
+  forceOpen?: string,
 ): Promise<void> {
   const patched = html
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
@@ -1114,24 +1250,41 @@ async function shootConsole(
   // (ADR-0106: the source panel lives on the mocks tab).
   await page.goto(pathToFileURL(file).href + (hash ?? ""));
   await page.waitForTimeout(300);
+  if (forceOpen) {
+    const opened = await page.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return false;
+      el.setAttribute("open", "");
+      return el.hasAttribute("open");
+    }, forceOpen);
+    // ⛔ A NÉMA KIHAGYÁS A HIBA MAGA: a régi sztring-csere is csendben nem illeszkedett,
+    // és ezért ürült ki a kép. Ha a szelektor ma nem talál, azt HANGOSAN mondjuk ki.
+    if (!opened) {
+      throw new Error(
+        `kb-shot: a(z) "${forceOpen}" elemet nem sikerült kinyitni a(z) ` +
+          `${path.relative(ROOT, outPath)} felvételéhez — elavult szelektor?`,
+      );
+    }
+    await page.waitForTimeout(150); // az elrendezés álljon be a nyitás után
+  }
   await mkdir(path.dirname(outPath), { recursive: true });
   if (hash === "#ls-mocks") {
     // The source panel sits below the fold on the mocks tab — an ELEMENT shot
     // captures exactly the panel. The sticky topbar/tab-bar would overlay the
     // capture region mid-panel, so they are hidden for this one shot.
     await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
-    await page.locator("#sp-panel").screenshot({ path: outPath });
+    await snap(page.locator("#sp-panel"), outPath);
   } else if (scrollTo) {
     // Ugyanaz a csapda, mint a #ls-mocks ágon: az elem-capture a lapot az elemhez
     // görgeti, és a TAPADÓ fejléc/fül-sáv ráúszik a felvételi területre. A legend.png-n
     // ez pont a két új sort (Felmérve, Terület) takarta el — vagyis a kép azt NEM
     // mutatta, amit az entry bizonyítékul hoz rá (tudásbázis-őr, 2026-09-14).
     await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
-    await page.locator(scrollTo).first().screenshot({ path: outPath });
+    await snap(page.locator(scrollTo).first(), outPath);
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
     return;
   } else {
-    await page.screenshot({ path: outPath });
+    await snap(page, outPath);
   }
   console.log(`  ✓ ${path.relative(ROOT, outPath)}`);
 }
@@ -1173,10 +1326,13 @@ await shootConsole(
   leadsPage(buildLeadListResult(leadRowsPaged, { ...defaultLeadQuery(), pageSize: 0 }), {
     ...defaultLeadQuery(),
     pageSize: 0,
-  }).replace('<details class="con-legend">', '<details class="con-legend" open>'),
+  }),
   path.join(ROOT, "kb/entries", "console-leads", "assets", "hu", "legend.png"),
   undefined,
   ".con-legend",
+  // A nézet szerver-oldalon MÁR `open`-t ad; amit ki kell kerülni, az a lap `syncOpen()`-je,
+  // ami 390 px-en becsukja. Ezért a DOM-on, a szkript lefutása UTÁN nyitjuk ki.
+  "#leadLegend",
 );
 await shootConsole(leadPage(leadDetail), conOut("console-lead"));
 // The "Honnan tudjuk?" source panel (ADR-0106 ⑥) sits on the mocks tab — its own
@@ -1320,4 +1476,52 @@ await shootConsole(
 );
 
 await browser.close();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉP-ŐR — ZÁRÓ MÉRLEG
+// ─────────────────────────────────────────────────────────────────────────────
+// ⛔ Ez a szakasz azért van a futás VÉGÉN és nem a felvételek közben, mert a
+// `kb-shot` egyben MINDENT újragenerál: egy futás közbeni `throw` a képek felét
+// frissen, felét régiben hagyná. Itt viszont a bukás visszafordíthatatlanul
+// látszik, és a hívó (ember vagy CI) nem hiheti, hogy sikerült.
+{
+  const collapsed = captures.filter((c) => captureCollapsed(c.prev, c.next));
+  const fresh = captures.filter((c) => !c.prev);
+  const compared = captures.filter((c) => c.prev && c.next).length;
+  const unreadable = captures.filter((c) => !c.next);
+
+  console.log(
+    `\nép-őr: ${captures.length} felvétel · ${compared} összevetve az előzővel · ` +
+      `${fresh.length} új (nincs mihez mérni)`,
+  );
+  // ⚠️ Amit KIHAGYUNK, azt HANGOSAN hagyjuk ki — egy néma kihagyás pont úgy néz ki,
+  // mint egy sikeres ellenőrzés (`feedback_debug_flag_manufactured_a_false_failure`).
+  for (const c of fresh) console.log(`   ℹ️ új kép, nincs összevetés: ${c.rel}`);
+  for (const c of unreadable) console.log(`   ⚠️ nem olvasható PNG: ${c.rel}`);
+
+  if (collapsed.length) {
+    console.error(`\n⛔ ${collapsed.length} súgó-kép BEOMLOTT — tartalom veszett el:`);
+    for (const c of collapsed) {
+      console.error(
+        `   ${c.rel}: ${c.prev!.w}×${c.prev!.h} → ${c.next!.w}×${c.next!.h} ` +
+          `(a magasság ${Math.round((c.next!.h / c.prev!.h) * 100)}%-ra esett)`,
+      );
+    }
+    console.error(
+      `\n   Ez pontosan az a hiba, amitől a legend.png 2020→126 px-re esett: a kép a\n` +
+        `   CSUKOTT állapotot mutatta, a súgó szövege meg a nyitottat ígérte. Nézd meg a\n` +
+        `   képet a szemeddel, mielőtt commitolod — a kb-check és a kb-freshness NEM\n` +
+        `   nézi, van-e tartalom a képen.`,
+    );
+    process.exit(1);
+  }
+  // ⛔ UTÓ-FELTÉTEL: ha a `snap()` mellett valaki új felvételi utat nyitna, a mérleg
+  // NÉMÁN kevesebbet mérne, és ez a zöld sor hazudna.
+  if (!captures.length) {
+    console.error("⛔ ép-őr: NULLA felvételt mértünk — a mérés maga romlott el.");
+    process.exit(1);
+  }
+  console.log("✅ ép-őr: egyetlen kép sem omlott be.");
+}
+
 console.log(`kb-shot: kész (${LANG})`);

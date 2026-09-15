@@ -142,14 +142,15 @@ miatt a **következő fizetési link kiegyenlítésekor** adhat újra megbízás
 
 Ha a mentett kártyáról nem sikerült levonni a díjat (a leggyakoribb ok, hogy
 éppen nem volt rajta fedezet), a terhelés **leáll**, és a honlap a türelmi idő
-után felfüggesztésre kerül. Ilyenkor a **Modulok** fülön az Előfizetés kártya
-alatt a megszokott zöld „BEKAPCSOLVA” felirat helyett egy piros
-**„NEM SIKERÜLT”** jelzés áll, fölötte a címmel:
+után felfüggesztésre kerül. Ilyenkor a **Modulok** fülön, az **Előfizetés**
+kártyán belül — annak alsó felében, ott, ahol egyébként az automatikus terhelés
+állapota áll — a megszokott zöld „BEKAPCSOLVA” felirat helyett egy piros
+**„NEM SIKERÜLT”** jelzés áll, **alatta** a címmel:
 **„Az automatikus kártyaterhelés elakadt”**.
 
 ⚠️ **Fontos:** az automata **nem próbálkozik magától tovább**. Ha időközben
 feltöltötte a kártyát, attól még nem fog magától lefutni a terhelés — Önnek kell
-elindítania. Ezért van ezen a kártyán két gomb.
+elindítania. Ezért van itt két gomb.
 
 ### Melyik gombot válasszam?
 

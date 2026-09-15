@@ -282,6 +282,51 @@ for (const { code, tab, s, why } of CASES) {
   }
 }
 
+// ── ⑥ A SÚGÓ ÁLLÍTÁSA A BLOKK SZERKEZETÉRŐL ─────────────────────────────────
+// ⛔ A tudásbázis-őr 2026-09-15-i verdiktje: a súgó a pirula és a cím SORRENDJÉT
+// fordítva írta le, és a blokkot az Előfizetés-kártya „alatt"-ra tette, holott az a
+// kártyán BELÜL van. Egy ilyen mondat némán elavul, mert semmilyen kapu nem nézi —
+// ezért a cikk két szerkezeti állítását ITT kötjük meg
+// (`feedback_a_contract_promise_needs_a_guard`).
+{
+  let page = adminDashboard(session, content, {
+    tab: "modulok", modules: MV, subscription: sub(), supportEmail: "elek@citoviso.com",
+  });
+  if (selfTest) {
+    // Visszarontás: a cím a pirula ELÉ kerül (ez az az állapot, amit a súgó tévesen
+    // írt le), és a blokk kikerül a kártyából — mindkét ⑥ állításnak meg kell szólalnia.
+    page = page
+      .replace(
+        /(<span class="adm-mand__pill adm-mand__pill--off">[^<]*<\/span>)(<h3>[^<]*<\/h3>)/,
+        "$2$1",
+      )
+      .replace(">Előfizetés</h2>", ">Elofizetes-XX</h2>");
+  }
+  const iPill = page.indexOf("NEM SIKERÜLT");
+  const iTitle = page.indexOf("Az automatikus kártyaterhelés elakadt");
+  if (iPill < 0 || iTitle < 0) {
+    fail("⑥a", "a fagyasztott mandátum-blokk pirulája vagy címe hiányzik a lapról");
+  } else if (iPill > iTitle) {
+    fail(
+      "⑥a",
+      "a súgó szerint a „NEM SIKERÜLT” pirula ELŐBB áll, mint a cím — a lapon fordítva van. " +
+        "Igazítsd a kb/entries/admin-subscription/entry.hu.md megfelelő mondatát.",
+    );
+  }
+  // A blokk a KÁRTYÁN BELÜL van: a mandátum-blokk kezdete az Előfizetés-kártya
+  // nyitó és záró jelzése KÖZÉ esik.
+  const iCardHead = page.indexOf(">Előfizetés</h2>");
+  const iMand = page.indexOf('<div class="adm-mand">');
+  const iCardEnd = iMand >= 0 ? iMand + page.slice(iMand).indexOf("</section>") : -1;
+  if (iCardHead < 0 || iMand < 0 || !(iCardHead < iMand && iMand < iCardEnd)) {
+    fail(
+      "⑥b",
+      "a mandátum-blokk NEM az Előfizetés-kártyán belül áll — a súgó viszont azt állítja. " +
+        `(kártya-fejléc @${iCardHead}, blokk @${iMand}, kártya vége @${iCardEnd})`,
+    );
+  }
+}
+
 // ── NEGATÍV KONTROLL: a TÖRTÉNETI hibát is elkapja-e? ───────────────────────
 // ⚠️ A fenti önteszt a SAJÁT szintetikus visszarontásomat méri. Az viszont nem
 // bizonyítja, hogy a szabály a VALÓDI hibaosztályra köt — egy őr, ami csak a maga
@@ -350,7 +395,7 @@ if (selfTest) {
   // ⛔ Nem elég, hogy „valami" pirosra ment: ha egy szabály SOHA nem szólal meg, akkor
   // az halott, és a zöld összesítő elfedi (ADR-0157: minden osztály viseljen saját
   // bizonyító esetet). Az összevont darabszám pont ezt tudja eltakarni.
-  const MUST = ["①", "②", "③", "④", "⑤"];
+  const MUST = ["①", "②", "③", "④", "⑤", "⑥a", "⑥b"];
   const dead = MUST.filter((r) => !fired.has(r));
   if (dead.length) {
     console.error(
@@ -360,8 +405,8 @@ if (selfTest) {
     process.exit(1);
   }
   console.log(
-    `\n✅ önteszt: ${failures} sértés a visszarontott lapon, és MIND AZ ÖT szabály (${MUST.join(", ")}) ` +
-      `bizonyítottan pirosra tud menni.`,
+    `\n✅ önteszt: ${failures} sértés a visszarontott lapon, és MIND A ${MUST.length} szabály ` +
+      `(${MUST.join(", ")}) bizonyítottan pirosra tud menni.`,
   );
   process.exit(0);
 }
