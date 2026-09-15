@@ -1,7 +1,45 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-14 (🔗 ADR-0169: egy leadhez EGY ÉLŐ követett link — és az őr kétszer volt zöld a rossz okból)
+Utolsó frissítés: 2026-09-15 (🧪 az elrohadt fixture megjavítva — az árva-őr leltár kiürült, ADR-0170)
 
-## Aktív feladat (legfrissebb szál, 2026-09-14)
+## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**🧪 ADR-0170 — AZ ELROHADT FIXTURE: A TERMÉK HÁROMSZOR LÉPETT TOVÁBB A TESZT ALATT.**
+Session-jegyzet: `_planning/memory/2026-09-15_rotted_fixture_repair.md`. **Élesítés NINCS.**
+**Termék-kód NEM változott.** Ez az ADR-0152 leltárának **utolsó adóssága**.
+
+- **Négy rothadás, egymás mögé rejtve.** Az őr 2026-09-15-ig árva volt; mert soha nem futott,
+  a fixture-je csendben elrohadt — és mert az ELSŐ hiba összeomlasztotta a futást, a mögötte
+  lévő ~40 állítás soha nem is jutott szóhoz:
+  ① `source: "booking:xyz"` a sémában előírt `booking:<uuid>` helyett →
+  `invalid input syntax for type uuid`, a futás halála · ② **ADR-0062 óta a foglalási felület
+  KÉT darab** (a sávban csak keskeny `variant="cta"` csík → `#cit-booking`, a teljes widget a
+  záró szekcióban) · ③ **telefon-kötelezettség** (tulajdonosi rendelet, 2026-08-23) — a
+  vendég-fixture a rendelet ELŐTTI alakban élt · ④ az átfedő kérést a termék már nem
+  `conflict`-tal állítja meg, hanem az első elfogadásakor **automatikusan elutasítja**
+  (`decided_by: "auto"`).
+- ⭐⭐ **A JAVÍTÁS SZABÁLYA: a KÉRDÉST tartjuk meg, nem az elvárás szövegét.** Minden ponton
+  ott volt a csábítás, hogy „igazítsuk az elvárást a kimenethez" — az zöldet adott volna,
+  **vakság árán**: ha törlöm a `data-cit-units` / `data-cit-min-nights` elvárást, sehol nem
+  maradt volna ellenőrizve, hogy az egységek és a szabályok eljutnak a VENDÉG lapjára.
+- **Ezért:** az állítás a **kiszállított felületre** költözött (`bookingSlot` +
+  `moduleSections`), és külön állítás rögzíti magát a kettéosztást is (a kontraktus ne legyen
+  néma) · a telefon-szabály **két NEGATÍV ikret** kapott (a pozitív eset önmagában nem védi:
+  a szabály kivehető lenne a kódból, és minden zöld maradna) · az átfedés-állítás **háromfelé**
+  bontva (nem lehet elfogadott · a RENDSZER utasította el · az éjszaka az ELSŐ vendégé maradt)
+  · a naptár-eset **valódi** `calendar_link`/`booking_request` sorra mutat.
+- ⭐ **Bizonyítva, hogy nem vakult meg:** három visszarontás, mindegyik pontosan a szándékolt
+  állítást buktatja (telefon-szabály kivéve → **2 piros** · szabály-attribútumok kivéve →
+  **1 piros** · `decided_by: "auto"`→`"owner"` → **1 piros**); termék-kód minden próba után
+  visszaállítva, mérve üres diffel.
+- **82 állítás zöld, ~11 s, két futás stabil, takarít** — a sorok a site-tal kaszkádolnak; az
+  egyetlen `_mcfg_check` árva **2026-09-08-i**, nem ezekből, és nem szaporodott.
+- ⭐ **Ezzel az ADR-0152 leltára KIÜRÜLT:** nincs több „elrohadt" kivétel, a
+  `guard-wiring-check` adósság-figyelmeztetése eltűnt.
+- **A tanulság:** egy soha le nem futó teszt nemcsak hasztalan — **aktívan félrevezet**. A
+  termék háromszor lépett tovább alatta, és minden egyes pirosnál ott volt a rossz válasz
+  lehetősége: „akkor vegyük ki azt az állítást".
+
+## Előző szál (2026-09-14) — 🔗 ADR-0169: egy leadhez EGY ÉLŐ követett link — és az őr kétszer volt zöld a rossz okból
 
 **🔗 ADR-0169 — EGY LEADHEZ EGY ÉLŐ KÖVETETT LINK: LEVEZETVE, NEM TÁROLVA.**
 Tulajdonosi választás a B6 három panel-tervéből: az **„A — Egy ÉLŐ, a többi archív"**.

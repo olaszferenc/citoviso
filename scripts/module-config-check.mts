@@ -22,6 +22,9 @@ import { createUnit, ensureUnits, getUnits, isMultiUnit, setUnitSeasonalOnly } f
 import { getTenantModules, setTenantModules } from "../src/tenant/modules.js";
 import { renderableModules } from "../src/modules.js";
 import { bookingSlot } from "../src/engine/templateKit.js";
+// ADR-0062: a teljes foglalás-widget a modul-szekciók közt él, nem a sávban — a mérésnek
+// a KISZÁLLÍTOTT felületet kell néznie, nem a sáv felét.
+import { moduleSections } from "../src/engine/moduleSections.js";
 import { moduleContentFor } from "../src/tenant/editor.js";
 import type { SiteData } from "../src/engine/recipe.js";
 import { createBookingRequest, decideRequest, getRequests, seasonRulesFor } from "../src/booking/requests.js";
@@ -226,7 +229,18 @@ try {
   check("foglalás nélkül: nincs egység-adat a lapon", !plain.includes("data-cit-units"));
   check("foglalás nélkül is van no-JS elérhetőség (mailto)", plain.includes("mailto:"));
 
-  const withBk = bookingSlot({
+  // ⚠️ ADR-0062 ÓTA A FOGLALÁSI FELÜLET KÉT DARABBÓL ÁLL, és a fixture ezt évekig nem
+  // tudta. A `bookingSlot()` foglalással már NEM a teljes űrlapot adja: a sablon
+  // kézjegyes sávjában csak egy KESKENY csík áll (`variant="cta"`), ami a záró
+  // „Foglalás" szekcióra ugrik — mert egy naptáras űrlap az első képernyőn azelőtt kéri
+  // a foglalást, hogy a vendégben bármi vágy épült volna (tulajdonosi elutasítás).
+  // A TELJES widget a `#cit-booking` szekcióban él (moduleSections).
+  //
+  // ⛔ Ezért a négy állítást NEM lazítottam fel, hanem ÁTHELYEZTEM oda, ahol a
+  // viselkedés ma van. A kérdés változatlan: eljutnak-e az egységek és a szabályok a
+  // VENDÉG lapjára, és marad-e JS nélküli út a szállásadóhoz. Egy „igazítsuk az
+  // elváráshoz" típusú javítás itt NÉMÁN kivégezte volna ezt a lefedettséget.
+  const bkData = {
     ...baseData,
     booking: {
       units: [{ id: "u1", name: "Padlásszoba", capacity: 2 }],
@@ -235,12 +249,39 @@ try {
       horizonMonths: 12,
       leadTimeDays: 1,
     },
-  } as unknown as SiteData);
-  check('⭐ foglalással: a slot "request" állapotba vált', withBk.includes('data-cit-variant="request"'), withBk.slice(0, 90));
-  check("⭐ az egységek átmennek a lapra", withBk.includes("Padl") && withBk.includes("data-cit-units"));
-  check("a szabályok is átmennek", withBk.includes('data-cit-min-nights="2"') && withBk.includes('data-cit-lead-days="1"'));
-  check("foglalással IS marad no-JS elérhetőség", withBk.includes("mailto:"));
-  check("egyetlen horgony marad (nem lesz két szekció)", withBk.split("data-cit-module=").length === 2);
+  } as unknown as SiteData;
+  const withBk = bookingSlot(bkData);
+  // A KISZÁLLÍTOTT felület = a sáv + a modul-szekciók (ezt kapja a vendég).
+  const surface = withBk + moduleSections(bkData);
+
+  check(
+    '⭐ foglalással a SÁV csak ugrató csík (ADR-0062: variant="cta" → #cit-booking)',
+    withBk.includes('data-cit-variant="cta"') && withBk.includes('href="#cit-booking"'),
+    withBk.slice(0, 120),
+  );
+  check(
+    '⭐ a TELJES widget a záró szekcióban áll, "request" állapotban',
+    surface.includes('id="cit-booking"') && surface.includes('data-cit-variant="request"'),
+    surface.slice(0, 120),
+  );
+  check(
+    "⭐ az egységek átmennek a VENDÉG lapjára",
+    surface.includes("Padl") && surface.includes("data-cit-units"),
+  );
+  check(
+    "a szabályok is átmennek",
+    surface.includes('data-cit-min-nights="2"') && surface.includes('data-cit-lead-days="1"'),
+  );
+  check("foglalással IS marad no-JS elérhetőség", surface.includes("mailto:"));
+  // A horgony-állítás a LAP szintjén értelmes, és a FELIRATA abból származzon, amit a
+  // predikátum tényleg megszámol: a naptárat a `variant="request"` felület hidratálja,
+  // a sáv `variant="cta"`-ja a runtime-nak no-op. Két `request` = két naptár egy lapon.
+  const requestSurfaces = surface.split('data-cit-variant="request"').length - 1;
+  check(
+    `pontosan EGY naptár-felület van a lapon (request-felületek: ${requestSurfaces})`,
+    requestSurfaces === 1,
+    requestSurfaces,
+  );
 
   // ── units: a guesthouse is several bookable things, not one ───────────────
   console.log("\nEgységek (szobák / apartmanok):");
@@ -262,11 +303,54 @@ try {
   const MONTH = "2099-09";
   // A portal-imported day and an accepted-booking day the owner must not be able
   // to erase from the admin calendar — the portal/guest owns those dates.
+  //
+  // ⛔ A `source` NEM szabad szöveg: a séma kimondja, hogy
+  //   'manual' | 'booking:<request_id>' | 'ical:<calendar_link_id>'
+  // és a `resolveDayDetails()` ki is olvassa belőle az azonosítót, hogy megnevezze a
+  // vendéget, illetve a portált. A fixture eredetileg `"ical:abc"`-t és `"booking:xyz"`-t
+  // írt — az akkori kód ezt még nem bontotta fel. MÉRVE 2026-09-14: ma ez
+  // `invalid input syntax for type uuid: "xyz"`-vel ÖSSZEOMLASZTJA az őrt a 282. sorban,
+  // vagyis a fixture ELROHADT. Hogy ez senkinek nem tűnt fel, annak külön oka van: az őr
+  // 2026-09-14-ig BEKÖTETLEN volt (ADR-0152) — egy soha le nem futó teszt csendben rohad.
+  // Ezért VALÓDI entitásokra hivatkozunk: a mérés így azt a lekérdezési utat járja be,
+  // amit az éles admin-naptár is, és a nap MEG IS TUD nevezni egy vendéget/portált.
+  const icalLink = await db
+    .insertInto("calendar_link")
+    .values({
+      unit_id: unitA,
+      direction: "import",
+      provider: "booking.com",
+      url: "https://example.invalid/naptar.ics",
+    })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  // ⚠️ Itt SZÁNDÉKOSAN közvetlen sort szúrunk be, nem a `createBookingRequest()`-et hívjuk:
+  // a hónap `2099-09` (a közös parktól elszigetelt jövő), amit a valódi API helyesen
+  // elutasít („Ennyire előre még nem lehet foglalni") — a kérés-validációt amúgy is a
+  // lenti „Foglalás-folyamat" szakasz méri, valós dátumokkal. Amit ITT bizonyítunk, az a
+  // naptár FORRÁS-feloldása: a `source` egy létező sorra mutat, és a nap meg tudja nevezni,
+  // ki foglalta. Ehhez valódi sor kell, nem valódi űrlap-út.
+  const portalGuest = await db
+    .insertInto("booking_request")
+    .values({
+      site_id: siteId,
+      unit_id: unitA,
+      guest_name: "Portál Vendég",
+      guest_email: "portal@example.com",
+      guest_phone: "+36 30 000 0000",
+      date_from: `${MONTH}-06`,
+      date_to: `${MONTH}-07`,
+      guests: 2,
+      status: "accepted",
+      action_token: `mcfg_${Date.now().toString(36)}`,
+    })
+    .returning("id")
+    .executeTakeFirstOrThrow();
   await db
     .insertInto("availability_day")
     .values([
-      { unit_id: unitA, day: `${MONTH}-05`, state: "blocked", source: "ical:abc" },
-      { unit_id: unitA, day: `${MONTH}-06`, state: "booked", source: "booking:xyz" },
+      { unit_id: unitA, day: `${MONTH}-05`, state: "blocked", source: `ical:${icalLink.id}` },
+      { unit_id: unitA, day: `${MONTH}-06`, state: "booked", source: `booking:${portalGuest.id}` },
       { unit_id: unitA, day: `${MONTH}-10`, state: "blocked", source: "manual" },
     ])
     .execute();
@@ -313,12 +397,24 @@ try {
     unitId: unitB,
     guestName: "Kovács Anna",
     guestEmail: "anna@example.com",
+    // ⛔ A TELEFON KÖTELEZŐ (tulajdonosi rendelet, 2026-08-23, `requests.ts` 327–332):
+    // a kérést a szállásadó erősíti meg, gyakran visszakérdezve — egy megválaszolatlan
+    // e-mail megöli a foglalást. A fixture ezt még a rendelet ELŐTTI alakban hordozta,
+    // és mert az őr bekötetlen volt (ADR-0152), négy állítás csendben elrohadt vele.
+    guestPhone: "+36 30 111 2233",
     dateFrom: soon(30),
     dateTo: soon(33),
     guests: 2,
   };
   const made = await createBookingRequest(guest, "https://example.test");
   check("foglalási kérés rögzíthető", made.ok, made.errors);
+
+  // ⭐ A rendeletet POZITÍV eset önmagában nem védi: enélkül a telefon-kötelezettség
+  // kivehető lenne a kódból, és minden állítás zöld maradna. Ezért negatív iker.
+  const noPhone = await createBookingRequest({ ...guest, guestPhone: "", dateFrom: soon(40), dateTo: soon(42) }, null);
+  check("⭐ telefonszám NÉLKÜL a kérés elutasítva (tulajdonosi rendelet)", noPhone.ok === false, noPhone.errors);
+  const shortPhone = await createBookingRequest({ ...guest, guestPhone: "12", dateFrom: soon(41), dateTo: soon(43) }, null);
+  check("elgépelt/túl rövid szám sem megy át", shortPhone.ok === false, shortPhone.errors);
 
   const tooShort = await createBookingRequest({ ...guest, dateFrom: soon(60), dateTo: soon(60) }, null);
   check("nulla éjszakás kérés elutasítva", tooShort.ok === false, tooShort.errors);
@@ -354,7 +450,34 @@ try {
     "accepted",
     null,
   );
-  check("⭐⭐ az ÁTFEDŐ második foglalás NEM fogadható el", rivalVerdict.outcome === "conflict", rivalVerdict);
+  // ⚠️ A fixture eredetileg `outcome === "conflict"`-ot várt. MÉRVE 2026-09-15: a termék
+  // azóta ERŐSEBB lett — az átfedő kérést már az ELSŐ elfogadásának pillanatában
+  // automatikusan elutasítja (`decided_by: "auto"`, 0051), ezért mire a szállásadó rákattint,
+  // a sor már `declined`, és a `conflict` ág (requests.ts 818) ebben a folyamatban el sem
+  // érhető — az a védelem második rétege. A KÉRDÉS változatlan, ezért a válasz alakját
+  // igazítom, nem a kérdést: az átfedő kérés SEMMIKÉPP nem lehet elfogadott, és az éjszaka
+  // az ELSŐ vendégé marad.
+  check(
+    "⭐⭐ az ÁTFEDŐ második foglalás NEM fogadható el",
+    rivalVerdict.outcome !== "accepted",
+    rivalVerdict,
+  );
+  const rivalRow = await db
+    .selectFrom("booking_request")
+    .select(["status", "decided_by"])
+    .where("id", "=", rival.id!)
+    .executeTakeFirstOrThrow();
+  check(
+    "⭐ …és a RENDSZER utasította el automatikusan, nem a szállásadó",
+    rivalRow.status === "declined" && rivalRow.decided_by === "auto",
+    rivalRow,
+  );
+  const stillFirst = await getMonthAvailability(unitB, guest.dateFrom.slice(0, 7));
+  check(
+    "⭐ az átfedő éjszaka továbbra is az ELSŐ vendégé",
+    stillFirst.cells.find((c) => c.day === guest.dateFrom)?.blocked === true,
+    stillFirst.cells.find((c) => c.day === guest.dateFrom),
+  );
 
   const twice = await decideRequest(pending!.token, "accepted", null);
   check("a link kétszeri megnyitása nem hibázik (idempotens)", twice.outcome === "already", twice);

@@ -1157,6 +1157,20 @@ if [ -f scripts/lead-page-surface-check.mts ] && \
   echo "[pre-commit] lead-page-surface-check (üres doboz · pirula-ütközés · üres csomag)…"
   npx tsx scripts/lead-page-surface-check.mts >/dev/null
 fi
+# ADR-0044 fixture-kapu: a modul-konfig réteg VÉGPONTTÓL VÉGPONTIG működik-e — alapérték-rétegek,
+# iparág-réteg, mentés/visszaolvasás, ismeretlen-kulcs elutasítás, visszaállítás, a közös
+# foglalás/érdeklődés hely, a foglaltság-naptár duplafoglalás-védelme és a kérés→döntés út.
+# 2026-09-15-ig ÁRVA volt (ADR-0152), és mert soha nem futott, a FIXTURE-je rohadt el:
+# `source: "booking:xyz"` (a séma szerint `booking:<uuid>`) → `invalid input syntax for type
+# uuid`; a `bookingSlot` elvárásai az ADR-0062 ELŐTTI felosztást állították; a vendég-fixture
+# pedig a telefon-kötelezettség (tulajdonosi rendelet, 2026-08-23) előtti alakban élt.
+# Mind javítva úgy, hogy a KÉRDÉSEK megmaradtak (áthelyezve oda, ahol a viselkedés ma van),
+# + három ÚJ állítás. 82 állítás, saját eldobható fixture a valós DB-n, ~11 s, takarít.
+if [ -f scripts/module-config-check.mts ] && \
+   changed_files | grep -qE '^src/(moduleConfig|modules)\.ts$|^src/tenant/(availability|units|modules|editor|prices|siteModuleConfig)\.ts$|^src/engine/(templateKit|moduleSections|recipe)\.ts$|^src/booking/requests\.ts$|^src/db/schema\.ts$|^scripts/module-config-check'; then
+  echo "[pre-commit] module-config-check (ADR-0044: a modul-konfig réteg végponttól végpontig)…"
+  npx tsx scripts/module-config-check.mts >/dev/null
+fi
 # ⭐⭐ A META-ŐR — MINDIG FUT, és nincs diff-scope-ja. Ez szándékos: egy új árva őr úgy
 # keletkezik, hogy valaki LÉTREHOZ egy `scripts/*-check.mts`-t és ezt a fájlt nem nyitja
 # meg — vagyis pont akkor, amikor semmilyen hook-fájlra szűkített trigger nem tüzelne.

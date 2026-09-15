@@ -117,12 +117,6 @@ const EXCEPTIONS: Readonly<Record<string, Exception>> = {
     measured:
       "Zöld (17 s) — de a parkban talált EGYETLEN provisioned/live oldalon mért, és üres halmazra kimondottan bukik: „⛔ nincs vizsgálható oldal (provisioned/live, slug-gal)” (a script 329. sora). Purge után ez állítaná meg mindenki landolását.",
   },
-  "module-config-check": {
-    kind: "elrohadt",
-    measuredOn: "2026-09-14",
-    measured:
-      "PIROS (9 s) — ELROHADT FIXTURE, mert évek óta senki nem futtatta: a fixture `source: \"booking:xyz\"`-t ír, a mai `getMonthAvailability` viszont UUID-t olvas ki belőle → `invalid input syntax for type uuid: \"xyz\"`. Előtte 4 állítás is bukik a foglalás-slot MAI markupjára (`cit-enquiry`). ⚠️ ADÓSSÁG: külön szál, a fixture-t a termék mai alakjához kell igazítani.",
-  },
 };
 
 type Block = {
