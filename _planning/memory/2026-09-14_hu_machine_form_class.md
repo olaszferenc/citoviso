@@ -67,9 +67,40 @@ CLAUDE.md §4 tiltja a nem kért működő kód módosítását. A határ STRUKT
 - `tsc --noEmit` tiszta, `i18n-lint` tiszta, `kb-check --coverage` 35/35,
   `elek-label-drift-check` 156/156.
 
+## Utóirat (2026-09-15) — a park vakfoltja megszűnt, a megjegyzésből KAPU lett
+
+A fenti „nyitott ② " tétel lezárva, tulajdonosi kérésre.
+
+**A lyuk oka, mérve.** A park FÉLIG KIPURGÁLT állapotban élt: `tenant` 1 · `site` 1 (live) ·
+`module_entitlement` **12 aktív** — de `order_intent` 0 · `payment` 0 · `subscription` 0.
+Tizenkét kifizetett jogosultság nulla vásárlási előzménnyel; ezért az Előfizetés kártya
+(`sub === null`) meg sem renderelődött, és a körbejárás „11/11 lap megmérve"-t írt egy olyan
+képernyőre, amit sosem látott.
+
+**A pótlás a TERMÉK saját útján megy** (`scripts/seed-park-subscription.mts`), nem nyers
+`INSERT`-tel: `order_intent (kind='initial', a prospecten át)` → kifizetett `payment` →
+`ensureSubscriptionForOrder()`. ⛔ Egy kézzel írt sor olyan állapotot is előállíthatna, amit a
+termék soha — és akkor az őr egy **fikciót** mérne. A fordulónapot így az ADR-0144 ① egyetlen
+definíciója adja, nem az én dátum-írásom. A horgony a bérlő SZÜLETÉSE (`2026-09-14`), nem a mai
+nap: egy „mai" horgony sosem létezett fordulónapot adna, és minden futtatás elcsúsztatná a
+park óráját. Dry-run alapból, idempotens, kiírja a visszavonás azonosítóit.
+
+**A tanúból kapu lett.** Amíg a hiány nem volt egy paranccsal orvosolható, az Előfizetés-tanú
+csak megjegyzés lehetett. Most `line()`-kapu, a hibaüzenetében a pótló paranccsal.
+
+**Bizonyítva (a COMMITOLT fájlból, nem a /tmp-s vázlatból):** töröltem, amit a vázlat csinált →
+dry-run · írás · második futás („🟢 már van" — idempotens). Majd **piros önteszt**: a sort
+törölve a teljes futás `⛔ BUKÁS — 0 gépies alak + 1 szerkezeti hiba`, a tanú megnevezi a
+pótló parancsot; a seeder visszaállítja, és mind a három tanú zöld, megjegyzés nélkül.
+Képen is megnézve (390 + 1280): **„Fordulónap — minden hónap 14-e"**.
+
+⚠️ A `MEMORY.md` aktív blokkját NEM írtam át: időközben egy másik szál (ADR-0169) vette át,
+és ez itt az ő munkájuknál kisebb utóirat — a helye ebben a jegyzetben van.
+
 ## Nyitott
 
 - A `domains/` és `payment/` kivétel-/napló-szövegeiben maradt 17 `a(z)` — **tudatos** döntés
   (fejlesztői olvasó). Ha valaha felületre kerülnek, az őr fájllistáját bővíteni kell.
-- A teljes (böngészős) futás az Előfizetés kártyát a parktól függően nem látja; a hiányt
-  a futás KIMONDJA, és a ② réteg fedi. Ha a park kap `subscription` sort, a tanú magától zöld.
+- A park purge-ölése visszahozza a lyukat; a kapu ilyenkor pirosra megy, és megmondja a
+  pótló parancsot. Automatikus újravetés SZÁNDÉKOSAN nincs: egy őr, ami magának gyártja a
+  fixture-jét, a saját mérését is megírja.

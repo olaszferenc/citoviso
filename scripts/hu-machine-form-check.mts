@@ -641,25 +641,28 @@ async function loggedInSurfaces(): Promise<void> {
   // „Fordulónap" szóra nézett — és ZÖLD lett úgy is, hogy az Előfizetés kártya meg sem
   // jelent: a szó a tenant-admin SÚGÓ fülén, a KB-cikkben állt. A tanú ezért a cella
   // ÉRTÉKÉNEK alakjára illeszkedik, amit csak a valódi kártya tud előállítani.
-  const WITNESSES: readonly [string, RegExp, string][] = [
-    ["tenant-admin", /Modulok/i, "a modul-lista füle"],
-    ["konzol", /leadek/i, "a konzol lead-listája"],
+  const WITNESSES: readonly [string, RegExp, string, string][] = [
+    ["tenant-admin", /Modulok/i, "a modul-lista füle", ""],
+    ["konzol", /leadek/i, "a konzol lead-listája", ""],
+    // ⛔ Az Előfizetés kártya park-függő: `subscription` sor nélkül MEG SEM JELENIK, és
+    // pont ott élt a bejelentett „minden hónap 10-a/-e". Amíg a pótlás nem volt egy
+    // parancs, ez csak megjegyzés lehetett — most KAPU, mert a hiány orvosolható, és
+    // egy „11/11 lap megmérve" sor különben lefedettségnek olvasódik.
+    [
+      "tenant-admin",
+      /(?:minden hónap|évente,)\s*\d{1,2}/,
+      "az Előfizetés kártya Fordulónap-cellája",
+      "pótold: npx tsx scripts/seed-park-subscription.mts --go",
+    ],
   ];
-  // ⚠️ Az Előfizetés kártya PARK-FÜGGŐ (nulla `subscription` sor esetén meg sem jelenik),
-  // ezért itt NEM kapu — de a hiányát KIMONDJUK, hogy a „11/11 lap megmérve" ne
-  // olvasódjon lefedettségnek. A képernyőt a ② réteg 31 napra kimerítően lefedi.
-  if (!/(?:minden hónap|évente,)\s*\d{1,2}/.test(harvested.get("tenant-admin") ?? ""))
-    notes.push(
-      "a körbejárás NEM látta az Előfizetés kártyát (a parkban nincs subscription sor) — " +
-        "azt a képernyőt a ② réteg fedi (31 nap × 2 ütem, a valódi modulesSection-ből)",
-    );
-  for (const [tag, re, what] of WITNESSES) {
+  for (const [tag, re, what, fix] of WITNESSES) {
     // ⚠️ Kis-nagybetű-érzéketlenül, ahol felirat: a „Leadek" tanú az „Aktív leadek"
     // címnek jogos részszövege — szigorúbb illesztés HAMIS leletet gyártana (ADR-0146).
     line(
       re.test(harvested.get(tag) ?? ""),
       `lefedettség-tanú: a(z) ${tag} körbejárás renderelte ezt: ${what}`,
-      "a réteg NEM mérte azt a képernyőt — a park fixture-je hiányos, a zöld itt nem bizonyíték",
+      "a réteg NEM mérte azt a képernyőt — a park fixture-je hiányos, a zöld itt nem bizonyíték" +
+        (fix ? ` · ${fix}` : ""),
     );
   }
 }
