@@ -1,7 +1,41 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🧭 ADR-0182 irány helyett NÉV · 🖼️ ADR-0183 a súgó-kép ne ürülhessen ki · 🌍 ADR-0184 a fordítás a szerkesztés UTÁN jár; + 💳 Barion-bírálat VÁRUNK)
+Utolsó frissítés: 2026-09-15 (🚀 ÉLESÍTVE `prod/20260915-1720` — 17 szál, 22 commit, négy őr-kör)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**🚀 A NAP LEZÁRVA — ÉLES = `331aae5` (tag `prod/20260915-1720`).**
+Session-jegyzet: `_planning/memory/2026-09-15_seventeen_threads_and_the_deploy.md`.
+
+- **17 párhuzamos szál** az Elek 2026-09-13-i teljes futásának leleteiből. ⛔ Nem a korábbi
+  összefoglalót idéztük: öt felmérő mind a 12 kör `LELETEK.md`-jét végigolvasta és **a MAI
+  kódon** ellenőrizte → ~**172 nyitott** lelet, ebből a tulaj 16 szálat választott
+  (A1–A8 doktrína-sértés · B1–B8 képernyő-kör §2b terv-kapuval), + 1 záró szál a KB-kapura.
+- **Élesítve 22 commit** (a mai ~90-ből 67 a reggeli Barion-bírálati deployjal már kint volt),
+  1 additív migráció (`0069_manual_charge_retry`), kanári zöld, pg_dump megvan.
+  Visszagörgetés: `deploy-prod.sh fd4ec5ed --go`.
+- ⭐ **Négy egymás utáni tudásbázis-őr, négy KÜLÖNBÖZŐ rés** — és a 2. és 3. lelet **az előző
+  javítás mellékterméke** volt (kiürült súgó-kép · a fordítás a szerkesztés ELŐTT futott).
+  **Ha a javító szál ítélhette volna meg magát, a kiürült kép élesre megy** (ADR-0132 H).
+  Mindhárom új rés egy osztály: **a meglévő kapuk MÁS KÉRDÉSRE válaszoltak.**
+- ⛔ **A `kb-gate` csak `pass`-t ismer**, a 4. FLAG viszont **pre-existing** hibára szólt (mérve:
+  a `kbPacks.ts` változatlan a 22 commitban, és már az élesben futó `fd4ec5e`-ben is benne volt).
+  A verdikt SZÖVEGE mondja ki, hogy ez **kimondott tulajdonosi kivétel**, nem tiszta PASS.
+- ⛔⛔ **A tulaj üzenetei SOHA nem értek célba:** mind a 16 szálon beküldetlen draft ült, három
+  körben ~30 utasítás. A puszta `Enter` nem kézbesít, a felhő-oldal visszaírja a draftot; a
+  működő út `C-u` + `send-keys -l` + `Enter` + **ellenőrzés**. ⚠️ A `❯` után **NBSP** áll, ezért
+  az első keresőmintám 15 draftot nem talált meg.
+- ⛔ **Saját hibáim:** az élesítési premisszám hamis volt (`b029db8`-at hittem élesnek, közben
+  ma 09:27-kor deploy történt) · a `reset --hard` után a watchdog GC elvitte a worktree-met ·
+  az örökölt `RC_PROJ` az ÉN fámba indította a pilotot · vak nyilazás a kérdés-TUI-ban rossz
+  opciót jelölt · a figyelőm háromszor mért rosszul (próza-kérdés, landolatlan commit, sentinel).
+- **Három lelet, amire senki nem indult el:** a **hírlevél-modul fizetős és a semmibe küld**
+  (levéve a polcról) · **olasz/angol kezelőnél a `confirm()` sosem fut le** (aposztróf töri a
+  JS-t) · **318 szövegelem a kontraszt-küszöb alatt** 1074-ből, a saját tokenjeinkből.
+- **NYITOTT:** ① a fordított súgó magyar gombneveket idéz (~199/217 eltér) — 4 résztétel ·
+  ② a `kb-gate` kivétel-módja · ③ `payResultPage` drift-védelem · ④ **tulaj-tennivaló: Zoho-alias
+  az `info@citoviso.com`-ra**, enélkül a fizető ügyfél válasza sehová nem érkezik · ⑤ FK-006.
+
+## Előző szál (2026-09-15) — ADR-0182/0183/0184
 
 **🧭 ADR-0182 — AZ ÚTBAIGAZÍTÁS NE IRÁNY LEGYEN, HANEM NÉV; ÉS A SÁV VIGYE IS A TETTET.**
 Session-jegyzet: `_planning/memory/2026-09-15_direction_word_vs_named_action.md`.
