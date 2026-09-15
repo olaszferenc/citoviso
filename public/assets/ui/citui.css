@@ -43,6 +43,30 @@
   --citui-bad:  #e5484d;
   --citui-info: var(--citui-cyan-500);
 
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+
   /* Elevation */
   --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
   --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);

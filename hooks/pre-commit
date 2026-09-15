@@ -758,6 +758,16 @@ if [ -f scripts/consent-style-check.mts ]; then
   echo "[pre-commit] consent-style-check (a sávnak van-e TÉNYLEGES stílusa)…"
   npx tsx scripts/consent-style-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A JELENTÉS-VIVŐ FELIRAT OLVASHATÓ (tulajdonosi döntés, 2026-09-15). A konzol
+# jelzés-színeit feliratnak is használtuk: a „Fizetek ▸" és a „Jóváhagyás" gomb 3,00-n,
+# MINDEN link 2,41-en állt. 10 útvonalon, 390 ÉS 1280 px-en mér, alfa-kompozitálva —
+# böngészőt indít (~50 s), ezért a szín-lánchoz kötve. ⛔ A trigger az őr SAJÁT
+# fájljára is szól: a hibaosztály (szín-alak, opacity, háttér-lánc) pont ott él.
+if [ -f scripts/console-contrast-check.mts ] && \
+   changed_files | grep -qE '^public/assets/ui/citui(-console(-table)?)?\.css$|^src/console/(views|partnerViews|testLogViews|server)\.ts$|^scripts/console-contrast-check\.mts$'; then
+  echo "[pre-commit] console-contrast (a jelentés-vivő felirat olvasható)…"
+  npx tsx scripts/console-contrast-check.mts >/dev/null
+fi
 # A .hu Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09). Offline és
 # gyors: a riasztót INJEKTÁLJUK, így a kapu sosem küld valódi SMS-t/levelet — de a
 # döntést (ki kap értesítést és hányszor) tényleg megméri. MINDIG fut: a modul

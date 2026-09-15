@@ -20,7 +20,7 @@ body.con {
   color: var(--citui-ink);
   font: 14px/1.5 var(--citui-font-text);
 }
-.con a { color: var(--citui-cyan-500); text-decoration: none; }
+.con a { color: var(--citui-link-ink); text-decoration: none; }
 .con a:hover { text-decoration: underline; }
 /* ⛔ …but NOT when the link is a BUTTON. `.con a` is (0,1,1) and beats every
    `.citui-btn--*` colour rule (0,1,0), so a link-shaped button silently took the
@@ -191,7 +191,7 @@ body.con {
 /* Bukás: UGYANAZ a sáv mondja meg, miért állt le — nem egy másik helyen, kisebb betűvel. */
 .con-runbar.bad {
   background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
-  color: var(--citui-bad); font-weight: 600;
+  color: var(--citui-bad-ink); font-weight: 600;
 }
 /* ⭐ A LEZÁRÓ SOR (FK-003b L06): a futás VÉGÉT eddig SEMMI nem mondta ki — a sáv némán
    eltűnt. Ez a sor MEGMARAD (az outcome TTL-jéig): kész, mennyi ideig tartott, hova vezet. */
@@ -372,7 +372,7 @@ body.con {
   background: color-mix(in srgb, var(--citui-white) 86%, transparent);
   color: var(--citui-ink); backdrop-filter: blur(2px);
 }
-.con .tpl-card__zoom:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
+.con .tpl-card__zoom:hover { border-color: var(--citui-cyan-500); color: var(--citui-link-ink); }
 .con .tpl-card:hover { border-color: var(--citui-cyan-500); transform: translateY(-2px); }
 .con .tpl-card.on {
   border-color: var(--citui-cyan-500);
@@ -440,7 +440,7 @@ body.con {
   width: 30px; height: 30px; flex: 0 0 auto;
   border: 1px solid var(--citui-line); border-radius: 8px; color: var(--citui-ink);
 }
-.con-open:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
+.con-open:hover { border-color: var(--citui-cyan-500); color: var(--citui-link-ink); }
 
 /* `.con .` prefix, not a bare class: the console makes every form inline
    (`.con form`, for the many one-button action forms in tables), and that
@@ -515,12 +515,12 @@ body.con {
   font-size: 0.9rem; border: 1px solid var(--citui-line); background: var(--citui-surface);
 }
 .con-flash.ok { border-color: var(--citui-ok); color: var(--citui-ink); }
-.con-flash.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
+.con-flash.bad { border-color: var(--citui-bad); color: var(--citui-bad-ink); }
 
 /* OUR outage, stated as ours — an unreachable data source must not be mistaken for a
    finding about the record ("nem találtunk fotót" while the quota was spent, 2026-09-09).
    Warn, not bad: nothing is broken in the data, we simply could not ask. */
-.con .con-warn { color: var(--citui-warn); }
+.con .con-warn { color: var(--citui-warn-ink); }
 
 /* ── Console hero (dashboard greeting) ───────────────────────────────────────
    Carries the homepage hero mood (navy glow + faint grid) into the app so the
@@ -631,7 +631,7 @@ body.con {
 }
 /* Already revoked: the trail stays, but it is history — not a live warning. */
 .con .optout-box--past { border-color: var(--citui-line); background: var(--citui-surface); }
-.con .optout-box summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--citui-bad); }
+.con .optout-box summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--citui-bad-ink); }
 .con .optout-box .ob-law { font-size: 12px; color: var(--citui-muted); margin: 8px 0; line-height: 1.5; }
 .con .optout-box .ob-form { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin: 0; }
 .con .optout-box .ob-form input[type="text"] { flex: 1 1 300px; min-width: 0; font-size: 13px; }
@@ -673,16 +673,18 @@ body.con {
   white-space: nowrap;
 }
 .con .panel h2 .pill { font-size: 11px; vertical-align: middle; }
-.con .pill.no_site, .con .pill.approved { color: var(--citui-ok); background: var(--citui-ok-soft); }
+.con .pill.no_site, .con .pill.approved { color: var(--citui-ok-ink); background: var(--citui-ok-soft); }
 .con .pill.outdated {
-  color: color-mix(in srgb, var(--citui-warn) 72%, var(--citui-ink));
+  color: var(--citui-warn-ink);
   background: color-mix(in srgb, var(--citui-warn) 16%, transparent);
 }
-.con .pill.rejected { color: var(--citui-bad); background: color-mix(in srgb, var(--citui-bad) 12%, transparent); }
-.con .pill.generated, .con .pill.sent { color: var(--citui-info); background: color-mix(in srgb, var(--citui-info) 13%, transparent); }
-.con .q-good { color: var(--citui-ok); font-weight: 700; }
-.con .q-mid { color: var(--citui-warn); font-weight: 700; }
-.con .q-bad { color: var(--citui-bad); font-weight: 700; }
+.con .pill.rejected { color: var(--citui-bad-ink); background: color-mix(in srgb, var(--citui-bad) 12%, transparent); }
+/* A `--citui-info` a ciánnal AZONOS, ezért a saját 13%-os tintjén 2,15 volt — ez ÁLLAPOT-
+   jelvény („legenerálva" / „elküldve"), tehát a jelentés-vivő körbe tartozik. */
+.con .pill.generated, .con .pill.sent { color: var(--citui-link-ink); background: color-mix(in srgb, var(--citui-info) 13%, transparent); }
+.con .q-good { color: var(--citui-ok-ink); font-weight: 700; }
+.con .q-mid { color: var(--citui-warn-ink); font-weight: 700; }
+.con .q-bad { color: var(--citui-bad-ink); font-weight: 700; }
 .con .sv { font-size: 10px; color: var(--citui-muted); border: 1px solid var(--citui-line); border-radius: 4px; padding: 0 4px; margin-left: 5px; vertical-align: middle; }
 
 /* ── Lead list: named counts, pager, legend ─────────────────────────────────
@@ -694,7 +696,7 @@ body.con {
 .con .con-sorth { text-decoration: none; color: inherit; white-space: nowrap; }
 .con .con-sorth__m { margin-left: 3px; opacity: 0.4; font-weight: 400; }
 .con .con-sorth:hover .con-sorth__m { opacity: 0.9; }
-.con .con-sorth.on { color: var(--citui-cyan-500); }
+.con .con-sorth.on { color: var(--citui-link-ink); }
 .con .con-sorth.on .con-sorth__m { opacity: 1; }
 .con .con-pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
 .con .con-pager__p, .con .con-pager__at, .con .con-pager__off, .con .con-pager__gap {
@@ -702,7 +704,7 @@ body.con {
 }
 .con .con-pager__p { border: 1px solid var(--citui-line); color: var(--citui-ink); text-decoration: none; }
 .con .con-pager__p:hover { background: var(--citui-surface-2); }
-.con .con-pager__at { border: 1px solid var(--citui-cyan-500); color: var(--citui-cyan-500); font-weight: 700; }
+.con .con-pager__at { border: 1px solid var(--citui-cyan-500); color: var(--citui-link-ink); font-weight: 700; }
 .con .con-pager__off, .con .con-pager__gap { color: var(--citui-muted); }
 .con .con-pager__all { margin-left: auto; }
 /* ② A FELSŐ lapozó a táblázat ELŐTT áll — ott már nem alsó szegély kell, hanem elválasztás
@@ -763,8 +765,8 @@ body.con {
   color: var(--citui-white); border-color: transparent;
 }
 .con button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.con-btn2):hover { filter: brightness(1.15); }
-.con button.ok { border-color: var(--citui-ok); color: var(--citui-ok); }
-.con button.bad { border-color: var(--citui-bad); color: var(--citui-bad); }
+.con button.ok { border-color: var(--citui-ok); color: var(--citui-ok-ink); }
+.con button.bad { border-color: var(--citui-bad); color: var(--citui-bad-ink); }
 /* Icon + label button (the icon set replaces the emoji these buttons once used). */
 .con button.con-ib { display: inline-flex; align-items: center; gap: 6px; }
 .con button.con-ib svg { flex: 0 0 auto; color: var(--citui-cyan-500); }
@@ -794,7 +796,7 @@ body.con {
 .con-login label { display: block; font-size: 0.85rem; color: var(--citui-muted); margin: 12px 0 4px; }
 .con-login input { width: 100%; box-sizing: border-box; }
 .con-login button { width: 100%; margin-top: 18px; background: var(--citui-cyan-500); border-color: var(--citui-cyan-500); color: var(--citui-navy-900); padding: 11px; }
-.con-login .err { color: var(--citui-bad); font-size: 0.88rem; margin-top: 12px; }
+.con-login .err { color: var(--citui-bad-ink); font-size: 0.88rem; margin-top: 12px; }
 
 /* ── Sub-tabs inside a section (e.g. Scrape ▸ indítás / térkép / területek) ──
    A second navigation level that keeps the top menu short: related surfaces of
@@ -821,9 +823,9 @@ body.con {
   border: 1px solid currentColor; background: var(--citui-white);
 }
 .con .qbadge svg { width: 14px; height: 14px; flex: 0 0 auto; }
-.con .qbadge.qb-hot { color: var(--citui-bad); }      /* no site = prime target */
-.con .qbadge.qb-warn { color: var(--citui-warn); }
-.con .qbadge.qb-ok { color: var(--citui-ok); }
+.con .qbadge.qb-hot { color: var(--citui-bad-ink); }      /* no site = prime target */
+.con .qbadge.qb-warn { color: var(--citui-warn-ink); }
+.con .qbadge.qb-ok { color: var(--citui-ok-ink); }
 .con .qbadge.qb-mut,
 .con .qbadge.qb-off { color: var(--citui-muted); }
 .con .qbadge.qb-off { text-decoration: line-through; }
@@ -965,7 +967,7 @@ body.con {
   font-size: 10.5px; line-height: 1; padding: 0; margin-left: 2px; cursor: pointer;
   vertical-align: middle; font-weight: 700; flex: 0 0 auto;
 }
-.con .con-helpq:hover { color: var(--citui-cyan-500); border-color: var(--citui-cyan-500); }
+.con .con-helpq:hover { color: var(--citui-link-ink); border-color: var(--citui-cyan-500); }
 /* A megnyitott sor kiemelése: az operátor lássa, MELYIK sorra ugrott. */
 .con .con-legend li.on {
   background: color-mix(in srgb, var(--citui-warn) 18%, transparent);
@@ -979,7 +981,7 @@ body.con {
 }
 .con .cf-btn:hover { background: var(--citui-surface-2); color: var(--citui-navy-900); }
 .con .cf-btn svg { width: 14px; height: 14px; }
-.con .cf-btn.on { color: var(--citui-cyan-500); border-color: var(--citui-cyan-500); }
+.con .cf-btn.on { color: var(--citui-link-ink); border-color: var(--citui-cyan-500); }
 /* ⑦ KÉT JELENTÉS = KÉT ALAK (jóváhagyott terv ⑦). Eddig a DARABSZÁM („2 értéket
    kipipáltam") és a KÜSZÖB („legalább 1") ugyanabban a kerek cián pöttyben ült — az
    alapértelmezett nézetben egymás mellett, két különböző jelentéssel, egy képpel. */
@@ -1030,7 +1032,7 @@ body.con {
 .con-listing__t { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
 .con-listing__ok {
   flex: 0 0 auto; font-size: 11px;
-  border-color: var(--citui-ok); color: var(--citui-ok);
+  border-color: var(--citui-ok); color: var(--citui-ok-ink);
 }
 
 /* ── Contact ledger (every sighting, with source and verdict) ────────────────
@@ -1039,8 +1041,8 @@ body.con {
 .con-ledger { width: 100%; }
 .con-ledger td, .con-ledger th { vertical-align: top; }
 .con-ledger__row--out { opacity: 0.62; }
-.con-ledger__use { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); font-size: 11px; }
-.con-ledger__ok { border-color: var(--citui-ok); color: var(--citui-ok); font-size: 11px; }
+.con-ledger__use { border-color: var(--citui-cyan-500); color: var(--citui-link-ink); font-size: 11px; }
+.con-ledger__ok { border-color: var(--citui-ok); color: var(--citui-ok-ink); font-size: 11px; }
 .con-ledger__no { border-color: var(--citui-line-strong); color: var(--citui-muted); font-size: 11px; }
 
 /* ── Duplicate review ────────────────────────────────────────────────────── */
@@ -1173,7 +1175,7 @@ body.con {
 .con-sub__n em { font-style: normal; background: color-mix(in srgb, var(--citui-cyan-400) 32%, transparent); border-radius: 4px; }
 .con-sub .pill { margin-left: auto; }
 .con-mod__foot { margin-top: auto; padding: 10px 16px 14px; border-top: 1px solid var(--citui-line); }
-.con-mod__open { display: inline-flex; align-items: center; gap: 6px; color: var(--citui-cyan-500); font-weight: 600; font-size: 12.5px; min-height: 32px; }
+.con-mod__open { display: inline-flex; align-items: center; gap: 6px; color: var(--citui-link-ink); font-weight: 600; font-size: 12.5px; min-height: 32px; }
 
 @media (max-width: 960px) { .con-modgrid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .con-modgrid { grid-template-columns: 1fr; } }
@@ -1220,7 +1222,7 @@ body.con {
 .con-kbox__r { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; flex-wrap: wrap; }
 .con-kbox__v { font-family: var(--citui-font-display); font-weight: 700; font-size: 1.12rem; color: var(--citui-navy-900); }
 .con-kbox__s { font-size: 11.5px; color: var(--citui-muted); }
-.con-kbox--bad .con-kbox__v { color: var(--citui-bad); }
+.con-kbox--bad .con-kbox__v { color: var(--citui-bad-ink); }
 
 /* Monthly breakdown chart (pure SVG bars) */
 .con-chart { border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px; background: var(--citui-white); margin: 0 0 14px; }
@@ -1257,8 +1259,8 @@ body.con {
 .cp-scale .cp-n {
   font-family: var(--citui-font-display); font-size: 1.85rem; font-weight: 600; line-height: 1;
 }
-.cp-scale .cp-n.good { color: var(--citui-ok); }
-.cp-scale .cp-n.miss { color: var(--citui-warn); }
+.cp-scale .cp-n.good { color: var(--citui-ok-ink); }
+.cp-scale .cp-n.miss { color: var(--citui-warn-ink); }
 .cp-scale .cp-t { font-size: 0.78rem; color: var(--citui-muted); line-height: 1.35; }
 
 .cp-doc { background: var(--citui-white); border: 1px solid var(--citui-line);
@@ -1267,7 +1269,7 @@ body.con {
   color: var(--citui-muted); margin: 0 0 6px; }
 .cp-lead { font-family: var(--citui-font-display); font-size: 1.5rem; line-height: 1.15;
   margin: 0 0 10px; font-weight: 600; }
-.cp-lead em { font-style: italic; color: var(--citui-cyan-500); }
+.cp-lead em { font-style: italic; color: var(--citui-link-ink); }
 .cp-tag { font-size: 0.98rem; margin: 0 0 10px; line-height: 1.45; }
 .cp-intro { font-size: 0.86rem; line-height: 1.65; color: var(--citui-ink);
   opacity: 0.82; margin: 0 0 12px; }
@@ -1373,13 +1375,13 @@ body.con {
 
 .sp-warn { display: flex; gap: 8px; align-items: center; border-radius: var(--citui-radius-sm);
   padding: 9px 13px; font-size: 0.82rem; font-weight: 500; margin-top: 12px; }
-.sp-warn.ok { background: var(--citui-ok-soft); color: var(--citui-ok); }
+.sp-warn.ok { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
 .sp-warn.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
   color: color-mix(in srgb, var(--citui-bad) 80%, var(--citui-ink)); }
 .sp-warn svg { flex: none; }
 .sp-miss { margin-top: 10px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
   padding: 9px 13px; font-size: 0.78rem; line-height: 1.5; }
-.sp-miss b { color: var(--citui-warn); }
+.sp-miss b { color: var(--citui-warn-ink); }
 .sp-miss span { color: var(--citui-muted); }
 .sp-legend { display: flex; gap: 14px; margin-top: 12px; font-size: 0.72rem;
   color: var(--citui-muted); flex-wrap: wrap; }
@@ -1397,7 +1399,7 @@ body.con {
   border: 1px solid var(--citui-line); border-radius: 50%;
   color: var(--citui-muted); vertical-align: middle; margin-left: 6px; opacity: 0.8;
 }
-.con-help:hover { opacity: 1; border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); }
+.con-help:hover { opacity: 1; border-color: var(--citui-cyan-500); color: var(--citui-link-ink); }
 /* ⛔ SÖTÉT SÁVON az alap `.con-help` olvashatatlan: navy-900-on a muted ink kontrasztja ~2,2, a
    keret pedig `rgba(14,42,71,.12)` — vagyis LÁTHATATLAN. A partner-lap fejléce ugyanolyan navy
    gradiens, mint a hero, ezért ugyanazt az inverz kezelést kapja. Mérve, nem feltételezve
@@ -1541,7 +1543,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   border-bottom: 1px solid var(--citui-line);
 }
 .con-kb-sc li:last-child a { border-bottom: 0; }
-.con-kb-sc li a:hover { color: var(--citui-cyan-500); }
+.con-kb-sc li a:hover { color: var(--citui-link-ink); }
 .con-kb-article h1 { font-size: 1.25rem; margin: 8px 0 4px; }
 .con-kb-article h3 { font-size: 1.02rem; margin: 20px 0 6px; }
 .con-kb-article p { margin: 8px 0; line-height: 1.55; }
@@ -1610,7 +1612,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .pr-tier__chip i { font-style: normal; font-size: .72rem; color: var(--citui-muted); }
 .pr-tier__chip b {
-  font-weight: 600; font-size: .68rem; text-transform: uppercase; color: var(--citui-warn);
+  font-weight: 600; font-size: .68rem; text-transform: uppercase; color: var(--citui-warn-ink);
 }
 /* inherited from the smaller tier — present, but not this tier's news */
 .pr-tier__chip--inh {
@@ -1621,7 +1623,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 @media (max-width: 760px) { .pr-modgrid { grid-template-columns: 1fr; } }
 .pr-mod { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .pr-mod__name { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.pr-mod__why { display: none; flex-basis: 100%; font-size: 11px; color: var(--citui-warn); }
+.pr-mod__why { display: none; flex-basis: 100%; font-size: 11px; color: var(--citui-warn-ink); }
 .pr-mod__price { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
 .pr-mod__price input {
   width: 76px; padding: 3px 7px; text-align: right; font: inherit;
@@ -1692,12 +1694,12 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .hp-dead[hidden], .hp-deadsum[hidden] { display: none; }
 .hp-dead {
   display: block; margin: 0; padding: 3px 5px 5px; font-size: 0.62rem; line-height: 1.35;
-  color: var(--citui-bad); background: color-mix(in srgb, var(--citui-bad) 8%, transparent);
+  color: var(--citui-bad-ink); background: color-mix(in srgb, var(--citui-bad) 8%, transparent);
 }
 .hp-cur .hp-dead { font-size: 0.72rem; padding: 5px 7px; border-radius: var(--citui-radius-sm); margin-top: 5px; }
 .hp-deadsum {
   margin-top: 10px; padding: 8px 11px; font-size: 0.8rem; font-weight: 600;
-  color: var(--citui-bad); border-radius: var(--citui-radius);
+  color: var(--citui-bad-ink); border-radius: var(--citui-radius);
   background: color-mix(in srgb, var(--citui-bad) 9%, transparent);
   border: 1px solid color-mix(in srgb, var(--citui-bad) 30%, transparent);
 }
@@ -1710,11 +1712,11 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
   border: 1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent);
 }
-.pg-head { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--citui-bad); font-size: 0.86rem; }
+.pg-head { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--citui-bad-ink); font-size: 0.86rem; }
 .pg-lead { margin: 7px 0 0; font-size: 0.82rem; font-weight: 600; line-height: 1.45; }
 .pg-list { margin: 8px 0 0; padding-left: 18px; font-size: 0.76rem; line-height: 1.45; }
 .pg-list li { margin-bottom: 6px; }
-.pg-why { color: var(--citui-bad); font-weight: 600; }
+.pg-why { color: var(--citui-bad-ink); font-weight: 600; }
 .pg-next { margin: 9px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--citui-navy-800); }
 .pg-ack { margin-top: 9px; }
 /* ── KÉP NÉLKÜLI lap: a kivétel KÉT LÉPÉSBEN (ADR-0150, jóváhagyott terv „B") ──────
@@ -1727,13 +1729,13 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   border: 1px solid var(--citui-line-strong); background: transparent; list-style: none;
 }
 .pg-exc > summary::-webkit-details-marker { display: none; }
-.pg-exc > summary:hover { border-color: var(--citui-bad); color: var(--citui-bad); }
+.pg-exc > summary:hover { border-color: var(--citui-bad); color: var(--citui-bad-ink); }
 .pg-form {
   margin-top: 10px; padding-top: 10px;
   border-top: 1px solid color-mix(in srgb, var(--citui-bad) 22%, transparent);
 }
 .pg-form label { display: block; font-size: 0.76rem; font-weight: 700; color: var(--citui-navy-800); margin-bottom: 5px; }
-.pg-req { color: var(--citui-bad); }
+.pg-req { color: var(--citui-bad-ink); }
 .pg-fields { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
 .pg-form textarea {
   flex: 1 1 320px; min-width: 0; font: inherit; font-size: 0.8rem; line-height: 1.45;
@@ -1742,8 +1744,8 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   color: var(--citui-ink); resize: vertical; min-height: 60px;
 }
 .pg-count { margin: 5px 0 0; font-size: 0.72rem; color: var(--citui-muted); }
-.pg-count.short { color: var(--citui-bad); font-weight: 600; }
-.pg-err { margin: 8px 0 0; font-size: 0.78rem; font-weight: 700; color: var(--citui-bad); }
+.pg-count.short { color: var(--citui-bad-ink); font-weight: 600; }
+.pg-err { margin: 8px 0 0; font-size: 0.78rem; font-weight: 700; color: var(--citui-bad-ink); }
 /* MOBIL: a mező és a gomb egymás alá, a gomb teljes szélességű hüvelykujj-cél. */
 @media (max-width: 560px) {
   .pg-fields { flex-direction: column; gap: 7px; }
@@ -1754,7 +1756,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pg-pre[hidden] { display: none; }
 .pg-pre {
   display: inline-block; align-self: center; font-size: 0.76rem; font-weight: 600;
-  line-height: 1.35; color: var(--citui-bad); padding: 4px 8px;
+  line-height: 1.35; color: var(--citui-bad-ink); padding: 4px 8px;
   border-radius: var(--citui-radius-sm);
   background: color-mix(in srgb, var(--citui-bad) 9%, transparent);
 }
@@ -1762,7 +1764,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    választható: tompítva, áthúzott kurzorral, gomb nélkül. */
 .hp-alt.is-excluded { display: block; cursor: not-allowed; opacity: 0.55; }
 .hp-alt.is-excluded:hover { border-color: var(--citui-line); transform: none; }
-.hp-alt.is-excluded .hp-subj { color: var(--citui-bad); font-weight: 600; }
+.hp-alt.is-excluded .hp-subj { color: var(--citui-bad-ink); font-weight: 600; }
 .hp-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
   background: var(--citui-ok-soft); border: 1px solid color-mix(in srgb, var(--citui-ok) 35%, transparent);
   border-radius: var(--citui-radius); padding: 9px 12px; font-size: 0.8rem; margin-bottom: 10px; }
@@ -1854,7 +1856,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con .con-wf__v { font-size: 13.5px; font-weight: 700; margin-top: 3px; }
 .con .con-wf__st.done { background: var(--citui-ok-soft); }
-.con .con-wf__st.done .con-wf__v { color: var(--citui-ok); }
+.con .con-wf__st.done .con-wf__v { color: var(--citui-ok-ink); }
 /* A SORON KÖVETKEZŐ állomás megjelöli magát — a kurátor ne keresse. */
 .con .con-wf__st.now {
   background: color-mix(in srgb, var(--citui-cyan-500) 11%, transparent);
@@ -1905,9 +1907,9 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 
 /* ⑤ KÉPANYAG-LEVEZETÉS + ⑧ megnevezett recept-sorok a nyers kulcs=érték helyett. */
 .con .con-imgdet { margin-top: 6px; font-size: 12.5px; }
-.con .con-imgdet summary { cursor: pointer; color: var(--citui-cyan-500); }
+.con .con-imgdet summary { cursor: pointer; color: var(--citui-link-ink); }
 .con .con-imgdet ul { margin: 6px 0 0; padding-left: 18px; color: var(--citui-muted); line-height: 1.6; }
-.con .con-imgwarn { margin-top: 6px; font-size: 12.5px; color: var(--citui-bad); display: flex; gap: 5px; align-items: flex-start; }
+.con .con-imgwarn { margin-top: 6px; font-size: 12.5px; color: var(--citui-bad-ink); display: flex; gap: 5px; align-items: flex-start; }
 .con .con-recipe {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 7px 16px;
   background: var(--citui-surface); border-radius: 10px; padding: 10px 12px;

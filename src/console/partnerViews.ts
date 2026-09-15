@@ -366,7 +366,7 @@ function monthlyChart(docs: PartnerDocuments): string {
     );
   }).join("");
   return `<div class="con-chart">
-    <div class="con-chart__t">${T(lang, "Havi bontás — {year} (Ft)", { year })} · <span style="color:var(--citui-cyan-500)">■</span> ${T(lang, "kimenő ·")} <span style="color:var(--citui-navy-700)">■</span> ${T(lang, "bejövő")}</div>
+    <div class="con-chart__t">${T(lang, "Havi bontás — {year} (Ft)", { year })} · <span style="color:var(--citui-link-ink)">■</span> ${T(lang, "kimenő ·")} <span style="color:var(--citui-navy-700)">■</span> ${T(lang, "bejövő")}</div>
     <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="${T(lang, "Havi forgalom-bontás")}">${bars}</svg>
   </div>`;
 }
@@ -746,7 +746,7 @@ function documentsBlock(docs: PartnerDocuments, q: PartnerDocQuery, opts: DocsBl
   )
     .map(
       ([, m], i) =>
-        `<td class="num"${i >= 3 && Object.keys(m).length ? ` style="color:var(--citui-bad);font-weight:600"` : ""}>${fmtMoney(m)}</td>`,
+        `<td class="num"${i >= 3 && Object.keys(m).length ? ` style="color:var(--citui-bad-ink);font-weight:600"` : ""}>${fmtMoney(m)}</td>`,
     )
     .join("");
   const aging = `<div class="tblwrap" style="margin:10px 0"><table>

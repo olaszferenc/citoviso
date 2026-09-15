@@ -668,18 +668,29 @@ async function main(): Promise<void> {
             );
             await ta.fill("a tulaj telefonon azt kérte, a saját képeit ő tölti majd fel");
             await pg.waitForTimeout(150);
-            const on = await btn.evaluate((e) => ({
-              disabled: (e as HTMLButtonElement).disabled,
-              color: getComputedStyle(e).color,
-            }));
+            // ⛔⛔ A VÁRT SZÍN A TOKENBŐL SZÁRMAZIK, nem beégetett hexből. Az első
+            // változatom `rgb(229, 72, 77)`-et hasonlított — és amikor egy MÁSIK kör a
+            // felirat-színt olvashatóbbra vitte (`--citui-bad-ink`), ez az őr pirosra
+            // ment egy HELYES javításra. A tű azt méri, amit egyszer már elkaptunk; az
+            // állítás SZÁNDÉKA viszont az volt, hogy a `.con button` (0,1,1) ne írja
+            // felül az osztály-szintű színt — ezt a token-PROBE mondja ki, nem a szám.
+            const on = await btn.evaluate((e) => {
+              const probe = document.createElement("span");
+              probe.style.color = "var(--citui-bad-ink)";
+              e.appendChild(probe);
+              const expected = getComputedStyle(probe).color;
+              probe.remove();
+              return {
+                disabled: (e as HTMLButtonElement).disabled,
+                color: getComputedStyle(e).color,
+                expected,
+              };
+            });
             check(!on.disabled, `@${w}px: érvényes indoklásra a gomb FELOLDÓDIK`);
-            // ⛔ SPECIFICITÁS-CSAPDA, ami a házban már háromszor ütött: a `.con button`
-            // (0,1,1) VERI az osztály-szintű színt (0,1,0). Ha ez pirosra megy, a
-            // gomb felirata a gomb hátterével azonos színű lehet.
             check(
-              on.color === "rgb(229, 72, 77)",
-              `@${w}px: a gomb felirata a MÁRKA-piros (a .con button nem írja felül)`,
-              `mért szín: ${on.color}`,
+              on.color === on.expected && on.expected !== "rgb(0, 0, 0)",
+              `@${w}px: a gomb felirata a SZEMANTIKUS token (a .con button nem írja felül)`,
+              `mért: ${on.color} · a --citui-bad-ink értéke: ${on.expected}`,
             );
             const layout = await pg.evaluate(`(() => {
               const f = document.querySelector('.pg-form textarea').getBoundingClientRect();

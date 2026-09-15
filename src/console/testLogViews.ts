@@ -18,13 +18,13 @@ const CSS = `<style>
 .tlog-sect h2{font-size:1rem;margin:0 0 2px;display:flex;align-items:center;gap:8px}
 .tlog-sect h2 .tlog-cnt{margin-left:auto;font-size:.72rem;font-weight:600;color:var(--citui-muted);
   background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:3px 10px}
-.tlog-sect h2 .tlog-cnt.done{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.tlog-sect h2 .tlog-cnt.done{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
 .tlog-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:4px 14px 12px;margin-top:8px}
 .tlog-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--citui-line)}
 .tlog-step:last-of-type{border-bottom:0}
 .tlog-step input[type=checkbox]{width:19px;height:19px;margin:1px 0 0;accent-color:var(--citui-cyan-500);flex:none}
 .tlog-step label{font-size:.9rem;line-height:1.45;cursor:pointer}
-.tlog-kezi{display:inline-block;margin-left:6px;font-size:.68rem;font-weight:700;color:var(--citui-warn);
+.tlog-kezi{display:inline-block;margin-left:6px;font-size:.68rem;font-weight:700;color:var(--citui-warn-ink);
   border:1px solid currentColor;border-radius:var(--citui-radius-pill);padding:1px 8px;vertical-align:2px}
 .tlog-cl{font-size:.72rem;font-weight:600;color:var(--citui-muted);margin-top:10px;text-transform:uppercase;letter-spacing:.04em}
 .tlog-cmt{width:100%;margin-top:6px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);
@@ -42,12 +42,12 @@ const CSS = `<style>
 .tlog-seclinks li{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:.82rem;border-bottom:1px dashed var(--citui-line)}
 .tlog-seclinks a{color:var(--citui-ink);text-decoration:none;font-weight:500}
 .tlog-seclinks .tlog-mini{margin-left:auto;font-size:.72rem;color:var(--citui-muted)}
-.tlog-seclinks .tlog-mini.done{color:var(--citui-ok);font-weight:700}
+.tlog-seclinks .tlog-mini.done{color:var(--citui-ok-ink);font-weight:700}
 .tlog-save{font:inherit;font-weight:700;font-size:.9rem;cursor:pointer;border:0;border-radius:var(--citui-radius-pill);
   padding:12px 20px;background:var(--citui-cyan-500);color:var(--citui-navy-950);width:100%;margin-top:12px}
 .tlog-save:hover{background:var(--citui-cyan-400)}
 .tlog-savestate{font-size:.74rem;color:var(--citui-muted);margin-top:8px;text-align:center}
-.tlog-savestate b.ok{color:var(--citui-ok)}
+.tlog-savestate b.ok{color:var(--citui-ok-ink)}
 .tlog-others{margin-top:14px;border-top:1px solid var(--citui-line);padding-top:10px}
 .tlog-others h4{font-size:.78rem;margin:0 0 6px;color:var(--citui-muted)}
 .tlog-others ul{list-style:none;margin:0;padding:0;font-size:.78rem}

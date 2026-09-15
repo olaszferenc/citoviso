@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — a konzol szemantikus gombjainak olvashatósága</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#1b3557;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-muted:#60748b;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+    /* A JAVÍTÁS HELYE — a változat-váltó ezt a két tokent állítja. MA = a mai érték. */
+    --citui-ok-ink:var(--citui-ok);
+    --citui-bad-ink:var(--citui-bad);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--citui-navy-950);font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+  .bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+       padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8;font-size:13px}
+  .bar b{font-family:var(--citui-font-display);font-weight:600;margin-right:auto;flex:1 1 100%}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;
+       padding:7px 13px;border-radius:var(--citui-radius-pill);cursor:pointer;font:inherit;min-height:34px}
+  .bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c;font-weight:600}
+  .bar .sep{width:1px;align-self:stretch;background:rgba(255,255,255,.2);margin:0 4px}
+
+  .stage{padding:18px;display:flex;justify-content:center}
+  .frame{width:100%;max-width:1180px;container-type:inline-size;background:var(--citui-surface);
+         border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm);transition:max-width var(--citui-transition)}
+  .frame.mobile{max-width:390px}
+  .con{padding:18px}
+  h2{font-family:var(--citui-font-display);font-size:19px;margin:0 0 2px}
+  .sub{color:var(--citui-muted);font-size:13px;margin:0 0 6px;line-height:1.5}
+  .lbl{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;margin:20px 0 9px}
+  .card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:14px 15px;margin-bottom:12px}
+  .card h3{font-family:var(--citui-font-display);font-size:15px;margin:0 0 3px}
+  .card .meta{color:var(--citui-muted);font-size:12px;margin:0 0 11px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mut{color:var(--citui-muted)}
+  .small{font-size:12px}
+
+  /* ── A KONZOL VALÓDI GOMB-SZABÁLYAI (citui-console.css) ── */
+  .con button{
+    font:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;min-height:34px;
+    border-radius:var(--citui-radius-pill);cursor:pointer;
+    border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-navy-800);
+    transition:var(--citui-transition);
+  }
+  .con button[type="submit"]:not(.ok):not(.bad){
+    background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));
+    color:var(--citui-white);border-color:transparent;
+  }
+  /* ⬇ EZ A KÉT SOR A TÁRGY. A `-ink` token MA azonos a kerettel — innen jön a 3,00 / 3,91. */
+  .con button.ok { border-color:var(--citui-ok);  color:var(--citui-ok-ink); }
+  .con button.bad{ border-color:var(--citui-bad); color:var(--citui-bad-ink); }
+
+  /* B változat: tömör gomb (a háttér a -ink token, a felirat fehér) */
+  body[data-v="B"] .con button.ok { background:var(--citui-ok-ink);  color:#fff; border-color:transparent; }
+  body[data-v="B"] .con button.bad{ background:var(--citui-bad-ink); color:#fff; border-color:transparent; }
+  /* C változat: semleges felirat, a szemantika a kereten + egy pötty */
+  body[data-v="C"] .con button.ok,
+  body[data-v="C"] .con button.bad{ color:var(--citui-navy-800); }
+  body[data-v="C"] .con button.ok::before,
+  body[data-v="C"] .con button.bad::before{
+    content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;
+  }
+  body[data-v="C"] .con button.ok::before { background:var(--citui-ok); }
+  body[data-v="C"] .con button.bad::before{ background:var(--citui-bad); }
+
+  /* ── a kép-kapu doboza (halvány piros háttér — itt a legrosszabb a mai érték) ── */
+  .pg-box{margin-top:10px;padding:11px 13px;border-radius:var(--citui-radius);
+    background:color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
+    border:1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent)}
+  .pg-head{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--citui-bad-ink);font-size:.86rem;line-height:1.35}
+  .pg-lead{margin:7px 0 0;font-size:.82rem;font-weight:600;line-height:1.45}
+
+  /* ── a fizetőlap (a vevő képernyője) ── */
+  .pay{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);
+       padding:20px;text-align:center}
+  .pay .amt{font-family:var(--citui-font-display);font-size:26px;font-weight:700;margin:6px 0 2px}
+  .pay .row{justify-content:center;margin-top:16px}
+
+  /* ── a MÉRÉS kiírása minden gomb alá ── */
+  .m{display:block;font-size:11px;font-weight:600;margin-top:5px;line-height:1.3}
+  .m.pass{color:#19733f}
+  .m.fail{color:#b3262b}
+  .btnwrap{display:flex;flex-direction:column;align-items:flex-start}
+  .pay .btnwrap{align-items:center}
+  .summary{margin-top:16px;padding:11px 13px;border-radius:var(--citui-radius-sm);
+    background:var(--citui-surface-2);border:1px solid var(--citui-line);font-size:13px;line-height:1.55}
+  .summary b{font-family:var(--citui-font-display)}
+  .note{font-size:12px;color:var(--citui-muted);margin:8px 0 0;line-height:1.5}
+
+  @container (max-width: 560px){
+    .row{gap:7px}
+    .btnwrap{width:100%}
+    .con button{width:100%}
+    .pay .btnwrap{width:100%}
+  }
+</style>
+</head>
+<body data-v="MA">
+
+<div class="bar">
+  <b>Terv — a konzol szemantikus (.ok / .bad) gombjainak olvashatósága</b>
+  <button data-v="MA" aria-pressed="true">MA</button>
+  <button data-v="A" aria-pressed="false">A — sötétebb felirat</button>
+  <button data-v="B" aria-pressed="false">B — tömör gomb</button>
+  <button data-v="C" aria-pressed="false">C — semleges felirat</button>
+  <span class="sep"></span>
+  <button id="m" aria-pressed="false">Mobil 390px</button>
+  <button id="d" aria-pressed="true">Asztali</button>
+</div>
+
+<div class="stage">
+<div class="frame" id="frame">
+<div class="con">
+
+  <h2>Olvasható-e az a felirat, amin a döntés múlik?</h2>
+  <p class="sub">
+    A szám minden gomb alatt <b>élőben mérve</b> a böngészőben (a tényleges feliratszín a
+    tényleges, kompozitált háttéren). Küszöb: <b>4,5</b> — ekkora betűnél ez a szabály.
+    Váltogasd a MA / A / B / C gombokat, és nézd a számokat.
+  </p>
+
+  <p class="lbl">① A kurátor döntő gombsora — mock-kártya</p>
+  <div class="card">
+    <h3>Aranykagyló 36 — fullbleed</h3>
+    <p class="meta">legenerálva · 2026-09-14 11:13</p>
+    <div class="row">
+      <div class="btnwrap"><button class="ok" type="button">Jóváhagyás</button><span class="m" data-m></span></div>
+      <div class="btnwrap"><button class="bad" type="button">Elutasítás</button><span class="m" data-m></span></div>
+      <div class="btnwrap"><button class="bad" type="button">Mock törlése</button><span class="m" data-m></span></div>
+      <div class="btnwrap"><button type="submit">Újragenerálás</button><span class="m mut">elsődleges gomb — nem tárgya ennek a körnek</span></div>
+    </div>
+  </div>
+
+  <p class="lbl">② A kép-kapu doboza — halvány piros háttéren (itt a legrosszabb a mai érték)</p>
+  <div class="card">
+    <div class="pg-box" role="alert">
+      <div class="pg-head">⚠ A jóváhagyás NEM történt meg — a lap FOTÓ NÉLKÜL menne ki</div>
+      <p class="pg-lead">Ezen a lapon EGYETLEN szállás-fotó sincs — a leadnek kép nélküli oldal menne ki.</p>
+      <div class="row" style="margin-top:9px">
+        <div class="btnwrap"><button class="bad" type="button">Vállalom — fotó nélkül hagyom jóvá</button><span class="m" data-m></span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="lbl">③ A fizetőlap — itt a VEVŐ dönt</p>
+  <div class="pay">
+    <div class="mut small">Citoviso előfizetés · CIT-4F2A9C01</div>
+    <div class="amt">14 900 Ft <span class="mut" style="font-size:14px">/ hó</span></div>
+    <div class="row">
+      <div class="btnwrap"><button class="ok" type="button">Fizetek ▸</button><span class="m" data-m></span></div>
+      <div class="btnwrap"><button class="bad" type="button">Elutasítom</button><span class="m" data-m></span></div>
+    </div>
+  </div>
+
+  <div class="summary" id="sum"></div>
+
+  <p class="lbl">Amit a három változat eldönt</p>
+  <p class="note">
+    <b>A — sötétebb felirat:</b> csak a SZÖVEG színe változik (új <code>--citui-ok-ink</code> /
+    <code>--citui-bad-ink</code> token); a keret és a gomb alakja marad. A legkisebb látvány-változás,
+    a „színhang" megmarad, és a destruktív gomb nem lesz hangsúlyosabb, mint ma.<br>
+    <b>B — tömör gomb:</b> kitöltött háttér, fehér felirat. A legerősebb jelzés — ⚠️ de ettől a
+    <i>Mock törlése</i> és a <i>Vállalom</i> ELSŐDLEGES akciónak néz ki, pedig a rendes kiút a
+    másik irány. ⛔ Fontos: a mai zöldre tett FEHÉR felirat is csak <b>3,00</b> — tömör gombhoz
+    is sötétebb árnyalat kell, szóval ez nem „olcsóbb" megoldás.<br>
+    <b>C — semleges felirat:</b> a szöveg sötétkék (kontraszt ~15), a szemantikát a keret és egy
+    színes pötty viszi. A legolvashatóbb, de a „piros gomb" jelzés a leggyengébb.
+  </p>
+
+</div>
+</div>
+</div>
+
+<script>
+  // ── MÉRÉS: valódi computed style, valódi kompozitált háttér ──────────────
+  // ⛔⛔ KÉT SZÍN-ALAK, KÉT SKÁLA. A böngésző a `color-mix()`-et
+  // `color(srgb 0.99 0.95 0.95)` alakban adja vissza (0..1), a többit `rgb(229,72,77)`-ként
+  // (0..255). Ezt a kettőt egyszer már összemostam, és a tökéletesen olvasható prózát
+  // 1,22-vel „bukónak" mondta MINDEN felületen. A skálát a SZINTAXIS dönti el, nem a
+  // szemem — ezért ez a függvény kérdezi meg, nem feltételezi.
+  function parse(c){
+    c = c || '';
+    var m = c.match(/-?[\d.]+(?:e-?\d+)?/g) || [];
+    var srgb = /^color\(\s*srgb/i.test(c);
+    var k = srgb ? 255 : 1;
+    return { r:+m[0]*k, g:+m[1]*k, b:+m[2]*k, a: m.length>3 ? +m[3] : 1 };
+  }
+  function over(f,b){ var a=f.a; return {r:f.r*a+b.r*(1-a), g:f.g*a+b.g*(1-a), b:f.b*a+b.b*(1-a), a:1}; }
+  function effBg(el){
+    var acc={r:255,g:255,b:255,a:1}, chain=[];
+    for(var n=el;n;n=n.parentElement) chain.push(n);
+    chain.reverse();
+    for(var i=0;i<chain.length;i++){ var c=parse(getComputedStyle(chain[i]).backgroundColor); if(c.a>0) acc=over(c,acc); }
+    return acc;
+  }
+  function lum(c){ function f(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);} return 0.2126*f(c.r)+0.7152*f(c.g)+0.0722*f(c.b); }
+  function ratio(fg,bg){ var L1=lum(fg),L2=lum(bg); var hi=Math.max(L1,L2), lo=Math.min(L1,L2); return (hi+0.05)/(lo+0.05); }
+
+  function measure(){
+    var worst=99, fails=0, total=0;
+    document.querySelectorAll('.btnwrap').forEach(function(w){
+      var btn=w.querySelector('button'), out=w.querySelector('[data-m]');
+      if(!btn||!out) return;
+      var cs=getComputedStyle(btn);
+      // ⛔ A GRADIENS NINCS BENNE a `backgroundColor`-ban: az `rgba(0,0,0,0)`, tehát a
+      // háttér-lánc a lap fehérjét adná, és a FEHÉR feliratú elsődleges gombra 1,00-t
+      // mérnénk — látványos hamis piros egy tökéletesen olvasható gombra. Amit nem tudunk
+      // megmérni, arról nem állítunk semmit (§B.17): kihagyjuk, és KI IS ÍRJUK.
+      if(getComputedStyle(btn).backgroundImage !== 'none'){
+        out.className='m mut';
+        out.textContent='nem mérhető (gradiens háttér) — nem tárgya ennek a körnek';
+        return;
+      }
+      var bg=effBg(btn);
+      var fg=parse(cs.color); if(fg.a<1) fg=over(fg,bg);
+      var cr=ratio(fg,bg);
+      total++; if(cr<4.5) fails++; if(cr<worst) worst=cr;
+      out.className='m '+(cr>=4.5?'pass':'fail');
+      out.textContent=(cr>=4.5?'✅ ':'❌ ')+cr.toFixed(2)+' (küszöb 4,5)';
+    });
+    var s=document.getElementById('sum');
+    var v=document.body.dataset.v;
+    s.innerHTML='<b>'+(v==='MA'?'MAI ÁLLAPOT':'„'+v+'" változat')+':</b> '+total+' gombból <b>'+fails+
+      '</b> a 4,5-ös küszöb alatt · a legrosszabb érték <b>'+worst.toFixed(2)+'</b>.'+
+      (fails? ' <span style="color:#b3262b;font-weight:700">Ezek feliratát nehéz elolvasni.</span>'
+            : ' <span style="color:#19733f;font-weight:700">Mind olvasható.</span>');
+  }
+
+  // ⛔⛔ A GOMBON `transition` VAN (220 ms). A váltás után AZONNAL olvasott computed
+  // color még az ÁTMENET közepe — mérve: „A" változatra 3,00 jött vissza (a MAI érték),
+  // pedig a szín már a helyes úton volt. A mérés NE az órára várjon, hanem a PIXELRE:
+  // addig pollozunk rAF-fal, amíg két egymást követő olvasat AZONOS (majd mérünk).
+  function snapshot(){
+    return Array.prototype.map.call(
+      document.querySelectorAll('.btnwrap button'),
+      function(b){ var c=getComputedStyle(b); return c.color+'|'+c.backgroundColor; }
+    ).join(';');
+  }
+  // `baseline` = a VÁLTÁS ELŐTTI állapot. Enélkül a poll két azonos képkockát talál
+  // MÉG AZ ÁTMENET INDULÁSA ELŐTT, és a RÉGI színt méri le az új változat neve alatt
+  // (mérve: az „A" változat 3,00-t mutatott, vagyis a mai értéket). Előbb meg kell
+  // VÁLTOZNIA, és csak utána megállapodnia. Ha sosem változik (pl. MA→MA), a plafon visz.
+  function whenSettled(fn, baseline){
+    var prev = null, same = 0, ticks = 0, changed = (baseline === null);
+    (function tick(){
+      var s = snapshot();
+      if (!changed && s !== baseline) changed = true;
+      same = (s === prev) ? same + 1 : 0;
+      prev = s;
+      if ((changed && same >= 2) || ++ticks > 90) return fn();
+      requestAnimationFrame(tick);
+    })();
+  }
+
+  var SHADES = {
+    MA: { ok:'', bad:'' },
+    A:  { ok:'#19733f', bad:'#b3262b' },
+    B:  { ok:'#19733f', bad:'#b3262b' },
+    C:  { ok:'#19733f', bad:'#b3262b' }
+  };
+  function setVariant(v){
+    var before = snapshot();
+    document.body.dataset.v=v;
+    var s=SHADES[v], r=document.documentElement.style;
+    if(s.ok){ r.setProperty('--citui-ok-ink', s.ok); r.setProperty('--citui-bad-ink', s.bad); }
+    else { r.removeProperty('--citui-ok-ink'); r.removeProperty('--citui-bad-ink'); }
+    document.querySelectorAll('.bar button[data-v]').forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.v===v));
+    });
+    whenSettled(measure, before);
+  }
+  document.querySelectorAll('.bar button[data-v]').forEach(function(b){
+    b.addEventListener('click', function(){ setVariant(b.dataset.v); });
+  });
+
+  var frame=document.getElementById('frame');
+  function setMode(mobile){
+    frame.classList.toggle('mobile', mobile);
+    document.getElementById('m').setAttribute('aria-pressed', String(mobile));
+    document.getElementById('d').setAttribute('aria-pressed', String(!mobile));
+    whenSettled(measure, null);
+  }
+  document.getElementById('m').onclick=function(){ setMode(true); };
+  document.getElementById('d').onclick=function(){ setMode(false); };
+  setMode(window.innerWidth < 560);
+  setVariant('MA');
+</script>
+</body>
+</html>

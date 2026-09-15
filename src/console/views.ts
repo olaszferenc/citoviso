@@ -663,7 +663,7 @@ export function pricingPage(
       })
       .join("");
     const warn = violations.length
-      ? `<p class="mut small" style="color:var(--citui-bad);margin:8px 0 0">` +
+      ? `<p class="mut small" style="color:var(--citui-bad-ink);margin:8px 0 0">` +
         `${T(lang, "⛔ A csomag-szabály SÉRÜL:")} ` +
         esc(
           violations
@@ -1808,7 +1808,7 @@ function subscriptionBox(
         T(lang, "A pontos dátumot és összeget e-mailben küldjük el."),
       );
   return `<div style="margin:0 0 18px;padding:13px 14px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius);background:var(--citui-surface-2)">
-      <h3 style="margin:0 0 9px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-cyan-500)">${T(lang, "Az előfizetése")}</h3>
+      <h3 style="margin:0 0 9px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-link-ink)">${T(lang, "Az előfizetése")}</h3>
       ${info?.amount ? row(T(lang, "Most fizetett"), fmtHuf(info.amount)) : ""}
       ${nextCharge}
       ${row(T(lang, "Megújulás"), T(lang, "Automatikus, a megadott kártyáról"))}
@@ -2393,7 +2393,7 @@ function prospectsPanel(
           // Linux-desktop böngészőről jött, azaz SAJÁT megnyitás. A szám marad (adat),
           // csak megmondjuk, mi NEM lehet: a megkeresés címzettje.
           !p.sentAt && p.views > 0
-            ? `<div class="small" style="margin-top:4px;color:var(--citui-bad)">${T(
+            ? `<div class="small" style="margin-top:4px;color:var(--citui-bad-ink)">${T(
                 lang,
                 "⚠ Ez a link még egyik csatornán sem ment ki, tehát ez a forgalom NEM a megkeresés címzettjétől van — saját megnyitás, előnézet vagy teszt.",
               )}</div>`
@@ -5186,7 +5186,7 @@ export function outreachDraftPage(
   const identityLines = new Set(identity.map(identityReason));
   const otherReasons = check.reasons.filter((r) => !identityLines.has(r));
   const reasons = otherReasons.length
-    ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad)">${otherReasons
+    ? `<ul class="small" style="margin-top:8px;color:var(--citui-bad-ink)">${otherReasons
         .map((r) => `<li>${esc(r)}</li>`)
         .join("")}</ul>`
     : "";
@@ -5202,8 +5202,8 @@ export function outreachDraftPage(
             (p) =>
               `<li style="margin-bottom:6px"><b>${esc(p.label)}</b> — <code>${esc(p.env)}</code>${
                 p.shown
-                  ? `<br>${T(lang, "a kiküldött érték:")} <span style="color:var(--citui-bad)">${esc(p.shown)}</span>`
-                  : `<br><span style="color:var(--citui-bad)">${T(lang, "nincs beállítva")}</span>`
+                  ? `<br>${T(lang, "a kiküldött érték:")} <span style="color:var(--citui-bad-ink)">${esc(p.shown)}</span>`
+                  : `<br><span style="color:var(--citui-bad-ink)">${T(lang, "nincs beállítva")}</span>`
               }<br><span class="mut">${esc(p.detail)}</span></li>`,
           )
           .join("")}</ul>
@@ -5289,7 +5289,7 @@ export function outreachDraftPage(
   // portal URL, a transport error), and on a 390px phone an unbreakable URL ran
   // off the card: the operator saw half the reason (measured 2026-09-13).
   const failNote = (msg: string): string =>
-    `<div style="margin-top:10px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere" class="small">${esc(msg)}</div>`;
+    `<div style="margin-top:10px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad-ink);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere" class="small">${esc(msg)}</div>`;
   // ⛔ Elek FK-004 H1 (2026-09-13): the picture the MMS carries was linked
   // unconditionally, so when it could not be produced the operator got a
   // broken-image icon — with a LIVE "Páros indítása" button right under it. The
@@ -5371,11 +5371,11 @@ export function outreachDraftPage(
   const step2 = smsSentAt ? "done" : pairJob?.phase === "sms" ? "run" : pairBroken ? "fail" : "";
   const stepStyle = (s: string): string =>
     s === "done"
-      ? "background:var(--citui-ok-soft);border-color:transparent;color:var(--citui-ok)"
+      ? "background:var(--citui-ok-soft);border-color:transparent;color:var(--citui-ok-ink)"
       : s === "run"
-        ? "border-color:var(--citui-info);color:var(--citui-info)"
+        ? "border-color:var(--citui-info);color:var(--citui-link-ink)"
         : s === "fail"
-          ? "background:color-mix(in srgb, var(--citui-bad) 12%, transparent);border-color:transparent;color:var(--citui-bad)"
+          ? "background:color-mix(in srgb, var(--citui-bad) 12%, transparent);border-color:transparent;color:var(--citui-bad-ink)"
           : "color:var(--citui-muted)";
   const badge = (label: string, s: string): string =>
     `<div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--citui-line-strong);font-size:13px;font-weight:600;${stepStyle(s)}">${label}</div>`;
@@ -5390,16 +5390,16 @@ export function outreachDraftPage(
             previewReady
               ? `<img src="/prospect/${esc(prospectId)}/mms-preview.jpg" alt="${T(lang, "a kimenő MMS képe")}" style="max-width:190px;border-radius:8px;border:1px solid var(--citui-line);margin-top:6px;display:block">`
               : preview.kind === "running"
-                ? `<p class="small" id="cit-mms-prev-run" style="margin:6px 0 0;color:var(--citui-info)">${T(lang, "A kimenő kép készül a látványtervből — a lap magától megmutatja, amint megvan.")}</p>`
-                : `<div id="cit-mms-prev-fail" style="margin-top:6px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere" class="small">
+                ? `<p class="small" id="cit-mms-prev-run" style="margin:6px 0 0;color:var(--citui-link-ink)">${T(lang, "A kimenő kép készül a látványtervből — a lap magától megmutatja, amint megvan.")}</p>`
+                : `<div id="cit-mms-prev-fail" style="margin-top:6px;background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad-ink);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere" class="small">
                      ${T(lang, "⛔ NINCS KIMENŐ KÉP — {reason}. Amíg nem látod a képet, a páros nem indítható (MMS kép nélkül nincs értelme).", { reason: previewReason })}
                    </div>
                    <form method="post" action="/prospect/${esc(prospectId)}/mms-preview" style="margin-top:8px">
                      <button type="submit">${T(lang, "Kép előállítása újra")}</button>
                    </form>`
           }
-          ${step1 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az MMSC befogadta")}${pairJob?.mmsMessageId ? ` — message-id: ${esc(pairJob.mmsMessageId.slice(0, 8))}…` : ""}</p>` : ""}
-          ${step1 === "run" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-info)">⏳ ${T(lang, "feltöltés a modemen…")}</p>` : ""}
+          ${step1 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok-ink)">✓ ${T(lang, "az MMSC befogadta")}${pairJob?.mmsMessageId ? ` — message-id: ${esc(pairJob.mmsMessageId.slice(0, 8))}…` : ""}</p>` : ""}
+          ${step1 === "run" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-link-ink)">⏳ ${T(lang, "feltöltés a modemen…")}</p>` : ""}
         </div>
       </div>
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--citui-line)">
@@ -5407,8 +5407,8 @@ export function outreachDraftPage(
         <div><b class="small">${T(lang, "Kísérő SMS — az élő link (a jogi kötelezők a linkelt oldalon)")}</b>
           <div id="smsbody" style="font:12.5px/1.5 ui-monospace,monospace;border:1px solid var(--citui-line);border-radius:8px;padding:8px;margin-top:6px;word-break:break-word;white-space:pre-wrap">${esc(smsText)}</div>
           <p class="mut small" style="margin:4px 0 0">${T(lang, "A szöveg meghívás; a jogalap-tájékoztatás és a leiratkozás a megnyitott előnézet-oldal lábában van.")}</p>
-          ${step2 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok)">✓ ${T(lang, "az SMS elment — a pár teljes.")}</p>` : ""}
-          ${step2 === "fail" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-bad)">⛔ ${T(lang, "a lépés hangosan bukott — fent az „SMS újra” gomb.")}</p>` : ""}
+          ${step2 === "done" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-ok-ink)">✓ ${T(lang, "az SMS elment — a pár teljes.")}</p>` : ""}
+          ${step2 === "fail" ? `<p class="small" style="margin:4px 0 0;color:var(--citui-bad-ink)">⛔ ${T(lang, "a lépés hangosan bukott — fent az „SMS újra” gomb.")}</p>` : ""}
         </div>
       </div>
       <div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:10px 0 4px">
@@ -6735,7 +6735,7 @@ export function duplicatesPage(clusters: DupClusterView[]): string {
       // produces — worth flagging, because it is usually NOT one business.
       const far =
         c.maxDistanceM != null && c.maxDistanceM > 1000
-          ? `<p class="small" style="margin:6px 0 0;color:var(--citui-bad)">⚠️ ${T(lang, "{km} km választja el őket — több telephely vagy közös ügynökségi oldal lehet, nem ugyanaz az üzlet.", { km: (c.maxDistanceM / 1000).toFixed(1) })}</p>`
+          ? `<p class="small" style="margin:6px 0 0;color:var(--citui-bad-ink)">⚠️ ${T(lang, "{km} km választja el őket — több telephely vagy közös ügynökségi oldal lehet, nem ugyanaz az üzlet.", { km: (c.maxDistanceM / 1000).toFixed(1) })}</p>`
           : "";
       return `<div class="panel dup-card">
         <h2>${T(lang, "{n} összetartozónak látszó rekord", { n: c.leads.length })}</h2>
