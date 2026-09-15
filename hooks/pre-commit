@@ -527,6 +527,18 @@ if [ -f scripts/frozen-guest-view-check.mts ] && \
   echo "[pre-commit] frozen-guest-view-check (a tulaj látja, mit lát a világ)…"
   npx tsx scripts/frozen-guest-view-check.mts >"$GATE_LOG" || gate_failed
 fi
+# freeze-state-v2 ⑤: a KÉZI terhelés-újrapróba FÉKEI. Pénzt mozgató út, ezért nem a
+# boldog ágat mérjük (az egy sor), hanem a fékeket: püfölhető-e a gomb, indul-e két
+# párhuzamos kattintásból két terhelés, megáll-e a sorozat, és hisz-e a szerver a
+# felületnek. Valódi DB kell hozzá, mert a mért szabály MAGA egy SQL WHERE — egy
+# TypeScriptben újraírt másolat nem a szabályt mérné. Valódi pénz NEM mozdul: a
+# terhelés-függvény injektált. Piros önteszt a fékek NÉLKÜLI változaton: 4 sértés
+# (köztük 2 párhuzamos terhelés és 11 próbálkozás a 4-es korlát ellenében).
+if [ -f scripts/charge-retry-check.mts ] && \
+   changed_files | grep -qE '^(src/payment/retryCharge\.ts|src/payment/service\.ts|src/payment/billing\.ts|src/server/public\.ts)|^scripts/charge-retry-check|^migrations/0069'; then
+  echo "[pre-commit] charge-retry-check (a terhelés-újrapróba fékei)…"
+  npx tsx scripts/charge-retry-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
 # mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
 # EMBER kapjon szót. Injektált futtatóval mér: sem LLM-et nem éget, sem SMS-t nem küld.

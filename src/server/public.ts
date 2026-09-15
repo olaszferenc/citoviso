@@ -64,6 +64,7 @@ import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
+import { retryRenewalCharge } from "../payment/retryCharge.js";
 import { chargeUpsellWithToken, requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
@@ -1463,6 +1464,7 @@ async function serveAdmin(
       tab,
       siteUrl,
       guestViewUrl,
+      chargeRetry: new URL(req.url ?? "/", "http://x").searchParams.get("ujra"),
       moduleSettingsHtml,
       units: adminUnits,
       help,
@@ -1903,6 +1905,24 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     await revokeAutoCharge(session.tenantId);
     return redirect(res, "/admin?tab=modulok");
+  }
+  // ── freeze-state-v2 ⑤: KÉZI terhelés-újrapróbálás ────────────────────────────
+  // A jóváhagyott terv „Újrapróbálom ezzel a kártyával" gombjának hiányzó útja.
+  // A leggyakoribb elutasítás a fedezethiány; ha a tulaj közben feltöltötte a
+  // kártyát, ma nincs mit tennie, mert a létra a FAGYÁS UTÁN már nem próbálkozik.
+  //   ⛔ A gomb megléte NEM bizonyíték: minden előfeltételt (van-e tartozás, van-e
+  // tárolt kártya, van-e rendezendő order, jár-e még a türelmi idő, maradt-e a
+  // sorozatból) a `retryRenewalCharge` mér ÚJRA, és a korlátok egy feltételes
+  // UPDATE WHERE-jében ülnek — két párhuzamos kattintásból pontosan egy nyer.
+  //   A visszajelzés MINDEN ágon MÁS: egy összevont „nem sikerült" itt azt a hibát
+  // követné el, amit ez a kör javít — nem mondaná meg, mit tehet a tulaj.
+  if (req.method === "POST" && pathname === "/admin/subscription/retry-charge") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const r = await retryRenewalCharge(session.tenantId);
+    const code = r.ok ? `t_${r.outcome}` : r.refusal;
+    console.log(`[billing] kézi terhelés-újrapróba · ${session.tenantId} · ${code}`);
+    return redirect(res, `/admin?tab=modulok&ujra=${encodeURIComponent(code)}`);
   }
   // ADR-0088 §8 — monthly→annual switch, armed for the NEXT renewal (approved
   // B plan). Nothing is charged here; after the redirect the card re-renders

@@ -409,8 +409,16 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-sub__v--date{font-size:1.05rem}
 .adm-sub__note{font-size:.78rem;color:var(--citui-muted);margin-top:4px;line-height:1.45}
 /* The forward action on the stuck-charge block, and the demoted revoke. */
-.adm-mand__btn--go{background:var(--citui-cyan-500);color:var(--citui-navy-950);
-  border-color:var(--citui-cyan-500)}
+/* ⛔ KÉTOSZTÁLYOS szelektor (0,2,0), nem egyosztályos: a `.adm-mand__btn` alapszabály
+   a fájlban KÉSŐBB áll, tehát azonos fajsúlynál MINDIG ő nyerne, és az elsődleges
+   gomb ugyanolyan fehér lenne, mint a másodlagos. Mérve: a két gomb háttere bitre
+   azonos volt (rgb(255,255,255) mindkettő) — vagyis a „fizetés útja a leghalkabb
+   elem" hibaosztály, épp abban a blokkban, ami ellene készült
+   (feedback_link_rule_eats_button_label: a szabály-ütközést MÉRNI kell, nem nézni). */
+.adm-mand__btn.adm-mand__btn--go{background:var(--citui-cyan-500);color:var(--citui-navy-950);
+  border-color:var(--citui-cyan-500);font-weight:700}
+.adm-mand__btn.adm-mand__btn--go:hover{background:var(--citui-cyan-400);
+  border-color:var(--citui-cyan-400);color:var(--citui-navy-950)}
 .adm-mand__quiet{background:none;border:0;padding:0;cursor:pointer;
   font:inherit;color:var(--citui-muted);text-decoration:underline}
 .adm-banner{border-radius:var(--citui-radius-sm);padding:12px;margin:0 0 12px;font-size:.9rem;line-height:1.5}

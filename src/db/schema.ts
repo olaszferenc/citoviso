@@ -317,6 +317,12 @@ export interface OrderIntentTable {
    *  invoice line. On 'initial' (year 1) and on the renewal whose period holds
    *  the domain anniversary (year 2+). NULL/0 = none due or waived (ADR-0093). */
   domain_fee: number | null;
+  /** (0069) Mikor indított a tulaj utoljára KÉZI terhelés-újrapróbát ezen az orderen.
+   *  Egyszerre várakozási idő és ATOMI birtokbavétel: a claim egyetlen feltételes
+   *  UPDATE, tehát két párhuzamos kattintásból pontosan az egyik nyer.
+   *  ⛔ A próbálkozások SZÁMA nincs tárolva — az levezetett (a `pay_url IS NULL`
+   *  payment sorok ezen az orderen), különben két igazság lenne belőle. */
+  manual_charge_at: Timestamp | null;
 }
 
 // --- Offer layer (migration 0045, ADR-0088) — list price + discounts. ---

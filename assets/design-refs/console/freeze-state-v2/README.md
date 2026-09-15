@@ -88,14 +88,34 @@ Mellé kerül egy előrevivő művelet — **„Másik kártyával fizetek"** �
 pedig halk szöveg-linkké válik, és **kimondja**, hogy **„— a rendezetlen díj ettől
 nem szűnik meg."**
 
-> ⚠️ **Eltérés a bemutatott mocktól, szándékosan.** A mockban két gomb volt:
-> „Újrapróbálom ezzel a kártyával" és „Másik kártyát adok meg". **Az újrapróbálás
-> NEM készült el**: nincs szerver-útvonal, ami egy terhelést újra megkísérelne, és
-> egy gomb, ami némán nem csinál semmit, rosszabb a hiánynál. Ami valóban előrevisz:
-> a fizetési link — a tárolt kártya-megbízást a kártyatársasági szabály szerint
-> csak egy 3DS-sel megerősített, ügyfél-kezdeményezett fizetés adhatja meg újra,
-> tehát az OTT megadott kártya lesz az új megbízás. Ezt mondja a gomb, egy hamis
-> újrapróbálás helyett. Ha az újrapróbálás kell, az külön kör (szerver-oldali munka).
+**Mindkét gomb VALÓDI utat kínál** (2026-09-15 óta teljes):
+
+| Gomb | Mit csinál | Miért |
+|---|---|---|
+| **„Újrapróbálom ezzel a kártyával"** (elsődleges, kitöltött) | `POST /admin/subscription/retry-charge` → a tárolt kártya ÚJRA terhelése | A leggyakoribb elutasítás a fedezethiány. Ha a tulaj közben feltöltötte a kártyát, egy kattintás elég — a létra a FAGYÁS UTÁN már nem próbálkozik, tehát magától SOHA nem jönne vissza érte. |
+| **„Másik kártyával fizetek"** (másodlagos) | a fizetési link | A tárolt megbízást a kártyatársasági szabály szerint csak 3DS-sel megerősített, ügyfél-kezdeményezett fizetés adhatja meg újra — az OTT megadott kártya lesz az új megbízás. |
+
+**⛔ A FÉKEK A SZERVEREN, EGY FELTÉTELES UPDATE WHERE-JÉBEN ÜLNEK**, nem a hívó
+jólneveltségén (ADR-0118 ② mintája). Pénzt mozgató útnál a gomb megléte nem
+bizonyíték — a `retryRenewalCharge` MINDEN előfeltételt újra mér:
+
+- **várakozás**: két kézi próba között el kell telnie a türelmi időnek (a gomb nem
+  püfölhető), és a claim atomi, tehát **két párhuzamos kattintásból pontosan egy nyer**;
+- **sorozat-korlát**: egy megújulás-orderre összesen korlátos számú MIT-terhelés mehet
+  (a kártyatársaságok korlátozzák egy elutasított MIT újrapróbálását, és a korlát
+  túllépése a kereskedőt bünteti). A darabszám **levezetett** (a `pay_url IS NULL`
+  payment sorok), nem külön számláló — az két igazság lenne;
+- **előfeltételek**: csak `frozen`/`past_due` fiókon, csak tárolt kártyával, csak
+  létező dunningolt orderre.
+
+**A visszajelzés MINDEN ágon MÁS** — sikerült / a bank elutasította / még jár a
+türelmi idő / elfogyott a sorozat / nincs kártya —, és **mindegyik megmondja, mit
+tehet**. Egy összevont „nem sikerült" itt azt a hibát követné el, amit ez a kör javít.
+
+⛔ **A terhelés MAGA a meglévő `chargeRenewalWithToken()`** — abban már benne van a
+dupla-terhelés önjavítása, a függő MIT-fizetés újrahasználata és az elakadt pending
+lezárása. Második terhelés-út két igazság lenne, és az elcsúszás a bankszámlán
+derülne ki.
 
 ### ⑥ A felfüggesztés MINDEN fülön megjelenik
 Az ADR-0119 ① hatálya a **teljes admin**, nem a Modulok fül. A belépő (`attekintes`)

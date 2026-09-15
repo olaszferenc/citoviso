@@ -1,8 +1,46 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (💳 az átjáró és a bukás-lap — ADR-0175; a B1 blokk lezárva)
+Utolsó frissítés: 2026-09-15 (💳 kézi terhelés-újrapróbálás — a fékek a WHERE-ben)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
+**💳 ADR-0176 — KÉZI TERHELÉS-ÚJRAPRÓBÁLÁS.** A 2026-09-14-én jóváhagyott terv hiányzó
+fele. Session-jegyzet: `_planning/memory/2026-09-15_manual_charge_retry.md`.
+**Élesítés NINCS** — és ez MIGRÁCIÓT is visz (0069).
+
+- **Miért kell:** a leggyakoribb elutasítás a fedezethiány, és a létra a FAGYÁS UTÁN már
+  nem próbálkozik. Ha a tulaj közben feltöltötte a kártyát, az automata SOHA nem jön
+  vissza érte — ma újra meg kellett adnia a kártyát a Barionnál.
+- **A terhelés NEM új kód:** a meglévő `chargeRenewalWithToken()` fut, amiben már benne van
+  a dupla-terhelés önjavítása, a függő MIT újrahasználata, az elakadt pending lezárása.
+- ⭐ **A fékek a WHERE-ben ülnek, nem a hívóban** (ADR-0118 ② mintája): egyetlen feltételes
+  UPDATE, ami egyszerre nézi a várakozást és a sorozat-korlátot → két párhuzamos
+  kattintásból pontosan egy nyer. A próbaszám LEVEZETETT (`pay_url IS NULL` payment sorok),
+  nem külön oszlop; tárolva csak tény: `manual_charge_at` (óra és zár egyben).
+- ⛔ **A KÉP fogta meg, nem az őr:** az „Újrapróbálom" gomb elsődleges osztályt kapott,
+  mégis BITRE AZONOS fehér lett, mint a másodlagos (a `.adm-mand__btn` a stíluslapban
+  később áll, azonos fajsúlynál mindig ő nyert). Vagyis „a fizetés útja a leghalkabb elem"
+  hibaosztály, ÉPP ABBAN A BLOKKBAN, ami ellene készült. Kétosztályos szelektor, kontraszt
+  6,91. + a magyarázó mondat két gomb alatt állt → most megnevezi, melyikre vonatkozik.
+- **Őr:** `charge-retry-check` — pénzt mozgató útnál nem a boldog ágat mérjük, hanem a
+  fékeket. VALÓDI DB-n fut (a szabály maga egy SQL WHERE; egy TS-másolat nem azt mérné),
+  eldobható fixtúrával és takarítással; valódi pénz NEM mozdul (injektált terhelés).
+  Hét állítás; piros önteszt a fékek NÉLKÜLI változaton: **2 párhuzamos terhelés és 11
+  próbálkozás a 4-es korlát ellenében**.
+- ⚠️ **Fixtúra-tanulság:** a `scripts/` nincs típus-ellenőrizve, ezért a fixtúrám kétszer
+  futásidőben halt meg (`tenant.slug` nem létezik — `lead_id` kell; `current_period_start`
+  NOT NULL). A fixtúrát a TERMÉK sémájából kell építeni, nem emlékezetből.
+- **Hangolható:** sorozat-korlát 4 (1 automata + 3 kézi), várakozás 15 perc.
+- 🔴 **A LAND BLOKKOLVA, és a blokkoló NEM ez a diff.** A `consent-style-check` piros
+  (`/pay/done` → `.panel` hiányzik) — **tiszta `origin/main` fán is ugyanaz a 2 bukás**, és
+  a bukásban érintett három fájl (`console/server.ts`, `payment/barion.ts`,
+  `consent-style-check.mts`) **0×** szerepel a commitomban. Gyökér-ok: a `/pay/done` minden
+  GET-re újrafuttatja a webhookot, ami a VALÓDI Barion API-t hívja egy elavult
+  referenciával → HTML válasz → `json()` dob. **Külső hívás bukása, nem termék-regresszió**,
+  és fájl-szűrő híján MINDEN szál landolását blokkolja. ⛔ Szándékosan nem javítottam:
+  tulajdonosi koordináció szerint a **B6 szál** kapta meg (külön ADR-rel). Nem kerültem meg
+  `--no-verify`-jal. **Következő:** B6 landolása után rebase + land.
+
+## Előző szál
 **💳 A FIZETÉS ÚTJÁN EGY HANGOS ÚT VAN, ÉS A KÉPERNYŐ MEGMONDJA, MIT FIZETSZ — ADR-0175.**
 Session-jegyzet: `_planning/memory/2026-09-15_pay_gateway_exit.md`. Kontraktus:
 `assets/design-refs/console/pay-gateway-exit/`. Tulaj: „A — a fizetés a főszereplő”.

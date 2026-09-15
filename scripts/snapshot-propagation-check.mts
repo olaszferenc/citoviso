@@ -39,6 +39,14 @@ const NO_RENDER_NEEDED: Record<string, string> = {
   "/admin/subscription/resume": "előfizetés — számlázás, nem oldal-tartalom",
   "/admin/subscription/settlement": "előfizetés — számlázás, nem oldal-tartalom",
   "/admin/subscription/auto-charge-off": "előfizetés — számlázás, nem oldal-tartalom",
+  // ⚠️ Ez NEM „nem kell renderelni", hanem „MÁSHOL renderel". A sikeres terhelés
+  // feloldja a fagyást, és az MÁR rendereli a pillanatképet — a terhelés-úton
+  // belül: chargeRenewalWithToken → applyRenewalPaid → ha `unfroze`, akkor
+  // rerenderTenantSnapshot(tenantId, { as: "live" }) (service.ts, mindkét ágon: az
+  // azonnali sikernél és a „már fizetve" önjavításnál is). Innen újra renderelni
+  // fölösleges második renderelés lenne, SIKERTELEN terhelésnél pedig nincs is mit.
+  "/admin/subscription/retry-charge":
+    "a sikeres terhelés MAGA rendereli (chargeRenewalWithToken → applyRenewalPaid → rerenderTenantSnapshot); bukásnál nincs változás",
   "/admin/subscription/period-annual": "előfizetés — számlázás, nem oldal-tartalom",
   "/admin/subscription/period-monthly": "előfizetés — számlázás, nem oldal-tartalom",
   "/admin/multilang": "a fordítás SAJÁT rendereléssel jár (multilangGenerate.ts)",

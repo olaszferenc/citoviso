@@ -16,6 +16,7 @@ import type { TrafficReport } from "../analytics/trafficReport.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
 import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
+import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { ic } from "../ui/icons.js";
 import { flagSvg } from "../ui/flags.js";
@@ -667,16 +668,23 @@ export function modulesSection(
           // was "Megbízás visszavonása" — on a stuck charge the single offered
           // action was to give up. The plan (freeze-state-v2 §⑤) requires a
           // FORWARD action.
-          //   ⚠️ It must be a REAL one. There is no server route that re-attempts
-          // a charge, and a button that quietly does nothing is worse than none
-          // (feedback_gate_must_not_refuse_the_paying_customer). What genuinely
-          // moves the tenant forward is the pay link: a stored credential can
-          // only be re-granted by a 3DS-challenged, customer-initiated payment,
-          // so the card entered THERE becomes the new mandate — which is exactly
-          // what the button says, instead of a fake retry.
+          //   ⚠️ Mindkettő VALÓDI utat kínál — fake gombot nem teszünk ki
+          // (feedback_gate_must_not_refuse_the_paying_customer).
+          //   ① „Újrapróbálom ezzel a kártyával" → a tárolt kártya ÚJRA terhelése.
+          // A leggyakoribb elutasítás a fedezethiány: ha a tulaj közben feltöltötte
+          // a kártyát, egy kattintás elég. A létra a FAGYÁS UTÁN már nem próbálkozik,
+          // tehát magától SOHA nem jönne vissza érte. A korlátok (türelmi idő,
+          // sorozat-vég) a szerveren, egy feltételes UPDATE WHERE-jében ülnek.
+          //   ② „Másik kártyával fizetek" → a fizetési link: a tárolt megbízást a
+          // kártyatársasági szabály szerint csak 3DS-sel megerősített,
+          // ügyfél-kezdeményezett fizetés adhatja meg újra, tehát az OTT megadott
+          // kártya lesz az új megbízás.
+          `<form method="POST" action="/admin/subscription/retry-charge" style="display:inline">` +
+          `<button class="citui-btn citui-btn--primary adm-mand__btn adm-mand__btn--go" type="submit">${T(lang, "Újrapróbálom ezzel a kártyával")}</button>` +
+          `</form>` +
           (sub.payUrl
-            ? `<a class="citui-btn citui-btn--primary adm-mand__btn adm-mand__btn--go" href="${esc(sub.payUrl)}">${T(lang, "Másik kártyával fizetek")}</a>` +
-              `<p class="adm-mand__hint">${T(lang, "A fizetéskor megadott kártya lesz az új megbízás — a bankkártyás megerősítés miatt csak így adható meg.")}</p>`
+            ? `<a class="citui-btn citui-btn--ghost adm-mand__btn" href="${esc(sub.payUrl)}">${T(lang, "Másik kártyával fizetek")}</a>` +
+              `<p class="adm-mand__hint">${T(lang, "A „Másik kártyával fizetek” úton megadott kártya lesz az új megbízás — a bankkártyás megerősítés miatt csak így adható meg.")}</p>`
             : "") +
           // The exit stays open (ADR-0119 ⑥) but it is no longer the loudest
           // thing here — and it says out loud what it does NOT do.
@@ -3720,6 +3728,8 @@ export interface AdminOpts {
    * (az 503-as udvarias lap).
    */
   readonly guestViewUrl?: string | null;
+  /** freeze-state-v2 ⑤: a kézi terhelés-újrapróba EREDMÉNYE (`?ujra=<kód>`). */
+  readonly chargeRetry?: string | null;
   /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
   readonly moduleSettingsHtml?: string | null;
   /** ADR-0044/d: bookable units, so photos can be assigned to them on the Fotók tab. */
@@ -3822,6 +3832,46 @@ export function adminDashboard(
   // hogy „az oldalammal minden rendben", pont amikor nincs. Ez az ADR-0119 ①
   // osztálya, más szavakkal — és a MODUL-SOROK ezt már megoldották („Megnézem" →
   // „Előnézet"); a fejléc-gomb csak kimaradt ugyanabból a javításból.
+  // ── freeze-state-v2 ⑤: a kézi terhelés-újrapróba visszajelzése ─────────────
+  // ⛔ MINDEN ÁG MÁS ÜZENET. Egy összevont „nem sikerült" pont azt a hibát
+  // követné el, amit ez a kör javít: nem mondaná meg, MIT TEHET a tulaj. A
+  // visszautasításnak mindig van kiútja — a fizetési link —, és a sikeres ág
+  // kimondja azt is, ami ilyenkor a legfontosabb: a honlap visszakapcsolt.
+  const retryNote = ((): string => {
+    const c = opts.chargeRetry;
+    if (!c) return "";
+    const bad = (msg: string) =>
+      `<div class="adm-banner adm-banner--bad" role="alert">${ic("alert", 18)} ${msg}</div>`;
+    const warn = (msg: string) =>
+      `<div class="adm-banner adm-banner--warn" role="status">${msg}</div>`;
+    switch (c) {
+      case "t_paid":
+        return `<div class="adm-saved">${ic("check", 18)} ${T(lang, "Sikerült — a díjat levontuk a kártyáról, és a honlapja újra elérhető.")}</div>`;
+      case "t_pending":
+        return warn(
+          T(lang, "A terhelés elindult, a bank még nem válaszolt. Ha sikerül, a honlapja magától visszakapcsol, és e-mailt küldünk — ezt a lapot nem kell nyitva tartania."),
+        );
+      case "t_failed":
+        return bad(
+          T(lang, "A bank most is elutasította a kártyát, ezért NEM vontunk le semmit. Próbálja meg később, vagy fizessen másik kártyával a fenti gombbal."),
+        );
+      case "varakozas":
+        return warn(
+          T(lang, "Nemrég már próbálkoztunk ezzel a kártyával. {n} perc múlva újra megpróbálhatja — addig a „Másik kártyával fizetek” úton tud fizetni.", { n: String(RETRY_COOLDOWN_MINUTES) }),
+        );
+      case "sorozat_vege":
+        return bad(
+          T(lang, "Ezzel a kártyával már többször próbálkoztunk, a bank mindannyiszor elutasította — többet nem kíséreljük meg, hogy ne terheljük fölöslegesen. Fizessen másik kártyával a fenti gombbal."),
+        );
+      case "nincs_kartya":
+        return warn(T(lang, "Nincs mentett kártya, amivel újra próbálkozhatnánk — a fenti fizetési linken tud fizetni."));
+      case "nincs_tartozas":
+        return warn(T(lang, "Nincs rendezendő tartozás — nincs mit újrapróbálni."));
+      default:
+        return bad(T(lang, "A terhelést most nem tudtuk elindítani. Fizessen a fenti gombbal, vagy írjon nekünk."));
+    }
+  })();
+
   const viewBtn = previewUrl
     ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} ${
         subFrozen ? T(lang, "Előnézet — csak Ön látja") : T(lang, "Oldal megtekintése")
@@ -3946,6 +3996,7 @@ export function adminDashboard(
       `<div class="adm-pagehead"><h1>${esc(tabLabel)}</h1>${viewBtn}</div>` +
       `<p class="adm-sub">${esc(session.displayName)}</p>` +
       savedNote +
+      retryNote +
       // ── ADR-0119 ① reaches EVERY tab (approved plan B, freeze-state-v2 §⑥) ──
       // The rule has always said the freeze is a STATE, not a box — but only
       // modulesSection() ever rendered it, so 12 of the 13 tabs stayed silent.
