@@ -1,7 +1,50 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🧪 az elrohadt fixture megjavítva — az árva-őr leltár kiürült, ADR-0170)
+Utolsó frissítés: 2026-09-15 (🔇 ADR-0171: a bukó kapu kimenete nem nyelhető el)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
+
+**🔇 ADR-0171 — EGY KAPU, AMINEK A BUKÁSA NÉMA, MAJDNEM ANNYIRA HASZNÁLHATATLAN, MINT EGY MEG
+SEM HÍVOTT.** Session-jegyzet: `_planning/memory/2026-09-15_silent_gate_output.md`.
+**Élesítés NINCS** (§0.3 — fejlesztői eszköz, nulla termék-kód). Tulajdonosi utasítás a lead-lap
+köréből (ADR-0167) kibukó mellék-leletre: „vidd végig".
+
+- **A hiba:** a `hooks/pre-commit` a kapuk többségét `>/dev/null`-ra futtatta `set -e` mellett,
+  ezért egy BUKÓ kapu kimenete **nyomtalanul eltűnt** — a napló annyit mutatott, hogy a kapu
+  fejléc-sora, majd semmi. ⛔ Nem hamis zöld (a bukás bukás, a commit nem jött létre), hanem
+  **diagnosztizálhatatlan** bukás, és pont akkor a legdrágább, amikor a legnagyobb a baj.
+- **Mérve, mit került: HÁROM diagnosztikai kört.** Harness-ölést gyanítottam → `nohup`, ugyanott
+  szakadt; OOM-ot → `dmesg` (nem volt, 12,7 GB szabad); végül `tmux`, és ott lett látható az
+  `EXIT=1`. Közben a kapu **valódi leletet talált**: egy „a(z)" a felhasználói szövegben, pont
+  abban a mondatban, amit a nyers `superseded_by:<uuid>` HELYETT írtam, hogy emberi legyen.
+  ⚠️ A rossz diagnózist a **saját mérőeszközöm** is táplálta: a `pgrep -f` élet-próbám egy
+  **5:51-es várakozó shellre** illeszkedett → háromszor jelentettem „fut"-ot egy HALOTT
+  folyamatra. A hosszú kapu-sort csak a **tmux** tartja életben, a `nohup` nem.
+- **Szállítva:** a kapu stdout-ja `$GATE_LOG`-ba megy, és **csak bukáskor** kerül kiírásra, a
+  kilépési kóddal — **79 hívási hely**. ⭐ A stderr **szándékosan átfolyik**: a zöld futás
+  viselkedése **bitre ugyanaz** marad (a `>/dev/null`-nak volt jogos szándéka; egy zajosabb zöld
+  futás azt a szokást nevelné ki, hogy senki nem olvassa a naplót). ⭐ A hívás alakja **UTÓTAG,
+  nem burkoló előtag**, és ez nem stílus: a `guard-wiring-check` a **sor elejére horgonyozva**
+  ismeri fel a bekötést, egy előtag tehát a kapuk többségét „bekötetlennek" jelentette volna —
+  mérve igazolva, hogy a felismert halmaz előtte/utána **azonos** (127 és 123 találat).
+- **Őr:** `scripts/gate-output-check.mts` — ① szerkezeti + ② **viselkedési**, ami a SZÁLLÍTOTT
+  segédfüggvényt kivágja a hookból és élesben futtatja (⛔ a kivágott EREDETIVEL, mert egy
+  másolat csak az én elképzelésemet bizonyítaná). 13 pass / 0 fail, **3 piros önteszt** mindkét
+  rétegen. **Éles végpont-végpont próba:** bukó kapu a hook élén → egy VALÓDI `git commit`
+  kiírta a korábban elnyelt sorokat; a próba eltávolítva, commit nem jött létre.
+- ⭐⭐ **A transzformáció utó-feltétele VALÓDI rést fogott:** a mintám csak `.mts|.mjs`-t ismert,
+  közben két ÚJ kapu **`.ts`** kiterjesztéssel landolt → a „0 elnémított maradhat" feltétel
+  elhasalt, és a fail-closed szkript semmit nem írt ki. ⛔⛔ **Ugyanez a vakság az ŐRBEN is benne
+  volt**, tehát „0 elnémítottat" jelentett volna, miközben kettő néma marad — **egy szűk
+  felismerő ugyanúgy hamis zöldet ad, mint egy hiányzó állítás.**
+- ⛔ **Amit a saját őröm ELSŐ futása fogott meg MAGÁN:** szó szerinti egyezést vártam és egy
+  HELYES sort (`--fast`) jelentettem hibásnak; a „sikerkor a stderr átfolyik" állítás **ÜRES
+  sztringen mért** (`execFileSync` sikerkor eldobja a stderr-t → `spawnSync`) — a mérőeszköz
+  hibája volt, nem a mérendőé; és a piros önteszt először csak az ① réteget buktatta.
+- **NYITOTT (idegen adósság, mérve):** a `guard-wiring-check` két őrt pirosnak jelent —
+  `module-config-check` (elrohadt fixture) és `lead-page-surface-check`, ami **TERMÉK-hiba**:
+  aurora/mobilon a lebegő pirula a „Szabad időpontok megtekintése" CTA **23 %-át** takarja.
+
+## Előző szál (2026-09-15) — 🧪 ADR-0170 — AZ ELROHADT FIXTURE: A TERMÉK HÁROMSZOR LÉPETT TOVÁBB A TESZT ALATT
 
 **🧪 ADR-0170 — AZ ELROHADT FIXTURE: A TERMÉK HÁROMSZOR LÉPETT TOVÁBB A TESZT ALATT.**
 Session-jegyzet: `_planning/memory/2026-09-15_rotted_fixture_repair.md`. **Élesítés NINCS.**

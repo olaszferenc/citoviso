@@ -12,6 +12,37 @@ cd "$(git rev-parse --show-toplevel)"
 changed_files() {
   if [ -n "${LAND_RANGE:-}" ]; then git diff --name-only "$LAND_RANGE"; else git diff --cached --name-only; fi
 }
+# ⛔⛔ A NÉMA BUKÁS (mérve 2026-09-15, ADR-0171). A kapuk többsége a `>/dev/null`-ra írt, a hook
+# pedig `set -e`-vel fut — így egy BUKÓ kapu kimenete NYOMTALANUL eltűnt, és a napló ennyit
+# mondott: a kapu fejléc-sora, majd semmi. Ez nem hamis zöld (a bukás bukás, a commit nem jön
+# létre), hanem DIAGNOSZTIZÁLHATATLAN bukás — és pont akkor a legdrágább, amikor a legnagyobb a
+# baj: három diagnosztikai kört vitt el (a folyamat megölését, majd OOM-ot gyanítottunk, dmesg-et
+# olvastunk, tmux-ba menekítettük a commitot), miközben a `hu-machine-form-check` VALÓDI leletet
+# talált — egy „a(z)" a felhasználói szövegben. A megtalálása órák, a javítása percek voltak.
+#
+# A mechanika: a kapu stdout-ja FÁJLBA megy, és CSAK BUKÁSKOR kerül kiírásra.
+# ⚠️ A stderr SZÁNDÉKOSAN átfolyik, ahogy eddig is (a `>/dev/null` sem fogta) — így a SIKERES
+#    futás viselkedése bitre ugyanaz marad, és csak a bukás lesz olvasható. A csendes zöld futás
+#    a `>/dev/null` jogos szándéka volt; azt megtartjuk, csak a bukást nem nyeljük el.
+# ⚠️ A hívás alakja SZÁNDÉKOSAN UTÓTAG (`… >"$GATE_LOG" || gate_failed`), nem burkoló előtag:
+#    a `guard-wiring-check` (ADR-0152) a SOR ELEJÉRE horgonyozva ismeri fel a bekötést
+#    (`/^\s*(?:npx tsx|node)\s+scripts\/…/`), egy `run_gate ` előtag tehát a kapuk többségét
+#    „bekötetlennek" jelentette volna. Mérve igazolva: a felismert halmaz a transzformáció előtt
+#    és után AZONOS.
+# A bukó kaput a KÖZVETLENÜL előtte álló `[pre-commit] …` sor nevezi meg, a kimenete pedig rögtön
+# utána jön — ezért nem kell a nevet minden hívásba külön beírni.
+# Őr, ami ezt életben tartja: `scripts/gate-output-check.mts` (szerkezet + éles viselkedés).
+GATE_LOG="$(mktemp -t cit-gate-XXXXXX)"
+trap 'rm -f "$GATE_LOG"' EXIT
+gate_failed() {
+  rc=$?
+  echo >&2
+  echo "⛔ EZ A KAPU ELBUKOTT (kilépési kód: $rc). A kimenete, amit eddig a >/dev/null elnyelt:" >&2
+  echo "──────────────────────────────────────────────────────────────────────" >&2
+  cat "$GATE_LOG" >&2
+  echo "──────────────────────────────────────────────────────────────────────" >&2
+  exit "$rc"
+}
 # ⛔ SYMLINK-TILALOM (2026-08-24, valós kár): a per-worktree `assets/Temp` symlink
 # bekerült egy commitba, és a fő fába landolva FELÜLÍRTA az ugyanott élő VALÓS
 # mappát — a tulaj bedobó-mappájának tartalma elveszett. A .gitignore `assets/Temp/`
@@ -90,7 +121,7 @@ fi
 if [ -f scripts/cancel-confirm-check.mts ] && \
    changed_files | grep -qE '^src/server/bookingViews\.ts|^scripts/cancel-confirm-check'; then
   echo "[pre-commit] cancel-confirm (a lemondás megerősítése a RENDSZERÉ)…"
-  npx tsx scripts/cancel-confirm-check.mts >/dev/null
+  npx tsx scripts/cancel-confirm-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ⛔⛔ ADATVESZTÉS-KOCKÁZAT (mérve 2026-09-14, tulajdonosi kiemelés): a konzol „jóváhagyott
 # mock törlése" `confirm()`-ja `jsStr()` nélkül kapta a szöveget. A MAGYAR forrásban nincs
@@ -102,7 +133,7 @@ fi
 if [ -f scripts/dialog-fires-check.mts ] && \
    changed_files | grep -qE '^(src/console/(views|partnerViews)\.ts|scripts/dialog-fires-check\.mts)'; then
   echo "[pre-commit] dialog-fires (lefut-e a megerősítés MINDEN nyelven)…"
-  npx tsx scripts/dialog-fires-check.mts >/dev/null
+  npx tsx scripts/dialog-fires-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek FK-001 (E1/Z1/Z2): a lista SORA mondja meg, miről szól. 18 közel azonos
 # számla-sor tétel-név nélkül · e-mail és SMS ugyanazzal az ikonnal · felfüggesztés-
@@ -121,7 +152,7 @@ fi
 if [ -f scripts/mms-preview-gate-check.mts ] && \
    changed_files | grep -qE '^(src/console/(views|server)\.ts|src/outreach/heroShot\.ts|public/assets/ui/citui-console\.css)|^scripts/mms-preview-gate-check'; then
   echo "[pre-commit] mms-preview-gate (kép nélkül nincs páros, és a lap kimondja)…"
-  npx tsx scripts/mms-preview-gate-check.mts >/dev/null
+  npx tsx scripts/mms-preview-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0131 ②: a mérőeszköz ne értékeljen zöldre olyan lépést, amin hiba keletkezett.
 # ÉLES runner-futással méri, negatívan (404 → piros) ÉS pozitívan (kimondott kivétel →
@@ -129,7 +160,7 @@ fi
 if [ -f scripts/elek-noise-verdict-check.mts ] && \
    changed_files | grep -qE '^(elek/bin/runner\.mts|src/elek/(stepVerdict|fkParse)\.ts|elek/scenarios/)|^scripts/elek-noise-verdict-check'; then
   echo "[pre-commit] elek-noise-verdict (a néma hiba pirosra visz)…"
-  npx tsx scripts/elek-noise-verdict-check.mts >/dev/null
+  npx tsx scripts/elek-noise-verdict-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0136: a HALOTT fotó ki se kerüljön a generált lapra. A tárolt portál-URL elrohad
 # (mérve: 73-ból 59 halott, 11 lead), és eddig a NYITÓKÉP is lehetett halott URL. A
@@ -138,7 +169,7 @@ fi
 if [ -f scripts/photo-liveness-check.mts ] && \
    changed_files | grep -qE '^(src/generator/(photoLiveness|generate)\.ts|src/outreach/mockPhotoHealth\.ts)|^scripts/photo-liveness-check'; then
   echo "[pre-commit] photo-liveness (halott fotó nem kerülhet a lapra)…"
-  npx tsx scripts/photo-liveness-check.mts >/dev/null
+  npx tsx scripts/photo-liveness-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0070 ②: the SCOPE itself is derived (import graph from the mail adapter) —
 # a new file feeding the mail path with bare Hungarian text fails HERE, listed or
@@ -171,7 +202,7 @@ fi
 # This gate proves the sender still refuses reserved test domains, in BOTH directions.
 if [ -f scripts/email-guard-check.mts ]; then
   echo "[pre-commit] email-guard-check (foglalt teszt-domain: nem megy ki levél)…"
-  npx tsx scripts/email-guard-check.mts >/dev/null
+  npx tsx scripts/email-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044)…"
@@ -181,21 +212,21 @@ fi
 # végösszege (Elek FK-002 Z1/Z2; kontraktus: design-refs/console/modules-annual-pricing).
 if [ -f scripts/modules-annual-check.mts ]; then
   echo "[pre-commit] modules-annual-check (Modulok fül: éves árazás + összegző)…"
-  npx tsx scripts/modules-annual-check.mts >/dev/null
+  npx tsx scripts/modules-annual-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A jóváhagyott „Csendes lista" terv (design-refs/console/modules-quiet-list):
 # rács-sor, halk lemondás, „+" csak a kirakatban, éves ár a kiemelt, fejléc-összeg.
 # BÖNGÉSZŐBEN mér, mert a kötött állítások fele vizuális.
 if [ -f scripts/modules-quiet-list-check.mts ]; then
   echo "[pre-commit] modules-quiet-list-check (Modulok fül: a jóváhagyott terv)…"
-  npx tsx scripts/modules-quiet-list-check.mts >/dev/null
+  npx tsx scripts/modules-quiet-list-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A fül bevezetője „azt FENT találja”-t ígért a megvásárolt modulokra, miközben
 # mérve MINDKÉT blokk ALATTA renderel (390px: 643<915<4242 · 1280px: 432<524<1763).
 # Az irány-állítás a RENDERELT sorrendhez van kötve, nem az emlékezethez.
 if [ -f scripts/modules-intro-direction-check.mts ]; then
   echo "[pre-commit] modules-intro-direction-check (a bevezető iránya = a render sorrendje)…"
-  npx tsx scripts/modules-intro-direction-check.mts >/dev/null
+  npx tsx scripts/modules-intro-direction-check.mts >"$GATE_LOG" || gate_failed
 fi
 # The tracked outreach link gained a readable slug (/p/<slug>/<token>). Links we
 # ALREADY SENT use the bare /p/<token> shape and must never stop resolving — a
@@ -217,7 +248,7 @@ fi
 # újabb generálás születik a jóváhagyott mellé — az Elek FK-004 emiatt bukott ÉP terméken.
 if [ -f scripts/mock-state-label-check.mts ]; then
   echo "[pre-commit] mock-state-label-check (a jelölés a jóváhagyottat is kimondja)…"
-  npx tsx scripts/mock-state-label-check.mts >/dev/null
+  npx tsx scripts/mock-state-label-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A FIZETÉS UTÁNI KIÚT kapuja (Elek FK-005a/b, mérve 2026-09-14): a sikeres lap egyetlen
 # továbblépése `class="btn"`-t viselt, aminek NULLA szabálya van a négy konzol-stíluslapon —
@@ -232,14 +263,14 @@ fi
 if [ -f scripts/pay-exit-truth-check.mts ] && \
    changed_files | grep -qE '^(src/console/(views|server)\.ts|public/assets/ui/citui(-console)?\.css|scripts/pay-exit-truth-check\.mts)'; then
   echo "[pre-commit] pay-exit-truth (a kiút valódi gomb · egy cím · a kikötött mondatok megvannak)…"
-  npx tsx scripts/pay-exit-truth-check.mts >/dev/null
+  npx tsx scripts/pay-exit-truth-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A JÓVÁHAGYOTT súgó-terv kapuja (assets/design-refs/console/help-collapse/README.md):
 # a terv VISELKEDÉST köt — alapból minden csoport csukva, több nyitható, a keresés
 # eredménye LÁTSZIK, és JS nélkül is működik. Képernyőkép egyikre sem bizonyíték.
 if [ -f scripts/help-collapse-check.mts ]; then
   echo "[pre-commit] help-collapse-check (a súgó csoportjai a jóváhagyott terv szerint)…"
-  npx tsx scripts/help-collapse-check.mts >/dev/null
+  npx tsx scripts/help-collapse-check.mts >"$GATE_LOG" || gate_failed
 fi
 # BELSŐ-HIVATKOZÁS kapu: fejlesztői azonosító (ADR-szám, §-szakasz, belső doksi-név)
 # nem mehet EMBER által olvasott szövegbe. Mérve 2026-09-12: a konzol Árazás-lapja
@@ -258,7 +289,7 @@ fi
 #   npx tsx scripts/hu-machine-form-check.mts
 if [ -f scripts/hu-machine-form-check.mts ]; then
   echo "[pre-commit] hu-machine-form-check --fast (nincs „a(z)” / „-a/-e” a felületen)…"
-  npx tsx scripts/hu-machine-form-check.mts --fast >/dev/null
+  npx tsx scripts/hu-machine-form-check.mts --fast >"$GATE_LOG" || gate_failed
 fi
 # ADR-0045 §J: KB gate — entry lint (frontmatter, anchors, non-placeholder body,
 # image refs, **„label”** drift against the view sources) AND coverage (every
@@ -300,7 +331,7 @@ fi
 if [ -f scripts/mock-form-honesty-check.mts ] && \
    changed_files | grep -qE '^(src/engine/moduleSections|src/engine/render|src/engine/templateKit|src/engine/templates/|scripts/mock-form-honesty-check)'; then
   echo "[pre-commit] mock-form-honesty-check (a mock jelölt, és nem ígér rögzítést)…"
-  npx tsx scripts/mock-form-honesty-check.mts >/dev/null
+  npx tsx scripts/mock-form-honesty-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A mock ÁR-MINTÁJA (jóváhagyott terv „B — kitöltendő mezők", 2026-09-14): kitöltendőnek
 # látszó cellák, NULLA számjegy, és a képaláírás csak arról beszél, ami a képen van. 390-en
@@ -308,7 +339,7 @@ fi
 if [ -f scripts/pricing-sample-check.mts ] && \
    changed_files | grep -qE '^(src/engine/moduleSections|src/engine/render|assets/design-refs/prospect-page/pricing-sample/|scripts/pricing-sample-check)'; then
   echo "[pre-commit] pricing-sample-check (kitöltendő mezők, nulla szám)…"
-  npx tsx scripts/pricing-sample-check.mts >/dev/null
+  npx tsx scripts/pricing-sample-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A KIKÜLDÖTT LAP KERETEZÉSE (jóváhagyott terv „A", assets/design-refs/prospect-page/framing/):
 # a sáv MINDEN látogatónak kimegy, a lap tetején marad, lenyomja a lapot, és a jogi részlete
@@ -317,14 +348,14 @@ fi
 if [ -f scripts/prospect-framing-check.mts ] && \
    changed_files | grep -qE '^(src/console/prospectNotice|src/console/server|src/engine/templates|src/engine/templateKit|src/generator/runtime|assets/design-refs/prospect-page/|scripts/prospect-framing-check)'; then
   echo "[pre-commit] prospect-framing-check (a keretezés minden látogatónak, a helyén)…"
-  npx tsx scripts/prospect-framing-check.mts >/dev/null
+  npx tsx scripts/prospect-framing-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Ugyanaz a hibaosztály az OPERÁTOR oldalán: a „Megnyitások" fölött „látogatás" állt,
 # a „–" pedig egyszerre jelentett „nem mértünk"-et és „nullá"-t. Böngésző nélkül fut.
 if [ -f scripts/prospect-activity-label-check.mts ] && \
    changed_files | grep -qE '^(src/console/views|src/console/data|scripts/prospect-activity-label-check)'; then
   echo "[pre-commit] prospect-activity-label-check (a felirat megnevezi, mit számol)…"
-  npx tsx scripts/prospect-activity-label-check.mts >/dev/null
+  npx tsx scripts/prospect-activity-label-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A vevő VÁSÁRLÁSI BELÉPŐJE lebeg-e ÉS LÁTSZIK-e minden sablonon (2026-09-08). Mérve: az
 # aurora `body>*{position:relative}` szabálya kiütötte a fixed rétegből a konfigurátor indító
@@ -335,7 +366,7 @@ fi
 if [ -f scripts/configurator-float-check.mts ] && \
    changed_files | grep -qE '^(src/engine/|src/generator/configurator|assets/runtime/cit-configurator|scripts/configurator-float-check)'; then
   echo "[pre-commit] configurator-float-check (a vásárlási belépő lebeg minden sablonon)…"
-  npx tsx scripts/configurator-float-check.mts >/dev/null
+  npx tsx scripts/configurator-float-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Középre rendezett fejléc alatt a TARTALOM is középen (tulaj, 2026-09-07): a
 # `--cit-modsec-head-align:center` csak a címet húzta középre, a modul-blokk rácsa
@@ -344,7 +375,7 @@ fi
 if [ -f scripts/modsec-align-check.mts ] && \
    changed_files | grep -qE '^src/engine/|^scripts/modsec-align-check'; then
   echo "[pre-commit] modsec-align-check (középre rendezett sablonok tartalma)…"
-  npx tsx scripts/modsec-align-check.mts >/dev/null
+  npx tsx scripts/modsec-align-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0111 — PIAC-KAPUK: zárt piacra (nincs jóváhagyott jogi csomag) nem megy hideg
 # megkeresés, nem adható ki fizetési link és nem élesíthető oldal. Az őr mindkét
@@ -354,7 +385,7 @@ fi
 if [ -f scripts/market-gate-check.mts ] && \
    changed_files | grep -qE '^(src/markets\.ts|src/payment/service\.ts|src/outreach/|src/console/server\.ts|migrations/)|^scripts/market-gate-check'; then
   echo "[pre-commit] market-gate-check (ADR-0111: piac-kapuk)…"
-  npx tsx scripts/market-gate-check.mts >/dev/null
+  npx tsx scripts/market-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0110 — a generált oldal JOGI LÁBAZATA. A lábléc „Adatkezelés" linkje hónapokig
 # href="#" volt egy olyan oldalon, amely nevet, e-mailt és telefonszámot gyűjt; a
@@ -365,7 +396,7 @@ fi
 if [ -f scripts/tenant-legal-check.mts ] && \
    changed_files | grep -qE '^(src/engine/|src/legal\.ts|src/tenant/legalIdentity\.ts|src/server/public\.ts)|^scripts/tenant-legal-check'; then
   echo "[pre-commit] tenant-legal-check (ADR-0110: jogi lábazat a generált oldalon)…"
-  npx tsx scripts/tenant-legal-check.mts >/dev/null
+  npx tsx scripts/tenant-legal-check.mts >"$GATE_LOG" || gate_failed
 fi
 # „Mentettem, de az oldalon nem látszik" (2026-09-08, a tulaj oldalán mérve): a publikus
 # oldal statikus pillanatkép, így a DB-írás önmagában nem változtat semmit a vendégnek.
@@ -374,7 +405,7 @@ fi
 if [ -f scripts/snapshot-propagation-check.mts ] && \
    changed_files | grep -qE '^(src/server/public\.ts|src/tenant/editor\.ts)|^scripts/snapshot-propagation-check'; then
   echo "[pre-commit] snapshot-propagáció (a mentés eljut-e a publikus oldalra)…"
-  npx tsx scripts/snapshot-propagation-check.mts >/dev/null
+  npx tsx scripts/snapshot-propagation-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0113: az „egész szállás" és a szobái kizárják egymást. A rés (izolált naptárak)
 # DUPLA FOGLALÁST termelt; a szabály négy külön kapun él, tehát bármelyik elrontása
@@ -382,7 +413,7 @@ fi
 if [ -f scripts/whole-property-check.mts ] && \
    changed_files | grep -qE '^(src/tenant/availability\.ts|src/tenant/unitScope\.ts|src/tenant/units\.ts|src/booking/requests\.ts)|^scripts/whole-property-check'; then
   echo "[pre-commit] whole-property-check (ADR-0114: egész szállás ↔ szobák)…"
-  npx tsx scripts/whole-property-check.mts >/dev/null
+  npx tsx scripts/whole-property-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Az ÜZEMI RIASZTÁS minden beállított címre menjen (tulaj-kérés, 2026-09-12). A címzettet
 # beállítani ADDITÍV ÍRÁS — a mezőben látszó három cím nem bizonyítja, hogy a levél
@@ -390,14 +421,14 @@ fi
 if [ -f scripts/alert-recipients-check.mts ] && \
    changed_files | grep -qE '^(src/console/appSettings\.ts|src/console/server\.ts|src/console/views\.ts|src/email/sender\.ts)|^scripts/alert-recipients-check'; then
   echo "[pre-commit] alert-recipients-check (a riasztás minden címzettet elér)…"
-  npx tsx scripts/alert-recipients-check.mts >/dev/null
+  npx tsx scripts/alert-recipients-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0113 ⑤ + FK-005b: a KIFIZETETT modul mondja ki magáról, hogy ki van fizetve, és
 # ugyanaz a tétel ne legyen újra megrendelhető (a kapu az ÍRÁSON, nem a gombon).
 if [ -f scripts/module-purchase-state-check.mts ] && \
    changed_files | grep -qE '^(src/tenant/multilangCard\.ts|src/tenant/multilangOrder\.ts|src/server/adminViews\.ts|src/console/views\.ts)|^scripts/module-purchase-state-check'; then
   echo "[pre-commit] module-purchase-state-check (a kifizetett modul kimondja a fizetést)…"
-  npx tsx scripts/module-purchase-state-check.mts >/dev/null
+  npx tsx scripts/module-purchase-state-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0080 ⑥: a FELFÜGGESZTETT lap ne állítson egyszerre két ellentétes dolgot
 # (mérve 2026-09-11: fagyás-banner + „nincs teendője" + „elérhető marad" + 11×
@@ -407,7 +438,7 @@ fi
 if [ -f scripts/frozen-state-check.mts ] && \
    changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/subscriptionAdmin\.ts|src/payment/billing\.ts|src/payment/subscription\.ts|public/assets/ui/citui-admin\.css)|^scripts/frozen-state-check'; then
   echo "[pre-commit] frozen-state-check (a felfüggesztett lap nem mond ellent magának)…"
-  npx tsx scripts/frozen-state-check.mts >/dev/null
+  npx tsx scripts/frozen-state-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ⓶ Elek FK-007 H1 + ⓷ FK-003b L03/L06 (jóváhagyott „A" tervek, 2026-09-14):
 # az idézet-doboznak MEG KELL NEVEZNIE a szerzőjét (vendég/szállásadó/rendszer), a vendég
@@ -418,7 +449,7 @@ fi
 if [ -f scripts/quote-author-check.mts ] && \
    changed_files | grep -qE '^(src/server/bookingViews\.ts|src/console/(views|server)\.ts|src/generator/generateEngine\.ts|public/assets/ui/citui-console\.css)|^scripts/quote-author-check'; then
   echo "[pre-commit] quote-author-check (szerző a dobozon · a generálás vége kimondva)…"
-  npx tsx scripts/quote-author-check.mts >/dev/null
+  npx tsx scripts/quote-author-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0119 ①: a fenti őr SZÓ SZERINTI tűket keres — és pont ezért engedte át a
 # 2026-09-13-i leletet (Elek FK-006a HIBA-1): a többnyelvű kártya MÁS SZAVAKKAL
@@ -433,7 +464,7 @@ fi
 if [ -f scripts/frozen-claim-check.mts ] && \
    changed_files | grep -qE '^(src/server/adminViews\.ts|src/server/suspendedPage\.ts|src/server/public\.ts|src/modules\.ts|src/tenant/multilangCard\.ts|src/tenant/modules\.ts)|^scripts/frozen-claim-check'; then
   echo "[pre-commit] frozen-claim-check (fagyás alatt semmi nem ígér elérhetőséget — tulaj ÉS vendég)…"
-  npx tsx scripts/frozen-claim-check.mts >/dev/null
+  npx tsx scripts/frozen-claim-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0119 ① — a fenti KÉT őr a 13 fülből EGYET mér (mindkettő a modulesSection()
 # kimenetén dolgozik). A tulaj viszont az `attekintes` fülre LÉP BE, és ott mérve
@@ -445,7 +476,7 @@ fi
 if [ -f scripts/frozen-entry-check.mts ] && \
    changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/subscriptionAdmin\.ts|src/payment/billing\.ts)|^scripts/frozen-entry-check'; then
   echo "[pre-commit] frozen-entry-check (a belépő lap kimondja a felfüggesztést)…"
-  npx tsx scripts/frozen-entry-check.mts >/dev/null
+  npx tsx scripts/frozen-entry-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Jóváhagyott terv „B — Rendezés-képernyő" (2026-09-14, freeze-state-v2 kontraktus):
 # fagyás alatt a lap EGY dologról szól. Ez az őr a PÉNZT és a VEZÉRLŐKET méri —
@@ -457,7 +488,7 @@ fi
 if [ -f scripts/frozen-settle-check.mts ] && \
    changed_files | grep -qE '^(src/server/adminViews\.ts|src/tenant/subscriptionAdmin\.ts|src/tenant/modules\.ts|src/payment/billing\.ts)|^scripts/frozen-settle-check'; then
   echo "[pre-commit] frozen-settle-check (a fagyasztott lap egy dologról szól)…"
-  npx tsx scripts/frozen-settle-check.mts >/dev/null
+  npx tsx scripts/frozen-settle-check.mts >"$GATE_LOG" || gate_failed
 fi
 # …és ugyanennek a tervnek a ⑦ kötése: a blokk telefonon ELSŐ FESTÉSKOR olvasható.
 # A szöveg-alapú őrök ezt szerkezetileg nem láthatják — az előző körben a javított
@@ -467,7 +498,7 @@ fi
 if [ -f scripts/frozen-phone-check.mts ] && \
    changed_files | grep -qE '^(src/server/adminViews\.ts|public/assets/ui/citui-admin\.css)|^scripts/frozen-phone-check'; then
   echo "[pre-commit] frozen-phone-check (a fagyás telefonon görgetés nélkül látszik)…"
-  npx tsx scripts/frozen-phone-check.mts >/dev/null
+  npx tsx scripts/frozen-phone-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0118: az elakadt, KIFIZETETT nyelv-generálás magától induljon újra — de ÉLŐ futás
 # mellé soha ne induljon második (valós LLM-pénz), a sorozat legyen véges, és a végén
@@ -475,7 +506,7 @@ fi
 if [ -f scripts/multilang-resume-check.mts ] && \
    changed_files | grep -qE '^(src/tenant/multilangResume\.ts|src/tenant/multilangGenerate\.ts|src/tenant/multilangCard\.ts|scripts/resume-multilang\.mts)|^scripts/multilang-resume-check'; then
   echo "[pre-commit] multilang-resume-check (ADR-0118: elakadt generálás újraindul)…"
-  npx tsx scripts/multilang-resume-check.mts >/dev/null
+  npx tsx scripts/multilang-resume-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A JÓVÁHAGYOTT foglalás-képernyő (design-refs/tenant-admin/booking-screen) VISELKEDÉSE:
 # a nap-kártya megnyílik-e, középen áll-e, a csukható naptár jelvénye igazat mond-e.
@@ -483,7 +514,7 @@ fi
 if [ -f scripts/booking-screen-check.mts ] && \
    changed_files | grep -qE '^(src/server/moduleConfigViews\.ts|src/tenant/availability\.ts|src/server/bookingViews\.ts)|^scripts/booking-screen-check'; then
   echo "[pre-commit] booking-screen-check (a szállított felület = a jóváhagyott terv)…"
-  npx tsx scripts/booking-screen-check.mts >/dev/null
+  npx tsx scripts/booking-screen-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Az ÜRES mező mondja meg, mit lát a vendég MOST (tulaj kérése, 2026-09-14). A döntő
 # állítás nem az, hogy üresen látszik, hanem hogy KITÖLTVE ELTŰNIK — egy soha el nem
@@ -492,7 +523,7 @@ fi
 if [ -f scripts/module-empty-state-note-check.mts ] && \
    changed_files | grep -qE '^(src/moduleConfig\.ts|src/server/moduleConfigViews\.ts|src/engine/moduleSections\.ts|scripts/module-empty-state-note-check\.mts)'; then
   echo "[pre-commit] module-empty-state-note-check (az üres mező megmondja, mit lát a vendég)…"
-  npx tsx scripts/module-empty-state-note-check.mts >/dev/null
+  npx tsx scripts/module-empty-state-note-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A JÓVÁHAGYOTT vendég-ár terv (design-refs/tenant-site/booking-price-clarity):
 # a bontás nyitva, az alap kimondva, a helyszíni tétel külön — és ⛔ KITALÁLT SZÁM
@@ -501,7 +532,7 @@ fi
 if [ -f scripts/booking-price-clarity-check.mts ] && \
    changed_files | grep -qE '^(assets/runtime/cit-runtime\.js|assets/runtime/cit-modules\.css|src/engine/moduleSections\.ts|src/engine/recipe\.ts|src/tenant/editor\.ts|src/moduleConfig\.ts|src/modules\.ts|scripts/booking-price-clarity-check\.mts|assets/design-refs/tenant-site/booking-price-clarity/)'; then
   echo "[pre-commit] booking-price-clarity-check (a vendég látja, mi van az árban)…"
-  npx tsx scripts/booking-price-clarity-check.mts >/dev/null
+  npx tsx scripts/booking-price-clarity-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A JÓVÁHAGYOTT várólista-terv (design-refs/tenant-admin/booking-queue-urgency):
 # a SORRENDET a válasz-határidő adja, nem az érkezés napja — a mért hibában a 21 órás
@@ -510,7 +541,7 @@ fi
 if [ -f scripts/booking-queue-urgency-check.mts ] && \
    changed_files | grep -qE '^(src/server/bookingViews\.ts|scripts/booking-queue-urgency-check\.mts|assets/design-refs/tenant-admin/booking-queue-urgency/)'; then
   echo "[pre-commit] booking-queue-urgency-check (a sorrendet a határidő adja)…"
-  npx tsx scripts/booking-queue-urgency-check.mts >/dev/null
+  npx tsx scripts/booking-queue-urgency-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A foglalás-sor IGAZAT mondjon arról, mi történt (ki mondta le, döntés volt-e,
 # melyik ablak járt le), a lemondás vigye vissza a tulajt oda, ahol dolgozott, és a
@@ -525,27 +556,27 @@ fi
 if [ -f scripts/shot-booking-form.mts ] && \
    changed_files | grep -qE '^(assets/runtime/cit-(runtime|money)\.js|assets/runtime/cit-modules\.css|src/engine/(templateKit|moduleSections|recipe)\.ts|scripts/shot-booking-form\.mts)$'; then
   echo "[pre-commit] shot-booking-form (a vendég-oldali űrlap MŰKÖDIK 390px-en)…"
-  npx tsx scripts/shot-booking-form.mts >/dev/null
+  npx tsx scripts/shot-booking-form.mts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/shot-review-form.mts ] && \
    changed_files | grep -qE '^(assets/runtime/cit-(runtime|money)\.js|assets/runtime/cit-modules\.css|src/engine/(render|recipe)\.ts|src/reviews/reviews\.ts|scripts/shot-review-form\.mts)$'; then
   echo "[pre-commit] shot-review-form (a vélemény-felület elfér és használható 390px-en)…"
-  npx tsx scripts/shot-review-form.mts >/dev/null
+  npx tsx scripts/shot-review-form.mts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/offer-selftest.ts ] && \
    changed_files | grep -qE '^(src/payment/offers\.ts|scripts/offer-selftest\.ts)$'; then
   echo "[pre-commit] offer-selftest (az ajánlat-választás egy legjobb ÉLŐ ajánlatot ad)…"
-  npx tsx scripts/offer-selftest.ts >/dev/null
+  npx tsx scripts/offer-selftest.ts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/period-switch-selftest.ts ] && \
    changed_files | grep -qE '^(src/payment/subscription\.ts|scripts/period-switch-selftest\.ts)$'; then
   echo "[pre-commit] period-switch-selftest (a havi→éves váltás a KÖVETKEZŐ fordulónapon él)…"
-  npx tsx scripts/period-switch-selftest.ts >/dev/null
+  npx tsx scripts/period-switch-selftest.ts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/booking-outcome-truth-check.mts ] && \
    changed_files | grep -qE '^(src/server/bookingViews\.ts|src/server/public\.ts|assets/runtime/cit-runtime\.js|src/engine/moduleSections\.ts|scripts/booking-outcome-truth-check\.mts)'; then
   echo "[pre-commit] booking-outcome-truth-check (a sor igazat mond, a vendég látja a választ)…"
-  npx tsx scripts/booking-outcome-truth-check.mts >/dev/null
+  npx tsx scripts/booking-outcome-truth-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A kiemelés a VENDÉGNEK szóljon (tulaj, 2026-08-24): a vízió-brief a fotó
 # FELÜLETEIT írja le, ha nem állítjuk meg — „sárga homlokzat", „bézs csempés
@@ -582,13 +613,13 @@ fi
 # szabályok — link, feladó-azonosítás, név, terv-keretezés — tényleg fognak-e).
 if [ -f scripts/optout-carrier-check.mts ]; then
   echo "[pre-commit] optout-carrier-check (ADR-0112: a linkelt oldal viszi az opt-outot)…"
-  npx tsx scripts/optout-carrier-check.mts >/dev/null
+  npx tsx scripts/optout-carrier-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ⚠️ 2026-09-09-ig ez CSAK az SMS-t mérte (`sms-gate-selftest.mts`), a levél-ág őrizetlen
 # volt — ezért maradt benne az a URL-vs-próza lyuk, amit az ADR-0112 az SMS-en már bezárt.
 if [ -f scripts/outreach-gate-selftest.mts ]; then
   echo "[pre-commit] outreach-gate-selftest (§C-kapu a kiszállított LEVÉLEN és SMS-en)…"
-  npx tsx scripts/outreach-gate-selftest.mts >/dev/null
+  npx tsx scripts/outreach-gate-selftest.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek FK-003b L01 (ADR-0130): a lap SAJÁT piros sávja kimondta, hogy a képek a
 # LEADNEK kiküldött lapon is törötten jelennek meg — a jóváhagyás mégis átment, és a
@@ -599,14 +630,14 @@ fi
 if [ -f scripts/mock-photo-gate-check.mts ] && \
    changed_files | grep -qE '^src/outreach/(mockPhotoHealth|sendBatch|sendOutreachSms)\.ts$|^src/console/(server|views|data)\.ts$|^src/generator/render\.ts$|^public/assets/ui/citui-console\.css$|^scripts/mock-photo-gate-check\.mts$'; then
   echo "[pre-commit] mock-photo-gate (sem a törött képes, sem a KÉP NÉLKÜLI mock nem küldhető ki)…"
-  npx tsx scripts/mock-photo-gate-check.mts >/dev/null
+  npx tsx scripts/mock-photo-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek FK-004 Z1/Z2: a piszkozat-lap „PASS — küldhető"-t állított, pedig a §C-kapu a
 # küldő-út KILENC kapujából egy — és a küldés UTÁN is ezt állította. Az őr a KIRENDERELT
 # lapon méri, hogy a képernyő állítása egyezik-e a küldő-út verdiktjével.
 if [ -f scripts/outreach-sendability-check.mts ]; then
   echo "[pre-commit] outreach-sendability-check (a lap a küldő-út verdiktjét mondja)…"
-  npx tsx scripts/outreach-sendability-check.mts >/dev/null
+  npx tsx scripts/outreach-sendability-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek FK-004 Z3/Z4: a sor „E-mail elküldve"-t írt a CSATORNA-FÜGGETLEN bélyegből (a mobil
 # páros is beállítja), a sosem-küldött linken mért forgalom lead-érdeklődésnek látszott, és a
@@ -615,11 +646,11 @@ fi
 # semmi nem fogta meg a commit-kapunál — a KB-t őr védi a drifttől, a forgatókönyveket nem.
 if [ -f scripts/elek-label-drift-check.mts ]; then
   echo "[pre-commit] elek-label-drift-check (a forgatókönyv létező feliratra mér)…"
-  npx tsx scripts/elek-label-drift-check.mts >/dev/null
+  npx tsx scripts/elek-label-drift-check.mts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/outreach-row-truth-check.mts ]; then
   echo "[pre-commit] outreach-row-truth-check (a sor a csatorna saját bélyegéből beszél)…"
-  npx tsx scripts/outreach-row-truth-check.mts >/dev/null
+  npx tsx scripts/outreach-row-truth-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek FK-004 ①: a piszkozat-előnézet 560px-en elvágta a levelet — az operátor a
 # leiratkozó-linket és a jogalapot NEM látta, mielőtt visszafordíthatatlanul kiküldte.
@@ -627,7 +658,7 @@ fi
 if [ -f scripts/outreach-preview-check.mts ] && \
    changed_files | grep -qE '^src/console/views\.ts$|^src/email/outreachEmail\.ts$|^src/outreach/draft\.ts$|^scripts/outreach-preview-check'; then
   echo "[pre-commit] outreach-preview-check (a piszkozat-előnézet nem vághatja le a levél jogi végét)…"
-  npx tsx scripts/outreach-preview-check.mts >/dev/null
+  npx tsx scripts/outreach-preview-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Jóváhagyott terv „A": egy leadhez EGY ÉLŐ követett link, a többi a „Korábbi linkek" alatt.
 # ⚠️ A CSS is trigger (a gomb-súlyt KIRAJZOLVA mérjük), és az ŐR SAJÁT fájlja is
@@ -635,7 +666,7 @@ fi
 if [ -f scripts/outreach-link-live-check.mts ] && \
    changed_files | grep -qE '^src/console/views\.ts$|^src/console/data\.ts$|^src/db/schema\.ts$|^public/assets/ui/citui-console\.css$|^scripts/outreach-link-live-check'; then
   echo "[pre-commit] outreach-link-live-check (egy ÉLŐ követett link, a többi korábbi)…"
-  npx tsx scripts/outreach-link-live-check.mts >/dev/null
+  npx tsx scripts/outreach-link-live-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Jóváhagyott terv „B": a visszafordíthatatlan küldés a levél UTÁN áll, ragadós sávban.
 # ⚠️ A CSS is trigger (a sáv tapadását egy `overflow` szabály némán megöli), és az ŐR SAJÁT
@@ -644,13 +675,13 @@ fi
 if [ -f scripts/outreach-send-bar-check.mts ] && \
    changed_files | grep -qE '^src/console/views\.ts$|^public/assets/ui/citui-console\.css$|^public/assets/ui/citui\.css$|^scripts/outreach-send-bar-check'; then
   echo "[pre-commit] outreach-send-bar-check (a küldés a levél után áll, tapad, és pixelben látszik)…"
-  npx tsx scripts/outreach-send-bar-check.mts >/dev/null
+  npx tsx scripts/outreach-send-bar-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Elek FK-004 ③: az „egyszer megy ki" garancia a CÍMRE szól, nem a prospect-rekordra.
 if [ -f scripts/outreach-oneshot-check.mts ] && \
    changed_files | grep -qE '^src/outreach/sendBatch\.ts$|^scripts/outreach-oneshot-check'; then
   echo "[pre-commit] outreach-oneshot-check (cím-szintű egy-lövés)…"
-  npx tsx scripts/outreach-oneshot-check.mts >/dev/null
+  npx tsx scripts/outreach-oneshot-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0123: a leiratkozás a POSTAFIÓKRA szól, nem egy írásmódra — és a visszavonás annyira
 # ér el, amennyire a tiltás. Normalizáló + SZERKEZETI iker (nincs visszaút nyers
@@ -659,7 +690,7 @@ fi
 if [ -f scripts/outreach-suppression-check.mts ] && \
    changed_files | grep -qE '^src/outreach/sendBatch\.ts$|^src/console/data\.ts$|^src/email/address\.ts$|^src/outreach/escalationFollowup\.ts$|^scripts/outreach-suppression-check'; then
   echo "[pre-commit] outreach-suppression-check (a leiratkozás a személyre illeszkedik)…"
-  npx tsx scripts/outreach-suppression-check.mts >/dev/null
+  npx tsx scripts/outreach-suppression-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0112: a törött pár (MMS kiment, SMS nem) a címzettet kiút nélkül hagyja, ezért
 # magától kell helyreállnia. Eldobható fixture-t épít a valódi DB-ben (~5 s), ezért a
@@ -668,7 +699,7 @@ fi
 if [ -f scripts/pair-repair-check.mts ] && \
    changed_files | grep -qE '^src/outreach/(pairRepair|sendOutreachPair|sendOutreachSms)\.ts$|^scripts/pair-repair\.mts$|^migrations/0058|^scripts/pair-repair-check'; then
   echo "[pre-commit] pair-repair-check (ADR-0112: a törött pár magától helyreáll)…"
-  npx tsx scripts/pair-repair-check.mts >/dev/null
+  npx tsx scripts/pair-repair-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
 # hole was real (measured 2026-08-26): three live tenants held 10, 12 and 1 unpaid
@@ -694,7 +725,7 @@ fi
 # commitnál ellenőrizzük.
 if [ -f scripts/consent-check.mts ]; then
   echo "[pre-commit] consent-check (a Pixel CSAK hozzájárulás után)…"
-  npx tsx scripts/consent-check.mts >/dev/null
+  npx tsx scripts/consent-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A sáv STÍLUSA (2026-09-14). A fenti őr a négy VISELKEDÉSI tiltást méri, és csak a
 # `/`-ot nyitja meg — ezért nem láthatta, hogy a sáv 12 saját felületből 11-en
@@ -704,7 +735,7 @@ fi
 # is ellenőrzi: a vendég-oldal MINDKÉT úton (host + /t/) sáv nélkül marad.
 if [ -f scripts/consent-style-check.mts ]; then
   echo "[pre-commit] consent-style-check (a sávnak van-e TÉNYLEGES stílusa)…"
-  npx tsx scripts/consent-style-check.mts >/dev/null
+  npx tsx scripts/consent-style-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A .hu Nyilvántartó megerősítő-figyelője (tulaj-rendelet 2026-09-09). Offline és
 # gyors: a riasztót INJEKTÁLJUK, így a kapu sosem küld valódi SMS-t/levelet — de a
@@ -713,7 +744,7 @@ fi
 # valamit, ha minden commitnál ellenőrizzük.
 if [ -f scripts/registry-confirm-check.mts ]; then
   echo "[pre-commit] registry-confirm-check (.hu megerősítés: a gép figyel, de NEM kattint)…"
-  npx tsx scripts/registry-confirm-check.mts >/dev/null
+  npx tsx scripts/registry-confirm-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Plan F (2026-08-26): the amenity picker — compose scope rules, inherited tiles,
 # the conversion panel, and the units/content route gates. Offline, fast.
@@ -736,7 +767,7 @@ fi
 if [ -f scripts/artifact-label-quote-check.mts ] && \
    changed_files | grep -qE '^src/scraper/regions\.ts$|^src/generator/(generate|brief)\.ts$|^migrations/.*region.*\.sql$|^scripts/artifact-label-quote-check'; then
   echo "[pre-commit] artifact-label-quote-check (a tárolt pillanatkép nem idéz visszavont terület-nevet)…"
-  npx tsx scripts/artifact-label-quote-check.mts >/dev/null
+  npx tsx scripts/artifact-label-quote-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Ha nincs megnevezett terület, a régió-fordulat ELMARAD (tulaj-döntés, 2026-09-14).
 # A `resolveRegion()` `?? id` fallbackja a SCRAPE KULCSOT adta vissza megjelenítendő névként
@@ -749,7 +780,7 @@ fi
 if [ -f scripts/region-phrase-drop-check.mts ] && \
    changed_files | grep -qE '^src/generator/(generate|generateEngine|recopy|brief|factCheck)\.ts$|^src/scraper/regions\.ts$|^scripts/region-phrase-drop-check\.mts$'; then
   echo "[pre-commit] region-phrase-drop-check (nincs terület-név → nincs régió-fordulat)…"
-  npx tsx scripts/region-phrase-drop-check.mts >/dev/null
+  npx tsx scripts/region-phrase-drop-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
@@ -761,7 +792,7 @@ fi
 if [ -f scripts/lead-filter-label-check.mts ] && \
    changed_files | grep -qE '^src/console/(views|data|leadFilters|server)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/lead-filter-label-check'; then
   echo "[pre-commit] lead-filter-label-check (a szűrő felirata = a szűrt oszlop; nincs levágott oszlop)…"
-  npx tsx scripts/lead-filter-label-check.mts >/dev/null
+  npx tsx scripts/lead-filter-label-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A lead-lista JÓVÁHAGYOTT TERVE (`assets/design-refs/console/lead-list/`, 2026-09-14):
 # a jelmagyarázat helye és érkezési állapota, a felső lapozó, a magyar állapot-szavak, a
@@ -774,7 +805,7 @@ fi
 if [ -f scripts/lead-list-plan-check.mts ] && \
    changed_files | grep -qE '^src/console/(views|leadFilters|data)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/lead-list-plan-check\.mts$'; then
   echo "[pre-commit] lead-list-plan-check (a jóváhagyott lista-terv; ragadás valódi görgetéssel)…"
-  npx tsx scripts/lead-list-plan-check.mts >/dev/null
+  npx tsx scripts/lead-list-plan-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A lead-lap JÓVÁHAGYOTT TERVE (`assets/design-refs/console/lead-page/`, 2026-09-14, „B"):
 # a munkamenet-sáv állomásai, a futás közben is megmaradó JÓVÁHAGYVA tény, a fül-mondat, az
@@ -785,7 +816,7 @@ fi
 if [ -f scripts/lead-page-plan-check.mts ] && \
    changed_files | grep -qE '^src/console/(views|leadFilters|data)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/lead-page-plan-check\.mts$'; then
   echo "[pre-commit] lead-page-plan-check (a jóváhagyott lead-lap terv; fül-mondat geometriával)…"
-  npx tsx scripts/lead-page-plan-check.mts >/dev/null
+  npx tsx scripts/lead-page-plan-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Lead-lap fül-horgony (Elek FK-003b, 2026-09-14): egy művelet utáni visszairányítás ODA
 # vigyen vissza, ahol a gomb volt. A „Mock generálása" horgony nélkül tért vissza, és a
@@ -797,7 +828,7 @@ fi
 if [ -f scripts/lead-tab-anchor-check.mts ] && \
    changed_files | grep -qE '^src/console/(views|server)\.ts$|^scripts/lead-tab-anchor-check\.mts$'; then
   echo "[pre-commit] lead-tab-anchor-check (a visszairányítás megnevezi a fület)…"
-  npx tsx scripts/lead-tab-anchor-check.mts >/dev/null
+  npx tsx scripts/lead-tab-anchor-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Lead-PAGE area gate (Elek FK-003b L15, 2026-09-14): ADR-0143 taught the Terület column
 # to name the collection box and to state "nincs besorolás" instead of handing over the
@@ -811,7 +842,7 @@ fi
 if [ -f scripts/lead-page-area-label-check.mts ] && \
    changed_files | grep -qE '^src/console/(views|data|leadFilters)\.ts$|^scripts/lead-page-area-label-check\.mts$'; then
   echo "[pre-commit] lead-page-area-label-check (a lead-LAP ugyanazt a terület-jelentést hordozza, mint a lista)…"
-  npx tsx scripts/lead-page-area-label-check.mts >/dev/null
+  npx tsx scripts/lead-page-area-label-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Template picker gate (2026-08-21): the card grid must SELECT when clicked, not just zoom.
 # Behaviour check in a real browser (~7s), so only when the picker's code is staged.
@@ -973,7 +1004,7 @@ fi
 if [ -f scripts/checkout-item-block-check.mts ] && \
    changed_files | grep -qE '^(assets/runtime/cit-configurator\.(js|css)|src/generator/configurator\.ts|scripts/checkout-item-block-check\.mts)'; then
   echo "[pre-commit] checkout-item-block (a fizetőoldal megnevezi, mit vesz a vevő)…"
-  npx tsx scripts/checkout-item-block-check.mts >/dev/null
+  npx tsx scripts/checkout-item-block-check.mts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/contract-drift-check.mts ] && \
    changed_files | grep -qE '^assets/design-refs/|^assets/runtime/|^src/console/views\.ts|^src/server/adminViews\.ts|^src/generator/|^scripts/contract-drift-check'; then
@@ -1022,14 +1053,14 @@ fi
 if [ -f scripts/missed-list-check.mts ] && \
    changed_files | grep -qE '^src/console/views\.ts$|^src/market\.ts$|^src/generator/|^scripts/missed-list-check'; then
   echo "[pre-commit] missed-list-check (egy lapon egy „mi maradt ki” lista)…"
-  npx tsx scripts/missed-list-check.mts >/dev/null
+  npx tsx scripts/missed-list-check.mts >"$GATE_LOG" || gate_failed
 fi
 # EGY LEADEN EGY JÓVÁHAGYOTT MOCK (FK-003b ⑤): két „approved" artefaktum mellett a
 # fejléc egy tetszőlegeset nevezett A jóváhagyottnak.
 if [ -f scripts/one-approved-check.mts ] && \
    changed_files | grep -qE '^src/console/data\.ts$|^src/console/server\.ts$|^migrations/|^scripts/one-approved-check'; then
   echo "[pre-commit] one-approved-check (leadenként egy jóváhagyott mock)…"
-  npx tsx scripts/one-approved-check.mts >/dev/null
+  npx tsx scripts/one-approved-check.mts >"$GATE_LOG" || gate_failed
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1048,14 +1079,14 @@ fi
 if [ -f scripts/geo-verify-check.mts ] && \
    changed_files | grep -qE '^src/scraper/(enrichPresence|enrichSiteSearch)\.ts$|^scripts/geo-verify-check'; then
   echo "[pre-commit] geo-verify-check (a weboldal-igazolás földrajzi horgonya)…"
-  npx tsx scripts/geo-verify-check.mts >/dev/null
+  npx tsx scripts/geo-verify-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Az iCal-réteg determinisztikus viselkedés-kapuja: a fixture-ök a VALÓDI feedek
 # torzságait hordozzák (tördelt sorok, CANCELLED, csonkolt letöltés). Offline (~7 s).
 if [ -f scripts/ical-check.mts ] && \
    changed_files | grep -qE '^src/booking/ical\.ts$|^scripts/ical-check'; then
   echo "[pre-commit] ical-check (foglaltság-feed értelmezése)…"
-  npx tsx scripts/ical-check.mts >/dev/null
+  npx tsx scripts/ical-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR: a SAJÁT kimaradásunk nem lelet a leadről. A kimerült Places-kvótát a panel
 # „ehhez a leadhez nem találtunk fotót"-ként írta ki, miközben a lista 10 képet
@@ -1064,7 +1095,7 @@ fi
 if [ -f scripts/places-outage-check.mts ] && \
    changed_files | grep -qE '^src/scraper/(enrichPlaces\.ts|sources/googleMaps\.ts)$|^src/generator/images\.ts$|^scripts/places-outage-check'; then
   echo "[pre-commit] places-outage-check (a kimaradás nem állítás a leadről)…"
-  npx tsx scripts/places-outage-check.mts >/dev/null
+  npx tsx scripts/places-outage-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0137: a felderítés PLAFONJA nem lelet. Egy hívás, egy kulcsszó, első lap =
 # 20 hely — miközben ugyanabban a dobozban 310 van. Szintetikus Places-világ ellen
@@ -1072,7 +1103,7 @@ fi
 if [ -f scripts/scrape-coverage-check.mts ] && \
    changed_files | grep -qE '^src/scraper/sources/googleMaps\.ts$|^scripts/scrape-coverage-check'; then
   echo "[pre-commit] scrape-coverage-check (ADR-0137: a motor bejár, nem egyszer kérdez)…"
-  npx tsx scripts/scrape-coverage-check.mts >/dev/null
+  npx tsx scripts/scrape-coverage-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0138: a háttérmunka tartozik egy ÉLETJELLEL. Egy éles scrape-et egy deploy ölt
 # meg (KillMode=control-group), a sor két napig „running" maradt, és a rendszernek
@@ -1081,7 +1112,7 @@ fi
 if [ -f scripts/scrape-liveness-check.mts ] && \
    changed_files | grep -qE '^src/console/(scrapeJob|data|views)\.ts$|^scripts/scrape-liveness-check'; then
   echo "[pre-commit] scrape-liveness-check (ADR-0138: a lista a futásról mond igazat)…"
-  npx tsx scripts/scrape-liveness-check.mts >/dev/null
+  npx tsx scripts/scrape-liveness-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0128: 29 nyelv, három sáv. A „Választható: N nyelv" mondat és a ténylegesen
 # kirenderelt csempék száma nem csúszhat el, minden nyelvnek van zászlója, és a
@@ -1090,7 +1121,7 @@ fi
 if [ -f scripts/multilang-tier-check.mts ] && \
    changed_files | grep -qE '^src/tenant/multilang(Card|Order)\.ts$|^src/(console/views|server/adminViews|ui/flags|i18n/lang)\.ts$|^scripts/multilang-tier-check'; then
   echo "[pre-commit] multilang-tier-check (ADR-0128: 29 nyelv, három sáv)…"
-  npx tsx scripts/multilang-tier-check.mts >/dev/null
+  npx tsx scripts/multilang-tier-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0071: a domain-vásárlás VALÓDI PÉNZ és nem visszaadható — a propagáció közepén
 # összeomló futás nem veszíthet el és nem vehet meg kétszer egy domaint. Saját
@@ -1098,7 +1129,7 @@ fi
 if [ -f scripts/domain-provision-check.mts ] && \
    changed_files | grep -qE '^src/domains/|^scripts/domain-provision-check'; then
   echo "[pre-commit] domain-provision-check (ADR-0071: domain-beszerzés állapotgépe)…"
-  npx tsx scripts/domain-provision-check.mts >/dev/null
+  npx tsx scripts/domain-provision-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0129: a minőség-kapu nem tagadhatja meg a FIZETNI AKARÓ vevőt. Mérve: 3 beküldött
 # rendelés egyetlen payment-sor nélkül, és a beígért e-mailt egyetlen kódsor sem küldi.
@@ -1108,7 +1139,7 @@ fi
 if [ -f scripts/order-paylink-check.mts ] && \
    changed_files | grep -qE '^src/payment/service\.ts$|^src/console/data\.ts$|^src/billing/buyer\.ts$|^scripts/order-paylink-check'; then
   echo "[pre-commit] order-paylink-check (ADR-0129: a fizetni akaró vevő tud fizetni)…"
-  PAYMENT_GATEWAY=mock npx tsx scripts/order-paylink-check.mts >/dev/null
+  PAYMENT_GATEWAY=mock npx tsx scripts/order-paylink-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0162: EGY összeg, EGY írásmód. Mérve 4535965-ön: ugyanaz a 99 900 HUF ÖT alakban
 # jött ki a kódból, és a hat dunning-levél „HUF"-ot írt oda, ahol a számla-levél „Ft"-ot.
@@ -1119,7 +1150,7 @@ fi
 if [ -f scripts/money-format-check.mts ] && \
    changed_files | grep -qE '^src/text/money\.ts$|^assets/runtime/cit-(money|runtime|configurator)\.js$|^src/email/(billingEmail|invoiceEmail)\.ts$|^src/payment/(billing|restoreNotice)\.ts$|^src/domains/settlementNotify\.ts$|^src/(pricing)\.ts$|^src/tenant/prices\.ts$|^src/engine/moduleSections\.ts$|^src/generator/(configurator|runtime)\.ts$|^src/server/(adminViews|moduleConfigViews)\.ts$|^src/console/(views|partnerViews|partnerData|server)\.ts$|^src/outreach/draft\.ts$|^scripts/money-format-check'; then
   echo "[pre-commit] money-format-check (ADR-0162: egy összeg, egy írásmód)…"
-  npx tsx scripts/money-format-check.mts >/dev/null
+  npx tsx scripts/money-format-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0144: EGY vásárlási úton EGY fordulónap. A fizetőoldal „2027. 09. 13."-át ígért,
 # a visszaigazolás „2027. 09. 10."-et írt — három nap eltérés egy AUTOMATIKUS
@@ -1129,7 +1160,7 @@ fi
 if [ -f scripts/renewal-date-coherence-check.mts ] && \
    changed_files | grep -qE '^src/payment/(service|subscription)\.ts$|^src/(pricing|legal)\.ts$|^src/text/day\.ts$|^src/tenant/(subscriptionAdmin|paidEntitlements|modules)\.ts$|^src/generator/configurator\.ts$|^src/(console/views|server/adminViews|email/billingEmail)\.ts$|^assets/runtime/cit-configurator\.js$|^scripts/renewal-date-coherence-check'; then
   echo "[pre-commit] renewal-date-coherence-check (ADR-0144: egy vásárlás, egy fordulónap)…"
-  npx tsx scripts/renewal-date-coherence-check.mts >/dev/null
+  npx tsx scripts/renewal-date-coherence-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A szoba-kártya KÉPE maradjon a kártyán belül. Mérve (Elek FK-004b H-2 / FK-005a H-3):
 # a törött-kép kitöltő a halott <img>-t egy abszolút, 150px-padlós panelre cserélte és a
@@ -1140,7 +1171,7 @@ fi
 if [ -f scripts/room-card-overflow-check.mts ] && \
    changed_files | grep -qE '^src/engine/render\.ts$|^src/engine/templates/|^assets/runtime/cit-modules\.css$|^scripts/room-card-overflow-check'; then
   echo "[pre-commit] room-card-overflow-check (a szoba-kártya képe nem takarja a szöveget)…"
-  npx tsx scripts/room-card-overflow-check.mts >/dev/null
+  npx tsx scripts/room-card-overflow-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A LEADNEK KISZÁLLÍTOTT LAP (Elek FK-004b ①②): nincs üres keretezett doboz (se függő, se
 # ELUTASÍTOTT térkép-keret mellett), a lebegő vásárlás-pirula nem takar elsődleges gombot, és
@@ -1155,7 +1186,7 @@ fi
 if [ -f scripts/lead-page-surface-check.mts ] && \
    changed_files | grep -qE '^src/engine/(render|recipe|templates)\.ts$|^src/engine/templates/|^src/generator/(configurator|runtime)\.ts$|^assets/runtime/cit-(configurator|modules)\.(js|css)$|^scripts/lead-page-surface-check'; then
   echo "[pre-commit] lead-page-surface-check (üres doboz · pirula-ütközés · üres csomag)…"
-  npx tsx scripts/lead-page-surface-check.mts >/dev/null
+  npx tsx scripts/lead-page-surface-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0044 fixture-kapu: a modul-konfig réteg VÉGPONTTÓL VÉGPONTIG működik-e — alapérték-rétegek,
 # iparág-réteg, mentés/visszaolvasás, ismeretlen-kulcs elutasítás, visszaállítás, a közös
@@ -1169,7 +1200,7 @@ fi
 if [ -f scripts/module-config-check.mts ] && \
    changed_files | grep -qE '^src/(moduleConfig|modules)\.ts$|^src/tenant/(availability|units|modules|editor|prices|siteModuleConfig)\.ts$|^src/engine/(templateKit|moduleSections|recipe)\.ts$|^src/booking/requests\.ts$|^src/db/schema\.ts$|^scripts/module-config-check'; then
   echo "[pre-commit] module-config-check (ADR-0044: a modul-konfig réteg végponttól végpontig)…"
-  npx tsx scripts/module-config-check.mts >/dev/null
+  npx tsx scripts/module-config-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ⭐⭐ A META-ŐR — MINDIG FUT, és nincs diff-scope-ja. Ez szándékos: egy új árva őr úgy
 # keletkezik, hogy valaki LÉTREHOZ egy `scripts/*-check.mts`-t és ezt a fájlt nem nyitja
@@ -1177,6 +1208,18 @@ fi
 # Fájlokat olvas, nem indít se böngészőt, se DB-t (~3 s).
 if [ -f scripts/guard-wiring-check.mts ]; then
   echo "[pre-commit] guard-wiring-check (minden őr be van-e kötve)…"
-  npx tsx scripts/guard-wiring-check.mts >/dev/null
+  npx tsx scripts/guard-wiring-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ⭐⭐ A MÁSODIK META-ŐR (ADR-0171) — „ha egy kapu elbukik, elolvasható-e, MIÉRT?"
+# A `guard-wiring-check` azt őrzi, hogy az őr MEGHÍVÓDIK; ez azt, hogy a BUKÁSA OLVASHATÓ.
+# A kettő együtt zárja a kört: egy meghívott őr, aminek a bukása néma, majdnem olyan
+# használhatatlan, mint egy meg sem hívott — csak drágább, mert azt hiszed, védve vagy.
+# ⚠️ MINDIG FUT, diff-scope NÉLKÜL, szándékosan: a visszaesés úgy keletkezik, hogy valaki egy
+# ÚJ kapu-sort ír `>/dev/null`-lal, és az a sor egy MÁSIK szál rebase-én is bejöhet — egy
+# hook-fájlra szűkített trigger ilyenkor nem tüzel megbízhatóan.
+# Fájlt olvas + egy apró bash-harness, se böngésző, se DB (~2 s).
+if [ -f scripts/gate-output-check.mts ]; then
+  echo "[pre-commit] gate-output-check (a bukó kapu kimenete eljut-e az operátorhoz)…"
+  npx tsx scripts/gate-output-check.mts >"$GATE_LOG" || gate_failed
 fi
 echo "[pre-commit] ✅ minden kapu zöld"
