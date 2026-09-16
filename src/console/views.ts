@@ -79,6 +79,7 @@ import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.
 import type { HeroShotState } from "../outreach/heroShot.js";
 import type { MailSendability } from "../outreach/sendBatch.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
+import { pixelQueueScript } from "../server/consent.js";
 
 export function esc(s: unknown): string {
   const lang = consoleLang();
@@ -2007,6 +2008,9 @@ export function payResultPage(
       readonly amount: number;
       readonly period: "monthly" | "annual";
     } | null;
+    /** Currency of the charge — the Barion `purchase` event requires it, and it
+     *  comes from the PAYMENT row, never from a default (ADR-0186). */
+    currency?: string | null;
   },
 ): string {
   const lang = consoleLang();
@@ -2017,6 +2021,36 @@ export function payResultPage(
   }</p>`;
   // ONE source for "write to us", on all three branches of this page. Empty
   // config → the offer is dropped, never replaced by a plausible-looking address.
+  // Barion Pixel (Full, ADR-0186): a MEGTÖRTÉNT vásárlás — a tölcsér utolsó
+  // eseménye. A lap nem hívja közvetlenül a Pixelt (a hozzájárulás a futtatóban
+  // dől el), csak deklarálja; a sor „Elfogadom" után ürül.
+  //
+  // ⚠️ EGY TÉTEL, nem tételes kosár — és ez SZÁNDÉKOS. A tételes bontás a
+  // konfigurátorból már kiment (initiateCheckout + addPaymentInfo, valós
+  // modul-árakkal); itt csak a TERHELT összeg ismert biztosan. Modulonkénti árat
+  // visszafejteni ebből annyit tenne, hogy kitalált számokat küldünk a
+  // csalásmegelőzésnek — egy igaz sor többet ér, mint négy kikövetkeztetett.
+  const pixelPurchase =
+    paid && typeof info?.amount === "number" && info.currency
+      ? pixelQueueScript("purchase", {
+          contents: [
+            {
+              id: "order",
+              contentType: "Product",
+              name: info.productName || "Citoviso",
+              unit: "db",
+              unitPrice: info.amount,
+              totalItemPrice: info.amount,
+              currency: info.currency,
+              quantity: 1,
+            },
+          ],
+          currency: info.currency,
+          step: 3,
+          revenue: info.amount,
+          ...(info.ref ? { orderNumber: info.ref } : {}),
+        })
+      : "";
   const support = (info?.supportEmail ?? "").trim();
   const helpLine = (leadIn: string): string =>
     support
@@ -2081,7 +2115,7 @@ export function payResultPage(
       T(lang, "Sikeres fizetés"),
       `<div class="panel" style="max-width:560px;margin:48px auto">
         <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
-        ${paidLine}
+        ${paidLine}${pixelPurchase}
         <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
         címet és a belépési adatait <b>${T(lang, "e-mailben elküldjük")}</b> ${T(lang, "— általában néhány órán belül.")}</p>
         ${subscriptionBox(lang, info)}
@@ -2115,7 +2149,7 @@ export function payResultPage(
     : `<li style="margin:0 0 6px">${T(lang, "A belépés pontos címét az e-mailben küldjük el.")}</li>`;
   const body = `<div class="panel" style="max-width:560px;margin:48px auto">
       <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
-      ${paidLine}
+      ${paidLine}${pixelPurchase}
       ${liveBlock}
       ${subscriptionBox(lang, info)}
       <h3 style="margin:0 0 8px">${T(lang, "Mi a következő lépés?")}</h3>

@@ -705,6 +705,107 @@
     return period === "annual" ? m * (12 - PRICING.annualFreeMonths) : m;
   }
 
+  // ── Barion Pixel (Full) — a vásárlás lépései ────────────────────────────────
+  //
+  // ⛔ EGY SZABÁLY, EGY PÉLDÁNY: a fizetendő összeg képlete eddig KIZÁRÓLAG a
+  // beküldő törzsében élt. A Pixel ugyanezt az összeget küldi (a Barion ebből
+  // dönti el, kockázatos-e a tranzakció), és egy második példány két igazságot
+  // adna ugyanarra a vásárlásra. Ezért a képlet ide került, és a beküldés is
+  // INNEN veszi.
+  function payableTotal() {
+    return (
+      offerPrice(period === "annual" ? annualTotal() : monthlyTotal()) +
+      // ADR-0109: a ciklus viszi a díjat — éves rendelésen 12 hónap.
+      (domainType === "citoviso_registered" && domainEligible()
+        ? domainFeeMonthly() * (period === "annual" ? 12 : 1)
+        : 0)
+    );
+  }
+  /** A ciklus szorzója és egysége — egy sor, egy mértékegység.
+   *  ⚠️ A `unit` GÉPI mező a Barion API felé (nem képernyő-felirat), ezért
+   *  angol és fordítatlan: a vevő nyelvétől független, összehasonlítható érték. */
+  function pxCycle() {
+    return period === "annual"
+      ? { mult: 12 - PRICING.annualFreeMonths, unit: "year" }
+      : { mult: 1, unit: "month" };
+  }
+  /** A csomag neve. Üres terméknév mellett a szolgáltatás általános neve áll —
+   *  kitalált szállás-nevet nem írunk a mérésbe sem (§B.17). */
+  function pxProductName() {
+    return (CFG.product && CFG.product.name) || tr("Citoviso előfizetés");
+  }
+  /**
+   * A kosár tételei. ⚠️ A tételek a LISTAÁRAT viselik (ez az, amit a vevő a
+   * soron LÁT), a kedvezmény pedig az egészre vonatkozik — ezért a `revenue` a
+   * TÉNYLEGESEN fizetendő összeg, és ajánlat esetén kevesebb, mint a tételek
+   * összege. A különbséget a `coupon` mező nevezi meg, hogy ne rejtett eltérés
+   * legyen. (Tételenként kerekítve az összeg nem adná ki a terhelést — az lenne
+   * a „két osztó egy soron" csapda.)
+   */
+  function pxContents() {
+    var c = pxCycle();
+    var items = [
+      {
+        id: "base",
+        contentType: "Product",
+        name: pxProductName(),
+        unit: c.unit,
+        unitPrice: PRICING.base * c.mult,
+        totalItemPrice: PRICING.base * c.mult,
+        currency: PRICING.currency,
+        quantity: 1,
+      },
+    ];
+    MODULES.forEach(function (m) {
+      if (!countsToward(m, selected) || !priceById[m.id]) return;
+      items.push(pxItem(m));
+    });
+    if (domainType === "citoviso_registered" && domainEligible()) {
+      var d = domainFeeMonthly() * (period === "annual" ? 12 : 1);
+      items.push({
+        id: "domain",
+        contentType: "Product",
+        name: domainName || tr("Saját domain"),
+        unit: c.unit,
+        unitPrice: d,
+        totalItemPrice: d,
+        currency: PRICING.currency,
+        quantity: 1,
+      });
+    }
+    return items;
+  }
+  /** Egyetlen modul-tétel — ugyanabban az egységben, mint a kosár többi sora. */
+  function pxItem(mod) {
+    var c = pxCycle();
+    var p = (priceById[mod.id] || 0) * c.mult;
+    return {
+      id: mod.id,
+      contentType: "Product",
+      name: mod.label,
+      unit: c.unit,
+      unitPrice: p,
+      totalItemPrice: p,
+      currency: PRICING.currency,
+      quantity: 1,
+    };
+  }
+  /** A közös boríték: ami minden pénztár-eseményen azonos. */
+  function pxCart(step) {
+    var o = {
+      contents: pxContents(),
+      step: step,
+      revenue: payableTotal(),
+      currency: PRICING.currency,
+    };
+    if (OFFER) o.coupon = OFFER.kind || "offer";
+    return o;
+  }
+  /** A Pixel hívása — a hozzájárulás-kapu a cit-consent.js-ben van, nem itt. */
+  function px(name, data) {
+    if (typeof window.citPixel === "function") window.citPixel(name, data);
+  }
+
   // See-the-change feedback: after ANY toggle-on (present OR sample) the page
   // scrolls to the affected section and flashes an accent outline on it — the
   // prospect must SEE what their choice did (the whole sell is the live preview).
@@ -891,6 +992,9 @@
       markCustom();
       updateSummary();
       track(next ? "module_add" : "module_remove", { module: mod.id });
+      // Barion Pixel (Full): a kosár mozgása. A tétel ugyanabból a függvényből
+      // épül, mint a pénztár-események sorai — nem külön kiszámolva.
+      px(next ? "addToCart" : "removeFromCart", pxItem(mod));
     }
     r.addEventListener("click", function (e) {
       // Inner buttons (info) handle themselves.
@@ -2581,6 +2685,8 @@
       domain_type: domainType,
       buyer_type: buyerType,
     });
+    // Barion Pixel (Full): a pénztár INDULÁSA — az első lépés a sorban.
+    px("initiateCheckout", pxCart(1));
     var url = CFG.requestUrl;
     if (!url) {
       showThanks(chosen);
@@ -2599,14 +2705,10 @@
         // Display-only figure for the tamper check; with an offer the payable
         // (discounted) amount is what the buyer saw (ADR-0088). The domain fee
         // rides on top undiscounted, same as the server's charge (ADR-0093).
-        price:
-          offerPrice(period === "annual" ? annualTotal() : monthlyTotal()) +
-          // ADR-0109: the cycle carries the fee — 12 months on the annual order,
-          // matching the server's domainFeeForCycle(). A 1-month figure here would
-          // trip the price-drift warning on every annual purchase.
-          (domainType === "citoviso_registered" && domainEligible()
-            ? domainFeeMonthly() * (period === "annual" ? 12 : 1)
-            : 0),
+        // ⭐ Egy forrás: ugyanaz a `payableTotal()`, amit a Barion Pixel küld —
+        // a képlet (kedvezmény + ciklus szerinti domain-díj, ADR-0093/0109) ott
+        // olvasható. Két példányban két igazság lenne ugyanarra a vásárlásra.
+        price: payableTotal(),
         domain_type: domainType,
         domain_name: domainName,
         photo_rights_declared: rightsBox.checked === true,
@@ -2636,6 +2738,12 @@
         // order, so the buyer goes straight to payment (pay → webhook → go-live).
         if (data && data.payUrl) {
           track("checkout_redirect", { period: period });
+          // Barion Pixel (Full): a fizetési mód kiválasztva, átadás a kapunak.
+          // ⚠️ A `paymentMethod` GÉPI érték, nem felirat. Innen már a Barion
+          // oldala jön: ez az UTOLSÓ esemény, amit a mi lapunk küldeni tud.
+          var pay = pxCart(2);
+          pay.paymentMethod = "card";
+          px("addPaymentInfo", pay);
           window.location.href = data.payUrl;
           return;
         }
@@ -2878,6 +2986,20 @@
     document.body.appendChild(panel);
     document.body.appendChild(launch);
     mountEscalationCard();
+    // Barion Pixel (Full): ez a lap TERMÉK-lap — az ajánlat a saját csomagjával
+    // itt áll a vevő előtt. A `contentView` a `cit-consent.js`-ből lap-szinten is
+    // elmegy (contentType: "Page"); ez a TERMÉKET nevezi meg, a Barion kötelező
+    // mezőivel (id, contentType, name, unitPrice, unit, currency, quantity).
+    var pxC = pxCycle();
+    px("contentView", {
+      contentType: "Product",
+      id: "base",
+      name: pxProductName(),
+      unit: pxC.unit,
+      unitPrice: PRICING.base * pxC.mult,
+      currency: PRICING.currency,
+      quantity: 1,
+    });
     // The invite pill enters AFTER the wow lands: a short beat, or on first scroll.
     var pillShown = false;
     function showPill() {

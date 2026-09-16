@@ -105,6 +105,27 @@ export function consentSnippet(): { head: string; body: string } {
   };
 }
 
+/**
+ * Egy SZERVER-OLDALON tudott Pixel-esemény beadása a lapnak (ADR-0186).
+ *
+ * ⛔ A lap nem hívhatja közvetlenül a Pixelt: a hozzájárulás a `cit-consent.js`-ben
+ * dől el, és egy közvetlen hívás megkerülné azt. Ezért a lap DEKLARATÍVAN sorba
+ * teszi, amit küldene, a sor pedig kizárólag „Elfogadom" után ürül — hozzájárulás
+ * nélkül az esemény némán elvész (nem raktározzuk el „majd később" küldésre, mert
+ * az a hozzájárulás kijátszása volna).
+ *
+ * A JSON-t `<` mentesítéssel írjuk ki: egy `</script>` a NÉVBEN (például egy
+ * szállás nevében) különben kinyitná a szkript-blokkot.
+ */
+export function pixelQueueScript(eventName: string, data: unknown): string {
+  const json = JSON.stringify(data).replace(/</g, "\\u003c");
+  const name = JSON.stringify(eventName).replace(/</g, "\\u003c");
+  return (
+    `<script>window.citPixelQueue=window.citPixelQueue||[];` +
+    `window.citPixelQueue.push([${name},${json}]);</script>`
+  );
+}
+
 /** Kimondja, kinek szól ez a válasz. A NEM deklarált alapértelmezés a nem-követés. */
 export function markAudience(res: { }, audience: PageAudience): void {
   (res as Record<symbol, PageAudience>)[PAGE_AUDIENCE] = audience;

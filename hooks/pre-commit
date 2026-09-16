@@ -865,6 +865,16 @@ if [ -f scripts/consent-style-check.mts ]; then
   # egy hálózati válaszon. Mérve 2026-09-15: barionnal 2 piros, mockkal 0.
   PAYMENT_GATEWAY=mock npx tsx scripts/consent-style-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A BARION PIXEL AZT KÜLDI, AMIT A VEVŐ TESZ (ADR-0186). Valódi böngésző + a Barion
+# ÉLŐ bp.js-e és annak saját validátora: hiányzó kötelező mezőnél a Pixel némán eldobja
+# az eseményt, tehát egy elgépelt `unitPrice` zöld teszt mellett is adatvesztés volna.
+# Méri a hozzájárulás-kaput is (előtte semmi, elutasítás után soha semmi).
+# ⚠️ Hálózat nélkül HANGOSAN kihagy (rc=2) — akkor a kapu nem ítél.
+if [ -f scripts/barion-pixel-check.mts ] && \
+   changed_files | grep -qE '^(public/assets/runtime/cit-consent\.(js|css)|assets/runtime/cit-configurator\.js|src/server/consent\.ts|scripts/barion-pixel-check\.mts)$'; then
+  echo "[pre-commit] barion-pixel-check (a Pixel a vásárlás lépéseit küldi)…"
+  npx tsx scripts/barion-pixel-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A JELENTÉS-VIVŐ FELIRAT OLVASHATÓ (tulajdonosi döntés, 2026-09-15). A konzol
 # jelzés-színeit feliratnak is használtuk: a „Fizetek ▸" és a „Jóváhagyás" gomb 3,00-n,
 # MINDEN link 2,41-en állt. 10 útvonalon, 390 ÉS 1280 px-en mér, alfa-kompozitálva —

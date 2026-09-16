@@ -817,9 +817,16 @@ scopeCases.push(
   { label: "KONZOL jogi /privacy (a kiküldött levelek linkje)", path: "/privacy", method: "GET", port: CONSOLE_PORT, audience: "own" },
   { label: "KONZOL /pay/mock/<ref> (fizetés-lap)", path: "/pay/mock/mock_00000000-0000-0000-0000-000000000000", method: "GET", port: CONSOLE_PORT, audience: "own" },
   { label: "KONZOL /admin/<token> (a tenant önkiszolgáló lapja)", path: `/admin/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "own" },
-  // A konzolon kiszolgált VENDÉG-lapok — ugyanaz az artefaktum, további ajtókon.
-  { label: "KONZOL /p/<token> (követett megkeresés-link)", path: `/p/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "guest" },
-  { label: "KONZOL /configure/<id> (konfigurátor a mockon)", path: "/configure/00000000-0000-0000-0000-000000000000", method: "GET", port: CONSOLE_PORT, audience: "guest" },
+  // ⚠️ MEGFORDÍTVA 2026-09-16 (ADR-0186): az ajánlat + konfigurátor a MI lapunk.
+  // Ez a két sor korábban `guest`-et várt, az ADR-0151 útvonal-listája szerint. A
+  // Full Barion Pixel viszont a kosár- és pénztár-eseményeket kéri, és azok KIZÁRÓLAG
+  // ezen a lapon történnek (a `/pay/…` már csak az eredményt látja) — vagyis az
+  // ADR-0151 SAJÁT kritériuma („ahol a mi fizetési utunk futhat") erre a lapra eddig
+  // is igaz volt. A viselkedést előbb igazoltuk (`barion-pixel-check`: 15 zöld
+  // állítás valódi böngészőben), és CSAK utána írtuk át ezt a várakozást.
+  { label: "KONZOL /p/<token> (ajánlat + konfigurátor — INNEN indul a vásárlás)", path: `/p/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "own" },
+  { label: "KONZOL /configure/<id> (ugyanaz, követés nélküli ikerúton)", path: "/configure/00000000-0000-0000-0000-000000000000", method: "GET", port: CONSOLE_PORT, audience: "own" },
+  // ⛔ A vendég-lapok VÁLTOZATLANUL tiszták — a határ nem tűnt el, csak arrébb ment.
   { label: "KONZOL /site/<token> (a szállás pillanatképe)", path: `/site/${DEAD_CANCEL_TOKEN}`, method: "GET", port: CONSOLE_PORT, audience: "guest" },
   // A BELSŐ felület — szintén tiszta, de más okból.
   { label: "KONZOL operátor-belépés /login", path: "/login", method: "GET", port: CONSOLE_PORT, audience: "operator" },

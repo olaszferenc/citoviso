@@ -176,13 +176,18 @@ const LEGAL_PATHS = new Set([
  * a vendég nem nálunk fizet, és egy süti-sáv a mockon arról is hazudna, hogyan fog
  * kinézni a kész oldal.
  *
- * ⚠️ A `/p/<token>`-ről a vásárlás EL TUD indulni (a konfigurátor-réteg beküldi a
- * rendelést) — a fizetés maga viszont a `/pay/…`-on és a Barion saját lapján
- * történik, és a Pixel ODA kell. Az artefaktum-lap attól még a szállás oldala.
+ * ⚠️ MEGFORDÍTVA 2026-09-16 (ADR-0186, tulajdonosi döntés). Itt korábban az állt,
+ * hogy a `/p/<token>`-ről „a vásárlás el tud indulni, de a fizetés a `/pay/…`-on
+ * történik, és a Pixel ODA kell". Ez a Base Pixelre igaz volt, a FULL Pixelre nem:
+ * a Full épp a kosár- és pénztár-lépéseket (addToCart, initiateCheckout) kéri, azok
+ * pedig KIZÁRÓLAG ezen a lapon történnek — a `/pay/…` már csak az eredményt látja.
+ * A tulaj az Advanced díjcsomagot választotta (1,19% vs. 1,49%, Barion díjszabás
+ * 2026-01-17), aminek a Full Pixel a feltétele, ezért a konfigurátor-lapok átkerülnek
+ * a saját lapjaink közé — süti-sávval együtt, mert a kettő nem választható szét.
+ * ⛔ A `/mock/` és a `/site/` MARAD vendég-lap: azok címzettje tényleg a szállás
+ * vendége, és vásárlás onnan nem indul (ADR-0151 ① kritériuma változatlanul áll).
  */
 const CONSOLE_GUEST_ROUTES: readonly RegExp[] = [
-  /^\/p\//, //          követett megkeresés-link → a mock artefaktum + konfigurátor
-  /^\/configure\//, //  ugyanaz a mock, követés nélküli ikerúton
   /^\/mock\//, //       nyers mock-előnézet (operátori link, de a lap a szállásé)
   /^\/site\//, //       a kiépített oldal pillanatképe — UGYANAZ a fájl, ötödik ajtó
 ];
@@ -195,6 +200,8 @@ const CONSOLE_GUEST_ROUTES: readonly RegExp[] = [
 const CONSOLE_OWN_ROUTES: readonly RegExp[] = [
   /^\/pay\/(?!webhook(?:\/|$))/, // a vevő teljes fizetési útja, köztük a /pay/done
   /^\/admin\/[A-Za-z0-9_-]{16,}$/, // a tenant saját, token-es önkiszolgáló lapja
+  /^\/p\//, //          ajánlat + konfigurátor: INNEN indul a vásárlás (ADR-0186)
+  /^\/configure\//, //  ugyanaz a lap, követés nélküli ikerúton — egy szabály, egy igazság
 ];
 
 /**
@@ -2890,7 +2897,7 @@ async function handle(
     const p = ref
       ? await db
           .selectFrom("payment")
-          .select(["id", "status", "amount", "pay_url as payUrl"])
+          .select(["id", "status", "amount", "currency", "pay_url as payUrl"])
           .where("gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
@@ -2956,6 +2963,9 @@ async function handle(
       payResultPage(paid, activated, {
         ...summary,
         amount: p.amount,
+        // A Barion `purchase` eseménynek kötelező mezője (ADR-0186) — a FIZETÉS
+        // sorából, nem alapértelmezésből: ami kiment, annak a pénzneme számít.
+        currency: p.currency,
         loginUrl: `${config.publicSiteUrl.replace(/\/+$/, "")}/login`,
         // A failure screen with no way forward is a dead end (Elek FK-005b H3):
         // the buyer gets the SAME pay-link back and a reference they can quote.

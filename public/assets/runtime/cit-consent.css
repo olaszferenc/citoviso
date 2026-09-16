@@ -42,7 +42,13 @@
  * bútorzatáról, ezért nem ő találgat: a felület deklarálja a fenntartott sávot, a
  * sáv pedig e FÖLÉ ül. Default 0 — a honlapon és a jogi lapokon nincs mit kerülni.
  */
-#cit-consent { position: fixed; left: 0; right: 0; bottom: var(--citui-consent-bottom, 0px); z-index: 9000;
+/* ⛔ A KÉRDÉS MINDEN FÖLÖTT ÁLL (ADR-0186). A sáv 9000-en ült, a konfigurátor-réteg
+ * viszont 2147483000+-on (`cit-configurator.css`) — amint az ajánlat-lap megkapta a
+ * Pixelt, a panel TAKARÓJA elfogta a kattintást a sávról: Playwrighttal mérve az
+ * „Elfogadom" 60 újrapróbálkozás után is elérhetetlen maradt („scrim intercepts
+ * pointer events"). Egy hozzájárulás-kérdés, amire nem lehet válaszolni, rosszabb,
+ * mintha ott sem volna — a döntés a látogatóé, nem a gazdalapé. */
+#cit-consent { position: fixed; left: 0; right: 0; bottom: var(--citui-consent-bottom, 0px); z-index: 2147483600;
   background: var(--citui-navy-950); color: var(--citui-white);
   box-shadow: 0 -8px 24px color-mix(in srgb, var(--citui-navy-950) 18%, transparent);
   container-type: inline-size; }

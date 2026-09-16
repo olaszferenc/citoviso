@@ -24,7 +24,11 @@
 .cit-cfg-launch {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  /* ADR-0186: a süti-sáv ezen a lapon is kinn van, és a lap ALJÁRA tapad. A hívó
+   * pirula fölé ül, különben a kettő egymáson áll — ugyanaz az osztály, amit az
+   * ADR-0145 ④ a tenant-admin navigációján már megfogott. A sáv a MÉRT magasságát
+   * publikálja a gyökérre; sáv nélkül a változó nincs, és marad a 24px. */
+  bottom: calc(24px + var(--citui-consent-h, 0px));
   z-index: 2147483000;
   display: inline-flex;
   align-items: center;
@@ -904,7 +908,8 @@
 @media (max-width: 560px) {
   .cit-cfg-panel {
     top: auto;
-    bottom: 0;
+    /* A telefonos alsó lap sem csúszhat a sáv alá: a beküldő gomb pont ott ül. */
+    bottom: var(--citui-consent-h, 0px);
     width: 100%;
     height: auto;
     max-height: 74vh;
@@ -919,7 +924,7 @@
     padding-top: 20px;
   }
   .cit-cfg-launch {
-    bottom: 16px;
+    bottom: calc(16px + var(--citui-consent-h, 0px));
     max-width: calc(100vw - 32px);
   }
   /* Bottom sheet → the handle sits on TOP of the sheet; chevron points down
