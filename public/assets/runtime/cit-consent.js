@@ -66,6 +66,15 @@
       function () {
         (window.bp.q = window.bp.q || []).push(arguments);
       };
+    // ⛔⛔ EZ NÉLKÜL A PIXEL NÉMA — ÉLESEN MÉRVE (2026-09-16, citoviso.com).
+    // A `bp.js` a saját azonosítóját KÉT helyről tudja kiolvasni: `window.barion_pixel_id`,
+    // vagy egy INLINE szkript szövegéből (`/.*BP-.{10}-.*/` minta). Mi az azonosítót a
+    // betöltő szkript `data-pixel-id` ATTRIBÚTUMÁBAN adjuk át — ami egyiknek sem felel
+    // meg —, ezért a Barion saját kódja „Base code implementaion not found" hibát adott,
+    // a küldő iframe (`barion_receiver`) fel sem épült, és az események feldolgozatlanul
+    // álltak a sorban. Élesen mérve: `bp.js` + `barion.html` letöltve, küldő iframe
+    // HIÁNYZIK, 2 üzenet a sorban. A kapunk tehát rendben volt, a CSATORNA nem.
+    window.barion_pixel_id = pixelId;
     var s = document.createElement("script");
     s.async = true;
     s.src = "https://pixel.barion.com/bp.js";

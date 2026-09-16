@@ -385,6 +385,15 @@ async function run(broken: boolean): Promise<void> {
   await page.waitForTimeout(1500);
   const after = await sentEvents(page);
   const names = namesOf(after);
+  // ⛔ Z3/a — AZ AZONOSÍTÓ KIMONDVA. Élesen mérve (2026-09-16) itt bukott a csatorna:
+  // a `bp.js` a pixel-azonosítót `window.barion_pixel_id`-ből vagy egy INLINE szkript
+  // szövegéből olvassa, a mi `data-pixel-id` attribútumunkból NEM — ezért a Barion
+  // kódja „Base code implementaion not found"-ot adott, a küldő iframe fel sem épült.
+  // Ezt az őr STUBJA nem foghatta meg (mindig válaszolt), ezért külön állítás.
+  say(
+    (await page.evaluate(() => (window as unknown as { barion_pixel_id?: string }).barion_pixel_id)) === PIXEL_ID,
+    "Z3/a: a Pixel-azonosító ott van, ahol a bp.js KERESI (window.barion_pixel_id)",
+  );
   say(names.includes("contentView"), "Z3: lap-megtekintés kimegy (a Base hiányzó eleme)", names.join(", "));
   say(names.includes("purchase"), "Z3: a szerver által beadott purchase is kimegy", names.join(", "));
   say(
