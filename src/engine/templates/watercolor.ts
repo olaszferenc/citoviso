@@ -183,7 +183,7 @@ const WATERCOLOR_CSS = `
   .wc-fb{border-top:1px solid var(--cit-line);padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px}
 
   /* mobile fixed CTA */
-  .wc-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:60;background:color-mix(in srgb, var(--cit-surface) 96%, transparent);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .wc-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:60;background:color-mix(in srgb, var(--cit-surface) 96%, transparent);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
   .wc-mobcta span{font-size:14px;color:var(--cit-ink)}
   .wc-mobcta b{color:var(--cit-accent)}
   @media(max-width:700px){.wc-mobcta{display:flex}body{padding-bottom:64px}}

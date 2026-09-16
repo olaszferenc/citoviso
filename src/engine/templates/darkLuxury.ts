@@ -185,7 +185,7 @@ const DARK_LUXURY_CSS = `
   .t-fbot{border-top:1px solid var(--cit-line);padding-top:24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12px;letter-spacing:1px}
 
   /* mobile fixed CTA bar */
-  .t-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:60;background:color-mix(in srgb,var(--cit-bg) 96%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--cit-line);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .t-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:60;background:color-mix(in srgb,var(--cit-bg) 96%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--cit-line);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
   .t-mobcta span{font-size:14px;color:var(--cit-ink)}
   .t-mobcta b{color:var(--cit-accent)}
   .t-mobcta .cit-btn{padding:11px 20px}

@@ -174,7 +174,7 @@ const CINEMATIC_CSS = `
   .cn-footlegal{padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px}
 
   /* mobile fixed CTA */
-  .cn-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:130;background:color-mix(in srgb, var(--cit-surface) 96%, black);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .cn-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:130;background:color-mix(in srgb, var(--cit-surface) 96%, black);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
   .cn-mobcta span{font-size:14px;color:var(--cit-ink)}
   .cn-mobcta b{color:var(--cit-accent)}
   @media(max-width:700px){.cn-mobcta{display:flex}body{padding-bottom:64px}}

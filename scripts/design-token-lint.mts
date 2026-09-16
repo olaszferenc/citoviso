@@ -54,6 +54,15 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
     ],
     reason: "kézzel komponált ARTWORK gradiens-stopok (brand-art konstans, mint a logó — nem skin-elem)",
   },
+  "public/assets/runtime/cit-consent.css": {
+    values: ["#0a1f36", "#ffffff", "#1fb6d6"],
+    reason:
+      "var(…, TARTALÉK) — a sáv IDEGEN lapra (generált szállás-oldal) is kikerül, ahol a " +
+      "citui.css nincs betöltve, tehát a --citui-* tokenek feloldatlanok: képen mérve a sáv " +
+      "HÁTTÉR NÉLKÜL, átlátszóan renderelt. A saját lapjainkon a token nyer, a tartalék csak " +
+      "ott él, ahol egyébként semmi sem lenne (ADR-0186 utószál). A három érték a dizájn-mag " +
+      "mai --citui-navy-950 / --citui-white / --citui-cyan-500 értéke, azzal szinkronban tartandó.",
+  },
   "public/index.html": {
     values: ["#35c4e0", "#8be8f3", "#0e2a47"],
     reason: "logó/hero SVG brand-art — SVG presentation-attribútumban a var() nem oldódik fel",

@@ -201,7 +201,7 @@ section{padding:clamp(64px,9vh,104px) 0}
    Visible the whole way down, so the primary action is never more than a glance
    away. It sits ABOVE the page's own footer padding, and steps aside for the
    visitor language bar that multilangCore injects at the top. */
-.t-book{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--cit-surface);
+.t-book{position:fixed;left:0;right:0;bottom:var(--citui-consent-h,0px);z-index:40;background:var(--cit-surface);
   border-top:1px solid var(--cit-line);box-shadow:0 -14px 34px -28px rgba(0,0,0,.5)}
 .t-book-in{width:min(1120px,94vw);margin-inline:auto;display:flex;align-items:center;
   justify-content:space-between;gap:16px;padding:12px 0}

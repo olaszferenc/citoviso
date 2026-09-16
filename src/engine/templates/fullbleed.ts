@@ -174,7 +174,7 @@ ${centredModsecCss("fullbleed")}
   @media(max-width:760px){.t-footgrid{grid-template-columns:1fr}}
 
   /* mobile fixed CTA bar */
-  .t-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:60;background:color-mix(in srgb, var(--cit-ink) 95%, black);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .t-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:60;background:color-mix(in srgb, var(--cit-ink) 95%, black);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
   .t-mobcta span{color:color-mix(in srgb, var(--cit-bg) 92%, #fff);font-size:14px}
   .t-mobcta b{color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
   .t-mobcta .cit-btn{padding:11px 22px}

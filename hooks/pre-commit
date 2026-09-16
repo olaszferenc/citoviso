@@ -870,6 +870,15 @@ fi
 # az eseményt, tehát egy elgépelt `unitPrice` zöld teszt mellett is adatvesztés volna.
 # Méri a hozzájárulás-kaput is (előtte semmi, elutasítás után soha semmi).
 # ⚠️ Hálózat nélkül HANGOSAN kihagy (rc=2) — akkor a kapu nem ítél.
+# A HOZZÁJÁRULÁS-KÉRDÉS ÉS A SABLON RAGADÓ SÁVJA NEM TAKARHATJA EGYMÁST (ADR-0186
+# utószál). Geometriával mér 14 sablonon, 390 ÉS 1280 px-en: a gomb kattinthatósága
+# ZÖLD volt akkor is, amikor a két felirat egymáson feküdt — azt csak a téglalap-metszet
+# (és a kép) mutatja meg.
+if [ -f scripts/consent-sticky-overlap-check.mts ] && \
+   changed_files | grep -qE '^(src/engine/templates/|public/assets/runtime/cit-consent\.(css|js)|scripts/consent-sticky-overlap-check\.mts)'; then
+  echo "[pre-commit] consent-sticky-overlap (a két ragadó sáv elfér egymás mellett)…"
+  npx tsx scripts/consent-sticky-overlap-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/barion-pixel-check.mts ] && \
    changed_files | grep -qE '^(public/assets/runtime/cit-consent\.(js|css)|assets/runtime/cit-configurator\.js|src/server/consent\.ts|scripts/barion-pixel-check\.mts)$'; then
   echo "[pre-commit] barion-pixel-check (a Pixel a vásárlás lépéseit küldi)…"

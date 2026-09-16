@@ -165,7 +165,7 @@ const DOPAMINE_CSS = `
   .t-footlegal{border-top:2px solid color-mix(in srgb, var(--cit-bg) 20%, transparent);padding-top:22px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px}
 
   /* mobile fixed CTA bar */
-  .t-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:110;background:var(--cit-ink);padding:10px 14px;gap:12px;align-items:center;justify-content:space-between}
+  .t-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:110;background:var(--cit-ink);padding:10px 14px;gap:12px;align-items:center;justify-content:space-between}
   .t-mobcta span{color:var(--cit-bg);font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px}
   .t-mobcta span svg{width:15px;height:15px;color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
   .t-mobcta .cit-btn{padding:10px 20px;font-size:13px;border-color:var(--cit-bg);box-shadow:3px 3px 0 color-mix(in srgb, var(--cit-accent) 45%, var(--cit-bg))}

@@ -180,7 +180,7 @@ const SCRAPBOOK_CSS = `
   .sb-fb{border-top:1px solid color-mix(in srgb, var(--cit-ink) 18%, transparent);padding-top:20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:13px}
 
   /* mobile fixed CTA */
-  .sb-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:120;background:var(--cit-bg);border-top:2px dashed var(--cit-muted);padding:10px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .sb-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:120;background:var(--cit-bg);border-top:2px dashed var(--cit-muted);padding:10px 16px;gap:12px;align-items:center;justify-content:space-between}
   .sb-mobcta span{font-size:14px;color:var(--cit-ink)}
   .sb-mobcta b{color:var(--cit-accent)}
   @media(max-width:700px){.sb-mobcta{display:flex}body{padding-bottom:66px}}

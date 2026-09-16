@@ -180,7 +180,7 @@ const PARALLAX_CSS = `
   .t-footlegal{display:flex;justify-content:space-between;gap:16px;padding-top:24px;font-size:12.5px;flex-wrap:wrap}
 
   /* MOBILE fixed CTA bar */
-  .t-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:80;background:color-mix(in srgb, var(--cit-ink) 94%, black);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .t-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:80;background:color-mix(in srgb, var(--cit-ink) 94%, black);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
   .t-mobcta span{color:color-mix(in srgb, var(--cit-bg) 92%, #fff);font-size:14px}
   .t-mobcta b{color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
   .t-mobcta .cit-btn{padding:11px 20px}

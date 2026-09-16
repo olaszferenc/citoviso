@@ -194,7 +194,7 @@ const BRUTALISM_CSS = `
   .b-fb{border-top:3px solid ${ACC_LIGHT};padding-top:20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:${MONO};font-size:11px;text-transform:uppercase;color:color-mix(in srgb, var(--cit-bg) 75%, transparent)}
 
   /* mobile fixed CTA bar */
-  .b-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:120;background:var(--cit-ink);border-top:3px solid var(--cit-accent);padding:10px 14px;align-items:center;justify-content:space-between;gap:12px}
+  .b-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:120;background:var(--cit-ink);border-top:3px solid var(--cit-accent);padding:10px 14px;align-items:center;justify-content:space-between;gap:12px}
   .b-mobcta span{color:var(--cit-bg);font-family:${MONO};font-size:12px;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .b-mobcta .cit-btn{padding:11px 18px;font-size:13px;background:${ACC_LIGHT};color:var(--cit-ink);border-color:var(--cit-ink);box-shadow:none;flex:none}
   @media(max-width:700px){.b-mobcta{display:flex}body{padding-bottom:64px}}

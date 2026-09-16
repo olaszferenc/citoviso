@@ -171,7 +171,7 @@ const TRANSIT_CSS = `
   .tb-footlegal{border-top:1px solid var(--cit-line);padding-top:20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:var(--cit-font-display);font-size:13px;letter-spacing:.08em;text-transform:uppercase}
 
   /* mobile fixed CTA */
-  .tb-mobcta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:110;background:color-mix(in srgb, var(--cit-bg) 96%, black);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .tb-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:110;background:color-mix(in srgb, var(--cit-bg) 96%, black);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
   .tb-mobcta span{font-family:var(--cit-font-display);font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--cit-ink)}
   @media(max-width:700px){.tb-mobcta{display:flex}body{padding-bottom:64px}}
 `;

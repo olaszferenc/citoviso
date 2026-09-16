@@ -172,7 +172,7 @@ const CARD_SIDEBAR_CSS = `
   .bcard .cit-btn-disabled{opacity:.55;pointer-events:none}
 
   /* mobile fixed booking bar (the reference's mobile pattern) */
-  .mob-book{position:fixed;left:0;right:0;bottom:0;z-index:120;background:color-mix(in srgb, var(--cit-surface) 97%, transparent);backdrop-filter:blur(8px);border-top:1px solid var(--cit-line);padding:11px 16px;padding-bottom:max(11px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .mob-book{position:fixed;left:0;right:0;bottom:var(--citui-consent-h,0px);z-index:120;background:color-mix(in srgb, var(--cit-surface) 97%, transparent);backdrop-filter:blur(8px);border-top:1px solid var(--cit-line);padding:11px 16px;padding-bottom:max(11px,env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px}
   .mob-book .mb-rate{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px}
   .mob-book .mb-rate .stars svg{width:14px;height:14px}
   .mob-book small{display:block;font-weight:400;font-size:12px;color:var(--cit-muted)}

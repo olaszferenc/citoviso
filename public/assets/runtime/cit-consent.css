@@ -1,3 +1,13 @@
+/* ⛔⛔ A TOKENEK NEM UTAZNAK A STÍLUSLAPPAL (2026-09-16, ADR-0186 utószál).
+ * Az ADR-0145 ① kimondta, hogy a stílus a SÁVVAL EGYÜTT utazik — és ez igaz is lett.
+ * Amit nem vettünk észre: a szabályok `--citui-*` dizájn-tokenekre hivatkoznak, azok
+ * viszont a `citui.css`-ben élnek, amit CSAK a saját felületeink töltenek be. Amint a
+ * sáv kikerült a GENERÁLT szállás-oldalra (ajánlat/konfigurátor lap), a tokenek
+ * feloldatlanok lettek: a sáv HÁTTÉR NÉLKÜL, átlátszóan renderelt, a felirata a lap
+ * tartalmán feküdt. Képen mérve (aurora sablon, 390 px) — a geometria ezt nem
+ * foghatta meg, mert a doboz a helyén volt.
+ * Ezért MINDEN token tartalék-értéket kap. A tartalék a dizájn-mag mai értéke; ha az
+ * változik, a saját lapjainkon a token nyer, idegen lapon a tartalék marad. */
 /* Süti-hozzájárulás sáv — a BEFAGYASZTOTT TERV stílusa (A változat).
  * Kontraktus: assets/design-refs/public-site/consent-bar/README.md
  *
@@ -23,7 +33,7 @@
  *
  * ⛔ MINDEN SZABÁLY `#cit-consent`-TEL KEZDŐDIK, ÉS EZ NEM STÍLUS-ÍZLÉS (mérve
  * 2026-09-14): a jogi lapok betöltik a `citui-console.css`-t, amiben a
- * `.con button { background: var(--citui-white) }` szabály él. Az (0,1,1)
+ * `.con button { background: var(--citui-white, #ffffff) }` szabály él. Az (0,1,1)
  * specificitása VERTE a `.cit-consent__yes` (0,1,0)-ét, ezért az „Elfogadom" gomb
  * az /adatvedelem és /aszf lapon FEHÉR volt a cián helyett, a „Csak a
  * szükségeseket" felirata pedig fehér-fehéren 1,12-es kontraszttal. A sáv egy
@@ -49,20 +59,20 @@
  * pointer events"). Egy hozzájárulás-kérdés, amire nem lehet válaszolni, rosszabb,
  * mintha ott sem volna — a döntés a látogatóé, nem a gazdalapé. */
 #cit-consent { position: fixed; left: 0; right: 0; bottom: var(--citui-consent-bottom, 0px); z-index: 2147483600;
-  background: var(--citui-navy-950); color: var(--citui-white);
-  box-shadow: 0 -8px 24px color-mix(in srgb, var(--citui-navy-950) 18%, transparent);
+  background: var(--citui-navy-950, #0a1f36); color: var(--citui-white, #ffffff);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--citui-navy-950, #0a1f36) 18%, transparent);
   container-type: inline-size; }
 #cit-consent .cit-consent__in { display: flex; gap: 14px; align-items: center;
   max-width: 1100px; margin: 0 auto; padding: 14px 16px; }
 #cit-consent .cit-consent__t { margin: 0; flex: 1; font-size: 13px; line-height: 1.5;
-  font-family: var(--citui-font-text);
-  color: color-mix(in srgb, var(--citui-white) 82%, transparent); }
-#cit-consent .cit-consent__t a { color: var(--citui-white); }
+  font-family: var(--citui-font-text, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  color: color-mix(in srgb, var(--citui-white, #ffffff) 82%, transparent); }
+#cit-consent .cit-consent__t a { color: var(--citui-white, #ffffff); }
 #cit-consent .cit-consent__b { display: flex; gap: 8px; flex-shrink: 0; }
 #cit-consent button { border: 0; border-radius: 9px; padding: 9px 16px;
   font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-#cit-consent .cit-consent__yes { background: var(--citui-cyan-500); color: var(--citui-navy-950); }
-#cit-consent .cit-consent__no { background: transparent; color: var(--citui-white);
+#cit-consent .cit-consent__yes { background: var(--citui-cyan-500, #1fb6d6); color: var(--citui-navy-950, #0a1f36); }
+#cit-consent .cit-consent__no { background: transparent; color: var(--citui-white, #ffffff);
   border: 1px solid currentColor; }
 /* A terv köti: szűk sávban a PRÓZA a gombok fölé kerül, a két gomb pedig EGY teljes
    szélességű sort oszt meg egyenlő arányban (`flex: 1`). ⚠️ Nem „egymás alatt" —
