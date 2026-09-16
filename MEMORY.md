@@ -1,7 +1,31 @@
 # MEMORY — Citoviso
 Utolsó frissítés: 2026-09-16 (🚀 ÉLES = MAIN = `3578491`, tag `prod/20260916-0729` — a kör teljesen kint)
 
-## Aktív feladat (legfrissebb szál, 2026-09-15)
+## Aktív feladat (legfrissebb szál, 2026-09-16)
+
+**Barion elfogadóhely — a hiánypótlás oka megszűnt, a bírálat elindult.**
+A Barion azért nem kezdte el a vizsgálatot, mert a regisztrációban ÉS az élő ÁSZF-ben egy
+**megszűnt** egyéni vállalkozás azonosítószáma szerepelt. A valós, „Élő" adatok a NAV
+Vállalkozói Ügysegédjéről: **adószám 92227011-1-33**, **nyilvántartási szám 62588818**,
+székhely házszám **6. 2.**, felvétel 2026.07.20. Javítva az `.env`-ben (lokál + éles, külön
+engedéllyel, backuppal), **origin ÉS CDN felől visszaellenőrizve** — a hat publikus jogi lapon
+a régi szám 0 előfordulás. Session-jegyzet:
+`_planning/memory/2026-09-16_terminated_tax_number.md`.
+
+- ⛔ **A saját konfigunkból olvasni NEM mérés.** A `BARION-APPLICATION.md` „MÉRVE (az éles
+  `.env`-ből olvasva)"-t állított — és pont ezért volt hibás hat napig. Cég-azonosítónál az
+  egyetlen forrás a nyilvántartás.
+- ⛔ **Az ellenőrzőszám-kapunk elvi okból vak volt rá:** mindkét adószám ÉRVÉNYES
+  ellenőrzőszámú. A számtan a jó ALAKOT bizonyítja, a LÉTEZÉST soha.
+- ⛔ **Hamis riadót fújtam a Barion-logóra:** bejelentettem, hogy nincs kint a főoldalon —
+  **kint volt**. Sor-alapú `grep`-pel mértem egy öt soron át tördelt `<img>` taget.
+- **NYITOTT, tulaj-teendő:** a hatósági bizonyítvány (`UEVH-00277388`, beadva 2026.09.15,
+  8 napos ügyintézési határidő) az **Üzleti profil** menübe töltendő — a Barion kifejezetten
+  kérte, hogy ne a Remark-szálba —, és ugyanott indítandó a **videó-azonosítás**.
+- **NYITOTT, apró:** a székhely utcaneve a nyilvántartásban ékezet nélküli („Kuno"), az élő
+  lapokon `Kunó` áll. Új éles engedélyt kér, nem blokkoló.
+
+## Előzmény — 2026-09-15 (a nagy párhuzamos kör)
 
 **🚀 A NAP LEZÁRVA — ÉLES = MAIN = `3578491` (tag `prod/20260916-0729`).**
 ⚠️ KÉT élesítés kellett hozzá: az első (`331aae5`, `prod/20260915-1720`) a 22 commitot vitte ki,
