@@ -112,9 +112,12 @@ export const RECURRING_MANDATE_V1 =
  * older order's `terms_text` must never be reinterpreted under newer wording
  * (ADR-0056: 🚪 one-way once accepted).
  */
-export const ASZF_VERSION = "1.1";
+// 1.2 (2026-09-16): Barion acquirer remarks — §1 payment-provider exclusion on
+// operated sites, §2 statement descriptor + Apple Pay limitation, §4 exact
+// cancellation route. Substance changed → version bumped (ADR-0056).
+export const ASZF_VERSION = "1.2";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
-export const ASZF_EFFECTIVE_FROM = "2026-09-01";
+export const ASZF_EFFECTIVE_FROM = "2026-09-16";
 
 /** One numbered chapter of a legal document. `body` entries are paragraphs. */
 export interface LegalSection {
@@ -147,6 +150,19 @@ export const ASZF_V1: readonly LegalSection[] = [
         "díj megfizetésével jön létre. A megrendeléskor bemutatott mintaoldal (látványterv) " +
         "és az éles honlap ugyanabból a rendszerből készül: a Megrendelő azt kapja, amit a " +
         "mintán látott.",
+      // 2026-09-16, Barion remark -001/1 (card-scheme rules): the reviewer read the
+      // T&C as "builds sites for partners" and asked us to state explicitly that no
+      // online payment provider can be wired into the sites offered under these
+      // terms. That IS the model (rented, fully operated sites; booking forms
+      // forward enquiries and never take money) — so the exclusion is said out loud.
+      "A honlapot teljes körűen a Szolgáltató üzemelteti, és azt a Megrendelő a " +
+        "szolgáltatás részeként bérli. A kártyatársasági szabályokra tekintettel a " +
+        "Szolgáltató által üzemeltetett honlapokba online fizetési szolgáltató (fizetési " +
+        "kapu, bankkártyás elfogadás) nem köthető be, és a honlapon közvetlen online " +
+        "értékesítés nem folytatható. A honlap külső foglalási vagy értékesítési felületre " +
+        "mutató hivatkozást tartalmazhat (például Booking.com); a fizetés ilyenkor minden " +
+        "esetben a külső felületen történik. A honlap foglalási és ajánlatkérő űrlapjai " +
+        "érdeklődés továbbítására szolgálnak, fizetési funkció nélkül.",
     ],
   },
   {
@@ -167,7 +183,10 @@ export const ASZF_V1: readonly LegalSection[] = [
         "közvetlenül a fizetési szolgáltatónak adja meg, a Szolgáltató csak a tranzakció " +
         "végeredményéről kap tájékoztatást. A szolgáltatást nyújtó Barion Payment Zrt. a " +
         "Magyar Nemzeti Bank felügyelete alatt álló intézmény, engedélyének száma: " +
-        "H-EN-I-1064/2013.",
+        // 2026-09-16, Barion remark -003/2: the statement descriptor must be named in
+        // the T&C so the buyer recognises the charge on their bank statement.
+        "H-EN-I-1064/2013. A bankkártyás fizetéskor a Megrendelő bankszámlakivonatán " +
+        "elfogadóhelyként a Barion Payment Zrt. jelenik meg.",
       // ADR-0088 ⑨: recurring card mandate — the MIT charge (ADR-0080 ④) has been
       // running since the token slice, but the customer was never told about it in
       // writing. A stored-credential mandate MUST be disclosed (card-scheme rules +
@@ -179,7 +198,11 @@ export const ASZF_V1: readonly LegalSection[] = [
         "automatikusan leemelje, külön fizetési művelet nélkül. A terhelés összege a " +
         "megrendelt csomagnak megfelelően változhat (modul be- vagy kikapcsolása, " +
         "havi/éves fizetésre váltás); a Szolgáltató a fordulónap előtt legalább 3 nappal " +
-        "e-mailben tájékoztat a következő terhelés összegéről és időpontjáról.",
+        "e-mailben tájékoztat a következő terhelés összegéről és időpontjáról. " +
+        // 2026-09-16, Barion remark -003: Apple Pay supports one-time payments only;
+        // Barion asked that buyers be informed of the recurring limitation.
+        "Apple Pay-jel csak egyszeri fizetés teljesíthető; az ismétlődő fizetéshez " +
+        "bankkártya-regisztráció szükséges.",
       "A Megrendelő az ismétlődő fizetési megbízást bármikor, indoklás nélkül " +
         "visszavonhatja a megrendelői felületen. A visszavonás a jövőre nézve hatályos: a " +
         "már teljesített terheléseket nem érinti, és nem szünteti meg a fizetési " +
@@ -206,9 +229,18 @@ export const ASZF_V1: readonly LegalSection[] = [
   {
     heading: "4. Felmondás", // i18n-exempt: legal pack (§H.22)
     body: [
-      "A Megrendelő az előfizetést bármikor felmondhatja. A felmondás a már kifizetett " +
-        "időszak végén lép hatályba: a Szolgáltató a honlapot a kifizetett időszak végéig " +
-        "változatlanul üzemelteti.",
+      // 2026-09-16, Barion remark -003/1: the cancellation clause must name the EXACT
+      // route (where to click, which address to write to). The button is real
+      // (adminViews "Előfizetés lemondása"; help text: Belépés → Modulok fül). The
+      // address is {SUPPORT_EMAIL}, substituted from config.supportEmail at render
+      // time — never a hardcoded literal (owner decision 2026-09-15,
+      // support-email-check ①: one source for the buyer-facing support address).
+      "A Megrendelő az előfizetést bármikor felmondhatja: (a) a megrendelői felületen, a " +
+        "citoviso.com/login címen belépve, a „Modulok” fülön az „Előfizetés lemondása” " +
+        "gombbal, vagy (b) a Szolgáltató ügyfélszolgálati e-mail-címére " +
+        "({SUPPORT_EMAIL}) küldött e-maillel, a honlap megnevezésével. A felmondás a már kifizetett időszak végén (a fordulónapon) lép " +
+        "hatályba: a Szolgáltató a honlapot a kifizetett időszak végéig változatlanul " +
+        "üzemelteti.",
       "A már megfizetett díj a kifizetett időszakra nem jár vissza, tekintettel arra, hogy " +
         "a Szolgáltató a szolgáltatást erre az időszakra folyamatosan nyújtja. Ez a " +
         "rendelkezés nem érinti a fogyasztónak minősülő Megrendelő elállási jogát (5. pont).",

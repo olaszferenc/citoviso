@@ -107,7 +107,15 @@ export function aszfPage(): string {
     `a Citoviso honlap-szolgáltatás tárgyában létrejövő szerződés feltételeit tartalmazzák. ` +
     `Elválaszthatatlan részét képezi az <a href="/elallas">Elállási tájékoztató</a> és az ` +
     `<a href="/adatfeldolgozas">Adatfeldolgozási feltételek</a>.</p>`;
-  return legalPage("Általános Szerződési Feltételek", intro, ASZF_V1);
+  // Barion remark -003/1 (2026-09-16): §4 names the cancellation address. It is
+  // substituted from config here so the T&C can never disagree with the address
+  // the console prints (support-email-check ①: no hardcoded buyer-facing e-mail).
+  // Substitution runs BEFORE esc() in legalPage; the address carries no markup.
+  const sections = ASZF_V1.map((s) => ({
+    heading: s.heading,
+    body: s.body.map((p) => p.replace("{SUPPORT_EMAIL}", config.supportEmail)),
+  }));
+  return legalPage("Általános Szerződési Feltételek", intro, sections);
 }
 
 /**
