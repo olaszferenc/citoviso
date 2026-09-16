@@ -3345,6 +3345,12 @@ function mockInputValue(key: string, v: unknown, lang = "hu"): string {
   if (key === "template" && typeof v === "string") {
     return (TEMPLATES[v]?.label.split(/[—:(]/)[0] ?? v).trim() || v;
   }
+  // ⛔ Raw enum leaked: the named meta row said „Nyitókép témája: pool_garden" — the
+  // label was translated, its VALUE was not. Same dictionary as the photo panel and
+  // the compare table (one word per meaning, not two truths on one screen).
+  if (key === "heroSubject" && typeof v === "string") {
+    return heroSubjectLabel(v, lang);
+  }
   return String(v);
 }
 
@@ -3834,7 +3840,13 @@ export function leadPage(
           <span class="why">${esc(exactOf(a.generatedAt).slice(11))}</span></td>
         <td data-l="${T(lang, "Sablon / arculat")}">${esc(tplName)}${skin ? `<span class="why">${esc(skin)}</span>` : ""}</td>
         <td data-l="${T(lang, "Kép")}" class="num">${esc(photos)}</td>
-        <td data-l="${T(lang, "Nyitókép")}">${subject ? esc(subject) : `<span class="mut">—</span>`}${
+        <td data-l="${T(lang, "Nyitókép")}">${
+          // ⛔ Raw enum leaked to the operator: this cell printed `pool_garden` while
+          // the card three rows below already said „kert / terasz" — the dictionary
+          // (heroSubjectLabel) existed, this table just did not use it. Caught by
+          // outreach-row-truth-check Z5 on the live corpus (2026-09-16).
+          subject ? esc(heroSubjectLabel(subject, lang)) : `<span class="mut">—</span>`
+        }${
           score != null ? `<span class="why">${T(lang, "{n} pont", { n: String(score) })}</span>` : ""
         }</td>
         <td data-l="${T(lang, "Állapot")}"><span class="pill ${esc(a.status)}">${esc(mockStatusLabel(a.status, lang))}</span>${
