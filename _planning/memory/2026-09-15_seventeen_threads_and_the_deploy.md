@@ -122,3 +122,24 @@ pásztáznia mind a 16 bemenetet**. Aki a webes mezőbe ír, annak az üzenete e
 4. **Tulaj-tennivaló:** Zoho-alias az `info@citoviso.com`-ra — enélkül a fizető ügyfél válasza
    sehová nem érkezik, és ez a cím MA ment ki élesre.
 5. Az FK-006 újrafuttatása (a park ELEK-tenantja hiányzik; valódi LLM-költség).
+
+---
+
+## Utóirat (2026-09-16): a második élesítés, és miért kellett
+
+Az első deploy (`331aae5`, `prod/20260915-1720`) után **még landolt két commit**: a záró
+memória-jegyzet (dokumentáció) és egy jogi javítás (a honlap egy **megszűnt e.v. adószámát**
+adta ki — a Barion emiatt el sem kezdte a vizsgálatot; az érték az `.env`-ben él, az élesen
+külön engedéllyel már javítva volt, a kód csak az őr FIXTURE-jét és egy kommentet visz).
+
+Ezért kellett egy második kör: **`3578491`, `prod/20260916-0729`** — 0 migráció, és mérve
+**0 végrehajtható kódsor** változott. Utána `éles == origin/main`.
+
+⛔ **A rés nem véletlen volt, hanem SORREND-hiba, és az enyém:** élesítettem, majd tovább
+dolgoztam. A gapben lévő két commit közül az elsőt én magam landoltam a deploy után.
+**Eljárásként rögzítve: a deploy a zárás UTOLSÓ lépése** — minden szál lezárt, memória megírva,
+és csak azután megy ki a verzió. Ha a deploy után landol valami, az legyen tudatos döntés,
+ne maradék.
+
+⚠️ Nyitva: a 17 felhő-session a claude.ai-on még `active` — a `PUT status=archived` 200-at ad,
+de nem vált; az archiválás UI-művelet. Lokálisan mind `retired=True` + a tmux leállítva.

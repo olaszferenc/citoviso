@@ -1,9 +1,14 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-15 (🚀 ÉLESÍTVE `prod/20260915-1720` — 17 szál, 22 commit, négy őr-kör)
+Utolsó frissítés: 2026-09-16 (🚀 ÉLES = MAIN = `3578491`, tag `prod/20260916-0729` — a kör teljesen kint)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-15)
 
-**🚀 A NAP LEZÁRVA — ÉLES = `331aae5` (tag `prod/20260915-1720`).**
+**🚀 A NAP LEZÁRVA — ÉLES = MAIN = `3578491` (tag `prod/20260916-0729`).**
+⚠️ KÉT élesítés kellett hozzá: az első (`331aae5`, `prod/20260915-1720`) a 22 commitot vitte ki,
+de UTÁNA még landolt a záró memória-jegyzet és egy jogi javítás — ezért egy második kör
+(`3578491`, `prod/20260916-0729`, 0 migráció, 0 végrehajtható kódsor) állította egy pontra a
+`main`-t és az élest. ⛔ **Tanulság, eljárásként: a deploy a zárás UTOLSÓ lépése** — aki élesít,
+majd tovább dolgozik, maga csinálja a rést.
 Session-jegyzet: `_planning/memory/2026-09-15_seventeen_threads_and_the_deploy.md`.
 
 - **17 párhuzamos szál** az Elek 2026-09-13-i teljes futásának leleteiből. ⛔ Nem a korábbi
