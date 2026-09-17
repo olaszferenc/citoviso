@@ -78,6 +78,7 @@ import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
 import type { HeroShotState } from "../outreach/heroShot.js";
 import type { MailSendability } from "../outreach/sendBatch.js";
+import type { BlockingVerdict } from "../outreach/mockVerdictGate.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 import { pixelQueueScript } from "../server/consent.js";
 
@@ -5300,6 +5301,61 @@ export function tenantAdminPage(v: TenantAdminView): string {
   return layout(`${v.displayName} ${T(lang, "— kezelő")}`, body, { chrome: false });
 }
 
+/** Melyik küldő-gombot erősíti meg a felugró — ugyanazt indítja, amit a kurátor megnyomott. */
+export interface VerdictConfirmView {
+  readonly action: "send" | "send-all" | "send-pair";
+  readonly blocking: readonly BlockingVerdict[];
+}
+
+/**
+ * A KÜLDÉS MEGERŐSÍTÉSE — felugró a generáláskori őr-lelettel (tulajdonosi rendelet,
+ * 2026-09-17: „max figyelmeztessen, de ha utána is továbbkattint, menjen ki").
+ *
+ * ⛔ A GARANCIA A SZERVER, NEM EZ AZ ABLAK. A `<dialog>` `open` attribútummal jön, tehát
+ * JS nélkül is LÁTSZIK és működik (csak nem modális); a `showModal()` csak a sötétített
+ * háttérért fut. Ez azért így van, mert ebben a házban egy `confirm()` már elszállt egy
+ * fordítás aposztrófján, és a visszafordíthatatlan művelet kérdés nélkül futott le — a
+ * küldő útvonal ezért a `confirmVerdicts` mező NÉLKÜL nem küld, akkor sem, ha a
+ * felugrót bárhogy megkerülik.
+ * ⚠️ Az indoklás itt SZÁNDÉKOSAN opcionális (a fotó-kapunál kötelező): a tulaj gyors
+ * utat kért. A napló így is rögzíti, ki, mikor és MELYIK leletet vállalta.
+ */
+function verdictConfirmDialog(prospectId: string, v: VerdictConfirmView): string {
+  const lang = consoleLang();
+  const items = v.blocking
+    .map(
+      (b) =>
+        `<li><span class="pg-why">${esc(b.label)} — ${
+          b.value === "flag" ? T(lang, "az őr sértést talált") : T(lang, "az őr NEM tudta ellenőrizni")
+        }</span>${b.reason ? `<br><span class="mut small">${esc(b.reason)}</span>` : ""}</li>`,
+    )
+    .join("");
+  return `<dialog class="vg-dlg" id="cit-verdict-confirm" open>
+      <div class="pg-head">${ic("alert", 16)} ${T(lang, "Az őr megjelölte ezt a mockot — kiküldöd mégis?")}</div>
+      <p class="pg-lead">${T(lang, "Ez nem tiltás: a kiküldés a te döntésed. De a levél ezzel a tartalommal megy ki egy idegennek, és nem vonható vissza.")}</p>
+      <ul class="pg-list">${items}</ul>
+      <form method="post" action="/prospect/${esc(prospectId)}/${esc(v.action)}" class="vg-dlg__form">
+        <input type="hidden" name="confirmVerdicts" value="1">
+        <label class="small mut" for="cit-vc-reason">${T(lang, "Megjegyzés a naplóba (nem kötelező)")}</label>
+        <input id="cit-vc-reason" type="text" name="verdictReason" style="width:100%;padding:7px 9px;margin-top:4px"
+          placeholder="${T(lang, "Pl.: a megjelölt tételek a „Minta” jelölésű modul-előnézetben vannak.")}">
+        <div class="vg-dlg__acts">
+          <a class="vg-dlg__cancel" href="/prospect/${esc(prospectId)}/draft">${T(lang, "Mégsem")}</a>
+          <button class="bad" type="submit">${T(lang, "Kiküldöm mégis")}</button>
+        </div>
+      </form>
+    </dialog>
+    <script>
+      (function () {
+        var d = document.getElementById("cit-verdict-confirm");
+        /* Fail-safe: az ablak már nyitva (open attribútum), tehát JS nélkül is látszik.
+           Ez csak a sötétített háttérért fut, és előbb bezárja, különben a showModal()
+           "already open" hibát dobna. */
+        if (d && typeof d.showModal === "function") { try { d.close(); d.showModal(); } catch (e) {} }
+      })();
+    </script>`;
+}
+
 /** Outreach draft page: §C gate verdict + pipeline send button + copy-ready fallback. */
 export function outreachDraftPage(
   prospectId: string,
@@ -5337,6 +5393,12 @@ export function outreachDraftPage(
    * means the caller could not probe; the line is then omitted rather than guessed.
    */
   sendable?: MailSendability,
+  /**
+   * A KÜLDÉS MEGERŐSÍTÉSE (tulajdonosi rendelet, 2026-09-17): a generáláskori őr-lelet
+   * nem tiltja a kiküldést, csak figyelmeztet — a kurátor a második kattintással küld.
+   * Non-null = a küldő útvonal visszafordult ide, mert van megerősítetlen lelet.
+   */
+  verdictConfirm?: VerdictConfirmView | null,
 ): string {
   const lang = consoleLang();
   const pass = check.verdict === "PASS";
@@ -5737,6 +5799,7 @@ export function outreachDraftPage(
       </script>`
     : "";
   const body = `
+    ${verdictConfirm ? verdictConfirmDialog(prospectId, verdictConfirm) : ""}
     ${leadId ? `<a class="con-back" href="/lead/${esc(leadId)}"><span aria-hidden="true">←</span> Vissza a leadhez</a>` : ""}
     <div class="panel">
       <h2>${T(lang, "Megkeresés-piszkozat")} — ${esc(input.leadName)}${input.segment ? ` <span class="pill">${esc(segmentLabel(input.segment, lang))}</span>` : ""} ${helpLink("console.outreach_draft")}</h2>

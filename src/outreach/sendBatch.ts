@@ -12,6 +12,12 @@ import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
+import {
+  ackCoversVerdicts,
+  blockingVerdicts,
+  verdictAckOf,
+  verdictReasonLine,
+} from "./mockVerdictGate.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
@@ -401,15 +407,19 @@ export async function sendOutreachMail(
   }
 
 
-  if (opts.dryRun) {
-    return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };
-  }
-
   // §A assert on the ARTIFACT's stored guard verdicts (guard-agent finding,
   // 2026-08-01): a generation-time FLAGged mock must not be pushed into a
   // mailbox (its hero image would arrive without any click). Missing keys are
   // fine (the deterministic engine path stores only designVerdict); an explicit
   // "flag" on any stored verdict blocks the send.
+  //
+  // ⛔⛔ THIS GATE USED TO SIT BELOW THE dryRun RETURN (measured 2026-09-17), which made
+  // the screen answer a DIFFERENT question than the button: `describeMailSendability`
+  // probes with dryRun, so it turned back BEFORE this check and could report „most
+  // kiküldhető — a küldő-út minden kapuja zöld" on a mock this gate would then refuse.
+  // The operator learned it from the rejection banner AFTER clicking — exactly the
+  // failure the probe was built to prevent. A read-only gate must run in the probe too;
+  // only the SENDING itself belongs below the dryRun line.
   if (p.artifactId) {
     const art = await db
       .selectFrom("mock_artifact")
@@ -421,22 +431,36 @@ export async function sendOutreachMail(
     // the mock's truthfulness is UNKNOWN — unverified must not auto-send any more than
     // failed (the missing guard is quieter than the bad one). A MISSING key still passes:
     // the deterministic paths legitimately never run the verifier.
-    const blocked = (["designVerdict", "demoFraming", "factVerdict", "marketVerdict"] as const)
-      .map((k) => ({ k, v: inputs[k] }))
-      .filter(({ v }) => v === "flag" || v === "error");
-    if (blocked.length) {
+    //
+    // ⛔⛔ TWO THINGS THIS GATE USED TO GET WRONG (measured 2026-09-16 on the Myrna Haus
+    // outreach, where a curator-APPROVED mock could not be sent): it named the KEY
+    // ("FLAG (designVerdict)") instead of the FINDING, and it offered no way out at all
+    // — "kurátor-rendezésig nem küldhető" pointed at an operation that did not exist.
+    // The reason is now printed, and an explicit, REASONED, logged curator override
+    // clears it (the photo gate's rule, reused): the ack covers only THIS finding.
+    const blocking = blockingVerdicts(inputs);
+    const ack = verdictAckOf(inputs);
+    if (blocking.length && !ackCoversVerdicts(ack, blocking)) {
+      const stale = ack ? " (a korábbi kurátori vállalás NEM fedi a mostani leletet)" : "";
       return {
         ...base,
         outcome: {
           kind: "flagged",
-          reasons: blocked.map(({ k, v }) =>
-            v === "flag"
-              ? `Kép-jog/tényhűség: az artifact generáláskori őr-verdiktje FLAG (${k}) — kurátor-rendezésig nem küldhető`
-              : `Kép-jog/tényhűség: az őr nem tudta ellenőrizni az artifactot (${k}=error) — ellenőrizetlen mock nem küldhető, generáld újra vagy kurátor döntsön`,
-          ),
+          reasons: [
+            ...blocking.map(verdictReasonLine),
+            // ⛔ A KIÚT A JÓVÁHAGYÁS, nem egy külön űrlap (tulajdonosi döntés, 2026-09-17).
+            // Ez a mock még azelőtt kapta a jóváhagyását, hogy a lelet látszott volna —
+            // ezért egy kör vissza a lead lapjára: ott a kurátor LÁTJA, mit talált az őr,
+            // és ha úgy hagyja jóvá, a küldés onnantól szabad.
+            `Kiút${stale}: a lead lapján hagyd jóvá újra ezt a mockot — ott megjelenik a lelet, és a jóváhagyással vállalod (indoklás kötelező, naplózzuk). Vagy generálj új mockot.`,
+          ],
         },
       };
     }
+  }
+
+  if (opts.dryRun) {
+    return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };
   }
 
   // Hero shot of the mock's opening screen (best-effort — its absence must never

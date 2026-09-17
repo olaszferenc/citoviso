@@ -150,6 +150,7 @@ export async function repointHero(
         ...inputs,
         siteData: nextData as unknown as Record<string, unknown>,
         designVerdict: design.verdict,
+        designReason: design.reason ?? null,
         heroVerdict: verdict.verdict,
         heroReason: verdict.reason,
         heroSubject: verdict.subject,

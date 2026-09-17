@@ -2102,3 +2102,31 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 @media (max-width: 560px) {
   .con .pay-exits { flex-direction: column; gap: 7px; }
 }
+
+/* ── A KÜLDÉS MEGERŐSÍTÉSE: őr-lelet felugró (tulajdonosi rendelet, 2026-09-17) ─────
+   „max figyelmeztessen, de ha utána is továbbkattint, menjen ki". A doboz a fotó-kapu
+   nyelvét beszéli (.pg-head/.pg-lead/.pg-list), mert ugyanaz a dolga: kimondja, mit
+   talált a gép, és a döntést a kurátorra bízza.
+   ⛔ `open` attribútummal jön, tehát JS NÉLKÜL is látszik — a `showModal()` csak a
+   sötétített hátteret adja hozzá. A garancia amúgy sem itt van, hanem a szerveren. */
+.vg-dlg {
+  max-width: 540px; width: calc(100% - 32px);
+  padding: 16px 18px; border-radius: var(--citui-radius);
+  border: 1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent);
+  background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
+  color: var(--citui-ink); box-shadow: var(--citui-shadow-md);
+}
+.vg-dlg::backdrop { background: color-mix(in srgb, var(--citui-navy-950) 55%, transparent); }
+.vg-dlg__form { margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--citui-bad) 22%, transparent); }
+.vg-dlg__acts { display: flex; gap: 10px; align-items: center; justify-content: flex-end;
+  flex-wrap: wrap; margin-top: 12px; }
+/* A kiút NÉV szerint, nem csak egy „x": a mégsem is döntés, és látszania kell. */
+.vg-dlg__cancel { font-size: 0.8rem; font-weight: 700; color: var(--citui-link-ink); text-decoration: none; }
+.vg-dlg__cancel:hover { text-decoration: underline; }
+/* MOBIL: a két válasz egymás alá, teljes szélességű hüvelykujj-cél. */
+@media (max-width: 560px) {
+  .vg-dlg__acts { flex-direction: column-reverse; align-items: stretch; }
+  .vg-dlg__acts button { width: 100%; }
+  .vg-dlg__cancel { text-align: center; padding: 8px 0; }
+}

@@ -269,6 +269,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
         recipe: nextRecipe as unknown as Record<string, unknown>,
         siteData: nextData as unknown as Record<string, unknown>,
         designVerdict: design.verdict,
+        designReason: design.reason ?? null,
         factVerdict: factCheck?.verdict ?? null,
         factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
         factCandidates: factCheck?.candidates.length ?? 0,

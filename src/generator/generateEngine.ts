@@ -677,6 +677,11 @@ async function generateEngineMockInner(
       photos: photos.length,
       recipeSource: source,
       designVerdict: design.verdict,
+      // ⛔ The REASON must be stored, not just the verdict (measured 2026-09-16): the
+      // outreach gate printed "FLAG (designVerdict)" and nothing else, so the curator
+      // was told to fix something the system never recorded. The AI path (generate.ts)
+      // already stored it; this path did not — one rule, two copies, one of them silent.
+      designReason: design.reason ?? null,
       factVerdict: factCheck?.verdict ?? null,
       // Melyik kép lett a nyitókép, és MIÉRT (heroPick.ts). A konzol ítélet-pirulája
       // ezt olvassa: a kurátor a listán látja, ha a hero nem eladó kép — eddig csak a

@@ -25,6 +25,12 @@
 import { buildDraftForProspect } from "./draft.js";
 import { checkOutreachSms } from "./outreachCheck.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
+import {
+  ackCoversVerdicts,
+  blockingVerdicts,
+  verdictAckOf,
+  verdictReasonLine,
+} from "./mockVerdictGate.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -200,13 +206,16 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   const inputs = (art?.inputs ?? {}) as Record<string, unknown>;
   // "flag" = guard violation; "error" = the fact verifier itself failed → truthfulness
   // UNKNOWN, treated as blocking (mirrors the mail path). Missing key still passes.
-  const guardBlocked = (["designVerdict", "demoFraming", "factVerdict", "marketVerdict"] as const)
-    .map((k) => ({ k, v: inputs[k] }))
-    .filter(({ v }) => v === "flag" || v === "error");
-  if (guardBlocked.length) {
+  //
+  // ⛔ THE SAME RULE LIVED IN TWO COPIES (measured 2026-09-16): the mail path and this
+  // one each spelled out the key list and wrote their own message, so naming the
+  // FINDING and honouring the curator's override had to be fixed twice — otherwise the
+  // screen would state two different truths (mail sendable, MMS+SMS pair still
+  // refusing). Both now read the same module.
+  const smsBlocking = blockingVerdicts(inputs);
+  if (smsBlocking.length && !ackCoversVerdicts(verdictAckOf(inputs), smsBlocking)) {
     return no(
-      `Kép-jog/tényhűség: az artifact őr-verdiktje blokkol (${guardBlocked.map(({ k, v }) => `${k}=${v}`).join(", ")}) — ` +
-        `FLAG: kurátor-rendezésig nem küldhető; error: a tényhűség nem ellenőrizhető, generáld újra`,
+      `${smsBlocking.map(verdictReasonLine).join(" · ")} — kiút: a lead lapján hagyd jóvá újra ezt a mockot (ott látszik a lelet, a jóváhagyással vállalod, indoklás kötelező), vagy generálj új mockot`,
     );
   }
 

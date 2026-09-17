@@ -146,6 +146,13 @@ import {
   recordNoPhotoAck,
   type MockPhotoHealth,
 } from "../outreach/mockPhotoHealth.js";
+import {
+  ackCoversVerdicts,
+  blockingVerdicts,
+  recordVerdictAck,
+  verdictAckOf,
+  type BlockingVerdict,
+} from "../outreach/mockVerdictGate.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
 import {
   adatfeldolgozasPage,
@@ -419,6 +426,58 @@ function coversShownNoPhotoGate(artifactId: string, health: MockPhotoHealth): bo
   const shown = photoGateShown.get(artifactId);
   if (!shown || Date.now() - shown.at > PHOTO_GATE_TTL_MS) return false;
   return health.verdict === "nophoto" && shown.verdict === "nophoto";
+}
+
+/**
+ * KELL-E MEGERŐSÍTÉS A KÜLDÉS ELŐTT? (tulajdonosi döntés, 2026-09-17.)
+ *
+ * A generáláskori őr-lelet NEM tiltja a kiküldést — figyelmeztet. A kurátor a második,
+ * KIMONDOTT kattintással küldi ki. `null` = nincs mit megerősíteni (nincs lelet, vagy a
+ * kurátor ezt a leletet már vállalta), tehát a küldés megy a maga útján.
+ *
+ * ⛔ A megerősítés a SZERVEREN dől el, nem egy `confirm()`-ban: ebben a házban már
+ * előfordult, hogy egy JS-hiba (aposztróf a fordításban) miatt a megerősítés NÉMÁN
+ * kimaradt, és a visszafordíthatatlan művelet kérdés nélkül lefutott. Egy kliens-oldali
+ * felugró a kényelem; a garancia az, hogy a küldő útvonal a `confirmVerdicts` mező
+ * nélkül nem küld.
+ */
+async function verdictsNeedingConfirm(
+  prospectId: string,
+): Promise<{ artifactId: string; blocking: BlockingVerdict[] } | null> {
+  const artifactId = await prospectArtifactId(prospectId);
+  if (!artifactId) return null;
+  const art = await db
+    .selectFrom("mock_artifact")
+    .select("inputs")
+    .where("id", "=", artifactId)
+    .executeTakeFirst();
+  const blocking = blockingVerdicts(art?.inputs);
+  if (!blocking.length || ackCoversVerdicts(verdictAckOf(art?.inputs), blocking)) return null;
+  return { artifactId, blocking };
+}
+
+/**
+ * A küldő útvonalak közös eleje: vagy visszaküld a megerősítő képernyőre, vagy —
+ * ha a kurátor megerősítette — RÖGZÍTI a vállalást, és engedi tovább a küldést.
+ * `true` = a hívó forduljon vissza (a válasz már el van küldve).
+ */
+async function heldForVerdictConfirm(
+  res: http.ServerResponse,
+  prospectId: string,
+  form: URLSearchParams,
+  /** Melyik küldő-gombot nyomta meg — a megerősítés UGYANAZT indítja, nem egy másikat. */
+  action: "send" | "send-all" | "send-pair",
+): Promise<boolean> {
+  const need = await verdictsNeedingConfirm(prospectId);
+  if (!need) return false;
+  if (form.get("confirmVerdicts") !== "1") {
+    redirect(res, `/prospect/${prospectId}/draft?verdictConfirm=${action}`);
+    return true;
+  }
+  // Naplózva: ki, mikor, MIRE — az indoklás itt opcionális (§ a tulaj döntése), a
+  // névsor viszont nem: a vállalás csak EZT a leletet fedi, újragenerálás után nem él.
+  await recordVerdictAck(need.artifactId, "console", (form.get("verdictReason") ?? "").trim(), need.blocking);
+  return false;
 }
 
 /** Hová térjen vissza a kép-kapu — a lead lapjára, a mock kártyájához. */
@@ -1954,6 +2013,12 @@ async function handle(
         await recordNoPhotoAck(curMatch[1]!, "console", noPhotoReason);
         photoGateShown.delete(curMatch[1]!);
       }
+      // ⛔ A GENERÁLÁSKORI ŐR-VERDIKT ITT NEM KÉRDEZ (tulajdonosi döntés, 2026-09-17).
+      // Előbb ide tettem a vállalást, de a tulaj a KÜLDÉS pillanatára kérte: „ha a
+      // kurátor kiküldi a cuccot, max figyelmeztessen, de ha utána is továbbkattint,
+      // menjen ki". A jóváhagyás tehát arról szól, MELYIK mock menjen — a lelet
+      // megerősítése a küldés útján van (`sendGuardBlocking`), EGY helyen. Két helyen
+      // kérdezni pont az a dupla kérdés lenne, amit a tulaj kifogásolt.
     }
     if (decision === "approve" || decision === "reject") {
       ({ superseded } = await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined));
@@ -2633,6 +2698,16 @@ async function handle(
     const notice = k
       ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") }
       : null;
+    // A küldő útvonal fordult vissza ide, mert a mockon MEGERŐSÍTETLEN őr-lelet ül
+    // (tulajdonosi rendelet, 2026-09-17). ⛔ A leletet MOST olvassuk ki, nem a query
+    // stringből: a felugró csak azt mondhatja, ami ebben a pillanatban igaz — és ha
+    // közben megszűnt (újragenerálás), nem jelenik meg egy tárgyát vesztett kérdés.
+    const vcRaw = url.searchParams.get("verdictConfirm");
+    const vcAction: "send" | "send-all" | "send-pair" | null =
+      vcRaw === "send" || vcRaw === "send-all" || vcRaw === "send-pair" ? vcRaw : null;
+    const vcNeed = vcAction ? await verdictsNeedingConfirm(draftMatch[1]!) : null;
+    const verdictConfirm =
+      vcAction && vcNeed ? { action: vcAction, blocking: vcNeed.blocking } : null;
     return send(
       res,
       200,
@@ -2671,6 +2746,7 @@ async function handle(
         },
         d.leadId,
         sendable,
+        verdictConfirm,
       ),
     );
   }
@@ -2696,6 +2772,7 @@ async function handle(
   // other, and the notice reports each outcome separately.
   const allMatch = /^\/prospect\/([0-9a-f-]{36})\/send-all$/i.exec(path);
   if (method === "POST" && allMatch) {
+    if (await heldForVerdictConfirm(res, allMatch[1]!, await readBody(req), "send-all")) return;
     const mail = await sendOutreachMail(allMatch[1]);
     const mailMsg =
       mail.outcome.kind === "sent"
@@ -2714,6 +2791,7 @@ async function handle(
   // job (~60–90 s real send); the draft page's timeline follows it.
   const pairMatch = /^\/prospect\/([0-9a-f-]{36})\/send-pair$/i.exec(path);
   if (method === "POST" && pairMatch) {
+    if (await heldForVerdictConfirm(res, pairMatch[1]!, await readBody(req), "send-pair")) return;
     const r = await startOutreachPair(pairMatch[1]);
     const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${pairMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
@@ -2822,6 +2900,7 @@ async function handle(
   // sendOutreachMail; Post/Redirect/Get with the outcome in the query string.
   const sendMatch = /^\/prospect\/([0-9a-f-]{36})\/send$/i.exec(path);
   if (method === "POST" && sendMatch) {
+    if (await heldForVerdictConfirm(res, sendMatch[1]!, await readBody(req), "send")) return;
     const r = await sendOutreachMail(sendMatch[1]);
     const msg =
       r.outcome.kind === "sent"

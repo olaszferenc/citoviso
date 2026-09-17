@@ -48,6 +48,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // Operator-only pipeline reporting: reasons shown in the CONSOLE RUN REPORT,
   // never sent to the recipient (the mail body comes from draft.ts).
   "src/outreach/sendBatch.ts": "operátor-riport (skip-okok) — a címzett sosem látja",
+  // A generáláskori őr-verdiktek megnevezése és indok-sora a KONZOL képernyőjén jelenik
+  // meg (piszkozat-lap piros csík + a küldés-megerősítő felugró). A levél törzse a
+  // draft.ts-ből jön; ide egyetlen betű sem jut el a címzetthez. A felugró SAJÁT feliratai
+  // a views.ts-ben T()-vel készülnek — ez a fájl csak magát a leletet nevezi meg.
+  "src/outreach/mockVerdictGate.ts": "őr-verdikt megnevezése/indoka — operátor/kurátor látja, a levélbe nem kerül",
   "src/outreach/outreachCheck.ts": "§C-kapu indoklásai — operátori verdikt-szöveg",
   "src/generator/provenanceCheck.ts": "§A-kapu verdikt-indoklásai — operátor/kurátor látja",
   "src/scraper/persist.ts": "scrape-összegző a konzol futás-riportjában — operátor látja",
