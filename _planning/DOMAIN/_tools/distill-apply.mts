@@ -523,6 +523,39 @@ function renderInsert(b: PromoteBlock, stamp: string): string[] {
 }
 
 // --------------------------------------------------------------------------
+// THE BRANCH THE OWNER HAS TO JUDGE — one source, two readers
+// --------------------------------------------------------------------------
+
+/**
+ * Slug / branch / worktree / pending-file for a given review stamp.
+ *
+ * ⛔ EXPORTED ON PURPOSE. The notifier (`notify.sh` → `notify.mts`) has to name these exact
+ * paths in the message it sends: an alert that says "there is something" without saying WHERE
+ * is the same silence we are fixing. It cannot read them from this script's output either —
+ * `distill.sh` deletes `.apply-out.txt` (line 146) BEFORE the notify hook runs (line 153).
+ * So the choice was: recompute them there, or share them. A rule in two copies becomes two
+ * truths (the house has several recorded cases), and here the second truth would be a wrong
+ * path in the one message whose whole job is to be actionable. Hence: one function, two callers.
+ */
+export interface BranchPaths {
+  readonly slug: string;
+  readonly branch: string;
+  readonly wtDir: string;
+  readonly pendingPath: string;
+}
+
+export function branchPaths(stamp: string, branchDirRoot: string): BranchPaths {
+  const slug = `distill${stamp.slice(0, 8)}`; // hyphen-free slug (CLAUDE.md §8)
+  const wtDir = path.join(branchDirRoot, slug);
+  return {
+    slug,
+    branch: `wt/${slug}`,
+    wtDir,
+    pendingPath: path.join(wtDir, "_planning", "DOMAIN", "_tools", "DISTILL-PENDING.md"),
+  };
+}
+
+// --------------------------------------------------------------------------
 // MAIN PIPELINE
 // --------------------------------------------------------------------------
 
@@ -733,9 +766,7 @@ function run(opts: Options): number {
   }
 
   // ------------------------------------------------------------------ --go --
-  const slug = `distill${opts.stamp.slice(0, 8)}`; // hyphen-free slug (CLAUDE.md §8)
-  const branch = `wt/${slug}`;
-  const wtDir = path.join(opts.branchDirRoot, slug);
+  const { slug, branch, wtDir } = branchPaths(opts.stamp, opts.branchDirRoot);
 
   const git = (args: string[], cwd: string) =>
     execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
@@ -800,7 +831,7 @@ function run(opts: Options): number {
   }
 
   // --- pending-decisions document (committed, so it shows up in the diff) ---
-  const pendingPath = path.join(wtDomain, "_tools", "DISTILL-PENDING.md");
+  const { pendingPath } = branchPaths(opts.stamp, opts.branchDirRoot);
   fs.mkdirSync(path.dirname(pendingPath), { recursive: true });
   fs.writeFileSync(pendingPath, renderPending(opts, reviews, refineAll, quarantined, parsed));
   touched.push("_planning/DOMAIN/_tools/DISTILL-PENDING.md");
@@ -1174,4 +1205,9 @@ function main(): void {
   process.exit(selfT ? selfTest(opts) : run(opts));
 }
 
-main();
+// ⛔ MAIN-GUARD. A `notify.mts` ebből a fájlból importálja a `branchPaths()`-t, hogy az ág és a
+// worktree útvonala EGY forrásból jöjjön. Enélkül a puszta import lefuttatná a teljes átvezetőt
+// és `process.exit`-tel megölné a hívót — az értesítő némán elhalna.
+if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === import.meta.filename) {
+  main();
+}

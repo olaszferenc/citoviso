@@ -39,8 +39,18 @@ Ezért a `distill.sh` a review után **előkészít egy jóváhagyható változt
 - Ha több hét ága gyűlt össze, a **legújabb ág a teljes kép** (semmi nem landolt, tehát minden
   korábbi tétel abban is benne van) — a régiek törölhetők.
 
-**Heti teendő (EMBER) — három parancs**, a pontos útvonalakat a cron-log végén kiírja
-(`~/.claude/distill-citoviso.log`):
+**⭐ A TULAJ MOSTANTÓL ÉRTESÜL RÓLA** (2026-09-17). A gyökérok nem a gépezet volt, hanem hogy a
+review egy gitignore-olt `_inbox/`-ba esett és **senki nem tudott róla** — a `distill.sh`
+hook-pontja hónapokig úgy élt, hogy a hívott `notify.sh` NEM LÉTEZETT, tehát a `[ -x ]` mindig
+hamis volt és a lépés **némán kimaradt** (ára: 9 review / 62 javaslat). Az értesítő (`_tools/notify.sh`)
+**SMS-t és e-mailt** küld — de **CSAK akkor, ha van mit eldönteni** (a frissesség-őr konjunkciója:
+párosítatlan ÉS érdemi tudást hordoz); üres heti futásra szándékosan néma, és a **felhalmozásról
+is** szól olyan héten, amikor nem született új review. Az e-mail a lenti három parancsot viszi,
+KONKRÉT útvonallal. ⛔ Fail-closed: `--mode=send` nélkül nem küld, ismeretlen kapcsoló = hiba.
+Őr: `scripts/distill-notify-check.mts`.
+
+**Heti teendő (EMBER) — három parancs**, a pontos útvonalakat az értesítő e-mail és a cron-log
+vége is kiírja (`~/.claude/distill-citoviso.log`):
 1. `git -C ~/wt/distill<dátum> diff HEAD~1` — mi változna
 2. `less ~/wt/distill<dátum>/_planning/DOMAIN/_tools/DISTILL-PENDING.md` — az ember-döntések
 3. elfogadás: a kereteket törlöd (a törzs marad), majd `bash scripts/land.sh` · elvetés:

@@ -54,9 +54,34 @@ Commitok: `d607238` · `9a0f215` · `e740fad` · `e9d816a`.
 - ⛔ **Saját hibáim:** elavult, rebase ELŐTTI SHA-kat idéztem a záró jelentésemben · szűk grep
   (`LiveSafe` helyett `applyLivePhotoPolicy`) · csövön át mért kilépési kód · **bemocskoltam
   a fő fát** 9 követetlen másolattal (a land ff-frissítése elbukott).
-- 🔴 **NYITOTT (tulaj):** ① vízjel — valódi detektálás, vagy a §A.2 törlése ② **a gyökérok: a
-  `notify.sh` hook-pont ÉL (`distill.sh:151-155`), de a fájl NEM LÉTEZIK** → ezen indul a
-  következő session ③ 12 „ÉLŐ" REFINE a `DISTILL-PENDING.md`-ben.
+- 🔴 **NYITOTT (tulaj):** ① vízjel — valódi detektálás, vagy a §A.2 törlése ② ~~a gyökérok: a
+  `notify.sh` hook-pont ÉL, de a fájl NEM LÉTEZIK~~ → **LEZÁRVA, lásd a következő blokkot**
+  ③ 12 „ÉLŐ" REFINE a `DISTILL-PENDING.md`-ben.
+
+## Párhuzamos szál (2026-09-17) — a desztilláló ÉRTESÍTŐJE
+
+**🔔 A GYÖKÉROK MEGSZŰNT: a review-ról mostantól ÉRTESÜL a tulaj.**
+Session-jegyzet: `_planning/memory/2026-09-17_distill_notifier.md`.
+
+- **A lelet igazolva:** `distill.sh:151-156` — a `[ -x "$NOTIFY" ]` hónapokig hamis volt, mert a
+  `notify.sh` **nem létezett**; a lépés némán kimaradt. Ez volt a 9 review / 62 javaslat OKA.
+- **Szállítva:** `_tools/notify.sh` + `notify.mts` (SMS + e-mail, **tulajdonosi döntés**) ·
+  `scripts/distill-notify-check.mts` (57 állítás, 17 fixture-mérés, diff-scope-olt).
+- ⭐ **Csak akkor szól, ha van mit dönteni** (a frissesség-őr konjunkciója, **nem újraírva**), és
+  **a felhalmozásról is** — a `fire_notify` a korai kilépés ELŐTT is fut. Üres futásra néma.
+- ⭐ **Csak LÉTEZŐ ágat nevez meg** (`git branch --list` a forrás): nincs ág → a valódi következő
+  lépést adja. Egy hazug útvonal rosszabb a csendnél.
+- ⛔ **Fail-closed:** `--mode=send` nélkül nem küld, ismeretlen kapcsoló = exit 2, dry-run HANGOS.
+  ⛔ **MMS elvetve mérés alapján** (csak JPEG, root, ~90 mp, közben áll az SMS-relé).
+- **Bizonyítás:** 5 szabotázs mind elkapva · a valódi `distill.sh` felhalmozás-ága végponttól
+  végpontig lefuttatva · a teszt **saját mellékhatása MÉRVE** (PATH-csapda + outbox-pillanatképek),
+  mert ezen a gépen **mindkét csatorna ÉLES** és a usernek NOPASSWD sudo-ja van.
+- ⛔⛔ **Saját hibáim:** a mérőeszközöm **elnémította a saját bizonyítékát** (stderr vs.
+  `execFileSync`) · **az őröm ÖSSZEOMLOTT piros helyett**, egyetlen lelet nélkül — rc=1 miatt
+  „elkapva"-ként könyveltem volna el, ha nem nézem meg a TELJES kimenetet · két top-level futtató
+  modult hittem importálhatónak (main-guard mindkettőbe).
+- ⚠️ **Amit NEM bizonyít:** az éles transzportot egyetlen teszt sem futtatta (szándékosan) — az
+  első ÉLES megszólalás a következő vasárnapi cron lesz, ha áll feldolgozatlan review.
 
 ## Előző szál (2026-09-16) — a megszűnt adószám
 

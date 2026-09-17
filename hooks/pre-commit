@@ -1406,6 +1406,17 @@ if [ -f scripts/domain-inbox-freshness-check.mts ] && \
   echo "[pre-commit] domain-inbox-freshness (feldolgozatlan ontológia-tudás áll-e)…"
   npx tsx scripts/domain-inbox-freshness-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⭐⭐ AZ ÉRTESÍTŐ ŐRE — a frissesség-őr a TÜNETET méri (áll-e feldolgozatlan tudás), ez az OKOT:
+# értesül-e róla bárki. A `distill.sh` hook-pontja hónapokig úgy élt, hogy a hívott `notify.sh`
+# NEM LÉTEZETT, tehát a `[ -x ]` mindig hamis volt és a lépés NÉMÁN kimaradt — ára 9 review /
+# 62 javaslat. Egy elveszett +x bit vagy egy átnevezett kapcsoló ugyanide vezetne vissza.
+# ⛔ DIFF-SCOPE: ~25 párhuzamos session dolgozik a repón, egy nem-scope-olt őr mindenkit megfog.
+# Csak a desztillálót / az őrt érintő diffre fut. Fixture-ökön mér, PATH-csapdával — nem küld.
+if [ -f scripts/distill-notify-check.mts ] && \
+   changed_files | grep -qE '^_planning/DOMAIN/_tools/(notify\.(sh|mts)|distill(-apply)?\.(sh|mts))|^scripts/(distill-notify-check|domain-inbox-freshness-check)'; then
+  echo "[pre-commit] distill-notify-check (szól-e az értesítő, és igazat mond-e)…"
+  npx tsx scripts/distill-notify-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⭐⭐ A META-ŐR — MINDIG FUT, és nincs diff-scope-ja. Ez szándékos: egy új árva őr úgy
 # keletkezik, hogy valaki LÉTREHOZ egy `scripts/*-check.mts`-t és ezt a fájlt nem nyitja
 # meg — vagyis pont akkor, amikor semmilyen hook-fájlra szűkített trigger nem tüzelne.

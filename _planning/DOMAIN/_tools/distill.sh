@@ -30,6 +30,21 @@ OUT="$INBOX/${STAMP}.md"
 
 log() { printf '[distill %s] %s\n' "$(date -u +%H:%M:%S)" "$*" >&2; }
 
+# --- the notifier ----------------------------------------------------------
+# ⛔ `--mode=send` IS LOAD-BEARING. The notifier is fail-closed: without this flag it decides
+# and logs but sends NOTHING. That is deliberate (a mistyped switch must never smuggle a live
+# send), which means THIS call site is the one place that opts into real messages — keep the
+# flag when moving this line, or the notifier goes silent exactly like it did for two months.
+NOTIFY="$TOOLS/notify.sh"
+fire_notify() {
+  if [ -x "$NOTIFY" ]; then
+    "$NOTIFY" "$@" --mode=send >>"$INBOX/notify.log" 2>&1 || log "notify failed (non-fatal)"
+  else
+    # Not silent any more: THIS is the branch that cost 9 unread reviews.
+    log "⚠️ nincs futtatható notify.sh ($NOTIFY) — SENKI NEM ÉRTESÜL a döntésre váró review-król"
+  fi
+}
+
 # --- 1. discover THIS repo's memory dir (scoped by repo path) ---------------
 # The harness stores per-project memory at ~/.claude/projects/<path-with-slashes-as-dashes>.
 # Deriving from REPO guarantees we never read another project's memory.
@@ -75,6 +90,10 @@ NEW_COUNT="$(wc -l < "$NEWLIST" | tr -d ' ')"
 if [ "$NEW_COUNT" -eq 0 ]; then
   log "no new or changed memories since last run — nothing to distill"
   rm -rf "$WORK"
+  # ⭐ A FELHALMOZÁS IS SZÁMÍT (tulajdonosi döntés, 2026-09-17). Nincs új MEMÓRIA, de attól még
+  # állhat ELDÖNTETLEN review korábbi hetekből — és a gyökérok pont az volt, hogy azokról senki
+  # nem szólt ÚJRA. A notifier maga dönti el, van-e mit mondani: ha nincs, néma marad.
+  fire_notify
   exit 0
 fi
 log "$NEW_COUNT new/changed memory file(s) to consider"
@@ -148,12 +167,10 @@ else
   log "nincs distill-apply.mts — csak review készült, átvezetés nem"
 fi
 
-# --- 6. notify (optional) --------------------------------------------------
-# Citoviso has no ticketing yet; if a notifier helper appears later, it fires.
-NOTIFY="$TOOLS/notify.sh"
-if [ -x "$NOTIFY" ]; then
-  "$NOTIFY" "$OUT" >>"$INBOX/notify.log" 2>&1 || log "notify failed (non-fatal)"
-fi
+# --- 6. notify -------------------------------------------------------------
+# No longer "optional": a review nobody hears about is a review nobody applies. The notifier
+# is silent when there is nothing to decide, so this fires every week without becoming noise.
+fire_notify "$OUT"
 
 log "DONE — review document: $OUT"
 echo "$OUT"

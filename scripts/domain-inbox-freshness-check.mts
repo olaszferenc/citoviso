@@ -629,5 +629,17 @@ function selfTest(): void {
   process.exit(fails.length ? 1 : 0);
 }
 
-if (SELF_TEST) selfTest();
-else run();
+// ⛔ EZ A MODUL IMPORTÁLHATÓ IS. A `_tools/notify.mts` innen veszi a konjunkciót (`readCorpus`
+// + `judge`), hogy „párosítatlan ÉS érdemi tudást hordoz" EGY példányban éljen — egy szabály
+// két példányban két igazság. Main-guard NÉLKÜL viszont a puszta import lefuttatná ezt a kaput
+// és `process.exit`-tel megölné a hívót: az értesítő némán elhalna, azaz pontosan azt a
+// csendet termelné újra, amit gyógyítani hivatott.
+const IS_MAIN = process.argv[1] !== undefined && path.resolve(process.argv[1]) === import.meta.filename;
+
+if (!IS_MAIN) {
+  /* library-használat: a hívó vezet, itt nem futtatunk és nem lépünk ki */
+} else if (SELF_TEST) {
+  selfTest();
+} else {
+  run();
+}
