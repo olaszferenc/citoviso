@@ -123,6 +123,31 @@ fi
 
 rm -rf "$WORK"
 
+# --- 5b. close the loop: prepare an APPROVABLE change ----------------------
+# The review alone was never enough: between 2026-07-12 and 2026-09-13 nine
+# reviews piled up unread, because "read 50 KB and hand-edit the ontology" is a
+# task nobody has time for. The applier turns the reviews into a committed
+# branch the owner can diff, accept or throw away — it never pushes, never
+# lands, and never touches the main worktree (that would block every other
+# session's land). REFINE/DRIFT are NOT auto-applied; they stay proposals.
+APPLIER="$TOOLS/distill-apply.mts"
+APPLY_RC=0
+if [ -f "$APPLIER" ]; then
+  log "átvezetés előkészítése (distill-apply.mts --go)…"
+  APPLY_OUT="$INBOX/.apply-out.txt"
+  if npx tsx "$APPLIER" --go >"$APPLY_OUT" 2>&1; then
+    cat "$APPLY_OUT"
+  else
+    APPLY_RC=$?
+    log "⛔⛔ AZ ÁTVEZETÉS BUKOTT (rc=$APPLY_RC) — a review MEGVAN az _inbox/-ban, de"
+    log "     nem készült jóváhagyható ág. A teljes kimenet:"
+    cat "$APPLY_OUT"
+  fi
+  rm -f "$APPLY_OUT"
+else
+  log "nincs distill-apply.mts — csak review készült, átvezetés nem"
+fi
+
 # --- 6. notify (optional) --------------------------------------------------
 # Citoviso has no ticketing yet; if a notifier helper appears later, it fires.
 NOTIFY="$TOOLS/notify.sh"
@@ -131,5 +156,11 @@ if [ -x "$NOTIFY" ]; then
 fi
 
 log "DONE — review document: $OUT"
-log "Next: read it, apply the PROMOTE/REFINE blocks to _planning/DOMAIN, then git commit."
 echo "$OUT"
+
+# A failed apply must not be swallowed by a green exit: the cron log is the
+# only channel, and a silent failure here would look exactly like success.
+if [ "$APPLY_RC" -ne 0 ]; then
+  log "⛔ a futás a review-val zöld, de az ÁTVEZETÉS bukott (rc=$APPLY_RC)"
+  exit "$APPLY_RC"
+fi

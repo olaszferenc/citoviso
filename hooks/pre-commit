@@ -1359,6 +1359,26 @@ if [ -f scripts/module-config-check.mts ] && \
   echo "[pre-commit] module-config-check (ADR-0044: a modul-konfig réteg végponttól végpontig)…"
   npx tsx scripts/module-config-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ONTOLÓGIA-FRISSESSÉG (mérve 2026-09-17): a `_planning/DOMAIN/` a `CLAUDE.md` §1 szerint
+# KÖTELEZŐEN olvasott igazság, az átvezetése mégis 2026-07-12 óta elmaradt — 9 feldolgozatlan
+# review, 64 érdemi javaslat, és a `01-CALC-MODELS.md` két hónapig a július 4-i vázban állt.
+# Semmi nem jelzett (a `distill.sh` 6. lépése maga mondja: „no ticketing yet").
+#
+# ⚠️ SZÁNDÉKOSAN DIFF-SCOPE-OLT, és NEM „mindig fut". Egy heti karbantartási adósság miatt
+# MINDEN commitot blokkolni ~25 párhuzamos szálnál bénító lenne, és pontosan az a hibaosztály,
+# amiért a `guard-scratch-scope-check` megszületett (egy hatókör nélküli őr „véletlenszerűen
+# mindenkit blokkolt"). Itt az van blokkolva, akinek a commitja a DOMAIN-t érinti — vagyis aki
+# ÉPPEN az ontológiát szerkeszti, és ezért a legolcsóbban tudja az inboxot is átvezetni.
+# ⭐ Ez nem elméleti szűkítés: 2026-07-12 és 09-13 között ~10 commit érintette a
+# `_planning/DOMAIN/`-t (00-GLOSSARY 08-21/08-31, 06-UI-CONTRACT 08-18, 03-INVARIANTS 08-23 és
+# 09-08/09-13), tehát ez a kapu a két hónap alatt ~10-szer állította volna meg a helyes embert.
+# A HÁZ-SZINTŰ, senkit nem blokkoló csatorna ettől külön él: `scripts/land.sh --warn-only`.
+# Fájlt + `git log`-ot olvas, se böngésző, se DB (~1 s).
+if [ -f scripts/domain-inbox-freshness-check.mts ] && \
+   changed_files | grep -qE '^_planning/DOMAIN/|^scripts/domain-inbox-freshness-check'; then
+  echo "[pre-commit] domain-inbox-freshness (feldolgozatlan ontológia-tudás áll-e)…"
+  npx tsx scripts/domain-inbox-freshness-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⭐⭐ A META-ŐR — MINDIG FUT, és nincs diff-scope-ja. Ez szándékos: egy új árva őr úgy
 # keletkezik, hogy valaki LÉTREHOZ egy `scripts/*-check.mts`-t és ezt a fájlt nem nyitja
 # meg — vagyis pont akkor, amikor semmilyen hook-fájlra szűkített trigger nem tüzelne.

@@ -115,5 +115,23 @@ while :; do
     rm -rf "$DRAFTS"
     echo "🧹 Terv-vázlatok törölve ($n fájl, assets/design-refs/_drafts/) — a jóváhagyott terv a design-refs/console alatt marad."
   fi
+
+  # ONTOLÓGIA-FRISSESSÉG — HANGOS, DE NEM KAPU (mérve 2026-09-17).
+  # A `_planning/DOMAIN/` az egyetlen dokumentum, amit a `CLAUDE.md` §1 MINDEN sessionnel
+  # kötelezően elolvastat; az átvezetése mégis 2026-07-12 óta elmaradt, és NÉMÁN állt elő:
+  # 9 feldolgozatlan review, 64 érdemi javaslat, a `01-CALC-MODELS.md` két hónapig a július
+  # 4-i, 22 soros vázban. Semmi nem jelzett — nincs notifier, az inbox gitignore-olt.
+  #
+  # ⚠️ MIÉRT ITT, ÉS MIÉRT `--warn-only`. A land az EGYETLEN pont, amin minden session
+  # átmegy (§3.3), tehát ez a legszélesebb csatorna a némaság ellen. Kapuvá tenni viszont
+  # tilos: egy HETI karbantartási adósság nem foghatja meg ~25 szál landolását — pontosan
+  # az az osztály, amit a `guard-scratch-scope-check` fejléce mér („véletlenszerűen ölték
+  # egymás commitjait"). A BLOKKOLÓ ág a `hooks/pre-commit`-ben él, a DOMAIN-t érintő
+  # diffre szűkítve — ott az van megállítva, aki éppen az ontológián dolgozik.
+  # ⚠️ A land ITT MÁR SIKERES (a push igazolva, §3.3) — ez a sor csak kiír, sosem dönt.
+  if [ -f "$ROOT/scripts/domain-inbox-freshness-check.mts" ]; then
+    npx tsx "$ROOT/scripts/domain-inbox-freshness-check.mts" --warn-only \
+      || echo "⚠️  domain-inbox-freshness nem futott le (a land ettől érvényes) — kézzel: npx tsx scripts/domain-inbox-freshness-check.mts"
+  fi
   exit 0
 done
