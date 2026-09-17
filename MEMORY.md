@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-17 (🚀 ÉLES = MAIN = `61e788a`, tag `prod/20260917-0943` — a Barion négy kérése teljesítve, a válasz beküldve)
+Utolsó frissítés: 2026-09-17 (🚀 ÉLES = `61e788a`, tag `prod/20260917-0943` — a Barion négy kérése teljesítve; + az ontológiai lenyomat felzárkóztatva, a desztilláló köre bezárult)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-17)
 
@@ -25,6 +25,38 @@ Döntések: **ADR-0185** (ÁSZF 1.2) · **ADR-0186** + utószál (Full Pixel). �
   **Üzleti profilba**. A Barion oldalán a Pixel `approvedBase: false` — az ő bírálatuk.
 - ⚪ **NYITOTT (kód):** az éles oldal külső CDN-eket hív (Google Fonts, unpkg, OSM)
   hozzájárulás nélkül — most, hogy a sáv jogi keretet kapott, ez a következő kör.
+
+## Párhuzamos szál (2026-09-17) — az ontológiai lenyomat felzárkóztatva
+
+> ⚠️ Ez a blokk NEM váltja le a fenti aktív feladatot: a két szál ugyanazon a napon, egymástól
+> függetlenül futott. (A doktrína „az aktív feladat előzménybe csúszik" szabálya ~25 párhuzamos
+> szálnál egymás munkáját törölné.)
+
+**🧠 A GÉPEZET ÉPÜLT, A LENYOMAT NEM — a kör most bezárult.**
+Session-jegyzet: `_planning/memory/2026-09-17_ontology_loop_closed.md`.
+Commitok: `d607238` · `9a0f215` · `e740fad` · `e9d816a`.
+
+- **A diagnózis:** az auto-desztilláló hibátlanul futott, de a review-k egy **gitignore-olt**
+  `_inbox/`-ba estek → **2026-07-12 és 2026-09-13 között 9 review / 62 javaslat-blokk állt
+  feldolgozatlanul**. A tudás nem veszett el, hanem **némán befagyott**.
+- **Szállítva:** a DOMAIN 435 → **~1030 sor** (`03-INVARIANTS` 141→482, `01-CALC-MODELS`
+  22→154, `02-ENTITY-MAP` 45→175), **ledger 12/12, 0 feldolgozatlan** · `distill-apply.mts`
+  (a desztilláló mostantól **jóváhagyható ágat** készít, nem olvasnivalót; REFINE/DRIFT
+  SOHA nem automatikus) · `domain-inbox-freshness-check.mts` (konjunkció-alapú őr,
+  diff-scope-olt a pre-commitben, `--warn-only` a landban).
+- **Menet közben:** a „tervezett" entitások fele (Tenant, Booking) már két hónapja ÉLT · a
+  kötelező belépőpont `04-INDEX` két hónapja **nem sorolta fel a `06-UI-CONTRACT`-ot** ·
+  **HAT** ütköző migráció-sorszám él (a közös Postgres némán nyeli el).
+- ⭐ **A legfontosabb lelet csak KERESZTBE olvasva állt össze:** a `watermarked` flaget
+  **semmi nem állítja `true`-ra** a termelési úton → **a megengedő fotó-szabály egyetlen fékje
+  halott kód**, miközben a §A.2 az ellenkezőjét ígéri és egy ZÖLD őr a flag *továbbélését*
+  méri, nem azt, hogy valaha beáll-e.
+- ⛔ **Saját hibáim:** elavult, rebase ELŐTTI SHA-kat idéztem a záró jelentésemben · szűk grep
+  (`LiveSafe` helyett `applyLivePhotoPolicy`) · csövön át mért kilépési kód · **bemocskoltam
+  a fő fát** 9 követetlen másolattal (a land ff-frissítése elbukott).
+- 🔴 **NYITOTT (tulaj):** ① vízjel — valódi detektálás, vagy a §A.2 törlése ② **a gyökérok: a
+  `notify.sh` hook-pont ÉL (`distill.sh:151-155`), de a fájl NEM LÉTEZIK** → ezen indul a
+  következő session ③ 12 „ÉLŐ" REFINE a `DISTILL-PENDING.md`-ben.
 
 ## Előző szál (2026-09-16) — a megszűnt adószám
 
