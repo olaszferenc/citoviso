@@ -755,6 +755,33 @@ if [ -f scripts/outreach-sendability-check.mts ]; then
   echo "[pre-commit] outreach-sendability-check (a lap a küldő-út verdiktjét mondja)…"
   npx tsx scripts/outreach-sendability-check.mts >"$GATE_LOG" || gate_failed
 fi
+# 2026-09-16/17: a generáláskori őr-verdikt egy KURÁTOR ÁLTAL JÓVÁHAGYOTT mock küldését
+# tiltotta meg, „FLAG (designVerdict)" indoklással és kiút nélkül. Három őr védi a javítást.
+# ⛔ MINDHÁROM TRIGGER AZ ŐR SAJÁT FÁJLJÁRA IS SZÓL: enélkül az őr átírása
+# ellenőrizetlenül menne át, pedig a hibaosztály pont ott él.
+#
+# ① A dizájn-kapu emoji-szabálya a VENDÉGNEK LÁTHATÓ zónát mérje — a CSS/JS
+#    kommentjeinkben álló ⛔/⚠ nem felületi ikon; de a CSS `content:` és a JS
+#    string-literál IGEN, azokat mérni kell (különben a javítás hamis ZÖLDET ad).
+if [ -f scripts/design-comment-zone-check.mts ] && \
+   changed_files | grep -qE '^src/generator/designCheck\.ts$|^scripts/design-comment-zone-check\.mts$'; then
+  echo "[pre-commit] design-comment-zone (az emoji-szabály a LÁTHATÓ zónát méri)…"
+  npx tsx scripts/design-comment-zone-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ② A kurátori vállalás CSAK azt a leletet fedheti, amit a kurátor LÁTOTT — és a kapu
+#    a dry-run próbában is fusson, különben a képernyő más kérdésre válaszol, mint a gomb.
+if [ -f scripts/verdict-gate-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(mockVerdictGate|sendBatch|sendOutreachSms)\.ts$|^src/console/views\.ts$|^scripts/verdict-gate-check\.mts$'; then
+  echo "[pre-commit] verdict-gate (a vállalás a LÁTOTT leletre szól)…"
+  npx tsx scripts/verdict-gate-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ③ A küldés-megerősítő felugró a SAJÁT csatornájára POST-oljon, és vigye a
+#    confirmVerdicts mezőt — a kép erre a kérdésre nem tud válaszolni, a DOM igen.
+if [ -f scripts/verdict-dialog-dom-check.mts ] && \
+   changed_files | grep -qE '^src/console/(server|views)\.ts$|^src/outreach/mockVerdictGate\.ts$|^public/assets/ui/citui-console\.css$|^scripts/verdict-dialog-dom-check\.mts$'; then
+  echo "[pre-commit] verdict-dialog-dom (a felugró a saját csatornáját indítja)…"
+  npx tsx scripts/verdict-dialog-dom-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Elek FK-004 Z3/Z4: a sor „E-mail elküldve"-t írt a CSATORNA-FÜGGETLEN bélyegből (a mobil
 # páros is beállítja), a sosem-küldött linken mért forgalom lead-érdeklődésnek látszott, és a
 # kézi másolás küldés után is jelzés nélkül állt ott.

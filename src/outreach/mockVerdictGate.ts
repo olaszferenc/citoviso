@@ -40,7 +40,7 @@ const REASON_KEY: Record<GuardVerdictKey, string> = {
  * ⛔ EZ A NÉV MÁSODIK PÉLDÁNY: a konzol `mockInputLabel()`-je (views.ts) ugyanezeket a
  * kulcsokat nevezi meg az artifact-adatlapon. Két név ugyanarra a kapura = két igazság
  * egy képernyőn, ezért SZÁNDÉKOSAN bájtra ugyanazok a szavak, és a
- * `scripts/verdict-gate-guard.mts` állítása köti össze a kettőt. Ha itt átírod, ott is
+ * `scripts/verdict-gate-check.mts` állítása köti össze a kettőt. Ha itt átírod, ott is
  * át kell — az őr hangosan megbukik, nem csendben csúszik szét.
  */
 export const VERDICT_LABEL: Record<GuardVerdictKey, string> = {

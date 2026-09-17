@@ -11,7 +11,7 @@
 // emoji can still reach the visitor's eye must keep flagging. The negative controls
 // only prove the false failure is gone.
 //
-// Run: npx tsx scripts/design-check-guard.mts
+// Run: npx tsx scripts/design-comment-zone-check.mts
 import { readFileSync, readdirSync } from "node:fs";
 import { checkDesign } from "../src/generator/designCheck.js";
 
@@ -170,7 +170,7 @@ if (realChecked === 0) {
   failures.push(`VALÓDI MOCK: egyetlen mock-*.html sem található a ${realDir} könyvtárban — a valódi kimenet NEM lett mérve`);
 }
 
-console.log(`\ndesign-check-guard: ${pass} zöld, ${failures.length} bukás (valódi mock mérve: ${realChecked})`);
+console.log(`\ndesign-comment-zone-check: ${pass} zöld, ${failures.length} bukás (valódi mock mérve: ${realChecked})`);
 if (failures.length) {
   for (const f of failures) console.error(`  ⛔ ${f}`);
   process.exit(1);

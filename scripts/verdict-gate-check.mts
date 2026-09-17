@@ -13,7 +13,7 @@
 // ⛔ Pure functions only, NO database: the park is shared by ~10 parallel sessions, and a
 // guard that writes it would break other threads' measurements (measured repeatedly).
 //
-// Run: npx tsx scripts/verdict-gate-guard.mts
+// Run: npx tsx scripts/verdict-gate-check.mts
 import { readFileSync } from "node:fs";
 import {
   ackCoversVerdicts,
@@ -176,7 +176,7 @@ for (const f of ["../src/outreach/sendBatch.ts", "../src/outreach/sendOutreachSm
   );
 }
 
-console.log(`\nverdict-gate-guard: ${pass} zöld, ${failures.length} bukás`);
+console.log(`\nverdict-gate-check: ${pass} zöld, ${failures.length} bukás`);
 if (failures.length) {
   for (const f of failures) console.error(`  ⛔ ${f}`);
   process.exit(1);
