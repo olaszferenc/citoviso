@@ -448,11 +448,12 @@ export async function sendOutreachMail(
           kind: "flagged",
           reasons: [
             ...blocking.map(verdictReasonLine),
-            // ⛔ A KIÚT A JÓVÁHAGYÁS, nem egy külön űrlap (tulajdonosi döntés, 2026-09-17).
-            // Ez a mock még azelőtt kapta a jóváhagyását, hogy a lelet látszott volna —
-            // ezért egy kör vissza a lead lapjára: ott a kurátor LÁTJA, mit talált az őr,
-            // és ha úgy hagyja jóvá, a küldés onnantól szabad.
-            `Kiút${stale}: a lead lapján hagyd jóvá újra ezt a mockot — ott megjelenik a lelet, és a jóváhagyással vállalod (indoklás kötelező, naplózzuk). Vagy generálj új mockot.`,
+            // ⛔ A KIÚT A KÜLDÉS-GOMB MAGA (tulajdonosi rendelet, 2026-09-17): a lelet
+            // figyelmeztet, nem tilt — a küldés felugróval kérdez, és a második,
+            // kimondott kattintás kiküldi. ⚠️ Ez a mondat egy kört még a JÓVÁHAGYÁSRA
+            // irányított (az előző terv maradéka): egy kiút-mondat, ami nem létező utat
+            // ajánl, ugyanolyan zsákutca, mint a „kurátor-rendezésig" volt.
+            `Kiút${stale}: nyomd meg újra a küldés gombot — a felugróban látod a leletet, és a megerősítéssel kimegy. Vagy generálj új mockot.`,
           ],
         },
       };

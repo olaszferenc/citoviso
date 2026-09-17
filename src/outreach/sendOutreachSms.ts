@@ -215,7 +215,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   const smsBlocking = blockingVerdicts(inputs);
   if (smsBlocking.length && !ackCoversVerdicts(verdictAckOf(inputs), smsBlocking)) {
     return no(
-      `${smsBlocking.map(verdictReasonLine).join(" · ")} — kiút: a lead lapján hagyd jóvá újra ezt a mockot (ott látszik a lelet, a jóváhagyással vállalod, indoklás kötelező), vagy generálj új mockot`,
+      `${smsBlocking.map(verdictReasonLine).join(" · ")} — kiút: nyomd meg újra a páros indítását, a felugróban látod a leletet, és a megerősítéssel elindul; vagy generálj új mockot`,
     );
   }
 
