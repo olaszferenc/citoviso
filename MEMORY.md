@@ -1,7 +1,32 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-16 (🚀 ÉLES = MAIN = `3578491`, tag `prod/20260916-0729` — a kör teljesen kint)
+Utolsó frissítés: 2026-09-17 (🚀 ÉLES = MAIN = `61e788a`, tag `prod/20260917-0943` — a Barion négy kérése teljesítve, a válasz beküldve)
 
-## Aktív feladat (legfrissebb szál, 2026-09-16)
+## Aktív feladat (legfrissebb szál, 2026-09-17)
+
+**💳 A BARION NÉGY KÉRÉSE TELJESÍTVE — a válasz beküldve, a labda náluk.**
+Session-jegyzet: `_planning/memory/2026-09-17_barion_requirements_delivered.md`.
+Döntések: **ADR-0185** (ÁSZF 1.2) · **ADR-0186** + utószál (Full Pixel). Éles: `61e788a`.
+
+- **Szállítva:** ÁSZF 1.2 (a bérelt honlapba fizetés-beépítés TILALMA kimondva · a felmondás
+  VALÓDI útja · kivonat-mondat + Apple Pay-korlát) · Full Barion Pixel a teljes tölcsérrel,
+  hozzájárulás-kapu mögött · 14 sablon ragadó sávja elfér a süti-sáv mellett.
+- ⭐ **A Pixel CSATORNÁJA némán állt, és ezt csak az ÉLES, deploy UTÁNI mérés fogta meg:** a
+  `bp.js` az azonosítót `window.barion_pixel_id`-ből olvassa, mi `data-pixel-id`
+  attribútumban adtuk át → a küldő iframe fel sem épült. A kód jelenléte zöld volt, a
+  viselkedés nem.
+- ⛔⛔ **Hiányos teszt-stubból VALÓDI leletet jelentettem** („a Pixel élesben soha nem küldött
+  semmit"), majd rossz időzítésű ellenkontrollból egy HIBÁS visszavonást. A `bp.js`
+  háromlépcsős kézfogását a dublőrnek le kell játszania, az ellenkontrollnak pedig a
+  KÖRÜLMÉNYT is kontrollálnia kell.
+- ⛔ **A saját őröm kétszer mért ÜRES HALMAZON** (28 mérés / 0 találat, zölden hallgatva).
+- 💰 **A díjcsomag-döntés mérésen állt:** Starter 1,49% vs. Advanced 1,19% = 0,30 pp
+  (~12 Ft/hó/ügyfél). A javaslatom a Starter volt, a tulaj az Advanced-et választotta.
+- 🔴 **NYITOTT (tulaj):** hatósági bizonyítvány (`UEVH-00277388`) + videó-azonosítás az
+  **Üzleti profilba**. A Barion oldalán a Pixel `approvedBase: false` — az ő bírálatuk.
+- ⚪ **NYITOTT (kód):** az éles oldal külső CDN-eket hív (Google Fonts, unpkg, OSM)
+  hozzájárulás nélkül — most, hogy a sáv jogi keretet kapott, ez a következő kör.
+
+## Előző szál (2026-09-16) — a megszűnt adószám
 
 **Barion elfogadóhely — a hiánypótlás oka megszűnt, a bírálat elindult.**
 A Barion azért nem kezdte el a vizsgálatot, mert a regisztrációban ÉS az élő ÁSZF-ben egy
