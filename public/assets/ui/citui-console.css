@@ -1090,8 +1090,16 @@ body.con {
   background: transparent; color: var(--citui-navy-700);
   border: 1.5px solid var(--citui-navy-700); border-radius: 4px; padding: 0 3px;
 }
+/* ⛔ `fixed`, NEM `absolute` — a felugró KIMENEKÜL a görgető-dobozból.
+   Mérve 390 px-en (tudásbázis-őr, 2026-09-20): a `.tblwrap--leads` `overflow:auto`
+   levágta a felugró jobb sávját (Kvalifikáció 29 px, Anyag 26 px, Terület 40 px), és
+   PONT ott ül a `.cf-count` élő darabszám — vagyis a kézikönyv „pipálható lista élő
+   darabszámmal" ígérete telefonon nem teljesült. Egy `absolute` doboz a görgető-ős
+   vágósíkján BELÜL marad, akárhova igazítom; a `fixed` a nézetablakhoz képest él, ezért
+   a lap-szkript helyezi el és szorítja a képernyőre (`citCfPlace`).
+   ⚠️ A két determinisztikus őr ezt NEM fogta: mindkettő 1280 px-en mért. */
 .con .cf-pop {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 210px;
+  position: fixed; z-index: 60; min-width: 210px; max-width: min(280px, calc(100vw - 16px));
   display: flex; flex-direction: column; gap: 6px; padding: 10px;
   background: var(--citui-white); border: 1px solid var(--citui-line-strong);
   border-radius: 10px; box-shadow: 0 10px 28px color-mix(in srgb, var(--citui-ink) 16%, transparent);

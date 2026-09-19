@@ -166,6 +166,9 @@ const BREAK_CSS = `
      ALATTA következő lépések kattintásait, és az őr nem PIROSRA menne, hanem ELHASALNA —
      egy időtúllépés pedig nem lelet, hanem diagnosztizálhatatlan némaság. */
   .con .con-legend[hidden] { display: grid !important; pointer-events: none !important; }
+  /* ADR-0188: a szűrő-felugró visszakerül a görgető-doboz vágósíkjába — 390 px-en ettől
+     vágódott le a jobb sávja, és épp ott ül az élő darabszám. */
+  .con .cf-pop { position: absolute !important; top: calc(100% + 6px) !important; left: 0 !important; }
 `;
 
 async function open(html: string, width: number): Promise<void> {
@@ -680,6 +683,52 @@ await open(render(Q), 1280);
     headMoved <= 2,
     `elmozdult ${headMoved}px (${before.headY} → ${after.headY}), miközben a 3. sor ${cellMoved}px-t`,
   );
+}
+
+// ═══ 11b. ⓯ A SZŰRŐ-FELUGRÓ 390 px-EN IS TELJES (nem vágja le a görgető-doboz) ═════
+// ⛔ MÉRT HIBA (tudásbázis-őr, 2026-09-20): a `.cf-pop` `position: absolute` volt, és a
+// `.tblwrap--leads` `overflow:auto`-ja levágta a jobb sávját — Kvalifikáció 29 px, Anyag
+// 26 px, Terület 40 px. Pont abban a sávban ül a `.cf-count` ÉLŐ DARABSZÁM, amit a
+// kézikönyv ígér, tehát a súgó telefonon hazudott. ⚠️ ÉS EGYIK GÉPI ŐR SEM FOGTA: mind a
+// kettő 1280 px-en mért. Egy szűk felismerő ugyanúgy hamis zöldet ad, mint a hiányzó
+// állítás — ezért ez a szakasz KIFEJEZETTEN 390 px-en dolgozik.
+await open(render(Q_FILTERED), 390);
+{
+  for (const col of ["qualification", "region", "mock"]) {
+    await page.click(`thead th[data-col="${col}"] .cf-btn`);
+    await page.waitForTimeout(150);
+    const m = await page.evaluate((c) => {
+      const pop = document.querySelector<HTMLElement>(`thead th[data-col="${c}"] .cf-pop`)!;
+      const r = pop.getBoundingClientRect();
+      const counts = [...pop.querySelectorAll<HTMLElement>(".cf-count")].map((e) => {
+        const cr = e.getBoundingClientRect();
+        return { text: (e.textContent ?? "").trim(), inView: cr.right <= window.innerWidth + 0.5 && cr.left >= -0.5 };
+      });
+      // A VALÓDI kérdés: kilóg-e a KÉPERNYŐBŐL, és látszik-e minden darabszám.
+      return {
+        open: !pop.hidden && r.width > 50,
+        outOfViewport: Math.max(0, r.right - window.innerWidth) + Math.max(0, -r.left),
+        counts: counts.length,
+        allCountsInView: counts.every((x) => x.inView),
+      };
+    }, col);
+    ok(`⓯ «${col}» felugrója 390 px-en megnyílik`, m.open, JSON.stringify(m));
+    ok(
+      `⓯ «${col}» felugrója NEM lóg ki a képernyőből`,
+      m.outOfViewport < 1,
+      `${Math.round(m.outOfViewport)}px kilógás`,
+    );
+    ok(
+      `⓯⭐ «${col}» ÉLŐ DARABSZÁMAI mind láthatók (ezt ígéri a kézikönyv)`,
+      // ⛔ `m.open` ELŐFELTÉTEL: egy rejtett elem befoglalója 0,0,0,0, tehát a „képernyőn
+      // belül van" CSUKOTT felugrón is igaz lenne — üres halmazon zöldülő állítás.
+      m.open && m.counts > 0 && m.allCountsInView,
+      `nyitva: ${m.open}, ${m.counts} darabszám, mind a képen: ${m.allCountsInView}`,
+    );
+    await page.keyboard.press("Escape");
+    await page.click("h2");
+    await page.waitForTimeout(80);
+  }
 }
 
 // ═══ 12. ⓮ A RAGADÁS ÉS A JELZÉS MÉRT TÉNYHEZ KÖTŐDIK, NEM TÖRÉSPONTHOZ ═════════

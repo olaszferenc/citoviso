@@ -1295,7 +1295,10 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
       `${sortHead(columnLabel("match", lang), "match", q)} ${minFilter("minMatch", q.minMatch, {
         step: "0.05",
         max: "1",
-        hint: T(lang, "0 és 1 között; a portál-találat nélküli (–) sorok kiesnek"),
+        // ⛔ A SZÓ, AMIT A CELLA ÍR — nem egy másik jelölés. A Match-cella „nincs találat”-ot
+        // ír (`confCell`), a szűrő súgója viszont „(–)”-t mondott: két név ugyanarra az
+        // állapotra, egy képernyőn. A kézikönyv a súgóból vette át, és vele együtt tévedett.
+        hint: T(lang, "0 és 1 között; a „nincs találat” sorok kiesnek"),
         summary: sum("match"),
       })}`,
     )}
@@ -1462,12 +1465,30 @@ function leadLegend(lang: string): string {
 /** Header-filter behaviour: open one popup at a time, close on outside click,
  *  and narrow long option lists as the operator types. */
 const LEAD_FILTER_JS = `<script>
+  var citCfOpen = null;
+  // A felugró position:fixed (a görgető-doboz levágta volna 390 px-en), ezért a
+  // helyét ITT kell kiszámolni: a gomb alá kerül, és a KÉPERNYŐRE szorítjuk. Ha alul
+  // nem fér el, fölé ugrik — a lista aljáról nyitott szűrő különben a kép alá lógna.
+  function citCfPlace(pop, btn) {
+    var r = btn.getBoundingClientRect();
+    var w = pop.offsetWidth, h = pop.offsetHeight;
+    var left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    var top = r.bottom + 6;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
   function citCf(btn) {
     var pop = btn.parentNode.querySelector('.cf-pop');
     var open = !pop.hidden;
     document.querySelectorAll('.cf-pop').forEach(function (p) { p.hidden = true; });
     pop.hidden = open;
-    if (!open) { var s = pop.querySelector('input'); if (s) s.focus(); }
+    citCfOpen = open ? null : { pop: pop, btn: btn };
+    if (!open) {
+      citCfPlace(pop, btn);
+      var s = pop.querySelector('input');
+      if (s) s.focus();
+    }
     event.stopPropagation();
   }
   function citCfSearch(input) {
@@ -1476,9 +1497,26 @@ const LEAD_FILTER_JS = `<script>
       o.style.display = !q || (o.dataset.label || '').indexOf(q) !== -1 ? '' : 'none';
     });
   }
-  document.addEventListener('click', function () {
+  function citCfCloseAll() {
+    citCfOpen = null;
     document.querySelectorAll('.cf-pop').forEach(function (p) { p.hidden = true; });
-  });
+  }
+  document.addEventListener('click', citCfCloseAll);
+  // ⛔ A fixed doboz NEM görög a táblázattal, tehát görgetéskor KÖVETNIE kell a gombját —
+  // különben egy MÁSIK oszlop fölött állítana valamit.
+  // ⛔ ÉS NEM ZÁRHATJUK görgetésre: mérve 2026-09-20 — a koppintás MAGA vált ki görgetést
+  // (a böngésző a gombot a képbe húzza), így a felugró abban a pillanatban csukódott be,
+  // amikor megnyílt. A zárás a kattintás/ESC dolga; a görgetés csak ÁTHELYEZ.
+  (function () {
+    function follow() {
+      if (!citCfOpen || citCfOpen.pop.hidden) return;
+      citCfPlace(citCfOpen.pop, citCfOpen.btn);
+    }
+    var box = document.querySelector('.tblwrap--leads');
+    if (box) box.addEventListener('scroll', follow, { passive: true });
+    window.addEventListener('scroll', follow, { passive: true });
+    window.addEventListener('resize', follow);
+  })();
   document.querySelectorAll('.cf-pop').forEach(function (p) {
     p.addEventListener('click', function (e) { e.stopPropagation(); });
   });

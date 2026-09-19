@@ -4,7 +4,7 @@ title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
 category: lead-path
 anchors: console.leads
-updated: 2026-09-19
+updated: 2026-09-20
 ---
 
 A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
@@ -36,7 +36,9 @@ megszólíthatókat: **nincs honlapja vagy elavult**, és **van legalább 1 öss
 Hogy ez fut, két dologról látod:
 
 1. az érintett oszlopfejlécen (**„Kvalifikáció”**, **„Anyag”**) **cián tölcsér** áll egy
-   jelvénnyel — rámutatva kiírja a feltételt is, pl. „Kvalifikáció: nincs honlap vagy elavult”;
+   jelvénnyel. **Koppints rá** — a felugró megmutatja, pontosan mi van kipipálva
+   (a Kvalifikációnál a „nincs honlap” és az „elavult”), a szám-oszlopoknál pedig a
+   beírt „legalább” érték (az Anyagnál 1);
 2. a cím sorában ott a **„Szűrők törlése”** link, ami szűrés nélkül **nincs** ott.
 
 ⚠️ A feltétel az **„Anyag”** oszlopon ül, nem a **„Fotók”**-on — ezért látsz a listában 0 fotós
@@ -57,16 +59,19 @@ mindig látható ikon zajt csinál, és elveszi a figyelmet az adattól.
   lista jön élő darabszámmal — hosszú listánál (Terület, Város) egy **„keresés…”** mező is, amivel
   szűkíthetsz. A szám-oszlopoknál (Fotók, Anyag, Match) egy **„legalább”** mező van. Amint pipálsz
   vagy beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb.
-- **Miről szól egy aktív szűrő:** a kigyulladt tölcsérre **rámutatva** (telefonon: hosszan nyomva)
-  kiírja a saját mondatát, pl. „Anyag: legalább 1” vagy „Mock: jóváhagyva vagy elutasítva”.
-  A mondat mindig azt az oszlopot nevezi meg, amelyiken a szűrő tényleg dolgozik.
+- **Miről szól egy aktív szűrő:** **koppints a kigyulladt tölcsérre** — a felugróban ott
+  vannak kipipálva a kiválasztott értékek (szám-oszlopnál a beírt „legalább” szám). Ez az út
+  **telefonon is működik**, és ez a mérvadó: amit a felugró mutat, az fut.
+  ⭐ Számítógépen ugyanez egérrel, kattintás nélkül is megjelenik, ha a tölcsér fölé húzod —
+  ilyenkor egy mondatban írja ki, pl. „Anyag: legalább 1”. Ez csak kényelem: **érintőképernyőn
+  nincs rámutatás**, ezért a felugró az igazi út.
 - **A jelvény két alakja két külön dolgot jelent:** a **kerek, kitöltött cián pötty** DARABSZÁM
   (hány értéket pipáltál ki), a **szögletes, körvonalas `≥` jelvény** pedig KÜSZÖB (alsó határ).
   Az alapértelmezett nézetben mindkettő látszik egyszerre: `2` a Kvalifikáción, `≥1` az Anyagon.
 - **Match-szűrés:** a Match 0 és 1 közti pontszám, ezért itt tizedes értéket adsz meg (0,05-ös
-  lépésekkel, pl. `0.9`). ⚠️ A küszöb beállításával a **portál-találat nélküli („–”) sorok
-  kiesnek** — helyesen, mert egy találat nélküli lead nem éri el a küszöböt. Ha azokat is látni
-  akarod, vedd ki a Match-szűrőt.
+  lépésekkel, pl. `0.9`). ⚠️ A küszöb beállításával a **„nincs találat” sorok kiesnek** —
+  helyesen, mert egy portál-találat nélküli lead nem éri el a küszöböt. Ha azokat is látni
+  akarod, vedd ki a Match-szűrőt. (A cella ugyanezt a szót írja, nem gondolatjelet.)
 - **Név-keresés:** a Név oszlop **nagyító ikonja** alatt gépelhetsz, és a lista a meglévő nevekből
   ajánl.
 - **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel. Amelyik oszlopnév mellett halvány
@@ -115,13 +120,14 @@ jelölés. A felugrót az **×**, az **ESC** vagy a háttérre koppintás zárja
 - **„Fotók”** — CSAK a Google Places-ből letöltött szállás-fotók száma. ⚠️ **A 10 PLAFON, nem
   darabszám:** a Google legfeljebb 10 fotót ad vissza, ezért ott a szám mellett a
   **„plafon”** jelölés áll, a szám pedig 10+ alakot vesz fel — annyit jelent, hogy ennyinél
-  több is lehet. (Mérve: 595 leadből 365 áll pontosan itt.)
+  több is lehet. (2026-09-14-én mérve: 595 leadből 365 állt pontosan itt.)
 - **„Anyag”** — MINDEN összegyűjtött kép (Places + portál-profil + Street View). A mock ebből
   készül, ezért az alapszűrés is ezt méri.
 - **„Match”** — 0 és 1 közti pontszám: mennyire biztos, hogy a megtalált portál-profil tényleg
   ehhez a szálláshoz tartozik. Ahol **„nincs találat”** áll, ott a gyűjtés nem talált
-  portál-profilt (595 leadből 109 ilyen). ⚠️ A **0,85** aláhúzva a képlet **alapértéke** —
-  nem mért egyezés, hanem a kiinduló súly (54 lead áll pontosan itt). Szűrhető („legalább”
+  portál-profilt (2026-09-14-én mérve: 595-ből 109 ilyen). ⚠️ A **0,85** aláhúzva a képlet
+  **alapértéke** —
+  nem mért egyezés, hanem a kiinduló súly (2026-09-14-én mérve: 54 lead állt pontosan itt). Szűrhető („legalább”
   küszöbbel) és rendezhető is.
 
 **Rendezni MINDEN oszlop szerint lehet** (a fejlécre koppintva). Szűrni majdnem mindegyik

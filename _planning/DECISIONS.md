@@ -10970,6 +10970,33 @@ jelvény mellett **0,34 px-re** zsugorodott. A forrásban ott volt a teljes `<sv
 „megvan-e az ikon" grep zöldet adott volna; a képernyőn egy üres kis doboz állt. Az őr ezért
 a RENDERELT szélességet méri, nem a meglétét.
 
+**⛔⛔ A SZŰK FELISMERŐ UGYANÚGY HAMIS ZÖLDET AD, MINT A HIÁNYZÓ ÁLLÍTÁS — ÉS EZT NEM ÉN
+VETTEM ÉSZRE.** Az élesítés-kapu tudásbázis-őre FLAG-et adott, kétszer is, és mindkétszer
+valódi hibára:
+
+1. **A súgó egy NEM LÉTEZŐ telefonos gesztust tanított.** A szócikk azt írta, hogy az aktív
+   szűrő mondata „telefonon: hosszan nyomva" előhívható — miközben az elemleírás
+   érintőképernyőn elérhetetlen, és ezt a saját kódunk kommentje is kimondja. Épp ez a kör
+   vitte el az egyetlen LÁTHATÓ hordozót (a cím alatti szűrő-mondatot). A tulaj telefonról
+   dolgozik: pont a célközönségnek lett volna hamis az útmutató.
+2. **A javítás által mérvadónak kijelölt út MAGA volt törött 390 px-en.** A `.cf-pop`
+   `position: absolute` volt, és a `.tblwrap--leads` `overflow:auto`-ja levágta a jobb
+   sávját (Kvalifikáció 29 px, Anyag 26 px, Terület 40 px) — **pont ott ül a `.cf-count`
+   élő darabszám**, amit a kézikönyv ígér. ⛔ **Egyik determinisztikus őr sem fogta: mindkettő
+   1280 px-en mért.** A felugró most `position: fixed` + lap-szkriptes elhelyezés, és az őr
+   ⓯ szakasza KIFEJEZETTEN 390 px-en méri.
+
+**⛔ ÉS A SAJÁT MÉRÉSEM KIÍRTA A HIBÁT, MIRE ÉN KÉPRŐL ZÖLDRE ÉRTÉKELTEM.** A 390 px-es
+próbám `clippedByBox: true`-t adott vissza; ránéztem a screenshotra, „teljesnek" láttam, és
+továbbmentem. Amit a mérés RÖGZÍT, azt nem szabad szemre felülbírálni.
+
+**⛔ A JAVÍTÁS MELLÉKTERMÉKE AZONNAL ÚJ HIBA LETT:** a `fixed` felugrót görgetésre zártam —
+csakhogy a KOPPINTÁS MAGA vált ki görgetést (a böngésző a gombot a képbe húzza), így a doboz
+abban a pillanatban csukódott be, amikor megnyílt. A görgetés most ÁTHELYEZ, nem zár. És az
+őr első változata ezt **zölden** engedte volna át: a „minden darabszám látszik" állítás egy
+CSUKOTT felugrón triviálisan igaz (a rejtett elem befoglalója 0,0,0,0) — a nyitottság azóta
+kimondott ELŐFELTÉTEL.
+
 **⭐ A KÉP A VALÓDI ÚTON KÉSZÜLJÖN.** A `legend.png` korábban a DOM-on kikényszerített `open`
 attribútummal készült — az a nyitó-gomb megkerülése, tehát egy elromlott gomb mellett is szép
 képet adott volna. Most a felvétel **rákattint a „?" gombra**, mint az operátor, és hangosan

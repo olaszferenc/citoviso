@@ -238,11 +238,17 @@ magassága és egy-alapvonalúsága, a tétlen/aktív tölcsér, a tölcsér-iko
 szélessége, a szűrő-mondat oszlop-kötése, **a fejléc tapadása VALÓDI függőleges
 görgetéssel**, és hogy széles képernyőn NEM ragaszt és nem biztat görgetésre.
 
+⛔ **⓯ ÉS KIFEJEZETTEN 390 px-EN:** a szűrő-felugró megnyílik, NEM lóg ki a képernyőből, és
+minden ÉLŐ DARABSZÁMA látszik. Ezt egyik korábbi őr sem mérte — **mindkettő 1280 px-en
+dolgozott**, és a rés (a `position:absolute` felugrót levágta a táblázat görgető-doboza,
+pont a darabszámok sávjában) csak a tudásbázis-őr ítéletében derült ki. A szűk felismerő
+ugyanúgy hamis zöldet ad, mint a hiányzó állítás.
+
 Az **A** megmaradt pontjaihoz: magyar állapot-szavak, tizedesvessző, plafon- és
 alapérték-jelölés, a két jelvény-alak, a `nowrap`, az egyenletes sormagasság, és
 **a NÉV-ragadás valódi vízszintes görgetéssel**.
 
-Piros önteszttel (a visszarontott nézeten **10 állítás** megy pirosra), a pre-commitben
+Piros önteszttel (a visszarontott nézeten **13 állítás** megy pirosra), a pre-commitben
 `views.ts` / `leadFilters.ts` / `citui-console.css` triggerrel.
 
 A meglévő `lead-filter-label-check` (a szűrő felirata = a szűrt oszlop; nincs levágott
