@@ -50,9 +50,13 @@ egyet sem adott; a mock az összes összegyűjtött képből készül.
 A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő egymás mellett van, ezért
 érdemes tudni, melyik mit csinál.
 
-⚠️ **A vezérlők alapból nem látszanak.** Az egérrel a fejléc fölé húzva jelennek meg (telefonon
-halványan mindig ott vannak), aktív szűrőnél pedig ciánnal kigyulladnak. Ez szándékos: 11 oszlopnyi
-mindig látható ikon zajt csinál, és elveszi a figyelmet az adattól.
+⚠️ **A vezérlők alapból nem látszanak** — egéren. A fejléc fölé húzva jelennek meg, aktív
+szűrőnél pedig ciánnal kigyulladnak. Ez szándékos: 11 oszlopnyi mindig látható ikon zajt csinál,
+és elveszi a figyelmet az adattól.
+
+⭐ **Érintőképernyőn viszont MINDIG ott vannak, halványan** — telefonon és tableten, **álló és
+fekvő tartásban egyaránt**. Ott nincs „fölé húzás", tehát egy rejtett ikonra nem lehetne
+rákoppintani. A megkülönböztetés nem a képernyő SZÉLESSÉGÉN múlik, hanem azon, van-e egered.
 
 - **Szűrés:** az oszlopnév melletti **tölcsér ikonra** koppintva nyílik le a szűrő.
   A kategorikus oszlopoknál (Terület, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható

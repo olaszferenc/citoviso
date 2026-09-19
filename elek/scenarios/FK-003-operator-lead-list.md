@@ -32,9 +32,11 @@ kontraktus: kb/entries/console-leads/entry.hu.md
   várd: darab "[data-filter-summary]" >= 1
   várd: darab "th[data-col='material'] [data-filter-summary]" >= 1
   várd: darab "th[data-col='photos'] [data-filter-summary]" == 0
-  kézi: a fejléc cián tölcsérére mutatva (telefonon hosszan nyomva) a mondatnak „Anyag: legalább 1”-et
-        kell írnia. A felirat NEM ígérhet „min. 1 kép”-et a FOTÓK oszlopra — a képen a FOTÓK
-        oszlopban 0 is előfordulhat, és ezt az ANYAG-ra hivatkozó felirat teszi igazzá
+  kézi: KOPPINTS az Anyag-oszlop cián tölcsérére — a felugróban a „legalább” mező értéke 1.
+        (Asztali gépen ugyanez egérrel, rámutatva is megjelenik egy mondatban: „Anyag: legalább 1”.
+        ⛔ Érintőképernyőn NINCS rámutatás, ezért a felugró az igazi út — ne azt kérd számon.)
+        A felirat NEM ígérhet „min. 1 kép”-et a FOTÓK oszlopra — a képen a FOTÓK oszlopban 0 is
+        előfordulhat, és ezt az ANYAG-ra hivatkozó felirat teszi igazzá
 
 - [ ] A jelmagyarázat NEM tolakszik a döntés elé: érkezéskor csukva, EGY gombbal nyitható
   várd: darab ".con-helpq" == 1

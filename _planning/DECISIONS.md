@@ -10986,6 +10986,28 @@ valódi hibára:
    1280 px-en mért.** A felugró most `position: fixed` + lap-szkriptes elhelyezés, és az őr
    ⓯ szakasza KIFEJEZETTEN 390 px-en méri.
 
+**⛔⛔ A TARTÁS NEM SZÉLESSÉG — ÉS A TAKARÁST CSAK `elementFromPoint` LÁTJA.** A kapu
+HARMADIK körében az őr két további rést mért ki, mindkettőt érintőképernyőn:
+
+- **A tölcsér-láthatóság `max-width: 700px`-en ült.** Ez FELTEVÉS volt: hogy „érintőképernyő
+  = keskeny". **FEKVŐ telefonon (844×390) és álló tableten (820×1180) a 10 tölcsérből 8
+  láthatatlan maradt** — vagyis a kézikönyv fő utasításának („koppints a tölcsérre") nyolc
+  oszlopon nem volt hova. A feltétel azóta a MUTATÓ-KÉPESSÉG (`hover: none` / `pointer:
+  coarse`), a szélesség csak kiegészítő ág.
+- **A SAJÁT „fölé ugrik" javításom a ragadó fejléc ALÁ tette a felugrót.** Fekvő telefonon a
+  4 élő darabszámból **3 takarva** volt — épp az a kettő, amit a kézikönyv példaként ígér.
+  A `z-index` önmagában nem elég (külön rétegző környezetek), ezért a lap-szkript a fejléc
+  alja ALÁ szorítja a dobozt, és ha úgy nem fér el, görgethetővé teszi.
+
+⛔ **ÉS AZ ELŐZŐ KÖRBEN ÍRT ŐRÖM (⓯) EGYIKET SEM LÁTTA:** EGY viewporton (390×844), desktop
+kontextusban és BEFOGLALÓ-matekkal mért. A tartás-függést csak több viewport, a takarást csak
+`elementFromPoint`, a `hover: none` szabályt pedig csak VALÓDI érintés-kontextus mutatja meg.
+A ⓰ szakasz mindhármat viszi — és a visszarontáson 19 állítás megy pirosra.
+
+⛔ **A FANTOM GESZTUS TÚLÉLT A TESTVÉR-DOKUMENTUMBAN:** a KB-ból kivettem, az FK-003
+forgatókönyv lépés-szövegéből nem. Egy felirat átírása MINDEN idézőjét érinti — a keresést a
+kézikönyvön túl is el kell végezni.
+
 **⛔ ÉS A SAJÁT MÉRÉSEM KIÍRTA A HIBÁT, MIRE ÉN KÉPRŐL ZÖLDRE ÉRTÉKELTEM.** A 390 px-es
 próbám `clippedByBox: true`-t adott vissza; ránéztem a screenshotra, „teljesnek" láttam, és
 továbbmentem. Amit a mérés RÖGZÍT, azt nem szabad szemre felülbírálni.

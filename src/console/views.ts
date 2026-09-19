@@ -1473,10 +1473,21 @@ const LEAD_FILTER_JS = `<script>
     var r = btn.getBoundingClientRect();
     var w = pop.offsetWidth, h = pop.offsetHeight;
     var left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    // ⛔ A RAGADÓ FEJLÉC ALJA A FELSŐ HATÁR, nem a nézetablak teteje. A „fölé ugrik" ág
+    // fekvő telefonon (844x390) a lapfejléc MÖGÉ tette a dobozt: a 4 élő darabszámból 3
+    // takarva volt — épp az a kettő, amit a kézikönyv példaként ígér.
+    var topbar = document.querySelector('.con-top');
+    var minTop = (topbar ? topbar.getBoundingClientRect().bottom : 0) + 6;
     var top = r.bottom + 6;
-    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    if (top + h > window.innerHeight - 8) top = r.top - h - 6;
+    if (top < minTop) top = minTop;
     pop.style.left = left + 'px';
     pop.style.top = top + 'px';
+    // ⛔ Ha a doboz így sem fér a fejléc alja és a képernyő alja közé, ne LÓGJON KI:
+    // kapjon görgethető magasságot. Egy félig látható lista némán hazudna a darabszámról.
+    var room = window.innerHeight - 8 - top;
+    pop.style.maxHeight = h > room ? room + 'px' : '';
+    pop.style.overflowY = h > room ? 'auto' : '';
   }
   function citCf(btn) {
     var pop = btn.parentNode.querySelector('.cf-pop');

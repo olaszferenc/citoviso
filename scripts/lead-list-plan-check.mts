@@ -160,6 +160,12 @@ const BREAK_CSS = `
   .con .con-leadtbl th .con-th { display: block !important; }
   /* ADR-0188: a tölcsérek megint MINDIG láthatók (a „csili-csálé" visszarontása) */
   .con .con-leadtbl th .cf-btn { opacity: 1 !important; }
+  /* ADR-0188: …ÉS a láthatóság visszakötve a SZÉLESSÉGRE — érintőképernyőn (fekvő telefon,
+     tablet) a tétlen tölcsér eltűnik, vagyis a kézikönyv „koppints rá" utasításának nincs
+     hova. Pontosan ez volt a mért hiba. */
+  @media (hover: none), (pointer: coarse) {
+    .con .con-leadtbl th .cf-btn:not(.on) { opacity: 0 !important; }
+  }
   /* ADR-0188: a felugró a lap ELŐTT áll, pedig senki nem kérdezett — pontosan az a
      csapda, amit a hidden DOM-tulajdonság mérése NEM vett volna észre.
      ⚠️ pointer-events:none KELL hozzá: enélkül a visszarontott takaró-réteg elnyelné az
@@ -728,6 +734,94 @@ await open(render(Q_FILTERED), 390);
     await page.keyboard.press("Escape");
     await page.click("h2");
     await page.waitForTimeout(80);
+  }
+}
+
+// ═══ 11c. ⓰ ÉRINTŐKÉPERNYŐN, MINDEN TARTÁSBAN — a vezérlő LÁTSZIK és NINCS TAKARVA ═
+// ⛔⛔ KÉT MÉRT HIBA SZÜLTE (tudásbázis-őr, 2026-09-20), és EGYIKET SEM LÁTTA a fenti ⓯:
+//   (a) a tölcsér láthatósága `max-width: 700px`-en ült — FELTEVÉS, hogy „érintőképernyő =
+//       keskeny". FEKVŐ telefonon (844×390) és álló tableten (820×1180) a 10 tölcsérből 8
+//       maradt láthatatlan, vagyis a kézikönyv fő utasításának („koppints rá") nem volt hova.
+//   (b) a „fölé ugrik" ág a felugrót a RAGADÓ FEJLÉC alá tette: a 4 élő darabszámból 3
+//       TAKARVA volt — épp az a kettő, amit a kézikönyv példaként ígér.
+// ⚠️ A ⓯ azért volt vak: EGY viewporton (390×844) mért, és BEFOGLALÓ-matekkal. A takarást
+// csak `elementFromPoint` látja, a tartás-függést csak több viewport.
+{
+  const TARTAS = [
+    { n: "álló telefon 390×844", w: 390, h: 844 },
+    { n: "FEKVŐ telefon 844×390", w: 844, h: 390 },
+    { n: "álló tablet 820×1180", w: 820, h: 1180 },
+  ];
+  for (const t of TARTAS) {
+    // ⛔ VALÓDI érintés-kontextus: a `hover: none` / `pointer: coarse` média-lekérdezést
+    // csak így kapja meg a lap. Egy sima `setViewportSize` desktop marad, és pont azt a
+    // szabályt HAGYNÁ KI, amelyik a hibát okozta.
+    const ctx = await browser.newContext({
+      viewport: { width: t.w, height: t.h },
+      hasTouch: true,
+      isMobile: true,
+    });
+    const tp = await ctx.newPage();
+    await tp.goto(`http://localhost:${assetPort}/`, { waitUntil: "load" });
+    if (SELF_TEST) await tp.addStyleTag({ content: BREAK_CSS });
+    await tp.waitForTimeout(150);
+
+    const faint = await tp.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("thead th .cf-btn")].filter(
+        (b) => Number(getComputedStyle(b).opacity) < 0.05,
+      ).length,
+    );
+    ok(
+      `⓰ ${t.n}: MINDEN szűrő-tölcsér látható (nincs hova nem koppintani)`,
+      faint === 0,
+      `${faint} tölcsér láthatatlan`,
+    );
+
+    for (const col of ["qualification", "material"]) {
+      await tp.locator(`thead th[data-col="${col}"] .cf-btn`).click();
+      await tp.waitForTimeout(150);
+      const m = await tp.evaluate((c) => {
+        const pop = document.querySelector<HTMLElement>(`thead th[data-col="${c}"] .cf-pop`)!;
+        const r = pop.getBoundingClientRect();
+        // ⛔ TAKARÁS-MÉRÉS: a befoglaló matek szerint egy teljesen eltakart doboz is „bent
+        // van a képernyőn". Azt kérdezzük, MI VAN A PONT FÖLÖTT — ez a felhasználó nézete.
+        const probes = [...pop.querySelectorAll<HTMLElement>(".cf-count, .cf-opt, input")];
+        let covered = 0;
+        let coverer = "";
+        for (const el of probes) {
+          const b = el.getBoundingClientRect();
+          if (b.width < 1 || b.height < 1) continue;
+          const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+          if (hit && !pop.contains(hit)) {
+            covered++;
+            coverer = hit.tagName.toLowerCase() + "." + (hit.className || "").toString().split(" ")[0];
+          }
+        }
+        return {
+          open: !pop.hidden && r.width > 50,
+          out: Math.max(0, r.right - window.innerWidth) + Math.max(0, -r.left) +
+               Math.max(0, r.bottom - window.innerHeight) + Math.max(0, -r.top),
+          probes: probes.length,
+          covered,
+          coverer,
+        };
+      }, col);
+      ok(`⓰ ${t.n} «${col}»: a felugró megnyílik`, m.open, JSON.stringify(m));
+      ok(
+        `⓰ ${t.n} «${col}»: NEM lóg ki a képernyőből`,
+        m.open && m.out < 1,
+        `${Math.round(m.out)}px kilógás`,
+      );
+      ok(
+        `⓰⭐ ${t.n} «${col}»: egyetlen eleme sincs TAKARVA (elementFromPoint)`,
+        m.open && m.probes > 0 && m.covered === 0,
+        `${m.covered}/${m.probes} takarva${m.coverer ? ` — takaró: ${m.coverer}` : ""}`,
+      );
+      await tp.keyboard.press("Escape");
+      await tp.locator("h2").click();
+      await tp.waitForTimeout(80);
+    }
+    await ctx.close();
   }
 }
 

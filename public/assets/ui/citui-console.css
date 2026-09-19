@@ -722,14 +722,18 @@ body.con {
 .con .con-leadcount { margin: 10px 2px 0; line-height: 1.6; }
 
 /* Sortable header: a nyíl alapból HALVÁNY, ráhúzásra erősödik, az aktív oszlopon teli.
-   ⛔ Érintőképernyőn nincs hover, és a tulaj telefonról dolgozik — ezért 700 px alatt a
-   nyíl MINDIG látszik (különben semmi nem mondaná, hogy a fejléc kattintható). */
+   ⛔ Érintőképernyőn NINCS hover, és a tulaj telefonról dolgozik — ott tehát mindig látszik.
+   ⛔⛔ A FELTÉTEL A MUTATÓ-KÉPESSÉG, NEM A SZÉLESSÉG. Eddig `max-width: 700px` volt, ami
+   FELTEVÉS: hogy „érintőképernyő = keskeny". Mérve (tudásbázis-őr, 2026-09-20): FEKVŐ
+   telefonon (844×390) és álló tableten (820×1180) a 10 tölcsérből 8 maradt láthatatlan,
+   vagyis a kézikönyv fő utasításának nem volt hova koppintani. A szélesség-ág megmarad
+   (egy keskenyre húzott asztali ablak is telefon-előnézet), de a DÖNTŐ a `hover: none`. */
 .con .con-sorth { text-decoration: none; color: inherit; white-space: nowrap; }
 .con .con-sorth__m { margin-left: 2px; opacity: 0.22; font-weight: 400; }
 .con .con-sorth:hover .con-sorth__m { opacity: 0.9; }
 .con .con-sorth.on { color: var(--citui-link-ink); }
 .con .con-sorth.on .con-sorth__m { opacity: 1; }
-@media (max-width: 700px) {
+@media (hover: none), (pointer: coarse), (max-width: 700px) {
   .con .con-sorth__m { opacity: 0.5; }
 }
 
@@ -950,7 +954,8 @@ body.con {
 .con .con-leadtbl th:hover .cf-btn,
 .con .con-leadtbl th .cf-btn:focus-visible,
 .con .con-leadtbl th .cf-btn.on { opacity: 1; }
-@media (max-width: 700px) {
+/* ⛔ Ugyanaz a szabály, ugyanabból az okból: a tölcsér ott látszódjon, ahol nincs hover. */
+@media (hover: none), (pointer: coarse), (max-width: 700px) {
   .con .con-leadtbl th .cf-btn { opacity: 0.55; }
 }
 
@@ -1099,7 +1104,11 @@ body.con {
    a lap-szkript helyezi el és szorítja a képernyőre (`citCfPlace`).
    ⚠️ A két determinisztikus őr ezt NEM fogta: mindkettő 1280 px-en mért. */
 .con .cf-pop {
-  position: fixed; z-index: 60; min-width: 210px; max-width: min(280px, calc(100vw - 16px));
+  /* ⛔ z-index 80: a ragadó `.con-top` fejléc 50-en ül, és mérve (fekvő telefon, 844×390)
+     a „fölé ugrik" ág alá tolta a felugrót — a 4 élő darabszámból 3 TAKARVA volt, épp az a
+     kettő, amit a kézikönyv példaként ígér. A z-index önmagában nem elég (külön rétegző
+     környezetek), ezért a lap-szkript a fejléc ALÁ is szorítja (`citCfPlace`). */
+  position: fixed; z-index: 80; min-width: 210px; max-width: min(280px, calc(100vw - 16px));
   display: flex; flex-direction: column; gap: 6px; padding: 10px;
   background: var(--citui-white); border: 1px solid var(--citui-line-strong);
   border-radius: 10px; box-shadow: 0 10px 28px color-mix(in srgb, var(--citui-ink) 16%, transparent);

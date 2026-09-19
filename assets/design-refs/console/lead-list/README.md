@@ -244,11 +244,19 @@ dolgozott**, és a rés (a `position:absolute` felugrót levágta a táblázat g
 pont a darabszámok sávjában) csak a tudásbázis-őr ítéletében derült ki. A szűk felismerő
 ugyanúgy hamis zöldet ad, mint a hiányzó állítás.
 
+⛔ **⓰ ÉS MINDEN TARTÁSBAN, VALÓDI ÉRINTÉS-KONTEXTUSBAN:** álló telefon (390×844), **FEKVŐ**
+telefon (844×390) és álló tablet (820×1180) — minden szűrő-tölcsér LÁTHATÓ, a felugró nem lóg
+ki, és `elementFromPoint`-tal mérve egyetlen eleme sincs TAKARVA. Ezt a ⓯ sem látta: EGY
+viewporton (390×844) és BEFOGLALÓ-matekkal mért. Két rés bújt meg benne: a tölcsér-láthatóság
+`max-width: 700px`-en ült (fekvő telefonon 10-ből 8 tölcsér eltűnt), és a „fölé ugrik" ág a
+felugrót a ragadó fejléc ALÁ tette (4 darabszámból 3 takarva). **A tartás nem szélesség, és a
+takarást csak `elementFromPoint` látja.**
+
 Az **A** megmaradt pontjaihoz: magyar állapot-szavak, tizedesvessző, plafon- és
 alapérték-jelölés, a két jelvény-alak, a `nowrap`, az egyenletes sormagasság, és
 **a NÉV-ragadás valódi vízszintes görgetéssel**.
 
-Piros önteszttel (a visszarontott nézeten **13 állítás** megy pirosra), a pre-commitben
+Piros önteszttel (a visszarontott nézeten **19 állítás** megy pirosra), a pre-commitben
 `views.ts` / `leadFilters.ts` / `citui-console.css` triggerrel.
 
 A meglévő `lead-filter-label-check` (a szűrő felirata = a szűrt oszlop; nincs levágott
