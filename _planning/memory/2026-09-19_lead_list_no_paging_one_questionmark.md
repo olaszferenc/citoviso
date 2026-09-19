@@ -97,3 +97,57 @@ a VÉGÉT veszi el (**16 sorból 8** került a képre).
 - **1280 és 1366 px között** a tábla oldalra görget (91 ill. 5 px). Működik és ki van mondva,
   de ha a tulaj azt akarja, hogy laptopon is kiférjen, az oszlop-szélesség korlátozása
   (Város/Terület csonkolás elemleírással) külön döntés — információt vesz el.
+
+---
+
+## Utószál (2026-09-20) — a deploy-kapu NÉGYSZER állított meg
+
+🚀 **Élesítve `4a59e13`** (tag `prod/20260920-0132`, 14 commit, 0 migráció). Visszagörgetés:
+`deploy-prod.sh 61e788a --go`.
+
+A `deploy-prod.sh` **GATE 1c** tudásbázis-őr verdiktet követel, amit a javító szál **nem adhat
+magának** (ADR-0132 H). Az őr **négy körben nyolc valódi leletet** talált — és egyiket sem látta
+volna egyetlen meglévő determinisztikus őr sem:
+
+| # | Lelet | Miért volt vak rá minden gépi őr |
+|---|---|---|
+| ① | A súgó **nem létező telefonos gesztust** tanított („hosszan nyomva") | A `title` megléte forrásból zöld; hogy érintőn elérhetetlen, azt nem kérdezte senki |
+| ② | A felugrót **levágta a görgető-doboz** 390 px-en, épp az élő darabszámok sávjában | Mindkét őr **1280 px-en** mért |
+| ③ | **A tartás nem szélesség:** fekvő telefonon 10-ből 8 tölcsér láthatatlan | A szabály `max-width`-re szólt; egy 390×844-es próba igaznak mutatta |
+| ④ | A „fölé ugrik" ág a **ragadó fejléc alá** tette a felugrót (4-ből 3 darabszám takarva) | A befoglaló-matek szerint „a képernyőn belül van"; a takarást csak `elementFromPoint` látja |
+
+### ⛔⛔ Amit ebből meg kell tanulni
+
+**Háromszor egymás után a SAJÁT javításom mellékterméke lett a következő lelet.** És kétszer a
+saját őröm volt vak rá:
+
+- a „felugró csukva érkezik" állítást a **`hidden` DOM-tulajdonságon** mértem — egy `display:grid`
+  némán veri a `[hidden]`-t, tehát az őr **zölden védte volna** a lap előtt álló takaró-réteget;
+- a ⓯ szakasz **egy** viewporton, **asztali** kontextusban, **befoglaló-matekkal** mért — a
+  `hover: none` szabály így hatályba sem lép, a takarás pedig elvből láthatatlan.
+
+**A ⓰ szakasz mindhármat viszi:** 3 tartás (álló telefon · FEKVŐ telefon · álló tablet),
+`hasTouch` kontextus, `elementFromPoint`. Önteszt: 10 → 13 → **19 piros állítás**.
+
+**⛔ És a saját mérésem KIÍRTA a hibát, mire én képről zöldre értékeltem.** A 390 px-es próbám
+`clippedByBox: true`-t adott vissza; ránéztem a screenshotra, „teljesnek" láttam, továbbmentem.
+Amit a mérés RÖGZÍT, azt nem szabad szemre felülbírálni.
+
+**⛔ A fantom gesztus TÚLÉLT a testvér-dokumentumban:** a KB-ból kivettem, az FK-003 forgatókönyv
+lépés-szövegéből nem. Egy felirat átírása MINDEN idézőjét érinti — a keresés nem állhat meg a
+kézikönyvnél.
+
+**⛔ Az ADR-számom a LANDOLÁS pillanatában ütközött** (egy párhuzamos szál vitte el a 0187-et) →
+ADR-**0188**. A `DECISIONS.md`-t és a `MEMORY.md`-t az `origin/main`-ről építettem újra + a saját
+blokkommal; utó-feltétel: mind a **185 idegen ADR-fejléc betűre változatlan**, és pontosan egy új
+tétel keletkezett.
+
+### Nyitott (az őr jelezte, egyik sem blokkoló)
+
+- A KB mondata („a megkülönböztetés nem a képernyő SZÉLESSÉGÉN múlik") **nem kimerítő**: a CSS
+  megtartotta a `(max-width: 700px)` harmadik VAGY-tagot, így egy 600 px-es **egeres** ablakban is
+  látszanak a tölcsérek. A veszélytelen irányba téved (rejtettet ígér, láthatót ad).
+- ⚠️ **Látens csapda az ŐRBEN:** a ⓰ `elementFromPoint`-szondája **hamis takarást** jelentene, ha
+  valaki kiterjesztené egy hosszú listás oszlopra (`city`/`region`) — a `.cf-list` saját 260 px-es
+  hajtása miatt a kigörgetett opciók a táblázatra hit-testelnek. Bővítés előtt a szondát a lista
+  **látható dobozára** kell vágni.

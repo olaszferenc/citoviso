@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-19 (a lead-lista A2 — ADR-0188; + a piszkozat-sáv hazug tiltása javítva — ADR-0187. ⚠️ ÉLES továbbra is `61e788a`, tag `prod/20260917-0943`: ez a két kör NINCS élesítve)
+Utolsó frissítés: 2026-09-20 (🚀 **ÉLES = MAIN = `4a59e13`**, tag `prod/20260920-0132` — a lead-lista A2 (ADR-0188) és a kiküldési-kapu javítás (ADR-0187) kint van; 14 commit, 0 migráció)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-19)
 
@@ -25,6 +25,29 @@ kell" a cím alatti két szöveg-blokkra) → megvalósítva. Session-jegyzet:
 - **Kapuk:** `lead-list-plan-check` zöld / önteszt 9 piros · `lead-filter-label-check` 135/135
   (két megvakult szelektora és a szegély-matekja javítva) · `kb-check --coverage` 🟢 ·
   i18n-lint · design-token-lint · contract-drift ✅
+- 🚀 **ÉLESÍTVE** `4a59e13` (tag `prod/20260920-0132`, 14 commit, **0 migráció**). Visszagörgetés:
+  `deploy-prod.sh 61e788a --go`. Az éles CSS frissessége MÉRVE (`cf-cache-status: MISS`,
+  `hover: none` ×3, lapozó-stílus 0) — a CDN 4 órás cache-e nem szolgált ki régit.
+- ⛔⛔ **A DEPLOY-KAPU NÉGYSZER ÁLLÍTOTT MEG, ÉS MIND A NÉGYSZER IGAZA VOLT.** A GATE 1c
+  tudásbázis-őr verdiktet követel, amit **nem adhatok magamnak** — összesen **8 valódi leletet**
+  talált, és egyiket sem látta volna egyetlen meglévő gépi őr sem:
+  ① a súgó **nem létező telefonos gesztust** tanított („hosszan nyomva") · ② a helyette kijelölt
+  út MAGA volt törött: a szűrő-felugrót **levágta a görgető-doboz** 390 px-en, épp az élő
+  darabszámok sávjában · ③ **a tartás nem szélesség**: a tölcsér-láthatóság `max-width:700px`-en
+  ült, fekvő telefonon 10-ből **8 tölcsér láthatatlan** · ④ a saját „fölé ugrik" javításom a
+  **ragadó fejléc alá** tette a felugrót (4 darabszámból 3 takarva).
+- ⛔⛔ **HÁROMSZOR EGYMÁS UTÁN A SAJÁT JAVÍTÁSOM MELLÉKTERMÉKE LETT A KÖVETKEZŐ HIBA.**
+  És kétszer a SAJÁT őröm volt vak rá: a „csukva érkezik" állítást a `hidden` DOM-tulajdonságon
+  mértem (egy `display:grid` némán veri), a ⓯ szakasz pedig EGY viewporton, asztali kontextusban,
+  befoglaló-matekkal. A ⓰ most **3 tartásban**, **valódi érintés-kontextusban**, `elementFromPoint`-os
+  takarás-méréssel dolgozik. Önteszt: 10 → 13 → **19 piros**.
+- ⛔ **A saját mérésem KIÍRTA a levágást (`clippedByBox: true`), én meg képről zöldre értékeltem.**
+- **NYITOTT (nem blokkoló, az őr jelezte):** a KB mondata („nem a SZÉLESSÉGEN múlik") nem
+  kimerítő — 600 px-es EGERES ablakban is látszanak a tölcsérek; a veszélytelen irányba téved.
+  ⚠️ És a ⓰ `elementFromPoint`-szondája hamis takarást jelentene, ha valaki kiterjesztené egy
+  hosszú listás oszlopra (`city`/`region`): a `.cf-list` saját 260 px-es hajtása miatt a
+  kigörgetett opciók a táblázatra hit-testelnek — bővítés előtt a szondát a lista LÁTHATÓ
+  dobozára kell vágni.
 - **NYITOTT:** virtualizáció („több száz vagy ezer sor”) szándékosan kimaradt (tulaj-halasztás);
   1280–1366 px között a tábla oldalra görget — ha laptopon is ki kell férnie, az oszlop-csonkolás
   külön tulajdonosi döntés (információt vesz el).
