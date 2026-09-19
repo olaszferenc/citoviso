@@ -698,46 +698,85 @@ body.con {
 .con .q-good { color: var(--citui-ok-ink); font-weight: 700; }
 .con .q-mid { color: var(--citui-warn-ink); font-weight: 700; }
 .con .q-bad { color: var(--citui-bad-ink); font-weight: 700; }
-.con .sv { font-size: 10px; color: var(--citui-muted); border: 1px solid var(--citui-line); border-radius: 4px; padding: 0 4px; margin-left: 5px; vertical-align: middle; }
+.con .sv { font-size: 10px; color: var(--citui-muted); border: 1px solid var(--citui-line); border-radius: 4px; padding: 0 3px; margin-left: 4px; vertical-align: middle; }
 
-/* ── Lead list: named counts, pager, legend ─────────────────────────────────
-   Every number the list prints now says WHAT it counts, and a 260-row result no
-   longer scrolls off into nothing with no "where am I" (Elek FK-003). */
-.con .con-leadcount { margin: 2px 0 6px; line-height: 1.6; }
-/* Sortable header: the ↕ is the ONLY thing that says "this name is clickable" —
-   colour and underline match the plain header text, and a phone has no cursor. */
+/* ── Lead list: title row, sort header, legend popup (ADR-0188) ─────────────
+   A lapozó MEGSZŰNT (mind a rekord egy lapon), a jelmagyarázat SÁVBÓL FELUGRÓ lett,
+   és a cím alatti két szöveg-blokk kikerült (tulajdonosi döntés, 2026-09-19). */
+
+/* A cím sora: cím + EGYETLEN „?" + a két kiút-link. A linkek jobbra sodródnak, szűk
+   képernyőn viszont a cím ALÁ törnek — 390 px-en egy sorba préselve a „diszkvalifikáltak ▸"
+   levágódna, márpedig az a másik lista EGYETLEN bejárata. */
+.con .con-leadhead {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.con .con-leadhead h2 { margin: 0; }
+.con .con-leadhead__sp { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+@media (max-width: 700px) {
+  .con .con-leadhead__sp { margin-left: 0; width: 100%; }
+}
+
+/* A darabszám EGY sorban, a tábla ALATT. Ez az egyetlen hely, ahol a MEDENCE mérete
+   elhangzik („260 sor a 596 aktív leadből”) — enélkül a szűrt lista a teljes készletnek
+   látszana, mert a `/leads` alapból szűr. */
+.con .con-leadcount { margin: 10px 2px 0; line-height: 1.6; }
+
+/* Sortable header: a nyíl alapból HALVÁNY, ráhúzásra erősödik, az aktív oszlopon teli.
+   ⛔ Érintőképernyőn nincs hover, és a tulaj telefonról dolgozik — ezért 700 px alatt a
+   nyíl MINDIG látszik (különben semmi nem mondaná, hogy a fejléc kattintható). */
 .con .con-sorth { text-decoration: none; color: inherit; white-space: nowrap; }
-.con .con-sorth__m { margin-left: 3px; opacity: 0.4; font-weight: 400; }
+.con .con-sorth__m { margin-left: 2px; opacity: 0.22; font-weight: 400; }
 .con .con-sorth:hover .con-sorth__m { opacity: 0.9; }
 .con .con-sorth.on { color: var(--citui-link-ink); }
 .con .con-sorth.on .con-sorth__m { opacity: 1; }
-.con .con-pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
-.con .con-pager__p, .con .con-pager__at, .con .con-pager__off, .con .con-pager__gap {
-  min-width: 32px; text-align: center; padding: 5px 8px; border-radius: 7px; font-size: 13px;
+@media (max-width: 700px) {
+  .con .con-sorth__m { opacity: 0.5; }
 }
-.con .con-pager__p { border: 1px solid var(--citui-line); color: var(--citui-ink); text-decoration: none; }
-.con .con-pager__p:hover { background: var(--citui-surface-2); }
-.con .con-pager__at { border: 1px solid var(--citui-cyan-500); color: var(--citui-link-ink); font-weight: 700; }
-.con .con-pager__off, .con .con-pager__gap { color: var(--citui-muted); }
-.con .con-pager__all { margin-left: auto; }
-/* ② A FELSŐ lapozó a táblázat ELŐTT áll — ott már nem alsó szegély kell, hanem elválasztás
-   a jelmagyarázattól (jóváhagyott terv ②). */
-.con .con-pager[data-pager="top"] { margin-top: 8px; margin-bottom: 4px; }
-/* ① A JELMAGYARÁZAT A TÁBLA FÖLÖTT (jóváhagyott terv ①): keretezett doboz, nem a lap
-   aljára ejtett lábjegyzet. Eddig a `margin-top` + felső vonal azt sugallta, hogy lezár
-   valamit — most bevezet. */
+
+/* ── JELMAGYARÁZAT-FELUGRÓ (ADR-0188) ───────────────────────────────────────
+   ⛔ Sáv volt: 11 sornyi szöveg a döntés előtt, MINDEN betöltéskor, akkor is, ha senki
+   nem kérdezett. Most felugró: a cím melletti „?" nyitja, az ×/ESC/háttér zárja. */
 .con .con-legend {
-  margin: 10px 0 12px; border: 1px solid var(--citui-line-strong);
-  border-radius: 12px; background: var(--citui-surface-2); padding: 0;
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px;
+  background: color-mix(in srgb, var(--citui-navy-950) 55%, transparent);
 }
-.con .con-legend > summary {
-  cursor: pointer; color: var(--citui-navy-900); font-size: 13.5px; font-weight: 700;
-  padding: 10px 14px; list-style: none;
+.con .con-legend[hidden] { display: none; }
+.con .con-legend__box {
+  width: min(100%, 620px); max-height: 82vh; overflow: auto;
+  background: var(--citui-white); border-radius: 16px;
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--citui-ink) 28%, transparent);
 }
-.con .con-legend > summary::-webkit-details-marker { display: none; }
-.con .con-legend > summary::before { content: "▸"; display: inline-block; margin-right: 6px; transition: transform 0.15s ease; }
-.con .con-legend[open] > summary::before { transform: rotate(90deg); }
-.con .con-legend ul { margin: 0; padding: 0 14px 12px 32px; line-height: 1.7; }
+/* A fejléc RAGAD a doboz tetején: 11 oszlop + 5 jelölés hosszabb, mint a képernyő, és a
+   bezáró × nem görögthet ki a képből. */
+.con .con-legend__head {
+  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px 12px; background: var(--citui-white);
+  border-bottom: 1px solid var(--citui-line);
+}
+.con .con-legend__head h3 {
+  margin: 0; font-size: 1.05rem; color: var(--citui-navy-900);
+}
+.con .con-legend__x {
+  margin-left: auto; border: 0; background: none; cursor: pointer; padding: 4px;
+  color: var(--citui-muted); line-height: 0; width: auto;
+}
+.con .con-legend__x:hover { color: var(--citui-navy-900); }
+.con .con-legend__list { margin: 0; padding: 14px 18px 18px; font-size: 0.88rem; line-height: 1.55; }
+.con .con-legend__row { margin-bottom: 10px; }
+.con .con-legend__row dt { font-weight: 800; color: var(--citui-navy-900); }
+.con .con-legend__row dd { margin: 2px 0 0; color: var(--citui-muted); }
+.con .con-legend__sec {
+  margin: 16px 0 10px; padding-top: 12px; border-top: 1px solid var(--citui-line);
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--citui-muted);
+}
+.con .con-legend__foot { margin: 0; padding: 0 18px 18px; }
+/* A tudásbázis-horgony itt FELIRATOS link, nem néma ikon: egy mondat végén egy ikon nem
+   mondja meg, hova visz. */
+.con .con-help--text {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.85rem; font-weight: 700; color: var(--citui-link-ink);
+}
 
 /* ── Text + layout helpers ──────────────────────────────────────────────── */
 .con .mut { color: var(--citui-muted); }
@@ -831,8 +870,8 @@ body.con {
    it gets a shape, not just a word. Icons are inline SVG (design doctrine: no
    emoji anywhere in the product). */
 .con .qbadge {
-  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
-  padding: 3px 10px 3px 7px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  padding: 3px 8px 3px 6px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
   border: 1px solid currentColor; background: var(--citui-white);
 }
 .con .qbadge svg { width: 14px; height: 14px; flex: 0 0 auto; }
@@ -859,36 +898,68 @@ body.con {
    Multi-select + search living IN the header: the filter sits where the data is,
    and several columns combine instead of replacing each other. */
 .con th { white-space: nowrap; }
-/* ⛔ A LEAD-LISTA fejléce KIVÉTEL: ott a nowrap vágta el a saját vezérlőjét.
-   Mérve (1280px, 2026-09-14): a táblázat legkisebb szélessége 1210 px volt a 1186 px-es
-   görgető-dobozban, tehát 24 px-nyi tartalom a látható él MÖGÉ esett — pont a MOCK
-   oszlop szűrő-tölcsére, aminek így a ~40%-a hiányzott, és az `approved` jelölés jobb
-   vége is le volt nyesve. ÉS pont az ALAPÉRTELMEZETT nézetben, mert ott két aktív
-   szűrő-jelölés (`2`, `1+`) is a fejléc-sorba préselődik. Görgetni lehetett, de a
-   belépő képernyő egy félbevágott gombot mutatott. Tördelhető fejléccel a legkisebb
-   szélesség a látható dobozba fér (mérve 1186 → 0 px túllógás), a felirat két sorba
-   tördel — a vezérlő ép marad. A tördelés a FELIRATRA szól, a sort-nyíl és a tölcsér
-   nem szakadhat el egymástól, azt a `.con-sorth` / `.cf` inline-block tartja. */
-.con .con-leadtbl th { white-space: normal; }
-/* ⚠️ …de a VEZÉRLŐK ne essenek külön sorba: a fejléc-felirat tördelhet, a sort-nyíl, a
-   szűrő-tölcsér és a „?" viszont egy soron marad a felirat UTOLSÓ szavával. Mérve: enélkül
-   a fejléc-sor 104 px lett (a „?" minden oszlopban új sort nyitott). */
-/* ⚠️ `top`, NEM `bottom`: alulra igazítva a magasabb vezérlőt viselő oszlop FELIRATA
-   feljebb csúszott (mérve: az „ANYAG" a `≥1` jelvénytől 26 px-szel a „NÉV" fölé került),
-   és a fejléc-sor lépcsőzetesen szétesett. Felülre igazítva minden felirat EGY vonalon áll,
-   a vezérlők pedig alatta sorakoznak. */
-.con .con-leadtbl th { line-height: 1.35; vertical-align: top; }
+/* ── EGYSOROS, NAGYVÁLLALATI FEJLÉC (ADR-0188) ──────────────────────────────
+   ⛔ A régi fejléc KÉTSZINTES volt és tördelt, mert minden oszlop három dolgot viselt:
+   feliratot, szűrő-tölcsért ÉS egy „?" gombot — mérve ~110 px magas, lépcsőzetes sor.
+   A „?" gombok megszűntek (a jelmagyarázat felugró lett), így a felirat, a rendezés-nyíl
+   és a tölcsér EGY 38 px-es sorba fér. A tördelés-kivétel ezzel tárgytalan: a fejléc
+   ismét `nowrap`, mint a konzol többi táblájáé.
+   ⚠️ A `nowrap` visszavétele azért biztonságos, mert 11 × ~19 px („?" + margó) szabadult
+   fel — de ezt az őr MÉRI (0 px túllógás), nem feltételezzük. */
+/* ⛔ SŰRŰ RÁCS-TIPOGRÁFIA. 11 oszlop, 260 sor, lapozás nélkül: a vízszintes hely a
+   legszűkösebb erőforrás, és a cella-SZÖVEG tolja, nem a fejléc. 13 px (a konzol
+   alapértelmezett 14,4 px helyett) ~80 px-t ad vissza — mérve ettől fér ki a 11 oszlop
+   1366 px-es laptopon is, ami a leggyakoribb munkahelyi szélesség. A jóváhagyott terv
+   12 px-en készült, tehát ez még mindig NAGYOBB, mint amit a tulaj elfogadott. */
+.con .con-leadtbl { font-size: 13px; }
+.con .con-leadtbl th {
+  white-space: nowrap; vertical-align: middle; line-height: 1.2;
+  font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--citui-muted); height: 38px; padding-top: 0; padding-bottom: 0;
+  background: var(--citui-surface-2); border-bottom: 1px solid var(--citui-line-strong);
+}
+.con .con-leadtbl th .con-th { display: inline-flex; align-items: center; }
+/* A SZÁM-oszlopok fejléce a számokkal egy oldalra igazodik (eddig a felirat balra, az
+   érték jobbra állt — az oszlop két különböző tengelyt mutatott). */
+.con .con-leadtbl th.num { text-align: right; }
+.con .con-leadtbl th.num .con-th { justify-content: flex-end; width: 100%; }
 .con .con-leadtbl th .con-sorth { display: inline; }
-/* A tölcsér és a „?" EGY egységként tördeljen (külön-külön három sorra estek szét). */
 .con .con-leadtbl th .cf { margin-left: 3px; }
-.con .con-leadtbl th .cf, .con .con-leadtbl th .con-helpq { white-space: nowrap; }
-/* A fejléc-tördelés a fejlécet oldja meg, de a legkisebb szélességet az ADAT is tolja:
-   mérve a „mind egy lapon" nézetben (593 sor) a leghosszabb szereplő-név 83 px
-   túllógást okozott, tehát a MOCK-tölcsér ott a fejléc-javítás UTÁN is csonka maradt
-   volna. Ezért a 11 oszlopos lead-táblán szűkebb a vízszintes belső margó (12 → 8 px):
-   ez 88 px-nyi valódi helyet ad vissza, MÉG MIELŐTT bárhol tördelni kellene. Mérve:
-   mindhárom nézet 0 px túllógás, és KEVESEBB többsoros cella lett, mint előtte. */
-.con .con-leadtbl td, .con .con-leadtbl th { padding-left: 8px; padding-right: 8px; }
+.con .con-leadtbl th .cf { white-space: nowrap; }
+
+/* ── A FEJLÉC TAPAD függőleges görgetéskor (ADR-0188) ───────────────────────
+   Lapozás nélkül mind a 260 sor egyben áll; a 40. sornál egy elgörgött fejléc azt
+   jelentené, hogy az operátor nem tudja, melyik oszlopot nézi. A `.tblwrap` a görgető-
+   doboz, tehát a `top: 0` AHHOZ képest ragad — ezért kap a doboz korlátos magasságot. */
+.con .con-leadtbl thead th { position: sticky; top: 0; z-index: 3; }
+/* ⚠️ A `sticky` a LEGKÖZELEBBI GÖRGETŐ ŐSHÖZ képest ragad. A `.tblwrap` az `overflow-x`
+   miatt már görgető doboz, de MAGASSÁG-KORLÁT nélkül függőlegesen sosem görög — vagyis a
+   fejléc ragadása néma no-op lenne, miközben a CSS-ben „beállítottnak" látszik
+   (`reference_fullpage_shot_hides_dead_sticky`). A korlát teszi valóságossá. */
+.con .tblwrap--leads {
+  max-height: min(72vh, 820px); overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--citui-line); border-radius: 10px;
+}
+
+/* ── A VEZÉRLŐK ALAPBÓL NEM LÁTSZANAK ───────────────────────────────────────
+   Tulajdonosi kifogás: „csili csálé, semmi nagyvállalati érzet". 11 oszlopnyi mindig
+   látható tölcsér zajt csinál; a tölcsér ráhúzásra jön elő, AKTÍV szűrőnél viszont
+   mindig ott van, ciánban, a jelvényével — mert az már ÁLLÍTÁS a listáról.
+   ⛔ Érintőképernyőn nincs hover → 700 px alatt mindig látszik (halványan). */
+.con .con-leadtbl th .cf-btn { opacity: 0; transition: opacity 0.12s ease; }
+.con .con-leadtbl th:hover .cf-btn,
+.con .con-leadtbl th .cf-btn:focus-visible,
+.con .con-leadtbl th .cf-btn.on { opacity: 1; }
+@media (max-width: 700px) {
+  .con .con-leadtbl th .cf-btn { opacity: 0.55; }
+}
+
+/* ⛔ A VÍZSZINTES HELY A LEGSZŰKÖSEBB ERŐFORRÁS ezen a 11 oszlopos táblán, és az
+   ADAT tolja (hosszú szereplő- és településnevek), nem a fejléc. 7 px belső margó:
+   mérve ez tartja 0 px túllógáson 1280 px-en, MIUTÁN a tölcsér visszakapta a 14 px-ét.
+   ⚠️ Az őr MÉRI (nem feltételezi): a `nowrap` fejléc egy elvékonyodó margóval némán
+   levágná a MOCK oszlop vezérlőjét, ahogy 2026-09-14-én tette. */
+.con .con-leadtbl td, .con .con-leadtbl th { padding-left: 6px; padding-right: 6px; }
 /* …plusz biztosíték a SZEREPLŐ-NÉV oszlopra: a fenti helynyerés a MAI korpuszra elég,
    egyetlen extrém hosszú token viszont megint kitolná a tölcsért a vágás mögé. A név a
    táblázat EGYETLEN felülről nem korlátos szabad szövege (cégnév), ezért ott a szó
@@ -938,75 +1009,86 @@ body.con {
   margin: 0 0 6px; font-size: 12.5px; color: var(--citui-muted);
 }
 
-/* ⚠️ CSAK SZŰK KÉPERNYŐN. Asztalin mind a 11 oszlop befér (mérve: 0 px túllógás), ott a
-   ragadás semmit nem oldana meg, a bal oldali árnyék viszont új vonalat húzna a táblába —
-   a jóváhagyott terv asztali képe pedig e nélkül készült. A `sticky` egyébként is csak
-   akkor mozdul, ha VAN vízszintes görgetés; a szűkítés a LÁTVÁNYT tartja a tervnél. */
+/* ⛔ A RAGADÁS ÉS A GÖRGETÉS-JELZÉS MÉRT TÉNYHEZ KÖTŐDIK, NEM TÖRÉSPONTHOZ (ADR-0188).
+   Eddig `@media (max-width: 700px)` kapcsolta be: az a feltevés, hogy asztalin mindig
+   befér mind a 11 oszlop. Mérve 2026-09-19 az ÚJ fejléccel: 1280 px-en 0 px a túllógás —
+   DE ez az ADAT függvénye (egy hosszabb településnév vagy egy 90 %-os böngésző-nagyítás
+   visszahozza), és akkor a MOCK oszlop némán levágódna, pont úgy, ahogy 2026-09-14-én.
+   Egy pixelre kimért illeszkedés VÉLETLENÜL tart (`feedback_exact_match_held_only_by_accident`).
+   Ezért a lap-szkript MEGMÉRI a valódi túllógást, és `is-scrollx`-et tesz a dobozra:
+   ha van mit görgetni, a NÉV tapad és a lap ki is mondja; ha nincs, egy vonal sem
+   kerül a táblába fölöslegesen. */
+.con .tblwrap--leads.is-scrollx .con-leadtbl td[data-col="name"],
+.con .tblwrap--leads.is-scrollx .con-leadtbl th[data-col="name"] {
+  position: sticky; left: 0; z-index: 2;
+  background: var(--citui-white);
+  box-shadow: 1px 0 0 var(--citui-line);
+}
+.con .tblwrap--leads.is-scrollx .con-leadtbl thead th[data-col="name"] {
+  background: var(--citui-surface-2); z-index: 4;
+}
+/* A sor-hover NE tüntesse el a ragadó cella hátterét (különben a mögé görgő oszlopok
+   átütnének rajta pont akkor, amikor az operátor egy soron áll). */
+.con .tblwrap--leads.is-scrollx .con-leadtbl tbody tr:hover td[data-col="name"] {
+  background: var(--citui-surface);
+}
+/* ⑩b „Oldalra görgetve jön a többi oszlop" — egy néma görgethetőség nem felfedezhető. */
+.con .con-scrollhint.is-on { display: flex; }
+
 @media (max-width: 700px) {
-  .con .con-leadtbl td[data-col="name"],
-  .con .con-leadtbl th[data-col="name"] {
-    position: sticky; left: 0; z-index: 2;
-    background: var(--citui-white);
-    box-shadow: 1px 0 0 var(--citui-line);
-  }
-  .con .con-leadtbl thead th[data-col="name"] { background: var(--citui-surface-2); z-index: 4; }
-  /* A sor-hover NE tüntesse el a ragadó cella hátterét (különben a mögé görgő oszlopok
-     átütnének rajta pont akkor, amikor az operátor egy soron áll). */
-  .con .con-leadtbl tbody tr:hover td[data-col="name"] { background: var(--citui-surface); }
-  /* ⑩b „Oldalra görgetve jön a többi oszlop" — egy néma görgethetőség 390 px-en nem
-     felfedezhető, és 11 oszlopból 3 látszik. */
-  .con .con-scrollhint { display: flex; }
   /* Telefonon a sorok magasabbak (a NÉV két sora + a jelölések kényelmesen elférnek). */
   .con .con-leadtbl tbody tr { height: 54px; }
-  .con .con-pager__all { margin-left: 0; width: 100%; }
 }
-
 
 /* ⑤ PLAFON-jelölés és ⑥ ALAPÉRTÉK-jelölés a cellában. Halkak: az ÉRTÉK a főszereplő,
    ezek csak megmondják, mit NEM jelent. */
 .con .con-cap {
   font-size: 10px; color: var(--citui-muted); border: 1px solid var(--citui-line);
-  border-radius: 4px; padding: 0 4px; margin-left: 4px; font-weight: 600;
+  border-radius: 4px; padding: 0 3px; margin-left: 3px; font-weight: 600;
   white-space: nowrap; vertical-align: middle;
 }
 .con .con-basev { border-bottom: 1px dotted var(--citui-muted); cursor: help; }
 .con .con-nomatch { color: var(--citui-muted); font-size: 12px; white-space: nowrap; cursor: help; }
 
-/* ① A jelmagyarázat „?" gombja a fejlécben — érintőképernyőn ez az EGYETLEN út a
-   jelentéshez (a `title` tooltip ott elérhetetlen). */
+/* A jelmagyarázatot nyitó EGYETLEN „?" a cím mellett (ADR-0188). Érintőképernyőn ez az
+   út a jelentéshez — a `title` elemleírás ott elérhetetlen, a tulaj pedig telefonról
+   dolgozik. 26 px: ujjal is eltalálható, de nem versenyez a címmel. */
 .con .con-helpq {
   border: 1px solid var(--citui-line-strong); background: var(--citui-white);
-  color: var(--citui-muted); border-radius: 50%; width: 15px; height: 15px;
-  font-size: 10.5px; line-height: 1; padding: 0; margin-left: 2px; cursor: pointer;
-  vertical-align: middle; font-weight: 700; flex: 0 0 auto;
+  color: var(--citui-muted); border-radius: 50%; width: 26px; height: 26px;
+  font-size: 14px; line-height: 1; padding: 0; cursor: pointer;
+  display: inline-grid; place-items: center; font-weight: 700; flex: 0 0 auto;
 }
-.con .con-helpq:hover { color: var(--citui-link-ink); border-color: var(--citui-cyan-500); }
-/* A megnyitott sor kiemelése: az operátor lássa, MELYIK sorra ugrott. */
-.con .con-legend li.on {
-  background: color-mix(in srgb, var(--citui-warn) 18%, transparent);
-  border-radius: 6px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--citui-warn) 18%, transparent);
+.con .con-helpq:hover, .con .con-helpq:focus-visible {
+  color: var(--citui-link-ink); border-color: var(--citui-cyan-500);
 }
-.con .cf { position: relative; display: inline-block; margin-left: 4px; vertical-align: middle; }
+.con .cf { position: relative; display: inline-block; margin-left: 2px; vertical-align: middle; }
 .con .cf-btn {
-  display: inline-flex; align-items: center; gap: 3px; padding: 3px 5px; margin: 0;
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px; margin: 0;
   border: 1px solid transparent; border-radius: 6px; background: none;
   color: var(--citui-muted); cursor: pointer; width: auto;
 }
 .con .cf-btn:hover { background: var(--citui-surface-2); color: var(--citui-navy-900); }
-.con .cf-btn svg { width: 14px; height: 14px; }
-.con .cf-btn.on { color: var(--citui-link-ink); border-color: var(--citui-cyan-500); }
+/* ⛔ `flex: 0 0 auto` KÖTELEZŐ: az `inline-flex` gomb a jelvény mellett 0,34 px-re
+   zsugorította az ikont (mérve 2026-09-19) — a tölcsér NEM HIÁNYZOTT a markupból, csak
+   nem volt szélessége, tehát a „megvan-e az ikon" forrás-ellenőrzés zöldet adott volna. */
+.con .cf-btn svg { width: 14px; height: 14px; flex: 0 0 auto; }
+/* AKTÍV szűrő: a SZÍN és a jelvény mondja, nem egy keret. A keretes alak gomb-dobozt
+   rajzolt a 38 px-es fejléc-sorba, és pont azt a „csili-csálé" hatást adta vissza,
+   amit a terv megszüntetett (tulajdonosi kifogás, 2026-09-19). */
+.con .cf-btn.on { color: var(--citui-link-ink); }
 /* ⑦ KÉT JELENTÉS = KÉT ALAK (jóváhagyott terv ⑦). Eddig a DARABSZÁM („2 értéket
    kipipáltam") és a KÜSZÖB („legalább 1") ugyanabban a kerek cián pöttyben ült — az
    alapértelmezett nézetben egymás mellett, két különböző jelentéssel, egy képpel. */
-.con .cf-btn i { font-style: normal; font-size: 0.7rem; font-weight: 700; line-height: 1; }
+.con .cf-btn i { font-style: normal; font-size: 0.7rem; font-weight: 700; line-height: 1; flex: 0 0 auto; }
 /* DARABSZÁM: kerek, KITÖLTÖTT, cián. */
 .con .cf-btn i.cf-count {
-  background: var(--citui-cyan-500); color: var(--citui-white); border-radius: 999px; padding: 1px 6px;
+  background: var(--citui-cyan-500); color: var(--citui-white); border-radius: 999px; padding: 1px 5px;
 }
 /* KÜSZÖB: SZÖGLETES, körvonalas, `≥` jellel — más forma, más súly, más jelentés. */
 .con .cf-btn i.cf-thresh {
   background: transparent; color: var(--citui-navy-700);
-  border: 1.5px solid var(--citui-navy-700); border-radius: 4px; padding: 0 4px;
+  border: 1.5px solid var(--citui-navy-700); border-radius: 4px; padding: 0 3px;
 }
 .con .cf-pop {
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 210px;

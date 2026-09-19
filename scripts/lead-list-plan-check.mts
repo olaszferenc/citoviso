@@ -1,5 +1,7 @@
 // A LEAD-LISTA JÓVÁHAGYOTT TERVÉNEK ŐRE — `assets/design-refs/console/lead-list/`
-// („A — Tábla, ragadó NÉV oszloppal”, tulajdonosi döntés 2026-09-14).
+// („A — Tábla, ragadó NÉV oszloppal”, tulajdonosi döntés 2026-09-14,
+//  **2026-09-19-én ADR-0188 szerint módosítva**: nincs lapozás, nincs jelmagyarázat-sáv,
+//  egysoros fejléc, és a cím alatti két szöveg-blokk kikerült).
 //
 // ⚠️⚠️ A LEGFONTOSABB ÁLLÍTÁS, ÉS AMIÉRT KÜLÖN KIKÖTÉS SZÜLETETT RÁ:
 // **a ragadást VALÓDI GÖRGETÉSSEL mérjük, nem a DOM-ból következtetve.**
@@ -93,9 +95,9 @@ const FIXTURE: LeadListRow[] = [
   // HOSSZÚ NÉV — a kétsoros vágás és az egyenletes sormagasság ezen dől el.
   row(500, { name: "Nagyon Hosszú Nevű Balatoni Panzió és Étterem Vendégház", material: 9 }),
   row(501, { name: "Rövid", material: 9 }),
-  // ⚠️ TÖLTELÉK a LAPOZÓHOZ: a `leadPager` üres sztringet ad, ha egy lapra minden kifér —
-  // a „van felső lapozó" állítás enélkül ÜRES HALMAZON mérne, és zöld lenne a lapozó
-  // eltűnésekor is. Ennyi sor biztosan több lapot ad (LEAD_PAGE_SIZE = 50).
+  // ⚠️ TÖLTELÉK a FÜGGŐLEGES GÖRGETÉSHEZ (ADR-0188): a tapadó fejléc állítása üres
+  // halmazon mérne, ha a lista kiférne a görgető-dobozba — 70+ sor biztosan nem fér ki.
+  // A régi szerepe (több lapot adni a lapozónak) megszűnt: lapozó nincs.
   ...Array.from({ length: 70 }, (_, i) => row(1000 + i, { material: 4 })),
 ];
 
@@ -150,6 +152,20 @@ const BREAK_CSS = `
   .con .pill { white-space: normal !important; }
   /* a görgetés-jelzés elrejtve */
   .con .con-scrollhint { display: none !important; }
+  /* ADR-0188: a fejléc-tapadás kikapcsolva — a 40. sornál senki nem tudná, mit néz */
+  .con .con-leadtbl thead th { position: static !important; }
+  /* ADR-0188: a fejléc visszahízik kétszintesre (a „?"-korszak alakja) */
+  .con .con-leadtbl th { white-space: normal !important; height: auto !important;
+    padding-top: 10px !important; padding-bottom: 10px !important; }
+  .con .con-leadtbl th .con-th { display: block !important; }
+  /* ADR-0188: a tölcsérek megint MINDIG láthatók (a „csili-csálé" visszarontása) */
+  .con .con-leadtbl th .cf-btn { opacity: 1 !important; }
+  /* ADR-0188: a felugró a lap ELŐTT áll, pedig senki nem kérdezett — pontosan az a
+     csapda, amit a hidden DOM-tulajdonság mérése NEM vett volna észre.
+     ⚠️ pointer-events:none KELL hozzá: enélkül a visszarontott takaró-réteg elnyelné az
+     ALATTA következő lépések kattintásait, és az őr nem PIROSRA menne, hanem ELHASALNA —
+     egy időtúllépés pedig nem lelet, hanem diagnosztizálhatatlan némaság. */
+  .con .con-legend[hidden] { display: grid !important; pointer-events: none !important; }
 `;
 
 async function open(html: string, width: number): Promise<void> {
@@ -159,9 +175,9 @@ async function open(html: string, width: number): Promise<void> {
   await page.waitForTimeout(120);
 }
 
-const Q: LeadQuery = { all: true, pageSize: 0 };
-/** LAPOZOTT nézet — a lapozó csak itt renderel (egy lapra férő listán nincs mit lapozni). */
-const Q_PAGED: LeadQuery = { all: true };
+const Q: LeadQuery = { all: true };
+/** SZŰRT nézet — a szűrő-jelvények, a mondat-horog és a medence-szám csak itt mérhető. */
+const Q_FILTERED: LeadQuery = { qualification: ["no_site", "outdated"], minMaterial: 1, defaulted: true };
 
 // ═══ 1. A FIXTURE BIZONYÍTJA A SAJÁT ÚTJÁT ═══════════════════════════════════════
 await open(render(Q), 1280);
@@ -188,50 +204,201 @@ await open(render(Q), 1280);
   ok("…és kiküldött megkeresést", shapes.sentPills > 0, JSON.stringify(shapes));
 }
 
-// ═══ 2. ① A JELMAGYARÁZAT A TÁBLA FÖLÖTT, ÉS A „?” A SAJÁT SORÁRA NYIT ══════════
+// ═══ 2. ① EGYETLEN „?", ÉS AZ FELUGRÓT NYIT (nem sáv) ══════════════════════════
+// ⛔ A 2026-09-14-i kontraktus ① pontja SÁVOT írt elő a tábla fölé + 11 fejléc-„?"-t.
+// ADR-0188 ezt felülírja: a tulaj szava „a segítség nem kell egy ilyen sávba, max egy
+// kattintható kérdőjel és onnan popup… minek ennyi kérdőjel". Az EREDETI indok (a
+// `title` elemleírás érintőképernyőn elérhetetlen) VÁLTOZATLANUL ÉL — ezért az őr azt is
+// méri, hogy a felugró MINDEN oszlopot megnevez, és hogy ujjal nyitható-kattintható.
 {
-  const pos = await page.evaluate(() => {
-    const lg = document.querySelector(".con-legend")!;
-    const tbl = document.querySelector(".tblwrap")!;
+  const q1 = await page.evaluate(() => {
+    const lg = document.querySelector<HTMLElement>(".con-legend");
+    const h = lg?.querySelector<HTMLElement>(".con-legend__head h3");
     return {
-      legendBeforeTable: !!(lg.compareDocumentPosition(tbl) & Node.DOCUMENT_POSITION_FOLLOWING),
-      open: (lg as HTMLDetailsElement).open,
-      helpButtons: document.querySelectorAll("thead .con-helpq").length,
+      helpQ: document.querySelectorAll(".con-helpq").length,
+      inHead: document.querySelectorAll("thead .con-helpq").length,
+      legendIsDetails: !!document.querySelector("details.con-legend"),
+      // ⛔ NEM a `hidden` DOM-TULAJDONSÁGOT mérjük. Egy `display:flex|grid` NÉMÁN veri a
+      // `[hidden]`-t (a konzolon volt már rá példa), és akkor a doboz ott áll a lap előtt,
+      // miközben a `lg.hidden` igazat mond — az őr zölden védené a hibát. A kérdés az,
+      // hogy a FELHASZNÁLÓ ELŐTT van-e: ezért a KIRAJZOLT magasságot és a számított
+      // `display`-t nézzük, a cím-sorral együtt.
+      hiddenOnArrival:
+        !!lg &&
+        getComputedStyle(lg).display === "none" &&
+        lg.getBoundingClientRect().height === 0 &&
+        (h?.getBoundingClientRect().height ?? 0) === 0,
       columns: document.querySelectorAll("thead th[data-col]").length,
     };
   });
-  ok("① a jelmagyarázat a TÁBLÁZAT ELŐTT áll (nem a lap alján)", pos.legendBeforeTable);
-  ok("① asztalin NYITVA fogad", pos.open);
-  ok("① MINDEN oszlop fejléce visel „?” gombot", pos.helpButtons === pos.columns, `${pos.helpButtons}/${pos.columns}`);
+  ok("① EGYETLEN „?” az egész felületen", q1.helpQ === 1, `${q1.helpQ} db`);
+  ok("① a FEJLÉCBEN egyetlen „?” sincs", q1.inHead === 0, `${q1.inHead} db`);
+  ok("① a jelmagyarázat NEM sáv (nincs nyitható `<details>`)", !q1.legendIsDetails);
+  ok("① érkezéskor a FELHASZNÁLÓ ELŐTT NINCS (kirajzolt magasság 0, display:none)", q1.hiddenOnArrival);
 
-  // A „?” a SAJÁT oszlopának sorát emeli ki — érintőképernyőn ez az egyetlen út.
-  await page.click('thead th[data-col="photos"] .con-helpq');
+  // A gomb TÉNYLEG nyit — és a felugró MINDEN oszlopot megnevez.
+  await page.click("#leadLegendBtn");
   await page.waitForTimeout(150);
-  const hit = await page.evaluate(() => ({
-    onPhotos: !!document.querySelector('.con-legend li[data-legend="photos"].on'),
-    onOthers: document.querySelectorAll(".con-legend li.on").length,
-  }));
-  ok("① a Fotók „?” a FOTÓK jelmagyarázat-sorát emeli ki", hit.onPhotos && hit.onOthers === 1, JSON.stringify(hit));
+  const opened = await page.evaluate(() => {
+    const lg = document.querySelector<HTMLElement>(".con-legend")!;
+    const keys = [...document.querySelectorAll<HTMLElement>(".con-legend [data-legend]")].map(
+      (e) => e.dataset.legend ?? "",
+    );
+    const cols = [...document.querySelectorAll<HTMLElement>("thead th[data-col]")].map(
+      (e) => e.dataset.col ?? "",
+    );
+    return {
+      visible: !lg.hidden && lg.getBoundingClientRect().height > 0,
+      missing: cols.filter((c) => !keys.includes(c)),
+      marks: document.querySelectorAll(".con-legend__row").length - keys.length,
+      kbAnchor: document.querySelectorAll('.con-legend [data-kb-anchor="console.leads"]').length,
+      // A doboz a NÉZETABLAKON BELÜL van (egy képernyőn kívülre esett felugró néma hiba).
+      inViewport: (() => {
+        const b = lg.querySelector(".con-legend__box")!.getBoundingClientRect();
+        return b.top >= -1 && b.left >= -1 && b.width > 100 && b.height > 100;
+      })(),
+    };
+  });
+  ok("① a „?” felugró ablakot NYIT", opened.visible);
+  ok("① a felugró MINDEN oszlopot megnevezi", opened.missing.length === 0, `hiányzik: ${opened.missing.join(", ")}`);
+  ok("① …és a CELLA-JELÖLÉSEKET is (SV, plafon, alapérték, –)", opened.marks >= 3, `${opened.marks} jelölés-sor`);
+  ok("① a doboz a nézetablakon belül nyílik", opened.inViewport);
+  // ⛔ A TUDÁSBÁZIS-HORGONY nem veszhet el a cím melletti ikonnal együtt: a kb-check
+  // lefedettség-kapuja azt méri, hogy a kézikönyvbe vezető út KINT van-e a képernyőn.
+  ok("① a `console.leads` tudásbázis-horgony a felugróban ÉL", opened.kbAnchor === 1, `${opened.kbAnchor} db`);
+
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(120);
+  ok(
+    "① ESC bezárja (és a fókusz visszatér a gombra)",
+    await page.evaluate(
+      () =>
+        document.querySelector<HTMLElement>(".con-legend")!.hidden &&
+        document.activeElement?.id === "leadLegendBtn",
+    ),
+  );
 }
 
-// ═══ 3. ② LAPOZÓ FELÜL IS ════════════════════════════════════════════════════════
-await open(render(Q_PAGED), 1280);
+// ═══ 3. ② NINCS LAPOZÁS — MINDEN REKORD EGY LAPON ═══════════════════════════════
+// ⛔ A 2026-09-14-i kontraktus ② pontja FELSŐ lapozót írt elő. ADR-0188 ezt felülírja:
+// a tulaj szava „ne lapok legyenek, hanem minden rekord”. Az őr NEGATÍV állítást mér (a
+// lapozó SEHOL nincs) ÉS pozitívat (a fixture minden sora kint van) — a kettő együtt
+// zárja ki, hogy egy üres lista is „lapozó-mentesnek” látsszon.
 {
-  const pages = await page.evaluate(() => document.querySelectorAll('[data-pager] .con-pager__p, [data-pager] .con-pager__at').length);
-  ok("② a fixture TÖBB lapot ad (különben a lapozó-állítás üres halmazon mérne)", pages > 1, `${pages} lap-gomb`);
   const p = await page.evaluate(() => ({
-    top: !!document.querySelector('[data-pager="top"]'),
-    bottom: !!document.querySelector('[data-pager="bottom"]'),
-    topBeforeTable: (() => {
-      const t = document.querySelector('[data-pager="top"]');
-      const tbl = document.querySelector(".tblwrap")!;
-      return !!t && !!(t.compareDocumentPosition(tbl) & Node.DOCUMENT_POSITION_FOLLOWING);
-    })(),
+    pagerNodes: document.querySelectorAll("[data-pager], .con-pager").length,
+    rendered: document.querySelectorAll("tbody tr").length,
+    text: document.body.innerText,
   }));
-  ok("② van FELSŐ lapozó, a táblázat előtt", p.top && p.topBeforeTable, JSON.stringify(p));
-  ok("② és megmaradt az ALSÓ is", p.bottom, JSON.stringify(p));
+  ok("② a fixture ELÉG NAGY ahhoz, hogy a régi lapozó lapozott volna", FIXTURE.length > 50, `${FIXTURE.length} sor`);
+  ok("② SEMMILYEN lapozó-elem nincs a lapon", p.pagerNodes === 0, `${p.pagerNodes} db`);
+  ok(
+    "② a lapozó FELIRATAI sem (‹ Előző · Következő › · Mind a N egy lapon · Lapozva)",
+    !/‹ Előző|Következő ›|Mind a \d+ egy lapon|Lapozva/.test(p.text),
+  );
+  ok(
+    "②⭐ MINDEN rekord ki van renderelve (nem csak egy ablak)",
+    p.rendered === FIXTURE.length,
+    `${p.rendered} / ${FIXTURE.length}`,
+  );
 }
-await open(render(Q), 1280);
+
+// ═══ 3b. ⓫ A DARABSZÁM-SOR MEGNEVEZI A MEDENCÉT (a tábla ALATT, egy sorban) ══════
+// ⛔ A `/leads` ALAPBÓL SZŰR (a valós korpuszban 260 a 596-ból). A cím alatti
+// számláló-blokk kikerült (ADR-0188), tehát ez az EGYETLEN hely, ahol a medence mérete
+// elhangzik — enélkül a szűkített lista a teljes készletnek látszana.
+{
+  await open(render(Q_FILTERED), 1280);
+  const c = await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>("[data-lead-counts]");
+    const tbl = document.querySelector(".tblwrap")!;
+    return {
+      text: (el?.textContent ?? "").trim(),
+      afterTable: !!el && !!(tbl.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING),
+      lines: (el?.textContent ?? "").split("·").length,
+      // A KIÚT is állítás: szűrő alatt ott a „Szűrők törlése”, szűrő nélkül nincs.
+      clear: document.querySelectorAll("[data-clear-filters]").length,
+    };
+  });
+  const shown = buildLeadListResult(FIXTURE, Q_FILTERED).counts;
+  ok("⓫ a darabszám-sor a TÁBLA ALATT áll", c.afterTable, c.text);
+  ok(
+    "⓫ kimondja a SZŰRT és a MEDENCE számot is, EGY mondatban",
+    c.text.includes(String(shown.matching)) && c.text.includes(String(shown.active)) && c.lines === 1,
+    `„${c.text}” (szűrt=${shown.matching}, medence=${shown.active})`,
+  );
+  ok("⓫ és kimondja, hogy nincs lapozás", /nincs lapozás/.test(c.text), c.text);
+  ok("⓫ aktív szűrőnél ott a „Szűrők törlése” kiút", c.clear === 1, `${c.clear} db`);
+  // NEGATÍV KONTROLL: szűrő nélkül nincs mit törölni — a link nem lehet ott örökre.
+  await open(render(Q), 1280);
+  ok(
+    "⓫ szűrő NÉLKÜL nincs „Szűrők törlése” (a link maga is állítás)",
+    (await page.evaluate(() => document.querySelectorAll("[data-clear-filters]").length)) === 0,
+  );
+}
+
+// ═══ 3c. ⓬ EGYSOROS FEJLÉC, REJTETT VEZÉRLŐKKEL ═════════════════════════════════
+// ⛔ Tulajdonosi kifogás: „az eredménytábla fejléce katasztrofális, csili csálé, semmi
+// nagyvállalati érzet”. A régi fejléc kétszintes volt (a felirat tördelt, alatta a
+// vezérlők). Az őr a MAGASSÁGOT méri, nem az osztályneveket — és azt, hogy a tölcsér
+// tétlenül nem látszik, aktív szűrőnél viszont igen.
+{
+  const h = await page.evaluate(() => {
+    const th = document.querySelector<HTMLElement>("thead th")!;
+    const rows = new Set(
+      [...document.querySelectorAll<HTMLElement>("thead th .con-sorth")].map((a) =>
+        Math.round(a.getBoundingClientRect().top),
+      ),
+    );
+    return { height: Math.round(th.getBoundingClientRect().height), labelRows: rows.size };
+  });
+  ok("⓬ a fejléc EGY sor magas (≤ 44px)", h.height <= 44, `${h.height}px`);
+  ok("⓬ minden oszlopfelirat EGY vonalon áll", h.labelRows === 1, `${h.labelRows} különböző alapvonal`);
+
+  const idle = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("thead th .cf-btn")].map((b) => ({
+      on: b.classList.contains("on"),
+      op: Number(getComputedStyle(b).opacity),
+      w: Math.round(b.getBoundingClientRect().width),
+    })),
+  );
+  ok(
+    "⓬ tétlen szűrő-gomb NEM látszik (de a helyét tartja — nincs ugrás ráhúzáskor)",
+    idle.every((b) => b.on || (b.op === 0 && b.w > 8)),
+    JSON.stringify(idle.filter((b) => !b.on && b.op !== 0)),
+  );
+  await open(render(Q_FILTERED), 1280);
+  const active = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("thead th .cf-btn.on")].map((b) => ({
+      op: Number(getComputedStyle(b).opacity),
+      icon: Math.round((b.querySelector("svg") as SVGElement).getBoundingClientRect().width),
+      summary: b.getAttribute("data-filter-summary") ?? "",
+    })),
+  );
+  ok("⓬ AKTÍV szűrőnél a gomb látszik", active.length > 0 && active.every((b) => b.op === 1), JSON.stringify(active));
+  // ⛔ Mérve 2026-09-19: az `inline-flex` gomb a jelvény mellett 0,34 px-re nyomta össze a
+  // tölcsér-ikont. A markupban BENNE VOLT — egy forrás-ellenőrzés zöldet adott volna.
+  ok(
+    "⓬ …és a tölcsér-ikonnak VAN SZÉLESSÉGE (nem 0,3 px-re zsugorodott)",
+    active.every((b) => b.icon >= 10),
+    JSON.stringify(active.map((b) => b.icon)),
+  );
+  // ⛔ A szűrő MONDATA (felirat ↔ predikátum kötés) nem veszett el a cím alatti sorral:
+  // az adott oszlop gombján ül, és a SAJÁT oszlopát nevezi meg.
+  const drift = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("thead th .cf-btn.on")].map((b) => ({
+      col: (b.closest("th") as HTMLElement).dataset.col ?? "",
+      label: ((b.closest("th") as HTMLElement).querySelector(".con-sorth")?.textContent ?? "").replace(/[↕↑↓]/g, "").trim(),
+      summary: b.getAttribute("data-filter-summary") ?? "",
+    })),
+  );
+  ok(
+    "⓬⭐ a szűrő mondata a SAJÁT oszlopát nevezi meg (a kötés átköltözött, nem veszett el)",
+    drift.length > 0 && drift.every((d) => d.summary.startsWith(d.label + ":")),
+    JSON.stringify(drift),
+  );
+  await open(render(Q), 1280);
+}
 
 // ═══ 4. ③ MAGYAR ÁLLAPOT-SZAVAK — nyers enum SEHOL a látható szövegben ══════════
 {
@@ -271,7 +438,10 @@ await open(render(Q), 1280);
 }
 {
   await open(render({ ...Q, minMatch: 0.8 }), 1280);
-  const summary = (await page.textContent("[data-filter-summary]"))?.trim() ?? "";
+  // ADR-0188: a mondat a cím alatti sorból az ADOTT OSZLOP tölcsér-gombjára költözött —
+  // ott elemleírásként olvasható és `data-filter-summary` attribútumként mérhető.
+  const summary =
+    (await page.getAttribute('th[data-col="match"] [data-filter-summary]', "data-filter-summary"))?.trim() ?? "";
   ok("④ a szűrő-MONDAT is vesszőt ír (egy formázó, egy szabály)", /legalább\s+0,8/.test(summary), summary);
   const thresh = (await page.textContent('th[data-col="match"] .cf-thresh'))?.trim() ?? "";
   ok("④ …és a küszöb-JELVÉNY is", thresh.includes("0,8"), thresh);
@@ -466,10 +636,69 @@ await open(render(Q), 390);
   ok("⑩ …és azt is, hogy a Név a helyén marad", (hint?.text ?? "").includes("Név"), hint?.text ?? "");
 }
 
-// ═══ 11. ① telefonon a jelmagyarázat CSUKVA fogad (két külön döntés) ════════════
+// ═══ 11. ⓭ A FEJLÉC TAPAD — VALÓDI FÜGGŐLEGES GÖRGETÉSSEL ══════════════════════
+// ⛔ Lapozás nélkül mind a 260 sor egyben áll; a 40. sornál egy elgörgött fejléc azt
+// jelentené, hogy az operátor nem tudja, melyik oszlopot nézi. A `position: sticky` a
+// DOM-ból és a `getComputedStyle`-ból is „beállítottnak” látszik akkor is, ha soha nem
+// tapad (elég egy magasság-korlát nélküli görgető-doboz), ezért itt is VALÓDI GÖRGETÉS
+// dönt, differenciálisan: egy tábla-CELLA elmozdul, a fejléc-cella marad.
+await open(render(Q), 1280);
 {
-  const openOnPhone = await page.evaluate(() => (document.querySelector(".con-legend") as HTMLDetailsElement).open);
-  ok("① telefonon CSUKVA fogad (a helye viszont ugyanaz: a döntés előtt)", !openOnPhone);
+  const before = await page.evaluate(() => {
+    const w = document.querySelector<HTMLElement>(".tblwrap--leads")!;
+    return {
+      overflowY: w.scrollHeight - w.clientHeight,
+      headY: Math.round(document.querySelector<HTMLElement>('thead th[data-col="name"]')!.getBoundingClientRect().top),
+      cellY: Math.round(document.querySelector<HTMLElement>('tbody tr:nth-child(3) td[data-col="name"]')!.getBoundingClientRect().top),
+    };
+  });
+  ok(
+    "⓭ a lista TÉNYLEG görget függőlegesen (van mit mérni)",
+    before.overflowY > 300,
+    `függőleges túllógás: ${before.overflowY}px`,
+  );
+  const SCROLL_Y = Math.min(400, before.overflowY);
+  const after = await page.evaluate((px) => {
+    const w = document.querySelector<HTMLElement>(".tblwrap--leads")!;
+    w.scrollTop = px;
+    void w.offsetHeight;
+    return {
+      scrolled: Math.round(w.scrollTop),
+      headY: Math.round(document.querySelector<HTMLElement>('thead th[data-col="name"]')!.getBoundingClientRect().top),
+      cellY: Math.round(document.querySelector<HTMLElement>('tbody tr:nth-child(3) td[data-col="name"]')!.getBoundingClientRect().top),
+    };
+  }, SCROLL_Y);
+  const cellMoved = before.cellY - after.cellY;
+  ok(
+    "⓭ a görgetés MEGTÖRTÉNT (egy tábla-cella elmozdult)",
+    after.scrolled >= SCROLL_Y - 2 && cellMoved >= SCROLL_Y - 4,
+    `scrollTop=${after.scrolled}, a 3. sor ${cellMoved}px-t mozdult`,
+  );
+  const headMoved = Math.abs(after.headY - before.headY);
+  ok(
+    "⓭⭐ a FEJLÉC a képernyőn MARADT görgetés közben (valódi tapadás)",
+    headMoved <= 2,
+    `elmozdult ${headMoved}px (${before.headY} → ${after.headY}), miközben a 3. sor ${cellMoved}px-t`,
+  );
+}
+
+// ═══ 12. ⓮ A RAGADÁS ÉS A JELZÉS MÉRT TÉNYHEZ KÖTŐDIK, NEM TÖRÉSPONTHOZ ═════════
+// ⛔ Ahol NINCS vízszintes túllógás, ott nem szabad se ragasztani, se görgetésre
+// biztatni — egy mindig kiírt „görgess oldalra” hazugság a széles képernyőn.
+{
+  await open(render(Q), 1900);
+  const wide = await page.evaluate(() => {
+    const w = document.querySelector<HTMLElement>(".tblwrap--leads")!;
+    const hint = document.querySelector<HTMLElement>(".con-scrollhint");
+    return {
+      overflowX: w.scrollWidth - w.clientWidth,
+      sticky: w.classList.contains("is-scrollx"),
+      hintVisible: !!hint && getComputedStyle(hint).display !== "none",
+    };
+  });
+  ok("⓮ széles képernyőn nincs vízszintes túllógás (a mérés előfeltétele)", wide.overflowX <= 1, `${wide.overflowX}px`);
+  ok("⓮ …ezért NEM ragaszt és NEM biztat görgetésre", !wide.sticky && !wide.hintVisible, JSON.stringify(wide));
+  await open(render(Q), 390);
 }
 
 // ── Zárás ───────────────────────────────────────────────────────────────────────
@@ -490,7 +719,7 @@ if (SELF_TEST) {
 
 console.log(
   bad === 0
-    ? "\n✅ A lead-lista a jóváhagyott terv szerint viselkedik (a ragadás VALÓDI görgetéssel igazolva)."
+    ? "\n✅ A lead-lista a jóváhagyott terv szerint viselkedik (ADR-0188; a ragadás VALÓDI görgetéssel igazolva)."
     : `\n⛔ ${bad} eltérés a jóváhagyott tervtől (assets/design-refs/console/lead-list/).`,
 );
 process.exit(bad === 0 ? 0 : 1);

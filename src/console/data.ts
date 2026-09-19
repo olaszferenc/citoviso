@@ -166,13 +166,7 @@ export interface LeadQuery {
    *  query so a view switch can carry it back; without it the default filter silently
    *  reappeared and the cleared state was lost (Elek FK-003, 2026-09-11). */
   all?: boolean;
-  /** 1-based page of the result set; `pageSize: 0` = every matching row on one page. */
-  page?: number;
-  pageSize?: number;
 }
-
-/** Rows per page in the lead list (0 = all on one page, `?pageSize=0`). */
-export const LEAD_PAGE_SIZE = 50;
 
 /**
  * The DEFAULT filter of a bare `/leads` (owner decree): the ACTIONABLE leads — no or
@@ -205,15 +199,14 @@ export interface LeadCounts {
 }
 
 export interface LeadListResult {
-  /** The page the query asked for (all matching rows when paging is off). */
+  /**
+   * EVERY matching row. There is no paging (ADR-0188, owner decree 2026-09-19): the list
+   * hands over the whole match set and the screen shows all of it.
+   */
   readonly rows: LeadListRow[];
   /** Every matching row — the header filters build their live option counts on this. */
   readonly matched: LeadListRow[];
   readonly counts: LeadCounts;
-  /** 1-based page actually served (clamped into range) and its size (0 = all). */
-  readonly page: number;
-  readonly pageSize: number;
-  readonly pages: number;
 }
 
 /**
@@ -222,10 +215,10 @@ export interface LeadListResult {
  * order = newest first.
  */
 export async function listLeads(q: LeadQuery = {}): Promise<LeadListRow[]> {
-  return (await listLeadPage({ ...q, pageSize: 0 })).matched;
+  return (await listLeadPage(q)).matched;
 }
 
-/** The lead list WITH its named counts and its page window. */
+/** The lead list WITH its named counts. */
 export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
   const leads = await db
     .selectFrom("lead")
@@ -318,9 +311,14 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
 }
 
 /**
- * Filter + sort + page a loaded row set. Pure (no DB), because the label guard must
- * be able to run the REAL selection and paging on a fixture it controls — a guard
- * that reimplements the logic it checks proves nothing.
+ * Filter + sort a loaded row set. Pure (no DB), because the label guard must be able to
+ * run the REAL selection on a fixture it controls — a guard that reimplements the logic
+ * it checks proves nothing.
+ *
+ * ⛔ NINCS LAPOZÁS (ADR-0188, tulajdonosi rendelet 2026-09-19). A korábbi 50-es lapozó
+ * darabokra vágta a döntési készletet, és a „hányadik lapon vagyok" állapot minden
+ * szűrő-linkben utazott. A lista a TELJES találati halmazt adja vissza; a képernyőn a
+ * fejléc tapad, nem a lapozó szervezi a görgetést.
  */
 export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): LeadListResult {
   // Disqualified leads are hidden from the working list by default — they are
@@ -346,13 +344,8 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
     rows = [...rows].sort((a, b) => d * compareSortKeys(sortCell(a, s.key), sortCell(b, s.key)));
   }
 
-  const pageSize = q.pageSize === 0 ? 0 : (q.pageSize ?? LEAD_PAGE_SIZE);
-  const pages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
-  const page = pageSize ? Math.min(Math.max(1, Math.floor(q.page ?? 1)), pages) : 1;
-  const window = pageSize ? rows.slice((page - 1) * pageSize, page * pageSize) : rows;
-
   return {
-    rows: window,
+    rows,
     matched: rows,
     counts: {
       matching: rows.length,
@@ -360,9 +353,6 @@ export function buildLeadListResult(all: LeadListRow[], q: LeadQuery = {}): Lead
       disqualified: disqualified.length,
       all: all.length,
     },
-    page,
-    pageSize,
-    pages,
   };
 }
 
@@ -1906,7 +1896,7 @@ export async function getFunnelReport(): Promise<FunnelReport> {
   // it — the old SQL counted qualification alone (disqualified rows and zero-material
   // rows included), so the chip said 267 and the list it linked to said 260, with
   // nothing explaining the gap (Elek FK-003, 2026-09-11).
-  const workable = await listLeadPage({ ...defaultLeadQuery(), pageSize: 0 });
+  const workable = await listLeadPage(defaultLeadQuery());
   const mocks = await db.selectFrom("mock_artifact").select(db.fn.countAll().as("n")).executeTakeFirst();
   const approved = await db
     .selectFrom("mock_artifact")

@@ -4,7 +4,7 @@ title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
 category: lead-path
 anchors: console.leads
-updated: 2026-09-14
+updated: 2026-09-19
 ---
 
 A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
@@ -13,17 +13,17 @@ vagy — a cím mondja ki, nem egy apró vissza-link.
 
 ![Képernyőkép: a lead-lista telefonon](assets/hu/screen.png)
 
-## Melyik szám mit számol?
+## Hány sort látsz, és mihez képest?
 
-A cím alatti sor minden számot megnevez, mert önmagában egyik sem mond semmit:
+A táblázat **ALATT** egyetlen sor áll, és az mondja meg mindkét számot:
+„260 sor a 596 aktív leadből — nincs lapozás, mind itt van.”
 
-- „1–50 / 260 sor megjelenítve” — amennyi ezen a lapon látszik.
-- „260 felel meg a szűrőnek” — a jelenlegi szűrés teljes találati halmaza (ennyin lapozol végig).
-  Ez a tétel **csak akkor jelenik meg, ha tényleg fut szűrő** — szűrés nélkül nincs mihez
-  „megfelelni”.
-- „593 aktív lead (szűrő nélkül)” — minden nem diszkvalifikált szereplő.
-- „2 diszkvalifikált” — akiket kizártál.
-- „595 felmért szereplő összesen” — a teljes gyűjtött állomány, a két nézet együtt.
+- Az **első szám** a most látható sorok száma.
+- A **második** az a készlet, amiből szűrtél: az aktív (nem diszkvalifikált) leadek.
+  Erre azért van szükség, mert a lista **alapból szűr** — enélkül a 260 úgy nézne ki,
+  mintha ennyi lead lenne összesen.
+- Ha **nincs** aktív szűrő, a sor rövidebb: „596 sor — nincs lapozás, mind itt van.”
+  Ilyenkor nincs mihez viszonyítani.
 
 Az irányítópult **„kvalifikált lead”** jelzője ugyanezt a szűrést számolja, mint amit a rákattintva
 kapott lista mutat — a két szám nem térhet el.
@@ -31,8 +31,13 @@ kapott lista mutat — a két szám nem térhet el.
 ## Az alapértelmezett szűrés
 
 Üres `/leads` megnyitásakor a lista nem a teljes állományt mutatja, hanem a ma
-megszólíthatókat. A szűrő-sor kiírja tételesen, **melyik oszlopra** milyen feltétel él,
-például: „Alapértelmezett szűrő — Kvalifikáció: nincs honlap vagy elavult · Anyag: legalább 1”.
+megszólíthatókat: **nincs honlapja vagy elavult**, és **van legalább 1 összegyűjtött képe**.
+
+Hogy ez fut, két dologról látod:
+
+1. az érintett oszlopfejlécen (**„Kvalifikáció”**, **„Anyag”**) **cián tölcsér** áll egy
+   jelvénnyel — rámutatva kiírja a feltételt is, pl. „Kvalifikáció: nincs honlap vagy elavult”;
+2. a cím sorában ott a **„Szűrők törlése”** link, ami szűrés nélkül **nincs** ott.
 
 ⚠️ A feltétel az **„Anyag”** oszlopon ül, nem a **„Fotók”**-on — ezért látsz a listában 0 fotós
 sorokat is. Ez szándékos: egy szállásnak lehet 13 képe portál-profilból úgy, hogy a Places
@@ -41,15 +46,23 @@ egyet sem adott; a mock az összes összegyűjtött képből készül.
 ## Szűrés és rendezés a fejlécből
 
 A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő egymás mellett van, ezért
-érdemes tudni, melyik mit csinál:
+érdemes tudni, melyik mit csinál.
 
-- **Szűrés:** az oszlopnév melletti kis, felirat nélküli **vonalkás ikonra** koppintva nyílik le a
-  szűrő. A kategorikus oszlopoknál (Terület, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható
+⚠️ **A vezérlők alapból nem látszanak.** Az egérrel a fejléc fölé húzva jelennek meg (telefonon
+halványan mindig ott vannak), aktív szűrőnél pedig ciánnal kigyulladnak. Ez szándékos: 11 oszlopnyi
+mindig látható ikon zajt csinál, és elveszi a figyelmet az adattól.
+
+- **Szűrés:** az oszlopnév melletti **tölcsér ikonra** koppintva nyílik le a szűrő.
+  A kategorikus oszlopoknál (Terület, Ország, Város, Kvalifikáció, Kontakt, Mock) pipálható
   lista jön élő darabszámmal — hosszú listánál (Terület, Város) egy **„keresés…”** mező is, amivel
   szűkíthetsz. A szám-oszlopoknál (Fotók, Anyag, Match) egy **„legalább”** mező van. Amint pipálsz
-  vagy beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb. Ha a
-  szűrő aktív, az ikon kigyullad: a pipálós szűrőnél a kijelölt értékek darabszáma, a szám-szűrőnél
-  maga a küszöb látszik rajta (pl. `3+`).
+  vagy beírsz egy számot, a lista **azonnal újratöltődik** — nincs külön „Alkalmaz” gomb.
+- **Miről szól egy aktív szűrő:** a kigyulladt tölcsérre **rámutatva** (telefonon: hosszan nyomva)
+  kiírja a saját mondatát, pl. „Anyag: legalább 1” vagy „Mock: jóváhagyva vagy elutasítva”.
+  A mondat mindig azt az oszlopot nevezi meg, amelyiken a szűrő tényleg dolgozik.
+- **A jelvény két alakja két külön dolgot jelent:** a **kerek, kitöltött cián pötty** DARABSZÁM
+  (hány értéket pipáltál ki), a **szögletes, körvonalas `≥` jelvény** pedig KÜSZÖB (alsó határ).
+  Az alapértelmezett nézetben mindkettő látszik egyszerre: `2` a Kvalifikáción, `≥1` az Anyagon.
 - **Match-szűrés:** a Match 0 és 1 közti pontszám, ezért itt tizedes értéket adsz meg (0,05-ös
   lépésekkel, pl. `0.9`). ⚠️ A küszöb beállításával a **portál-találat nélküli („–”) sorok
   kiesnek** — helyesen, mert egy találat nélküli lead nem éri el a küszöböt. Ha azokat is látni
@@ -58,38 +71,43 @@ A táblázat fejléce nem csak felirat — szűrő **és** rendező is. A kettő
   ajánl.
 - **Rendezés:** **bármelyik oszlop nevére** koppintva rendezel. Amelyik oszlopnév mellett halvány
   **↕** áll, az rendezhető — vagyis mind. Érkezéskor a **„Felmérve”** oszlop nyila áll ↓-on: ez a
-  lista alap-sorrendje, nem „rendezetlenség”. Koppintás után a nyíl a valódi irányt mutatja (↑ növekvő,
-  ↓ csökkenő), az oszlopnév kiemelt színű lesz, újabb koppintás megfordítja; a lista visszaugrik az
-  első lapra. Ha csak szűrni akartál, ügyelj rá, hogy az ikont találd el, ne a nevet.
+  lista alap-sorrendje, nem „rendezetlenség”. Koppintás után a nyíl a valódi irányt mutatja
+  (↑ növekvő, ↓ csökkenő), és az oszlopnév kiemelt színű lesz; újabb koppintás megfordítja.
+  Ha csak szűrni akartál, ügyelj rá, hogy a tölcsért találd el, ne a nevet.
   A szöveges oszlopok a **magyar ábécé** szerint rendeződnek, tehát az Á, É, Ó, Ö, Ü kezdetű nevek
   a helyükön vannak, nem a lista végén. Ahol nincs adat („–”), azok a sorok növekvő rendezésnél
   elöl, csökkenőnél hátul csoportosulnak.
-- **Mindig látod, mi szerint olvasod a listát:** a szűrő-sor végén ott a sorrend
-  („Sorrend: Felmérve (csökkenő)”, rendezés után pl. „Sorrend: Város (növekvő)”) — és mindig
-  egy **oszlopot** nevez meg, amit a táblázatban vissza is tudsz nézni.
+- **Mindig látod, mi szerint olvasod a listát:** a kiemelt színű oszlopnév és a nyila mondja meg,
+  melyik oszlop rendez és melyik irányba — nem külön mondat a cím alatt.
 
 A szűrésed akkor is megmarad, ha közben **kiürítesz** egy fejléc-szűrőt: a
 **„Szűrők törlése”**-vel kapott teljes listáról nem esel vissza az alapértelmezettre.
-- Ha elveszett a fonál: **„Szűrők törlése”** — minden szűrőt egyszerre enged el, és ezzel a teljes
-  aktív állományt (a „593 aktív lead” sort) kapod meg.
+- Ha elveszett a fonál: a cím sorában a **„Szűrők törlése”** minden szűrőt egyszerre enged el, és
+  ezzel a teljes aktív állományt kapod meg.
 
 A szűrésed **átmegy a nézetváltáson**: ha a **„diszkvalifikáltak ▸”**-ra, majd az
 **„◂ aktív leadek”**-re kattintasz, ugyanazt a szűrt listát kapod vissza, amiből elindultál.
 
-⚠️ **Telefonon** a táblázat vízszintesen görgethető, és álló képernyőn csak néhány oszlop fér
-ki egyszerre. **A Név oszlop közben a helyén marad** (oldalra húzva sem csúszik el), így minden
-érték mellett látod, melyik szállásról szól — a lista a táblázat fölött ki is írja, hogy
-oldalra húzva jön a többi oszlop.
+⚠️ **Ha a 11 oszlop nem fér ki**, a táblázat vízszintesen görgethető, és a lap ezt ki is írja a
+táblázat fölött: **„Oldalra görgetve jön a többi oszlop — a Név oszlop közben a helyén marad.”**
+**A Név oszlop közben a helyén marad** (oldalra húzva sem csúszik el), így minden érték mellett
+látod, melyik szállásról szól. Telefonon ez mindig így van; számítógépen csak akkor, ha tényleg
+nem fér ki minden oszlop — széles képernyőn se ragadás, se ez a mondat nincs.
+
+⚠️ **A fejléc-sor a helyén marad lefelé görgetve is.** Mivel nincs lapozás, a lista akár több száz
+soros is lehet — a 100. sornál is látod, melyik oszlopot nézed.
 
 ## Mit jelentenek az oszlopok és a jelölések?
 
-**A táblázat FÖLÖTT** nyitható ugyanez a lista a felületen is:
-**„Mit jelentenek az oszlopok és a jelölések?”** — minden oszlop és minden cellán belüli jelölés
-szerepel benne. Számítógépen nyitva fogad, telefonon csukva (hogy a táblázat elférjen), és
-**minden oszlopfejléc mellett van egy „?” gomb**, ami egyenesen az ADOTT oszlop magyarázatához
-ugrik és kiemeli azt — érintőképernyőn ez a leggyorsabb út.
+A cím mellett **egyetlen „?” gomb** áll. Rákoppintva felugrik a teljes jelmagyarázat:
+**„Mit jelentenek az oszlopok és a jelölések?”** — mind a 11 oszlop, és minden cellán belüli
+jelölés. A felugrót az **×**, az **ESC** vagy a háttérre koppintás zárja, és a lábában ott a
+**„Részletes súgó a tudásbázisban”** link, ami ide, ehhez a szócikkhez hoz vissza.
 
-![Képernyőkép: a jelmagyarázat kinyitva](assets/hu/legend.png)
+Érintőképernyőn ez az egyetlen út a jelentéshez: az egérrel megjeleníthető elemleírás
+(rámutatás) telefonon nem elérhető.
+
+![Képernyőkép: a jelmagyarázat felugró ablaka](assets/hu/legend.png)
 
 - **„Kvalifikáció”** — a honlap-helyzet badge-e: **„nincs honlap”** (fő célcsoport),
   **„elavult”**, **„modern”**, **„ismeretlen”**. Diszkvalifikált leadnél itt áll az áthúzott
@@ -133,13 +151,13 @@ Cellán belüli jelölések:
   piros = nincs.
 - **–** bármelyik szám-oszlopban — nincs adat; az Anyag oszlopban a nulla is így jelenik meg.
 
-## Lapozás
+## Nincs lapozás
 
-Alapból 50 sor jön egy lapon; alul a **„‹ Előző”** / **„Következő ›”** visz tovább.
-A „Mind a 260 egy lapon” linkkel egyszerre is végignézheted a teljes találati halmazt — onnan a
-**„Lapozva”** link vált vissza lapozott nézetre.
+**A lista minden rekordot egyben mutat** (tulajdonosi döntés, 2026-09-19). Nincs
+„‹ Előző” / „Következő ›”, nincs lapszám és nincs „mind egy lapon” kapcsoló: amit a szűrő
+kiválaszt, az mind ott van egyetlen görgethető táblázatban, a fejléce pedig a helyén marad.
 
-![Képernyőkép: a lapozó](assets/hu/pager.png)
+Ha sok a sor, **ne lapozz — szűrj vagy rendezz**: a fejléc tölcsére és az oszlopnév erre való.
 
 ## A lead-lapra
 
@@ -149,6 +167,6 @@ mock-generálás, kuráció, megkeresés, konverzió). Erről külön útmutató
 
 ## Diszkvalifikáltak
 
-A szűrő-sáv jobb szélén a **„diszkvalifikáltak ▸”** link az elutasított szereplőket mutatja
+A cím sorának jobb szélén a **„diszkvalifikáltak ▸”** link az elutasított szereplőket mutatja
 (őket az újra-scrape sem hozza vissza); az **„◂ aktív leadek”** visszavált. A diszkvalifikálás
 indokkal együtt a lead-lapon történik, és visszavonható.

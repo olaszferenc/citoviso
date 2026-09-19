@@ -1001,9 +1001,9 @@ const leadRows: LeadListRow[] = [
   }),
   leadRow("l3", "Borostyán Panzió", "outdated", "Gyenesdiás", 4, "sms", null),
 ];
-// A wider stock for the LIST shot: the entry describes a "1–50 / N sor megjelenítve"
-// counter and a pager, and a 3-row fixture proves neither (tudásbázis-őr, 2026-09-11).
-// Same rows, enough of them that the real LEAD_PAGE_SIZE actually pages.
+// A wider stock for the LIST shot: a 3-row fixture proves nothing about a list that shows
+// EVERY record in one scrolling table (ADR-0188) — the shot has to look like the real thing
+// the entry talks about (tudásbázis-őr, 2026-09-11).
 const leadRowsPaged: LeadListRow[] = Array.from({ length: 64 }, (_, i) =>
   leadRow(
     `lp${i}`,
@@ -1224,20 +1224,21 @@ async function shootConsole(
   hash?: string,
   scrollTo?: string,
   /**
-   * Nyisd ki ezt az elemet a KÉP ELŐTT, de a LAP-SZKRIPT LEFUTÁSA UTÁN.
+   * KATTINTS erre a vezérlőre a KÉP ELŐTT — és a felvétel csak akkor készül el, ha a
+   * felugró tényleg megnyílt.
    *
-   * ⛔ MÉRT HIBA (2026-09-15): a `legend.png` a CSUKOTT fejléc-sávot mutatta, és a teljes
+   * ⛔ MÉRT HIBA (2026-09-15): a `legend.png` a CSUKOTT sávot mutatta, és a teljes
    * oszlop-magyarázat némán kiesett a súgóból — miközben a képaláírás azt írja, hogy „a
-   * jelmagyarázat kinyitva". KÉT réteg volt egyszerre:
-   *   (a) a régi megoldás a SZERVER HTML-jében cserélt sztringet
-   *       (`<details class="con-legend">` → `… open`), a nézet viszont ma
-   *       `<details class="con-legend" id="leadLegend" open>`-t ad → a csere NO-OP volt;
-   *   (b) és ha illeszkedett volna, sem ér semmit: a lap `syncOpen()`-je 700 px alatt
-   *       LESZEDI az `open`-t, a felvétel pedig 390 px-en készül.
-   * Ezért a nyitást a betöltés UTÁN, a DOM-on kell kikényszeríteni. A `syncOpen()` csak
-   * betöltéskor fut (nincs resize-figyelő), tehát ez stabilan megmarad a felvételig.
+   * jelmagyarázat kinyitva". A régi megoldás a SZERVER HTML-jében cserélt sztringet,
+   * ami némán nem illeszkedett; a rákövetkező a DOM-on állított `open` attribútumot,
+   * ami viszont a gomb megkerülésével hazudhat: egy elromlott nyitó-gomb mellett is
+   * szép képet adott volna.
+   *
+   * ADR-0188 óta a jelmagyarázat FELUGRÓ, a nyitás pedig JS-t futtat — ezért a kép a
+   * VALÓDI úton készül: rákattintunk a „?" gombra, mint az operátor. Ha a gomb nem nyit,
+   * a felvétel HANGOSAN elhasal, nem üres képet ad.
    */
-  forceOpen?: string,
+  clickToOpen?: string,
 ): Promise<void> {
   const patched = html
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
@@ -1250,20 +1251,26 @@ async function shootConsole(
   // (ADR-0106: the source panel lives on the mocks tab).
   await page.goto(pathToFileURL(file).href + (hash ?? ""));
   await page.waitForTimeout(300);
-  if (forceOpen) {
-    const opened = await page.evaluate((sel) => {
-      const el = document.querySelector(sel);
-      if (!el) return false;
-      el.setAttribute("open", "");
-      return el.hasAttribute("open");
-    }, forceOpen);
-    // ⛔ A NÉMA KIHAGYÁS A HIBA MAGA: a régi sztring-csere is csendben nem illeszkedett,
-    // és ezért ürült ki a kép. Ha a szelektor ma nem talál, azt HANGOSAN mondjuk ki.
-    if (!opened) {
+  if (clickToOpen) {
+    const btn = page.locator(clickToOpen).first();
+    if ((await btn.count()) === 0) {
       throw new Error(
-        `kb-shot: a(z) "${forceOpen}" elemet nem sikerült kinyitni a(z) ` +
+        `kb-shot: a(z) "${clickToOpen}" nyitó-vezérlő NINCS a lapon a(z) ` +
           `${path.relative(ROOT, outPath)} felvételéhez — elavult szelektor?`,
       );
+    }
+    await btn.click();
+    await page.waitForTimeout(250);
+    // ⛔ A NÉMA KIHAGYÁS A HIBA MAGA: ha a kattintás nem nyitott, azt HANGOSAN mondjuk ki,
+    // különben megint egy üres kép kerül a kézikönyvbe.
+    if (scrollTo) {
+      const shown = await page.locator(scrollTo).first().isVisible();
+      if (!shown) {
+        throw new Error(
+          `kb-shot: a(z) "${clickToOpen}" kattintás UTÁN sem látszik a(z) "${scrollTo}" — ` +
+            `a ${path.relative(ROOT, outPath)} üres lenne.`,
+        );
+      }
     }
     await page.waitForTimeout(150); // az elrendezés álljon be a nyitás után
   }
@@ -1280,6 +1287,14 @@ async function shootConsole(
     // ez pont a két új sort (Felmérve, Terület) takarta el — vagyis a kép azt NEM
     // mutatta, amit az entry bizonyítékul hoz rá (tudásbázis-őr, 2026-09-14).
     await page.addStyleTag({ content: ".con-top,.con-ltabs__bar{visibility:hidden}" });
+    // ⛔ A LEVÁGOTT ELŐNÉZET MINDIG A VÉGÉT VESZI EL. Ha a felvett elem SAJÁT MAGA görget
+    // (a jelmagyarázat-felugró `max-height: 82vh`), az elem-capture csak a látható részt
+    // veszi: mérve 16 sorból 8 került a képre — a kézikönyv így olyan képre hivatkozna,
+    // amiről a fele hiányzik (`feedback_truncated_preview_hides_the_legal_end`).
+    await page.addStyleTag({
+      content: `${scrollTo}{max-height:none !important;overflow:visible !important}`,
+    });
+    await page.waitForTimeout(120);
     await snap(page.locator(scrollTo).first(), outPath);
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
     return;
@@ -1314,25 +1329,16 @@ await shootConsole(
   leadsPage(buildLeadListResult(leadRowsPaged, defaultLeadQuery()), defaultLeadQuery()),
   conOut("console-leads"),
 );
-// The pager and the legend sit BELOW a 50-row table, so a viewport shot never reaches
-// them. Element captures, so the entry's claims about both have a picture behind them.
+// ⛔ A LAPOZÓ-KÉP MEGSZŰNT (ADR-0188): nincs lapozó, tehát nincs mit lefotózni — és egy
+// olyan képernyőelemről szóló kép, ami nem létezik, a kézikönyv legrosszabb fajta hazugsága.
+// A jelmagyarázat a VALÓDI úton nyílik: rákattintunk a „?" gombra, és a FELUGRÓ DOBOZÁT
+// vesszük (a `.con-legend` maga teljes képernyős, félig átlátszó háttér).
 await shootConsole(
   leadsPage(buildLeadListResult(leadRowsPaged, defaultLeadQuery()), defaultLeadQuery()),
-  path.join(ROOT, "kb/entries", "console-leads", "assets", "hu", "pager.png"),
-  undefined,
-  ".con-pager",
-);
-await shootConsole(
-  leadsPage(buildLeadListResult(leadRowsPaged, { ...defaultLeadQuery(), pageSize: 0 }), {
-    ...defaultLeadQuery(),
-    pageSize: 0,
-  }),
   path.join(ROOT, "kb/entries", "console-leads", "assets", "hu", "legend.png"),
   undefined,
-  ".con-legend",
-  // A nézet szerver-oldalon MÁR `open`-t ad; amit ki kell kerülni, az a lap `syncOpen()`-je,
-  // ami 390 px-en becsukja. Ezért a DOM-on, a szkript lefutása UTÁN nyitjuk ki.
-  "#leadLegend",
+  ".con-legend__box",
+  "#leadLegendBtn",
 );
 await shootConsole(leadPage(leadDetail), conOut("console-lead"));
 // The "Honnan tudjuk?" source panel (ADR-0106 ⑥) sits on the mocks tab — its own

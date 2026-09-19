@@ -10901,3 +10901,77 @@ nem igazoltuk, hogy megfog valamit. (Pont az fedte el a hibát, hogy minden mér
 („✓ kiküldve”), nem egy egész mondatra: a sáv mobilon „…a küldés gomb előbb megmut…”-nál
 elvágódott — vagyis **pont az a fél mondat veszett el, ami megmondja, hogy ki lehet küldeni**.
 A mondat-vivő pirulák (`pill--claim`) ezért tördelnek. A levágás mindig a VÉGÉT viszi el.
+
+## ADR-0188 — A lead-lista: minden rekord egy lapon, EGY kérdőjel, és egysoros fejléc (2026-09-19)
+
+**Státusz:** elfogadva · **Felülírja:** a 2026-09-14-i lead-lista-kontraktus ① és ② pontját
+(`assets/design-refs/console/lead-list/README.md`) · **Őr:** `scripts/lead-list-plan-check.mts`
+
+### A helyzet
+
+A `/leads` a 2026-09-14-i jóváhagyott terv szerint épült, és a terv minden pontja mért hibára
+válaszolt. A tulaj most a KÉSZ felületet nézte meg élesben, és három dolgot kifogásolt:
+
+> *„a segítség nem kell egy ilyen sávba, max, egy kattintható kérdőjel és onnan popup…
+> ne lapok legyenek, hanem minden rekord (ha több száz vagy ezer lesz akkor azt majd kezelni
+> kell)… az eredménytábla fejléce katasztrofális, nézd meg! csili csálé, semmi nagyvállalati
+> érzet, minek ennyi kérdőjel stb"*
+
+…majd a §2b vázlaton: *„A változat de ez nem kell"* — a számláló-sorra és a szűrő/sorrend-mondatra.
+
+### A döntés
+
+1. **Nincs lapozás.** A találati halmaz teljes egészében kirenderelődik egyetlen görgethető
+   táblázatba, **tapadó fejléccel**. Megszűnt a `‹ Előző` / `Következő ›` / `Mind a N egy lapon` /
+   `Lapozva`, a `?page=` / `?pageSize=` paraméter és a `LEAD_PAGE_SIZE` konstans.
+   Virtualizáció **szándékosan nincs** — tulajdonosi halasztás a „több száz vagy ezer" esetére.
+2. **EGY „?" az egész felületen**, a cím mellett, felugró jelmagyarázattal. A sáv és a 11
+   fejléc-gomb megszűnt.
+3. **Egysoros, 38 px-es fejléc**, tétlenül rejtett vezérlőkkel; aktív szűrőnél cián tölcsér
+   a jelvényével, keret nélkül.
+4. **A cím alatti két szöveg-blokk kikerült**; a darabszám EGY sorban, a tábla alatt, a
+   szűrt ÉS a medence-számmal együtt.
+
+### Az elv, ami ebből általános
+
+**⭐ A FELÜLET TÖRÖLHET EGY MONDATOT, HA A MONDAT ÁLLÍTÁSÁT MÁS HORDOZZA — DE MEG KELL
+NEVEZNI, MI.** Mind a négy kivett szöveg egy-egy mért hibára született válasz volt (Elek
+FK-003), tehát a törlés önmagában visszalépés lett volna. Ezért minden kivett mondathoz
+kijelöltük az utódját, és az ŐR AZT MÉRI:
+
+| Amit a kivett szöveg mondott | Ki hordozza most | Mit mér az őr |
+|---|---|---|
+| mi szűr | a fejléc cián tölcsére + a gomb `data-filter-summary`-je | a mondat a SAJÁT oszlopát nevezi meg |
+| fut-e szűrő egyáltalán | a „Szűrők törlése" link léte | szűrővel ott van, szűrő NÉLKÜL nincs |
+| mi a sorrend | a rendező oszlop kiemelt neve és nyila | — (a meglévő `⑩` pont) |
+| hány sor, mihez képest | egy sor a tábla alatt | a szűrt ÉS a medence-szám EGY mondatban |
+| mit jelent egy oszlop | a felugró jelmagyarázat | MIND a 11 oszlop szerepel benne |
+
+**⛔ ÉS AMI A TÖRLÉSSEL MAJDNEM ELVESZETT: a tudásbázis-horgony.** A cím mellől eltűnt az
+ikonos súgó-link, és vele a `data-kb-anchor="console.leads"` — a `kb-check --coverage` azonnal
+pirosra ment. A horgony a felugró lábazatába költözött, **feliratos** linkként. Egy „takarítás"
+így vihet el egy olyan utat, amit egy MÁSIK kapu ígér.
+
+**⛔ A SÚGÓ A LAPOZÓ FELIRATAIT IDÉZTE.** A `console-leads` szócikk szó szerint hozta a
+„‹ Előző" / „Következő ›" / „Lapozva" feliratokat, és volt róluk képernyőkép is. A
+label-drift őr elkapta — a szócikket a KÓDBÓL írtuk újra (nem a commit-üzenetből), a
+lapozó-kép pedig törölve: egy olyan képernyőelemről szóló kép, ami nem létezik, a kézikönyv
+legrosszabb fajta hazugsága.
+
+**⛔ A TÖRÉSPONT FELTEVÉS, A MÉRÉS TÉNY.** A NÉV-oszlop ragadása és a görgetés-jelzés
+`@media (max-width: 700px)`-en ült — abból a feltevésből, hogy asztalin mindig kifér mind a
+11 oszlop. Mérve a valós korpuszon: **1440 px-től** fér ki, 1280 px-en 91 px lóg túl.
+A feltevés tehát hamis volt, és a MOCK oszlop némán levágódott volna, pont úgy, ahogy
+2026-09-14-én. Most a lap-szkript **megméri** a valódi túllógást (`is-scrollx`), és ahhoz köti
+mindkettőt. Egy pixelre kimért illeszkedés véletlenül tart.
+
+**⛔ A MARKUPBAN BENNE VOLT, MÉGSEM LÁTSZOTT.** Az új tölcsér-ikon az `inline-flex` gombon a
+jelvény mellett **0,34 px-re** zsugorodott. A forrásban ott volt a teljes `<svg>`, tehát egy
+„megvan-e az ikon" grep zöldet adott volna; a képernyőn egy üres kis doboz állt. Az őr ezért
+a RENDERELT szélességet méri, nem a meglétét.
+
+**⭐ A KÉP A VALÓDI ÚTON KÉSZÜLJÖN.** A `legend.png` korábban a DOM-on kikényszerített `open`
+attribútummal készült — az a nyitó-gomb megkerülése, tehát egy elromlott gomb mellett is szép
+képet adott volna. Most a felvétel **rákattint a „?" gombra**, mint az operátor, és hangosan
+elhasal, ha nem nyílik meg. Ugyanitt: az elem-felvétel a saját görgetését is feloldja, mert a
+levágott előnézet mindig a VÉGÉT veszi el (16 sorból 8 került a képre).

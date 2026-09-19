@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lead-lista — A változat — vezérlők a fejlécben</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#fff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-ok-ink:#19733f;--citui-bad-ink:#b3262b;--citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);--citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe9f0;font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+/* ── draft chrome (NOT part of the design) ─────────────────────────────── */
+.sizebar{position:sticky;top:0;z-index:99;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:13px}
+.sizebar button{font:inherit;font-weight:700;cursor:pointer;border-radius:999px;padding:6px 14px;
+  border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit}
+.sizebar button.on{background:var(--citui-cyan-400);color:var(--citui-navy-950);border-color:transparent}
+.sizebar .note{opacity:.8}
+.stage{display:flex;justify-content:center;padding:18px 10px 40px}
+.frame{container-type:inline-size;width:100%;max-width:1280px;background:var(--citui-surface);
+  border-radius:12px;overflow:visible;box-shadow:var(--citui-shadow-md)}
+body.m .frame{width:390px}
+
+/* ── console shell ─────────────────────────────────────────────────────── */
+.topnav{display:flex;align-items:center;gap:18px;padding:12px 16px;border-radius:12px 12px 0 0;
+  background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));color:var(--citui-ink-inverse);
+  font-weight:700;font-size:14px;overflow:hidden;white-space:nowrap}
+.topnav .brand{font-family:var(--citui-font-display);font-size:17px;display:flex;align-items:center;gap:8px}
+.topnav .dot{width:16px;height:16px;border-radius:50%;border:3px solid var(--citui-cyan-400);border-right-color:transparent}
+.topnav span.on{background:rgba(255,255,255,.14);padding:6px 12px;border-radius:8px}
+.topnav .sp{margin-left:auto;opacity:.85;font-weight:600}
+.panel{padding:18px 16px 22px}
+@container (max-width:700px){.panel{padding:14px 10px 18px}}
+
+.phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.phead .sp{margin-left:auto;display:flex;gap:14px;font-size:13px}
+.phead a{color:var(--citui-link-ink);font-weight:600;text-decoration:none;cursor:pointer}
+.phead h1{font-family:var(--citui-font-display);font-size:22px;margin:0;color:var(--citui-navy-900)}
+.helpq{width:26px;height:26px;border-radius:50%;border:1px solid var(--citui-line-strong);
+  background:var(--citui-white);color:var(--citui-muted);font:700 14px/1 var(--citui-font-text);
+  cursor:pointer;display:grid;place-items:center;padding:0}
+.helpq:hover,.helpq:focus-visible{color:var(--citui-link-ink);border-color:var(--citui-cyan-500)}
+.meta{margin:8px 0 0;font-size:13px;color:var(--citui-muted)}
+.meta b{color:var(--citui-ink)}
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 12px;font-size:13px;color:var(--citui-muted)}
+.toolbar .sp{margin-left:auto;display:flex;gap:14px}
+.toolbar a{color:var(--citui-link-ink);font-weight:600;text-decoration:none;cursor:pointer}
+
+/* ── table ─────────────────────────────────────────────────────────────── */
+.tblwrap{border:1px solid var(--citui-line);border-radius:10px;background:var(--citui-white);
+  max-height:620px;overflow:auto;position:relative}
+@container (max-width:700px){.tblwrap{max-height:520px}}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px}
+thead th{position:sticky;top:0;z-index:3;background:var(--citui-surface-2);
+  border-bottom:1px solid var(--citui-line-strong);padding:0 8px;height:38px;
+  text-align:left;white-space:nowrap;vertical-align:middle}
+tbody td{height:44px;padding:0 8px;border-bottom:1px solid var(--citui-line);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;background:var(--citui-white)}
+tbody tr:hover td{background:var(--citui-surface)}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+td[data-col=region]{max-width:88px}
+td[data-col=city]{max-width:96px}
+th[data-col=country],td[data-col=country]{width:1%}
+th[data-col=name],td[data-col=name]{position:sticky;left:0;z-index:2;max-width:150px}
+@container (max-width:700px){th[data-col=name],td[data-col=name]{max-width:150px}}
+/* ⑦ KÉT JELENTÉS = KÉT ALAK (a 2026-09-14-i kontraktus él tovább):
+   DARABSZÁM = kerek, kitöltött · KÜSZÖB = szögletes, körvonalas, ≥ jellel. */
+.bdg{display:inline-flex;align-items:center;justify-content:center;font-style:normal;
+  font:800 9.5px/1 var(--citui-font-text);margin-left:4px;vertical-align:middle}
+.bdg:empty{display:none}
+.bdg.cnt{min-width:15px;height:15px;border-radius:50%;background:var(--citui-cyan-500);color:#fff}
+.bdg.thr{height:15px;padding:0 4px;border-radius:4px;border:1px solid var(--citui-cyan-500);
+  color:var(--citui-link-ink);background:var(--citui-white)}
+.shint{margin:0 0 8px;font-size:12px;color:var(--citui-muted);display:none}
+@container (max-width:700px){.shint{display:block}}
+thead th[data-col=name]{z-index:5}
+td[data-col=name]{box-shadow:1px 0 0 var(--citui-line)}
+thead th[data-col=name]{box-shadow:1px 0 0 var(--citui-line)}
+tbody tr:hover td[data-col=name]{background:var(--citui-surface)}
+td[data-col=name] a{color:var(--citui-link-ink);font-weight:600;text-decoration:none}
+.mut{color:var(--citui-muted)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;
+  border:1px solid transparent}
+.pill.nosite{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,transparent)}
+.pill.outdated{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 16%,transparent)}
+.pill.approved{color:var(--citui-ok-ink);background:var(--citui-ok-soft)}
+.pill.rejected{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 12%,transparent)}
+.pill.generated{color:var(--citui-link-ink);background:color-mix(in srgb,var(--citui-cyan-500) 13%,transparent)}
+.mark{font-size:10px;color:var(--citui-muted);border:1px solid var(--citui-line);border-radius:4px;
+  padding:0 4px;margin-left:5px;vertical-align:middle}
+.good{color:var(--citui-ok-ink);font-weight:700}
+.mid{color:var(--citui-warn-ink);font-weight:700}
+.bad{color:var(--citui-bad-ink);font-weight:700}
+.foot{margin:10px 2px 0;font-size:12px;color:var(--citui-muted)}
+@container (max-width:700px){.phead .sp{margin-left:0;width:100%}}
+
+/* ── popovers ──────────────────────────────────────────────────────────── */
+.pop{position:fixed;z-index:60;min-width:216px;max-width:270px;background:var(--citui-white);
+  border:1px solid var(--citui-line-strong);border-radius:10px;box-shadow:var(--citui-shadow-md);
+  padding:10px;font-size:13px;white-space:normal}
+.pop[hidden]{display:none}
+.pop .hint{color:var(--citui-muted);font-size:12px;line-height:1.4;margin:0 0 8px}
+.pop label{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer}
+.pop label:hover{background:var(--citui-surface-2)}
+.pop .list{display:flex;flex-direction:column;gap:2px;max-height:240px;overflow:auto}
+.pop input[type=text],.pop input[type=number]{width:100%;font:inherit;padding:6px 8px;
+  border:1px solid var(--citui-line-strong);border-radius:8px;margin-bottom:8px}
+.pop .cnt{margin-left:auto;color:var(--citui-muted);font-size:11px}
+.pop .act{display:flex;gap:8px;justify-content:space-between;margin-top:9px;border-top:1px solid var(--citui-line);padding-top:9px}
+.pop .act button{font:inherit;font-weight:700;font-size:12px;cursor:pointer;border-radius:8px;padding:6px 12px}
+.pop .act .go{border:0;background:var(--citui-navy-900);color:#fff}
+.pop .act .off{border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-muted)}
+
+/* ── legend modal ──────────────────────────────────────────────────────── */
+.back{position:fixed;inset:0;background:rgba(10,31,54,.5);z-index:80;display:grid;place-items:center;padding:16px}
+.back[hidden]{display:none}
+.modal{background:var(--citui-white);border-radius:16px;max-width:620px;width:100%;max-height:82vh;
+  overflow:auto;box-shadow:var(--citui-shadow-md)}
+.modal header{position:sticky;top:0;background:var(--citui-white);display:flex;align-items:center;gap:10px;
+  padding:16px 18px 12px;border-bottom:1px solid var(--citui-line)}
+.modal h2{font-family:var(--citui-font-display);font-size:18px;margin:0;color:var(--citui-navy-900)}
+.modal .x{margin-left:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--citui-muted)}
+.modal dl{margin:0;padding:14px 18px 20px;font-size:13.5px;line-height:1.55}
+.modal dt{font-weight:800;color:var(--citui-navy-900);margin-top:12px}
+.modal dt:first-child{margin-top:0}
+.modal dd{margin:2px 0 0;color:var(--citui-muted)}
+.modal .sec{margin:18px 18px 0;padding-top:14px;border-top:1px solid var(--citui-line);
+  font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted)}
+
+thead th .sorth{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;padding:0;
+  font:800 10.5px/1 var(--citui-font-text);letter-spacing:.075em;text-transform:uppercase;
+  color:var(--citui-muted);cursor:pointer}
+thead th .sorth:hover{color:var(--citui-navy-900)}
+thead th.on .sorth{color:var(--citui-navy-900)}
+thead th .arr{font-size:9px;line-height:1;opacity:0;transition:opacity .12s}
+thead th:hover .arr{opacity:.35}
+thead th.on .arr{opacity:1;color:var(--citui-link-ink)}
+thead th .fbtn{margin-left:6px;border:0;background:transparent;padding:2px;cursor:pointer;
+  color:var(--citui-muted);opacity:0;transition:opacity .12s;vertical-align:middle;line-height:0}
+thead th:hover .fbtn,thead th .fbtn:focus-visible{opacity:.5}
+thead th .fbtn svg{width:11px;height:11px;display:block}
+thead th .fbtn.on{opacity:1;color:var(--citui-link-ink)}
+thead th .fbtn.on svg{width:11px;height:11px}
+thead th .cellwrap{display:flex;align-items:center}
+th.num .cellwrap{justify-content:flex-end}
+@container (max-width:700px){thead th .fbtn{opacity:.5}}
+</style>
+</head><body>
+<div class="sizebar">
+  <button type="button" data-size="m">Mobil 390px</button>
+  <button type="button" data-size="d" class="on">Asztali</button>
+  <span class="note">A változat — vezérlők a fejlécben — a felső sáv a VÁZLAT kerete, nem a terv része.</span>
+</div>
+<div class="stage"><div class="frame">
+  <nav class="topnav">
+    <span class="brand"><span class="dot"></span>Citoviso</span>
+    <span>Irányítópult</span><span class="on">CRM</span><span>Pénzügy</span><span>Riport</span>
+    <span class="sp">HU · Kilépés</span>
+  </nav>
+  <div class="panel">
+    <div class="phead">
+      <h1>Aktív leadek</h1>
+      <button type="button" class="helpq" id="helpBtn" title="Mit jelentenek az oszlopok és a jelölések?" aria-label="Mit jelentenek az oszlopok és a jelölések?">?</button>
+      <span class="sp"><a id="clear">Szűrők törlése</a><a>diszkvalifikáltak ▸</a></span>
+    </div>
+    
+    <p class="shint">Oldalra görgetve jön a többi oszlop — a <b>Név</b> a helyén marad.</p>
+    <div class="tblwrap" id="tw">
+      <table><thead id="th"></thead><tbody id="tb"></tbody></table>
+    </div>
+    <p class="foot" id="foot"></p>
+  </div>
+</div></div>
+
+<div class="back" id="help" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Mit jelentenek az oszlopok és a jelölések?">
+    <header><h2>Mit jelentenek az oszlopok és a jelölések?</h2>
+      <button type="button" class="x" id="helpX" aria-label="Bezárás">×</button></header>
+    <dl id="helpBody"></dl>
+  </div>
+</div>
+
+<script>
+const VARIANT="A";const ROWS=[["ELEK-TESZT Vendégház","2026-09-04","Balaton","HU","Balatonboglár","no_site",0,1,12,null,"email","approved",0],["Dencs Apartmanház","2026-08-21","Balaton","HU","Gyenesdiás","no_site",10,1,16,0.6912182872132611,"email","none",0],["Boróka ház","2026-08-21","Balaton","HU","Siófok","no_site",10,1,21,0.9917040560391283,"email","none",0],["Camping Carina","2026-08-21","Balaton","HU","Balatongyörök","outdated",10,0,21,0.9258208038532693,"email","none",0],["Levendula Vendégház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,0.9583544500731922,"none","none",0],["Erika nyaralóház","2026-08-21","Balaton","HU","Balatonszárszó","no_site",0,1,1,null,"sms","none",0],["Hajóállomás Appartman","2026-08-21","Balaton","HU","Tihany","no_site",0,1,1,null,"none","none",0],["Rozé Fogadó","2026-08-21","Balaton","HU","Révfülöp","no_site",10,1,18,0.8500000000000001,"sms","none",0],["Ifjúsági Szállás Tihany","2026-08-21","Balaton","HU","Tihany","no_site",10,1,17,0.8500000000000001,"email","none",0],["Villa Suzy Zamárdi","2026-08-21","Balaton","HU","Zamárdi","no_site",10,1,53,0.8500000000000001,"email","none",0],["Hotel Viola","2026-08-21","Balaton","HU","Siófok","outdated",0,1,16,null,"email","none",0],["Csikós Lovasudvar","2026-08-21","Balaton","HU","Pécsley, Klára-puszta","outdated",0,0,4,null,"email","none",0],["Ezüsthíd Vendégház","2026-08-21","Balaton","HU","Vonyarcvashegy","no_site",0,0,10,0.9900233261440713,"none","none",0],["Postaláda Vendégház","2026-08-21","Balaton","HU","Salföld","outdated",0,1,30,0.9899367740700823,"email","none",0],["Pusztai apartmanok","2026-08-21","Balaton","HU","Balatonszemes","no_site",0,1,11,null,"none","none",0],["Szent Jupát ház","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,8,null,"email","none",0],["Panzió","2026-08-21","Balaton","HU","Balatongyörök","no_site",10,1,11,0.7669567522046702,"sms","none",0],["Villa Rubin","2026-08-21","Balaton","HU","Balatonföldvár","outdated",10,1,19,0.9952418696431765,"email","none",0],["Levendula Vendégház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",2,1,53,0.9798143452006777,"email","none",0],["Villa Port Resort","2026-08-21","Balaton","HU","Balatonföldvár","no_site",7,1,8,0.9947344788462755,"voice","none",0],["Ezüst Nyár","2026-08-21","Balaton","HU","Balatonudvari","outdated",0,1,9,null,"none","none",0],["Aranykagyló 36","2026-08-21","Balaton","HU","Szigliget","no_site",0,1,113,null,"sms","approved",0],["Krisztina vendégház","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,4,null,"email","none",0],["Landhaus Dörgicse","2026-08-21","Balaton","HU","Dörgicse","outdated",0,1,27,0.3692100356407644,"voice","none",0],["Laguna Panzió","2026-08-21","Balaton","HU","Szántód","outdated",10,1,11,0.6512116298267856,"email","none",0],["Galopp Lovas Üdülőfalu","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,null,"voice","none",0],["Riviéra Park Hotel","2026-08-21","Balaton","HU","Balatonföldvár","outdated",10,1,11,0.8686879859661182,"email","none",0],["Rév-Hotel","2026-08-21","Balaton","HU","Szántód","no_site",7,1,8,0.9520744968982914,"none","none",0],["Családi ház – kiadó szobák","2026-08-21","Balaton","HU","Örvényes","outdated",0,1,42,null,"email","none",0],["Gamauf Panzió","2026-08-21","Balaton","HU","Balatonszárszó","no_site",0,1,1,null,"email","none",0],["Kőröshegyi falusi vendégház","2026-08-21","Balaton","HU","Kőröshegy","no_site",10,1,11,0.5260956283785203,"email","none",0],["Boglárka Apartman","2026-08-21","Balaton","HU","Balatonboglár","no_site",0,1,1,null,"email","none",0],["Alig-vár Tanya","2026-08-21","Balaton","HU","Salföld","no_site",10,0,10,0.5090583276170699,"email","none",0],["Magánszállás (Horváth Dezső)","2026-08-21","Balaton","HU","Szentbékkálla","no_site",0,1,1,null,"email","none",0],["Nyíregyházi gyermeküdülő","2026-08-21","Balaton","HU","Szigliget","no_site",10,1,11,0.9957515617028307,"voice","none",0],["Három Huszár Apartments","2026-08-21","Balaton","HU","Köveskál","no_site",10,1,11,0.8310076068419424,"sms","none",0],["Jani Gyula","2026-08-21","Balaton","HU","Szigliget","no_site",10,1,11,0.6068499486115111,"email","none",0],["Átrium - Malom Panzió","2026-08-21","Balaton","HU","Nemesvita","no_site",10,0,10,0.5852631472533794,"none","none",0],["Üdülő tábor","2026-08-21","Balaton","HU","Szigliget","no_site",10,1,11,0.4696348064344913,"voice","none",0],["Köveskáli Diákkemping","2026-08-21","Balaton","HU","Köveskál","no_site",0,1,29,0.3090030522582671,"email","none",0],["Domb apartmanház","2026-08-21","Balaton","HU","Gyenesdiás","no_site",0,1,1,null,"none","none",0],["Takács Panzió","2026-08-21","Balaton","HU","Gyenesdiás","no_site",1,1,2,0.6331192854672835,"voice","none",0],["Eldorádó Fogadó-Kemping","2026-08-21","Balaton","HU","Vonyarcvashegy","outdated",0,1,50,null,"email","none",0],["Wellness Park Panzió & Camping","2026-08-21","Balaton","HU","Gyenesdiás","outdated",10,1,12,0.804290840151198,"email","none",0],["Balatonudvari vendégház","2026-08-21","Balaton","HU","Balatonudvari","outdated",0,1,1,0.3997989254342053,"email","none",0],["Hotel","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"none","none",0],["BMW üdülőtelep","2026-08-21","Balaton","HU","Tihany","no_site",0,1,1,null,"none","none",0],["Kentaur üdülőfalu","2026-08-21","Balaton","HU","Balatonboglár","outdated",10,1,11,0.9684266965333485,"email","none",0],["Strand Apartman Keszthely","2026-08-21","Balaton","HU","Keszthely","no_site",10,1,11,0.8190976097881356,"email","none",0],["Vasvári Vendégház","2026-08-21","Balaton","HU","Szigliget","no_site",1,0,1,0.9318572553133341,"sms","none",0],["Szolnoki gyermek tábor","2026-08-21","Balaton","HU","Balatonszepezd","no_site",10,1,11,0.5119335707868105,"sms","none",0],["Mini Camping Örvényes","2026-08-21","Balaton","HU","Örvényes","no_site",10,1,11,0.9385743063382236,"email","none",0],["Rooms for Rent","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"sms","none",0],["Halastó Nyaralóház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,null,"email","none",0],["Mákszem Nyaraló","2026-08-21","Balaton","HU","Szántód","outdated",0,1,47,null,"none","none",0],["Bánó Porta Köveskál","2026-08-21","Balaton","HU","Köveskál","outdated",10,1,11,0.5922692872397356,"email","none",0],["Eifert Panzió","2026-08-21","Balaton","HU","Balatongyörök","no_site",10,1,11,0.9941910797651649,"sms","none",0],["Kathy Panzió","2026-08-21","Balaton","HU","Balatongyörök","outdated",10,1,37,0.9866038673125518,"email","none",0],["Liliom vendégház","2026-08-21","Balaton","HU","Káptalantóti","no_site",1,1,2,0.6922844441040403,"sms","none",0],["CT Hostel","2026-08-21","Balaton","HU","Tihany","no_site",0,1,1,null,"none","none",0],["Favorit Motel","2026-08-21","Balaton","HU","Szántód","outdated",10,1,14,0.6346230320342425,"email","none",0],["Csenge Panzió","2026-08-21","Balaton","HU","Balatonszárszó","outdated",0,1,76,0.2625,"email","none",0],["Rajczi Panzió Ádám Vendégház","2026-08-21","Balaton","HU","Balatonszemes","outdated",10,1,69,0.6307127589102198,"sms","none",0],["Szemes Vendégház","2026-08-21","Balaton","HU","Balatonszemes","outdated",10,1,11,0.6596515635101313,"email","none",0],["Szurok Apartman","2026-08-21","Balaton","HU","Balatonboglár","no_site",0,1,1,null,"none","none",0],["Janka apartman","2026-08-21","Balaton","HU","Szigliget","outdated",6,1,10,0.9880845369612402,"email","none",0],["Pavill_ker üdülője","2026-08-21","Balaton","HU","Balatonszepezd","no_site",0,1,1,null,"none","none",0],["Erzsébet Vendéglő","2026-08-21","Balaton","HU","Balatonboglár","no_site",0,1,12,null,"email","none",0],["Villa Schwalbennest","2026-08-21","Balaton","HU","Vonyarcvashegy","outdated",6,1,7,0.997415926136792,"sms","none",0],["Admirális Apartman","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"sms","none",0],["Szieszta Apartmanház","2026-08-21","Balaton","HU","Balatonboglár","no_site",0,1,4,null,"email","none",0],["Lavia panzió","2026-08-21","Balaton","HU","Gyenesdiás","outdated",0,1,47,0.6353201291688622,"email","none",0],["László Apartmanház","2026-08-21","Balaton","HU","Vonyarcvashegy","outdated",10,1,11,0.9967371833830537,"voice","none",0],["Krisztina Vendégház","2026-08-21","Balaton","HU","Szigliget","outdated",7,1,8,0.8106097530038677,"email","none",0],["Happy Bunnies Apartman II","2026-08-21","Balaton","HU","Siófok","no_site",8,1,9,0.9955582072734489,"email","none",0],["Szent Benedek turistaszálló","2026-08-21","Balaton","HU","Szentbékkálla","no_site",10,1,11,0.5740806641818572,"email","none",0],["Beach Hostel","2026-08-21","Balaton","HU","Balatonboglár","no_site",10,1,11,0.8431942570650542,"sms","none",0],["Gádor tábor","2026-08-21","Balaton","HU","Vászoly","no_site",0,1,1,null,"email","none",0],["Lovász apartman","2026-08-21","Balaton","HU","Tapolca","no_site",10,1,11,0.680534355134644,"sms","none",0],["Erdei iskola","2026-08-21","Balaton","HU","Monoszló","outdated",0,1,76,null,"email","none",0],["Vadócztanya sport- és ifjúsági tábor","2026-08-21","Balaton","HU","Gyenesdiás","outdated",10,1,36,0.6551717209848558,"email","none",0],["Papillon Vendégház","2026-08-21","Balaton","HU","Gyulakeszi","no_site",10,1,11,0.9903642937669738,"sms","none",0],["Kerner","2026-08-21","Balaton","HU","Siófok","no_site",10,1,11,0.7534319672751423,"sms","none",0],["Balatonederics újhegyi vendégház Csali Tamásné","2026-08-21","Balaton","HU","Balatonederics","no_site",0,1,1,null,"email","none",0],["Kántás Vendégház és Étterem","2026-08-21","Balaton","HU","Tihany","no_site",0,1,1,null,"none","none",0],["Farkas","2026-08-21","Balaton","HU","Siófok","no_site",0,1,63,0.7659166326213295,"email","none",0],["ZoZi","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"none","none",0],["Lido Riviera Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","no_site",6,1,7,0.5866880313101577,"sms","none",0],["Lidó Wellness és Bor Villa","2026-08-21","Balaton","HU","Siófok","no_site",10,1,11,0.6053986971160369,"sms","none",0],["Carpe Diem Park","2026-08-21","Balaton","HU","Kőröshegy","no_site",0,1,1,0.9753575539499572,"email","none",0],["Szegfű ház","2026-08-21","Balaton","HU","Balatonboglár","no_site",10,1,11,0.7599803991389309,"sms","none",0],["Hiláriusz vendégház","2026-08-21","Balaton","HU","Káptalantóti","no_site",7,1,8,0.9883881788677926,"email","none",0],["Tieff Apartmanház","2026-08-21","Balaton","HU","Zamárdi","outdated",10,1,29,0.5425917499840104,"email","none",0],["Zsuzsa Apartman","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"sms","none",0],["Hajni Vendégház","2026-08-21","Balaton","HU","Kisapáti","no_site",9,1,10,0.9686247658272465,"sms","none",0],["Nyírfa Apartman","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"none","none",0],["Orsi Vendégház","2026-08-21","Balaton","HU","Szentbékkálla","no_site",8,1,9,0.9662556046911644,"sms","none",0],["Valéria Vendégház","2026-08-21","Balaton","HU","Szentbékkálla","no_site",10,1,11,0.9737143323245508,"email","none",0],["Ferenc Ház","2026-08-21","Balaton","HU","Szentbékkálla","no_site",10,1,11,0.9950332932774949,"email","none",0],["Ádám-Gergő Vendégház","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,0.44999999999999996,"email","none",0],["Középkelet-magyarországi Közlekedési Központ Zrt. Üdülője","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,null,"none","none",0],["Panoráma Nyaraló","2026-08-21","Balaton","HU","Badacsonytördemic","no_site",10,1,11,0.9339569439489092,"sms","none",0],["Bóna Vendégház","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,25,null,"none","none",0],["Bauxit hostel","2026-08-21","Balaton","HU","Tapolca","no_site",0,1,1,null,"none","none",0],["Büdöskúti turistaház","2026-08-21","Balaton","HU","Vállus","no_site",0,1,1,0.3,"none","none",0],["Klára Apartman","2026-08-21","Balaton","HU","Örvényes","outdated",10,1,26,0.9710264316256271,"email","none",0],["Műemlék Nyaralóház","2026-08-21","Balaton","HU","Dörgicse","no_site",0,1,1,null,"email","none",0],["Turistaszállás","2026-08-21","Balaton","HU","Nemesvita","outdated",0,1,1,null,"voice","none",0],["András Apartman","2026-08-21","Balaton","HU","Balatongyörök","no_site",0,1,1,0.4079226801881879,"none","none",0],["Kele Vendégház","2026-08-21","Balaton","HU","Badacsonytördemic","outdated",0,1,13,0.9910025367330809,"none","none",0],["Harmónia Vendégház","2026-08-21","Balaton","HU","Vonyarcvashegy","no_site",10,0,10,0.9929652749295644,"sms","none",0],["Myrna Haus","2026-08-21","Balaton","HU","Balatonakali","no_site",10,1,11,0.6974596600998976,"email","rejected",0],["Castelinho Apartments","2026-08-21","Balaton","HU","Gyenesdiás","outdated",10,1,18,0.8367017765934194,"email","none",0],["Villa Elysium","2026-08-21","Balaton","HU","Gyenesdiás","outdated",4,1,5,0.9903922831268902,"email","none",0],["Artemisz Panzió","2026-08-21","Balaton","HU","Tapolca","no_site",10,0,10,0.9115892560769271,"email","none",0],["Fruzsi Vendégház","2026-08-21","Balaton","HU","Szentbékkálla","no_site",10,1,11,0.9926726353501152,"email","none",0],["Sarvalyi vadászház","2026-08-21","Balaton","HU","Sümegprága","no_site",1,0,1,0.9843692384507153,"voice","none",0],["Éden üdülőház","2026-08-21","Balaton","HU","Fonyód","no_site",10,1,11,0.9635798090249724,"email","none",0],["Philip-Cindy Haus","2026-08-21","Balaton","HU","Örvényes","no_site",2,1,3,0.764291668636266,"sms","none",0],["Steixner Ház","2026-08-21","Balaton","HU","Örvényes","outdated",0,1,16,null,"email","none",0],["Marika Vendégház","2026-08-21","Balaton","HU","Örvényes","outdated",0,1,16,0.9850242067085485,"email","none",0],["Papp-Lak","2026-08-21","Balaton","HU","Örvényes","no_site",4,1,5,0.991085413982063,"sms","none",0],["József Ház","2026-08-21","Balaton","HU","Örvényes","no_site",0,1,1,null,"email","none",0],["Neptun Társasüdülő","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.898902901416265,"voice","none",0],["Vécsey Apartman","2026-08-21","Balaton","HU","Siófok","no_site",10,1,11,0.9976969144461859,"sms","none",0],["SILVERBEACH Residences","2026-08-21","Balaton","HU","Siófok","no_site",10,1,11,0.9943082108799731,"email","none",0],["Zsóka fogadója","2026-08-21","Balaton","HU","Szentantalfa","outdated",10,1,18,0.8295517291835168,"email","none",0],["Pálkövei Ifjúsági Tábor","2026-08-21","Balaton","HU","Kővágóörs","outdated",10,0,32,0.5371046609767748,"email","none",0],["Rózsa panzió","2026-08-21","Balaton","HU","Zamárdi","outdated",10,1,11,0.6333156004794729,"none","none",0],["Nikolett apartman","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,null,"none","none",0],["Preimusz Vendégház","2026-08-21","Balaton","HU","Siófok","outdated",10,1,16,0.6414678460001801,"email","none",0],["Kurucz vendégház","2026-08-21","Balaton","HU","Balatonboglár","no_site",0,1,1,null,"email","none",0],["BBB Apartman Balatonboglár","2026-08-21","Balaton","HU","Balatonboglár","outdated",10,1,31,0.8456582508434823,"email","none",0],["A BKM Budapesti Közművek Nonprofit Zrt. üdülője","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"none","none",0],["Hello Balcsi Apartmanház","2026-08-21","Balaton","HU","Tihany","outdated",10,1,17,1,"email","none",0],["Berkes Vendégház és Borozó","2026-08-21","Balaton","HU","Badacsonytördemic","outdated",10,1,14,0.7597397142196294,"email","none",0],["Panoráma Vendégház","2026-08-21","Balaton","HU","Balatonendréd","outdated",10,1,11,0.84635631027548,"email","none",0],["BÉ-CY Villa","2026-08-21","Balaton","HU","Balatonszemes","no_site",3,1,4,0.9344803181157034,"email","none",0],["Guns pince","2026-08-21","Balaton","HU","Szigliget","outdated",10,0,13,0.9660900060756952,"email","none",0],["Schmuck apartmanház","2026-08-21","Balaton","HU","Nemesgulács","no_site",10,1,11,0.5338223361585429,"sms","none",0],["Schmuck nyaralóház","2026-08-21","Balaton","HU","Nemesgulács","no_site",10,1,11,0.6679991790875535,"sms","none",0],["Platán Üdülőház","2026-08-21","Balaton","HU","Balatonszemes","no_site",10,1,11,0.6188771807983774,"voice","none",0],["Pitypang Vendégház","2026-08-21","Balaton","HU","Szólád","no_site",10,1,17,0.8500000000000001,"email","none",0],["Haus Elisabeth","2026-08-21","Balaton","HU","Balatonlelle","outdated",8,1,59,0.6872570711640564,"email","none",0],["Oleánder Vendégház","2026-08-21","Balaton","HU","Tihany","no_site",10,1,11,0.9876822146715961,"sms","none",0],["Tihany Gyöngye Villa","2026-08-21","Balaton","HU","Tihany","no_site",10,1,11,0.9895367823439215,"sms","none",0],["Aranyhomok Társasüdülő","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.8428141072986659,"voice","none",0],["Hotel Francoise","2026-08-21","Balaton","HU","Balatonlelle","outdated",0,1,1,null,"email","none",0],["Tettye Társasüdülő","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.5481452703347902,"voice","none",0],["Zengő Társasüdülő","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.984939904750369,"email","none",0],["Apartman Balaton","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,25,0.642134651865455,"email","none",0],["Aranyhal Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","no_site",9,1,10,0.6572014506242337,"sms","none",0],["Frézia Apartman","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"email","none",0],["Panoráma Társasüdülő","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,0,10,0.7900713903131369,"none","none",0],["Káli Kő Apartman","2026-08-21","Balaton","HU","Szentbékkálla","outdated",10,1,12,0.9892389228894838,"email","none",0],["Kővágó Panzió","2026-08-21","Balaton","HU","Kővágóörs","outdated",10,1,11,0.9671270310371616,"sms","none",0],["Theodorakert","2026-08-21","Balaton","HU","Kővágóörs","no_site",9,1,10,0.7498092471932688,"none","none",0],["1000 jó villa","2026-08-21","Balaton","HU","Zamárdi","no_site",3,1,4,0.6261091082608266,"email","none",0],["Hotel Tiffany","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,26,0.9644750347287162,"email","none",0],["Művészeti Szakszervezetek Üdülője","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,null,"none","none",0],["Nárcisz panzió","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.6048018482594986,"email","none",0],["Vasas Szakszervezet üdülője","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.570710546776164,"voice","none",0],["R-home apartman","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,0.9671277347039041,"none","none",0],["Keresztes Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.827239533725581,"sms","none",0],["Eszter-Ház","2026-08-21","Balaton","HU","Kisapátihegy","no_site",10,1,11,0.7205727645662559,"sms","none",0],["Hotel Három Hattyú","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,null,"voice","none",0],["Reider Beach","2026-08-21","Balaton","HU","Balatonszemes","outdated",10,1,11,0.6210987220336364,"email","none",0],["Erika magánszálláshely","2026-08-21","Balaton","HU","Balatonszárszó","no_site",0,1,1,null,"none","none",0],["Éva Vendégház","2026-08-21","Balaton","HU","Balatonudvari","no_site",0,1,1,null,"voice","none",0],["Villa Elisabeth","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.6554691001687255,"sms","none",0],["Hont Villa","2026-08-21","Balaton","HU","Balatonlelle","no_site",4,1,5,0.9967597031460166,"email","none",0],["Villa Szent István","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.9876256345593571,"email","none",0],["Kék Tó Hotel","2026-08-21","Balaton","HU","Balatonszárszó","no_site",0,1,1,null,"none","none",0],["Jancsi és Juliska Vendégháza","2026-08-21","Balaton","HU","Balatonszárszó","no_site",10,1,11,0.9718450926586475,"sms","none",0],["Európa Apartmanház","2026-08-21","Balaton","HU","Balatonszemes","no_site",0,1,1,null,"email","none",0],["Orbán Vendégház","2026-08-21","Balaton","HU","Kővágóörs","no_site",10,0,10,0.9583808889117551,"email","none",0],["Balatoni Apartman","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,0.42205620993368353,"email","none",0],["Gyöngyi Vendégház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,null,"none","none",0],["Strand Apartmanház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,null,"email","none",0],["Hotel Amigo","2026-08-21","Balaton","HU","Zamárdi","outdated",10,1,11,0.6334673298135999,"email","none",0],["Harmónia üdülőház","2026-08-21","Balaton","HU","Balatonszepezd","no_site",10,0,18,0.5272512770966167,"sms","none",0],["Centrum Stúdióapartman Balatonlelle","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.9863697928058918,"sms","none",0],["Somogy Megyei Kaposi Mór Kórház üdülője","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"voice","none",0],["Simon Apartman","2026-08-21","Balaton","HU","Révfülöp","no_site",0,1,1,0.33847140327512326,"voice","none",0],["Liget vendégház","2026-08-21","Balaton","HU","Révfülöp","no_site",10,0,10,0.9844482100295225,"sms","none",0],["Mandula Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.6849056855506706,"sms","none",0],["Árnyas Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","no_site",6,1,7,0.9688916288864643,"none","none",0],["Lívia Apartman","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.6366321374828796,"email","none",0],["Villa Jázminvirág","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.9946102281287591,"email","none",0],["Szent István Hotel","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.6691154088283321,"email","none",0],["Komáromi Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","outdated",2,1,3,0.9896778044598061,"email","none",0],["Botos Villa","2026-08-21","Balaton","HU","Balatonlelle","outdated",10,1,11,0.8464003189815007,"email","none",0],["Napsugár Hotel","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.69009276208597,"sms","none",0],["Révfülöp Panoráma Kúria","2026-08-21","Balaton","HU","Kővágóörs","no_site",8,0,8,0.9944063345590625,"sms","none",0],["Tünde Vendégház","2026-08-21","Balaton","HU","Szentbékkálla","no_site",0,1,1,0.9873085013713901,"sms","none",0],["Gyümölcsöskert Vendégház","2026-08-21","Balaton","HU","Köveskál","no_site",10,0,10,0.9545598992560104,"sms","none",0],["Lantos Apartmanház","2026-08-21","Balaton","HU","Zamárdi","outdated",10,1,19,0.9859906311189475,"sms","none",0],["Balaton-felvidéki Erdészeti Erdei Iskola","2026-08-21","Balaton","HU","Szentjakabfa","outdated",10,1,11,0.9236330080941446,"email","none",0],["Luxury Reed House","2026-08-21","Balaton","HU","Balatonudvari","outdated",10,0,10,0.9462049144719065,"none","none",0],["Platán Hotel Zamárdi","2026-08-21","Balaton","HU","Zamárdi","outdated",10,1,11,0.6958712060910315,"email","none",0],["Martina Apartmanház","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,0.9818369545139468,"sms","none",0],["Bubu-Lak","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.8351679044772841,"sms","none",0],["Wellness Hotel Katalin","2026-08-21","Balaton","HU","Gyenesdiás","outdated",10,1,82,0.9565354919380286,"email","none",0],["Era Apartman","2026-08-21","Balaton","HU","Balatonszemes","no_site",0,1,1,0.9954377329524707,"email","none",0],["House4U","2026-08-21","Balaton","HU","Balatonszemes","outdated",0,1,1,0.6385238625921906,"voice","none",0],["SZGYF Tábor","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"none","none",0],["Sam Ash Vendégház","2026-08-21","Balaton","HU","Balatonszemes","outdated",0,1,1,null,"email","none",0],["Csillag Villa","2026-08-21","Balaton","HU","Balatonszemes","no_site",8,1,9,0.9978056913169796,"sms","none",0],["EMI Vendégház","2026-08-21","Balaton","HU","Balatonszemes","no_site",10,1,11,0.9961423810859495,"sms","none",0],["Csillag Vendégház","2026-08-21","Balaton","HU","Balatonszemes","no_site",8,1,9,0.5153674398999808,"email","none",0],["Egyed Apartman","2026-08-21","Balaton","HU","Mindszentkálla","no_site",0,1,1,null,"voice","none",0],["Kati néni Apartmanja","2026-08-21","Balaton","HU","Balatonszemes","no_site",0,1,1,null,"email","none",0],["Balatonszemesi Beach Club Üdülőház és Camping","2026-08-21","Balaton","HU","Balatonszemes","no_site",4,1,5,0.8963706982248422,"sms","none",0],["Platánfa Vendégház","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,null,"email","none",0],["Zenit Magánszálláshely","2026-08-21","Balaton","HU","Zamárdi","no_site",10,1,11,0.997040285901124,"email","none",0],["Fenyőliget üdülőház","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"none","none",0],["Aqua Hotel","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,0.24,"email","none",0],["Hungária Vendégház","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,0.8442314087566013,"none","none",0],["Doka ház","2026-08-21","Balaton","HU","Kisapáti","no_site",10,0,10,0.8320705575309585,"voice","none",0],["Emilia Apartment","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,1,0.9270659446097008,"sms","none",0],["Bettina vendégház","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,null,"email","none",0],["Pitypang apartman","2026-08-21","Balaton","HU","Siófok","no_site",0,1,1,0.8319174008791077,"email","none",0],["Erdészeti Üdülő","2026-08-21","Balaton","HU","Szántód","outdated",10,1,11,0.7350250760508656,"email","none",0],["Harmonia","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"sms","none",0],["Pécsi Tudományegyetem Balatonlellei Üdülő","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.9632159402467951,"voice","none",0],["Budapesti Operettszínház Üdülője","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.7676662024884637,"none","none",0],["Vadvirág Apartman","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"email","none",0],["Randevú Vendégház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",8,1,9,0.9844747115254125,"email","none",0],["SZGYF Üdülő","2026-08-21","Balaton","HU","Zamárdi","no_site",0,1,1,null,"sms","none",0],["Giardino Apartman","2026-08-21","Balaton","HU","Balatonlelle","outdated",0,1,1,0.9252623480002812,"email","none",0],["Beáta Nyaralóház","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"email","none",0],["Lilla Apartman","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,11,0.9062811424836524,"sms","none",0],["Mecsek Villa","2026-08-21","Balaton","HU","Balatonlelle","no_site",0,1,1,null,"sms","none",0],["Keresztes Apartman vendégház","2026-08-21","Balaton","HU","Kővágóörs","no_site",0,1,1,null,"none","none",0],["Kemencés Vendégház","2026-08-21","Balaton","HU","Szentbékkálla","no_site",10,1,11,0.9784376722706765,"email","rejected",0],["Sport Üdülő","2026-08-21","Balaton","HU","Révfülöp","no_site",10,1,16,0.9882157137387054,"sms","none",0],["Berta Apartmanház","2026-08-21","Balaton","HU","Balatonföldvár","no_site",0,1,10,0.9880859781291605,"email","none",0],["Kati Villa","2026-08-21","Balaton","HU","Balatonlelle","no_site",10,1,27,0.7084266777373455,"email","none",0],["Mandula vendégház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",6,1,7,0.8500000000000001,"none","none",0],["Nagy Bed and Breakfast","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",10,1,115,0.8500000000000001,"email","none",0],["Arcadia Guesthouse","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Ábrahámhegy","outdated",10,1,11,0.8500000000000001,"sms","none",0],["Centrum Panzió","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",2,1,20,0.6585988622285768,"email","none",0],["Fred Vendeghaz","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",0,1,1,null,"voice","none",0],["Villa Pátzay","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",10,1,32,1,"email","none",0],["Korbély szálláshely","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",2,0,8,0.6286602970523916,"none","none",0],["Piroska Ház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",0,1,1,null,"sms","none",0],["Borbarátok","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","outdated",10,1,11,0.7445447715191736,"voice","none",0],["Varga István","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",0,1,1,null,"email","none",0],["Fortuna vendégház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",10,1,36,0.5987547380248793,"email","none",0],["Harsona","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","outdated",4,1,5,0.7704911343003747,"sms","none",0],["Rózsakő ház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",6,1,90,0.99585154629544,"email","none",0],["Balaton-ko hostel","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","outdated",10,1,13,0.9892512566166342,"sms","none",0],["Bella Ciao","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",10,1,79,0.9934507255756403,"email","none",0],["Borbaratok Panzio","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","outdated",10,1,11,0.8500000000000001,"sms","none",0],["Sörpatika Vendégház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","outdated",10,1,11,0.8500000000000001,"sms","none",0],["Arcadia Guesthouse","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Ábrahámhegy","outdated",10,1,11,0.8500000000000001,"sms","none",0],["Villa Pátzay","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",10,1,21,0.8500000000000001,"email","none",0],["Mandula vendégház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",6,1,42,0.8500000000000001,"none","none",0],["Nagy Bed and Breakfast","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","no_site",10,1,18,0.8500000000000001,"sms","none",0],["Sörpatika Vendégház","2026-08-18","Badacsony (Badacsonytomaj környéke)","HU","Badacsonytomaj","outdated",10,1,11,0.8500000000000001,"sms","none",0]];const COUNTS={"matching":260,"active":596,"disqualified":2,"all":598};
+
+const IDX={name:0,surveyed:1,region:2,country:3,city:4,qualification:5,photos:6,sv:7,material:8,match:9,contact:10,mock:11,sent:12};
+const COLS=[
+ {k:"name",l:"Név",t:"search",m:"A szálláshely neve, ahogy a felmérés rögzítette. Kattintva megnyílik a lead lapja."},
+ {k:"surveyed",l:"Felmérve",t:"none",m:"Mikor rögzítette a felmérés ezt a szereplőt. A lista alapból ezzel rendez, a legfrissebb elöl."},
+ {k:"region",l:"Terület",t:"enum",m:"Az a felmérési TERÜLET, ahonnan a lead jött — nem a szállás saját régiója."},
+ {k:"country",l:"Ország",t:"enum",m:"A felmérésben talált ország (ISO-2 kód)."},
+ {k:"city",l:"Város",t:"enum",m:"A felmérésben talált település."},
+ {k:"qualification",l:"Kvalifikáció",t:"enum",m:"Miért célpont: nincs honlapja, vagy van, de elavult."},
+ {k:"photos",l:"Fotók",t:"num",m:"Valódi szállás-fotók száma (Google Places). A 10 a forrás PLAFONJA, nem darabszám."},
+ {k:"material",l:"Anyag",t:"num",m:"Összes begyűjtött kép (Places + honlap + Street View) — ebből készül a mockup."},
+ {k:"match",l:"Match",t:"num",m:"Mennyire biztos a portál-párosítás. A 0,85 a képlet ALAPÉRTÉKE, nem mért egyezés."},
+ {k:"contact",l:"Kontakt",t:"enum",m:"A legjobb elérhető megkeresési csatorna."},
+ {k:"mock",l:"Mock",t:"enum",m:"Készült-e már mockup ehhez a leadhez, és hol tart."}];
+const MARKS=[["SV","Street View alapkép elérhető — van mire építeni, ha nincs valódi fotó."],
+ ["plafon","A forrás legfeljebb ennyi fotót ad (10) — a valós szám ennyi VAGY TÖBB."],
+ ["alapérték","A match-pontszám a képlet kiinduló súlya, nem mért egyezés."],
+ ["nincs találat","Nem volt portál-találat erre a leadre."],
+ ["nincs besorolás","A felmérés nem rögzített értéket ehhez az oszlophoz."],
+ ["kerek, kitöltött jelvény","DARABSZÁM: hány értéket pipáltál ki ebben az oszlopban."],
+ ["szögletes ≥ jelvény","KÜSZÖB: alsó határ — nem darabszám. A két alak szándékosan különbözik."]];
+const LBL={qualification:{no_site:"nincs honlap",outdated:"elavult",unknown:"ismeretlen"},
+ contact:{email:"e-mail",sms:"SMS",voice:"telefon",none:"nincs"},
+ mock:{none:"nincs",generated:"legenerálva",approved:"jóváhagyva",rejected:"elutasítva"}};
+const lab=(k,v)=>(LBL[k]&&LBL[k][v])||(v===""?"nincs besorolás":v);
+const num=n=>n.toLocaleString("hu-HU");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ── live state (the mock really filters and really sorts) ─────────────── */
+const S={sort:"surveyed",dir:"desc",f:{qualification:["no_site","outdated"],material:1},defaulted:true};
+const val=(r,k)=>k==="match"?(r[IDX.match]===null?-1:r[IDX.match]):k==="region"?(r[IDX.region]||"zzz nincs besorolás"):r[IDX[k]];
+
+function pass(r){
+  for(const k in S.f){const v=S.f[k];if(v===undefined||v===null)continue;
+    if(k==="name"){if(!String(r[0]).toLowerCase().includes(String(v).toLowerCase()))return false;}
+    else if(Array.isArray(v)){if(!v.length)continue;if(!v.includes(String(r[IDX[k]]??"")))return false;}
+    else {if(!(val(r,k)>=v))return false;}}
+  return true;
+}
+function view(){
+  const out=ROWS.filter(pass);
+  const c=COLS.find(c=>c.k===S.sort);
+  out.sort((a,b)=>{let x=val(a,S.sort),y=val(b,S.sort);
+    if(c.t==="num"){x=+x;y=+y;}else{x=String(x);y=String(y);return (S.dir==="asc"?1:-1)*x.localeCompare(y,"hu");}
+    return (S.dir==="asc"?1:-1)*(x-y);});
+  return out;
+}
+function opts(k){const m=new Map();ROWS.forEach(r=>{const v=String(r[IDX[k]]??"");m.set(v,(m.get(v)||0)+1);});
+  return [...m.entries()].sort((a,b)=>a[0]===""?1:b[0]===""?-1:a[0].localeCompare(b[0],"hu"));}
+
+function cell(r,k){
+  switch(k){
+    case "name":return '<a href="#" title="'+esc(r[0])+'">'+esc(r[0])+'</a>';
+    case "surveyed":return '<span class="mut">'+r[1]+'</span>';
+    case "region":case "country":case "city":{const v=r[IDX[k]];return v?esc(v):'<span class="mut">nincs besorolás</span>';}
+    case "qualification":return '<span class="pill '+(r[5]==="no_site"?"nosite":"outdated")+'">'+lab("qualification",r[5])+'</span>';
+    case "photos":{const p=r[6];let s=p>=10?'10<span class="mark">plafon</span>':String(p);
+      if(r[7])s+='<span class="mark">SV</span>';return s;}
+    case "material":return num(r[8]);
+    case "match":{const m=r[9];if(m===null)return '<span class="mut">nincs találat</span>';
+      const s=m.toLocaleString("hu-HU",{minimumFractionDigits:2,maximumFractionDigits:2});
+      return Math.abs(m-0.85)<1e-9?s+'<span class="mark">alapérték</span>':s;}
+    case "contact":{const c=r[10];return '<span class="'+(c==="email"?"good":c==="none"?"bad":"mid")+'">'+lab("contact",c)+'</span>';}
+    case "mock":{const v=r[11];return v==="none"?'<span class="mut">nincs</span>':'<span class="pill '+v+'">'+lab("mock",v)+'</span>';}
+  }
+}
+function renderBody(rows){
+  document.getElementById("tb").innerHTML=rows.map(r=>"<tr>"+COLS.map(c=>
+    '<td data-col="'+c.k+'"'+(c.t==="num"?' class="num"':'')
+    +(c.k==="name"?' title="'+esc(r[0])+'"':'')+'>'+cell(r,c.k)+"</td>").join("")+"</tr>").join("");
+}
+function filterSentence(){
+  const parts=[];for(const k in S.f){const v=S.f[k];if(v===undefined||v===null)continue;
+    const c=COLS.find(c=>c.k===k);
+    if(Array.isArray(v)){if(!v.length)continue;parts.push(c.l+": "+v.map(x=>lab(k,x)).join(", "));}
+    else if(k==="name")parts.push(c.l+' tartalmazza: "'+v+'"');
+    else parts.push(c.l+" ≥ "+String(v).replace(".",","));}
+  return parts;
+}
+function paint(){
+  const rows=view();
+  renderBody(rows);
+  const parts=filterSentence();
+  // ⛔ A cím alatti két szöveg-blokk (számláló-sor + szűrő/sorrend-mondat) KIKERÜLT
+  // (tulajdonosi döntés, 2026-09-19). Amit mondtak, azt most a felület MUTATJA:
+  //   • MI SZŰR → a fejléc cián tölcsére + jelvénye, és a „Szűrők törlése" link léte
+  //   • MI A SORREND → a rendező oszlop nyila a fejlécben
+  //   • HÁNY SOR → egyetlen rövid sor a tábla ALATT, a szűrt és a teljes számmal együtt,
+  //     hogy a leszűkített lista ne látsszon a teljes készletnek.
+  document.getElementById("clear").style.display=parts.length?"":"none";
+  document.getElementById("foot").textContent=parts.length
+    ? num(rows.length)+" sor a "+num(COUNTS.active)+" aktív leadből — nincs lapozás, mind itt van."
+    : num(rows.length)+" sor — nincs lapozás, mind itt van.";
+  paintHead();
+  if(typeof paintChips==="function")paintChips();
+}
+function setSort(k){if(S.sort===k){S.dir=S.dir==="asc"?"desc":"asc";}else{S.sort=k;S.dir=(COLS.find(c=>c.k===k).t==="num"||k==="surveyed")?"desc":"asc";}paint();}
+function active(k){const v=S.f[k];return Array.isArray(v)?v.length>0:v!==undefined&&v!==null;}
+/* Két jelentés, két ALAK: darabszám → kerek/kitöltött, küszöb → szögletes/≥. */
+function badgeHtml(k){
+  const v=S.f[k];if(v===undefined||v===null)return "";
+  if(Array.isArray(v))return v.length?'<i class="bdg cnt" title="'+v.length+' kipipált érték">'+v.length+"</i>":"";
+  if(k==="name")return '<i class="bdg cnt" title="névrészlet">1</i>';
+  return '<i class="bdg thr" title="alsó határ">≥'+String(v).replace(".",",")+"</i>";
+}
+
+/* ── one popover at a time, anchored to its button ─────────────────────── */
+let openPop=null;
+function closePop(){if(openPop){openPop.remove();openPop=null;}}
+document.addEventListener("click",closePop);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closePop();closeHelp();}});
+function place(el,btn){
+  const r=btn.getBoundingClientRect();el.hidden=false;
+  const w=el.offsetWidth,h=el.offsetHeight;
+  let left=Math.min(Math.max(8,r.left),window.innerWidth-w-8);
+  let top=r.bottom+6;if(top+h>window.innerHeight-8)top=Math.max(8,r.top-h-6);
+  el.style.left=left+"px";el.style.top=top+"px";
+}
+function filterPop(k,btn,extraHtml){
+  const c=COLS.find(c=>c.k===k);
+  const el=document.createElement("div");el.className="pop";
+  let inner=extraHtml||"";
+  if(c.t==="enum"){
+    const cur=Array.isArray(S.f[k])?S.f[k]:[];
+    inner+='<p class="hint">Pipáld ki, mely értékek maradjanak a listán.</p>'
+      +'<div class="list">'+opts(k).map(([v,n])=>'<label><input type="checkbox" value="'+esc(v)+'"'
+      +(cur.includes(v)?" checked":"")+"> "+esc(lab(k,v))+'<span class="cnt">'+num(n)+"</span></label>").join("")+"</div>";
+  } else if(c.t==="num"){
+    inner+='<p class="hint">Csak azok a sorok maradnak, ahol a '+c.l+' értéke legalább ennyi.</p>'
+      +'<input type="number" step="'+(k==="match"?"0,01":"1")+'" value="'+(S.f[k]??"")+'" placeholder="legalább…">';
+  } else {
+    inner+='<p class="hint">Névrészlet — a lista azonnal szűkül rá.</p>'
+      +'<input type="text" value="'+esc(S.f[k]??"")+'" placeholder="név részlete…">';
+  }
+  inner+='<div class="act"><button type="button" class="off">Szűrő törlése</button><button type="button" class="go">Alkalmaz</button></div>';
+  el.innerHTML=inner;
+  el.addEventListener("click",e=>e.stopPropagation());
+  el.querySelector(".go").addEventListener("click",()=>{
+    if(c.t==="enum"){S.f[k]=[...el.querySelectorAll("input:checked")].map(i=>i.value);if(!S.f[k].length)delete S.f[k];}
+    else if(c.t==="num"){const v=parseFloat(String(el.querySelector("input").value).replace(",","."));
+      if(isNaN(v))delete S.f[k];else S.f[k]=v;}
+    else {const v=el.querySelector("input").value.trim();if(!v)delete S.f[k];else S.f[k]=v;}
+    S.defaulted=false;closePop();paint();});
+  el.querySelector(".off").addEventListener("click",()=>{delete S.f[k];S.defaulted=false;closePop();paint();});
+  document.body.appendChild(el);place(el,btn);openPop=el;
+  const first=el.querySelector("input");if(first&&first.type!=="checkbox")first.focus();
+}
+
+/* ── legend: ONE question mark, one popup ──────────────────────────────── */
+function openHelp(){document.getElementById("help").hidden=false;}
+function closeHelp(){const h=document.getElementById("help");if(h)h.hidden=true;}
+function buildHelp(){
+  document.getElementById("helpBody").innerHTML=
+    COLS.map(c=>"<dt>"+c.l+"</dt><dd>"+c.m+"</dd>").join("")
+    +'</dl><div class="sec">Jelölések a cellákban</div><dl>'
+    +MARKS.map(m=>"<dt>"+esc(m[0])+"</dt><dd>"+esc(m[1])+"</dd>").join("");
+}
+document.getElementById("helpBtn").addEventListener("click",e=>{e.stopPropagation();openHelp();});
+document.getElementById("help").addEventListener("click",e=>{if(e.target.id==="help")closeHelp();});
+document.getElementById("helpX").addEventListener("click",closeHelp);
+buildHelp();
+
+/* ── draft chrome: size switch ─────────────────────────────────────────── */
+document.querySelectorAll(".sizebar button[data-size]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".sizebar button[data-size]").forEach(x=>x.classList.toggle("on",x===b));
+  document.body.classList.toggle("m",b.dataset.size==="m");closePop();}));
+if(window.innerWidth<=700){document.body.classList.add("m");
+  document.querySelectorAll(".sizebar button[data-size]").forEach(x=>x.classList.toggle("on",x.dataset.size==="m"));}
+
+
+document.getElementById("th").innerHTML="<tr>"+COLS.map(c=>
+ '<th data-col="'+c.k+'"'+(c.t==="num"?' class="num"':'')+'><span class="cellwrap">'
+ +'<button type="button" class="sorth" data-sort="'+c.k+'">'+c.l+'<i class="arr"></i></button>'
+ +(c.t!=="none"?'<button type="button" class="fbtn" data-filter="'+c.k+'" aria-label="'+c.l+' szűrése"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1 2h12a.6.6 0 0 1 .45 1L9 8.2V12l-4 1.6V8.2L.55 3A.6.6 0 0 1 1 2z" fill="currentColor"/></svg></button><span class="fb"></span>':"")
+ +"</span></th>").join("")+"</tr>";
+function paintHead(){
+  document.querySelectorAll("#th th").forEach(th=>{
+    const k=th.dataset.col,on=k===S.sort;th.classList.toggle("on",on);
+    const a=th.querySelector(".arr");if(a)a.textContent=on?(S.dir==="asc"?"▲":"▼"):"▼";
+    const f=th.querySelector(".fbtn");if(f){f.classList.toggle("on",active(k));
+      th.querySelector(".fb").innerHTML=badgeHtml(k);}});
+}
+document.querySelectorAll("#th .sorth").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();closePop();setSort(b.dataset.sort);}));
+document.querySelectorAll("#th .fbtn").forEach(b=>b.addEventListener("click",e=>{
+  e.stopPropagation();const was=openPop;closePop();if(was&&was.dataset.for===b.dataset.filter)return;
+  filterPop(b.dataset.filter,b);openPop.dataset.for=b.dataset.filter;}));
+
+paint();
+
+</script>
+</body></html>

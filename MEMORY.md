@@ -1,7 +1,35 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-19 (⛔ a piszkozat-sáv HAZUG tiltása javítva — a kurátor kiküldési szándékát gépi lelet nem gátolhatja, ADR-0187)
+Utolsó frissítés: 2026-09-19 (a lead-lista A2 — ADR-0188; + a piszkozat-sáv hazug tiltása javítva — ADR-0187. ⚠️ ÉLES továbbra is `61e788a`, tag `prod/20260917-0943`: ez a két kör NINCS élesítve)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-19)
+
+**📋 LEAD-LISTA A2 — minden rekord egy lapon, EGY kérdőjel, egysoros fejléc (ADR-0188).**
+A tulaj a KÉSZ `/leads`-et nézte meg, és hármat kifogásolt: a jelmagyarázat-SÁV, a LAPOZÁS,
+és a „csili csálé" kétszintes fejléc a 11 kérdőjellel. §2b kör (2 változat → **A** → „ez nem
+kell" a cím alatti két szöveg-blokkra) → megvalósítva. Session-jegyzet:
+`_planning/memory/2026-09-19_lead_list_no_paging_one_questionmark.md`.
+
+- **Szállítva:** nincs lapozó sehol (a `LEAD_PAGE_SIZE`, a `?page=`/`?pageSize=` is kivezetve),
+  mind a 260 sor egyben, **tapadó fejléccel** · EGY „?" a cím mellett → felugró jelmagyarázat
+  (11 oszlop + 5 jelölés, ESC/×/háttér zár, fókusz visszatér) · **38 px-es egysoros fejléc**
+  rejtett vezérlőkkel, aktív szűrőnél cián tölcsérrel · a cím alatti számláló-blokk és
+  szűrő/sorrend-mondat helyett **egy sor a tábla alatt** a szűrt ÉS a medence-számmal.
+- ⭐ **Az elv, amiért ez nem visszalépés:** mind a négy kivett mondat egy MÉRT hibára (Elek
+  FK-003) született válasz volt, ezért mindegyikhez **utódot jelöltem**, és az őr azt méri.
+- ⛔ **A takarítás majdnem elvitt egy utat, amit egy MÁSIK kapu ígér:** a `console.leads`
+  tudásbázis-horgony a kivett ikonos súgó-linkkel együtt tűnt volna el.
+- ⛔ **A súgó a lapozó feliratait idézte, képpel együtt** — a label-drift őr kapta el; a
+  szócikk a KÓDBÓL íródott újra, a `pager.png` törölve.
+- ⛔ **A töréspont feltevés volt:** a NÉV-ragadás 700 px-hez kötve; mérve **1440 px-től** fér
+  ki mind a 11 oszlop, **1280 px-en 91 px lóg túl** → a lap most MEGMÉRI (`is-scrollx`).
+- **Kapuk:** `lead-list-plan-check` zöld / önteszt 9 piros · `lead-filter-label-check` 135/135
+  (két megvakult szelektora és a szegély-matekja javítva) · `kb-check --coverage` 🟢 ·
+  i18n-lint · design-token-lint · contract-drift ✅
+- **NYITOTT:** virtualizáció („több száz vagy ezer sor”) szándékosan kimaradt (tulaj-halasztás);
+  1280–1366 px között a tábla oldalra görget — ha laptopon is ki kell férnie, az oszlop-csonkolás
+  külön tulajdonosi döntés (információt vesz el).
+
+## Előzmény — 2026-09-19 (kiküldési szándék / piszkozat-sáv)
 
 **⛔ A KURÁTOR KIKÜLDÉSI SZÁNDÉKÁT SEMMI NEM GÁTOLJA — a sáv hazug tiltása javítva.**
 Session-jegyzet: `_planning/memory/2026-09-19_curator_intent_not_overridden.md`. Döntés: **ADR-0187**.

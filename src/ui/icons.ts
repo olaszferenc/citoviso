@@ -84,6 +84,11 @@ export const ICON: Readonly<Record<string, string>> = {
     `<path d="M12 3.6l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8 2.5-5Z"/>` +
     `<circle cx="18.8" cy="18.4" r="1.9" ${CY_ACCENT}/>`,
   close: `<path d="M6.4 6.4l11.2 11.2M17.6 6.4L6.4 17.6"/>`,
+  // ADR-0188 — oszlop-szűrő a lead-lista fejlécében. Tölcsér, mert a korábbi „három
+  // vízszintes vonal" a rendezés-vezérlőtől volt megkülönböztethetetlen egy 38 px magas,
+  // egysoros fejlécben. Utility-ikon: tiszta currentColor, hogy az AKTÍV állapot ciánja
+  // az egész alakot átszínezze (a jelvény hordozza a számot, nem az ikon).
+  filter: `<path d="M4.2 5.4h15.6l-6.1 7.1v5.4l-3.4 1.7v-7.1z"/>`,
   // Collapsible section marker (approved booking-screen contract, 2026-09-08): the
   // <details> summary rotates it, so the owner sees whether it opens or closes.
   "chevron-down": `<path d="m6.5 9.5 5.5 5.5 5.5-5.5"/>`,

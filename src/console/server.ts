@@ -1456,8 +1456,9 @@ async function handle(
       // so the view can carry it through a disqualified/active switch. Without that,
       // the cleared list silently snapped back to the default (Elek FK-003).
       all: sp.get("all") === "1",
-      page: sp.get("page") ? Number(sp.get("page")) : undefined,
-      pageSize: sp.get("pageSize") === "0" ? 0 : undefined,
+      // ⛔ NINCS `page` / `pageSize` (ADR-0188): a lista minden rekordot egyben ad. A két
+      // paramétert szándékosan NEM olvassuk ki — egy régi könyvjelző így nem tud egy
+      // olyan állapotot felidézni, amit a felület már nem tud megmutatni.
     };
     // DEFAULT FILTER (owner decree): a fresh /leads shows the ACTIONABLE leads — no or
     // outdated website with at least one gathered image — not all 590. It applies ONLY

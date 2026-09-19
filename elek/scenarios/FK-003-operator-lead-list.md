@@ -21,18 +21,37 @@ kontraktus: kb/entries/console-leads/entry.hu.md
 - [ ] A cím megkülönbözteti a két nézetet (nem csak egy apró vissza-link)
   várd: látható "Aktív leadek"
 
-- [ ] Ki van írva, melyik szám mit számol, és mennyi látszik a találati halmazból
+- [ ] Ki van írva, hány sor látszik ÉS mekkora készletből (egy sor a tábla alatt)
   várd: darab "[data-lead-counts]" >= 1
-  várd: látható "felel meg a szűrőnek"
-  várd: látható "felmért szereplő összesen"
+  várd: látható "aktív leadből"
+  várd: látható "nincs lapozás"
+  kézi: a leszűkített lista NEM látszhat a teljes készletnek — a sornak MINDKÉT számot ki
+        kell mondania (hány sor / mekkora medencéből), mert a lista alapból szűr
 
-- [ ] Az alapértelmezett szűrő ANNAK az oszlopnak a nevén szólal meg, amin ténylegesen szűr
+- [ ] Az alapértelmezett szűrő ANNAK az oszlopnak a vezérlőjén szólal meg, amin ténylegesen szűr
   várd: darab "[data-filter-summary]" >= 1
-  várd: látható "Anyag: legalább 1"
-  kézi: a felirat NEM ígérhet „min. 1 kép”-et a FOTÓK oszlopra — a képen a FOTÓK oszlopban 0 is előfordulhat, és ezt az ANYAG-ra hivatkozó felirat teszi igazzá
+  várd: darab "th[data-col='material'] [data-filter-summary]" >= 1
+  várd: darab "th[data-col='photos'] [data-filter-summary]" == 0
+  kézi: a fejléc cián tölcsérére mutatva (telefonon hosszan nyomva) a mondatnak „Anyag: legalább 1”-et
+        kell írnia. A felirat NEM ígérhet „min. 1 kép”-et a FOTÓK oszlopra — a képen a FOTÓK
+        oszlopban 0 is előfordulhat, és ezt az ANYAG-ra hivatkozó felirat teszi igazzá
 
-- [ ] A jelölések magyarázata ott van, ahol a jelölések
+- [ ] A jelmagyarázat NEM tolakszik a döntés elé: érkezéskor csukva, EGY gombbal nyitható
+  várd: darab ".con-helpq" == 1
+  várd: darab "thead .con-helpq" == 0
+  várd: nem látható "Mit jelentenek az oszlopok és a jelölések?"
+
+- [ ] …és a gomb tényleg megnyitja, MINDEN oszlopot megnevezve
+  tedd: kattints "#leadLegendBtn"
   várd: látható "Mit jelentenek az oszlopok és a jelölések?"
+  várd: darab "#leadLegend [data-legend]" >= 11
+  kézi: a felugró ÉRINTŐKÉPERNYŐN is használható kell legyen (a `title` elemleírás ott
+        elérhetetlen) — ez volt az indok a korábbi 11 fejléc-„?” gombra is
+
+- [ ] …és be is záródik, nem marad a lap előtt
+  tedd: kattints "#leadLegendX"
+  várd: nem látható "Mit jelentenek az oszlopok és a jelölések?"
+  várd: látható "Aktív leadek"
 
 ## Szűrők
 
@@ -43,7 +62,10 @@ kontraktus: kb/entries/console-leads/entry.hu.md
   tedd: kattints "Szűrők törlése"
   várd: látható "Aktív leadek"
   várd: darab "tbody tr" >= 1
-  várd: látható "nincs szűrő"
+  várd: darab "[data-clear-filters]" == 0
+  várd: darab "[data-filter-summary]" == 0
+  kézi: a „nincs szűrő” állapotot nem MONDAT hordozza, hanem az, hogy egyetlen
+        fejléc-tölcsér sem cián, és a „Szűrők törlése” kiút eltűnt — mert nincs mit törölni
 
 - [ ] A szegmens-jelölések olvashatók a listában
   várd: látható "nincs honlap"
@@ -58,16 +80,26 @@ kontraktus: kb/entries/console-leads/entry.hu.md
 - [ ] Vissza az aktív leadekhez — a KITÖRÖLT szűrő-állapot nem vész el némán
   tedd: kattints "◂ aktív leadek"
   várd: látható "Aktív leadek"
-  várd: látható "nincs szűrő"
-  kézi: a lista NEM ugorhat vissza az alapértelmezett szűrésre — a „nincs szűrő” állapotnak meg kell maradnia
+  várd: darab "[data-clear-filters]" == 0
+  várd: darab "[data-filter-summary]" == 0
+  kézi: a lista NEM ugorhat vissza az alapértelmezett szűrésre — a szűrő-mentes állapotnak
+        meg kell maradnia (ha visszajönne, a tölcsérek újra ciánok lennének, és ott állna a kiút)
 
-## Lapozás
+## Nincs lapozás — minden rekord egy lapon
 
-- [ ] Csak egy részhalmaz látszik, de ki van írva, mennyi, és tovább lehet lapozni
-  várd: látható "sor megjelenítve"
-  tedd: kattints "Következő ›"
+- [ ] A lista NEM darabolja a döntési készletet, és ezt ki is mondja
+  várd: darab "[data-pager]" == 0
+  várd: nem látható "Következő ›"
+  várd: nem látható "‹ Előző"
+  várd: látható "nincs lapozás"
   várd: darab "tbody tr" >= 1
-  várd: látható "sor megjelenítve"
+  kézi: a sorok száma a tábla alatti mondatban álló számmal EGYEZZEN — ha eltér, a lista
+        mégis ablakot mutat, miközben az ellenkezőjét állítja
+
+- [ ] Lefelé görgetve is tudni lehet, melyik oszlopot nézzük (tapadó fejléc)
+  kézi: görgess a lista közepére, és nézd meg, hogy az oszlopnevek sora a helyén maradt-e.
+        ⚠️ Ezt KÉPRŐL nem lehet megítélni: a teljes-lapos felvétel a tapadó elemet a
+        végleges helyére festi, tehát egy sosem tapadó fejléc is jónak látszana
 
 ## Összkép
 

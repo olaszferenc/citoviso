@@ -220,13 +220,28 @@ for (const f of LEAD_FILTERS) {
   );
 }
 
+/**
+ * A szűrő MONDATA (ADR-0188 után): a cím alatti összefoglaló sor megszűnt, a mondat az
+ * ADOTT OSZLOP tölcsér-gombjára költözött `data-filter-summary` attribútumként. A kötés
+ * (felirat ↔ predikátum) ugyanaz — csak ott van, ahol a szűrő dolgozik.
+ *
+ * ⛔ A visszaadott alak SZÁNDÉKOSAN a régi, „ · "-tal fűzött mondat: az alatta futó
+ * szegmens-bontó és a piros önteszt így változatlanul azt méri, amit eddig.
+ */
+async function filterSummaryText(): Promise<string> {
+  const parts = await page.$$eval("thead [data-filter-summary]", (els) =>
+    els.map((e) => (e.getAttribute("data-filter-summary") ?? "").trim()).filter(Boolean),
+  );
+  return parts.join(" · ");
+}
+
 // ── 3. The sentence and the cells of the column it NAMES ─────────────────────
 /**
  * Read `[data-filter-summary]` and verify each claim against the cells of the column
  * the claim names. This is the assertion the shipped bug would have failed.
  */
 async function assertSummaryMatchesCells(label: string): Promise<void> {
-  let summary = (await page.textContent("[data-filter-summary]"))?.trim() ?? "";
+  let summary = await filterSummaryText();
   if (SELF_TEST) {
     // RED CONTROL — reproduce the shipped drift: the sentence names FOTÓK while the
     // predicate (unchanged) still runs on ANYAG. Nothing else about the page moves.
@@ -235,8 +250,8 @@ async function assertSummaryMatchesCells(label: string): Promise<void> {
       `${columnLabel("photos", "hu")}: legalább`,
     );
   }
-  if (!summary || summary === "nincs szűrő") {
-    check(false, `${label}: a szűrő-összefoglaló üres, pedig szűrés van`);
+  if (!summary) {
+    check(false, `${label}: egyetlen fejléc-szűrő sem hordozza a saját mondatát, pedig szűrés van`);
     return;
   }
   const cells = await page.$$eval("tbody td[data-col]", (tds) =>
@@ -325,10 +340,11 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
     `Match-szűrőnél a portál-találat nélküli sorok KIESNEK (maradt: ${dashes})`,
   );
   // …and they are genuinely there when nothing filters them out, or the assertion
-  // above would be measuring an empty set. `pageSize: 0` on purpose: the no-match
-  // rows sit at the end of the fixture, so a paged render would "prove" their
-  // absence by never reaching them.
-  await open(render({ all: true, pageSize: 0 }));
+  // above would be measuring an empty set. (ADR-0188 óta nincs lapozás, tehát a
+  // fixture VÉGÉN ülő találat-nélküli sorok mindig kirenderelődnek — korábban ehhez
+  // külön `pageSize: 0` kellett, különben egy lapozott nézet úgy „bizonyította” a
+  // hiányukat, hogy soha nem ért el odáig.)
+  await open(render({ all: true }));
   const dashesUnfiltered = await page.$$eval('tbody td[data-col="match"]', (tds) =>
     tds.filter((td) => Number(td.getAttribute("data-v")) < 0).length,
   );
@@ -348,26 +364,20 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
     rendered === expected.rows.length,
     `a kirajzolt sorok száma = a lap ablaka (${rendered} vs ${expected.rows.length})`,
   );
+  // ADR-0188: a öt tételes számláló-blokk EGY mondatra fogyott a tábla ALATT, és a
+  // szűrt szám mellett a MEDENCE méretét is kimondja — enélkül a leszűkített lista a
+  // teljes készletnek látszana.
   check(
-    counts.includes(`${expected.counts.matching} felel meg a szűrőnek`),
-    `a fejléc kiírja a találati halmaz méretét (${expected.counts.matching})`,
+    counts.includes(String(expected.counts.matching)),
+    `a számláló-sor kiírja a találati halmaz méretét (${expected.counts.matching}) — „${counts}”`,
   );
   check(
     counts.includes(`${expected.counts.active} aktív lead`),
-    `a fejléc kiírja a szűretlen aktív állományt (${expected.counts.active})`,
+    `…és a medencét is, amiből szűrt (${expected.counts.active}) — „${counts}”`,
   );
   check(
-    counts.includes(`${expected.counts.disqualified} diszkvalifikált`),
-    `a fejléc kiírja a diszkvalifikáltak számát (${expected.counts.disqualified})`,
-  );
-  check(
-    counts.includes(`${expected.counts.all} felmért szereplő összesen`),
-    `a fejléc kiírja a teljes állományt (${expected.counts.all})`,
-  );
-  const window = `1–${expected.rows.length} / ${expected.counts.matching} sor megjelenítve`;
-  check(
-    expected.counts.matching <= expected.rows.length || counts.includes(window),
-    `részhalmaznál ki van írva, mennyi látszik („${window}”)`,
+    /nincs lapozás/.test(counts),
+    `…és kimondja, hogy nincs lapozás — „${counts}”`,
   );
 }
 
@@ -420,7 +430,7 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
 // ── 6. Marks and column meanings are explained where they appear ─────────────
 {
   await open(render(DEFAULT_Q));
-  const legend = (await page.textContent(".con-legend"))?.replace(/\s+/g, " ") ?? "";
+  const legend = (await page.textContent(".con-legend__list"))?.replace(/\s+/g, " ") ?? "";
   for (const k of ["photos", "material", "match"] as LeadColumnKey[]) {
     check(legend.includes(columnLabel(k, "hu")), `a jelmagyarázat megnevezi a «${columnLabel(k, "hu")}» oszlopot`);
   }
@@ -448,7 +458,7 @@ await assertSummaryMatchesCells("kézi szűrő: Match ≥ 0.8");
 // hard-coded word list: whatever raw area key a row carries, that string may not be
 // what its cell prints.
 {
-  await open(render({ all: true, pageSize: 0 }));
+  await open(render({ all: true }));
   const cells = await page.$$eval("tbody tr", (trs) =>
     trs.map((tr) => ({
       text: (tr.querySelector('td[data-col="region"]')?.textContent ?? "").replace(/\s+/g, " ").trim(),
@@ -547,7 +557,7 @@ function refCompare(a: number | string, b: number | string): number {
 //     corpus: Ábrahámhegy / Óbudavár / Örvényes past Zánka, and four lead names).
 for (const key of SORTABLE_COLUMNS) {
   for (const dir of ["asc", "desc"] as const) {
-    await open(render({ all: true, pageSize: 0, sort: key, dir }));
+    await open(render({ all: true, sort: key, dir }));
     const shown = await page.$$eval(`tbody td[data-col="${key}"]`, (tds) =>
       tds.map((td) => ({
         text: (td.textContent ?? "").replace(/\s+/g, " ").trim(),
@@ -604,11 +614,15 @@ await open(render(DEFAULT_Q));
     active === eff.key,
     `érintetlen lapon a KIEMELT fejléc a tényleges alap-rendezés oszlopa (mért: ${active}, várt: ${eff.key})`,
   );
-  // …and the sentence above the table names that same column.
-  const sortLine = (await page.textContent("[data-sort-summary]"))?.trim() ?? "";
+  // ⛔ A SORREND-MONDAT MEGSZŰNT (ADR-0188), az állítás NEM: a kiemelés magában kevés,
+  // mert egy oszlop lehet kiemelve a NEVE nélkül is. Ezért a kiemelt fejléc FELIRATÁT
+  // olvassuk vissza, és az a tényleges rendező oszlop neve kell legyen.
+  const activeLabel = (await page.textContent("thead th:has(.con-sorth.on) .con-sorth"))
+    ?.replace(/[↕↑↓]/g, "")
+    .trim();
   check(
-    sortLine.includes(columnLabel(eff.key, "hu")),
-    `a sorrend-mondat a TÉNYLEG rendező oszlopot nevezi meg („${sortLine}”)`,
+    activeLabel === columnLabel(eff.key, "hu"),
+    `a kiemelt fejléc FELIRATA a tényleg rendező oszlopot nevezi meg (mért: „${activeLabel}”, várt: „${columnLabel(eff.key, "hu")}”)`,
   );
 }
 // …and on a sorted list exactly one header shows the live direction.
@@ -622,49 +636,61 @@ await open(render(DEFAULT_Q));
   check(activeCol === "city", `a kiemelt fejléc a TÉNYLEG rendezett oszlop (mért: ${activeCol})`);
 }
 
-// ── 9. The counts line must not contradict the filter line ───────────────────
+// ── 9. The counts line must not contradict the filter state ─────────────────
 // "593 felel meg a szűrőnek" stood 25px under "nincs szűrő" — one page, two claims,
-// opposite meanings.
+// opposite meanings. ADR-0188 után a szűrő ÁLLAPOTÁT nem mondat hordozza, hanem a
+// fejléc jelvénye és a „Szűrők törlése" kiút léte — az ellentmondás lehetősége viszont
+// megmaradt, ezért az állítás is.
 for (const [label, q] of [
   ["szűretlen aktív lista", { all: true } as LeadQuery],
   ["szűretlen diszkvalifikált lista", { all: true, disqualified: "1" } as LeadQuery],
 ]) {
   await open(render(q as LeadQuery));
-  const filterText = (await page.textContent("[data-filter-summary]"))?.trim() ?? "";
+  const summary = await filterSummaryText();
+  const clear = await page.$$eval("[data-clear-filters]", (els) => els.length);
   const counts = (await page.textContent("[data-lead-counts]"))?.replace(/\s+/g, " ") ?? "";
   check(
-    filterText === "nincs szűrő" && !counts.includes("felel meg a szűrőnek"),
-    `${label}: „nincs szűrő” mellett NEM állítja, hogy bármi „megfelel a szűrőnek” (szűrő: „${filterText}”)`,
+    summary === "" && clear === 0 && !/a \d+ aktív leadből|a \d+ diszkvalifikáltból/.test(counts),
+    `${label}: szűrő nélkül SEM jelvény, SEM kiút, SEM „ebből szűrtem” állítás (mondat: „${summary}”, kiút: ${clear}, sor: „${counts}”)`,
   );
 }
 {
-  // …and with a filter running, the segment IS there — otherwise the check above
-  // would pass on a page that simply never prints the match count.
+  // …és szűrővel MINDHÁROM ott van — különben a fenti ág egy olyan lapon is átmenne,
+  // ami sosem mond semmit a szűrésről (ez a NEGATÍV KONTROLL párja).
   await open(render(DEFAULT_Q));
+  const summary = await filterSummaryText();
+  const clear = await page.$$eval("[data-clear-filters]", (els) => els.length);
   const counts = (await page.textContent("[data-lead-counts]"))?.replace(/\s+/g, " ") ?? "";
   check(
-    counts.includes("felel meg a szűrőnek"),
-    "szűrt lapon VISZONT ott a találat-szám („felel meg a szűrőnek”)",
+    summary !== "" && clear === 1 && /a \d+ aktív leadből/.test(counts),
+    `szűrt lapon VISZONT ott a jelvény-mondat, a kiút és a medence-szám (mondat: „${summary}”, kiút: ${clear}, sor: „${counts}”)`,
   );
 }
 
 // ── 10. The list names the order it arrived in ───────────────────────────────
-// An untouched list came back newest-first with nothing saying so.
+// An untouched list came back newest-first with nothing saying so. ADR-0188 után ezt
+// NEM egy mondat mondja a cím alatt, hanem a rendező oszlop KIEMELT neve és a nyila —
+// ezért itt azt mérjük, és mindkét esetben (érintetlen ÉS rendezett lapon).
 {
-  await open(render({ all: true }));
-  const s = (await page.textContent("[data-sort-summary]"))?.trim() ?? "";
-  check(s.length > 0 && !s.includes("undefined"), `rendezetlen lapon is meg van nevezve a sorrend („${s}”)`);
-  await open(render({ all: true, sort: "material", dir: "desc" }));
-  const s2 = (await page.textContent("[data-sort-summary]"))?.trim() ?? "";
-  check(
-    s2.includes(columnLabel("material", "hu")) && s2.includes("csökkenő"),
-    `rendezett lapon az OSZLOPOT és az IRÁNYT is megnevezi („${s2}”)`,
-  );
+  for (const [label, q, wantKey, wantArrow] of [
+    ["érintetlen lap", { all: true } as LeadQuery, effectiveLeadSort({}).key, "↓"],
+    ["rendezett lap", { all: true, sort: "material", dir: "desc" } as LeadQuery, "material", "↓"],
+    ["rendezett lap (növekvő)", { all: true, sort: "material", dir: "asc" } as LeadQuery, "material", "↑"],
+  ] as [string, LeadQuery, LeadColumnKey, string][]) {
+    await open(render(q));
+    const col = await page.getAttribute("thead th:has(.con-sorth.on)", "data-col").catch(() => null);
+    const arrow = (await page.textContent("thead .con-sorth.on .con-sorth__m"))?.trim() ?? "";
+    check(
+      col === wantKey && arrow === wantArrow,
+      `${label}: a kiemelt fejléc a rendező oszlop és a nyila az irányt mutatja ` +
+        `(mért: ${col}/${arrow}, várt: ${wantKey}/${wantArrow})`,
+    );
+  }
 }
 
 // The accent case, stated as its own assertion so a regression names itself.
 {
-  await open(render({ all: true, pageSize: 0, sort: "city", dir: "asc" }));
+  await open(render({ all: true, sort: "city", dir: "asc" }));
   const cities = await page.$$eval('tbody td[data-col="city"]', (tds) =>
     tds.map((td) => (td.textContent ?? "").trim()),
   );
@@ -692,21 +718,29 @@ for (const [label, q] of [
   const VIEWS: [string, LeadQuery][] = [
     ["ALAPÉRTELMEZETT nézet", DEFAULT_Q],
     ["szűrő nélküli lista", { all: true }],
-    ["mind egy lapon", { all: true, pageSize: 0 }],
-    ["második lap", { all: true, page: 2 }],
+    ["rendezett lista", { all: true, sort: "city", dir: "asc" }],
     ["diszkvalifikáltak", { all: true, disqualified: "1" }],
   ];
   for (const [label, q] of VIEWS) {
     await openDressed(render(q), 1280);
     if (SELF_TEST) {
-      // RED CONTROL — put the shipped cause back and nothing else: the header row
-      // forced onto one line, which is what pushed the funnel past the visible edge.
-      await page.addStyleTag({ content: ".con .con-leadtbl th { white-space: nowrap; }" });
+      // RED CONTROL — a levágás VALÓDI oka: a 11 oszlopos táblán a vízszintes hely a
+      // legszűkösebb erőforrás, és a belső margó tolja.
+      // ⛔ A KORÁBBI kontroll (`th { white-space: nowrap }`) ADR-0188 óta a MAI
+      // ALAPÁLLAPOT, tehát nem rontott vissza semmit: némán zöldet adott volna, és az
+      // őr „képes pirosra menni" állítása üres halmazon állt volna.
+      await page.addStyleTag({
+        content: ".con .con-leadtbl td, .con .con-leadtbl th { padding-left: 14px; padding-right: 14px; }",
+      });
     }
     const m = await page.evaluate(() => {
       const wrap = document.querySelector(".tblwrap") as HTMLElement | null;
       if (!wrap) return null;
-      const visibleRight = wrap.getBoundingClientRect().left + wrap.clientWidth;
+      // ⛔ `clientLeft` KELL: a `getBoundingClientRect().left` a SZEGÉLLYEL EGYÜTT mér, a
+      // `clientWidth` viszont szegély nélkül. Amióta a lead-táblázat görgető-doboza 1 px
+      // kerettel jön (ADR-0188), a kettő összege 1 px-szel a valódi látható él ELŐTT állt,
+      // és az őr NÉGY nézetben jelentett „levágást" ott, ahol a túllógás mérve 0 px volt.
+      const visibleRight = wrap.getBoundingClientRect().left + wrap.clientLeft + wrap.clientWidth;
       // Every cell AND every interactive control inside it: a cell can end inside the
       // box while the button it contains sticks out.
       const probes: { el: Element; what: string }[] = [];

@@ -14,7 +14,7 @@ import type {
   ProspectView,
   TenantAdminView,
 } from "./data.js";
-import { LEAD_PAGE_SIZE, normalizeCountry } from "./data.js";
+import { normalizeCountry } from "./data.js";
 import type { LeadColumnKey, LeadFilterDef } from "./leadFilters.js";
 import {
   cellMarkMeanings,
@@ -163,12 +163,19 @@ const MENU = (
 
 /** ADR-0045/e §J: contextual help on a screen header. The data-kb-anchor is the
  *  coverage hook (kb-check --coverage, operator group): a screen carrying it MUST
- *  have an audience:operator KB entry. */
-export function helpLink(anchor: string): string {
+ *  have an audience:operator KB entry.
+ *
+ *  `label` (ADR-0188): a lead-listán a horgony NEM a cím mellett ül ikonként, hanem a
+ *  jelmagyarázat-felugró lábazatában, feliratos linkként — egy mondat végén egy néma
+ *  ikon nem mondja meg, hova visz (`feedback_directions_should_be_names`). Az alapeset
+ *  (címke nélkül, ikon) VÁLTOZATLAN: a többi képernyő ugyanazt kapja, mint eddig. */
+export function helpLink(anchor: string, label = ""): string {
   const lang = consoleLang();
   return (
-    `<a class="con-help" data-kb-anchor="${anchor}" href="/help?topic=${encodeURIComponent(anchor)}" ` +
-    `title="${esc(T(lang, "Súgó ehhez a képernyőhöz"))}">${ic("help", 16)}</a>`
+    `<a class="con-help${label ? " con-help--text" : ""}" data-kb-anchor="${anchor}" ` +
+    `href="/help?topic=${encodeURIComponent(anchor)}" ` +
+    `title="${esc(T(lang, "Súgó ehhez a képernyőhöz"))}">${ic("help", 16)}` +
+    `${label ? `<span>${esc(label)}</span>` : ""}</a>`
   );
 }
 
@@ -981,6 +988,8 @@ function colFilter(
   name: string,
   options: { value: string; label: string; count?: number }[],
   selected: string[] = [],
+  /** The active filter's own sentence (`<Oszlop>: <feltétel>`), empty when idle. */
+  summary = "",
 ): string {
   const lang = consoleLang();
   const on = selected.length;
@@ -1003,9 +1012,10 @@ function colFilter(
   // „1+" (küszöb) és az „1" (egy kipipált érték) megkülönböztethetetlen volt.
   return `<span class="cf">
     <button type="button" class="cf-btn${on ? " on" : ""}" onclick="citCf(this)"
-            aria-label="${T(lang, "szűrés")}" title="${T(lang, "Szűrés: hány értéket pipáltál ki")}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${on ? `<i class="cf-count">${on}</i>` : ""}
+            aria-label="${on ? esc(summary) : T(lang, "szűrés")}"
+            title="${on ? esc(summary) : T(lang, "Szűrés: hány értéket pipáltál ki")}"
+            ${on ? `data-filter-summary="${esc(summary)}"` : ""}>
+      ${ic("filter", 14)}${on ? `<i class="cf-count">${on}</i>` : ""}
     </button>
     <span class="cf-pop" hidden>
       ${options.length > 6 ? `<input type="text" class="cf-search" placeholder="${T(lang, "keresés…")}" oninput="citCfSearch(this)" onclick="event.stopPropagation()">` : ""}
@@ -1026,7 +1036,7 @@ function colFilter(
 function minFilter(
   name: string,
   value?: number,
-  opts: { step?: string; max?: string; hint?: string } = {},
+  opts: { step?: string; max?: string; hint?: string; summary?: string } = {},
 ): string {
   const lang = consoleLang();
   // ⛔ KÜSZÖB-jelvény: SZÖGLETES, körvonalas, `≥` jellel — hogy egy pillantásra elváljon a
@@ -1036,11 +1046,13 @@ function minFilter(
   const badge = value
     ? `<i class="cf-thresh">≥${esc(decimalText(value, lang))}</i>`
     : "";
+  const summary = opts.summary ?? "";
   return `<span class="cf">
     <button type="button" class="cf-btn${value ? " on" : ""}" onclick="citCf(this)"
-            aria-label="minimum" title="${T(lang, "Küszöb: legalább ennyi")}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-        <path d="M4 6h16M7 12h10M10 18h4"/></svg>${badge}
+            aria-label="${value ? esc(summary) : "minimum"}"
+            title="${value ? esc(summary) : T(lang, "Küszöb: legalább ennyi")}"
+            ${value ? `data-filter-summary="${esc(summary)}"` : ""}>
+      ${ic("filter", 14)}${badge}
     </button>
     <span class="cf-pop" hidden>
       <label class="cf-opt" style="gap:6px">${T(lang, "legalább")}
@@ -1094,10 +1106,11 @@ function leadOptionLabel(
 
 export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const lang = consoleLang();
-  const { rows: pageRows, matched, counts } = result;
+  const { rows: listRows, matched, counts } = result;
   const disqView = q.disqualified === "1";
-  // Header-filter option counts describe the WHOLE match set, never the page window —
-  // a count that changed as you paged would be a new lie in place of the old one.
+  // Since ADR-0188 the two are the same set (there is no page window any more), but the
+  // option counts keep reading `matched` on purpose: they describe what the FILTER would
+  // match, which is a different question from what the table happens to render.
   const rows = matched;
   // Keyed by the column's OWN cell value (not the row field): an unregistered area's
   // cell is the empty bucket, so an entry under its raw key would be unreachable —
@@ -1150,12 +1163,11 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const cityOpts = facetOpts(cityCounts);
 
   // The whole table lives in ONE GET form: every header control submits it, so
-  // filters combine instead of replacing each other. Paging is NOT carried into the
-  // form: changing a filter must land on page 1, not on page 6 of a new result set.
+  // filters combine instead of replacing each other. There is nothing paging-shaped
+  // left to carry (ADR-0188): the form travels sort, `all` and the view switch only.
   const hidden =
     (q.sort ? `<input type="hidden" name="sort" value="${esc(q.sort)}">` : "") +
     (q.dir ? `<input type="hidden" name="dir" value="${esc(q.dir)}">` : "") +
-    (q.pageSize === 0 ? `<input type="hidden" name="pageSize" value="0">` : "") +
     // `all` travels with the FORM too, not just with the toolbar links. Measured
     // 2026-09-12: from a cleared list (593), setting a header filter dropped `all=1`
     // — harmless while the filter was set, but CLEARING that number then had nothing
@@ -1170,27 +1182,19 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const activeFilters = LEAD_FILTERS.map((f) => ({ f, v: filterValue(q, f) })).filter(
     (x): x is { f: LeadFilterDef; v: string | string[] | number } => x.v !== undefined,
   );
-  const summaryText = activeFilters
-    .map(({ f, v }) =>
+  // ⛔ A SZŰRŐ MONDATA NEM TŰNT EL A TERVVEL — ÁTKÖLTÖZÖTT ODA, AHOL A SZŰRŐ VAN.
+  // A cím alatti összefoglaló sort a tulaj kivetette (ADR-0188), de a mondat MAGA a
+  // kötés a felirat és a predikátum között: ugyanabból a regiszterből születik, amelyik
+  // a szűrést futtatja, ezért nem tud olyan oszlopot ígérni, amit nem olvas
+  // (`feedback_label_must_derive_from_predicate`). Most az ADOTT OSZLOP tölcsér-gombján
+  // ül — elemleírásként és `data-filter-summary` horogként —, tehát ott olvasható, ahol
+  // a kérdés felmerül, és ott mérhető, ahol a szűrő dolgozik.
+  const summaryByColumn = new Map<LeadColumnKey, string>(
+    activeFilters.map(({ f, v }) => [
+      f.column,
       filterSummary(f, v, (col, code) => leadOptionLabel(col, code, regionLabels, lang), lang),
-    )
-    .join(" · ");
-  const filterLine = activeFilters.length
-    ? `${q.defaulted ? T(lang, "Alapértelmezett szűrő") : T(lang, "{n} aktív szűrő", { n: activeFilters.length })} — <span data-filter-summary>${esc(summaryText)}</span>`
-    : `<span data-filter-summary>${T(lang, "nincs szűrő")}</span>`;
-
-  // ── What ORDER am I reading? ────────────────────────────────────────────────
-  // The list always arrives sorted, but until now only an ACTIVE sort said so — an
-  // untouched list came back newest-first with nothing naming that order, so the
-  // operator could not tell what they were scanning (Elek, 2026-09-12).
-  // …and it names the COLUMN, always — including the default order, which used to be
-  // described as "legutóbb felmért elöl" while no column on the screen carried a date
-  // to check it against (Elek FK-003 Z1).
-  const effSort = effectiveLeadSort(q);
-  const sortLine = T(lang, "Sorrend: {col} ({dir})", {
-    col: columnLabel(effSort.key, lang),
-    dir: effSort.dir === "asc" ? T(lang, "növekvő") : T(lang, "csökkenő"),
-  });
+    ]),
+  );
 
   // ── View switch that CARRIES the operator's state ───────────────────────────
   // Going "diszkvalifikáltak ▸" and back used to drop the query, so a cleared list
@@ -1198,72 +1202,69 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   // explicit query travels both ways; the injected default does not travel (it is
   // re-derived on arrival, which is the same state, not a lost one).
   const carried: LeadQuery = q.defaulted
-    ? { sort: q.sort, dir: q.dir, all: q.all, pageSize: q.pageSize }
-    : { ...q, page: undefined };
-  const switchHref = qs(carried, { disqualified: disqView ? undefined : "1", page: undefined });
+    ? { sort: q.sort, dir: q.dir, all: q.all }
+    : { ...q };
+  const switchHref = qs(carried, { disqualified: disqView ? undefined : "1" });
   const clearHref = qs(
-    { sort: q.sort, dir: q.dir, pageSize: q.pageSize },
+    { sort: q.sort, dir: q.dir },
     { disqualified: disqView ? "1" : undefined, all: disqView ? undefined : "1" },
   );
 
-  const toolbar = `<div class="row" style="justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-    <span class="mut small">${filterLine} · <span data-sort-summary>${esc(sortLine)}</span></span>
-    <span class="row" style="gap:12px">
-      ${activeFilters.length ? `<a class="small" href="${clearHref}">${T(lang, "Szűrők törlése")}</a>` : ""}
-      <a class="small" href="${switchHref}">${
-        disqView ? T(lang, "◂ aktív leadek") : T(lang, "diszkvalifikáltak ▸")
-      }</a>
-    </span>
-  </div>`;
+  // ── A cím sora viszi a két kiutat ───────────────────────────────────────────
+  // ⛔ A cím ALATTI két szöveg-blokk (számláló-sor + szűrő/sorrend-mondat) KIKERÜLT
+  // (tulajdonosi döntés 2026-09-19, ADR-0188). A linkek megmaradnak — a „Szűrők törlése"
+  // maga is ÁLLÍTÁS: csak akkor van ott, ha fut szűrő, és el is tudja vinni onnan.
+  const headLinks = `<span class="con-leadhead__sp">
+    ${activeFilters.length ? `<a class="small" href="${clearHref}" data-clear-filters>${T(lang, "Szűrők törlése")}</a>` : ""}
+    <a class="small" href="${switchHref}">${
+      disqView ? T(lang, "◂ aktív leadek") : T(lang, "diszkvalifikáltak ▸")
+    }</a>
+  </span>`;
 
-  // ── Every number on this screen, named ──────────────────────────────────────
-  // Five totals used to sit across two screens with nothing saying what each one
-  // counted. Each is now printed WITH its predicate, and the shown window is stated.
-  const from = counts.matching ? (result.page - 1) * (result.pageSize || counts.matching) + 1 : 0;
-  const to = counts.matching ? from + pageRows.length - 1 : 0;
-  const shown =
-    result.pageSize && counts.matching > pageRows.length
-      ? T(lang, "{from}–{to} / {n} sor megjelenítve", { from, to, n: counts.matching })
-      : T(lang, "mind a {n} sor megjelenítve", { n: counts.matching });
-  // ⛔ "593 felel meg a szűrőnek" stood 25px under "nincs szűrő" — the page asserting
-  // in one breath that there is no filter and that N rows satisfy it (Elek,
-  // 2026-09-12). The match segment is a statement ABOUT a filter, so it only appears
-  // when one is running; unfiltered, the pool count carries no "(szűrő nélkül)"
-  // qualifier either, because there is nothing to qualify it against.
-  const segments = [
-    `<b>${esc(shown)}</b>`,
-    activeFilters.length ? T(lang, "{n} felel meg a szűrőnek", { n: counts.matching }) : "",
+  // ── Hány sorból hány, EGY sorban, a tábla ALATT ─────────────────────────────
+  // ⛔ A leszűkített lista nem látszhat a teljes készletnek: a `/leads` alapból SZŰR
+  // (260 a 596-ból), és ha semmi nem mondja ki, az operátor 260-at hisz összesnek. Ez a
+  // sor tehát nem díszítés — ez az egyetlen hely, ahol a MEDENCE mérete elhangzik, és
+  // ezért a szűrt számmal EGYÜTT áll, nem külön mondatban (`feedback_two_divisors…`).
+  const poolSize = disqView ? counts.disqualified : counts.active;
+  const countsLine = `<p class="mut small con-leadcount" data-lead-counts>${
     activeFilters.length
-      ? T(lang, "{n} aktív lead (szűrő nélkül)", { n: counts.active })
-      : T(lang, "{n} aktív lead", { n: counts.active }),
-    T(lang, "{n} diszkvalifikált", { n: counts.disqualified }),
-    T(lang, "{n} felmért szereplő összesen", { n: counts.all }),
-  ].filter(Boolean);
-  const countsLine = `<p class="mut small con-leadcount" data-lead-counts>
-    ${segments.join(" · ")}
-  </p>`;
+      ? disqView
+        ? T(lang, "{n} sor a {total} diszkvalifikáltból — nincs lapozás, mind itt van.", {
+            n: counts.matching,
+            total: poolSize,
+          })
+        : T(lang, "{n} sor a {total} aktív leadből — nincs lapozás, mind itt van.", {
+            n: counts.matching,
+            total: poolSize,
+          })
+      : T(lang, "{n} sor — nincs lapozás, mind itt van.", { n: counts.matching })
+  }</p>`;
 
-  // Column headers carry `data-col` + the column's MEANING as a tooltip — the guard
-  // reads the attribute to tie a filter's sentence to the cells it claims to describe.
+  // ── EGYSOROS FEJLÉC (ADR-0188) ──────────────────────────────────────────────
+  // ⛔ A 11 fejléc-„?" gomb MEGSZŰNT (tulajdonosi döntés 2026-09-19: „minek ennyi
+  // kérdőjel"). A jelentés nem veszett el: a `title` marad az egérnek, és a jelmagyarázat
+  // a cím melletti EGYETLEN „?"-ből nyílik felugró ablakként — érintőképernyőn is, ami az
+  // eredeti indok volt a fejléc-gombokra. A fejléc így EGY sor, nem kettő.
   //
-  // ⛔ …és a tooltip ÉRINTŐKÉPERNYŐN ELÉRHETETLEN, a tulaj pedig telefonról dolgozik. Ezért
-  // minden fejléc visel egy „?" gombot, ami a jelmagyarázatot NYITJA KI az ADOTT oszlop
-  // sorára, odagörget és kiemeli — a jelentés ott érhető el, ahol a kérdés felmerül
-  // (jóváhagyott terv ①, `assets/design-refs/console/lead-list/`).
-  const helpQ = (key: LeadColumnKey) =>
-    `<button type="button" class="con-helpq" data-help="${key}"
-       aria-label="${T(lang, "Mit jelent ez az oszlop?")}" title="${T(lang, "Mit jelent ez az oszlop?")}">?</button>`;
+  // `data-col` a guard horga: ezen köti össze a szűrő mondatát azokkal a cellákkal,
+  // amelyekről állít valamit. A numerikus oszlopok `num` osztályt kapnak, hogy a fejléc
+  // a számokkal EGY oldalra igazodjon (eddig a felirat balra, az érték jobbra állt).
+  const sum = (key: LeadColumnKey) => summaryByColumn.get(key) ?? "";
   const th = (key: LeadColumnKey, inner: string) =>
-    `<th data-col="${key}" title="${esc(columnMeaning(key, lang))}">${inner} ${helpQ(key)}</th>`;
+    `<th data-col="${key}"${LEAD_COLUMNS[key].numeric ? ` class="num"` : ""} title="${esc(columnMeaning(key, lang))}">` +
+    `<span class="con-th">${inner}</span></th>`;
 
   const head = `<thead><tr>
     ${th(
       "name",
       `${sortHead(columnLabel("name", lang), "name", q)}
       <span class="cf">
-        <button type="button" class="cf-btn${q.name ? " on" : ""}" onclick="citCf(this)" aria-label="${T(lang, "név-keresés")}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-            <circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/></svg>
+        <button type="button" class="cf-btn${q.name ? " on" : ""}" onclick="citCf(this)"
+                aria-label="${q.name ? esc(sum("name")) : T(lang, "név-keresés")}"
+                title="${q.name ? esc(sum("name")) : T(lang, "név-keresés")}"
+                ${q.name ? `data-filter-summary="${esc(sum("name"))}"` : ""}>
+          ${ic("zoom", 14)}${q.name ? `<i class="cf-count">1</i>` : ""}
         </button>
         <span class="cf-pop" hidden>
           <input type="text" name="name" list="leadNames" value="${esc(q.name ?? "")}"
@@ -1272,9 +1273,9 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
       </span>`,
     )}
     ${th("surveyed", sortHead(columnLabel("surveyed", lang), "surveyed", q))}
-    ${th("region", `${sortHead(columnLabel("region", lang), "region", q)} ${colFilter("region", regionOpts, q.region ?? [])}`)}
-    ${th("country", `${sortHead(columnLabel("country", lang), "country", q)} ${colFilter("country", countryOpts, q.country ?? [])}`)}
-    ${th("city", `${sortHead(columnLabel("city", lang), "city", q)} ${colFilter("city", cityOpts, q.city ?? [])}`)}
+    ${th("region", `${sortHead(columnLabel("region", lang), "region", q)} ${colFilter("region", regionOpts, q.region ?? [], sum("region"))}`)}
+    ${th("country", `${sortHead(columnLabel("country", lang), "country", q)} ${colFilter("country", countryOpts, q.country ?? [], sum("country"))}`)}
+    ${th("city", `${sortHead(columnLabel("city", lang), "city", q)} ${colFilter("city", cityOpts, q.city ?? [], sum("city"))}`)}
     ${th(
       "qualification",
       `${sortHead(columnLabel("qualification", lang), "qualification", q)} ${colFilter(
@@ -1284,16 +1285,18 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
           qualCounts,
         ),
         q.qualification ?? [],
+        sum("qualification"),
       )}`,
     )}
-    ${th("photos", `${sortHead(columnLabel("photos", lang), "photos", q)} ${minFilter("minPhotos", q.minPhotos)}`)}
-    ${th("material", `${sortHead(columnLabel("material", lang), "material", q)} ${minFilter("minMaterial", q.minMaterial)}`)}
+    ${th("photos", `${sortHead(columnLabel("photos", lang), "photos", q)} ${minFilter("minPhotos", q.minPhotos, { summary: sum("photos") })}`)}
+    ${th("material", `${sortHead(columnLabel("material", lang), "material", q)} ${minFilter("minMaterial", q.minMaterial, { summary: sum("material") })}`)}
     ${th(
       "match",
       `${sortHead(columnLabel("match", lang), "match", q)} ${minFilter("minMatch", q.minMatch, {
         step: "0.05",
         max: "1",
         hint: T(lang, "0 és 1 között; a portál-találat nélküli (–) sorok kiesnek"),
+        summary: sum("match"),
       })}`,
     )}
     ${th(
@@ -1302,6 +1305,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
         "contact",
         opt([["email", T(lang, "e-mail")], ["sms", "SMS"], ["voice", T(lang, "telefon")], ["none", T(lang, "nincs")]], contactCounts),
         q.contact ?? [],
+        sum("contact"),
       )}`,
     )}
     ${th(
@@ -1315,6 +1319,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
           mockCounts,
         ),
         q.mock ?? [],
+        sum("mock"),
       )}`,
     )}
   </tr></thead>`;
@@ -1324,8 +1329,8 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const td = (key: LeadColumnKey, r: LeadListRow, cls: string, inner: string) =>
     `<td data-col="${key}" data-v="${esc(String(LEAD_COLUMNS[key].cell(r)))}"${cls ? ` class="${cls}"` : ""}>${inner}</td>`;
 
-  const bodyRows = pageRows.length
-    ? pageRows
+  const bodyRows = listRows.length
+    ? listRows
         .map(
           (r) => `<tr>
         ${td("name", r, "", `<a href="/lead/${esc(r.id)}">${esc(r.name)}</a>`)}
@@ -1373,77 +1378,48 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const scrollHint = `<p class="con-scrollhint"><span aria-hidden="true">⇄</span>
     ${T(lang, "Oldalra görgetve jön a többi oszlop — a Név oszlop közben a helyén marad.")}</p>`;
 
-  // ⛔ A JELMAGYARÁZAT ÉS A LAPOZÓ A DÖNTÉS ELŐTT ÁLL (jóváhagyott terv ① és ②).
-  // Eddig mindkettő a lap ALJÁN volt, a jelmagyarázat ráadásul csukva — ott, ahol a döntés
-  // már megszületett. A lapozó ALUL IS megmarad: egy 10 soros lapról az alsó vezérlő a
-  // természetes következő lépés.
-  const body = `<div class="panel"><h2>${esc(title)} ${helpLink("console.leads")}</h2>
-    ${countsLine}
-    ${toolbar}
-    ${leadLegend(lang)}
-    ${leadPager(result, q, lang, "top")}
+  // ── A LAP (ADR-0188) ────────────────────────────────────────────────────────
+  // Cím + EGYETLEN „?" + a két kiút-link, aztán AZONNAL a tábla. Se lapozó (se fent, se
+  // lent), se jelmagyarázat-sáv, se számláló-blokk, se szűrő/sorrend-mondat: a szűrő
+  // tényét a fejléc cián jelvénye és a „Szűrők törlése" link viszi, a sorrendet a
+  // rendező oszlop nyila, a darabszámot EGY sor a tábla alatt.
+  const body = `<div class="panel">
+    <div class="con-leadhead">
+      <h2>${esc(title)}</h2>
+      <button type="button" class="con-helpq" id="leadLegendBtn" aria-haspopup="dialog"
+              aria-controls="leadLegend" aria-expanded="false"
+              aria-label="${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}"
+              title="${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}">?</button>
+      ${headLinks}
+    </div>
     ${scrollHint}
     <form method="get" id="leadFilters">${hidden}
-      <div class="tblwrap"><table class="con-leadtbl">${head}<tbody>${bodyRows}</tbody></table></div>
+      <div class="tblwrap tblwrap--leads"><table class="con-leadtbl">${head}<tbody>${bodyRows}</tbody></table></div>
     </form>
-    ${leadPager(result, q, lang, "bottom")}
+    ${countsLine}
     ${nameList}
+    ${leadLegend(lang)}
     ${LEAD_FILTER_JS}</div>`;
   return layout(title, body, { active: "/leads" });
 }
 
 /**
- * Pager. Before this, 260 rows rendered into one endless scroll with no "where am I"
- * anywhere — the screenshot showed 10 rows and nothing said there were 250 more.
- * "Mind egy lapon" stays available, because scanning the whole set IS a real need.
- */
-function leadPager(
-  result: LeadListResult,
-  q: LeadQuery,
-  lang: string,
-  /** Melyik példány — a `data-pager` horgot az őr olvassa, hogy a FELSŐ meglétét mérje. */
-  where: "top" | "bottom" = "bottom",
-): string {
-  const { counts, page, pages, pageSize } = result;
-  const wrap = (inner: string) => `<div class="con-pager" data-pager="${where}">${inner}</div>`;
-  if (!pageSize) {
-    return counts.matching > LEAD_PAGE_SIZE
-      ? wrap(`<span class="mut small">${T(lang, "mind a {n} sor egy lapon", { n: counts.matching })}</span>
-          <a class="small" href="${qs(q, { pageSize: undefined, page: undefined })}">${T(lang, "Lapozva")}</a>`)
-      : "";
-  }
-  if (pages <= 1) return "";
-  const link = (p: number, label: string, cur = false) =>
-    cur
-      ? `<span class="con-pager__at" aria-current="page">${esc(label)}</span>`
-      : `<a class="con-pager__p" href="${qs(q, { page: p })}">${esc(label)}</a>`;
-  // Window of page numbers around the current one (first/last always reachable).
-  const nums: (number | null)[] = [];
-  for (let p = 1; p <= pages; p++) {
-    if (p === 1 || p === pages || Math.abs(p - page) <= 2) nums.push(p);
-    else if (nums[nums.length - 1] !== null) nums.push(null);
-  }
-  return wrap(`
-    ${page > 1 ? link(page - 1, T(lang, "‹ Előző")) : `<span class="con-pager__off">${T(lang, "‹ Előző")}</span>`}
-    ${nums.map((p) => (p === null ? `<span class="con-pager__gap">…</span>` : link(p, String(p), p === page))).join("")}
-    ${page < pages ? link(page + 1, T(lang, "Következő ›")) : `<span class="con-pager__off">${T(lang, "Következő ›")}</span>`}
-    <a class="small con-pager__all" href="${qs(q, { pageSize: 0, page: undefined })}">${T(lang, "Mind a {n} egy lapon", { n: counts.matching })}</a>
-  `);
-}
-
-/**
- * Jelmagyarázat — jóváhagyott terv ① (`assets/design-refs/console/lead-list/`).
+ * Jelmagyarázat — ADR-0188 (tulajdonosi döntés, 2026-09-19).
  *
- * ⛔ Mért hiba (Elek FK-003): a lista LEGALJÁN állt, CSUKVA — ott, ahol a döntés már
- * megszületett. Most a TÁBLA FÖLÖTT van, és a fejlécek „?" gombja ide ugrik, az adott
- * oszlop sorára. A `data-col`-horgok nem díszítés: azokra görget és azokat emeli ki a JS,
- * és azokon méri az őr, hogy a „?" tényleg a SAJÁT sorát nyitja.
+ * ⛔ SÁV VOLT, FELUGRÓ LETT. A 2026-09-14-i kontraktus ① pontja a tábla FÖLÉ tette,
+ * nyitott `<details>` sávként, és minden oszlopfejlécre tett egy „?" gombot. A tulaj
+ * szava: „a segítség nem kell egy ilyen sávba, max egy kattintható kérdőjel és onnan
+ * popup… minek ennyi kérdőjel". A sáv 11 sornyi szöveget tolt a döntés elé MINDEN
+ * betöltéskor, akkor is, amikor senki nem kérdezett.
  *
- * ⚠️ NYITVA / CSUKVA két KÜLÖN tervezői döntés: asztalin nyitva fogad (van rá hely),
- * telefonon csukva — nyitva a teljes első képernyőt elvenné a táblázat elől. A `open`
- * attribútumot a kiszolgáló NEM tudja eldönteni (nem ismeri a képernyőt), ezért a
- * `con-legend` alapból nyitott, és a lap-szkript csukja be szűk konténeren. A HELYE
- * mindkét méreten ugyanaz — a döntés ELŐTT.
+ * ⚠️ AMI NEM VÁLTOZOTT, ÉS NEM IS SZABAD: az EREDETI indok a fejléc-gombokra az volt,
+ * hogy a `title` elemleírás ÉRINTŐKÉPERNYŐN ELÉRHETETLEN, a tulaj pedig telefonról
+ * dolgozik. A felugró ezt jobban oldja meg, mint a 11 gomb: EGY gomb nyitja, ujjal is,
+ * és MINDEN oszlopot felsorol. A jelentés tehát nem veszett el — kevesebb kattintásnyira
+ * került.
+ *
+ * A `data-legend` horgok maradnak: az őr ezeken méri, hogy a felugró tényleg mind a 11
+ * oszlopot megnevezi, és hogy a felirat a REGISZTERBŐL jön, nem kézzel újraírt listából.
  */
 function leadLegend(lang: string): string {
   // EVERY column, not a hand-picked few: a meaning that lives only in the header
@@ -1453,16 +1429,34 @@ function leadLegend(lang: string): string {
   const items = cols
     .map(
       (k) =>
-        `<li data-legend="${k}"><b>${esc(columnLabel(k, lang))}</b> — ${esc(columnMeaning(k, lang))}</li>`,
-    )
-    .concat(
-      cellMarkMeanings(lang).map(
-        (m) => `<li><span class="sv">${esc(m.mark)}</span> — ${esc(m.meaning)}</li>`,
-      ),
+        `<div class="con-legend__row" data-legend="${k}"><dt>${esc(columnLabel(k, lang))}</dt>` +
+        `<dd>${esc(columnMeaning(k, lang))}</dd></div>`,
     )
     .join("");
-  return `<details class="con-legend" id="leadLegend" open><summary>${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}</summary>
-    <ul class="mut small">${items}</ul></details>`;
+  const marks = cellMarkMeanings(lang)
+    .map(
+      (m) =>
+        `<div class="con-legend__row"><dt><span class="sv">${esc(m.mark)}</span></dt>` +
+        `<dd>${esc(m.meaning)}</dd></div>`,
+    )
+    .join("");
+  // ⛔ A TUDÁSBÁZIS-HORGONY ITT ÉL (`console.leads`). A cím mellől kikerült az ikonos
+  // súgó-link — a tulaj EGYETLEN „?"-t kért —, de a horgony nem tűnhet el: a kb-check
+  // lefedettség-kapuja pont azt méri, hogy a képernyőn KINT van-e az az út, amit a
+  // kézikönyv ígér. Itt, a felugró lábazatában van a helye: aki a jelmagyarázatot
+  // kinyitotta, az pont most keres bővebb leírást.
+  return `<div class="con-legend" id="leadLegend" hidden>
+    <div class="con-legend__box" role="dialog" aria-modal="true" aria-labelledby="leadLegendTitle">
+      <div class="con-legend__head">
+        <h3 id="leadLegendTitle">${T(lang, "Mit jelentenek az oszlopok és a jelölések?")}</h3>
+        <button type="button" class="con-legend__x" id="leadLegendX" aria-label="${T(lang, "Bezárás")}">${ic("close", 18)}</button>
+      </div>
+      <dl class="con-legend__list">${items}
+        <div class="con-legend__sec">${T(lang, "Jelölések a cellákban")}</div>${marks}
+      </dl>
+      <p class="con-legend__foot">${helpLink("console.leads", T(lang, "Részletes súgó a tudásbázisban"))}</p>
+    </div>
+  </div>`;
 }
 
 /** Header-filter behaviour: open one popup at a time, close on outside click,
@@ -1489,31 +1483,49 @@ const LEAD_FILTER_JS = `<script>
     p.addEventListener('click', function (e) { e.stopPropagation(); });
   });
 
-  // ── Jelmagyarázat: a fejléc „?" gombja a SAJÁT oszlopának sorát nyitja ki ──────────
-  // (jóváhagyott terv ①). A tooltip érintőképernyőn elérhetetlen, a tulaj telefonról
-  // dolgozik — ez az az út, ami ott is működik.
+  // ── Jelmagyarázat: EGY gomb, EGY felugró ──────────────────────────────────────────
+  // Az ujjal is elérhető út: a „?" nyit, az × / ESC / a háttérre kattintás zár. A
+  // fókusz a felugróba megy és a záráskor VISSZATÉR a gombra — különben a billentyűvel
+  // dolgozó operátor a lap tetején találná magát.
   (function () {
     var lg = document.getElementById('leadLegend');
-    if (!lg) return;
-    // ⚠️ A NYITVA/CSUKVA a KONTÉNER szélességétől függ, nem a kiszolgálótól: a szerver nem
-    // ismeri a képernyőt. Asztalin nyitva marad, telefonon becsukjuk — a HELYE ugyanaz.
-    function syncOpen() {
-      if (window.innerWidth <= 700) lg.removeAttribute('open');
+    var btn = document.getElementById('leadLegendBtn');
+    if (!lg || !btn) return;
+    function open() {
+      lg.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      var x = document.getElementById('leadLegendX');
+      if (x) x.focus();
     }
-    syncOpen();
-    document.querySelectorAll('.con-helpq').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var key = b.getAttribute('data-help');
-        lg.setAttribute('open', '');
-        lg.querySelectorAll('li[data-legend]').forEach(function (li) { li.classList.remove('on'); });
-        var li = lg.querySelector('li[data-legend="' + key + '"]');
-        if (!li) return;
-        li.classList.add('on');
-        li.scrollIntoView({ block: 'center' });
-      });
-    });
+    function close() {
+      if (lg.hidden) return;
+      lg.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.focus();
+    }
+    btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); open(); });
+    var x = document.getElementById('leadLegendX');
+    if (x) x.addEventListener('click', close);
+    // A HÁTTÉRRE kattintás zár, a DOBOZRA nem — különben a szövegben kijelölni sem lehet.
+    lg.addEventListener('click', function (e) { if (e.target === lg) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  })();
+
+  // ── A görgethetőség MÉRT tény, nem töréspont ─────────────────────────────────────
+  // Ha a 11 oszlop nem fér ki, a NÉV tapad és a lap KI IS MONDJA; ha kifér, egyik sem
+  // történik. A kiszolgáló ezt nem tudhatja (nem ismeri a képernyőt, a nagyítást, sem a
+  // leghosszabb településnevet a mai találati halmazban) — a böngésző viszont megméri.
+  (function () {
+    var box = document.querySelector('.tblwrap--leads');
+    var hint = document.querySelector('.con-scrollhint');
+    if (!box) return;
+    function sync() {
+      var over = box.scrollWidth - box.clientWidth > 1;
+      box.classList.toggle('is-scrollx', over);
+      if (hint) hint.classList.toggle('is-on', over);
+    }
+    sync();
+    window.addEventListener('resize', sync);
   })();
 </script>`;
 
