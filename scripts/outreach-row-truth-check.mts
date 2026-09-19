@@ -165,7 +165,7 @@ if (d) {
     outreachDraftPage("p1", d.input, d.draft, { ...check2, verdict: "PASS", reasons: [] },
       "teszt@citoviso.com", null,
       { sms: { text: "x" }, phone, emailSentAt, mmsPreview: { kind: "ready", url: "/x.jpg" } } as never,
-      d.leadId, { sendable: true, reason: null, gateBlocked: false });
+      d.leadId, { sendable: true, reason: null, gateBlocked: false, needsConfirm: false, gate: null, reasons: [] });
 
   // Z6 — szám nélkül: a gomb TILTOTT, és a lap megmondja, hol lehet pótolni.
   const noPhone = SELF_TEST ? page(null, "+36301112233") : page(null, null);

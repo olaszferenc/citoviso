@@ -34,9 +34,20 @@ const say = (ok: boolean, what: string, detail = ""): void => {
   console.error(`✗ BUKÁS  ${what}${detail ? `\n     ↳ ${detail}` : ""}`);
 };
 
-/** The two claims the screen can make, as the operator reads them. */
+/**
+ * The THREE claims the screen can make, as the operator reads them.
+ *
+ * ⛔⛔ MIÉRT HÁROM (tulajdonosi rendelet, 2026-09-19: „megtiltom, hogy a kurátor kiküldeni
+ * szándékát bármi meggátolja"): kettővel az őr ZÖLDEN védte a bejelentett hibát. A lap
+ * „most NEM küldhető — a jogszerűségi kapu tiltja (az okok lent)"-et írt, a küldő-út
+ * tényleg nem küldött EGY kattintásra, tehát az ①-es „a lap állítása = a küldő-út
+ * verdiktje" szabály elégedetten zöldet adott — miközben (a) nem a jogszerűségi kapu
+ * szólt (az PASS volt), (b) „az okok" nem voltak lent, és (c) a kurátor MÁSODIK
+ * kattintása kiküldte volna. Egy tiltás és egy kérdés nem ugyanaz az állítás.
+ */
 const CLAIM_YES = "most kiküldhető";
 const CLAIM_NO = "most NEM küldhető";
+const CLAIM_CONFIRM = "a küldés gomb előbb megmutatja az őr leletét";
 
 /**
  * Rule ②: does the §C badge promise sendability? ONE copy, used by the page check AND
@@ -44,6 +55,13 @@ const CLAIM_NO = "most NEM küldhető";
  * one could not be falsified by the sendability self-test (that one only lies about the
  * claim, not about the badge).
  */
+/**
+ * ⑤/⑥ predikátumai EGY példányban — a szabály ÉS az önteszt ugyanazt hívja. Két másolat
+ * itt azt jelentené, hogy az önteszt egy másik szabályt igazol, mint amelyik fut.
+ */
+const barDeniesCurator = (html: string): boolean => html.includes(CLAIM_NO);
+const barBlamesLegalGate = (html: string): boolean => html.includes("a jogszerűségi kapu tiltja");
+
 const badgePromisesSendable = (html: string): boolean =>
   /Jogszerűségi kapu[^<]*küldhető/u.test(
     html.replace(/Jogszerűségi kapu: FLAG — ez tiltja a küldést/gu, ""),
@@ -73,7 +91,7 @@ for (const r of rows) {
   // while the send path refuses. Every rule below must go red on it, or none of them
   // could ever have caught the reported bug.
   const shown: MailSendability = SELF_TEST
-    ? { sendable: true, reason: null, gateBlocked: false }
+    ? { sendable: true, reason: null, gateBlocked: false, needsConfirm: false, gate: null, reasons: [] }
     : truth;
   const html = outreachDraftPage(
     r.id,
@@ -88,14 +106,49 @@ for (const r of rows) {
   );
   const saysYes = html.includes(CLAIM_YES);
   const saysNo = html.includes(CLAIM_NO);
+  const saysConfirm = html.includes(CLAIM_CONFIRM);
   const who = `${r.name} (${r.id.slice(0, 8)})`;
+  /** Melyik állítást KELLENE tennie — pontosan egyet a háromból. */
+  const want = truth.sendable ? "yes" : truth.needsConfirm ? "confirm" : "no";
+  const got = saysYes ? "yes" : saysConfirm ? "confirm" : saysNo ? "no" : "semmi";
 
-  // ① the page's claim IS the send path's verdict
+  // ① the page's claim IS the send path's verdict — all THREE states
   say(
-    saysYes === truth.sendable && saysNo === !truth.sendable,
-    `${who}: a lap állítása = a küldő-út verdiktje (${truth.sendable ? "küldhető" : "nem küldhető"})`,
-    `lapon: küldhető=${saysYes} / nem=${saysNo} · küldő-út: ${truth.sendable ? "küldhető" : (truth.reason ?? "§C kapu")}`,
+    want === got && [saysYes, saysConfirm, saysNo].filter(Boolean).length === 1,
+    `${who}: a lap állítása = a küldő-út verdiktje (${want})`,
+    `lapon: ${got} (küldhető=${saysYes} / megerősítés=${saysConfirm} / nem=${saysNo}) · küldő-út: ${want}${truth.reason ? ` — ${truth.reason}` : ""}`,
   );
+
+  // ⑤ A KURÁTORT NEM TILTJUK EL A SAJÁT DÖNTÉSÉTŐL. Amit egy második kattintás kiküld,
+  // arra a lap nem mondhatja, hogy „NEM küldhető" — a bejelentett hiba pont ez volt.
+  if (truth.needsConfirm) {
+    say(
+      !barDeniesCurator(html),
+      `${who}: a megerősíthető lelet nem „NEM küldhető”-ként jelenik meg`,
+      "a kurátor egy kattintással kiküldené, a lap mégis tiltást mutat",
+    );
+  }
+
+  // ⑥ A SÁV A VALÓDI KAPUT NEVEZI MEG. A „jogszerűségi kapu tiltja" mondat CSAK akkor
+  // állhat a lapon, ha tényleg a §C szólt — máskülönben a lap egy ártatlan kaput vádol,
+  // és a kurátor a rossz helyen keresi a hibát (mérve 2026-09-19: PASS-jelvény alatt).
+  if (barBlamesLegalGate(html)) {
+    say(
+      truth.gateBlocked,
+      `${who}: a „jogszerűségi kapu tiltja" mondat csak §C-FLAG mellett áll`,
+      `a lap a §C-t vádolja, de a valódi kapu: ${truth.gate ?? "nem is kapu"} (a §C-jelvény PASS)`,
+    );
+  }
+
+  // ⑦ HA A LAP INDOKRA HIVATKOZIK, AZ INDOK LEGYEN OTT. Az „(az okok lent)" mondat üres
+  // lista fölött ugyanaz a hazugság, mint egy rossz kapu-név.
+  if (!truth.sendable && truth.reasons.length && !truth.gateBlocked) {
+    say(
+      truth.reasons.some((x) => html.includes(x.slice(0, 40))),
+      `${who}: a lelet SAJÁT mondatai ott vannak a lapon`,
+      "a lap visszatartást állít, de a kurátor nem látja, mi az",
+    );
+  }
 
   // ② the §C badge must never claim sendability — that verdict is not its to give
   say(
@@ -128,6 +181,19 @@ if (SELF_TEST) {
   // not the badge), so it is measured against the page as it ACTUALLY SHIPPED on
   // 2026-09-13 — the wording from the FK-004 screenshot. Without this, rule ② would be
   // a green line that never proved it can see anything.
+  // ⛔ A 2026-09-19-én KIMENT sáv, szó szerint a tulaj képernyőjéről. Az ⑤ és ⑥ szabály
+  // ezen MINDKETTŐ pirosra kell menjen — egy megerősíthető lelet mellett (needsConfirm),
+  // §C-PASS-szal. Enélkül a két új szabály olyan sor lenne, amiről soha nem bizonyítottuk,
+  // hogy lát valamit: a bejelentett hibát épp az fedte el, hogy minden mérés zöld volt.
+  const SHIPPED_BAR =
+    `<span class="pill rejected">E-mail: most NEM küldhető — a jogszerűségi kapu tiltja (az okok lent)</span>`;
+  if (!barDeniesCurator(SHIPPED_BAR) || !barBlamesLegalGate(SHIPPED_BAR)) {
+    console.error(
+      "\n⛔ ÖNTESZT BUKOTT: az ⑤/⑥ szabály a 2026-09-19-én KIMENT sávot sem fogja meg — vak.",
+    );
+    process.exit(1);
+  }
+  console.log("✓ ÖNTESZT ⑤/⑥: a szabályok felismerik a kiment „NEM küldhető — a jogszerűségi kapu tiltja” sávot");
   const SHIPPED_BADGE = `<span class="pill approved">Jogszerűségi kapu: PASS — küldhető</span>`;
   if (!badgePromisesSendable(SHIPPED_BADGE)) {
     console.error(

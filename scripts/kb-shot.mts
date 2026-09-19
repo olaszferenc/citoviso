@@ -1456,7 +1456,7 @@ await shootConsole(
     // ⛔ The guide calls this „a legfelső sor" — a fixture that omits the argument would
     // teach a screen that does not exist (a KB image is only worth what it really shows).
     // The happy path matches the PASS verdict above: every gate green, the mail may go.
-    { sendable: true, reason: null, gateBlocked: false },
+    { sendable: true, reason: null, gateBlocked: false, needsConfirm: false, gate: null, reasons: [] },
   ),
   conOut("console-outreach-draft"),
 );

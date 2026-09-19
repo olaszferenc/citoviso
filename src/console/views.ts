@@ -5305,6 +5305,12 @@ export function tenantAdminPage(v: TenantAdminView): string {
 export interface VerdictConfirmView {
   readonly action: "send" | "send-all" | "send-pair";
   readonly blocking: readonly BlockingVerdict[];
+  /**
+   * A KÉP-lelet — ugyanebben a felugróban (tulajdonosi rendelet, 2026-09-19). Eddig a
+   * kurátort egy másik képernyőre küldte, kötelező indoklásért; a kiküldési szándék útjába
+   * a rendszer nem állhat így. Null = a lap képeivel nincs baj (vagy nincs mit vállalni).
+   */
+  readonly photo?: { kind: "broken" | "nophoto"; sentence: string; urls: readonly string[] } | null;
 }
 
 /**
@@ -5330,10 +5336,32 @@ function verdictConfirmDialog(prospectId: string, v: VerdictConfirmView): string
         }</span>${b.reason ? `<br><span class="mut small">${esc(b.reason)}</span>` : ""}</li>`,
     )
     .join("");
+  // A kép-lelet ugyanezen a listán, a SAJÁT mondatával — a kurátor egy helyen látja,
+  // mit vállal, és egy kattintással vállalja.
+  const photoItem = v.photo
+    ? `<li><span class="pg-why">${
+        v.photo.kind === "nophoto"
+          ? T(lang, "A kiszállított lapon egyetlen szállás-fotó sincs")
+          : T(lang, "{n} kép forrása nem érhető el a kiszállított lapon", { n: String(v.photo.urls.length) })
+      }</span><br><span class="mut small">${esc(v.photo.sentence)}</span>${
+        v.photo.urls.length
+          ? `<ul class="mut small" style="margin:4px 0 0">${v.photo.urls
+              .slice(0, 6)
+              .map((u) => `<li>${esc(u)}</li>`)
+              .join("")}</ul>`
+          : ""
+      }</li>`
+    : "";
   return `<dialog class="vg-dlg" id="cit-verdict-confirm" open>
-      <div class="pg-head">${ic("alert", 16)} ${T(lang, "Az őr megjelölte ezt a mockot — kiküldöd mégis?")}</div>
+      <div class="pg-head">${ic("alert", 16)} ${
+        // A cím arra válaszoljon, ami a leletben van: egy fotó-hiányra „az őr megjelölte"
+        // más kérdésre felelne, és a kurátor a rossz dolgot keresné a mockon.
+        v.blocking.length
+          ? T(lang, "Az őr megjelölte ezt a mockot — kiküldöd mégis?")
+          : T(lang, "A kiszállított lap képeivel baj van — kiküldöd mégis?")
+      }</div>
       <p class="pg-lead">${T(lang, "Ez nem tiltás: a kiküldés a te döntésed. De a levél ezzel a tartalommal megy ki egy idegennek, és nem vonható vissza.")}</p>
-      <ul class="pg-list">${items}</ul>
+      <ul class="pg-list">${items}${photoItem}</ul>
       <form method="post" action="/prospect/${esc(prospectId)}/${esc(v.action)}" class="vg-dlg__form">
         <input type="hidden" name="confirmVerdicts" value="1">
         <label class="small mut" for="cit-vc-reason">${T(lang, "Megjegyzés a naplóba (nem kötelező)")}</label>
@@ -5417,20 +5445,51 @@ export function outreachDraftPage(
   // „Mehet ki most?" — ONE predicate with the button (describeMailSendability). Absent
   // (undefined) only for callers that cannot probe; then the line is simply not shown,
   // because a screen that GUESSES this is the bug being fixed.
+  // ⛔⛔ A SÁV HÁROM MONDATA — és miért nem kettő (tulajdonosi rendelet, 2026-09-19:
+  // „megtiltom, hogy a kurátor kiküldeni szándékát bármi meggátolja").
+  //
+  // MÉRVE ezen a képernyőn: a sáv „E-mail: most NEM küldhető — a jogszerűségi kapu tiltja
+  // (az okok lent)"-et írt, miközben (a) a §C-jelvény közvetlenül alatta ZÖLD PASS volt,
+  // (b) „az okok" NEM voltak lent — a §C-nek nem volt mondanivalója, tehát üres lista,
+  // és (c) ez nem is tiltás volt: a dizájn-őr lelete figyelmeztet, a küldés gomb felugrója
+  // a kurátor megerősítésére KIKÜLDI a levelet. A kurátor egy hamis tiltást olvasott egy
+  // ártatlan kapu nevével, ezért meg sem nyomta a gombot, ami küldött volna.
+  //
+  // Ezért: ami a kurátor EGY kattintásával kimegy, az nem „nem küldhető" — az KÉRDÉS.
+  // A sáv megnevezi a VALÓDI kaput, kiírja a lelet SAJÁT mondatait, és megmondja a
+  // következő mozdulatot.
+  const sendableClass = sendable === undefined ? "" : sendable.sendable ? "approved" : sendable.needsConfirm ? "warn" : "rejected";
+  const sendableClaim =
+    sendable === undefined
+      ? ""
+      : sendable.sendable
+        ? T(lang, "E-mail: most kiküldhető — a küldő-út minden kapuja zöld")
+        : sendable.needsConfirm
+          ? T(lang, "E-mail: kiküldhető — a küldés gomb előbb megmutatja az őr leletét, és a megerősítéssel kimegy")
+          : T(lang, "E-mail: most NEM küldhető — {ok}", {
+              ok: esc(
+                sendable.gateBlocked
+                  ? T(lang, "a jogszerűségi kapu tiltja (lent felsorolva)")
+                  : (sendable.reason ?? T(lang, "ismeretlen ok"))),
+            });
+  // A lelet SAJÁT sorai. ⛔ A §C okait NEM ismételjük: azokat a `reasons` blokk rendereli
+  // lejjebb — egy szabály két példányban két igazság egy képernyőn.
+  // ⚠️ DEFENZÍV OLVASÁS, és nem a kényelemért: a `scripts/` NINCS típus-ellenőrizve (a
+  // tsconfig include-ja csak `src/**`), ezért a kézzel írt őr-fixture-ök a MailSendability
+  // régi alakját adják át — a `sendable.reasons.length` rajtuk futásidőben dobott, és ezzel
+  // az ÉN változtatásom omlasztott össze egy IDEGEN őrt (outreach-row-truth-check) a
+  // commit-kapuban. Egy renderelő függvény ne dőljön el egy hiányzó kiegészítő mezőn.
+  const whyLines = sendable?.reasons ?? [];
+  const sendableWhy =
+    sendable === undefined || sendable.gate == null || sendable.gate === "legal" || !whyLines.length
+      ? ""
+      : `<ul class="small" style="margin:6px 0 0;color:var(--citui-warn-ink)">${whyLines
+          .map((r) => `<li>${esc(r)}</li>`)
+          .join("")}</ul>`;
   const sendableBlock =
     sendable === undefined
       ? ""
-      : `<div class="row" style="margin-top:8px"><span class="pill ${sendable.sendable ? "approved" : "rejected"}">${
-          sendable.sendable
-            ? T(lang, "E-mail: most kiküldhető — a küldő-út minden kapuja zöld")
-            : T(lang, "E-mail: most NEM küldhető — {ok}", {
-                ok: esc(
-                  sendable.gateBlocked
-                    ? T(lang, "a jogszerűségi kapu tiltja (az okok lent)")
-                    : (sendable.reason ?? T(lang, "ismeretlen ok")),
-                ),
-              })
-        }</span></div>`;
+      : `<div class="row" style="margin-top:8px"><span class="pill pill--claim ${sendableClass}">${sendableClaim}</span></div>${sendableWhy}`;
   // ⚖️ §C.2 FELADÓ-AZONOSÍTÁS — PER FIELD, on the screen where the irreversible
   // button is (Elek FK-004 H2). The letter that went out named "TESZT Szolgáltató
   // e.v. (nem valódi)" in its footer under a green PASS badge; a flat sentence in
@@ -5468,7 +5527,7 @@ export function outreachDraftPage(
       </div>`
     : "";
   const noticeBlock = notice
-    ? `<div class="row" style="margin-top:8px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
+    ? `<div class="row" style="margin-top:8px"><span class="pill pill--claim ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>`
     : "";
   // ⚠️ WHERE DO THE LETTER'S LINKS POINT? (Elek FK-004 ④.) Every link in the mail is
   // built from PUBLIC_BASE_URL, and nothing tied that host to the identity the letter
@@ -5477,7 +5536,7 @@ export function outreachDraftPage(
   // the send decision is made, and flagged when it is not our own domain.
   const linkHost = checkOutreachLinkHost();
   const linkHostBlock = linkHost
-    ? `<div class="row" style="margin-top:8px"><span class="pill${linkHost.mismatch ? " rejected" : ""}">${
+    ? `<div class="row" style="margin-top:8px"><span class="pill pill--claim${linkHost.mismatch ? " rejected" : ""}">${
         linkHost.mismatch
           ? // ⛔ It says FIGYELMEZTETÉS because it does NOT block (Elek FK-004 Z1): a red
             // pill that reads like a verdict, directly under a green one, left the operator

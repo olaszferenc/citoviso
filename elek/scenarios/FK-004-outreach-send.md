@@ -31,7 +31,13 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
   tedd: kattints "E-mail / SMS megnyitása — küldés ▸"
   várd: látható "Megkeresés-piszkozat"
   várd: látható "Jogszerűségi kapu: PASS"
-  várd: látható "E-mail: most kiküldhető"
+  # ⚠️ A SÁVNAK HÁROM ÁLLAPOTA VAN (2026-09-19): „most kiküldhető”, „kiküldhető — a küldés
+  # gomb előbb megmutatja az őr leletét…” (megerősítéssel kimegy), és „most NEM küldhető”.
+  # A tiltó mondat NEM tartalmazza a „kiküldhető” szót, a másik kettő igen — ezért a
+  # szóra mérünk: a kör attól nem bukhat el, hogy a park mockján ül egy őr-lelet, amit a
+  # kurátor egy kattintással vállalhat. (A „most kiküldhető”-re mérő sor egy ÉP terméken
+  # buktatta volna el az egészet.)
+  várd: látható "kiküldhető"
 
 - [ ] KŐBE VÉSETT címzett-ellenőrzés: a küldés-gomb felirata az elek@citoviso.com címet viseli
   várd: látható "Küldés e-mailben — elek@citoviso.com"
@@ -45,6 +51,10 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
 
 - [ ] A levél a rendszerből kimegy az elek@ címre, a felület visszaigazolja
   tedd: kattints "Küldés e-mailben — elek@citoviso.com"
+  # ⚠️ Ha a mockon megerősítetlen őr- vagy kép-lelet ül, itt egy ablak kérdez rá
+  # („kiküldöd mégis?”) — a kurátor döntése kiküldi. Elek ilyenkor a „Kiküldöm mégis”
+  # gombot nyomja: a forgatókönyv tárgya a KIKÜLDÉS, nem a lelet elkerülése.
+  kézi: ha felugrik a „kiküldöd mégis?” ablak, nyomd meg a „Kiküldöm mégis” gombot
   várd: látható "Kiküldve"
   várd: látható "státusz: sent"
   adat: ELEK-TESZT kimenő e-mail (elek@citoviso.com)

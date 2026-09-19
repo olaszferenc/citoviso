@@ -15,11 +15,40 @@ ez a hideg megkeresés jogi kapuja és küldő-felülete egyben. A lead-lap Megk
 
 ## „Mehet ki most?” — a legfelső sor válaszol rá
 
-A lap legfelső sora **azt** mondja meg, amit tudni akarsz: **„E-mail: most kiküldhető — a
-küldő-út minden kapuja zöld”**, vagy **„E-mail: most NEM küldhető”**, és ilyenkor a
-sor végén ott az OK is (például hogy ennek a prospectnek már kiküldtük az e-mailt, vagy hogy
-a mock még kurátori jóváhagyásra vár). Ez a sor ugyanazt futtatja le, amit a küldés-gomb —
-tehát amit itt olvasol, azt fogja a gomb is tenni.
+A lap legfelső sora **azt** mondja meg, amit tudni akarsz. **Három** válasza lehet:
+
+1. **„E-mail: most kiküldhető — a küldő-út minden kapuja zöld”** (zöld) — nyomd meg a
+   küldés gombot, és megy.
+2. **„E-mail: kiküldhető — a küldés gomb előbb megmutatja az őr leletét, és a
+   megerősítéssel kimegy”** (sárga) — a gépi őr talált valamit a mockon (vagy a lap
+   képeivel van baj). **Ez nem tiltás.** A sor ALATT ott a lelet a saját szavaival, és a
+   küldés gomb megnyomására egy ablak megkérdezi, kiküldöd-e mégis. Ha igen, kimegy.
+3. **„E-mail: most NEM küldhető”** (piros) — itt tényleg nem megy, és a sor
+   megmondja, miért: például ennek a címre már kiküldtük a hideg megkeresést, a címzett
+   leiratkozott, a mock még kurátori jóváhagyásra vár, nincs renderelt lapja, vagy a
+   jogszerűségi kapu FLAG-et adott.
+
+Ez a sor ugyanazt futtatja le, amit a küldés-gomb — tehát amit itt olvasol, azt fogja a
+gomb is tenni.
+
+## „Kiküldöd mégis?” — a megerősítő ablak
+
+Ha a gépi őr megjelölte a mockot, vagy a kiszállított lap képeivel van baj, a küldés gomb
+**nem küld azonnal**, hanem előbb megmutatja, mit talált:
+
+- a címe **„Az őr megjelölte ezt a mockot — kiküldöd mégis?”**, kép-hiba esetén
+  **„A kiszállított lap képeivel baj van — kiküldöd mégis?”**;
+- felsorolja a leletet (melyik őr, mit talált; képeknél a nem elérhető kép-címeket);
+- van egy **„Megjegyzés a naplóba (nem kötelező)”** mező — ide írhatod, miért vállalod;
+- **„Kiküldöm mégis”** → a levél kimegy. **„Mégsem”** → visszalépsz a piszkozathoz.
+
+⚠️ **A döntés a tiéd, és a rendszer nem bírálja felül.** A napló rögzíti, ki, mikor és
+melyik leletet vállalta. A vállalás csak **arra** a leletre szól, amit láttál: ha a mockot
+újragenerálod, vagy a jóváhagyás óta újabb kép esik ki, az ablak megint megkérdezi.
+
+⛔ **Két eset, ahol a gomb tényleg nem küld** — mert nem lelet, hanem hiányzó termék:
+a mockhoz **nincs renderelt lap** (a lead üres oldalra érkezne), vagy a lapját egy újabb
+generálás **felülírta** (a link más mock tartalmát vinné). Ezeket újra kell generálni.
 
 ## A jogszerűségi kapu — a jogi ítélet
 
@@ -29,7 +58,8 @@ JOGILAG rendben van — **nem** azt, hogy ki is mehet: a küldésnek több felt�
 csatorna, jóváhagyatlan mock, leiratkozás). Ezért van fent külön a „mehet ki most?” sor.
 
 FLAG esetén a piros lista megmondja az okokat — amíg ezek
-nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki (hideg megkeresés
+nem rendeződnek, a levél SEMMILYEN csatornán nem küldhető ki, és ezen a megerősítő ablak
+sem segít: ez nem gépi vélemény, hanem jogi követelmény (hideg megkeresés
 csak jogszerűen mehet — leiratkozási link, elérhető feladó, a hirdető cégazonosítása, valós személyre
 szabás).
 

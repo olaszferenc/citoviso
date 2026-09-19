@@ -443,7 +443,12 @@ function coversShownNoPhotoGate(artifactId: string, health: MockPhotoHealth): bo
  */
 async function verdictsNeedingConfirm(
   prospectId: string,
-): Promise<{ artifactId: string; blocking: BlockingVerdict[] } | null> {
+): Promise<{
+  artifactId: string;
+  blocking: BlockingVerdict[];
+  /** A KÉP-lelet, ha van és a kurátor vállalhatja (törött kép / nulla fotó). */
+  photo: { kind: "broken" | "nophoto"; sentence: string; urls: readonly string[] } | null;
+} | null> {
   const artifactId = await prospectArtifactId(prospectId);
   if (!artifactId) return null;
   const art = await db
@@ -452,8 +457,26 @@ async function verdictsNeedingConfirm(
     .where("id", "=", artifactId)
     .executeTakeFirst();
   const blocking = blockingVerdicts(art?.inputs);
-  if (!blocking.length || ackCoversVerdicts(verdictAckOf(art?.inputs), blocking)) return null;
-  return { artifactId, blocking };
+  const needVerdicts = blocking.length > 0 && !ackCoversVerdicts(verdictAckOf(art?.inputs), blocking);
+  // ⭐ A KÉP-LELET IS IDE TARTOZIK (tulajdonosi rendelet, 2026-09-19). Eddig a kurátort
+  // egy MÁSIK lapra küldte („a lead lapján vedd tudomásul, indoklással"), miközben a
+  // kezében ott volt a küldés gomb — vagyis a rendszer a kiküldési szándékot egy másik
+  // képernyőre terelte. Most ugyanaz a felugró kérdezi meg, amelyik az őr-leletet.
+  // ⛔ AMI NEM KERÜL IDE: az `unknown` (nincs renderelt lap) és a felülírt fájl. Ott nem
+  // egy lelet áll a szándék útjában, hanem NINCS mit kiküldeni — a lead linkje üres vagy
+  // idegen lapra vinne. Azt újragenerálni kell, nem lenyugtázni.
+  const health = await assessMockPhotos(artifactId);
+  const acks = photoAcksOf(art?.inputs);
+  const photo =
+    photoGateBlocks(health, acks) && !health.staleFile && (health.verdict === "broken" || health.verdict === "nophoto")
+      ? {
+          kind: health.verdict,
+          sentence: brokenPhotoSentence(health),
+          urls: health.broken.map((b) => b.url),
+        }
+      : null;
+  if (!needVerdicts && !photo) return null;
+  return { artifactId, blocking: needVerdicts ? blocking : [], photo };
 }
 
 /**
@@ -474,9 +497,25 @@ async function heldForVerdictConfirm(
     redirect(res, `/prospect/${prospectId}/draft?verdictConfirm=${action}`);
     return true;
   }
+  const reason = (form.get("verdictReason") ?? "").trim();
   // Naplózva: ki, mikor, MIRE — az indoklás itt opcionális (§ a tulaj döntése), a
   // névsor viszont nem: a vállalás csak EZT a leletet fedi, újragenerálás után nem él.
-  await recordVerdictAck(need.artifactId, "console", (form.get("verdictReason") ?? "").trim(), need.blocking);
+  if (need.blocking.length) {
+    await recordVerdictAck(need.artifactId, "console", reason, need.blocking);
+  }
+  // A KÉP-lelet vállalása ugyanebből a kattintásból (tulajdonosi rendelet, 2026-09-19).
+  // ⚠️ A fotó-ack indoklást KÖVETEL (`isUsableAckReason`), és ezt a követelést nem
+  // lazítjuk fel egy üres sztringgel — az a „néma pipa" visszatérése lenne. Ha a kurátor
+  // nem írt megjegyzést, a napló azt rögzíti, ami TÉNYLEG történt: a küldés felugrójában,
+  // a lelet ismeretében vállalta. Ez nem töltelék-mondat, hanem a művelet leírása.
+  if (need.photo) {
+    const logged = reason || "A kurátor a küldés felugrójában, a kép-lelet ismeretében vállalta a kiküldést.";
+    if (need.photo.kind === "nophoto") {
+      await recordNoPhotoAck(need.artifactId, "console", logged);
+    } else {
+      await recordBrokenPhotoAck(need.artifactId, need.photo.urls, "console");
+    }
+  }
   return false;
 }
 
@@ -2707,7 +2746,9 @@ async function handle(
       vcRaw === "send" || vcRaw === "send-all" || vcRaw === "send-pair" ? vcRaw : null;
     const vcNeed = vcAction ? await verdictsNeedingConfirm(draftMatch[1]!) : null;
     const verdictConfirm =
-      vcAction && vcNeed ? { action: vcAction, blocking: vcNeed.blocking } : null;
+      vcAction && vcNeed
+        ? { action: vcAction, blocking: vcNeed.blocking, photo: vcNeed.photo }
+        : null;
     return send(
       res,
       200,

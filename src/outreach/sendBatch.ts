@@ -163,10 +163,40 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     }));
 }
 
+/**
+ * MELYIK kapu adta a leletet.
+ *
+ * ⛔⛔ MÉRT HAZUGSÁG (2026-09-19, tulajdonosi bejelentés): a piszkozat-lap piros sávja
+ * „a jogszerűségi kapu tiltja (az okok lent)"-et írt — miközben ugyanazon a képernyőn a
+ * §C-jelvény ZÖLD PASS volt, és az „okok" sem voltak lent (a §C nem talált semmit). A
+ * valódi visszatartó a DIZÁJN-ŐR leletének megerősítése volt. A `flagged` kimenet eddig
+ * nem mondta meg, melyik kapuból jött, ezért a képernyő egy ártatlan kaput nevezett meg,
+ * és elhallgatta az egyetlen dolgot, ami számít: hogy a kurátor egy kattintással kiküldheti.
+ */
+export type FlagGate =
+  /** §C — jogszerűség (GDPR/Grt.): ez TILT, ezen a kurátor sem léphet át. */
+  | "legal"
+  /** ADR-0134/0150 — a kiszállított lap kép-egészsége: kurátori tudomásulvétellel átléphető. */
+  | "photo"
+  /** ADR-0126 — generáláskori őr-lelet: FIGYELMEZTET, a küldés-gomb felugrója kiküldi. */
+  | "verdict";
+
 export type SendOutcome =
   | { readonly kind: "sent"; readonly emailId: string; readonly provider: string }
   | { readonly kind: "dry-run"; readonly subject: string }
-  | { readonly kind: "flagged"; readonly reasons: readonly string[] }
+  | {
+      readonly kind: "flagged";
+      readonly reasons: readonly string[];
+      readonly gate: FlagGate;
+      /**
+       * ⭐ A KURÁTOR EGY KATTINTÁSSAL KIKÜLDHETI (tulajdonosi rendelet, 2026-09-19).
+       * True = a lelet FIGYELMEZTET: a küldés gomb felugrója megmutatja, és a megerősítés
+       * kiküldi. False = nincs mit kiküldeni (nincs renderelt lap, vagy a link MÁS mock
+       * tartalmát vinné a leadhez), vagy a JOG tiltja (§C) — ezeken a kurátor sem léphet át,
+       * mert itt nem a rendszer bírálja felül a döntését, hanem a termék hiányzik mögüle.
+       */
+      readonly confirmable: boolean;
+    }
   | { readonly kind: "skipped"; readonly reason: string };
 
 export interface SendReport {
@@ -177,16 +207,30 @@ export interface SendReport {
 }
 
 export interface MailSendability {
-  /** True only if the send path would REALLY proceed right now. */
+  /** True only if the send path would REALLY proceed right now, with ONE click. */
   readonly sendable: boolean;
   /**
    * Why not, in the send path's OWN words — never a second copy of the rule.
-   * Null when the §C gate is the blocker (the screen renders those reasons in full)
-   * or when the mail is sendable.
+   * Null when a gate is the blocker (its reasons are in `reasons`) or when sendable.
    */
   readonly reason: string | null;
-  /** The §C gate is what blocks — its reasons are rendered separately. */
+  /**
+   * The §C LEGAL gate is what blocks. ⛔ ONLY §C — this used to be true for EVERY
+   * `flagged` outcome, so the screen accused the legal gate of a design-guard finding
+   * while its own badge showed „Jogszerűségi kapu: PASS" right above.
+   */
   readonly gateBlocked: boolean;
+  /**
+   * ⭐ NEM TILTÁS, HANEM KÉRDÉS (tulajdonosi rendelet, 2026-09-19: „megtiltom, hogy a
+   * rendszer felülbírálja a kurátori döntést"). True = a lelet figyelmeztet, és a küldés
+   * gomb felugrója a kurátor megerősítésére KIKÜLDI. A képernyő ezt nem nevezheti
+   * „nem küldhető"-nek: az a mondat a kurátort a saját döntésétől tiltja el.
+   */
+  readonly needsConfirm: boolean;
+  /** Which gate spoke — the screen must name THIS one, never another. */
+  readonly gate: FlagGate | null;
+  /** The gate's OWN sentences, so the screen never has to say „az okok lent" in vain. */
+  readonly reasons: readonly string[];
 }
 
 /**
@@ -205,17 +249,28 @@ export interface MailSendability {
  */
 export async function describeMailSendability(prospectId: string): Promise<MailSendability> {
   const r = await sendOutreachMail(prospectId, { dryRun: true, probe: true });
+  const none = { needsConfirm: false, gate: null, reasons: [] as readonly string[] };
   switch (r.outcome.kind) {
     case "dry-run":
-      return { sendable: true, reason: null, gateBlocked: false };
+      return { sendable: true, reason: null, gateBlocked: false, ...none };
     case "flagged":
-      return { sendable: false, reason: null, gateBlocked: true };
+      return {
+        sendable: false,
+        reason: null,
+        // ⛔ ONLY the legal gate may be called a block (see MailSendability.gateBlocked).
+        gateBlocked: r.outcome.gate === "legal",
+        // A guard finding is a WARNING with a second click behind it — the send route
+        // (heldForSendConfirm) pops the dialog and sends on confirmation.
+        needsConfirm: r.outcome.confirmable,
+        gate: r.outcome.gate,
+        reasons: r.outcome.reasons,
+      };
     case "skipped":
-      return { sendable: false, reason: r.outcome.reason, gateBlocked: false };
+      return { sendable: false, reason: r.outcome.reason, gateBlocked: false, ...none };
     case "sent":
       // Unreachable with dryRun — and if it ever happens, the screen must not call it
       // sendable: a probe that SENT is a defect, not a green light.
-      return { sendable: false, reason: "a próba tévedésből küldött — ez hiba, jelezd", gateBlocked: false };
+      return { sendable: false, reason: "a próba tévedésből küldött — ez hiba, jelezd", gateBlocked: false, ...none };
   }
 }
 
@@ -341,7 +396,7 @@ export async function sendOutreachMail(
   // §C gate — a FLAGged draft must not be sent, ever.
   const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
-    return { ...base, outcome: { kind: "flagged", reasons: check.reasons } };
+    return { ...base, outcome: { kind: "flagged", reasons: check.reasons, gate: "legal", confirmable: false } };
   }
 
   // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).
@@ -370,6 +425,10 @@ export async function sendOutreachMail(
           reasons: [
             `A kiszállított mock képei nem ellenőrizhetők (${health.note ?? "ismeretlen ok"}) — ellenőrizetlen lap nem mehet ki`,
           ],
+          gate: "photo",
+          // ⛔ Itt nincs mit vállalni: nincs renderelt lap, a lead linkje üres oldalra vinne.
+          // Ez nem a kurátor döntésének felülbírálása — a termék hiányzik. Újragenerálás.
+          confirmable: false,
         },
       };
     }
@@ -384,8 +443,10 @@ export async function sendOutreachMail(
           reasons: [
             "A kiszállított lapon EGYETLEN szállás-fotó sincs — a lead kép nélküli oldalt kapna, " +
               "miközben a megkeresés lényege épp a látvány. Kurátori döntés kell: „Adatok újragyűjtése” " +
-              "a lead lapján és új mock, vagy a konzolon — indoklással — vállald a kép nélküli kiküldést.",
+              "a lead lapján és új mock, vagy nyomd meg újra a küldés gombot: a felugróban vállalhatod a kép nélküli kiküldést.",
           ],
+          gate: "photo",
+          confirmable: true,
         },
       };
     }
@@ -398,9 +459,11 @@ export async function sendOutreachMail(
             `${health.broken.length} kép forrása nem érhető el a kiszállított lapon — a lead törött képeket kapna. ` +
               (acks.broken
                 ? "A kurátor korábbi tudomásulvétele NEM fedi a mostani törést (új kép esett ki a jóváhagyás óta)."
-                : "Kurátori döntés kell: generálj újat friss adattal, vagy a konzolon vedd tudomásul kifejezetten."),
+                : "Kiút: nyomd meg újra a küldés gombot — a felugróban vállalhatod, és kimegy. Vagy generálj újat friss adattal."),
             ...health.broken.slice(0, 6).map((b) => `${b.url} — ${b.reason}`),
           ],
+          gate: "photo",
+          confirmable: true,
         },
       };
     }
@@ -455,6 +518,8 @@ export async function sendOutreachMail(
             // ajánl, ugyanolyan zsákutca, mint a „kurátor-rendezésig" volt.
             `Kiút${stale}: nyomd meg újra a küldés gombot — a felugróban látod a leletet, és a megerősítéssel kimegy. Vagy generálj új mockot.`,
           ],
+          gate: "verdict",
+          confirmable: true,
         },
       };
     }

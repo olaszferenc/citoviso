@@ -679,6 +679,19 @@ body.con {
   background: color-mix(in srgb, var(--citui-warn) 16%, transparent);
 }
 .con .pill.rejected { color: var(--citui-bad-ink); background: color-mix(in srgb, var(--citui-bad) 12%, transparent); }
+/* FIGYELMEZTET, DE NEM TILT — saját szóképe kell (tulajdonosi rendelet, 2026-09-19).
+   A „nem küldhető" és a „megerősítéssel kimegy" KÉT KÜLÖNBÖZŐ állítás; egy piros
+   pirulán mutatva a kurátor azt olvassa, hogy a rendszer megtiltotta neki a SAJÁT
+   döntését — és meg sem próbálja megnyomni a gombot, ami kiküldené. */
+.con .pill.warn {
+  color: var(--citui-warn-ink);
+  background: color-mix(in srgb, var(--citui-warn) 16%, transparent);
+}
+/* ⛔ EGÉSZ MONDATOT VIVŐ PIRULA — a `.pill` alap `nowrap`-je egy SZÓKÉP-címkére való
+   („✓ kiküldve"), nem egy állításra. Mérve 390px-en: a sáv „E-mail: kiküldhető — a
+   küldés gomb előbb megmut…"-nál elvágódott, vagyis pont az a fél mondat veszett el,
+   ami megmondja, hogy a kurátor KI TUDJA küldeni. A levágás mindig a VÉGÉT viszi el. */
+.con .pill--claim { white-space: normal; }
 /* A `--citui-info` a ciánnal AZONOS, ezért a saját 13%-os tintjén 2,15 volt — ez ÁLLAPOT-
    jelvény („legenerálva" / „elküldve"), tehát a jelentés-vivő körbe tartozik. */
 .con .pill.generated, .con .pill.sent { color: var(--citui-link-ink); background: color-mix(in srgb, var(--citui-info) 13%, transparent); }

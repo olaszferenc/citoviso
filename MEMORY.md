@@ -1,7 +1,31 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-17 (🚀 ÉLES = `61e788a`, tag `prod/20260917-0943` — a Barion négy kérése teljesítve; + az ontológiai lenyomat felzárkóztatva, a desztilláló köre bezárult)
+Utolsó frissítés: 2026-09-19 (⛔ a piszkozat-sáv HAZUG tiltása javítva — a kurátor kiküldési szándékát gépi lelet nem gátolhatja, ADR-0187)
 
-## Aktív feladat (legfrissebb szál, 2026-09-17)
+## Aktív feladat (legfrissebb szál, 2026-09-19)
+
+**⛔ A KURÁTOR KIKÜLDÉSI SZÁNDÉKÁT SEMMI NEM GÁTOLJA — a sáv hazug tiltása javítva.**
+Session-jegyzet: `_planning/memory/2026-09-19_curator_intent_not_overridden.md`. Döntés: **ADR-0187**.
+
+- **A bejelentés (tulaj, dühösen):** a piszkozat-lapon egyszerre állt `E-mail: most NEM
+  küldhető — a jogszerűségi kapu tiltja (az okok lent)` **és** alatta `Jogszerűségi kapu: PASS`.
+- **Három hazugság egy sorban:** nem a §C szólt (hanem a dizájn-őr tárolt lelete) · „az okok”
+  nem voltak lent (üres lista) · **nem is tiltás volt** — a küldés gomb felugrója megkérdezi,
+  és a megerősítés kiküldi. A kurátor emiatt meg sem nyomta a gombot, ami küldött volna.
+- ⭐ **Miért volt ZÖLD minden mérés:** az őr azt mérte, hogy „a lap állítása = a küldő-út
+  verdiktje”, és egyezett. **Egy TILTÁS és egy KÉRDÉS azonban nem ugyanaz az állítás** — az
+  őrnek két állapota volt ott, ahol háromnak kell lennie.
+- **Szállítva:** a `flagged` megnevezi a kaput (legal/photo/verdict) + vállalhatóságot ·
+  a sáv három állapota (zöld · sárga „a megerősítéssel kimegy” + a lelet saját sorai · piros) ·
+  a **kép-lelet is a küldés felugrójába** került (eddig másik lapra terelt, kötelező indoklásért).
+- **Kemény maradt, és egyik sem a kurátor felülbírálása:** §C jog (Grt./Eker.tv.) és a
+  „nincs mit kiküldeni” (nincs renderelt lap / felülírt fájl) — ott a termék hiányzik.
+- **390px-en mérve:** a `.pill` `nowrap` elvágta a mondat VÉGÉT („…előbb megmut…”) — pont azt a
+  felét, ami megmondja, hogy ki lehet küldeni. A mondat-vivő pirulák tördelnek.
+- ⚪ **NYITOTT:** a kiküldés maga nincs végigkattintva élesben (valódi SMTP + egy-lövéses
+  csatorna) — a tulaj a :4600-on nyomja meg · a „Nyugalom Vendégház” prospect `no` állapotban
+  van, nem néztem meg, mi tartja vissza.
+
+## Előző szál (2026-09-17)
 
 **💳 A BARION NÉGY KÉRÉSE TELJESÍTVE — a válasz beküldve, a labda náluk.**
 Session-jegyzet: `_planning/memory/2026-09-17_barion_requirements_delivered.md`.
