@@ -90,4 +90,25 @@ kimondva, egysoros visszaváltással).
   már nincs fizetési út. Nem nyúltam hozzá (consent-szöveg, külön kör).
 - A KB nem kapott új entry-t: az `owned` lap a vevőnek szól, nem a tenant-adminnak.
   Ha kell, külön kör.
-- Élesítés nem történt.
+## Élesítve — 2026-09-20 21:38
+
+`prod/20260920-2138` = `91b856d` (előtte `4a59e13`). 7 commit ment ki, ebből 4 idegen
+(fizetés-visszaigazoló ADR-0190, mock-kártyák ADR-0189, doksi) — a tulaj kimondottan
+jóváhagyta, hogy a VERZIÓ megy, nem válogatás. Migráció nem volt.
+
+**A deploy-kapu kétszer megállított, mindkétszer jogosan:** a KB-verdikt FLAG-et adott
+(először 3, majd további 2 lelet). A négyből kettő az ADR-0189 szál adóssága volt (az a
+commit NULLA `kb/` fájlt érintett), a többi az enyém — a harmadik keretezési állapottal
+hamissá tettem egy számosság-állítást, majd a javításom csak a `live` alágra volt igaz,
+és rosszul írtam le az „előnézet ▸" helyét. A label-drift őr KÉTSZER fogott meg ugyanazon
+a mintán: teljes mondatot idéztem félkövéren olyan szövegből, amit a kód két darabból rak
+össze — így a súgóban olyan felirat állt volna, ami a képernyőn sosem jelenik meg.
+
+**Élesben igazolva** (nem a deploy zöldjére hagyatkozva): `/p/<token>` → HTTP 200, owned
+sáv ott, konfigurátor 0, belépés-gomb ott, **`mock_view` 5 → 5** (tehát a „nem rögzítjük"
+igaz élesen is); a predikátum mindkét irányban helyes (2 vásárolt lead → pay-link
+megtagadva, kontroll-lead → engedélyezett).
+
+Visszagörgetés: `deploy-prod.sh 4a59e13 --go`.
+
+## Nyitott (élesítés után)
