@@ -1343,10 +1343,19 @@ await shootConsole(
 await shootConsole(leadPage(leadDetail), conOut("console-lead"));
 // The "Honnan tudjuk?" source panel (ADR-0106 ⑥) sits on the mocks tab — its own
 // capture, referenced by the entry's dedicated section.
+//
+// ⛔ MÉRT ELAVULÁS (2026-09-20, deploy-kapu KB-verdikt): az ADR-0189 óta a mock-kártyák
+// állnak a fül ELEJÉN, a forrás-panel pedig egy CSUKOTT <details> mögé került. A kép így
+// a kártya-rácsot mutatta egy „forrás-panel" nevű fájlban, és a puszta `#ls-mocks`
+// horgonnyal újragenerálva SEM jött volna elő a panel. Ezért most a VALÓDI úton készül:
+// rákattintunk a nyitó sorra, mint az operátor, és a panelre görgetünk. Ha a nyitás nem
+// működik, a felvétel HANGOSAN elhasal (a legend.png tanulsága, ADR-0183).
 await shootConsole(
   leadPage(leadDetail),
   path.join(ROOT, "kb/entries", "console-lead", "assets", "hu", "source-panel.png"),
   "#ls-mocks",
+  "#sp-panel",
+  ".con-mkgen > summary",
 );
 await shootConsole(
   scrapePage(scrapeIdle, scrapeRuns, [{ id: "keszthely", label: "Keszthely és környéke" }]),

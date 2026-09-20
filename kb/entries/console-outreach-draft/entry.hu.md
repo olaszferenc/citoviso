@@ -151,8 +151,11 @@ címzett akkor is egy ember, ha nálunk két sorban szerepel.
 
 ## Mit lát a lead, amikor megnyitja a linket
 
-A lap **legtetején** egy diszkrét sáv áll, amit **minden** látogató megkap (2026-09-14 óta —
-korábban csak az, aki már leiratkozott):
+A lap **legtetején** mindig áll egy diszkrét sáv — de **három különböző**, attól függően, ki
+nyitja meg. Egy látogató mindig **pontosan egyet** lát a három közül, mert a három mást állít.
+
+**① Aki először kattint a hideg levélből** (2026-09-14 óta — korábban felső sávot csak az
+kapott, aki már leiratkozott):
 
 > **Ez egy honlap-terv az Ön szállásáról.** Készítette: *(a hirdető neve a beállításokból)* —
 > ingyen, az Ön nyilvánosan elérhető adataiból. Ez még nem élő oldal.
@@ -171,9 +174,28 @@ képernyős bevezetővel indul (a szállás neve úszik be, több másodpercig).
 linken ez ki van kapcsolva, hogy a lead **azonnal** a lapot és a fenti sávot lássa.
 A megrendelt, éles oldalon a bevezető marad.
 
-⚠️ Aki **korábban leiratkozott**, más sávot lát: „Leiratkozott, ezért nem keressük többé —
+**② Aki korábban leiratkozott**, más sávot lát: „Leiratkozott, ezért nem keressük többé —
 ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük és nem küldünk
-emlékeztetőt.” Egy látogató **soha nem látja mind a kettőt**.
+emlékeztetőt.”
+
+**③ Aki MÁR MEGVETTE a honlapját** (2026-09-20 óta), megint mást lát — és ezen a
+lapon **nem lehet újra megrendelni**:
+
+> ✓ **Ez az oldal már az Öné.** Az oldala él: *(a saját címe)*
+> **[Belépés a kezelőfelületre]**
+> ▸ **Miért ezt látom?**
+
+Miért kellett ez: a link e-mailben él tovább, és aki már fizetett, bármikor rákattinthat.
+Korábban ilyenkor a lap **újra felkínálta a fizetést**, és a kártyát tényleg meg lehetett
+terhelni — úgy, hogy a vevő cserébe semmit nem kapott volna (az előfizetése sem
+hosszabbodott volna meg). Ma a fizetés a **szerver oldalán** is le van tiltva, nem csak a
+gomb tűnt el: egy régen nyitva hagyott fülről beküldött rendelést is elutasít.
+
+Ezen az ágon **nem mérünk** (nincs megnyitás-rögzítés, nincs eszkalációs ajánlat), és a sáv
+**nem lépteti be** a látogatót — csak elvezeti a belépéshez. A link továbbküldhető egy
+levélben, ezért hozzáférést nem adhat.
+
+Három állapot, három sáv: egy látogató **mindig pontosan egyet** lát.
 
 ## Tevékenység — mit mért a link
 

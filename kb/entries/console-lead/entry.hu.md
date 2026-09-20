@@ -76,8 +76,16 @@ friss webes keresést futtat erre az egy leadre.
 
 ## Mock-generálás
 
+⚠️ **Ha ezen a leaden már van mock, a generáló panel CSUKVA van.** A mock-kártyák állnak elöl,
+a generálás pedig egy összecsukott sor mögé került — kattints erre, és kinyílik:
+
+> ▸ **Új mock generálása, forrás és szöveg-újraírás**
+
+(Ha még egy mock sincs, a panel eleve nyitva áll — nincs mit elé tenni.)
+
 A generáló panelben a **„Kinézet-típus”** kártyákon választod ki, milyen elrendezéssel
-készüljön a mock, majd a gombbal indítod. Az elkészült mock az „előnézet ▸” linken nyílik.
+készüljön a mock, majd a gombbal indítod. Az elkészült mock az „előnézet ▸” linken nyílik —
+ez a mock-kártyán, a kép melletti dobozban van.
 
 ⚠️ **A választó TÖBBSZÖRÖS, és alapból egy sincs bejelölve.** Amennyi kártyát bejelölsz, annyi
 külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt
@@ -269,11 +277,29 @@ pillanatkép, ezért panel sincs — generálj újat, és megjelenik.
 4. A „csak a problémák” pipával a panel elrejti az egészséges részeket, és csak a piros
    chipes elemeket meg a figyelmeztetéseket hagyja fent — gyors ellenőrzéshez.
 
+## A mock-kártya pillanatképe
+
+Minden mock a saját **kártyáján** ül, és a kártya tetején egy pillanatkép mutatja, hogyan néz
+ki a mock nyitóképernyője — ugyanaz a kép, ami a megkeresésbe is megy. Így nem kell megnyitni
+mindegyiket ahhoz, hogy lásd, melyik lett jó.
+
+A kép **nem készül el magától**, mert a legyártása jó néhány másodpercig tart. A kártya
+megmondja, hol tart:
+
+- **„Még nem készült pillanatkép”** → a **„Kép kérése”** gombbal indítod.
+- **„Pillanatkép készül…”** → fut; frissítsd a lapot kicsit később.
+- **„Nincs pillanatkép”** → hibázott, és a kártya megnevezi az okát. Ilyenkor a gomb felirata
+  **„Újra”**.
+
+ℹ️ Ha nincs kép, a kártyán **nem jelenik meg törött képikon** — helyette ez a magyarázó doboz
+áll. Ez szándékos: egy néma törött ikonból nem derülne ki, hogy kérni kell.
+
 ## Kuráció — ember dönt
 
 Minden mockon két gomb: **„Jóváhagyás”** és **„Elutasítás”**. Kiküldeni CSAK jóváhagyott mockot
-lehet — ez kőbe vésett szabály, a rendszer nem enged vak auto-sendet. Elutasításnál a mock a lap
-alján az „Elutasított mockok” csoportba kerül, és bármikor generálhatsz újat.
+lehet — ez kőbe vésett szabály, a rendszer nem enged vak auto-sendet. Elutasításnál a mock a
+kártya-rácsban **marad**, csak halványan és hátrasorolva, és bármikor generálhatsz újat. A
+**„Mock-artefaktumok”** fejléc zárójelben ki is írja, hány aktív és hány elutasított van.
 
 ⚠️ **Egy leaden EGY jóváhagyott mock van.** Ha jóváhagysz egy másikat, a korábbi automatikusan
 visszakerül „legenerálva” állapotba, és a lap tetején zöld sávban ezt ki is írjuk. Így a fejléc,
@@ -323,8 +349,12 @@ keresni. (A cím kis- és nagybetűs alakja ugyanaz a személy: `Info@…` és `
 
 ## Konverzió
 
-Ha a tulaj megrendelt, a jóváhagyott mock alatti űrlapon a **„Konvertálás privát előnézetbe ▸”**
-gomb indítja az élesítést — a modulok a tulaj konfigurátor-választásából jönnek, nem kézből.
+Ha a tulaj megrendelt, a **„Konvertálás privát előnézetbe ▸”** gomb indítja az élesítést — a
+modulok a tulaj konfigurátor-választásából jönnek, nem kézből.
+
+⚠️ **Ez a gomb el van rejtve, amíg ki nem nyitod.** A jóváhagyott mock kártyáján kattints a
+**„Részletek ▾”** gombra — a konvertáló űrlap (és a mock törlése, az AI-költség, a recept)
+ott nyílik ki. Visszazárni a **„Bezárom ▴”** felirattal lehet, ugyanazon a gombon.
 
 ## Diszkvalifikálás
 
