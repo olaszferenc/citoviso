@@ -79,6 +79,8 @@ import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
+import { siteShotPath } from "../payment/siteShot.js";
+import { tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import {
   applyOffer,
@@ -3138,6 +3140,28 @@ async function handle(
       return;
     }
     const summary = paid ? await getActivationSummary(ref) : null;
+    // ④ THE PREVIEW, resolved server-side but WITHOUT blocking: a cached shot of
+    // the live site if one exists, else the site's cover photo, else nothing (the
+    // markup's brand gradient carries the box). Both probes are cheap — a stat()
+    // and one DB read — and neither renders a browser on the request path.
+    //
+    // ⛔ The shot is NOT started here on a cache miss in the hope it lands: the
+    // buyer is looking at the page NOW. It is pre-built at activation; a miss
+    // means this buyer sees the photo, which is the contract's level ②.
+    // ⛔ summary.tenantId FIRST: `order_intent.tenant_id` is NULL on a first
+    // purchase (the tenant is born during activation, found through the lead), so
+    // keying the preview off the order would blank it for exactly the new
+    // customers this page was redesigned for. Measured on payment 28831f1c…
+    const previewTenantId = summary?.tenantId ?? kindRow?.tenantId ?? null;
+    const preview =
+      paid && previewTenantId
+        ? {
+            shotUrl: (await siteShotPath(previewTenantId))
+              ? `/pay/preview?paymentId=${encodeURIComponent(ref)}`
+              : null,
+            photoUrl: (await tenantCoverPhoto(previewTenantId).catch(() => null))?.url ?? null,
+          }
+        : null;
     // "Activated" for the buyer = credentials/site exist (webhook may have run
     // earlier, so handleWebhook's own flag can be a stale false here).
     const activated = Boolean(summary?.siteUrl ?? summary?.username);
@@ -3175,11 +3199,46 @@ async function handle(
         // dropped, never replaced by a plausible-looking one (§B.17).
         supportEmail: config.supportEmail || null,
         productName: kindRow?.leadName ?? null,
+        // The headline and the preview overlay name the business (contract ④/⑥).
+        businessName: summary?.businessName ?? kindRow?.leadName ?? null,
+        preview,
         // ⛔ Only when a tenant actually exists. A first-time buyer has no admin
         // yet, and a link to one would be a promise we cannot keep (§B.17).
         adminUrl: kindRow?.tenantId ? `${adminBase()}/admin` : null,
       }),
     );
+  }
+  // GET /pay/preview?paymentId=… — the confirmation page's site screenshot.
+  //
+  // ⛔ NO operator session here: the viewer is the BUYER, who has no console
+  // account. The gateway reference IS the capability — the same opaque id that
+  // already unlocks the confirmation page itself, so this exposes nothing that
+  // page does not. Only PAID payments, and only the shot of THEIR OWN tenant.
+  if (method === "GET" && path === "/pay/preview") {
+    const ref = url.searchParams.get("paymentId") ?? url.searchParams.get("PaymentId") ?? "";
+    if (!ref) return send(res, 404, "not found");
+    const row = await db
+      .selectFrom("payment")
+      .select(["status"])
+      .where("gateway_ref", "=", ref)
+      .executeTakeFirst();
+    if (!row || row.status !== "paid") return send(res, 404, "not found");
+    // The SAME tenant resolution the page uses (lead → tenant), not the order's
+    // column — see the note at /pay/done above.
+    const tenantId = (await getActivationSummary(ref))?.tenantId ?? null;
+    if (!tenantId) return send(res, 404, "not found");
+    const shot = await siteShotPath(tenantId);
+    if (!shot) return send(res, 404, "not found");
+    const png = await readFile(shot);
+    res.writeHead(200, {
+      "content-type": "image/png",
+      "content-length": String(png.byteLength),
+      // Private: it is one buyer's page, and the file name already carries the
+      // snapshot mtime, so a re-render produces a different URL anyway.
+      "cache-control": "private, max-age=600",
+    });
+    res.end(png);
+    return;
   }
   // GET /pay/mock/:ref — the MOCK hosted pay page (Fizetek / Elutasítom).
   const mockPayMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)$/i.exec(path);

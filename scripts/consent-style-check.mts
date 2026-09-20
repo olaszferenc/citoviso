@@ -484,7 +484,14 @@ if (paidRef?.gateway_ref) {
     expectBar: true,
     // ⛔ A sáv NEM takarhatja a fizetés-lap kiútjait. Az ADR-0145 ④ ugyanezt a
     // hibát a tenant-admin fül-sávján mérte ki — fizetés-lapon súlyosabb.
-    bottomFurniture: ".panel",
+    //
+    // ⚠️ A HORGONY KÖVETI A LAPOT: a visszaigazoló ADR-0190 óta a jóváhagyott
+    // split-terv szerint renderel, a konzol shelljén és a `.panel` dobozán KÍVÜL.
+    // A régi `.panel` szelektor itt már nem talált semmit, és a mérés „hiányzó
+    // bútorzat"-ra ment pirosra — jó okból, rossz néven. A kiútok (CTA, azonosító-
+    // másolás, support-cím) a világos kártyában ülnek; a bal hasáb másodlagos
+    // gombjait a paydone-split-check méri, a sáv helyfoglalásával együtt.
+    bottomFurniture: ".pd-card",
   });
 }
 // A konzol OPERÁTOR-felülete és a rajta kiszolgált VENDÉG-lapok: egyik sem kaphat
@@ -643,11 +650,35 @@ for (const s of surfaces.filter((x) => x.expectBar)) {
       const reach = await readFurnitureReach(page, s.bottomFurniture);
       check(reach.found, `${tag}: a gazdalap bútorzata megvan (${s.bottomFurniture})`);
       if (reach.found) {
-        check(
-          reach.covered.length === 0,
-          `${tag}: a SÁV egyetlen vezérlőt sem takar el (${reach.total} vezérlő)`,
-          reach.covered.length ? `takarva: ${reach.covered.join(" · ")}` : "",
-        );
+        // ⛔ A KÉRDÉS: ELÉRHETETLENNÉ tesz-e a sáv egy vezérlőt — nem az, hogy
+        // takar-e valamit ott, ahol a lap éppen áll. Egy EGYKÉPERNYŐS lapon a
+        // kettő egybeesett (ezért volt jó a mérés eddig), egy hosszabb lapon nem:
+        // a görgetés nélküli nézetben a fix sáv természetesen fedi a lap alját.
+        // Mérve (ADR-0190 visszaigazoló, 1280×900): a „Másolom" a lap tetején a
+        // sáv alatt volt, LEGÖRGETVE szabad (a lap a --citui-consent-h-val helyet
+        // hagy). Ami viszont görgetés UTÁN is takart, az valóban elérhetetlen —
+        // a fixen tapadó tenant-admin fül-sáv (ADR-0145 ④) pontosan ilyen, és
+        // azt ez a mérés ugyanúgy pirosra viszi.
+        if (reach.covered.length) {
+          await page.evaluate("window.scrollTo(0, document.body.scrollHeight)");
+          await page.waitForTimeout(250);
+          const after = await readFurnitureReach(page, s.bottomFurniture);
+          const stillCovered = after.covered.filter((c) => reach.covered.includes(c));
+          check(
+            stillCovered.length === 0,
+            `${tag}: a SÁV egyetlen vezérlőt sem tesz ELÉRHETETLENNÉ (${reach.total} vezérlő)`,
+            stillCovered.length
+              ? `görgetés után is takarva: ${stillCovered.join(" · ")}`
+              : "",
+          );
+          if (!stillCovered.length) {
+            console.log(
+              `  · ${tag}: a lap tetején a sáv alá esett, de görgetésre szabaddá vált: ${reach.covered.join(" · ")}`,
+            );
+          }
+        } else {
+          check(true, `${tag}: a SÁV egyetlen vezérlőt sem takar el (${reach.total} vezérlő)`);
+        }
         // Nem ennek az őrnek a verdiktje, de nem is nyeljük el: ha MÁS takar egy
         // vezérlőt, azt kiírjuk — a hallgatás itt „minden rendben"-nek olvasódna.
         if (reach.other.length) {

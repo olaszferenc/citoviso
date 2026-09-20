@@ -314,6 +314,18 @@ if [ -f scripts/pay-exit-truth-check.mts ] && \
   echo "[pre-commit] pay-exit-truth (a kiút valódi gomb · egy cím · a kikötött mondatok megvannak)…"
   npx tsx scripts/pay-exit-truth-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A JÓVÁHAGYOTT fizetés-visszaigazoló kapuja (design-refs/console/paydone-split/README.md,
+# ADR-0190): a lap a VEVŐ felülete — saját sötét váz, kéthasáb asztalon, előnézet három
+# szinttel, és a kötelezettség-sorok hiánytalanul. A mérés nem áll meg a forrásnál: a lapot
+# KIRAJZOLVA is méri 390 és 1280 px-en, mert a megvalósításkor mért három hibából KETTŐ
+# csak ott látszott (navy-on-navy címsor a citui.css h1-szabálya miatt; a fix süti-sáv
+# rátakart az egyetlen CTA-ra). Negatív kontrollal: visszarontva pirosra vált.
+# ⛔ Az ŐR SAJÁT FÁJLJA is trigger (ADR-0147 ③).
+if [ -f scripts/paydone-split-check.mts ] && \
+   changed_files | grep -qE '^(src/console/views\.ts|src/console/server\.ts|src/payment/(siteShot|service)\.ts|public/assets/ui/citui\.css|assets/design-refs/console/paydone-split/|scripts/paydone-split-check\.mts)'; then
+  echo "[pre-commit] paydone-split (a jóváhagyott visszaigazoló: forrás + kirajzolt lap)…"
+  npx tsx scripts/paydone-split-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A JÓVÁHAGYOTT súgó-terv kapuja (assets/design-refs/console/help-collapse/README.md):
 # a terv VISELKEDÉST köt — alapból minden csoport csukva, több nyitható, a keresés
 # eredménye LÁTSZIK, és JS nélkül is működik. Képernyőkép egyikre sem bizonyíték.

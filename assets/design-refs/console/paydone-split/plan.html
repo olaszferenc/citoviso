@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fizetés-visszaigazolás — TERV „D" (Prémium sötét / split)</title>
+<style>
+/* Self-contained draft — token values copied from public/assets/ui/citui.css. */
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-glow-blue:#5081ff;
+  --citui-white:#fff; --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-ok-ink:#19733f;
+  --citui-link-ink:#10697a; --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-lg:32px;
+  --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-font-text:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e8edf4;font:14px/1.55 var(--citui-font-text);color:var(--citui-ink)}
+.wrap{max-width:1500px;margin:0 auto;padding:16px}
+h1{font:700 19px/1.3 var(--citui-font-display);margin:0 0 4px}
+.lead{margin:0 0 12px;color:#4a5568;font-size:13.5px;max-width:86ch}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.toolbar button{min-height:42px;padding:10px 16px;border:1px solid #c3ccd9;border-radius:10px;background:#fff;color:#25313f;font:600 13px/1 var(--citui-font-text);cursor:pointer}
+.toolbar button[aria-pressed="true"]{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:#fff}
+.toolbar .tag{margin-left:auto;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted)}
+.stage{display:flex;justify-content:center}
+.frame{position:relative;container-type:inline-size;border:10px solid #1b2430;border-radius:24px;overflow:hidden;box-shadow:0 18px 44px rgba(16,24,40,.22);background:var(--citui-navy-950)}
+body[data-size="mobile"] .frame{width:390px;height:1180px}
+body[data-size="desktop"] .frame{width:1280px;height:980px}
+.caption{text-align:center;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);margin:10px 0 0}
+
+.page{height:100%;overflow-y:auto;
+  background:
+    radial-gradient(760px 420px at 12% -6%,rgba(80,129,255,.28),transparent 62%),
+    radial-gradient(660px 420px at 88% 8%,rgba(31,182,214,.26),transparent 62%),
+    linear-gradient(160deg,var(--citui-navy-950),#0c2b48 55%,#0a2036);
+  color:var(--citui-ink-inverse)}
+.brand{display:flex;align-items:center;gap:10px;padding:16px 24px}
+.brand .mark{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--citui-cyan-400);border-right-color:transparent}
+.brand b{font:700 15px/1 var(--citui-font-display)}
+.split{display:flex;gap:26px;align-items:flex-start;padding:10px 24px 40px;max-width:1120px;margin:0 auto}
+.left{flex:1 1 46%;min-width:0;padding-top:12px}
+.right{flex:0 0 430px;max-width:430px}
+
+/* ── left: the stamp + what they bought, LIVE ───────────────────────────── */
+.stamp{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;margin:0 0 18px;
+  background:linear-gradient(140deg,var(--citui-cyan-500),var(--citui-cyan-300));
+  box-shadow:0 0 0 9px rgba(31,182,214,.13),0 14px 30px rgba(31,182,214,.34);
+  animation:pop 520ms cubic-bezier(.2,.9,.3,1.2) both}
+.stamp svg{width:30px;height:30px;color:#08243c}
+.stamp svg path{stroke-dasharray:36;stroke-dashoffset:36;animation:draw 420ms 320ms ease forwards}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.stamp{animation:none}.stamp svg path{animation:none;stroke-dashoffset:0}}
+
+.left h2{font:800 32px/1.15 var(--citui-font-display);margin:0 0 10px;letter-spacing:-.025em}
+.left .sub{margin:0 0 20px;font-size:15px;color:rgba(234,243,248,.8);max-width:44ch}
+.left .sub b{color:#fff}
+
+.browser{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 26px 60px rgba(3,14,26,.55);background:#0b2137}
+.browser .bar{display:flex;align-items:center;gap:7px;padding:9px 12px;background:rgba(255,255,255,.07)}
+.browser .bar i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);display:block}
+.browser .bar .addr{flex:1 1 auto;margin-left:8px;background:rgba(0,0,0,.28);border-radius:999px;padding:5px 11px;
+  font:600 11.5px/1 var(--citui-font-text);color:rgba(234,243,248,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.browser .shot{height:230px;position:relative;background:linear-gradient(160deg,#1b3a52,#2f6f86 55%,#63b6c7)}
+.browser .shot .veil{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px 22px;
+  background:linear-gradient(to top,rgba(4,20,34,.78),rgba(4,20,34,.05) 62%)}
+.browser .shot b{font:700 23px/1.2 var(--citui-font-display);color:#fff}
+.browser .shot span{font-size:13px;color:rgba(255,255,255,.86);margin-top:5px}
+.browser .shot .live{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.94);border-radius:999px;padding:5px 11px;font:700 11.5px/1 var(--citui-font-text);color:var(--citui-ok-ink)}
+.browser .shot .live i{width:7px;height:7px;border-radius:50%;background:var(--citui-ok);display:block}
+
+.urlrow{display:flex;gap:9px;align-items:center;margin:14px 0 0;flex-wrap:wrap}
+.urlrow .u{flex:1 1 auto;min-width:0;font:700 14px/1.35 var(--citui-font-text);color:#fff;overflow-wrap:anywhere}
+.ghost-dark{min-height:40px;padding:9px 13px;border-radius:11px;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.22);color:#fff;font:600 12.5px/1 var(--citui-font-text);cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.ghost-dark.ok{border-color:var(--citui-cyan-300);color:var(--citui-cyan-300)}
+
+/* ── right: the light confirmation card ─────────────────────────────────── */
+.cardw{background:#fff;color:var(--citui-ink);border-radius:var(--citui-radius);box-shadow:0 30px 70px rgba(3,14,26,.42);overflow:hidden}
+.cardw .hd{padding:18px 20px 14px;border-bottom:1px solid var(--citui-line);text-align:center;background:var(--citui-surface-2)}
+.cardw .hd .pill{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;
+  background:var(--citui-ok-soft);color:var(--citui-ok-ink);font:700 12.5px/1 var(--citui-font-text);border:1px solid #bfe4cd}
+.cardw .hd .sum{font:800 32px/1.1 var(--citui-font-display);margin:11px 0 2px;letter-spacing:-.02em}
+.cardw .hd .what{font-size:12.5px;color:var(--citui-muted)}
+.cardw .bd{padding:16px 20px 20px}
+.sect{font:700 11.5px/1 var(--citui-font-text);letter-spacing:.09em;text-transform:uppercase;color:var(--citui-link-ink);margin:0 0 9px}
+.row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--citui-line)}
+.row:last-child{border-bottom:none}
+.row .t{flex:0 0 124px;color:var(--citui-muted);font-size:12.5px}
+.row .v{flex:1 1 auto;font-size:13px;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.row .v a{color:var(--citui-link-ink)}
+.row .v .soft{font-weight:400;color:var(--citui-muted)}
+.hr{height:1px;background:var(--citui-line);margin:16px 0}
+.btn{min-height:48px;padding:13px 20px;border-radius:12px;border:1px solid transparent;cursor:pointer;
+  font:700 14.5px/1.2 var(--citui-font-text);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn--primary{background:linear-gradient(120deg,var(--citui-cyan-500),var(--citui-cyan-400));color:var(--citui-navy-900);box-shadow:0 10px 24px rgba(31,182,214,.30)}
+.btn--ghost{background:#fff;border-color:var(--citui-line-strong);color:var(--citui-ink);min-height:40px;padding:9px 13px;font-size:12.5px;width:auto}
+.btn--ghost.ok{border-color:var(--citui-ok);color:var(--citui-ok-ink)}
+.refline{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:14px 0 0;font-size:12.5px;color:var(--citui-muted)}
+code{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:7px;padding:5px 8px;
+  font:600 12.5px/1 ui-monospace,Menlo,monospace;color:var(--citui-ink)}
+.cardw .ft{padding:13px 20px;border-top:1px solid var(--citui-line);background:var(--citui-surface-2);
+  display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--citui-muted)}
+.cardw .ft .lock{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--citui-ink)}
+.cardw .ft .sp{flex:1 1 auto}
+.cardw .ft a{color:var(--citui-link-ink)}
+
+@container (max-width:1023px){
+  .brand{padding:14px 16px}
+  .split{flex-direction:column;gap:18px;padding:4px 14px 34px}
+  .left{flex:1 1 auto;width:100%;padding-top:4px}
+  .right{flex:1 1 auto;width:100%;max-width:none}
+  .left h2{font-size:26px}
+  .left .sub{font-size:14px}
+  .browser .shot{height:180px}
+  .browser .shot b{font-size:19px}
+  .urlrow .u{flex:1 1 100%}
+  .urlrow .ghost-dark{flex:1 1 auto}
+  .row{flex-direction:column;gap:2px}
+  .row .t{flex:none}
+}
+</style>
+</head>
+<body data-size="mobile">
+<div class="wrap">
+  <h1>„D" — Prémium sötét / split</h1>
+  <p class="lead">Asztalon <b>kéthasáb</b>: balra a megvett oldal élő előnézete márka-gradiensen, jobbra a világos
+  visszaigazoló kártya. Mobilon egymás alá kerül (pecsét → előnézet → kártya). Ez a legdrágább kinézet —
+  és a legtöbb munka: az előnézeti képet a generátornak elő kell állítania.</p>
+  <div class="toolbar">
+    <button type="button" data-set="mobile" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-set="desktop" aria-pressed="false">Asztali</button>
+    <span class="tag">TERV — a másolás, a linkek és a pecsét-animáció élnek</span>
+  </div>
+  <div class="stage">
+    <div class="frame">
+      <div class="page">
+        <div class="brand"><span class="mark"></span><b>Citoviso</b></div>
+        <div class="split">
+          <div class="left">
+            <div class="stamp">
+              <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M13 25l7.5 7.5L35 16" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h2>Sikeres fizetés — az oldala él.</h2>
+            <p class="sub">Az <b>5 430 Ft</b> terhelés megtörtént, és az <b>Aranykagyló 36</b> honlapja
+            ebben a percben elérhető az interneten.</p>
+
+            <div class="browser">
+              <div class="bar"><i></i><i></i><i></i><span class="addr">https://aranykagylo-36.citoviso.com</span></div>
+              <div class="shot">
+                <span class="live"><i></i> ÉL</span>
+                <div class="veil"><b>Aranykagyló 36</b><span>Vendégház · Balatonszemes — foglalás, képek, elérhetőség</span></div>
+              </div>
+            </div>
+            <div class="urlrow">
+              <span class="u" id="siteD">aranykagylo-36.citoviso.com</span>
+              <button class="ghost-dark" type="button" data-copy="#siteD">Cím másolása</button>
+              <a class="ghost-dark" href="#" data-toast="Megnyitom az oldalt — új lapon.">Megnyitom ↗</a>
+            </div>
+          </div>
+
+          <div class="right">
+            <div class="cardw">
+              <div class="hd">
+                <span class="pill">
+                  <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Sikeres fizetés
+                </span>
+                <div class="sum">5 430 Ft</div>
+                <div class="what">Citoviso honlap — Aranykagyló 36, havi előfizetés</div>
+              </div>
+              <div class="bd">
+                <p class="sect">Az előfizetése</p>
+                <div class="row"><span class="t">Következő terhelés</span><span class="v">2026. október 20. — 5 430 Ft / hó</span></div>
+                <div class="row"><span class="t">Megújulás</span><span class="v">Automatikus, a megadott kártyáról</span></div>
+                <div class="row"><span class="t">ÁFA</span><span class="v">Alanyi adómentes — az ár ÁFÁ-t nem tartalmaz</span></div>
+                <div class="row"><span class="t">Számla</span><span class="v">E-mailben, néhány percen belül: olaszferenc@gmail.com</span></div>
+                <div class="row"><span class="t">Lemondás</span><span class="v">Bármikor: Belépés → Modulok fül → „Előfizetés lemondása”. A fordulónapon lép érvénybe.</span></div>
+
+                <div class="hr"></div>
+
+                <p class="sect">A belépése</p>
+                <div class="row"><span class="t">Felhasználónév</span><span class="v">aranykagylo-36 <span class="soft">(a jelszó az e-mailben)</span></span></div>
+                <div class="row"><span class="t">Belépés</span><span class="v"><a href="#">aranykagylo-36.citoviso.com/login</a></span></div>
+                <div class="row"><span class="t">Mit szerkeszthet</span><span class="v">A bemutatkozó szöveget, a képeket és az elérhetőségeit — nem kell hozzá szakember.</span></div>
+
+                <p style="margin:16px 0 0">
+                  <a class="btn btn--primary" href="#" data-toast="Belépés — a kész felületen ez a tulaj saját adminjára visz.">Belépek és szerkesztem</a>
+                </p>
+
+                <div class="refline">
+                  Hivatkozási azonosító: <code id="refD">CIT-28831F1C</code>
+                  <button class="btn btn--ghost" type="button" data-copy="#refD">Másolás</button>
+                </div>
+              </div>
+              <div class="ft">
+                <span class="lock">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.6"/></svg>
+                  Biztonságos fizetés
+                </span>
+                <span class="sp"></span>
+                <span><a href="mailto:info@citoviso.com">info@citoviso.com</a></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption">„D" — Prémium sötét / split</p>
+</div>
+
+<div id="toast" role="status" aria-live="polite" style="position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(140%);
+  background:#0e2a47;color:#fff;padding:11px 16px;border-radius:12px;font:600 13px/1.3 Inter,system-ui,sans-serif;
+  box-shadow:0 14px 34px rgba(16,24,40,.3);transition:transform 220ms ease;max-width:86vw;text-align:center;z-index:9"></div>
+
+<script>
+document.querySelectorAll('.toolbar button[data-set]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.body.dataset.size = b.dataset.set;
+    document.querySelectorAll('.toolbar button[data-set]').forEach(function (o) {
+      o.setAttribute('aria-pressed', String(o === b));
+    });
+  });
+});
+var toastEl = document.getElementById('toast'), toastT = null;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastT);
+  toastT = setTimeout(function () { toastEl.style.transform = 'translateX(-50%) translateY(140%)'; }, 2200);
+}
+document.querySelectorAll('[data-copy]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var src = document.querySelector(btn.dataset.copy);
+    var text = (src && src.textContent || '').trim();
+    var done = function () {
+      var old = btn.textContent;
+      btn.textContent = 'Másolva ✓';
+      btn.classList.add('ok');
+      toast('Vágólapra másolva: ' + text);
+      setTimeout(function () { btn.textContent = old; btn.classList.remove('ok'); }, 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, done);
+    } else { done(); }
+  });
+});
+document.querySelectorAll('[data-toast]').forEach(function (el) {
+  el.addEventListener('click', function (e) { e.preventDefault(); toast(el.dataset.toast); });
+});
+</script>
+</body>
+</html>

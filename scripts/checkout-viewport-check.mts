@@ -418,20 +418,49 @@ async function auditConfirmation(page: Page): Promise<void> {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.setContent(html);
   await page.waitForTimeout(200);
+  // ⚠️ A FELIRATBÓL indulunk, nem egy konkrét TAGBŐL: a visszaigazoló ADR-0190 óta
+  // a jóváhagyott split-terv szerint renderel, ahol a szakasz-cím `p.pd-sect` és
+  // nem `h3`, a sorok pedig a cím TESTVÉREI (nincs körülöttük doboz). A régi
+  // `h3 → parentNode` minta ezen 0 px-t mért, vagyis a mérés MEGVAKULT, nem a
+  // felület romlott el. Amit mérni akarunk, az változatlan: a kötelezettség-blokk
+  // (cím + a hozzá tartozó sorok) tényleg a képernyőn van-e 390 px-en.
   const boxSeen = await page.evaluate(`(function () {
-    var hs = document.querySelectorAll("h3");
-    var box = null;
-    for (var i = 0; i < hs.length; i++) if (/előfizetése/i.test(hs[i].textContent)) box = hs[i].parentNode;
-    if (!box) return { found: false };
-    var r = box.getBoundingClientRect();
-    var cx = Math.round(r.left + r.width / 2);
-    var cy = Math.round(r.top + Math.min(r.height / 2, 40));
+    var all = document.querySelectorAll("h2,h3,h4,p,div,span");
+    var label = null;
+    for (var i = 0; i < all.length; i++) {
+      var t = (all[i].textContent || "").trim();
+      if (/^az előfizetése$/i.test(t)) { label = all[i]; break; }
+    }
+    if (!label) return { found: false };
+    // A blokk = a cím + az utána álló testvérek a KÖVETKEZŐ szakasz-címig.
+    var top = label.getBoundingClientRect().top;
+    var bottom = label.getBoundingClientRect().bottom;
+    var n = label.nextElementSibling;
+    var rows = 0;
+    while (n) {
+      var nt = (n.textContent || "").trim();
+      var isSection = /^(a belépése|az ön adatai)$/i.test(nt) || n.tagName === "HR"
+        || (n.className || "").toString().indexOf("pd-hr") >= 0;
+      if (isSection) break;
+      var nr = n.getBoundingClientRect();
+      if (nr.height > 0) { bottom = Math.max(bottom, nr.bottom); rows++; }
+      n = n.nextElementSibling;
+    }
+    var lr = label.getBoundingClientRect();
+    var cx = Math.round(lr.left + lr.width / 2);
+    var cy = Math.round(lr.top + lr.height / 2);
     var hit = cy >= 0 && cy < window.innerHeight ? document.elementFromPoint(cx, cy) : null;
-    return { found: true, h: Math.round(r.height), hits: !!hit && box.contains(hit) };
-  })()`) as { found: boolean; h?: number; hits?: boolean };
+    return {
+      found: true,
+      h: Math.round(bottom - top),
+      rows: rows,
+      hits: !!hit && (hit === label || label.contains(hit)),
+    };
+  })()`) as { found: boolean; h?: number; rows?: number; hits?: boolean };
   check(
-    boxSeen.found && !!boxSeen.hits && (boxSeen.h ?? 0) > 60,
-    `visszaigazolás: az „Az előfizetése" doboz 390px-en LÁTSZIK (${boxSeen.h ?? 0}px)`,
+    boxSeen.found && !!boxSeen.hits && (boxSeen.h ?? 0) > 60 && (boxSeen.rows ?? 0) >= 3,
+    `visszaigazolás: az „Az előfizetése" blokk 390px-en LÁTSZIK ` +
+      `(${boxSeen.h ?? 0}px, ${boxSeen.rows ?? 0} sor)`,
   );
 }
 

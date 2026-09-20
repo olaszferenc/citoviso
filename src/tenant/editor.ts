@@ -784,6 +784,25 @@ export async function rerenderTenantSnapshot(
   return renderAndPersist(s, s.overrides, opts.as ?? s.status);
 }
 
+/**
+ * The site's CURRENT cover photo — photos[0] AFTER the tenant's overrides, i.e.
+ * exactly what every template puts at the top of the page.
+ *
+ * Read-only; added for the payment confirmation's second-level preview fallback
+ * (approved contract: design-refs/console/paydone-split ④ ②). It resolves the
+ * override/base precedence through the same `loadSiteForEdit` the editor uses —
+ * a second copy of that rule is how the two drift apart.
+ */
+export async function tenantCoverPhoto(
+  tenantId: string,
+): Promise<{ url: string; alt: string } | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return null;
+  const first = (s.overrides.photos ?? s.baseSiteData.photos ?? [])[0];
+  const url = (first?.url ?? "").trim();
+  return url ? { url, alt: (first?.alt ?? "").trim() } : null;
+}
+
 /** A2: remove one owner photo by url and re-render. */
 /**
  * Move a photo one place earlier or later, or straight to the front.

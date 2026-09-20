@@ -325,7 +325,13 @@ async function main(): Promise<void> {
   const cta = ok.anchors.find((a) => a.text.includes("Belépek és szerkesztem"));
   check(Boolean(cta), "① a sikeres lapon ott van a „Belépek és szerkesztem” kiút");
   if (cta) {
-    check(/\bcitui-btn\b/.test(cta.cls), `① a kiút gomb-osztályt visel (mérve: "${cta.cls}")`);
+    // ⚠️ A NÉV nem a lényeg, a KONTROLL-mivolt az — de a névre kötött állítás
+    // hasznos drift-jelző, ezért nem töröljük, hanem követi a felületet: a
+    // jóváhagyott split-visszaigazoló (ADR-0190) saját gomb-osztályt hozott
+    // (`pd-cta`), mert a lap a konzol shelljén KÍVÜL él. A „csupasz szöveg-link"
+    // eset ettől ugyanúgy bukik — a kifestettség, a méret és a differenciál-
+    // hasonlítás alább változatlanul méri a valódi tulajdonságot.
+    check(/\b(citui-btn|pd-cta)\b/.test(cta.cls), `① a kiút gomb-osztályt visel (mérve: "${cta.cls}")`);
     check(cta.painted, "① a kiút KIFESTETT (gradiens vagy tömör háttér), nem csupasz szöveg-link");
     check(cta.padX >= 12, `① a kiútnak valódi oldalsó margója van (mérve: ${cta.padX} px)`);
     check(cta.radius >= 4, `① a kiútnak gomb-alakja van (radius ${cta.radius} px)`);
@@ -338,7 +344,11 @@ async function main(): Promise<void> {
     check(cta.h >= 44, `① a kiút valódi kattintó-felület (mérve: ${cta.h} px, küszöb 44)`);
     // ⭐ DIFFERENTIAL: the property that actually broke was "looks like the links
     // next to it". Compare against the plain anchors on the SAME page.
-    const plain = ok.anchors.filter((a) => a !== cta && !/citui-btn|citui-brand/.test(a.cls) && a.text);
+    // A „sima link" halmazból a MÁSODLAGOS gombok (pd-ghost: cím másolása,
+    // megnyitom) is kimaradnak — azok sem sima linkek, csak halkabb kontrollok.
+    const plain = ok.anchors.filter(
+      (a) => a !== cta && !/citui-btn|citui-brand|pd-cta|pd-ghost/.test(a.cls) && a.text,
+    );
     check(plain.length > 0, "① van mihez hasonlítani (sima link ugyanazon a lapon)");
     const twins = plain.filter(
       (a) => a.color === cta.color && a.painted === cta.painted

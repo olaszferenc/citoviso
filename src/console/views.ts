@@ -61,7 +61,7 @@ import {
   presetNestingViolations,
 } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
-import { huArticleLower } from "../hu.js";
+import { huArticle, huArticleLower } from "../hu.js";
 import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic } from "../ui/icons.js";
@@ -197,6 +197,18 @@ export interface LayoutOpts {
   readonly chrome?: boolean;
   /** Extra markup injected into <head> (e.g. a map library's stylesheet). */
   readonly head?: string;
+  /**
+   * "bare" → NO console shell at all: no navy topbar, no `.con` body class, and
+   * the page paints its own surface edge to edge.
+   *
+   * ⛔ Why this exists (approved contract: design-refs/console/paydone-split ①):
+   * the payment confirmation is the BUYER's page, and its approved design is a
+   * dark, full-bleed split. Rendering it inside the console's light shell would
+   * repeat the mistake that once melted three separately approved drafts into
+   * one house layout — the system's frame must not overrule the approved plan.
+   * The console stylesheets still load: the DESIGN TOKENS live there (ADR-0021 ①).
+   */
+  readonly shell?: "console" | "bare";
 }
 
 /**
@@ -258,8 +270,12 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>
-<body class="con"><header class="con-top">${BRAND}${nav}</header>
-<main class="con-main">${body}</main></body></html>`;
+${
+  opts.shell === "bare"
+    ? `<body class="paypage">${body}</body></html>`
+    : `<body class="con"><header class="con-top">${BRAND}${nav}</header>
+<main class="con-main">${body}</main></body></html>`
+}`;
 }
 
 /**
@@ -1715,16 +1731,24 @@ function payCopyScript(lang: string): string {
   // ⛔ Deferred: this goes into <head>, so the elements do not exist yet when it
   // parses. `layout()` has no tail slot, and adding one would touch every console
   // page — a wider blast radius than this needs.
+  // ⭐ EVERY `[data-copy-target]` button, not just the reference row: the approved
+  // confirmation (paydone-split ⑤) also makes the SITE ADDRESS copyable, and two
+  // near-identical scripts on one page is how the second one rots. Each button
+  // restores its OWN original label, so a page may carry any number of them.
   return `<script>(function(){function w(){
-  var b=document.getElementById("payRefCopy"),c=document.getElementById("payRef");
-  if(!b||!c)return;
-  b.addEventListener("click",function(){
-    var t=(c.textContent||"").trim();
-    var done=function(){b.textContent=${jsStr(T(lang, "✓ Kimásolva"))};b.classList.add("is-done");
-      setTimeout(function(){b.textContent=${jsStr(T(lang, "Másolom"))};b.classList.remove("is-done");},1800);};
-    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,done);
-    else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();
-      try{document.execCommand("copy");}catch(e){}document.body.removeChild(a);done();}
+  var bs=document.querySelectorAll("[data-copy-target]");
+  Array.prototype.forEach.call(bs,function(b){
+    var c=document.getElementById(b.getAttribute("data-copy-target"));
+    if(!c)return;
+    var orig=b.textContent;
+    b.addEventListener("click",function(){
+      var t=(c.textContent||"").trim();
+      var done=function(){b.textContent=${jsStr(T(lang, "✓ Kimásolva"))};b.classList.add("is-done");
+        setTimeout(function(){b.textContent=orig;b.classList.remove("is-done");},1800);};
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,done);
+      else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();
+        try{document.execCommand("copy");}catch(e){}document.body.removeChild(a);done();}
+    });
   });
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",w);else w();
@@ -1967,6 +1991,11 @@ export async function multilangPayResultPage(
  * The owner approved all six rows (2026-09-11), including the VAT and invoice
  * lines, over the shorter four-row alternative.
  */
+/** One term/value line of the confirmation card (contract ⑦). */
+function payRow(term: string, value: string): string {
+  return `<div class="pd-row"><span class="pd-row__t">${term}</span><span class="pd-row__v">${value}</span></div>`;
+}
+
 function subscriptionBox(
   lang: string,
   info?: {
@@ -1974,39 +2003,295 @@ function subscriptionBox(
     amount?: number | null;
     renewal?: { readonly date: string; readonly amount: number; readonly period: "monthly" | "annual" } | null;
   },
+  /**
+   * Print the "Most fizetett" row? FALSE on the split confirmation, where the very
+   * same amount is the headline of the card immediately above — two identical
+   * figures a centimetre apart read as two different charges (measured on the
+   * rendered page, 2026-09-20).
+   */
+  showPaid = true,
 ): string {
   const r = info?.renewal ?? null;
   const per = r?.period === "monthly" ? T(lang, "/ hó") : T(lang, "/ év");
-  const row = (term: string, value: string): string =>
-    `<div style="display:flex;gap:10px;margin:0 0 6px;flex-wrap:wrap">
-       <span class="mut" style="flex:0 0 132px;font-size:12.5px">${term}</span>
-       <span style="flex:1 1 180px;font-weight:600;font-size:13px">${value}</span>
-     </div>`;
   const nextCharge = r
-    ? row(
+    ? payRow(
         T(lang, "Következő terhelés"),
         `${esc(formatDay(r.date, lang))} — ${fmtHuf(r.amount)} ${per}`,
       )
-    : row(
+    : payRow(
         T(lang, "Következő terhelés"),
         T(lang, "A pontos dátumot és összeget e-mailben küldjük el."),
       );
-  return `<div style="margin:0 0 18px;padding:13px 14px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius);background:var(--citui-surface-2)">
-      <h3 style="margin:0 0 9px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-link-ink)">${T(lang, "Az előfizetése")}</h3>
-      ${info?.amount ? row(T(lang, "Most fizetett"), fmtHuf(info.amount)) : ""}
+  // ⛔ EVERY row here is part of the approved contract (paydone-split ⑦): the
+  // standing obligation must be readable on the confirmation itself, not learned
+  // later from a bank statement. The "Most fizetett" line is dropped only when
+  // the amount stands in the card header right above it (avoids two divisors on
+  // one screen); the caller decides with `showPaid`.
+  return `<p class="pd-sect">${T(lang, "Az előfizetése")}</p>
+      ${showPaid && info?.amount ? payRow(T(lang, "Most fizetett"), fmtHuf(info.amount)) : ""}
       ${nextCharge}
-      ${row(T(lang, "Megújulás"), T(lang, "Automatikus, a megadott kártyáról"))}
-      ${row(T(lang, "ÁFA"), T(lang, "Alanyi adómentes — az ár ÁFÁ-t nem tartalmaz"))}
-      ${row(
+      ${payRow(T(lang, "Megújulás"), T(lang, "Automatikus, a megadott kártyáról"))}
+      ${payRow(T(lang, "ÁFA"), T(lang, "Alanyi adómentes — az ár ÁFÁ-t nem tartalmaz"))}
+      ${payRow(
         T(lang, "Számla"),
         info?.contactEmail
           ? T(lang, "E-mailben, néhány percen belül: {email}", { email: esc(info.contactEmail) })
           : T(lang, "E-mailben, néhány percen belül."),
       )}
-      ${row(
+      ${payRow(
         T(lang, "Lemondás"),
         T(lang, "Bármikor: Belépés → Modulok fül → „Előfizetés lemondása”. A fordulónapon lép érvénybe."),
-      )}
+      )}`;
+}
+
+/**
+ * The buyer's confirmation surface — APPROVED CONTRACT:
+ * `assets/design-refs/console/paydone-split/` („D — prémium sötét / split", 2026-09-20).
+ *
+ * Every colour comes from the design core (ADR-0021 ①); the only raw literals are
+ * white/black alphas, which the token lint treats as neutral.
+ */
+function payDarkStyles(): string {
+  // ⛔ INLINE, not a linked stylesheet — deliberately. This is the page a customer
+  // lands on seconds after being charged, and a CDN that serves a stale or missing
+  // css would leave them staring at an unstyled page at the worst possible moment
+  // (measured once: the consent bar fell to the page bottom after a deploy because
+  // the CDN held the old css for 4 hours). One page, one round trip, no cache race.
+  return `<style>
+  body.paypage{margin:0;font:14px/1.55 var(--citui-font-text);color:var(--citui-ink-inverse);
+    background:
+      radial-gradient(760px 420px at 12% -6%, color-mix(in srgb, var(--citui-glow-blue) 30%, transparent), transparent 62%),
+      radial-gradient(660px 420px at 88% 8%, color-mix(in srgb, var(--citui-cyan-500) 28%, transparent), transparent 62%),
+      linear-gradient(160deg, var(--citui-navy-950), var(--citui-navy-900) 55%, var(--citui-navy-950));
+    background-attachment:fixed;min-height:100vh}
+  .pd-brand{display:flex;align-items:center;gap:10px;padding:16px 24px}
+  .pd-brand__mark{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--citui-cyan-400);border-right-color:transparent}
+  .pd-brand b{font:700 15px/1 var(--citui-font-display)}
+  /* ⛔ Room for the cookie bar: it is position:fixed at the bottom and was
+     sitting ON the „Belépek és szerkesztem" button (measured 2026-09-20).
+     The --citui-consent-h token is published by the consent runtime; 0 when hidden. */
+  .pd-split{display:flex;gap:26px;align-items:flex-start;max-width:1120px;margin:0 auto;
+    padding:10px 24px calc(44px + var(--citui-consent-h, 0px))}
+  .pd-left{flex:1 1 46%;min-width:0;padding-top:12px}
+  .pd-right{flex:0 0 430px;max-width:430px;min-width:0}
+
+  /* ③ the stamp — the success is SHOWN, not only written */
+  .pd-stamp{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;margin:0 0 18px;
+    background:linear-gradient(140deg, var(--citui-cyan-500), var(--citui-cyan-300));
+    box-shadow:0 0 0 9px color-mix(in srgb, var(--citui-cyan-500) 14%, transparent),
+               0 14px 30px color-mix(in srgb, var(--citui-cyan-500) 34%, transparent);
+    animation:pd-pop 520ms cubic-bezier(.2,.9,.3,1.2) both}
+  .pd-stamp svg{width:30px;height:30px;color:var(--citui-navy-950)}
+  .pd-stamp svg path{stroke-dasharray:36;stroke-dashoffset:36;animation:pd-draw 420ms 320ms ease forwards}
+  @keyframes pd-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes pd-draw{to{stroke-dashoffset:0}}
+  @media (prefers-reduced-motion:reduce){
+    .pd-stamp{animation:none}
+    .pd-stamp svg path{animation:none;stroke-dashoffset:0}
+  }
+  /* ⛔ The colour is NOT inherited: citui.css gives h1 its own (dark ink) rule,
+     which beats the body.paypage colour — measured on the rendered page, the
+     headline was near-invisible navy-on-navy. */
+  .pd-left h1{font:800 32px/1.15 var(--citui-font-display);margin:0 0 10px;letter-spacing:-.025em;
+    text-wrap:balance;color:var(--citui-white)}
+  .pd-sub{margin:0 0 20px;font-size:15px;color:color-mix(in srgb, var(--citui-ink-inverse) 80%, transparent);max-width:46ch}
+  .pd-sub b{color:var(--citui-white)}
+
+  /* ④ what they bought */
+  .pd-browser{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.16);
+    box-shadow:0 26px 60px rgba(0,0,0,.45);background:var(--citui-navy-900)}
+  .pd-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;background:rgba(255,255,255,.07)}
+  .pd-bar i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35);display:block}
+  .pd-bar span{flex:1 1 auto;margin-left:8px;background:rgba(0,0,0,.28);border-radius:999px;padding:5px 11px;
+    font:600 11.5px/1 var(--citui-font-text);color:color-mix(in srgb, var(--citui-ink-inverse) 85%, transparent);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ③ fallback surface: with no shot AND no photo this brand gradient is what the
+     buyer sees — never an empty box, never a broken-image icon. */
+  .pd-shot{height:230px;position:relative;overflow:hidden;
+    background:linear-gradient(160deg, var(--citui-navy-800), color-mix(in srgb, var(--citui-cyan-500) 55%, var(--citui-navy-800)) 60%, var(--citui-cyan-300))}
+  .pd-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .pd-veil{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px 22px;
+    background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,.05) 62%)}
+  .pd-veil b{font:700 23px/1.2 var(--citui-font-display);color:var(--citui-white)}
+  .pd-live{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;gap:6px;
+    background:var(--citui-white);border-radius:999px;padding:5px 11px;
+    font:700 11.5px/1 var(--citui-font-text);color:var(--citui-ok-ink)}
+  .pd-live i{width:7px;height:7px;border-radius:50%;background:var(--citui-ok);display:block}
+
+  /* ⑤ the address is an OBJECT, not a bare link */
+  .pd-urlrow{display:flex;gap:9px;align-items:center;margin:14px 0 0;flex-wrap:wrap}
+  .pd-u{flex:1 1 auto;min-width:0;font:700 14px/1.35 var(--citui-font-text);color:var(--citui-white);overflow-wrap:anywhere}
+  .pd-ghost{min-height:40px;padding:9px 13px;border-radius:11px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.22);color:var(--citui-white);font:600 12.5px/1 var(--citui-font-text);
+    cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+  .pd-ghost:hover{background:rgba(255,255,255,.14);text-decoration:none}
+  .pd-ghost.is-done{border-color:var(--citui-cyan-300);color:var(--citui-cyan-300)}
+
+  /* the light card */
+  .pd-card{background:var(--citui-white);color:var(--citui-ink);border-radius:var(--citui-radius);
+    box-shadow:0 30px 70px rgba(0,0,0,.42);overflow:hidden}
+  .pd-card__hd{padding:18px 20px 14px;border-bottom:1px solid var(--citui-line);text-align:center;background:var(--citui-surface-2)}
+  .pd-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;
+    background:var(--citui-ok-soft);color:var(--citui-ok-ink);font:700 12.5px/1 var(--citui-font-text);
+    border:1px solid color-mix(in srgb, var(--citui-ok) 35%, transparent)}
+  .pd-sum{font:800 32px/1.1 var(--citui-font-display);margin:11px 0 2px;letter-spacing:-.02em}
+  .pd-what{font-size:12.5px;color:var(--citui-muted)}
+  .pd-card__bd{padding:16px 20px 20px}
+  .pd-sect{font:700 11.5px/1 var(--citui-font-text);letter-spacing:.09em;text-transform:uppercase;
+    color:var(--citui-link-ink);margin:0 0 9px}
+  .pd-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--citui-line)}
+  .pd-row:last-of-type{border-bottom:none}
+  .pd-row__t{flex:0 0 124px;color:var(--citui-muted);font-size:12.5px}
+  .pd-row__v{flex:1 1 auto;font-size:13px;font-weight:600;min-width:0;overflow-wrap:anywhere}
+  .pd-row__v a{color:var(--citui-link-ink)}
+  .pd-row__v .pd-soft{font-weight:400;color:var(--citui-muted)}
+  /* the same quiet tone outside a row (the "credentials were e-mailed" note) */
+  .pd-card__bd > .pd-soft{display:block;color:var(--citui-muted);font-weight:400}
+  .pd-hr{height:1px;background:var(--citui-line);margin:16px 0}
+  /* ⑧ ONE dominant action. A link-shaped button is a BUTTON: its colour comes from
+     the variant, and no page-level link rule may reach inside it. */
+  .pd-cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    min-height:48px;padding:13px 20px;border-radius:12px;border:1px solid transparent;margin:16px 0 0;
+    font:700 14.5px/1.2 var(--citui-font-text);text-decoration:none;cursor:pointer;
+    background:linear-gradient(120deg, var(--citui-cyan-500), var(--citui-cyan-400));
+    color:var(--citui-navy-900);box-shadow:0 10px 24px color-mix(in srgb, var(--citui-cyan-500) 30%, transparent)}
+  .pd-cta:hover{text-decoration:none}
+  .pd-refline{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:14px 0 0;font-size:12.5px;color:var(--citui-muted)}
+  .pd-refline code{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:7px;
+    padding:5px 8px;font:600 12.5px/1 ui-monospace,Menlo,monospace;color:var(--citui-ink)}
+  .pd-copy{min-height:36px;padding:8px 12px;border:1px solid var(--citui-line-strong);border-radius:9px;
+    background:var(--citui-white);color:var(--citui-ink);font:600 12px/1 var(--citui-font-text);cursor:pointer}
+  .pd-copy.is-done{border-color:var(--citui-ok);color:var(--citui-ok-ink)}
+  .pd-card__ft{padding:13px 20px;border-top:1px solid var(--citui-line);background:var(--citui-surface-2);
+    display:flex;gap:9px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--citui-muted)}
+  .pd-lock{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--citui-ink)}
+  .pd-card__ft .pd-sp{flex:1 1 auto}
+  .pd-card__ft a{color:var(--citui-link-ink)}
+  /* "paid, site still being finished" — the same frame, honest content (contract, NEM KÖT §2) */
+  .pd-note{border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);
+    padding:18px 20px;color:color-mix(in srgb, var(--citui-ink-inverse) 88%, transparent);font-size:14.5px}
+  .pd-note b{color:var(--citui-white)}
+
+  /* ② MOBILE IS A SEPARATE DECISION: one column, the bought thing first. */
+  @media (max-width:1023px){
+    .pd-brand{padding:14px 16px}
+    .pd-split{flex-direction:column;gap:18px;padding:4px 14px calc(36px + var(--citui-consent-h, 0px))}
+    .pd-left{flex:1 1 auto;width:100%;padding-top:4px}
+    .pd-right{flex:1 1 auto;width:100%;max-width:none}
+    .pd-left h1{font-size:26px}
+    .pd-sub{font-size:14px}
+    .pd-shot{height:180px}
+    .pd-veil b{font-size:19px}
+    .pd-u{flex:1 1 100%}
+    .pd-urlrow .pd-ghost{flex:1 1 auto}
+    .pd-row{flex-direction:column;gap:2px}
+    .pd-row__t{flex:none}
+  }
+</style>`;
+}
+
+/**
+ * The card header (contract ⑥): the success pill, the amount, and ONE line that
+ * says what the money bought. With no product name the line is omitted — a
+ * confirmation may narrow, never invent (§B.17).
+ */
+function cardHead(
+  lang: string,
+  info: { amount?: number | null; productName?: string | null; businessName?: string | null } | undefined,
+  pill: string,
+): string {
+  const what = (info?.productName ?? info?.businessName ?? "").trim();
+  return `${pill}
+    <div class="pd-sum">${info?.amount ? fmtHuf(info.amount) : T(lang, "A terhelés megtörtént")}</div>
+    ${what ? `<div class="pd-what">${T(lang, "Citoviso honlap — {name}", { name: esc(what) })}</div>` : ""}`;
+}
+
+/**
+ * The approved two-column confirmation frame (paydone-split ①/②): dark, brand-lit,
+ * the bought thing on the left and the paperwork on the right; one column below
+ * 1024px with the left side first.
+ */
+function paySplitLayout(
+  lang: string,
+  o: {
+    title: string;
+    headline: string;
+    sub: string;
+    left: string;
+    cardHead: string;
+    cardBody: string;
+    pixel: string;
+    support: string | null;
+  },
+): string {
+  const support = (o.support ?? "").trim();
+  return layout(
+    o.title,
+    `<div class="pd-brand"><span class="pd-brand__mark"></span><b>Citoviso</b></div>
+    <div class="pd-split">
+      <div class="pd-left">
+        ${payStamp()}
+        <h1>${o.headline}</h1>
+        <p class="pd-sub">${o.sub}</p>
+        ${o.left}
+      </div>
+      <div class="pd-right">
+        <div class="pd-card">
+          <div class="pd-card__hd">${o.cardHead}${o.pixel}</div>
+          <div class="pd-card__bd">${o.cardBody}</div>
+          <div class="pd-card__ft">
+            <span class="pd-lock">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.6"/></svg>
+              ${T(lang, "Biztonságos fizetés")}
+            </span>
+            <span class="pd-sp"></span>
+            ${support ? `<span><a href="mailto:${esc(support)}">${esc(support)}</a></span>` : ""}
+          </div>
+        </div>
+      </div>
+    </div>`,
+    { chrome: false, shell: "bare", head: `${payDarkStyles()}${payCopyScript(lang)}` },
+  );
+}
+
+/** The check-mark stamp (contract ③). Own SVG — the icon set forbids emoji. */
+function payStamp(): string {
+  return `<div class="pd-stamp" aria-hidden="true">
+      <svg viewBox="0 0 48 48" fill="none"><path d="M13 25l7.5 7.5L35 16" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>`;
+}
+
+/**
+ * The site preview (contract ④): screenshot → cover photo → brand gradient.
+ *
+ * ⛔ The fallback is LAYERED IN THE MARKUP, not decided by a server-side fetch: the
+ * gradient is the box's own background and the image sits on top, so a photo that
+ * 404s leaves the gradient behind instead of a broken-image icon — and nobody has
+ * to wait for us to probe a URL while their payment page loads.
+ */
+function payPreviewBox(
+  lang: string,
+  opts: { siteUrl: string; name: string; shotUrl?: string | null; photoUrl?: string | null },
+): string {
+  const src = opts.shotUrl || opts.photoUrl || "";
+  const isShot = Boolean(opts.shotUrl);
+  const host = opts.siteUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  return `<div class="pd-browser">
+      <div class="pd-bar"><i></i><i></i><i></i><span>${esc(opts.siteUrl)}</span></div>
+      <div class="pd-shot">
+        ${
+          src
+            ? `<img src="${esc(src)}" alt="${T(lang, "Az Ön oldala: {name}", { name: esc(opts.name || host) })}" onerror="this.remove()">`
+            : ""
+        }
+        <span class="pd-live"><i></i> ${T(lang, "ÉL")}</span>
+        ${
+          // The name overlay belongs to the FALLBACK levels only: a real screenshot
+          // already carries the site's own heading, and covering it would hide the
+          // very thing the buyer is here to see.
+          isShot || !opts.name ? "" : `<div class="pd-veil"><b>${esc(opts.name)}</b></div>`
+        }
+      </div>
     </div>`;
 }
 
@@ -2073,6 +2358,18 @@ export function payResultPage(
     /** Currency of the charge — the Barion `purchase` event requires it, and it
      *  comes from the PAYMENT row, never from a default (ADR-0186). */
     currency?: string | null;
+    /**
+     * The business the site belongs to — the headline and the preview overlay use
+     * it (approved contract: paydone-split ④/⑥). Empty = we do not know, and the
+     * sentence narrows instead of inventing a name (§B.17).
+     */
+    businessName?: string | null;
+    /**
+     * The site preview, resolved by the CALLER (contract ④): a cached screenshot
+     * of the live site, else its cover photo. Both absent → the brand gradient in
+     * the markup carries the box. The page never fetches, probes or waits.
+     */
+    preview?: { readonly shotUrl?: string | null; readonly photoUrl?: string | null } | null;
   },
 ): string {
   const lang = consoleLang();
@@ -2081,6 +2378,21 @@ export function payResultPage(
   const paidLine = `<p class="q-good" style="margin:0 0 14px;font-size:15px"><b>${T(lang, "✓ Sikeres fizetés")}</b>${
     info?.amount ? T(lang, " — a {amount} összegű terhelés megtörtént.", { amount: fmtHuf(info.amount) }) : T(lang, " — a terhelés megtörtént.")
   }</p>`;
+  // The same statement in the approved card header (contract ⑥): the pill says the
+  // charge succeeded, the amount stands under it, and one line names WHAT was paid
+  // for. `paidLine` stays for the branches that still render the old panel.
+  const paidPill = `<span class="pd-pill">
+      <svg viewBox="0 0 16 16" fill="none" width="14" height="14" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${T(lang, "Sikeres fizetés")}
+    </span>`;
+  // ⑦ The reference stays COPYABLE on the confirmation too, not only on the
+  // failure screen: it is what a buyer quotes when they write to us.
+  const refBlock = info?.ref
+    ? `<div class="pd-refline">${T(lang, "Hivatkozási azonosító:")}
+        <code id="payRef">${esc(info.ref)}</code>
+        <button type="button" class="pd-copy" data-copy-target="payRef">${T(lang, "Másolom")}</button>
+      </div>`
+    : "";
   // ONE source for "write to us", on all three branches of this page. Empty
   // config → the offer is dropped, never replaced by a plausible-looking address.
   // Barion Pixel (Full, ADR-0186): a MEGTÖRTÉNT vásárlás — a tölcsér utolsó
@@ -2173,31 +2485,34 @@ export function payResultPage(
   // confirmation", and this is one.) With no subscription row yet `renewal` is null
   // and the box says what we actually know instead of inventing a date.
   if (!activated) {
-    return layout(
-      T(lang, "Sikeres fizetés"),
-      `<div class="panel" style="max-width:560px;margin:48px auto">
-        <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
-        ${paidLine}${pixelPurchase}
-        <p style="margin:0 0 12px">Az oldalát még véglegesítjük. Amint elérhető, a pontos
-        címet és a belépési adatait <b>${T(lang, "e-mailben elküldjük")}</b> ${T(lang, "— általában néhány órán belül.")}</p>
-        ${subscriptionBox(lang, info)}
-        ${helpLine(T(lang, "Kérdése van? Írjon:"))}
-      </div>`,
-      { chrome: false },
-    );
+    return paySplitLayout(lang, {
+      title: T(lang, "Sikeres fizetés"),
+      headline: T(lang, "Sikeres fizetés — köszönjük!"),
+      // ⛔ Never claim the site is live or that credentials were e-mailed: it is
+      // not, and they were not. The left column states what IS true.
+      sub: T(lang, "A terhelés megtörtént. Az oldalát még véglegesítjük."),
+      left: `<div class="pd-note">${T(
+        lang,
+        "Amint elérhető, a pontos címet és a belépési adatait {b} — általában néhány órán belül.",
+        { b: `<b>${T(lang, "e-mailben elküldjük")}</b>` },
+      )}</div>`,
+      cardHead: cardHead(lang, info, paidPill),
+      cardBody: `${subscriptionBox(lang, info, false)}${refBlock}`,
+      pixel: pixelPurchase,
+      support: info?.supportEmail ?? null,
+    });
   }
   const site = info?.siteUrl;
-  const liveBlock = site
-    ? `<p style="margin:0 0 6px">Az oldala <b>${T(lang, "elérhető az interneten")}</b>:</p>
-       <p style="margin:0 0 22px;font-size:18px"><a href="${esc(site)}">${esc(site)}</a></p>`
-    : `<p style="margin:0 0 22px">Az oldala elkészült. Néhány percen belül elérhető lesz —
-       a pontos címet e-mailben küldjük.</p>`;
+  const businessName = info?.businessName ?? info?.productName ?? "";
   const mailNote = info?.contactEmail
     ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
     : T(lang, "A belépési adatait e-mailben küldtük el.");
   const userLine = info?.username
-    ? `<li style="margin:0 0 6px">${T(lang, "Felhasználónév:")} <b>${esc(info.username)}</b> ${T(lang, "(a jelszó az e-mailben)")}</li>`
-    : `<li style="margin:0 0 6px">${T(lang, "A felhasználónevet és a jelszót e-mailben küldtük.")}</li>`;
+    ? payRow(
+        T(lang, "Felhasználónév"),
+        `${esc(info.username)} <span class="pd-soft">${T(lang, "(a jelszó az e-mailben)")}</span>`,
+      )
+    : payRow(T(lang, "Felhasználónév"), T(lang, "A felhasználónevet és a jelszót e-mailben küldtük."));
   // The link the buyer must be able to click: their OWN admin, never ours.
   //
   // ⛔ NO bare "/login" fallback any more. Measured on the confirmation screen:
@@ -2207,24 +2522,57 @@ export function payResultPage(
   const loginHref = /^https?:\/\//.test(info?.loginUrl ?? "") ? info!.loginUrl! : null;
   const loginLabel = loginHref ? loginHref.replace(/^https?:\/\//, "") : null;
   const loginLine = loginHref
-    ? `<li style="margin:0 0 6px">${T(lang, "Belépés:")} <a href="${esc(loginHref)}">${esc(loginLabel!)}</a></li>`
-    : `<li style="margin:0 0 6px">${T(lang, "A belépés pontos címét az e-mailben küldjük el.")}</li>`;
-  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
-      <h2 class="q-good" style="margin-top:0">${T(lang, "Sikeres fizetés — köszönjük!")}</h2>
-      ${paidLine}${pixelPurchase}
-      ${liveBlock}
-      ${subscriptionBox(lang, info)}
-      <h3 style="margin:0 0 8px">${T(lang, "Mi a következő lépés?")}</h3>
-      <p style="margin:0 0 10px">${mailNote} ${T(lang, "Ezekkel bármikor beléphet, és {b} — nem kell hozzá szakember.", { b: `<b>${T(lang, "saját maga szerkesztheti a szövegeket és a fotókat")}</b>` })}</p>
-      <ul style="margin:0 0 18px;padding-left:20px">
-        ${userLine}
-        ${loginLine}
-        <li>${T(lang, "Itt cserélheti a bemutatkozó szöveget, a képeket és az elérhetőségeit.")}</li>
-      </ul>
-      ${loginHref ? `<p style="margin:0 0 18px"><a class="citui-btn citui-btn--primary" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a></p>` : ""}
-      ${helpLine(T(lang, "Kérdése van? Írjon:"))}
-    </div>`;
-  return layout(T(lang, "Sikeres fizetés — az oldala él"), body, { chrome: false });
+    ? payRow(T(lang, "Belépés"), `<a href="${esc(loginHref)}">${esc(loginLabel!)}</a>`)
+    : payRow(T(lang, "Belépés"), T(lang, "A belépés pontos címét az e-mailben küldjük el."));
+  // ⑤ The address as an OBJECT: copyable, openable, and it survives a long URL.
+  // With no live URL yet we say that instead of printing half a promise.
+  const left = site
+    ? `${payPreviewBox(lang, {
+        siteUrl: site,
+        name: businessName,
+        shotUrl: info?.preview?.shotUrl ?? null,
+        photoUrl: info?.preview?.photoUrl ?? null,
+      })}
+      <div class="pd-urlrow">
+        <span class="pd-u" id="paySiteUrl">${esc(site.replace(/^https?:\/\//, "").replace(/\/+$/, ""))}</span>
+        <button type="button" class="pd-ghost" data-copy-target="paySiteUrl">${T(lang, "Cím másolása")}</button>
+        <a class="pd-ghost" href="${esc(site)}" target="_blank" rel="noopener">${T(lang, "Megnyitom")} ↗</a>
+      </div>`
+    : `<div class="pd-note">${T(lang, "Az oldala elkészült. Néhány percen belül elérhető lesz — a pontos címet e-mailben küldjük.")}</div>`;
+  return paySplitLayout(lang, {
+    title: T(lang, "Sikeres fizetés — az oldala él"),
+    headline: site
+      ? T(lang, "Sikeres fizetés — az oldala él.")
+      : T(lang, "Sikeres fizetés — köszönjük!"),
+    sub: businessName
+      ? // ⛔ Nem „A(z)": a felhasználó ne ragozzon helyettünk — a névelőt a
+        // huArticle() dönti el a névből (hu.ts), ahogy a tenant-admin is teszi.
+        T(lang, "{Art} {name} honlapja ebben a percben elérhető az interneten.", {
+          Art: huArticle(businessName),
+          name: `<b>${esc(businessName)}</b>`,
+        })
+      : T(lang, "A honlapja ebben a percben elérhető az interneten."),
+    left,
+    cardHead: cardHead(lang, info, paidPill),
+    cardBody: `${subscriptionBox(lang, info, false)}
+      <div class="pd-hr"></div>
+      <p class="pd-sect">${T(lang, "A belépése")}</p>
+      ${userLine}
+      ${loginLine}
+      ${payRow(
+        T(lang, "Mit szerkeszthet"),
+        T(lang, "A bemutatkozó szöveget, a képeket és az elérhetőségeit — nem kell hozzá szakember."),
+      )}
+      <p class="pd-soft" style="margin:10px 0 0;font-size:12.5px">${mailNote}</p>
+      ${
+        loginHref
+          ? `<a class="pd-cta" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a>`
+          : ""
+      }
+      ${refBlock}`,
+    pixel: pixelPurchase,
+    support: info?.supportEmail ?? null,
+  });
 }
 
 /**

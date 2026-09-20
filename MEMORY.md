@@ -75,6 +75,30 @@ kell" a cím alatti két szöveg-blokkra) → megvalósítva. Session-jegyzet:
   1280–1366 px között a tábla oldalra görget — ha laptopon is ki kell férnie, az oszlop-csonkolás
   külön tulajdonosi döntés (információt vesz el).
 
+## Párhuzamos szál (2026-09-20) — a fizetés-visszaigazoló
+
+**💳 A FIZETÉS-VISSZAIGAZOLÓ A VEVŐ LAPJA LETT (ADR-0190).** A tulaj az éles `/pay/done`-ról:
+*„a kinézete miatt nem bizalomgerjesztő… gagyin néz ki"*. §2b kör **négy** tervvel (nyugta ·
+pecsét+oldal-kártya · onboarding-lépcső · **split**) → a tulaj a **D**-t választotta, az
+előnézethez **screenshot + kétszintű tartalék**-kal. Terv befagyasztva:
+`assets/design-refs/console/paydone-split/`. Session-jegyzet:
+`_planning/memory/2026-09-20_paydone_premium_split.md`.
+
+- **Szállítva:** `layout(shell:"bare")` — saját, teljes felületű sötét lap (a konzol shellje
+  nem írhatja felül a jóváhagyott tervet) · kéthasáb asztalon / egy oszlop mobilon · pecsét ·
+  böngésző-keretes előnézet + **másolható cím** · `siteShot.ts` (aktiváláskor előre gyártott
+  képernyőkép, cache-kulcs = tenant + snapshot mtime) + `/pay/preview` a vevőnek ·
+  `tenantCoverPhoto()` a ② szinthez · a kötelezettség-sorok hiánytalanul.
+- ⛔ **Öt saját lelet, egyik sem látszott a forráson:** `order_intent.tenant_id` **NULL az első
+  vásárlásnál** (az előnézet pont az ÚJ vevőknél maradt volna üres) · navy-on-navy címsor (a
+  citui.css `h1`-szabálya verte a body színt) · a süti-sáv **rátakart az egyetlen CTA-ra** ·
+  hero nélküli screenshot (a sablonok CSS-háttérként festenek) · a saját őröm hamis PIROSA.
+- ⚠️ **Négy testvér-kapu vakult meg a szelektorán** (pay-exit-truth · consent-style ·
+  checkout-viewport · hu-machine-form) — mind követi a felületet, egyik sem gyengítve.
+- **Kapuk:** `paydone-split-check` zöld, **önteszttel** (a két mért hibát visszarontva piros) ·
+  tsc · i18n-lint + katalógus · design-token-lint · guard-wiring (az őr bekötve).
+- ⚠️ **Élesítés NEM történt** — az külön, kimondott utasítás (§0.3).
+
 ## Előzmény — 2026-09-19 (kiküldési szándék / piszkozat-sáv)
 
 **⛔ A KURÁTOR KIKÜLDÉSI SZÁNDÉKÁT SEMMI NEM GÁTOLJA — a sáv hazug tiltása javítva.**

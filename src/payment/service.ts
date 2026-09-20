@@ -28,6 +28,7 @@ import { getGateway } from "./index.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
 import { applyRenewalPaid, ensureSubscriptionForOrder, nextChargeDate } from "./subscription.js";
 import { grantNewSubscriberCouponForOrder, redeemOfferForOrder } from "./offers.js";
+import { startSiteShot } from "./siteShot.js";
 
 export interface RequestPaymentResult {
   readonly paymentId: string;
@@ -939,6 +940,11 @@ async function activate(orderIntentId: string): Promise<boolean> {
       .set({ status: "live", live_at: new Date() })
       .where("tenant_id", "=", conv.tenantId)
       .execute();
+    // ④ ① — build the confirmation's site screenshot NOW, while the buyer is still
+    // on the gateway. Fire-and-forget by contract: the page never waits for it, and
+    // a failed shot simply falls through to the cover photo. This is the only place
+    // where the snapshot is known-fresh AND we have time to spare.
+    startSiteShot(conv.tenantId);
     await db
       .updateTable("lead")
       .set({ lifecycle_status: "activation" })
@@ -1019,6 +1025,16 @@ async function activate(orderIntentId: string): Promise<boolean> {
 /** What the buyer needs right after paying: where their site lives and how to get in. */
 export interface ActivationSummary {
   readonly businessName: string;
+  /**
+   * The tenant this activation produced.
+   *
+   * ⛔ NOT the same as `order_intent.tenant_id`: for a FIRST purchase that column
+   * is NULL, because the tenant is born during activation and is found through the
+   * lead. Measured 2026-09-20 on the confirmation page's site preview — keying it
+   * off the order would have blanked the preview for exactly the new customers it
+   * was built for, while working fine for upsells.
+   */
+  readonly tenantId: string | null;
   /** Public URL of the live site (<slug>.citoviso.com), or null if not live yet. */
   readonly siteUrl: string | null;
   /** Login username (the credentials mail carries the password). */
@@ -1118,6 +1134,7 @@ export async function getActivationSummary(gatewayRef: string): Promise<Activati
   return {
     renewal: row.tenantId ? await renewalPreview(row.tenantId) : null,
     businessName: row.businessName,
+    tenantId: row.tenantId ?? null,
     siteUrl:
       row.siteStatus === "live"
         ? tenantSiteUrl(config.publicSiteUrl, row.slug, row.customDomain)
