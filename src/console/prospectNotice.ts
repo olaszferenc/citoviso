@@ -140,6 +140,159 @@ export function injectTrackingBanner(html: string, token: string): string {
   return prependToBody(html, banner);
 }
 
+// ── THE THIRD FRAMING STATE: the visitor ALREADY BOUGHT ──────────────────────
+//
+// WHY IT CANNOT REUSE EITHER EXISTING PAIR (measured in dev, 2026-09-20): the
+// tracked bar ends with "Ez még nem élő oldal." and the tracked footer states
+// the view is recorded "hogy az ajánlatot az igényeihez igazíthassuk". Served to
+// a paying customer re-opening the cold letter, BOTH are false — §B.17 binds us
+// about ourselves too. So `owned` gets its own bar and its own footer, exactly
+// as `opted-out` does, and a visitor never sees two of them.
+//
+// What the bar must do, in this order: say the page is theirs (so a returning
+// buyer is not left wondering whether the purchase took), name where the live
+// site is, and hand them the way IN. It must NOT sign them in: this link travels
+// in e-mail, and a forwarded letter would otherwise be account access.
+
+/** Which promise is actually true for this customer right now. Mirrors
+ *  OwnedStage in conversion/owned.ts — kept as a bare string union so this
+ *  module stays importable by the guard without dragging in the DB client. */
+export type OwnedFraming = "paid_pending" | "provisioned" | "live";
+
+export interface OwnedBannerInput {
+  readonly stage: OwnedFraming;
+  /** Public URL of the live site, when there is one. */
+  readonly siteUrl: string | null;
+  /** Where the owner signs in (ADR-0042), when there is a host. */
+  readonly loginUrl: string | null;
+}
+
+/** The brand cyan, literal for the same reason the two greys are: this bar sits
+ *  on an ENGINE-rendered mock that never loads citui.css (verified: 0 refs), so
+ *  --citui-cyan-400 would not resolve. Value copied from the token, not invented. */
+const CYAN = "#35c4e0";
+
+/** Confirmation mark — inline SVG, never an emoji (icon doctrine, §4). */
+const CHECK =
+  `<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" ` +
+  `style="vertical-align:-2px;margin-right:6px"><path d="M2 8.5l4 4 8-9" fill="none" ` +
+  `stroke="${CYAN}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/** Mobile and desktop are two decisions, not one plan shrunk: stacked with a
+ *  full-width action on the phone, one row with the action pinned right above
+ *  760 px. @media is correct here — this is a real page in a real viewport. */
+const OWNED_CSS =
+  `<style data-cit-owned-css>` +
+  `.ow-wrap{max-width:78ch;margin:0 auto}` +
+  `.ow-row{display:flex;flex-direction:column;gap:10px;align-items:stretch}` +
+  `.ow-txt{text-align:center}` +
+  `.ow-btn{display:block;text-align:center;padding:11px 16px;border-radius:9px;` +
+  `font:600 13.5px/1 system-ui,sans-serif;text-decoration:none;white-space:nowrap;` +
+  `border:1px solid ${CYAN};color:${SURFACE};background:${CYAN}}` +
+  `.ow-det{margin-top:8px}` +
+  `.ow-det summary{cursor:pointer;color:${INK_MUTED};text-decoration:underline;` +
+  `font-size:12.5px;text-align:center;list-style:none}` +
+  `.ow-det summary::-webkit-details-marker{display:none}` +
+  `.ow-det .ow-body{margin:8px auto 2px;font-size:12.5px;line-height:1.65;text-align:center}` +
+  `@media (min-width:760px){` +
+  `.ow-row{flex-direction:row;align-items:center;justify-content:space-between;gap:18px}` +
+  `.ow-txt{text-align:left}.ow-btn{display:inline-block}` +
+  `.ow-det summary,.ow-det .ow-body{text-align:left}}` +
+  `</style>`;
+
+/** WHY they see this instead of the offer. No tracking claim and no "not live
+ *  yet" claim — the two sentences that would be false here. */
+const OWNED_WHY =
+  "Ezt a linket a korábbi megkeresésünkben kapta. Azóta megrendelte a honlapját, ezért itt " +
+  "már nem lehet újra megrendelni — a szövegeit és a képeit a kezelőfelületen szerkesztheti. " +
+  "Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.";
+
+/** The headline per stage. A stalled activation MUST NOT claim a live site —
+ *  that is the buyer most likely to re-open the letter, and the one a confident
+ *  "your page is live" would mislead hardest. */
+function ownedHeadline(i: OwnedBannerInput): string {
+  const strong = (s: string) =>
+    `<strong style="color:#fff;font-weight:600">${CHECK}${s}</strong>`;
+  if (i.stage === "paid_pending") {
+    return (
+      strong("Ezt már megrendelte.") +
+      " A fizetés beérkezett, az oldala még készül — amint elkészül, e-mailben jelezzük."
+    );
+  }
+  if (i.stage === "provisioned") {
+    return (
+      strong("Ez az oldal már az Öné.") +
+      " Elkészült; a nyilvános megjelenés még folyamatban van."
+    );
+  }
+  return (
+    strong("Ez az oldal már az Öné.") +
+    (i.siteUrl
+      ? ` Az oldala él: <a href="${escapeHtml(i.siteUrl)}" ` +
+        `style="color:#fff;text-decoration:underline">${escapeHtml(prettyUrl(i.siteUrl))}</a>`
+      : "")
+  );
+}
+
+/**
+ * The URL as a human reads it: protocol and trailing slash dropped, everything
+ * else KEPT.
+ *
+ * ⛔ NOT `new URL(u).host` — measured 2026-09-20 on the real route: off-platform
+ * the site lives at `<host>/t/<slug>`, and returning the host alone printed
+ * "az oldala él: 100.97.188.105:4800", i.e. an address where the site is NOT.
+ * A label that drops the part that identifies the site answers a different
+ * question than the sentence around it asks.
+ */
+function prettyUrl(url: string): string {
+  return url.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+}
+
+/**
+ * THE OWNED BAR — same place and same mechanics as the other two (in normal
+ * flow, native <details>, no script), different truth.
+ */
+export function injectOwnedBanner(html: string, input: OwnedBannerInput): string {
+  const action = input.loginUrl
+    ? `<a class="ow-btn" href="${escapeHtml(input.loginUrl)}">Belépés a kezelőfelületre</a>`
+    : "";
+  const banner =
+    OWNED_CSS +
+    `<div data-cit-framing="owned" style="padding:13px 18px;` +
+    `border-bottom:1px solid rgba(53,196,224,.35);` +
+    `font:400 13px/1.55 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
+    `<div class="ow-wrap"><div class="ow-row">` +
+    `<div class="ow-txt">${ownedHeadline(input)}</div>${action}</div>` +
+    `<details class="ow-det"><summary>Miért ezt látom?</summary>` +
+    `<div class="ow-body">${OWNED_WHY} ` +
+    `<a href="/privacy" style="color:${INK_MUTED};text-decoration:underline">Adatkezelési tájékoztató</a>` +
+    `</div></details></div></div>`;
+  return prependToBody(html, banner);
+}
+
+/**
+ * The bottom notice for an owned visitor.
+ *
+ * ⛔ It must NOT reuse the tracked footer (states a measurement we do not make
+ * here) and must NOT offer the unsubscribe: on a paying customer's own page a
+ * "Leiratkozás" link reads as if their service could be cancelled by a click.
+ * Marketing opt-out for an existing customer is an admin setting, not this link.
+ */
+export function injectOwnedNotice(html: string, input: OwnedBannerInput): string {
+  const where = input.loginUrl
+    ? ` Kezelőfelület: <a href="${escapeHtml(input.loginUrl)}" ` +
+      `style="color:${INK_MUTED};text-decoration:underline">${escapeHtml(prettyUrl(input.loginUrl))}</a> · `
+    : " ";
+  const notice =
+    `<div data-cit-footer="owned" style="padding:14px 18px;text-align:center;` +
+    `font:12px/1.6 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
+    `Ön a Citoviso ügyfele — ezt az oldalt a korábbi megkeresésünk linkjéről nyitotta meg. ` +
+    `A megtekintést nem rögzítjük.${where}` +
+    `<a href="/privacy" style="color:${INK_MUTED};text-decoration:underline">Adatkezelési tájékoztató</a>` +
+    `</div>`;
+  return appendToBody(html, notice);
+}
+
 /**
  * NO OPENING ANIMATION ON A MOCK WE SEND OUT (owner's ruling, 2026-09-14 —
  * ADR-0159 nyitott pontja lezárva).

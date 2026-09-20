@@ -128,14 +128,11 @@ try {
     .returning("id")
     .executeTakeFirstOrThrow();
   ids.prospectId = prospect.id;
-  // A renewal order must belong to a tenant (order_intent_upsell_tenant_chk), and the
-  // renewal exception is one of the claims under test — so the fixture needs one.
-  const tenant = await db
-    .insertInto("tenant")
-    .values({ lead_id: lead.id, display_name: "_mkt_check tenant" })
-    .returning("id")
-    .executeTakeFirstOrThrow();
-  ids.tenantId = tenant.id;
+  // ⛔ A TENANT KÉSŐBB SZÜLETIK, közvetlenül a megújulás-ág előtt (2026-09-20).
+  // Eddig itt jött létre, mert a megújulás-ág megköveteli — csakhogy ettől a lead a
+  // HÁROM INITIAL ág alatt is „már vásárolt" volt, és az ADR-0191 kapu (jogosan)
+  // megtagadta a pay-linket. Az őr így a PIAC-kapu helyett egy másik kaput mért
+  // volna, és pirosra ment egy hibátlan terméken.
   const order = await db
     .insertInto("order_intent")
     .values({
@@ -178,6 +175,14 @@ try {
   // unable to pay by a decision of ours (ADR-0111).
   // The DB requires kind+tenant to agree (order_intent_upsell_tenant_chk): an initial
   // order has no tenant, a renewal must have one. Flip both in one statement.
+  // A tenant only comes into existence HERE — while the initial legs ran, this lead
+  // was not yet a customer (see the note at the fixture above).
+  const tenant = await db
+    .insertInto("tenant")
+    .values({ lead_id: lead.id, display_name: "_mkt_check tenant" })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  ids.tenantId = tenant.id;
   await db
     .updateTable("order_intent")
     .set({ kind: "renewal", tenant_id: tenant.id })

@@ -2770,6 +2770,16 @@
           track("billing_invalid", { fields: Object.keys(data.fields || {}).join(",") });
           return;
         }
+        // ALREADY A CUSTOMER (2026-09-20). Reachable from a STALE TAB: once the
+        // lead owns a site the page stops rendering this panel at all, but a form
+        // opened BEFORE the purchase can still be submitted. It must not fall
+        // through to showThanks() — that says "Megkaptuk a rendelését", which
+        // would tell a customer a second order exists when the server took none.
+        if (data && data.error === "already_owned") {
+          payBtn.removeAttribute("data-busy");
+          showOwned(data);
+          return;
+        }
         showThanks(chosen);
       })
       .catch(function () {
@@ -2792,6 +2802,28 @@
       '<p class="cit-cfg-note">' +
       tr("Most nem terheltük meg a kártyáját, és semmire nem kötelezi. A megmutatott mintákat az Ön valódi adataival töltjük fel — a kész oldalra minta-tartalom soha nem kerül.") +
       "</p>";
+  }
+
+  // The already-a-customer branch. Two things must be true on this screen: that
+  // NOTHING was charged (the buyer's first fear on seeing a checkout they
+  // thought they had completed), and where they can actually get in.
+  function showOwned(data) {
+    var foot = panel.querySelector(".cit-cfg-foot");
+    var where =
+      data && data.loginUrl
+        ? '<p class="cit-cfg-note"><a href="' +
+          String(data.loginUrl).replace(/"/g, "&quot;") +
+          '">' +
+          tr("Belépés a kezelőfelületre") +
+          "</a></p>"
+        : "";
+    foot.innerHTML =
+      '<p class="cit-cfg-sum"><b>' +
+      tr("Ezt már megrendelte.") +
+      "</b> " +
+      tr("A honlapja már az Öné, ezért most nem indítottunk fizetést és nem terheltük meg a kártyáját. A szövegeit és a képeit a kezelőfelületen szerkesztheti.") +
+      "</p>" +
+      where;
   }
 
   // ── ADR-0088 escalation decision card (approved plan: design-refs/console/

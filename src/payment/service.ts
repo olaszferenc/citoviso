@@ -11,6 +11,7 @@
 import { db } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
+import { ownedSiteForLead } from "../conversion/owned.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { tenantSiteUrl } from "../domains.js";
@@ -60,6 +61,33 @@ export async function requestPayment(
   // prospect's — possibly since-rejected — mock blocked a translation purchase
   // on a live tenant ("payerror" with no real error).
   if (oi.kind === "initial") {
+    // ALREADY-A-CUSTOMER GATE (2026-09-20, measured in dev). Re-opening the cold
+    // letter after buying served the checkout again and took the money again —
+    // for nothing: convertLead is idempotent, the subscription anchor does not
+    // move (onConflict doNothing), the login is not re-issued. The buyer got a
+    // second charge and a real invoice in exchange for zero new service.
+    //
+    // ⛔ THE REFUSAL BELONGS HERE, not (only) on the page. The page can be a
+    // stale tab and the form can be re-submitted, so a screen that merely hides
+    // the button is not a gate. No pay-link ⇒ no charge is possible.
+    // A legitimate second purchase (module, translation, domain, renewal) is
+    // NOT an `initial` order and never reaches this branch — it is bought from
+    // the admin against the live site.
+    const lead = await db
+      .selectFrom("order_intent")
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .select("prospect.lead_id as leadId")
+      .where("order_intent.id", "=", orderIntentId)
+      .executeTakeFirst();
+    const owned = lead ? await ownedSiteForLead(lead.leadId) : null;
+    if (owned) {
+      console.warn(
+        `[payment] requestPayment ${orderIntentId} MEGTAGADVA: a lead MÁR VÁSÁROLT ` +
+          `(állapot: ${owned.stage}${owned.siteUrl ? `, oldal: ${owned.siteUrl}` : ""}) — ` +
+          `initial rendelésre nem adunk pay-linket, mert a második terhelés semmit nem adna hozzá`,
+      );
+      return null;
+    }
     const artifact = await db
       .selectFrom("order_intent")
       .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")

@@ -90,6 +90,7 @@ import {
 } from "../payment/offers.js";
 import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage, payUnknownRefPage } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
+import { ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import {
@@ -127,6 +128,8 @@ import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
 import {
   injectOptedOutBanner,
   injectOptedOutNotice,
+  injectOwnedBanner,
+  injectOwnedNotice,
   disableIntroAnimation,
   injectTrackingBanner,
   injectTrackingNotice,
@@ -741,6 +744,33 @@ async function handleOrderRequest(
   artifactId: string,
   prospectToken?: string,
 ): Promise<void> {
+  // ALREADY-A-CUSTOMER GATE (2026-09-20) — BEFORE anything is recorded.
+  // requestPayment() refuses an initial order from an existing customer, but
+  // reaching that refusal through here would first write an order_intent and
+  // then fire alertStuckOrder(), i.e. manufacture an operator incident out of a
+  // non-problem and tell the buyer "a colleague will contact you". Nothing is
+  // wrong: they already own the site. Refuse at the door and say so.
+  // Keyed on the ARTIFACT so the token-less /configure path is gated too.
+  const alreadyOwned = await ownedSiteForArtifact(artifactId);
+  if (alreadyOwned) {
+    console.warn(
+      `[console] rendelés ELUTASÍTVA: a lead már vásárolt (artifact ${artifactId}, ` +
+        `állapot: ${alreadyOwned.stage}) — nincs order_intent, nincs pay-link, nincs riasztás`,
+    );
+    send(
+      res,
+      409,
+      JSON.stringify({
+        ok: false,
+        error: "already_owned",
+        stage: alreadyOwned.stage,
+        siteUrl: alreadyOwned.siteUrl,
+        loginUrl: alreadyOwned.loginUrl,
+      }),
+      "application/json",
+    );
+    return;
+  }
   const body = (await readJson(req)) as {
     modules?: unknown;
     billing_period?: unknown;
@@ -2332,8 +2362,32 @@ async function handle(
     // is standing here either.
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
     const tracked = !p.unsubscribed;
+    // THE THIRD FRAMING STATE (2026-09-20): this lead ALREADY BOUGHT. Measured in
+    // dev — the link kept serving the configurator and the checkout to a paying
+    // customer, so re-opening the cold letter charged them again for nothing.
+    //
+    // This branch is the SCREEN half of the fix, not the fix: the gate that makes
+    // a second charge impossible lives in requestPayment()/handleOrderRequest,
+    // because a stale tab can re-submit a form this page never renders.
+    //
+    // What it deliberately skips: recordView + the event beacon + the escalation
+    // offer + the configurator. Measuring an existing customer to "tailor the
+    // offer" and minting a discount for someone who already paid are both wrong,
+    // and the footer here states we do NOT measure — it must be true.
+    const owned = await ownedSiteForProspectToken(pMatch[1]);
     try {
       const html = await readFile(p.artifactPath, "utf8");
+      if (owned) {
+        console.log(
+          `[console] /p/${pMatch[1]}: MÁR VÁSÁROLT lead (állapot: ${owned.stage}` +
+            `${owned.siteUrl ? `, oldal: ${owned.siteUrl}` : ""}) — vásárlási réteg nélkül szolgáljuk ki`,
+        );
+        return send(
+          res,
+          200,
+          injectOwnedNotice(injectOwnedBanner(disableIntroAnimation(html), owned), owned),
+        );
+      }
       const viewId = tracked
         ? await recordView(
             p.id,

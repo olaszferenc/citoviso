@@ -180,6 +180,17 @@ if [ -f scripts/charge-retry-note-check.mts ] && \
   echo "[pre-commit] charge-retry-note (a sáv ne IRÁNYT mondjon, hanem VIGYEN)…"
   npx tsx scripts/charge-retry-note-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-0191: a megkeresés linkje a VÁSÁRLÁS UTÁN nem árul. A kapu a PÉNZ-ÚTON ül
+# (requestPayment nem ad pay-linket egy már vásárolt lead initial rendelésére), a lap
+# pedig harmadik keretezési állapotot kap — saját sávval ÉS saját lábléccel, mert a
+# követett pár két mondata („Ez még nem élő oldal", „az ajánlatot az igényeihez
+# igazíthassuk") egy fizető ügyfélnek hazugság. Az őr a VALÓDI requestPayment()-et
+# futtatja, nem egy jelvényt kérdez.
+if [ -f scripts/prospect-owned-check.mts ] && \
+   changed_files | grep -qE '^(src/conversion/owned\.ts|src/console/(prospectNotice|server)\.ts|src/payment/service\.ts|assets/runtime/cit-configurator\.js)|^scripts/prospect-owned-check'; then
+  echo "[pre-commit] prospect-owned (a már vásárolt lead nem vehet újra)…"
+  npx tsx scripts/prospect-owned-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0131 ①: kép nélkül nincs páros-indítás, és a felület MONDJA KI. Az Elek FK-004
 # piszkozat-lapja feltétel nélkül linkelte az MMS-előnézetet: 404 → törött-kép ikon,
 # alatta ÉLŐ „Páros indítása" gomb valódi SIM-re. Az őr a RENDERELT lapot méri, mind a

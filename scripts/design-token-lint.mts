@@ -82,8 +82,11 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
       "a „nem tölthető be” helyettesítő kép ÖNÁLLÓ SVG-dokumentumként megy ki egy <img>-be (citui.css nincs betöltve, a var() nem oldódna fel) — a --citui-surface-2 / --citui-bad / --citui-muted tükrei, értékben a maggal szinkronban tartandó",
   },
   "src/console/prospectNotice.ts": {
-    values: ["#8a8f98", "#101216"],
-    reason: "/p/ előnézet-lábléc: ENGINE-renderelt mock fölé kerül (--cit-* skin, citui.css nélkül) — semleges szürkék",
+    values: ["#8a8f98", "#101216", "#35c4e0", "rgba(53,196,224,.35)"],
+    reason:
+      "/p/ előnézet keretezése: ENGINE-renderelt mock fölé kerül (--cit-* skin, citui.css nélkül) — " +
+      "semleges szürkék; a cián a MEGERŐSÍTŐ 'már az Öné' sáv akcentje (pipa + gomb + alsó él), " +
+      "értéke a --citui-cyan-400 token MÁSOLATA, nem új szín — a tokent itt a böngésző nem tudná feloldani",
   },
   "src/server/adminViews.ts": {
     values: ["#1fb6d6", "#16283f"],
