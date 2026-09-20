@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-09-13
+updated: 2026-09-20
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -294,6 +294,49 @@ megmondja, hol tart:
 
 ℹ️ Ha nincs kép, a kártyán **nem jelenik meg törött képikon** — helyette ez a magyarázó doboz
 áll. Ez szándékos: egy néma törött ikonból nem derülne ki, hogy kérni kell.
+
+### A „Kapuk” jelvénysor
+
+A kártyán rövid nevekkel látod a mock legenerálásakor futott gépi ellenőrzések verdiktjét:
+
+| Jelvény | Mire felel |
+|---|---|
+| **Tényhűség** | minden kemény tény (szám, ár, férőhely) forrásból származik-e — nincs-e kitalálva |
+| **Piac** | a szöveg megnevezi-e azt, amiért egy vendég valóban választ (a rendszer másutt **„Marketing-őr”**, a küldés-felugróban **„Piac-kapu”** néven mutatja ugyanezt). ⚠️ Ennek semmi köze a **Beállítások → „Piacok — jogi csomag”** panelhez |
+| **Dizájn** | a generált oldal viseli-e a kötelező szerkezeti szabályokat (ikonok, tokenek, modul-horgonyok) |
+| **Nyitókép** | a lap tetejére került fotó elérte-e a minőségi küszöböt (a pontszám és a téma külön is ott áll a kártyán) |
+
+**A jelvény színe:** zöld = rendben · **sárga = lelet van**. Ha egy kapu lefutott, de nem tudott
+ítélni, a jelvényen a nyers `error` szó áll — zöld alapon; ez **nem** azt jelenti, hogy rendben
+van, hanem hogy nincs ítélet. Ha egy kapu egyáltalán nem futott, a jelvénye meg sem jelenik.
+
+⛔ **A jelvény nem az utolsó szó — a küldésnél derül ki, mi állít meg.** Ne a jelvények
+színéből próbáld kitalálni, kimehet-e a megkeresés: nyomd meg a küldést, és ha a rendszer
+akadályt lát, **felugró áll meg elé**, ami MEGNEVEZI a kaput és leírja, mit talált. Ott
+döntesz: **„Mégsem”**, vagy **„Kiküldöm mégis”**. A felugró mezője (**„Megjegyzés a naplóba
+(nem kötelező)”**) elhagyható — a napló üresen is rögzíti, hogy te vállaltad.
+
+A felugró **többet tud, mint a négy jelvény**:
+- a **Nyitókép** jelvény önmagában sosem állít meg — sárgán is kimegy a levél. A másik három
+  (Tényhűség · Piac · Dizájn) viszont igen;
+- van egy megállító kapu, aminek **nincs jelvénye a kártyán**: a **„Demó-keretezés”** (rajta
+  van-e a kiküldendő lapon az „előzetes terv” keretezés, és nem állítja-e a lap magáról, hogy
+  már élő, hivatalos oldal). A felugró ezen a néven nevezi meg;
+- a **képek állapotát** sem a jelvények mutatják. Ha a kiszállított lapon törött kép van vagy
+  egyetlen szállás-fotó sincs, azt is a felugró mondja meg — **„A kiszállított lap képeivel baj
+  van — kiküldöd mégis?”** címmel akkor, ha közben az őrök nem találtak semmit; ha van őr-lelet
+  is, a cím az **„Az őr megjelölte ezt a mockot — kiküldöd mégis?”**, és a kép-baj a felsorolásban
+  áll. Fotó nélküli mocknál a kártya maga is kiírja: *„Ez a mock használható fotó NÉLKÜL
+  készült… Kiküldés előtt gyűjts friss adatot, és generálj újat.”* — ilyenkor a jó válasz az új
+  gyűjtés, nem a vállalás. (Ha mégis fotó nélkül küldenél, azt a kártyán, a **„Mégis kiküldöm
+  fotó nélkül…”** lenyíló alatt kell vállalni, és ott az indoklás **kötelező**.)
+
+⚠️ **Két esetben NINCS „Kiküldöm mégis”** — ott a küldés nem vállalható, újat kell generálni:
+ha a mockhoz **nincs renderelt lap**, vagy ha **egy újabb generálás felülírta a lap fájlját**
+(ilyenkor a link már más tartalmat vinne, mint amit jóváhagytál).
+
+A felugró részletes leírása a Súgóban a **„Megkeresés-piszkozat”** témánál, a *„Kiküldöd
+mégis?”* szakaszban.
 
 ## Kuráció — ember dönt
 

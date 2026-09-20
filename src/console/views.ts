@@ -3772,6 +3772,11 @@ function mockInputLabel(key: string, lang = "hu"): string {
     case "marketVerdict": return T(lang, "Piac-kapu");
     case "designVerdict": return T(lang, "Dizájn-kapu");
     case "heroVerdict": return T(lang, "Nyitókép-kapu");
+    // ⭐ A kurátor a küldés-felugróban találkozik ezzel a kapuval („Demó-keretezés"),
+    // ezért az artifact-adatlapon is NEVE van — eddig csak a mockVerdictGate ismerte,
+    // és a felugró egy olyan kapu nevét hozta, amit az operátor sehol nem látott.
+    // ⛔ A szöveg BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
+    case "demoFraming": return T(lang, "Demó-keretezés");
     case "engine": return T(lang, "Motor");
     case "region": return T(lang, "Gyűjtési terület");
     case "recipeSource": return T(lang, "Recept forrása");

@@ -1275,6 +1275,22 @@ async function shootConsole(
     await page.waitForTimeout(150); // az elrendezés álljon be a nyitás után
   }
   await mkdir(path.dirname(outPath), { recursive: true });
+  // ⛔ A VÉGTELEN ANIMÁCIÓ MEGÖLI AZ ELEM-FELVÉTELT. A konzolon több végtelen
+  // `conPulse` fut (élő-jelző pötty, futó-jelzés); a Playwright elem-capture-je
+  // stabil dobozt vár, ezért a mock-fül felvétele 30 s után „element is not
+  // stable"-lel HALT MEG (mérve 2026-09-20, a mock-kártyák bevezetése után). A
+  // mozgás kikapcsolása nem szépít: a kézikönyvbe úgyis állókép kerül.
+  await page.addStyleTag({
+    content: "*,*::before,*::after{animation:none !important;transition:none !important}",
+  });
+  // …és a KETYEGŐ időzítők is. A lead-lap egy `setInterval(tick, 1000)`-rel írja az
+  // eltelt-idő számlálót (`data-cit-elapsed`), ami minden másodpercben megváltoztatja
+  // a szöveget — az elem-capture ettől VÉGTELENSÉGIG „nem stabil"-t mér. A számláló
+  // értéke egy kézikönyv-képen úgysem jelent semmit; a lap többi tartalma áll.
+  await page.evaluate(`(() => {
+    const top = setInterval(() => {}, 100000);
+    for (let i = 0; i <= top; i++) { clearInterval(i); clearTimeout(i); }
+  })()`);
   if (hash === "#ls-mocks") {
     // The source panel sits below the fold on the mocks tab — an ELEMENT shot
     // captures exactly the panel. The sticky topbar/tab-bar would overlay the
