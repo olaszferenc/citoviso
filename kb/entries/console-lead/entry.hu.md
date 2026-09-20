@@ -85,7 +85,8 @@ a generálás pedig egy összecsukott sor mögé került — kattints erre, és 
 
 A generáló panelben a **„Kinézet-típus”** kártyákon választod ki, milyen elrendezéssel
 készüljön a mock, majd a gombbal indítod. Az elkészült mock az „előnézet ▸” linken nyílik —
-ez a mock-kártyán, a kép melletti dobozban van.
+ez a mock-kártyán, **a pillanatkép jobb alsó sarkában**, egy sötét pirulán ül (a képen, nem
+mellette). Ha még nincs kép, ugyanott találod, a magyarázó doboz sarkában.
 
 ⚠️ **A választó TÖBBSZÖRÖS, és alapból egy sincs bejelölve.** Amennyi kártyát bejelölsz, annyi
 külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt

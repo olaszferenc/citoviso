@@ -179,11 +179,22 @@ ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük 
 emlékeztetőt.”
 
 **③ Aki MÁR MEGVETTE a honlapját** (2026-09-20 óta), megint mást lát — és ezen a
-lapon **nem lehet újra megrendelni**:
+lapon **nem lehet újra megrendelni**. Ez a sáv **három dolgot mondhat**, attól függően, hol
+tart a megrendelés:
 
 > ✓ **Ez az oldal már az Öné.** Az oldala él: *(a saját címe)*
 > **[Belépés a kezelőfelületre]**
 > ▸ **Miért ezt látom?**
+
+…ha az oldal már nyilvános. Ha elkészült, de még **nem** nyilvános, a nyitó mondat ugyanaz
+(**„Ez az oldal már az Öné.”**), de utána nem a cím jön, hanem az, hogy elkészült, és a
+nyilvános megjelenés még folyamatban van — cím nélkül, mert még nincs mit megmutatni.
+
+⚠️ Ha a fizetés beérkezett, de az élesítés **elakadt** (pl. kurátori rendezésre vár), a sáv
+mással kezd: **„Ezt már megrendelte.”**, és azzal folytatja, hogy a fizetés beérkezett, az
+oldala még készül, és e-mailben jelezzük, amint elkészül. Ilyenkor **nincs belépés-gomb**,
+mert még nincs hova belépni. Ez az a vevő, aki a leginkább hajlamos újra rákattintani a
+levélre — ha ilyet lát, nála **a mi oldalunkon akadt el valami**, nem nála.
 
 Miért kellett ez: a link e-mailben él tovább, és aki már fizetett, bármikor rákattinthat.
 Korábban ilyenkor a lap **újra felkínálta a fizetést**, és a kártyát tényleg meg lehetett
