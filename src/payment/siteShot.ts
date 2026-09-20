@@ -17,12 +17,16 @@ import path from "node:path";
 import { chromium } from "playwright-core";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { SITE_SHOT_VIEWPORT } from "./shotSize.js";
 
 const SHOT_DIR = path.resolve(process.cwd(), "sites/_pay-shots");
 
 /** Rendered at desktop layout; the card shows it ~600 CSS px wide, so half scale
- *  still lands above the display size (crisp on a phone's 2-3× screen). */
-const VIEWPORT = { width: 1240, height: 820 };
+ *  still lands above the display size (crisp on a phone's 2-3× screen).
+ *  ⛔ The SHAPE comes from shotSize.ts, because the confirmation page builds its
+ *  preview box from the same numbers — a box that disagrees with the picture is
+ *  what cropped the hero mid-sentence (2026-09-20). */
+const VIEWPORT = SITE_SHOT_VIEWPORT;
 const SCALE = 0.5;
 /** One retry: an image host that rate-limited the burst usually answers the
  *  second try. Two is the ceiling — nobody is waiting for this. */

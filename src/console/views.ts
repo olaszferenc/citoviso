@@ -62,6 +62,7 @@ import {
 } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { huArticle, huArticleLower } from "../hu.js";
+import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
 import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic } from "../ui/icons.js";
@@ -2106,8 +2107,12 @@ function payDarkStyles(): string {
     font:600 11.5px/1 var(--citui-font-text);color:color-mix(in srgb, var(--citui-ink-inverse) 85%, transparent);
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* ③ fallback surface: with no shot AND no photo this brand gradient is what the
-     buyer sees — never an empty box, never a broken-image icon. */
-  .pd-shot{height:230px;position:relative;overflow:hidden;
+     buyer sees — never an empty box, never a broken-image icon.
+     ⛔ A MAGASSÁG AZ ARÁNYBÓL JÖN, nem egy kitalált px-ből: a fix 230 px a valódi
+     képernyőképet a hero mondat közepén vágta el („nagyon le van vágva", tulaj,
+     2026-09-20). A dobozt a screenshot SAJÁT alakja szabja meg (shotSize.ts),
+     így a kettő nem tud szétcsúszni. */
+  .pd-shot{aspect-ratio:${SITE_SHOT_VIEWPORT.width}/${SITE_SHOT_VIEWPORT.height};position:relative;overflow:hidden;
     background:linear-gradient(160deg, var(--citui-navy-800), color-mix(in srgb, var(--citui-cyan-500) 55%, var(--citui-navy-800)) 60%, var(--citui-cyan-300))}
   .pd-shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
   .pd-veil{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px 22px;
@@ -2180,7 +2185,6 @@ function payDarkStyles(): string {
     .pd-right{flex:1 1 auto;width:100%;max-width:none}
     .pd-left h1{font-size:26px}
     .pd-sub{font-size:14px}
-    .pd-shot{height:180px}
     .pd-veil b{font-size:19px}
     .pd-u{flex:1 1 100%}
     .pd-urlrow .pd-ghost{flex:1 1 auto}

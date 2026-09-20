@@ -20,6 +20,7 @@ import { pathToFileURL } from "node:url";
 import { chromium, type Page } from "playwright-core";
 
 import { payResultPage } from "../src/console/views.js";
+import { SITE_SHOT_ASPECT } from "../src/payment/shotSize.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -188,6 +189,28 @@ async function main(): Promise<void> {
         check(seen.renewal === 1, `${vp.tag}: a következő terhelés összege egyszer látható (mért: ${seen.renewal})`);
         check(seen.paidRow === 0, `${vp.tag}: nincs megismételt „Most fizetett” sor`);
 
+        // (b3) THE PREVIEW MUST NOT CROP. A fixed box height cut the hero mid-
+        //      sentence (owner, 2026-09-20: „nagyon le van vágva"); the box now
+        //      takes the SHOT's own aspect, so the two cannot drift apart. The
+        //      tolerance is 2% — enough for sub-pixel rounding, not for a
+        //      re-introduced magic number.
+        const shotBox = await page.evaluate(`(() => {
+          const el = document.querySelector(".pd-shot");
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { w: Math.round(r.width), h: Math.round(r.height) };
+        })()`) as { w: number; h: number } | null;
+        if (!shotBox || !shotBox.h) fail(`${vp.tag}: nincs előnézet-doboz a lapon`);
+        else {
+          const ratio = shotBox.w / shotBox.h;
+          const off = Math.abs(ratio - SITE_SHOT_ASPECT) / SITE_SHOT_ASPECT;
+          check(
+            off <= 0.02,
+            `${vp.tag}: az előnézet a KÉP alakját viseli, nem vág le ` +
+              `(${shotBox.w}×${shotBox.h} = ${ratio.toFixed(2)}, kép: ${SITE_SHOT_ASPECT.toFixed(2)})`,
+          );
+        }
+
         // (c) the layout must not leak sideways at any width
         const overflow = await page.evaluate(
           `document.documentElement.scrollWidth - document.documentElement.clientWidth`,
@@ -207,6 +230,17 @@ async function main(): Promise<void> {
         return getComputedStyle(el).color;
       })()`) as string;
       check(luminance(darkAgain) <= 0.5, `önteszt: sötét címsorra a mérés BUKIK (visszarontva: ${darkAgain})`);
+      const cropped = await page.evaluate(`(() => {
+        const el = document.querySelector(".pd-shot");
+        el.style.aspectRatio = "auto";
+        el.style.height = "230px";
+        const r = el.getBoundingClientRect();
+        return r.width / r.height;
+      })()`) as number;
+      check(
+        Math.abs(cropped - SITE_SHOT_ASPECT) / SITE_SHOT_ASPECT > 0.02,
+        `önteszt: fix magasságú (levágó) előnézetre a mérés BUKIK (visszarontva: ${cropped.toFixed(2)})`,
+      );
       const noRoom = await page.evaluate(`(() => {
         const s = document.querySelector(".pd-split");
         s.style.paddingBottom = "44px";

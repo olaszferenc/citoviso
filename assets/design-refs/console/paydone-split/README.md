@@ -35,6 +35,10 @@ a tulaj a **D**-t választotta.
    - ③ ha az sincs: márka-gradiens + cím.
    ⛔ Soha nem üres, soha nem várakoztatja a vevőt, és soha nem állít olyat, ami nem igaz
    (törött kép helyett a következő szint jön).
+   ⛔ **AZ ELŐNÉZET NEM VÁGHAT LE** (tulajdonosi észrevétel, 2026-09-20: *„itt az előnézet
+   legyen nagyobb, mert így nagyon le van vágva"*): a doboz magasságát a képernyőkép SAJÁT
+   alakja adja (`src/payment/shotSize.ts` — egy forrás a fényképezőnek és a keretnek), nem
+   egy beírt px-érték. A fix 230 px a nyitó mondat közepén vágta el a lapot.
 5. **A cím OBJEKTUM, nem csupasz link:** kiírt cím + „Cím másolása" (valódi vágólap, a gomb
    visszajelez) + „Megnyitom ↗". Hosszú címnél sem törhet szét az elrendezés.
 6. **Az összeg a jobb kártya fejlécében áll**, fölötte a „Sikeres fizetés" pill, alatta egy sor,
