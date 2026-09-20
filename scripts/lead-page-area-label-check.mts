@@ -246,14 +246,23 @@ try {
       subtitle: (document.querySelector("[data-cit-area]")?.textContent ?? "")
         .replace(/\s+/g, " ")
         .trim(),
+      // ⚠️ MÁSODSZOR MOZDULT EL ALATTA A SZERKEZET, ÉS EZ AZ ŐR MEGINT MEGFOGTA
+      // (mock-cards terv, 2026-09-20): az artefaktum-panel `<div class="panel">`-ből
+      // `<article class="con-mk">` csempe lett, tehát a `.panel …` előtag 0 sort talált.
+      // A mérhetőség-állítás helyesen PIROSRA ment. A szelektor MINDKÉT szerkezetet
+      // olvassa: a recept a lead-lapon máshol is megjelenhet, és egy őr, aminek a
+      // hatóköre szűkebb a jelentésnél, üres halmazon mér.
       metaLines: [
-        ...document.querySelectorAll(".panel .small.mut, .panel .con-recipe, .panel .con-rawmeta pre"),
+        ...document.querySelectorAll(
+          ".panel .small.mut, .panel .con-recipe, .panel .con-rawmeta pre," +
+            ".con-mk .small.mut, .con-mk .con-recipe, .con-mk .con-rawmeta pre",
+        ),
       ].map((e) => (e.textContent ?? "").replace(/\s+/g, " ").trim()),
       // Az OPERÁTOR ÁLTAL LÁTOTT megnevezett sorok értékei (a `kulcs=érték` felsorolás
       // utódja). Itt van a mérés helye: a nyers blokk fejlesztői adat, nem operátor-felület.
-      recipeValues: [...document.querySelectorAll(".panel .con-recipe dd")].map((e) =>
-        (e.textContent ?? "").replace(/\s+/g, " ").trim(),
-      ),
+      recipeValues: [
+        ...document.querySelectorAll(".panel .con-recipe dd, .con-mk .con-recipe dd"),
+      ].map((e) => (e.textContent ?? "").replace(/\s+/g, " ").trim()),
       // `textContent`, NEM `innerText`: a nyers alak CSUKOTT `<details>`-ben él, és az
       // innerText a csukott tartalmat elhagyja — a szivárgás-vizsgálat pont ott lenne vak,
       // ahol a nyers mezők laknak.

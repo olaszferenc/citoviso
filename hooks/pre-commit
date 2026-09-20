@@ -1002,6 +1002,17 @@ if [ -f scripts/lead-page-plan-check.mts ] && \
   echo "[pre-commit] lead-page-plan-check (a jóváhagyott lead-lap terv; fül-mondat geometriával)…"
   npx tsx scripts/lead-page-plan-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A MOCK-KÁRTYÁK JÓVÁHAGYOTT TERVE (`assets/design-refs/console/mock-cards/`, 2026-09-20, „A"):
+# a rács oszlopszáma asztalin és 390 px-en, a CSUKOTT kártya mérete a maihoz képest, a
+# kártyánkénti (és nem globális) kinyitás, a pillanatkép négy állapota — és a legfontosabb
+# NEGATÍV állítás: hiányzó képnél NEM születik `<img>` (az Elek FK-004 H1 hibaosztálya).
+# ⚠️ A képet KISZOLGÁLÓ útvonal is trigger (`server.ts`, `heroShot.ts`) és a stíluslap is
+# (a rács oszlopszáma CSS-ből jön, tehát egy stíluslap-szerkesztés is el tudja rontani).
+if [ -f scripts/mock-card-plan-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|server)\.ts$|^src/outreach/heroShot\.ts$|^public/assets/ui/citui-console\.css$|^scripts/mock-card-plan-check\.mts$'; then
+  echo "[pre-commit] mock-card-plan-check (a jóváhagyott mock-kártya terv; a hiányzó kép NEM lesz törött ikon)…"
+  npx tsx scripts/mock-card-plan-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Lead-lap fül-horgony (Elek FK-003b, 2026-09-14): egy művelet utáni visszairányítás ODA
 # vigyen vissza, ahol a gomb volt. A „Mock generálása" horgony nélkül tért vissza, és a
 # fül-JS az ELSŐ fület nyitotta — a kurátort a saját gombnyomása dobta át az „Adatok"-ra.

@@ -1,7 +1,30 @@
 # MEMORY — Citoviso
 Utolsó frissítés: 2026-09-20 (🚀 **ÉLES = MAIN = `4a59e13`**, tag `prod/20260920-0132` — a lead-lista A2 (ADR-0188) és a kiküldési-kapu javítás (ADR-0187) kint van; 14 commit, 0 migráció)
 
-## Aktív feladat (legfrissebb szál, 2026-09-19)
+## Aktív feladat (legfrissebb szál, 2026-09-20)
+
+**🖼️ A MOCK-KÁRTYA A MOCKOT MUTATJA — pillanatkép a nyitóoldalról, harmadakkora kártyán (ADR-0189).**
+Session-jegyzet: `_planning/memory/2026-09-20_mock_cards.md`.
+Kontraktus: `assets/design-refs/console/mock-cards/` (A — kép-vezérelt, tulajdonosi döntés).
+
+- **A kérés:** a lead-lap „Mock és generálás" fülén a mock legyen felül, kártyánként kinyitható,
+  legyen rajta **snapshot a nyitóoldalról**, a kártya a mainak a **harmada**, egy sorba menjenek.
+- **§2b kör:** 3 változat (kép- / adat-vezérelt / sor-igazított subgrid), asztali ÉS mobil képpel,
+  valós adaton → a tulaj **A**-t választotta, **mobilon 1 oszloppal**.
+- ⭐ **A pillanatképet nem kellett megépíteni:** a `heroShot.ts` gyorstára már gyártja — a kurátor
+  **ugyanazt a képet látja, ami a megkeresésbe megy**. Új: `ensureCardJpeg` + három
+  artefaktum-útvonal (`shot.jpg` · `shot-state` · `POST shot`).
+- ⛔ **A két legfontosabb őr-állítás NEGATÍV:** hiányzó képnél SEHOL nincs `<img>`, és a
+  kép-útvonal **csak gyorstár** (mérve: az állapot a GET előtt és után ugyanaz). Ez az Elek
+  FK-004 H1 hibaosztálya — egy `<img>`-kérés nem indíthat 2×30 s Chromiumot.
+- **Mérve:** csukott kártya **403×476 px = a mai 21 %-a** · **3 kártya/sor** asztalin, **1** 390 px-en.
+- ⛔ **Saját hibák:** az őröm a saját locator-feltételétől bukott · a méret-állítás a KINYITOTT
+  kártyát mérte · a kapu-jelvények két sorba törtek a jóváhagyott képpel szemben (**a kódot
+  igazítottam a tervhez, nem fordítva**).
+- 🔴 **NYITOTT:** a pillanatkép ma kimondott kérésre készül; az automatikus legyártás a
+  generáláskor külön döntés (Chromium a generálási úton).
+
+## Előző szál (2026-09-19)
 
 **📋 LEAD-LISTA A2 — minden rekord egy lapon, EGY kérdőjel, egysoros fejléc (ADR-0188).**
 A tulaj a KÉSZ `/leads`-et nézte meg, és hármat kifogásolt: a jelmagyarázat-SÁV, a LAPOZÁS,

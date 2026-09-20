@@ -3431,6 +3431,25 @@ function mockInputLabel(key: string, lang = "hu"): string {
   }
 }
 
+/**
+ * A négy kapu RÖVID neve a mock-kártya jelvény-sorára (mock-cards kontraktus ④).
+ *
+ * ⛔ Nem új szótár egy meglévő helyett: a jelvények fölött a `Kapuk` felirat áll, tehát a
+ * `Tényhűség-kapu` alak ott „kapuk / tényhűség-kapu"-t mondana — és a teljes nevekkel a
+ * négy jelvény KÉT sorba tört, szemben a tulaj által jóváhagyott képpel (a jóváhagyott
+ * vázlat a kontraktus, a rendszer szokása nem írhatja felül). A TELJES név nem vész el:
+ * a jelvény `title`-je a `mockInputLabel` nevét és a verdikt szavát viseli.
+ */
+function gateShortLabel(key: string, lang = "hu"): string {
+  switch (key) {
+    case "factVerdict": return T(lang, "Tényhűség");
+    case "marketVerdict": return T(lang, "Piac");
+    case "designVerdict": return T(lang, "Dizájn");
+    case "heroVerdict": return T(lang, "Nyitókép");
+    default: return mockInputLabel(key, lang);
+  }
+}
+
 /** A kapu-verdiktek értéke is szöveg, nem `pass`/`flag` enum. */
 function mockInputValue(key: string, v: unknown, lang = "hu"): string {
   if (key.endsWith("Verdict")) {
@@ -3448,6 +3467,84 @@ function mockInputValue(key: string, v: unknown, lang = "hu"): string {
     return heroSubjectLabel(v, lang);
   }
   return String(v);
+}
+
+/**
+ * MIÉRT nincs pillanatkép — EGY szótár, két felület.
+ *
+ * ⛔ Ez a mondat-készlet korábban a megkeresés-vázlat lapjába volt beágyazva. A
+ * mock-kártya (mock-cards kontraktus ③) ugyanezeket az okokat mutatja, és ha a
+ * második helyen újraírtam volna, két igazság állna két képernyőn ugyanarról a
+ * hibáról (`feedback_one_rule_two_copies`). Egy szabály, egy példány.
+ */
+export function heroShotFailReason(fail: HeroShotState & { kind: "failed" }, lang: string): string {
+  const f = fail.fail;
+  if (f.code === "no-artifact") {
+    return T(lang, "ehhez a megkereséshez nincs látványterv, amiből kép készülhetne");
+  }
+  if (f.code === "no-mock-file") {
+    return T(lang, "a látványterv fájlja nincs meg a lemezen ({file}) — újragenerálás kell", {
+      file: esc(f.detail),
+    });
+  }
+  if (f.code === "broken-images") {
+    return T(lang, "a látványterv NYITÓKÉPE nem töltődik be, a kép üresen menne ki ({urls})", {
+      urls: esc(f.detail),
+    });
+  }
+  return T(lang, "a kép előállítása hibára futott ({error})", { error: esc(f.detail) });
+}
+
+/**
+ * A MOCK NYITÓOLDALÁNAK PILLANATKÉPE a kurátor-kártyán (mock-cards kontraktus ③).
+ *
+ * Ugyanaz a kép, ami a megkeresésbe megy (`heroShot.ts` gyorstára) — tehát a kurátor
+ * azt látja, amit a lead fog, nem egy másik renderelést.
+ *
+ * ⛔ A doboz NÉGY állapota mind KIMONDJA magát, és `<img>` CSAK `ready` esetén születik.
+ * Egy feltétel nélkül kitett `<img>` a hiányzó képet néma törött-kép ikonná változtatja,
+ * a kurátor pedig vakon dönt — ezt az Elek FK-004 H1 már egyszer megmérte az
+ * MMS-előnézeten. ⛔ És a doboz nem INDÍT renderelést: a Chromium-futás ~40 s, ezért
+ * kimondott kérésre indul (`POST /artifact/:id/shot`).
+ */
+function mockShotBox(
+  artifactId: string,
+  state: HeroShotState,
+  status: string,
+  lang: string,
+  links: string,
+): string {
+  const badge = `<span class="pill ${esc(status)} con-mk__badge">${esc(mockStatusLabel(status, lang))}</span>`;
+  if (state.kind === "ready") {
+    return `<div class="con-mk__shot" data-mk-shot="${esc(artifactId)}" data-shot-state="ready">
+      ${badge}
+      <img src="/artifact/${esc(artifactId)}/shot.jpg" alt="${T(lang, "A mock nyitóképernyője")}" loading="lazy">
+      ${links}</div>`;
+  }
+  if (state.kind === "running") {
+    return `<div class="con-mk__shot is-empty" data-mk-shot="${esc(artifactId)}" data-shot-state="running">
+      ${badge}
+      <span class="con-mk__why">${T(lang, "Pillanatkép készül…")}</span>
+      ${links}</div>`;
+  }
+  // Se kép, se futás: a kártya megmondja, MIÉRT, és felkínálja a kimondott kérést.
+  const ask = `<form method="post" action="/artifact/${esc(artifactId)}/shot">
+      <button class="con-mk__ask" type="submit">${
+        state.kind === "failed" ? T(lang, "Újra") : T(lang, "Kép kérése")
+      }</button></form>`;
+  const why =
+    state.kind === "failed"
+      ? `<b>${T(lang, "Nincs pillanatkép")}</b> ${heroShotFailReason(state, lang)}`
+      : `<b>${T(lang, "Még nem készült pillanatkép")}</b> ${T(
+          lang,
+          "a kép legyártása ~40 másodperc, ezért külön kérésre indul",
+        )}`;
+  return `<div class="con-mk__shot is-empty" data-mk-shot="${esc(artifactId)}" data-shot-state="${
+    state.kind === "failed" ? "failed" : "none"
+  }">
+    ${badge}
+    <span class="con-mk__why">${why}${ask}</span>
+    ${links}</div>`;
 }
 
 /** A kurátori döntés szava magyarul (eddig a nyers `approve`/`reject` enum állt a lapon). */
@@ -3691,6 +3788,16 @@ export function leadPage(
   recopyResult: { ok: boolean; message: string } | null = null,
   /** ADR-0131: a kép-kapu KIÍRT állapota — mit tagadott meg a szerver, és miért. */
   photoGate: PhotoGateView | null = null,
+  /**
+   * mock-cards kontraktus ③: artefaktumonként a NYITÓOLDAL-PILLANATKÉP állapota.
+   *
+   * ⛔ Azért PARAMÉTER és nem itt mért érték: a nézet szinkron, a mérés pedig I/O.
+   * A lényeg viszont nem a függvény alakja, hanem hogy a kártya csak akkor emit
+   * `<img>`-et, ha ELŐBB megkérdeztük, megvan-e a kép — különben a hiányzó kép
+   * néma törött-kép ikonná válik (Elek FK-004 H1). Hiányzó bejegyzés = „még nem
+   * kérte senki", nem „nincs".
+   */
+  shots: ReadonlyMap<string, HeroShotState> = new Map(),
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -3787,8 +3894,29 @@ export function leadPage(
             .filter(([k]) => !META_HIDDEN_KEYS.has(k))
             .filter(([, v]) => v !== null && v !== "" && v !== undefined);
           const rawMeta = scalars.map(([k, v]) => `${esc(k)}=${esc(v)}`).join(" · ");
+          // mock-cards ④: ami a CSUKOTT kártyán már ott áll, az a kinyitott recept-rácsból
+          // kimarad — különben ugyanaz az adat kétszer szerepel egy kártyán. A NYERS blokk
+          // viszont teljes marad: az a fejlesztőé, és ott a hiánytalanság a hasznos.
+          const FRONT_KEYS = new Set([
+            "template", "photos", "heroScore", "heroSubject",
+            "factVerdict", "marketVerdict", "designVerdict", "heroVerdict",
+          ]);
           const namedMeta = scalars
+            .filter(([k]) => !FRONT_KEYS.has(k))
             .map(([k, v]) => `<div><dt>${esc(mockInputLabel(k, lang))}</dt><dd>${esc(mockInputValue(k, v, lang))}</dd></div>`)
+            .join("");
+          // mock-cards ④: a négy kapu egyetlen jelvény-sorban. ⛔ Ha a verdikt NEM
+          // „átment", a szó ki is van írva — egy piros pötty önmagában nem mondja meg,
+          // hogy megjelölve vagy elbukott, és pont ott számít a különbség.
+          const gateChips = (["factVerdict", "marketVerdict", "designVerdict", "heroVerdict"] as const)
+            .filter((k) => typeof a.inputs[k] === "string")
+            .map((k) => {
+              const word = mockInputValue(k, a.inputs[k], lang);
+              const pass = a.inputs[k] === "pass";
+              return `<span class="con-mk__gate" data-verdict="${esc(String(a.inputs[k]))}" title="${esc(
+                `${mockInputLabel(k, lang)}: ${word}`,
+              )}">${esc(gateShortLabel(k, lang))}${pass ? ` ${ic("check", 11)}` : `: ${esc(word)}`}</span>`;
+            })
             .join("");
           // photos=0 used to pass in silence — a mock built on ZERO usable photos
           // (the gate dropped them all) is exactly the missing-data branch that
@@ -3807,91 +3935,128 @@ export function leadPage(
           const tplName = tplId
             ? ((TEMPLATES[tplId]?.label.split(/[—:(]/)[0] ?? tplId).trim() || tplId)
             : "";
-          return `<div class="panel" id="a-${esc(a.id)}">
-            <div class="row">
-              <span class="pill ${esc(a.status)}">${esc(mockStatusLabel(a.status, lang))}</span>
-              ${tplName ? `<span class="pill" title="${esc(tplId)}">${esc(tplName)}</span>` : ""}
-              <span class="mut small">${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
-              ${a.path ? `<a class="small" href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>` : ""}
-              ${a.path ? `<a class="small" href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>` : ""}
+          const photos = typeof a.inputs.photos === "number" ? a.inputs.photos : null;
+          const heroScore = typeof a.inputs.heroScore === "number" ? a.inputs.heroScore : null;
+          const heroSubject =
+            typeof a.inputs.heroSubject === "string" ? heroSubjectLabel(a.inputs.heroSubject, lang) : "";
+          const links = a.path
+            ? `<span class="con-mk__links">
+                 <a href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>
+                 <a href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>
+               </span>`
+            : "";
+          // ⛔ AZ AKTÍV KÉP-KAPU TELJES SORT KAP. A megtagadás doboza megnevezi a hibás
+          // képeket ÉS indoklást kér — mérve, egy harmad-szélességű kártyában 1280 px-en is
+          // egymás alá esett a mező és a gomb (a `mock-photo-gate-check` fogta meg, helyesen).
+          // Nem stílus-részlet: a kártya, ami DÖNTÉST kér, kapja a legtöbb helyet.
+          const gateOpen = !!photoGate && photoGate.artifactId === a.id;
+          return `<article class="con-mk" id="a-${esc(a.id)}" data-mk-state="${esc(a.status)}"${
+            gateOpen ? ' data-mk-gate="1"' : ""
+          }>
+            ${mockShotBox(a.id, shots.get(a.id) ?? { kind: "none" }, a.status, lang, links)}
+            <div class="con-mk__hd">
+              ${tplName ? `<b title="${esc(tplId)}">${esc(tplName)}</b>` : ""}
+              <span class="con-mk__sub">${
+                patternSummary(a.inputs as PatternInputs)
+                  ? `${esc(patternSummary(a.inputs as PatternInputs))} · `
+                  : ""
+              }${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
             </div>
-            ${
-              patternSummary(a.inputs as PatternInputs)
-                ? `<div style="margin-top:8px;font-weight:600">${esc(patternSummary(a.inputs as PatternInputs))}</div>`
-                : ""
-            }
-            ${namedMeta ? `<dl class="con-recipe">${namedMeta}</dl>` : ""}
-            ${
-              rawMeta
-                ? `<details class="con-rawmeta"><summary>${T(lang, "Fejlesztői adatok (nyers)")}</summary><pre>${esc(rawMeta)}</pre></details>`
-                : ""
-            }
+            <dl class="con-mk__facts">
+              ${
+                photos !== null
+                  ? `<div><dt>${esc(mockInputLabel("photos", lang))}</dt><dd>${photos}</dd></div>`
+                  : ""
+              }
+              ${
+                heroScore !== null
+                  ? `<div><dt>${esc(mockInputLabel("heroScore", lang))}</dt><dd>${heroScore}${
+                      heroSubject ? `<span class="con-mk__u">${esc(heroSubject)}</span>` : ""
+                    }</dd></div>`
+                  : ""
+              }
+              ${
+                gateChips
+                  ? `<div class="con-mk__wide"><dt>${T(lang, "Kapuk")}</dt><dd>${gateChips}</dd></div>`
+                  : ""
+              }
+            </dl>
             ${noPhotos}
-            ${renderAiCost(a.inputs.aiUsage)}
-            ${
-              dec
-                ? // ⛔ A DÖNTÉS SZAVA MAGYARUL (jóváhagyott terv ⑧): eddig a nyers `reject`
-                  // enum állt itt. A jegyzetben a `superseded_by:<uuid>` helyett a
-                  // felülíró mock MEGNEVEZÉSE áll — egy uuid nem mond semmit a kurátornak.
-                  `<div class="con-decision">${T(lang, "Döntés:")} <b>${esc(decisionLabel(dec.decision, lang))}</b>
-                   ${dec.notes ? `— ${esc(decisionNote(dec.notes, d.artifacts, lang))}` : ""}
-                   <span class="mut">(${esc(dec.decidedBy)}, ${esc(exactOf(dec.decidedAt))})</span></div>`
-                : ""
-            }
-            ${photoGate && photoGate.artifactId === a.id ? photoGateBox(photoGate, a.id) : ""}
-            ${
-              curated
-                ? ""
-                : `<div class="row" data-photo-gate-row="${esc(a.id)}">
-                   <form method="post" action="/artifact/${esc(a.id)}/curate">
-                     <input type="hidden" name="decision" value="approve">
-                     <button class="ok" type="submit">${T(lang, "Jóváhagyás")}</button></form>
-                   <form method="post" action="/artifact/${esc(a.id)}/curate">
-                     <input type="hidden" name="decision" value="reject">
-                     <button class="bad" type="submit">${T(lang, "Elutasítás")}</button></form>
-                   <span class="pg-pre" data-photo-gate-pre="${esc(a.id)}" hidden></span>
-                 </div>
-                 <script>${photoGatePreScript(d.id, a.id)}</script>`
-            }
-            ${
-              a.status === "approved"
-                ? conversion && conversion.sourceArtifactId === a.id
-                  ? convertedBlock(conversion)
-                  : convertForm(d.id, a.id, convertModules, convertFromOrder)
-                : ""
-            }
-            ${
-              deletable
-                ? // ⛔⛔ MÉRVE 2026-09-14: ez a szöveg `jsStr()` NÉLKÜL ment az egyszeres
-                  // idézőjelbe. A magyar forrásban nincs aposztróf — A FORDÍTÁSBAN VAN:
-                  // `en` „It hasn't been sent yet" · `it` „l'operazione". Mindkét nyelven a
-                  // kezelő SyntaxError lett, tehát a `confirm()` SOHA nem futott le, és a
-                  // jóváhagyott mock törlése MEGERŐSÍTÉS NÉLKÜL ment a szerverre (valódi
-                  // böngészőben mérve: dialógus=0, JS-hiba=1, `defaultPrevented`=false).
-                  // Pontosan az a hibaosztály, amiről a `jsStr()` docstringje és a
-                  // `bookingViews.ts` kommentje is szól. Őr: scripts/dialog-fires-check.mts.
-                  `<form method="post" action="/artifact/${esc(a.id)}/delete" style="margin-top:10px"
-                         onsubmit="return confirm('${esc(
-                           jsStr(
-                             removesPreview
-                               ? T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki. A privát ELŐNÉZET is megszűnik (oldal + hozzáférés). A művelet nem vonható vissza.")
-                               : T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza."),
-                           ),
-                         )}')">
-                     <button class="bad small" type="submit">${T(lang, "Mock törlése")}</button>
-                     <span class="mut small" style="margin-left:8px">${
-                       removesPreview
-                         ? T(lang, "a privát előnézet is törlődik")
-                         : T(lang, "csak ki nem küldött mock törölhető")
-                     }</span>
-                   </form>`
-                : ""
-            }
-          </div>`;
+            ${gateOpen ? photoGateBox(photoGate!, a.id) : ""}
+            <div class="con-mk__act">
+              ${
+                curated
+                  ? dec
+                    ? // ⛔ A DÖNTÉS SZAVA MAGYARUL (lead-page terv ⑧): eddig a nyers `reject`
+                      // enum állt itt. A jegyzetben a `superseded_by:<uuid>` helyett a
+                      // felülíró mock MEGNEVEZÉSE áll — egy uuid nem mond semmit a kurátornak.
+                      `<span class="con-decision">${T(lang, "Döntés:")} <b>${esc(decisionLabel(dec.decision, lang))}</b>
+                       ${dec.notes ? `— ${esc(decisionNote(dec.notes, d.artifacts, lang))}` : ""}
+                       <span class="mut">(${esc(dec.decidedBy)}, ${esc(exactOf(dec.decidedAt))})</span></span>`
+                    : ""
+                  : `<span class="con-mk__decide" data-photo-gate-row="${esc(a.id)}">
+                       <form method="post" action="/artifact/${esc(a.id)}/curate">
+                         <input type="hidden" name="decision" value="approve">
+                         <button class="ok" type="submit">${T(lang, "Jóváhagyás")}</button></form>
+                       <form method="post" action="/artifact/${esc(a.id)}/curate">
+                         <input type="hidden" name="decision" value="reject">
+                         <button class="bad" type="submit">${T(lang, "Elutasítás")}</button></form>
+                       <span class="pg-pre" data-photo-gate-pre="${esc(a.id)}" hidden></span>
+                     </span>`
+              }
+              <button type="button" class="con-mk__more" data-mk-more="${esc(a.id)}"
+                      aria-expanded="false" aria-controls="det-${esc(a.id)}">${T(lang, "Részletek ▾")}</button>
+            </div>
+            ${curated ? "" : `<script>${photoGatePreScript(d.id, a.id)}</script>`}
+            <div class="con-mk__det" id="det-${esc(a.id)}" hidden>
+              ${namedMeta ? `<dl class="con-recipe">${namedMeta}</dl>` : ""}
+              ${renderAiCost(a.inputs.aiUsage)}
+              ${
+                rawMeta
+                  ? `<details class="con-rawmeta"><summary>${T(lang, "Fejlesztői adatok (nyers)")}</summary><pre>${esc(rawMeta)}</pre></details>`
+                  : ""
+              }
+              ${
+                a.status === "approved"
+                  ? conversion && conversion.sourceArtifactId === a.id
+                    ? convertedBlock(conversion)
+                    : convertForm(d.id, a.id, convertModules, convertFromOrder)
+                  : ""
+              }
+              ${
+                deletable
+                  ? // ⛔⛔ MÉRVE 2026-09-14: ez a szöveg `jsStr()` NÉLKÜL ment az egyszeres
+                    // idézőjelbe. A magyar forrásban nincs aposztróf — A FORDÍTÁSBAN VAN:
+                    // `en` „It hasn't been sent yet" · `it` „l'operazione". Mindkét nyelven a
+                    // kezelő SyntaxError lett, tehát a `confirm()` SOHA nem futott le, és a
+                    // jóváhagyott mock törlése MEGERŐSÍTÉS NÉLKÜL ment a szerverre (valódi
+                    // böngészőben mérve: dialógus=0, JS-hiba=1, `defaultPrevented`=false).
+                    // Pontosan az a hibaosztály, amiről a `jsStr()` docstringje és a
+                    // `bookingViews.ts` kommentje is szól. Őr: scripts/dialog-fires-check.mts.
+                    `<form method="post" action="/artifact/${esc(a.id)}/delete" style="margin-top:10px"
+                           onsubmit="return confirm('${esc(
+                             jsStr(
+                               removesPreview
+                                 ? T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki. A privát ELŐNÉZET is megszűnik (oldal + hozzáférés). A művelet nem vonható vissza.")
+                                 : T(lang, "Biztosan törlöd ezt a jóváhagyott mockot? Még nem küldtük ki, a művelet nem vonható vissza."),
+                             ),
+                           )}')">
+                       <button class="bad small" type="submit">${T(lang, "Mock törlése")}</button>
+                       <span class="mut small" style="margin-left:8px">${
+                         removesPreview
+                           ? T(lang, "a privát előnézet is törlődik")
+                           : T(lang, "csak ki nem küldött mock törölhető")
+                       }</span>
+                     </form>`
+                  : ""
+              }
+            </div>
+          </article>`;
   };
 
-  // Split rejected mocks out of the main flow: the active/pending ones stay expanded, the
-  // rejected ones collapse into a single foldable group (keeps the working list clean).
+  // mock-cards ⑥: az elutasított mock a RÁCSBAN marad (halványan, hátul), nem külön
+  // kinyitható csoportban. ⛔ Három 403 px-es kártyánál egy külön blokk több helyet vinne,
+  // mint amennyit spórol — a korábbi `<details>` a teljes szélességű paneleknek szólt.
   const rejected = d.artifacts.filter((a) => a.status === "rejected");
   const active = d.artifacts.filter((a) => a.status !== "rejected");
   // ⚠️ ITT születnek, nem lentebb: az összehasonlító tábla (terv ④) és a munkamenet-sáv
@@ -3902,12 +4067,6 @@ export function leadPage(
   /** A leadhez tartozó JÓVÁHAGYOTT mock (0064 óta legfeljebb egy) — ez dönti el, hogy a
    *  megkeresés kimehet-e, ezért a sáv akkor is kimondja, ha nem ez a legutóbbi. */
   const approvedMock = d.artifacts.find((a) => a.status === "approved");
-  const rejectedBlock = rejected.length
-    ? `<details class="panel" style="margin-top:0">
-         <summary style="cursor:pointer;font-weight:600">${T(lang, "Elutasított mockok ({n}) — kibontás", { n: rejected.length })}</summary>
-         <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px">${rejected.map(renderArtifact).join("")}</div>
-       </details>`
-    : "";
   /**
    * ÖSSZEHASONLÍTÓ MOCK-TÁBLA — jóváhagyott terv ④
    * (`assets/design-refs/console/lead-page/`, tulajdonosi döntés 2026-09-14).
@@ -3974,8 +4133,34 @@ export function leadPage(
          )}</p>
        </div>`
     : "";
+  /**
+   * A KÁRTYA-RÁCS — jóváhagyott terv (`assets/design-refs/console/mock-cards/`, 2026-09-20).
+   *
+   * ⑤ Egy sorban annyi kártya, amennyi fér (asztalin három, 390 px-en egy); ⑥ az elutasított
+   * kártyák halványan, a sor végén. A rendezés az `active` (dátum szerint csökkenő) után
+   * fűzi az elutasítottakat — így a kurátor elé az kerül, amiről dönteni kell.
+   *
+   * A kinyitó-szkript EGY példányban ül a rács mellett (nem kártyánként): eseményt a
+   * dokumentumon fog, így az egyszerre tíz kártyás lead sem kap tíz kezelőt.
+   */
+  const mockGridScript = `(function(){
+    document.addEventListener('click',function(e){
+      var b=e.target.closest('[data-mk-more]'); if(!b) return;
+      var card=b.closest('.con-mk'); if(!card) return;
+      var det=card.querySelector('.con-mk__det'); if(!det) return;
+      var open=card.getAttribute('data-mk-open')==='1';
+      card.setAttribute('data-mk-open',open?'0':'1');
+      det.hidden=open;
+      b.setAttribute('aria-expanded',String(!open));
+      b.textContent=open?'${jsStr(T(lang, "Részletek ▾"))}':'${jsStr(T(lang, "Bezárom ▴"))}';
+    });
+  })();`;
   const artifacts = d.artifacts.length
-    ? `${compareTable}${active.map(renderArtifact).join("")}${rejectedBlock}`
+    ? `${compareTable}
+       <div class="con-mkgrid" data-cit-mockcards="1">${[...active, ...rejected]
+         .map(renderArtifact)
+         .join("")}</div>
+       <script>${mockGridScript}</script>`
     : `<div class="panel"><p class="mut">${T(lang, "Még nincs generált mock ehhez a leadhez.")}</p></div>`;
 
   // IDENTITY BAND — everything the operator must know BEFORE choosing a tab: who is this,
@@ -4970,9 +5155,19 @@ function cpScript(prefix: string): string {
       say: d.artifacts.length
         ? T(lang, "{n} aktív és {r} elutasított mock.", { n: active.length, r: rejected.length })
         : T(lang, "Még nincs mock ezen a leaden — innen indíthatod a generálást."),
-      body: `${copyPanel}${sourcePanel}${generatePanel}
-        <h2 id="mock-artifacts" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}${d.artifacts.length ? ` (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})` : ""}</h2>
-        ${artifacts}`,
+      // mock-cards ①: HA VAN MOCK, AZ A FÜL ELSŐ ELEME — a másoló/forrás/generáló panel
+      // alá csúszik, csukottan. ⛔ Mock NÉLKÜLI leaden fordítva: ott a generáló-panel nyitva
+      // áll és ő van elöl, mert egy üres rács nem lehet a lap első mondata.
+      body: d.artifacts.length
+        ? `<h2 id="mock-artifacts" data-cit-mocksfirst="1" style="margin:2px 4px 10px">${T(lang, "Mock-artefaktumok")} (${T(lang, "{n} aktív", { n: active.length })}${rejected.length ? ` · ${T(lang, "{n} elutasított", { n: rejected.length })}` : ""})</h2>
+           ${artifacts}
+           <details class="panel con-mkgen" style="margin-top:14px">
+             <summary style="cursor:pointer;font-weight:600">${T(lang, "Új mock generálása, forrás és szöveg-újraírás")}</summary>
+             <div style="margin-top:12px">${copyPanel}${sourcePanel}${generatePanel}</div>
+           </details>`
+        : `<div class="con-mkgen">${copyPanel}${sourcePanel}${generatePanel}</div>
+           <h2 id="mock-artifacts" data-cit-mocksfirst="0" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}</h2>
+           ${artifacts}`,
     },
     {
       id: "ls-outreach",
@@ -5675,22 +5870,9 @@ export function outreachDraftPage(
   // thing missing was saying it BEFORE the click. No image → no pair, stated.
   const preview: HeroShotState = channel?.mmsPreview ?? { kind: "none" };
   const previewReady = preview.kind === "ready";
-  const previewReason =
-    preview.kind !== "failed"
-      ? ""
-      : preview.fail.code === "no-artifact"
-        ? T(lang, "ehhez a megkereséshez nincs látványterv, amiből kép készülhetne")
-        : preview.fail.code === "no-mock-file"
-          ? T(lang, "a látványterv fájlja nincs meg a lemezen ({file}) — újragenerálás kell", {
-              file: esc(preview.fail.detail),
-            })
-          : preview.fail.code === "broken-images"
-            ? T(lang, "a látványterv NYITÓKÉPE nem töltődik be, a kép üresen menne ki ({urls})", {
-                urls: esc(preview.fail.detail),
-              })
-            : T(lang, "a kép előállítása hibára futott ({error})", {
-                error: esc(preview.fail.detail),
-              });
+  // Ugyanaz a szótár, amit a mock-kártya is használ (heroShotFailReason) — a hiba
+  // oka nem lehet két különböző mondat két képernyőn.
+  const previewReason = preview.kind === "failed" ? heroShotFailReason(preview, lang) : "";
   /** Why the pair cannot start — stated on the button itself, not in a banner. */
   const pairBlocked = !channel?.phone
     ? T(lang, " (nincs szám)")

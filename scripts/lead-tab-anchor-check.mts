@@ -129,10 +129,24 @@ ok(
 );
 // A horgony ne mutasson nem létező fülre: amit kiír, azt a lap ismerje. (Az aliasokat a
 // fül-kapcsoló `ALIAS` táblája ismeri; `a-<uuid>` = egy konkrét artefaktum-kártya.)
+//
+// ⚠️ Az `a-` prefix azért ELFOGADOTT, mert a viselkedés MÉRVE van, nem mert kényelmes:
+// a fül-kapcsoló a panelen BELÜLI horgonyra is vált (`views.ts`: `el.closest('.con-tabp')`),
+// tehát egy kártya-horgony NEM hagyja a kurátort rejtett fülön. A mérés:
+// `scripts/mock-card-plan-check.mts` ⑧ — „a kártya-horgony a MOCK-fülre vált" + „a
+// megcélzott kártya LÁTSZIK". Ha az a két állítás valaha pirosra vált, ez a kivétel is
+// elveszti az alapját. ⛔ A kivétel PREFIX-re szól (`a-<uuid>`), nem minden ismeretlenre.
 const ALIASES = ["mock-artifacts", "prospects", "ls-generate"];
+/** A panelen belüli, a fül-kapcsoló által feloldott horgony-prefixek. */
+const IN_PANE_PREFIXES = ["a-"];
 const unknownAnchor = targets
   .flatMap((t) => [...t.matchAll(/#([a-z0-9-]+)/g)].map((m) => m[1]!))
-  .filter((h) => !tabIds.includes(h) && !ALIASES.includes(h));
+  .filter(
+    (h) =>
+      !tabIds.includes(h) &&
+      !ALIASES.includes(h) &&
+      !IN_PANE_PREFIXES.some((p) => h === p || h.startsWith(p)),
+  );
 ok("② a kiírt horgony létező fülre (vagy ismert aliasra) mutat", unknownAnchor.length === 0, unknownAnchor.join(" · "));
 
 if (SELF_TEST) {

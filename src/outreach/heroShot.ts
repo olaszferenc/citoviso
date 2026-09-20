@@ -11,6 +11,7 @@
 import { access, mkdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
+import sharp from "sharp";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
@@ -135,6 +136,26 @@ export async function ensureHeroShotDetailed(artifactId: string): Promise<HeroSh
 /** Path-only wrapper — the mail path treats a missing shot as "mail without image". */
 export async function ensureHeroShot(artifactId: string): Promise<string | null> {
   return (await ensureHeroShotDetailed(artifactId)).path;
+}
+
+/**
+ * Card-sized JPEG of an ALREADY CACHED hero shot (mock-cards contract ③).
+ *
+ * The operator grid puts three of these on one screen and the source PNG is
+ * ~150–250 kB each; at card width (403 px, 2× for retina) a 720 px JPEG carries
+ * the same information for a tenth of the bytes. Derived NEXT TO the PNG and
+ * keyed by it, so the mock-file mtime in the PNG's name cache-busts this too —
+ * a re-generated mock can never keep showing the previous picture.
+ *
+ * ⛔ Never renders: it converts an existing file or throws. The render decision
+ * belongs to heroShotState/startHeroShot (Elek FK-004 H1 — an <img> request must
+ * not be able to launch a 2×30 s Chromium).
+ */
+export async function ensureCardJpeg(pngPath: string): Promise<string> {
+  const out = `${pngPath.replace(/\.[a-z]+$/i, "")}.card.jpg`;
+  if (await fileExists(out)) return out;
+  await sharp(pngPath).resize({ width: 720, withoutEnlargement: true }).jpeg({ quality: 74 }).toFile(out);
+  return out;
 }
 
 async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {

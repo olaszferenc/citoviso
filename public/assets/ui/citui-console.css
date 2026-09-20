@@ -2045,6 +2045,127 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   padding: 9px 12px; margin-top: 8px;
 }
 
+/* ═══ MOCK-KÁRTYÁK — jóváhagyott terv: assets/design-refs/console/mock-cards/ ═══
+   (A — kép-vezérelt csempe, tulajdonosi döntés 2026-09-20)
+
+   ⛔ MIÉRT: a mockok teljes szélességű, MÉRT 1529×586 px-es panelekként álltak egymás
+   alatt, tizennyolc mezős recept-ráccsal, és a mock LÁTVÁNYA sehol nem jelent meg —
+   pedig a kurátor pont azt ítéli meg. A csukott kártya most 403×476 px (a mai 21 %-a),
+   háromasával egy sorban, a tetején a generált nyitóoldal pillanatképével. */
+.con .con-mkgrid { display: grid; gap: 12px; grid-template-columns: 1fr; margin-top: 2px; }
+@media (min-width: 700px)  { .con .con-mkgrid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1040px) { .con .con-mkgrid { grid-template-columns: repeat(3, 1fr); } }
+
+.con .con-mk {
+  background: var(--citui-white); border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.con .con-mk[data-mk-state="approved"] {
+  border-color: color-mix(in srgb, var(--citui-ok) 45%, var(--citui-line));
+}
+/* ⑥ Az elutasított kártya a rácsban marad, halványan — a jelvénye mondja ki, mi történt. */
+.con .con-mk[data-mk-state="rejected"] { opacity: 0.62; }
+.con .con-mk[data-mk-state="rejected"]:hover,
+.con .con-mk[data-mk-state="rejected"]:focus-within { opacity: 1; }
+/* Az AKTÍV kép-kapu kártyája TELJES SORT kap: a megtagadás megnevezi a hibás képeket
+   és INDOKLÁST kér — az a szöveg és az az űrlap nem fér egy harmad-szélességű kártyába
+   (mérve: 1280 px-en is egymás alá esett a mező és a gomb). A pillanatkép ilyenkor nem
+   nőhet 16:9-ben a teljes szélességre, ezért kap magasság-plafont. */
+.con .con-mk[data-mk-gate="1"] { grid-column: 1 / -1; }
+.con .con-mk[data-mk-gate="1"] .con-mk__shot { max-height: 280px; }
+.con .con-mk[data-mk-open="1"] {
+  border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--citui-cyan-500) 14%, transparent);
+}
+
+/* ③ PILLANATKÉP. A `ready` doboz FIX 16:9 (a rács így egyenletes); a beszédes
+   állapotoké viszont csak MINIMUM magasság — egy befagyasztott magasságba kényszerített
+   indok kifolyik a doboz alól, rá a linkekre (mérve a terv első körében). */
+.con .con-mk__shot {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  background: var(--citui-surface-2); border-bottom: 1px solid var(--citui-line);
+}
+.con .con-mk__shot img {
+  display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center;
+}
+.con .con-mk__shot.is-empty {
+  aspect-ratio: auto; min-height: 120px; display: flex; align-items: center;
+  justify-content: center; text-align: center; padding: 32px 12px 44px;
+  background: repeating-linear-gradient(45deg,
+    var(--citui-surface-2) 0 10px, var(--citui-white) 10px 20px);
+}
+.con .con-mk__why {
+  font-size: 11.5px; line-height: 1.45; color: var(--citui-warn-ink); max-width: 36ch;
+  overflow-wrap: anywhere;
+}
+.con .con-mk__why b { display: block; color: var(--citui-ink); font-size: 12px; margin-bottom: 3px; }
+.con .con-mk__ask {
+  display: block; margin: 8px auto 0; font: 600 11.5px/1 var(--citui-font-text);
+  padding: 7px 12px; border-radius: var(--citui-radius-pill);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  color: var(--citui-ink); cursor: pointer;
+}
+.con .con-mk__badge { position: absolute; top: 8px; left: 8px; z-index: 2; }
+/* ⑦ A két MEGLÉVŐ link a képen ül — a felirataik változatlanok (az Elek-forgatókönyv
+   és a KB szó szerint idézi őket). */
+.con .con-mk__links { position: absolute; right: 7px; bottom: 7px; z-index: 2; display: flex; gap: 5px; }
+.con .con-mk__links a {
+  font-size: 11px; font-weight: 600; text-decoration: none; color: var(--citui-white);
+  background: color-mix(in srgb, var(--citui-navy-950) 84%, transparent);
+  padding: 5px 9px; border-radius: var(--citui-radius-pill);
+}
+.con .con-mk__links a:hover { background: var(--citui-navy-900); color: var(--citui-white); }
+
+.con .con-mk__hd { padding: 9px 11px 0; }
+.con .con-mk__hd b {
+  font-family: var(--citui-font-display); font-size: 0.92rem; display: block; line-height: 1.25;
+}
+.con .con-mk__sub { display: block; font-size: 11px; color: var(--citui-muted); margin-top: 2px; }
+
+/* ④ A CSUKOTT KÁRTYÁN csak az áll, ami a mockok között KÜLÖNBÖZIK. */
+.con .con-mk__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 8px 11px 10px; margin: 0; }
+.con .con-mk__facts > div { min-width: 0; }
+.con .con-mk__facts .con-mk__wide { grid-column: 1 / -1; }
+.con .con-mk__facts dt {
+  font-size: 9.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--citui-muted);
+}
+.con .con-mk__facts dd { margin: 1px 0 0; font-weight: 700; font-size: 13px; line-height: 1.25; }
+.con .con-mk__u { display: block; font-weight: 400; font-size: 11px; color: var(--citui-muted); }
+.con .con-mk__gate {
+  display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 600;
+  padding: 2px 7px; border-radius: var(--citui-radius-pill); margin: 0 3px 3px 0;
+  background: var(--citui-ok-soft); color: var(--citui-ok-ink);
+}
+.con .con-mk__gate[data-verdict="flag"] {
+  background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-white)); color: var(--citui-warn-ink);
+}
+.con .con-mk__gate[data-verdict="fail"] {
+  background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-white)); color: var(--citui-bad-ink);
+}
+
+.con .con-mk__act {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 8px 10px;
+  border-top: 1px solid var(--citui-line); background: var(--citui-surface); margin-top: auto;
+}
+.con .con-mk__decide { display: contents; }
+.con .con-mk__act button { font-size: 12px; padding: 8px 12px; }
+.con .con-mk__more { margin-left: auto; }
+.con .con-mk__act .con-decision {
+  margin: 0; padding: 0; background: none; font-size: 11.5px; line-height: 1.35; flex: 1; min-width: 0;
+}
+
+/* ② A KINYITOTT RÉSZ — ide költözött minden, ami a csukott kártyáról lekerült.
+   Semmi nem tűnt el: a recept többi mezője, az AI-költség, a nyers adat, és a
+   jóváhagyott mock műveletei (konvertálás, törlés) mind itt élnek tovább. */
+.con .con-mk__det {
+  border-top: 1px solid var(--citui-line); padding: 10px 12px; background: var(--citui-surface);
+}
+.con .con-mk__det[hidden] { display: none; }
+.con .con-mk__det .con-recipe { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-top: 0; }
+.con .con-mkgen summary { color: var(--citui-ink); }
+
 /* ⑥ ÖSSZEADÓDÓ SÁV — a három szakasz kiadja a nevezőt. */
 .con .cp-sum { margin: 10px 0 4px; }
 .con .cp-bar {

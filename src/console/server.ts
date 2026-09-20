@@ -131,6 +131,7 @@ import {
 } from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import {
+  ensureCardJpeg,
   ensureHeroShot,
   heroShotState,
   startHeroShot,
@@ -1859,7 +1860,18 @@ async function handle(
         new Set([...recopying.keys()].filter((aid) => recopyInFlight(aid))),
         // Outcome of the last finished rewrite (success or the REASON it failed).
         latestArtifactId ? lastRecopyOutcome(latestArtifactId) : null,
-        photoGate),
+        photoGate,
+        // mock-cards ③: a pillanatkép állapota artefaktumonként. A mérés itt történik,
+        // nem a nézetben — a `leadPage` szinkron marad, és a lap SOHA nem tesz ki
+        // <img>-et olyan képre, amiről nem kérdeztük meg, hogy megvan-e. Olcsó:
+        // artefaktumonként egy DB-sor + két stat(), se böngésző, se hálózat.
+        new Map(
+          await Promise.all(
+            d.artifacts.map(
+              async (a): Promise<[string, HeroShotState]> => [a.id, await heroShotState(a.id)],
+            ),
+          ),
+        )),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -2129,6 +2141,59 @@ async function handle(
     await deleteArtifact(delMatch[1]);
     const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
     return redirect(res, `${back}#mock-artifacts`);
+  }
+  // ── A MOCK-KÁRTYA PILLANATKÉPE (mock-cards kontraktus ③) ────────────────────
+  //
+  // GET /artifact/:id/shot.jpg — a kártyára méretezett kép. ⛔ CSAK GYORSTÁR, soha
+  // nem renderel: ugyanaz a szabály, ami az MMS-előnézetnél már ki lett fizetve
+  // (Elek FK-004 H1) — egy <img>-kérés nem indíthat 2×30 s Chromiumot, és ha mégis
+  // 404-et ad, az azt jelenti, hogy a LAP volt elavult, nem azt, hogy a felület
+  // hazudik. A lap ezért `heroShotState()`-et kérdez ELŐSZÖR, és csak `ready`
+  // állapotban tesz ki <img>-et.
+  const artShotMatch = /^\/artifact\/([0-9a-f-]{36})\/shot\.jpg$/i.exec(path);
+  if (method === "GET" && artShotMatch) {
+    const state = await heroShotState(artShotMatch[1]!);
+    if (state.kind !== "ready") {
+      return send(res, 404, "nincs pillanatkép (a lap állapota elavult)", "text/plain; charset=utf-8");
+    }
+    try {
+      const buf = await readFile(await ensureCardJpeg(state.path));
+      res.writeHead(200, {
+        "Content-Type": "image/jpeg",
+        "Content-Length": buf.length,
+        // A fájlnév tartalmazza a mock mtime-ját, tehát az URL tartalom-címzett:
+        // új mock → új URL. Ezért a hosszú cache biztonságos.
+        "Cache-Control": "private, max-age=86400",
+      });
+      res.end(buf);
+    } catch (e) {
+      console.error(`[artifact-shot] ${artShotMatch[1]}: ${(e as Error).message}`);
+      send(res, 500, "a pillanatkép átalakítása hibázott", "text/plain; charset=utf-8");
+    }
+    return;
+  }
+  // GET /artifact/:id/shot-state — a kép állapota JSON-ban, hogy a futó renderelést
+  // a kártya teljes lap-újratöltés nélkül tudja követni.
+  const artShotStateMatch = /^\/artifact\/([0-9a-f-]{36})\/shot-state$/i.exec(path);
+  if (method === "GET" && artShotStateMatch) {
+    const state = await heroShotState(artShotStateMatch[1]!);
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ kind: state.kind }));
+    return;
+  }
+  // POST /artifact/:id/shot — a kurátor KIMONDOTT kérése a képre (első legyártás vagy
+  // újrapróba). Azért külön kattintás, mert egy bukott renderelés ~40 s Chromium, és
+  // nem ismétlődhet minden lapmegtekintésnél.
+  const artShotAskMatch = /^\/artifact\/([0-9a-f-]{36})\/shot$/i.exec(path);
+  if (method === "POST" && artShotAskMatch) {
+    const artifactId = artShotAskMatch[1]!;
+    startHeroShot(artifactId);
+    const a = await db
+      .selectFrom("mock_artifact")
+      .select("lead_id")
+      .where("id", "=", artifactId)
+      .executeTakeFirst();
+    return redirect(res, a ? `/lead/${a.lead_id}#a-${artifactId}` : "/");
   }
   // GET /mock/:artifactId
   const mockMatch = /^\/mock\/([0-9a-f-]{36})$/i.exec(path);
