@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-20 (🚀 **ÉLES = MAIN = `4a59e13`**, tag `prod/20260920-0132` — a lead-lista A2 (ADR-0188) és a kiküldési-kapu javítás (ADR-0187) kint van; 14 commit, 0 migráció)
+Utolsó frissítés: 2026-09-20 (🚀 **ÉLES = `91b856d`**, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-20)
 
@@ -98,6 +98,30 @@ előnézethez **screenshot + kétszintű tartalék**-kal. Terv befagyasztva:
 - **Kapuk:** `paydone-split-check` zöld, **önteszttel** (a két mért hibát visszarontva piros) ·
   tsc · i18n-lint + katalógus · design-token-lint · guard-wiring (az őr bekötve).
 - ⚠️ **Élesítés NEM történt** — az külön, kimondott utasítás (§0.3).
+
+## Párhuzamos szál (2026-09-20) — a fizetés-visszaigazoló (ADR-0190) 🚀 ÉLESBEN
+
+**💳 A /pay/done A VEVŐ LAPJA LETT.** A tulaj az éles lapról: *„a kinézete miatt nem
+bizalomgerjesztő… gagyin néz ki"*. §2b kör **négy** tervvel → a tulaj a **D**-t (prémium
+sötét/split) választotta, az előnézethez **screenshot + kétszintű tartalék**-kal. Terv
+befagyasztva: `assets/design-refs/console/paydone-split/`. Jegyzet:
+`_planning/memory/2026-09-20_paydone_premium_split.md`.
+
+- **Szállítva:** `layout(shell:"bare")` (saját sötét lap — a konzol shellje nem írhatja felül a
+  jóváhagyott tervet) · kéthasáb/egy oszlop · pecsét · böngésző-keretes előnézet + másolható cím ·
+  `siteShot.ts` (aktiváláskor előre gyártott kép, cache = tenant + snapshot mtime) + `/pay/preview`
+  a vevőnek · `tenantCoverPhoto()` a ② szinthez · a kötelezettség-sorok hiánytalanul.
+- ⛔ **Öt saját lelet, egyik sem látszott a forráson:** `order_intent.tenant_id` **NULL az első
+  vásárlásnál** · navy-on-navy címsor (a citui.css `h1`-szabálya) · a süti-sáv **rátakart az
+  egyetlen CTA-ra** · hero nélküli screenshot (CSS-háttér) · a saját őröm hamis PIROSA.
+- ⛔ **A KB-kapu NYOLC kört futott, és a nyolcból hatot a saját javításom termelt** — a súgó
+  minden kapu BELSŐ logikáját le akarta tanítani; a megoldás a szűkítés lett („a jelvény nem az
+  utolsó szó"). Két termék-lelet: a nem ítélhető kapu **zölden** áll meg · a `demoFraming`
+  kapunak **nem volt neve** a konzolon (megkapta).
+- ⚠️ **Egy párhuzamos szál ugyanezt a KB-javítást írta meg, és ő élesített** — az ő szövege a
+  bázis, az enyémből csak az egyedi rész ment fel (`c8f2eb9`).
+- **Kapuk:** `paydone-split-check` (önteszttel) · `pay-exit-truth` · `consent-style` ·
+  `checkout-viewport` · `verdict-gate-check` · i18n · design-token · kb-check.
 
 ## Előzmény — 2026-09-19 (kiküldési szándék / piszkozat-sáv)
 

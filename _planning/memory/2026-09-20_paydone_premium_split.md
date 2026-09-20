@@ -69,10 +69,44 @@ duplikáció), a két mért hibára **negatív kontrollal** (visszarontva pirosr
 i18n-lint + katalógus · design-token-lint (a lap minden színe tokenből jön; a CSS
 szándékosan **inline**, mert a fizetés utáni másodpercben nem függhet CDN-cache-től).
 
+## 🚀 ÉLESÍTVE — és a KB-kapu nyolc köre
+
+A tulaj engedélyt adott (`mehet élesre`). A deploy-kapu azonban **KB-verdiktet követelt** a
+`4a59e13..99ec180` tartományra, és a `tudasbazis-or` **FLAG**-elt: két szócikk valótlant
+állított a felületről. ⛔ **Egyik sem a fizetés-visszaigazolóé** — a vevői lap indokoltan marad
+saját entry nélkül, és az őt IDÉZŐ entryk (admin-modules, admin-multilang) tételesen állnak.
+A leletek a MÁSIK két szál munkájához tartoztak (mock-kártyák, ADR-0191), de a verzió mindkettőt
+vitte, tehát nekem kellett rendbe tennem.
+
+**A kör mérete: nyolc verdikt, és a nyolcból HATOT a saját javításom termelt.** A minta:
+a szakasz, amit írtam, minden gépi kapu BELSŐ logikáját le akarta tanítani, ezért minden mondat
+egy külön alrendszer pontos ismeretét kérte — és mindig maradt egy, amit a kapu NEVÉBŐL
+következtettem. Mért félrevezetések: „Piacok menü" (nincs ilyen; a jogi csomag a Beállítások
+lapon) · „másoló-panel" (kód-belső név, a képernyőn „A mock szövege") · „piros = bukott"
+(egyik kapu sem ad `fail`-t) · „az indoklás kötelező" (a felugróban NEM az) · „öt kapu"
+(a Nyitókép sosem blokkol). **A megoldás a szűkítés volt:** a súgó ma azt mondja, ami biztosan
+igaz és a kurátornak számít — *„a jelvény nem az utolsó szó — a küldésnél derül ki, mi állít
+meg"* —, a részletes leletet a felugró mondja meg.
+
+**Két valódi termék-lelet a körökből:**
+- a nem ítélhető kapu (`error`) **ZÖLDEN** jelenik meg, pedig megállítja a küldést (a
+  `mockInputValue` csak `pass/flag/fail`-t fordít, a CSS-nek nincs `error` szabálya) — a súgó
+  ezt kimondja, a **kód javítása nyitott tétel**;
+- a `demoFraming` kapu megállítja a küldést, de a konzolnak **nem volt rá neve** — a felugró
+  olyan kaput nevezett meg, amit az operátor sehol nem látott. Megkapta (`mockInputLabel`).
+
+**⚠️ És közben egy PÁRHUZAMOS SZÁL ugyanezt a KB-javítást írta meg — az övé landolt előbb, és
+ő élesített.** Az éles `91b856d` (tag `prod/20260920-2138`) — ez **tartalmazza a fizetés-
+visszaigazolót is**, mert a verzió megy ki, nem válogatás (ADR-0053). A duplikátumot eldobtam;
+a záró commit (`c8f2eb9`) CSAK azt viszi, ami nála nincs: a kapu-jelvény szakasz, a
+`demoFraming` konzol-címke és a kb-shot animáció/időzítő-némítása.
+
 ## Nyitott
 
 - A ① szintű screenshot ezen a dev-adaton nem áll elő, mert az élő lap hero-fotója portál-URL
   és 404 — friss begyűjtés vagy tulaj-fotó után jön meg magától.
 - A `!paid` (elutasított) lap változatlan: annak saját jóváhagyott terve van
   (`design-refs/console/pay-gateway-exit/`).
-- Élesítés nem történt — ez külön, kimondott utasítás (§0.3).
+- **KÓD-tétel:** a nem ítélhető (`error`) kapu zöld jelvénye + a `staleFile` ág, ahol a sáv
+  „a megerősítéssel kimegy"-et ígér, de a felugró sosem jön (a `verdictsNeedingConfirm`
+  kizárja) — a kurátor piros sávot kap kiút nélkül.
