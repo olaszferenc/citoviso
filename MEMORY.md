@@ -76,9 +76,16 @@ read-only ágens; a leltár határozta meg a séma alakját, nem fordítva.
   **3 szobakártyát mutat**; 33 artifactból **0**-ban van valódi szobalista, a látható kártyaszám
   **hamis proxy**).
 - **Séma: nincs DB-tábla** — `ModuleRequirement {id, when, strength, why}` a `ModuleDef`-en.
-- **Visszafelé kompatibilitás mérve: 0 sértő tenant, 0 sértő rendelés** (dev). ⛔ Az **ÉLES DB-t
-  nem mértem**. A kockázat **három sodródás**: megújítás-sweep · egység-törlés · a modul-eladás
-  kapcsoló tranzitív hatása.
+- **Visszafelé kompatibilitás mérve: 0 sértő tenant, 0 sértő rendelés** — dev **ÉS ÉLES** (2026-09-21,
+  csak `SELECT`, `READ ONLY`; éles: 2 tenant / 25 jogosultság). A kockázat **három sodródás**:
+  megújítás-sweep · egység-törlés · a modul-eladás kapcsoló tranzitív hatása.
+- ⛔⛔ **AMIT NEM KERESTEM: az ADR-0072 invariáns ÉLESEN SÉRÜL** (ADR-0192 ⑦b). A `paidModuleIds()`
+  pontos lekérdezését replikálva: Ferenc Ház **13 aktív / 8 kifizetett** (a különbözet
+  `booking,email,hours,newsletter,poi` = 2 650 Ft/hó), Nyugalom **12 / 0**. A bizonyíték pontos: az
+  egyetlen `paid` fizetés 75 300 Ft = (3 900 + 3 630) × 10 hónap, épp a rendelés 8 moduljára.
+  ⚠️ Mérséklő: a fizetés `gateway='mock'` (**nincs valódi vevő-pénz**), az eltérés a **vevő javára**
+  szól, a Nyugalomnak pedig nincs `subscription` sora (demó). **Külön munkát kér** — se nem a
+  függőségi rend, se nem az ADR-0193 tárgya.
 - A tartós tudás a **`_planning/DOMAIN/05-MODULES.md`**-be is bekerült (**72 napja** nem mozdult),
   és ott **kimondva**, hogy a Szint 0–1 tábla GENERÁTOR-nézet, ami **eltér** a `MODULE_CATALOG`-tól
   (`contact_details` **nem létezik**; `email`/`multilang` hiányzik; `newsletter` retired).
@@ -88,7 +95,9 @@ read-only ágens; a leltár határozta meg a séma alakját, nem fordítva.
   ár-kaput és a kupon-kerekítést viszi. ⚠️ A kettő **ugyanabba a kliens-JS blokkba** nyúl
   (`adminViews.ts` ~1490-1560); az `arkapu` landol előbb, **az ő szövege a bázis**.
 - 🔴 **NYITOTT:** **hat további mért hiba** az ADR-0192 ⑧-ban (a nyolcból kettőt az `arkapu`
-  visz) · az **ÉLES DB** felmérése a megvalósítás előtt · számlázzuk-e a `requires`-sértő modult.
+  vitt, ADR-0193) · **az ADR-0072 éles sérülése** (⑦b) — gazdátlan · számlázzuk-e a `requires`-sértő
+  modult · Ferenc Háznak `booking` jogosultsága van **0 `site_unit` sorral** (a naptárnak nincs
+  egysége), és az élő lapja **két** modul-felületet mutat tizenháromból.
 
 ## Előző szál (2026-09-21) — a számlázó fiók
 

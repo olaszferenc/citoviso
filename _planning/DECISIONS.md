@@ -11436,8 +11436,52 @@ booking-os a `pricing`-et is. A bevezetés **egyetlen meglévő sort sem érinte
 írhatja felül a már kifizetettet") nem kerül veszélybe.
 ⭐ A „2+ egység" verdikt **robusztus a definícióra**: mindkét olvasat (összes egység ≥2 / az
 „egész szállás" nélkül ≥2) **ugyanazt a két site-ot** jelöli többegységesnek.
-⛔ **Az ÉLES adatbázist NEM mértem** — minden szám a devből való; a megvalósítás előtt élesen is
-meg kell nézni (élesi olvasás szabad, §0.4).
+**⭐ AZ ÉLES DB IS MEGMÉRVE** (2026-09-21, tulajdonosi kérésre, kizárólag `SELECT` +
+`SET TRANSACTION READ ONLY`; semmi írás — §0.4). Éles = `91b856d`.
+
+| Mérés | Éles (`citoviso`) | Dev |
+|---|---|---|
+| aktív tenant / aktív jogosultság-sor | **2 / 25** | 5 / 48 |
+| `booking` aktív `pricing` nélkül | **0** | 0 |
+| `pricing` aktív `rooms` nélkül, 2+ egységnél | **0** | 0 |
+| függő lemondás (`cancel_at_period_end`) | **0** | 0 |
+| sértő beküldött rendelés | **0** (mind a 3 `initial`) | 0 |
+
+**A lánc élesen is visszafelé kompatibilis: 0 érintett sor.**
+
+### ⑦b ⛔⛔ AMIT NEM KERESTEM: AZ ADR-0072 INVARIÁNS ÉLESEN SÉRÜL
+
+Ugyanaz a mérés kidobott egy **másik** leletet. A `paidModuleIds()` **pontos** lekérdezését
+replikáltam — mindkét lábbal (tenanthez kötött rendelés **és** a `prospect → lead` láb,
+`src/tenant/paidEntitlements.ts:40-72`):
+
+| Tenant | aktív modul | **kifizetett** | aktív, de NEM fizetett |
+|---|---|---|---|
+| Ferenc Ház | 13 | **8** | `booking, email, hours, newsletter, poi` (2 650 Ft/hó) |
+| Nyugalom Vendégház | 12 | **0** | mind a 12 |
+
+**A bizonyíték hajszálpontosan kijön:** az egyetlen `paid` fizetés **75 300 Ft**, éves — és a hozzá
+tartozó rendelés 8 modulja (`gallery, rooms, amenities, pricing, enquiry, location, usp, reviews`)
+= 3 630 Ft/hó + 3 900 alapdíj = 7 530 × 10 hónap = **75 300**. A másik öt modul soha nem lett
+kifizetve. Az ADR-0072 szövege (`:3196`) — *„az aktív modul-entitlement = a kifizetett rendelések
+uniója, amint a site élesedik vagy már élő"* — élesen **nem áll**; a `syncEntitlementsToPaid`
+láthatóan nem fut az élő úton.
+
+⚠️ **Három dolog, ami mérsékli, és amit ki kell mondani, hogy a lelet ne legyen nagyobb a
+valóságánál:** a fizetés `gateway='mock'` → **nincs valódi vevő-pénz a rendszerben** · az eltérés
+**a vevő javára** szól (többet birtokol, mint amiért fizetett — senkit nem terhelünk túl) · a
+Nyugalom Vendégháznak **nincs `subscription` sora**, tehát demó, és rá az invariáns feltétele
+(„amint élesedik") vitatható.
+
+**Két járulékos éles tény:** Ferenc Háznak `booking` jogosultsága van **NULLA `site_unit` sorral**
+(az `ensureUnits` nála sosem futott; az élő lapján nincs `data-cit-units`, vagyis a naptárnak nincs
+egysége) · az élő lapja **két** modul-felületet mutat (`booking`, `gallery`) — és nem csak a
+horgonyokat mértem, a tartalmat is: *Szobák* 0, *Árak* 0, *Felszereltség* 0, *Nyitvatartás* 0,
+*Környék* 0 találat, összesen 2 db `<h2>`. ⛔ A mechanizmus (nincs mentett tartalom, és 0 egység
+mellett a `rooms`/`pricing` meg sem születik) **nem bizonyított** — csak a leletet állítom.
+
+⛔ **Ez NEM a függőségi rend tárgya**, és nem is az ADR-0193-é: külön munkát kér, mert egy
+KIMONDOTT invariánst cáfol élesben.
 
 A kockázat tehát nem a múltban van, hanem **három jövőbeli sodródásban**: a megújítás vak
 kikapcsolása (`src/payment/subscription.ts:226-236`), az egység-törlés (`src/tenant/units.ts:227-233`
