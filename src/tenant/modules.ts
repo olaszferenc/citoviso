@@ -61,6 +61,84 @@ export function isBilledModule(m: TenantModule): boolean {
   );
 }
 
+/**
+ * Which `moduleContentFor()` fields actually got content.
+ *
+ * ⛔ A SET OF FIELD NAMES, not the ModuleContent object: importing the editor's type
+ * here would be circular (the editor imports getTenantModules from this file), and
+ * casting the interface to an index signature is the kind of `as unknown as` that
+ * hides a real mismatch. Build it with filledContentFields() below.
+ */
+export type FilledContentFields = ReadonlySet<string>;
+
+/**
+ * The fields a `moduleContentFor()` result actually filled.
+ *
+ * A field is only ever set when the module produced something (`if (items.length)
+ * out.poi = items`), so presence IS the renderer's own "will this show up" answer.
+ * The undefined-filter is belt-and-braces for anyone who later writes a key
+ * unconditionally — an explicitly-undefined key must not read as content.
+ */
+export function filledContentFields(content: object): FilledContentFields {
+  return new Set(
+    Object.entries(content)
+      .filter(([, v]) => v !== undefined)
+      .map(([k]) => k),
+  );
+}
+
+/**
+ * Modules with a REAL empty state, paired with the ModuleContent field that proves it.
+ *
+ * ⛔ THE PAIR IS EXPLICIT ON PURPOSE. Module id and content field happen to match for
+ * all five today, but the mapping is NOT guaranteed: `usp` writes its items into the
+ * template's highlights (weave), so an empty `usp` field does not mean the tenant sees
+ * nothing — which is exactly why usp is NOT on this list. Deriving the field from the
+ * id would have silently added it.
+ *
+ * ⛔ FOUR MODULES ARE DELIBERATELY ABSENT because they always render something, so
+ * "empty" is not a state they can be in and a to-do row would be a false alarm:
+ * `booking` (sample calendar fallback), `location` (renders from geo or the address),
+ * `reviews` (pending block when there are no reviews yet), `enquiry` (spine).
+ * `gallery` is absent too — its content is the photo list, which the Fotók to-do
+ * already covers.
+ */
+const EMPTIABLE_MODULES: ReadonlyArray<readonly [moduleId: string, contentField: string]> = [
+  ["pricing", "pricing"],
+  ["poi", "poi"],
+  ["hours", "hours"],
+  ["amenities", "amenities"],
+  ["rooms", "rooms"],
+];
+
+/**
+ * Modules the tenant PAYS for that put nothing on the live page.
+ *
+ * The measured hole (2026-09-21, on the owner's own tenant): three modules were bought
+ * for 14 775 Ft; `booking` had content and rendered, `pricing` and `poi` were empty and
+ * therefore absent from the live HTML entirely — "Árak" and "A környéken" each appeared
+ * 0 times on the published page. Nothing in the admin said so: the Teendők list only
+ * ever spoke about photos, intro text and publication.
+ *
+ * ⛔ THE EMPTINESS TEST IS THE RENDERER'S OWN: we read the very `moduleContentFor()`
+ * output the page is built from, not a second heuristic like "is there a
+ * site_module_config row". A config row can exist with an empty items array, and the
+ * renderer would still show nothing — a guard asking the other question would have
+ * passed while the customer saw a blank.
+ */
+export function paidButEmptyModules(
+  mv: TenantModuleView,
+  filled: FilledContentFields,
+): readonly TenantModule[] {
+  return mv.modules.filter((m) => {
+    const pair = EMPTIABLE_MODULES.find(([id]) => id === m.id);
+    if (!pair) return false;
+    // Billed, not merely active: a superseded or cancelled module is not something
+    // the tenant is paying for right now, so it must not be dunned about.
+    return isBilledModule(m) && !filled.has(pair[1]);
+  });
+}
+
 /** The full catalog with this tenant's active flags + current prices. */
 export async function getTenantModules(tenantId: string): Promise<TenantModuleView> {
   await loadPricing();

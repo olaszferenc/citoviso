@@ -51,6 +51,7 @@ import {
   photosByUnit,
   rerenderTenantSnapshot,
   renderTenantModulePreview,
+  moduleContentFor,
 } from "../tenant/editor.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import {
@@ -65,7 +66,12 @@ import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
-import { getTenantModules, siteRendersModule } from "../tenant/modules.js";
+import {
+  filledContentFields,
+  getTenantModules,
+  paidButEmptyModules,
+  siteRendersModule,
+} from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
@@ -1054,6 +1060,32 @@ async function serveAdmin(
   let subscription: AdminOpts["subscription"] = null;
   if (tab === "modulok") subscription = await getSubscriptionAdmin(session.tenantId, modules);
 
+  // ── „kifizette, de üres" (jóváhagyott terv: paid-empty-a, 2026-09-21) ────────
+  // A modul, amiért FIZET, de a vendégnek semmit nem mutat, saját teendő-sort kap
+  // az Áttekintésen. Mérve ugyanaznap a tulaj saját tenantján: 14 775 Ft-ért vett
+  // három modult, ebből kettő (pricing, poi) üresen maradt, ezért az élő lapról
+  // teljesen hiányzott — és egyetlen képernyő sem szólt róla.
+  //
+  // ⛔ Az ürességet a RENDERELŐ SAJÁT kimenetéből olvassuk (moduleContentFor), nem
+  // egy második heurisztikával: egy `site_module_config` sor létezhet üres tömbbel
+  // is, és akkor a lapon továbbra sincs semmi — a másik kérdést feltevő őr zölden
+  // engedte volna át, miközben a vevő üres szakaszt lát.
+  let paidEmpty: AdminOpts["paidEmpty"] = [];
+  const overviewTab = !tab || tab === "attekintes";
+  if (overviewTab && site?.id) {
+    const moduleContent = await moduleContentFor(session.tenantId, site.id);
+    // ⛔ `.data` — a modul-mezők ott ülnek, a ModuleContent felső szintje csak burkoló
+    // (`{ data, photoCap, units }`). A burkolót átadva a halmaz `data/photoCap/units`
+    // lett volna, vagyis EGYETLEN modul-mező sem szerepelt benne: a predikátum minden
+    // modult üresnek mond — véletlenül helyes eredménnyel az üres tenanton, és HAMIS
+    // riasztással minden kitöltöttön. (Mérve 2026-09-21, a saját első változatomon.)
+    paidEmpty = paidButEmptyModules(modules, filledContentFields(moduleContent.data));
+    // Csak akkor kérdezzük le az előfizetést, ha van mit árazni vele: az ár ugyanazzal
+    // a szabállyal képződik, mint a Modulok fülön (éves fióknál az éves összeg vezet),
+    // hogy ne kerüljön két különböző osztó a tulaj két képernyőjére.
+    if (paidEmpty.length) subscription ??= await getSubscriptionAdmin(session.tenantId, modules);
+  }
+
   let moduleSettingsHtml: string | null = null;
   if (tab === "modulok" && moduleId && site?.id) {
     const active = modules.modules.find((m) => m.id === moduleId && m.active);
@@ -1471,6 +1503,7 @@ async function serveAdmin(
       payError: new URL(req.url ?? "/", "http://x").searchParams.get("payerror") === "1",
       previewToken: site?.preview_token,
       modules,
+      paidEmpty,
       subscription,
       moduleApplied,
       domainSettle,

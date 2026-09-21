@@ -145,6 +145,17 @@ if [ -f scripts/admin-list-labels-check.mts ] && \
   echo "[pre-commit] admin-list-labels (tétel-név · csatorna · túlhaladottság)…"
   npx tsx scripts/admin-list-labels-check.mts
 fi
+# A modul, amiért FIZET, de a vendégnek semmit nem mutat. Mérve a tulaj saját tenantján:
+# 14 775 Ft-ért vett három modult, kettő üresen maradt, ezért az ÉLŐ lapról teljesen
+# hiányzott — és egyetlen képernyő sem szólt róla. Az őr KÉT szinten mér: a predikátumon
+# (a hamis riasztás ugyanolyan kár — négy modul üresen is renderel valamit, azokat
+# dunningolni hazugság lenne) és a RENDERELT soron (név · ár a fiók ütemében · a tétel ·
+# a teendő-mondat · élő href). Piros önteszttel (20 sértés a visszarontott lapon).
+if [ -f scripts/paid-empty-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/server/public\.ts|src/tenant/(modules|editor)\.ts|src/modules\.ts)|^scripts/paid-empty-check'; then
+  echo "[pre-commit] paid-empty (kifizetett, de üres modul)…"
+  npx tsx scripts/paid-empty-check.mts
+fi
 # A kézi terhelés-újrapróba visszajelzése IRÁNYT mondott TETT helyett: négy ág „a fenti
 # gombbal" fordulattal küldött, miközben a gombok mérve ~3 600 bájttal LEJJEBB álltak, a
 # redirect pedig fragmentet sem vitt. ⛔ És a „nincs_kartya" ág olyan gombot nevezett meg,

@@ -697,6 +697,17 @@ async function shoot(
     // ADR-0084: the two document/message tabs need their own fixtures, and the
     // unread badge must show on EVERY capture — it lives in the nav, not the tab.
     ...(tab === "modulok" ? { subscription: sub } : {}),
+    // Az Áttekintés súgója a „kifizette, de üres" teendő-sorról is beszél, ezért a
+    // KÉPNEK tartalmaznia kell egyet — különben a szöveg olyasmit magyaráz, amit a
+    // saját képe nem mutat (ez a hibaosztály vitte el a lapozós súgó-képet is).
+    // Az előfizetés is kell hozzá: a sor a fiók ütemében árazza a modult.
+    // ⚠️ `rooms`, mert a fixtúra-vendégház ÉPP EZT birtokolja (OWNED_IN_SHOT) ÉS
+    // üresíthető. Egy nem-birtokolt modul (pl. poi) üres listát adott volna, és a
+    // kép változatlan maradt volna — mérve: 0 px magasság-növekmény, miközben a
+    // szöveg már a sorról beszélt.
+    ...(tab === "attekintes"
+      ? { subscription: sub, paidEmpty: mods.modules.filter((m) => m.id === "rooms") }
+      : {}),
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
     ...(tab === "fiok" ? { legal: legalFixture } : {}),
@@ -761,7 +772,19 @@ for (const [tab, entryId] of TAB_TO_ENTRY) {
     path.join(ROOT, "kb/entries", entryId, "assets", LANG, "screen.png"),
     undefined,
     undefined,
-    undefined,
+    // ⛔ Az Áttekintés KÁRTYÁT lőjük, nem a viewportot: a „kifizette, de üres" teendő-sor
+    // magasabb a többinél (ár + magyarázat + két gomb), és 390×844-en a fix alsó navigáció
+    // GLIFÁK KÖZEPÉN vágta ketté — a magyarázó mondat és MINDKÉT gomb lemaradt a képről,
+    // miközben a szócikk épp azokon vezeti végig a tulajt (tudásbázis-őr verdikt,
+    // 2026-09-21: „a kép nem mutatja, amit a szöveg magyaráz").
+    // ⚠️ `.adm-card` — MÉRT kompromisszum, nem hanyagság. A 390×844 viewport a
+    // „kifizette, de üres" sort glifák közepén vágta ketté (a magyarázat és mindkét
+    // gomb lemaradt). A befoglaló `.adm-main__inner` visszahozná a lap fejlécét is, de
+    // MÉRVE 2344 px magas — a szkript saját szabálya szerint 2000 px fölött a kép a
+    // telefonos súgóban olvashatatlan. A kártya 1644 px, és a szakasz tárgya — a teljes
+    // teendő-sor — hiánytalanul rajta van; a fejléc „Oldal megtekintése" gombját a
+    // szócikk szövege helyezi el („a lap tetején lévő").
+    entryId === "admin-overview" ? ".adm-card" : undefined,
     undefined,
     // The modules guide is shot on an ANNUAL account so its picture shows the
     // per-module annual conversion and the annual summary it describes.

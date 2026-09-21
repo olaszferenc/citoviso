@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
-import { isBilledModule, type TenantModuleView } from "../tenant/modules.js";
+import { isBilledModule, type TenantModule, type TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
 import { bookingsSection } from "./bookingViews.js";
 import type { BookingsTabData } from "./bookingViews.js";
@@ -529,6 +529,59 @@ function frozenStateBlock(
   );
 }
 
+/**
+ * How many months an annual account is actually billed for (0 = monthly account).
+ *
+ * ⛔ ONE COPY, because the periodising PREDICATE is exactly what split the screen
+ * before: binding the VALUES to one source was not enough — with the predicate
+ * duplicated, an armed monthly account showed 5 570 Ft in the summary against
+ * 55 700 Ft in the invoice cell. The Áttekintés to-do rows now read it from here too.
+ */
+function annualMultiplier(sub: SubscriptionAdminData | null): number {
+  return sub && (sub.billingPeriod === "annual" || sub.pendingAnnual) ? 12 - sub.annualFreeMonths : 0;
+}
+
+/**
+ * The price as the account is actually billed.
+ *
+ * ⭐ APPROVED CONTRACT 2026-09-14 — design-refs/console/modules-quiet-list §6–7:
+ *  • the ANNUAL figure LEADS on an annual account. ⛔ This OVERRIDES
+ *    modules-annual-pricing §1, which bound the monthly figure as primary and
+ *    which the code shipped faithfully (measured: monthly 13.12px/700/navy vs
+ *    annual 11.84px/600/muted). The owner overruled it on the principle that
+ *    THE BIGGEST NUMBER MUST BE THE ONE HE PAYS — for a 99 900 Ft/év account
+ *    that is the yearly total, not the 490 Ft/hó unit price.
+ *  • the „+" sign belongs to the SHOP only (`plus`). On an already-owned — or
+ *    PAUSED, or cancelled-but-paid — module it read as if a fee were about to
+ *    be added to a bill he has already settled.
+ *
+ * Monthly accounts keep today's wording — an annual figure would be noise.
+ *
+ * ⛔ MODULE-LEVEL, not a closure, since 2026-09-21: the Áttekintés „kifizette, de üres"
+ * rows price modules too, and a second `{price}/hó` literal there would have put two
+ * different divisors on one owner's two screens — the same annual account reading
+ * 4 900 Ft/év under Modulok and 490 Ft/hó under Áttekintés for the very same module.
+ */
+function modulePriceForm(monthly: number, plus: boolean, annualMult: number, lang: string): string {
+  const yearly = esc(hufAmount(monthly * annualMult));
+  const price = esc(hufAmount(monthly));
+  const lead =
+    annualMult > 0
+      ? plus
+        ? T(lang, "+{yearly}/év", { yearly })
+        : T(lang, "{yearly}/év", { yearly })
+      : plus
+        ? T(lang, "+{price}/hó", { price })
+        : T(lang, "{price}/hó", { price });
+  return (
+    `<b class="adm-price__lead">${lead}</b>` +
+    // The other period stays readable — dropping it would answer a different
+    // question than "what does this module cost me": it is the unit he
+    // compares modules on. It is the COMPANION now, not the headline.
+    (annualMult > 0 ? `<em class="adm-price__alt">${T(lang, "{price}/hó", { price })}</em>` : "")
+  );
+}
+
 export function modulesSection(
   mv: TenantModuleView,
   sub: SubscriptionAdminData | null,
@@ -981,43 +1034,12 @@ export function modulesSection(
   // time. Binding only the VALUES to one source was not enough: with the period
   // predicate still duplicated, an armed monthly account showed 5 570 Ft in the
   // summary against 55 700 Ft in the invoice cell — a tenfold split on one screen.
-  const annualMult =
-    sub && (sub.billingPeriod === "annual" || sub.pendingAnnual) ? 12 - sub.annualFreeMonths : 0;
-  /**
-   * The price as the account is actually billed.
-   *
-   * ⭐ APPROVED CONTRACT 2026-09-14 — design-refs/console/modules-quiet-list §6–7:
-   *  • the ANNUAL figure LEADS on an annual account. ⛔ This OVERRIDES
-   *    modules-annual-pricing §1, which bound the monthly figure as primary and
-   *    which the code shipped faithfully (measured: monthly 13.12px/700/navy vs
-   *    annual 11.84px/600/muted). The owner overruled it on the principle that
-   *    THE BIGGEST NUMBER MUST BE THE ONE HE PAYS — for a 99 900 Ft/év account
-   *    that is the yearly total, not the 490 Ft/hó unit price.
-   *  • the „+" sign belongs to the SHOP only (`plus`). On an already-owned — or
-   *    PAUSED, or cancelled-but-paid — module it read as if a fee were about to
-   *    be added to a bill he has already settled.
-   *
-   * Monthly accounts keep today's wording — an annual figure would be noise.
-   */
-  const priceForm = (monthly: number, plus: boolean): string => {
-    const yearly = esc(huf(monthly * annualMult));
-    const price = esc(huf(monthly));
-    const lead =
-      annualMult > 0
-        ? plus
-          ? T(lang, "+{yearly}/év", { yearly })
-          : T(lang, "{yearly}/év", { yearly })
-        : plus
-          ? T(lang, "+{price}/hó", { price })
-          : T(lang, "{price}/hó", { price });
-    return (
-      `<b class="adm-price__lead">${lead}</b>` +
-      // The other period stays readable — dropping it would answer a different
-      // question than "what does this module cost me": it is the unit he
-      // compares modules on. It is the COMPANION now, not the headline.
-      (annualMult > 0 ? `<em class="adm-price__alt">${T(lang, "{price}/hó", { price })}</em>` : "")
-    );
-  };
+  // ⛔ Both the multiplier and the price wording now live at module level, so the
+  // Áttekintés to-do rows price a module EXACTLY as this tab does. See
+  // annualMultiplier() / modulePriceForm() for the approved contract they carry.
+  const annualMult = annualMultiplier(sub);
+  const priceForm = (monthly: number, plus: boolean): string =>
+    modulePriceForm(monthly, plus, annualMult, lang);
 
   const priceChip = (m: TenantModuleView["modules"][number], replacedBy: string | null): string =>
     replacedBy
@@ -2914,6 +2936,10 @@ function overviewSection(
   previewUrl: string | null,
   mv: TenantModuleView | null,
   lang = "hu",
+  /** Paid-for modules with nothing on the live page — one to-do row each. */
+  paidEmpty: readonly TenantModule[] = [],
+  /** Only to price those rows the way the account is billed (annual vs monthly). */
+  sub: SubscriptionAdminData | null = null,
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -2940,7 +2966,66 @@ function overviewSection(
       : `<span class="citui-hint">–</span>`;
   const todoItem = (done: boolean, html: string) =>
     `<li class="${done ? "done" : "pending"}"><span class="adm-tico">${ic(done ? "check" : "alert", 18)}</span><span>${html}</span></li>`;
+  // ── APPROVED CONTRACT (paid-empty-a, owner ruling 2026-09-21) ────────────────
+  // A module he PAYS for that shows the guest nothing gets its own row, with the
+  // module name, what it costs, and one click to fill it.
+  //
+  // THE HOLE IT CLOSES (measured on the owner's own tenant the same day): he bought
+  // pricing + poi + booking for 14 775 Ft; booking had content and rendered, the other
+  // two were empty and therefore absent from the published HTML entirely — "Árak" and
+  // "A környéken" each occurred 0 times on the live page. Every screen stayed silent:
+  // the module list said "aktív", and this very list only ever discussed photos,
+  // intro text and publication.
+  //
+  // ⛔ The sentence is per-module, not one generic line: "amíg nincs benne ár" and
+  // "amíg nincs benne hely" tell him WHAT to type. Each is its own T() literal — a
+  // lookup table indexed by id would be invisible to the i18n extractor (§B.18).
+  const emptyNote = (id: string): string =>
+    id === "pricing"
+      ? T(lang, "Amíg nincs benne ár, a szakasz nem jelenik meg az oldalán.")
+      : id === "poi"
+        ? T(lang, "Amíg nincs benne hely, a szakasz nem jelenik meg az oldalán.")
+        : id === "hours"
+          ? T(lang, "Amíg nincs benne időpont, a szakasz nem jelenik meg az oldalán.")
+          : id === "amenities"
+            ? T(lang, "Amíg nincs benne szolgáltatás, a szakasz nem jelenik meg az oldalán.")
+            : T(lang, "Amíg nincs benne szoba, a szakasz nem jelenik meg az oldalán.");
+  const annualMult = annualMultiplier(sub);
+  // The same preview URL the Modulok tab uses, so the two „Megnézem" buttons open
+  // the same thing. Committed = what he actually owns; the focused module is his.
+  const committedIds = mv ? mv.modules.filter((m) => m.active && !m.supersededBy).map((m) => m.id) : [];
+  const paidEmptyRows = paidEmpty
+    .map((m) => {
+      // ⛔ The SAME predicate the Modulok tab runs before it offers „Beállítás".
+      // Without it this button could point at a settings screen that does not
+      // exist — a to-do whose only action is a dead end.
+      const fill = hasSettingsScreen(m.id)
+        ? `<a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok&m=${encodeURIComponent(m.id)}">${T(lang, "Kitöltöm")}</a>`
+        : `<a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok">${T(lang, "Kitöltöm")}</a>`;
+      const look =
+        `<a class="citui-btn citui-btn--ghost citui-btn--sm" target="_blank" rel="noopener"` +
+        ` href="/admin/modules/preview?on=${encodeURIComponent(committedIds.join(","))}#focus=${encodeURIComponent(m.id)}">` +
+        `${T(lang, "Megnézem")}</a>`;
+      return (
+        `<li class="pending adm-todo__paid">` +
+        `<span class="adm-tico">${ic("alert", 18)}</span>` +
+        `<span class="adm-todo__body">` +
+        // ⛔ A modul neve is FORDUL: a felület minden más helye `T(lang, m.label)`-t ír
+        // (modul-lista, előnézet, árazás). Fordítatlanul hagyva a lengyel tulaj
+        // lefordított súgót olvasna lefordított modulnévvel, a képernyőn viszont magyar
+        // nevet látna — ugyanarra a modulra két név. Az i18n-lint ezt nem látja: a
+        // kulcs itt változó, nem literál (tudásbázis-őr verdikt, 2026-09-21).
+        `<strong>${T(lang, "Töltse ki: {module}", { module: esc(T(lang, m.label)) })}</strong> ` +
+        `<span class="adm-todo__price">${modulePriceForm(m.priceMonthly, false, annualMult, lang)}</span> ` +
+        `${T(lang, "— kifizette, de üres, ezért a vendég ma nem látja")}` +
+        `<span class="adm-todo__note">${emptyNote(m.id)}</span>` +
+        `<span class="adm-todo__acts">${fill}${look}</span>` +
+        `</span></li>`
+      );
+    })
+    .join("");
   const todo =
+    paidEmptyRows +
     todoItem(
       content.usingOwnPhotos,
       content.usingOwnPhotos
@@ -3918,6 +4003,12 @@ export interface AdminOpts {
   readonly payError?: boolean;
   readonly previewToken?: string | null;
   readonly modules?: TenantModuleView | null;
+  /**
+   * Modules the tenant PAYS for that put nothing on the live page — one to-do row
+   * each on the Áttekintés tab. Computed by the caller (the emptiness test is the
+   * renderer's own async `moduleContentFor()`), see paidButEmptyModules().
+   */
+  readonly paidEmpty?: readonly TenantModule[];
   /** ADR-0080: subscription card data for the Modulok tab (null → no card). */
   readonly subscription?: SubscriptionAdminData | null;
   /** ADR-0080: the applied-changes confirmation after POST /admin/modules. */
@@ -4286,6 +4377,8 @@ export function adminDashboard(
                 previewUrl,
                 mv,
                 lang,
+                opts.paidEmpty ?? [],
+                opts.subscription ?? null,
               );
 
   return shell(

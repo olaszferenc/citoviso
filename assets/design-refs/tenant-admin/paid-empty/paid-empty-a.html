@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A változat — kifizetett, de üres modul a Teendők között (terv)</title>
+<style>
+/* ── Citoviso dizájn-mag tokenek (public/assets/ui/citui.css :root másolata) ── */
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08); --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dde8ee;font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+/* ── Terv-fejléc (a mockon KÍVÜL) ── */
+.pl{padding:14px 12px 0;max-width:1240px;margin:0 auto}
+.pl h1{font-family:var(--citui-font-display);font-size:1.05rem;margin:0 0 3px}
+.pl p{margin:0 0 10px;font-size:.83rem;color:#3c5064;line-height:1.5}
+.pl b{color:var(--citui-ink)}
+.szw{display:inline-flex;background:var(--citui-white);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:3px;gap:3px;margin-bottom:12px}
+.szw button{border:0;background:transparent;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-muted);
+  padding:9px 15px;border-radius:var(--citui-radius-pill);cursor:pointer}
+.szw button.on{background:var(--citui-navy-900);color:var(--citui-white)}
+
+/* ── Színpad + keret (a méret-váltó ezt méretezi; @container, NEM @media) ── */
+.stage{padding:0 12px 26px;max-width:1240px;margin:0 auto;overflow-x:auto}
+.frame{container-type:inline-size;width:390px;background:var(--citui-surface);
+  border:1px solid var(--citui-line-strong);border-radius:14px;overflow:hidden;
+  box-shadow:var(--citui-shadow-md);transition:width .2s}
+body[data-size="desktop"] .frame{width:1180px}
+
+/* ── Admin héj (citui-admin.css nyelvén) ── */
+.shell{display:grid;grid-template-columns:1fr;min-height:640px;background:var(--citui-surface)}
+.side{background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-950));
+  color:var(--citui-ink-inverse);order:2;padding:6px;border-top:1px solid rgba(255,255,255,.1)}
+.nav{display:flex;flex-wrap:wrap;gap:2px}
+.nav a{flex:1 1 19%;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 3px;
+  border-radius:10px;color:rgba(234,243,248,.72);text-decoration:none;font-weight:600;font-size:.68rem;
+  text-align:center;cursor:pointer;overflow-wrap:break-word}
+.nav a.on{background:color-mix(in srgb,var(--citui-cyan-500) 20%,transparent);color:var(--citui-white)}
+.main{order:1;padding:18px 14px 26px;min-width:0}
+.h1{font-family:var(--citui-font-display);font-size:1.5rem;margin:0 0 2px}
+.sub{margin:0 0 16px;color:var(--citui-muted);font-size:.9rem}
+
+/* ── Kártya ── */
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);
+  box-shadow:var(--citui-shadow-sm);padding:16px;margin-bottom:16px}
+.adm-card__head{display:flex;align-items:center;gap:10px;margin:-16px -16px 14px;padding:14px 16px;
+  background:linear-gradient(180deg,var(--citui-navy-900),var(--citui-navy-800));
+  border-radius:var(--citui-radius) var(--citui-radius) 0 0;color:var(--citui-white)}
+.adm-card__head h2{font-family:var(--citui-font-display);font-size:1.05rem;margin:0;flex:1}
+.adm-ico{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;
+  background:color-mix(in srgb,var(--citui-cyan-500) 22%,transparent)}
+.adm-ico svg,.adm-tico svg{display:block}
+
+/* ── Statisztika-cellák (ÉLES HIBA JAVÍTVA: a hosszú cím törhet) ── */
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
+.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px;min-width:0}
+.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;
+  margin-bottom:2px;overflow-wrap:anywhere}
+.adm-stat span{font-size:.8rem;color:var(--citui-muted)}
+.adm-stat a{color:var(--citui-cyan-500);font-weight:600}
+
+/* ── Teendők ── */
+h3.tdh{font-size:1rem;margin:24px 0 0;font-family:var(--citui-font-display)}
+.adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.adm-todo li{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--citui-line);
+  border-radius:12px;font-size:.95rem}
+.adm-todo li .adm-tico{flex:0 0 auto;margin-top:1px}
+.adm-todo li.done{color:var(--citui-muted)}
+.adm-todo li.done .adm-tico{color:var(--citui-ok)}
+.adm-todo li.pending .adm-tico{color:var(--citui-warn)}
+.adm-todo li a{color:var(--citui-cyan-500);font-weight:600;cursor:pointer}
+.adm-todo li .tbody{min-width:0;flex:1}
+.adm-todo li .tnote{display:block;margin-top:3px;font-size:.82rem;color:var(--citui-muted)}
+
+/* ── Gombok (citui-btn nyelven) ── */
+.btn{border:0;border-radius:var(--citui-radius-pill);font:700 .85rem/1 var(--citui-font-text);
+  padding:11px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.btn--pri{background:linear-gradient(135deg,var(--citui-cyan-500),var(--citui-cyan-400));color:var(--citui-navy-950)}
+.btn--ghost{background:transparent;color:var(--citui-navy-900);border:1px solid var(--citui-line-strong)}
+.btn--sm{padding:8px 13px;font-size:.8rem}
+
+/* ── Szerkesztő-panel (a „Kitöltöm" nyitja) ── */
+.ed{display:none;margin-top:10px;padding:14px;border:1px solid var(--citui-line-strong);
+  border-radius:14px;background:var(--citui-surface-2)}
+.ed.open{display:block}
+.ed label{display:block;font-weight:700;font-size:.9rem;margin-bottom:3px}
+.ed .help{display:block;font-size:.8rem;color:var(--citui-muted);margin-bottom:8px}
+.ed textarea{width:100%;min-height:104px;border:1px solid var(--citui-line-strong);border-radius:12px;
+  padding:10px 12px;font:400 .9rem/1.5 var(--citui-font-text);color:var(--citui-ink);background:var(--citui-white);
+  resize:vertical}
+.ed textarea:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+.ed .row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.ed .cnt{font-size:.8rem;color:var(--citui-muted)}
+.err{display:none;margin-top:8px;padding:9px 12px;border-radius:10px;font-size:.85rem;font-weight:600;
+  background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad)}
+.err.on{display:block}
+
+/* ── Asztali elrendezés: a keret szélessége dönt, NEM az ablaké ── */
+@container (min-width:900px){
+  .shell{grid-template-columns:232px 1fr}
+  .side{order:1;padding:18px 12px;border-top:0}
+  .nav{flex-direction:column;gap:4px}
+  .nav a{flex:none;flex-direction:row;justify-content:flex-start;gap:11px;padding:11px 13px;font-size:.92rem;text-align:left}
+  .main{order:2;padding:26px 30px 34px}
+  .adm-card{padding:22px}
+  .adm-card__head{margin:-22px -22px 18px;padding:16px 22px}
+  .h1{font-size:1.9rem}
+}
+</style>
+<style>
+/* A változat sajátja: a figyelmeztetés a meglévő Teendők-listába illeszkedik,
+   modulonként EGY sor. Nincs új komponens — a sor szerkezete azonos a mai
+   todoItem()-mel, csak a szövege és a benne ülő gomb új. */
+.adm-todo li.paid{border-color:color-mix(in srgb,var(--citui-warn) 45%,var(--citui-line))}
+.adm-todo li.paid .tprice{display:inline-block;margin-left:6px;font-size:.78rem;font-weight:700;
+  color:var(--citui-warn);white-space:nowrap}
+</style>
+</head>
+<body data-size="mobile">
+
+<div class="pl">
+  <h1>A változat — a figyelmeztetés a Teendők közé kerül, modulonként egy sor</h1>
+  <p>A ma is meglévő Teendők-lista bővül: minden <b>kifizetett, de üres</b> modul kap egy saját sort.
+     Nincs új felületi elem. A sor megmondja, mennyiért fut, és egy kattintással kitölthető.
+     <b>Ez a mock működik:</b> nyissa meg a „Kitöltöm"-et, írjon be sorokat, mentsen.</p>
+  <div class="szw">
+    <button id="bM" class="on" onclick="setSize('mobile')">Mobil 390px</button>
+    <button id="bD" onclick="setSize('desktop')">Asztali</button>
+  </div>
+</div>
+
+<div class="stage">
+<div class="frame">
+  <div class="shell">
+    <nav class="side">
+      <div class="nav">
+        <a class="on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Áttekintés</a>
+        <a><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h10M4 17h7"/></svg>Szövegek</a>
+        <a><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-4 4-2-2-7 7"/></svg>Fotók</a>
+        <a><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Modulok</a>
+        <a><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Foglalások</a>
+      </div>
+    </nav>
+
+    <main class="main">
+      <h1 class="h1">Áttekintés</h1>
+      <p class="sub">Eldorádó Kemping, Campsite</p>
+
+      <div class="adm-card">
+        <div class="adm-card__head">
+          <span class="adm-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></span>
+          <h2>Áttekintés</h2>
+        </div>
+
+        <div class="adm-stats">
+          <div class="adm-stat"><b><span style="display:inline-block;padding:5px 12px;border-radius:999px;font-size:.8rem;font-weight:700;background:var(--citui-ok-soft);color:var(--citui-ok)">Élő (publikus)</span></b><span>Állapot</span></div>
+          <div class="adm-stat"><b style="font-size:1rem"><a href="#" style="color:var(--citui-cyan-500)">100.97.188.105:4800/t/eldorado-kemping-campsite</a></b><span>Az oldal címe</span></div>
+          <div class="adm-stat"><b>7 db</b><span>Aktív modul · ebből 6 számlázott · <a href="#">kezelés</a></span></div>
+        </div>
+
+        <h3 class="tdh">Teendők</h3>
+        <ul class="adm-todo" id="todo">
+
+          <li class="pending paid" id="row-pricing">
+            <span class="adm-tico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+            <span class="tbody">
+              <strong>Töltse ki: Árak, szezonok</strong><span class="tprice">490 Ft/hó</span> — kifizette, de üres, ezért a vendég ma nem látja
+              <span class="tnote">Amíg nincs benne ár, a szakasz nem jelenik meg az oldalán.</span>
+              <span class="row" style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
+                <button class="btn btn--pri btn--sm" onclick="openEd('pricing')">Kitöltöm</button>
+                <button class="btn btn--ghost btn--sm" onclick="alert('Az előnézet a valódi felületen nyílik meg.')">Megnézem</button>
+              </span>
+              <span class="ed" id="ed-pricing">
+                <label for="ta-pricing">Mit mutasson az áraknál?</label>
+                <span class="help">Soronként egy tétel. Például: Főszezon (júl–aug) — 12 000 Ft/éj</span>
+                <textarea id="ta-pricing" placeholder="Főszezon (júl–aug) — 12 000 Ft/éj" oninput="count('pricing')"></textarea>
+                <span class="err" id="err-pricing"></span>
+                <span class="row">
+                  <button class="btn btn--pri btn--sm" onclick="save('pricing')">Mentés</button>
+                  <button class="btn btn--ghost btn--sm" onclick="openEd('pricing')">Mégsem</button>
+                  <span class="cnt" id="cnt-pricing">0 sor</span>
+                </span>
+              </span>
+            </span>
+          </li>
+
+          <li class="pending paid" id="row-poi">
+            <span class="adm-tico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+            <span class="tbody">
+              <strong>Töltse ki: Környék, látnivalók</strong><span class="tprice">490 Ft/hó</span> — kifizette, de üres, ezért a vendég ma nem látja
+              <span class="tnote">Amíg nincs benne hely, a szakasz nem jelenik meg az oldalán.</span>
+              <span class="row" style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
+                <button class="btn btn--pri btn--sm" onclick="openEd('poi')">Kitöltöm</button>
+                <button class="btn btn--ghost btn--sm" onclick="alert('Az előnézet a valódi felületen nyílik meg.')">Megnézem</button>
+              </span>
+              <span class="ed" id="ed-poi">
+                <label for="ta-poi">Mi van a közelben?</label>
+                <span class="help">Soronként egy hely, ha tudja, távolsággal. Például: Strand — 300 m</span>
+                <textarea id="ta-poi" placeholder="Strand — 300 m" oninput="count('poi')"></textarea>
+                <span class="err" id="err-poi"></span>
+                <span class="row">
+                  <button class="btn btn--pri btn--sm" onclick="save('poi')">Mentés</button>
+                  <button class="btn btn--ghost btn--sm" onclick="openEd('poi')">Mégsem</button>
+                  <span class="cnt" id="cnt-poi">0 sor</span>
+                </span>
+              </span>
+            </span>
+          </li>
+
+          <li class="pending">
+            <span class="adm-tico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+            <span class="tbody"><strong>Töltsön fel saját fotókat</strong> — jelenleg bemutató képek láthatók (<a href="#">Fotók</a>)</span>
+          </li>
+
+          <li class="done">
+            <span class="adm-tico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
+            <span class="tbody">A bemutatkozó szövege kész</span>
+          </li>
+
+          <li class="done">
+            <span class="adm-tico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
+            <span class="tbody">Az oldala élő és nyilvános</span>
+          </li>
+
+        </ul>
+      </div>
+    </main>
+  </div>
+</div>
+</div>
+
+<script>
+function setSize(s){document.body.dataset.size=s;
+  document.getElementById('bM').classList.toggle('on',s==='mobile');
+  document.getElementById('bD').classList.toggle('on',s==='desktop');}
+
+/* A VALÓDI szabály (src/tenant/editor.ts:232 `lines()` + moduleConfig poi.maxItems):
+   soronként egy tétel, az ÜRES sorok eldobva (filter(Boolean)), legfeljebb 12. */
+var MAX = 12;
+function rows(id){return document.getElementById('ta-'+id).value.split('\n').map(function(s){return s.trim()}).filter(Boolean);}
+function count(id){
+  var n = rows(id).length;
+  document.getElementById('cnt-'+id).textContent = n + ' sor' + (n>MAX ? ' — legfeljebb ' + MAX : '');
+  if(n<=MAX) hideErr(id);
+}
+function hideErr(id){var e=document.getElementById('err-'+id);e.classList.remove('on');e.textContent='';}
+function showErr(id,msg){var e=document.getElementById('err-'+id);e.textContent=msg;e.classList.add('on');}
+function openEd(id){
+  var ed=document.getElementById('ed-'+id);
+  ed.classList.toggle('open');
+  if(ed.classList.contains('open')) document.getElementById('ta-'+id).focus();
+}
+function save(id){
+  var n = rows(id).length;
+  if(n===0){ showErr(id,'Adjon meg legalább egy sort — üresen a szakasz továbbra sem jelenik meg.'); return; }
+  if(n>MAX){ showErr(id,'Legfeljebb ' + MAX + ' sort tudunk megjeleníteni. Most ' + n + ' van.'); return; }
+  hideErr(id);
+  var li=document.getElementById('row-'+id);
+  var name = id==='poi' ? 'Környék, látnivalók' : 'Árak, szezonok';
+  li.className='done';
+  li.innerHTML='<span class="adm-tico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>'
+    + '<span class="tbody">' + name + ' — kész, ' + n + ' tétel jelenik meg az oldalán</span>';
+}
+/* Induló állapot: telefonon MOBIL, széles képernyőn ASZTALI (a gombokkal bármikor váltható). */
+setSize(window.innerWidth>=1240?'desktop':'mobile');
+</script>
+</body>
+</html>

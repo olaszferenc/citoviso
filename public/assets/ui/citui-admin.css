@@ -55,8 +55,15 @@
 .adm-saved{display:inline-flex;align-items:center;gap:8px;background:var(--citui-ok-soft);color:var(--citui-ok);
   border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-pill);padding:8px 16px;font-weight:600;font-size:.9rem;margin-bottom:18px}
 .adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:6px}
-.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px}
-.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px}
+/* min-width:0 — a grid cell's default `min-width:auto` refuses to shrink below its
+   content, so a long unbroken value pushed the cell past the card instead of wrapping. */
+.adm-stat{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:14px;padding:16px 18px;min-width:0}
+/* overflow-wrap — the site address is ONE token with no spaces
+   (`100.97.188.105:4800/t/eldorado-kemping-campsite`), so without a break opportunity
+   it ran out past the card's right edge (owner report 2026-09-21, measured at 1920px).
+   `anywhere` and not `break-word`: only `anywhere` also shrinks the min-content width,
+   which is what the grid cell measures when deciding the column. */
+.adm-stat b{display:block;font-family:var(--citui-font-display);font-size:1.35rem;line-height:1.2;margin-bottom:2px;overflow-wrap:anywhere}
 .adm-stat span{color:var(--citui-muted);font-size:.85rem}
 .adm-stat a{color:var(--citui-cyan-500);font-weight:600;text-decoration:none}
 .adm-todo{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
@@ -66,6 +73,20 @@
 .adm-todo li.done .adm-tico{color:var(--citui-ok)}
 .adm-todo li.pending .adm-tico{color:var(--citui-warn)}
 .adm-todo li a{color:var(--citui-cyan-500);font-weight:600}
+/* ── „kifizette, de üres" sor (jóváhagyott terv: paid-empty-a, 2026-09-21) ──
+   A sor szerkezete azonos a többi teendővel; a keret jelzi, hogy PÉNZ áll mögötte. */
+.adm-todo li.adm-todo__paid{border-color:color-mix(in srgb,var(--citui-warn) 45%,var(--citui-line))}
+.adm-todo__body{flex:1;min-width:0}
+.adm-todo__price{display:inline-block;white-space:nowrap}
+.adm-todo__price .adm-price__lead{font-size:.82rem;font-weight:700;color:var(--citui-warn)}
+/* Az éves fiók havi egységára a másodlagos adat — a vezető szám az, amit fizet. */
+.adm-todo__price .adm-price__alt{font-size:.78rem;font-style:normal;color:var(--citui-muted);margin-left:5px}
+.adm-todo__note{display:block;margin-top:3px;font-size:.85rem;color:var(--citui-muted)}
+.adm-todo__acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+/* A gombok feliratát a link-szabály (.adm-todo li a) ciánra festené — egy cián
+   gradiensen az 1.16-os kontraszt olvashatatlan. A gomb az GOMB, nem link. */
+.adm-todo__acts a.citui-btn{color:var(--citui-navy-950)}
+.adm-todo__acts a.citui-btn--ghost{color:var(--citui-navy-900)}
 .adm-modgroup{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);
   font-weight:700;margin:22px 0 10px}
 .adm-mod{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--citui-line);
