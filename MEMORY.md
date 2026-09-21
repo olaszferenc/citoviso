@@ -8,6 +8,38 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-21)
 
+**🔗 A MODUL-FÜGGŐSÉGI REND MEGVALÓSÍTÁSA — ADR-0192 ④/⑤/⑥.**
+Tulajdonosi mandátum (`~/rc-briefs/module-deps-impl-brief.md`), a felderítés folytatása.
+Session-jegyzet: `_planning/memory/2026-09-21_module_dependency_impl.md`.
+Landolt: `fbd95a9` (séma + lint) és `ae6adae` (szerver + felület + őr). **Élesítés NEM volt feladat.**
+
+- **A lánc a katalógusban:** `booking → pricing → rooms(multiUnit)`. **Nincs DB-tábla** — a
+  függőség TERMÉK-SZERKEZET, nem operátor által hangolt érték (a `supersedes` precedense).
+  Öt közös helper: a kosár, a kapu, a sweep, a lint és az őr MIND ezen dönt.
+- **⭐ A megújítás-sweep az ember nélküli út:** a kattintáskor a halmaz még ÉRVÉNYES (a modul a
+  periódus végéig él), tehát a toggle-ra kötött őr átengedi — a szabály a FORDULÓNAPON sérül,
+  nézők nélkül. Most visszatart + riaszt; a visszatartott modul egy ciklusig ingyen fut (a három
+  rossz közül a legkisebb: elsöpörni = fizetett naptár ár nélkül, kaszkádolni = kifizetett adat
+  néma törlése, ADR-0155 ③).
+- **Mért lyuk befoltozva:** a `module_sales_disabled` kapcsoló némán ÉRVÉNYTELEN csomagot gyártott
+  (`rooms` levétele után a `teljes` tovább kínálta a `pricing`-et), a `presetNestingViolations()`
+  meg zölden állt, mert a kapcsolót nem látja.
+- **§2b:** 3 változat, mobil ÉS asztali képpel → a tulaj a **C**-t választotta („a SOR mondja meg
+  MIT, a SÁV MENNYIÉRT"). Kontraktus: `assets/design-refs/console/module-dependency/`.
+- ⛔⛔ **Négy saját hiba, mind mérésből:** ① a befoglaló-dobozom ZÖLDET adott egy szétesett
+  elrendezésre (`1042×57` „rendben", miközben a nevet 60 px-be préselte és kilógott) — **csak a
+  KÉP mutatta meg** ② a szűk felismerőm („ehhez jár") hamis zöldet adott ÜRES indoklásra ③ az őr
+  egyik szakasza ÜRES volt (nem volt fizetett rendelés a fixture-ben, sosem ért el az új kódig)
+  ④ **a kapum megtagadta a FIZETŐ VEVŐT**, és egy MEGLÉVŐ őr fogta meg — míg a párjánál
+  (`module-upsell-check`) a FIXTURE csatolása volt véletlen; **a kettőt nem szabad összemosni.**
+- **ADR-0192 helyesbítve** (tulajdonosi jóváhagyás): a ④.2 példamondata KETTŐT feltételezett, a
+  mért lánc HÁROM tagú; a ⑧ lista 1–2. tétele lezárva (ADR-0193).
+- 🔴 **NYITOTT:** ① a terv-sáv CSOPORTOSÍTOTT ár-blokkja ② a konfigurátor kosara + a `/pricing`
+  csomag-kártyák ③ a három KB-szócikk ④ az őr ①/⑤ állítása ⑤ a felület interakciójának
+  ÉLES-lapos mérése (eddig csak a §2b vázlaton van végigkattintva) ⑥ a `DOMAIN/05-MODULES.md`.
+
+## Előző szál (2026-09-21) — az ár-jogosultsági kapu
+
 **💸 ÁR-JOGOSULTSÁGI KAPU A FOGLALÁSI ÚTON + EGY KEREKÍTÉSI SZABÁLY (ADR-0193).**
 Tulajdonosi SÜRGŐS mandátum (`~/rc-briefs/urgent-price-gate-brief.md`): az ADR-0192 ⑧ két
 pénzügyi/bizalmi leletének javítása, őrrel és negatív kontrollal. Session-jegyzet:
