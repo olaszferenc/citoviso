@@ -8,6 +8,35 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-21)
 
+**🛏️ A SZOBA-KÁRTYA ÉS A RÉSZLETEK-FELUGRÓ — §2b kör, a tulaj a B változatot jóváhagyta.**
+Kontraktus: `assets/design-refs/tenant-site/rooms-card/` (README + `plan.html` + 5 kép, `6514d63`).
+Session-jegyzet: `_planning/memory/2026-09-21_rooms_card_plan.md`.
+A megvalósítás **külön szálban fut** (`wt/szobakartya`), a kontraktussal.
+
+- **A kérés:** a kártya alatt CSAK a férőhely; kattintásra felugrik a szoba lapja leírással,
+  képgalériával és **ikonos** felszereltséggel; a stílus a mockból. Második körben: a **képen
+  látszódjon, hogy kattintható**, a nagy kép ALATT kattintható indexképek, és a nagy képre
+  kattintva **teljes méret**.
+- **A kiváltó lelet:** `src/tenant/editor.ts:310` — a leírás ÉS a felszereltség **egyetlen
+  `note` mezőbe** fűzve, ezért a vendég megkülönböztethetetlenül kapja. A kódban ott a
+  beismerés is: *„no template edit"* — a kerülő út azért született, hogy ne kelljen 12 sablonhoz nyúlni.
+- ⛔⛔ **HÁROMSZOR a KÉP fogta meg, amit a gépi őr ZÖLDEN átengedett:** a `display:flex` ÜTI a
+  `[hidden]`-t · a felugrón a 9 felszereltségből **NULLA** látszott, az őr mégis 9-et jelentett
+  (`<li>`-t számolt, nem láthatóságot) · a magasság a galéria BURKOLÓJÁN ült, ezért a 68 px-es
+  indexkép-sáv teljesen levágódott — **a kért galéria nem is létezett**. Negatív kontroll
+  mindhármon (4·1·1 bukás a javítás előtt).
+- ⛔ **A `contract-drift-check` KÉT saját hibámat fogta meg:** rossz mappa (`public-rooms`
+  helyett `tenant-site/`), és **KÖTŐ feliratként jelöltem olyat, ami még nem él a kódban** →
+  a jelölés a megvalósítás UTOLSÓ lépése; hatókör-sor nélkül a kapu az egész kódbázisban keres.
+- **Mérve:** 39 állítás zöld, 0 JS-hiba, mobil+asztali, valós adat+minta, JS-sel+JS nélkül.
+  A fixture a TERMÉK forrásából épült (4 valós egység, az élő artdeco skin, 17/17 katalógus-ikon).
+- ⛔ **A `land.sh` törli a `_drafts/`-ot** — vele ment a generátor és a mérő; a `plan.html`
+  önhordó volta mentette meg. Amit a következő szálnak átadnál, azt a land ELŐTT mentsd ki.
+- 🔴 **NYITOTT:** a tenant-admin szoba-szerkesztő §2b terv-köre (kártyás/nyitható, helyben
+  képfeltöltés, **borítókép** — ma a hozzárendelés sorrendje dönt, és félrevezet).
+
+## Előző szál (2026-09-21)
+
 **🔗 A MODUL-FÜGGŐSÉGI REND MEGVALÓSÍTÁSA — ADR-0192 ④/⑤/⑥.**
 Tulajdonosi mandátum (`~/rc-briefs/module-deps-impl-brief.md`), a felderítés folytatása.
 Session-jegyzet: `_planning/memory/2026-09-21_module_dependency_impl.md`.
