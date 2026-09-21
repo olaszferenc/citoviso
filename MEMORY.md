@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés)
+Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés, `e338d79` ADR-0192 + ontológia — **mindkettő csak dokumentum**)
 
 > 🔴 **ÉLES KOCKÁZAT (2026-09-21):** az éles `.env`-ben még a **RÉGI, megszűnt adószámú** Számlázz.hu
 > fiók Agent kulcsa fut — egy éles fizetés ma a megszűnt vállalkozás nevére állítana ki számlát.
@@ -7,6 +7,52 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 > `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`.
 
 ## Aktív feladat (legfrissebb szál, 2026-09-21)
+
+**🧩 A MODUL-FÜGGŐSÉGI REND FELDERÍTÉSE — húsz fogyasztó, és ami kiesett a láncból (ADR-0192).**
+Session-jegyzet: `_planning/memory/2026-09-21_module_dependency_discovery.md`. **Kód nem változott**
+— a mandátum kimondottan FELDERÍTÉS volt („felmérjük, hol van ennek relevanciája"). Hat párhuzamos,
+read-only ágens; a leltár határozta meg a séma alakját, nem fordítva.
+
+- **A lánc:** `booking → pricing → rooms` (rooms: ha 2+ egység, **vagy ha ismeretlen**).
+- ⛔ **Az `amenities requires rooms` KIESETT.** A brief még tartalmazta; mérve az `amenities`
+  **site-szintű adat**, `rooms` nélkül hibátlanul renderel, és a KB-szócikk **címe** is ezt mondja.
+  A valódi kötés csak a **szobánkénti szerkesztőre** áll, és **ADR-0074 §5 óta már él**.
+  ⭐ Általánosítva: a „modul A kell B-hez" **három** relációt takarhat — kiváltás · függőség ·
+  **művelet-kapu**; a harmadikat katalógusba emelni kár.
+- ⛔⛔ **KÉTSZER lett hamis premissza a saját összefoglalómból, egy sessionben.** ① Egy felderítő
+  1 sértő rendelést jelentett, **továbbadtam tényként** — az `order_intent.modules` `kind='upsell'`
+  esetén **DELTA, nem halmaz**, a valódi sértés **0 db**; a függőséget a **beküldött halmaz ∪ a
+  meglévő jogosultságok** unióján kell mérni (ez lett az őr 4. negatív kontrollja). ② „Az
+  `isMultiUnit()`-nak nulla hívója van" — a `src/`-re igaz, a **repóra nem**
+  (`scripts/module-config-check.mts:290/296` mindkét polaritását méri). Mindkétszer egy **szűk
+  hatókörű** állítást vettem át általánosként.
+- **A hangos leletek** (húsz fogyasztóból): ⛔⛔ a `/api/foglaltsag` az **entitlement-kaput nem
+  kérdezi meg** → ár nélküli lapon **kötelező erejű 84 000 Ft-os ajánlat** megy ki a vendégnek
+  e-mailben is · ⛔⛔ a megújítás **vakon** kapcsol ki (`cancel_at_period_end` sweep) → a szabály
+  **a fordulónapon, ember nélkül, némán** sérül · ⛔⛔ a kliens fizetés-kártya csak a **BEPIPÁLT**
+  checkboxokat ismeri (**990 a képernyőn / 2 170 a terhelésen**) · ⛔ a modul-előnézet **ÍR**, és az
+  őre vak rá · ⛔ a `module_sales_disabled` **némán érvénytelen presetet** gyárt.
+- **Négy tulajdonosi döntés:** a kliens **bepipálja és kimondja** (⭐ így a helyes ár *magától*
+  következik) · a lemondás **blokkol** + közöset ajánl (kaszkád elvetve: ADR-0155 ③) · az
+  amenities-kötés elesik · **ismeretlen egységszám → a függőség ÁLL** (⭐ összhang: a mock maga
+  **3 szobakártyát mutat**; 33 artifactból **0**-ban van valódi szobalista, a látható kártyaszám
+  **hamis proxy**).
+- **Séma: nincs DB-tábla** — `ModuleRequirement {id, when, strength, why}` a `ModuleDef`-en.
+- **Visszafelé kompatibilitás mérve: 0 sértő tenant, 0 sértő rendelés** (dev). ⛔ Az **ÉLES DB-t
+  nem mértem**. A kockázat **három sodródás**: megújítás-sweep · egység-törlés · a modul-eladás
+  kapcsoló tranzitív hatása.
+- A tartós tudás a **`_planning/DOMAIN/05-MODULES.md`**-be is bekerült (**72 napja** nem mozdult),
+  és ott **kimondva**, hogy a Szint 0–1 tábla GENERÁTOR-nézet, ami **eltér** a `MODULE_CATALOG`-tól
+  (`contact_details` **nem létezik**; `email`/`multilang` hiányzik; `newsletter` retired).
+- 🟢 **MINDKÉT UTÓD-SZÁL ELINDULT** (a tulaj, 17:15, közvetlenül az ADR landolása után):
+  **megvalósítás** (`~/rc-briefs/module-deps-impl-brief.md`) és **sürgős javítás**
+  (`~/rc-briefs/urgent-price-gate-brief.md`, worktree `wt/arkapu`) — utóbbi a `/api/foglaltsag`
+  ár-kaput és a kupon-kerekítést viszi. ⚠️ A kettő **ugyanabba a kliens-JS blokkba** nyúl
+  (`adminViews.ts` ~1490-1560); az `arkapu` landol előbb, **az ő szövege a bázis**.
+- 🔴 **NYITOTT:** **hat további mért hiba** az ADR-0192 ⑧-ban (a nyolcból kettőt az `arkapu`
+  visz) · az **ÉLES DB** felmérése a megvalósítás előtt · számlázzuk-e a `requires`-sértő modult.
+
+## Előző szál (2026-09-21) — a számlázó fiók
 
 **🧾 A SZÁMLÁZÓ FIÓK KÖVETTE AZ ADÓSZÁM-CSERÉT — új Számlázz.hu fiók + Agent kulcs.**
 Session-jegyzet: `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`. Kód nem változott.
