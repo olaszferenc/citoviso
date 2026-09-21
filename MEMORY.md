@@ -8,6 +8,44 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-21)
 
+**💸 ÁR-JOGOSULTSÁGI KAPU A FOGLALÁSI ÚTON + EGY KEREKÍTÉSI SZABÁLY (ADR-0193).**
+Tulajdonosi SÜRGŐS mandátum (`~/rc-briefs/urgent-price-gate-brief.md`): az ADR-0192 ⑧ két
+pénzügyi/bizalmi leletének javítása, őrrel és negatív kontrollal. Session-jegyzet:
+`_planning/memory/2026-09-21_price_gate_and_coupon_rounding.md`. **Élesítés NEM volt a feladat.**
+
+- **① Előbb REPRODUKÁLTAM.** Eldobható fixture (aktív `booking`, lemondott `pricing`), valódi DB +
+  valódi HTTP-szerver: a javítás előtt **4 állítás piros**, és a döntő bizonyíték nem egy mező
+  volt, hanem a **kiszállított levél** — `56 000 Ft` a vendégnek kiment `.eml`-ben, olyan
+  szállásról, ahol a lapon ár nem szerepel.
+- **A döntés: a foglalás ELINDUL, csak SZÁM NÉLKÜL.** A kérés nem vásárlás (ADR-0044 §6), és a
+  **kifizetett** `booking` funkcióját nem veheti el egy meg nem vett `pricing`; a vendégnek tett
+  ígéret viszont kötelező erejű → §B.17: jobb nincs szám. ⭐ A túl-kapuzás is hiba: a
+  `cancel_at_period_end` (a fordulónapig kifizetve) esetén az ár **MARAD** — külön állítás védi.
+- **A predikátum EGY helyen:** `isRenderedModule` / `siteRendersModule` (`src/tenant/modules.ts`);
+  a renderelő `on()`-ja is erre vált — a **meglévő** szabály kapott nevet, nem másolat készült.
+- **② Kupon-kerekítés: megszüntettem a második példányt, nem parity-őrt írtam rá.** A `cit-money.js`
+  precedense szándékos duplikátum + mérés — de **egy eltérő FORMÁZÓ csúnya stringet ír, egy eltérő
+  ÁR mást terhel, mint amit ígért**. A szabály most egyetlen fájl (`assets/runtime/cit-coupon.cjs`):
+  Node `require`-ol, a tenant-admin ugyanazokat a bájtokat inline-olja. ⚠️ `.cjs`, mert a
+  `package.json` `"type": "module"` — egy `.js` itt ESM-ként parse-olódna.
+- ⚠️ **Vállalt következmény:** a sorok legnagyobb-maradékkal oszlanak, hogy PONTOSAN kiadják a
+  végösszeget → két azonos árú modul sora 1 Ft-tal eltérhet (490+490 @4% → **471 és 470**).
+- ⛔ **Két SAJÁT hiba, amit a MÉRÉS fogott meg:** ① az őröm a **korábbi futás levelét** olvasta (a
+  címzett-slug stabil), és a javított kódra a javítás előtti összegeket jelentette; ② a piros
+  kontrollom `page.evaluate()`-ből akarta felülírni a szabályt, de az admin-script **IIFE** —
+  `ReferenceError`-ral halt meg ahelyett, hogy mért volna. Most a lap a történeti szabállyal
+  **renderelődik**, és külön állítás bizonyítja, hogy a csere meg is történt.
+- ⭐⭐ **A ② őr ELŐSZÖR a saját fixture-jét bizonyítja:** 1…99-ig keres olyan kupon-százalékot, ahol
+  a két szabály **bizonyíthatóan** eltér, és ha nincs, **hangosan bukik**. Évesen a két út
+  véletlenül egybeesik — ott a hibás kód is zöld lenne, ezért mér **havit**.
+- **Őrök bekötve** (`hooks/pre-commit`, diff-scope-olt): `booking-price-gate-check` (önteszt **4
+  piros**) · `coupon-rounding-check` (önteszt **3 piros**, 1602 vs 1603).
+- 🔴 **NYITOTT:** az ADR-0192 ⑧ **hat további** hibája (mock fizetőoldal „éves" felirata ·
+  `rooms` eltünteti a fizetett `amenities`-t · az előnézet ÍR · `renewableModuleIds` supersession ·
+  nem-atomi `activateUpsell` · doc-hiba) — **egyik sem az én szálam volt**.
+
+## Előző szál (2026-09-21) — a modul-függőségi rend
+
 **🧩 A MODUL-FÜGGŐSÉGI REND FELDERÍTÉSE — húsz fogyasztó, és ami kiesett a láncból (ADR-0192).**
 Session-jegyzet: `_planning/memory/2026-09-21_module_dependency_discovery.md`. **Kód nem változott**
 — a mandátum kimondottan FELDERÍTÉS volt („felmérjük, hol van ennek relevanciája"). Hat párhuzamos,
