@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E-változat — hol álljon a play?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-glow-blue:#5081ff;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd;
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:"Inter",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.55 var(--citui-font-text);color:var(--citui-ink);background:#e8eef3}
+  header.pg{padding:18px 20px;background:#fff;border-bottom:1px solid #d9e2ea;position:sticky;top:0;z-index:5}
+  h1{font:700 19px/1.3 var(--citui-font-display);margin:0 0 4px}
+  .sub{color:var(--citui-muted);font-size:13px;margin:0}
+  .sizer{display:inline-flex;gap:6px;margin-top:12px}
+  .sizer button{font:600 13px var(--citui-font-text);padding:7px 14px;border-radius:9px;
+    border:1px solid #c7d4de;background:#fff;color:var(--citui-ink);cursor:pointer}
+  .sizer button[aria-pressed="true"]{background:var(--citui-navy-900);color:#fff;border-color:var(--citui-navy-900)}
+  #stage{container-type:inline-size;margin:0 auto;padding:18px 12px;transition:max-width .2s}
+  body[data-w="390"] #stage{max-width:390px}
+  body[data-w="desk"] #stage{max-width:1180px}
+  .card{background:#fff;border:1px solid #d9e2ea;border-radius:14px;margin-bottom:16px;overflow:hidden}
+  .card > h2{font:700 14px/1.3 var(--citui-font-display);margin:0;padding:12px 16px;
+    background:var(--citui-surface);border-bottom:1px solid #e3ebf1}
+  .card .note{padding:10px 16px;font-size:13px;color:var(--citui-muted);border-top:1px solid #eef3f7}
+  .pick{padding:10px 16px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid #eef3f7}
+  .pick button{font:700 13px var(--citui-font-text);padding:8px 16px;border-radius:9px;border:0;
+    background:var(--citui-cyan-400);color:var(--citui-navy-900);cursor:pointer}
+  .pick .chosen{font-size:13px;font-weight:700;color:#1d7a4f;display:none}
+  .card[data-chosen="1"] .pick .chosen{display:inline}
+  .card[data-chosen="1"]{border-color:#2fa96b;box-shadow:0 0 0 2px rgba(47,169,107,.18)}
+  .paybg{background:
+      radial-gradient(760px 420px at 12% -6%, color-mix(in srgb, var(--citui-glow-blue) 30%, transparent), transparent 62%),
+      radial-gradient(660px 420px at 88% 8%, color-mix(in srgb, var(--citui-cyan-500) 28%, transparent), transparent 62%),
+      linear-gradient(160deg, var(--citui-navy-950), var(--citui-navy-900) 55%, var(--citui-navy-950));
+    color:#eaf3f8}
+  .brandbar{display:flex;align-items:center;gap:10px;padding:16px 20px}
+  .brandbar b{font:700 15px/1 var(--citui-font-display)}
+  .sizes{display:flex;align-items:flex-end;gap:26px;padding:16px 20px;flex-wrap:wrap}
+  .sizes figure{margin:0;text-align:center}
+  .sizes figcaption{font-size:11px;color:rgba(234,243,248,.62);margin-top:7px}
+  .m22{width:22px;height:22px} .m38{width:38px;height:38px} .m96{width:96px;height:96px}
+  .lightrow{display:flex;align-items:center;gap:14px;padding:16px 20px;background:#fff;flex-wrap:wrap}
+  .lightrow b{font:700 19px/1 var(--citui-font-display);color:var(--citui-navy-800)}
+  .lightrow .cap{font-size:12px;color:#60748b}
+  @container (max-width: 520px){ .sizes{gap:18px;padding:14px} .m96{width:64px;height:64px} }
+</style></head>
+<body data-w="390">
+
+<header class="pg">
+  <h1>E-változat — hol álljon a play-háromszög?</h1>
+  <p class="sub">Az E rajzában a play <b>14,6 egységgel beljebb</b> ül, mint a mai jelben. Itt kijjebb tolva.
+     A „rés” a szem széle és a play között, a 120-as rajz-egységben.</p>
+  <div class="sizer" role="group" aria-label="Méret">
+    <button type="button" data-w="390" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-w="desk" aria-pressed="false">Asztali</button>
+  </div>
+</header>
+
+<div id="stage"></div>
+
+<p style="font-size:13px;color:#60748b;padding:0 16px 30px;max-width:1180px;margin:0 auto">
+  A választást csak jelöli — nem ment és nem küld sehova. Írd meg a jelét.</p>
+
+<script>
+/* ── The E mark, parameterised. Geometry from assets/brand/mark-gradient.svg;
+      only the eye and the play triangle move. C arc + mouth are fixed. ── */
+const MOUTH = 84.6;                      // where the C arc opens — the reference line
+const mark = (o, cls, uid) => {
+  const eyeR = o.eyeR, eyeX = o.eyeX, px = o.playX;
+  return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">
+    <defs><radialGradient id="g${uid}" cx="38%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#8ee6f6"/><stop offset="1" stop-color="#1fb6d6"/></radialGradient></defs>
+    <path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="#1fb6d6" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="${eyeX}" cy="60" r="${eyeR}" fill="url(#g${uid})"/>
+    <circle cx="${eyeX - 5.5}" cy="54" r="${(eyeR * 0.28).toFixed(2)}" fill="#fff"/>
+    <path d="M${px} 49 L${px} 71 L${px + 20} 60 Z" fill="#fff"/>
+  </svg>`;
+};
+/* The light-background twin: navy arc + cyan play, same geometry. */
+const markLight = (o, cls, uid) => {
+  const eyeR = o.eyeR, eyeX = o.eyeX, px = o.playX;
+  return `<svg class="${cls}" viewBox="0 0 120 120" aria-hidden="true">
+    <defs><radialGradient id="l${uid}" cx="38%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#35c4e0"/><stop offset="1" stop-color="#0e2a47"/></radialGradient></defs>
+    <path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="#1fb6d6" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="${eyeX}" cy="60" r="${eyeR}" fill="url(#l${uid})"/>
+    <circle cx="${eyeX - 5.5}" cy="54" r="${(eyeR * 0.28).toFixed(2)}" fill="#fff" opacity=".92"/>
+    <path d="M${px} 49 L${px} 71 L${px + 20} 60 Z" fill="#1fb6d6"/>
+  </svg>`;
+};
+
+const V = [
+  { id: "E1", title: "E1 — a tegnapi E, változatlanul (referencia)", eyeX: 50, eyeR: 15, playX: 70,
+    note: "Ezt kifogásoltad. A play bal széle 14,6 egységgel a C szája MÖGÖTT van, a rés a szemtől mindössze 5,0.",
+    pick: false },
+  { id: "E2", title: "E2 — play félúton kijjebb", eyeX: 50, eyeR: 15, playX: 77,
+    note: "A play a száj vonala felé lép, a szem mérete marad. Óvatos korrekció." },
+  { id: "E3", title: "E3 — play a C szájának vonalán (a mai jel logikája)", eyeX: 50, eyeR: 15, playX: 84.6,
+    note: "Pontosan ott, ahol a MAI jelben áll: a play bal széle = a C nyílása. A nagy szem miatt a rés így 19,6." },
+  { id: "E4", title: "E4 — kisebb szem + play a szájnál (kiegyensúlyozott)", eyeX: 48, eyeR: 12.5, playX: 82,
+    note: "A szem kisebb és balrább, így a play kifér a szájhoz anélkül, hogy a jel jobbra elnehezedne. A mai jel arányaihoz ez áll a legközelebb." },
+];
+
+const stage = document.getElementById("stage");
+stage.innerHTML = V.map((o, i) => {
+  const gap = (o.playX - (o.eyeX + o.eyeR)).toFixed(1);
+  const mouth = (o.playX - MOUTH).toFixed(1);
+  return `<section class="card" id="c-${o.id}">
+    <h2>${o.title}</h2>
+    <div class="paybg">
+      <div class="brandbar">${mark(o, "m22", i + "a")}<b>Citoviso</b></div>
+      <div class="sizes">
+        <figure>${mark(o, "m22", i + "b")}<figcaption>22 px — fizetés-lap</figcaption></figure>
+        <figure>${mark(o, "m38", i + "c")}<figcaption>38 px — konzol</figcaption></figure>
+        <figure>${mark(o, "m96", i + "d")}<figcaption>96 px</figcaption></figure>
+      </div>
+    </div>
+    <div class="lightrow">${markLight(o, "m38", i + "e")}<b>Citoviso</b>
+      <span class="cap">← ugyanez világos háttéren (számla, honlap)</span></div>
+    <p class="note">Rés a szemtől: <b>${gap}</b> · a play a C szájához képest: <b>${mouth > 0 ? "+" + mouth : mouth}</b>
+      (0 = pont a vonalán; a mai jelben −1,2). ${o.note}</p>
+    ${o.pick === false ? "" :
+      `<div class="pick"><button type="button">Ez legyen</button><span class="chosen">✓ kiválasztva</span></div>`}
+  </section>`;
+}).join("");
+
+for (const b of document.querySelectorAll(".sizer button")) {
+  b.addEventListener("click", () => {
+    document.body.dataset.w = b.dataset.w;
+    for (const o of document.querySelectorAll(".sizer button")) o.setAttribute("aria-pressed", String(o === b));
+  });
+}
+for (const b of document.querySelectorAll(".pick button")) {
+  b.addEventListener("click", () => {
+    for (const c of document.querySelectorAll(".card")) c.removeAttribute("data-chosen");
+    b.closest(".card").setAttribute("data-chosen", "1");
+  });
+}
+</script>
+</body></html>

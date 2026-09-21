@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Citoviso mark">
+  <!-- Citoviso mark — LIGHT-background variant (owner-approved E4, 2026-09-21).
+       Same geometry as mark-e4-dark.svg; only the eye gradient and the play colour differ. -->
+  <defs>
+    <radialGradient id="cit-eye-light" cx="38%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#35c4e0"/>
+      <stop offset="1" stop-color="#0e2a47"/>
+    </radialGradient>
+  </defs>
+  <path d="M84.6 29.3 A42 42 0 1 0 84.6 90.7" fill="none" stroke="#1fb6d6" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="48" cy="60" r="12.5" fill="url(#cit-eye-light)"/>
+  <circle cx="42.5" cy="54" r="3.5" fill="#ffffff" opacity=".92"/>
+  <path d="M82 49 L82 71 L102 60 Z" fill="#1fb6d6"/>
+</svg>

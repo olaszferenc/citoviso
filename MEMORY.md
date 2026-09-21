@@ -76,6 +76,32 @@ pénzügyi/bizalmi leletének javítása, őrrel és negatív kontrollal. Sessio
   `rooms` eltünteti a fizetett `amenities`-t · az előnézet ÍR · `renewableModuleIds` supersession ·
   nem-atomi `activateUpsell` · doc-hiba) — **egyik sem az én szálam volt**.
 
+## Párhuzamos szál (2026-09-21) — a márkajel
+
+**🎨 A MÁRKAJEL, AMI KÉT PÉLDÁNYBAN ÉLT — E4 jóváhagyva.**
+Session-jegyzet: `_planning/memory/2026-09-21_brand_mark_e4.md`.
+Kontraktus: `assets/design-refs/console/brand-mark/README.md` (geometria + mért kontrasztok).
+
+- **A kérés:** „egy számlázz.hu-ra feltölthető cito logót png". A forrás keresése kibontotta, hogy
+  **két külön márkajel él**: a fejlécet a `views.ts:117` inline SVG-je adja, a **favikont** a
+  `94680b4`-ben commitolt `assets/brand/` készlet — más ív-szín, más szem, más font, más szó
+  („Citoviso" vs „itoviso").
+- ⛔ **A bejelentett hiba oka más volt, mint a javasolt javítás:** a `/pay/done` bal felső sarkában
+  **nem a logó** van, hanem a `.pd-brand__mark` (`views.ts:2069`) 22 px-es CSS-köre
+  (`border-right-color:transparent`) — **se szem, se play**; a közepe mérve **1,06**.
+  A kért fehér halo mérve **semmit nem old meg** (1,44 → 1,44): a glória a kontúrt emeli, nem a közepét.
+- **§2b két kör:** A–G a VALÓDI gradiensen, tényleges méretekben (22/38/96 px) → „az E a jó irány,
+  csak a play beljebb került" → **mérve igaza volt** (−14,6 vs a mai −1,2) → E1–E4 → **E4**.
+- **Szállítva:** `mark-e4-dark.svg` + `mark-e4-light.svg` (bitre azonos geometria, C-ív mindkettőn
+  cián), `citoviso-logo-szamla.png` (**ez megy a Számlázz.hu-ra**) + 3 további változat, és a
+  befagyasztott terv.
+- ⛔ **Saját hiba:** az „átlátszó" PNG **nem volt átlátszó** (a saját `background:#fff` sorom ölte
+  meg az `omitBackground`-ot; a két fájl md5-azonossága árulta el) → a generátor most utó-feltétellel
+  méri a kiírás UTÁN, hogy minden fájl háttere megfelel-e a nevének.
+- 🔴 **NYITOTT — a hiba ÉLESBEN MÉG OTT VAN:** a terv jóváhagyva, **kódsor nem változott**. Három hely:
+  `views.ts:2069` (fizetés-lap), `views.ts:117` + `adminViews.ts:101` (fejléc), és a favikon
+  `public/assets/ui/mark-gradient.svg`. Csere előtt a fogyasztókat grepelni kell.
+
 ## Előző szál (2026-09-21) — a modul-függőségi rend
 
 **🧩 A MODUL-FÜGGŐSÉGI REND FELDERÍTÉSE — húsz fogyasztó, és ami kiesett a láncból (ADR-0192).**
