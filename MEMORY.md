@@ -1,7 +1,39 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-20 (🚀 **ÉLES = `91b856d`**, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés)
+Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés)
 
-## Aktív feladat (legfrissebb szál, 2026-09-20)
+> 🔴 **ÉLES KOCKÁZAT (2026-09-21):** az éles `.env`-ben még a **RÉGI, megszűnt adószámú** Számlázz.hu
+> fiók Agent kulcsa fut — egy éles fizetés ma a megszűnt vállalkozás nevére állítana ki számlát.
+> Lokálban cserélve és igazolva; **az éles csere külön engedélyt kér** (§0.3). Részletek:
+> `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`.
+
+## Aktív feladat (legfrissebb szál, 2026-09-21)
+
+**🧾 A SZÁMLÁZÓ FIÓK KÖVETTE AZ ADÓSZÁM-CSERÉT — új Számlázz.hu fiók + Agent kulcs.**
+Session-jegyzet: `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`. Kód nem változott.
+
+- **A rés, amit a 09-16-i javítás hagyott:** az `.env` már a valós `92227011-1-33`-at mondta, de a
+  **Számlázz.hu fiók maga** a megszűnt `69646014`-en állt — egy éles fizetés a **megszűnt
+  vállalkozás nevére** számlázott volna.
+- **A törzsszám fiókon belül SOHA nem módosítható** (csak áfakód + megyekód) ⇒ **új számlázási
+  fiók**; „alfiók" nem létezik — külön fiók UGYANAZZAL a belépéssel (cégválasztó).
+- ⛔ **A tesztüzem kapuja egyirányú:** csak kiállított számla ÉS NAV-összekötés ELŐTT kapcsolható
+  be — a Vezérlőpult viszont a NAV-linket kínálja fel előbb, arra kattintva véglegesen elvész.
+- ⭐ **A kulcs kiállítás NÉLKÜL igazolva:** nem létező számlaszám PDF-kérése → **7** („ismeretlen
+  számlaszám" = hitelesítve) vs. rossz kulccsal **3** („Sikertelen bejelentkezés"). A 7-es
+  önmagában semmit nem bizonyít — a **negatív kontroll** tette bizonyítékká.
+- ⛔⛔ **„A dev rendszer még a régi fiókot használja" nem az `.env`-ről szólt:** a `config.ts:10`
+  `process.loadEnvFile()` **egyszer fut, modul-betöltéskor**, a `tsx watch` az `.env`-re nem figyel
+  → 13 órán át a régi kulcs élt a memóriában. Javítás: `sudo systemctl restart citoviso-public
+  citoviso-console`. ⚠️ A `/proc/<pid>/environ` **nem mutatja** a kulcsot — „nincs benne" ≠ „nincs
+  beállítva".
+- **Igazolás:** `CITO-2026-1` a valódi adapteren át (14 900 Ft, AAM, PDF 26 kB) — és a tesztüzemet
+  **a dokumentum igazolta, nem a szóbeli állítás**: „minta minta" vízjel + „TESZT –" előtag.
+- **Barion:** `UEVH-00277388` az Üzleti profilba feltöltve + videó-azonosítás **kész, jóváhagyásra vár**.
+- 🔴 **NYITOTT:** ① a székhely `Kunó`→`Kuno` az `.env`-ben (a 09-16-i jegyzet nyitott tétele, **öt
+  nappal később is áll**; a hat publikus jogi lapon ez megy ki) ② **élesen még a RÉGI fiók kulcsa
+  fut** — külön engedélyt kér ③ a teljes fizetési folyamat valódi Számlázz.hu-val nincs végigvive.
+
+## Előző szál (2026-09-20)
 
 **🖼️ A MOCK-KÁRTYA A MOCKOT MUTATJA — pillanatkép a nyitóoldalról, harmadakkora kártyán (ADR-0189).**
 Session-jegyzet: `_planning/memory/2026-09-20_mock_cards.md`.
