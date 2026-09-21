@@ -20,6 +20,7 @@ import {
   GROUP_LABELS,
   PRESETS,
   detectPresentModules,
+  sellableModuleIds,
 } from "../modules.js";
 import {
   loadPricing,
@@ -298,8 +299,17 @@ export async function buildManifest(
   // ⛔ `retired` = LEVÉVE A POLCRÓL (src/modules.ts): a leadnek mutatott kínálatból is
   // ki kell esnie, különben a konfigurátor olyan modult árazna és jelölne mintával,
   // aminek nincs felülete — pontosan azt a néma ígéretet, amit a levétel megszüntet.
+  // ⛔ ADR-0192: a disabled module also takes DOWN everything that hard-requires it.
+  // Measured leak: with `rooms` off the shelf the offer still listed `pricing` and
+  // `booking` — a calendar whose price table cannot be bought.
+  const sellable = new Set(
+    sellableModuleIds(
+      MODULE_CATALOG.filter((m) => !m.tenantOnly && !m.retired).map((m) => m.id),
+      disabledSales,
+    ),
+  );
   const offered = MODULE_CATALOG.filter(
-    (m) => !m.tenantOnly && !m.retired && (m.spine || !disabledSales.has(m.id)),
+    (m) => !m.tenantOnly && !m.retired && (m.spine || sellable.has(m.id)),
   );
   const renewal = await renewalQuoteForLead(
     opts.renewalLeadId ?? null,
@@ -390,8 +400,9 @@ export async function buildManifest(
       id: p.id,
       label: p.label,
       note: p.note,
-      // A preset must not tick a module the list below no longer offers.
-      modules: p.modules.filter((id) => !disabledSales.has(id)),
+      // A preset must not tick a module the list below no longer offers — and not
+      // one whose hard requirement fell off the shelf with it (ADR-0192).
+      modules: sellableModuleIds(p.modules, disabledSales),
     })),
     // NB: the prospect sees `publicLabel` (plain), never the operator jargon label.
     // Tenant-only/one-time modules (ADR-0063) are not offered here: the purchase
