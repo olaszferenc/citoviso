@@ -11351,8 +11351,14 @@ felismerés lett az őr 4. negatív kontrollja (lásd ⑤).
    lustán). A feltétel tehát mock fázisban ~97%-ban kiértékelhetetlen — de az adat **olcsón
    beszerelhető**: mindkét útvonal már betölti a `mock_artifact.inputs`-ot (`src/console/server.ts:690`,
    `src/console/data.ts:1524`), csak a `buildManifest` nem kapja meg.
-   ⭐ A kiértékelő az **élesztett `isMultiUnit()`** (`src/tenant/units.ts:137-139`), aminek ma
-   **nulla hívója van** — egy szabály két példányban két igazság.
+   ⭐ A kiértékelő az **élesztett `isMultiUnit()`** (`src/tenant/units.ts:137-139`) — egy szabály két
+   példányban két igazság.
+   ⛔ **HELYESBÍTÉS (ugyanaznap, a bevitel előtti ellenőrzésen):** a felderítő „nulla hívója van"-t
+   jelentett, én ezt átvettem — **a `src/`-re igaz, az egész repóra NEM**. A `scripts/module-config-check.mts:21`
+   importálja, és a `:290`/`:296` **mindkét polaritását méri** („az alapértelmezett egység nem kér
+   döntést" / „több egységnél megjelenik a választó"). Ez jó hír: a predikátum **már ma őrzött**, tehát
+   nem kell újat írni alá — de a `grep` hatókörét ki kell mondani, mert a szűk felismerő ugyanúgy hamis
+   képet ad, mint a hiányzó mérés (`feedback_narrow_recognizer_is_a_false_green`).
 
 ### ⑤ A SÉMA — nincs DB-tábla, és nem is sztring-lista
 
