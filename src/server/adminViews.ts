@@ -17,6 +17,7 @@ import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.
 import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
 import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
+import { COUPON_JS } from "../payment/couponRule.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { ic } from "../ui/icons.js";
 import { flagSvg } from "../ui/flags.js";
@@ -1506,18 +1507,31 @@ export function modulesSection(
     // so the bar and the confirm card can never promise a different amount.
     `var FCM=${fcMonths},CPCT=${coupon ? coupon.percent : 0},AUTOC=${sub?.autoCharge ? "true" : "false"};` +
     `var payNow=0,payAdds=[];` +
-    `var fcPrice=function(p){return Math.floor((p*FCM*(100-CPCT))/100)};` +
+    // ⛔ THE ROUNDING RULE ARRIVES AS A FILE, it is not retyped here. The line that used
+    // to stand in this spot — `Math.floor(p*FCM*(100-CPCT)/100)` PER MODULE, then summed —
+    // was a second copy of moduleUpsell.createFirstChargeOrder's whole-basket discount, and
+    // measured 2026-09-21 the two disagreed by 1 Ft on live data (1 626 on screen vs 1 627
+    // charged). `splitFirstCharge` gives the charged total AND per-module lines that add up
+    // to it, so the bar, the confirm card and the order are one arithmetic.
+    `${COUPON_JS}` +
+    `var fcLine=function(c){return +c.dataset.fcLine||0};` +
+    `function fcAllocate(){var sp=CitCoupon.splitFirstCharge(` +
+    `payAdds.map(function(c){return +c.dataset.price}),FCM,CPCT);` +
+    `payNow=sp.total;payAdds.forEach(function(c,i){c.dataset.fcLine=sp.lines[i]})}` +
     `var apply=document.getElementById("adm-plan-apply");` +
     `var paybox=document.getElementById("adm-plan-paynow"),paysum=document.getElementById("adm-plan-paysum");` +
     `function sync(){var add=[],rem=[],delta=0;payNow=0;payAdds=[];cbs.forEach(function(c){` +
     `var was=c.dataset.committed==="1",is=c.checked,p=+c.dataset.price;` +
     `var row=c.closest("[data-modrow]");if(row)row.classList.toggle("is-dirty",was!==is);` +
-    `if(is&&!was){add.push(c);delta+=p;if(p>0&&!c.dataset.rejoin){payNow+=fcPrice(p);payAdds.push(c)}}` +
+    `if(is&&!was){add.push(c);delta+=p;if(p>0&&!c.dataset.rejoin){payAdds.push(c)}}` +
     `if(!is&&was){rem.push(c);delta-=p}});` +
+    // The basket is complete only now, and the discount is a property of the BASKET —
+    // so the allocation happens here, once, before anything renders a number from it.
+    `fcAllocate();` +
     `bar.classList.toggle("show",add.length+rem.length>0);` +
     `rows.innerHTML=add.map(function(c){var p=+c.dataset.price;` +
     `var what=c.dataset.rejoin?"${T(lang, "visszakapcsolás — ki van fizetve {date}-ig", { date: esc(renewDateS) })}"` +
-    `:p>0?"${T(lang, "fizetés most:")} <b>"+HUF(fcPrice(p))+"</b> ("+FCM+" ${T(lang, "hónap a fordulónapig")})"` +
+    `:p>0?"${T(lang, "fizetés most:")} <b>"+HUF(fcLine(c))+"</b> ("+FCM+" ${T(lang, "hónap a fordulónapig")})"` +
     `:"${T(lang, "azonnal él — díjmentes")}";` +
     `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDateS) })}</span></div>'}).join("");` +
@@ -1554,7 +1568,7 @@ export function modulesSection(
     `var fcOk=false;` +
     `function fcOpen(){var lines=fcm.querySelector("[data-fc-lines]");` +
     `lines.innerHTML=payAdds.map(function(c){var p=+c.dataset.price;` +
-    `return '<div class="adm-fc__line"><span>'+c.dataset.label+' · '+FCM+' ${T(lang, "hó")} × '+HUF(p)+(CPCT?' − '+CPCT+'%':'')+'</span><b>'+HUF(fcPrice(p))+'</b></div>'}).join("")+` +
+    `return '<div class="adm-fc__line"><span>'+c.dataset.label+' · '+FCM+' ${T(lang, "hó")} × '+HUF(p)+(CPCT?' − '+CPCT+'%':'')+'</span><b>'+HUF(fcLine(c))+'</b></div>'}).join("")+` +
     `'<div class="adm-fc__line adm-fc__line--total"><span>${T(lang, "Fizetendő most")}</span><b>'+HUF(payNow)+'</b></div>';` +
     `fcm.querySelector("[data-fc-note]").textContent=AUTOC` +
     `?"${T(lang, "A tárolt kártya-megbízását terheljük. A modul a sikeres terheléskor azonnal élesedik; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}"` +

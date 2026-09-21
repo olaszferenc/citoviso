@@ -23,7 +23,8 @@
 
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
+import { couponRule } from "../payment/couponRule.js";
+import { bestActiveCouponForTenant } from "../payment/offers.js";
 import { getAnnualFreeMonths, getModulePrice, loadPricing } from "../pricing.js";
 
 /**
@@ -127,7 +128,16 @@ export async function createFirstChargeOrder(
   const months = proratedFirstChargeMonths(period, periodEnd);
   const listPrice = monthly * months;
   const coupon = await bestActiveCouponForTenant(tenantId);
-  const price = coupon ? applyOffer(listPrice, coupon) : listPrice;
+  // ⛔ THE SAME SPLIT THE BROWSER SHOWED, not a second computation of it. The tenant-admin
+  // renders the basket through couponRule.splitFirstCharge(); pricing the order any other
+  // way is how "1 626 Ft on the screen, 1 627 Ft on the card" was born (ADR-0192 ⑧.2 —
+  // per-module rounding there, whole-basket rounding here). The park never caught it
+  // because its only upsell is annual, where the two paths happen to agree.
+  const price = couponRule.splitFirstCharge(
+    ids.map((id) => getModulePrice(id)),
+    months,
+    coupon ? coupon.percent : 0,
+  ).total;
 
   const row = await db
     .insertInto("order_intent")

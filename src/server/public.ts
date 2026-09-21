@@ -65,7 +65,7 @@ import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
 import { TENANT_LOGIN_URL, injectOwnerLogin } from "./ownerLogin.js";
-import { getTenantModules } from "../tenant/modules.js";
+import { getTenantModules, siteRendersModule } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
@@ -678,7 +678,15 @@ async function serveTenantHost(
     // Only busy DATES leave the building — no guest name, no contact, nothing personal.
     // Prices ride along (owner decree 2026-09-06): the widget shows the stay total
     // at booking time. Public data — the same numbers the pricing section renders.
-    const priceRows = await getUnitPrices(unitId);
+    //
+    // ⛔⛔ …AND ONLY WHEN THE PRICING MODULE ACTUALLY RENDERS (ADR-0193). This endpoint
+    // used to skip the entitlement question entirely, so a tenant who cancelled
+    // `pricing` had the price vanish from the PAGE while this JSON kept feeding the
+    // widget — the guest read a stay total on a site that quotes no prices. Same
+    // predicate as the renderer (isRenderedModule), asked through one function, so
+    // the page and the widget cannot disagree about whether this site has prices.
+    const pricingLive = await siteRendersModule(siteId, "pricing");
+    const priceRows = pricingLive ? await getUnitPrices(unitId) : [];
     const pricingRow = await db
       .selectFrom("site_module_config")
       .select("config")

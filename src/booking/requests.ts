@@ -21,6 +21,7 @@ import { getEmailSender } from "../email/sender.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
+import { siteRendersModule } from "../tenant/modules.js";
 import { blockingUnitIds } from "../tenant/unitScope.js";
 import { formatAmount, getUnitPrices, quoteStayFrom, seasonCovers } from "../tenant/prices.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
@@ -388,25 +389,39 @@ export async function createBookingRequest(
 
   // Owner decree 2026-09-06: freeze the price IN FORCE NOW onto the request —
   // seasonal rows win per night; no (complete) price list → no quote anywhere.
-  const pricingRow = await db
-    .selectFrom("site_module_config")
-    .select("config")
-    .where("site_id", "=", input.siteId)
-    .where("module", "=", "pricing")
-    .executeTakeFirst();
+  //
+  // ⛔⛔ THE PRICE MAY ONLY BE FROZEN IF THE SITE ACTUALLY QUOTES PRICES (ADR-0193).
+  // A frozen quote is a BINDING offer: it goes out in the guest's confirmation mail
+  // and the guest may hold the owner to it. Measured 2026-09-21 (ADR-0192 ②): with
+  // `pricing` cancelled the page showed no price at all and this line still froze
+  // 84 000 Ft onto the request — the letter contradicted the site it came from.
+  // The booking itself is NOT refused: a request is not a purchase (ADR-0044 §6), and
+  // a module the tenant DID pay for (`booking`) must not die with one they did not.
+  // §B.17: no number is better than a wrong number.
+  const pricingLive = await siteRendersModule(input.siteId, "pricing");
+  const pricingRow = pricingLive
+    ? await db
+        .selectFrom("site_module_config")
+        .select("config")
+        .where("site_id", "=", input.siteId)
+        .where("module", "=", "pricing")
+        .executeTakeFirst()
+    : null;
   const pricing = effectiveModuleConfig(
     "pricing",
     (pricingRow?.config ?? null) as Record<string, unknown> | null,
     null,
   );
-  const quote = quoteStayFrom(await getUnitPrices(input.unitId), {
-    dateFrom,
-    dateTo,
-    guests: Math.max(1, Math.round(input.guests || 1)),
-    currency: String(pricing.currency ?? "HUF"),
-    unitMode: String(pricing.unit ?? "per_night"),
-    baseLabel: T(lang, "Alapár"),
-  });
+  const quote = pricingLive
+    ? quoteStayFrom(await getUnitPrices(input.unitId), {
+        dateFrom,
+        dateTo,
+        guests: Math.max(1, Math.round(input.guests || 1)),
+        currency: String(pricing.currency ?? "HUF"),
+        unitMode: String(pricing.unit ?? "per_night"),
+        baseLabel: T(lang, "Alapár"),
+      })
+    : null;
 
   const token = randomBytes(24).toString("base64url");
   const row = await db

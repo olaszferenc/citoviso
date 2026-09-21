@@ -114,6 +114,46 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
 }
 
 /**
+ * Is this module LIVE on the guest's page — i.e. may its content leave the building?
+ *
+ * ⛔ ONE definition, for the same reason isBilledModule() above has one. "Rendered" is
+ * not "active": a superseded module shares its slot with the module that replaced it,
+ * so it shows nothing. A cancelled-for-the-period-end module IS still rendered — the
+ * tenant paid for it until the renewal date, and gating it the moment they click
+ * "lemondom" would take away what they already bought.
+ *
+ * Measured 2026-09-21 (ADR-0192 ②) with this question answered in ONE place only (the
+ * renderer): `/api/foglaltsag` and createBookingRequest never asked it, so a tenant who
+ * cancelled `pricing` had the price vanish from the PAGE while the booking widget kept
+ * calculating and the request froze an 84 000 Ft quote into the guest's mail. Anything
+ * that needs this answer calls THIS function.
+ */
+export function isRenderedModule(m: TenantModule): boolean {
+  return m.active && !m.supersededBy;
+}
+
+/** isRenderedModule() asked by tenant + module id. */
+export async function tenantRendersModule(tenantId: string, moduleId: string): Promise<boolean> {
+  const mv = await getTenantModules(tenantId);
+  const m = mv.modules.find((x) => x.id === moduleId);
+  return Boolean(m && isRenderedModule(m));
+}
+
+/**
+ * The same question asked from a SITE id — the public surfaces (availability endpoint,
+ * booking request) only ever know which site they serve, and resolving the tenant at
+ * each call site is exactly how the second, divergent copy gets written.
+ */
+export async function siteRendersModule(siteId: string, moduleId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("site")
+    .select("tenant_id")
+    .where("id", "=", siteId)
+    .executeTakeFirst();
+  return row ? tenantRendersModule(row.tenant_id, moduleId) : false;
+}
+
+/**
  * Apply the tenant's module selection. `wanted` = module ids the owner wants active; every
  * other catalog module is deactivated. The spine is never touched. Unknown ids are ignored
  * (the catalog is the single source of truth). Idempotent.

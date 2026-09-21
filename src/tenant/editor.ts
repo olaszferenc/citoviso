@@ -22,7 +22,7 @@ import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
-import { getTenantModules } from "./modules.js";
+import { getTenantModules, isRenderedModule } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits } from "./units.js";
 import { formatSpan, getSitePrices, priceSpan, type UnitPrice } from "./prices.js";
@@ -225,7 +225,7 @@ export async function moduleContentFor(
   const on = (id: string) => {
     if (overrideRenderable) return overrideRenderable.has(id);
     const m = mv!.modules.find((x) => x.id === id);
-    return Boolean(m?.active && !m.supersededBy);
+    return Boolean(m && isRenderedModule(m));
   };
   const configs = await getAllSiteModuleConfigs(siteId);
   const cfg = (id: string) => configs[id]?.config ?? {};

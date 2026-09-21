@@ -1420,6 +1420,29 @@ if [ -f scripts/module-config-check.mts ] && \
   echo "[pre-commit] module-config-check (ADR-0044: a modul-konfig réteg végponttól végpontig)…"
   npx tsx scripts/module-config-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⛔⛔ ÁR-JOGOSULTSÁGI KAPU A FOGLALÁSI ÚTON (ADR-0193, a lelet: ADR-0192 ②). A
+# `/api/foglaltsag` nem kérdezte meg az entitlement-kaput: a `pricing` lemondása után az ár
+# eltűnt a LAPRÓL, de nem a folyamatból — a widget kalkulált, a `createBookingRequest`
+# BEFAGYASZTOTTA, és a `quoted_total` KIMENT A VENDÉG LEVELÉBE. Ár nélküli lap + kötelező
+# erejű ajánlat. Az őr eldobható fixture-t épít (valódi DB + valódi HTTP-szerver), és a
+# KISZÁLLÍTOTT .eml-ben méri meg, hogy tényleg nincs benne szám. Piros önteszttel (4 bukás
+# a történeti viselkedésen). ⚠️ DB-t igényel; foglalt teszt-domainre levelez (outbox).
+if [ -f scripts/booking-price-gate-check.mts ] && \
+   changed_files | grep -qE '^src/(server/public|booking/requests|tenant/(modules|editor|prices))\.ts$|^scripts/booking-price-gate-check'; then
+  echo "[pre-commit] booking-price-gate (ár-jogosultság nélkül nem megy ki szám)…"
+  npx tsx scripts/booking-price-gate-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ⛔⛔ EGY KEREKÍTÉSI SZABÁLY (ADR-0193 ②, a lelet: ADR-0192 ⑧.2). A kupon-kerekítés két
+# példányban élt — a kliens MODULONKÉNT, a szerver a VÉGÖSSZEGEN —, és élő adaton 1 Ft-tal
+# eltért: 1 626 a képernyőn, 1 627 a terhelésen. Az őr HAVI kosarat mér (az évesen a két út
+# véletlenül egybeesik, ezért ott a hibás kód is zöld lenne), és MIELŐTT bármit állítana,
+# bizonyítja, hogy a fixture meg tudja különböztetni a két szabályt. Piros önteszt: a lapot a
+# TÖRTÉNETI szabállyal rendereli. ⚠️ DB + böngésző (~15 s).
+if [ -f scripts/coupon-rounding-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-coupon\.cjs$|^src/payment/(couponRule|offers)\.ts$|^src/tenant/moduleUpsell\.ts$|^src/server/adminViews\.ts$|^scripts/coupon-rounding-check'; then
+  echo "[pre-commit] coupon-rounding (a képernyő és a terhelés egy szám)…"
+  npx tsx scripts/coupon-rounding-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ONTOLÓGIA-FRISSESSÉG (mérve 2026-09-17): a `_planning/DOMAIN/` a `CLAUDE.md` §1 szerint
 # KÖTELEZŐEN olvasott igazság, az átvezetése mégis 2026-07-12 óta elmaradt — 9 feldolgozatlan
 # review, 64 érdemi javaslat, és a `01-CALC-MODELS.md` két hónapig a július 4-i vázban állt.

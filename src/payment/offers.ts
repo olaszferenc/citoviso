@@ -15,6 +15,7 @@
 // covered automatically the moment they stamp sent_at.
 
 import { db } from "../db/client.js";
+import { couponRule } from "./couponRule.js";
 
 // ── Tunable parameters (ADR-0088: percentages/deadlines are parameters, not law).
 export const OUTREACH_OFFER_PERCENT = 25;
@@ -33,9 +34,17 @@ export interface ActiveOffer {
   readonly expiresAt: Date | null;
 }
 
-/** Discounted amount for a list price — floor, so we never overcharge by rounding. */
+/**
+ * Discounted amount for a list price — floor, so we never overcharge by rounding.
+ *
+ * ⛔ THE ARITHMETIC IS NOT HERE. It lives in assets/runtime/cit-coupon.cjs, because the
+ * browser reprices the module basket on every checkbox click and cannot import TypeScript.
+ * While the rule existed in both places it drifted — measured 2026-09-21 on live data:
+ * 1 626 Ft on the screen, 1 627 Ft on the card (the browser discounted each module, this
+ * side discounted the total). Delegating leaves ONE predicate, not two a guard has to referee.
+ */
 export function applyOffer(listPrice: number, offer: { percent: number }): number {
-  return Math.floor((listPrice * (100 - offer.percent)) / 100);
+  return couponRule.discount(listPrice, offer.percent);
 }
 
 function toActive(row: {
