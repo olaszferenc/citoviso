@@ -123,6 +123,41 @@ befagyasztva: `assets/design-refs/console/paydone-split/`. Jegyzet:
 - **Kapuk:** `paydone-split-check` (önteszttel) · `pay-exit-truth` · `consent-style` ·
   `checkout-viewport` · `verdict-gate-check` · i18n · design-token · kb-check.
 
+## Párhuzamos szál (2026-09-20) — a megkeresés-link a vásárlás után (ADR-0191) 🚀 ÉLESBEN
+
+**🔒 A MEGKERESÉS LINKJE A VÁSÁRLÁS UTÁN NEM ÁRUL — a lead a SAJÁT oldalához ér.**
+Session-jegyzet: `_planning/memory/2026-09-20_owned_prospect_link.md`.
+Élesítve: `prod/20260920-2138` = `91b856d`. Visszagörgetés: `deploy-prod.sh 4a59e13 --go`.
+
+- **A bejelentés (tulajdonosi dev-teszt):** a már fizetett lead újra megnyitja a `/p/<token>`-t,
+  és valódi kártyaterhelést indíthat.
+- ⭐ **A kár MÁS volt, mint a bejelentés — és mint az első reflexem.** Nem „kétszer kapja meg",
+  és nem is „elhasal a UNIQUE-on": a `convertLead` idempotens, az `ensureSubscriptionForOrder`
+  `onConflict…doNothing`, az `issueAndSendTenantLogin` kihagy — tehát a vevő **fizet, VALÓDI
+  SZÁMLÁT kap, és semmit nem kap**, még hosszabb előfizetést sem. Az idempotencia némán
+  elnyelte a második futást; a nem-idempotens ágak (terhelés, számla) adták a kárt.
+- **Szállítva:** `ownedSiteForLead()` = **egy predikátum, két hívó** (képernyő + pénz-út), két
+  lábbal — tenant VAGY fizetett `initial`, és a **második a fontosabb** (a megakadt aktiválású
+  vevő FIZETETT és nincs oldala, pont ő próbálja újra) · a tiltás a **PÉNZ-ÚTON** ül
+  (`requestPayment` nem ad `initial` pay-linket ⇒ nincs terhelés), a `handleOrderRequest` pedig
+  a rendelés RÖGZÍTÉSE ELŐTT tilt (különben `order_intent` + operátori riasztás keletkezne egy
+  nem-problémából) · **harmadik keretezési állapot** (`owned`) saját sávval ÉS saját lábléccel,
+  mert a követett pár két mondata (`Ez még nem élő oldal` · `az ajánlatot az igényeihez
+  igazíthassuk`) egy fizető ügyfélnek hazugság · a sáv **elvezet** a belépéshez, de **nem léptet
+  be** (a link e-mailben utazik; továbbküldött levél = fiók-hozzáférés).
+- **Élesben igazolva, nem a deploy zöldjére hagyatkozva:** `/p/<token>` → 200, owned sáv ott,
+  konfigurátor 0, **`mock_view` 5 → 5**, és a predikátum mindkét irányban helyes (2 vásárolt
+  lead → pay-link megtagadva, kontroll → engedélyezett).
+- ⛔⛔ **A deploy-kapu KÉTSZER megállított, jogosan** (5 KB-lelet): kettő az ADR-0189 szál
+  adóssága (az a commit **nulla `kb/` fájlt** érintett), három az enyém. A **label-drift őr
+  kétszer ugyanazon a mintán**: teljes mondatot idéztem félkövéren olyan szövegből, amit a kód
+  KÉT darabból rak össze — a súgóban olyan felirat állt volna, ami a képernyőn sosem jelenik
+  meg. + a belső-hivatkozás őr egy ADR-számon, amit felhasználói szövegbe írtam.
+- 🔴 **NYITOTT:** a leiratkozó link hiánya az `owned` lapon **jogilag eldöntetlen** (az ítélő
+  ágens elszállt, verdiktet NEM adtam helyette — élesen is így megy) · a süti-sáv a vásárolt
+  lapon is kártyás fizetésről beszél, pedig ott már nincs fizetési út · 35 KB-entryből 28
+  `updated:` dátuma elavult (repó-szintű hézag).
+
 ## Előzmény — 2026-09-19 (kiküldési szándék / piszkozat-sáv)
 
 **⛔ A KURÁTOR KIKÜLDÉSI SZÁNDÉKÁT SEMMI NEM GÁTOLJA — a sáv hazug tiltása javítva.**
