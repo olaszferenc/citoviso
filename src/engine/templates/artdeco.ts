@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -103,15 +103,18 @@ ${centredModsecCss("artdeco")}
   /* ROOMS — deco-framed cards */
   .ad-rooms{display:grid;gap:30px;grid-template-columns:1fr}
   @media(min-width:900px){.ad-rooms{grid-template-columns:repeat(3,1fr)}}
-  .ad-room .ad-im{aspect-ratio:3/4;overflow:hidden;background:color-mix(in srgb, var(--cit-ink) 12%, var(--cit-surface))}
+  /* The card is a real <a> (.ad-room) to the unit's page; the footer controls sit in a
+     SIBLING body, because a link may not contain a button or a second link. The room
+     rules therefore hang off .ad-room-wrap, which owns both halves. */
+  .ad-room .ad-im{position:relative;aspect-ratio:3/4;overflow:hidden;background:color-mix(in srgb, var(--cit-ink) 12%, var(--cit-surface))}
   .ad-room .ad-im img{width:100%;height:100%;object-fit:cover;filter:sepia(.3) contrast(1.05) brightness(.92);transition:filter .5s,transform .6s}
-  .ad-room:hover .ad-im img{filter:sepia(.1);transform:scale(1.04)}
-  .ad-room .ad-bd{text-align:center;padding:24px 16px 6px}
-  .ad-room h3{font-size:25px;margin-bottom:6px}
-  .ad-room .ad-mt{font-style:italic;font-size:16px;color:color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));margin-bottom:14px}
-  .ad-room p{font-size:14.5px;color:var(--cit-muted);margin-bottom:18px}
-  .ad-room .ad-ft{padding-top:16px;border-top:1px solid color-mix(in srgb, var(--cit-accent) 30%, transparent)}
-  .ad-room .ad-pr{font-family:var(--cit-font-display);font-size:22px;letter-spacing:.05em;color:var(--cit-accent);display:block;margin-bottom:12px}
+  .ad-room:hover .ad-im img,.ad-room:focus-visible .ad-im img{filter:sepia(.1);transform:scale(1.04)}
+  .ad-room-wrap .ad-bd{text-align:center;padding:24px 16px 6px}
+  .ad-room-wrap h3{font-size:25px;margin-bottom:6px}
+  .ad-room-wrap .ad-mt{font-style:italic;font-size:16px;color:color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));margin-bottom:14px}
+  .ad-room-wrap p{font-size:14.5px;color:var(--cit-muted);margin-bottom:18px}
+  .ad-room-wrap .ad-ft{padding-top:16px;border-top:1px solid color-mix(in srgb, var(--cit-accent) 30%, transparent);display:flex;flex-direction:column;align-items:center;gap:10px}
+  .ad-room-wrap .ad-pr{font-family:var(--cit-font-display);font-size:22px;letter-spacing:.05em;color:var(--cit-accent);display:block}
 
   /* SERVICES — deco list, right-aligned italic value */
   .ad-svc{display:grid;gap:0;grid-template-columns:1fr;max-width:840px;margin:0 auto}
@@ -283,16 +286,25 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="ad-rooms" data-cit-module="rooms">
         ${roomsData
           .map(
-            (r) => `<article class="ad-room">
-          <div class="ad-frame"><div class="ad-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</div></div>
+            (r, i) => `<article class="ad-room-wrap">
+          ${roomShell(
+            data,
+            r,
+            i,
+            "ad-room",
+            `<div class="ad-frame"><div class="ad-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${roomHint(data, r)}</div></div>
           <div class="ad-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="ad-mt">${esc(r.capacity)}</p>` : ""}
-            ${r.note ? `<p>${esc(r.note)}</p>` : ""}
+          </div>`,
+          )}
+          <div class="ad-bd" style="padding-top:0">
             <div class="ad-ft">
               ${r.price ? `<span class="ad-pr">${esc(r.price)}</span>` : ""}
+              <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
               ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
             </div>
+            ${roomDetails(data, r, i)}
           </div>
         </article>`,
           )

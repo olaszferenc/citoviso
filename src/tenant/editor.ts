@@ -25,6 +25,7 @@ import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules, isRenderedModule } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits } from "./units.js";
+import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
 import { formatSpan, getSitePrices, priceSpan, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
@@ -154,14 +155,29 @@ export interface ModuleContent {
  * is not an SEO win but thin content, and several similar ones read as duplicates —
  * so the content gate comes before the URL.
  */
+/**
+ * The thin-content gate as ONE predicate (ADR-0044 §13).
+ *
+ * Two callers need the SAME answer: the writer loop (does this unit get a file?) and
+ * the room card (may it link to /apartman/<slug>?). Two copies of the rule would
+ * eventually disagree, and the shape of the disagreement is a card linking to a 404 —
+ * so there is one rule and both read it.
+ */
+export function unitPageIsWorthWriting(
+  unit: { description: string | null; amenities: string[] },
+  unitPhotos: readonly unknown[],
+): boolean {
+  const hasText = Boolean(unit.description?.trim()) || unit.amenities.length > 0;
+  return unitPhotos.length > 0 && hasText;
+}
+
 export function unitPageData(
   base: SiteData,
   unit: NonNullable<ModuleContent["units"]>[number],
   unitPhotos: PhotoEdit[],
   canonicalBase: string | undefined,
 ): SiteData | null {
-  const hasText = Boolean(unit.description?.trim()) || unit.amenities.length > 0;
-  if (!unitPhotos.length || !hasText) return null;
+  if (!unitPageIsWorthWriting(unit, unitPhotos)) return null;
 
   const housePricing = base.pricing;
   const mine = housePricing?.units?.filter((u) => u.name === unit.name) ?? [];
@@ -302,18 +318,38 @@ export async function moduleContentFor(
           : " / éj";
     out.rooms = units.map((u) => {
       const span = priceSpan(priceMap.get(u.id) ?? []);
-      // The room card shows the unit's OWN first photo when the owner assigned one;
+      // The room card shows the unit's OWN photos when the owner assigned any;
       // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
-      const own = unitPhotos.get(u.id)?.[0];
-      // ADR-0059 §2 (unit-first): the unit's own amenities belong ON its card, so
-      // they ride the note line every template already renders — no template edit.
-      const note = [u.description, u.amenities.join(" · ")].filter(Boolean).join(" · ");
+      const mine = unitPhotos.get(u.id) ?? [];
+      const own = mine[0];
+      // ⛔ The description and the amenities travel SEPARATELY (rooms-card contract §1).
+      // They used to be glued into one `note` line "so no template needs editing" — and
+      // the guest got "az hogy … · Ingyenes Wi‑Fi · Síkképernyős TV" as one sentence,
+      // unable to tell the owner's words from a feature list. The card now shows
+      // neither; the details popover shows both, structured, with catalogue icons.
+      const description = u.description?.trim() ?? "";
+      const amenities = u.amenities
+        .map((label) => label.trim())
+        .filter(Boolean)
+        .map((label) => {
+          const item = amenityByLabel(label);
+          // Measured: all 17 stored labels hit the 70-item catalogue exactly. A label
+          // that does not (a hand-typed one) still shows — just without an icon.
+          return item ? { label, icon: amenitySvg(item) } : { label };
+        });
+      // The card links to the unit's own page ONLY when that page really gets written —
+      // one predicate, shared with the writer loop, so a card can never point at a 404.
+      const hasPage = units.length > 1 && Boolean(u.slug) && unitPageIsWorthWriting(u, mine);
       return {
         name: u.name,
         ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
-        ...(note ? { note } : {}),
+        ...(description ? { description } : {}),
+        ...(amenities.length ? { amenities } : {}),
         ...(span ? { price: `${formatSpan(span.min, span.max, currency)}${perNight}` } : {}),
         ...(own ? { photo: own } : {}),
+        ...(mine.length > 1 ? { photos: mine } : {}),
+        ...(hasPage ? { slug: u.slug! } : {}),
+        ...(u.isWholeProperty ? { wholeProperty: true } : {}),
       };
     });
     // ADR-0059 §2: an item already on a unit's card must not repeat in the site-level

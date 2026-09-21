@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, roomsLead, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -305,16 +305,25 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="cn-rooms" data-cit-module="rooms">
         ${roomsData
           .map(
-            (r) => `<article class="cn-rc">
-          <div class="cn-im2">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</div>
+            (r, i) => `<article class="cn-rc">
+          ${roomShell(
+            data,
+            r,
+            i,
+            "cn-rclink",
+            `<div class="cn-im2">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${roomHint(data, r)}</div>
           <div class="cn-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="cn-mt">${esc(r.capacity)}</p>` : ""}
-            ${r.note ? `<p>${esc(r.note)}</p>` : ""}
+          </div>`,
+          )}
+          <div class="cn-bd" style="padding-top:0">
             <div class="cn-ft">
               ${r.price ? `<span class="cn-pr">${esc(r.price)}</span>` : "<span></span>"}
+              <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
               ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
+            ${roomDetails(data, r, i)}
           </div>
         </article>`,
           )

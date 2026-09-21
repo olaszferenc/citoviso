@@ -20,19 +20,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  centredModsecCss,
-  copyOf,
-  esc,
-  firstSentence,
-  heroPhoto,
-  photoFill,
-  roomsForMock,
-  T,
-  type ArtTemplate,
-} from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 const TILTED_CSS = `
 /* shared module sections (.cit-modsec) dressed to this template's rhythm (ADR-0057):
@@ -326,8 +314,14 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       ${rooms
         .map(
           (r, i) => `<figure><div class="t-rv" ${mo("up", i * 90)}>
-          ${shot(r.photo, r.name)}
-          <figcaption>${esc(r.name)}${r.capacity ? `<span class="t-note">${esc(r.capacity)}</span>` : ""}</figcaption>
+          ${roomShell(
+            data,
+            r,
+            i,
+            "t-rvlink",
+            `<span class="cit-rmbox">${shot(r.photo, r.name)}${roomHint(data, r)}</span>
+          <figcaption>${esc(r.name)}${r.capacity ? `<span class="t-note">${esc(r.capacity)}</span>` : ""}</figcaption>`,
+          )}${roomDetails(data, r, i)}
         </div></figure>`,
         )
         .join("")}

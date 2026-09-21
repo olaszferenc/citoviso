@@ -274,19 +274,43 @@ for (const id of priced) {
 // list would look like a bug to the guest and to the owner.
 {
   const data = { ...BASE, ...CASES.rooms!.patch } as SiteData;
+  /**
+   * A LÁTHATÓ szövegben számolunk, nem a nyers HTML-ben.
+   *
+   * ⚠️ A nyers számlálás ATTRIBÚTUMOKAT is beleszámolt: az `alt`-ot mindig (ezért volt a
+   * küszöb „> 2", vagyis egy attribútum-példány eleve elnézve), és 2026-09-21-től a
+   * szoba-kártya `data-cit-room-name`-jét is — amitől NÉGY hibátlan sablon pirosra ment.
+   * Egy adat-attribútum nem „kétszer kiírt szoba-lista". A tag-eket kivágva a küszöb
+   * visszaszigorodik 1-re: a VENDÉG EGYSZER látja a nevet, és a mérés is ezt kérdezi.
+   */
+  const visible = (html: string): string => html.replace(/<[^>]*>/g, " ");
+  const countVisible = (html: string): number =>
+    visible(html).split(CASES.rooms!.needle).length - 1;
+
   const dupes: string[] = [];
+  let sample = "";
   for (const t of templateIds) {
     const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, data, {
       phase: "live",
     });
+    if (!sample) sample = html;
     const anchors = html.split('data-cit-module="rooms"').length - 1;
-    const names = html.split(CASES.rooms!.needle).length - 1;
-    if (anchors > 1 || names > 2) dupes.push(`${t}(horgony:${anchors}, név:${names})`);
+    const names = countVisible(html);
+    if (anchors > 1 || names > 1) dupes.push(`${t}(horgony:${anchors}, név:${names})`);
   }
   check(
     "a szoba-lista nem jelenik meg kétszer egyik sablonban sem",
     dupes.length === 0,
     dupes.slice(0, 4).join(", "),
+  );
+  // ⭐ NEGATÍV KONTROLL a mérőre magára: egy SZÁNDÉKOSAN megduplázott szoba-szekciót a
+  // szigorított számlálásnak meg KELL fognia. Enélkül a lazítás észrevétlenül vakká
+  // tehetné a kaput pont arra, amiről szól.
+  const doubled = sample + sample;
+  check(
+    "⭐ a duplikátum-mérő ÖNMAGA is bizonyít (megduplázott lap → piros)",
+    countVisible(doubled) > 1 && doubled.split('data-cit-module="rooms"').length - 1 > 1,
+    `megduplázva: név=${countVisible(doubled)}`,
   );
 }
 

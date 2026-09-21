@@ -138,23 +138,28 @@ const LIVE_PHOTO =
  *  ugyanaz az `error` esemény keletkezik, mint egy 404-nél). */
 const DEAD_PHOTO = "https://dead.invalid.citoviso.test/photo.jpg";
 
+// ⚠️ `description`, NEM `note` (2026-09-21, a szoba-kártya kontraktusa): a leírás és a
+// felszereltség lekerült a kártyáról és a részletek-felugróba költözött, tehát egy
+// `note`-os fixture olyan szöveget tűzne ki, amit egyetlen sablon sem rendel többé — a
+// mérés NÉMÁN kevesebbet mérne, és a zöldje kevesebbet is jelentene. A kártya szövege
+// most: név + kapacitás + ár, és a takarás-vizsgálat ezeken fut.
 const ROOMS = [
   {
     name: "Kertre néző apartman",
     capacity: "2 fő · 26 m²",
-    note: "Franciaágyas szoba, saját terasszal a kertre.",
+    description: "Franciaágyas szoba, saját terasszal a kertre.",
     price: "24 000 Ft / éj",
   },
   {
     name: "Tetőtéri családi szoba",
     capacity: "4 fő · 34 m²",
-    note: "Két hálótér, zuhanyzó, gyerekágy kérhető.",
+    description: "Két hálótér, zuhanyzó, gyerekágy kérhető.",
     price: "32 000 Ft / éj",
   },
   {
     name: "Kisház a kert végében",
     capacity: "2 fő · 18 m²",
-    note: "Külön bejárat, teakonyha, csendes sarok.",
+    description: "Külön bejárat, teakonyha, csendes sarok.",
     price: "21 000 Ft / éj",
   },
 ];

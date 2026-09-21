@@ -24,19 +24,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  centredModsecCss,
-  copyOf,
-  esc,
-  firstSentence,
-  heroPhoto,
-  photoFill,
-  roomsForMock,
-  T,
-  type ArtTemplate,
-} from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -297,10 +285,16 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
         ${rooms
           .slice(0, 3)
           .map(
-            (r, i) => `<figure>${framed(r.photo, r.name, i * 170)}
+            (r, i) => `<figure>${roomShell(
+              data,
+              r,
+              i,
+              "a-roomlink",
+              `<span class="cit-rmbox">${framed(r.photo, r.name, i * 170)}${roomHint(data, r)}</span>
           <figcaption>${esc(r.name)}${
             r.capacity ? `<span class="a-note">${esc(r.capacity)}</span>` : ""
-          }</figcaption></figure>`,
+          }</figcaption>`,
+            )}${roomDetails(data, r, i)}</figure>`,
           )
           .join("")}
       </div>

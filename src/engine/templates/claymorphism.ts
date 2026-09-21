@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -268,20 +268,33 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
       ${roomCopy.lead ? `<p class="cl-lead">${esc(roomCopy.lead)}</p>` : ""}
       <div class="cl-rooms" data-cit-module="rooms">
         ${roomsData
-          .map((r) => {
-            const chips = [r.capacity, r.note]
+          .map((r, i) => {
+            // ⛔ A chip-sor a FÉRŐHELYRE szűkül: a leírás és a felszereltség a kártyán
+            // eddig ugyanolyan chip volt, mint a „4 fő" — a vendég nem tudta szétválasztani
+            // őket. A rooms-card kontraktus §1 szerint mindkettő a felugróba megy.
+            const chips = [r.capacity]
               .filter(Boolean)
               .map((c) => `<span>${esc(c as string)}</span>`)
               .join("");
             return `<article class="cl-clay cl-room">
-          <div class="cl-im"><figure>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</figure></div>
+          ${roomShell(
+            data,
+            r,
+            i,
+            "cl-roomlink",
+            `<div class="cl-im"><figure>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${roomHint(data, r)}</figure></div>
           <div class="cl-bd">
             <h3>${esc(r.name)}</h3>
             ${chips ? `<div class="cl-chips">${chips}</div>` : ""}
+          </div>`,
+          )}
+          <div class="cl-bd" style="padding-top:0">
             <div class="cl-ft">
               ${r.price ? `<span class="cl-pr">${esc(r.price)}</span>` : "<span></span>"}
+              <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
               ${hasContact ? `<a class="cl-btn cl-btn-soft" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
+            ${roomDetails(data, r, i)}
           </div>
         </article>`;
           })

@@ -18,7 +18,7 @@
 // lands in instead of fighting it.
 
 import type { SiteData } from "./recipe.js";
-import { T, esc, sampleRooms } from "./templateKit.js";
+import { T, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { mapEmbed } from "./primitives.js";
 import { formatMoney } from "../text/money.js";
@@ -513,36 +513,56 @@ function roomsBlock(d: SiteData): string {
     const cells = facts
       .map(([k, v]) => `<li><b>${esc(k)}</b>${esc(v)}</li>`)
       .join("");
+    // ⛔ The description and the amenities are NOT on the panel (rooms-card contract
+    // §1) — they open in the popover. The single unit is anchored too: without it the
+    // whole-property site would be the one place where they are simply gone.
     return (
       `<section class="cit-modsec" data-cit-module="rooms">` +
       `<div class="cit-modsec__in"><h2>${T(d, "A szállás")}</h2>` +
-      `<div class="cit-whole">` +
-      (r.photo?.url
-        ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy" ` +
-          `class="cit-whole__img">`
-        : "") +
-      `<div class="cit-whole__txt"><p class="cit-whole__t">${esc(r.name)}</p>` +
-      (r.note ? `<p class="cit-whole__note">${esc(r.note)}</p>` : "") +
-      (cells ? `<ul class="cit-whole__facts">${cells}</ul>` : "") +
-      `</div></div>` +
+      roomShell(
+        d,
+        r,
+        0,
+        "cit-whole",
+        (r.photo?.url
+          ? `<div class="cit-whole__imwrap">` +
+            `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy" ` +
+            `class="cit-whole__img">` +
+            roomHint(d, r) +
+            `</div>`
+          : "") +
+          `<div class="cit-whole__txt"><p class="cit-whole__t">${esc(r.name)}</p>` +
+          (cells ? `<ul class="cit-whole__facts">${cells}</ul>` : "") +
+          `</div>`,
+      ) +
+      roomDetails(d, r, 0) +
       `</div></section>`
     );
   }
   const cards = rooms
     .map(
-      (r) =>
+      (r, i) =>
         `<li class="cit-modsec__item" style="flex-direction:column;gap:6px">` +
-        // The card wears the unit's photo when there is one — imagery is where the
-        // wow lives (ADR-0059/0061), on the shared fallback card too.
-        (r.photo?.url
-          ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy" ` +
-            `style="width:100%;aspect-ratio:3/2;object-fit:cover;` +
-            `border-radius:calc(var(--cit-radius) * 0.4)">`
-          : "") +
-        `<strong>${esc(r.name)}</strong>` +
-        (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
-        (r.note ? `<span style="color:var(--cit-muted)">${esc(r.note)}</span>` : "") +
-        (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : "") +
+        roomShell(
+          d,
+          r,
+          i,
+          "cit-modsec__room",
+          // The card wears the unit's photo when there is one — imagery is where the
+          // wow lives (ADR-0059/0061), on the shared fallback card too.
+          (r.photo?.url
+            ? `<div class="cit-modsec__roomim">` +
+              `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy" ` +
+              `style="width:100%;aspect-ratio:3/2;object-fit:cover;display:block;` +
+              `border-radius:calc(var(--cit-radius) * 0.4)">` +
+              roomHint(d, r) +
+              `</div>`
+            : "") +
+            `<strong>${esc(r.name)}</strong>` +
+            (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
+            (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : ""),
+        ) +
+        roomDetails(d, r, i) +
         `</li>`,
     )
     .join("");

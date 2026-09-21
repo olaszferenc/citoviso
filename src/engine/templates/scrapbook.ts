@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const SCRAPBOOK_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -285,14 +285,21 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${roomsData
           .map(
             (r, i) => `<article class="sb-room" style="--r:${tilt(i)}">
-          ${r.photo?.url ? `<figure><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}"></figure>` : `<figure>${photoFill(r.name)}</figure>`}
+          ${roomShell(
+            data,
+            r,
+            i,
+            "sb-roomlink",
+            `${r.photo?.url ? `<figure><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">${roomHint(data, r)}</figure>` : `<figure>${photoFill(r.name)}</figure>`}
           <h3>${esc(r.name)}</h3>
-          ${r.capacity ? `<p class="sb-mt">${esc(r.capacity)}</p>` : ""}
-          ${r.note ? `<p>${esc(r.note)}</p>` : ""}
+          ${r.capacity ? `<p class="sb-mt">${esc(r.capacity)}</p>` : ""}`,
+          )}
           <div class="sb-ft">
             ${r.price ? `<span class="sb-pr">${esc(r.price)}</span>` : "<span></span>"}
+            <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
             ${hasContact ? `<a class="sb-cta" href="#cit-enquiry">${T(data, "Ezt kérjük")}</a>` : ""}
           </div>
+          ${roomDetails(data, r, i)}
         </article>`,
           )
           .join("\n        ")}

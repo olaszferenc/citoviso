@@ -1412,6 +1412,19 @@ if [ -f scripts/room-card-overflow-check.mts ] && \
   echo "[pre-commit] room-card-overflow-check (a szoba-kártya képe nem takarja a szöveget)…"
   npx tsx scripts/room-card-overflow-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A SZOBA-KÁRTYA ÉS A RÉSZLETEK-FELUGRÓ KONTRAKTUSA (tulaj 2026-09-21, B változat —
+# assets/design-refs/tenant-site/rooms-card/README.md). Az állítások a README „KÖT"
+# pontjaiból valók: a kártyán NINCS leírás/felszereltség, a jelvény hover nélkül látszik
+# és nem ígér többet, mint ami van, a felugró egy képnél NEM mutat halott vezérlőt, a
+# felszereltségből görgetés nélkül látszik a kötött darabszám, az ESC EGY réteget hámoz,
+# és a fókusz visszatér a kártyára. ⭐ A horgony-lefedettséget is méri: egy JÖVŐBELI
+# sablon, ami elfelejti a data-cit-room-ot, némán a régi, összefűzött mondatot mutatná.
+# Böngészőt indít (19 sablon × 2 szélesség), ezért szigorúan diff-scope-olva.
+if [ -f scripts/room-details-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|templateKit|moduleSections|recipe|render)|^src/tenant/(editor|amenityCatalog)\.ts$|^assets/runtime/cit-(runtime\.js|modules\.css)$|^scripts/room-details-check'; then
+  echo "[pre-commit] room-details-check (a szoba-kártya + felugró jóváhagyott kontraktusa)…"
+  npx tsx scripts/room-details-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A LEADNEK KISZÁLLÍTOTT LAP (Elek FK-004b ①②): nincs üres keretezett doboz (se függő, se
 # ELUTASÍTOTT térkép-keret mellett), a lebegő vásárlás-pirula nem takar elsődleges gombot, és
 # a „Testre szabom" doboz nem nyitható üresre. 2026-09-14-ig ÁRVA volt — és mert soha nem

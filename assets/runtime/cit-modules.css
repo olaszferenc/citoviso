@@ -707,3 +707,265 @@ a.cit-grat:hover {
 .cit-book__receipt .cit-book__qline{margin-top:2px}
 .cit-book__receipt .cit-book__qtotal{margin-top:8px;padding-top:8px;font-size:1rem;
   border-top:1px solid var(--cit-line,rgba(16,36,58,.12))}
+
+/* ══ ROOM CARD + DETAILS POPOVER ═══════════════════════════════════════════════
+   APPROVED PLAN, variant B (owner, 2026-09-21 — assets/design-refs/tenant-site/
+   rooms-card/: README.md is the contract, plan.html the reference implementation).
+
+   ONE markup, themed only from --cit-* → in-skin in all 19 templates by itself
+   (ADR-0011 hydrating runtime, ADR-0057 in-skin module). ⛔ A generic white modal
+   is forbidden: it would look borrowed on every single skin.
+
+   ⚠️ @container, NOT @media: the popover sits inside the page's own box and has to
+   react to THAT box. (The measurement frame the plan was judged in is 390px wide
+   while the window is not — a @media rule would have answered the wrong question.) */
+.cit-rooms-js .cit-rmore { display: none; }   /* JS lifts it into the popover */
+.cit-room__open { color: inherit; text-decoration: none; cursor: pointer; }
+.cit-room__open:focus-visible { outline: 2px solid var(--cit-accent); outline-offset: 4px; }
+/* ⛔ ZERO specificity on purpose (:where). The shell wraps markup each template
+   already lays out with its OWN class — `.cit-whole` is a flex panel, several room
+   cards are grids. A plain `.cit-room__open{display:block}` sits LATER in this sheet
+   than those rules and, at equal specificity, would silently win and flatten them.
+   (The console already paid for that exact lesson: a link rule ate a button's colour.)
+   `:where()` lets a template class take the layout back, while an anchor that
+   declares nothing still stops being inline. */
+:where(.cit-room__open) { display: block; }
+
+/* The badge is absolutely placed, so the photo box must be its positioning context.
+   `.tb-thumbwrap` is transit's table-row thumbnail; the others are the shared block. */
+.cit-whole__imwrap, .cit-modsec__roomim { position: relative; display: block; }
+/* ⛔⛔ THE SHELL MUST NOT SHRINK. `.cit-modsec__item` is a column flex with
+   align-items:flex-start, so wrapping the card's contents in the clickable shell turned
+   them into ONE flex item that shrank to its content — measured: the room photo went
+   from full card width to 75×50px, and the badge nearly covered the whole picture.
+   The wrapper is a shell, not a new layout: it inherits the width it replaced. */
+.cit-modsec__item > .cit-room__open, .cit-modsec__item > .cit-rmore { width: 100%; align-self: stretch; }
+.tb-thumbwrap { position: relative; display: inline-block; vertical-align: middle; }
+
+/* The explicit "Részletek" control next to Foglalás. One neutral, token-only style so
+   the affordance does not have to be re-styled in each of the 12 card markups. */
+.cit-rmbtn {
+  background: 0; border: 0; padding: 4px; cursor: pointer; font: inherit;
+  font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--cit-muted); text-decoration: underline; text-underline-offset: 4px;
+}
+.cit-rmbtn:hover { color: var(--cit-accent); }
+
+/* ── the badge ON the photo ────────────────────────────────────────────────────
+   ⭐ Owner ruling: the PHOTO must say it is clickable, and it must say so WITHOUT
+   hover — a phone has none. Measured opacity:1 with no interaction. It also reports
+   how many photos wait inside, a promise the popover then keeps. */
+.cit-rmhint {
+  position: absolute; right: 9px; bottom: 9px; z-index: 3;
+  display: flex; align-items: center; gap: 7px;
+  background: color-mix(in srgb, var(--cit-bg) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 55%, transparent);
+  color: var(--cit-ink); font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  padding: 7px 10px; backdrop-filter: blur(2px); transition: .25s;
+  max-width: calc(100% - 18px); white-space: nowrap; overflow: hidden;
+  /* ⛔ NO pointer-events:none. It was here so the whole card would be the click target
+     — which it is anyway, since the badge sits INSIDE the card's <a>. What it actually
+     did was make the badge invisible to hit-testing, so the room-card overflow guard
+     probed the badge's own text, got the IMG underneath, and reported "the photo covers
+     the text" on seven templates. The pill is painted ABOVE the photo; a measurement
+     that cannot see it will conclude the opposite. */
+}
+/* ⛔ The badge is absolutely placed, so it needs a positioned ancestor — and the photo
+   frame is a DIFFERENT element in each of the 12 card markups (.ad-im, .cn-im2, .og-im,
+   a bare <figure>…). Measured without this: on four templates the pill anchored to some
+   far ancestor and painted 200-900px away from its picture, one of them at y=-219, i.e.
+   off-screen. `:has` names the frame by what it CONTAINS instead of by 12 class names;
+   `:where` keeps it at zero specificity so a template that positions its own frame
+   deliberately still wins. */
+:where(.cit-room__open *:has(> .cit-rmhint)) { position: relative; }
+.cit-rmhint svg { flex: none; color: var(--cit-accent); }
+.cit-room__open:hover .cit-rmhint, .cit-room__open:focus-visible .cit-rmhint {
+  background: var(--cit-accent); color: var(--cit-on-accent); border-color: var(--cit-accent);
+}
+.cit-room__open:hover .cit-rmhint svg, .cit-room__open:focus-visible .cit-rmhint svg {
+  color: var(--cit-on-accent);
+}
+/* A thumbnail cannot hold a padded pill (the transit row image is 50×36 on a phone):
+   there the badge is the magnifier alone, riding the corner. Same lesson the SAMPLE
+   band already paid for. */
+.cit-rmhint--sm { right: 2px; bottom: 2px; padding: 3px; gap: 0; letter-spacing: 0; }
+.cit-rmhint--sm > span { display: none; }
+
+/* ── no-JS fallback: the SAME content, opened on the card ──────────────────── */
+.cit-rmore { margin-top: 14px; text-align: left; }
+.cit-rmore > summary {
+  cursor: pointer; font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--cit-accent); text-align: center; padding: 8px;
+}
+.cit-rmore__ph { display: flex; gap: 6px; overflow-x: auto; list-style: none; margin: 10px 0; padding: 0; }
+.cit-rmore__ph img { width: 96px; aspect-ratio: 4/3; object-fit: cover; display: block; }
+.cit-rmore__desc { color: var(--cit-muted); font-size: 14.5px; margin: 12px 0; }
+.cit-rmore__h {
+  font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: var(--cit-accent);
+  margin-top: 14px;
+}
+.cit-rmore__am { display: grid; gap: 8px 14px; grid-template-columns: 1fr 1fr; margin: 10px 0 0; padding: 0; }
+.cit-rmore__am li { display: flex; align-items: center; gap: 9px; list-style: none; font-size: 14px; }
+.cit-rmore__am svg { flex: none; color: var(--cit-accent); }
+.cit-rmore__empty { color: var(--cit-muted); font-size: 13.5px; font-style: italic; margin-top: 10px; }
+
+/* ── the popover ──────────────────────────────────────────────────────────── */
+.cit-rd { display: none; container-type: inline-size; }
+.cit-rd[data-open] { display: block; }
+/* ⛔⛔ !important, DELIBERATELY — an overlay a template can push off-screen is not an
+   overlay, so its position is not negotiable by page CSS.
+   MEASURED, not feared: `aurora`'s glass trick is
+       body>*:not(.au-aurora):not(.au-nav){position:relative;z-index:1}
+   which scores (0,2,1). A plain `.cit-rd` (0,1,0) lost, and so did a doubled
+   `.cit-rd.cit-rd` (0,2,0) — the "fixed" popover opened 4029px DOWN THE DOCUMENT with
+   zero height: the guest clicked a card and nothing happened. Specificity escalation is
+   a race a template can always win by adding one more `:not()`; a stated rule is not.
+   The SAME page rule has been silently hitting the shared lightbox all along, so it is
+   pinned here too. Any template may own its own stacking — neither may own these two. */
+.cit-rd { position: fixed !important; inset: 0 !important; z-index: 9000; }
+.cit-lb { position: fixed !important; inset: 0 !important; }
+.cit-rd__veil {
+  position: absolute; inset: 0;
+  background: color-mix(in srgb, var(--cit-bg) 82%, transparent); backdrop-filter: blur(3px);
+}
+.cit-rd__panel {
+  position: absolute; inset: 0; overflow: hidden;
+  background: var(--cit-bg); color: var(--cit-ink); font-family: var(--cit-font-body);
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  display: flex; flex-direction: column; box-shadow: var(--cit-shadow);
+}
+/* Desktop: a centred dialog, never taller than the viewport.
+   ⛔ NOT 100cqh — the container is container-type:inline-size, so the block-axis cq
+   unit does not resolve against it. Measured on the plan: the panel overflowed by
+   141px and pushed the Foglalás button 106px out of the frame. The panel is absolutely
+   positioned inside .cit-rd (inset:0), so plain % is both correct and simpler. */
+@container (min-width: 900px) {
+  .cit-rd__panel {
+    inset: 40px auto auto 50%; transform: translateX(-50%);
+    width: min(1060px, 92%); max-height: calc(100% - 80px);
+  }
+}
+.cit-rd__x {
+  position: absolute; top: 10px; right: 10px; z-index: 6; width: 42px; height: 42px;
+  border: 0; cursor: pointer; font-family: inherit; font-size: 22px; line-height: 1;
+  background: color-mix(in srgb, var(--cit-bg) 72%, transparent); color: var(--cit-ink);
+}
+.cit-rd__x:hover { color: var(--cit-accent); }
+.cit-rd__body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* gallery half — flex-shrink 1 so a long amenity list can reclaim its rows.
+   ⛔ IT IS A COLUMN FLEX ITSELF, and that is the whole point: when the wrapper gives
+   space back, the STAGE must absorb it and the thumb strip must keep its 68px. My own
+   first shrink-fix skipped this and the strip bled 5-13px OUT of its wrapper on three
+   templates — the same "the height sits on the wrapper" defect the plan already paid
+   for, re-created by the fix for something else. */
+.cit-rd__gal {
+  position: relative; flex: 0 1 auto; min-height: 0; background: #000;
+  display: flex; flex-direction: column;
+}
+.cit-rd__gal img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* ⭐⭐ THE FACTS GET THE SPACE; THE PICTURE TAKES WHAT IS LEFT.
+   Measured three times over: a 4/3 stage ate 292px of a 780px sheet and left 1 of 9
+   amenities in front of the guest. Tuning the stage to a fixed 16/10 then passed on
+   artdeco and still failed on arch-frames, tilted-gallery and wordmark-grow — because
+   the popover wears the SKIN's fonts, so a pixel budget that fits one skin is not a
+   rule, it is a coincidence (the "barely passing value" trap).
+   So the stage is ELASTIC (flex-shrink on the gallery, a vh target with a floor) and
+   the text column is what the layout protects. vh, not cq: this overlay is fixed to
+   the VIEWPORT — the @container rules below still own the LAYOUT. */
+.cit-rd__stage { flex: 0 1 auto; height: 24vh; min-height: 96px; max-height: 230px;
+  position: relative; cursor: zoom-in; }
+.cit-rd__nav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px;
+  border: 0; cursor: pointer; font-family: inherit; font-size: 20px;
+  background: color-mix(in srgb, var(--cit-bg) 60%, transparent); color: var(--cit-ink);
+}
+.cit-rd__nav:hover { background: var(--cit-accent); color: var(--cit-on-accent); }
+.cit-rd__nav--prev { left: 0; } .cit-rd__nav--next { right: 0; }
+.cit-rd__count {
+  position: absolute; bottom: 8px; right: 10px; font-size: 11px; letter-spacing: .14em;
+  padding: 4px 9px;
+  background: color-mix(in srgb, var(--cit-bg) 66%, transparent); color: var(--cit-ink);
+}
+.cit-rd__thumbs {
+  display: flex; gap: 6px; padding: 6px; overflow-x: auto; flex: none;
+  background: color-mix(in srgb, var(--cit-bg) 88%, #000);
+}
+/* ⛔⛔ display:flex BEATS the [hidden] attribute's UA display:none. Measured: with a
+   single photo the thumb strip still painted — a dead control the guest can SEE while
+   el.hidden === true. Three of four test units have exactly one photo, so this is the
+   BASE case, not the edge. Every hideable control below repeats the rule on purpose. */
+.cit-rd__thumbs[hidden], .cit-rd__nav[hidden], .cit-rd__count[hidden],
+.cit-rd__desc[hidden], .cit-rd__cap[hidden], .cit-rd__price[hidden],
+.cit-rd__empty[hidden] { display: none; }
+.cit-rd__thumbs button {
+  flex: none; width: 74px; aspect-ratio: 4/3; border: 1px solid transparent; padding: 0;
+  cursor: pointer; background: 0;
+}
+.cit-rd__thumbs button[aria-current="true"] { border-color: var(--cit-accent); }
+.cit-rd__thumbs img { width: 100%; height: 100%; object-fit: cover; opacity: .62; }
+.cit-rd__thumbs button[aria-current="true"] img { opacity: 1; }
+
+/* text half */
+.cit-rd__txt { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 18px; }
+.cit-rd__brow {
+  font-size: 11px; letter-spacing: .4em; text-transform: uppercase;
+  color: var(--cit-accent); font-weight: 600;
+}
+.cit-rd__txt h3 {
+  font-family: var(--cit-font-display); font-weight: 400; letter-spacing: .06em;
+  font-size: clamp(26px, 6vw, 38px); margin: 8px 0 4px;
+}
+.cit-rd__cap {
+  font-style: italic; font-size: 17px;
+  color: color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));
+}
+.cit-rd__price { font-weight: 600; font-size: 16px; margin-top: 6px; }
+.cit-rd__desc { color: var(--cit-muted); font-size: 15px; line-height: 1.7; margin-top: 12px; }
+.cit-rd__h4 {
+  font-size: 11px; letter-spacing: .34em; text-transform: uppercase; color: var(--cit-accent);
+  margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--cit-accent) 24%, transparent);
+}
+/* ⛔⛔ TWO COLUMNS ALREADY ON A PHONE. One column measured 1 of 9 amenities in front of
+   the guest — the contract binds SIX without scrolling, and "the <li> exists" is exactly
+   the answer that once reported 9 while the guest saw none. */
+.cit-rd__am { display: grid; gap: 9px 14px; grid-template-columns: 1fr 1fr; margin: 12px 0 0; padding: 0; }
+.cit-rd__am li {
+  display: flex; align-items: center; gap: 10px; list-style: none; font-size: 14.5px;
+  color: var(--cit-ink);
+}
+.cit-rd__am svg { flex: none; color: var(--cit-accent); }
+.cit-rd__empty { color: var(--cit-muted); font-size: 13.5px; font-style: italic; margin-top: 18px; }
+.cit-rd__cta {
+  flex: none; padding: 14px 18px; background: var(--cit-bg);
+  border-top: 1px solid color-mix(in srgb, var(--cit-accent) 28%, transparent);
+}
+.cit-rd__cta a {
+  display: block; width: 100%; text-align: center; text-decoration: none;
+  background: var(--cit-accent); color: var(--cit-on-accent);
+  font-size: 12px; letter-spacing: .24em; text-transform: uppercase; font-weight: 700;
+  padding: 16px 38px; font-family: inherit; transition: .25s;
+}
+.cit-rd__cta a:hover { filter: brightness(1.08); }
+/* ── DESKTOP ─────────────────────────────────────────────────────────────────
+   ⚠️ LAST in the file ON PURPOSE. The first version put this block right after
+   .cit-rd__stage, so every base rule below it — the 1-column amenity grid, the phone
+   padding — came LATER and silently won at equal specificity. Measured on a 1280px
+   viewport: 2 of 9 amenities in front of the guest where the contract binds all nine.
+   The rule read correctly and did nothing. */
+@container (min-width: 900px) {
+  /* ⛔ Measured on the plan: height + overflow:hidden on the WRAPPER put the 68px thumb
+     strip entirely below the box and clipped it away — the gallery the owner approved
+     did not exist. The height belongs on the STAGE; the wrapper grows with it. */
+  .cit-rd__stage { height: 22vh; min-height: 120px; max-height: 250px; }
+  .cit-rd__txt { text-align: center; padding: 22px 44px 18px; }
+  .cit-rd__desc { margin-top: 10px; }
+  .cit-rd__am { grid-template-columns: repeat(3, 1fr); justify-items: center; }
+  .cit-rd__cta { text-align: center; border-top: 0; padding-bottom: 34px; }
+  .cit-rd__cta a { display: inline-block; width: auto; min-width: 280px; }
+}
+
+/* A bare photo-box for the three minimal templates whose card is just <figure> + caption:
+   they have no image wrapper of their own to hang the badge on. */
+.cit-rmbox { position: relative; display: block; }

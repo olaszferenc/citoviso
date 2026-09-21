@@ -30,18 +30,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  esc,
-  firstSentence,
-  heroPhoto,
-  photoFill,
-  roomsForMock,
-  T,
-  type ArtTemplate,
-} from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -287,10 +276,16 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         ${rooms
           .slice(0, 3)
           .map(
-            (r, i) => `<figure>${card(r.photo, r.name, i * 140)}
+            (r, i) => `<figure>${roomShell(
+              data,
+              r,
+              i,
+              "w-roomlink",
+              `<span class="cit-rmbox">${card(r.photo, r.name, i * 140)}${roomHint(data, r)}</span>
           <figcaption>${esc(r.name)}${
             r.capacity ? `<span class="w-note">${esc(r.capacity)}</span>` : ""
-          }</figcaption></figure>`,
+          }</figcaption>`,
+            )}${roomDetails(data, r, i)}</figure>`,
           )
           .join("")}
       </div>

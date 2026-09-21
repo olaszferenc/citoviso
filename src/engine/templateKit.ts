@@ -293,6 +293,122 @@ export function photoFill(alt: string, opts: { icon?: string; compact?: boolean 
   );
 }
 
+// ── the room card's shared layer (rooms-card contract, assets/design-refs/tenant-site) ──
+//
+// The card markup lives in 12 templates and the shared fallback — thirteen places. What
+// the contract adds to it (the anchor, the badge, the no-JS <details>) is written HERE,
+// ONCE, and spliced in, so a fix lands in all thirteen and a new template that forgets
+// to call these is caught by scripts/room-anchor-check.mts rather than shipping the old
+// glued-together sentence in silence.
+
+/** The badge's magnifier — inline SVG, never an emoji (§B / design doctrine). */
+const ROOM_HINT_SVG =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+  '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/><path d="M11 8v6M8 11h6"/></svg>';
+
+/** Every photo of a room, cover first — the one place that answers "how many?". */
+export function roomPhotos(r: Room): readonly Photo[] {
+  if (r.photos?.length) return r.photos;
+  return r.photo ? [r.photo] : [];
+}
+
+/**
+ * The always-visible badge on the room's PHOTO (contract §1).
+ *
+ * ⛔ Never hover-only: the first draft appeared on hover and a phone has no hover, so on
+ * the device most guests use it would never have existed.
+ * ⛔ Never "1 kép": one photo is not a gallery, and the badge may not promise more than
+ * the popover can keep (§B.17). One photo → "Részletek".
+ */
+export function roomHint(d: SiteData, r: Room, opts: { compact?: boolean } = {}): string {
+  const n = roomPhotos(r).length;
+  if (!n) return "";
+  const label = n > 1 ? T(d, "{n} kép", { n }) : T(d, "Részletek");
+  // `compact` is for a table-row thumbnail (transit's picture is 50×36 on a phone):
+  // a padded pill there would be clipped to a stub, which is a defect, not a badge.
+  // The magnifier alone still says "there is more inside"; the label rides the title.
+  const cls = opts.compact ? "cit-rmhint cit-rmhint--sm" : "cit-rmhint";
+  return `<span class="${cls}" title="${esc(label)}">${ROOM_HINT_SVG}<span>${esc(label)}</span></span>`;
+}
+
+/**
+ * The card's clickable shell around `inner`.
+ *
+ * A REAL <a> to the unit's own page when that page exists — the subpage is an SEO entry
+ * point (ADR-0041/0044 §12-13) and the popover must not cost us it; the runtime merely
+ * intercepts the click. Where the thin-content gate left no subpage there is nothing to
+ * link to, so the shell becomes a button (the runtime gives it Enter/Space).
+ */
+export function roomShell(d: SiteData, r: Room, i: number, cls: string, inner: string): string {
+  const n = roomPhotos(r).length;
+  const attrs =
+    `class="${cls} cit-room__open" data-cit-room="${i}"` +
+    ` data-cit-room-name="${esc(r.name)}"` +
+    (r.capacity ? ` data-cit-room-cap="${esc(r.capacity)}"` : "") +
+    (r.price ? ` data-cit-room-price="${esc(r.price)}"` : "") +
+    (r.wholeProperty ? ` data-cit-room-whole="1"` : "") +
+    // ⛔ NO aria-label. The shell CONTAINS the room's name and capacity, so that text
+    // already IS its accessible name — an aria-label would REPLACE the richer content
+    // with a shorter sentence. It also printed the name a third time in the markup,
+    // which tripped the module-render guard's duplicate-room-list detector (that guard
+    // counts name occurrences, and it was right to notice a third one appearing).
+    // `aria-haspopup="dialog"` is what actually announces the popover.
+    ` aria-haspopup="dialog"`;
+  return r.slug
+    ? `<a ${attrs} href="/apartman/${esc(r.slug)}">${inner}</a>`
+    : `<div ${attrs} role="button" tabindex="0">${inner}</div>`;
+}
+
+/**
+ * The no-JS fallback AND the popover's data source (contract §3).
+ *
+ * Without JS this <details> opens ON the card, so nothing the popover would have shown
+ * is lost. With JS the runtime reads it and REMOVES it — deliberately: a collapsed
+ * <details> leaves text nodes with zero line boxes on the card, which is exactly what
+ * the room-card overflow guard calls a defect, and it would be right to.
+ */
+export function roomDetails(d: SiteData, r: Room, i: number): string {
+  const photos = roomPhotos(r).slice(1); // [0] is already the card's own image
+  const desc = r.description?.trim() ?? "";
+  const ams = r.amenities ?? [];
+  const shots = photos.length
+    ? `<ul class="cit-rmore__ph">` +
+      photos
+        .map(
+          (p) =>
+            `<li><img src="${esc(p.url)}" alt="${esc(p.alt || r.name)}" loading="lazy"></li>`,
+        )
+        .join("") +
+      `</ul>`
+    : "";
+  const descP = desc ? `<p class="cit-rmore__desc">${esc(desc)}</p>` : "";
+  // ⛔ ADR-0181: no heading without items. An empty "Amit ez az egység kínál" box is a
+  // claim about the unit, not a layout detail.
+  const amL = ams.length
+    ? `<p class="cit-rmore__h">${T(d, "Amit ez az egység kínál")}</p>` +
+      `<ul class="cit-rmore__am">` +
+      ams
+        .map((a) => `<li>${a.icon ?? ""}<span>${esc(a.label)}</span></li>`)
+        .join("") +
+      `</ul>`
+    : "";
+  // An honest sentence beats an empty box — the guest learns WHY there is nothing here.
+  const empty =
+    !desc && !ams.length
+      ? `<p class="cit-rmore__empty">${T(d, "Ehhez az egységhez még nincs leírás és felszereltség megadva.")}</p>`
+      : "";
+  return (
+    // The index pairs it with its shell EXPLICITLY. Matching by DOM order would work
+    // until one template puts the details somewhere else, and then it would pair the
+    // wrong unit's amenities to a room — silently, and only for that one template.
+    `<details class="cit-rmore" data-cit-roomdata="${i}">` +
+    `<summary>${T(d, "Részletek")}</summary>` +
+    `<div class="cit-rmore__in">${shots}${descP}${amL}${empty}</div>` +
+    `</details>`
+  );
+}
+
 /** Deterministic skin pick for a template — stable per seed (lead UUID), spread across the
  *  curated list (djb2 hash). Kills the planner monoculture without randomness (mock=live safe). */
 export function pickTemplateSkin(template: ArtTemplate, seed: string): string {

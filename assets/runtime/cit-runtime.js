@@ -54,6 +54,18 @@
     return d.toISOString().slice(0, 10);
   }
 
+  /**
+   * Page scroll lock, shared by every overlay.
+   *
+   * Overlays STACK: the room popover opens the full-size viewer on top of itself. Each
+   * one clearing the lock on its own way out handed scrolling back to a page the guest
+   * still could not reach — so the lock asks the DOM who is up, not who just left.
+   */
+  function syncScrollLock() {
+    var up = document.querySelector(".cit-lb[data-open], .cit-rd[data-open]");
+    document.documentElement.style.overflow = up ? "hidden" : "";
+  }
+
   var registry = {};
 
   /** Register a module handler: fn(slot) mounts behaviour/UI into the slot. */
@@ -888,13 +900,13 @@
       show();
       root.setAttribute("data-open", "");
       root.setAttribute("aria-hidden", "false");
-      document.documentElement.style.overflow = "hidden";
+      syncScrollLock();
       root.querySelector(".cit-lb__btn--close").focus();
     }
     function close() {
       root.removeAttribute("data-open");
       root.setAttribute("aria-hidden", "true");
-      document.documentElement.style.overflow = "";
+      syncScrollLock();
       imgEl.src = "";
       if (state.opener && state.opener.focus) state.opener.focus();
     }
@@ -938,6 +950,236 @@
       im.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ensureLightbox().open(items, idx, im); }
       });
+    });
+  });
+
+  // ── room details popover (module: rooms) ────────────────────────────────────
+  // APPROVED PLAN, variant B (owner, 2026-09-21). Contract + reference implementation:
+  // assets/design-refs/tenant-site/rooms-card/{README.md,plan.html}.
+  //
+  // Progressive enhancement, the mountGallery way: the card markup is authored in-skin
+  // by each template and is NEVER replaced. Every card carries a <details> with the
+  // same content the popover shows, so without JS the guest opens it ON the card and
+  // loses nothing; the card itself stays a real <a> to /apartman/<slug>, which is the
+  // SEO entry point the popover must not cost us.
+  //
+  // ONE popover for the whole page, themed only from --cit-* → in-skin everywhere.
+  var rd = null; // singleton, lazily built on first open
+
+  /** Lift a card's <details> into a plain object, then take it out of the card.
+   *  REMOVING it is deliberate: a collapsed <details> leaves text nodes with zero line
+   *  boxes on the card, which the room-card overflow guard calls a defect — rightly. */
+  function readRoomData(slot, shell, idx) {
+    var det = slot.querySelector('[data-cit-roomdata="' + idx + '"]');
+    var cover = shell.querySelector("img");
+    var photos = [];
+    if (cover) photos.push({ src: cover.getAttribute("data-cit-full") || cover.currentSrc || cover.src, alt: cover.alt || "" });
+    var desc = "", empty = "", amHtml = "", amCount = 0, heading = "";
+    if (det) {
+      det.querySelectorAll(".cit-rmore__ph img").forEach(function (im) {
+        photos.push({ src: im.getAttribute("data-cit-full") || im.getAttribute("src"), alt: im.alt || "" });
+      });
+      var dEl = det.querySelector(".cit-rmore__desc");
+      if (dEl) desc = dEl.textContent || "";
+      var eEl = det.querySelector(".cit-rmore__empty");
+      if (eEl) empty = eEl.textContent || "";
+      var hEl = det.querySelector(".cit-rmore__h");
+      if (hEl) heading = hEl.textContent || "";
+      var amEl = det.querySelector(".cit-rmore__am");
+      if (amEl) { amHtml = amEl.innerHTML; amCount = amEl.children.length; }
+      det.remove();
+    }
+    return {
+      name: shell.getAttribute("data-cit-room-name") || "",
+      cap: shell.getAttribute("data-cit-room-cap") || "",
+      price: shell.getAttribute("data-cit-room-price") || "",
+      whole: shell.getAttribute("data-cit-room-whole") === "1",
+      photos: photos,
+      desc: desc,
+      empty: empty,
+      heading: heading,
+      amHtml: amHtml,
+      amCount: amCount,
+      href: shell.getAttribute("href") || "",
+    };
+  }
+
+  function ensureRoomPopover() {
+    if (rd) return rd;
+    var root = document.createElement("div");
+    root.className = "cit-rd";
+    root.setAttribute("role", "dialog");
+    root.setAttribute("aria-modal", "true");
+    root.setAttribute("aria-hidden", "true");
+    root.innerHTML =
+      '<div class="cit-rd__veil" data-rd="close"></div>' +
+      '<div class="cit-rd__panel">' +
+      '<button class="cit-rd__x" type="button" data-rd="close" aria-label="' + tr("Bezárás") + '">&times;</button>' +
+      '<div class="cit-rd__body">' +
+      '<div class="cit-rd__gal">' +
+      '<div class="cit-rd__stage">' +
+      '<img class="cit-rd__img" alt="">' +
+      '<button class="cit-rd__nav cit-rd__nav--prev" type="button" data-rd="prev" aria-label="' + tr("Előző kép") + '">&#8249;</button>' +
+      '<button class="cit-rd__nav cit-rd__nav--next" type="button" data-rd="next" aria-label="' + tr("Következő kép") + '">&#8250;</button>' +
+      '<span class="cit-rd__count"></span>' +
+      "</div>" +
+      '<div class="cit-rd__thumbs"></div>' +
+      "</div>" +
+      '<div class="cit-rd__txt">' +
+      '<div class="cit-rd__brow"></div>' +
+      "<h3></h3>" +
+      '<p class="cit-rd__cap"></p>' +
+      '<p class="cit-rd__price"></p>' +
+      '<p class="cit-rd__desc"></p>' +
+      '<div class="cit-rd__amwrap"></div>' +
+      '<p class="cit-rd__empty"></p>' +
+      "</div>" +
+      "</div>" +
+      '<div class="cit-rd__cta"></div>' +
+      "</div>";
+    document.body.appendChild(root);
+
+    var q = function (s) { return root.querySelector(s); };
+    var img = q(".cit-rd__img"), thumbs = q(".cit-rd__thumbs"), count = q(".cit-rd__count");
+    var state = { room: null, i: 0, opener: null };
+
+    /** ⛔ Paint the step, and hide EVERY dead control when there is a single photo.
+     *  Measured: 3 of 4 units have exactly one photo, so this is the base case; and
+     *  `hidden` alone is not enough because display:flex beats it (CSS repeats it). */
+    function show(i) {
+      var ph = state.room ? state.room.photos : [];
+      if (!ph.length) return;
+      state.i = (i + ph.length) % ph.length;
+      img.src = ph[state.i].src;
+      img.alt = ph[state.i].alt;
+      count.textContent = state.i + 1 + " / " + ph.length;
+      var many = ph.length > 1;
+      count.hidden = !many;                 // "1 / 1" is noise, not information
+      thumbs.hidden = !many;
+      q(".cit-rd__nav--prev").hidden = !many;
+      q(".cit-rd__nav--next").hidden = !many;
+      Array.prototype.forEach.call(thumbs.children, function (b, n) {
+        b.setAttribute("aria-current", n === state.i ? "true" : "false");
+      });
+    }
+
+    function open(room, opener) {
+      state.room = room;
+      state.opener = opener || null;
+      q(".cit-rd__brow").textContent = room.whole ? tr("A szállás egésze") : tr("Apartman");
+      q("h3").textContent = room.name;
+      var cap = q(".cit-rd__cap");
+      cap.textContent = room.cap; cap.hidden = !room.cap;
+      var pr = q(".cit-rd__price");
+      pr.textContent = room.price; pr.hidden = !room.price;
+      var de = q(".cit-rd__desc");
+      de.textContent = room.desc; de.hidden = !room.desc;
+      // ⛔ ADR-0181: no heading without items — an empty amenity box is a claim.
+      var wrap = q(".cit-rd__amwrap");
+      wrap.innerHTML = room.amCount
+        ? '<p class="cit-rd__h4">' + esc(room.heading || tr("Amit ez az egység kínál")) + "</p>" +
+          '<ul class="cit-rd__am">' + room.amHtml + "</ul>"
+        : "";
+      var em = q(".cit-rd__empty");
+      em.textContent = room.empty; em.hidden = !room.empty;
+      // The CTA is the page's own enquiry/booking anchor — the popover never invents
+      // a second process (ADR-0048: one word, one slot for the whole page).
+      q(".cit-rd__cta").innerHTML =
+        '<a href="#cit-enquiry">' + esc(tr("Foglalás")) + "</a>";
+      thumbs.innerHTML = "";
+      room.photos.forEach(function (p, n) {
+        var b = document.createElement("button");
+        b.type = "button";
+        var im = document.createElement("img");
+        im.src = p.src; im.alt = "";
+        b.appendChild(im);
+        b.addEventListener("click", function () { show(n); });
+        thumbs.appendChild(b);
+      });
+      show(0);
+      root.setAttribute("data-open", "");
+      root.setAttribute("aria-hidden", "false");
+      syncScrollLock();
+      q(".cit-rd__x").focus();
+    }
+
+    function close() {
+      root.removeAttribute("data-open");
+      root.setAttribute("aria-hidden", "true");
+      syncScrollLock();
+      img.src = "";
+      if (state.opener && state.opener.focus) state.opener.focus(); // back to its card
+      state.opener = null;
+    }
+
+    root.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-rd]");
+      if (t) {
+        var a = t.getAttribute("data-rd");
+        if (a === "close") close();
+        else if (a === "prev") show(state.i - 1);
+        else if (a === "next") show(state.i + 1);
+        return;
+      }
+      // The big photo opens FULL SIZE, in the shared lightbox — one layer above.
+      if (e.target.closest(".cit-rd__stage") && state.room && state.room.photos.length) {
+        ensureLightbox().open(state.room.photos, state.i, img);
+      }
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (!root.hasAttribute("data-open")) return;
+      // ⛔ ESC PEELS ONE LAYER. While the full-size viewer is up it owns the key: it
+      // closes, and the popover stays open. Only the second ESC closes the popover.
+      // (The lightbox is built lazily, so its own listener may be registered after
+      // this one — the check is on the DOM, not on listener order.)
+      if (document.querySelector(".cit-lb[data-open]")) return;
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft") show(state.i - 1);
+      else if (e.key === "ArrowRight") show(state.i + 1);
+    });
+
+    rd = { open: open };
+    return rd;
+  }
+
+  register("rooms", function mountRoomDetails(slot) {
+    // ⚠️ ONLY the card shells carry the DATA. A room can have SEVERAL openers (the card
+    // itself, plus a "Részletek" button next to Foglalás), so treating every
+    // [data-cit-room] as a card would build two entries for one room and hand the next
+    // room's photos to the wrong unit. The INDEX in the attribute is the key; position
+    // in the DOM is not.
+    var shells = [].slice.call(slot.querySelectorAll(".cit-room__open[data-cit-room]"));
+    if (!shells.length) return; // nothing anchored — leave the in-skin markup as is
+    // Tell the page JS is on, so the no-JS <details> stands down even for the brief
+    // moment before we take them out.
+    document.documentElement.classList.add("cit-rooms-js");
+    var rooms = {};
+    shells.forEach(function (sh) {
+      var idx = sh.getAttribute("data-cit-room");
+      rooms[idx] = readRoomData(slot, sh, idx);
+    });
+
+    function fire(trigger) {
+      var room = rooms[trigger.getAttribute("data-cit-room")];
+      if (room) ensureRoomPopover().open(room, trigger);
+    }
+    slot.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-cit-room]");
+      if (!t || !slot.contains(t)) return;
+      // ⛔ The anchor stays a REAL link: only our interception stops the navigation, and
+      // only for a plain left click. Ctrl/⌘/shift/middle-click must still open the
+      // unit's own page — that page is the reason the <a> exists at all (ADR-0041).
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      fire(t);
+    });
+    slot.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var t = e.target.closest('[data-cit-room][role="button"]');
+      if (!t || !slot.contains(t)) return;
+      e.preventDefault();
+      fire(t);
     });
   });
 

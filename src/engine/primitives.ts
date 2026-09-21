@@ -11,6 +11,10 @@
 import { iconSvg, matchIcon, starIcon, starRow } from "./icons.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import type { Faq, Review, Room, SectionCopy, SectionKind, SiteData } from "./recipe.js";
+// ⛔ These legacy archetype renderers have NO details popover: a real unit's
+// description and amenities arrive STRUCTURED now, so reading `r.note` raw would
+// silently render nothing at all. roomNoteLine() rebuilds the one-line form.
+import { roomNoteLine } from "./recipe.js";
 
 // ---- stats (data-only band — never fabricated) ---------------------------
 
@@ -592,7 +596,8 @@ function roomsSection(d: SiteData, copy?: SectionCopy): string {
         ? `<div class="cit-room-img"><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt)}" loading="lazy"></div>`
         : "";
       const cap = r.capacity ? `<p class="cit-room-meta">${esc(r.capacity)}</p>` : "";
-      const noteP = r.note ? `<p class="cit-room-note">${esc(r.note)}</p>` : "";
+      const rNote = roomNoteLine(r);
+      const noteP = rNote ? `<p class="cit-room-note">${esc(rNote)}</p>` : "";
       return `<article class="cit-room">${img}<div class="cit-room-body"><h3>${esc(r.name)}</h3>${cap}${noteP}</div></article>`;
     })
     .join("\n          ");
@@ -617,7 +622,8 @@ function roomsShowcase(d: SiteData, copy?: SectionCopy): string {
         ? `<div class="cit-show-img"><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt)}" loading="lazy"></div>`
         : "";
       const cap = r.capacity ? `<p class="cit-room-meta">${esc(r.capacity)}</p>` : "";
-      const noteP = r.note ? `<p class="cit-show-note">${esc(r.note)}</p>` : "";
+      const rNote = roomNoteLine(r);
+      const noteP = rNote ? `<p class="cit-show-note">${esc(rNote)}</p>` : "";
       const idx = `<span class="cit-show-idx">${String(i + 1).padStart(2, "0")}</span>`;
       return `<article class="cit-show-row${i % 2 ? " cit-show-row--rev" : ""}">${img}<div class="cit-show-body">${idx}<h3>${esc(
         r.name,
@@ -646,7 +652,8 @@ function roomsBoutique(d: SiteData, copy?: SectionCopy): string {
         ? `<div class="cit-room-img"><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt)}" loading="lazy"></div>`
         : "";
       const meta = r.capacity ? `<div class="cit-room-chips"><span>${esc(r.capacity)}</span></div>` : "";
-      const noteP = r.note ? `<p class="cit-room-note">${esc(r.note)}</p>` : "";
+      const rNote = roomNoteLine(r);
+      const noteP = rNote ? `<p class="cit-room-note">${esc(rNote)}</p>` : "";
       const price = r.price ? `<span class="cit-room-price"><strong>${esc(r.price)}</strong></span>` : "";
       return `<article class="cit-room cit-room--boutique">${img}<div class="cit-room-body"><h3>${esc(
         r.name,
@@ -685,7 +692,8 @@ function roomsSuitesScroll(d: SiteData, copy?: SectionCopy): string {
         ? `<div class="cit-suite-img"><img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt)}" loading="lazy"></div>`
         : "";
       const meta = r.capacity ? `<p class="cit-suite-meta">${esc(r.capacity)}</p>` : "";
-      const noteP = r.note ? `<p class="cit-suite-note">${esc(r.note)}</p>` : "";
+      const rNote = roomNoteLine(r);
+      const noteP = rNote ? `<p class="cit-suite-note">${esc(rNote)}</p>` : "";
       const price = r.price ? `<strong>${esc(r.price)}</strong>` : "<span></span>";
       return `<article class="cit-suite">${img}<div class="cit-suite-body"><h3>${esc(
         r.name,

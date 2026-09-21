@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -332,15 +332,22 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       <div class="au-apts" data-cit-module="rooms">
         ${roomsData
           .map(
-            (r) => `<article class="au-glass au-apt">
-          <div class="au-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="au-bdg">${esc(r.capacity)}</span>` : ""}</div>
-          <div class="au-bd">
-            <h3>${esc(r.name)}</h3>
-            ${r.note ? `<p class="au-mt">${esc(r.note)}</p>` : ""}
+            (r, i) => `<article class="au-glass au-apt">
+          ${roomShell(
+            data,
+            r,
+            i,
+            "au-aptlink",
+            `<div class="au-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="au-bdg">${esc(r.capacity)}</span>` : ""}${roomHint(data, r)}</div>
+          <div class="au-bd"><h3>${esc(r.name)}</h3></div>`,
+          )}
+          <div class="au-bd" style="padding-top:0">
             <div class="au-row">
               ${r.price ? `<span class="au-pr">${esc(r.price)}</span>` : "<span></span>"}
+              <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
               ${hasContact ? `<a class="au-go" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
+            ${roomDetails(data, r, i)}
           </div>
         </article>`,
           )

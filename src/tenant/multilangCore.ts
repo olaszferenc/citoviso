@@ -64,6 +64,11 @@ export function collectTranslatableStrings(
     add(r.capacity);
     add(r.note);
     add(r.price);
+    // The details popover's text lives here now that the card no longer glues it into
+    // `note` — without these two the popover would stay Hungarian on a paid language
+    // version, which is the module silently not delivering what it sold.
+    add(r.description);
+    for (const a of r.amenities ?? []) add(a.label);
   }
   for (const f of data.faqs ?? []) {
     add(f.q);
@@ -196,6 +201,11 @@ export function applyTranslationMap(
             ...(r.capacity ? { capacity: trReq(r.capacity) } : {}),
             ...(r.note ? { note: trReq(r.note) } : {}),
             ...(r.price ? { price: trReq(r.price) } : {}),
+            ...(r.description ? { description: trReq(r.description) } : {}),
+            // Only the LABEL is language; `icon` is SVG markup and must pass untouched.
+            ...(r.amenities
+              ? { amenities: r.amenities.map((a) => ({ ...a, label: trReq(a.label) })) }
+              : {}),
           })),
         }
       : {}),

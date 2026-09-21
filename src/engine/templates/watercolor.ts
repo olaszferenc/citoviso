@@ -13,7 +13,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const WATERCOLOR_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -292,16 +292,25 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="wc-rooms" data-cit-module="rooms">
         ${roomsData
           .map(
-            (r) => `<article class="wc-room">
-          <div class="wc-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="wc-tag">${esc(r.capacity)}</span>` : ""}</div>
+            (r, i) => `<article class="wc-room">
+          ${roomShell(
+            data,
+            r,
+            i,
+            "wc-roomlink",
+            `<div class="wc-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${r.capacity ? `<span class="wc-tag">${esc(r.capacity)}</span>` : ""}${roomHint(data, r)}</div>
           <div class="wc-bd">
             <h3>${esc(r.name)}</h3>
             ${r.capacity ? `<p class="wc-mt">${esc(r.capacity)}</p>` : ""}
-            ${r.note ? `<p>${esc(r.note)}</p>` : ""}
+          </div>`,
+          )}
+          <div class="wc-bd" style="padding-top:0">
             <div class="wc-ft">
               ${r.price ? `<span class="wc-pr">${esc(r.price)}</span>` : "<span></span>"}
+              <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
               ${hasContact ? `<a href="#cit-enquiry">${T(data, "Kiválasztom")}</a>` : ""}
             </div>
+            ${roomDetails(data, r, i)}
           </div>
         </article>`,
           )

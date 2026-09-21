@@ -17,7 +17,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const TRANSIT_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -257,15 +257,21 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         <tbody>
           ${roomsData
             .map(
-              (r) => `<tr>
-            <td class="tb-u">${
-              r.photo?.url
-                ? `<img class="tb-thumb" src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy">`
-                : `<span class="tb-thumb">${photoFill(r.name, { compact: true })}</span>`
-            }<span>${esc(r.name)}</span></td>
-            <td class="tb-cap">${r.capacity ? esc(r.capacity) : r.note ? esc(r.note) : ""}</td>
+              (r, i) => `<tr>
+            <td class="tb-u">${roomShell(
+              data,
+              r,
+              i,
+              "tb-ulink",
+              `<span class="tb-thumbwrap">${
+                r.photo?.url
+                  ? `<img class="tb-thumb" src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}" loading="lazy">`
+                  : `<span class="tb-thumb">${photoFill(r.name, { compact: true })}</span>`
+              }${roomHint(data, r, { compact: true })}</span><span>${esc(r.name)}</span>`,
+            )}${roomDetails(data, r, i)}</td>
+            <td class="tb-cap">${r.capacity ? esc(r.capacity) : ""}</td>
             ${showPriceCol ? `<td class="tb-pr tb-num">${r.price ? esc(r.price) : ""}</td>` : ""}
-            <td class="tb-act">${hasContact ? `<a class="tb-go" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}</td>
+            <td class="tb-act"><button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>${hasContact ? `<a class="tb-go" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}</td>
           </tr>`,
             )
             .join("\n          ")}

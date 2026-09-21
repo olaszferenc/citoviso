@@ -12,7 +12,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const HORIZONTAL_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -276,15 +276,24 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ${roomsData
       .map(
         (r, i) => `<article class="h-house">
-      <div class="h-im"><span class="h-no">${T(data, "{n}. fejezet", { n: String(i + 1) })}</span>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}</div>
+      ${roomShell(
+        data,
+        r,
+        i,
+        "h-houselink",
+        `<div class="h-im"><span class="h-no">${T(data, "{n}. fejezet", { n: String(i + 1) })}</span>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${roomHint(data, r)}</div>
       <div class="h-bd">
         <h3>${esc(r.name)}</h3>
         ${r.capacity ? `<p class="h-mt">${esc(r.capacity)}</p>` : ""}
-        ${r.note ? `<p>${esc(r.note)}</p>` : ""}
+      </div>`,
+      )}
+      <div class="h-bd" style="padding-top:0">
         <div class="h-ft">
           ${r.price ? `<span class="h-pr">${esc(r.price)}</span>` : "<span></span>"}
+          <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
           ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
+        ${roomDetails(data, r, i)}
       </div>
     </article>`,
       )

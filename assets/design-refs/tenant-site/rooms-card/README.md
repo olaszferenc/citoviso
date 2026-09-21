@@ -3,7 +3,12 @@
 **Jóváhagyta:** a tulaj, 2026-09-21 (§2b terv-jóváhagyási kapu) · **Változat:** **B — Két út**
 (az A — „Előbb nézd meg" elvetve) · **Terv:** `plan.html` (önhordó, kattintható) ·
 **Képek:** `B-mobil-*.png`, `B-asztali-*.png`
-**Hatókör:** `assets/runtime/cit-runtime.js`, `src/engine/moduleSections.ts`, `src/tenant/editor.ts`
+**Hatókör:** `assets/runtime/cit-runtime.js`, `assets/runtime/cit-modules.css`, `src/engine/templateKit.ts`, `src/engine/moduleSections.ts`, `src/engine/recipe.ts`, `src/tenant/editor.ts`
+> A hatókör a megvalósításkor NŐTT (2026-09-21): a kártya közös rétege — a horgony, a
+> jelvény és a no-JS `<details>` — a `templateKit.ts`-ben született meg, hogy a 12 saját
+> szoba-szekciót rajzoló sablon EGY forrásból kapja; a `recipe.ts` hordozza a szétszedett
+> `description` / `amenities` / `photos` / `slug` mezőket; a felugró CSS-e a
+> `cit-modules.css`-ben él. A 12 sablon-fájl a horgony BEHÍVÁSA, nem a kontraktus szövege.
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.** Ami itt „KÖT" jelöléssel áll,
 azt a kész felületnek teljesítenie kell; a kódot ehhez mérjük, nem fordítva
@@ -111,12 +116,19 @@ kell rá, különben egy JÖVŐBELI sablon némán a régi, összefűzött szöv
 
 ## 4. Reprodukció
 
+⚠️ A terv-vázlat generátorai a landoláskor törlődtek (§2b ⑥). A MEGVALÓSULT felületet a
+kapuja reprodukálja — ugyanabból a fixture-ből, ami a kontraktust méri:
+
 ```bash
-# a fixture a TERMÉK forrásából épül (DB + valódi ikon-resolver), nem kézzel:
-npx tsx assets/design-refs/_drafts/build-fixture.mts
-npx tsx assets/design-refs/_drafts/build-public.mts
-npx tsx assets/design-refs/_drafts/check-public.mts   # a működés mérése
+npx tsx scripts/room-details-check.mts              # a kapu: 19 sablon × 2 szélesség
+npx tsx scripts/room-details-check.mts --selftest   # NEGATÍV önteszt (7 visszarontás)
+npx tsx scripts/room-details-check.mts artdeco --keep   # a renderelt lap megmarad
+npx tsx scripts/ui-shot.mts <a --keep által kiírt útvonal>   # kép mindkét méreten
 ```
+
+A fixture ikonjai a 70 tételes ÉLES katalógusból, a VALÓDI resolverrel jönnek
+(`amenityByLabel` + `amenitySvg`) — egy kézzel írt ikon-fixture azt mérné, le tudtam-e
+másolni egy SVG-t. Ha egy címke nem katalógus-találat, a mérés HANGOSAN elszáll.
 
 A `plan.html` a fenti generátor kimenete (kisebb képekkel: `PHOTO_W=430 PHOTO_Q=64`).
 A benne lévő kapcsolók — **Mobil/Asztali · Valós adat/Kitöltött minta · JS-sel/JS nélkül** —
@@ -139,14 +151,32 @@ a terv részei: a jóváhagyás **mindhárom tengelyen** megtörtént.
 megköveteli, hogy a felirat ÉLJEN a **Hatókör** alatti fájlokban. Egy kontraktus, ami a
 megvalósítás ELŐTT születik, ezért még nem jelölheti meg őket — nincs mit ellenőrizni.
 
-**A megvalósító szál feladata a munka végén:** a ténylegesen szállított feliratokat itt
-kötő alakra írni. Ezek legalább:
+**Megjelölve 2026-09-21-én, a megvalósítás után.** Az alábbiak a ténylegesen szállított
+`T()` / `tr()` ARGUMENTUMOK (nem a képernyőn látott összefűzött mondat):
 
-| Felirat | Hol |
-|---|---|
-| a felszereltség-blokk alcíme (`Amit ez az egység kínál`) | felugró |
-| az üres egység őszinte mondata | felugró |
-| a jelvény két alakja (`N kép` / `Részletek`) | kártya |
+| Felirat | Hol | Forrás |
+|---|---|---|
+| **„Amit ez az egység kínál"** | a felugró felszereltség-alcíme | `templateKit.ts` (`roomDetails`) + `cit-runtime.js` |
+| **„Ehhez az egységhez még nincs leírás és felszereltség megadva."** | a felugró üres egységnél | `templateKit.ts` (`roomDetails`) |
+| **„{n} kép"** | a jelvény, 2+ fotónál (a képernyőn: „4 kép") | `templateKit.ts` (`roomHint`) |
+| **„Részletek"** | a jelvény EGY fotónál, és a kártya nyitó-gombja | `templateKit.ts` + a 12 sablon |
+| **„A szállás egésze"** | a felugró kategória-felirata a teljes szállásnál | `cit-runtime.js` |
+| **„Apartman"** | a felugró kategória-felirata egy egységnél | `cit-runtime.js` |
+
+⚠️ A `{n} kép` SZÁNDÉKOSAN a nyers kulcs: a képernyőn „4 kép" áll, de az behelyettesített
+alak — a kötő szöveg a `T()` argumentuma, különben az őr egy sosem létező literált keresne
+(`feedback_composed_sentence_is_not_a_quotable_label`).
+
+**Amit a megvalósítás a tervhez képest KÉNYSZERŰEN pontosított** (mérésből, nem ízlésből):
+
+- **A galéria magassága rugalmas, nem fix.** A terv 260 px-es állóképe egy skinen
+  ráfért; másokon a felszereltség a hajtás alá esett (mérve: 9-ből 4). A szoba-tények
+  kapják a helyet, a kép veszi, ami marad — a KÖT-ött darabszám így MINDEN sablonon áll.
+- **A felugró `position` értéke `!important`.** Az `aurora` sablon `body>*{position:
+  relative}` szabálya a dokumentum közepére ejtette az overlayt (mérve: 4029 px-re lent,
+  nulla magassággal). Ugyanez a meglévő nagykép-réteget is érintette.
+- **Az ár a kártyán MARAD** (tulajdonosi döntés, 2026-09-21). A §5 kimondja, hogy a terv
+  az ár helyét nem dönti el; a kártya így hat elemű.
 
 ⛔ **Idézd a `T()` argumentumát, ne a képernyőn látott összefűzött mondatot**
 (`feedback_composed_sentence_is_not_a_quotable_label`: háromszor buktam el ezen egy

@@ -94,15 +94,64 @@ export interface Photo {
   readonly watermarked?: boolean;
 }
 
+/** One amenity ON a unit: the owner's stored label plus the catalogue's icon markup. */
+export interface RoomAmenity {
+  /** The stored Hungarian label — also the i18n source key (amenityCatalog.ts). */
+  readonly label: string;
+  /** Inline `<svg>` from the 70-item catalogue. Absent → the label stands alone. */
+  readonly icon?: string;
+}
+
 /** A room/unit type (real data; usually absent for a cold lead → sample-marked in the mock). */
 export interface Room {
   readonly name: string;
   readonly capacity?: string;
+  /**
+   * ⛔ A SINGLE concatenated line — the pre-contract shape, kept for SAMPLE rooms and
+   * for the legacy archetype renderers that have no details popover. Real units no
+   * longer set it: their description and amenities now arrive STRUCTURED (below),
+   * because one line made the guest read "az hogy … · Ingyenes Wi‑Fi · Síkképernyős
+   * TV" as a single indistinguishable sentence. Use roomNoteLine() to read it.
+   * Contract: assets/design-refs/tenant-site/rooms-card/README.md §1.
+   */
   readonly note?: string;
   readonly photo?: Photo;
   /** Price line (e.g. "42 500 Ft / éj"). REAL data only — sample rooms never carry one
    *  (§B.17: a number is the most trust-sensitive fact; the price slot stays empty). */
   readonly price?: string;
+
+  // ── the details popover reads these; the CARD never renders them (contract §1) ──
+  /** The unit's own description, on its own — never glued to the amenities. */
+  readonly description?: string;
+  /** The unit's own amenities with catalogue icons. */
+  readonly amenities?: readonly RoomAmenity[];
+  /**
+   * EVERY photo assigned to this unit, cover first (`photo` is photos[0]). Drives the
+   * popover gallery and the card badge's "N kép"; absent or 1-long → no gallery
+   * controls at all (contract §2: a single photo is the BASE case, not the edge).
+   */
+  readonly photos?: readonly Photo[];
+  /**
+   * The unit's own subpage slug — set ONLY when `/apartman/<slug>.html` really exists
+   * (thin-content gate, ADR-0044 §13). The card is a real <a> to it and the popover
+   * must not cost us that: the subpage is the SEO entry point (ADR-0041).
+   */
+  readonly slug?: string;
+  /** ADR-0114 — this unit IS the whole place; the popover says so instead of "Apartman". */
+  readonly wholeProperty?: boolean;
+}
+
+/**
+ * The one-line room note for renderers that have NO details popover (the legacy
+ * archetype primitives). Real units carry `description` + `amenities` separately, so
+ * without this helper those renderers would silently lose both — the exact
+ * "one shared field widened, three of four consumers quietly worse" failure.
+ */
+export function roomNoteLine(r: Room): string {
+  if (r.note) return r.note;
+  return [r.description, (r.amenities ?? []).map((a) => a.label).join(" · ")]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 /** A guest review (real data; usually absent for a cold lead → sample-marked in the mock). */
