@@ -8,6 +8,45 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-21)
 
+**🛏️ A PUBLIKUS SZOBA-KÁRTYA ÉS RÉSZLETEK-FELUGRÓ MEGVALÓSÍTÁSA — ADR-0195.**
+Tulajdonosi mandátum (`~/rc-briefs/rooms-card-brief.md`), a §2b B változat leszállítása.
+Kontraktus: `assets/design-refs/tenant-site/rooms-card/README.md`.
+Session-jegyzet: `_planning/memory/2026-09-21_rooms_card_impl.md`. **Élesítés NEM volt feladat.**
+
+- **A kerülő út megszűnt.** A kódban ott volt a beismerés: *„they ride the note line every
+  template already renders — **no template edit**"*. Az `editor.ts` egy `note` mezőbe fűzte
+  a leírást ÉS a felszereltséget, a vendég egy mondatban kapta mindkettőt. A `Room` most
+  strukturált (`description`, `amenities{label,icon}`, `photos`, `slug`, `wholeProperty`);
+  a minta-szobák és a 4 legacy renderelő `roomNoteLine()`-t olvas, hogy NE vesszen szöveg.
+- **Egy közös réteg, 13 behívó.** `templateKit.ts`: `roomShell` (héj + `data-cit-room`
+  horgony + valódi `<a href="/apartman/<slug>">`, mert az aloldal SEO-belépő), `roomHint`
+  (hover-független jelvény: „{n} kép" / EGY fotónál „Részletek", soha nem „1 kép"),
+  `roomDetails` (no-JS `<details>` = a felugró adatforrása, amit a runtime beolvas és KIVESZ).
+  A felugró: `register("rooms")`, a MEGLÉVŐ `.cit-lb` a nagykép, rétegzett ESC, közös
+  görgetés-zár. Egy predikátum (`unitPageIsWorthWriting`) őrzi, hogy kártya ne mutasson 404-re.
+- **⭐ A galéria RUGALMAS, nem fix.** A fix magasság artdeco-n átment, három sablonon bukott:
+  a felugró a SKIN betűit viseli, ezért a pixel-költségvetés nem szabály, hanem véletlen.
+  A szoba-TÉNYEK kapják a helyet, a kép veszi, ami marad.
+- **Őrök:** ÚJ `room-details-check` (38 mérés · 114 kártya · 114 horgony · **7 visszarontásos
+  önteszt** kontrollal), bekötve. A meglévő `room-card-overflow-check` 114 mérésen zöld.
+- ⛔⛔ **Öt saját hiba, mind mérésből:** ① a CSS forrás-sorrendje (az asztali szabályom semmit
+  nem csinált: 1280 px-en 9-ből **2** felszereltség látszott) ② pixel-költségvetést hangoltam
+  szabály helyett ③ a saját mérőm **két álbukást gyártott** (a hálózat-tiltásom `ERR_FAILED`-je
+  „JS-hiba"; a nyers illesztés a csupa-nagybetűs sablonokon) ④ **két visszarontásom nem vitt
+  pirosra** (egyik nem létező mechanizmust célzott, másik gyengébb volt a javításnál)
+  ⑤ **a kártya 75×50 px-re zsugorodását egy IDEGEN őr fogta meg**, nem az enyém.
+- ⭐ **Nem keresett lelet:** az `aurora` `body>*{position:relative}` szabálya (0,2,1) leütötte
+  az overlay `fixed`-jét (4029 px-re lent, nulla magassággal) — **és ugyanez a MEGLÉVŐ
+  nagykép-lightboxot is érintette, csendben, eddig is.** Mindkettő pozíciója most `!important`.
+- 🔴 **NYITOTT:** ① **négy sablon** (`arch-frames`, `tilted-gallery`, `wordmark-grow`,
+  `transit`) a tulaj képen-döntésére vár — a szállított „A" változatban a képen álló jelvény
+  az egyetlen belépő ② az ár „minimumtól" alakja egy MÉRT döntést írna felül (Elek FK-007:
+  a mai nap ára ellentmondott az ár-táblázatnak és a foglaló-widgetnek egy képernyőn)
+  ③ az admin szoba-szerkesztő külön §2b kör ④ a felugró ÉLES tenant-lapon még nincs
+  végigkattintva (ma a fixture-ön mér).
+
+## Előző szál (2026-09-21) — a kifizetett, de üres modul
+
 **💸 A KIFIZETETT, DE ÜRES MODUL TÖBBÉ NEM MARAD NÉMA (ADR-0194).**
 Session-jegyzet: `_planning/memory/2026-09-21_paid_but_empty_modules.md`.
 Kontraktus: `assets/design-refs/tenant-admin/paid-empty/` (A változat, tulajdonosi döntés).
