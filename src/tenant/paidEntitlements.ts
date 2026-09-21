@@ -22,6 +22,8 @@
 // to the moment money changes hands, which is why the only callers are the two
 // paid paths in src/payment/service.ts.
 import { db } from "../db/client.js";
+import { missingRequiredModules } from "../modules.js";
+import { tenantDependencyContext } from "./moduleRequirements.js";
 
 /** Modules the tenant has actually PAID for: the union over every order_intent
  *  of theirs that carries a `paid` payment (initial checkout, upsell, one-time). */
@@ -105,12 +107,40 @@ export async function syncEntitlementsToPaid(tenantId: string): Promise<Entitlem
     current.filter((c) => !c.active && c.cancelled_at != null).map((c) => c.module),
   );
 
+  // ADR-0192: the set this sync would LEAVE BEHIND — everything active now, plus
+  // everything it is about to grant, minus what an explicit cancellation tombstones.
+  // Judged once, as a whole: the grant loop runs module by module, and asking the
+  // question per module would miss that two of them satisfy each other.
+  const depCtx = await tenantDependencyContext(tenantId);
+  const wouldHold = new Set(
+    [...activeNow, ...paid].filter((m) => !cancelled.has(m)),
+  );
+
   const granted: string[] = [];
   for (const module of paid) {
     if (activeNow.has(module)) continue;
     if (cancelled.has(module)) {
       console.log(`[entitlement] ${tenantId}: ${module} lemondva — a régi fizetés nem éleszti újra`);
       continue;
+    }
+    // ⛔⛔ MEASURED, AND I HAD IT BACKWARDS FIRST. My first cut SKIPPED the grant
+    // when the module's requirement carried a cancellation tombstone — and
+    // `entitlement-paid-check` went red on "a KIFIZETETT upsell bekapcsol":
+    // the gate was refusing a customer who had paid. ADR-0072 is not negotiable
+    // ("azt kapja, amiért fizetett"), and the harm the refusal was aimed at is
+    // already covered one layer down: ADR-0193's render/quote gate stops a
+    // priceless calendar from quoting, entitlement or not.
+    // So the module IS granted — and the situation is announced, because a paid
+    // module standing next to a cancelled requirement still needs a human.
+    const unmet = missingRequiredModules([module, ...wouldHold], depCtx).filter(
+      (i) => i.moduleId === module,
+    );
+    if (unmet.length) {
+      console.error(
+        `[entitlement] ${tenantId}: ${module} bekapcsol (KI VAN FIZETVE), de hiányzik hozzá: ` +
+          `${unmet.map((i) => i.requiredId).join(", ")} (lemondva). ` +
+          `A lap a hiányzó modul nélkül nem mond árat (ADR-0193) — emberi rendezés kell.`,
+      );
     }
     await db
       .insertInto("module_entitlement")

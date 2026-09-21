@@ -11334,8 +11334,23 @@ felismerés lett az őr 4. negatív kontrollja (lásd ⑤).
    a **helyes ár magától következik** — a „990 a képernyőn, 2 170 a terhelésen" hazugság meg sem
    születik. Szerver-oldali csendes hozzávétellel azt KÜLÖN kellett volna megjavítani.
    A szerver-oldali kapu ettől még kell (kézzel gyártott POST), csak nem ő az elsődleges út.
-2. **A lemondás: BLOKKOL, és közös lemondást ajánl.** „A Szobák nem kapcsolható ki, amíg az Online
-   foglalás él. Lemondja mindkettőt?" Precedens: az ár-padló már ma elutasít EGÉSZ változtatásokat
+2. **A lemondás: BLOKKOL, és közös lemondást ajánl.**
+   > ⛔ **HELYESBÍTVE 2026-09-21-én, a megvalósítás mérése alapján** (tulajdonosi jóváhagyással).
+   > Az eredeti példamondat ~~„A Szobák nem kapcsolható ki, amíg az Online foglalás él. Lemondja
+   > mindkettőt?"~~ **KETTŐT** feltételezett, mert a `Szobák`↔`Foglalás` közvetlen kötést vette
+   > alapul. A lánc viszont ① szerint **három tagú**: a `booking` a `pricing`-et követeli meg, a
+   > `pricing` pedig a `rooms`-ot — a közbülső tag kimaradt a példából. A `rooms` lemondása tehát
+   > **hármat** visz, és a felugró hármat is nevez meg.
+   > ⚠️ Az eredeti mondat szándékosan marad itt áthúzva: a döntés-előzmény nem törlendő, különben
+   > nem derül ki, hogy a megvalósítás nem hibázott, hanem egy azóta helyesbített feltevést követett.
+   >
+   > **Ami MOST köt:** „A Szobák, apartmanok nem kapcsolható ki, amíg az Árak, szezonok és az
+   > Online foglalás él." + a **teljes eltávolítási zárvány** tételesen, modulonkénti árral, és a
+   > gomb a zárványból számolja a darabszámot („Mind a hármat lemondom"). A névelőt `huArticle`
+   > dönti el (ADR-0101), és a mondat a katalógus `why`-jával folytatódik — nem a felületen
+   > fogalmazva. Kontraktus: `assets/design-refs/console/module-dependency/`.
+
+   Precedens: az ár-padló már ma elutasít EGÉSZ változtatásokat
    (`src/tenant/moduleChange.ts:123-138`) — a minta kész, csak forintban mér, nem szerkezetileg.
    ⛔ A kaszkádot **elvetettük**: ADR-0155 ③ szerint a fagyasztott lap hiányzó mezője lemondásnak
    olvasódik, ezért egy automatikus ELTÁVOLÍTÓ ág pont a megőrző mezőkkel védett adatvesztés-csapdába
@@ -11434,8 +11449,13 @@ tranzitív hatása.
 A felderítés hat, a függőségtől **független** hibát mért ki. Egyiket sem javítottam — de
 leírva maradnak, hogy ne kelljen újra megtalálni:
 
-1. `/api/foglaltsag` ár-kapu hiánya (`src/server/public.ts:670-708`).
-2. **Kupon-kerekítés két példányban** — kliens modulonként (`src/server/adminViews.ts:1499`),
+> ✅ **AZÓTA LEZÁRVA (2026-09-21):** az **1.** és a **2.** tételt a `wt/arkapu` szál landolta
+> (**ADR-0193**) — az `/api/foglaltsag` már az entitlement-kaput kérdezi (`siteRendersModule`),
+> a kerekítés pedig egy közös szabályra (`cit-coupon.cjs` · `splitFirstCharge`) került. A
+> 3–8. tétel **továbbra is nyitott.**
+
+1. ~~`/api/foglaltsag` ár-kapu hiánya (`src/server/public.ts:670-708`).~~ → **ADR-0193**
+2. ~~**Kupon-kerekítés két példányban**~~ → **ADR-0193**. Eredeti lelet: kliens modulonként (`src/server/adminViews.ts:1499`),
    szerver a végösszegen (`src/tenant/moduleUpsell.ts:130`). Élő adaton: **1 626 Ft a képernyőn,
    1 627 a terhelésen**. Azért nem derült ki eddig, mert a park egyetlen upsellje éves (ott
    véletlenül egybeesik).

@@ -108,6 +108,14 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // mondatok a kártyán születnek (adminViews.ts, T()-vel), nem itt.
   "src/tenant/multilangResume.ts":
     "belső tulaj-riasztás (elakadt nyelv-generálás) — a címzett az operátor; a vevő szövege a kártyán, T()-vel",
+  // ADR-0192: a modul-függőség kiértékelője. A magyarja kétféle, és egyik sem
+  // vevő-szöveg: (a) belső operátor-riasztás a visszatartott lemondásról (címzett =
+  // az üzemeltető, a multilangResume mintájára), (b) a tulajnak szánt `why` mondat
+  // NEM itt születik — az a katalógusból jön (src/modules.ts, szintén adat-regiszter
+  // kivétel), ez a fájl csak TOVÁBBADJA. Ha itt fogalmaznánk, az lenne a második
+  // igazság ugyanarra a mondatra (feedback_one_rule_two_copies).
+  "src/tenant/moduleRequirements.ts":
+    "belső operátor-riasztás (visszatartott lemondás) — a tulajnak szóló mondat a katalógusból jön, itt csak átfolyik",
   // A figyelő húzta be a levél-gráfba (a riasztás importálja a futtatót): a magyarja
   // az AI-fordító RENDSZER-PROMPTJA és operátor-napló — levél-törzsbe nem folyik.
   "src/tenant/multilangGenerate.ts":

@@ -65,6 +65,8 @@ export const ICON: Readonly<Record<string, string>> = {
     `<path d="M14 3.8V8.5h4.7M8.4 12.4h7.2M8.4 15.6h4.6"/>` +
     `<circle cx="16.4" cy="17.2" r="1.9" ${CY_ACCENT}/>`,
   // ── Utility / state icons (pure currentColor) ──
+  link:
+    '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
   check: `<circle cx="12" cy="12" r="8.4"/><path d="m8.6 12.3 2.3 2.3 4.6-4.9"/>`,
   clock: `<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4v5l3.3 2"/>`,
   zoom: `<circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/>`,

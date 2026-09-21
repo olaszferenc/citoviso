@@ -11,6 +11,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { redeemOffer } from "./offers.js";
 import { announceRestore } from "./restoreNotice.js";
+import { alertHeldCancellations, heldCancellations } from "../tenant/moduleRequirements.js";
 
 /**
  * Is the tenant's site switched off for non-payment right now (ADR-0080 ⑤, T+10)?
@@ -222,9 +223,20 @@ export async function applyRenewalPaid(
       .execute();
   }
 
+  // ⭐ ADR-0192 ②: THE UNATTENDED PATH. This one statement used to sweep EVERY
+  // pending cancellation, and that is where the dependency rule broke with nobody
+  // in the room: at the moment the tenant clicked "lemondom" the set was still
+  // valid (the module lives to the period end), so a guard tied to the toggle
+  // waved it through — and the violation landed on the renewal day.
+  // Cancellations that would leave a LIVE module without its hard requirement are
+  // held back and a human is alerted. Not a cascade: removing the dependent too
+  // would silently delete something the tenant paid for (ADR-0155 ③).
+  const held = await heldCancellations(tenantId);
+  const heldIds = held.map((h) => h.module);
+
   // cancelled_at is the tombstone the paid-reconciliation respects: without it a
   // later payment would re-grant the module off the historical paid union.
-  const removed = await db
+  let sweep = db
     .updateTable("module_entitlement")
     .set({
       active: false,
@@ -232,9 +244,21 @@ export async function applyRenewalPaid(
       cancelled_at: sql`coalesce(cancelled_at, now())` as unknown as never,
     })
     .where("tenant_id", "=", tenantId)
-    .where("cancel_at_period_end", "=", true)
-    .returning("module")
-    .execute();
+    .where("cancel_at_period_end", "=", true);
+  if (heldIds.length) sweep = sweep.where("module", "not in", heldIds);
+  const removed = await sweep.returning("module").execute();
+
+  // The held module stays ACTIVE but was NOT billed by this renewal
+  // (renewableModuleIds excludes cancel_at_period_end rows), so it runs free for
+  // one cycle. That is the price of not lying on the page and not deleting paid
+  // data — and the alert is what keeps it to one cycle.
+  if (held.length) {
+    console.error(
+      `[module-deps] ${tenantId}: ${held.length} lemondás VISSZATARTVA a megújításnál ` +
+        `(${held.map((h) => `${h.module}←${h.blockedBy.join("+")}`).join(", ")}).`,
+    );
+    await alertHeldCancellations(tenantId, held);
+  }
 
   // ADR-0088: a renewal that carried the welcome coupon's first-charge
   // discount just got paid — burn the use HERE, because the token-charge path

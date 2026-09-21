@@ -2,7 +2,12 @@
 // Server-rendered HTML; Post/Redirect/Get for mutations. No framework (node:http).
 
 import type { TenantSession } from "../auth/tenantAuth.js";
-import { GROUP_LABELS, type ModuleGroup } from "../modules.js";
+import {
+  GROUP_LABELS,
+  applicableRequirements,
+  type ModuleGroup,
+  type MultiUnitState,
+} from "../modules.js";
 import { readFileSync } from "node:fs";
 import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
@@ -533,6 +538,13 @@ export function modulesSection(
   lang = "hu",
   /** freeze-state-v2 ⑨: a felfüggesztett hoszt címe — amit a látogató MA lát. */
   guestViewUrl: string | null = null,
+  /**
+   * ADR-0192 ④.4 — does this tenant have 2+ bookable units? Handed IN because
+   * this render is synchronous, and ⛔ defaulting to "unknown" is the fail-closed
+   * reading on purpose: a caller that forgets it shows the dependency, it does not
+   * silently drop it.
+   */
+  multiUnit: MultiUnitState = "unknown",
 ): string {
   const huf = hufAmount;
   // The anniversary the owner reads a dozen times on this page. It arrives in
@@ -945,6 +957,16 @@ export function modulesSection(
     // ADR-0113: re-ticking a cancelled-but-still-active module is a FREE rejoin
     // (paid through the period) — the plan bar must not price it as a purchase.
     (m.active && m.cancelAtPeriodEnd ? ` data-rejoin="1"` : "") +
+    // ADR-0192: the module's APPLICABLE hard requirements, with the owner-facing
+    // sentence straight from the catalogue. The client ticks them and quotes this
+    // — it never composes its own explanation (feedback_one_rule_two_copies).
+    (() => {
+      const reqs = applicableRequirements(m.id, { multiUnit })
+        .filter((r) => r.strength === "hard")
+        .map((r) => ({ id: r.id, why: T(lang, r.why) }));
+      return reqs.length ? ` data-requires="${esc(JSON.stringify(reqs))}"` : "";
+    })() +
+    ` data-art="${esc(huArticleLower(T(lang, m.label)))}"` +
     ` data-label="${esc(T(lang, m.label))}" aria-label="${esc(T(lang, m.label))}">`;
 
   // ── approved contract: design-refs/console/modules-annual-pricing/ ──
@@ -1110,7 +1132,12 @@ export function modulesSection(
       // phone: at 1280px too (x=377, below „Megnézem" at x=821).
       return (
         `<div class="adm-mine__row${frozen ? " adm-mine__row--ro" : ""}" data-modrow="${esc(m.id)}">${keep}` +
-        `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}</strong>` +
+        `<span class="adm-mine__t"><strong>${esc(T(lang, m.label))}` +
+        // ⭐ APPROVED CONTRACT (module-dependency §2, C változat): the ROW says WHAT.
+        // ⛔ `.adm-mine__t .dep-tag` — the plain `.dep-tag` (0,1,0) loses to
+        // `.adm-mine__t span` (0,1,1) and the pill renders as a full-width bar.
+        `<span class="dep-tag">${ic("link", 14)}<span>${T(lang, "együtt jár")}</span></span>` +
+        `</strong>` +
         // An empty <span> would still draw its 2px top margin on every plain row.
         (state ? `<span>${state}</span>` : "") +
         `</span>` +
@@ -1120,6 +1147,8 @@ export function modulesSection(
         // cost is stated ONCE, in the summary below, as part of the debt. The grid
         // CELL stays (an `auto` track collapses to 0), so the row keeps its shape.
         `<span class="adm-mine__p">${frozen ? "" : priceChip(m, replacedBy ?? null)}</span>` +
+        // The explanation itself — filled by the client from data-requires.
+        `<span class="dep-rail">${ic("link", 14)}<span data-dep-why></span></span>` +
         `<span class="adm-mine__a">` +
         // Under a freeze the link still works — it is an INTERNAL preview route,
         // not the suspended public host. Renaming it keeps that honest: what it
@@ -1424,6 +1453,21 @@ export function modulesSection(
     `<p class="adm-fc__note" data-fc-note></p>` +
     `<button class="adm-mdl__keep" type="button" data-fc-keep>${T(lang, "Mégsem")}</button>` +
     `<button class="adm-mdl__go" type="submit" data-fc-go></button>` +
+    `</div>` +
+    // ── ADR-0192 ④.2 · a BLOKKOLÓ lemondás (jóváhagyott kontraktus) ───────────
+    // Ajánlatot tesz, nem hajt végre: kaszkád NINCS (ADR-0155 ③ — a fagyasztott
+    // lap hiányzó mezője lemondásnak olvasódik, ezért egy automatikus ELTÁVOLÍTÓ
+    // ág pont a megőrző mezőkkel védett adatvesztés-csapdába nyúlna).
+    // ⛔ A gombok type="button": ez a párbeszéd SEMMIT nem küld be, csak a
+    // checkboxokat állítja — a beküldés a terv-sáv dolga.
+    `<div class="adm-mdlveil" data-dep-veil hidden></div>` +
+    `<div class="adm-mdl adm-mdl--dep" role="dialog" aria-modal="true" aria-labelledby="adm-dep-t" data-dep-modal hidden>` +
+    `<h3 id="adm-dep-t">${ic("alert", 18)}<span data-dep-t></span></h3>` +
+    `<p class="adm-fc__note" data-dep-b></p>` +
+    `<ul class="adm-dep__list" data-dep-l></ul>` +
+    `<button class="adm-mdl__keep" type="button" data-dep-keep>${T(lang, "Mégsem, marad minden")}</button>` +
+    `<button class="adm-mdl__go adm-mdl__go--warn" type="button" data-dep-all></button>` +
+    `<p class="adm-fc__note">${T(lang, "A lemondott modulok a kifizetett időszak végéig ({date}) élnek, és a tartalmuk megmarad — bármikor visszakapcsolhatók.", { date: esc(renewDate) })}</p>` +
     `</div>`;
 
   // ── ③ full-page preview overlay (ADR-0089) ────────────────────────────────
@@ -1560,6 +1604,78 @@ export function modulesSection(
     `if(sumNote&&sumMult>1)sumNote.textContent=delta` +
     `?SUMNOTE.replace("\\u0001",HUF(Math.round(nt/12))):sumNote0;}` +
     `if(window.__citPvSync)window.__citPvSync();}` +
+    // ── ADR-0192 ④.1/④.2 · jóváhagyott kontraktus (module-dependency) ──────────
+    // A kosár BEPIPÁLJA a függőséget és a SOR kimondja, miért. Azért a kliens és
+    // nem a szerver: a terv-sáv és a fizetés-megerősítő a BEPIPÁLT checkboxokon
+    // iterál, tehát a helyes ár magától következik — néma szerver-oldali
+    // hozzávételnél a vevő 990-et látna és 2 170-et fizetne.
+    // ⛔ A szerver-oldali kapu (applyModuleChange) ettől még áll: ez az elsődleges
+    // ÚT, nem az egyetlen védelem.
+    `var REQ={};cbs.forEach(function(c){try{REQ[c.value]=JSON.parse(c.dataset.requires||"[]")}catch(e){REQ[c.value]=[]}});` +
+    `function cbFor(id){return f.querySelector('input[name="module"][value="'+id+'"][data-committed]')}` +
+    `function labOf(id){var b=cbFor(id);return b?b.dataset.label:id}` +
+    // A zárvány: fix-pont, hogy a lánc (booking → pricing → rooms) végig lefusson.
+    `function closure(ids){var out=ids.slice();for(var g=0;g<12;g++){var add=false;` +
+    `out.slice().forEach(function(id){(REQ[id]||[]).forEach(function(r){if(out.indexOf(r.id)<0){out.push(r.id);add=true}})});` +
+    `if(!add)break}return out}` +
+    `function checkedIds(){return cbs.filter(function(c){return c.checked}).map(function(c){return c.value})}` +
+    // Ami ELTÖRNE, ha `id` kikapcsolna — ugyanaz a kérdés, amit a szerver
+    // blockersOfRemoving()-ja tesz fel.
+    `function blockers(id){return checkedIds().filter(function(x){return x!==id&&(REQ[x]||[]).some(function(r){return r.id===id})})}` +
+    // Amit EGYÜTT kell lemondani (tranzitív) — ezt AJÁNLJA a felugró, nem hajtja végre.
+    `function removalClosure(id){var ids=checkedIds(),gone=[id];for(var g=0;g<12;g++){var add=false;` +
+    `ids.forEach(function(x){if(gone.indexOf(x)>=0)return;` +
+    `if((REQ[x]||[]).some(function(r){return gone.indexOf(r.id)>=0})){gone.push(x);add=true}});if(!add)break}` +
+    `return ids.filter(function(x){return gone.indexOf(x)>=0})}` +
+    // A SOR mondja meg MIT: a pirula + a katalógus mondata. ⛔ Csak arra a sorra,
+    // amit a tulaj NEM maga pipált be és nincs kifizetve — egy sajátkezű választás
+    // nem „együtt jár".
+    `function markDeps(){var ids=checkedIds();cbs.forEach(function(c){` +
+    `var row=c.closest("[data-modrow]");if(!row)return;` +
+    `var drv=ids.filter(function(x){return x!==c.value&&(REQ[x]||[]).some(function(r){return r.id===c.value})});` +
+    `var isDep=c.checked&&drv.length>0&&c.dataset.self!=="1"&&c.dataset.committed!=="1";` +
+    `row.classList.toggle("is-dep",isDep);var w=row.querySelector("[data-dep-why]");` +
+    `if(isDep&&w){var d=drv[0],r=(REQ[d]||[]).filter(function(x){return x.id===c.value})[0];` +
+    `w.textContent=labOf(d)+${JSON.stringify(" — " + T(lang, "ehhez jár.") + " ")}+(r?r.why:"")}})}` +
+    `cbs.forEach(function(c){c.addEventListener("change",function(){` +
+    `if(c.checked){c.dataset.self="1";` +
+    `closure([c.value]).forEach(function(id){var b=cbFor(id);if(b&&!b.checked){b.checked=true;b.dataset.self="0"}});` +
+    `}else{var bl=blockers(c.value);` +
+    `if(bl.length){c.checked=true;depOpen(c.value,removalClosure(c.value));return}` +
+    // Visszavesszük, amit ez hozott be: KEEP = a kifizetett + a kézzel pipált
+    // modulok zárványa. Ami ezen kívül esik, azért a tulaj nem fizethet.
+    `c.dataset.self="0";var keep=closure(checkedIds().filter(function(x){` +
+    `var b=cbFor(x);return b&&(b.dataset.committed==="1"||b.dataset.self==="1")}));` +
+    `cbs.forEach(function(b){if(!b.checked||b.dataset.committed==="1"||b.dataset.self==="1")return;` +
+    `if(keep.indexOf(b.value)<0)b.checked=false})}` +
+    `sync()})});` +
+    // A BLOKKOLÓ felugró (ADR-0192 ④.2): ajánlat, nem végrehajtás.
+    `var dm=document.querySelector("[data-dep-modal]"),dv=document.querySelector("[data-dep-veil]");` +
+    `var depGone=null;` +
+    `function art(id){var b=cbFor(id);return (b&&b.dataset.art?b.dataset.art:"")+" "}` +
+    `function depOpen(id,gone){if(!dm)return;depGone=gone;` +
+    `var others=gone.filter(function(x){return x!==id});` +
+    `dm.querySelector("[data-dep-t]").textContent=labOf(id)+${JSON.stringify(
+      " " + T(lang, "nem kapcsolható ki, amíg"),
+    )}+" "+others.map(function(x){return art(labOf(x))+labOf(x)}).join(${JSON.stringify(
+      " " + T(lang, "és") + " ",
+    )})+${JSON.stringify(" " + T(lang, "él."))};` +
+    `var r=null;others.forEach(function(o){(REQ[o]||[]).forEach(function(x){if(x.id===id)r=x})});` +
+    `dm.querySelector("[data-dep-b]").textContent=r?r.why:"";` +
+    `dm.querySelector("[data-dep-l]").innerHTML=gone.map(function(g){var b=cbFor(g);` +
+    `return '<li><span>'+labOf(g)+'</span><b>−'+HUF(b?+b.dataset.price:0)+'</b></li>'}).join("");` +
+    `dm.querySelector("[data-dep-all]").textContent=${JSON.stringify(
+      T(lang, "Mind a {n}-t lemondom", { n: "\u0005" }),
+    )}.replace("\u0005",String(gone.length));` +
+    `dm.hidden=false;dv.hidden=false;dm.querySelector("[data-dep-keep]").focus()}` +
+    `function depClose(){if(!dm)return;dm.hidden=true;dv.hidden=true;depGone=null}` +
+    `if(dm){dm.querySelector("[data-dep-keep]").addEventListener("click",depClose);` +
+    `dv.addEventListener("click",depClose);` +
+    `document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!dm.hidden)depClose()});` +
+    `dm.querySelector("[data-dep-all]").addEventListener("click",function(){` +
+    `if(!depGone)return;depGone.forEach(function(id){var b=cbFor(id);if(b){b.checked=false;b.dataset.self="0"}});` +
+    `depClose();sync()})}` +
+    `var _sync0=sync;sync=function(){_sync0();markDeps()};` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
     `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
@@ -3821,6 +3937,9 @@ export interface AdminOpts {
    * (az 503-as udvarias lap).
    */
   readonly guestViewUrl?: string | null;
+  /** ADR-0192 ④.4: has the tenant 2+ bookable units? Absent = "unknown" → the
+   *  conditional requirement STANDS (fail-closed, and it matches the mock). */
+  readonly multiUnit?: MultiUnitState;
   /** freeze-state-v2 ⑤: a kézi terhelés-újrapróba EREDMÉNYE (`?ujra=<kód>`). */
   readonly chargeRetry?: string | null;
   /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
@@ -4095,6 +4214,7 @@ export function adminDashboard(
                     opts.domainSettle ?? null,
                     lang,
                     opts.guestViewUrl ?? null,
+                    opts.multiUnit ?? "unknown",
                   ) +
                   // ADR-0063: the one-time multilang module has its own card — it is
                   // NOT a free toggle, so it lives outside the toggle form.

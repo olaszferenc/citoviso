@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C — A sor mondja meg MIT, a sáv MENNYIÉRT — modul-függőség (ADR-0192)</title>
+<style>
+:root{
+  --citui-white:#fff; --citui-ink:#0f1b2d; --citui-ink-inverse:#f7fbff;
+  --citui-muted:#5c6b80; --citui-line:#e2e8f0; --citui-line-strong:#cbd5e1;
+  --citui-surface:#f7fafc; --citui-surface-2:#eef3f8;
+  --citui-navy-700:#1c3557; --citui-navy-900:#122642; --citui-navy-950:#0b1930;
+  --citui-cyan-500:#0aa2c0; --citui-cyan-400:#22b8d6;
+  --citui-ok:#128a5d; --citui-ok-soft:#e6f6ef; --citui-warn:#b7791f; --citui-bad:#c0392b;
+  --citui-radius:16px; --citui-radius-sm:12px; --citui-radius-pill:999px;
+  --citui-shadow-sm:0 1px 3px rgba(15,27,45,.08);
+  --citui-font-display:"Georgia",serif; --citui-font-text:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --citui-transition:.18s ease;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)}
+/* ── mock chrome (not part of the design) ── */
+.mk{position:sticky;top:0;z-index:9;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:10px 14px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:.82rem}
+.mk b{font-family:var(--citui-font-display);font-size:.95rem}
+.mk__sw{margin-left:auto;display:flex;gap:5px}
+.mk__sw button{border:1px solid rgba(255,255,255,.28);background:transparent;color:inherit;
+  border-radius:var(--citui-radius-pill);padding:6px 13px;font:600 .8rem/1 var(--citui-font-text);cursor:pointer}
+.mk__sw button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c}
+.mk__note{width:100%;opacity:.78;font-size:.75rem;line-height:1.55}
+.stage{display:flex;justify-content:center;padding:18px 12px 90px;overflow:hidden}
+.stage[data-w="mobile"] .con{width:390px}
+/* The desktop layout keeps its REAL 1100px width (see modules-annual-pricing). */
+.stage[data-w="desktop"] .con{width:1100px}
+/* ⚠️ @container, NOT @media: the stage is a narrowed div. */
+.con{container-type:inline-size;transform-origin:top center;flex:0 0 auto}
+
+.adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;
+  box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:20px}
+.adm-card__head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:-26px -28px 18px;padding:15px 28px;color:var(--citui-ink-inverse);
+  border-radius:20px 20px 0 0;
+  background:linear-gradient(120deg,var(--citui-navy-950),var(--citui-navy-700))}
+.adm-card__head h2{margin:0;font:700 1.05rem/1.3 var(--citui-font-display)}
+.adm-ico{display:inline-flex;vertical-align:-3px;color:var(--citui-cyan-500)}
+.adm-card__head .adm-ico{color:var(--citui-cyan-400)}
+.adm-lead{margin:0 0 14px;font-size:.88rem;color:var(--citui-muted);line-height:1.55}
+
+/* ── module rows ── */
+.adm-mine{margin:0 -4px}
+.adm-mine__row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 4px;
+  border-bottom:1px solid var(--citui-line);transition:background var(--citui-transition)}
+.adm-mine__row:last-child{border-bottom:0}
+.adm-mine__row.is-dirty{background:color-mix(in srgb,var(--citui-cyan-500) 7%,transparent);
+  border-radius:var(--citui-radius-sm)}
+.adm-mine__t{flex:1 1 190px;min-width:0}
+.adm-mine__t strong{display:block;font-size:.98rem;color:var(--citui-ink)}
+.adm-mine__t span{display:block;font-size:.8rem;color:var(--citui-muted);line-height:1.45;margin-top:2px}
+.adm-chip{white-space:nowrap;font-size:.82rem;font-weight:700;color:var(--citui-navy-900);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-pill);padding:5px 12px;font-variant-numeric:tabular-nums}
+.adm-sw{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex:0 0 auto}
+.adm-sw input{position:absolute;width:1px;height:1px;opacity:0}
+.adm-sw i{width:46px;height:26px;border-radius:var(--citui-radius-pill);background:var(--citui-line-strong);
+  position:relative;transition:background var(--citui-transition)}
+.adm-sw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:var(--citui-white);transition:transform var(--citui-transition);box-shadow:var(--citui-shadow-sm)}
+.adm-sw input:checked+i{background:var(--citui-cyan-500)}
+.adm-sw input:checked+i::after{transform:translateX(20px)}
+.adm-sw input:focus-visible+i{outline:2px solid var(--citui-navy-900);outline-offset:2px}
+
+/* ── VARIANT A/C: the companion rail inside the row ── */
+.dep-rail{flex:1 1 100%;display:none;align-items:flex-start;gap:8px;margin:8px 0 0 0;padding:9px 12px;
+  border-left:3px solid var(--citui-cyan-500);border-radius:0 var(--citui-radius-sm) var(--citui-radius-sm) 0;
+  background:color-mix(in srgb,var(--citui-cyan-500) 9%,transparent);
+  font-size:.81rem;line-height:1.5;color:var(--citui-navy-900)}
+.adm-mine__row.is-dep .dep-rail{display:flex}
+.dep-rail b{font-weight:700}
+.dep-rail .adm-ico{color:var(--citui-cyan-500);flex:0 0 auto;margin-top:1px}
+.adm-mine__t .dep-tag{display:inline-flex;align-items:center;gap:5px;font:700 .72rem/1 var(--citui-font-text);
+  text-transform:uppercase;letter-spacing:.03em;color:#04222c;background:var(--citui-cyan-400);
+  border-radius:var(--citui-radius-pill);padding:5px 10px}
+.adm-mine__row:not(.is-dep) .adm-mine__t .dep-tag{display:none}
+
+/* ── plan bar ── */
+.planbar{position:sticky;bottom:0;margin-top:18px;background:var(--citui-white);
+  border:1px solid color-mix(in srgb,var(--citui-cyan-500) 45%,transparent);
+  border-radius:var(--citui-radius);box-shadow:0 -6px 22px rgba(15,27,45,.10);padding:14px 16px;display:none}
+.planbar.show{display:block}
+.planbar__h{font:700 .82rem/1.3 var(--citui-font-text);color:var(--citui-muted);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:9px}
+.planbar__row{display:flex;gap:10px;justify-content:space-between;align-items:baseline;flex-wrap:wrap;
+  padding:6px 0;font-size:.86rem;border-bottom:1px dashed var(--citui-line)}
+.planbar__row:last-of-type{border-bottom:0}
+/* When a long module name wraps at 390px the amount must stay on the money side —
+   a price that falls to the left of the next line reads as a different column. */
+.planbar__row>span:last-child{margin-left:auto;text-align:right}
+.planbar__tag{display:inline-block;font:700 .7rem/1 var(--citui-font-text);border-radius:var(--citui-radius-pill);
+  padding:4px 8px;margin-right:6px}
+.planbar__tag--add{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.planbar__tag--del{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad)}
+/* VARIANT B/C: the grouped dependency block */
+.planbar__row--sub{padding-left:16px;border-left:3px solid var(--citui-cyan-500);
+  margin-left:2px;background:color-mix(in srgb,var(--citui-cyan-500) 6%,transparent);
+  border-radius:0 var(--citui-radius-sm) var(--citui-radius-sm) 0;font-size:.83rem}
+.planbar__why{flex:1 1 100%;font-size:.79rem;color:var(--citui-muted);line-height:1.5;margin:2px 0 4px 18px}
+.planbar__tot{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--citui-line)}
+.planbar__tot b{font:700 1.35rem/1.2 var(--citui-font-display);color:var(--citui-navy-900);font-variant-numeric:tabular-nums}
+.planbar__tot s{text-decoration:none;font-size:.8rem;color:var(--citui-muted)}
+.planbar__acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.citui-btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--citui-radius-pill);
+  padding:9px 16px;font:600 .86rem/1 var(--citui-font-text);cursor:pointer;text-decoration:none;
+  border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-navy-900)}
+.citui-btn--primary{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.citui-btn--danger{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+
+/* ── blocking cancel dialog (identical in all three variants) ── */
+.veil{position:fixed;inset:0;background:rgba(11,25,48,.55);z-index:20}
+.modal{position:fixed;z-index:21;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(520px,calc(100vw - 28px));max-height:calc(100vh - 32px);overflow:auto;
+  background:var(--citui-white);border-radius:var(--citui-radius);box-shadow:0 18px 50px rgba(15,27,45,.35);
+  padding:22px 22px 18px}
+.modal h3{margin:0 0 10px;font:700 1.05rem/1.35 var(--citui-font-display);color:var(--citui-navy-900);
+  display:flex;gap:8px;align-items:flex-start}
+.modal h3 .adm-ico{color:var(--citui-warn);flex:0 0 auto;margin-top:2px}
+.modal p{margin:0 0 12px;font-size:.88rem;line-height:1.6;color:var(--citui-ink)}
+.modal ul{margin:0 0 14px;padding-left:0;list-style:none}
+.modal li{display:flex;justify-content:space-between;gap:10px;font-size:.86rem;
+  padding:7px 10px;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);margin-bottom:5px}
+.modal li b{font-variant-numeric:tabular-nums}
+.modal__acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.modal__note{font-size:.78rem;color:var(--citui-muted);line-height:1.55;margin-top:10px}
+
+/* ── desktop refinements (@container — the stage is a div) ── */
+@container (min-width:700px){
+  /* ⛔ NO flex-wrap:nowrap here — the rail has a 100% basis and MUST be able to
+     take its own line. With nowrap it stayed in the row, crushed the title into a
+     60px column and overflowed the card. */
+  .adm-mine__row{gap:16px}
+  .adm-mine__t{flex:1 1 320px;min-width:0}
+  .adm-chip{flex:0 0 auto;margin-left:auto}
+  .dep-rail{margin-left:58px}
+  .planbar{padding:16px 20px}
+  .planbar__row{flex-wrap:nowrap}
+}
+@container (max-width:699px){
+  .adm-card{padding:18px 16px;border-radius:16px}
+  .adm-card__head{margin:-18px -16px 14px;padding:13px 16px;border-radius:16px 16px 0 0}
+  .adm-chip{margin-left:auto}
+  .planbar__tot{flex-direction:column;align-items:flex-start;gap:2px}
+  .planbar__acts .citui-btn{flex:1 1 100%;justify-content:center}
+}
+</style></head>
+<body>
+<div class="mk">
+  <b>C — A sor mondja meg MIT, a sáv MENNYIÉRT</b>
+  <span>Modulok fül · modul-függőségi rend (ADR-0192) · valós katalógus-adat</span>
+  <span class="mk__sw">
+    <button type="button" data-vw="mobile" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-vw="desktop" aria-pressed="false">Asztali</button>
+  </span>
+  <span class="mk__note">MŰKÖDŐ vázlat. ① Kapcsolja be az <b>Online foglalás</b>-t az első kártyán — a
+  függőségei maguktól bekapcsolnak, és az ár is követi. ② A második kártyán kapcsolja KI a
+  <b>Szobák, apartmanok</b>-at — a lemondás blokkol, és közös lemondást ajánl.</span>
+</div>
+<div class="stage" data-w="mobile">
+<div class="con">
+
+  <div class="adm-card">
+    <div class="adm-card__head"><h2>Modulok</h2></div>
+    <p class="adm-lead">Alapdíj <b>3 900 Ft / hó</b>. A bekapcsolt modulok ára ehhez adódik;
+    a módosítás a lenti sávban kel életre, és csak az <b>Alkalmazom</b> gombbal lép érvénybe.</p>
+    <div class="adm-mine"><div class="adm-mine__row" data-modrow data-id="gallery" data-scene="own"><label class="adm-sw"><input type="checkbox" name="module" value="gallery" data-price="490" data-label="Képek a szállásról" checked data-committed="1"><i></i></label><span class="adm-mine__t"><strong>Képek a szállásról <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>Nagy, minőségi fotógaléria a szállásról.</span></span><span class="adm-chip">+490 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="rooms" data-scene="own"><label class="adm-sw"><input type="checkbox" name="module" value="rooms" data-price="690" data-label="Szobák, apartmanok" data-committed="0"><i></i></label><span class="adm-mine__t"><strong>Szobák, apartmanok <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>A szobák, apartmanok külön kártyákon: fotó, férőhely, rövid leírás.</span></span><span class="adm-chip">+690 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="pricing" data-scene="own"><label class="adm-sw"><input type="checkbox" name="module" value="pricing" data-price="490" data-label="Árak, szezonok" data-committed="0"><i></i></label><span class="adm-mine__t"><strong>Árak, szezonok <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>Árak és szezonok áttekinthető táblázatban.</span></span><span class="adm-chip">+490 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="location" data-scene="own"><label class="adm-sw"><input type="checkbox" name="module" value="location" data-price="490" data-label="Térkép, megközelítés" checked data-committed="1"><i></i></label><span class="adm-mine__t"><strong>Térkép, megközelítés <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>Interaktív térkép a pontos címével.</span></span><span class="adm-chip">+490 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="usp" data-scene="own"><label class="adm-sw"><input type="checkbox" name="module" value="usp" data-price="490" data-label="Miért Önt válasszák" checked data-committed="1"><i></i></label><span class="adm-mine__t"><strong>Miért Önt válasszák <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>A szállás valódi erősségei kiemelve.</span></span><span class="adm-chip">+490 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="booking" data-scene="own"><label class="adm-sw"><input type="checkbox" name="module" value="booking" data-price="990" data-label="Online foglalás" data-committed="0"><i></i></label><span class="adm-mine__t"><strong>Online foglalás <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>Foglalási naptár közvetlenül az oldalán, közvetítői jutalék nélkül.</span></span><span class="adm-chip">+990 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div></div>
+    <div class="planbar" data-bar="own">
+      <div class="planbar__h">A tervezett módosítás</div>
+      <div data-rows></div>
+      <div class="planbar__tot"><span>Új havi díj<s data-was></s></span><b data-tot></b></div>
+      <div class="planbar__acts">
+        <button type="button" class="citui-btn citui-btn--primary" data-apply>Alkalmazom a módosításokat</button>
+        <button type="button" class="citui-btn" data-reset>Mégsem</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="adm-card">
+    <div class="adm-card__head"><h2>2. jelenet — lemondás</h2></div>
+    <p class="adm-lead">Ebben a fiókban mind a három modul <b>él és ki van fizetve</b>.
+    Próbálja meg kikapcsolni a <b>Szobák, apartmanok</b>-at.</p>
+    <div class="adm-mine"><div class="adm-mine__row" data-modrow data-id="rooms" data-scene="cancel"><label class="adm-sw"><input type="checkbox" name="module" value="rooms" data-price="690" data-label="Szobák, apartmanok" checked data-committed="1"><i></i></label><span class="adm-mine__t"><strong>Szobák, apartmanok <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>3 szoba, 2 apartman — ma 5 kártya él az oldalán.</span></span><span class="adm-chip">+690 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="pricing" data-scene="cancel"><label class="adm-sw"><input type="checkbox" name="module" value="pricing" data-price="490" data-label="Árak, szezonok" checked data-committed="1"><i></i></label><span class="adm-mine__t"><strong>Árak, szezonok <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>4 szezon, egységenkénti éjszakai árakkal.</span></span><span class="adm-chip">+490 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div><div class="adm-mine__row" data-modrow data-id="booking" data-scene="cancel"><label class="adm-sw"><input type="checkbox" name="module" value="booking" data-price="990" data-label="Online foglalás" checked data-committed="1"><i></i></label><span class="adm-mine__t"><strong>Online foglalás <span class="dep-tag"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> együtt jár</span></strong><span>A naptárban 11 foglalás fut a következő 60 napra.</span></span><span class="adm-chip">+990 Ft / hó</span><span class="dep-rail"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span data-dep-why></span></span></div></div>
+    <div class="planbar" data-bar="cancel">
+      <div class="planbar__h">A tervezett módosítás</div>
+      <div data-rows></div>
+      <div class="planbar__tot"><span>Új havi díj<s data-was></s></span><b data-tot></b></div>
+      <div class="planbar__acts">
+        <button type="button" class="citui-btn citui-btn--primary" data-apply>Alkalmazom a módosításokat</button>
+        <button type="button" class="citui-btn" data-reset>Mégsem</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="veil" hidden data-veil></div>
+<div class="modal" hidden data-modal role="dialog" aria-modal="true" aria-labelledby="dlg-t">
+  <h3 id="dlg-t"><svg class="adm-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span data-dlg-title></span></h3>
+  <p data-dlg-body></p>
+  <ul data-dlg-list></ul>
+  <div class="modal__acts">
+    <button type="button" class="citui-btn" data-dlg-keep>Mégsem, marad minden</button>
+    <button type="button" class="citui-btn citui-btn--danger" data-dlg-all></button>
+  </div>
+  <p class="modal__note">A lemondott modulok a kifizetett időszak végéig (2026-10-14) élnek,
+  és a tartalmuk megmarad — bármikor visszakapcsolhatók.</p>
+</div>
+
+<script>/* AN AMOUNT OF MONEY, in the browser — the mirror of src/text/money.ts.
+ *
+ * WHY A SECOND COPY. The buyer's checkout reprices on every checkbox click, so the
+ * server cannot hand down a finished string; the browser has to format. It cannot
+ * import TypeScript, so the rule exists twice ON PURPOSE. What makes that safe is
+ * not discipline — it is scripts/money-format-check.mts, which runs this file and
+ * the TS module over the same matrix and fails on the first byte that differs.
+ * An unmeasured second copy is exactly how the split this file closes was born:
+ * measured 2026-09-14, cit-runtime.js printed the guest's quote with a NON-BREAKING
+ * space while src/tenant/prices.ts printed the SAME quote with a plain one, and
+ * cit-configurator.js wrote "Ft" onto every amount because the server sent it the
+ * literal string "Ft" as the currency.
+ *
+ * Loaded by INLINING (generator/runtime.ts, generator/configurator.ts and the
+ * tenant-admin views all splice their scripts into the document), so this defines
+ * one global: `CitMoney`. No module system, no external fetch — a generated mock
+ * is opened from file:// and out of an e-mail client too.
+ */
+var CitMoney = (function () {
+  "use strict";
+
+  /** The domestic sign for the currencies we price in; anything else prints its code. */
+  var SIGN = { HUF: "Ft", EUR: "€" };
+
+  /** NBSP, NARROW NBSP, THIN SPACE — none may survive into our output (see the TS twin). */
+  var NON_BREAKING = /[\u00a0\u202f\u2009]/g;
+
+  function group(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
+  /** "HUF" → "Ft", "EUR" → "€", anything else (a sign already, or "RON") → itself. */
+  function currencySign(currency) {
+    var c = String(currency == null ? "" : currency).trim();
+    if (!c) return "";
+    return Object.prototype.hasOwnProperty.call(SIGN, c.toUpperCase()) ? SIGN[c.toUpperCase()] : c;
+  }
+
+  function finite(amount) {
+    return typeof amount === "number" && isFinite(amount);
+  }
+
+  /** The grouped number alone: 99900 → "99 900". For sentences carrying their own unit. */
+  function formatNumber(amount, lang) {
+    if (!finite(amount)) return "";
+    var n = Math.round(amount);
+    if (!lang || lang === "hu") return group(n);
+    try {
+      return new Intl.NumberFormat(lang, { maximumFractionDigits: 0 })
+        .format(n)
+        .replace(NON_BREAKING, " ");
+    } catch (e) {
+      return group(n);
+    }
+  }
+
+  /**
+   * 99900,"HUF" → "99 900 Ft" · 10,"EUR" → "10 €" · 50,"RON" → "50 RON".
+   *
+   * Only the Hungarian reader gets "Ft"; other packs go through Intl, so a German
+   * reads "99.900 HUF". Never throws: Intl's currency style raises on a non-ISO
+   * code, and we are handed those ("Ft", "€", ""), so the Hungarian branch catches.
+   */
+  function formatMoney(amount, currency, lang) {
+    if (!finite(amount)) return "";
+    var n = Math.round(amount);
+    if (lang && lang !== "hu") {
+      try {
+        return new Intl.NumberFormat(lang, {
+          style: "currency",
+          currency: String(currency == null ? "" : currency).trim().toUpperCase(),
+          maximumFractionDigits: 0,
+        })
+          .format(n)
+          .replace(NON_BREAKING, " ");
+      } catch (e) {
+        /* Not an ISO code — fall through to the Hungarian branch, which prints something true. */
+      }
+    }
+    var sign = currencySign(currency);
+    var num = group(n);
+    return sign ? num + " " + sign : num;
+  }
+
+  return { formatMoney: formatMoney, formatNumber: formatNumber, currencySign: currencySign };
+})();
+
+/* Node (the parity guard) loads this file as a script and reads CitMoney off the
+ * sandbox global; a browser gets the same binding from the var above. */
+if (typeof module !== "undefined" && module.exports) module.exports = CitMoney;
+</script>
+<script>
+(function(){
+  var REQ = {"booking":[{"id":"pricing","why":"Az online foglalás összeget mond a vendégnek a naptárban, és ugyanaz az összeg megy ki a visszaigazoló levélben is — az árakat az Árak modul adja."}],"pricing":[{"id":"rooms","why":"Több szoba vagy apartman esetén az ár mindig ahhoz tartozik, amit a vendég kivesz — a Szobák modul mondja meg, mire vonatkozik az összeg."}]};
+  var DEPROW = true, GROUPBAR = true, BARWHY = false;
+  var BASE = 3900;
+  function huf(n){return CitMoney.formatMoney(n,"HUF")}
+  var SCOPE="own";
+  function find(id,scene){return document.querySelector('[data-scene="'+(scene||SCOPE)+'"] input[value="'+id+'"]')}
+  function labelOf(id,scene){var c=find(id,scene);return c?c.dataset.label:id}
+  function priceOf(id,scene){var c=find(id,scene);return c?+c.dataset.price:0}
+
+  document.querySelectorAll(".mk__sw button").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll(".mk__sw button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});
+      document.querySelector(".stage").dataset.w=b.dataset.vw;
+    });
+  });
+
+  function scenes(){return ["own","cancel"]}
+  function boxes(scene){return [].slice.call(document.querySelectorAll('[data-scene="'+scene+'"] input[name="module"]'))}
+  function checkedIds(scene){return boxes(scene).filter(function(c){return c.checked}).map(function(c){return c.value})}
+
+  // ⭐ ONE rule: the same closure the server computes (withRequiredModules).
+  function closure(ids){
+    var out=ids.slice();
+    for(var g=0;g<8;g++){
+      var added=false;
+      out.slice().forEach(function(id){
+        (REQ[id]||[]).forEach(function(r){ if(out.indexOf(r.id)<0){out.push(r.id);added=true} });
+      });
+      if(!added)break;
+    }
+    return out;
+  }
+  // Which still-active modules break if the id goes (blockersOfRemoving)?
+  function blockers(id,ids){
+    var rest=ids.filter(function(x){return x!==id});
+    return rest.filter(function(x){return (REQ[x]||[]).some(function(r){return r.id===id})});
+  }
+  // Everything that must go with the id (removalClosure).
+  function removalClosure(id,ids){
+    var gone=[id];
+    for(var g=0;g<8;g++){
+      var added=false;
+      ids.forEach(function(x){
+        if(gone.indexOf(x)>=0)return;
+        if((REQ[x]||[]).some(function(r){return gone.indexOf(r.id)>=0})){gone.push(x);added=true}
+      });
+      if(!added)break;
+    }
+    return ids.filter(function(x){return gone.indexOf(x)>=0});
+  }
+  function art(w){return /^[aáeéiíoóöőuúüű]/i.test(String(w))?"az":"a"}
+  function withArt(w){return art(w)+" "+w}
+  function whyFor(driver,depId){
+    var r=(REQ[driver]||[]).filter(function(x){return x.id===depId})[0];
+    return r?r.why:"";
+  }
+
+  scenes().forEach(function(scene){
+    var cbs=boxes(scene);
+    var bar=document.querySelector('[data-bar="'+scene+'"]');
+    if(!cbs.length||!bar)return;
+    var rowsEl=bar.querySelector("[data-rows]"), totEl=bar.querySelector("[data-tot]"), wasEl=bar.querySelector("[data-was]");
+    var committed=cbs.filter(function(c){return c.dataset.committed==="1"}).map(function(c){return c.value});
+    var base0=BASE+committed.reduce(function(s,id){return s+priceOf(id)},0);
+
+    function markAuto(){
+      // A dependency the owner did not pick themselves is flagged, so unticking the
+      // DRIVER can take it back out — otherwise the owner is stuck paying for it.
+      var ids=checkedIds(scene);
+      cbs.forEach(function(c){
+        var drivers=ids.filter(function(x){return x!==c.value&&(REQ[x]||[]).some(function(r){return r.id===c.value})});
+        var row=c.closest("[data-modrow]");
+        var isDep=DEPROW&&c.checked&&drivers.length>0&&c.dataset.self!=="1"&&c.dataset.committed!=="1";
+        row.classList.toggle("is-dep",isDep);
+        if(isDep){
+          var d=drivers[0];
+          row.querySelector("[data-dep-why]").innerHTML=
+            "<b>"+labelOf(d,scene)+"</b> — ehhez jár. "+whyFor(d,c.value);
+        }
+      });
+    }
+
+    function sync(){
+      var ids=checkedIds(scene);
+      var add=ids.filter(function(id){return committed.indexOf(id)<0});
+      var rem=committed.filter(function(id){return ids.indexOf(id)<0});
+      var delta=add.reduce(function(s,id){return s+priceOf(id)},0)-rem.reduce(function(s,id){return s+priceOf(id)},0);
+      cbs.forEach(function(c){
+        var was=c.dataset.committed==="1";
+        c.closest("[data-modrow]").classList.toggle("is-dirty",was!==c.checked);
+      });
+      bar.classList.toggle("show",add.length+rem.length>0);
+
+      // Group the additions: a driver carries its dependencies underneath it.
+      var drivers=add.filter(function(id){return !add.some(function(o){return o!==id&&(REQ[o]||[]).some(function(r){return r.id===id})})});
+      var html="";
+      drivers.forEach(function(d){
+        var deps=add.filter(function(id){return id!==d&&closure([d]).indexOf(id)>=0});
+        var sum=priceOf(d)+deps.reduce(function(s,id){return s+priceOf(id)},0);
+        html+='<div class="planbar__row"><span><span class="planbar__tag planbar__tag--add">+ bekapcsol</span>'+labelOf(d)+'</span><span><b>'+huf(priceOf(d))+' / hó</b></span></div>';
+        if(GROUPBAR&&deps.length){
+          deps.forEach(function(id){
+            html+='<div class="planbar__row planbar__row--sub"><span>ehhez jár: '+labelOf(id)+'</span><span>'+huf(priceOf(id))+' / hó</span></div>';
+          });
+          // ⛔ In C the ROW already carries the reason — repeating it here would be
+          // the same sentence twice on one screen, which is what C claims NOT to do.
+          if(BARWHY)deps.forEach(function(id){
+            var dr=[d].concat(deps).filter(function(x){return whyFor(x,id)})[0];
+            if(dr)html+='<div class="planbar__why"><b>'+labelOf(id,scene)+'</b> — '+whyFor(dr,id)+'</div>';
+          });
+          html+='<div class="planbar__why">'+labelOf(d,scene)+' + '+deps.map(function(x){return labelOf(x,scene)}).join(" + ")+' — <b>együtt '+huf(sum)+' / hó</b>.</div>';
+        } else if(deps.length){
+          deps.forEach(function(id){
+            html+='<div class="planbar__row"><span><span class="planbar__tag planbar__tag--add">+ bekapcsol</span>'+labelOf(id)+'</span><span><b>'+huf(priceOf(id))+' / hó</b></span></div>';
+          });
+        }
+      });
+      add.filter(function(id){return drivers.indexOf(id)<0&&!drivers.some(function(d){return closure([d]).indexOf(id)>=0})}).forEach(function(id){
+        html+='<div class="planbar__row"><span><span class="planbar__tag planbar__tag--add">+ bekapcsol</span>'+labelOf(id)+'</span><span><b>'+huf(priceOf(id))+' / hó</b></span></div>';
+      });
+      rem.forEach(function(id){
+        html+='<div class="planbar__row"><span><span class="planbar__tag planbar__tag--del">− lemond</span>'+labelOf(id)+'</span><span>2026-10-14-ig aktív marad</span></div>';
+      });
+      rowsEl.innerHTML=html;
+      totEl.textContent=huf(base0+delta);
+      wasEl.textContent=delta?"  (most "+huf(base0)+")":"";
+      markAuto();
+    }
+
+    cbs.forEach(function(c){
+      c.addEventListener("change",function(){
+        var ids=checkedIds(scene);
+        if(c.checked){
+          c.dataset.self="1";
+          // ④.1 — the cart TICKS the dependency and SAYS it. Not a silent server-side
+          // add: the confirming card iterates the ticked boxes, so the right price
+          // follows by itself.
+          closure([c.value]).forEach(function(id){
+            var b=find(id,scene);
+            if(b&&!b.checked){b.checked=true;b.dataset.self="0"}
+          });
+        } else {
+          var blocked=blockers(c.value,ids.concat([c.value]));
+          if(blocked.length){
+            // ④.2 — BLOCKS and offers a joint cancellation. No cascade: an automatic
+            // removing branch would reach into the ADR-0155 ③ data-loss trap.
+            c.checked=true;
+            openDialog(scene,c.value,removalClosure(c.value,checkedIds(scene)));
+            return;
+          }
+          // Take back the dependencies this module pulled in. KEEP = the closure of
+          // everything that is paid for or was picked BY HAND — an auto-added module
+          // outside that set has no reason to stay, and leaving it would charge the
+          // owner for something they never chose.
+          c.dataset.self="0";
+          var keep=closure(checkedIds(scene).filter(function(x){
+            var b=find(x,scene);return b&&(b.dataset.committed==="1"||b.dataset.self==="1");
+          }));
+          cbs.forEach(function(b){
+            if(!b.checked||b.dataset.committed==="1"||b.dataset.self==="1")return;
+            if(keep.indexOf(b.value)<0)b.checked=false;
+          });
+        }
+        sync();
+      });
+    });
+    bar.querySelector("[data-reset]").addEventListener("click",function(){
+      cbs.forEach(function(c){c.checked=c.dataset.committed==="1";c.dataset.self="0"});sync();
+    });
+    bar.querySelector("[data-apply]").addEventListener("click",function(){
+      alert("Vázlat: itt indulna a fizetés / alkalmazás.");
+    });
+    sync();
+  });
+
+  // ── the blocking dialog (identical in all three variants — ADR-0192 ④.2) ──
+  var modal=document.querySelector("[data-modal]"),veil=document.querySelector("[data-veil]");
+  var pending=null;
+  function openDialog(scene,id,gone){
+    pending={scene:scene,gone:gone};SCOPE=scene;
+    var others=gone.filter(function(x){return x!==id});
+    modal.querySelector("[data-dlg-title]").textContent=
+      labelOf(id,scene)+" nem kapcsolható ki, amíg "+others.map(function(x){return withArt(labelOf(x,scene))}).join(" és ")+" él.";
+    modal.querySelector("[data-dlg-body]").textContent=whyFor(others[others.length-1],id)||whyFor(others[0],id);
+    modal.querySelector("[data-dlg-list]").innerHTML=gone.map(function(g){
+      return "<li><span>"+labelOf(g,scene)+"</span><b>−"+huf(priceOf(g,scene))+" / hó</b></li>";
+    }).join("");
+    modal.querySelector("[data-dlg-all]").textContent=
+      "Mind a "+(gone.length===2?"kettőt":gone.length===3?"hármat":gone.length+"-et")+" lemondom";
+    modal.hidden=false;veil.hidden=false;
+    modal.querySelector("[data-dlg-keep]").focus();
+  }
+  function closeDialog(){modal.hidden=true;veil.hidden=true;pending=null}
+  modal.querySelector("[data-dlg-keep]").addEventListener("click",closeDialog);
+  veil.addEventListener("click",closeDialog);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!modal.hidden)closeDialog()});
+  modal.querySelector("[data-dlg-all]").addEventListener("click",function(){
+    if(!pending)return;
+    var s=pending.scene,gone=pending.gone;
+    gone.forEach(function(id){
+      var b=find(id,s);
+      if(b)b.checked=false;
+    });
+    closeDialog();
+    document.querySelector('[data-scene="'+s+'"] input[name="module"]').dispatchEvent(new Event("change"));
+  });
+  window.openDialog=openDialog;
+})();
+</script>
+</body></html>

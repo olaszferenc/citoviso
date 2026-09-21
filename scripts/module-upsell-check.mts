@@ -177,7 +177,15 @@ await db.insertInto("order_intent")
 await setTenantModules(tenant.id, ["gallery"]);
 
 // ── ADR-0113 ①: a paid ADD is NOT written — it is reported for payment ──────
-const PAID = "booking"; // 990 Ft/hó
+// ⚠️ EZ A MODUL SZÁNDÉKOSAN FÜGGŐSÉG-MENTES (ADR-0192). Ez az őr az ADR-0113
+// FIZETÉSI mechanikáját méri (fizetés-kötelezett hozzáadás · a lemondás tiszteli a
+// kifizetett periódust · a visszakapcsolás ingyen · az örök-ingyen hurok zárva) —
+// a modul csak „egy felárazott modul" helyettese. Korábban `booking` volt, ami
+// azóta MEGKÖVETELI a `pricing`-et (az pedig a `rooms`-ot), ezért a fixture
+// halmaza érvénytelenné vált és a függőség-kapu — helyesen — elutasította mind az
+// öt lépést. ⛔ Ha ezt átírod, olyat válassz, aminek nincs `requires`-e, különben
+// ez az őr megint olyan szabályon bukik, amit nem ő mér.
+const PAID = "reviews"; // 690 Ft/hó, nincs függősége
 const change = await applyModuleChange(tenant.id, ["gallery", PAID]);
 ok(
   change.requiresPayment.includes(PAID) && !change.added.includes(PAID),

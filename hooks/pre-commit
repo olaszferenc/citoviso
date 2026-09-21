@@ -259,8 +259,18 @@ if [ -f scripts/email-guard-check.mts ]; then
   npx tsx scripts/email-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/module-config-lint.mts ]; then
-  echo "[pre-commit] module-config-lint (ADR-0044)…"
+  echo "[pre-commit] module-config-lint (ADR-0044 + ADR-0192 ⑥①: függőség-deklaráció)…"
   npx tsx scripts/module-config-lint.mts
+  # A kapu PIROS kontrollja: 8 szándékosan törött fixture + 2 pozitív. Egy őr,
+  # amit soha nem láttunk pirosnak, nem őr.
+  npx tsx scripts/module-config-lint.mts --selftest >"$GATE_LOG" || gate_failed
+fi
+# ADR-0192 ⑥②: a modul-függőségi rend a KOSÁRON, a lemondáson, a megújítás-sweepen,
+# a számlázáson és a renderen is álljon. ⭐ A sweep azért kritikus, mert ember nélkül,
+# a fordulónapon, NÉMÁN sérti a szabályt — a kattintásra kötött őr átengedi.
+if [ -f scripts/module-dependency-check.mts ]; then
+  echo "[pre-commit] module-dependency-check (ADR-0192: függőség végponttól végpontig)…"
+  npx tsx scripts/module-dependency-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A modul ára a fiók SZÁMLÁZÁSI CIKLUSÁBAN jelenjen meg, és a fülnek legyen
 # végösszege (Elek FK-002 Z1/Z2; kontraktus: design-refs/console/modules-annual-pricing).

@@ -23,7 +23,8 @@
 
 import { db } from "../db/client.js";
 import { getDisabledModules } from "../moduleSales.js";
-import { MODULE_CATALOG } from "../modules.js";
+import { MODULE_CATALOG, type DependencyIssue } from "../modules.js";
+import { cancellationGroup, dependencyIssuesFor } from "./moduleRequirements.js";
 import { computeMonthly, getModulePrice, loadPricing } from "../pricing.js";
 import { activeDomainCommitment } from "../domains/domainCommitment.js";
 import { isSubscriptionFrozen } from "../payment/subscription.js";
@@ -45,6 +46,21 @@ export interface ModuleChangeResult {
   /** ADR-0094 ④: the change was REFUSED — it would sink the package below the
    *  domain commitment's frozen floor. Nothing was written. */
   readonly refusedBelowFloor?: { readonly floor: number; readonly attempted: number };
+  /**
+   * ADR-0192 ④.2: the change was REFUSED — it would leave a module without a
+   * module it HARD-requires. Nothing was written; the whole change is refused
+   * atomically, exactly like the floor guard, because a partial apply would not
+   * match any state the tenant asked for.
+   *
+   * ⛔ Blocking, never cascading. An automatic REMOVING branch would reach into
+   * the ADR-0155 ③ data-loss trap, where a missing field on the frozen admin page
+   * already reads as a cancellation. The screen OFFERS `group` — the tenant decides.
+   */
+  readonly refusedMissingRequirement?: {
+    readonly issues: readonly DependencyIssue[];
+    /** The joint cancellation to offer: everything that must go together. */
+    readonly group: readonly string[];
+  };
   /** ADR-0119 ⑥ (owner ruling 2026-09-12): NEW additions refused because the
    *  site is suspended for non-payment. Selling a module to someone whose site
    *  we just switched off is not an upsell — it is asking for more money for
@@ -112,6 +128,47 @@ export async function applyModuleChange(
       if (s?.awaiting_first_charge) switchedOff.push(m.id);
       else cancelled.push(m.id);
     }
+  }
+
+  // ── ADR-0192 ④.2 dependency gate ──────────────────────────────────────────
+  // Judged on BOTH sets, and the difference is load-bearing:
+  //   · `want`      — what the tenant will END UP with once the pay-pending adds
+  //                   land. Ticking `pricing` alone on an empty account passes the
+  //                   immediate check (nothing is active yet) and then activates
+  //                   into a price table with nothing to price.
+  //   · `immediate` — what the change LEAVES BEHIND right now (the floor guard's
+  //                   reasoning): an unpaid add must not be able to prop up a
+  //                   cancellation that breaks a live module.
+  // The gate sits on the WRITE, not in the UI: the cart ticks the dependency for
+  // the owner (ADR-0192 ④.1), but a crafted POST must not route around it
+  // (feedback_additive_write_is_not_a_gate).
+  const wantList = [...want];
+  const immediateWanted = wantList.filter((id) => !requiresPayment.includes(id));
+  const depIssues = [
+    ...(await dependencyIssuesFor(tenantId, wantList)),
+    ...(await dependencyIssuesFor(tenantId, immediateWanted)),
+  ];
+  if (depIssues.length) {
+    // The dialog asks about ONE thing going away, so the offer is built around the
+    // first requirement the change would break.
+    const group = await cancellationGroup(tenantId, depIssues[0]!.requiredId);
+    return {
+      added: [],
+      requiresPayment: [],
+      cancelled: [],
+      rejoined: [],
+      switchedOff: [],
+      renderNeeded: false,
+      refusedMissingRequirement: {
+        issues: depIssues.filter(
+          (i, n) =>
+            depIssues.findIndex(
+              (o) => o.moduleId === i.moduleId && o.requiredId === i.requiredId,
+            ) === n,
+        ),
+        group,
+      },
+    };
   }
 
   // ADR-0094 ④ package-floor guard: a running domain commitment froze a minimum
