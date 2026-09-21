@@ -8,6 +8,34 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-21)
 
+**💸 A KIFIZETETT, DE ÜRES MODUL TÖBBÉ NEM MARAD NÉMA (ADR-0194).**
+Session-jegyzet: `_planning/memory/2026-09-21_paid_but_empty_modules.md`.
+Kontraktus: `assets/design-refs/tenant-admin/paid-empty/` (A változat, tulajdonosi döntés).
+
+- **A kiváltó mérés:** a tulaj a saját tenantján 14 775 Ft-ért vett három modult; a `booking`
+  renderelt, a `pricing` és a `poi` üresen maradt, ezért az ÉLŐ lapról **teljesen hiányzott**
+  (az „Árak" és „A környéken" szó **0-szor** fordul elő a kiszolgált HTML-ben). Minden
+  képernyő hallgatott: a modul-lista „aktív"-ot írt, a Teendők csak fotóról és bemutatkozóról
+  beszélt. **Fizetett, nem kapott semmit, és nem is tudta meg.**
+- **Szállítva:** minden számlázott+üres modul saját teendő-sort kap (név · ár a fiók ütemében ·
+  „kifizette, de üres, ezért a vendég ma nem látja" · modulra szabott magyarázat · Kitöltöm /
+  Megnézem). Öt modul kaphat sort, **négy SOHA** (`booking`, `location`, `reviews`, `enquiry`)
+  — a hamis riasztás ugyanolyan kár, mint a néma hiba.
+- ⛔ **Az ürességet a RENDERELŐ SAJÁT kimenete dönti el** (`moduleContentFor().data`), nem a
+  „van-e config sora" kérdés: az zölden átengedte volna az üres tömböt.
+- ⭐ Az ár-szabály modul-szintre emelve, hogy a Modulok fül és a sor EGY példányból árazzon.
+- **A tulaj két másik kérdése is megmérve:** a kilógó cím **igaz** (javítva); a **14 775 Ft
+  HELYES** (19 700 listaár − 25 % üdvözlő kupon), csak a kedvezmény **sehol nem látszik**.
+- ⛔⛔ **A tudásbázis-őr két körben 9 leletet talált**, köztük: a súgóba **kitalált modulnevet**
+  írtam, és az **őr fixtúrája ugyanazt gépelte** — a saját téves feltevésemet igazoltam vissza,
+  zárt hurokban; gépi kapu nem láthatta. A fixtúra most a `MODULE_CATALOG`-ból származtat.
+- 🔴 **NYITOTT:** a POI-modul ígérete („mi állítjuk össze") fedezetlen — nincs mögötte gyűjtés,
+  cron, se POI-tábla → külön session fut rá (**„Automata heti programajánló"**). Továbbá: az
+  ADR-0193 ár-kapuja a JOGOSULTSÁGOT kérdezi, nem a tartalmat, ezért kifizetett de ÜRES
+  `pricing` mellett a foglalási út árat fagyaszthat a vendég levelébe.
+
+## Előző szál (2026-09-21)
+
 **🛏️ A SZOBA-KÁRTYA ÉS A RÉSZLETEK-FELUGRÓ — §2b kör, a tulaj a B változatot jóváhagyta.**
 Kontraktus: `assets/design-refs/tenant-site/rooms-card/` (README + `plan.html` + 5 kép, `6514d63`).
 Session-jegyzet: `_planning/memory/2026-09-21_rooms_card_plan.md`.
