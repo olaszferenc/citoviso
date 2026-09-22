@@ -627,6 +627,133 @@
   transform: none;
 }
 
+/* ── ADR-0192 · jóváhagyott kontraktus: design-refs/console/module-dependency ──
+   A SOR mondja meg MIT: cián „együtt jár" pirula a név mellett, és a katalógus
+   indoklása a sor ALATT, saját sávban.
+
+   ⛔ A magyarázat NEM a kapcsoló-sorba megy: ott a teljes szélességével a nevet
+   szűk oszlopba préselné és kilógna a kártyából (a terv-körben mérve). A
+   `.cit-cfg-rowbox` a gazdája, ezért kerül a sor alá saját blokk-sorként.
+
+   A cián a dizájn-mag `--citui-cyan-500` tükre. Ez a panel IDEGEN dokumentumba —
+   a generált mockba — injektálódik, ahol a `citui.css` nincs betöltve és a `:root`
+   a mock skinjéé, ezért a fájl végig nyers értékekkel dolgozik; ez a kettő a
+   maggal szinkronban tartandó (ugyanaz a helyzet, mint a prospectNotice.ts-nél). */
+/* A név + pirula közös, TÖRDELHETŐ doboza. ⛔ Mérve: a pirula a nyers flex-sorban
+   82 px-re szorította a modulnevet (390 px-en ÉS 1280 px-en is — a panel fix
+   szélességű, tehát az asztali sem ment meg). Így szűk helyen a pirula a NÉV ALÁ
+   kerül, és a névoszlop a maga szélességét kapja. */
+.cit-cfg-row .cit-cfg-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 7px;
+}
+/* A `.cit-cfg-row .cit-cfg-label{flex:1}` (0,2,0) fölé kell kerülni, különben a
+   név a közös dobozon BELÜL is kitöltene és a pirula megint szorítaná. */
+.cit-cfg-row .cit-cfg-name .cit-cfg-label {
+  flex: 0 1 auto;
+}
+.cit-cfg-row .cit-cfg-deptag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #08222a;
+  background: #35c4e0;
+}
+/* ⛔ A `[hidden]`-t egy sima `display:inline-flex` ÜTNÉ (0,2,0 vs 0,0,1) — mérve
+   más felületen is —, ezért a rejtés MAGASABB specificitással áll. */
+.cit-cfg-row .cit-cfg-deptag[hidden] {
+  display: none;
+}
+.cit-cfg-row .cit-cfg-deptag svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+}
+.cit-cfg-deprail {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 8px 11px;
+  border-left: 3px solid #35c4e0;
+  border-radius: 0 7px 7px 0;
+  background: rgba(53, 196, 224, 0.1);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccd4df;
+}
+.cit-cfg-deprail[hidden] {
+  display: none;
+}
+.cit-cfg-deprail svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #35c4e0;
+  fill: none;
+  stroke: currentColor;
+}
+/* Zárolva, amíg egy bekapcsolt modul igényli (blokkol, nem kaszkádol). A
+   kapcsoló ugyanazt a „nem mozdítható" nyelvet beszéli, mint a kiváltott soré —
+   de cián, mert itt nem kiváltásról, hanem együtt-járásról van szó. */
+.cit-cfg-row.cit-cfg-dep {
+  cursor: default;
+  /* ⛔ A `.cit-cfg-locked{opacity:.72}` halványítása IDE NEM való. Az a „ez nincs
+     az ajánlatban" nyelve — ez a sor viszont BENNE van, és a vevő FIZET érte. Egy
+     kifizetett modult kiszürkíteni hazugság a saját számlájáról. (Azonos
+     specificitás, ezért a sorrend dönt: ez a blokk a `.cit-cfg-locked` UTÁN áll.) */
+  opacity: 1;
+}
+.cit-cfg-row.cit-cfg-dep[aria-pressed="true"] .cit-cfg-sw {
+  background: #1d6b7c;
+}
+/* Egy zárolt sor megérintése felvillantja azt a sort, ami FOGJA — néma
+   elutasítás helyett megmutatjuk, mit kell előbb levenni. */
+@keyframes citCfgNudge {
+  0%,
+  100% {
+    background: transparent;
+  }
+  25%,
+  75% {
+    background: rgba(53, 196, 224, 0.22);
+  }
+}
+.cit-cfg-row.cit-cfg-nudge {
+  animation: citCfgNudge 0.8s ease-in-out 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-row.cit-cfg-nudge {
+    animation: none;
+    outline: 2px solid #35c4e0;
+  }
+}
+/* A visszautasítás üzenete a terv-lépés lábában — nem felugró: a vevő ugyanazon
+   a képernyőn látja az okot (a modul sorában) és az ÚJ összeget. */
+.cit-cfg-depwarn {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-left: 3px solid #35c4e0;
+  border-radius: 0 7px 7px 0;
+  background: rgba(53, 196, 224, 0.12);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #ccd4df;
+}
+
 .cit-cfg-foot {
   padding: 14px 18px 18px;
   border-top: 1px solid #262b34;

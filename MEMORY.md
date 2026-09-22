@@ -8,6 +8,41 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
 
+**🛒 A MODUL-FÜGGŐSÉG A VÁSÁRLÁS PILLANATÁBAN — a lead kosara bepipál, a beküldő végpont elutasít
+(ADR-0202).** Tulajdonosi mandátum (`~/rc-briefs/lead-side-dependency-gate-brief.md`). Az ADR-0192
+szabálya ott állt, ahol a tulaj MÁR bent van (Modulok fül, megújítás-sweep), és ott hiányzott, ahol
+a pénz ELŐSZÖR mozdul: a lead megvehette az **Online foglalást Árak nélkül**, kifizette, és a
+konverzió pontosan azt élesítette. Session-jegyzet:
+`_planning/memory/2026-09-22_lead_side_dependency_gate.md`. **Élesítés NEM volt a feladat.**
+
+- **① A kosár BEPIPÁL** — a manifest szállítja a `requires`-t a katalógus `why` mondatával, a
+  kosár tranzitívan behozza a láncot: „EGYÜTT JÁR" pirula · soronkénti indoklás · a vezérlő
+  sorában csoportosított ár. Mérve: **+2 170 Ft/hó**, a jóváhagyott kontraktus száma, pontosan.
+  ⭐ Azért a kliens, mert a fizetendő összeg a kiválasztott halmazon iterál — így a helyes ár
+  **magától következik**, a „990 a képernyőn, 2 170 a terhelésen" meg sem születik.
+- **② ⭐ A VALÓDI VÉDELEM: a beküldő végpont ELUTASÍT** (`400 module_dependency_unmet`), a
+  kiszállított HTTP-úton mérve, a lánc KÖZEPÉN megszakítva is. ⛔ Nem kiegészít (a vevő többet
+  fizetne, mint amit jóváhagyott) és nem hagyja el némán a modult (kifizetné és nem kapná meg).
+  ⚠️ Valódi vevőt nem tagadhat meg: a konfigurátor futása **kiszolgáláskor** injektálódik (mérve
+  **0 tárolt artifact** viseli a jelölőt), tehát régi mock-link is a MAI kosarat kapja.
+- **③ A konverziós ág NEM épült meg, és ez ki van mondva.** A brief 3. lépésére döntést kértem;
+  a tulaj leállította — és igaza volt: **dev 9 rendelésből 0 sértő, élesen is 0**. Mérj ELŐBB,
+  és a kérdést a mérés mellé tedd.
+- ⛔⛔ **A SAJÁT ŐRÖM 39 állítása HAMISAN ZÖLD volt:** a `check()` argumentum-sorrendjét
+  elrontottam, a címke-sztring igazzá értékelődött, és a kimenetben ott állt `✓ false ↳ 82px` —
+  a lap KIÍRTA a bukást és zöldre értékelte. ⭐ **És a hamis zöld ELREJTETT egy valódi leletet:**
+  a 82 px igaz volt, a pirula szűk oszlopba préselte a modulnevet 390 px-en ÉS 1280 px-en is
+  (a panel fix szélességű — „az asztalin elfér" FELTEVÉS volt). Az elrendezés-mérce most
+  **alapvonal** (ugyanaz a sor pirula nélkül vs. pirulával), nem fix pixelszám.
+- **Őrök:** új `module-dependency-cart-check` (**46 állítás**, böngésző 390 px + 1280 px, plusz a
+  HTTP-végpont), `hooks/pre-commit`-be kötve. Az ADR-0192 ⑥ **NOT_COVERED** listája kiürült — de
+  nem mutatóra cserélve: a `module-dependency-check` ÁLLÍTJA, hogy a kosár-őr létezik ÉS hogy a
+  hook lefuttatja (negatív kontrollal igazolva: a hook-sort kivéve PIROS).
+- 🔴 **NYITOTT:** a terv-sáv csoportosított ár-blokkja · a `/pricing` csomag-kártyák jelvénye · a
+  három KB-szócikk · a `DOMAIN/05-MODULES.md` függőségi szakasza · az ADR-0192 ⑧ 3–5. tétele.
+
+## Előző szál (2026-09-22) — a szoba-szerkesztő terve
+
 **🛏️ A TENANT-ADMIN SZOBA-SZERKESZTŐ — §2b terv-kör, a tulaj a D változatot jóváhagyta (ADR-0199).**
 Tulajdonosi mandátum (`~/rc-briefs/rooms-admin-brief.md`): kártyás/kinyitható szobák, helyben
 képfeltöltés, **borítókép**. Kontraktus: `assets/design-refs/tenant-admin/room-editor/`

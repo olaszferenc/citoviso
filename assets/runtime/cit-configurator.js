@@ -120,6 +120,13 @@
       '<svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0"/><circle cx="12" cy="18.5" r="1"/></svg>',
     tag:
       '<svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>',
+    // ⭐ A közös ikonkészlet `link` ikonja (src/ui/icons.ts) — SZÓ SZERINT ugyanaz a
+    // path, hogy az „együtt jár" pirula a lead-oldali kosárban és a tulaj Modulok
+    // fülén egyazon kézjegyet viselje (ADR-0192 · module-dependency kontraktus).
+    link:
+      '<svg viewBox="0 0 24 24" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/>' +
+      '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
     pin:
       '<svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
     clock:
@@ -605,6 +612,8 @@
   var PRESETS = CFG.presets || [];
   var GROUP_ORDER = ["offer", "reach", "extra"];
   var rowsById = {};
+  /** ADR-0192: a soronkénti magyarázó sáv (a `data-dep-why` lead-oldali párja). */
+  var railById = {};
 
   // ── pricing (base + Σ selected module; annual = 12 − freeMonths) ─────────────
   var PRICING = CFG.pricing || { base: 0, annualFreeMonths: 0, currency: "HUF" };
@@ -665,6 +674,120 @@
   }
   function countsToward(m, set) {
     return !!set[m.id] && !supersededIn(m.id, set);
+  }
+
+  // ── ADR-0192 ④.1 · jóváhagyott kontraktus: design-refs/console/module-dependency
+  //
+  // A LÁNC (booking → pricing → rooms) eddig ott állt, ahol a tulaj MÁR bent van
+  // (Modulok fül, megújítás-sweep), és pont ott hiányzott, ahol a pénz ELŐSZÖR
+  // mozdul: a lead megvehette az Online foglalást Árak nélkül, kifizette, és a
+  // konverzió pontosan azt élesítette — naptár, ami nem tud árat mondani.
+  //
+  // ⭐ Miért a KLIENS az elsődleges út (és nem a szerver): a fizetendő összeg és a
+  // fizetés-megerősítő MIND a kiválasztott halmazon iterál, tehát ha a kosár
+  // bepipálja a párját, a helyes ár MAGÁTÓL következik. Néma szerver-oldali
+  // hozzávételnél a vevő 990-et látna és 2 170-et fizetne. A szerver-kapu ettől
+  // még áll (kézzel gyártott POST) — csak nem ő az elsődleges út.
+  //
+  // ⛔ A magyarázat a KATALÓGUSBÓL jön (`why`), nem itt fogalmazva: ugyanaz a
+  // mondat hat képernyőn jelenik meg, két példány két igazság volna
+  // (feedback_one_rule_two_copies). ⛔ Nyers katalógus-id SOHA nem kerül a
+  // képernyőre (kontraktus §4) — a `labelOf` üres sztringet ad, nem az id-t.
+  var REQ = {};
+  MODULES.forEach(function (m) {
+    REQ[m.id] = (m.requires || []).slice();
+  });
+  /**
+   * Amit a vevő SAJÁT KEZŰLEG választott — nem a függőség hozta be.
+   * ⭐ Induláskor MINDEN igaz, mert az ALL-IN horgony a vevő kiinduló választása
+   * (a teljes oldalt látja, és onnan nyes vissza). Ha ezek nem számítanának
+   * sajátkezűnek, az első kikapcsolás a §5 visszavétellel KIÜRÍTENÉ a kosarat.
+   */
+  var selfPicked = {};
+  MODULES.forEach(function (m) {
+    selfPicked[m.id] = true;
+  });
+  /**
+   * Sorok, ahol a vevő MEGPRÓBÁLTA levenni a fogott modult — ott a magyarázat
+   * attól kezdve kint marad.
+   *
+   * ⭐ Miért nem mindig látszik: a tulaj Modulok fülén a sajátkezűleg választott
+   * (vagy kifizetett) sor NEM visel pirulát és sávot — ott a levételi kísérlet
+   * nyit FELUGRÓT, és az mondja el, mi tartja. A lead-keretben felugró helyett a
+   * sor szólal meg, de UGYANABBAN a pillanatban. Különben az ALL-IN nyitókép két
+   * cián sávval indulna olyasmiről, amit a vevő még nem is próbált.
+   */
+  var depRevealed = {};
+  function setOf(ids) {
+    var s = {};
+    ids.forEach(function (i) {
+      s[i] = true;
+    });
+    return s;
+  }
+  function selectedIds() {
+    return MODULES.filter(function (m) {
+      return selected[m.id];
+    }).map(function (m) {
+      return m.id;
+    });
+  }
+  function defOf(id) {
+    for (var i = 0; i < MODULES.length; i++) if (MODULES[i].id === id) return MODULES[i];
+    return null;
+  }
+  /** ⛔ Sosem az id: egy ismeretlen id-re inkább NINCS felirat, mint gépi kód. */
+  function labelOf(id) {
+    var d = defOf(id);
+    return d ? d.label : "";
+  }
+  function priceOf(id) {
+    return priceById[id] || 0;
+  }
+  /**
+   * A halmaz + minden KÖTELEZŐ párja, tranzitívan — fix-pont, hogy a hármas lánc
+   * végig lefusson. ⛔ Kiváltott modul NEM támaszt követelményt: nem mutat
+   * szekciót, tehát a párjáért fizettetni semmiért fizettetés volna. Ugyanaz a
+   * szűrés, amit a szerver `renderableModules()`-a végez — különben a kosár olyan
+   * halmazt pipálna be, amit a szerver utána elutasít.
+   */
+  function depClosure(ids) {
+    var out = ids.slice();
+    for (var g = 0; g <= MODULES.length; g++) {
+      var set = setOf(out);
+      var add = false;
+      out.slice().forEach(function (id) {
+        if (supersededIn(id, set)) return;
+        (REQ[id] || []).forEach(function (r) {
+          if (out.indexOf(r.id) < 0) {
+            out.push(r.id);
+            add = true;
+          }
+        });
+      });
+      if (!add) break;
+    }
+    return out;
+  }
+  /** A bekapcsolt modulok, amelyek IGÉNYLIK `id`-t — ők blokkolják a levételét. */
+  function dependentsOf(id) {
+    var ids = selectedIds();
+    var set = setOf(ids);
+    return ids.filter(function (x) {
+      return (
+        x !== id &&
+        !supersededIn(x, set) &&
+        (REQ[x] || []).some(function (r) {
+          return r.id === id;
+        })
+      );
+    });
+  }
+  /** A `drv → id` él indoklása a katalógusból (a MAGA indoka, nem a vezérlőé). */
+  function whyOf(drv, id) {
+    var rs = REQ[drv] || [];
+    for (var i = 0; i < rs.length; i++) if (rs[i].id === id) return rs[i].why || "";
+    return "";
   }
   function monthlyTotal() {
     var t = PRICING.base;
@@ -920,6 +1043,115 @@
     });
   }
 
+  /**
+   * ADR-0192 · a sorok FÜGGŐSÉGI állapota — egy helyen, a kiválasztásból
+   * levezetve, minden újraszámoláskor. Két, egymást kizáró szerep:
+   *
+   *   · a sort egy bekapcsolt modul IGÉNYLI → zárolt + „együtt jár" pirula (csak
+   *     ha a függőség hozta be) + a sáv megmondja, KI igényli és MIÉRT;
+   *   · a sor maga a VEZÉRLŐ, ami behozott másokat → a sáv a CSOPORTOSÍTOTT árat
+   *     mondja. A lead-keretben nincs terv-sáv (a tulaj Modulok fülén az viszi
+   *     ezt a szerepet), ezért a „mennyiért" a vezérlő sorára kerül.
+   *
+   * ⛔ Az INDOKLÁS így is CSAK EGYSZER hangzik el (a függő soron) — a C változat
+   * állítása pont az, hogy egy képernyő ne mondja kétszer ugyanazt.
+   */
+  function syncDeps() {
+    MODULES.forEach(function (m) {
+      var r = rowsById[m.id];
+      var rail = railById[m.id];
+      if (!r) return;
+      var pill = r.querySelector(".cit-cfg-deptag");
+      var drivers = selected[m.id] ? dependentsOf(m.id) : [];
+      var heldBy = drivers.length > 0;
+      // Zárolva, amíg egy bekapcsolt modul igényli (kontraktus §6: blokkol, nem
+      // kaszkádol). A `cit-cfg-locked` a MEGLÉVŐ idióma — a gerinc és a kiváltott
+      // sorok is ezt viselik —, így a vevő ugyanazt a vizuális nyelvet olvassa.
+      //
+      // ⛔ EZT A MEGLÉVŐ ŐR TALÁLTA MEG: a `configurator-placement-check` §I
+      // állítása („nincs néma modul") a `.cit-cfg-locked`-ot NEM viselő sorokat
+      // kapcsolgatja végig, és azt várja, hogy a lap változzon. A fogott sor
+      // szemantikailag zárolt volt, de a DOM-ban nem mondta ki — az őr tehát nem
+      // egy fixture-sodródást jelzett, hanem valódi következetlenséget a kódomban.
+      //
+      // ⚠️ ADDITÍVAN: a kiváltott (refreshSuperseded) és a gerinc-sorok zárolása
+      // NEM a mi okunkból van, ezért csak a sajátunkat vehetjük vissza.
+      var supersededNow = !!supersededIn(m.id, selected);
+      r.classList.toggle("cit-cfg-dep", heldBy);
+      if (heldBy) r.classList.add("cit-cfg-locked");
+      else if (!supersededNow && !(m.spine && m.present)) r.classList.remove("cit-cfg-locked");
+      if (pill) {
+        // ⛔ A pirula CSAK akkor, ha a modult a FÜGGŐSÉG hozta be: egy sajátkezű
+        // választásra ráírni, hogy „együtt jár", hamis állítás volna.
+        if (heldBy && !selfPicked[m.id]) pill.removeAttribute("hidden");
+        else pill.setAttribute("hidden", "");
+      }
+      if (!rail) return;
+      var txt = "";
+      if (heldBy && (!selfPicked[m.id] || depRevealed[m.id])) {
+        // ⛔ Az ÉL saját indoklása, nem a vezérlő modulé: a `booking → pricing` és
+        // a `pricing → rooms` KÉT külön mondat (a terv-kör első változata a
+        // vezérlőét írta ki mindkettőre, és a második élen üres sztring lett).
+        var d0 = drivers[0];
+        txt = labelOf(d0) + " — " + tr("ehhez jár.") + " " + tr(whyOf(d0, m.id));
+      } else if (!heldBy && selected[m.id]) {
+        var brought = depClosure([m.id]).filter(function (id) {
+          return id !== m.id && selected[id] && !selfPicked[id];
+        });
+        if (brought.length) {
+          var total = priceOf(m.id);
+          var parts = brought.map(function (id) {
+            total += priceOf(id);
+            return labelOf(id) + " +" + fmt(priceOf(id));
+          });
+          // ⚠️ EGY SOR, EGY MÉRTÉKEGYSÉG: a tételek és az összeg egyaránt HAVI —
+          // a sor-árak is azok. Az éves ciklusban a fejléc-összeg évesen beszél,
+          // de ez a mondat kimondja a saját egységét, nem hagyja kitalálni.
+          txt =
+            tr("Ehhez jár:") +
+            " " +
+            parts.join(" · ") +
+            " — " +
+            tr("együtt {s} / hó").replace("{s}", fmt(total));
+        }
+      }
+      if (txt) {
+        rail.querySelector("span").textContent = txt;
+        rail.removeAttribute("hidden");
+      } else {
+        rail.setAttribute("hidden", "");
+      }
+    });
+  }
+
+  var nudgeTimer = null;
+  /**
+   * A vevő egy ZÁROLT sort érintett meg. ⛔ Néma elutasítás tilos: a kapcsoló,
+   * ami nem mozdul és nem mond semmit, hibának látszik. Megmutatjuk, MIT kell
+   * előbb levennie — azt a sort villantjuk fel, ami fogja.
+   */
+  function nudgeDeps(ids) {
+    var rows = (ids || [])
+      .map(function (id) {
+        return rowsById[id];
+      })
+      .filter(Boolean);
+    if (!rows.length) return;
+    if (nudgeTimer) clearTimeout(nudgeTimer);
+    rows.forEach(function (x) {
+      x.classList.remove("cit-cfg-nudge");
+    });
+    void rows[0].offsetWidth; // restart the flash
+    rows.forEach(function (x) {
+      x.classList.add("cit-cfg-nudge");
+    });
+    nudgeTimer = setTimeout(function () {
+      rows.forEach(function (x) {
+        x.classList.remove("cit-cfg-nudge");
+      });
+    }, 1600);
+  }
+
   function row(mod) {
     var on = selected[mod.id];
     // Replaced by another selected module (they share a slot): locked off, unpriced,
@@ -942,8 +1174,19 @@
         '" data-id="' +
         esc(mod.id) +
         '">' +
+        // ⛔ A név és a pirula EGY tördelhető dobozban. A pirula a nyers flex-sorban
+        // 82 px-es oszlopba préselte a modulnevet (mérve, 390 px-en ÉS asztalin is)
+        // — pontosan az a csapda, amit a jóváhagyott kontraktus külön kiköt. Így a
+        // pirula szűk helyen a NÉV ALÁ kerül (a kontraktus mobil-szabálya), és a
+        // névoszlop megtartja a szélességét.
+        '<span class="cit-cfg-name">' +
         '<span class="cit-cfg-label">' +
         esc(mod.label) +
+        "</span>" +
+        // ⭐ Kontraktus §2 (C változat): a SOR mondja meg MIT. A pirula csak akkor
+        // látszik, ha a modult a FÜGGŐSÉG hozta be — egy sajátkezű választás nem
+        // „együtt jár". A láthatóságot a syncDeps() kapcsolja.
+        '<span class="cit-cfg-deptag" hidden>' + I.link + "<span>" + tr("együtt jár") + "</span></span>" +
         "</span>" +
         tag +
         '<span class="cit-cfg-price">' +
@@ -955,6 +1198,12 @@
     rowsById[mod.id] = r;
     var wrap = el('<div class="cit-cfg-rowbox"></div>');
     wrap.appendChild(r);
+    // A magyarázó sáv SAJÁT sorban, a kapcsoló-sor ALATT. ⛔ Nem a flex-sorba:
+    // 100%-os szélességgel a nevet szűk oszlopba préselné és kilógna a kártyából
+    // (a terv-körben mérve, a jóváhagyott kontraktus külön kiköti).
+    var rail = el('<div class="cit-cfg-deprail" hidden>' + I.link + "<span></span></div>");
+    wrap.appendChild(rail);
+    railById[mod.id] = rail;
     // Info disclosure: a plain one-liner about what the module DOES + a
     // "show me on the page" jump — the ask behind the icon (2026-08-19).
     if (mod.desc) {
@@ -1004,20 +1253,72 @@
     if (locked) return wrap;
     function toggle() {
       var next = !selected[mod.id];
+      // ⛔ ADR-0192 ④.2 · kontraktus §6: amíg egy bekapcsolt modul IGÉNYLI, ez a
+      // sor nem vehető le. BLOKKOL, nem kaszkádol — a vevő döntse el, mit ad fel.
+      if (!next) {
+        var held = dependentsOf(mod.id);
+        if (held.length) {
+          // A magyarázat ITT szólal meg (a felugró szerepe a lead-keretben), és
+          // kint is marad: a vevő ne legyen kénytelen újra nekifutni, hogy lássa.
+          depRevealed[mod.id] = true;
+          syncDeps();
+          nudgeDeps(held);
+          return;
+        }
+      }
+      // ⭐ KÉT FÁZIS, és ez a lényeg (ugyanaz az ok, mint az applyPreset-nél): a
+      // festés a `selected` térképből olvas, ezért előbb a TELJES kiválasztásnak
+      // rendeződnie kell. Egy félig frissített térképből festve a lánc közepe
+      // rossz állapotot kapna.
+      var before = setOf(selectedIds());
+      // ── 1. FÁZIS — a kiválasztás rendeződik, DOM-hoz még nem nyúlunk ─────────
       selected[mod.id] = next;
+      selfPicked[mod.id] = next;
+      if (next) {
+        // A kötelező párjai VELE jönnek be, tranzitívan — és a soruk kimondja,
+        // miért. Így a fizetendő összeg (ami a kiválasztott halmazon iterál) már
+        // a helyes árat adja: a „990 a képernyőn, 2 170 a terhelésen" meg sem
+        // születik.
+        depClosure([mod.id]).forEach(function (id) {
+          if (selected[id]) return;
+          selected[id] = true;
+          selfPicked[id] = false; // a függőség hozta — ő viseli a pirulát
+        });
+      } else {
+        // §5 — a vezérlő kikapcsolása VISSZAVESZI, amit behozott. KEEP = a
+        // sajátkezűleg választottak (+ a gerinc) zárványa; ami ezen kívül esik,
+        // azért a vevő nem fizethet, mert sosem választotta.
+        var keep = setOf(
+          depClosure(
+            selectedIds().filter(function (x) {
+              var d = defOf(x);
+              return selfPicked[x] || !!(d && d.spine);
+            }),
+          ),
+        );
+        selectedIds().forEach(function (id) {
+          if (!keep[id]) selected[id] = false;
+        });
+      }
+      // ── 2. FÁZIS — minden MEGVÁLTOZOTT sort a rendezett állapotból festünk ───
+      MODULES.forEach(function (m2) {
+        if (!!before[m2.id] === !!selected[m2.id]) return;
+        applyModule(m2, selected[m2.id]);
+        setRow(m2, selected[m2.id]); // the tag follows the state (see setRow)
+        // Toggling a module that REPLACES another (booking → enquiry) changes the
+        // other row too, so refresh the affected rows rather than only this one.
+        if (m2.supersedes) refreshSuperseded(m2.supersedes);
+        track(selected[m2.id] ? "module_add" : "module_remove", { module: m2.id });
+        // Barion Pixel (Full): a kosár mozgása. A tétel ugyanabból a függvényből
+        // épül, mint a pénztár-események sorai — nem külön kiszámolva. ⛔ A
+        // függőség-modul IS tétel: a kosár-esemény különben kevesebbet jelentene
+        // a kapunak, mint amit a vevő valójában fizet.
+        px(selected[m2.id] ? "addToCart" : "removeFromCart", pxItem(m2));
+      });
       r.setAttribute("aria-pressed", next ? "true" : "false");
-      applyModule(mod, next);
-      setRow(mod, next); // the tag follows the state (see setRow)
-      // Toggling a module that REPLACES another (booking → enquiry) changes the
-      // other row too, so refresh the affected rows rather than only this one.
-      if (mod.supersedes) refreshSuperseded(mod.supersedes);
       if (next) revealChange(mod); // see-the-change feedback (present + sample)
       markCustom();
       updateSummary();
-      track(next ? "module_add" : "module_remove", { module: mod.id });
-      // Barion Pixel (Full): a kosár mozgása. A tétel ugyanabból a függvényből
-      // épül, mint a pénztár-események sorai — nem külön kiszámolva.
-      px(next ? "addToCart" : "removeFromCart", pxItem(mod));
     }
     r.addEventListener("click", function (e) {
       // Inner buttons (info) handle themselves.
@@ -1054,6 +1355,18 @@
     // PHASE 1 — the whole selection, no DOM touched yet.
     MODULES.forEach(function (m) {
       selected[m.id] = !!set[m.id] || !!(m.spine && m.present); // backbone always on
+      // A csomag tételei a vevő SAJÁT választásai — egy kattintással, de kimondva.
+      selfPicked[m.id] = selected[m.id];
+    });
+    // ADR-0192: a csomag kötelező párjai is bejönnek. A katalógus-lint állítja,
+    // hogy MINDEN preset érvényes (a `module_sales_disabled` szimulálásával is),
+    // tehát ez ma nem tesz hozzá semmit — de fail-closed: ha egy jövőbeli csomag
+    // mégis sértene, a kosár nem küldene be olyan halmazt, amit a szerver-kapu
+    // utána elutasít.
+    depClosure(selectedIds()).forEach(function (id) {
+      if (selected[id]) return;
+      selected[id] = true;
+      selfPicked[id] = false;
     });
     // PHASE 2 — paint every module from the settled state.
     MODULES.forEach(function (m) {
@@ -2512,6 +2825,10 @@
   }
 
   function updateSummary() {
+    // ⭐ EGY TORKOLAT: a függőségi sor-állapot minden újraszámoláskor frissül, így
+    // nem lehet elfelejteni egy új beavatkozási pontnál (csomagváltás, visszavétel,
+    // kiváltás). Idempotens — a ciklus- és domain-váltás is bátran hívhatja.
+    syncDeps();
     var n = 0;
     MODULES.forEach(function (m) {
       if (selected[m.id]) n++;
@@ -2807,6 +3124,49 @@
           showOwned(data);
           return;
         }
+        // ADR-0192 — a szerver-kapu elutasította a halmazt (kötelező pár nélkül
+        // érkezett). ⛔ Ide ma csak ELAVULT FÜLBŐL lehet eljutni — a kosár bepipálja
+        // a párját, és a futás kiszolgáláskor injektálódik, tehát a régi mock-link
+        // is a mai kosarat kapja —, de ág nélkül a kérés némán a showThanks()-re
+        // esne, ami „Megkaptuk a rendelését"-et mond egy rendelésre, amit a szerver
+        // NEM vett fel. Ehelyett: bepipáljuk a hiányzót (a sora maga megmondja,
+        // miért jár), visszavisszük a tervhez, és kimondjuk, hogy fizetés nem indult.
+        if (data && data.error === "module_dependency_unmet") {
+          payBtn.removeAttribute("data-busy");
+          var added = [];
+          (data.missing || []).forEach(function (id) {
+            if (selected[id]) return;
+            var d = defOf(id);
+            if (!d) return; // ismeretlen id-t nem pipálunk be és nem is írunk ki
+            selected[id] = true;
+            selfPicked[id] = false;
+            added.push(id);
+            applyModule(d, true);
+            setRow(d, true);
+            if (d.supersedes) refreshSuperseded(d.supersedes);
+            px("addToCart", pxItem(d));
+          });
+          markCustom();
+          updateSummary();
+          syncStrapAmount();
+          syncConsents();
+          // A döntés a terv-lépésen születik, és az ÚJ összeg is ott látszik.
+          step3El.setAttribute("hidden", "");
+          step2El.removeAttribute("hidden");
+          setStrap(false);
+          placeSummary();
+          panel.classList.remove("cit-cfg-panel--billing");
+          showDepNotice(
+            added
+              .map(function (id) {
+                return labelOf(id);
+              })
+              .filter(Boolean),
+          );
+          nudgeDeps(added);
+          track("module_dependency_unmet", { missing: (data.missing || []).join(",") });
+          return;
+        }
         showThanks(chosen);
       })
       .catch(function () {
@@ -2819,6 +3179,31 @@
   // falsehood and left in a dead end with money in hand. What IS true: the order is
   // recorded, and the server has just alerted a human (console/payLinkAlert.ts). The
   // screen may claim exactly that much and not a word more (§B.17).
+  /**
+   * ADR-0192 — a visszautasítás MEGMONDJA, mi történt és mi NEM történt. A két
+   * dolog, aminek igaznak kell lennie ezen a képernyőn: hogy semmit nem
+   * terheltünk (a vevő első félelme egy megszakadt pénztárnál), és hogy mit tegyen
+   * most. A MIÉRT nem ide kerül — az a modul sorában áll, a katalógus mondatával.
+   */
+  function showDepNotice(names) {
+    var foot = panel.querySelector(".cit-cfg-foot");
+    if (!foot) return;
+    var n = foot.querySelector(".cit-cfg-depwarn");
+    if (!n) {
+      n = el('<p class="cit-cfg-depwarn" role="status"></p>');
+      foot.insertBefore(n, foot.firstChild);
+    }
+    n.textContent =
+      (names.length
+        ? tr("A választásához kötelezően jár még: {m} — bepipáltuk.").replace(
+            "{m}",
+            names.join(", "),
+          )
+        : tr("A választása hiányos volt, ezért nem tudtuk rögzíteni.")) +
+      " " +
+      tr("Fizetést most nem indítottunk, és nem terheltük meg a kártyáját. Nézze meg az új összeget, és küldje be újra.");
+  }
+
   function showThanks(chosen) {
     var foot = panel.querySelector(".cit-cfg-foot");
     foot.innerHTML =

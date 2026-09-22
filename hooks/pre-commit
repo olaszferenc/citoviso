@@ -283,6 +283,15 @@ if [ -f scripts/module-dependency-check.mts ]; then
   echo "[pre-commit] module-dependency-check (ADR-0192: függőség végponttól végpontig)…"
   npx tsx scripts/module-dependency-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-0192 ④.1: a LEAD-oldali kosár (bepipálás, indoklás, zárolás, visszavétel,
+# „Fizetendő most" == szerver-ár) ÉS a rendelés-beküldés kapuja. ⭐ Itt mozdul
+# ELŐSZÖR a pénz: a lead eddig megvehette az Online foglalást Árak nélkül, és a
+# konverzió pontosan azt élesítette. BÖNGÉSZŐBEN + a kiszállított HTTP-végponton
+# mér — egy kézzel gyártott POST-nak is el kell akadnia.
+if [ -f scripts/module-dependency-cart-check.mts ]; then
+  echo "[pre-commit] module-dependency-cart-check (ADR-0192: kosár + beküldő kapu)…"
+  npx tsx scripts/module-dependency-cart-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A modul ára a fiók SZÁMLÁZÁSI CIKLUSÁBAN jelenjen meg, és a fülnek legyen
 # végösszege (Elek FK-002 Z1/Z2; kontraktus: design-refs/console/modules-annual-pricing).
 if [ -f scripts/modules-annual-check.mts ]; then

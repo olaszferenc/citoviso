@@ -151,11 +151,33 @@ for (const start of [["booking"], ["pricing"], ["booking", "gallery"], []]) {
   );
 }
 
+// ⭐ ① and ⑤ used to stand here as LOUDLY NOT COVERED. They are covered now — by
+// `module-dependency-cart-check`, which needs a browser and an HTTP round trip and
+// therefore lives in its own file. ⛔ A pointer is a PROMISE, not a proof: this
+// asserts the file exists AND that a hook actually runs it, so the coverage cannot
+// quietly move back to "not covered" while this comment claims otherwise.
+{
+  const cartGuard = new URL("./module-dependency-cart-check.mts", import.meta.url);
+  const hook = await readFile(new URL("../hooks/pre-commit", import.meta.url), "utf8");
+  let present = true;
+  try {
+    await readFile(cartGuard, "utf8");
+  } catch {
+    present = false;
+  }
+  check(
+    "①⑤ a kosár- és beküldő-kaput a module-dependency-cart-check méri…",
+    present,
+    "scripts/module-dependency-cart-check.mts",
+  );
+  check(
+    "①⑤ …és a pre-commit TÉNYLEG lefuttatja (a mutató önmagában csak ígéret)",
+    /npx tsx scripts\/module-dependency-cart-check\.mts/.test(hook),
+    "hooks/pre-commit",
+  );
+}
 // ⛔ LOUDLY NOT COVERED — a skipped assertion that says nothing reads as a pass.
-const NOT_COVERED = [
-  "① kliens-halmaz (a kosár bepipálja a függőséget) — a felület-szelet szállításakor kerül ide",
-  "⑤ kliens „Fizetendő most\" == szerver order.price — ugyanott",
-];
+const NOT_COVERED: string[] = [];
 
 if (process.argv.includes("--selftest")) {
   console.log(
@@ -491,8 +513,10 @@ try {
   await db.destroy();
 }
 
-console.log(`\n⚠️ MÉG NEM FEDETT (hangosan, mert a néma kihagyás átmenőnek olvasódik):`);
-for (const n of NOT_COVERED) console.log(`   · ${n}`);
+if (NOT_COVERED.length) {
+  console.log(`\n⚠️ MÉG NEM FEDETT (hangosan, mert a néma kihagyás átmenőnek olvasódik):`);
+  for (const n of NOT_COVERED) console.log(`   · ${n}`);
+}
 
 console.log(
   fails

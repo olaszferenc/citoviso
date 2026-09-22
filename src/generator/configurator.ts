@@ -19,6 +19,7 @@ import {
   MODULE_CATALOG,
   GROUP_LABELS,
   PRESETS,
+  applicableRequirements,
   detectPresentModules,
   sellableModuleIds,
 } from "../modules.js";
@@ -232,6 +233,13 @@ export interface ConfiguratorManifest {
     readonly price: number;
     /** Module ids this one replaces when selected (shared slot). */
     readonly supersedes?: string[];
+    /**
+     * ENFORCED (hard) dependencies of this module, already filtered to the ones
+     * that APPLY on the lead side (ADR-0192 ④.1). `why` is the owner-facing
+     * sentence from the catalogue — the cart quotes it, never rewrites it.
+     * Absent = this module needs nothing.
+     */
+    readonly requires?: { readonly id: string; readonly why: string }[];
     readonly domType?: string;
     /** Extra `data-cit-module` anchors this module also owns (e.g. reviews has
      *  three page states). Without these the toggle found nothing to move. */
@@ -421,6 +429,27 @@ export async function buildManifest(
       // total, so a prospect is never charged for two things that share one slot
       // ("ha van foglalás, akkor nincs érdeklődés").
       ...(m.supersedes ? { supersedes: [...m.supersedes] } : {}),
+      // ADR-0192 ④.1: the module's ENFORCED (hard) requirements, each with the
+      // owner-facing sentence straight from the catalogue. The cart ticks them and
+      // QUOTES this — it never composes its own explanation, because the same
+      // sentence has to appear on six screens (feedback_one_rule_two_copies).
+      //
+      // ⛔ The context is deliberately EMPTY, i.e. multiUnit = "unknown", so the
+      // conditional edge (pricing → rooms) STANDS on the lead side. Measured
+      // (ADR-0192 ④.4): 33 mock artifacts, 0 with a real room list — a prospect
+      // has no `site_unit` row at all, so the condition is unevaluable here, and
+      // the mock itself SHOWS three room cards. Reading "unknown" as "no" would
+      // contradict the screen the buyer is looking at.
+      //
+      // ⚠️ Every id here is guaranteed to BE in `offered`: `sellable` above is
+      // closed under hard requirements, so a module whose requirement fell off the
+      // shelf fell with it. The guard asserts that closure rather than trusting it.
+      ...(() => {
+        const reqs = applicableRequirements(m.id)
+          .filter((r) => r.strength === "hard")
+          .map((r) => ({ id: r.id, why: r.why }));
+        return reqs.length ? { requires: reqs } : {};
+      })(),
       ...(m.domType ? { domType: m.domType } : {}),
       ...(m.domTypesAlso ? { domTypesAlso: [...m.domTypesAlso] } : {}),
     })),

@@ -98,7 +98,7 @@ import {
   normalizeCustomDomain,
   suggestWithAvailability,
 } from "../domains.js";
-import { MODULE_CATALOG, modulesForConversion } from "../modules.js";
+import { MODULE_CATALOG, missingRequiredModules, modulesForConversion } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
 import { renderSite } from "../engine/render.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
@@ -820,6 +820,58 @@ async function handleOrderRequest(
   const modules = Array.isArray(body.modules)
     ? body.modules.filter((m): m is string => typeof m === "string" && catalogIds.has(m))
     : [];
+  // ⭐ ADR-0192 ④.1 — THE DEPENDENCY GATE ON THE ORDER PATH. Until now the rule
+  // stood exactly where the owner was already inside (tenant admin, renewal
+  // sweep) and was MISSING where the money first moves: a buyer could order the
+  // Online foglalás without Árak, pay for it, and the conversion provisioned
+  // precisely that — a booking calendar that cannot name a price.
+  //
+  // The cart is the PRIMARY path (it ticks the requirement and prices it, so the
+  // confirming figure follows by itself); this is the protection, because a
+  // hand-crafted POST must stop too (feedback_additive_write_is_not_a_gate).
+  //
+  // ⛔ REFUSAL, not completion, and not a silent drop. Completing the set here
+  // would charge 2 170 for the 990 the buyer saw — the exact lie ADR-0192 ④.1
+  // measured and rejected; dropping the dependent module would take away what he
+  // is paying for. The three gates above (photo rights, recurring mandate,
+  // billing identity) refuse the same way, on the same route.
+  //
+  // ⚠️ This cannot refuse a REAL buyer (ADR-0072 is not up for negotiation): the
+  // configurator runtime is injected at SERVE time — measured, 0 stored mock
+  // artifacts carry the `data-cit-configurator` marker — so even a months-old
+  // mock link opens with today's ticking cart. The only way here is a stale tab
+  // or a forged POST, and the client has a branch for the former.
+  //
+  // ⛔ The context is EMPTY on purpose: a prospect has no `site_unit` row at all,
+  // so multiUnit is "unknown" and the conditional edge STANDS — the same reading
+  // the manifest shipped to the cart. Two readings would let the cart tick a set
+  // the server then refuses (feedback_one_rule_two_copies).
+  //
+  // The spine is folded in because it is always provisioned and the buyer cannot
+  // toggle it: it may only SATISFY a requirement, never create one.
+  const spineIds = MODULE_CATALOG.filter((m) => m.spine).map((m) => m.id);
+  const unmet = missingRequiredModules([...modules, ...spineIds]);
+  if (unmet.length) {
+    console.warn(
+      `[console] MODUL-FÜGGŐSÉG a rendelés beküldésén ELUTASÍTVA (ADR-0192): ` +
+        `${unmet.map((i) => `${i.moduleId}→${i.requiredId}`).join(", ")} ` +
+        `(beküldött: ${modules.join(",") || "—"}) — nincs order_intent, nincs pay-link`,
+    );
+    send(
+      res,
+      400,
+      JSON.stringify({
+        ok: false,
+        error: "module_dependency_unmet",
+        // What the cart has to tick, and the catalogue's sentence for WHY. One
+        // source for the screen and the refusal alike.
+        missing: [...new Set(unmet.map((i) => i.requiredId))],
+        issues: unmet.map((i) => ({ module: i.moduleId, requires: i.requiredId, why: i.why })),
+      }),
+      "application/json",
+    );
+    return;
+  }
   const billingPeriod = body.billing_period === "annual" ? "annual" : "monthly";
   // Domain choice (ADR-0020): default = platform subdomain; a custom domain
   // registered through us implies the minimum commitment.
