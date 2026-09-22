@@ -104,9 +104,27 @@ A puszta id-lista azért kevés, mert a leltár hármat követel: **feltétel** 
 
 `citoviso_dev`: **0 sértő tenant, 0 valódi sértő rendelés**. Mind az 5 tenant birtokolja a
 `rooms`-ot. ⭐ A „2+ egység" verdikt **robusztus a definícióra** (mindkét olvasat ugyanazt a két
-site-ot jelöli). ⛔ Az **ÉLES DB-t NEM mértem** — a megvalósítás előtt kell.
+site-ot jelöli).
 A kockázat nem a múltban van, hanem **három sodródásban**: megújítás-sweep · egység-törlés ·
 `module_sales_disabled` tranzitív hatása.
+
+**⭐ AZ ÉLES DB IS MEGMÉRVE** (még ugyanaznap, tulajdonosi kérésre — a session eredeti „nem
+mértem" kikötése ezzel ÉRVÉNYÉT VESZTETTE; csak `SELECT` + `SET TRANSACTION READ ONLY`, semmi
+írás). Éles: **2 tenant / 25 aktív jogosultság / 3 beküldött rendelés → 0 sértés** mindhárom
+szabályra. **A lánc élesen is visszafelé kompatibilis.**
+
+⛔⛔ **És amit nem kerestem: az ADR-0072 invariáns élesen SÉRÜL** (ADR-0192 ⑦b). A
+`paidModuleIds()` pontos lekérdezését replikálva (mindkét lábbal): Ferenc Ház **13 aktív /
+8 kifizetett** (`booking,email,hours,newsletter,poi` = 2 650 Ft/hó), Nyugalom **12 / 0**. A
+bizonyíték hajszálpontos: az egyetlen `paid` fizetés **75 300 Ft** = (3 900 + 3 630) × 10 hónap,
+épp a rendelés 8 moduljára.
+⚠️ **Mérséklő, hogy a lelet ne legyen nagyobb a valóságánál:** a fizetés `gateway='mock'` (nincs
+valódi vevő-pénz), az eltérés a **vevő javára** szól, a Nyugalomnak pedig nincs `subscription`
+sora (demó).
+**Járulékos:** Ferenc Háznak `booking` jogosultsága van **0 `site_unit` sorral** (a naptárnak
+nincs egysége), és az élő lapja **két** modul-felületet mutat tizenháromból — a horgonyok MELLETT
+a tartalmat is mérve (*Szobák/Árak/Felszereltség/Nyitvatartás/Környék*: 0 találat). ⛔ A
+mechanizmus **nem bizonyított**, csak a lelet.
 
 ## Módosított fájlok
 
