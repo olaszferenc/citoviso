@@ -87,6 +87,30 @@ jóváhagyás részeként próbavásárlást indíthatnak a webshopodban: **URL,
 jóváhagyás után tennénk ki. (A MotiBro — maga is zárt, bejelentkezéses rendszer — pontosan
 így csinálja: teszt-fiókot generál a bírálónak.)
 
+## 2b/2. FULL PIXEL — a 2026-09-18-i Starter-verdikt és a javítás (2026-09-22)
+
+**Mi történt:** a Barion az elfogadóhelyet *„egyelőre a Starter csomagban"* hagyta jóvá
+(-001-es észrevétel, 2026-09-18), mert *„a Full Barion Pixel első két kötelező eseménye
+(1.1 grantConsent, 1.2 setEncryptedEmail) még nincsen bekötve"*. **Igazuk volt** — és a
+`barion-pixel-check` őr közben ZÖLD volt, mert a SAJÁT eseménylistánkat mérte, nem a
+Barionét (a hiányzó állítás nem piros, hanem láthatatlan).
+
+**A hivatalos kötelező minimum** (docs.barion.com/Implementing_the_Full_Barion_Pixel,
+„Mandatory events", Wayback 2026-01-22): `grantConsent` · `setEncryptedEmail` ·
+`contentView` · `addToCart` · `initiateCheckout` · `initiatePurchase` VAGY `purchase`.
+
+**Javítás (2026-09-22, lokálban mérve, deploy vár):**
+- `grantConsent` — az „Elfogadom" után a kimenő sor ELEJÉN megy ki, `bp('consent', …)`
+  csatornán (`public/assets/runtime/cit-consent.js`, drain);
+- `setEncryptedEmail` — a checkout `buyer_email` mezőjéből, change-figyelő + Fizetek-gomb
+  ág, dedupe-pal, `bp('identity', …)` csatornán (`assets/runtime/cit-configurator.js`);
+- az őr (`scripts/barion-pixel-check.mts`) ZM-kapuja innentől a **Barion kötelező
+  listáját** járja végig tételesen, és az önteszt mindhárom szándékos törésre nevesített
+  pirosat követel.
+
+**A kör lezárása (sorrend kötött):** ① deploy élesre → ② a -001-es észrevétel ÚJRANYITÁSA
+a Barionnál („kérjük a felülvizsgálatot" — ők kérték így) → ③ Advanced díjcsomag (1,19%).
+
 ## 2c. ISMÉTLŐDŐ FIZETÉS — külön engedély, külön út (kutatás 2026-09-15)
 
 - **Alapértelmezés a „Nem", és nem önkiszolgáló.** docs.barion.com/Token_payment: *„Premium

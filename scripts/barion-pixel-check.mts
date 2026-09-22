@@ -20,7 +20,17 @@
  *  Z6  a `revenue` EGYEZIK a felületen mutatott fizetendő összeggel — a Pixel és a
  *      vevő nem mondhat két számot ugyanarról a vásárlásról;
  *  Z7  a szerver-oldali `purchase` (a fizetés-visszaigazoló lap sora) átmegy a
- *      validátoron.
+ *      validátoron;
+ *  Z8  grantConsent: az „Elfogadom" ténye kimegy a `consent` csatornán, és a sor
+ *      ELEJÉN — a Barion minden mást csak érvényes consent mellett dolgoz fel;
+ *  Z9  setEncryptedEmail: a beírt számlázási e-mail kimegy az `identity` csatornán;
+ *  ZM  ⛔ A BARION KÉRDÉSE A ZÁRÓ KAPU, nem a miénk. 2026-09-18-án az elfogadóhely
+ *      Starterre bukott, mert a Full Pixel két kötelező eseménye (grantConsent,
+ *      setEncryptedEmail) HIÁNYZOTT — és ez az őr akkor ZÖLD volt, mert a saját
+ *      eseménylistánkat mérte, nem a Barionét (a hiányzó állítás nem piros, hanem
+ *      láthatatlan). A ZM ezért a Barion hivatalos kötelező-minimumát tételesen
+ *      járja végig (forrás: docs.barion.com/Implementing_the_Full_Barion_Pixel,
+ *      „Mandatory events") — ha a lista bővül, ide kell felvenni, és addig piros.
  *
  * ⚠️ Amit NEM tud: hogy a Barion a beérkezett eseményt hogyan értékeli, és hogy az
  * elfogadóhely-adatlapon melyik díjcsomag áll. Az az ő oldaluk. Hálózat nélkül pedig
@@ -29,6 +39,7 @@
  * Futtatás: npx tsx scripts/barion-pixel-check.mts [--self-test]
  */
 import { chromium, type Page } from "playwright-core";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 
@@ -51,6 +62,10 @@ const BP_URL = "https://pixel.barion.com/bp.js";
 const PAGE_URL = "https://citoviso-fixture.test/p/teszt-token";
 
 let failed = 0;
+/** A bukott állítások címkéi — az önteszt ebből bizonyítja, hogy MINDHÁROM
+ *  szándékos törést észrevette (egy `failed > 0` összesítő mellett két halott
+ *  kontroll is elbújna a harmadik mögött). */
+const failedWhat: string[] = [];
 /** A szervernek ténylegesen beküldött ár — a Z6 ehhez méri a Pixel `revenue`-ját. */
 let submittedPrice: number | null = null;
 const say = (ok: boolean, what: string, detail = ""): void => {
@@ -59,6 +74,7 @@ const say = (ok: boolean, what: string, detail = ""): void => {
     return;
   }
   failed++;
+  failedWhat.push(what);
   console.error(`✗ BUKÁS  ${what}${detail ? `\n     ↳ ${detail}` : ""}`);
 };
 
@@ -127,6 +143,21 @@ async function buildPreview(broken: boolean): Promise<void> {
   );
   if (broken) {
     html = html.replace("unitPrice: p,", "unitPriceX: p,");
+    // 🔴 önteszt: a setEncryptedEmail MINDKÉT útja kiütve (change-figyelő + a
+    // Fizetek-gomb ága) — a Z9-nek és a ZM-nek ezt észre KELL vennie.
+    // ⛔ UTÓ-FELTÉTEL kötelező: egy nem-találó csere az öntesztet némán
+    // gyengítené — a „törött" fixture valójában ép lenne, és a piros kontroll
+    // a unitPrice-ra szűkülne (a szűk felismerő ugyanúgy hamis zöld).
+    for (const gone of [
+      'if (t && t.name === "buyer_email") pxEmail(t.value);',
+      'pxEmail(val("buyer_email"));',
+    ]) {
+      html = html.replace(gone, "");
+      if (html.includes(gone)) {
+        console.error(`⛔ ÖNTESZT-HIBA: a kiütendő minta nem tűnt el: ${gone}`);
+        process.exit(1);
+      }
+    }
   }
   // A szerver által tudott esemény — szó szerint ugyanaz a hívás, amit a
   // fizetés-visszaigazoló lap használ (nem egy másolat).
@@ -169,9 +200,21 @@ async function buildPreview(broken: boolean): Promise<void> {
       process.exit(1);
     }
   }
+  let consentJs = readFileSync("public/assets/runtime/cit-consent.js", "utf8");
+  if (broken) {
+    // 🔴 önteszt: a grantConsent kiütve a sor éléről — a Z8-nak és a ZM-nek
+    // ezt észre KELL vennie (2026-09-18: pont ez az esemény hiányzott élesben,
+    // és az akkori őr zölden hallgatott róla). Utó-feltétel itt is (lásd fent).
+    const gone = 'window.citPixel("grantConsent");';
+    consentJs = consentJs.replace(gone, "");
+    if (consentJs.includes(gone)) {
+      console.error(`⛔ ÖNTESZT-HIBA: a kiütendő minta nem tűnt el: ${gone}`);
+      process.exit(1);
+    }
+  }
   const inline =
     `<style>${readFileSync("public/assets/runtime/cit-consent.css", "utf8")}</style>` +
-    `<script data-pixel-id="${PIXEL_ID}">${readFileSync("public/assets/runtime/cit-consent.js", "utf8")}</script>`;
+    `<script data-pixel-id="${PIXEL_ID}">${consentJs}</script>`;
   html = html.replace("</body>", `${purchase}${inline}</body>`);
   await writeFile(PREVIEW, html, "utf8");
 }
@@ -264,6 +307,16 @@ const sentEvents = (page: Page): Promise<Sent[]> =>
 
 const namesOf = (rows: Sent[]): string[] =>
   rows.map((r) => String(r.event_name ?? "")).filter((n) => n && n !== "addBarionPixelId");
+
+/**
+ * Egy esemény ELSŐ előfordulása a kimenő üzenetek közt — nem csak `event_name`
+ * szerint: a consent/identity csatorna (grantConsent, setEncryptedEmail) üzenet-alakja
+ * eltérhet a track-ekétől, ezért a teljes üzenetben is keresünk. A találat így is a
+ * bp.js KIMENŐ üzenete (a megfigyelő-iframe-hez csak az jut el), nem a forrásunk
+ * visszhangja.
+ */
+const firstIndexOf = (rows: Sent[], name: string): number =>
+  rows.findIndex((r) => r.event_name === name || JSON.stringify(r).includes(`"${name}"`));
 
 /**
  * A kosár mozgatása VALÓDI kattintással — oda-vissza.
@@ -394,6 +447,21 @@ async function run(broken: boolean): Promise<void> {
     (await page.evaluate(() => (window as unknown as { barion_pixel_id?: string }).barion_pixel_id)) === PIXEL_ID,
     "Z3/a: a Pixel-azonosító ott van, ahol a bp.js KERESI (window.barion_pixel_id)",
   );
+  // ── Z8: grantConsent — az „Elfogadom" ténye ─────────────────────────────────
+  const gcIdx = firstIndexOf(after, "grantConsent");
+  say(
+    gcIdx >= 0,
+    "Z8: a hozzájárulás ténye kimegy (grantConsent — Full Pixel kötelező #1)",
+    `kiment: ${namesOf(after).join(", ") || "(semmi)"}`,
+  );
+  const cvIdx = firstIndexOf(after, "contentView");
+  if (gcIdx >= 0 && cvIdx >= 0) {
+    say(
+      gcIdx < cvIdx,
+      "Z8: a grantConsent MEGELŐZI a contentView-t (minden mást csak érvényes consent mellett dolgoznak fel)",
+      `grantConsent a #${gcIdx}. üzenet, contentView a #${cvIdx}.`,
+    );
+  }
   say(names.includes("contentView"), "Z3: lap-megtekintés kimegy (a Base hiányzó eleme)", names.join(", "));
   say(names.includes("purchase"), "Z3: a szerver által beadott purchase is kimegy", names.join(", "));
   say(
@@ -434,17 +502,65 @@ async function run(broken: boolean): Promise<void> {
   }
   say(jsErrors.length === 0, "Z7: nincs JS-hiba a lapon", jsErrors[0] ?? "");
 
+  // ── Z9: setEncryptedEmail — a beírt számlázási cím azonosítója ──────────────
+  const seIdx = firstIndexOf(all, "setEncryptedEmail");
+  say(
+    seIdx >= 0,
+    "Z9: a számlázási e-mail azonosító kimegy (setEncryptedEmail — Full Pixel kötelező #2)",
+    `kiment: ${namesOf(all).join(", ") || "(semmi)"}`,
+  );
+  if (seIdx >= 0) {
+    // A doksi szerint a bp.js SHA-1-gyel hashel; kisbetűs plaintextet is elfogad.
+    // Bármelyik alak bizonyítja, hogy a BEÍRT cím ment ki, nem egy üres string.
+    const msg = JSON.stringify(all[seIdx]);
+    const sha1 = createHash("sha1").update("teszt@pelda.hu").digest("hex");
+    say(
+      msg.includes(sha1) || msg.includes("teszt@pelda.hu"),
+      "Z9: az üzenet a BEÍRT címet viszi (SHA-1 hash vagy kisbetűs plaintext)",
+      msg.slice(0, 220),
+    );
+  }
+
+  // ── ZM: a Barion kötelező-minimuma, TÉTELESEN ───────────────────────────────
+  // ⛔ Ez a kapu a BARION kérdését teszi fel, nem a miénket. Forrás:
+  // docs.barion.com/Implementing_the_Full_Barion_Pixel „Mandatory events" —
+  // „the events that must be implemented in every webshop as a bare minimum".
+  // 2026-09-18: az elfogadóhely Starterre bukott, mert ebből kettő hiányzott,
+  // és az akkori őr zölden hallgatott — a hiányzó állítás nem piros, láthatatlan.
+  const MANDATORY: readonly (readonly string[])[] = [
+    ["grantConsent"],
+    ["setEncryptedEmail"],
+    ["contentView"],
+    ["addToCart"],
+    ["initiateCheckout"],
+    ["initiatePurchase", "purchase"],
+  ];
+  for (const alt of MANDATORY) {
+    say(
+      alt.some((n) => firstIndexOf(all, n) >= 0),
+      `ZM: Barion-kötelező esemény kimegy: ${alt.join(" VAGY ")}`,
+      `kiment: ${namesOf(all).join(", ") || "(semmi)"}`,
+    );
+  }
+
   await browser.close();
 }
 
 await run(SELF_TEST);
 
 if (SELF_TEST) {
+  // Törésenként EGY-EGY nevesített piros kell: a Z4 a unitPrice-é, a Z8 a
+  // grantConsent-é, a Z9 a setEncryptedEmailé. Az összesítő ehhez kevés.
+  const mustFail = ["Z4", "Z8", "Z9"];
+  const deadControls = mustFail.filter((z) => !failedWhat.some((w) => w.startsWith(z)));
   console.log(
-    `\n🔴 ÖNTESZT: a kosár-tétel kötelező \`unitPrice\` mezőjét elrontva ${failed} állítás bukott.\n` +
-      "   (Ha ez 0, az őr nem mér semmit — a Barion validátorának el KELL dobnia az eseményt.)",
+    `\n🔴 ÖNTESZT: három szándékos törés (unitPrice elgépelve · grantConsent kiütve ·\n` +
+      `   setEncryptedEmail mindkét útja kiütve) összesen ${failed} állítást buktatott.\n` +
+      (deadControls.length
+        ? `   ⛔ HALOTT KONTROLL: a(z) ${deadControls.join(", ")} törése NEM adott pirosat — az őr ott vak.`
+        : "   Mindhárom törés nevesítetten piros — az őr mindhármat méri."),
   );
-  process.exit(failed > 0 ? 0 : 1);
+  process.exit(deadControls.length === 0 ? 0 : 1);
 }
 
 if (failed) {

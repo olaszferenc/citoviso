@@ -806,6 +806,29 @@
     if (typeof window.citPixel === "function") window.citPixel(name, data);
   }
 
+  /**
+   * Barion Pixel (Full) kötelező #2: setEncryptedEmail — ott sül el, ahol e-mail-cím
+   * került beírásra (docs.barion.com/SetEncryptedEmail; ez volt az egyik ok, amiért a
+   * Barion 2026-09-18-án Starterre fokozta az elfogadóhelyet). Kisbetűsítve megy, a
+   * SHA-1 hash-t a bp.js számolja; érvénytelen alakot a bp hibával dobna, ezért ITT
+   * szűrünk. Ugyanaz a cím laponként egyszer megy ki — a blur/submit ismétlődik, az
+   * azonosító nem változik tőle.
+   */
+  var pxEmailSent = {};
+  function pxEmail(raw) {
+    var v = (raw || "").trim().toLowerCase();
+    if (!v || pxEmailSent[v]) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return;
+    pxEmailSent[v] = true;
+    px("setEncryptedEmail", v);
+  }
+  // Delegált figyelő: a számlázási lépés újra-renderelését is túléli (a mező
+  // DOM-csomópontja cserélődhet, a name attribútum a stabil horog).
+  document.addEventListener("change", function (ev) {
+    var t = ev.target;
+    if (t && t.name === "buyer_email") pxEmail(t.value);
+  });
+
   // See-the-change feedback: after ANY toggle-on (present OR sample) the page
   // scrolls to the affected section and flashes an accent outline on it — the
   // prospect must SEE what their choice did (the whole sell is the live preview).
@@ -2685,6 +2708,10 @@
       domain_type: domainType,
       buyer_type: buyerType,
     });
+    // Barion Pixel (Full): előbb az e-mail-azonosító — az ELŐTÖLTÖTT (sosem
+    // szerkesztett) cím esetét a change-figyelő nem látja, ez az ág igen; a
+    // pxEmail dedupe-ja miatt a kétszer-út nem küld kétszer.
+    pxEmail(val("buyer_email"));
     // Barion Pixel (Full): a pénztár INDULÁSA — az első lépés a sorban.
     px("initiateCheckout", pxCart(1));
     var url = CFG.requestUrl;

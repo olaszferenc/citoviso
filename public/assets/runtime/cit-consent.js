@@ -53,7 +53,15 @@
       return;
     }
     try {
-      window.bp("track", eventName, data || {});
+      // ⛔ NEM MINDEN ESEMÉNY „track" (Barion-elutasítás, 2026-09-18: a Full Pixel
+      // emiatt bukott Starterre — a két kötelező esemény MÁS bp-csatornán megy, és
+      // nálunk fel sem merült, mert az őrünk a SAJÁT listánkat mérte, nem a Barionét):
+      //   · grantConsent      → bp('consent', …) — paraméter nélkül;
+      //   · setEncryptedEmail → bp('identity', …, <email>) — kisbetűs plaintext,
+      //     a SHA-1 hash-t a bp.js maga számolja (docs.barion.com/SetEncryptedEmail).
+      if (eventName === "grantConsent") window.bp("consent", "grantConsent");
+      else if (eventName === "setEncryptedEmail") window.bp("identity", "setEncryptedEmail", data);
+      else window.bp("track", eventName, data || {});
     } catch (e) {
       /* a mérés soha nem törheti el a lapot */
     }
@@ -122,6 +130,12 @@
    * contentType, name), utána a sorban álló események, beérkezési sorrendben.
    */
   function drain() {
+    // ⭐ ELSŐKÉNT a hozzájárulás ténye (Full Pixel kötelező #1, docs.barion.com/GrantConsent):
+    // a Barion minden további eseményt CSAK érvényes grantConsent mellett dolgoz fel,
+    // ezért a sor élén megy — és minden lap-betöltésen újra (a CMP-k is így jelzik;
+    // a hozzájárulás visszavonásig vagy 2 évig érvényes). Ide CSAK „Elfogadom" után
+    // jut el a futás, tehát az esemény sosem hazudik hozzájárulást.
+    window.citPixel("grantConsent");
     window.citPixel("contentView", {
       contentType: "Page",
       id: location.pathname,
