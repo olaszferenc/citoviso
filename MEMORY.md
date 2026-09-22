@@ -13,6 +13,32 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22 este)
 
+**📅 AUTOMATA HETI PROGRAMAJÁNLÓ — a gyűjtés MÉRVE, az átnevezés KÉSZ, a kód még nincs.**
+Session-jegyzet: `_planning/memory/2026-09-22_programajanlo_modul.md`.
+
+- **FENT VAN:** a `poi` modul új neve **„Automata heti programajánló"** (publikus: „Heti
+  programajánló"), az `id` szándékosan marad `poi` (a jogosultság/ár/számla sorok arra
+  oldanak fel). Három rejtett fogyasztó javítva: a **konfigurátor** beégetve tartotta a
+  régi nevet (a vevő a VÁSÁRLÁSI felületen a régit látta volna) + fedezetlen ígéretet
+  hordozott; a **saját kommentem** fantom fordítási kulcsot gyártott; a **KB** idézte a
+  régi feliratot. + fordítás-kör 6 nyelvre + a §2b-ben jóváhagyott **B terv kontraktusként**
+  (`assets/design-refs/console/programajanlo/`).
+- **A GYŰJTÉS TERVE MÉRT SZÁMOKON:** Brave ($5/1000) → `politeness.ts` letöltés →
+  `jsonLdNodes()` → Haiku **kis kötegekben** → **kódszintű dátum-kapu** → dedup.
+  **43 Ft/régió/futás, 17 program, 2,55 Ft/program, 0 rossz dátum** — szemben a
+  web_search 33,92 Ft / 6 program / **33% rossz dátummal**.
+  ⛔ Három saját téves következtetés a szálban: a Sonnet+dinamikus szűrés NEM olcsóbb
+  (1,86× drágább); a bő futás egy hívásban ROSSZABB (a kötegméret a szűk keresztmetszet);
+  és „50 ingyen JSON-LD esemény" valójában **1** volt — darabszámot néztem tartalomnak.
+- **Lokalitás:** nem modell-címke, hanem ① településenkénti lekérdezés (≥1000 fő = 41
+  település egy valós tenant 120-ából, ~72 Ft) + a SAJÁT település mindig, ② **távolság-címke**
+  koordinátából („HELYBEN" / „7 km") — számítás, nem ítélet.
+- **NINCS KÉSZ:** a gyűjtés megépítése, a tenant heti értesítője (ma nincs ilyen levél és
+  nincs ütemező az appban). ⛔ A **vendég-értesítés KIESETT** (tulajdonosi döntés).
+- **AZ ÁR:** a tulaj állítja be az Árazás lapon — kódot nem igényel. Ma 490 Ft/hó.
+
+## Előző szál (2026-09-22)
+
 **💳 A FIZETÉSI LÁNC ÉLESÍTÉSE — BARION FULL PIXEL + ÉLES POS + ÉLES SZÁMLÁZÁS (ADR-0206).**
 Session-jegyzet: `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`.
 
