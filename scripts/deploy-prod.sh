@@ -11,7 +11,9 @@
 #   GATE 1  only a commit already ON origin/main may deploy (land first);
 #   GATE 2  diff-before-deploy: the exact prod-version → target diff is printed;
 #   GATE 3  pending migrations trigger a pg_dump before applying;
-#   GATE 4  a RUNNING scrape blocks the deploy — the restart would kill it (measured).
+#   GATE 4  a RUNNING scrape blocks the deploy — the restart would kill it (measured);
+#   GATE 5  a fordítás-frissesség az ÉLES DB-n (ADR-0207) — blokkoló és visszaellenőrzött,
+#           de CSAK ha a tartomány fordítás-releváns fájlt érint (különben hangosan kihagyva).
 # Rollback = the same script with the previously deployed SHA.
 #
 # Access model: the server never talks to GitHub. The dev machine pushes the named
@@ -272,6 +274,39 @@ $SSH "cd $APP && sudo -u citoviso npm install --no-audit --no-fund 2>&1 | tail -
 
 echo "── migrációk…"
 $SSH "cd $APP && sudo -u citoviso npm run db:migrate 2>&1 | tail -8" </dev/null || fail "migráció HIBA — a servicek NEM lettek újraindítva"
+
+# ── GATE 5 — fordítás-frissesség az ÉLES adatbázison (ADR-0207) ───────────────
+# A védelem eddig pre-commit kapu volt, ami a DEV adatbázist mérte — a kár viszont
+# ITT keletkezik: a `kbPacks.ts` kimondja, hogy „a stale translation still serves",
+# MAGYAR FALLBACK NINCS, tehát az érintett tulaj a régi (esetleg hibás) súgót olvassa.
+# Az egyetlen éles védelem eddig egy boot-idejű `void (async …)` önjavítás volt:
+# nem várta meg senki, a bukását nem ellenőrizte senki, és a forgalom megindulása
+# UTÁN futott. Itt viszont egy fa van, nincs versenytárs, és meg tudjuk várni.
+#
+# ⭐ TARTOMÁNY-SZŰKÍTETT: ha a deployolt tartomány egyetlen fordítás-releváns fájlt
+# sem érint, a kapu HANGOSAN kihagyja magát — egy kód-only deploy ne égessen
+# AI-költséget és ne várjon fordításra (ugyanaz az elv, mint a GATE 1c-nél).
+if [ -n "$PROD_SHA" ] && git diff --name-only "$PROD_SHA" "$SHA" 2>/dev/null \
+     | grep -qE '^kb/entries/|^src/i18n/catalog\.json$'; then
+  NEEDS_I18N=1
+elif [ -z "$PROD_SHA" ]; then
+  NEEDS_I18N=1   # első sync: nincs mihez diffelni, ezért frissítünk
+else
+  NEEDS_I18N=0
+fi
+
+if [ "$NEEDS_I18N" = "0" ]; then
+  echo "── GATE 5 — fordítás: nincs fordítás-releváns változás a tartományban ✓ (kihagyva)"
+else
+  echo "── GATE 5 — fordítás-frissítés az éles adatbázison (blokkoló)…"
+  $SSH "cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null \
+    || fail "a nyelvi csomagok frissítése HIBÁZOTT — a servicek NEM lettek újraindítva, az éles a régi fordítást szolgálná ki"
+  # ⛔ A frissítő SAJÁT szavát nem fogadjuk el: független méréssel igazoljuk. Egy
+  # „lefutottam" ág, ami nem bizonyít, pontosan az a hamis zöld, amitől ez a kapu véd.
+  echo "── GATE 5b — visszaellenőrzés (független mérés)…"
+  $SSH "cd $APP && sudo -u citoviso npx tsx scripts/kb-translation-coverage-check.mts 2>&1 | tail -12" </dev/null \
+    || fail "a frissítés után is maradt elavult fordítás — a servicek NEM lettek újraindítva"
+fi
 
 # A scrape a deploy ELEJE óta is elindulhatott — a kapu ott áll, ahol az ölés történik.
 scrape_gate "közvetlenül a restart előtt"

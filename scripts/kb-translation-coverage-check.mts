@@ -31,6 +31,16 @@ import { kbSourceHash } from "../src/i18n/kbPacks.js";
 import { loadKbEntries } from "../src/kb/kb.js";
 
 const selfTest = process.argv.includes("--self-test");
+/**
+ * ADR-0207: commit-időben a kapu CSAK az adott diff által érintett cikkeket kéri számon
+ * (`--only=id,id`). Teljes módban (kapcsoló nélkül) minden cikket — ezt használja a
+ * DEPLOY-kapu, ahol egy fa van és nincs versenytárs. A szűkítés nem gyengíti az
+ * ADR-0184 forgatókönyvét: az a SAJÁT szerkesztésről szól, tehát a saját diffben van.
+ */
+const onlyArg = process.argv.find((a) => a.startsWith("--only="));
+const onlyIds: ReadonlySet<string> | null = onlyArg
+  ? new Set(onlyArg.slice("--only=".length).split(",").map((x) => x.trim()).filter(Boolean))
+  : null;
 
 /** A kapu döntése — KÜLÖN függvény, hogy az önteszt meg tudja szólaltatni DB nélkül is. */
 export function coverageBlocking(
@@ -106,23 +116,33 @@ const rows: { lang: string; total: number; missing: number }[] = [];
 /** Melyik nyelven MELYIK cikk maradt le — a puszta darabszám nem mondja meg, mit kell tenni. */
 const stale = new Map<string, string[]>();
 
+/** A számonkért halmaz: teljes módban minden tenant-cikk, szűkítve csak a diffé. */
+const scoped = onlyIds ? entries.filter((e) => onlyIds.has(e.id)) : entries;
+
 for (const { lang } of langs) {
-  const c = await kbCoverage(lang);
-  rows.push({ lang, total: c.total, missing: c.missing });
-  if (c.missing > 0) {
-    const have = new Map(
-      (
-        await db
-          .selectFrom("kb_translation")
-          .select(["entry_id", "source_hash"])
-          .where("lang", "=", lang)
-          .execute()
-      ).map((r) => [r.entry_id, r.source_hash]),
-    );
-    stale.set(
-      lang,
-      entries.filter((e) => have.get(e.id) !== kbSourceHash(e)).map((e) => e.id),
-    );
+  const have = new Map(
+    (
+      await db
+        .selectFrom("kb_translation")
+        .select(["entry_id", "source_hash"])
+        .where("lang", "=", lang)
+        .execute()
+    ).map((r) => [r.entry_id, r.source_hash]),
+  );
+  const staleIds = scoped.filter((e) => have.get(e.id) !== kbSourceHash(e)).map((e) => e.id);
+  rows.push({ lang, total: scoped.length, missing: staleIds.length });
+  if (staleIds.length) stale.set(lang, staleIds);
+  // Sanity: teljes módban a saját számolásunknak egyeznie kell a kbCoverage()-ével.
+  // Ha elválnak, a mérés romlott el — azt nem nyeljük el.
+  if (!onlyIds) {
+    const c = await kbCoverage(lang);
+    if (c.total !== scoped.length) {
+      console.error(
+        `⛔ kb-translation-coverage: a MÉRÉS ellentmond magának (${lang}: kbCoverage ${c.total} cikk, ` +
+          `a sajat szamolas ${scoped.length}). Nulla bizalom egy oneterjedelmu merésnek.`,
+      );
+      process.exit(1);
+    }
   }
 }
 await db.destroy();
@@ -136,6 +156,15 @@ for (const r of rows) {
 
 // ⛔ UTÓ-FELTÉTEL: ha a nyelv-lekérdezés vagy a cikk-szűrés elromlana, a ciklus üresen
 // futna, és a kapu NÉMÁN zöldet adna (`feedback_narrow_recognizer_is_a_false_green`).
+// Szűkített módban az ÜRES halmaz legitim (a commit nem nyúlt súgóhoz) — de akkor a
+// hívónak meg sem kellett volna szólítania minket. Mondjuk ki, ne tegyünk úgy, mintha mértünk volna.
+if (onlyIds && !scoped.length) {
+  console.log(
+    `✅ kb-translation-coverage: a megadott ${onlyIds.size} azonosító egyike sem fordítható ` +
+      `tenant-cikk — nincs mit számonkérni.`,
+  );
+  process.exit(0);
+}
 if (!rows.length || !entries.length) {
   console.error(
     `⛔ kb-translation-coverage: a MÉRÉS romlott el — ${rows.length} nyelv, ${entries.length} fordítható cikk. ` +
@@ -155,5 +184,8 @@ if (coverageBlocking(rows)) {
   process.exit(1);
 }
 console.log(
-  `✅ kb-translation-coverage: ${entries.length} tenant-cikk mind a(z) ${rows.length} élő nyelven friss.`,
+  onlyIds
+    ? `✅ kb-translation-coverage (diff-szűkített, ADR-0207): ${scoped.length} érintett cikk ` +
+        `mind a(z) ${rows.length} élő nyelven friss.`
+    : `✅ kb-translation-coverage: ${entries.length} tenant-cikk mind a(z) ${rows.length} élő nyelven friss.`,
 );

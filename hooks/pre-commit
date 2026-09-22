@@ -181,10 +181,24 @@ fi
 # szerint a frissen javított hibákat olvasta tovább. A rés SZERKEZETI volt: a `kbCoverage()`
 # létezett és pontosan ezt mérte, de SEHOL nem volt bekötve. ⚠️ DB-t igényel; elérhetetlen
 # adatbázisnál HANGOSAN bukik, nem enged át némán.
+# ADR-0207: commit-időben a kapu CSAK az ebben a diffben érintett cikkeket kéri számon.
+# A `language_pack` tábla KÖZÖS a worktree-k között, a KB magyar forrásai viszont fánként
+# külön élnek — repó-széles számonkéréssel két párhuzamos szál kölcsönösen blokkolja
+# egymást (mérve 2026-09-22, ~2,4 USD ismételt fordítás-körbe került). Az ADR-0184
+# forgatókönyve ettől NEM sérül: az a SAJÁT szerkesztésről szól, tehát a saját diffben van.
+# ⚠️ Ha maga az őr változik, TELJES módban fut — egy őr módosítása teljes igazolást kér.
 if [ -f scripts/kb-translation-coverage-check.mts ] && \
    changed_files | grep -qE '^kb/entries/.*/entry\..*\.md|^scripts/kb-translation-coverage-check'; then
-  echo "[pre-commit] kb-translation-coverage (§J.25: a súgó minden élő nyelvre eljutott-e)…"
-  npx tsx scripts/kb-translation-coverage-check.mts >"$GATE_LOG" || gate_failed
+  if changed_files | grep -qE '^scripts/kb-translation-coverage-check'; then
+    echo "[pre-commit] kb-translation-coverage (TELJES — maga az őr változott)…"
+    npx tsx scripts/kb-translation-coverage-check.mts >"$GATE_LOG" || gate_failed
+  else
+    KB_IDS="$(changed_files | sed -n 's#^kb/entries/\([^/]*\)/entry\..*\.md$#\1#p' | sort -u | paste -sd, -)"
+    if [ -n "$KB_IDS" ]; then
+      echo "[pre-commit] kb-translation-coverage (diff-szűkített: $KB_IDS)…"
+      npx tsx scripts/kb-translation-coverage-check.mts "--only=$KB_IDS" >"$GATE_LOG" || gate_failed
+    fi
+  fi
 fi
 # ⛔ A kb-shot NÉMÁN ki tudta üríteni egy súgó-kép tartalmát (legend.png: 640×2020 → 640×126,
 # a teljes oszlop-magyarázat kiesett, miközben a képaláírás „kinyitva"-t ígért). Sem a kb-check,
