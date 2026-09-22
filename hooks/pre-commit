@@ -41,6 +41,20 @@ gate_failed() {
   echo "──────────────────────────────────────────────────────────────────────" >&2
   cat "$GATE_LOG" >&2
   echo "──────────────────────────────────────────────────────────────────────" >&2
+  # ⚠️ PARK-GYANÚ. A hook 166 kaput hív, és ezek közül 55 a KÖZÖS dev-DB-t olvassa,
+  # amin ~10 worktree osztozik — egy idegen session teszt-maradéka tehát eltörheti
+  # egy kapu ELŐFELTÉTELÉT, és a piros ilyenkor NEM a commitolni készült diffről szól.
+  # Mérve 2026-09-22: egy árva `_amdedup_…` lead HAT land-kísérletet blokkolt,
+  # miközben a kód hibátlan volt — és semmi nem súgta meg, hol keresse az ember.
+  #   ⛔ Csak akkor szólal meg, ha a kapu kimenete ELŐFELTÉTEL-hiányra utal: egy
+  # minden bukáshoz odabiggyesztett tanács zajjá válna, és a VALÓDI leleteket is
+  # „á, biztos megint a park" reflexbe fullasztaná.
+  if grep -qE "ELŐFELTÉTEL|nincs egyetlen|nincs vásárolt|nincs tenant" "$GATE_LOG" 2>/dev/null; then
+    echo >&2
+    echo "ℹ️  PARK-GYANÚ: ez a kapu ELŐFELTÉTEL-hiányra panaszkodik, nem szabálysértésre." >&2
+    echo "   A közös dev-parkot más session is írja. Mielőtt a saját kódodat kezdenéd" >&2
+    echo "   keresni, kérdezd meg a parkot:  npx tsx scripts/park-doctor.mts" >&2
+  fi
   exit "$rc"
 }
 # ⛔ SYMLINK-TILALOM (2026-08-24, valós kár): a per-worktree `assets/Temp` symlink
