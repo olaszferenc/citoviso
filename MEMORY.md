@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés, `e338d79` ADR-0192 + ontológia — **mindkettő csak dokumentum**)
+Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés, `e338d79` ADR-0192 + ontológia — **mindkettő csak dokumentum**)
 
 > 🔴 **ÉLES KOCKÁZAT (2026-09-21):** az éles `.env`-ben még a **RÉGI, megszűnt adószámú** Számlázz.hu
 > fiók Agent kulcsa fut — egy éles fizetés ma a megszűnt vállalkozás nevére állítana ki számlát.
@@ -7,6 +7,38 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 > `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`.
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
+
+**🔍 „MEGVETTE, DE ÜRES" — a duplikátum, a RÉSZLEGES eset, és három hazudó mérés (ADR-0197).**
+Tulajdonosi mandátum: `~/rc-briefs/bought-but-empty-brief.md` (az ADR-0192 ⑨ nyitott kérdése).
+Session-jegyzet: `_planning/memory/2026-09-22_paid_but_partially_empty.md`.
+**Felderítés — termék-kód NEM változott.** Élesítés nem volt feladat.
+
+- ⛔⛔ **A mandátum érdemi részét egy PÁRHUZAMOS SZÁL elvitte, miközben mértem:** induláskor
+  `ef5b081` volt a fej, 21:22-kor landolt a `4eed722` + **ADR-0194** (a brief ① felderítése,
+  ② döntése ÉS ④ őre is). Rebase után lefuttatva: **🟢 minden állítás áll.** A duplikátumot
+  eldobtam. ⭐ A session-eleji `git fetch` NEM elég — a `main` kétszer mozdult a szomszéd
+  területen; a felderítés FELÉNÉL is fetchelni kell.
+- **① A valódi lelet — a RÉSZLEGESEN árazott szállás.** Két kapunk **két különböző kérdést**
+  tesz fel (ADR-0193: „be van-e kapcsolva" · ADR-0194: „van-e BÁRMI tartalom"); a harmadikat —
+  **„minden egységre van-e ár?"** — egyik sem. Eldobható fixtúrán mérve: az árazott egységre a
+  végpont **árat ad**, az árazatlanra **`pricing: null`**, és **mindkét őr ZÖLD**. A vendég
+  ugyanazon a naptáron az egyik fülön **28 000 Ft**-ot lát, a szomszédoson semmit. ⚠️ Ma nem
+  áll fenn (0/4 és 3/3) → **jövőbeli sodródás**, elég egy új egységet felvenni.
+- **② A polcról levett modult tovább számlázzuk.** `isBilledModule()` nem nézi a `retired`-et:
+  `newsletter` **490 Ft/hó** (a blokkja bizonyítottan mindig `""`), `email` **390 Ft/hó** (nem
+  is eladható). ⭐ Az ADR-0196 óta a megújítás is erre delegál → **egy záradék** javítaná.
+- **③ Az ADR-0194 nyitott kérdése cáfolva:** nem hamis szám megy ki, hanem **semmilyen**
+  (`pricing: priceRows.length ? {…} : null`). A kár más alakú: a naptár **teljesen**
+  kirenderelődik (**942 / 1096 px**) — összeg nélkül.
+- ⛔⛔ **Három mérésből kettő meggyőzően hazudott:** a horgony-számolás **hamis pozitív** (a
+  tartalom a sablon SAJÁT szekciójába megy), a `moduleContentFor()` **hamis negatív kétszer**
+  (a tartalom a `.data` alatt ül; és a generált `highlights` alapot nem látja). A helyes forrás
+  az **`assembleEffective()`**. ⭐ A **POZITÍV KONTROLL** fogta meg — nélküle „minden üres"-t
+  adtam volna tovább leletként.
+- 🔴 **NYITOTT:** ① javítása (§2b tervkör, vendég-lap) · ② javítása (külön mandátum) · a tulaj
+  „**mindhárom felületen szóljon**" kérése a `wt/modulreq` lezárása után, §2b tervkörrel.
+
+## Előző szál (2026-09-22)
 
 **💸 A KIFIZETETT BŐVÍTÉS MIND VAGY SEMMI — és „a pénz megjött" ≠ „kézbesítve" (ADR-0196).**
 Tulajdonosi utasítás: *„vidd a maradék hat hibát is, kezdd a nem-atomi activateUpsell-lel."*
