@@ -191,7 +191,23 @@ async function measure(
   const noJsVisible = await p2.locator(`${sel.link}:visible`).count();
   ok(`JS NÉLKÜL is LÁTSZIK legalább ${MIN_VISIBLE} cikkcím érkezéskor`, noJsVisible >= MIN_VISIBLE,
      `${noJsVisible}`);
-  await p2.locator(sel.head).nth(1).click();
+  // ⛔⛔ A KATTINTÁS ELŐTT EL KELL GÖRGETNI A FIX ALSÓ SÁV ALÓL. A Playwright
+  // auto-görgetése a LEGKISEBB mozdulatot teszi: az elemet a képernyő ALJÁRA hozza —
+  // ott viszont a mobil admin `position:fixed` fül-sávja ül (mérve 390 px-en: 186 px
+  // magas, z-index 50), és elfogja a kattintást („…adm-nav… intercepts pointer events").
+  // Ettől a kapu TERHELÉS ALATT elhasalt (2026-09-22: a land és egy commit is megállt
+  // rajta, miközben magában kétszer zöld volt) — időzítési szerencsén múlt.
+  // ⚠️ Ez NEM az állítás gyengítése: a kattintás VALÓDI kattintás marad, és továbbra is
+  // a natív <details> nyílását méri. Csak azt tesszük meg, amit egy valódi felhasználó:
+  // tovább görgetünk, hogy a fejléc ne a takart sávban legyen. A `wheel` azért jó, mert
+  // JS NÉLKÜL is működik (a böngésző natív görgetése) — itt a JS kikapcsolva fut.
+  // ⛔ NEM `click({force:true})`: az átlépne egy VALÓDI takaráson is, és pont azt a
+  // hibaosztályt rejtené el, amit ez a fájl máshol mér.
+  const head2 = p2.locator(sel.head).nth(1);
+  await head2.scrollIntoViewIfNeeded();
+  await p2.mouse.wheel(0, 260);
+  await p2.waitForTimeout(120);
+  await head2.click();
   await p2.waitForTimeout(120);
   ok("JS NÉLKÜL is nyílik a csoport (natív <details>)",
      (await p2.locator(`${sel.group}[open]`).count()) === 2);
