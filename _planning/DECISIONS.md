@@ -11914,10 +11914,9 @@ A session indulásakor a `main` feje `ef5b081` volt. **21:22-kor** landolt a `4e
 
 **A duplikátumot eldobtam** (`feedback_two_threads_did_the_same_work`), és a szál hatóköre a
 tulajdonosi döntés nyomán arra szűkült, amit az ADR-0194 **kifejezetten nyitva hagyott**, és
-amit senki nem mért meg. A „mindhárom felületen szóljon" tulajdonosi kérés **elhalasztva**:
-akkor kerül sorra, ha a `wt/modulreq` szál lezárta a Modulok fül sorát (ma az már visel
-modulnevet, függőség-címkét, ár-chipet és három gombot; az ADR-0194 mondata oda változatlanul
-nem fér el, tehát önálló §2b tervkört kér).
+amit senki nem mért meg. A „mindhárom felületen szóljon" tulajdonosi kérés utóbb **ELVETVE**
+(2026-09-22, lásd ⑤.3): az Áttekintés teendő-sora elég, a Modulok fül sora és a modul
+szerkesztője nem kap külön jelzést.
 
 ---
 
@@ -12040,8 +12039,20 @@ renderelő saját bemenetét olvassa, és **megtagadja az ítéletet**, ha nincs
    naptár/az ártáblázat a hiányzó egységnél. ⚠️ A vendég-lap megváltoztatása kinézeti döntés →
    **§2b tervkör**, nem mehet közvetlenül kódba.
 2. **② javítása** — egy záradék az `isBilledModule()`-ban, külön mandátummal.
-3. **A „mindhárom felületen szóljon"** (tulajdonosi kérés, 2026-09-22) — a `wt/modulreq` szál
-   lezárása után, §2b tervkörrel.
+3. ~~**A „mindhárom felületen szóljon"**~~ → ⛔ **ELVETVE, tulajdonosi döntés 2026-09-22.**
+   Az **Áttekintés teendő-sora elég**; a Modulok fül sora és a modul szerkesztője NEM kap
+   külön jelzést. Indok: az Áttekintés az ELSŐ képernyő, a szerkesztőben pedig már ma is van
+   üres-mező jelzés (`.mcfg-empty`) — a rés kicsi, az ára egy teljes §2b kör és **három
+   példány ugyanabból a mondatból** (`feedback_one_rule_two_copies`).
+   ⚠️ **A döntés-előzmény szándékosan marad itt áthúzva**, mert enélkül a következő szál
+   ugyanezt fogja újraépíteni: az eredeti „mindhárom helyen" kérés úgy született, hogy a tulaj
+   **még nem tudta**, hogy az ADR-0194 egy változata már landolt — és amint megtudta, előbb
+   későbbre tette, majd elvetette. A §2b vázlat (3 működő változat, mért sor-magasságokkal:
+   mobilon 127/169/188 px a mai 113-hoz képest) **eldobva**, kód nem született belőle.
+   ⛔ **Saját hiba, amiért ez egyáltalán legyártódott:** egy kétértelmű „ok folytassuk"-ból
+   **én választottam témát**, méghozzá azt, amit a tulaj az előző körben kifejezetten
+   *későbbre* tett. Kétértelmű folytatás-kérésnél a hatókört vissza kell kérdezni, nem
+   levezetni.
 4. **A `rooms` „tartalom nélküli tartalom" esete** — mérve: az `aranykagylo-36` szobakártyája
    **26 látható karakter 388 px-en** (*„A szállás / A szállás egésze"*), az `agrosz` ugyanez
    247 px-en. Az ADR-0194 teendő-sora ezt **elkapja** (a `rooms` a listáján van), tehát

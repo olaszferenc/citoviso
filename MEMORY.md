@@ -64,8 +64,10 @@ Session-jegyzet: `_planning/memory/2026-09-22_paid_but_partially_empty.md`.
   (a tartalom a `.data` alatt ül; és a generált `highlights` alapot nem látja). A helyes forrás
   az **`assembleEffective()`**. ⭐ A **POZITÍV KONTROLL** fogta meg — nélküle „minden üres"-t
   adtam volna tovább leletként.
-- 🔴 **NYITOTT:** ① javítása (§2b tervkör, vendég-lap) · ② javítása (külön mandátum) · a tulaj
-  „**mindhárom felületen szóljon**" kérése a `wt/modulreq` lezárása után, §2b tervkörrel.
+- 🔴 **NYITOTT:** ① javítása (§2b tervkör, vendég-lap) · ② javítása (külön mandátum).
+- ⛔ **ELVETVE (2026-09-22):** a „mindhárom felületen szóljon" — az Áttekintés teendő-sora elég.
+  A §2b vázlat eldobva, kód nem lett. **Saját hiba:** a tulaj ezt későbbre tette, én egy
+  kétértelmű „ok folytassuk"-ból levezettem a hatókört — vissza kellett volna kérdezni.
 
 ## Előző szál (2026-09-22)
 

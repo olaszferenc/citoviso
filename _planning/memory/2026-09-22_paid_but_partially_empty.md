@@ -22,7 +22,7 @@ mozdult (ADR-0194, majd ADR-0196), és mindkétszer pont a szomszéd területen.
 
 | Kérdés | Döntés |
 |---|---|
-| Hol szóljon a figyelmeztetés | **Mindhárom helyen** — de a landolt csak az Áttekintésen szól → **elhalasztva** a `modulreq` lezárásáig |
+| Hol szóljon a figyelmeztetés | **Mindhárom helyen** → utóbb ⛔ **ELVETVE** (2026-09-22): az Áttekintés teendő-sora elég |
 | Melyik modulra NE szóljon | `reviews` · `usp`/`amenities`-ha-highlights · `gallery` — **az ADR-0194 már pont így csinálja** |
 | A polcról levett modul számlázása | **Külön szálba** — itt csak ADR-ként rögzítve |
 | Az ár nélküli naptár | Ne nyúljunk a vendég-laphoz most |
@@ -111,4 +111,16 @@ azon az állításon, amiért íródott.** Most megtagadja az ítéletet, ha nin
 1. **① javítása** — hol kérdezzük meg, hogy MINDEN egységre van-e ár, és mit mondjon a naptár a
    hiányzó egységnél. ⚠️ Vendég-lap = kinézeti döntés → **§2b tervkör**.
 2. **② javítása** — egy záradék az `isBilledModule()`-ban, külön mandátummal.
-3. **A „mindhárom felületen szóljon"** — a `wt/modulreq` lezárása után, §2b tervkörrel.
+3. ~~A „mindhárom felületen szóljon"~~ → ⛔ **ELVETVE (tulajdonosi döntés, 2026-09-22).**
+   Az Áttekintés teendő-sora elég; a Modulok fül sora és a modul szerkesztője nem kap külön
+   jelzést. A §2b vázlat (3 működő változat, mért sor-magasságokkal) **eldobva**, kód nem lett.
+
+## ⛔ Utólagos saját hiba: kétértelmű folytatásból ÉN választottam témát
+
+A tulaj az előző körben a „mindhárom hely"-et kifejezetten **későbbre** tette. Amikor annyit
+írt, hogy *„ok folytassuk"*, én ezt a **③-ra** értettem — mert láttam, hogy a blokkoló
+(`wt/modulreq`) feloldódott —, és legyártottam egy teljes §2b kört. A tulaj reakciója:
+*kavarodás van, szerintem már volt design döntés*. **Igaza volt** abban, hogy volt döntés
+(ADR-0194, A változat) — csak az egy MÁSIK kérdésre válaszolt (hogyan nézzen ki, nem hogy hány
+helyen legyen). A felesleges kört viszont nem a duplikátum okozta, hanem az, hogy egy
+kétértelmű folytatás-kérésből **levezettem** a hatókört, ahelyett hogy visszakérdeztem volna.
