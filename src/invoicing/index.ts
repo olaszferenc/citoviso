@@ -18,6 +18,7 @@ export function getInvoiceProvider(): InvoiceProvider {
     assertInvoiceKeyAllowed({
       agentKey: process.env.SZAMLAZZ_AGENT_KEY ?? "",
       publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "",
+      demo: process.env.SZAMLAZZ_DEMO === "1",
     });
   }
   cached = which === "szamlazz" ? new SzamlazzAgent() : new MockInvoiceProvider();

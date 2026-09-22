@@ -31,6 +31,24 @@ export const DENYLISTED_KEY_SHA256: readonly string[] = [
   "80c8ef5590a1bc5ad506a2b623a6ebe106983d0a620ce0e14cd99c969e7b0807",
 ];
 
+/**
+ * Fingerprints of keys belonging to a TEST-MODE Számlázz.hu account — the only
+ * Agent keys dev may use. Számlázz.hu binds an account to the TAX NUMBER, so the
+ * second (test) account cannot be created from the public registration form; it
+ * is opened from inside the live account ("Új számlázó fiókot hozok létre") and
+ * switched to test mode while still empty. Its key is allowlisted here.
+ *
+ * ⛔ An allowlist, not a denylist, on purpose: an unknown key in dev is refused,
+ * so a pasted live key cannot quietly start issuing real, NAV-reported invoices.
+ */
+export const TEST_ACCOUNT_KEY_SHA256: readonly string[] = [
+  // "TESZT OLASZ Ferenc (OV)" — our own permanently test-mode account (the
+  // dashboard shows the TESZTÜZEM badge). Its invoices carry the TST- prefix and
+  // a "minta" watermark, never reach NAV, and unlike the public demo account
+  // they show OUR OWN seller data — so dev sees exactly what a buyer would get.
+  "38a29c639cc212d5803e6bbce7abeddb1fe07a6fb92dae27a2a059121a09bace",
+];
+
 export const keyFingerprint = (key: string): string =>
   createHash("sha256").update(key).digest("hex");
 
@@ -47,9 +65,17 @@ export function assertInvoiceKeyAllowed(opts: {
   agentKey: string;
   publicBaseUrl: string;
   denylist?: readonly string[];
+  /** SZAMLAZZ_DEMO=1 — the public demo account, which cannot issue a legal invoice. */
+  demo?: boolean;
+  allowlist?: readonly string[];
 }): void {
   const list = opts.denylist ?? DENYLISTED_KEY_SHA256;
+  const allow = opts.allowlist ?? TEST_ACCOUNT_KEY_SHA256;
   if (!isLiveHost(opts.publicBaseUrl)) {
+    // Dev may reach the real endpoint on exactly two proven-harmless routes:
+    // the public demo account, or a key belonging to OUR test-mode account.
+    if (opts.demo) return;
+    if (opts.agentKey && allow.includes(keyFingerprint(opts.agentKey))) return;
     // ⛔⛔ THE OTHER DIRECTION, AND TODAY THE SHARPER ONE (2026-09-22, evening).
     // We no longer have ANY test-mode Számlázz.hu account: the live account left
     // test mode so production can issue real invoices, and a second test account
@@ -63,13 +89,15 @@ export function assertInvoiceKeyAllowed(opts: {
     // anymore, so the answer is structural, not disciplinary: off the live host,
     // the szamlazz provider simply cannot be constructed.
     throw new Error(
-      "⛔ SZÁMLÁZÁS LETILTVA DEV KÖRNYEZETBEN: az INVOICE_PROVIDER=szamlazz csak az " +
-        "ÉLES hoston engedett. Teszt-módú Számlázz.hu-fiókunk NINCS (az élesről a " +
-        "tesztüzem lekerült, másodikat a Számlázz.hu az adószám miatt nem enged), " +
-        "ezért dev-ből minden Számla Agent hívás VALÓDI, NAV-hoz beküldött számlát " +
-        "állítana ki. Dev-ben használd a mock szolgáltatót (INVOICE_PROVIDER=mock); " +
-        "a számla ADATAIT a mock kimenete és a számla-őrök ellenőrzik, valódi " +
-        "kiállítás nélkül. (src/invoicing/keyGuard.ts — 2026-09-22)",
+      "⛔ SZÁMLÁZÁS LETILTVA DEV KÖRNYEZETBEN: ismeretlen Számla Agent kulccsal a " +
+        "dev VALÓDI, NAV-hoz beküldött számlát állítana ki. Dev-ben három út van:\n" +
+        "  · INVOICE_PROVIDER=mock — a napi fejlesztéshez (nincs hálózati hívás);\n" +
+        "  · SZAMLAZZ_DEMO=1 — a nyilvános demo fiók: VALÓDI teszt-PDF, TST- " +
+        "sorszámmal, NAV nélkül (⛔ csak szintetikus adattal, a fiók nyilvános!);\n" +
+        "  · a SAJÁT teszt-módú fiókunk kulcsa — az ujjlenyomatát fel kell venni a " +
+        "TEST_ACCOUNT_KEY_SHA256 listára (a fiókot az ÉLES fiókba belépve kell " +
+        "létrehozni: Új számlázó fiókot hozok létre, majd Tesztüzem bekapcsolása).\n" +
+        "(src/invoicing/keyGuard.ts — 2026-09-22)",
     );
   }
   if (!opts.agentKey) return; // a missing key fails later, loudly, on its own

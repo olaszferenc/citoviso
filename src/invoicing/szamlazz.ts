@@ -55,15 +55,36 @@ function pick(m: RegExpExecArray | null): string | null {
 export class SzamlazzAgent implements InvoiceProvider {
   readonly name = "szamlazz";
   private readonly key: string;
+  /**
+   * Public DEMO credentials instead of an Agent key (dev only, see keyGuard).
+   *
+   * Számlázz.hu's `<beallitasok>` still accepts the legacy `felhasznalo`/`jelszo`
+   * pair, and the public `demo`/`demo` account answers on the SAME endpoint —
+   * measured 2026-09-22: `<sikeres>true`, invoice `TST-2026-92`, a real 19.5 kB
+   * PDF watermarked "minta", fictional seller (TESZT - Teszt Kft.), nothing sent
+   * to NAV. That makes the full transport path (multipart, XML, PDF parsing)
+   * provable in dev without a legal invoice ever being born.
+   *
+   * ⛔ Shared, public playground: other developers see those documents and they
+   * are wiped nightly, so ONLY synthetic fixtures may travel this way — never a
+   * real lead or buyer (§B/§C provenance).
+   */
+  private readonly demo: boolean;
 
   constructor(key = process.env.SZAMLAZZ_AGENT_KEY ?? "") {
-    if (!key) {
+    this.demo = process.env.SZAMLAZZ_DEMO === "1";
+    if (!key && !this.demo) {
       throw new Error(
         "SZAMLAZZ_AGENT_KEY missing — set INVOICE_PROVIDER=mock for the pilot, " +
           "or provide the Számla Agent key to enable real invoicing.",
       );
     }
     this.key = key;
+  }
+
+  /** The credential block — demo pair or Agent key; never both. */
+  private authXml(): string {
+    return this.demo ? t("felhasznalo", "demo") + t("jelszo", "demo") : t("szamlaagentkulcs", this.key);
   }
 
   private buildXml(input: InvoiceInput): string {
@@ -90,7 +111,7 @@ export class SzamlazzAgent implements InvoiceProvider {
       'xsi:schemaLocation="http://www.szamlazz.hu/xmlszamla ' +
       'https://www.szamlazz.hu/szamla/docs/xsds/agent/xmlszamla.xsd">' +
       "<beallitasok>" +
-      t("szamlaagentkulcs", this.key) +
+      this.authXml() +
       t("eszamla", "false") +
       // ASK FOR THE PDF (0029). This was hardcoded 'false', so we never received
       // the document at all — no invoice could be stored, shown to the buyer or
