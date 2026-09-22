@@ -475,6 +475,13 @@ export async function moduleContentFor(
         id: u.id,
         name: u.name,
         ...(u.capacity ? { capacity: u.capacity } : {}),
+        // KONTRAKTUS ⑤ (design-refs/tenant-site/quote-request): az egység-választó MÁR A
+        // VÁLASZTÁS PILLANATÁBAN jelzi, ha arra az egységre egyedi ár jár — nem utólag,
+        // az eltűnő ár-dobozból derül ki. ⛔ A kliens ezt nem tudja kiszámolni: az
+        // `/api/foglaltsag/<unitId>` EGYETLEN egységre ad árat (ADR-0199), tehát a
+        // választó felépítésekor a többi egységről semmit nem tudna. A szerver viszont
+        // render-időben már kezében tartja a teljes `priceMap`-et.
+        ...((priceMap.get(u.id) ?? []).length ? {} : { unpriced: true }),
       })),
       minNights: Number(b.minNights ?? 1),
       maxNights: Number(b.maxNights ?? 30),

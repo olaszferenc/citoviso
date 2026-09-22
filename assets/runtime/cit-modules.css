@@ -668,6 +668,24 @@ a.cit-grat:hover {
   line-height:1.5;color:var(--cit-ink,#10243a);
   background:color-mix(in srgb,var(--cit-accent) 8%, var(--cit-bg));
   border:1px solid color-mix(in srgb,var(--cit-accent) 30%, transparent)}
+/* ÁRAJÁNLAT-MÓD (kontraktus: design-refs/tenant-site/quote-request, tulaj 2026-09-22).
+   Ez a doboz ÁLL OTT, ahol eddig néma üresség volt: ha a tartózkodásra nem áll össze ár,
+   a vendég megtudja, MIÉRT nincs szám. A skin akcentszínéből derivál (nincs nyers hex),
+   de a sima ár-doboznál hangsúlyosabb kerettel — más állapot, más súly. */
+/* ⛔ A doboznak NINCS saját kerete: a `.cit-book__quote` konténer MÁR visel egy
+   1,5 px-es akcent-keretet + hátteret, és az első változatom egy másodikat tett bele —
+   kettős keret, a KÉPEN látszott, a gépi állításaim mind zölden álltak. Az ÁLLAPOTOT
+   ezért a konténer viseli (`--ask`), a tartalom csak tartalom. */
+.cit-book__ask{font-size:.86rem;line-height:1.5;color:var(--cit-ink,#10243a)}
+.cit-book__ask b{display:block;margin-bottom:3px}
+.cit-book__ask span{display:block}
+.cit-book__ask-sub{margin-top:5px;font-size:.8rem;color:var(--cit-muted)}
+/* Az árajánlat-állapot a KONTÉNEREN jelenik meg — egy keret, erősebb hangsúllyal. */
+.cit-book__quote--ask{background:color-mix(in srgb,var(--cit-accent) 10%, var(--cit-bg))}
+/* A gomb is más állapotot visel — de a felirat kontrasztja marad a mérce. */
+.cit-book__submit[data-cit-mode="ask"]{
+  background:color-mix(in srgb,var(--cit-accent) 82%, var(--cit-ink))}
+
 /* ⑤ a nyugta LÉPÉSEI — teendő, nem csak kód */
 .cit-book__steph{margin:12px 0 7px;font-size:.73rem;font-weight:800;letter-spacing:.05em;
   text-transform:uppercase;color:var(--cit-accent)}

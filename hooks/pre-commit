@@ -1548,6 +1548,14 @@ if [ -f scripts/coupon-rounding-check.mts ] && \
   echo "[pre-commit] coupon-rounding (a képernyő és a terhelés egy szám)…"
   npx tsx scripts/coupon-rounding-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ÁRAJÁNLAT-MÓD (kontraktus: design-refs/tenant-site/quote-request, tulaj 2026-09-22):
+# ha a tartózkodásra nem áll össze ár, a lap NEM foglalást ígér. A `renderQuote` eddig
+# némán kiürítette a dobozt, és a vendég ár nélkül nyomta meg a foglalás-gombot.
+if [ -f scripts/quote-request-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-(runtime\.js|modules\.css)$|^src/tenant/editor\.ts$|^src/engine/recipe\.ts$|^assets/design-refs/tenant-site/quote-request/|^scripts/quote-request-check'; then
+  echo "[pre-commit] quote-request (ár nélkül nem foglalást ígérünk)…"
+  npx tsx scripts/quote-request-check.mts >"$GATE_LOG" || gate_failed
+fi
 # SZEZON-SZABÁLY (ADR-0197 ③): a „melyik ár-sor vonatkozik erre az éjszakára?" kérdés
 # KÉT példányban élt — a szerveré fagy rá a foglalási kérésre és megy ki a vendég
 # levelében, a böngészőé az, amit a vendég beküldés ELŐTT olvas —, és a kettőt semmi

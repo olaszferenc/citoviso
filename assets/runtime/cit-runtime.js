@@ -133,8 +133,12 @@
         tr("Melyiket foglalná?") + "</label>" +
         '<select class="cit-book__input" id="cit-unit" name="unit">' +
         units.map(function (u) {
+          /* KONTRAKTUS ⑤: az egyedi ár MÁR A VÁLASZTÁSKOR látszik, nem utólag, az
+           * eltűnő ár-dobozból. A jelölést a szerver adja (`unpriced`), mert az
+           * ár-végpont egyszerre EGY egységre válaszol. */
           return '<option value="' + esc(u.id) + '">' + esc(u.name) +
-            (u.capacity ? " · " + u.capacity + " " + tr("fő") : "") + "</option>";
+            (u.capacity ? " · " + u.capacity + " " + tr("fő") : "") +
+            (u.unpriced ? " · " + tr("egyedi ár") : "") + "</option>";
         }).join("") +
         "</select></div>"
       : '<input type="hidden" name="unit" value="' + esc(units[0].id) + '">';
@@ -221,6 +225,33 @@
     var note = form.querySelector(".cit-book__note");
     var baseNote = note.innerHTML;
     var submit = form.querySelector(".cit-book__submit");
+    /* KONTRAKTUS ③–④ (design-refs/tenant-site/quote-request, tulaj 2026-09-22: „C").
+     * Ha a tartózkodásra nem áll össze ár, a lap NEM foglalást ígér: a gomb árajánlatot
+     * kér, ÉS az alatta álló mondat is átíródik. ⛔ A kettő EGYÜTT vált — különben a
+     * gomb árajánlatot mond, az ígéret meg a foglalás véglegesedéséről és a helyszíni
+     * fizetésről beszél, vagyis a lap két dolgot állít egy képernyőn. */
+    var bookLabel = submit.textContent;
+    /* A mondat, amit a validáció visszaállít, ha nincs hiba — az ÁLLAPOTTAL mozog. */
+    var restNote = baseNote;
+    var askLabel = tr("Árajánlatot kérek");
+    var askNote = tr("A szállásadó árajánlattal válaszol. A foglalás akkor válik véglegessé, ha Ön az ajánlatot elfogadja.");
+    var askMode = false;
+    function setAskMode(on) {
+      if (on === askMode) return;
+      askMode = on;
+      submit.textContent = on ? askLabel : bookLabel;
+      submit.setAttribute("data-cit-mode", on ? "ask" : "book");
+      /* ⛔ MÉRT SAJÁT HIBA (2026-09-22, a shot-booking-form őre fogta meg): ez eleinte
+       * KÖZVETLENÜL írt a `note` elembe — csakhogy az elem KÖZÖS: a `say()` ugyanide
+       * teszi a validációs hibát („ezek a napok foglaltak"), hiba nélkül pedig az
+       * alap-mondatot állítja vissza. Így az árajánlat-mód letörölte az élő hibaüzenetet,
+       * a hiba elmúltával viszont a FOGLALÁSI ígéret jött vissza — ár nélküli kérésre.
+       * Ezért az ÁLLAPOT az alap-mondatot cseréli, és a `say()` azt olvassa vissza. */
+      restNote = !demo && on ? esc(askNote) : baseNote;
+      /* A demó-lap saját jegyzetét nem bántjuk: ott a mondat arról szól, hogy innen
+       * semmi nem megy el — igazabb állítás, mint bármelyik ígéretünk. */
+      if (!note.classList.contains("cit-book__note--err")) note.innerHTML = restNote;
+    }
     var countEl = form.querySelector("[data-guests]");
     var guests = 2;
     var blocked = {};
@@ -284,9 +315,32 @@
     function renderQuote(a, b, n) {
       var el = form.querySelector("[data-quote]");
       if (!el) return;
-      if (!(n > 0)) { el.innerHTML = ""; return; }
+      /* Nincs még kiválasztott tartózkodás: nem tudunk se árat, se ár-hiányt állítani.
+       * A doboz üres, a gomb marad a foglalásnál — az árajánlat-mód ÁLLÍTÁS, nem
+       * alapértelmezés. */
+      if (!(n > 0)) { el.innerHTML = ""; el.classList.remove("cit-book__quote--ask"); setAskMode(false); return; }
       var q = quoteFor(a, b);
-      if (!q) { el.innerHTML = ""; return; }
+      /* ⛔ KONTRAKTUS ①–③: ez a pont eddig NÉMÁN kiürítette a dobozt. Mérve (valódi
+       * böngésző, 2026-09-22): asztalon üres lyuk maradt a dátum-sáv alatt, mobilon
+       * összecsukódott — a vendég pedig változatlanul megnyomhatta a „Foglalási kérés
+       * elküldése" gombot, anélkül hogy valaha árat látott volna.
+       *
+       * A kiváltó SZÁNDÉKOSAN a meglévő predikátum: a `quoteFor` akkor ad null-t, ha a
+       * tartózkodás BÁRMELYIK éjszakájára nincs sor — tehát a mód dátum-szintű, és egy
+       * részlegesen árazott időszakra is életbe lép, nem csak az árazatlan egységre. */
+      if (!q) {
+        el.innerHTML =
+          '<div class="cit-book__ask">' +
+          "<b>" + tr("Erre az időszakra a szállásadó egyedi árat ad.") + "</b>" +
+          "<span>" + tr("Küldje el a kérését, és a szállásadó árajánlattal válaszol.") + "</span>" +
+          '<span class="cit-book__ask-sub">' +
+          tr("Az elküldéssel még nem vállal fizetési kötelezettséget.") + "</span></div>";
+        el.classList.add("cit-book__quote--ask");
+        setAskMode(true);
+        return;
+      }
+      el.classList.remove("cit-book__quote--ask");
+      setAskMode(false);
       var cur = pricing.currency;
       var rows = q.lines.map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
@@ -459,7 +513,9 @@
     if (unitSel) unitSel.addEventListener("change", loadAvailability);
 
     function say(msg, bad) {
-      note.innerHTML = msg ? esc(msg) : baseNote;
+      // `restNote`, nem `baseNote`: árajánlat-módban a hiba elmúltával sem térhet
+      // vissza a foglalási ígéret (lásd setAskMode).
+      note.innerHTML = msg ? esc(msg) : restNote;
       note.classList.toggle("cit-book__note--err", !!bad);
     }
     function nights(a, b) {

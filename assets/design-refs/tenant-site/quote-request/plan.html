@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terv — „árajánlatkérés" az árazatlan egységnél</title>
+<style>
+:root{
+  --cit-ink:#22201d; --cit-muted:#6d6660; --cit-bg:#faf7f2; --cit-card:#fff;
+  --cit-line:#e3ddd3; --cit-accent:#2f6b3f; --cit-accent-ink:#fff;
+  --cit-warm:#8a6a1f; --cit-warm-bg:#fdf6e3; --cit-warm-line:#e8d9a8;
+  --cit-radius:10px; --cit-font:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--cit-font);color:var(--cit-ink);background:#eceae6}
+.wrap{max-width:1180px;margin:0 auto;padding:14px}
+h1{font-size:19px;margin:0 0 4px}
+.lede{color:var(--cit-muted);font-size:14px;line-height:1.55;margin:0 0 14px}
+
+.sizebar{position:sticky;top:0;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:#13202b;color:#fff;padding:10px 12px;border-radius:var(--cit-radius);margin-bottom:14px}
+.sizebar b{font-size:13px;margin-right:auto}
+.sizebar button{font:inherit;font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
+  background:transparent;color:#fff;cursor:pointer}
+.sizebar button[aria-pressed="true"]{background:#22b8cf;border-color:#22b8cf;color:#06232b;font-weight:700}
+
+.stage{container-type:inline-size;margin:0 auto;transition:max-width .18s ease}
+body[data-size="mobile"] .stage{max-width:390px}
+body[data-size="desktop"] .stage{max-width:1180px}
+
+.vari{background:#fff;border:1px solid #d8d3cb;border-radius:var(--cit-radius);padding:14px;margin-bottom:18px}
+.vari > h2{font-size:16px;margin:0 0 2px}
+.vari > .why{font-size:13px;color:var(--cit-muted);margin:0 0 12px;line-height:1.5}
+
+/* ── a foglaló felület, a valódi arányokkal ─────────────────────────────────── */
+.book{background:var(--cit-bg);border:1px solid var(--cit-line);border-radius:var(--cit-radius);padding:12px}
+.book__grid{display:grid;gap:14px}
+@container (min-width:720px){ .book__grid{grid-template-columns:1fr 1fr;align-items:start} }
+.book__h{font-size:15px;font-weight:700;margin:0 0 10px}
+.dates{background:#fff;border:1px solid var(--cit-line);border-radius:8px;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dates span{font-size:11px;letter-spacing:.06em;color:var(--cit-muted);text-transform:uppercase;display:block}
+.dates b{font-size:14px}
+.nights{margin-left:auto;color:var(--cit-accent);font-weight:700;font-size:13px}
+.trust{margin:10px 0 0;padding:0;list-style:none;font-size:12.5px;color:var(--cit-muted)}
+.trust li{padding:3px 0}
+
+/* AZ ÁR-DOBOZ — a mai állapot (ár esetén) */
+.quote{margin-top:10px;background:#fff;border:1px solid var(--cit-line);border-radius:8px;padding:11px}
+.quote__h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--cit-accent);font-weight:700;margin-bottom:6px}
+.quote__line{display:block;font-size:13.5px;margin-bottom:4px}
+.quote__basis{font-size:12px;color:var(--cit-muted);line-height:1.45;margin:6px 0}
+.quote__total{font-size:16px;font-weight:700;border-top:1px solid var(--cit-line);padding-top:8px;margin-top:6px}
+.quote__later{margin-top:8px;background:#f2f6f2;border-radius:6px;padding:8px;font-size:12px;line-height:1.45}
+
+/* A JAVASOLT ÚJ ÁLLAPOT */
+.askbox{margin-top:10px;background:var(--cit-warm-bg);border:1px solid var(--cit-warm-line);border-radius:8px;
+  padding:11px;font-size:13.5px;line-height:1.5;color:#3b3218}
+.askbox b{display:block;margin-bottom:3px}
+.askbox .sub{color:var(--cit-warm);font-size:12.5px;margin-top:4px;display:block}
+
+.form label{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--cit-muted);margin:9px 0 3px}
+.form select,.form input,.form textarea{font:inherit;width:100%;padding:9px 10px;border:1px solid var(--cit-line);border-radius:8px;background:#fff}
+.cta{margin-top:12px;width:100%;font:inherit;font-size:15px;font-weight:700;padding:12px;border-radius:8px;border:0;
+  background:var(--cit-accent);color:var(--cit-accent-ink);cursor:pointer}
+.cta[data-mode="ask"]{background:var(--cit-warm);}
+.after{font-size:12px;color:var(--cit-muted);margin-top:8px;line-height:1.45}
+.hole{border:1px dashed #d33;border-radius:8px;color:#a22;font-size:12px;padding:10px;margin-top:10px;background:#fff6f6}
+.hidden{display:none !important}
+
+.switch{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#13202b;color:#e6f1f7;
+  border-radius:var(--cit-radius);padding:11px 12px;font-size:13px;line-height:1.5;margin-bottom:16px}
+.switch b{color:#fff}
+.switch button{font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
+  background:transparent;color:#fff;cursor:pointer}
+.switch button[aria-pressed="true"]{background:#22b8cf;border-color:#22b8cf;color:#06232b;font-weight:700}
+.tag{font-size:11px;font-weight:700;color:#2f6b3f}
+</style>
+</head>
+<body data-size="mobile">
+<div class="wrap">
+  <div class="sizebar">
+    <b>Terv — „árajánlatkérés" az árazatlan egységnél</b>
+    <button type="button" data-size-btn="mobile" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-size-btn="desktop" aria-pressed="false">Asztali</button>
+  </div>
+
+  <h1>Ma a vendég ár nélkül nyomja meg a „Foglalási kérés elküldése" gombot</h1>
+  <p class="lede">
+    Mérve (valódi böngésző, mindkét méret): ha a kiválasztott egységre vagy akár EGY éjszakára
+    nincs ár, a teljes ár-doboz <b>némán eltűnik</b> — asztalon nagy üres lyuk marad a helyén,
+    mobilon összecsukódik. A naptár, az űrlap és a gomb változatlanul működik, tehát a vendég
+    <b>kötelezettséget vállal az ár ismerete nélkül</b>.
+    <br>A kiváltó pont a kódban már létezik: <code>renderQuote</code> → <code>if (!q) { el.innerHTML = ""; }</code>.
+    A kérdés csak az, mi kerüljön az üresség helyére.
+  </p>
+
+  <div class="switch">
+    <b>Próbálja ki:</b>
+    <button type="button" data-state="priced" aria-pressed="true">Árazott egység</button>
+    <button type="button" data-state="unpriced" aria-pressed="false">Árazatlan egység</button>
+    <span id="state-note">Most: van ár → mindhárom változat a mai, ismerős képet mutatja.</span>
+  </div>
+
+  <div class="stage">
+
+  <!-- ══════════ MA ══════════ -->
+  <section class="vari">
+    <h2>MA — így néz ki (nincs változtatás)</h2>
+    <p class="why">Ez a jelenlegi viselkedés, hogy legyen mihez mérni. Kapcsoljon át
+      „Árazatlan egység"-re: a doboz eltűnik, és a gomb ugyanúgy foglalást ígér.</p>
+    <div class="book"><div class="book__grid">
+      <div>
+        <p class="book__h">Foglalás</p>
+        <div class="dates">
+          <div><span>Érkezés</span><b>2026. 09. 25.</b></div>
+          <div><span>Távozás</span><b>2026. 09. 27.</b></div>
+          <div class="nights">2 éjszaka</div>
+        </div>
+        <ul class="trust">
+          <li>✓ Közvetlenül a szállásadónál — nincs közvetítői jutalék</li>
+          <li>✓ A szállásadó személyesen igazolja vissza</li>
+          <li>✓ Fizetés a helyszínen</li>
+        </ul>
+        <div class="quote" data-when="priced">
+          <div class="quote__h">Az ár — 2026. 09. 25. → 2026. 09. 27.</div>
+          <span class="quote__line">Alapár: 2 éj × 28 000 Ft = 56 000 Ft</span>
+          <p class="quote__basis">Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg 2 fő).</p>
+          <div class="quote__total">Összesen a szállásért 56 000 Ft</div>
+          <div class="quote__later">A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő.</div>
+        </div>
+        <div class="hole" data-when="unpriced">⛔ Itt ma SEMMI nincs — az ár-doboz némán eltűnik.</div>
+      </div>
+      <div class="form">
+        <label>Melyiket foglalná?</label>
+        <select><option data-opt>Árazott apartman · 4 fő</option></select>
+        <label>Az Ön neve</label><input type="text">
+        <label>E-mail cím</label><input type="email">
+        <button class="cta" type="button">Foglalási kérés elküldése</button>
+        <p class="after">A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ══════════ A ══════════ -->
+  <section class="vari">
+    <h2>A változat — A doboz helyére mondat kerül, és a gomb átnevezve</h2>
+    <p class="why">Az üresség helyén kimondjuk, MIÉRT nincs szám, és a gomb már nem foglalást
+      ígér, hanem árajánlatot kér. Az asztali lyuk is eltűnik. Ez az Ön javaslata a legteljesebb
+      formában.</p>
+    <div class="book"><div class="book__grid">
+      <div>
+        <p class="book__h">Foglalás</p>
+        <div class="dates">
+          <div><span>Érkezés</span><b>2026. 09. 25.</b></div>
+          <div><span>Távozás</span><b>2026. 09. 27.</b></div>
+          <div class="nights">2 éjszaka</div>
+        </div>
+        <ul class="trust">
+          <li>✓ Közvetlenül a szállásadónál — nincs közvetítői jutalék</li>
+          <li>✓ A szállásadó személyesen igazolja vissza</li>
+          <li>✓ Fizetés a helyszínen</li>
+        </ul>
+        <div class="quote" data-when="priced">
+          <div class="quote__h">Az ár — 2026. 09. 25. → 2026. 09. 27.</div>
+          <span class="quote__line">Alapár: 2 éj × 28 000 Ft = 56 000 Ft</span>
+          <p class="quote__basis">Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg 2 fő).</p>
+          <div class="quote__total">Összesen a szállásért 56 000 Ft</div>
+          <div class="quote__later">A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő.</div>
+        </div>
+        <div class="askbox" data-when="unpriced">
+          <b>Erre az időszakra a szállásadó egyedi árat ad.</b>
+          Küldje el a kérését, és a szállásadó árajánlattal válaszol.
+          <span class="sub">Az elküldéssel még nem vállal fizetési kötelezettséget.</span>
+        </div>
+      </div>
+      <div class="form">
+        <label>Melyiket foglalná?</label>
+        <select><option data-opt>Árazott apartman · 4 fő</option></select>
+        <label>Az Ön neve</label><input type="text">
+        <label>E-mail cím</label><input type="email">
+        <button class="cta" type="button" data-cta>Foglalási kérés elküldése</button>
+        <p class="after" data-after>A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ══════════ B ══════════ -->
+  <section class="vari">
+    <h2>B változat — Csak a gomb beszél</h2>
+    <p class="why">A legkevesebb változtatás: a doboz ugyanúgy eltűnik, csak a gomb felirata
+      igazodik. ⚠️ Az asztali <b>üres lyuk megmarad</b>, és a vendég nem tudja meg, miért nincs
+      szám — csak azt, hogy most árajánlatot kér.</p>
+    <div class="book"><div class="book__grid">
+      <div>
+        <p class="book__h">Foglalás</p>
+        <div class="dates">
+          <div><span>Érkezés</span><b>2026. 09. 25.</b></div>
+          <div><span>Távozás</span><b>2026. 09. 27.</b></div>
+          <div class="nights">2 éjszaka</div>
+        </div>
+        <ul class="trust">
+          <li>✓ Közvetlenül a szállásadónál — nincs közvetítői jutalék</li>
+          <li>✓ A szállásadó személyesen igazolja vissza</li>
+          <li>✓ Fizetés a helyszínen</li>
+        </ul>
+        <div class="quote" data-when="priced">
+          <div class="quote__h">Az ár — 2026. 09. 25. → 2026. 09. 27.</div>
+          <span class="quote__line">Alapár: 2 éj × 28 000 Ft = 56 000 Ft</span>
+          <p class="quote__basis">Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg 2 fő).</p>
+          <div class="quote__total">Összesen a szállásért 56 000 Ft</div>
+          <div class="quote__later">A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő.</div>
+        </div>
+        <div class="hole" data-when="unpriced">(itt marad az üresség — a B változat nem tölti ki)</div>
+      </div>
+      <div class="form">
+        <label>Melyiket foglalná?</label>
+        <select><option data-opt>Árazott apartman · 4 fő</option></select>
+        <label>Az Ön neve</label><input type="text">
+        <label>E-mail cím</label><input type="email">
+        <button class="cta" type="button" data-cta>Foglalási kérés elküldése</button>
+        <p class="after" data-after>A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- ══════════ C ══════════ -->
+  <section class="vari">
+    <h2>C változat — A választóban is látszik, mielőtt rákattint</h2>
+    <p class="why">Mint az A, plusz az egység-választó maga jelzi: „egyedi ár". Így a vendég
+      MÁR A VÁLASZTÁS PILLANATÁBAN tudja, mire számítson — nem utólag derül ki.
+      ⚠️ Cserébe a lista zajosabb, és a jelölés minden árazatlan egységnél ott ül.</p>
+    <div class="book"><div class="book__grid">
+      <div>
+        <p class="book__h">Foglalás</p>
+        <div class="dates">
+          <div><span>Érkezés</span><b>2026. 09. 25.</b></div>
+          <div><span>Távozás</span><b>2026. 09. 27.</b></div>
+          <div class="nights">2 éjszaka</div>
+        </div>
+        <ul class="trust">
+          <li>✓ Közvetlenül a szállásadónál — nincs közvetítői jutalék</li>
+          <li>✓ A szállásadó személyesen igazolja vissza</li>
+          <li>✓ Fizetés a helyszínen</li>
+        </ul>
+        <div class="quote" data-when="priced">
+          <div class="quote__h">Az ár — 2026. 09. 25. → 2026. 09. 27.</div>
+          <span class="quote__line">Alapár: 2 éj × 28 000 Ft = 56 000 Ft</span>
+          <p class="quote__basis">Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg 2 fő).</p>
+          <div class="quote__total">Összesen a szállásért 56 000 Ft</div>
+          <div class="quote__later">A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő.</div>
+        </div>
+        <div class="askbox" data-when="unpriced">
+          <b>Erre az időszakra a szállásadó egyedi árat ad.</b>
+          Küldje el a kérését, és a szállásadó árajánlattal válaszol.
+          <span class="sub">Az elküldéssel még nem vállal fizetési kötelezettséget.</span>
+        </div>
+      </div>
+      <div class="form">
+        <label>Melyiket foglalná?</label>
+        <select><option data-opt data-mark>Árazott apartman · 4 fő</option></select>
+        <label>Az Ön neve</label><input type="text">
+        <label>E-mail cím</label><input type="email">
+        <button class="cta" type="button" data-cta>Foglalási kérés elküldése</button>
+        <p class="after" data-after>A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik.</p>
+      </div>
+    </div></div>
+  </section>
+
+  </div><!-- /stage -->
+</div>
+
+<script>
+(function(){
+  "use strict";
+  document.querySelectorAll("[data-size-btn]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var w = b.getAttribute("data-size-btn");
+      document.body.setAttribute("data-size", w);
+      document.querySelectorAll("[data-size-btn]").forEach(function(o){
+        o.setAttribute("aria-pressed", String(o.getAttribute("data-size-btn") === w));
+      });
+    });
+  });
+
+  var note = document.getElementById("state-note");
+
+  /* The REAL trigger, mirrored: the quote is null when any night of the stay has no
+   * price row. Not "the unit has no price" — a single unpriced night is enough. */
+  function apply(state){
+    var priced = state === "priced";
+    document.querySelectorAll('[data-when="priced"]').forEach(function(el){ el.classList.toggle("hidden", !priced); });
+    document.querySelectorAll('[data-when="unpriced"]').forEach(function(el){ el.classList.toggle("hidden", priced); });
+    document.querySelectorAll("[data-opt]").forEach(function(o){
+      var mark = o.hasAttribute("data-mark") && !priced ? " · egyedi ár" : "";
+      o.textContent = (priced ? "Árazott apartman · 4 fő" : "Árazatlan faház · 2 fő") + mark;
+    });
+    document.querySelectorAll("[data-cta]").forEach(function(btn){
+      btn.textContent = priced ? "Foglalási kérés elküldése" : "Árajánlatot kérek";
+      btn.setAttribute("data-mode", priced ? "book" : "ask");
+    });
+    document.querySelectorAll("[data-after]").forEach(function(p){
+      p.textContent = priced
+        ? "A foglalás akkor válik véglegessé, ha a szállásadó visszaigazolja. A fizetés a helyszínen történik."
+        : "A szállásadó árajánlattal válaszol. A foglalás akkor válik véglegessé, ha Ön az ajánlatot elfogadja.";
+    });
+    document.querySelectorAll("[data-state]").forEach(function(b){
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-state") === state));
+    });
+    note.textContent = priced
+      ? "Most: van ár → mindhárom változat a mai, ismerős képet mutatja."
+      : "Most: nincs ár erre az egységre/időszakra → nézze meg, mit tesz a három változat.";
+  }
+
+  document.querySelectorAll("[data-state]").forEach(function(b){
+    b.addEventListener("click", function(){ apply(b.getAttribute("data-state")); });
+  });
+  apply("priced");
+})();
+</script>
+</body>
+</html>

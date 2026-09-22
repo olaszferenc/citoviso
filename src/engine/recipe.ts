@@ -329,6 +329,14 @@ export interface SiteData {
       readonly id: string;
       readonly name: string;
       readonly capacity?: number;
+      /**
+       * No price row on this unit — the widget marks it in the picker and the stay
+       * resolves to an ARAJÁNLAT (quote request) instead of a priced booking
+       * (kontraktus: design-refs/tenant-site/quote-request ⑤). Absent = priced.
+       * The flag is server-side because the availability endpoint answers for ONE
+       * unit at a time, so the browser could not know about the others.
+       */
+      readonly unpriced?: boolean;
     }[];
     readonly minNights: number;
     readonly maxNights: number;
