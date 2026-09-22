@@ -686,9 +686,36 @@ Commitok: `d607238` · `9a0f215` · `e740fad` · `e9d816a`.
 - ⛔ **Saját hibáim:** elavult, rebase ELŐTTI SHA-kat idéztem a záró jelentésemben · szűk grep
   (`LiveSafe` helyett `applyLivePhotoPolicy`) · csövön át mért kilépési kód · **bemocskoltam
   a fő fát** 9 követetlen másolattal (a land ff-frissítése elbukott).
-- 🔴 **NYITOTT (tulaj):** ① vízjel — valódi detektálás, vagy a §A.2 törlése ② ~~a gyökérok: a
+- ✅ **LEZÁRVA (2026-09-22):** ① vízjel → ADR-0200 (a kapu ÉL) ② ~~a gyökérok: a
   `notify.sh` hook-pont ÉL, de a fájl NEM LÉTEZIK~~ → **LEZÁRVA, lásd a következő blokkot**
   ③ 12 „ÉLŐ" REFINE a `DISTILL-PENDING.md`-ben.
+
+## Párhuzamos szál (2026-09-22) — két halott ígéret élesítve
+
+**🔒 A §A.2 VÍZJEL-KAPU ÉL, ÉS A REFINE-JAVASLAT TÚLÉLI A REVIEW LEZÁRÁSÁT.**
+Session-jegyzet: `_planning/memory/2026-09-22_watermark_and_refine_queue.md`.
+Döntések: **ADR-0200** (vízjel) · **ADR-0201** (REFINE-sor).
+
+- ⛔ **A §A.2 „egyetlen feltétlen kizárás"-a halott kód volt:** a `watermarked` flaget a
+  termelési úton SEMMI nem állította `true`-ra. A fék be volt építve, a pedál működött, de
+  soha senki nem nyomta meg. Most a vision-kör adja az ítéletet (külön mező, nem `subject`),
+  a bélyeg a `dropNeverShown`-ban ragad rá (mind a NÉGY renderelő út azt hívja).
+- ⭐ **Az újrapontozás EGYBEN a mérés volt:** 91 ítéletből **12 vízjeles**, mind ugyanarról a
+  szállásról — **szemmel igazolva 2 pozitív + 2 negatív, mind helyes**. Ez a 12 fotó eddig
+  kiment volna egy FIZETŐ ügyfél élő lapjára idegen cég vízjelével.
+- ⛔ **A REFINE-javaslatot a review LEZÁRÁSA temette el** (23 blokk elérhetetlenül) — köztük
+  az, amelyik 2026-08-02-án kimondta, hogy a `watermarked` halott kód. A sor mostantól
+  SZÁRMAZTATOTT, a gép SOHA nem zár le tételt, az indoklás KÖTELEZŐ.
+- ⛔ **Három további ÉLES hiba:** ① a cron NEM tudott jóváhagyható ágat készíteni (a friss
+  worktree-ben nincs `node_modules`/`.env`) — a „kör bezárult" élesben NEM állt ② a
+  `wt/distill*` glob IDEGEN munka-ág törlését ajánlotta ③ az átvezető audit-naplója minden
+  futáskor bemocskolta a fő fát.
+- ⭐ **Az értesítő ÉLESBEN lefutott** 2026-09-20-án: SMS + e-mail kiment a tulajnak.
+- ⛔⛔ **Saját hiba:** az őröm MÁSODSZOR omlott össze piros helyett — a testvér-őrben már
+  javítottam ÉS memóriába mentettem, de **a javítás nem terjedt át magától**.
+- 🔴 **NYITOTT (tulaj):** **24 REFINE-tétel** (`refine-queue.mts`, 2 ma is érvényes) ·
+  a **`wt/distill20260922`** ág jóváhagyásra vár · a vízjel-detektálás PONTOSSÁGA címkézett
+  korpuszon nincs mérve.
 
 ## Párhuzamos szál (2026-09-17) — a desztilláló ÉRTESÍTŐJE
 
