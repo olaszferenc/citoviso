@@ -1306,6 +1306,12 @@ async function serveAdmin(
         // ADR-0113: instant-charge outcome riding the redirect.
         charged: ids("mcharged"),
         chargedAmount: Math.max(0, Number(q.get("mamount")) || 0),
+        // ADR-0202: a kedvezmény levezetése. ⛔ Csak akkor fogadjuk el, ha a listaár
+        // TÉNYLEG nagyobb a fizetettnél és a százalék értelmes — a paraméter a
+        // címsorból jön, tehát bárki átírhatja: egy kitalált „mlist" különben hamis
+        // kedvezményt íratna ki a saját visszaigazolására.
+        chargedListPrice: Math.max(0, Number(q.get("mlist")) || 0),
+        chargedOfferPercent: Math.min(100, Math.max(0, Number(q.get("mpct")) || 0)),
         chargePending: q.get("mpending") === "1",
       };
     }
@@ -1855,10 +1861,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           sub.recurrence_trace_id,
         );
         if (outcome === "paid") {
+          // ADR-0202: a kedvezmény LEVEZETÉSE is utazik, nem csak a végösszeg. A
+          // korábbi redirect kizárólag `mamount`-ot vitt, ezért a sáv csak a 14 775 Ft-ot
+          // tudta kiírni — a 19 700 Ft-os díjat és a −25 %-ot nem —, pedig mindkettő ott
+          // van az orderben. A tulaj emiatt nem tudta ellenőrizni a saját számláját, és
+          // maga jelezte, hogy „kevésnek tűnik" (2026-09-21).
+          // ⛔ `mlist` csak akkor megy, ha VOLT kedvezmény: enélkül a sáv üres
+          // „−0 Ft" sort írna arra, aki teljes áron vett.
+          const discount =
+            order.offerPercent && order.listPrice > order.price
+              ? `&mlist=${order.listPrice}&mpct=${order.offerPercent}`
+              : "";
           return redirect(
             res,
             `/admin?tab=modulok&applied=1&mcharged=${change.requiresPayment.join(",")}` +
-              `&mamount=${order.price}${q ? `&${q}` : ""}`,
+              `&mamount=${order.price}${discount}${q ? `&${q}` : ""}`,
           );
         }
         if (outcome === "pending") {

@@ -156,6 +156,17 @@ if [ -f scripts/paid-empty-check.mts ] && \
   echo "[pre-commit] paid-empty (kifizetett, de üres modul)…"
   npx tsx scripts/paid-empty-check.mts
 fi
+# A kapott kedvezmény LÁTSZIK — és közben egy fillér sem mozdul. A tulaj 14 775 Ft-ot
+# fizetett, és nem tudta eldönteni, jó-e a szám: jó volt (19 700 Ft − 25 %), csak sehol
+# nem mondtuk ki. ⛔ A döntő állítás nem a szöveg, hanem a PÉNZ: a Számlázz.hu összeadja
+# a tételeket, ezért külön kedvezmény-SOR a végösszeget 14 775-ről 9 850-re vinné. Az őr
+# minden esetben visszaméri, hogy a tételek összege a terhelt összeg maradt.
+# Piros önteszttel (8 sértés a visszarontott állapoton).
+if [ -f scripts/coupon-visible-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/server/public\.ts|src/payment/service\.ts|src/payment/offers\.ts)|^scripts/coupon-visible-check'; then
+  echo "[pre-commit] coupon-visible (a kedvezmény látszik, a végösszeg nem mozdul)…"
+  npx tsx scripts/coupon-visible-check.mts
+fi
 # A kézi terhelés-újrapróba visszajelzése IRÁNYT mondott TETT helyett: négy ág „a fenti
 # gombbal" fordulattal küldött, miközben a gombok mérve ~3 600 bájttal LEJJEBB álltak, a
 # redirect pedig fragmentet sem vitt. ⛔ És a „nincs_kartya" ág olyan gombot nevezett meg,

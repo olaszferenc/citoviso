@@ -248,3 +248,21 @@ most veszi meg. A levonás magától történik, nem kell kódot beírnia.
 
 **Kedvezmények nem adódnak össze:** ha többre is jogosult, mindig a nagyobb
 érvényesül.
+
+### Mit lát a vásárlás után?
+
+Ha kedvezménnyel vásárolt, a zöld visszaigazoló sáv nem csak a végösszeget írja ki, hanem a
+teljes levezetést is: mennyi lett volna a díj, mennyi a kedvezmény (forintban és
+százalékban), és végül — az **„A kártyáját megterheltük”** sorban — mennyit vontunk le
+ténylegesen. Így utólag is ellenőrizheti, miből jött ki a szám.
+
+⚠️ **A kedvezmény egyszeri.** A sáv alján ezért ott áll, mennyibe kerülnek ugyanezek a
+modulok a **következő megújításkor**, kedvezmény nélkül. Erre érdemes figyelni, hogy jövőre
+ne érje meglepetés.
+
+Ugyanez a számlára is felkerül: a tétel neve kimondja, hogy kedvezményes árról van szó, a
+számla megjegyzésében pedig ott a teljes levezetés. A fizetendő összeg természetesen az,
+amit a kártyájáról levontunk.
+
+Ha nem volt kedvezménye, a sáv a megszokott egy mondat marad — üres kedvezmény-sorokat nem
+írunk ki.

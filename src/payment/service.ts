@@ -711,13 +711,39 @@ function fireDomainProvisioning(orderIntentId: string): void {
  * into the subscription line; a 'domain_upgrade' order is a domain line only
  * (it used to mislabel as "előfizetés (éves, 0 modul)").
  */
-function buildInvoiceItems(
+/**
+ * A számla megjegyzése — a jogi mondat, és ha volt kupon, a LEVEZETÉS.
+ *
+ * ⛔ EGY PÉLDÁNY, és szándékosan itt, nem a hívás helyén: ez az egyetlen hely, ahol a
+ * kedvezmény úgy fér el a számlán, hogy a TÉTELEKHEZ nem nyúlunk. Külön kedvezmény-sor
+ * tilos — a Számlázz.hu összeadja a tételeket, tehát egy −4 925 Ft-os sor a 14 775 Ft-os
+ * végösszeget 9 850-re vinné (ADR-0202).
+ */
+export function invoiceComment(
+  reverse: boolean,
+  offerPercent: number | null | undefined,
+  listPrice: number | null | undefined,
+  amount: number,
+): string {
+  const legal = reverse
+    ? "A szolgáltatás teljesítési helye a megrendelő tagállama — fordított adózás (Áfa tv. 37. §). Reverse charge."
+    : "Alanyi adómentes (AAM).";
+  if (!offerPercent || !listPrice || listPrice <= amount) return legal;
+  return (
+    `${legal} Üdvözlő kedvezmény: a ${listPrice.toLocaleString("hu-HU")} Ft-os díjból ` +
+    `−${offerPercent}%, így a fizetendő ${amount.toLocaleString("hu-HU")} Ft.`
+  );
+}
+
+export function buildInvoiceItems(
   p: {
     amount: number;
     kind: string;
     settlementTakeDomain: boolean | null;
     domainFee: number | null;
     domainName: string | null;
+    /** ADR-0202: a kupon százaléka, ha volt — a tétel neve mondja ki. */
+    offerPercent?: number | null;
   },
   cadence: "monthly" | "annual" | "once",
   periodLabel: string,
@@ -743,8 +769,13 @@ function buildInvoiceItems(
     ];
   if (p.kind === "domain_upgrade") return [line(domainLabel, p.amount)];
   if (cadence === "once") return [line(`Citoviso többnyelvű honlap (egyszeri generálási díj)`, p.amount)];
+  // ADR-0202: ha kupon csökkentette az árat, a TÉTEL NEVE mondja ki. ⛔ Külön
+  // kedvezmény-SORT nem veszünk fel: a Számlázz.hu összeadja a tételeket, tehát egy
+  // −4 925 Ft-os sor a 14 775 Ft-os végösszeget 9 850-re vinné — vagyis rosszul
+  // számláznánk. A név bővítése az összegekhez nem nyúl.
   const subscriptionLine = line(
-    `Citoviso előfizetés (${periodLabel}, ${modCount} modul)`,
+    `Citoviso előfizetés (${periodLabel}, ${modCount} modul)` +
+      (p.offerPercent ? ` — ${p.offerPercent}% kedvezménnyel` : ""),
     p.amount - (p.domainFee ?? 0),
   );
   return p.domainFee && p.domainFee > 0
@@ -765,6 +796,10 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     .selectFrom("payment")
     .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
     .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    // leftJoin: a rendelések többségéhez NINCS kupon — egy innerJoin némán eltüntetné
+    // a számlát azoknál, vagyis a kedvezmény láthatóvá tétele venné el a számlát
+    // mindenki mástól.
+    .leftJoin("offer", "offer.id", "order_intent.offer_id")
     .select([
       "payment.amount as amount",
       "payment.currency as currency",
@@ -786,6 +821,13 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       "order_intent.buyer_address as address",
       "order_intent.buyer_email as buyerEmail",
       "order_intent.vat_treatment as vatTreatment",
+      // ADR-0202: a kedvezmény a SZÁMLÁN is látszik. A listaárat eddig TÁROLTUK, de
+      // sosem olvastuk vissza ide, ezért a vevő egy 14 775 Ft-os végösszeget kapott
+      // minden nyom nélkül arról, hogy az egy 19 700 Ft-os díj kedvezményes ára.
+      "order_intent.list_price as listPrice",
+      // A százalék a KUPONBÓL jön, nem a két összeg hányadosából: a kerekítés egy
+      // 33 %-os kuponból „32 %"-ot csinálhatna a számlán, és egy számla nem tippelhet.
+      "offer.percent as offerPercent",
       "prospect.contact_email as email",
     ])
     .where("payment.id", "=", paymentId)
@@ -857,9 +899,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
     dueDate: today,
     paymentMethod: "Bankkártya",
     paid: true,
-    comment: reverse
-      ? "A szolgáltatás teljesítési helye a megrendelő tagállama — fordított adózás (Áfa tv. 37. §). Reverse charge."
-      : "Alanyi adómentes (AAM).",
+    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount),
   };
 
   try {

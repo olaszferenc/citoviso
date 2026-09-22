@@ -301,6 +301,13 @@ export interface ModuleAppliedFlash {
   readonly charged?: string[];
   /** The amount that charge took (HUF), for the banner's honesty. */
   readonly chargedAmount?: number;
+  /**
+   * ADR-0202: the undiscounted total and the coupon percent, so the banner can SHOW
+   * the derivation instead of only the end figure. Both 0 when no coupon applied —
+   * the banner then says nothing about discounts rather than printing „−0 Ft".
+   */
+  readonly chargedListPrice?: number;
+  readonly chargedOfferPercent?: number;
   /** ADR-0113: the MIT charge is in flight — the callback will activate. */
   readonly chargePending?: boolean;
   /** ADR-0094 ④: the change was refused — it would sink below the domain
@@ -579,6 +586,65 @@ function modulePriceForm(monthly: number, plus: boolean, annualMult: number, lan
     // question than "what does this module cost me": it is the unit he
     // compares modules on. It is the COMPANION now, not the headline.
     (annualMult > 0 ? `<em class="adm-price__alt">${T(lang, "{price}/hó", { price })}</em>` : "")
+  );
+}
+
+/**
+ * The purchase confirmation — with the DERIVATION when a coupon was applied.
+ *
+ * ⭐ APPROVED CONTRACT: assets/design-refs/tenant-admin/coupon-visible/ (C változat).
+ * Fee → discount → charged, then what happens at renewal. Without a coupon it stays
+ * the single sentence it has always been: a receipt whose every line is „−0 Ft" is
+ * noise, and the owner ruling was explicit that an empty derivation must not appear.
+ *
+ * ⛔ THE LIST SEPARATOR IS „ · ", NOT „, ". Six of the fourteen module names contain a
+ * comma themselves („Árak, szezonok"), so a comma-joined list of three modules reads
+ * as five items — which is exactly how the owner's own screen looked while the
+ * invoice next to it said „3 modul".
+ */
+function chargedNotice(
+  applied: ModuleAppliedFlash,
+  lang: string,
+  huf: (n: number) => string,
+  labelOf: (id: string) => string,
+): string {
+  // ⛔ MINDEN NÉV EGYBEN TÖRIK — a `·` elválasztó önmagában nem elég. Mérve 390 px-en:
+  // a sor pont a „Környék, látnivalók" NEVEN BELÜLI vesszőnél tört, lógó vesszővel zárva
+  // az első sort, így a három modul megint öt tételnek olvasódott. A `nowrap` a törést az
+  // elválasztókra kényszeríti; a leghosszabb név („Amit kínál (felszereltség)") elfér.
+  const list = (applied.charged ?? [])
+    .map((id) => `<span class="adm-nowrap">${esc(T(lang, labelOf(id)))}</span>`)
+    .join(" · ");
+  const paid = applied.chargedAmount ?? 0;
+  const listPrice = applied.chargedListPrice ?? 0;
+  const pct = applied.chargedOfferPercent ?? 0;
+  // A kedvezmény csak akkor létezik, ha a listaár TÉNYLEGESEN nagyobb — a paraméter
+  // a címsorból jön, és egy kitalált érték hamis levezetést íratna ki.
+  const discounted = pct > 0 && listPrice > paid;
+  if (!discounted) {
+    return T(lang, "A kártyáját megterheltük ({sum}) — mostantól él: {list}. A következő számlán már normál tételként szerepel.", {
+      sum: esc(huf(paid)),
+      list,
+    });
+  }
+  const row = (k: string, v: string, cls = "") =>
+    `<div class="adm-rcpt__row${cls ? ` ${cls}` : ""}"><span>${k}</span><span class="adm-rcpt__v">${v}</span></div>`;
+  return (
+    T(lang, "Mostantól él: {list}.", { list }) +
+    `<div class="adm-rcpt">` +
+    row(T(lang, "{n} modul a fordulónapig", { n: String((applied.charged ?? []).length) }), esc(huf(listPrice))) +
+    row(
+      T(lang, "Üdvözlő kedvezmény ({pct}%)", { pct: String(pct) }),
+      `−${esc(huf(listPrice - paid))}`,
+      "adm-rcpt__row--neg",
+    ) +
+    row(T(lang, "A kártyáját megterheltük"), esc(huf(paid)), "adm-rcpt__row--tot") +
+    `</div>` +
+    `<span class="adm-rcpt__note">` +
+    T(lang, "A kedvezmény egyszeri — a következő megújításkor {sum}/év díjjal szerepelnek a számlán.", {
+      sum: esc(huf(listPrice)),
+    }) +
+    `</span>`
   );
 }
 
@@ -936,11 +1002,17 @@ export function modulesSection(
   ) {
     const parts = [
       // ADR-0113: the instant MIT charge — the banner owes the exact amount.
+      // ⭐ APPROVED CONTRACT (kupon-lathato, C változat, owner ruling 2026-09-22):
+      // when a coupon discounted the purchase, the banner SHOWS THE DERIVATION —
+      // fee, discount, charged — instead of only the end figure.
+      //
+      // THE HOLE IT CLOSES: the owner bought three modules for 14 775 Ft and could
+      // not tell whether the figure was right ("nekem kevésnek tűnik"). It was
+      // right: 19 700 Ft less a 25 % welcome coupon. But nothing on any screen said
+      // so, so the only way to check was to read the database. If the OWNER cannot
+      // verify his own charge, a customer certainly cannot.
       applied.charged?.length
-        ? T(lang, "A kártyáját megterheltük ({sum}) — mostantól él: {list}. A következő számlán már normál tételként szerepel.", {
-            sum: esc(huf(applied.chargedAmount ?? 0)),
-            list: applied.charged.map((id) => esc(T(lang, labelOf(id)))).join(", "),
-          })
+        ? chargedNotice(applied, lang, huf, labelOf)
         : "",
       applied.chargePending
         ? T(lang, "A kártya-terhelés folyamatban van — az új modul a jóváíráskor magától élesedik.")
@@ -949,18 +1021,18 @@ export function modulesSection(
       // the charged/payment path) — no fee to promise.
       applied.added.length
         ? T(lang, "Mostantól él: {list} — díjmentes.", {
-            list: applied.added.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+            list: applied.added.map((id) => esc(T(lang, labelOf(id)))).join(" · "),
           })
         : "",
       applied.cancelled.length
         ? T(lang, "{date}-ig még aktív: {list} — utána lekerül az oldalról és a számláról.", {
-            list: applied.cancelled.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+            list: applied.cancelled.map((id) => esc(T(lang, labelOf(id)))).join(" · "),
             date: esc(renewDateS),
           })
         : "",
       applied.other.length
         ? T(lang, "Frissítve: {list}.", {
-            list: applied.other.map((id) => esc(T(lang, labelOf(id)))).join(", "),
+            list: applied.other.map((id) => esc(T(lang, labelOf(id)))).join(" · "),
           })
         : "",
     ].filter(Boolean);

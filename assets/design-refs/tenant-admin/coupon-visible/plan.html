@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terv — a kedvezmény legyen látható (3 változat)</title>
+<style>
+/* ── Citoviso dizájn-mag tokenek (public/assets/ui/citui.css :root másolata) ── */
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-muted:#60748b;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dde8ee;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.pl{padding:16px 12px 0;max-width:1240px;margin:0 auto}
+.pl h1{font-family:var(--citui-font-display);font-size:1.05rem;margin:0 0 4px}
+.pl p{margin:0 0 10px;font-size:.85rem;color:#3c5064;line-height:1.55}
+.ctl{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.szw{display:inline-flex;background:var(--citui-white);border:1px solid var(--citui-line-strong);
+  border-radius:var(--citui-radius-pill);padding:3px;gap:3px}
+.szw button{border:0;background:transparent;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-muted);
+  padding:9px 15px;border-radius:var(--citui-radius-pill);cursor:pointer}
+.szw button.on{background:var(--citui-navy-900);color:var(--citui-white)}
+.stage{padding:0 12px 30px;max-width:1240px;margin:0 auto}
+/* A színpad a KERETHEZ szűkül, különben asztalin a lap negyede üresen marad
+   és a vázlat elrontott elrendezésnek látszik. */
+body[data-size="desktop"] .stage{max-width:948px}
+/* 390 px-en a 12 px-es oldalpadding kitolta a 390 px-es keretet: a jobb szélen
+   2 px maradt, a lekerekítés alig fért ki. Telefon-szélességen nincs padding. */
+body[data-size="mobile"] .stage{padding-left:0;padding-right:0}
+body[data-size="mobile"] .frame{margin-left:auto;margin-right:auto}
+.frame{container-type:inline-size;width:390px;background:var(--citui-surface);
+  border:1px solid var(--citui-line-strong);border-radius:14px;padding:16px;margin-bottom:18px;
+  box-shadow:var(--citui-shadow-sm);transition:width .2s}
+body[data-size="desktop"] .frame{width:900px}
+.vlabel{font:700 .82rem/1 var(--citui-font-text);color:var(--citui-navy-900);margin:0 0 4px}
+.vwhy{font-size:.8rem;color:var(--citui-muted);margin:0 0 12px;line-height:1.5}
+
+/* ── A visszaigazoló sáv (adminViews .adm-banner nyelvén) ── */
+.adm-banner{display:flex;align-items:flex-start;gap:10px;background:var(--citui-ok-soft);
+  border:1px solid color-mix(in srgb,var(--citui-ok) 30%,transparent);border-radius:var(--citui-radius-sm);
+  padding:13px 15px;font-size:.92rem;line-height:1.55}
+.adm-banner b{font-weight:700}
+.adm-banner__ico{flex:0 0 auto;color:var(--citui-ok);margin-top:2px}
+.adm-banner__body{min-width:0}
+.sum{white-space:nowrap;font-weight:700}
+.strike{text-decoration:line-through;color:var(--citui-muted);font-weight:400}
+.pct{color:var(--citui-ok);font-weight:700;white-space:nowrap}
+.renew{display:block;margin-top:6px;font-size:.85rem;color:var(--citui-muted)}
+
+/* B — külön kedvezmény-sor */
+.disc{display:flex;align-items:flex-start;gap:8px;margin-top:9px;padding:8px 11px;border-radius:10px;
+  background:var(--citui-white);border:1px dashed color-mix(in srgb,var(--citui-ok) 45%,var(--citui-line));
+  font-size:.85rem}
+.disc b{color:var(--citui-ok)}
+/* FONTOS: flex:0 0 auto — enélkül az ikon mobilon ~8 px-re lapult, és a HÁROM soros
+   mondat MÁSODIK sora elé csúszott: nem ikonnak, hanem szedés-hibának látszott. */
+.disc>svg{flex:0 0 auto;color:var(--citui-ok);margin-top:1px}
+
+/* C — nyugta-levezetés */
+.rcpt{margin-top:10px;background:var(--citui-white);border:1px solid var(--citui-line);
+  border-radius:12px;padding:4px 12px}
+.rcpt div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:.86rem}
+.rcpt div+div{border-top:1px solid var(--citui-line)}
+.rcpt .k{color:var(--citui-muted)}
+.rcpt .v{font-variant-numeric:tabular-nums;white-space:nowrap}
+.rcpt .tot{font-weight:700}
+.rcpt .tot .v{font-size:.95rem}
+.rcpt .neg .v{color:var(--citui-ok);font-weight:700}
+@container (min-width:700px){ .frame{padding:22px} }
+</style>
+</head>
+<body data-size="mobile">
+
+<div class="pl">
+  <h1>Terv — a kedvezmény legyen látható a vásárlás visszaigazolásán</h1>
+  <p>Ma a sáv csak a végösszeget írja (14&nbsp;775&nbsp;Ft), a „19&nbsp;700-ból −25&nbsp;%" levezetés sehol nem
+     jelenik meg — ezért nem lehet ránézésre ellenőrizni. Három megfogalmazás, valós adattal
+     (a tegnapi vásárlása). <b>A kapcsolóval kipróbálhatja azt is, mi történik, ha NINCS kupon</b> —
+     ilyenkor egyik változat sem írhat ki üres levezetést.</p>
+  <div class="ctl">
+    <div class="szw">
+      <button id="bM" class="on" onclick="setSize('mobile')">Mobil 390px</button>
+      <button id="bD" onclick="setSize('desktop')">Asztali</button>
+    </div>
+    <div class="szw">
+      <button id="cY" class="on" onclick="setCoupon(true)">Kuponnal (25%)</button>
+      <button id="cN" onclick="setCoupon(false)">Kupon nélkül</button>
+    </div>
+  </div>
+</div>
+
+<div class="stage">
+
+  <!-- ─────────────── A ─────────────── -->
+  <div class="frame">
+    <p class="vlabel">A változat — a levezetés a mondatban</p>
+    <p class="vwhy">A legkisebb beavatkozás: a mai mondat bővül. Egy sor marad, de hosszabb lesz.</p>
+    <div class="adm-banner">
+      <span class="adm-banner__ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
+      <div class="adm-banner__body">
+        <b>Kész.</b> A kártyáját megterheltük <span class="sum" id="a-sum">14 775 Ft</span><span id="a-disc"> — a teljes díjból (<span class="strike">19 700 Ft</span>) <span class="pct">25% üdvözlő kedvezménnyel</span></span>.
+        Mostantól él: Árak, szezonok · Környék, látnivalók · Online foglalás.
+        <span class="renew" id="a-renew">A kedvezmény egyszeri: a következő megújításkor ezek a modulok 19 700 Ft/év díjjal szerepelnek a számlán.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── B ─────────────── -->
+  <div class="frame">
+    <p class="vlabel">B változat — külön kedvezmény-sor</p>
+    <p class="vwhy">A mai mondat érintetlen marad; a kedvezmény külön, kiemelt sorban áll alatta.</p>
+    <div class="adm-banner">
+      <span class="adm-banner__ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
+      <div class="adm-banner__body">
+        <b>Kész.</b> A kártyáját megterheltük (<span class="sum" id="b-sum">14 775 Ft</span>) — mostantól él:
+        Árak, szezonok · Környék, látnivalók · Online foglalás.
+        <span class="disc" id="b-disc">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h.01M17 17h.01M6 18 18 6"/><circle cx="12" cy="12" r="9"/></svg>
+          <span>Üdvözlő kedvezmény: <b>−4 925 Ft</b> (25%) — egyszeri, a következő megújításkor 19 700 Ft/év.</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── C ─────────────── -->
+  <div class="frame">
+    <p class="vlabel">C változat — nyugta-levezetés</p>
+    <p class="vwhy">Három soros mini-elszámolás: díj, kedvezmény, fizetve. Ez mutatja meg a
+      legpontosabban, hogy mi miből jött ki — cserébe ez a legtöbb új felület.</p>
+    <div class="adm-banner">
+      <span class="adm-banner__ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg></span>
+      <div class="adm-banner__body">
+        <b>Kész.</b> Mostantól él: Árak, szezonok · Környék, látnivalók · Online foglalás.
+        <div class="rcpt" id="c-rcpt">
+          <div><span class="k">Három modul a fordulónapig</span><span class="v">19 700 Ft</span></div>
+          <div class="neg" id="c-disc"><span class="k">Üdvözlő kedvezmény (25%)</span><span class="v">−4 925 Ft</span></div>
+          <div class="tot"><span class="k">A kártyáját megterheltük</span><span class="v" id="c-sum">14 775 Ft</span></div>
+        </div>
+        <span class="renew" id="c-renew">A kedvezmény egyszeri — a következő megújításkor 19 700 Ft/év.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── A SZÁMLA ─────────────── -->
+  <div class="frame">
+    <p class="vlabel">És mi kerüljön a SZÁMLÁRA?</p>
+    <p class="vwhy">A számla ma egyetlen tételt tartalmaz: <i>„Citoviso előfizetés (éves, 3 modul)
+      — 14 775 Ft"</i>. <b>FONTOS:</b> külön kedvezmény-SORT nem szabad felvenni: a Számlázz.hu a tételeket
+      összeadja, így a végösszeg 14 775-ről 9 850-re esne — vagyis rosszul számláznánk. Marad
+      két biztonságos hely, ahol a végösszeg biztosan érintetlen:</p>
+
+    <div class="rcpt" style="margin-top:0">
+      <div><span class="k"><b>1. A tétel nevében</b></span><span class="v">a végösszeg nem változik</span></div>
+      <div style="display:block"><span class="k" style="display:block;margin:2px 0 6px">Így nézne ki a számlán:</span>
+        <span class="v" style="display:block;white-space:normal;font-weight:600">Citoviso előfizetés (éves, 3 modul) — 25% üdvözlő kedvezménnyel</span>
+        <span class="k" style="display:block;margin-top:5px">Rövid, és ott van, ahol a tételt olvassa. Viszont a 19 700 Ft-os díj nem fér el.</span>
+      </div>
+    </div>
+
+    <div class="rcpt">
+      <div><span class="k"><b>2. A számla megjegyzésében</b></span><span class="v">a végösszeg nem változik</span></div>
+      <div style="display:block"><span class="k" style="display:block;margin:2px 0 6px">A mai megjegyzés: „Alanyi adómentes (AAM).” — kiegészülne:</span>
+        <span class="v" style="display:block;white-space:normal;font-weight:600">Alanyi adómentes (AAM). Üdvözlő kedvezmény: a 19 700 Ft-os díjból −25%.</span>
+        <span class="k" style="display:block;margin-top:5px">Elfér benne a teljes levezetés, de a lap alján van, nem a tétel mellett.</span>
+      </div>
+    </div>
+
+    <p class="vwhy" style="margin:12px 0 0"><b>A kettő együtt is mehet</b> — a tétel neve mondja ki,
+      hogy kedvezményes, a megjegyzés pedig megadja a pontos levezetést.</p>
+  </div>
+
+</div>
+
+<script>
+function setSize(s){document.body.dataset.size=s;
+  document.getElementById('bM').classList.toggle('on',s==='mobile');
+  document.getElementById('bD').classList.toggle('on',s==='desktop');}
+
+/* A VALÓDI adat (order_intent): list_price=19700, offer.percent=25, price=14775.
+   Kupon nélkül az order price === listPrice és offerPercent === null — ilyenkor
+   egyetlen változat sem írhat ki levezetést, mert nincs mit levezetni. */
+var LIST = 19700, PCT = 25, PAID = 14775;
+function huf(n){ return n.toLocaleString('hu-HU').replace(/ /g,' ') + ' Ft'; }
+
+function setCoupon(on){
+  document.getElementById('cY').classList.toggle('on', on);
+  document.getElementById('cN').classList.toggle('on', !on);
+  var paid = on ? PAID : LIST;
+  ['a-sum','b-sum','c-sum'].forEach(function(id){ document.getElementById(id).textContent = huf(paid); });
+  // A kupon-függő részek eltűnnek, ha nincs kupon — nem marad üres „−0 Ft" sor.
+  document.getElementById('a-disc').style.display = on ? '' : 'none';
+  document.getElementById('b-disc').style.display = on ? '' : 'none';
+  document.getElementById('c-disc').style.display = on ? '' : 'none';
+  // A megújítás-figyelmeztetés is csak akkor igaz, ha volt kedvezmény.
+  ['a-renew','c-renew'].forEach(function(id){ document.getElementById(id).style.display = on ? '' : 'none'; });
+  // Kupon nélkül a C nyugtája egyetlen sorra esne — ilyenkor a mai mondat a helyes.
+  document.getElementById('c-rcpt').style.display = on ? '' : 'none';
+}
+
+setSize(window.innerWidth>=1240?'desktop':'mobile');
+setCoupon(true);
+</script>
+</body>
+</html>
