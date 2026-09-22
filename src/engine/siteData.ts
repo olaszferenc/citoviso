@@ -45,6 +45,8 @@ export interface CollectedPhoto {
   readonly url: string;
   readonly provenance?: Photo["provenance"];
   readonly caption?: string;
+  /** §A.2 — foreign ownership watermark, set from the purchased vision verdict. */
+  readonly watermarked?: boolean;
 }
 
 /**
@@ -61,6 +63,10 @@ export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string
     // The caption the SOURCE published beats a generated placeholder (§B.17: real text).
     alt: p.caption?.trim() || `${leadName} — ${i + 1}. kép`,
     ...(p.provenance ? { provenance: p.provenance } : {}),
+    // §A.2: the live gate's ONLY unconditional exclusion. Dropping it here would make
+    // `photoPolicy.isLiveSafePhoto` unreachable again — the exact dead-code state this
+    // whole change exists to end. Only ever set, never cleared (same shape as provenance).
+    ...(p.watermarked ? { watermarked: true } : {}),
   }));
 }
 

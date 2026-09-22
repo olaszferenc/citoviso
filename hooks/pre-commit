@@ -1511,6 +1511,17 @@ if [ -f scripts/domain-inbox-freshness-check.mts ] && \
   echo "[pre-commit] domain-inbox-freshness (feldolgozatlan ontológia-tudás áll-e)…"
   npx tsx scripts/domain-inbox-freshness-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⭐⭐ VÍZJEL-KAPU ŐR (§A.2) — az „egyetlen feltétlen kizárás" tényleg kizár-e.
+# A `watermarked` flaget évekig SEMMI nem állította `true`-ra a termelési úton: a kapu ott
+# állt, a fék halott kód volt, és egy vízjeles portál-fotó kimehetett egy FIZETŐ ügyfél élő
+# oldalára. Ez az őr a TELJES láncot méri (vision-ítélet → dropNeverShown → toSitePhotos →
+# isLiveSafePhoto), és a feltétlenséget is (a kizárás a jogi nyilatkozat ELLENÉRE is áll).
+# ⛔ DIFF-SCOPE: csak a láncot érintő diffre fut. Nem hív LLM-et, nem ír DB-t (~3 s).
+if [ -f scripts/watermark-gate-check.mts ] && \
+   changed_files | grep -qE '^(src/generator/(heroPick|generate)\.ts|src/engine/(siteData|photoPolicy|recipe)\.ts|src/conversion/provision\.ts|scripts/watermark-gate-check\.mts)'; then
+  echo "[pre-commit] watermark-gate-check (a §A.2 vízjel-kizárás tényleg kizár-e)…"
+  npx tsx scripts/watermark-gate-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⭐⭐ AZ ÉRTESÍTŐ ŐRE — a frissesség-őr a TÜNETET méri (áll-e feldolgozatlan tudás), ez az OKOT:
 # értesül-e róla bárki. A `distill.sh` hook-pontja hónapokig úgy élt, hogy a hívott `notify.sh`
 # NEM LÉTEZETT, tehát a `[ -x ]` mindig hamis volt és a lépés NÉMÁN kimaradt — ára 9 review /

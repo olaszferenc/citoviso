@@ -19,7 +19,7 @@ import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
-import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
+import { dropNeverShown, photoUrlKey, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 
 export interface ConversionResult {
@@ -57,6 +57,22 @@ async function renderSnapshotHtml(artifact: {
     const shown = dropNeverShown(stored.photos ?? [], scores);
     for (const d of shown.dropped) {
       console.log(`  ⛔ élesítés: kihagyva a lapról [${d.verdict.subject}] ${d.photo.url} — ${d.verdict.reason}`);
+    }
+    // ⚠️ §A.2 LEFEDETTSÉG — itt a HALLGATÁS a veszélyes. Ez az út SZÁNDÉKOSAN cache-ből
+    // dolgozik (élesítéskor nem indítunk fizetős hívást), a vízjel-ítélet viszont csak a
+    // `v3-watermark` prompt-verzió óta létezik. Egy KORÁBBAN legyártott mock pillanatképénél
+    // tehát nincs verdikt — és verdikt nélkül a kép bélyeg nélkül megy tovább, vagyis a §A.2
+    // „feltétlen kizárás"-a ezeken a lapokon NEM tud érvényesülni.
+    // A vevőt nem büntetjük érte (a mi lemaradásunk nem lelet a fotóról, és egy fizető ügyfél
+    // élesítését egy hiányzó ítélet nem tagadhatja meg) — de KIMONDJUK, mert egy néma
+    // lefedettségi lyuk pontosan úgy néz ki, mint a siker.
+    const unjudged = shown.kept.filter((p) => !scores.has(photoUrlKey(p.url)));
+    if (unjudged.length > 0) {
+      console.warn(
+        `  ⚠️ élesítés: ${unjudged.length}/${shown.kept.length} fotónak NINCS vision-ítélete ` +
+          `(korábbi prompt-verzió) — a §A.2 vízjel-kizárás ezeken NEM futott le. ` +
+          `Feloldás: npx tsx scripts/rescore-photo-verdicts.mts --go`,
+      );
     }
     const siteData: SiteData = { ...stored, photos: shown.kept };
     // LIVE phase: sample-capable modules (rooms/reviews) with no real data are dropped —

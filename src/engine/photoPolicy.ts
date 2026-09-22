@@ -49,5 +49,21 @@ export function applyLivePhotoPolicy(data: SiteData, rightsDeclared: boolean): S
   const rooms = data.rooms?.map((r) =>
     r.photo && !isLiveSafePhoto(r.photo, rightsDeclared) ? { ...r, photo: undefined } : r,
   );
+  // ⚠️ A VÍZJEL MIATTI KIZÁRÁS NEM LEHET NÉMA (ADR-0200). A szűrés egy FIZETŐ ügyfél élő
+  // lapjáról vesz le képet, és a döntést egy MÉRETLEN pontosságú vision-ítélet hozza: ha
+  // téved, egy valódi szállás-fotó tűnik el — némán, nyom nélkül. Egy téves kizárást csak
+  // akkor lehet észrevenni és visszavonni, ha egyáltalán KIMONDJUK, hogy megtörtént.
+  // (A provenance-alapú kizárás ettől külön ügy: az szándékos és jól értett szabály.)
+  const wmPhotos = data.photos.filter((p) => p.watermarked);
+  const wmRooms = (data.rooms ?? []).filter((r) => r.photo?.watermarked);
+  if (wmPhotos.length > 0 || wmRooms.length > 0) {
+    console.warn(
+      `  ⚠️ §A.2 vízjel-kizárás: ${wmPhotos.length} galéria-kép` +
+        (wmRooms.length ? ` + ${wmRooms.length} szoba-kép` : "") +
+        ` NEM megy ki az élő lapra (${data.photos.length} képből ${photos.length} marad). ` +
+        `A vision-ítélet pontossága NINCS mérve — téves kizárásnál ez a sor a nyom. ` +
+        `Kizárt: ${wmPhotos.map((p) => p.url).join(", ")}`,
+    );
+  }
   return { ...data, photos, ...(rooms ? { rooms } : {}) };
 }

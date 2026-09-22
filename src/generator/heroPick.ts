@@ -42,8 +42,14 @@ const HERO_MODEL = "claude-haiku-4-5";
  * bevezetése előtt egy Mirabella-kemping reklámbanner (ráégetett felirattal, más cég
  * hirdetése) 92 pontot kapott "gyönyörű vízparti kilátás"-ként — mert az is, csak nem a
  * lead képe. A verzió a cache `model` mezőjébe kerül, így a régi ítéletek nem "ragadnak be".
+ *
+ * ⚠️ `v3-watermark` (2026-09-19): a séma `watermarked` mezővel bővült, ezért a régi sorok
+ * ítélete HIÁNYOS (nincs vízjel-verdiktjük) — a verzió-bump szándékosan érvényteleníti őket.
+ * Mérve az újrapontozás ára: a cache 222 sor (194 a `v2-adbanner`-en), tehát a teljes
+ * újrapontozás nagyságrendileg 1 USD alatt van — ez nem ok arra, hogy hiányos ítéletet
+ * hordozzunk tovább egy jogi kapu alatt.
  */
-const PROMPT_VERSION = "v2-adbanner";
+const PROMPT_VERSION = "v3-watermark";
 const CACHE_MODEL = `${HERO_MODEL}#${PROMPT_VERSION}`;
 
 /**
@@ -147,8 +153,26 @@ export function dropNeverShown<T extends OrderablePhoto>(
   const dropped: { photo: T; verdict: HeroScore }[] = [];
   for (const p of photos) {
     const v = scores.get(photoUrlKey(p.url));
-    if (v && NEVER_SHOWN.has(v.subject)) dropped.push({ photo: p, verdict: v });
-    else kept.push(p);
+    if (v && NEVER_SHOWN.has(v.subject)) {
+      dropped.push({ photo: p, verdict: v });
+      continue;
+    }
+    // ⛔⛔ A VÍZJEL-BÉLYEG ITT RAGAD RÁ, ÉS SZÁNDÉKOSAN EBBEN A FÜGGVÉNYBEN (§A.2).
+    //
+    // A §A.2 azt ígéri, hogy a vízjeles fotó FELTÉTLEN kizáró ok az élesítésnél, és a kapu
+    // (`photoPolicy.isLiveSafePhoto`) évek óta ott is áll — csakhogy a `watermarked` flaget
+    // a termelési úton SEMMI nem állította `true`-ra, tehát a fék halott kód volt: egy
+    // vízjeles portál-fotó akadálytalanul kiment egy fizető ügyfél ÉLŐ oldalára.
+    //
+    // Miért nem külön függvény? Mert NÉGY renderelő út olvassa a megvett ítéletet
+    // (generate · provision · tenant/editor · heroOverride), és mind a négy EZT hívja. Egy
+    // különálló `markWatermarked()`-et egy jövőbeli ötödik út némán kihagyna — pontosan az
+    // a hibaosztály, ami az `ad_banner`-nél már megtörtént (a verdikt megvolt, a kiszállított
+    // lap mégis vitte). Egy megvett ítélet, egy alkalmazási pont.
+    //
+    // A bélyeg NEM dob el képet itt: a MOCK/DEMO fázisban a vízjeles kép megengedett, a
+    // kizárás az ÉLES kapué (§A.2 fázis-mátrix). Itt csak a tudást visszük tovább.
+    kept.push(v?.watermarked ? ({ ...p, watermarked: true } as T) : p);
   }
   return { kept, dropped };
 }
@@ -160,12 +184,23 @@ export interface HeroScore {
   readonly score: number;
   /** Egy mondat magyarul: MIÉRT — ez megy az operátor-konzol ítélet-buborékjába. */
   readonly reason: string;
+  /**
+   * IDEGEN tulajdonjogi vízjel van-e a képen (§A.2). Ortogonális a `subject`-re: egy
+   * vízjeles kép attól még lehet a szállás gyönyörű külső fotója — csak nem mehet ÉLESRE.
+   *
+   * ⚠️ Régi, `v3-watermark` ELŐTTI cache-sorban ez a mező nem létezik. Ezért a cache-olvasó
+   * verzióra szűr (`model = CACHE_MODEL`), vagyis ilyen sort be sem tölt — a hiányzó ítélet
+   * így nem „false"-ként, hanem NEM LÉTEZŐ verdiktként viselkedik.
+   */
+  readonly watermarked: boolean;
 }
 
 /** Amit a rendezéshez tudni kell egy fotóról (a GatedPhoto ennek a bővebb alakja). */
 export interface OrderablePhoto {
   readonly url: string;
   readonly longEdge?: number | undefined;
+  /** §A.2 — a `dropNeverShown` ezt ragasztja rá a megvett ítéletből. */
+  readonly watermarked?: boolean | undefined;
 }
 
 /** URL query-string nélkül, kisbetűsen — ugyanaz a kulcs, amivel a generate.ts dedupel. */
@@ -213,8 +248,19 @@ const SCHEMA = {
             type: "string",
             description: "Egy rövid magyar mondat: mi látszik és miért kapta ezt a pontot.",
           },
+          // ⛔ KÜLÖNÁLLÓ MEZŐ, NEM KATEGÓRIA. A vízjel ortogonális arra, hogy MIT ábrázol a
+          // kép: egy tökéletes, a szállást ábrázoló külső fotó is lehet vízjeles, és pont AZ
+          // a §A.2 esete — a kép a szállásé, de a rányomott jel másé. Ha `subject`-ként
+          // kezelnénk, a vízjeles külső fotó elveszítené az `exterior` besorolását, és a
+          // hero-választás romlana el egy jogi mező miatt.
+          watermarked: {
+            type: "boolean",
+            description:
+              "Van-e a képen IDEGEN tulajdonjogi vízjel (fotóügynökség/portál félig átlátszó " +
+              "jele, ismétlődő mintázat, sarok-logó). A szállás SAJÁT táblája/logója NEM az.",
+          },
         },
-        required: ["index", "subject", "score", "reason"],
+        required: ["index", "subject", "score", "reason", "watermarked"],
       },
     },
   },
@@ -233,7 +279,20 @@ Pontozás (a vendég szemével: melyik kép miatt kattint tovább):
 - 0–15: nyitóképnek ALKALMATLAN: WC/külső illemhely, fürdőszoba, parkoló, kuka, tábla/logó/térkép, dokumentum vagy képernyőkép, emberekről készült portré, felismerhetetlen kép.
 - 0 pont és "ad_banner": REKLÁM. Ha a képre SZÖVEG, logó, ár, webcím vagy szlogen van ráégetve, az hirdetés — akkor is, ha egyébként szép tájkép. Egy portál a saját hirdetéseit is a galéria közé keveri, és egy MÁSIK szolgáltató reklámja a mi ügyfelünk lapján a legrosszabb, ami történhet.
 
-A "subject" a fő tárgyat nevezze meg; ha a kép fele kert, fele épület, az erősebb élményt add meg.`;
+A "subject" a fő tárgyat nevezze meg; ha a kép fele kert, fele épület, az erősebb élményt add meg.
+
+VÍZJEL ("watermarked") — ez KÜLÖN kérdés a tárgytól és a pontszámtól:
+- true, ha a képen IDEGEN tulajdonjogi jel van: fotóügynökség vagy foglalási portál félig
+  átlátszó felirata, a képen végigismétlődő mintázat, sarokba égetett szolgáltató-logó
+  (pl. "booking", "szallas.hu", "©", "stock", egy fotós neve).
+- false, ha a felirat a SZÁLLÁSÉ: a panzió saját névtáblája, cégére, a saját logója az
+  épületen vagy a medence mellett. Az a szállás tulajdona, nem idegen jog.
+- A vízjel a pontszámot NEM befolyásolja, és a "subject"-et sem: egy vízjeles, gyönyörű
+  külső fotó továbbra is "exterior" magas pontszámmal — a vízjel külön, jogi kérdés.
+- Ha BIZONYTALAN vagy, adj false-t, de a "reason" ELEJÉRE írd oda, hogy "VÍZJEL?" és utána
+  mit láttál. Egy téves true elvenné a szállás valódi fotóját (a szűrés nem vehet el valódi
+  szállás-fotót), egy néma false viszont eltemetné a kétséget — ezért a kétes eset MARAD a
+  lapon, de LÁTHATÓ a kurátornak.`;
 
 /** Cache-ből olvasott + frissen pontozott verdiktek egy lead fotóira, URL-kulcs szerint. */
 export type HeroScores = ReadonlyMap<string, HeroScore>;
@@ -243,12 +302,19 @@ async function readCache(keys: readonly string[]): Promise<Map<string, HeroScore
   if (!keys.length) return out;
   const rows = await db
     .selectFrom("photo_hero_score")
-    .select(["url_key", "subject", "score", "reason"])
+    .select(["url_key", "subject", "score", "reason", "watermarked"])
     .where("url_key", "in", [...keys])
     .where("model", "=", CACHE_MODEL)
     .execute();
   for (const r of rows) {
-    out.set(r.url_key, { subject: r.subject, score: r.score, reason: r.reason ?? "" });
+    out.set(r.url_key, {
+      subject: r.subject,
+      score: r.score,
+      reason: r.reason ?? "",
+      // A `model = CACHE_MODEL` szűrő miatt ide csak `v3-watermark` sor jut, ahol az oszlop
+      // ki van töltve. A `?? false` a séma-migráció utáni, még NULL sorok védője.
+      watermarked: r.watermarked ?? false,
+    });
   }
   return out;
 }
@@ -268,12 +334,20 @@ export async function readCachedScores(urls: readonly string[]): Promise<HeroSco
 async function writeCache(key: string, v: HeroScore): Promise<void> {
   await db
     .insertInto("photo_hero_score")
-    .values({ url_key: key, subject: v.subject, score: v.score, reason: v.reason, model: CACHE_MODEL })
+    .values({
+      url_key: key,
+      subject: v.subject,
+      score: v.score,
+      reason: v.reason,
+      watermarked: v.watermarked,
+      model: CACHE_MODEL,
+    })
     .onConflict((oc) =>
       oc.column("url_key").doUpdateSet({
         subject: v.subject,
         score: v.score,
         reason: v.reason,
+        watermarked: v.watermarked,
         model: CACHE_MODEL,
       }),
     )
@@ -333,7 +407,17 @@ export async function scoreHeroCandidates(
   const block = res.content.find((b) => b.type === "text");
   if (!block || block.type !== "text") return scores;
 
-  let parsed: { photos?: { index?: number; subject?: string; score?: number; reason?: string }[] };
+  let parsed: {
+    photos?: {
+      index?: number;
+      subject?: string;
+      score?: number;
+      reason?: string;
+      // A séma kötelezővé teszi, a TÍPUS mégis opcionális: ez a nyers JSON a modelltől,
+      // nem garancia. A `=== true` olvasás alább ezt fail-safe-en kezeli.
+      watermarked?: boolean;
+    }[];
+  };
   try {
     parsed = JSON.parse(block.text) as typeof parsed;
   } catch {
@@ -349,7 +433,16 @@ export async function scoreHeroCandidates(
     const score = NEVER_HERO.has(subject)
       ? Math.min(NEVER_HERO_SCORE, Math.max(0, Math.round(row.score)))
       : Math.max(0, Math.min(100, Math.round(row.score)));
-    const verdict: HeroScore = { subject, score, reason: (row.reason ?? "").trim() };
+    // ⛔ A vízjel csak akkor `true`, ha a modell KIMONDTA. Hiányzó/rossz típusú mező =
+    // false, NEM „igaz, mert óvatosak vagyunk": egy téves true elvenné a fizető ügyfél
+    // valódi szállás-fotóját. A kétes esetet a modell a `reason` „VÍZJEL?" előtagjával
+    // jelzi, és az a kurátor csempéjén látszik.
+    const verdict: HeroScore = {
+      subject,
+      score,
+      reason: (row.reason ?? "").trim(),
+      watermarked: row.watermarked === true,
+    };
     const key = photoUrlKey(target.photo.url);
     scores.set(key, verdict);
     await writeCache(key, verdict).catch(() => {

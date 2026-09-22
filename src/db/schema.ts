@@ -1010,6 +1010,13 @@ export interface PhotoHeroScoreTable {
   /** 0–100 hero suitability; the photo ordering reads this. */
   score: number;
   reason: string | null;
+  /**
+   * 0070 (§A.2): carries a FOREIGN ownership watermark. Orthogonal to `subject` — a
+   * watermarked photo can still be a perfect exterior shot; it just cannot go LIVE.
+   * Nullable only for rows written before the column existed; the reader filters on
+   * `model = CACHE_MODEL`, so a pre-`v3-watermark` row is never loaded at all.
+   */
+  watermarked: boolean | null;
   model: string;
   scored_at: Generated<Timestamp>;
 }
