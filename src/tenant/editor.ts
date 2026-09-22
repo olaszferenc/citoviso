@@ -54,6 +54,19 @@ export interface PhotoEdit {
    * picture again for every room. Unassigned photos stay the house's own gallery.
    */
   units?: string[];
+  /**
+   * ADR-0198: unit ids whose COVER this photo is — the picture the room card shows
+   * on the public page. A separate concept from gallery ORDER on purpose: the house
+   * cover is `photos[0]`, and one global order cannot serve N independent covers
+   * (measured: the same photo was the first of two different rooms, so two cards
+   * showed one picture and the owner had no way to fix it).
+   *
+   * A LIST, not a single id, because one photo may legitimately be the cover of more
+   * than one unit — and because marking unit A must never move unit B's cover.
+   * Chosen over a `site_unit` column so the shared-library rules (assignment,
+   * ordering, deletion) keep applying to one record with no migration.
+   */
+  coverFor?: string[];
 }
 
 /**
@@ -73,7 +86,24 @@ function carryPhoto(p: PhotoEdit): PhotoEdit {
     ...(p.provenance ? { provenance: p.provenance } : {}),
     ...(p.watermarked ? { watermarked: true } : {}),
     ...(p.units?.length ? { units: [...p.units] } : {}),
+    ...(p.coverFor?.length ? { coverFor: [...p.coverFor] } : {}),
   };
+}
+
+/**
+ * The unit's COVER photo (ADR-0198): the owner's explicit pick if there is one,
+ * otherwise the first assigned photo — today's rule, kept as the fallback so an
+ * owner who never opens the picker sees exactly what they see now.
+ *
+ * ONE resolver for the public render and for the admin, because two copies of this
+ * rule is how the screen and the page start disagreeing about the same picture.
+ */
+export function unitCoverPhoto(
+  unitId: string,
+  photos: readonly PhotoEdit[],
+): PhotoEdit | undefined {
+  const mine = photos.filter((p) => (p.units ?? []).includes(unitId));
+  return mine.find((p) => (p.coverFor ?? []).includes(unitId)) ?? mine[0];
 }
 export interface TenantContentEdits {
   name?: string;
@@ -321,7 +351,10 @@ export async function moduleContentFor(
       // The room card shows the unit's OWN photos when the owner assigned any;
       // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
       const mine = unitPhotos.get(u.id) ?? [];
-      const own = mine[0];
+      // ADR-0198: the cover is the owner's OWN pick when they made one. Until this,
+      // it was `mine[0]` — the shared gallery's order — so two rooms holding the same
+      // first photo showed one picture on two cards, unfixably (measured on the dev DB).
+      const own = unitCoverPhoto(u.id, photos) ?? mine[0];
       // ⛔ The description and the amenities travel SEPARATELY (rooms-card contract §1).
       // They used to be glued into one `note` line "so no template needs editing" — and
       // the guest got "az hogy … · Ingyenes Wi‑Fi · Síkképernyős TV" as one sentence,
@@ -917,8 +950,59 @@ export async function setTenantUnitPhotos(
     const carried = carryPhoto(p);
     const others = (carried.units ?? []).filter((u) => u !== unitId);
     const next = picked.has(p.url) ? [...others, unitId] : others;
-    const { units: _dropped, ...rest } = carried;
-    return next.length ? { ...rest, units: next } : rest;
+    const { units: _dropped, coverFor: _cover, ...rest } = carried;
+    // ADR-0198: a photo taken OFF the unit cannot stay its cover — otherwise the
+    // card would keep showing a picture the owner just detached. Dropping the mark
+    // lets the resolver fall back to the first remaining photo, which is exactly
+    // what the screen promises ("a sorban következő lép a helyébe").
+    const cover = picked.has(p.url)
+      ? (carried.coverFor ?? [])
+      : (carried.coverFor ?? []).filter((u) => u !== unitId);
+    return {
+      ...rest,
+      ...(next.length ? { units: next } : {}),
+      ...(cover.length ? { coverFor: cover } : {}),
+    };
+  });
+  return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
+}
+
+/**
+ * ADR-0198 — make ONE photo the cover of ONE unit.
+ *
+ * Two invariants the decision binds, enforced here rather than trusted:
+ *   · the HOUSE cover (`photos[0]`) is untouched — the array order never changes;
+ *   · another unit's cover is untouched — only THIS unit's mark moves.
+ * And the third rule comes from the screen: a star on a photo the unit does not own
+ * assigns it too, because a control whose only honest answer is "nem lehet" is worse
+ * than a control that does the obvious thing.
+ */
+export async function setTenantUnitCover(
+  tenantId: string,
+  unitId: string,
+  url: string,
+): Promise<{ ok: boolean }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false };
+  const owned = new Set((await ensureUnits(s.id)).map((u) => u.id));
+  if (!owned.has(unitId)) return { ok: false };
+  const source = s.overrides.photos ?? s.baseSiteData.photos ?? [];
+  if (!source.some((p) => p.url === url)) return { ok: false };
+  const current = source.map((p) => {
+    const carried = carryPhoto(p);
+    const { units: _u, coverFor: _c, ...rest } = carried;
+    const isTarget = p.url === url;
+    const units = isTarget
+      ? [...(carried.units ?? []).filter((u) => u !== unitId), unitId]
+      : (carried.units ?? []);
+    const cover = isTarget
+      ? [...(carried.coverFor ?? []).filter((u) => u !== unitId), unitId]
+      : (carried.coverFor ?? []).filter((u) => u !== unitId);
+    return {
+      ...rest,
+      ...(units.length ? { units } : {}),
+      ...(cover.length ? { coverFor: cover } : {}),
+    };
   });
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
 }

@@ -8,6 +8,46 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
 
+**🛏️ A TENANT-ADMIN SZOBA-SZERKESZTŐ — A JÓVÁHAGYOTT D TERV LESZÁLLÍTVA (ADR-0198 ⑥).**
+Mandátum: `~/rc-briefs/room-editor-impl-brief.md` (a terv-szál GÉPI munkaátadása). Kontraktus:
+`assets/design-refs/tenant-admin/room-editor/README.md` (§9 kötő feliratok + §10 döntések).
+Session-jegyzet: `_planning/memory/2026-09-22_room_editor_impl.md`. **Élesítés nem volt feladat.**
+
+- **A felület:** kártyarács (mobil 2 / asztali 4 oszlop; borító, `N kép`/`Részletek`, név,
+  férőhely, `Van saját oldala`/`Hiányos`, és a **borító-ütközés jelvénye a RÁCSON**) + kattintásra
+  **felugró** `Alapok · Képek · Felszereltség` fülekkel; asztalin középre zárt párbeszéd, a
+  **Mentés rögzített lábazatban**. A **név és a férőhely bekerült a szerkesztőbe** — eddig egy
+  szoba KÉT űrlapon élt. A Képek fül nagy borító-előnézettel kezd, alatta **helyben feltöltés**
+  (a közös képtárba megy ÉS ehhez az egységhez rendel, és ezt kimondja) és a **KÖZÖS képtár**
+  (halvány = nincs hozzárendelve, pipa = hozzárendel, **csillag = borítóvá tesz ÉS hozzárendel**).
+- **A nyitva hagyott tárolási modell ELDÖNTVE: jelölés a FOTÓ-rekordon** (`coverFor?: string[]`,
+  migráció nélkül, a `carryPhoto()` viszi tovább). Lista, nem egy id (egy kép több szoba borítója
+  lehet); a galéria-sorrend érintetlen → a **ház nyitóképe nem mozdul**, és **másik szoba borítója
+  sem**. Feloldás EGY függvényben (`unitCoverPhoto`), jelölés nélkül a MAI szabály a tartalék —
+  aki nem nyúl hozzá, azt látja, amit eddig.
+- **JS nélkül is teljes** (felugró `:target`-tel, fülváltás rádió+CSS, hozzárendelés,
+  borító-váltás, mentés — kikapcsolt JS-sel mérve). A helyben feltöltés JS-t kér, ahogy a Fotók
+  fülön ma is (nincs multipart-értelmező) — **kimondva, nem elhallgatva**.
+- ⛔ **Saját leletek mérésből:** a `history.replaceState` **nem értékeli újra a `:target`-et**
+  (az ESC „lefutott", a felugró nyitva maradt) · a kontraktus horgony-listájából **NULLA** elem
+  került be, mert a szakasz CÍMÉT a próza is leírta, és az őr a KORÁBBI előfordulást fogta meg —
+  **zölden** (a regiszter kimenetéből visszaolvasva: 40 → 54) · a levétel kötő üzenete a SZOKÁSOS
+  úton (pipa le + Mentés) elmaradt volna, most az **állapot-különbségből** képződik.
+- ⛔⛔ **A feltöltést HOLTVERSENY tartotta fogva:** a súgó-fordítás lefedettség-kapuja a KÖZÖS
+  dev-DB sorait a SAJÁT fa forrás-hash-éhez méri, és három fa három különböző verziót tartott két
+  szócikkből — minden futás felülírta a másikét (mérve fél órán át, 40 commit-kísérlet, egyik sem
+  talált csendet). A fám lemaradása is része volt, azt rebase-szel javítottam. **Tulajdonosi
+  engedéllyel, EGYSZER** léptem túl EZEN AZ EGY kapun; minden más kapu lefutott.
+- **Őr:** `scripts/room-editor-check.mts` — 123 állítás, 390 + 1280 px, JS-sel és JS nélkül,
+  KIFESTETT téglalapon, kontraszt-önteszttel, és **hat negatív kontroll** (mind pirosra ment).
+- 🔴 **NYITOTT:** az **ADR-0192 ⑧.4** ugyanezt a felületet érinti (a `rooms` eltüntetheti a
+  fizetett `amenities` szekciót → szólni kell a tulajnak) — **külön §2b kör**. ⚠️ A súgó-fordítás
+  kapuja N párhuzamos fa mellett SZERKEZETILEG teljesíthetetlen (a közös táblát a saját fa
+  hash-éhez méri) — ezt külön mandátum rendezze.
+
+## Előző szál (2026-09-22)
+
+
 **💳 A KAPOTT KEDVEZMÉNY LÁTSZIK — a sávon és a számlán is (ADR-0205).**
 Session-jegyzet: `_planning/memory/2026-09-22_coupon_visible.md`.
 Kontraktus: `assets/design-refs/tenant-admin/coupon-visible/` (C változat, tulajdonosi döntés).

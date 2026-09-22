@@ -394,7 +394,13 @@ const editorUnits = [
     description: "Tágas, világos apartman a kertre néző terasszal.",
     slug: "kertre-nezo-apartman",
     amenities: ["Saját fürdőszoba", "Erkély", "Klíma"],
-    photoCount: 2,
+    // ADR-0198: a szoba-szerkesztő a HOZZÁRENDELT képekből és a BORÍTÓBÓL dolgozik —
+    // a fixture ugyanazt mondja, amit a fenti `content.photos` (egy kép tartozik ide,
+    // a másik kettő a képtárban halványan áll). Egy kitalált darabszám itt épp azt a
+    // képet adná, amit a termék nem tud előállítani.
+    photoCount: 1,
+    photoUrls: ["/assets/ui/tpl-organic.jpg"],
+    coverUrl: "/assets/ui/tpl-organic.jpg",
   },
   {
     id: "u2",
@@ -403,7 +409,9 @@ const editorUnits = [
     description: null,
     slug: "padlasszoba",
     amenities: [],
-    photoCount: 0,
+    photoCount: 1,
+    photoUrls: ["/assets/ui/tpl-watercolor.jpg"],
+    coverUrl: "/assets/ui/tpl-watercolor.jpg",
   },
 ];
 
@@ -499,6 +507,11 @@ function moduleShotHtml(entryId: string): string {
       // Plan F: the screenshot must show what the entry describes — the icon
       // picker with a couple of site-wide picks inherited (greyed) on the card.
       unitAmenities: { active: true, siteSelected: ["Medence", "Ingyenes Wi‑Fi"] },
+      // ADR-0198: a KÖZÖS képtár a szerkesztő magja — e nélkül a felugró Képek füle
+      // „még nincs kép"-et mutatna, miközben a szócikk a képtárról beszél.
+      photoLibrary: (content.photos ?? []) as never,
+      // A második kép tárgya: a NYITOTT felugró Képek füle (a `:target` a hash-ből jön).
+      roomsView: { openUnitId: "u1", tab: "kep" },
     });
   if (entryId === "admin-modules-pricing")
     return moduleSettingsSection("pricing", {
@@ -684,6 +697,9 @@ async function shoot(
   multilang?: MultilangAdminData,
   /** Element capture with the card's sticky price bar unpinned (see below). */
   viewportAt?: string,
+  /** ADR-0198: a szoba-szerkesztő felugrója `:target`-tel nyílik (nulla JS), tehát a
+   *  KÉP is a valódi úton készül — a horgonnyal együtt töltjük be a lapot. */
+  hash?: string,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     ...(multilang ? { multilang } : {}),
@@ -727,7 +743,7 @@ async function shoot(
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
   const file = path.join(tmp, `${tab}-${topic ?? "x"}-${path.basename(outPath, ".png")}.html`);
   await writeFile(file, html, "utf8");
-  await page.goto(pathToFileURL(file).href);
+  await page.goto(pathToFileURL(file).href + (hash ?? ""));
   await page.waitForTimeout(300);
   // A guide image must show what its entry describes — when the subject sits
   // below the fold (the room card's amenity picker), capture THAT element:
@@ -901,7 +917,14 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
     // A foglalás-entry TÖRZSE a naptárról szól (csukható fejléc, jelvény, nap-fajták,
     // jelmagyarázat) — az viszont a hajtás ALATT van, tehát a viewport-kép semmit nem
     // mutatna belőle (tudásbázis-őr, 2026-09-08). Az elem-capture a naptár-kártyát viszi.
-    entryId === "admin-modules-booking" ? "details#cit-naptar" : undefined,
+    entryId === "admin-modules-booking"
+      ? "details#cit-naptar"
+      : // ADR-0198: a szoba-entry TÁRGYA a kártyarács, az pedig a 390×844 viewport
+        // HAJTÁSA ALATT kezdődik (a modul-fejléc és a magyarázó sáv fölötte ül) —
+        // mérve: a viewport-képen egyetlen szoba-kártya sem látszott egészben.
+        entryId === "admin-modules-rooms"
+        ? ".rs-wrap"
+        : undefined,
   );
 }
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative
@@ -927,14 +950,25 @@ await shoot(
     LANG,
   ),
 );
-// The rooms entry's second image: the amenity picker itself, which lives below
-// the fold on the room card (kb guard finding, 2026-08-26).
+// ADR-0198 — a szoba-entry MÁSODIK képe: a megnyitott szerkesztő „Képek" füle, mert a
+// szócikk törzse a borítóképről, a feltöltésről és a közös képtárról szól, az pedig a
+// rácsról készült képen egyáltalán nem látszik (a felugró alapból csukva van).
+// A felugró `:target`-tel nyílik → a kép a VALÓDI úton készül, a horgonnyal.
 await shoot(
   "modulok",
   path.join(ROOT, "kb/entries", "admin-modules-rooms", "assets", LANG, "picker.png"),
   undefined,
   moduleShotHtml("admin-modules-rooms"),
-  ".ampick",
+  // ⚠️ A felugróból HÁROM van a lapon (egy egységenként), és csak a megcélzott
+  // látszik — a puszta `.rs-pop` az ELSŐT (a rejtettet) fogná meg, és a kép 30 mp
+  // után némán elhasalna.
+  "#szoba-u1 .rs-pop",
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  "#szoba-u1",
 );
 // Verification-only shots (mobile nav with the Súgó tab + an open guide) — CWD.
 await shoot("sugo", path.join(process.cwd(), "kb-shot-sugo-list.png"));

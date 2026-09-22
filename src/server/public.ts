@@ -48,6 +48,8 @@ import {
   setTenantPhotoCaption,
   setTenantPhotoUnits,
   setTenantUnitPhotos,
+  setTenantUnitCover,
+  unitCoverPhoto,
   photosByUnit,
   rerenderTenantSnapshot,
   renderTenantModulePreview,
@@ -1020,6 +1022,9 @@ async function serveAdmin(
   unitId?: string | null,
   helpTopic?: string | null,
   helpQuery?: string | null,
+  /** ADR-0198 — a szoba-szerkesztő felugrójának füle (`fl`) és nyugtázó kódja (`uz`). */
+  roomTab?: string | null,
+  roomNotice?: string | null,
 ): Promise<void> {
   const session = await currentTenant(req);
   if (!session) return redirect(res, "/login");
@@ -1124,9 +1129,8 @@ async function serveAdmin(
       let unitAmenities;
       if (moduleId === "rooms" || moduleId === "pricing") {
         const list = await ensureUnits(site.id);
-        const assigned = photosByUnit(
-          ((await getTenantContent(session.tenantId))?.photos ?? []) as never,
-        );
+        const libraryPhotos = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
+        const assigned = photosByUnit(libraryPhotos);
         units = list.map((u) => ({
           id: u.id,
           name: u.name,
@@ -1138,7 +1142,12 @@ async function serveAdmin(
           // The picker's checked state (approved plan B): which library photos
           // this unit already owns.
           photoUrls: (assigned.get(u.id) ?? []).map((p) => p.url),
+          // ADR-0198: resolved by the SAME function the public render uses, so the
+          // admin cannot show one picture while the page serves another.
+          coverUrl: unitCoverPhoto(u.id, libraryPhotos)?.url ?? null,
           seasonalOnly: u.seasonalOnly,
+          // ADR-0114: the card says "az egész ház" — it changes what the unit MEANS.
+          isWholeProperty: u.isWholeProperty,
         }));
         // The shared library the room card offers to pick from.
         photoLibrary = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
@@ -1205,6 +1214,12 @@ async function serveAdmin(
         ...(reviews ? { reviews } : {}),
         ...(photoLibrary ? { photoLibrary } : {}),
         ...(unitAmenities ? { unitAmenities } : {}),
+        // ADR-0198 — a felugró állapota a körút után: melyik szoba, melyik fül, és
+        // mi történt. A `#szoba-<id>` horgony nyitja a felugrót (`:target`), ez
+        // pedig a fület és a nyugtázó üzenetet adja hozzá.
+        ...(moduleId === "rooms"
+          ? { roomsView: { openUnitId: unitId ?? null, tab: roomTab ?? null, notice: roomNotice ?? null } }
+          : {}),
       });
     }
   }
@@ -2282,6 +2297,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
     const unit = form.get("id") ?? "";
+    // ADR-0198: which tab the owner was on, so the round trip puts them back there
+    // instead of dropping them on "Alapok" after every star-click.
+    const tabRaw = form.get("fl") ?? "";
+    const backTab = tabRaw === "kep" || tabRaw === "fel" ? tabRaw : "alap";
+    let notice = "mentve";
     // This route was the ONE unit-scoped save with no module gate at all (found
     // 2026-08-26 while its neighbours — prices, booking — all checked): the link
     // was hidden without the rooms module, but a direct POST wrote anyway. Same
@@ -2293,7 +2313,19 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     ) {
       const units = await ensureUnits(siteId);
       const u = units.find((x) => x.id === unit)!;
-      await updateUnit(siteId, unit, u.name, u.capacity, form.get("description"));
+      // ADR-0198: the name and the capacity moved ONTO the room editor — until now a
+      // room was edited on two separate forms ("Mit ad ki?" and the content card) and
+      // the owner had to know which half lived where. A blank name would be a silent
+      // wipe, so it falls back to the stored one; a blank capacity is a real value
+      // ("nincs megadva"), so it clears.
+      const postedName = (form.get("name") ?? "").trim();
+      const capRaw = Number(form.get("capacity") ?? "");
+      const capacity = form.has("capacity")
+        ? Number.isFinite(capRaw) && capRaw > 0
+          ? Math.round(capRaw)
+          : null
+        : u.capacity;
+      await updateUnit(siteId, unit, postedName || u.name, capacity, form.get("description"));
       // AMENITY PICKER (plan F; owner decision: unit amenities need rooms AND
       // amenities). Module active → compose checked labels + free lines, with
       // scope enforced server-side (a forged property-only label is dropped).
@@ -2315,13 +2347,42 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       // same save carries the picture assignment. `photo` is absent when the
       // owner never opened the picker — then the assignment is left untouched;
       // an OPENED-but-empty picker posts the marker below and clears it.
+      //
+      // ADR-0198: the ★ (make it the cover) is a submit button of this SAME form, so
+      // one round trip carries the text, the ticks and the intent.
+      const makeCover = form.get("set_cover") ?? "";
       if (form.get("photos_touched")) {
-        await setTenantUnitPhotos(session.tenantId, unit, form.getAll("photo"));
+        const before = await getTenantContent(session.tenantId);
+        const photosBefore = (before?.photos ?? []) as never as { url: string; units?: string[] }[];
+        const mineBefore = photosBefore.filter((p) => (p.units ?? []).includes(unit)).map((p) => p.url);
+        const coverBefore = unitCoverPhoto(unit, (before?.photos ?? []) as never)?.url ?? "";
+        const picked = form.getAll("photo");
+        await setTenantUnitPhotos(session.tenantId, unit, picked);
+        // ⛔ A levételt az ÁLLAPOT-KÜLÖNBSÉGBŐL olvassuk, nem egy külön „unassign"
+        // szándék-mezőből: a tulaj a pipa levételével is levehet egy képet, és akkor
+        // is jár neki a három tényállás egyike — különben a legfontosabb mondat
+        // („a közös képtárban benne marad") pont a szokásos úton maradna el.
+        const removed = mineBefore.filter((url) => !picked.includes(url));
+        if (removed.length) {
+          // The owner is owed the truth about what just happened to the cover: a
+          // replacement stepped in, or the card lost its picture altogether.
+          notice = !removed.includes(coverBefore) ? "le" : picked.length ? "lekov" : "lenincs";
+        }
+        if (makeCover) {
+          const wasAssigned = picked.includes(makeCover);
+          const r = await setTenantUnitCover(session.tenantId, unit, makeCover);
+          if (r.ok) notice = wasAssigned ? "borito" : "boritoplus";
+        }
       }
     }
     // The description and the amenities ride the room card; only the photo branch
     // re-rendered before, so a text-only save stayed invisible on the page.
-    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=rooms&saved=1");
+    return redirectRerendered(
+      res,
+      session.tenantId,
+      `/admin?tab=modulok&m=rooms&saved=1&e=${encodeURIComponent(unit)}` +
+        `&fl=${backTab}&uz=${notice}#szoba-${encodeURIComponent(unit)}`,
+    );
   }
   // ── ADR-0044/c prices: an owner prices a UNIT, so every route is unit-scoped ──
   if (req.method === "POST" && pathname === "/admin/prices/base") {
@@ -2556,22 +2617,81 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return send(res, 401, JSON.stringify({ ok: false }), MIME[".json"]);
     try {
       const body = await readJsonBody(req);
-      const images = Array.isArray(body.images) ? body.images.slice(0, 12) : [];
+      const all = Array.isArray(body.images) ? body.images : [];
+      const images = all.slice(0, 12);
+      // ⛔ ADR-0198: a refused file used to be a silent `continue` — the owner got
+      // "ok: true" and a picture that never arrived. Every refusal now NAMES the file
+      // and the reason, and travels back as an ERROR, not as part of a success.
+      const errors: { file: string; reason: string }[] = [];
+      const nameOf = (it: unknown, i: number): string =>
+        String((it as Record<string, unknown>)?.name ?? "").slice(0, 120) || `${i + 1}. kép`;
+      if (all.length > images.length) {
+        errors.push({
+          file: "",
+          reason: `Egyszerre legfeljebb 12 képet tölthet fel; ${all.length - images.length} kimaradt.`,
+        });
+      }
+      // The shared library holds 24 pictures (addTenantPhotos slices there). Without
+      // this the overflow was dropped inside the writer with nothing said.
+      const contentNow = await getTenantContent(session.tenantId);
+      const libCount = contentNow?.usingOwnPhotos ? (contentNow.photos?.length ?? 0) : 0;
+      let room = Math.max(0, 24 - libCount);
+      // ADR-0198: uploading FROM a room assigns the picture to that room in the same
+      // step — one shared library, marked where it belongs (ADR-0044 §11).
+      const unitId = String(body.unit ?? "").trim();
+      const siteIdForUnit = unitId ? await tenantSiteId(session.tenantId) : null;
+      const unitOk = Boolean(
+        unitId && siteIdForUnit && (await unitBelongsToSite(siteIdForUnit, unitId)),
+      );
       const store = getAssetStore();
-      const saved: { url: string; alt: string }[] = [];
-      for (const it of images) {
+      const saved: { url: string; alt: string; units?: string[] }[] = [];
+      for (const [i, it] of images.entries()) {
         const dataUrl = String((it as Record<string, unknown>)?.dataUrl ?? "");
         const alt = String((it as Record<string, unknown>)?.alt ?? session.displayName).slice(0, 160);
         const m = dataUrl.match(/^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/);
-        if (!m) continue;
+        if (!m) {
+          errors.push({ file: nameOf(it, i), reason: "nem kép (JPEG, PNG vagy WEBP kell)" });
+          continue;
+        }
         const buf = Buffer.from(m[2], "base64");
-        if (buf.length > 6_000_000) continue; // 6 MB cap per image
+        if (buf.length > 6_000_000) {
+          errors.push({
+            file: nameOf(it, i),
+            reason: `${(buf.length / 1_000_000).toFixed(1).replace(".", ",")} MB — a legnagyobb feltölthető méret 6 MB`,
+          });
+          continue;
+        }
+        if (room <= 0) {
+          errors.push({ file: nameOf(it, i), reason: "a közös képtárba legfeljebb 24 kép fér" });
+          continue;
+        }
         const ext = m[1] === "jpeg" ? "jpg" : m[1];
         const a = await store.save(session.tenantId, ext, buf);
-        saved.push({ url: a.url, alt });
+        room -= 1;
+        saved.push({ url: a.url, alt, ...(unitOk ? { units: [unitId] } : {}) });
       }
+      // Did this unit have a cover before? If not, the first uploaded picture becomes
+      // it (through the fallback resolver) — and the screen says so. If it HAD one,
+      // the upload must not silently change what the public page shows (ADR-0198 ②).
+      const hadCover = unitOk
+        ? Boolean(unitCoverPhoto(unitId, (contentNow?.photos ?? []) as never))
+        : true;
       if (saved.length) await addTenantPhotos(session.tenantId, saved);
-      return send(res, 200, JSON.stringify({ ok: true, count: saved.length }), MIME[".json"]);
+      return send(
+        res,
+        200,
+        JSON.stringify({
+          // `ok` keeps its old meaning — the request was handled — because the Fotók
+          // tab's script branches on it; WHAT was refused travels in `errors`, and it
+          // is the caller's job to show a refusal as a refusal (the room editor does).
+          ok: true,
+          count: saved.length,
+          assigned: unitOk && saved.length > 0,
+          becameCover: unitOk && !hadCover && saved.length > 0,
+          errors,
+        }),
+        MIME[".json"],
+      );
     } catch (err) {
       return send(res, 400, JSON.stringify({ ok: false, error: String((err as Error).message) }), MIME[".json"]);
     }
@@ -2850,6 +2970,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         url.searchParams.get("e"),
         url.searchParams.get("topic"),
         url.searchParams.get("q"),
+        url.searchParams.get("fl"),
+        url.searchParams.get("uz"),
       );
     // ADR-0045 §J.26: KB screenshots live in the repo — served session-gated and
     // path-fenced to kb/entries/<id>/assets/ (kbAssetPath refuses escapes).

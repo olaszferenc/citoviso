@@ -3,7 +3,7 @@
 **Jóváhagyta:** a tulaj, 2026-09-22 (§2b terv-jóváhagyási kapu) · **Változat:** **D — kártyarács
 + felugró + fülek** (a B rácsából, a C füleivel; az A, B, C külön is elvetve) ·
 **Terv:** `plan.html` (önhordó, kattintható, MŰKÖDIK) · **Képek:** `D-mobil-*.png`, `D-asztali-*.png`
-**Hatókör:** `src/server/moduleConfigViews.ts` · `src/server/adminViews.ts` · `src/server/public.ts` · `src/tenant/editor.ts` · `public/assets/ui/citui-admin.css`
+**Hatókör:** `src/server/moduleConfigViews.ts` · `src/server/public.ts` · `src/tenant/editor.ts`
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.** A kódot ehhez mérjük, nem
 fordítva (`feedback_approved_draft_is_the_contract`). A terv a **valós adatból** épült (az
@@ -210,26 +210,104 @@ megtörtént. Mérve a jóváhagyáskor: **103 állítás zöld, 0 JS-hiba.**
 ## 9. A KÖTŐ FELIRATOK ÉS HORGONYOK MEGJELÖLÉSE — a megvalósítás UTOLSÓ lépése
 
 ⚠️ A `contract-drift-check` őr a félkövér-magyar-idézőjeles alakot olvassa kötő feliratként, és
-megköveteli, hogy a felirat ÉLJEN a **Hatókör** alatti fájlokban; ugyanígy a `## Kötő horgony`
-lista elemeinek (CSS-osztály, `data-*` horog) is léteznie kell. Egy kontraktus, ami a
-megvalósítás ELŐTT születik, ezért még **egyetlen feliratot és horgonyt sem jelölhet meg** —
-nincs mit ellenőrizni, és a hamis jelölés jogosan buktatná a kaput.
+megköveteli, hogy a felirat ÉLJEN a **Hatókör** alatti fájlokban; ugyanígy a lenti horgony-lista
+elemeinek (CSS-osztály, `data-*` horog) is léteznie kell. Egy kontraktus, ami a megvalósítás
+ELŐTT születik, ezért még **egyetlen feliratot és horgonyt sem jelölhet meg** — nincs mit
+ellenőrizni, és a hamis jelölés jogosan buktatná a kaput.
 
-**A megvalósító szál feladata a munka végén** a ténylegesen szállított feliratokat kötő alakra
-írni, és a `## Kötő horgony` szakaszt felvenni. Ezek legalább:
+⛔ **És a horgony-szakasz CÍMÉT sem szabad a szövegben leírni** (mérve, 2026-09-22): az őr a
+szakaszt egy fejléc-mintával keresi, tehát a prózába idézett cím egy KORÁBBI helyen fogta meg,
+és a valódi listából **nulla horgonyt** olvasott be — zölden, mert ami nincs beolvasva, azt nincs
+is mit buktatni (`feedback_registration_count_must_be_read_back`: a regiszter kimenetéből
+olvasd vissza a darabszámot).
 
-| Felirat / horgony | Hol |
-|---|---|
-| a rács vezető mondata | szobák rácsa |
-| a jelvény két alakja (`N kép` / `Részletek`) | kártya |
-| az állapot két alakja (`Van saját oldala` / `Nincs saját oldala — hiányzik: …`) | kártya + Alapok fül |
-| az ütközés-jelvény szövege | kártya + Képek fül |
-| a nagy borító-előnézet felirata | Képek fül |
-| a feltöltés gombja és nyugtázó üzenete | Képek fül |
-| a levétel üzenete („a közös képtárban benne marad") | Képek fül |
-| a három fül felirata | felugró |
-| a felugró szerkezeti horgonyai (a felugró, a backdrop, a képtár-cella, a borító-gomb osztályai) | `## Kötő horgony` |
+**Megtörtént** (2026-09-22, a megvalósítással egy körben). Az alábbiak a ténylegesen szállított
+`T()` **argumentumok** — nem a képernyőn látott összefűzött mondatok
+(`feedback_composed_sentence_is_not_a_quotable_label`). Ahol a felirat behelyettesítést tartalmaz,
+a `{…}` a kulcs része, és azt is így idézzük: a kapu a forrás-stringet keresi, nem a kirajzolt
+szöveget.
 
-⛔ **Idézd a `T()` argumentumát, ne a képernyőn látott összefűzött mondatot**
-(`feedback_composed_sentence_is_not_a_quotable_label`). Ha a felirat i18n-kulcs, a magyar
-forrás-string a kötő szöveg.
+### A rács
+
+- **„A szobái"** — a szakasz címe
+- **„A kártya azt mutatja, amit a vendég lát a honlapon. Koppintson rá — a szerkesztő felugrik."**
+- a jelvény három alakja: **„{n} kép"** · **„Részletek"** (egyetlen képnél, mert az „1 kép”
+  galériát ígérne) · **„nincs kép"**
+- az állapot: **„Van saját oldala"** / **„Hiányos"** (a kártyán), és **„Nincs saját oldala —
+  hiányzik: {mi}"** (az Alapok fülön, a hiányzó részek nevével)
+- a borító-ütközés: **„ugyanaz a borító, mint: {names}"**
+- **„nincs borítókép"** — az őszinte doboz üres borító helyén
+- **„Új egység felvétele"**
+
+### A felugró
+
+- a három fül: **„Alapok"** · **„Képek"** · **„Felszereltség"**
+- a lábazat: **„Mentés"** · **„Egység törlése"**
+- Alapok: **„Az egység neve"** · **„Férőhely"** · **„Leírás"** · **„Ezt látja a vendég a honlapon"**
+
+### Képek fül
+
+- a nagy borító-előnézet felirata: **„Ezt mutatja a honlap ezen a kártyán"**
+- üres borítónál: **„Ennek az egységnek még nincs borítóképe — a honlap kártyáján nem lesz kép."**
+- a feltöltés: **„Kép feltöltése"**, mellette **„A feltöltött kép a közös képtárba kerül, és ehhez
+  az egységhez rendelem."**
+- a nyugtázás mindkét fele: **„{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez az
+  egységhez."** és — csak ha nem volt borító — **„Mivel nem volt borítóképe, az első feltöltött
+  lett a borító."**
+- a visszautasítás megnevezi az okot: **„nem kép (JPEG, PNG vagy WEBP kell)"** ·
+  **„a legnagyobb feltölthető méret 6 MB"** (a fájl nevét a felület a fájlból írja mellé)
+- a képtár: **„A ház közös képtára"**, a csillag súgója: **„Ez legyen a borítókép"**
+- borítóvá tétel: **„A honlap ezentúl ezt a képet mutatja {art} {name} kártyáján."**, és ha még
+  nem tartozott ide: **„Egyben hozzá is rendeltem ehhez az egységhez."** (⛔ a névelő `{art}`
+  behelyettesítés, nem „a(z)": azt a `huArticleLower()` dönti el a névből — a gépies alakot a
+  `hu-machine-form-check` jogosan buktatta)
+- a levétel: **„A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is
+  állhat."**, kiegészítve **„Ez volt a borítókép, ezért a sorban következő lépett a helyébe."**
+  vagy **„Ez volt a borítókép — most nincs borító, a honlap kártyáján nem lesz kép."**
+
+### Felszereltség fül
+
+- **„Hozzáadás a listából"** (⛔ szándékosan darabszám NÉLKÜL: a „70 tételes lista” attól a
+  pillanattól hazudna, hogy a katalógus bővül)
+- **„Csak azt sorolja fel, ami EBBEN az egységben van. A ház egészére vonatkozó tételek a
+  Felszereltség modulnál maradnak."**
+
+## Kötő horgony
+
+- `rs-modal` — a felugró kerete; a `:target` ezen ül, ettől nyílik JS nélkül
+- `rs-backdrop` — az elsötétülő háttér, egyben a bezáró felület
+- `rs-pop__foot` — a RÖGZÍTETT lábazat, amiben a Mentés görgetés nélkül elérhető marad
+- `rs-tabin` — a fül-rádiógomb (a fülváltás JS nélküli mechanizmusa)
+- `rs-pane` — egy fül tartalma (a CSS ebből mutat egyet)
+- `rs-gcard` — a szoba kártyája a rácsban
+- `rs-b--clash` — a borító-ütközés jelvénye (a rácson IS, nem csak a felugróban)
+- `rs-hero` — a nagy borító-előnézet a Képek fülön
+- `rs-libcell` — a közös képtár egy cellája (pipa = hozzárendelés)
+- `rs-libcov` — a csillag: borítóvá tesz, és hozzá is rendel
+- `set_cover` — a borító-váltás mezőneve (ugyanannak az űrlapnak a submitja)
+- `coverFor` — a szobánkénti borító tárolási mezője a fotó-rekordon (ADR-0198 ①)
+- `data-rs-upload` — a helyben feltöltés horga
+- `data-rs-msg` — a nyugtázó üzenet helye a Képek fülön
+
+## 10. AMIT A MEGVALÓSÍTÁS ELDÖNTÖTT (a §7 nyitott kérdései)
+
+- **A borító tárolása: jelölés a FOTÓ-rekordon** (`coverFor?: string[]`, a meglévő `units?:
+  string[]` mintájára, migráció nélkül; a `carryPhoto()` viszi tovább). Egy kép több egység
+  borítója is lehet, és a jelölés mozgatása nem nyúl sem a ház nyitóképéhez (`photos[0]`), sem
+  másik egység borítójához. Feloldás EGY függvényben (`unitCoverPhoto`), amit a publikus render
+  és az admin is hív — jelölés hiányában a MAI szabály a tartalék (az első hozzárendelt kép),
+  tehát aki soha nem nyúl hozzá, azt látja, amit eddig.
+- **A levétel** nem külön „×" gomb, hanem a pipa levétele + Mentés; a kötő üzenet ugyanaz, és a
+  szerver az ÁLLAPOT-KÜLÖNBSÉGBŐL ismeri fel (nem egy szándék-mezőből), tehát a szokásos úton is
+  jár a mondat.
+- **A Mentés tranzakciós határa** a mai marad: egy gomb menti a szöveget, a képeket és a
+  felszereltséget együtt; a csillag ugyanennek az űrlapnak a submitja.
+- **JS nélkül** a felugró (`:target`), a fülváltás (rádió + CSS), a hozzárendelés, a borító-váltás
+  és a mentés MIND működik. A helyben feltöltés JS-t igényel — ahogy a Fotók fülön ma is, mert a
+  terméknek nincs multipart-értelmezője; ez tehát nem veszteség a JS nélküli úton.
+- **Egyetlen egységnél** a mai képernyő marad (nincs mit „átlátni", és saját aloldal sem
+  születik) — a rács két egységtől jelenik meg.
+
+**Az őr:** `npx tsx scripts/room-editor-check.mts` — végigkattintja a valódi felületet mindkét
+méreten, JS-sel és JS nélkül, és a végén NEGATÍV KONTROLLOKAT futtat (a visszarontott állapoton
+pirosra kell mennie). `--shots` kapcsolóval állapot-képeket is ment.

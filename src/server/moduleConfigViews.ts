@@ -34,6 +34,7 @@ import { T } from "../i18n/mail.js";
 import {
   AMENITY_CATALOG,
   AMENITY_CATEGORIES,
+  amenityByLabel,
   amenitySvg,
   splitAmenities,
   type AmenityItem as AmenityItem_,
@@ -343,6 +344,211 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   .breq__act,.breq__act form{width:100%}
   .breq__act .citui-btn{flex:1}
 }
+
+/* ══ SZOBA-SZERKESZTŐ — a jóváhagyott D kontraktus (ADR-0198) ══════════════════
+   assets/design-refs/tenant-admin/room-editor/README.md. Kártyarács + felugró +
+   fülek. A felugró :target-tel nyílik és rádió-gombos fülekkel vált, tehát
+   JavaScript NÉLKÜL is teljes — ugyanaz a szabály, mint a naptáré. */
+.rs-head{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px}
+.rs-head h1{margin:0;font:600 1.15rem/1.25 var(--citui-font-display);color:var(--citui-ink)}
+.rs-head p{margin:4px 0 0;color:var(--citui-muted);font-size:.85rem;line-height:1.5}
+.rs-head .adm-ico{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;flex:none;
+  background:var(--citui-navy-900);color:var(--citui-cyan-300)}
+@media(min-width:900px){.rs-head h1{font-size:1.45rem}.rs-head p{font-size:.92rem}}
+
+/* ── a rács: mobilon KÉT oszlop (mind a négy szoba egy képernyőn), asztalin négy ── */
+.rs-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+@media(min-width:900px){.rs-grid{grid-template-columns:repeat(4,1fr);gap:14px}}
+.rs-gcard{background:var(--citui-white);border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-sm);overflow:hidden;text-align:left;padding:0;
+  font:inherit;color:var(--citui-ink);text-decoration:none;
+  display:flex;flex-direction:column;transition:var(--citui-transition)}
+.rs-gcard:hover{border-color:var(--citui-cyan-500);box-shadow:var(--citui-shadow-sm)}
+.rs-gcard:focus-visible{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.rs-gim{position:relative;width:100%;aspect-ratio:4/3;background:var(--citui-surface-2)}
+.rs-gim img{width:100%;height:100%;object-fit:cover;display:block}
+.rs-cover__none{display:grid;place-items:center;height:100%;color:var(--citui-muted);
+  font-size:.7rem;text-align:center;padding:8px;line-height:1.3}
+.rs-gcount{position:absolute;right:6px;bottom:6px;display:inline-flex;align-items:center;gap:4px;
+  background:color-mix(in srgb,var(--citui-navy-950) 74%,transparent);color:var(--citui-white);
+  font:700 .62rem/1 var(--citui-font-text);padding:5px 8px;border-radius:var(--citui-radius-pill)}
+.rs-gcount svg{width:11px;height:11px}
+.rs-gbd{padding:9px 10px 11px;display:grid;gap:5px}
+.rs-gbd b{font:600 .88rem/1.25 var(--citui-font-display);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+/* ⛔ A :not(.rs-b) KELL: a .rs-gbd span (0,1,1) VERNÉ a .rs-b--ok/--warn (0,1,0)
+   színét, és mind a négy státusz-jelvény semleges szürke lenne — a szín elvesztené a
+   jelentését (mérve a terv-körben: a kontraszt 5,5-ről 4,2-re esett). Ugyanaz a fajta
+   ütközés, mint amikor egy link-szabály ette meg a gomb színét. */
+.rs-gbd>span:not(.rs-b){color:var(--citui-muted);font-size:.74rem}
+/* a jelvény a SZÖVEGÉIG érjen, ne a kártya széléig (rács-cellában a nyújtás az alap) */
+.rs-gbd>.rs-b{justify-self:start}
+@media(min-width:900px){.rs-gbd b{font-size:1rem}.rs-gbd>span:not(.rs-b){font-size:.8rem}}
+
+/* ⛔ NINCS white-space:nowrap — azzal a hosszú állapot-szöveg darabja a kártya
+   overflow:hidden-je alá esne, vagyis pont AZT nem lehetne elolvasni, AMI HIÁNYZIK.
+   A jelvény inkább TÖRJÖN KÉT SORBA. */
+.rs-b{display:inline-flex;align-items:flex-start;gap:4px;
+  font:600 .68rem/1.35 var(--citui-font-text);border-radius:12px;padding:5px 9px;
+  white-space:normal;text-align:left;max-width:100%}
+.rs-b svg{width:12px;height:12px;flex:none;margin-top:1px}
+.rs-b--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.rs-b--warn{background:color-mix(in srgb,var(--citui-warn) 15%,var(--citui-white));
+  color:var(--citui-warn-ink)}
+.rs-b--clash{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));
+  color:var(--citui-bad-ink)}
+
+/* ── új egység: a rács alatt, egyetlen szaggatott vezérlő ── */
+.rs-new{border:1.5px dashed var(--citui-line-strong);border-radius:var(--citui-radius-sm);
+  margin-top:12px;background:transparent}
+.rs-new>summary{display:flex;align-items:center;gap:9px;padding:13px;cursor:pointer;
+  font:600 .88rem/1 var(--citui-font-text);color:var(--citui-link-ink);list-style:none}
+.rs-new>summary::-webkit-details-marker{display:none}
+.rs-new>summary svg{width:18px;height:18px}
+.rs-new:hover{border-color:var(--citui-cyan-500)}
+.rs-new .unit-row{padding:0 13px 13px;margin:0}
+
+/* ── a felugró: :target = nulla JS ── */
+.rs-modal{display:none}
+.rs-modal:target{display:block}
+.rs-backdrop{position:fixed;inset:0;z-index:59;
+  background:color-mix(in srgb,var(--citui-navy-950) 62%,transparent)}
+/* KÖT: mobilon majdnem teljes képernyő, de LÁTHATÓ kerettel — ha kitöltené, már nem
+   felugrónak, hanem másik oldalnak olvasódna. */
+.rs-pop{position:fixed;z-index:60;left:9px;right:9px;top:15px;
+  bottom:max(15px,env(safe-area-inset-bottom));display:flex;flex-direction:column;
+  overflow:hidden;background:var(--citui-white);border-radius:18px;
+  box-shadow:var(--citui-shadow-md);border:1px solid var(--citui-line-strong)}
+/* KÖT: asztalin NEM lapot borít — középre zárt párbeszéd, a rács ott marad mögötte. */
+@media(min-width:900px){
+  .rs-pop{left:50%;right:auto;transform:translateX(-50%);width:min(960px,92%);top:34px;bottom:34px}
+}
+.rs-pop__top{flex:none;display:flex;align-items:center;gap:10px;padding:11px 12px;
+  background:var(--citui-navy-900);color:var(--citui-white)}
+.rs-pop__top b{font:600 .98rem/1.2 var(--citui-font-display);flex:1;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.rs-pop__meta{font-size:.76rem;color:var(--citui-cyan-300);white-space:nowrap;flex:none}
+.rs-pop__x{width:34px;height:34px;border-radius:50%;border:1px solid var(--citui-line-strong);
+  background:transparent;color:var(--citui-white);cursor:pointer;display:grid;place-items:center;
+  flex:none;text-decoration:none}
+.rs-pop__x:hover{background:var(--citui-cyan-500);color:var(--citui-navy-950);
+  border-color:var(--citui-cyan-500)}
+@media(min-width:900px){.rs-pop__top{padding:14px 18px}.rs-pop__top b{font-size:1.15rem}}
+.rs-pop__body{flex:1;overflow-y:auto;padding:14px 12px}
+@media(min-width:900px){.rs-pop__body{padding:20px 22px}}
+/* KÖT: a Mentés RÖGZÍTETT lábazatban — a törzs görget, a lábazat nem mozdul. */
+.rs-pop__foot{flex:none;border-top:1px solid var(--citui-line);background:var(--citui-white);
+  padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+@media(min-width:900px){.rs-pop__foot{padding:12px 22px}}
+.rs-del{margin-left:auto;background:transparent;border:0;cursor:pointer;color:var(--citui-muted);
+  font:600 .76rem/1 var(--citui-font-text);text-decoration:underline;text-underline-offset:3px}
+.rs-del:hover{color:var(--citui-bad)}
+
+/* ── fülek: rádió-gomb + label, tehát JS nélkül is váltanak ── */
+.rs-tabin{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.rs-tabs{flex:none;display:flex;gap:4px;border-bottom:1px solid var(--citui-line);padding:0 10px;
+  overflow-x:auto;background:var(--citui-surface)}
+.rs-tab{padding:11px 10px 9px;font:600 .8rem/1 var(--citui-font-text);color:var(--citui-muted);
+  white-space:nowrap;border-bottom:2.5px solid transparent;margin-bottom:-1px;cursor:pointer}
+.rs-tab:hover{color:var(--citui-ink)}
+.rs-tab em{font-style:normal;font-weight:700;opacity:.7;margin-left:4px}
+@media(min-width:900px){.rs-tabs{padding:0 16px}.rs-tab{padding:13px 14px 11px;font-size:.88rem}}
+.rs-pane{display:none}
+.rs-tabin--alap:checked~.rs-tabs .rs-tab--alap,
+.rs-tabin--kep:checked~.rs-tabs .rs-tab--kep,
+.rs-tabin--fel:checked~.rs-tabs .rs-tab--fel{color:var(--citui-link-ink);
+  border-bottom-color:var(--citui-cyan-500)}
+.rs-tabin--alap:checked~.rs-pop__body .rs-pane--alap,
+.rs-tabin--kep:checked~.rs-pop__body .rs-pane--kep,
+.rs-tabin--fel:checked~.rs-pop__body .rs-pane--fel{display:block}
+
+/* ── szakaszok a felugróban ── */
+.rs-sec{display:grid;gap:10px}
+.rs-sec>h4{margin:0;font:600 .8rem/1.2 var(--citui-font-text);color:var(--citui-ink);
+  display:flex;align-items:center;gap:6px}
+.rs-sec>h4 svg{width:15px;height:15px;color:var(--citui-cyan-500)}
+.rs-why{margin:0;color:var(--citui-muted);font-size:.76rem;line-height:1.5}
+.rs-row2{display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:560px){.rs-row2{grid-template-columns:1fr 130px}}
+/* asztali külön tervezői döntés: űrlap BAL + élő vendég-előnézet JOBB */
+@media(min-width:900px){
+  .rs-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:22px;
+    align-items:start}
+}
+.rs-gcard--preview{max-width:290px;border-style:dashed}
+.rs-gcard--preview:hover{box-shadow:none;border-color:var(--citui-line)}
+
+/* ── a nagy borító-előnézet ── */
+.rs-hero{position:relative;border-radius:12px;overflow:hidden;background:var(--citui-surface-2);
+  border:1px solid var(--citui-line);aspect-ratio:16/10}
+@media(min-width:900px){.rs-hero{aspect-ratio:16/7}}
+.rs-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.rs-hero .rs-cover__none{font-size:.82rem;padding:14px;line-height:1.4}
+.rs-herolab{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:5px;
+  background:color-mix(in srgb,var(--citui-navy-950) 76%,transparent);color:var(--citui-white);
+  font:600 .68rem/1 var(--citui-font-text);padding:6px 9px;border-radius:var(--citui-radius-pill)}
+.rs-herolab svg{width:12px;height:12px;color:var(--citui-cyan-300)}
+
+/* ── feltöltés: elsődleges gomb a fül TETEJÉN (nem a szalag végén, ahol kiszorul) ── */
+.rs-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rs-upbtn{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.rs-upbtn svg{width:15px;height:15px}
+.rs-upbtn input{position:absolute;width:1px;height:1px;opacity:0}
+
+/* ── üzenet-sávok ── */
+.rs-msg{display:flex;align-items:flex-start;gap:7px;border-radius:10px;padding:8px 10px;
+  font-size:.77rem;line-height:1.45}
+.rs-msg svg{width:14px;height:14px;flex:none;margin-top:1px}
+.rs-msg--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.rs-msg--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));
+  color:var(--citui-bad-ink)}
+.rs-msg--warn{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));
+  color:var(--citui-warn-ink)}
+.rs-msg b{font-weight:700}
+
+/* ── a ház KÖZÖS képtára ── */
+.rs-lib{border:1px solid var(--citui-line);border-radius:12px;padding:10px;
+  background:var(--citui-surface)}
+.rs-libgrid{display:grid;gap:8px;grid-template-columns:repeat(3,1fr)}
+@media(min-width:560px){.rs-libgrid{grid-template-columns:repeat(4,1fr)}}
+/* KÖT: asztalin HAT oszlop — a szélesebb hely vigyen is valamit */
+@media(min-width:900px){.rs-libgrid{grid-template-columns:repeat(6,1fr)}}
+.rs-libcell{position:relative;display:block;cursor:pointer}
+/* KÖT: a nem hozzárendelt kép HALVÁNY — ránézésre látszik, mi tartozik ide */
+.rs-libcell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:9px;display:block;
+  border:1px solid var(--citui-line);opacity:.45;transition:var(--citui-transition)}
+.rs-libcell input{position:absolute;opacity:0;width:1px;height:1px}
+.rs-libtick{position:absolute;left:5px;top:5px;width:20px;height:20px;border-radius:50%;
+  display:grid;place-items:center;background:var(--citui-white);
+  border:1px solid var(--citui-line-strong);color:var(--citui-muted)}
+.rs-libcell input:checked~.rs-libtick{background:var(--citui-cyan-500);
+  border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.rs-libcell input:checked~img{opacity:1;border-color:var(--citui-cyan-500);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.rs-libtick svg{width:12px;height:12px}
+.rs-libcov{position:absolute;right:4px;bottom:4px;border:0;border-radius:var(--citui-radius-pill);
+  padding:4px 7px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;
+  background:color-mix(in srgb,var(--citui-navy-950) 70%,transparent);color:var(--citui-white);
+  font:700 .6rem/1 var(--citui-font-text)}
+.rs-libcov svg{width:11px;height:11px}
+.rs-libcov[data-on=true]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.rs-libcov:hover{background:var(--citui-cyan-400);color:var(--citui-navy-950)}
+.rs-libfoot{margin:9px 0 0;color:var(--citui-muted);font-size:.74rem;line-height:1.5}
+
+/* ── felszereltség: kompakt csempék + egy gombra nyíló katalógus ── */
+.rs-ams{display:flex;flex-wrap:wrap;gap:6px}
+.rs-am{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--citui-line);
+  border-radius:var(--citui-radius-pill);padding:5px 9px;background:var(--citui-white);
+  font-size:.75rem;color:var(--citui-ink)}
+.rs-am svg{width:14px;height:14px;color:var(--citui-cyan-500);flex:none}
+.rs-am--other svg{color:var(--citui-muted)}
+.rs-amcat{border:1px solid var(--citui-line);border-radius:12px;background:var(--citui-surface);
+  margin-top:4px}
+.rs-amcat>summary{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;cursor:pointer;
+  font:600 .78rem/1 var(--citui-font-text);color:var(--citui-link-ink);list-style:none}
+.rs-amcat>summary::-webkit-details-marker{display:none}
+.rs-amcat>summary svg{width:13px;height:13px}
+.rs-amcat .ampick{padding:0 10px 10px}
 </style>`;
 
 const huf = (n: number) => formatMoney(n, "HUF");
@@ -673,6 +879,11 @@ export interface EditorUnit {
   readonly photoCount?: number;
   /** URLs assigned to THIS unit — the picker's checked state. */
   readonly photoUrls?: readonly string[];
+  /** ADR-0198: the picture the public room card shows — the owner's own pick if they
+   *  made one, otherwise the first assigned photo. Resolved by ONE function
+   *  (`unitCoverPhoto`), the same the renderer uses, so the admin and the page can
+   *  never disagree about which picture is out there. */
+  readonly coverUrl?: string | null;
   /** "Csak a felsorolt időszakokban adom ki" (ADR-0049). */
   readonly seasonalOnly?: boolean;
   /** ADR-0114 — this unit IS the whole place; it and the rooms exclude each other.
@@ -839,63 +1050,398 @@ function amenityLockedPanel(lang: string): string {
 }
 
 /**
- * Photo picker ON THE ROOM CARD (owner decree 2026-08-25, approved plan "B").
+ * ADR-0198 — THE ROOM EDITOR (jóváhagyott D kontraktus, tulaj 2026-09-22).
+ * Kontraktus: assets/design-refs/tenant-admin/room-editor/README.md
  *
- * Before this, giving a room a picture meant leaving the room editor for the Fotók
- * tab and assigning from the photo's side — the owner was editing a room and could
- * not do the one thing the room card kept asking for ("0 hozzárendelt fotó").
+ * Mit vált le és miért (mind MÉRT tény, nem ízlés):
+ *   · a 4 szoba egyetlen, 9 103 px hosszú görgetés volt mobilon → kártyarács;
+ *   · egy szoba KÉT űrlapon élt (név+férőhely a „Mit ad ki?"-on, a többi külön) →
+ *     egy felugró, három füllel;
+ *   · a 70 tételes felszereltség-választó mind a négy szobánál kinyitva ült;
+ *   · borítókép-fogalom NEM volt: a honlap a szobához rendelt ELSŐ képet mutatta a
+ *     KÖZÖS galéria sorrendjében, ezért két szoba ugyanazt a fotót kapta, és a
+ *     tulajnak nem volt eszköze orvosolni.
  *
- * Shape (the frozen plan, assets/design-refs/tenant-admin/room-photo-picker.html):
- * the already-picked thumbnails + a "Képek választása" button that opens the full
- * library as a checkbox grid. <details> so it works with ZERO JavaScript — the same
- * rule as the availability calendar. The checkboxes live in the card's own form, so
- * one Mentés saves text and pictures together.
- *
- * The library is SHARED: a photo may belong to several rooms, and uploading stays on
- * the Fotók tab (one upload, many assignments).
+ * A felugró `:target`-tel nyílik, a fülek rádió-gombok, a vezérlők ugyanannak az
+ * egy űrlapnak a submit-gombjai — tehát a felület JavaScript NÉLKÜL is teljes
+ * (ugyanaz a szabály, mint a naptárnál). A JS csak rátesz: ESC-zárás, élő számlálók
+ * és élő vendég-előnézet, és a helyben feltöltés.
  */
-function photoPicker(u: EditorUnit, library: readonly PhotoEdit[], lang = "hu"): string {
-  if (!library.length) {
+
+/** A kártya és az Alapok fül ugyanazt a mondatot mondja: mi hiányzik a saját oldalhoz. */
+function roomGate(u: EditorUnit): { ok: boolean; missing: ("photo" | "text")[] } {
+  const hasText = Boolean(u.description?.trim()) || (u.amenities?.length ?? 0) > 0;
+  const hasPhoto = (u.photoCount ?? 0) > 0;
+  const missing: ("photo" | "text")[] = [];
+  if (!hasPhoto) missing.push("photo");
+  if (!hasText) missing.push("text");
+  return { ok: hasPhoto && hasText, missing };
+}
+
+function roomMeta(u: EditorUnit, lang: string): string {
+  const bits = [
+    u.capacity ? T(lang, "{n} fő", { n: u.capacity }) : T(lang, "férőhely nincs megadva"),
+    u.isWholeProperty ? T(lang, "az egész ház") : "",
+  ].filter(Boolean);
+  return bits.join(" · ");
+}
+
+/** The badge the GUEST sees on the public room card — the admin shows the same words.
+ *  ⛔ Soha nem „1 kép": az galériát ígérne (rooms-card kontraktus §1). */
+function roomCountBadge(n: number, lang: string): string {
+  return n > 1 ? T(lang, "{n} kép", { n }) : n === 1 ? T(lang, "Részletek") : T(lang, "nincs kép");
+}
+
+/** Ugyanaz a kép két egység borítója? Ez a MAI, valódi hiba egyetlen látható jelzése. */
+function coverClash(u: EditorUnit, units: readonly EditorUnit[], lang: string): string {
+  if (!u.coverUrl) return "";
+  const others = units.filter((o) => o.id !== u.id && o.coverUrl === u.coverUrl).map((o) => o.name);
+  if (!others.length) return "";
+  return (
+    `<span class="rs-b rs-b--clash">${ic("alert", 12)}` +
+    `${T(lang, "ugyanaz a borító, mint: {names}", { names: esc(others.join(", ")) })}</span>`
+  );
+}
+
+/** ONE room card in the grid: exactly what the guest gets on the public page. */
+function roomCard(u: EditorUnit, units: readonly EditorUnit[], lang: string): string {
+  const g = roomGate(u);
+  const n = u.photoCount ?? 0;
+  const cover = u.coverUrl
+    ? `<img src="${esc(u.coverUrl)}" alt="" loading="lazy">`
+    : `<span class="rs-cover__none">${T(lang, "nincs borítókép")}</span>`;
+  return (
+    `<a class="rs-gcard" href="#szoba-${esc(u.id)}" data-rs-card="${esc(u.id)}">` +
+    `<span class="rs-gim">${cover}` +
+    `<span class="rs-gcount">${ic("photos", 11)}${esc(roomCountBadge(n, lang))}</span></span>` +
+    `<span class="rs-gbd"><b>${esc(u.name)}</b><span>${esc(roomMeta(u, lang))}</span>` +
+    `<span class="rs-b rs-b--${g.ok ? "ok" : "warn"}">${ic(g.ok ? "check" : "alert", 12)}` +
+    `${g.ok ? T(lang, "Van saját oldala") : T(lang, "Hiányos")}</span>` +
+    coverClash(u, units, lang) +
+    `</span></a>`
+  );
+}
+
+/** Mi hiányzik a saját oldalhoz — a hiányzó részek NEVÉVEL, nem „nem elég adat"-tal. */
+function roomMissingText(u: EditorUnit, lang: string): string {
+  const parts = roomGate(u).missing.map((m) =>
+    m === "photo" ? T(lang, "fotó") : T(lang, "leírás vagy felszereltség"),
+  );
+  return T(lang, "Nincs saját oldala — hiányzik: {mi}", { mi: parts.join(T(lang, " és ")) });
+}
+
+/** Az állapot-sáv az Alapok fülön: vagy a kész oldal címe, vagy ami hiányzik hozzá. */
+function roomStatus(u: EditorUnit, lang: string): string {
+  const g = roomGate(u);
+  if (g.ok) {
     return (
-      `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Még nincs feltöltött kép. A {tab} fülön tölthet fel, utána itt rendelheti a szobákhoz.", { tab: `<strong>${T(lang, "Fotók")}</strong>` })}</p>`
+      `<div class="rs-msg rs-msg--ok" data-rs-status>${ic("check", 14)}<div>` +
+      `${T(lang, "Saját oldala: {url} — a keresők külön is megtalálják.", { url: `<b>/apartman/${esc(u.slug ?? "")}</b>` })}</div></div>`
     );
   }
+  return (
+    `<div class="rs-msg rs-msg--warn" data-rs-status>${ic("alert", 14)}<div>` +
+    `${esc(roomMissingText(u, lang))} ${T(lang, "Üres oldallal többet ártanánk, mint használnánk.")}</div></div>`
+  );
+}
+
+/** ÉLŐ vendég-előnézet (asztali külön tervezői döntés): pontosan az, amit a vendég a
+ *  szoba-rácsban lát — borító, név, férőhely, jelvény, és SEMMI MÁS
+ *  (assets/design-refs/tenant-site/rooms-card/README.md §1). */
+function roomGuestPreview(u: EditorUnit, lang: string): string {
+  const n = u.photoCount ?? 0;
+  const cover = u.coverUrl
+    ? `<img src="${esc(u.coverUrl)}" alt="" loading="lazy">`
+    : `<span class="rs-cover__none">${T(lang, "nincs borítókép")}</span>`;
+  return (
+    `<div class="rs-sec"><h4>${ic("preview", 15)}${T(lang, "Ezt látja a vendég a honlapon")}</h4>` +
+    `<div class="rs-gcard rs-gcard--preview" aria-hidden="true">` +
+    `<span class="rs-gim">${cover}` +
+    (n ? `<span class="rs-gcount">${ic("photos", 11)}${esc(roomCountBadge(n, lang))}</span>` : "") +
+    `</span><span class="rs-gbd"><b data-rs-prev-name>${esc(u.name)}</b>` +
+    `<span data-rs-prev-cap>${esc(u.capacity ? T(lang, "{n} fő", { n: u.capacity }) : T(lang, "férőhely nincs megadva"))}</span>` +
+    `</span></div>` +
+    `<p class="rs-why">${T(lang, "A jelvény felirata a képek számától függ: több képnél a darabszám, egyetlen képnél „Részletek” — mert az „1 kép” galériát ígérne.")}</p></div>`
+  );
+}
+
+/** „Alapok" fül — a név, a férőhely és a leírás EGY helyen (eddig két űrlapon volt). */
+function roomBasicsPane(u: EditorUnit, lang: string): string {
+  const form =
+    `<div class="rs-sec"><h4>${ic("texts", 15)}${T(lang, "Alapadatok")}</h4>` +
+    `<div class="rs-row2">` +
+    `<div class="citui-field" style="margin:0"><label class="citui-label" for="n_${esc(u.id)}">${T(lang, "Az egység neve")}</label>` +
+    `<input class="citui-input" id="n_${esc(u.id)}" name="name" value="${esc(u.name)}" data-rs-name></div>` +
+    `<div class="citui-field" style="margin:0"><label class="citui-label" for="c_${esc(u.id)}">${T(lang, "Férőhely")}</label>` +
+    `<input class="citui-input" id="c_${esc(u.id)}" name="capacity" type="number" min="1" max="50" ` +
+    `inputmode="numeric" value="${u.capacity ?? ""}" data-rs-cap></div></div>` +
+    `<div class="citui-field" style="margin:0"><label class="citui-label" for="d_${esc(u.id)}">${T(lang, "Leírás")}</label>` +
+    `<textarea class="citui-textarea" id="d_${esc(u.id)}" name="description" style="min-height:96px" ` +
+    `placeholder="${T(lang, "Mi jellemzi ezt a szobát? Mit szeretnek benne a vendégek?")}" data-rs-desc>${esc(u.description ?? "")}</textarea></div></div>`;
+  // ⭐ KÉT KÜLÖN TERVEZŐI DÖNTÉS: 390 px-en egy hasáb, 1280 px-en űrlap BAL + élő
+  // vendég-előnézet JOBB. Egyetlen 1200 px széles mezősor nem elrendezés.
+  return (
+    `<div class="rs-two"><div class="rs-sec">${form}</div>` +
+    `<div class="rs-sec">${roomGuestPreview(u, lang)}${roomStatus(u, lang)}</div></div>`
+  );
+}
+
+/** A művelet nyugtázása, a szerver ÁLLAPOTÁBÓL — nem a kattintás szándékából. */
+function roomNotice(u: EditorUnit, notice: string | null | undefined, lang: string): string {
+  if (!notice) return "";
+  const box = (kind: string, icon: string, html: string): string =>
+    `<div class="rs-msg rs-msg--${kind}" data-rs-notice>${ic(icon, 14)}<div>${html}</div></div>`;
+  // ⛔ NEM „a(z)": a névelőt a NÉV dönti el, és azt a ház függvénye tudja (src/hu.ts).
+  // A zárójeles alak azt kérné a tulajtól, hogy ő ragozzon helyettünk.
+  const cover = T(lang, "A honlap ezentúl ezt a képet mutatja {art} {name} kártyáján.", {
+    art: huArticleLower(u.name),
+    name: `<b>${esc(u.name)}</b>`,
+  });
+  switch (notice) {
+    case "borito":
+      return box("ok", "check", cover);
+    case "boritoplus":
+      return box(
+        "ok",
+        "check",
+        cover + " " + T(lang, "Egyben hozzá is rendeltem ehhez az egységhez."),
+      );
+    // A levétel HÁROM külön tényállás — és a tulaj mindháromban mást kell hogy tudjon.
+    case "le":
+      return box("ok", "check", T(lang, "A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is állhat."));
+    case "lekov":
+      return box(
+        "ok",
+        "check",
+        T(lang, "A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is állhat.") +
+          " " +
+          T(lang, "Ez volt a borítókép, ezért a sorban következő lépett a helyébe."),
+      );
+    case "lenincs":
+      return box(
+        "warn",
+        "alert",
+        T(lang, "A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is állhat.") +
+          " " +
+          T(lang, "Ez volt a borítókép — most nincs borító, a honlap kártyáján nem lesz kép."),
+      );
+    default:
+      return "";
+  }
+}
+
+/** „Képek" fül — a terv magja: nagy borító-előnézet → feltöltés → a KÖZÖS képtár. */
+function roomPhotosPane(
+  u: EditorUnit,
+  units: readonly EditorUnit[],
+  library: readonly PhotoEdit[],
+  notice: string | null | undefined,
+  lang: string,
+): string {
   const picked = new Set(u.photoUrls ?? []);
-  const minis = library
-    .filter((p) => picked.has(p.url))
-    .slice(0, 8)
-    .map(
-      (p) =>
-        `<img class="mcfg-pf__mini" src="${esc(p.url)}" alt="${esc(p.alt ?? "")}" loading="lazy">`,
-    )
-    .join("");
+  const hero = u.coverUrl
+    ? `<img src="${esc(u.coverUrl)}" alt="" data-rs-hero>`
+    : `<span class="rs-cover__none">${T(lang, "Ennek az egységnek még nincs borítóképe — a honlap kártyáján nem lesz kép.")}</span>`;
+  const clashNames = u.coverUrl
+    ? units.filter((o) => o.id !== u.id && o.coverUrl === u.coverUrl).map((o) => o.name)
+    : [];
+  const warn = clashNames.length
+    ? `<div class="rs-msg rs-msg--warn">${ic("alert", 14)}<div>` +
+      T(lang, "Ez a kép {names} borítója is — a honlapon két kártya ugyanazt mutatja. Válasszon másikat lent.", {
+        names: `<b>${esc(clashNames.join(", "))}</b>`,
+      }) +
+      `</div></div>`
+    : "";
+  // ⛔ A feltöltő vezérlő a fül TETEJÉN áll, nem a képek végén: ott a negyedik kép
+  // után kiszorult a vízszintes görgetésbe, vagyis a tulaj LEGFŐBB kérése a képen
+  // nem is látszott.
+  const acts =
+    `<div class="rs-acts">` +
+    `<label class="citui-btn citui-btn--primary citui-btn--sm rs-upbtn">${ic("plus", 15)}` +
+    `${T(lang, "Kép feltöltése")}` +
+    `<input type="file" multiple accept="image/jpeg,image/png,image/webp" data-rs-upload="${esc(u.id)}"></label>` +
+    `<span class="rs-why" style="align-self:center">${T(lang, "A feltöltött kép a közös képtárba kerül, és ehhez az egységhez rendelem.")}</span></div>`;
+
   const cells = library
     .map((p) => {
       const on = picked.has(p.url);
+      const isCover = u.coverUrl === p.url;
+      const owners = units
+        .filter((o) => o.id !== u.id && (o.photoUrls ?? []).includes(p.url))
+        .map((o) => o.name);
+      const title = owners.length
+        ? T(lang, "Ehhez is tartozik: {names}", { names: esc(owners.join(", ")) })
+        : T(lang, "Még nincs egységhez rendelve");
       return (
-        `<label class="mcfg-pf__cell${on ? " is-on" : ""}">` +
+        `<label class="rs-libcell${on ? " is-on" : ""}" title="${title}">` +
         `<input type="checkbox" name="photo" value="${esc(p.url)}"${on ? " checked" : ""}>` +
         `<img src="${esc(p.url)}" alt="${esc(p.alt ?? "")}" loading="lazy">` +
-        // The gallery's DEFAULT alt is "<szállás> — 3. kép": identical on every
-        // tile, so it labels nothing. Only the owner's own caption is shown.
-        (p.alt && !/—\s*\d+\.\s*kép\s*$/.test(p.alt) ? `<span>${esc(p.alt)}</span>` : "") +
+        `<span class="rs-libtick">${ic("check", 12)}</span>` +
+        // ⛔ A csillag egy még NEM hozzárendelt képen hozzá is rendel — tiltott,
+        // semmit nem csináló gomb helyett az értelmes dolgot teszi.
+        `<button class="rs-libcov" type="submit" name="set_cover" value="${esc(p.url)}" ` +
+        `data-on="${isCover}" title="${T(lang, "Ez legyen a borítókép")}">${ic("star", 11)}` +
+        `${isCover ? T(lang, "borító") : ""}</button>` +
         `</label>`
       );
     })
     .join("");
+
+  const lib = library.length
+    ? `<div class="rs-lib"><div class="rs-libgrid">${cells}</div>` +
+      `<p class="rs-libfoot">${T(lang, "A halvány képek még nem tartoznak ehhez az egységhez. A pipa rendeli hozzá, a csillag teszi borítóvá (a csillag hozzá is rendeli, ha még nem volt). A képtár a ház ÖSSZES képét tartalmazza — egy kép több szobánál is állhat.")}</p></div>`
+    : `<p class="rs-why">${T(lang, "Még nincs kép a képtárban. Töltsön fel egyet a fenti gombbal — rögtön ehhez az egységhez is rendelem.")}</p>`;
+
   return (
-    `<div class="citui-field">` +
-    `<label class="citui-label">${T(lang, "Képek ehhez az egységhez")}</label>` +
+    `<div class="rs-sec">` +
+    `<div class="rs-hero">${hero}` +
+    `<span class="rs-herolab">${ic("preview", 12)}${T(lang, "Ezt mutatja a honlap ezen a kártyán")}</span></div>` +
+    warn +
+    acts +
+    `<div data-rs-msg>${roomNotice(u, notice, lang)}</div>` +
+    `<h4>${ic("photos", 15)}${T(lang, "A ház közös képtára")}</h4>` +
+    `<p class="rs-why">${T(lang, "A {tick} rendeli a képet ehhez az egységhez, a {star} teszi borítóvá. Egy kép több szobánál is állhat — ezért tölt fel egyszer, és jelöli meg, hova tartozik.", { tick: `<b>${T(lang, "pipa")}</b>`, star: `<b>${T(lang, "csillag")}</b>` })}</p>` +
+    lib +
+    `</div>`
+  );
+}
+
+/** „Felszereltség" fül — kompakt csempék, a katalógus egy gombra nyílik.
+ *  ⛔ ÜRES felszereltségnél RÖGTÖN nyitva: csukva a fül egy nagy fehér semmi volt
+ *  egyetlen gombbal (a tartalom a doboz 21 %-át töltötte ki). */
+function roomAmenityPane(u: EditorUnit, ctx: UnitAmenityContext | undefined, lang: string): string {
+  if (!ctx) return "";
+  if (!ctx.active) return `<div class="rs-sec">${amenityLockedPanel(lang)}</div>`;
+  const stored = splitAmenities(u.amenities ?? []);
+  const chips =
+    stored.selected
+      .map((label) => {
+        const item = amenityByLabel(label);
+        return (
+          `<span class="rs-am${item ? "" : " rs-am--other"}">` +
+          `${item ? amenitySvg(item) : ic("texts", 14)}${esc(T(lang, label))}</span>`
+        );
+      })
+      .join("") +
+    stored.other
+      .map((label) => `<span class="rs-am rs-am--other">${ic("texts", 14)}${esc(label)}</span>`)
+      .join("");
+  const total = stored.selected.length + stored.other.length;
+  // A csempesor SZERVER-oldalon születik, hogy JS nélkül is látszódjon, mi van
+  // kiválasztva — a picker saját szkriptje utána élővé teszi ugyanezt a sort.
+  return (
+    `<div class="rs-sec"><h4>${ic("modules", 15)}${T(lang, "Felszereltség")}</h4>` +
+    `<p class="rs-why">${T(lang, "Csak azt sorolja fel, ami EBBEN az egységben van. A ház egészére vonatkozó tételek a Felszereltség modulnál maradnak.")}</p>` +
+    (total ? `<div class="rs-ams" data-rs-chips>${chips}</div>` : "") +
+    `<details class="rs-amcat"${total ? "" : " open"}>` +
+    // ⛔ A felirat NEM írja bele a katalógus darabszámát: a „70 tételes lista" attól
+    // a pillanattól hazudik, hogy a katalógus bővül — és a súgó is azt idézné.
+    `<summary>${ic("plus", 13)}${T(lang, "Hozzáadás a listából")}</summary>` +
+    amenityPicker({
+      scope: "unit",
+      selected: stored.selected,
+      other: stored.other,
+      inherited: ctx.siteSelected,
+      idPrefix: `amp_${u.id}`,
+      checkName: "am",
+      otherName: "amenities_other",
+      lang,
+    }) +
+    `</details></div>`
+  );
+}
+
+/** A felugró: fejléc + fülek + törzs + RÖGZÍTETT lábazat (a Mentés görgetés nélkül). */
+function roomPopup(
+  u: EditorUnit,
+  units: readonly EditorUnit[],
+  library: readonly PhotoEdit[],
+  ctx: UnitAmenityContext | undefined,
+  view: RoomsView,
+  lang: string,
+): string {
+  const openTab = view.openUnitId === u.id && (view.tab === "kep" || view.tab === "fel") ? view.tab : "alap";
+  const notice = view.openUnitId === u.id ? view.notice : null;
+  const n = u.photoCount ?? 0;
+  const amCount = (u.amenities ?? []).filter((a) => a.trim()).length;
+  const radio = (t: string): string =>
+    `<input class="rs-tabin rs-tabin--${t}" type="radio" name="fl" value="${t}" ` +
+    `id="fl_${esc(u.id)}_${t}"${openTab === t ? " checked" : ""}>`;
+  const tab = (t: string, label: string, count: number | null): string =>
+    `<label class="rs-tab rs-tab--${t}" for="fl_${esc(u.id)}_${t}" role="tab">${esc(label)}` +
+    (count === null ? "" : `<em data-rs-count="${t}">${count}</em>`) +
+    `</label>`;
+  return (
+    `<div class="rs-modal" id="szoba-${esc(u.id)}" data-rs-modal="${esc(u.id)}">` +
+    `<a class="rs-backdrop" href="#szobak" aria-label="${T(lang, "Bezárás")}"></a>` +
+    `<form class="rs-pop" method="POST" action="/admin/units/content" role="dialog" aria-modal="true" ` +
+    `aria-label="${esc(u.name)}">` +
+    `<input type="hidden" name="id" value="${esc(u.id)}">` +
     // Marker: distinguishes "never opened the picker" from "opened and cleared it",
     // so a save cannot silently wipe an assignment the owner did not touch.
     `<input type="hidden" name="photos_touched" value="1">` +
-    `<div class="mcfg-pf__sel">${minis}` +
-    `<span class="citui-hint" style="margin:0">${T(lang, "{n} kiválasztva", { n: picked.size })}</span></div>` +
-    `<details class="mcfg-pf"><summary><span class="citui-btn citui-btn--ghost citui-btn--sm">` +
-    `${T(lang, "Képek választása")}</span></summary>` +
-    `<div class="mcfg-pf__grid">${cells}</div>` +
-    `<p class="citui-hint" style="margin:8px 0 0">${T(lang, "Pipálja ki, melyik kép tartozik ehhez az egységhez. Új képet a {tab} fülön tölthet fel — egy kép több szobához is tartozhat.", { tab: `<strong>${T(lang, "Fotók")}</strong>` })}</p>` +
-    `</details></div>`
+    radio("alap") +
+    radio("kep") +
+    radio("fel") +
+    `<div class="rs-pop__top">` +
+    `<a class="rs-pop__x" href="#szobak" aria-label="${T(lang, "Bezárás")}">${ic("close", 16)}</a>` +
+    `<b>${esc(u.name)}</b><span class="rs-pop__meta">${esc(roomMeta(u, lang))}</span></div>` +
+    `<div class="rs-tabs" role="tablist">` +
+    tab("alap", T(lang, "Alapok"), null) +
+    tab("kep", T(lang, "Képek"), n) +
+    (ctx?.active ? tab("fel", T(lang, "Felszereltség"), amCount) : tab("fel", T(lang, "Felszereltség"), null)) +
+    `</div>` +
+    `<div class="rs-pop__body">` +
+    `<div class="rs-pane rs-pane--alap">${roomBasicsPane(u, lang)}</div>` +
+    `<div class="rs-pane rs-pane--kep">${roomPhotosPane(u, units, library, notice, lang)}</div>` +
+    `<div class="rs-pane rs-pane--fel">${roomAmenityPane(u, ctx, lang)}</div>` +
+    `</div>` +
+    `<div class="rs-pop__foot">` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button>` +
+    // ADR-0114: az egész szállás nem törölhető (ő horgonyozza a kizárást), ezért a
+    // gombot nem is kínáljuk — a csak „nem lehet"-et válaszoló gomb rosszabb a semminél.
+    (units.length > 1 && !u.isWholeProperty
+      ? `<button class="rs-del" type="submit" formaction="/admin/units/delete">${T(lang, "Egység törlése")}</button>`
+      : "") +
+    `</div></form></div>`
+  );
+}
+
+/** ADR-0198 — melyik szoba van nyitva, melyik fülön, és mi történt az imént. */
+export interface RoomsView {
+  readonly openUnitId?: string | null;
+  readonly tab?: string | null;
+  readonly notice?: string | null;
+}
+
+/** A teljes szoba-szerkesztő: vezető mondat + kártyarács + felugrók + új egység. */
+function roomsEditor(
+  units: readonly EditorUnit[],
+  library: readonly PhotoEdit[],
+  ctx: UnitAmenityContext | undefined,
+  view: RoomsView,
+  lang: string,
+): string {
+  const cards = units.map((u) => roomCard(u, units, lang)).join("");
+  const pops = units.map((u) => roomPopup(u, units, library, ctx, view, lang)).join("");
+  return (
+    // A `.rs-wrap` a felugrók NÉLKÜLI rész: ez a súgó-kép tárgya is (a felugró
+    // fixed pozíciójú, és egy teljes-lapos kép a rács fölé festené).
+    `<div class="rs-wrap">` +
+    `<div class="rs-head"><span class="adm-ico">${ic("modules")}</span><div>` +
+    `<h1>${T(lang, "A szobái")}</h1>` +
+    `<p>${T(lang, "A kártya azt mutatja, amit a vendég lát a honlapon. Koppintson rá — a szerkesztő felugrik.")}</p></div></div>` +
+    `<div class="rs-grid" id="szobak">${cards}</div>` +
+    // A felvétel a MAI viselkedés marad (a terv szándékosan nem kötötte be), csak a
+    // helye változik: a rács alatt, egyetlen szaggatott vezérlőben.
+    `<details class="rs-new"><summary>${ic("plus")}${T(lang, "Új egység felvétele")}</summary>` +
+    `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
+    `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
+    `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
+    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
+    `</form></details></div>` +
+    pops
   );
 }
 
@@ -908,58 +1454,91 @@ export interface UnitAmenityContext {
   readonly siteSelected: readonly string[];
 }
 
-function unitContentCards(
-  units: EditorUnit[],
-  library: readonly PhotoEdit[] = [],
-  lang = "hu",
-  amenityCtx?: UnitAmenityContext,
-): string {
-  if (units.length < 2) return "";
-  return units
-    .map((u) => {
-      const photos = u.photoCount ?? 0;
-      const hasText = Boolean(u.description?.trim()) || (u.amenities?.length ?? 0) > 0;
-      const ready = photos > 0 && hasText;
-      const status = ready
-        ? `<p class="mcfg-note" style="margin:14px 0 0">${T(lang, "Saját oldala: {url} — a keresők külön is megtalálják.", { url: `<code>/apartman/${esc(u.slug ?? "")}</code>` })}</p>`
-        : `<p class="mcfg-note" style="margin:14px 0 0">${T(lang, "Ennek az egységnek még nincs saját oldala. Ahhoz kell legalább {photo} (itt lent, a „Képek választása” gombbal) és {text}. Üres oldallal többet ártanánk, mint használnánk.", { photo: `<strong>${T(lang, "egy hozzárendelt fotó")}</strong>`, text: `<strong>${T(lang, "leírás vagy felszereltség")}</strong>` })}</p>`;
-      // The amenity block, in one of three shapes: the approved picker (module
-      // active), the conversion panel (module missing), or — when the caller gave
-      // no context (booking screen reuses this card) — the stored list read-only.
-      const stored = splitAmenities(u.amenities ?? []);
-      const amenityBlock = amenityCtx
-        ? amenityCtx.active
-          ? `<div class="citui-field"><span class="citui-label">${T(lang, "Ebben az egységben van")}</span>` +
-            amenityPicker({
-              scope: "unit",
-              selected: stored.selected,
-              other: stored.other,
-              inherited: amenityCtx.siteSelected,
-              idPrefix: `amp_${u.id}`,
-              checkName: "am",
-              otherName: "amenities_other",
-              lang,
-            }) +
-            `</div>`
-          : amenityLockedPanel(lang)
-        : "";
-      return (
-        `<form method="POST" action="/admin/units/content" class="adm-card">` +
-        `<input type="hidden" name="id" value="${esc(u.id)}">` +
-        `<div class="adm-card__head"><span class="adm-ico">${ic("texts")}</span><h2>${esc(u.name)}</h2></div>` +
-        `<div class="citui-field"><label class="citui-label" for="d_${esc(u.id)}">${T(lang, "Leírás")}</label>` +
-        `<textarea class="citui-textarea" id="d_${esc(u.id)}" name="description" style="min-height:110px" ` +
-        `placeholder="${T(lang, "Mi jellemzi ezt a szobát? Mit szeretnek benne a vendégek?")}">${esc(u.description ?? "")}</textarea></div>` +
-        amenityBlock +
-        photoPicker(u, library, lang) +
-        `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">` +
-        `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button>` +
-        `<span class="citui-hint" style="margin:0">${T(lang, "{n} hozzárendelt fotó", { n: photos })}</span></div>` +
-        status +
-        `</form>`
-      );
-    })
-    .join("");
+/**
+ * A szoba-szerkesztő JS-RÁTÉTE — a felület nélküle is teljes (`:target` felugró,
+ * rádió-gombos fülek, submit-gombos vezérlők). Ez a szkript hármat tesz hozzá:
+ *   · ESC-zárás (a kontraktus köti; billentyűzet nélkül nincs más útja),
+ *   · élő számlálók + élő vendég-előnézet gépelés közben,
+ *   · helyben feltöltés (a termék ma sem tud JS nélkül feltölteni — nincs
+ *     multipart-értelmezőnk —, tehát ez nem VESZTESÉG a JS nélküli úton, hanem
+ *     ugyanaz, amit a Fotók fül nyújt).
+ * A felhasználónak szóló szövegek SZERVER-oldalon fordulnak (ADR-0067).
+ */
+function roomEditorScript(lang: string): string {
+  // ⚠️ A T() hívás LÁTHATÓ alakban kell maradjon (az i18n-őr a forrás-stringet a
+  // T() argumentumából gyűjti): a `j(T(lang,"…"))` burkolás azt adja, a saját
+  // rövidítő segéd (s("…")) viszont ELREJTENÉ a kulcsot a katalógus elől.
+  const j = (v: string): string => JSON.stringify(v);
+  return (
+    `<script>(function(){` +
+    // ESC: a felugró a :target-en ül, tehát a bezárás = a horgony elhagyása.
+    // ⛔ A history.replaceState NEM értékeli újra a :target-et: az ESC „megtörtént",
+    // a felugró meg nyitva maradt (mérve az őrrel). A horgonyt TÉNYLEGESEN el kell hagyni.
+    `document.addEventListener("keydown",function(e){` +
+    `if(e.key!=="Escape")return;if(!document.querySelector(".rs-modal:target"))return;` +
+    `location.hash="#szobak"});` +
+    // Élő előnézet + számlálók: a beírt név/férőhely azonnal látszik ott, ahol a
+    // vendég is látni fogja.
+    `document.addEventListener("input",function(e){` +
+    `var el=e.target,pop=el.closest&&el.closest(".rs-pop");if(!pop)return;` +
+    `if(el.hasAttribute("data-rs-name")){var t=pop.querySelector("[data-rs-prev-name]");` +
+    `if(t)t.textContent=el.value;var h=pop.querySelector(".rs-pop__top b");if(h)h.textContent=el.value;` +
+    `var c=document.querySelector('[data-rs-card="'+pop.querySelector('[name=id]').value+'"] .rs-gbd b');` +
+    `if(c)c.textContent=el.value}` +
+    `if(el.hasAttribute("data-rs-cap")){var p=pop.querySelector("[data-rs-prev-cap]");` +
+    `if(p)p.textContent=el.value?el.value+${j(T(lang, " fő"))}:${j(T(lang, "férőhely nincs megadva"))}}` +
+    `});` +
+    // A Képek fül számlálója a PIPÁKAT követi (azt menti a Mentés).
+    `document.addEventListener("change",function(e){` +
+    `var el=e.target,pop=el.closest&&el.closest(".rs-pop");if(!pop)return;` +
+    `if(el.type==="checkbox"&&el.name==="photo"){` +
+    `var n=pop.querySelectorAll('input[name=photo]:checked').length;` +
+    `var c=pop.querySelector('[data-rs-count=kep]');if(c)c.textContent=n;` +
+    `var cell=el.closest(".rs-libcell");if(cell)cell.classList.toggle("is-on",el.checked)}` +
+    `if(el.type==="checkbox"&&el.name==="am"){` +
+    `var m=pop.querySelectorAll('input[name=am]:checked').length;` +
+    `var d=pop.querySelector('[data-rs-count=fel]');if(d)d.textContent=m}` +
+    `});` +
+    // Helyben feltöltés. A korlátok a SZERVER mért korlátai; a hiba MEGNEVEZI a
+    // fájlt és az okot, és hibaként jelenik meg — nem sikerként.
+    `function read(f){return new Promise(function(res,rej){var r=new FileReader();` +
+    `r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}` +
+    `function esc(s){return String(s).replace(/[&<>"]/g,function(c){` +
+    `return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}` +
+    `document.addEventListener("change",async function(e){` +
+    `var inp=e.target;if(!inp.hasAttribute||!inp.hasAttribute("data-rs-upload"))return;` +
+    `var unit=inp.getAttribute("data-rs-upload"),files=[].slice.call(inp.files||[]);` +
+    `if(!files.length)return;` +
+    `var pop=inp.closest(".rs-pop"),slot=pop.querySelector("[data-rs-msg]");` +
+    `slot.innerHTML='<div class="rs-msg rs-msg--n">'+${j(T(lang, "Feltöltés…"))}+'</div>';` +
+    `var bad=[],good=[];` +
+    `for(var i=0;i<files.length;i++){var f=files[i];` +
+    `if(["image/jpeg","image/png","image/webp"].indexOf(f.type)<0){` +
+    `bad.push("<b>"+esc(f.name)+"</b> "+${j(T(lang, "nem kép (JPEG, PNG vagy WEBP kell)"))});continue}` +
+    `if(f.size>6000000){bad.push("<b>"+esc(f.name)+"</b> "+(f.size/1000000).toFixed(1).replace(".",",")+" MB — "+` +
+    `${j(T(lang, "a legnagyobb feltölthető méret 6 MB"))});continue}good.push(f)}` +
+    `try{var images=[];for(var j=0;j<good.length;j++){images.push({dataUrl:await read(good[j]),name:good[j].name,alt:""})}` +
+    `var res=images.length?await (await fetch("/admin/photos",{method:"POST",` +
+    `headers:{"Content-Type":"application/json"},body:JSON.stringify({images:images,unit:unit})})).json():{count:0,errors:[]};` +
+    `(res.errors||[]).forEach(function(er){bad.push((er.file?"<b>"+esc(er.file)+"</b> ":"")+esc(er.reason))});` +
+    `var parts=[];` +
+    `if(res.count)parts.push(${j(T(lang, "{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez az egységhez."))}.replace("{n}",res.count));` +
+    `if(res.becameCover)parts.push(${j(T(lang, "Mivel nem volt borítóképe, az első feltöltött lett a borító."))});` +
+    `if(bad.length)parts.push(bad.join(" "));` +
+    // A részleges sikert MINDKÉT felével megőrizzük az újratöltés után: a rácsnak
+    // és a képtárnak a szerver igazsága kell, az üzenetnek meg a teljes története.
+    `sessionStorage.setItem("citRsMsg",JSON.stringify({u:unit,kind:bad.length?(res.count?"warn":"bad"):"ok",html:parts.join(" ")}));` +
+    `if(res.count){location.href="/admin?tab=modulok&m=rooms&saved=1&e="+encodeURIComponent(unit)+"&fl=kep#szoba-"+unit}` +
+    `else{show(slot,unit)}}` +
+    `catch(err){sessionStorage.setItem("citRsMsg",JSON.stringify({u:unit,kind:"bad",html:${j(T(lang, "Hiba a feltöltéskor."))}}));show(slot,unit)}});` +
+    `function show(slot,unit){var raw=sessionStorage.getItem("citRsMsg");if(!raw)return;` +
+    `sessionStorage.removeItem("citRsMsg");var m=JSON.parse(raw);if(m.u!==unit)return;` +
+    `slot.innerHTML='<div class="rs-msg rs-msg--'+m.kind+'" data-rs-notice>'+m.html+'</div>'}` +
+    `var raw=sessionStorage.getItem("citRsMsg");` +
+    `if(raw){var m=JSON.parse(raw);var slot=document.querySelector('[data-rs-modal="'+m.u+'"] [data-rs-msg]');` +
+    `if(slot)show(slot,m.u);else sessionStorage.removeItem("citRsMsg")}` +
+    `})();</script>`
+  );
 }
 
 export interface EditorRequest {
@@ -1426,6 +2005,10 @@ export interface ModuleSettingsOpts {
   /** Rooms screen: state of the amenities module for the per-unit picker
    *  (owner decision 2026-08-26: unit amenities need rooms AND amenities). */
   readonly unitAmenities?: UnitAmenityContext;
+  /** ADR-0198 — which room is open, on which tab, and what the last action did.
+   *  A POST round trip carries these back, so a star-click does not dump the owner
+   *  on the first tab of a closed editor. */
+  readonly roomsView?: RoomsView;
   /** ADR-0067: the site's own language — the settings screens render in it. */
   readonly lang?: string;
 }
@@ -1474,11 +2057,23 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
     def.editor === "booking" && opts.booking
       ? bookingEditor(moduleId, opts.booking, lang)
       : def.editor === "rooms" && opts.units
-        ? // The SAME units card the booking screen shows — one truth, two doors.
-          `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
-          unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData) +
-          unitContentCards(opts.units, opts.photoLibrary ?? [], lang, opts.unitAmenities) +
-          amenityPickerScript(lang)
+        ? // ADR-0198 — a kártyarács + felugró + fülek szerkesztő. EGY egységnél a mai
+          // képernyő marad: ott nincs mit „átlátni", és saját aloldal sem születik
+          // (a szoba-oldal feltétele több egység), tehát a rács állapot-jelvénye
+          // olyat állítana, ami egy egységnél nem igaz.
+          opts.units.length > 1
+          ? `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
+            roomsEditor(
+              opts.units,
+              opts.photoLibrary ?? [],
+              opts.unitAmenities,
+              opts.roomsView ?? {},
+              lang,
+            ) +
+            amenityPickerScript(lang) +
+            roomEditorScript(lang)
+          : `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
+            unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData)
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews

@@ -12158,6 +12158,55 @@ mérés **103 állítás zöld, 0 JS-hiba**, valós adaton, mobil és asztali m�
   nélkül; a terv a JS-sel gazdagított viselkedést mutatja, a szállított felület nem veszítheti el
   a másikat
 
+### ⑥ A MEGVALÓSÍTÁS — és a nyitva hagyott tárolási modell eldöntve (2026-09-22)
+
+**A felület leszállítva** (kártyarács + `:target`-felugró + rádió-gombos fülek). Az ⑤ mindhárom
+nyitott pontja lezárva:
+
+**A tárolási modell: jelölés a FOTÓ-rekordon** — `PhotoEdit.coverFor?: string[]`, a meglévő
+`units?: string[]` mintájára, **migráció nélkül**, és a `carryPhoto()` viszi tovább (e nélkül az
+első átrendezés csendben ledobná, pontosan úgy, ahogy a `watermarked` mezővel megtörtént). Miért
+ez, és nem a másik kettő:
+
+- **lista, nem egy id**, mert egy kép több egység borítója is lehet (ADR-0044 §11), és mert így a
+  jelölés mozgatása SOSEM nyúl másik egység borítójához — az invariánst nem betartjuk, hanem a
+  modell alakja teszi megsérthetetlenné;
+- a **galéria-sorrend érintetlen**, tehát a ház nyitóképe (`photos[0]`) nem mozdul — ez az a
+  csapda, ami miatt a „legyen ez a borító" = előrehozás mechanizmus nem volt használható;
+- **`site_unit` oszlop helyett** a fotó-rekord, mert így a megosztott képtár minden szabálya
+  (hozzárendelés, sorrend, törlés) EGY rekordra vonatkozik, és a törölt kép magával viszi a
+  jelölését — külön oszlopnál árva sor maradna.
+
+**Feloldás EGY függvényben** (`unitCoverPhoto`), amit a publikus render ÉS az admin is hív; jelölés
+hiányában a MAI szabály a tartalék (az első hozzárendelt kép), tehát aki soha nem nyúl hozzá,
+pontosan azt látja, amit eddig. ⭐ Ez teszi a bevezetést visszamenőleg is némává: nincs migráció,
+nincs „minden szoba borítója eltűnt" pillanat.
+
+**A JS nélküli út MEGMARADT, és mérve is van:** a felugró `:target`-tel nyílik, a fülváltás
+rádió-gomb + CSS, a hozzárendelés/borító-váltás/mentés pedig ugyanannak az egy űrlapnak a
+submitja. Kikapcsolt JS mellett az őr végigmegy rajta (felugrás, fülváltás, képtár, mentés). A
+**helyben feltöltés** JS-t igényel — ahogy a Fotók fülön ma is, mert a terméknek nincs
+multipart-értelmezője; ez tehát nem veszteség, hanem a MAI állapot megtartása. Kimondva, nem
+elhallgatva.
+
+**A levétel nem külön „×"**, hanem a pipa levétele + Mentés; a kötő üzenet („a közös képtárban
+benne marad" + mi lett a borítóval) ugyanaz, és a szerver az **állapot-különbségből** ismeri fel,
+nem egy szándék-mezőből — különben a legfontosabb mondat pont a szokásos úton maradna el.
+
+**Egyetlen egységnél a mai képernyő marad:** ott nincs mit „átlátni", és saját aloldal sem
+születik (annak feltétele több egység), tehát a rács `Van saját oldala` jelvénye olyat állítana,
+ami egy egységnél nem igaz.
+
+⭐ **Két lelet a saját munkámból, amit a mérés fogott meg:** ① a `history.replaceState` **nem
+értékeli újra a `:target`-et** — az ESC „megtörtént", a felugró meg nyitva maradt ② a kontraktus
+horgony-listájából **nulla** elem került be, mert a szakasz CÍMÉT a §9 prózája is leírta, és az őr
+a korábbi előfordulást fogta meg (a regiszter kimenetéből visszaolvasva derült ki: 40 → 54).
+
+**Őr:** `scripts/room-editor-check.mts` — a valódi felületet kattintja végig mindkét méreten,
+JS-sel és JS nélkül, és a végén **hat negatív kontroll** fut (a visszarontott állapoton pirosra
+kell mennie). A kontraktus kötő feliratai és horgonyai megjelölve (README §9), a
+`contract-drift-check` és a KB-kapu zöld.
+
 ---
 
 ## ADR-0199 — A leugrás vigye a szobát, és a kártya PADLÓ-árat írjon (2026-09-22)

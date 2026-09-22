@@ -1445,6 +1445,21 @@ if [ -f scripts/room-details-check.mts ] && \
   echo "[pre-commit] room-details-check (a szoba-kártya + felugró jóváhagyott kontraktusa)…"
   npx tsx scripts/room-details-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A TENANT-ADMIN SZOBA-SZERKESZTŐ KONTRAKTUSA (tulaj 2026-09-22, D változat — ADR-0198,
+# assets/design-refs/tenant-admin/room-editor/README.md). Az állítások a README „KÖT"
+# pontjaiból valók: a kártya azt mutatja, amit a vendég lát (a borító-ÜTKÖZÉS jelvénye a
+# rácson is), a felugró látható kerettel nyílik és asztalin nem borít lapot, a Mentés
+# rögzített lábazatban marad, a csillag hozzá is rendel, a feltöltés nem írja át a meglévő
+# borítót, a levétel kimondja, hogy a kép a közös képtárban marad — és a felület JS NÉLKÜL
+# sem veszít funkciót. ⭐ A végén hat NEGATÍV KONTROLL fut: a visszarontott állapoton az
+# őrnek pirosra kell mennie (ami nem tud pirosra menni, az nem őr).
+# Böngészőt indít (2 szélesség + JS nélküli kör) és saját eldobható fixture-t vet, ezért
+# szigorúan diff-scope-olva.
+if [ -f scripts/room-editor-check.mts ] && \
+   changed_files | grep -qE '^src/server/(moduleConfigViews|public)\.ts$|^src/tenant/editor\.ts$|^scripts/room-editor-check'; then
+  echo "[pre-commit] room-editor-check (a szoba-szerkesztő jóváhagyott kontraktusa, ADR-0198)…"
+  npx tsx scripts/room-editor-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A LEADNEK KISZÁLLÍTOTT LAP (Elek FK-004b ①②): nincs üres keretezett doboz (se függő, se
 # ELUTASÍTOTT térkép-keret mellett), a lebegő vásárlás-pirula nem takar elsődleges gombot, és
 # a „Testre szabom" doboz nem nyitható üresre. 2026-09-14-ig ÁRVA volt — és mert soha nem
