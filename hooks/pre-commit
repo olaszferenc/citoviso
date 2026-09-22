@@ -1511,6 +1511,17 @@ if [ -f scripts/domain-inbox-freshness-check.mts ] && \
   echo "[pre-commit] domain-inbox-freshness (feldolgozatlan ontológia-tudás áll-e)…"
   npx tsx scripts/domain-inbox-freshness-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⭐⭐ REFINE-DÖNTÉSI SOR ŐRE — túléli-e a javaslat a review LEZÁRÁSÁT?
+# A `listReviews()` kiszűr minden párosított review-t, MIELŐTT bármi más lefutna. PROMOTE-ra ez
+# helyes; REFINE-ra végzetes, mert azt a gép sosem vezeti át — a lezárás MAGA temeti el. Mérve:
+# 23 javaslat állt így elérhetetlenül, köztük az, amelyik 2026-08-02-án KIMONDTA, hogy a
+# `watermarked` halott kód. Az őr azt is méri, hogy az ág-felismerő nem nyúl IDEGEN munka-ághoz.
+# ⛔ DIFF-SCOPE: ~25 párhuzamos session dolgozik a repón. Fixture-ökön mér, nem ír (~20 s).
+if [ -f scripts/refine-queue-check.mts ] && \
+   changed_files | grep -qE '^_planning/DOMAIN/_tools/(refine-queue|distill-apply|notify)\.mts|^scripts/refine-queue-check'; then
+  echo "[pre-commit] refine-queue-check (túléli-e a javaslat a review lezárását)…"
+  npx tsx scripts/refine-queue-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⭐⭐ VÍZJEL-KAPU ŐR (§A.2) — az „egyetlen feltétlen kizárás" tényleg kizár-e.
 # A `watermarked` flaget évekig SEMMI nem állította `true`-ra a termelési úton: a kapu ott
 # állt, a fék halott kód volt, és egy vízjeles portál-fotó kimehetett egy FIZETŐ ügyfél élő

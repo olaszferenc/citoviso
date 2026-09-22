@@ -56,5 +56,18 @@ vége is kiírja (`~/.claude/distill-citoviso.log`):
 3. elfogadás: a kereteket törlöd (a törzs marad), majd `bash scripts/land.sh` · elvetés:
    `git worktree remove --force` + `git branch -D`
 
+**⭐ REFINE — az eldöntetlen javaslatok SORA** (ADR-0201). A REFINE a kanonikus szöveg átírását
+kérné, ezért a gép SOHA nem vezeti át. Korábban a review lezárása (`_inbox/applied/`) MAGA
+temette el a javaslatot — mérve 23 blokk állt így elérhetetlenül, köztük az, amelyik
+2026-08-02-án kimondta, hogy a `watermarked` halott kód (a §A.2-lyukat végül egy független
+mérés találta meg újra, ADR-0200). Mostantól a javaslat a lezárástól FÜGGETLENÜL él:
+
+  `npx tsx _planning/DOMAIN/_tools/refine-queue.mts`                          — a nyitott sor
+  `… refine-queue.mts --close <id> --reason "<miért>"`                        — elvetés
+  `… refine-queue.mts --accept <id> --reason "<hol vezetted át>"`             — elfogadás
+
+⛔ A gép SOHA nem zár le tételt, és **az indoklás kötelező**. A döntések: `_tools/REFINE-DECISIONS.md`
+(commitolt). Amiről nincs döntés, arra a heti értesítő emlékeztet.
+
 Kézi futtatás: `npx tsx _planning/DOMAIN/_tools/distill-apply.mts` (**alapból SZÁRAZ**, semmit nem
 ír; írni csak `--go`-val lehet, ismeretlen kapcsoló = hiba) · önteszt: `--self-test`.

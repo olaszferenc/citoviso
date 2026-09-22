@@ -523,6 +523,114 @@ function renderInsert(b: PromoteBlock, stamp: string): string[] {
 }
 
 // --------------------------------------------------------------------------
+// REFINE: A JAVASLATOK, AMIKET A GÉP SOHA NEM VEZET ÁT
+// --------------------------------------------------------------------------
+
+/**
+ * Megméri, hogy a REFINE-javaslat `OLD:` idézete ma is megvan-e az ontológiában.
+ *
+ * ⛔ KIEMELVE, MERT KÉT HÍVÓJA VAN. Eddig ez a hurok a `run()` törzsében ült; a
+ * `refine-queue.mts`-nek ugyanerre a mérésre van szüksége, és egy második példány két
+ * igazságot adna ugyanarra a kérdésre (a házban több rögzített esetünk van rá).
+ */
+export function measureRefineStatus(
+  blocks: RefineBlock[],
+  readTarget: (t: string) => string[] | null,
+): void {
+  const countOf = (h: string, n: string): number => {
+    if (!n) return 0;
+    let c = 0;
+    let i = h.indexOf(n);
+    while (i >= 0) {
+      c++;
+      i = h.indexOf(n, i + 1);
+    }
+    return c;
+  };
+  for (const r of blocks) {
+    if (r.status === "ELLIPSIZED" || r.status === "UNPARSEABLE") continue;
+    if (!r.target || !ALLOWED_TARGETS.includes(r.target as (typeof ALLOWED_TARGETS)[number])) {
+      r.status = "NO-TARGET";
+      continue;
+    }
+    const lines = readTarget(r.target);
+    if (!lines) {
+      r.status = "NO-TARGET";
+      continue;
+    }
+    const hay = lines.join("\n");
+    const needle = r.oldLiteral!;
+    const count = countOf(hay, needle);
+    if (count === 1) r.status = "LIVE";
+    else if (count > 1) r.status = "AMBIGUOUS";
+    else {
+      // Second pass, formatting-insensitive: "not found verbatim" is NOT the
+      // same claim as "no longer in the ontology".
+      const soft = countOf(deformat(hay), deformat(needle));
+      r.status = soft >= 1 ? "REFORMATTED" : "STALE";
+    }
+  }
+}
+
+export interface RefineProposal {
+  /** Tartalom-alapú, STABIL azonosító: a döntés ehhez tapad, nem a fájl sorszámához. */
+  readonly id: string;
+  readonly review: string;
+  readonly target: string | null;
+  readonly heading: string;
+  readonly oldRaw: string;
+  readonly newRaw: string;
+  readonly why: string;
+  readonly status: RefineStatus;
+}
+
+/**
+ * MINDEN REFINE-javaslat a megadott review-könyvtárakból, MAI státusszal mérve.
+ *
+ * ⛔ MIÉRT KELL KÜLÖN BEJÁRAT. A `run()` szándékosan kihagyja a már párosított review-kat
+ * (`listReviews` → `applied/`), és ez PROMOTE-ra helyes. REFINE-ra viszont végzetes: azt a
+ * gép SOHA nem vezeti át, tehát a review lezárása MAGA az a művelet, ami a javaslatot
+ * örökre eltemeti. Mérve 2026-09-19: 23 REFINE-blokk állt így, elérhetetlenül.
+ * Ez a függvény a review LEZÁRÁSÁTÓL FÜGGETLENÜL olvas — a `applied/`-ból is.
+ */
+export function collectRefineProposals(domainDir: string, reviewDirs: readonly string[]): RefineProposal[] {
+  const fileCache = new Map<string, string[]>();
+  const readTarget = (t: string): string[] | null => {
+    if (fileCache.has(t)) return fileCache.get(t)!;
+    const p = path.join(domainDir, t);
+    if (!fs.existsSync(p)) return null;
+    const lines = fs.readFileSync(p, "utf8").split("\n");
+    fileCache.set(t, lines);
+    return lines;
+  };
+  const all: RefineBlock[] = [];
+  const seenReview = new Set<string>();
+  for (const dir of reviewDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir).sort()) {
+      if (!/\.md$/.test(f)) continue;
+      // Ugyanaz a review az inboxban ÉS az applied/-ban is ott ülhet — a bélyeg a horgony,
+      // különben minden javaslat duplán jelenne meg a sorban.
+      const stamp = /(\d{8}T\d{6}Z)/.exec(f)?.[1] ?? f;
+      if (seenReview.has(stamp)) continue;
+      seenReview.add(stamp);
+      all.push(...parseReview(f, fs.readFileSync(path.join(dir, f), "utf8")).refine);
+    }
+  }
+  measureRefineStatus(all, readTarget);
+  return all.map((r) => ({
+    id: sha(`${r.review}|${r.heading}|${normalize(r.oldRaw)}`),
+    review: r.review,
+    target: r.target,
+    heading: r.heading,
+    oldRaw: r.oldRaw,
+    newRaw: r.newRaw,
+    why: r.why,
+    status: r.status,
+  }));
+}
+
+// --------------------------------------------------------------------------
 // THE BRANCH THE OWNER HAS TO JUDGE — one source, two readers
 // --------------------------------------------------------------------------
 
@@ -680,39 +788,7 @@ function run(opts: Options): number {
   }
 
   // --- measure REFINE staleness against the real ontology ------------------
-  for (const r of refineAll) {
-    if (r.status === "ELLIPSIZED" || r.status === "UNPARSEABLE") continue;
-    if (!r.target || !ALLOWED_TARGETS.includes(r.target as (typeof ALLOWED_TARGETS)[number])) {
-      r.status = "NO-TARGET";
-      continue;
-    }
-    const lines = readTarget(r.target);
-    if (!lines) {
-      r.status = "NO-TARGET";
-      continue;
-    }
-    const hay = lines.join("\n");
-    const needle = r.oldLiteral!;
-    const countOf = (h: string, n: string): number => {
-      if (!n) return 0;
-      let c = 0;
-      let i = h.indexOf(n);
-      while (i >= 0) {
-        c++;
-        i = h.indexOf(n, i + 1);
-      }
-      return c;
-    };
-    const count = countOf(hay, needle);
-    if (count === 1) r.status = "LIVE";
-    else if (count > 1) r.status = "AMBIGUOUS";
-    else {
-      // Second pass, formatting-insensitive: "not found verbatim" is NOT the
-      // same claim as "no longer in the ontology".
-      const soft = countOf(deformat(hay), deformat(needle));
-      r.status = soft >= 1 ? "REFORMATTED" : "STALE";
-    }
-  }
+  measureRefineStatus(refineAll, readTarget);
 
   // --- summary -------------------------------------------------------------
   const toApply = promoteAll.filter((b) => b.status === "apply");
@@ -780,6 +856,25 @@ function run(opts: Options): number {
     process.stdout.write(`Worktree létrehozva: ${wtDir} (${branch})\n`);
   } else {
     process.stdout.write(`Meglévő worktree használata: ${wtDir}\n`);
+  }
+
+  // ⛔⛔ A FRISS WORKTREE FUTTATHATATLAN, AMÍG NINCSENEK BENNE A FUTÁSIDEJŰ FÜGGŐSÉGEK.
+  // Mérve ÉLESBEN (2026-09-20 cron): az ág létrejött, a fájlok bekerültek, majd a
+  // `git commit` elbukott, mert a pre-commit őrei `ERR_MODULE_NOT_FOUND`-dal elszálltak —
+  // a `git worktree add` csak a KÖVETETT fájlokat hozza, a `node_modules` és a `.env`
+  // gitignore-olt. Az eredmény pontosan az, amit ez a szerszám hivatott megszüntetni:
+  // „review megvan, jóváhagyható ág nincs". A watchdog `rc-wt-prepare.sh`-ja ugyanezt a
+  // symlink-készletet rakja ki minden munkafának; itt ugyanazt tesszük, csak szűkebben.
+  for (const dep of ["node_modules", ".env", "sites"]) {
+    const src = path.join(opts.repo, dep);
+    const dst = path.join(wtDir, dep);
+    if (!fs.existsSync(src) || fs.existsSync(dst)) continue;
+    try {
+      fs.symlinkSync(fs.realpathSync(src), dst);
+    } catch (e) {
+      // Nem néma: ha ez nem sikerül, a commit fog elbukni, és jobb ITT megtudni, miért.
+      process.stdout.write(`  ⚠️ ${dep} symlink nem jött létre: ${(e as Error).message}\n`);
+    }
   }
 
   const wtDomain = path.join(wtDir, "_planning", "DOMAIN");
@@ -892,10 +987,16 @@ function run(opts: Options): number {
   // If earlier weeks' branches were never accepted, their proposals are also
   // in THIS branch (nothing landed, so nothing counts as done). Say so, rather
   // than leaving the owner to guess which branch is current.
+  // ⛔⛔ A MINTA A DÁTUM-ALAKRA SZŰKÍT, NEM A `wt/distill*` GLOBRA. Mérve ÉLESBEN
+  // (2026-09-22): a laza glob illeszkedett a `wt/distillnotify` ágra — egy EMBER munka-ágára,
+  // aminek semmi köze a desztillálóhoz —, és a szerszám azt írta ki róla, hogy „nyugodtan
+  // törölhető", kész `branch -D` paranccsal. Egy idegen szál munkájának megsemmisítését
+  // ajánlotta fel, magabiztosan. A desztilláló ágai MINDIG `wt/distill<ÉÉÉÉHHNN>` alakúak
+  // (`branchPaths`), tehát a nyolc számjegy a megkülönböztető jel.
   const others = git(["branch", "--list", "wt/distill*"], opts.repo)
     .split("\n")
     .map((l) => l.replace(/^[*+]?\s*/, "").trim())
-    .filter((l) => l && l !== branch);
+    .filter((l) => /^wt\/distill\d{8}$/.test(l) && l !== branch);
   if (others.length > 0) {
     process.stdout.write(
       `ℹ️  Van ${others.length} korábbi, el nem fogadott desztilláló-ág: ${others.join(", ")}\n` +

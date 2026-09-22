@@ -65,6 +65,8 @@ import {
   type Review,
 } from "../../../scripts/domain-inbox-freshness-check.mts";
 import { branchPaths } from "./distill-apply.mts";
+import type { RefineProposal } from "./distill-apply.mts";
+import { loadRefineQueue } from "./refine-queue.mts";
 
 const DAY_MS = 86_400_000;
 
@@ -153,6 +155,13 @@ export function plan(
   now: number,
   branches: readonly BranchInfo[],
   repo: string,
+  /**
+   * Nyitott REFINE-döntések. ⛔ KÜLÖN OK A MEGSZÓLALÁSRA: ezek a javaslatok akkor is állnak,
+   * amikor MINDEN review párosítva van — a review lezárása MAGA temette el őket. Ha az
+   * értesítő csak a review-kat nézné, a gyökérok egy réteggel beljebb változatlan maradna:
+   * a gép szólna a review-ról, és hallgatna az eldöntetlen javaslatról.
+   */
+  openRefine: readonly RefineProposal[] = [],
 ): NotifyPlan {
   const verdict = judge(corpus, now);
   const empty = new Set(verdict.emptyRuns.map((r) => r.file));
@@ -161,12 +170,13 @@ export function plan(
   const oldestDays = reviews.length ? ageDays(reviews[0].iso, now) : null;
   const structural = verdict.structural;
 
-  if (reviews.length === 0 && structural.length === 0) {
+  if (reviews.length === 0 && structural.length === 0 && openRefine.length === 0) {
     return {
       speak: false,
       silentReason:
         `nincs mit eldönteni — ${corpus.pending.length} párosítatlan review, abból ` +
-        `${verdict.emptyRuns.length} üres futás, 0 érdemi. A heti üres futásra SZÁNDÉKOSAN néma.`,
+        `${verdict.emptyRuns.length} üres futás, 0 érdemi, 0 nyitott REFINE-döntés. ` +
+        `A heti üres futásra SZÁNDÉKOSAN néma.`,
       reviews: [],
       suggestions: 0,
       oldestDays: null,
@@ -191,6 +201,13 @@ export function plan(
         : ready.length > 1
           ? `${ready.length} atvezeto ag var (${ready.map((b) => b.branch).join(", ")}).`
           : "Atvezeto ag MEG NINCS - a reszletek az e-mailben.",
+    );
+  }
+  if (openRefine.length > 0) {
+    const live = openRefine.filter((r) => r.status === "LIVE").length;
+    smsParts.push(
+      `${openRefine.length} eldontetlen REFINE-javaslat is all` +
+        (live > 0 ? ` (ebbol ${live} MA IS ervenyes).` : "."),
     );
   }
   if (structural.length > 0) {
@@ -219,6 +236,28 @@ export function plan(
       const targets = r.targets.length ? ` → ${r.targets.join(", ")}` : "";
       lines.push(`  - ${r.file} — ${what}${targets}`);
     }
+    lines.push("");
+  }
+  if (openRefine.length > 0) {
+    const byStatus = new Map<string, number>();
+    for (const r of openRefine) byStatus.set(r.status, (byStatus.get(r.status) ?? 0) + 1);
+    const live = openRefine.filter((r) => r.status === "LIVE");
+    lines.push(`── ELDÖNTETLEN REFINE-JAVASLATOK (${openRefine.length}) ${"─".repeat(30)}`);
+    lines.push("A REFINE a MÁR MEGLÉVŐ kanonikus szöveget írná át — ezt a gép SOHA nem vezeti át");
+    lines.push("automatikusan. Korábban a review lezárása örökre eltemette őket; mostantól állnak,");
+    lines.push("amíg EMBER nem dönt (indoklással).");
+    lines.push("");
+    lines.push(`  állapot: ${[...byStatus].sort().map(([k, v]) => `${k}=${v}`).join(" · ")}`);
+    if (live.length > 0) {
+      lines.push("");
+      lines.push(`  🔴 MA IS ÉRVÉNYES (${live.length}) — ezekről érdemben dönteni kell:`);
+      for (const r of live) {
+        lines.push(`     ${r.id}  ${r.target ?? "—"} — ${r.heading.replace(/^#+\s*/, "").slice(0, 80)}`);
+      }
+    }
+    lines.push("");
+    lines.push(`  A teljes sor:  npx tsx ${path.join(repo, "_planning/DOMAIN/_tools/refine-queue.mts")}`);
+    lines.push("  Lezárás:       … refine-queue.mts --close <id> --reason \"<miért>\"  (az indoklás KÖTELEZŐ)");
     lines.push("");
   }
   if (structural.length > 0) {
@@ -256,7 +295,9 @@ export function plan(
   const emailSubject =
     reviews.length > 0
       ? `Citoviso — ${reviews.length} desztilláló-review vár döntésre (${suggestions} javaslat)`
-      : `Citoviso — szerkezeti lelet a desztilláló inboxában (${structural.length})`;
+      : openRefine.length > 0
+        ? `Citoviso — ${openRefine.length} eldöntetlen REFINE-javaslat áll`
+        : `Citoviso — szerkezeti lelet a desztilláló inboxában (${structural.length})`;
 
   return {
     speak: true,
@@ -409,7 +450,9 @@ async function main(): Promise<number> {
   const loc = resolveInbox(repo, args.inbox ?? process.env.DOMAIN_INBOX_DIR);
   const corpus = readCorpus(loc.dir, [path.join(repo, "_planning/DOMAIN/_inbox/applied")]);
   const branches = liveBranches(repo, path.join(os.homedir(), "wt"));
-  const p = plan(corpus, Date.now(), branches, repo);
+  // A REFINE-sor a review LEZÁRÁSÁTÓL FÜGGETLENÜL él — ezért külön töltjük be.
+  const openRefine = loadRefineQueue().open;
+  const p = plan(corpus, Date.now(), branches, repo, openRefine);
 
   console.log(`[notify] inbox: ${loc.dir} (${loc.how})`);
   if (!p.speak) {
