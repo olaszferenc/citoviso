@@ -61,7 +61,7 @@ Két gomb tartozik hozzá:
 
 Amint mentette a tartalmat, a sor magától eltűnik a listáról, és a szakasz megjelenik az oldalán.
 
-Öt modulnál fordulhat elő: **Árak, szezonok**; **Környék, látnivalók**; **Nyitvatartás, érkezés**;
+Öt modulnál fordulhat elő: **Árak, szezonok**; **Heti programajánló**; **Nyitvatartás, érkezés**;
 **Amit kínál (felszereltség)**; **Szobák, apartmanok**. A többi modul üresen is mutat valamit a
 vendégnek, ezért azoknál ilyen sor nem jelenik meg.
 
