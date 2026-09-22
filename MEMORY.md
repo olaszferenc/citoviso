@@ -141,6 +141,9 @@ Session-jegyzet: `_planning/memory/2026-09-21_rooms_card_impl.md`. **Élesítés
   dátum-mondat a FELUGRÓBA, csak ott, ahol a lap tud is árat számolni. ⛔ A tulaj „szám
   helyett mondat" javaslatát NEM vettem át (az ár az első szűrő; és `quoteFor()` `null`-t
   ad ár-sor nélkül) — kimondva, nem csendben.
+- **TULAJDONOSI RENDELKEZÉS (2026-09-22):** ① a **dátum-vezérelt kártya-ár** ÚJ SESSIONBE megy
+  — mandátum: `~/rc-briefs/date-driven-price-brief.md` ② a felugró **ÉLES tenant-lapos**
+  végigkattintása **NEM időszerű, amíg a többi szál nem végez** — ne indítsd el magadtól.
 - 🔴 **NYITOTT:** ① **négy sablon** (`arch-frames`, `tilted-gallery`, `wordmark-grow`,
   `transit`) a tulaj képen-döntésére vár — a szállított „A" változatban a képen álló jelvény
   az egyetlen belépő ② az ár „minimumtól" alakja egy MÉRT döntést írna felül (Elek FK-007:
