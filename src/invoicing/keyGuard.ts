@@ -25,8 +25,10 @@ import { createHash } from "node:crypto";
  * .update(process.argv[1]).digest("hex"))' '<key>'
  */
 export const DENYLISTED_KEY_SHA256: readonly string[] = [
-  // (old defunct-E.V. test account — fingerprint lands when the key is swapped
-  // into the dev .env; until then the list is empty and the guard is dormant)
+  // Old defunct-E.V. Számlázz.hu account (permanently test-mode; dev-only key,
+  // swapped into the dev .env on 2026-09-22). Cross-checked against the live
+  // key's fingerprint at freeze time: they differ.
+  "80c8ef5590a1bc5ad506a2b623a6ebe106983d0a620ce0e14cd99c969e7b0807",
 ];
 
 export const keyFingerprint = (key: string): string =>
