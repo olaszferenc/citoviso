@@ -280,6 +280,14 @@ if [ -f scripts/email-guard-check.mts ]; then
   echo "[pre-commit] email-guard-check (foglalt teszt-domain: nem megy ki levél)…"
   npx tsx scripts/email-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Számlázó-kulcs őr (tulajdonosi döntés, 2026-09-22): a dev a RÉGI (megszűnt E.V.,
+# teszt-módú) Számlázz.hu-fiók kulcsát használja — élesben az a kulcs jogilag nem
+# létező számlákat gyártana fizető vevőknek. A boot-őr fail-closed; ez a kapu azt
+# bizonyítja minden.commiton, hogy az őr MINDKÉT irányba ítél (piros kontrollal).
+if [ -f scripts/invoice-key-guard-check.mts ]; then
+  echo "[pre-commit] invoice-key-guard-check (teszt-módú számlázó-kulcs élesben tilos)…"
+  npx tsx scripts/invoice-key-guard-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/module-config-lint.mts ]; then
   echo "[pre-commit] module-config-lint (ADR-0044 + ADR-0192 ⑥①: függőség-deklaráció)…"
   npx tsx scripts/module-config-lint.mts
