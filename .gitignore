@@ -53,6 +53,12 @@ _planning/DOMAIN/_inbox/*.md
 # not a workspace). Measured 2026-09-08: 2921 of 2921 sync refusals came from this one
 # file, and the :4600 test surface silently fell 19 commits behind for two days.
 _planning/DOMAIN/_tools/.distill-manifest
+# ⛔ UGYANAZ A KÁR, UGYANAZ A KÖNYVTÁR — csak ezt kihagytuk (mérve 2026-09-22). A
+# `.distill-applied` az átvezető append-only AUDIT-naplója: gépi állapot, nem forrás. A
+# `distill-apply.mts --go` MINDEN futáskor írja, és a cron a FŐ FÁRA mutat — vagyis a heti
+# desztillálás minden alkalommal követetlen fájlt hagyott a fő fában, ami a fenti sor szerint
+# már egyszer megállította a main-sync-et (2921/2921 visszautasítás, 19 commit lemaradás).
+_planning/DOMAIN/_tools/.distill-applied
 
 # OS / editor
 .DS_Store
