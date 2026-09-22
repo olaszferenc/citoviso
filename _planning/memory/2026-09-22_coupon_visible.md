@@ -1,4 +1,4 @@
-# 2026-09-22 — A kapott kedvezmény láthatóvá tétele (ADR-0203)
+# 2026-09-22 — A kapott kedvezmény láthatóvá tétele (ADR-0205)
 
 ## A kiváltó kérdés
 
@@ -76,4 +76,4 @@ hivatkozásom az `src/` alatt van, az idegené a `_planning/` alatt, és csak az
 `public/assets/ui/citui-admin.css` · `src/i18n/catalog.json` ·
 `scripts/coupon-visible-check.mts` (új) · `hooks/pre-commit` ·
 `kb/entries/admin-modules/entry.hu.md` · `assets/design-refs/tenant-admin/coupon-visible/` ·
-`_planning/DECISIONS.md` (ADR-0203)
+`_planning/DECISIONS.md` (ADR-0205)

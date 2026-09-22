@@ -302,7 +302,7 @@ export interface ModuleAppliedFlash {
   /** The amount that charge took (HUF), for the banner's honesty. */
   readonly chargedAmount?: number;
   /**
-   * ADR-0203: the undiscounted total and the coupon percent, so the banner can SHOW
+   * ADR-0205: the undiscounted total and the coupon percent, so the banner can SHOW
    * the derivation instead of only the end figure. Both 0 when no coupon applied —
    * the banner then says nothing about discounts rather than printing „−0 Ft".
    */
