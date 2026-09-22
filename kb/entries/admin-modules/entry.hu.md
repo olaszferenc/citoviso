@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-09-15
+updated: 2026-09-22
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -59,13 +59,41 @@ szokásos módon működik.
 3. Ami már az Öné, azt az **„Az én moduljaim”** részben a **„Kikapcsolom”** felirattal mondhatja
    le. Ez **aláhúzott szöveg a sor jobb szélén**, nem gomb — szándékosan halkabb a
    „Megnézem”/„Beállítás” gomboknál, de ugyanúgy egyetlen kattintás. Ha meggondolja magát,
-   ugyanott a **„Mégis megtartom”** felirat áll.
+   ugyanott a **„Mégis megtartom”** felirat áll. (Egy kivétel van: ha a modult egy másik, élő
+   modul igényli, a kikapcsolás előbb egy kérdést tesz fel — lásd lentebb, *„Ha egy modul
+   másik modullal jár együtt”*.)
 4. A gombok itt még **nem élesítenek**: a lap alján megjelenő sötét sáv összegyűjti, mi változna.
    Fizetős új modulnál a sáv soronként mutatja a **most fizetendő** összeget és a
    **„Fizetendő most”** végösszeget is; az ingyenes változásoknál csak azt, mi módosul.
 5. A záró gombbal véglegesít mindent egyszerre — fizetős bővítésnél a felirata
    **„Fizetés és alkalmazás”** (tárolt kártya-megbízásnál azt mondja ki, mennyivel terheljük);
    az **„Elvetem”** gomb mindent visszaállít.
+
+## Ha egy modul másik modullal jár együtt
+
+Van modul, amelyik csak egy másikkal együtt tud működni — például mert annak az adataira épül.
+Ilyenkor a lap ezt Ön helyett kezeli, és mindig ki is mondja, mit miért tett:
+
+- **Bekapcsoláskor a szükséges társ magától a tervébe kerül.** A sora megjelölve látszik: a
+  neve mellett egy **„együtt jár”** címke áll, alatta pedig egy magyarázó sor megnevezi,
+  melyik modul hozta magával („… — ehhez jár.”), és hogy miért van rá szükség. A társ modul
+  díja ugyanúgy számít: a lap alji összegző és a fejléc összege azonnal a együttes árat
+  mutatja — még a véglegesítés előtt, ahogy minden más kapcsolásnál.
+- **Ha visszaveszi, amit bekapcsolt, a magával hozott társ is visszakerül** — azért a
+  modulért, ami csak a másikat szolgálta ki, nem marad fizetnivalója. Amit viszont Ön maga is
+  bepipált, vagy ami már kifizetett modulja, az természetesen a helyén marad.
+- **A szükséges modul önmagában nem kapcsolható ki, amíg az él, amelyik igényli.** Ha mégis a
+  **„Kikapcsolom”** feliratára kattint, a lap nem hajtja végre némán, hanem egy kérdést tesz
+  fel: a felugró címe kimondja, melyik modul miatt nem kapcsolható ki, a szövege elmagyarázza
+  az okot, alatta pedig tételes lista áll arról, mely modulok és mennyi díj esne ki, ha
+  mindet lemondaná. Két kiút van: a **„Mégsem, marad minden”** gombbal változatlanul hagy
+  mindent, vagy a piros gombbal az összes felsorolt modult egyszerre mondja le — a gomb
+  felirata kimondja, hány modulról van szó. A felugró azt is odaírja, hogy a lemondott
+  modulok a kifizetett időszak végéig élnek, a tartalmuk megmarad, és bármikor
+  visszakapcsolhatók.
+
+A felugró tehát **ajánlat, nem végrehajtás**: magától soha nem mond le semmit — az „együtt
+lemondás” csak akkor történik meg, ha Ön a piros gombbal kifejezetten kéri.
 
 ## Mennyibe kerül? — az árak abban az ütemben állnak, ahogy fizet
 
