@@ -153,7 +153,15 @@ export const MODULE_CATALOG: readonly ModuleDef[] = [
   { id: "hours", label: "Nyitvatartás / be-kijelentkezés", publicLabel: "Nyitvatartás, érkezés", publicDesc: "Be- és kijelentkezési idők egy helyen — a vendég tudja, mikor érkezhet, kevesebb telefonos kérdés.", group: "reach", domType: "hours", priceMonthly: 290 },
   { id: "usp", label: "„Miért mi” — előnyök", publicLabel: "Miért Önt válasszák", publicDesc: "A szállás valódi erősségei kiemelve — ami megkülönbözteti a környékbeli többi szállástól.", group: "offer", domType: "usp", priceMonthly: 490 },
   { id: "reviews", label: "Vélemények (valós)", publicLabel: "Vendégek véleménye", publicDesc: "Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek.", group: "offer", domType: "reviews", domTypesAlso: ["reviews-pending", "review-form"], priceMonthly: 690 },
-  { id: "poi", label: "Környék / látnivalók", publicLabel: "Környék, látnivalók", publicDesc: "Közeli látnivalók, strand, éttermek — ötleteket ad a vendégnek, miért épp ide jöjjön.", group: "offer", domType: "poi", priceMonthly: 490 },
+  // Renamed from the old neighbourhood/sights wording (tulaj, 2026-09-22). Do NOT
+  // quote the retired label here: extract-i18n.mts scrapes quoted Hungarian out of
+  // comments too, and a dead key would be shipped for translation. The id stays `poi`
+  // on purpose: entitlement, price and invoice rows already resolve that key, and
+  // renaming it would orphan paying subscribers. Only the LABELS change — and with
+  // them the 6 language packs, whose translation keys ARE the Hungarian source
+  // strings (§B.18): the old pair was translated in de/en/hr/it/pl/sk, so a bare
+  // rename silently ships the module name in Hungarian on those sites (ADR-0184).
+  { id: "poi", label: "Automata heti programajánló", publicLabel: "Heti programajánló", publicDesc: "Minden héten automatikusan összegyűjtjük a környék programjait — fesztiválok, falunapok, vásárok, futóversenyek —, Ön pedig kiválasztja, melyik 10 jelenjen meg a honlapján.", group: "offer", domType: "poi", priceMonthly: 490 },
   // Shares the enquiry SLOT (data-cit-module="booking"): with this on, the visitor
   // gets a real calendar instead of a "write to us" form, so enquiry is replaced
   // rather than stacked. One slot, two states — never both.

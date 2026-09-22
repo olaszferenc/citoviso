@@ -312,14 +312,17 @@
         "</div>",
     },
     poi: {
-      title: tr("Környék / látnivalók"),
-      caption: tr("Minta-lista — a közeli látnivalókat, távolságokat mi állítjuk össze."),
+      title: tr("Heti programajánló"),
+      // The old caption promised "we compile the nearby sights and distances" — a
+      // promise nothing delivered. This one states what the module actually does,
+      // and the sample rows mirror the real output shape: programme + date + distance.
+      caption: tr("Minta — minden héten automatikusan összegyűjtjük a környék programjait."),
       body:
         '<div class="cit-cfg-rows">' +
         [
-          [tr("Látnivaló a közelben"), tr("— perc")],
-          [tr("Strand / túraútvonal"), tr("— km")],
-          [tr("Étterem / borászat"), tr("— perc")],
+          [tr("Falunap, szüreti felvonulás"), tr("szept. 26. · helyben")],
+          [tr("Termelői és kézműves vásár"), tr("okt. 3. · 7 km")],
+          [tr("Terepfutás, amatőr verseny"), tr("okt. 3. · 12 km")],
         ]
           .map(function (r) {
             return (

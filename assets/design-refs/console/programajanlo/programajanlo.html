@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B) Automata heti programajánló — két hasáb, sorrenddel (javított)</title>
+<style>
+  :root{
+    --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#ffffff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922;
+    --citui-radius-sm:14px; --citui-radius:18px; --citui-radius-pill:999px;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px;letter-spacing:.4px}
+  .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06222e}
+  .stage{margin:14px auto 60px;container-type:inline-size;width:100%;max-width:1000px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+  .adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;box-shadow:var(--citui-shadow-sm);padding:24px}
+  .adm-card__head{display:flex;align-items:center;gap:11px;margin:-24px -24px 16px;padding:15px 24px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));border-radius:20px 20px 0 0}
+  .adm-card__head h2{margin:0;font-size:1.12rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+  .help{margin-left:auto;color:var(--citui-cyan-300);font-size:.82rem;text-decoration:none}
+  .intro{font-size:.9rem;color:var(--citui-muted);margin:0 0 14px;line-height:1.55}
+  .intro b{color:var(--citui-ink)}
+
+  /* MOBILE decision: two panes cannot sit side by side at 390px -> tabs.
+     DESKTOP decision: real two-column, pool and result visible at once. */
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  @container (min-width:720px){ .tabs{display:none} }
+  .tabs button{flex:1;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);
+    padding:9px 8px;font:700 .82rem/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer}
+  .tabs button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+
+  .cols{display:grid;grid-template-columns:1fr;gap:16px}
+  @container (min-width:720px){ .cols{grid-template-columns:1fr 1fr;gap:20px;align-items:stretch} }
+
+  .pane{min-width:0;display:flex;flex-direction:column}
+  .pane.hide{display:none}
+  @container (min-width:720px){ .pane.hide{display:flex} }
+
+  .paneh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .paneh h3{margin:0;font:700 .92rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+  .paneh .c{font-size:.8rem;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+  .paneh .c.warn{color:var(--citui-warn);font-weight:700}
+
+  .box{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:var(--citui-surface);
+    padding:6px;height:100%;display:flex;flex-direction:column}
+  .box.sel{background:var(--citui-ok-soft);border-color:color-mix(in srgb,var(--citui-ok) 28%,transparent)}
+  /* fills the pane, so the desktop start screen does not read as half-finished */
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:22px 12px;text-align:center;color:var(--citui-muted);font-size:.84rem;line-height:1.5;min-height:140px}
+  .empty svg{width:30px;height:30px;color:var(--citui-line-strong);margin-bottom:8px}
+
+  .it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--citui-white);
+    border:1px solid var(--citui-line);border-radius:11px;padding:9px 10px;margin:5px 0}
+  .it .d{font:700 .72rem/1 var(--citui-font-display);color:var(--citui-cyan-500);letter-spacing:.3px}
+  .it .n{font:600 .88rem/1.3 var(--citui-font-text);margin-top:3px;word-break:break-word}
+  .it .n[contenteditable=true]{outline:2px solid var(--citui-cyan-500);outline-offset:2px;border-radius:4px}
+  .it .c{font-size:.75rem;color:var(--citui-muted);margin-top:2px}
+  .it .c a{color:var(--citui-cyan-500);text-decoration:none}
+  .ctrl{display:flex;flex-direction:column;gap:3px}
+  .ctrl button{width:28px;height:24px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+    border-radius:7px;font:700 .8rem/1 system-ui;color:var(--citui-ink);cursor:pointer;padding:0}
+  .ctrl button:hover:not(:disabled){border-color:var(--citui-cyan-500);color:var(--citui-cyan-500)}
+  .ctrl button:disabled{opacity:.3;cursor:not-allowed}
+  .add{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-cyan-500);background:var(--citui-white);
+    color:var(--citui-cyan-500);font:700 1.05rem/1 system-ui;cursor:pointer}
+  .add:disabled{opacity:.3;cursor:not-allowed;border-color:var(--citui-line-strong);color:var(--citui-muted)}
+  .rm{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+    color:var(--citui-muted);font:700 1rem/1 system-ui;cursor:pointer}
+  .rm:hover{border-color:var(--citui-warn);color:var(--citui-warn)}
+  .pen{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:7px;
+    padding:2px 8px;font:600 .7rem/1.35 var(--citui-font-text);cursor:pointer;color:var(--citui-ink)}
+
+  .full{display:none;background:#fdf6e6;border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent);
+    border-radius:11px;padding:9px 11px;font:700 .8rem/1.4 var(--citui-font-text);color:var(--citui-warn);margin-bottom:8px}
+  .full.on{display:block}
+
+  .foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)}
+  .foot .sp{flex:1}
+  .btn{border:0;border-radius:var(--citui-radius-pill);padding:11px 20px;font:700 .9rem/1 var(--citui-font-text);cursor:pointer}
+  .btn--primary{background:var(--citui-cyan-500);color:#06222e}
+  .btn--primary:disabled{background:#cfdbe3;color:#8496a5;cursor:not-allowed}
+  .saved{display:none;align-items:center;gap:7px;color:var(--citui-ok);font:700 .85rem/1 var(--citui-font-text)}
+  .saved.on{display:flex}
+  .refresh{margin-top:14px;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:11px 13px;font-size:.82rem;color:var(--citui-muted);line-height:1.5}
+  .refresh b{color:var(--citui-ink)}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <b>B) KÉT HASÁB + SORREND — javított</b>
+  <span class="sp"></span>
+  <button id="bm" class="on">Mobil 390px</button>
+  <button id="bd">Asztali</button>
+</div>
+
+<div class="stage m" id="stage">
+  <div class="adm-card">
+    <div class="adm-card__head">
+      <h2>Automata heti programajánló</h2>
+      <a class="help" href="#">Súgó</a>
+    </div>
+
+    <!-- FIX ①: the old wording said "balra … jobbra", which is false at 390px
+         (tabs there). This sentence is true at BOTH sizes; the tab labels and the
+         pane headings do the orienting. -->
+    <p class="intro">
+      A héten összegyűjtött programokból válassza ki, <b>melyik 10 jelenjen meg a honlapján</b>.
+      A sorrend is az Öné — ami felül van, az kerül legelőre.
+    </p>
+
+    <div class="tabs">
+      <button id="tp" class="on">Javasolt (<span id="np">13</span>)</button>
+      <button id="ts">Az Ön oldalán (<span id="ns">0</span>)</button>
+    </div>
+
+    <div class="full" id="full">Betelt a 10 hely. Vegyen le egyet, ha mást szeretne felvenni.</div>
+
+    <div class="cols">
+      <div class="pane" id="panePool">
+        <div class="paneh"><h3>Javasolt programok</h3><span class="c" id="cPool"></span></div>
+        <div class="box" id="pool"></div>
+      </div>
+      <div class="pane hide" id="paneSel">
+        <div class="paneh"><h3>Az Ön oldalán</h3><span class="c" id="cSel"></span></div>
+        <div class="box sel" id="sel"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span class="sp"></span>
+      <span class="saved" id="saved">✓ Mentve</span>
+      <button class="btn btn--primary" id="save" disabled>Mentés a honlapra</button>
+    </div>
+    <div class="refresh">
+      <b>Következő frissítés:</b> hétfő reggel. Az Ön választása és sorrendje megmarad;
+      a lejárt programok maguktól lekerülnek a honlapjáról.
+    </div>
+  </div>
+</div>
+
+<script>
+// Real measured data: Brave -> fetch -> extract chain, Balatonfüred 30 km, 2026-09-22.
+const EVENTS = [
+  {d:"09. 25.", c:"Tihany",       n:"Kutatók Éjszakája 2026",                   u:"https://welovebalaton.hu/programok"},
+  {d:"09. 25.", c:"Tapolca",      n:"Pisztráng és Borfesztivál 2026",            u:"https://welovebalaton.hu/programok"},
+  {d:"09. 26.", c:"Balatonfüred", n:"Murcifesztivál Balatonfüreden",             u:"https://www.programturizmus.hu/helykategoria-fesztival.balatonfured.html"},
+  {d:"09. 26.", c:"Tihany",       n:"Szüreti Napok Tihanyban",                   u:"https://csodalatosmagyarorszag.hu/programok/gasztro-programok/szureti-napok-2026-tihany/"},
+  {d:"09. 26.", c:"Tihany",       n:"Masterprint Tihany Cross terepfutás",       u:"https://futonaptar.hu/"},
+  {d:"09. 26.", c:"Balatonlelle", n:"VIII. Kishegy Trail terepfutás és túrázás", u:"https://korido.hu/events"},
+  {d:"09. 26.", c:"Balatonfüred", n:"Szívünk napja — Szívkórház",                u:"https://balatonfured.hu/category/kultura/rendezveny/"},
+  {d:"09. 26.", c:"Balatonfüred", n:"Beszélgetés Erős Antóniával",               u:"https://balatonfured.hu/category/kultura/rendezveny/"},
+  {d:"10. 03.", c:"Balatonlelle", n:"Balatonlellei Murci Gasztrofesztivál 2026", u:"https://welovebalaton.hu/programok"},
+  {d:"10. 03.", c:"Vászoly",      n:"Vászolyi Termelői Piac",                    u:"https://visitbalaton365.hu/ajanlatok/helyi-finomsagok-vaszolyi-termeloi-piac"},
+  {d:"10. 03.", c:"Tihany",       n:"XI. Tihanyi Félmaraton",                    u:"https://korido.hu/events"},
+  {d:"10. 03.", c:"Balatonfüred", n:"ULTRABALATON TRAIL",                        u:"https://ultrabalatontrail.hu/"},
+  {d:"10. 04.", c:"Balatonfüred", n:"Erzsébet, a magyarok királynéja",           u:"https://balatonfured.hu/category/kultura/rendezveny/"},
+];
+const MAX=10;
+EVENTS.forEach((e,i)=>e.id=i);
+let pool=[...EVENTS], sel=[];
+const $=id=>document.getElementById(id);
+function host(u){ try{return new URL(u).hostname.replace(/^www\./,"");}catch(_){return"";} }
+
+const ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>';
+
+function itemHTML(e, where, idx){
+  const ctrl = where==="pool"
+    ? `<button class="add" data-id="${e.id}" title="Felveszem" aria-label="${e.n} felvétele" ${sel.length>=MAX?"disabled":""}>+</button>`
+    : `<div class="ctrl">
+         <button class="up" data-id="${e.id}" ${idx===0?"disabled":""} title="Feljebb" aria-label="Feljebb">▲</button>
+         <button class="dn" data-id="${e.id}" ${idx===sel.length-1?"disabled":""} title="Lejjebb" aria-label="Lejjebb">▼</button>
+       </div>
+       <button class="rm" data-id="${e.id}" title="Leveszem" aria-label="${e.n} levétele">×</button>`;
+  return `<div class="it">
+      <div>
+        <div class="d">${e.d}</div>
+        <div class="n" id="n${where}${e.id}">${e.n}</div>
+        <div class="c">${e.c} · <a href="${e.u}" target="_blank" rel="noopener">${host(e.u)}</a>
+          ${where==="sel"?` · <button class="pen" data-id="${e.id}">átírom</button>`:""}</div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center">${ctrl}</div>
+    </div>`;
+}
+
+function render(){
+  $("pool").innerHTML = pool.length ? pool.map(e=>itemHTML(e,"pool")).join("")
+    : `<div class="empty">${ICON}Minden javasolt programot felvett.</div>`;
+  $("sel").innerHTML = sel.length ? sel.map((e,i)=>itemHTML(e,"sel",i)).join("")
+    : `<div class="empty">${ICON}Még nincs kiválasztva program.<br>Vegyen fel a javasoltak közül — legfeljebb 10-et.</div>`;
+  $("cPool").textContent = pool.length+" program";
+  const c=$("cSel"); c.textContent = sel.length+" / "+MAX; c.classList.toggle("warn", sel.length>=MAX);
+  $("np").textContent=pool.length; $("ns").textContent=sel.length;
+  $("full").classList.toggle("on", sel.length>=MAX);
+  $("save").disabled = sel.length===0;
+  $("saved").classList.remove("on");
+}
+
+document.addEventListener("click", ev=>{
+  const b=ev.target.closest("button"); if(!b) return;
+  const id=Number(b.dataset.id);
+  if(b.classList.contains("add")){ if(sel.length>=MAX) return;
+    const k=pool.findIndex(x=>x.id===id); sel.push(pool[k]); pool.splice(k,1); render(); }
+  else if(b.classList.contains("rm")){
+    const k=sel.findIndex(x=>x.id===id); const e=sel[k]; sel.splice(k,1);
+    pool.push(e); pool.sort((a,z)=>a.id-z.id); render(); }
+  else if(b.classList.contains("up")){ const k=sel.findIndex(x=>x.id===id);
+    if(k>0){ [sel[k-1],sel[k]]=[sel[k],sel[k-1]]; render(); } }
+  else if(b.classList.contains("dn")){ const k=sel.findIndex(x=>x.id===id);
+    if(k<sel.length-1){ [sel[k],sel[k+1]]=[sel[k+1],sel[k]]; render(); } }
+  else if(b.classList.contains("pen")){
+    const t=$("nsel"+id); if(!t) return;
+    const on=t.getAttribute("contenteditable")==="true";
+    if(on){ t.setAttribute("contenteditable","false"); b.textContent="átírom";
+            const e=sel.find(x=>x.id===id); if(e) e.n=t.textContent.trim(); }
+    else { t.setAttribute("contenteditable","true"); b.textContent="kész"; t.focus(); }
+  }
+});
+$("save").addEventListener("click", ()=>$("saved").classList.add("on"));
+
+$("tp").onclick=()=>{ $("panePool").classList.remove("hide"); $("paneSel").classList.add("hide");
+  $("tp").classList.add("on"); $("ts").classList.remove("on"); };
+$("ts").onclick=()=>{ $("paneSel").classList.remove("hide"); $("panePool").classList.add("hide");
+  $("ts").classList.add("on"); $("tp").classList.remove("on"); };
+
+const stage=$("stage"),bm=$("bm"),bd=$("bd");
+bm.onclick=()=>{stage.classList.add("m");bm.classList.add("on");bd.classList.remove("on");};
+bd.onclick=()=>{stage.classList.remove("m");bd.classList.add("on");bm.classList.remove("on");};
+render();
+</script>
+</body>
+</html>
