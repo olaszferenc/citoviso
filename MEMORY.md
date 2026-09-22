@@ -92,6 +92,34 @@ Session-jegyzet: `_planning/memory/2026-09-22_room_editor_impl.md`. **Élesíté
 
 ## Előző szál (2026-09-22)
 
+**💬 ÁR NÉLKÜL NEM FOGLALÁST ÍGÉRÜNK, HANEM ÁRAJÁNLATOT KÉRÜNK — és a szezon-szabály EGY
+példányban (ADR-0208).** Az ADR-0197 ① folytatása, tulajdonosi mandátum.
+Session-jegyzet: `_planning/memory/2026-09-22_quote_request_and_season_rule.md`.
+Landolt: `dcb130b` · `7f7045b` · `eeb01e7`. **Élesítés NEM volt feladat.**
+
+- **① A szezon-illesztés egy példányba** (`assets/runtime/cit-season.cjs`): a „melyik ár-sor
+  vonatkozik erre az éjszakára?" KÉT példányban élt — az egyik azt döntötte el, mit OLVAS a
+  vendég, a másik azt, mi FAGY RÁ a kérésre és megy ki a levelében —, és a kettőt SEMMI nem
+  vetette össze. ⭐ Ez az **év-specifikus szezonár előfeltétele**: mérve, a 12 hónapos
+  horizonton belül ugyanaz a **96 000 Ft** fagy be 2027 júliusára, mint 2026-ra.
+- **② Árajánlat-mód** (§2b, 3 változat → a tulaj a **C**-t választotta): ha a tartózkodás
+  bármelyik éjszakájára nincs ár, a néma üresség helyén magyarázat áll, a gomb
+  **„Árajánlatot kérek"**, és a gomb alatti ígéret is átíródik. A választó már a választáskor
+  jelzi („· egyedi ár") — szerver-oldali, mert a végpont egy egységre válaszol.
+- ⛔⛔ **Öt saját hiba, egyiket sem a gondolkodás fogta meg.** A legfontosabb: a
+  **végponttól-végpontig mérésem HAMIS ZÖLDET adott** — három script KÉZZEL fűzi össze a
+  runtime-fájlokat, és az új fájl nélkül a lap undefined `CitSeason`-ön hal meg. ⭐ A mérésem
+  azért volt vak, mert **csak azt az utat járta, amit én írtam**. Plusz: kettős keret (a KÉP
+  fogta meg, 14 gépi állítás mellett), a KÖZÖS `note` elem, egy szintetikus (hibás) saját
+  állítás, és egy idegen őr 2026-09-08 óta lappangó hónapforduló-hibája.
+- 🔴 **NYITOTT (mind külön mandátum):** a tulaj értesítése árajánlat-kéréskor · a három állapot
+  (⚠️ a `setBasePrice` a 0-t nem tárolja) · új egységnél kérdezés · emlékeztető · év-specifikus
+  szezonár + nudge · az ADR-0197 ② (a polcról levett modult tovább számlázzuk).
+
+
+
+## Előző szál (2026-09-22)
+
 
 **💳 A KAPOTT KEDVEZMÉNY LÁTSZIK — a sávon és a számlán is (ADR-0205).**
 Session-jegyzet: `_planning/memory/2026-09-22_coupon_visible.md`.
