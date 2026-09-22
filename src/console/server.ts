@@ -88,7 +88,14 @@ import {
   bestActiveOfferForProspectToken,
   ensureEscalationOffer,
 } from "../payment/offers.js";
-import { multilangPayResultPage, payMockPage, payPendingPage, payResultPage, payUnknownRefPage } from "./views.js";
+import {
+  heroShotFailReason,
+  multilangPayResultPage,
+  payMockPage,
+  payPendingPage,
+  payResultPage,
+  payUnknownRefPage,
+} from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
@@ -1949,13 +1956,33 @@ async function handle(
         // nem a nézetben — a `leadPage` szinkron marad, és a lap SOHA nem tesz ki
         // <img>-et olyan képre, amiről nem kérdeztük meg, hogy megvan-e. Olcsó:
         // artefaktumonként egy DB-sor + két stat(), se böngésző, se hálózat.
-        new Map(
-          await Promise.all(
-            d.artifacts.map(
-              async (a): Promise<[string, HeroShotState]> => [a.id, await heroShotState(a.id)],
+        await (async () => {
+          const states = new Map(
+            await Promise.all(
+              d.artifacts.map(
+                async (a): Promise<[string, HeroShotState]> => [a.id, await heroShotState(a.id)],
+              ),
             ),
-          ),
-        )),
+          );
+          // ⛔ A MEGLÉVŐ mockok képe is magától készüljön el (ADR-0203). A fenti
+          // automatizálás csak az ezután generált változatokra hat — a lapon ülő 19
+          // kép nélküli kártya attól még 19 kattintás maradna, és pont az a döntés,
+          // amihez a kép kell. Ezért a lap megnyitása sorba állítja a HIÁNYZÓKAT.
+          // ⚠️ CSAK a `none` állapotút: a `failed` nem indul újra magától (az újra-
+          // próbálkozás az operátor gombja marad — egy bukott render minden egyes
+          // lapmegtekintéskor újraindulva pontosan az ADR-0131-es hiba lenne), a
+          // `running`-ot az inflight úgyis elnyelné, a `ready` pedig kész.
+          for (const [aid, st] of states) {
+            if (st.kind !== "none") continue;
+            startHeroShot(aid);
+            // ⛔ A LAP AZT MONDJA, AMIT TETT. A mérés a start ELŐTT készült, tehát a
+            // nyers állapot `none` maradna, és a kártya „Kép kérése" gombot kínálna egy
+            // MÁR FUTÓ renderhez — a kurátor egy fölösleges kattintással a semmit
+            // sürgetné. A render ettől a sortól kezdve fut (vagy a sorompónál áll).
+            states.set(aid, { kind: "running" });
+          }
+          return states;
+        })()),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the
@@ -2013,6 +2040,16 @@ async function handle(
                 r.status === "fulfilled",
             );
             const artifactId = okResults.length === 1 ? (okResults[0]!.value.artifactId ?? null) : null;
+            // ⛔⛔ A KÉP NEM KÜLÖN KÉRÉS (ADR-0203, felülírja az ADR-0131 „explicit kérésre"
+            // ágát). A régi indok — „egy render ~40 s Chromium" — MÉRVE hamis volt: 5,6 s az
+            // első, 2,0–2,3 s a többi, mert a forrásfotók innentől lemez-cache-ből jönnek
+            // (6/6 találat). A kurátornak viszont KÉP KELL, hogy választani tudjon a
+            // változatok közül — a kattintgatás (19 mock = 19 kattintás) pont a döntést
+            // akadályozta. Sorban futnak: a globális sorompó egyszerre egy Chromiumot enged.
+            for (const r of okResults) {
+              const aid = r.value.artifactId;
+              if (aid) startHeroShot(aid);
+            }
             if (!failed.length) {
               generateOutcome.set(id, {
                 ok: true,
@@ -2256,8 +2293,37 @@ async function handle(
     }
     return;
   }
-  // GET /artifact/:id/shot-state — a kép állapota JSON-ban, hogy a futó renderelést
-  // a kártya teljes lap-újratöltés nélkül tudja követni.
+  // GET /lead/:id/shot-states — EGY kérdés a lead ÖSSZES mock-képéről (ADR-0203).
+  //
+  // ⛔⛔ MÉRT HIBA. Kártyánként külön kérdezve egy 19 mockos lead 19 fetch-et indít
+  // háromszor percenként, és a lap SOHA nem ér el `networkidle`-t — az arra épülő őrök
+  // és screenshot-eszközök elakadnak. A `button-weight-check` 390 px-en pontosan ezért
+  // futott „HTTP nincs válasz"-ra. Egy kérés, egy válasz.
+  //
+  // A bukás OKA is itt utazik: a kliens magától csak annyit látna, hogy „failed", és egy
+  // néma hibaállapot pontosan az, amit a fail-kódok bevezetése megszüntetett (FK-004 H1).
+  const leadShotStatesMatch = /^\/lead\/([0-9a-f-]{36})\/shot-states$/i.exec(path);
+  if (method === "GET" && leadShotStatesMatch) {
+    const lang = consoleLang();
+    const arts = await db
+      .selectFrom("mock_artifact")
+      .select("id")
+      .where("lead_id", "=", leadShotStatesMatch[1]!)
+      .execute();
+    const out: Record<string, { kind: string; reason?: string }> = {};
+    for (const a of arts) {
+      const st = await heroShotState(a.id as string);
+      out[a.id as string] =
+        st.kind === "failed"
+          ? { kind: st.kind, reason: heroShotFailReason(st, lang) }
+          : { kind: st.kind };
+    }
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify(out));
+    return;
+  }
+  // GET /artifact/:id/shot-state — EGY artefaktum állapota. A kézi „Kép kérése" útja
+  // használja; a kártya-rács a fenti köteges végpontot kérdezi.
   const artShotStateMatch = /^\/artifact\/([0-9a-f-]{36})\/shot-state$/i.exec(path);
   if (method === "GET" && artShotStateMatch) {
     const state = await heroShotState(artShotStateMatch[1]!);

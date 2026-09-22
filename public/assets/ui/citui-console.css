@@ -269,6 +269,15 @@ body.con {
   color: rgba(255, 255, 255, 0.74); background: transparent; cursor: pointer;
   transition: color var(--citui-transition), background var(--citui-transition);
 }
+/* ⛔⛔ A LINK-SZABÁLY ELETTE A FÜL FELIRATÁT. A `.con a` (0,1,1) VERI a fenti
+   `.con-ltab` (0,1,0) színét, ezért az inaktív fülek a navy gradiens sávon
+   `--citui-link-ink` sötét türkizzel festődtek: PIXELBŐL mérve 2,22:1 (a küszöb 4,5) —
+   a tulaj szava: „szinte nem is látszik" (2026-09-22). A `:hover` és az `.on` ág már
+   `.con` prefixszel íródott, tehát ott a link-szabály veszít; csak az ALAPÁLLAPOT
+   maradt ki. ⚠️ A konzol-kontraszt őr ezt NEM láthatta: a háttér GRADIENS, és az őr
+   gradiens ősnél nem számolt hátteret, vagyis a sáv minden felirata kimaradt a mért
+   elemekből — a vakfolt betömve (`console-contrast-check.mts`, pixel-ág). */
+.con a.con-ltab { color: rgba(255, 255, 255, 0.74); }
 .con .con-ltab:hover {
   color: var(--citui-white); background: rgba(255, 255, 255, 0.13); text-decoration: none;
 }

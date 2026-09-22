@@ -35,6 +35,8 @@ import { db } from "../src/db/client.js";
 const selfTest = process.argv.includes("--self-test");
 
 let fails = 0;
+/** ÖNTESZT-mérőszám: hány bukó felirat jött GRADIENS hátterű sávról (lásd a záró blokkot). */
+let selfTestGradOffenders = 0;
 const check = (cond: boolean, msg: string, why = ""): void => {
   if (!cond) fails++;
   console.log(`  ${cond ? "✅" : "❌"} ${msg}${cond || !why ? "" : `\n       → ${why}`}`);
@@ -71,8 +73,15 @@ interface Hit {
   crBase: number;
   /** Az ősöktől örökölt szorzott opacity (1 = nincs tompítás). */
   dim: number;
+  /** GRADIENS hátteren ül-e (a sáv minden stopjára megoldva, a legrosszabbal). */
+  grad: boolean;
+  /** Hány háttér-jelöltből jött a legrosszabb (1 = sima szín). */
+  stops: number;
   thr: number; px: number; w: number; txt: string;
 }
+
+/** Amiről az őr NEM tud állítani semmit (kép-háttér, féligátlátszó gradiens). */
+interface Unmeasurable { lap: string; tag: string; cls: string; txt: string }
 
 /** A mérés a lapon belül fut — ez a forrása. A `parse` KÉT szín-alakot ismer (lásd lent). */
 const MEASURE = `(() => {
@@ -87,26 +96,61 @@ const MEASURE = `(() => {
     return { r:+m[0]*k, g:+m[1]*k, b:+m[2]*k, a: m.length > 3 ? +m[3] : 1 };
   }
   function over(f, b){ var a = f.a; return { r:f.r*a+b.r*(1-a), g:f.g*a+b.g*(1-a), b:f.b*a+b.b*(1-a), a:1 }; }
-  // A HÁTTÉR FELFELÉ keresendő, az első ÁTLÁTSZATLAN ősig — és ott meg kell állni.
-  // Gradiens ősnél NULL: azt nem tudjuk kiszámolni, tehát nem állítunk róla semmit.
-  function effBg(el){
-    var stack = [];
+  // ⛔⛔ A GRADIENS EDDIG VAKFOLT VOLT. A háttér-keresés NULL-lal adta fel az első
+  // gradiens ősnél, vagyis a konzol MINDEN sötét sávja (lead-fejléc, fül-sor, ragadó
+  // fejlécek) kimaradt a mérésből — némán. 2026-09-22-én pont ott ült egy 2,22:1-es
+  // felirat (a ".con a" link-szabály ette meg a fül színét), és az őr 9733 elemre
+  // mondott zöldet fölötte. A gradiens NEM mérhetetlen: a stop-színei kiolvashatók, és
+  // a felirat a sáv MINDEN pontján olvasható kell legyen — ezért MINDEN stopra
+  // számolunk, és a LEGROSSZABBAT vesszük. Ez konzervatív: a köztes átmenet-értékek a
+  // két szélső közé esnek, tehát ez az ág nem tud hamis ZÖLDET adni.
+  // Amit így sem tudunk (kép-háttér, féligátlátszó gradiens): NULL marad — de azt a
+  // riport MEGSZÁMOLJA és KIÍRJA, nem nyeli el.
+  function stopsOf(bgImage){
+    var m = bgImage.match(/(?:rgba?|color)\\([^)]*\\)/g) || [];
+    var out = [];
+    for (var i = 0; i < m.length; i++){ var c = parse(m[i]); if (c.a > 0) out.push(c); }
+    return out;
+  }
+  /** { list: [háttér-jelölt, …], gradient: bool } vagy null, ha nem számolható. */
+  function effBgList(el){
+    var stack = [];   // a felette álló FÉLIGÁTLÁTSZÓ rétegek, belülről kifelé
+    function compose(base){
+      var acc = base;
+      for (var i = stack.length - 1; i >= 0; i--) acc = over(stack[i], acc);
+      return acc;
+    }
     for (var n = el; n; n = n.parentElement){
       var cs = getComputedStyle(n);
-      if (cs.backgroundImage !== 'none') return null;
+      if (cs.backgroundImage !== 'none'){
+        var stops = stopsOf(cs.backgroundImage);
+        // Nincs kiolvasható szín (url(), névvel megadott stop) VAGY féligátlátszó a
+        // gradiens: itt nem állítunk semmit — a hívó megszámolja.
+        if (!stops.length) return null;
+        for (var s = 0; s < stops.length; s++) if (stops[s].a < 1) return null;
+        var outs = [];
+        for (var k = 0; k < stops.length; k++) outs.push(compose(stops[k]));
+        return { list: outs, gradient: true };
+      }
       var c = parse(cs.backgroundColor);
-      if (c.a > 0){ stack.push(c); if (c.a >= 1) break; }
+      if (c.a > 0){
+        if (c.a >= 1) return { list: [compose(c)], gradient: false };
+        stack.push(c);
+      }
     }
-    var acc = { r:255, g:255, b:255, a:1 };
-    for (var i = stack.length - 1; i >= 0; i--) acc = over(stack[i], acc);
-    return acc;
+    return { list: [compose({ r:255, g:255, b:255, a:1 })], gradient: false };
   }
   function lum(c){
     function f(v){ v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }
     return 0.2126*f(c.r) + 0.7152*f(c.g) + 0.0722*f(c.b);
   }
+  function ratio(f, b){
+    var L1 = lum(f), L2 = lum(b);
+    var hi = Math.max(L1, L2), lo = Math.min(L1, L2);
+    return (hi + 0.05) / (lo + 0.05);
+  }
   var SKIP = __SKIP__;
-  var out = [];
+  var out = [], unmeasurable = [];
   document.querySelectorAll('*').forEach(function(el){
     if (SKIP.indexOf(el.tagName.toLowerCase()) >= 0) return;
     var hasText = false;
@@ -114,39 +158,49 @@ const MEASURE = `(() => {
     if (!hasText) return;
     var cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none') return;
-    var bg = effBg(el); if (!bg) return;
+    var bgs = effBgList(el);
+    if (!bgs){
+      // NEM néma kihagyás: eltesszük, a riport kiírja, mi maradt mérhetetlen.
+      unmeasurable.push({
+        tag: el.tagName.toLowerCase(), cls: (el.className || '').toString().slice(0, 30),
+        txt: (el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 40)
+      });
+      return;
+    }
     // ⛔ AZ OPACITY IS SZÁMÍT: egy 0,6-os opacityjű szöveg ténylegesen a háttérrel
     // keveredik. A kontrasztot a KOMPOZITÁLT értéken mérjük, nem a deklaráltan.
-    var op = 1, node = el;
+    var op = 1;
     for (var m = el; m && m !== document.documentElement; m = m.parentElement){
       var o = parseFloat(getComputedStyle(m).opacity);
       if (!isNaN(o)) op *= o;
     }
-    function ratio(f, b){
-      var L1 = lum(f), L2 = lum(b);
-      var hi = Math.max(L1, L2), lo = Math.min(L1, L2);
-      return (hi + 0.05) / (lo + 0.05);
-    }
     var base = parse(cs.color);
-    // A SAJÁT alfája (rgba) mindig számít — az a szín része.
-    var baseC = base.a < 1 ? over(base, bg) : base;
-    // A LÁTOTT szín: az ős-opacityk is rákeverik a háttérre.
-    var fg = { r: base.r, g: base.g, b: base.b, a: base.a * op };
-    if (fg.a < 1) fg = over(fg, bg);
-    var cr = ratio(fg, bg);
-    var crBase = ratio(baseC, bg);
+    // A gradiens MINDEN stopjára megoldjuk, és a LEGROSSZABB jelöltet visszük tovább —
+    // a crBase UGYANARRA a háttérre szól, hogy a két szám ne két különböző világból jöjjön.
+    var worst = null;
+    for (var i = 0; i < bgs.list.length; i++){
+      var bg = bgs.list[i];
+      // A SAJÁT alfája (rgba) mindig számít — az a szín része.
+      var baseC = base.a < 1 ? over(base, bg) : base;
+      // A LÁTOTT szín: az ős-opacityk is rákeverik a háttérre.
+      var fg = { r: base.r, g: base.g, b: base.b, a: base.a * op };
+      if (fg.a < 1) fg = over(fg, bg);
+      var cand = { bg: bg, baseC: baseC, cr: ratio(fg, bg), crBase: ratio(baseC, bg) };
+      if (!worst || cand.cr < worst.cr) worst = cand;
+    }
     var px = parseFloat(cs.fontSize), w = parseInt(cs.fontWeight, 10) || 400;
     var large = px >= 24 || (px >= 18.66 && w >= 700);
     out.push({
       tag: el.tagName.toLowerCase(), cls: (el.className || '').toString().slice(0, 30),
-      color: 'rgb(' + [baseC.r, baseC.g, baseC.b].map(Math.round).join(', ') + ')',
-      bg: 'rgb(' + [bg.r, bg.g, bg.b].map(Math.round).join(', ') + ')',
-      cr: +cr.toFixed(2), crBase: +crBase.toFixed(2), dim: +op.toFixed(2),
+      color: 'rgb(' + [worst.baseC.r, worst.baseC.g, worst.baseC.b].map(Math.round).join(', ') + ')',
+      bg: 'rgb(' + [worst.bg.r, worst.bg.g, worst.bg.b].map(Math.round).join(', ') + ')',
+      cr: +worst.cr.toFixed(2), crBase: +worst.crBase.toFixed(2), dim: +op.toFixed(2),
+      grad: bgs.gradient, stops: bgs.list.length,
       thr: large ? 3 : 4.5, px: +px.toFixed(1), w: w,
       txt: (el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 40)
     });
   });
-  return out;
+  return { rows: out, unmeasurable: unmeasurable };
 })()`;
 
 async function main(): Promise<void> {
@@ -178,6 +232,8 @@ async function main(): Promise<void> {
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
   const hits: Hit[] = [];
   let measured = 0;
+  let onGradient = 0;
+  const unmeasurable: Unmeasurable[] = [];
   const skippedRoutes: string[] = [];
   try {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -201,6 +257,16 @@ async function main(): Promise<void> {
         await p.evaluate(`document.querySelectorAll('[hidden]').forEach(e=>e.hidden=false);
                           document.querySelectorAll('details').forEach(d=>d.open=true);`);
         if (selfTest) {
+          // ⛔ NEGATÍV KONTROLL A GRADIENS-ÁGRA — ELŐSZÖR, a token-csere ELŐTT. A
+          // 2026-09-22-én javított hiba visszaállítása: az inaktív fül felirata
+          // `--citui-link-ink` (#10697a) a navy gradiensen, mérve 2,22:1. ⚠️ A sorrend
+          // NEM mindegy: a lenti token-csere a link-tintát CIÁNRA írja át, ami a sötét
+          // sávon már ÁTMENNE (~5,5) — vagyis fordított sorrendben a kontroll némán
+          // elgyengülne, és a gradiens-ág halottan is „bizonyítottnak" látszana.
+          // Az inline érték konkrét szín (nem var()), ezért a csere nem nyúl hozzá.
+          await p.evaluate(`document.querySelectorAll('.con-ltab:not(.on)').forEach(function(e){
+            e.style.color = getComputedStyle(document.documentElement).getPropertyValue('--citui-link-ink');
+          })`);
           // ⛔ ÖNTESZT: visszaállítjuk a NYERS jelzés-színeket a feliratokra. Az őrnek
           // ettől pirosra kell mennie — különben nem a renderelt lapból dolgozik.
           await p.evaluate(`(() => {
@@ -212,8 +278,14 @@ async function main(): Promise<void> {
           })()`);
           await p.waitForTimeout(350); // a `transition` miatt a szín ANIMÁL — a pixelre várunk
         }
-        for (const h of (await p.evaluate(js)) as Omit<Hit, "lap">[]) {
+        const res = (await p.evaluate(js)) as {
+          rows: Omit<Hit, "lap">[];
+          unmeasurable: Omit<Unmeasurable, "lap">[];
+        };
+        for (const u of res.unmeasurable) unmeasurable.push({ lap: `${name}@${w}`, ...u });
+        for (const h of res.rows) {
           measured++;
+          if (h.grad) onGradient++;
           if (h.cr < h.thr) hits.push({ lap: `${name}@${w}`, ...h });
         }
         await p.close();
@@ -235,6 +307,20 @@ async function main(): Promise<void> {
   console.log(`      nem teljes lefedettség. Amit lát, arról ítél; amit a park nem rendert, arról nem.`);
   if (skippedRoutes.length) {
     console.log(`  ⏭️  KIMARADT útvonal: ${skippedRoutes.join(" · ")} — ezekről nem állítunk semmit.`);
+  }
+  // ⛔⛔ A GRADIENS-VAKFOLT MÉRŐSZÁMA. Amíg az őr gradiens ősnél feladta, a konzol sötét
+  // sávjainak EGYETLEN felirata sem került a mérésbe — és pont ott ült egy 2,22:1-es
+  // (2026-09-22). Ezt a számot azért írjuk ki, hogy a lefedettség visszaesése LÁTSZÓDJON:
+  // ha ez nullára megy, nem „nincs gradiens", hanem elromlott a háttér-feloldás.
+  console.log(`  🎨 ebből ${onGradient} felirat GRADIENS hátteren — a sáv minden stopjára megoldva, a LEGROSSZABB értékkel`);
+  check(onGradient > 0, `a gradiens-ág ÉL (${onGradient} felirat a sötét sávokról)`,
+    "a konzolnak vannak gradiens sávjai (lead-fejléc, fül-sor) — ha nulla, a háttér-feloldás némán feladta, és a zöld ezekről semmit nem mond");
+  if (unmeasurable.length) {
+    const byCls = new Map<string, number>();
+    for (const u of unmeasurable) byCls.set(`${u.tag}.${u.cls}`, (byCls.get(`${u.tag}.${u.cls}`) ?? 0) + 1);
+    const top = [...byCls.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    console.log(`  ⏭️  ${unmeasurable.length} felirat MÉRHETETLEN hátteren (kép-háttér vagy féligátlátszó gradiens) — ezekről NEM állítunk semmit:`);
+    console.log(`      ${top.map(([c, n]) => `${c} ×${n}`).join(" · ")}`);
   }
 
   // ── HÁROM CSOPORT, mind KIMONDVA ─────────────────────────────────────────
@@ -299,6 +385,12 @@ async function main(): Promise<void> {
     `EGYETLEN jelentés-vivő felirat sincs a küszöb alatt (${offenders.length} találat)`,
     "ezek olyan színek, amikre a tulaj NEM adott kivételt");
 
+  // ⛔ AZ ÖNTESZT NEM ELÉGEDHET MEG A PUSZTA PIROSSAL. A token-csere sima hátterű
+  // feliratokat ront el, azok önmagukban pirosra viszik a futást — és közben a
+  // gradiens-ág lehet halott. A gradiens-vakfolt pont így élt túl: a bukások száma
+  // „bizonyította" a működést, a sötét sávokról meg semmi nem derült ki.
+  selfTestGradOffenders = offenders.filter((h) => h.grad).length;
+
   await db.destroy();
 }
 
@@ -306,11 +398,18 @@ console.log(`KONZOL-KONTRASZT őr${selfTest ? " — ÖNTESZT (visszaállítottuk
 await main();
 
 if (selfTest) {
-  if (fails) {
-    console.log(`\n✅ önteszt: az őr PIROSRA ment a nyers színekkel (${fails} bukás) — a renderelt lapból dolgozik.`);
+  const ok = fails > 0 && selfTestGradOffenders > 0;
+  if (ok) {
+    console.log(`\n✅ önteszt: az őr PIROSRA ment a nyers színekkel (${fails} bukás) — a renderelt lapból dolgozik,`);
+    console.log(`   és ebből ${selfTestGradOffenders} a GRADIENS sávokról jött — a vakfolt tömve.`);
     process.exit(0);
   }
-  console.error("\n⛔ önteszt: az őr ZÖLD maradt, pedig a feliratok visszakapták az olvashatatlan színt — nem a renderelt lapot méri.");
+  if (!fails) {
+    console.error("\n⛔ önteszt: az őr ZÖLD maradt, pedig a feliratok visszakapták az olvashatatlan színt — nem a renderelt lapot méri.");
+  } else {
+    console.error(`\n⛔ önteszt: piros lett (${fails} bukás), de EGYETLEN lelet sem a gradiens sávokról jött.`);
+    console.error("   A visszarontott fül-felirat (link-tinta a navy sávon, 2,22:1) nem bukott meg — a gradiens-vakfolt VISSZATÉRT.");
+  }
   process.exit(1);
 }
 if (fails) {

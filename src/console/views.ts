@@ -3861,8 +3861,10 @@ export function heroShotFailReason(fail: HeroShotState & { kind: "failed" }, lan
  * ⛔ A doboz NÉGY állapota mind KIMONDJA magát, és `<img>` CSAK `ready` esetén születik.
  * Egy feltétel nélkül kitett `<img>` a hiányzó képet néma törött-kép ikonná változtatja,
  * a kurátor pedig vakon dönt — ezt az Elek FK-004 H1 már egyszer megmérte az
- * MMS-előnézeten. ⛔ És a doboz nem INDÍT renderelést: a Chromium-futás ~40 s, ezért
- * kimondott kérésre indul (`POST /artifact/:id/shot`).
+ * MMS-előnézeten. ⛔ És a doboz MA SEM indít renderelést — de már nem azért, mert drága
+ * (ADR-0203: mérve 5,6 s az első, 2,0–2,3 s a többi), hanem mert a render indítása a
+ * LAP dolga, egy helyen (`server.ts`, a lead-lap állapot-gyűjtése), nem húsz kártyáé.
+ * A `POST /artifact/:id/shot` a kézi kiút marad a bukott rendereknek.
  */
 function mockShotBox(
   artifactId: string,
@@ -3889,12 +3891,18 @@ function mockShotBox(
       <button class="con-mk__ask" type="submit">${
         state.kind === "failed" ? T(lang, "Újra") : T(lang, "Kép kérése")
       }</button></form>`;
+  // ⛔⛔ A RÉGI MONDAT MÉRVE HAMIS VOLT (ADR-0203): „a kép legyártása ~40 másodperc,
+  // ezért külön kérésre indul" — a valóság 5,6 s az első renderre és 2,0–2,3 s a
+  // többire (a forrásfotók lemez-cache-ből jönnek). A 40 másodperc a BUKÓ eset két
+  // kísérletének ideje volt, és ebből lett a felületen egy INDOK, ami miatt a kurátor
+  // 19 kártyán 19-szer kattintott. A kép ma magától indul; ez a doboz csak akkor
+  // látszik, ha valamiért mégsem indult el — és akkor ez a gomb a kiút.
   const why =
     state.kind === "failed"
       ? `<b>${T(lang, "Nincs pillanatkép")}</b> ${heroShotFailReason(state, lang)}`
       : `<b>${T(lang, "Még nem készült pillanatkép")}</b> ${T(
           lang,
-          "a kép legyártása ~40 másodperc, ezért külön kérésre indul",
+          "magától elindul, amikor megnyitod a lapot — ha mégsem, itt kérheted",
         )}`;
   return `<div class="con-mk__shot is-empty" data-mk-shot="${esc(artifactId)}" data-shot-state="${
     state.kind === "failed" ? "failed" : "none"
@@ -4512,12 +4520,82 @@ export function leadPage(
       b.textContent=open?'${jsStr(T(lang, "Részletek ▾"))}':'${jsStr(T(lang, "Bezárom ▴"))}';
     });
   })();`;
+  /**
+   * A KÁRTYA MAGÁTÓL FRISSÜL, amikor a képe elkészül (ADR-0203).
+   *
+   * ⛔ A `shot-state` végpont 2026-09-13 óta létezik, és a kommentje azt ígérte, hogy
+   * „a kártya teljes lap-újratöltés nélkül tudja követni" a rendert — a KLIENS-OLDAL
+   * viszont soha nem íródott meg. A kurátor így F5 nélkül sosem látta meg a kész képet:
+   * az ígéret a kódban állt, a viselkedés nem. Most a kártya helyben cserél: a „készül…"
+   * doboz helyére bekerül a kép, a lap többi része (nyitott panelek, görgetés, a most
+   * kapott visszajelzés) érintetlen marad.
+   *
+   * ⛔⛔ EGY KÉRÉS, NEM KÁRTYÁNKÉNT EGY. Az első változat artefaktumonként kérdezett:
+   * 19 mocknál 19 fetch háromszor percenként — a lap így SOHA nem ért el `networkidle`-t,
+   * és a `button-weight-check` 390 px-en „HTTP nincs válasz"-ra futott. A köteges végpont
+   * (`/lead/:id/shot-states`) egy kérdés, egy válasz.
+   *
+   * ⛔⛔ ÉS NINCS ÚJRATÖLTÉS. Az első változat bukásnál `location.replace()`-t hívt, hogy
+   * a szerver fogalmazza meg az OKOT — ez viszont a betöltés közepén is lecserélte a lapot,
+   * vagyis megtörte a navigációt (ugyanaz a mért bukás). Az ok most a válaszban utazik,
+   * a doboz pedig helyben mondja ki — a lap nem rándul meg a kurátor alatt.
+   */
+  const shotPollScript = `(function(){
+    var PERIOD=3000, DEADLINE=Date.now()+15*60*1000,
+        ALT=${JSON.stringify(T(lang, "A mock nyitóképernyője"))},
+        NOSHOT=${JSON.stringify(T(lang, "Nincs pillanatkép"))},
+        RETRY=${JSON.stringify(T(lang, "Újra"))};
+    function pending(){
+      return Array.prototype.slice.call(document.querySelectorAll('[data-mk-shot]')).filter(function(b){
+        var s=b.getAttribute('data-shot-state'); return s==='none'||s==='running';
+      });
+    }
+    function paint(box){
+      var img=document.createElement('img');
+      img.src='/artifact/'+box.getAttribute('data-mk-shot')+'/shot.jpg';
+      img.alt=ALT; img.loading='lazy';
+      var why=box.querySelector('.con-mk__why');
+      if(why){ why.replaceWith(img); } else { box.appendChild(img); }
+      box.classList.remove('is-empty');
+      box.setAttribute('data-shot-state','ready');
+    }
+    function fail(box, reason){
+      var id=box.getAttribute('data-mk-shot');
+      var why=box.querySelector('.con-mk__why');
+      if(!why){ why=document.createElement('span'); why.className='con-mk__why'; box.appendChild(why); }
+      why.textContent='';
+      var b=document.createElement('b'); b.textContent=NOSHOT; why.appendChild(b);
+      why.appendChild(document.createTextNode(' '+(reason||'')));
+      var f=document.createElement('form'); f.method='post'; f.action='/artifact/'+id+'/shot';
+      var btn=document.createElement('button'); btn.type='submit'; btn.className='con-mk__ask';
+      btn.textContent=RETRY; f.appendChild(btn); why.appendChild(f);
+      box.setAttribute('data-shot-state','failed');
+    }
+    function tick(){
+      if(Date.now()>DEADLINE) return;
+      if(!pending().length) return;             // mind megvan — a ciklus leáll magától
+      if(document.hidden) return setTimeout(tick,PERIOD);
+      fetch('/lead/${jsStr(d.id)}/shot-states',{credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(map){
+          pending().forEach(function(box){
+            var s=map && map[box.getAttribute('data-mk-shot')];
+            if(!s) return;
+            if(s.kind==='ready') paint(box);
+            else if(s.kind==='failed') fail(box, s.reason);
+          });
+        })
+        .catch(function(){})
+        .then(function(){ setTimeout(tick,PERIOD); });
+    }
+    setTimeout(tick,PERIOD);
+  })();`;
   const artifacts = d.artifacts.length
     ? `${compareTable}
        <div class="con-mkgrid" data-cit-mockcards="1">${[...active, ...rejected]
          .map(renderArtifact)
          .join("")}</div>
-       <script>${mockGridScript}</script>`
+       <script>${mockGridScript}${shotPollScript}</script>`
     : `<div class="panel"><p class="mut">${T(lang, "Még nincs generált mock ehhez a leadhez.")}</p></div>`;
 
   // IDENTITY BAND — everything the operator must know BEFORE choosing a tab: who is this,

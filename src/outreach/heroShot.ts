@@ -16,6 +16,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
+import { createPhotoCache } from "./photoCache.js";
 
 const SHOT_DIR = path.resolve(process.cwd(), "sites/_outreach-shots");
 
@@ -68,6 +69,39 @@ export type HeroShotState =
 /** In-flight renders, keyed by artifact — two page loads must not launch two
  * Chromiums for the same shot (and the second would race on the same file). */
 const inflight = new Map<string, Promise<HeroShotResult>>();
+
+/**
+ * GLOBÁLIS SOROMPÓ a renderek közé (ADR-0203).
+ *
+ * ⛔ Az `inflight` map ARTIFACTONKÉNT véd — ugyanarra a mockra nem indul két Chromium.
+ * A darabszámot viszont SEMMI nem fogta: amikor a generálás végén 19 változat képe
+ * egyszerre indul el, az 19 párhuzamos Chromium, és mindegyik a SAJÁT kép-sorát kéri a
+ * portáltól — pontosan az a burst, amiért egyszer 429-et kaptunk. Egyszerre EGY render:
+ * így a forráskép-cache is dolgozni tud (az első letölti, a többi onnan eszik — mérve
+ * 6/6 találat), és a portál felé a politeness-lánc marad az egyetlen, soros út.
+ */
+const MAX_CONCURRENT_RENDERS = 1;
+let activeRenders = 0;
+const renderQueue: (() => void)[] = [];
+
+async function acquireRenderSlot(): Promise<() => void> {
+  if (activeRenders >= MAX_CONCURRENT_RENDERS) {
+    await new Promise<void>((resolve) => renderQueue.push(resolve));
+  }
+  activeRenders++;
+  let released = false;
+  return () => {
+    if (released) return; // a felszabadítás egyszer számít, akárhányszor hívják
+    released = true;
+    activeRenders--;
+    renderQueue.shift()?.();
+  };
+}
+
+/** Hány pillanatkép vár még sorára — a felület ezt írja ki („3. a sorban"). */
+export function renderQueueDepth(): { active: number; waiting: number } {
+  return { active: activeRenders, waiting: renderQueue.length };
+}
 /** Last failure per artifact, so a reload still tells the operator the reason.
  * In-process on purpose (the pair-job registry's pattern): a server restart
  * forgets it and the next visit simply re-measures. */
@@ -185,7 +219,19 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     // Declared OUTSIDE the browser block: it is the reason the operator reads on
     // the draft page, and it must survive the loop that produced it.
     let lastBroken: string[] = [];
-    const browser = await chromium.launch({ executablePath: config.chromiumPath });
+    // A forrásképek lemez-cache-e (ADR-0203): egy lead 19 változata ugyanazt a
+    // fotó-készletet hordozza — a portál ne lássa 19-szer ugyanazt a 24 kérést.
+    const photos = createPhotoCache();
+    // A sorompó a BÖNGÉSZŐ köré kerül, nem az egész függvény köré: a DB-olvasás és a
+    // cache-próba mehet párhuzamosan, Chromiumot viszont egyszerre egy indít.
+    const release = await acquireRenderSlot();
+    // ⛔ A slotot a launch BUKÁSA is fel kell szabadítsa: a `try` csak a böngésző
+    // megszületése UTÁN kezdődik, tehát egy dobó launch némán elszivárogtatná a
+    // sorompó egyetlen helyét — és onnantól SOHA nem készülne több pillanatkép.
+    const browser = await chromium.launch({ executablePath: config.chromiumPath }).catch((e) => {
+      release();
+      throw e;
+    });
     try {
       // A screenshot with a missing hero photo is worse than no screenshot: it
       // went out as an empty-looking MMS once (2026-08-30, portal answered 429
@@ -215,9 +261,19 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
           const hostChain = new Map<string, Promise<void>>();
           await page.route("**/*", async (route) => {
             if (route.request().resourceType() !== "image") return route.continue();
+            const url = route.request().url();
+            // ⛔ A CACHE-TALÁLAT NEM MEGY BE A POLITENESS-LÁNCBA. Ez a lényeg: a lánc a
+            // PORTÁLT védi, egy lemezről kiszolgált kép viszont el sem hagyja a gépet.
+            // Ha a várakozás elé kerülne, a 19 render továbbra is 19 × 12 s-et állna —
+            // a kérés-szám csökkenne, az IDŐ nem (a cache fele haszna elveszne).
+            const cached = await photos.read(url);
+            if (cached) {
+              photos.hit();
+              return route.fulfill({ status: 200, contentType: cached.contentType, body: cached.body });
+            }
             let host: string;
             try {
-              host = new URL(route.request().url()).host;
+              host = new URL(url).host;
             } catch {
               return route.continue();
             }
@@ -227,7 +283,20 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
               prev.then(() => new Promise<void>((r) => setTimeout(r, IMG_GAP_MS))),
             );
             await prev;
-            await route.continue();
+            photos.miss();
+            // A letöltött választ EGYSZER olvassuk ki, és ugyanazt adjuk a lapnak, amit
+            // elmentünk — így a cache-elt és az élő ág bizonyíthatóan ugyanazt a bájtot
+            // viszi (egy külön újraletöltés két különböző képet adhatna).
+            try {
+              const resp = await route.fetch();
+              const body = await resp.body();
+              const ct = resp.headers()["content-type"] ?? "";
+              if (resp.status() === 200) await photos.write(url, body, ct);
+              return route.fulfill({ response: resp, body });
+            } catch {
+              // Hálózati hiba: menjen a rendes úton, hadd lássa a requestfailed-figyelő.
+              return route.continue();
+            }
           });
           await page.goto(`file://${mockAbs}`, { waitUntil: "networkidle", timeout: 30000 });
           await page.waitForTimeout(800); // webfonts + hero image settle
@@ -288,6 +357,13 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
             document.body.appendChild(b);
           }, ribbon);
           await page.screenshot({ path: dest, fullPage: false });
+          // The cache's benefit is a NUMBER, not a promise: this line says how many
+          // requests we did NOT send to the portal on this render (ADR-0203's metric).
+          const st = photos.stats();
+          console.log(
+            `[heroShot] ${artifactId}: done — photo cache ${st.hits} hit / ${st.misses} fetched` +
+              `${st.stored ? ` (${st.stored} stored)` : ""}`,
+          );
           return { path: dest };
         } finally {
           await page.close().catch(() => {});
@@ -295,6 +371,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
       }
     } finally {
       await browser.close();
+      release();
     }
     console.warn(`[heroShot] ${artifactId}: no valid hero shot after ${ATTEMPTS} attempts`);
     return {
