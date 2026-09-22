@@ -92,3 +92,57 @@ export async function alertStuckOrder(a: StuckOrderAlert): Promise<void> {
     console.error(`[pay-link] a megrekedt-rendelés riasztás elbukott (${a.orderIntentId}):`, e);
   }
 }
+
+/**
+ * Alert the operator about a PAID purchase that never reached the customer.
+ *
+ * The same failure class as alertStuckOrder above — money in, nothing out, and the
+ * house does not know — one step later in the funnel: the payment cleared, but the
+ * modules did not switch on and the automatic retry could not fix it (ADR-0196).
+ *
+ * ⛔ IT LIVES HERE, NOT IN payment/service.ts, and that is not tidiness. Importing the
+ * mail adapter into service.ts widened the ADR-0070 derived i18n scope by three modules
+ * (conversion/provision, tenant/multilangOrder, payment/siteShot) and the i18n-scope
+ * gate refused the commit — correctly. The choice was to widen a shared list for three
+ * consumers I had not analysed, or to put the alert where alerting already happens.
+ */
+export async function alertUndeliveredUpsell(
+  orderIntentId: string,
+  missing: readonly string[],
+  reason: string,
+): Promise<void> {
+  const line =
+    `[upsell] ⛔ KIFIZETETT, KÉZBESÍTETLEN BŐVÍTÉS — rendelés ${orderIntentId}, ` +
+    `hiányzó modul(ok): ${missing.join(", ")}. Ok: ${reason}. A vevő FIZETETT és nem kapta meg.`;
+  try {
+    const rcpt = await getAlertRecipients();
+    if (!rcpt.phone && !rcpt.email) {
+      console.error(`${line} ⚠️ Nincs riasztási címzett (konzol /settings) — értesítés NEM ment ki.`);
+      return;
+    }
+    // Internal operator text — outside the §B.18 customer-facing i18n scope.
+    if (rcpt.email) {
+      await getEmailSender().send({
+        to: rcpt.email,
+        audience: "platform",
+        subject: `Citoviso: kifizetett bővítés KÉZBESÍTETLEN — ${orderIntentId}`,
+        text:
+          `Egy modul-bővítés ki van fizetve, de a modulok nem kapcsoltak be, és az ` +
+          `automatikus újrarendezés sem segített.\n\n` +
+          `Rendelés: ${orderIntentId}\nHiányzó modul(ok): ${missing.join(", ")}\nOk: ${reason}\n\n` +
+          `Kézi rendezés kell: a fizetés érvényes, a vevő nem kapta meg, amit vett.`,
+      });
+    }
+    if (rcpt.phone) {
+      await sendSms({
+        to: rcpt.phone,
+        text:
+          `Citoviso: KIFIZETETT BOVITES KEZBESITETLEN — rendeles ${orderIntentId}. ` +
+          `Hianyzo: ${missing.join(", ")}. A vevo fizetett es nem kapta meg. Kezi rendezes kell.`,
+      });
+    }
+    console.error(line);
+  } catch (e) {
+    console.error(`${line} ⚠️ A riasztás maga is elhasalt:`, e);
+  }
+}

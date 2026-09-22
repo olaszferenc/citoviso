@@ -38,6 +38,16 @@
 // null), hogy egy mindig-igaz predikátum ne adhasson néma zöldet.
 
 process.env.CIT_SHOT = "1"; // no boot self-heal, no AI calls
+// ⛔ EPHEMERAL PORT, or this guard cannot run WHERE THE WORK HAPPENS. It booted the
+// console on the fixed CONSOLE_PORT (4600), which on this dev box is held by the
+// running `citoviso-console` service — so every worktree run died with EADDRINUSE
+// before a single assertion (measured 2026-09-21, on a commit that only touched
+// payment/service.ts). The server already supports CONSOLE_PORT=0 and this guard
+// already reads the assigned port back; only the asking was missing.
+// ⚠️ Must be set BEFORE the (dynamic) import of console/server.js — that module reads
+// the variable at load time (reference_env_assignment_loses_to_esm_imports).
+// `??=` so an explicit CONSOLE_PORT from the caller still wins.
+process.env.CONSOLE_PORT ??= "0";
 
 import { mkdir, rm, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";

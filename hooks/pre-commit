@@ -1454,6 +1454,20 @@ if [ -f scripts/module-config-check.mts ] && \
   echo "[pre-commit] module-config-check (ADR-0044: a modul-konfig réteg végponttól végpontig)…"
   npx tsx scripts/module-config-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⛔⛔ A KIFIZETETT BŐVÍTÉS MIND BEKAPCSOL, VAGY EGYIK SEM (ADR-0196, a lelet: ADR-0192 ⑧.7).
+# Az `activateUpsell` modulonként KÜLÖN utasítással írt → félbemaradó ciklus után `booking` bent,
+# `pricing` kint: KIFIZETETT függőség-sértés, amit semmi nem vett észre. ⛔ És a javítás közben
+# kimért IKER-hiba: a fizetés a rendezés ELŐTT áll `paid`-re, az `applyWebhookResult` első sora
+# pedig `alreadySettled`-del tért vissza — egy újraküldött webhook MEG SEM PRÓBÁLTA újra, tehát
+# a vevő fizetett és semmit nem kapott. Az őr DB-szintű hibát injektál (a fixture tenantjára
+# szűkített triggerrel), és a VALÓDI webhook-úton méri az újrarendezést. Piros önteszt: 3 bukás.
+# ⚠️ DB-t igényel; a KIMENŐ riasztást szándékosan nem süti el (hangos kihagyással) — arra a ház
+# kézi eszköze való (`scripts/alert-drill.mts --go`).
+if [ -f scripts/upsell-atomicity-check.mts ] && \
+   changed_files | grep -qE '^src/(tenant/(moduleUpsell|paidEntitlements)|payment/service)\.ts$|^scripts/upsell-atomicity-check'; then
+  echo "[pre-commit] upsell-atomicity (a kifizetett bővítés mind vagy semmi)…"
+  npx tsx scripts/upsell-atomicity-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⛔⛔ ÁR-JOGOSULTSÁGI KAPU A FOGLALÁSI ÚTON (ADR-0193, a lelet: ADR-0192 ②). A
 # `/api/foglaltsag` nem kérdezte meg az entitlement-kaput: a `pricing` lemondása után az ár
 # eltűnt a LAPRÓL, de nem a folyamatból — a widget kalkulált, a `createBookingRequest`

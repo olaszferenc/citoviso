@@ -357,8 +357,15 @@ export function supersederOf(moduleId: string, activeIds: Iterable<string>): str
 
 /**
  * The set that actually RENDERS: the active modules minus everything a superseding
- * module has replaced. Use this for rendering and for pricing — billing a tenant
- * for a section the page cannot show would be charging for nothing.
+ * module has replaced.
+ *
+ * ⚠️ FOR RENDERING. The sentence here used to say "use this for pricing too", and the
+ * code never did (ADR-0192 ⑧.8 — measured: `src/tenant/editor.ts` was the only caller).
+ * A comment that instructs something nobody follows is worse than none: the next reader
+ * either wires it up at the wrong layer or trusts a guarantee that does not exist.
+ * The money side asks `isBilledModule()` (src/tenant/modules.ts), which carries the SAME
+ * supersession reasoning plus the legs this function cannot know about — spine, one-off
+ * billing and cancel-at-period-end.
  */
 export function renderableModules(activeIds: Iterable<string>): string[] {
   const active = [...new Set(activeIds)];

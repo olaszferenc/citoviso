@@ -32,6 +32,7 @@ import {
 import { langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { getTenantModules, isBilledModule } from "../tenant/modules.js";
 import {
   computeAnnual,
   computeMonthly,
@@ -124,18 +125,17 @@ interface SubRow {
  * (computeMonthly over this set) decides whether the domain's yearly fee is waived.
  */
 export async function renewableModuleIds(tenantId: string): Promise<string[]> {
-  const rows = await db
-    .selectFrom("module_entitlement")
-    .select(["module"])
-    .where("tenant_id", "=", tenantId)
-    .where("active", "=", true)
-    .where("cancel_at_period_end", "=", false)
-    .execute();
-  return rows
-    .map((r) => r.module)
-    .filter((id) =>
-      MODULE_CATALOG.some((m) => m.id === id && !m.spine && m.billing !== "once"),
-    )
+  // ⛔ ONE PREDICATE, and it is isBilledModule() (ADR-0196, the finding: ADR-0192 ⑧.6).
+  // This used to re-implement "is this a line on the next invoice?" inline — and the
+  // copy was missing the SUPERSESSION leg, so a superseded module would renew forever
+  // while rendering nothing. It agrees with the canonical rule today only by accident:
+  // the catalog's single supersession (enquiry ← booking) is spine AND 0 Ft, so the
+  // `!spine` clause happens to cover it. The next non-spine supersession would have
+  // billed for a section the page cannot show — the exact harm isBilledModule() names.
+  const mv = await getTenantModules(tenantId);
+  return mv.modules
+    .filter(isBilledModule)
+    .map((m) => m.id)
     .sort();
 }
 

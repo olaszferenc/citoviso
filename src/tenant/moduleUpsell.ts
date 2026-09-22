@@ -184,6 +184,18 @@ export async function createFirstChargeOrder(
  * Additive on purpose — it turns ON what was paid for and touches nothing else.
  * A tenant may have changed other toggles while the payment was in flight, and
  * overwriting the whole selection here would silently revert those.
+ *
+ * ⛔⛔ ALL OR NOTHING, IN ONE TRANSACTION (ADR-0196, the finding: ADR-0192 ⑧.7).
+ * This loop used to issue one statement — one transaction — PER MODULE, so a
+ * failure half way through left the tenant holding `booking` without `pricing`:
+ * a PAID dependency violation that no layer detects, and which only heals at the
+ * next payment event. Measured 2026-09-21 with a fault injected on the second
+ * module: `["gallery"]` stayed behind, the rest never arrived.
+ *
+ * A rollback means the buyer temporarily has nothing — which is only acceptable
+ * because the settlement is now RE-DRIVEN (payment/service.ts: a replayed webhook
+ * re-attempts an undelivered purchase instead of shrugging "already settled").
+ * Atomicity without that re-drive would have traded one silent failure for another.
  */
 export async function activateUpsell(orderIntentId: string): Promise<string[]> {
   const oi = await db
@@ -195,21 +207,53 @@ export async function activateUpsell(orderIntentId: string): Promise<string[]> {
   const bought = ((oi.modules as unknown as string[]) ?? []).filter((id) =>
     MODULE_CATALOG.some((m) => m.id === id),
   );
-  for (const id of bought) {
-    await db
-      .insertInto("module_entitlement")
-      .values({ tenant_id: oi.tenant_id, module: id, active: true })
-      .onConflict((oc) =>
-        // Paid activation leaves a CLEAN slate: no first-charge debt (this
-        // payment WAS the first charge) and no stale cancellation tombstone.
-        oc.columns(["tenant_id", "module"]).doUpdateSet({
-          active: true,
-          awaiting_first_charge: false,
-          cancel_at_period_end: false,
-          cancelled_at: null,
-        }),
-      )
-      .execute();
-  }
+  if (!bought.length) return [];
+  const tenantId = oi.tenant_id;
+  await db.transaction().execute(async (trx) => {
+    for (const id of bought) {
+      await trx
+        .insertInto("module_entitlement")
+        .values({ tenant_id: tenantId, module: id, active: true })
+        .onConflict((oc) =>
+          // Paid activation leaves a CLEAN slate: no first-charge debt (this
+          // payment WAS the first charge) and no stale cancellation tombstone.
+          oc.columns(["tenant_id", "module"]).doUpdateSet({
+            active: true,
+            awaiting_first_charge: false,
+            cancel_at_period_end: false,
+            cancelled_at: null,
+          }),
+        )
+        .execute();
+    }
+  });
   return bought;
+}
+
+/**
+ * Did this paid upsell actually DELIVER? `payment.status = 'paid'` only says the
+ * money arrived — the entitlements say whether the buyer got what they bought.
+ *
+ * Used by the webhook replay path: those two facts are written by two different
+ * statements, and everything between them can fail.
+ */
+export async function undeliveredUpsellModules(orderIntentId: string): Promise<string[]> {
+  const oi = await db
+    .selectFrom("order_intent")
+    .select(["tenant_id", "modules", "kind"])
+    .where("id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (!oi || oi.kind !== "upsell" || !oi.tenant_id) return [];
+  const bought = ((oi.modules as unknown as string[]) ?? []).filter((id) =>
+    MODULE_CATALOG.some((m) => m.id === id),
+  );
+  if (!bought.length) return [];
+  const rows = await db
+    .selectFrom("module_entitlement")
+    .select("module")
+    .where("tenant_id", "=", oi.tenant_id)
+    .where("active", "=", true)
+    .execute();
+  const live = new Set(rows.map((r) => r.module));
+  return bought.filter((id) => !live.has(id));
 }

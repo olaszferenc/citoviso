@@ -18,7 +18,8 @@ import { tenantSiteUrl } from "../domains.js";
 import { config } from "../config.js";
 import { getInvoiceProvider } from "../invoicing/index.js";
 import { upsertPartnerFromOrder } from "../billing/partner.js";
-import { activateUpsell } from "../tenant/moduleUpsell.js";
+import { activateUpsell, undeliveredUpsellModules } from "../tenant/moduleUpsell.js";
+import { alertUndeliveredUpsell } from "../console/payLinkAlert.js";
 import { syncEntitlementsToPaid } from "../tenant/paidEntitlements.js";
 import { provisionOrderDomain } from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
@@ -217,7 +218,22 @@ export async function applyWebhookResult(
   if (!payment) return { ok: false };
   // Idempotent — and SAY SO: the replayed "paid" click used to re-render the
   // "terhelés megtörtént" page on a charge that never happened (Elek FK-005b H1).
-  if (payment.status === "paid") return { ok: true, activated: false, alreadySettled: true };
+  //
+  // ⛔⛔ BUT "THE MONEY ARRIVED" IS NOT "THE PURCHASE WAS DELIVERED" (ADR-0196).
+  // The payment flips to 'paid' ABOVE the settlement, so everything between the
+  // two can fail — and this line then answered every retry with a shrug. Measured
+  // 2026-09-21: after a failed activation the buyer had paid, held nothing, and a
+  // re-delivered webhook refused to try again. That is the idempotency-swallows-
+  // the-failure class, and it is exactly what made atomicity alone insufficient.
+  //
+  // ⚠️ SCOPED TO UPSELL, out loud: that is the path that was measured. The other
+  // kinds (initial / renewal / multilang) keep today's behaviour — multilang
+  // already carries its own re-runnable lifecycle row, and the initial conversion
+  // is idempotent end to end. A silent widening here would be a guess.
+  if (payment.status === "paid") {
+    const redelivered = await redeliverUpsellIfNeeded(payment.order_intent_id);
+    return { ok: true, activated: redelivered, alreadySettled: true };
+  }
 
   if (res.status === "failed") {
     await db.updateTable("payment").set({ status: "failed" }).where("id", "=", payment.id).execute();
@@ -509,6 +525,42 @@ export async function chargeRenewalWithToken(
  * activateUpsell writes `active: true` only, so anything the tenant was holding
  * unpaid would ride along untouched.
  */
+/**
+ * A paid upsell that never reached the tenant's entitlements: settle it again.
+ *
+ * Returns true when this call actually delivered something. Never throws — a
+ * webhook replay must not be turned into a gateway error by a second failure —
+ * but it is never SILENT either: a purchase that stays undelivered after the
+ * retry is money taken for nothing, so a human is told
+ * (`feedback_auto_retry_needs_heartbeat_and_cap`: an auto-retry without a final
+ * human alarm is just a quieter outage).
+ */
+async function redeliverUpsellIfNeeded(orderIntentId: string): Promise<boolean> {
+  let missing: string[];
+  try {
+    missing = await undeliveredUpsellModules(orderIntentId);
+  } catch (err) {
+    console.error(`[upsell] kézbesítés-ellenőrzés HIBA (${orderIntentId}):`, (err as Error).message);
+    return false;
+  }
+  if (!missing.length) return false;
+  console.warn(
+    `[upsell] KIFIZETVE, DE NEM KÉZBESÍTVE (${orderIntentId}): ${missing.join(", ")} — újrarendezés.`,
+  );
+  try {
+    await settleUpsellPaid(orderIntentId);
+  } catch (err) {
+    await alertUndeliveredUpsell(orderIntentId, missing, (err as Error).message);
+    return false;
+  }
+  const still = await undeliveredUpsellModules(orderIntentId).catch(() => missing);
+  if (still.length) {
+    await alertUndeliveredUpsell(orderIntentId, still, "az újrarendezés lefutott, de a modulok továbbra sem aktívak");
+    return false;
+  }
+  return true;
+}
+
 export async function settleUpsellPaid(orderIntentId: string): Promise<string[]> {
   const bought = await activateUpsell(orderIntentId);
   const oi = await db
