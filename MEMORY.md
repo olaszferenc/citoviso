@@ -8,6 +8,35 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
 
+**🛏️ A TENANT-ADMIN SZOBA-SZERKESZTŐ — §2b terv-kör, a tulaj a D változatot jóváhagyta (ADR-0198).**
+Tulajdonosi mandátum (`~/rc-briefs/rooms-admin-brief.md`): kártyás/kinyitható szobák, helyben
+képfeltöltés, **borítókép**. Kontraktus: `assets/design-refs/tenant-admin/room-editor/`
+(README + `plan.html` + 8 kép). Session-jegyzet: `_planning/memory/2026-09-22_room_editor_plan.md`.
+**Kód NEM született — ez terv-kör. Élesítés nem volt feladat.**
+
+- **A mért kiindulópont adta a kérés súlyát:** a 4 szoba ma **9 103 px** hosszú görgetés mobilon
+  (asztalin 6 422), egy szoba **KÉT külön űrlapon** szerkeszthető, a felszereltség-választó mind
+  a 4 szobánál kinyitva ül.
+- ⛔ **Borítókép-fogalom NINCS:** a honlap a szobához rendelt ELSŐ képet mutatja a KÖZÖS galéria
+  sorrendjében (`editor.ts` — `mine[0]`). Mérve: a **Tetőtéri Appartman és a Kerti faház
+  UGYANAZT a fotót mutatja**, és a tulajnak nincs eszköze orvosolni. **Egyetlen globális sorrend
+  nem tud N független borítót kiszolgálni** → önálló fogalom; a tárolási modellt az ADR nyitva hagyja.
+- **A választott D:** kártyarács (a kártya = a vendég kártyája) + kattintásra **felugró** +
+  `Alapok · Képek · Felszereltség` fülek. Asztalin **középre zárt párbeszéd**, a rács látszik
+  mögötte. A Képek fül nagy borító-előnézettel kezd, alatta feltöltés és a **KÖZÖS képtár**.
+- ⛔⛔ **Hat hiba: NÉGYET A KÉP fogott meg** (levágott státusz-szöveg **94 px** — pont AZT nem
+  lehetett elolvasni, AMI HIÁNYZIK, miközben a túlcsordulás-mérés 0-t mutatott · a feltöltő
+  csempe asztalin kiszorult a vízszintes görgetésbe · **navy-on-navy címsor, kontraszt 1,00** ·
+  üres fül 21 % kitöltöttséggel) — **KETTŐT a saját mérőm hazudott zöldre** (az auto-görgetés
+  kitolta a jelvényeket a keretből: **y = −275 px** · a `color-mix()` **0–1-es** színalakját
+  0–255-ként olvastam → „éppen átment" 3,32/3,21 álértékek, valójában 5,53/5,57).
+- **Záró mérés:** 103 állítás zöld, 0 JS-hiba, valós adat, mobil+asztali, minden javításhoz
+  negatív kontroll. A `_drafts/` generátor/mérő kimentve: `~/rc-briefs/rooms-admin-ref/`.
+- 🔴 **NYITOTT:** ① a megvalósítás (a **kötő feliratok/horgonyok megjelölése annak UTOLSÓ lépése**)
+  ② a borító **tárolási modellje** ③ a **JS nélküli út** megtartása.
+
+## Előző szál (2026-09-22)
+
 **🔍 „MEGVETTE, DE ÜRES" — a duplikátum, a RÉSZLEGES eset, és három hazudó mérés (ADR-0197).**
 Tulajdonosi mandátum: `~/rc-briefs/bought-but-empty-brief.md` (az ADR-0192 ⑨ nyitott kérdése).
 Session-jegyzet: `_planning/memory/2026-09-22_paid_but_partially_empty.md`.
