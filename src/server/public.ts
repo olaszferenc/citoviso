@@ -59,6 +59,7 @@ import { getAssetStore } from "../tenant/assetStore.js";
 import {
   adminDashboard,
   chargeRetryAnchor,
+  DECLINED_NOTE_ANCHOR,
   domainSettlementSection,
   loginHelpPage,
   loginPage,
@@ -79,7 +80,7 @@ import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { retryRenewalCharge } from "../payment/retryCharge.js";
-import { chargeUpsellWithToken, requestPayment } from "../payment/service.js";
+import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../payment/service.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
@@ -1309,11 +1310,13 @@ async function serveAdmin(
     ]);
     domainSettle = { commitmentActive: !!commitment, settlementPaid: !!settle?.paid };
     const q = new URL(req.url ?? "/", "http://x").searchParams;
+    // Shared by the applied- and the declined-charge branch: both name modules
+    // back to the tenant, and both take the ids from a URL anyone can edit.
+    const ids = (key: string) =>
+      (q.get(key) ?? "")
+        .split(",")
+        .filter((id) => modules.modules.some((m) => m.id === id));
     if (q.get("applied") === "1") {
-      const ids = (key: string) =>
-        (q.get(key) ?? "")
-          .split(",")
-          .filter((id) => modules.modules.some((m) => m.id === id));
       moduleApplied = {
         added: ids("madd"),
         cancelled: ids("mcancel"),
@@ -1338,6 +1341,18 @@ async function serveAdmin(
     // ADR-0119 ⑥: the add was refused because the site is suspended.
     if (q.get("frozenblock") === "1") {
       moduleApplied = { added: [], cancelled: [], other: [], frozenBlocked: true };
+    }
+    // The stored card was DECLINED (owner ruling 2026-09-22): nothing was charged
+    // and the paid module did NOT switch on — but anything else in the same submit
+    // DID land, so the banner carries those ids too and says so.
+    if (q.get("payfail") === "1") {
+      moduleApplied = {
+        added: ids("madd"),
+        cancelled: ids("mcancel"),
+        other: ids("mother"),
+        payFailedModules: ids("mfail"),
+        payFailedUrl: await openUpsellPayUrl(session.tenantId),
+      };
     }
   }
 
@@ -1896,7 +1911,27 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         if (outcome === "pending") {
           return redirect(res, `/admin?tab=modulok&applied=1&mpending=1${q ? `&${q}` : ""}`);
         }
-        // Failed MIT → fall through to the pay-link, this purchase collects by hand.
+        // ⛔ DECLINED MIT → we stop on OUR OWN screen and say so (owner ruling,
+        // 2026-09-22). This used to fall straight through to the pay-link below,
+        // and that redirect is the problem: in production `payUrl` is the
+        // GATEWAY's own page (barion.ts → secure.barion.com), where we cannot
+        // write a single word. The tenant read „a kártyáját 4 900 Ft-tal
+        // terheljük", clicked, and landed on a stranger's payment form — never
+        // learning that the stored card was the thing that failed. Only the mock
+        // gateway happens to run on our host, so local testing never showed it.
+        //   The pay-link is still minted here (it IS the way forward, and the
+        // banner needs a real target — charge-retry-note-check ②/③), but the
+        // tenant now clicks it knowingly.
+        const retry = await requestPayment(order.orderId);
+        if (!retry) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
+        // ⛔ A fragment NEM dekoráció (mérve 2026-09-22, 390px ÉS 1280px): nélküle a
+        // tulaj a lap tetejére érkezik, a sáv pedig a hajtás alatt marad — a bukás
+        // ugyanolyan néma, mint a gateway-re dobás volt.
+        return redirect(
+          res,
+          `/admin?tab=modulok&payfail=1&mfail=${change.requiresPayment.join(",")}` +
+            `${q ? `&${q}` : ""}#${DECLINED_NOTE_ANCHOR}`,
+        );
       }
       const link = await requestPayment(order.orderId);
       if (!link) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);

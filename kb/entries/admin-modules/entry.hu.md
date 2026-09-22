@@ -165,12 +165,20 @@ A fizetős modul **a díj kifizetése után jelenik meg az oldalán** — bekapc
 megerősítő kártya tételesen mutatja, mit, hány hónapra és mennyiért vesz meg, és a
 **„Mégsem”** gombbal következmény nélkül kiléphet belőle.
 
+> Ha ugyanabban a lépésben **lemond** is valamit, a megerősítő kártya erre külön figyelmeztet:
+> **„A lemondása ettől függetlenül érvénybe lép — akkor is, ha ez a fizetés nem megy végbe.”**
+> A két fele ugyanis nem osztozik egy sorson: a lemondás a gomb megnyomásakor rögzül, a vétel
+> csak akkor, ha a fizetés is sikerül. Ezért mondjuk meg **kattintás előtt** — utólag már nem
+> tudna segíteni a döntésben.
+
 - Az **első díj időarányos**: a mai naptól a fordulónapig hátralévő (megkezdett) hónapokra
   szól — éves fizetésnél sosem több, mint amennyi havi díj az éves csomagban egyébként is
   szerepel (az ajándékhónapokkal csökkentve). A következő számlán a modul már normál
   tételként szerepel.
 - Ha él a **tárolt kártya-megbízása**, a **„Terhelés és élesítés”** gombbal azonnal fizet, és a
-  modul rögtön megjelenik az oldalán.
+  modul rögtön megjelenik az oldalán. Ha a bank a tárolt kártyát elutasítja, **a Modulok fülön
+  marad** — nem kerül idegen fizetőoldalra —, és egy piros sáv mondja meg, mi történt (lásd
+  alább: *Mi van, ha a fizetés nem sikerül?*).
 - Megbízás nélkül a **„Tovább a fizetéshez”** gomb a fizetőoldalra visz; a modul a fizetés
   beérkezésekor élesedik. Ha a fizetés elmarad, semmit nem kapcsolunk be és semmit nem
   számolunk fel.
@@ -180,7 +188,35 @@ fizetés nélkül.
 
 ### Mi van, ha a fizetés nem sikerül?
 
-A fizetőoldalról visszatérve nem csak a jó végkifejlet lehetséges. A képernyő mindig
+Két különböző dolog történhet, attól függően, hogy volt-e tárolt kártya-megbízása. A
+leggyakoribb eset **el sem jut a fizetőoldalig**, ezért kezdjük azzal.
+
+#### a) A tárolt kártyát utasította el a bank — a Modulok fülön marad
+
+Ilyenkor a rendszer **nem viszi tovább sehová**: ugyanazon a lapon marad, és a Modulok fül
+tetején egy piros sáv fogadja, amelynek első, félkövér mondata
+**„A tárolt kártyáját nem sikerült megterhelni.”**. A sáv ezután megnevezi, melyik modult nem
+kapcsoltuk be, és kimondja, hogy terhelés sem történt.
+
+Amit ez jelent — és amit érdemes tudni, mert a sáv nem fér ki mindenre:
+
+- **Pénz nem mozdult**, és a modul **nem kapcsolt be**. Nem kell „visszacsinálni” semmit.
+- A **honlapja változatlanul él** — egy elutasított bővítés-terhelés nem függeszt fel semmit,
+  és a tárolt kártya-megbízása is megmarad. (Ez más, mint amikor az *előfizetési* díj akad el:
+  azt az Előfizetés kártya jelzi külön, „Az automatikus kártyaterhelés elakadt” címmel.)
+- Ha ugyanabban a lépésben **lemondott** is valamit, a sáv ezt külön kiírja: a lemondás
+  **érvénybe lépett**, akkor is, ha a vétel elmaradt.
+- A sávban egy **„Fizetés kézzel”** gomb áll, amellyel a vásárlást kártyás fizetéssel rendezheti.
+  ⚠️ Ez a gomb a **fizetési szolgáltató saját lapjára** visz, ami másképp néz ki, mint a
+  kezelőfelület — ez nem hiba. ⚠️ Az ott megadott kártya **nem lép a tárolt megbízás helyébe**:
+  a tárolt kártya cseréje külön út (lásd az előfizetésről szóló súgót).
+- Ha a fizetési hivatkozást sem sikerült kiadni, gomb helyett ennyi áll ott:
+  **„Próbálja meg újra, vagy forduljon hozzánk.”** — ilyenkor nem küldünk sehová, mert nem
+  volna hová.
+
+#### b) A fizetőoldalról tért vissza
+
+Megbízás nélkül (vagy a kézi fizetés útján) a fizetőoldalon dől el a dolog. A képernyő mindig
 megmondja, mi történt — és **soha nem hagyja teendő nélkül**:
 
 - „A fizetés nem sikerült” — a bank elutasította a kártyát. A lap első, kiemelt mondata az,
@@ -216,6 +252,11 @@ nyilvántartásunk**, nem a bank végleges válasza.
 Amit lemond, a már kifizetett időszak végéig (a fordulónapig) **aktív marad** — addig a modul
 sorában a pontos dátumot látja, és a **„Mégis megtartom”** gombbal bármikor, ingyenesen
 meggondolhatja magát. A fordulónap után a modul lekerül az oldalról és a számláról is.
+
+⚠️ **Ha egy lépésben cserél** (egyiket lemondja, másikat megveszi), a két fele nem együtt dől
+el: a **lemondás azonnal rögzül**, a vétel viszont csak a fizetéssel. Ha a fizetés elakad, a
+lemondás akkor is érvényben marad — a csereként szánt lépésből egyelőre csak a lemondás
+valósul meg. Meggondolhatja magát: a **„Mégis megtartom”** gomb a fordulónapig elérhető.
 
 Egy kivétel van: ha **saját webcímet** kapott tőlünk, és a hozzá vállalt hűségidő még tart, a
 csomagja nem csökkenhet a vállaláskor rögzített minimum alá. Ilyenkor a lemondás nem megy át, és

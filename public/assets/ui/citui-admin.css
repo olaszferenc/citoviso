@@ -452,7 +452,12 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
    horgony-görgetés — a lap statikus képe változatlan. Itt csak levegő a képernyő
    tetejéig; a sáv MAGASSÁGA nincs beleégetve, ezért egy hosszabb vagy lefordított
    üzenet sem tudja némán levágni a tetejét. */
-.adm-banner,.adm-saved{scroll-margin-top:16px}
+/* ⛔ Az `.adm-applied` 2026-09-22-ig kimaradt ebből a sorból, és a hiánya MÉRHETŐ
+   volt: az elutasított kártyaterhelés sávjára horgonyzott redirect 390 ÉS 1280 px-en
+   is LEVÁGTA a sáv tetejét — pont a félkövér első mondatot („A tárolt kártyáját nem
+   sikerült megterhelni."), vagyis azt az egyetlen sort, amiért a sáv létezik. A
+   szabály megvolt, csak nem ért el az új sávig. */
+.adm-banner,.adm-saved,.adm-applied{scroll-margin-top:16px}
 .adm-note{font-size:.8rem;line-height:1.45;margin-top:7px;border-radius:6px;padding:7px 9px}
 .adm-note--ok{background:var(--citui-ok-soft)}
 .adm-note--warn{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white))}

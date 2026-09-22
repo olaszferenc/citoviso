@@ -190,6 +190,32 @@ export async function requestPayment(
   return { paymentId: payment.id, payUrl: link.payUrl, gatewayRef: link.gatewayRef };
 }
 
+/**
+ * The pay-link of this tenant's newest still-open UPSELL payment, or null.
+ *
+ * ⛔ Why the banner reads this from the DB instead of receiving it on the redirect:
+ * in production `payUrl` points at the GATEWAY's own domain (barion.ts →
+ * `secure.barion.com`), so carrying it in our query string would make the admin an
+ * open redirect — anyone could hand the tenant a `/admin?...&payurl=<anywhere>`
+ * link. Keyed by tenant, the destination can only ever be a link WE minted for
+ * THIS tenant.
+ *
+ * Only `pending` qualifies: a `failed` row is the declined MIT attempt itself, and
+ * a `paid` one has nothing left to collect.
+ */
+export async function openUpsellPayUrl(tenantId: string): Promise<string | null> {
+  const row = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .select(["payment.pay_url as payUrl"])
+    .where("order_intent.kind", "=", "upsell")
+    .where("order_intent.tenant_id", "=", tenantId)
+    .where("payment.status", "=", "pending")
+    .orderBy("payment.created_at", "desc")
+    .executeTakeFirst();
+  return row?.payUrl ?? null;
+}
+
 /** Handle a gateway webhook: mark paid/failed, and on paid activate the site. */
 export async function handleWebhook(
   params: Record<string, unknown>,

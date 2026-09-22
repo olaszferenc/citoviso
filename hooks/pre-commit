@@ -216,6 +216,14 @@ if [ -f scripts/charge-retry-note-check.mts ] && \
   echo "[pre-commit] charge-retry-note (a sáv ne IRÁNYT mondjon, hanem VIGYEN)…"
   npx tsx scripts/charge-retry-note-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Az ELUTASÍTOTT kártyaterhelés sávja: a tulaj a Modulok fülön marad, és megtudja,
+# hogy a kártyája bukott el — nem egy idegen fizetőoldalon köt ki némán. A `service.ts`
+# is kapu-kiváltó: az `openUpsellPayUrl()` adja a sáv egyetlen valódi kijáratát.
+if [ -f scripts/declined-mandate-note-check.mts ] && \
+   changed_files | grep -qE '^(src/server/(adminViews|public)\.ts|src/payment/service\.ts|public/assets/ui/citui-admin\.css)|^scripts/declined-mandate-note-check'; then
+  echo "[pre-commit] declined-mandate-note (az elutasított kártya nem néma)…"
+  npx tsx scripts/declined-mandate-note-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0191: a megkeresés linkje a VÁSÁRLÁS UTÁN nem árul. A kapu a PÉNZ-ÚTON ül
 # (requestPayment nem ad pay-linket egy már vásárolt lead initial rendelésére), a lap
 # pedig harmadik keretezési állapotot kap — saját sávval ÉS saját lábléccel, mert a

@@ -316,6 +316,18 @@ export interface ModuleAppliedFlash {
   /** ADR-0119 ⑥: a NEW module could not be added because the site is suspended
    *  for non-payment. Cancellations in the same submit DID go through. */
   readonly frozenBlocked?: boolean;
+  /**
+   * The stored card was DECLINED: nothing was charged and these modules did NOT
+   * switch on. Empty/absent on every other path — its presence IS the signal.
+   */
+  readonly payFailedModules?: string[];
+  /**
+   * The freshly minted pay-link for that same purchase, so the banner can offer a
+   * real, clickable exit (charge-retry-note-check ②/③ — a named exit must exist).
+   * Null when it could not be minted; the banner then names no exit at all rather
+   * than pointing at nothing.
+   */
+  readonly payFailedUrl?: string | null;
 }
 
 /** ADR-0094 ② (approved plan B): how the danger zone must behave under a domain
@@ -394,6 +406,21 @@ function daysUntil(iso: string): number {
  * böngésző nem görget. Fail-safe.
  */
 const RETRY_NOTE_ANCHOR = "terheles-uzenet";
+
+/**
+ * Az ELUTASÍTOTT kártyaterhelés sávjának horgonya — ide tér vissza a `payfail=1`.
+ *
+ * ⛔ MÉRVE (2026-09-22, 390px ÉS 1280px, `ui-shot --fold`): fragment nélkül a
+ * redirect a lap TETEJÉRE érkezik, ahol az Előfizetés-kártya áll — a bukás-sáv a
+ * Modulok szekcióban, a hajtás ALATT marad. A tulaj tehát visszakerül egy
+ * változatlannak látszó lapra, és sehol nem tudja meg, hogy a kártyája elbukott;
+ * pontosan az a némaság, amit ez a sáv megszüntetni hivatott.
+ *   A horgony MAGA A SÁV — ugyanaz a szerkezeti megoldás, amit a kézi újrapróba
+ * ága három mérés után vett fel (lásd RETRY_NOTE_ANCHOR): a böngésző a sáv tetejét
+ * viszi a képernyő tetejére, így az üzenet TELJESEN látszik, és nem egy
+ * tartalomtól függő px-érték eltalálásán múlik.
+ */
+export const DECLINED_NOTE_ANCHOR = "kartya-elutasitva";
 
 /**
  * Hová vigyen a kézi terhelés-újrapróba redirectje (`#fragment`), kimenet szerint.
@@ -1048,6 +1075,53 @@ export function modulesSection(
       }) +
       `</div>`;
   }
+  // ── Declined stored card (owner ruling 2026-09-22) ─────────────────────────
+  // The MIT charge was refused, so this purchase did NOT happen. Until now the
+  // tenant was redirected straight to the gateway's own page and never learned
+  // why — this banner is the only place we can tell them.
+  //   ⚠️ Three things it deliberately does NOT say:
+  //   · no direction words ("fenti"/"lenti") — charge-retry-note-check ①;
+  //   · no amount — the sum belongs to ONE place per approved contract, and a
+  //     second copy reads as if it had to be paid twice (⑤, frozen-settle-check);
+  //   · nothing about the new card becoming the stored mandate: an upsell
+  //     pay-link does NOT initiate recurrence (service.ts `wantsToken` covers
+  //     `initial`/`renewal` only), so promising it would be a lie.
+  if (applied?.payFailedModules?.length) {
+    const list = applied.payFailedModules.map((id) => esc(T(lang, labelOf(id)))).join(" · ");
+    appliedBox =
+      `<div id="${DECLINED_NOTE_ANCHOR}" class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+      `<b>${T(lang, "A tárolt kártyáját nem sikerült megterhelni.")}</b> ` +
+      T(lang, "Ezért nem kapcsoltuk be: {list} — és terhelés sem történt.", { list }) +
+      // The cancellations in the same submit DID land. Same honesty the suspended
+      // branch already practises ("A lemondásai viszont érvényesültek.").
+      (applied.cancelled.length
+        ? " " +
+          T(lang, "{date}-ig még aktív: {list} — a lemondása viszont érvénybe lépett.", {
+            list: applied.cancelled.map((id) => esc(T(lang, labelOf(id)))).join(" · "),
+            date: esc(renewDateS),
+          })
+        : "") +
+      // ③: the banner must CARRY the deed, not describe it. No link ⇒ no promise.
+      (applied.payFailedUrl
+        ? ` <a class="citui-btn citui-btn--primary" href="${esc(applied.payFailedUrl)}" style="margin-top:8px">${T(lang, "Fizetés kézzel")}</a>`
+        : ` ${T(lang, "Próbálja meg újra, vagy forduljon hozzánk.")}`) +
+      `</div>` +
+      // ⛔ A fragment-görgetés KORREKCIÓJA — mérve, nem feltételezve (2026-09-22):
+      // a böngésző a betöltés közben görget a horgonyra, és ott a lap fölöttünk lévő
+      // része még más magasságú, ezért 48 px-szel odébb áll meg. Eredmény: a sáv
+      // teteje 390px-en 32, 1280px-en 9 px-szel a képernyő FÖLÉ kerül — épp a
+      // félkövér első mondat, amiért a sáv létezik. A `scroll-margin-top:16px`
+      // érvényesül (computed style), de a rossz megállót nem javítja; ugyanez az
+      // elem `scrollIntoView()`-val MÉRVE pontosan top=16-ra áll.
+      //   Haladás-fokozat: JS nélkül a böngésző saját (pontatlan) görgetése marad,
+      // ami még mindig a sáv közelébe visz — a korrekció javít, nem feltétel.
+      //   ⚠️ A `load` esemény NEM óvatoskodás: az első változatom `setTimeout(…,0)`-val
+      // futott, és MÉRVE semmit nem javított — a lap ekkor még parse alatt áll, tehát
+      // ugyanarra a félkész elrendezésre görget, mint amit a böngésző elrontott.
+      `<script>(function(){var h=${JSON.stringify(`#${DECLINED_NOTE_ANCHOR}`)};` +
+      `if(location.hash!==h)return;` +
+      `addEventListener("load",function(){var e=document.querySelector(h);if(e)e.scrollIntoView()})})();</script>`;
+  }
   // ADR-0119 ⑥: refusal notice — the shop is closed while the site is suspended.
   if (applied?.frozenBlocked) {
     appliedBox =
@@ -1644,7 +1718,9 @@ export function modulesSection(
     // the order is priced with (moduleUpsell.createFirstChargeOrder ↔ applyOffer),
     // so the bar and the confirm card can never promise a different amount.
     `var FCM=${fcMonths},CPCT=${coupon ? coupon.percent : 0},AUTOC=${sub?.autoCharge ? "true" : "false"};` +
-    `var payNow=0,payAdds=[];` +
+    // `remCount` rides out of sync() so the confirm card can warn that the two
+    // halves of a mixed submit do NOT share a fate (see fcOpen).
+    `var payNow=0,payAdds=[],remCount=0;` +
     // ⛔ THE ROUNDING RULE ARRIVES AS A FILE, it is not retyped here. The line that used
     // to stand in this spot — `Math.floor(p*FCM*(100-CPCT)/100)` PER MODULE, then summed —
     // was a second copy of moduleUpsell.createFirstChargeOrder's whole-basket discount, and
@@ -1662,7 +1738,7 @@ export function modulesSection(
     `var was=c.dataset.committed==="1",is=c.checked,p=+c.dataset.price;` +
     `var row=c.closest("[data-modrow]");if(row)row.classList.toggle("is-dirty",was!==is);` +
     `if(is&&!was){add.push(c);delta+=p;if(p>0&&!c.dataset.rejoin){payAdds.push(c)}}` +
-    `if(!is&&was){rem.push(c);delta-=p}});` +
+    `if(!is&&was){rem.push(c);delta-=p}});remCount=rem.length;` +
     // The basket is complete only now, and the discount is a property of the BASKET —
     // so the allocation happens here, once, before anything renders a number from it.
     `fcAllocate();` +
@@ -1780,9 +1856,18 @@ export function modulesSection(
     `lines.innerHTML=payAdds.map(function(c){var p=+c.dataset.price;` +
     `return '<div class="adm-fc__line"><span>'+c.dataset.label+' · '+FCM+' ${T(lang, "hó")} × '+HUF(p)+(CPCT?' − '+CPCT+'%':'')+'</span><b>'+HUF(fcLine(c))+'</b></div>'}).join("")+` +
     `'<div class="adm-fc__line adm-fc__line--total"><span>${T(lang, "Fizetendő most")}</span><b>'+HUF(payNow)+'</b></div>';` +
-    `fcm.querySelector("[data-fc-note]").textContent=AUTOC` +
+    // ⚠️ A MIXED submit's two halves do NOT share a fate, and this is the last
+    // screen where we can still say so: the cancellations are written the moment
+    // the form posts, while the purchase only lands if the money does. If the
+    // charge is declined (or the tenant walks away from the pay page), the
+    // cancellation stays — so a submit meant as a SWAP can leave only the losing
+    // half behind. Said BEFORE the click, not in the banner afterwards: a warning
+    // that arrives after the deed cannot change the decision, and the pay-page
+    // detour would swallow the redirect that carried it anyway.
+    `fcm.querySelector("[data-fc-note]").textContent=(AUTOC` +
     `?"${T(lang, "A tárolt kártya-megbízását terheljük. A modul a sikeres terheléskor azonnal élesedik; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}"` +
-    `:"${T(lang, "A fizetőoldalra irányítjuk. A modul CSAK a fizetés beérkezése után jelenik meg az oldalán; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}";` +
+    `:"${T(lang, "A fizetőoldalra irányítjuk. A modul CSAK a fizetés beérkezése után jelenik meg az oldalán; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}")` +
+    `+(remCount?" ${T(lang, "A lemondása ettől függetlenül érvénybe lép — akkor is, ha ez a fizetés nem megy végbe.")}":"");` +
     `fcm.querySelector("[data-fc-go]").textContent=AUTOC?"${T(lang, "Terhelés és élesítés")}":"${T(lang, "Tovább a fizetéshez")}";` +
     `fcm.hidden=false;fcv.hidden=false;fcm.querySelector("[data-fc-keep]").focus();}` +
     `function fcClose(){fcm.hidden=true;fcv.hidden=true;}` +
