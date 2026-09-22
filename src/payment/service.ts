@@ -717,7 +717,7 @@ function fireDomainProvisioning(orderIntentId: string): void {
  * ⛔ EGY PÉLDÁNY, és szándékosan itt, nem a hívás helyén: ez az egyetlen hely, ahol a
  * kedvezmény úgy fér el a számlán, hogy a TÉTELEKHEZ nem nyúlunk. Külön kedvezmény-sor
  * tilos — a Számlázz.hu összeadja a tételeket, tehát egy −4 925 Ft-os sor a 14 775 Ft-os
- * végösszeget 9 850-re vinné (ADR-0202).
+ * végösszeget 9 850-re vinné (ADR-0203).
  */
 export function invoiceComment(
   reverse: boolean,
@@ -742,7 +742,7 @@ export function buildInvoiceItems(
     settlementTakeDomain: boolean | null;
     domainFee: number | null;
     domainName: string | null;
-    /** ADR-0202: a kupon százaléka, ha volt — a tétel neve mondja ki. */
+    /** ADR-0203: a kupon százaléka, ha volt — a tétel neve mondja ki. */
     offerPercent?: number | null;
   },
   cadence: "monthly" | "annual" | "once",
@@ -769,7 +769,7 @@ export function buildInvoiceItems(
     ];
   if (p.kind === "domain_upgrade") return [line(domainLabel, p.amount)];
   if (cadence === "once") return [line(`Citoviso többnyelvű honlap (egyszeri generálási díj)`, p.amount)];
-  // ADR-0202: ha kupon csökkentette az árat, a TÉTEL NEVE mondja ki. ⛔ Külön
+  // ADR-0203: ha kupon csökkentette az árat, a TÉTEL NEVE mondja ki. ⛔ Külön
   // kedvezmény-SORT nem veszünk fel: a Számlázz.hu összeadja a tételeket, tehát egy
   // −4 925 Ft-os sor a 14 775 Ft-os végösszeget 9 850-re vinné — vagyis rosszul
   // számláznánk. A név bővítése az összegekhez nem nyúl.
@@ -821,7 +821,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       "order_intent.buyer_address as address",
       "order_intent.buyer_email as buyerEmail",
       "order_intent.vat_treatment as vatTreatment",
-      // ADR-0202: a kedvezmény a SZÁMLÁN is látszik. A listaárat eddig TÁROLTUK, de
+      // ADR-0203: a kedvezmény a SZÁMLÁN is látszik. A listaárat eddig TÁROLTUK, de
       // sosem olvastuk vissza ide, ezért a vevő egy 14 775 Ft-os végösszeget kapott
       // minden nyom nélkül arról, hogy az egy 19 700 Ft-os díj kedvezményes ára.
       "order_intent.list_price as listPrice",

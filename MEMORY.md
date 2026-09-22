@@ -8,6 +8,26 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
 
+**💳 A KAPOTT KEDVEZMÉNY LÁTSZIK — a sávon és a számlán is (ADR-0205).**
+Session-jegyzet: `_planning/memory/2026-09-22_coupon_visible.md`.
+Kontraktus: `assets/design-refs/tenant-admin/coupon-visible/` (C változat, tulajdonosi döntés).
+
+- **A kiváltó kérdés:** *„csak nem azt számlázzuk amit fizet vagy mi?"* — **megmérve: a
+  számlázás HELYES** (terhelve 14 775 = számlázva 14 775). A „láthatatlan" nem pénzügyi hiba
+  volt, hanem hogy a 19 700 − 25 % levezetés sehol nem jelent meg — a bizonyíték rá, hogy
+  **maga a tulaj sem tudta eldönteni, jó-e a szám**.
+- **Szállítva:** kuponos vásárlásnál nyugta-levezetés (díj → kedvezmény → terhelve) +
+  megújítás-figyelmeztetés; kupon nélkül a régi egy mondat; a számlán a tétel NEVE és a
+  MEGJEGYZÉS mondja ki.
+- ⛔⛔ **Külön kedvezmény-SOR a számlán TILOS:** a Számlázz.hu összeadja a tételeket, tehát a
+  végösszeg 14 775-ről 9 850-re esne. Az őr minden esetben visszaméri a végösszeg-egyezést.
+- ⭐ **Egy ÉLŐ hibát is feltárt a terv-kör:** a modulok vesszős felsorolása három modulból
+  ötöt csinált a képernyőn (a nevek maguk is vesszősek) — most „ · " + `nowrap`.
+- ⛔⛔ **A mérőeszköz HÁROMSZOR hazudott, mielőtt a termék egyszer is** (levágó regex, a
+  halvány zöldre vak pixel-kereső, nem-törő szóköz) — a részletek a jegyzetben.
+
+## Előző szál (legfrissebb szál, 2026-09-22)
+
 **🖼️ A FÜLSÁV OLVASHATATLAN FELIRATA, ÉS A PILLANATKÉP, AMI MAGÁTÓL ELKÉSZÜL (ADR-0203 +
 ADR-0204).** Két tulajdonosi mondat egy képernyőkép mellé: *„itt a header zöld betűje szinte nem is
 látszik"* és *„miért nem jön automatikusan előnézeti kép?"* Session-jegyzet:

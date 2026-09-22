@@ -1306,7 +1306,7 @@ async function serveAdmin(
         // ADR-0113: instant-charge outcome riding the redirect.
         charged: ids("mcharged"),
         chargedAmount: Math.max(0, Number(q.get("mamount")) || 0),
-        // ADR-0202: a kedvezmény levezetése. ⛔ Csak akkor fogadjuk el, ha a listaár
+        // ADR-0203: a kedvezmény levezetése. ⛔ Csak akkor fogadjuk el, ha a listaár
         // TÉNYLEG nagyobb a fizetettnél és a százalék értelmes — a paraméter a
         // címsorból jön, tehát bárki átírhatja: egy kitalált „mlist" különben hamis
         // kedvezményt íratna ki a saját visszaigazolására.
@@ -1861,7 +1861,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           sub.recurrence_trace_id,
         );
         if (outcome === "paid") {
-          // ADR-0202: a kedvezmény LEVEZETÉSE is utazik, nem csak a végösszeg. A
+          // ADR-0203: a kedvezmény LEVEZETÉSE is utazik, nem csak a végösszeg. A
           // korábbi redirect kizárólag `mamount`-ot vitt, ezért a sáv csak a 14 775 Ft-ot
           // tudta kiírni — a 19 700 Ft-os díjat és a −25 %-ot nem —, pedig mindkettő ott
           // van az orderben. A tulaj emiatt nem tudta ellenőrizni a saját számláját, és
