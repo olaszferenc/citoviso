@@ -8,6 +8,35 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
 
+**🖼️ A FÜLSÁV OLVASHATATLAN FELIRATA, ÉS A PILLANATKÉP, AMI MAGÁTÓL ELKÉSZÜL (ADR-0203 +
+ADR-0204).** Két tulajdonosi mondat egy képernyőkép mellé: *„itt a header zöld betűje szinte nem is
+látszik"* és *„miért nem jön automatikusan előnézeti kép?"* Session-jegyzet:
+`_planning/memory/2026-09-22_tab_contrast_and_auto_shots.md`. **Élesítés NEM volt a feladat.**
+
+- **① A bejelentett hiba valódi, és egy sor javítja.** A lead-lap INAKTÍV fül-feliratai a navy
+  gradiensen `--citui-link-ink`-kel festődtek: **pixelből 2,22:1** (küszöb 4,5). Ok: `.con a`
+  (0,1,1) veri a `.con-ltab` (0,1,0) színét — a `:hover` és az `.on` ág MÁR `.con` prefixszel
+  íródott, csak az ALAPÁLLAPOT maradt ki. `.con a.con-ltab` → **8,33:1**, mindkét méreten.
+  ⚠️ A tulaj képe zöldes-sötét volt, az enyém navy; a Chrome force-darkjával a KÉPET
+  reprodukáltam, de az zsákutca volt (a force-dark **javította** a számokat) — a reprodukált
+  látvány nem diagnózis.
+- **② ⛔⛔ Az őr 9733 elemre mondott zöldet FÖLÖTTE.** A háttér-feloldás gradiens ősnél `null`-lal
+  adta fel → a konzol MINDEN sötét sávja némán kimaradt. Most minden stopra megold és a
+  LEGROSSZABBAT veszi (**+302 felirat**), a mérhetetlent megszámolja és KIÍRJA (36), és az
+  **önteszt negatív kontrollt kapott pont erre az ágra** (2 → **14** lelet).
+- **③ A „~40 másodperc" MÉRVE HAMIS volt** (5,6 s az első render, 2,0–2,3 s a többi) — és ebből
+  lett a felületen egy INDOK, amiért a kurátor 19 kártyán 19-szer kattintott, miközben a kép pont
+  a DÖNTÉSHEZ kell. Valódi költség: a portál felé ismételt fotó-letöltés → **forráskép-cache**
+  (19 render, **4 letöltés**) + globális sorompó + automatikus indítás (generálás vége ÉS
+  lap-megnyitás a `none`-okra; a `failed` SOHA nem indul újra magától) + magától frissülő kártya.
+  **Mérve, kattintás nélkül: 19 kép 49,5 s alatt, 0 JS-hiba.**
+- ⛔⛔ **A saját első poll-változatom lett a következő hiba:** kártyánként kérdezve a lap sosem érte
+  el a `networkidle`-t (a `button-weight-check` 390 px-en „HTTP nincs válasz"), bukásnál pedig a
+  `location.replace()` megtörte a navigációt. Köteges `/lead/:id/shot-states` (a bukás OKÁVAL) +
+  helyben kiírt hiba; az őr utána **414 állítással zöld**.
+
+### Előző szál (2026-09-22)
+
 **🛒 A MODUL-FÜGGŐSÉG A VÁSÁRLÁS PILLANATÁBAN — a lead kosara bepipál, a beküldő végpont elutasít
 (ADR-0202).** Tulajdonosi mandátum (`~/rc-briefs/lead-side-dependency-gate-brief.md`). Az ADR-0192
 szabálya ott állt, ahol a tulaj MÁR bent van (Modulok fül, megújítás-sweep), és ott hiányzott, ahol
