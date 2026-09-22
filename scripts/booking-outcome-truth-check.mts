@@ -254,6 +254,9 @@ const SUMMARY = {
 };
 
 const MONEY_JS = await readFile(path.join(ROOT, "assets/runtime/cit-money.js"), "utf8");
+// ⚠️ A szezon-szabály ugyanígy a lappal utazik (ADR-0197 ③): a cit-runtime.js
+// CitSeason-t hív, és nélküle a quote-sor némán eltűnik.
+const SEASON_JS = await readFile(path.join(ROOT, "assets/runtime/cit-season.cjs"), "utf8");
 
 async function guestPage(runtimeJs: string, modulesCss: string): Promise<string> {
   const stub =
@@ -283,7 +286,7 @@ async function guestPage(runtimeJs: string, modulesCss: string): Promise<string>
     // first). This page is built by hand, so it must do the same — without it the
     // quote line dies on an undefined CitMoney and the check would blame the
     // markup for a missing dependency. money-format-check enforces the pairing.
-    `<script>${MONEY_JS}${runtimeJs}</script></body></html>`
+    `<script>${MONEY_JS}${SEASON_JS}${runtimeJs}</script></body></html>`
   );
 }
 

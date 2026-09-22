@@ -18,6 +18,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
 import { blockingUnitIds } from "./unitScope.js";
 import { formatAmount, getUnitPrices, seasonCovers } from "./prices.js";
+import { seasonRule } from "./seasonRule.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 
 export type DaySource = "manual" | "booking" | "ical" | "linked";
@@ -413,7 +414,10 @@ export async function getBlockedDaysFrom(unitId: string, from: string): Promise<
       const d = new Date(start);
       d.setUTCDate(d.getUTCDate() + i);
       const iso = d.toISOString().slice(0, 10);
-      if (!seasons.some((s) => seasonCovers(s.from!, s.to!, iso.slice(5)))) blocked.add(iso);
+      // `iso.slice(5)` was a FOURTH spelling of the month-day assumption; it goes
+      // through the shared rule so a year-aware season has one place to change.
+      const md = seasonRule.monthDayOf(iso);
+      if (!seasons.some((s) => seasonCovers(s.from!, s.to!, md))) blocked.add(iso);
     }
   }
   return [...blocked].sort();

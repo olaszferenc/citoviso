@@ -24,6 +24,7 @@ import { logTenantMessage } from "../tenant/messages.js";
 import { siteRendersModule } from "../tenant/modules.js";
 import { blockingUnitIds } from "../tenant/unitScope.js";
 import { formatAmount, getUnitPrices, quoteStayFrom, seasonCovers } from "../tenant/prices.js";
+import { seasonRule } from "../tenant/seasonRule.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 
 export interface BookingRequestInput {
@@ -158,7 +159,7 @@ export async function seasonRulesFor(
   const nightCount = Math.max(0, nights(dateFrom, dateTo));
   for (let i = 0; i < nightCount; i++) {
     const day = addDays(dateFrom, i);
-    const md = day.slice(5); // 'MM-DD'
+    const md = seasonRule.monthDayOf(day); // the shared month-day rule, not a 5th slice
     const match = seasons.find((s) => seasonCovers(s.from!, s.to!, md));
     // seasonal_only: a night outside every listed season is simply not for sale.
     if (!match && unit?.seasonal_only) closed = true;

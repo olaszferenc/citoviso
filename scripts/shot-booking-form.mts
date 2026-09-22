@@ -55,8 +55,9 @@ const data = {
 // through injectRuntime, so it has to do the same — without it the quote line
 // dies on an undefined CitMoney, and the check would report a layout defect for
 // a missing dependency. money-format-check enforces the pairing.
-const [moneyJs, runtimeJs, modulesCss] = await Promise.all([
+const [moneyJs, seasonJs, runtimeJs, modulesCss] = await Promise.all([
   readFile(path.join(ROOT, "assets/runtime/cit-money.js"), "utf8"),
+  readFile(path.join(ROOT, "assets/runtime/cit-season.cjs"), "utf8"),
   readFile(path.join(ROOT, "assets/runtime/cit-runtime.js"), "utf8"),
   readFile(path.join(ROOT, "assets/runtime/cit-modules.css"), "utf8"),
 ]);
@@ -136,7 +137,7 @@ const html =
   // in the closing "Foglalás" section (moduleSections renders it from d.booking).
   bookingSlot(data) +
   moduleSections(data) +
-  `<script>${moneyJs}\n${runtimeJs}</script></body></html>`;
+  `<script>${moneyJs}\n${seasonJs}\n${runtimeJs}</script></body></html>`;
 
 const dir = await mkdtemp(path.join(tmpdir(), "bookform-"));
 const file = path.join(dir, "form.html");

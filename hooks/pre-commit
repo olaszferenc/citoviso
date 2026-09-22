@@ -1500,6 +1500,15 @@ if [ -f scripts/coupon-rounding-check.mts ] && \
   echo "[pre-commit] coupon-rounding (a képernyő és a terhelés egy szám)…"
   npx tsx scripts/coupon-rounding-check.mts >"$GATE_LOG" || gate_failed
 fi
+# SZEZON-SZABÁLY (ADR-0197 ③): a „melyik ár-sor vonatkozik erre az éjszakára?" kérdés
+# KÉT példányban élt — a szerveré fagy rá a foglalási kérésre és megy ki a vendég
+# levelében, a böngészőé az, amit a vendég beküldés ELŐTT olvas —, és a kettőt semmi
+# nem vetette össze. A hónap-nap feltevés ráadásul öt helyen élt külön.
+if [ -f scripts/season-rule-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-(season\.cjs|runtime\.js)$|^src/tenant/(seasonRule|prices|availability)\.ts$|^src/booking/requests\.ts$|^src/generator/runtime\.ts$|^scripts/season-rule-check'; then
+  echo "[pre-commit] season-rule (egy szezon-szabály, két oldal)…"
+  npx tsx scripts/season-rule-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ONTOLÓGIA-FRISSESSÉG (mérve 2026-09-17): a `_planning/DOMAIN/` a `CLAUDE.md` §1 szerint
 # KÖTELEZŐEN olvasott igazság, az átvezetése mégis 2026-07-12 óta elmaradt — 9 feldolgozatlan
 # review, 64 érdemi javaslat, és a `01-CALC-MODELS.md` két hónapig a július 4-i vázban állt.

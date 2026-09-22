@@ -240,9 +240,13 @@
      * night, else base; ANY unpriced night → no quote at all (§B.17: better no
      * number than a wrong one). Mirrors the server's quoteStayFrom — the server
      * recomputes and FREEZES the quote at submit; this is the guest's preview. */
-    function seasonCovers(from, to, md) {
-      return from <= to ? md >= from && md <= to : md >= from || md <= to;
-    }
+    /* ⛔ `seasonCovers` used to live here as a SECOND implementation of the rule that
+     * decides which price row a night falls under — the server had its own, and
+     * nothing compared them. It is now cit-season.cjs, require()d by the server and
+     * inlined above for the browser, so what the guest READS and what gets FROZEN
+     * onto the request are the same bytes. The local wrapper is gone rather than
+     * kept as a one-line forwarder: a function nobody calls reads as a live path.
+     */
     /* ⛔ This used to group with a NON-BREAKING space and print "Ft" for anything
      * that was not EUR — while the SERVER rendered the very same quote through
      * src/tenant/prices.ts with a plain space (measured 2026-09-14). One rule now,
@@ -257,12 +261,12 @@
         ? Math.max(1, Number((form.querySelector("[data-guests]") || {}).textContent || form.guests && form.guests.value || 1))
         : 1;
       while (d.getTime() < end) {
-        var md = d.toISOString().slice(5, 10), hit = null;
-        for (var i = 0; i < pricing.rows.length; i++) {
-          var r = pricing.rows[i];
-          if (!r.base && r.from && r.to && seasonCovers(r.from, r.to, md)) { hit = r; break; }
-        }
-        if (!hit) for (var k = 0; k < pricing.rows.length; k++) if (pricing.rows[k].base) hit = pricing.rows[k];
+        /* Row selection is shared too, not just the range test: "which row wins
+         * tonight" is the question that would let the screen and the invoice
+         * disagree. The endpoint ships `base`; the server calls the same helper
+         * with its own `isBase`. */
+        var md = CitSeason.monthDayOf(d.toISOString());
+        var hit = CitSeason.rowFor(pricing.rows, md, function (r) { return !!r.base; });
         if (!hit) return null;
         var last = lines[lines.length - 1];
         var label = hit.base ? tr("Alapár") : hit.label;

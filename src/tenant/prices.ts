@@ -13,6 +13,7 @@ import { db } from "../db/client.js";
 import { T, langForUnit, prepareMailLang } from "../i18n/mail.js";
 import { formatMoney } from "../text/money.js";
 import { formatNumber } from "../text/money.js";
+import { seasonRule } from "./seasonRule.js";
 
 export interface UnitPrice {
   readonly id: string;
@@ -169,24 +170,31 @@ export async function deletePrice(siteId: string, priceId: string): Promise<void
   await db.deleteFrom("unit_price").where("id", "=", priceId).execute();
 }
 
-/** Does a recurring 'MM-DD' range cover this month-day? Handles year-end wrap. */
+/**
+ * Does a recurring 'MM-DD' range cover this month-day? Handles year-end wrap.
+ *
+ * ⛔ THE PREDICATE IS NOT HERE. It lives in assets/runtime/cit-season.cjs, because the
+ * BROWSER runs the very same rule on the guest's screen — and the two used to be
+ * separate copies with nothing comparing them: one decides what the guest READS before
+ * submitting, the other what gets FROZEN onto the request and mailed as a binding
+ * offer. A formatter that disagrees prints an ugly string; a price SELECTOR that
+ * disagrees quotes one amount and charges another (the ADR-0193 ② harm class).
+ * This is the thin delegation; the file header carries the measured reasoning.
+ */
 export function seasonCovers(from: string, to: string, monthDay: string): boolean {
-  return from <= to
-    ? monthDay >= from && monthDay <= to
-    : monthDay >= from || monthDay <= to; // wraps December → January
+  return seasonRule.covers(from, to, monthDay);
 }
 
 /**
  * The price in effect on a given day: the first matching season, else the base.
  * Seasons are checked in the owner's own order, so an overlap resolves the way the
  * list reads top-down instead of by some hidden rule.
+ *
+ * The SELECTION is shared too, not just the range test: "which row wins tonight" is
+ * exactly the question that would let the screen and the invoice disagree.
  */
 export function priceOn(prices: readonly UnitPrice[], monthDay: string): UnitPrice | null {
-  for (const p of prices) {
-    if (p.isBase || !p.from || !p.to) continue;
-    if (seasonCovers(p.from, p.to, monthDay)) return p;
-  }
-  return prices.find((p) => p.isBase) ?? null;
+  return seasonRule.rowFor(prices, monthDay, (p) => p.isBase || !p.from || !p.to);
 }
 
 /** "28 000 Ft" — space-grouped; toLocaleString is unreliable without full ICU. */
@@ -275,7 +283,7 @@ export function quoteStayFrom(
   const end = Date.parse(`${opts.dateTo}T00:00:00Z`);
   if (!(d.getTime() < end)) return null;
   while (d.getTime() < end) {
-    const md = d.toISOString().slice(5, 10);
+    const md = seasonRule.monthDayOf(d.toISOString());
     const p = priceOn(prices, md);
     if (!p) return null; // an unpriced night → no quote at all
     nights.push({ rowId: p.id, label: p.isBase ? opts.baseLabel : p.label, amount: p.amount });

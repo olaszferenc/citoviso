@@ -22,8 +22,15 @@ async function runtimeBlock(): Promise<string> {
   // The money rule travels WITH the widget: a generated mock is opened from
   // file:// and out of e-mail clients, so nothing may be fetched separately.
   const money = await readFile(path.join(RUNTIME_DIR, "cit-money.js"), "utf8");
+  // The season rule travels with it for the same reason — and one stronger one: the
+  // SERVER freezes this rule's answer onto the booking request and mails it, so the
+  // browser must run the very same bytes, not a second implementation that happens to
+  // agree today. Inlined BEFORE cit-runtime.js, which calls CitSeason.
+  const season = await readFile(path.join(RUNTIME_DIR, "cit-season.cjs"), "utf8");
   const js = await readFile(path.join(RUNTIME_DIR, "cit-runtime.js"), "utf8");
-  cached = `<style data-cit-runtime>\n${css}\n</style>\n<script data-cit-runtime>\n${money}\n${js}\n</script>\n`;
+  cached =
+    `<style data-cit-runtime>\n${css}\n</style>\n` +
+    `<script data-cit-runtime>\n${money}\n${season}\n${js}\n</script>\n`;
   return cached;
 }
 
