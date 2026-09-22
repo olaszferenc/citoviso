@@ -1,12 +1,31 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `prod/20260920-2138` — benne a fizetés-visszaigazoló split-lapja (ADR-0190), a mock-kártyák (ADR-0189) és az ADR-0191; utána landolt: `c8f2eb9` KB-kiegészítés, `e338d79` ADR-0192 + ontológia — **mindkettő csak dokumentum**)
+Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
-> 🔴 **ÉLES KOCKÁZAT (2026-09-21):** az éles `.env`-ben még a **RÉGI, megszűnt adószámú** Számlázz.hu
-> fiók Agent kulcsa fut — egy éles fizetés ma a megszűnt vállalkozás nevére állítana ki számlát.
-> Lokálban cserélve és igazolva; **az éles csere külön engedélyt kér** (§0.3). Részletek:
-> `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`.
+> 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
+> fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
+> észrevétel felülvizsgálata fut). Számlázás: **prod = CITO-fiók** (valódi számla, 92227011-1-33),
+> **dev = TESZT (OV) fiók** (`OV-` teszt-számla saját cégadatokkal, NAV nélkül), a régi fiók
+> kulcsa **tiltólistán** — a szerepeket boot-őr kényszeríti, mindkét irányban mérve (ADR-0206).
+> 🔴 **A pilot előtti utolsó lépés: a 100 Ft-os próbavásárlás** (kupon-alapú, a tulaj címére) —
+> ez a teljes éles kör egyetlen bizonyítéka: terhelés → webhook → élesítés → **valódi számla**.
+> Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
+> (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-22)
+## Aktív feladat (legfrissebb szál, 2026-09-22 este)
+
+**💳 A FIZETÉSI LÁNC ÉLESÍTÉSE — BARION FULL PIXEL + ÉLES POS + ÉLES SZÁMLÁZÁS (ADR-0206).**
+Session-jegyzet: `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`.
+
+- **Full Pixel:** a Barion Starterre fokozta az elfogadóhelyet, mert a `grantConsent` és a
+  `setEncryptedEmail` hiányzott — az őrünk közben ZÖLD volt, mert a SAJÁT listánkat mérte.
+  Bekötve (más bp-csatornán mennek!), az őr **ZM-kapuja** a Barion hivatalos listáját járja.
+- **Élesben:** `dcb130b` deploy, éles POSKey, ismétlődő fizetés engedélyezve.
+- **Számlázás:** a prod/dev kulcs **fel volt cserélve** (a tesztüzemű fiók kulcsa futott élesen) —
+  javítva, és ujjlenyomat-őr kényszeríti a szerepeket. A dev valódi `OV-` teszt-számlát ad.
+- 🔴 **Nyitva:** a 100 Ft-os próbavásárlás · a -001 felülvizsgálata · „a együttes" elütés-patch ·
+  `Kunó`/`Kuno` székhely-ékezet.
+
+### Előzmény — szoba-szerkesztő (ugyanaznap)
 
 **🛏️ A TENANT-ADMIN SZOBA-SZERKESZTŐ — A JÓVÁHAGYOTT D TERV LESZÁLLÍTVA (ADR-0198 ⑥).**
 Mandátum: `~/rc-briefs/room-editor-impl-brief.md` (a terv-szál GÉPI munkaátadása). Kontraktus:
