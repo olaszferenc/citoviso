@@ -40,14 +40,32 @@ try {
 }
 say(threw, "① tiltólistás kulcs + éles host → a boot elhal (fail-closed)");
 
-// ── ② ugyanaz a kulcs DEV hoston: átmegy (ott legitim) ────────────────────────
+// ── ② BÁRMILYEN kulcs DEV hoston: DOBNIA KELL ────────────────────────────────
+// Teszt-módú fiókunk nincs (2026-09-22 este), tehát dev-ből minden valódi
+// Számla Agent hívás NAV-hoz beküldött számlát szülne — a mock az egyetlen út.
 threw = false;
 try {
   assertInvoiceKeyAllowed({ agentKey: KEY, publicBaseUrl: DEV, denylist: DENY });
 } catch {
   threw = true;
 }
-say(!threw, "② tiltólistás kulcs + dev host → szabad út (a dev-használat legitim)");
+say(threw, "② tiltólistás kulcs + dev host → a dev-boot is elhal");
+
+threw = false;
+try {
+  assertInvoiceKeyAllowed({ agentKey: "az-eles-kulcs", publicBaseUrl: DEV, denylist: DENY });
+} catch {
+  threw = true;
+}
+say(threw, "② az ÉLES kulcs dev hoston → szintén elhal (ez a mai éles veszély)");
+
+threw = false;
+try {
+  assertInvoiceKeyAllowed({ agentKey: "barmi", publicBaseUrl: "http://localhost:4600", denylist: DENY });
+} catch {
+  threw = true;
+}
+say(threw, "② localhost + bármilyen kulcs → elhal (nincs legitim dev-hívás)");
 
 // ── ③ nem-tiltott kulcs éles hoston: átmegy ───────────────────────────────────
 threw = false;
@@ -65,7 +83,7 @@ say(!threw, "③ nem-listás kulcs + éles host → szabad út (az éles kulcs m
 // provider éles-host env-vel felépül (nem dob), azaz az assert tényleg lefut és
 // átereszt — a ①-es ág pedig bizonyítja, hogy tiltott kulccsal dobna.
 process.env.INVOICE_PROVIDER = "szamlazz";
-process.env.PUBLIC_BASE_URL = LIVE;
+process.env.PUBLIC_BASE_URL = DEV;
 process.env.SZAMLAZZ_AGENT_KEY = "other-key";
 const { getInvoiceProvider } = await import("../src/invoicing/index.js");
 threw = false;
@@ -74,7 +92,10 @@ try {
 } catch {
   threw = true;
 }
-say(!threw, "④ a valódi getInvoiceProvider bekötés lefut és nem-listás kulccsal átereszt");
+say(
+  threw,
+  "④ a VALÓDI bekötés dev-env-vel elhal — a mai gépen ez a tényleges védelem",
+);
 
 // ── ⑤ a valódi tiltólista alakilag ép (hex-64 sorok) ──────────────────────────
 say(

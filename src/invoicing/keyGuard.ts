@@ -49,7 +49,29 @@ export function assertInvoiceKeyAllowed(opts: {
   denylist?: readonly string[];
 }): void {
   const list = opts.denylist ?? DENYLISTED_KEY_SHA256;
-  if (!isLiveHost(opts.publicBaseUrl)) return;
+  if (!isLiveHost(opts.publicBaseUrl)) {
+    // ⛔⛔ THE OTHER DIRECTION, AND TODAY THE SHARPER ONE (2026-09-22, evening).
+    // We no longer have ANY test-mode Számlázz.hu account: the live account left
+    // test mode so production can issue real invoices, and a second test account
+    // is refused by Számlázz.hu ("Ennek a vállalkozásnak már van számlázási
+    // fiókja" — the tax number binds the account, not the e-mail). Meanwhile the
+    // working Agent key still sits in the dev .env. That means a single edited
+    // env line — or one script that sets INVOICE_PROVIDER inline — would make a
+    // DEV run issue a REAL, NAV-reported invoice under the owner's company, from
+    // a machine where ~25 parallel threads run automated payment tests.
+    // There is no legitimate reason for dev to reach the real invoicing API
+    // anymore, so the answer is structural, not disciplinary: off the live host,
+    // the szamlazz provider simply cannot be constructed.
+    throw new Error(
+      "⛔ SZÁMLÁZÁS LETILTVA DEV KÖRNYEZETBEN: az INVOICE_PROVIDER=szamlazz csak az " +
+        "ÉLES hoston engedett. Teszt-módú Számlázz.hu-fiókunk NINCS (az élesről a " +
+        "tesztüzem lekerült, másodikat a Számlázz.hu az adószám miatt nem enged), " +
+        "ezért dev-ből minden Számla Agent hívás VALÓDI, NAV-hoz beküldött számlát " +
+        "állítana ki. Dev-ben használd a mock szolgáltatót (INVOICE_PROVIDER=mock); " +
+        "a számla ADATAIT a mock kimenete és a számla-őrök ellenőrzik, valódi " +
+        "kiállítás nélkül. (src/invoicing/keyGuard.ts — 2026-09-22)",
+    );
+  }
   if (!opts.agentKey) return; // a missing key fails later, loudly, on its own
   if (list.includes(keyFingerprint(opts.agentKey))) {
     throw new Error(
