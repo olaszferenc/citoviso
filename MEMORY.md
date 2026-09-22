@@ -6,7 +6,40 @@ Utolsó frissítés: 2026-09-21 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 > Lokálban cserélve és igazolva; **az éles csere külön engedélyt kér** (§0.3). Részletek:
 > `_planning/memory/2026-09-21_szamlazz_uj_fiok.md`.
 
-## Aktív feladat (legfrissebb szál, 2026-09-21)
+## Aktív feladat (legfrissebb szál, 2026-09-22)
+
+**💸 A KIFIZETETT BŐVÍTÉS MIND VAGY SEMMI — és „a pénz megjött" ≠ „kézbesítve" (ADR-0196).**
+Tulajdonosi utasítás: *„vidd a maradék hat hibát is, kezdd a nem-atomi activateUpsell-lel."*
+Session-jegyzet: `_planning/memory/2026-09-22_upsell_atomicity_and_billing_predicate.md`.
+**Élesítés NEM volt feladat** — a tulaj kimondta: élesre majd mindennel együtt.
+
+- **⑧.7 reprodukálva, aztán javítva.** A `activateUpsell` modulonként külön utasítással írt;
+  DB-szintű hibát injektálva a 2. modulnál **`["gallery"]` maradt hátra, kifizetve**.
+- ⛔⛔ **A tranzakció ÖNMAGÁBAN nem lett volna javítás.** A fizetés a rendezés ELŐTT áll
+  `paid`-re, a webhook első sora viszont `alreadySettled`-del tér vissza → egy újraküldött
+  webhook **meg sem próbálta újra**: a vevő fizetett, semmit nem kapott, és az idempotencia
+  elnyelte. Három réteg kellett: **atomi írás** + **a `paid` nem kézbesítési bizonyíték**
+  (`undeliveredUpsellModules` → a replay újrarendez) + **ember-riasztás**, ha az sem megy.
+  ⚠️ Szándékosan csak az `upsell` ágra — a többi `kind` változatlan, kimondva a kódban.
+- **⑧.6** `renewableModuleIds` a „mit számlázunk"-ra második példányban válaszolt, a
+  supersession lába nélkül; ma csak **véletlenül** egyezett (a kiváltott modul spine ÉS 0 Ft).
+  Összevonva az `isBilledModule()`-ra — **5 dev tenanten 0 eltérés**, független referenciával.
+- **⑧.8** a `renderableModules` doc-ja árazásra utasított, amit a kód sosem tett.
+- ⛔ **Három saját hiba, mind MÉRÉSBŐL:** ① az egysoros `getEmailSender` importom **3 modullal
+  kitágította** az ADR-0070 i18n-hatókörét → a riasztás a `payLinkAlert.ts`-be került, nem a
+  közös listát tágítottam ② az **ADR-0194 a kommentjeimben is élt**, miközben elkelt (→0196)
+  ③ a commit kimenetét `| tail -40`-nel néztem, és **az vágta le a bukás sorát** — nem a kapu
+  volt néma, én tettem azzá.
+- **Mellékág:** a `prospect-owned-check` **egyetlen munkafában sem tudott lefutni** (fix 4600-as
+  port → EADDRINUSE, egyetlen állítás előtt). Efemer port kérése, 1 sor → **71 állítás zöld**.
+- 🔴 **A hatból három nyitva:** **⑧.4** (eltűnő Felszereltség-szakasz — *mérve ma egyetlen
+  tenant sincs így*; tulajdonosi döntés: **szóljunk a tulajnak** → **felület, §2b kört kér**)
+  · **⑧.3** (mock fizetőoldal „éves előfizetés" egy egyszeri díjra) · **⑧.5** (az előnézet ÍR).
+- 🔴 **HITELESÍTÉS:** az előző szelet §2b-kivételét egy **gép-írta briefre** hivatkozva nyitottam
+  ki („tulajdonosi mandátum"); a tulaj utóbb kimondta, hogy a promptot nem ő írta. Jelentve, ő a
+  továbbmenetelt választotta — de gép-írta brief **nem** tulajdonosi felhatalmazás (ADR-0068).
+
+## Előző szál (2026-09-21) — a publikus szoba-kártya
 
 **🛏️ A PUBLIKUS SZOBA-KÁRTYA ÉS RÉSZLETEK-FELUGRÓ MEGVALÓSÍTÁSA — ADR-0195.**
 Tulajdonosi mandátum (`~/rc-briefs/rooms-card-brief.md`), a §2b B változat leszállítása.
