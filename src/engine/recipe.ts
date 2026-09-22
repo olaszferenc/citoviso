@@ -139,6 +139,19 @@ export interface Room {
   readonly slug?: string;
   /** ADR-0114 — this unit IS the whole place; the popover says so instead of "Apartman". */
   readonly wholeProperty?: boolean;
+  /**
+   * The `site_unit` id this card stands for — so the card's "Foglalás" can carry WHICH
+   * room down to the booking widget. Measured 2026-09-22: it could not, and the guest
+   * who clicked Foglalás on the second room landed on a form preset to the FIRST one —
+   * wrong calendar, wrong quote, and `unit: currentUnit()` would submit the wrong unit.
+   */
+  readonly unitId?: string;
+  /**
+   * The price line is a FLOOR ("24 000 Ft-tól"), because this unit has several season
+   * prices. The popover may then say the exact price depends on the dates — but only
+   * where the page can actually quote one (§B.17: no promise the page cannot keep).
+   */
+  readonly priceFrom?: boolean;
 }
 
 /**

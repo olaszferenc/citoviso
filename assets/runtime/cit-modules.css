@@ -841,8 +841,12 @@ a.cit-grat:hover {
    positioned inside .cit-rd (inset:0), so plain % is both correct and simpler. */
 @container (min-width: 900px) {
   .cit-rd__panel {
-    inset: 40px auto auto 50%; transform: translateX(-50%);
-    width: min(1060px, 92%); max-height: calc(100% - 80px);
+    /* ⚠️ 40→24px keret. A hangolás skin-függő volt (ami artdeco-n átment, a
+       wordmark-grow betűivel megbukott), ezért a helyet SZERKEZETILEG adjuk hozzá:
+       a párbeszéd közelebb ül a képernyő széléhez, és a nyert 32px minden skinen
+       ugyanannyi — nem a betűméret szerencséje. */
+    inset: 24px auto auto 50%; transform: translateX(-50%);
+    width: min(1060px, 92%); max-height: calc(100% - 48px);
   }
 }
 .cit-rd__x {
@@ -958,7 +962,9 @@ a.cit-grat:hover {
   /* ⛔ Measured on the plan: height + overflow:hidden on the WRAPPER put the 68px thumb
      strip entirely below the box and clipped it away — the gallery the owner approved
      did not exist. The height belongs on the STAGE; the wrapper grows with it. */
-  .cit-rd__stage { height: 22vh; min-height: 120px; max-height: 250px; }
+  /* ⚠️ A padló 120→96: a dátum-mondat hozzáadása ~25px-et vitt el, és két sablonon
+     a 9. felszereltség a hajtás alá esett. A KÉP enged, nem a tények. */
+  .cit-rd__stage { height: 22vh; min-height: 96px; max-height: 250px; }
   .cit-rd__txt { text-align: center; padding: 22px 44px 18px; }
   .cit-rd__desc { margin-top: 10px; }
   .cit-rd__am { grid-template-columns: repeat(3, 1fr); justify-items: center; }
@@ -969,3 +975,25 @@ a.cit-grat:hover {
 /* A bare photo-box for the three minimal templates whose card is just <figure> + caption:
    they have no image wrapper of their own to hang the badge on. */
 .cit-rmbox { position: relative; display: block; }
+
+/* A közös tartalék szoba-kártyájának foglalás-gombja. Mérve 2026-09-22: a hét
+   tartalékra bízott sablonon NULLA volt belőle, vagyis ott a „szobánál a Foglalásra
+   kattintok" folyamat nem létezett — miközben a 12 saját szekciót rajzoló sablonon
+   végig megvolt. */
+.cit-modsec__roomcta {
+  display: inline-block; margin-top: 4px; padding: 9px 18px; text-decoration: none;
+  font-size: .82rem; font-weight: 700; letter-spacing: .04em;
+  background: var(--cit-accent); color: var(--cit-on-accent);
+  border-radius: calc(var(--cit-radius) * 0.6);
+}
+.cit-modsec__roomcta:hover { filter: brightness(1.07); }
+.cit-whole__cta { margin: 14px 0 0; }
+.cit-rd__pricenote { color: var(--cit-muted); font-size: 12.5px; font-style: italic;
+  margin-top: 2px; line-height: 1.45; }
+.cit-rd__pricenote[hidden] { display: none; }
+
+/* Ár a három szikár sablon szoba-feliratában (arch-frames, tilted-gallery,
+   wordmark-grow). Tulajdonosi döntés 2026-09-22: „szobáknál is legyen ár" — ezeken
+   a kártyákon eddig EGYÁLTALÁN nem volt ár, miközben a többi 16-on igen. A sablon
+   rajzát nem írja át: ugyanaz a felirat-stílus, egy sorral lejjebb. */
+.a-price, .w-price, .t-price { font-weight: 600; opacity: .95; }

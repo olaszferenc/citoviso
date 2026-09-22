@@ -974,7 +974,7 @@
     var cover = shell.querySelector("img");
     var photos = [];
     if (cover) photos.push({ src: cover.getAttribute("data-cit-full") || cover.currentSrc || cover.src, alt: cover.alt || "" });
-    var desc = "", empty = "", amHtml = "", amCount = 0, heading = "";
+    var desc = "", empty = "", amHtml = "", amCount = 0, heading = "", priceNote = "";
     if (det) {
       det.querySelectorAll(".cit-rmore__ph img").forEach(function (im) {
         photos.push({ src: im.getAttribute("data-cit-full") || im.getAttribute("src"), alt: im.alt || "" });
@@ -983,6 +983,8 @@
       if (dEl) desc = dEl.textContent || "";
       var eEl = det.querySelector(".cit-rmore__empty");
       if (eEl) empty = eEl.textContent || "";
+      var pnEl = det.querySelector(".cit-rmore__pricenote");
+      if (pnEl) priceNote = pnEl.textContent || "";
       var hEl = det.querySelector(".cit-rmore__h");
       if (hEl) heading = hEl.textContent || "";
       var amEl = det.querySelector(".cit-rmore__am");
@@ -994,10 +996,12 @@
       cap: shell.getAttribute("data-cit-room-cap") || "",
       price: shell.getAttribute("data-cit-room-price") || "",
       whole: shell.getAttribute("data-cit-room-whole") === "1",
+      unitId: shell.getAttribute("data-cit-room-unit") || "",
       photos: photos,
       desc: desc,
       empty: empty,
       heading: heading,
+      priceNote: priceNote,
       amHtml: amHtml,
       amCount: amCount,
       href: shell.getAttribute("href") || "",
@@ -1030,6 +1034,7 @@
       "<h3></h3>" +
       '<p class="cit-rd__cap"></p>' +
       '<p class="cit-rd__price"></p>' +
+      '<p class="cit-rd__pricenote"></p>' +
       '<p class="cit-rd__desc"></p>' +
       '<div class="cit-rd__amwrap"></div>' +
       '<p class="cit-rd__empty"></p>' +
@@ -1072,6 +1077,10 @@
       cap.textContent = room.cap; cap.hidden = !room.cap;
       var pr = q(".cit-rd__price");
       pr.textContent = room.price; pr.hidden = !room.price;
+      // ⛔ Csak PADLÓ-árnál („24 000 Ft-tól"), és csak ha a lap tud is ajánlatot adni —
+      // a szerver dönti el, itt már csak átvesszük. Egy árnál a mondat hazugság volna.
+      var pn = q(".cit-rd__pricenote");
+      pn.textContent = room.priceNote; pn.hidden = !room.priceNote;
       var de = q(".cit-rd__desc");
       de.textContent = room.desc; de.hidden = !room.desc;
       // ⛔ ADR-0181: no heading without items — an empty amenity box is a claim.
@@ -1082,10 +1091,17 @@
         : "";
       var em = q(".cit-rd__empty");
       em.textContent = room.empty; em.hidden = !room.empty;
-      // The CTA is the page's own enquiry/booking anchor — the popover never invents
-      // a second process (ADR-0048: one word, one slot for the whole page).
+      // The CTA is the page's own enquiry/booking anchor — the popover never invents a
+      // second process (ADR-0048: one word, one slot for the whole page).
+      // ⛔ WHICHEVER ANCHOR ACTUALLY EXISTS. The server rewrites #cit-enquiry to
+      // #cit-booking when the booking module is on, but that rewrite only touches
+      // SERVER-rendered HTML — this CTA is built here, so a hard-coded #cit-enquiry
+      // would have pointed at nothing on exactly the pages that sell booking.
+      var target = document.querySelector("#cit-booking") ? "#cit-booking" : "#cit-enquiry";
       q(".cit-rd__cta").innerHTML =
-        '<a href="#cit-enquiry">' + esc(tr("Foglalás")) + "</a>";
+        '<a href="' + target + '"' +
+        (room.unitId ? ' data-cit-room-unit="' + esc(room.unitId) + '"' : "") +
+        ' data-rd-cta>' + esc(tr("Foglalás")) + "</a>";
       thumbs.innerHTML = "";
       room.photos.forEach(function (p, n) {
         var b = document.createElement("button");
@@ -1113,6 +1129,9 @@
     }
 
     root.addEventListener("click", function (e) {
+      // ⛔ A CTA ZÁRJA A FELUGRÓT. Nélküle a vendég leugrik a foglalás-szekcióra, de a
+      // fátyol és a görgetés-zár fent marad — a lap halottnak látszik.
+      if (e.target.closest("[data-rd-cta]")) { close(); return; }
       var t = e.target.closest("[data-rd]");
       if (t) {
         var a = t.getAttribute("data-rd");
@@ -1164,6 +1183,46 @@
       var room = rooms[trigger.getAttribute("data-cit-room")];
       if (room) ensureRoomPopover().open(room, trigger);
     }
+
+    /**
+     * ⛔⛔ THE JUMP MUST CARRY WHICH ROOM.
+     *
+     * Measured 2026-09-22: clicking "Foglalás" on the SECOND room card DID jump to the
+     * booking section — and left the unit selector on the FIRST unit. The guest then set
+     * dates against the wrong unit's calendar, read the wrong unit's quote, and
+     * `unit: currentUnit()` would submit the wrong unit: the owner receives a booking
+     * request for a room nobody asked for. The anchor carried no room at all.
+     *
+     * We set the SELECT, because that is what everything else already reads — the
+     * availability refetch, the price rows and the submit all follow it. (Without JS
+     * there is no booking widget at all, so this is inherently a JS-side step.)
+     */
+    function carryUnitToBooking(anchor) {
+      var card = anchor.closest("article, li, tr, figure, .cit-whole, .cit-modsec__item");
+      var holder = anchor.getAttribute("data-cit-room-unit")
+        ? anchor
+        : card
+          ? card.querySelector("[data-cit-room-unit]")
+          : null;
+      var unitId = holder && holder.getAttribute("data-cit-room-unit");
+      if (!unitId) return;
+      var sel = document.querySelector('[name="unit"]');
+      if (!sel || sel.value === unitId) return;
+      // ⚠️ Csak akkor állítunk, ha a választóban TÉNYLEG van ilyen érték — különben némán
+      // egy nem létező egységre váltanánk, és a naptár üresen maradna.
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === unitId) {
+          sel.value = unitId;
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+          return;
+        }
+      }
+    }
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest('a[href="#cit-booking"], a[href="#cit-enquiry"]');
+      if (a) carryUnitToBooking(a);
+    });
+
     slot.addEventListener("click", function (e) {
       var t = e.target.closest("[data-cit-room]");
       if (!t || !slot.contains(t)) return;

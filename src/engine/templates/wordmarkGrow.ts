@@ -284,7 +284,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
               `<span class="cit-rmbox">${card(r.photo, r.name, i * 140)}${roomHint(data, r)}</span>
           <figcaption>${esc(r.name)}${
             r.capacity ? `<span class="w-note">${esc(r.capacity)}</span>` : ""
-          }</figcaption>`,
+          }${r.price ? `<span class="w-note w-price">${esc(r.price)}</span>` : ""}</figcaption>`,
             )}${roomDetails(data, r, i)}</figure>`,
           )
           .join("")}

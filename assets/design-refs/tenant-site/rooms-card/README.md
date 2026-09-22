@@ -162,6 +162,7 @@ megvalósítás ELŐTT születik, ezért még nem jelölheti meg őket — nincs
 | **„Részletek"** | a jelvény EGY fotónál, és a kártya nyitó-gombja | `templateKit.ts` + a 12 sablon |
 | **„A szállás egésze"** | a felugró kategória-felirata a teljes szállásnál | `cit-runtime.js` |
 | **„Apartman"** | a felugró kategória-felirata egy egységnél | `cit-runtime.js` |
+| **„A pontos ár a dátumoktól függ."** | a felugróban, PADLÓ-ár alatt | `templateKit.ts` (`roomDetails`) |
 
 ⚠️ A `{n} kép` SZÁNDÉKOSAN a nyers kulcs: a képernyőn „4 kép" áll, de az behelyettesített
 alak — a kötő szöveg a `T()` argumentuma, különben az őr egy sosem létező literált keresne
@@ -177,6 +178,25 @@ alak — a kötő szöveg a `T()` argumentuma, különben az őr egy sosem léte
   nulla magassággal). Ugyanez a meglévő nagykép-réteget is érintette.
 - **Az ár a kártyán MARAD** (tulajdonosi döntés, 2026-09-21). A §5 kimondja, hogy a terv
   az ár helyét nem dönti el; a kártya így hat elemű.
+
+**UTÓSZÁL — 2026-09-22 (tulajdonosi döntés, ADR-0199):**
+
+- **Több ár → PADLÓ, nem sáv.** A kártya „24 000 Ft-tól / éj"-t ír a „24 000–32 000 Ft / éj"
+  helyett. A sáv két számot tett oda, ahol a vendég egyet keres. A „-tól" MEGTARTJA az Elek
+  FK-007 invariánsát: kimondja, hogy ez a padló — a régi hiba épp az volt, hogy ez a jelzés
+  hiányzott. Egy árnál nincs „-tól".
+- **A felugró kimondja, mitől függ** — de CSAK padló-árnál és CSAK ott, ahol a lap tud is
+  ajánlatot adni. Mérve: a runtime `quoteFor()`-ja `null`-t ad ár-sor nélkül, és az
+  ár-doboz üresen marad; egy „válasszon dátumot" felirat ilyenkor be nem tartható ígéret.
+- ⛔ **KÖT: a kártya „Foglalás"-a VISZI, MELYIK SZOBÁRÓL jött.** Mérve 2026-09-22: a 2. szoba
+  gombja leugrott a foglalás-szekcióra, és a választót az 1. egységen hagyta — rossz naptár,
+  rossz ár, és `unit: currentUnit()` a ROSSZ egységre küldte volna a kérést.
+- ⛔ **KÖT: minden szobának van foglalás-útja, ami viszi az egységet.** Ahol a kártyán van
+  gomb (16 sablon), ott az; a három szikár sablonon (`arch-frames`, `tilted-gallery`,
+  `wordmark-grow`) a FELUGRÓ „Foglalás"-a — és az mind a 19-en kötelezően viszi az egységet.
+  Mérve: a közös tartalék kártyáin (7 sablon) 2026-09-22-ig NULLA foglalás-gomb volt.
+- **A három szikár sablon kártyája ár-sort kap** (tulajdonosi döntés: „szobáknál is legyen
+  ár") — a meglévő felirat-stílusban, a sablon rajzának átírása nélkül.
 
 ⛔ **Idézd a `T()` argumentumát, ne a képernyőn látott összefűzött mondatot**
 (`feedback_composed_sentence_is_not_a_quotable_label`: háromszor buktam el ezen egy

@@ -320,7 +320,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
             i,
             "t-rvlink",
             `<span class="cit-rmbox">${shot(r.photo, r.name)}${roomHint(data, r)}</span>
-          <figcaption>${esc(r.name)}${r.capacity ? `<span class="t-note">${esc(r.capacity)}</span>` : ""}</figcaption>`,
+          <figcaption>${esc(r.name)}${r.capacity ? `<span class="t-note">${esc(r.capacity)}</span>` : ""}${r.price ? `<span class="t-note t-price">${esc(r.price)}</span>` : ""}</figcaption>`,
           )}${roomDetails(data, r, i)}
         </div></figure>`,
         )

@@ -293,7 +293,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
               `<span class="cit-rmbox">${framed(r.photo, r.name, i * 170)}${roomHint(data, r)}</span>
           <figcaption>${esc(r.name)}${
             r.capacity ? `<span class="a-note">${esc(r.capacity)}</span>` : ""
-          }</figcaption>`,
+          }${r.price ? `<span class="a-note a-price">${esc(r.price)}</span>` : ""}</figcaption>`,
             )}${roomDetails(data, r, i)}</figure>`,
           )
           .join("")}

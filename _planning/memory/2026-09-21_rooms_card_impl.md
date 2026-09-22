@@ -94,3 +94,24 @@ dokumentum közepén nyílt. Mindkét réteg pozíciója most `!important`, kimo
 3. ⏳ Az **admin** szoba-szerkesztő külön §2b kört kér (a kontraktus §5 kiveszi).
 4. ⏳ A felugró interakciójának mérése ma a FIXTURE-ön fut; élő tenant-lapon
    (Elek-forgatókönyv) még nincs végigkattintva.
+
+---
+
+# UTÓSZÁL — 2026-09-22: a leugrás és az ár-sor (ADR-0199)
+
+A tulaj két kérdése nyomán mérve, és **a második kérdésre a mérés mást válaszolt**, mint amire számítottunk.
+
+- ✅ A kártya Foglalás gombja tényleg odaugrik a foglalás-szekcióra, és ott dátum állítható.
+- ⛔ **De nem vitte át, MELYIK szobáról jött**: a 2. szoba gombja után a választó az 1. egységen maradt → rossz naptár, rossz ár, és `unit: currentUnit()` a ROSSZ egységre küldte volna a kérést.
+- ⛔ **A közös tartalék kártyáin (7 sablon) NULLA foglalás-gomb volt** — ott a folyamat nem is létezett.
+- Mindkettő KORÁBBI állapot, nem az ADR-0195 terméke.
+
+**Szállítva:** `data-cit-room-unit` a héjon + a runtime beállítja a `<select name="unit">`-et (`change`-csel, mert minden más azt olvassa) · foglalás-gomb a közös tartalékba · **PADLÓ-ár** (`24 000 Ft-tól / éj`) a sáv helyett · a „A pontos ár a dátumoktól függ." mondat a FELUGRÓBA, és csak padló-árnál + foglalás-felülettel · ár-sor a három szikár sablon kártyájára.
+
+⛔ **A tulaj javaslatát (szám helyett mondat a kártyán) NEM vettem át**, két mért okból: az ár az első szűrő; és a mondat be nem tartható ígéret ott, ahol `quoteFor()` `null`-t ad és az ár-doboz üresen marad. Ezt kimondtam neki, nem csendben döntöttem el.
+
+**Őr:** a `room-details-check` négy új állítással és három új visszarontással — **10 visszarontás, mind piros, kontroll zöld**. Az egyik állítás OUTCOME-szintű lett („eljut-e a vendég a foglaláshoz a szoba azonosságával"), nem mechanizmus-szintű („van-e gomb") — így a három szikár sablon a felugrón át teljesíti, kivétel nélkül.
+
+⛔ **Két saját hiba ismét:** a `file://` foglaltság-lekérés CORS-hibáját a mérőm „JS-hibának" olvasta; és egy visszarontásom **másodszor** célzott már nem létező mechanizmust (a runtime a `<details>`-t a `load` ELŐTT kiveszi) — 0/4 pirossal „bizonyított" volna.
+
+⚠️ **ADR-szám ötödször csúszott:** amíg dolgoztam, két párhuzamos szál landolta a 0196-ot és a 0197-et → 0198.

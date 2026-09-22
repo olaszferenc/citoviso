@@ -17,8 +17,8 @@
 // from the skin's --cit-* contract, so the block inherits whatever template it
 // lands in instead of fighting it.
 
-import type { SiteData } from "./recipe.js";
-import { T, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
+import type { RenderPhase, SiteData } from "./recipe.js";
+import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { mapEmbed } from "./primitives.js";
 import { formatMoney } from "../text/money.js";
@@ -497,9 +497,24 @@ function newsletterBlock(_d: SiteData, _opts: { demo?: boolean; sample?: boolean
  * module must not get nothing just because of which template their site drew.
  * The caller decides (see `alreadyShown`) so we never print the rooms twice.
  */
-function roomsBlock(d: SiteData): string {
+function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
   const rooms = d.rooms ?? [];
   if (!rooms.length) return "";
+  // ⛔ MÉRVE 2026-09-22: a közös tartalék kártyáin NULLA foglalás-gomb volt, vagyis a
+  // hét tartalékra bízott sablonon az a folyamat — „a szobánál a Foglalásra kattintok,
+  // és leugrom a naptárhoz" — EGYÁLTALÁN NEM LÉTEZETT. A 12 saját szoba-szekciót rajzoló
+  // sablonon végig megvolt; itt csendben hiányzott.
+  // ⛔ A FÁZIST ÁT KELL ADNI. Az első változatom `ctaLabel(d)`-t hívott (alapértelmezett
+  // „live" fázis), és a MOCKON „Érdeklődés"-t írt, miközben a lap minden más gombja
+  // „Foglalás"-t — pontosan az ADR-0048 egy-szó-egy-folyamat szabályának megsértése.
+  // Egy IDEGEN őr (module-slot-check) fogta meg, hat sablonon.
+  const canAsk = Boolean(d.contact.email || d.contact.phone);
+  const cta = (r: (typeof rooms)[number]): string =>
+    canAsk
+      ? `<a class="cit-modsec__roomcta" href="#cit-enquiry"` +
+        (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
+        `>${esc(ctaLabel(d, phase))}</a>`
+      : "";
   // ⛔ KONTRAKTUS ⑨ (ADR-0114): EGYETLEN egységnél nincs egy-kártyás rács. Mérve az
   // éles lapon: 229 px magas „Szobák, apartmanok" szekció egyetlen apró kártyával és
   // egy „6 fő" felirattal — a rács üzenete („válasszon a szobák közül") hamis, ha
@@ -535,6 +550,7 @@ function roomsBlock(d: SiteData): string {
           (cells ? `<ul class="cit-whole__facts">${cells}</ul>` : "") +
           `</div>`,
       ) +
+      (cta(r) ? `<p class="cit-whole__cta">${cta(r)}</p>` : "") +
       roomDetails(d, r, 0) +
       `</div></section>`
     );
@@ -562,6 +578,7 @@ function roomsBlock(d: SiteData): string {
             (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
             (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : ""),
         ) +
+        cta(r) +
         roomDetails(d, r, i) +
         `</li>`,
     )
@@ -882,10 +899,10 @@ export function moduleSectionGroups(
       opts.roomsAlreadyShown
         ? ""
         : d.rooms?.length
-          ? roomsBlock(d)
+          ? roomsBlock(d, opts.demo ? "mock" : "live")
           : s.has("rooms")
             ? asSample(
-                roomsBlock({ ...d, rooms: sampleRooms(d) }),
+                roomsBlock({ ...d, rooms: sampleRooms(d) }, opts.demo ? "mock" : "live"),
                 d,
                 T(d, "Minta — ide az Ön szobái, fotói és árai kerülnek."),
               )

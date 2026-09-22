@@ -72,25 +72,36 @@ const DESC_MANY = "A teljes ház a kertre nyíló nappalival és tágas konyháv
 const DESC_ONE = "Külön bejárat, teakonyha, csendes sarok a kert végében.";
 
 /** A három forgatókönyv EGY lapon: a mérés így ugyanazon a renderen látja mindet. */
+const UNITS = [
+  { id: "u-teljes", name: "Teljes Szállás", capacity: 12 },
+  { id: "u-kerti", name: "Kerti Appartman", capacity: 4 },
+  { id: "u-teto", name: "Tetőtéri Appartman", capacity: 6 },
+];
+
 const ROOMS: Room[] = [
   {
     // ⭐ A SOK-fotós, SOK-felszereltséges eset: a galéria-vezérlők ÉS a 6-tétel szabály.
-    name: "Teljes Szállás", capacity: "12 fő", price: "24 000–32 000 Ft / éj",
+    // ⭐ ÉS a TÖBB-ÁRÚ eset: a kártyán PADLÓ-ár („-tól"), a felugróban a dátum-mondat.
+    name: "Teljes Szállás", unitId: "u-teljes", capacity: "12 fő",
+    price: "24 000 Ft-tól / éj", priceFrom: true,
     description: DESC_MANY, amenities: NINE, wholeProperty: true,
     photo: P[0], photos: P, slug: "teljes-szallas",
   },
   {
-    // ⭐ AZ ALAPESET: EGY fotó. Mérve: 4 egységből 3-nak egy képe van — tehát a
-    // „halott vezérlő" tilalmat ITT kell bizonyítani, nem a széleken.
-    name: "Kerti Appartman", capacity: "4 fő", price: "18 000 Ft / éj",
+    // ⭐ AZ ALAPESET: EGY fotó, EGY ár. Mérve: 4 egységből 3-nak egy képe van — tehát a
+    // „halott vezérlő" tilalmat ITT kell bizonyítani, nem a széleken. Egy árnál NINCS
+    // „-tól" és NINCS dátum-mondat: az a padló-jelzés ott hazugság volna.
+    name: "Kerti Appartman", unitId: "u-kerti", capacity: "4 fő", price: "18 000 Ft / éj",
     description: DESC_ONE, amenities: [am("Ingyenes Wi‑Fi"), am("Saját fürdőszoba")],
     photo: P[1], slug: "kerti-appartman",
   },
   {
     // ⭐ AZ ÜRES egység: se leírás, se felszereltség → őszinte mondat, alcím NÉLKÜL.
-    name: "Tetőtéri Appartman", capacity: "6 fő", photo: P[2],
+    name: "Tetőtéri Appartman", unitId: "u-teto", capacity: "6 fő", photo: P[2],
   },
 ];
+
+const DATE_NOTE = "A pontos ár a dátumoktól függ.";
 
 const EMPTY_SENTENCE = "Ehhez az egységhez még nincs leírás és felszereltség megadva.";
 const AM_HEADING = "Amit ez az egység kínál";
@@ -105,6 +116,9 @@ function siteData(): SiteData {
     contact: { email: "info@example.invalid", phone: "+36 30 000 0000", address: "Fő utca 1." },
     place: { city: "Balatonboglár", country: "HU" },
     rooms: ROOMS,
+    // ⚠️ A foglalás-modul NÉLKÜL a „melyik szobáról ugrottam le" állítás nem mérhető:
+    // nincs egység-választó, amit meg lehetne nézni. A hiba pont ott él, ahol pénz van.
+    booking: { units: UNITS, minNights: 1, maxNights: 14, horizonMonths: 6, leadTimeDays: 0 },
   } as unknown as SiteData;
 }
 
@@ -117,7 +131,7 @@ const WIDTHS = [
 // STRING, mert a tsx/esbuild `keepNames`-e `__name(...)` hívást injektálna a nyilazott
 // függvényekbe, ami `page.evaluate`-ben ReferenceError.
 const PROBE = `(function (cfg) {
-  var out = { fatal: null, findings: [], shells: 0, cards: 0 };
+  var out = { fatal: null, findings: [], shells: 0, cards: 0, cardCtas: 0 };
   function bad(kind, detail) { out.findings.push({ kind: kind, detail: detail }); }
 
   var sec = document.querySelector('[data-cit-module="rooms"]');
@@ -220,6 +234,57 @@ const PROBE = `(function (cfg) {
     var href = sh.getAttribute("href");
     if (expectHref && href !== expectHref) bad("a-kartya-nem-az-aloldalra-mutat", "szoba #" + idx + " href=" + href);
     if (!expectHref && sh.tagName === "A") bad("link-aloldal-nelkul", "szoba #" + idx + " <a> van, de nincs aloldala");
+  }
+
+  // ── ①b A LEUGRÁS VISZI-E A SZOBÁT? ────────────────────────────────────────
+  // ⛔ Mérve 2026-09-22: a 2. szoba „Foglalás"-a leugrott a foglalás-szekcióra, és a
+  // választót az 1. egységen hagyta — rossz naptár, rossz ár, és a beküldés a ROSSZ
+  // egységre ment volna. A kérdés nem az, hogy odaugrik-e, hanem hogy MIT VISZ MAGÁVAL.
+  var sel = document.querySelector('[name="unit"]');
+  var ctas = sec.querySelectorAll('a[href="#cit-booking"], a[href="#cit-enquiry"]');
+  // ⚠️ A KÉRDÉS NEM A GOMB, HANEM AZ ÚT. Három sablon (arch-frames, tilted-gallery,
+  // wordmark-grow) kártyája szándékosan szikár: fotó + név + férőhely + ár, CTA nélkül —
+  // ott a felugró „Foglalás"-a az út, és azt a felugró-szonda méri (ott KÖT, mind a 19-en).
+  // Itt csak azt kötjük ki: AHOL VAN kártya-gomb, ott vinnie KELL a szobát.
+  out.cardCtas = ctas.length;
+  if (cfg.expectCta && ctas.length) {
+    if (!sel) bad("nincs-egyseg-valaszto", "van foglalás-gomb, de nincs mihez vinni a szobát");
+    else {
+      // a MÁSODIK szoba gombja — az elsőn a hiba szerkezetileg láthatatlan volna
+      var want = cfg.unitByIndex["1"];
+      var target = null;
+      for (var ci = 0; ci < ctas.length; ci++) {
+        var card = ctas[ci].closest("article, li, tr, figure, .cit-whole, .cit-modsec__item");
+        var h = card ? card.querySelector('[data-cit-room-unit="' + want + '"]') : null;
+        if (h || ctas[ci].getAttribute("data-cit-room-unit") === want) { target = ctas[ci]; break; }
+      }
+      if (!target) bad("a-foglalas-gomb-nem-tudja-melyik-szoba", "szoba #1 (" + want + ")");
+      else {
+        var before = sel.value;
+        target.click();
+        if (sel.value !== want) {
+          bad("a-leugras-nem-vitte-at-a-szobat",
+            "kattintás a 2. szoba gombján: választó " + before + " → " + sel.value + " (várt: " + want + ")");
+        }
+        sel.value = before;
+      }
+    }
+  }
+
+  // ── ①c AZ ÁR-SOR ALAKJA ────────────────────────────────────────────────────
+  // ⛔ Több ár → PADLÓ, kimondott „-tól"-lal. Enélkül a kártya olyan számot állít, ami
+  // alatta van annak, amit a vendég fizetni fog — pont az Elek FK-007 hiba.
+  for (var pi = 0; pi < cfg.priceByIndex.length; pi++) {
+    var want2 = cfg.priceByIndex[pi];
+    if (!want2) continue;
+    if (secText.indexOf(want2.toLowerCase()) < 0) {
+      // ⚠️ Idézőjel NÉLKÜL: a beágyazott template-literálban az escape-elt " kétszer is
+      // szintaxis-hibát okozott ebben a fájlban. A lelet így is egyértelmű.
+      bad("hianyzo-vagy-mas-ar-sor", "szoba #" + pi + " várt ár-sor: " + want2);
+    }
+  }
+  if (cfg.forbiddenPrice && secText.indexOf(cfg.forbiddenPrice.toLowerCase()) >= 0) {
+    bad("sav-alaku-ar-a-kartyan", cfg.forbiddenPrice);
   }
 
   // ── ② A FELUGRÓ ────────────────────────────────────────────────────────────
@@ -340,9 +405,26 @@ const PROBE_RD = `(function (want) {
     out.visibleAmenities = visible;
   }
 
+  // ⛔ A DÁTUM-MONDAT CSAK PADLÓ-ÁRNÁL. Egy árnál ott hazugság volna („a pontos ár a
+  // dátumoktól függ", miközben egyetlen ár van), üres egységnél pedig semmire nem mutat.
+  var noteShown = txt.indexOf(want.dateNote.toLowerCase()) >= 0;
+  if (want.priceFrom && !noteShown) bad("nincs-datum-mondat-padlo-arnal", want.name);
+  if (!want.priceFrom && noteShown) bad("datum-mondat-egy-arnal", want.name);
+
   // A „Foglalás" mindig ott van, és a vendég előtt.
   var cta = panel.querySelector(".cit-rd__cta a");
   if (!seen(cta, panel)) bad("nincs-lathato-foglalas-gomb", box(cta) ? "kifestve, de nem látható" : "nincs kifestve");
+  // ⛔⛔ ÉS VISZI A SZOBÁT. Ez az OUTCOME-állítás: a vendég ezen az úton is eljut a
+  // foglaláshoz, és a foglalás arról az egységről fog szólni, amelyiket megnyitotta.
+  // A szikár sablonokon ez az EGYETLEN út, tehát itt nem lehet kivétel.
+  if (cta && want.unitId && cta.getAttribute("data-cit-room-unit") !== want.unitId) {
+    bad("a-felugro-foglalasa-nem-viszi-a-szobat",
+      want.name + ": " + (cta.getAttribute("data-cit-room-unit") || "semmit"));
+  }
+  // ⛔ ÉS LÉTEZŐ horgonyra mutat: a szerver #cit-enquiry→#cit-booking átírása csak a
+  // SZERVER-oldali markupot éri el, ez a gomb viszont itt születik.
+  var href = cta ? cta.getAttribute("href") : null;
+  if (href && !document.querySelector(href)) bad("a-felugro-foglalasa-a-semmibe-mutat", href);
   out.ok = true;
   return out;
 })`;
@@ -351,14 +433,14 @@ interface Finding { kind: string; detail: string }
 
 interface Expect {
   idx: number; name: string; cap: string; desc: string; photos: number; amenities: number;
-  minVisible: number;
+  minVisible: number; priceFrom: boolean; unitId: string;
 }
 
 function expectations(minVisible: number): Expect[] {
   return [
-    { idx: 0, name: "Teljes Szállás", cap: "12 fő", desc: DESC_MANY, photos: 4, amenities: 9, minVisible },
-    { idx: 1, name: "Kerti Appartman", cap: "4 fő", desc: DESC_ONE, photos: 1, amenities: 2, minVisible },
-    { idx: 2, name: "Tetőtéri Appartman", cap: "6 fő", desc: "", photos: 1, amenities: 0, minVisible },
+    { idx: 0, name: "Teljes Szállás", cap: "12 fő", desc: DESC_MANY, photos: 4, amenities: 9, minVisible, priceFrom: true, unitId: "u-teljes" },
+    { idx: 1, name: "Kerti Appartman", cap: "4 fő", desc: DESC_ONE, photos: 1, amenities: 2, minVisible, priceFrom: false, unitId: "u-kerti" },
+    { idx: 2, name: "Tetőtéri Appartman", cap: "6 fő", desc: "", photos: 1, amenities: 0, minVisible, priceFrom: false, unitId: "u-teto" },
   ];
 }
 
@@ -377,6 +459,11 @@ async function measure(page: Page, url: string, width: number) {
     // futáson pontosan ez adott 2 „js-hiba" leletet egy hibátlan lapon — a beszámoló
     // fele a mérés mellékterméke lett volna. A VALÓDI kivételeket a pageerror hozza.
     if (/net::ERR_FAILED|Failed to load resource/i.test(m.text())) return;
+    // ⚠️ A foglaltság-lekérés `file://`-ról CORS-hibát ad — a MÉRÉS környezete okozza,
+    // nem a termék. A runtime ezt szándékosan lenyeli („Availability unreachable: do NOT
+    // block the guest"), tehát a vendég ebből semmit nem lát. A szűrés SZŰK: csak a
+    // foglaltság-végpontra szól, hogy egy valódi CORS-hiba máshol ne csússzon át.
+    if (/foglaltsag/.test(m.text()) && /CORS|Cross origin/i.test(m.text())) return;
     errs.push(m.text());
   };
   page.on("pageerror", onErr);
@@ -394,9 +481,20 @@ async function measure(page: Page, url: string, width: number) {
     if (r.slug) hrefByIndex[String(i)] = `/apartman/${r.slug}`;
   });
   const forbiddenOnCard = [DESC_MANY, DESC_ONE, ...NINE.map((a) => a.label)];
+  const unitByIndex: Record<string, string> = {};
+  ROOMS.forEach((r, i) => { if (r.unitId) unitByIndex[String(i)] = r.unitId; });
+  const priceByIndex = ROOMS.map((r) => r.price ?? "");
 
   const card = (await page.evaluate(
-    `${PROBE}(${JSON.stringify({ names: ROOMS.map((r) => r.name), hintByIndex, hrefByIndex, forbiddenOnCard })})`,
+    `${PROBE}(${JSON.stringify({
+      names: ROOMS.map((r) => r.name), hintByIndex, hrefByIndex, forbiddenOnCard,
+      unitByIndex, priceByIndex,
+      // ⛔ A SÁV-alak tilos: ez az a forma, amit a „-tól" leváltott.
+      forbiddenPrice: "24 000–32 000",
+      // Minden sablon szoba-kártyáján KELL lennie foglalás-gombnak — a hét tartalékos
+      // sablonon 2026-09-22-ig NULLA volt, vagyis ott a folyamat nem is létezett.
+      expectCta: true,
+    })})`,
   )) as { fatal: string | null; findings: Finding[]; shells: number; cards: number };
 
   const findings: Finding[] = [...card.findings];
@@ -406,7 +504,7 @@ async function measure(page: Page, url: string, width: number) {
       if (!opened) { findings.push({ kind: "nincs-nyito-vezerlo", detail: want.name }); continue; }
       await page.waitForTimeout(220);
       const res = (await page.evaluate(
-        `${PROBE_RD}(${JSON.stringify({ ...want, emptySentence: EMPTY_SENTENCE, heading: AM_HEADING })})`,
+        `${PROBE_RD}(${JSON.stringify({ ...want, emptySentence: EMPTY_SENTENCE, heading: AM_HEADING, dateNote: DATE_NOTE })})`,
       )) as { findings: Finding[] };
       findings.push(...res.findings);
 
@@ -513,6 +611,36 @@ const REVERTS = [
         `var n=sh.getAttribute("data-cit-room-name");if(!m[n])return;` +
         `var p=document.createElement("p");p.textContent=m[n];` +
         `(sh.parentElement||sh).appendChild(p);});});</script></body>`,
+      ),
+  },
+  {
+    key: "a leugrás elfelejti a szobát",
+    why: "a 2026-09-22-i bejelentett hiba: a gomb odaugrik, de a választót az 1. egységen hagyja",
+    apply: (html: string) =>
+      html.replace(
+        "</body>",
+        `<script data-cit-selftest>window.addEventListener("load",function(){` +
+        `document.querySelectorAll("[data-cit-room-unit]").forEach(function(e){` +
+        `e.removeAttribute("data-cit-room-unit");});});</script></body>`,
+      ),
+  },
+  {
+    key: "a sáv-alakú ár visszatérése",
+    why: "a kártya megint két számot ír oda, ahol a vendég egyet keres, padló-jelzés nélkül",
+    apply: (html: string) =>
+      html.replaceAll("24 000 Ft-tól / éj", "24 000–32 000 Ft / éj"),
+  },
+  {
+    key: "a dátum-mondat egy árnál is megjelenik",
+    why: "a mondat ott hazugság: egyetlen ár van, nincs mit a dátumtól függővé tenni",
+    // ⚠️ A HTML-BE írjuk, nem futásidőben. Az első változatom `load`-ra futó szkript volt,
+    // de a runtime a `<details>`-t MÁR a DOMContentLoaded-en kiveszi — mire a szkript
+    // elindult, nem volt mit elrontania, és a kapu 0/4 pirossal „bizonyított". Ez már a
+    // MÁSODIK visszarontásom, ami egy megszűnt mechanizmusra célzott.
+    apply: (html: string) =>
+      html.replace(
+        /(data-cit-roomdata="1">[\s\S]*?<div class="cit-rmore__in">)/,
+        `$1<p class="cit-rmore__pricenote">${DATE_NOTE}</p>`,
       ),
   },
   {

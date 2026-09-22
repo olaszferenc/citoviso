@@ -8,7 +8,7 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `91b856d`** változatlan, tag `p
 
 ## Aktív feladat (legfrissebb szál, 2026-09-22)
 
-**🛏️ A TENANT-ADMIN SZOBA-SZERKESZTŐ — §2b terv-kör, a tulaj a D változatot jóváhagyta (ADR-0198).**
+**🛏️ A TENANT-ADMIN SZOBA-SZERKESZTŐ — §2b terv-kör, a tulaj a D változatot jóváhagyta (ADR-0199).**
 Tulajdonosi mandátum (`~/rc-briefs/rooms-admin-brief.md`): kártyás/kinyitható szobák, helyben
 képfeltöltés, **borítókép**. Kontraktus: `assets/design-refs/tenant-admin/room-editor/`
 (README + `plan.html` + 8 kép). Session-jegyzet: `_planning/memory/2026-09-22_room_editor_plan.md`.
@@ -102,7 +102,7 @@ Session-jegyzet: `_planning/memory/2026-09-22_upsell_atomicity_and_billing_predi
 
 ## Előző szál (2026-09-21) — a publikus szoba-kártya
 
-**🛏️ A PUBLIKUS SZOBA-KÁRTYA ÉS RÉSZLETEK-FELUGRÓ MEGVALÓSÍTÁSA — ADR-0195.**
+**🛏️ A PUBLIKUS SZOBA-KÁRTYA ÉS RÉSZLETEK-FELUGRÓ — ADR-0195 + ADR-0199.**
 Tulajdonosi mandátum (`~/rc-briefs/rooms-card-brief.md`), a §2b B változat leszállítása.
 Kontraktus: `assets/design-refs/tenant-site/rooms-card/README.md`.
 Session-jegyzet: `_planning/memory/2026-09-21_rooms_card_impl.md`. **Élesítés NEM volt feladat.**
@@ -132,6 +132,15 @@ Session-jegyzet: `_planning/memory/2026-09-21_rooms_card_impl.md`. **Élesítés
 - ⭐ **Nem keresett lelet:** az `aurora` `body>*{position:relative}` szabálya (0,2,1) leütötte
   az overlay `fixed`-jét (4029 px-re lent, nulla magassággal) — **és ugyanez a MEGLÉVŐ
   nagykép-lightboxot is érintette, csendben, eddig is.** Mindkettő pozíciója most `!important`.
+- **⭐ UTÓSZÁL (2026-09-22, ADR-0199):** a tulaj kérdésére mérve kiderült, hogy a kártya
+  Foglalás gombja odaugrik ugyan, **de nem viszi át, MELYIK szobáról jött** — a 2. szoba
+  gombja után a választó az 1. egységen maradt (rossz naptár, rossz ár, és a beküldés a
+  ROSSZ egységre ment volna); a közös tartalék kártyáin pedig **nulla** foglalás-gomb volt.
+  Mindkettő korábbi állapot. Szállítva: `data-cit-room-unit` + a runtime átállítja a
+  választót · gomb a tartalékba · **PADLÓ-ár** (`24 000 Ft-tól / éj`) a sáv helyett · a
+  dátum-mondat a FELUGRÓBA, csak ott, ahol a lap tud is árat számolni. ⛔ A tulaj „szám
+  helyett mondat" javaslatát NEM vettem át (az ár az első szűrő; és `quoteFor()` `null`-t
+  ad ár-sor nélkül) — kimondva, nem csendben.
 - 🔴 **NYITOTT:** ① **négy sablon** (`arch-frames`, `tilted-gallery`, `wordmark-grow`,
   `transit`) a tulaj képen-döntésére vár — a szállított „A" változatban a képen álló jelvény
   az egyetlen belépő ② az ár „minimumtól" alakja egy MÉRT döntést írna felül (Elek FK-007:

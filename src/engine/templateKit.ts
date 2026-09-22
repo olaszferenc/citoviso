@@ -348,6 +348,8 @@ export function roomShell(d: SiteData, r: Room, i: number, cls: string, inner: s
     (r.capacity ? ` data-cit-room-cap="${esc(r.capacity)}"` : "") +
     (r.price ? ` data-cit-room-price="${esc(r.price)}"` : "") +
     (r.wholeProperty ? ` data-cit-room-whole="1"` : "") +
+    // A kártya „Foglalás"-a ebből tudja meg, MELYIK egységre ugrik le.
+    (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
     // ⛔ NO aria-label. The shell CONTAINS the room's name and capacity, so that text
     // already IS its accessible name — an aria-label would REPLACE the richer content
     // with a shorter sentence. It also printed the name a third time in the markup,
@@ -393,6 +395,14 @@ export function roomDetails(d: SiteData, r: Room, i: number): string {
         .join("") +
       `</ul>`
     : "";
+  // ⛔ A mondat csak ott, ahol a lap BE IS TUDJA TARTANI. Mérve a runtime-ban:
+  // `quoteFor()` NULL-t ad ár-sor nélkül, és a `renderQuote` ilyenkor ÜRESEN hagyja a
+  // dobozt — vagyis foglalás-felület vagy ár nélkül a vendég dátumot választana, és nem
+  // történne semmi. Egy felirat, ami másra mutat, mint ami van, rosszabb a semminél.
+  const dateNote =
+    r.priceFrom && d.booking
+      ? `<p class="cit-rmore__pricenote">${T(d, "A pontos ár a dátumoktól függ.")}</p>`
+      : "";
   // An honest sentence beats an empty box — the guest learns WHY there is nothing here.
   const empty =
     !desc && !ams.length
@@ -404,7 +414,7 @@ export function roomDetails(d: SiteData, r: Room, i: number): string {
     // wrong unit's amenities to a room — silently, and only for that one template.
     `<details class="cit-rmore" data-cit-roomdata="${i}">` +
     `<summary>${T(d, "Részletek")}</summary>` +
-    `<div class="cit-rmore__in">${shots}${descP}${amL}${empty}</div>` +
+    `<div class="cit-rmore__in">${shots}${dateNote}${descP}${amL}${empty}</div>` +
     `</details>`
   );
 }

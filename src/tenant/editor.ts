@@ -340,12 +340,26 @@ export async function moduleContentFor(
       // The card links to the unit's own page ONLY when that page really gets written —
       // one predicate, shared with the writer loop, so a card can never point at a 404.
       const hasPage = units.length > 1 && Boolean(u.slug) && unitPageIsWorthWriting(u, mine);
+      // ⭐ TÖBB ÁR → PADLÓ, nem sáv (tulajdonosi döntés, 2026-09-22).
+      // A sáv („24 000–32 000 Ft / éj") két szám ott, ahol a vendég egyet keres, és úgy
+      // olvasódik, mintha nem tudnánk dönteni. A „-tól" viszont MEGTARTJA az Elek FK-007
+      // invariánsát: a kiírt szám soha nem több annál, amit a vendég fizetni fog, és a
+      // „-tól" kimondja, hogy ez a padló — a régi hiba épp az volt, hogy ez a jelzés
+      // hiányzott (a kártya 24 000-et írt, a widget 32 000-et terhelt, magyarázat nélkül).
+      const oneP = !span || Math.round(span.min) === Math.round(span.max);
+      const priceLine = span
+        ? oneP
+          ? `${formatSpan(span.min, span.max, currency)}${perNight}`
+          : `${formatSpan(span.min, span.min, currency)}-tól${perNight}`
+        : "";
       return {
         name: u.name,
+        unitId: u.id,
         ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
         ...(description ? { description } : {}),
         ...(amenities.length ? { amenities } : {}),
-        ...(span ? { price: `${formatSpan(span.min, span.max, currency)}${perNight}` } : {}),
+        ...(priceLine ? { price: priceLine } : {}),
+        ...(span && !oneP ? { priceFrom: true } : {}),
         ...(own ? { photo: own } : {}),
         ...(mine.length > 1 ? { photos: mine } : {}),
         ...(hasPage ? { slug: u.slug! } : {}),
