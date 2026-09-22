@@ -48,6 +48,10 @@ const plus = (n: number) => {
   return iso(d);
 };
 
+/** Ugyanabba a naptári hónapba esik-e a két 'YYYY-MM-DD' nap? A naptár csak a MOSTANI
+ *  hónapot mutatja, tehát a fixtúra minden napjának oda kell esnie. */
+const sameMonth = (a: string, b: string) => a.slice(0, 7) === b.slice(0, 7);
+
 let leadId = "";
 let tenantId = "";
 let siteId = "";
@@ -171,10 +175,42 @@ try {
   }
   // Kézi blokk ugyanabban a hónapban: e nélkül a „kézi ≠ vendég-foglalás" mérés
   // vakon menne át (nincs mit összehasonlítani).
+  //
+  // ⛔ MÉRT HIBA (2026-09-22): ez `plus(9)`-et írt, a naptárnak viszont NINCS
+  // hónap-váltója — csak a MOSTANI hónapot mutatja. A hónap utolsó ~9 napján a
+  // blokk átcsúszott a KÖVETKEZŐ hónapba, és az őr hamisan pirosra ment két
+  // állításon („van kézi blokk a hónapban", „a jelvény a foglalt napok számát
+  // mondja — 2 nap tele" a várt 3 helyett). A komment MÁR AKKOR is „ugyanabban a
+  // hónapban"-t mondott — a szándék jó volt, a számtan nem. Lappangott 2026-09-08
+  // óta, és mindenkit blokkolt, aki a diff-hatókörébe eső fájlhoz nyúlt.
+  //
+  // ⛔⛔ AZ ELSŐ JAVÍTÁSOM SZÜLTE A KÖVETKEZŐ HIBÁT (ugyanaznap, mérésből): a blokkot
+  // a foglalt napok ELÉ tettem (`plus(3)`), mire az ELSŐ csíkos cella a KÉZI blokk
+  // lett — annak pedig nincs vendége, így az „a csíkos nap megmondja, KI tartja"
+  // állítás jogosan pirosra ment. A SORREND tehát számít, és egy másik állítás épp
+  // arra épült. A blokk ezért a foglalt ablak UTÁN marad, csak közelebb húzva,
+  // amíg belefér a hónapba.
+  const manualDay =
+    [9, 8, 7].map(plus).find((d) => sameMonth(d, from)) ?? plus(9);
   await db
     .insertInto("availability_day")
-    .values({ unit_id: whole.id, day: plus(9), state: "blocked", source: "manual" })
+    .values({ unit_id: whole.id, day: manualDay, state: "blocked", source: "manual" })
     .execute();
+
+  // ⚠️ Ha még a foglalt ablak sem fér a hónapba, ez az őr nem tud mérni — és akkor
+  // HANGOSAN kihagy, nem hamisan bukik. Néma kihagyás sosem: a kimenet mondja ki.
+  // ⚠️ A próba a MEGJELENÍTETT hónaphoz mér, nem a fixtúra saját napjaihoz: ha a
+  // teljes ablak átcsúszna a következő hónapba, a napok EGYMÁSSAL konzisztensek
+  // lennének, és a „mérhető" hamisan igazat mondana — miközben a naptár továbbra is
+  // a mostani hónapot mutatja, és minden állítás elhasalna.
+  const shownMonth = iso(new Date()).slice(0, 7);
+  const measurable = [from, to, manualDay].every((d) => d.slice(0, 7) === shownMonth);
+  if (!measurable) {
+    console.log(
+      `  ⚠️ KIHAGYVA: a fixtúra ablaka (${from} … ${to}, kézi: ${manualDay}) nem fér egy ` +
+        "naptári hónapba, a naptárnak pedig nincs hónap-váltója. Nem hamis pirosat adok.",
+    );
+  }
 
   // ── szerver + bejelentkezett tenant ────────────────────────────────────────
   const { server } = (await import("../src/server/public.js")) as { server: Server };
