@@ -99,7 +99,7 @@ var CitSeason = (function () {
   }
 
   /* One YEAR's occurrence of a recurring season, named by the year it STARTS in
-   * (migration 0073, approved plan season-year-price). A range that wraps the year end
+   * (migration 0074, approved plan season-year-price). A range that wraps the year end
    * (11-01 → 03-01) ends in the next calendar year, so its label is "2026/27" and its
    * window runs 2026-11-01 … 2027-03-01. The Árazás page, the year-price writer and the
    * public price table all name and date a year the SAME way — from here. */

@@ -12,7 +12,7 @@
    2027.03.01 időszak. 2. kör: B·1 (kilógó kártya) / B·2 (év-vonalzó) → **B·1**.
    Kérdésre: fel/le sorrend kell; `parent_id` + `season_nudged_year` jóváhagyva; éves szezonra
    nincs „lejár egy ár” levél.
-2. **Megvalósítás** — migráció 0073; `cit-season.cjs` kapott `occurrence` / `firstOpenYear` /
+2. **Megvalósítás** — migráció 0074; `cit-season.cjs` kapott `occurrence` / `firstOpenYear` /
    `normMonthDay` függvényt (egy példány: szerver + Árazás-lap előnézet); `prices.ts`
    (`setSeasonYearPrice`, `updateSeasonPrice`, `moveSeasonPrice`, `publicSeasons`); három új route;
    évsáv + szerkesztő + előnézet a lapon; honlap-ártábla évvel; `seasonNudge.ts` (óránkénti tick);
@@ -37,7 +37,7 @@
 
 ## Módosított / új fájlok
 
-- `migrations/0073_season_year_price.sql` (új) · `src/db/schema.ts`
+- `migrations/0074_season_year_price.sql` (új) · `src/db/schema.ts`
 - `assets/runtime/cit-season.cjs` · `src/tenant/seasonRule.ts` · `src/tenant/prices.ts`
 - `src/tenant/seasonNudge.ts` (új) · `src/tenant/priceExpiry.ts` · `scripts/booking-maintenance.mts`
 - `src/server/public.ts` · `src/server/moduleConfigViews.ts` · `src/tenant/editor.ts` ·

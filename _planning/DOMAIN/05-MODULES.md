@@ -123,7 +123,7 @@ ajánlat ára **mindig** az árlistába kerül (ADR-0215) — a hiányzó ár í
 ⛔ A dátumos sor lejárata nem csak szabály-kérdés: a lap statikus pillanatkép, tehát lejáratkor a
 sor TÖRLŐDIK és a lap ÚJRARENDERELŐDIK (`src/tenant/priceExpiry.ts`, óránkénti tick).
 
-**Az éves ár (ADR-XXXX, migráció 0073).** Egy ismétlődő szezon adott évi ára egy évhez kötött
+**Az éves ár (ADR-XXXX, migráció 0074).** Egy ismétlődő szezon adott évi ára egy évhez kötött
 szezon-sor, `parent_id`-val a szezonjához kötve; az „év" az alkalom KEZDŐ éve (egy évhatáron
 átnyúló szezonnál „2026/27"). Invariánsok:
 - **Visszaesés:** ahol nincs éves ár, az ismétlődő él — az éves ár hiánya soha nem hiba.

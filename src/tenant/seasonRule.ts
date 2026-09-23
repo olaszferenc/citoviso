@@ -32,11 +32,11 @@ export interface SeasonRule {
     isoDay: string,
     isBaseRow: (row: T) => boolean,
   ): T | null;
-  /** 0073: one year's occurrence of a recurring season ("2026/27" when it wraps). */
+  /** 0074: one year's occurrence of a recurring season ("2026/27" when it wraps). */
   occurrence(from: string, to: string, year: number): SeasonOccurrence;
-  /** 0073: the first year whose occurrence has not ended by `isoToday`. */
+  /** 0074: the first year whose occurrence has not ended by `isoToday`. */
   firstOpenYear(from: string, to: string, isoToday: string): number;
-  /** 0073: what the owner typed → 'MM-DD' ("11.01", "1101", "11/1" …), or null. */
+  /** 0074: what the owner typed → 'MM-DD' ("11.01", "1101", "11/1" …), or null. */
   normMonthDay(raw: string): string | null;
 }
 

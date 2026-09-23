@@ -10,9 +10,9 @@ a DB-mezők neve **`parent_id`** és **`season_nudged_year`**, és az évre szó
 lejáratakor **nincs** „Hamarosan lejár egy ár” levél. ·
 **Kapcsolódó:** ADR-0208 ③ (a szezon `MM-DD`, év nélkül — a mért tényállás), ADR-0208 ⑥.5,
 ADR-0215 ② (az évhez kötött ár adata és szabálya, migráció 0072), ADR-0193 ① (nem blokkolunk),
-§B.17. · **Migráció:** 0073.
+§B.17. · **Migráció:** 0074.
 
-**Hatókör:** `src/server/moduleConfigViews.ts` · `src/tenant/seasonNudge.ts` · `src/tenant/prices.ts` · `src/tenant/priceExpiry.ts` · `src/engine/moduleSections.ts` · `migrations/0073_season_year_price.sql`
+**Hatókör:** `src/server/moduleConfigViews.ts` · `src/tenant/seasonNudge.ts` · `src/tenant/prices.ts` · `src/tenant/priceExpiry.ts` · `src/engine/moduleSections.ts` · `migrations/0074_season_year_price.sql`
 
 `plan.html` a megvalósítás **KONTRAKTUSA, nem stílus-javaslat.** A kész felületet ehhez
 mérjük (mobil 390 + asztali). A fájl a 2. kör mockja: a fenti váltón a **B·1** a jóváhagyott,

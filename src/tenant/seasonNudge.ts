@@ -6,7 +6,7 @@
 // out: the season, this year's price, and a link to next year's card on the year strip.
 //
 // Rules (from the hourly booking tick, scripts/booking-maintenance.mts):
-//   ① once per season and year — stamp `season_nudged_year` (0073, name approved by the
+//   ① once per season and year — stamp `season_nudged_year` (0074, name approved by the
 //      owner), claimed with a conditional UPDATE, so two overlapping ticks send one mail;
 //   ② not at all when next year already has its own price — the question is answered;
 //   ③ only within NUDGE_WINDOW_DAYS of the end: a season that ended months ago (or the

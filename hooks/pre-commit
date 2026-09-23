@@ -1672,7 +1672,7 @@ fi
 # (éves ár · szerkesztés · sorrend · évsáv · honlap-ártábla · szezon végi kérdés · a lejárat-
 # levél kivétele) hat fájlban épül — a trigger mindet és az őrt magát is lefedi.
 if [ -f scripts/season-year-price-check.mts ] && \
-   changed_files | grep -qE '^src/tenant/(prices|priceExpiry|seasonNudge|seasonRule|editor)\.ts$|^src/server/(moduleConfigViews|public)\.ts$|^src/engine/moduleSections\.ts$|^assets/runtime/cit-season\.cjs$|^migrations/0073_|^assets/design-refs/tenant-admin/season-year-price/|^scripts/season-year-price-check'; then
+   changed_files | grep -qE '^src/tenant/(prices|priceExpiry|seasonNudge|seasonRule|editor)\.ts$|^src/server/(moduleConfigViews|public)\.ts$|^src/engine/moduleSections\.ts$|^assets/runtime/cit-season\.cjs$|^migrations/0074_|^assets/design-refs/tenant-admin/season-year-price/|^scripts/season-year-price-check'; then
   echo "[pre-commit] season-year-price (évhez kötött szezonár, évsáv, szezon végi kérdés)…"
   npx tsx scripts/season-year-price-check.mts >"$GATE_LOG" || gate_failed
 fi

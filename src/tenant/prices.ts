@@ -29,7 +29,7 @@ export interface UnitPrice {
   /** 0072: year-bound validity window ('YYYY-MM-DD', inclusive); null = timeless. */
   readonly validFrom: string | null;
   readonly validTo: string | null;
-  /** 0073: the recurring season this row is one YEAR's price of; null otherwise. */
+  /** 0074: the recurring season this row is one YEAR's price of; null otherwise. */
   readonly parentId: string | null;
 }
 
@@ -189,7 +189,7 @@ export async function addSeasonPrice(
 }
 
 /* ------------------------------------------------------------------ *
- * 0073 — the SEASON after it is saved: edit, order, one year's price
+ * 0074 — the SEASON after it is saved: edit, order, one year's price
  * (approved plan season-year-price, B·1; assets/design-refs/tenant-admin/season-year-price/)
  * ------------------------------------------------------------------ */
 
@@ -331,7 +331,7 @@ export interface YearPriceInput {
 
 /**
  * Set — or clear — ONE YEAR's price of a recurring season (the "2027" card of the
- * year strip). Stored as a year-bound season row (0072) tied to its season (0073), so
+ * year strip). Stored as a year-bound season row (0072) tied to its season (0074), so
  * the one precedence rule in cit-season.cjs prices it first, and every other year
  * falls back to the recurring price: nothing breaks when the owner gives none.
  */
@@ -447,7 +447,7 @@ export interface PublicSeason {
 }
 
 /**
- * The season rows of the PUBLIC price table (0073, approved plan season-year-price ③).
+ * The season rows of the PUBLIC price table (0074, approved plan season-year-price ③).
  *
  * A season WITHOUT year prices stays one year-less row, as before — it is true every
  * year. A season WITH one is listed year by year, from the first occurrence not yet

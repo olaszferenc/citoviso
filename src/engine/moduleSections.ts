@@ -313,7 +313,7 @@ function pricingBlock(d: SiteData): string {
     .map((u) => {
       const rows: string[] = [];
       for (const s of u.seasons ?? []) {
-        // 0073: one YEAR of a season that has a year price — named and dated with the
+        // 0074: one YEAR of a season that has a year price — named and dated with the
         // year, so the table never promises this year's price for the next one.
         const when =
           s.start && s.end

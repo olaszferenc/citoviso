@@ -52,7 +52,7 @@ export async function maintainDatedPrices(
       "site.id as siteId",
     ])
     .where("unit_price.valid_to", "is not", null)
-    // 0073 (owner, 2026-09-23): a YEAR price of a season ("Főszezon 2027") gets no
+    // 0074 (owner, 2026-09-23): a YEAR price of a season ("Főszezon 2027") gets no
     // "lejár egy ár" mail — when it ends, the recurring season price takes over, so no
     // night is left unpriced and the mail's promise ("a vendég nem lát árat") would be
     // false. Next year's price is asked by the end-of-season question instead.

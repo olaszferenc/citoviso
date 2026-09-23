@@ -4,7 +4,7 @@
 **Kapcsolódó:** ADR-0208 ③ (a mért tényállás: a szezon `MM-DD`, év nélkül) és ⑥.5 (ez a tétel),
 ADR-0215 ② (az évhez kötött ár adata és szabálya — migráció 0072), ADR-0193 ① (nem blokkolunk),
 ADR-0067 (a tenant nyelvén), §B.17 · **Kontraktus:** `assets/design-refs/tenant-admin/season-year-price/`
-· **Migráció:** 0073 · **Őr:** `scripts/season-year-price-check.mts`.
+· **Migráció:** 0074 · **Őr:** `scripts/season-year-price-check.mts`.
 
 **Kiváltó.** A szezon ismétlődő `MM-DD`, ezért a 12 hónapos foglalási horizonton belül 2027
 júliusára ugyanaz az ár fagyott be, mint idénre (ADR-0208 ③). Az ADR-0215 az ADATOT
@@ -24,7 +24,7 @@ dátumos alapár → alapár) megadta; a felület, a honlap-ártábla és a nudg
   **`parent_id`**, **`season_nudged_year`** jóváhagyva; az éves szezon lejáratakor **nincs**
   „Hamarosan lejár egy ár" levél.
 
-### ② AZ ADATMODELL (0073)
+### ② AZ ADATMODELL (0074)
 
 - `unit_price.parent_id` (uuid → `unit_price.id`, **ON DELETE CASCADE**): az éves ár melyik
   ismétlődő szezoné. Az éves ár egy évhez kötött szezon-sor (0072), tehát a szabály **nem

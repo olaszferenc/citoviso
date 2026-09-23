@@ -1198,7 +1198,7 @@ async function serveAdmin(
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
           for (const u of list) prices[u.id] = await getUnitPrices(u.id);
-          // 0073: which season is open for editing, which year card was just saved or
+          // 0074: which season is open for editing, which year card was just saved or
           // refused, and where the refusal text belongs (next to it, not at the top).
           const qp = new URL(req.url ?? "/", "http://x").searchParams;
           pricing = {
@@ -1279,7 +1279,7 @@ async function serveAdmin(
         // period the account is billed in (0 = monthly account, no conversion).
         annualMult:
           subscription?.billingPeriod === "annual" ? 12 - subscription.annualFreeMonths : 0,
-        // 0073: a season-edit / year-card refusal is shown next to that control.
+        // 0074: a season-edit / year-card refusal is shown next to that control.
         ...(cfgErrors?.length && !pricing?.inlineErrors ? { errors: cfgErrors } : {}),
         ...(booking ? { booking } : {}),
         ...(units ? { units } : {}),
@@ -2565,7 +2565,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
   }
-  // 0073 (approved plan season-year-price): a saved season can be CHANGED — name,
+  // 0074 (approved plan season-year-price): a saved season can be CHANGED — name,
   // days, price, minimum. Before, the only way was delete + re-add. An error keeps the
   // edit open (`edit=`) and shows next to it, not at the top of a long page.
   if (req.method === "POST" && pathname === "/admin/prices/season/edit") {

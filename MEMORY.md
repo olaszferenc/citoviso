@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-09-23 (évhez kötött szezonár + szezon végi kérd�
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 este)
 
-**📅 ÉVHEZ KÖTÖTT SZEZONÁR — KÉSZ LOKÁLBAN (ADR-XXXX, migráció 0073). Élesítés nem volt.**
+**📅 ÉVHEZ KÖTÖTT SZEZONÁR — KÉSZ LOKÁLBAN (ADR-XXXX, migráció 0074). Élesítés nem volt.**
 Session-jegyzet: `_planning/memory/2026-09-23_season_year_price.md`.
 
 - **Árazás lap:** minden szezon alatt **évsáv** (B·1: kilógó kártya, végtelen oldalgörgetés, nyilak) —

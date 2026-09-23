@@ -933,9 +933,9 @@ export interface UnitPriceTable {
   valid_to: string | null;
   /** 0072: the pre-expiry reminder went out (one per window). */
   expiry_notified_at: Timestamp | null;
-  /** 0073: the recurring season this row is ONE YEAR's price of. NULL = not a year price. */
+  /** 0074: the recurring season this row is ONE YEAR's price of. NULL = not a year price. */
   parent_id: string | null;
-  /** 0073: which year's occurrence the end-of-season question already went out for. */
+  /** 0074: which year's occurrence the end-of-season question already went out for. */
   season_nudged_year: number | null;
 }
 

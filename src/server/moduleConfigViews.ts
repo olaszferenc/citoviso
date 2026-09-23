@@ -672,7 +672,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .rv-gr-state--on{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
 .rv-gr-state a{color:inherit;font-weight:700}
 .rv-gr-state--off{background:color-mix(in srgb,var(--citui-warn) 14%,transparent);color:var(--citui-warn-ink)}
-/* ── 0073 season editor + year strip — approved plan season-year-price (B·1),
+/* ── 0074 season editor + year strip — approved plan season-year-price (B·1),
    assets/design-refs/tenant-admin/season-year-price/. The strip measures ITS OWN
    width (@container), so the phone gets one card + a peeking edge, a desktop ~2⅓. */
 .season-block{border-bottom:1px solid var(--citui-line);padding-bottom:14px;margin-bottom:4px;scroll-margin-top:80px}
@@ -2114,7 +2114,7 @@ export interface EditorPrice {
   /** 0072: year-bound window ('YYYY-MM-DD'); null = timeless / recurring. */
   readonly validFrom?: string | null;
   readonly validTo?: string | null;
-  /** 0073: the recurring season this row is one YEAR's price of. */
+  /** 0074: the recurring season this row is one YEAR's price of. */
   readonly parentId?: string | null;
 }
 
@@ -2130,7 +2130,7 @@ export interface PricingEditorData {
    * Required on purpose: a caller that forgets it must fail the type check.
    */
   readonly bookingActive: boolean;
-  /** 0073: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
+  /** 0074: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
    *  the year card just saved or refused (`?ev=<seasonId>-<year>`). */
   readonly editSeason?: string | null;
   readonly savedSeason?: string | null;
@@ -2394,7 +2394,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
       const today = data.today ?? new Date().toISOString().slice(0, 10);
       const rows = (data.prices[u.id] ?? []).filter((r) => !r.validTo || r.validTo >= today);
       const base = rows.find((r) => r.isBase && !r.validFrom);
-      // 0073: a year price hangs under its season (parentId); only RECURRING seasons
+      // 0074: a year price hangs under its season (parentId); only RECURRING seasons
       // are rows of their own. A year-bound season without a parent cannot be made
       // from this screen, but is still listed (with its dates) rather than hidden.
       const seasons = rows.filter((r) => !r.isBase && !r.parentId && !r.validFrom);

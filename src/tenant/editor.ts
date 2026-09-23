@@ -335,7 +335,7 @@ export async function moduleContentFor(
     on("rooms") || on("pricing") ? await getSitePrices(siteId) : new Map();
   const currency = text("pricing", "currency") || "HUF";
   const priceUnit = text("pricing", "unit") || "per_night";
-  // 0073: the price table lists a season's years as far as a guest can book.
+  // 0074: the price table lists a season's years as far as a guest can book.
   const horizonMonths = Number(cfg("booking").horizonMonths ?? 12) || 12;
 
   if (on("pricing")) {

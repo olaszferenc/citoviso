@@ -44,7 +44,7 @@ try {
   const offers = await expireStaleOffers();
   if (offers) console.log(`[booking] ${offers} megválaszolatlan árajánlat lejárt`);
 
-  // 0073 (season-year-price ②): the morning after a season's last day, the owner is
+  // 0074 (season-year-price ②): the morning after a season's last day, the owner is
   // asked what next year's price should be. Before the dated-price sweep below, which
   // removes a lapsed year price — the mail quotes what that year actually charged.
   const nudges = await maintainSeasonNudges();
