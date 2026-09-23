@@ -41,8 +41,9 @@ kapnak, például 2026/27.
 
 ### Egy időszak módosítása
 
-A sor melletti **„Szerkesztés”** gombbal a nevet, a napokat, az árat és a minimumot is
-átírhatja, majd **„Mentés”** (vagy **„Mégse”**). Az évekre megadott külön árak megmaradnak.
+A sor melletti **„Szerkesztés”** gombbal a nevet, a napokat és az árat átírhatja — ha online
+foglalása is van, a minimumot is —, majd **„Mentés”** (vagy **„Mégse”**). Az évekre megadott
+külön árak megmaradnak.
 
 Egy időszakot a **„Törlés”** gombbal távolíthat el — az évekre megadott külön árai is vele
 mennek, és utána ott újra az alapár érvényes. Ha nincs egyetlen időszaki ár sem, mindig az
@@ -65,8 +66,10 @@ Minden időszak alatt ott vannak az évek, egy-egy kártyán (a legközelebbi, m
 - Ahol nem ír semmit, ott **„az ismétlődő ár”** érvényes — semmi nem romlik el, ha nem ad meg
   külön árat.
 - A **„Vissza az ismétlődőre”** gomb törli az adott év külön árát.
-- Ha egy évben más napokra esik az időszak (pl. húsvét), a kártyán a **„Más napokon ebben
-  az évben”** alatt adhatja meg azokat.
+- Ha egy évben más napokra esik az időszak (pl. húsvét), a kártyán nyissa le a **„Más napokon
+  ebben az évben”** részt, adja meg a kezdetet és a véget, majd koppintson a kártya
+  **„Mentés”** gombjára. Ezután a kártyán „saját napok” áll, és a napokat a **„Napok
+  módosítása”** alatt írhatja át.
 
 A honlapján az évet csak akkor írjuk ki, ha annak az időszaknak van külön éves ára — ilyenkor
 a vendég a foglalható hónapokra évenként látja az árat.
@@ -75,7 +78,9 @@ a vendég a foglalható hónapokra évenként látja az árat.
 
 Egy időszak utolsó napja utáni reggelen e-mailt küldünk: mennyi volt idén az ára, és mi
 legyen jövőre. Ha marad, nem kell tennie semmit. Ha változtatna, a levél linkje egyenesen a
-következő év kártyájára visz. Egy időszakról évente egyszer írunk, és nem írunk, ha a következő
+következő év kártyájára visz. Ha a link előbb belépést kér, belépés után a Modulok fülön az
+ár-modul **„Beállítás”** linkjével jut ide, és a szezon alatt a következő év kártyáján adhatja
+meg az árat. Egy időszakról évente egyszer írunk, és nem írunk, ha a következő
 évre már megadott árat.
 
 ## Mikor adja ki, és legalább hány éjszakára — online foglalással
