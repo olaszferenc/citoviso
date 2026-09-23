@@ -204,24 +204,21 @@ fi
 # szerint a frissen javított hibákat olvasta tovább. A rés SZERKEZETI volt: a `kbCoverage()`
 # létezett és pontosan ezt mérte, de SEHOL nem volt bekötve. ⚠️ DB-t igényel; elérhetetlen
 # adatbázisnál HANGOSAN bukik, nem enged át némán.
-# ADR-0207: commit-időben a kapu CSAK az ebben a diffben érintett cikkeket kéri számon.
-# A `language_pack` tábla KÖZÖS a worktree-k között, a KB magyar forrásai viszont fánként
-# külön élnek — repó-széles számonkéréssel két párhuzamos szál kölcsönösen blokkolja
-# egymást (mérve 2026-09-22, ~2,4 USD ismételt fordítás-körbe került). Az ADR-0184
-# forgatókönyve ettől NEM sérül: az a SAJÁT szerkesztésről szól, tehát a saját diffben van.
-# ⚠️ Ha maga az őr változik, TELJES módban fut — egy őr módosítása teljes igazolást kér.
+# ADR-0207 (+ módosítás 2026-09-23, tulajdonosi döntés): a fordítás frissességét NEM a
+# commit kéri számon, hanem a DEPLOY (`deploy-prod.sh` GATE 5 — az ÉLES DB-n, megvárva,
+# független méréssel visszaellenőrizve). Az ADR-0184 forgatókönyve (szerkeszt → fordíttat →
+# újra szerkeszt) ott is elbukik, mert a GATE 5 a ténylegesen kimenő forrásból dönt.
+#   ⛔ Miért nem maradt a diff-szűkített commit-kapu sem: a `kb_translation` sor (entry, lang)
+# kulcsú, és a KÖZÖS dev-DB-ben él, a magyar forrás viszont fánként külön. Ha két fa UGYANAZT
+# a cikket szerkeszti, egymás fordítását írják felül — mérve 2026-09-23 (`admin-modules`):
+# a per-nyelv „✅ teljes" sort a futás SAJÁT záró visszamérése cáfolta, és minden kör
+# AI-költség volt egy olyan adatbázisra, ami vevőt nem szolgál ki.
+#   Ami commitkor marad: ha MAGA AZ ŐR változik, a hermetikus öntesztje fut (DB nélkül) —
+# a deploy-kapu ugyanezt a szkriptet hívja, tehát a épségét itt kell igazolni.
 if [ -f scripts/kb-translation-coverage-check.mts ] && \
-   changed_files | grep -qE '^kb/entries/.*/entry\..*\.md|^scripts/kb-translation-coverage-check'; then
-  if changed_files | grep -qE '^scripts/kb-translation-coverage-check'; then
-    echo "[pre-commit] kb-translation-coverage (TELJES — maga az őr változott)…"
-    npx tsx scripts/kb-translation-coverage-check.mts >"$GATE_LOG" || gate_failed
-  else
-    KB_IDS="$(changed_files | sed -n 's#^kb/entries/\([^/]*\)/entry\..*\.md$#\1#p' | sort -u | paste -sd, -)"
-    if [ -n "$KB_IDS" ]; then
-      echo "[pre-commit] kb-translation-coverage (diff-szűkített: $KB_IDS)…"
-      npx tsx scripts/kb-translation-coverage-check.mts "--only=$KB_IDS" >"$GATE_LOG" || gate_failed
-    fi
-  fi
+   changed_files | grep -qE '^scripts/kb-translation-coverage-check'; then
+  echo "[pre-commit] kb-translation-coverage --self-test (az őr változott; a fordítás a deploy kapuja)…"
+  npx tsx scripts/kb-translation-coverage-check.mts --self-test >"$GATE_LOG" || gate_failed
 fi
 # ⛔ A kb-shot NÉMÁN ki tudta üríteni egy súgó-kép tartalmát (legend.png: 640×2020 → 640×126,
 # a teljes oszlop-magyarázat kiesett, miközben a képaláírás „kinyitva"-t ígért). Sem a kb-check,

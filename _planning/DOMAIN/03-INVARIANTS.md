@@ -329,7 +329,10 @@
     őrzött staleness). Új nyelv/régió aktiválása = UI-csomag + KB-fordítás EGY ensure-hívásból — a
     lengyel tulaj nem kaphat magyar súgót, és a KB nem maradhat ki egy új nyelvből azért, mert valaki
     elfelejtette. (A §B.18 tükre dokumentum-szinten; a §H.22 munkamegosztás itt is áll: tartalom = AI,
-    jogi szöveg = determinisztikus csomag.)
+    jogi szöveg = determinisztikus csomag.) **Hol kényszerítve (ADR-0207, módosítva 2026-09-23):
+    a DEPLOY-nál** (`deploy-prod.sh` GATE 5, az éles DB-n, megvárva és visszaellenőrizve) — a
+    commit NEM kér fordítást, mert a közös dev-DB-ben a fák egymás fordítását írják felül, és
+    a `main` vevőt nem szolgál ki.
 26. **Screenshot csak reprodukálható lehet.** A súgó-képek script-generáltak (Playwright, nyelv-
     paraméteres) — UI-változásnál és új nyelvnél újragenerálódnak. Kézi kép csak átmeneti és
     nyelv-jelölt; külső (repón kívüli) képhivatkozás tilos. Ok: a kézi kép elavul és nyelv-hamis.

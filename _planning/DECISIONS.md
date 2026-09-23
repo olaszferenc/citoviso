@@ -12878,6 +12878,21 @@ blokkolják egymást; és az éles kiszolgálás **először** kap valódi kaput
 `main` átmenetileg hordozhat olyan súgó-cikket, aminek a fordítása elavult — ez nem árt
 senkinek, mert a `main` nem szolgál ki vevőt; a deploy-kapu viszont nem engedi élesre.
 
+**Módosítás 2026-09-23 (tulajdonosi döntés) — a commit-kapu teljesen kikerül.**
+A diff-szűkített commit-kapu sem volt versenymentes: a `kb_translation` sor (entry, lang)
+kulcsú a KÖZÖS dev-DB-ben, a magyar forrás fánként külön él, tehát ha két fa UGYANAZT a
+cikket szerkeszti, egymás fordítását írják felül. Mérve 2026-09-23 (`admin-modules`): a
+`kb-translate` per-nyelv „✅ teljes" sorát a futás saját záró visszamérése cáfolta
+(`en 18/19 ⛔`), a land hat körön át várt rá, és minden kör AI-költség volt egy vevőt nem
+kiszolgáló adatbázisra. A tulaj kérdése: „addig mindenki gyűjti a cuccát, kinyomja a
+mainbe, és a main megy a productionbe — és abban a pillanatban fordítunk".
+- **Commit:** fordítást NEM kér. Ha maga az őr változik, a hermetikus `--self-test` fut
+  (DB nélkül) — a deploy ugyanezt a szkriptet hívja, az épségét itt kell igazolni.
+- **Deploy (GATE 5):** változatlan, és ez az EGYETLEN kényszer. Az ADR-0184 esetét
+  (szerkeszt → fordíttat → újra szerkeszt) ez is elkapja, mert a kimenő forrásból dönt.
+- Elvetve: `source_hash` a sor kulcsában — adatmodell-változás egy olyan problémára, ami a
+  kapu áthelyezésével megszűnik.
+
 ## ADR-0208 — Ár nélkül nem foglalást ígérünk, hanem árajánlatot kérünk — és a szezon-szabály egy példányban (2026-09-22)
 
 **Dátum:** 2026-09-22 · **Státusz:** elfogadva (megvalósítva, őrökkel) · **Kapcsolódó:**

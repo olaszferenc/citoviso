@@ -44,6 +44,9 @@ Futtasd le (`npx tsx scripts/kb-check.mts`), a verdiktjét vedd készpénznek; t
    script-generáltak-e (kb-shot), vagy kézi/átmeneti státuszúak — utóbbi jelölt-e nyelvi mappával.
 5. **Nyelvi teljesség (§J.25, a ③ locale-szelet élesedése után):** entry-változásnál a
    `kb_translation` staleness rendezett-e (source_hash), új nyelvnél a KB is generálódott-e.
+   ⚠️ ADR-0207 (+ 2026-09-23): a fordítás a DEPLOY kapuja (`deploy-prod.sh` GATE 5, éles DB) —
+   commit-időben a dev-DB elavult fordítása NEM FLAG. Azt ítéld meg, hogy a MAGYAR szöveg
+   igaz-e; a fordítást a deploy frissíti.
 
 ## Kimenet — pontosan ez a struktúra, semmi több
 A visszatérő szöveged a hívó agentnek dolgozza fel:
