@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-nem-elado-galeria-marad-a-mockon.md) — A nem eladó galéria a mockon marad (2026-09-23)
 - [ADR-0216](decisions/0216-az-eles-idozitoket-a-deploy-telepiti-es.md) — Az éles időzítőket a DEPLOY telepíti és visszaméri — kézzel nem, kihagyhatatlanul (2026-09-23)
 - [ADR-0215](decisions/0215-ar-nelkuli-keresre-arajanlat-megy-a-rendszerbol.md) — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)
 - [ADR-0214](decisions/0214-automata-heti-programajanlo-telepules-kulcsos.md) — Automata heti programajánló: település-kulcsos gyűjtés, automatikus kitöltés, csak-tulaj levél (2026-09-23)

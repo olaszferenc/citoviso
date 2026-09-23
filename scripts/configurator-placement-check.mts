@@ -182,6 +182,11 @@ check(
   const presets = (await page.evaluate(
     `JSON.parse(document.querySelector('[data-cit-configurator]').textContent).presets`,
   )) as { id: string; label: string; modules: string[] }[];
+  const offeredIds = new Set(
+    (await page.evaluate(
+      `JSON.parse(document.querySelector('[data-cit-configurator]').textContent).modules.map(function(m){return m.id;})`,
+    )) as string[],
+  );
   check("van legalább két csomag, amin a váltás mérhető", presets.length >= 2, presets.length);
 
   /** What the PAGE currently offers, measured on visible elements only. */
@@ -242,6 +247,10 @@ check(
     }
     // ② the page must show exactly the switched-on surfaces
     for (const [mod, visible] of Object.entries(r.surfaces)) {
+      // ADR-XXXX (owner, 2026-09-23): a NOT-sellable gallery stays on the mock —
+      // it is the lead's own photos, not sample data. Only gallery, and only while
+      // it is off the shelf; a sellable gallery still follows the package.
+      if (mod === "gallery" && !offeredIds.has("gallery")) continue;
       const want = wants.has(mod);
       if (want && !visible) missingIncluded.push(`${id}/${mod}`);
       if (!want && visible) soldNotIncluded.push(`${id}/${mod}`);
