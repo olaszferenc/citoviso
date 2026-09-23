@@ -557,6 +557,14 @@ if [ -f scripts/prospect-framing-check.mts ] && \
   echo "[pre-commit] prospect-framing-check (a keretezés minden látogatónak, a helyén)…"
   npx tsx scripts/prospect-framing-check.mts >"$GATE_LOG" || gate_failed
 fi
+# TÖBB TERV EGY LINKEN (plan-tabs kontraktus, 2026-09-23): a vékony sáv a helyén, VÉKONY,
+# a váltó valódi link, a lap alji blokk a jogi lábléc FÖLÖTT, a felvillanás véges — a
+# renderelt lapon, sablonok ellen, hat piros önteszttel (--selftest).
+if [ -f scripts/plan-switcher-check.mts ] && \
+   changed_files | grep -qE '^(src/console/planSwitcher|src/console/prospectNotice|src/console/server|src/engine/templates|src/engine/templateKit|src/generator/runtime|assets/design-refs/prospect-page/plan-tabs/|scripts/plan-switcher-check)'; then
+  echo "[pre-commit] plan-switcher-check (több terv: vékony sáv, valódi linkek, véges felvillanás)…"
+  npx tsx scripts/plan-switcher-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Ugyanaz a hibaosztály az OPERÁTOR oldalán: a „Megnyitások" fölött „látogatás" állt,
 # a „–" pedig egyszerre jelentett „nem mértünk"-et és „nullá"-t. Böngésző nélkül fut.
 if [ -f scripts/prospect-activity-label-check.mts ] && \

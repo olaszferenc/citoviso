@@ -1538,6 +1538,144 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
   };
 }
 
+// ── SEVERAL PLANS ON ONE TRACKED LINK (contract: assets/design-refs/prospect-page/plan-tabs/) ──
+
+/** One plan the lead can switch to: its number AS THE LEAD SEES IT, and its artifact. */
+export interface ProspectPlan {
+  /** 1-based, gap-free display number — also the /p/<token>/v/<n> path segment. */
+  readonly n: number;
+  readonly artifactId: string;
+  readonly artifactPath: string;
+}
+
+/** The contract's cap: the approved mock + at most two alternatives. */
+export const MAX_PLANS = 3;
+
+/**
+ * Every plan on a tracked link, in the order the lead sees them.
+ *
+ * Plan 1 is ALWAYS the prospect's own mock (the approved one, the letter's image);
+ * the alternatives follow by their stored position. An alternative that has since
+ * been rejected or lost its file DROPS OUT rather than rendering a broken tab — and
+ * the numbers close up, because the lead reads "3 plans" off the switcher and a
+ * gap ("1, 3") would be a visible lie about the count.
+ *
+ * A link without alternatives returns ONE plan: every caller treats length < 2 as
+ * "nothing from the multi-plan contract applies".
+ */
+export async function listProspectPlans(
+  prospectId: string,
+  primary: { readonly artifactId: string; readonly artifactPath: string },
+): Promise<ProspectPlan[]> {
+  const alts = await db
+    .selectFrom("prospect_variant")
+    .innerJoin("mock_artifact", "mock_artifact.id", "prospect_variant.mock_artifact_id")
+    .select(["mock_artifact.id as artifactId", "mock_artifact.path as artifactPath"])
+    .where("prospect_variant.prospect_id", "=", prospectId)
+    .where("mock_artifact.status", "!=", "rejected")
+    .where("mock_artifact.path", "is not", null)
+    .where("mock_artifact.id", "!=", primary.artifactId)
+    .orderBy("prospect_variant.position")
+    .execute();
+  const plans: ProspectPlan[] = [{ n: 1, ...primary }];
+  for (const a of alts) {
+    if (plans.length >= MAX_PLANS) break;
+    plans.push({ n: plans.length + 1, artifactId: a.artifactId, artifactPath: a.artifactPath! });
+  }
+  return plans;
+}
+
+/** Why attaching alternatives was refused — the console states it, it never guesses. */
+export type SetVariantsRefusal =
+  | "no-prospect"
+  | "already-sent"
+  | "too-many"
+  | "duplicate"
+  | "is-primary"
+  | "foreign-lead"
+  | "rejected"
+  | "no-file";
+
+/**
+ * Attach (or clear) the alternative plans of a tracked link, replacing what was there.
+ *
+ * ⛔ LOCKED ONCE SENT (§I): what the lead was offered stands. The letter says "3 plans"
+ * the moment it goes out, so adding, removing or swapping a plan afterwards would make
+ * the letter and the link disagree. The measure is `sent_at` (any channel), the same
+ * one `curateArtifact` uses for "already offered".
+ *
+ * Every alternative must be a mock OF THE SAME LEAD, not rejected, with a file on disk:
+ * the switcher shows these to the lead verbatim.
+ */
+export async function setProspectVariants(
+  prospectId: string,
+  artifactIds: readonly string[],
+): Promise<{ ok: true } | { ok: false; reason: SetVariantsRefusal }> {
+  if (artifactIds.length > MAX_PLANS - 1) return { ok: false, reason: "too-many" };
+  if (new Set(artifactIds).size !== artifactIds.length) return { ok: false, reason: "duplicate" };
+  return db.transaction().execute(async (trx) => {
+    const p = await trx
+      .selectFrom("prospect")
+      .select(["lead_id", "mock_artifact_id", "sent_at"])
+      .where("id", "=", prospectId)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!p) return { ok: false as const, reason: "no-prospect" as const };
+    if (p.sent_at != null) return { ok: false as const, reason: "already-sent" as const };
+    if (artifactIds.includes(p.mock_artifact_id ?? "")) {
+      return { ok: false as const, reason: "is-primary" as const };
+    }
+    if (artifactIds.length) {
+      const rows = await trx
+        .selectFrom("mock_artifact")
+        .select(["id", "lead_id", "status", "path"])
+        .where("id", "in", [...artifactIds])
+        .execute();
+      if (rows.length !== artifactIds.length) return { ok: false as const, reason: "foreign-lead" as const };
+      for (const r of rows) {
+        if (r.lead_id !== p.lead_id) return { ok: false as const, reason: "foreign-lead" as const };
+        if (r.status === "rejected") return { ok: false as const, reason: "rejected" as const };
+        if (!r.path) return { ok: false as const, reason: "no-file" as const };
+      }
+    }
+    await trx.deleteFrom("prospect_variant").where("prospect_id", "=", prospectId).execute();
+    if (artifactIds.length) {
+      await trx
+        .insertInto("prospect_variant")
+        .values(
+          artifactIds.map((id, i) => ({ prospect_id: prospectId, mock_artifact_id: id, position: i + 2 })),
+        )
+        .execute();
+    }
+    return { ok: true as const };
+  });
+}
+
+/** How long a plan switch may continue the view it came from. */
+const PLAN_SWITCH_VIEW_MINUTES = 30;
+
+/**
+ * Continue the viewing session a PLAN SWITCH came from, instead of opening a new one.
+ *
+ * ⛔ WHY (plan-tabs contract): a switch is a full page load, and every load used to be
+ * a new mock_view — while the ADR-0088 §4 escalation offer fires on the 3RD VIEW. A lead
+ * clicking through three plans once would have minted the "3rd visit" discount in ten
+ * seconds. The switcher's links carry the current view id; this accepts it only if it is
+ * this prospect's own view and recent — anything else (a forwarded or bookmarked URL, a
+ * foreign id) falls back to a fresh view, which is exactly today's behaviour.
+ */
+export async function continueView(prospectId: string, viewId: string): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(viewId)) return null;
+  const v = await db
+    .selectFrom("mock_view")
+    .select("id")
+    .where("id", "=", viewId)
+    .where("prospect_id", "=", prospectId)
+    .where(sql<boolean>`started_at > ${new Date(Date.now() - PLAN_SWITCH_VIEW_MINUTES * 60_000)}`)
+    .executeTakeFirst();
+  return v?.id ?? null;
+}
+
 /** One viewing session per page load (return visit = new view, PILOT.md §3). */
 export async function recordView(
   prospectId: string,

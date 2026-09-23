@@ -35,6 +35,7 @@ const FILES = [
   "src/console/views.ts",
   "src/console/server.ts",
   "src/console/prospectNotice.ts",
+  "src/console/planSwitcher.ts",
   "src/console/photoProxy.ts",
   "src/generator/patternBadge.ts",
   "src/server/adminViews.ts",
@@ -87,6 +88,16 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
       "/p/ előnézet keretezése: ENGINE-renderelt mock fölé kerül (--cit-* skin, citui.css nélkül) — " +
       "semleges szürkék; a cián a MEGERŐSÍTŐ 'már az Öné' sáv akcentje (pipa + gomb + alsó él), " +
       "értéke a --citui-cyan-400 token MÁSOLATA, nem új szín — a tokent itt a böngésző nem tudná feloldani",
+  },
+  "src/console/planSwitcher.ts": {
+    values: [
+      "#101216", "#8a8f98", "#e8e9ec", "#2c323c", "#1a1e25", "#35c4e0",
+      "rgba(53,196,224,.35)", "rgba(53,196,224,.7)", "rgba(53,196,224,.45)", "rgba(53,196,224,0)",
+    ],
+    reason:
+      "/p/ több-tervű keretezés (plan-tabs kontraktus): ugyanaz az ENGINE-renderelt mock, citui.css nélkül — " +
+      "a keretező sáv semleges szürkéi + a sötét felület két árnyalata (vonal, kártya); a cián a jelölt terv és a " +
+      "felvillanás akcentje, értéke a --citui-cyan-400 token MÁSOLATA — a tokent itt a böngésző nem tudná feloldani",
   },
   "src/server/adminViews.ts": {
     values: ["#1fb6d6", "#16283f"],

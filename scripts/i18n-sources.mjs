@@ -36,6 +36,9 @@ export const I18N_SOURCES = [
   "src/generator/generateEngine.ts",
   // Serve-time injection onto the LIVE tenant page.
   "src/server/ownerLogin.ts",
+  // The multi-plan switcher on the tracked /p/ page (plan-tabs contract §H.22):
+  // the lead reads every word of it.
+  "src/console/planSwitcher.ts",
   "assets/runtime/cit-runtime.js",
   "assets/runtime/cit-configurator.js",
 

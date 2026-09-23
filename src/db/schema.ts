@@ -191,6 +191,20 @@ export interface ProspectOptoutLogTable {
   created_at: Generated<Timestamp>;
 }
 
+/**
+ * The ALTERNATIVE plans attached to one tracked link (0071, contract:
+ * assets/design-refs/prospect-page/plan-tabs/). Plan 1 is NOT here — it stays
+ * prospect.mock_artifact_id (the approved mock, the letter's image); this table
+ * holds plans 2 and 3 only, so a single-plan link is untouched by construction.
+ */
+export interface ProspectVariantTable {
+  prospect_id: string;
+  mock_artifact_id: string;
+  /** The plan's number as the lead sees it: 2 or 3. */
+  position: number;
+  created_at: Generated<Timestamp>;
+}
+
 export interface MockViewTable {
   id: Generated<string>;
   prospect_id: string;
@@ -1291,6 +1305,7 @@ export interface Database {
   curator_decision: CuratorDecisionTable;
   prospect: ProspectTable;
   prospect_optout_log: ProspectOptoutLogTable;
+  prospect_variant: ProspectVariantTable;
   mock_view: MockViewTable;
   mock_event: MockEventTable;
   site_visit: SiteVisitTable;

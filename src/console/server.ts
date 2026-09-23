@@ -53,6 +53,9 @@ import {
   getOrderIntents,
   getPayments,
   getProspectByToken,
+  continueView,
+  listProspectPlans,
+  type ProspectPlan,
   getProspectActivity,
   getProspects,
   getSiteByToken,
@@ -141,6 +144,7 @@ import {
   injectTrackingBanner,
   injectTrackingNotice,
 } from "./prospectNotice.js";
+import { injectPlanEndBlock, injectPlanSwitcherBar, planHref } from "./planSwitcher.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import {
   ensureCardJpeg,
@@ -687,6 +691,30 @@ async function serveMock(res: http.ServerResponse, artifactId: string): Promise<
 
 /** Serve a mock with the PROSPECT CONFIGURATOR overlay injected (ADR-0015). The
  *  stored artifact stays pure; the interactive sell layer is added at serve time. */
+/**
+ * The two layers of a MULTI-PLAN tracked page (assets/design-refs/prospect-page/plan-tabs/):
+ * the thin bar with the switcher at the top, the end-of-page block at the end. A chip gets
+ * its picture only when that plan's hero shot is READY — the page never points an <img> at
+ * a shot that would have to be rendered on request (Elek FK-004 H1).
+ */
+async function multiPlanLayers(
+  html: string,
+  i: {
+    token: string;
+    leadName: string;
+    lang: string | undefined;
+    plans: readonly ProspectPlan[];
+    current: number;
+    viewId: string | null;
+  },
+): Promise<string> {
+  const plans = await Promise.all(
+    i.plans.map(async (p) => ({ n: p.n, hasThumb: (await heroShotState(p.artifactId)).kind === "ready" })),
+  );
+  const input = { ...i, plans };
+  return injectPlanEndBlock(injectPlanSwitcherBar(html, input), input);
+}
+
 async function serveConfigure(res: http.ServerResponse, artifactId: string): Promise<void> {
   const a = await db
     .selectFrom("mock_artifact")
@@ -2460,6 +2488,44 @@ async function handle(
     if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
     return handleOrderRequest(req, res, p.artifactId, pReqMatch[1]);
   }
+  // POST /p/:token/v/:n/request — the order submit of PLAN n (plan-tabs contract §F.19):
+  // the order binds to the plan the lead was looking at, not to the link's first plan.
+  const pvReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/v\/([1-9])\/request$/.exec(pPath);
+  if (method === "POST" && pvReqMatch) {
+    const p = await getProspectByToken(pvReqMatch[1]!);
+    if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+    const plan = plans.find((x) => x.n === Number(pvReqMatch[2]));
+    if (!plan) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    return handleOrderRequest(req, res, plan.artifactId, pvReqMatch[1]!);
+  }
+  // GET /p/:token/v/:n/thumb.jpg — the switcher chip's picture: the plan's CACHED hero
+  // shot as a card JPEG. ⛔ Never renders on request (Elek FK-004 H1 — an <img> may not
+  // launch Chromium from lead traffic); the page only asks for it when the shot is ready.
+  const pThumbMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/v\/([1-9])\/thumb\.jpg$/.exec(pPath);
+  if (method === "GET" && pThumbMatch) {
+    const p = await getProspectByToken(pThumbMatch[1]!);
+    const plans = p
+      ? await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath })
+      : [];
+    const plan = plans.find((x) => x.n === Number(pThumbMatch[2]));
+    const state = plan ? await heroShotState(plan.artifactId) : null;
+    if (!state || state.kind !== "ready") return send(res, 404, "", "text/plain; charset=utf-8");
+    try {
+      const buf = await readFile(await ensureCardJpeg(state.path));
+      res.writeHead(200, {
+        "Content-Type": "image/jpeg",
+        "Content-Length": buf.length,
+        // The shot's file name carries the mock mtime: a regenerated mock gets a new
+        // file, but THIS url stays — so a short cache, not a content-addressed one.
+        "Cache-Control": "private, max-age=600",
+      });
+      res.end(buf);
+      return;
+    } catch {
+      return send(res, 404, "", "text/plain; charset=utf-8");
+    }
+  }
   // GET /p/:token — the instrumented prospect preview: one mock_view per page
   // load (return visit = new session), configurator overlay + event beacons +
   // GDPR transparency footer.
@@ -2472,7 +2538,9 @@ async function handle(
   // escalation offer, and showing any offer card. What stays: the mock, the
   // configurator, and an honest banner saying they opted out and opened this
   // themselves.
-  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(pPath);
+  // …and /p/:token/v/:n — plan n of a MULTI-PLAN link (plan-tabs contract): the same
+  // page for another artifact. Plan 1 is the bare link, the letter's own address.
+  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})(?:\/v\/([1-9]))?$/.exec(pPath);
   if (method === "GET" && pMatch) {
     const p = await getProspectByToken(pMatch[1]);
     // Unknown token: no prospect, so no opt-out to offer (there is nothing to opt
@@ -2480,6 +2548,13 @@ async function handle(
     // is standing here either.
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
     const tracked = !p.unsubscribed;
+    const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+    const planN = Number(pMatch[2] ?? 1);
+    const plan = plans.find((x) => x.n === planN);
+    // A plan number this link does not have (a single-plan link, or a plan that has
+    // since dropped out) is not an error page: the lead lands on the link's own plan.
+    if (!plan) return redirect(res, planHref(p.leadName, pMatch[1], 1));
+    const multi = plans.length >= 2;
     // THE THIRD FRAMING STATE (2026-09-20): this lead ALREADY BOUGHT. Measured in
     // dev — the link kept serving the configurator and the checkout to a paying
     // customer, so re-opening the cold letter charged them again for nothing.
@@ -2494,7 +2569,7 @@ async function handle(
     // and the footer here states we do NOT measure — it must be true.
     const owned = await ownedSiteForProspectToken(pMatch[1]);
     try {
-      const html = await readFile(p.artifactPath, "utf8");
+      const html = await readFile(plan.artifactPath, "utf8");
       if (owned) {
         console.log(
           `[console] /p/${pMatch[1]}: MÁR VÁSÁROLT lead (állapot: ${owned.stage}` +
@@ -2506,13 +2581,29 @@ async function handle(
           injectOwnedNotice(injectOwnedBanner(disableIntroAnimation(html), owned), owned),
         );
       }
-      const viewId = tracked
+      // A PLAN SWITCH continues the visit it came from (?s=<viewId>) — otherwise three
+      // clicks through the plans would count as three visits and mint the ADR-0088 §4
+      // "3rd visit" offer in seconds (data.ts continueView).
+      const continued =
+        tracked && multi && url.searchParams.get("s")
+          ? await continueView(p.id, url.searchParams.get("s")!)
+          : null;
+      // `continued` is itself gated on `tracked` above; the guarded shape below stays
+      // verbatim on purpose (scripts/optout-carrier-check.mts, ADR-0112).
+      const viewId =
+        continued ??
+        (tracked
         ? await recordView(
             p.id,
             (req.headers["user-agent"] as string | undefined) ?? null,
             (req.headers.referer as string | undefined) ?? null,
           )
-        : null;
+        : null);
+      // §G.21: WHICH plan was looked at, inside the visit — no schema change, the
+      // existing event stream carries it.
+      if (viewId && multi) {
+        await recordEvent(p.id, viewId, "plan_view", { plan: plan.n, artifactId: plan.artifactId });
+      }
       // ADR-0088 §4: 3rd visit without a purchase mints the one-time, deadline-
       // bound decision-helper offer — BEFORE resolution, so this very view
       // already renders the decision card. Never for an opted-out visitor: that
@@ -2538,8 +2629,9 @@ async function handle(
         ])
         .where("prospect.token", "=", pMatch[1])
         .executeTakeFirst();
-      const page = await injectConfigurator(html, p.artifactId, p.leadName, {
-        requestUrl: `/p/${pMatch[1]}/request`,
+      const page = await injectConfigurator(html, plan.artifactId, p.leadName, {
+        // §F.19: the order binds to the plan on screen.
+        requestUrl: plan.n === 1 ? `/p/${pMatch[1]}/request` : `/p/${pMatch[1]}/v/${plan.n}/request`,
         // ADR-0080 ①: if this buyer's tenant already runs a cycle, the purchase
         // JOINS it — so the checkout must promise that anniversary and that
         // invoice, not today+12mo over the ticked boxes (Elek FK-005a H-1).
@@ -2577,9 +2669,22 @@ async function handle(
         // 2026-09-14): on two templates a full-screen intro held the first screen
         // for ~5 s, the framing bar behind it. Both branches, because both are the
         // lead's first screen.
+        //
+        // A MULTI-PLAN link (plan-tabs contract, 2026-09-23) swaps the tracked bar for
+        // the thin bar with the switcher and adds the end-of-page block ABOVE the legal
+        // footer (both append; the footer goes last). A single-plan link is untouched.
         tracked
           ? injectTrackingNotice(
-              injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
+              multi
+                ? await multiPlanLayers(disableIntroAnimation(page), {
+                    token: pMatch[1],
+                    leadName: p.leadName,
+                    lang: p.lang ?? undefined,
+                    plans,
+                    current: plan.n,
+                    viewId,
+                  })
+                : injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
               pMatch[1],
             )
           : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page)), pMatch[1]),
