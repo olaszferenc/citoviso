@@ -27,7 +27,7 @@ export interface Unit {
   /** ADR-0114 — this unit IS the whole place. It and the rooms exclude each other:
    *  see `blockingUnitIds()` in unitScope.ts for what that means day by day. */
   readonly isWholeProperty: boolean;
-  /** ADR-0208 ⑥.2 (0074): "nem adok meg árat" — where no price row covers a night,
+  /** ADR-0208 ⑥.2 (0075): "nem adok meg árat" — where no price row covers a night,
    *  the owner quotes individually. A decision, so it is not reported as missing. */
   readonly priceOnRequest: boolean;
 }

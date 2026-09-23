@@ -643,10 +643,10 @@ export interface SiteTable {
   created_at: Generated<Timestamp>;
   /** Tenant-owned content overrides (0011); NULL → use the artifact's siteData. */
   edited_site_data: NullableJson;
-  /** 0074 (ADR-0208 ⑥.4): when the hourly tick first saw an undeclared price gap;
+  /** 0075 (ADR-0208 ⑥.4): when the hourly tick first saw an undeclared price gap;
    *  NULL = none. Cleared when the gap closes (the episode ends). */
   price_gap_since: Timestamp | null;
-  /** 0074: when the last weekly price-gap reminder went out (claimed conditionally). */
+  /** 0075: when the last weekly price-gap reminder went out (claimed conditionally). */
   price_gap_reminded_at: Timestamp | null;
 }
 
@@ -912,7 +912,7 @@ export interface SiteUnitTable {
    *  site (partial unique index, 0059). Booking it takes every other unit off the
    *  market for those nights, and any booked room takes IT off the market. */
   is_whole_property: Generated<boolean>;
-  /** 0074 (ADR-0208 ⑥.2): "nem adok meg árat" — where this unit has no price row,
+  /** 0075 (ADR-0208 ⑥.2): "nem adok meg árat" — where this unit has no price row,
    *  the owner quotes each guest individually. A DECISION, not a gap: no to-do row,
    *  no reminder, and the page lists the unit as "Egyedi ajánlat alapján". */
   price_on_request: Generated<boolean>;

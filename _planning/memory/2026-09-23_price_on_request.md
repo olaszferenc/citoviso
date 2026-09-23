@@ -14,7 +14,7 @@
    konkrét példával (egy szoba, amit mindig egyedi ajánlattal ad ki) lett eldönthető →
    `site_unit.price_on_request`. ④ mezők: `site.price_gap_since` / `price_gap_reminded_at`.
 3. **§2b:** egy működő mock (A: pipa az alapár alatt · B: két kártya), mobil+asztali → a tulaj: **A**.
-4. **Megvalósítás:** migráció 0074 · `unitPriceStatus` (prices.ts) · `priceGap.ts` (hiány-lista +
+4. **Megvalósítás:** migráció 0075 · `unitPriceStatus` (prices.ts) · `priceGap.ts` (hiány-lista +
    heti tick) · Árazás kártya · két felvevő űrlap + visszajelzés · Áttekintés sor · vendég-lap
    „Egyedi ajánlat alapján” · súgó (4 szócikk + új kép) · őr + pre-commit.
 
@@ -36,7 +36,7 @@
 
 ## Módosított / új fájlok
 
-- `migrations/0074_unit_price_on_request.sql` (új) · `src/db/schema.ts`
+- `migrations/0075_unit_price_on_request.sql` (új) · `src/db/schema.ts`
 - `src/tenant/prices.ts` · `src/tenant/priceGap.ts` (új) · `src/tenant/units.ts` · `src/tenant/editor.ts`
 - `src/server/moduleConfigViews.ts` · `src/server/adminViews.ts` · a publikus szerver útvonalai
 - `src/engine/recipe.ts` · `src/engine/moduleSections.ts` · `public/assets/ui/citui-admin.css`
@@ -49,5 +49,5 @@
 
 ## Nyitva
 
-⑥.5 felülete (párhuzamos szál) · a heti levél zaja valódi adaton · a Szobák kártya ár-sora a
+⑥.5 közben landolt (ADR-0221, összefésülve) · a heti levél zaja valódi adaton · a Szobák kártya ár-sora a
 kimondott szobánál nem ír „egyedi ajánlat”-ot (az „Árak” táblázat mondja ki).

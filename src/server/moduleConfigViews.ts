@@ -1088,7 +1088,7 @@ export interface EditorUnit {
   readonly coverUrl?: string | null;
   /** "Csak a felsorolt időszakokban adom ki" (ADR-0049). */
   readonly seasonalOnly?: boolean;
-  /** ADR-0208 ⑥.2: "nem adok meg árat" — the owner's stated decision (0074). */
+  /** ADR-0208 ⑥.2: "nem adok meg árat" — the owner's stated decision (0075). */
   readonly priceOnRequest?: boolean;
   /** ADR-0114 — this unit IS the whole place; it and the rooms exclude each other.
    *  The unit tabs say so, because it changes what a blocked day MEANS. */

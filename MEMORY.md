@@ -14,7 +14,7 @@ Utolsó frissítés: 2026-09-23 („nem adok meg árat” + új egység ára + h
 ## Aktív feladat (legfrissebb szál, 2026-09-23 este)
 
 **🏷️ A „NINCS ÁR” KIMONDOTT DÖNTÉS + ÚJ EGYSÉG ÁRA + HETI EMLÉKEZTETŐ — KÉSZ LOKÁLBAN (ADR-XXXX,
-migráció 0074). Élesítés nem volt.** Az ADR-0208 ⑥.2–⑥.4. Jegyzet:
+migráció 0075). Élesítés nem volt.** Az ADR-0208 ⑥.2–⑥.4. Jegyzet:
 `_planning/memory/2026-09-23_price_on_request.md` · kontraktus: `assets/design-refs/tenant-admin/price-on-request/`.
 
 - `site_unit.price_on_request` (szobánként „Nem adok meg alapárat” pipa, alapár mellett tiltott, az
@@ -22,8 +22,8 @@ migráció 0074). Élesítés nem volt.** Az ADR-0208 ⑥.2–⑥.4. Jegyzet:
   + pipa, a mentés sosem tagad meg · Áttekintés: „{n} szobájának nincs ára” (a részleges esetet is) ·
   vendég-lap: a kimondott szoba „Egyedi ajánlat alapján” · heti levél: 7 nap után, hetente, korlát
   nélkül (`site.price_gap_since` / `price_gap_reminded_at`).
-- Őr: `scripts/price-on-request-check.mts` (pre-commit). Nyitva: ⑥.5 felülete (párhuzamos szál),
-  a levél zaja valódi adaton még nem mérhető.
+- Őr: `scripts/price-on-request-check.mts` (pre-commit). A ⑥.5 (évhez kötött szezon) közben ADR-0221-ként
+  landolt — a két szál az Árazás kártyán összefésülve. Nyitva: a levél zaja valódi adaton még nem mérhető.
 
 ## Előző szál (2026-09-23 este — évhez kötött szezonár)
 

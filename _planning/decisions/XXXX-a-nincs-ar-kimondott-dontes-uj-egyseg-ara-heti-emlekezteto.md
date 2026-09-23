@@ -4,7 +4,7 @@
 · ⑥.3 · ⑥.4 (ez a három tétel), ADR-0215 (az ár ideje; ennek a szálnak az előzménye), ADR-0197 ①
 (a részlegesen árazott szállás, amiről eddig senki nem szólt), ADR-0194 (a kifizetett-de-üres
 teendő-sor), ADR-0193 ① (nem blokkolunk) · **Kontraktus:** `assets/design-refs/tenant-admin/price-on-request/`
-· **Migráció:** 0074.
+· **Migráció:** 0075.
 
 **Kiváltó.** A tulaj mandátuma (`~/rc-briefs/arazas-nincs-ar-uj-egyseg-emlekezteto.md`): a
 hiányzó ár és a „szándékosan nincs ár” megkülönböztethetetlen; új egységnél senki nem kér árat;
@@ -93,8 +93,10 @@ mobil láthatóság bukik · a 7 napos várakozás nélkül 2 bukás · ha a kim
 
 ### ⑤ AMI NYITVA MARAD
 
-1. ADR-0208 ⑥.5 felülete (évhez kötött szezon, „Főszezon 2027”, szezon-végi nudge) — a
-   párhuzamos szál viszi; ehhez nem nyúltam.
+1. ADR-0208 ⑥.5 (évhez kötött szezon, szezon-végi kérdés) a párhuzamos szálon ADR-0221-ként
+   landolt, e munka közben; a landoláskor a két szál az Árazás kártyán, a publikus szerver
+   útvonalaiban és a pre-commitban kézzel összefésülve, mindkét őr újrafuttatva. A migráció-szám
+   kétszer csúszott (0073 → 0074 → 0075).
 2. A szoba-kártya (Szobák modul) ár-sora a kimondott szobánál nem ír „egyedi ajánlat”-ot —
    a terv nem kérte; az „Árak” táblázat mondja ki.
 3. A heti levél zaja valódi adaton (lásd ②).
