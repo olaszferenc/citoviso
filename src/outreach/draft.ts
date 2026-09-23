@@ -15,6 +15,7 @@
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
+import { listProspectPlans } from "../console/data.js";
 import { formatNumber } from "../text/money.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
@@ -94,6 +95,19 @@ export interface OutreachParts {
    * rejects, exactly like the sender block above.
    */
   readonly identity: string;
+  /**
+   * MULTI-PLAN links only (plan-tabs contract, 2026-09-23): the line under the letter's
+   * image — the letter carries ONE picture (plan 1), so it must say so, or it promises
+   * less than the link gives (§I). Absent on a single-plan letter: nothing changes there.
+   */
+  readonly planNote?: string;
+  /**
+   * How many plans the link carries (1–3). A NUMBER on purpose: the HTML picks the
+   * button's singular/plural label from it, and the §C.4 consistency guard only holds
+   * STRING parts to the plain-text body — a label part would have forced a new line into
+   * the single-plan letter, which must stay verbatim.
+   */
+  readonly planCount: number;
 }
 
 /**
@@ -162,6 +176,22 @@ export interface DraftInput {
    * Load the pack with prepareMailLang() before rendering — T() here is sync.
    */
   readonly lang: string;
+  /**
+   * How many plans the tracked link carries (1–3; plan-tabs contract). The copy is
+   * DERIVED from it — subject, offer, try-it-out, go-live, the image line and both
+   * SMS — so the letter can never say "3" while the link shows 2. Read it from
+   * listProspectPlans(), the same rule the page counts with.
+   *
+   * ⚠️ scripts/ are not type-checked: a fixture that omits it reaches here as
+   * `undefined`, and that reads as ONE plan — i.e. today's letter, verbatim.
+   */
+  readonly planCount: number;
+}
+
+/** 1, 2 or 3 — anything else (absent, 0, NaN) is a single-plan letter. */
+function planCountOf(d: DraftInput): 1 | 2 | 3 {
+  const n = Number(d.planCount);
+  return n >= 3 ? 3 : n === 2 ? 2 : 1;
 }
 
 /**
@@ -261,7 +291,15 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // followed by "– készítettem Önöknek egy honlap-tervet" — fit for ZERO of them, so
   // the offer always fell behind the ellipsis and a long-named lead saw nothing but
   // their own name. This form fits for 336 of 389 (86%), name AND point visible.
-  const subject = T(d.lang, "{name} – honlap-terv", { name: d.leadName });
+  //
+  // Several plans: the NUMBER goes in the subject as a digit (owner's pick, 2026-09-23):
+  // measured on 598 lead names, "– 3 honlap-terv" fits the ~38-char preview for 82%
+  // (today's "– honlap-terv" 87%, "– három honlap-terv" 68%).
+  const plans = planCountOf(d);
+  const subject =
+    plans === 1
+      ? T(d.lang, "{name} – honlap-terv", { name: d.leadName })
+      : T(d.lang, "{name} – {n} honlap-terv", { name: d.leadName, n: plans });
 
   const percent = String(OUTREACH_OFFER_PERCENT);
   const priceList = formatHuf(getBaseMonthly());
@@ -282,23 +320,55 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     // from two drafts. „Mi" is also the truthful voice: the plan is produced by our
     // system, not hand-drawn by the signer (§B.17 binds us about ourselves too), and it
     // matches the SMS channel's „A Citoviso Csapata" sign-off (ADR-0112).
-    p1: T(
-      d.lang,
-      "Ezért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.",
-    ),
-    p2: T(
-      d.lang,
-      "A linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
-    ),
+    // Multi-plan wording: approved 2026-09-23 (plan-tabs README, „A megkeresés szövege").
+    p1:
+      plans === 3
+        ? T(
+            d.lang,
+            "Ezért készítettünk három honlap-tervet, háromféle kinézettel. Előzetes látványtervek az Önről nyilvánosan elérhető adatokból: nem kész oldalak, és semmire nem kötelezik.",
+          )
+        : plans === 2
+          ? T(
+              d.lang,
+              "Ezért készítettünk két honlap-tervet, kétféle kinézettel. Előzetes látványtervek az Önről nyilvánosan elérhető adatokból: nem kész oldalak, és semmire nem kötelezik.",
+            )
+          : T(
+              d.lang,
+              "Ezért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.",
+            ),
+    p2:
+      plans === 3
+        ? T(
+            d.lang,
+            "A linken mindhármat megnézheti, és egy kattintással válthat köztük. Ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
+          )
+        : plans === 2
+          ? T(
+              d.lang,
+              "A linken mindkettőt megnézheti, és egy kattintással válthat köztük. Ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
+            )
+          : T(
+              d.lang,
+              "A linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
+            ),
     p3: T(
       d.lang,
       "Bemutatkozó ajánlat: minden csomagra {percent}% kedvezmény — a saját honlapja havi {price} forint helyett {offerPrice} forinttól az Öné.",
       { percent, price: priceList, offerPrice: priceOffer },
     ),
-    p4: T(
-      d.lang,
-      "Ha tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
-    ),
+    p4:
+      plans === 1
+        ? T(d.lang, "Ha tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.")
+        : T(
+            d.lang,
+            "Ha valamelyik tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
+          ),
+    ...(plans === 3
+      ? { planNote: T(d.lang, "A képen az első terv látható — a másik kettőt a linken találja.") }
+      : plans === 2
+        ? { planNote: T(d.lang, "A képen az első terv látható — a másikat a linken találja.") }
+        : {}),
+    planCount: plans,
     priceList,
     priceOffer,
     percent,
@@ -342,6 +412,9 @@ export function composeBody(
     "",
     l.cta,
     "",
+    // Multi-plan only: the image line is a CLAIM (the letter shows one plan of several),
+    // so the gated text carries it too. A single-plan letter has none — unchanged.
+    ...(t.planNote ? [t.planNote, ""] : []),
     t.p2,
     "",
     t.p3,
@@ -395,11 +468,25 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
   // legitimate-interest notice AND the working opt-out (injectTrackingNotice),
   // so the message stays short. See ADR-0112; checkOutreachSms enforces that the
   // link is reachable, since it is now the sole carrier of the opt-out.
-  const text = T(
-    d.lang,
-    "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n{link}",
-    { name: d.leadName, link },
-  );
+  const plans = planCountOf(d);
+  const text =
+    plans === 3
+      ? T(
+          d.lang,
+          "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n{link}",
+          { name: d.leadName, link },
+        )
+      : plans === 2
+        ? T(
+            d.lang,
+            "{name} – két honlap-látványtervet is készítettünk Önnek, amelyeket most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n{link}",
+            { name: d.leadName, link },
+          )
+        : T(
+            d.lang,
+            "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n{link}",
+            { name: d.leadName, link },
+          );
   return { text, link, unsubscribeLink };
 }
 
@@ -412,11 +499,27 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
  */
 export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   const { link, unsubscribeLink } = smsDraftParts(d);
-  const text = T(
-    d.lang,
-    "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n{link}",
-    { name: d.leadName, link },
-  );
+  // Multi-plan: the SHORT form on purpose — "az imént MMS-ben küldött honlap-látványterv
+  // mellé…" made 50 of 598 real names a 5-part SMS, this one 16 (measured 2026-09-23).
+  const plans = planCountOf(d);
+  const text =
+    plans === 3
+      ? T(
+          d.lang,
+          "{name} – az imént küldött terv mellé még kettőt készítettünk: mindhármat élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n{link}",
+          { name: d.leadName, link },
+        )
+      : plans === 2
+        ? T(
+            d.lang,
+            "{name} – az imént küldött terv mellé még egyet készítettünk: mindkettőt élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n{link}",
+            { name: d.leadName, link },
+          )
+        : T(
+            d.lang,
+            "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n{link}",
+            { name: d.leadName, link },
+          );
   return { text, link, unsubscribeLink };
 }
 
@@ -452,6 +555,8 @@ export async function buildDraftForProspect(prospectId: string): Promise<
       "scraper_definition.region as region",
       "scraper_definition.country as country",
       "mock_artifact.inputs as artifactInputs",
+      "mock_artifact.id as artifactId",
+      "mock_artifact.path as artifactPath",
     ])
     .where("prospect.id", "=", prospectId)
     .executeTakeFirst();
@@ -475,7 +580,14 @@ export async function buildDraftForProspect(prospectId: string): Promise<
   // page it links to must not disagree.
   const sdLang = (inputs.siteData as { lang?: string } | undefined)?.lang;
   const lang = await prepareMailLang(sdLang || langForCountry(r.country));
+  // The plan count from the SAME rule the page counts with — the letter may not say "3"
+  // while the link shows 2 (one rule, one copy).
+  const planCount =
+    r.artifactId && r.artifactPath
+      ? (await listProspectPlans(prospectId, { artifactId: r.artifactId, artifactPath: r.artifactPath })).length
+      : 1;
   const input: DraftInput = {
+    planCount,
     leadName: r.leadName,
     region: r.region,
     qualification: r.qualification,

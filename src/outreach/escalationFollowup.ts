@@ -116,6 +116,9 @@ export async function sendEscalationFollowups(
       ),
       // §C.2 advertiser identification — the follow-up is an advertising message too.
       identity: advertiserIdentity(lang),
+      // The follow-up's own copy speaks of ONE plan ("a honlap-tervét") and has no image;
+      // its multi-plan wording was not part of the 2026-09-23 approval, so it stays as is.
+      planCount: 1,
     };
     const body = composeBody(
       parts,

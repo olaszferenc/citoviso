@@ -49,6 +49,7 @@ const INPUT: DraftInput = {
   rating: null,
   token: "hWAeKUweNOvCiAAMz6hlqUAA",
   lang: "hu",
+  planCount: 1,
 };
 
 let failed = 0;
@@ -102,6 +103,70 @@ say(
   "kiszállított levél: §C-kapu tiszta (az árazás-kapun kívül)",
   notPricing(mailCheck.reasons).join(" | "),
 );
+
+// ── MULTI-PLAN links (plan-tabs contract, 2026-09-23). ───────────────────────
+//
+// The copy is derived from the plan count. Two promises are pinned here: (1) a 2- or
+// 3-plan letter and both SMS pass the SAME §C judge as today's, and say the right
+// count; (2) a single-plan letter is TODAY'S LETTER, VERBATIM — including when the
+// field is missing (scripts/ are not type-checked, a fixture can omit it).
+console.log("\n── Több terv egy linken ──────────────────────────────────────────");
+{
+  const { buildOutreachEmail } = await import("../src/email/outreachEmail.js");
+  for (const n of [2, 3] as const) {
+    const d: DraftInput = { ...INPUT, planCount: n };
+    const m = renderDraft(d);
+    say(
+      notPricing(checkOutreachDraft(m, LEAD, "hu").reasons).length === 0,
+      `${n} terv — levél: §C-kapu tiszta`,
+      notPricing(checkOutreachDraft(m, LEAD, "hu").reasons).join(" | "),
+    );
+    say(m.subject === `${LEAD} – ${n} honlap-terv`, `${n} terv — tárgy: „${LEAD} – ${n} honlap-terv”`, m.subject);
+    const word = n === 3 ? "három honlap-tervet" : "két honlap-tervet";
+    say(m.body.includes(word), `${n} terv — a levél kimondja: „${word}”`);
+    const note = n === 3 ? "a másik kettőt a linken találja" : "a másikat a linken találja";
+    say(m.body.includes(note), `${n} terv — a képaláírás a kapuzott szövegben is benne van`);
+    const pair = renderPairSmsDraft(d);
+    const solo = renderSmsDraft(d);
+    for (const [name, sms, must] of [
+      ["páros SMS", pair, n === 3 ? "mindhármat" : "mindkettőt"],
+      ["önálló SMS", solo, n === 3 ? "három honlap-látványtervet" : "két honlap-látványtervet"],
+    ] as const) {
+      const r = checkOutreachSms(sms, LEAD, "hu");
+      say(r.verdict === "PASS", `${n} terv — ${name}: §C-kapu PASS`, r.reasons.join(" | "));
+      say(sms.text.includes(must), `${n} terv — ${name}: kimondja „${must}”`, sms.text);
+    }
+    // The HTML consistency guard (§C.4) must accept the new part, and the button says it.
+    let html = "";
+    try {
+      const msg = buildOutreachEmail(m, "a@b.hu", { lang: "hu", heroShotPath: "/nonexistent/hero.png" });
+      html = String((msg as { html?: unknown }).html ?? "");
+    } catch (e) {
+      html = `THROW ${(e as Error).message}`;
+    }
+    say(!html.startsWith("THROW"), `${n} terv — a HTML-levél összeáll (a §C.4 egyezés-őr elfogadja)`, html.slice(0, 200));
+    say(html.includes("Megnézem a terveket"), `${n} terv — a gomb többes számú`);
+    say(html.includes(note), `${n} terv — a kép alatt ott a képaláírás`);
+  }
+  // (2) single plan = today's letter, byte for byte
+  const one = renderDraft(INPUT);
+  const missing = renderDraft({ ...INPUT, planCount: undefined as unknown as number });
+  say(one.subject === `${LEAD} – honlap-terv`, "1 terv — a tárgy a mai", one.subject);
+  say(missing.subject === one.subject && missing.body === one.body, "hiányzó mező = 1 terv (a mai levél, betűre)");
+  say(!one.body.includes("A képen"), "1 terv — nincs képaláírás");
+  say(
+    renderSmsDraft(INPUT).text ===
+      `${LEAD} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n${renderSmsDraft(INPUT).link}`,
+    "1 terv — az önálló SMS a mai, betűre",
+  );
+  say(
+    renderPairSmsDraft(INPUT).text ===
+      `${LEAD} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n${renderPairSmsDraft(INPUT).link}`,
+    "1 terv — a páros SMS a mai, betűre",
+  );
+  const oneHtml = String((buildOutreachEmail(one, "a@b.hu", { lang: "hu", heroShotPath: "/nonexistent/hero.png" }) as { html?: unknown }).html ?? "");
+  say(oneHtml.includes("Megnézem a tervet") && !oneHtml.includes("Megnézem a terveket"), "1 terv — a gomb a mai");
+}
 
 // ── STRUCTURAL: the random token may never change the verdict. ───────────────
 //

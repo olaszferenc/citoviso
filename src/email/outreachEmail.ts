@@ -93,6 +93,10 @@ function buildMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, lang?
       `<a href="${esc(l.cta)}" style="text-decoration:none">` +
       `<img src="${heroSrc}" alt="${esc(T(lang, "A honlap-terv nyitóképe"))}" width="${W - 2 * PAD}" ` +
       `style="display:block;width:100%;max-width:${W - 2 * PAD}px;height:auto;border:1px solid ${LINE}" border="0"></a>` +
+      // Multi-plan link: the letter shows ONE of several plans — and says so (§I).
+      (t.planNote
+        ? `<div style="padding:8px 0 0;font-family:${FONT};font-size:13px;line-height:1.5;color:${MUTED}">${esc(t.planNote)}</div>`
+        : "") +
       `</td></tr>`
     : "";
 
@@ -102,7 +106,7 @@ function buildMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, lang?
     tbl(
       `cellpadding="0"`,
       `<tr><td bgcolor="${NAVY}" style="background:${NAVY};border-radius:8px">` +
-        `<a href="${esc(l.cta)}" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(T(lang, "Megnézem a tervet"))}</a>` +
+        `<a href="${esc(l.cta)}" style="display:block;padding:13px 26px;font-family:${FONT};font-size:15px;font-weight:600;color:#ffffff;text-decoration:none">${esc(t.planCount >= 2 ? T(lang, "Megnézem a terveket") : T(lang, "Megnézem a tervet"))}</a>` +
         `</td></tr>`,
     ) +
     `</td></tr>`;
