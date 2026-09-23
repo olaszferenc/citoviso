@@ -37,6 +37,7 @@ import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
+import { planCountStill } from "./planSet.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -307,13 +308,21 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   // Atomic CLAIM before the send: stamp sms_sent_at only if still NULL, so a double
   // click (or a concurrent run) can never put the same cold SMS on a phone twice.
   const now = new Date();
-  const claimed = await db
-    .updateTable("prospect")
-    .set({ sms_sent_at: now })
-    .where("id", "=", prospectId)
-    .where("sms_sent_at", "is", null)
-    .executeTakeFirst();
-  if (!claimed.numUpdatedRows) return no("párhuzamos küldés claimelte a prospectet");
+  // The SMS names the plan count — it must still be true at the claim (plan-tabs).
+  const claimed = await db.transaction().execute(async (trx) => {
+    if (!(await planCountStill(trx, prospectId, d.input.planCount))) return "plans" as const;
+    const r = await trx
+      .updateTable("prospect")
+      .set({ sms_sent_at: now })
+      .where("id", "=", prospectId)
+      .where("sms_sent_at", "is", null)
+      .executeTakeFirst();
+    return r.numUpdatedRows ? ("won" as const) : ("lost" as const);
+  });
+  if (claimed === "plans") {
+    return no("a link tervei az SMS megírása óta változtak — küldd újra a friss tervszámmal");
+  }
+  if (claimed !== "won") return no("párhuzamos küldés claimelte a prospectet");
 
   const result = await sendSms({ to, text: d.sms.text });
   if (result.provider === "blocked") {

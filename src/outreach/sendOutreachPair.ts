@@ -29,6 +29,7 @@ import { ensureHeroShot } from "./heroShot.js";
 import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
 import { sendSms } from "../sms/sender.js";
 import { ensureMmsJpeg, sendMms } from "../mms/sender.js";
+import { planCountStill } from "./planSet.js";
 
 export interface PairJobState {
   /** mms = uploading to the modem; sms = companion text; done/failed = terminal. */
@@ -102,13 +103,22 @@ export async function startOutreachPair(
 
   // Atomic CLAIM: stamp mms_sent_at only if still NULL — a double click loses here.
   const now = new Date();
-  const claimed = await db
-    .updateTable("prospect")
-    .set({ mms_sent_at: now })
-    .where("id", "=", prospectId)
-    .where("mms_sent_at", "is", null)
-    .executeTakeFirst();
-  if (!claimed.numUpdatedRows) return { ok: false, message: "párhuzamos küldés claimelte a prospectet" };
+  // The companion SMS names the plan count — true at the claim, and locked from then on
+  // (the variant editor refuses once any channel claimed; plan-tabs).
+  const claimed = await db.transaction().execute(async (trx) => {
+    if (!(await planCountStill(trx, prospectId, d.input.planCount))) return "plans" as const;
+    const r = await trx
+      .updateTable("prospect")
+      .set({ mms_sent_at: now })
+      .where("id", "=", prospectId)
+      .where("mms_sent_at", "is", null)
+      .executeTakeFirst();
+    return r.numUpdatedRows ? ("won" as const) : ("lost" as const);
+  });
+  if (claimed === "plans") {
+    return { ok: false, message: "a link tervei a szöveg megírása óta változtak — indítsd újra a friss tervszámmal" };
+  }
+  if (claimed !== "won") return { ok: false, message: "párhuzamos küldés claimelte a prospectet" };
 
   jobs.set(prospectId, { phase: "mms", startedAt: now.toISOString() });
 

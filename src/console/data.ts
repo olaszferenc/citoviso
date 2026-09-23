@@ -6,9 +6,11 @@
 import { randomBytes } from "node:crypto";
 import { unlink } from "node:fs/promises";
 
-import { sql } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "../db/client.js";
+import type { Database } from "../db/schema.js";
+import { isPlanSetOffered, MAX_PLANS } from "../outreach/planSet.js";
 import type { BuyerDeclaration } from "../billing/buyer.js";
 import {
   PHOTO_RIGHTS_DECLARATION_V1,
@@ -649,6 +651,25 @@ export async function isArtifactDeletable(artifactId: string): Promise<boolean> 
     .where("sent_at", "is not", null)
     .executeTakeFirst();
   if (sent) return false;
+  // …nor as an ALTERNATIVE plan under a link that was already offered (plan-tabs; jog/
+  // provenance-őr FLAG 2026-09-23): the prospect_variant row would cascade away with the
+  // mock, and a letter that said "mindhármat" would open onto two. "Offered" is ANY
+  // channel's claim — the same predicate that locks the plan set (isPlanSetOffered).
+  const offeredAlt = await db
+    .selectFrom("prospect_variant")
+    .innerJoin("prospect", "prospect.id", "prospect_variant.prospect_id")
+    .select("prospect.id")
+    .where("prospect_variant.mock_artifact_id", "=", artifactId)
+    .where((eb) =>
+      eb.or([
+        eb("prospect.sent_at", "is not", null),
+        eb("prospect.email_sent_at", "is not", null),
+        eb("prospect.sms_sent_at", "is not", null),
+        eb("prospect.mms_sent_at", "is not", null),
+      ]),
+    )
+    .executeTakeFirst();
+  if (offeredAlt) return false;
   const live = await db
     .selectFrom("site")
     .select("id")
@@ -1538,52 +1559,8 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
   };
 }
 
-// ── SEVERAL PLANS ON ONE TRACKED LINK (contract: assets/design-refs/prospect-page/plan-tabs/) ──
-
-/** One plan the lead can switch to: its number AS THE LEAD SEES IT, and its artifact. */
-export interface ProspectPlan {
-  /** 1-based, gap-free display number — also the /p/<token>/v/<n> path segment. */
-  readonly n: number;
-  readonly artifactId: string;
-  readonly artifactPath: string;
-}
-
-/** The contract's cap: the approved mock + at most two alternatives. */
-export const MAX_PLANS = 3;
-
-/**
- * Every plan on a tracked link, in the order the lead sees them.
- *
- * Plan 1 is ALWAYS the prospect's own mock (the approved one, the letter's image);
- * the alternatives follow by their stored position. An alternative that has since
- * been rejected or lost its file DROPS OUT rather than rendering a broken tab — and
- * the numbers close up, because the lead reads "3 plans" off the switcher and a
- * gap ("1, 3") would be a visible lie about the count.
- *
- * A link without alternatives returns ONE plan: every caller treats length < 2 as
- * "nothing from the multi-plan contract applies".
- */
-export async function listProspectPlans(
-  prospectId: string,
-  primary: { readonly artifactId: string; readonly artifactPath: string },
-): Promise<ProspectPlan[]> {
-  const alts = await db
-    .selectFrom("prospect_variant")
-    .innerJoin("mock_artifact", "mock_artifact.id", "prospect_variant.mock_artifact_id")
-    .select(["mock_artifact.id as artifactId", "mock_artifact.path as artifactPath"])
-    .where("prospect_variant.prospect_id", "=", prospectId)
-    .where("mock_artifact.status", "!=", "rejected")
-    .where("mock_artifact.path", "is not", null)
-    .where("mock_artifact.id", "!=", primary.artifactId)
-    .orderBy("prospect_variant.position")
-    .execute();
-  const plans: ProspectPlan[] = [{ n: 1, ...primary }];
-  for (const a of alts) {
-    if (plans.length >= MAX_PLANS) break;
-    plans.push({ n: plans.length + 1, artifactId: a.artifactId, artifactPath: a.artifactPath! });
-  }
-  return plans;
-}
+// ── SEVERAL PLANS ON ONE TRACKED LINK — the counting rules live in outreach/planSet.ts ──
+export { listProspectPlans, planCountStill, MAX_PLANS, type ProspectPlan } from "../outreach/planSet.js";
 
 /** Why attaching alternatives was refused — the console states it, it never guesses. */
 export type SetVariantsRefusal =
@@ -1594,7 +1571,31 @@ export type SetVariantsRefusal =
   | "is-primary"
   | "foreign-lead"
   | "rejected"
-  | "no-file";
+  | "no-file"
+  /** Same template as another plan — "háromféle kinézettel" would be false (§B.17). */
+  | "same-look"
+  /** Built from a different photo set — "ugyanazokból a képekből" would be false. */
+  | "different-inputs"
+  /** The artifact does not record its template or photos — the claims cannot be checked. */
+  | "look-unknown";
+
+/** The artifact's LOOK: its template (composition engine) or corpus entry (AI engine). */
+function lookOf(inputs: unknown): string | null {
+  const i = (inputs ?? {}) as { template?: unknown; corpusId?: unknown };
+  if (typeof i.template === "string" && i.template) return `t:${i.template}`;
+  if (typeof i.corpusId === "string" && i.corpusId) return `c:${i.corpusId}`;
+  return null;
+}
+
+/** The artifact's PHOTO SET, order-free (a hero pin reorders, it does not change the set). */
+function photoSetOf(inputs: unknown): string | null {
+  const photos = ((inputs ?? {}) as { siteData?: { photos?: unknown } }).siteData?.photos;
+  if (!Array.isArray(photos)) return null;
+  return photos
+    .map((ph) => (ph && typeof ph === "object" ? String((ph as { url?: unknown }).url ?? "") : ""))
+    .sort()
+    .join("\n");
+}
 
 /**
  * Attach (or clear) the alternative plans of a tracked link, replacing what was there.
@@ -1621,22 +1622,34 @@ export async function setProspectVariants(
       .forUpdate()
       .executeTakeFirst();
     if (!p) return { ok: false as const, reason: "no-prospect" as const };
-    if (p.sent_at != null) return { ok: false as const, reason: "already-sent" as const };
+    if (await isPlanSetOffered(prospectId, trx)) return { ok: false as const, reason: "already-sent" as const };
     if (artifactIds.includes(p.mock_artifact_id ?? "")) {
       return { ok: false as const, reason: "is-primary" as const };
     }
     if (artifactIds.length) {
       const rows = await trx
         .selectFrom("mock_artifact")
-        .select(["id", "lead_id", "status", "path"])
-        .where("id", "in", [...artifactIds])
+        .select(["id", "lead_id", "status", "path", "inputs"])
+        .where("id", "in", [...artifactIds, ...(p.mock_artifact_id ? [p.mock_artifact_id] : [])])
         .execute();
-      if (rows.length !== artifactIds.length) return { ok: false as const, reason: "foreign-lead" as const };
-      for (const r of rows) {
+      const alts = rows.filter((r) => artifactIds.includes(r.id));
+      if (alts.length !== artifactIds.length) return { ok: false as const, reason: "foreign-lead" as const };
+      for (const r of alts) {
         if (r.lead_id !== p.lead_id) return { ok: false as const, reason: "foreign-lead" as const };
         if (r.status === "rejected") return { ok: false as const, reason: "rejected" as const };
         if (!r.path) return { ok: false as const, reason: "no-file" as const };
       }
+      // §B.17 — the copy says "háromféle kinézettel" and "ugyanazokból a képekből és
+      // adatokból, más kinézettel": both are claims about US, so both are made TRUE here,
+      // structurally: every plan a different template, all from the same photo set.
+      const all = rows.filter((r) => r.id === p.mock_artifact_id || artifactIds.includes(r.id));
+      const looks = all.map((r) => lookOf(r.inputs));
+      const photos = all.map((r) => photoSetOf(r.inputs));
+      if (looks.some((l) => l === null) || photos.some((s) => s === null)) {
+        return { ok: false as const, reason: "look-unknown" as const };
+      }
+      if (new Set(looks).size !== looks.length) return { ok: false as const, reason: "same-look" as const };
+      if (new Set(photos).size !== 1) return { ok: false as const, reason: "different-inputs" as const };
     }
     await trx.deleteFrom("prospect_variant").where("prospect_id", "=", prospectId).execute();
     if (artifactIds.length) {

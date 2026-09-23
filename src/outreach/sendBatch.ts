@@ -27,6 +27,7 @@ import { huArticleLower } from "../hu.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
+import { planCountStill } from "./planSet.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -582,6 +583,12 @@ export async function sendOutreachMail(
       .limit(1)
       .executeTakeFirst();
     if (already) return { won: false, reason: "address" as const };
+    // The letter was written for N plans — the link must still carry N at the claim
+    // (plan-tabs; jog/provenance-őr FLAG 2026-09-23). Locks the row; the variant editor
+    // takes the same lock, so after this claim the plan set cannot change.
+    if (!(await planCountStill(trx, prospectId, d.input.planCount))) {
+      return { won: false, reason: "plans" as const };
+    }
     const r = await trx
       .updateTable("prospect")
       .set({ email_sent_at: now })
@@ -598,7 +605,9 @@ export async function sendOutreachMail(
         reason:
           claimed.reason === "address"
             ? "erre a CÍMRE közben kiment egy hideg megkeresés (cím-szintű egy-lövés) — nincs újraküldés"
-            : "párhuzamos küldés claimelte a prospectet",
+            : claimed.reason === "plans"
+              ? "a link tervei a levél megírása óta változtak — a következő futás a friss tervszámmal írja meg"
+              : "párhuzamos küldés claimelte a prospectet",
       },
     };
   }
