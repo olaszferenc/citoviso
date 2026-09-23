@@ -7,12 +7,19 @@
 // A grep for `getDisabledModules()` would have passed the whole time — the call
 // existed in the neighbouring code path, just not in the one that offered.
 //
-// ⚠️ It flips a REAL app_setting row in the shared dev DB, so the original value
-// is restored in a finally block. Run: npx tsx scripts/module-sales-check.mts
+// ⛔ It does NOT write the shared `module_sales_disabled` row any more. It used to
+// flip the real row and restore it in `finally` — two overlapping runs (two lands
+// at once) then left a DURABLE residue (B read A's temporary state as its
+// "original"), and meanwhile every other guard read a state nobody decided
+// (2026-09-23: configurator-placement-check red on a clean origin/main). The
+// disabled set is now a PROCESS-LOCAL override (overrideDisabledModulesInProcess),
+// and the run asserts the stored row is byte-for-byte untouched at the end.
+// Run: npx tsx scripts/module-sales-check.mts
 //   --self-test  → deliberately breaks an expectation, so the suite must go RED.
 
 import { db } from "../src/db/client.js";
-import { getDisabledModules, setDisabledModules } from "../src/moduleSales.js";
+import { getSetting } from "../src/console/appSettings.js";
+import { getDisabledModules, overrideDisabledModulesInProcess } from "../src/moduleSales.js";
 import { loadPricing, computeMonthly } from "../src/pricing.js";
 import {
   MODULE_CATALOG,
@@ -38,9 +45,31 @@ function ok(cond: boolean, label: string, detail = ""): void {
 const VICTIM = subscriptionModules().find((m) => !m.spine && m.priceMonthly > 0)!;
 const label = (id: string) => MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
 
+// The shared row as it stands BEFORE the run — value AND write timestamp, so a
+// rewrite of the same value (the old restore) would also show up as a change.
+const KEY = "module_sales_disabled";
+async function storedRow(): Promise<string> {
+  const r = await db
+    .selectFrom("app_setting")
+    .select(["value", "updated_at"])
+    .where("key", "=", KEY)
+    .executeTakeFirst();
+  return r ? `${r.value} @ ${new Date(r.updated_at as unknown as string).toISOString()}` : "(nincs sor)";
+}
+const rowBefore = await storedRow();
+
+// The product read path still reads the stored row when no override is set
+// (the switch the operator flips on /pricing must keep working).
+{
+  const raw = await getSetting(KEY);
+  const read = [...(await getDisabledModules())].sort().join(",");
+  const want = raw === null ? null : (JSON.parse(raw) as string[]).slice().sort().join(",");
+  ok(want === null || read === want, "override nélkül a tárolt sort olvassa", `tárolt: ${raw} · olvasott: ${read}`);
+}
+
 const original = await getDisabledModules();
 try {
-  await setDisabledModules([...original, VICTIM.id]);
+  overrideDisabledModulesInProcess([...original, VICTIM.id]);
   await loadPricing(true);
   const disabled = await getDisabledModules();
   ok(disabled.has(VICTIM.id), `a kapcsoló fog: „${label(VICTIM.id)}" kikapcsolva`);
@@ -116,7 +145,7 @@ try {
     if (!dependedOn) {
       ok(false, "⑤ a katalógusban nincs olyan modul, amire más ráépül — az állítás ÜRES volna");
     } else {
-      await setDisabledModules([...original, dependedOn]);
+      overrideDisabledModulesInProcess([...original, dependedOn]);
       await loadPricing(true);
       const dis2 = await getDisabledModules();
       const teljesIds = teljes.modules;
@@ -174,13 +203,11 @@ try {
     }
   }
 } finally {
-  await setDisabledModules([...original]);
-  await loadPricing(true);
-  const restored = await getDisabledModules();
-  console.log(
-    `\n↩ visszaállítva: ${restored.size ? [...restored].join(", ") : "(üres)"} ` +
-      `— az eredeti állapot ${[...original].join(", ") || "(üres)"}`,
-  );
+  overrideDisabledModulesInProcess(null);
+  // ⛔ The guarantee this guard now gives the other ~10 threads: the shared row
+  // was never written. Measured, not assumed (value + updated_at).
+  const rowAfter = await storedRow();
+  ok(rowAfter === rowBefore, "a közös module_sales_disabled sor ÉRINTETLEN maradt", `előtte: ${rowBefore} · utána: ${rowAfter}`);
   await db.destroy();
 }
 

@@ -22,8 +22,28 @@ const KEY = "module_sales_disabled";
  */
 const DEFAULT_DISABLED: readonly string[] = ["email"];
 
+/**
+ * PROCESS-LOCAL override for guards (scripts/*-check.mts). The dev DB is SHARED
+ * by ~10 parallel worktrees: a guard that flipped the real row and restored it
+ * in `finally` left a durable residue when two runs overlapped (B read A's
+ * temporary state as its "original"), and every OTHER guard reading the row
+ * meanwhile saw a state nobody decided (measured 2026-09-23: the
+ * configurator-placement-check went red on a clean origin/main). An override
+ * lives only in this process, so nothing is written and nothing leaks.
+ * null = read the stored row again. Product code never calls this.
+ */
+let processOverride: ReadonlySet<string> | null = null;
+
+export function overrideDisabledModulesInProcess(ids: readonly string[] | null): void {
+  processOverride =
+    ids === null
+      ? null
+      : new Set(ids.filter((id) => MODULE_CATALOG.some((m) => m.id === id && !m.spine)));
+}
+
 /** Module ids currently NOT sellable. Unknown/spine ids are dropped defensively. */
 export async function getDisabledModules(): Promise<Set<string>> {
+  if (processOverride) return new Set(processOverride);
   const raw = await getSetting(KEY);
   if (raw === null) return new Set(DEFAULT_DISABLED);
   try {
