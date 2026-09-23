@@ -45,7 +45,7 @@ const demo: SiteData = {
   // Six tiles → the last row holds two: exactly the ragged tail the fix has to centre.
   amenities: ["Ingyenes wifi", "Parkolás", "Reggeli", "Klíma", "Terasz, kert", "Kisállat"],
   // Three cards where four columns fit → the phantom-column case.
-  // ADR-XXXX: programs (title + date + place + source), not typed place lines.
+  // ADR-0214: programs (title + date + place + source), not typed place lines.
   poi: [
     { title: "Szüreti napok", start: "2026-09-26", end: null, settlement: "Révfülöp", distanceKm: null, sourceUrl: "https://example.com/a", sourceHost: "example.com" },
     { title: "Termelői piac", start: "2026-09-27", end: null, settlement: "Kővágóörs", distanceKm: 3, sourceUrl: "https://example.com/b", sourceHost: "example.com" },

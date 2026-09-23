@@ -1,6 +1,6 @@
 # 2026-09-23 — Automata heti programajánló: MEGÉPÍTVE (gyűjtés, választó, honlap-blokk, tulaj-levél)
 
-**ADR-XXXX.** Brief: `~/rc-briefs/programajanlo-gyujtes-brief.md` (a 2026-09-22-i mérés folytatása).
+**ADR-0214.** Brief: `~/rc-briefs/programajanlo-gyujtes-brief.md` (a 2026-09-22-i mérés folytatása).
 Saját fa: `~/wt/cit35b0e705`, egyedül (ellenőrizve).
 
 ## Tulajdonosi döntések ebben a körben
@@ -37,7 +37,7 @@ Saját fa: `~/wt/cit35b0e705`, egyedül (ellenőrizve).
 - **A saját kontraktusom** összerakott feliratot idézett („Forrás: <domain>") — a contract-drift
   kapu fogta meg; csak a szó szerinti `T()`-argumentum idézhető.
 - **Az ADR-szám a munka közben foglalttá vált** (a main ADR-enkénti fájlszerkezetre állt át,
-  ADR-0210) → ADR-XXXX, saját fájlban.
+  ADR-0210) → ADR-0214, saját fájlban.
 
 ## Park-lelet (a landolás közben)
 A `configurator-placement-check` a tiszta `origin/main`-en is piros volt: a közös dev-DB-ben

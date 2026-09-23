@@ -1,4 +1,4 @@
-## ADR-XXXX — Automata heti programajánló: település-kulcsos gyűjtés, automatikus kitöltés, csak-tulaj levél (2026-09-23)
+## ADR-0214 — Automata heti programajánló: település-kulcsos gyűjtés, automatikus kitöltés, csak-tulaj levél (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrökkel) · **Kapcsolódó:**
 ADR-0207 (átnevezés + fordítás-kapu), ADR-0026 (Brave), ADR-0084 (tenant-postafiók), ADR-0108 (havi levél mintája).

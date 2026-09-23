@@ -90,7 +90,7 @@ try {
 
   const lead = await db
     .insertInto("lead")
-    // ADR-XXXX: coordinates of the fixture settlement below (far from every real
+    // ADR-0214: coordinates of the fixture settlement below (far from every real
     // gathered circle), so the program pool is THIS check's own and nobody else's.
     .values({ scrape_run_id: run.id, name: "_mcfg_check lead", raw: JSON.stringify({}), lat: 48.3, lng: 21.2, address: "Fő utca 1, _Mcfgfalva" })
     .returning("id")
@@ -192,7 +192,7 @@ try {
   await setTenantModules(tenant.id, ["amenities", "hours", "poi"]);
   await setSiteModuleConfig(siteId, "amenities", { items: ["Ingyenes wifi", "Fedett kerékpártároló"] }, "test");
   await setSiteModuleConfig(siteId, "hours", { checkInFrom: "15:30", checkInTo: "20:00", checkOutUntil: "09:45" }, "test");
-  // ADR-XXXX: the program pool is gathered data, so the fixture seeds its own tiny
+  // ADR-0214: the program pool is gathered data, so the fixture seeds its own tiny
   // circle — two fake settlements (negative OSM ids, north-east Hungary, far from every
   // real gathered circle), a finished run for the own one, three programs.
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });

@@ -69,7 +69,7 @@ const CASES: Record<string, { patch: Partial<SiteData>; needle: string }> = {
     patch: { usp: ["Kétperces séta a nádasig"] } as Partial<SiteData>,
     needle: "Kétperces séta a nádasig",
   },
-  // ADR-XXXX: the weekly program recommender renders PROGRAMS (title + date + place +
+  // ADR-0214: the weekly program recommender renders PROGRAMS (title + date + place +
   // source), not typed place lines. A program without a source would not render (§B.17),
   // so the fixture carries one.
   poi: {
