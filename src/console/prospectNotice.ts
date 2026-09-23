@@ -175,7 +175,8 @@ export function injectTrackingNotice(html: string, token: string): string {
  *  · The visible line answers WHAT and WHO; one click answers WHY, and carries
  *    the privacy notice and the working opt-out with it.
  */
-export function injectTrackingBanner(html: string, token: string): string {
+/** WHO made it and WHAT it is not yet — the tracked bar's second statement. */
+function trackedMadeSentence(): string {
   const advertiser = advertiserName();
   // "Készítette: X." and not "A(z) X készítette" on purpose: a Hungarian article
   // in front of an unknown company name forces the "a(z)" crutch, and the ADR-0101
@@ -190,16 +191,36 @@ export function injectTrackingBanner(html: string, token: string): string {
   // 77 px measured. On the desktop it is ONE line. Frozen plan:
   // assets/design-refs/prospect-page/first-screen-compact/.
   const dot = advertiser.endsWith(".") ? "" : ".";
-  const made = advertiser
+  return advertiser
     ? `Készítette: ${escapeHtml(advertiser)}${dot}<span class="cit-fr-long"> — ingyen, az Ön nyilvánosan ` +
       `elérhető adataiból.</span> Ez még nem élő oldal.`
     : `Az Ön nyilvánosan elérhető adataiból készült, ingyen. Ez még nem élő oldal.`;
+}
+
+/** The tracked bar's headline — shared with the multi-plan bar. */
+const TRACKED_HEADLINE = "Ez egy honlap-terv az Ön szállásáról.";
+
+/**
+ * The tracked bar's three statements as PARTS, for the multi-plan bar
+ * (assets/design-refs/prospect-page/plan-tabs/ §B.5): the same sentences from the
+ * same constants, laid out on one line instead of three. Two bars, one truth.
+ */
+export function trackedBarParts(token: string): { headline: string; made: string; why: string } {
+  return {
+    headline: TRACKED_HEADLINE,
+    made: trackedMadeSentence(),
+    why: `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token)}`,
+  };
+}
+
+export function injectTrackingBanner(html: string, token: string): string {
+  const made = trackedMadeSentence();
   const banner =
     FRAMING_CSS +
     `<div data-cit-framing="tracked" class="cit-fr" style="text-align:center;` +
     `font:400 12.5px/1.4 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
     `<div class="cit-fr-in">` +
-    `<strong style="color:#fff;font-weight:600">Ez egy honlap-terv az Ön szállásáról.</strong> ` +
+    `<strong style="color:#fff;font-weight:600">${TRACKED_HEADLINE}</strong> ` +
     `${made}` +
     `<details class="cit-fr-det">` +
     `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline">` +
@@ -509,13 +530,13 @@ export function unsubscribeConfirmBody(token: string): string {
 }
 
 /** Put a block at the very END of the page (the opt-out lives at the bottom). */
-function appendToBody(html: string, block: string): string {
+export function appendToBody(html: string, block: string): string {
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);
   return html + block;
 }
 
 /** Put a block at the very START of the page (both framing bars live there). */
-function prependToBody(html: string, block: string): string {
+export function prependToBody(html: string, block: string): string {
   if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${block}`);
   return block + html;
 }

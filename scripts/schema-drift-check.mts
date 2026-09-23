@@ -27,6 +27,7 @@ const MAP: Readonly<Record<string, string>> = {
   bank_account: "BankAccountTable",
   accounting_document: "AccountingDocumentTable",
   accounting_document_line: "AccountingDocumentLineTable",
+  prospect_variant: "ProspectVariantTable",
 };
 
 // A 0031-es táblák az audit-oszlopokat közös `AuditColumns`-ból öröklik, tehát az adott

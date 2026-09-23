@@ -92,6 +92,9 @@ import {
   getOrderIntents,
   getPayments,
   getProspectByToken,
+  continueView,
+  listProspectPlans,
+  type ProspectPlan,
   getProspectActivity,
   getProspects,
   getSiteByToken,
@@ -217,6 +220,7 @@ import {
   deferConsentUntilEngagement,
 } from "./prospectNotice.js";
 import { markOwnViewLinks, normalizeProspectPath, OWN_VIEW_PARAM } from "./prospectPath.js";
+import { injectPlanEndBlock, injectPlanSwitcherBar, planHref } from "./planSwitcher.js";
 import {
   ensureCardJpeg,
   ensureHeroShot,
@@ -939,6 +943,37 @@ async function serveMock(res: http.ServerResponse, artifactId: string): Promise<
 
 /** Serve a mock with the PROSPECT CONFIGURATOR overlay injected (ADR-0015). The
  *  stored artifact stays pure; the interactive sell layer is added at serve time. */
+/**
+ * The two layers of a MULTI-PLAN tracked page (assets/design-refs/prospect-page/plan-tabs/):
+ * the thin bar with the switcher at the top, the end-of-page block at the end. A chip gets
+ * its picture only when that plan's hero shot is READY — the page never points an <img> at
+ * a shot that would have to be rendered on request (Elek FK-004 H1).
+ */
+/** The persisted inputs of a plan's artifact — plan 1 is the prospect's own (already loaded). */
+async function planInputs(plan: ProspectPlan, primaryInputs: unknown): Promise<unknown> {
+  if (plan.n === 1) return primaryInputs;
+  const row = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", plan.artifactId).executeTakeFirst();
+  return row?.inputs ?? null;
+}
+
+async function multiPlanLayers(
+  html: string,
+  i: {
+    token: string;
+    leadName: string;
+    lang: string | undefined;
+    plans: readonly ProspectPlan[];
+    current: number;
+    viewId: string | null;
+  },
+): Promise<string> {
+  const plans = await Promise.all(
+    i.plans.map(async (p) => ({ n: p.n, hasThumb: (await heroShotState(p.artifactId)).kind === "ready" })),
+  );
+  const input = { ...i, plans };
+  return injectPlanEndBlock(injectPlanSwitcherBar(html, input), input);
+}
+
 async function serveConfigure(res: http.ServerResponse, artifactId: string): Promise<void> {
   const a = await db
     .selectFrom("mock_artifact")
@@ -3380,6 +3415,32 @@ async function handle(
     const p = await getProspectByToken(pViewMatch[1]);
     if (!p || p.unsubscribed || (await ownedSiteForProspectToken(pViewMatch[1]))) return send(res, 204, "");
     const body = (await readJson(req)) as { referrer?: unknown; forras?: unknown };
+    // MULTI-PLAN (plan-tabs contract): the page says which plan it shows. A switch within
+    // PLAN_SWITCH_VIEW_MINUTES of the visit's start continues that visit — no new view, no
+    // new offer — and the plan looked at is an event inside it (§G.21, no schema change).
+    const planN = Number(url.searchParams.get("plan") ?? 0);
+    if (planN >= 1 && planN <= 9) {
+      const recent = await db
+        .selectFrom("mock_view")
+        .select("id")
+        .where("prospect_id", "=", p.id)
+        .orderBy("started_at", "desc")
+        .limit(1)
+        .executeTakeFirst();
+      const continued = recent ? await continueView(p.id, recent.id) : null;
+      const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+      const shown = plans.find((x) => x.n === planN);
+      if (continued) {
+        if (shown) await recordEvent(p.id, continued, "plan_view", { plan: planN, artifactId: shown.artifactId });
+        const offerNow = await bestActiveOfferForProspect(p.id);
+        return send(
+          res,
+          200,
+          JSON.stringify({ viewId: continued, offer: offerNow ? offerForPage(offerNow, p.lang ?? "hu") : null }),
+          "application/json",
+        );
+      }
+    }
     const viewId = await recordView(
       p.id,
       (req.headers["user-agent"] as string | undefined) ?? null,
@@ -3396,6 +3457,11 @@ async function handle(
         `[offer] eszkalációs ajánlat (−${escalation.percent}%, ` +
           `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
       );
+    }
+    if (planN >= 1 && planN <= 9) {
+      const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+      const shown = plans.find((x) => x.n === planN);
+      if (shown && plans.length >= 2) await recordEvent(p.id, viewId, "plan_view", { plan: planN, artifactId: shown.artifactId });
     }
     const offer = await bestActiveOfferForProspect(p.id);
     return send(
@@ -3516,6 +3582,44 @@ async function handle(
     if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
     return handleOrderRequest(req, res, p.artifactId, pReqMatch[1]);
   }
+  // POST /p/:token/v/:n/request — the order submit of PLAN n (plan-tabs contract §F.19):
+  // the order binds to the plan the lead was looking at, not to the link's first plan.
+  const pvReqMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/v\/([1-9])\/request$/.exec(pPath);
+  if (method === "POST" && pvReqMatch) {
+    const p = await getProspectByToken(pvReqMatch[1]!);
+    if (!p) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+    const plan = plans.find((x) => x.n === Number(pvReqMatch[2]));
+    if (!plan) return send(res, 404, JSON.stringify({ ok: false }), "application/json");
+    return handleOrderRequest(req, res, plan.artifactId, pvReqMatch[1]!);
+  }
+  // GET /p/:token/v/:n/thumb.jpg — the switcher chip's picture: the plan's CACHED hero
+  // shot as a card JPEG. ⛔ Never renders on request (Elek FK-004 H1 — an <img> may not
+  // launch Chromium from lead traffic); the page only asks for it when the shot is ready.
+  const pThumbMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/v\/([1-9])\/thumb\.jpg$/.exec(pPath);
+  if (method === "GET" && pThumbMatch) {
+    const p = await getProspectByToken(pThumbMatch[1]!);
+    const plans = p
+      ? await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath })
+      : [];
+    const plan = plans.find((x) => x.n === Number(pThumbMatch[2]));
+    const state = plan ? await heroShotState(plan.artifactId) : null;
+    if (!state || state.kind !== "ready") return send(res, 404, "", "text/plain; charset=utf-8");
+    try {
+      const buf = await readFile(await ensureCardJpeg(state.path));
+      res.writeHead(200, {
+        "Content-Type": "image/jpeg",
+        "Content-Length": buf.length,
+        // The shot's file name carries the mock mtime: a regenerated mock gets a new
+        // file, but THIS url stays — so a short cache, not a content-addressed one.
+        "Cache-Control": "private, max-age=600",
+      });
+      res.end(buf);
+      return;
+    } catch {
+      return send(res, 404, "", "text/plain; charset=utf-8");
+    }
+  }
   // GET /p/:token — the instrumented prospect preview: one mock_view per page
   // load (return visit = new session), configurator overlay + event beacons +
   // GDPR transparency footer.
@@ -3590,7 +3694,9 @@ async function handle(
     }
   }
 
-  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})$/.exec(pPath);
+  // …and /p/:token/v/:n — plan n of a MULTI-PLAN link (plan-tabs contract): the same
+  // page for another artifact. Plan 1 is the bare link, the letter's own address.
+  const pMatch = /^\/p\/([A-Za-z0-9_-]{16,})(?:\/v\/([1-9]))?$/.exec(pPath);
   if (method === "GET" && pMatch) {
     const p = await getProspectByToken(pMatch[1]);
     // Unknown token: no prospect, so no opt-out to offer (there is nothing to opt
@@ -3603,6 +3709,13 @@ async function handle(
     // no beacon, so no mock_view, no events, no nth-visit offer.
     const tracked = !p.unsubscribed;
     const measured = tracked && url.searchParams.get(OWN_VIEW_PARAM) !== "1";
+    const plans = await listProspectPlans(p.id, { artifactId: p.artifactId, artifactPath: p.artifactPath });
+    const planN = Number(pMatch[2] ?? 1);
+    const plan = plans.find((x) => x.n === planN);
+    // A plan number this link does not have (a single-plan link, or a plan that has
+    // since dropped out) is not an error page: the lead lands on the link's own plan.
+    if (!plan) return redirect(res, planHref(p.leadName, pMatch[1], 1));
+    const multi = plans.length >= 2;
     // THE THIRD FRAMING STATE (2026-09-20): this lead ALREADY BOUGHT. Measured in
     // dev — the link kept serving the configurator and the checkout to a paying
     // customer, so re-opening the cold letter charged them again for nothing.
@@ -3629,7 +3742,7 @@ async function handle(
           })
         : null;
       const html = containHorizontalOverflow(
-        lazyLoadBelowFold(ownedSite ?? (await readServableMock(p.artifactPath, p.artifactInputs))),
+        lazyLoadBelowFold(ownedSite ?? (await readServableMock(plan.artifactPath, await planInputs(plan, p.artifactInputs)))),
       );
       if (owned) {
         console.log(
@@ -3692,8 +3805,9 @@ async function handle(
           : true;
       // ADR-0364 (B1): the form names what the trial GIVES — the same list startTrial grants.
       const trialPkg = trialCfg.enabled && !hadTrial ? await configuredTrialPackage() : null;
-      const page = await injectConfigurator(html, p.artifactId, p.leadName, {
-        requestUrl: `/p/${pMatch[1]}/request`,
+      const page = await injectConfigurator(html, plan.artifactId, p.leadName, {
+        // §F.19: the order binds to the plan on screen.
+        requestUrl: plan.n === 1 ? `/p/${pMatch[1]}/request` : `/p/${pMatch[1]}/v/${plan.n}/request`,
         // ADR-0330: the subdomain the outreach link showed is the default they keep — via
         // plannedSiteSlug, the SAME rule convertLead assigns with (ADR-0343 ②: `trial.sub`
         // must be the address the trial site gets; free-trial-check ⑩).
@@ -3705,7 +3819,18 @@ async function handle(
         // No beacon for an opted-out visitor — the absence of `track` is what
         // actually stops the client-side event stream, not just the DB write.
         // ADR-0322 ④/B: feedbackUrl rides with the beacon — no survey for an opted-out visitor either.
-        ...(measured ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: `/p/${pMatch[1]}/view`, feedbackUrl: `/p/${pMatch[1]}/feedback` } } : {}),
+        // A multi-plan page names its plan to the view beacon: a plan switch CONTINUES the
+        // visit (POST /view below) instead of counting a new one — three clicks through the
+        // plans must not mint the 3rd-visit offer in seconds (ADR-0088 §4).
+        ...(measured
+          ? {
+              track: {
+                url: `/p/${pMatch[1]}/event`,
+                viewUrl: multi ? `/p/${pMatch[1]}/view?plan=${plan.n}` : `/p/${pMatch[1]}/view`,
+                feedbackUrl: `/p/${pMatch[1]}/feedback`,
+              },
+            }
+          : {}),
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(
           pf?.leadAddress ?? null,
@@ -3754,10 +3879,23 @@ async function handle(
         // …and the consent question waits for the first scroll/tap (first-screen-compact,
         // 2026-09-26): the lead sees the plan before the cookie bar, and nothing tracks
         // before the answer either way.
+        //
+        // A MULTI-PLAN link (plan-tabs contract, 2026-09-23) swaps the tracked bar for
+        // the thin bar with the switcher and adds the end-of-page block ABOVE the legal
+        // footer (both append; the footer goes last). A single-plan link is untouched.
         deferConsentUntilEngagement(
           tracked
             ? injectTrackingNotice(
-                injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
+                multi
+                  ? await multiPlanLayers(disableIntroAnimation(page), {
+                      token: pMatch[1],
+                      leadName: p.leadName,
+                      lang: p.lang ?? undefined,
+                      plans,
+                      current: plan.n,
+                      viewId: null,
+                    })
+                  : injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
                 pMatch[1],
               )
             : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page)), pMatch[1]),
