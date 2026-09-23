@@ -14,7 +14,7 @@
 - [2026-09-23_multiplan_tabs_feature_branch.md](2026-09-23_multiplan_tabs_feature_branch.md) — 2026-09-23 — Több terv egy követett linken (tervváltó) — a `feat/multimocktabs` ágon, a pilot UTÁN megy a main-re
 - [2026-09-23_monthly_default_period_badge.md](2026-09-23_monthly_default_period_badge.md) — 2026-09-23 — A konfigurátorban a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211)
 - [2026-09-23_module_sales_check_race.md](2026-09-23_module_sales_check_race.md) — 2026-09-23 — a module-sales-check nem ír többé közös DB-sort (verseny-maradék megszűnt)
-- [2026-09-23_kb_shot_determinism_gate.md](2026-09-23_kb_shot_determinism_gate.md) — 2026-09-23 — Súgó-képek: determinisztikus gyártó + deploy-KAPU (ADR-XXXX)
+- [2026-09-23_kb_shot_determinism_gate.md](2026-09-23_kb_shot_determinism_gate.md) — 2026-09-23 — Súgó-képek: determinisztikus gyártó + deploy-KAPU (ADR-0220)
 - [2026-09-23_declined_card_deploy_pipefail.md](2026-09-23_declined_card_deploy_pipefail.md) — 2026-09-22/23 — Az elutasított kártya nem néma · a park megmondja magáról · a deploy-kapuk tudnak bukni
 - [2026-09-23_booking_offer_dated_price.md](2026-09-23_booking_offer_dated_price.md) — 2026-09-23 — Árajánlat ár nélküli kérésre + évhez kötött ár (ADR-0215)
 - [2026-09-23_amenities_two_lists.md](2026-09-23_amenities_two_lists.md) — 2026-09-23 — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (ADR-0209)

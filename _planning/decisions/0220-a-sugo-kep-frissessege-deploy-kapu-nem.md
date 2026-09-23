@@ -1,4 +1,4 @@
-## ADR-XXXX — A súgó-kép frissessége deploy-KAPU, nem figyelmeztetés — előfeltétele a determinisztikus képgyártó (2026-09-23)
+## ADR-0220 — A súgó-kép frissessége deploy-KAPU, nem figyelmeztetés — előfeltétele a determinisztikus képgyártó (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, lokálban igazolva) · **Kapcsolódó:**
 ADR-0045/f (tudás-őr a deploy-csőben — a 1c) WARN-t és a 3. „elvetett: pixel-diff" pontját
@@ -46,7 +46,7 @@ zajra bukik. A megoldás ezért KÉT lépés, ebben a sorrendben.
   modul-ára/-neve változik, a kapu elavultnak mondja a képet → újragyártás + commit. Szándékos:
   a kép a katalógus állapotát mutatja. DB nélkül az `--out` gyártás hangosan bukik (nem ad üres
   Modulok-képet „elavult" címkével).
-- Egy ADR-XXXX ELŐTTI commit `kb-shot`-ja nem ismeri a `--check-committed`-et → a kapu bukik
+- Egy ADR-0220 ELŐTTI commit `kb-shot`-ja nem ismeri a `--check-committed`-et → a kapu bukik
   („nem igazolható"). ⚠️ Ez egy ilyen commitra való VISSZAGÖRGETÉST is megállít — tudatos
   kompromisszum, a tulaj döntheti felül.
 - Chromium- vagy rendszer-betűtípus-frissítés a dev gépen minden képet elmozdíthat → egyszeri

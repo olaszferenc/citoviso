@@ -1,4 +1,4 @@
-# 2026-09-23 — Súgó-képek: determinisztikus gyártó + deploy-KAPU (ADR-XXXX)
+# 2026-09-23 — Súgó-képek: determinisztikus gyártó + deploy-KAPU (ADR-0220)
 
 **Brief:** `~/rc-briefs/kb-shot-determinism-gate-brief.md` (a MODULOK 2. kör sessionből).
 
@@ -22,7 +22,7 @@
    console-outreach-draft + console-report (felső sáv betű után), console-dashboard (2 px).
 
 ## Nyitott kérdések (tulaj)
-- ⚠️ A kapu egy ADR-XXXX ELŐTTI commitra való VISSZAGÖRGETÉST is megállítja (nincs `--check-committed`).
+- ⚠️ A kapu egy ADR-0220 ELŐTTI commitra való VISSZAGÖRGETÉST is megállítja (nincs `--check-committed`).
   Szándékosan nincs kikerülő kapcsoló; ha vészhelyzeti rollback kell, erről a tulaj dönt.
 - A képek a DEV DB modul-katalógusából renderelnek → a dev DB modul-ár/név változása „elavult képet" jelent.
 - A `partner-kb-shot.mts` képei nincsenek a kapu alatt.

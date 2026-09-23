@@ -12,9 +12,9 @@
 //   npx tsx scripts/kb-shot.mts --out <dir>   # a képek a <dir> alá (a fa érintetlen)
 //   npx tsx scripts/kb-shot.mts --determinism # KÉT futás ideiglenes könyvtárba → pixel-összevetés
 //   npx tsx scripts/kb-shot.mts --check-committed  # újragyárt ideiglenesen, és a COMMITOLT
-//                                                  # képekkel veti össze (deploy GATE 1c, ADR-XXXX)
+//                                                  # képekkel veti össze (deploy GATE 1c, ADR-0220)
 //
-// ⛔ DETERMINIZMUS (2026-09-23, ADR-XXXX). A súgó-kép frissessége deploy-KAPU, és egy kapu
+// ⛔ DETERMINIZMUS (2026-09-23, ADR-0220). A súgó-kép frissessége deploy-KAPU, és egy kapu
 // csak akkor mondhat igazat, ha ugyanaz a commit MINDIG ugyanazt a képet adja. Mérve nem
 // ezt adta: három futásból a `console-lead/source-panel.png` hol mutatta a tartalomra
 // festett ragadó fülsor-mondatot, hol nem (7 623 px), a `console-leads/screen.png` táblázat-
@@ -81,7 +81,7 @@ const LANG = process.env.KB_SHOT_LANG ?? "hu";
 
 // ── --out <dir>: a felvételek a <dir> alá mennek, ugyanazzal a relatív úttal ────────
 // A fa képei érintetlenek maradnak — ez kell a determinizmus-próbához és a deploy-kapuhoz,
-// ami a COMMITOLT képeket veti össze egy friss gyártással (ADR-XXXX).
+// ami a COMMITOLT képeket veti össze egy friss gyártással (ADR-0220).
 const OUT_DIR = (() => {
   const i = process.argv.indexOf("--out");
   if (i < 0) return null;
@@ -187,7 +187,7 @@ if (process.argv.includes("--determinism")) {
 if (process.argv.includes("--check-committed")) {
   // ── --check-committed: friss gyártás vs. a fában (= a commitban) álló képek ────────
   // A deploy GATE 1c ezt futtatja a CÉL-commit worktree-jében: eltérés = a súgó olyan
-  // képet mutat, ami NEM az, amit a kiadott kód renderel — a deploy megáll (ADR-XXXX).
+  // képet mutat, ami NEM az, amit a kiadott kód renderel — a deploy megáll (ADR-0220).
   const run = await runInto("check");
   const rels = run.rels.filter(isEntryAsset).sort();
   const bad = await compareSets(
@@ -833,7 +833,7 @@ const FREEZE_CSS =
 
 /**
  * A felvétel előtti BEÁLLÁS — minden kép ezen megy át (a `snap()` hívja), hogy ugyanaz a
- * commit futásról futásra ugyanazt a képet adja (ADR-XXXX). Sorrendben:
+ * commit futásról futásra ugyanazt a képet adja (ADR-0220). Sorrendben:
  *  1. animáció/átmenet ki (egy félúton lévő átmenet a capture pillanatától függ);
  *  2. betűtípusok + képek bevárva (a késve érkező betű átrendezi a sorokat — ez tolta el
  *     1–2 px-szel az outreach-draft felső sávját);
@@ -956,7 +956,7 @@ if (process.argv.includes("--self-test")) {
   }
   console.log(`  ✅ szerkezeti próba: mind a felvétel EGYETLEN úton megy ki (snap()).`);
 
-  // ── A PIXEL-ÖSSZEVETŐ ÖNKONTROLLJA (ADR-XXXX) ───────────────────────────────
+  // ── A PIXEL-ÖSSZEVETŐ ÖNKONTROLLJA (ADR-0220) ───────────────────────────────
   // A determinizmus-próba és a deploy-kapu ezen áll: ha VAK (mindig „azonos"), mindkettő
   // zölden hazudik; ha ZAJRA érzékeny, a kapu hamisan bukik. Mindkét irányt kitűzzük,
   // szintetikus képeken (`reference_template_diversity_pixel_gate`: kalibráló pár kell).

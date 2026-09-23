@@ -146,7 +146,7 @@ timers_install_and_verify() {
   echo "     ✓ $(grep -c '\.timer$' "$UNITS_TMP/names") prod időzítő telepítve, engedélyezve, fut"
 }
 
-# ── GATE 1c/kép — a súgó-képek frissessége KAPU, nem figyelmeztetés (ADR-XXXX) ──────
+# ── GATE 1c/kép — a súgó-képek frissessége KAPU, nem figyelmeztetés (ADR-0220) ──────
 # Eddig a képek elavulását csak egy WARN jelezte („view változott, screenshot nem"), és
 # 2026-09-23-án mérve 4 commitolt kép már nem azt mutatta, amit a kód renderel — köztük a
 # console-pricing egy MEGSZŰNT modul-nevet. Innentől a cél-commit SAJÁT worktree-jében a
@@ -164,12 +164,12 @@ kb_shot_gate() { # $1 = commit sha
   # A worktree-ben nincs node_modules (gitignore) — a hívó fáé kell a playwright/sharp-hoz.
   # A .env a hívó cwd-jéből töltődik (a modul-katalógus a DB-ből jön a képekhez).
   ln -s "$PWD/node_modules" "$wt/node_modules"
-  # ⛔ Egy ADR-XXXX előtti cél-commit kb-shot-ja NEM ismeri a --check-committed-et: a
+  # ⛔ Egy ADR-0220 előtti cél-commit kb-shot-ja NEM ismeri a --check-committed-et: a
   # kapcsolót csendben figyelmen kívül hagyva a worktree képeit írná újra, és 0-val lépne
   # ki — néma zöld. Az ilyen commit képeinek frissessége nem mérhető, tehát nem is állítható.
   if ! grep -q -- '--check-committed' "$wt/scripts/kb-shot.mts"; then
     git worktree remove -f "$wt" >/dev/null 2>&1 || true
-    fail "kb-kép-kapu: a cél-commit kb-shot-ja nem tud összevetni (ADR-XXXX előtti) — a súgó-képek frissessége nem igazolható"
+    fail "kb-kép-kapu: a cél-commit kb-shot-ja nem tud összevetni (ADR-0220 előtti) — a súgó-képek frissessége nem igazolható"
   fi
   # A kimenet fájlba, és CSAK bukáskor ki — a zöld futás 40 sora elfedné a kapu többi sorát.
   npx tsx "$wt/scripts/kb-shot.mts" --check-committed >"$log" 2>&1
@@ -327,7 +327,7 @@ if [ -n "$PROD_SHA" ]; then
     fi
     git worktree remove -f "$KBWT" >/dev/null 2>&1 || true
     # (A régi „view változott, screenshot nem" WARN kivezetve: a képek frissességét a fenti
-    # GATE 1c/kép pixel-szinten MÉRI és blokkol — ADR-XXXX.)
+    # GATE 1c/kép pixel-szinten MÉRI és blokkol — ADR-0220.)
     node scripts/kb-gate.mjs check "$PROD_SHA..$SHA" \
       || fail "tudasbazis-or verdikt hiányzik/elavult — futtasd az őrt a fenti diffre, majd: node scripts/kb-gate.mjs pass \"$PROD_SHA..$SHA\" \"<kivonat>\""
   fi
