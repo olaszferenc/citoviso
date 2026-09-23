@@ -1,4 +1,4 @@
-## ADR-XXXX — Az éles időzítőket a DEPLOY telepíti és visszaméri — kézzel nem, kihagyhatatlanul (2026-09-23)
+## ADR-0216 — Az éles időzítőket a DEPLOY telepíti és visszaméri — kézzel nem, kihagyhatatlanul (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, negatív kontrollokkal; a telepítő ág
 első éles futása a következő deploy) · **Kapcsolódó:** ADR-0053 (verzió megy ki), ADR-0214
