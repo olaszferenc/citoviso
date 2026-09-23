@@ -131,6 +131,22 @@ A tulaj: **„all-in, minden automata"** — a nem-tech tulaj nem utalgat, a ká
   Számlázz.hu-összekötés) + hoszting-cél → grounded ajánlás + scope-olt 1. szelet (árazás+rendelés a
   konfigurátorban). Hurok-sorrend: árazás → rendelés → fizetés → élesítés → tenant-admin → (később) globális billing.
 
+### Kimenő portál-naptár a foglalás LEMONDÁSA után — a kézi zárás beragad (2026-09-23, lelet)
+Dátum: 2026-09-23 · Forrás: tudásbázis-őr lelete az ADR-0049 módosítása közben · Súlyosság: **alacsony**
+(csak aki volt foglalással + portált kötött + kézzel zárt + lemondott; élesben ma valószínűleg senki).
+- **Mi történik:** a `/naptar/<token>.ics` feed (`src/server/public.ts`, a `feedMatch` ág) NINCS a
+  foglalás modulhoz kötve — a portál (Booking.com/Airbnb) lemondás után is letölti. Benne van minden
+  `availability_day` sor (`getBlockedDaysFrom`): foglalás, KÉZI zárás, importált portál-nap.
+- **A gond:** lemondás után a naptár-szerkesztő nem nyílik meg (a modul-beállítás csak aktív modulnál,
+  `public.ts` `moduleSettingsHtml`), így egy korábbi kézi zárás („márciusban felújítás") a portálon
+  zárva marad, és a tulaj sehol nem tudja levenni.
+- **Ami HELYES és maradjon:** a lemondás előtt beérkezett, elfogadott FOGLALÁS továbbra is zárja a
+  portált (a vendég jön) — a feed teljes lekapcsolása dupla foglalást okozna.
+- **Javasolt irány:** foglalás nélkül a feed csak a valódi foglalásokat adja ki, a kézi zárásokat nem
+  (`source` szerint szűrve); őr: a `module-config-check` mintájára, mindkét állapotban mérve.
+- A szezon-zárás („csak a felsorolt időszakokban") ugyanezen a csatornán ment volna ki — azt az ADR-0049
+  2026-09-23-i módosítása már kivette (`src/tenant/seasonalOnly.ts`).
+
 ## ⚠️ Kritikus elvek / minőség
 
 ### ⭐ Entitás-párosítás & provenance = bizalom-kritikus (2026-07-06 lelet)
