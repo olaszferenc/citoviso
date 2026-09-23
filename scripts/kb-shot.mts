@@ -31,6 +31,7 @@ import {
 import { multilangCatalogView } from "../src/tenant/multilangCard.js";
 import type { DomainAdminData } from "../src/domains/domainAdmin.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
+import { ownerOfferPage } from "../src/server/offerViews.js";
 import {
   dashboardPage,
   duplicatesPage,
@@ -1412,6 +1413,42 @@ async function shootConsole(
 
 const conOut = (entryId: string): string =>
   path.join(ROOT, "kb/entries", entryId, "assets", "hu", "screen.png");
+// ADR-XXXX / tudásbázis-őr lelete (2026-09-23): the offer page is the flow's main NEW
+// screen — the owner types a price there and reads the yellow warning — and the entry
+// had no picture of it. Rendered from the REAL view (ownerOfferPage) with a price
+// typed in, so the live total and the "no end date" warning both show; element shot
+// of the price card, because the request card sits above it on a phone.
+await shootConsole(
+  ownerOfferPage(
+    {
+      outcome: "open",
+      status: "pending",
+      token: "kb-demo",
+      lang: LANG,
+      hostName: "Rózsa Vendégház",
+      guestName: "Kiss Anna",
+      guestPhone: "+36 30 555 1234",
+      guestEmail: "kiss.anna@example.com",
+      message: "Két felnőtt, esetleg kiságyat kérnénk. Mennyi lenne?",
+      unitName: "Emeleti szoba",
+      dateFrom: "2027-06-28",
+      dateTo: "2027-07-03",
+      nights: 5,
+      guests: 2,
+      currency: "HUF",
+      unitMode: "per_night",
+      known: [{ label: "Főszezon", nights: 2, perNight: 32000, from: "2027-07-01", to: "2027-07-03" }],
+      missing: ["2027-06-28", "2027-06-29", "2027-06-30"],
+      seasons: [{ label: "Főszezon", from: "07-01", to: "08-31", amount: 32000 }],
+      today: "2026-09-23",
+      expireHours: 48,
+    },
+    { amount: "26 000" },
+  ),
+  path.join(ROOT, "kb/entries", "admin-bookings", "assets", LANG, "offer.png"),
+  undefined,
+  "[data-offer-form]",
+);
 // Finance chips/hub counters (the dashboard is a hub since the 2026-08-23 redesign).
 const finCounts = { docs: 12, open: 3, overdue: 1, partners: 7 };
 // ADR-0102: the sales badge and the per-module switches must be VISIBLE in the guide

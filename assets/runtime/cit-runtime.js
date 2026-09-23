@@ -296,8 +296,7 @@
          * tonight" is the question that would let the screen and the invoice
          * disagree. The endpoint ships `base`; the server calls the same helper
          * with its own `isBase`. */
-        var md = CitSeason.monthDayOf(d.toISOString());
-        var hit = CitSeason.rowFor(pricing.rows, md, function (r) { return !!r.base; });
+        var hit = CitSeason.rowFor(pricing.rows, d.toISOString().slice(0, 10), function (r) { return !!r.base; });
         if (!hit) return null;
         var last = lines[lines.length - 1];
         var label = hit.base ? tr("Alapár") : hit.label;

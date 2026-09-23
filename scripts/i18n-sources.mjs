@@ -133,6 +133,10 @@ export const I18N_SOURCES = [
   // yet none of those strings ever reached the catalog: a non-Hungarian tenant
   // administered their bookings in Hungarian, and nothing could report it.
   "src/server/bookingViews.ts",
+  // Booking-offer (ADR-XXXX, 2026-09-23): the owner's offer page and the guest's offer
+  // page, plus the dated-price reminder mail — new files, entered on day one.
+  "src/server/offerViews.ts",
+  "src/tenant/priceExpiry.ts",
 
   // ── The INTERNAL CONSOLE (ADR-0067 ③) ────────────────────────────────────
   // Operator-facing, and prepared for a non-Hungarian colleague: the language is

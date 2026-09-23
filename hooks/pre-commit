@@ -1647,6 +1647,15 @@ if [ -f scripts/quote-request-check.mts ] && \
   echo "[pre-commit] quote-request (ár nélkül nem foglalást ígérünk)…"
   npx tsx scripts/quote-request-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ÁRAJÁNLAT-ÚT (kontraktus: design-refs/tenant-admin/booking-offer): ár nélküli
+# kérésnél a tulaj levele koppintással ÁR NÉLKÜL véglegesített. A lánc (tulaj-levél →
+# ajánlat-lap → árlista → vendég-levél → vendég-lap → foglalás) öt fájlban épül, ezért
+# a trigger mindet lefedi — és a szezon-szabályt is, mert a hiányzó éjszakát az dönti el.
+if [ -f scripts/booking-offer-check.mts ] && \
+   changed_files | grep -qE '^src/booking/requests\.ts$|^src/server/(offerViews|bookingViews|public)\.ts$|^src/tenant/(prices|priceExpiry|seasonRule)\.ts$|^assets/runtime/cit-season\.cjs$|^assets/design-refs/tenant-admin/booking-offer/|^scripts/booking-offer-check'; then
+  echo "[pre-commit] booking-offer (ár nélküli kérésre árajánlat, levéltől foglalásig)…"
+  npx tsx scripts/booking-offer-check.mts >"$GATE_LOG" || gate_failed
+fi
 # SZEZON-SZABÁLY (ADR-0197 ③): a „melyik ár-sor vonatkozik erre az éjszakára?" kérdés
 # KÉT példányban élt — a szerveré fagy rá a foglalási kérésre és megy ki a vendég
 # levelében, a böngészőé az, amit a vendég beküldés ELŐTT olvas —, és a kettőt semmi

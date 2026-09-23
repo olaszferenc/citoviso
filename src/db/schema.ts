@@ -928,6 +928,11 @@ export interface UnitPriceTable {
   min_nights: number | null;
   sort_order: Generated<number>;
   created_at: Generated<Timestamp>;
+  /** 0072: year-bound validity window (inclusive). Both NULL = recurring/timeless, as before. */
+  valid_from: string | null;
+  valid_to: string | null;
+  /** 0072: the pre-expiry reminder went out (one per window). */
+  expiry_notified_at: Timestamp | null;
 }
 
 /** Non-bookable days of a UNIT. Absent row = free (0024). */
@@ -952,7 +957,7 @@ export interface BookingRequestTable {
   date_to: string;
   guests: Generated<number>;
   message: string | null;
-  status: Generated<"pending" | "accepted" | "declined" | "expired" | "cancelled">;
+  status: Generated<"pending" | "offered" | "accepted" | "declined" | "expired" | "cancelled">;
   /** Single-use token behind the ACCEPT/DECLINE links in the owner's e-mail. */
   action_token: string;
   decided_at: Timestamp | null;
@@ -970,6 +975,10 @@ export interface BookingRequestTable {
   quoted_lines: JSONColumnType<
     { label: string; nights: number; per_night: number; guests: number; sum: number }[]
   > | null;
+  /** 0072: when the owner sent a price offer (status 'offered'); expiry derives from it. */
+  offered_at: Timestamp | null;
+  /** 0072: the GUEST's single-use key to accept the offer — never the owner's action_token. */
+  offer_token: string | null;
 }
 
 /** Portal calendar links per UNIT; both directions close the double-booking loop (0024). */

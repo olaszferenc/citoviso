@@ -1940,6 +1940,9 @@ export interface EditorPrice {
   readonly isBase: boolean;
   /** Minimum stay inside this period (ADR-0049); null → the module-wide minimum. */
   readonly minNights: number | null;
+  /** 0072: year-bound window ('YYYY-MM-DD'); null = timeless / recurring. */
+  readonly validFrom?: string | null;
+  readonly validTo?: string | null;
 }
 
 export interface PricingEditorData {
@@ -1974,9 +1977,29 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   const bk = data.bookingActive;
   const cards = data.units
     .map((u) => {
-      const rows = data.prices[u.id] ?? [];
-      const base = rows.find((r) => r.isBase);
+      // 0072: a lapsed dated row can never price a night again — it is not shown
+      // (the maintenance tick removes it). The "Alapár" field is the TIMELESS base
+      // only; a dated base from the offer page is its own row below, with its dates,
+      // so saving the field can neither overwrite it nor hide it.
+      const today = new Date().toISOString().slice(0, 10);
+      const rows = (data.prices[u.id] ?? []).filter((r) => !r.validTo || r.validTo >= today);
+      const base = rows.find((r) => r.isBase && !r.validFrom);
       const seasons = rows.filter((r) => !r.isBase);
+      const datedBases = rows.filter((r) => r.isBase && r.validFrom && r.validTo);
+      const isoNice = (iso: string): string => `${iso.slice(0, 4)}. ${iso.slice(5, 7)}. ${iso.slice(8, 10)}.`;
+      const datedRows = datedBases
+        .map(
+          (b) =>
+            `<div class="price-row">` +
+            `<span class="price-row__txt"><strong>${T(lang, "Alapár, dátummal")}</strong>` +
+            `<span>${esc(isoNice(b.validFrom!))} – ${esc(isoNice(b.validTo!))}</span></span>` +
+            `<span class="price-row__amt">${esc(grouped(b.amount))} ${esc(cur)}</span>` +
+            `<form method="POST" action="/admin/prices/delete">` +
+            `<input type="hidden" name="id" value="${esc(b.id)}">` +
+            `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit">${T(lang, "Törlés")}</button>` +
+            `</form></div>`,
+        )
+        .join("");
 
       const seasonRows = seasons.length
         ? seasons
@@ -2010,6 +2033,10 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +
         `<p class="citui-hint" style="margin:0 0 18px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
+        (datedRows
+          ? datedRows +
+            `<p class="citui-hint" style="margin:6px 0 18px">${T(lang, "A dátumos alapár az árajánlatból került ide: a megadott napig érvényes, ahol nincs időszaki ár. Lejárat előtt e-mailben emlékeztetjük.")}</p>`
+          : "") +
         // ② seasons
         `<h3 class="mcfg-sub">${T(lang, "Időszaki árak")}</h3>` +
         seasonRows +
@@ -2500,7 +2527,7 @@ export function bookingVerdictPage(r: {
  * bottom. Both are optional: a stale token resolves neither, and half a header is
  * better than an invented one (§B.17).
  */
-function guestPageShell(
+export function guestPageShell(
   title: string,
   inner: string,
   opts: { host?: string | null; back?: string | null; backLabel?: string } = {},

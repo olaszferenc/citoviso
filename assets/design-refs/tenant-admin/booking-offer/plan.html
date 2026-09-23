@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terv (2. kör) — árajánlat, érvényességgel, vendég-elfogadással</title>
+<style>
+:root{
+  --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-cyan-500:#1fb6d6;
+  --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-text:#1f7a4c; --citui-warn-text:#8a6212; --citui-bad-text:#b3262b;
+  --r:12px; --font:Inter,'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);color:var(--citui-ink);background:#e9eef2}
+.wrap{max-width:1180px;margin:0 auto;padding:14px}
+h1{font-size:19px;margin:0 0 4px}
+.lede{color:var(--citui-muted);font-size:14px;line-height:1.55;margin:0 0 14px}
+.sizebar{position:sticky;top:0;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--citui-navy-900);color:#fff;padding:10px 12px;border-radius:var(--r);margin-bottom:14px}
+.sizebar b{font-size:13px;margin-right:auto}
+.sizebar button{font:inherit;font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;cursor:pointer}
+.sizebar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06232b;font-weight:700}
+.stage{container-type:inline-size;margin:0 auto;transition:max-width .18s ease}
+body[data-size="mobile"] .stage{max-width:390px}
+body[data-size="desktop"] .stage{max-width:1180px}
+.vari{background:#fff;border:1px solid #cfd8e0;border-radius:var(--r);padding:14px;margin-bottom:22px}
+.step{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;margin:22px 0 8px}
+.step:first-child{margin-top:0}
+
+.mail{border:1px solid var(--citui-line-strong);border-radius:10px;overflow:hidden;background:#fff}
+.mail__head{background:var(--citui-surface-2);padding:8px 12px;font-size:12.5px;color:var(--citui-muted);line-height:1.5}
+.mail__head b{color:var(--citui-ink)}
+.mail__body{padding:14px;font-size:15px;line-height:1.65}
+.mail__body .t{font-size:17px;font-weight:700;margin:0 0 8px}
+.noprice{border-left:4px solid var(--citui-warn);background:#fdf6e6;padding:10px 12px;border-radius:6px;font-size:14px;line-height:1.55;margin:10px 0}
+.noprice b{display:block}
+.mbtn{display:inline-block;padding:13px 22px;border-radius:10px;font-size:16px;font-weight:600;margin:4px 6px 4px 0;cursor:pointer;border:0;font-family:inherit}
+.mbtn--pri{background:var(--citui-navy-800);color:#fff}
+.mbtn--sec{background:#fff;color:var(--citui-navy-800);border:1px solid #ccd}
+
+.page{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:var(--r);padding:16px}
+.page__host{font-weight:800;color:var(--citui-navy-900);padding-bottom:10px;border-bottom:1px solid var(--citui-line);margin-bottom:14px}
+.page__grid{display:grid;gap:14px}
+@container (min-width:760px){ .page__grid{grid-template-columns:5fr 7fr;align-items:start} }
+.card{background:#fff;border:1px solid var(--citui-line);border-radius:var(--r);padding:14px}
+.card h3{margin:0 0 10px;font-size:16px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;line-height:1.5}
+.kv dt{color:var(--citui-muted)} .kv dd{margin:0;font-weight:600}
+.quote-guest{margin-top:12px;border-left:4px solid var(--citui-cyan-500);background:var(--citui-surface-2);padding:9px 11px;border-radius:6px;font-size:14px;line-height:1.5}
+.quote-guest .who{font-size:11px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--citui-muted);display:block;margin-bottom:2px}
+.saw{margin-top:12px;font-size:13.5px;color:var(--citui-warn-text);display:flex;gap:7px;align-items:flex-start;line-height:1.45}
+.saw svg{flex:none;margin-top:2px}
+
+.lines{margin:0 0 10px;padding:0;list-style:none}
+.lines li{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:9px 0;border-bottom:1px dashed var(--citui-line-strong);font-size:14.5px}
+.lines li small{display:block;color:var(--citui-muted);font-size:12.5px}
+.lines li.missing{background:#fdf6e6;margin:0 -8px;padding:10px 8px;border-radius:8px;border-bottom:0}
+.lines li .full{grid-column:1/-1}
+.lines .sum{font-weight:700;white-space:nowrap}
+.fld{margin-top:9px}
+.fld>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
+.inp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.inp input{font:inherit;font-size:16px;width:150px;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;background:#fff}
+.inp input[type=date]{width:170px}
+.inp input[aria-invalid="true"]{border-color:var(--citui-bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-bad) 18%,transparent)}
+.inp em{font-style:normal;color:var(--citui-muted);font-size:14px}
+.err{color:var(--citui-bad-text);font-size:13px;margin-top:4px}
+.validity{margin-top:8px;font-size:13px;line-height:1.5;border-radius:6px;padding:8px 10px}
+.validity--warn{background:#fff;border:1px solid var(--citui-warn);color:var(--citui-warn-text)}
+.validity--ok{background:var(--citui-ok-soft);color:var(--citui-ok-text)}
+.total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--citui-ink);padding-top:10px;margin-top:4px;font-size:15px}
+.total b{font-size:22px} .total b.empty{color:var(--citui-muted);font-size:15px;font-weight:600}
+.into{font-size:13px;color:var(--citui-muted);margin:10px 0 0;line-height:1.5}
+label.lbl{display:block;font-size:13px;font-weight:600;margin:14px 0 5px}
+textarea{width:100%;font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;min-height:70px;resize:vertical}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn{font:inherit;font-size:16px;font-weight:700;padding:13px 20px;border-radius:10px;border:0;cursor:pointer}
+.btn--pri{background:var(--citui-navy-800);color:#fff;flex:1 1 220px}
+.btn--pri[disabled]{background:#a9b6c3;cursor:not-allowed}
+.btn--ghost{background:#fff;color:var(--citui-navy-800);border:1px solid var(--citui-line-strong)}
+.fine{font-size:13px;color:var(--citui-muted);line-height:1.5;margin-top:10px}
+
+.done{border-left:4px solid var(--citui-ok);background:var(--citui-ok-soft);padding:12px 14px;border-radius:8px;font-size:14.5px;line-height:1.55}
+.done b{display:block;color:var(--citui-ok-text);font-size:16px;margin-bottom:3px}
+.done--muted{border-color:var(--citui-muted);background:#f1f3f5} .done--muted b{color:var(--citui-ink)}
+.done--bad{border-color:var(--citui-bad);background:#fdecec} .done--bad b{color:var(--citui-bad-text)}
+.pricebox{border:1px solid var(--citui-line);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.6}
+.pricebox .tot{font-weight:800;border-top:1px solid var(--citui-line);margin-top:6px;padding-top:6px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#fdf1d6;color:var(--citui-warn-text)}
+.pill--ok{background:var(--citui-ok-soft);color:var(--citui-ok-text)}
+.pill--muted{background:#eceff2;color:var(--citui-muted)}
+.hidden{display:none!important}
+.two{display:grid;gap:12px}
+@container (min-width:760px){ .two{grid-template-columns:1fr 1fr;align-items:start} }
+.gpage{background:#faf7f2;border:1px solid #e3ddd3;border-radius:var(--r);padding:18px;text-align:center}
+.gpage .host{font-weight:800;padding-bottom:10px;border-bottom:1px solid #e3ddd3;margin-bottom:12px;text-align:left}
+.gpage h4{font-size:19px;margin:6px 0 8px}
+.gpage p{font-size:14.5px;line-height:1.6;margin:0 0 12px}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--citui-line);border-radius:10px;padding:10px 12px;background:#fff;font-size:14px;flex-wrap:wrap}
+.notes{font-size:13px;line-height:1.55;color:var(--citui-ink);background:#f4f6f8;border-radius:8px;padding:10px 12px;margin-top:14px}
+.notes li{margin:3px 0}
+.sim{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.sim button{font:inherit;font-size:13px;padding:6px 11px;border-radius:999px;border:1px dashed var(--citui-line-strong);background:#fff;cursor:pointer}
+</style>
+</head>
+<body data-size="mobile">
+<div class="wrap">
+  <div class="sizebar">
+    <b>Árajánlat — 2. kör (B út)</b>
+    <button type="button" data-size-btn="mobile" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-size-btn="desktop" aria-pressed="false">Asztali</button>
+  </div>
+  <div class="stage">
+    <h1>Az ajánlat a rendszerből megy ki, és az ár dátummal kerül az árlistába</h1>
+    <p class="lede">Minta: Emeleti szoba, 2027. jún. 28. – júl. 3. (5 éj, 2 fő). A szobának csak <b>Főszezon (07.01–08.31) 32 000 Ft/éj</b> ára van, ezért a jún. 28–30. éjszakákra nincs ár, és a vendég árajánlatot kért. Ma: 2026. szept. 23.<br>
+    <b>Változás az 1. körhöz képest:</b> a „nincs árlista” eset kikerült (az online foglaláshoz kötelező az árlista-modul) · az árat nem lehet „csak erre a kérésre” megadni, mindig az árlistába kerül · érvényességi dátum, figyelmeztetéssel, ha üresen marad · a vendég elfogadásának teljes útja.</p>
+
+    <section class="vari">
+      <p class="step">1 · A tulaj levele</p>
+      <div class="mail">
+        <div class="mail__head"><b>Árajánlat-kérés: Kiss Anna, 2027. 06. 28.–2027. 07. 03.</b><br>Citoviso · a Rózsa Vendégház foglalási értesítője</div>
+        <div class="mail__body">
+          <p class="t">Új árajánlat-kérés — Emeleti szoba</p>
+          <div class="noprice"><b>A vendég nem látott árat.</b>Az Emeleti szobának 3 éjszakára (jún. 28–30.) nincs ára. Adja meg, és a rendszer elküldi neki az ajánlatot — az ár bekerül az árlistájába, így a következő vendég már látja.</div>
+          Kiss Anna · CIT-8F21A0C4<br>2027. jún. 28. — 2027. júl. 3. · 2 fő<br>
+          <button class="mbtn mbtn--pri" type="button" data-go-page>Ajánlatot küldök</button>
+          <button class="mbtn mbtn--sec" type="button" data-decline>Nem szabad</button>
+        </div>
+      </div>
+
+      <div id="offer">
+      <p class="step">2 · Az ajánlat-lap (a levél linkje, belépés nélkül · a Foglalások fülön ugyanez)</p>
+      <div class="page">
+        <div class="page__host">Rózsa Vendégház</div>
+        <div class="page__grid">
+          <div class="card">
+            <h3>Kiss Anna kérése</h3>
+            <dl class="kv">
+              <dt>Szoba</dt><dd>Emeleti szoba</dd>
+              <dt>Érkezés</dt><dd>2027. jún. 28.</dd>
+              <dt>Távozás</dt><dd>2027. júl. 3. (5 éj)</dd>
+              <dt>Létszám</dt><dd>2 fő</dd>
+              <dt>Telefon</dt><dd>+36 30 555 1234</dd>
+            </dl>
+            <div class="quote-guest"><span class="who">Vendég</span>„Két felnőtt, esetleg kiságyat kérnénk. Mennyi lenne?”</div>
+            <p class="saw"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.5v4.2M8 11v.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>A vendég az oldalon nem látott összeget — amit itt beír, az lesz az első ár, amit megtud.</span></p>
+          </div>
+
+          <div class="card">
+            <h3>Az ár</h3>
+            <ul class="lines">
+              <li class="missing">
+                <div>Új ár · 3 éj <small>jún. 28 – júl. 1. — erre nincs ára</small></div>
+                <span class="sum" data-sum>—</span>
+                <div class="full">
+                  <div class="fld"><span>Ár éjszakánként</span>
+                    <div class="inp"><input type="text" inputmode="numeric" placeholder="pl. 26 000" data-amount aria-label="Ár éjszakánként"><em>Ft / éj</em></div>
+                    <div class="err" data-amount-err></div>
+                  </div>
+                  <div class="fld"><span>Érvényes eddig (nem kötelező)</span>
+                    <div class="inp"><input type="date" data-until min="2026-09-23" aria-label="Érvényes eddig"><button class="btn btn--ghost" type="button" data-clear-until style="padding:8px 12px;font-size:13px">Nincs vége</button></div>
+                    <div class="err" data-until-err></div>
+                  </div>
+                  <div class="validity" data-validity></div>
+                </div>
+              </li>
+              <li>
+                <div>Főszezon · 2 éj × 32 000 Ft <small>júl. 1 – júl. 3. — ez már az árlistájában van</small></div>
+                <span class="sum">64 000 Ft</span>
+              </li>
+            </ul>
+            <div class="total"><span>Összesen</span><b class="empty" data-total>írja be az árat</b></div>
+            <p class="into" data-into></p>
+
+            <label class="lbl" for="note">Üzenet a vendégnek (nem kötelező)</label>
+            <textarea id="note" data-note placeholder="pl. A kiságyat szívesen odakészítjük, díjmentesen."></textarea>
+            <div class="actions">
+              <button class="btn btn--pri" type="button" data-send disabled>Ajánlat küldése</button>
+              <button class="btn btn--ghost" type="button" data-decline>Nem szabad</button>
+            </div>
+            <p class="fine">Az ajánlat még nem foglalás: a napok addig szabadok maradnak, amíg Kiss Anna el nem fogadja. Ha 48 órán belül nem felel, az ajánlat lejár, és erről mindketten értesítést kapnak.</p>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <div id="after" class="hidden">
+        <p class="step">3 · A tulaj lapja a küldés után · és amit a vendég kap</p>
+        <div class="two">
+          <div>
+            <div class="done" data-done></div>
+            <p class="step" style="margin-top:14px">A Foglalások fülön</p>
+            <div class="row"><span><b>Kiss Anna</b> · Emeleti szoba · jún. 28 – júl. 3.</span><span class="pill" data-status>Ajánlat kiküldve · lejár szept. 25. 14:05</span></div>
+            <p style="margin:8px 0 0"><button class="btn btn--ghost" type="button" data-owner-accept style="font-size:14px;padding:9px 14px">A vendég elfogadta (telefonon / levélben)</button></p>
+            <p class="fine" style="margin-top:4px">Ha a vendég nem a levél gombjával, hanem telefonon vagy válaszlevélben mondja, hogy kéri: ugyanaz történik, mintha ő nyomta volna meg.</p>
+          </div>
+          <div class="mail">
+            <div class="mail__head"><b>Árajánlat: 2027. 06. 28. — 2027. 07. 03.</b><br>Rózsa Vendégház</div>
+            <div class="mail__body" style="font-size:14.5px">Kedves Kiss Anna!<br><br>A szállásadó árajánlatot küldött a kért időszakra:
+              <div class="pricebox" data-gprice></div>
+              <div data-gnote></div>
+              Az ajánlat <b>2026. szept. 25. 14:05-ig</b> érvényes. A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja.<br>
+              <button class="mbtn mbtn--pri" type="button" data-g-open>Megnézem és elfogadom</button>
+              <button class="mbtn mbtn--sec" type="button" data-g-no>Nem kérem</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="gconfirm" class="hidden">
+          <p class="step">4 · A levél linkje a SZÁLLÁS saját oldalán nyílik — előbb megmutat, csak a gomb dönt</p>
+          <div class="two">
+            <div class="gpage">
+              <div class="host">Rózsa Vendégház</div>
+              <h4>Az ajánlat</h4>
+              <p>Emeleti szoba · 2027. jún. 28. — júl. 3. · 2 fő<br><b data-g-total></b></p>
+              <p style="font-size:13px;color:#6d6660">Az elfogadással a foglalás végleges. A lemondás feltételei a visszaigazoló levélben lesznek.</p>
+              <button class="mbtn mbtn--pri" type="button" data-g-accept>Elfogadom az ajánlatot</button>
+              <div class="sim"><span style="font-size:12px;color:var(--citui-muted)">Próba:</span>
+                <button type="button" data-sim="taken">Közben elkelt</button>
+                <button type="button" data-sim="expired">Lejárt az ajánlat</button>
+              </div>
+            </div>
+            <div data-g-result></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="declined" class="hidden">
+        <p class="step">Utána</p>
+        <div class="done done--muted"><b>Elutasítva</b>Értesítettük Kiss Annát, hogy a kért időpont nem szabad. A naptár és az árlista nem változott.</div>
+      </div>
+      <p style="margin-top:14px"><button class="btn btn--ghost" type="button" data-reset>Újra az elejéről</button></p>
+
+      <div class="notes"><b>Mit köt ez a terv</b>
+        <ul>
+          <li><b>Az ár mindig az árlistába kerül</b> — nincs „csak erre a kérésre” kiút. Dátummal: attól a naptól a megadott napig érvényes (évhez kötött). Dátum nélkül: az egység alapára lesz, azaz minden olyan éjszakára, amire nincs szezonár, a következő módosításig — a szezonárak ettől a saját árukon maradnak.</li>
+          <li><b>A dátum nem lehet a kért tartózkodás előtt</b> — különben az ár erre a kérésre sem vonatkozna.</li>
+          <li><b>A vendég elfogadása:</b> a levél gombja a szállás oldalán nyit egy lapot, ami előbb megmutatja az ajánlatot (a levelezők előre megnyitják a linkeket, ezért egy link megnyitása soha nem dönt). Az „Elfogadom” gomb ugyanazt teszi, mint ma a tulaj elfogadása: egy lépésben ellenőrzi, hogy a napok szabadok-e, és ha igen, foglalttá teszi őket.</li>
+          <li><b>Utána:</b> a vendég megkapja a mai visszaigazoló levelet (az ajánlott árral), a tulaj levelet kap, hogy elfogadták. Ha közben elkelt vagy lejárt, a vendég ezt látja, a tulaj pedig értesítést kap.</li>
+          <li><b>Lejárat:</b> a modul meglévő határideje (alapból 48 óra) az ajánlat elküldésétől számít.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  var TODAY = "2026-09-23";
+  var FIRST = "2027-06-28", LAST_MISSING = "2027-06-30"; // the three unpriced nights
+  var MISSING = 3, SEASON = 64000;
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  var MONTHS = ["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
+  function huDate(iso){ var p = iso.split("-"); return p[0] + ". " + MONTHS[+p[1]-1] + " " + (+p[2]) + "."; }
+  function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; }
+  function parseAmount(raw){
+    var s = String(raw).replace(/[\s. ]/g, "").replace(/ft$/i, "");
+    if (s === "") return { empty:true };
+    if (!/^\d+$/.test(s)) return { error:"Csak számot írjon, pl. 26 000." };
+    var n = parseInt(s, 10);
+    if (!(n > 0)) return { error:"Az ár legyen nagyobb nullánál." };
+    if (n > 10000000) return { error:"Ez túl nagy összeg — ellenőrizze a nullákat." };
+    return { value:n };
+  }
+
+  var amount = $("[data-amount]"), until = $("[data-until]"), send = $("[data-send]");
+  var state = {};
+
+  function compute(){
+    var r = parseAmount(amount.value);
+    $("[data-amount-err]").textContent = r.error || "";
+    amount.setAttribute("aria-invalid", r.error ? "true" : "false");
+    var u = until.value, uErr = "";
+    if (u && u < LAST_MISSING) uErr = "Legalább " + huDate(LAST_MISSING) + " legyen — különben az ár erre a kérésre sem vonatkozik.";
+    $("[data-until-err]").textContent = uErr;
+    until.setAttribute("aria-invalid", uErr ? "true" : "false");
+
+    var v = $("[data-validity]");
+    if (!u) {
+      v.className = "validity validity--warn";
+      v.innerHTML = "<b>Nincs lejárati dátum.</b> Ez lesz az Emeleti szoba <b>alapára</b>: minden olyan éjszakára érvényes, amelyre nincs szezonár — a következő módosításig. A Főszezon (07.01–08.31) a saját 32 000 Ft-os árán marad.";
+    } else if (!uErr) {
+      v.className = "validity validity--ok";
+      v.innerHTML = "Mától " + huDate(u).replace(/\.$/, "") + "-ig érvényes. Utána erre a szobára — ahol nincs szezonár — újra nem lesz ár; a lejárat előtt emlékeztetjük.";
+    } else { v.className = "validity hidden"; }
+
+    var total = r.value && !uErr ? r.value * MISSING + SEASON : null;
+    $("[data-sum]").textContent = r.value ? fmt(r.value * MISSING) : "—";
+    var t = $("[data-total]");
+    t.textContent = total ? fmt(total) : "írja be az árat";
+    t.classList.toggle("empty", !total);
+    $("[data-into]").textContent = r.value
+      ? fmt(r.value) + "/éj kerül be az Emeleti szoba árlistájába " + (u && !uErr ? "(" + huDate(TODAY) + " – " + huDate(u) + ")" : "alapárként") + ", és a honlapon is megjelenik."
+      : "";
+    send.disabled = !total;
+    state = { amount: r.value, until: u, total: total };
+  }
+  amount.addEventListener("input", compute);
+  amount.addEventListener("blur", function(){ var r = parseAmount(amount.value); if (r.value) amount.value = String(r.value).replace(/\B(?=(\d{3})+(?!\d))/g, " "); });
+  until.addEventListener("input", compute);
+  until.addEventListener("change", compute);
+  $("[data-clear-until]").addEventListener("click", function(){ until.value = ""; compute(); });
+
+  $("[data-go-page]").addEventListener("click", function(){ $("#offer").scrollIntoView({behavior:"smooth"}); amount.focus({preventScroll:true}); });
+  $$("[data-decline]").forEach(function(b){ b.addEventListener("click", function(){ $("#offer").classList.add("hidden"); $("#after").classList.add("hidden"); $("#declined").classList.remove("hidden"); }); });
+
+  send.addEventListener("click", function(){
+    compute(); if (!state.total) return;
+    var validTxt = state.until ? " (" + huDate(TODAY) + " – " + huDate(state.until) + ")" : " alapárként";
+    $("[data-done]").className = "done";
+    $("[data-done]").innerHTML = "<b>Ajánlat elküldve, " + fmt(state.total) + "</b>Kiss Anna e-mailben megkapta. A napok még szabadok — ha elfogadja, értesítjük, és akkor válnak foglalttá. Az Emeleti szoba árlistájába bekerült: " + fmt(state.amount) + "/éj" + validTxt + ".";
+    $("[data-gprice]").innerHTML = "Új ár: 3 éj × " + fmt(state.amount) + " = " + fmt(state.amount*3) + "<br>Főszezon: 2 éj × 32 000 Ft = 64 000 Ft<div class='tot'>Összesen: " + fmt(state.total) + "</div>";
+    var note = $("[data-note]").value.trim();
+    $("[data-gnote]").innerHTML = note ? "<div class='quote-guest' style='margin:0 0 10px'><span class='who'>A szállásadó üzenete</span>„" + note.replace(/[<>&]/g,"") + "”</div>" : "";
+    $("[data-g-total]").textContent = "Összesen: " + fmt(state.total);
+    $("[data-status]").className = "pill"; $("[data-status]").textContent = "Ajánlat kiküldve · lejár szept. 25. 14:05";
+    $("#offer").classList.add("hidden"); $("#after").classList.remove("hidden");
+    $("#gconfirm").classList.add("hidden"); $("[data-g-result]").innerHTML = "";
+  });
+
+  $("[data-g-open]").addEventListener("click", function(){ $("#gconfirm").classList.remove("hidden"); $("#gconfirm").scrollIntoView({behavior:"smooth"}); });
+  $("[data-g-no]").addEventListener("click", function(){
+    $("[data-status]").className = "pill pill--muted"; $("[data-status]").textContent = "A vendég nem kérte — a napok szabadok";
+    $("#gconfirm").classList.add("hidden");
+  });
+  function gResult(kind){
+    var out = $("[data-g-result]");
+    if (kind === "ok") {
+      out.innerHTML = "<div class='done'><b>Vendég: „Foglalása végleges”</b>Megkapja a visszaigazoló levelet az árral és a lemondó linkkel.</div>" +
+        "<div class='mail' style='margin-top:12px'><div class='mail__head'><b>Kiss Anna elfogadta az ajánlatát</b><br>Citoviso · a Rózsa Vendégház foglalási értesítője</div><div class='mail__body' style='font-size:14.5px'>A foglalás végleges: Emeleti szoba, 2027. jún. 28. — júl. 3., 2 fő, <b>" + fmt(state.total) + "</b>. A napok foglaltak a naptárban.</div></div>";
+      $("[data-status]").className = "pill pill--ok"; $("[data-status]").textContent = "Elfogadva — foglalás végleges";
+    } else if (kind === "taken") {
+      out.innerHTML = "<div class='done done--bad'><b>Vendég: „Ezek a napok közben elkeltek”</b>A foglalás nem jött létre, pénz nem mozdult. A szállásadót értesítettük — ha tud másik időpontot, jelentkezik.</div>";
+      $("[data-status]").className = "pill pill--muted"; $("[data-status]").textContent = "Közben elkelt — a vendég nem foglalhatott";
+    } else {
+      out.innerHTML = "<div class='done done--muted'><b>Vendég: „Ez az ajánlat lejárt”</b>A napokat nem tartottuk tovább. Kérjen új ajánlatot a szállás oldalán, vagy válaszoljon erre a levélre.</div>";
+      $("[data-status]").className = "pill pill--muted"; $("[data-status]").textContent = "Lejárt — a vendég nem felelt 48 órán belül";
+    }
+  }
+  $("[data-g-accept]").addEventListener("click", function(){ gResult("ok"); });
+  $("[data-owner-accept]").addEventListener("click", function(){ $("#gconfirm").classList.remove("hidden"); gResult("ok"); $("[data-g-result] .done b").textContent = "Rögzítve: a vendég elfogadta"; });
+  $$("[data-sim]").forEach(function(b){ b.addEventListener("click", function(){ gResult(b.getAttribute("data-sim")); }); });
+
+  $("[data-reset]").addEventListener("click", function(){
+    amount.value = ""; until.value = ""; $("[data-note]").value = "";
+    $("#offer").classList.remove("hidden"); $("#after").classList.add("hidden"); $("#declined").classList.add("hidden");
+    compute();
+  });
+
+  $$("[data-size-btn]").forEach(function(b){
+    b.addEventListener("click", function(){
+      document.body.setAttribute("data-size", b.getAttribute("data-size-btn"));
+      $$("[data-size-btn]").forEach(function(x){ x.setAttribute("aria-pressed", String(x === b)); });
+    });
+  });
+  if (window.innerWidth > 900) $("[data-size-btn='desktop']").click();
+  compute();
+})();
+</script>
+</body>
+</html>

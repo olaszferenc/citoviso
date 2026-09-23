@@ -14,6 +14,9 @@ import { readFileSync } from "node:fs";
 export interface SeasonRow {
   readonly from?: string | null;
   readonly to?: string | null;
+  /** 0072: year-bound window ('YYYY-MM-DD', inclusive); absent/null = timeless. */
+  readonly validFrom?: string | null;
+  readonly validTo?: string | null;
 }
 
 export interface SeasonRule {
@@ -21,10 +24,12 @@ export interface SeasonRule {
   covers(from: string | null | undefined, to: string | null | undefined, monthDay: string): boolean;
   /** 'YYYY-MM-DD' (or a full ISO stamp) → 'MM-DD'. */
   monthDayOf(isoDate: string): string;
-  /** First matching season, else the base row, else null. */
+  /** Is a 'YYYY-MM-DD' day inside the row's year-bound window? Timeless rows: always. */
+  inWindow(row: SeasonRow, isoDay: string): boolean;
+  /** The row in effect on a night: year-bound season → season → dated base → base → null. */
   rowFor<T extends SeasonRow>(
     rows: readonly T[],
-    monthDay: string,
+    isoDay: string,
     isBaseRow: (row: T) => boolean,
   ): T | null;
 }

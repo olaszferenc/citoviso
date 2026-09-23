@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-09-14
+updated: 2026-09-23
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -28,6 +28,53 @@ sürgőseket a kártya bal szélén piros sáv is jelzi. Két lehetőség közü
 
 Ugyanezt a döntést a kérésről kapott e-mailből is elintézheti egy koppintással, belépés nélkül.
 Ha a megadott időn belül nem válaszol, a kérés lejár, és a vendég udvarias értesítést kap.
+
+## Árajánlat-kérés érkezett — a vendég nem látott árat
+
+Ha a vendég olyan szobát vagy időszakot választ, amelyre az árlistájában nincs ár, az oldal nem
+foglalást ígér neki, hanem árajánlatot kér. Az ilyen kérésen ezt olvassa: **„A vendég nem látott
+árat — árajánlatot kért. Adja meg az árat, és a rendszer elküldi neki.”** Itt nincs
+„Visszaigazolom” gomb, mert az ár nélkül véglegesítené a foglalást. Két lehetősége van: ha nem
+tudja fogadni, az **„Elutasítom”** gomb ugyanúgy működik, mint máskor. Ha fogadná, küldjön
+ajánlatot:
+
+1. Koppintson az **„Ajánlatot küldök”** gombra (ugyanez a gomb a kérésről kapott e-mailben is ott
+   van, belépés nélkül). Megnyílik az ajánlat-lap.
+2. A lap felsorolja a kért éjszakákat. Amire már van ára (például a főszezonra), az a meglévő
+   áron fixen áll. Csak a hiányzó éjszakákhoz kell árat írnia az **„Ár éjszakánként”** mezőbe —
+   az összeg azonnal kiszámolódik alatta.
+3. Az **„Érvényes eddig (nem kötelező)”** mezőben megadhatja, meddig érvényes ez az ár. A dátum
+   nem lehet korábbi a kért tartózkodás utolsó ár nélküli éjszakájánál — különben az ár erre a
+   kérésre sem vonatkozna, és a lap ezt hibaüzenettel jelzi. Ha üresen hagyja (vagy a **„Nincs
+   vége”** gombra koppint), ez lesz a szoba alapára: minden olyan éjszakára érvényes, amelyre
+   nincs időszaki ár, a következő módosításig — ezt a lap sárga figyelmeztetésben ki is mondja.
+   Ha dátumot ad meg, az ár addig érvényes, és a lejárat előtt legfeljebb két héttel e-mailben
+   emlékeztetjük.
+4. Írhat üzenetet a vendégnek (például „A kiságyat szívesen odakészítjük.”), majd koppintson az
+   **„Ajánlat küldése”** gombra. Ha mégsem tudja fogadni, ugyanitt a **„Nem szabad”** gombbal
+   elutasíthatja.
+
+![Képernyőkép: az ajánlat-lap ár-része telefonon, beírt árral és a figyelmeztetéssel](assets/hu/offer.png)
+
+Küldés után a lap zöld dobozban megerősíti, mennyi ment ki és mi került az árlistába; a
+**„Foglalások megnyitása”** gombbal visszatérhet ide. Az ár mindig bekerül a szoba árlistájába,
+így a következő vendég már árat lát az oldalon.
+
+A vendég e-mailben kapja meg az ajánlatot, és egy gombbal elfogadhatja. **Az ajánlat még nem
+foglalás:** a napok addig szabadok maradnak, amíg a vendég el nem fogadja. Ha közben más
+foglalja le őket, és a vendég utána fogadná el az ajánlatot, a lap megmondja neki, hogy a napok
+elkeltek, Ön pedig értesítést kap. Ha a Modulok → Online foglalás
+beállításaiban az **„Ennyi idő után magától lejár a kérés”** mezőben megadott idő letelik, az
+ajánlat lejár — erről Ön és a vendég is értesítést kap. (Ha ott 0 áll, az ajánlat nem jár le.)
+Ha a vendég nem kéri az ajánlatot, e-mailben szólunk, és a napok szabadok maradnak.
+
+A kiküldött ajánlatok az **„Ajánlatra vár”** részben látszanak, a lejárat idejével. Ha a vendég
+nem a levél gombjával, hanem telefonon vagy válaszlevélben mondja, hogy kéri, koppintson az
+**„A vendég elfogadta (telefonon / levélben)”** gombra — ugyanaz történik, mintha ő nyomta
+volna meg: a napok foglalttá válnak, és a vendég megkapja a visszaigazolást az árral.
+
+A dátummal megadott árat a Modulok fülön, az „Árak, szezonok” modulnál **„Alapár, dátummal”**
+sorként látja, a dátumokkal együtt; ott törölheti is.
 
 ## Ha többen kérik ugyanazt az időszakot
 
@@ -69,7 +116,8 @@ napok automatikusan felszabadulnak.
 idézet-doboz megnevezi a szerzőjét: **„Vendég”** (amit a foglaláskor írt — ez a kérdése akkor is
 ott marad, ha már döntött), **„Ön”** (amit a visszaigazoláskor vagy elutasításkor küldött),
 **„Rendszer”** (amit a rendszer írt, például lejárat esetén) és **„Megjegyzés”** (a saját,
-csak Önnek szóló feljegyzése). Így nem kell fejben tartania, kinek a szavait olvassa.
+csak Önnek szóló feljegyzése). Így nem kell fejben tartania, kinek a szavait olvassa. Az
+árajánlathoz írt üzenete akkor is **„Ön”** címkét kap, ha végül a vendég fogadta el az ajánlatot.
 
 ## Hová érkeznek az értesítések?
 

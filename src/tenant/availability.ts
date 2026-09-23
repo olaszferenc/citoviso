@@ -413,7 +413,8 @@ export async function getBlockedDaysFrom(unitId: string, from: string): Promise<
       // `iso.slice(5)` was a FOURTH spelling of the month-day assumption; it goes
       // through the shared rule so a year-aware season has one place to change.
       const md = seasonRule.monthDayOf(iso);
-      if (!seasons.some((s) => seasonCovers(s.from!, s.to!, md))) blocked.add(iso);
+      // 0072: a year-bound season only opens the nights inside its own window.
+      if (!seasons.some((s) => seasonRule.inWindow(s, iso) && seasonCovers(s.from!, s.to!, md))) blocked.add(iso);
     }
   }
   return [...blocked].sort();

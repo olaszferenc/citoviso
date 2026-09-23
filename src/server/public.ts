@@ -130,10 +130,21 @@ import {
   createBookingRequest,
   decideRequest,
   getRequests,
+  loadOfferView,
   markRequestsSeen,
   peekCancelView,
+  peekGuestOffer,
+  recordOfferAcceptedByOwner,
+  respondToOffer,
+  sendOffer,
   unseenRequestCount,
 } from "../booking/requests.js";
+import {
+  guestOfferPage,
+  guestOfferResultPage,
+  ownerOfferPage,
+  ownerOfferSentPage,
+} from "./offerViews.js";
 import { createEnquiry } from "../booking/enquiry.js";
 import { addSeasonPrice, deletePrice, getUnitPrices, setBasePrice } from "../tenant/prices.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
@@ -221,6 +232,10 @@ const MIME: Record<string, string> = {
 const RE_MOCK_PREVIEW = /^\/m\/([a-f0-9]{8,64})$/;
 const RE_PREVIEW_SITE = /^\/site\/([A-Za-z0-9_-]{10,64})$/;
 const RE_GUEST_CANCEL = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/;
+// Booking-offer ⑪: the guest's offer page (GET shows, POST answers) — the guest's key.
+const RE_GUEST_OFFER = /^\/ajanlat\/([A-Za-z0-9_-]{16,80})(?:\/(elfogadom|nem-kerem))?$/;
+// Booking-offer ④: the owner's offer page — the owner's key (action_token).
+const RE_OWNER_OFFER = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/ajanlat$/;
 const GUEST_PAGE_ROUTES: readonly RegExp[] = [
   // A generált szállás-oldal MAGA, csak másik ajtón: a `/site/<preview_token>` ugyanazt
   // a `sites/<tenant>/index.html`-t adja ki, amit a tenant-host (mérve: bájtazonos
@@ -231,6 +246,8 @@ const GUEST_PAGE_ROUTES: readonly RegExp[] = [
   // A vendég lemondó lapjai (GET megerősítés + POST eredmény). Itt a vendég a saját
   // foglalását mondja le a szállásadónál — nálunk semmit nem fizet.
   RE_GUEST_CANCEL,
+  // A vendég ajánlat-lapja (booking-offer ⑪): ugyanaz a vendég, ugyanaz a szállás.
+  RE_GUEST_OFFER,
 ];
 
 function send(res: http.ServerResponse, code: number, body: string | Buffer, type = "text/html; charset=utf-8"): void {
@@ -721,6 +738,9 @@ async function serveTenantHost(
               to: p.to,
               amount: p.amount,
               base: p.isBase,
+              // 0072: the browser runs the same rule, so it needs the same window.
+              validFrom: p.validFrom,
+              validTo: p.validTo,
             })),
           }
         : null,
@@ -2547,6 +2567,74 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (siteId) await deletePrice(siteId, form.get("id") ?? "");
     return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
   }
+  // POST /foglalas/<token>/ajanlat — the owner sends the price offer (booking-offer ⑤–⑧).
+  // No login: the owner's single-use action token from the mail IS the authorization,
+  // exactly like the one-tap verdict links it replaces on a quote request.
+  const ownerOfferPost = req.method === "POST" && RE_OWNER_OFFER.exec(pathname);
+  if (ownerOfferPost) {
+    const token = ownerOfferPost[1]!;
+    const form = await readFormBody(req);
+    const input = {
+      amount: form.get("amount") ?? "",
+      until: form.get("until"),
+      note: form.get("note"),
+    };
+    const r = await sendOffer(token, input, publicBaseUrl(req));
+    if (r.outcome === "sent") {
+      const v = await loadOfferView(token);
+      return send(res, 200, ownerOfferSentPage(r, v.hostName ?? ""));
+    }
+    const v = await loadOfferView(token);
+    return send(
+      res,
+      r.outcome === "unknown" ? 404 : r.outcome === "invalid" ? 400 : 200,
+      ownerOfferPage(v, {
+        errors: r.errors,
+        amount: input.amount,
+        until: input.until ?? "",
+        note: input.note ?? "",
+      }),
+    );
+  }
+
+  // POST /ajanlat/<offer_token>/elfogadom | nem-kerem — the GUEST answers (⑪/⑫).
+  const guestOfferPost = req.method === "POST" && RE_GUEST_OFFER.exec(pathname);
+  if (guestOfferPost && guestOfferPost[2]) {
+    const v = await respondToOffer(
+      guestOfferPost[1]!,
+      guestOfferPost[2] === "elfogadom" ? "accept" : "decline",
+      publicBaseUrl(req),
+    );
+    return send(res, v.outcome === "unknown" ? 404 : 200, guestOfferResultPage(v));
+  }
+
+  // POST /admin/booking/offer-accept — ⑬ the owner records a phone/letter acceptance.
+  if (req.method === "POST" && pathname === "/admin/booking/offer-accept") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const token = form.get("token") ?? "";
+    const owned = siteId
+      ? await db
+          .selectFrom("booking_request")
+          .select("id")
+          .where("action_token", "=", token)
+          .where("site_id", "=", siteId)
+          .executeTakeFirst()
+      : null;
+    if (owned) {
+      const r = await recordOfferAcceptedByOwner(token, publicBaseUrl(req));
+      if (r.outcome === "conflict") {
+        return redirect(
+          res,
+          `/admin?tab=foglalasok&hiba=${encodeURIComponent("Ezek a napok időközben foglalttá váltak, ezért nem fogadható el.")}`,
+        );
+      }
+    }
+    return redirectRerendered(res, session.tenantId, "/admin?tab=foglalasok&saved=1");
+  }
+
   // POST /foglalas/<token>/lemondom — the GUEST's cancel (approved plan, 2026-09-06).
   // No login: the single-use token from the confirmation mail IS the authorization.
   const guestCancel = req.method === "POST" && RE_GUEST_CANCEL.exec(pathname);
@@ -2581,6 +2669,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       : null;
     if (owned) {
       const r = await decideRequest(token, verdict, publicBaseUrl(req), form.get("uzenet"));
+      // Booking-offer ②: a request with no price is answered with an offer, not a verdict.
+      if (r.outcome === "needs_offer") return redirect(res, `/foglalas/${token}/ajanlat`);
       if (r.outcome === "conflict") {
         return redirect(
           res,
@@ -2935,7 +3025,25 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (decideMatch) {
       const verdict = decideMatch[2] === "elfogadom" ? "accepted" : "declined";
       const r = await decideRequest(decideMatch[1]!, verdict, publicBaseUrl(req));
+      // Booking-offer ②: an old mail's one-tap accept on a request with NO price does
+      // not confirm — it opens the offer page, where the price is set first.
+      if (r.outcome === "needs_offer") return redirect(res, `/foglalas/${decideMatch[1]!}/ajanlat`);
       return send(res, r.outcome === "unknown" ? 404 : 200, bookingVerdictPage(r));
+    }
+
+    // GET /foglalas/<token>/ajanlat — the owner's offer page (booking-offer ④).
+    const ownerOfferGet = RE_OWNER_OFFER.exec(pathname);
+    if (ownerOfferGet) {
+      const v = await loadOfferView(ownerOfferGet[1]!);
+      return send(res, v.outcome === "unknown" ? 404 : 200, ownerOfferPage(v));
+    }
+
+    // GET /ajanlat/<offer_token> — the guest's offer page (⑪): SHOWS, never decides —
+    // mail clients prefetch links.
+    const guestOfferGet = RE_GUEST_OFFER.exec(pathname);
+    if (guestOfferGet && !guestOfferGet[2]) {
+      const v = await peekGuestOffer(guestOfferGet[1]!);
+      return send(res, v.outcome === "unknown" ? 404 : 200, guestOfferPage(v, guestOfferGet[1]!));
     }
 
     // GET /foglalas/<token>/lemondom — the guest's cancel link from the confirmation

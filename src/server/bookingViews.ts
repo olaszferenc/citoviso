@@ -558,7 +558,56 @@ function requestCard(
     conflictNote +
     `</div></div>` +
     (r.message ? `<div class="bk-req__msg">„${esc(r.message)}"</div>` : "") +
-    `<div class="bk-req__act">${verdictPanel(true)}${verdictPanel(false)}</div>` +
+    // Booking-offer ②: NO frozen price = the guest asked for a quote. A "Visszaigazolom"
+    // here would confirm a stay at no price at all — the card offers the offer page.
+    (r.quotedTotal
+      ? `<div class="bk-req__act">${verdictPanel(true)}${verdictPanel(false)}</div>`
+      : `<p class="bk-hint" data-bk-quote>${T(lang, "A vendég nem látott árat — árajánlatot kért. Adja meg az árat, és a rendszer elküldi neki.")}</p>` +
+        `<div class="bk-req__act"><a class="citui-btn bk-btn--ok" href="/foglalas/${esc(r.token)}/ajanlat">` +
+        `${ic("check", 15)}${T(lang, "Ajánlatot küldök")}</a>${verdictPanel(false)}</div>`) +
+    `</div>`
+  );
+}
+
+/**
+ * Booking-offer ⑬: an offer that waits on the GUEST. The nights are still free; the
+ * owner can record an acceptance that arrived by phone or by reply — the same step
+ * the guest's own button runs.
+ */
+function offeredCard(r: InboxItem, expireHours: number, lang: string): string {
+  const exp = r.offeredAt && expireHours ? new Date(r.offeredAt.getTime() + expireHours * 3_600_000) : null;
+  // The pilot's clock is Budapest's — the server's own zone is not the owner's.
+  const when = exp
+    ? new Intl.DateTimeFormat("hu-HU", {
+        timeZone: "Europe/Budapest",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(exp)
+    : "";
+  return (
+    `<div class="bk-req bk-req--cool" id="req-${esc(r.id)}" data-bk-offered>` +
+    `<div class="bk-req__hd">` +
+    `<span class="bk-req__ico">${ic("account", 20)}</span>` +
+    `<div class="bk-req__t">` +
+    `<strong>${esc(r.guestName)}</strong>` +
+    `<span class="bk-req__dates">${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+      r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
+    }</span>` +
+    `<span class="bk-req__meta">${esc(r.guestEmail)}${r.guestPhone ? ` · ${esc(r.guestPhone)}` : ""}${r.unitName ? ` · ${esc(r.unitName)}` : ""}</span>` +
+    `<span class="bk-chip bk-chip--offer">${
+      when ? T(lang, "Ajánlat kiküldve · lejár {when}", { when }) : T(lang, "Ajánlat kiküldve")
+    }</span>` +
+    `</div></div>` +
+    // Inside the card's own action strip (its padding), not flush to the card edge.
+    `<div class="bk-req__act">` +
+    `<form method="post" action="/admin/booking/offer-accept">` +
+    `<input type="hidden" name="token" value="${esc(r.token)}">` +
+    `<button type="submit" class="citui-btn bk-btn--ghost">${T(lang, "A vendég elfogadta (telefonon / levélben)")}</button></form>` +
+    `<p class="bk-hint" style="margin:0">${T(lang, "Ha a vendég nem a levél gombjával, hanem telefonon vagy válaszlevélben mondja, hogy kéri: ugyanaz történik, mintha ő nyomta volna meg.")}</p>` +
+    `</div>` +
     `</div>`
   );
 }
@@ -585,6 +634,18 @@ function whoDecided(decidedBy: string | null): QuoteWho {
     default:
       return "unknown";
   }
+}
+
+/**
+ * Who wrote `decision_note`. ⛔ On a PRICE OFFER (booking-offer ⑧) the note is the
+ * OWNER's word sent with the offer — but `decided_by` names whoever CLOSED the request,
+ * which is the guest when they accept or decline. Read from `decided_by` alone, the
+ * owner's "A kiságyat szívesen odakészítjük" was labelled „Vendég" (seen on the first
+ * shot). Only the system may overwrite an offer's note (the "közben elkelt" ending).
+ */
+function noteAuthor(r: InboxItem): QuoteWho {
+  if (r.offeredAt && r.decidedBy !== "auto" && r.decidedBy !== "system") return "owner";
+  return whoDecided(r.decidedBy);
 }
 
 /**
@@ -674,7 +735,7 @@ function historyRow(r: InboxItem, expireHours: number, view: string, lang: strin
   // marad. A sorrend időrendi: kérdés → válasz → záró esemény.
   const quotes =
     (r.message ? quoteBox("guest", r.message, lang) : "") +
-    (r.decisionNote ? quoteBox(whoDecided(r.decidedBy), r.decisionNote, lang) : "") +
+    (r.decisionNote ? quoteBox(noteAuthor(r), r.decisionNote, lang) : "") +
     (r.status === "expired"
       ? quoteBox(
           "system",
@@ -720,8 +781,9 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
   const arrivals = d.requests
     .filter((r) => r.status === "accepted" && r.dateFrom >= today)
     .sort((a, b) => (a.dateFrom < b.dateFrom ? -1 : 1));
+  const offered = d.requests.filter((r) => r.status === "offered");
   const decided = d.requests
-    .filter((r) => r.status !== "pending")
+    .filter((r) => r.status !== "pending" && r.status !== "offered")
     .sort((a, b) => (b.decidedAt?.getTime() ?? 0) - (a.decidedAt?.getTime() ?? 0));
 
   // Overlap popup payload (approved ⑥): per contested request the whole group,
@@ -781,6 +843,10 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     (pend.length
       ? pend.map((r) => requestCard(r, groups.get(r.id), d.expireHours, lang)).join("")
       : `<div class="bk-empty">${T(lang, "Most nincs döntésre váró kérés.")} ✔<br>${T(lang, "Az újakról e-mailt is kap.")}</div>`) +
+    (offered.length
+      ? `<h2 class="bk-sect">${T(lang, "Ajánlatra vár")}</h2>` +
+        offered.map((r) => offeredCard(r, d.expireHours, lang)).join("")
+      : "") +
     `<h2 class="bk-sect">${T(lang, "Korábbi kérések")}</h2>` +
     (decided.length
       ? decided.map((r) => historyRow(r, d.expireHours, viewState(d), lang)).join("")
@@ -1120,6 +1186,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
 .bk-chip--bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad)}
 .bk-chip--mut{background:var(--citui-surface-2);color:var(--citui-muted)}
+.bk-chip--offer{display:inline-block;margin-top:6px;background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));color:var(--citui-warn-ink)}
 /* a lejárat ELVESZETT VENDÉG — borostyán, kerettel, nem a legcsendesebb chip a lapon */
 .bk-chip--lost{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-white));
   color:var(--citui-warn);border:1px solid color-mix(in srgb,var(--citui-warn) 40%,transparent)}

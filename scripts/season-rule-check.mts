@@ -50,7 +50,7 @@ const RULE_SRC = readFileSync(RULE_PATH, "utf8");
 interface Rule {
   covers(from: string | null, to: string | null, md: string): boolean;
   monthDayOf(iso: string): string;
-  rowFor<T>(rows: readonly T[], md: string, isBase: (r: T) => boolean): T | null;
+  rowFor<T>(rows: readonly T[], isoDay: string, isBase: (r: T) => boolean): T | null;
 }
 
 /** Load a copy of the rule the way the BROWSER gets it: plain script, global var. */
@@ -91,12 +91,14 @@ check("a szezon-szabály a cit-runtime.js ELŐTT kerül a lapra", iSeason > 0 &&
 console.log("\n② A szerver és a böngésző ugyanazt a sort választja");
 
 // ⛔ A `--selftest` nem szimulál: a böngésző-oldalt a TÖRTÉNETI, eltérő szabállyal tölti
-// be — a wrap-öt nem ismerő változattal, ami a karácsonyi (12-20 → 01-05) áron csendben
-// mást választ. Ha ettől nem pirosodik, az őr vak.
+// be — a wrap-öt nem ismerő ÉS az évhez kötött ablakot (0072) nem ismerő változattal, ami
+// a karácsonyi (12-20 → 01-05) áron és a dátumos soroknál csendben mást választ. Ha ettől
+// nem pirosodik, az őr vak.
 const HISTORICAL = `var CitSeason = (function(){
   function covers(from,to,md){ return !!from && !!to && md >= from && md <= to; }
   function monthDayOf(iso){ return String(iso).slice(5,10); }
-  function rowFor(rows,md,isBase){
+  function rowFor(rows,iso,isBase){
+    var md = monthDayOf(iso);
     if(!rows||!rows.length) return null;
     var base=null;
     for(var i=0;i<rows.length;i++){ var r=rows[i];
@@ -122,45 +124,58 @@ interface Row {
   readonly from: string | null;
   readonly to: string | null;
   readonly isBase: boolean;
+  readonly validFrom?: string | null;
+  readonly validTo?: string | null;
 }
 const ROWS: Row[] = [
   { id: "base", from: null, to: null, isBase: true },
   { id: "fo", from: "06-15", to: "08-31", isBase: false },
   { id: "kar", from: "12-20", to: "01-05", isBase: false }, // ÁTFORDUL az évhatáron
+  // 0072: évhez kötött szezon — csak 2027-ben, és ott a ismétlődő „fo" ELÉ kerül.
+  { id: "fo2027", from: "07-01", to: "07-31", isBase: false, validFrom: "2027-01-01", validTo: "2027-12-31" },
+  // 0072: dátumos alapár — az ajánlat-lap írja; csak az ablakában, és csak ahol nincs szezon.
+  { id: "dbase", from: null, to: null, isBase: true, validFrom: "2026-10-01", validTo: "2027-03-31" },
 ];
 
-function refRowFor(md: string): string {
-  for (const r of ROWS) {
-    if (r.isBase) continue;
-    if (refCovers(r.from!, r.to!, md)) return r.id;
-  }
-  return "base";
+/** FÜGGETLEN referencia a 0071-es sorrendre: rétegenként SZŰR, aztán a legerősebb nem
+ *  üres réteg ELSŐ eleme — szándékosan nem egy-menetes, mint a vizsgált kód. */
+function refRowFor(iso: string): string {
+  const md = iso.slice(5);
+  const live = ROWS.filter((r) => !r.validFrom || (iso >= r.validFrom && iso <= r.validTo!));
+  const seasonHit = live.filter((r) => !r.isBase && refCovers(r.from!, r.to!, md));
+  const tiers = [
+    seasonHit.filter((r) => r.validFrom),
+    seasonHit.filter((r) => !r.validFrom),
+    live.filter((r) => r.isBase && r.validFrom),
+    live.filter((r) => r.isBase && !r.validFrom),
+  ];
+  return tiers.find((t) => t.length)?.[0]?.id ?? "none";
 }
 
-// Minden naptári nap — nem mintavétel: a wrap pont a széleken bukik.
+// Két TELJES naptári év (2026–2027), minden nap — nem mintavétel: a wrap és az ablakok
+// széle pont a határnapokon bukik.
 let mismatchServer = 0;
 let mismatchBrowser = 0;
-let wrapDays = 0;
+const seen = new Map<string, number>();
 const days: string[] = [];
-for (let m = 1; m <= 12; m++) {
-  for (let d = 1; d <= 31; d++) {
-    const md = `${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    days.push(md);
-  }
+for (let t = Date.UTC(2026, 0, 1); t <= Date.UTC(2027, 11, 31); t += 86_400_000) {
+  days.push(new Date(t).toISOString().slice(0, 10));
 }
-for (const md of days) {
-  const want = refRowFor(md);
-  const srv = seasonRule.rowFor(ROWS, md, (r) => r.isBase)?.id ?? "none";
-  const brw = browser.rowFor(ROWS, md, (r) => r.isBase)?.id ?? "none";
+for (const iso of days) {
+  const want = refRowFor(iso);
+  const srv = seasonRule.rowFor(ROWS, iso, (r) => r.isBase)?.id ?? "none";
+  const brw = browser.rowFor(ROWS, iso, (r) => r.isBase)?.id ?? "none";
   if (srv !== want) mismatchServer++;
   if (brw !== want) mismatchBrowser++;
-  if (want === "kar") wrapDays++;
+  seen.set(want, (seen.get(want) ?? 0) + 1);
 }
 check(`a szerver mind a ${days.length} napon a referenciát követi`, mismatchServer === 0, mismatchServer);
 check(`a böngésző mind a ${days.length} napon a referenciát követi`, mismatchBrowser === 0, mismatchBrowser);
-// ⭐ Utó-feltétel: ha a fixtúra nem tartalmaz ÁTFORDULÓ szezont, a ② állítás üresen
-// futna — pont azt nem mérné, amiben a két példány eltérhet.
-check("a mérés tartalmaz évhatáron átforduló szezont (különben üresen futna)", wrapDays > 0, wrapDays);
+// ⭐ Utó-feltétel: MINDEN réteg ténylegesen nyert valahol — különben a ② állítás arra a
+// rétegre üresen futna, és pont azt nem mérné, amiben a két példány eltérhet.
+for (const id of ["kar", "fo", "fo2027", "dbase", "base"]) {
+  check(`a mérésben a(z) „${id}" sor nyer legalább egy napon (különben üresen futna)`, (seen.get(id) ?? 0) > 0, seen.get(id) ?? 0);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ③ A hónap-nap feltevés EGY helyen él
@@ -220,18 +235,25 @@ check(
 // ─────────────────────────────────────────────────────────────────────────────
 // ④ A mai, KIMONDOTT korlát: év-előtagú dátum nem illeszkedik némán
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n④ Az év-előtagú szezon ma NEM illeszkedik — kimondva, nem véletlenül");
+console.log("\n④ Az évet a valid_from/valid_to hordozza, nem a hónap-nap mező");
 
+// 0072: az év NEM a `from`/`to`-ba kerül (az MM-DD marad) — egy év-előtagú from/to
+// továbbra sem illeszkedik, és az írás oldalán is elutasított.
 const yearRow: Row[] = [
   { id: "base", from: null, to: null, isBase: true },
   { id: "fo2027", from: "2027-06-15", to: "2027-08-31", isBase: false },
 ];
-const hit = seasonRule.rowFor(yearRow, "07-10", (r) => r.isBase)?.id;
-check(
-  "év-előtagú szezon NEM nyer — az alapárra esik vissza (a bővítés még nem él)",
-  hit === "base",
-  hit,
-);
+const hit = seasonRule.rowFor(yearRow, "2027-07-10", (r) => r.isBase)?.id;
+check("év-előtagú from/to NEM nyer — az alapárra esik vissza", hit === "base", hit);
+// ⛔ A rowFor második argumentuma hónap-napról TELJES dátumra váltott. Egy régi hívó, ami
+// még '07-10'-et ad, minden dátumos sort némán kihagyna — ezért hangosan kell bukjon.
+let threw = false;
+try {
+  seasonRule.rowFor(ROWS, "07-10", (r) => r.isBase);
+} catch {
+  threw = true;
+}
+check("hónap-nappal hívva HANGOSAN bukik (nem hagy ki némán dátumos sort)", threw);
 check(
   "…és az írás oldalán is elutasított (isMonthDay)",
   !(await import("../src/tenant/prices.js")).isMonthDay("2027-06-15"),

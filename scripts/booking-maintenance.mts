@@ -8,7 +8,11 @@
 //    a booking taken on Booking.com tomorrow only reaches us if we keep pulling.
 //    Without this the "soha nem lesz dupla foglalás" promise decays within a day.
 //
-// 2. Expire requests the owner never answered, per each site's autoDeclineHours.
+// 2. Expire requests the owner never answered, per each site's autoDeclineHours —
+//    and price offers the guest never answered (booking-offer ⑫).
+//
+// 3. Remind the owner before a DATED price ends, and take it down when it has
+//    (booking-offer ⑥) — the page must not keep quoting a lapsed price.
 //    Silence is not an answer a guest can plan around; after the window the request
 //    lapses instead of hanging forever.
 //
@@ -16,7 +20,8 @@
 // window in which a double booking could realistically be made.
 
 import { pool } from "../src/db/client.js";
-import { expireStaleRequests } from "../src/booking/requests.js";
+import { expireStaleOffers, expireStaleRequests } from "../src/booking/requests.js";
+import { maintainDatedPrices } from "../src/tenant/priceExpiry.js";
 import { syncAllCalendarLinks } from "../src/booking/sync.js";
 
 const started = Date.now();
@@ -33,6 +38,17 @@ try {
 
   const expired = await expireStaleRequests();
   if (expired) console.log(`[booking] ${expired} megválaszolatlan kérés lejárt`);
+
+  // Booking-offer ⑫: a price offer the guest never answered lapses the same way.
+  const offers = await expireStaleOffers();
+  if (offers) console.log(`[booking] ${offers} megválaszolatlan árajánlat lejárt`);
+
+  // Booking-offer ⑥: a dated price is reminded before it ends, and when it ends the
+  // row goes and the page is re-rendered — the price table must not keep quoting it.
+  const dp = await maintainDatedPrices();
+  if (dp.reminded || dp.expired) {
+    console.log(`[booking] dátumos ár: ${dp.reminded} emlékeztető · ${dp.expired} lejárt és levéve`);
+  }
 
   console.log(`[booking] kész ${Math.round((Date.now() - started) / 1000)}s alatt`);
 } finally {

@@ -20,8 +20,8 @@
  * (moduleConfigViews.ts: "making them re-enter it each January would guarantee stale
  * prices"). Measured 2026-09-22: a stay in July 2027 — inside the 12-month booking
  * horizon — is quoted the SAME amount as July 2026, and that amount is frozen onto the
- * request. Year-qualified seasons are a separate, approved piece of work; they land
- * HERE first, once, instead of in two places that would silently disagree.
+ * request. Year-bound rows (migration 0072: valid_from/valid_to) landed HERE, once —
+ * see rowFor's precedence — instead of in two places that would silently disagree.
  *
  * `.cjs` on purpose: package.json says "type": "module", so a `.js` here could not be
  * require()d from the server at all. The browser gets the text spliced into the runtime
@@ -43,31 +43,62 @@ var CitSeason = (function () {
     return String(isoDate).slice(5, 10);
   }
 
-  /* The row in effect on a given month-day: the FIRST matching season, else the base,
-   * else null. Seasons are tested in the owner's own order, so an overlap resolves the
-   * way the list reads top-down instead of by some hidden rule.
-   *
-   * `rows` is shape-agnostic on purpose — the server calls it with UnitPrice objects
-   * (`isBase`/`from`/`to`) and the browser with the JSON the endpoint ships
-   * (`base`/`from`/`to`). `isBaseRow` tells the two apart without a second copy of the
-   * selection logic. Returns null when there is no season hit AND no base: an unpriced
-   * night, which every caller must turn into "no quote at all" (§B.17).
-   */
-  function rowFor(rows, monthDay, isBaseRow) {
-    if (!rows || !rows.length) return null;
-    var base = null;
-    for (var i = 0; i < rows.length; i++) {
-      var r = rows[i];
-      if (isBaseRow(r)) {
-        if (!base) base = r;
-        continue;
-      }
-      if (covers(r.from, r.to, monthDay)) return r;
-    }
-    return base;
+  /* Is a 'YYYY-MM-DD' date inside a row's YEAR-BOUND window (inclusive)? A row with
+   * no window (both ends null) is timeless and always "inside". Plain string compare
+   * is exact for zero-padded ISO dates. (migration 0072) */
+  function inWindow(row, isoDay) {
+    var a = row.validFrom, b = row.validTo;
+    if (!a || !b) return true;
+    return isoDay >= a && isoDay <= b;
   }
 
-  return { covers: covers, monthDayOf: monthDayOf, rowFor: rowFor };
+  function hasWindow(row) {
+    return !!(row.validFrom && row.validTo);
+  }
+
+  /* The row in effect on a given NIGHT ('YYYY-MM-DD'), or null for an unpriced night,
+   * which every caller must turn into "no quote at all" (§B.17).
+   *
+   * Precedence, most specific first (approved plan booking-offer, 2026-09-23):
+   *   1. a YEAR-BOUND season covering the night ("Főszezon 2027" beats the recurring one)
+   *   2. a recurring season covering the night
+   *   3. a DATED base whose window holds the night (the offer page writes these: a price
+   *      for the nights no season covers, until the owner's chosen day)
+   *   4. the timeless base
+   * Rows whose window does not hold the night do not exist for it. Inside each tier the
+   * owner's own order decides (first wins), so an overlap resolves the way the list
+   * reads top-down instead of by some hidden rule.
+   *
+   * `rows` is shape-agnostic on purpose — the server calls it with UnitPrice objects
+   * (`isBase`/`from`/`to`/`validFrom`/`validTo`) and the browser with the JSON the
+   * endpoint ships (`base`/…). `isBaseRow` tells the two apart without a second copy of
+   * the selection logic.
+   *
+   * ⛔ The second argument used to be a MONTH-DAY. It is a full date now, because a
+   * year-bound row cannot be judged from 'MM-DD' — a caller still passing '07-10' would
+   * silently skip every dated row, so a short argument is refused loudly. */
+  function rowFor(rows, isoDay, isBaseRow) {
+    if (!rows || !rows.length) return null;
+    if (String(isoDay).length < 10) throw new Error("CitSeason.rowFor: full YYYY-MM-DD date required, got " + isoDay);
+    var day = String(isoDay).slice(0, 10);
+    var md = monthDayOf(day);
+    var yearSeason = null, season = null, datedBase = null, base = null;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (!inWindow(r, day)) continue;
+      if (isBaseRow(r)) {
+        if (hasWindow(r)) { if (!datedBase) datedBase = r; }
+        else if (!base) base = r;
+        continue;
+      }
+      if (!covers(r.from, r.to, md)) continue;
+      if (hasWindow(r)) { if (!yearSeason) yearSeason = r; }
+      else if (!season) season = r;
+    }
+    return yearSeason || season || datedBase || base;
+  }
+
+  return { covers: covers, monthDayOf: monthDayOf, inWindow: inWindow, rowFor: rowFor };
 })();
 
 /* Node (server) requires this file; a browser gets the same binding from the var. */

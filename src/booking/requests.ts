@@ -24,7 +24,15 @@ import { logTenantMessage } from "../tenant/messages.js";
 import { siteRendersModule } from "../tenant/modules.js";
 import { blockingUnitIds } from "../tenant/unitScope.js";
 import { seasonalOnlyInForce } from "../tenant/seasonalOnly.js";
-import { formatAmount, getUnitPrices, quoteStayFrom, seasonCovers } from "../tenant/prices.js";
+import {
+  addDatedBasePrice,
+  formatAmount,
+  getUnitPrices,
+  priceOn,
+  quoteStayFrom,
+  seasonCovers,
+  setBasePrice,
+} from "../tenant/prices.js";
 import { seasonRule } from "../tenant/seasonRule.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 
@@ -158,7 +166,8 @@ export async function seasonRulesFor(
   for (let i = 0; i < nightCount; i++) {
     const day = addDays(dateFrom, i);
     const md = seasonRule.monthDayOf(day); // the shared month-day rule, not a 5th slice
-    const match = seasons.find((s) => seasonCovers(s.from!, s.to!, md));
+    // 0072: a year-bound season only counts inside its own window.
+    const match = seasons.find((s) => seasonRule.inWindow(s, day) && seasonCovers(s.from!, s.to!, md));
     // seasonal_only: a night outside every listed season is simply not for sale.
     if (!match && seasonalOnly) closed = true;
     const min = match?.minNights ?? null;
@@ -270,7 +279,9 @@ function quoteBlock(req: RequestRow, lang: string): string {
     })
     .join("\n");
   return (
-    `\n${T(lang, "Ár (a foglaláskor érvényes árak szerint):")}\n` +
+    // An OFFER's price was set by the owner for this very stay (booking-offer ⑧) —
+    // "the price list at booking time" would misdescribe where the number came from.
+    `\n${req.offered_at ? T(lang, "Az ajánlott ár:") : T(lang, "Ár (a foglaláskor érvényes árak szerint):")}\n` +
     lines +
     `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, cur)}\n`
   );
@@ -504,15 +515,25 @@ async function sendGuestAck(id: string): Promise<void> {
   const to = huDate(dayStr(req.date_to));
   const unit = req.unit_name ? ` (${req.unit_name})` : "";
 
+  // Booking-offer ⑭: no frozen price = the guest asked for a QUOTE (the page said so,
+  // ADR-0208). The letter must say the same thing the page did, not "foglalási kérés".
+  const isQuote = !req.quoted_total;
   const body =
     T(lang, "Kedves {name}!", { name: req.guest_name }) +
     `\n\n` +
-    T(lang, "Köszönjük! A foglalási kérése megérkezett a szállásadóhoz{unit}.", { unit }) +
-    `\n\n` +
-    T(
-      lang,
-      "A foglalás még nem végleges — a szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.",
-    ) +
+    (isQuote
+      ? T(lang, "Köszönjük! Az árajánlat-kérése megérkezett a szállásadóhoz{unit}.", { unit }) +
+        `\n\n` +
+        T(
+          lang,
+          "A szállásadó e-mailben árajánlatot küld Önnek. A foglalás csak akkor válik véglegessé, ha az ajánlatot elfogadja.",
+        )
+      : T(lang, "Köszönjük! A foglalási kérése megérkezett a szállásadóhoz{unit}.", { unit }) +
+        `\n\n` +
+        T(
+          lang,
+          "A foglalás még nem végleges — a szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.",
+        )) +
     (ctx.expireHours
       ? `\n` +
         T(lang, "Ha {n} órán belül nem érkezik válasz, arról is értesítjük.", {
@@ -532,7 +553,9 @@ async function sendGuestAck(id: string): Promise<void> {
     to: req.guest_email,
     audience: "guest",
     ...guestIdentity(ctx),
-    subject: T(lang, "Foglalási kérését rögzítettük: {from} — {to}", { from, to }),
+    subject: isQuote
+      ? T(lang, "Árajánlat-kérését rögzítettük: {from} — {to}", { from, to })
+      : T(lang, "Foglalási kérését rögzítettük: {from} — {to}", { from, to }),
     text: body,
     html: bookingHtml(body),
   });
@@ -557,6 +580,9 @@ interface RequestRow {
   quoted_lines:
     | { label: string; nights: number; per_night: number; guests: number; sum: number }[]
     | null;
+  offered_at: Date | null;
+  offer_token: string | null;
+  decision_note?: string | null;
   unit_name?: string;
 }
 
@@ -612,9 +638,34 @@ async function notifyOwner(
   // ADR-0067: the owner is written to in their own site's language.
   const lang = await prepareMailLang(await langForSite(req.site_id));
 
+  // Booking-offer ①–②: NO frozen price = the guest saw no amount and asked for a
+  // quote. The letter says so, names the unpriced nights, and offers the offer page
+  // instead of a one-tap accept that would confirm the stay at no price at all.
+  const isQuote = !req.quoted_total;
+  const offerUrl = `${base}/foglalas/${token}/ajanlat`;
+  const missing = isQuote ? await unpricedNights(req.unit_id, from, until) : [];
+  const unitName = req.unit_name ?? "";
+  const quoteNote = isQuote
+    ? T(lang, "A vendég nem látott árat.") +
+      " " +
+      (missing.length
+        ? T(
+            lang,
+            "{unit}: {n} éjszakára nincs megadott ár ({from} – {to}). Adja meg itt, és a rendszer elküldi neki az ajánlatot — az ár bekerül az árlistájába, így a következő vendég már látja.",
+            {
+              unit: unitName,
+              n: missing.length,
+              from: huDate(missing[0]!),
+              to: huDate(addDays(missing[missing.length - 1]!, 1)),
+            },
+          )
+        : T(lang, "Adja meg az árat, és a rendszer elküldi neki az ajánlatot."))
+    : "";
+
   const text =
-    T(lang, "Új foglalási kérés") +
+    (isQuote ? T(lang, "Új árajánlat-kérés") : T(lang, "Új foglalási kérés")) +
     `${unit}\n\n` +
+    (isQuote ? `${quoteNote}\n\n` : "") +
     `${T(lang, "Vendég:")} ${req.guest_name}\n` +
     // The guest reads the same reference on screen and in their own mail — without
     // it a phone call ("a hétvégi foglalásom ügyében…") has nothing to match on.
@@ -627,11 +678,18 @@ async function notifyOwner(
     (req.guest_phone ? `${T(lang, "Telefon:")} ${req.guest_phone}\n` : "") +
     `${T(lang, "E-mail:")} ${req.guest_email}\n` +
     (req.message ? `\n${T(lang, "Üzenete:")}\n${req.message}\n` : "") +
-    `\n${T(lang, "Elfogadom:")} ${yes}\n${T(lang, "Nem szabad:")} ${no}\n\n` +
-    T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.");
+    (isQuote
+      ? `\n${T(lang, "Ajánlatot küldök:")} ${offerUrl}\n${T(lang, "Nem szabad:")} ${no}\n\n` +
+        T(lang, "A foglalás csak akkor lesz végleges, ha a vendég elfogadja az ajánlatát.")
+      : `\n${T(lang, "Elfogadom:")} ${yes}\n${T(lang, "Nem szabad:")} ${no}\n\n` +
+        T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött."));
 
   const html =
-    `<p style="font-size:17px"><strong>${T(lang, "Új foglalási kérés")}${esc(unit)}</strong></p>` +
+    `<p style="font-size:17px"><strong>${isQuote ? T(lang, "Új árajánlat-kérés") : T(lang, "Új foglalási kérés")}${esc(unit)}</strong></p>` +
+    (isQuote
+      ? `<p style="border-left:4px solid #d29922;background:#fdf6e6;padding:10px 12px;border-radius:6px;` +
+        `font-size:15px;line-height:1.55">${esc(quoteNote)}</p>`
+      : "") +
     `<p style="font-size:16px;line-height:1.7">` +
     `<strong>${esc(req.guest_name)}</strong><br>` +
     `${T(lang, "Hivatkozás:")} ${esc(bookingRef(req.id))}<br>` +
@@ -644,24 +702,34 @@ async function notifyOwner(
     `</p>` +
     (req.message ? `<p style="font-size:15px;color:#444">„${esc(req.message)}"</p>` : "") +
     `<p style="margin:28px 0">` +
-    `<a href="${esc(yes)}" style="display:inline-block;padding:16px 28px;background:#16283f;` +
-    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">${T(lang, "Elfogadom")}</a>` +
+    `<a href="${esc(isQuote ? offerUrl : yes)}" style="display:inline-block;padding:16px 28px;background:#16283f;` +
+    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">${isQuote ? T(lang, "Ajánlatot küldök") : T(lang, "Elfogadom")}</a>` +
     `&nbsp;&nbsp;` +
     `<a href="${esc(no)}" style="display:inline-block;padding:16px 28px;border:1px solid #ccc;` +
     `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">${T(lang, "Nem szabad")}</a>` +
     `</p>` +
-    `<p style="font-size:14px;color:#666">${T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.")}</p>`;
+    `<p style="font-size:14px;color:#666">${
+      isQuote
+        ? T(lang, "A foglalás csak akkor lesz végleges, ha a vendég elfogadja az ajánlatát.")
+        : T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.")
+    }</p>`;
 
   const msg = {
     to,
     // Goes to the TENANT, but every line of it is their guest's personal data
     // (name, phone, dates) — the tenant is its controller, so no pilot BCC.
     audience: "guest" as const,
-    subject: T(lang, "Foglalási kérés: {guest}, {from}–{to}", {
-      guest: req.guest_name,
-      from: huDate(from),
-      to: huDate(until),
-    }),
+    subject: isQuote
+      ? T(lang, "Árajánlat-kérés: {guest}, {from}–{to}", {
+          guest: req.guest_name,
+          from: huDate(from),
+          to: huDate(until),
+        })
+      : T(lang, "Foglalási kérés: {guest}, {from}–{to}", {
+          guest: req.guest_name,
+          from: huDate(from),
+          to: huDate(until),
+        }),
     text,
     html,
   };
@@ -787,9 +855,34 @@ export async function decideRequest(
     return { ok: true, outcome: "declined", id: req.id, ...base };
   }
 
-  // ACCEPT — the only place double booking is actually prevented. Re-check and
-  // write the day rows in ONE transaction; a conflicting night aborts the whole thing.
+  // ⛔ A request with NO frozen price is a quote request (approved plan booking-offer
+  // ①–②): accepting it here would confirm a stay at an amount the guest never saw.
+  // Mails sent before the offer flow still carry a one-tap "Elfogadom" link — it
+  // must not confirm; the owner is sent to price it first.
+  if (!req.quoted_total) return { ok: false, outcome: "needs_offer", ...base };
+  return acceptCore(req, "owner", "pending", decisionNote, publicBaseUrl, base);
+}
+
+class AcceptRaceLost extends Error {}
+
+/**
+ * ACCEPT — the only place double booking is actually prevented. Re-check and write
+ * the day rows in ONE transaction; a conflicting night aborts the whole thing.
+ * Shared by the owner's verdict and by an accepted price offer (approved plan
+ * booking-offer ⑪/⑬), so there is one lock, one conflict rule and one set of mails.
+ */
+async function acceptCore(
+  req: RequestRow,
+  by: "owner" | "guest",
+  fromStatus: "pending" | "offered",
+  decisionNote: string | null,
+  publicBaseUrl: string | null,
+  base: { guestName: string; dateFrom: string; dateTo: string; lang: string },
+): Promise<DecisionResult> {
+  const from = base.dateFrom;
+  const to = base.dateTo;
   let conflict = false;
+  let lost = false;
   // ADR-0114: read the whole-place relation ONCE, outside the transaction — it is
   // structure (which units exclude this one), not state that the transaction protects.
   const blockers = await blockingUnitIds(req.unit_id);
@@ -817,20 +910,33 @@ export async function decideRequest(
         })
         .execute();
     }
-    await trx
+    const upd = await trx
       .updateTable("booking_request")
       .set({
         status: "accepted",
         decided_at: new Date(),
-        decided_by: "owner",
+        decided_by: by,
         decision_note: decisionNote,
       })
       .where("id", "=", req.id)
-      .execute();
+      // The state the caller saw (pending for a verdict, offered for an offer): a
+      // second tap that races the first finds it gone and changes nothing.
+      .where("status", "=", fromStatus)
+      .executeTakeFirst();
+    if (!Number(upd.numUpdatedRows)) {
+      lost = true;
+      throw new AcceptRaceLost();
+    }
+  }).catch((err) => {
+    if (!(err instanceof AcceptRaceLost)) throw err;
   });
 
+  if (lost) return { ok: true, outcome: "already", ...base };
   if (conflict) return { ok: false, outcome: "conflict", ...base };
-  void mailSafe("guest-accepted", () => sendGuestVerdict(req, "accepted", publicBaseUrl, decisionNote));
+  // Reload: an accepted OFFER carries the price frozen when it was sent, and the
+  // confirmation must quote exactly that.
+  const fresh = (await loadRequest({ id: req.id })) ?? req;
+  void mailSafe("guest-accepted", () => sendGuestVerdict(fresh, "accepted", publicBaseUrl, decisionNote));
 
   // Approved plan ⑥: the nights are gone — every overlapping pending request is
   // auto-declined NOW, with an honest mail, instead of rotting until expiry.
@@ -1216,6 +1322,8 @@ export interface InboxItem {
   /** 0052: total frozen from the price list at request time (null = no price list then). */
   readonly quotedTotal: number | null;
   readonly quotedCurrency: string | null;
+  /** 0072: when the price offer went out (status 'offered'). */
+  readonly offeredAt: Date | null;
 }
 
 /** The owner's request list for the admin (pending first, newest first). */
@@ -1249,6 +1357,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     seen: r.seen_at != null,
     quotedTotal: r.quoted_total ?? null,
     quotedCurrency: r.quoted_currency ?? null,
+    offeredAt: r.offered_at ? new Date(r.offered_at as unknown as string) : null,
   }));
 }
 
@@ -1388,4 +1497,638 @@ async function sendGuestExpired(req: RequestRow, hours: number): Promise<void> {
     text: body,
     html: bookingHtml(body),
   });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * PRICE OFFER ON A QUOTE REQUEST — approved plan booking-offer (tulaj, 2026-09-23)
+ * Contract: assets/design-refs/tenant-admin/booking-offer/README.md
+ *
+ * The owner prices the nights the guest asked about (the price lands in the price
+ * list, so the NEXT guest sees it), the offer goes out FROM the system, and the guest
+ * accepts it in the system — nothing depends on a private reply the owner would have
+ * to keep track of.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** The nights of a stay no price row covers ('YYYY-MM-DD' each); empty = fully priced. */
+export async function unpricedNights(unitId: string, dateFrom: string, dateTo: string): Promise<string[]> {
+  const prices = await getUnitPrices(unitId);
+  const out: string[] = [];
+  const n = nights(dateFrom, dateTo);
+  for (let i = 0; i < n; i++) {
+    const day = addDays(dateFrom, i);
+    if (!priceOn(prices, day)) out.push(day);
+  }
+  return out;
+}
+
+/**
+ * The amount rule of the offer page — the mock's `parseAmount`, byte for byte in
+ * behaviour: thousand separators (space, dot, NBSP) and a trailing "Ft" are dropped,
+ * only a positive whole number up to 10 000 000 passes.
+ */
+export function parseOfferAmount(raw: string): {
+  value?: number;
+  error?: "num" | "pos" | "big";
+  empty?: boolean;
+} {
+  const s = String(raw ?? "").replace(/[\s.\u00a0]/g, "").replace(/ft$/i, "");
+  if (s === "") return { empty: true };
+  if (!/^\d+$/.test(s)) return { error: "num" };
+  const n = parseInt(s, 10);
+  if (!(n > 0)) return { error: "pos" };
+  if (n > 10_000_000) return { error: "big" };
+  return { value: n };
+}
+
+export interface OfferLine {
+  readonly label: string;
+  readonly nights: number;
+  readonly perNight: number;
+  readonly from: string;
+  /** Checkout day of the line's last night. */
+  readonly to: string;
+}
+
+/** What the owner's offer page shows. */
+export interface OfferView {
+  readonly outcome: "open" | "already" | "unknown";
+  readonly status?: string;
+  readonly token?: string;
+  readonly lang: string;
+  readonly hostName?: string;
+  readonly guestName?: string;
+  readonly guestPhone?: string | null;
+  readonly guestEmail?: string;
+  readonly message?: string | null;
+  readonly unitName?: string;
+  readonly dateFrom?: string;
+  readonly dateTo?: string;
+  readonly nights?: number;
+  readonly guests?: number;
+  readonly currency?: string;
+  /** per_night | per_person_night | per_stay */
+  readonly unitMode?: string;
+  /** Nights already priced by the list, merged like the quote lines. */
+  readonly known?: OfferLine[];
+  /** The unpriced nights ('YYYY-MM-DD'), in order. */
+  readonly missing?: string[];
+  /** Named seasons that keep their own price whatever the owner enters. */
+  readonly seasons?: { label: string; from: string; to: string; amount: number }[];
+  readonly today?: string;
+  readonly expireHours?: number;
+}
+
+async function pricingConfigFor(siteId: string): Promise<{ currency: string; unitMode: string }> {
+  const row = await db
+    .selectFrom("site_module_config")
+    .select("config")
+    .where("site_id", "=", siteId)
+    .where("module", "=", "pricing")
+    .executeTakeFirst();
+  const cfg = effectiveModuleConfig(
+    "pricing",
+    (row?.config ?? null) as Record<string, unknown> | null,
+    null,
+  );
+  return { currency: String(cfg.currency ?? "HUF"), unitMode: String(cfg.unit ?? "per_night") };
+}
+
+/** The owner's offer page (GET) — the action token is the owner's key. */
+export async function loadOfferView(token: string): Promise<OfferView> {
+  const req = await loadRequest({ token });
+  if (!req) return { outcome: "unknown", lang: "hu" };
+  const ctx = await siteMailContext(req.site_id);
+  const from = dayStr(req.date_from);
+  const to = dayStr(req.date_to);
+  if (req.status !== "pending" || req.quoted_total) {
+    return {
+      outcome: "already",
+      status: req.quoted_total && req.status === "pending" ? "priced" : req.status,
+      lang: ctx.lang,
+      guestName: req.guest_name,
+      dateFrom: from,
+      dateTo: to,
+      hostName: ctx.hostName,
+    };
+  }
+  const prices = await getUnitPrices(req.unit_id);
+  const { currency, unitMode } = await pricingConfigFor(req.site_id);
+  const known: OfferLine[] = [];
+  const missing: string[] = [];
+  const baseLabel = T(ctx.lang, "Alapár");
+  for (let i = 0; i < nights(from, to); i++) {
+    const day = addDays(from, i);
+    const p = priceOn(prices, day);
+    if (!p) {
+      missing.push(day);
+      continue;
+    }
+    const label = p.isBase ? baseLabel : p.label;
+    const last = known[known.length - 1];
+    if (last && last.label === label && last.perNight === p.amount && last.to === day) {
+      known[known.length - 1] = { ...last, nights: last.nights + 1, to: addDays(day, 1) };
+    } else {
+      known.push({ label, nights: 1, perNight: p.amount, from: day, to: addDays(day, 1) });
+    }
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    outcome: "open",
+    status: req.status,
+    token,
+    lang: ctx.lang,
+    hostName: ctx.hostName,
+    guestName: req.guest_name,
+    guestPhone: req.guest_phone,
+    guestEmail: req.guest_email,
+    message: req.message,
+    unitName: req.unit_name ?? "",
+    dateFrom: from,
+    dateTo: to,
+    nights: nights(from, to),
+    guests: req.guests,
+    currency,
+    unitMode,
+    known,
+    missing,
+    seasons: prices
+      .filter((p) => !p.isBase && p.from && p.to && (!p.validTo || p.validTo >= today))
+      .map((p) => ({ label: p.label, from: p.from!, to: p.to!, amount: p.amount })),
+    today,
+    expireHours: ctx.expireHours,
+  };
+}
+
+export interface SendOfferResult {
+  readonly ok: boolean;
+  /** 'sent' | 'invalid' | 'already' | 'unknown' */
+  readonly outcome: string;
+  readonly errors: string[];
+  readonly total?: number;
+  readonly currency?: string;
+  readonly guestName?: string;
+  readonly amount?: number;
+  readonly until?: string | null;
+  readonly expiresAt?: Date | null;
+  readonly lang: string;
+  readonly unitName?: string;
+}
+
+/**
+ * Send the price offer (POST of the owner's offer page).
+ *
+ * ⑤ The price ALWAYS lands in the price list: without `until` as the unit's
+ * timeless base (there is none — otherwise no night would be unpriced), with it as a
+ * dated base from today to `until`. Seasons keep their own price either way.
+ * ⑧ The request moves to 'offered' with the recomputed quote FROZEN on it; the
+ * nights stay free until the guest accepts.
+ */
+export async function sendOffer(
+  token: string,
+  input: { amount: string; until?: string | null; note?: string | null },
+  publicBaseUrl: string | null,
+): Promise<SendOfferResult> {
+  const req = await loadRequest({ token });
+  if (!req) return { ok: false, outcome: "unknown", errors: [], lang: "hu" };
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  if (req.status !== "pending" || req.quoted_total) {
+    return { ok: false, outcome: "already", errors: [], lang };
+  }
+  const from = dayStr(req.date_from);
+  const to = dayStr(req.date_to);
+  const today = new Date().toISOString().slice(0, 10);
+  const missing = await unpricedNights(req.unit_id, from, to);
+
+  const errors: string[] = [];
+  const amount = parseOfferAmount(input.amount);
+  const until = (input.until ?? "").trim() || null;
+  if (missing.length) {
+    if (amount.empty) errors.push(T(lang, "Írja be az árat."));
+    else if (amount.error === "num") errors.push(T(lang, "Csak számot írjon, pl. 26 000."));
+    else if (amount.error === "pos") errors.push(T(lang, "Az ár legyen nagyobb nullánál."));
+    else if (amount.error === "big") errors.push(T(lang, "Ez túl nagy összeg — ellenőrizze a nullákat."));
+    if (until) {
+      const last = missing[missing.length - 1]!;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(until) || Number.isNaN(Date.parse(`${until}T00:00:00Z`))) {
+        errors.push(T(lang, "A dátumot év-hónap-nap alakban kérjük."));
+      } else if (until < last || until < today) {
+        errors.push(
+          T(lang, "Legalább {date} legyen — különben az ár erre a kérésre sem vonatkozik.", {
+            date: huDate(last),
+          }),
+        );
+      }
+    }
+  }
+  if (errors.length) return { ok: false, outcome: "invalid", errors, lang };
+
+  if (missing.length && amount.value) {
+    if (until) await addDatedBasePrice(req.unit_id, amount.value, today, until);
+    else await setBasePrice(req.unit_id, amount.value);
+  }
+
+  const { currency, unitMode } = await pricingConfigFor(req.site_id);
+  const quote = quoteStayFrom(await getUnitPrices(req.unit_id), {
+    dateFrom: from,
+    dateTo: to,
+    guests: Math.max(1, Math.round(req.guests || 1)),
+    currency,
+    unitMode,
+    baseLabel: T(lang, "Alapár"),
+  });
+  if (!quote) {
+    // The price was written, yet the rule still finds an unpriced night: a defect,
+    // not an owner mistake. Loud, and nothing goes to the guest (§B.17).
+    console.error(`[booking:offer] az ár mentése után sincs teljes ár (${req.id}) — ajánlat NEM ment ki`);
+    return { ok: false, outcome: "invalid", errors: [T(lang, "Az árat nem sikerült kiszámolni. Kérjük, próbálja újra.")], lang };
+  }
+
+  const offerToken = randomBytes(24).toString("base64url");
+  const note = input.note?.trim().slice(0, 1000) || null;
+  const offeredAt = new Date();
+  const upd = await db
+    .updateTable("booking_request")
+    .set({
+      status: "offered",
+      offered_at: offeredAt,
+      offer_token: offerToken,
+      decision_note: note,
+      quoted_total: quote.total,
+      quoted_currency: quote.currency,
+      quoted_lines: JSON.stringify(
+        quote.lines.map((l) => ({
+          label: l.label,
+          nights: l.nights,
+          per_night: l.perNight,
+          guests: l.guests,
+          sum: l.sum,
+        })),
+      ),
+    })
+    .where("id", "=", req.id)
+    // A double submit must not send two offers (the second finds it gone).
+    .where("status", "=", "pending")
+    .executeTakeFirst();
+  if (!Number(upd.numUpdatedRows)) return { ok: false, outcome: "already", errors: [], lang };
+
+  // The price list changed → the public page (price table, room-card span, the
+  // booking widget's JSON is live already) must say the same thing.
+  if (missing.length && ctx.tenantId) {
+    try {
+      const { rerenderTenantSnapshot } = await import("../tenant/editor.js");
+      await rerenderTenantSnapshot(ctx.tenantId);
+    } catch (err) {
+      console.error(`[booking:offer] az oldal újrarenderelése nem sikerült (${ctx.tenantId}):`, err);
+    }
+  }
+
+  const fresh = (await loadRequest({ id: req.id }))!;
+  void mailSafe("guest-offer", () => sendGuestOffer(fresh, publicBaseUrl));
+  const expiresAt = ctx.expireHours ? new Date(offeredAt.getTime() + ctx.expireHours * 3_600_000) : null;
+  return {
+    ok: true,
+    outcome: "sent",
+    errors: [],
+    total: quote.total,
+    currency: quote.currency,
+    guestName: req.guest_name,
+    amount: amount.value,
+    until,
+    expiresAt,
+    lang,
+    unitName: req.unit_name ?? "",
+  };
+}
+
+/** "2026. szept. 25. 14:05" in the site's time zone (Budapest for the pilot). */
+function huDateTime(d: Date): string {
+  const parts = new Intl.DateTimeFormat("hu-HU", {
+    timeZone: "Europe/Budapest",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string): string => parts.find((p) => p.type === t)?.value ?? "";
+  return `${huDate(`${get("year")}-${get("month")}-${get("day")}`)} ${get("hour")}:${get("minute")}`;
+}
+
+/** When an offer lapses (null = the module never expires anything). */
+export function offerExpiresAt(offeredAt: Date | null, hours: number): Date | null {
+  if (!offeredAt || !hours) return null;
+  return new Date(new Date(offeredAt).getTime() + hours * 3_600_000);
+}
+
+/** ⑨ The guest's offer letter: the price, the owner's word, the deadline, one link. */
+async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Promise<void> {
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  const from = huDate(dayStr(req.date_from));
+  const to = huDate(dayStr(req.date_to));
+  const unit = req.unit_name ? ` (${req.unit_name})` : "";
+  const url = `${publicBaseUrl ?? ""}/ajanlat/${req.offer_token}`;
+  const expires = offerExpiresAt(req.offered_at, ctx.expireHours);
+  const body =
+    T(lang, "Kedves {name}!", { name: req.guest_name }) +
+    `\n\n` +
+    T(lang, "{host} árajánlatot küldött a kért időszakra{unit}.", { host: ctx.hostName, unit }) +
+    `\n\n` +
+    `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
+    `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
+    quoteBlock(req, lang) +
+    `\n` +
+    (req.decision_note ? `${T(lang, "A szállásadó üzenete:")} „${req.decision_note}"\n\n` : "") +
+    (expires
+      ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires) }) + " "
+      : "") +
+    T(lang, "A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja.") +
+    `\n\n${T(lang, "Az ajánlat megtekintése és elfogadása:")}\n${url}\n\n` +
+    T(lang, "Ha nem kéri, ugyanezen a linken jelezheti.") +
+    `\n\n${ctx.hostName}\n`;
+  const html =
+    bookingHtml(body) +
+    `<p style="margin:22px 0"><a href="${esc(url)}" style="display:inline-block;padding:14px 26px;` +
+    `background:#16283f;color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:600">` +
+    `${T(lang, "Megnézem és elfogadom")}</a></p>`;
+  await getEmailSender().send({
+    to: req.guest_email,
+    audience: "guest",
+    ...guestIdentity(ctx),
+    subject: T(lang, "Árajánlat: {from} — {to}", { from, to }),
+    text: body,
+    html,
+  });
+}
+
+/** What the guest's offer page shows (GET — it never decides anything). */
+export interface GuestOfferView {
+  /** 'open' | 'accepted' | 'declined' | 'expired' | 'cancelled' | 'unknown' */
+  readonly outcome: string;
+  readonly lang: string;
+  readonly hostName?: string;
+  readonly siteUrl?: string;
+  readonly guestName?: string;
+  readonly unitName?: string;
+  readonly dateFrom?: string;
+  readonly dateTo?: string;
+  readonly guests?: number;
+  readonly total?: number;
+  readonly currency?: string;
+  readonly lines?: { label: string; nights: number; per_night: number; guests: number; sum: number }[];
+  readonly note?: string | null;
+  readonly expiresAt?: Date | null;
+}
+
+async function loadByOfferToken(offerToken: string): Promise<RequestRow | null> {
+  const row = await db
+    .selectFrom("booking_request")
+    .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
+    .selectAll("booking_request")
+    .select("site_unit.name as unit_name")
+    .where("booking_request.offer_token", "=", offerToken)
+    .executeTakeFirst();
+  return (row as unknown as RequestRow | undefined) ?? null;
+}
+
+/** An 'offered' row whose deadline passed is expired even before the tick reaches it. */
+function offerLapsed(req: RequestRow, hours: number): boolean {
+  const exp = offerExpiresAt(req.offered_at, hours);
+  return !!exp && exp.getTime() <= Date.now();
+}
+
+export async function peekGuestOffer(offerToken: string): Promise<GuestOfferView> {
+  const req = await loadByOfferToken(offerToken);
+  if (!req) return { outcome: "unknown", lang: "hu" };
+  const ctx = await siteMailContext(req.site_id);
+  const lapsed = req.status === "offered" && offerLapsed(req, ctx.expireHours);
+  const siteUrl = await siteUrlFor(req.site_id);
+  return {
+    outcome: lapsed ? "expired" : req.status === "offered" ? "open" : req.status,
+    lang: ctx.lang,
+    hostName: ctx.hostName,
+    ...(siteUrl ? { siteUrl } : {}),
+    guestName: req.guest_name,
+    unitName: req.unit_name ?? "",
+    dateFrom: dayStr(req.date_from),
+    dateTo: dayStr(req.date_to),
+    guests: req.guests,
+    total: req.quoted_total ?? undefined,
+    currency: req.quoted_currency ?? "HUF",
+    lines: req.quoted_lines ?? [],
+    note: req.decision_note ?? null,
+    expiresAt: offerExpiresAt(req.offered_at, ctx.expireHours),
+  };
+}
+
+/**
+ * ⑪/⑫ The guest's answer (POST from the offer page). Accept runs the SAME core as
+ * the owner's verdict: one transaction checks the nights and books them.
+ */
+export async function respondToOffer(
+  offerToken: string,
+  answer: "accept" | "decline",
+  publicBaseUrl: string | null,
+): Promise<GuestOfferView> {
+  const req = await loadByOfferToken(offerToken);
+  if (!req) return { outcome: "unknown", lang: "hu" };
+  const view = await peekGuestOffer(offerToken);
+  if (view.outcome !== "open") {
+    // A lapsed offer the tick has not reached yet: close it now, the same way.
+    if (view.outcome === "expired" && req.status === "offered") await expireOffer(req);
+    return view;
+  }
+  const ctx = await siteMailContext(req.site_id);
+  const base = {
+    guestName: req.guest_name,
+    dateFrom: dayStr(req.date_from),
+    dateTo: dayStr(req.date_to),
+    lang: ctx.lang,
+  };
+
+  if (answer === "decline") {
+    const upd = await db
+      .updateTable("booking_request")
+      .set({ status: "declined", decided_at: new Date(), decided_by: "guest" })
+      .where("id", "=", req.id)
+      .where("status", "=", "offered")
+      .executeTakeFirst();
+    if (Number(upd.numUpdatedRows)) {
+      await mailSafe("owner-offer-declined", () =>
+        sendOwnerOfferNews(req, "declined"),
+      );
+    }
+    return { ...view, outcome: "declined_now" };
+  }
+
+  const r = await acceptCore(req, "guest", "offered", req.decision_note ?? null, publicBaseUrl, base);
+  if (r.outcome === "accepted") {
+    await mailSafe("owner-offer-accepted", () => sendOwnerOfferNews(req, "accepted"));
+    return { ...view, outcome: "accepted_now" };
+  }
+  if (r.outcome === "conflict") {
+    // ⑫ "közben elkelt": the request closes honestly, nothing is booked, the owner hears.
+    await db
+      .updateTable("booking_request")
+      .set({
+        status: "declined",
+        decided_at: new Date(),
+        decided_by: "auto",
+        decision_note: T(ctx.lang, "Az ajánlat elfogadásakor a napok már foglaltak voltak."),
+      })
+      .where("id", "=", req.id)
+      .where("status", "=", "offered")
+      .execute();
+    await mailSafe("owner-offer-conflict", () => sendOwnerOfferNews(req, "conflict"));
+    return { ...view, outcome: "conflict" };
+  }
+  return { ...view, outcome: "accepted" };
+}
+
+/**
+ * ⑬ The owner records that the guest accepted by phone or by reply — the same step
+ * the guest's button runs, started by the owner (admin, ownership-checked by caller).
+ */
+export async function recordOfferAcceptedByOwner(
+  actionToken: string,
+  publicBaseUrl: string | null,
+): Promise<DecisionResult> {
+  const req = await loadRequest({ token: actionToken });
+  if (!req) return { ok: false, outcome: "unknown" };
+  const ctx = await siteMailContext(req.site_id);
+  const base = {
+    guestName: req.guest_name,
+    dateFrom: dayStr(req.date_from),
+    dateTo: dayStr(req.date_to),
+    lang: ctx.lang,
+  };
+  if (req.status !== "offered") return { ok: true, outcome: "already", ...base };
+  return acceptCore(req, "owner", "offered", req.decision_note ?? null, publicBaseUrl, base);
+}
+
+/** The owner hears how their offer ended (never for the owner's own recording). */
+async function sendOwnerOfferNews(
+  req: RequestRow,
+  kind: "accepted" | "declined" | "conflict" | "expired",
+): Promise<void> {
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  if (!ctx.notifyList.length) {
+    console.warn(`[booking] nincs értesítési cím — az ajánlat kimenetele (${req.id}, ${kind}) CSAK naplózva`);
+    return;
+  }
+  const hu = {
+    guest: req.guest_name,
+    from: huDate(dayStr(req.date_from)),
+    to: huDate(dayStr(req.date_to)),
+    unit: req.unit_name ?? "",
+  };
+  const total = req.quoted_total ? formatAmount(req.quoted_total, req.quoted_currency ?? "HUF") : "";
+  const M = {
+    accepted: {
+      subject: T(lang, "{guest} elfogadta az ajánlatát", hu),
+      body: T(
+        lang,
+        "A foglalás végleges: {unit}, {from} — {to}, {n} fő, {total}. A napok foglaltak a naptárban.",
+        { ...hu, n: req.guests, total },
+      ),
+    },
+    declined: {
+      subject: T(lang, "{guest} nem kérte az ajánlatot", hu),
+      body: T(lang, "{guest} a {from} — {to} közötti ajánlatot nem kérte. A napok szabadok maradtak.", hu),
+    },
+    conflict: {
+      subject: T(lang, "{guest} elfogadta volna az ajánlatát, de a napok közben elkeltek", hu),
+      body: T(
+        lang,
+        "{guest} elfogadta volna a {from} — {to} közötti ajánlatot, de ezekre a napokra közben másik foglalás került. A foglalás nem jött létre; ha tud másik időpontot, keresse meg a vendéget.",
+        hu,
+      ),
+    },
+    expired: {
+      subject: T(lang, "Lejárt egy árajánlat: {guest}, {from} — {to}", hu),
+      body: T(
+        lang,
+        "{guest} nem fogadta el időben a {from} — {to} közötti ajánlatot, ezért az lejárt. A vendéget értesítettük, a napok szabadok.",
+        hu,
+      ),
+    },
+  }[kind];
+  const body = `${M.body}\n\n${ctx.hostName}\n`;
+  await getEmailSender().send({
+    to: ctx.notifyList.join(", "),
+    audience: "guest",
+    subject: M.subject,
+    text: body,
+    html: bookingHtml(body),
+  });
+  if (ctx.tenantId) {
+    await logTenantMessage({
+      tenantId: ctx.tenantId,
+      channel: "email",
+      kind: "booking",
+      subject: M.subject,
+      bodyText: body,
+      recipient: ctx.notifyList.join(", "),
+      relatedKind: "booking_request",
+      relatedId: req.id,
+    });
+  }
+}
+
+/** Close a lapsed offer: status, then both sides are told (⑫). */
+async function expireOffer(req: RequestRow): Promise<boolean> {
+  const upd = await db
+    .updateTable("booking_request")
+    .set({ status: "expired", decided_at: new Date(), decided_by: "system" })
+    .where("id", "=", req.id)
+    .where("status", "=", "offered")
+    .executeTakeFirst();
+  if (!Number(upd.numUpdatedRows)) return false;
+  await mailSafe("guest-offer-expired", () => sendGuestOfferExpired(req));
+  await mailSafe("owner-offer-expired", () => sendOwnerOfferNews(req, "expired"));
+  return true;
+}
+
+async function sendGuestOfferExpired(req: RequestRow): Promise<void> {
+  const ctx = await siteMailContext(req.site_id);
+  const lang = ctx.lang;
+  const from = huDate(dayStr(req.date_from));
+  const to = huDate(dayStr(req.date_to));
+  const body =
+    T(lang, "Kedves {name}!", { name: req.guest_name }) +
+    `\n\n` +
+    T(
+      lang,
+      "A {from} — {to} közötti időszakra küldött árajánlat lejárt, a napokat nem tartottuk tovább. Ha még szeretne jönni, kérjen új ajánlatot a szállás oldalán, vagy válaszoljon erre a levélre.",
+      { from, to },
+    ) +
+    `\n\n${ctx.hostName}\n`;
+  await getEmailSender().send({
+    to: req.guest_email,
+    audience: "guest",
+    ...guestIdentity(ctx),
+    subject: T(lang, "Az árajánlat lejárt: {from} — {to}", { from, to }),
+    text: body,
+    html: bookingHtml(body),
+  });
+}
+
+/** The tick's half of ⑫: every offer past its deadline lapses. */
+export async function expireStaleOffers(): Promise<number> {
+  const rows = await db
+    .selectFrom("booking_request")
+    .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
+    .selectAll("booking_request")
+    .select("site_unit.name as unit_name")
+    .where("booking_request.status", "=", "offered")
+    .execute();
+  let n = 0;
+  for (const r of rows as unknown as RequestRow[]) {
+    const hours = Number((await bookingRules(r.site_id)).autoDeclineHours ?? 48);
+    if (offerLapsed(r, hours) && (await expireOffer(r))) n++;
+  }
+  return n;
 }

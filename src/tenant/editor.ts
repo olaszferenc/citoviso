@@ -26,7 +26,7 @@ import { getTenantModules, isRenderedModule } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits, peekUnits } from "./units.js";
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
-import { formatSpan, getSitePrices, priceSpan, type UnitPrice } from "./prices.js";
+import { formatSpan, getSitePrices, isPriceActive, priceSpan, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
 import {
@@ -339,13 +339,28 @@ export async function moduleContentFor(
   if (on("pricing")) {
     const priced = units
       .map((u) => {
-        const rows = priceMap.get(u.id) ?? [];
-        const base = rows.find((r) => r.isBase)?.amount;
+        // 0072: a dated row that already expired can never be charged again, so it
+        // must not reach the page. The base shown is the one IN FORCE today: a dated
+        // base (written on the offer page) whose window holds today, else the timeless
+        // one. The maintenance tick re-renders when a window closes, so the table does
+        // not keep quoting a price that has lapsed.
+        const today = new Date().toISOString().slice(0, 10);
+        const rows = (priceMap.get(u.id) ?? []).filter((r) => isPriceActive(r, today));
+        const baseRow =
+          rows.find((r) => r.isBase && r.validFrom && r.validFrom <= today) ??
+          rows.find((r) => r.isBase && !r.validFrom);
+        const base = baseRow?.amount;
+        const baseUntil = baseRow?.validTo ?? undefined;
         const seasons = rows
           .filter((r) => !r.isBase && r.from && r.to)
           .map((r) => ({ label: r.label, from: r.from!, to: r.to!, amount: r.amount }));
         if (base === undefined && !seasons.length) return null;
-        return { name: u.name, ...(base !== undefined ? { base } : {}), ...(seasons.length ? { seasons } : {}) };
+        return {
+          name: u.name,
+          ...(base !== undefined ? { base } : {}),
+          ...(baseUntil ? { baseUntil } : {}),
+          ...(seasons.length ? { seasons } : {}),
+        };
       })
       .filter(Boolean) as NonNullable<SiteData["pricing"]>["units"];
 

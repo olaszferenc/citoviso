@@ -26,6 +26,9 @@ export interface UnitPrice {
   readonly isBase: boolean;
   /** Minimum stay inside this season (0028); null → the module's site-wide minNights. */
   readonly minNights: number | null;
+  /** 0072: year-bound validity window ('YYYY-MM-DD', inclusive); null = timeless. */
+  readonly validFrom: string | null;
+  readonly validTo: string | null;
 }
 
 const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
@@ -37,7 +40,7 @@ export function isMonthDay(v: string): boolean {
 export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
   const rows = await db
     .selectFrom("unit_price")
-    .select(["id", "label", "date_from", "date_to", "amount", "min_nights"])
+    .select(["id", "label", "date_from", "date_to", "amount", "min_nights", "valid_from", "valid_to"])
     .where("unit_id", "=", unitId)
     .orderBy("sort_order")
     .orderBy("created_at")
@@ -50,6 +53,8 @@ export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
     amount: r.amount,
     isBase: r.date_from === null && r.date_to === null,
     minNights: r.min_nights,
+    validFrom: r.valid_from,
+    validTo: r.valid_to,
   }));
 }
 
@@ -66,6 +71,8 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       "unit_price.date_to as dateTo",
       "unit_price.amount as amount",
       "unit_price.min_nights as minNights",
+      "unit_price.valid_from as validFrom",
+      "unit_price.valid_to as validTo",
     ])
     .where("site_unit.site_id", "=", siteId)
     .orderBy("unit_price.sort_order")
@@ -83,6 +90,8 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       amount: r.amount,
       isBase: r.dateFrom === null && r.dateTo === null,
       minNights: r.minNights,
+      validFrom: r.validFrom,
+      validTo: r.validTo,
     });
     out.set(r.unitId, list);
   }
@@ -99,12 +108,16 @@ export interface SavePriceResult {
  * Amount 0 or blank removes it — an owner who is not ready to publish a price must
  * be able to take it back down, and an empty price simply renders nothing (§B.17:
  * better no number than a wrong one).
+ *
+ * ⛔ Only the TIMELESS base (0072). A dated base the owner set on the offer page is a
+ * separate row with its own window; editing the timeless one must not delete it.
  */
 export async function setBasePrice(unitId: string, amount: number | null): Promise<void> {
   await db
     .deleteFrom("unit_price")
     .where("unit_id", "=", unitId)
     .where("date_from", "is", null)
+    .where("valid_from", "is", null)
     .execute();
   if (amount && amount > 0) {
     await db
@@ -157,6 +170,49 @@ export async function addSeasonPrice(
   return { ok: true, errors: [] };
 }
 
+/**
+ * A DATED base price (0072): in force from `validFrom` to `validTo` inclusive, only on
+ * nights no season covers. Written by the offer page (approved plan booking-offer ⑥),
+ * where the owner prices the nights a guest asked about. An earlier dated base whose
+ * window overlaps is replaced, so one night never has two competing dated bases.
+ */
+export async function addDatedBasePrice(
+  unitId: string,
+  amount: number,
+  validFrom: string,
+  validTo: string,
+): Promise<void> {
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .deleteFrom("unit_price")
+      .where("unit_id", "=", unitId)
+      .where("date_from", "is", null)
+      .where("valid_from", "is not", null)
+      .where("valid_from", "<=", validTo)
+      .where("valid_to", ">=", validFrom)
+      .execute();
+    await trx
+      .insertInto("unit_price")
+      .values({
+        unit_id: unitId,
+        label: null,
+        date_from: null,
+        date_to: null,
+        amount: Math.round(amount),
+        min_nights: null,
+        sort_order: 0,
+        valid_from: validFrom,
+        valid_to: validTo,
+      })
+      .execute();
+  });
+}
+
+/** Is the row still able to price some night from `today` on? Timeless rows always are. */
+export function isPriceActive(p: UnitPrice, today: string): boolean {
+  return !p.validTo || p.validTo >= today;
+}
+
 export async function deletePrice(siteId: string, priceId: string): Promise<void> {
   // Ownership guard: the row must belong to a unit of THIS site.
   const owned = await db
@@ -186,15 +242,14 @@ export function seasonCovers(from: string, to: string, monthDay: string): boolea
 }
 
 /**
- * The price in effect on a given day: the first matching season, else the base.
- * Seasons are checked in the owner's own order, so an overlap resolves the way the
- * list reads top-down instead of by some hidden rule.
+ * The price in effect on a given NIGHT ('YYYY-MM-DD'). The precedence (year-bound
+ * season → season → dated base → base) lives in cit-season.cjs, once.
  *
  * The SELECTION is shared too, not just the range test: "which row wins tonight" is
  * exactly the question that would let the screen and the invoice disagree.
  */
-export function priceOn(prices: readonly UnitPrice[], monthDay: string): UnitPrice | null {
-  return seasonRule.rowFor(prices, monthDay, (p) => p.isBase || !p.from || !p.to);
+export function priceOn(prices: readonly UnitPrice[], isoDay: string): UnitPrice | null {
+  return seasonRule.rowFor(prices, isoDay, (p) => p.isBase || !p.from || !p.to);
 }
 
 /** "28 000 Ft" — space-grouped; toLocaleString is unreliable without full ICU. */
@@ -221,8 +276,15 @@ export function formatAmount(amount: number, currency: string, lang?: string): s
  * A span has neither fault: it is true on every day of the year, and the guest
  * never reads a number smaller than the one they will be charged.
  */
-export function priceSpan(prices: readonly UnitPrice[]): { min: number; max: number } | null {
-  const amounts = prices.map((p) => p.amount).filter((a) => Number.isFinite(a) && a > 0);
+export function priceSpan(
+  prices: readonly UnitPrice[],
+  today: string = new Date().toISOString().slice(0, 10),
+): { min: number; max: number } | null {
+  // An expired dated row can never be charged again — it must not widen the span.
+  const amounts = prices
+    .filter((p) => isPriceActive(p, today))
+    .map((p) => p.amount)
+    .filter((a) => Number.isFinite(a) && a > 0);
   if (!amounts.length) return null;
   return { min: Math.min(...amounts), max: Math.max(...amounts) };
 }
@@ -283,8 +345,7 @@ export function quoteStayFrom(
   const end = Date.parse(`${opts.dateTo}T00:00:00Z`);
   if (!(d.getTime() < end)) return null;
   while (d.getTime() < end) {
-    const md = seasonRule.monthDayOf(d.toISOString());
-    const p = priceOn(prices, md);
+    const p = priceOn(prices, d.toISOString().slice(0, 10));
     if (!p) return null; // an unpriced night → no quote at all
     nights.push({ rowId: p.id, label: p.isBase ? opts.baseLabel : p.label, amount: p.amount });
     d.setUTCDate(d.getUTCDate() + 1);

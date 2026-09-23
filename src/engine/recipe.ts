@@ -328,6 +328,8 @@ export interface SiteData {
       readonly name: string;
       /** Applies when no season matches; absent → only seasons are shown. */
       readonly base?: number;
+      /** 0072: the base is a DATED one, in force until this day ('YYYY-MM-DD', inclusive). */
+      readonly baseUntil?: string;
       readonly seasons?: readonly {
         readonly label: string;
         /** Recurring 'MM-DD'. */

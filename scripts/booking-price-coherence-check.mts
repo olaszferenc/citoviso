@@ -129,6 +129,14 @@ interface TableRow {
   readonly label: string;
   readonly season: { from: string; to: string } | null;
   readonly amount: number;
+  /** 0072: a dated base prints "– 2027. 09. 30." in its date cell; past it, no price. */
+  readonly until?: string | null;
+}
+
+/** "– 2027. 09. 30." → "2027-09-30" (a dated base's last day); null otherwise. */
+function parseUntil(s: string): string | null {
+  const m = /[–\-—]\s*(\d{4})\.\s*(\d{2})\.\s*(\d{2})\./.exec(s);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
 /** The guard's OWN arithmetic from the on-screen table: night by night. */
@@ -140,8 +148,10 @@ function expectedTotal(rows: readonly TableRow[], from: string, to: string): num
   const end = Date.parse(`${to}T00:00:00Z`);
   if (!(d.getTime() < end)) return null;
   while (d.getTime() < end) {
-    const md = d.toISOString().slice(5, 10);
-    const hit = seasons.find((r) => covers(r.season!.from, r.season!.to, md)) ?? base;
+    const iso = d.toISOString().slice(0, 10);
+    const md = iso.slice(5, 10);
+    const dated = base?.until && iso > base.until ? undefined : base;
+    const hit = seasons.find((r) => covers(r.season!.from, r.season!.to, md)) ?? dated;
     if (!hit) return null;
     total += hit.amount;
     d.setUTCDate(d.getUTCDate() + 1);
@@ -230,7 +240,12 @@ async function checkSite(page: Page, port: number, slug: string): Promise<void> 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ).then((raw: { label: string; when: string; amount: string }[]) =>
     raw
-      .map((r) => ({ label: r.label, season: parseWhen(r.when), amount: parseMoney(r.amount) ?? 0 }))
+      .map((r) => ({
+        label: r.label,
+        season: parseWhen(r.when),
+        amount: parseMoney(r.amount) ?? 0,
+        until: parseUntil(r.when),
+      }))
       .filter((r) => r.amount > 0),
   );
   if (!rows.length) {

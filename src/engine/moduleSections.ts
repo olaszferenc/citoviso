@@ -318,8 +318,13 @@ function pricingBlock(d: SiteData): string {
         );
       }
       if (u.base) {
+        // 0072: a DATED base says when it ends — otherwise the table would promise a
+        // price for stays the owner never priced (the widget asks for a quote there).
+        const until = u.baseUntil
+          ? `– ${esc(u.baseUntil.slice(0, 4))}. ${esc(niceDay(u.baseUntil.slice(5, 10)))}`
+          : "";
         rows.push(
-          `<tr><td>${T(d, "Egyéb időszakban")}</td><td></td>` +
+          `<tr><td>${T(d, "Egyéb időszakban")}</td><td>${until}</td>` +
             `<td>${esc(money(u.base, p.currency))}</td></tr>`,
         );
       }
