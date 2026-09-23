@@ -41,10 +41,10 @@ const MEM_DIR_REL = "_planning/memory";
 const MEM_INDEX_REL = `${MEM_DIR_REL}/INDEX.md`;
 const GENERATED = [DEC_INDEX_REL, MEM_INDEX_REL];
 
-// The one KNOWN duplicate on main: two different decisions both numbered 0033. Renumbering the
-// later one is an owner decision (2026-09-23: "később rendezzük, most megjelölöm"). Every OTHER
-// duplicate fails the gate. Remove the entry once the owner has decided.
-const KNOWN_DUPLICATES = new Set(["ADR-0033"]);
+// Known duplicates the gate tolerates. EMPTY on purpose: the one historical case (two ADR-0033s)
+// was resolved 2026-09-23 by the owner — the later nginx decision got a new number. Every
+// duplicate fails the gate now.
+const KNOWN_DUPLICATES = new Set<string>();
 
 // B (2026-09-23): a new ADR is written with the PLACEHOLDER number `XXXX` (file `XXXX-slug.md`,
 // heading `## ADR-XXXX — …`, references `ADR-XXXX`); the land assigns the real number AFTER its

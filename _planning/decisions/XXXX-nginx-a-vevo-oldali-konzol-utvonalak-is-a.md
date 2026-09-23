@@ -1,4 +1,8 @@
-## ADR-0033 — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
+## ADR-XXXX — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
+
+> **Korábban ADR-0033** (2026-08-09): 5 másodperccel az ár-döntés (ma is ADR-0033) után landolt,
+> ugyanazzal a számmal — mindkettő beolvadt. Átszámozva 2026-09-23 (ADR-0210, tulajdonosi döntés):
+> ez kapott új számot, mert a későbbi, és egyetlen hivatkozás sem mutatott rá.
 
 - **Kiváltó (2026-08-09):** a `citoviso.com` nginx-blokkja csak a `/p/`-t proxyzta a konzolra (:4600),
   minden mást a publikus szerverre (:4800). A vevő-folyam viszont a konzol több útvonalát is hívja

@@ -22,7 +22,10 @@ ki: az **ADR-0033 két különböző döntés**, mindkettő beolvadt.
   Az alszámok (`0036/b`, `0186 utószál`) külön címkék, nem duplikátumok.
   ⭐ **Munka közben élesben is megtörtént:** ezt az ADR-t 0209-ként írtam, és mire commitoltam,
   egy párhuzamos szál a 0209-et landolta (felszereltség, régi alakban) — ezért lett 0210.
-- **ADR-0033:** mindkét döntés bájtra hűen, külön fájlban él; a kapu ezt az EGY esetet ismert
+- **ADR-0033 (③ — RENDEZVE 2026-09-23):** az ár-döntés MARAD 0033 (minden hivatkozás rá mutat: 0072,
+  0074, 0080, 0088, 0113, DOMAIN-inbox); az nginx-döntés (5 mp-cel később landolt, hivatkozás nélkül)
+  új számot kapott — MAGÁVAL a ② mechanizmussal, a fejlécében „Korábban ADR-0033" sorral. A kivétel-
+  lista üres, minden duplikátum bukik. Eredeti megjegyzés: mindkét döntés bájtra hűen, külön fájlban él; a kapu ezt az EGY esetet ismert
   kivételként kezeli (`KNOWN_DUPLICATES`). Az átszámozás tulajdonosi döntés (a későbbi, az nginx-es
   kapjon új számot) — „később rendezzük" (2026-09-23).
 - **Átmenet:** a migráció idején futó szálak a RÉGI, egyfájlos naplót szerkesztik. A feloldó a
@@ -81,7 +84,7 @@ külön, jelölt commitban (`Land-Assigned-ADR:`) írja át:
 - A régi út (`next` + számozott fájl) működik tovább; ütközéskor a duplikátum-kapu fogja meg.
 
 **Nyitva:** A `MEMORY.md` „Aktív feladat"
-blokkjának ütközése (A+D nem érinti). · ADR-0033 átszámozása.
+blokkjának ütközése (A+D nem érinti). · ~~ADR-0033 átszámozása~~ (③, kész).
 
 **Visszafordíthatóság:** 🔄 — a régi napló a git-történetben bájtra megvan, a fájlok összefűzése
 visszaadja; adat, kód-viselkedés, éles nem érintett. **Élesítés:** NINCS (§0.3) — dokumentum-infra.

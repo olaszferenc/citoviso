@@ -49,7 +49,8 @@
 - ⭐ Az első éles szál (ADR-0211) már a darabolt rendben landolt: saját fájl + idegen ADR-fájl módosítása, index +1 sor.
 
 ## Nyitva
-- **ADR-0033** átszámozása (tulajdonosi döntés; a `KNOWN_DUPLICATES`-ből utána törlendő).
+- ~~ADR-0033 átszámozása~~ — KÉSZ: a tulaj döntése szerint az nginx-es (később landolt, hivatkozás nélküli)
+  kapott új számot, a B mechanizmussal kiosztva; a `KNOWN_DUPLICATES` üres.
 - A `MEMORY.md` „Aktív feladat" blokkjának ütközése (A+D nem fedi).
 - Futó szálak régi alakú, commitolatlan `DECISIONS.md`-szerkesztéssel (mérve 2026-09-23):
   `~/wt/cit2167c7de`, `~/wt/mocklapleadszem` — a rebase-ükön a feloldó viszi át, vagy hangosan megáll.

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-nginx-a-vevo-oldali-konzol-utvonalak-is-a.md) — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
 - [ADR-0211](decisions/0211-a-konfiguratorban-a-havi-az-alapertelmezett.md) — A konfigurátorban a HAVI az alapértelmezett fizetési ütem; a „2 hó ingyen” forintban és mozogva hirdet
 - [ADR-0210](decisions/0210-adr-enkent-kulon-fajl-a-ket-index-generalt.md) — ADR-enként külön fájl, a két index generált, és a duplikált szám kapu (2026-09-23)
 - [ADR-0209](decisions/0209-a-felszereltseg-es-a-szobak-felszereltsege-ket.md) — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (2026-09-23)
@@ -196,7 +197,6 @@
 - [ADR-0035](decisions/0035-tenant-admin-vizualis-rancfelvarras-valodi-saas.md) — Tenant-admin vizuális ráncfelvarrás: valódi SaaS-dashboard shell
 - [ADR-0034](decisions/0034-tenant-admin-menurendszer-onkiszolgalo-modul.md) — Tenant-admin: menürendszer + önkiszolgáló modul-kezelés (a „gagyi egy-űrlap" leváltása)
 - [ADR-0033](decisions/0033-a-publikus-honlap-ara-a-valos-arazasbol.md) — A publikus honlap ára a valós árazásból renderel (régió-tudatos, §C-kapuzott)
-- [ADR-0033](decisions/0033-nginx-a-vevo-oldali-konzol-utvonalak-is-a.md) — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
 - [ADR-0032](decisions/0032-szabadon-valaszthato-platform-aldomain-e-mail.md) — Szabadon választható platform-aldomain + e-mail-modul + Citoviso-kredit a láblécben
 - [ADR-0031](decisions/0031-cimzett-e-mail-megadhato-modosithato-a-meglevo.md) — Címzett e-mail megadható/módosítható a meglévő követett linken (az outreach-küldés csapdájának feloldása)
 - [ADR-0030](decisions/0030-outreach-csatorna-valasztas-e-mail-valodi-sms.md) — Outreach csatorna-választás: e-mail (valódi) + SMS (placeholder, GSM-modul később)
