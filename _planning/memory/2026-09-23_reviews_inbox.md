@@ -1,6 +1,6 @@
 # 2026-09-23 — Vendégvélemény-kezelő: a csillag nem hazudik többé, a köszönőlevél egyszer megy ki
 
-**ADR-XXXX.** Brief: `~/rc-briefs/reviews-admin-list-brief.md`. Saját fa: `~/wt/cit25841bd5`.
+**ADR-0219.** Brief: `~/rc-briefs/reviews-admin-list-brief.md`. Saját fa: `~/wt/cit25841bd5`.
 
 ## Tulajdonosi döntések
 - **B terv** (csoportosított lista) — kontraktus: `assets/design-refs/console/reviews-inbox/`.

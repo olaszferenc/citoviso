@@ -1,4 +1,4 @@
-## ADR-XXXX — A vendég köszönőlevele legfeljebb egyszer megy ki; a vélemény-kezelő csillaga szín nélkül is igazat mond (2026-09-23)
+## ADR-0219 — A vendég köszönőlevele legfeljebb egyszer megy ki; a vélemény-kezelő csillaga szín nélkül is igazat mond (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, negatív kontrollokkal; nem élesítve)
 · **Kapcsolódó:** ADR-0046 (a `reviews` modul: first-party, moderált), ADR-0036 (i18n-doktrína),
