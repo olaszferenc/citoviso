@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-XXXX az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -12,6 +12,15 @@ Utolsó frissítés: 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-02
 > (a megújítás listaáron menne).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 délután)
+
+**🗂️ TÖBB TERV EGY KÖVETETT LINKEN (tervváltó) — KÉSZ AZ ÁGON, NEM A MAIN-EN (2026-09-23).**
+Ág: `feat/multimocktabs` (originen), **land.sh NEM fut rá** — tulajdonosi döntés: a pilot UTÁN kerül a main-re
+(alvó, de a küldési claimeket is módosítja). Kész: jóváhagyott terv (`assets/design-refs/prospect-page/plan-tabs/`
+csak az ágon), `prospect_variant` (0071), `/p/<token>/v/<n>`, vékony sáv + képes váltó + lap alji blokk,
+„{név} – N honlap-terv” szöveg (1 tervnél bájtra a mai), jog-őr PASS (6 lelet zárva), két új őr. **Következő:
+a kurátori felület §2b terve.** ⚠️ Pilot-releváns, EZTŐL független: dupla pont a lábléc feladó-mondatában
+(„e.v..”), és NEM mért gyanú, hogy a rendelés-gomb ráül a Leiratkozás linkre.
+Jegyzet: `_planning/memory/2026-09-23_multiplan_tabs_feature_branch.md`.
 
 **🔒 MODULE-SALES-CHECK: NEM ÍR TÖBBÉ KÖZÖS DB-SORT (2026-09-23 este).** A két egymásba lapolt
 futás tartós maradékot hagyott a `module_sales_disabled`-ben (mérve: `email,gallery,rooms`), ami
