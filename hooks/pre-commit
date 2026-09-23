@@ -202,6 +202,21 @@ if [ -f scripts/amenities-house-list-check.mts ] && \
   echo "[pre-commit] amenities-house-list (ADR-0209: két külön lista)…"
   npx tsx scripts/amenities-house-list-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Automata heti programajánló, src/events/. ① A gyűjtés kódszintű kapui (dátum-ablak,
+# dátum-a-szövegben, dedup a MÉRT duplapárokkal, lokalitás) mindkét irányban — tiszta
+# függvények, gyors. ② A tenant-admin választó a jóváhagyott B kontraktus mért listáján,
+# a VALÓDI képernyőn (mentés-visszaolvasás, hamisított id elutasítása); böngészőt indít
+# és saját eldobható fixture-t vet, ezért diff-szűkítve.
+if [ -f scripts/events-gates-check.mts ] && \
+   changed_files | grep -qE '^src/events/|^scripts/events-gates-check'; then
+  echo "[pre-commit] events-gates (a programgyűjtés kapui)…"
+  npx tsx scripts/events-gates-check.mts >"$GATE_LOG" || gate_failed
+fi
+if [ -f scripts/programs-editor-check.mts ] && \
+   changed_files | grep -qE '^src/events/|^src/server/(moduleConfigViews|public)\.ts$|^src/moduleConfig\.ts$|^scripts/programs-editor-check'; then
+  echo "[pre-commit] programs-editor (a programajánló-választó kontraktusa)…"
+  npx tsx scripts/programs-editor-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A kapott kedvezmény LÁTSZIK — és közben egy fillér sem mozdul. A tulaj 14 775 Ft-ot
 # fizetett, és nem tudta eldönteni, jó-e a szám: jó volt (19 700 Ft − 25 %), csak sehol
 # nem mondtuk ki. ⛔ A döntő állítás nem a szöveg, hanem a PÉNZ: a Számlázz.hu összeadja

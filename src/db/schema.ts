@@ -525,6 +525,8 @@ export interface TenantMessageTable {
     | "dunning"
     /** ADR-0108: havi forgalmi kimutatás. */
     | "traffic"
+    /** 0071: heti programajánló a tulajnak (új programok, kiválasztás-figyelmeztetés). */
+    | "programs"
     | "other";
   /** NULL for SMS (no subject) — the view then titles it from the body's first line. */
   subject: string | null;
@@ -1021,6 +1023,55 @@ export interface PhotoHeroScoreTable {
   scored_at: Generated<Timestamp>;
 }
 
+/** 0071: OSM settlement cache — the gathering unit of the weekly program recommender
+ *  (owner ruling 2026-09-23: settlement-keyed, so overlapping tenant circles pay once). */
+export interface SettlementTable {
+  osm_id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  /** NULL = OSM carries no `population` tag. Not zero: the threshold skips it, the
+   *  tenant's own settlement is included regardless. */
+  population: number | null;
+  country: Generated<string>;
+  refreshed_at: Generated<Timestamp>;
+}
+
+/** 0071: one weekly gathering run for one settlement — cost and yield, measured. */
+export interface EventGatherRunTable {
+  id: Generated<string>;
+  settlement_osm_id: string;
+  started_at: Generated<Timestamp>;
+  finished_at: Timestamp | null;
+  /** running | done | failed */
+  status: Generated<string>;
+  queries: Generated<number>;
+  pages: Generated<number>;
+  in_tokens: Generated<number>;
+  out_tokens: Generated<number>;
+  cost_usd: Generated<string>;
+  extracted: Generated<number>;
+  kept: Generated<number>;
+  drops: Generated<Record<string, number>>;
+  error: string | null;
+}
+
+/** 0071: a gathered program that passed every gate. `settlement_osm_id` is where the
+ *  EVENT is, not the settlement whose query found it. */
+export interface LocalEventTable {
+  id: Generated<string>;
+  settlement_osm_id: string;
+  name: string;
+  start_date: string;
+  end_date: string | null;
+  place_name: string | null;
+  source_url: string;
+  via: "jsonld" | "llm";
+  dedup_key: string;
+  first_seen_at: Generated<Timestamp>;
+  last_seen_at: Generated<Timestamp>;
+}
+
 /** 0061: the operator's hero pick for a lead. Overrides heroPick's score ordering and
  *  SURVIVES re-generation — a decision a human already made must not be re-asked
  *  every time the mock is rebuilt (owner ruling, 2026-09-09). */
@@ -1331,6 +1382,9 @@ export interface Database {
   calendar_link: CalendarLinkTable;
   site_place_rating: SitePlaceRatingTable;
   photo_hero_score: PhotoHeroScoreTable;
+  settlement: SettlementTable;
+  event_gather_run: EventGatherRunTable;
+  local_event: LocalEventTable;
   lead_hero_override: LeadHeroOverrideTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;

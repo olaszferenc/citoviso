@@ -156,6 +156,7 @@ import {
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
+import { readPicks, resolvePicks, siteProgramPool } from "../events/picks.js";
 import { getTrafficReport } from "../analytics/trafficReport.js";
 import {
   computeAnnual,
@@ -1202,6 +1203,31 @@ async function serveAdmin(
         };
       }
 
+      // The weekly program recommender's picker (approved contract B): the live pool
+      // of the tenant's circle + the stored choice, resolved by the same function the
+      // render and the weekly mail use (src/events/picks.ts).
+      let programs;
+      if (moduleId === "poi") {
+        const { state, events } = await siteProgramPool(site.id);
+        programs = {
+          state,
+          pool: events.map((e) => ({
+            id: e.id,
+            start: e.start,
+            end: e.end,
+            name: e.name,
+            settlement: e.settlement,
+            distanceKm: e.distanceKm,
+            sourceUrl: e.sourceUrl,
+            sourceHost: e.sourceHost,
+          })),
+          picks: resolvePicks(readPicks(cfg.config), events).map((p) =>
+            p.title !== p.name ? { id: p.id, title: p.title } : { id: p.id },
+          ),
+          saved,
+        };
+      }
+
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
         // ADR-0067: the settings screens speak the tenant's own site language.
         lang: content?.lang ?? "hu",
@@ -1217,6 +1243,7 @@ async function serveAdmin(
         ...(units ? { units } : {}),
         ...(pricing ? { pricing } : {}),
         ...(reviews ? { reviews } : {}),
+        ...(programs ? { programs } : {}),
         ...(photoLibrary ? { photoLibrary } : {}),
         ...(unitAmenities ? { unitAmenities } : {}),
         // ADR-0198 — a felugró állapota a körút után: melyik szoba, melyik fül, és
@@ -2190,6 +2217,35 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     // A module's settings ARE page content (amenity list, contact block, opening
     // hours, newsletter copy…), so the snapshot has to carry the new values.
+    return redirectRerendered(res, session.tenantId, `${back}&saved=1`);
+  }
+  // POST /admin/programs — the weekly program recommender's picker (approved contract B).
+  // ⛔ Only ids from THIS tenant's live pool are stored: the form is client-built, and
+  // a foreign or invented id must not land on the page (§B.17 — no source, no row).
+  if (req.method === "POST" && pathname === "/admin/programs") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const siteId = await tenantSiteId(session.tenantId);
+    if (!siteId || !(await tenantHasModule(session.tenantId, "poi"))) {
+      return redirect(res, "/admin?tab=modulok");
+    }
+    const form = await readFormBody(req);
+    let posted: unknown = [];
+    try {
+      posted = JSON.parse(form.get("picks") ?? "[]");
+    } catch {
+      posted = [];
+    }
+    const { events } = await siteProgramPool(siteId);
+    const picks = resolvePicks(readPicks({ picks: posted }), events, 10).map((p) =>
+      p.title !== p.name ? { id: p.id, title: p.title } : { id: p.id },
+    );
+    const result = await setSiteModuleConfig(siteId, "poi", { picks }, session.tenantUserId);
+    const back = "/admin?tab=modulok&m=poi";
+    if (!result.ok) {
+      const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
+      return redirect(res, `${back}&${q}`);
+    }
     return redirectRerendered(res, session.tenantId, `${back}&saved=1`);
   }
   // POST /admin/module-config/restore — "tegyék vissza, ahogy volt".

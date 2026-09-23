@@ -195,6 +195,18 @@ export interface Stat {
 /** Content that fills the recipe's slots. Demo data → mock; real data → live. The optional
  *  rooms/reviews carry REAL data when we have it; absent → the module shows marked sample
  *  content in the MOCK, and is dropped on LIVE (see RenderPhase). */
+/** One program of the weekly recommender, as the page shows it. */
+export interface SiteProgram {
+  readonly title: string;
+  readonly start: string;
+  readonly end: string | null;
+  readonly settlement: string;
+  /** null = "Helyben" (the tenant's own settlement). */
+  readonly distanceKm: number | null;
+  readonly sourceUrl: string;
+  readonly sourceHost: string;
+}
+
 export interface SiteData {
   /** ADR-0036: target language (BCP-47 primary subtag, e.g. "pl"), derived from the lead's
    *  region country at generation time and persisted — the live re-render renders the same
@@ -287,7 +299,14 @@ export interface SiteData {
    */
   readonly amenityIconMap?: Readonly<Record<string, string>>;
   readonly usp?: readonly string[];
-  readonly poi?: readonly string[];
+  /**
+   * "Heti programajánló" (the `poi` module): the programs on the page, in the tenant's
+   * order then auto-filled (approved contract: design-refs/public-site/programajanlo/).
+   * Titles and settlement names are FACTS from the source and are not translated.
+   */
+  readonly poi?: readonly SiteProgram[];
+  /** The tenant's own settlement — the "… 30 km-es körzetéből" line of the block. */
+  readonly poiArea?: string;
   readonly hours?: {
     readonly checkInFrom?: string;
     readonly checkInTo?: string;

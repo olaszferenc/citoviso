@@ -49,6 +49,7 @@ const TOPIC_OF: Record<MessageKind, MessageTopic> = {
   multilang: "honlap",
   review: "honlap",
   traffic: "honlap",
+  programs: "honlap",
   // Access to the admin. Rare, but a DIFFERENT question from how the site behaves —
   // and precisely because it is rare, being one click away is what makes it findable.
   credentials: "fiok",

@@ -45,7 +45,12 @@ const demo: SiteData = {
   // Six tiles → the last row holds two: exactly the ragged tail the fix has to centre.
   amenities: ["Ingyenes wifi", "Parkolás", "Reggeli", "Klíma", "Terasz, kert", "Kisállat"],
   // Three cards where four columns fit → the phantom-column case.
-  poi: ["Strand, vízpart", "Éttermek, borászatok", "Látnivalók, túraútvonalak"],
+  // ADR-XXXX: programs (title + date + place + source), not typed place lines.
+  poi: [
+    { title: "Szüreti napok", start: "2026-09-26", end: null, settlement: "Révfülöp", distanceKm: null, sourceUrl: "https://example.com/a", sourceHost: "example.com" },
+    { title: "Termelői piac", start: "2026-09-27", end: null, settlement: "Kővágóörs", distanceKm: 3, sourceUrl: "https://example.com/b", sourceHost: "example.com" },
+    { title: "Családi futónap", start: "2026-10-03", end: null, settlement: "Tapolca", distanceKm: 15, sourceUrl: "https://example.com/c", sourceHost: "example.com" },
+  ],
   rooms: [
     { name: "Superior szoba", capacity: "2 fő", note: "Városra néző.", photo: { url: PX, alt: "Superior" } },
     { name: "Deluxe panoráma", capacity: "2 fő", note: "Franciaerkély.", photo: { url: PX, alt: "Deluxe" } },

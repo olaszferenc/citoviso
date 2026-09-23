@@ -1,0 +1,11 @@
+[Unit]
+Description=Citoviso programajánló — függő tenantok, ötpercenként
+
+[Timer]
+# Egy oneshot service-t a systemd nem indít újra, amíg fut — egy 40 perces gyűjtés alatt
+# a következő ütés kimarad, nem halmozódik.
+OnBootSec=3min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

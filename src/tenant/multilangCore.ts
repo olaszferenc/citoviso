@@ -57,7 +57,8 @@ export function collectTranslatableStrings(
   for (const h of data.highlights ?? []) add(h);
   for (const a of data.amenities ?? []) add(a);
   for (const u of data.usp ?? []) add(u);
-  for (const p of data.poi ?? []) add(p);
+  // data.poi: program titles are facts from the source (a festival's own name) — they
+  // are shown as published, not translated; only the block's labels go through T().
   add(data.hours?.note);
   for (const r of data.rooms ?? []) {
     add(r.name);
@@ -191,7 +192,6 @@ export function applyTranslationMap(
     ...(data.amenities ? { amenities: data.amenities.map(trReq) } : {}),
     ...(Object.keys(amenityIconMap).length ? { amenityIconMap } : {}),
     ...(data.usp ? { usp: data.usp.map(trReq) } : {}),
-    ...(data.poi ? { poi: data.poi.map(trReq) } : {}),
     ...(data.hours ? { hours: { ...data.hours, ...(data.hours.note ? { note: trReq(data.hours.note) } : {}) } } : {}),
     ...(data.rooms
       ? {

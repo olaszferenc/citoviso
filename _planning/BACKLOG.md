@@ -147,6 +147,23 @@ Dátum: 2026-09-23 · Forrás: tudásbázis-őr lelete az ADR-0049 módosítása
 - A szezon-zárás („csak a felsorolt időszakokban") ugyanezen a csatornán ment volna ki — azt az ADR-0049
   2026-09-23-i módosítása már kivette (`src/tenant/seasonalOnly.ts`).
 
+### 💰 Vendég-értesítések — külön FIZETŐS modul (2026-09-23, tulaj)
+Dátum: 2026-09-23 · Forrás: tulaj (ötlet) · Státusz: parkolt, NEM a programajánló-kör része.
+A foglalt vendégnek automatikus, időzített levelek a tartózkodás köré:
+- **Érkezés előtt 1 héttel:** „ideje pakolni” (emlékeztető + amit érdemes hozni).
+- **Érkezés előtt 2 nappal:** időjárás-előrejelzés + a **tartózkodás alatti programok** + érkezés előtti teendők
+  (érkezési idő, kulcsátvétel, parkolás, útvonal).
+- **Kicsekkolás előtti nap:** értesítő (távozás ideje, teendők) + köszönet, stb. — kézenfekvő folytatás: vélemény-kérés
+  a Vendégvélemények modulba.
+- **Mire épül, ami már megvan:** a foglalás dátumai (`booking_request`), a Heti programajánló gyűjtése (`local_event`,
+  település-kulcsos, `src/events/` — a tartózkodás napjaira szűrve), a Nyitvatartás modul (érkezés/távozás ideje).
+  **Új függőség:** időjárás-API (előrejelzés a tenant koordinátájára).
+- ⚠️ **Előzmény:** a programajánló-körből a vendég-értesítés KIFEJEZETTEN kiesett (tulajdonosi döntés, 2026-09-22),
+  és a vásárláskori tájékoztatóba sem került bele — ez az ötlet ezért KÜLÖN modulként, külön árral indul, nem a
+  programajánló bővítéseként.
+- Nyitott: árazás (a tulaj állítja be az Árazás lapon), a levelek nyelve (a vendég nyelve vs. a site nyelve),
+  jogi alap (a foglalás teljesítéséhez kötődő tájékoztatás vs. marketing — leiratkozhatóság).
+
 ## ⚠️ Kritikus elvek / minőség
 
 ### ⭐ Entitás-párosítás & provenance = bizalom-kritikus (2026-07-06 lelet)

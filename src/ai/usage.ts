@@ -90,6 +90,24 @@ function costOf(model: string, u: AiCallUsage): number | null {
 }
 
 /**
+ * Cost of ONE call, outside any ambient run — for pipelines that persist their own
+ * per-run spend (the weekly event gathering writes it on `event_gather_run`).
+ * null for an unpriced model, same as the collector.
+ */
+export function callCostUsd(model: string, usage: AnthropicUsageLike | null | undefined): number | null {
+  if (!usage) return 0;
+  return costOf(model, {
+    step: "",
+    model,
+    inputTokens: usage.input_tokens ?? 0,
+    outputTokens: usage.output_tokens ?? 0,
+    cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+    costUsd: null,
+  });
+}
+
+/**
  * Record one API call against the ambient run. No-op when no run is active, so call sites
  * are safe to instrument unconditionally.
  */

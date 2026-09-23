@@ -288,7 +288,8 @@ async function main(): Promise<void> {
       contact: { email: "or@example.invalid", phone: "+36300000000" },
       rooms: [{ name: "Padlásszoba", capacity: "2 fő", price: "19 000 Ft / éj" }],
       amenities: ["Wifi", "Parkoló"],
-      poi: ["Strand 2 km"],
+      // ADR-XXXX: programs (title + date + place + source), not typed place lines.
+      poi: [{ title: "Szüreti napok", start: "2026-09-26", end: null, settlement: "Révfülöp", distanceKm: null, sourceUrl: "https://example.com/programok", sourceHost: "example.com" }],
       location: { showMap: true, approachNote: "A templomnál jobbra.", parkingNote: "" },
       reviews: [{ quote: "Nagyon jó volt.", author: "Anna" }],
       googleRating: { value: 4.9, count: 143, url: "https://example.com/reviews" },

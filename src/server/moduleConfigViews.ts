@@ -50,6 +50,66 @@ function esc(s: unknown): string {
 
 /** Styles for the settings screens; loaded only on this tab. */
 export const MODCFG_STYLE = `<style>
+/* ── Automata heti programajánló (poi) — approved contract B,
+   assets/design-refs/console/programajanlo/. Two panes need 720px of CONTAINER
+   width (@container, not @media: the admin column is narrower than the window). */
+.pa{container-type:inline-size}
+.pa-intro b{color:var(--citui-ink)}
+.pa-tabs{display:flex;gap:6px;margin-bottom:12px}
+.pa-tabs button{flex:1;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:9px 8px;font:700 .82rem/1 var(--citui-font-text);
+  color:var(--citui-muted);cursor:pointer}
+.pa-tabs button.is-on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.pa-cols{display:grid;grid-template-columns:1fr;gap:16px}
+.pa-pane{min-width:0;display:flex;flex-direction:column}
+.pa-pane.is-hide{display:none}
+@container (min-width:720px){
+  .pa-tabs{display:none}
+  .pa-cols{grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+  .pa-pane.is-hide{display:flex}
+}
+.pa-paneh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.pa-paneh h3{margin:0;font:700 .92rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+.pa-c{font-size:.8rem;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+.pa-c.is-full{color:var(--citui-warn-ink);font-weight:700}
+.pa-box{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:var(--citui-surface);
+  padding:6px;flex:1;display:flex;flex-direction:column}
+.pa-box--sel{background:var(--citui-ok-soft);border-color:color-mix(in srgb,var(--citui-ok) 28%,transparent)}
+.pa-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:22px 12px;text-align:center;color:var(--citui-muted);font-size:.84rem;line-height:1.5;min-height:140px}
+.pa-empty svg{color:var(--citui-line-strong)}
+.pa-it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--citui-white);
+  border:1px solid var(--citui-line);border-radius:11px;padding:9px 10px;margin:5px 0}
+.pa-body{min-width:0}
+.pa-d{font:700 .72rem/1 var(--citui-font-display);color:var(--citui-link-ink);letter-spacing:.3px}
+.pa-n{font:600 .88rem/1.3 var(--citui-font-text);margin-top:3px;overflow-wrap:anywhere;color:var(--citui-ink)}
+.pa-n[contenteditable=true]{outline:2px solid var(--citui-cyan-500);outline-offset:2px;border-radius:4px}
+.pa-m{font-size:.75rem;color:var(--citui-muted);margin-top:2px;overflow-wrap:anywhere}
+.pa-m a{color:var(--citui-link-ink);text-decoration:underline;text-underline-offset:2px}
+.pa-dist.is-here{font-weight:700;color:var(--citui-ok-ink)}
+.pa-acts{display:flex;gap:5px;align-items:center}
+.pa-ctrl{display:flex;flex-direction:column;gap:3px}
+.pa-ctrl button{width:28px;height:24px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:7px;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-ink);cursor:pointer;padding:0}
+.pa-ctrl button:disabled,.pa-add:disabled{opacity:.3;cursor:not-allowed}
+.pa-add{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-cyan-500);background:var(--citui-white);
+  color:var(--citui-link-ink);font:700 1.05rem/1 var(--citui-font-text);cursor:pointer;padding:0}
+.pa-add:disabled{border-color:var(--citui-line-strong);color:var(--citui-muted)}
+.pa-rm{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  color:var(--citui-muted);font:700 1rem/1 var(--citui-font-text);cursor:pointer;padding:0}
+.pa-pen{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:7px;
+  padding:2px 8px;font:600 .7rem/1.35 var(--citui-font-text);cursor:pointer;color:var(--citui-ink)}
+.pa-full{background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent);border-radius:11px;
+  padding:9px 11px;font:700 .8rem/1.4 var(--citui-font-text);color:var(--citui-warn-ink);margin-bottom:8px}
+.pa-full[hidden],.pa-saved[hidden],.pa-auto[hidden]{display:none}
+.pa-auto{margin:0 0 10px;font-size:.84rem;color:var(--citui-muted)}
+.pa-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)}
+.pa-sp{flex:1}
+.pa-saved{display:inline-flex;align-items:center;gap:6px;color:var(--citui-ok-ink);font-weight:700;font-size:.88rem}
+.pa-refresh{margin:14px 0 0;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);
+  padding:11px 13px;font-size:.82rem;color:var(--citui-muted);line-height:1.5}
+.pa-refresh b{color:var(--citui-ink)}
 .mcfg-back{display:inline-flex;align-items:center;gap:6px;color:var(--citui-muted);
   text-decoration:none;font-size:.92rem;margin-bottom:12px}
 .mcfg-back:hover{color:var(--citui-ink)}
@@ -2025,6 +2085,8 @@ export interface ModuleSettingsOpts {
   readonly annualMult?: number;
   /** Guest reviews awaiting or past the owner's verdict (ADR-0046). */
   readonly reviews?: ReviewsEditorData;
+  /** The weekly program recommender's picker (`poi`, approved contract B). */
+  readonly programs?: ProgramsEditorData;
   /** The shared photo library, so a ROOM CARD can assign pictures without
    *  sending the owner to the Fotók tab (approved plan B, 2026-08-25). */
   readonly photoLibrary?: readonly PhotoEdit[];
@@ -2054,6 +2116,157 @@ export interface ReviewsEditorData {
   /** The Google badge currently on the page, if any — shown so the owner can see
    *  what the visitor sees rather than having to trust the toggle. */
   readonly google?: { value: number; count: number; url: string } | null;
+}
+
+/**
+ * The weekly program recommender's picker (`poi`). APPROVED CONTRACT:
+ * assets/design-refs/console/programajanlo/README.md — every "KÖT" line there is
+ * behaviour this editor owes, and the guard (scripts/programs-editor-check.mts)
+ * runs the README's measured list against THIS screen.
+ */
+export interface ProgramsEditorData {
+  /** ok · no_location (the lead has no coordinates → no circle) · not_gathered
+   *  (the first weekly run has not reached this tenant's settlements yet). */
+  readonly state: "ok" | "no_location" | "not_gathered";
+  readonly pool: readonly {
+    id: string;
+    start: string;
+    end: string | null;
+    name: string;
+    settlement: string;
+    /** null = "Helyben" (the tenant's own settlement). */
+    distanceKm: number | null;
+    sourceUrl: string;
+    sourceHost: string;
+  }[];
+  /** The stored choice, in the tenant's order (contract ③). Ids whose program has
+   *  expired are already filtered out by the caller — they fell off by themselves. */
+  readonly picks: readonly { id: string; title?: string }[];
+  readonly saved?: boolean;
+}
+
+/** Contract ②: at most this many programs go on the page. */
+export const PROGRAMS_MAX = 10;
+
+function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
+  const j = (v: unknown): string => JSON.stringify(v).replace(/</g, "\\u003c");
+  const head =
+    `<div class="adm-card__head"><span class="adm-ico">${ic("bookings")}</span>` +
+    `<h2>${T(lang, "Automata heti programajánló")}</h2></div>`;
+  if (data.state !== "ok") {
+    const msg =
+      data.state === "no_location"
+        ? T(lang, "Nem ismerjük a szállás pontos helyét, ezért nem tudjuk, melyik környék programjait gyűjtsük. Írjon nekünk, és beállítjuk.")
+        : T(lang, "Most gyűjtjük a környéke programjait. Körülbelül egy órán belül itt lesznek — addig nincs miből választani, és a honlapján sem jelenik meg a szakasz.");
+    return `<div class="adm-card">${head}<p class="adm-lead">${msg}</p></div>`;
+  }
+  // Every owner-facing string is born here, through T(), and handed to the client
+  // as data — the i18n guard reads the T() argument, a client literal would escape it.
+  const L = {
+    here: T(lang, "Helyben"),
+    km: T(lang, "{n} km"),
+    add: T(lang, "Felveszem"),
+    remove: T(lang, "Leveszem"),
+    up: T(lang, "Feljebb"),
+    down: T(lang, "Lejjebb"),
+    edit: T(lang, "átírom"),
+    done: T(lang, "kész"),
+    programs: T(lang, "{n} program"),
+    emptyPool: T(lang, "Minden javasolt programot felvett."),
+    autoFill: T(lang, "A szabad {n} helyre automatikusan a legközelebbi programok kerülnek, amíg Ön nem választ."),
+    noneThisWeek: T(lang, "Ezen a héten nem találtunk programot a környékén. Hétfő reggel újra keresünk."),
+    emptySel: T(lang, "Még nincs kiválasztva program. Vegyen fel a javasoltak közül — legfeljebb 10-et."),
+  };
+  const empty = (t: string): string =>
+    `<div class="pa-empty">${ic("bookings", 30)}<span>${esc(t)}</span></div>`;
+  return (
+    `<div class="adm-card pa" data-pa-max="${PROGRAMS_MAX}">` +
+    head +
+    `<p class="adm-lead pa-intro">${T(lang, "A héten összegyűjtött programokból válassza ki, <b>melyik 10 jelenjen meg a honlapján</b>. A sorrend is az Öné — ami felül van, az kerül legelőre.")}</p>` +
+    `<div class="pa-tabs" role="tablist">` +
+    `<button type="button" class="is-on" data-pa-tab="pool" role="tab">${T(lang, "Javasolt")} (<span data-pa-n="pool">0</span>)</button>` +
+    `<button type="button" data-pa-tab="sel" role="tab">${T(lang, "Az Ön oldalán")} (<span data-pa-n="sel">0</span>)</button>` +
+    `</div>` +
+    `<p class="pa-auto" data-pa-auto></p>` +
+    `<div class="pa-full" data-pa-full hidden>${T(lang, "Betelt a 10 hely. Vegyen le egyet, ha mást szeretne felvenni.")}</div>` +
+    `<div class="pa-cols">` +
+    `<div class="pa-pane" data-pa-pane="pool"><div class="pa-paneh"><h3>${T(lang, "Javasolt programok")}</h3><span class="pa-c" data-pa-c="pool"></span></div>` +
+    `<div class="pa-box" data-pa-list="pool">${empty(L.emptyPool)}</div></div>` +
+    `<div class="pa-pane is-hide" data-pa-pane="sel"><div class="pa-paneh"><h3>${T(lang, "Az Ön oldalán")}</h3><span class="pa-c" data-pa-c="sel"></span></div>` +
+    `<div class="pa-box pa-box--sel" data-pa-list="sel">${empty(L.emptySel)}</div></div>` +
+    `</div>` +
+    `<form method="POST" action="/admin/programs" class="pa-foot">` +
+    `<input type="hidden" name="picks" value="">` +
+    `<span class="pa-sp"></span>` +
+    `<span class="pa-saved"${data.saved ? "" : " hidden"}>${ic("check", 16)} ${T(lang, "Mentve")}</span>` +
+    `<button class="citui-btn citui-btn--primary" type="submit" data-pa-save disabled>${T(lang, "Mentés a honlapra")}</button>` +
+    `</form>` +
+    `<p class="pa-refresh"><b>${T(lang, "Következő frissítés:")}</b> ${T(lang, "hétfő reggel. Az Ön választása és sorrendje megmarad; a lejárt programok maguktól lekerülnek a honlapjáról.")}</p>` +
+    `<script type="application/json" data-pa-data>${j({ pool: data.pool, picks: data.picks, lang, L })}</script>` +
+    `</div>` +
+    programsEditorScript()
+  );
+}
+
+/** The picker's behaviour. Plain ES5 in a string, like the other editors' scripts. */
+function programsEditorScript(): string {
+  return (
+    `<script>(function(){` +
+    `var root=document.querySelector(".pa");if(!root)return;` +
+    `var D=JSON.parse(root.querySelector("[data-pa-data]").textContent),L=D.L,MAX=+root.dataset.paMax;` +
+    `var byId={};D.pool.forEach(function(e){byId[e.id]=e});` +
+    `var sel=[],titles={};D.picks.forEach(function(p){if(byId[p.id]&&sel.indexOf(p.id)<0){sel.push(p.id);if(p.title)titles[p.id]=p.title}});` +
+    `var initial=JSON.stringify(state());` +
+    `var fmt;try{fmt=new Intl.DateTimeFormat(D.lang,{month:"short",day:"numeric",timeZone:"UTC"})}catch(_){fmt=new Intl.DateTimeFormat("hu",{month:"short",day:"numeric",timeZone:"UTC"})}` +
+    `function day(s){return fmt.format(new Date(s+"T12:00:00Z"))}` +
+    `function when(e){return e.end?day(e.start)+" – "+day(e.end):day(e.start)}` +
+    `function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}` +
+    `function dist(e){return e.distanceKm==null?L.here:L.km.replace("{n}",e.distanceKm)}` +
+    `function state(){return sel.map(function(id){return titles[id]?{id:id,title:titles[id]}:{id:id}})}` +
+    `function item(e,where,i){var ctrl=where==="pool"` +
+    `?'<button type="button" class="pa-add" data-pa-act="add" data-id="'+e.id+'" title="'+esc(L.add)+'" aria-label="'+esc(L.add+": "+e.name)+'"'+(sel.length>=MAX?" disabled":"")+'>+</button>'` +
+    `:'<div class="pa-ctrl"><button type="button" data-pa-act="up" data-id="'+e.id+'" title="'+esc(L.up)+'" aria-label="'+esc(L.up)+'"'+(i===0?" disabled":"")+'>&#9650;</button>'` +
+    `+'<button type="button" data-pa-act="down" data-id="'+e.id+'" title="'+esc(L.down)+'" aria-label="'+esc(L.down)+'"'+(i===sel.length-1?" disabled":"")+'>&#9660;</button></div>'` +
+    `+'<button type="button" class="pa-rm" data-pa-act="remove" data-id="'+e.id+'" title="'+esc(L.remove)+'" aria-label="'+esc(L.remove+": "+e.name)+'">&times;</button>';` +
+    `var name=where==="sel"&&titles[e.id]?titles[e.id]:e.name;` +
+    `return '<div class="pa-it" data-pa-item="'+e.id+'"><div class="pa-body"><div class="pa-d">'+esc(when(e))+'</div>'` +
+    `+'<div class="pa-n" data-pa-name="'+where+'">'+esc(name)+'</div>'` +
+    `+'<div class="pa-m">'+esc(e.settlement)+' · <span class="pa-dist'+(e.distanceKm==null?" is-here":"")+'">'+esc(dist(e))+'</span> · '` +
+    `+'<a href="'+esc(e.sourceUrl)+'" target="_blank" rel="noopener nofollow">'+esc(e.sourceHost)+'</a>'` +
+    `+(where==="sel"?' · <button type="button" class="pa-pen" data-pa-act="edit" data-id="'+e.id+'">'+esc(L.edit)+'</button>':"")` +
+    `+'</div></div><div class="pa-acts">'+ctrl+'</div></div>'}` +
+    `var emptyIcon=root.querySelector(".pa-empty svg");emptyIcon=emptyIcon?emptyIcon.outerHTML:"";` +
+    `function render(){var pool=D.pool.filter(function(e){return sel.indexOf(e.id)<0});` +
+    `root.querySelector('[data-pa-list=pool]').innerHTML=pool.length?pool.map(function(e){return item(e,"pool")}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(D.pool.length?L.emptyPool:L.noneThisWeek)+"</span></div>";` +
+    `root.querySelector('[data-pa-list=sel]').innerHTML=sel.length?sel.map(function(id,i){return item(byId[id],"sel",i)}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(L.emptySel)+"</span></div>";` +
+    `root.querySelector('[data-pa-c=pool]').textContent=L.programs.replace("{n}",pool.length);` +
+    `var c=root.querySelector('[data-pa-c=sel]');c.textContent=sel.length+" / "+MAX;c.classList.toggle("is-full",sel.length>=MAX);` +
+    `root.querySelector('[data-pa-n=pool]').textContent=pool.length;root.querySelector('[data-pa-n=sel]').textContent=sel.length;` +
+    `root.querySelector("[data-pa-full]").hidden=sel.length<MAX;` +
+    `var au=root.querySelector("[data-pa-auto]");au.hidden=sel.length>=MAX||!D.pool.length;au.textContent=L.autoFill.replace("{n}",MAX-sel.length);` +
+    `var st=JSON.stringify(state());root.querySelector("input[name=picks]").value=st;` +
+    `root.querySelector("[data-pa-save]").disabled=st===initial;` +
+    `if(st!==initial){var sv=root.querySelector(".pa-saved");if(sv)sv.hidden=true}}` +
+    `function commitEdit(){var t=root.querySelector('[data-pa-name=sel][contenteditable=true]');if(!t)return;` +
+    `var id=t.closest("[data-pa-item]").getAttribute("data-pa-item");var v=t.textContent.replace(/\\s+/g," ").trim().slice(0,120);` +
+    `if(v&&v!==byId[id].name)titles[id]=v;else delete titles[id]}` +
+    `root.addEventListener("click",function(ev){var b=ev.target.closest("button[data-pa-act],button[data-pa-tab]");if(!b)return;` +
+    `if(b.dataset.paTab){root.querySelectorAll("[data-pa-tab]").forEach(function(x){x.classList.toggle("is-on",x===b)});` +
+    `root.querySelectorAll("[data-pa-pane]").forEach(function(p){p.classList.toggle("is-hide",p.dataset.paPane!==b.dataset.paTab)});return}` +
+    `var id=b.dataset.id,a=b.dataset.paAct,k=sel.indexOf(id);` +
+    `if(a==="edit"){var t=b.closest("[data-pa-item]").querySelector("[data-pa-name]");` +
+    `if(t.getAttribute("contenteditable")==="true"){commitEdit();render()}` +
+    `else{commitEdit();t.setAttribute("contenteditable","true");b.textContent=L.done;t.focus()}return}` +
+    `commitEdit();` +
+    `if(a==="add"&&k<0&&sel.length<MAX)sel.push(id);` +
+    `else if(a==="remove"&&k>=0){sel.splice(k,1);delete titles[id]}` +
+    `else if(a==="up"&&k>0){sel[k]=sel[k-1];sel[k-1]=id}` +
+    `else if(a==="down"&&k>=0&&k<sel.length-1){sel[k]=sel[k+1];sel[k+1]=id}` +
+    `render()});` +
+    `root.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&ev.target.matches("[contenteditable=true]")){ev.preventDefault();commitEdit();render()}});` +
+    `root.querySelector("form.pa-foot").addEventListener("submit",function(){commitEdit();render()});` +
+    `render()})();</script>`
+  );
 }
 
 /** The settings screen for ONE module. */
@@ -2104,7 +2317,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
           ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews
             ? reviewsEditor(opts.reviews, lang)
-            : amenityStored
+            : def.editor === "programs" && opts.programs
+              ? programsEditor(opts.programs, lang)
+              : amenityStored
               ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
                 `<input type="hidden" name="module" value="amenities">` +
                 `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span><h2>${esc(T(lang, cat.publicLabel))}</h2></div>` +
@@ -2134,7 +2349,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         ? helpLink("admin.modules.rooms", lang)
         : def.editor === "pricing" && opts.pricing
           ? helpLink("admin.modules.pricing", lang)
-          : amenityStored
+          : def.editor === "programs" && opts.programs
+            ? helpLink("admin.modules.programs", lang)
+            : amenityStored
             ? helpLink("admin.modules.amenities", lang)
             : helpLink("admin.modules.settings", lang);
 
@@ -2474,6 +2691,7 @@ export const IMPLEMENTED_EDITORS: ReadonlySet<string> = new Set([
   "rooms",
   "pricing",
   "reviews",
+  "programs",
 ]);
 
 /** Can the owner set anything on this module TODAY? (Drives the link and the lint.) */

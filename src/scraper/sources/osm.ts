@@ -4,7 +4,7 @@ import type { LeadSource } from "./LeadSource.js";
 // OpenStreetMap via the Overpass API. Free, open data, legally clean — and it
 // carries the `website` tag, which is exactly our qualification signal.
 // Public Overpass instances are often overloaded (429/504); try mirrors in order.
-const OVERPASS_ENDPOINTS = [
+export const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",

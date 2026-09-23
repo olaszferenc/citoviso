@@ -532,6 +532,35 @@ function moduleShotHtml(entryId: string): string {
         },
       },
     });
+  if (entryId === "admin-modules-programs") {
+    // A believable Monday: a gathered pool around a lakeside village, two programs
+    // already picked (one rewritten), so the shot shows both lists and the order arrows.
+    const ev = (id: string, start: string, name: string, settlement: string, km: number | null, host: string) => ({
+      id: `00000000-0000-4000-8000-00000000000${id}`,
+      start,
+      end: null,
+      name,
+      settlement,
+      distanceKm: km,
+      sourceUrl: `https://${host}/programok`,
+      sourceHost: host,
+    });
+    return moduleSettingsSection("poi", {
+      ...common,
+      values: effectiveModuleConfig("poi", null, null),
+      programs: {
+        state: "ok",
+        pool: [
+          ev("1", "2026-09-26", "Szüreti napok", "Révfülöp", null, "revfulop.hu"),
+          ev("2", "2026-09-26", "Termelői piac", "Kővágóörs", 3, "kovagoors.hu"),
+          ev("3", "2026-09-27", "Családi futónap", "Tapolca", 15, "futonaptar.hu"),
+          ev("4", "2026-10-03", "Gasztrofesztivál", "Balatonlelle", 7, "welovebalaton.hu"),
+          ev("5", "2026-10-04", "Vezetett túra a Szent György-hegyen", "Kisapáti", 12, "visitbalaton365.hu"),
+        ],
+        picks: [{ id: "00000000-0000-4000-8000-000000000001" }, { id: "00000000-0000-4000-8000-000000000004", title: "Murci-fesztivál" }],
+      },
+    });
+  }
   // Generic fields form — the hours module is the representative screen.
   return moduleSettingsSection("hours", {
     ...common,
@@ -544,6 +573,7 @@ const MODULE_SHOT_ENTRIES = [
   "admin-modules-booking",
   "admin-modules-rooms",
   "admin-modules-pricing",
+  "admin-modules-programs",
   "admin-modules-settings",
 ] as const;
 

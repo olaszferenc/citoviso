@@ -57,7 +57,8 @@ const FULL: SiteData = {
   ],
   amenities: ["Zárt kerékpártároló", "Fedett grillterasz"],
   usp: ["Kétperces séta a mólóig"],
-  poi: ["Strand 2 km"],
+  // ADR-XXXX: programs (title + date + place + source), not typed place lines.
+  poi: [{ title: "Szüreti napok", start: "2026-09-26", end: null, settlement: "Révfülöp", distanceKm: null, sourceUrl: "https://example.com/programok", sourceHost: "example.com" }],
   hours: { checkInFrom: "14:00", checkInTo: "", checkOutUntil: "10:00", note: "" },
   location: { showMap: true, approachNote: "A templomnál jobbra.", parkingNote: "" },
   newsletter: { title: "Hírlevél", subtitle: "Évente pár levél." },

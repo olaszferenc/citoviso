@@ -1,0 +1,11 @@
+[Unit]
+Description=Citoviso heti programajánló — napi futás (hétfői gyűjtés, napi lejárat-takarítás)
+
+[Timer]
+# 05:30: a hétfői gyűjtés reggelre kész (a választó lábazata „hétfő reggel"-t ígér),
+# és nem ütközik a 07:00-s billing- és a 08:00-s forgalmi-levél futással.
+OnCalendar=*-*-* 05:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -186,3 +186,39 @@ systemctl list-timers citoviso-multilang-resume.timer
 tail -f ~/.claude/citoviso-multilang-resume.log
 npx tsx scripts/resume-multilang.mts --dry    # mit találna, írás nélkül
 ```
+
+## `citoviso-events` (Automata heti programajánló, 2026-09-23)
+
+**Mit csinál.** Naponta 05:30-kor a `scripts/gather-events.mts` három fázisa fut:
+1. **gyűjtés** — hetente egyszer: egy település akkor kerül sorra, ha az utolsó kész
+   futása a hét hétfője előtti (vagy még sosem volt). Brave → udvarias letöltés →
+   JSON-LD + Haiku (5 lap/hívás) → kódszintű kapuk → dedup → `local_event`;
+2. **újrarenderelés** — naponta minden `poi`-s oldal, hogy a lejárt program magától
+   lekerüljön (a választó lábazata ezt ígéri);
+3. **tulaj-levél** — hetente egyszer tenantonként (idempotencia: `tenant_message`
+   `programs`), üres készletről hallgat. ⛔ Vendégnek NEM megy levél (tulajdonosi döntés).
+
+**Vásárláskor nem kell másnapig várni: `citoviso-events-pending`** (ötpercenként,
+`--pending`): csak azokat a tenantokat nézi, akiknek a saját települése még SOSEM volt
+begyűjtve — bármelyik aktiválási úton jött a modul —, begyűjti a körüket és újrarendereli
+az oldalukat (levél nincs). Ha senki nem vár, egyetlen DB-lekérdezés. Tulajdonosi döntés
+(2026-09-23): „különben dühös lesz a tenant". A két futás egy Postgres advisory lockon
+osztozik, így ugyanazt a települést sosem fizetjük kétszer.
+
+**Miért veszélytelen naponta futni.** A gyűjtés a héten már kész településeket kihagyja
+(`event_gather_run`), a levél hetente egyszer megy, az újrarenderelés idempotens.
+
+**Pénzt költ.** Mérve 2026-09-23: egy 41 települési kör ≈ $0,43/hét (fele Brave, fele
+Haiku). A költség a lefedett TELEPÜLÉSEKKEL nő, nem a tenantokkal (átfedő körök egyszer
+fizetnek). Futásonkénti költség és hozam: `event_gather_run`.
+
+**Telepítés (dev gépen):**
+
+```bash
+sudo cp deploy/systemd/citoviso-events.* deploy/systemd/citoviso-events-pending.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now citoviso-events.timer citoviso-events-pending.timer
+```
+
+⚠️ Élesen a `WorkingDirectory` `/opt/citoviso/app` (ez van a unitban); a dev gépen a fő fa.
+Az éles telepítés külön, kimondott engedélyt igényel (CLAUDE.md §0.3).

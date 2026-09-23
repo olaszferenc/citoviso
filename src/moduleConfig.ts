@@ -256,19 +256,35 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
     },
   },
 
+  // v2 — "Automata heti programajánló" (approved contract B,
+  // assets/design-refs/console/programajanlo/). The owner no longer TYPES places: the
+  // weekly gathering (src/events/) proposes programs and the owner PICKS up to 10 and
+  // orders them. `picks` = [{ id: local_event.id, title?: the owner's rewrite }], in
+  // the owner's order (contract ③). Expired ids stay harmlessly in the row — the
+  // render resolves them against the live pool, so they fall off by themselves (⑦).
   poi: {
-    version: 1,
-    fields: [
-      {
-        key: "items",
-        type: "lines",
-        label: "Mi van a közelben?",
-        help: "Soronként egy hely, ha tudja, távolsággal. Például: Strand — 300 m",
-        placeholder: "Strand — 300 m",
-        maxItems: 12,
-      },
-    ],
-    defaults: { items: [] },
+    version: 2,
+    fields: [],
+    defaults: { picks: [] },
+    editor: "programs",
+    validate: (cfg) => {
+      const picks = cfg.picks;
+      if (!Array.isArray(picks)) return ["A kiválasztott programok listája hibás."];
+      if (picks.length > 10) return ["Legfeljebb 10 program választható."];
+      for (const p of picks as unknown[]) {
+        const r = p as { id?: unknown; title?: unknown };
+        if (!r || typeof r.id !== "string" || !/^[0-9a-f-]{36}$/.test(r.id)) {
+          return ["A kiválasztott programok listája hibás."];
+        }
+        if (r.title !== undefined && (typeof r.title !== "string" || r.title.length > 120)) {
+          return ["A program címe legfeljebb 120 karakter lehet."];
+        }
+      }
+      return [];
+    },
+    // v1 was a free-text "Mi van a közelben?" list (places, not programs). It does not
+    // map onto a pick of gathered events, so it is dropped rather than misread.
+    migrate: (from, cfg) => (from >= 2 ? cfg : { picks: [] }),
   },
 
   enquiry: {

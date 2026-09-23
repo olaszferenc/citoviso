@@ -66,7 +66,7 @@ console.log("Alapérték-rétegek (tiszta függvények):");
 
 // ── database round trip on a throwaway site ────────────────────────────────
 console.log("\nAdatbázis kör-forduló (eldobható fixture):");
-const ids: { defId?: string; runId?: string; leadId?: string; tenantId?: string; siteId?: string } = {};
+const ids: { defId?: string; runId?: string; leadId?: string; tenantId?: string; siteId?: string; settlements?: boolean } = {};
 try {
   const def = await db
     .insertInto("scraper_definition")
@@ -90,7 +90,9 @@ try {
 
   const lead = await db
     .insertInto("lead")
-    .values({ scrape_run_id: run.id, name: "_mcfg_check lead", raw: JSON.stringify({}) })
+    // ADR-XXXX: coordinates of the fixture settlement below (far from every real
+    // gathered circle), so the program pool is THIS check's own and nobody else's.
+    .values({ scrape_run_id: run.id, name: "_mcfg_check lead", raw: JSON.stringify({}), lat: 48.3, lng: 21.2, address: "Fő utca 1, _Mcfgfalva" })
     .returning("id")
     .executeTakeFirstOrThrow();
   ids.leadId = lead.id;
@@ -190,12 +192,36 @@ try {
   await setTenantModules(tenant.id, ["amenities", "hours", "poi"]);
   await setSiteModuleConfig(siteId, "amenities", { items: ["Ingyenes wifi", "Fedett kerékpártároló"] }, "test");
   await setSiteModuleConfig(siteId, "hours", { checkInFrom: "15:30", checkInTo: "20:00", checkOutUntil: "09:45" }, "test");
-  await setSiteModuleConfig(siteId, "poi", { items: ["Strand — 300 m"] }, "test");
+  // ADR-XXXX: the program pool is gathered data, so the fixture seeds its own tiny
+  // circle — two fake settlements (negative OSM ids, north-east Hungary, far from every
+  // real gathered circle), a finished run for the own one, three programs.
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });
+  const plus = (n: number) => { const d = new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  await db.insertInto("settlement").values([
+    { osm_id: "-990001", name: "_Mcfgfalva", lat: 48.3, lon: 21.2, population: 900 },
+    { osm_id: "-990002", name: "_Mcfgszomszed", lat: 48.39, lon: 21.2, population: 4000 },
+  ]).onConflict((oc) => oc.column("osm_id").doNothing()).execute();
+  ids.settlements = true;
+  await db.insertInto("event_gather_run").values({ settlement_osm_id: "-990001", status: "done", finished_at: new Date() }).execute();
+  const [evOwn, evNear, evLater] = await db.insertInto("local_event").values([
+    { settlement_osm_id: "-990001", name: "_Mcfg helyi szüret", start_date: plus(2), source_url: "https://example.com/a", via: "llm", dedup_key: "mcfg-a" },
+    { settlement_osm_id: "-990002", name: "_Mcfg szomszéd vásár", start_date: plus(3), source_url: "https://example.com/b", via: "llm", dedup_key: "mcfg-b" },
+    { settlement_osm_id: "-990002", name: "_Mcfg szomszéd futás", start_date: plus(5), source_url: "https://example.com/c", via: "llm", dedup_key: "mcfg-c" },
+  ]).returning("id").execute();
+  // The owner picks ONE (the latest), rewrites its title; the automation fills the rest.
+  await setSiteModuleConfig(siteId, "poi", { picks: [{ id: evLater!.id, title: "_Mcfg átírt cím" }] }, "test");
 
   const content = (await moduleContentFor(tenant.id, siteId)).data;
   check("⭐ a mentett felszereltség eljut az oldal adatába", (content.amenities ?? []).includes("Fedett kerékpártároló"), content.amenities);
   check("⭐ a mentett nyitvatartás eljut az oldal adatába", content.hours?.checkInFrom === "15:30", content.hours);
-  check("a mentett környék-lista eljut az oldal adatába", (content.poi ?? []).includes("Strand — 300 m"), content.poi);
+  const poi = content.poi ?? [];
+  check("⭐ a tulaj választása ELSŐ, az átírt címével", poi[0]?.title === "_Mcfg átírt cím", poi.map((p) => p.title));
+  check("a szabad helyeket az automatika tölti ki (3 program a körben → 3 az oldalon)", poi.length === 3, poi.length);
+  check("⭐ a saját település programja „Helyben” (distanceKm = null)", poi.find((p) => p.title === "_Mcfg helyi szüret")?.distanceKm === null, poi);
+  check("a szomszéd település programja km-címkét kap (10 km)", poi.find((p) => p.title === "_Mcfg szomszéd vásár")?.distanceKm === 10, poi);
+  check("minden programnál ott a forrás", poi.every((p) => /^https:\/\//.test(p.sourceUrl)), poi);
+  check("a körzet neve eljut a blokk bevezetőjéhez", content.poiArea === "_Mcfgfalva", content.poiArea);
+  void evOwn; void evNear;
 
   // A module the tenant has NOT bought must not leak its stored settings onto the page.
   await setSiteModuleConfig(siteId, "usp", { items: ["Ezt nem vette meg"] }, "test");
@@ -549,6 +575,11 @@ try {
   if (ids.leadId) await db.deleteFrom("lead").where("id", "=", ids.leadId).execute();
   if (ids.runId) await db.deleteFrom("scrape_run").where("id", "=", ids.runId).execute();
   if (ids.defId) await db.deleteFrom("scraper_definition").where("id", "=", ids.defId).execute();
+  if (ids.settlements) {
+    await db.deleteFrom("local_event").where("settlement_osm_id", "in", ["-990001", "-990002"]).execute();
+    await db.deleteFrom("event_gather_run").where("settlement_osm_id", "in", ["-990001", "-990002"]).execute();
+    await db.deleteFrom("settlement").where("osm_id", "in", ["-990001", "-990002"]).execute();
+  }
   await pool.end();
 }
 

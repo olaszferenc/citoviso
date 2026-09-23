@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-23_programajanlo_build.md](2026-09-23_programajanlo_build.md) — 2026-09-23 — Automata heti programajánló: MEGÉPÍTVE (gyűjtés, választó, honlap-blokk, tulaj-levél)
 - [2026-09-23_preview_nowrite_upsell_oneoff.md](2026-09-23_preview_nowrite_upsell_oneoff.md) — 2026-09-23 — Az előnézet nem ír, és a bővítés egyszeri díj (ADR-0213, ADR-0192 ⑧.3 + ⑧.5)
 - [2026-09-23_monthly_default_period_badge.md](2026-09-23_monthly_default_period_badge.md) — 2026-09-23 — A konfigurátorban a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211)
 - [2026-09-23_declined_card_deploy_pipefail.md](2026-09-23_declined_card_deploy_pipefail.md) — 2026-09-22/23 — Az elutasított kártya nem néma · a park megmondja magáról · a deploy-kapuk tudnak bukni

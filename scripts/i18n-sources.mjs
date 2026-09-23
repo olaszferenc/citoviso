@@ -112,6 +112,7 @@ export const I18N_SOURCES = [
   // a forgalmi levél a TULAJNAK megy, a modul-előnézet feliratait a vendég olvassa.
   "src/booking/enquiry.ts",
   "src/email/trafficEmail.ts",
+  "src/email/programsEmail.ts",
   "src/server/modulePreview.ts",
   "src/console/testLogViews.ts",
   "src/console/photoProxy.ts",

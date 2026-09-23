@@ -69,9 +69,25 @@ const CASES: Record<string, { patch: Partial<SiteData>; needle: string }> = {
     patch: { usp: ["Kétperces séta a nádasig"] } as Partial<SiteData>,
     needle: "Kétperces séta a nádasig",
   },
+  // ADR-XXXX: the weekly program recommender renders PROGRAMS (title + date + place +
+  // source), not typed place lines. A program without a source would not render (§B.17),
+  // so the fixture carries one.
   poi: {
-    patch: { poi: ["Öreg-hegyi kilátó — 1,2 km"] } as Partial<SiteData>,
-    needle: "Öreg-hegyi kilátó",
+    patch: {
+      poi: [
+        {
+          title: "Zsindelyes szüreti felvonulás",
+          start: "2026-09-26",
+          end: null,
+          settlement: "Révfülöp",
+          distanceKm: null,
+          sourceUrl: "https://example.com/programok",
+          sourceHost: "example.com",
+        },
+      ],
+      poiArea: "Révfülöp",
+    } as Partial<SiteData>,
+    needle: "Zsindelyes szüreti felvonulás",
   },
   // Prices hang off the UNIT (ADR-0044/c): the needle is the season label of a
   // specific room, so a flat table that lost the unit could not satisfy it.

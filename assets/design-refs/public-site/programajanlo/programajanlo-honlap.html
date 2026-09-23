@@ -1,0 +1,1184 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heti programajánló — honlap-blokk (§2b vázlat)</title><link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>[class*="reveal"],[class*="fade"],[class*="inview"],[class*="in-view"],[class*="appear"],[class*="animate"],[class*="scroll-anim"],[style*="opacity:0"],[style*="opacity: 0"]{opacity:1!important;transform:none!important;visibility:visible!important}.cit-fintro,.cit-intro{display:none!important}</style>
+<style>
+  :root {
+    --cit-accent: #e7b4aa;
+    --cit-on-accent: #12161a;
+    --cit-ink: #e8edf1;
+    --cit-muted: #8b98a5;
+    --cit-bg: #12161a;
+    --cit-surface: #1a2026;
+    --cit-line: #2b343c;
+    --cit-radius: 2px;
+    --cit-font-display: 'Barlow Condensed', system-ui, sans-serif;
+    --cit-font-body: 'Barlow', system-ui, sans-serif;
+    --cit-shadow: 0 10px 30px rgba(0,0,0,.4);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--cit-font-body);color:var(--cit-ink);background:var(--cit-bg);line-height:1.65}
+
+  /* shared module sections (.cit-modsec) dressed to match this template's rhythm (ADR-0057) */
+  body.cit-tpl-transit{
+    --cit-modsec-py:74px;
+    --cit-modsec-maxw:1220px;
+    --cit-modsec-px:28px;
+    --cit-modsec-divider:1px solid var(--cit-line);
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:38px;
+    --cit-modsec-head-size:clamp(26px,4.4vw,44px);
+    --cit-modsec-head-weight:700;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:24px}
+
+  img{display:block;max-width:100%}
+  a{color:inherit;text-decoration:none}
+  .tb-wrap{max-width:1220px;margin:0 auto;padding:0 28px}
+  .tb-eyebrow{font-family:var(--cit-font-display);font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--cit-accent);font-weight:600}
+  .tb-num{font-variant-numeric:tabular-nums;letter-spacing:.06em}
+  .cit-btn{display:inline-block;background:var(--cit-accent);color:var(--cit-on-accent);padding:14px 32px;letter-spacing:.08em;text-transform:uppercase;font-family:var(--cit-font-display);font-size:16px;font-weight:700;transition:.22s;cursor:pointer}
+  .cit-btn:hover{filter:brightness(1.08)}
+  .cit-btn-ghost{background:transparent;color:var(--cit-ink);border:1px solid var(--cit-line)}
+  .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent);filter:none}
+  .cit-btn-disabled{opacity:.5;pointer-events:none}
+
+  /* masthead — the name owns the first screen (owner contract 2026-08-30). The old
+     sticky signage bar carried no scroll JS, so it is gone: the masthead IS the header
+     (link band keeps the navigation). Display-board dialect: uppercase condensed name,
+     signage stripe — the old bar's 3px accent line lives on under the lockup. */
+  .cit-tpl-transit .cit-mast{--mast-font:var(--cit-font-display);--mast-weight:600;
+    --mast-track:.12em;--mast-hover:var(--cit-accent);
+    --mast-rule:color-mix(in srgb, var(--cit-accent) 70%, transparent);
+    --mast-line:color-mix(in srgb, var(--cit-accent) 40%, transparent);
+    background:var(--cit-surface);padding-bottom:20px;border-bottom:3px solid var(--cit-accent)}
+  .cit-tpl-transit .cit-mast-name{text-transform:uppercase}
+
+  /* hero — split copy/photo */
+  .tb-hero{border-bottom:1px solid var(--cit-line)}
+  .tb-hgrid{display:grid;grid-template-columns:1fr;align-items:stretch}
+  @media(min-width:960px){.tb-hgrid{grid-template-columns:1.05fr .95fr}}
+  .tb-hl{padding:56px 0 50px}
+  @media(min-width:960px){.tb-hl{padding-right:46px}}
+  .tb-hero h1{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(40px,7.2vw,84px);line-height:1.04;margin-bottom:16px}
+  .tb-hero h1 em{font-style:normal;color:var(--cit-accent)}
+  .tb-hero p{color:var(--cit-muted);max-width:470px;margin:20px 0 28px}
+  .tb-heroctas{display:flex;gap:12px;flex-wrap:wrap}
+  .tb-hr{position:relative;min-height:320px;background:color-mix(in srgb, var(--cit-ink) 12%, var(--cit-surface))}
+  .tb-hr img{width:100%;height:100%;object-fit:cover}
+  .tb-hr--flat{background:linear-gradient(155deg, var(--cit-surface), color-mix(in srgb, var(--cit-accent) 34%, var(--cit-bg)))}
+
+  /* board — units as departure-board table */
+  .tb-board{background:var(--cit-surface);border-bottom:1px solid var(--cit-line);padding:56px 0}
+  .tb-boardhead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--cit-line);padding-bottom:14px;margin-bottom:8px}
+  .tb-boardhead h2{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(26px,4.4vw,44px)}
+  .tb-boardhead .tb-note{font-family:var(--cit-font-display);font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--cit-muted);white-space:nowrap}
+  .tb-table{width:100%;border-collapse:collapse}
+  .tb-table th{font-family:var(--cit-font-display);font-size:13.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--cit-muted);text-align:left;padding:14px 12px 14px 0;font-weight:600;border-bottom:1px solid var(--cit-line)}
+  .tb-table td{padding:16px 12px 16px 0;border-bottom:1px solid var(--cit-line);font-size:15px;vertical-align:middle}
+  .tb-table td.tb-u{font-family:var(--cit-font-display);font-size:21px;letter-spacing:.04em;text-transform:uppercase;
+    display:flex;align-items:center;gap:12px}
+  /* The board was the ONE template whose room rows showed no imagery at all
+     (measured 2026-08-24). A small preview from the property's OWN gallery keeps
+     the signage character and still gives the eye something to hold. */
+  .tb-thumb{width:66px;height:46px;object-fit:cover;border:1px solid var(--cit-line);flex:none}
+  .tb-table td.tb-u .cit-wmwrap{width:66px;height:46px;flex:none}
+  .tb-table td.tb-u>span:last-child{white-space:nowrap}
+  @media(max-width:620px){.tb-thumb,.tb-table td.tb-u .cit-wmwrap{width:50px;height:36px}.tb-table td.tb-u{font-size:17px;gap:9px}}
+  .tb-table td.tb-cap{color:var(--cit-muted)}
+  .tb-table td.tb-pr{font-family:var(--cit-font-display);font-size:20px;color:var(--cit-accent);white-space:nowrap}
+  .tb-table td.tb-act{text-align:right}
+  .tb-table a.tb-go{display:inline-block;background:transparent;border:1px solid var(--cit-accent);color:var(--cit-accent);font-family:var(--cit-font-display);font-size:15px;text-transform:uppercase;letter-spacing:.08em;padding:8px 16px;white-space:nowrap;transition:.2s}
+  .tb-table a.tb-go:hover{background:var(--cit-accent);color:var(--cit-on-accent)}
+  @media(max-width:640px){.tb-table td.tb-cap,.tb-table th.tb-cap-h{display:none}}
+  .tb-sample{font-size:12.5px;color:var(--cit-muted);letter-spacing:.04em;padding:14px 0 0}
+
+  /* kiosk booking */
+  .tb-kiosk{border-bottom:1px solid var(--cit-line);padding:40px 0}
+  .tb-kioskpanel{border:1px solid var(--cit-line);background:var(--cit-surface);padding:14px clamp(16px,3vw,26px)}
+  .tb-kioskpanel .cit-enquiry-bar-inner{max-width:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem .4rem}
+  .tb-kioskpanel .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-size:1.3rem;text-transform:uppercase;letter-spacing:.08em;color:var(--cit-ink)}
+
+  /* sections */
+  section.tb-sec{padding:74px 0;border-bottom:1px solid var(--cit-line)}
+  .tb-shead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--cit-line);padding-bottom:14px;margin-bottom:38px}
+  .tb-shead h2{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(26px,4.4vw,44px)}
+  .tb-shead h2 em{font-style:normal;color:var(--cit-accent)}
+  .tb-shead .tb-note{font-family:var(--cit-font-display);font-size:15px;text-transform:uppercase;letter-spacing:.12em;color:var(--cit-muted);white-space:nowrap}
+
+  /* services — pictogram grid */
+  .tb-pict{display:grid;gap:1px;grid-template-columns:repeat(2,1fr);background:var(--cit-line);border:1px solid var(--cit-line)}
+  @media(min-width:880px){.tb-pict{grid-template-columns:repeat(4,1fr)}}
+  .tb-pi{background:var(--cit-surface);padding:24px 22px}
+  .tb-pi svg{width:28px;height:28px;color:var(--cit-accent);margin-bottom:14px}
+  .tb-pi p{font-size:14.5px;color:color-mix(in srgb, var(--cit-ink) 84%, transparent)}
+
+  /* gallery */
+  .tb-gal{display:grid;gap:16px;grid-template-columns:repeat(2,1fr)}
+  @media(min-width:860px){.tb-gal{grid-template-columns:repeat(4,1fr)}}
+  .tb-gal figure{position:relative;aspect-ratio:3/4;overflow:hidden;border:1px solid var(--cit-line);background:color-mix(in srgb, var(--cit-ink) 12%, var(--cit-surface))}
+  .tb-gal img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+  .tb-gal figure:hover img{transform:scale(1.05)}
+
+  /* reviews */
+  .tb-rev{background:color-mix(in srgb, var(--cit-bg) 92%, black)}
+  .tb-revscore{display:flex;align-items:center;gap:14px}
+  .tb-revscore b{font-family:var(--cit-font-display);font-size:44px;color:var(--cit-accent)}
+  .tb-stars{display:flex;gap:3px}
+  .tb-stars svg{width:18px;height:18px;color:var(--cit-accent)}
+  .tb-revscore span{font-size:13.5px;color:var(--cit-muted)}
+  .tb-revgrid{display:grid;gap:18px;grid-template-columns:1fr}
+  @media(min-width:880px){.tb-revgrid{grid-template-columns:repeat(3,1fr)}}
+  .tb-rv{background:var(--cit-surface);border:1px solid var(--cit-line);padding:24px;display:flex;flex-direction:column}
+  .tb-rv p{font-size:14.5px;margin-bottom:16px}
+  .tb-rv footer{margin-top:auto;font-family:var(--cit-font-display);font-size:14px;text-transform:uppercase;letter-spacing:.1em;color:var(--cit-accent)}
+
+  /* faq */
+  .tb-faq{max-width:860px}
+  .tb-faq details{border:1px solid var(--cit-line);margin-bottom:10px;background:var(--cit-surface)}
+  .tb-faq summary{list-style:none;cursor:pointer;padding:16px 20px;font-family:var(--cit-font-display);font-size:19px;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;gap:14px}
+  .tb-faq summary::after{content:"+";color:var(--cit-accent)}
+  .tb-faq details[open] summary{border-bottom:1px solid var(--cit-line)}
+  .tb-faq details[open] summary::after{content:"−"}
+  .tb-faq details p{padding:16px 20px;color:var(--cit-muted);font-size:14.5px}
+
+  /* contact split */
+  .tb-congrid{display:grid;gap:18px;grid-template-columns:1fr}
+  @media(min-width:920px){.tb-congrid{grid-template-columns:1.15fr .85fr;align-items:center}}
+  .tb-concopy h2{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(26px,4vw,42px);margin:12px 0 20px}
+  .tb-conline{display:flex;align-items:center;gap:15px;padding:16px 0;border-top:1px solid var(--cit-line);font-size:16px}
+  .tb-conline svg{width:22px;height:22px;color:var(--cit-accent);flex:none}
+  .tb-conline b{font-family:var(--cit-font-display);font-size:17px}
+  .tb-conline small{color:var(--cit-muted);font-size:13px;display:block}
+  .tb-conphoto img{aspect-ratio:4/3;object-fit:cover;width:100%;border:1px solid var(--cit-line)}
+
+  /* footer (the .tb-brand lockup only lives here since the masthead took the top) */
+  .tb-brand{display:flex;align-items:center;gap:10px}
+  .tb-brand b{font-family:var(--cit-font-display);font-size:19px;text-transform:uppercase;letter-spacing:.12em;font-weight:600}
+  .tb-foot{background:var(--cit-surface);border-top:1px solid var(--cit-line);padding:52px 0 26px;color:var(--cit-muted)}
+  .tb-footgrid{display:grid;gap:30px;grid-template-columns:1fr;margin-bottom:34px}
+  @media(min-width:800px){.tb-footgrid{grid-template-columns:2fr 1fr 1fr}}
+  .tb-foot .tb-brand b{font-size:19px}
+  .tb-foot p{font-size:14px;margin-top:12px;max-width:300px}
+  .tb-foot h4{font-family:var(--cit-font-display);color:var(--cit-accent);font-size:14px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px}
+  .tb-foot a{display:block;padding:4px 0;font-size:14px;transition:.2s}
+  .tb-foot a:hover{color:var(--cit-accent)}
+  .tb-footlegal{border-top:1px solid var(--cit-line);padding-top:20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:var(--cit-font-display);font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+
+  /* mobile fixed CTA */
+  .tb-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:110;background:color-mix(in srgb, var(--cit-bg) 96%, black);border-top:1px solid var(--cit-line);backdrop-filter:blur(10px);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .tb-mobcta span{font-family:var(--cit-font-display);font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--cit-ink)}
+  @media(max-width:700px){.tb-mobcta{display:flex}body{padding-bottom:64px}}
+
+
+  .cit-mast{position:relative;z-index:40;text-align:center;
+    color:var(--mast-ink,var(--cit-ink));padding:30px 24px 0}
+  .cit-mast-name{display:block;font-family:var(--mast-font,var(--cit-font-display));
+    font-weight:var(--mast-weight,400);font-size:clamp(28px,3vw,40px);
+    letter-spacing:var(--mast-track,.5px);line-height:1.1;color:inherit;text-decoration:none}
+  .cit-mast-place{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px}
+  .cit-mast-place::before,.cit-mast-place::after{content:"";height:1px;width:min(70px,9vw);
+    background:var(--mast-rule,color-mix(in srgb, var(--cit-ink) 30%, transparent))}
+  .cit-mast-place span{font-size:10.5px;letter-spacing:4.5px;text-transform:uppercase;font-weight:500;
+    color:var(--mast-sub,color-mix(in srgb, var(--cit-ink) 70%, transparent))}
+  .cit-mast-links{display:flex;justify-content:center;gap:30px;align-items:center;margin:16px auto 0;
+    padding:12px 0;max-width:640px;
+    border-top:1px solid var(--mast-line,color-mix(in srgb, var(--cit-ink) 18%, transparent));
+    border-bottom:1px solid var(--mast-line,color-mix(in srgb, var(--cit-ink) 18%, transparent))}
+  .cit-mast-links a{color:var(--mast-linkink,var(--cit-ink));
+    text-decoration:none;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;transition:.25s}
+  .cit-mast-links a:hover{color:var(--mast-hover,var(--cit-accent))}
+  .cit-mast-links a.cit-mast-hot{font-weight:600;padding-bottom:2px;
+    border-bottom:1px solid var(--mast-hotline,var(--cit-accent))}
+  @media(max-width:720px){
+    .cit-mast-name{font-size:26px}
+    .cit-mast-place span{letter-spacing:3.5px}
+    .cit-mast-links{gap:18px;max-width:340px}
+    .cit-mast-links a:not(.cit-mast-hot){display:none}
+  }
+  </style>
+<style data-cit-modsec>
+/* The 16 templates do not agree on a global box-sizing reset, so every box here
+   states its own. Measured, not assumed: without this the amenity cards overran
+   their section by 27px on fullbleed and pushed editorial into a 12px horizontal
+   scroll — a sideways-scrolling page is the classic broken-on-a-phone symptom. */
+.cit-modsec,.cit-modsec *{box-sizing:border-box}
+/* Template-native contract (ADR-0057): each art template overrides these vars to its
+   OWN section rhythm, so a paid module reads as part of the site instead of a generic
+   grey appendix. The defaults reproduce the pre-contract look verbatim, so a template
+   that sets nothing renders byte-identically to before. This is O(templates) one-liners
+   per template, NOT the O(templates × modules) trap — the module MARKUP stays single-
+   source here; only the section's rhythm/card treatment is themed per template. */
+.cit-modsec{
+  --_py:var(--cit-modsec-py,56px);
+  --_maxw:var(--cit-modsec-maxw,1120px);
+  --_px:var(--cit-modsec-px,4vw);
+  --_align:var(--cit-modsec-head-align,left);
+  --_head-mb:var(--cit-modsec-head-mb,22px);
+  --_head-size:var(--cit-modsec-head-size,clamp(1.3rem,3.2vw,1.9rem));
+  --_head-weight:var(--cit-modsec-head-weight,700);
+  --_card-bg:var(--cit-modsec-card-bg,var(--cit-bg));
+  --_card-border:var(--cit-modsec-card-border,1px solid var(--cit-line));
+  --_card-radius:var(--cit-modsec-card-radius,calc(var(--cit-radius) * 0.6));
+  --_card-pad:var(--cit-modsec-card-pad,12px 14px);
+  padding:var(--_py) 0;border-top:var(--cit-modsec-divider,1px solid var(--cit-line));
+  overflow-x:hidden}
+.cit-modsec__in{width:100%;max-width:var(--_maxw);margin:0 auto;padding:0 var(--_px)}
+.cit-modsec h2{font-family:var(--cit-font-display,inherit);font-size:var(--_head-size);
+  font-weight:var(--_head-weight);text-align:var(--_align);
+  margin:0 0 var(--_head-mb);color:var(--cit-ink)}
+.cit-modsec__grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.cit-modsec__item{display:flex;align-items:flex-start;gap:10px;padding:var(--_card-pad);
+  border:var(--_card-border);border-radius:var(--_card-radius);
+  background:var(--_card-bg);color:var(--cit-ink)}
+.cit-modsec__item svg{flex:0 0 auto;width:18px;height:18px;stroke:var(--cit-accent);
+  fill:none;stroke-width:1.8;margin-top:2px}
+.cit-modsec__facts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.cit-modsec__fact{padding:var(--_card-pad);border:var(--_card-border);
+  border-radius:var(--_card-radius);background:var(--_card-bg)}
+.cit-modsec__fact b{display:block;font-size:1.25rem;color:var(--cit-ink)}
+.cit-modsec__fact span{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--cit-muted);font-weight:600}
+.cit-modsec__note{margin:16px 0 0;color:var(--cit-muted)}
+.cit-modsec__badge{margin:0 0 16px}
+.cit-modsec table{width:100%;border-collapse:collapse;table-layout:fixed}
+.cit-modsec th,.cit-modsec td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--cit-line);
+  overflow-wrap:anywhere}
+.cit-modsec th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cit-muted)}
+.cit-modsec td{color:var(--cit-ink)}
+/* A 3-column price table cannot shrink below its content, which pushed a narrow
+   template into horizontal scroll (measured: 23px on card-sidebar). On a phone the
+   right answer is not a scrollable table but stacked rows, each labelled. */
+@media (max-width:560px){
+  .cit-modsec table,.cit-modsec tbody,.cit-modsec tr,.cit-modsec td{display:block;width:100%}
+  .cit-modsec thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .cit-modsec tr{padding:12px 0;border-bottom:1px solid var(--cit-line)}
+  .cit-modsec td{border:0;padding:2px 0}
+  .cit-modsec td:first-child{font-weight:600}
+  .cit-modsec td:empty{display:none}
+  /* ⛔ "each labelled" — the comment above promised it, the CSS never delivered it.
+     While the cells were an EMPTY one (hidden by :empty) and a self-describing
+     money amount, nothing showed. The sample table's B form (owner's choice,
+     2026-09-14) carries a dashed placeholder and „Ön írja be" — two cells that mean
+     NOTHING without their column name once the header row is hidden. Measured at
+     390 px: „Főszezon / ▭▭▭▭ / Ön írja be", and no way to tell which is the date and
+     which is the price. A cell that needs its column says so. */
+  .cit-modsec td[data-cit-col]::before{content:attr(data-cit-col) " ";
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--cit-muted);font-weight:600;font-style:normal}
+}
+.cit-news{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.cit-news input{flex:1;min-width:220px;font:inherit;padding:12px 14px;color:var(--cit-ink);
+  background:var(--cit-bg);border:1px solid var(--cit-line);
+  border-radius:calc(var(--cit-radius) * 0.6)}
+/* Review form: one column on a phone, two where there is room. minmax(0,1fr) not
+   1fr — a bare 1fr refuses to shrink below its content and re-creates the sideways
+   scroll the box-sizing note above describes. */
+.cit-rev-f{display:grid;gap:14px;grid-template-columns:1fr;margin-top:6px}
+@media (min-width:620px){.cit-rev-f{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cit-rev-f__wide{grid-column:1/-1}
+.cit-rev-f__lbl{display:flex;flex-direction:column;gap:6px;font-size:.86rem;
+  color:var(--cit-muted);font-weight:600}
+.cit-rev-f input,.cit-rev-f select,.cit-rev-f textarea{font:inherit;padding:12px 14px;
+  color:var(--cit-ink);background:var(--cit-bg);border:1px solid var(--cit-line);
+  border-radius:calc(var(--cit-radius) * 0.6);width:100%;max-width:100%}
+.cit-rev-f textarea{resize:vertical}
+/* ADR-0110: the publication-consent tick-box. A checkbox must NOT inherit the
+   full-width input rule above, or it renders as a giant square. */
+.cit-rev-f__consent{display:flex;align-items:flex-start;gap:10px;font-size:.86rem;
+  line-height:1.5;color:var(--cit-ink)}
+.cit-rev-f__consent input[type=checkbox]{width:18px;height:18px;flex:0 0 auto;
+  margin-top:2px;padding:0;accent-color:var(--cit-accent)}
+.cit-rev-f__consent a{color:var(--cit-accent)}
+/* Google rating badge — a number and a way to verify it. */
+.cit-grat{display:inline-flex;align-items:center;gap:14px;text-decoration:none;
+  padding:14px 20px;border:1px solid var(--cit-line);background:var(--cit-bg);
+  border-radius:calc(var(--cit-radius) * 0.6);color:var(--cit-ink);max-width:100%}
+.cit-grat__icon svg{width:26px;height:26px;stroke:var(--cit-accent);fill:none;stroke-width:1.8}
+.cit-grat__num{font-size:1.7rem;font-weight:700;line-height:1}
+.cit-grat__meta{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--cit-muted)}
+.cit-grat__meta em{font-style:normal;color:var(--cit-accent);font-weight:600}
+/* ADR-0061 — the honest sample marker on a NATIVE-styled demo section (§B.17): the
+   module is the real one, only its data is representative. Same pill language as the
+   booking demo ribbon, token-themed. */
+.cit-modsec__minta{display:inline-block;vertical-align:middle;margin-left:12px;
+  font-family:var(--cit-font-body);font-size:.58em;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  border:1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  border-radius:100px;padding:3px 10px;white-space:nowrap}
+/* Per-room price switcher (owner decree 2026-08-23): with several rooms the guest
+   reads ONE room's prices at a time. The tabs are built by the runtime; without JS
+   every block stays visible under its own heading (nothing hides behind a script). */
+.cit-price__tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.cit-price__tab{font:inherit;font-size:.86rem;font-weight:600;cursor:pointer;
+  padding:9px 16px;border:1px solid var(--cit-line);background:var(--cit-bg);
+  color:var(--cit-muted);border-radius:100px;transition:.15s}
+.cit-price__tab:hover{border-color:var(--cit-accent);color:var(--cit-ink)}
+.cit-price__tab[aria-selected="true"]{background:var(--cit-accent);
+  border-color:var(--cit-accent);color:var(--cit-on-accent)}
+.cit-price__unit[hidden]{display:none}
+/* With tabs the block's own heading is redundant — the selected tab names it. */
+.cit-price--tabbed .cit-price__name{display:none}
+.cit-price--tabbed .cit-price__unit table{margin-top:0}
+/* The SAMPLE price table (owner's choice „B — kitöltendő mezők", 2026-09-14): a cell
+   the owner will fill LOOKS like one. It used to be an empty <td> and an em dash, so
+   the lead read a finished table that happened to be blank — and the caption talked
+   about prices that were not on the screen at all. The dashed rule is a placeholder,
+   not data: nothing here can be mistaken for a number. */
+.cit-price__fill{display:inline-block;min-width:110px;max-width:100%;height:10px;
+  border-radius:3px;vertical-align:middle;
+  background:repeating-linear-gradient(90deg,var(--cit-line) 0 9px,transparent 9px 15px)}
+.cit-price__you{color:var(--cit-muted);font-style:italic;white-space:nowrap}
+</style>
+<style data-cit-runtime>
+/* Citoviso module runtime — shared widget styles (UI-CONTRACT §A/§B, ADR-0011).
+ * Every rule reads ONLY the standard design tokens (with sane fallbacks), so a
+ * single widget adopts each archetype's skin automatically. Archetypes MUST
+ * declare the tokens in :root; the fallbacks here keep the widget usable if one
+ * is missing. Light-DOM (no shadow) so CSS custom properties inherit naturally. */
+
+/* Fallback token defaults in a LOW-PRIORITY cascade layer: a layered :root always
+ * loses to the page's own unlayered :root (the skin), regardless of source order — so
+ * inlining this runtime AFTER the skin can no longer clobber the skin tokens. Standalone
+ * widget fixtures (no page tokens) still get these fallbacks. */
+@layer cit-fallback {
+  :root {
+    --cit-accent: #b5122e;
+    --cit-on-accent: #ffffff;
+    --cit-ink: #1a1a1a;
+    --cit-muted: #6b6b6b;
+    --cit-bg: #ffffff;
+    --cit-surface: #f6f4f0;
+    --cit-line: #e3e0d8;
+    --cit-radius: 10px;
+    --cit-font-display: Georgia, "Times New Roman", serif;
+    --cit-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --cit-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.cit-book * { box-sizing: border-box; }
+
+.cit-book {
+  font-family: var(--cit-font-body);
+  color: var(--cit-ink);
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-line);
+  border-radius: var(--cit-radius);
+  box-shadow: var(--cit-shadow);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.cit-book__title {
+  font-family: var(--cit-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.cit-book__title svg { width: 20px; height: 20px; stroke: var(--cit-accent); fill: none; }
+/* ADR-0059 ④ — the demo widget's honest sample marker (§B.17): visible AT the form,
+   not a footnote somewhere below it. Token-themed like everything else here. */
+.cit-book__demo {
+  margin-left: auto;
+  font-family: var(--cit-font-body, inherit);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  border-radius: 100px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.cit-book__fields { display: grid; gap: 12px; }
+/* The author display:grid outranks the UA's [hidden]{display:none} (author origin
+ * always wins) — measured trap 2026-09-06: the "hidden" element stayed visible on
+ * the screenshot everyone believed. Explicit rule, same specificity, later. */
+.cit-book__fields[hidden] { display: none; }
+.cit-book__field { display: grid; gap: 5px; }
+.cit-book__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cit-muted);
+  font-weight: 600;
+}
+.cit-book__input {
+  font: inherit;
+  color: var(--cit-ink);
+  background: var(--cit-bg);
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  padding: 11px 12px;
+  width: 100%;
+}
+.cit-book__input:focus { outline: 2px solid var(--cit-accent); outline-offset: 1px; }
+
+/* Guests stepper */
+.cit-book__stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  background: var(--cit-bg);
+  overflow: hidden;
+  width: fit-content;
+}
+.cit-book__step {
+  font: inherit;
+  border: 0;
+  background: transparent;
+  color: var(--cit-ink);
+  width: 40px;
+  height: 42px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.cit-book__step:hover { background: var(--cit-surface); }
+.cit-book__count { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.cit-book__submit {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  border-radius: calc(var(--cit-radius) * 0.7);
+  background: var(--cit-accent);
+  color: var(--cit-on-accent);
+  padding: 13px 18px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.cit-book__submit:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+.cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
+.cit-book__note--err { color: var(--cit-accent); }
+
+/* Booking widget layout (owner decree 2026-08-23 — "milyen gagyi az elrendezése"):
+   the CALENDAR leads on the left (it is what sells the module), a compact request
+   panel on the right, one card, no floating islands. Single column on a phone. */
+.cit-book__cols { display: grid; gap: 22px; align-items: start; }
+@media (min-width: 860px) {
+  .cit-book__cols { grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.85fr); gap: 28px; }
+  .cit-book__formcol {
+    border-left: 1px solid var(--cit-line);
+    padding-left: 26px;
+  }
+}
+.cit-book__calcol { display: grid; gap: 12px; min-width: 0; }
+.cit-book__formcol { display: grid; gap: 14px; align-content: start; min-width: 0; }
+/* The picked range as a slim strip UNDER the calendar — real date inputs (OS picker
+   + keyboard path survive), but visually a summary, not two fat fields competing
+   with the calendar for attention. */
+.cit-book__dates {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  background: color-mix(in srgb, var(--cit-ink) 3%, var(--cit-bg));
+}
+.cit-book__date { display: grid; gap: 2px; min-width: 0; }
+.cit-book__dinput {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cit-ink);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.cit-book__arrow { color: var(--cit-muted); font-size: 1rem; }
+/* Why book HERE — the process facts that answer the hesitation at the decision
+   point (and carry the module's own sales argument: no platform commission). */
+.cit-book__trust {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.cit-book__trust li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--cit-muted);
+}
+.cit-book__trust svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  stroke: var(--cit-accent);
+  fill: none;
+}
+.cit-book__nights {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cit-accent);
+  white-space: nowrap;
+}
+
+/* Visible availability calendar: the guest SEES the owner-managed busy nights per
+   unit; tapping two free days fills the date inputs. Token-themed; two months side
+   by side where there is room, one on a phone. */
+.cit-book__field--wide { grid-column: 1 / -1; }
+.cit-book__cal {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.7);
+  background: color-mix(in srgb, var(--cit-ink) 3%, var(--cit-bg));
+}
+.cit-book__calhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cit-book__callabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cit-muted);
+  font-weight: 600;
+}
+.cit-book__calnav {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cit-line);
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.cit-book__calnav svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+.cit-book__calnav--next svg { transform: rotate(180deg); }
+.cit-book__calnav:disabled { opacity: 0.35; cursor: default; }
+/* Two months side by side, but only where BOTH fit properly — a squeezed second
+   month is what made the grid read as scattered dots (measured: 225px minimum was
+   too generous, the columns stretched and the days floated apart). */
+/* auto-fit, NOT a viewport media query: the calendar lives in the left COLUMN, which
+   is far narrower than the screen — sizing cells off the viewport made the grid
+   overflow into the form column (measured at 1440px). auto-fit asks the real
+   container, so two months fit when the column can hold them and one when it cannot. */
+.cit-book__months {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+}
+/* On a phone ONE month at a time — two stacked months turned the widget into a
+   scroll marathon before the guest reached the fields. The chevrons page through. */
+@media (max-width: 559px) { .cit-book__months > .cit-book__month + .cit-book__month { display: none; } }
+/* A month never stretches beyond a comfortable measure: without this the seven
+   columns drift apart into the "scattered dots" the owner called gagyi. */
+.cit-book__month { width: 100%; max-width: 300px; margin-inline: auto; }
+.cit-book__mlabel {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--cit-ink);
+  text-align: center;
+}
+/* Fixed 7 × 32px tracks, centred: the row does not stretch to the container width,
+   so the days stay a compact block instead of drifting to the far edges. */
+/* Fluid 7 columns inside the month's capped measure: the cells grow with the space
+   they actually have and can never overflow the column. */
+.cit-book__mgrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.cit-book__dow {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--cit-muted);
+  text-align: center;
+  padding: 0 0 4px;
+  line-height: 1;
+}
+.cit-book__day {
+  aspect-ratio: 1;
+  min-height: 34px;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--cit-ink);
+  border-radius: 7px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.cit-book__day:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cit-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--cit-accent) 45%, transparent);
+}
+.cit-book__day:disabled { color: color-mix(in srgb, var(--cit-muted) 45%, transparent); cursor: default; }
+.cit-book__day--busy {
+  text-decoration: line-through;
+  background: color-mix(in srgb, var(--cit-muted) 14%, transparent);
+  color: var(--cit-muted);
+}
+.cit-book__day--sel {
+  background: var(--cit-accent);
+  color: var(--cit-on-accent, #fff);
+  font-weight: 700;
+}
+.cit-book__day--range { background: color-mix(in srgb, var(--cit-accent) 16%, transparent); }
+/* ⛔ KONTRAKTUS ⑦: OLVASHATÓ JELMAGYARÁZAT. Mérve a régi lapon: 11,84 px,
+   kontraszt 3,99 (az AA-küszöb 4,5), és a „szabad" minta FEHÉR A FEHÉREN egy halvány
+   1 px-es kerettel. Itt: nagyobb betű, sötétebb szöveg (a szöveg-tokenből, nem a
+   muted-ból), és MINDEN mintának erős kerete van — színvakon is elkülönül. */
+.cit-book__legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--cit-ink);
+}
+.cit-book__lg { width: 15px; height: 15px; border-radius: 5px; display: inline-block;
+  border: 1.5px solid color-mix(in srgb, var(--cit-ink) 70%, transparent); }
+.cit-book__lg--free { background: var(--cit-bg); }
+.cit-book__lg--busy { background: color-mix(in srgb, var(--cit-muted) 30%, transparent); }
+.cit-book__legend .cit-book__lg--busy { margin-left: 8px; }
+
+/* Variant: bar — a compact horizontal booking bar (wide screens). */
+@media (min-width: 720px) {
+  .cit-book--bar { grid-template-columns: 1fr auto; align-items: end; }
+  .cit-book--bar .cit-book__title { grid-column: 1 / -1; }
+  .cit-book--bar .cit-book__fields {
+    grid-column: 1;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    align-items: end;
+  }
+  .cit-book--bar .cit-book__submit { grid-column: 2; height: 44px; align-self: end; white-space: nowrap; }
+  .cit-book--bar .cit-book__note { grid-column: 1 / -1; }
+  /* Approved "B" contract: once the contact block is open it takes the full bar
+     width and the submit moves under it — the button belongs after the fields
+     the guest is being asked to fill. */
+  .cit-book--bar [data-contact] { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+  .cit-book--bar:has([data-contact]:not([hidden])) .cit-book__submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* Variant: request — the REAL booking form (ADR-0044), mounted when the owner
+   bought the booking module. It carries more fields than the enquiry bar, so it
+   stays one readable column on a phone and only splits in two on a real screen. */
+.cit-book--request .cit-book__fields { gap: 14px; }
+.cit-book--request .cit-book__submit { width: 100%; margin-top: 4px; }
+.cit-book--request .cit-book__submit[disabled] { opacity: 0.55; cursor: not-allowed; }
+.cit-book--request textarea.cit-book__input { resize: vertical; min-height: 74px; }
+@media (min-width: 720px) {
+  .cit-book--request .cit-book__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cit-book--request .cit-book__field--wide { grid-column: 1 / -1; }
+  .cit-book--request .cit-book__submit { width: auto; min-width: 240px; }
+}
+/* …but inside the two-column layout the request panel is the NARROW column, so its
+   fields stay stacked and the CTA spans it fully (a 2-up grid there produced the
+   cramped half-width inputs). Wins on specificity over the rule above. */
+@media (min-width: 860px) {
+  .cit-book__formcol .cit-book__fields { grid-template-columns: 1fr; gap: 12px; }
+  .cit-book__formcol .cit-book__submit { width: 100%; min-width: 0; }
+}
+/* After sending, the form is REPLACED by the confirmation — a form left standing
+   invites the same guest to send the identical request twice. */
+.cit-book--done .cit-book__note { margin-top: 8px; }
+
+/* Variant: card — a stacked vertical panel (default / narrow / sidebar). */
+.cit-book--card { max-width: 420px; }
+
+/* ── gallery lightbox (module: gallery) ─────────────────────────────────────
+ * Progressive enhancement: the in-skin <img>s stay as authored; JS only adds a
+ * zoom affordance + this overlay. Token-themed so it matches every archetype. */
+[data-cit-module="gallery"] img { cursor: zoom-in; }
+[data-cit-module="gallery"] img:focus-visible {
+  outline: 3px solid var(--cit-accent);
+  outline-offset: 2px;
+}
+
+.cit-lb {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--cit-font-body);
+}
+.cit-lb[data-open] { display: flex; }
+.cit-lb__scrim { position: absolute; inset: 0; background: rgba(12, 10, 9, 0.88); }
+.cit-lb__stage {
+  position: relative;
+  margin: 0;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.cit-lb__img {
+  display: block;
+  max-width: 92vw;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: var(--cit-radius);
+  box-shadow: var(--cit-shadow);
+  background: var(--cit-surface);
+}
+.cit-lb__cap {
+  color: #f3efe9;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  text-align: center;
+  max-width: 60ch;
+}
+.cit-lb__btn {
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cit-accent);
+  color: var(--cit-on-accent);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.cit-lb__btn:hover { transform: scale(1.06); filter: brightness(1.08); }
+.cit-lb__btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; }
+.cit-lb__btn--close { top: 18px; right: 18px; }
+.cit-lb__btn--prev { top: 50%; left: 18px; transform: translateY(-50%); }
+.cit-lb__btn--next { top: 50%; right: 18px; transform: translateY(-50%) scaleX(-1); }
+.cit-lb__btn--prev:hover { transform: translateY(-50%) scale(1.06); }
+.cit-lb__btn--next:hover { transform: translateY(-50%) scaleX(-1) scale(1.06); }
+.cit-lb__count {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #f3efe9;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+@media (max-width: 560px) {
+  .cit-lb__btn { width: 40px; height: 40px; }
+  .cit-lb__btn--prev { left: 8px; }
+  .cit-lb__btn--next { right: 8px; }
+}
+
+/* ── map / location (module: map) ───────────────────────────────────────────
+ * Click-to-load facade → lazy Google embed only after opt-in (privacy). */
+.cit-map { margin-top: 16px; border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line); }
+.cit-map__load {
+  font: inherit;
+  font-family: var(--cit-font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 200px;
+  padding: 24px;
+  border: 0;
+  cursor: pointer;
+  color: var(--cit-ink);
+  background: var(--cit-surface);
+  font-weight: 600;
+}
+.cit-map__load:hover { filter: brightness(0.98); }
+.cit-map__load svg { width: 22px; height: 22px; stroke: var(--cit-accent); fill: none; }
+.cit-map__frame { display: block; width: 100%; height: 340px; border: 0; }
+
+/* ── reviews carousel (module: reviews) ─────────────────────────────────────
+ * The in-skin [data-cit-track] of real review cards becomes a snap scroller. */
+.cit-rev__track {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.cit-rev__track::-webkit-scrollbar { display: none; }
+.cit-rev__slide { scroll-snap-align: center; flex: 0 0 min(100%, 420px); }
+.cit-rev__nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
+.cit-rev__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--cit-line);
+  border-radius: 999px;
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.cit-rev__btn:hover { border-color: var(--cit-accent); }
+.cit-rev__btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; }
+.cit-rev__btn--next svg { transform: scaleX(-1); }
+.cit-rev__dots { display: inline-flex; align-items: center; gap: 8px; }
+.cit-rev__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cit-line);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.cit-rev__dot[aria-current="true"] { background: var(--cit-accent); transform: scale(1.3); }
+
+/* SAMPLE-photo watermark (owner decree 2026-08-23): a room photo standing in for a
+   room we do not know about must be unmistakable ON THE PICTURE — the lead who sees
+   an invented room reads it as a false claim about their own property and drops the
+   whole mock ("nálam nincs is apartman, ez nem az én szállásom"). A corner ribbon
+   was clipped by the card's overflow, so this is the classic centred watermark:
+   readable at any card size, drawn by the runtime over any flagged <img> so all 16
+   templates get it from one place. */
+/* Tight wrapper around the flagged image — the band belongs ON the picture, not on
+   whatever box happens to contain it (a table cell swallowed it whole).
+   ⛔⛔ `height:100%` MADE IT SWALLOW THE CARD AGAIN (measured 2026-09-13, 19 templates).
+   In a column-flex room card the li has a definite height (it is stretched by its row),
+   so the wrapper's 100% resolved against the WHOLE CARD instead of the picture: the
+   rotated band spilled past the card edges and covered the room name. That is the same
+   failure the tight wrapper was invented to fix — reintroduced by a sizing shortcut.
+   The wrapper now HUGS the image by default; where the picture genuinely filled its
+   frame's height, the runtime re-grants `height:100%` (it measures that, see
+   markSamplePhotos) instead of every wrapper claiming it blind.
+   Guard: scripts/room-card-overflow-check.mts */
+.cit-wmwrap {
+  position: relative;
+  display: block;
+  line-height: 0;
+  container-type: inline-size;
+  width: 100%;
+}
+.cit-wmwrap[data-cit-wmfill] {
+  height: 100%;
+}
+/* ⛔⛔ THE BAND IS ROTATED, SO ITS BOX IS BIGGER THAN THE PICTURE. A -14° rotation of a
+   300×200 slot reaches ~33px above and below it — enough to land the corners on the room
+   name underneath and to stick out past the card's edge. Measured on 19 templates
+   (2026-09-13) as "a kép takarja a szöveget", and it happened with a PERFECTLY LOADED
+   photo too, so it was never only a broken-image problem.
+   The clip layer is the answer that does not need a new number per template: the mark may
+   live anywhere ON the picture and nowhere else. It wraps the band (never the image), so a
+   template that rotates its own photo — tilted-gallery, scrapbook — keeps its picture
+   untouched. Guard: scripts/room-card-overflow-check.mts */
+.cit-wmclip {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* APPROVED PLAN, variant C (owner's pick, 2026-09-14 — assets/design-refs/engine/
+   roomcard-sample-mark/): a small "MINTA" pill in a corner of the picture instead of the
+   diagonal wash that covered the whole photo. The owner's reasoning: the photo is what
+   sells, so the mark must be unmistakable without dimming the image. §B.17 is still met —
+   the pill sits ON the picture it qualifies, and the section keeps its own "Minta" note. */
+.cit-wm {
+  position: absolute;
+  top: 8px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 100px;
+  font-family: var(--cit-font-body);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+/* WHICH CORNER IS MEASURED, NOT ASSUMED. Templates draw their own things on the picture —
+   `horizontal` puts the chapter number at top-LEFT, `watercolor`/`aurora` put a capacity
+   badge elsewhere. An opaque pill dropped on a fixed corner would bury one of them, and
+   unlike the old translucent wash it does not let the text through. The runtime picks the
+   free corner (see markSamplePhotos); this is only the default.
+   Guard: scripts/room-card-overflow-check.mts */
+.cit-wm { left: 8px; }
+.cit-wm--right { left: auto; right: 8px; }
+.cit-wm--bottom { top: auto; bottom: 8px; }
+/* A tiny picture (the transit row thumbnail is 50×36 on a phone) cannot hold a padded
+   pill: it would be clipped to a stub, which is not a mark but a defect. Smaller type,
+   tighter tracking, and it hugs the corner. */
+.cit-wm--sm {
+  top: 3px;
+  padding: 2px 5px;
+  letter-spacing: 0.04em;
+  font-size: 9px;
+}
+.cit-wm--sm.cit-wm--right { right: 3px; }
+.cit-wm--sm.cit-wm--bottom { top: auto; bottom: 3px; }
+.cit-wm--sm:not(.cit-wm--right) { left: 3px; }
+
+/* The rating badge is a link when we can point at Google's own reviews — it must
+   look clickable (owner request 2026-08-23). */
+a.cit-grat { transition: border-color 0.15s ease, transform 0.15s ease; }
+a.cit-grat:hover {
+  border-color: var(--cit-accent);
+  transform: translateY(-1px);
+}
+
+/* Server-side map embed (owner ruling 2026-09-01: the map renders, it is not a
+   click-to-load facade). Fills the slot it sits in; the address pin card behind it
+   stays as the no-frame fallback. */
+.cit-map__frame--inline { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+/* THE MAP SLOT IS NEVER JUST THE FRAME (Elek FK-004b H-1, measured 2026-09-13).
+   Until now the module-section map WAS the bare iframe, sized and framed by this
+   sheet — so the one time the embed did not paint, the lead was handed a 1120×340 px
+   bordered void: no map, no text, no error, nothing to tell them whether something
+   broke or it was built that way. The box now holds the pin card underneath (the
+   property's own name — real content, not a placeholder), and the frame floats over
+   it on z-index 1. Guard: scripts/lead-page-surface-check.mts ①. */
+.cit-modsec .cit-map-box { position: relative; min-height: 340px; margin-top: 16px;
+  border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line);
+  background: var(--cit-surface); }
+.cit-map-pin { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; }
+/* The shared pin icon is an OUTLINE everywhere else in a module section (stroke, no
+   fill) — `color` alone left it a solid black blob here. Same treatment as
+   .cit-modsec__item svg, one size up. */
+.cit-map-pin svg { width: 34px; height: 34px; stroke: var(--cit-accent); fill: none; stroke-width: 1.6; }
+.cit-map-pin strong { font-family: var(--cit-font-display); font-size: 1.2rem; color: var(--cit-ink); }
+
+/* ── stay quote (owner decree 2026-09-06) + NYITOTT BONTÁS (tulaj 2026-09-14,
+   design-refs/tenant-site/booking-price-clarity „A"): a bontás MINDIG látszik, az alap
+   ki van mondva, és a HELYSZÍNEN fizetendő külön dobozban áll — mert nem része a
+   szállásdíjnak. ── */
+.cit-book__quote{display:block;margin-top:10px;padding:12px 13px;border-radius:12px;
+  background:var(--cit-bg);border:1.5px solid var(--cit-accent)}
+.cit-book__quote:empty{display:none;border:0;padding:0}
+.cit-book__qh{display:block;font-size:.73rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-accent);margin-bottom:8px}
+.cit-book__qline{display:block;font-size:.83rem;color:var(--cit-ink,#10243a);line-height:1.55}
+.cit-book__qbasis{display:block;font-size:.78rem;color:var(--cit-muted,#60748b);
+  line-height:1.5;margin:4px 0 6px}
+.cit-book__qrow{display:flex;justify-content:space-between;gap:12px;font-size:.83rem;
+  line-height:1.55;padding:2px 0}
+.cit-book__qtotal{display:block;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;
+  color:var(--cit-ink,#10243a);border-top:1px solid var(--cit-line)}
+.cit-book__qtotal b{float:right}
+.cit-book__later{margin-top:9px;padding:9px 11px;border-radius:10px;font-size:.81rem;
+  line-height:1.5;color:var(--cit-ink,#10243a);
+  background:color-mix(in srgb,var(--cit-accent) 8%, var(--cit-bg));
+  border:1px solid color-mix(in srgb,var(--cit-accent) 30%, transparent)}
+/* ⑤ a nyugta LÉPÉSEI — teendő, nem csak kód */
+.cit-book__steph{margin:12px 0 7px;font-size:.73rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-accent)}
+.cit-book__steps{counter-reset:citstep;list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.cit-book__steps li{counter-increment:citstep;position:relative;padding-left:32px;
+  font-size:.85rem;line-height:1.5;color:var(--cit-ink,#10243a)}
+.cit-book__steps li::before{content:counter(citstep);position:absolute;left:0;top:0;
+  width:23px;height:23px;border-radius:999px;background:var(--cit-accent);color:#fff;
+  display:grid;place-items:center;font-size:.76rem;font-weight:800}
+/* ── egy-egységes szállás: teljes szélességű panel (kontraktus ⑨) ── */
+.cit-whole{display:grid;gap:14px;border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);padding:16px}
+@media(min-width:760px){.cit-whole{grid-template-columns:1fr 1fr;align-items:start}}
+.cit-whole__img{width:100%;aspect-ratio:3/2;object-fit:cover;
+  border-radius:calc(var(--cit-radius) * 0.4)}
+.cit-whole__t{margin:0;font-size:1.05rem;font-weight:700;color:var(--cit-ink)}
+.cit-whole__note{margin:6px 0 0;font-size:.9rem;line-height:1.6;color:var(--cit-muted)}
+.cit-whole__facts{list-style:none;margin:12px 0 0;padding:0;display:grid;
+  grid-template-columns:1fr 1fr;gap:9px}
+.cit-whole__facts li{background:color-mix(in srgb,var(--cit-ink) 4%,transparent);
+  border-radius:10px;padding:9px 11px;font-size:.86rem;color:var(--cit-ink)}
+.cit-whole__facts b{display:block;font-size:.71rem;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-muted);margin-bottom:2px}
+
+/* ── the guest's RECEIPT after sending (Elek FK-007, 2026-09-11) ──
+   Label/value rows so the numbers line up on a 390 px screen too: the label
+   shrinks, the value never wraps mid-figure (a broken "32 000" reads as two
+   prices). The total keeps the quote's own styling, so the number the guest
+   saw before sending and the number they read after are visibly the same one. */
+.cit-book__receipt{display:block;margin:10px 0;padding:12px 14px;border-radius:12px;
+  background:var(--cit-surface-2,rgba(16,36,58,.04));border:1px solid var(--cit-line,rgba(16,36,58,.12))}
+.cit-book__rrow{display:flex;gap:12px;align-items:baseline;justify-content:space-between;
+  font-size:.86rem;line-height:1.65}
+.cit-book__rrow>span{color:var(--cit-muted,#60748b);flex:0 1 auto}
+.cit-book__rrow>b{color:var(--cit-ink,#10243a);text-align:right;flex:1 1 auto;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.cit-book__receipt .cit-book__qline{margin-top:2px}
+.cit-book__receipt .cit-book__qtotal{margin-top:8px;padding-top:8px;font-size:1rem;
+  border-top:1px solid var(--cit-line,rgba(16,36,58,.12))}
+
+</style>
+<style>
+  .cit-legal-strip { background: color-mix(in srgb, var(--cit-ink) 92%, var(--cit-accent));
+    color: color-mix(in srgb, var(--cit-bg) 88%, transparent);
+    font-family: var(--cit-font-body); font-size: .82rem; line-height: 1.5; }
+  .cit-legal-strip__inner { max-width: 1120px; margin: 0 auto; display: flex; flex-wrap: wrap;
+    align-items: center; gap: .5rem .9rem; padding: .85rem clamp(1.1rem, 4vw, 2.5rem); }
+  .cit-legal-strip__name { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; }
+  .cit-legal-strip__name svg { width: 15px; height: 15px; flex: 0 0 auto; }
+  .cit-legal-strip__sep { opacity: .45; }
+  .cit-legal-strip__links { display: flex; gap: .9rem; margin-left: auto; }
+  .cit-legal-strip a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  /* At phone width the row wraps and the separator would be orphaned at a line end. */
+  @media (max-width: 719px) {
+    .cit-legal-strip__links { margin-left: 0; width: 100%; }
+    .cit-legal-strip__sep { display: none; }
+  }
+</style><style>
+/* draft chrome — NOT the product */
+.draft-bar{position:sticky;top:0;z-index:50;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;
+  background:var(--cit-ink);color:var(--cit-bg);font:600 13px/1.3 var(--cit-font-body)}
+.draft-bar button{font:inherit;padding:6px 12px;border-radius:999px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}
+.draft-bar button[aria-pressed=true]{background:var(--cit-bg);color:var(--cit-ink)}
+.draft-bar .sp{flex:1}
+.stage{margin:0 auto;container-type:inline-size;background:var(--cit-bg)}
+.stage.is-mobile{max-width:390px;box-shadow:0 0 0 1px var(--cit-line)}
+.variant-label{max-width:1120px;margin:40px auto 0;padding:0 4vw;font:700 12px/1 var(--cit-font-body);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--cit-accent)}
+.variant-label small{display:block;margin-top:6px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--cit-muted);font-size:13px;line-height:1.4}
+/* shared */
+[data-cit-module=poi] .ev-lead{margin:-8px 0 20px;color:var(--cit-muted)}
+[data-cit-module=poi] h3{margin:0;font-family:var(--cit-font-body);font-size:1.02rem;line-height:1.3;color:var(--cit-ink)}
+[data-cit-module=poi] svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;flex:0 0 auto}
+.ev-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:6px 0 0;font-size:.88rem;color:var(--cit-muted)}
+.ev-where{display:inline-flex;align-items:center;gap:4px}
+.ev-where svg{stroke:var(--cit-accent)}
+.ev-dist{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--cit-line);font-size:.78rem;font-weight:600;color:var(--cit-ink)}
+.ev-dist.is-here{background:var(--cit-accent);border-color:var(--cit-accent);color:var(--cit-on-accent);text-transform:uppercase;letter-spacing:.05em}
+.ev-srcline{margin:6px 0 0;font-size:.8rem;color:var(--cit-muted)}
+.ev-src{display:inline-flex;align-items:center;gap:3px;color:var(--cit-muted);text-decoration:underline;text-underline-offset:2px}
+.ev-src:hover{color:var(--cit-accent)}
+.ev-span{font-size:.85rem}
+/* A */
+.evA-list{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.evA-row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--cit-line)}
+.evA-date{text-align:center;border:1px solid var(--cit-line);border-radius:var(--cit-radius);padding:6px 0;background:var(--cit-surface);align-self:start}
+.evA-date b{display:block;font-family:var(--cit-font-display);font-size:1.6rem;line-height:1;color:var(--cit-ink)}
+.evA-date span{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cit-accent);font-weight:700}
+.evA-row.is-more{display:none}
+.evA.is-open .evA-row.is-more{display:grid}
+.evA-more{margin-top:16px;padding:10px 18px;border-radius:var(--cit-radius);border:1px solid var(--cit-accent);background:transparent;color:var(--cit-accent);font:600 .95rem var(--cit-font-body);cursor:pointer}
+@container (min-width:720px){ .evA-list{grid-template-columns:1fr 1fr;column-gap:40px} .evA-row.is-more{display:grid} .evA-more{display:none} }
+/* B */
+.evB-row{display:grid;grid-auto-flow:column;grid-auto-columns:78%;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px}
+.evB-card{scroll-snap-align:start;display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--cit-line);border-radius:var(--cit-radius);background:var(--cit-surface)}
+.evB-card .ev-srcline{margin-top:auto}
+.evB-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.evB-when{font-weight:700;color:var(--cit-accent);font-size:.9rem}
+.evB-card .ev-where{font-size:.88rem;color:var(--cit-muted);margin:0}
+.evB-hint{margin:6px 0 0;font-size:.8rem;color:var(--cit-muted)}
+@container (min-width:720px){ .evB-row{grid-auto-flow:row;grid-template-columns:repeat(3,1fr);overflow:visible} .evB-hint{display:none} }
+@container (min-width:1000px){ .evB-row{grid-template-columns:repeat(4,1fr)} }
+/* C */
+.evC-cols{display:grid;gap:24px}
+.evC-week{font-size:.78rem !important;text-transform:uppercase;letter-spacing:.08em;color:var(--cit-accent) !important;margin:0 0 6px !important}
+.evC-col ul{list-style:none;margin:0;padding:0}
+.evC-item{display:grid;gap:2px;padding:12px 0;border-bottom:1px solid var(--cit-line)}
+.evC-when{font-weight:700;font-size:.9rem;color:var(--cit-ink)}
+.evC-when em{font-style:normal;font-weight:500;color:var(--cit-muted);margin-left:4px}
+.evC-name{font-size:1rem;color:var(--cit-ink)}
+.evC-item.is-more,.evC-col.is-more{display:none}
+.evC.is-open .evC-item.is-more{display:grid}
+.evC.is-open .evC-col.is-more{display:block}
+.evC-more{margin-top:16px;padding:10px 18px;border-radius:var(--cit-radius);border:1px solid var(--cit-accent);background:transparent;color:var(--cit-accent);font:600 .95rem var(--cit-font-body);cursor:pointer}
+@container (min-width:720px){ .evC-cols{grid-template-columns:1fr 1fr;gap:48px} .evC-item.is-more{display:grid} .evC-col.is-more{display:block} .evC-more{display:none} }
+</style></head><body class="cit-tpl-transit" data-cit-native="rooms selling-points gallery hours usp reviews booking">
+<div class="draft-bar"><span>§2b VÁZLAT — Heti programajánló a vendég-oldalon · Rozé Fogadó arculata · valós gyűjtés (2026-09-23)</span><span class="sp"></span>
+<button data-mode="m">Mobil 390px</button><button data-mode="d">Asztali</button></div>
+<p class="variant-label" id="vA">A — Napirend-lista — javítva<small>Mobilon az első 5 program + „Még N program” gomb; asztalon két hasáb, mind a 10 látszik. A lábszöveg kikerült.</small></p><div class="stage"><section class="cit-modsec" data-cit-module="hours"><div class="cit-modsec__in"><h2>Érkezés és távozás</h2><div class="cit-modsec__facts"><div class="cit-modsec__fact"><b>14:00 – 20:00</b><span>Érkezés</span></div><div class="cit-modsec__fact"><b>10:00</b><span>Távozás eddig</span></div></div></div></section><section class="cit-modsec evA" data-cit-module="poi"><div class="cit-modsec__in">
+<h2>Programok a környéken</h2><p class="ev-lead">A következő két hét, Révfülöp 30 km-es körzetéből.</p>
+<ol class="evA-list"><li class="evA-row">
+  <div class="evA-date"><b>25</b><span>szept.</span></div>
+  <div class="evA-body"><h3>Vezetett badacsonyi gyalogtúrák Szigligeti vár esti fényekben</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Badacsonytomaj</span><span class="ev-dist">9 km</span><span class="ev-span">péntek</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://balatonnaptar.hu/" target="_blank" rel="noopener nofollow">balatonnaptar.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row">
+  <div class="evA-date"><b>25</b><span>szept.</span></div>
+  <div class="evA-body"><h3>Sétálj az orvossal: A regeneráció művésze</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Fonyód</span><span class="ev-dist">11 km</span><span class="ev-span">péntek</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://fonyodinyar.hu/programok" target="_blank" rel="noopener nofollow">fonyodinyar.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row">
+  <div class="evA-date"><b>26</b><span>szept.</span></div>
+  <div class="evA-body"><h3>Családi gasztrokert kulturális programokkal</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Káptalantóti</span><span class="ev-dist">9 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://balatonnaptar.hu/" target="_blank" rel="noopener nofollow">balatonnaptar.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row">
+  <div class="evA-date"><b>26</b><span>szept.</span></div>
+  <div class="evA-body"><h3>Gyerek szüret</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Badacsonytomaj</span><span class="ev-dist">9 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://balatonnaptar.hu/" target="_blank" rel="noopener nofollow">balatonnaptar.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row">
+  <div class="evA-date"><b>26</b><span>szept.</span></div>
+  <div class="evA-body"><h3>FUTNIVEGY - Családi Futónap és kirándulás a Nivegy Völgyben</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Balatoncsicsó</span><span class="ev-dist">11 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://balatonnaptar.hu/" target="_blank" rel="noopener nofollow">balatonnaptar.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row is-more">
+  <div class="evA-date"><b>26</b><span>szept.</span></div>
+  <div class="evA-body"><h3>Meseösvény átadó túrák</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Fonyód</span><span class="ev-dist">11 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://www.fonyod.hu/hu/" target="_blank" rel="noopener nofollow">fonyod.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row is-more">
+  <div class="evA-date"><b>27</b><span>szept.</span></div>
+  <div class="evA-body"><h3>XV. Családi Futónap</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Fonyód</span><span class="ev-dist">11 km</span><span class="ev-span">vasárnap</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://www.fonyod.hu/hu/" target="_blank" rel="noopener nofollow">fonyod.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row is-more">
+  <div class="evA-date"><b>3</b><span>okt.</span></div>
+  <div class="evA-body"><h3>Boldog születésnapot! Avagy hatan pizsamában</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Balatonboglár</span><span class="ev-dist">6 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://utazzitthon.hu/program/revfolop" target="_blank" rel="noopener nofollow">utazzitthon.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row is-more">
+  <div class="evA-date"><b>3</b><span>okt.</span></div>
+  <div class="evA-body"><h3>Balatonlellei Murci Gasztrofesztivál 2026</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Balatonlelle</span><span class="ev-dist">7 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://welovebalaton.hu/programok" target="_blank" rel="noopener nofollow">welovebalaton.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li><li class="evA-row is-more">
+  <div class="evA-date"><b>3</b><span>okt.</span></div>
+  <div class="evA-body"><h3>Dűlő Trail futás és túra</h3>
+    <p class="ev-meta"><span class="ev-where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Tagyon</span><span class="ev-dist">9 km</span><span class="ev-span">szombat</span></p>
+    <p class="ev-srcline">Forrás: <a class="ev-src" href="https://visitbalaton365.hu/programok" target="_blank" rel="noopener nofollow">visitbalaton365.hu<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></p></div></li></ol>
+<button type="button" class="evA-more" aria-expanded="false">Még 5 program</button>
+</div></section></div>
+
+
+<script>
+(function(){
+  var stages=document.querySelectorAll('.stage');
+  function setMode(mob){stages.forEach(function(s){s.classList.toggle('is-mobile',mob)});
+    document.querySelectorAll('[data-mode]').forEach(function(b){b.setAttribute('aria-pressed',String((b.dataset.mode==='m')===mob))});}
+  document.querySelectorAll('[data-mode]').forEach(function(b){b.addEventListener('click',function(){setMode(b.dataset.mode==='m')})});
+  setMode(window.innerWidth<700);
+  document.querySelectorAll('.evA-more').forEach(function(btn){btn.addEventListener('click',function(){
+    var sec=btn.closest('.evA');sec.classList.add('is-open');btn.hidden=true;});});
+  document.querySelectorAll('.evC-more').forEach(function(btn){btn.addEventListener('click',function(){
+    var sec=btn.closest('.evC');var open=sec.classList.toggle('is-open');btn.setAttribute('aria-expanded',String(open));
+    btn.textContent=open?'Kevesebb':'Mind a 10 program';});});
+})();
+</script></body></html>

@@ -1,0 +1,20 @@
+[Unit]
+# Automata heti programajánló (a `poi` modul). NAPONTA fut, három fázisban:
+#  1. gyűjtés — hetente egyszer, hétfőn (egy kimaradt hétfőt a kedd pótol; új tenant
+#     körét aznap gyűjti), település-kulcsosan: az átfedő körök egyszer fizetnek;
+#  2. újrarenderelés — NAPONTA, hogy a lejárt program magától lekerüljön a honlapról;
+#  3. a tulaj heti levele — hetente egyszer (idempotencia: tenant_message 'programs').
+# Pénzt költ (Brave + Haiku): mérve 2026-09-23 egy 41 települési kör ≈ $0,43/hét.
+Description=Citoviso heti programajánló — gyűjtés, újrarenderelés, tulaj-levél
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+WorkingDirectory=/opt/citoviso/app
+ExecStart=/usr/bin/npx tsx scripts/gather-events.mts
+# A per-host fékezés miatt egy 41 települési kör ~40 perc; a több tenantos régió több.
+TimeoutStartSec=10800
+StandardOutput=journal
+StandardError=inherit

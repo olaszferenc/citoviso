@@ -36,6 +36,7 @@ import {
   reconcileMultilangState,
 } from "./multilangCore.js";
 import { renderableModules } from "../modules.js";
+import { PROGRAMS_ON_PAGE, autoFill, readPicks, resolvePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 
 export interface PhotoEdit {
   url: string;
@@ -292,8 +293,24 @@ export async function moduleContentFor(
     if (items.length) out.usp = items;
   }
   if (on("poi")) {
-    const items = lines("poi");
-    if (items.length) out.poi = items;
+    // The weekly program recommender: the tenant's picks in THEIR order, then the free
+    // slots auto-filled with the nearest upcoming programs (owner ruling, 2026-09-23 —
+    // an "Automata" module must not sit empty because nobody clicked).
+    const { state, events } = await siteProgramPool(siteId);
+    if (state === "ok" && events.length) {
+      const picked = resolvePicks(readPicks(cfg("poi")), events, PROGRAMS_ON_PAGE);
+      out.poi = [...picked, ...autoFill(events, picked, PROGRAMS_ON_PAGE)].map((e) => ({
+        title: "title" in e ? e.title : e.name,
+        start: e.start,
+        end: e.end,
+        settlement: e.settlement,
+        distanceKm: e.distanceKm,
+        sourceUrl: e.sourceUrl,
+        sourceHost: e.sourceHost,
+      }));
+      const own = events.find((e) => e.distanceKm === null)?.settlement ?? (await siteOwnSettlement(siteId));
+      if (own) out.poiArea = own;
+    }
   }
   if (on("hours")) {
     const h = {

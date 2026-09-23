@@ -53,7 +53,8 @@ const FULL = {
   rooms: [{ name: "Padlásszoba", capacity: "2 fő", price: "19 000 Ft / éj" }],
   amenities: ["Wifi", "Parkoló"],
   usp: ["Csend"],
-  poi: ["Strand 2 km"],
+  // ADR-XXXX: programs (title + date + place + source), not typed place lines.
+  poi: [{ title: "Szüreti napok", start: "2026-09-26", end: null, settlement: "Révfülöp", distanceKm: null, sourceUrl: "https://example.com/programok", sourceHost: "example.com" }],
   hours: { checkInFrom: "14:00", checkInTo: "", checkOutUntil: "10:00", note: "" },
   pricing: { currency: "HUF", unit: "per_night", note: "", units: [{ name: "Padlásszoba", base: 19000 }] },
   location: { showMap: true, approachNote: "A templomnál jobbra.", parkingNote: "" },

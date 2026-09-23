@@ -157,6 +157,42 @@ const CSS = `<style data-cit-modsec>
   border-radius:3px;vertical-align:middle;
   background:repeating-linear-gradient(90deg,var(--cit-line) 0 9px,transparent 9px 15px)}
 .cit-price__you{color:var(--cit-muted);font-style:italic;white-space:nowrap}
+/* ── Heti programajánló (poi) — approved contract A, design-refs/public-site/programajanlo/.
+   Mobile: 5 rows + a show-more toggle; ≥720px CONTAINER: two columns, all rows. The
+   toggle is a CSS checkbox, so the rest opens without JS (no-JS empty-band rule). */
+.cit-ev{container-type:inline-size}
+.cit-ev__lead{margin:-8px 0 20px;color:var(--cit-muted)}
+.cit-ev__list{list-style:none;margin:0;padding:0;display:grid}
+.cit-ev__row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--cit-line)}
+.cit-ev__date{text-align:center;border:1px solid var(--cit-line);border-radius:var(--_card-radius);padding:6px 0;
+  background:var(--cit-surface,var(--_card-bg));align-self:start}
+.cit-ev__date b{display:block;font-family:var(--cit-font-display,inherit);font-size:1.6rem;line-height:1;color:var(--cit-ink)}
+.cit-ev__date span{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cit-accent);font-weight:700}
+.cit-ev__row h3{margin:0;font-family:var(--cit-font-body,inherit);font-size:1.02rem;line-height:1.3;color:var(--cit-ink);overflow-wrap:anywhere}
+.cit-ev__meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:6px 0 0;font-size:.88rem;color:var(--cit-muted)}
+.cit-ev__where{display:inline-flex;align-items:center;gap:4px}
+.cit-ev svg{width:14px;height:14px;fill:none;stroke-width:1.8;flex:0 0 auto}
+.cit-ev__where svg{stroke:var(--cit-accent)}
+.cit-ev__dist{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--cit-line);
+  font-size:.78rem;font-weight:600;color:var(--cit-ink)}
+.cit-ev__dist.is-here{background:var(--cit-accent);border-color:var(--cit-accent);color:var(--cit-on-accent);
+  text-transform:uppercase;letter-spacing:.05em}
+.cit-ev__src{margin:6px 0 0;font-size:.8rem;color:var(--cit-muted)}
+.cit-ev__src a{display:inline-flex;align-items:center;gap:3px;color:var(--cit-muted);text-decoration:underline;text-underline-offset:2px}
+.cit-ev__src a svg{stroke:currentColor}
+.cit-ev__row.is-more{display:none}
+/* Visually hidden but FOCUSABLE: a keyboard user tabs to it and toggles with space. */
+.cit-ev__toggle{position:absolute;width:1px;height:1px;opacity:0;margin:0;pointer-events:none}
+.cit-ev__toggle:checked ~ .cit-ev__list .cit-ev__row.is-more{display:grid}
+.cit-ev__more{display:inline-block;margin-top:16px;padding:10px 18px;border-radius:var(--_card-radius);
+  border:1px solid var(--cit-accent);color:var(--cit-accent);font-weight:600;font-size:.95rem;cursor:pointer}
+.cit-ev__toggle:checked ~ .cit-ev__more{display:none}
+.cit-ev__toggle:focus-visible ~ .cit-ev__more{outline:2px solid var(--cit-accent);outline-offset:2px}
+@container (min-width:720px){
+  .cit-ev__list{grid-template-columns:1fr 1fr;column-gap:40px}
+  .cit-ev__row.is-more{display:grid}
+  .cit-ev__more,.cit-ev__toggle{display:none}
+}
 </style>`;
 
 // Own SVG set — emoji icons are forbidden (§B.4).
@@ -402,6 +438,64 @@ function amenitiesSampleBlock(d: SiteData): string {
     listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t)),
     d,
     T(d, "Minta — a tényleges szolgáltatásait Ön jelöli be."),
+  );
+}
+
+const ICON_EXT = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`;
+
+/** Mobile shows this many rows before "Még N program" (owner, 2026-09-23). */
+const PROGRAMS_MOBILE_FIRST = 5;
+
+/**
+ * "Heti programajánló" — approved contract A (design-refs/public-site/programajanlo/).
+ * Each row: date column · title · settlement + distance ("Helyben" / "N km") + weekday
+ * or range · source link (§B.17 — no source, no row). Order = the tenant's (the
+ * content builder already put picks first, auto-fill after).
+ */
+function programsBlock(d: SiteData): string {
+  const items = (d.poi ?? []).filter((e) => e.sourceUrl);
+  if (!items.length) return "";
+  const lang = d.lang || "hu";
+  const fmt = (o: Intl.DateTimeFormatOptions) => {
+    try {
+      return new Intl.DateTimeFormat(lang, { ...o, timeZone: "UTC" });
+    } catch {
+      return new Intl.DateTimeFormat("hu", { ...o, timeZone: "UTC" });
+    }
+  };
+  const mon = fmt({ month: "short" });
+  const dm = fmt({ month: "short", day: "numeric" });
+  const wd = fmt({ weekday: "long" });
+  const at = (iso: string) => new Date(`${iso}T12:00:00Z`);
+  const rows = items
+    .map((e, i) => {
+      const when = e.end ? `${dm.format(at(e.start))} – ${dm.format(at(e.end))}` : wd.format(at(e.start));
+      const dist = e.distanceKm == null ? T(d, "Helyben") : T(d, "{n} km", { n: String(e.distanceKm) });
+      return (
+        `<li class="cit-ev__row${i >= PROGRAMS_MOBILE_FIRST ? " is-more" : ""}">` +
+        `<div class="cit-ev__date"><b>${Number(e.start.slice(8, 10))}</b><span>${esc(mon.format(at(e.start)))}</span></div>` +
+        `<div><h3>${esc(e.title)}</h3>` +
+        `<p class="cit-ev__meta"><span class="cit-ev__where">${ICON_PIN}${esc(e.settlement)}</span>` +
+        `<span class="cit-ev__dist${e.distanceKm == null ? " is-here" : ""}">${esc(dist)}</span>` +
+        `<span>${esc(when)}</span></p>` +
+        `<p class="cit-ev__src">${T(d, "Forrás:")} <a href="${esc(e.sourceUrl)}" target="_blank" rel="noopener nofollow">` +
+        `${esc(e.sourceHost)}${ICON_EXT}</a></p></div></li>`
+      );
+    })
+    .join("");
+  const rest = items.length - PROGRAMS_MOBILE_FIRST;
+  return (
+    `<section class="cit-modsec cit-ev" data-cit-module="poi"><div class="cit-modsec__in">` +
+    `<h2>${T(d, "Programok a környéken")}</h2>` +
+    (d.poiArea
+      ? `<p class="cit-ev__lead">${T(d, "A következő két hét, {area} 30 km-es körzetéből.", { area: esc(d.poiArea) })}</p>`
+      : "") +
+    (rest > 0 ? `<input type="checkbox" id="cit-ev-more" class="cit-ev__toggle">` : "") +
+    `<ol class="cit-ev__list">${rows}</ol>` +
+    (rest > 0
+      ? `<label for="cit-ev-more" class="cit-ev__more">${T(d, "Még {n} program", { n: String(rest) })}</label>`
+      : "") +
+    `</div></section>`
   );
 }
 
@@ -931,7 +1025,7 @@ export function moduleSectionGroups(
       d.hours ? hoursBlock(d) : s.has("hours") ? hoursSampleBlock(d) : "",
       locationBlock(d, { sampleMap: s.has("map") }),
       d.poi?.length
-        ? listBlock(d, "poi", T(d, "A környéken"), d.poi, ICON_PIN)
+        ? programsBlock(d)
         : s.has("poi")
           ? poiSampleBlock(d)
           : "",
