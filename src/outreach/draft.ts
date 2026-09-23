@@ -16,7 +16,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import { ensurePreviewLabel, peekPreviewLabel, previewLink } from "./previewLabel.js";
-import { listProspectPlans } from "../console/data.js";
+import { listProspectPlans } from "./planSet.js";
 import { formatNumber } from "../text/money.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { T, prepareMailLang } from "../i18n/mail.js";

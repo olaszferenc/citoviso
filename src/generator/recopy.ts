@@ -41,6 +41,8 @@ import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { injectRuntime } from "./runtime.js";
 import { secureMockPhotos } from "./photoTransport.js";
+import { loadLead } from "./persist.js";
+import { isAttachedAsAlternative } from "../outreach/planSet.js";
 
 export interface RecopyResult {
   readonly ok: boolean;
@@ -108,7 +110,8 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     .select("id")
     .where("mock_artifact_id", "=", artifactId)
     .executeTakeFirst();
-  if (offered) {
+  // …and the same freeze for a plan 2/3 of a multi-plan link (plan-tabs).
+  if (offered || (await isAttachedAsAlternative(artifactId))) {
     return {
       ok: false,
       message:

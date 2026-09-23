@@ -31,6 +31,7 @@ import {
   scoreHeroCandidates,
 } from "./heroPick.js";
 import { secureMockPhotos } from "./photoTransport.js";
+import { isAttachedAsAlternative } from "../outreach/planSet.js";
 
 /** A lead operátori nyitókép-választása, ha van. */
 export async function getHeroPin(leadId: string): Promise<{ url: string; actor: string } | null> {
@@ -98,7 +99,8 @@ export async function repointHero(
     .select("id")
     .where("mock_artifact_id", "=", artifactId)
     .executeTakeFirst();
-  if (offered) {
+  // …and the same freeze for a plan 2/3 of a multi-plan link (plan-tabs).
+  if (offered || (await isAttachedAsAlternative(artifactId))) {
     return {
       ok: false,
       message:
