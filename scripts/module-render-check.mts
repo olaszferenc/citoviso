@@ -364,6 +364,39 @@ for (const id of priced) {
   );
 }
 
+// ── The mock's program sample (owner's choice C, 2026-09-23) ────────────────
+// The lead sees the approved A block FILLED — with program types, never an invented
+// place, distance or source (§B.17 / ADR-0061), marked in its lead sentence, dated
+// from the render day onwards (the runtime moves them to the viewing day).
+{
+  const lead = { ...BASE, place: { city: "Zamárdi" } } as unknown as SiteData;
+  const tomorrow = new Date(Date.now() + 864e5).getUTCDate();
+  const bad: string[] = [];
+  for (const t of templateIds) {
+    const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, lead, { phase: "mock" });
+    const m = /<section[^>]*data-cit-module="poi"[\s\S]*?<\/section>/.exec(html);
+    const sec = m?.[0] ?? "";
+    const text = sec.replace(/<[^>]*>/g, " ");
+    // The rows alone: the lead sentence names the real 30 km radius of the feature.
+    const rowsText = (/<ol class="cit-ev__list">[\s\S]*?<\/ol>/.exec(sec)?.[0] ?? "").replace(/<[^>]*>/g, " ");
+    const why = [
+      !sec && "nincs poi-szekció",
+      (sec.match(/class="cit-ev__row/g)?.length ?? 0) !== 10 && "nem 10 sor",
+      !/class="cit-ev__minta"/.test(sec) && "jelöletlen",
+      !/data-cit-ev-shift/.test(sec) && "nincs dátum-tolás horgony",
+      /Forrás|Helyben|\d\s*km\b/.test(rowsText + text.replace(/\d+ km-es körzet/, "")) && "kitalált forrás/távolság",
+      !text.includes("Zamárdi 30 km-es") && "hiányzik a lead települése a bevezetőből",
+      !new RegExp(`<div class="cit-ev__date"><b>${tomorrow}</b>`).test(sec) && "az első dátum nem holnap",
+    ].filter(Boolean);
+    if (why.length) bad.push(`${t}(${why.join(",")})`);
+  }
+  check(
+    "⭐⭐ a mock programajánló-mintája kitöltött, jelölt, és NEM talál ki helyet/távolságot/forrást",
+    bad.length === 0,
+    bad.slice(0, 4).join(" · "),
+  );
+}
+
 if (failures) {
   console.error(
     `\n⛔ module-render-check: ${failures} modul beállítása NEM jut el az oldalra. ` +

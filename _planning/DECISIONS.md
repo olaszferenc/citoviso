@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-programajanlo-minta-a-lead-mockban.md) — A lead-mock programajánlója kitöltött minta: pirula nélkül, a nézés napjához igazított dátumokkal (2026-09-23)
 - [ADR-0217](decisions/0217-a-nem-elado-galeria-a-mockon-marad-2026-09-23.md) — A nem eladó galéria a mockon marad (2026-09-23)
 - [ADR-0216](decisions/0216-az-eles-idozitoket-a-deploy-telepiti-es.md) — Az éles időzítőket a DEPLOY telepíti és visszaméri — kézzel nem, kihagyhatatlanul (2026-09-23)
 - [ADR-0215](decisions/0215-ar-nelkuli-keresre-arajanlat-megy-a-rendszerbol.md) — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)

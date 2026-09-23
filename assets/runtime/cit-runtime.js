@@ -1600,7 +1600,35 @@
     });
   }
 
-  function boot() { hydrate(); initReveal(); initDemoForms(); markSamplePhotos(); initReviewPopup(); }
+  // ── Mock program sample (owner's choice C, 2026-09-23): the rows carry their offset
+  // from the VIEWING day (data-d, data-len). The server printed them from the render
+  // day; a lead opens the mock weeks later, and an expired date is the worst first
+  // impression — so the dates follow today. Formatting mirrors programsSampleBlock().
+  function shiftSampleDates() {
+    var sec = document.querySelectorAll("[data-cit-ev-shift]");
+    if (!sec.length) return;
+    var lang = document.documentElement.lang || "hu";
+    function fmt(o) {
+      o.timeZone = "UTC";
+      try { return new Intl.DateTimeFormat(lang, o); } catch (e) { return new Intl.DateTimeFormat("hu", o); }
+    }
+    var mon = fmt({ month: "short" }), dm = fmt({ month: "short", day: "numeric" }), wd = fmt({ weekday: "long" });
+    var t = new Date();
+    var base = Date.UTC(t.getFullYear(), t.getMonth(), t.getDate(), 12);
+    function at(n) { return new Date(base + n * 864e5); }
+    Array.prototype.forEach.call(sec, function (s) {
+      Array.prototype.forEach.call(s.querySelectorAll(".cit-ev__row[data-d]"), function (li) {
+        var d = +li.getAttribute("data-d"), len = li.getAttribute("data-len"), day = at(d);
+        var b = li.querySelector(".cit-ev__date b"), m = li.querySelector(".cit-ev__date span");
+        var w = li.querySelector(".cit-ev__when");
+        if (b) b.textContent = String(day.getUTCDate());
+        if (m) m.textContent = mon.format(day);
+        if (w) w.textContent = len ? dm.format(day) + " – " + dm.format(at(d + +len)) : wd.format(day);
+      });
+    });
+  }
+
+  function boot() { hydrate(); initReveal(); initDemoForms(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

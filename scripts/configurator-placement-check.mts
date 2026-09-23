@@ -88,8 +88,10 @@ for (const t of Object.keys(TEMPLATES)) {
   const absent = OFFERED_SURFACES.filter(([, re]) => !re.test(bare)).map(([n]) => n);
   if (absent.length) missing.push(`${t}(${absent.join(",")})`);
   // The §B.17 marking lives ON the sampled sections: hours + pricing + poi at least.
+  // The program sample marks itself in its lead sentence (owner's choice C, 2026-09-23).
   const pills = bare.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;
-  if (pills < 3) unmarked.push(`${t}(${pills})`);
+  const poiMarked = /data-cit-module="poi"[^>]*>(?:(?!<\/section>)[\s\S])*class="cit-ev__minta"/.test(bare);
+  if (pills < 2 || !poiMarked) unmarked.push(`${t}(${pills}${poiMarked ? "" : ",poi jelöletlen"})`);
 
   const dir = await mkdtemp(path.join(tmpdir(), "cfg-"));
   const f = path.join(dir, "p.html");
@@ -107,7 +109,7 @@ check(
   missing.length === 0,
   missing.slice(0, 6),
 );
-check("a minta-adatú szekciók jelöltek (Minta-szalag ≥3)", unmarked.length === 0, unmarked.slice(0, 6));
+check("a minta-adatú szekciók jelöltek (Minta-szalag ≥2 + a programajánló bevezetője)", unmarked.length === 0, unmarked.slice(0, 6));
 check(
   "⭐⭐ új artifactra a konfigurátor NULLA generikus minta-kártyát injektál",
   injected.length === 0,

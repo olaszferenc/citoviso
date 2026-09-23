@@ -1,0 +1,392 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Programajánló minta — lead-mock vázlat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cit-accent: #1f3f1b;
+    --cit-on-accent: #ffffff;
+    --cit-ink: #241a17;
+    --cit-muted: #6f5f52;
+    --cit-bg: #f7f2ea;
+    --cit-surface: #fffdf9;
+    --cit-line: #e2d9cb;
+    --cit-radius: 6px;
+    --cit-font-display: 'Fraunces', Georgia, serif;
+    --cit-font-body: 'Jost', system-ui, sans-serif;
+    --cit-shadow: 0 8px 30px rgba(36,26,23,.10);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--cit-font-body);background:var(--cit-bg);color:var(--cit-ink);font-size:16px;line-height:1.65}
+
+  /* shared module sections (.cit-modsec) themed to the newsprint rhythm (ADR-0057):
+     left-aligned bold serif heads, 1100px column, sharp-cornered bordered cards */
+  body.cit-tpl-editorial{
+    --cit-modsec-py:56px;
+    --cit-modsec-maxw:1100px;
+    --cit-modsec-px:4%;
+    --cit-modsec-divider:0;
+    --cit-modsec-head-align:left;
+    --cit-modsec-head-mb:34px;
+    --cit-modsec-head-size:clamp(24px,3vw,34px);
+    --cit-modsec-head-weight:600;
+    --cit-modsec-card-radius:0;
+    --cit-modsec-card-pad:18px}
+
+  img{display:block;max-width:100%}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3{font-family:var(--cit-font-display);font-weight:600;line-height:1.15}
+  .e-wrap{width:min(1100px,92%);margin:0 auto}
+  .cit-btn{display:inline-block;background:var(--cit-accent);color:var(--cit-on-accent);border:1px solid var(--cit-accent);padding:13px 28px;font-family:inherit;font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.25s}
+  .cit-btn:hover{filter:brightness(1.12);box-shadow:0 8px 22px color-mix(in srgb, var(--cit-accent) 30%, transparent)}
+  .cit-btn-disabled{opacity:.55;pointer-events:none}
+
+  /* masthead — nameplate between rules, factual dateline row (no invented dates) */
+  .e-mast{border-bottom:2px solid var(--cit-ink)}
+  .e-mast-top{display:flex;justify-content:space-between;align-items:center;gap:8px 22px;flex-wrap:wrap;padding:12px 0;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--cit-muted);border-bottom:1px solid var(--cit-line)}
+  .e-mast-top svg{width:13px;height:13px;color:var(--cit-accent);vertical-align:-2px;display:inline-block}
+  .e-mast-mid{text-align:center;padding:26px 0 20px}
+  .e-mast-mid h1{font-size:clamp(34px,6.5vw,64px);letter-spacing:1px}
+  .e-mast-mid p{font-family:var(--cit-font-display);font-style:italic;font-weight:400;color:var(--cit-muted);margin-top:8px}
+
+  /* sticky nav — a body-level sibling so position:sticky actually holds */
+  .e-nav{position:sticky;top:0;z-index:40;background:var(--cit-bg);border-bottom:2px solid var(--cit-ink);transition:box-shadow .3s}
+  .e-nav.e-stuck{box-shadow:0 8px 24px color-mix(in srgb, var(--cit-ink) 14%, transparent)}
+  .e-nav .e-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 0}
+  .e-nav a{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:100px;transition:.25s}
+  .e-nav a:hover{background:var(--cit-ink);color:var(--cit-bg)}
+  .e-nav a.e-hot{background:var(--cit-accent);color:var(--cit-on-accent)}
+
+  /* lead photograph — full column width, immediately under the masthead */
+  .e-leadfig{position:relative;margin-top:36px;border:1px solid var(--cit-ink);padding:10px;background:var(--cit-surface)}
+  .e-leadfig .e-in{position:relative;overflow:hidden}
+  .e-leadfig img{width:100%;aspect-ratio:16/8;object-fit:cover}
+  .e-leadfig figcaption{position:absolute;left:0;bottom:0;background:color-mix(in srgb, var(--cit-ink) 92%, black);color:var(--cit-bg);font-size:12px;letter-spacing:1px;padding:8px 14px}
+
+  /* lead article — pull-quote headline + dropcap body + fact box */
+  .e-story{display:grid;gap:44px;grid-template-columns:1fr;padding:46px 0 56px}
+  @media(min-width:920px){.e-story{grid-template-columns:1.15fr .85fr}}
+  .e-kicker{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--cit-accent);font-weight:700;margin-bottom:14px}
+  .e-quote{font-size:clamp(28px,3.8vw,44px);margin-bottom:20px}
+  .e-quote em{font-style:italic;color:var(--cit-accent)}
+  .e-story p{margin-bottom:14px}
+  .e-dropcap::first-letter{font-family:var(--cit-font-display);font-size:56px;float:left;line-height:.85;padding-right:10px;color:var(--cit-accent)}
+  .e-story .cit-btn{margin-top:8px}
+  .e-aside figure{border:1px solid var(--cit-ink);padding:8px;background:var(--cit-surface)}
+  .e-aside img{width:100%;aspect-ratio:4/5;object-fit:cover}
+  .e-aside figcaption{font-family:var(--cit-font-display);font-style:italic;font-size:13px;color:var(--cit-muted);padding-top:8px;text-align:center}
+  .e-facts{border-top:2px solid var(--cit-ink);margin-top:26px}
+  .e-facts h3{font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:12px 0 2px;color:var(--cit-muted)}
+  .e-fact{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 0;border-bottom:1px solid var(--cit-line);font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--cit-muted)}
+  .e-fact b{font-family:var(--cit-font-display);font-size:22px;color:var(--cit-ink);display:flex;align-items:baseline;gap:6px;letter-spacing:0;text-transform:none}
+  .e-fact b svg{width:14px;height:14px;color:var(--cit-accent)}
+
+  /* booking — coupon clipping, the canonical hydrated slot inside the dashed frame */
+  .e-coupon{border:2px dashed var(--cit-ink);background:var(--cit-surface);padding:26px;margin-bottom:70px}
+  .e-coupon h3{font-size:22px}
+  .e-coupon .e-sub{font-size:13px;color:var(--cit-muted);margin:4px 0 16px;letter-spacing:1px;text-transform:uppercase}
+  .e-coupon .cit-book{background:none;border:0;box-shadow:none}
+  .e-coupon .cit-enquiry-bar-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
+  .e-coupon .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-size:1.2rem}
+
+  /* section heads — numbered, with a rule running to the margin */
+  .e-sech{display:flex;align-items:center;gap:18px;margin:0 0 34px}
+  .e-sech h2{font-size:clamp(24px,3vw,34px)}
+  .e-sech h2 em{font-style:italic;color:var(--cit-accent)}
+  .e-sech::after{content:"";flex:1;border-top:1px solid var(--cit-ink);min-width:40px}
+  .e-sech .e-no{font-family:var(--cit-font-display);font-style:italic;color:var(--cit-accent);font-size:20px;flex:none}
+
+  /* amenities — classified-ads columns with rules between */
+  .e-ads{column-count:1;column-gap:34px;column-rule:1px solid var(--cit-line);margin-bottom:70px}
+  @media(min-width:680px){.e-ads{column-count:2}}
+  .e-ad{break-inside:avoid;border:1px solid var(--cit-ink);background:var(--cit-surface);padding:18px;margin-bottom:20px;transition:.25s}
+  .e-ad:hover{box-shadow:var(--cit-shadow);transform:translateY(-2px)}
+  .e-ad h3{font-size:17px;font-weight:600;display:flex;align-items:flex-start;gap:10px}
+  .e-ad h3 svg{width:20px;height:20px;color:var(--cit-accent);flex:none;margin-top:3px}
+
+  /* gallery — contact sheet of slightly rotated polaroids */
+  .e-sheet{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:70px}
+  @media(min-width:760px){.e-sheet{grid-template-columns:repeat(3,1fr)}}
+  .e-shot{position:relative;background:var(--cit-surface);padding:10px 10px 30px;border:1px solid var(--cit-line);box-shadow:0 3px 12px color-mix(in srgb, var(--cit-ink) 10%, transparent);transform:rotate(var(--r,0deg));transition:transform .3s}
+  .e-shot:hover{transform:rotate(0) scale(1.03);z-index:2}
+  .e-shot figure{aspect-ratio:1;overflow:hidden}
+  .e-shot img{width:100%;height:100%;object-fit:cover}
+  .e-shot figcaption{font-family:var(--cit-font-display);font-style:italic;font-size:13px;text-align:center;padding-top:10px;color:var(--cit-muted)}
+
+  /* reviews — letters to the editor */
+  .e-letters{display:grid;gap:26px;grid-template-columns:1fr;margin-bottom:8px}
+  @media(min-width:820px){.e-letters{grid-template-columns:repeat(3,1fr)}}
+  .e-letter{background:var(--cit-surface);border-top:4px solid var(--cit-accent);box-shadow:var(--cit-shadow);padding:24px;font-size:14.5px}
+  .e-letter .e-st{display:flex;gap:3px;color:var(--cit-accent);margin-bottom:12px}
+  .e-letter .e-st svg{width:15px;height:15px}
+  .e-letter p{font-family:var(--cit-font-display);font-style:italic;margin-bottom:16px}
+  .e-letter footer{font-size:12.5px;letter-spacing:1px;text-transform:uppercase;color:var(--cit-muted)}
+  .e-sample{text-align:center;font-size:12.5px;color:var(--cit-muted);letter-spacing:.5px;margin-bottom:62px;padding-top:18px}
+  .e-letters-end{margin-bottom:70px}
+
+  /* contact — letter to the editor's desk + framed photo */
+  .e-dest{display:grid;gap:34px;grid-template-columns:1fr;margin-bottom:70px}
+  @media(min-width:900px){.e-dest{grid-template-columns:1fr 1fr;align-items:start}}
+  .e-dest .e-intro{margin-bottom:20px;max-width:48ch;color:color-mix(in srgb, var(--cit-ink) 80%, var(--cit-muted))}
+  .e-conline{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--cit-line);font-size:15.5px}
+  .e-conline svg{width:20px;height:20px;color:var(--cit-accent);flex:none}
+  .e-conline b{font-family:var(--cit-font-display);font-weight:600;font-size:17px}
+  .e-conline small{display:block;color:var(--cit-muted);font-size:12.5px;letter-spacing:1px;text-transform:uppercase}
+  .e-dest .cit-btn{margin-top:24px}
+  .e-mapframe{border:1px solid var(--cit-ink);padding:10px;background:var(--cit-surface)}
+  .e-mapframe .e-in{position:relative;aspect-ratio:4/3;overflow:hidden}
+  .e-mapframe img{width:100%;height:100%;object-fit:cover}
+  .e-mapov{position:absolute;left:0;right:0;bottom:0;background:color-mix(in srgb, var(--cit-ink) 85%, black);color:var(--cit-bg);padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px}
+  .e-mapov svg{width:15px;height:15px;color:var(--cit-accent);flex:none}
+
+  /* colophon — double-rule footer */
+  .e-colo{border-top:2px solid var(--cit-ink);padding:38px 0 30px;font-size:13.5px;color:var(--cit-muted)}
+  .e-colo-grid{display:grid;gap:30px;grid-template-columns:1fr;padding-bottom:28px;border-bottom:1px solid var(--cit-line)}
+  @media(min-width:760px){.e-colo-grid{grid-template-columns:2fr 1fr 1fr}}
+  .e-colo .e-brand{font-family:var(--cit-font-display);font-size:22px;color:var(--cit-ink)}
+  .e-colo p{margin-top:10px;max-width:38ch}
+  .e-colo h4{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--cit-ink);margin-bottom:12px}
+  .e-colo a{display:block;padding:4px 0;transition:.25s}
+  .e-colo a:hover{color:var(--cit-accent)}
+  .e-colo-legal{display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:space-between;padding-top:22px}
+
+  </style>
+<style data-cit-modsec>
+/* The 16 templates do not agree on a global box-sizing reset, so every box here
+   states its own. Measured, not assumed: without this the amenity cards overran
+   their section by 27px on fullbleed and pushed editorial into a 12px horizontal
+   scroll — a sideways-scrolling page is the classic broken-on-a-phone symptom. */
+.cit-modsec,.cit-modsec *{box-sizing:border-box}
+/* Template-native contract (ADR-0057): each art template overrides these vars to its
+   OWN section rhythm, so a paid module reads as part of the site instead of a generic
+   grey appendix. The defaults reproduce the pre-contract look verbatim, so a template
+   that sets nothing renders byte-identically to before. This is O(templates) one-liners
+   per template, NOT the O(templates × modules) trap — the module MARKUP stays single-
+   source here; only the section's rhythm/card treatment is themed per template. */
+.cit-modsec{
+  --_py:var(--cit-modsec-py,56px);
+  --_maxw:var(--cit-modsec-maxw,1120px);
+  --_px:var(--cit-modsec-px,4vw);
+  --_align:var(--cit-modsec-head-align,left);
+  --_head-mb:var(--cit-modsec-head-mb,22px);
+  --_head-size:var(--cit-modsec-head-size,clamp(1.3rem,3.2vw,1.9rem));
+  --_head-weight:var(--cit-modsec-head-weight,700);
+  --_card-bg:var(--cit-modsec-card-bg,var(--cit-bg));
+  --_card-border:var(--cit-modsec-card-border,1px solid var(--cit-line));
+  --_card-radius:var(--cit-modsec-card-radius,calc(var(--cit-radius) * 0.6));
+  --_card-pad:var(--cit-modsec-card-pad,12px 14px);
+  padding:var(--_py) 0;border-top:var(--cit-modsec-divider,1px solid var(--cit-line));
+  overflow-x:hidden}
+.cit-modsec__in{width:100%;max-width:var(--_maxw);margin:0 auto;padding:0 var(--_px)}
+.cit-modsec h2{font-family:var(--cit-font-display,inherit);font-size:var(--_head-size);
+  font-weight:var(--_head-weight);text-align:var(--_align);
+  margin:0 0 var(--_head-mb);color:var(--cit-ink)}
+.cit-modsec__grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.cit-modsec__item{display:flex;align-items:flex-start;gap:10px;padding:var(--_card-pad);
+  border:var(--_card-border);border-radius:var(--_card-radius);
+  background:var(--_card-bg);color:var(--cit-ink)}
+.cit-modsec__item svg{flex:0 0 auto;width:18px;height:18px;stroke:var(--cit-accent);
+  fill:none;stroke-width:1.8;margin-top:2px}
+.cit-modsec__facts{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.cit-modsec__fact{padding:var(--_card-pad);border:var(--_card-border);
+  border-radius:var(--_card-radius);background:var(--_card-bg)}
+.cit-modsec__fact b{display:block;font-size:1.25rem;color:var(--cit-ink)}
+.cit-modsec__fact span{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--cit-muted);font-weight:600}
+.cit-modsec__note{margin:16px 0 0;color:var(--cit-muted)}
+.cit-modsec__badge{margin:0 0 16px}
+.cit-modsec table{width:100%;border-collapse:collapse;table-layout:fixed}
+.cit-modsec th,.cit-modsec td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--cit-line);
+  overflow-wrap:anywhere}
+.cit-modsec th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cit-muted)}
+.cit-modsec td{color:var(--cit-ink)}
+/* A 3-column price table cannot shrink below its content, which pushed a narrow
+   template into horizontal scroll (measured: 23px on card-sidebar). On a phone the
+   right answer is not a scrollable table but stacked rows, each labelled. */
+@media (max-width:560px){
+  .cit-modsec table,.cit-modsec tbody,.cit-modsec tr,.cit-modsec td{display:block;width:100%}
+  .cit-modsec thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .cit-modsec tr{padding:12px 0;border-bottom:1px solid var(--cit-line)}
+  .cit-modsec td{border:0;padding:2px 0}
+  .cit-modsec td:first-child{font-weight:600}
+  .cit-modsec td:empty{display:none}
+  /* ⛔ "each labelled" — the comment above promised it, the CSS never delivered it.
+     While the cells were an EMPTY one (hidden by :empty) and a self-describing
+     money amount, nothing showed. The sample table's B form (owner's choice,
+     2026-09-14) carries a dashed placeholder and „Ön írja be" — two cells that mean
+     NOTHING without their column name once the header row is hidden. Measured at
+     390 px: „Főszezon / ▭▭▭▭ / Ön írja be", and no way to tell which is the date and
+     which is the price. A cell that needs its column says so. */
+  .cit-modsec td[data-cit-col]::before{content:attr(data-cit-col) " ";
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--cit-muted);font-weight:600;font-style:normal}
+}
+.cit-news{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.cit-news input{flex:1;min-width:220px;font:inherit;padding:12px 14px;color:var(--cit-ink);
+  background:var(--cit-bg);border:1px solid var(--cit-line);
+  border-radius:calc(var(--cit-radius) * 0.6)}
+/* Review form: one column on a phone, two where there is room. minmax(0,1fr) not
+   1fr — a bare 1fr refuses to shrink below its content and re-creates the sideways
+   scroll the box-sizing note above describes. */
+.cit-rev-f{display:grid;gap:14px;grid-template-columns:1fr;margin-top:6px}
+@media (min-width:620px){.cit-rev-f{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cit-rev-f__wide{grid-column:1/-1}
+.cit-rev-f__lbl{display:flex;flex-direction:column;gap:6px;font-size:.86rem;
+  color:var(--cit-muted);font-weight:600}
+.cit-rev-f input,.cit-rev-f select,.cit-rev-f textarea{font:inherit;padding:12px 14px;
+  color:var(--cit-ink);background:var(--cit-bg);border:1px solid var(--cit-line);
+  border-radius:calc(var(--cit-radius) * 0.6);width:100%;max-width:100%}
+.cit-rev-f textarea{resize:vertical}
+/* ADR-0110: the publication-consent tick-box. A checkbox must NOT inherit the
+   full-width input rule above, or it renders as a giant square. */
+.cit-rev-f__consent{display:flex;align-items:flex-start;gap:10px;font-size:.86rem;
+  line-height:1.5;color:var(--cit-ink)}
+.cit-rev-f__consent input[type=checkbox]{width:18px;height:18px;flex:0 0 auto;
+  margin-top:2px;padding:0;accent-color:var(--cit-accent)}
+.cit-rev-f__consent a{color:var(--cit-accent)}
+/* Google rating badge — a number and a way to verify it. */
+.cit-grat{display:inline-flex;align-items:center;gap:14px;text-decoration:none;
+  padding:14px 20px;border:1px solid var(--cit-line);background:var(--cit-bg);
+  border-radius:calc(var(--cit-radius) * 0.6);color:var(--cit-ink);max-width:100%}
+.cit-grat__icon svg{width:26px;height:26px;stroke:var(--cit-accent);fill:none;stroke-width:1.8}
+.cit-grat__num{font-size:1.7rem;font-weight:700;line-height:1}
+.cit-grat__meta{display:flex;flex-direction:column;gap:2px;font-size:.85rem;color:var(--cit-muted)}
+.cit-grat__meta em{font-style:normal;color:var(--cit-accent);font-weight:600}
+/* ADR-0061 — the honest sample marker on a NATIVE-styled demo section (§B.17): the
+   module is the real one, only its data is representative. Same pill language as the
+   booking demo ribbon, token-themed. */
+.cit-modsec__minta{display:inline-block;vertical-align:middle;margin-left:12px;
+  font-family:var(--cit-font-body);font-size:.58em;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  border:1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  border-radius:100px;padding:3px 10px;white-space:nowrap}
+/* Per-room price switcher (owner decree 2026-08-23): with several rooms the guest
+   reads ONE room's prices at a time. The tabs are built by the runtime; without JS
+   every block stays visible under its own heading (nothing hides behind a script). */
+.cit-price__tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.cit-price__tab{font:inherit;font-size:.86rem;font-weight:600;cursor:pointer;
+  padding:9px 16px;border:1px solid var(--cit-line);background:var(--cit-bg);
+  color:var(--cit-muted);border-radius:100px;transition:.15s}
+.cit-price__tab:hover{border-color:var(--cit-accent);color:var(--cit-ink)}
+.cit-price__tab[aria-selected="true"]{background:var(--cit-accent);
+  border-color:var(--cit-accent);color:var(--cit-on-accent)}
+.cit-price__unit[hidden]{display:none}
+/* With tabs the block's own heading is redundant — the selected tab names it. */
+.cit-price--tabbed .cit-price__name{display:none}
+.cit-price--tabbed .cit-price__unit table{margin-top:0}
+/* The SAMPLE price table (owner's choice „B — kitöltendő mezők", 2026-09-14): a cell
+   the owner will fill LOOKS like one. It used to be an empty <td> and an em dash, so
+   the lead read a finished table that happened to be blank — and the caption talked
+   about prices that were not on the screen at all. The dashed rule is a placeholder,
+   not data: nothing here can be mistaken for a number. */
+.cit-price__fill{display:inline-block;min-width:110px;max-width:100%;height:10px;
+  border-radius:3px;vertical-align:middle;
+  background:repeating-linear-gradient(90deg,var(--cit-line) 0 9px,transparent 9px 15px)}
+.cit-price__you{color:var(--cit-muted);font-style:italic;white-space:nowrap}
+/* ── Heti programajánló (poi) — approved contract A, design-refs/public-site/programajanlo/.
+   Mobile: 5 rows + a show-more toggle; ≥720px CONTAINER: two columns, all rows. The
+   toggle is a CSS checkbox, so the rest opens without JS (no-JS empty-band rule). */
+.cit-ev{container-type:inline-size}
+.cit-ev__lead{margin:-8px 0 20px;color:var(--cit-muted)}
+.cit-ev__list{list-style:none;margin:0;padding:0;display:grid}
+.cit-ev__row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--cit-line)}
+.cit-ev__date{text-align:center;border:1px solid var(--cit-line);border-radius:var(--_card-radius);padding:6px 0;
+  background:var(--cit-surface,var(--_card-bg));align-self:start}
+.cit-ev__date b{display:block;font-family:var(--cit-font-display,inherit);font-size:1.6rem;line-height:1;color:var(--cit-ink)}
+.cit-ev__date span{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--cit-accent);font-weight:700}
+.cit-ev__row h3{margin:0;font-family:var(--cit-font-body,inherit);font-size:1.02rem;line-height:1.3;color:var(--cit-ink);overflow-wrap:anywhere}
+.cit-ev__meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:6px 0 0;font-size:.88rem;color:var(--cit-muted)}
+.cit-ev__where{display:inline-flex;align-items:center;gap:4px}
+.cit-ev svg{width:14px;height:14px;fill:none;stroke-width:1.8;flex:0 0 auto}
+.cit-ev__where svg{stroke:var(--cit-accent)}
+.cit-ev__dist{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--cit-line);
+  font-size:.78rem;font-weight:600;color:var(--cit-ink)}
+.cit-ev__dist.is-here{background:var(--cit-accent);border-color:var(--cit-accent);color:var(--cit-on-accent);
+  text-transform:uppercase;letter-spacing:.05em}
+.cit-ev__src{margin:6px 0 0;font-size:.8rem;color:var(--cit-muted)}
+.cit-ev__src a{display:inline-flex;align-items:center;gap:3px;color:var(--cit-muted);text-decoration:underline;text-underline-offset:2px}
+.cit-ev__src a svg{stroke:currentColor}
+.cit-ev__row.is-more{display:none}
+/* Visually hidden but FOCUSABLE: a keyboard user tabs to it and toggles with space. */
+.cit-ev__toggle{position:absolute;width:1px;height:1px;opacity:0;margin:0;pointer-events:none}
+.cit-ev__toggle:checked ~ .cit-ev__list .cit-ev__row.is-more{display:grid}
+.cit-ev__more{display:inline-block;margin-top:16px;padding:10px 18px;border-radius:var(--_card-radius);
+  border:1px solid var(--cit-accent);color:var(--cit-accent);font-weight:600;font-size:.95rem;cursor:pointer}
+.cit-ev__toggle:checked ~ .cit-ev__more{display:none}
+.cit-ev__toggle:focus-visible ~ .cit-ev__more{outline:2px solid var(--cit-accent);outline-offset:2px}
+@container (min-width:720px){
+  .cit-ev__list{grid-template-columns:1fr 1fr;column-gap:40px}
+  .cit-ev__row.is-more{display:grid}
+  .cit-ev__more,.cit-ev__toggle{display:none}
+}
+</style>
+<style>
+/* draft chrome only */
+.dbar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px;
+  background:var(--cit-ink);color:var(--cit-bg);font:14px/1.3 system-ui,sans-serif}
+.dbar button{font:inherit;padding:6px 12px;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}
+.dbar button[aria-pressed=true]{background:var(--cit-bg);color:var(--cit-ink)}
+.dbar label{display:inline-flex;gap:6px;align-items:center}
+.dbar input[type=date]{font:inherit;padding:4px 6px}
+.dstage{margin:0 auto;background:var(--cit-bg);container-type:inline-size;transition:max-width .2s}
+.is-m .dstage{max-width:390px;box-shadow:0 0 0 1px var(--cit-line)}
+.vlabel{max-width:1100px;margin:36px auto 0;padding:0 16px;font:600 17px/1.35 system-ui,sans-serif;color:var(--cit-ink)}
+.vlabel small{display:block;font-weight:400;font-size:14px;color:var(--cit-muted);margin-top:4px}
+.is-m .vlabel{max-width:390px}
+.ctx{opacity:.55}
+/* variant B placeholder (the price-table sample's idiom) */
+.evfill{display:inline-block;height:9px;border-radius:3px;vertical-align:middle;
+  background:repeating-linear-gradient(90deg,var(--cit-line) 0 8px,transparent 8px 13px)}
+.evfill-chip{border-style:dashed}
+.cit-ev__lead b{color:var(--cit-ink)}
+#jsinfo{opacity:.8}
+</style></head>
+<body class="is-m cit-tpl-editorial" data-cit-native="selling-points gallery rooms hours pricing poi amenities usp map reviews booking">
+<div class="dbar">
+  <strong>Programajánló a lead-mockban — 3 változat</strong>
+  <button data-mode="m" aria-pressed="true">Mobil 390px</button><button data-mode="d" aria-pressed="false">Asztali</button>
+  <label>A lead ekkor nyitja meg: <input type="date" id="view"></label>
+  <label><input type="checkbox" id="nojs"> JS nélkül (a generálás napja: 2026-09-02)</label>
+  <span id="jsinfo"></span>
+</div>
+<p class="vlabel">C — Pirula nélkül, a jelölés a bevezető mondatban (a „wow” a legerősebb)<small>A cím tiszta, a sorok úgy néznek ki, mint élesben. A minta-voltát a cím alatti mondat mondja ki. ⚠ Eltér a lap többi minta-szakaszától (ADR-0061 pirula).</small></p><div class="dstage"><div class="ctx"><section class="cit-modsec" data-cit-module="hours"><div class="cit-modsec__in"><h2>Érkezés és távozás<span class="cit-modsec__minta">Minta</span></h2><div class="cit-modsec__facts"><div class="cit-modsec__fact"><b>14:00 – 20:00</b><span>Érkezés</span></div><div class="cit-modsec__fact"><b>10:00</b><span>Távozás eddig</span></div></div><p class="cit-modsec__note">Minta-időpontok — ide az Ön saját érkezési és távozási rendje kerül.</p></div></section></div><section class="cit-modsec cit-ev" data-cit-module="poi" data-cit-sample-dates><div class="cit-modsec__in"><h2>Programok a környéken</h2><p class="cit-ev__lead"><b>Minta-napirend.</b> Élesben itt a következő két hét valós programjai állnak, Zamárdi 30 km-es körzetéből, forrással.</p><input type="checkbox" id="evC" class="cit-ev__toggle"><ol class="cit-ev__list"><li class="cit-ev__row" data-d="1"><div class="cit-ev__date"><b>3</b><span>szept.</span></div><div><h3>Termelői piac</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">csütörtök</span></p></div></li><li class="cit-ev__row" data-d="2"><div class="cit-ev__date"><b>4</b><span>szept.</span></div><div><h3>Borkóstoló est</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">péntek</span></p></div></li><li class="cit-ev__row" data-d="3" data-len="2"><div class="cit-ev__date"><b>5</b><span>szept.</span></div><div><h3>Kézműves vásár</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">szept. 5. – szept. 7.</span></p></div></li><li class="cit-ev__row" data-d="4"><div class="cit-ev__date"><b>6</b><span>szept.</span></div><div><h3>Esti koncert</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">vasárnap</span></p></div></li><li class="cit-ev__row" data-d="6"><div class="cit-ev__date"><b>8</b><span>szept.</span></div><div><h3>Családi nap</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">kedd</span></p></div></li><li class="cit-ev__row is-more" data-d="7"><div class="cit-ev__date"><b>9</b><span>szept.</span></div><div><h3>Vezetett túra</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">szerda</span></p></div></li><li class="cit-ev__row is-more" data-d="8"><div class="cit-ev__date"><b>10</b><span>szept.</span></div><div><h3>Színházi előadás</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">csütörtök</span></p></div></li><li class="cit-ev__row is-more" data-d="10" data-len="1"><div class="cit-ev__date"><b>12</b><span>szept.</span></div><div><h3>Gasztronap</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">szept. 12. – szept. 13.</span></p></div></li><li class="cit-ev__row is-more" data-d="11"><div class="cit-ev__date"><b>13</b><span>szept.</span></div><div><h3>Táncház</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">vasárnap</span></p></div></li><li class="cit-ev__row is-more" data-d="13"><div class="cit-ev__date"><b>15</b><span>szept.</span></div><div><h3>Kiállítás-megnyitó</h3><p class="cit-ev__meta"><span class="cit-ev__where"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>a környéken</span><span class="evwhen">kedd</span></p></div></li></ol><label for="evC" class="cit-ev__more">Még 5 program</label></div></section></div>
+<p class="vlabel">Ma a lead-mockban (összevetésnek)<small>A régi ADR-0061 hely-típus minta — ezt váltja le a fenti.</small></p>
+<div class="dstage"><section class="cit-modsec" data-cit-module="poi"><div class="cit-modsec__in"><h2>A környéken<span class="cit-modsec__minta">Minta</span></h2><ul class="cit-modsec__grid" style="list-style:none;margin:0;padding:0"><li class="cit-modsec__item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg><span>Strand, vízpart</span></li><li class="cit-modsec__item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg><span>Éttermek, borászatok</span></li><li class="cit-modsec__item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg><span>Látnivalók, túraútvonalak</span></li></ul><p class="cit-modsec__note">Minta — a környék valós pontjait és távolságait mi állítjuk össze.</p></div></section></div>
+<div style="height:60px"></div>
+<script>
+// Production-shape logic: each row carries its offset (data-d) from the day the
+// page is VIEWED; the server prints generation-day dates, this shifts them.
+(function(){
+  var GEN = "2026-09-02";
+  var mon = new Intl.DateTimeFormat("hu",{month:"short",timeZone:"UTC"});
+  var dm = new Intl.DateTimeFormat("hu",{month:"short",day:"numeric",timeZone:"UTC"});
+  var wd = new Intl.DateTimeFormat("hu",{weekday:"long",timeZone:"UTC"});
+  function add(iso,n){var x=new Date(iso+"T12:00:00Z");x.setUTCDate(x.getUTCDate()+n);return x;}
+  function paint(from){
+    document.querySelectorAll("[data-cit-sample-dates] .cit-ev__row").forEach(function(li){
+      var d=+li.getAttribute("data-d"), len=li.getAttribute("data-len"), s=add(from,d);
+      li.querySelector(".cit-ev__date b").textContent=s.getUTCDate();
+      li.querySelector(".cit-ev__date span").textContent=mon.format(s);
+      li.querySelector(".evwhen").textContent= len ? dm.format(s)+" – "+dm.format(add(from,d+ +len)) : wd.format(s);
+    });
+  }
+  var view=document.getElementById("view"), nojs=document.getElementById("nojs"), info=document.getElementById("jsinfo");
+  var t=new Date(); view.value=t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");
+  function run(){
+    if(nojs.checked){paint(GEN);info.textContent="→ a dátumok a generálás napjához képest (így látja, akinél nem fut szkript)";}
+    else{paint(view.value||GEN);info.textContent="";}
+  }
+  view.addEventListener("input",run); nojs.addEventListener("change",run); run();
+  document.querySelectorAll(".dbar button").forEach(function(b){b.addEventListener("click",function(){
+    document.body.classList.toggle("is-m",b.dataset.mode==="m");
+    document.querySelectorAll(".dbar button").forEach(function(o){o.setAttribute("aria-pressed",String(o===b));});
+  });});
+  if(!matchMedia("(max-width:600px)").matches){} // phones start in mobile mode (default)
+})();
+</script>
+</body></html>
