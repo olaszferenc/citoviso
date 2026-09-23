@@ -1,4 +1,4 @@
-## ADR-XXXX — A nem eladó galéria a mockon marad (2026-09-23)
+## ADR-0217 — A nem eladó galéria a mockon marad (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva az őrben) · **Visszafordíthatóság:** 🔄 ·
 **Kapcsolódó:** ADR-0102 (nem eladó modul), a 2026-08-25-i „üzleti csalás" szabály

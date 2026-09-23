@@ -31,7 +31,7 @@ Brief: `~/rc-briefs/module-sales-check-verseny-brief.md` (a programajánló-szá
 A mérés alatt kétszer lett elrontva (a negatív kontroll szándékosan), mindkétszer visszaállítva
 `["email"]`-re; a session végén `["email"]`.
 
-## A galéria-kérdés — eldőlt (ADR-XXXX)
+## A galéria-kérdés — eldőlt (ADR-0217)
 Ha a Galéria nem eladó, a csomagválasztó nem kínálja, de a mockon a szekció (a lead fotói)
 megmaradt. Tulaj: **maradjon** (saját fotók, nem minta). Megvalósítva a
 `configurator-placement-check` ② pontjában: nem eladó galériára kivétel, csak rá.

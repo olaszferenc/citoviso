@@ -247,7 +247,7 @@ check(
     }
     // ② the page must show exactly the switched-on surfaces
     for (const [mod, visible] of Object.entries(r.surfaces)) {
-      // ADR-XXXX (owner, 2026-09-23): a NOT-sellable gallery stays on the mock —
+      // ADR-0217 (owner, 2026-09-23): a NOT-sellable gallery stays on the mock —
       // it is the lead's own photos, not sample data. Only gallery, and only while
       // it is off the shelf; a sellable gallery still follows the package.
       if (mod === "gallery" && !offeredIds.has("gallery")) continue;
