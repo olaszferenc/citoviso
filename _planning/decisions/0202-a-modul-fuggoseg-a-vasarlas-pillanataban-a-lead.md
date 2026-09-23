@@ -151,6 +151,47 @@ böngészőben MINDKÉT méreten (390 px és 1280 px), plusz a kiszállított HT
 
 ### ⑦ Nyitva marad
 
-A terv-sáv csoportosított ár-blokkja a Modulok fülön · a `/pricing` csomag-kártyák jelvénye (ott a
-jelvény és a kiírt csomagár ma MÁS halmazt mérne) · a három KB-szócikk · a
+A terv-sáv csoportosított ár-blokkja a Modulok fülön · a három KB-szócikk · a
 `_planning/DOMAIN/05-MODULES.md` függőségi szakasza · az ADR-0192 ⑧ 3–5. tétele.
+
+### ⑧ UTÓLAG LEZÁRVA (ugyanaznap): az Árazás oldal csomag-kártyái
+
+A ⑦-ben nyitva hagyott `/pricing` tétel megoldva, tulajdonosi utasításra. A konzol **Árazás**
+oldalán minden modul mellett van egy kapcsoló („Leállítva — új előfizetés nem köthető rá; a
+meglévők futnak tovább"), alul pedig a három csomag-kártya az áraival.
+
+**A mért hiba:** a kártya csak MAGÁT a leállított modult hagyta ki az árból
+(`p.modules.filter((id) => !disabledSales.has(id))`). A `rooms` leállításával tehát a kártya
+tovább árazta az `Árak`-at és az `Online foglalás`-t — miközben a lead konfigurátora (ami mindig
+is a közös `sellableModuleIds()`-t hívta) már nem is kínálta őket. **A konzol magasabb csomagárat
+mutatott, mint amennyit a vevőnek egyáltalán ki lehet számlázni** — két képernyő, két igazság
+ugyanarról a csomagról, pont az, amit az ottani komment megtiltott. Mérve: `src/console/views.ts`
+**nulla** alkalommal hívta a közös szabályt.
+
+**A javítás:** a kártya a `sellableModuleIds()`-t hívja, és a csempe „nem eladó" jelvénye
+UGYANABBÓL a halmazból származik, mint az ár — a felirat nem válaszolhat más kérdésre, mint a
+mellette álló szám (`feedback_label_must_derive_from_predicate`). Mérve a renderelt lapon:
+`rooms` leállításával a Teljes csomag 7 330 Ft/hó, és a `Szobák`, az `Árak` ÉS a `Foglalás`
+csempéje is jelölt.
+
+⛔ **Az őr eddig ÜRES KONTROLL volt.** A `module-sales-check` áldozata a katalógus első felárazott
+modulja (`gallery`), amire SEMMI nem épül — ott a szűk szűrés és a helyes zárvány ugyanazt adja,
+tehát a kapu évekig zölden állt egy lyuk fölött, amit a fixture-je soha nem ért el. Az őr mostantól
+egy MÁSODIK áldozattal is mér: olyannal, amire a katalógus szerint ráépül valami — és **előbb
+bizonyítja, hogy a kontroll nem üres** (hány modult visz magával, és hogy ez pénzben is eltér).
+Negatív kontroll: a javítást visszarontva **4 állítás pirosra megy**.
+
+⚠️ **Ami tudatosan NEM készült el:** a magával vitt modul csempéje nem mondja meg, MIÉRT nem
+eladó (a közvetlenül leállítottétól így nem különbözik). Ehhez új felületi mondat kellene, az
+pedig a nyelvi katalógus újragenerálását kéri — az a fájl ebben a munkafában épp egy MÁSIK szál
+kezében volt (`reference_shared_worktree_collision`), ezért nem nyúltam hozzá. Külön kör.
+
+**⛔ A land közben egy IDEGEN őr fixture-sodródása állított meg — tulajdonosi engedéllyel javítva.**
+Az `outreach-send-bar-check` (a `src/console/views.ts` minden érintésekor fut) a közös park
+legfrissebb, még ki nem küldött prospectjét mérte. Mérve 2026-09-23: a parkban **egyetlen
+kiküldhető prospect sem volt** (a termék saját „mehet ki most?" predikátuma szerint), így az őr
+élő gomb nélküli lapra érkezett, és **7 termék-hibát jelentett egy hibátlan terméken** — bárki,
+aki ma a fájlhoz nyúl, ebbe futott volna. Most a termék predikátumával (`describeMailSendability`)
+választ; ha nincs kiküldhető prospect, HANGOSAN kiírja, és a valódi piszkozat-nézetet
+(`outreachDraftPage`) rendereli egy valódi levéllel, „még nem ment ki" állapotban, ugyanazon az
+originen — adatbázis-írás és küldés nélkül. A saját piros önteszt a fixture-en is **7 pirosat** ad.

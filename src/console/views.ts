@@ -59,6 +59,7 @@ import {
   presetsAscending,
   presetAddedModules,
   presetNestingViolations,
+  sellableModuleIds,
 } from "../modules.js";
 import type { PricingSnapshot } from "../pricing.js";
 import { huArticle, huArticleLower } from "../hu.js";
@@ -662,13 +663,25 @@ export function pricingPage(
         // sale is not in the package, so counting it would show a figure nobody
         // can be charged (the configurator already excludes it — the two screens
         // must not disagree about the same package).
-        const sellable = p.modules.filter((id) => !disabledSales.has(id));
+        //
+        // ⛔ ADR-0192/ADR-0202: the switch takes DOWN EVERYTHING THAT NEEDS IT,
+        // transitively — that is what `sellableModuleIds` is for, and the lead's
+        // configurator has always called it. This page filtered only the switched
+        // -off module itself, so with `rooms` stopped the card still priced
+        // `pricing` and `booking` — modules the buyer cannot be offered at all.
+        // The console quoted a HIGHER package price than anything invoiceable.
+        const sellable = sellableModuleIds(p.modules, disabledSales);
+        const sellableSet = new Set(sellable);
         const monthly = computeMonthly(sellable, snap.region);
         const annual = computeAnnual(sellable, snap.region);
         const added = presetAddedModules(p.id);
         const inherited = p.modules.filter((id) => !added.includes(id));
         const chip = (id: string, faded: boolean): string => {
-          const off = disabledSales.has(id);
+          // ⭐ ONE predicate for the badge and for the price: the badge must not
+          // answer a different question than the figure next to it
+          // (feedback_label_must_derive_from_predicate). Deriving `off` from
+          // `disabledSales` alone is exactly how the two came apart.
+          const off = !sellableSet.has(id);
           const price = getModulePrice(id, snap.region);
           return (
             `<span class="pr-tier__chip${faded ? " pr-tier__chip--inh" : ""}"` +

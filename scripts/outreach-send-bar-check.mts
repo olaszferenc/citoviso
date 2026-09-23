@@ -81,22 +81,82 @@ async function bootConsole(): Promise<{ port: number; cookie: string }> {
 }
 
 /**
- * A prospect whose draft page actually OFFERS a send — otherwise the bar is absent
- * and the guard would be green for the wrong reason (nothing to measure).
- * ⚠️ Read-only: the shared dev park must not move because a guard ran.
+ * The page the guard measures. ⛔ The first version took the NEWEST prospect with an
+ * e-mail address that had not been mailed — a guess at "sendable" made from two
+ * columns. Measured 2026-09-23: the shared park had NO sendable prospect at all (the
+ * three newest were mailed, the next ones blocked by the address-level one-shot or the
+ * photo gate), so the guard landed on a page with no live button, found nothing to
+ * measure, and reported SEVEN PRODUCT FAILURES on a correct product. Every thread that
+ * touched `src/console/views.ts` was stopped by the state of the shared test data.
+ *
+ * Now: ① the product's OWN predicate (`describeMailSendability`, the read-only dry run
+ * the draft page itself asks) picks a real sendable prospect; ② if the park has none,
+ * the guard does NOT fail and does NOT go silent — it renders the SAME view function
+ * the route renders (`outreachDraftPage`), from a real prospect's real draft, in the
+ * "not sent yet" state, and serves it at the draft URL on the SAME origin, so the real
+ * console stylesheet and layout apply. Nothing is written to the DB (read-only, as the
+ * shared park requires) and nothing can be sent: the fixture address is on the
+ * reserved `.invalid` TLD and no POST is ever made.
+ * ⚠️ The fixture forces the §C verdict to PASS — this guard measures WHERE the send
+ * sits and whether it is visible, not the legal gate (that has its own guards).
  */
-async function pickProspect(): Promise<string> {
+interface PickedPage {
+  readonly prospectId: string;
+  /** Non-null = no sendable prospect in the park; serve this HTML at the draft URL. */
+  readonly fixtureHtml: string | null;
+}
+async function pickProspect(): Promise<PickedPage> {
   const { db } = await import("../src/db/client.js");
+  const { describeMailSendability } = await import("../src/outreach/sendBatch.js");
   const rows = await db
     .selectFrom("prospect")
     .select(["id", "contact_email", "email_sent_at"])
     .orderBy("created_at", "desc")
-    .limit(20)
+    .limit(40)
     .execute();
-  const sendable = rows.find((r) => r.contact_email && !r.email_sent_at);
-  const row = sendable ?? rows[0];
-  if (!row) throw new Error("nincs prospect a dev DB-ben — az őr nem tud mit mérni");
-  return row.id;
+  if (!rows.length) throw new Error("nincs prospect a dev DB-ben — az őr nem tud mit mérni");
+  for (const r of rows) {
+    if (!r.contact_email || r.email_sent_at) continue;
+    if ((await describeMailSendability(r.id)).sendable) {
+      console.log(`mért lap: VALÓDI kiküldhető prospect (${r.id.slice(0, 8)})`);
+      return { prospectId: r.id, fixtureHtml: null };
+    }
+  }
+  const { buildDraftForProspect, renderPairSmsDraft } = await import("../src/outreach/draft.js");
+  const { checkOutreachDraft } = await import("../src/outreach/outreachCheck.js");
+  const { outreachDraftPage } = await import("../src/console/views.js");
+  for (const r of rows) {
+    const d = await buildDraftForProspect(r.id);
+    if (!d) continue;
+    const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
+    const html = outreachDraftPage(
+      r.id,
+      d.input,
+      d.draft,
+      { ...check, verdict: "PASS" },
+      "kuldes-sav-or@example.invalid",
+      null,
+      { sms: renderPairSmsDraft(d.input), phone: null, emailSentAt: null, emailAddressMailed: false },
+      d.leadId,
+      undefined,
+      null,
+    );
+    console.log(
+      `⚠️ PARK: a közös adatbázisban MOST egyetlen kiküldhető prospect sincs — a mért lap ` +
+        `PARK-FÜGGETLEN FIXTURE: a valódi piszkozat-nézet, „még nem ment ki" állapotban, ` +
+        `a(z) ${r.id.slice(0, 8)} prospect valódi levelével. Adatbázis-írás és küldés nincs.`,
+    );
+    return { prospectId: r.id, fixtureHtml: html };
+  }
+  throw new Error("egyetlen prospectre sem épül piszkozat — az őr nem tud mit mérni");
+}
+
+/** Serve the fixture at the draft URL; everything else (CSS, JS, icons) stays real. */
+let FIXTURE_HTML: string | null = null;
+async function serveFixture(ctx: import("playwright-core").BrowserContext, url: string): Promise<void> {
+  if (!FIXTURE_HTML) return;
+  const body = FIXTURE_HTML;
+  await ctx.route(url, (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body }));
 }
 
 // ── A mérő-kód, a lapon belül ────────────────────────────────────────────────
@@ -279,6 +339,7 @@ async function measureViewport(
 ): Promise<void> {
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
   await ctx.addCookies([{ name: "cit_op_session", value: cookie, url: origin }]);
+  await serveFixture(ctx, url);
   const page = await ctx.newPage();
   const jsErrs: string[] = [];
   page.on("pageerror", (e) => jsErrs.push(String(e)));
@@ -405,6 +466,7 @@ async function measureNoJs(browser: Browser, url: string, cookie: string, origin
     javaScriptEnabled: false,
   });
   await ctx.addCookies([{ name: "cit_op_session", value: cookie, url: origin }]);
+  await serveFixture(ctx, url);
   const page = await ctx.newPage();
   await page.goto(url, { waitUntil: "domcontentloaded" });
   const n = await page.locator("[data-cit-sendbar] button[type=submit]").count();
@@ -431,7 +493,9 @@ async function main(): Promise<void> {
   );
   const { port, cookie } = await bootConsole();
   const origin = `http://localhost:${port}`;
-  const prospectId = await pickProspect();
+  const picked = await pickProspect();
+  const prospectId = picked.prospectId;
+  FIXTURE_HTML = picked.fixtureHtml;
   const url = `${origin}/prospect/${prospectId}/draft`;
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
 

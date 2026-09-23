@@ -14,7 +14,14 @@
 import { db } from "../src/db/client.js";
 import { getDisabledModules, setDisabledModules } from "../src/moduleSales.js";
 import { loadPricing, computeMonthly } from "../src/pricing.js";
-import { MODULE_CATALOG, PRESETS, modulesForConversion, subscriptionModules } from "../src/modules.js";
+import {
+  MODULE_CATALOG,
+  PRESETS,
+  applicableRequirements,
+  modulesForConversion,
+  sellableModuleIds,
+  subscriptionModules,
+} from "../src/modules.js";
 import { buildManifest } from "../src/generator/configurator.js";
 import { pricingPage } from "../src/console/views.js";
 import { pricingSnapshot, pricingRegions } from "../src/pricing.js";
@@ -89,6 +96,83 @@ try {
     "egyetlen kínált csomag ára sem lépi túl a megvehető maximumot",
     `max kínált: ${Math.max(...anyPresetPrice)} · megvehető: ${computeMonthly(sellableTeljes, "hu")}`,
   );
+
+  // ── ⑤ ADR-0202: A KIKAPCSOLÁS LEVISZI AZT IS, AMI RÁÉPÜL ────────────────────
+  //
+  // A fenti blokk `gallery`-t kapcsol ki — arra SEMMI nem épül, ezért a szűk
+  // szűrés (`!disabled.has(id)`) és a helyes zárvány (`sellableModuleIds`, ami a
+  // ráépülő modulokat is leviszi) UGYANAZT adja. A kapu így éveken át zöld volt
+  // egy olyan lyuk fölött, amit a fixture-je soha nem ért el: ez ÜRES KONTROLL.
+  //
+  // Mérve: `rooms` leállításával a Díjcsomagok kártya MAGASABB árat írt ki, mint
+  // amennyit a vevőnek egyáltalán ki lehet számlázni — a lead konfigurátora az
+  // `Árak`-at és az `Online foglalás`-t már nem is kínálta.
+  {
+    const dependedOn = MODULE_CATALOG.map((m) => m.id).find((id) =>
+      MODULE_CATALOG.some((x) =>
+        applicableRequirements(x.id).some((r) => r.strength === "hard" && r.id === id),
+      ),
+    );
+    if (!dependedOn) {
+      ok(false, "⑤ a katalógusban nincs olyan modul, amire más ráépül — az állítás ÜRES volna");
+    } else {
+      await setDisabledModules([...original, dependedOn]);
+      await loadPricing(true);
+      const dis2 = await getDisabledModules();
+      const teljesIds = teljes.modules;
+      const narrow = teljesIds.filter((id) => !dis2.has(id)); // a RÉGI, szűk szűrés
+      const closure = sellableModuleIds(teljesIds, dis2); // a helyes zárvány
+      const knocked = narrow.filter((id) => !closure.includes(id));
+
+      // ⛔ ELŐBB a kontroll nem-ürességét bizonyítjuk: ha a két halmaz egybeesne,
+      // minden alatta lévő állítás igazat mondana egy HIBÁS kódra is.
+      ok(
+        knocked.length > 0,
+        `⑤ a kontroll NEM üres: „${label(dependedOn)}" leállítása magával visz még ${knocked.length} modult`,
+        knocked.map(label).join(", ") || "EGYET SEM — az állítás üres",
+      );
+
+      const wantMonthly = computeMonthly(closure, "hu");
+      const oldMonthly = computeMonthly(narrow, "hu");
+      ok(
+        wantMonthly < oldMonthly,
+        "⑤ …és ez PÉNZBEN is különbség (a régi szűrés többet árazott)",
+        `helyes ${wantMonthly} < régi ${oldMonthly}`,
+      );
+
+      const html2 = pricingPage(pricingSnapshot("hu"), pricingRegions(), null, dis2, new Map());
+      const shown = [...html2.matchAll(/pr-tier__price">([^<]*)</g)].map((x) =>
+        x[1]!.trim().replace(/ /g, " "),
+      );
+      const want = String(SELF_TEST ? oldMonthly : wantMonthly).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
+      ok(
+        shown.some((v) => v === want),
+        "⑤⭐ a Díjcsomagok kártya a TÉNYLEG megvehető árat írja ki",
+        `várt: „${want}" · kiírva: ${shown.join(" | ")}`,
+      );
+      ok(
+        !shown.some((v) => v === String(oldMonthly).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"),
+        "⑤ …és a régi, túlárazott szám SEHOL nem jelenik meg",
+        shown.join(" | "),
+      );
+
+      // A FELIRAT ugyanabból a halmazból származzon, mint az ÁR: a magával vitt
+      // modul csempéje is viselje a jelölést (feedback_label_must_derive_from_predicate).
+      // ⛔ Csempénként mérve, nem a lap egészén: egy lapszintű `includes` a
+      // KIKAPCSOLT modul jelölésétől is zöld lenne, a magával vitt nélkül.
+      const chips = [...html2.matchAll(/<span class="pr-tier__chip[^"]*"[^>]*>([\s\S]*?)<\/span>/g)].map(
+        (x) => x[1]!,
+      );
+      for (const id of knocked) {
+        const mine = chips.filter((c) => c.includes(label(id)));
+        ok(
+          mine.length > 0 && mine.every((c) => /<b>/.test(c)),
+          `⑤ „${label(id)}" csempéje is JELÖLVE van (nem csak a kikapcsolt modulé)`,
+          mine.length ? `${mine.length} csempe, jelöletlen: ${mine.filter((c) => !/<b>/.test(c)).length}` : "nincs ilyen csempe",
+        );
+      }
+    }
+  }
 } finally {
   await setDisabledModules([...original]);
   await loadPricing(true);

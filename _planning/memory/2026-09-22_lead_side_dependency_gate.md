@@ -73,3 +73,20 @@ a lánc három sora három KÜLÖN csoportban áll, ezért nem fér egy képre.
    fizetett `amenities`-t · az előnézet ÍR, és az őre vak rá).
 6. ⚠️ **A lánc három csoportra esik szét a kosárban** — ha a tulaj zavarónak találja a képen, a
    csoportosítás újragondolása külön kör.
+
+## Utólag (2026-09-23): az Árazás oldal csomag-kártyái — ADR-0202 ⑧
+
+A konzol Árazás oldalán a csomag-kártya csak MAGÁT a leállított modult hagyta ki az árból; a
+ráépülőket (Szobák leállításakor az Árak és a Foglalás) tovább árazta, miközben a lead
+konfigurátora már nem kínálta őket. Javítva: `src/console/views.ts` a `sellableModuleIds()`-t
+hívja, és a jelvény ugyanabból a halmazból jön, mint az ár. Őr: `scripts/module-sales-check.mts`
+⑤ blokk (ráépülős áldozat; visszarontva 4 piros).
+
+- ⛔ **Közös fa:** ebben a munkafában egy másik szál („CIT ➕ Automata heti programajánló")
+  stage-elt fájlokat hagyott; a commitjaim emiatt kétszer elakadtak, és egyszer a
+  `git commit -- <paths>` sem volt elég, mert a kapuk a MUNKAFÁT olvassák, nem a temp-indexet.
+  Azóta doktrína (globális CLAUDE.md §9): egy fában egy élő session.
+- ⚠️ `outreach-send-bar-check`: fixture-sodródás, nem termék-hiba — lásd MEMORY.md.
+- ✅ **Javítva (tulajdonosi engedéllyel):** az `outreach-send-bar-check` már nem a park állapotán
+  bukik — a termék saját predikátumával választ, és ha nincs kiküldhető prospect, park-független
+  fixture-t renderel ugyanabból a nézet-függvényből (43 zöld, önteszt 7 piros).

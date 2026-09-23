@@ -236,8 +236,15 @@ konverzió pontosan azt élesítette. Session-jegyzet:
   HTTP-végpont), `hooks/pre-commit`-be kötve. Az ADR-0192 ⑥ **NOT_COVERED** listája kiürült — de
   nem mutatóra cserélve: a `module-dependency-check` ÁLLÍTJA, hogy a kosár-őr létezik ÉS hogy a
   hook lefuttatja (negatív kontrollal igazolva: a hook-sort kivéve PIROS).
-- 🔴 **NYITOTT:** a terv-sáv csoportosított ár-blokkja · a `/pricing` csomag-kártyák jelvénye · a
-  három KB-szócikk · a `DOMAIN/05-MODULES.md` függőségi szakasza · az ADR-0192 ⑧ 3–5. tétele.
+- ✅ **Utólag (ADR-0202 ⑧):** a konzol **Árazás** oldalának csomag-kártyái is a közös
+  `sellableModuleIds()`-t hívják — egy modul leállítása a ráépülőket is leviszi az árból és
+  jelvénnyel jelöli. ⛔ A `module-sales-check` eddig ÜRES KONTROLL volt (az áldozata, a
+  `gallery`, semmire nem kell); most egy ráépülős áldozattal is mér, visszarontva 4 piros.
+- 🔴 **NYITOTT:** a terv-sáv csoportosított ár-blokkja · a három KB-szócikk · a
+  `DOMAIN/05-MODULES.md` függőségi szakasza · az ADR-0192 ⑧ 3–5. tétele · az Árazás-kártyán a
+  ráépülő modul jelvénye még nem mondja meg, MIÉRT nem eladó. ✅ Az `outreach-send-bar-check`
+  fixture-sodródása javítva: a termék predikátumával választ, üres parknál park-független
+  fixture-t renderel (azelőtt 7 hamis termék-hibával állított meg mindenkit a `views.ts`-en).
 
 ## Előző szál (2026-09-22) — a szoba-szerkesztő terve
 
