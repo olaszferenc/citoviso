@@ -1558,7 +1558,7 @@ fi
 # Mind javítva úgy, hogy a KÉRDÉSEK megmaradtak (áthelyezve oda, ahol a viselkedés ma van),
 # + három ÚJ állítás. 82 állítás, saját eldobható fixture a valós DB-n, ~11 s, takarít.
 if [ -f scripts/module-config-check.mts ] && \
-   changed_files | grep -qE '^src/(moduleConfig|modules)\.ts$|^src/tenant/(availability|units|modules|editor|prices|siteModuleConfig)\.ts$|^src/engine/(templateKit|moduleSections|recipe)\.ts$|^src/booking/requests\.ts$|^src/db/schema\.ts$|^scripts/module-config-check'; then
+   changed_files | grep -qE '^src/(moduleConfig|modules)\.ts$|^src/tenant/(availability|seasonalOnly|units|modules|editor|prices|siteModuleConfig)\.ts$|^src/engine/(templateKit|moduleSections|recipe)\.ts$|^src/booking/requests\.ts$|^src/db/schema\.ts$|^scripts/module-config-check'; then
   echo "[pre-commit] module-config-check (ADR-0044: a modul-konfig réteg végponttól végpontig)…"
   npx tsx scripts/module-config-check.mts >"$GATE_LOG" || gate_failed
 fi
@@ -1615,6 +1615,16 @@ if [ -f scripts/season-rule-check.mts ] && \
    changed_files | grep -qE '^assets/runtime/cit-(season\.cjs|runtime\.js)$|^src/tenant/(seasonRule|prices|availability)\.ts$|^src/booking/requests\.ts$|^src/generator/runtime\.ts$|^scripts/season-rule-check'; then
   echo "[pre-commit] season-rule (egy szezon-szabály, két oldal)…"
   npx tsx scripts/season-rule-check.mts >"$GATE_LOG" || gate_failed
+fi
+# FOGLALÁS-FÜGGŐ ÁRAZÁS-VEZÉRLŐK (mérve 2026-09-23): a „csak a felsorolt időszakokban"
+# kapcsolót és az „éj min." mezőt CSAK a foglalási naptár olvassa, az Árak modul viszont
+# foglalás nélkül is megvehető — foglalás nélkül mindkettő átbillent, és semmi nem
+# változott a lapon (ál-választás). Az őr mindkét állapotot méri: foglalás nélkül nincs
+# ott, foglalással ott van, és az ár-szerkesztés maga mindkettőben él.
+if [ -f scripts/pricing-booking-only-check.mts ] && \
+   changed_files | grep -qE '^src/server/(moduleConfigViews|public)\.ts$|^scripts/pricing-booking-only-check'; then
+  echo "[pre-commit] pricing-booking-only (foglalás nélkül nincs ál-kapcsoló)…"
+  npx tsx scripts/pricing-booking-only-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ONTOLÓGIA-FRISSESSÉG (mérve 2026-09-17): a `_planning/DOMAIN/` a `CLAUDE.md` §1 szerint
 # KÖTELEZŐEN olvasott igazság, az átvezetése mégis 2026-07-12 óta elmaradt — 9 feldolgozatlan

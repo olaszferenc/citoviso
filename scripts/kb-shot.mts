@@ -520,6 +520,9 @@ function moduleShotHtml(entryId: string): string {
       pricing: {
         units: editorUnits.map((u) => ({ ...u })),
         currency: "HUF",
+        // Said out loud: the screen differs with and without booking, and scripts/ is not
+        // type-checked, so a missing field would silently shoot the no-booking state.
+        bookingActive: true,
         prices: {
           u1: [
             { id: "p1", label: "Alapár", from: null, to: null, amount: 24000, isBase: true },

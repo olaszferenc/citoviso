@@ -23,6 +23,7 @@ import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { siteRendersModule } from "../tenant/modules.js";
 import { blockingUnitIds } from "../tenant/unitScope.js";
+import { seasonalOnlyInForce } from "../tenant/seasonalOnly.js";
 import { formatAmount, getUnitPrices, quoteStayFrom, seasonCovers } from "../tenant/prices.js";
 import { seasonRule } from "../tenant/seasonRule.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
@@ -143,11 +144,8 @@ export async function seasonRulesFor(
   dateFrom: string,
   dateTo: string,
 ): Promise<SeasonRules> {
-  const unit = await db
-    .selectFrom("site_unit")
-    .select("seasonal_only")
-    .where("id", "=", unitId)
-    .executeTakeFirst();
+  // The shared answer (booking on the page AND the switch on) — not the raw column.
+  const seasonalOnly = await seasonalOnlyInForce(unitId);
   const prices = await getUnitPrices(unitId);
   const seasons = prices.filter((p) => !p.isBase && p.from && p.to);
   const openLabel = seasons
@@ -162,7 +160,7 @@ export async function seasonRulesFor(
     const md = seasonRule.monthDayOf(day); // the shared month-day rule, not a 5th slice
     const match = seasons.find((s) => seasonCovers(s.from!, s.to!, md));
     // seasonal_only: a night outside every listed season is simply not for sale.
-    if (!match && unit?.seasonal_only) closed = true;
+    if (!match && seasonalOnly) closed = true;
     const min = match?.minNights ?? null;
     if (min && (strictest === null || min > strictest)) strictest = min;
   }

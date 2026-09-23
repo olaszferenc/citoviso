@@ -74,6 +74,7 @@ import {
   getTenantModules,
   paidButEmptyModules,
   siteRendersModule,
+  tenantRendersModule,
 } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
@@ -1172,6 +1173,9 @@ async function serveAdmin(
             units,
             prices,
             currency: String(cfg.config.currency ?? "HUF"),
+            // The SAME predicate the page and the season rule use (isRenderedModule):
+            // active AND not superseded — "is the calendar actually on the page?"
+            bookingActive: await tenantRendersModule(session.tenantId, "booking"),
           };
         }
       }

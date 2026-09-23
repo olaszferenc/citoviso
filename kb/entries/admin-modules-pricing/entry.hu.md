@@ -4,7 +4,7 @@ title: Árak — alapár és időszaki árak egységenként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
-updated: 2026-08-21
+updated: 2026-09-23
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
@@ -33,6 +33,29 @@ Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes sza
 
 Egy időszakot a sora melletti **„Törlés”** gombbal távolíthat el — utána ott újra az alapár
 érvényes. Ha nincs egyetlen időszaki ár sem, mindig az alapár él.
+
+## Mikor adja ki, és legalább hány éjszakára — online foglalással
+
+Ez a két beállítás a **foglalási naptárra** hat, ezért csak akkor jelenik meg, ha az Online
+foglalás modul is be van kapcsolva:
+
+- **„éj min.”** — az új időszak sorában, az ár mellett: ebben az időszakban legalább ennyi
+  éjszakára lehet foglalni (pl. nyáron 3). Ha üresen hagyja, a foglalás-modulnál beállított
+  általános minimum érvényes. A meglévő időszak sorában az ár alatt látja, amit megadott.
+- **„Csak a felsorolt időszakokban adom ki”** — kapcsoló az egység kártyájának alján.
+  Bekapcsolva a felsorolt időszakokon kívüli napokat a vendég a naptárban ki sem tudja
+  választani (pl. télen zárva tart). Kikapcsolva egész évben foglalható, és az időszakok csak
+  az árat és a minimumot finomítják. Egységenként külön állítható.
+
+Ha nincs online foglalása, a vendég időpontkérést küld, és azt Ön bírálja el — ilyenkor ez a
+kettő nem hat semmire, ezért nem is látja. A helyükön egy rövid sor mondja meg, mit adna hozzá
+a foglalás. Ha korábban, még foglalással már beállította őket, nem vesznek el: foglalás nélkül
+szünetelnek (a portálokkal megosztott naptárát sem zárják), és ha újra bekapcsolja a
+foglalást, ugyanúgy élnek tovább.
+
+Az Online foglalás külön havidíjas modul. A sor alatti **„Online foglalás”** link a Modulok
+fülre visz; ott a **„Bővítés — amit még hozzáadhat”** részben keresse meg az Online foglalás
+kártyáját — rajta látja a havidíjat is —, és koppintson a **„Hozzáadom”** gombra.
 
 ## Több szoba, több ár
 

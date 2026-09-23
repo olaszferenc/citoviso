@@ -500,6 +500,19 @@ try {
     check("kapcsoló nélkül télen is kiadó (a mai viselkedés)", winterOpen.closed === false, winterOpen);
 
     await setUnitSeasonalOnly(unit.id, true);
+
+    // 2026-09-23: the switch is a BOOKING setting. Without booking on the page the
+    // pricing screen does not offer it, so a stored ON must not close anything — not
+    // the request rule, and not the outgoing portal feed (which has no module gate).
+    // Up to here the fixture tenant has NO modules (see setTenantModules(…, []) above).
+    const offRule = await seasonRulesFor(unit.id, "2027-02-10", "2027-02-12");
+    check("⭐⭐ foglalás NÉLKÜL a bekapcsolt kapcsoló sem zár (nincs ál-hatás)", offRule.closed === false, offRule);
+    const offFeed = await getBlockedDaysFrom(unit.id, "2027-02-01");
+    check("⭐⭐ foglalás NÉLKÜL a portál-feed sem zárja a téli napot", !offFeed.includes("2027-02-10"), offFeed.length);
+
+    // From here on the switch's real precondition: booking (and the pricing it
+    // hard-requires, ADR-0192) actually on the page.
+    await setTenantModules(ids.tenantId!, ["booking", "pricing"]);
     const winterClosed = await seasonRulesFor(unit.id, "2027-02-10", "2027-02-12");
     check("⭐⭐ bekapcsolva a szezonon KÍVÜLI kérés zárva", winterClosed.closed === true, winterClosed);
 

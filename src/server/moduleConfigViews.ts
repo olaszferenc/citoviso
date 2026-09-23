@@ -79,6 +79,7 @@ export const MODCFG_STYLE = `<style>
 .mcfg-suffix{display:flex;align-items:center;gap:8px}
 .mcfg-suffix .citui-input{max-width:110px}
 .mcfg-suffix>span{color:var(--citui-muted);font-size:.9rem}
+.mcfg-bkline a{display:inline-block;margin-top:6px;font-weight:600;white-space:nowrap}
 
 /* ── calendar: COLLAPSIBLE card (owner, 2026-09-08) ───────────────── */
 /* A wide screen gets the legend + save BESIDE the grid; the grid itself stops
@@ -300,9 +301,14 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .price-new>.citui-input{flex:1;min-width:140px}
 .price-new__dates{display:flex;align-items:center;gap:6px}
 .price-new__dates .citui-input{width:88px;text-align:center}
+.price-new .mcfg-suffix>span{white-space:nowrap}
 @media(max-width:520px){
   .price-new{flex-direction:column;align-items:stretch}
-  .price-new__dates .citui-input{flex:1;width:auto}
+  /* Measured 2026-09-23 @390px: the date and amount rows were 482px wide in a 320px
+     card — flex items default to min-width:auto, so the inputs' intrinsic width won
+     and the second date field was cut off. Let every row shrink to the card. */
+  .price-new>*{min-width:0}
+  .price-new__dates .citui-input,.price-new .mcfg-suffix .citui-input{flex:1 1 0;width:0;max-width:none}
   .price-new .citui-btn{width:100%}
   .price-row__amt{margin-left:auto}
 }
@@ -1881,6 +1887,13 @@ export interface PricingEditorData {
   /** unit id → its price rows (base first is not required; order is the owner's). */
   readonly prices: Record<string, EditorPrice[]>;
   readonly currency: string;
+  /**
+   * Is the booking module active? The per-period minimum and the "only in the
+   * listed periods" switch act on the booking calendar alone; without it the guest
+   * sends an enquiry the owner decides, so both would be switches that do nothing.
+   * Required on purpose: a caller that forgets it must fail the type check.
+   */
+  readonly bookingActive: boolean;
 }
 
 /** "28 000" — grouped, no currency (the field shows the unit next to it). */
@@ -1898,6 +1911,7 @@ function grouped(n: number): string {
 function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   // ⛔ Was `=== "EUR" ? "€" : "Ft"`, i.e. ANY other currency printed as forint.
   const cur = currencySign(data.currency);
+  const bk = data.bookingActive;
   const cards = data.units
     .map((u) => {
       const rows = data.prices[u.id] ?? [];
@@ -1912,7 +1926,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
                 `<span class="price-row__txt"><strong>${esc(s.label)}</strong>` +
                 `<span>${esc(s.from ?? "")} – ${esc(s.to ?? "")}</span></span>` +
                 `<span class="price-row__amt">${esc(grouped(s.amount))} ${esc(cur)}` +
-                (s.minNights ? `<em style="display:block;font-style:normal;font-size:.8rem;color:var(--citui-muted)">${T(lang, "min. {n} éj", { n: s.minNights })}</em>` : "") +
+                (bk && s.minNights ? `<em style="display:block;font-style:normal;font-size:.8rem;color:var(--citui-muted)">${T(lang, "min. {n} éj", { n: s.minNights })}</em>` : "") +
                 `</span>` +
                 `<form method="POST" action="/admin/prices/delete">` +
                 `<input type="hidden" name="id" value="${esc(s.id)}">` +
@@ -1951,23 +1965,35 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `inputmode="numeric" min="0" placeholder="0" aria-label="${T(lang, "Ár")}"><span>${esc(cur)}</span></span>` +
         // ADR-0049: the period carries its own minimum stay. A fortnight in August is
         // not a February weekend, and the owner should say so where they say the price.
-        `<span class="mcfg-suffix"><input class="citui-input" name="min_nights" type="number" ` +
-        `inputmode="numeric" min="1" max="60" placeholder="—" aria-label="${T(lang, "Legrövidebb foglalás ebben az időszakban")}">` +
-        `<span>${T(lang, "éj min.")}</span></span>` +
+        // Booking-only: without the calendar nothing would ever ask for it.
+        (bk
+          ? `<span class="mcfg-suffix"><input class="citui-input" name="min_nights" type="number" ` +
+            `inputmode="numeric" min="1" max="60" placeholder="—" aria-label="${T(lang, "Legrövidebb foglalás ebben az időszakban")}">` +
+            `<span>${T(lang, "éj min.")}</span></span>`
+          : "") +
         `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
         `</form>` +
-        `<p class="citui-hint" style="margin-top:10px">${T(lang, "A dátumot hónap-nap alakban kérjük (06-15). Minden évben ugyanígy érvényes, nem kell újra megadni. A „éj min.” üresen hagyva a foglalás-modulnál beállított általános minimum érvényes.")}</p>` +
-        // ③ is this unit let all year, or only in the listed periods?
-        `<form method="POST" action="/admin/units/seasonal" class="mcfg-row" style="margin-top:16px">` +
-        `<input type="hidden" name="unit" value="${esc(u.id)}">` +
-        `<span class="mcfg-row__txt"><strong>${T(lang, "Csak a felsorolt időszakokban adom ki")}</strong>` +
-        `<span>${T(lang, "Bekapcsolva a többi napot a vendég nem is tudja kiválasztani. Kikapcsolva egész évben foglalható.")}</span></span>` +
-        `<label class="adm-switch"><input type="checkbox" name="seasonal_only" value="1"` +
-        `${u.seasonalOnly ? " checked" : ""} onchange="this.form.submit()" ` +
-        `aria-label="${T(lang, "Csak a felsorolt időszakokban adom ki")}">` +
-        `<span class="tr"></span><span class="th"></span></label>` +
-        `<noscript><button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button></noscript>` +
-        `</form>` +
+        `<p class="citui-hint" style="margin-top:10px">${T(lang, "A dátumot hónap-nap alakban kérjük (06-15). Minden évben ugyanígy érvényes, nem kell újra megadni.")}` +
+        (bk ? ` ${T(lang, "A „éj min.” üresen hagyva a foglalás-modulnál beállított általános minimum érvényes.")}` : "") +
+        `</p>` +
+        // ③ is this unit let all year, or only in the listed periods? Booking-only,
+        // like the minimum: without booking the switch would flip and change nothing,
+        // so it is not offered — one line says what booking would add (approved plan B).
+        (bk
+          ? `<form method="POST" action="/admin/units/seasonal" class="mcfg-row" style="margin-top:16px">` +
+            `<input type="hidden" name="unit" value="${esc(u.id)}">` +
+            `<span class="mcfg-row__txt"><strong>${T(lang, "Csak a felsorolt időszakokban adom ki")}</strong>` +
+            `<span>${T(lang, "Bekapcsolva a többi napot a vendég nem is tudja kiválasztani. Kikapcsolva egész évben foglalható.")}</span></span>` +
+            `<label class="adm-switch"><input type="checkbox" name="seasonal_only" value="1"` +
+            `${u.seasonalOnly ? " checked" : ""} onchange="this.form.submit()" ` +
+            `aria-label="${T(lang, "Csak a felsorolt időszakokban adom ki")}">` +
+            `<span class="tr"></span><span class="th"></span></label>` +
+            `<noscript><button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button></noscript>` +
+            `</form>`
+          : `<p class="citui-hint mcfg-bkline" data-cit-booking-only style="margin-top:16px">` +
+            `<span class="adm-ico" style="vertical-align:middle">${ic("bookings")}</span> ` +
+            `${T(lang, "Online foglalással azt is megadhatja, hogy csak ezekben az időszakokban adja ki, és időszakonként hány éjszaka a minimum.")} ` +
+            `<br><a href="/admin?tab=modulok">${T(lang, "Online foglalás")} ›</a></p>`) +
         `</div>`
       );
     })

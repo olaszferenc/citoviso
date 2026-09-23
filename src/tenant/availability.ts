@@ -19,6 +19,7 @@ import { db } from "../db/client.js";
 import { blockingUnitIds } from "./unitScope.js";
 import { formatAmount, getUnitPrices, seasonCovers } from "./prices.js";
 import { seasonRule } from "./seasonRule.js";
+import { seasonalOnlyInForce } from "./seasonalOnly.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 
 export type DaySource = "manual" | "booking" | "ical" | "linked";
@@ -400,12 +401,7 @@ export async function getBlockedDaysFrom(unitId: string, from: string): Promise<
   //
   // Computed, not stored: editing a season takes effect immediately instead of
   // needing a year of day-rows rewritten (and left stale when the owner changes mind).
-  const unit = await db
-    .selectFrom("site_unit")
-    .select("seasonal_only")
-    .where("id", "=", unitId)
-    .executeTakeFirst();
-  if (unit?.seasonal_only) {
+  if (await seasonalOnlyInForce(unitId)) {
     const seasons = (await getUnitPrices(unitId)).filter((p) => !p.isBase && p.from && p.to);
     const start = new Date(`${from}T00:00:00Z`);
     // 400 days ≥ any bookable horizon the form offers; beyond a year the MM-DD
