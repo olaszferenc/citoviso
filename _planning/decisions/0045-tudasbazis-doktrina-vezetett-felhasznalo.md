@@ -193,6 +193,8 @@ kapuzott fejlesztési úton készül.
    c) screenshot-frissesség WARN: ha a tartományban view-fájl változott, de egyetlen
       entry-asset sem, a dry-run kiírja („kb-shot futtatás hiányozhat") — nem hard-fail,
       mert a vizuális érintettséget az ítélet-réteg dönti el.
+      ⛔ **FELÜLÍRVA (ADR-XXXX, 2026-09-23):** a WARN helyett KAPU — a cél-commit worktree-jében
+      újragyártott képek pixel-összevetése a commitolttal, eltérésnél a deploy megáll.
    KB-releváns diff nélkül a kapu néma. Első sync (nincs PROD_SHA) → kapu kihagyva.
 2. **Periodikus kör: `citoviso-kb-freshness.timer` (napi, dev-gép).** `scripts/kb-freshness.mts`:
    ① prod↔repo drift (ssh READ-ONLY: az élesen futó SHA kora/lemaradása az origin/main-hez);
@@ -203,6 +205,8 @@ kapuzott fejlesztési úton készül.
    réteget méri, az ítélet a deploy-kapunál kötelező.
 3. **Elvetett:** deploy-időben AI-tartalomgenerálás (hamis-súgó kockázat, lásd határ);
    pixel-diff a screenshot-frissességre (a PNG-render nem bájt-determinisztikus → hamis riasztás);
+   ⛔ ez a pont FELÜLÍRVA (ADR-XXXX): a gyártó determinisztikussá téve (`kb-shot` settle()),
+   a pixel-összevetés küszöbös — a hamis riasztás oka megszűnt, a kapu így igazat mondhat;
    agent-hívás a bash deploy-szkriptből (a verdikt-evidencia a session-ben születik, a szkript
    a bizonyítékot kényszeríti ki).
 - **Visszafordíthatóság:** 🔄 additív (új kapu-szakasz + új szkript + timer; a deploy többi

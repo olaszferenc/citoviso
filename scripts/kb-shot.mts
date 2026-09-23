@@ -9,6 +9,20 @@
 //
 //   npx tsx scripts/kb-shot.mts
 //   npx tsx scripts/kb-shot.mts --self-test   # csak az ÉP-ŐR piros próbája, NEM fényképez
+//   npx tsx scripts/kb-shot.mts --out <dir>   # a képek a <dir> alá (a fa érintetlen)
+//   npx tsx scripts/kb-shot.mts --determinism # KÉT futás ideiglenes könyvtárba → pixel-összevetés
+//   npx tsx scripts/kb-shot.mts --check-committed  # újragyárt ideiglenesen, és a COMMITOLT
+//                                                  # képekkel veti össze (deploy GATE 1c, ADR-XXXX)
+//
+// ⛔ DETERMINIZMUS (2026-09-23, ADR-XXXX). A súgó-kép frissessége deploy-KAPU, és egy kapu
+// csak akkor mondhat igazat, ha ugyanaz a commit MINDIG ugyanazt a képet adja. Mérve nem
+// ezt adta: három futásból a `console-lead/source-panel.png` hol mutatta a tartalomra
+// festett ragadó fülsor-mondatot, hol nem (7 623 px), a `console-leads/screen.png` táblázat-
+// fejléce hol el volt tolva, hol nem (3 417 px), és az `outreach-draft` felső sávja 1–2 px-et
+// mozgott — a capture hol előbb, hol később futott, mint a betűtípus/elrendezés beállt.
+// Ezért MINDEN felvétel előtt (a `snap()`-ben, az egyetlen felvételi úton) `settle()` fut:
+// animáció/átmenet ki, betűtípusok és képek bevárva, a görgetés explicit, az elem-felvételeken
+// a ragadó elemek a természetes helyükön (static), majd két képkocka.
 //
 // ⛔ ÉP-ŐR (2026-09-15, tudásbázis-őr verdikt). Ez a szkript NÉMÁN ki tudta ürí­teni egy
 // súgó-kép tartalmát: a `legend.png` 640×2020 / 305 kB-ról 640×126 / 12 kB-ra esett, vagyis
@@ -17,8 +31,9 @@
 // EGYIK SEM NÉZI, VAN-E TARTALOM A KÉPEN. Ezért minden felvétel után összevetjük a kép
 // magasságát az ELŐZŐ változatéval, és a beomlás PIROS.
 
-import { chromium } from "playwright-core";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chromium, type Locator, type Page } from "playwright-core";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -57,11 +72,144 @@ import { positionThreads } from "../src/tenant/messageThreads.js";
 import { isUnread } from "../src/tenant/messages.js";
 import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
 import type { MonthView } from "../src/tenant/availability.js";
+import { describeDiff, identical, pixelDiff } from "./lib/png-pixel-diff.mts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Language of the shot UI. Today the admin renders Hungarian; when the admin surface
 // gets language packs, this drives per-language captures of the same fixtures.
 const LANG = process.env.KB_SHOT_LANG ?? "hu";
+
+// ── --out <dir>: a felvételek a <dir> alá mennek, ugyanazzal a relatív úttal ────────
+// A fa képei érintetlenek maradnak — ez kell a determinizmus-próbához és a deploy-kapuhoz,
+// ami a COMMITOLT képeket veti össze egy friss gyártással (ADR-XXXX).
+const OUT_DIR = (() => {
+  const i = process.argv.indexOf("--out");
+  if (i < 0) return null;
+  const v = process.argv[i + 1];
+  if (!v || v.startsWith("--")) {
+    console.error("⛔ --out: hiányzik a könyvtár");
+    process.exit(2);
+  }
+  return path.resolve(v);
+})();
+const MANIFEST = "kb-shot-manifest.json";
+
+/** Only the guide images are committed; the CWD verification shots are not. */
+const isEntryAsset = (rel: string): boolean => rel.startsWith("kb/entries/");
+
+interface ShotRun {
+  readonly dir: string;
+  readonly rels: readonly string[];
+}
+
+/**
+ * Egy teljes gyártás egy ideiglenes könyvtárba, KÜLÖN folyamatban (friss böngésző, mint egy
+ * valódi futás). A kimenetét fájlba fogjuk, és CSAK bukáskor írjuk ki — a néma bukás
+ * diagnosztizálhatatlan (`feedback_silenced_failure_costs_hours`), a zöld futás zaja viszont
+ * elfedné a lényeget.
+ */
+async function runInto(label: string): Promise<ShotRun> {
+  const dir = await mkdtemp(path.join(tmpdir(), `kbshot-${label}-`));
+  const log = path.join(dir, "run.log");
+  const self = new URL(import.meta.url).pathname;
+  const r = spawnSync("npx", ["tsx", self, "--out", dir], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  await writeFile(log, `${r.stdout ?? ""}\n${r.stderr ?? ""}`, "utf8");
+  if (r.status !== 0) {
+    console.error(`⛔ kb-shot (${label}) gyártás bukott (rc=${r.status}) — a kimenete:\n`);
+    console.error(`${r.stdout ?? ""}\n${r.stderr ?? ""}`);
+    process.exit(1);
+  }
+  const rels = JSON.parse(await readFile(path.join(dir, MANIFEST), "utf8")) as string[];
+  // ⛔ UTÓ-FELTÉTEL: egy nulla képes gyártás mellett minden összevetés üresen zöld lenne.
+  if (!rels.filter(isEntryAsset).length) {
+    console.error(`⛔ kb-shot (${label}): a gyártás NULLA súgó-képet adott — a mérés maga romlott el.`);
+    process.exit(1);
+  }
+  return { dir, rels };
+}
+
+interface Mismatch {
+  readonly rel: string;
+  readonly what: string;
+}
+
+async function compareSets(
+  rels: readonly string[],
+  left: (rel: string) => string,
+  right: (rel: string) => string,
+  missingRight: string,
+): Promise<Mismatch[]> {
+  const out: Mismatch[] = [];
+  for (const rel of rels) {
+    const r = right(rel);
+    const exists = await readFile(r).then(() => true, () => false);
+    if (!exists) {
+      out.push({ rel, what: missingRight });
+      continue;
+    }
+    const d = await pixelDiff(left(rel), r);
+    if (!identical(d)) out.push({ rel, what: describeDiff(d) });
+  }
+  return out;
+}
+
+if (process.argv.includes("--determinism")) {
+  // ── --determinism: KÉT független gyártás, pixel-összevetés ────────────────────────
+  // Egy kapu, ami a commitolt képet a friss gyártáshoz méri, csak akkor mond igazat, ha
+  // a gyártás önmagával egyezik. Ha ez a próba piros, a kapu ZAJRA bukna — előbb ezt javítsd.
+  const a = await runInto("a");
+  const b = await runInto("b");
+  const rels = [...new Set([...a.rels, ...b.rels])].filter(isEntryAsset).sort();
+  const bad = await compareSets(
+    rels,
+    (rel) => path.join(a.dir, rel),
+    (rel) => path.join(b.dir, rel),
+    "csak az egyik futás gyártotta le",
+  );
+  console.log(`kb-shot determinizmus: ${rels.length} súgó-kép, két futás összevetve (küszöb: csatornánként >24)`);
+  if (bad.length) {
+    console.error(`\n⛔ ${bad.length} súgó-kép NEM determinisztikus (futásonként más):`);
+    for (const m of bad) console.error(`   ${m.rel}: ${m.what}`);
+    console.error(`\n   A két futás képei: ${a.dir} · ${b.dir}`);
+    process.exit(1);
+  }
+  await rm(a.dir, { recursive: true, force: true });
+  await rm(b.dir, { recursive: true, force: true });
+  console.log(`✅ mind a ${rels.length} kép pixelre azonos a két futásban.`);
+  process.exit(0);
+}
+
+if (process.argv.includes("--check-committed")) {
+  // ── --check-committed: friss gyártás vs. a fában (= a commitban) álló képek ────────
+  // A deploy GATE 1c ezt futtatja a CÉL-commit worktree-jében: eltérés = a súgó olyan
+  // képet mutat, ami NEM az, amit a kiadott kód renderel — a deploy megáll (ADR-XXXX).
+  const run = await runInto("check");
+  const rels = run.rels.filter(isEntryAsset).sort();
+  const bad = await compareSets(
+    rels,
+    (rel) => path.join(run.dir, rel),
+    (rel) => path.join(ROOT, rel),
+    "a gyártó előállítja, de NINCS commitolva",
+  );
+  console.log(`kb-shot frissesség: ${rels.length} súgó-kép összevetve a commitolt változattal`);
+  if (bad.length) {
+    console.error(`\n⛔ ${bad.length} súgó-kép ELAVULT (a commitolt kép ≠ amit a kód ma renderel):`);
+    for (const m of bad) console.error(`   ${m.rel}: ${m.what}`);
+    console.error(
+      `\n   A friss képek: ${run.dir}\n` +
+        `   Javítás: npx tsx scripts/kb-shot.mts → nézd meg a képeket → commitold, ami változott.`,
+    );
+    process.exit(1);
+  }
+  await rm(run.dir, { recursive: true, force: true });
+  console.log(`✅ mind a ${rels.length} commitolt súgó-kép friss.`);
+  process.exit(0);
+}
 
 const session = {
   tenantId: "demo",
@@ -96,6 +244,12 @@ const units = [
 ];
 
 const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
+// ⛔ Az --out (determinizmus-próba, deploy-kapu) gyártása nem mehet DB nélkül: modul-lista
+// nélkül a Modulok-képek ÜRESEK lennének, és a kapu egy környezeti hibát „elavult képnek" mondana.
+if (OUT_DIR && !modules) {
+  console.error("⛔ kb-shot --out: a modul-katalógus nem olvasható (DB?) — a képek hamisak lennének.");
+  process.exit(1);
+}
 
 // ⛔ 2026-09-12: a demo tenantnak EGYETLEN aktív fizetős modulja sincs (csak a spine
 // „Időpontkérés"), tehát az „Az én moduljaim" lista minden eddigi KB-képen üres volt —
@@ -661,14 +815,95 @@ const captures: CaptureStat[] = [];
  * hívóhely külön-külön írna, egy új hívóhely NÉMÁN kimaradna az ellenőrzésből
  * (`feedback_narrow_recognizer_is_a_false_green`), és a záró összesítő zölden hallgatna.
  */
-async function snap(
-  target: { screenshot(o: { path: string }): Promise<Buffer> },
-  outPath: string,
-): Promise<void> {
-  const prev = await pngSize(outPath);
+async function snap(target: Page | Locator, treePath: string): Promise<void> {
+  const rel = path.relative(ROOT, treePath);
+  // --out: same relative path under the out dir; the tree's image stays the ÉP-ŐR baseline.
+  const outPath = OUT_DIR ? path.join(OUT_DIR, rel.startsWith("..") ? path.basename(treePath) : rel) : treePath;
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await settle(target);
+  const prev = await pngSize(treePath);
   await target.screenshot({ path: outPath });
   const next = await pngSize(outPath);
-  captures.push({ rel: path.relative(ROOT, outPath), prev, next });
+  captures.push({ rel, prev, next });
+}
+
+// Motion off for the shot only — a guide image is a still anyway. The caret blinks too.
+const FREEZE_CSS =
+  "*,*::before,*::after{animation:none !important;transition:none !important;caret-color:transparent !important}";
+
+/**
+ * A felvétel előtti BEÁLLÁS — minden kép ezen megy át (a `snap()` hívja), hogy ugyanaz a
+ * commit futásról futásra ugyanazt a képet adja (ADR-XXXX). Sorrendben:
+ *  1. animáció/átmenet ki (egy félúton lévő átmenet a capture pillanatától függ);
+ *  2. betűtípusok + képek bevárva (a késve érkező betű átrendezi a sorokat — ez tolta el
+ *     1–2 px-szel az outreach-draft felső sávját);
+ *  3. görgetés EXPLICIT: viewport-képnél a horgonyra (ha van), különben a lap tetejére —
+ *     a korábbi, betűtípus ELŐTTI horgony-görgetés az azóta átrendezett lapon rossz helyen áll;
+ *     a konzol lead-lapja `hashchange`-re a saját (ragadó sávokat kerülő) görgetését futtatja;
+ *  4. a RAGADÓ elemek a természetes helyükre (static) — elem-képnél mind (lent), viewport-
+ *     képnél csak a nem elmozdultak (a settle() törzsében); az elem-capture görget, és
+ *     a ragadó sáv a görgetés pillanatától függően hol a tartalomra festődött, hol nem (a
+ *     source-panel.png-n a fülsor alatti mondat — mérve 7 623 px). A static a folyásban
+ *     ugyanakkora helyet foglal, mint a sticky, tehát az elrendezés NEM változik;
+ *  5. két képkocka, hogy a fenti változások (és az IntersectionObserver-visszahívások)
+ *     lefessenek.
+ * ⚠️ Szöveges `evaluate`: a tsx-átírt függvény-törzs `__name` segédet hivatkozhat, ami a
+ * böngészőben nem létezik.
+ */
+async function settle(target: Page | Locator): Promise<void> {
+  const isElement = target !== page;
+  await page.addStyleTag({ content: FREEZE_CSS });
+  // ⛔ A beállás NEM várhat örökké: egy soha fel nem oldó ígéret (lazy kép, beragadt betű)
+  // némán megakasztotta a teljes futást. Időkorlát → HANGOS bukás, a lap URL-jével.
+  let timer: NodeJS.Timeout | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`kb-shot settle(): 15 s alatt sem állt be a lap (${page.url()})`)),
+      15_000,
+    );
+  });
+  const work = page.evaluate(`(async () => {
+    await document.fonts.ready;
+    // ⚠️ A lazy kép a látómezőn kívül SOSEM töltődik be, és a decode()-ja sosem old fel
+    // (mérve: a Modulok › Szobák felvétele örökre várt) — eager-re kapcsoljuk, így az
+    // elem-felvétel akkor is kész képet lő, ha a görgetés csak a capture-kor jön.
+    for (const i of Array.from(document.images)) if (i.loading === "lazy") i.loading = "eager";
+    await Promise.all(Array.from(document.images).map((i) =>
+      i.complete ? null : i.decode().catch(() => null)));
+    const stickies = Array.from(document.querySelectorAll("*"))
+      .filter((el) => getComputedStyle(el).position === "sticky");
+    if (${isElement}) {
+      for (const el of stickies) el.style.setProperty("position", "static", "important");
+    } else {
+      const id = decodeURIComponent(location.hash.replace(/^#/, ""));
+      const anchor = id ? document.getElementById(id) : null;
+      if (anchor) {
+        anchor.scrollIntoView({ block: "start", behavior: "instant" });
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      } else {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+      // A viewport-képen a természetes helyén álló ragadó elem is static lesz: ott a kettő
+      // pixelre ugyanaz, de a sticky réteg kompozitálása futásonként eltért (mérve: a
+      // lead-lista táblázat-fejlécének alsó vonala hol teljes, hol csonka — 892 px).
+      // Ami ténylegesen TAPAD (a helye elmozdul a static-tól, pl. alsó sáv), az marad:
+      // a tulaj pont így látja a lapot.
+      for (const el of stickies) {
+        const before = el.getBoundingClientRect();
+        el.style.setProperty("position", "static", "important");
+        const after = el.getBoundingClientRect();
+        if (Math.abs(before.top - after.top) > 0.5 || Math.abs(before.left - after.left) > 0.5) {
+          el.style.removeProperty("position");
+        }
+      }
+    }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  })()`);
+  try {
+    await Promise.race([work, limit]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ── --self-test: az ÉP-ŐR piros próbája, fényképezés NÉLKÜL ─────────────────
@@ -720,6 +955,40 @@ if (process.argv.includes("--self-test")) {
     process.exit(1);
   }
   console.log(`  ✅ szerkezeti próba: mind a felvétel EGYETLEN úton megy ki (snap()).`);
+
+  // ── A PIXEL-ÖSSZEVETŐ ÖNKONTROLLJA (ADR-XXXX) ───────────────────────────────
+  // A determinizmus-próba és a deploy-kapu ezen áll: ha VAK (mindig „azonos"), mindkettő
+  // zölden hazudik; ha ZAJRA érzékeny, a kapu hamisan bukik. Mindkét irányt kitűzzük,
+  // szintetikus képeken (`reference_template_diversity_pixel_gate`: kalibráló pár kell).
+  const { default: sharp } = await import("sharp");
+  const W = 120, H = 80;
+  const base = Buffer.alloc(W * H * 4);
+  for (let i = 0; i < W * H; i++) base.set([(i * 7) % 256, (i * 13) % 256, 200, 255], i * 4);
+  const png = (raw: Buffer, w = W, h = H): Promise<Buffer> =>
+    sharp(raw, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
+  const patched = Buffer.from(base);
+  for (let y = 40; y < 45; y++) for (let x = 30; x < 35; x++) patched.set([0, 0, 0, 255], (y * W + x) * 4);
+  const noisy = Buffer.from(base);
+  for (let i = 0; i < noisy.length; i += 4) noisy[i] = Math.min(255, noisy[i] + 10);
+  const pb = await png(base);
+  const pixCases: ReadonlyArray<{ why: string; b: Buffer; want: (d: Awaited<ReturnType<typeof pixelDiff>>) => boolean }> = [
+    { why: "önmagával → azonos (kalibráló pár)", b: await png(base), want: (d) => identical(d) },
+    { why: "5×5-ös folt → PIROS, pontos bbox (30,40)-(34,44)", b: await png(patched),
+      want: (d) => d.changed === 25 && JSON.stringify(d.bbox) === JSON.stringify({ x0: 30, y0: 40, x1: 34, y1: 44 }) },
+    { why: "+10 élsimítási zaj → azonos (küszöb alatt)", b: await png(noisy), want: (d) => identical(d) },
+    { why: "más méret → PIROS", b: await png(Buffer.alloc(W * (H + 1) * 4, 255), W, H + 1), want: (d) => d.sizeMismatch },
+  ];
+  let pixBad = 0;
+  for (const c of pixCases) {
+    const d = await pixelDiff(pb, c.b);
+    const ok = c.want(d);
+    if (!ok) pixBad++;
+    console.log(`  ${ok ? "✅" : "⛔"} pixel-összevető: ${c.why} → ${describeDiff(d)}`);
+  }
+  if (pixBad) {
+    console.error(`\n❌ pixel-összevető önteszt: ${pixBad} eset nem a várt eredményt adta.`);
+    process.exit(1);
+  }
 
   console.log(
     `\n✅ kb-shot ép-őr önteszt: ${cases.length} eset, ebből ${firedCount} PIROSRA ment — ` +
@@ -1708,4 +1977,7 @@ await browser.close();
   console.log("✅ ép-őr: egyetlen kép sem omlott be.");
 }
 
+if (OUT_DIR) {
+  await writeFile(path.join(OUT_DIR, MANIFEST), JSON.stringify(captures.map((c) => c.rel)), "utf8");
+}
 console.log(`kb-shot: kész (${LANG})`);

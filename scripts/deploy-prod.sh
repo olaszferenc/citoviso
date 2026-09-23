@@ -146,8 +146,62 @@ timers_install_and_verify() {
   echo "     ✓ $(grep -c '\.timer$' "$UNITS_TMP/names") prod időzítő telepítve, engedélyezve, fut"
 }
 
+# ── GATE 1c/kép — a súgó-képek frissessége KAPU, nem figyelmeztetés (ADR-XXXX) ──────
+# Eddig a képek elavulását csak egy WARN jelezte („view változott, screenshot nem"), és
+# 2026-09-23-án mérve 4 commitolt kép már nem azt mutatta, amit a kód renderel — köztük a
+# console-pricing egy MEGSZŰNT modul-nevet. Innentől a cél-commit SAJÁT worktree-jében a
+# kb-shot újragyártja a képeket egy ideiglenes könyvtárba, és pixel-szinten (küszöbbel)
+# összeveti a commitolt képekkel: bármely eltérés = a deploy MEGÁLL, a hiba megnevezi a
+# képet és a bbox-ot. Előfeltétele a determinisztikus gyártó (kb-shot settle(), próbája:
+# `npx tsx scripts/kb-shot.mts --determinism`) — nélküle a kapu zajra bukna.
+# Nem csak KB-releváns diffnél fut: egy CSS- vagy fixture-változás ugyanúgy elavítja a képet.
+# Csak LOKÁLIS: a prodot nem érinti (külön is futtatható: --kb-shot-gate <commit>).
+kb_shot_gate() { # $1 = commit sha
+  local wt log rc
+  wt="$(mktemp -d /tmp/kbshot-gate-XXXX)"
+  log="$(mktemp /tmp/kbshot-gate-log-XXXX)"
+  git worktree add -q --detach "$wt" "$1" || fail "kb-kép-kapu: cél-worktree létrehozás sikertelen"
+  # A worktree-ben nincs node_modules (gitignore) — a hívó fáé kell a playwright/sharp-hoz.
+  # A .env a hívó cwd-jéből töltődik (a modul-katalógus a DB-ből jön a képekhez).
+  ln -s "$PWD/node_modules" "$wt/node_modules"
+  # ⛔ Egy ADR-XXXX előtti cél-commit kb-shot-ja NEM ismeri a --check-committed-et: a
+  # kapcsolót csendben figyelmen kívül hagyva a worktree képeit írná újra, és 0-val lépne
+  # ki — néma zöld. Az ilyen commit képeinek frissessége nem mérhető, tehát nem is állítható.
+  if ! grep -q -- '--check-committed' "$wt/scripts/kb-shot.mts"; then
+    git worktree remove -f "$wt" >/dev/null 2>&1 || true
+    fail "kb-kép-kapu: a cél-commit kb-shot-ja nem tud összevetni (ADR-XXXX előtti) — a súgó-képek frissessége nem igazolható"
+  fi
+  # A kimenet fájlba, és CSAK bukáskor ki — a zöld futás 40 sora elfedné a kapu többi sorát.
+  npx tsx "$wt/scripts/kb-shot.mts" --check-committed >"$log" 2>&1
+  rc=$?
+  git worktree remove -f "$wt" >/dev/null 2>&1 || true
+  if [ "$rc" -ne 0 ]; then
+    sed 's/^/     /' "$log" >&2
+    rm -f "$log"
+    fail "kb-kép-kapu: a cél-commit súgó-képei ELAVULTAK vagy nem gyárthatók (fent: melyik kép, hol) — futtasd: npx tsx scripts/kb-shot.mts, nézd meg a képeket, commitold és landold"
+  fi
+  # A zöld csak a gyártó SAJÁT zöld sorával együtt igaz (rc=0 egymagában nem bizonyíték).
+  local ok
+  ok="$(grep -o 'mind a [0-9]* commitolt súgó-kép friss' "$log" || true)"
+  if [ -z "$ok" ]; then
+    sed 's/^/     /' "$log" >&2
+    rm -f "$log"
+    fail "kb-kép-kapu: a gyártó 0-val lépett ki, de a „friss\" sort nem írta ki — a mérés nem történt meg"
+  fi
+  echo "     ✓ $ok"
+  rm -f "$log"
+}
+
 [ $# -ge 1 ] || fail "használat: deploy-prod.sh <commit-ish> [--go]  ·  önteszt: --self-test"
 if [ "$1" = "--self-test" ]; then residue_self_test; exit $?; fi
+if [ "$1" = "--kb-shot-gate" ]; then
+  [ $# -ge 2 ] || fail "használat: deploy-prod.sh --kb-shot-gate <commit-ish>"
+  cd "$(git rev-parse --show-toplevel)" || fail "nem git-fa"
+  KSHA="$(git rev-parse --verify "$2^{commit}" 2>/dev/null)" || fail "ismeretlen commit: $2"
+  echo "── GATE 1c/kép — súgó-képek frissessége ($KSHA, csak lokál)…"
+  kb_shot_gate "$KSHA"
+  exit 0
+fi
 TARGET_REF="$1"
 shift
 GO=""
@@ -246,6 +300,9 @@ for v in LEGAL_ENTITY_NAME LEGAL_ENTITY_ADDRESS LEGAL_ENTITY_REG_NUMBER LEGAL_EN
 done
 echo "     ✓ szerkezet ép + az éles impresszum-adatok kitöltöttek"
 
+echo "── GATE 1c/kép — súgó-képek frissessége (újragyártás a cél-commiton, pixel-összevetés)…"
+kb_shot_gate "$SHA"
+
 # GATE 1c — tudásbázis-frissesség (ADR-0045/f, §J). The dev-time hooks guarantee the
 # DETERMINISTIC layer at every commit; deploy-time re-verifies it on the TARGET commit's
 # own tree (the working tree in hand may differ), and enforces the JUDGMENT layer as
@@ -269,13 +326,8 @@ if [ -n "$PROD_SHA" ]; then
       fail "kb-check --coverage PIROS a cél-commiton — a súgó és a felület szétcsúszott"
     fi
     git worktree remove -f "$KBWT" >/dev/null 2>&1 || true
-    # Screenshot staleness (WARN only): views changed in range but no entry asset did —
-    # whether the change is VISUAL is the judgment layer's call, so this does not fail.
-    VIEWS_TOUCHED="$(git diff --name-only "$PROD_SHA" "$SHA" -- src/console/views.ts src/console/partnerViews.ts src/server/adminViews.ts src/server/moduleConfigViews.ts src/server/modulePreview.ts || true)"
-    ASSETS_TOUCHED="$(git diff --name-only "$PROD_SHA" "$SHA" -- ':(glob)kb/entries/*/assets/**' || true)"
-    if [ -n "$VIEWS_TOUCHED" ] && [ -z "$ASSETS_TOUCHED" ]; then
-      echo "     ⚠️  view-fájl változott, de entry-screenshot NEM — ha a változás látszik, futtasd: npx tsx scripts/kb-shot.mts"
-    fi
+    # (A régi „view változott, screenshot nem" WARN kivezetve: a képek frissességét a fenti
+    # GATE 1c/kép pixel-szinten MÉRI és blokkol — ADR-XXXX.)
     node scripts/kb-gate.mjs check "$PROD_SHA..$SHA" \
       || fail "tudasbazis-or verdikt hiányzik/elavult — futtasd az őrt a fenti diffre, majd: node scripts/kb-gate.mjs pass \"$PROD_SHA..$SHA\" \"<kivonat>\""
   fi

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-sugo-kep-frissessege-deploy-kapu.md) — A súgó-kép frissessége deploy-KAPU, nem figyelmeztetés — előfeltétele a determinisztikus képgyártó (2026-09-23)
 - [ADR-0219](decisions/0219-a-vendeg-koszonolevele-legfeljebb-egyszer-megy.md) — A vendég köszönőlevele legfeljebb egyszer megy ki; a vélemény-kezelő csillaga szín nélkül is igazat mond (2026-09-23)
 - [ADR-0218](decisions/0218-a-lead-mock-programajanloja-kitoltott-minta.md) — A lead-mock programajánlója kitöltött minta: pirula nélkül, a nézés napjához igazított dátumokkal (2026-09-23)
 - [ADR-0217](decisions/0217-a-nem-elado-galeria-a-mockon-marad-2026-09-23.md) — A nem eladó galéria a mockon marad (2026-09-23)

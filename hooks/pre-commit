@@ -281,9 +281,11 @@ fi
 # minden felvételt összevet az előzővel, és a beomlás PIROS. Ez az önteszt azt méri, hogy ez az
 # ép-őr maga ép-e: megszólal-e a valódi hibára, átengedi-e a jogos rövidülést, és nem kerülhető-e
 # meg egy új felvételi úttal (szerkezeti próba). Böngészőt NEM indít, nem fényképez.
+# ADR-XXXX: a pixel-összevetőt (determinizmus-próba + deploy-kép-kapu alapja) is kalibrálja —
+# vak-e (5×5-ös folt), zajra érzékeny-e (+10 csatornánként) —, ezért annak változására is fut.
 if [ -f scripts/kb-shot.mts ] && \
-   changed_files | grep -qE '^scripts/kb-shot\.mts'; then
-  echo "[pre-commit] kb-shot ép-őr önteszt (egy súgó-kép ne tudjon némán kiürülni)…"
+   changed_files | grep -qE '^scripts/(kb-shot\.mts|lib/png-pixel-diff\.mts)'; then
+  echo "[pre-commit] kb-shot ép-őr + pixel-összevető önteszt…"
   npx tsx scripts/kb-shot.mts --self-test >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/charge-retry-note-check.mts ] && \
