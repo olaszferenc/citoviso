@@ -23,6 +23,7 @@ import { pool } from "../src/db/client.js";
 import { expireStaleOffers, expireStaleRequests } from "../src/booking/requests.js";
 import { maintainDatedPrices } from "../src/tenant/priceExpiry.js";
 import { maintainSeasonNudges } from "../src/tenant/seasonNudge.js";
+import { maintainPriceGaps } from "../src/tenant/priceGap.js";
 import { syncAllCalendarLinks } from "../src/booking/sync.js";
 
 const started = Date.now();
@@ -55,6 +56,13 @@ try {
   const dp = await maintainDatedPrices();
   if (dp.reminded || dp.expired) {
     console.log(`[booking] dátumos ár: ${dp.reminded} emlékeztető · ${dp.expired} lejárt és levéve`);
+  }
+
+  // ADR-0208 ⑥.4: an undeclared price gap gets a weekly mail after 7 days — AFTER the
+  // dated-price pass, because a window that just lapsed may have opened the gap.
+  const pg = await maintainPriceGaps();
+  if (pg.started || pg.ended || pg.reminded) {
+    console.log(`[booking] ár-hiány: ${pg.started} új · ${pg.ended} lezárult · ${pg.reminded} emlékeztető`);
   }
 
   console.log(`[booking] kész ${Math.round((Date.now() - started) / 1000)}s alatt`);

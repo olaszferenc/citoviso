@@ -27,6 +27,7 @@ import { currencySign } from "../text/money.js";
 import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
+import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { ic } from "../ui/icons.js";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
@@ -126,6 +127,16 @@ export const MODCFG_STYLE = `<style>
   background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));
   border:1px solid color-mix(in srgb,var(--citui-warn) 38%,transparent)}
 .mcfg-empty svg{flex:0 0 auto;margin-top:2px;color:var(--citui-warn)}
+/* ADR-0208 ⑥.2: the owner's STATED decision is not a warning — same shape, calm colour. */
+.mcfg-empty--said{background:var(--citui-surface-2);border-color:var(--citui-line)}
+.mcfg-empty--said svg{color:var(--citui-cyan-500)}
+.pr-decl{display:flex;align-items:flex-start;gap:10px;margin:0 0 12px;padding:11px 12px;
+  border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);cursor:pointer;
+  font-size:.92rem;line-height:1.45}
+.pr-decl input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--citui-navy-800)}
+.pr-decl strong{display:block;font-weight:600}
+.pr-decl span span{display:block;color:var(--citui-muted);font-size:.84rem;margin-top:2px}
+.pr-decl.is-off{opacity:.55;cursor:not-allowed}
 .mcfg-err{background:color-mix(in srgb,var(--citui-bad) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--citui-bad) 40%,transparent);
   border-radius:var(--citui-radius-sm);padding:12px 14px;margin:0 0 18px}
@@ -348,6 +359,12 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .unit-row--new{border-bottom:0;padding-top:16px}
 .unit-row__name{flex:1;min-width:160px}
 .unit-row__cap{width:90px}
+.unit-row__price{width:130px}
+.unit-row--new .pr-decl{flex-basis:100%;margin:0}
+.nu-flash{margin:0 0 16px;scroll-margin-top:16px}
+.nu-flash .mcfg-empty{margin:0}
+.nu-flash__acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.nu-flash__acts form{margin:0}
 .unit-row__del{color:var(--citui-bad);border-color:color-mix(in srgb,var(--citui-bad) 35%,transparent)}
 
 /* ── prices, one card per unit ───────────────────────────────────────── */
@@ -408,6 +425,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   .cal-save .citui-btn{width:100%}
   .unit-row{flex-direction:column;align-items:stretch}
   .unit-row__cap{width:100%}
+  .unit-row__price{width:100%}
   .breq__act,.breq__act form{width:100%}
   .breq__act .citui-btn{flex:1}
 }
@@ -1070,6 +1088,8 @@ export interface EditorUnit {
   readonly coverUrl?: string | null;
   /** "Csak a felsorolt időszakokban adom ki" (ADR-0049). */
   readonly seasonalOnly?: boolean;
+  /** ADR-0208 ⑥.2: "nem adok meg árat" — the owner's stated decision (0073). */
+  readonly priceOnRequest?: boolean;
   /** ADR-0114 — this unit IS the whole place; it and the rooms exclude each other.
    *  The unit tabs say so, because it changes what a blocked day MEANS. */
   readonly isWholeProperty?: boolean;
@@ -1598,6 +1618,88 @@ export interface RoomsView {
   readonly notice?: string | null;
 }
 
+/** ADR-0208 ⑥.3 — the new-unit row's price state and the flash after a save. */
+export interface NewUnitView {
+  /** Is the pricing module on? Off → the row stays name + capacity, as before. */
+  readonly pricingActive: boolean;
+  /** The pricing module's currency — the suffix reads what the price table will. */
+  readonly currency: string;
+  /** Which screen the row lives on — the save comes back HERE, where the flash is read. */
+  readonly back: "rooms" | "booking";
+  readonly flash?: {
+    readonly state: "ar" | "ajanlat" | "kimondva" | "nincs" | "rossz";
+    readonly unitId: string;
+    readonly unitName: string;
+  } | null;
+}
+
+/**
+ * The price half of the new-unit row: an amount, or the stated "nem adok meg árat".
+ * ⛔ Nothing here is `required` — the save never refuses a unit (ADR-0193 ①); the
+ * flash says what a unit without either means.
+ */
+function newUnitPriceFields(nu: NewUnitView | undefined, lang: string): string {
+  const back = `<input type="hidden" name="back" value="${nu?.back ?? "booking"}">`;
+  if (!nu?.pricingActive) return back;
+  return (
+    back +
+    `<span class="mcfg-suffix"><input class="citui-input unit-row__price" name="price" inputmode="numeric" ` +
+    `placeholder="${T(lang, "Alapár")}" aria-label="${T(lang, "Alapár")}"><span>${esc(currencySign(nu.currency))}</span></span>`
+  );
+}
+
+function newUnitDecl(nu: NewUnitView | undefined, lang: string): string {
+  if (!nu?.pricingActive) return "";
+  return (
+    `<label class="pr-decl"><input type="checkbox" name="price_on_request" value="1">` +
+    `<span><strong>${T(lang, "Nem adok meg árat — egyedi ajánlatot küldök")}</strong>` +
+    `<span>${T(lang, "Később az Árazás lapon bármikor megadhatja.")}</span></span></label>`
+  );
+}
+
+/** The flash after the save — one of four outcomes, each saying what the guest now sees. */
+function newUnitFlash(nu: NewUnitView | undefined, lang: string): string {
+  const f = nu?.flash;
+  if (!f) return "";
+  return newUnitFlashBox(f, nu!.back, lang);
+}
+
+function newUnitFlashBox(
+  f: NonNullable<NewUnitView["flash"]>,
+  back: NewUnitView["back"],
+  lang: string,
+): string {
+  const name = esc(f.unitName);
+  if (f.state === "ar") {
+    return (
+      `<div class="nu-flash" id="nu-flash" data-nu-flash="ar"><p class="mcfg-empty mcfg-empty--said">${ic("check", 16)}<span>` +
+      `<strong>${T(lang, "Felvettük: {name}.", { name })}</strong> ` +
+      `${T(lang, "Az alapára mentve, a vendég azonnal látja.")}</span></p></div>`
+    );
+  }
+  if (f.state === "ajanlat" || f.state === "kimondva") {
+    return (
+      `<div class="nu-flash" id="nu-flash" data-nu-flash="${f.state}"><p class="mcfg-empty mcfg-empty--said">${ic("check", 16)}<span>` +
+      `<strong>${f.state === "ajanlat" ? T(lang, "Felvettük: {name}.", { name }) : T(lang, "Rendben: {name}.", { name })}</strong> ` +
+      `${T(lang, "Árat nem ad meg: a vendég árajánlatot kér, és Ön a rendszerből válaszol.")}</span></p></div>`
+    );
+  }
+  const unit = encodeURIComponent(f.unitId);
+  return (
+    `<div class="nu-flash" id="nu-flash" data-nu-flash="${f.state}"><div class="mcfg-empty">${ic("alert", 16)}<span>` +
+    `<strong>${T(lang, "Felvettük: {name} — de nincs ára.", { name })}</strong> ` +
+    (f.state === "rossz" ? `${T(lang, "A beírt árat nem tudtuk értelmezni, ezért nem mentettük.")} ` : "") +
+    `${T(lang, "A vendég nem lát rá árat, és árajánlatot kér. Amíg nem ad meg árat, vagy nem jelöli, hogy nem ad meg, hetente emlékeztetjük.")}` +
+    `<span class="nu-flash__acts">` +
+    `<a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok&m=pricing#ar-${unit}">${T(lang, "Árat adok meg")}</a>` +
+    `<form method="POST" action="/admin/prices/request">` +
+    `<input type="hidden" name="unit" value="${esc(f.unitId)}"><input type="hidden" name="on" value="1">` +
+    `<input type="hidden" name="back" value="${back}">` +
+    `<button class="citui-btn citui-btn--ghost citui-btn--sm" type="submit">${T(lang, "Nem adok meg árat")}</button></form>` +
+    `</span></span></div></div>`
+  );
+}
+
 /** A teljes szoba-szerkesztő: vezető mondat + kártyarács + felugrók + új egység. */
 function roomsEditor(
   units: readonly EditorUnit[],
@@ -1605,6 +1707,7 @@ function roomsEditor(
   ctx: UnitAmenityContext | undefined,
   view: RoomsView,
   lang: string,
+  nu?: NewUnitView,
 ): string {
   const cards = units.map((u) => roomCard(u, units, lang)).join("");
   const pops = units.map((u) => roomPopup(u, units, library, ctx, view, lang)).join("");
@@ -1615,6 +1718,7 @@ function roomsEditor(
     `<div class="rs-head"><span class="adm-ico">${ic("modules")}</span><div>` +
     `<h1>${T(lang, "A szobái")}</h1>` +
     `<p>${T(lang, "A kártya azt mutatja, amit a vendég lát a honlapon. Koppintson rá — a szerkesztő felugrik.")}</p></div></div>` +
+    newUnitFlash(nu, lang) +
     `<div class="rs-grid" id="szobak">${cards}</div>` +
     // A felvétel a MAI viselkedés marad (a terv szándékosan nem kötötte be), csak a
     // helye változik: a rács alatt, egyetlen szaggatott vezérlőben.
@@ -1623,7 +1727,9 @@ function roomsEditor(
     `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
     `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
     `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
+    newUnitPriceFields(nu, lang) +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
+    newUnitDecl(nu, lang) +
     `</form></details></div>` +
     pops
   );
@@ -1829,7 +1935,7 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
 }
 
 /** Add / rename / remove the bookable units. */
-function unitsCard(booking: BookingEditorData, lang = "hu"): string {
+function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): string {
   const multi = booking.units.length > 1;
   const rows = booking.units
     .map(
@@ -1854,6 +1960,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu"): string {
   return (
     `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>Mit ad ki?</h2></div>` +
+    newUnitFlash(nu, lang) +
     `<p class="adm-lead">` +
     (multi
       ? T(lang, "Minden egységnek külön naptára van, így külön telhet be.")
@@ -1864,7 +1971,9 @@ function unitsCard(booking: BookingEditorData, lang = "hu"): string {
     `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
     `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
     `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
+    newUnitPriceFields(nu, lang) +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
+    newUnitDecl(nu, lang) +
     `</form></div>`
   );
 }
@@ -1995,7 +2104,12 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
   );
 }
 
-function bookingEditor(moduleId: string, booking: BookingEditorData, lang = "hu"): string {
+function bookingEditor(
+  moduleId: string,
+  booking: BookingEditorData,
+  lang = "hu",
+  nu?: NewUnitView,
+): string {
   const mv = booking.month;
   const imported = booking.links.filter((l) => l.direction === "import");
   const multi = booking.units.length > 1;
@@ -2098,7 +2212,7 @@ function bookingEditor(moduleId: string, booking: BookingEditorData, lang = "hu"
     `</div>`) +
 
     // ③ units
-    unitsCard(booking, lang)
+    unitsCard(booking, lang, nu)
   );
 }
 
@@ -2139,6 +2253,12 @@ export interface PricingEditorData {
   readonly inlineErrors?: string[];
   /** Tests pin the day; the page uses the real one. */
   readonly today?: string;
+  /**
+   * ADR-0208 ⑥.2–⑥.4: unit id → how complete its price list is, from the ONE
+   * predicate (`unitPriceStatus`) the overview to-do and the reminder also read.
+   * Required: a card that cannot say "hiányos" would contradict the to-do row.
+   */
+  readonly status: Readonly<Record<string, UnitPriceStatus>>;
 }
 
 /** "28 000" — grouped, no currency (the field shows the unit next to it). */
@@ -2375,6 +2495,56 @@ function seasonEditorScript(lang: string): string {
 }
 
 /**
+ * ADR-0208 ⑥.2 — approved plan price-on-request, variant A: the "nem adok meg alapárat"
+ * box under the base field, and ONE state line saying where the unit stands.
+ *
+ * The box is off while a timeless base exists: with it every night is priced, so the
+ * decision would mean nothing (and saving a base clears it — see setBasePrice). It
+ * saves on toggle, like the seasonal switch below; <noscript> keeps a button.
+ * ⛔ "hetente emlékeztetjük" is a PROMISE on this screen: the weekly reminder
+ * (priceGap.ts) reads the same status, so the sentence and the mail cannot drift.
+ */
+function priceDecision(
+  u: EditorUnit,
+  hasBase: boolean,
+  hasSeasons: boolean,
+  status: UnitPriceStatus,
+  lang: string,
+): string {
+  const box =
+    `<form method="POST" action="/admin/prices/request">` +
+    `<input type="hidden" name="unit" value="${esc(u.id)}">` +
+    `<label class="pr-decl${hasBase ? " is-off" : ""}">` +
+    `<input type="checkbox" name="on" value="1"${u.priceOnRequest && !hasBase ? " checked" : ""}` +
+    `${hasBase ? " disabled" : ""} onchange="this.form.submit()">` +
+    `<span><strong>${T(lang, "Nem adok meg alapárat — ahol nincs ár, egyedi ajánlatot küldök")}</strong>` +
+    `<span>${
+      hasBase
+        ? T(lang, "Alapárral minden éjszakának van ára — ehhez előbb törölje az alapárat.")
+        : T(lang, "A vendég ilyenkor árajánlatot kér, és Ön a rendszerből válaszol.")
+    }</span></span></label>` +
+    `<noscript><button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button></noscript>` +
+    `</form>`;
+  const line =
+    status === "on_request"
+      ? `<p class="mcfg-empty mcfg-empty--said" data-price-state="on_request">${ic("check", 16)}<span>` +
+        `<strong>${T(lang, "Kimondva: nem ad meg alapárat.")}</strong> ` +
+        (hasSeasons
+          ? T(lang, "Az időszaki árak érvényesek, a többi éjszakára a vendég árajánlatot kér.")
+          : T(lang, "A vendég árajánlatot kér, és Ön a rendszerből válaszol.")) +
+        ` ${T(lang, "Emlékeztetőt erről a szobáról nem küldünk.")}</span></p>`
+      : status === "none" || status === "partial"
+        ? `<p class="mcfg-empty" data-price-state="${status}">${ic("alert", 16)}<span>` +
+          `<strong>${status === "none" ? T(lang, "Nincs ára.") : T(lang, "Az év egy részére nincs ára.")}</strong> ` +
+          (status === "none"
+            ? T(lang, "A vendég nem lát árat, és árajánlatot kér.")
+            : T(lang, "Ott a vendég nem lát árat, és árajánlatot kér.")) +
+          ` ${T(lang, "Adjon meg alapárat, vagy jelölje be, hogy nem ad meg. Amíg egyik sincs, hetente emlékeztetjük.")}</span></p>`
+        : "";
+  return box + (line ? `<div style="margin:0 0 18px">${line}</div>` : "");
+}
+
+/**
  * Prices, one card per unit. The owner prices a ROOM, so the screen is organised by
  * room and never asks them to think in a season × unit matrix — a grid is unusable
  * on a phone and unreadable to someone who has never met one.
@@ -2429,7 +2599,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         : `<p class="citui-hint" style="margin:6px 0 12px">${T(lang, "Nincs külön időszaki ár — mindig az alapár érvényes.")}</p>`;
 
       return (
-        `<div class="adm-card" data-seasons="${esc(JSON.stringify(seasons.map((x) => ({ id: x.id, label: x.label, from: x.from, to: x.to }))))}">` +
+        `<div class="adm-card" id="ar-${esc(u.id)}" data-seasons="${esc(JSON.stringify(seasons.map((x) => ({ id: x.id, label: x.label, from: x.from, to: x.to }))))}">` +
         `<div class="adm-card__head"><span class="adm-ico">${ic("pricing")}</span>` +
         `<h2>${esc(u.name)}</h2></div>` +
         // ① base price
@@ -2441,7 +2611,8 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `value="${base ? base.amount : ""}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +
-        `<p class="citui-hint" style="margin:0 0 18px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
+        `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
+        priceDecision(u, Boolean(base), seasons.length > 0, data.status[u.id] ?? "none", lang) +
         (datedRows
           ? datedRows +
             `<p class="citui-hint" style="margin:6px 0 18px">${T(lang, "A dátumos alapár az árajánlatból került ide: a megadott napig érvényes, ahol nincs időszaki ár. Lejárat előtt e-mailben emlékeztetjük.")}</p>`
@@ -2535,6 +2706,9 @@ export interface ModuleSettingsOpts {
    *  A POST round trip carries these back, so a star-click does not dump the owner
    *  on the first tab of a closed editor. */
   readonly roomsView?: RoomsView;
+  /** ADR-0208 ⑥.3 — the new-unit row asks for a price when pricing is on, and the
+   *  flash after a save says where the new unit stands (approved plan price-on-request ②). */
+  readonly newUnit?: NewUnitView;
   /** ADR-0067: the site's own language — the settings screens render in it. */
   readonly lang?: string;
 }
@@ -2734,7 +2908,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
 
   const bespoke =
     def.editor === "booking" && opts.booking
-      ? bookingEditor(moduleId, opts.booking, lang)
+      ? bookingEditor(moduleId, opts.booking, lang, opts.newUnit)
       : def.editor === "rooms" && opts.units
         ? // ADR-0198 — a kártyarács + felugró + fülek szerkesztő. EGY egységnél a mai
           // képernyő marad: ott nincs mit „átlátni", és saját aloldal sem születik
@@ -2748,11 +2922,12 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
               opts.unitAmenities,
               opts.roomsView ?? {},
               lang,
+              opts.newUnit,
             ) +
             amenityPickerScript(lang) +
             roomEditorScript(lang)
           : `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
-            unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData)
+            unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData, lang, opts.newUnit)
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews

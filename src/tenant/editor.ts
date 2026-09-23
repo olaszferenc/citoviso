@@ -354,12 +354,16 @@ export async function moduleContentFor(
         const base = baseRow?.amount;
         const baseUntil = baseRow?.validTo ?? undefined;
         const seasons = publicSeasons(rows, today, horizonMonths);
-        if (base === undefined && !seasons.length) return null;
+        // ADR-0208 ⑥.2: an unpriced unit the owner DECLARED ("nem adok meg árat") is
+        // listed, not dropped — the room list shows it, so the price table must too.
+        const onRequest = base === undefined && u.priceOnRequest;
+        if (base === undefined && !seasons.length && !onRequest) return null;
         return {
           name: u.name,
           ...(base !== undefined ? { base } : {}),
           ...(baseUntil ? { baseUntil } : {}),
           ...(seasons.length ? { seasons } : {}),
+          ...(onRequest ? { onRequest: true } : {}),
         };
       })
       .filter(Boolean) as NonNullable<SiteData["pricing"]>["units"];

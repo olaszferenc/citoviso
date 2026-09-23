@@ -70,7 +70,9 @@ const prices = {
 function render(bookingActive: boolean): string {
   return moduleSettingsSection("pricing", {
     values: {},
-    pricing: { units: [unit], prices, currency: "HUF", bookingActive },
+    // ADR-0208 ⑥.2: the card reads each unit's price status (required; scripts/ is not
+    // type-checked). The fixture unit has a timeless base → complete.
+    pricing: { units: [unit], prices, currency: "HUF", bookingActive, status: { "u-1": "complete" } },
   } as Parameters<typeof moduleSettingsSection>[1]);
 }
 

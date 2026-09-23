@@ -4,7 +4,7 @@ title: Szobák, apartmanok — egységek és saját aloldalaik
 audience: tenant
 category: bookings
 anchors: admin.modules.rooms
-updated: 2026-09-22
+updated: 2026-09-23
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -29,6 +29,14 @@ képpel szerepel.
 Új egységet a rács alatti **„Új egység felvétele”** résznél vesz fel: adja meg a nevét, a
 férőhelyét, és nyomja meg a **„Hozzáadás”** gombot. Ha csak egyben adja ki az egész szállást, elég
 egyetlen egység — ilyenkor a vendég nem is találkozik a szobaválasztással.
+
+Ha az Árak modul is be van kapcsolva, a **„Hozzáadás”** megnyomása ELŐTT ugyanitt az árat is
+megadhatja (**„Alapár”** mező), vagy bepipálhatja a gomb alatti négyzetet: **„Nem adok meg árat —
+egyedi ajánlatot küldök”**. Egyiket sem kötelező kitölteni, a szoba mindenképp felkerül. Ha a
+beírt árat nem tudjuk értelmezni (például betűvel írta), a szoba ár nélkül kerül fel, és a sárga
+sor ezt is megmondja. Ha se ár, se pipa nincs, a mentés után egy sárga sor mondja ki,
+hogy a szobát felvettük, de nincs ára. Mellette az **„Árat adok meg”** gomb az Árazás lapra visz, a
+**„Nem adok meg árat”** gomb pedig ott helyben rögzíti, hogy egyedi ajánlatot ad.
 
 ## A szerkesztő: koppintson a kártyára
 

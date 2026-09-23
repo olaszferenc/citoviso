@@ -136,6 +136,10 @@ export async function setBasePrice(unitId: string, amount: number | null): Promi
     .where("valid_from", "is", null)
     .execute();
   if (amount && amount > 0) {
+    // ADR-0208 ⑥.2: a timeless base prices every night, so "nem adok meg alapárat" no
+    // longer means anything — and left set, it would silently come back the day the
+    // owner takes the base down again, as a decision they did not make that day.
+    await db.updateTable("site_unit").set({ price_on_request: false }).where("id", "=", unitId).execute();
     await db
       .insertInto("unit_price")
       .values({
@@ -490,6 +494,52 @@ export function publicSeasons(rows: readonly UnitPrice[], today: string, horizon
     out.push({ label: r.label, from: r.from!, to: r.to!, amount: r.amount, year: o.label, start: r.validFrom!, end: r.validTo! });
   }
   return out;
+}
+
+/**
+ * ADR-0208 ⑥.2–⑥.4 — how complete is ONE unit's price list, looking ahead?
+ *
+ *   complete    every bookable night of the horizon resolves to a price
+ *   on_request  some night does not, and the owner SAID so ("nem adok meg alapárat")
+ *   none        no night resolves, and nobody said anything
+ *   partial     some nights resolve, some do not (ADR-0197 ①: the case no gate saw)
+ *
+ * ⛔ ONE predicate for every reader: the Árazás card's state line, the overview
+ * to-do row and the weekly reminder. A to-do that says "hiányos" while the card
+ * says nothing is two truths on two screens (feedback_one_rule_two_copies).
+ *
+ * The night-by-night walk uses priceOn() — the very rule that decides what the guest
+ * reads and what freezes onto a request — so "priced" here means priced THERE.
+ * A seasonal-only unit is let only inside its seasons, and inside a season a row
+ * always exists, so any active row makes it complete; its off-season is closed, not
+ * unpriced.
+ */
+export type UnitPriceStatus = "complete" | "on_request" | "none" | "partial";
+
+export const PRICE_HORIZON_DAYS = 365;
+
+export function unitPriceStatus(
+  prices: readonly UnitPrice[],
+  unit: { readonly seasonalOnly: boolean; readonly priceOnRequest: boolean },
+  today: string = new Date().toISOString().slice(0, 10),
+): UnitPriceStatus {
+  const active = prices.filter((p) => isPriceActive(p, today));
+  let priced = 0;
+  let gaps = 0;
+  if (unit.seasonalOnly) {
+    if (active.length) return "complete";
+    gaps = 1;
+  } else {
+    const d = new Date(`${today}T00:00:00Z`);
+    for (let i = 0; i < PRICE_HORIZON_DAYS; i++) {
+      if (priceOn(active, d.toISOString().slice(0, 10))) priced++;
+      else gaps++;
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
+  }
+  if (!gaps) return "complete";
+  if (unit.priceOnRequest) return "on_request";
+  return priced ? "partial" : "none";
 }
 
 /** Is the row still able to price some night from `today` on? Timeless rows always are. */

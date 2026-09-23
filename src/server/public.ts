@@ -110,6 +110,7 @@ import {
   guestCancelDonePage,
   hasSettingsScreen,
   moduleSettingsSection,
+  type NewUnitView,
   reviewThanksPage,
   reviewVerdictPage,
 } from "./moduleConfigViews.js";
@@ -121,6 +122,8 @@ import {
   ensureUnits,
   setUnitAmenities,
   setUnitSeasonalOnly,
+  setUnitPriceOnRequest,
+  getUnits,
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
@@ -138,6 +141,7 @@ import {
   respondToOffer,
   sendOffer,
   unseenRequestCount,
+  parseOfferAmount,
 } from "../booking/requests.js";
 import {
   guestOfferPage,
@@ -154,7 +158,10 @@ import {
   setBasePrice,
   setSeasonYearPrice,
   updateSeasonPrice,
+  unitPriceStatus,
+  type UnitPriceStatus,
 } from "../tenant/prices.js";
+import { sitePriceGaps } from "../tenant/priceGap.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
   getSiteModuleConfig,
@@ -1107,6 +1114,7 @@ async function serveAdmin(
   // is, és akkor a lapon továbbra sincs semmi — a másik kérdést feltevő őr zölden
   // engedte volna át, miközben a vevő üres szakaszt lát.
   let paidEmpty: AdminOpts["paidEmpty"] = [];
+  let priceGaps: AdminOpts["priceGaps"] = [];
   const overviewTab = !tab || tab === "attekintes";
   if (overviewTab && site?.id) {
     const moduleContent = await moduleContentFor(session.tenantId, site.id);
@@ -1120,6 +1128,10 @@ async function serveAdmin(
     // a szabállyal képződik, mint a Modulok fülön (éves fióknál az éves összeg vezet),
     // hogy ne kerüljön két különböző osztó a tulaj két képernyőjére.
     if (paidEmpty.length) subscription ??= await getSubscriptionAdmin(session.tenantId, modules);
+    // ADR-0208 ⑥.4 — the incomplete-price row. ⛔ Not beside a paid-empty "Árak" row:
+    // that one already says the whole section is empty; two rows about the same gap
+    // would read as two problems.
+    if (!paidEmpty.some((m) => m.id === "pricing")) priceGaps = await sitePriceGaps(site.id);
   }
 
   let moduleSettingsHtml: string | null = null;
@@ -1179,6 +1191,7 @@ async function serveAdmin(
           seasonalOnly: u.seasonalOnly,
           // ADR-0114: the card says "az egész ház" — it changes what the unit MEANS.
           isWholeProperty: u.isWholeProperty,
+          priceOnRequest: u.priceOnRequest,
         }));
         // The shared library the room card offers to pick from.
         photoLibrary = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
@@ -1198,12 +1211,17 @@ async function serveAdmin(
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
           for (const u of list) prices[u.id] = await getUnitPrices(u.id);
+          // ADR-0208 ⑥.2–⑥.4: the card's state line comes from the ONE predicate the
+          // overview to-do and the weekly reminder read.
+          const status: Record<string, UnitPriceStatus> = {};
+          for (const u of list) status[u.id] = unitPriceStatus(prices[u.id] ?? [], u);
           // 0074: which season is open for editing, which year card was just saved or
           // refused, and where the refusal text belongs (next to it, not at the top).
           const qp = new URL(req.url ?? "/", "http://x").searchParams;
           pricing = {
             units,
             prices,
+            status,
             editSeason: qp.get("edit"),
             savedSeason: qp.get("sv"),
             yearFocus: qp.get("ev"),
@@ -1269,6 +1287,28 @@ async function serveAdmin(
         };
       }
 
+      // ADR-0208 ⑥.3 — the new-unit row (rooms / booking) asks for a price when pricing
+      // is on; `uj`+`ue` carry the outcome of the save back to the same screen.
+      let newUnit: NewUnitView | null = null;
+      if (moduleId === "rooms" || moduleId === "booking") {
+        const q = new URL(req.url ?? "/", "http://x").searchParams;
+        const state = q.get("uj");
+        const ue = q.get("ue") ?? "";
+        const flashUnit =
+          state && ["ar", "ajanlat", "kimondva", "nincs", "rossz"].includes(state)
+            ? (await getUnits(site.id)).find((u) => u.id === ue)
+            : undefined;
+        const priceCfg = await getSiteModuleConfig(site.id, "pricing");
+        newUnit = {
+          pricingActive: await tenantHasModule(session.tenantId, "pricing"),
+          currency: String(priceCfg.config.currency ?? "HUF"),
+          back: moduleId,
+          flash: flashUnit
+            ? { state: state as NonNullable<NewUnitView["flash"]>["state"], unitId: flashUnit.id, unitName: flashUnit.name }
+            : null,
+        };
+      }
+
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
         // ADR-0067: the settings screens speak the tenant's own site language.
         lang: content?.lang ?? "hu",
@@ -1291,6 +1331,7 @@ async function serveAdmin(
         // ADR-0198 — a felugró állapota a körút után: melyik szoba, melyik fül, és
         // mi történt. A `#szoba-<id>` horgony nyitja a felugrót (`:target`), ez
         // pedig a fület és a nyugtázó üzenetet adja hozzá.
+        ...(newUnit ? { newUnit } : {}),
         ...(moduleId === "rooms"
           ? { roomsView: { openUnitId: unitId ?? null, tab: roomTab ?? null, notice: roomNotice ?? null } }
           : {}),
@@ -1613,6 +1654,7 @@ async function serveAdmin(
       previewToken: site?.preview_token,
       modules,
       paidEmpty,
+      priceGaps,
       subscription,
       moduleApplied,
       domainSettle,
@@ -2370,6 +2412,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
+    let newUnit: { id: string; state: "ar" | "ajanlat" | "nincs" | "rossz" } | null = null;
     if (siteId) {
       const id = form.get("id") ?? "";
       const name = form.get("name") ?? "";
@@ -2378,12 +2421,37 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (id && (await unitBelongsToSite(siteId, id))) {
         await updateUnit(siteId, id, name, cap, form.get("description"));
       } else if (!id) {
-        await createUnit(siteId, name, cap, form.get("description"));
+        const created = await createUnit(siteId, name, cap, form.get("description"));
+        // ADR-0208 ⑥.3 (approved plan price-on-request ②): with pricing on, the new-unit
+        // row asks for the price or "nem adok meg árat". ⛔ It never refuses the save
+        // (ADR-0193 ①) — a unit without either is created, and the flash says what
+        // that means and offers both ways out.
+        if (created && (await tenantHasModule(session.tenantId, "pricing"))) {
+          const amount = parseOfferAmount(form.get("price") ?? "");
+          if (amount.value) {
+            await setBasePrice(created, amount.value);
+            newUnit = { id: created, state: "ar" };
+          } else if (form.get("price_on_request") !== null) {
+            await setUnitPriceOnRequest(created, true);
+            newUnit = { id: created, state: "ajanlat" };
+          } else {
+            // A malformed amount is not silently dropped as "no price": the flash
+            // names it, so the owner knows the figure they typed was not taken.
+            newUnit = { id: created, state: amount.error ? "rossz" : "nincs" };
+          }
+        }
       }
     }
+    // The owner comes back to the screen the row was on (rooms or booking) — the
+    // flash about the price has to be where they are looking.
+    const back = form.get("back") === "rooms" ? "rooms" : "booking";
+    // `#nu-flash`: on a phone the flash sits ~600 px down, under the cookie bar and the
+    // fixed bottom nav (measured) — without the anchor the owner lands on the page and
+    // never sees what just happened to the unit they added.
+    const flash = newUnit ? `&uj=${newUnit.state}&ue=${encodeURIComponent(newUnit.id)}#nu-flash` : "";
     // A new or renamed unit is a ROOM CARD on the page (and its own subpage) — the
     // snapshot has to be rebuilt or the owner adds apartments nobody can see.
-    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=booking&saved=1");
+    return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=${back}&saved=1${flash}`);
   }
   if (req.method === "POST" && pathname === "/admin/units/delete") {
     const session = await currentTenant(req);
@@ -2631,6 +2699,28 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
     }
     return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=pricing&saved=1&ev=${ev}#ev-${ev}`);
+  }
+  // ADR-0208 ⑥.2 — "nem adok meg alapárat", per unit (approved plan price-on-request A).
+  // Saved on toggle. The page lists the unit as "Egyedi ajánlat alapján" from now on,
+  // so it is re-rendered. `back` lets the new-unit flash on the rooms/booking screen
+  // record the same decision without sending the owner to another tab.
+  if (req.method === "POST" && pathname === "/admin/prices/request") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const unit = form.get("unit") ?? "";
+    if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
+      if (await unitBelongsToSite(siteId, unit)) {
+        await setUnitPriceOnRequest(unit, form.get("on") !== null);
+      }
+    }
+    const back = form.get("back");
+    const target =
+      back === "rooms" || back === "booking"
+        ? `/admin?tab=modulok&m=${back}&saved=1&uj=kimondva&ue=${encodeURIComponent(unit)}#nu-flash`
+        : "/admin?tab=modulok&m=pricing&saved=1";
+    return redirectRerendered(res, session.tenantId, target);
   }
   // ADR-0049 — "csak a felsorolt időszakokban adom ki", per unit. Off by default, so
   // an owner who never opens this screen keeps the all-year behaviour they had.

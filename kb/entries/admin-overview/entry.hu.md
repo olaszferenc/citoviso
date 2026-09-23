@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-09-21
+updated: 2026-09-23
 ---
 
 Az **Áttekintés** fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -64,6 +64,19 @@ Amint mentette a tartalmat, a sor magától eltűnik a listáról, és a szakasz
 Öt modulnál fordulhat elő: **Árak, szezonok**; **Heti programajánló**; **Nyitvatartás, érkezés**;
 **Amit kínál (felszereltség)**; **Szobák, apartmanok**. A többi modul üresen is mutat valamit a
 vendégnek, ezért azoknál ilyen sor nem jelenik meg.
+
+## „… szobájának nincs ára”
+
+Ha az Árak modul be van kapcsolva, és egy szobának nincs ára, vagy csak az év egy részére van, a
+Teendők között sor jelenik meg, ami megmondja, hány szobájának nincs ára (például „2 szobájának
+nincs ára”). Alatta felsoroljuk, melyik
+szobáról van szó, és mi hiányzik belőle. A vendég ezekre az éjszakákra nem lát árat, és foglalás
+helyett árajánlatot kér.
+
+A **„Megadom az árakat”** gomb az Árazás lapra visz. Ha egy szobára szándékosan nem ad meg árat,
+mert mindig egyedi ajánlatot küld, ott pipálja be — akkor a szoba lekerül a sorról, és
+emlékeztetőt sem küldünk róla. Ha az Árak modulban egyáltalán nincs tartalom, ez a sor nem
+jelenik meg, mert akkor a „Töltse ki:” sor szól róla.
 
 ## Az oldal megnyitása
 

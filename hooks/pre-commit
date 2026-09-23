@@ -72,8 +72,7 @@ fi
 # ⛔ FELOLDATLAN MERGE-KONFLIKTUS (2026-09-14, valós kár KÉTSZER). ~10 párhuzamos szál
 # mellett a közös doksik (MEMORY.md, INDEX.md, DECISIONS.md) minden rebase-en ütköznek.
 # A MEMORY.md-be landolt jelölőt a nap zárásakor észrevettük — az INDEX.md-ét viszont
-# SENKI: a <<<<<<< / ======= / >>>>>>> hármas ott ült az origin/main-en, és két valódi
-# bejegyzést tett olvashatatlanná. Egyetlen kapu sem nézte. Ez az.
+# SENKI: a # bejegyzést tett olvashatatlanná. Egyetlen kapu sem nézte. Ez az.
 # ⚠️ A STAGED tartalmat olvassa (`git show :<f>`), nem a munkafát: a kapuk a munkafán
 # mérnek, és pont ez engedett már át egy féloldalas commitot.
 # ⛔ `if`, nem `grep -q … && echo`: ez a fájl `set -e` alatt fut, és a `&&` a NEM-TALÁLAT
@@ -1675,6 +1674,15 @@ if [ -f scripts/season-year-price-check.mts ] && \
    changed_files | grep -qE '^src/tenant/(prices|priceExpiry|seasonNudge|seasonRule|editor)\.ts$|^src/server/(moduleConfigViews|public)\.ts$|^src/engine/moduleSections\.ts$|^assets/runtime/cit-season\.cjs$|^migrations/0074_|^assets/design-refs/tenant-admin/season-year-price/|^scripts/season-year-price-check'; then
   echo "[pre-commit] season-year-price (évhez kötött szezonár, évsáv, szezon végi kérdés)…"
   npx tsx scripts/season-year-price-check.mts >"$GATE_LOG" || gate_failed
+fi
+# „NEM ADOK MEG ÁRAT" + ÚJ EGYSÉG ÁRA + HETI EMLÉKEZTETŐ (ADR-0208 ⑥.2–⑥.4, kontraktus:
+# design-refs/tenant-admin/price-on-request): a hiányzó ár és a kimondott „nincs ár" EGY
+# predikátumból (unitPriceStatus) dől el a kártyán, a teendő-soron és a heti levélben —
+# három felület, egy szabály; a trigger ezért mindhármat és a szabályt is lefedi.
+if [ -f scripts/price-on-request-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(prices|priceGap|units|editor)\.ts$|^src/server/(moduleConfigViews|adminViews|public)\.ts$|^src/engine/moduleSections\.ts$|^scripts/booking-maintenance\.mts$|^assets/design-refs/tenant-admin/price-on-request/|^scripts/price-on-request-check'; then
+  echo "[pre-commit] price-on-request (a „nincs ár” kimondott döntés, új egység ára, heti emlékeztető)…"
+  npx tsx scripts/price-on-request-check.mts >"$GATE_LOG" || gate_failed
 fi
 # SZEZON-SZABÁLY (ADR-0197 ③): a „melyik ár-sor vonatkozik erre az éjszakára?" kérdés
 # KÉT példányban élt — a szerveré fagy rá a foglalási kérésre és megy ki a vendég

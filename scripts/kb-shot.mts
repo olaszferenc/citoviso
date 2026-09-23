@@ -695,6 +695,10 @@ function moduleShotHtml(entryId: string): string {
         },
         // A fixed day, so the strip's first card (and so the shot) does not drift daily.
         today: `${SHOT_YEAR - 1}-09-23`,
+        // ADR-0208 ⑥.2: the whole place has no price yet — the shot shows the state line
+        // and the "nem adok meg alapárat" box the entry describes. REQUIRED: the view reads
+        // it per unit, and scripts/ is not type-checked.
+        status: { u0: "none", u1: "complete", u2: "complete" },
       },
     });
   if (entryId === "admin-modules-programs") {
@@ -1269,6 +1273,16 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
             : undefined,
   );
 }
+// ADR-0208 ⑥.2: the pricing entry's "ha szándékosan nem ad meg árat" section is about
+// ONE card — the state line and the box — and both sit below the 390×844 fold of the
+// screen shot above. The element capture carries them.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "nincs-ar.png"),
+  undefined,
+  moduleShotHtml("admin-modules-pricing"),
+  "#ar-u0",
+);
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative
 // numbers the frozen plan mock uses (12/5/7 months, 8 000 floor, 20 000 buyout),
 // so the guide image and the contract tell one story.

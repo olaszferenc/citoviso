@@ -82,6 +82,10 @@
 /* Az éves fiók havi egységára a másodlagos adat — a vezető szám az, amit fizet. */
 .adm-todo__price .adm-price__alt{font-size:.78rem;font-style:normal;color:var(--citui-muted);margin-left:5px}
 .adm-todo__note{display:block;margin-top:3px;font-size:.85rem;color:var(--citui-muted)}
+/* ADR-0208 ⑥.4 — a teendő-sor BELSŐ felsorolása (az árazatlan szobák): nem teendő-kártya,
+   ezért a .adm-todo li keretét, flexét és párnázását leveszi. */
+.adm-todo .adm-todo__list{list-style:disc;margin:6px 0 0;padding-left:20px;display:block}
+.adm-todo .adm-todo__list li{display:list-item;border:0;border-radius:0;padding:1px 0;font-size:.92rem}
 .adm-todo__acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
 /* A gombok feliratát a link-szabály (.adm-todo li a) ciánra festené — egy cián
    gradiensen az 1.16-os kontraszt olvashatatlan. A gomb az GOMB, nem link. */

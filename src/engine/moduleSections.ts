@@ -336,6 +336,13 @@ function pricingBlock(d: SiteData): string {
           `<tr><td>${T(d, "Egyéb időszakban")}</td><td>${until}</td>` +
             `<td>${esc(money(u.base, p.currency))}</td></tr>`,
         );
+      } else if (u.onRequest) {
+        // ADR-0208 ⑥.2 — the owner's stated decision, in the row where the base would
+        // stand: with seasons it covers "the rest of the year", alone the whole year.
+        rows.push(
+          `<tr data-cit-onrequest><td>${u.seasons?.length ? T(d, "Egyéb időszakban") : T(d, "Egész évben")}</td><td></td>` +
+            `<td><em>${T(d, "Egyedi ajánlat alapján")}</em></td></tr>`,
+        );
       }
       if (!rows.length) return "";
       // Every unit is its own block, named — with several of them the runtime turns

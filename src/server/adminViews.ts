@@ -2,6 +2,7 @@
 // Server-rendered HTML; Post/Redirect/Get for mutations. No framework (node:http).
 
 import type { TenantSession } from "../auth/tenantAuth.js";
+import type { PriceGap } from "../tenant/priceGap.js";
 import {
   GROUP_LABELS,
   applicableRequirements,
@@ -3099,6 +3100,8 @@ function overviewSection(
   paidEmpty: readonly TenantModule[] = [],
   /** Only to price those rows the way the account is billed (annual vs monthly). */
   sub: SubscriptionAdminData | null = null,
+  /** ADR-0208 ⑥.4 — incomplete, undeclared price lists (unitPriceStatus none|partial). */
+  priceGaps: readonly PriceGap[] = [],
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -3183,8 +3186,38 @@ function overviewSection(
       );
     })
     .join("");
+  // ── ADR-0208 ⑥.4 (approved plan price-on-request ③) ─────────────────────────
+  // A unit with unpriced nights ahead, and no "nem adok meg árat" from the owner.
+  // The paid-empty row above only fires when pricing has NOTHING; a partly priced
+  // site (ADR-0197 ①: 28 000 Ft on one tab, nothing on the next) was silent here.
+  // ⛔ The SAME predicate the Árazás card's state line and the weekly reminder read
+  // (unitPriceStatus), so the three can never disagree about a unit.
+  const priceGapRow = priceGaps.length
+    ? `<li class="pending adm-todo__paid" data-todo="price-gap">` +
+      `<span class="adm-tico">${ic("alert", 18)}</span>` +
+      `<span class="adm-todo__body">` +
+      `<strong>${
+        priceGaps.length === 1
+          ? T(lang, "1 szobájának nincs ára")
+          : T(lang, "{n} szobájának nincs ára", { n: priceGaps.length })
+      }</strong> ${T(lang, "— a vendég ezekre nem lát árat, és árajánlatot kér")}` +
+      `<ul class="adm-todo__list">${priceGaps
+        .map(
+          (g) =>
+            `<li>${esc(g.name)} — ${
+              g.status === "none"
+                ? T(lang, "egyik éjszakára sincs ár")
+                : T(lang, "az év egy részére nincs ár")
+            }</li>`,
+        )
+        .join("")}</ul>` +
+      `<span class="adm-todo__note">${T(lang, "Ha szándékosan nem ad meg árat, jelölje be az Árazás lapon — akkor ez a sor eltűnik, és emlékeztetőt sem küldünk.")}</span>` +
+      `<span class="adm-todo__acts"><a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok&m=pricing">${T(lang, "Megadom az árakat")}</a></span>` +
+      `</span></li>`
+    : "";
   const todo =
     paidEmptyRows +
+    priceGapRow +
     todoItem(
       content.usingOwnPhotos,
       content.usingOwnPhotos
@@ -4168,6 +4201,8 @@ export interface AdminOpts {
    * renderer's own async `moduleContentFor()`), see paidButEmptyModules().
    */
   readonly paidEmpty?: readonly TenantModule[];
+  /** ADR-0208 ⑥.4 — units whose price list is incomplete and undeclared. */
+  readonly priceGaps?: readonly PriceGap[];
   /** ADR-0080: subscription card data for the Modulok tab (null → no card). */
   readonly subscription?: SubscriptionAdminData | null;
   /** ADR-0080: the applied-changes confirmation after POST /admin/modules. */
@@ -4538,6 +4573,7 @@ export function adminDashboard(
                 lang,
                 opts.paidEmpty ?? [],
                 opts.subscription ?? null,
+                opts.priceGaps ?? [],
               );
 
   return shell(

@@ -138,6 +138,8 @@ export const I18N_SOURCES = [
   "src/server/offerViews.ts",
   "src/tenant/priceExpiry.ts",
   "src/tenant/seasonNudge.ts",
+  // ADR-0208 ⑥.4 (2026-09-23): the weekly price-gap reminder mail — new file, day one.
+  "src/tenant/priceGap.ts",
 
   // ── The INTERNAL CONSOLE (ADR-0067 ③) ────────────────────────────────────
   // Operator-facing, and prepared for a non-Hungarian colleague: the language is

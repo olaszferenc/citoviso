@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terv — „nem adok meg árat”, új egység ára, heti emlékeztető</title>
+<style>
+:root{
+  --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-cyan-500:#1fb6d6; --citui-cyan-300:#7fdcee;
+  --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fdf6e6; --citui-bad:#e5484d;
+  --citui-ok-text:#1f7a4c; --citui-warn-text:#8a6212; --citui-bad-text:#b3262b;
+  --r:14px; --font:Inter,'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);color:var(--citui-ink);background:#e9eef2}
+.wrap{max-width:1180px;margin:0 auto;padding:14px}
+h1{font-size:19px;margin:0 0 4px}
+.lede{color:var(--citui-muted);font-size:14px;line-height:1.55;margin:0 0 14px}
+.sizebar{position:sticky;top:0;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--citui-navy-900);color:#fff;padding:10px 12px;border-radius:12px;margin-bottom:14px}
+.sizebar b{font-size:13px;margin-right:auto}
+.sizebar button{font:inherit;font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;cursor:pointer}
+.sizebar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06232b;font-weight:700}
+.stage{container-type:inline-size;margin:0 auto}
+body[data-size="mobile"] .stage{max-width:390px}
+body[data-size="desktop"] .stage{max-width:1180px}
+.sec{background:#fff;border:1px solid #cfd8e0;border-radius:12px;padding:14px;margin-bottom:22px}
+.sec>h2{font-size:16px;margin:0 0 4px}
+.sec>.why{font-size:13.5px;color:var(--citui-muted);line-height:1.5;margin:0 0 14px}
+.tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--citui-navy-900);color:#fff;border-radius:6px;padding:2px 7px;margin-right:6px;vertical-align:2px}
+.pair{display:grid;gap:16px}
+@container (min-width:900px){ .pair{grid-template-columns:1fr 1fr;align-items:start} }
+.vlabel{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px}
+
+/* admin skin */
+.adm{background:var(--citui-surface);border-radius:12px;padding:12px}
+.card{background:#fff;border:1px solid var(--citui-line);border-radius:var(--r);overflow:hidden}
+.card__head{background:var(--citui-navy-800);color:#fff;display:flex;gap:10px;align-items:center;padding:13px 16px}
+.card__head h3{margin:0;font-size:16px}
+.card__head .ico{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.card__body{padding:16px}
+.lbl{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.suffix{display:flex;align-items:center;gap:6px}
+.inp{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--citui-line-strong);border-radius:10px;background:#fff;width:130px}
+.inp--name{width:100%;min-width:0}
+.inp:disabled{background:var(--citui-surface-2);color:var(--citui-muted)}
+.inp[aria-invalid="true"]{border-color:var(--citui-bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-bad) 18%,transparent)}
+.btn{font:inherit;font-size:15px;font-weight:700;padding:10px 18px;border-radius:10px;cursor:pointer;border:1px solid var(--citui-line-strong);background:#fff;color:var(--citui-ink)}
+.btn--pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06232b}
+a.btn{text-decoration:none;display:inline-block}
+.btn--sm{font-size:13.5px;padding:7px 12px}
+.hint{font-size:12.5px;color:var(--citui-muted);line-height:1.5;margin:6px 0 0}
+.err{font-size:13px;color:var(--citui-bad-text);margin:6px 0 0}
+.sub{font-size:13.5px;font-weight:700;margin:18px 0 6px}
+.price-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--citui-line);font-size:14px}
+.price-row small{display:block;color:var(--citui-muted)}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:11px 12px;border:1px solid var(--citui-line-strong);border-radius:10px;cursor:pointer;font-size:14px;line-height:1.45}
+.check input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--citui-navy-800)}
+.check b{display:block}
+.check span span{color:var(--citui-muted);font-size:13px}
+.check[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.state{margin-top:12px;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.state svg{flex:none;margin-top:2px}
+.state--warn{background:var(--citui-warn-soft);border-left:4px solid var(--citui-warn);color:var(--citui-warn-text)}
+.state--ok{background:var(--citui-ok-soft);border-left:4px solid var(--citui-ok);color:var(--citui-ok-text)}
+.state--info{background:var(--citui-surface-2);border-left:4px solid var(--citui-cyan-500);color:var(--citui-ink)}
+.state b{color:inherit}
+.seg{display:grid;gap:8px;margin-top:4px}
+@container (min-width:560px){ .seg{grid-template-columns:1fr 1fr} }
+.seg label{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--citui-line-strong);border-radius:12px;padding:12px;cursor:pointer;font-size:14px;line-height:1.45}
+.seg label:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 7%,#fff)}
+.seg input[type=radio]{accent-color:var(--citui-navy-800);width:18px;height:18px;flex:none;margin:1px 0 0}
+.seg b{display:block}
+.seg small{color:var(--citui-muted);font-size:12.5px}
+.seg .inline{margin-top:8px;display:flex}
+.seg .inline .inp{width:130px;flex:none}
+.seg label>span{flex:1;min-width:0}
+
+/* new unit */
+.newunit{border:1.5px dashed var(--citui-line-strong);border-radius:var(--r);padding:14px;background:#fff}
+.newunit h4{margin:0 0 10px;font-size:15px}
+.nu-grid{display:grid;gap:10px}
+@container (min-width:760px){ .nu-grid{grid-template-columns:2fr 110px 170px auto;align-items:end} }
+.nu-grid .inp{width:100%}
+.flash{margin-top:12px}
+.flash .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.list-mini{margin:12px 0 0;padding:0;list-style:none}
+.list-mini li{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--citui-line);border-radius:10px;margin-bottom:6px;font-size:14px;background:#fff}
+.list-mini em{font-style:normal;color:var(--citui-muted);font-size:13px}
+
+/* todo */
+.todo{list-style:none;margin:0;padding:0}
+.todo>li{display:flex;gap:10px;padding:12px;border:1px solid var(--citui-line);border-radius:12px;background:#fff;margin-bottom:8px;font-size:14px;line-height:1.5}
+.todo>li.pending{border-left:4px solid var(--citui-warn)}
+.todo>li.done{color:var(--citui-muted)}
+.todo .ico{flex:none;margin-top:2px}
+.todo .note{display:block;color:var(--citui-muted);font-size:13px;margin-top:3px}
+.todo .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.todo ul{margin:4px 0 0;padding-left:18px;list-style:disc}
+.todo ul li{margin:2px 0}
+
+/* mail */
+.mail{border:1px solid var(--citui-line-strong);border-radius:10px;overflow:hidden;background:#fff;max-width:640px}
+.mail__head{background:var(--citui-surface-2);padding:8px 12px;font-size:12.5px;color:var(--citui-muted);line-height:1.6}
+.mail__head b{color:var(--citui-ink)}
+.mail__body{padding:16px;font-size:15px;line-height:1.65}
+.mail__body .t{font-size:18px;font-weight:700;margin:0 0 8px}
+.mail__body ul{padding-left:20px;margin:6px 0 12px}
+.mbtn{display:inline-block;padding:12px 20px;border-radius:10px;font-size:15px;font-weight:600;margin:4px 6px 4px 0;text-decoration:none}
+.mbtn--pri{background:var(--citui-navy-800);color:#fff}
+.mbtn--sec{background:#fff;color:var(--citui-navy-800);border:1px solid var(--citui-line-strong)}
+.mail__foot{font-size:12.5px;color:var(--citui-muted);border-top:1px solid var(--citui-line);padding:10px 16px;line-height:1.5}
+
+/* guest */
+.guest{background:#fbf8f3;border-radius:12px;padding:18px;font-family:Georgia,serif;color:#2c2419}
+.guest h4{font-size:22px;margin:0 0 12px;font-weight:600}
+.gtab{width:100%;border-collapse:collapse;font-size:15px}
+.gtab td{padding:10px 4px;border-bottom:1px solid rgba(44,36,25,.14);vertical-align:top}
+.gtab td:last-child{text-align:right;white-space:nowrap;font-weight:600}
+.gtab small{display:block;color:#7a6b58;font-size:13px;font-weight:400}
+.gtab .req{font-style:italic;font-weight:400;color:#5b4a36}
+.sim{font-family:var(--font);font-size:12px;color:var(--citui-muted);margin-top:10px}
+.sim button{font:inherit;font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid var(--citui-line-strong);background:#fff;cursor:pointer;margin:2px}
+.sim button[aria-pressed="true"]{background:var(--citui-navy-800);color:#fff}
+</style>
+</head>
+<body data-size="desktop">
+<div class="wrap">
+<div class="sizebar"><b>Terv — ② „nem adok meg árat” · ③ új egység ára · ④ heti emlékeztető</b>
+  <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+  <button type="button" data-size="desktop" aria-pressed="true">Asztali</button>
+</div>
+<h1>Mit dönt el ez a kör?</h1>
+<p class="lede">Az <b>1. rész</b> kérdés: hogyan álljon a pipa a szoba ár-kártyáján (<b>A</b> = pipa az alapár alatt, <b>B</b> = két választható út). A 2–5. rész közös, és azt mutatja, mi következik a pipából: új szoba felvétele, Áttekintés teendő-sor, heti levél, vendég-oldali „Árak”. Minden mező működik: írjon be árat (a „26 000”, „26.000” és „26000 Ft” is jó), törölje ki, pipálja be.</p>
+
+<div class="stage">
+
+<!-- ① UNIT CARD -->
+<section class="sec">
+  <h2><span class="tag">1</span>Árazás lap — egy szoba kártyája</h2>
+  <p class="why">A pipa csak akkor választható, ha <b>nincs alapár</b>: alapárral minden éjszakának van ára, így nincs mit kimondani. A szezonárak (Főszezon) ettől függetlenül érvényesek, a pipa csak a <b>többi</b> éjszakára mondja, hogy egyedi ajánlat megy.</p>
+  <div class="pair">
+    <div>
+      <p class="vlabel">A — pipa az alapár alatt</p>
+      <div class="adm"><div class="card" data-variant="A">
+        <div class="card__head"><span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--citui-cyan-300)" stroke-width="2"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><h3>Nagy lakosztály</h3></div>
+        <div class="card__body">
+          <label class="lbl" for="a-base">Alapár</label>
+          <div class="row"><span class="suffix"><input id="a-base" class="inp" inputmode="numeric" placeholder="0" data-base><span>Ft</span></span><button class="btn" type="button" data-save>Mentés</button></div>
+          <p class="err" data-err hidden></p>
+          <p class="hint">Ez érvényes, amikor egyik időszak sem.</p>
+          <label class="check" data-checkwrap>
+            <input type="checkbox" data-decl>
+            <span><b>Nem adok meg alapárat — ahol nincs ár, egyedi ajánlatot küldök</b>
+            <span>A vendég ilyenkor árajánlatot kér, és Ön a rendszerből válaszol.</span></span>
+          </label>
+          <div data-state></div>
+          <p class="sub">Időszaki árak</p>
+          <div class="price-row"><span><b>Főszezon</b><small>06-15 – 08-31</small></span><span>38 000 Ft</span></div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <p class="vlabel">B — két út, egyiket választja</p>
+      <div class="adm"><div class="card" data-variant="B">
+        <div class="card__head"><span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--citui-cyan-300)" stroke-width="2"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><h3>Nagy lakosztály</h3></div>
+        <div class="card__body">
+          <span class="lbl">Mennyibe kerül egy éjszaka?</span>
+          <div class="seg">
+            <label><input type="radio" name="b-mode" value="price" checked data-mode>
+              <span><b>Alapárat adok meg</b><small>Érvényes, amikor egyik időszak sem.</small>
+              <span class="suffix inline"><input class="inp" inputmode="numeric" placeholder="0" data-base aria-label="Alapár"><span>Ft</span></span>
+              <span class="err" data-err hidden style="display:block"></span></span></label>
+            <label><input type="radio" name="b-mode" value="request" data-mode>
+              <span><b>Nem adok meg alapárat</b><small>Ahol nincs ár, a vendég árajánlatot kér, és Ön a rendszerből válaszol.</small></span></label>
+          </div>
+          <div class="row" style="margin-top:10px"><button class="btn" type="button" data-save>Mentés</button></div>
+          <div data-state></div>
+          <p class="sub">Időszaki árak</p>
+          <div class="price-row"><span><b>Főszezon</b><small>06-15 – 08-31</small></span><span>38 000 Ft</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ② NEW UNIT -->
+<section class="sec">
+  <h2><span class="tag">2</span>Új egység felvétele (Szobák és Foglalás modul)</h2>
+  <p class="why">Ha az árazás aktív, a felvevő sorban ott az ár és a pipa. <b>A mentés soha nem tilt</b> (ADR-0193): ár és pipa nélkül is felveszi a szobát, de a visszajelzés kimondja a következményt, és egy kattintással az Árazás lapra visz. Próbálja ki mindhárom utat.</p>
+  <div class="adm">
+    <form class="newunit" id="nu" novalidate>
+      <h4>+ Új egység felvétele</h4>
+      <div class="nu-grid">
+        <label><span class="lbl">Neve</span><input class="inp inp--name" name="name" placeholder="Pl. Kertre néző apartman"></label>
+        <label><span class="lbl">Férőhely</span><span class="suffix"><input class="inp" name="cap" inputmode="numeric" placeholder="2" style="width:70px"><span>fő</span></span></label>
+        <label><span class="lbl">Alapár / éj</span><span class="suffix"><input class="inp" name="price" inputmode="numeric" placeholder="0" style="width:120px"><span>Ft</span></span></label>
+        <button class="btn btn--pri" type="submit">Hozzáadás</button>
+      </div>
+      <p class="err" data-err hidden></p>
+      <label class="check"><input type="checkbox" name="decl"><span><b>Nem adok meg árat — egyedi ajánlatot küldök</b><span>Később az Árazás lapon bármikor megadhatja.</span></span></label>
+    </form>
+    <div class="flash" id="nu-flash"></div>
+    <ul class="list-mini" id="nu-list">
+      <li><span>Kis faház</span><em>15 000 Ft / éj</em></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ③ OVERVIEW TODO -->
+<section class="sec">
+  <h2><span class="tag">3</span>Áttekintés — teendő-sor</h2>
+  <p class="why">Ugyanaz a szabály dönt, mint a heti levélnél: az a szoba hiányos, amelyiknek a következő 12 hónapban van ár nélküli éjszakája, nincs rajta pipa, és nem „csak a felsorolt időszakokban” adja ki. Ma ilyen sor nincs, ha a szállás <i>részben</i> árazott (ADR-0197 ①). A pipa után a sor eltűnik.</p>
+  <div class="adm">
+    <ul class="todo" id="todo"></ul>
+    <div class="sim">Szimuláció: <button type="button" data-todo="2" aria-pressed="true">2 árazatlan szoba</button><button type="button" data-todo="0" aria-pressed="false">mind árazott / kimondva</button></div>
+  </div>
+</section>
+
+<!-- ④ MAIL -->
+<section class="sec">
+  <h2><span class="tag">4</span>Heti emlékeztető levél</h2>
+  <p class="why">Az első levél <b>7 nap</b> hiányos állapot után megy ki, utána <b>hetente</b>, amíg minden szobának ára nincs, vagy a pipa be nem kerül (tulajdonosi döntés). Szállásonként egy levél, benne az összes érintett szoba. A levél megmondja, hogyan állítható le.</p>
+  <div class="mail">
+    <div class="mail__head"><b>Feladó:</b> Citoviso · <b>Címzett:</b> Kati (Nyugalom Vendégház)<br><b>Tárgy:</b> 2 szobájának nincs ára — a vendég nem lát árat</div>
+    <div class="mail__body">
+      <p class="t">2 szobájának még nincs ára</p>
+      <p>Ezek a szobák már 7 napja ár nélkül állnak a honlapján:</p>
+      <ul><li><b>Nagy lakosztály</b> — egyik éjszakára sincs ár</li><li><b>Tetőtéri szoba</b> — 06-15 és 08-31 között van ár, az év többi részére nincs</li></ul>
+      <p>A vendég ezekre nem lát árat: foglalás helyett árajánlatot kér, és Önnek minden kérésre külön kell ajánlatot küldenie.</p>
+      <p><a class="mbtn mbtn--pri" href="#">Megadom az árakat</a></p>
+      <p style="font-size:14px;color:var(--citui-muted)">Ha ezekre a szobákra szándékosan nem ad meg árat, mert mindig egyedi ajánlatot küld, pipálja be az Árazás lapon: „Nem adok meg alapárat”. Akkor több emlékeztetőt nem küldünk róluk.</p>
+    </div>
+    <div class="mail__foot">Hetente emlékeztetjük, amíg minden szobának ára van, vagy be nem jelöli, hogy nem ad meg árat.</div>
+  </div>
+</section>
+
+<!-- ⑤ GUEST -->
+<section class="sec">
+  <h2><span class="tag">5</span>Vendég-oldal — „Árak” szakasz</h2>
+  <p class="why">Ma az ár nélküli szoba <b>kimarad</b> az Árak táblázatból, holott a szobalistában ott van. Pipával kimondottan szerepel: „Egyedi ajánlat alapján”. Pipa nélkül (elfelejtett ár) ugyanúgy kimarad, mint ma, mert ott nem igaz, hogy a tulaj egyedi ajánlatot ad. A foglaló doboz mindkét esetben árajánlatot kér (változatlan).</p>
+  <div class="guest">
+    <h4>Árak</h4>
+    <table class="gtab" id="gtab"></table>
+    <div class="sim">Szimuláció, a Nagy lakosztály: <button type="button" data-g="decl" aria-pressed="true">pipálva</button><button type="button" data-g="none" aria-pressed="false">nincs ár, nincs pipa</button></div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script>
+(function () {
+  // size switch
+  var btns = document.querySelectorAll(".sizebar button");
+  function setSize(s) {
+    document.body.setAttribute("data-size", s);
+    btns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-size") === s)); });
+  }
+  btns.forEach(function (b) { b.addEventListener("click", function () { setSize(b.getAttribute("data-size")); }); });
+  if (window.innerWidth < 700) setSize("mobile");
+
+  // same rule as parseOfferAmount (src/booking/requests.ts)
+  function parseAmount(raw) {
+    var s = String(raw == null ? "" : raw).replace(/[\s. ]/g, "").replace(/ft$/i, "");
+    if (s === "") return { empty: true };
+    if (!/^\d+$/.test(s)) return { error: "Csak számot írjon (például 26 000)." };
+    var n = parseInt(s, 10);
+    if (!(n > 0)) return { error: "Az ár legyen nagyobb nullánál." };
+    if (n > 10000000) return { error: "Ez túl nagy összeg — ellenőrizze." };
+    return { value: n };
+  }
+  function money(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; }
+  var icWarn = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  var icOk = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>';
+  var icInfo = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
+  var DECL_TXT = "<b>Kimondva: nem ad meg alapárat.</b> A Főszezonban (06-15 – 08-31) a 38 000 Ft érvényes, a többi éjszakára a vendég árajánlatot kér. Emlékeztetőt erről a szobáról nem küldünk.";
+  var MISS_TXT = "<b>Az év nagy részére nincs ára.</b> A Főszezonon kívül a vendég nem lát árat, és árajánlatot kér. Adjon meg alapárat, vagy jelölje be, hogy nem ad meg. Amíg egyik sincs, hetente emlékeztetjük.";
+  function priced(n) { return "<b>Mentve: " + money(n) + " / éj.</b> Minden éjszakának van ára, a Főszezonban a 38 000 Ft érvényes."; }
+
+  // variant A
+  (function () {
+    var card = document.querySelector('[data-variant="A"]');
+    var base = card.querySelector("[data-base]"), decl = card.querySelector("[data-decl]"), wrap = card.querySelector("[data-checkwrap]");
+    var err = card.querySelector("[data-err]"), st = card.querySelector("[data-state]");
+    var saved = { amount: null, decl: false };
+    function sync() {
+      var p = parseAmount(base.value);
+      var hasPrice = !p.empty;
+      decl.disabled = hasPrice; wrap.setAttribute("aria-disabled", String(hasPrice));
+      if (hasPrice) decl.checked = false;
+    }
+    function render() {
+      if (saved.amount) st.innerHTML = '<div class="state state--ok">' + icOk + "<span>" + priced(saved.amount) + "</span></div>";
+      else if (saved.decl) st.innerHTML = '<div class="state state--info">' + icInfo + "<span>" + DECL_TXT + "</span></div>";
+      else st.innerHTML = '<div class="state state--warn">' + icWarn + "<span>" + MISS_TXT + "</span></div>";
+    }
+    function save() {
+      var p = parseAmount(base.value);
+      if (p.error) { err.textContent = p.error; err.hidden = false; base.setAttribute("aria-invalid", "true"); return; }
+      err.hidden = true; base.removeAttribute("aria-invalid");
+      saved = { amount: p.value || null, decl: !p.value && decl.checked };
+      if (p.value) base.value = String(p.value);
+      render();
+    }
+    base.addEventListener("input", sync);
+    card.querySelector("[data-save]").addEventListener("click", save);
+    decl.addEventListener("change", save); // a checkbox saves on toggle, like the seasonal switch
+    sync(); render();
+  })();
+
+  // variant B
+  (function () {
+    var card = document.querySelector('[data-variant="B"]');
+    var base = card.querySelector("[data-base]"), err = card.querySelector("[data-err]"), st = card.querySelector("[data-state]");
+    var modes = card.querySelectorAll("[data-mode]");
+    var saved = { amount: null, decl: false };
+    function mode() { var m = "price"; modes.forEach(function (r) { if (r.checked) m = r.value; }); return m; }
+    function sync() { base.disabled = mode() !== "price"; }
+    function render() {
+      if (saved.amount) st.innerHTML = '<div class="state state--ok">' + icOk + "<span>" + priced(saved.amount) + "</span></div>";
+      else if (saved.decl) st.innerHTML = '<div class="state state--info">' + icInfo + "<span>" + DECL_TXT + "</span></div>";
+      else st.innerHTML = '<div class="state state--warn">' + icWarn + "<span>" + MISS_TXT + "</span></div>";
+    }
+    function save() {
+      if (mode() === "request") { saved = { amount: null, decl: true }; err.hidden = true; base.removeAttribute("aria-invalid"); return render(); }
+      var p = parseAmount(base.value);
+      if (p.error) { err.textContent = p.error; err.hidden = false; base.setAttribute("aria-invalid", "true"); return; }
+      err.hidden = true; base.removeAttribute("aria-invalid");
+      saved = { amount: p.value || null, decl: false };
+      if (p.value) base.value = String(p.value);
+      render();
+    }
+    modes.forEach(function (r) { r.addEventListener("change", sync); });
+    card.querySelector("[data-save]").addEventListener("click", save);
+    sync(); render();
+  })();
+
+  // new unit
+  (function () {
+    var f = document.getElementById("nu"), flash = document.getElementById("nu-flash"), list = document.getElementById("nu-list");
+    var err = f.querySelector("[data-err]"), price = f.elements.price, decl = f.elements.decl;
+    price.addEventListener("input", function () { if (!parseAmount(price.value).empty) decl.checked = false; });
+    decl.addEventListener("change", function () { if (decl.checked) { price.value = ""; price.removeAttribute("aria-invalid"); err.hidden = true; } });
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = f.elements.name.value.trim();
+      if (!name) { err.textContent = "Adjon nevet az egységnek."; err.hidden = false; return; }
+      var p = parseAmount(price.value);
+      if (p.error) { err.textContent = p.error; err.hidden = false; price.setAttribute("aria-invalid", "true"); return; }
+      err.hidden = true; price.removeAttribute("aria-invalid");
+      var li = document.createElement("li"), em = document.createElement("em"), sp = document.createElement("span");
+      sp.textContent = name;
+      var html;
+      if (p.value) {
+        em.textContent = money(p.value) + " / éj";
+        html = '<div class="state state--ok">' + icOk + "<span><b>Felvettük: " + esc(name) + ".</b> Ára " + money(p.value) + " / éj, a vendég azonnal látja.</span></div>";
+      } else if (decl.checked) {
+        em.textContent = "egyedi ajánlat";
+        html = '<div class="state state--info">' + icInfo + "<span><b>Felvettük: " + esc(name) + ".</b> Árat nem ad meg: a vendég árajánlatot kér, Ön a rendszerből válaszol.</span></div>";
+      } else {
+        em.textContent = "nincs ára";
+        html = '<div class="state state--warn">' + icWarn + "<span><b>Felvettük: " + esc(name) + " — de nincs ára.</b> A vendég nem lát rá árat, és árajánlatot kér. Amíg nem ad meg árat, vagy nem jelöli, hogy nem ad meg, hetente emlékeztetjük." +
+          '<span class="acts" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><a class="btn btn--sm btn--pri" href="#">Árat adok meg</a><button type="button" class="btn btn--sm" data-late-decl>Nem adok meg árat</button></span></span></div>';
+      }
+      li.appendChild(sp); li.appendChild(em); list.appendChild(li);
+      flash.innerHTML = html;
+      var late = flash.querySelector("[data-late-decl]");
+      if (late) late.addEventListener("click", function () {
+        em.textContent = "egyedi ajánlat";
+        flash.innerHTML = '<div class="state state--info">' + icInfo + "<span><b>Rendben: " + esc(name) + ".</b> Árat nem ad meg, a vendég árajánlatot kér.</span></div>";
+      });
+      f.reset();
+    });
+    function esc(s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  })();
+
+  // todo
+  (function () {
+    var ul = document.getElementById("todo");
+    var doneRows = '<li class="done"><span class="ico">' + icOk + '</span><span>A saját fotói fent vannak</span></li>';
+    function render(n) {
+      ul.innerHTML = (n
+        ? '<li class="pending"><span class="ico" style="color:var(--citui-warn-text)">' + icWarn + "</span><span><b>2 szobájának nincs ára</b> — a vendég ezekre nem lát árat, és árajánlatot kér" +
+          "<ul><li>Nagy lakosztály — egyik éjszakára sincs ár</li><li>Tetőtéri szoba — a Főszezonon kívül nincs ár</li></ul>" +
+          '<span class="note">Ha szándékosan nem ad meg árat, jelölje be az Árazás lapon — akkor ez a sor eltűnik, és emlékeztetőt sem küldünk.</span>' +
+          '<span class="acts"><a class="btn btn--sm btn--pri" href="#">Megadom az árakat</a></span></span></li>'
+        : "") + doneRows;
+    }
+    document.querySelectorAll("[data-todo]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll("[data-todo]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        render(Number(b.getAttribute("data-todo")));
+      });
+    });
+    render(2);
+  })();
+
+  // guest
+  (function () {
+    var t = document.getElementById("gtab");
+    function render(mode) {
+      t.innerHTML =
+        "<tr><td>Kis faház<small>2 fő</small></td><td>15 000 Ft / éj</td></tr>" +
+        "<tr><td>Tetőtéri szoba<small>Főszezon · 06.15 – 08.31.</small></td><td>24 000 Ft / éj</td></tr>" +
+        (mode === "decl"
+          ? '<tr><td>Nagy lakosztály<small>6 fő</small></td><td class="req">Egyedi ajánlat alapján</td></tr>'
+          : "");
+    }
+    document.querySelectorAll("[data-g]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll("[data-g]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        render(b.getAttribute("data-g"));
+      });
+    });
+    render("decl");
+  })();
+})();
+</script>
+</body>
+</html>

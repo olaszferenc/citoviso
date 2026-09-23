@@ -330,6 +330,11 @@ export interface SiteData {
       readonly base?: number;
       /** 0072: the base is a DATED one, in force until this day ('YYYY-MM-DD', inclusive). */
       readonly baseUntil?: string;
+      /** ADR-0208 ⑥.2: the owner said "nem adok meg árat" — where no row prices a night
+       *  the table reads "Egyedi ajánlat alapján" instead of dropping the unit. Only on
+       *  a DECISION: a forgotten price stays off the table, because saying the owner
+       *  quotes individually would then be untrue (§B.17). */
+      readonly onRequest?: boolean;
       readonly seasons?: readonly {
         readonly label: string;
         /** Recurring 'MM-DD'. */

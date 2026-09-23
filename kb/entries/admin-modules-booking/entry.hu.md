@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, egységek, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-09-08
+updated: 2026-09-23
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -96,6 +96,11 @@ A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintv
 A **„Mit ad ki?”** részben veszi fel, amit kiad: ha több szobája vagy apartmanja van, mindegyiknek
 saját naptára lesz, így külön telhetnek be. Új egységet a név és a férőhely megadásával, a
 **„Hozzáadás”** gombbal vehet fel; a meglévőt átnevezheti, a **„Törlés”** gombbal eltávolíthatja.
+Ha az Árak modul is be van kapcsolva, a **„Hozzáadás”** megnyomása ELŐTT az **„Alapár”** is
+megadható, vagy bepipálható a gomb alatti **„Nem adok meg árat — egyedi ajánlatot küldök”**.
+Egyik sem kötelező. Ha egyik sincs, a mentés után egy sárga sor figyelmeztet: az **„Árat adok
+meg”** gomb az Árazás lapra visz (ott írja be és mentse az árat), a **„Nem adok meg árat”** gomb
+pedig helyben rögzíti, hogy egyedi ajánlatot küld.
 Több egységnél a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
 Az egység nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
 

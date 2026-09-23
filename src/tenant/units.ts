@@ -27,6 +27,9 @@ export interface Unit {
   /** ADR-0114 — this unit IS the whole place. It and the rooms exclude each other:
    *  see `blockingUnitIds()` in unitScope.ts for what that means day by day. */
   readonly isWholeProperty: boolean;
+  /** ADR-0208 ⑥.2 (0073): "nem adok meg árat" — where no price row covers a night,
+   *  the owner quotes individually. A decision, so it is not reported as missing. */
+  readonly priceOnRequest: boolean;
 }
 
 /**
@@ -66,6 +69,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
       "amenities",
       "seasonal_only",
       "is_whole_property",
+      "price_on_request",
     ])
     .where("site_id", "=", siteId)
     .orderBy("sort_order")
@@ -81,6 +85,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
     amenities: Array.isArray(r.amenities) ? r.amenities : [],
     seasonalOnly: r.seasonal_only,
     isWholeProperty: r.is_whole_property,
+    priceOnRequest: r.price_on_request,
   }));
 }
 
@@ -112,6 +117,7 @@ export async function peekUnits(siteId: string): Promise<Unit[]> {
         amenities: [],
         seasonalOnly: false,
         isWholeProperty: true,
+        priceOnRequest: false,
       },
     ];
   }
@@ -180,9 +186,9 @@ export async function createUnit(
   name: string,
   capacity: number | null,
   description: string | null,
-): Promise<void> {
+): Promise<string | null> {
   const clean = name.trim().slice(0, 120);
-  if (!clean) return;
+  if (!clean) return null;
   const units = await getUnits(siteId);
   const row = await db
     .insertInto("site_unit")
@@ -196,6 +202,7 @@ export async function createUnit(
     .returning("id")
     .executeTakeFirstOrThrow();
   await assignSlug(siteId, row.id, clean);
+  return row.id;
 }
 
 /** This unit's own amenities (own bathroom, terrace…). Empty entries dropped. */
@@ -324,4 +331,12 @@ export async function resolveUnit(siteId: string, wantedId?: string | null): Pro
  */
 export async function setUnitSeasonalOnly(unitId: string, on: boolean): Promise<void> {
   await db.updateTable("site_unit").set({ seasonal_only: on }).where("id", "=", unitId).execute();
+}
+
+/**
+ * "Nem adok meg alapárat" (ADR-0208 ⑥.2, approved plan price-on-request A). Per UNIT:
+ * one room may be quoted individually while the others carry a price.
+ */
+export async function setUnitPriceOnRequest(unitId: string, on: boolean): Promise<void> {
+  await db.updateTable("site_unit").set({ price_on_request: on }).where("id", "=", unitId).execute();
 }

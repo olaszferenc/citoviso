@@ -22,6 +22,36 @@ ennyivel, a többi ráér.
 Ha az árat üresen hagyva ment, az ár törlődik az oldaláról — jobb, ha nincs kint szám, mint ha
 rossz szám van kint.
 
+## Ha szándékosan nem ad meg árat
+
+Van szoba, aminek az árát mindig a vendéghez szabja (hányan jönnek, mennyi időre). Ilyenkor az
+alapár alatti négyzetet pipálja be: **„Nem adok meg alapárat — ahol nincs ár, egyedi ajánlatot
+küldök”**. A pipa azonnal ment, nem kell külön gombot nyomnia.
+
+Mi történik utána:
+
+- Azokra az éjszakákra, amelyekre nincs ár, a vendég nem lát számot, és foglalás helyett
+  **árajánlatot kér**. Ön a rendszerből válaszol rá (a kérésről e-mailt kap). Ha a szobának
+  vannak időszaki árai, azokban az időszakokban a vendég továbbra is az árat látja.
+- Az oldala **„Árak”** részében a szoba „Egyedi ajánlat alapján” sorral szerepel. Ha vannak
+  időszaki árai, azok érvényesek, és a sor „Egyéb időszakban” mondja ki, hogy a többi
+  éjszakára ajánlatot ad.
+- A szobáról **nem kap emlékeztetőt**, és az Áttekintés teendői között sem jelenik meg.
+
+![Képernyőkép: egy szoba ár nélkül — a sárga sor és a „Nem adok meg alapárat” négyzet](assets/hu/nincs-ar.png)
+
+A kártyán egy kék sor erősíti meg: **„Kimondva: nem ad meg alapárat.”** A pipa levételével
+bármikor visszavonhatja. Ha alapárat ad meg, a pipa magától lekerül, hiszen akkor már minden
+éjszakának van ára. Amíg alapár van, a négyzet szürke, és nem jelölhető be.
+
+## Ha egy szobának nincs (teljes) ára
+
+Ha egy szobának egyáltalán nincs ára, vagy csak az év egy részére van (például csak főszezoni
+ár, alapár nélkül), a kártyán sárga sor jelzi: **„Nincs ára.”**, illetve **„Az év egy részére
+nincs ára.”** Ilyenkor a vendég ezekre az éjszakákra nem lát árat, és árajánlatot kér. Két
+kiút van: adjon meg alapárat, vagy pipálja be, hogy szándékosan nem ad meg. Amíg egyik sincs,
+hetente e-mailben emlékeztetjük.
+
 ## Időszaki árak (pl. főszezon)
 
 Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes szakaszaira:
