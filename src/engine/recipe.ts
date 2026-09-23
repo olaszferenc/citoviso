@@ -336,6 +336,13 @@ export interface SiteData {
         readonly from: string;
         readonly to: string;
         readonly amount: number;
+        /** 0073: ONE YEAR's occurrence ("2027", "2026/27" over the year end) with its
+         *  full dates ('YYYY-MM-DD'). Present only when the season has a year price —
+         *  then the table lists each year within the booking horizon, because a
+         *  year-less row would promise this year's price for next year too. */
+        readonly year?: string;
+        readonly start?: string;
+        readonly end?: string;
       }[];
     }[];
   };

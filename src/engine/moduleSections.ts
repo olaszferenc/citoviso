@@ -313,8 +313,16 @@ function pricingBlock(d: SiteData): string {
     .map((u) => {
       const rows: string[] = [];
       for (const s of u.seasons ?? []) {
+        // 0073: one YEAR of a season that has a year price — named and dated with the
+        // year, so the table never promises this year's price for the next one.
+        const when =
+          s.start && s.end
+            ? `${esc(s.start.slice(0, 4))}. ${esc(niceDay(s.start.slice(5, 10)))} – ` +
+              (s.end.slice(0, 4) !== s.start.slice(0, 4) ? `${esc(s.end.slice(0, 4))}. ` : "") +
+              esc(niceDay(s.end.slice(5, 10)))
+            : `${esc(niceDay(s.from))} – ${esc(niceDay(s.to))}`;
         rows.push(
-          `<tr><td>${esc(s.label)}</td><td>${esc(niceDay(s.from))} – ${esc(niceDay(s.to))}</td>` +
+          `<tr><td>${esc(s.label)}${s.year ? ` ${esc(s.year)}` : ""}</td><td>${when}</td>` +
             `<td>${esc(money(s.amount, p.currency))}</td></tr>`,
         );
       }

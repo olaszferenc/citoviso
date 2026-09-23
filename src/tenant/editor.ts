@@ -26,7 +26,7 @@ import { getTenantModules, isRenderedModule } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
 import { ensureUnits, peekUnits } from "./units.js";
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
-import { formatSpan, getSitePrices, isPriceActive, priceSpan, type UnitPrice } from "./prices.js";
+import { formatSpan, getSitePrices, isPriceActive, priceSpan, publicSeasons, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
 import {
@@ -335,6 +335,8 @@ export async function moduleContentFor(
     on("rooms") || on("pricing") ? await getSitePrices(siteId) : new Map();
   const currency = text("pricing", "currency") || "HUF";
   const priceUnit = text("pricing", "unit") || "per_night";
+  // 0073: the price table lists a season's years as far as a guest can book.
+  const horizonMonths = Number(cfg("booking").horizonMonths ?? 12) || 12;
 
   if (on("pricing")) {
     const priced = units
@@ -351,9 +353,7 @@ export async function moduleContentFor(
           rows.find((r) => r.isBase && !r.validFrom);
         const base = baseRow?.amount;
         const baseUntil = baseRow?.validTo ?? undefined;
-        const seasons = rows
-          .filter((r) => !r.isBase && r.from && r.to)
-          .map((r) => ({ label: r.label, from: r.from!, to: r.to!, amount: r.amount }));
+        const seasons = publicSeasons(rows, today, horizonMonths);
         if (base === undefined && !seasons.length) return null;
         return {
           name: u.name,

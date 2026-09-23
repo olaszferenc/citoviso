@@ -113,10 +113,22 @@ function allMoney(s: string): number[] {
   return out;
 }
 
-/** "09. 15. – 09. 30." → { from: "09-15", to: "09-30" }; null for the base row. */
+/** "09. 15. – 09. 30." → { from: "09-15", to: "09-30" }; null for the base row.
+ *  0073: a YEAR row ("2027. 06. 15. – 08. 31.", or "2026. 11. 01. – 2027. 03. 01." over
+ *  the year end) is read here first — its days, and its window are parseWindow's. */
 function parseWhen(s: string): { from: string; to: string } | null {
+  const w = parseWindow(s);
+  if (w) return { from: w.start.slice(5), to: w.end.slice(5) };
   const m = /(\d{2})\.\s*(\d{2})\.\s*[–\-—]\s*(\d{2})\.\s*(\d{2})\./.exec(s);
   return m ? { from: `${m[1]}-${m[2]}`, to: `${m[3]}-${m[4]}` } : null;
+}
+
+/** 0073: a year row's own window, from the cell text alone (the second year is printed
+ *  only when it differs). Deliberately not the product's parser — see covers(). */
+function parseWindow(s: string): { start: string; end: string } | null {
+  const m = /(\d{4})\.\s*(\d{2})\.\s*(\d{2})\.\s*[–\-—]\s*(?:(\d{4})\.\s*)?(\d{2})\.\s*(\d{2})\./.exec(s);
+  if (!m) return null;
+  return { start: `${m[1]}-${m[2]}-${m[3]}`, end: `${m[4] ?? m[1]}-${m[5]}-${m[6]}` };
 }
 
 /** Same wrap-aware rule as src/tenant/prices.ts — deliberately re-implemented here:
@@ -128,6 +140,9 @@ function covers(from: string, to: string, monthDay: string): boolean {
 interface TableRow {
   readonly label: string;
   readonly season: { from: string; to: string } | null;
+  /** 0073: a year row — its price holds ONLY inside this window, and there it beats
+   *  the recurring row of the same season. */
+  readonly window?: { start: string; end: string } | null;
   readonly amount: number;
   /** 0072: a dated base prints "– 2027. 09. 30." in its date cell; past it, no price. */
   readonly until?: string | null;
@@ -151,7 +166,10 @@ function expectedTotal(rows: readonly TableRow[], from: string, to: string): num
     const iso = d.toISOString().slice(0, 10);
     const md = iso.slice(5, 10);
     const dated = base?.until && iso > base.until ? undefined : base;
-    const hit = seasons.find((r) => covers(r.season!.from, r.season!.to, md)) ?? dated;
+    // 0073: a year row inside its window first, then a recurring season, then the base.
+    const yearHit = seasons.find((r) => r.window && iso >= r.window.start && iso <= r.window.end);
+    const hit =
+      yearHit ?? seasons.find((r) => !r.window && covers(r.season!.from, r.season!.to, md)) ?? dated;
     if (!hit) return null;
     total += hit.amount;
     d.setUTCDate(d.getUTCDate() + 1);
@@ -243,6 +261,7 @@ async function checkSite(page: Page, port: number, slug: string): Promise<void> 
       .map((r) => ({
         label: r.label,
         season: parseWhen(r.when),
+        window: parseWindow(r.when),
         amount: parseMoney(r.amount) ?? 0,
         until: parseUntil(r.when),
       }))

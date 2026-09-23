@@ -22,6 +22,7 @@
 import { pool } from "../src/db/client.js";
 import { expireStaleOffers, expireStaleRequests } from "../src/booking/requests.js";
 import { maintainDatedPrices } from "../src/tenant/priceExpiry.js";
+import { maintainSeasonNudges } from "../src/tenant/seasonNudge.js";
 import { syncAllCalendarLinks } from "../src/booking/sync.js";
 
 const started = Date.now();
@@ -42,6 +43,12 @@ try {
   // Booking-offer ⑫: a price offer the guest never answered lapses the same way.
   const offers = await expireStaleOffers();
   if (offers) console.log(`[booking] ${offers} megválaszolatlan árajánlat lejárt`);
+
+  // 0073 (season-year-price ②): the morning after a season's last day, the owner is
+  // asked what next year's price should be. Before the dated-price sweep below, which
+  // removes a lapsed year price — the mail quotes what that year actually charged.
+  const nudges = await maintainSeasonNudges();
+  if (nudges.sent) console.log(`[booking] szezon végi kérdés: ${nudges.sent} levél`);
 
   // Booking-offer ⑥: a dated price is reminded before it ends, and when it ends the
   // row goes and the page is re-rendered — the price table must not keep quoting it.

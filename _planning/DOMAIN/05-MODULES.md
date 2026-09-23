@@ -123,6 +123,20 @@ ajánlat ára **mindig** az árlistába kerül (ADR-0215) — a hiányzó ár í
 ⛔ A dátumos sor lejárata nem csak szabály-kérdés: a lap statikus pillanatkép, tehát lejáratkor a
 sor TÖRLŐDIK és a lap ÚJRARENDERELŐDIK (`src/tenant/priceExpiry.ts`, óránkénti tick).
 
+**Az éves ár (ADR-XXXX, migráció 0073).** Egy ismétlődő szezon adott évi ára egy évhez kötött
+szezon-sor, `parent_id`-val a szezonjához kötve; az „év" az alkalom KEZDŐ éve (egy évhatáron
+átnyúló szezonnál „2026/27"). Invariánsok:
+- **Visszaesés:** ahol nincs éves ár, az ismétlődő él — az éves ár hiánya soha nem hiba.
+- **Egy szezon × év = egy sor.** A szezon szerkesztésekor a saját nap nélküli éves ár a szezon
+  új napjaira költözik, a saját napos (pl. húsvét) megtartja a sajátját; a név és a minimum követi.
+- **Átfedésnél a tulaj listájának sorrendje dönt** (a feljebb álló szezon ára számít) — ezt a
+  tulaj rendezi (fel/le), és a lap kimondja, ha két szezon napjai közösek.
+- **A honlap-ártábla** évet csak az éves árú szezonnál ír, és akkor a foglalható horizont minden
+  alkalmát a valódi árával; év nélküli sor mellette nem maradhat (az idei árat ígérné jövőre is).
+- **Az éves ár lejárata csendes** (nincs „lejár egy ár" levél): utána az ismétlődő ár él.
+  Helyette a szezon záró napja utáni reggelen EGY kérdés megy a tulajnak a jövő évi árról
+  (`season_nudged_year`, `src/tenant/seasonNudge.ts`) — hacsak a következő évre már nincs ár.
+
 ### Ahol a halmaz EMBER NÉLKÜL sérülhet
 
 A modul-halmaz nem csak kattintásra változik. Három sodródási út (ADR-0192 ⑦):

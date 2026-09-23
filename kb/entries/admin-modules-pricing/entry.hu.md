@@ -28,11 +28,55 @@ Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes sza
 
 1. Adjon nevet az időszaknak (pl. Főszezon).
 2. Adja meg a kezdetét és végét **hónap-nap** alakban (pl. 06-15 és 08-31) — évszám nélkül,
-   mert minden évben ugyanígy érvényes, nem kell januárban újra beírnia.
+   mert minden évben ugyanígy érvényes, nem kell januárban újra beírnia. Pontokkal is írhatja
+   (06.15), a rendszer átalakítja.
 3. Írja be az árat, és koppintson a **„Hozzáadás”** gombra.
 
-Egy időszakot a sora melletti **„Törlés”** gombbal távolíthat el — utána ott újra az alapár
-érvényes. Ha nincs egyetlen időszaki ár sem, mindig az alapár él.
+Gépelés közben a mezők alatt kiírjuk, pontosan mettől meddig lesz érvényes az időszak.
+
+**Az év végén átnyúló időszak** (pl. téli holtszezon novembertől márciusig): írja be úgy, ahogy
+mondaná — kezdet 11-01, vég 03-01. Ha a vége korábbi, mint az eleje, az időszak átnyúlik az év
+végén, és a soron az **„átnyúlik az év végén”** jelölés áll. Az évek ilyenkor két évszámot
+kapnak, például 2026/27.
+
+### Egy időszak módosítása
+
+A sor melletti **„Szerkesztés”** gombbal a nevet, a napokat, az árat és a minimumot is
+átírhatja, majd **„Mentés”** (vagy **„Mégse”**). Az évekre megadott külön árak megmaradnak.
+
+Egy időszakot a **„Törlés”** gombbal távolíthat el — az évekre megadott külön árai is vele
+mennek, és utána ott újra az alapár érvényes. Ha nincs egyetlen időszaki ár sem, mindig az
+alapár él.
+
+### Ha két időszak ugyanarra a napra esik
+
+Ahol két időszak átfed (pl. a „Téli ár” novembertől februárig, és benne az „Ünnepek”), ott a
+**listán feljebb álló** időszak ára számít. A **„Szerkesztés”** gomb előtti kis fel- és le-nyíllal
+rendezheti át őket. Ha egy új vagy átírt időszak átfed egy másikkal, a mezők alatt sárga
+sorban kiírjuk, melyiké lesz a közös napok ára.
+
+## Más ár egy adott évben
+
+Minden időszak alatt ott vannak az évek, egy-egy kártyán (a legközelebbi, még le nem zajlott
+évtől kezdve). Oldalra húzva — vagy a két nyíllal — további évekhez jut, akármeddig előre.
+
+- Ha egy évben mást kér (pl. jövőre drágább lesz a főszezon), írja be az árat az adott év
+  kártyáján, és koppintson a **„Mentés”** gombra. A kártya ekkor **„saját ár”** jelölést kap.
+- Ahol nem ír semmit, ott **„az ismétlődő ár”** érvényes — semmi nem romlik el, ha nem ad meg
+  külön árat.
+- A **„Vissza az ismétlődőre”** gomb törli az adott év külön árát.
+- Ha egy évben más napokra esik az időszak (pl. húsvét), a kártyán a **„Más napokon ebben
+  az évben”** alatt adhatja meg azokat.
+
+A honlapján az évet csak akkor írjuk ki, ha annak az időszaknak van külön éves ára — ilyenkor
+a vendég a foglalható hónapokra évenként látja az árat.
+
+### Levél a szezon végén
+
+Egy időszak utolsó napja utáni reggelen e-mailt küldünk: mennyi volt idén az ára, és mi
+legyen jövőre. Ha marad, nem kell tennie semmit. Ha változtatna, a levél linkje egyenesen a
+következő év kártyájára visz. Egy időszakról évente egyszer írunk, és nem írunk, ha a következő
+évre már megadott árat.
 
 ## Mikor adja ki, és legalább hány éjszakára — online foglalással
 

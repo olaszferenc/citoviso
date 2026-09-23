@@ -29,6 +29,8 @@ export interface UnitPrice {
   /** 0072: year-bound validity window ('YYYY-MM-DD', inclusive); null = timeless. */
   readonly validFrom: string | null;
   readonly validTo: string | null;
+  /** 0073: the recurring season this row is one YEAR's price of; null otherwise. */
+  readonly parentId: string | null;
 }
 
 const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
@@ -37,10 +39,21 @@ export function isMonthDay(v: string): boolean {
   return MMDD.test(v);
 }
 
+/**
+ * What the owner typed → 'MM-DD', or null when it is not a real day of the year.
+ * Accepts "11-01", "11.01", "11. 01.", "11/1" and "1101" (approved plan
+ * season-year-price: the old form accepted only the hyphen). "02-30" is refused, where
+ * the old pattern let "02-31" through. The rule lives in cit-season.cjs, because the
+ * Árazás page previews the typed days with the very same function.
+ */
+export function normMonthDay(raw: string): string | null {
+  return seasonRule.normMonthDay(raw);
+}
+
 export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
   const rows = await db
     .selectFrom("unit_price")
-    .select(["id", "label", "date_from", "date_to", "amount", "min_nights", "valid_from", "valid_to"])
+    .select(["id", "label", "date_from", "date_to", "amount", "min_nights", "valid_from", "valid_to", "parent_id"])
     .where("unit_id", "=", unitId)
     .orderBy("sort_order")
     .orderBy("created_at")
@@ -55,6 +68,7 @@ export async function getUnitPrices(unitId: string): Promise<UnitPrice[]> {
     minNights: r.min_nights,
     validFrom: r.valid_from,
     validTo: r.valid_to,
+    parentId: r.parent_id,
   }));
 }
 
@@ -73,6 +87,7 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       "unit_price.min_nights as minNights",
       "unit_price.valid_from as validFrom",
       "unit_price.valid_to as validTo",
+      "unit_price.parent_id as parentId",
     ])
     .where("site_unit.site_id", "=", siteId)
     .orderBy("unit_price.sort_order")
@@ -92,6 +107,7 @@ export async function getSitePrices(siteId: string): Promise<Map<string, UnitPri
       minNights: r.minNights,
       validFrom: r.validFrom,
       validTo: r.validTo,
+      parentId: r.parentId,
     });
     out.set(r.unitId, list);
   }
@@ -148,11 +164,13 @@ export async function addSeasonPrice(
   const lang = await prepareMailLang(await langForUnit(unitId));
   const errors: string[] = [];
   if (!label.trim()) errors.push(T(lang, "Adjon nevet az időszaknak (például: Főszezon)."));
-  if (!isMonthDay(from) || !isMonthDay(to)) {
+  const nFrom = normMonthDay(from);
+  const nTo = normMonthDay(to);
+  if (!nFrom || !nTo) {
     errors.push(T(lang, "Az időszak dátumait HÓNAP-NAP alakban kérjük (például: 06-15)."));
   }
   if (!Number.isFinite(amount) || amount <= 0) errors.push(T(lang, "Adjon meg egy árat."));
-  if (errors.length) return { ok: false, errors };
+  if (errors.length || !nFrom || !nTo) return { ok: false, errors };
 
   const existing = await getUnitPrices(unitId);
   await db
@@ -160,14 +178,224 @@ export async function addSeasonPrice(
     .values({
       unit_id: unitId,
       label: label.trim().slice(0, 80),
-      date_from: from,
-      date_to: to,
+      date_from: nFrom,
+      date_to: nTo,
       amount: Math.round(amount),
       min_nights: minNights && minNights > 0 ? Math.min(60, Math.round(minNights)) : null,
       sort_order: existing.length + 1,
     })
     .execute();
   return { ok: true, errors: [] };
+}
+
+/* ------------------------------------------------------------------ *
+ * 0073 — the SEASON after it is saved: edit, order, one year's price
+ * (approved plan season-year-price, B·1; assets/design-refs/tenant-admin/season-year-price/)
+ * ------------------------------------------------------------------ */
+
+/** A recurring season row of THIS site (not a base, not a year price), or null. */
+async function ownedSeason(siteId: string, priceId: string) {
+  return db
+    .selectFrom("unit_price")
+    .innerJoin("site_unit", "site_unit.id", "unit_price.unit_id")
+    .select([
+      "unit_price.id as id",
+      "unit_price.unit_id as unitId",
+      "unit_price.label as label",
+      "unit_price.date_from as from",
+      "unit_price.date_to as to",
+      "unit_price.amount as amount",
+      "unit_price.min_nights as minNights",
+      "unit_price.sort_order as sortOrder",
+    ])
+    .where("unit_price.id", "=", priceId)
+    .where("site_unit.site_id", "=", siteId)
+    .where("unit_price.date_from", "is not", null)
+    .where("unit_price.date_to", "is not", null)
+    .where("unit_price.valid_from", "is", null)
+    .where("unit_price.parent_id", "is", null)
+    .executeTakeFirst();
+}
+
+function clampMin(minNights: number | null | undefined): number | null {
+  return minNights && minNights > 0 ? Math.min(60, Math.round(minNights)) : null;
+}
+
+export interface SeasonEdit {
+  readonly label: string;
+  readonly from: string;
+  readonly to: string;
+  readonly amount: number;
+  readonly minNights: number | null;
+}
+
+/**
+ * Change a saved season — name, days, price, minimum (owner, 2026-09-23: "nem lehet
+ * mentés után egy szezont módosítani" — a logic gap: the only way was delete + re-add,
+ * which also threw away every year price hanging on it).
+ *
+ * The season's YEAR prices stay. One that follows the season's days (the owner never
+ * gave it days of its own) moves with the new days; one with days of its own keeps
+ * them. The label and the minimum always follow — a year price is the same season.
+ */
+export async function updateSeasonPrice(
+  siteId: string,
+  priceId: string,
+  edit: SeasonEdit,
+): Promise<SavePriceResult> {
+  const season = await ownedSeason(siteId, priceId);
+  if (!season) return { ok: false, errors: [] };
+  const lang = await prepareMailLang(await langForUnit(season.unitId));
+  const errors: string[] = [];
+  const nFrom = normMonthDay(edit.from);
+  const nTo = normMonthDay(edit.to);
+  if (!edit.label.trim()) errors.push(T(lang, "Adjon nevet az időszaknak (például: Főszezon)."));
+  if (!nFrom || !nTo) errors.push(T(lang, "Az időszak dátumait HÓNAP-NAP alakban kérjük (például: 06-15)."));
+  if (!Number.isFinite(edit.amount) || edit.amount <= 0) errors.push(T(lang, "Adjon meg egy árat."));
+  if (edit.minNights !== null && !(Number.isInteger(edit.minNights) && edit.minNights >= 1 && edit.minNights <= 60)) {
+    errors.push(T(lang, "A minimum 1 és 60 éj között lehet."));
+  }
+  if (errors.length || !nFrom || !nTo) return { ok: false, errors };
+
+  const label = edit.label.trim().slice(0, 80);
+  const minNights = clampMin(edit.minNights);
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .updateTable("unit_price")
+      .set({ label, date_from: nFrom, date_to: nTo, amount: Math.round(edit.amount), min_nights: minNights })
+      .where("id", "=", season.id)
+      .execute();
+    const children = await trx
+      .selectFrom("unit_price")
+      .select(["id", "date_from", "date_to", "valid_from"])
+      .where("parent_id", "=", season.id)
+      .execute();
+    for (const c of children) {
+      const follows = c.date_from === season.from && c.date_to === season.to;
+      const from = follows ? nFrom : c.date_from!;
+      const to = follows ? nTo : c.date_to!;
+      const occ = seasonRule.occurrence(from, to, Number(String(c.valid_from).slice(0, 4)));
+      await trx
+        .updateTable("unit_price")
+        .set({ label, date_from: from, date_to: to, min_nights: minNights, valid_from: occ.start, valid_to: occ.end })
+        .where("id", "=", c.id)
+        .execute();
+    }
+  });
+  return { ok: true, errors: [] };
+}
+
+/**
+ * Move a season one place up or down among the unit's seasons. Where two seasons
+ * share days, the one HIGHER on the list prices them (cit-season.cjs: "inside each
+ * tier the owner's own order decides") — the owner asked to be able to decide that
+ * (2026-09-23), instead of deleting and re-adding in the right order. Year prices
+ * carry their season's place, so a year's order matches the list the owner reads.
+ */
+export async function moveSeasonPrice(siteId: string, priceId: string, dir: -1 | 1): Promise<void> {
+  const season = await ownedSeason(siteId, priceId);
+  if (!season) return;
+  const seasons = await db
+    .selectFrom("unit_price")
+    .select("id")
+    .where("unit_id", "=", season.unitId)
+    .where("date_from", "is not", null)
+    .where("valid_from", "is", null)
+    .where("parent_id", "is", null)
+    .orderBy("sort_order")
+    .orderBy("created_at")
+    .execute();
+  const ids = seasons.map((r) => r.id);
+  const i = ids.indexOf(season.id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+  await db.transaction().execute(async (trx) => {
+    for (let k = 0; k < ids.length; k++) {
+      await trx.updateTable("unit_price").set({ sort_order: k + 1 }).where("id", "=", ids[k]!).execute();
+      await trx.updateTable("unit_price").set({ sort_order: k + 1 }).where("parent_id", "=", ids[k]!).execute();
+    }
+  });
+}
+
+export interface YearPriceInput {
+  /** The year the occurrence STARTS in (2026 for "2026/27"). */
+  readonly year: number;
+  /** Blank → no own amount (the season's price) — with no own days either, the year
+   *  price is removed and the recurring price holds that year. */
+  readonly amount: string;
+  /** Own days for this one year (e.g. Easter); blank or equal to the season's = follows it. */
+  readonly from?: string | null;
+  readonly to?: string | null;
+}
+
+/**
+ * Set — or clear — ONE YEAR's price of a recurring season (the "2027" card of the
+ * year strip). Stored as a year-bound season row (0072) tied to its season (0073), so
+ * the one precedence rule in cit-season.cjs prices it first, and every other year
+ * falls back to the recurring price: nothing breaks when the owner gives none.
+ */
+export async function setSeasonYearPrice(
+  siteId: string,
+  seasonId: string,
+  input: YearPriceInput,
+  today: string = new Date().toISOString().slice(0, 10),
+): Promise<SavePriceResult & { cleared?: boolean }> {
+  const season = await ownedSeason(siteId, seasonId);
+  if (!season) return { ok: false, errors: [] };
+  const lang = await prepareMailLang(await langForUnit(season.unitId));
+  const errors: string[] = [];
+  const year = Math.trunc(Number(input.year));
+  const raw = String(input.amount ?? "").replace(/[\s.\u00a0]/g, "");
+  let amount: number | null = null;
+  if (raw) {
+    if (!/^\d+$/.test(raw) || Number(raw) <= 0) errors.push(T(lang, "Adjon meg egy árat, számmal (például: 35 000)."));
+    else amount = Number(raw);
+  }
+  let from = season.from!;
+  let to = season.to!;
+  if ((input.from ?? "").trim() || (input.to ?? "").trim()) {
+    const f = normMonthDay(input.from ?? "");
+    const t = normMonthDay(input.to ?? "");
+    if (!f || !t) errors.push(T(lang, "A napokat hónap-nap alakban kérjük, például 04-02."));
+    else {
+      from = f;
+      to = t;
+    }
+  }
+  const occ = seasonRule.occurrence(from, to, year);
+  const thisYear = Number(today.slice(0, 4));
+  if (!Number.isFinite(year) || year < thisYear - 1 || year > thisYear + 60) errors.push(T(lang, "Ismeretlen év."));
+  else if (occ.end < today) errors.push(T(lang, "Ez az időszak már lezajlott, erre már nem adható ár."));
+  if (errors.length) return { ok: false, errors };
+
+  const ownDays = from !== season.from || to !== season.to;
+  await db.transaction().execute(async (trx) => {
+    // One year price per season and year: the new one replaces the old.
+    await trx
+      .deleteFrom("unit_price")
+      .where("parent_id", "=", season.id)
+      .where("valid_from", ">=", `${year}-01-01`)
+      .where("valid_from", "<=", `${year}-12-31`)
+      .execute();
+    if (amount === null && !ownDays) return;
+    await trx
+      .insertInto("unit_price")
+      .values({
+        unit_id: season.unitId,
+        label: season.label,
+        date_from: from,
+        date_to: to,
+        amount: amount ?? season.amount,
+        min_nights: season.minNights,
+        sort_order: season.sortOrder,
+        valid_from: occ.start,
+        valid_to: occ.end,
+        parent_id: season.id,
+      })
+      .execute();
+  });
+  return { ok: true, errors: [], cleared: amount === null && !ownDays };
 }
 
 /**
@@ -206,6 +434,62 @@ export async function addDatedBasePrice(
       })
       .execute();
   });
+}
+
+export interface PublicSeason {
+  readonly label: string;
+  readonly from: string;
+  readonly to: string;
+  readonly amount: number;
+  readonly year?: string;
+  readonly start?: string;
+  readonly end?: string;
+}
+
+/**
+ * The season rows of the PUBLIC price table (0073, approved plan season-year-price ③).
+ *
+ * A season WITHOUT year prices stays one year-less row, as before — it is true every
+ * year. A season WITH one is listed year by year, from the first occurrence not yet
+ * over to the booking horizon, each at the price that year really charges (its own,
+ * or the recurring one): a year-less "Főszezon 28 000" beside a "Főszezon 2027
+ * 35 000" would promise 28 000 for 2027 too. `rows` must already be active-only.
+ */
+export function publicSeasons(rows: readonly UnitPrice[], today: string, horizonMonths: number): PublicSeason[] {
+  const horizon = new Date(`${today}T00:00:00Z`);
+  horizon.setUTCMonth(horizon.getUTCMonth() + horizonMonths);
+  const until = horizon.toISOString().slice(0, 10);
+  const out: PublicSeason[] = [];
+  const seasons = rows.filter((r) => !r.isBase && r.from && r.to && !r.parentId && !r.validFrom);
+  for (const s of seasons) {
+    const years = rows.filter((r) => r.parentId === s.id && r.validFrom && r.validTo);
+    if (!years.length) {
+      out.push({ label: s.label, from: s.from!, to: s.to!, amount: s.amount });
+      continue;
+    }
+    for (let y = seasonRule.firstOpenYear(s.from!, s.to!, today); ; y++) {
+      const own = years.find((r) => Number(r.validFrom!.slice(0, 4)) === y);
+      const o = seasonRule.occurrence(own?.from ?? s.from!, own?.to ?? s.to!, y);
+      if (o.start > until) break;
+      if (o.end < today) continue;
+      out.push({
+        label: s.label,
+        from: own?.from ?? s.from!,
+        to: own?.to ?? s.to!,
+        amount: own?.amount ?? s.amount,
+        year: o.label,
+        start: o.start,
+        end: o.end,
+      });
+    }
+  }
+  // A year-bound season with no parent (not writable from the Árazás page) still
+  // prices its nights, so it is shown — with its year.
+  for (const r of rows.filter((x) => !x.isBase && x.from && x.to && !x.parentId && x.validFrom && x.validTo)) {
+    const o = seasonRule.occurrence(r.from!, r.to!, Number(r.validFrom!.slice(0, 4)));
+    out.push({ label: r.label, from: r.from!, to: r.to!, amount: r.amount, year: o.label, start: r.validFrom!, end: r.validTo! });
+  }
+  return out;
 }
 
 /** Is the row still able to price some night from `today` on? Timeless rows always are. */

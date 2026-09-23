@@ -146,7 +146,15 @@ import {
   ownerOfferSentPage,
 } from "./offerViews.js";
 import { createEnquiry } from "../booking/enquiry.js";
-import { addSeasonPrice, deletePrice, getUnitPrices, setBasePrice } from "../tenant/prices.js";
+import {
+  addSeasonPrice,
+  deletePrice,
+  getUnitPrices,
+  moveSeasonPrice,
+  setBasePrice,
+  setSeasonYearPrice,
+  updateSeasonPrice,
+} from "../tenant/prices.js";
 import { buildUnitFeed, syncCalendarLink } from "../booking/sync.js";
 import {
   getSiteModuleConfig,
@@ -1190,9 +1198,16 @@ async function serveAdmin(
         if (moduleId === "pricing") {
           const prices: Record<string, Awaited<ReturnType<typeof getUnitPrices>>> = {};
           for (const u of list) prices[u.id] = await getUnitPrices(u.id);
+          // 0073: which season is open for editing, which year card was just saved or
+          // refused, and where the refusal text belongs (next to it, not at the top).
+          const qp = new URL(req.url ?? "/", "http://x").searchParams;
           pricing = {
             units,
             prices,
+            editSeason: qp.get("edit"),
+            savedSeason: qp.get("sv"),
+            yearFocus: qp.get("ev"),
+            ...(cfgErrors?.length && (qp.get("edit") || qp.get("ev")) ? { inlineErrors: cfgErrors } : {}),
             currency: String(cfg.config.currency ?? "HUF"),
             // The SAME predicate the page and the season rule use (isRenderedModule):
             // active AND not superseded — "is the calendar actually on the page?"
@@ -1264,7 +1279,8 @@ async function serveAdmin(
         // period the account is billed in (0 = monthly account, no conversion).
         annualMult:
           subscription?.billingPeriod === "annual" ? 12 - subscription.annualFreeMonths : 0,
-        ...(cfgErrors?.length ? { errors: cfgErrors } : {}),
+        // 0073: a season-edit / year-card refusal is shown next to that control.
+        ...(cfgErrors?.length && !pricing?.inlineErrors ? { errors: cfgErrors } : {}),
         ...(booking ? { booking } : {}),
         ...(units ? { units } : {}),
         ...(pricing ? { pricing } : {}),
@@ -2548,6 +2564,73 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       }
     }
     return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=pricing&saved=1");
+  }
+  // 0073 (approved plan season-year-price): a saved season can be CHANGED — name,
+  // days, price, minimum. Before, the only way was delete + re-add. An error keeps the
+  // edit open (`edit=`) and shows next to it, not at the top of a long page.
+  if (req.method === "POST" && pathname === "/admin/prices/season/edit") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const id = form.get("id") ?? "";
+    if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
+      const min = (form.get("min_nights") ?? "").trim();
+      const result = await updateSeasonPrice(siteId, id, {
+        label: form.get("label") ?? "",
+        from: form.get("from") ?? "",
+        to: form.get("to") ?? "",
+        amount: Number(String(form.get("amount") ?? "").replace(/[\s.\u00a0]/g, "")),
+        minNights: min ? Number(min) : null,
+      });
+      if (!result.ok && result.errors.length) {
+        const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
+        return redirect(res, `/admin?tab=modulok&m=pricing&edit=${encodeURIComponent(id)}&${q}#s-${encodeURIComponent(id)}`);
+      }
+    }
+    return redirectRerendered(
+      res,
+      session.tenantId,
+      `/admin?tab=modulok&m=pricing&saved=1&sv=${encodeURIComponent(id)}#s-${encodeURIComponent(id)}`,
+    );
+  }
+  // Where two seasons share days, the one higher on the list prices them — the owner
+  // decides that order (2026-09-23), so it can be changed in place.
+  if (req.method === "POST" && pathname === "/admin/prices/season/move") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const id = form.get("id") ?? "";
+    if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
+      await moveSeasonPrice(siteId, id, form.get("dir") === "up" ? -1 : 1);
+    }
+    return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=pricing&saved=1#s-${encodeURIComponent(id)}`);
+  }
+  // One YEAR's price of a season (the year strip). `op=clear` removes it, and the
+  // recurring price holds that year again. The redirect lands on the same card.
+  if (req.method === "POST" && pathname === "/admin/prices/year") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    const season = form.get("season") ?? "";
+    const year = Number(form.get("year") ?? "");
+    const ev = `${encodeURIComponent(season)}-${Number.isFinite(year) ? year : 0}`;
+    if (siteId && (await tenantHasModule(session.tenantId, "pricing"))) {
+      const clear = form.get("op") === "clear";
+      const result = await setSeasonYearPrice(siteId, season, {
+        year,
+        amount: clear ? "" : (form.get("amount") ?? ""),
+        from: clear ? null : form.get("from"),
+        to: clear ? null : form.get("to"),
+      });
+      if (!result.ok && result.errors.length) {
+        const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");
+        return redirect(res, `/admin?tab=modulok&m=pricing&ev=${ev}&${q}#ev-${ev}`);
+      }
+    }
+    return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=pricing&saved=1&ev=${ev}#ev-${ev}`);
   }
   // ADR-0049 — "csak a felsorolt időszakokban adom ki", per unit. Off by default, so
   // an owner who never opens this screen keeps the all-year behaviour they had.

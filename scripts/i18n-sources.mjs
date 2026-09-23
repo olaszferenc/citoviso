@@ -137,6 +137,7 @@ export const I18N_SOURCES = [
   // page, plus the dated-price reminder mail — new files, entered on day one.
   "src/server/offerViews.ts",
   "src/tenant/priceExpiry.ts",
+  "src/tenant/seasonNudge.ts",
 
   // ── The INTERNAL CONSOLE (ADR-0067 ③) ────────────────────────────────────
   // Operator-facing, and prepared for a non-Hungarian colleague: the language is

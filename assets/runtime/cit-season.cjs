@@ -98,7 +98,49 @@ var CitSeason = (function () {
     return yearSeason || season || datedBase || base;
   }
 
-  return { covers: covers, monthDayOf: monthDayOf, inWindow: inWindow, rowFor: rowFor };
+  /* One YEAR's occurrence of a recurring season, named by the year it STARTS in
+   * (migration 0073, approved plan season-year-price). A range that wraps the year end
+   * (11-01 → 03-01) ends in the next calendar year, so its label is "2026/27" and its
+   * window runs 2026-11-01 … 2027-03-01. The Árazás page, the year-price writer and the
+   * public price table all name and date a year the SAME way — from here. */
+  function occurrence(from, to, year) {
+    var y = Number(year);
+    var wraps = from > to;
+    return {
+      year: y,
+      start: y + "-" + from,
+      end: (wraps ? y + 1 : y) + "-" + to,
+      label: wraps ? y + "/" + String(y + 1).slice(2) : String(y)
+    };
+  }
+
+  /* The first year whose occurrence has not ended by `isoToday` — the leftmost year the
+   * owner can still price (a season that closed yesterday offers next year first). */
+  function firstOpenYear(from, to, isoToday) {
+    var y = Number(String(isoToday).slice(0, 4)) - 1;
+    while (occurrence(from, to, y).end < String(isoToday).slice(0, 10)) y++;
+    return y;
+  }
+
+  /* What the owner typed → 'MM-DD', or null when it is not a real day of the year.
+   * "11-01", "11.01", "11. 01.", "11/1", "1101" all mean November 1 (approved plan
+   * season-year-price). Here, once: the Árazás page previews with it while the owner
+   * types, and the server stores with it — a preview that normalised differently
+   * would promise days the saved season does not have. */
+  var DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  function normMonthDay(raw) {
+    var t = String(raw == null ? "" : raw).replace(/\s+/g, "").replace(/\.$/, "");
+    var m = /^(\d{1,2})[.\-\/](\d{1,2})$/.exec(t) || /^(\d{2})(\d{2})$/.exec(t);
+    if (!m) return null;
+    var mo = Number(m[1]), d = Number(m[2]);
+    if (mo < 1 || mo > 12 || d < 1 || d > DIM[mo - 1]) return null;
+    return (mo < 10 ? "0" : "") + mo + "-" + (d < 10 ? "0" : "") + d;
+  }
+
+  return {
+    covers: covers, monthDayOf: monthDayOf, inWindow: inWindow, rowFor: rowFor,
+    occurrence: occurrence, firstOpenYear: firstOpenYear, normMonthDay: normMonthDay
+  };
 })();
 
 /* Node (server) requires this file; a browser gets the same binding from the var. */

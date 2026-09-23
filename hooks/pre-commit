@@ -1667,6 +1667,15 @@ if [ -f scripts/booking-offer-check.mts ] && \
   echo "[pre-commit] booking-offer (ár nélküli kérésre árajánlat, levéltől foglalásig)…"
   npx tsx scripts/booking-offer-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ÉVHEZ KÖTÖTT SZEZONÁR (kontraktus: design-refs/tenant-admin/season-year-price): a szezon
+# MM-DD volt, év nélkül, ezért 2027 júliusára ugyanaz az ár fagyott be, mint idénre. A lánc
+# (éves ár · szerkesztés · sorrend · évsáv · honlap-ártábla · szezon végi kérdés · a lejárat-
+# levél kivétele) hat fájlban épül — a trigger mindet és az őrt magát is lefedi.
+if [ -f scripts/season-year-price-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(prices|priceExpiry|seasonNudge|seasonRule|editor)\.ts$|^src/server/(moduleConfigViews|public)\.ts$|^src/engine/moduleSections\.ts$|^assets/runtime/cit-season\.cjs$|^migrations/0073_|^assets/design-refs/tenant-admin/season-year-price/|^scripts/season-year-price-check'; then
+  echo "[pre-commit] season-year-price (évhez kötött szezonár, évsáv, szezon végi kérdés)…"
+  npx tsx scripts/season-year-price-check.mts >"$GATE_LOG" || gate_failed
+fi
 # SZEZON-SZABÁLY (ADR-0197 ③): a „melyik ár-sor vonatkozik erre az éjszakára?" kérdés
 # KÉT példányban élt — a szerveré fagy rá a foglalási kérésre és megy ki a vendég
 # levelében, a böngészőé az, amit a vendég beküldés ELŐTT olvas —, és a kettőt semmi

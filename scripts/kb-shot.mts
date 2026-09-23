@@ -78,6 +78,8 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 // Language of the shot UI. Today the admin renders Hungarian; when the admin surface
 // gets language packs, this drives per-language captures of the same fixtures.
 const LANG = process.env.KB_SHOT_LANG ?? "hu";
+/** 0073: the pricing shot's year strip is pinned to this year (and "today" to the year before). */
+const SHOT_YEAR = 2027;
 
 // ── --out <dir>: a felvételek a <dir> alá mennek, ugyanazzal a relatív úttal ────────
 // A fa képei érintetlenek maradnak — ez kell a determinizmus-próbához és a deploy-kapuhoz,
@@ -683,9 +685,16 @@ function moduleShotHtml(entryId: string): string {
           u1: [
             { id: "p1", label: "Alapár", from: null, to: null, amount: 24000, isBase: true },
             { id: "p2", label: "Főszezon", from: "06-15", to: "08-31", amount: 32000, isBase: false },
+            // 0073: the year strip is what the entry describes — one season with a
+            // year price of its own, one that runs over the year end.
+            { id: "p4", label: "Főszezon", from: "06-15", to: "08-31", amount: 35000, isBase: false,
+              validFrom: `${SHOT_YEAR}-06-15`, validTo: `${SHOT_YEAR}-08-31`, parentId: "p2" },
+            { id: "p5", label: "Holtszezon", from: "11-01", to: "03-01", amount: 18000, isBase: false },
           ],
           u2: [{ id: "p3", label: "Alapár", from: null, to: null, amount: 16000, isBase: true }],
         },
+        // A fixed day, so the strip's first card (and so the shot) does not drift daily.
+        today: `${SHOT_YEAR - 1}-09-23`,
       },
     });
   if (entryId === "admin-modules-programs") {
@@ -1253,7 +1262,11 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
           // filled the whole viewport — measured: not one review card in the first shot.
           entryId === "admin-modules-reviews"
           ? ".rv-inbox"
-          : undefined,
+          : // 0073: the pricing entry explains the YEAR STRIP and the season's edit/order
+            // controls — both sit below the 390×844 fold, so the whole first unit card goes.
+            entryId === "admin-modules-pricing"
+            ? ".adm-card:has([data-strip])"
+            : undefined,
   );
 }
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative

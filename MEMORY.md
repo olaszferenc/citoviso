@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-XXXX — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -12,6 +12,20 @@ Utolsó frissítés: 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determin
 > (a megújítás listaáron menne).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 este)
+
+**📅 ÉVHEZ KÖTÖTT SZEZONÁR — KÉSZ LOKÁLBAN (ADR-XXXX, migráció 0073). Élesítés nem volt.**
+Session-jegyzet: `_planning/memory/2026-09-23_season_year_price.md`.
+
+- **Árazás lap:** minden szezon alatt **évsáv** (B·1: kilógó kártya, végtelen oldalgörgetés, nyilak) —
+  üres kártyán az ismétlődő ár él (visszaesés); **„Szerkesztés”** a szezon-soron; **fel/le** sorrend
+  (átfedésnél a feljebb álló nyer); élő előnézet („11.01” is jó; átnyúló szezon „2026/27”).
+- **Honlap-ártábla:** évet csak az éves árú szezon kap, a foglalható horizont minden alkalmával.
+- **Szezon végi kérdés:** a záró nap utáni reggelen egy levél a jövő évi árról (`season_nudged_year`);
+  az éves szezonra nincs „lejár egy ár” levél. Kontraktus: `assets/design-refs/tenant-admin/season-year-price/`.
+- **Őr:** `scripts/season-year-price-check.mts` (~99 állítás, piros kontrollal).
+- **Nyitva:** névelő nélküli levél-tárgy (i18n), egységenkénti levél, foglaltsági szám a levélben.
+
+## Előző szál (2026-09-23 este — súgó-kép frissesség)
 
 **🖼️ SÚGÓ-KÉP FRISSESSÉG = DEPLOY-KAPU — KÉSZ LOKÁLBAN (ADR-0220).** A `kb-shot` determinisztikus
 (`settle()` minden felvétel előtt; próba: `npx tsx scripts/kb-shot.mts --determinism`, 8 gyártás
