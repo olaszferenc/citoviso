@@ -1,4 +1,4 @@
-## ADR-XXXX — Évhez kötött szezonár: évsáv visszaeséssel, szerkeszthető és rendezhető szezon, szezon végi kérdés (2026-09-23)
+## ADR-0221 — Évhez kötött szezonár: évsáv visszaeséssel, szerkeszthető és rendezhető szezon, szezon végi kérdés (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrrel; nem élesítve) ·
 **Kapcsolódó:** ADR-0208 ③ (a mért tényállás: a szezon `MM-DD`, év nélkül) és ⑥.5 (ez a tétel),

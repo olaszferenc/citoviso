@@ -1,4 +1,4 @@
-# 2026-09-23 — Évhez kötött szezonár: évsáv, szerkeszthető szezon, szezon végi kérdés (ADR-XXXX)
+# 2026-09-23 — Évhez kötött szezonár: évsáv, szerkeszthető szezon, szezon végi kérdés (ADR-0221)
 
 **Szál:** „CIT ➕ Árazás: évhez kötött szezonár + nudge” (munkafa `~/wt/cit844fa15e`). Mandátum:
 `~/rc-briefs/arazas-evhez-kotott-szezon.md` (ADR-0208 ⑥.5 — a „kikényszerítés” 3. része).

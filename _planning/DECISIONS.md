@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-evhez-kotott-szezonar-evsav-es-szezon-vegi-kerdes.md) — Évhez kötött szezonár: évsáv visszaeséssel, szerkeszthető és rendezhető szezon, szezon végi kérdés (2026-09-23)
+- [ADR-0221](decisions/0221-evhez-kotott-szezonar-evsav-visszaesessel.md) — Évhez kötött szezonár: évsáv visszaeséssel, szerkeszthető és rendezhető szezon, szezon végi kérdés (2026-09-23)
 - [ADR-0220](decisions/0220-a-sugo-kep-frissessege-deploy-kapu-nem.md) — A súgó-kép frissessége deploy-KAPU, nem figyelmeztetés — előfeltétele a determinisztikus képgyártó (2026-09-23)
 - [ADR-0219](decisions/0219-a-vendeg-koszonolevele-legfeljebb-egyszer-megy.md) — A vendég köszönőlevele legfeljebb egyszer megy ki; a vélemény-kezelő csillaga szín nélkül is igazat mond (2026-09-23)
 - [ADR-0218](decisions/0218-a-lead-mock-programajanloja-kitoltott-minta.md) — A lead-mock programajánlója kitöltött minta: pirula nélkül, a nézés napjához igazított dátumokkal (2026-09-23)
