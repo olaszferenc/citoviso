@@ -20,6 +20,13 @@ in_rebase() {
   [ -d "$(git rev-parse --git-path rebase-merge)" ] || [ -d "$(git rev-parse --git-path rebase-apply)" ]
 }
 
+# B: a previous land attempt may have assigned a number and then been rejected (push race, red
+# gate). That assignment is undone first, so this round assigns a FRESH number after its fetch.
+# (A branch from before the migration has no tool yet — the rebase below brings it in.)
+if [ -f scripts/planning-index.mts ]; then
+  npx tsx scripts/planning-index.mts assign --undo || exit 1
+fi
+
 if ! git rebase origin/main; then
   in_rebase || exit 1 # the rebase refused to even start (e.g. dirty tree) — nothing to resolve
 fi
@@ -59,4 +66,7 @@ if ! git diff --quiet -- _planning/DECISIONS.md _planning/memory/INDEX.md; then
   git commit -q --no-verify -m "chore(index): a generált döntés- és memória-index újraépítve a rebase után" || exit 1
   echo "   ↻ a generált indexek újraépítve (külön commit)"
 fi
+# B: the placeholder ADR (if any) gets its number NOW — after the last fetch+rebase, right before
+# the gates and the push. Rewrites only this branch's added lines; post-conditions or a loud stop.
+npx tsx scripts/planning-index.mts assign || exit 1
 exit 0

@@ -46,8 +46,28 @@ const GENERATED = [DEC_INDEX_REL, MEM_INDEX_REL];
 // duplicate fails the gate. Remove the entry once the owner has decided.
 const KNOWN_DUPLICATES = new Set(["ADR-0033"]);
 
-const HEADING_RE = /^## (ADR-(\d{4})(\/b| utószál)?) — (.+)$/;
-const ADR_FILE_RE = /^(\d{4})(-b|-utoszal)?-[a-z0-9-]+\.md$/;
+// B (2026-09-23): a new ADR is written with the PLACEHOLDER number `XXXX` (file `XXXX-slug.md`,
+// heading `## ADR-XXXX — …`, references `ADR-XXXX`); the land assigns the real number AFTER its
+// last fetch (`assign`). The token is built by concatenation so this file never "contains" it.
+const PH_NUM = "X".repeat(4);
+const PH_LABEL = `ADR-${PH_NUM}`;
+const HEADING_RE = /^## (ADR-(\d{4}|XXXX)(\/b| utószál)?) — (.+)$/;
+const ADR_FILE_RE = /^(\d{4}|XXXX)(-b|-utoszal)?-[a-z0-9-]+\.md$/;
+// Files that DOCUMENT the placeholder mechanism: the land never rewrites the token in them.
+// An ADDED line carrying the token here is a hard stop (a human decides) — see cmdAssign.
+const PH_DOC_FILES = new Set([
+  "CLAUDE.md",
+  "scripts/planning-index.mts",
+  "scripts/planning-index-land-check.mts",
+  "scripts/land-rebase.sh",
+  "scripts/land.sh",
+  "hooks/pre-commit",
+  `${DEC_DIR_REL}/README.md`,
+  `${DEC_DIR_REL}/0210-adr-enkent-kulon-fajl-a-ket-index-generalt.md`,
+]);
+const ASSIGN_TRAILER_KEY = "Land-Assigned-ADR";
+const ASSIGN_TRAILER = `${ASSIGN_TRAILER_KEY}:`;
+const ASSIGN_SUBJECT = "chore(adr): a helyőrző → ";
 const GENERATED_MARK = "<!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->";
 
 // ── Sources: the working tree, or the git index (the STAGED content — what a commit carries).
@@ -198,7 +218,8 @@ function readAdrFiles(src: Source, problems: string[]): AdrFile[] {
     if (fm[1] !== h[2] || fileSuffix !== (h[3] ?? "")) {
       problems.push(`${DEC_DIR_REL}/${file}: a fájlnév száma (${fm[1]}${fileSuffix}) ≠ a fejléc száma (${h[1]})`);
     }
-    out.push({ file, label: h[1], num: Number(h[2]), suffixed: Boolean(h[3]), title: h[4] });
+    // The placeholder sorts above every real number (it is the newest by definition).
+    out.push({ file, label: h[1], num: h[2] === PH_NUM ? 1e6 : Number(h[2]), suffixed: Boolean(h[3]), title: h[4] });
   }
   return out;
 }
@@ -214,8 +235,9 @@ export function buildDecisionsIndex(src: Source, problems: string[]): string {
   const howto = [
     "> **Hol a szöveg?** Minden ADR a SAJÁT fájljában él: `_planning/decisions/NNNN-slug.md`. Ez a lap",
     "> csak index (újabb elöl). Teljes szövegű keresés: `grep -rn \"…\" _planning/decisions/`.",
-    "> **Új ADR:** `npx tsx scripts/planning-index.mts next` adja a számot → új fájl `## ADR-NNNN — Cím`",
-    "> első sorral → `npx tsx scripts/planning-index.mts build`. Ezt a lapot kézzel ne szerkeszd.",
+    `> **Új ADR:** \`${DEC_DIR_REL}/${PH_NUM}-slug.md\`, első sora \`## ${PH_LABEL} — Cím\`, és mindenhol`,
+    `> \`${PH_LABEL}\`-ként hivatkozz rá → \`npx tsx scripts/planning-index.mts build\`. A SZÁMOT A LAND OSZTJA KI`,
+    "> az utolsó fetch után, és csak a saját diffed hozzáadott soraiban írja át. Ezt a lapot kézzel ne szerkeszd.",
     "> **Rebase-ütközés ebben a fájlban?** (pl. a régi, egyfájlos naplóban szerkesztettél) →",
     "> `npx tsx scripts/planning-index.mts rebase-resolve` → `git rebase --continue`. A régi alakú",
     "> szerkesztésedet a saját ADR-fájljába viszi; ha ugyanazt az ADR-t a main is módosította, megáll.",
@@ -262,6 +284,10 @@ function duplicateProblems(src: Source): string[] {
   const byLabel = new Map<string, string[]>();
   for (const f of readAdrFiles(src, [])) byLabel.set(f.label, [...(byLabel.get(f.label) ?? []), f.file]);
   for (const [label, files] of byLabel) {
+    if (label.startsWith(PH_LABEL) && files.length > 1) {
+      problems.push(`TÖBB HELYŐRZŐ-ADR (${label}): ${files.join(", ")} — egy landban EGY új ADR; a többit vidd külön landba`);
+      continue;
+    }
     if (files.length > 1 && !KNOWN_DUPLICATES.has(label)) {
       problems.push(
         `DUPLIKÁLT ADR-SZÁM: ${label} ${files.length} fájlon — ${files.join(", ")}\n` +
@@ -290,9 +316,13 @@ function cmdBuild(): number {
   return 0;
 }
 
-function cmdCheck(staged: boolean): number {
+function cmdCheck(staged: boolean, noPlaceholder: boolean): number {
   const src = staged ? stagedSource() : worktreeSource;
   const problems: string[] = [];
+  // At land time the placeholder must already be assigned — it may never reach main.
+  if (noPlaceholder) {
+    for (const f of readAdrFiles(src, [])) if (f.label.startsWith(PH_LABEL)) problems.push(`${DEC_DIR_REL}/${f.file}: helyőrző-ADR a landolt diffben — a számot a land-rebase \`assign\` lépése osztja ki`);
+  }
   const dec = buildDecisionsIndex(src, problems);
   if (src.read(DEC_INDEX_REL) !== dec) problems.push(`${DEC_INDEX_REL} ELAVULT vagy kézzel szerkesztett — futtasd: npx tsx scripts/planning-index.mts build`);
   if (src.read(MEM_INDEX_REL) !== buildMemoryIndex(src)) problems.push(`${MEM_INDEX_REL} ELAVULT vagy kézzel szerkesztett — futtasd: npx tsx scripts/planning-index.mts build`);
@@ -308,13 +338,13 @@ function cmdNext(): number {
   const nums: number[] = [];
   for (const f of worktreeSource.list(DEC_DIR_REL)) {
     const m = ADR_FILE_RE.exec(f);
-    if (m) nums.push(Number(m[1]));
+    if (m && m[1] !== PH_NUM) nums.push(Number(m[1]));
   }
   const tree = spawnSync("git", ["ls-tree", "--name-only", `origin/main:${DEC_DIR_REL}`], { cwd: ROOT, encoding: "utf8" });
   if (tree.status === 0) {
     for (const f of tree.stdout.split("\n")) {
       const m = ADR_FILE_RE.exec(f);
-      if (m) nums.push(Number(m[1]));
+      if (m && m[1] !== PH_NUM) nums.push(Number(m[1]));
     }
   }
   // Transition: a main that still carries the single-file log numbers its ADRs in the headings.
@@ -322,7 +352,7 @@ function cmdNext(): number {
   if (legacy.status === 0) for (const m of legacy.stdout.matchAll(/^## ADR-(\d{4})/gm)) nums.push(Number(m[1]));
   if (tree.status !== 0 && legacy.status !== 0) console.error("⚠️  origin/main nem olvasható (nincs fetch?) — csak a munkafa alapján számolok");
   console.log(`ADR-${String(Math.max(0, ...nums) + 1).padStart(4, "0")}`);
-  console.error("⚠️  A szám a LAND pillanatáig nem végleges: közvetlenül land előtt `git fetch` és futtasd újra.");
+  console.error(`⚠️  Ez csak tájékoztató. Új ADR-t ${PH_LABEL} helyőrzővel írj — a számot a land osztja ki az utolsó fetch után.`);
   return 0;
 }
 
@@ -453,6 +483,160 @@ function cmdRebaseResolve(): number {
   return 0;
 }
 
+// ── B: the land assigns the placeholder's number ────────────────────────────────────────────
+// ⛔⛔ THE MOST DANGEROUS STEP, with a paid lesson (feedback_my_fixup_tool_damaged_another_thread):
+// an earlier land automation's blind `sed` rewrote TWO FOREIGN sessions' ADR numbers. Hence:
+//   · the token is rewritten ONLY in lines this branch ADDED (git diff -U0 origin/main...HEAD),
+//     never in a line main already had — and never in the files documenting the mechanism;
+//   · post-conditions prove it: every changed line differs from HEAD ONLY by token→number, no
+//     file outside the branch's own diff changed, no token remains, no duplicate number exists.
+// Any violation restores the tree and stops loudly; the branch keeps its placeholder.
+
+function isClean(): boolean {
+  return git(["status", "--porcelain", "--untracked-files=no"])!.trim() === "";
+}
+
+// New-side line numbers (1-based) of the lines this branch added to `file`.
+function addedLines(file: string): Set<number> {
+  const out = git(["diff", "-U0", "--no-color", "origin/main...HEAD", "--", file]) ?? "";
+  const lines = new Set<number>();
+  for (const m of out.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+    const start = Number(m[1]);
+    const len = m[2] === undefined ? 1 : Number(m[2]);
+    for (let i = 0; i < len; i++) lines.add(start + i);
+  }
+  return lines;
+}
+
+function cmdAssign(): number {
+  const placeholders = worktreeSource.list(DEC_DIR_REL).filter((f) => f.startsWith(`${PH_NUM}-`));
+  if (placeholders.length === 0) {
+    console.log("planning-index: assign — nincs helyőrző-ADR, nincs mit kiosztani");
+    return 0;
+  }
+  if (!isClean()) return report(["assign: a fa nem tiszta — a land csak commitolt állapoton oszt számot"]);
+  if (placeholders.length > 1) return report([`assign: ${placeholders.length} helyőrző-ADR (${placeholders.join(", ")}) — egy landban EGY új ADR`]);
+  const phFile = placeholders[0];
+
+  const nums: number[] = [];
+  for (const f of worktreeSource.list(DEC_DIR_REL)) {
+    const m = ADR_FILE_RE.exec(f);
+    if (m && m[1] !== PH_NUM) nums.push(Number(m[1]));
+  }
+  const num = String(Math.max(0, ...nums) + 1).padStart(4, "0");
+  const label = `ADR-${num}`;
+
+  const changed = (git(["diff", "--name-only", "--diff-filter=AMR", "origin/main...HEAD"]) ?? "").split("\n").filter(Boolean);
+  const problems: string[] = [];
+  const edits = new Map<string, string>(); // rel -> new content
+  let replaced = 0;
+  const wholeFile = process.env.PLANNING_INDEX_SABOTAGE === "whole-file";
+  for (const rel of changed) {
+    if (GENERATED.includes(rel)) continue; // regenerated below
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) continue;
+    const text = fs.readFileSync(abs, "utf8");
+    const added = addedLines(rel);
+    const lines = text.split("\n");
+    if (PH_DOC_FILES.has(rel)) {
+      const hit = [...added].filter((n) => lines[n - 1]?.includes(PH_LABEL));
+      if (hit.length) problems.push(`${rel}: a mechanizmust leíró fájlban helyőrzős HOZZÁADOTT sor (${hit.join(", ")}. sor) — ezt a land nem írja át, döntsd el kézzel`);
+      continue;
+    }
+    let touched = false;
+    for (let i = 0; i < lines.length; i++) {
+      if (!(wholeFile || added.has(i + 1)) || !lines[i].includes(PH_LABEL)) continue;
+      // The new number must not ALREADY mean something in the lines we rewrite.
+      if (new RegExp(`${label}(?!\\d)`).test(lines[i])) problems.push(`${rel}:${i + 1}: a sor már hivatkozik a(z) ${label}-ra — a csere után két jelentése lenne`);
+      const before = lines[i];
+      lines[i] = lines[i].split(PH_LABEL).join(label);
+      replaced += before.split(PH_LABEL).length - 1;
+      touched = true;
+    }
+    if (touched) edits.set(rel, lines.join("\n"));
+  }
+  if (problems.length) return report(problems);
+
+  const phRel = `${DEC_DIR_REL}/${phFile}`;
+  const phContent = edits.get(phRel) ?? fs.readFileSync(path.join(ROOT, phRel), "utf8");
+  if (!phContent.startsWith(`## ${label}`)) return report([`assign: a ${phRel} fejléce nem cserélődött (${phContent.split("\n")[0]})`]);
+  const newRel = `${DEC_DIR_REL}/${fileNameFor(phContent)}`;
+  edits.delete(phRel);
+
+  // Apply, then prove.
+  for (const [rel, content] of edits) fs.writeFileSync(path.join(ROOT, rel), content);
+  fs.writeFileSync(path.join(ROOT, newRel), phContent);
+  fs.rmSync(path.join(ROOT, phRel));
+  const restore = (why: string[]) => {
+    git(["checkout", "-q", "HEAD", "--", "."]);
+    if (fs.existsSync(path.join(ROOT, newRel)) && newRel !== phRel) fs.rmSync(path.join(ROOT, newRel));
+    return report(why);
+  };
+
+  const post: string[] = [];
+  // (1) only the branch's own files (+ the rename target + the generated indexes) changed
+  const allowed = new Set([...changed, newRel, ...GENERATED]);
+  const dirty = git(["status", "--porcelain", "--untracked-files=all"])!.split("\n").filter(Boolean).map((l) => l.slice(3));
+  for (const f of dirty) if (!allowed.has(f) && f !== "BRIEF.md") post.push(`UTÓ-FELTÉTEL: idegen fájl változott: ${f}`);
+  // (2) every changed line differs from HEAD only by the token substitution
+  const pairs: [string, string][] = [...edits.keys()].map((r) => [r, r]);
+  pairs.push([phRel, newRel]);
+  for (const [oldRel, nowRel] of pairs) {
+    const was = (git(["show", `HEAD:${oldRel}`]) ?? "").split("\n");
+    const now = fs.readFileSync(path.join(ROOT, nowRel), "utf8").split("\n");
+    if (was.length !== now.length) post.push(`UTÓ-FELTÉTEL: ${nowRel} sorszáma változott`);
+    for (let i = 0; i < Math.min(was.length, now.length); i++) {
+      if (was[i] !== now[i] && was[i].split(PH_LABEL).join(label) !== now[i]) post.push(`UTÓ-FELTÉTEL: ${nowRel}:${i + 1} nem csak a helyőrző cseréjével változott`);
+    }
+    // a line main already had must be byte-identical
+    const addedNow = addedLines(oldRel);
+    for (let i = 0; i < Math.min(was.length, now.length); i++) {
+      if (!addedNow.has(i + 1) && was[i] !== now[i]) post.push(`UTÓ-FELTÉTEL: ${nowRel}:${i + 1} a MAIN-en már meglévő sor változott`);
+    }
+  }
+  // (3) no placeholder left in the branch's own (non-doc) added lines
+  for (const rel of changed) {
+    if (PH_DOC_FILES.has(rel) || GENERATED.includes(rel) || rel === phRel) continue;
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) continue;
+    const lines = fs.readFileSync(abs, "utf8").split("\n");
+    for (const n of addedLines(rel)) if (lines[n - 1]?.includes(PH_LABEL)) post.push(`UTÓ-FELTÉTEL: ${rel}:${n} helyőrző maradt`);
+  }
+  // (4) indexes rebuilt, and the new number is unique
+  const probs: string[] = [];
+  const dec = buildDecisionsIndex(worktreeSource, probs);
+  post.push(...probs, ...duplicateProblems(worktreeSource));
+  if (post.length) return restore(post);
+  fs.writeFileSync(path.join(ROOT, DEC_INDEX_REL), dec);
+  fs.writeFileSync(path.join(ROOT, MEM_INDEX_REL), buildMemoryIndex(worktreeSource));
+
+  git(["add", "-A", "--", ...allowed, phRel]);
+  const msg =
+    `${ASSIGN_SUBJECT}${label} (a land osztotta ki az utolsó fetch után)\n\n` +
+    `${replaced} hivatkozás a saját diff hozzáadott soraiban; ${phFile} → ${path.basename(newRel)}.\n\n` +
+    `${ASSIGN_TRAILER} ${label}\n`;
+  const r = spawnSync("git", ["commit", "-q", "--no-verify", "-F", "-"], { cwd: ROOT, input: msg, encoding: "utf8" });
+  if (r.status !== 0) return restore([`assign: a commit nem sikerült: ${r.stderr}`]);
+  console.log(`planning-index: assign ✅ ${PH_LABEL} → ${label} (${replaced} hivatkozás, ${path.basename(newRel)})`);
+  return 0;
+}
+
+// Undo the land's own previous assignment (a rejected push / failed gate): only a commit whose
+// SUBJECT is the land's own assignment subject AND which carries the marker as a real git TRAILER
+// AND is not on origin/main — anything else is somebody's real work.
+// ⛔ MÉRT (2026-09-23): az első változat `msg.includes(trailer)`-t nézett, és a SAJÁT B-commitomat
+//    vonta vissza, mert az üzenete MEGEMLÍTETTE a jelölőt. Szöveg-előfordulás nem azonosít.
+function cmdAssignUndo(): number {
+  const subject = git(["log", "-1", "--format=%s"]) ?? "";
+  const trailer = (git(["log", "-1", `--format=%(trailers:key=${ASSIGN_TRAILER_KEY},valueonly)`]) ?? "").trim();
+  if (!subject.startsWith(ASSIGN_SUBJECT) || !/^ADR-\d{4}$/.test(trailer)) return 0;
+  if (git(["merge-base", "--is-ancestor", "HEAD", "origin/main"], { allowFail: true }) !== null) return 0;
+  if (!isClean()) return report(["assign --undo: a fa nem tiszta — a kiosztó commitot nem vonom vissza"]);
+  git(["reset", "-q", "--hard", "HEAD~1"]);
+  console.log("planning-index: a land előző szám-kiosztása visszavonva (újra helyőrző) — a következő kör friss számot ad");
+  return 0;
+}
+
 function report(problems: string[]): number {
   console.error("⛔ planning-index:");
   for (const p of problems) console.error(`   · ${p}`);
@@ -465,8 +649,12 @@ function main(argv: string[]): number {
     case "build":
       return cmdBuild();
     case "check":
-      if (rest.some((a) => a !== "--staged")) return report([`ismeretlen kapcsoló: ${rest.join(" ")}`]);
-      return cmdCheck(rest.includes("--staged"));
+      if (rest.some((a) => a !== "--staged" && a !== "--no-placeholder")) return report([`ismeretlen kapcsoló: ${rest.join(" ")}`]);
+      return cmdCheck(rest.includes("--staged"), rest.includes("--no-placeholder"));
+    case "assign":
+      if (rest.length === 1 && rest[0] === "--undo") return cmdAssignUndo();
+      if (rest.length) return report([`ismeretlen kapcsoló: ${rest.join(" ")}`]);
+      return cmdAssign();
     case "next":
       return cmdNext();
     case "split":
@@ -480,7 +668,7 @@ function main(argv: string[]): number {
     case "rebase-resolve":
       return cmdRebaseResolve();
     default:
-      return report([`ismeretlen parancs: ${cmd ?? "(nincs)"} — build | check [--staged] | next | split | verify-split | rebase-resolve`]);
+      return report([`ismeretlen parancs: ${cmd ?? "(nincs)"} — build | check [--staged] [--no-placeholder] | next | assign [--undo] | split | verify-split | rebase-resolve`]);
   }
 }
 

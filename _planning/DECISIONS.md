@@ -7,8 +7,9 @@
 
 > **Hol a szöveg?** Minden ADR a SAJÁT fájljában él: `_planning/decisions/NNNN-slug.md`. Ez a lap
 > csak index (újabb elöl). Teljes szövegű keresés: `grep -rn "…" _planning/decisions/`.
-> **Új ADR:** `npx tsx scripts/planning-index.mts next` adja a számot → új fájl `## ADR-NNNN — Cím`
-> első sorral → `npx tsx scripts/planning-index.mts build`. Ezt a lapot kézzel ne szerkeszd.
+> **Új ADR:** `_planning/decisions/XXXX-slug.md`, első sora `## ADR-XXXX — Cím`, és mindenhol
+> `ADR-XXXX`-ként hivatkozz rá → `npx tsx scripts/planning-index.mts build`. A SZÁMOT A LAND OSZTJA KI
+> az utolsó fetch után, és csak a saját diffed hozzáadott soraiban írja át. Ezt a lapot kézzel ne szerkeszd.
 > **Rebase-ütközés ebben a fájlban?** (pl. a régi, egyfájlos naplóban szerkesztettél) →
 > `npx tsx scripts/planning-index.mts rebase-resolve` → `git rebase --continue`. A régi alakú
 > szerkesztésedet a saját ADR-fájljába viszi; ha ugyanazt az ADR-t a main is módosította, megáll.

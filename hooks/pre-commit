@@ -99,7 +99,7 @@ if [ -f scripts/planning-index.mts ] && \
    changed_files | grep -qE '^_planning/(DECISIONS\.md|decisions/|memory/)|^scripts/(planning-index\.mts|land-rebase\.sh)'; then
   echo "[pre-commit] planning-index (friss-e a két generált index, nincs-e duplikált ADR-szám)…"
   if [ -n "${LAND_RANGE:-}" ]; then
-    npx tsx scripts/planning-index.mts check >"$GATE_LOG" || gate_failed
+    npx tsx scripts/planning-index.mts check --no-placeholder >"$GATE_LOG" || gate_failed
   else
     npx tsx scripts/planning-index.mts check --staged >"$GATE_LOG" || gate_failed
   fi

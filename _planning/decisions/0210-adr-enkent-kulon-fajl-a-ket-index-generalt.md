@@ -62,9 +62,25 @@ helyéből és a reggeli commitokból igazolva), a fixture-ág törölve. Javít
 környezetéből minden `GIT_*` kikerül + TRIPWIRE minden írás előtt; hook-környezetben CSALI
 repóra bizonyítva (érintetlen), a szűrést visszarontva a tripwire az első lépésnél megállít.
 
-**Nyitva:** **B** — a szám a land pillanatában dőljön el (`ADR-XXXX` helyőrző → a `land-rebase` osztja
-ki az utolsó fetch után, és CSAK a saját diff hivatkozásait írja át, utó-feltétellel); addig a
-duplikált számot a kapu fogja meg, és a szál kézzel számoz át. · A `MEMORY.md` „Aktív feladat"
+**② B — a szám a LAND pillanatában dől el (2026-09-23, tulajdonosi jóváhagyás):** új ADR `XXXX-slug.md`
+fájlba, `## ADR-XXXX — Cím` fejléccel, és a szál mindenhol `ADR-XXXX`-ként hivatkozik rá. A `land-rebase.sh`
+a rebase UTÁN (az utolsó fetch után) a következő szabad számot adja (`planning-index.mts assign`), és
+külön, jelölt commitban (`Land-Assigned-ADR:`) írja át:
+- CSAK a saját diff HOZZÁADOTT sorait (`git diff -U0 origin/main...HEAD`) — a mainen már meglévő sort
+  soha (ez a megfizetett lecke: egy vak `sed` két idegen ADR-t írt át);
+- a mechanizmust leíró fájlokat (`CLAUDE.md`, a szkriptek, a README, ez az ADR) SOHA — ha ott hozzáadott
+  sorban helyőrző áll, hangos megállás;
+- UTÓ-FELTÉTELEK: minden megváltozott sor csak a csere erejéig tér el; a main meglévő sora bájtra
+  marad; idegen fájl nem változik; nem marad helyőrző; nincs duplikátum; ha a sor MÁR hivatkozik az új
+  számra (két jelentés lenne) → megállás. Bármelyik sérül → a fa visszaáll, az ág a helyőrzőn marad.
+- Verseny: ha a push előtt valaki elviszi a számot, a következő kör (és minden bukott land) visszavonja
+  a SAJÁT kiosztó commitját (csak ha jelölt és nincs a mainen), és friss számot ad.
+- Bizonyíték: a land-őr 50 állítása (⑧ kiosztás · ⑨ verseny · ⑩–⑫ megállások · ⑬ negatív kontroll: a
+  szűkítés kikapcsolva az utó-feltétel megfogja); két célzott rontás (undo kikapcsolva → ⑨ piros;
+  doktrína-védelem kikapcsolva → ⑩ piros).
+- A régi út (`next` + számozott fájl) működik tovább; ütközéskor a duplikátum-kapu fogja meg.
+
+**Nyitva:** A `MEMORY.md` „Aktív feladat"
 blokkjának ütközése (A+D nem érinti). · ADR-0033 átszámozása.
 
 **Visszafordíthatóság:** 🔄 — a régi napló a git-történetben bájtra megvan, a fájlok összefűzése

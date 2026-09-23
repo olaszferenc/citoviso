@@ -16,6 +16,17 @@
 //   ⑥ KÉZI SZERKESZTÉS a generált indexben: a `check --staged` bukik.
 //   ⑦ NEGATÍV KONTROLL: a ③ átvétel kikapcsolva (PLANNING_INDEX_SABOTAGE=skip-adopt) a ③
 //      állításainak PIROSRA kell menniük — különben a ③ zöldje nem bizonyít semmit.
+//   ── B: a helyőrző-szám kiosztása a land pillanatában ──
+//   ⑧ KIOSZTÁS: közben landol egy másik ADR; a helyőrző a következő szabad számot kapja, és CSAK a
+//      saját diff HOZZÁADOTT sorai íródnak át — a main-en már meglévő helyőrzős sor bájtra marad.
+//   ⑨ VERSENY: a kiosztott számot a push előtt elviszik → a következő kör visszavonja a kiosztást
+//      és friss számot ad; duplikátum nincs, a másik szál ADR-je érintetlen.
+//   ⑩ A MECHANIZMUST LEÍRÓ FÁJL (CLAUDE.md) hozzáadott sorában helyőrző → hangos megállás.
+//   ⑪ KÉT HELYŐRZŐ egy landban → megállás.   ⑫ KÉTÉRTELMŰ: a sor már hivatkozik az új számra → megállás.
+//   ⑭ AZ UNDO CSAK A SAJÁTJÁT: egy szál-commit, aminek az üzenete MEGEMLÍTI a kiosztó jelölőt, NEM
+//      vonható vissza (mérve: az első változat pont így dobta el a saját B-commitomat).
+//   ⑬ NEGATÍV KONTROLL: a „csak hozzáadott sor" szűkítés kikapcsolva (PLANNING_INDEX_SABOTAGE=whole-file)
+//      → az UTÓ-FELTÉTELNEK meg kell fognia a main meglévő sorának átírását.
 //
 // ⛔ ÜRES HALMAZON MÉRNI HAMIS ZÖLD: a záró sor kiírja, hány állítás futott; nulla = bukás.
 //
@@ -113,6 +124,9 @@ function seed() {
   write(s, "_planning/memory/2026-01-01_elso.md", "# Első jegyzet\n\ntartalom\n");
   write(s, "_planning/memory/INDEX.md", "# index\n- [2026-01-01_elso.md](2026-01-01_elso.md) — kézi sor\n");
   write(s, "src/app.ts", "export const x = 1;\n");
+  // The mechanism is documented with the literal token — the land must never rewrite these lines.
+  write(s, "CLAUDE.md", "# doktrína\n\nÚj ADR: `ADR-XXXX` helyőrző, a land osztja ki.\n");
+  write(s, "docs/mechanism.md", "# leírás\n\n`ADR-XXXX` a helyőrző neve.\n");
   commitAll(s, "legacy");
   git(s, "branch", "legacy-work");
   // Migration commit: the tool arrives WITH the migration, exactly as on the real main.
@@ -253,6 +267,102 @@ function scenarioHandEdit() {
   expect(d.status !== 0 && d.out.includes("DECISIONS.md ELAVULT"), "⑥ a DECISIONS.md-be kézzel írt ADR-t a check --staged megfogja");
 }
 
+// ── B scenarios ─────────────────────────────────────────────────────────────────────────────
+const PH = "ADR-" + "XXXX";
+function writePlaceholder(dir: string, title: string) {
+  write(dir, `_planning/decisions/XXXX-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.md`, `## ${PH} — ${title}\n\n- tartalom\n`);
+}
+const lastMsg = (dir: string) => git(dir, "log", "-1", "--format=%B");
+const decFiles = (dir: string) => fs.readdirSync(path.join(dir, "_planning/decisions"));
+let bClone = "";
+
+// ⑧ + ⑨
+function scenarioAssign() {
+  const a = clone();
+  addAdr(a, "0011", "Kozben");
+  tool(a, "build");
+  commitAll(a, "a: 0011");
+  const aFile = fs.readFileSync(path.join(a, "_planning/decisions/0011-kozben.md"), "utf8");
+  const b = clone();
+  bClone = b;
+  writePlaceholder(b, "Uj dontes");
+  write(b, "_planning/memory/2026-03-01_b.md", `# B jegyzet\n\nlásd (${PH})\n`);
+  write(b, "src/other.ts", `// see ${PH}\nexport const y = 1;\n`);
+  fs.appendFileSync(path.join(b, "docs/mechanism.md"), `- új sor: ${PH}\n`);
+  tool(b, "build");
+  commitAll(b, "b: új ADR helyőrzővel");
+  git(a, "push", "-q", "origin", "main");
+  git(b, "fetch", "-q", "origin");
+  const r = landRebase(b);
+  expect(r.status === 0, `⑧ a land-rebase kioszt (rc=${r.status}: ${r.out.slice(-400)})`);
+  const f12 = read(b, "_planning/decisions/0012-uj-dontes.md");
+  expect(Boolean(f12?.startsWith("## ADR-0012 — Uj dontes")), "⑧ a helyőrző a következő szabad számot kapta (0012), fejléccel együtt");
+  expect(!decFiles(b).some((f) => f.startsWith("XXXX-")), "⑧ nem maradt helyőrző-fájl");
+  expect(read(b, "_planning/memory/2026-03-01_b.md")!.includes("(ADR-0012)"), "⑧ a saját jegyzet hivatkozása átírva");
+  expect(read(b, "src/other.ts")!.startsWith("// see ADR-0012"), "⑧ a saját kódkomment hivatkozása átírva");
+  const mech = read(b, "docs/mechanism.md")!;
+  expect(mech.includes(`\`${PH}\` a helyőrző neve.`) && mech.includes("- új sor: ADR-0012"), "⑧ a main MEGLÉVŐ helyőrzős sora bájtra maradt, CSAK a hozzáadott sor íródott át");
+  expect(read(b, "CLAUDE.md")!.includes(PH), "⑧ a doktrína helyőrző-leírása érintetlen");
+  expect(lastMsg(b).includes("Land-Assigned-ADR: ADR-0012"), "⑧ a kiosztás külön, jelölt commit");
+  expect(read(b, "_planning/decisions/0011-kozben.md") === aFile, "⑧ a közben landolt idegen ADR-0011 bájtra érintetlen");
+  expect(tool(b, "check", "--no-placeholder").status === 0, "⑧ a land-kapu (check --no-placeholder) zöld");
+
+  // ⑨ the push "failed": meanwhile c lands ITS OWN 0012
+  const c = clone();
+  addAdr(c, "0012", "Harmadik szal");
+  tool(c, "build");
+  commitAll(c, "c: 0012");
+  git(c, "push", "-q", "origin", "main");
+  const cFile = read(c, "_planning/decisions/0012-harmadik-szal.md");
+  git(b, "fetch", "-q", "origin");
+  const r2 = landRebase(b);
+  expect(r2.status === 0, `⑨ a második kör lefut (rc=${r2.status}: ${r2.out.slice(-400)})`);
+  expect(Boolean(read(b, "_planning/decisions/0013-uj-dontes.md")?.startsWith("## ADR-0013 — Uj dontes")), "⑨ a visszavont kiosztás után FRISS szám (0013)");
+  expect(!decFiles(b).includes("0012-uj-dontes.md") && read(b, "_planning/decisions/0012-harmadik-szal.md") === cFile, "⑨ a másik szál ADR-0012-je érintetlen, a régi kiosztás eltűnt");
+  const note = read(b, "_planning/memory/2026-03-01_b.md")!;
+  expect(note.includes("(ADR-0013)") && !note.includes("ADR-0012"), "⑨ a saját hivatkozás a FRISS számra mutat");
+  const trailers = git(b, "log", "--format=%B", "origin/main..HEAD").split("Land-Assigned-ADR:").length - 1;
+  expect(trailers === 1, `⑨ pontosan EGY kiosztó commit a landolandó tartományban (${trailers})`);
+  expect(tool(b, "check", "--no-placeholder").status === 0, "⑨ nincs duplikátum, a kapu zöld");
+}
+
+function nextNumber(dir: string): string {
+  return tool(dir, "next").out.match(/ADR-\d{4}/)![0];
+}
+
+// ⑩ ⑪ ⑫ ⑬ — each must STOP, and leave the branch on its placeholder
+function scenarioAssignStops() {
+  const cases: [string, (d: string) => void, string, Record<string, string>][] = [
+    ["⑩ doktrína-fájl hozzáadott sora", (d) => fs.appendFileSync(path.join(d, "CLAUDE.md"), `- lásd ${PH}\n`), "CLAUDE.md", {}],
+    ["⑪ két helyőrző", (d) => writePlaceholder(d, "Masodik"), "helyőrző", {}],
+    ["⑫ kétértelmű sor", (d) => write(d, "src/amb.ts", `// ${PH} vö. ${nextNumber(d)}\n`), "két jelentése", {}],
+    ["⑬ NEGATÍV KONTROLL (szűkítés kikapcsolva)", (d) => fs.appendFileSync(path.join(d, "docs/mechanism.md"), `- sor: ${PH}\n`), "MAIN-en már meglévő sor", { PLANNING_INDEX_SABOTAGE: "whole-file" }],
+  ];
+  for (const [name, mutate, needle, env] of cases) {
+    const d = clone();
+    writePlaceholder(d, "Megallos");
+    mutate(d);
+    tool(d, "build");
+    commitAll(d, name);
+    git(d, "fetch", "-q", "origin");
+    const r = landRebase(d, env);
+    expect(r.status !== 0 && r.out.includes(needle), `${name}: hangos megállás, megnevezve (rc=${r.status}: ${r.out.slice(-300)})`);
+    expect(decFiles(d).some((f) => f.startsWith("XXXX-")) && !lastMsg(d).includes("Land-Assigned-ADR"), `${name}: az ág a helyőrzőn maradt, kiosztó commit nincs`);
+    expect(git(d, "status", "--porcelain", "--untracked-files=no").trim() === "", `${name}: a fa tiszta (a félkész csere visszaállítva)`);
+  }
+}
+
+// ⑭ a commit that merely MENTIONS the marker is somebody's work — undo must leave it alone
+function scenarioUndoOnlyOwn() {
+  const d = clone();
+  write(d, "src/mention.ts", "export const z = 1;\n");
+  git(d, "add", "-A");
+  git(d, "commit", "-q", "-m", "feat: a kiosztó commit jelölője (Land-Assigned-ADR:) a szövegben\n\nLand-Assigned-ADR: említés, nem trailer-érték");
+  const before = git(d, "rev-parse", "HEAD").trim();
+  const r = tool(d, "assign", "--undo");
+  expect(r.status === 0 && git(d, "rev-parse", "HEAD").trim() === before, `⑭ a jelölőt csak EMLÍTŐ szál-commit érintetlen (rc=${r.status})`);
+}
+
 try {
   seed();
   scenarioParallel();
@@ -274,6 +384,9 @@ try {
   scenarioLegacyBothChanged();
   scenarioForeignConflict();
   scenarioHandEdit();
+  scenarioAssign();
+  scenarioAssignStops();
+  scenarioUndoOnlyOwn();
 } catch (e) {
   failures.push(`a forgatókönyv elszállt: ${(e as Error).message}`);
 } finally {
@@ -286,4 +399,4 @@ if (failures.length) {
   for (const f of failures) console.error(`   · ${f}`);
   process.exit(1);
 }
-console.log(`planning-index-land-check: ✅ ${asserts} állítás zöld (párhuzamos ADR · duplikátum · régi alak · ütközés · kézi szerkesztés · negatív kontroll)`);
+console.log(`planning-index-land-check: ✅ ${asserts} állítás zöld (párhuzamos ADR · duplikátum · régi alak · ütközés · kézi szerkesztés · szám-kiosztás · verseny · megállások · negatív kontrollok)`);

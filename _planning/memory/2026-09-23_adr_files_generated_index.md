@@ -36,8 +36,19 @@
 `scripts/planning-index-land-check.mts` · `scripts/land.sh` · `hooks/pre-commit` · `CLAUDE.md` §1.4/§3.1 ·
 `.claude/agents/tudasbazis-or.md` · `MEMORY.md`
 
+## B — a szám a land pillanatában (ugyanaznap, második kör)
+- `XXXX` helyőrző-szám → a `land-rebase.sh` végén `planning-index.mts assign` osztja ki, csak a saját diff
+  hozzáadott soraiban, a mechanizmus-fájlokban soha, utó-feltételekkel; bukott land / elutasított push
+  → `assign --undo` (csak a saját, jelölt, nem-landolt commit). Land-őr: 50 állítás, 2 célzott rontás piros.
+- ⛔ Lelet a saját bővítésemben: a rebase ELŐTTI `assign --undo` egy régi alakú fában elszállt (az eszköz
+  ott még nincs — a rebase hozza) — a ③ forgatókönyv fogta meg; javítva (feltételes hívás).
+- ⛔⛔ Lelet ÉLESBEN, a saját landomon: az `assign --undo` a SAJÁT B-commitomat vonta vissza, mert a
+  commit-üzenetem MEGEMLÍTETTE a kiosztó jelölőt, az undo pedig szöveg-előfordulást nézett. A reflog
+  megőrizte, cherry-pick visszahozta. Javítva: a kiosztó commit = a land SAJÁT tárgysora ÉS valódi
+  git-trailer (`%(trailers:key=…)`), nem szöveg-egyezés; ⑭ őrzi (a régi felismeréssel piros).
+- ⭐ Az első éles szál (ADR-0211) már a darabolt rendben landolt: saját fájl + idegen ADR-fájl módosítása, index +1 sor.
+
 ## Nyitva
-- **B** — a szám a land pillanatában (helyőrző → kiosztás az utolsó fetch után, csak a saját diffben).
 - **ADR-0033** átszámozása (tulajdonosi döntés; a `KNOWN_DUPLICATES`-ből utána törlendő).
 - A `MEMORY.md` „Aktív feladat" blokkjának ütközése (A+D nem fedi).
 - Futó szálak régi alakú, commitolatlan `DECISIONS.md`-szerkesztéssel (mérve 2026-09-23):

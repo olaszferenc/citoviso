@@ -15,6 +15,11 @@
 set -u
 
 fail() {
+  # B: never leave a land-assigned ADR number behind on a failed land — the branch goes back to
+  # its placeholder, and the next land assigns a fresh number after its own fetch.
+  if [ -n "${ROOT:-}" ] && [ -f "$ROOT/scripts/planning-index.mts" ]; then
+    (cd "$ROOT" && npx tsx scripts/planning-index.mts assign --undo) || true
+  fi
   echo
   echo "⛔ LAND: ELBUKOTT — $1" >&2
   echo "   A session NINCS lezárva; az origin/main NEM tartalmazza a munkát." >&2
@@ -65,7 +70,7 @@ while :; do
   if [ "${LAND_FAKE_PUSH:-}" = "1" ]; then
     echo "   (LAND_FAKE_PUSH=1 — a push kihagyva; a visszaellenőrzésnek most buknia KELL)"
   elif ! git push origin HEAD:main; then
-    echo "   push elutasítva (a main közben mozgott) — fetch + rebase + kapuk újra…"
+    echo "   push elutasítva (a main közben mozgott) — fetch + rebase + kapuk újra (a kiosztott ADR-szám is újra)…"
     git fetch origin || fail "git fetch origin sikertelen"
     continue
   fi

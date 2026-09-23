@@ -33,7 +33,8 @@ Session-jegyzet: `_planning/memory/2026-09-23_adr_files_generated_index.md`.
   saját ADR-fájljába visz; minden más ütközés hangosan megállít. A duplikált ADR-szám KAPU.
 - **Bizonyítva:** 210 blokk ↔ 210 fájl bájtra (két független módon, 4 pozitív kontroll); land-őr 22
   állítás eldobható repóban + negatív kontroll + 3 célzott rontás, mind piros.
-- 🔴 **Nyitva:** B (szám a land pillanatában) · ADR-0033 átszámozása (tulaj) · `MEMORY.md` „Aktív
+- **B KÉSZ:** új ADR `XXXX` helyőrzővel (`XXXX-slug.md`), a számot a LAND osztja ki (ADR-0210 ②).
+- 🔴 **Nyitva:** ADR-0033 átszámozása (tulaj) · `MEMORY.md` „Aktív
   feladat" ütközése · két futó fa régi alakú, commitolatlan `DECISIONS.md`-szerkesztéssel.
 
 ## Előző szál (2026-09-23 — felszereltség)
