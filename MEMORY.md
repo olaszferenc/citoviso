@@ -73,6 +73,8 @@ Session-jegyzet: `_planning/memory/2026-09-23_programajanlo_build.md`.
 DB-pillanatképes őr; a próba-fizetőoldal a bővítést „éves előfizetés/Ft/év"-nek mondta → egyszeri
 díj + modulnevek, valódi útvonalon mérő őr. Élesen egyik sem érintett vevőt.
 Jegyzet: `_planning/memory/2026-09-23_preview_nowrite_upsell_oneoff.md`.
+➡️ **Logó-csere** átadva új sessionnek: `~/rc-briefs/logo-c-lockup-brief.md` (a jel maga a C + „itoviso",
+E4; nyitva a méretarány). ⚠️ `module-upsell-check` fix nevű scratch-DB → párhuzamos land-ok egymást buktatják.
 
 ## Előző szál (2026-09-23 — elutasított kártya)
 

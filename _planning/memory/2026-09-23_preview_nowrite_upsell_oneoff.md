@@ -26,3 +26,12 @@ Fa: `~/wt/felszkapu`. Élesítés nem volt feladat (a tulaj: a main egyben megy 
 
 ## Nyitva
 - A Barion-leírás nem sorolja fel a bővítés moduljait.
+- **Logó (a tulaj kérése, „B" = a jel maga a C + „itoviso"):** NEM ez a szál csinálja — átadó brief
+  kész: `~/rc-briefs/logo-c-lockup-brief.md` (+ mockok: `~/rc-briefs/logo-c-lockup/`). Mért lelet: az E4
+  jóváhagyás óta egyetlen kódsor sem változott; a favikonhoz a VILÁGOS változat kell (a fül világos).
+  Nyitva a C méretaránya (betű- vagy ikonméret) — a tulaj ott dönt.
+- ⛔ **`module-upsell-check.mts` versenyhelyzet:** fix nevű scratch-DB-t (`citoviso_upsell_check`)
+  dob el és hoz létre → párhuzamos land-ok egymás alól törlik („database … does not exist"). Egyedül
+  futtatva zöld. Javítás: futásonként egyedi név. Nem javítva (a tulaj dönt).
+- A land hétszer futott: átmeneti GitHub-SSH hiba, 3× `MEMORY.md`-ütközés, ADR-szám-ütközés (0212 →
+  0213, a másik szál helyőrzőjét a land osztotta ki), 2 közös-DB őr-verseny. A kód egyiket sem okozta.
