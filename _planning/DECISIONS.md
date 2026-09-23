@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-tobb-terv-egy-kovetett-linken.md) — Több terv egy követett linken: a lead a saját linkjén vált 2–3 jóváhagyott terv között
 - [ADR-0211](decisions/0211-a-konfiguratorban-a-havi-az-alapertelmezett.md) — A konfigurátorban a HAVI az alapértelmezett fizetési ütem; a „2 hó ingyen” forintban és mozogva hirdet
 - [ADR-0210](decisions/0210-adr-enkent-kulon-fajl-a-ket-index-generalt.md) — ADR-enként külön fájl, a két index generált, és a duplikált szám kapu (2026-09-23)
 - [ADR-0209](decisions/0209-a-felszereltseg-es-a-szobak-felszereltsege-ket.md) — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (2026-09-23)
