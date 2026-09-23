@@ -77,3 +77,14 @@ hivatkozásom az `src/` alatt van, az idegené a `_planning/` alatt, és csak az
 `scripts/coupon-visible-check.mts` (új) · `hooks/pre-commit` ·
 `kb/entries/admin-modules/entry.hu.md` · `assets/design-refs/tenant-admin/coupon-visible/` ·
 `_planning/DECISIONS.md` (ADR-0205)
+
+## Zárás (2026-09-23)
+
+- A kedvezmény-munka **igazoltan fent** (szemantikus próba: „Üdvözlő kedvezmény", `adm-rcpt`,
+  `invoiceComment`, az őr és az ADR-0205 mind az `origin/main`-en; `origin/main..HEAD = 0`).
+- A KB-fordítás szálak közti versenyét egy másik szál zárta le: **ADR-0207** (a fordítás-frissesség
+  a DEPLOY kapuja, nem a commité). Erre külön session nem kell.
+- A session↔munkafa hibát a **§9 doktrína** + az új `rc-new.sh --brief` zárta (foglalt fát elutasít).
+- 🔴 **Nyitva, a tulaj döntése szerint most NEM indul:** a ~87 worktree kitakarítása. A
+  `~/wt/kbverseny` az én leállított indítási kísérletem maradéka (0 commit, csak brief) — törölhető,
+  de a takarítással együtt, nem külön.
