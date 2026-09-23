@@ -110,6 +110,19 @@ mondana ellent.
    meglévő jogosultságok** unióján kell kiértékelni — aki a rendelés-sort önmagában nézi, **minden**
    upsell-rendelést elutasít, ami nem véletlenül vesz meg egy már birtokolt modult.
 
+### Az ár IDEJE — ismétlődő és évhez kötött (ADR-XXXX, migráció 0072)
+
+Egy `unit_price` sor két, egymástól független időtengelyt hordoz:
+- `date_from`/`date_to` (**MM-DD**, év nélkül) — az ISMÉTLŐDŐ szezon, minden évben ugyanaz;
+- `valid_from`/`valid_to` (**teljes dátum**) — az ÉVHEZ KÖTÖTT érvényesség. Mindkettő üres = időtlen.
+
+Egy éjszakára a sorrend (egy helyen: `assets/runtime/cit-season.cjs`): **évhez kötött szezon →
+ismétlődő szezon → dátumos alapár → időtlen alapár → nincs ár**. A „nincs ár" nem hiba, hanem
+az árajánlat-út kiváltója (ADR-0208): a vendég nem kap számot, a tulaj ajánlatot küld, és az
+ajánlat ára **mindig** az árlistába kerül (ADR-XXXX) — a hiányzó ár így nem ismétlődhet.
+⛔ A dátumos sor lejárata nem csak szabály-kérdés: a lap statikus pillanatkép, tehát lejáratkor a
+sor TÖRLŐDIK és a lap ÚJRARENDERELŐDIK (`src/tenant/priceExpiry.ts`, óránkénti tick).
+
 ### Ahol a halmaz EMBER NÉLKÜL sérülhet
 
 A modul-halmaz nem csak kattintásra változik. Három sodródási út (ADR-0192 ⑦):
