@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -12,6 +12,26 @@ Utolsó frissítés: 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelv
 > (a megújítás listaáron menne).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23)
+
+**📅 AUTOMATA HETI PROGRAMAJÁNLÓ — MEGÉPÍTVE (ADR-0214), NEM élesítve.**
+Session-jegyzet: `_planning/memory/2026-09-23_programajanlo_build.md`.
+
+- Gyűjtés (`src/events/`): Brave → udvarias letöltés → JSON-LD + Haiku 5 lap/hívás → kódszintű kapuk
+  (dátum-ablak, dátum-a-szövegben, forrás a lap sorszámából, ismert hely) → token-halmazos dedup.
+  **Település-kulcsos** tárolás (0071: `settlement`, `event_gather_run`, `local_event`) — 3 tenant köre 96 helyett 42 település.
+- Tenant-admin választó (B kontraktus) + honlap-blokk (**A** kontraktus, `design-refs/public-site/programajanlo/`:
+  mobilon 5 + „Még N program”, lábszöveg nélkül) + üres választásnál **automatikus kitöltés** + heti levél **CSAK a tulajnak**.
+- Időzítők: `citoviso-events.timer` (napi 05:30: hétfői gyűjtés, napi újrarenderelés, heti levél) +
+  `citoviso-events-pending.timer` (5 perc: a most vásárolt tenant köre azonnal — „különben dühös lesz a tenant”).
+  ⛔ **Élesítéskor MINDKETTŐT telepíteni kell**, különben semmi nem gyűlik. Dev gépen nincsenek bekapcsolva (költenek).
+- Mérve: Rozé köre 41 település → 40 program, $0,43/hét. ⚠️ Magányos tenantnál ~650 Ft/hó költség vs 490 Ft/hó ár (az ár a tulajé).
+- 🔴 **Nyitva:** a LEAD-MOCK programajánló-tartalma (A blokk „Minta” jelöléssel, program-TÍPUSOK, a megtekintés
+  napjához igazodó dátumok — valós adat NEM, mert a mock statikus és hetekkel később nézik); a lakosság-küszöb (≥1000) korrekciója a hozamból.
+- ⚠️ Park-lelet: a `module-sales-check` két egymásba lapolódó futása „gallery”-t hagyott a `module_sales_disabled`-ben
+  (a másik futás ideiglenes állapotát mentette eredetiként) → a `configurator-placement-check` mindenkinél piros lett;
+  visszaállítva a döntés szerinti `["email"]`-re. Az őr maga javításra szorul (zár vagy saját fixture).
+
+## Előző szál (2026-09-23 — modul-előnézet + egyszeri díj)
 
 **🔍 ADR-0192 ⑧.3 + ⑧.5 LEZÁRVA (ADR-0213).** Előbb mérve, aztán javítva: a modul-előnézet
 (Szobák/Árak/Értékelések/Foglalás) egységet írt egy semmit nem vett fiókba → `peekUnits` +
