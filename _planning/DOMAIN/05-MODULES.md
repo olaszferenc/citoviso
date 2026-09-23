@@ -137,6 +137,14 @@ szezon-sor, `parent_id`-val a szezonjához kötve; az „év" az alkalom KEZDŐ 
   Helyette a szezon záró napja utáni reggelen EGY kérdés megy a tulajnak a jövő évi árról
   (`season_nudged_year`, `src/tenant/seasonNudge.ts`) — hacsak a következő évre már nincs ár.
 
+**A „nincs ár” két alakja (ADR-XXXX, migráció 0073).** A lánc alján álló „nincs ár” vagy
+*kimondott* (`site_unit.price_on_request`: „ahol nincs ár, egyedi ajánlatot adok”), vagy
+*hiány*. A vendég mindkettőnél árajánlatot kér; a különbség a tulaj felé (a kimondottról nincs
+teendő-sor és heti levél) és az „Árak” szakaszban van (a kimondott szoba „Egyedi ajánlat
+alapján”, a hiány kimarad — §B.17). Egy szoba állapota EGY predikátumból jön
+(`unitPriceStatus`, 365 éjszaka a vendég-lap szabályával): `complete` · `on_request` · `none` ·
+`partial`. A „csak a felsorolt időszakokban” szoba szezonon kívüli napja zárva van, nem árazatlan.
+
 ### Ahol a halmaz EMBER NÉLKÜL sérülhet
 
 A modul-halmaz nem csak kattintásra változik. Három sodródási út (ADR-0192 ⑦):

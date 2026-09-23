@@ -11,6 +11,7 @@
 - [2026-09-23_programajanlo_lead_mock_minta.md](2026-09-23_programajanlo_lead_mock_minta.md) — 2026-09-23 — Programajánló minta a lead-mockban (C változat)
 - [2026-09-23_programajanlo_build.md](2026-09-23_programajanlo_build.md) — 2026-09-23 — Automata heti programajánló: MEGÉPÍTVE (gyűjtés, választó, honlap-blokk, tulaj-levél)
 - [2026-09-23_pricing_booking_only_and_kb_images.md](2026-09-23_pricing_booking_only_and_kb_images.md) — 2026-09-23 — Árazás foglalás nélkül: nincs ál-kapcsoló; a szezon-zárás csak foglalással él; elavult súgó-képek
+- [2026-09-23_price_on_request.md](2026-09-23_price_on_request.md) — 2026-09-23 — „Nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető (ADR-XXXX)
 - [2026-09-23_preview_nowrite_upsell_oneoff.md](2026-09-23_preview_nowrite_upsell_oneoff.md) — 2026-09-23 — Az előnézet nem ír, és a bővítés egyszeri díj (ADR-0213, ADR-0192 ⑧.3 + ⑧.5)
 - [2026-09-23_multiplan_tabs_feature_branch.md](2026-09-23_multiplan_tabs_feature_branch.md) — 2026-09-23 — Több terv egy követett linken (tervváltó) — a `feat/multimocktabs` ágon, a pilot UTÁN megy a main-re
 - [2026-09-23_monthly_default_period_badge.md](2026-09-23_monthly_default_period_badge.md) — 2026-09-23 — A konfigurátorban a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211)
