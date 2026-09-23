@@ -1,4 +1,4 @@
-## ADR-XXXX — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
+## ADR-0212 — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
 
 > **Korábban ADR-0033** (2026-08-09): 5 másodperccel az ár-döntés (ma is ADR-0033) után landolt,
 > ugyanazzal a számmal — mindkettő beolvadt. Átszámozva 2026-09-23 (ADR-0210, tulajdonosi döntés):
