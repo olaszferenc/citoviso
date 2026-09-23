@@ -243,6 +243,14 @@ if [ -f scripts/kb-translation-coverage-check.mts ] && \
   echo "[pre-commit] kb-translation-coverage --self-test (az őr változott; a fordítás a deploy kapuja)…"
   npx tsx scripts/kb-translation-coverage-check.mts --self-test >"$GATE_LOG" || gate_failed
 fi
+# ⛔ A BLOKKOLÓ DEPLOY-KAPU TUDJON IS BUKNI (mérve 2026-09-23, az éles gépen): `$SSH "… | tail"
+# || fail` a TAIL kilépési kódját látja, tehát sosem bukik — így volt néma a pg_dump, a
+# db:migrate, az npm install és a fordítás-kapu (GATE 5/5b). Hermetikus: csak a szöveget olvassa.
+if [ -f scripts/deploy-pipe-check.mts ] && \
+   changed_files | grep -qE '^scripts/deploy-prod\.sh|^scripts/deploy-pipe-check'; then
+  echo "[pre-commit] deploy-pipe (a blokkoló deploy-kapu tudjon bukni)…"
+  { npx tsx scripts/deploy-pipe-check.mts --self-test && npx tsx scripts/deploy-pipe-check.mts; } >"$GATE_LOG" 2>&1 || gate_failed
+fi
 # ⛔ A kb-shot NÉMÁN ki tudta üríteni egy súgó-kép tartalmát (legend.png: 640×2020 → 640×126,
 # a teljes oszlop-magyarázat kiesett, miközben a képaláírás „kinyitva"-t ígért). Sem a kb-check,
 # sem a kb-freshness nem fogta meg: EGYIK SEM NÉZI, VAN-E TARTALOM A KÉPEN. Azóta a kb-shot

@@ -23,6 +23,13 @@
 # `git -C /opt/citoviso/app rev-parse HEAD` (plus the /opt/citoviso/DEPLOYED ledger).
 # Restart order: console (:4600, internal canary) first and verified, THEN public (:4800).
 set -u
+# ⛔ PIPEFAIL — SORONKÉNT, NEM GLOBÁLISAN (mérve 2026-09-23, az éles gépen): egy `cmd | tail`
+# csővezeték kilépési kódja a TAIL-é, tehát `$SSH "… | tail" || fail` SOHA nem bukik. Így
+# bukhatott némán a pg_dump (üres mentés), a db:migrate (restart bukott migráció után), az
+# npm install és a fordítás-kapu (GATE 5/5b). Minden blokkoló távoli csővezeték `set -o
+# pipefail;`-lel indul; a helyi (`$SSH … | sort`) egy `( set -o pipefail … )` alhéjban.
+# Globálisan azért nem: a `… | grep -q` mintáknál a korán kilépő grep SIGPIPE-ot okoz az
+# íróban, és pipefail-lel hamis bukást adna. Őr: scripts/deploy-pipe-check.mts.
 
 HOST=178.104.3.223
 KEY="$HOME/.ssh/citoviso_hetzner"
@@ -213,8 +220,9 @@ else
 fi
 
 # Pending migrations (prod's applied ledger vs the target commit's files).
-$SSH "sudo -u citoviso psql -d citoviso -t -A -c 'SELECT name FROM schema_migrations'" </dev/null | sort > /tmp/deploy-applied-migs.txt \
-  || fail "schema_migrations nem olvasható"
+( set -o pipefail
+  $SSH "sudo -u citoviso psql -d citoviso -t -A -c 'SELECT name FROM schema_migrations'" </dev/null | sort > /tmp/deploy-applied-migs.txt
+) || fail "schema_migrations nem olvasható"
 git ls-tree --name-only "$SHA" migrations/ | sed 's|migrations/||' | sort > /tmp/deploy-target-migs.txt
 PENDING="$(comm -13 /tmp/deploy-applied-migs.txt /tmp/deploy-target-migs.txt)"
 if [ -n "$PENDING" ]; then echo "── futtatandó migrációk:"; echo "$PENDING" | sed 's/^/     /'; else echo "── nincs új migráció"; fi
@@ -233,7 +241,7 @@ $SSH "chown -R citoviso:citoviso $BARE" </dev/null
 if [ -n "$PENDING" ]; then
   echo "── GATE 3 — pg_dump a migrációk előtt…"
   TS="$(date +%Y%m%d-%H%M%S)"
-  $SSH "sudo -u citoviso pg_dump -d citoviso | gzip > /opt/citoviso/backups/db-pre-$TS.sql.gz && ls -la /opt/citoviso/backups/db-pre-$TS.sql.gz" </dev/null || fail "pg_dump sikertelen"
+  $SSH "set -o pipefail; sudo -u citoviso pg_dump -d citoviso | gzip > /opt/citoviso/backups/db-pre-$TS.sql.gz && ls -la /opt/citoviso/backups/db-pre-$TS.sql.gz" </dev/null || fail "pg_dump sikertelen"
 fi
 
 if [ -z "${SKIP_CHECKOUT:-}" ]; then
@@ -270,10 +278,10 @@ else
 fi
 
 echo "── npm install (zár-egyezésig)…"
-$SSH "cd $APP && sudo -u citoviso npm install --no-audit --no-fund 2>&1 | tail -2" </dev/null || fail "npm install sikertelen"
+$SSH "set -o pipefail; cd $APP && sudo -u citoviso npm install --no-audit --no-fund 2>&1 | tail -2" </dev/null || fail "npm install sikertelen"
 
 echo "── migrációk…"
-$SSH "cd $APP && sudo -u citoviso npm run db:migrate 2>&1 | tail -8" </dev/null || fail "migráció HIBA — a servicek NEM lettek újraindítva"
+$SSH "set -o pipefail; cd $APP && sudo -u citoviso npm run db:migrate 2>&1 | tail -8" </dev/null || fail "migráció HIBA — a servicek NEM lettek újraindítva"
 
 # ── GATE 5 — fordítás-frissesség az ÉLES adatbázison (ADR-0207) ───────────────
 # A védelem eddig pre-commit kapu volt, ami a DEV adatbázist mérte — a kár viszont
@@ -299,12 +307,12 @@ if [ "$NEEDS_I18N" = "0" ]; then
   echo "── GATE 5 — fordítás: nincs fordítás-releváns változás a tartományban ✓ (kihagyva)"
 else
   echo "── GATE 5 — fordítás-frissítés az éles adatbázison (blokkoló)…"
-  $SSH "cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null \
+  $SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null \
     || fail "a nyelvi csomagok frissítése HIBÁZOTT — a servicek NEM lettek újraindítva, az éles a régi fordítást szolgálná ki"
   # ⛔ A frissítő SAJÁT szavát nem fogadjuk el: független méréssel igazoljuk. Egy
   # „lefutottam" ág, ami nem bizonyít, pontosan az a hamis zöld, amitől ez a kapu véd.
   echo "── GATE 5b — visszaellenőrzés (független mérés)…"
-  $SSH "cd $APP && sudo -u citoviso npx tsx scripts/kb-translation-coverage-check.mts 2>&1 | tail -12" </dev/null \
+  $SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/kb-translation-coverage-check.mts 2>&1 | tail -12" </dev/null \
     || fail "a frissítés után is maradt elavult fordítás — a servicek NEM lettek újraindítva"
 fi
 

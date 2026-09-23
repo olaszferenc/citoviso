@@ -68,3 +68,11 @@ mainbe, és a main megy a productionbe — és abban a pillanatban fordítunk".
   (szerkeszt → fordíttat → újra szerkeszt) ez is elkapja, mert a kimenő forrásból dönt.
 - Elvetve: `source_hash` a sor kulcsában — adatmodell-változás egy olyan problémára, ami a
   kapu áthelyezésével megszűnik.
+
+**⛔ Helyesbítés 2026-09-23 — a GATE 5 / 5b eddig NEM TUDOTT BUKNI.** A távoli parancs
+`… 2>&1 | tail -12` alakú volt, `pipefail` nélkül, így a kilépési kód a `tail`-é (0), és a
+`|| fail` sosem sült el — mérve az éles gépen (`sh -c 'exit 1' | tail` → rc 0; pipefail-lel
+→ rc 1). Ugyanígy néma volt a pg_dump, a db:migrate és az npm install kapuja. Javítva
+(`set -o pipefail;` soronként), őr: `scripts/deploy-pipe-check.mts`. Amíg ez a javítás
+nem futott le élesen egy deployon, a korábbi deployok GATE 5-ös „zöldje" nem bizonyíték —
+a söprés ④ rétege (kb-freshness) mostantól naponta független mérést ad az élesről.
