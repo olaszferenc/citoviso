@@ -1273,7 +1273,7 @@ fi
 # it is scoped to commits that actually touch the review path — the dangerous direction
 # is a pending/rejected review reaching the page, and a Google badge shown without cover.
 if [ -f scripts/review-flow-check.mts ] && \
-   changed_files | grep -qE '^src/reviews/|^src/tenant/editor\.ts|^src/engine/moduleSections\.ts|^migrations/0027|^scripts/review-flow-check'; then
+   changed_files | grep -qE '^src/reviews/|^src/tenant/editor\.ts|^src/engine/moduleSections\.ts|^migrations/00(27|73)|^scripts/review-flow-check'; then
   echo "[pre-commit] review-flow-check (ADR-0046: moderáció + Google-jelvény kapui)…"
   npx tsx scripts/review-flow-check.mts
 fi
@@ -1683,6 +1683,15 @@ if [ -f scripts/pricing-booking-only-check.mts ] && \
    changed_files | grep -qE '^src/server/(moduleConfigViews|public)\.ts$|^scripts/pricing-booking-only-check'; then
   echo "[pre-commit] pricing-booking-only (foglalás nélkül nincs ál-kapcsoló)…"
   npx tsx scripts/pricing-booking-only-check.mts >"$GATE_LOG" || gate_failed
+fi
+# A VÉLEMÉNY-KEZELŐ CSILLAGA (mérve 2026-09-23): a teli és az üres csillag ugyanaz a „★"
+# jel volt, egy 1 csillagos vélemény ★★★★★-nak látszott, a sorok egybefolytak, és a
+# Google-kártya „látszik most"-ot mondott kikapcsolt kapcsolónál is. Böngészőben mér,
+# 390/1280 px-en, a kapcsoló mindkét állásában (jóváhagyott B terv: design-refs/console/reviews-inbox/).
+if [ -f scripts/reviews-inbox-check.mts ] && \
+   changed_files | grep -qE '^src/server/(moduleConfigViews|public)\.ts$|^public/assets/ui/citui(-admin)?\.css$|^scripts/reviews-inbox-check'; then
+  echo "[pre-commit] reviews-inbox (a csillag nem hazudik, a sorok nem folynak egybe)…"
+  npx tsx scripts/reviews-inbox-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ONTOLÓGIA-FRISSESSÉG (mérve 2026-09-17): a `_planning/DOMAIN/` a `CLAUDE.md` §1 szerint
 # KÖTELEZŐEN olvasott igazság, az átvezetése mégis 2026-07-12 óta elmaradt — 9 feldolgozatlan

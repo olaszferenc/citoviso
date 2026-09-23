@@ -1111,6 +1111,9 @@ export interface SiteReviewTable {
   booking_request_id: string | null;
   verified: Generated<boolean>;
   decided_at: Timestamp | null;
+  /** When the guest's thank-you mail went out; null = never. Sent at most once
+   *  (claimed by a conditional UPDATE before sending — migration 0073). */
+  thanked_at: Timestamp | null;
   created_at: Generated<Timestamp>;
 }
 

@@ -1220,6 +1220,12 @@ async function serveAdmin(
           google: await getPlaceRating(site.id).then((g) =>
             g ? { value: g.rating, count: g.userRatingCount, url: g.reviewsUrl } : null,
           ),
+          // The decide route's PRG round trip reuses the `e` (row id) + `uz` (what
+          // happened) query slots the room editor already carries.
+          done:
+            unitId && (roomNotice === "published" || roomNotice === "rejected" || roomNotice === "withdrawn")
+              ? { id: unitId, verdict: roomNotice as "published" | "rejected" | "withdrawn" }
+              : null,
         };
       }
 
@@ -2747,7 +2753,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const owned = siteId
       ? await db
           .selectFrom("site_review")
-          .select("action_token")
+          .select(["action_token", "status"])
           .where("id", "=", id)
           .where("site_id", "=", siteId)
           .executeTakeFirst()
@@ -2765,8 +2771,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       await decideReview(owned.action_token, verdict, publicBaseUrl(req));
       // Both directions change the page: publishing adds words, withdrawing removes them.
       await rerenderTenantSnapshot(session.tenantId);
+      // Name what the tap did on the screen it returns to (approved contract B).
+      const done =
+        verdict === "published" ? "published" : owned.status === "published" ? "withdrawn" : "rejected";
+      return redirect(
+        res,
+        `/admin?tab=modulok&m=reviews&e=${encodeURIComponent(id)}&uz=${done}#velemenyek`,
+      );
     }
-    return redirect(res, "/admin?tab=modulok&m=reviews&saved=1");
+    return redirect(res, "/admin?tab=modulok&m=reviews");
   }
 
   if (req.method === "POST" && pathname === "/admin/contact") {

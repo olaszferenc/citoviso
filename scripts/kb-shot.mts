@@ -52,6 +52,7 @@ import type { PricingSnapshot } from "../src/pricing.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
 import { loadKbEntries, renderKbBody } from "../src/kb/kb.js";
 import { getTenantModules } from "../src/tenant/modules.js";
+import { MODULE_CATALOG } from "../src/modules.js";
 import { positionThreads } from "../src/tenant/messageThreads.js";
 import { isUnread } from "../src/tenant/messages.js";
 import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
@@ -562,6 +563,26 @@ function moduleShotHtml(entryId: string): string {
       },
     });
   }
+  // The review inbox: one review in EACH state, so the capture shows all three badges
+  // and every button the entry names ("Döntésre vár" / "Az oldalon" / "Nem került ki").
+  if (entryId === "admin-modules-reviews")
+    return moduleSettingsSection("reviews", {
+      ...common,
+      // The module's OWN price, not the shared fixture's 990 (that is booking's).
+      priceMonthly: MODULE_CATALOG.find((m) => m.id === "reviews")!.priceMonthly,
+      values: effectiveModuleConfig("reviews", null, null),
+      reviews: {
+        items: [
+          { id: "rv1", authorName: "Kovács Anna", rating: 5, body: "Csendes, tiszta, a reggeli házi lekvár külön élmény. Jövőre visszajövünk!",
+            stayMonth: "2026-08", unitName: "Kertre néző apartman", status: "pending", verified: false, token: "t1" },
+          { id: "rv2", authorName: "Nagy Péter", rating: 4, body: "Kedves fogadtatás, jó elhelyezkedés. A parkolás kicsit szűkös.",
+            stayMonth: "2026-07", unitName: "Padlásszoba", status: "published", verified: false, token: "t2" },
+          { id: "rv3", authorName: "Teszt Elek", rating: 1, body: "asdasd",
+            stayMonth: null, unitName: null, status: "rejected", verified: false, token: "t3" },
+        ],
+        google: { value: 4.8, count: 37, url: "https://www.google.com/maps" },
+      },
+    });
   // Generic fields form — the hours module is the representative screen.
   return moduleSettingsSection("hours", {
     ...common,
@@ -575,6 +596,7 @@ const MODULE_SHOT_ENTRIES = [
   "admin-modules-rooms",
   "admin-modules-pricing",
   "admin-modules-programs",
+  "admin-modules-reviews",
   "admin-modules-settings",
 ] as const;
 
@@ -958,7 +980,11 @@ for (const entryId of MODULE_SHOT_ENTRIES) {
         // mérve: a viewport-képen egyetlen szoba-kártya sem látszott egészben.
         entryId === "admin-modules-rooms"
         ? ".rs-wrap"
-        : undefined,
+        : // The entry's subject is the review LIST; the Google card sits above it and
+          // filled the whole viewport — measured: not one review card in the first shot.
+          entryId === "admin-modules-reviews"
+          ? ".rv-inbox"
+          : undefined,
   );
 }
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative

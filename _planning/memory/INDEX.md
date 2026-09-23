@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-23_reviews_inbox.md](2026-09-23_reviews_inbox.md) — 2026-09-23 — Vendégvélemény-kezelő: a csillag nem hazudik többé, a köszönőlevél egyszer megy ki
 - [2026-09-23_programajanlo_lead_mock_minta.md](2026-09-23_programajanlo_lead_mock_minta.md) — 2026-09-23 — Programajánló minta a lead-mockban (C változat)
 - [2026-09-23_programajanlo_build.md](2026-09-23_programajanlo_build.md) — 2026-09-23 — Automata heti programajánló: MEGÉPÍTVE (gyűjtés, választó, honlap-blokk, tulaj-levél)
 - [2026-09-23_preview_nowrite_upsell_oneoff.md](2026-09-23_preview_nowrite_upsell_oneoff.md) — 2026-09-23 — Az előnézet nem ír, és a bővítés egyszeri díj (ADR-0213, ADR-0192 ⑧.3 + ⑧.5)

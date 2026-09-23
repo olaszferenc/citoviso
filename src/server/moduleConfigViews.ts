@@ -615,6 +615,62 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .rs-amcat>summary::-webkit-details-marker{display:none}
 .rs-amcat>summary svg{width:13px;height:13px}
 .rs-amcat .ampick{padding:0 10px 10px}
+/* ── Review inbox — approved contract B, assets/design-refs/console/reviews-inbox/.
+   Grouped by state; rows lay out in three columns once the CONTAINER is 640px. */
+.rv-inbox{container-type:inline-size}
+.rv-flash{margin:0 0 12px}
+.rv-group{margin-top:18px}
+.rv-group:first-of-type{margin-top:6px}
+.rv-group__h{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:700 .8rem/1 var(--citui-font-display);
+  letter-spacing:.5px;text-transform:uppercase;color:var(--citui-muted)}
+.rv-group__h .n{font-variant-numeric:tabular-nums;background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);
+  padding:3px 8px;color:var(--citui-ink)}
+.rv-group--wait .rv-group__h{color:var(--citui-navy-900)}
+.rv-group--wait .rv-group__h .n{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.rv-group__rows{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden;background:var(--citui-white)}
+.rv-group--wait .rv-group__rows{border-color:color-mix(in srgb,var(--citui-cyan-500) 55%,transparent)}
+.rv-row{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:14px 16px}
+.rv-row + .rv-row{border-top:1px solid var(--citui-line)}
+.rv-row__who strong{font:700 .98rem/1.3 var(--citui-font-text);color:var(--citui-ink);overflow-wrap:anywhere}
+.rv-row__meta{display:block;font-size:.8rem;color:var(--citui-muted)}
+.rv-row__text{min-width:0}
+.rv-row__body{margin:2px 0 4px;font-size:.92rem;line-height:1.55;color:var(--citui-ink);overflow-wrap:anywhere}
+.rv-row__body--clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rv-row__tgl{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.rv-row__tgl:checked + .rv-row__body--clamp{display:block;-webkit-line-clamp:unset;overflow:visible}
+.rv-row__more{display:inline-block;color:var(--citui-link-ink);font:600 .82rem/1.4 var(--citui-font-text);cursor:pointer}
+.rv-row__tgl:focus-visible ~ .rv-row__more{outline:2px solid var(--citui-cyan-500);outline-offset:2px;border-radius:4px}
+.rv-more-close{display:none}
+.rv-row__tgl:checked ~ .rv-row__more .rv-more-open{display:none}
+.rv-row__tgl:checked ~ .rv-row__more .rv-more-close{display:inline}
+.rv-row__acts{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 0}
+.rv-row__acts .citui-btn{padding:9px 16px;font-size:.88rem}
+.rv-group--off .rv-row{background:var(--citui-surface)}
+.rv-group--off .rv-row__body{color:var(--citui-muted)}
+.rv-group__empty{margin:0;padding:12px 16px;font-size:.86rem;color:var(--citui-muted)}
+@container (min-width:640px){
+  .rv-row{grid-template-columns:190px minmax(0,1fr) auto;column-gap:20px;align-items:start}
+  .rv-row__who{grid-column:1;grid-row:1}
+  .rv-row > .rv-stars{grid-column:1;grid-row:2}
+  .rv-row__text{grid-column:2;grid-row:1 / span 2}
+  .rv-row__acts{grid-column:3;grid-row:1 / span 2;flex-direction:column;align-items:stretch;margin:0}
+}
+.rv-stars{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.rv-stars__g{font-size:1.02rem;letter-spacing:1px;line-height:1}
+.rv-stars__g .on{color:var(--citui-warn)}
+.rv-stars__g .off{color:var(--citui-line-strong)}
+.rv-stars__n{font:700 .82rem/1 var(--citui-font-text);font-variant-numeric:tabular-nums;color:var(--citui-ink);
+  background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);padding:4px 8px}
+.rv-stars--low .rv-stars__n{background:color-mix(in srgb,var(--citui-bad) 14%,transparent);color:var(--citui-bad-ink)}
+.rv-gr{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 10px}
+.rv-gr__num{font:700 2rem/1 var(--citui-font-display);color:var(--citui-ink)}
+.rv-gr__cnt{font-size:.88rem;color:var(--citui-muted)}
+.rv-gr.is-off > *{opacity:.45}
+.rv-gr-state{display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;padding:10px 12px;border-radius:12px;font-size:.88rem;line-height:1.5}
+.rv-gr-state svg{flex:none;margin-top:2px}
+.rv-gr-state--on{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.rv-gr-state a{color:inherit;font-weight:700}
+.rv-gr-state--off{background:color-mix(in srgb,var(--citui-warn) 14%,transparent);color:var(--citui-warn-ink)}
 </style>`;
 
 const huf = (n: number) => formatMoney(n, "HUF");
@@ -1756,51 +1812,105 @@ function unitsCard(booking: BookingEditorData, lang = "hu"): string {
  * second one, for an owner who is already logged in or wants to take something down
  * later. A published review can still be withdrawn: the page is theirs.
  */
-function reviewsEditor(data: ReviewsEditorData, lang = "hu"): string {
+function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"): string {
+  // Approved contract: assets/design-refs/console/reviews-inbox/README.md.
+  // The filled and the empty star are DIFFERENT glyphs and the count is written out,
+  // so a 1-star review can never read as five — with or without colour.
   const stars = (n: number): string =>
-    `<span class="rev-stars" aria-label="${n} csillag">${"★".repeat(n)}<span>${"★".repeat(5 - n)}</span></span>`;
+    `<span class="rv-stars${n <= 2 ? " rv-stars--low" : ""}" role="img" data-rv-stars="${n}" ` +
+    `aria-label="${esc(T(lang, "{n} csillag az 5-ből", { n }))}">` +
+    `<span class="rv-stars__g" aria-hidden="true"><span class="on">${"★".repeat(n)}</span>` +
+    `<span class="off">${"☆".repeat(5 - n)}</span></span>` +
+    `<span class="rv-stars__n" aria-hidden="true">${n}/5</span></span>`;
 
-  const card = (r: ReviewsEditorData["items"][number]): string => {
-    const pending = r.status === "pending";
+  const row = (r: ReviewsEditorData["items"][number]): string => {
     const meta = [r.stayMonth, r.unitName].filter(Boolean).join(" · ");
-    const state = pending
-      ? `<span class="rev-badge rev-badge--wait">${T(lang, "Döntésre vár")}</span>`
-      : r.status === "published"
-        ? `<span class="rev-badge rev-badge--ok">Az oldalon</span>`
-        : `<span class="rev-badge">${T(lang, "Nem került ki")}</span>`;
-    // Both actions stay available whatever the current state: taking a published
+    // Long words only get a toggle when there is something to unfold (≈3 lines).
+    const long = r.body.length > 180;
+    const tgl = `rvt_${esc(r.id)}`;
+    // Both directions stay available whatever the current state: taking a published
     // review down must not require finding the original e-mail.
     const actions =
-      `<form method="POST" action="/admin/review/decide" class="rev-acts">` +
+      `<form method="POST" action="/admin/review/decide" class="rv-row__acts">` +
       `<input type="hidden" name="id" value="${esc(r.id)}">` +
       (r.status !== "published"
-        ? `<button class="citui-btn citui-btn--primary" type="submit" name="verdict" value="published">Kiteszem</button>`
+        ? `<button class="citui-btn citui-btn--primary" type="submit" name="verdict" value="published">${T(lang, "Kiteszem")}</button>`
         : "") +
       (r.status !== "rejected"
         ? `<button class="citui-btn citui-btn--ghost" type="submit" name="verdict" value="rejected">` +
-          (r.status === "published" ? "Leveszem" : "Nem teszem ki") +
+          (r.status === "published" ? T(lang, "Leveszem") : T(lang, "Nem teszem ki")) +
           `</button>`
         : "") +
       `</form>`;
     return (
-      `<div class="rev-card${pending ? " is-wait" : ""}">` +
-      `<div class="rev-card__head"><strong>${esc(r.authorName)}</strong>${stars(r.rating)}${state}</div>` +
-      (meta ? `<p class="citui-hint" style="margin:2px 0 8px">${esc(meta)}</p>` : "") +
-      `<p class="rev-card__body">„${esc(r.body)}"</p>` +
+      `<div class="rv-row" id="rv-${esc(r.id)}" data-rv="${esc(r.id)}" data-rating="${r.rating}">` +
+      `<div class="rv-row__who"><strong>${esc(r.authorName)}</strong>` +
+      (meta ? `<span class="rv-row__meta">${esc(meta)}</span>` : "") +
+      `</div>` +
+      stars(r.rating) +
+      `<div class="rv-row__text">` +
+      (long ? `<input type="checkbox" class="rv-row__tgl" id="${tgl}">` : "") +
+      `<p class="rv-row__body${long ? " rv-row__body--clamp" : ""}">„${esc(r.body)}"</p>` +
+      (long
+        ? `<label class="rv-row__more" for="${tgl}"><span class="rv-more-open">${T(lang, "Teljes szöveg")}</span>` +
+          `<span class="rv-more-close">${T(lang, "Kevesebb")}</span></label>`
+        : "") +
+      `</div>` +
       actions +
       `</div>`
     );
   };
 
+  const groups: readonly [string, string, string][] = [
+    ["pending", "wait", T(lang, "Döntésre vár")],
+    ["published", "ok", T(lang, "Az oldalon")],
+    ["rejected", "off", T(lang, "Nem került ki")],
+  ];
   const waiting = data.items.filter((r) => r.status === "pending");
-  const rest = data.items.filter((r) => r.status !== "pending");
+  const list = groups
+    .map(([status, tone, label]) => {
+      const rows = data.items.filter((r) => r.status === status);
+      // The waiting group always shows (its zero is news); the others only when used.
+      if (!rows.length && status !== "pending") return "";
+      return (
+        `<section class="rv-group rv-group--${tone}" data-rv-group="${status}">` +
+        `<h3 class="rv-group__h">${label} <span class="n">${rows.length}</span></h3>` +
+        `<div class="rv-group__rows">` +
+        (rows.length
+          ? rows.map(row).join("")
+          : `<p class="rv-group__empty">${T(lang, "Nincs döntésre váró vélemény.")}</p>`) +
+        `</div></section>`
+      );
+    })
+    .join("");
 
+  // What the last tap did, named — the owner should not have to find the row to check.
+  const doneRow = data.done ? data.items.find((r) => r.id === data.done!.id) : undefined;
+  const flash = doneRow
+    ? `<p class="adm-saved rv-flash" role="status">${ic("check", 18)} <span>${
+        data.done!.verdict === "published"
+          ? T(lang, "{name} véleménye kikerült az oldalára.", { name: esc(doneRow.authorName) })
+          : data.done!.verdict === "withdrawn"
+            ? T(lang, "{name} véleményét levette az oldaláról.", { name: esc(doneRow.authorName) })
+            : T(lang, "{name} véleménye nem kerül ki.", { name: esc(doneRow.authorName) })
+      }</span></p>`
+    : "";
+
+  // The Google card mirrors the owner's toggle: with it off the number is REMOVED from
+  // the page (tenant/editor.ts), so "this is on your page now" would be false.
   const googleCard = data.google
-    ? `<div class="adm-card">` +
+    ? `<div class="adm-card" data-rv-google="${showGoogle ? "on" : "off"}">` +
       `<div class="adm-card__head"><span class="adm-ico">${ic("star")}</span><h2>${T(lang, "Google-értékelés")}</h2></div>` +
-      `<p class="adm-lead">${T(lang, "Ez látszik most az oldalán:")} <strong>${data.google.value
-        .toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-        .replace(/</g, "")}</strong> · ${T(lang, "{n} értékelés. A vendég rákattintva a Google-véleményekhez jut.", { n: data.google.count })}</p>` +
+      `<div class="rv-gr${showGoogle ? "" : " is-off"}"><span class="rv-gr__num">${data.google.value
+        .toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>` +
+      // The same rounding the page's stars use (honestStarCount) — this row shows what the visitor sees.
+      `<span class="rv-stars" role="img" aria-label="${esc(T(lang, "{n} csillag az oldalon", { n: Math.max(1, Math.min(5, Math.round(data.google.value))) }))}">` +
+      `<span class="rv-stars__g" aria-hidden="true"><span class="on">${"★".repeat(Math.max(1, Math.min(5, Math.round(data.google.value))))}</span></span></span>` +
+      `<span class="rv-gr__cnt">${T(lang, "{n} értékelés a Google-on", { n: data.google.count })}</span></div>` +
+      (showGoogle
+        ? `<p class="rv-gr-state rv-gr-state--on">${ic("check", 16)}<span>${T(lang, "Ez látszik most az oldalán. A vendég rákattintva a Google-véleményekhez jut.")}</span></p>`
+        : `<p class="rv-gr-state rv-gr-state--off">${ic("alert", 16)}<span>${T(lang, "Ez most nem látszik az oldalán: kikapcsolta lent, a Szabályok között („{label}”).", { label: T(lang, "A Google-értékelés csillagai az oldalon") })} ` +
+          `<a href="#cfg_showGoogleRating">${T(lang, "Ugrás a kapcsolóhoz")}</a></span></p>`) +
       `<p class="citui-hint">${T(lang, "A vélemények SZÖVEGÉT a Google feltételei miatt nem másolhatjuk át az oldalára — csak az átlagot és a darabszámot mutathatjuk, ezért visz a kattintás a Google-re.")}</p>` +
       `<p style="margin:14px 0 0"><a class="citui-btn citui-btn--ghost" href="${esc(data.google.url)}" ` +
       `target="_blank" rel="noopener">${T(lang, "Megnézem, mit írnak a Google-on")}</a></p>` +
@@ -1809,16 +1919,15 @@ function reviewsEditor(data: ReviewsEditorData, lang = "hu"): string {
 
   return (
     googleCard +
-    `<div class="adm-card">` +
+    `<div class="adm-card rv-inbox" id="velemenyek">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("modules")}</span><h2>${T(lang, "Vendégvélemények")}</h2></div>` +
+    flash +
     (data.items.length
       ? `<p class="adm-lead">${
           waiting.length
             ? T(lang, "{n} vélemény vár a döntésére.", { n: waiting.length })
             : T(lang, "Minden véleményről döntött.")
-        }</p>` +
-        waiting.map(card).join("") +
-        rest.map(card).join("")
+        }</p>` + list
       : `<p class="adm-lead">${T(lang, "Még nem érkezett vélemény. Az oldalán van egy űrlap, ahol a vendégek írhatnak — amint jön egy, e-mailt kap róla, és egy koppintással eldöntheti, kikerüljön-e.")}</p>`) +
     `</div>`
   );
@@ -2143,6 +2252,8 @@ export interface ReviewsEditorData {
   /** The Google badge currently on the page, if any — shown so the owner can see
    *  what the visitor sees rather than having to trust the toggle. */
   readonly google?: { value: number; count: number; url: string } | null;
+  /** The owner's last tap on this screen (PRG round trip), so the page can name it. */
+  readonly done?: { id: string; verdict: "published" | "rejected" | "withdrawn" } | null;
 }
 
 /**
@@ -2343,7 +2454,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing, lang)
           : def.editor === "reviews" && opts.reviews
-            ? reviewsEditor(opts.reviews, lang)
+            ? reviewsEditor(opts.reviews, opts.values.showGoogleRating !== false, lang)
             : def.editor === "programs" && opts.programs
               ? programsEditor(opts.programs, lang)
               : amenityStored
@@ -2380,7 +2491,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
             ? helpLink("admin.modules.programs", lang)
             : amenityStored
             ? helpLink("admin.modules.amenities", lang)
-            : helpLink("admin.modules.settings", lang);
+            : def.editor === "reviews" && opts.reviews
+              ? helpLink("admin.modules.reviews", lang)
+              : helpLink("admin.modules.settings", lang);
 
   // amenityStored set → the picker above IS the form; the generic one would duplicate it.
   const form = def.fields.length && !amenityStored

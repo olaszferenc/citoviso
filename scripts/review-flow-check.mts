@@ -156,8 +156,11 @@ try {
   const afterVerdict = await publishedReviews(siteId);
   check("döntés UTÁN a vélemény publikus", afterVerdict.length === 1, afterVerdict);
 
+  check("az első kitétel elküldi a köszönőlevelet (van e-mail-cím)", verdict.thanked === true, verdict);
+
   const twice = await decideReview(row.action_token, "published", null);
   check("a link kétszeri megnyitása nem hibázik (idempotens)", twice.outcome === "already", twice);
+  check("a kétszeri megnyitás NEM küld újabb levelet", twice.thanked !== true, twice);
 
   {
     const content = await moduleContentFor(tenantId, siteId);
@@ -181,6 +184,23 @@ try {
   await decideReview(row.action_token, "rejected", null);
   const afterReject = await publishedReviews(siteId);
   check("⭐⭐ a levett vélemény nem publikus többé", afterReject.length === 0, afterReject);
+
+  // ── 3b. put back up: the guest was thanked once already (2026-09-23) ──────
+  // The admin route does exactly this — reset to pending, decide again. Before
+  // migration 0073 every re-publication mailed the guest another "thank you".
+  await db.updateTable("site_review").set({ status: "pending" }).where("site_id", "=", siteId).execute();
+  const again = await decideReview(row.action_token, "published", null);
+  check("újra kitéve publikus", again.outcome === "published", again);
+  check("⭐⭐ levétel + újra kitétel után a vendég NEM kap második köszönőlevelet", again.thanked === false, again);
+  const thankedRows = await db
+    .selectFrom("site_review")
+    .select("thanked_at")
+    .where("site_id", "=", siteId)
+    .where("thanked_at", "is not", null)
+    .execute();
+  check("a köszönés nyoma a soron van (thanked_at)", thankedRows.length === 1, thankedRows.length);
+  await db.updateTable("site_review").set({ status: "pending" }).where("site_id", "=", siteId).execute();
+  await decideReview(row.action_token, "rejected", null);
 
   // ── 4. the Google badge gates ─────────────────────────────────────────────
   console.log("\nGoogle-értékelés kapui:");

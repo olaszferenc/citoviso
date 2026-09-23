@@ -260,6 +260,8 @@ export interface DecisionResult {
   /** Whose snapshot needs rebuilding — the page is a static file, so a verdict that
    *  does not trigger a re-render is a verdict the owner never sees take effect. */
   readonly tenantId?: string;
+  /** Whether THIS verdict sent the guest's thank-you mail (at most once per review). */
+  readonly thanked?: boolean;
 }
 
 /**
@@ -290,8 +292,31 @@ export async function decideReview(
     .where("id", "=", rev.id)
     .execute();
 
-  if (verdict === "published") await thankGuest(rev, publicBaseUrl);
-  return { ok: true, outcome: verdict, ...base };
+  // The thank-you goes out at most ONCE per review. The admin route re-decides an
+  // already-decided review (withdraw, then publish again), and the status alone cannot
+  // tell a first publication from a second one — so the send is CLAIMED first: only the
+  // UPDATE that flips thanked_at from NULL may send (two quick taps cannot both win).
+  let thanked = false;
+  if (verdict === "published" && rev.author_email) {
+    const claim = await db
+      .updateTable("site_review")
+      .set({ thanked_at: new Date() })
+      .where("id", "=", rev.id)
+      .where("thanked_at", "is", null)
+      .returning("id")
+      .executeTakeFirst();
+    if (claim) {
+      try {
+        await thankGuest(rev, publicBaseUrl);
+        thanked = true;
+      } catch (err) {
+        // Not sent → not thanked: release the claim so a later publication can retry.
+        await db.updateTable("site_review").set({ thanked_at: null }).where("id", "=", rev.id).execute();
+        throw err;
+      }
+    }
+  }
+  return { ok: true, outcome: verdict, thanked, ...base };
 }
 
 /**
