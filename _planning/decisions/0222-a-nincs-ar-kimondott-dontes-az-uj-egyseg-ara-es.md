@@ -1,4 +1,4 @@
-## ADR-XXXX — A „nincs ár” kimondott döntés, az új egység ára, és heti emlékeztető a hiányos árazásról (2026-09-23)
+## ADR-0222 — A „nincs ár” kimondott döntés, az új egység ára, és heti emlékeztető a hiányos árazásról (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrrel) · **Kapcsolódó:** ADR-0208 ⑥.2
 · ⑥.3 · ⑥.4 (ez a három tétel), ADR-0215 (az ár ideje; ennek a szálnak az előzménye), ADR-0197 ①

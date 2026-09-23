@@ -1,4 +1,4 @@
-# 2026-09-23 — „Nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető (ADR-XXXX)
+# 2026-09-23 — „Nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető (ADR-0222)
 
 **Szál:** „Árazás kikényszerítése, 2. rész” (munkafa `~/wt/citd2826912`, brief:
 `~/rc-briefs/arazas-nincs-ar-uj-egyseg-emlekezteto.md`). Az ADR-0208 ⑥.2 · ⑥.3 · ⑥.4.
