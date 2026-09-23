@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -12,6 +12,14 @@ Utolsó frissítés: 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri kö
 > (a megújítás listaáron menne).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 délután)
+
+**💶 ÁRAZÁS FOGLALÁS NÉLKÜL — NINCS ÁL-KAPCSOLÓ (ADR-0049 módosítás) — LANDOLVA, élesre NEM.**
+Foglalás nélkül az Árazás-képernyőn nincs szezon-kapcsoló / „éj min." (jóváhagyott B terv), és a
+`seasonalOnlyInForce()` (`src/tenant/seasonalOnly.ts`) miatt a kapcsoló a naptárban, a portál-feedben
+és a kérésnél is CSAK foglalással zár. Mobil túlcsúszás javítva. Őr: `pricing-booking-only-check`.
++ 4 elavult súgó-kép újragenerálva (`4cffc731`). Átadva két új sessionnek (saját fában):
+**vélemény-kezelő** (a `rev-*` CSS sosem létezett → egy 1★ vélemény ★★★★★-nak látszott) és
+**súgó-képek determinizmus + deploy-kapu**. Jegyzet: `_planning/memory/2026-09-23_pricing_booking_only_and_kb_images.md`.
 
 **⭐ VENDÉGVÉLEMÉNY-KEZELŐ (2026-09-23 este, ADR-0219).** Az 1 csillagos vélemény ★★★★★-nak látszott
 (a teli és üres csillag ugyanaz a jel volt, CSS sosem készült). Jóváhagyott B terv: csoportosított
