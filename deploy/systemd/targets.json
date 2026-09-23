@@ -1,0 +1,27 @@
+{
+  "_doc": "Every *.timer in deploy/systemd MUST be listed here (scripts/systemd-units.mts check, pre-commit). target=prod → deploy-prod.sh GATE 6 installs it on the live VPS (rendered to the prod form), enables it and VERIFIES it is enabled+active, or the deploy fails. target=dev → never installed on prod; `why` is mandatory. A timer running on prod that is not listed here as prod also fails the deploy.",
+  "timers": {
+    "citoviso-billing.timer": { "target": "prod" },
+    "citoviso-booking-maintenance.timer": { "target": "prod" },
+    "citoviso-domain-resume.timer": { "target": "prod" },
+    "citoviso-traffic-mail.timer": { "target": "prod" },
+    "citoviso-events.timer": { "target": "prod" },
+    "citoviso-events-pending.timer": { "target": "prod" },
+    "citoviso-backup-dev.timer": {
+      "target": "dev",
+      "why": "a DEV adatbázist menti a dev gépen; az éles mentése a deploy GATE 3 pg_dump-ja és a VPS saját mentése"
+    },
+    "citoviso-sms-relay.timer": {
+      "target": "dev",
+      "why": "a helyi GSM-modem (SIM800C) a dev gépen ül; a relay a távoli sort erre a modemre üríti (CLAUDE.md §8)"
+    },
+    "citoviso-multilang-resume.timer": {
+      "target": "dev",
+      "why": "ma csak a dev gépen fut (a fő fából, ADR-0171 szerint); hogy élesen is kell-e, NINCS eldöntve — külön vizsgálandó (tulaj, 2026-09-23: maradjon dev)"
+    },
+    "citoviso-pair-repair.timer": {
+      "target": "dev",
+      "why": "ma csak a dev gépen fut; hogy élesen is kell-e, NINCS eldöntve — külön vizsgálandó (tulaj, 2026-09-23: maradjon dev)"
+    }
+  }
+}

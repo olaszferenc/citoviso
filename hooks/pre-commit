@@ -202,6 +202,15 @@ if [ -f scripts/amenities-house-list-check.mts ] && \
   echo "[pre-commit] amenities-house-list (ADR-0209: két külön lista)…"
   npx tsx scripts/amenities-house-list-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A systemd-időzítők nyilvántartása: minden deploy/systemd/*.timer vagy prod (a deploy GATE 6
+# telepíti, engedélyezi és visszaméri), vagy indokolt dev. Egy új időzítő nyilvántartás nélkül
+# nem commitolható — különben élesen csendben sosem futna (a programajánló két időzítője
+# így maradt volna ki).
+if [ -f scripts/systemd-units.mts ] && \
+   changed_files | grep -qE '^deploy/systemd/|^scripts/systemd-units|^scripts/deploy-prod\.sh$'; then
+  echo "[pre-commit] systemd-units (az időzítők prod/dev nyilvántartása)…"
+  npx tsx scripts/systemd-units.mts check >"$GATE_LOG" || gate_failed
+fi
 # Automata heti programajánló, src/events/. ① A gyűjtés kódszintű kapui (dátum-ablak,
 # dátum-a-szövegben, dedup a MÉRT duplapárokkal, lokalitás) mindkét irányban — tiszta
 # függvények, gyors. ② A tenant-admin választó a jóváhagyott B kontraktus mért listáján,

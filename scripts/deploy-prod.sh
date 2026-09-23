@@ -12,6 +12,9 @@
 #   GATE 2  diff-before-deploy: the exact prod-version → target diff is printed;
 #   GATE 3  pending migrations trigger a pg_dump before applying;
 #   GATE 4  a RUNNING scrape blocks the deploy — the restart would kill it (measured);
+#   GATE 6  systemd-időzítők: a cél-commit deploy/systemd/targets.json-jának MINDEN prod
+#           időzítője telepítve (éles alakra renderelve), engedélyezve ÉS futva — visszamérve;
+#           élesen futó, nem-deklarált időzítő is bukás. Nincs kapcsoló, ami átugorja.
 #   GATE 5  a fordítás-frissesség az ÉLES DB-n (ADR-0207) — blokkoló és visszaellenőrzött,
 #           de CSAK ha a tartomány fordítás-releváns fájlt érint (különben hangosan kihagyva).
 # Rollback = the same script with the previously deployed SHA.
@@ -80,6 +83,67 @@ src/x.ts'
     return 1
   fi
   echo "✅ ÖNTESZT: a szűrő a fa EGÉSZÉT nézi (a gyökeret is), és csak a deploy saját mentését engedi át."
+}
+
+# ── GATE 6 — systemd-időzítők (tulaj, 2026-09-23: „amit nem tudunk kikerülni") ───────
+# Az éles gép időzítőit eddig KÉZZEL telepítettük egy README alapján; egy új időzítő így
+# csak egy jegyzet volt, amit a deploy nem olvasott. A programajánló két időzítő nélkül
+# élesen SEMMIT nem gyűjt, miközben minden felület azt állítja, hogy igen. Innentől a
+# forrás a cél-commit `deploy/systemd/targets.json`-ja: minden `prod` időzítő + a
+# szolgáltatása éles alakra renderelve (`scripts/systemd-units.mts`, mérve: a kézzel
+# telepített 8 egységgel BÁJTRA egyezik), telepítve, engedélyezve, és VISSZAMÉRVE.
+# Nincs --skip kapcsoló: ami kihagyható, azt ki is fogják hagyni.
+UNITS_TMP=""
+timers_render() {
+  UNITS_TMP="$(mktemp -d)"
+  mkdir -p "$UNITS_TMP/src"
+  ( set -o pipefail
+    git archive "$SHA" deploy/systemd | tar -x -C "$UNITS_TMP/src"
+  ) || fail "GATE 6: a deploy/systemd nem bontható ki a cél-commitból"
+  [ -f "$UNITS_TMP/src/deploy/systemd/targets.json" ] \
+    || fail "GATE 6: a cél-commitban nincs deploy/systemd/targets.json — az időzítők sorsa eldöntetlen"
+  npx tsx scripts/systemd-units.mts render-prod "$UNITS_TMP/src/deploy/systemd" "$UNITS_TMP/out" > "$UNITS_TMP/names" \
+    || fail "GATE 6: az időzítő-nyilvántartás hibás (npx tsx scripts/systemd-units.mts check)"
+}
+# Kiírja: „új|módosul|egyezik <egység>" — és bukik, ha élesen olyan citoviso-időzítő
+# van ENGEDÉLYEZVE, amit a cél-commit nem deklarál prodnak (rejtett, verziózatlan futás).
+timers_plan() {
+  local u r l
+  UNITS_CHANGED=""
+  echo "── GATE 6 — systemd-időzítők (terv):"
+  while read -r u; do
+    l="$(sha256sum "$UNITS_TMP/out/$u" | cut -d' ' -f1)"
+    r="$($SSH "sha256sum /etc/systemd/system/$u 2>/dev/null | cut -d' ' -f1" </dev/null || true)"
+    if [ -z "$r" ]; then echo "     új        $u"; UNITS_CHANGED="$UNITS_CHANGED $u"
+    elif [ "$r" != "$l" ]; then echo "     módosul   $u"; UNITS_CHANGED="$UNITS_CHANGED $u"
+    else echo "     egyezik   $u"; fi
+  done < "$UNITS_TMP/names"
+  local enabled undeclared=""
+  enabled="$($SSH "systemctl list-unit-files 'citoviso-*.timer' --state=enabled --no-legend 2>/dev/null | cut -d' ' -f1" </dev/null || true)"
+  for u in $enabled; do grep -qxF "$u" "$UNITS_TMP/names" || undeclared="$undeclared $u"; done
+  [ -z "$undeclared" ] || fail "GATE 6: élesen engedélyezett, de a repóban NEM prod-ként deklarált időzítő:$undeclared — vedd fel a deploy/systemd/targets.json-ba (prod), vagy tiltsd le élesen, tudatosan"
+}
+timers_install_and_verify() {
+  local u t bad=""
+  for u in $UNITS_CHANGED; do
+    $SSH "cat > /etc/systemd/system/$u" < "$UNITS_TMP/out/$u" || fail "GATE 6: $u telepítése sikertelen"
+  done
+  $SSH "systemctl daemon-reload" </dev/null || fail "GATE 6: systemctl daemon-reload sikertelen"
+  for t in $(grep '\.timer$' "$UNITS_TMP/names"); do
+    $SSH "systemctl enable --now $t" </dev/null >/dev/null 2>&1 || fail "GATE 6: $t engedélyezése sikertelen"
+  done
+  # ⛔ A telepítő SAJÁT szavát nem fogadjuk el — független visszamérés, egységenként.
+  echo "── GATE 6b — visszamérés (fájl-egyezés + engedélyezve + fut):"
+  for u in $(cat "$UNITS_TMP/names"); do
+    [ "$($SSH "sha256sum /etc/systemd/system/$u | cut -d' ' -f1" </dev/null)" = "$(sha256sum "$UNITS_TMP/out/$u" | cut -d' ' -f1)" ] \
+      || bad="$bad $u(fájl-eltérés)"
+  done
+  for t in $(grep '\.timer$' "$UNITS_TMP/names"); do
+    [ "$($SSH "systemctl is-enabled $t" </dev/null 2>/dev/null)" = "enabled" ] || bad="$bad $t(nincs engedélyezve)"
+    [ "$($SSH "systemctl is-active $t" </dev/null 2>/dev/null)" = "active" ] || bad="$bad $t(nem fut)"
+  done
+  [ -z "$bad" ] || fail "GATE 6b: az időzítők NEM állnak úgy, ahogy a cél-commit előírja:$bad — a servicek NEM lettek újraindítva"
+  echo "     ✓ $(grep -c '\.timer$' "$UNITS_TMP/names") prod időzítő telepítve, engedélyezve, fut"
 }
 
 [ $# -ge 1 ] || fail "használat: deploy-prod.sh <commit-ish> [--go]  ·  önteszt: --self-test"
@@ -227,6 +291,9 @@ git ls-tree --name-only "$SHA" migrations/ | sed 's|migrations/||' | sort > /tmp
 PENDING="$(comm -13 /tmp/deploy-applied-migs.txt /tmp/deploy-target-migs.txt)"
 if [ -n "$PENDING" ]; then echo "── futtatandó migrációk:"; echo "$PENDING" | sed 's/^/     /'; else echo "── nincs új migráció"; fi
 
+timers_render
+timers_plan
+
 if [ "$GO" != "--go" ]; then
   echo
   echo "DRY-RUN vége. Élesítéshez (a tulaj scope-olt engedélyével): deploy-prod.sh $TARGET_REF --go"
@@ -315,6 +382,9 @@ else
   $SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/kb-translation-coverage-check.mts 2>&1 | tail -12" </dev/null \
     || fail "a frissítés után is maradt elavult fordítás — a servicek NEM lettek újraindítva"
 fi
+
+# GATE 6 — az időzítők a restart ELŐTT állnak fel: ha nem, a servicek nem indulnak újra.
+timers_install_and_verify
 
 # A scrape a deploy ELEJE óta is elindulhatott — a kapu ott áll, ahol az ölés történik.
 scrape_gate "közvetlenül a restart előtt"

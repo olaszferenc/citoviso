@@ -4,6 +4,20 @@ Verziózott unit-fájlok, hogy a telepítés **reprodukálható és átnézhető
 ne ad-hoc `ssh` parancsokból álljon össze (ugyanaz az elv, mint ADR-0053-ban a
 deploynál: verzió megy ki, nem kézi művelet).
 
+## ⛔ Éles telepítés: a DEPLOY csinálja, kézzel nem (2026-09-23)
+
+A `targets.json` minden időzítőt `prod` vagy `dev` célba sorol (a `dev` indoklással). A
+`scripts/deploy-prod.sh` **GATE 6**-ja a CÉL-commitból minden `prod` időzítőt + a szolgáltatását
+éles alakra rendereli (`scripts/systemd-units.mts`: `WorkingDirectory=/opt/citoviso/app`,
+`npx tsx`, `journal`), telepíti ami eltér, `daemon-reload` + `enable --now`, majd **visszaméri**
+(fájl-egyezés + engedélyezve + fut). Bármelyik nem stimmel → a deploy elbukik, a szolgáltatások
+nem indulnak újra. Élesen engedélyezett, de nem-`prod`-ként deklarált időzítő is bukás.
+Nincs kapcsoló, ami átugorja. A pre-commit (`systemd-units check`) nem enged nyilvántartás
+nélküli időzítőt a repóba. Mérve 2026-09-23: a renderelő a kézzel telepített 8 éles egységgel
+**bájtra** egyezik — a GATE 6 első futása csak a hiányzót teszi fel.
+
+Az alábbi „Telepítés" receptek a **dev gépre** vonatkoznak (ott nincs deploy-kapu).
+
 ## `citoviso-domain-resume` (ADR-0071)
 
 **Mit csinál.** Kétpercenként továbbnyomja a beragadt egyedi-domain beszerzéseket
@@ -220,5 +234,4 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now citoviso-events.timer citoviso-events-pending.timer
 ```
 
-⚠️ Élesen a `WorkingDirectory` `/opt/citoviso/app` (ez van a unitban); a dev gépen a fő fa.
-Az éles telepítés külön, kimondott engedélyt igényel (CLAUDE.md §0.3).
+⚠️ Élesen a deploy GATE 6-ja telepíti (fent); a dev gépen a fenti recept.
