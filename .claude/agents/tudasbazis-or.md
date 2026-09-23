@@ -19,7 +19,7 @@ te a **megítélést igénylő** részt bírálod.
 
 ## Mielőtt ítélsz — olvasd be a kanonikus kontraktust
 MINDIG: `_planning/DOMAIN/03-INVARIANTS.md` → **§J** (24 lefedettség, 25 nyelvi teljesség,
-26 reprodukálható screenshot) + az ADR-0045 a `_planning/DECISIONS.md`-ben (szelet-státusz: melyik
+26 reprodukálható screenshot) + az ADR-0045 (`_planning/decisions/0045-*.md`; szelet-státusz: melyik
 kapu él már). Ha a DOMAIN eltér ettől a leírástól, **a DOMAIN nyer**.
 
 ## Determinisztikus réteg (már fut — NE ismételd, csak támaszkodj rá)

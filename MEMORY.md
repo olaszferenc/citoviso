@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -12,6 +12,20 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-
 > (a megújítás listaáron menne).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23)
+
+**🗂️ A KÖZÖS DOKSIK ÜTKÖZÉSE — ADR-enként külön fájl, generált indexek, duplikátum-kapu (ADR-0210).**
+Session-jegyzet: `_planning/memory/2026-09-23_adr_files_generated_index.md`.
+
+- **ÚJ MUNKAMÓD:** új ADR = új fájl `_planning/decisions/NNNN-slug.md` (szám: `npx tsx scripts/planning-index.mts next`);
+  a `DECISIONS.md` (rövid index) és a memória `INDEX.md` GENERÁLT — `planning-index.mts build`, kézzel ne.
+- **Land:** ha csak a két index ütközik, a `land-rebase.sh` újragenerál; régi alakú szerkesztést a
+  saját ADR-fájljába visz; minden más ütközés hangosan megállít. A duplikált ADR-szám KAPU.
+- **Bizonyítva:** 210 blokk ↔ 210 fájl bájtra (két független módon, 4 pozitív kontroll); land-őr 22
+  állítás eldobható repóban + negatív kontroll + 3 célzott rontás, mind piros.
+- 🔴 **Nyitva:** B (szám a land pillanatában) · ADR-0033 átszámozása (tulaj) · `MEMORY.md` „Aktív
+  feladat" ütközése · két futó fa régi alakú, commitolatlan `DECISIONS.md`-szerkesztéssel.
+
+## Előző szál (2026-09-23 — felszereltség)
 
 **🛋️ FELSZERELTSÉG = KÉT KÜLÖN LISTA (ADR-0209, lezárja az ADR-0192 ⑧.4-et).** A renderelő
 kihúzta a ház-listából, ami egy szobánál is szerepelt → teljes átfedésnél a KIFIZETETT szakasz
@@ -47,7 +61,7 @@ Session-jegyzet: `_planning/memory/2026-09-22_programajanlo_modul.md`.
   nincs ütemező az appban). ⛔ A **vendég-értesítés KIESETT** (tulajdonosi döntés).
 - **AZ ÁR:** a tulaj állítja be az Árazás lapon — kódot nem igényel. Ma 490 Ft/hó.
 
-## Előző szál (2026-09-22)
+### Előzmény — a fizetési lánc élesítése (2026-09-22)
 
 **💳 A FIZETÉSI LÁNC ÉLESÍTÉSE — BARION FULL PIXEL + ÉLES POS + ÉLES SZÁMLÁZÁS (ADR-0206).**
 Session-jegyzet: `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`.

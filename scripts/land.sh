@@ -49,7 +49,9 @@ while :; do
   fi
 
   echo "── land #$ATTEMPT: rebase origin/main-re…"
-  if ! git rebase origin/main; then
+  # The two planning indexes are GENERATED: a conflict confined to them is resolved by
+  # regenerating (scripts/land-rebase.sh). Any other conflict still aborts loudly.
+  if ! bash "$ROOT/scripts/land-rebase.sh"; then
     git rebase --abort 2>/dev/null || true
     fail "rebase-konfliktus — oldd fel kézzel (git rebase origin/main), majd land újra"
   fi

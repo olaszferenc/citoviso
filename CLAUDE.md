@@ -25,7 +25,8 @@ Ez a szabály felülír mindent, beleértve a `bypassPermissions` engedély-mód
 1. Olvasd el ezt a fájlt: `/CLAUDE.md`
 2. Olvasd el: `/MEMORY.md` (projekt-összefoglaló)
 3. Nézd át a `_planning/memory/` indexét (fejlődő vállalati memória)
-4. Nézd át a `_planning/DECISIONS.md` legutóbbi ADR-jeit — **döntés (adatmodell, árazás, folyamat, infrastruktúra) implementálása ELŐTT vissza kell olvasni az érintett ADR-t.** Egy már meghozott döntés újratárgyalása vagy megsértése a leggyakoribb hiba-forrás. ⚠️ Új ADR írásakor a sorszámot **közvetlenül írás előtt** ellenőrizd `git fetch` után — párhuzamos szálak egyszerre számoznak (2026-08-22: két ADR-0051 keletkezett).
+4. Nézd át a `_planning/DECISIONS.md` legutóbbi ADR-jeit (generált index, újabb elöl; a szöveg ADR-enként a `_planning/decisions/NNNN-slug.md`-ben, teljes szövegű keresés: `grep -rn … _planning/decisions/`) — **döntés (adatmodell, árazás, folyamat, infrastruktúra) implementálása ELŐTT vissza kell olvasni az érintett ADR-t.** Egy már meghozott döntés újratárgyalása vagy megsértése a leggyakoribb hiba-forrás.
+   ⚠️ **Új ADR = új FÁJL** (`_planning/decisions/NNNN-slug.md`, első sora `## ADR-NNNN — Cím`), a számot a `npx tsx scripts/planning-index.mts next` adja — `git fetch` után, **közvetlenül írás előtt**. A `DECISIONS.md`-t és a memória `INDEX.md`-t **kézzel ne szerkeszd**: `npx tsx scripts/planning-index.mts build` állítja elő, a `land.sh` ütközéskor újragenerálja, és a kapu bukik, ha két ADR ugyanazt a számot viseli (külön fájlok között a git NEM jelez ütközést — 2026-08-22: két ADR-0051; a két ADR-0033 ma is él).
 5. Nézd át a `_planning/DOMAIN/04-INDEX.md`-t (vállalati ontológia) — domain-döntés (adatmodell, árazás, generálási szabály) előtt KÖTELEZŐ
 6. Ha valamelyik nem létezik: jelezd és hozd létre üres sablonnal
 7. Foglald össze 3-5 sorban: hol tartunk, mi volt az utolsó feladat
@@ -115,7 +116,7 @@ ui-shot ellenőrzéssel. Kétség esetén: terv-először.
 
 ⚠️ Ha a felhasználó zárást kér, MIND A HÁROM lépés jár, külön kérés nélkül. Nem emlékeztetsz rá — MEGCSINÁLOD.
 
-1. **Memória-frissítés.** `/MEMORY.md` (az aktív feladat előzménybe csúszik, az új szál a helyére) **+** új fájl a `_planning/memory/`-ba (dátum, elvégzett munka, módosított fájlok, nyitott kérdések) **+** a sora a `_planning/memory/INDEX.md`-ben. Döntés született? Az az `_planning/DECISIONS.md`-be megy ADR-ként, nem a session-jegyzetbe.
+1. **Memória-frissítés.** `/MEMORY.md` (az aktív feladat előzménybe csúszik, az új szál a helyére) **+** új fájl a `_planning/memory/`-ba (dátum, elvégzett munka, módosított fájlok, nyitott kérdések) (az `INDEX.md` sora a jegyzet első `# ` címéből GENERÁLÓDIK: `npx tsx scripts/planning-index.mts build`). Döntés született? Az ADR-ként megy a `_planning/decisions/` alá, saját fájlba (§1.4), nem a session-jegyzetbe.
 2. **Commit tételes fájllistával.** ⛔ SOHA `git add .` (több session dolgozik párhuzamosan, a `git add .` mások félkész munkáját viszi be).
 3. **Landolás: `bash scripts/land.sh`** — fetch → rebase → kapuk → push → **visszaellenőrzés** egyben (ADR-0052); hangosan bukik. A „felküldve" CSAK a land zöld záró sora („IGAZOLTAN FENT") után mondható ki, azaz amikor a `git log origin/main..HEAD` üres — **amíg nem az, a session NINCS lezárva.** Kézi push esetén is ugyanez az igazolás jár.
 
