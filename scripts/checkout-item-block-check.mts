@@ -179,6 +179,11 @@ async function openPayStep(page: Page, file: string): Promise<void> {
   await page.locator(".cit-cfg-launch.cit-cfg-in").waitFor({ state: "visible", timeout: 20000 });
   await page.locator(".cit-cfg-launch").click();
   await page.waitForTimeout(350);
+  // The pay-step assertions start from the ANNUAL cycle and switch to monthly;
+  // monthly is the default since ADR-0211, so the buyer's step-1 choice is made
+  // explicitly here (it also proves the step-1 choice carries to the pay step).
+  await page.locator('.cit-cfg-permat [data-period="annual"]').click();
+  await page.waitForTimeout(200);
   await page.locator(".cit-cfg-next").click();
   await page.waitForTimeout(200);
   await page.locator(".cit-cfg-rights").check();
@@ -292,7 +297,7 @@ async function runAll(regress?: string): Promise<void> {
       check(a.periods.length >= 4, `${T} ⑥ két váltó van a panelen (${a.periods.length} gomb)`);
       check(
         annualOn === a.periods.length / 2 && !a.periods.includes("monthly:on"),
-        `${T} ⑥ induláskor MINDEN váltó ugyanazt mutatja (${a.periods.join(" ")})`,
+        `${T} ⑥ az 1. lépésen választott éves ütemet MINDEN váltó mutatja (${a.periods.join(" ")})`,
       );
 
       // ⑦ switching on the PAY step must move EVERY figure on the screen
@@ -360,6 +365,19 @@ interface Step1 { cards: Card[]; listPrice: number | null }
 /** ⑧ The package cards must carry the SELECTED cycle — and follow the switch. */
 async function checkCards(page: Page, tag: string): Promise<void> {
   const T = `[${tag}]`;
+  // ADR-0211: MONTHLY is the default — every switch on the panel must say so at
+  // start. The annual assertions below then run from an explicit switch.
+  const start = (await page.evaluate(
+    `Array.prototype.map.call(document.querySelectorAll(".cit-cfg-popt"), function (x) {
+      return x.getAttribute("data-period") + ":" + (x.classList.contains("cit-cfg-popt--on") ? "on" : "off");
+    })`,
+  )) as string[];
+  check(
+    start.length >= 2 && !start.includes("annual:on") && start.filter((p) => p === "monthly:on").length === start.length / 2,
+    `${T} ⑥ induláskor MINDEN váltó a HAVIT mutatja (ADR-0211) (${start.join(" ")})`,
+  );
+  await page.locator('[data-period="annual"]').first().click();
+  await page.waitForTimeout(350);
   const annual = (await page.evaluate(STEP1)) as Step1;
   check(annual.cards.length > 0, `${T} ⑧ vannak csomag-kártyák (${annual.cards.length})`);
   check(

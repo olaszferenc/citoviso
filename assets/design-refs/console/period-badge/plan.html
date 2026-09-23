@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — Havi alapértelmezés + markánsabb „2 hó ingyen”</title>
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #14171c; --card: #171b21; --line: #2c323c; --line2: #262b34;
+    --ink: #e7ebf1; --ink2: #cdd4de; --mut: #9aa4b2; --blue: #2f6feb; --blue-bg: #1b2634;
+    --green: #1c7a3e; --green2: #27a355; --green-ink: #d9ffe7; --gold: #f5c542;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecef; font: 14px/1.4 system-ui, sans-serif; color: #1c2128; }
+  header.top { padding: 16px; max-width: 1280px; margin: 0 auto; }
+  header.top h1 { font-size: 18px; margin: 0 0 6px; }
+  header.top p { margin: 0 0 10px; color: #4a5361; font-size: 13px; }
+  .sizes { display: inline-flex; gap: 6px; }
+  .sizes button { border: 1px solid #b8c0cc; background: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; font: 600 13px system-ui; }
+  .sizes button[aria-pressed="true"] { background: #1c2128; color: #fff; border-color: #1c2128; }
+
+  .variants { max-width: 1280px; margin: 0 auto; padding: 0 16px 40px; display: grid; gap: 28px; }
+  .variant h2 { font-size: 15px; margin: 0 0 4px; }
+  .variant > p { margin: 0 0 10px; color: #4a5361; font-size: 13px; max-width: 760px; }
+
+  /* The stage imitates the real surface: desktop = page + 440px side panel,
+     mobile = 390px bottom sheet. Width drives the container queries below. */
+  .stage { container-type: inline-size; border-radius: 14px; overflow: hidden; background: #cfd5dc; }
+  .frame { display: flex; }
+  .page { flex: 1 1 auto; min-height: 330px; background:
+      linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.18)),
+      repeating-linear-gradient(135deg, #d7dbe0 0 14px, #d1d6dc 14px 28px);
+      display: flex; align-items: flex-end; padding: 18px; color: #2c333d; font: 800 34px/1 system-ui; letter-spacing: -.5px; }
+  .panel { flex: 0 0 440px; background: var(--panel); color: var(--ink2); display: flex; flex-direction: column; }
+  body.m .stage { max-width: 390px; }
+  body.m .page { display: none; }
+  body.m .panel { flex: 1 1 auto; }
+
+  .body-cut { padding: 14px 18px; border-bottom: 1px solid var(--line2); color: var(--mut); font-size: 12px; }
+  .body-cut b { color: var(--ink); font-size: 13px; }
+  .foot { padding: 16px 18px 18px; }
+
+  /* period cards — the live .cit-cfg-popt skeleton */
+  .permat { display: flex; gap: 8px; margin: 0 0 12px; }
+  .popt { flex: 1 1 0; position: relative; text-align: left; cursor: pointer; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--card); color: var(--ink2); padding: 10px 12px; font: inherit; }
+  .popt--on { border-color: var(--blue); background: var(--blue-bg); box-shadow: 0 0 0 1px var(--blue) inset; }
+  .popt__t { display: block; font: 700 13px/1 system-ui; color: var(--ink); }
+  .popt__s { display: block; margin-top: 4px; font-size: 11px; color: var(--mut); }
+  .popt:focus-visible { outline: 2px solid #9dc2ff; outline-offset: 2px; }
+
+  .sum { margin: 0 0 8px; font-size: 15px; color: var(--ink); }
+  .sum b { font-size: 20px; }
+  .sum small { font-size: 12px; color: var(--mut); }
+  .save { margin: 0 0 8px; font-size: 12.5px; color: #7ee2a0; min-height: 0; }
+  .save[hidden] { display: none; }
+  .note { margin: 0 0 6px; font-size: 11.5px; color: var(--mut); }
+  .next { width: 100%; border: 0; border-radius: 10px; background: var(--blue); color: #fff; padding: 12px; font: 600 15px system-ui; margin-top: 6px; }
+
+  /* ── A · pulsing pill ─────────────────────────────────────────────── */
+  .vA .badge { position: absolute; top: -11px; right: 8px; padding: 4px 9px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--green2), var(--green)); color: #fff;
+    font: 800 11px/1 system-ui; letter-spacing: .4px; text-transform: uppercase;
+    animation: pulse 2.2s ease-out infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(39,163,85,.65); transform: scale(1); }
+    18% { transform: scale(1.08); }
+    36% { transform: scale(1); }
+    70% { box-shadow: 0 0 0 10px rgba(39,163,85,0); }
+    100% { box-shadow: 0 0 0 0 rgba(39,163,85,0); }
+  }
+
+  /* ── B · full-width ribbon + struck price ─────────────────────────── */
+  .vB .popt[data-period="annual"] { padding-top: 32px; overflow: hidden; border-color: var(--green2); }
+  .vB .popt[data-period="annual"].popt--on { border-color: var(--blue); }
+  .vB .ribbon { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 6px 8px; background: var(--green2); color: #fff; font: 800 11.5px/1 system-ui; letter-spacing: .5px; text-transform: uppercase; }
+  .vB .ribbon svg { width: 13px; height: 13px; flex: 0 0 auto; }
+  .vB .strike { display: block; margin-top: 6px; font-size: 11px; color: var(--mut); }
+  .vB .strike s { color: #c77; }
+  .vB .strike b { color: var(--ink); }
+
+  /* ── C · shine sweep + forint saving ──────────────────────────────── */
+  .vC .popt[data-period="annual"] { border-color: var(--green2); padding-top: 18px; }
+  .vC .popt[data-period="monthly"] { padding-top: 18px; }
+  .vC .popt[data-period="annual"].popt--on { border-color: var(--blue); }
+  .vC .badge { position: absolute; top: -12px; right: 8px; overflow: hidden; padding: 5px 10px; border-radius: 999px;
+    background: linear-gradient(135deg, #2fbf62, var(--green)); color: #fff; font: 800 11.5px/1 system-ui; letter-spacing: .3px;
+    box-shadow: 0 4px 14px rgba(39,163,85,.45); white-space: nowrap; }
+  .vC .badge::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.75), transparent);
+    transform: skewX(-20deg); animation: shine 3.2s ease-in-out infinite; }
+  @keyframes shine { 0%, 55% { left: -60%; } 85%, 100% { left: 130%; } }
+  .vC .gain { display: block; margin-top: 4px; font: 700 11px/1.2 system-ui; color: #7ee2a0; }
+  .vC .wiggle { animation: nudge 5s ease-in-out infinite; }
+  @keyframes nudge { 0%, 88%, 100% { transform: rotate(0); } 91% { transform: rotate(-4deg); } 94% { transform: rotate(4deg); } 97% { transform: rotate(-2deg); } }
+
+  /* desktop: the wider panel carries the full comparison line; phone keeps it short */
+  .only-wide { display: none; }
+  @container (min-width: 700px) {
+    .only-wide { display: inline; }
+    .only-narrow { display: none; }
+    .foot { padding: 18px 22px 22px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vA .badge, .vC .badge::after, .vC .wiggle { animation: none; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Havi az alapértelmezett + markánsabb „2 hó ingyen” — 3 változat</h1>
+  <p>Villa Suzy Zamárdi, valós számokkal: 11 szekció · 9 500 Ft/hó · éves = 9 500 × (12 − 2) = 95 000 Ft/év (a 12 havi 114 000 helyett, −19 000 Ft).
+     Minden változatban a <b>Havi</b> van kiválasztva induláskor; kattints az Éves/Havi kártyákra, az ár és a szövegek átváltanak.
+     Mozgás-érzékeny beállításnál (prefers-reduced-motion) az animáció leáll.</p>
+  <div class="sizes" role="group" aria-label="Méret">
+    <button type="button" data-size="m">Mobil 390px</button>
+    <button type="button" data-size="d">Asztali</button>
+  </div>
+</header>
+
+<main class="variants">
+  <section class="variant vA" data-variant="A">
+    <h2>A — Pulzáló pirula</h2>
+    <p>A mai jelvény, csak nagyobb, nagybetűs, zöld színátmenettel, és 2,2 mp-enként „lélegzik” (enyhe felvillanás + gyűrű). Legkisebb beavatkozás, a kártya-pár szerkezete változatlan.</p>
+    <div class="stage"><div class="frame"><div class="page">VILLA SUZY ZAMÁRDI</div><div class="panel">
+      <div class="body-cut"><b>Testre szabom</b> · 11 szekció … (a modul-lista fölötte görget)</div>
+      <div class="foot">
+        <div class="permat" role="group" aria-label="Fizetési gyakoriság">
+          <button class="popt popt--on" type="button" data-period="monthly"><span class="popt__t">Havi</span><span class="popt__s">rugalmas, bármikor</span></button>
+          <button class="popt" type="button" data-period="annual"><span class="badge">2 hónap ingyen</span><span class="popt__t">Éves</span><span class="popt__s">a legjobb ár</span></button>
+        </div>
+        <p class="sum"></p><p class="save" hidden></p>
+        <p class="note">Az ár ÁFA-t nem tartalmaz — a szolgáltató alanyi adómentes (AAM).</p>
+        <p class="note nextcharge"></p>
+        <button class="next" type="button">Tovább a megrendeléshez ›</button>
+      </div></div></div></div>
+  </section>
+
+  <section class="variant vB" data-variant="B">
+    <h2>B — Szalag a kártya tetején + áthúzott ár</h2>
+    <p>Az Éves kártya fejléce egy teljes szélességű zöld szalag („2 hónap ingyen”), alatta áthúzva a 12 havi ár és a valódi éves ár. Nem mozog — a méret és a szín viszi a figyelmet; a leginkább „hirdetés-szerű”.</p>
+    <div class="stage"><div class="frame"><div class="page">VILLA SUZY ZAMÁRDI</div><div class="panel">
+      <div class="body-cut"><b>Testre szabom</b> · 11 szekció … (a modul-lista fölötte görget)</div>
+      <div class="foot">
+        <div class="permat" role="group" aria-label="Fizetési gyakoriság">
+          <button class="popt popt--on" type="button" data-period="monthly"><span class="popt__t">Havi</span><span class="popt__s">rugalmas, bármikor</span></button>
+          <button class="popt" type="button" data-period="annual">
+            <span class="ribbon"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 7h12v2H2zM3 9h10v6H3zM7 7h2v8H7zM8 6C6 2 3 3 4.5 5.2 5.3 6.2 7 6 8 6c1 0 2.7.2 3.5-.8C13 3 10 2 8 6z"/></svg>2 hónap ingyen</span>
+            <span class="popt__t">Éves</span>
+            <span class="strike"><s>114 000 Ft</s> <b>95 000 Ft</b><span class="only-wide"> / év</span></span>
+          </button>
+        </div>
+        <p class="sum"></p><p class="save" hidden></p>
+        <p class="note">Az ár ÁFA-t nem tartalmaz — a szolgáltató alanyi adómentes (AAM).</p>
+        <p class="note nextcharge"></p>
+        <button class="next" type="button">Tovább a megrendeléshez ›</button>
+      </div></div></div></div>
+  </section>
+
+  <section class="variant vC" data-variant="C">
+    <h2>C — Csillanó jelvény forintos megtakarítással</h2>
+    <p>A jelvény a pénzt mondja: „−19 000 Ft · 2 hó ingyen”, 3 mp-enként végigfut rajta egy fénycsík, 5 mp-enként egy apró „biccentés”. Az Éves kártya zöld keretet kap akkor is, ha nincs kiválasztva. Asztalin a teljes összehasonlítás is kiíródik.</p>
+    <div class="stage"><div class="frame"><div class="page">VILLA SUZY ZAMÁRDI</div><div class="panel">
+      <div class="body-cut"><b>Testre szabom</b> · 11 szekció … (a modul-lista fölötte görget)</div>
+      <div class="foot">
+        <div class="permat" role="group" aria-label="Fizetési gyakoriság">
+          <button class="popt popt--on" type="button" data-period="monthly"><span class="popt__t">Havi</span><span class="popt__s">rugalmas, bármikor</span></button>
+          <button class="popt" type="button" data-period="annual"><span class="badge wiggle">−19 000 Ft · 2 hó ingyen</span><span class="popt__t">Éves</span>
+            <span class="gain"><span class="only-narrow">10 hónap áráért 12</span><span class="only-wide">10 hónap áráért 12 hónap — 95 000 Ft/év</span></span></button>
+        </div>
+        <p class="sum"></p><p class="save" hidden></p>
+        <p class="note">Az ár ÁFA-t nem tartalmaz — a szolgáltató alanyi adómentes (AAM).</p>
+        <p class="note nextcharge"></p>
+        <button class="next" type="button">Tovább a megrendeléshez ›</button>
+      </div></div></div></div>
+  </section>
+</main>
+
+<script>
+  // Same rule as src/pricing.ts: monthly = base + Σ modules; annual = monthly × (12 − freeMonths).
+  var MONTHLY = 9500, FREE = 2, SECTIONS = 11;
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; }
+  function render(root, period) {
+    var annual = period === "annual";
+    root.querySelectorAll(".popt").forEach(function (b) {
+      var on = b.getAttribute("data-period") === period;
+      b.classList.toggle("popt--on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    var price = annual ? MONTHLY * (12 - FREE) : MONTHLY;
+    var per = annual ? "/ év" : "/ hó";
+    root.querySelector(".sum").innerHTML = "<b>" + fmt(price) + "</b> " + per + " <small>· " + SECTIONS + " szekció</small>";
+    var save = root.querySelector(".save");
+    save.hidden = !annual;
+    save.textContent = FREE + " hónap ingyen — " + fmt(MONTHLY * FREE) + " megtakarítás a havi fizetéshez képest.";
+    root.querySelector(".nextcharge").textContent = "A következő terhelés a mai fizetéstől számítva " +
+      (annual ? "2027. 09. 23." : "2026. 10. 23.") + ": " + fmt(price) + " " + per + ", automatikusan.";
+  }
+  document.querySelectorAll(".variant").forEach(function (v) {
+    render(v, "monthly"); // MONTHLY is the default
+    v.querySelectorAll(".popt").forEach(function (b) {
+      b.addEventListener("click", function () { render(v, b.getAttribute("data-period")); });
+    });
+  });
+  function setSize(s) {
+    document.body.classList.toggle("m", s === "m");
+    document.querySelectorAll(".sizes button").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-size") === s ? "true" : "false");
+    });
+  }
+  document.querySelectorAll(".sizes button").forEach(function (b) {
+    b.addEventListener("click", function () { setSize(b.getAttribute("data-size")); });
+  });
+  setSize(window.matchMedia("(min-width: 900px)").matches ? "d" : "m");
+</script>
+</body>
+</html>

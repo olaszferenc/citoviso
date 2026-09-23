@@ -1100,6 +1100,8 @@
   display: flex;
   gap: 8px;
   margin: 0 0 12px;
+  /* the gain line's long form follows the SWITCH's own width (contract period-badge ⑤) */
+  container-type: inline-size;
 }
 .cit-cfg-popt {
   flex: 1 1 0;
@@ -1138,9 +1140,81 @@
   font: 700 9.5px/1 system-ui, sans-serif;
   letter-spacing: 0.3px;
 }
-.cit-cfg-popt--on .cit-cfg-popt__badge {
-  background: #2f6feb;
+/* ADR-0211 · contract design-refs/console/period-badge (variant C): the annual
+ * deal advertises itself — forint saving, green frame even when not selected,
+ * a periodic shine + nudge; all motion stops under prefers-reduced-motion. */
+.cit-cfg-permat .cit-cfg-popt {
+  padding-top: 18px; /* room for the badge: it must never cover the title (⑦) */
+}
+.cit-cfg-popt--deal {
+  border-color: #27a355;
+}
+.cit-cfg-popt--deal.cit-cfg-popt--on {
+  border-color: #2f6feb;
+}
+.cit-cfg-permat .cit-cfg-popt__badge {
+  top: -12px;
+  right: 8px;
+  overflow: hidden;
+  padding: 5px 10px;
+  background: linear-gradient(135deg, #2fbf62, #1c7a3e);
   color: #fff;
+  font: 800 11.5px/1 system-ui, sans-serif;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(39, 163, 85, 0.45);
+  animation: cit-cfg-nudge 5s ease-in-out infinite;
+}
+.cit-cfg-permat .cit-cfg-popt__badge[hidden] {
+  display: none;
+}
+.cit-cfg-permat .cit-cfg-popt__badge::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: skewX(-20deg);
+  animation: cit-cfg-shine 3.2s ease-in-out infinite;
+}
+@keyframes cit-cfg-shine {
+  0%, 55% { left: -60%; }
+  85%, 100% { left: 130%; }
+}
+@keyframes cit-cfg-nudge {
+  0%, 88%, 100% { transform: rotate(0); }
+  91% { transform: rotate(-4deg); }
+  94% { transform: rotate(4deg); }
+  97% { transform: rotate(-2deg); }
+}
+.cit-cfg-popt__gain {
+  font-weight: 700;
+  color: #7ee2a0;
+}
+.cit-cfg-gain-w {
+  display: none;
+}
+.cit-cfg-gain-amt {
+  white-space: nowrap;
+}
+@container (min-width: 390px) {
+  .cit-cfg-gain-n { display: none; }
+  .cit-cfg-gain-w { display: inline; }
+}
+.cit-cfg-save {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #7ee2a0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cit-cfg-permat .cit-cfg-popt__badge,
+  .cit-cfg-permat .cit-cfg-popt__badge::after {
+    animation: none;
+  }
 }
 .cit-cfg-foot .cit-cfg-sum {
   font-size: 15px;

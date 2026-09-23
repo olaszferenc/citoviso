@@ -163,6 +163,43 @@ async function audit(page: Page, viewport: string): Promise<Result> {
     failures.push(`az összeg kilóg a képernyőből (y=${box?.y}, h=${box?.height}, vh=${vh})`);
   }
 
+  // 2b) ADR-0211 / contract design-refs/console/period-badge: MONTHLY is the
+  // default, and the annual card's badge names the saving in forints =
+  // monthly list total × free months (read independently from the manifest).
+  {
+    const st = await page.evaluate(() => {
+      const el = document.querySelector("[data-cit-configurator]");
+      const cfg = el ? JSON.parse(el.textContent || "{}") : {};
+      const on = document.querySelector(".cit-cfg-permat .cit-cfg-popt--on");
+      const badge = document.querySelector(".cit-cfg-permat .cit-cfg-popt__badge") as HTMLElement | null;
+      const title = document.querySelector('.cit-cfg-permat .cit-cfg-popt[data-period="annual"] .cit-cfg-popt__t');
+      const a = badge?.getBoundingClientRect();
+      const t = title?.getBoundingClientRect();
+      return {
+        free: Number(cfg?.pricing?.annualFreeMonths ?? 0),
+        hasOffer: !!cfg?.pricing?.offer,
+        on: on?.getAttribute("data-period") ?? null,
+        badge: badge && !badge.hidden ? badge.textContent || "" : null,
+        covers: !!(a && t && a.bottom > t.top + 1 && a.right > t.left && a.left < t.right),
+      };
+    });
+    if (st.on !== "monthly") failures.push(`induláskor nem a Havi van kiválasztva (hanem: ${st.on})`);
+    if (st.free > 0) {
+      if (st.badge === null) failures.push("az Éves kártyán nincs látható „hó ingyen” jelvény");
+      else {
+        const monthly = amount(await sum.innerText());
+        const saving = amount(st.badge);
+        if (!st.hasOffer && saving !== monthly * st.free) {
+          failures.push(`a jelvény megtakarítása ${saving} (várt: ${monthly} × ${st.free} = ${monthly * st.free})`);
+        }
+        if (!st.badge.includes(`${st.free} hó ingyen`)) failures.push(`a jelvény nem nevezi az ingyen hónapokat: "${st.badge}"`);
+      }
+      if (st.covers) failures.push("a jelvény rálóg az „Éves” feliratra");
+    } else if (st.badge !== null) {
+      failures.push(`0 ingyen hónapnál is van jelvény: "${st.badge}"`);
+    }
+  }
+
   // 3) flipping a priced row moves the total by exactly that price
   const priced = page.locator('.cit-cfg-detail .cit-cfg-row:not(.cit-cfg-locked)').filter({ hasText: "+" });
   if (!(await priced.count())) {
@@ -182,9 +219,9 @@ async function audit(page: Page, viewport: string): Promise<Result> {
     await sw.click();
     await page.waitForTimeout(250);
     const after = amount(await sum.innerText());
-    // The row shows a MONTHLY price; the total follows the selected period, and the
-    // annual view is the default (owner decree 2026-08-23) — there a 490 Ft/month
-    // module moves the total by 490 × paid months (12 − free months).
+    // The row shows a MONTHLY price; the total follows the selected period (monthly
+    // is the default since ADR-0211) — on the annual view a 490 Ft/month module
+    // moves the total by 490 × paid months (12 − free months).
     const paidMonths = await page.evaluate(() => {
       const el = document.querySelector("[data-cit-configurator]");
       const cfg = el ? JSON.parse(el.textContent || "{}") : {};

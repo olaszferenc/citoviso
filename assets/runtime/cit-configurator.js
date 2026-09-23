@@ -648,10 +648,10 @@
       return d.toISOString().slice(0, 16).replace("T", " ");
     }
   }
-  // ANNUAL is the default (owner decree 2026-08-23): it is the better deal for the
-  // buyer (two months free) and the healthier commitment for us — the monthly option
-  // stays one tap away.
-  var period = "annual"; // "monthly" | "annual"
+  // MONTHLY is the default (ADR-0211, owner 2026-09-23 — overrides the 2026-08-23
+  // annual decree): the entry price is the smaller number, and the annual deal is
+  // advertised by the badge on its card instead (contract: design-refs/console/period-badge).
+  var period = "monthly"; // "monthly" | "annual"
   var priceById = {};
   MODULES.forEach(function (m) {
     priceById[m.id] = m.price || 0;
@@ -1642,14 +1642,15 @@
       // a step-2 toggle was undiscoverable on mobile — the price showed "/ év" with no
       // switch in sight. Variant B (two option cards) makes the annual discount explicit.
       '<div class="cit-cfg-permat" role="group" aria-label="' + tr("Fizetési gyakoriság") + '">' +
-      '<button class="cit-cfg-popt" type="button" data-period="monthly">' +
+      // The badge and the gain line are filled by syncAnnualBadge() — the saving is
+      // in forints and follows the selected sections (contract: period-badge ②⑤).
+      '<button class="cit-cfg-popt cit-cfg-popt--on" type="button" data-period="monthly">' +
       '<span class="cit-cfg-popt__t">' + tr("Havi") + "</span>" +
       '<span class="cit-cfg-popt__s">' + tr("rugalmas, bármikor") + "</span></button>" +
-      '<button class="cit-cfg-popt cit-cfg-popt--on" type="button" data-period="annual">' +
-      '<span class="cit-cfg-popt__badge">' +
-      tr("{n} hó ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + "</span>" +
+      '<button class="cit-cfg-popt cit-cfg-popt--deal" type="button" data-period="annual">' +
+      '<span class="cit-cfg-popt__badge" hidden></span>' +
       '<span class="cit-cfg-popt__t">' + tr("Éves") + "</span>" +
-      '<span class="cit-cfg-popt__s">' + tr("a legjobb ár") + "</span></button>" +
+      '<span class="cit-cfg-popt__s cit-cfg-popt__gain">' + tr("a legjobb ár") + "</span></button>" +
       "</div>" +
       '<p class="cit-cfg-sum"></p>' +
       // Contract ⑥: until this slice the whole purchase path said NOTHING about
@@ -2175,6 +2176,37 @@
       track("period_select", { period: period });
     });
   });
+  /** What the free months are worth: the monthly LIST total × free months. The
+   *  domain fee is excluded — the free months discount our service, never the
+   *  pass-through registrar cost (ADR-0109 ⑥, ADR-0211 ②). */
+  function annualSaving() {
+    return monthlyTotal() * PRICING.annualFreeMonths;
+  }
+  /** Contract period-badge ②⑤: the annual card advertises the saving in forints. */
+  function syncAnnualBadge() {
+    var free = PRICING.annualFreeMonths;
+    var badge = panel.querySelector(".cit-cfg-popt__badge");
+    var gain = panel.querySelector(".cit-cfg-popt__gain");
+    if (!badge || !gain) return;
+    if (!(free > 0)) {
+      // No free months → nothing to advertise; never a "0 hó ingyen" badge.
+      badge.hidden = true;
+      gain.textContent = tr("a legjobb ár");
+      return;
+    }
+    badge.hidden = false;
+    badge.textContent =
+      "−" + fmt(annualSaving()) + " · " + tr("{n} hó ingyen").replace("{n}", String(free));
+    var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
+    var yearly = annualTotal() + (domOn ? domainFeeMonthly() * 12 : 0);
+    var paid = tr("{paid} hónap áráért 12")
+      .replace("{paid}", String(12 - free));
+    gain.innerHTML =
+      '<span class="cit-cfg-gain-n">' + esc(paid) + "</span>" +
+      '<span class="cit-cfg-gain-w">' + esc(paid + " " + tr("hónap") + " — ") +
+      // the amount never breaks inside the number ("95 / 000 Ft")
+      '<span class="cit-cfg-gain-amt">' + esc(fmt(yearly) + tr("/év")) + "</span></span>";
+  }
   function syncPeriodButtons() {
     panel.querySelectorAll(".cit-cfg-popt").forEach(function (x) {
       var on = x.getAttribute("data-period") === period;
@@ -2855,6 +2887,13 @@
       sumEl.innerHTML = OFFER
         ? offerCardHtml(a, tr("/ év"), permoA, domA)
         : '<b>' + fmt(a + domA) + "</b> " + tr("/ év") + " " + permoA;
+      // Contract period-badge ⑥: the saving named in forints once the deal is chosen.
+      if (PRICING.annualFreeMonths > 0) {
+        sumEl.innerHTML +=
+          '<span class="cit-cfg-save">' +
+          tr("{amount} megtakarítás a havi fizetéshez képest").replace("{amount}", fmt(annualSaving())) +
+          "</span>";
+      }
     } else {
       var m0 = monthlyTotal();
       var permoM =
@@ -2904,6 +2943,7 @@
     // see in one glance (ADR-0164 ③).
     syncPresetPrices();
     syncPeriodButtons();
+    syncAnnualBadge();
     // The card's height moves with the offer/domain lines; on desktop it lives
     // inside the pinned action block, so the scroll affordance has to follow.
     syncScrollHint();

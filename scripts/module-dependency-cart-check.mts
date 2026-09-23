@@ -414,12 +414,17 @@ try {
   // fizet — pont az a hazugság, amiért a kliens pipál.
   await loadPricing();
   const digits = (s: string): number => Number((/([\d\s  ]+)\s*Ft/.exec(s)?.[1] ?? "").replace(/\D/g, ""));
-  const clientAnnual = digits(clientSum);
+  // The figure is compared in the cycle the card SHOWS (monthly is the default
+  // since ADR-0211) — read from its own unit, never assumed; no unit = red.
+  const clientCycle = /\/\s*év/.test(clientSum) ? "annual" : /\/\s*hó/.test(clientSum) ? "monthly" : null;
+  const clientAmount = digits(clientSum);
   const serverAnnual = computeAnnual(clientChosen);
+  const serverAmount = clientCycle === "annual" ? serverAnnual : computeMonthly(clientChosen);
+  const unitLabel = clientCycle === "annual" ? "Ft/év" : "Ft/hó";
   check(
     "⑤ a kliens „Fizetendő most\" == a szerver ára UGYANARRA a halmazra",
-    clientAnnual === serverAnnual,
-    `kliens ${clientAnnual} Ft/év · szerver ${serverAnnual} Ft/év · halmaz: ${clientChosen.join(",")}`,
+    clientCycle !== null && clientAmount === serverAmount,
+    `kliens ${clientAmount} ${unitLabel} · szerver ${serverAmount} ${unitLabel} (ütem: ${clientCycle ?? "NINCS egység"}) · halmaz: ${clientChosen.join(",")}`,
   );
   // N2 — az állítás nem üres: a függőségek NÉLKÜLI halmaz ára bizonyíthatóan más.
   const withoutDeps = clientChosen.filter((id) => !PULLED.includes(id));

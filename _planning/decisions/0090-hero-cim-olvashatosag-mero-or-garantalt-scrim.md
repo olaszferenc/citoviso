@@ -29,7 +29,7 @@ sablon **3,10–4,85:1**.
 (a „Tovább a megrendeléshez" után) ült, míg az **éves** ár már az 1. lépésen látszott váltó nélkül →
 mobilon felfedezhetetlen (a lead nem találta, hogyan válthat havira). A váltó **átkerült az 1. lépés
 láblécébe, közvetlenül az ÖSSZESEN ár fölé** (`.cit-cfg-permat` két opció-kártya, az éves kedvezmény
-badge-ként), mindig látható a pinnelt láblécben mobilon is. Az **éves marad az alapértelmezett**
+badge-ként), mindig látható a pinnelt láblécben mobilon is. Az **éves marad az alapértelmezett** (⚠️ FELÜLÍRVA: ADR-0211, 2026-09-23 — a havi az alapértelmezett)
 (ADR-0080/tulaj-rendelet), a valós árazás (`pricing.ts`) és az ADR-0088 ajánlat-kártya változatlan.
 A `configurator-price-check` az új class-ra (`.cit-cfg-popt`) horgonyoz. A felület-kapu (§2b) a
 tervekkel/ui-shottal/jóváhagyással végigfutott.

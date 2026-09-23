@@ -15,6 +15,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-0211](decisions/0211-a-konfiguratorban-a-havi-az-alapertelmezett.md) — A konfigurátorban a HAVI az alapértelmezett fizetési ütem; a „2 hó ingyen” forintban és mozogva hirdet
 - [ADR-0210](decisions/0210-adr-enkent-kulon-fajl-a-ket-index-generalt.md) — ADR-enként külön fájl, a két index generált, és a duplikált szám kapu (2026-09-23)
 - [ADR-0209](decisions/0209-a-felszereltseg-es-a-szobak-felszereltsege-ket.md) — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (2026-09-23)
 - [ADR-0208](decisions/0208-ar-nelkul-nem-foglalast-igerunk-hanem.md) — Ár nélkül nem foglalást ígérünk, hanem árajánlatot kérünk — és a szezon-szabály egy példányban (2026-09-22)

@@ -327,6 +327,11 @@ async function preChargeSentence(
       await page.locator(`.cit-cfg-row[data-id="${id}"]`).click();
       await page.waitForTimeout(100);
     }
+    // The fixture's order and subscription are ANNUAL; the buyer must pick the
+    // same cycle on screen. Monthly is the default since ADR-0211, so this is an
+    // explicit choice now, not an inherited default.
+    await page.locator('.cit-cfg-permat [data-period="annual"]').click();
+    await page.waitForTimeout(150);
     await page.locator(".cit-cfg-next").click();
     await page.waitForTimeout(200);
     await page.locator(".cit-cfg-rights").check();

@@ -18,8 +18,8 @@ a `/ év` ár már az 1. lépésen látszott.
 4. **Valós árazás:** a váltó a `src/pricing.ts` szerint számol újra
    (havi = alap + Σ modul; éves = havi × (12 − annualFreeMonths)); a bemutatkozó/eszkalációs
    ajánlat (−%) az ár-kártyán VÁLTOZATLAN marad (egyszeri, a hosszabbítás listaáron).
-5. **Az éves marad az alapértelmezett** kiválasztás (tulaj-rendelet 2026-08-23) — a havi
-   egy kattintás.
+5. ~~Az éves marad az alapértelmezett~~ — **FELÜLÍRVA (ADR-0211, 2026-09-23): a HAVI az alapértelmezett**, az éves
+   egy kattintás; a jelvény kontraktusa: `design-refs/console/period-badge`.
 
 ## Referencia
 `plan.html` — a jóváhagyott mock (A = pirula és B = kártya egymás mellett; a **B** a kötelező).
