@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-09-23 (tulajdonosi döntés: „C”), §2b terv-kapu, A / B / C változatból.
 **Ez a fájl KONTRAKTUS, nem stílus-javaslat.** Az alap-blokk a szülő mappa A kontraktusa
-(`../README.md`); ez a fájl azt köti, amiben a MINTA eltér tőle. Döntés: ADR-XXXX.
+(`../README.md`); ez a fájl azt köti, amiben a MINTA eltér tőle. Döntés: ADR-0218.
 
 | fájl | mi ez |
 |---|---|

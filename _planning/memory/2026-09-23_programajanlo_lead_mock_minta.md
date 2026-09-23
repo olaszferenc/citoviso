@@ -1,6 +1,6 @@
 # 2026-09-23 — Programajánló minta a lead-mockban (C változat)
 
-**Szál:** `wt/cit08ae3378`, brief: `~/rc-briefs/programajanlo-lead-mock-brief.md`. Döntés: ADR-XXXX.
+**Szál:** `wt/cit08ae3378`, brief: `~/rc-briefs/programajanlo-lead-mock-brief.md`. Döntés: ADR-0218.
 
 ## Elvégezve
 - §2b: 3 vázlat (A pirula+mondat · B kitöltendő mezők · C pirula nélkül, jelölés a bevezetőben) a

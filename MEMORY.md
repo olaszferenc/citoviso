@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (programajánló-minta a lead-mockban, ADR-XXXX) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-XXXX az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-09-23 (programajánló-minta a lead-mockban, ADR-XXXX)
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 délután)
 
-**📅 PROGRAMAJÁNLÓ-MINTA A LEAD-MOCKBAN — KÉSZ LOKÁLBAN (ADR-XXXX, tulaj: „C”).** A mock a
+**📅 PROGRAMAJÁNLÓ-MINTA A LEAD-MOCKBAN — KÉSZ LOKÁLBAN (ADR-0218, tulaj: „C”).** A mock a
 jóváhagyott A blokkot mutatja kitöltve: 10 évszak-független program-típus, „a környéken”,
 kitalált km/forrás nélkül; jelölés a bevezetőben („Minta-napirend.”, pirula nélkül); a dátumok
 a nézés napjához igazodnak (`shiftSampleDates`). A régi mockok a rerenderig a régi mintát viszik.

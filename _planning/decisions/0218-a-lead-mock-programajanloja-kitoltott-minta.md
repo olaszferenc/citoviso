@@ -1,4 +1,4 @@
-## ADR-XXXX — A lead-mock programajánlója kitöltött minta: pirula nélkül, a nézés napjához igazított dátumokkal (2026-09-23)
+## ADR-0218 — A lead-mock programajánlója kitöltött minta: pirula nélkül, a nézés napjához igazított dátumokkal (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva) · **Kapcsolódó:** ADR-0214
 (heti programajánló), ADR-0061 (minta-jelölés a szekción), ADR-0015 (wow ↔ jelölés feszültség),
