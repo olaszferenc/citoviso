@@ -507,6 +507,23 @@ if [ -f scripts/module-preview-check.mts ]; then
   echo "[pre-commit] module-preview-check (ADR-0089: előnézet nem ír, jelöl)…"
   npx tsx scripts/module-preview-check.mts
 fi
+# Az előnézet VISELKEDÉSRE sem ír (ADR-0192 ⑧.5): a fenti őr a forrásszöveget nézi, és
+# vak volt a két hívással mélyebben ülő INSERT-re — a Szobák/Árak/Értékelések/Foglalás
+# előnézete egységet hozott létre egy semmit nem vett fiókban. Piros iker: a mentő út
+# ugyanitt ír, azt látnia kell.
+if [ -f scripts/module-preview-nowrite-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(editor|units|modules)\.ts$|^src/server/modulePreview\.ts$|^scripts/module-preview-nowrite-check'; then
+  echo "[pre-commit] module-preview-nowrite (ADR-0192 ⑧.5: az előnézet adatbázist sem ír)…"
+  npx tsx scripts/module-preview-nowrite-check.mts >"$GATE_LOG" || gate_failed
+fi
+# A próba-fizetőoldal a modul-bővítésre IGAZAT mond (ADR-0192 ⑧.3): egyszeri, időarányos
+# díj, a megvett modulok nevével — nem „éves előfizetés · Ft/év". A VALÓDI útvonalon mér
+# (a hiba a kind→időszak leképezésben ült), pozitív kontrollal az éves előfizetésre.
+if [ -f scripts/pay-mock-upsell-check.mts ] && \
+   changed_files | grep -qE '^src/console/(server|views)\.ts$|^scripts/pay-mock-upsell-check'; then
+  echo "[pre-commit] pay-mock-upsell (ADR-0192 ⑧.3: a bővítés egyszeri díj)…"
+  npx tsx scripts/pay-mock-upsell-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0059: one content type appears ONCE, inside the template's native section —
 # module data weaves in, the shared block carries only the measured leftover; the
 # mock's sample rooms wear real photos and its booking slot is a clickable demo.

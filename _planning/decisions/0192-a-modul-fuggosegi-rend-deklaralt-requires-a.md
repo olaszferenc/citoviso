@@ -264,11 +264,11 @@ leírva maradnak, hogy ne kelljen újra megtalálni:
    szerver a végösszegen (`src/tenant/moduleUpsell.ts:130`). Élő adaton: **1 626 Ft a képernyőn,
    1 627 a terhelésen**. Azért nem derült ki eddig, mert a park egyetlen upsellje éves (ott
    véletlenül egybeesik).
-3. A mock fizetőoldal upsellnél **„éves előfizetés / Ft/év"**-et ír egy időarányos EGYSZERI díjra,
+3. ✅ **→ ADR-0213 (2026-09-23).** A mock fizetőoldal upsellnél **„éves előfizetés / Ft/év"**-et ír egy időarányos EGYSZERI díjra,
    és **nulla** modulnevet (`src/console/server.ts:3319`, `src/console/views.ts:1832`) — ADR-0175
    ütközés.
 4. ~~A `rooms` bekapcsolása eltünteti a fizetett `amenities` szekciót.~~ → **ADR-0209**
-5. Az előnézet ÍR (ADR-0089 ④), és az őre vak rá (`scripts/module-preview-check.mts:50-70`).
+5. ✅ **→ ADR-0213 (2026-09-23).** Az előnézet ÍR (ADR-0089 ④), és az őre vak rá (`scripts/module-preview-check.mts:50-70`).
 6. `renewableModuleIds` nem ismeri a supersessiont (`src/payment/billing.ts:126-139`) — ma
    véletlenül egyezik, mert az egyetlen kiváltott modul spine ÉS 0 Ft.
 7. `activateUpsell` **nem atomi** (`src/tenant/moduleUpsell.ts:188-203`): félbemaradó ciklus után

@@ -13,6 +13,14 @@ Utolsó frissítés: 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelv
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23)
 
+**🔍 ADR-0192 ⑧.3 + ⑧.5 LEZÁRVA (ADR-0213).** Előbb mérve, aztán javítva: a modul-előnézet
+(Szobák/Árak/Értékelések/Foglalás) egységet írt egy semmit nem vett fiókba → `peekUnits` +
+DB-pillanatképes őr; a próba-fizetőoldal a bővítést „éves előfizetés/Ft/év"-nek mondta → egyszeri
+díj + modulnevek, valódi útvonalon mérő őr. Élesen egyik sem érintett vevőt.
+Jegyzet: `_planning/memory/2026-09-23_preview_nowrite_upsell_oneoff.md`.
+
+## Előző szál (2026-09-23 — elutasított kártya)
+
 **💳 AZ ELUTASÍTOTT KÁRTYA NEM NÉMA · a deploy-kapuk tudnak bukni · a fordítás a deploy kapuja.**
 Session-jegyzet: `_planning/memory/2026-09-23_declined_card_deploy_pipefail.md`. Landolva (`c4e61db` … `127f2194`), **NEM élesítve**.
 

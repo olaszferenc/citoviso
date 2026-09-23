@@ -84,6 +84,43 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
   }));
 }
 
+/** Id of the in-memory unit peekUnits() shows when the site has none. Never persisted. */
+export const PREVIEW_UNIT_ID = "preview-whole-property";
+
+/**
+ * ADR-0089 ④ / ADR-0192 ⑧.5 — the units for a render that must write NOTHING: the
+ * tenant-admin module preview. It answers what ensureUnits() would give the page, but
+ * keeps the answer in memory: no default unit is inserted, no slug is back-filled, no
+ * whole-property flag is set.
+ *
+ * Measured 2026-09-23: previewing Szobák, Árak or Foglalás on a site without units
+ * INSERTED an "A szállás egésze" row (with a slug) — the owner only LOOKED, bought
+ * nothing, and his data changed. The virtual unit has no slug on purpose: a preview
+ * must not advertise a subpage that does not exist.
+ */
+export async function peekUnits(siteId: string): Promise<Unit[]> {
+  const rows = await getUnits(siteId);
+  if (!rows.length) {
+    return [
+      {
+        id: PREVIEW_UNIT_ID,
+        name: DEFAULT_UNIT_NAME,
+        capacity: null,
+        description: null,
+        sortOrder: 0,
+        slug: null,
+        amenities: [],
+        seasonalOnly: false,
+        isWholeProperty: true,
+      },
+    ];
+  }
+  // ensureUnits() would mark the first unit as the whole place (ADR-0114) — say the same, unsaved.
+  return rows.some((u) => u.isWholeProperty)
+    ? rows
+    : rows.map((u, i) => (i === 0 ? { ...u, isWholeProperty: true } : u));
+}
+
 /**
  * The site's units, guaranteeing at least one. Called wherever the booking module
  * needs somewhere to put a day — a site can never be unit-less, so no caller has

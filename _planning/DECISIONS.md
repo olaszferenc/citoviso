@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-0213](decisions/0213-az-elonezet-nem-ir-a-bovites-egyszeri-dij.md) — Az előnézet nem ír adatot, és a próba-fizetőoldal a modul-bővítést egyszeri díjnak mondja (2026-09-23)
 - [ADR-0212](decisions/0212-nginx-a-vevo-oldali-konzol-utvonalak-is-a.md) — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)
 - [ADR-0211](decisions/0211-a-konfiguratorban-a-havi-az-alapertelmezett.md) — A konfigurátorban a HAVI az alapértelmezett fizetési ütem; a „2 hó ingyen” forintban és mozogva hirdet
 - [ADR-0210](decisions/0210-adr-enkent-kulon-fajl-a-ket-index-generalt.md) — ADR-enként külön fájl, a két index generált, és a duplikált szám kapu (2026-09-23)

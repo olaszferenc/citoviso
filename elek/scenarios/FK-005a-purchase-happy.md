@@ -40,7 +40,7 @@ kontraktus: kb/entries/console-lead/entry.hu.md
   tedd: kattints ".cit-cfg-terms"
   tedd: kattints ".cit-cfg-recurring"
   tedd: kattints ".cit-cfg-pay"
-  tedd: várj "Mock fizetőoldal" 30
+  tedd: várj "Próba-fizetés" 30
   várd: látható "Fizetek ▸"
   adat: ELEK-TESZT megrendelés + fizetési kérés (mock)
 

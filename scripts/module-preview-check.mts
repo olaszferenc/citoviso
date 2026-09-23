@@ -8,6 +8,9 @@
  *     never paid for. The guard reads the preview's own source and refuses ANY
  *     write call in its closure — and proves the detector works by pointing it at
  *     renderAndPersist(), which must come back dirty.
+ *     ⚠️ TEXT-ONLY: it cannot see a write deeper in the call chain (ADR-0192 ⑧.5 sat
+ *     in ensureUnits, two calls down). The behavioural twin measures the DB itself:
+ *     scripts/module-preview-nowrite-check.mts.
  *  ②  A NOT-YET-OWNED SECTION IS MARKED. Without the "MINTA…" badge the preview
  *     claims the content is already the tenant's (§B.17) and the paid reality would
  *     differ from what was shown (§I bait-and-switch).

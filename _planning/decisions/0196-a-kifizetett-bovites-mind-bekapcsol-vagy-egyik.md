@@ -100,8 +100,8 @@ miközben négy fájlom már hivatkozott rá — átszámozva, ellenőrzött 0 m
   eltűnt. A dedup maga helyes (ADR-0059 §2). **Tulajdonosi döntés (2026-09-22): a tulajnak
   SZÓLNI kell** a Felszereltség lapon, hogy minden tétele a szobakártyákon van, ezért a külön
   szakasz nem jelenik meg. ⚠️ Ez FELÜLET → §2b terv-kör, külön menetben.
-- **⑧.3** — a mock fizetőoldal upsellnél „éves előfizetés / Ft/év"-et ír egy időarányos
+- ✅ **LEZÁRVA → ADR-0213.** **⑧.3** — a mock fizetőoldal upsellnél „éves előfizetés / Ft/év"-et ír egy időarányos
   EGYSZERI díjra, és nulla modulnevet (ADR-0175 ütközés). Nem javítva.
-- **⑧.5** — a modul-előnézet ÍR (`ensureUnits` → `INSERT site_unit`), az ADR-0089 ④ ellenére,
+- ✅ **LEZÁRVA → ADR-0213.** **⑧.5** — a modul-előnézet ÍR (`ensureUnits` → `INSERT site_unit`), az ADR-0089 ④ ellenére,
   és az őre vak rá. Nem javítva; a `src/server/modulePreview.ts:5` komment ma is azt állítja,
   hogy „writes nothing".

@@ -1775,6 +1775,8 @@ export function payMockPage(
   period: string,
   status: string,
   productName?: string | null,
+  /** Translated labels of the modules an UPSELL buys (ADR-0192 ⑧.3). */
+  upsellModules?: readonly string[],
 ): string {
   const lang = consoleLang();
   // "oneoff" = one-time purchase: no per-period suffix (an "/ hó" on an egyszeri
@@ -1840,16 +1842,24 @@ export function payMockPage(
         ? T(lang, "éves előfizetés")
         : T(lang, "havi előfizetés");
   const body = `<div class="panel" style="max-width:440px;margin:48px auto;text-align:center">
-    <h2>${T(lang, "Mock fizetőoldal")}</h2>
-    ${payItemLine(lang, productName, T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }))}
+    <h2>${T(lang, "Próba-fizetés — valódi pénz nem mozdul")}</h2>
+    ${payItemLine(
+      lang,
+      productName,
+      upsellModules?.length
+        ? T(lang, "Modul-bővítés: {modules} — {cycle}", {
+            modules: esc(upsellModules.join(", ")),
+            cycle: esc(cycleWord),
+          })
+        : T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }),
+    )}
     <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>
     ${banner}
     <p class="mut small" data-pay-status="${esc(status)}">${T(lang, "státusz: {status}", { status: esc(statusWord) })}</p>
     ${actions}
     ${payRefRow(lang, ref, T(lang, "Hivatkozás:"))}
-    <p class="mut small" style="margin-top:16px">${T(lang, "Ez a MOCK fizetőoldal a valós Barion pay-link helyén. A gombok ugyanazt a webhook-utat hajtják, amit az éles gateway fog.")}</p>
   </div>`;
-  return layout(T(lang, "Mock fizetés"), body, { chrome: false, head: payCopyScript(lang) });
+  return layout(T(lang, "Próba-fizetés"), body, { chrome: false, head: payCopyScript(lang) });
 }
 
 /**

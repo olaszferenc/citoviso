@@ -3428,14 +3428,28 @@ async function handle(
       .leftJoin("lead", "lead.id", "prospect.lead_id")
       .select([
         "payment.amount as amount", "payment.period as period", "payment.status as status",
-        "order_intent.kind as kind", "lead.name as leadName",
+        "order_intent.kind as kind", "order_intent.modules as modules", "lead.name as leadName",
       ])
       .where("gateway_ref", "=", mockPayMatch[1])
       .executeTakeFirst();
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen fizetés.</p>"));
     // A one-time purchase must not read "/ hó" on the pay screen (Elek FK-005b H3):
     // the period column carries the subscription cycle even on one-off orders.
-    const oneTime = p.kind === "multilang" || p.kind === "domain_settlement" || p.kind === "domain_upgrade";
+    // ⛔ An UPSELL is one-time too: the tenant pays the pro-rata difference ONCE, the
+    // renewal then bills it with the subscription. Missing from this list, it read
+    // "Citoviso honlap — éves előfizetés · 1 627 Ft / év" (ADR-0192 ⑧.3, measured
+    // 2026-09-23) — while Barion's own description says "időarányos első díj".
+    const oneTime =
+      p.kind === "multilang" || p.kind === "domain_settlement" || p.kind === "domain_upgrade" || p.kind === "upsell";
+    // Contract ② (pay-gateway-exit): the screen names WHAT is paid — for an upsell that
+    // is the modules, not "Citoviso honlap".
+    const upsellModules =
+      p.kind === "upsell" && Array.isArray(p.modules)
+        ? (p.modules as unknown[]).map((id) => {
+            const def = MODULE_CATALOG.find((m) => m.id === String(id));
+            return def ? T(consoleLang(), def.publicLabel) : String(id);
+          })
+        : undefined;
     // ⛔ NO-STORE (Elek FK-005b H4, 2026-09-11): after a decline the buyer presses
     // BACK, and the browser served this page from its history cache — a pixel-
     // perfect copy of the pre-decline screen, status "pending" and both buttons
@@ -3447,7 +3461,7 @@ async function handle(
     return send(
       res,
       200,
-      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status, p.leadName),
+      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status, p.leadName, upsellModules),
       "text/html; charset=utf-8",
       { "cache-control": "no-store, no-cache, must-revalidate", pragma: "no-cache" },
     );

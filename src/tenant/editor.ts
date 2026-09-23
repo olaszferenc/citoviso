@@ -24,7 +24,7 @@ import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules, isRenderedModule } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
-import { ensureUnits } from "./units.js";
+import { ensureUnits, peekUnits } from "./units.js";
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
 import { formatSpan, getSitePrices, priceSpan, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
@@ -309,7 +309,11 @@ export async function moduleContentFor(
   // the pricing module puts a number on them. All three read site_unit, so they can
   // never disagree about what the owner actually rents out.
   const needsUnits = on("rooms") || on("pricing") || on("booking");
-  const units = needsUnits ? await ensureUnits(siteId) : [];
+  // ⛔ ADR-0089 ④: the preview (overrideActive) writes NOTHING. ensureUnits() inserts a
+  // default unit and back-fills slugs — measured 2026-09-23, merely LOOKING at the
+  // Szobák/Árak/Foglalás preview created a unit in the owner's account (ADR-0192 ⑧.5).
+  const loadUnits = overrideActive ? peekUnits : ensureUnits;
+  const units = needsUnits ? await loadUnits(siteId) : [];
   const priceMap: Map<string, UnitPrice[]> =
     on("rooms") || on("pricing") ? await getSitePrices(siteId) : new Map();
   const currency = text("pricing", "currency") || "HUF";
@@ -454,7 +458,7 @@ export async function moduleContentFor(
     // The collection form. Units are offered only when there is a real choice: a
     // single-unit owner never sees the concept (same rule as booking).
     if (cfg("reviews").collectEnabled !== false) {
-      const revUnits = units.length ? units : await ensureUnits(siteId);
+      const revUnits = units.length ? units : await loadUnits(siteId);
       out.reviewForm =
         revUnits.length > 1
           ? { units: revUnits.map((u) => ({ id: u.id, name: u.name })) }

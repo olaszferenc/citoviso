@@ -27,14 +27,14 @@ kontraktus: kb/entries/admin-multilang/entry.hu.md
 
 - [ ] A fizetés elindul a mock-fizetőoldalra
   tedd: kattints "Fizetés és generálás"
-  tedd: várj "Mock fizetőoldal" 30
+  tedd: várj "Próba-fizetés" 30
   várd: látható "Elutasítom"
   várd: látható "Ez a fizetés még nem indult el"
   adat: ELEK-TESZT egyszeri fizetés (Többnyelvű honlap, mock)
 
 - [ ] A fizetés közbeni oldal-újratöltés nem terhel és nem veszít el semmit
   tedd: újratöltés
-  várd: látható "Mock fizetőoldal"
+  várd: látható "Próba-fizetés"
   várd: látható "Elutasítom"
   várd: látható "Ez a fizetés még nem indult el"
 
