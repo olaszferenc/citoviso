@@ -1917,8 +1917,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         // GATEWAY's own page (barion.ts → secure.barion.com), where we cannot
         // write a single word. The tenant read „a kártyáját 4 900 Ft-tal
         // terheljük", clicked, and landed on a stranger's payment form — never
-        // learning that the stored card was the thing that failed. Only the mock
-        // gateway happens to run on our host, so local testing never showed it.
+        // learning that the stored card was the thing that failed. (Dev runs the
+        // Barion SANDBOX — `secure.test.barion.com` — so this was reproducible
+        // locally too; it was simply never exercised with a declined MIT.)
         //   The pay-link is still minted here (it IS the way forward, and the
         // banner needs a real target — charge-retry-note-check ②/③), but the
         // tenant now clicks it knowingly.

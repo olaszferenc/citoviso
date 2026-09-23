@@ -1103,7 +1103,9 @@ export function modulesSection(
         : "") +
       // ③: the banner must CARRY the deed, not describe it. No link ⇒ no promise.
       (applied.payFailedUrl
-        ? ` <a class="citui-btn citui-btn--primary" href="${esc(applied.payFailedUrl)}" style="margin-top:8px">${T(lang, "Fizetés kézzel")}</a>`
+        ? // Own line, not inline: measured 2026-09-23 on a REAL declined charge at 390px,
+          // an inline button inflated the line box mid-sentence and split the text.
+          `<div style="margin-top:10px"><a class="citui-btn citui-btn--primary" href="${esc(applied.payFailedUrl)}">${T(lang, "Fizetés kézzel")}</a></div>`
         : ` ${T(lang, "Próbálja meg újra, vagy forduljon hozzánk.")}`) +
       `</div>` +
       // ⛔ A fragment-görgetés KORREKCIÓJA — mérve, nem feltételezve (2026-09-22):

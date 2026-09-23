@@ -8,7 +8,9 @@
 // (`barion.ts` → secure.barion.com), ahol egy szavunk sincs. A tulaj tehát azt
 // olvasta, hogy „a kártyáját 4 900 Ft-tal terheljük", rákattintott, és egy idegen
 // fizetőoldalon találta magát — sosem tudva meg, hogy épp a KÁRTYÁJA bukott el.
-// Lokálban ez nem látszott: a mock gateway véletlenül a mi hosztunkon fut.
+// ⚠️ Helyesbítve 2026-09-23: a dev is a Barion SANDBOXOT futtatja (`.env`
+// PAYMENT_GATEWAY=barion), tehát lokálban is reprodukálható volt — csak senki nem
+// futtatott elutasított MIT-et. E2E-próba: PAYMENT_GATEWAY=mock + MOCK_RECURRING_FAIL=1.
 //   Ma a szerver a Modulok fülön áll meg, és ez a sáv mondja ki, mi történt.
 //
 // ⚠️ MIÉRT KÜLÖN ŐR, amikor a `charge-retry-note-check` ugyanezt a lapot méri:
