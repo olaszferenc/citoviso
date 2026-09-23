@@ -11,7 +11,17 @@ Utolsó frissítés: 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-22 este)
+## Aktív feladat (legfrissebb szál, 2026-09-23)
+
+**🛋️ FELSZERELTSÉG = KÉT KÜLÖN LISTA (ADR-0209, lezárja az ADR-0192 ⑧.4-et).** A renderelő
+kihúzta a ház-listából, ami egy szobánál is szerepelt → teljes átfedésnél a KIFIZETETT szakasz
+eltűnt, és az Áttekintés „kifizette, de üres”-t mondott egy kitöltött listára. Tulajdonosi döntés:
+a kezdőlapi Felszereltség = amit a tulaj kiválaszt, a szobák a sajátjukat viszik; a szűrő kivéve.
+Őr: `scripts/amenities-house-list-check.mts`. ⛔ Tanulság: a brief premisszáját kérdezd meg,
+mielőtt a magyarázatot tervezed. Jegyzet: `_planning/memory/2026-09-23_amenities_two_lists.md`.
+Élesítés nem volt feladat.
+
+## Előző szál (2026-09-22 este)
 
 **📅 AUTOMATA HETI PROGRAMAJÁNLÓ — a gyűjtés MÉRVE, az átnevezés KÉSZ, a kód még nincs.**
 Session-jegyzet: `_planning/memory/2026-09-22_programajanlo_modul.md`.

@@ -170,6 +170,15 @@ if [ -f scripts/paid-empty-check.mts ] && \
   echo "[pre-commit] paid-empty (kifizetett, de üres modul)…"
   npx tsx scripts/paid-empty-check.mts
 fi
+# A ház-szintű Felszereltség PONTOSAN az, amit a tulaj kiválasztott (ADR-0209). A renderelő
+# korábban kihúzta belőle, ami egy szobánál is szerepelt: aki mindkét helyen bejelölte,
+# annak a fizetett szakasza eltűnt a lapról, az Áttekintés pedig „kifizette, de üres"-t írt
+# egy KITÖLTÖTT listára. Negatív kontroll: a valóban üres lista továbbra is riaszt.
+if [ -f scripts/amenities-house-list-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(editor|modules|units)\.ts$|^scripts/amenities-house-list-check'; then
+  echo "[pre-commit] amenities-house-list (ADR-0209: két külön lista)…"
+  npx tsx scripts/amenities-house-list-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A kapott kedvezmény LÁTSZIK — és közben egy fillér sem mozdul. A tulaj 14 775 Ft-ot
 # fizetett, és nem tudta eldönteni, jó-e a szám: jó volt (19 700 Ft − 25 %), csak sehol
 # nem mondtuk ki. ⛔ A döntő állítás nem a szöveg, hanem a PÉNZ: a Számlázz.hu összeadja

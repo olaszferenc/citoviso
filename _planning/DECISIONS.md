@@ -2352,6 +2352,8 @@ a modul továbbra is függelék, nem az oldal része. Konkrét tünetek:
 2. **Unit-elsődleges értelmezés:** ha vannak unitok, az unit-szintre értelmezhető adat
    (felszereltség, ár, kapacitás, fotó) az unit-kártyán/aloldalon jelenik meg; globális listába
    csak a ténylegesen ház-szintű tétel kerül.
+   ⚠️ **PONTOSÍTVA — ADR-0209 (2026-09-23):** „ház-szintű” = amit a tulaj a Felszereltség
+   lapon kiválaszt. A renderelő NEM szűri a ház-listát a szobák listáival szemben.
 3. **A mintaszoba a szállás VALÓS fotóit viseli.** A lead fotókészletéből (Places/portál) a
    szoba-mintakártyák képet kapnak („Minta" jelöléssel — §B.17 tiszta: valós fotó + minta-címke).
    A photoFill ikon-panel csak akkor, ha EGYETLEN fotó sincs.
@@ -11506,7 +11508,7 @@ leírva maradnak, hogy ne kelljen újra megtalálni:
 3. A mock fizetőoldal upsellnél **„éves előfizetés / Ft/év"**-et ír egy időarányos EGYSZERI díjra,
    és **nulla** modulnevet (`src/console/server.ts:3319`, `src/console/views.ts:1832`) — ADR-0175
    ütközés.
-4. A `rooms` bekapcsolása eltünteti a fizetett `amenities` szekciót (`src/tenant/editor.ts:318-330`).
+4. ~~A `rooms` bekapcsolása eltünteti a fizetett `amenities` szekciót.~~ → **ADR-0209**
 5. Az előnézet ÍR (ADR-0089 ④), és az őre vak rá (`scripts/module-preview-check.mts:50-70`).
 6. `renewableModuleIds` nem ismeri a supersessiont (`src/payment/billing.ts:126-139`) — ma
    véletlenül egyezik, mert az egyetlen kiváltott modul spine ÉS 0 Ft.
@@ -11880,7 +11882,7 @@ miközben négy fájlom már hivatkozott rá — átszámozva, ellenőrzött 0 m
 
 ### ⑥ AMI MÉG NYITOTT AZ ADR-0192 ⑧-BÓL
 
-- **⑧.4** — a `rooms` bekapcsolása eltüntetheti a fizetett `amenities` szekciót. **Mérve: ma
+- ✅ **LEZÁRVA → ADR-0209 (2026-09-23).** **⑧.4** — a `rooms` bekapcsolása eltüntetheti a fizetett `amenities` szekciót. **Mérve: ma
   egyetlen tenant sincs ilyen állapotban**, de szintetikusan kiváltottam és a szekció valóban
   eltűnt. A dedup maga helyes (ADR-0059 §2). **Tulajdonosi döntés (2026-09-22): a tulajnak
   SZÓLNI kell** a Felszereltség lapon, hogy minden tétele a szobakártyákon van, ezért a külön
@@ -12999,3 +13001,43 @@ mely ágakat nem ront vissza; a fixtúrája pedig külön állítással bizonyí
 4. **Emlékeztető**, ha X napja hiányos az árazás.
 5. **Év-specifikus szezonár + nudge** a szezon záró napja után — a ③ volt hozzá az alap.
 6. **Az ADR-0197 ② javítása** (a polcról levett modul számlázása) — külön mandátum.
+
+## ADR-0209 — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (2026-09-23)
+
+**Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrrel) · **Kapcsolódó:**
+ADR-0192 ⑧.4 (lezárja), ADR-0059 döntés 2 (pontosítja), ADR-0194 (a „kifizette, de üres” sor).
+
+### A mért tényállás (2026-09-22/23, eldobható fixture-rel, pozitív kontrollal)
+
+A renderelő (`moduleContentFor`, rooms-ág) kihúzta a ház-szintű Felszereltségből azt a tételt,
+ami egy szobánál is szerepelt (kisbetűsítve egyező). Ha a tulaj MINDEN ház-szintű tételét a
+szobáknál is bejelölte, a lista kiürült, és a **kifizetett szakasz eltűnt a lapról**. Ennél is
+rosszabb: az Áttekintés erre az üres kimenetre az ADR-0194 sorát adta — *„kifizette, de üres,
+ezért a vendég ma nem látja”* —, egy KITÖLTÖTT listáról, és a „Kitöltöm” egy csupa-pipa lapra
+vitt. Részleges átfedésnél a lista némán fogyatkozott, erről semmi nem szólt.
+
+A szoba-szerkesztő eközben már a helyes modellt követte: a ház-szintű tételt a szobánál
+„az egész szállásra” jelöléssel, nem kapcsolhatóan mutatja. A kiürülés csak akkor állt elő, ha
+a tulaj előbb a szobáknál jelölt be valamit, és utána a ház-listába is felvette.
+
+### A döntés (tulajdonosi, 2026-09-23)
+
+**Két külön lista.** A Felszereltség a kezdőlapon azt mutatja, amit a tulaj ott kiválasztott —
+se többet, se kevesebbet. A szobák a SAJÁT listájukat viszik a kártyájuk részleteiben. A
+renderelő a kettőt nem veti össze. „Ház-szintű” = a tulaj választása, nem származtatott érték.
+
+⛔ **Eljárási tanulság:** a munkaátadás azzal a feltevéssel jött, hogy „a kihúzás helyes, csak
+szólni kell”. Ezt átvéve három tájékoztató-változat (§2b kör) készült arra, hogyan magyarázzuk
+el a tulajnak a viselkedést — a tulaj kérdezett rá, hogy maga a szabály ellentétes azzal, ahogy
+a két modult elképzeli. A változatok elvetve. **Előbb azt kell megkérdezni, hogy a viselkedés a
+tulaj modelljét követi-e; csak utána azt, hogyan mondjuk el.**
+
+### Őr
+
+`scripts/amenities-house-list-check.mts` (pre-commit, `src/tenant/(editor|modules|units).ts`
+változásakor): közös DB-n eldobható fixture, a `moduleContentFor().data`-n és az Áttekintés
+saját predikátumán mér. Pozitív kontroll (nincs átfedés), részleges és teljes átfedés (a lista
+teljes, nincs hamis sor, a szobák a saját 3-3 tételüket viszik), **negatív kontroll** (valóban
+üres lista → a szakasz nincs, és a „kifizette, de üres” sor TOVÁBBRA IS megjelenik).
+`--self-test` a régi szűrőt visszaalkalmazva pontosan 3 bukást követel.
+

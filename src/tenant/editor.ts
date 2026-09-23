@@ -399,18 +399,12 @@ export async function moduleContentFor(
         ...(u.isWholeProperty ? { wholeProperty: true } : {}),
       };
     });
-    // ADR-0059 §2: an item already on a unit's card must not repeat in the site-level
-    // list — the global amenities hold only the genuinely house-level items.
-    if (Array.isArray(out.amenities)) {
-      const unitLevel = new Set(
-        units.flatMap((u) => u.amenities.map((a) => a.trim().toLowerCase())),
-      );
-      const houseOnly = (out.amenities as string[]).filter(
-        (a) => !unitLevel.has(a.trim().toLowerCase()),
-      );
-      if (houseOnly.length) out.amenities = houseOnly;
-      else delete out.amenities;
-    }
+    // ⛔ ADR-0209: the site-level amenities are NOT filtered against the units' lists.
+    // "House-level" is what the owner picked on the Felszereltség screen, not something
+    // derived here. The filter that used to live here removed every house item that also
+    // sat on a unit — so an owner who ticked the same things in both places lost the paid
+    // section from the page entirely, and the Áttekintés then told him "kifizette, de
+    // üres" about a list he had filled in (ADR-0192 ⑧.4, measured 2026-09-22).
   }
   if (on("location")) {
     const l = {
