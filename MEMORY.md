@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -12,6 +12,17 @@ Utolsó frissítés: 2026-09-23 (a közös doksik generált indexe, ADR-0210) ·
 > (a megújítás listaáron menne).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23)
+
+**💳 KONFIGURÁTOR: a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211).**
+Session-jegyzet: `_planning/memory/2026-09-23_monthly_default_period_badge.md`. Landolva `d38e027a`, **NEM élesítve**
+(a tulaj később egyben viszi a maint).
+
+- §2b: 3 változatból a **C** (csillanó jelvény `−19 000 Ft · 2 hó ingyen`, zöld keret, „10 hónap áráért 12”);
+  kontraktus `assets/design-refs/console/period-badge/`. Felülírja a 2026-08-23-i éves rendeletet (ADR-0090 ②).
+- ⛔ Az alapérték-váltás 3 idegen őrt pirosított (mind „induláskor éves”-t feltételezett) → explicit éves választásra igazítva.
+- 🔴 **Nyitva:** éves előfizetésű tenant + havi alapértelmezés → fizetőoldal havi, visszaigazolás éves összeg? (nem mérve)
+
+## Előző szál (2026-09-23 — doksi-infra)
 
 **🗂️ A KÖZÖS DOKSIK ÜTKÖZÉSE — ADR-enként külön fájl, generált indexek, duplikátum-kapu (ADR-0210).**
 Session-jegyzet: `_planning/memory/2026-09-23_adr_files_generated_index.md`.

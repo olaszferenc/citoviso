@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-23_monthly_default_period_badge.md](2026-09-23_monthly_default_period_badge.md) — 2026-09-23 — A konfigurátorban a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211)
 - [2026-09-23_amenities_two_lists.md](2026-09-23_amenities_two_lists.md) — 2026-09-23 — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (ADR-0209)
 - [2026-09-23_adr_files_generated_index.md](2026-09-23_adr_files_generated_index.md) — 2026-09-23 — A közös doksik ütközése: ADR-enként külön fájl, generált indexek, duplikátum-kapu (ADR-0210)
 - [2026-09-22_watermark_and_refine_queue.md](2026-09-22_watermark_and_refine_queue.md) — 2026-09-22 — Két halott ígéret élesítése, és három éles hiba, amiről senki nem tudott
