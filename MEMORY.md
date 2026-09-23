@@ -13,6 +13,16 @@ Utolsó frissítés: 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelv
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23)
 
+**💳 AZ ELUTASÍTOTT KÁRTYA NEM NÉMA · a deploy-kapuk tudnak bukni · a fordítás a deploy kapuja.**
+Session-jegyzet: `_planning/memory/2026-09-23_declined_card_deploy_pipefail.md`. Landolva (`c4e61db` … `127f2194`), **NEM élesítve**.
+
+- Elutasított MIT → a tulaj a Modulok fülön marad (sáv + „Fizetés kézzel"), nem a Barion lapján némán; VALÓDI POST-tal végigfuttatva (10/10).
+- ⛔⛔ A `deploy-prod.sh` hat blokkoló kapuja (pg_dump, db:migrate, npm install, GATE 5/5b) `| tail` miatt NEM TUDOTT BUKNI — `pipefail` + `deploy-pipe-check`.
+- A commit nem kér fordítást (ADR-0207 mód.); `kb-freshness` ④ az élest méri; `park-doctor.mts` megmondja, ha a piros a parké.
+- 🔴 **Nyitva:** a korábbi pg_dump-mentések valódisága (csak olvasás, tulaj szavára) · a következő deploy az első, amin ezek a kapuk bukni tudnak.
+
+## Előző szál (2026-09-23 — konfigurátor)
+
 **💳 KONFIGURÁTOR: a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211).**
 Session-jegyzet: `_planning/memory/2026-09-23_monthly_default_period_badge.md`. Landolva `d38e027a`, **NEM élesítve**
 (a tulaj később egyben viszi a maint).
