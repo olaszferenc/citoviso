@@ -1,4 +1,4 @@
-## ADR-XXXX — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)
+## ADR-0215 — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)
 
 **Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrrel) · **Kapcsolódó:** ADR-0208 ⑥.1
 (ez a tétel), ADR-0208 ⑥.5 (évhez kötött ár — az ALAPJA itt landolt), ADR-0193 ① (nem blokkolunk),

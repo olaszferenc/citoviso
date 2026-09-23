@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-ar-nelkuli-keresre-arajanlat-a-rendszerbol.md) — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)
+- [ADR-0215](decisions/0215-ar-nelkuli-keresre-arajanlat-megy-a-rendszerbol.md) — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)
 - [ADR-0214](decisions/0214-automata-heti-programajanlo-telepules-kulcsos.md) — Automata heti programajánló: település-kulcsos gyűjtés, automatikus kitöltés, csak-tulaj levél (2026-09-23)
 - [ADR-0213](decisions/0213-az-elonezet-nem-ir-a-bovites-egyszeri-dij.md) — Az előnézet nem ír adatot, és a próba-fizetőoldal a modul-bővítést egyszeri díjnak mondja (2026-09-23)
 - [ADR-0212](decisions/0212-nginx-a-vevo-oldali-konzol-utvonalak-is-a.md) — nginx: a vevő-oldali konzol-útvonalak is a citoviso.com-ról a konzolra (:4600)

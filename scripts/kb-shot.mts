@@ -1413,7 +1413,7 @@ async function shootConsole(
 
 const conOut = (entryId: string): string =>
   path.join(ROOT, "kb/entries", entryId, "assets", "hu", "screen.png");
-// ADR-XXXX / tudásbázis-őr lelete (2026-09-23): the offer page is the flow's main NEW
+// ADR-0215 / tudásbázis-őr lelete (2026-09-23): the offer page is the flow's main NEW
 // screen — the owner types a price there and reads the yellow warning — and the entry
 // had no picture of it. Rendered from the REAL view (ownerOfferPage) with a price
 // typed in, so the live total and the "no end date" warning both show; element shot

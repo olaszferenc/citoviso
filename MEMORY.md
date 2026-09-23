@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-XXXX — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-XX
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 délután)
 
-**💬 ÁR NÉLKÜLI KÉRÉSRE ÁRAJÁNLAT — KÉSZ LOKÁLBAN (ADR-XXXX, migráció 0072). Élesítés nem volt.**
+**💬 ÁR NÉLKÜLI KÉRÉSRE ÁRAJÁNLAT — KÉSZ LOKÁLBAN (ADR-0215, migráció 0072). Élesítés nem volt.**
 Session-jegyzet: `_planning/memory/2026-09-23_booking_offer_dated_price.md`.
 
 - **A hiba:** ár nélküli kérésnél a tulaj levele koppintásos „Elfogadom”-mal ÁR NÉLKÜL véglegesített.

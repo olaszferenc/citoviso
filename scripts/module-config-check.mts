@@ -432,7 +432,7 @@ try {
     dateTo: soon(33),
     guests: 2,
   };
-  // ADR-XXXX: the one-tap verdict path exists only for a PRICED request — an unpriced one
+  // ADR-0215: the one-tap verdict path exists only for a PRICED request — an unpriced one
   // is answered with a price offer (booking-offer-check covers that). This section tests
   // the verdict path, so the unit gets a price and the pricing module is on; the module
   // set is restored after the verdict checks, so the sections below see what they did.
@@ -440,7 +440,7 @@ try {
   await setBasePrice(unitB, 20_000);
   const made = await createBookingRequest(guest, "https://example.test");
   check("foglalási kérés rögzíthető", made.ok, made.errors);
-  check("…árral (az egy koppintásos elfogadás csak árazott kérésre él — ADR-XXXX)", typeof made.summary?.total === "number", made.summary?.total);
+  check("…árral (az egy koppintásos elfogadás csak árazott kérésre él — ADR-0215)", typeof made.summary?.total === "number", made.summary?.total);
 
   // ⭐ A rendeletet POZITÍV eset önmagában nem védi: enélkül a telefon-kötelezettség
   // kivehető lenne a kódból, és minden állítás zöld maradna. Ezért negatív iker.

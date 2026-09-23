@@ -1,4 +1,4 @@
-# 2026-09-23 — Árajánlat ár nélküli kérésre + évhez kötött ár (ADR-XXXX)
+# 2026-09-23 — Árajánlat ár nélküli kérésre + évhez kötött ár (ADR-0215)
 
 **Szál:** „CIT ➕ Árazás kikényszerítése” (munkafa `~/wt/arazaskenyszer`). Mandátum: a fa
 `BRIEF.md`-je (az ADR-0208 ⑥ öt nyitott tétele); ebből az ① (tulaj-értesítés) készült el, és
@@ -54,7 +54,7 @@ magával hozta az ⑤ (évhez kötött ár) ALAPJÁT. **Élesítés nem volt fel
 - `kb/entries/admin-bookings/entry.hu.md` (+ `assets/hu/offer.png`) · `src/i18n/catalog.json` ·
   `scripts/i18n-sources.mjs` · `scripts/kb-shot.mts`
 - `assets/design-refs/tenant-admin/booking-offer/` (kontraktus + 9 kép)
-- `_planning/DECISIONS.md` (ADR-XXXX) · `_planning/DOMAIN/05-MODULES.md` (az ár ideje)
+- `_planning/DECISIONS.md` (ADR-0215) · `_planning/DOMAIN/05-MODULES.md` (az ár ideje)
 
 ## Nyitva
 
