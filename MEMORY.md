@@ -13,6 +13,14 @@ Utolsó frissítés: 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-02
 
 ## Aktív feladat (legfrissebb szál, 2026-09-23 délután)
 
+**🔒 MODULE-SALES-CHECK: NEM ÍR TÖBBÉ KÖZÖS DB-SORT (2026-09-23 este).** A két egymásba lapolt
+futás tartós maradékot hagyott a `module_sales_disabled`-ben (mérve: `email,gallery,rooms`), ami
+minden land-et pirosra vitt a `configurator-placement-check`-en. Javítás: folyamaton belüli
+felülírás (`overrideDisabledModulesInProcess`) + az őr méri, hogy a közös sor érintetlen.
+Nyitott termék-kérdés: kikapcsolt `gallery` szekciója a mockon megmarad (`sampleDenyKeys`).
+Jegyzet: `_planning/memory/2026-09-23_module_sales_check_race.md`.
+
+
 **💬 ÁR NÉLKÜLI KÉRÉSRE ÁRAJÁNLAT — KÉSZ LOKÁLBAN (ADR-0215, migráció 0072). Élesítés nem volt.**
 Session-jegyzet: `_planning/memory/2026-09-23_booking_offer_dated_price.md`.
 

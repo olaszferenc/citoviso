@@ -9,6 +9,7 @@
 - [2026-09-23_programajanlo_build.md](2026-09-23_programajanlo_build.md) — 2026-09-23 — Automata heti programajánló: MEGÉPÍTVE (gyűjtés, választó, honlap-blokk, tulaj-levél)
 - [2026-09-23_preview_nowrite_upsell_oneoff.md](2026-09-23_preview_nowrite_upsell_oneoff.md) — 2026-09-23 — Az előnézet nem ír, és a bővítés egyszeri díj (ADR-0213, ADR-0192 ⑧.3 + ⑧.5)
 - [2026-09-23_monthly_default_period_badge.md](2026-09-23_monthly_default_period_badge.md) — 2026-09-23 — A konfigurátorban a HAVI az alapértelmezett, a „2 hó ingyen” forintban és mozogva hirdet (ADR-0211)
+- [2026-09-23_module_sales_check_race.md](2026-09-23_module_sales_check_race.md) — 2026-09-23 — a module-sales-check nem ír többé közös DB-sort (verseny-maradék megszűnt)
 - [2026-09-23_declined_card_deploy_pipefail.md](2026-09-23_declined_card_deploy_pipefail.md) — 2026-09-22/23 — Az elutasított kártya nem néma · a park megmondja magáról · a deploy-kapuk tudnak bukni
 - [2026-09-23_booking_offer_dated_price.md](2026-09-23_booking_offer_dated_price.md) — 2026-09-23 — Árajánlat ár nélküli kérésre + évhez kötött ár (ADR-0215)
 - [2026-09-23_amenities_two_lists.md](2026-09-23_amenities_two_lists.md) — 2026-09-23 — A Felszereltség és a szobák felszereltsége KÉT KÜLÖN LISTA (ADR-0209)
