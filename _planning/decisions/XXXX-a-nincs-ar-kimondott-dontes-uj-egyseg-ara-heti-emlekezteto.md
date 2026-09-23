@@ -4,7 +4,7 @@
 · ⑥.3 · ⑥.4 (ez a három tétel), ADR-0215 (az ár ideje; ennek a szálnak az előzménye), ADR-0197 ①
 (a részlegesen árazott szállás, amiről eddig senki nem szólt), ADR-0194 (a kifizetett-de-üres
 teendő-sor), ADR-0193 ① (nem blokkolunk) · **Kontraktus:** `assets/design-refs/tenant-admin/price-on-request/`
-· **Migráció:** 0073.
+· **Migráció:** 0074.
 
 **Kiváltó.** A tulaj mandátuma (`~/rc-briefs/arazas-nincs-ar-uj-egyseg-emlekezteto.md`): a
 hiányzó ár és a „szándékosan nincs ár” megkülönböztethetetlen; új egységnél senki nem kér árat;
@@ -73,8 +73,13 @@ valódi tenantoknál érdemes visszanézni, hány levél megy ki szállásonkén
    epizód közben felvett szobára nem igaz. A 7 nap a szállás epizódja: „A szállása árazása
    {days} napja hiányos.”
 3. **Két összerakott feliratot idéztem szó szerint a súgóban** — a `kb-check` fogta meg.
-4. **A `kb-shot` fixtúrája szállt volna el:** a `scripts/` nincs típus-ellenőrizve, és az új,
-   kötelező `status` mező hiányzott belőle.
+4. **Két idegen fixtúra szállt el futásidőben** (`kb-shot`, `pricing-booking-only-check`): a
+   `scripts/` nincs típus-ellenőrizve, és az új, kötelező `status` mező hiányzott belőlük — a
+   második csak a commit-kapuban derült ki.
+5. ⚠️ **Ingadozó idegen őr:** a `room-editor-check` egyik negatív kontrollja („a nem hozzárendelt
+   képek HALVÁNYAK”) egy commit-futásban zöldet mért a visszarontott állapoton (opacity 0,5539 —
+   egy átmenet közepe), külön futtatva kétszer egymás után zöld. Nem ez a munka érinti; nem
+   javítottam csendben — külön szálnak.
 
 ### ④ AZ ŐR
 

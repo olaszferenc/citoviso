@@ -14,7 +14,7 @@ Utolsó frissítés: 2026-09-23 („nem adok meg árat” + új egység ára + h
 ## Aktív feladat (legfrissebb szál, 2026-09-23 este)
 
 **🏷️ A „NINCS ÁR” KIMONDOTT DÖNTÉS + ÚJ EGYSÉG ÁRA + HETI EMLÉKEZTETŐ — KÉSZ LOKÁLBAN (ADR-XXXX,
-migráció 0073). Élesítés nem volt.** Az ADR-0208 ⑥.2–⑥.4. Jegyzet:
+migráció 0074). Élesítés nem volt.** Az ADR-0208 ⑥.2–⑥.4. Jegyzet:
 `_planning/memory/2026-09-23_price_on_request.md` · kontraktus: `assets/design-refs/tenant-admin/price-on-request/`.
 
 - `site_unit.price_on_request` (szobánként „Nem adok meg alapárat” pipa, alapár mellett tiltott, az
