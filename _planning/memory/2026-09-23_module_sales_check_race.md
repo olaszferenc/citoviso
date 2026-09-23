@@ -31,10 +31,9 @@ Brief: `~/rc-briefs/module-sales-check-verseny-brief.md` (a programajánló-szá
 A mérés alatt kétszer lett elrontva (a negatív kontroll szándékosan), mindkétszer visszaállítva
 `["email"]`-re; a session végén `["email"]`.
 
-## Nyitott (nem ebben a szálban)
-- A `configurator-placement-check` továbbra is a közös sort OLVASSA (buildManifest). Versenyt már
-  nem kap (őr nem ír), de ha az operátor a dev-konzolon kikapcsol pl. `gallery`-t, piros lesz.
-  Ez részben VALÓDI jel: a `sampleDenyKeys` a `gallery`-t nem képezi le, tehát egy kikapcsolt
-  galéria szekciója a mockon megmaradna, miközben a csomag nem tartalmazza. Termék-kérdés a tulajnak
-  (a galéria a lead SAJÁT fotói — „minta"-e?). Az őrt szándékosan NEM rögzítettem a seedre, mert
-  az ezt a jelet elnémítaná.
+## A galéria-kérdés — eldőlt (ADR-XXXX)
+Ha a Galéria nem eladó, a csomagválasztó nem kínálja, de a mockon a szekció (a lead fotói)
+megmaradt. Tulaj: **maradjon** (saját fotók, nem minta). Megvalósítva a
+`configurator-placement-check` ② pontjában: nem eladó galériára kivétel, csak rá.
+Kontroll (a teszt-folyamatban felülírt tiltással, közös sor érintetlen): kivétellel zöld,
+kivétel nélkül piros (`teljes/ajanlott/alap/gallery`).

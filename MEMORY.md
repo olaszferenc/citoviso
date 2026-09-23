@@ -26,7 +26,7 @@ Jegyzet: `_planning/memory/2026-09-23_multiplan_tabs_feature_branch.md`.
 futás tartós maradékot hagyott a `module_sales_disabled`-ben (mérve: `email,gallery,rooms`), ami
 minden land-et pirosra vitt a `configurator-placement-check`-en. Javítás: folyamaton belüli
 felülírás (`overrideDisabledModulesInProcess`) + az őr méri, hogy a közös sor érintetlen.
-Nyitott termék-kérdés: kikapcsolt `gallery` szekciója a mockon megmarad (`sampleDenyKeys`).
+Eldőlt (ADR-XXXX): a nem eladó galéria a mockon MARAD (a lead saját fotói); az őr erre kivételt tesz.
 Jegyzet: `_planning/memory/2026-09-23_module_sales_check_race.md`.
 
 
