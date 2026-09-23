@@ -46,9 +46,12 @@ Session-jegyzet: `_planning/memory/2026-09-23_programajanlo_build.md`.
   mobilon 5 + „Még N program”, lábszöveg nélkül) + üres választásnál **automatikus kitöltés** + heti levél **CSAK a tulajnak**.
 - Időzítők: `citoviso-events.timer` (napi 05:30: hétfői gyűjtés, napi újrarenderelés, heti levél) +
   `citoviso-events-pending.timer` (5 perc: a most vásárolt tenant köre azonnal — „különben dühös lesz a tenant”).
-  ⛔ **Élesítéskor MINDKETTŐT telepíteni kell**, különben semmi nem gyűlik. Dev gépen nincsenek bekapcsolva (költenek).
+  ✅ Élesen a deploy **GATE 6** telepíti, engedélyezi és visszaméri őket (ADR-0216, `deploy/systemd/targets.json`) —
+  kihagyhatatlanul. Dev gépen nincsenek bekapcsolva (költenek).
 - Mérve: Rozé köre 41 település → 40 program, $0,43/hét. ⚠️ Magányos tenantnál ~650 Ft/hó költség vs 490 Ft/hó ár (az ár a tulajé).
-- 🔴 **Nyitva:** a LEAD-MOCK programajánló-tartalma (A blokk „Minta” jelöléssel, program-TÍPUSOK, a megtekintés
+- 🔴 **Nyitva:** a LEAD-MOCK programajánló-tartalma — FUT külön szálban (`~/wt/cit08ae3378`, brief:
+  `~/rc-briefs/programajanlo-lead-mock-brief.md`); a `module-sales-check` verseny-javítása is külön szálban
+  (`~/wt/cit6c630b0f`). Eredeti terv: (A blokk „Minta” jelöléssel, program-TÍPUSOK, a megtekintés
   napjához igazodó dátumok — valós adat NEM, mert a mock statikus és hetekkel később nézik); a lakosság-küszöb (≥1000) korrekciója a hozamból.
 - ⚠️ Park-lelet: a `module-sales-check` két egymásba lapolódó futása „gallery”-t hagyott a `module_sales_disabled`-ben
   (a másik futás ideiglenes állapotát mentette eredetiként) → a `configurator-placement-check` mindenkinél piros lett;
