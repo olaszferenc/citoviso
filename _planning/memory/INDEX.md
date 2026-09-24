@@ -9,6 +9,7 @@
 - [2026-09-24_worktree_collision_root_causes.md](2026-09-24_worktree_collision_root_causes.md) — 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-0223)
 - [2026-09-24_barion_setencryptedemail_hotfix.md](2026-09-24_barion_setencryptedemail_hotfix.md) — 2026-09-24 — Barion -001: a setEncryptedEmail sosem sült el — hotfix élesítve (csak ez)
 - [2026-09-24_barion_callback_failed.md](2026-09-24_barion_callback_failed.md) — 2026-09-24 — Barion „Unsuccessful callback" levelek: a tesztkapu indított valódi sandbox-fizetést
+- [2026-09-24_barion_advanced_approved.md](2026-09-24_barion_advanced_approved.md) — 2026-09-24 — Barion: az Advanced díjcsomag jóváhagyva (ténylegesen 1,39%)
 - [2026-09-23_season_year_price.md](2026-09-23_season_year_price.md) — 2026-09-23 — Évhez kötött szezonár: évsáv, szerkeszthető szezon, szezon végi kérdés (ADR-0221)
 - [2026-09-23_reviews_inbox.md](2026-09-23_reviews_inbox.md) — 2026-09-23 — Vendégvélemény-kezelő: a csillag nem hazudik többé, a köszönőlevél egyszer megy ki
 - [2026-09-23_programajanlo_lead_mock_minta.md](2026-09-23_programajanlo_lead_mock_minta.md) — 2026-09-23 — Programajánló minta a lead-mockban (C változat)

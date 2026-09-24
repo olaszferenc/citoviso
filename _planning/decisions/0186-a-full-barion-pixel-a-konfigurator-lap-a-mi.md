@@ -54,3 +54,9 @@ nem ad PASS-t.
 
 **Visszafordíthatóság:** 🔄 két útvonal-minta, egy z-index és egy futtató-réteg; nulla séma.
 **Élesítés:** külön engedéllyel (§0.3).
+
+**Kiegészítés (2026-09-24) — a bírálat lezárult, a TÉNYLEGES díj 1,39%.** A Barion a -001-es
+észrevétel felülvizsgálata után az elfogadóhelyet az **Advanced Fix 1,19%** díjcsomagba tette.
+Az ismétlődő fizetés (recurring) felára **+0,2%**, és mi előfizetést árulunk, ezért a ténylegesen
+beállított díj **Fix 1,39%**. ⛔ Díjszámításnál ezt vedd alapul, ne a fenti 1,19%-ot. A Barion
+Metrics elemzési adatai az Elfogadóhelyek menüpontban, az elfogadóhely neve mellett érhetők el.
