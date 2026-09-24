@@ -937,7 +937,8 @@ export async function tenantCoverPhoto(
 export async function moveTenantPhoto(
   tenantId: string,
   url: string,
-  to: "up" | "down" | "cover",
+  /** One step, the front — or (ADR-0224 drag-and-drop) an absolute 0-based index. */
+  to: "up" | "down" | "cover" | number,
 ): Promise<{ ok: boolean }> {
   const s = await loadSiteForEdit(tenantId);
   if (!s || !s.path) return { ok: false };
@@ -948,7 +949,14 @@ export async function moveTenantPhoto(
   const i = current.findIndex((p) => p.url === url);
   if (i < 0) return { ok: false };
   const [item] = current.splice(i, 1);
-  const target = to === "cover" ? 0 : to === "up" ? Math.max(0, i - 1) : Math.min(current.length, i + 1);
+  const target =
+    typeof to === "number"
+      ? Math.min(current.length, Math.max(0, Math.trunc(to)))
+      : to === "cover"
+        ? 0
+        : to === "up"
+          ? Math.max(0, i - 1)
+          : Math.min(current.length, i + 1);
   current.splice(target, 0, item!);
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
 }

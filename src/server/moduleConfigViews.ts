@@ -29,7 +29,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
-import { ic } from "../ui/icons.js";
+import { icAdmin as ic } from "../ui/icons.js";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
@@ -58,7 +58,7 @@ export const MODCFG_STYLE = `<style>
 .pa{container-type:inline-size}
 .pa-intro b{color:var(--citui-ink)}
 .pa-tabs{display:flex;gap:6px;margin-bottom:12px}
-.pa-tabs button{flex:1;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+.pa-tabs button{flex:1;border:1px solid var(--citui-line-strong);background:var(--citui-panel);
   border-radius:var(--citui-radius-pill);padding:9px 8px;font:700 .82rem/1 var(--citui-font-text);
   color:var(--citui-muted);cursor:pointer}
 .pa-tabs button.is-on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
@@ -71,7 +71,7 @@ export const MODCFG_STYLE = `<style>
   .pa-pane.is-hide{display:flex}
 }
 .pa-paneh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
-.pa-paneh h3{margin:0;font:700 .92rem/1.3 var(--citui-font-display);color:var(--citui-navy-900)}
+.pa-paneh h3{margin:0;font:700 .92rem/1.3 var(--citui-font-display);color:var(--citui-ink)}
 .pa-c{font-size:.8rem;color:var(--citui-muted);font-variant-numeric:tabular-nums}
 .pa-c.is-full{color:var(--citui-warn-ink);font-weight:700}
 .pa-box{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:var(--citui-surface);
@@ -80,7 +80,7 @@ export const MODCFG_STYLE = `<style>
 .pa-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
   padding:22px 12px;text-align:center;color:var(--citui-muted);font-size:.84rem;line-height:1.5;min-height:140px}
 .pa-empty svg{color:var(--citui-line-strong)}
-.pa-it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--citui-white);
+.pa-it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--citui-panel);
   border:1px solid var(--citui-line);border-radius:11px;padding:9px 10px;margin:5px 0}
 .pa-body{min-width:0}
 .pa-d{font:700 .72rem/1 var(--citui-font-display);color:var(--citui-link-ink);letter-spacing:.3px}
@@ -91,17 +91,17 @@ export const MODCFG_STYLE = `<style>
 .pa-dist.is-here{font-weight:700;color:var(--citui-ok-ink)}
 .pa-acts{display:flex;gap:5px;align-items:center}
 .pa-ctrl{display:flex;flex-direction:column;gap:3px}
-.pa-ctrl button{width:28px;height:24px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+.pa-ctrl button{width:28px;height:24px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);
   border-radius:7px;font:700 .8rem/1 var(--citui-font-text);color:var(--citui-ink);cursor:pointer;padding:0}
 .pa-ctrl button:disabled,.pa-add:disabled{opacity:.3;cursor:not-allowed}
-.pa-add{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-cyan-500);background:var(--citui-white);
+.pa-add{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-cyan-500);background:var(--citui-panel);
   color:var(--citui-link-ink);font:700 1.05rem/1 var(--citui-font-text);cursor:pointer;padding:0}
 .pa-add:disabled{border-color:var(--citui-line-strong);color:var(--citui-muted)}
-.pa-rm{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+.pa-rm{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-line-strong);background:var(--citui-panel);
   color:var(--citui-muted);font:700 1rem/1 var(--citui-font-text);cursor:pointer;padding:0}
-.pa-pen{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:7px;
+.pa-pen{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:7px;
   padding:2px 8px;font:600 .7rem/1.35 var(--citui-font-text);cursor:pointer;color:var(--citui-ink)}
-.pa-full{background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));
+.pa-full{background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));
   border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent);border-radius:11px;
   padding:9px 11px;font:700 .8rem/1.4 var(--citui-font-text);color:var(--citui-warn-ink);margin-bottom:8px}
 .pa-full[hidden],.pa-saved[hidden],.pa-auto[hidden]{display:none}
@@ -124,7 +124,7 @@ export const MODCFG_STYLE = `<style>
 .mcfg-empty{display:flex;align-items:flex-start;gap:8px;margin:8px 0 0;padding:10px 12px;
   border-radius:var(--citui-radius-sm);font-size:.88rem;line-height:1.55;
   color:var(--citui-ink);
-  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));
+  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));
   border:1px solid color-mix(in srgb,var(--citui-warn) 38%,transparent)}
 .mcfg-empty svg{flex:0 0 auto;margin-top:2px;color:var(--citui-warn)}
 /* ADR-0208 ⑥.2: the owner's STATED decision is not a warning — same shape, calm colour. */
@@ -198,7 +198,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
    guest booking — the two used to be pixel-identical while behaving differently
    (one frees the night, the other opens a card). */
 .cal-cell input:checked+label{background:var(--citui-navy-700);color:var(--citui-white);
-  border-color:var(--citui-navy-700);font-weight:600}
+  border-color:var(--citui-ink);font-weight:600}
 .cal-cell input:focus-visible+label{outline:2px solid var(--citui-cyan-400);outline-offset:2px}
 .cal-cell--blank{visibility:hidden}
 .cal-cell--past label{color:var(--citui-muted);background:var(--citui-surface-2);
@@ -315,43 +315,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .unit-tabs a[aria-current="true"]{color:var(--citui-ink);font-weight:600;
   border-bottom-color:var(--citui-cyan-500)}
 
-/* ── photo cards: order + caption (ADR-0044) ────────────────────────── */
-.adm-photo{position:relative;border:1px solid var(--citui-line);border-radius:10px;
-  padding:6px;background:var(--citui-surface)}
-.adm-photo.is-cover{border-color:var(--citui-cyan-500);
-  box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 22%,transparent)}
-.adm-photo img{width:100%;height:92px;object-fit:cover;border-radius:6px;display:block}
-.adm-photo__badge{position:absolute;top:10px;left:10px;background:var(--citui-navy-800);
-  color:var(--citui-white);font-size:.68rem;font-weight:600;padding:2px 7px;border-radius:999px}
-.adm-photo__del{position:absolute;top:10px;right:10px;margin:0}
-.adm-photo__bar{display:flex;gap:4px;margin-top:6px}
-/* Each button sits in its own <form>, so the FORM is the flex child — putting
-   flex:1 only on the button left thumb-sized taps on a phone. */
-.adm-photo__bar form{flex:1;display:flex;margin:0}
-/* 44px is the accepted minimum tap target; measured at 38px before this. */
-.adm-photo-btn{flex:1;font:inherit;font-size:.95rem;line-height:1;padding:9px 0;cursor:pointer;
-  min-height:44px;
-  color:var(--citui-ink);background:var(--citui-surface-2);border:1px solid var(--citui-line);
-  border-radius:6px}
-.adm-photo-btn:hover{border-color:var(--citui-line-strong)}
-.adm-photo__cap{display:flex;gap:5px;margin-top:6px}
-.adm-photo__cap .citui-input{flex:1;min-width:0;padding:7px 9px;font-size:.85rem}
-.adm-photo__cap .citui-btn{padding:7px 10px;font-size:.8rem;white-space:nowrap}
-/* The caption is now a real control, so the thumbnail grid must give it room.
-   Measured at 390px: the auto-fill grid left ~150px per card, which truncated the
-   field to "Kert a h" — unreadable and unusable. One column below 560px trades a
-   little thumbnail density for a caption the owner can actually read while typing. */
-@media(max-width:560px){
-  .adm-gallery{grid-template-columns:1fr}
-  .adm-photo img{height:150px}
-}
-
-.adm-photo__units{margin-top:6px;padding-top:6px;border-top:1px solid var(--citui-line);
-  display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
-.adm-photo__units-lbl{width:100%;font-size:.76rem;color:var(--citui-muted);font-weight:600}
-.adm-photo__units label{display:inline-flex;align-items:center;gap:5px;font-size:.86rem;
-  min-height:32px}
-.adm-photo__units .citui-btn{padding:6px 10px;font-size:.8rem}
+/* (ADR-0224: the Fotók tab's photo kit moved to citui-admin.css — .adm-t / .adm-r) */
 
 /* ── unit rows ──────────────────────────────────────────────────────── */
 .unit-row{display:flex;align-items:center;gap:10px;padding:12px 0;
@@ -444,7 +408,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 /* ── a rács: mobilon KÉT oszlop (mind a négy szoba egy képernyőn), asztalin négy ── */
 .rs-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
 @media(min-width:900px){.rs-grid{grid-template-columns:repeat(4,1fr);gap:14px}}
-.rs-gcard{background:var(--citui-white);border:1px solid var(--citui-line);
+.rs-gcard{background:var(--citui-panel);border:1px solid var(--citui-line);
   border-radius:var(--citui-radius-sm);overflow:hidden;text-align:left;padding:0;
   font:inherit;color:var(--citui-ink);text-decoration:none;
   display:flex;flex-direction:column;transition:var(--citui-transition)}
@@ -478,9 +442,9 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   white-space:normal;text-align:left;max-width:100%}
 .rs-b svg{width:12px;height:12px;flex:none;margin-top:1px}
 .rs-b--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
-.rs-b--warn{background:color-mix(in srgb,var(--citui-warn) 15%,var(--citui-white));
+.rs-b--warn{background:color-mix(in srgb,var(--citui-warn) 15%,var(--citui-panel));
   color:var(--citui-warn-ink)}
-.rs-b--clash{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));
+.rs-b--clash{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));
   color:var(--citui-bad-ink)}
 
 /* ── új egység: a rács alatt, egyetlen szaggatott vezérlő ── */
@@ -502,7 +466,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
    felugrónak, hanem másik oldalnak olvasódna. */
 .rs-pop{position:fixed;z-index:60;left:9px;right:9px;top:15px;
   bottom:max(15px,env(safe-area-inset-bottom));display:flex;flex-direction:column;
-  overflow:hidden;background:var(--citui-white);border-radius:18px;
+  overflow:hidden;background:var(--citui-panel);border-radius:18px;
   box-shadow:var(--citui-shadow-md);border:1px solid var(--citui-line-strong)}
 /* KÖT: asztalin NEM lapot borít — középre zárt párbeszéd, a rács ott marad mögötte. */
 @media(min-width:900px){
@@ -522,7 +486,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .rs-pop__body{flex:1;overflow-y:auto;padding:14px 12px}
 @media(min-width:900px){.rs-pop__body{padding:20px 22px}}
 /* KÖT: a Mentés RÖGZÍTETT lábazatban — a törzs görget, a lábazat nem mozdul. */
-.rs-pop__foot{flex:none;border-top:1px solid var(--citui-line);background:var(--citui-white);
+.rs-pop__foot{flex:none;border-top:1px solid var(--citui-line);background:var(--citui-panel);
   padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 @media(min-width:900px){.rs-pop__foot{padding:12px 22px}}
 .rs-del{margin-left:auto;background:transparent;border:0;cursor:pointer;color:var(--citui-muted);
@@ -585,9 +549,9 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   font-size:.77rem;line-height:1.45}
 .rs-msg svg{width:14px;height:14px;flex:none;margin-top:1px}
 .rs-msg--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
-.rs-msg--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));
+.rs-msg--bad{background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));
   color:var(--citui-bad-ink)}
-.rs-msg--warn{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));
+.rs-msg--warn{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));
   color:var(--citui-warn-ink)}
 .rs-msg b{font-weight:700}
 
@@ -604,7 +568,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   border:1px solid var(--citui-line);opacity:.45;transition:var(--citui-transition)}
 .rs-libcell input{position:absolute;opacity:0;width:1px;height:1px}
 .rs-libtick{position:absolute;left:5px;top:5px;width:20px;height:20px;border-radius:50%;
-  display:grid;place-items:center;background:var(--citui-white);
+  display:grid;place-items:center;background:var(--citui-panel);
   border:1px solid var(--citui-line-strong);color:var(--citui-muted)}
 .rs-libcell input:checked~.rs-libtick{background:var(--citui-cyan-500);
   border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
@@ -623,7 +587,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 /* ── felszereltség: kompakt csempék + egy gombra nyíló katalógus ── */
 .rs-ams{display:flex;flex-wrap:wrap;gap:6px}
 .rs-am{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--citui-line);
-  border-radius:var(--citui-radius-pill);padding:5px 9px;background:var(--citui-white);
+  border-radius:var(--citui-radius-pill);padding:5px 9px;background:var(--citui-panel);
   font-size:.75rem;color:var(--citui-ink)}
 .rs-am svg{width:14px;height:14px;color:var(--citui-cyan-500);flex:none}
 .rs-am--other svg{color:var(--citui-muted)}
@@ -644,9 +608,9 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   letter-spacing:.5px;text-transform:uppercase;color:var(--citui-muted)}
 .rv-group__h .n{font-variant-numeric:tabular-nums;background:var(--citui-surface-2);border-radius:var(--citui-radius-pill);
   padding:3px 8px;color:var(--citui-ink)}
-.rv-group--wait .rv-group__h{color:var(--citui-navy-900)}
+.rv-group--wait .rv-group__h{color:var(--citui-ink)}
 .rv-group--wait .rv-group__h .n{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
-.rv-group__rows{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden;background:var(--citui-white)}
+.rv-group__rows{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden;background:var(--citui-panel)}
 .rv-group--wait .rv-group__rows{border-color:color-mix(in srgb,var(--citui-cyan-500) 55%,transparent)}
 .rv-row{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:14px 16px}
 .rv-row + .rv-row{border-top:1px solid var(--citui-line)}
@@ -699,7 +663,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .season-act form{margin:0}
 .s-move{display:inline-flex;flex-direction:column;gap:2px}
 .s-move button{width:30px;height:22px;display:grid;place-items:center;padding:0;border-radius:7px;
-  border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer}
+  border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);cursor:pointer}
 .s-move button:disabled{opacity:.3;cursor:default}
 .s-move .up svg{transform:rotate(180deg)}
 .s-edit{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:12px;margin:4px 0 10px}
@@ -708,21 +672,21 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .s-edit .price-new__dates .citui-input{width:84px;text-align:center}
 .s-edit .mcfg-suffix>span{white-space:nowrap}
 .s-prev{margin:10px 0 0;font-size:.86rem;line-height:1.5;padding:9px 11px;border-radius:var(--citui-radius-sm);
-  background:var(--citui-white);border:1px solid var(--citui-line)}
+  background:var(--citui-panel);border:1px solid var(--citui-line)}
 .s-prev b{color:var(--citui-ink)}
 .s-prev--bad{color:var(--citui-bad);border-color:color-mix(in srgb,var(--citui-bad) 40%,transparent)}
 .s-warn{margin:8px 0 0;font-size:.84rem;line-height:1.5;padding:9px 11px;border-radius:var(--citui-radius-sm);
-  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-white));border:1px solid color-mix(in srgb,var(--citui-warn) 38%,transparent)}
+  background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));border:1px solid color-mix(in srgb,var(--citui-warn) 38%,transparent)}
 .s-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .s-flash{color:var(--citui-ok-ink);font-size:.84rem;font-weight:600;margin:6px 0 0}
 .s-err{color:var(--citui-bad);font-size:.84rem;margin:6px 0 0}
 .wrap-tag{display:inline-block;margin-left:6px;font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:999px;
-  background:color-mix(in srgb,var(--citui-cyan-400) 16%,var(--citui-white));color:var(--citui-ink)}
+  background:color-mix(in srgb,var(--citui-cyan-400) 16%,var(--citui-panel));color:var(--citui-ink)}
 .ys-head{display:flex;align-items:center;gap:8px;margin:6px 0 8px}
 .ys-head__t{flex:1;font-size:.84rem;color:var(--citui-muted)}
 .ys-head__t b{color:var(--citui-ink)}
 .ys-arrow{width:36px;height:36px;flex:0 0 36px;border-radius:50%;border:1px solid var(--citui-line-strong);
-  background:var(--citui-white);display:grid;place-items:center;cursor:pointer;color:var(--citui-ink);padding:0}
+  background:var(--citui-panel);display:grid;place-items:center;cursor:pointer;color:var(--citui-ink);padding:0}
 .ys-arrow[hidden]{display:none}
 .ys-arrow:disabled{opacity:.35;cursor:default}
 .ys-arrow--l svg{transform:rotate(90deg)}
@@ -731,12 +695,12 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .ys{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 12px;
   scrollbar-width:thin;overscroll-behavior-x:contain}
 .ys-cell{flex:0 0 80%;scroll-snap-align:start;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);
-  padding:10px 12px;background:var(--citui-white);box-sizing:border-box;margin:0}
+  padding:10px 12px;background:var(--citui-panel);box-sizing:border-box;margin:0}
 @container (min-width:560px){.ys-cell{flex-basis:calc((100% - 20px) / 2.35)}}
 .ys-wrap::after{content:"";position:absolute;top:0;right:0;bottom:12px;width:44px;pointer-events:none;
   background:linear-gradient(to right,transparent,var(--citui-white))}
 .ys-cell.is-own{border-color:color-mix(in srgb,var(--citui-cyan-400) 70%,transparent);
-  background:color-mix(in srgb,var(--citui-cyan-400) 7%,var(--citui-white))}
+  background:color-mix(in srgb,var(--citui-cyan-400) 7%,var(--citui-panel))}
 .ys-cell__y{display:flex;justify-content:space-between;gap:6px;font-weight:700;font-size:.95rem}
 .ys-cell__y em{font-style:normal;font-weight:600;font-size:.74rem;color:var(--citui-muted);align-self:center}
 .ys-cell.is-own .ys-cell__y em{color:var(--citui-ink)}
@@ -3175,7 +3139,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
   return guestPageShell(
     T(lang, "Foglalás lemondása"),
     `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${T(lang, "Biztosan lemondja a foglalását?")}</h1>` +
-      `<div style="background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-white));` +
+      `<div style="background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-panel));` +
       `border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent);border-radius:13px;` +
       `padding:14px 16px;margin:14px 0;font-size:.95rem;line-height:1.6">` +
       `<b>${esc(v.guestName ?? "")} · ${when}</b>${v.ref ? ` · ${esc(v.ref)}` : ""}<br>` +

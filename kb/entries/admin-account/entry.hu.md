@@ -42,5 +42,6 @@ adat hiányzik.
 
 ## Kilépés
 
-A **„Kilépés”** linkkel jelentkezhet ki. Közös vagy idegen eszközön (pl. a recepció gépén) a munka
-végén mindig lépjen ki — a saját telefonján maradhat belépve.
+Telefonon az alsó sáv **„Menü”** gombjával megnyíló fiók alján találja a **„Kilépés”** sort; gépen
+a bal oldali menü alján, a neve mellett a kilépés-ikon teszi ugyanezt. Közös vagy idegen eszközön
+(pl. a recepció gépén) a munka végén mindig lépjen ki — a saját telefonján maradhat belépve.

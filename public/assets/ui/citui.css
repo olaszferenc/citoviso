@@ -106,17 +106,54 @@
      essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
      sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
   --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
 }
 
 /* Dark surface scope — flips neutrals; brand hues stay.
    Use on any wrapper (internal console shell, dark hero, etc.). */
 [data-citui-theme="dark"] {
-  --citui-ink:         #eaf2f8;
-  --citui-muted:       #8ea3b8;
-  --citui-surface:     #16283f;
-  --citui-surface-2:   #1c3450;
-  --citui-line:        rgba(255, 255, 255, 0.10);
-  --citui-line-strong: rgba(255, 255, 255, 0.20);
+  --citui-ink:         #e6e9ef;
+  --citui-muted:       #8a93a3;
+  --citui-surface:     #12151c;
+  --citui-surface-2:   #1b1f29;
+  --citui-line:        #262b37;
+  --citui-line-strong: #343a48;
+  /* ADR-0224: a tenant-admin sötét módja. Semleges (nem navy-tintált) sötét
+     rétegek — a Linear-terv sötét képei ezekből készültek. */
+  --citui-bg:     #0f1116;
+  --citui-panel:  #151821;
+  --citui-side:   #12151c;
+  --citui-field:  #1b1f29;
+  --citui-hover:  #1e2330;
+  /* A jelzés-hue-k VILÁGOSABB változata: a világos-módú telített zöld/piros a
+     sötét panelen 2,5–3,5 kontrasztot adna keretként és pöttyként. */
+  --citui-ok:      #3ddc97;
+  --citui-warn:    #f0b35a;
+  --citui-bad:     #ff7b7b;
+  --citui-ok-soft: #14352a;
+  /* ⛔ A négy FELIRAT-token a sötét panelre (#151821) KIMÉRVE (WCAG, ≥ 4,5, tartalékkal;
+     mérés: node-os luminancia-számítás, 2026-09-24):
+       ok-ink   #4fe3a3 → 10,85 · bad-ink #ff8e8e → 8,03 · warn-ink #f5c06b → 10,67 ·
+       link-ink #4fd0ea → 9,74 (a --citui-field #1b1f29 mezőn a legrosszabb: bad-ink 7,46;
+       a --citui-muted #8a93a3 a panelen 5,73). */
+  --citui-ok-ink:   #4fe3a3;
+  --citui-bad-ink:  #ff8e8e;
+  --citui-warn-ink: #f5c06b;
+  --citui-link-ink: #4fd0ea;
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

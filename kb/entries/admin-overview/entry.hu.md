@@ -4,33 +4,74 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-09-23
+updated: 2026-09-24
 ---
 
-Az **Áttekintés** fül a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
+Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
 oldala, és mi a következő teendője.
 
-![Képernyőkép: az Áttekintés fül telefonon](assets/hu/screen.png)
+![Képernyőkép: az Áttekintés lap telefonon](assets/hu/screen.png)
+
+## A kezelőfelület felépítése
+
+- **Gépen** a bal oldali menü csoportokba rendezve mutatja a lapokat: **„Az oldalam”** (Szövegek,
+  Fotók, Modulok), **„Vendégek”** (Foglalások, Üzenetek), **„Üzlet”** (Webcím, Forgalom,
+  Dokumentumok) és **„Fiók”** (Fiók, Súgó). A Fotók és a Modulok mellett a darabszám, az Üzenetek
+  mellett az olvasatlanok száma áll. A menü tetején lévő nyíllal a menü keskeny ikonsávvá
+  csukható, és úgy is marad, amíg vissza nem nyitja.
+- **Telefonon** az alsó sávban négy fő pont van (**„Áttekintés”**, **„Fotók”**, **„Foglalások”**,
+  **„Üzenetek”**), az ötödik, a **„Menü”** nyitja meg a teljes listát egy bal oldali fiókban —
+  ugyanazokkal a csoportokkal, alul a **„Kilépés”** gombbal.
+- **Minden lap tetején** egy ← gomb és az útvonal áll (például „Boróka ház › Fotók”): a nyíl és a
+  szállás neve is az Áttekintésre visz vissza, és a böngésző saját Vissza gombja is működik.
+  Jobbra az **„Oldal”** gomb új lapon nyitja meg, amit a vendégek látnak.
+- **Világos vagy sötét mód:** gépen a fejléc és a menü alján lévő nap/hold gomb, telefonon a
+  Menüben a **„Sötét mód”** / **„Világos mód”** sor váltja; a választását a készüléke megjegyzi.
 
 ## Mit mutatnak a csempék?
 
-- **„Állapot”** — az oldala jelenlegi állapota. Az „Előnézet (még nem publikus)” azt jelenti, hogy
-  az oldal elkészült, de még csak Ön látja egy privát címen; az „Élő (publikus)” azt, hogy bárki
-  megtalálhatja az interneten.
-- **„Az oldal címe”** — ide kattintva megnyílik az oldala (élő cím, vagy amíg nincs élesítve, a
-  privát előnézet).
-- **Aktív modul** — hány szolgáltatás-modul van bekapcsolva; a „kezelés” linkkel egyből a Modulok
-  fülre jut. Ha egy bekapcsolt modulnak nincs külön ára (mert az alapdíj része, vagy mert egy
-  másik modul váltja ki), a csempe a darabszám mellé azt is kiírja, ebből hány a **számlázott**.
-  A két szám nem ellentmondás: az első azt mondja meg, mi működik az oldalán, a második azt,
-  miért fizet. Az összesített díjat a Modulok fülön, az **„Az én moduljaim”** lista alján lévő
-  összegzőben látja; a tételes bontást pedig az **„Előfizetés”** doboz **„A következő számla
-  tételei”** nyithatójában.
+Az Áttekintés tetején három csempe áll:
+
+- **„Állapot”** — az oldala jelenlegi állapota, alatta az oldal címe. Az „Előnézet (még nem
+  publikus)” azt jelenti, hogy az oldal elkészült, de még csak Ön látja egy privát címen; az
+  „Élő (publikus)” azt, hogy bárki megtalálhatja az interneten. A címre kattintva megnyílik az
+  oldala (élő cím, vagy amíg nincs élesítve, a privát előnézet). A csempe sarkában lévő „…” a
+  Webcím lapra visz.
+- **„Látogatók · 7 nap”** — hány különböző ember nyitotta meg az oldalát az elmúlt héten
+  (**„egyedi látogató, robotok nélkül”**: a keresőrobotokat nem számoljuk). Az apró oszlopsor a
+  hét napjait mutatja; a „…” a Forgalom lapra visz, ahol a részletes kimutatás van.
+- **„Üzenetek”** — a három legutóbbi üzenet, amit Önnek küldtünk; a sor eleji pötty az
+  olvasatlanokat jelöli. Egy sorra koppintva megnyílik az üzenet; a „…” az Üzenetek lapra visz.
+
+## A nyitókép
+
+A csempék alatt a **nyitókép-mutató** azt a képet mutatja, amit a vendég az oldal tetején lát —
+a sarkában az áll, hogy ez **„Bemutató nyitókép”** vagy **„Saját nyitókép”**, és hogy összesen hány
+képe van. Amíg bemutató képek vannak fent, a **„Cserélje sajátra”** gomb a Fotók lapra visz;
+saját képeknél a **„Fotók kezelése”** gomb teszi ugyanezt. A **„Nagyítás”** teljes képernyőn
+mutatja a képet.
+
+## Előfizetés-kártya
+
+Gépen a menü alján, telefonon az Áttekintés alján egy kis kártya mutatja az előfizetését:
+**„Éves előfizetés”** vagy **„Havi előfizetés”**, a megújulás napja, hány modul aktív, és éves
+csomagnál az, hogy a 12 hónapból hányadikban jár (a 12 kis szegmens ezt rajzolja ki). A
+**„Modulok kezelése”** gomb a Modulok lapra visz, ahol a részletes számla és a modulok is vannak.
 
 ## A „Teendők” lista
 
-A lista magától frissül: a pipa azt jelzi, hogy egy lépés kész, a felkiáltójel azt, hogy még
-hátravan. A két legfontosabb teendő az induláskor:
+A lista fejléce megmondja, hány **nyitott** teendője van, és jobb oldalon azt, hogy hány modul
+működik az oldalán — ha egy bekapcsolt modulnak nincs külön ára (mert az alapdíj része, vagy mert
+egy másik modul váltja ki), a fejléc azt is kiírja, ebből hány a **számlázott** (például
+„11 modul · 10 számlázott”). A két szám nem ellentmondás: az első azt mondja meg, mi működik az
+oldalán, a második azt, miért fizet. Az összesített díjat a Modulok lapon, az **„Az én
+moduljaim”** lista alján lévő összegzőben látja; a tételes bontást pedig az **„Előfizetés”** doboz
+**„A következő számla tételei”** nyithatójában.
+
+A lista magától frissül: a zöld pötty és az áthúzott szöveg azt jelzi, hogy egy lépés kész, a
+szaggatott kör azt, hogy még hátravan. Minden sor jobb szélén annak a lapnak a neve áll, ahol a
+teendőt elintézheti — rákoppintva oda jut. Amíg az oldal nincs élesítve, a nyitott sorokon az
+**„Élesítés előtt”** címke áll. A két legfontosabb teendő az induláskor:
 
 1. **„Töltsön fel saját fotókat”** — amíg nem tölt fel sajátot, bemutató képek láthatók az
    oldalán. Ha megvan, a sor átvált erre: **„A saját fotói fent vannak”**.
@@ -80,5 +121,5 @@ jelenik meg, mert akkor a „Töltse ki:” sor szól róla.
 
 ## Az oldal megnyitása
 
-A lap tetején lévő **„Oldal megtekintése”** gombbal bármikor megnézheti, hogyan látják az oldalát
+A lap tetején, jobb oldalon lévő **„Oldal”** gombbal bármikor megnézheti, hogyan látják az oldalát
 a vendégek — minden mentett módosítása ott azonnal látszik.

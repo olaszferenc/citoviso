@@ -765,9 +765,13 @@ try {
     const p = (await painted(page, `#szoba-${roomA.id} .rs-pop`))!;
     mustFail("mobilon látható keret marad a felugró körül", p.x >= 4 && p.x + p.w <= 390 - 4 && p.y >= 4, `x=${p.x} y=${p.y}`);
     // ④ a lábazat együtt görög a törzzsel → a Mentés elúszik
+    // ⚠️ A törzs magasságát a szabotázs MAGA garantálja (200vh): a kontroll eddig a
+    // fixture szövegének hosszán múlt — az ADR-0224 13 px-es tipográfiája után a törzs
+    // már nem ért a keret alá, a görgetés 0 px-et mozdult, és a kontroll ZÖLD maradt
+    // (2026-09-24). Egy negatív kontroll ne a tartalom véletlen hosszán múljon.
     await page.addStyleTag({
       content: `#szoba-${roomA.id} .rs-pop{display:block !important;overflow:auto !important}` +
-        `#szoba-${roomA.id} .rs-pop__body{overflow:visible !important}`,
+        `#szoba-${roomA.id} .rs-pop__body{overflow:visible !important;min-height:200vh !important}`,
     });
     await page.waitForTimeout(80);
     const fb = await painted(page, `#szoba-${roomA.id} .rs-pop__foot`);

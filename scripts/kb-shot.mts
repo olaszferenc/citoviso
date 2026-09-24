@@ -317,6 +317,22 @@ const subscriptionAnnualFixture = {
   billingPeriod: "annual" as const,
 };
 
+// ADR-0224 ④: the frame's subscription card reads a SUMMARY (cadence + the running
+// cycle), on every tab. The monthly one matches subscriptionFixture's period end.
+const subSummaryFixture = {
+  status: "active" as const,
+  billingPeriod: "monthly" as const,
+  periodStart: "2026-08-28",
+  periodEnd: "2026-09-28",
+};
+const subSummaryAnnualFixture = {
+  status: "active" as const,
+  billingPeriod: "annual" as const,
+  periodStart: "2026-06-28",
+  periodEnd: "2027-06-28",
+};
+
+
 // ADR-0110 legal-panel fixture. The registry number is deliberately absent: the
 // entry explains the "hiányzó kötelező adat" warning, so the picture must contain it.
 // ADR-0226: a Pénztárca fixtúrája — a fixtúra-vendégház Visa-kártyája két
@@ -388,6 +404,18 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
 // invoices and our own service notices. The FAILED row is here on purpose — the
 // guide explains that state, so the picture has to contain it.
 const dt = (s: string): Date => new Date(`${s}T10:00:00Z`);
+// ADR-0224 ⑤: the Áttekintés widgets — representative, never personal. The visitor
+// series has a zero day on purpose (the sparkline draws it as a baseline stub), and
+// the three messages are the mailbox fixture's newest rows (two unread, one read).
+const overviewFixture = {
+  visitors7: 12,
+  visitsByDay: [1, 3, 0, 2, 4, 1, 1],
+  messages: [
+    { id: "m1", subject: "Utolsó figyelmeztetés — 3 nap múlva felfüggesztés", sentAt: dt("2026-08-29"), unread: true },
+    { id: "m2", subject: "Citoviso: a 2026.08.28-i díj még nem érkezett meg.", sentAt: dt("2026-08-29"), unread: true },
+    { id: "m3", subject: "Számla — OV-2026-5 (7 240 Ft)", sentAt: dt("2026-08-28"), unread: false },
+  ],
+};
 const documentsFixture = {
   invoices: [
     { id: "f1", itemKey: "subscription" as const, itemPeriod: "monthly" as const,
@@ -994,6 +1022,13 @@ async function shoot(
     siteUrl: "https://nyugalom-vendeghaz.citoviso.com",
     previewToken: "demo",
     units,
+    // ADR-0224: the frame (slug line, subscription card) is on EVERY capture.
+    // ⛔ ADR-0220: the card says „még N nap" / „K. hónap" and the message dates say
+    // „ma" — all relative to NOW. A pinned clock keeps the same commit → the same picture.
+    now: new Date("2026-09-23T10:00:00+02:00"),
+    siteSlug: "nyugalom-vendeghaz",
+    subSummary: sub.billingPeriod === "annual" ? subSummaryAnnualFixture : subSummaryFixture,
+    ...(tab === "attekintes" ? { overview: overviewFixture } : {}),
     ...(moduleSettingsHtml ? { moduleSettingsHtml } : {}),
     ...(tab === "sugo" ? { help: helpFixture(topic) } : {}),
     // ADR-0084: the two document/message tabs need their own fixtures, and the
@@ -1047,7 +1082,7 @@ async function shoot(
   if (viewportAt) {
     await mkdir(path.dirname(outPath), { recursive: true });
     await page.addStyleTag({
-      content: ".adm-side{display:none !important}.adm-mlbar{position:static !important;margin:0 0 14px !important}",
+      content: ".adm-bnav{display:none !important}.adm-mlbar{position:static !important;margin:0 0 14px !important}",
     });
     await snap(page.locator(viewportAt).first(), outPath);
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem, sticky feloldva: ${viewportAt})`);
@@ -1055,11 +1090,11 @@ async function shoot(
   }
   if (scrollTo) {
     await mkdir(path.dirname(outPath), { recursive: true });
-    // The phone layout pins the tab bar to the bottom of the viewport (.adm-side),
+    // The phone layout pins the tab bar to the bottom of the viewport (.adm-bnav),
     // and it lies ON TOP of an element capture — on the legal panel it covered the
     // two links the guide points at. Hide it for the shot only; the panel itself is
     // captured exactly as it renders.
-    await page.addStyleTag({ content: ".adm-side{display:none !important}" });
+    await page.addStyleTag({ content: ".adm-bnav{display:none !important}" });
     await snap(page.locator(scrollTo).first(), outPath);
     console.log(`  ✓ ${path.relative(ROOT, outPath)} (elem: ${scrollTo})`);
     return;
@@ -1089,7 +1124,7 @@ for (const [tab, entryId] of TAB_TO_ENTRY) {
     // telefonos súgóban olvashatatlan. A kártya 1644 px, és a szakasz tárgya — a teljes
     // teendő-sor — hiánytalanul rajta van; a fejléc „Oldal megtekintése" gombját a
     // szócikk szövege helyezi el („a lap tetején lévő").
-    entryId === "admin-overview" ? ".adm-card" : undefined,
+    entryId === "admin-overview" ? ".adm-ov" : undefined,
     undefined,
     // The modules guide is shot on an ANNUAL account so its picture shows the
     // per-module annual conversion and the annual summary it describes.

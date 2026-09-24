@@ -89,9 +89,10 @@ számlázunk — 2 hónap ajándék, ezért a fenti éves összeg 12 hónapra el
 
 ### 3. A számláló megnevezi, mit számol
 
-Az Áttekintés fül csempéje a számot és a jelentését EGYÜTT mondja ki — a kötő felirat
-a kódban: **„Aktív modul · ebből {n} számlázott ·"** (a darabszám a `{n} db` sablonból jön,
-tehát a rendered sor: „12 db · Aktív modul · ebből 11 számlázott · kezelés").
+Az Áttekintés a számot és a jelentését EGYÜTT mondja ki — a kötő felirat a kódban
+(ADR-0224 óta a Teendők fejlécének jobb oldalán, nem külön csempén):
+**„{n} modul · {k} számlázott"** (a rendered sor: „12 modul · 11 számlázott"; ha a két szám
+egyezik, csak „12 modul").
 A 12 az `m.active`, a 11 a számlázott (`!spine && !supersededBy`) — mindkettő igaz, de eddig
 egyik felület sem mondta meg, melyiket mutatja. ⛔ A két szám közül egyiket sem töröljük.
 

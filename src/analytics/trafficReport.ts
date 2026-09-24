@@ -123,3 +123,47 @@ export async function getTrafficReport(tenantId: string, days = 30): Promise<Tra
     isEmpty: views === 0,
   };
 }
+
+/**
+ * ADR-0224 — the Áttekintés „Látogatók · 7 nap" widget: unique non-bot visitors over
+ * the last 7 days, plus the per-day series for the sparkline (oldest → newest, 7
+ * entries, today included). The SAME predicate as getTrafficReport (bots out).
+ */
+export interface VisitorSeries {
+  readonly days: number;
+  /** Unique visitors over the whole window (a visitor seen on two days counts once). */
+  readonly visitors: number;
+  /** Unique visitors PER DAY, oldest first; always `days` entries. */
+  readonly byDay: readonly number[];
+}
+
+export async function getVisitorSeries(tenantId: string, days = 7): Promise<VisitorSeries> {
+  const from = since(days - 1);
+  const rows = await db
+    .selectFrom("site_visit")
+    .select([
+      sql<string>`to_char(occurred_at, 'YYYY-MM-DD')`.as("day"),
+      sql<number>`count(distinct visitor_hash)`.as("n"),
+    ])
+    .where("tenant_id", "=", tenantId)
+    .where("is_bot", "=", false)
+    .where(sql<boolean>`occurred_at >= ${from}`)
+    .groupBy(sql`to_char(occurred_at, 'YYYY-MM-DD')`)
+    .execute();
+  const total = await db
+    .selectFrom("site_visit")
+    .select(sql<number>`count(distinct visitor_hash)`.as("n"))
+    .where("tenant_id", "=", tenantId)
+    .where("is_bot", "=", false)
+    .where(sql<boolean>`occurred_at >= ${from}`)
+    .executeTakeFirst();
+  const byKey = new Map(rows.map((r) => [r.day, Number(r.n)]));
+  const byDay: number[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    byDay.push(byKey.get(key) ?? 0);
+  }
+  return { days, visitors: Number(total?.n ?? 0), byDay };
+}

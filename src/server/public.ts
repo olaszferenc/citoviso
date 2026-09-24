@@ -79,7 +79,7 @@ import {
 } from "../tenant/modules.js";
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
-import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
+import { getSubscriptionAdmin, getSubscriptionSummary, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
 import { createCardUpdateOrder, getWalletAdmin } from "../tenant/wallet.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { retryRenewalCharge } from "../payment/retryCharge.js";
@@ -92,7 +92,7 @@ import { multilangCardData } from "../tenant/multilangCard.js";
 import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
 import { createMultilangOrder } from "../tenant/multilangOrder.js";
 import { listTenantInvoices, listTenantAgreements, tenantInvoicePdf } from "../tenant/documents.js";
-import { countUnreadMessages, listTenantMessages, markAllMessagesRead, markMessageRead } from "../tenant/messages.js";
+import { countUnreadMessages, isUnread, listTenantMessages, markAllMessagesRead, markMessageRead } from "../tenant/messages.js";
 import { isMessageTopic } from "../tenant/messageTopics.js";
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
@@ -185,7 +185,8 @@ import {
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readPicks, resolvePicks, siteProgramPool } from "../events/picks.js";
-import { getTrafficReport } from "../analytics/trafficReport.js";
+import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
+import { messagePreview } from "../tenant/messagePreview.js";
 import {
   computeAnnual,
   formatPrice,
@@ -1141,6 +1142,24 @@ async function serveAdmin(
     if (!paidEmpty.some((m) => m.id === "pricing")) priceGaps = await sitePriceGaps(site.id);
   }
 
+  // ── ADR-0224: the frame's subscription card (every tab) + the Áttekintés widgets ──
+  const subSummary = await getSubscriptionSummary(session.tenantId);
+  let overview: AdminOpts["overview"] = null;
+  if (overviewTab) {
+    const series = await getVisitorSeries(session.tenantId, 7);
+    const inbox = await listTenantMessages(session.tenantId);
+    overview = {
+      visitors7: series.visitors,
+      visitsByDay: series.byDay,
+      messages: inbox.rows.slice(0, 3).map((m) => ({
+        id: m.id,
+        subject: m.subject ?? messagePreview(m, "", content?.lang ?? "hu"),
+        sentAt: m.sentAt,
+        unread: isUnread(m, m.thread),
+      })),
+    };
+  }
+
   let moduleSettingsHtml: string | null = null;
   if (tab === "modulok" && moduleId && site?.id) {
     const active = modules.modules.find((m) => m.id === moduleId && m.active);
@@ -1700,6 +1719,10 @@ async function serveAdmin(
       unreadMessages: messages ? messages.unread : unreadMessages,
       bookings,
       unseenBookings,
+      subSummary,
+      overview,
+      siteSlug: site?.slug ?? null,
+      photosView: new URL(req.url ?? "/", "http://x").searchParams.get("v") === "list" ? "list" : "grid",
     }),
   );
 }
@@ -2526,9 +2549,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
-    const to = form.get("to");
+    const to = form.get("to") ?? "";
     if (to === "up" || to === "down" || to === "cover") {
       await moveTenantPhoto(session.tenantId, form.get("url") ?? "", to);
+    } else if (/^\d{1,3}$/.test(to)) {
+      // ADR-0224 ⑥: drag-and-drop lands the picture on an absolute position.
+      await moveTenantPhoto(session.tenantId, form.get("url") ?? "", Number(to));
     }
     return redirect(res, "/admin?tab=fotok&saved=1");
   }
@@ -2537,7 +2563,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
-    await setTenantPhotoCaption(session.tenantId, form.get("url") ?? "", form.get("alt") ?? "");
+    const r = await setTenantPhotoCaption(session.tenantId, form.get("url") ?? "", form.get("alt") ?? "");
+    // ADR-0224 ⑥: the tab saves captions in place (fetch) — answer JSON, not a redirect.
+    if (String(req.headers["x-requested-with"] ?? "") === "fetch")
+      return send(res, r.ok ? 200 : 400, JSON.stringify({ ok: r.ok }), MIME[".json"]);
     return redirect(res, "/admin?tab=fotok&saved=1");
   }
   // POST /admin/photos/units — assign a photo to units (one shared library).
@@ -3124,12 +3153,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
-    const url = form.get("url") ?? "";
-    if (url) {
+    // ADR-0224 ⑥: one form, one OR MANY urls (the selection mode's bulk delete).
+    for (const url of form.getAll("url").filter(Boolean)) {
       await removeTenantPhoto(session.tenantId, url);
       await getAssetStore().remove(session.tenantId, url);
     }
-    return redirect(res, "/admin?saved=1");
+    return redirect(res, "/admin?tab=fotok&saved=1");
   }
 
   // ── ADR-0080 ⑦ SMS-relay API: the Debian-box relay drains sms_outbox here. ──
@@ -3400,6 +3429,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           modules: await getTenantModules(session.tenantId),
           supportEmail: config.supportEmail,
           unreadMessages: await countUnreadMessages(session.tenantId),
+          subSummary: await getSubscriptionSummary(session.tenantId),
         }),
       );
       return;

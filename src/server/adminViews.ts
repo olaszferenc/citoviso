@@ -20,12 +20,12 @@ import type { BookingsTabData } from "./bookingViews.js";
 import { domAnchorsOf } from "./modulePreview.js";
 import type { TrafficReport } from "../analytics/trafficReport.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
-import type { SubscriptionAdminData } from "../tenant/subscriptionAdmin.js";
+import type { SubscriptionAdminData, SubscriptionSummary } from "../tenant/subscriptionAdmin.js";
 import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
 import { COUPON_JS } from "../payment/couponRule.js";
 import type { TenantLegalIdentity } from "../legal.js";
-import { ic } from "../ui/icons.js";
+import { icAdmin as ic } from "../ui/icons.js";
 import { flagSvg } from "../ui/flags.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
@@ -93,16 +93,29 @@ const MONEY_JS = readFileSync(
   "utf8",
 );
 
-function shell(title: string, body: string, lang = "hu"): string {
+/**
+ * Page frame. `opts.head` lands BEFORE the stylesheet (the admin's theme boot runs
+ * there so the first paint is already dark when the owner chose dark); `opts.bodyClass`
+ * replaces the inline surface background (the admin paints from --citui-bg).
+ */
+function shell(
+  title: string,
+  body: string,
+  lang = "hu",
+  opts: { readonly head?: string; readonly bodyClass?: string } = {},
+): string {
   return (
     `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
+    (opts.head ?? "") +
     `<link rel="preconnect" href="https://fonts.googleapis.com">` +
     `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">` +
     `<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}"><title>${esc(title)}</title></head>` +
-    `<body style="background:var(--citui-surface)">${body}</body></html>`
+    (opts.bodyClass
+      ? `<body class="${opts.bodyClass}">${body}</body></html>`
+      : `<body style="background:var(--citui-surface)">${body}</body></html>`)
   );
 }
 
@@ -113,8 +126,15 @@ const LOGO =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
-// Icons come from the shared bespoke set (src/ui/icons.ts) — one icon language
-// across every first-party surface.
+/** The bare logo mark for the admin frame (ADR-0224): the dot follows the ink, so it
+ *  reads in both themes — the cyan arc/arrow is the brand constant. */
+const LOGO_MARK =
+  `<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">` +
+  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
+  `<circle cx="22.5" cy="24" r="4.5" fill="currentColor"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>`;
+
+// Icons come from the shared bespoke set (src/ui/icons.ts) — the admin renders the
+// THIN variants (ADR-0224: colour only for meaning, no accent dot in the frame).
 
 /** Admin design system lives in the central design core (ADR-0021 ①):
  *  /assets/ui/citui-admin.css (scoped .adm-*, token-driven on citui.css).
@@ -130,94 +150,437 @@ function helpLink(anchor: string, lang = "hu"): string {
   );
 }
 
+/* ═══ ADR-0224 — the admin FRAME: theme boot, sidebar, top bar, bottom bar, drawer ═══
+   Contract: assets/design-refs/tenant-admin/admin-linear/README.md ②③⑧⑨. */
 
-/** Photos card — current gallery (with remove when own) + upload. */
+/**
+ * Runs in <head>, before the stylesheet: restores the owner's theme and rail choice
+ * so the first paint is already right (no light flash on a dark page). The choice
+ * lives in localStorage for now (README ⑧: account setting later).
+ */
+const THEME_BOOT =
+  `<script>(function(){try{var d=document.documentElement,t=localStorage.getItem('citui-theme');` +
+  `if(t==='dark'||t==='light')d.setAttribute('data-citui-theme',t);` +
+  `if(localStorage.getItem('citui-admin-rail')==='1')d.classList.add('is-rail');}catch(e){}})();</script>`;
+
+/** Short status word for the frame (the widgets keep the full, KB-quoted labels). */
+function statusShort(status: string, lang: string): string {
+  return status === "live"
+    ? T(lang, "Élő")
+    : status === "provisioned"
+      ? T(lang, "Előnézet")
+      : status === "suspended"
+        ? T(lang, "Felfüggesztve")
+        : status === "deactivated"
+          ? T(lang, "Deaktiválva")
+          : T(lang, "Vázlat");
+}
+
+interface NavCounts {
+  readonly photos: number;
+  readonly modules: number;
+  readonly unread: number;
+  readonly unseenBookings: number;
+}
+
+/** Count / badge cell for a nav item — the SAME rule on the sidebar, the drawer and
+ *  the bottom bar, so no two places disagree about what is in the mailbox. */
+function navMark(id: string, c: NavCounts, lang: string, counts = true): string {
+  if (id === "uzenetek" && c.unread > 0)
+    return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} olvasatlan üzenet", { n: c.unread }))}">${c.unread > 99 ? "99+" : c.unread}</span>`;
+  if (id === "foglalasok" && c.unseenBookings > 0)
+    return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} új foglalási kérés", { n: c.unseenBookings }))}">${c.unseenBookings > 99 ? "99+" : c.unseenBookings}</span>`;
+  if (!counts) return "";
+  if (id === "fotok" && c.photos > 0) return `<span class="adm-nav__n">${c.photos}</span>`;
+  if (id === "modulok" && c.modules > 0) return `<span class="adm-nav__n">${c.modules}</span>`;
+  return "";
+}
+
+/** Grouped sidebar links (README ②): Az oldalam · Vendégek · Üzlet · Fiók. */
+function sideNav(active: string, lang: string, c: NavCounts): string {
+  let out = "";
+  let group = "";
+  for (const t of TABS(lang)) {
+    if (t.group !== group) {
+      group = t.group;
+      const label = groupLabel(group, lang);
+      if (label) out += `<div class="adm-nav__g">${esc(label)}</div>`;
+    }
+    out +=
+      `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active" aria-current="page"' : ""} title="${esc(t.label)}">` +
+      `${ic(t.icon, 16)}<span>${esc(t.label)}</span>${navMark(t.id, c, lang)}</a>`;
+  }
+  return out;
+}
+
+function groupLabel(group: string, lang: string): string {
+  return group === "site"
+    ? T(lang, "Az oldalam")
+    : group === "guests"
+      ? T(lang, "Vendégek")
+      : group === "biz"
+        ? T(lang, "Üzlet")
+        : group === "acct"
+          ? T(lang, "Fiók")
+          : "";
+}
+
+/** The 4 main points + Menü on the phone (README ⑨). ⛔ Exactly five items. */
+const BOTTOM_TABS = ["attekintes", "fotok", "foglalasok", "uzenetek"] as const;
+
+function bottomNav(active: string, lang: string, c: NavCounts): string {
+  const tabs = TABS(lang);
+  const items = BOTTOM_TABS.map((id) => {
+    const t = tabs.find((x) => x.id === id)!;
+    return (
+      `<a href="/admin?tab=${id}"${id === active ? ' class="is-active" aria-current="page"' : ""}>` +
+      `${ic(t.icon, 20)}${esc(t.label)}${navMark(id, c, lang, false)}</a>`
+    );
+  });
+  const menuActive = !(BOTTOM_TABS as readonly string[]).includes(active);
+  items.push(
+    `<a href="#adm-menu" data-drawer-open${menuActive ? ' class="is-active"' : ""}>${ic("menu", 20)}${T(lang, "Menü")}</a>`,
+  );
+  return `<nav class="adm-bnav" aria-label="${T(lang, "Fő menü")}">${items.join("")}</nav>`;
+}
+
+/**
+ * The phone's left drawer (README ⑨): every group, the theme row, the slug and
+ * Kilépés. Opens with ZERO JavaScript through `:target` (#adm-menu); with JS the
+ * same links toggle a class so the URL keeps no hash.
+ */
+function drawer(active: string, lang: string, c: NavCounts, siteName: string, slug: string | null): string {
+  let links = "";
+  let group = "";
+  for (const t of TABS(lang)) {
+    if (t.group !== group) {
+      group = t.group;
+      const label = groupLabel(group, lang);
+      if (label) links += `<div class="adm-menu__g">${esc(label)}</div>`;
+    }
+    links +=
+      `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>` +
+      `${ic(t.icon, 16)}${esc(t.label)}${navMark(t.id, c, lang, false)}</a>`;
+  }
+  return (
+    `<div class="adm-drawer" id="adm-menu" role="dialog" aria-modal="true" aria-label="${T(lang, "Menü")}">` +
+    `<a class="adm-drawer__veil" href="#" data-drawer-close aria-label="${T(lang, "Bezárás")}"></a>` +
+    `<div class="adm-drawer__box"><div class="adm-drawer__h">${LOGO_MARK}<b>${esc(siteName)}</b>` +
+    `<a class="adm-ib adm-ib--ghost" href="#" data-drawer-close aria-label="${T(lang, "Bezárás")}">${ic("close", 18)}</a></div>` +
+    `<nav class="adm-menu">${links}` +
+    `<div class="adm-menu__g">${T(lang, "Megjelenés")}</div>` +
+    `<a href="#" class="adm-theme-row" data-theme-toggle hidden><span data-ic>${ic("moon", 16)}</span>` +
+    `<span data-when="light">${T(lang, "Sötét mód")}</span><span data-when="dark" hidden>${T(lang, "Világos mód")}</span></a>` +
+    `<div class="adm-menu__g">${esc(slug ?? "")}</div>` +
+    `<a href="/logout">${ic("logout", 16)}${T(lang, "Kilépés")}</a></nav></div></div>`
+  );
+}
+
+/**
+ * Subscription card (README ④) — REAL data: cadence, the current cycle's bounds and
+ * the module count. Annual: 12 segments, filled to the running month. Monthly: a
+ * single meter for the running cycle (a 12-segment bar would claim a year that a
+ * monthly account never committed to).
+ */
+function subscriptionCard(
+  sum: SubscriptionSummary | null,
+  activeModules: number,
+  lang: string,
+  mobile: boolean,
+  now: Date = new Date(),
+): string {
+  if (!sum) return "";
+  const start = new Date(`${sum.periodStart}T00:00:00`);
+  const end = new Date(`${sum.periodEnd}T00:00:00`);
+  const renews = formatDay(sum.periodEnd, lang);
+  let meter: string;
+  let line: string;
+  if (sum.billingPeriod === "annual") {
+    let k = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    if (now.getDate() < start.getDate()) k -= 1;
+    k = Math.min(12, Math.max(1, k + 1));
+    line = T(lang, "megújul {date} · {n} modul aktív · {k}. hónap a 12-ből", { date: renews, n: activeModules, k });
+    meter = `<div class="adm-plan__bars">${Array.from({ length: 12 }, (_, i) => `<i${i < k ? ' class="on"' : ""}></i>`).join("")}</div>`;
+  } else {
+    const total = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+    const left = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86_400_000));
+    const pct = Math.min(100, Math.max(0, Math.round(((total - left) / total) * 100)));
+    line = T(lang, "megújul {date} · {n} modul aktív · még {d} nap", { date: renews, n: activeModules, d: left });
+    meter = `<div class="adm-plan__meter"><i style="width:${pct}%"></i></div>`;
+  }
+  const title = sum.billingPeriod === "annual" ? T(lang, "Éves előfizetés") : T(lang, "Havi előfizetés");
+  return (
+    `<div class="adm-plan${mobile ? " adm-plan--m" : ""}" data-plan><b>${ic("card", 14)}${esc(title)}</b>` +
+    `<small>${esc(line)}</small>${meter}` +
+    `<a class="adm-btn adm-btn--sm" href="/admin?tab=modulok">${T(lang, "Modulok kezelése")}</a></div>`
+  );
+}
+
+/** The frame's own behaviour: theme + rail toggles, the ← button, the drawer. */
+const SHELL_SCRIPT = (lang: string): string =>
+  `<script>(function(){var d=document.documentElement;` +
+  `var ICO={sun:${JSON.stringify(ic("sun", 16))},moon:${JSON.stringify(ic("moon", 16))},col:${JSON.stringify(ic("collapse", 14))},exp:${JSON.stringify(ic("expand", 14))}};` +
+  `function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
+  `function theme(){return d.getAttribute('data-citui-theme')==='dark'?'dark':'light'}` +
+  `function paint(){var t=theme();$$('[data-theme-toggle]').forEach(function(b){b.hidden=false;var i=b.querySelector('[data-ic]');if(i)i.innerHTML=t==='dark'?ICO.sun:ICO.moon;` +
+  `$$('[data-when]',b).forEach(function(s){s.hidden=s.getAttribute('data-when')!==t})});` +
+  `var r=document.querySelector('[data-rail]');if(r)r.innerHTML=d.classList.contains('is-rail')?ICO.exp:ICO.col}` +
+  `document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
+  `var rb=e.target.closest('[data-rail]');if(rb){e.preventDefault();d.classList.toggle('is-rail');try{localStorage.setItem('citui-admin-rail',d.classList.contains('is-rail')?'1':'0')}catch(x){}paint();return}` +
+  `var bk=e.target.closest('[data-back]');if(bk&&history.length>1&&document.referrer.indexOf(location.origin+'/admin')===0){e.preventDefault();history.back();return}` +
+  `var dr=document.getElementById('adm-menu');if(!dr)return;` +
+  `if(e.target.closest('[data-drawer-open]')){e.preventDefault();dr.classList.add('on');return}` +
+  `if(e.target.closest('[data-drawer-close]')){e.preventDefault();dr.classList.remove('on');if(location.hash==='#adm-menu')history.replaceState(null,'',location.pathname+location.search)}});` +
+  `document.addEventListener('keydown',function(e){if(e.key==='Escape'){var dr=document.getElementById('adm-menu');if(dr)dr.classList.remove('on')}});` +
+  `paint();})();</script>`;
+
+/* ═══ ADR-0224 ③ — PHOTOS: drop bar, grid / list, hover actions, lightbox, selection ═══
+   Contract: README ⑥⑦. Every mutation is a plain POST form (order / caption / units /
+   delete / upload) so the tab works without JavaScript; the script adds drag-and-drop,
+   the lightbox, selection + bulk delete, per-file upload progress and in-place captions. */
+
+function orderForm(url: string, to: string, icon: string, title: string, disabled: boolean, cls = "adm-ib"): string {
+  return (
+    `<form method="POST" action="/admin/photos/order"><input type="hidden" name="url" value="${esc(url)}">` +
+    `<input type="hidden" name="to" value="${to}"><button class="${cls}" title="${esc(title)}" aria-label="${esc(title)}"${disabled ? " disabled" : ""}>${icon}</button></form>`
+  );
+}
+
+function deleteForm(url: string, lang: string, cls: string, label = ""): string {
+  return (
+    `<form method="POST" action="/admin/photos/delete" data-del><input type="hidden" name="url" value="${esc(url)}">` +
+    `<button class="${cls}" title="${T(lang, "Törlés")}" aria-label="${T(lang, "Törlés")}">${ic("trash", 15)}${label}</button></form>`
+  );
+}
+
+function captionForm(p: PhotoEdit, i: number, lang: string): string {
+  return (
+    `<form method="POST" action="/admin/photos/caption" class="adm-capf"><input type="hidden" name="url" value="${esc(p.url)}">` +
+    `<input class="adm-cap" name="alt" maxlength="160" value="${esc(p.alt)}" placeholder="${T(lang, "Mi látszik a képen?")}" ` +
+    `aria-label="${T(lang, "Képaláírás")}" data-cap="${i}"></form>`
+  );
+}
+
+/** ADR-0044/d — ONE shared photo library: the owner ticks where a picture belongs.
+ *  Only with several units; a single-unit owner must never meet the concept. */
+function unitsForm(p: PhotoEdit, units: readonly { id: string; name: string }[], lang: string): string {
+  if (units.length < 2) return "";
+  return (
+    `<form method="POST" action="/admin/photos/units"><input type="hidden" name="url" value="${esc(p.url)}">` +
+    `<span class="adm-units__lbl">${T(lang, "Melyik egységhez?")}</span>` +
+    units
+      .map(
+        (u) =>
+          `<label><input type="checkbox" name="unit" value="${esc(u.id)}"${(p.units ?? []).includes(u.id) ? " checked" : ""}> ${esc(u.name)}</label>`,
+      )
+      .join("") +
+    `<button class="adm-btn adm-btn--sm" type="submit">${T(lang, "Mentés")}</button></form>`
+  );
+}
+
+function photoTile(p: PhotoEdit, i: number, n: number, own: boolean, lang: string): string {
+  const cover = i === 0;
+  return (
+    `<figure class="adm-t${cover ? " is-cover" : ""}" data-i="${i}" data-url="${esc(p.url)}" data-alt="${esc(p.alt)}" draggable="true">` +
+    `<img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy" data-lb="${i}">` +
+    (cover ? `<span class="adm-t__cover">${ic("starf", 11)}${T(lang, "Nyitókép")}</span>` : "") +
+    `<span class="adm-t__n">${i + 1}</span>` +
+    `<button type="button" class="adm-t__chk" data-sel="${i}" aria-label="${T(lang, "Kijelölés")}">${ic("check", 14)}</button>` +
+    `<div class="adm-t__acts">` +
+    orderForm(p.url, "cover", ic("star", 15), T(lang, "Legyen ez a nyitókép"), cover) +
+    orderForm(p.url, "up", ic("back", 15), T(lang, "Előrébb"), i === 0) +
+    orderForm(p.url, "down", ic("fwd", 15), T(lang, "Hátrébb"), i === n - 1) +
+    (own ? deleteForm(p.url, lang, "adm-ib adm-ib--del") : "") +
+    `</div></figure>`
+  );
+}
+
+function photoRow(
+  p: PhotoEdit,
+  i: number,
+  n: number,
+  own: boolean,
+  units: readonly { id: string; name: string }[],
+  lang: string,
+): string {
+  const cover = i === 0;
+  const multi = units.length > 1;
+  return (
+    `<div class="adm-r${cover ? " is-cover" : ""}${multi ? " has-units" : ""}" data-i="${i}" data-url="${esc(p.url)}" data-alt="${esc(p.alt)}" draggable="true">` +
+    `<span class="adm-r__g" title="${T(lang, "Húzza a rendezéshez")}">${ic("grip", 16)}${i + 1}</span>` +
+    `<button type="button" class="adm-r__chk" data-sel="${i}" aria-label="${T(lang, "Kijelölés")}">${ic("check", 14)}</button>` +
+    `<span class="adm-r__img"><img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy" data-lb="${i}"></span>` +
+    `<span class="adm-r__cap">${captionForm(p, i, lang)}<span class="adm-cap-saved" data-saved="${i}">${T(lang, "Mentve")}</span></span>` +
+    `<span class="adm-r__acts">` +
+    (cover
+      ? `<span class="adm-covb is-on">${ic("starf", 12)}${T(lang, "Nyitókép")}</span>`
+      : orderForm(p.url, "cover", `${ic("star", 12)}${T(lang, "Legyen nyitókép")}`, T(lang, "Legyen ez a nyitókép"), false, "adm-covb")) +
+    `<span class="adm-tag adm-tag--mute">${own ? T(lang, "saját") : T(lang, "bemutató")}</span>` +
+    orderForm(p.url, "up", ic("back", 15), T(lang, "Előrébb"), i === 0) +
+    orderForm(p.url, "down", ic("fwd", 15), T(lang, "Hátrébb"), i === n - 1) +
+    (own ? deleteForm(p.url, lang, "adm-ib adm-ib--del") : "") +
+    `</span>` +
+    (multi ? `<span class="adm-r__units">${unitsForm(p, units, lang)}</span>` : "") +
+    `</div>`
+  );
+}
+
+/** Photos tab (README ⑥⑦). `view` = grid | list (GET `v=`, remembered by the script). */
 function photosCard(
   content: NonNullable<AdminContent>,
   units: readonly { id: string; name: string }[] = [],
   lang = "hu",
+  view: "grid" | "list" = "grid",
 ): string {
   const photos = content.photos ?? [];
-  const notice = content.usingOwnPhotos
-    ? `<p class="citui-hint">${T(lang, "A saját fotói láthatók az oldalán.")}</p>`
-    : `<p class="citui-hint" style="color:var(--citui-warn)">${T(lang, "Jelenleg bemutató (demó) képek láthatók. Töltsön fel saját fotókat — az élesítéshez a saját, jogtiszta képei szükségesek.")}</p>`;
-  // ADR-0044: order + caption. Every template uses photos[0] as the cover, so
-  // "legyen ez a főkép" is the most valuable control here — and the gallery module's
-  // help text has been promising ordering while this tab offered none.
-  const items = photos
-    .map((p, i) => {
-      const move = (to: string, label: string, title: string) =>
-        `<form method="POST" action="/admin/photos/order" style="margin:0">` +
-        `<input type="hidden" name="url" value="${esc(p.url)}">` +
-        `<input type="hidden" name="to" value="${to}">` +
-        `<button class="adm-photo-btn" title="${esc(title)}">${label}</button></form>`;
-      return (
-        `<figure class="adm-photo${i === 0 ? " is-cover" : ""}" style="margin:0">` +
-        `<img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy">` +
-        (i === 0 ? `<span class="adm-photo__badge">${T(lang, "Nyitókép")}</span>` : "") +
-        (content.usingOwnPhotos
-          ? `<form method="POST" action="/admin/photos/delete" class="adm-photo__del">` +
-            `<input type="hidden" name="url" value="${esc(p.url)}">` +
-            `<button title="${T(lang, "Törlés")}" class="adm-photo-del">×</button></form>`
-          : "") +
-        `<div class="adm-photo__bar">` +
-        (i > 0 ? move("cover", "★", T(lang, "Legyen ez a nyitókép")) : "") +
-        (i > 0 ? move("up", "‹", T(lang, "Előrébb")) : "") +
-        (i < photos.length - 1 ? move("down", "›", T(lang, "Hátrébb")) : "") +
-        `</div>` +
-        `<form method="POST" action="/admin/photos/caption" class="adm-photo__cap">` +
-        `<input type="hidden" name="url" value="${esc(p.url)}">` +
-        `<input class="citui-input" name="alt" value="${esc(p.alt)}" placeholder="${T(lang, "Mi látszik a képen?")}" ` +
-        `aria-label="${T(lang, "Képaláírás")}">` +
-        `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
-        `</form>` +
-        // ADR-0044/d — ONE shared photo library: the owner uploads a picture once and
-        // ticks where it belongs. Only shown with several units; a single-unit owner
-        // must never meet the concept.
-        (units.length > 1
-          ? `<form method="POST" action="/admin/photos/units" class="adm-photo__units">` +
-            `<input type="hidden" name="url" value="${esc(p.url)}">` +
-            `<span class="adm-photo__units-lbl">${T(lang, "Melyik egységhez?")}</span>` +
-            units
-              .map(
-                (u) =>
-                  `<label><input type="checkbox" name="unit" value="${esc(u.id)}"` +
-                  `${(p.units ?? []).includes(u.id) ? " checked" : ""}> ${esc(u.name)}</label>`,
-              )
-              .join("") +
-            `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button></form>`
-          : "") +
-        `</figure>`
-      );
-    })
-    .join("");
-  const grid = photos.length
-    ? `<p class="citui-hint">${T(lang, "Az {b} — az jelenik meg legnagyobban az oldalán. A ★ gombbal bármelyiket előre hozhatja.", { b: `<strong>${T(lang, "első kép a nyitókép")}</strong>` })}</p><div class="adm-gallery">${items}</div>`
+  const own = content.usingOwnPhotos;
+  const n = photos.length;
+  const notice = own
+    ? `<div class="adm-notice adm-notice--own">${ic("checkc", 18)}<span>${T(lang, "A saját fotói láthatók az oldalán.")} ${T(lang, "{n} / 24 kép a könyvtárban.", { n })}</span></div>`
+    : `<div class="adm-notice adm-notice--demo">${ic("alert", 18)}<span><b>${T(lang, "Bemutató képek láthatók.")}</b> ${T(lang, "Az élesítéshez a saját, jogtiszta fotói kellenek — az első feltöltés {b} a {n} bemutató képet.", { b: `<b>${T(lang, "lecseréli")}</b>`, n })}</span></div>`;
+  // README ⑦: the rules ARE /admin/photos's (ADR-0198) — the bar states them verbatim.
+  const drop =
+    `<div class="adm-drop" id="adm-drop"><b>${T(lang, "Húzza ide a fotóit")}</b>` +
+    `<p>${T(lang, "JPEG, PNG vagy WEBP · max. 6 MB képenként · max. 12 egyszerre · könyvtár: {n} / 24", { n: own ? n : 0 })}</p>` +
+    `<div class="adm-drop__acts"><label class="adm-btn adm-btn--p" for="adm-file">${ic("upload", 16)}${T(lang, "Fotók választása")}</label>` +
+    `<label class="adm-btn adm-drop__cam" for="adm-file-cam">${ic("camera", 16)}${T(lang, "Fényképezés")}</label></div>` +
+    `<div class="adm-prog" id="adm-prog" aria-live="polite"></div></div>`;
+  const seg =
+    `<span class="adm-seg" data-view-seg>` +
+    `<a class="${view === "grid" ? "on" : ""}" href="/admin?tab=fotok&v=grid" data-view="grid">${ic("grid", 14)}${T(lang, "Rács")}</a>` +
+    `<a class="${view === "list" ? "on" : ""}" href="/admin?tab=fotok&v=list" data-view="list">${ic("list", 14)}${T(lang, "Lista")}</a></span>`;
+  const selBtns = own
+    ? `<button type="button" class="adm-btn adm-btn--sm" data-selmode="1">${ic("select", 15)}${T(lang, "Kijelölés")}</button>` +
+      `<button type="button" class="adm-btn adm-btn--sm" data-selmode="0" hidden>${T(lang, "Kész")}</button>`
+    : "";
+  const body = n
+    ? `<div class="adm-pgrid">${photos.map((p, i) => photoTile(p, i, n, own, lang)).join("")}</div>` +
+      `<div class="adm-rows">${photos.map((p, i) => photoRow(p, i, n, own, units, lang)).join("")}</div>`
     : `<p class="citui-hint">${T(lang, "Még nincs kép.")}</p>`;
+  const bulk =
+    `<div class="adm-bulk"><span data-selcount>${T(lang, "{n} kijelölve", { n: 0 })}</span><span class="adm-sp"></span>` +
+    `<button type="button" class="adm-btn adm-btn--sm" data-selmode="0">${T(lang, "Mégse")}</button>` +
+    `<button type="button" class="adm-btn adm-btn--sm adm-btn--danger" data-bulkdel disabled>${ic("trash", 15)}${T(lang, "Törlés")}</button></div>`;
   return (
-    `<div class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("photos")}</span><h2>${T(lang, "Fotók")}</h2>${helpLink("admin.photos", lang)}</div>${notice}${grid}` +
-    `<div class="citui-field" style="margin-top:16px"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" multiple></div>` +
-    `<button class="citui-btn citui-btn--primary" id="photo-upload" type="button">${T(lang, "Kiválasztott fotók feltöltése")}</button>` +
-    `<p class="citui-hint" id="photo-note"></p></div>`
+    `<div class="adm-ph"><div class="adm-ph__row"><div><h1>${T(lang, "Fotók")}${helpLink("admin.photos", lang)}</h1>` +
+    `<p>${T(lang, "{n} kép · az első a nyitókép · húzással rendezhető", { n })}</p></div></div></div>` +
+    notice +
+    `<div class="adm-photos" id="adm-photos" data-view="${view}" data-own="${own ? 1 : 0}" data-count="${n}">` +
+    `<div class="adm-dropbar">${drop}</div>` +
+    `<div class="adm-tb">${seg}<span class="adm-sp"></span>${selBtns}</div>` +
+    body +
+    bulk +
+    `</div>` +
+    // ⛔ README ⑥: no visible file field. Both inputs are hidden; the labels above open them.
+    `<input type="file" id="adm-file" class="adm-file" accept="image/jpeg,image/png,image/webp" multiple hidden>` +
+    `<input type="file" id="adm-file-cam" class="adm-file" accept="image/*" capture="environment" hidden>` +
+    `<noscript><p class="citui-hint">${T(lang, "A feltöltéshez JavaScript kell; a sorrend, a képaláírás és a törlés e nélkül is működik.")}</p></noscript>` +
+    `<div class="adm-pageover" id="adm-pageover">${T(lang, "Engedje el — feltöltjük")}</div>`
+  );
+}
+
+/** Shared overlays (lightbox · dialog · toast) — rendered once per page. */
+function overlaysHtml(): string {
+  return (
+    `<div class="adm-lb" id="adm-lb" role="dialog" aria-modal="true"></div>` +
+    `<div class="adm-dlg" id="adm-dlg" role="alertdialog" aria-modal="true"></div>` +
+    `<div class="adm-toast" id="adm-toast" role="status"></div>`
   );
 }
 
 // A FUNCTION of the reader's language (ADR-0067): the inline script's own
 // user-visible messages are localized SERVER-side and interpolated in, so the
 // browser never has to carry a second translation mechanism.
-const UPLOAD_SCRIPT = (lang = "hu"): string =>
+const PHOTO_SCRIPT = (lang = "hu"): string =>
   `<script>(function(){` +
-  `var inp=document.getElementById('photo-input'),btn=document.getElementById('photo-upload'),note=document.getElementById('photo-note');` +
-  `if(!inp||!btn)return;` +
+  `var root=document.getElementById('adm-photos');` +
+  `var ICO={alert:${JSON.stringify(ic("alert", 18))},ok:${JSON.stringify(ic("checkc", 18))},close:${JSON.stringify(ic("close", 18))},` +
+  `l:${JSON.stringify(ic("back", 20))},r:${JSON.stringify(ic("fwd", 20))},star:${JSON.stringify(ic("star", 16))},starf:${JSON.stringify(ic("starf", 16))},` +
+  `trash:${JSON.stringify(ic("trash", 16))},a16:${JSON.stringify(ic("alert", 16))}};` +
+  `var L={cover:${JSON.stringify(T(lang, "Nyitókép"))},own:${JSON.stringify(T(lang, "saját fotó"))},demo:${JSON.stringify(T(lang, "bemutató kép"))},close:${JSON.stringify(T(lang, "Bezárás"))},prev:${JSON.stringify(T(lang, "Előző"))},next:${JSON.stringify(T(lang, "Következő"))},` +
+  `ph:${JSON.stringify(T(lang, "Mi látszik a képen?"))},mkCover:${JSON.stringify(T(lang, "Legyen ez a nyitókép"))},isCover:${JSON.stringify(T(lang, "Ez a nyitókép"))},del:${JSON.stringify(T(lang, "Törlés"))},cancel:${JSON.stringify(T(lang, "Mégsem"))},` +
+  `capSaved:${JSON.stringify(T(lang, "Képaláírás mentve"))},capFail:${JSON.stringify(T(lang, "Nem sikerült menteni a képaláírást."))},demoDel:${JSON.stringify(T(lang, "A bemutató képeket nem kell törölnie — az első saját feltöltés lecseréli őket."))},` +
+  `del1t:${JSON.stringify(T(lang, "Fotó törlése"))},del1:${JSON.stringify(T(lang, "A fotó lekerül az oldaláról. Ez nem vonható vissza."))},delNt:${JSON.stringify(T(lang, "{n} fotó törlése"))},delN:${JSON.stringify(T(lang, "A kijelölt {n} fotó lekerül az oldaláról. Ez nem vonható vissza."))},` +
+  `selN:${JSON.stringify(T(lang, "{n} kijelölve"))},batch:${JSON.stringify(T(lang, "Egyszerre legfeljebb 12 képet tölthet fel; {n} kimaradt."))},notImg:${JSON.stringify(T(lang, "nem kép (JPEG, PNG vagy WEBP kell)"))},` +
+  `tooBig:${JSON.stringify(T(lang, "túl nagy ({mb} MB, a határ 6 MB)"))},full:${JSON.stringify(T(lang, "a könyvtár tele van (24 kép)"))},done:${JSON.stringify(T(lang, "kész"))},upFail:${JSON.stringify(T(lang, "a feltöltés nem sikerült"))},` +
+  `upN:${JSON.stringify(T(lang, "{n} fotó feltöltve"))},rejN:${JSON.stringify(T(lang, " — {n} elutasítva"))},none:${JSON.stringify(T(lang, "Egy kép sem került fel: {r}"))},allRej:${JSON.stringify(T(lang, "minden fájl elutasítva"))}};` +
+  `function $(s,r){return (r||document).querySelector(s)}function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
+  `function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}` +
+  `function fmt(s,v){return s.replace(/\\{(\\w+)\\}/g,function(_,k){return v[k]})}` +
+  `var toastT;function toast(m,bad){var t=$('#adm-toast');if(!t)return;t.className='adm-toast'+(bad?' bad':'');t.innerHTML=(bad?ICO.alert:ICO.ok)+'<span></span>';t.lastChild.textContent=m;` +
+  `requestAnimationFrame(function(){t.classList.add('on')});clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on')},2600)}` +
+  `function confirmDlg(title,text,ok,cb){var d=$('#adm-dlg');d.innerHTML='<div class="adm-dlg__box"><h3></h3><p></p><div class="adm-dlg__acts"><button type="button" class="adm-btn" data-no></button><button type="button" class="adm-btn adm-btn--danger" data-ok></button></div></div>';` +
+  `$('h3',d).textContent=title;$('p',d).textContent=text;$('[data-no]',d).textContent=L.cancel;$('[data-ok]',d).textContent=ok;d.classList.add('on');` +
+  `$('[data-no]',d).onclick=function(){d.classList.remove('on')};$('[data-ok]',d).onclick=function(){d.classList.remove('on');cb()};$('[data-ok]',d).focus()}` +
+  `function post(action,fields){var f=document.createElement('form');f.method='POST';f.action=action;Object.keys(fields).forEach(function(k){[].concat(fields[k]).forEach(function(v){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=v;f.appendChild(i)})});document.body.appendChild(f);f.submit()}` +
+  // ── the photo list, read off the rendered tiles (one source: the server's order)
+  `var P=[];$$('.adm-t[data-i], .adm-r[data-i], [data-lb-single]').forEach(function(el){var i=+el.getAttribute('data-i');if(!P[i])P[i]={url:el.getAttribute('data-url'),alt:el.getAttribute('data-alt')||''}});` +
+  `var own=root?root.getAttribute('data-own')==='1':false;var lbIdx=-1;` +
+  // ── lightbox
+  `function renderLb(){var p=P[lbIdx];var lb=$('#adm-lb');if(!p){lb.classList.remove('on');return}` +
+  `var units=root?$('.adm-r[data-i="'+lbIdx+'"] .adm-r__units'):null;` +
+  `lb.innerHTML='<div class="adm-lb__top"><button type="button" class="adm-ib" data-lb-close aria-label="'+esc(L.close)+'">'+ICO.close+'</button><b>'+(lbIdx+1)+' / '+P.length+(lbIdx===0?' · '+esc(L.cover):'')+'</b><span class="adm-sp"></span><span class="adm-tag">'+esc(own?L.own:L.demo)+'</span></div>'+` +
+  `'<div class="adm-lb__img">'+(P.length>1?'<button type="button" class="adm-lb__nav adm-lb__nav--l" data-lb-step="-1" aria-label="'+esc(L.prev)+'">'+ICO.l+'</button>':'')+'<img src="'+esc(p.url)+'" alt="'+esc(p.alt)+'">'+(P.length>1?'<button type="button" class="adm-lb__nav adm-lb__nav--r" data-lb-step="1" aria-label="'+esc(L.next)+'">'+ICO.r+'</button>':'')+'</div>'+` +
+  `(root?'<div class="adm-lb__foot"><form method="POST" action="/admin/photos/caption" class="adm-capf adm-lb__capf"><input type="hidden" name="url" value="'+esc(p.url)+'"><input class="adm-cap" name="alt" maxlength="160" value="'+esc(p.alt)+'" placeholder="'+esc(L.ph)+'" data-cap="'+lbIdx+'"></form>'+` +
+  `'<div class="adm-lb__acts">'+(lbIdx>0?'<form method="POST" action="/admin/photos/order"><input type="hidden" name="url" value="'+esc(p.url)+'"><input type="hidden" name="to" value="cover"><button class="adm-btn adm-btn--p">'+ICO.star+esc(L.mkCover)+'</button></form>':'<button type="button" class="adm-btn" disabled>'+ICO.starf+esc(L.isCover)+'</button>')+` +
+  `(own?'<button type="button" class="adm-btn adm-btn--danger" data-lb-del>'+ICO.trash+esc(L.del)+'</button>':'')+'</div>'+(units?'<div class="adm-lb__units">'+units.innerHTML+'</div>':'')+'</div>':'');` +
+  `lb.classList.add('on');bindCaps(lb)}` +
+  `function openLb(i){lbIdx=i;renderLb()}function closeLb(){lbIdx=-1;$('#adm-lb').classList.remove('on')}function lbStep(d){lbIdx=(lbIdx+d+P.length)%P.length;renderLb()}` +
+  `document.addEventListener('click',function(e){var t=e.target;var img=t.closest('[data-lb]');if(img&&!(root&&root.classList.contains('is-selmode'))){openLb(+img.getAttribute('data-lb'));return}` +
+  `if(t.closest('[data-lb-close]'))return closeLb();var st=t.closest('[data-lb-step]');if(st)return lbStep(+st.getAttribute('data-lb-step'));` +
+  `if(t.closest('[data-lb-del]'))return del([lbIdx]);` +
+  `var s=t.closest('[data-sel]');if(s){toggleSel(+s.getAttribute('data-sel'));return}` +
+  `var sm=t.closest('[data-selmode]');if(sm){setSelMode(sm.getAttribute('data-selmode')==='1');return}` +
+  `if(t.closest('[data-bulkdel]')){del(Object.keys(sel).map(Number));return}` +
+  `var v=t.closest('[data-view]');if(v&&v.closest('[data-view-seg]')){e.preventDefault();setView(v.getAttribute('data-view'));return}` +
+  `var chk=t.closest('.is-selmode .adm-t, .is-selmode .adm-r');if(chk&&!t.closest('form,button,input,label')){toggleSel(+chk.getAttribute('data-i'))}});` +
+  `document.addEventListener('keydown',function(e){if(lbIdx<0)return;if(e.key==='Escape')closeLb();if(e.key==='ArrowLeft')lbStep(-1);if(e.key==='ArrowRight')lbStep(1)});` +
+  `if(!root)return;` +
+  // ── selection + bulk delete (own photos only — the demo set has no delete at all)
+  `var sel={};function setSelMode(v){root.classList.toggle('is-selmode',v);sel={};$$('.is-sel',root).forEach(function(x){x.classList.remove('is-sel')});$$('[data-selmode]',root).forEach(function(b){if(b.closest('.adm-bulk'))return;b.hidden=(b.getAttribute('data-selmode')==='1')===v});refreshSel()}` +
+  `function toggleSel(i){if(!root.classList.contains('is-selmode'))setSelMode(true);if(sel[i])delete sel[i];else sel[i]=1;$$('[data-i="'+i+'"]',root).forEach(function(x){x.classList.toggle('is-sel',!!sel[i])});refreshSel()}` +
+  `function refreshSel(){var n=Object.keys(sel).length;var c=$('[data-selcount]',root);if(c)c.textContent=fmt(L.selN,{n:n});var b=$('[data-bulkdel]',root);if(b)b.disabled=!n}` +
+  `function del(idxs){if(!own){toast(L.demoDel,true);return}var n=idxs.length;confirmDlg(n>1?fmt(L.delNt,{n:n}):L.del1t,n>1?fmt(L.delN,{n:n}):L.del1,L.del,function(){post('/admin/photos/delete',{url:idxs.map(function(i){return P[i].url})})})}` +
+  `$$('form[data-del]',root).forEach(function(f){f.addEventListener('submit',function(e){e.preventDefault();var i=+f.closest('[data-i]').getAttribute('data-i');del([i])})});` +
+  // ── grid / list, remembered
+  `function setView(v){root.setAttribute('data-view',v);$$('[data-view-seg] [data-view]',root).forEach(function(a){a.classList.toggle('on',a.getAttribute('data-view')===v)});try{localStorage.setItem('citui-admin-photos-view',v)}catch(x){}}` +
+  `try{if(location.search.indexOf('v=')<0){var sv=localStorage.getItem('citui-admin-photos-view');if(sv==='list'||sv==='grid')setView(sv)}}catch(x){}` +
+  // ── captions: Enter submits the form natively; a change saves in place
+  `function bindCaps(scope){$$('.adm-capf',scope).forEach(function(f){if(f.dataset.bound)return;f.dataset.bound='1';var inp=$('.adm-cap',f);` +
+  `function save(){fetch(f.action,{method:'POST',headers:{'X-Requested-With':'fetch','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(new FormData(f)).toString()}).then(function(r){if(!r.ok)throw 0;` +
+  `var i=+inp.getAttribute('data-cap');if(P[i])P[i].alt=inp.value.slice(0,160);$$('[data-cap="'+i+'"]',document).forEach(function(o){if(o!==inp)o.value=inp.value});$$('[data-i="'+i+'"]',root).forEach(function(o){o.setAttribute('data-alt',inp.value)});` +
+  `var s=$('[data-saved="'+i+'"]',root);if(s){s.classList.add('on');setTimeout(function(){s.classList.remove('on')},1400)}if(scope!==root)toast(L.capSaved)}).catch(function(){toast(L.capFail,true)})}` +
+  `f.addEventListener('submit',function(e){e.preventDefault();save()});inp.addEventListener('change',save)})}bindCaps(root);` +
+  // ── drag-and-drop reorder → POST /admin/photos/order (to = index)
+  `var dragI=-1;$$('[data-i]',root).forEach(function(el){el.addEventListener('dragstart',function(e){if(root.classList.contains('is-selmode')){e.preventDefault();return}dragI=+el.getAttribute('data-i');el.classList.add('is-drag');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(dragI))}catch(x){}});` +
+  `el.addEventListener('dragend',function(){el.classList.remove('is-drag');$$('.is-over',root).forEach(function(x){x.classList.remove('is-over')})});` +
+  `el.addEventListener('dragover',function(e){if(dragI<0)return;e.preventDefault();el.classList.add('is-over')});el.addEventListener('dragleave',function(){el.classList.remove('is-over')});` +
+  `el.addEventListener('drop',function(e){if(dragI<0)return;e.preventDefault();e.stopPropagation();var to=+el.getAttribute('data-i');if(to!==dragI)post('/admin/photos/order',{url:P[dragI].url,to:String(to)});dragI=-1})});` +
+  // ── upload: the browser mirrors /admin/photos's rules (ADR-0198), then sends ONE
+  //    request per file so each row gets its own progress and its own refusal
+  `var LIB=24,BATCH=12,BYTES=6000000;function mb(b){return (b/1e6).toFixed(1).replace('.',',')}` +
   `function read(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}` +
-  `btn.addEventListener('click',async function(){var files=[].slice.call(inp.files||[]);` +
-  `if(!files.length){note.textContent='${T(lang, "Válasszon ki képeket.")}';return;}` +
-  `btn.disabled=true;note.textContent='${T(lang, "Feltöltés…")}';` +
-  `try{var images=[];for(var i=0;i<files.length;i++){if(files[i].size>6000000){continue;}var d=await read(files[i]);images.push({dataUrl:d,alt:''});}` +
-  `if(!images.length){note.textContent='${T(lang, "A képek túl nagyok (max 6 MB).")}';btn.disabled=false;return;}` +
-  `var r=await fetch('/admin/photos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images:images})});` +
-  `var j=await r.json();if(j&&j.ok){location.href='/admin?saved=1';}else{note.textContent='${T(lang, "Hiba a feltöltéskor.")}';btn.disabled=false;}}` +
-  `catch(e){note.textContent='${T(lang, "Hiba a feltöltéskor.")}';btn.disabled=false;}});})();</script>`;
+  `function send(f,row){return read(f).then(function(d){return new Promise(function(res){var x=new XMLHttpRequest();x.open('POST','/admin/photos');x.setRequestHeader('Content-Type','application/json');` +
+  `x.upload.onprogress=function(e){if(e.lengthComputable){var p=Math.round(e.loaded/e.total*100);$('i',row).style.width=p+'%';$('.st',row).textContent=p+'%'}};` +
+  `x.onload=function(){var j=null;try{j=JSON.parse(x.responseText)}catch(e){}var err=j&&j.errors&&j.errors.length?j.errors[0].reason:(!j||!j.ok?L.upFail:'');res(err)};x.onerror=function(){res(L.upFail)};` +
+  `x.send(JSON.stringify({images:[{dataUrl:d,alt:'',name:f.name}]}))})})}` +
+  `var busy=false;function ingest(files){files=[].slice.call(files||[]);if(!files.length||busy)return;busy=true;var prog=$('#adm-prog');prog.innerHTML='';var errors=[];` +
+  `if(files.length>BATCH){errors.push(fmt(L.batch,{n:files.length-BATCH}));files=files.slice(0,BATCH)}var room=own?Math.max(0,LIB-P.length):LIB;var rows=[];` +
+  `files.forEach(function(f){var okT=/^image\\/(jpeg|png|webp)$/.test(f.type),okS=f.size<=BYTES,reason='';if(!okT)reason=L.notImg;else if(!okS)reason=fmt(L.tooBig,{mb:mb(f.size)});else if(room<=0)reason=L.full;` +
+  `var url=okT?URL.createObjectURL(f):'';var row=document.createElement('div');row.className='adm-prog__row'+(reason?' is-bad':'');` +
+  `row.innerHTML=(url?'<img src="'+url+'" alt="">':'<span style="width:34px;display:inline-flex;justify-content:center">'+ICO.a16+'</span>')+'<span class="adm-prog__name"></span>'+(reason?'<span class="rs"></span>':'<span class="adm-prog__bar"><i></i></span><span class="st">0%</span>');` +
+  `$('.adm-prog__name',row).textContent=f.name;if(reason)$('.rs',row).textContent=reason;prog.appendChild(row);if(reason)return;room--;rows.push({f:f,row:row})});` +
+  `var done=0;(function next(k){if(k>=rows.length){finish();return}send(rows[k].f,rows[k].row).then(function(err){var row=rows[k].row;if(err){row.classList.add('is-bad');row.innerHTML=row.innerHTML.replace(/<span class="adm-prog__bar">.*$/,'');var s=document.createElement('span');s.textContent=err;row.appendChild(s)}else{row.classList.add('is-ok');$('i',row).style.width='100%';$('.st',row).textContent=L.done;done++}next(k+1)})})(0);` +
+  `function finish(){busy=false;if(done){toast(fmt(L.upN,{n:done})+(done<files.length?fmt(L.rejN,{n:files.length-done}):''));setTimeout(function(){location.href='/admin?tab=fotok&saved=1'},1300)}` +
+  `else{toast(fmt(L.none,{r:errors[0]||($('.is-bad .rs, .is-bad span:last-child',prog)||{}).textContent||L.allRej}),true)}}}` +
+  `$$('.adm-file').forEach(function(i){i.addEventListener('change',function(){ingest(i.files);i.value=''})});` +
+  `var drop=$('#adm-drop');['dragenter','dragover'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('is-over')})});['dragleave','drop'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('is-over')})});` +
+  `drop.addEventListener('drop',function(e){if(e.dataTransfer&&e.dataTransfer.files.length)ingest(e.dataTransfer.files)});` +
+  `var over=$('#adm-pageover');function hasFiles(e){return e.dataTransfer&&[].slice.call(e.dataTransfer.types||[]).indexOf('Files')>=0}` +
+  `['dragenter','dragover'].forEach(function(ev){document.addEventListener(ev,function(e){if(dragI>=0||!hasFiles(e))return;e.preventDefault();over.classList.add('on')})});` +
+  `document.addEventListener('dragleave',function(e){if(!e.relatedTarget)over.classList.remove('on')});` +
+  `document.addEventListener('drop',function(e){over.classList.remove('on');if(dragI>=0||!hasFiles(e))return;e.preventDefault();ingest(e.dataTransfer.files)});` +
+  `})();</script>`;
 
 /** Login page — enter username + password. */
 export function loginPage(
@@ -2610,7 +2973,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     // ADR-0128 kontraktus §2–§7. Csak --citui-* tokenek (ADR-0021 ①).
     `<style>` +
     `.adm-mltier{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 6px}` +
-    `.adm-mltc{display:block;cursor:pointer;background:var(--citui-white);padding:14px 15px;` +
+    `.adm-mltc{display:block;cursor:pointer;background:var(--citui-panel);padding:14px 15px;` +
     `border:1.5px solid var(--citui-line);border-radius:var(--citui-radius);` +
     `transition:var(--citui-transition)}` +
     `.adm-mltc:hover{border-color:var(--citui-cyan-400)}` +
@@ -2627,13 +2990,13 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     `.adm-mlrg h3{margin:0;font-size:.88rem;font-family:var(--citui-font-display);` +
     `text-transform:uppercase;letter-spacing:.06em;color:var(--citui-muted)}` +
     `.adm-mlchips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}` +
-    `.adm-mlchips span{display:flex;align-items:center;gap:6px;background:var(--citui-white);` +
+    `.adm-mlchips span{display:flex;align-items:center;gap:6px;background:var(--citui-panel);` +
     `border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);` +
     `padding:4px 10px 4px 7px;font-size:.8rem}` +
     `.adm-mlang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:7px}` +
     `.adm-mlang{display:flex;align-items:center;gap:9px;padding:9px 11px;min-height:44px;` +
     `border:1.5px solid var(--citui-line);border-radius:var(--citui-radius-sm);cursor:pointer;` +
-    `background:var(--citui-white);transition:var(--citui-transition)}` +
+    `background:var(--citui-panel);transition:var(--citui-transition)}` +
     `.adm-mlang:hover{border-color:var(--citui-cyan-400)}` +
     `.adm-mlang.is-on{border-color:var(--citui-cyan-500);` +
     `background:color-mix(in srgb, var(--citui-cyan-500) 8%, var(--citui-white))}` +
@@ -3027,7 +3390,7 @@ const DOMAIN_STYLE =
   `.adm-dcurrent span{font-size:.85rem;color:var(--citui-muted)}` +
   `.adm-dlist{display:flex;flex-direction:column;gap:9px;margin:0 0 16px}` +
   `.adm-dopt{display:flex;align-items:center;gap:11px;padding:13px 14px;border:1.5px solid var(--citui-line);` +
-  `border-radius:var(--citui-radius);background:var(--citui-white);min-height:56px;flex-wrap:wrap;cursor:pointer;` +
+  `border-radius:var(--citui-radius);background:var(--citui-panel);min-height:56px;flex-wrap:wrap;cursor:pointer;` +
   `transition:var(--citui-transition)}` +
   `.adm-dopt:hover{border-color:var(--citui-cyan-500)}` +
   `.adm-dopt:has(input:checked){border-color:var(--citui-cyan-500);` +
@@ -3056,7 +3419,7 @@ const DOMAIN_STYLE =
   `.adm-dprog__row{display:flex;align-items:flex-start;gap:11px;padding:11px 0}` +
   `.adm-dprog__row+.adm-dprog__row{border-top:1px solid var(--citui-line)}` +
   `.adm-dprog__dot{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;` +
-  `border:2px solid var(--citui-line-strong);background:var(--citui-white);margin-top:1px}` +
+  `border:2px solid var(--citui-line-strong);background:var(--citui-panel);margin-top:1px}` +
   `.adm-dprog__row.is-done .adm-dprog__dot{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}` +
   `.adm-dprog__row.is-now .adm-dprog__dot{border-color:var(--citui-cyan-500);` +
   `background:color-mix(in srgb, var(--citui-cyan-500) 20%, var(--citui-white))}` +
@@ -3077,28 +3440,31 @@ const DOMAIN_STYLE =
 // A FUNCTION, not a const: the labels must be translated at RENDER time (the
 // reader's language is only known then), and the T() calls must keep LITERAL
 // source strings so the catalog extractor can see them (ADR-0067).
-const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }[] => [
-  { id: "attekintes", label: T(lang, "Áttekintés"), icon: "overview" },
-  { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts" },
-  { id: "fotok", label: T(lang, "Fotók"), icon: "photos" },
-  { id: "modulok", label: T(lang, "Modulok"), icon: "modules" },
+/** The admin's tabs. `group` drives the sidebar / drawer sections (ADR-0224 README ②):
+ *  home (no label) · site „Az oldalam" · guests „Vendégek" · biz „Üzlet" · acct „Fiók". */
+const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string; group: string }[] => [
+  { id: "attekintes", label: T(lang, "Áttekintés"), icon: "overview", group: "home" },
+  { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts", group: "site" },
+  { id: "fotok", label: T(lang, "Fotók"), icon: "photos", group: "site" },
+  { id: "modulok", label: T(lang, "Modulok"), icon: "modules", group: "site" },
   // Jóváhagyott terv 2026-09-06: a foglalási kérések SAJÁT felületet kapnak badge-dzsel —
   // a Modulok → Foglalás alá temetve nem látszottak (booking-luka triázs).
-  { id: "foglalasok", label: T(lang, "Foglalások"), icon: "bookings" },
+  { id: "foglalasok", label: T(lang, "Foglalások"), icon: "bookings", group: "guests" },
+  { id: "uzenetek", label: T(lang, "Üzenetek"), icon: "mail", group: "guests" },
   // ADR-0078: a saját webcím önálló fül — a fizetési döntés külön képernyőt kap.
-  { id: "webcim", label: T(lang, "Webcím"), icon: "domain" },
+  { id: "webcim", label: T(lang, "Webcím"), icon: "domain", group: "biz" },
   // ADR-0108: a forgalom az ALAPCSOMAG része — saját fül, nem modul mögé rejtve.
-  { id: "forgalom", label: T(lang, "Forgalom"), icon: "report" },
+  { id: "forgalom", label: T(lang, "Forgalom"), icon: "report", group: "biz" },
   // ADR-0084 (jóváhagyott terv): a bizonylatok és a kommunikáció két külön fül.
   // ⛔ A felirat „Dokumentumok" — tulajdonosi javítás: magyarul nem „Iratok".
-  { id: "dokumentumok", label: T(lang, "Dokumentumok"), icon: "docs" },
+  { id: "dokumentumok", label: T(lang, "Dokumentumok"), icon: "docs", group: "biz" },
   // ADR-0226 (jóváhagyott terv: design-refs/console/wallet, „B"): a mentett kártya
   // saját fület kap — látható, cserélhető, visszavonható; nem a Modulok alá bújtatva.
-  { id: "penztarca", label: T(lang, "Pénztárca"), icon: "card" },
-  { id: "uzenetek", label: T(lang, "Üzenetek"), icon: "mail" },
-  { id: "fiok", label: T(lang, "Fiók"), icon: "account" },
+  // ADR-0224 csoport: „Üzlet" — a Dokumentumok mellé, ahova a pénz-ügyek tartoznak.
+  { id: "penztarca", label: T(lang, "Pénztárca"), icon: "card", group: "biz" },
+  { id: "fiok", label: T(lang, "Fiók"), icon: "account", group: "acct" },
   // ADR-0045: the searchable knowledge base is its own surface, not only per-section icons.
-  { id: "sugo", label: T(lang, "Súgó"), icon: "help" },
+  { id: "sugo", label: T(lang, "Súgó"), icon: "help", group: "acct" },
 ];
 
 /**
@@ -3111,24 +3477,32 @@ function tabHeading(tab: string, lang: string): string {
   return TABS(lang).find((t) => t.id === tab)?.label ?? T(lang, "Áttekintés");
 }
 
-/** Sidebar / bottom-bar navigation links (icon + label), with the active item highlighted.
- *  `unread` paints the Üzenetek badge — the whole point of a mailbox is to be told
- *  there is something in it without opening it. */
-function navItems(active: string, lang = "hu", unread = 0, unseenBookings = 0): string {
-  return TABS(lang)
-    .map((t) => {
-      const badge =
-        t.id === "uzenetek" && unread > 0
-          ? `<span class="adm-nav__bdg" aria-label="${esc(T(lang, "{n} olvasatlan üzenet", { n: unread }))}">${unread > 99 ? "99+" : unread}</span>`
-          : t.id === "foglalasok" && unseenBookings > 0
-            ? `<span class="adm-nav__bdg" aria-label="${esc(T(lang, "{n} új foglalási kérés", { n: unseenBookings }))}">${unseenBookings > 99 ? "99+" : unseenBookings}</span>`
-            : "";
-      return `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>${ic(t.icon)}<span>${esc(t.label)}</span>${badge}</a>`;
-    })
-    .join("");
+/** ADR-0224 ⑤ — what the Áttekintés widgets read. Loaded by the caller (public.ts);
+ *  the KB shot feeds a fixture. */
+export interface OverviewData {
+  /** Unique non-bot visitors over the last 7 days. */
+  readonly visitors7: number;
+  /** Unique visitors per day, oldest → newest, 7 entries (the sparkline). */
+  readonly visitsByDay: readonly number[];
+  /** The 3 latest messages, newest first. */
+  readonly messages: readonly {
+    readonly id: string;
+    readonly subject: string;
+    readonly sentAt: Date;
+    readonly unread: boolean;
+  }[];
 }
 
-/** Overview: status tiles + an honest next-step checklist. */
+/** „ma" / „tegnap" / a short date — the message widget's right column. */
+function relDay(d: Date, lang: string, now: Date = new Date()): string {
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86_400_000);
+  if (diff <= 0) return T(lang, "ma");
+  if (diff === 1) return T(lang, "tegnap");
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { month: "short", day: "numeric" }).format(d);
+}
+
+/** Overview (ADR-0224 ⑤): title · 3 widgets · cover showcase · to-do list · (phone) plan card. */
 function overviewSection(
   content: NonNullable<AdminContent>,
   statusText: string,
@@ -3142,6 +3516,11 @@ function overviewSection(
   sub: SubscriptionAdminData | null = null,
   /** ADR-0208 ⑥.4 — incomplete, undeclared price lists (unitPriceStatus none|partial). */
   priceGaps: readonly PriceGap[] = [],
+  /** The widgets' data; null renders the honest empty states. */
+  ov: OverviewData | null = null,
+  /** The phone's subscription card (README ④: at the bottom of the Áttekintés). */
+  subSummary: SubscriptionSummary | null = null,
+  now: Date = new Date(),
 ): string {
   const live = content.status === "live";
   // ⛔ ADR-0119 ① reaches THIS tab too, and until now it did not (measured
@@ -3166,8 +3545,17 @@ function overviewSection(
     : previewUrl
       ? `<a href="${esc(previewUrl)}" target="_blank" rel="noopener">${T(lang, "privát előnézet")}</a>`
       : `<span class="citui-hint">–</span>`;
-  const todoItem = (done: boolean, html: string) =>
-    `<li class="${done ? "done" : "pending"}"><span class="adm-tico">${ic(done ? "check" : "alert", 18)}</span><span>${html}</span></li>`;
+  const tabName = (id: string) => TABS(lang).find((t) => t.id === id)?.label ?? id;
+  /**
+   * One to-do row. `tab` names WHERE it is done (the right column — the sentence no
+   * longer carries a parenthesised link). The „Élesítés előtt" chip marks the open
+   * rows that gate the go-live, and ONLY while the site is not live yet: on a live
+   * site with demo photos the chip would claim a step the site has already passed.
+   */
+  const todoItem = (done: boolean, html: string, tab: string, gate = false) =>
+    `<li class="${done ? "done" : "pending"}"><i class="adm-todo__st"></i><span>${html}</span>` +
+    `<em class="adm-todo__m">${!done && gate && !live ? `<span class="adm-tag adm-tag--warn">${T(lang, "Élesítés előtt")}</span>` : ""}` +
+    `<a href="/admin?tab=${tab}">${esc(tabName(tab))}</a></em></li>`;
   // ── APPROVED CONTRACT (paid-empty-a, owner ruling 2026-09-21) ────────────────
   // A module he PAYS for that shows the guest nothing gets its own row, with the
   // module name, what it costs, and one click to fill it.
@@ -3210,7 +3598,7 @@ function overviewSection(
         `${T(lang, "Megnézem")}</a>`;
       return (
         `<li class="pending adm-todo__paid">` +
-        `<span class="adm-tico">${ic("alert", 18)}</span>` +
+        `<i class="adm-todo__st"></i>` +
         `<span class="adm-todo__body">` +
         // ⛔ A modul neve is FORDUL: a felület minden más helye `T(lang, m.label)`-t ír
         // (modul-lista, előnézet, árazás). Fordítatlanul hagyva a lengyel tulaj
@@ -3234,7 +3622,7 @@ function overviewSection(
   // (unitPriceStatus), so the three can never disagree about a unit.
   const priceGapRow = priceGaps.length
     ? `<li class="pending adm-todo__paid" data-todo="price-gap">` +
-      `<span class="adm-tico">${ic("alert", 18)}</span>` +
+      `<i class="adm-todo__st"></i>` +
       `<span class="adm-todo__body">` +
       `<strong>${
         priceGaps.length === 1
@@ -3255,6 +3643,7 @@ function overviewSection(
       `<span class="adm-todo__acts"><a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok&m=pricing">${T(lang, "Megadom az árakat")}</a></span>` +
       `</span></li>`
     : "";
+  const introDone = Boolean(content.intro && content.intro.length > 40);
   const todo =
     paidEmptyRows +
     priceGapRow +
@@ -3262,13 +3651,17 @@ function overviewSection(
       content.usingOwnPhotos,
       content.usingOwnPhotos
         ? T(lang, "A saját fotói fent vannak")
-        : `<strong>${T(lang, "Töltsön fel saját fotókat")}</strong> ${T(lang, "— jelenleg bemutató képek láthatók (")}<a href="/admin?tab=fotok">${T(lang, "Fotók")}</a>)`,
+        : `<strong>${T(lang, "Töltsön fel saját fotókat")}</strong> ${T(lang, "— jelenleg bemutató képek láthatók")}`,
+      "fotok",
+      true,
     ) +
     todoItem(
-      Boolean(content.intro && content.intro.length > 40),
-      content.intro && content.intro.length > 40
+      introDone,
+      introDone
         ? T(lang, "A bemutatkozó szövege kész")
-        : `<strong>${T(lang, "Írja meg a bemutatkozó szöveget")}</strong> (<a href="/admin?tab=szovegek">${T(lang, "Szövegek")}</a>)`,
+        : `<strong>${T(lang, "Írja meg a bemutatkozó szöveget")}</strong>`,
+      "szovegek",
+      true,
     ) +
     todoItem(
       live,
@@ -3278,24 +3671,85 @@ function overviewSection(
           ? // Action first, then cause, then the way back. The old sentence was
             // written for a site that has never been published yet — under a
             // freeze it was simply false, and false in OUR favour.
-            `<strong>${T(lang, "Rendezze a díjat — a honlapja fel van függesztve")}</strong> ${T(lang, "— a vendégek most nem érik el. A befizetés után magától, azonnal visszakapcsol (")}<a href="/admin?tab=modulok">${T(lang, "Modulok fül")}</a>)`
+            `<strong>${T(lang, "Rendezze a díjat — a honlapja fel van függesztve")}</strong> ${T(lang, "— a vendégek most nem érik el. A befizetés után magától, azonnal visszakapcsol")}`
           : T(lang, "Az oldal még nem publikus — a Citoviso élesíti, amint minden készen áll"),
+      suspended ? "modulok" : "webcim",
     );
+  const openCount =
+    paidEmpty.length + (priceGaps.length ? 1 : 0) + (content.usingOwnPhotos ? 0 : 1) + (introDone ? 0 : 1) + (live ? 0 : 1);
+  // ── the three widgets (README ⑤) ────────────────────────────────────────────
+  const statusTag =
+    content.status === "live"
+      ? "adm-tag--ok"
+      : content.status === "suspended"
+        ? "adm-tag--bad"
+        : content.status === "provisioned"
+          ? "adm-tag--info"
+          : "adm-tag--mute";
+  const wStatus =
+    `<div class="adm-wc" data-widget="status"><div class="adm-wc__h">${ic("dot", 12)}${T(lang, "Állapot")}` +
+    `<a class="adm-ib" href="/admin?tab=webcim" title="${T(lang, "Webcím")}">${ic("moreh", 14)}</a></div>` +
+    `<div class="adm-wc__v"><span class="adm-tag ${statusTag}"><i></i>${esc(statusText)}</span></div>` +
+    `<div class="adm-wc__s">${addr}</div></div>`;
+  const series = ov?.visitsByDay ?? [];
+  const max = Math.max(1, ...series);
+  const spark = series.length
+    ? `<div class="adm-spark" aria-hidden="true">${series
+        .map((v) => `<i class="${v ? "" : "z"}" style="height:${Math.max(6, Math.round((v / max) * 100))}%"></i>`)
+        .join("")}</div>`
+    : "";
+  const wVisits =
+    `<div class="adm-wc" data-widget="visitors"><div class="adm-wc__h">${ic("report", 14)}${T(lang, "Látogatók · 7 nap")}` +
+    `<a class="adm-ib" href="/admin?tab=forgalom" title="${T(lang, "Forgalom")}">${ic("moreh", 14)}</a></div>` +
+    `<div class="adm-wc__v">${ov ? ov.visitors7 : "–"}</div><div class="adm-wc__s">${T(lang, "egyedi látogató, robotok nélkül")}</div>${spark}</div>`;
+  const msgRows = (ov?.messages ?? [])
+    .slice(0, 3)
+    .map(
+      (m) =>
+        `<a class="adm-mrow${m.unread ? "" : " is-read"}" href="/admin?tab=uzenetek&open=${encodeURIComponent(m.id)}"><i></i>` +
+        `<span>${esc(m.subject)}</span><em class="d">${esc(relDay(m.sentAt, lang, now))}</em></a>`,
+    )
+    .join("");
+  const wMsgs =
+    `<div class="adm-wc" data-widget="messages"><div class="adm-wc__h">${ic("mail", 14)}${T(lang, "Üzenetek")}` +
+    `<a class="adm-ib" href="/admin?tab=uzenetek" title="${T(lang, "Üzenetek")}">${ic("moreh", 14)}</a></div>` +
+    (msgRows || `<div class="adm-wc__empty">${T(lang, "Még nincs üzenet.")}</div>`) +
+    `</div>`;
+  // ── the cover showcase (README ⑤, from the Bento round) ─────────────────────
+  const cover = content.photos?.[0];
+  const own = content.usingOwnPhotos;
+  const photoCount = content.photos?.length ?? 0;
+  const showcase = cover
+    ? `<div class="adm-covc" data-i="0" data-url="${esc(cover.url)}" data-alt="${esc(cover.alt)}" data-lb-single>` +
+      `<img src="${esc(cover.url)}" alt="${esc(cover.alt)}" data-lb="0">` +
+      `<span class="adm-covc__tag">${ic("starf", 12)}${own ? T(lang, "Saját nyitókép") : T(lang, "Bemutató nyitókép")}</span>` +
+      `<span class="adm-covc__meta">${T(lang, "{n} kép", { n: photoCount })}</span>` +
+      `<div class="adm-covc__b"><div><b>${esc(content.name)}</b><span>${
+        own
+          ? T(lang, "A saját fotói láthatók az oldalán — így látja a vendég az oldal tetején.")
+          : T(lang, "Jelenleg bemutató képek — az élesítéshez a saját, jogtiszta fotói kellenek.")
+      }</span></div><div class="adm-covc__acts">` +
+      (own
+        ? `<a class="adm-btn adm-btn--sm" href="/admin?tab=fotok">${ic("photos", 14)}${T(lang, "Fotók kezelése")}</a>`
+        : `<a class="adm-btn adm-btn--sm adm-btn--p" href="/admin?tab=fotok">${ic("upload", 14)}${T(lang, "Cserélje sajátra")}</a>`) +
+      `<button type="button" class="adm-btn adm-btn--sm" data-lb="0">${ic("preview", 14)}${T(lang, "Nagyítás")}</button>` +
+      `</div></div></div>`
+    : "";
   return (
-    `<div class="adm-card">` +
-    `<div class="adm-card__head"><span class="adm-ico">${ic("overview")}</span><h2>${T(lang, "Áttekintés")}</h2>${helpLink("admin.overview", lang)}</div>` +
-    `<div class="adm-stats">` +
-    `<div class="adm-stat"><b><span class="citui-pill ${live ? "citui-pill--ok" : "citui-pill--info"}">${esc(statusText)}</span></b><span>${T(lang, "Állapot")}</span></div>` +
-    `<div class="adm-stat"><b style="font-size:1rem">${addr}</b><span>${T(lang, "Az oldal címe")}</span></div>` +
-    `<div class="adm-stat"><b>${T(lang, "{n} db", { n: activeCount })}</b><span>${
+    `<section class="adm-ov">` +
+    `<div class="adm-ph"><h1>${T(lang, "Áttekintés")}${helpLink("admin.overview", lang)}</h1>` +
+    `<p>${T(lang, "Az oldala állapota egy képernyőn — ami teendő, az itt sorban áll.")}</p></div>` +
+    `<div class="adm-w">${wStatus}${wVisits}${wMsgs}</div>` +
+    showcase +
+    `<div class="adm-todobox"><div class="adm-todo__h">${T(lang, "Teendők")} <span class="cnt">${T(lang, "{n} nyitott", { n: openCount })}</span>` +
+    `<span class="adm-sp"></span><span class="cnt">${
       billedActiveCount === activeCount
-        ? T(lang, "Aktív modul ·")
-        : T(lang, "Aktív modul · ebből {n} számlázott ·", { n: String(billedActiveCount) })
-    } <a href="/admin?tab=modulok">${T(lang, "kezelés")}</a></span></div>` +
-    `</div>` +
-    `<h3 style="font-size:1rem;margin:24px 0 0;font-family:var(--citui-font-display)">${T(lang, "Teendők")}</h3>` +
-    `<ul class="adm-todo">${todo}</ul>` +
-    `</div>`
+        ? T(lang, "{n} modul", { n: activeCount })
+        : T(lang, "{n} modul · {k} számlázott", { n: activeCount, k: billedActiveCount })
+    }</span></div>` +
+    `<ul class="adm-todo">${todo}</ul></div>` +
+    subscriptionCard(subSummary, activeCount, lang, true, now) +
+    `</section>`
   );
 }
 
@@ -4422,6 +4876,17 @@ export interface AdminOpts {
   readonly priceGaps?: readonly PriceGap[];
   /** ADR-0080: subscription card data for the Modulok tab (null → no card). */
   readonly subscription?: SubscriptionAdminData | null;
+  /** ADR-0224 ④: the sidebar's subscription card (every tab) — one cheap row read. */
+  readonly subSummary?: SubscriptionSummary | null;
+  /** ADR-0224 ⑤: the Áttekintés widgets' data (visitors, latest messages). */
+  readonly overview?: OverviewData | null;
+  /** ADR-0224 ②③: the site's slug for the frame (`slug · Élő`). */
+  readonly siteSlug?: string | null;
+  /** ADR-0224 ⑥: the Fotók tab's layout (GET `v=`; the script remembers the choice). */
+  readonly photosView?: "grid" | "list";
+  /** „Now" for the date-relative copy (subscription card, message dates). ADR-0220: the
+   *  KB shot pins it, so the same commit always renders the same picture. */
+  readonly now?: Date;
   /** ADR-0080: the applied-changes confirmation after POST /admin/modules. */
   readonly moduleApplied?: ModuleAppliedFlash | null;
   /** ADR-0094 ②: domain-commitment state for the danger zone (Modulok tab). */
@@ -4482,6 +4947,68 @@ export interface AdminOpts {
   readonly unseenBookings?: number;
 }
 
+/**
+ * The admin frame around one tab (ADR-0224): desktop sidebar + top bar, phone top bar +
+ * bottom bar + drawer, overlays and the frame script. The SAME frame for the no-site
+ * page and for every tab, so a guard measuring the frame measures the real one.
+ */
+function frame(
+  lang: string,
+  tab: string,
+  session: TenantSession,
+  siteName: string,
+  slug: string | null,
+  status: string,
+  counts: NavCounts,
+  crumbLabel: string,
+  actions: string,
+  main: string,
+  subSummary: SubscriptionSummary | null,
+  now: Date,
+): string {
+  const overview = tab === "attekintes";
+  const initials = siteName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+  const side =
+    `<aside class="adm-side"><div class="adm-side__top">${LOGO_MARK}` +
+    `<b>${esc(siteName)}<small>${esc(slug ? `${slug} · ${statusShort(status, lang)}` : statusShort(status, lang))}</small></b>` +
+    `<button type="button" class="adm-ib" data-rail title="${T(lang, "Oldalsáv összecsukása")}" aria-label="${T(lang, "Oldalsáv összecsukása")}">${ic("collapse", 14)}</button></div>` +
+    `<nav class="adm-nav" aria-label="${T(lang, "Fő menü")}">${sideNav(tab, lang, counts)}</nav>` +
+    subscriptionCard(subSummary, counts.modules, lang, false, now) +
+    `<div class="adm-user"><span class="adm-user__av">${esc(initials)}</span>` +
+    `<span class="adm-user__t">${esc(session.displayName)}<small>${esc(session.username)}</small></span>` +
+    `<button type="button" class="adm-ib adm-ib--ghost adm-theme" data-theme-toggle hidden title="${T(lang, "Világos / sötét")}" aria-label="${T(lang, "Világos / sötét")}"><span data-ic>${ic("moon", 16)}</span></button>` +
+    `<a class="adm-ib adm-ib--ghost" href="/logout" title="${T(lang, "Kilépés")}" aria-label="${T(lang, "Kilépés")}">${ic("logout", 16)}</a></div></aside>`;
+  const top =
+    `<div class="adm-top">` +
+    `<a class="adm-ib adm-ib--ghost adm-top__menu" href="#adm-menu" data-drawer-open aria-label="${T(lang, "Menü")}">${ic("menu", 18)}</a>` +
+    `<a class="adm-ib adm-ib--ghost adm-back${overview ? " is-hidden" : ""}" href="/admin" data-back title="${T(lang, "Vissza")}" aria-label="${T(lang, "Vissza")}"${overview ? ' aria-hidden="true" tabindex="-1"' : ""}>${ic("back", 18)}</a>` +
+    `<div class="adm-crumb">${
+      overview
+        ? `<b>${esc(siteName)}</b>`
+        : `<a href="/admin">${esc(siteName)}</a>${ic("fwd", 13)}<b>${esc(crumbLabel)}</b>`
+    }</div>` +
+    // README ③: the search slot is bound by PLACE only — the search itself is not part of the
+    // plan, so no shortcut hint either (a ⌘K that does nothing would be a dead promise, §B.17).
+    `<div class="adm-topsearch" aria-hidden="true">${ic("search", 14)}${T(lang, "Keresés…")}</div>` +
+    `<button type="button" class="adm-ib adm-ib--ghost adm-theme" data-theme-toggle hidden title="${T(lang, "Világos / sötét")}" aria-label="${T(lang, "Világos / sötét")}"><span data-ic>${ic("moon", 16)}</span></button>` +
+    actions +
+    `</div>`;
+  return (
+    ADM_STYLE +
+    `<div class="adm-shell">${side}${top}<main class="adm-main"><div class="adm-main__inner">${main}</div></main>` +
+    bottomNav(tab, lang, counts) +
+    `</div>` +
+    drawer(tab, lang, counts, siteName, slug) +
+    overlaysHtml() +
+    SHELL_SCRIPT(lang)
+  );
+}
+
 export function adminDashboard(
   session: TenantSession,
   content: AdminContent,
@@ -4513,21 +5040,37 @@ export function adminDashboard(
     deactivated: T(lang, "Deaktiválva"),
   };
   const previewUrl = previewToken ? `/site/${previewToken}` : null;
-  const sideBrand = LOGO.replace("citui-brand--ink", "").replace('fill="#16283f"', 'fill="#fff"');
+  const counts: NavCounts = {
+    photos: content?.photos?.length ?? 0,
+    modules: mv ? mv.modules.filter((m) => m.active).length : 0,
+    unread,
+    unseenBookings: opts.unseenBookings ?? 0,
+  };
+  const siteName = session.displayName;
+  const head = THEME_BOOT;
 
   if (!content) {
     return shell(
       T(lang, "Admin"),
-      ADM_STYLE +
-        `<div class="adm-shell"><aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
-        `<nav class="adm-nav">${navItems(tab, lang, unread, opts.unseenBookings ?? 0)}</nav>` +
-        `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
-        `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
-        `<main class="adm-main"><div class="adm-main__inner"><div class="adm-card">` +
-        `<h1>${T(lang, "Üdv, {name}!", { name: esc(session.displayName) })}</h1>` +
-        `<p class="citui-hint">${T(lang, "Ehhez a fiókhoz még nincs szerkeszthető oldal. Amint elkészül az oldala, itt tudja majd szerkeszteni.")}</p>` +
-        `</div></div></main></div>`,
+      frame(
+        lang,
+        tab,
+        session,
+        siteName,
+        opts.siteSlug ?? null,
+        "draft",
+        counts,
+        tabLabel,
+        "",
+        `<div class="adm-card">` +
+          `<h1>${T(lang, "Üdv, {name}!", { name: esc(session.displayName) })}</h1>` +
+          `<p class="citui-hint">${T(lang, "Ehhez a fiókhoz még nincs szerkeszthető oldal. Amint elkészül az oldala, itt tudja majd szerkeszteni.")}</p>` +
+          `</div>`,
+        opts.subSummary ?? null,
+        opts.now ?? new Date(),
+      ),
       lang,
+      { head, bodyClass: "adm-body" },
     );
   }
 
@@ -4685,11 +5228,19 @@ export function adminDashboard(
     }
   })();
 
+  // README ③: „Oldal" (view) in the top bar — under a freeze it says PREVIEW, because
+  // the guest gets a 503 while the owner gets the working page (frozen-guest-view-check).
   const viewBtn = previewUrl
-    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 16)} ${
-        subFrozen ? T(lang, "Előnézet — csak Ön látja") : T(lang, "Oldal megtekintése")
+    ? `<a class="adm-viewbtn" href="${esc(siteUrl ?? previewUrl)}" target="_blank" rel="noopener">${ic("external", 14)} ${
+        subFrozen ? T(lang, "Előnézet — csak Ön látja") : T(lang, "Oldal")
       }</a>`
     : "";
+  // README ③: the page's PRIMARY button, only where the page has one real action.
+  // Fotók → Feltöltés (a <label> for the hidden file field, so it works without JS).
+  const primaryBtn =
+    tab === "fotok"
+      ? `<label class="adm-btn adm-btn--sm adm-btn--p" for="adm-file">${ic("upload", 14)}${T(lang, "Feltöltés")}</label>`
+      : "";
 
   // The freeze block for the OTHER tabs. `compact` on every tab that is not
   // about money: it states the situation and the way out without taking over a
@@ -4706,7 +5257,7 @@ export function adminDashboard(
       : tab === "szovegek"
       ? textsSection(content, lang)
       : tab === "fotok"
-        ? photosCard(content, opts.units ?? [], lang)
+        ? photosCard(content, opts.units ?? [], lang, opts.photosView ?? "grid")
         : tab === "modulok"
           ? // ADR-0044: ?m=<id> opens that module's own settings screen; without it
             // the tab is the on/off list. One screen = one decision.
@@ -4797,41 +5348,49 @@ export function adminDashboard(
                 opts.paidEmpty ?? [],
                 opts.subscription ?? null,
                 opts.priceGaps ?? [],
+                opts.overview ?? null,
+                opts.subSummary ?? null,
+                opts.now ?? new Date(),
               );
+
+  // The Áttekintés and the Fotók render their own page head (title + sentence);
+  // every other tab gets the plain H1 here.
+  const pageHead = tab === "attekintes" || tab === "fotok" ? "" : `<div class="adm-ph"><h1>${esc(tabLabel)}</h1></div>`;
 
   return shell(
     T(lang, "Admin"),
-    ADM_STYLE +
-      `<div class="adm-shell">` +
-      // Desktop sidebar
-      `<aside class="adm-side"><div class="adm-side__brand">${sideBrand}</div>` +
-      `<nav class="adm-nav">${navItems(tab, lang, unread, opts.unseenBookings ?? 0)}</nav>` +
-      `<div class="adm-side__foot"><span class="adm-side__user">${esc(session.username)}</span>` +
-      `<a class="adm-side__out" href="/logout">${T(lang, "Kilépés")}</a></div></aside>` +
-      `<main class="adm-main">` +
-      // Mobile top bar (brand + logout); the nav lives in the bottom bar on mobile
-      `<div class="adm-topbar"><span class="adm-tb-brand">${sideBrand}</span><a href="/logout">${T(lang, "Kilépés")}</a></div>` +
-      `<div class="adm-main__inner">` +
-      `<div class="adm-pagehead"><h1>${esc(tabLabel)}</h1>${viewBtn}</div>` +
-      `<p class="adm-sub">${esc(session.displayName)}</p>` +
-      savedNote +
-      retryNote +
-      // ── ADR-0119 ① reaches EVERY tab (approved plan B, freeze-state-v2 §⑥) ──
-      // The rule has always said the freeze is a STATE, not a box — but only
-      // modulesSection() ever rendered it, so 12 of the 13 tabs stayed silent.
-      // Measured 2026-09-14 on the rendered page: the Üzenetek tab contained
-      // ZERO freeze words while the site was answering 503, and the tab the
-      // owner LANDS ON showed no amount and no way to pay.
-      //   The Modulok tab renders its own (full) block inside the section, so it
-      // is excluded here — otherwise the same block would appear twice.
-      frozenBar +
-      section +
-      `</div></main></div>` +
-      (tab === "fotok" ? UPLOAD_SCRIPT(lang) : "") +
-      // The photo cards (order/caption) and the module screens share one stylesheet.
-      (tab === "modulok" || tab === "fotok" ? MODCFG_STYLE : "") +
+    frame(
+      lang,
+      tab,
+      session,
+      siteName,
+      opts.siteSlug ?? null,
+      content.status,
+      counts,
+      tabLabel,
+      viewBtn + primaryBtn,
+      pageHead +
+        savedNote +
+        retryNote +
+        // ── ADR-0119 ① reaches EVERY tab (approved plan B, freeze-state-v2 §⑥) ──
+        // The rule has always said the freeze is a STATE, not a box — but only
+        // modulesSection() ever rendered it, so 12 of the 13 tabs stayed silent.
+        // Measured 2026-09-14 on the rendered page: the Üzenetek tab contained
+        // ZERO freeze words while the site was answering 503, and the tab the
+        // owner LANDS ON showed no amount and no way to pay.
+        //   The Modulok tab renders its own (full) block inside the section, so it
+        // is excluded here — otherwise the same block would appear twice.
+        frozenBar +
+        section,
+      opts.subSummary ?? null,
+      opts.now ?? new Date(),
+    ) +
+      (tab === "fotok" || tab === "attekintes" ? PHOTO_SCRIPT(lang) : "") +
+      // The module screens share one stylesheet.
+      (tab === "modulok" ? MODCFG_STYLE : "") +
       (tab === "webcim" ? DOMAIN_STYLE : "") +
       (tab === "forgalom" ? TRAFFIC_STYLE : ""),
     lang,
+    { head, bodyClass: "adm-body" },
   );
 }

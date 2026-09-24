@@ -19,7 +19,7 @@
 import { T } from "../i18n/mail.js";
 import type { MonthView } from "../tenant/availability.js";
 import type { InboxItem } from "../booking/requests.js";
-import { ic } from "../ui/icons.js";
+import { icAdmin as ic } from "../ui/icons.js";
 import { formatAmount } from "../tenant/prices.js";
 import { huArticle } from "../hu.js";
 import { formatDay } from "../text/day.js";
@@ -1012,11 +1012,11 @@ export const BOOKINGS_STYLE = `<style>
 .bk-intro{color:var(--citui-muted);font-size:.92rem;line-height:1.55;margin:0 0 14px}
 .bk-intro a{color:var(--citui-cyan-500);font-weight:700}
 /* collapsible calendar */
-.bk-cal{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;
+.bk-cal{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:16px;
   box-shadow:var(--citui-shadow-sm);padding:14px;margin-bottom:14px}
 .bk-cal__top{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit}
 .bk-cal__ico{flex:0 0 auto;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
-  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+  background:var(--citui-surface-2);color:var(--citui-ink)}
 .bk-cal__t{flex:1;min-width:0}
 .bk-cal__t b{display:block;font-size:.98rem}
 .bk-cal__t span{display:block;font-size:.8rem;color:var(--citui-muted);margin-top:1px}
@@ -1028,7 +1028,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-cal__hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
 .bk-cal__hd b{font-size:1rem}
 .bk-cal__nav{display:grid;place-items:center;width:34px;height:34px;border:1.5px solid var(--citui-line);
-  border-radius:10px;text-decoration:none;color:var(--citui-navy-900);font-weight:800}
+  border-radius:10px;text-decoration:none;color:var(--citui-ink);font-weight:800}
 .bk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .bk-dow{font-size:.68rem;font-weight:700;color:var(--citui-muted);text-align:center;padding:4px 0}
 .bk-dayform{display:contents}
@@ -1038,10 +1038,10 @@ export const BOOKINGS_STYLE = `<style>
 .bk-day:hover{border-color:var(--citui-cyan-500)}
 .bk-day--past{opacity:.35;cursor:default;pointer-events:none}
 .bk-day--out{background:transparent;pointer-events:none}
-.bk-day--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white));color:var(--citui-ok)}
+.bk-day--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel));color:var(--citui-ok)}
 .bk-day--sel{border-color:var(--citui-ok)}
 .bk-day--manual{background:var(--citui-navy-900);color:var(--citui-white)}
-.bk-day--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-white));color:var(--citui-warn);cursor:help}
+.bk-day--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-panel));color:var(--citui-warn);cursor:help}
 /* ADR-0114: held by ANOTHER unit — striped, not tappable, same language as the
    module screen so the two calendars cannot tell the owner different things. */
 .bk-day--linked{cursor:help;color:var(--citui-ink);
@@ -1051,11 +1051,11 @@ export const BOOKINGS_STYLE = `<style>
 .bk-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:11px;font-size:.72rem;color:var(--citui-muted)}
 .bk-lg{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:5px;vertical-align:-1px}
 .bk-lg--free{background:var(--citui-surface-2)}
-.bk-lg--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white))}
+.bk-lg--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel))}
 .bk-lg--manual{background:var(--citui-navy-900)}
-.bk-lg--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-white))}
-.bk-lg--sel{background:var(--citui-white);border:2px solid var(--citui-ok);box-sizing:border-box}
-.bk-lg--past{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-white));opacity:.35}
+.bk-lg--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-panel))}
+.bk-lg--sel{background:var(--citui-panel);border:2px solid var(--citui-ok);box-sizing:border-box}
+.bk-lg--past{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel));opacity:.35}
 .bk-dayinfo{margin-bottom:11px;border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);
   background:var(--citui-ok-soft);border-radius:12px;padding:12px 13px}
 .bk-dayinfo>b{display:block;font-size:.92rem;margin-bottom:2px}
@@ -1078,17 +1078,17 @@ export const BOOKINGS_STYLE = `<style>
 .bk-tile__v small{font-size:.78rem;font-weight:600;color:var(--citui-muted)}
 /* ha a legsürgősebb kérés 24 órán belül lejár, a csempe-sor is jelez */
 .bk-tiles--hot .bk-tile:first-child{border-color:color-mix(in srgb,var(--citui-bad) 45%,transparent);
-  background:color-mix(in srgb,var(--citui-bad) 5%,var(--citui-white))}
+  background:color-mix(in srgb,var(--citui-bad) 5%,var(--citui-panel))}
 .bk-tile{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 26px 10px 12px;
   border:1.5px solid transparent;position:relative;text-decoration:none;color:inherit;display:block}
 .bk-tile:hover{border-color:var(--citui-cyan-500)}
-.bk-tile.is-on{border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 9%,var(--citui-white))}
+.bk-tile.is-on{border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 9%,var(--citui-panel))}
 .bk-tile::after{content:"";position:absolute;right:11px;top:50%;width:7px;height:7px;margin-top:-6px;
   border-right:2px solid var(--citui-muted);border-bottom:2px solid var(--citui-muted);transform:rotate(45deg)}
 .bk-tile.is-on::after{transform:rotate(225deg);margin-top:-2px}
 .bk-tile__l{display:block;font-size:.72rem;font-weight:600;color:var(--citui-muted)}
-.bk-tile__v{display:block;font-size:1.02rem;font-weight:700;color:var(--citui-navy-900)}
-.bk-panel{background:var(--citui-white);border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,transparent);
+.bk-tile__v{display:block;font-size:1.02rem;font-weight:700;color:var(--citui-ink)}
+.bk-panel{background:var(--citui-panel);border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,transparent);
   border-radius:13px;padding:6px 8px;margin-bottom:14px;box-shadow:var(--citui-shadow-sm)}
 .bk-prow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:9px;text-decoration:none;color:inherit}
 .bk-prow:hover{background:var(--citui-surface)}
@@ -1098,18 +1098,18 @@ export const BOOKINGS_STYLE = `<style>
 .bk-prow__t span{display:block;font-size:.77rem;color:var(--citui-muted);margin-top:1px}
 .bk-prow__r{margin-left:auto;flex:0 0 auto}
 .bk-panel__more{padding:9px 8px;font-size:.77rem;color:var(--citui-muted);text-align:center}
-.bk-note{background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white));
+.bk-note{background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-panel));
   border:1px solid color-mix(in srgb,var(--citui-cyan-500) 30%,transparent);
   border-radius:11px;padding:11px 13px;font-size:.8rem;line-height:1.55;color:var(--citui-ink);margin-bottom:14px}
 .bk-sect{font-size:.8rem;font-weight:700;color:var(--citui-muted);text-transform:uppercase;
   letter-spacing:.06em;margin:20px 0 10px}
 /* request cards */
-.bk-req{border:1px solid var(--citui-line);border-radius:15px;margin-bottom:11px;background:var(--citui-white)}
+.bk-req{border:1px solid var(--citui-line);border-radius:15px;margin-bottom:11px;background:var(--citui-panel)}
 .bk-req.is-new{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 9%,transparent)}
 .bk-req__hd{display:flex;gap:11px;align-items:flex-start;padding:13px 14px}
 .bk-req__ico{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
-  background:var(--citui-surface-2);color:var(--citui-navy-700)}
+  background:var(--citui-surface-2);color:var(--citui-ink)}
 .bk-req__t{flex:1;min-width:0}
 .bk-req__t strong{display:block;font-size:.97rem}
 .bk-req__dates{display:block;font-size:.85rem;font-weight:600;margin-top:2px}
@@ -1122,12 +1122,12 @@ export const BOOKINGS_STYLE = `<style>
 .bk-req--cool{box-shadow:inset 4px 0 0 var(--citui-line-strong)}
 .bk-deadline{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;
   border-radius:999px;padding:5px 10px;margin-top:6px;
-  background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));color:var(--citui-warn)}
-.bk-deadline--hot{background:color-mix(in srgb,var(--citui-bad) 13%,var(--citui-white));color:var(--citui-bad)}
+  background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));color:var(--citui-warn)}
+.bk-deadline--hot{background:color-mix(in srgb,var(--citui-bad) 13%,var(--citui-panel));color:var(--citui-bad)}
 .bk-deadline--cool{background:var(--citui-surface-2);color:var(--citui-muted)}
 .bk-conflict{display:inline-flex;align-items:flex-start;gap:6px;font-size:.74rem;font-weight:700;line-height:1.45;
   border-radius:11px;padding:7px 11px;margin-top:6px;
-  background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad)}
+  background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad)}
 .bk-req__msg{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;margin:0 14px 12px;
   font-size:.83rem;line-height:1.55;color:var(--citui-ink)}
 .bk-req__act{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
@@ -1137,7 +1137,7 @@ export const BOOKINGS_STYLE = `<style>
   box-sizing:border-box;min-height:40px}
 .bk-verdict summary::-webkit-details-marker{display:none}
 .bk-btn--ok{background:var(--citui-ok);color:var(--citui-white);border:0}
-.bk-btn--ghost{background:var(--citui-white);color:var(--citui-navy-900);border:1.5px solid var(--citui-line-strong)}
+.bk-btn--ghost{background:var(--citui-panel);color:var(--citui-ink);border:1.5px solid var(--citui-line-strong)}
 .bk-btn--danger{background:var(--citui-bad);color:var(--citui-white);border:0}
 .bk-verdict form,.bk-cancel form{border-top:1px dashed var(--citui-line);margin-top:10px;padding-top:10px}
 .bk-verdict label,.bk-cancel label{display:block;font-size:.78rem;font-weight:700;margin-bottom:6px}
@@ -1148,7 +1148,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-row{display:flex;gap:8px;flex-wrap:wrap}
 /* history */
 .bk-hist{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border:1px solid var(--citui-line);
-  border-radius:13px;margin-bottom:8px;background:var(--citui-white);flex-wrap:wrap}
+  border-radius:13px;margin-bottom:8px;background:var(--citui-panel);flex-wrap:wrap}
 .bk-hist__t{flex:1 1 auto;min-width:160px}
 .bk-hist__t strong{display:block;font-size:.88rem}
 .bk-hist__t span{display:block;color:var(--citui-muted);font-size:.77rem;margin-top:1px}
@@ -1162,12 +1162,12 @@ export const BOOKINGS_STYLE = `<style>
   text-transform:uppercase;margin-bottom:3px}
 .bk-quote__txt{display:block;color:var(--citui-ink)}
 .bk-quote--guest{border-left-color:var(--citui-cyan-500);
-  background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-white))}
+  background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-panel))}
 .bk-quote--guest .bk-quote__who{color:color-mix(in srgb,var(--citui-cyan-500) 72%,var(--citui-navy-900))}
 .bk-quote--owner{border-left-color:var(--citui-navy-900);background:var(--citui-surface-2)}
-.bk-quote--owner .bk-quote__who{color:var(--citui-navy-900)}
+.bk-quote--owner .bk-quote__who{color:var(--citui-ink)}
 .bk-quote--system,.bk-quote--unknown{border-left-style:dashed;border-left-color:var(--citui-muted);
-  background:var(--citui-white);border-top:1px solid var(--citui-line);
+  background:var(--citui-panel);border-top:1px solid var(--citui-line);
   border-right:1px solid var(--citui-line);border-bottom:1px solid var(--citui-line)}
 .bk-quote--system .bk-quote__who,.bk-quote--unknown .bk-quote__who{color:var(--citui-muted)}
 .bk-quote--system .bk-quote__txt,.bk-quote--unknown .bk-quote__txt{color:var(--citui-muted)}
@@ -1184,24 +1184,24 @@ export const BOOKINGS_STYLE = `<style>
 .bk-hist__r{flex:0 0 auto;text-align:right}
 .bk-chip{display:inline-block;font-size:.7rem;font-weight:700;border-radius:999px;padding:4px 9px;white-space:nowrap}
 .bk-chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok)}
-.bk-chip--bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad)}
+.bk-chip--bad{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad)}
 .bk-chip--mut{background:var(--citui-surface-2);color:var(--citui-muted)}
-.bk-chip--offer{display:inline-block;margin-top:6px;background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));color:var(--citui-warn-ink)}
+.bk-chip--offer{display:inline-block;margin-top:6px;background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-panel));color:var(--citui-warn-ink)}
 /* a lejárat ELVESZETT VENDÉG — borostyán, kerettel, nem a legcsendesebb chip a lapon */
-.bk-chip--lost{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-white));
+.bk-chip--lost{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-panel));
   color:var(--citui-warn);border:1px solid color-mix(in srgb,var(--citui-warn) 40%,transparent)}
 /* KONTRAKTUS ⑧: a lezárt sor továbbvisz a vendéghez */
 .bk-reach{flex:1 1 100%;margin-top:9px;padding-top:9px;border-top:1px dashed var(--citui-line);
   display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--citui-muted)}
 .bk-reach__do{color:var(--citui-cyan-500);font-weight:700;text-decoration:underline}
-.bk-reach__do:hover{color:var(--citui-navy-900)}
+.bk-reach__do:hover{color:var(--citui-ink)}
 .bk-cancel summary{list-style:none;color:var(--citui-muted);font-size:.74rem;font-weight:700;
   text-decoration:underline;cursor:pointer;margin-top:5px}
 .bk-cancel summary::-webkit-details-marker{display:none}
 .bk-cancel summary:hover{color:var(--citui-bad)}
 .bk-hist .bk-cancel form{text-align:left;min-width:230px}
 .bk-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6;
-  background:var(--citui-white);border:1px dashed var(--citui-line-strong);border-radius:13px}
+  background:var(--citui-panel);border:1px dashed var(--citui-line-strong);border-radius:13px}
 /* overlap popup
    Elek FK-007 (2026-09-11): the modal's bottom was cut off and the closing button
    was not visible at all. Three separate causes, all fixed here:
@@ -1218,12 +1218,12 @@ export const BOOKINGS_STYLE = `<style>
    az isVisible() igazat mondott. Ha itt bármit átírsz, azt az őrnek zölden kell hagynia. */
 .bk-ovl{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 55%,transparent);
   z-index:60;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}
-.bk-ovm{background:var(--citui-white);border-radius:18px;box-shadow:var(--citui-shadow-md);width:100%;
+.bk-ovm{background:var(--citui-panel);border-radius:18px;box-shadow:var(--citui-shadow-md);width:100%;
   max-width:560px;max-height:calc(100vh - 28px);max-height:calc(100dvh - 28px);overflow:auto;
   padding:18px 16px 0;box-sizing:border-box;margin:auto}
-.bk-ovm h3{margin:0 0 4px;font-size:1.1rem;color:var(--citui-navy-900)}
+.bk-ovm h3{margin:0 0 4px;font-size:1.1rem;color:var(--citui-ink)}
 .bk-ovsub{font-size:.83rem;color:var(--citui-muted);line-height:1.55;margin:0 0 13px}
-.bk-ovmonth{text-align:center;font-weight:800;font-size:.92rem;margin:0 0 7px;color:var(--citui-navy-900)}
+.bk-ovmonth{text-align:center;font-weight:800;font-size:.92rem;margin:0 0 7px;color:var(--citui-ink)}
 .bk-ovkey{display:flex;gap:12px;flex-wrap:wrap;font-size:.74rem;margin:8px 0 2px}
 .bk-ovkey span{display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .bk-ovkey i{width:13px;height:13px;border-radius:4px;display:inline-block;flex:0 0 auto}
@@ -1234,28 +1234,28 @@ export const BOOKINGS_STYLE = `<style>
 .bk-ovreq{display:flex;align-items:flex-start;gap:10px;border:1.5px solid var(--citui-line);border-radius:13px;
   padding:11px 12px;margin-top:9px;cursor:pointer}
 .bk-ovreq:hover{border-color:var(--citui-cyan-500)}
-.bk-ovreq.is-sel{border-color:var(--citui-ok);background:color-mix(in srgb,var(--citui-ok) 7%,var(--citui-white))}
+.bk-ovreq.is-sel{border-color:var(--citui-ok);background:color-mix(in srgb,var(--citui-ok) 7%,var(--citui-panel))}
 .bk-ovord{flex:0 0 auto;width:26px;height:26px;border-radius:999px;display:grid;place-items:center;
   font-size:.78rem;font-weight:800;color:var(--citui-white)}
 .bk-ovt{flex:1;min-width:0}
 .bk-ovt b{display:block;font-size:.9rem}
 .bk-ovt span{display:block;font-size:.77rem;color:var(--citui-muted);margin-top:1px;line-height:1.5}
 .bk-ovpick{flex:0 0 auto;border:1.5px solid var(--citui-line-strong);border-radius:999px;
-  padding:8px 13px;font-size:.76rem;font-weight:700;color:var(--citui-navy-900)}
+  padding:8px 13px;font-size:.76rem;font-weight:700;color:var(--citui-ink)}
 .bk-ovreq.is-sel .bk-ovpick{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
-.bk-ovwarn{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-white));
+.bk-ovwarn{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-panel));
   border:1px solid color-mix(in srgb,var(--citui-bad) 30%,transparent);border-radius:12px;
   padding:12px 13px;font-size:.82rem;line-height:1.6;margin-top:12px}
 .bk-ovlabel{display:block;font-size:.78rem;font-weight:700;margin-top:11px;margin-bottom:6px}
 .bk-ovnote{width:100%;box-sizing:border-box;border:1.5px solid var(--citui-line);border-radius:11px;
   padding:10px 12px;font:inherit;min-height:56px;resize:vertical}
 .bk-ovrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;position:sticky;bottom:0;
-  background:var(--citui-white);border-top:1px solid var(--citui-line);padding:11px 0 18px}
+  background:var(--citui-panel);border-top:1px solid var(--citui-line);padding:11px 0 18px}
 /* what the last verdict actually did, in names */
 .bk-outcome{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px;padding:13px 15px;
   border-radius:14px;background:var(--citui-ok-soft);
-  border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);color:var(--citui-navy-900)}
-.bk-outcome--bad{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-white));
+  border:1px solid color-mix(in srgb,var(--citui-ok) 35%,transparent);color:var(--citui-ink)}
+.bk-outcome--bad{background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-panel));
   border-color:color-mix(in srgb,var(--citui-bad) 30%,transparent)}
 .bk-outcome__t{flex:1;min-width:0;font-size:.92rem;line-height:1.55}
 .bk-outcome__also{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:3px}

@@ -400,7 +400,7 @@ const surfaces: Surface[] = [
     auth: true,
     audience: "own",
     expectBar: true,
-    bottomFurniture: ".adm-side",
+    bottomFurniture: ".adm-bnav",
   },
   {
     name: "tenant-admin /admin?tab=modules",
@@ -409,7 +409,7 @@ const surfaces: Surface[] = [
     auth: true,
     audience: "own",
     expectBar: true,
-    bottomFurniture: ".adm-side",
+    bottomFurniture: ".adm-bnav",
   },
 ];
 if (liveSite?.slug) {

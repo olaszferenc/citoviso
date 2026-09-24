@@ -778,6 +778,16 @@ if [ -f scripts/frozen-phone-check.mts ] && \
   echo "[pre-commit] frozen-phone-check (a fagyás telefonon görgetés nélkül látszik)…"
   npx tsx scripts/frozen-phone-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-0224 — a tenant-admin „Linear" kontraktus ŐRE (design-refs/tenant-admin/admin-linear):
+# a keret (oldalsáv / fejléc / alsó sáv / fiók), az Áttekintés 3 widgetje + nyitókép-mutató +
+# teendő-lista, a Fotók (nincs látható fájlmező, bemutatón nincs törlés, rács/lista, nagyítás),
+# a téma megmaradása és a sötét mód „fehér lyuk" tilalma — mindkét méret × mindkét téma.
+# Böngészőt indít (≈40 mp), ezért SZŰK a szűrője: a felület, a stíluslap, az ikonok, a mag.
+if [ -f scripts/admin-linear-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|public/assets/ui/citui-admin\.css|public/assets/ui/citui\.css|src/ui/icons\.ts)|^scripts/admin-linear-check'; then
+  echo "[pre-commit] admin-linear-check (a szállított admin = a jóváhagyott Linear terv)…"
+  npx tsx scripts/admin-linear-check.mts >"$GATE_LOG" || gate_failed
+fi
 # freeze-state-v2 ⑨ (tulajdonosi döntés, 2026-09-15): a tulaj azt is látja, ami az ÖVÉ
 # (belső előnézet), és azt is, amit a VILÁG (az 503-as udvarias lap). Az őr gerince:
 # amit az admin ÍGÉR a látogatói lapról, azt a VALÓDI vendég-lap renderjén keresi vissza

@@ -286,6 +286,36 @@ export async function getSubscriptionAdmin(
   };
 }
 
+/**
+ * ADR-0224 — the sidebar's subscription card, on EVERY admin tab. One cheap row read:
+ * getSubscriptionAdmin() costs five queries (pay-link, dunning order, invoice, coupon…)
+ * and is only loaded where the Modulok tab needs it. The card wants three facts —
+ * cadence, the current cycle's bounds, status — so it reads just those.
+ */
+export interface SubscriptionSummary {
+  readonly status: "active" | "past_due" | "frozen" | "cancelled";
+  readonly billingPeriod: "monthly" | "annual";
+  /** ISO date the CURRENT cycle started (the „K. hónap a 12-ből" anchor). */
+  readonly periodStart: string;
+  /** ISO date of the next renewal. */
+  readonly periodEnd: string;
+}
+
+export async function getSubscriptionSummary(tenantId: string): Promise<SubscriptionSummary | null> {
+  const sub = await db
+    .selectFrom("subscription")
+    .select(["status", "billing_period", "current_period_start", "current_period_end"])
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!sub) return null;
+  return {
+    status: sub.status,
+    billingPeriod: sub.billing_period,
+    periodStart: isoDate(new Date(sub.current_period_start as unknown as string)),
+    periodEnd: isoDate(new Date(sub.current_period_end as unknown as string)),
+  };
+}
+
 /** Arm / disarm the whole-subscription cancellation (takes effect at period end). */
 export async function setSubscriptionCancel(
   tenantId: string,
