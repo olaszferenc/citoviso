@@ -85,3 +85,15 @@ lejárat-levél kivételének kivétele.
 3. A levél nem mondja meg, „mi működött" (foglaltság a szezonban) — a brief célja („amikor épp
    látta, mi működött") ma csak az időzítésben teljesül; a foglaltsági szám külön mérés után.
 4. ADR-0208 ⑥.2–⑥.4 a párhuzamos szálé (nem ez a munka).
+
+### ⑦ UTÓLAG (2026-09-24, tulaj: „menjen a levél link is")
+
+A levél linkje belépés nélkül (telefonon a gyakori eset) a belépő oldalra vitt, és a belépés a
+sima admin-kezdőlapra dobott — a kártya elveszett. Most az `/admin` a célt `next`-ként viszi a
+`/login`-ra, a belépő oldal a `#kártya` részt a saját címéből teszi hozzá (a szerver sosem látja),
+és a sikeres belépés oda irányít. ⛔ A cél felhasználói bemenet: `safeAdminNext()` CSAK `/admin…`
+utat fogad el (`//host`, séma, backslash, vezérlő-karakter → sima `/admin`) — egy nyitott
+átirányítás a belépő oldalunkon adathalász-eszköz lenne. Az őr végigjárja (kijelentkezett
+böngésző → link → belépés → a kártyán a kurzor) és öt idegen célra negatív próbát tesz, egy
+valódi `/admin` célra pozitív kontrollt. A meglévő lejárat-emlékeztető levél linkje is ezt kapja.
+

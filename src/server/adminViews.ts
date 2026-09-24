@@ -221,6 +221,8 @@ export function loginPage(
   msg?: { text: string; kind: "info" | "bad" },
   consoleLoginUrl = "",
   lang = "hu",
+  /** Where to land after login — already vetted by safeAdminNext(); null = the admin. */
+  next: string | null = null,
 ): string {
   const note = msg
     ? `<p class="citui-hint" style="text-align:center;color:${msg.kind === "bad" ? "var(--citui-bad)" : "var(--citui-ok)"}">${esc(msg.text)}</p>`
@@ -236,6 +238,13 @@ export function loginPage(
       `<h1 style="font-size:1.5rem;text-align:center">${T(lang, "Ügyfél-belépés")}</h1>` +
       `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapja kezeléséhez adja meg a felhasználónevét és a kapott jelszót.")}</p>` +
       `<form method="POST" action="/login">` +
+      // A mail link to one admin card: the path rides in `next`; the #card part never
+      // reaches the server, so the page adds it from its own address before posting.
+      (next
+        ? `<input type="hidden" name="next" value="${esc(next)}">` +
+          `<script>(function(){var h=location.hash;if(!/^#[A-Za-z0-9_-]{1,120}$/.test(h))return;` +
+          `var i=document.querySelector('input[name="next"]');if(i&&i.value.indexOf("#")<0)i.value+=h})();</script>`
+        : "") +
       `<div class="citui-field"><label class="citui-label" for="username">${T(lang, "Felhasználónév")}</label>` +
       `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" autofocus placeholder="pl. napfeny-panzio"></div>` +
       `<div class="citui-field"><label class="citui-label" for="password">${T(lang, "Jelszó")}</label>` +

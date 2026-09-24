@@ -278,6 +278,48 @@ try {
     check(`${label}: a levél-link a ${yMain + 1}-es kártyára ugrik, a kurzor az ár-mezőben`, focused === `ev-${sMain.id}-${yMain + 1}`, focused);
     await ctx.close();
   }
+  // The mail link WITHOUT a session (a phone opens it in another browser): the login
+  // must bring the owner back to the very card, cursor in its field (owner, 2026-09-24).
+  {
+    const { hashPassword } = await import("../src/auth/tenantAuth.js");
+    await db.updateTable("tenant_user").set({ password_hash: hashPassword("szezon-teszt-42") }).where("id", "=", tu.id).execute();
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 1000 } });
+    const page = await ctx.newPage();
+    page.on("pageerror", (e) => errs.push(`belépés: ${e.message}`));
+    const target = `/admin?tab=modulok&m=pricing#ev-${sMain.id}-${yMain + 1}`;
+    await page.goto(`${BASE}${target}`, { waitUntil: "networkidle" });
+    const u1 = new URL(page.url());
+    check("levél-link belépés nélkül → a belépő oldal, a céllal (next)", u1.pathname === "/login" && u1.searchParams.get("next") === "/admin?tab=modulok&m=pricing", page.url());
+    check("…a kártya-horgony (#) is megmaradt", u1.hash === `#ev-${sMain.id}-${yMain + 1}`, u1.hash);
+    await page.fill("#username", `syp_${stamp}`);
+    await page.fill("#password", "szezon-teszt-42");
+    await Promise.all([page.waitForNavigation({ waitUntil: "networkidle" }), page.click('button[type="submit"]')]);
+    await page.waitForTimeout(300);
+    const u2 = new URL(page.url());
+    check("belépés után a linkelt lapra ér (nem a kezdőlapra)", u2.pathname === "/admin" && u2.search === "?tab=modulok&m=pricing" && u2.hash === `#ev-${sMain.id}-${yMain + 1}`, page.url());
+    const foc = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.closest("form")?.id ?? "");
+    check(`…és a ${yMain + 1}-es kártyán áll a kurzor`, foc === `ev-${sMain.id}-${yMain + 1}`, foc);
+    await page.screenshot({ path: path.join(OUT, "level-link-belepes-utan-mobil.png") });
+    await ctx.close();
+    // ⛔ never an open redirect: a foreign target lands on the plain admin
+    for (const evil of ["//evil.example/x", "https://evil.example/", "/admin//evil.example", "/admin\\evil", "/login"]) {
+      const r = await fetch(`${BASE}/login`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ username: `syp_${stamp}`, password: "szezon-teszt-42", next: evil }).toString(),
+      });
+      check(`nyitott átirányítás nincs: next=${JSON.stringify(evil)} → /admin`, r.status === 302 && r.headers.get("location") === "/admin", { status: r.status, loc: r.headers.get("location") });
+    }
+    // positive control for the same probe: a real /admin target IS honoured
+    const ok = await fetch(`${BASE}/login`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username: `syp_${stamp}`, password: "szezon-teszt-42", next: "/admin?tab=modulok&m=pricing#ev-x-1" }).toString(),
+    });
+    check("⭐ pozitív kontroll: egy /admin cél viszont érvényes", ok.headers.get("location") === "/admin?tab=modulok&m=pricing#ev-x-1", ok.headers.get("location"));
+  }
   // a year card saved from the browser (the real form, the real route)
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 1000 } });

@@ -2474,7 +2474,7 @@ function seasonEditorScript(lang: string): string {
     // ⛔ The browser's own jump to the #fragment runs AFTER this script and resets focus to
     // <body> (measured) — so the cursor goes in once the page has loaded.
     `if(!/[?&]saved=1/.test(location.search)){var inp=el.querySelector('input[name="amount"]');` +
-    `if(inp){var go=function(){setTimeout(function(){inp.focus({preventScroll:true})},0)};if(document.readyState==="complete")go();else window.addEventListener("load",go)}}sync(st)}` +
+    `if(inp){var go=function(){setTimeout(function(){el.scrollIntoView({block:"center"});inp.focus({preventScroll:true})},0)};if(document.readyState==="complete")go();else window.addEventListener("load",go)}}sync(st)}` +
     // ── previews: what the typed days MEAN, and which other season shares them ──
     `function preview(box,isNew){var out=box.querySelector("[data-sprev]");if(!out)return;` +
     `var fi=box.querySelector('input[name="from"]'),ti=box.querySelector('input[name="to"]');` +

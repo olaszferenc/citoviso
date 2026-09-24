@@ -37,6 +37,7 @@ Session-jegyzet: `_planning/memory/2026-09-23_season_year_price.md`.
 - **Szezon végi kérdés:** a záró nap utáni reggelen egy levél a jövő évi árról (`season_nudged_year`);
   az éves szezonra nincs „lejár egy ár” levél. Kontraktus: `assets/design-refs/tenant-admin/season-year-price/`.
 - **Őr:** `scripts/season-year-price-check.mts` (~99 állítás, piros kontrollal).
+- **Levél-link:** belépés után is a linkelt kártyára visz (csak `/admin…` cél — nincs nyitott átirányítás).
 - **Nyitva:** névelő nélküli levél-tárgy (i18n), egységenkénti levél, foglaltsági szám a levélben.
 
 ## Előző szál (2026-09-23 este — súgó-kép frissesség)

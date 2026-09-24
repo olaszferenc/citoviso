@@ -36,6 +36,7 @@ import {
   changeTenantPassword,
   clearSession,
   currentTenant,
+  safeAdminNext,
   setSession,
   updateContactEmail,
 } from "../auth/tenantAuth.js";
@@ -1065,7 +1066,12 @@ async function serveAdmin(
   roomNotice?: string | null,
 ): Promise<void> {
   const session = await currentTenant(req);
-  if (!session) return redirect(res, "/login");
+  // A mail link to one card of the admin must survive the login (owner, 2026-09-24):
+  // the path + query ride along as `next`; the #card part is added by the login page.
+  if (!session) {
+    const next = safeAdminNext(req.url ?? "");
+    return redirect(res, next && next !== "/admin" ? `/login?next=${encodeURIComponent(next)}` : "/login");
+  }
   const content = await getTenantContent(session.tenantId);
   const site = await db
     .selectFrom("site")
@@ -1842,6 +1848,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (req.method === "POST" && pathname === "/login") {
     const form = await readFormBody(req);
     const uid = await authenticate(form.get("username") ?? "", form.get("password") ?? "");
+    const next = safeAdminNext(form.get("next"));
     if (!uid) {
       return send(
         res,
@@ -1849,11 +1856,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         loginPage(
           { text: "Hibás felhasználónév vagy jelszó.", kind: "bad" },
           consoleLoginUrl(req),
+          undefined,
+          next,
         ),
       );
     }
     setSession(res, uid);
-    return redirect(res, "/admin");
+    // Back to where the link pointed (only ever inside /admin — safeAdminNext).
+    return redirect(res, next ?? "/admin");
   }
   // POST /admin/password — tenant password change (Fiók card).
   if (req.method === "POST" && pathname === "/admin/password") {
@@ -3269,7 +3279,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         : DEFAULT_LANG,
     );
     if (pathname === "/login") {
-      return send(res, 200, loginPage(undefined, consoleLoginUrl(req), loginLang));
+      return send(
+        res,
+        200,
+        loginPage(undefined, consoleLoginUrl(req), loginLang, safeAdminNext(url.searchParams.get("next"))),
+      );
     }
     if (pathname === "/login/help") {
       return send(

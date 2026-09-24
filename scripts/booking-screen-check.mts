@@ -190,8 +190,11 @@ try {
   // állítás jogosan pirosra ment. A SORREND tehát számít, és egy másik állítás épp
   // arra épült. A blokk ezért a foglalt ablak UTÁN marad, csak közelebb húzva,
   // amíg belefér a hónapba.
+  // ⛔ MÉRT HIBA (2026-09-24, harmadszor ugyanitt): a 9/8/7 napos jelöltek szept. 24-én
+  // mind októberbe estek. A `plus(6)` a távozás napja — a vendég-éjszakák UTÁN van, tehát
+  // a „első csíkos cella = vendég" állítás nem sérül, és a hónap utolsó napjain is belefér.
   const manualDay =
-    [9, 8, 7].map(plus).find((d) => sameMonth(d, from)) ?? plus(9);
+    [9, 8, 7, 6].map(plus).find((d) => sameMonth(d, from)) ?? plus(9);
   await db
     .insertInto("availability_day")
     .values({ unit_id: whole.id, day: manualDay, state: "blocked", source: "manual" })
@@ -205,6 +208,7 @@ try {
   // a mostani hónapot mutatja, és minden állítás elhasalna.
   const shownMonth = iso(new Date()).slice(0, 7);
   const measurable = [from, to, manualDay].every((d) => d.slice(0, 7) === shownMonth);
+  const manualInMonth = manualDay.slice(0, 7) === shownMonth;
   if (!measurable) {
     console.log(
       `  ⚠️ KIHAGYVA: a fixtúra ablaka (${from} … ${to}, kézi: ${manualDay}) nem fér egy ` +
@@ -269,7 +273,10 @@ try {
       check("a naptár összecsukható (details)", (await details.count()) === 1);
       const badge = (await page.locator(".cal-sum__badge").textContent()) ?? "";
       // 2 vendég-éjszaka + 1 kézi blokk
-      check("a jelvény a foglalt napok számát mondja", /3 nap tele/.test(badge), badge);
+      // ⛔ A „KIHAGYVA" sor eddig csak KIÍRTA a kihagyást, az állítások mégis lefutottak és
+      // hamisan buktak (2026-09-24). Ami a kézi blokkra épül, most TÉNYLEG kimarad — hangosan.
+      if (manualInMonth) check("a jelvény a foglalt napok számát mondja", /3 nap tele/.test(badge), badge);
+      else console.log("  ⚠️ KIHAGYVA: a jelvény-szám (a kézi blokk nem fér a mostani hónapba)");
       await page.locator(".cal-sum").click();
       await page.waitForTimeout(150);
       check("koppintásra becsukódik", !(await page.locator(".cal-grid").isVisible()));
@@ -310,13 +317,17 @@ try {
       // ④/b A KÉZI blokk és a VENDÉG foglalása nem néz ki egyformán — az egyik
       //     koppintásra felold, a másik kártyát nyit (KB-őr lelete, 2026-09-08).
       const manualCell = page.locator(".cal-cell input:checked + label").first();
-      check("van kézi blokk a hónapban (a méréshez)", (await manualCell.count()) === 1);
-      const manualBg = await manualCell.evaluate((el) => getComputedStyle(el).backgroundColor);
-      const bookedBg = await page
-        .locator(".cal-cell--booked a")
-        .first()
-        .evaluate((el) => getComputedStyle(el).backgroundColor);
-      check("a kézi blokk és a vendég-foglalás KÜLÖNBÖZŐ színű", manualBg !== bookedBg, `${manualBg} vs ${bookedBg}`);
+      if (manualInMonth) {
+        check("van kézi blokk a hónapban (a méréshez)", (await manualCell.count()) === 1);
+        const manualBg = await manualCell.evaluate((el) => getComputedStyle(el).backgroundColor);
+        const bookedBg = await page
+          .locator(".cal-cell--booked a")
+          .first()
+          .evaluate((el) => getComputedStyle(el).backgroundColor);
+        check("a kézi blokk és a vendég-foglalás KÜLÖNBÖZŐ színű", manualBg !== bookedBg, `${manualBg} vs ${bookedBg}`);
+      } else {
+        console.log("  ⚠️ KIHAGYVA: kézi blokk ≠ vendég-foglalás színe (a kézi blokk nem fér a mostani hónapba)");
+      }
       const legend = (await page.locator(".cal-legend").textContent()) ?? "";
       check(
         "a jelmagyarázat mindkettőt külön nevezi meg",

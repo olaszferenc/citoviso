@@ -55,3 +55,6 @@
 - Több egység azonos napon záruló szezonja egységenként külön levél (ha zaj, napi összesítő).
 - A levél nem mond foglaltsági számot („mi működött”) — külön mérés után.
 - ADR-0208 ⑥.2–⑥.4: a párhuzamos szálé.
+- ✅ 2026-09-24: a levél-link belépés után is a kártyára visz (`safeAdminNext`, csak `/admin…` cél;
+  a `#kártya` részt a belépő oldal teszi hozzá). Őr: teljes út + 5 negatív + 1 pozitív kontroll.
+

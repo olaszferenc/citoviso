@@ -108,9 +108,7 @@ a vendég a foglalható hónapokra évenként látja az árat.
 
 Egy időszak utolsó napja utáni reggelen e-mailt küldünk: mennyi volt idén az ára, és mi
 legyen jövőre. Ha marad, nem kell tennie semmit. Ha változtatna, a levél linkje egyenesen a
-következő év kártyájára visz. Ha a link előbb belépést kér, belépés után a Modulok fülön az
-ár-modul **„Beállítás”** linkjével jut ide, és a szezon alatt a következő év kártyáján adhatja
-meg az árat. Egy időszakról évente egyszer írunk, és nem írunk, ha a következő
+következő év kártyájára visz — ha előbb belépést kér, a belépés után is oda. Egy időszakról évente egyszer írunk, és nem írunk, ha a következő
 évre már megadott árat.
 
 ## Mikor adja ki, és legalább hány éjszakára — online foglalással

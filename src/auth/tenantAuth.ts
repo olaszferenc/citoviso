@@ -73,6 +73,25 @@ function setCookie(res: http.ServerResponse, value: string, maxAgeSec: number): 
   );
 }
 
+/**
+ * Where to land after logging in — only somewhere INSIDE the tenant admin.
+ *
+ * A link in our own mail (the end-of-season question, the price-expiry reminder) points
+ * at one card of the Árazás page. On a phone it usually opens in a browser with no
+ * session, and the login used to drop the target: the owner landed on the admin's
+ * front page and had to find the card themself (owner, 2026-09-24: "menjen a levél link
+ * is"). ⛔ The target is user-controlled (a query parameter), so it is accepted ONLY as
+ * a same-site "/admin…" path — never "//host", a backslash, a scheme or a control
+ * character: an open redirect from our login page would be a phishing tool.
+ */
+export function safeAdminNext(raw: string | null | undefined): string | null {
+  const v = String(raw ?? "");
+  if (!v || v.length > 600) return null;
+  if (!/^\/admin(?:[/?#]|$)/.test(v)) return null;
+  if (/[\\\s\x00-\x1f]|\/\//.test(v)) return null;
+  return v;
+}
+
 export function setSession(res: http.ServerResponse, tenantUserId: string): void {
   setCookie(res, `${tenantUserId}.${signValue(tenantUserId)}`, SESSION_TTL_DAYS * 86_400);
 }
