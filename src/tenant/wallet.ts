@@ -198,8 +198,8 @@ export interface CardUpdateOrder {
 }
 
 /**
- * ADR-0226: the order behind "Kártya cseréje" — a card_update that holds
- * CARD_VERIFY_AMOUNT_HUF and is released the moment the token is stored.
+ * ADR-0226: the order behind "Kártya cseréje" — a card_update that takes
+ * CARD_VERIFY_AMOUNT_HUF and refunds it the moment the token is stored (ADR-XXXX).
  * Reuses a still-fresh open one (a second click must not mint a second hold).
  * Billing identity is inherited (0029 doctrine) so the order passes the same
  * gates as any other; FAIL CLOSED without a declared buyer.

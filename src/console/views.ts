@@ -1757,7 +1757,7 @@ function payCopyScript(lang: string): string {
     var orig=b.textContent;
     b.addEventListener("click",function(){
       var t=(c.textContent||"").trim();
-      var done=function(){b.textContent=${jsStr(T(lang, "✓ Kimásolva"))};b.classList.add("is-done");
+      var done=function(){b.textContent='${jsStr(T(lang, "✓ Kimásolva"))}';b.classList.add("is-done");
         setTimeout(function(){b.textContent=orig;b.classList.remove("is-done");},1800);};
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done,done);
       else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();
@@ -1815,7 +1815,7 @@ export function payMockPage(
       ? `<div class="pay-act">
       <form method="post" action="/pay/mock/${esc(ref)}/paid">${cardPicker}<button type="submit">${
         wallet?.verification
-          ? `${T(lang, "Megerősítem a kártyát")} — ${T(lang, "{sum} zárolás, azonnal feloldva", { sum: fmtHuf(amount) })}`
+          ? `${T(lang, "Megerősítem a kártyát")} — ${T(lang, "{sum}, azonnal visszautalva", { sum: fmtHuf(amount) })}`
           : `${T(lang, "Fizetek")} — ${fmtHuf(amount)}`
       }</button></form>
       <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/failed"><button type="submit">${
@@ -1875,7 +1875,7 @@ export function payMockPage(
             cycle: esc(cycleWord),
           })
         : wallet?.verification
-          ? T(lang, "Kártya-megerősítés — zárolás, pénzt nem vonunk le")
+          ? T(lang, "Kártya-megerősítés — az összeget azonnal visszautaljuk")
           : T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }),
     )}
     <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>

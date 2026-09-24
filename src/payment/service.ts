@@ -38,8 +38,15 @@ export interface RequestPaymentResult {
   readonly gatewayRef: string;
 }
 
-/** ADR-0226: the amount a card-verification payment HOLDS (and releases). */
-export const CARD_VERIFY_AMOUNT_HUF = 100;
+/**
+ * ADR-0226 + ADR-XXXX: the amount a card-verification payment takes and refunds at once.
+ * ⚠️ A Barion "Reservation" paid by BANK CARD is a real charge held in OUR wallet, and
+ * FinishReservation(0) is a REFUND to the card (docs: up to 30 days, bank-dependent) —
+ * NOT a hold release (measured in the sandbox 2026-09-24: CardPayment + RefundToBankCard).
+ * Owner ruling: keep the mechanism, keep the amount small (10 Ft, sandbox-proven end to
+ * end incl. the MIT charge on the token). Every sentence about it derives from this.
+ */
+export const CARD_VERIFY_AMOUNT_HUF = 10;
 
 /** Create (or reuse a still-pending) pay-link for a submitted order intent.
  *  ADR-0226 `newCard`: an UPSELL the tenant chose to pay "with another card" —
@@ -198,7 +205,7 @@ export async function requestPayment(
           : oi.kind === "upsell"
             ? "Citoviso modul-bővítés — időarányos első díj"
             : oi.kind === "card_update"
-              ? "Citoviso kártya-megerősítés — zárolás, azonnal feloldva"
+              ? "Citoviso kártya-megerősítés — azonnal visszautalva"
               : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,

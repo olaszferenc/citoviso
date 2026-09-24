@@ -38,6 +38,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
+import { CARD_VERIFY_AMOUNT_HUF } from "../src/payment/service.js";
 import {
   adminDashboard,
   domainSettlementSection,
@@ -350,7 +351,7 @@ const walletFixture: WalletAdminData = {
     { on: "2026-06-28", orderKind: "initial", billingPeriod: "monthly", amount: 7240, status: "paid" },
   ],
   history: [{ brand: "MasterCard", last4: "8810", savedOn: "2026-03-10", endedOn: "2026-06-28", reason: "replaced" }],
-  verifyAmount: 100,
+  verifyAmount: CARD_VERIFY_AMOUNT_HUF, // the product constant, not a second copy (ADR-XXXX)
   canChangeCard: true,
 };
 

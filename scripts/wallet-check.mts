@@ -45,7 +45,7 @@ const ok = (cond: boolean, what: string): void => {
 const { adminDashboard, walletSection } = await import("../src/server/adminViews.js");
 const { BarionGateway } = await import("../src/payment/barion.js");
 const { MockGateway, MOCK_CARDS } = await import("../src/payment/mock.js");
-const { applyWebhookResult, requestPayment } = await import("../src/payment/service.js");
+const { applyWebhookResult, requestPayment, CARD_VERIFY_AMOUNT_HUF } = await import("../src/payment/service.js");
 const { revokeAutoCharge } = await import("../src/payment/subscription.js");
 const { createCardUpdateOrder, getWalletAdmin, cardExpiresBefore } = await import("../src/tenant/wallet.js");
 const { getTenantModules } = await import("../src/tenant/modules.js");
@@ -105,7 +105,7 @@ const base: WalletAdminData = {
   frozen: false,
   charges: [{ on: "2026-08-28", orderKind: "renewal", billingPeriod: "monthly", amount: 7240, status: "paid" }],
   history: [{ brand: "MasterCard", last4: "8810", savedOn: "2026-03-10", endedOn: "2026-06-28", reason: "replaced" }],
-  verifyAmount: 100,
+  verifyAmount: CARD_VERIFY_AMOUNT_HUF,
   canChangeCard: true,
 };
 const strip = (html: string): string => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
@@ -121,7 +121,12 @@ console.log("A) render — állapotok és a kontraktus feliratai");
   ok(onT.includes("Korábbi kártyák (1)") && onT.includes("MASTERCARD ····8810") && onT.includes("cserélve"), "előzmény: cserélve (④)");
   ok(on.includes("data-wal-change>") && onT.includes("Kártya cseréje"), "gomb: Kártya cseréje (④)");
   ok(on.includes("data-mand-revoke>") && on.includes('form="adm-mand-off"'), "gomb: Megbízás visszavonása + kétlépéses ablak (⑥)");
-  ok(onT.includes("100 Ft-ot zárolunk") && onT.includes("pénzt nem vonunk le"), "csere-ablak: a hitelesítés ára kimondva (⑤)");
+  // ⑤ + ADR-XXXX: a bank-card Reservation IS a charge and Finish(0) a refund (sandbox-
+  // measured) — the sentence must say "terhelünk … visszautaljuk … legfeljebb 30 nap",
+  // and the old "zárolunk / pénzt nem vonunk le" promise must be GONE, not merely joined.
+  ok(onT.includes("10 Ft-ot terhelünk") && onT.includes("azonnal vissza is utaljuk") && onT.includes("legfeljebb 30 nap"), "csere-ablak: a hitelesítés ára IGAZON kimondva — terhelés + visszautalás, max 30 nap (⑤)");
+  ok(!onT.includes("zárolunk") && !onT.includes("pénzt nem vonunk le"), "csere-ablak: a hamis „zárolunk / pénzt nem vonunk le” ígéret nincs a lapon (⑤)");
+  ok(CARD_VERIFY_AMOUNT_HUF === 10, `a megerősítő összeg a tulaj döntése szerint 10 Ft (mért: ${CARD_VERIFY_AMOUNT_HUF})`);
   ok(onT.includes("Kártya megadása") && onT.includes("gombbal"), "visszavonó ablak 4. pontja a valódi utódot nevezi (⑥)");
   // ② The face never carries more than four digits — whatever the gateway sent.
   const face = on.match(/<div class="adm-wal__num">([^<]*)<\/div>/)?.[1] ?? "";
@@ -147,7 +152,7 @@ console.log("A) render — állapotok és a kontraktus feliratai");
   ok(!noGw.includes("data-wal-change>") && !strip(noGw).includes("Kártya cseréje"), "zárolást nem tudó átjáró: nincs csere-gomb (④)");
 
   const flash = strip(walletSection({ ...base, card: { brand: "MasterCard", last4: "8810", expMonth: 3, expYear: 2029, savedOn: "2026-09-24" } }, sub, "ok"));
-  ok(flash.includes("Kész: a mentett kártya ezután MASTERCARD ····8810") && flash.includes("zárolást feloldottuk"), "csere-siker sáv (④)");
+  ok(flash.includes("Kész: a mentett kártya ezután MASTERCARD ····8810") && flash.includes("10 Ft-ot azonnal visszautaltuk") && flash.includes("legfeljebb 30 napon") && !flash.includes("zárolást feloldottuk"), "csere-siker sáv: a visszautalás igaz mondata (④/⑤)");
   ok(strip(walletSection(base, sub, "fail")).includes("A bank elutasította a megerősítést") && strip(walletSection(base, sub, "fail")).includes("nem változott"), "csere-elutasítás sáv: semmi nem változott (④)");
 
   ok(!walletSection(null, null, null).includes("adm-wal__face") && strip(walletSection(null, null, null)).includes("akkor jelenik meg"), "előfizetés nélkül: őszinte üres állapot");
@@ -313,7 +318,7 @@ try {
   const link = await requestPayment(o1.orderId!);
   ok(!!link?.payUrl, "requestPayment(card_update): pay-link (a mock zárolást tud)");
   const payRow = await db.selectFrom("payment").select(["id", "initiates_recurrence", "amount"]).where("id", "=", link!.paymentId).executeTakeFirstOrThrow();
-  ok(payRow.initiates_recurrence === true && payRow.amount === 100, "a fizetés-sor: initiates_recurrence=true, 100 Ft");
+  ok(payRow.initiates_recurrence === true && payRow.amount === CARD_VERIFY_AMOUNT_HUF, `a fizetés-sor: initiates_recurrence=true, ${CARD_VERIFY_AMOUNT_HUF} Ft`);
   const o2 = await createCardUpdateOrder(tenantId);
   ok(o2.ok && o2.orderId === o1.orderId, "második kattintás: a nyitott rendelést hasznosítja újra (nincs második zárolás)");
 

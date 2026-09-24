@@ -17,6 +17,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { Script } from "node:vm";
 import { chromium, type Page } from "playwright-core";
 
 import { payResultPage } from "../src/console/views.js";
@@ -69,6 +70,16 @@ function luminance(rgb: string): number {
   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
 }
 
+/** Compile only — the script never runs here (no DOM); a SyntaxError is the finding. */
+function parses(src: string): boolean {
+  try {
+    new Script(src);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function main(): Promise<void> {
   const dir = await mkdtemp(path.join(tmpdir(), "cit-paydone-"));
   try {
@@ -97,6 +108,17 @@ async function main(): Promise<void> {
     check(/id="payRef"/.test(liveHtml) && /data-copy-target="payRef"/.test(liveHtml),
       "a hivatkozási azonosító másolható");
     check(liveHtml.includes("2026"), "a következő terhelés DÁTUMMAL szerepel");
+    // ⛔ MÉRT HIBA (2026-09-24, wallet-tour): a két másolás-gomb MARKUPJA hónapokig
+    // zölden átment a fenti két állításon, miközben a szkript, ami működteti, el sem
+    // indult — `b.textContent=✓ Kimásolva` idézőjel nélkül (a `jsStr()` csak escape-el,
+    // nem idéz) → SyntaxError, a gomb halott a vevő lapján. A jelenlét nem működés:
+    // minden inline szkriptnek le kell fordulnia.
+    const scripts = [...liveHtml.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]!);
+    const broken = scripts.filter((s) => !parses(s));
+    check(scripts.length > 0 && broken.length === 0,
+      `a lap inline szkriptjei lefordulnak (mért: ${scripts.length} szkript, ${broken.length} hibás)`);
+    check(!parses("var b={};b.textContent=✓ Kimásolva;"),
+      "negatív kontroll: az idézetlen felirat (a mért hiba) NEM fordul le");
 
     console.log("\n⑥ EGY ÖSSZEG, EGYSZER (a fejléc alatti duplikáció mért hiba volt)");
     // ⛔ A forrás-illesztés itt HAMIS PIROSAT adott (mért: 5): a terhelt összeg

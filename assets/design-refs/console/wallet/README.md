@@ -33,6 +33,12 @@ stílus-javaslat.
 5. **A csere-hitelesítés ára a lapon áll, és IGAZ.** A vázlat a „100 Ft zárolás, azonnal
    feloldva" változatot írja; a megvalósítás azt a mondatot viszi, amelyet a Barion-doksi és a
    sandbox IGAZOL (zárolás/feloldás vagy jelképes összeg, amit a következő díjból jóváírunk).
+   ⭐ **Eldőlt (2026-09-24, ADR-XXXX, sandbox-mérés + tulajdonosi döntés):** a Barion
+   bankkártyás „Reservation"-je VALÓDI terhelés, a `FinishReservation(0)` VISSZATÉRÍTÉS a
+   kártyára (a doksi szerint legfeljebb 30 nap), a Barion-gomb „Fizetek: <összeg>". A mód
+   marad, az összeg **10 Ft**, és a mondat: „A megerősítéshez 10 Ft-ot terhelünk a kártyán,
+   és azonnal vissza is utaljuk — a visszatérítés a bankjától függően néhány nap, legfeljebb
+   30 nap alatt jelenik meg." ⛔ „zárolunk" / „pénzt nem vonunk le" TILOS (hamis).
    A mondat NEM ígérhet olyat, amit az átjáró nem tesz.
 6. **Megbízás visszavonása** — a jóváhagyott KÉTLÉPÉSES ablak (mandate-coupon ②) változatlan
    hátrány-listával; a 4. pont szövege azonban frissül: „a visszakapcsolás nem egy kattintás:

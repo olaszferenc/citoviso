@@ -39,8 +39,9 @@ terheléssel kerülnek ide.
 1. Koppintson a **„Kártya cseréje”** gombra (ha még nincs kártyája: **„Kártya megadása”**).
 2. Egy kis ablak elmagyarázza, mi következik: az új kártyát a fizetési szolgáltató (Barion)
    oldalán adja meg, a bankja pedig egyszeri megerősítést kér (SMS vagy banki alkalmazás).
-   A megerősítéshez **100 Ft-ot zárolunk a kártyán, és a megerősítés után rögtön
-   feloldjuk** — pénzt nem vonunk le; a bankja a feloldást néhány napon belül könyveli.
+   A megerősítéshez **10 Ft-ot terhelünk a kártyán, és azonnal vissza is utaljuk** — a
+   visszatérítés a bankjától függően néhány nap, legfeljebb 30 nap alatt jelenik meg.
+   (A Barion fizetési oldalán ezért a gomb „Fizetek: 10 Ft” feliratú.)
 3. Koppintson a **„Tovább a bankkártyás megerősítéshez”** gombra, és adja meg az új kártyát
    a megnyíló fizetési oldalon. Ha meggondolta magát, a **„Mégsem”** gombbal bezárhatja az
    ablakot — ilyenkor semmi nem változik.

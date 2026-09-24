@@ -4560,7 +4560,7 @@ export function walletSection(
   // ── the round that just ended (contract ④: success / refused / nothing changed) ──
   const flashBox =
     flash === "ok"
-      ? `<div class="adm-applied" role="status"><b>${T(lang, "Kész: a mentett kártya ezután {card}.", { card: esc(card ? `${walletBrandWord(card.brand)} ····${card.last4 ?? "????"}`.trim() : "") })}</b> ${T(lang, "Pénzt nem vontunk le — a zárolást feloldottuk.")}</div>`
+      ? `<div class="adm-applied" role="status"><b>${T(lang, "Kész: a mentett kártya ezután {card}.", { card: esc(card ? `${walletBrandWord(card.brand)} ····${card.last4 ?? "????"}`.trim() : "") })}</b> ${T(lang, "A megerősítő {sum}-ot azonnal visszautaltuk — a bankja néhány napon, legfeljebb 30 napon belül jóváírja.", { sum: esc(hufAmount(w.verifyAmount)) })}</div>`
       : flash === "fail"
         ? `<div class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)"><b>${T(lang, "A bank elutasította a megerősítést.")}</b> ${T(lang, "A mentett kártya nem változott.")}</div>`
         : flash === "err"
@@ -4656,7 +4656,7 @@ export function walletSection(
       `<p class="adm-fc__note">${T(lang, "Az új kártyát a fizetési szolgáltató (Barion) oldalán adja meg — a kártyaadatokat mi nem látjuk és nem tároljuk.")}</p>` +
       // Contract ⑤: the price of the verification, TRUE to what the gateway does
       // (a Reservation hold that the webhook releases with FinishReservation 0).
-      `<div class="adm-wal__gw"><b>${T(lang, "Mi történik:")}</b> ${T(lang, "a bank egy egyszeri megerősítést kér (SMS / banki alkalmazás). A megerősítéshez {sum}-ot zárolunk a kártyán, és a megerősítés után rögtön feloldjuk — pénzt nem vonunk le; a bankja a feloldást néhány napon belül könyveli. Ezután minden díjat az új kártyáról vonunk, a régit töröljük.", { sum: esc(hufAmount(w.verifyAmount)) })}</div>` +
+      `<div class="adm-wal__gw"><b>${T(lang, "Mi történik:")}</b> ${T(lang, "a bank egy egyszeri megerősítést kér (SMS / banki alkalmazás). A megerősítéshez {sum}-ot terhelünk a kártyán, és azonnal vissza is utaljuk — a visszatérítés a bankjától függően néhány nap, legfeljebb 30 nap alatt jelenik meg. Ezután minden díjat az új kártyáról vonunk, a régit töröljük.", { sum: esc(hufAmount(w.verifyAmount)) })}</div>` +
       `<button class="adm-mdl__keep" type="submit" form="adm-wal-change">${T(lang, "Tovább a bankkártyás megerősítéshez")}</button>` +
       `<button class="adm-mdl__ghost" type="button" data-wal-keep>${T(lang, "Mégsem")}</button>` +
       `</div>` +

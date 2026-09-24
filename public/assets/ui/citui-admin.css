@@ -755,6 +755,14 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   border-radius:var(--citui-radius);padding:12px 14px;margin-top:14px;display:none;
   box-shadow:var(--citui-shadow-md)}
 .adm-planbar.show{display:block}
+/* ⛔ MÉRT HIBA (2026-09-24, wallet-tour): on the phone layout the bar stuck at bottom:10px,
+   i.e. UNDER the fixed bottom tab bar — its pay button sat at y=770 of 844 px, covered for as
+   long as the bar was "helpfully" sticky. Lift it above the tab bar (same token as the cookie
+   bar). ⚠️ Must stay AFTER the base rule: an earlier copy inside the @media(max-width:899px)
+   block above lost to it on source order and changed nothing (measured). */
+@media(max-width:899px){
+  .adm-planbar{bottom:calc(var(--citui-admin-bottomnav-h) + env(safe-area-inset-bottom) + 10px)}
+}
 .adm-planbar__row{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:3px 0}
 .adm-planbar__tag{font-weight:700}
 .adm-planbar__tag--add{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-panel))}
