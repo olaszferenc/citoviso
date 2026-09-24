@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-24 (✅ **Barion bírálat LEZÁRVA** — Advanced díjcsomag jóváhagyva: 1,19% + 0,2% recurring = **1,39%** ténylegesen; Metrics az Elfogadóhelyek menüben) · 2026-09-24 (worktree-ütközések három gyökéroka zárva — címadó eszköz nélkül, resume fa-őr CIT·MR·OF, kapu-versenyek egyedi állapotra; ADR-0223) · 2026-09-24 (Barion „Unsuccessful callback” levelek: a market-gate-check indított valódi sandbox-fizetést → mock átjáró kötelezően; köztes Barion-állapot 200, ismeretlen fizetés 400 — nem élesítve) · 2026-09-23 („nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető, ADR-0222 — nem élesítve) · 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-0221 — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-24 (🎨 **tenant-admin újratervezés: „A” Linear jóváhagyva, terv befagyasztva, kód következik** — ADR-XXXX) · 2026-09-24 (✅ **Barion bírálat LEZÁRVA** — Advanced díjcsomag jóváhagyva: 1,19% + 0,2% recurring = **1,39%** ténylegesen; Metrics az Elfogadóhelyek menüben) · 2026-09-24 (worktree-ütközések három gyökéroka zárva — címadó eszköz nélkül, resume fa-őr CIT·MR·OF, kapu-versenyek egyedi állapotra; ADR-0223) · 2026-09-24 (Barion „Unsuccessful callback” levelek: a market-gate-check indított valódi sandbox-fizetést → mock átjáró kötelezően; köztes Barion-állapot 200, ismeretlen fizetés 400 — nem élesítve) · 2026-09-23 („nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető, ADR-0222 — nem élesítve) · 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-0221 — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%). ✅ **Advanced díjcsomag JÓVÁHAGYVA (2026-09-24):**
@@ -11,7 +11,21 @@ Utolsó frissítés: 2026-09-24 (✅ **Barion bírálat LEZÁRVA** — Advanced 
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-24 délelőtt — párhuzamosság)
+## Aktív feladat (legfrissebb szál, 2026-09-24 délután — tenant-admin újratervezés)
+
+**🎨 TENANT-ADMIN ÚJRATERVEZÉS — „A” (Linear + cián akcent + fehér oldalsáv) JÓVÁHAGYVA, a
+terv BEFAGYASZTVA, a kód MÉG NEM indult (ADR-XXXX).** Kontraktus:
+`assets/design-refs/tenant-admin/admin-linear/` (README = mit köt; `plan.html` kattintható,
+világos/sötét × mobil/asztali képek). Jegyzet: `_planning/memory/2026-09-24_tenant_admin_linear_redesign.md`.
+- Három §2b kör: ① a mai admin átrendezése ELVETVE („légy drasztikus, csak a logó marad”) →
+  ② 4 új nyelv (Linear · Bento · Midnight · Enterprise), Linear az alap → ③ + cián akcent,
+  Midnight előfizetés-kártya, Bento nyitókép-mutató, világos/sötét váltó; A (fehér sáv) nyert.
+- **Következő:** megvalósítás a README sorrendjében: ① keret + navigáció + téma (minden fül) →
+  ② Áttekintés → ③ Fotók → ④ súgó-képek + KB-idézetek (a „Kiválasztott fotók feltöltése”
+  felirat megszűnik → fogyasztók grepelése). Őr: `scripts/admin-linear-check.mts` (készül).
+  ⛔ A mock hexei csak a mockban — a kód `--citui-*` tokenekből (sötét készlet a citui.css-be).
+
+## Előző szál (2026-09-24 délelőtt — párhuzamosság)
 
 **🛡️ „WORKTREE COMMIT ÖSSZEAKADÁSOK” — HÁROM GYÖKÉROK, MIND ZÁRVA (ADR-0223).** Jegyzet:
 `_planning/memory/2026-09-24_worktree_collision_root_causes.md`.
