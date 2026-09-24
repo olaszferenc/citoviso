@@ -38,6 +38,8 @@ export async function deliverInvoiceEmail(input: {
   period: "monthly" | "annual" | "once";
   pdfBase64: string | null;
   buyerName: string;
+  /** true only for a private person — a company gets the neutral salutation. */
+  buyerIsPerson?: boolean;
   buyerEmail: string | null;
 }): Promise<void> {
   try {
@@ -54,6 +56,7 @@ export async function deliverInvoiceEmail(input: {
         "site.status as siteStatus",
         "site.slug as siteSlug",
         "site.custom_domain as siteCustomDomain",
+        "tenant.display_name as siteName",
         // Elek FK-001 E1: WHAT was billed — the same column the admin's
         // document row derives its item name from, so the mail subject and the
         // list can not drift apart.
@@ -83,6 +86,8 @@ export async function deliverInvoiceEmail(input: {
     const msg = buildInvoiceEmail({
       to: to.join(", "),
       buyerName: input.buyerName,
+      buyerIsPerson: input.buyerIsPerson ?? false,
+      siteName: row?.siteName ?? null,
       invoiceNumber: input.invoiceNumber,
       gross: input.gross,
       currency: input.currency,

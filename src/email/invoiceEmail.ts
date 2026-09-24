@@ -12,12 +12,17 @@
 import { T } from "../i18n/mail.js";
 import { formatMoney } from "../text/money.js";
 import { invoiceItemLabel, type InvoiceItemKey } from "../billing/invoiceItem.js";
+import { esc, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
 
 export interface InvoiceEmailInput {
   /** All billing recipients, comma-joined by the caller (primary first). */
   readonly to: string;
   readonly buyerName: string;
+  /** true only for a private person — a company gets the neutral salutation. */
+  readonly buyerIsPerson?: boolean;
+  /** The site the fee is for (tenant display name) — named in the footer. */
+  readonly siteName?: string | null;
   readonly invoiceNumber: string;
   readonly gross: number;
   readonly currency: string;
@@ -55,8 +60,9 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     item: itemName,
   });
 
+  const greeting = mailGreeting(lang, buyerName, input.buyerIsPerson ?? false);
   const text =
-    T(lang, "Kedves {name}!", { name: buyerName }) +
+    greeting +
     `\n\n` +
     // Egy egyszeri díjnál nincs mit „előfizetni" — ugyanaz a §B.17-sértés, mint
     // a tárgyban volt, csak a törzsben.
@@ -77,26 +83,6 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
     T(lang, "Ha kérdése van a számlával kapcsolatban, válaszoljon erre a levélre.") +
     `\n`;
 
-  const html =
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
-    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
-    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${
-      period === "once" ? T(lang, "Köszönjük a megrendelést!") : T(lang, "Köszönjük az előfizetést!")
-    }</h1>` +
-    `<p style="margin:0 0 16px">${T(lang, "A fizetés megérkezett. A számlát a levél mellékletében találja.")}</p>` +
-    `<div style="background:#fff;border:1px solid #dfe5ec;border-radius:12px;padding:18px 20px;margin:0 0 20px">` +
-    `<p style="margin:0 0 6px"><strong>${T(lang, "Számla sorszáma:")}</strong> ${invoiceNumber}</p>` +
-    `<p style="margin:0 0 6px"><strong>${T(lang, "Összeg:")}</strong> ${total}</p>` +
-    `<p style="margin:0"><strong>${T(lang, "Tétel:")}</strong> ${itemName}</p></div>` +
-    (siteUrl
-      ? `<p style="margin:0 0 24px"><a href="${siteUrl}" ` +
-        `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
-        `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Oldala megtekintése")}</a></p>`
-      : "") +
-    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Ha kérdése van a számlával kapcsolatban, válaszoljon erre a levélre.")}</p>` +
-    `</div></body></html>`;
-
   const attachments: EmailAttachment[] = input.pdfBase64
     ? [
         {
@@ -107,13 +93,29 @@ export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {
       ]
     : [];
 
+  const thanks =
+    period === "once" ? T(lang, "Köszönjük a megrendelést!") : T(lang, "Köszönjük az előfizetést!");
+  const receivedLine = T(lang, "A fizetése megérkezett. A számlát PDF-ben csatoltuk ehhez a levélhez.");
+
   // Our own customer relationship (we issue the invoice) → pilot BCC applies.
-  return {
+  return platformMail({
     to,
-    audience: "platform",
     subject,
     text,
-    html,
+    lang,
+    heading: thanks,
+    greeting,
+    siteName: input.siteName ?? null,
+    blocks: [
+      mailPara(esc(receivedLine)),
+      mailDetails([
+        { label: T(lang, "Számla sorszáma"), value: invoiceNumber },
+        { label: T(lang, "Tétel"), value: itemName },
+        { label: T(lang, "Összeg"), value: total, emphasis: true },
+      ]),
+      ...(siteUrl ? [mailButton(siteUrl, T(lang, "Oldala megtekintése"))] : []),
+      mailNote(esc(T(lang, "Kérdése van a számlával kapcsolatban? Egyszerűen válaszoljon erre a levélre."))),
+    ],
     ...(attachments.length ? { attachments } : {}),
-  };
+  });
 }

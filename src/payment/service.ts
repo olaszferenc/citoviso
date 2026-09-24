@@ -979,6 +979,7 @@ async function issueInvoiceFor(paymentId: string): Promise<void> {
       period: cadence,
       pdfBase64: res.pdfBase64 ?? null,
       buyerName: p.buyerName,
+      buyerIsPerson: p.buyerType === "individual",
       buyerEmail: p.buyerEmail ?? p.email,
     });
   } catch (e) {
@@ -1013,6 +1014,9 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
       "prospect.contact_email as contactEmail",
+      // The credentials letter greets the buyer by name (a person only).
+      "order_intent.buyer_name as buyerName",
+      "order_intent.buyer_type as buyerType",
       // ADR-0111: the market gate below needs the buyer's jurisdiction.
       "order_intent.buyer_country as buyerCountry",
     ])
@@ -1157,6 +1161,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
           conv.tenantId,
           tenantRow?.display_name ?? "oldalam",
           oi.contactEmail,
+          { name: oi.buyerName, isPerson: oi.buyerType === "individual" },
         );
         console.log(
           `[payment] tenant-belépés kiadva · ${login.username} → ${login.contactEmail}`,

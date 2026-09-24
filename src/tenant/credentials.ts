@@ -84,6 +84,8 @@ export async function issueAndSendTenantLogin(
   tenantId: string,
   businessName: string,
   contactEmail: string,
+  /** Who ordered — only for the salutation (a company gets a neutral one). */
+  buyer?: { name: string | null; isPerson: boolean },
 ): Promise<IssuedLogin> {
   const login = await issueTenantLogin(tenantId, businessName, contactEmail);
   const loginUrl = `${config.publicSiteUrl.replace(/\/$/, "")}/login`;
@@ -94,6 +96,9 @@ export async function issueAndSendTenantLogin(
     username: login.username,
     password: login.password,
     loginUrl,
+    siteName: businessName,
+    buyerName: buyer?.name ?? null,
+    buyerIsPerson: buyer?.isPerson ?? false,
     lang,
   });
   await getEmailSender().send(msg);

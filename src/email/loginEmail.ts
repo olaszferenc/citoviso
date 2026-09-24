@@ -3,8 +3,14 @@
 //
 // ADR-0067: written in the TENANT's own site language. The caller resolves it
 // (langForTenant) and provisions the pack (prepareMailLang) before building.
+//
+// Frame: platformLayout.ts (approved variant A, 2026-09-24). The letter names
+// the SITE — an owner with two places, or one who ordered weeks ago, must not
+// have to guess which login this is.
 
 import { T } from "../i18n/mail.js";
+import { huArticleLower } from "../hu.js";
+import { mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail, esc } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 
 export function buildCredentialsEmail(input: {
@@ -12,44 +18,51 @@ export function buildCredentialsEmail(input: {
   username: string;
   password: string;
   loginUrl: string;
+  /** The site these credentials edit (tenant display name). */
+  siteName: string;
+  /** Who ordered (order_intent.buyer_name); absent → neutral salutation. */
+  buyerName?: string | null;
+  /** true only for a private person — a company gets the neutral salutation. */
+  buyerIsPerson?: boolean;
   /** Reader's language (ADR-0067). Absent → Hungarian. */
   lang?: string;
 }): EmailMessage {
-  const { to, username, password, loginUrl, lang } = input;
+  const { to, username, password, loginUrl, siteName, lang } = input;
+  const greeting = mailGreeting(lang, input.buyerName, input.buyerIsPerson ?? false);
+  const subject = T(lang, "Belépési adatai – {site}", { site: siteName });
+  const intro = T(
+    lang,
+    "Elkészült {art} {site} oldalának szerkesztő felülete. Ezekkel az adatokkal bármikor beléphet, és szerkesztheti az oldalát.",
+    { art: huArticleLower(siteName), site: siteName },
+  );
+  const keep = T(
+    lang,
+    "Javasoljuk, hogy a jelszót jegyezze fel egy biztos helyre. Ha elfelejtené, válaszoljon erre a levélre, és küldünk újat.",
+  );
+  const button = T(lang, "Belépés a szerkesztőbe");
+
   const text =
-    T(lang, "Belépési adatok a Citoviso admin felülethez") +
-    `\n\n` +
-    T(lang, "Belépés:") +
-    ` ${loginUrl}\n` +
-    T(lang, "Felhasználónév:") +
-    ` ${username}\n` +
-    T(lang, "Jelszó:") +
-    ` ${password}\n\n` +
-    T(
-      lang,
-      "Ezekkel az adatokkal bármikor beléphet és szerkesztheti az oldalát. Javasoljuk, hogy jegyezze fel egy biztos helyre.",
-    ) +
-    `\n`;
-  const html =
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
-    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
-    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "Belépési adatai")}</h1>` +
-    `<p style="margin:0 0 16px">${T(lang, "Ezekkel az adatokkal bármikor beléphet és szerkesztheti az oldalát:")}</p>` +
-    `<div style="background:#fff;border:1px solid #dfe5ec;border-radius:12px;padding:18px 20px;margin:0 0 20px">` +
-    `<p style="margin:0 0 6px"><strong>${T(lang, "Felhasználónév:")}</strong> <code style="font-size:16px;color:#0e2a47">${username}</code></p>` +
-    `<p style="margin:0"><strong>${T(lang, "Jelszó:")}</strong> <code style="font-size:16px;color:#0e2a47">${password}</code></p></div>` +
-    `<p style="margin:0 0 24px"><a href="${loginUrl}" ` +
-    `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
-    `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Belépés")}</a></p>` +
-    `<p style="margin:0;color:#8a95a1;font-size:13px">${T(lang, "Javasoljuk, hogy jegyezze fel a jelszót egy biztos helyre. Ha elfelejtené, írjon nekünk, és küldünk újat.")}</p>` +
-    `</div></body></html>`;
-  // Our own tenant relationship (their console credentials) → pilot BCC applies.
-  return {
+    `${greeting}\n\n${intro}\n\n` +
+    `${T(lang, "Felhasználónév:")} ${username}\n` +
+    `${T(lang, "Jelszó:")} ${password}\n\n` +
+    `${button}: ${loginUrl}\n\n${keep}\n`;
+
+  return platformMail({
     to,
-    audience: "platform",
-    subject: T(lang, "Belépési adatai – Citoviso admin"),
+    subject,
     text,
-    html,
-  };
+    lang,
+    heading: T(lang, "Belépési adatai"),
+    greeting,
+    siteName,
+    blocks: [
+      mailPara(esc(intro).replace(esc(siteName), `<b>${esc(siteName)}</b>`)),
+      mailDetails([
+        { label: T(lang, "Felhasználónév"), value: username, mono: true },
+        { label: T(lang, "Jelszó"), value: password, mono: true },
+      ]),
+      mailButton(loginUrl, button),
+      mailNote(esc(keep)),
+    ],
+  });
 }

@@ -10,6 +10,7 @@
 // gondoskodik a nyelvi csomagról (prepareMailLang), mielőtt ezt hívja.
 
 import { T } from "../i18n/mail.js";
+import { mailButton, mailDetails, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 import { huArticle } from "../hu.js";
 
@@ -37,18 +38,20 @@ export function buildDomainLiveEmail(input: {
     T(lang, "Nincs teendője — a beállításokat elvégeztük.") +
     `\n`;
 
-  const html =
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
-    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
-    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "Elkészült a saját webcíme")}</h1>` +
-    `<p style="margin:0 0 16px">${T(lang, "A honlapja mostantól itt érhető el:")}</p>` +
-    `<p style="margin:0 0 20px"><a href="${url}" style="font-size:18px;color:#0e7490">${domain}</a></p>` +
-    (redirectLine ? `<p style="margin:0 0 16px;color:#4a5b6d">${redirectLine}</p>` : "") +
-    `<p style="margin:0">${T(lang, "Nincs teendője — a beállításokat elvégeztük.")}</p>` +
-    `</div></body></html>`;
-
-  return { to, subject: T(lang, "Elkészült a saját webcíme"), text, html, audience: "platform" };
+  return platformMail({
+    to,
+    subject: T(lang, "Elkészült a saját webcíme"),
+    text,
+    lang,
+    heading: T(lang, "Elkészült a saját webcíme"),
+    blocks: [
+      mailPara(T(lang, "A honlapja mostantól itt érhető el:")),
+      mailDetails([{ label: T(lang, "Webcím"), value: domain, emphasis: true }]),
+      mailButton(url, T(lang, "Honlap megnyitása")),
+      ...(redirectLine ? [mailNote(redirectLine)] : []),
+      mailPara(T(lang, "Nincs teendője — a beállításokat elvégeztük.")),
+    ],
+  });
 }
 
 /** A beszerzés elakadt: a nevet időközben elvitték — a tulaj választhat másikat. */
@@ -76,16 +79,14 @@ export function buildDomainFailedEmail(input: {
     T(lang, "Válasszon másik nevet itt:") +
     ` ${adminUrl}\n`;
 
-  const html =
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
-    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
-    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${T(lang, "A választott webcím időközben elkelt")}</h1>` +
-    `<p style="margin:0 0 20px">${body}</p>` +
-    `<p style="margin:0"><a href="${adminUrl}" style="color:#0e7490">${T(lang, "Válasszon másik nevet itt:")}</a></p>` +
-    `</div></body></html>`;
-
-  return { to, subject: T(lang, "A választott webcím időközben elkelt"), text, html, audience: "platform" };
+  return platformMail({
+    to,
+    subject: T(lang, "A választott webcím időközben elkelt"),
+    text,
+    lang,
+    heading: T(lang, "A választott webcím időközben elkelt"),
+    blocks: [mailPara(body), mailButton(adminUrl, T(lang, "Másik név választása"))],
+  });
 }
 
 /** ADR-0094 ② (jóváhagyott B terv): a lemondás-elszámolás rögzült — itt a fizetési
@@ -134,16 +135,16 @@ export function buildDomainSettlementEmail(input: {
     lines.join("\n\n") +
     `\n\n${payLabel}: ${payUrl}\n`;
 
-  const html =
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
-    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
-    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${subject}</h1>` +
-    lines.map((p) => `<p style="margin:0 0 16px">${p}</p>`).join("") +
-    `<p style="margin:0 0 16px"><a href="${payUrl}" style="display:inline-block;background:#0e7490;` +
-    `color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">${payLabel}</a></p>` +
-    `<p style="margin:0">${T(lang, "Ha a link nem nyílik meg, másolja a böngészőbe: {url}", { url: payUrl })}</p>` +
-    `</div></body></html>`;
-
-  return { to, subject, text, html, audience: "platform" };
+  return platformMail({
+    to,
+    subject,
+    text,
+    lang,
+    heading: subject,
+    blocks: [
+      ...lines.map(mailPara),
+      mailButton(payUrl, payLabel),
+      mailNote(T(lang, "Ha a link nem nyílik meg, másolja a böngészőbe: {url}", { url: payUrl })),
+    ],
+  });
 }

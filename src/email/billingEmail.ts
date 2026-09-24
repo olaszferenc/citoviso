@@ -11,6 +11,7 @@ import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
 import { formatDay } from "../text/day.js";
 import { formatMoney } from "../text/money.js";
+import { mailButton, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 
 // Dates arrive here in STORAGE form and are formatted at the sentence, not by
@@ -37,22 +38,31 @@ export interface BillingMailBase {
   readonly lang?: string;
 }
 
-function wrapHtml(lang: string | undefined, title: string, paragraphs: string[]): string {
-  return (
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><body style="margin:0;background:#eef7fa;` +
-    `font-family:Arial,Helvetica,sans-serif;color:#10243a;line-height:1.6">` +
-    `<div style="max-width:520px;margin:0 auto;padding:32px 24px">` +
-    `<h1 style="font-size:20px;color:#0e2a47;margin:0 0 12px">${title}</h1>` +
-    paragraphs.map((p) => `<p style="margin:0 0 16px">${p}</p>`).join("") +
-    `</div></body></html>`
-  );
+// Body lines are paragraphs, except the pay button (already a block). The frame
+// — logo, company footer, From name — is platformLayout.ts, shared by every
+// platform letter (approved variant A, 2026-09-24).
+function billingMail(input: {
+  to: string;
+  lang: string | undefined;
+  subject: string;
+  text: string;
+  siteName: string;
+  lines: string[];
+}): EmailMessage {
+  return platformMail({
+    to: input.to,
+    subject: input.subject,
+    text: input.text,
+    lang: input.lang,
+    heading: input.subject,
+    siteName: input.siteName,
+    // A T() sentence never starts with markup; the button always does.
+    blocks: input.lines.map((l) => (l.startsWith("<table") ? l : mailPara(l))),
+  });
 }
 
 function payButton(payUrl: string, label: string): string {
-  return (
-    `<a href="${payUrl}" style="display:inline-block;background:#0e7490;color:#ffffff;` +
-    `padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">${label}</a>`
-  );
+  return mailButton(payUrl, label);
 }
 
 /** T−3: the renewal is coming — no action needed yet, just no surprise charge.
@@ -70,13 +80,14 @@ export function buildRenewalPreNoticeEmail(
       ? T(lang, "A díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.")
       : T(lang, "A fizetési linket a megújulás napján küldjük — addig nincs teendője."),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     text: lines.join("\n\n") + "\n",
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }
 
 export interface BillingChargeMail extends BillingMailBase {
@@ -115,17 +126,18 @@ export function buildRenewalChargeEmail(input: BillingChargeMail): EmailMessage 
     payButton(payUrl, pay),
     T(lang, "Ha a link nem nyílik meg, másolja a böngészőbe: {url}", { url: payUrl }),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     // The text body must carry the SAME story as the HTML — the failed-charge
     // line especially (Elek FK-006 H1: the plain-text reader was left with the
     // contradiction the fix exists to remove).
     text:
       `${lines[0]}\n\n${failedLine ? `${failedLine}\n\n` : ""}${period}\n\n${pay}: ${payUrl}\n`,
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }
 
 export interface BillingReminderMail extends BillingChargeMail {
@@ -144,13 +156,14 @@ export function buildRenewalReminderEmail(input: BillingReminderMail): EmailMess
     payButton(payUrl, pay),
     T(lang, "Ha időközben már fizetett, ezt a levelet tekintse tárgytalannak."),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     text: `${lines[0]}\n\n${lines[1]}\n\n${pay}: ${payUrl}\n\n${lines[3]}\n`,
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }
 
 /** T+7: last warning before the freeze (paired with an SMS). */
@@ -166,13 +179,14 @@ export function buildRenewalFinalWarningEmail(input: BillingReminderMail): Email
     payButton(payUrl, pay),
     T(lang, "Fizetés után a honlap automatikusan, azonnal visszakapcsol."),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     text: `${lines[0]}\n\n${lines[1]}\n\n${pay}: ${payUrl}\n\n${lines[3]}\n`,
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }
 
 /** The short SMS twin of the T+7 warning (ő/ű → unicode, so keep it tight). */
@@ -207,13 +221,14 @@ export function buildSiteFrozenEmail(input: BillingChargeMail): EmailMessage {
     payButton(payUrl, pay),
     T(lang, "Fizetés után a honlap automatikusan, azonnal visszakapcsol."),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     text: `${lines[0]}\n\n${lines[1]}\n\n${pay}: ${payUrl}\n\n${lines[3]}\n`,
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }
 
 /** The freeze LIFTED — the counterpart of buildSiteFrozenEmail.
@@ -239,16 +254,17 @@ export function buildSiteRestoredEmail(input: {
     ...(siteUrl ? [payButton(siteUrl, T(lang, "Megnézem a honlapomat"))] : []),
     T(lang, "Az automatikus kártyaterhelés a következő fordulónaptól újra él."),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     text:
       `${lines[0]}\n\n${lines[1]}\n\n` +
       (siteUrl ? `${T(lang, "Megnézem a honlapomat")}: ${siteUrl}\n\n` : "") +
       `${lines[lines.length - 1]}\n`,
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }
 
 /** T+30: the subscription is considered cancelled for non-payment. */
@@ -263,11 +279,12 @@ export function buildSubscriptionCancelledEmail(input: {
     T(lang, "A 30 napja rendezetlen díj miatt honlap-előfizetését lezártuk, a honlapot levettük."),
     T(lang, "Ha szeretné folytatni, írjon nekünk — a honlap tartalmát megőriztük, visszakapcsolható."),
   ];
-  return {
+  return billingMail({
     to,
-    audience: "platform",
+    lang,
     subject,
+    siteName,
     text: lines.join("\n\n") + "\n",
-    html: wrapHtml(lang, subject, lines),
-  };
+    lines,
+  });
 }

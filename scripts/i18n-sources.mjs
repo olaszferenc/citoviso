@@ -45,6 +45,7 @@ export const I18N_SOURCES = [
   // most visible failure of all: they see the tenant's site in one language and
   // its mail in another.
   "src/i18n/mail.ts",
+  "src/email/platformLayout.ts",
   "src/email/loginEmail.ts",
   "src/email/invoiceEmail.ts",
   // Elek FK-001 E1: a SZÁMLA-TÉTEL neve. EGY regiszter szolgálja ki a tenant-admin
