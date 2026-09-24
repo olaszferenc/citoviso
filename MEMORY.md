@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-23 („nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető, ADR-0222 — nem élesítve) · 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-0221 — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-24 (Barion „Unsuccessful callback” levelek: a market-gate-check indított valódi sandbox-fizetést → mock átjáró kötelezően; köztes Barion-állapot 200, ismeretlen fizetés 400 — nem élesítve) · 2026-09-23 („nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető, ADR-0222 — nem élesítve) · 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-0221 — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -11,7 +11,22 @@ Utolsó frissítés: 2026-09-23 („nem adok meg árat” + új egység ára + h
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-23 este)
+## Aktív feladat (legfrissebb szál, 2026-09-24 reggel)
+
+**📨 BARION „UNSUCCESSFUL CALLBACK” LEVELEK — OK MEGTALÁLVA ÉS JAVÍTVA, A MAINEN (86974c6e).
+Élesítés nem volt; a tulaj döntése: minden egyben megy mainről prodba.** Jegyzet:
+`_planning/memory/2026-09-24_barion_callback_failed.md`.
+
+- Ok: a `market-gate-check` (pre-commit) `PAYMENT_GATEWAY=barion` mellett VALÓDI sandbox-fizetést
+  indított, majd törölte a `payment` sort → a 30 perc múlva lejáró fizetés callbackje 400-at kapott →
+  CallbackFailed-levél commitonként (39 db a szálban). Vevő és pénz nem volt mögötte.
+- Javítás: az őr mock átjáróval fut, fail-closed (Barionon leáll az első fizetés előtt); a
+  `parseWebhook` köztes állapotra `"pending"` → 200 (csak ISMERT fizetésre), ismeretlen fizetés /
+  hibás Barion-válasz marad 400 (a valódi riasztás). Új őr: `scripts/barion-webhook-ack-check.mts`.
+- Bizonyíték a zaj megszűnésére: a következő órában nem jön új sandbox-levél. Ha jön: a `payment`
+  táblában a gateway_ref hiánya = tesztszivárgás, megléte = valódi baj.
+
+## Előző szál (2026-09-23 este — „nincs ár” döntés)
 
 **🏷️ A „NINCS ÁR” KIMONDOTT DÖNTÉS + ÚJ EGYSÉG ÁRA + HETI EMLÉKEZTETŐ — KÉSZ LOKÁLBAN (ADR-0222,
 migráció 0075). Élesítés nem volt.** Az ADR-0208 ⑥.2–⑥.4. Jegyzet:
