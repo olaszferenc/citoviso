@@ -288,7 +288,14 @@ export interface OrderIntentTable {
    * then holds ONLY the newly added ones, because that is what is being paid for.
    */
   kind: Generated<
-    "initial" | "upsell" | "multilang" | "domain_upgrade" | "renewal" | "domain_settlement"
+    | "initial"
+    | "upsell"
+    | "multilang"
+    | "domain_upgrade"
+    | "renewal"
+    | "domain_settlement"
+    /** ADR-XXXX: kártya-csere hitelesítő fizetés — vásárlás nélkül, a tokenért. */
+    | "card_update"
   >;
   /** ADR-0080: the period a kind='renewal' order covers (invoice line + the
    *  timer's cycle↔order identity). NULL on every other kind. */
@@ -459,6 +466,14 @@ export interface SubscriptionTable {
   /** 0040: the initiating payment's card-scheme TraceId — replayed on every MIT
    *  charge (3DS); without it the issuer declines. */
   recurrence_trace_id: string | null;
+  /** ADR-XXXX (0076): the stored card's MASK for the Pénztárca — brand, last 4,
+   *  expiry, when it became the mandate. The full PAN never reaches us; NULL on a
+   *  pre-0076 token until its next charge/renewal reports the card. */
+  card_brand: string | null;
+  card_last4: string | null;
+  card_exp_month: number | null;
+  card_exp_year: number | null;
+  card_saved_at: Timestamp | null;
   cancel_at_period_end: Generated<boolean>;
   cancelled_at: Timestamp | null;
   frozen_at: Timestamp | null;
@@ -702,8 +717,27 @@ export interface PaymentTable {
   gateway_ref: string | null;
   pay_url: string | null;
   status: Generated<"pending" | "paid" | "failed" | "cancelled">;
+  /** ADR-XXXX (0076): this pay-link asked the gateway to store a token — the
+   *  webhook reads the FACT from here, not from the order kind (an upsell paid
+   *  "with another card" and a card_update both initiate). */
+  initiates_recurrence: Generated<boolean>;
   created_at: Generated<Timestamp>;
   paid_at: Timestamp | null;
+}
+
+/** ADR-XXXX (0076): a tenant's former stored cards (mask only) — replaced or
+ *  revoked; the Pénztárca "Korábbi kártyák" list. */
+export interface SavedCardHistoryTable {
+  id: Generated<string>;
+  tenant_id: string;
+  card_brand: string | null;
+  card_last4: string | null;
+  card_exp_month: number | null;
+  card_exp_year: number | null;
+  saved_at: Timestamp;
+  ended_at: Generated<Timestamp>;
+  end_reason: "replaced" | "revoked";
+  created_at: Generated<Timestamp>;
 }
 
 // --- Invoice (migration 0007) — the financial end of the loop (Slice 3). ---
@@ -1385,6 +1419,7 @@ export interface Database {
   market_log: MarketLogTable;
   site: SiteTable;
   payment: PaymentTable;
+  saved_card_history: SavedCardHistoryTable;
   invoice: InvoiceTable;
   partner: PartnerTable;
   partner_contact: PartnerContactTable;

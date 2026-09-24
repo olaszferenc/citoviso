@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-penztarca-a-mentett-kartya-lathato-es-cserelheto.md) — Pénztárca: a mentett kártya látható és cserélhető (külön fül, 3DS-úton)
 - [ADR-0225](decisions/0225-a-platform-levelek-kozos-kerete-e4-logo.md) — A platform-levelek közös kerete: E4 logó, „Citoviso” feladó, cégadatos lábléc (2026-09-24)
 - [ADR-0224](decisions/0224-tenant-admin-ujratervezes-linear-nyelv-egy.md) — Tenant-admin újratervezés: „Linear” nyelv, egy akcent, világos/sötét mód (2026-09-24)
 - [ADR-0223](decisions/0223-parhuzamos-szalak-ii-a-fa-szabaly-a-resume-nal.md) — Párhuzamos szálak II.: a fa-szabály a RESUME-nál is, a headless Claude eszköz nélkül, a kapuk osztott állapota futásonként egyedi (2026-09-24)

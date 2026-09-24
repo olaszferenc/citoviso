@@ -1002,3 +1002,45 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-dep__list li b{font-variant-numeric:tabular-nums}
 /* A közös lemondás a ROMBOLÓ út: nézzen is annak ki, ne a semleges elsődlegesnek. */
 .adm-mdl__go--warn{background:var(--citui-bad);border-color:var(--citui-bad)}
+/* ── Pénztárca (ADR-XXXX, design-refs/console/wallet) ─────────────────────── */
+.adm-wal__two{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:900px){.adm-wal__two{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start}}
+.adm-wal__face{position:relative;border-radius:18px;padding:18px 20px;color:var(--citui-white);min-height:150px;
+  display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--citui-shadow-sm);
+  background:linear-gradient(135deg,var(--citui-navy-900) 0%,var(--citui-navy-700) 60%,color-mix(in srgb,var(--citui-navy-700) 70%,var(--citui-cyan-500)) 100%)}
+.adm-wal__face--mc{background:linear-gradient(135deg,color-mix(in srgb,var(--citui-navy-950) 70%,var(--citui-warn)),color-mix(in srgb,var(--citui-navy-700) 40%,var(--citui-warn)) 65%,color-mix(in srgb,var(--citui-navy-700) 30%,var(--citui-warn)))}
+.adm-wal__face--none{background:var(--citui-surface-2);color:var(--citui-muted);border:1.5px dashed var(--citui-line-strong);box-shadow:none;justify-content:center}
+.adm-wal__brand{font:700 .8rem/1 var(--citui-font-display);letter-spacing:.1em;opacity:.9}
+.adm-wal__num{font:700 1.35rem/1.2 var(--citui-font-display);letter-spacing:.12em;margin-top:22px;font-variant-numeric:tabular-nums}
+.adm-wal__none{font-size:.86rem;margin-top:6px}
+.adm-wal__foot{display:flex;justify-content:space-between;gap:12px;font-size:.78rem;opacity:.85;margin-top:10px;flex-wrap:wrap}
+.adm-wal__chip{position:absolute;top:16px;right:18px;width:30px;height:22px;border-radius:5px;opacity:.9;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--citui-warn) 35%,var(--citui-white)),color-mix(in srgb,var(--citui-warn) 80%,var(--citui-navy-900)))}
+.adm-wal__pill{margin-top:12px}
+.adm-mand__pill--warn{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-white));color:color-mix(in srgb,var(--citui-warn) 60%,var(--citui-navy-900))}
+.adm-wal__hint{font-size:.82rem;color:var(--citui-muted);margin:8px 0 0}
+.adm-wal__hint--warn{color:color-mix(in srgb,var(--citui-warn) 60%,var(--citui-navy-900))}
+.adm-wal__hint--bad{color:var(--citui-bad)}
+.adm-wal__acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.adm-wal__btn{border-radius:var(--citui-radius-pill)}
+.adm-wal__hist{margin-top:14px;padding-top:10px;border-top:1px dashed var(--citui-line);font-size:.8rem;color:var(--citui-muted)}
+.adm-wal__hist summary{cursor:pointer;font-weight:600}
+.adm-wal__hist ul{margin:6px 0 0;padding-left:18px} .adm-wal__hist li{margin:3px 0}
+.adm-wal__tbl{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:10px}
+.adm-wal__tbl th{text-align:left;font:600 .72rem/1.4 var(--citui-font-text);color:var(--citui-muted);padding:6px 0;border-bottom:1px solid var(--citui-line)}
+.adm-wal__tbl td{padding:8px 0;border-bottom:1px dashed var(--citui-line);vertical-align:top}
+.adm-wal__r{text-align:right}
+.adm-wal__num2{font-variant-numeric:tabular-nums;white-space:nowrap}
+.adm-wal__sub{color:var(--citui-muted)}
+.adm-wal__ok{color:var(--citui-ok);font-weight:700} .adm-wal__bad{color:var(--citui-bad);font-weight:700}
+.adm-wal__gw{margin:12px 0;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface);padding:10px 12px;font-size:.84rem;line-height:1.55;border-radius:0 12px 12px 0}
+.adm-mdl__ghost{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
+  border-radius:10px;padding:11px;color:var(--citui-ink);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
+/* Terv-sáv kártyaválasztó (wallet ⑧) */
+.adm-planbar__card{display:grid;gap:6px;margin:8px 0 4px}
+.adm-planbar__opt{display:flex;gap:9px;align-items:flex-start;border:1.5px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:8px 10px;cursor:pointer;font-size:.84rem;line-height:1.4}
+.adm-planbar__opt:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 8%,transparent)}
+.adm-planbar__opt input{margin-top:3px;flex:0 0 auto}
+.adm-planbar__opt small{display:block;color:var(--citui-muted);font-size:.78rem}
+/* A két jobbra zárt cella (összeg · állapot) 390 px-en összeért („327 Ftelutasítva”) — mérve. */
+.adm-wal__tbl td.adm-wal__r,.adm-wal__tbl th.adm-wal__r{padding-left:10px}

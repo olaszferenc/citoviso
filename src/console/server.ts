@@ -79,6 +79,7 @@ import { buildBillingPrefill } from "../billing/prefill.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
+import { mockCard, MOCK_CARDS } from "../payment/mock.js";
 import { siteShotPath } from "../payment/siteShot.js";
 import { tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
@@ -3290,6 +3291,14 @@ async function handle(
     if (paid && kindRow?.kind === "multilang" && kindRow.tenantId) {
       return send(res, 200, await multilangPayResultPage(kindRow.tenantId, p.amount));
     }
+    // ADR-XXXX: a CARD-UPDATE round ends in the Pénztárca, whatever happened —
+    // nothing was bought, so neither the welcome page nor a receipt applies. The
+    // tab's own banner says "the card is now X" / "the bank refused, nothing changed".
+    if (kindRow?.kind === "card_update" && kindRow.tenantId) {
+      res.writeHead(302, { location: `${adminBase()}/admin?tab=penztarca&card=${paid ? "ok" : "fail"}` });
+      res.end();
+      return;
+    }
     // ADR-0113: an UPSELL buyer is a logged-in tenant who came from the Modulok
     // tab — send them straight back there; the tab's banner reports what the
     // payment just switched on. The generic "your site is live / credentials"
@@ -3428,6 +3437,7 @@ async function handle(
       .leftJoin("lead", "lead.id", "prospect.lead_id")
       .select([
         "payment.amount as amount", "payment.period as period", "payment.status as status",
+        "payment.initiates_recurrence as initiatesRecurrence",
         "order_intent.kind as kind", "order_intent.modules as modules", "lead.name as leadName",
       ])
       .where("gateway_ref", "=", mockPayMatch[1])
@@ -3440,7 +3450,8 @@ async function handle(
     // "Citoviso honlap — éves előfizetés · 1 627 Ft / év" (ADR-0192 ⑧.3, measured
     // 2026-09-23) — while Barion's own description says "időarányos első díj".
     const oneTime =
-      p.kind === "multilang" || p.kind === "domain_settlement" || p.kind === "domain_upgrade" || p.kind === "upsell";
+      p.kind === "multilang" || p.kind === "domain_settlement" || p.kind === "domain_upgrade" || p.kind === "upsell" ||
+      p.kind === "card_update";
     // Contract ② (pay-gateway-exit): the screen names WHAT is paid — for an upsell that
     // is the modules, not "Citoviso honlap".
     const upsellModules =
@@ -3461,7 +3472,13 @@ async function handle(
     return send(
       res,
       200,
-      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status, p.leadName, upsellModules),
+      payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status, p.leadName, upsellModules, {
+        // ADR-XXXX: a token-initiating payment lets the tester pick the test card,
+        // so the Pénztárca's mask and the card swap run end to end locally.
+        cardPick: p.initiatesRecurrence,
+        verification: p.kind === "card_update",
+        cards: MOCK_CARDS.map((c) => ({ id: c.id, label: `${c.card.brand} ····${c.card.last4}` })),
+      }),
       "text/html; charset=utf-8",
       { "cache-control": "no-store, no-cache, must-revalidate", pragma: "no-cache" },
     );
@@ -3473,9 +3490,14 @@ async function handle(
     // A mock_ ref is by definition the mock gateway's — apply it directly. Routing
     // it through the CONFIGURED gateway's parser dropped it on a Barion-configured
     // process, and the page still claimed success (Elek FK-005a, 2026-09-05).
+    // ADR-XXXX: the picked test card rides on the form body — the same shape the
+    // mock gateway's parseWebhook would give (card mask on a paid result).
+    const body = await readBody(req);
+    const pickedCard = mockCard(body.get("card") ?? "") ?? mockCard("visa4242");
     const r = await applyWebhookResult({
       gatewayRef: mockPayDoMatch[1],
       status: mockPayDoMatch[2] === "paid" ? "paid" : "failed",
+      ...(mockPayDoMatch[2] === "paid" && pickedCard ? { card: pickedCard } : {}),
     });
     if (!r.ok) {
       return send(

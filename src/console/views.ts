@@ -1777,8 +1777,25 @@ export function payMockPage(
   productName?: string | null,
   /** Translated labels of the modules an UPSELL buys (ADR-0192 ⑧.3). */
   upsellModules?: readonly string[],
+  /** ADR-XXXX: `cardPick` — this payment stores a token, so the tester picks WHICH
+   *  test card pays (the Pénztárca shows its mask afterwards); `verification` — a
+   *  card_update: the amount is only HELD and released, never charged. */
+  wallet?: { readonly cardPick?: boolean; readonly verification?: boolean; readonly cards?: readonly { id: string; label: string }[] },
 ): string {
   const lang = consoleLang();
+  // ADR-XXXX: the card picker rides INSIDE the "Fizetek" form, so the choice
+  // posts with the click — the same body the mock gateway's webhook reads.
+  const cardPicker =
+    wallet?.cardPick && wallet.cards?.length
+      ? `<fieldset class="pay-cards"><legend class="mut small">${T(lang, "Melyik próbakártyával?")}</legend>` +
+        wallet.cards
+          .map(
+            (c, i) =>
+              `<label class="pay-cards__opt"><input type="radio" name="card" value="${esc(c.id)}"${i === 0 ? " checked" : ""}> ${esc(c.label)}</label>`,
+          )
+          .join("") +
+        `</fieldset>`
+      : "";
   // "oneoff" = one-time purchase: no per-period suffix (an "/ hó" on an egyszeri
   // díj was a price-truth defect — Elek FK-005b H3).
   const perLabel =
@@ -1796,8 +1813,14 @@ export function payMockPage(
   const actions =
     status === "pending"
       ? `<div class="pay-act">
-      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button type="submit">${T(lang, "Fizetek")} — ${fmtHuf(amount)}</button></form>
-      <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/failed"><button type="submit">${T(lang, "Mégsem fizetek most")}</button></form>
+      <form method="post" action="/pay/mock/${esc(ref)}/paid">${cardPicker}<button type="submit">${
+        wallet?.verification
+          ? `${T(lang, "Megerősítem a kártyát")} — ${T(lang, "{sum} zárolás, azonnal feloldva", { sum: fmtHuf(amount) })}`
+          : `${T(lang, "Fizetek")} — ${fmtHuf(amount)}`
+      }</button></form>
+      <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/failed"><button type="submit">${
+        wallet?.verification ? T(lang, "A bank elutasítja (próba)") : T(lang, "Mégsem fizetek most")
+      }</button></form>
     </div>`
       : status === "paid"
         ? // ⚠️ YES, this repeats the `banner` below it — and the repetition is
@@ -1851,7 +1874,9 @@ export function payMockPage(
             modules: esc(upsellModules.join(", ")),
             cycle: esc(cycleWord),
           })
-        : T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }),
+        : wallet?.verification
+          ? T(lang, "Kártya-megerősítés — zárolás, pénzt nem vonunk le")
+          : T(lang, "Citoviso honlap — {cycle}", { cycle: esc(cycleWord) }),
     )}
     <p style="font-size:24px;margin:12px 0"><b>${fmtHuf(amount)}</b> ${perLabel}</p>
     ${banner}

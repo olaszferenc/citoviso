@@ -136,7 +136,13 @@ Visszavonás után **Önnek kell fizetnie** minden fordulónapon a kiküldött
 fizetési linkkel. A díjfizetési kötelezettség megmarad, és ha a díj nem érkezik
 be, ugyanaz történik, mint fentebb: emlékeztetők, majd a honlap átmeneti
 felfüggesztése. A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés
-miatt a **következő fizetési link kiegyenlítésekor** adhat újra megbízást.
+miatt vagy a **Pénztárca** fülön, a **„Kártya megadása”** gombbal adhat újra
+megbízást (ez egy megerősítő lépéssel jár, vásárlás nélkül), vagy a következő
+fizetési link kiegyenlítésekor — az a fizetés is megadja a megbízást.
+
+Hogy **melyik** kártya van mentve (márka, utolsó 4 számjegy, lejárat), és hogyan
+cseréli le, azt a **Pénztárca** fül mutatja — a kártya alatt a
+**„Pénztárca — melyik kártya, csere”** gomb visz oda. Erről külön útmutató szól.
 
 ## Az automatikus kártyaterhelés elakadt — mit tegyek?
 

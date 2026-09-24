@@ -80,6 +80,7 @@ import {
 import { applyModuleChange } from "../tenant/moduleChange.js";
 import { createFirstChargeOrder } from "../tenant/moduleUpsell.js";
 import { getSubscriptionAdmin, setSubscriptionCancel } from "../tenant/subscriptionAdmin.js";
+import { createCardUpdateOrder, getWalletAdmin } from "../tenant/wallet.js";
 import { revokeAutoCharge, setPendingBillingPeriod } from "../payment/subscription.js";
 import { retryRenewalCharge } from "../payment/retryCharge.js";
 import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../payment/service.js";
@@ -1484,6 +1485,8 @@ async function serveAdmin(
   const params = new URL(req.url ?? "/", "http://x").searchParams;
   let documents: AdminOpts["documents"] = null;
   let legal: AdminOpts["legal"] = null;
+  let wallet: AdminOpts["wallet"] = null;
+  let walletFlash: AdminOpts["walletFlash"] = null;
   let messages: AdminOpts["messages"] = null;
 
   // Jóváhagyott terv 2026-09-06: a Foglalások fül adata + a jelvény MINDEN fülön.
@@ -1596,6 +1599,15 @@ async function serveAdmin(
       // Kontraktus ⑦: MÉRT tartozás. Nincs előfizetés → a kérdés fel sem tehető → null.
       owed: sub ? (sub.arrears?.amount ?? 0) : null,
     };
+  } else if (tab === "penztarca") {
+    // ADR-XXXX: the wallet reads the card from its own loader and the next-charge
+    // AMOUNT from the subscription card's rule — one number, one source.
+    [wallet, subscription] = await Promise.all([
+      getWalletAdmin(session.tenantId),
+      getSubscriptionAdmin(session.tenantId, modules),
+    ]);
+    const c = params.get("card");
+    walletFlash = c === "ok" || c === "fail" || c === "err" ? c : null;
   } else if (tab === "fiok") {
     // ADR-0110: the published legal identity, seeded from the buyer record. Loaded
     // only for this tab — every other tab would pay two queries for nothing.
@@ -1681,6 +1693,8 @@ async function serveAdmin(
       documents,
       messages,
       legal,
+      wallet,
+      walletFlash,
       // A jelvény a navban ül → minden fülön aktuális kell legyen, nem csak az
       // Üzenetek lapon. Megnyitás után a frissen olvasottat már nem számoljuk.
       unreadMessages: messages ? messages.unread : unreadMessages,
@@ -2008,6 +2022,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       );
       if (!order) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
 
+      // ADR-XXXX (wallet ⑧): the tenant chose "Másik kártyával" — skip the stored
+      // card and mint a pay-link that INITIATES a token, so the card that pays
+      // becomes the mandate (the plan bar promised exactly that).
+      const newCard = form.get("card") === "new";
+      if (newCard && sub.payment_method === "token" && sub.recurrence_token) {
+        const link = await requestPayment(order.orderId, { newCard: true });
+        if (!link) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
+        return redirect(res, link.payUrl);
+      }
       // Stored mandate: charge now, payer absent — success activates on the spot.
       if (sub.payment_method === "token" && sub.recurrence_token) {
         const outcome = await chargeUpsellWithToken(
@@ -2144,7 +2167,26 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     await revokeAutoCharge(session.tenantId);
-    return redirect(res, "/admin?tab=modulok");
+    // ADR-XXXX: the revoke can start from the Pénztárca too — go back to where
+    // the tenant was (a fixed value, never a raw redirect target).
+    const form = await readFormBody(req);
+    return redirect(res, form.get("back") === "penztarca" ? "/admin?tab=penztarca" : "/admin?tab=modulok");
+  }
+  // ── ADR-XXXX (wallet ④): „Kártya cseréje / megadása" — a card_update order whose
+  // pay-link HOLDS the verification amount and initiates a token; the webhook
+  // releases the hold and the paying card becomes the mandate. Fail closed at
+  // every step: no order / no pay-link ⇒ nothing changed, and the tab SAYS so.
+  if (req.method === "POST" && pathname === "/admin/wallet/change-card") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const order = await createCardUpdateOrder(session.tenantId);
+    if (!order.ok || !order.orderId) {
+      console.warn(`[wallet] kártyacsere-order NEM készült · ${session.tenantId} · ${order.error ?? "?"}`);
+      return redirect(res, "/admin?tab=penztarca&card=err");
+    }
+    const pay = await requestPayment(order.orderId);
+    if (!pay) return redirect(res, "/admin?tab=penztarca&card=err");
+    return redirect(res, pay.payUrl);
   }
   // ── freeze-state-v2 ⑤: KÉZI terhelés-újrapróbálás ────────────────────────────
   // A jóváhagyott terv „Újrapróbálom ezzel a kártyával" gombjának hiányzó útja.

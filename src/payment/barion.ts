@@ -62,7 +62,14 @@ export class BarionGateway implements PaymentGateway {
   async createPayLink(req: PaymentRequest): Promise<PayLink> {
     const body = {
       POSKey: this.posKey,
-      PaymentType: "Immediate",
+      // ADR-XXXX: a card-verification payment only HOLDS the amount (Reservation);
+      // the service releases it with FinishReservation(0) once the token is
+      // stored. Docs: a finished-with-zero reservation ends Succeeded and the
+      // whole amount goes back to the card. ⚠️ Token storage on a Reservation
+      // initiator is not spelled out by the docs (nothing forbids it either) —
+      // the sandbox pass is the proof before this ships to production.
+      PaymentType: req.verification ? "Reservation" : "Immediate",
+      ...(req.verification ? { ReservationPeriod: "0.01:00:00" } : {}),
       PaymentRequestId: req.paymentId,
       FundingSources: ["All"],
       GuestCheckOut: true,
@@ -223,7 +230,20 @@ export class BarionGateway implements PaymentGateway {
     //    beszélt, és ELTAKARTA a valódi okot. Egy fallback, ami hazudik az okról,
     //    rosszabb, mint ha nem lenne.
     const raw = await resp.text();
-    let data: { Status?: string; TraceId?: string; Errors?: unknown[] };
+    let data: {
+      Status?: string;
+      TraceId?: string;
+      Errors?: unknown[];
+      /** ADR-XXXX: the paying card's mask (docs: FundingInformation.BankCard). */
+      FundingInformation?: {
+        BankCard?: {
+          MaskedPan?: string;
+          BankCardType?: string;
+          ValidThruYear?: string;
+          ValidThruMonth?: string;
+        };
+      };
+    };
     try {
       data = JSON.parse(raw) as typeof data;
     } catch {
@@ -239,7 +259,21 @@ export class BarionGateway implements PaymentGateway {
     if (status === SUCCEEDED) {
       // 0040: the card-scheme TraceId of a token-initiating payment — the caller
       // stores it with the token; every MIT charge must replay it (3DS).
-      return { gatewayRef: paymentId, status: "paid", traceId: data.TraceId ?? null };
+      // ADR-XXXX: and the card's MASK — "MaskedPan" is documented as the LAST FOUR
+      // digits only; a longer value is still reduced to its last four, so the
+      // Pénztárca never shows more than that whatever the gateway sends.
+      const bc = data.FundingInformation?.BankCard;
+      const pan = bc?.MaskedPan ? bc.MaskedPan.replace(/\D/g, "").slice(-4) : "";
+      const card =
+        bc && (pan || bc.BankCardType)
+          ? {
+              brand: bc.BankCardType ?? null,
+              last4: pan || null,
+              expMonth: bc.ValidThruMonth ? Number(bc.ValidThruMonth) || null : null,
+              expYear: bc.ValidThruYear ? Number(bc.ValidThruYear) || null : null,
+            }
+          : null;
+      return { gatewayRef: paymentId, status: "paid", traceId: data.TraceId ?? null, card };
     }
     if (FAILED_STATES.has(status)) return { gatewayRef: paymentId, status: "failed" };
     // Mid-flight: received fine, nothing to settle yet. Answering 400 here made
@@ -248,5 +282,48 @@ export class BarionGateway implements PaymentGateway {
     // Empty status (Barion Errors[], e.g. unknown PaymentId) or an unknown value:
     // we do not know the state → null → 400, so Barion retries and alerts.
     return null;
+  }
+
+  /**
+   * ADR-XXXX: close a Reservation for `total` — 0 releases the whole hold. The
+   * transaction id comes from GetPaymentState (FinishReservation wants it, not
+   * our POSTransactionId). Never throws: false = not released (the caller logs
+   * loudly; the hold then expires by itself at ReservationPeriod).
+   */
+  async finishReservation(gatewayRef: string, total: number): Promise<boolean> {
+    try {
+      const stateUrl = `${API}/v2/Payment/GetPaymentState?POSKey=${encodeURIComponent(
+        this.posKey,
+      )}&PaymentId=${encodeURIComponent(gatewayRef)}`;
+      const state = (await (await fetch(stateUrl)).json()) as {
+        Status?: string;
+        Transactions?: { TransactionId?: string; POSTransactionId?: string }[];
+      };
+      if (state.Status === SUCCEEDED) return true; // already finished
+      const tx = state.Transactions?.[0]?.TransactionId;
+      if (!tx) return false;
+      const resp = await fetch(`${API}/v2/Payment/FinishReservation`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          POSKey: this.posKey,
+          PaymentId: gatewayRef,
+          Transactions: [{ TransactionId: tx, Total: total }],
+        }),
+      });
+      const data = (await resp.json()) as {
+        Status?: string;
+        Errors?: { ErrorCode?: string; Title?: string; Description?: string }[];
+      };
+      if (data.Errors && data.Errors.length) {
+        const e = data.Errors[0]!;
+        console.error(`[barion] FinishReservation hiba: ${e.ErrorCode ?? "?"} — ${e.Title ?? e.Description ?? ""}`);
+        return false;
+      }
+      return data.Status === SUCCEEDED;
+    } catch (err) {
+      console.error(`[barion] FinishReservation kivétel (${gatewayRef}):`, err);
+      return false;
+    }
   }
 }

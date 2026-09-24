@@ -1,0 +1,291 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Pénztárca — mentett kártya kezelése (A/B vázlat)</title>
+<style>
+  :root{
+    --citui-navy-950:#06222e; --citui-navy-900:#0e2a47; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6; --citui-cyan-400:#3fc5e0; --citui-cyan-300:#6fd8eb;
+    --citui-ink:#10243a; --citui-muted:#60748b; --citui-white:#fff;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-soft:#fff7e6; --citui-bad:#e5484d;
+    --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif; --citui-font-text:system-ui,sans-serif;
+  }
+  *{box-sizing:border-box} body{margin:0;font:15px/1.5 var(--citui-font-text);background:#e8eef3;color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8}
+  .bar b{font-size:13px} .bar .sp{flex:1}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 system-ui;cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .note{max-width:900px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  h3.sec{max-width:900px;margin:26px auto 6px;padding:0 14px;font:700 .82rem/1.3 var(--citui-font-text);letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+  .stage{margin:8px auto 30px;container-type:inline-size;width:100%;max-width:900px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0}
+  .adm-card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:20px;box-shadow:var(--citui-shadow-sm);padding:26px 28px;margin-bottom:16px}
+  .adm-card__head{display:flex;align-items:center;gap:11px;margin:-26px -28px 18px;padding:15px 28px;background:linear-gradient(120deg,var(--citui-navy-900),var(--citui-navy-700));border-radius:20px 20px 0 0}
+  .adm-card__head h2{margin:0;font-size:1.2rem;font-family:var(--citui-font-display);color:var(--citui-white)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--citui-ok)}
+  .help{margin-left:auto;color:var(--citui-cyan-300);font-size:.82rem;text-decoration:none}
+  .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+  @container (min-width:640px){ .grid{grid-template-columns:1fr 1fr 1fr} }
+  .cell{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:10px 12px}
+  .cell .l{font:600 .74rem/1.4 var(--citui-font-text);color:var(--citui-muted)}
+  .cell .v{font:700 1rem/1.4 var(--citui-font-display);color:var(--citui-navy-900)}
+  .mono{font-variant-numeric:tabular-nums}
+  .btn{display:inline-block;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:9px 16px;font:600 .86rem/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink);text-decoration:none}
+  .btn:hover{border-color:var(--citui-cyan-500)}
+  .btn.pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .btn.pri:hover{background:var(--citui-cyan-400)}
+  .quiet{background:none;border:0;padding:0;cursor:pointer;color:var(--citui-muted);text-decoration:underline;font:inherit;font-size:.8rem}
+  .pill{display:inline-block;padding:3px 10px;border-radius:var(--citui-radius-pill);font:700 .72rem/1.5 var(--citui-font-text);margin-bottom:8px;background:var(--citui-surface-2);color:var(--citui-muted)}
+  .pill.on{background:var(--citui-ok-soft);color:var(--citui-ok)}
+  .pill.warn{background:var(--citui-warn-soft);color:#8a6511}
+  .pill.off{background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-white));color:var(--citui-bad)}
+  .hint{font-size:.8rem;color:var(--citui-muted);margin:8px 0 0}
+  .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
+  /* ── A: Pénztárca-blokk az Előfizetés kártyában ── */
+  .wal{margin-top:14px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px 16px}
+  .wal__head{display:flex;align-items:center;gap:10px}
+  .wal__head h3{margin:0;font:700 .95rem/1.3 var(--citui-font-display)}
+  .wal__row{display:flex;gap:14px;align-items:center;margin-top:12px}
+  .cc{flex:0 0 auto;width:56px;height:38px;border-radius:8px;background:linear-gradient(135deg,var(--citui-navy-900),var(--citui-navy-700));display:grid;place-items:center;color:var(--citui-white);font:700 .62rem/1 var(--citui-font-display);letter-spacing:.06em}
+  .cc.mc{background:linear-gradient(135deg,#3a2a1a,#7a4a1a)}
+  .cc.none{background:var(--citui-surface-2);color:var(--citui-muted);border:1px dashed var(--citui-line-strong)}
+  .wal__txt{flex:1;min-width:0}
+  .wal__num{font:700 1rem/1.3 var(--citui-font-display);letter-spacing:.04em}
+  .wal__meta{font-size:.8rem;color:var(--citui-muted)}
+  .wal__meta b.exp{color:#8a6511}
+  .wal__hist{margin:12px 0 0;padding:10px 0 0;border-top:1px dashed var(--citui-line);font-size:.8rem;color:var(--citui-muted)}
+  .wal__hist summary{cursor:pointer;font-weight:600}
+  .wal__hist ul{margin:6px 0 0;padding-left:18px} .wal__hist li{margin:3px 0}
+
+  /* ── B: külön Pénztárca fül ── */
+  .nav{display:flex;gap:6px;flex-wrap:wrap;margin:-8px -28px 16px;padding:8px 28px 10px;border-bottom:1px solid var(--citui-line);font-size:.8rem}
+  .nav span{padding:5px 10px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);color:var(--citui-muted)}
+  .nav span.on{background:var(--citui-navy-900);color:#fff}
+  .bigcard{position:relative;border-radius:18px;padding:18px 20px;color:#fff;background:linear-gradient(135deg,var(--citui-navy-900) 0%,var(--citui-navy-700) 60%,#2b5a7a 100%);box-shadow:var(--citui-shadow-sm);min-height:150px;display:flex;flex-direction:column;justify-content:space-between}
+  .bigcard.mc{background:linear-gradient(135deg,#2a1c10,#6a3d14 65%,#8a5a1e)}
+  .bigcard.none{background:var(--citui-surface-2);color:var(--citui-muted);border:1.5px dashed var(--citui-line-strong);box-shadow:none;align-items:flex-start;justify-content:center}
+  .bigcard .brand{font:700 .8rem/1 var(--citui-font-display);letter-spacing:.1em;opacity:.9}
+  .bigcard .num{font:700 1.35rem/1.2 var(--citui-font-display);letter-spacing:.12em;margin-top:22px}
+  .bigcard .foot{display:flex;justify-content:space-between;gap:12px;font-size:.78rem;opacity:.85;margin-top:10px}
+  .bigcard .chip{position:absolute;top:16px;right:18px;width:30px;height:22px;border-radius:5px;background:linear-gradient(135deg,#e8d9a8,#b99a4e);opacity:.9}
+  .two{display:grid;grid-template-columns:1fr;gap:16px}
+  @container (min-width:640px){ .two{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start} }
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.86rem;margin-top:12px}
+  .kv .k{color:var(--citui-muted)} .kv .v{font-weight:600}
+  .tbl{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:8px}
+  .tbl th{text-align:left;font:600 .72rem/1.4 var(--citui-font-text);color:var(--citui-muted);padding:6px 0;border-bottom:1px solid var(--citui-line)}
+  .tbl td{padding:8px 0;border-bottom:1px dashed var(--citui-line);vertical-align:top}
+  .tbl td.r,.tbl th.r{text-align:right}
+  .tbl .ok{color:var(--citui-ok);font-weight:700} .tbl .bad{color:var(--citui-bad);font-weight:700}
+
+  /* ── Checkout: kártyaválasztó ── */
+  .opt{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:12px 14px;margin-top:10px;cursor:pointer}
+  .opt.on{border-color:var(--citui-cyan-500);background:var(--citui-surface)}
+  .opt input{margin-top:4px}
+  .opt strong{display:block;font-size:.92rem} .opt small{display:block;color:var(--citui-muted);font-size:.8rem;margin-top:2px}
+  .pay{margin-top:12px;width:100%;border:none;border-radius:10px;padding:13px;background:var(--citui-navy-900);color:#fff;font:600 .95rem/1 var(--citui-font-text);cursor:pointer}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;background:var(--citui-navy-900);color:#fff;padding:10px 16px;border-radius:12px;font-size:.86rem;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;max-width:calc(100vw - 24px)}
+  .toast.on{display:block}
+
+  /* ── megerősítő ablakok ── */
+  .veil{position:fixed;inset:0;z-index:70;background:rgba(8,16,24,.55);display:none} .veil.on{display:block}
+  .modal{position:fixed;z-index:71;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,460px);background:var(--citui-white);border-radius:18px;padding:22px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.4);display:none}
+  .modal.on{display:block}
+  .modal h4{margin:0 0 8px;font:700 1.06rem/1.3 var(--citui-font-display)}
+  .modal p,.modal li{font-size:.87rem;line-height:1.6}
+  .modal ul{margin:0 0 14px;padding-left:18px}
+  .modal .keep{display:block;width:100%;border:none;border-radius:10px;padding:12px;background:var(--citui-navy-900);color:#fff;font:600 .92rem/1.2 var(--citui-font-text);cursor:pointer}
+  .modal .go{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-bad);background:var(--citui-white);border-radius:10px;padding:11px;color:var(--citui-bad);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
+  .modal .ghost{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:10px;padding:11px;color:var(--citui-ink);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
+  .gw{margin:12px 0;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface);padding:10px 12px;font-size:.84rem;border-radius:0 12px 12px 0}
+</style></head><body>
+<div class="bar"><b>PÉNZTÁRCA — MENTETT KÁRTYA (A / B)</b><span class="sp"></span>
+<button id="szM" class="on">Mobil 390px</button><button id="szD">Asztali</button>
+<button id="stExp">Lejáró kártya</button><button id="stReset">Alapállapot</button></div>
+<p class="note">Két elhelyezés ugyanarra a tartalomra: <b>A</b> = a mostani megbízás-blokk helyén, a Modulok fül Előfizetés kártyájában;
+<b>B</b> = külön <b>Pénztárca</b> fül. Mindkettő működik: „Kártya cseréje” → tájékoztató → szimulált bankkártyás megerősítés → az új kártya lesz a mentett.
+„Megbízás visszavonása” = a jóváhagyott kétlépéses ablak. A 3) rész a modul-vásárlás kártyaválasztója (ott dől el, hogy a másik kártya mentődik-e).</p>
+
+<h3 class="sec">A) Pénztárca-blokk az Előfizetés kártyában (Modulok fül)</h3>
+<div class="stage m"><div class="adm-card">
+  <div class="adm-card__head"><span class="dot"></span><h2>Előfizetés</h2><a class="help" href="#">Súgó</a></div>
+  <div class="grid">
+    <div class="cell"><div class="l">Fordulónap</div><div class="v">minden hónap 28-a</div></div>
+    <div class="cell"><div class="l">Jelenlegi díj</div><div class="v mono">6 070 Ft/hó</div></div>
+    <div class="cell"><div class="l">Következő számla (2026-10-28)</div><div class="v mono">6 070 Ft</div></div>
+  </div>
+  <div class="wal" id="walA"></div>
+</div></div>
+
+<h3 class="sec">B) Külön „Pénztárca” fül</h3>
+<div class="stage m"><div class="adm-card">
+  <div class="nav"><span>Modulok</span><span>Webcím</span><span>Dokumentumok</span><span class="on">Pénztárca</span><span>Fiók</span></div>
+  <div class="adm-card__head" style="margin-top:0;border-radius:0"><span class="dot"></span><h2>Pénztárca</h2><a class="help" href="#">Súgó</a></div>
+  <div class="two">
+    <div id="walB"></div>
+    <div>
+      <div class="cell"><div class="l">Következő terhelés</div><div class="v mono" id="nextB">2026-10-28 · 6 070 Ft</div></div>
+      <div class="hint" style="margin-top:6px">A terhelés előtt 3 nappal e-mailt küldünk. A díj a csomagja szerint változhat.</div>
+      <table class="tbl"><thead><tr><th>Terhelések ezen a kártyán</th><th class="r">Összeg</th><th class="r">Állapot</th></tr></thead>
+      <tbody id="histB"></tbody></table>
+    </div>
+  </div>
+</div></div>
+
+<h3 class="sec">3) Modul-vásárlás — melyik kártyával? (a mentés itt dől el)</h3>
+<div class="stage m"><div class="adm-card">
+  <div class="adm-card__head"><span class="dot"></span><h2>Fizetés</h2></div>
+  <div class="cell"><div class="l">Fizetendő most — Programajánló, időarányos első díj</div><div class="v mono">327 Ft</div></div>
+  <div id="opts"></div>
+  <button class="pay" id="payBtn">Fizetek</button>
+  <p class="hint" id="payHint"></p>
+</div></div>
+
+<div class="veil" id="veil"></div>
+
+<div class="modal" id="mChange" role="dialog" aria-modal="true" aria-labelledby="mct">
+  <h4 id="mct">Kártya cseréje</h4>
+  <p>Az új kártyát a fizetési szolgáltató (Barion) oldalán adja meg — a kártyaadatokat mi nem látjuk és nem tároljuk.</p>
+  <div class="gw"><b>Mi történik:</b> a bank egy egyszeri megerősítést kér (SMS / banki app). A megerősítéshez <b>100 Ft-ot zárolunk, majd azonnal feloldunk</b> — pénzt nem vonunk le. Ezután minden díjat az új kártyáról vonunk, a régit töröljük.</div>
+  <button class="keep" id="mcGo">Tovább a bankkártyás megerősítéshez</button>
+  <button class="ghost" id="mcNo">Mégsem</button>
+</div>
+
+<div class="modal" id="mRevoke" role="dialog" aria-modal="true" aria-labelledby="mrt">
+  <h4 id="mrt">Biztosan visszavonja az automatikus terhelést?</h4>
+  <ul>
+    <li>Ezután <b>Önnek kell fizetnie</b> minden fordulónapon, a kiküldött fizetési linkkel.</li>
+    <li>Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot <b>átmenetileg felfüggesztjük</b>.</li>
+    <li>A visszavonás <b>nem szünteti meg</b> a fizetési kötelezettséget, és nem mondja le az előfizetést.</li>
+    <li>A visszakapcsolás <b>nem egy kattintás</b>: a bankkártyás megerősítés miatt új kártya-megadás kell (Kártya megadása gomb).</li>
+  </ul>
+  <button class="keep" id="mrKeep">Mégsem — marad az automatikus fizetés</button>
+  <button class="go" id="mrGo">Igen, visszavonom a megbízást</button>
+</div>
+
+<div class="modal" id="mGw" role="dialog" aria-modal="true" aria-labelledby="mgt">
+  <h4 id="mgt">Barion — bankkártyás megerősítés (szimuláció)</h4>
+  <p>Élesben itt a Barion fizetési oldala nyílik. A vázlatban válaszd ki, mi történjen:</p>
+  <button class="keep" id="gwOk">Sikeres megerősítés — Mastercard ····8810</button>
+  <button class="ghost" id="gwFail">A bank elutasította</button>
+  <button class="ghost" id="gwBack">Vissza, kártya-megadás nélkül</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  var CARD0={brand:"VISA",cls:"",last4:"4242",exp:"08/2028",saved:"2026-09-22",expiring:false};
+  var CARDNEW={brand:"MASTERCARD",cls:"mc",last4:"8810",exp:"03/2029",saved:"2026-09-24",expiring:false};
+  var state={card:null,history:[],charges:[],pendingGw:null};
+  function reset(){state.card=Object.assign({},CARD0);state.history=[];
+    state.charges=[["2026-09-28","Előfizetés (havi)",6070,"ok"],["2026-09-22","Előfizetés — első díj",6070,"ok"]];
+    render();}
+  function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft";}
+  function ICO(){return '<svg viewBox="0 0 24 24" width="20" height="20" style="stroke:var(--citui-navy-900);fill:none;stroke-width:1.7"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/></svg>';}
+
+  function pillHtml(c){
+    if(!c) return '<span class="pill off">NINCS MENTETT KÁRTYA</span>';
+    if(c.expiring) return '<span class="pill warn">LEJÁR: '+c.exp+'</span>';
+    return '<span class="pill on">AUTOMATIKUS TERHELÉS BEKAPCSOLVA</span>';
+  }
+  function metaHtml(c){
+    return (c.expiring?'<b class="exp">Lejár: '+c.exp+' — a következő terhelés előtt cserélje</b>':'Lejárat: '+c.exp)+' · mentve: '+c.saved;
+  }
+  function histHtml(){
+    if(!state.history.length) return '';
+    return '<details class="wal__hist"><summary>Korábbi kártyák ('+state.history.length+')</summary><ul>'+
+      state.history.map(function(h){return '<li>'+h.brand+' ····'+h.last4+' — mentve '+h.saved+', cserélve '+h.replaced+'</li>';}).join('')+'</ul></details>';
+  }
+
+  function renderA(){
+    var c=state.card, el=document.getElementById("walA");
+    el.innerHTML='<div class="wal__head">'+ICO()+'<h3>Pénztárca</h3></div>'+
+      (c
+        ? '<div class="wal__row"><div class="cc '+c.cls+'">'+c.brand+'</div><div class="wal__txt">'+pillHtml(c)+
+          '<div class="wal__num">···· ···· ···· '+c.last4+'</div><div class="wal__meta">'+metaHtml(c)+'</div></div></div>'+
+          '<p class="hint">A fordulónapon magától levonjuk a díjat erről a kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.</p>'+
+          '<div class="acts"><button class="btn pri" data-change>Kártya cseréje</button>'+
+          '<button class="quiet" data-revoke>Megbízás visszavonása</button></div>'
+        : '<div class="wal__row"><div class="cc none">—</div><div class="wal__txt">'+pillHtml(null)+
+          '<div class="wal__num">Fizetés díjbekérővel</div><div class="wal__meta">A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.</div></div></div>'+
+          '<div class="acts"><button class="btn pri" data-change>Kártya megadása</button></div>'+
+          '<p class="hint">A megadás egy bankkártyás megerősítéssel jár (a bank kéri, nem mi). Utána a díjak újra magától mennek.</p>')+
+      histHtml();
+  }
+  function renderB(){
+    var c=state.card, el=document.getElementById("walB");
+    el.innerHTML=(c
+      ? '<div class="bigcard '+c.cls+'"><div class="chip"></div><div class="brand">'+c.brand+'</div><div class="num">···· ···· ···· '+c.last4+'</div>'+
+        '<div class="foot"><span>Lejárat: '+c.exp+'</span><span>Mentve: '+c.saved+'</span></div></div>'+
+        '<div style="margin-top:12px">'+pillHtml(c)+'</div>'+
+        (c.expiring?'<p class="hint" style="color:#8a6511;margin-top:0"><b>A kártya a következő terhelés előtt lejár.</b> Ha nem cseréli, a fordulónapon fizetési linket kap e-mailben.</p>':'')+
+        '<div class="acts"><button class="btn pri" data-change>Kártya cseréje</button><button class="btn" data-revoke>Megbízás visszavonása</button></div>'+
+        '<p class="hint">A kártyaadatokat a Barion tárolja, mi csak az utolsó 4 számjegyet és a lejáratot látjuk.</p>'
+      : '<div class="bigcard none"><div class="brand">NINCS MENTETT KÁRTYA</div><div style="font-size:.86rem;margin-top:6px">A díjakat fizetési linkkel, e-mailből tudja rendezni.</div></div>'+
+        '<div class="acts"><button class="btn pri" data-change>Kártya megadása</button></div>'+
+        '<p class="hint">A megadás egy bankkártyás megerősítéssel jár (a bank kéri, nem mi). Utána a díjak újra magától mennek.</p>')+
+      histHtml();
+    document.getElementById("nextB").textContent=c?"2026-10-28 · 6 070 Ft":"2026-10-28 · fizetési link e-mailben";
+    document.getElementById("histB").innerHTML=state.charges.map(function(r){
+      return '<tr><td>'+r[0]+'<br><span style="color:var(--citui-muted)">'+r[1]+'</span></td><td class="r mono">'+huf(r[2])+'</td><td class="r"><span class="'+(r[3]==="ok"?"ok":"bad")+'">'+(r[3]==="ok"?"sikeres":"elutasítva")+'</span></td></tr>';}).join('')||'<tr><td colspan="3" style="color:var(--citui-muted)">Még nem volt terhelés.</td></tr>';
+  }
+  var payChoice="saved";
+  function renderPay(){
+    var c=state.card, o=document.getElementById("opts");
+    if(!c){payChoice="new";}
+    o.innerHTML=(c?'<label class="opt'+(payChoice==="saved"?" on":"")+'"><input type="radio" name="pc" value="saved"'+(payChoice==="saved"?" checked":"")+'><span><strong>A mentett kártyámmal — '+c.brand+' ····'+c.last4+'</strong><small>Azonnal, átirányítás nélkül. Ez marad a mentett kártya.</small></span></label>':'')+
+      '<label class="opt'+(payChoice==="new"?" on":"")+'"><input type="radio" name="pc" value="new"'+(payChoice==="new"?" checked":"")+'><span><strong>Másik kártyával</strong><small>A Barion oldalán adja meg, bankkártyás megerősítéssel. <b>Ez a kártya lesz ezután a mentett kártya</b>'+(c?', a '+c.brand+' ····'+c.last4+' helyett':'')+' — a jövőbeli díjak erről mennek.</small></span></label>';
+    o.querySelectorAll('input').forEach(function(i){i.onchange=function(){payChoice=i.value;renderPay();};});
+    document.getElementById("payBtn").textContent=payChoice==="saved"?"Fizetek — 327 Ft a ····"+c.last4+" kártyáról":"Tovább a Barionhoz — 327 Ft";
+    document.getElementById("payHint").textContent=payChoice==="saved"?"":"A fizetés után az új kártya jelenik meg a Pénztárcában, a régi a korábbi kártyák közé kerül.";
+  }
+  function render(){renderA();renderB();renderPay();bind();}
+
+  function openM(id){document.getElementById("veil").classList.add("on");var m=document.getElementById(id);m.classList.add("on");var f=m.querySelector("button");if(f)f.focus();}
+  function closeM(){document.getElementById("veil").classList.remove("on");document.querySelectorAll(".modal.on").forEach(function(m){m.classList.remove("on");});}
+  function toast(t){var e=document.getElementById("toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove("on");},3500);}
+
+  function bind(){
+    document.querySelectorAll("[data-change]").forEach(function(b){b.onclick=function(){state.pendingGw="change";openM("mChange");};});
+    document.querySelectorAll("[data-revoke]").forEach(function(b){b.onclick=function(){openM("mRevoke");};});
+  }
+  function swapCard(){
+    if(state.card){var old=Object.assign({},state.card);old.replaced=CARDNEW.saved;state.history.unshift(old);}
+    state.card=Object.assign({},CARDNEW);
+  }
+  document.getElementById("mcNo").onclick=closeM;
+  document.getElementById("mcGo").onclick=function(){closeM();openM("mGw");};
+  document.getElementById("gwBack").onclick=function(){closeM();toast("Nem történt változás — a mentett kártya a régi maradt.");};
+  document.getElementById("gwFail").onclick=function(){closeM();toast("A bank elutasította a megerősítést. A mentett kártya nem változott.");};
+  document.getElementById("gwOk").onclick=function(){
+    closeM();
+    if(state.pendingGw==="pay"){state.charges.unshift(["2026-09-24","Programajánló — időarányos első díj",327,"ok"]);}
+    swapCard();
+    render();
+    toast(state.pendingGw==="pay"?"Fizetve: 327 Ft. A mentett kártya ezután: Mastercard ····8810.":"Kész: a mentett kártya ezután Mastercard ····8810. Pénzt nem vontunk le.");
+    state.pendingGw=null;
+  };
+  document.getElementById("mrKeep").onclick=closeM;
+  document.getElementById("mrGo").onclick=function(){
+    closeM();
+    if(state.card){var old=Object.assign({},state.card);old.replaced="2026-09-24 (visszavonva)";state.history.unshift(old);}
+    state.card=null;payChoice="new";render();
+    toast("A megbízást visszavontuk. A díjakat mostantól fizetési linkkel kell rendeznie.");
+  };
+  document.getElementById("payBtn").onclick=function(){
+    if(payChoice==="saved"){state.charges.unshift(["2026-09-24","Programajánló — időarányos első díj",327,"ok"]);render();toast("Fizetve: 327 Ft a ····"+state.card.last4+" kártyáról. A mentett kártya változatlan.");}
+    else{state.pendingGw="pay";openM("mGw");}
+  };
+  document.getElementById("veil").onclick=closeM;
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeM();});
+  document.getElementById("stExp").onclick=function(){state.card=Object.assign({},CARD0,{exp:"10/2026",expiring:true});render();};
+  document.getElementById("stReset").onclick=reset;
+
+  function setW(mobile){document.querySelectorAll(".stage").forEach(function(s){s.classList.toggle("m",mobile);});}
+  document.getElementById("szM").onclick=function(){setW(true);this.classList.add("on");document.getElementById("szD").classList.remove("on");};
+  document.getElementById("szD").onclick=function(){setW(false);this.classList.add("on");document.getElementById("szM").classList.remove("on");};
+  if(matchMedia("(min-width: 900px)").matches){document.getElementById("szD").click();}
+  reset();
+</script>
+</body></html>

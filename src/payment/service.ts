@@ -38,9 +38,16 @@ export interface RequestPaymentResult {
   readonly gatewayRef: string;
 }
 
-/** Create (or reuse a still-pending) pay-link for a submitted order intent. */
+/** ADR-XXXX: the amount a card-verification payment HOLDS (and releases). */
+export const CARD_VERIFY_AMOUNT_HUF = 100;
+
+/** Create (or reuse a still-pending) pay-link for a submitted order intent.
+ *  ADR-XXXX `newCard`: an UPSELL the tenant chose to pay "with another card" —
+ *  the pay-link then initiates a token, and the card that pays becomes the
+ *  stored mandate (the plan-bar promise; without this it would be a lie). */
 export async function requestPayment(
   orderIntentId: string,
+  opts: { readonly newCard?: boolean } = {},
 ): Promise<RequestPaymentResult | null> {
   const oi = await db
     .selectFrom("order_intent")
@@ -144,6 +151,24 @@ export async function requestPayment(
     return { paymentId: existing.id, payUrl: existing.pay_url, gatewayRef: existing.gateway_ref };
   }
 
+  // ADR-0080 ④: a SUBSCRIPTION checkout stores a charge token (the payer consents
+  // on the gateway's own pay page), so later renewals can charge automatically.
+  // One-time purchases (multilang, domain) never initiate one — nothing recurs.
+  // ADR-XXXX: a card_update exists ONLY for the token, and an upsell paid "with
+  // another card" initiates too (the new card replaces the mandate). The FACT is
+  // written on the payment row — the webhook reads it from there, not from kind.
+  const wantsToken =
+    oi.kind === "initial" ||
+    oi.kind === "renewal" ||
+    oi.kind === "card_update" ||
+    (oi.kind === "upsell" && !!opts.newCard);
+  // A card_update on a gateway that cannot release a hold would CHARGE the
+  // verification amount — refuse instead of taking money the page said we would not.
+  if (oi.kind === "card_update" && !gw.finishReservation) {
+    console.warn(`[payment] card_update ${orderIntentId} MEGTAGADVA: az átjáró (${gw.name}) nem tud zárolást feloldani`);
+    return null;
+  }
+
   const payment = await db
     .insertInto("payment")
     .values({
@@ -153,15 +178,12 @@ export async function requestPayment(
       period: oi.billing_period,
       gateway: gw.name,
       status: "pending",
+      initiates_recurrence: wantsToken,
     })
     .returning("id")
     .executeTakeFirstOrThrow();
 
   const base = process.env.PUBLIC_BASE_URL ?? "";
-  // ADR-0080 ④: a SUBSCRIPTION checkout stores a charge token (the payer consents
-  // on the gateway's own pay page), so later renewals can charge automatically.
-  // One-time purchases (multilang, domain) never initiate one — nothing recurs.
-  const wantsToken = oi.kind === "initial" || oi.kind === "renewal";
   const link = await gw.createPayLink({
     paymentId: payment.id,
     amount: oi.price,
@@ -175,10 +197,13 @@ export async function requestPayment(
           ? "Citoviso lemondás-elszámolás (hűségidő-kötbér és díjak)"
           : oi.kind === "upsell"
             ? "Citoviso modul-bővítés — időarányos első díj"
-            : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+            : oi.kind === "card_update"
+              ? "Citoviso kártya-megerősítés — zárolás, azonnal feloldva"
+              : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
     ...(wantsToken ? { initiateRecurrence: true, recurrenceId: payment.id } : {}),
+    ...(oi.kind === "card_update" ? { verification: true } : {}),
   });
 
   await db
@@ -221,7 +246,8 @@ export async function handleWebhook(
   params: Record<string, unknown>,
   headers: Record<string, string | string[] | undefined>,
 ): Promise<{ ok: boolean; activated?: boolean; pending?: boolean }> {
-  const res = await getGateway().parseWebhook(params, headers);
+  const gw = getGateway();
+  const res = await gw.parseWebhook(params, headers);
   if (!res) return { ok: false };
   if (res === "pending") {
     // In-flight at the gateway: acknowledge (200) — but ONLY for a payment we
@@ -229,9 +255,29 @@ export async function handleWebhook(
     // because that is exactly the "a real payment has no row here" case.
     const ref = String(params.paymentId ?? params.PaymentId ?? params.gatewayRef ?? "");
     const known = ref
-      ? await db.selectFrom("payment").select("id").where("gateway_ref", "=", ref).executeTakeFirst()
+      ? await db
+          .selectFrom("payment")
+          .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+          .select(["payment.id as id", "payment.status as status", "order_intent.kind as kind"])
+          .where("payment.gateway_ref", "=", ref)
+          .executeTakeFirst()
       : undefined;
-    return known ? { ok: true, pending: true } : { ok: false };
+    if (!known) return { ok: false };
+    // ADR-XXXX: a card-verification payment is a RESERVATION — "in flight" here
+    // means the card was authenticated and the hold stands. Release it (0) at
+    // once; the gateway then reports Succeeded and the token + card get stored
+    // on the re-read. No money ever moves. A release that fails is logged and
+    // retried on the next callback (the hold expires by itself at the period end).
+    if (known.kind === "card_update" && known.status === "pending" && gw.finishReservation) {
+      const released = await gw.finishReservation(ref, 0);
+      if (!released) {
+        console.error(`[payment] kártya-megerősítés: a zárolás feloldása NEM sikerült (${ref}) — újrapróba a következő callbacknél`);
+        return { ok: true, pending: true };
+      }
+      const again = await gw.parseWebhook(params, headers);
+      if (again && again !== "pending") return applyWebhookResult(again);
+    }
+    return { ok: true, pending: true };
   }
   return applyWebhookResult(res);
 }
@@ -290,6 +336,18 @@ export async function applyWebhookResult(
     .select(["kind", "tenant_id"])
     .where("id", "=", payment.order_intent_id)
     .executeTakeFirst();
+  // ADR-XXXX CARD_UPDATE: nothing was bought — the hold is released by the
+  // caller (handleWebhook) and the ONLY deliverable is the mandate: the card
+  // that just authenticated becomes the stored one. No invoice: no money moved.
+  if (kindRow?.kind === "card_update") {
+    const stored = await storeRecurrenceTokenIfInitiated(
+      payment.id,
+      payment.order_intent_id,
+      res.traceId ?? null,
+      res.card ?? null,
+    );
+    return { ok: true, activated: stored };
+  }
   // ADR-0088: a paid offer-priced order burns one use of its offer. Renewals
   // redeem inside applyRenewalPaid instead — that path is also reached by the
   // token charge, which never passes through this webhook.
@@ -298,6 +356,10 @@ export async function applyWebhookResult(
   }
   if (kindRow?.kind === "upsell") {
     const bought = await settleUpsellPaid(payment.order_intent_id);
+    // ADR-XXXX: an upsell paid "with another card" initiated a token — that card
+    // is the mandate now (no-op when the payment did not initiate one).
+    await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null, res.card ?? null);
+    await backfillCardMaskIfMissing(kindRow.tenant_id, res.card ?? null);
     await issueInvoiceFor(payment.id);
     return { ok: true, activated: bought.length > 0 };
   }
@@ -336,7 +398,10 @@ export async function applyWebhookResult(
     }
     // ADR-0080 ④: a pay-link renewal that initiated a token upgrades the
     // subscription to auto-charge from the NEXT cycle on.
-    await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null);
+    await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null, res.card ?? null);
+    // ADR-XXXX: a MIT renewal on a pre-0076 token also reports the card — the
+    // Pénztárca learns the mask of a mandate stored before masks existed.
+    await backfillCardMaskIfMissing(kindRow.tenant_id, res.card ?? null);
     await issueInvoiceFor(payment.id);
     return { ok: true, activated: !!settled };
   }
@@ -377,7 +442,7 @@ export async function applyWebhookResult(
   // order reaches its tenant only through the lead the activation just converted.
   if (activated) await ensureSubscriptionForOrder(payment.order_intent_id);
   // ADR-0080 ④: AFTER the subscription is born — the token hangs off its row.
-  if (activated) await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null);
+  if (activated) await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null, res.card ?? null);
   // ADR-0088 §6: the conversion just made a subscriber — grant the welcome
   // coupon for their next purchase. AFTER activate(): the tenant only exists
   // through the lead this activation converted.
@@ -400,15 +465,24 @@ async function storeRecurrenceTokenIfInitiated(
   paymentId: string,
   orderIntentId: string,
   traceId: string | null,
-): Promise<void> {
-  if (!getGateway().chargeRecurring) return;
+  card: import("./gateway.js").CardInfo | null = null,
+): Promise<boolean> {
+  if (!getGateway().chargeRecurring) return false;
+  // ADR-XXXX: the FACT that this pay-link asked for a token lives on the payment
+  // row (0076) — kind alone no longer decides (upsell "másik kártyával", card_update).
+  const pay = await db
+    .selectFrom("payment")
+    .select("initiates_recurrence")
+    .where("id", "=", paymentId)
+    .executeTakeFirst();
+  if (!pay?.initiates_recurrence) return false;
   const oi = await db
     .selectFrom("order_intent")
     .leftJoin("prospect", "prospect.id", "order_intent.prospect_id")
     .select(["order_intent.kind as kind", "order_intent.tenant_id as tenantId", "prospect.lead_id as leadId"])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
-  if (!oi || (oi.kind !== "initial" && oi.kind !== "renewal")) return;
+  if (!oi) return false;
   let tenantId = oi.tenantId;
   if (!tenantId && oi.leadId) {
     const t = await db
@@ -418,18 +492,80 @@ async function storeRecurrenceTokenIfInitiated(
       .executeTakeFirst();
     tenantId = t?.id ?? null;
   }
-  if (!tenantId) return;
+  if (!tenantId) return false;
+  // ADR-XXXX: the card being REPLACED goes to the history (the Pénztárca's
+  // "Korábbi kártyák"). Only a real, different mandate counts — a replayed
+  // webhook for the same payment must not write a bogus "replaced" row.
+  const prev = await db
+    .selectFrom("subscription")
+    .select(["recurrence_token", "card_brand", "card_last4", "card_exp_month", "card_exp_year", "card_saved_at"])
+    .where("tenant_id", "=", tenantId)
+    .executeTakeFirst();
+  if (!prev) return false;
+  if (prev.recurrence_token === paymentId) return true; // idempotent replay
+  const now = new Date();
+  if (prev.recurrence_token) {
+    await db
+      .insertInto("saved_card_history")
+      .values({
+        tenant_id: tenantId,
+        card_brand: prev.card_brand,
+        card_last4: prev.card_last4,
+        card_exp_month: prev.card_exp_month,
+        card_exp_year: prev.card_exp_year,
+        saved_at: (prev.card_saved_at ?? now) as unknown as never,
+        ended_at: now as unknown as never,
+        end_reason: "replaced",
+      })
+      .execute();
+  }
   await db
     .updateTable("subscription")
     .set({
       recurrence_token: paymentId,
       recurrence_trace_id: traceId,
       payment_method: "token",
-      updated_at: new Date() as unknown as never,
+      card_brand: card?.brand ?? null,
+      card_last4: card?.last4 ?? null,
+      card_exp_month: card?.expMonth ?? null,
+      card_exp_year: card?.expYear ?? null,
+      card_saved_at: now as unknown as never,
+      updated_at: now as unknown as never,
     })
     .where("tenant_id", "=", tenantId)
     .execute();
-  console.log(`[billing] terhelési token eltárolva → auto-terhelés a következő ciklustól · tenant ${tenantId}`);
+  console.log(
+    `[billing] terhelési token eltárolva → auto-terhelés a következő ciklustól · tenant ${tenantId}` +
+      (card?.last4 ? ` · kártya ${card.brand ?? "?"} ····${card.last4}` : " · kártya-maszk nélkül") +
+      (prev.recurrence_token ? " · a korábbi kártya az előzményekbe került" : ""),
+  );
+  return true;
+}
+
+/**
+ * ADR-XXXX: a mandate stored BEFORE 0076 has a token but no mask. Every later
+ * charge on it (MIT renewal/upsell via the webhook) reports the card — fill the
+ * mask in once, so the Pénztárca stops saying "a részletek a következő
+ * terheléskor jelennek meg". Never overwrites a mask that is already there.
+ */
+async function backfillCardMaskIfMissing(
+  tenantId: string | null,
+  card: import("./gateway.js").CardInfo | null,
+): Promise<void> {
+  if (!tenantId || !card?.last4) return;
+  await db
+    .updateTable("subscription")
+    .set({
+      card_brand: card.brand,
+      card_last4: card.last4,
+      card_exp_month: card.expMonth,
+      card_exp_year: card.expYear,
+    })
+    .where("tenant_id", "=", tenantId)
+    .where("payment_method", "=", "token")
+    .where("recurrence_token", "is not", null)
+    .where("card_last4", "is", null)
+    .execute();
 }
 
 export type RenewalChargeOutcome = "paid" | "pending" | "failed";

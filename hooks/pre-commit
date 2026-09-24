@@ -236,6 +236,15 @@ if [ -f scripts/coupon-visible-check.mts ] && \
   echo "[pre-commit] coupon-visible (a kedvezmény látszik, a végösszeg nem mozdul)…"
   npx tsx scripts/coupon-visible-check.mts
 fi
+# Pénztárca (design-refs/console/wallet): a mentett kártya látható (maszk, sosem több 4 jegynél), cserélhető
+# (EGY út: 3DS-zárolás + feloldás, számla nélkül), visszavonható (előzmény), és a modul-vásárlás
+# „másik kártyával" ága TÉNYLEG tokent kér. Render + terv-sáv (Playwright) + Barion-maszk +
+# valódi DB-út eldobható fixtúrán. Piros önteszttel.
+if [ -f scripts/wallet-check.mts ] && \
+   changed_files | grep -qE '^(src/server/adminViews\.ts|src/server/public\.ts|src/payment/(service|subscription|barion|mock|gateway)\.ts|src/tenant/wallet\.ts|src/tenant/subscriptionAdmin\.ts|public/assets/ui/citui-admin\.css)|^scripts/wallet-check'; then
+  echo "[pre-commit] wallet (a mentett kártya látható · cserélhető · visszavonható)…"
+  npx tsx scripts/wallet-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A kézi terhelés-újrapróba visszajelzése IRÁNYT mondott TETT helyett: négy ág „a fenti
 # gombbal" fordulattal küldött, miközben a gombok mérve ~3 600 bájttal LEJJEBB álltak, a
 # redirect pedig fragmentet sem vitt. ⛔ És a „nincs_kartya" ág olyan gombot nevezett meg,

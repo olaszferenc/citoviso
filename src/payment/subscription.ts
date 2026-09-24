@@ -336,19 +336,51 @@ export async function setPendingBillingPeriod(
  * card scheme binds the stored credential to THAT authentication.
  */
 export async function revokeAutoCharge(tenantId: string): Promise<boolean> {
+  const now = new Date();
+  // ADR-XXXX: the mask is read BEFORE it is dropped — RETURNING would only give
+  // the nulled row — so the Pénztárca can list it under "Korábbi kártyák — visszavonva".
+  const prev = await db
+    .selectFrom("subscription")
+    .select(["recurrence_token", "card_brand", "card_last4", "card_exp_month", "card_exp_year", "card_saved_at"])
+    .where("tenant_id", "=", tenantId)
+    .where("payment_method", "=", "token")
+    .executeTakeFirst();
   const r = await db
     .updateTable("subscription")
     .set({
       payment_method: "invoice",
       recurrence_token: null,
       recurrence_trace_id: null,
-      updated_at: new Date() as unknown as never,
+      // ADR-XXXX: the mask goes with the token — a revoked card is not "saved".
+      card_brand: null,
+      card_last4: null,
+      card_exp_month: null,
+      card_exp_year: null,
+      card_saved_at: null,
+      updated_at: now as unknown as never,
     })
     .where("tenant_id", "=", tenantId)
     .where("payment_method", "=", "token")
     .returning("id")
     .execute();
-  if (r.length) console.log(`[subscription] ismétlődő fizetési megbízás VISSZAVONVA · tenant ${tenantId}`);
+  if (r.length) {
+    if (prev?.recurrence_token) {
+      await db
+        .insertInto("saved_card_history")
+        .values({
+          tenant_id: tenantId,
+          card_brand: prev.card_brand,
+          card_last4: prev.card_last4,
+          card_exp_month: prev.card_exp_month,
+          card_exp_year: prev.card_exp_year,
+          saved_at: (prev.card_saved_at ?? now) as unknown as never,
+          ended_at: now as unknown as never,
+          end_reason: "revoked",
+        })
+        .execute();
+    }
+    console.log(`[subscription] ismétlődő fizetési megbízás VISSZAVONVA · tenant ${tenantId}`);
+  }
   return r.length > 0;
 }
 

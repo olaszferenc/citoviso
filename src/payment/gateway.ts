@@ -24,6 +24,13 @@ export interface PaymentRequest {
   /** Merchant-chosen token id (we use the first payment's id); required when
    *  initiateRecurrence is set, and quoted verbatim at every later MIT charge. */
   readonly recurrenceId?: string;
+  /**
+   * ADR-XXXX: a CARD-VERIFICATION payment — the tenant swaps the stored card
+   * without buying anything. The gateway should only HOLD the amount
+   * (Barion PaymentType=Reservation); the caller releases it with
+   * finishReservation(…, 0) the moment the token is stored, so no money moves.
+   */
+  readonly verification?: boolean;
 }
 
 /** ADR-0080 ④: a merchant-initiated charge with a stored token (payer absent). */
@@ -53,11 +60,25 @@ export interface PayLink {
   readonly payUrl: string;
 }
 
+/**
+ * ADR-XXXX: the MASK of the card that paid — what the Pénztárca may show. Never
+ * the PAN: the gateway holds the card, we hold four digits and an expiry.
+ */
+export interface CardInfo {
+  /** Scheme/brand as the gateway names it ("Visa", "MasterCard", …). */
+  readonly brand: string | null;
+  readonly last4: string | null;
+  readonly expMonth: number | null;
+  readonly expYear: number | null;
+}
+
 export interface WebhookResult {
   readonly gatewayRef: string;
   readonly status: "paid" | "failed";
   /** 0040: card-scheme TraceId of a paid, token-initiating payment (Barion). */
   readonly traceId?: string | null;
+  /** ADR-XXXX: the paying card's mask, when the gateway reports one. */
+  readonly card?: CardInfo | null;
 }
 
 export interface PaymentGateway {
@@ -90,4 +111,10 @@ export interface PaymentGateway {
    * pay-link + dunning ladder.
    */
   chargeRecurring?(req: RecurringChargeRequest): Promise<RecurringChargeResult>;
+  /**
+   * ADR-XXXX: close a Reservation-type payment for `total` (0 = release the whole
+   * hold back to the card). Optional — a gateway without reservations cannot run
+   * the card-verification flow, and the caller must not offer it.
+   */
+  finishReservation?(gatewayRef: string, total: number): Promise<boolean>;
 }

@@ -5,6 +5,7 @@
 // PAYMENT_GATEWAY=barion once keys exist; the service + DB layer stay unchanged.
 
 import type {
+  CardInfo,
   PaymentGateway,
   PaymentRequest,
   PayLink,
@@ -12,6 +13,20 @@ import type {
   RecurringChargeResult,
   WebhookResult,
 } from "./gateway.js";
+
+/**
+ * ADR-XXXX: the mock gateway's two test cards — the pay page offers them on a
+ * token-initiating payment. Shapes mirror what Barion's FundingInformation
+ * reports (brand as the scheme names it, last 4, expiry).
+ */
+export const MOCK_CARDS: readonly { readonly id: string; readonly card: CardInfo }[] = [
+  { id: "visa4242", card: { brand: "Visa", last4: "4242", expMonth: 8, expYear: 2028 } },
+  { id: "mc8810", card: { brand: "MasterCard", last4: "8810", expMonth: 3, expYear: 2029 } },
+];
+
+export function mockCard(id: string): CardInfo | null {
+  return MOCK_CARDS.find((c) => c.id === id)?.card ?? null;
+}
 
 export class MockGateway implements PaymentGateway {
   readonly name = "mock";
@@ -30,7 +45,16 @@ export class MockGateway implements PaymentGateway {
   async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | null> {
     if (typeof params.gatewayRef !== "string") return null;
     if (params.status !== "paid" && params.status !== "failed") return null;
-    return { gatewayRef: params.gatewayRef, status: params.status };
+    // ADR-XXXX: the mock pay page lets the tester pick WHICH test card paid, so the
+    // Pénztárca's card mask and the "másik kártya" swap run locally end to end.
+    const card = typeof params.card === "string" ? mockCard(params.card) : null;
+    return { gatewayRef: params.gatewayRef, status: params.status, ...(card ? { card } : {}) };
+  }
+
+  /** ADR-XXXX: the mock holds nothing, so releasing is always a success. */
+  async finishReservation(gatewayRef: string, total: number): Promise<boolean> {
+    console.log(`[payment:mock] zárolás lezárva · ${gatewayRef} · ${total} HUF`);
+    return true;
   }
 
   /**

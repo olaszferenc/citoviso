@@ -90,6 +90,9 @@ export interface SubscriptionAdminData {
   // see or cancel is the "silent gate" failure). ──
   /** A usable stored mandate exists → the fordulónap charges automatically. */
   readonly autoCharge: boolean;
+  /** ADR-XXXX: the stored card named for the plan bar ("Visa ····4242");
+   *  null without a mandate — or on a pre-0076 token whose mask is unknown yet. */
+  readonly cardLabel: string | null;
   /** The tenant's live welcome/campaign coupon for their NEXT purchase. */
   readonly coupon: { readonly percent: number; readonly expiresAt: string | null } | null;
 }
@@ -140,6 +143,8 @@ export async function getSubscriptionAdmin(
       "pending_period",
       "payment_method",
       "recurrence_token",
+      "card_brand",
+      "card_last4",
       "restored_at",
       "frozen_at",
     ])
@@ -271,6 +276,7 @@ export async function getSubscriptionAdmin(
     annualSavings: total * freeMonths,
     annualFreeMonths: freeMonths,
     autoCharge,
+    cardLabel: autoCharge && sub.card_last4 ? `${sub.card_brand ?? ""} ····${sub.card_last4}`.trim() : null,
     coupon: coupon
       ? {
           percent: coupon.percent,

@@ -38,10 +38,13 @@ import { formatDay, formatDayStem, formatMonthDay } from "../text/day.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
 import {
+  invoiceItemKey,
   invoiceItemLabel,
+  invoiceItemPeriod,
   type InvoiceItemKey,
   type InvoiceItemPeriod,
 } from "../billing/invoiceItem.js";
+import type { WalletAdminData } from "../tenant/wallet.js";
 import { threadSubjectLabel, type ThreadPosition } from "../tenant/messageThreads.js";
 import { isUnread, type MessageKind } from "../tenant/messages.js";
 import { messagePreview } from "../tenant/messagePreview.js";
@@ -945,7 +948,9 @@ export function modulesSection(
           `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "BEKAPCSOLVA")}</span>` +
           `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
           `<p>${T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
-          `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>` +
+          `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button> ` +
+          // ADR-XXXX (wallet ⑨): the card itself lives on ONE surface — link, do not copy.
+          `<a class="adm-mand__btn" href="/admin?tab=penztarca">${T(lang, "Pénztárca — melyik kártya, csere")}</a>` +
           `</div></div>`
       : `<div class="adm-mand">` +
         `<div class="adm-mand__ico">${ic("card")}</div>` +
@@ -957,7 +962,11 @@ export function modulesSection(
         // 3DS-challenged, customer-initiated payment, so there is no button that
         // can switch this back on by itself. The next pay-link payment re-grants
         // it — which is exactly what we say, instead of offering a fake switch.
-        `<p class="adm-mand__hint">${T(lang, "Újra bekapcsolni a következő fizetési link kiegyenlítésekor tud: az a fizetés adja meg újra a megbízást (a bankkártyás megerősítés miatt).")}</p>` +
+        // ADR-XXXX (wallet ⑨): the re-grant has a real path now — the Pénztárca's
+        // "Kártya megadása" (a 3DS round without a purchase). The old sentence
+        // ("only at the next pay-link") is no longer the whole truth.
+        `<p class="adm-mand__hint">${T(lang, "Újra bekapcsolni a Pénztárcában tud, a „Kártya megadása” gombbal (bankkártyás megerősítéssel) — vagy a következő fizetési link kiegyenlítésekor: az a fizetés is megadja a megbízást.")}</p>` +
+        `<a class="adm-mand__btn" href="/admin?tab=penztarca">${T(lang, "Pénztárca — kártya megadása")}</a>` +
         (sub.payUrl
           ? `<a class="adm-mand__btn" href="${esc(sub.payUrl)}">${T(lang, "Díj rendezése és megbízás megadása")}</a>`
           : "") +
@@ -1616,7 +1625,21 @@ export function modulesSection(
     `<div class="adm-planbar__foot">` +
     `<span class="adm-planbar__sum">` +
     `<span class="adm-planbar__paynow" id="adm-plan-paynow" hidden>${T(lang, "Fizetendő most:")} <b id="adm-plan-paysum"></b><br></span>` +
-    `${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span></span>` +
+    `${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span>` +
+    // ADR-XXXX (wallet ⑧): WHICH card pays — only when a mandate exists and there
+    // is something to pay now (JS shows it). "Másik kártyával" is a promise the
+    // server keeps: that pay-link initiates a token (requestPayment newCard).
+    (sub?.autoCharge
+      ? `<div class="adm-planbar__card" id="adm-plan-card" hidden>` +
+        `<label class="adm-planbar__opt"><input type="radio" name="card" value="saved" checked><span><b>${
+          sub.cardLabel
+            ? T(lang, "A mentett kártyámmal — {card}", { card: esc(sub.cardLabel) })
+            : T(lang, "A mentett kártyámmal")
+        }</b><small>${T(lang, "Azonnal, átirányítás nélkül. Ez marad a mentett kártya.")}</small></span></label>` +
+        `<label class="adm-planbar__opt"><input type="radio" name="card" value="new"><span><b>${T(lang, "Másik kártyával")}</b><small>${T(lang, "A fizetési szolgáltató oldalán adja meg, bankkártyás megerősítéssel. Ez a kártya lesz ezután a mentett kártya — a jövőbeli díjak erről mennek.")}</small></span></label>` +
+        `</div>`
+      : "") +
+    `</span>` +
     `<span><button type="button" class="citui-btn citui-btn--ghost" id="adm-plan-reset">${T(lang, "Elvetem")}</button> ` +
     `<button class="citui-btn citui-btn--primary" type="submit" id="adm-plan-apply">${T(lang, "Alkalmazom a módosításokat")}</button></span>` +
     `</div></div>` +
@@ -1762,7 +1785,11 @@ export function modulesSection(
     `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDateS) })}</span></div>'}).join("");` +
     `if(paybox){paybox.hidden=payNow<=0;if(paysum)paysum.textContent=HUF(payNow)}` +
-    `if(apply)apply.textContent=payNow>0?(AUTOC?"${T(lang, "Alkalmazom — a kártyáját {sum} terheljük", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)+"-tal"):"${T(lang, "Fizetés és alkalmazás")}"):"${T(lang, "Alkalmazom a módosításokat")}";` +
+    // ADR-XXXX (wallet ⑧): the card chooser follows the pay-now box, and the
+    // button says which way the money goes — stored card now, or the gateway page.
+    `var cardbox=document.getElementById("adm-plan-card");if(cardbox)cardbox.hidden=!(AUTOC&&payNow>0);` +
+    `var cardNew=false;var cr=f.querySelector('input[name="card"]:checked');if(cr)cardNew=cr.value==="new";` +
+    `if(apply)apply.textContent=payNow>0?(AUTOC&&!cardNew?"${T(lang, "Alkalmazom — a kártyáját {sum} terheljük", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)+"-tal"):AUTOC?"${T(lang, "Fizetés másik kártyával — {sum}", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)):"${T(lang, "Fizetés és alkalmazás")}"):"${T(lang, "Alkalmazom a módosításokat")}";` +
     `if(tot)tot.textContent=HUF(base+delta*mult);` +
     `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta*mult))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
     `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
@@ -1859,6 +1886,7 @@ export function modulesSection(
     `depClose();sync()})}` +
     `var _sync0=sync;sync=function(){_sync0();markDeps()};` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
+    `[].forEach.call(f.querySelectorAll('input[name="card"]'),function(r){r.addEventListener("change",sync)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
     `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
     // ── ADR-0113 confirm card: a submit that would charge stops here first ──
@@ -3064,6 +3092,9 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }
   // ADR-0084 (jóváhagyott terv): a bizonylatok és a kommunikáció két külön fül.
   // ⛔ A felirat „Dokumentumok" — tulajdonosi javítás: magyarul nem „Iratok".
   { id: "dokumentumok", label: T(lang, "Dokumentumok"), icon: "docs" },
+  // ADR-XXXX (jóváhagyott terv: design-refs/console/wallet, „B"): a mentett kártya
+  // saját fület kap — látható, cserélhető, visszavonható; nem a Modulok alá bújtatva.
+  { id: "penztarca", label: T(lang, "Pénztárca"), icon: "card" },
   { id: "uzenetek", label: T(lang, "Üzenetek"), icon: "mail" },
   { id: "fiok", label: T(lang, "Fiók"), icon: "account" },
   // ADR-0045: the searchable knowledge base is its own surface, not only per-section icons.
@@ -4040,6 +4071,183 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
  * on the page itself the row reads "— nincs megadva —" instead of quietly
  * disappearing, so the gap is visible on both sides (ADR-0110 ⑥).
  */
+// ── Pénztárca (ADR-XXXX, approved contract: design-refs/console/wallet/README.md) ──
+// The stored card, VISIBLE and REPLACEABLE. Every sentence here is bound by the
+// contract's numbered points; the README says which.
+
+/** "VISA" / "MASTERCARD" for the card face — the brand as the gateway names it,
+ *  uppercased; a mask-less mandate (pre-0076 token) gets no brand word. */
+function walletBrandWord(brand: string | null): string {
+  return brand ? brand.toUpperCase() : "";
+}
+
+function walletExp(m: number | null, y: number | null): string {
+  return m && y ? `${String(m).padStart(2, "0")}/${y}` : "";
+}
+
+export function walletSection(
+  w: WalletAdminData | null,
+  sub: SubscriptionAdminData | null,
+  flash: "ok" | "fail" | "err" | null,
+  lang = "hu",
+): string {
+  const head =
+    `<div class="adm-card__head"><span class="adm-ico">${ic("card")}</span><h2>${T(lang, "Pénztárca")}</h2>${helpLink("admin.wallet", lang)}</div>`;
+  // No subscription yet (site not paid/live): an honest empty state, not a half-working wallet.
+  if (!w) {
+    return (
+      `<div class="adm-card">${head}` +
+      `<p class="citui-hint">${T(lang, "A Pénztárca akkor jelenik meg, ha a honlapja már él és van előfizetése.")}</p></div>`
+    );
+  }
+  const d = (iso: string): string => esc(fmtDate(new Date(`${iso}T12:00:00`), lang));
+  const card = w.card;
+  const maskKnown = !!card?.last4;
+  // ── the round that just ended (contract ④: success / refused / nothing changed) ──
+  const flashBox =
+    flash === "ok"
+      ? `<div class="adm-applied" role="status"><b>${T(lang, "Kész: a mentett kártya ezután {card}.", { card: esc(card ? `${walletBrandWord(card.brand)} ····${card.last4 ?? "????"}`.trim() : "") })}</b> ${T(lang, "Pénzt nem vontunk le — a zárolást feloldottuk.")}</div>`
+      : flash === "fail"
+        ? `<div class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)"><b>${T(lang, "A bank elutasította a megerősítést.")}</b> ${T(lang, "A mentett kártya nem változott.")}</div>`
+        : flash === "err"
+          ? `<div class="adm-applied" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)"><b>${T(lang, "A kártyacserét most nem tudtuk elindítani.")}</b> ${T(lang, "Semmi nem változott — próbálja meg később, vagy írjon nekünk.")}</div>`
+          : "";
+  // ── state pill (contract ③) ──
+  const pill = !card
+    ? `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "NINCS MENTETT KÁRTYA")}</span>`
+    : w.frozen
+      ? `<span class="adm-mand__pill adm-mand__pill--off">${T(lang, "A TERHELÉS NEM SIKERÜLT")}</span>`
+      : w.expiring
+        ? `<span class="adm-mand__pill adm-mand__pill--warn">${T(lang, "LEJÁR: {exp}", { exp: esc(walletExp(card.expMonth, card.expYear)) })}</span>`
+        : `<span class="adm-mand__pill adm-mand__pill--on">${T(lang, "AUTOMATIKUS TERHELÉS BEKAPCSOLVA")}</span>`;
+  // ── the card face (contract ②) ──
+  const face = card
+    ? `<div class="adm-wal__face${/master/i.test(card.brand ?? "") ? " adm-wal__face--mc" : ""}">` +
+      `<span class="adm-wal__chip" aria-hidden="true"></span>` +
+      `<div class="adm-wal__brand">${esc(walletBrandWord(card.brand)) || T(lang, "MENTETT KÁRTYA")}</div>` +
+      `<div class="adm-wal__num">${maskKnown ? `···· ···· ···· ${esc(card.last4!)}` : "···· ···· ···· ····"}</div>` +
+      `<div class="adm-wal__foot"><span>${maskKnown && walletExp(card.expMonth, card.expYear) ? T(lang, "Lejárat: {exp}", { exp: esc(walletExp(card.expMonth, card.expYear)) }) : ""}</span>` +
+      `<span>${T(lang, "Mentve: {date}", { date: d(card.savedOn) })}</span></div></div>`
+    : `<div class="adm-wal__face adm-wal__face--none">` +
+      `<div class="adm-wal__brand">${T(lang, "NINCS MENTETT KÁRTYA")}</div>` +
+      `<div class="adm-wal__none">${T(lang, "A díjakat fizetési linkkel, e-mailből tudja rendezni.")}</div></div>`;
+  // ── what the state MEANS (contract ③ + the mask-less honesty of ②) ──
+  const meaning = !card
+    ? `<p class="adm-wal__hint">${T(lang, "A fordulónapon fizetési linket küldünk e-mailben, amit Önnek kell kiegyenlítenie. A díjfizetési kötelezettség változatlan.")}</p>`
+    : (w.frozen
+        ? `<p class="adm-wal__hint adm-wal__hint--bad">${T(lang, "A mentett kártyáról nem sikerült levonni a díjat, ezért a terhelés leállt. A díj rendezése a Modulok fülön történik; egy másik kártya megadása itt lehetséges.")} <a href="/admin?tab=modulok">${T(lang, "A díj rendezése →")}</a></p>`
+        : w.expiring
+          ? `<p class="adm-wal__hint adm-wal__hint--warn"><b>${T(lang, "A kártya a következő terhelés előtt lejár.")}</b> ${T(lang, "Ha nem cseréli, a fordulónapon fizetési linket kap e-mailben.")}</p>`
+          : "") +
+      (!maskKnown
+        ? `<p class="adm-wal__hint">${T(lang, "A kártya mentve van; az utolsó 4 számjegy és a lejárat a következő terheléskor jelenik meg itt.")}</p>`
+        : "");
+  // ── actions (contract ④ + ⑥) — ONE way to get a card in: through the 3DS round ──
+  const changeBtn = w.canChangeCard
+    ? `<button class="citui-btn citui-btn--primary adm-wal__btn" type="button" data-wal-change>${card ? T(lang, "Kártya cseréje") : T(lang, "Kártya megadása")}</button>`
+    : "";
+  const revokeBtn = card
+    ? `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button>`
+    : "";
+  const acts = `<div class="adm-wal__acts">${changeBtn}${revokeBtn}</div>`;
+  const storedNote = card
+    ? `<p class="adm-wal__hint">${T(lang, "A kártyaadatokat a Barion tárolja, mi csak az utolsó 4 számjegyet és a lejáratot látjuk.")}</p>`
+    : `<p class="adm-wal__hint">${T(lang, "A megadás egy bankkártyás megerősítéssel jár (a bank kéri, nem mi). Utána a díjak újra magától mennek.")}</p>`;
+  // ── former cards ──
+  const history = w.history.length
+    ? `<details class="adm-wal__hist"><summary>${T(lang, "Korábbi kártyák ({n})", { n: String(w.history.length) })}</summary><ul>` +
+      w.history
+        .map((h) => {
+          const name = `${walletBrandWord(h.brand)} ····${h.last4 ?? "????"}`.trim();
+          return `<li>${esc(name)} — ${T(lang, "mentve {saved}", { saved: d(h.savedOn) })}, ${
+            h.reason === "revoked"
+              ? T(lang, "visszavonva {date}", { date: d(h.endedOn) })
+              : T(lang, "cserélve {date}", { date: d(h.endedOn) })
+          }</li>`;
+        })
+        .join("") +
+      `</ul></details>`
+    : "";
+  // ── right column: next charge (ONE source for the amount: sub.nextInvoiceTotal) + charges ──
+  const nextVal = card
+    ? sub
+      ? `${d(w.nextChargeOn)} · ${esc(hufAmount(sub.nextInvoiceTotal))}`
+      : d(w.nextChargeOn)
+    : `${d(w.nextChargeOn)} · ${T(lang, "fizetési link e-mailben")}`;
+  const next =
+    `<div class="adm-sub__cell"><div class="adm-sub__l">${T(lang, "Következő terhelés")}</div>` +
+    `<div class="adm-sub__v adm-sub__v--date">${nextVal}</div></div>` +
+    `<p class="adm-wal__hint">${T(lang, "A terhelés előtt 3 nappal e-mailt küldünk. A díj a csomagja szerint változhat.")}</p>`;
+  const rows = w.charges
+    .map((c) => {
+      const key = invoiceItemKey(c.orderKind);
+      const label = invoiceItemLabel(key, invoiceItemPeriod(key, c.billingPeriod), lang);
+      return (
+        `<tr><td>${d(c.on)}<br><span class="adm-wal__sub">${esc(label)}</span></td>` +
+        `<td class="adm-wal__r adm-wal__num2">${esc(hufAmount(c.amount))}</td>` +
+        `<td class="adm-wal__r"><span class="${c.status === "paid" ? "adm-wal__ok" : "adm-wal__bad"}">${c.status === "paid" ? T(lang, "sikeres") : T(lang, "elutasítva")}</span></td></tr>`
+      );
+    })
+    .join("");
+  const table =
+    `<table class="adm-wal__tbl"><thead><tr><th>${T(lang, "Terhelések ezen a kártyán")}</th>` +
+    `<th class="adm-wal__r">${T(lang, "Összeg")}</th><th class="adm-wal__r">${T(lang, "Állapot")}</th></tr></thead>` +
+    `<tbody>${rows || `<tr><td colspan="3" class="adm-wal__sub">${T(lang, "Még nem volt terhelés.")}</td></tr>`}</tbody></table>`;
+  // ── dialogs (contract ④ / ⑥). Forms live OUTSIDE the dialogs' markup and are
+  //    referenced by id, so the no-JS path still posts. ──
+  const changeDialog = w.canChangeCard
+    ? `<div class="adm-mdlveil" data-wal-veil hidden></div>` +
+      `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-wal-t" data-wal-modal hidden>` +
+      `<h3 id="adm-wal-t">${card ? T(lang, "Kártya cseréje") : T(lang, "Kártya megadása")}</h3>` +
+      `<p class="adm-fc__note">${T(lang, "Az új kártyát a fizetési szolgáltató (Barion) oldalán adja meg — a kártyaadatokat mi nem látjuk és nem tároljuk.")}</p>` +
+      // Contract ⑤: the price of the verification, TRUE to what the gateway does
+      // (a Reservation hold that the webhook releases with FinishReservation 0).
+      `<div class="adm-wal__gw"><b>${T(lang, "Mi történik:")}</b> ${T(lang, "a bank egy egyszeri megerősítést kér (SMS / banki alkalmazás). A megerősítéshez {sum}-ot zárolunk a kártyán, és a megerősítés után rögtön feloldjuk — pénzt nem vonunk le; a bankja a feloldást néhány napon belül könyveli. Ezután minden díjat az új kártyáról vonunk, a régit töröljük.", { sum: esc(hufAmount(w.verifyAmount)) })}</div>` +
+      `<button class="adm-mdl__keep" type="submit" form="adm-wal-change">${T(lang, "Tovább a bankkártyás megerősítéshez")}</button>` +
+      `<button class="adm-mdl__ghost" type="button" data-wal-keep>${T(lang, "Mégsem")}</button>` +
+      `</div>` +
+      `<form id="adm-wal-change" method="POST" action="/admin/wallet/change-card"></form>`
+    : "";
+  const revokeDialog = card
+    ? `<div class="adm-mdlveil" data-mand-veil hidden></div>` +
+      `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-mand-t" data-mand-modal hidden>` +
+      `<h3 id="adm-mand-t">${T(lang, "Biztosan visszavonja az automatikus terhelést?")}</h3>` +
+      `<ul>` +
+      `<li>${T(lang, "Ezután Önnek kell fizetnie minden fordulónapon, a kiküldött fizetési linkkel.")}</li>` +
+      `<li>${T(lang, "Ha a díj nem érkezik be, emlékeztetőket küldünk, és a fordulónap után 10 nappal a honlapot átmenetileg felfüggesztjük.")}</li>` +
+      `<li>${T(lang, "A visszavonás nem szünteti meg a fizetési kötelezettséget, és nem mondja le az előfizetést.")}</li>` +
+      // Contract ⑥: the fourth point names the REAL way back (the wallet's own button).
+      `<li>${T(lang, "A visszakapcsolás nem egy kattintás: a bankkártyás megerősítés miatt új kártya-megadás kell (a „Kártya megadása” gombbal).")}</li>` +
+      `</ul>` +
+      `<button class="adm-mdl__keep" type="button" data-mand-keep>${T(lang, "Mégsem — marad az automatikus fizetés")}</button>` +
+      `<button class="adm-mdl__go" type="submit" form="adm-mand-off">${T(lang, "Igen, visszavonom a megbízást")}</button>` +
+      `</div>` +
+      `<form id="adm-mand-off" method="POST" action="/admin/subscription/auto-charge-off"><input type="hidden" name="back" value="penztarca"></form>`
+    : "";
+  const js =
+    `<script>(function(){` +
+    `function wire(mSel,vSel,bSel,kSel){var m=document.querySelector(mSel),v=document.querySelector(vSel);if(!m||!v)return;` +
+    `var bs=document.querySelectorAll(bSel);if(!bs.length)return;var last=null;` +
+    `function open(){m.hidden=false;v.hidden=false;var k=m.querySelector(kSel);if(k)k.focus();}` +
+    `function close(){m.hidden=true;v.hidden=true;if(last)last.focus();}` +
+    `bs.forEach(function(b){b.addEventListener("click",function(){last=b;open();});});` +
+    `v.addEventListener("click",close);var k=m.querySelector(kSel);if(k)k.addEventListener("click",close);` +
+    `document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!m.hidden)close();});}` +
+    `wire("[data-wal-modal]","[data-wal-veil]","[data-wal-change]","[data-wal-keep]");` +
+    `wire("[data-mand-modal]","[data-mand-veil]","[data-mand-revoke]","[data-mand-keep]");` +
+    `})();</script>`;
+  return (
+    `<div class="adm-card">${head}${flashBox}` +
+    `<div class="adm-wal__two">` +
+    `<div>${face}<div class="adm-wal__pill">${pill}</div>${meaning}${acts}${storedNote}${history}</div>` +
+    `<div>${next}${table}</div>` +
+    `</div></div>` +
+    changeDialog +
+    revokeDialog +
+    js
+  );
+}
+
 function legalSection(legal: LegalAdminData, lang = "hu"): string {
   const field = (
     id: string,
@@ -4260,6 +4468,10 @@ export interface AdminOpts {
   readonly documents?: DocumentsAdminData | null;
   /** ADR-0110: a „Jogi adatok" panel adata (Fiók fül). */
   readonly legal?: LegalAdminData | null;
+  /** ADR-XXXX: a „Pénztárca" fül adata (mentett kártya, terhelések, előzmény). */
+  readonly wallet?: WalletAdminData | null;
+  /** ADR-XXXX: what the card-change round just did (`?card=ok|fail|err`). */
+  readonly walletFlash?: "ok" | "fail" | "err" | null;
   /** ADR-0084: az „Üzenetek" fül adata (postaláda + szűrés). */
   readonly messages?: MessagesAdminData | null;
   /** ADR-0084: olvasatlan üzenetek száma — a fülsor jelvénye. */
@@ -4570,6 +4782,8 @@ export function adminDashboard(
                 },
                 lang,
               )
+          : tab === "penztarca"
+            ? walletSection(opts.wallet ?? null, opts.subscription ?? null, opts.walletFlash ?? null, lang)
           : tab === "fiok"
             ? accountSection(session, lang) +
               (opts.legal ? legalSection(opts.legal, lang) : "")

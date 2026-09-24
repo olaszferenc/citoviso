@@ -45,6 +45,7 @@ import {
 } from "../src/server/adminViews.js";
 import { multilangCatalogView } from "../src/tenant/multilangCard.js";
 import type { DomainAdminData } from "../src/domains/domainAdmin.js";
+import type { WalletAdminData } from "../src/tenant/wallet.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import { ownerOfferPage } from "../src/server/offerViews.js";
 import {
@@ -318,6 +319,25 @@ const subscriptionAnnualFixture = {
 
 // ADR-0110 legal-panel fixture. The registry number is deliberately absent: the
 // entry explains the "hiányzó kötelező adat" warning, so the picture must contain it.
+// ADR-XXXX: a Pénztárca fixtúrája — a fixtúra-vendégház Visa-kártyája két
+// terheléssel és egy korábbi, lecserélt kártyával, hogy a kép a szócikk minden
+// szakaszát mutassa (kártya-kép, címke, „Korábbi kártyák", terhelés-lista).
+const walletFixture: WalletAdminData = {
+  autoCharge: true,
+  card: { brand: "Visa", last4: "4242", expMonth: 8, expYear: 2028, savedOn: "2026-06-28" },
+  expiring: false,
+  nextChargeOn: "2026-09-28",
+  frozen: false,
+  charges: [
+    { on: "2026-08-28", orderKind: "renewal", billingPeriod: "monthly", amount: 7240, status: "paid" },
+    { on: "2026-07-28", orderKind: "renewal", billingPeriod: "monthly", amount: 7240, status: "paid" },
+    { on: "2026-06-28", orderKind: "initial", billingPeriod: "monthly", amount: 7240, status: "paid" },
+  ],
+  history: [{ brand: "MasterCard", last4: "8810", savedOn: "2026-03-10", endedOn: "2026-06-28", reason: "replaced" }],
+  verifyAmount: 100,
+  canChangeCard: true,
+};
+
 const legalFixture = {
   who: {
     legalName: "Nyugalom Vendégház Kft.",
@@ -356,6 +376,9 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["modulok", "admin-modules"],
   ["modulok", "admin-subscription"],
   ["dokumentumok", "admin-documents"],
+  // ADR-XXXX: a Pénztárca fül képe a mentett kártyát (maszk, lejárat), a
+  // következő terhelést és a terhelés-listát mutatja — a szócikk ezekről beszél.
+  ["penztarca", "admin-wallet"],
   ["uzenetek", "admin-messages"],
   ["fiok", "admin-account"],
   ["foglalasok", "admin-bookings"],
@@ -990,6 +1013,9 @@ async function shoot(
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
     ...(tab === "fiok" ? { legal: legalFixture } : {}),
+    // ADR-XXXX: a mentett kártya + a következő terhelés összege a subscription
+    // kártya szabályából (egy szám, egy forrás) — a fixtúra-vendégház Visa-kártyája.
+    ...(tab === "penztarca" ? { wallet: walletFixture, subscription: sub } : {}),
     ...(domain ? { domain, domainView: {} } : {}),
     ...(tab === "forgalom" ? { traffic: trafficFixture } : {}),
     // ⛔ 2026-09-09, tudásbázis-őr lelete: a Foglalások fül képe eddig KÉZI capture volt,
