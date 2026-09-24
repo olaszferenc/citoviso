@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-tenant-admin-linear-nyelv.md) — Tenant-admin újratervezés: „Linear” nyelv, egy akcent, világos/sötét mód (2026-09-24)
+- [ADR-0224](decisions/0224-tenant-admin-ujratervezes-linear-nyelv-egy.md) — Tenant-admin újratervezés: „Linear” nyelv, egy akcent, világos/sötét mód (2026-09-24)
 - [ADR-0223](decisions/0223-parhuzamos-szalak-ii-a-fa-szabaly-a-resume-nal.md) — Párhuzamos szálak II.: a fa-szabály a RESUME-nál is, a headless Claude eszköz nélkül, a kapuk osztott állapota futásonként egyedi (2026-09-24)
 - [ADR-0222](decisions/0222-a-nincs-ar-kimondott-dontes-az-uj-egyseg-ara-es.md) — A „nincs ár” kimondott döntés, az új egység ára, és heti emlékeztető a hiányos árazásról (2026-09-23)
 - [ADR-0221](decisions/0221-evhez-kotott-szezonar-evsav-visszaesessel.md) — Évhez kötött szezonár: évsáv visszaeséssel, szerkeszthető és rendezhető szezon, szezon végi kérdés (2026-09-23)

@@ -3,7 +3,7 @@
 **Szál:** a tulaj két képernyőképpel bejelentette, hogy a tenant-admin navigációja és a Fotók
 fül elfogadhatatlan (nincs vissza-út, 11-gombos kétsoros mobil alsó sáv, űrlap-halom galéria,
 nyers fájlmező). Három §2b kör után az **„A” — Linear + cián akcent + fehér oldalsáv**
-jóváhagyva. ADR-XXXX. Kontraktus: `assets/design-refs/tenant-admin/admin-linear/`.
+jóváhagyva. ADR-0224. Kontraktus: `assets/design-refs/tenant-admin/admin-linear/`.
 
 ## Elvégzett
 

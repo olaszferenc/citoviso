@@ -4,7 +4,7 @@
 ELVETVE („nem újragondolás”); (2) négy gyökeresen új nyelvből a **2.1 „Linear”** lett az alap;
 (3) a Linear + cián akcent + előfizetés-kártya + nyitókép-mutató + világos/sötét váltó két
 változatából az **„A” — fehér oldalsáv** (a „B” brand-navy oldalsáv elvetve).
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0021 ① (dizájn-mag: a megvalósítás `--citui-*`
+**Kapcsolódó:** ADR-0224 (ez a döntés), ADR-0021 ① (dizájn-mag: a megvalósítás `--citui-*`
 tokenekből dolgozik, a mock nyers hexei CSAK a mockban élnek), ADR-0034/0035 (oldalsáv-menü),
 ADR-0044 (fotó-sorrend, nyitókép), ADR-0045 §J (súgó-horgonyok), ADR-0198 (feltöltés
 elutasítása névvel), ADR-0220 (súgó-kép frissesség = deploy-kapu).

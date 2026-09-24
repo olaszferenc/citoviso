@@ -1,4 +1,4 @@
-## ADR-XXXX — Tenant-admin újratervezés: „Linear” nyelv, egy akcent, világos/sötét mód (2026-09-24)
+## ADR-0224 — Tenant-admin újratervezés: „Linear” nyelv, egy akcent, világos/sötét mód (2026-09-24)
 
 **Dátum:** 2026-09-24 · **Státusz:** elfogadva (terv befagyasztva, megvalósítás következik) ·
 **Kapcsolódó:** ADR-0021 ① (dizájn-mag, `--citui-*`), ADR-0034/0035 (oldalsáv-menü), ADR-0044
