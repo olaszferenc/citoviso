@@ -21,8 +21,9 @@ Utolsó frissítés: 2026-09-24 (worktree-ütközések három gyökéroka zárva
   saját worktree + `RC_NOTICE` első prompt, CIT·MR·OF (`--selftest-resume-guard`). ③ **Kapu-
   versenyek**: `server-import-env-check` őr (a szerver importja ne írja a közös nyelvi
   csomagokat), `lib/scratch-db.mts` + `lib/session-tmp.mts`, 22 őr per-run egyedi állapotra.
-- Nyitva: `copy-panel-check` a HEAD-en is bukik (`.cp-scale`); MR/OF örökölt fő-fás sessionök a
-  következő újraindításukkor költöznek.
+- MR/OF fő fák RENDEZVE (11:30): MR 7 fő-fás session → 0 (land saját fából / átadás / retire), a
+  maradék 219 árva fájlt egy dedikált MR-session landolja. Nyitva: `copy-panel-check` a HEAD-en is
+  bukik (`.cp-scale`).
 
 ## Előző szál (2026-09-24 délelőtt — Barion setEncryptedEmail hotfix)
 

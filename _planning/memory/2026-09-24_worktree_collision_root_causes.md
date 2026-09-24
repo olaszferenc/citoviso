@@ -37,3 +37,14 @@ sessionok között… ez a probléma mindenhol fennáll: CIT MR OF… javítsunk
 - MR/OF örökölt fő-fás sessionök: a következő újraindításukkor költöznek maguktól.
 - `copy-panel-check` bukása; fixture-települések fix koordinátái.
 - A MEMORY.md-teteje land-ütközés (ADR-0210 az indexeket kezeli, ezt nem).
+
+## Kiegészítés (11:30) — a fő fák rendezése CIT·MR·OF-en
+- **MR:** a `/home/mineral/minereal` 7 élő sessionje → 0: 4 saját ideiglenes fából landolt
+  (`5f1f965`, `20305ab`, `e0a1446`; a Szállítólevél szemantikusan bizonyítva), 1 félben →
+  utód saját fában (`~/wt/mre84d09cf`, brieffel), 2 lezárva; mind retire-kéréssel, nem kill-lel.
+  A `main` mutató mixed resettel az originhez, 22 érintetlen fájl bizonyított ff-fel a mainre.
+  Ami maradt (51 tracked + 168 untracked árva, 98 fedett origin-ágon), azt egy dedikált MR-session
+  landolja/ignorálja a fő fában (`rc-new.sh --main --dir …`; ⛔ a `--main` `--dir` nélkül új
+  worktree-t készít — egyszer félreindult). Recept: `reference_reconcile_shared_main_tree`.
+- **OF:** a fő fában csak a bemutatkozó session maradt, az új blank saját fában.
+- **CIT:** fő fa = origin/main, minden session saját fában.
