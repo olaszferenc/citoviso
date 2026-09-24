@@ -149,6 +149,24 @@ try {
     .executeTakeFirstOrThrow();
   ids.orderId = order.id;
 
+  // ⛔ MOCK ÁTJÁRÓ, KÖTELEZŐEN (2026-09-24). A .env-ben PAYMENT_GATEWAY=barion áll,
+  // így ez az őr eddig VALÓDI Barion sandbox-fizetést indított (ághoz kettőt), a
+  // `finally` pedig törölte a payment sort. 30 perc múlva a Barion lejáratta őket,
+  // a callbackje nem talált sort → 400 → „Unsuccessful callback in your shop!"
+  // levél, commitonként. A zaj pont azt a levelet temette volna el, ami egy VALÓDI
+  // fizetés elveszett callbackjéről szól. Az őr a PIAC-kaput méri, nem a Bariont.
+  // A .env-t a config a static importoknál már betöltötte; a getGateway() lustán,
+  // az első hívásnál olvas — ezért ez az értékadás még időben van. Hogy tényleg
+  // időben van-e, azt nem hisszük el, hanem az első requestPayment ELŐTT lemérjük.
+  process.env.PAYMENT_GATEWAY = "mock";
+  const { getGateway } = await import("../src/payment/index.js");
+  if (getGateway().name !== "mock") {
+    // throw, not exit: the `finally` below must still tear the fixtures down.
+    throw new Error(
+      `ELŐFELTÉTEL: az átjáró "${getGateway().name}", nem "mock" — az őr valódi ` +
+        "fizetést indítana. Leállok, mielőtt bármit kiküldenék.",
+    );
+  }
   const { requestPayment } = await import("../src/payment/service.js");
 
   // CLOSED market → no pay-link. The order stays recorded; nothing is taken.

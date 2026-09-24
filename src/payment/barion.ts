@@ -29,6 +29,16 @@ const PAY = (process.env.BARION_PAY_URL ?? "https://secure.barion.com").replace(
 /** Barion PaymentStatus values (docs: PaymentStatus). */
 const SUCCEEDED = "Succeeded";
 const FAILED_STATES = new Set(["Canceled", "Expired", "Failed", "Rejected"]);
+/** Known in-flight states: the callback arrived fine, the outcome is still open.
+ *  Listed explicitly — an UNKNOWN status string stays "state unknown" (400). */
+const IN_FLIGHT_STATES = new Set([
+  "Prepared",
+  "Started",
+  "InProgress",
+  "Waiting",
+  "Reserved",
+  "Authorized",
+]);
 
 export class BarionGateway implements PaymentGateway {
   readonly name = "barion";
@@ -185,7 +195,7 @@ export class BarionGateway implements PaymentGateway {
     return { gatewayRef: data.PaymentId, status: "pending" };
   }
 
-  async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | null> {
+  async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | "pending" | null> {
     // Barion's callback is only a PING carrying the paymentId — it does NOT contain
     // the status; GetPaymentState is mandatory to learn the real outcome.
     const paymentId =
@@ -232,6 +242,11 @@ export class BarionGateway implements PaymentGateway {
       return { gatewayRef: paymentId, status: "paid", traceId: data.TraceId ?? null };
     }
     if (FAILED_STATES.has(status)) return { gatewayRef: paymentId, status: "failed" };
-    return null; // Prepared / Started / InProgress / Reserved / Authorized → not final
+    // Mid-flight: received fine, nothing to settle yet. Answering 400 here made
+    // Barion count every in-flight callback as a CallbackFailed (and e-mail us).
+    if (IN_FLIGHT_STATES.has(status)) return "pending";
+    // Empty status (Barion Errors[], e.g. unknown PaymentId) or an unknown value:
+    // we do not know the state → null → 400, so Barion retries and alerts.
+    return null;
   }
 }

@@ -549,6 +549,15 @@ if [ -f scripts/pay-mock-upsell-check.mts ] && \
   echo "[pre-commit] pay-mock-upsell (ADR-0192 ⑧.3: a bővítés egyszeri díj)…"
   npx tsx scripts/pay-mock-upsell-check.mts >"$GATE_LOG" || gate_failed
 fi
+# BARION CALLBACK-NYUGTA (2026-09-24). Minden 400-ast a Barion CallbackFailed-nek
+# könyvel és levelet ír róla. A folyamatban lévő fizetés (Reserved/Authorized…) 200-at
+# kap, az ismeretlen fizetés / olvashatatlan állapot HANGOS marad (400). Stubolt
+# GetPaymentState, hálózat nélkül; piros kontroll mindkét irányban kézzel igazolva.
+if [ -f scripts/barion-webhook-ack-check.mts ] && \
+   changed_files | grep -qE '^src/payment/|^src/console/server\.ts$|^scripts/barion-webhook-ack-check'; then
+  echo "[pre-commit] barion-webhook-ack-check (callback-nyugta: 200 vs. 400)…"
+  npx tsx scripts/barion-webhook-ack-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0059: one content type appears ONCE, inside the template's native section —
 # module data weaves in, the shared block carries only the measured leftover; the
 # mock's sample rooms wear real photos and its booking slot is a clickable demo.

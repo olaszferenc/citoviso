@@ -220,9 +220,19 @@ export async function openUpsellPayUrl(tenantId: string): Promise<string | null>
 export async function handleWebhook(
   params: Record<string, unknown>,
   headers: Record<string, string | string[] | undefined>,
-): Promise<{ ok: boolean; activated?: boolean }> {
+): Promise<{ ok: boolean; activated?: boolean; pending?: boolean }> {
   const res = await getGateway().parseWebhook(params, headers);
   if (!res) return { ok: false };
+  if (res === "pending") {
+    // In-flight at the gateway: acknowledge (200) — but ONLY for a payment we
+    // actually issued. An unknown id stays loud (400 → the gateway alerts us),
+    // because that is exactly the "a real payment has no row here" case.
+    const ref = String(params.paymentId ?? params.PaymentId ?? params.gatewayRef ?? "");
+    const known = ref
+      ? await db.selectFrom("payment").select("id").where("gateway_ref", "=", ref).executeTakeFirst()
+      : undefined;
+    return known ? { ok: true, pending: true } : { ok: false };
+  }
   return applyWebhookResult(res);
 }
 

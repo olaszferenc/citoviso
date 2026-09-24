@@ -68,13 +68,22 @@ export interface PaymentGateway {
    * Resolve a gateway webhook into a final result, or null if not recognizable /
    * not yet final. `params` is the merged webhook query + body (the mock passes
    * {gatewayRef,status}; Barion passes {paymentId} and the adapter must call
-   * GetPaymentState to learn the status → async). Returns null for non-final
-   * states (e.g. Prepared/InProgress) so the caller does not act prematurely.
+   * GetPaymentState to learn the status → async).
+   *
+   * Three answers, and they are NOT interchangeable:
+   *   - WebhookResult — final (paid / failed), the caller settles the payment;
+   *   - "pending"     — the gateway KNOWS the payment and it is mid-flight
+   *                     (e.g. Barion Reserved/Authorized). Nothing to settle, but
+   *                     the notification was received fine → the route answers 200;
+   *   - null          — unrecognizable / state unknown (no id, gateway error, non-JSON)
+   *                     → the route answers 400 so the gateway retries and alerts.
+   * Before the split every non-final state was null, so Barion logged each
+   * in-flight callback as a CallbackFailed and e-mailed about it.
    */
   parseWebhook(
     params: Record<string, unknown>,
     headers: Record<string, string | string[] | undefined>,
-  ): Promise<WebhookResult | null>;
+  ): Promise<WebhookResult | "pending" | null>;
   /**
    * ADR-0080 ④: charge a stored token, payer absent (Barion MIT). Optional —
    * absent means the gateway cannot, and the renewal engine falls back to the
