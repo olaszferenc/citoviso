@@ -946,10 +946,14 @@
     px("setEncryptedEmail", v);
   }
   // Delegált figyelő: a számlázási lépés újra-renderelését is túléli (a mező
-  // DOM-csomópontja cserélődhet, a name attribútum a stabil horog).
+  // DOM-csomópontja cserélődhet, a `data-f` attribútum a stabil horog).
+  // ⛔ NEM `name`: a bField() mezőinek nincs name-je. 2026-09-22 és 09-24 között
+  // ez az ág HALOTT volt (`t.name === "buyer_email"`), a cím CSAK a Fizetek-
+  // kattintáskor ment ki — a Barion bírálója beírta, nem fizetett, és a
+  // setEncryptedEmail sosem jelent meg nála (-001-es észrevétel).
   document.addEventListener("change", function (ev) {
     var t = ev.target;
-    if (t && t.name === "buyer_email") pxEmail(t.value);
+    if (t && t.getAttribute && t.getAttribute("data-f") === "buyer_email") pxEmail(t.value);
   });
 
   // See-the-change feedback: after ANY toggle-on (present OR sample) the page

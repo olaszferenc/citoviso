@@ -15,6 +15,11 @@
 //
 //   npx tsx scripts/demo-prospect.mts
 //
+// ⚠️ Run it from the SERVER's working directory (local: the main tree; prod:
+// /opt/citoviso/app): mock_artifact.path is relative, and the server resolves it
+// against its own cwd — written from a worktree, /p/<token> answers "Ez az
+// előnézet már nem érhető el" (measured 2026-09-24).
+//
 // Local-first (deploy doctrine §0.1). On prod it only runs with the same explicit
 // permission any prod write needs — it refuses non-local DBs the same way
 // demo-tenant.mts does, and the prod copy is a deliberate, separate decision.
@@ -37,10 +42,13 @@ if (dsn && !/@?(localhost|127\.0\.0\.1)|\/tmp|\.pgdata/.test(dsn)) {
 const NAME = "Nyugalom Vendégház";
 
 try {
+  // The demo lead is the one that OWNS the demo tenant — the reviewer lead below
+  // carries the same name, so the name alone is ambiguous.
   const lead = await db
     .selectFrom("lead")
-    .select(["id", "name"])
-    .where("name", "=", NAME)
+    .innerJoin("tenant", "tenant.lead_id", "lead.id")
+    .select(["lead.id as id", "lead.name as name"])
+    .where("lead.name", "=", NAME)
     .executeTakeFirst();
   if (!lead) throw new Error("nincs demó-lead — előbb: npx tsx scripts/demo-tenant.mts");
 
@@ -80,8 +88,67 @@ try {
     .execute();
 
   console.log(`\n✅ Demó-prospect bekötve (artifact ${artifact.id.slice(0, 8)} → ${path})`);
-  console.log(`   A vásárlói út:  http://localhost:4600/p/${prospect.token}`);
-  console.log(`   (élesen:        https://citoviso.com/p/${prospect.token})\n`);
+  console.log(`   (a tenant-demó linkje — ez NEM vásárlói út: a lead-nek élő oldala van)`);
+
+  // ── REVIEWER PURCHASE PATH (2026-09-24) ────────────────────────────────────
+  // The demo lead above OWNS a live site (its tenant), so since the "already
+  // bought" branch of /p/<token> (2026-09-20) its link serves the mock WITHOUT
+  // the configurator and checkout — measured on prod: the Barion reviewer could
+  // not reach the billing e-mail field, so setEncryptedEmail never fired.
+  // ownedSiteForLead() keys on the LEAD (tenant.lead_id, paid initial order), so
+  // the purchase path needs its own lead: same content, no tenant, no payment.
+  // Deterministic token → re-running reuses the same link instead of minting one.
+  const demoLead = await db
+    .selectFrom("lead")
+    .select(["scrape_run_id"])
+    .where("id", "=", lead.id)
+    .executeTakeFirstOrThrow();
+  const reviewToken = `review${lead.id.replace(/-/g, "").slice(0, 12)}`;
+  const existing = await db
+    .selectFrom("prospect")
+    .select(["id", "lead_id"])
+    .where("token", "=", reviewToken)
+    .executeTakeFirst();
+  const reviewLeadId =
+    existing?.lead_id ??
+    (
+      await db
+        .insertInto("lead")
+        .values({ scrape_run_id: demoLead.scrape_run_id, name: NAME, raw: JSON.stringify({ demo: "review" }) })
+        .returning("id")
+        .executeTakeFirstOrThrow()
+    ).id;
+  const reviewArtifact =
+    (await db
+      .selectFrom("mock_artifact")
+      .select(["id", "path"])
+      .where("lead_id", "=", reviewLeadId)
+      .executeTakeFirst()) ??
+    (await db
+      .insertInto("mock_artifact")
+      .values({ lead_id: reviewLeadId, status: "approved", inputs: JSON.stringify(inputs) })
+      .returning(["id", "path"])
+      .executeTakeFirstOrThrow());
+  const reviewPath =
+    reviewArtifact.path ?? mockArtifactPath(lead.name, inputs.recipe.template ?? "engine", reviewArtifact.id);
+  await writeFile(reviewPath, framed, "utf8");
+  await db.updateTable("mock_artifact").set({ path: reviewPath }).where("id", "=", reviewArtifact.id).execute();
+  if (existing) {
+    await db
+      .updateTable("prospect")
+      .set({ mock_artifact_id: reviewArtifact.id } as never)
+      .where("id", "=", existing.id)
+      .execute();
+  } else {
+    await db
+      .insertInto("prospect")
+      .values({ lead_id: reviewLeadId, token: reviewToken, mock_artifact_id: reviewArtifact.id } as never)
+      .execute();
+  }
+
+  console.log(`\n✅ Bírálói vásárlói út (tenant nélküli lead ${reviewLeadId.slice(0, 8)})`);
+  console.log(`   A vásárlói út:  http://localhost:4600/p/${reviewToken}`);
+  console.log(`   (élesen:        https://citoviso.com/p/${reviewToken})\n`);
 } finally {
   await pool.end();
 }
