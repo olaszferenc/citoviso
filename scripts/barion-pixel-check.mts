@@ -42,6 +42,8 @@ import { chromium, type Page } from "playwright-core";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import { sessionTmpDir } from "./lib/session-tmp.mts";
 
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderSite } from "../src/engine/render.js";
@@ -52,7 +54,8 @@ import { consentSnippet, pixelQueueScript } from "../src/server/consent.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 const ARTIFACT_ID = "00000000-0000-4000-8000-000000000000";
-const PREVIEW = "/tmp/cit-barion-pixel-check.html";
+// Session-private preview: /tmp is shared by every worktree, a FIXED path raced siblings.
+const PREVIEW = path.join(sessionTmpDir("barion-pixel-check"), "preview.html");
 const PIXEL_ID = "BP-rTpo59JAam-6C";
 const BP_URL = "https://pixel.barion.com/bp.js";
 /** ⛔ A fixture NEM `file://`-ből fut. A `bp.js` valódi eredetet vár (süti, hostname),

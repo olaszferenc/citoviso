@@ -67,6 +67,12 @@ console.log("Alapérték-rétegek (tiszta függvények):");
 // ── database round trip on a throwaway site ────────────────────────────────
 console.log("\nAdatbázis kör-forduló (eldobható fixture):");
 const ids: { defId?: string; runId?: string; leadId?: string; tenantId?: string; siteId?: string; settlements?: boolean } = {};
+// Per-run fixture settlements + dedup keys: the dev DB is shared, and FIXED ids meant the
+// end-of-run cleanup deleted a sibling session's rows (and its programs) mid-run.
+const SLOT = (process.pid % 9000) * 2;
+const S_OWN = String(-(990000 + SLOT + 1));
+const S_NEAR = String(-(990000 + SLOT + 2));
+const DEDUP = (k: string): string => `mcfg-${k}-${process.pid}`;
 try {
   const def = await db
     .insertInto("scraper_definition")
@@ -198,15 +204,15 @@ try {
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });
   const plus = (n: number) => { const d = new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   await db.insertInto("settlement").values([
-    { osm_id: "-990001", name: "_Mcfgfalva", lat: 48.3, lon: 21.2, population: 900 },
-    { osm_id: "-990002", name: "_Mcfgszomszed", lat: 48.39, lon: 21.2, population: 4000 },
+    { osm_id: S_OWN, name: "_Mcfgfalva", lat: 48.3, lon: 21.2, population: 900 },
+    { osm_id: S_NEAR, name: "_Mcfgszomszed", lat: 48.39, lon: 21.2, population: 4000 },
   ]).onConflict((oc) => oc.column("osm_id").doNothing()).execute();
   ids.settlements = true;
-  await db.insertInto("event_gather_run").values({ settlement_osm_id: "-990001", status: "done", finished_at: new Date() }).execute();
+  await db.insertInto("event_gather_run").values({ settlement_osm_id: S_OWN, status: "done", finished_at: new Date() }).execute();
   const [evOwn, evNear, evLater] = await db.insertInto("local_event").values([
-    { settlement_osm_id: "-990001", name: "_Mcfg helyi szüret", start_date: plus(2), source_url: "https://example.com/a", via: "llm", dedup_key: "mcfg-a" },
-    { settlement_osm_id: "-990002", name: "_Mcfg szomszéd vásár", start_date: plus(3), source_url: "https://example.com/b", via: "llm", dedup_key: "mcfg-b" },
-    { settlement_osm_id: "-990002", name: "_Mcfg szomszéd futás", start_date: plus(5), source_url: "https://example.com/c", via: "llm", dedup_key: "mcfg-c" },
+    { settlement_osm_id: S_OWN, name: "_Mcfg helyi szüret", start_date: plus(2), source_url: "https://example.com/a", via: "llm", dedup_key: DEDUP("a") },
+    { settlement_osm_id: S_NEAR, name: "_Mcfg szomszéd vásár", start_date: plus(3), source_url: "https://example.com/b", via: "llm", dedup_key: DEDUP("b") },
+    { settlement_osm_id: S_NEAR, name: "_Mcfg szomszéd futás", start_date: plus(5), source_url: "https://example.com/c", via: "llm", dedup_key: DEDUP("c") },
   ]).returning("id").execute();
   // The owner picks ONE (the latest), rewrites its title; the automation fills the rest.
   await setSiteModuleConfig(siteId, "poi", { picks: [{ id: evLater!.id, title: "_Mcfg átírt cím" }] }, "test");
@@ -584,9 +590,9 @@ try {
   if (ids.runId) await db.deleteFrom("scrape_run").where("id", "=", ids.runId).execute();
   if (ids.defId) await db.deleteFrom("scraper_definition").where("id", "=", ids.defId).execute();
   if (ids.settlements) {
-    await db.deleteFrom("local_event").where("settlement_osm_id", "in", ["-990001", "-990002"]).execute();
-    await db.deleteFrom("event_gather_run").where("settlement_osm_id", "in", ["-990001", "-990002"]).execute();
-    await db.deleteFrom("settlement").where("osm_id", "in", ["-990001", "-990002"]).execute();
+    await db.deleteFrom("local_event").where("settlement_osm_id", "in", [S_OWN, S_NEAR]).execute();
+    await db.deleteFrom("event_gather_run").where("settlement_osm_id", "in", [S_OWN, S_NEAR]).execute();
+    await db.deleteFrom("settlement").where("osm_id", "in", [S_OWN, S_NEAR]).execute();
   }
   await pool.end();
 }

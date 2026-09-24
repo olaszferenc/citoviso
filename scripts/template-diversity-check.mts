@@ -51,7 +51,9 @@ const DATA: SiteData = {
   ],
 } as SiteData;
 
-const OUT = path.resolve(import.meta.dirname, "..", "assets", "Temp", "tpl-diversity");
+// Worktree-unique scratch dir: assets/Temp is a SYMLINK shared by every worktree.
+const SCOPE = path.basename(path.resolve(import.meta.dirname, ".."));
+const OUT = path.resolve(import.meta.dirname, `../assets/Temp/_tpl-diversity-${SCOPE}`);
 await mkdir(OUT, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });

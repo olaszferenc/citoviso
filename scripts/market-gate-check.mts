@@ -2,7 +2,8 @@
 //
 // The claim under test: a country whose legal pack is NOT approved gets no cold
 // outreach, no pay-link and no live site. Each is asserted in BOTH directions on a
-// throwaway market (XX), because a gate that always blocks proves as little as one
+// throwaway market (an X-prefixed code derived from the pid — ISO 3166 reserves
+// XA…XZ for user assignment, so it can never be a real country), because a gate that always blocks proves as little as one
 // that never does.
 //
 // Two layers:
@@ -58,8 +59,10 @@ check(
   "a nyelv-alapú régi szabály maradványa",
 );
 
-console.log("\n2. Piac-nyilvántartás (DB, eldobható XX ország)");
-const XX = "XX";
+// Per-run throwaway country: the dev DB is shared, so a FIXED "XX" would be deleted
+// and re-approved under a sibling session's run. "X" + a letter from the pid.
+const XX = "X" + String.fromCharCode(65 + (process.pid % 26));
+console.log(`\n2. Piac-nyilvántartás (DB, eldobható ${XX} ország)`);
 await db.deleteFrom("market_log").where("country", "=", XX).execute();
 await db.deleteFrom("market").where("country", "=", XX).execute();
 try {
@@ -71,7 +74,7 @@ try {
     await approveMarket({ country: XX, actor: "teszt", reason: "ADR-0111 önteszt" }),
   );
   check("a kapu most nyitva", await isMarketApproved(XX));
-  check("kisbetűs írásmód ugyanaz a piac", await isMarketApproved("xx"), "normalizálás nélkül két piac lenne");
+  check("kisbetűs írásmód ugyanaz a piac", await isMarketApproved(XX.toLowerCase()), "normalizálás nélkül két piac lenne");
   check(
     "lezárható",
     await revokeMarket({ country: XX, actor: "teszt", reason: "önteszt vége" }),

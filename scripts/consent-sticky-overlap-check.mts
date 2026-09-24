@@ -20,6 +20,8 @@
  */
 import { chromium, type Page } from "playwright-core";
 import { readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { sessionTmpDir } from "./lib/session-tmp.mts";
 
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderSite } from "../src/engine/render.js";
@@ -28,7 +30,8 @@ import { consentSnippet } from "../src/server/consent.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 const PAGE_URL = "https://citoviso-fixture.test/p/teszt-token";
-const FIXTURE = "/tmp/cit-consent-overlap.html";
+// Session-private fixture: /tmp is shared by every worktree, a FIXED path raced siblings.
+const FIXTURE = path.join(sessionTmpDir("consent-overlap"), "fixture.html");
 
 let failed = 0;
 const say = (ok: boolean, what: string, detail = ""): void => {

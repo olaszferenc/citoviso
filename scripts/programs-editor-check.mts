@@ -42,8 +42,11 @@ function ok(cond: boolean, msg: string): void {
 const { sql } = await import("kysely");
 const { rm } = await import("node:fs/promises");
 const path = await import("node:path");
-const OWN = "-990101";
-const NEAR = "-990102";
+// Per-run fixture settlements: the dev DB is shared, and FIXED ids meant the cleanup
+// deleted a sibling session's rows mid-run. A different base than module-config-check.
+const SLOT = (process.pid % 9000) * 2;
+const OWN = String(-(1100000 + SLOT + 1));
+const NEAR = String(-(1100000 + SLOT + 2));
 const STAMP = Date.now();
 const ids: { def?: string; run?: string; lead?: string; tenant?: string; site?: string } = {};
 const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });
@@ -100,7 +103,7 @@ async function seed() {
     start_date: plus(1 + (i % 12)),
     source_url: `https://example.com/p${i}`,
     via: "llm" as const,
-    dedup_key: `pe-${i}`,
+    dedup_key: `pe-${process.pid}-${i}`,
   }))).execute();
   return { id: user.id, siteId: site.id, name: "_Programajánló őr" };
 }

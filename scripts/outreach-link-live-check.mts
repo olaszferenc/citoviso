@@ -263,14 +263,36 @@ async function measure(
  * okból. Ezért az őr SAJÁT fixture-t épít: egy megjelölt lead HÁROM követett linkkel,
  * amiből egy archivált. `finally`-ben törli (a prospect FK `ON DELETE CASCADE`), és
  * indulás előtt a korábbi futás maradékát is takarítja.
- * ⚠️ A közös dev-park miatt a név egyedi és beszédes; a fixture-lead sehol máshol nem
- * jelenik meg lead-listaként (nincs scrape-run, nincs mock).
+ * ⚠️ A közös dev-park miatt a név PID-UTÓTAGÚ (két párhuzamos futás nem törli egymás
+ * fixture-jét) és beszédes; a fixture-lead sehol máshol nem jelenik meg lead-listaként
+ * (nincs scrape-run, nincs mock). Az elárvult (halott pid-ű) maradékot indulás előtt takarítja.
  */
-const FIXTURE_NAME = "ŐR-elo-link-check";
+const FIXTURE_BASE = "ŐR-elo-link-check";
+const FIXTURE_NAME = `${FIXTURE_BASE}-${process.pid}`;
+const TOKEN_SUFFIX = `-${process.pid}`;
+
+/** Is a process with this pid alive? EPERM counts as alive (exists, not ours). */
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
 
 async function dropFixture(): Promise<void> {
   const { db } = await import("../src/db/client.js");
   await db.deleteFrom("lead").where("name", "=", FIXTURE_NAME).execute();
+  // Crashed runs' leftovers: same base, a pid that is no longer alive. Live siblings stay.
+  const rows = await db.selectFrom("lead").select(["id", "name"]).where("name", "like", `${FIXTURE_BASE}-%`).execute();
+  for (const r of rows) {
+    const m = /-(\d+)$/.exec(r.name ?? "");
+    if (!m) continue;
+    const pid = Number(m[1]);
+    if (pid === process.pid || pidAlive(pid)) continue;
+    await db.deleteFrom("lead").where("id", "=", r.id).execute();
+  }
 }
 
 async function makeFixture(): Promise<{ leadId: string; expectedLiveToken: string }> {
@@ -288,9 +310,9 @@ async function makeFixture(): Promise<{ leadId: string; expectedLiveToken: strin
     .executeTakeFirstOrThrow();
   const base = Date.now();
   const rows = [
-    { token: "GUARD-oldest-0001", minutesAgo: 30, archived: false },
-    { token: "GUARD-archived-002", minutesAgo: 20, archived: true },  // ÚJABB, de ARCHIVÁLT
-    { token: "GUARD-live-0000003", minutesAgo: 25, archived: false },
+    { token: `GUARD-oldest-0001${TOKEN_SUFFIX}`, minutesAgo: 30, archived: false },
+    { token: `GUARD-archived-002${TOKEN_SUFFIX}`, minutesAgo: 20, archived: true },  // ÚJABB, de ARCHIVÁLT
+    { token: `GUARD-live-0000003${TOKEN_SUFFIX}`, minutesAgo: 25, archived: false },
   ];
   for (const r of rows) {
     await db
@@ -306,7 +328,7 @@ async function makeFixture(): Promise<{ leadId: string; expectedLiveToken: strin
   // A várt ÉLŐ: a legutóbb létrehozott NEM archivált → GUARD-live-0000003 (25 perce),
   // NEM a 20 perce létrehozott archivált. Ez a fixture LÉNYEGE: az archiválás akkor is
   // kiüti az élő szerepből, ha az a legfrissebb sor.
-  return { leadId: lead.id, expectedLiveToken: "GUARD-live-0000003" };
+  return { leadId: lead.id, expectedLiveToken: `GUARD-live-0000003${TOKEN_SUFFIX}` };
 }
 
 async function main(): Promise<void> {

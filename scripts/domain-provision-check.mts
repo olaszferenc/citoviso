@@ -25,9 +25,13 @@
 import pg from "pg";
 import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./lib/scratch-db.mts";
 
 const SELF_TEST = process.argv.includes("--self-test");
-const SCRATCH = "citoviso_domain_check";
+// Per-run name (base + worktree key + pid): ~10 worktrees share this cluster, and a
+// FIXED name meant "DROP DATABASE" dropped the sibling session's database mid-run.
+const SCRATCH_BASE = "citoviso_domain_check";
+const SCRATCH = scratchDbName(SCRATCH_BASE);
 const PG = {
   host: process.env.PGHOST ?? "/tmp",
   port: Number(process.env.PGPORT ?? 5433),
@@ -142,6 +146,10 @@ async function admin(sql: string): Promise<void> {
   await c.query(sql);
   await c.end();
 }
+// Sweep crashed runs' leftovers (dead pid) — live siblings are untouched — and
+// guarantee OUR drop on every exit path (normal end, process.exit, uncaught throw).
+await sweepStaleScratchDbs(PG, SCRATCH_BASE);
+registerScratchDrop(PG, SCRATCH);
 await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);
 await admin(`CREATE DATABASE ${SCRATCH}`);
 execFileSync("npx", ["tsx", "src/db/migrate.ts"], {

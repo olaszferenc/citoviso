@@ -35,7 +35,8 @@ import type { Server } from "node:http";
 import { chromium } from "playwright-core";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const OUT = path.join(ROOT, "assets", "Temp", "season-year-price");
+const SCOPE = path.basename(ROOT); // worktree-unique scratch key: assets/Temp is a SYMLINK shared by every worktree
+const OUT = path.join(ROOT, `assets/Temp/_season-year-price-${SCOPE}`);
 const { db, pool } = await import("../src/db/client.js");
 const { setTenantModules } = await import("../src/tenant/modules.js");
 const { setSiteModuleConfig } = await import("../src/tenant/siteModuleConfig.js");

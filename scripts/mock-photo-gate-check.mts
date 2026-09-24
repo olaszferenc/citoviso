@@ -357,6 +357,7 @@ async function main(): Promise<void> {
 
   // ── ⑤ A KAPU A VALÓDI ÚTON: DB-sor + konzol-szerver + HTTP ───────────────────
   console.log("\n④ A kapu a VALÓDI konzol-úton (HTTP, DB-sor, renderelt fájl)");
+  process.env.CIT_SHOT = "1"; // no boot self-heal: no AI top-ups, no writes to the SHARED language packs
   process.env.CONSOLE_PORT = "0";
   const { db } = await import("../src/db/client.js");
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");

@@ -15,6 +15,8 @@
 import { chromium, type Page } from "playwright-core";
 import { writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import path from "node:path";
+import { sessionTmpDir } from "./lib/session-tmp.mts";
 
 import { config } from "../src/config.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
@@ -24,8 +26,10 @@ import { injectRuntime } from "../src/generator/runtime.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
 
 const ARTIFACT_ID = "00000000-0000-4000-8000-000000000000";
-const PREVIEW = "/tmp/cit-configurator-price-check.html";
-const LEGACY_PREVIEW = "/tmp/cit-configurator-price-check-legacy.html";
+// Session-private previews: /tmp is shared by every worktree, FIXED paths raced siblings.
+const TMP = sessionTmpDir("configurator-price-check");
+const PREVIEW = path.join(TMP, "preview.html");
+const LEGACY_PREVIEW = path.join(TMP, "preview-legacy.html");
 
 const demo: SiteData = {
   name: "Hotel Példa",

@@ -34,6 +34,7 @@ const ck = (ok: boolean, msg: string): void => {
  * server would bind the real port (this exact ordering trap once sent a real e-mail).
  */
 async function bootConsole(): Promise<{ port: number; cookie: string }> {
+  process.env.CIT_SHOT = "1"; // no boot self-heal: no AI top-ups, no writes to the SHARED language packs
   process.env.CONSOLE_PORT = "0";
   const { server } = (await import("../src/console/server.js")) as { server: Server };
   if (!server.listening) await once(server, "listening");

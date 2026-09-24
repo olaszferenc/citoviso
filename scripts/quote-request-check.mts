@@ -31,6 +31,7 @@ import type { Server } from "node:http";
 import { chromium } from "playwright-core";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
+const SCOPE = path.basename(ROOT); // worktree-unique scratch key: assets/Temp is a SYMLINK shared by every worktree
 const { db, pool } = await import("../src/db/client.js");
 const { setTenantModules } = await import("../src/tenant/modules.js");
 const { setSiteModuleConfig } = await import("../src/tenant/siteModuleConfig.js");
@@ -102,7 +103,7 @@ try {
   const port = (server.address() as AddressInfo).port;
 
   const browser = await chromium.launch();
-  const OUT = path.join(ROOT, "assets", "Temp");
+  const OUT = path.join(ROOT, `assets/Temp/_quote-${SCOPE}`);
   await mkdir(OUT, { recursive: true });
 
   for (const [label, width, desktop] of [["mobil", 390, false], ["asztali", 1280, true]] as const) {

@@ -33,6 +33,7 @@ import type { Server } from "node:http";
 import { chromium } from "playwright-core";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
+const SCOPE = path.basename(ROOT); // worktree-unique scratch key: assets/Temp is a SYMLINK shared by every worktree
 const { config } = await import("../src/config.js");
 const { db, pool } = await import("../src/db/client.js");
 const { setTenantModules } = await import("../src/tenant/modules.js");
@@ -207,7 +208,7 @@ try {
 
   // ── ④–⑦ the owner's offer page, in a real browser, both sizes ────────────────
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
-  const OUT = path.join(ROOT, "assets", "Temp");
+  const OUT = path.join(ROOT, `assets/Temp/_offer-${SCOPE}`);
   await mkdir(OUT, { recursive: true });
   for (const [label, width] of [["mobil", 390], ["asztali", 1280]] as const) {
     console.log(`\n④–⑦ Ajánlat-lap — ${label} (${width}px)`);

@@ -29,6 +29,7 @@ import type { Server } from "node:http";
 import { chromium } from "playwright-core";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
+const SCOPE = path.basename(ROOT); // worktree-unique scratch key: assets/Temp is a SYMLINK shared by every worktree
 const { db, pool } = await import("../src/db/client.js");
 const { setTenantModules } = await import("../src/tenant/modules.js");
 const { addSeasonPrice, setBasePrice, getUnitPrices, unitPriceStatus } = await import("../src/tenant/prices.js");
@@ -246,7 +247,7 @@ try {
 
   // ── browser: both widths, the real click, and the eye ─────────────────────
   console.log("\n🖥  Böngésző — mobil + asztali");
-  const out = path.join(ROOT, "assets", "Temp");
+  const out = path.join(ROOT, `assets/Temp/_por-${SCOPE}`);
   await mkdir(out, { recursive: true });
   const browser = await chromium.launch();
   for (const vp of [{ tag: "mobile", width: 390, height: 844 }, { tag: "desktop", width: 1280, height: 900 }]) {

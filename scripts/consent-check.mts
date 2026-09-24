@@ -18,12 +18,20 @@
 // Usage: npx tsx scripts/consent-check.mts
 
 import http from "node:http";
+import { once } from "node:events";
 import { chromium } from "playwright-core";
 
 import { config } from "../src/config.js";
 import { PLATFORM_DOMAIN } from "../src/domains.js";
 import { db } from "../src/db/client.js";
-import { server } from "../src/server/public.js";
+
+// ⚠️ Set BEFORE the dynamic import — a static `import` would be hoisted above these
+// lines. Without CIT_SHOT=1 the public server's boot self-heal writes the SHARED
+// language_pack/kb_translation tables from THIS worktree's source and calls the AI;
+// without PUBLIC_PORT=0 it binds the real :4800.
+process.env.CIT_SHOT = "1";
+process.env.PUBLIC_PORT = "0";
+const { server } = (await import("../src/server/public.js")) as { server: http.Server };
 
 let failed = 0;
 const check = (ok: boolean, what: string, detail = ""): void => {
@@ -34,7 +42,8 @@ const check = (ok: boolean, what: string, detail = ""): void => {
   }
 };
 
-await new Promise<void>((r) => server.listen(0, r));
+// The module already called `listen(0)` (PUBLIC_PORT=0) — wait for it, do not re-listen.
+if (!server.listening) await once(server, "listening");
 const port = (server.address() as { port: number }).port;
 
 /** Raw GET so the Host header actually goes out (fetch drops it). */

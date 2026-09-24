@@ -46,7 +46,10 @@ import pg from "pg";
 import { chromium } from "playwright-core";
 import { writeFile, rm } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import path from "node:path";
+import { sessionTmpDir } from "./lib/session-tmp.mts";
 import { execFileSync } from "node:child_process";
+import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./lib/scratch-db.mts";
 
 const SELF_TEST = process.argv.includes("--self-test");
 // ⛔⛔ FUTÁSONKÉNT EGYEDI NÉV. Fix névvel két párhuzamos szál UGYANABBA a scratch-adatbázisba
@@ -55,8 +58,12 @@ const SELF_TEST = process.argv.includes("--self-test");
 // egyidejű futás `23505 duplicate key` (prospect_token, majd pg_database_datname) hibával
 // állt meg, és a bukás egy olyan szál commitját fogta meg, amelynek a diffje hozzá sem ért.
 // Az előtag megmarad, hogy egy elszállt futás árvája felismerhető és kitakarítható legyen.
-const SCRATCH = `citoviso_renewal_date_check_${Math.random().toString(36).slice(2, 8)}`;
-const PREVIEW = "/tmp/cit-renewal-date-check.html";
+// Per-run name (base + worktree key + pid): the pid lets the next run sweep a crashed
+// run's leftover without touching a live sibling's database.
+const SCRATCH_BASE = "citoviso_renewal_date_check";
+const SCRATCH = scratchDbName(SCRATCH_BASE);
+// Session-private preview: /tmp is shared by every worktree, a FIXED path raced siblings.
+const PREVIEW = path.join(sessionTmpDir("renewal-date-check"), "preview.html");
 const PG = {
   host: process.env.PGHOST ?? "/tmp",
   port: Number(process.env.PGPORT ?? 5433),
@@ -94,6 +101,9 @@ async function admin(sqlText: string): Promise<void> {
   await c.query(sqlText);
   await c.end();
 }
+// Sweep crashed runs' leftovers (dead pid) and guarantee OUR drop on every exit path.
+await sweepStaleScratchDbs(PG, SCRATCH_BASE);
+registerScratchDrop(PG, SCRATCH);
 await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);
 await admin(`CREATE DATABASE ${SCRATCH}`);
 execFileSync("npx", ["tsx", "src/db/migrate.ts"], {

@@ -32,6 +32,8 @@
 import { chromium, type Page } from "playwright-core";
 import { writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import path from "node:path";
+import { sessionTmpDir } from "./lib/session-tmp.mts";
 
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderSite } from "../src/engine/render.js";
@@ -41,7 +43,8 @@ import { injectConfigurator } from "../src/generator/configurator.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 const ARTIFACT_ID = "00000000-0000-4000-8000-000000000000";
-const PREVIEW = "/tmp/cit-checkout-viewport-check.html";
+// Session-private preview: /tmp is shared by every worktree, a FIXED path raced siblings.
+const PREVIEW = path.join(sessionTmpDir("checkout-viewport-check"), "preview.html");
 
 /** Phone and desktop are two separate design decisions — both are measured. */
 const SIZES = [

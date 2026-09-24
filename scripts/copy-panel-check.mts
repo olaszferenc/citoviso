@@ -6,6 +6,7 @@ import type { Server } from "node:http";
 import { chromium } from "playwright-core";
 import { config } from "../src/config.js";
 
+process.env.CIT_SHOT = "1"; // no boot self-heal: no AI top-ups, no writes to the SHARED language packs
 process.env.CONSOLE_PORT = "0";
 const { server } = (await import("../src/console/server.js")) as { server: Server };
 if (!server.listening) await once(server, "listening");

@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-09-24 (Barion „Unsuccessful callback” levelek: a market-gate-check indított valódi sandbox-fizetést → mock átjáró kötelezően; köztes Barion-állapot 200, ismeretlen fizetés 400 — nem élesítve) · 2026-09-23 („nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető, ADR-0222 — nem élesítve) · 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-0221 — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
+Utolsó frissítés: 2026-09-24 (worktree-ütközések három gyökéroka zárva — címadó eszköz nélkül, resume fa-őr CIT·MR·OF, kapu-versenyek egyedi állapotra; ADR-XXXX) · 2026-09-24 (Barion „Unsuccessful callback” levelek: a market-gate-check indított valódi sandbox-fizetést → mock átjáró kötelezően; köztes Barion-állapot 200, ismeretlen fizetés 400 — nem élesítve) · 2026-09-23 („nem adok meg árat” + új egység ára + heti ár-hiány emlékeztető, ADR-0222 — nem élesítve) · 2026-09-23 (évhez kötött szezonár + szezon végi kérdés, ADR-0221 — nem élesítve) · 2026-09-23 (súgó-kép frissesség = deploy-KAPU, determinisztikus kb-shot, ADR-0220) · 2026-09-23 (árazás foglalás nélkül: nincs ál-kapcsoló + szezon-zárás csak foglalással, ADR-0049 módosítás; 4 elavult súgó-kép — nem élesítve) · 2026-09-23 (vélemény-kezelő: igaz csillag + egyszeri köszönőlevél, ADR-0219 — nem élesítve) · 2026-09-23 (programajánló-minta a lead-mockban, ADR-0218) · 2026-09-23 (több terv egy követett linken — a `feat/multimocktabs` ÁGON, a pilot UTÁN megy a main-re, ADR-0218 az ágon) · 2026-09-23 (árajánlat-út ár nélküli kérésre, ADR-0215 — nem élesítve) · 2026-09-23 (heti programajánló megépítve, ADR-0214) · 2026-09-23 (havi alapértelmezés + „2 hó ingyen” jelvény, ADR-0211) · 2026-09-23 (a közös doksik generált indexe, ADR-0210) · 2026-09-22 (🚀 **ÉLES = `dcb130b`**, tag `prod/20260922-1501` — a Barion **Full Pixel** két kötelező eseménye (grantConsent, setEncryptedEmail) élesben, **éles POS** (valódi kártya + ismétlődő fizetés engedélyezve), és **éles számlázás** a CITO-fiókból. Részletek: ADR-0206 + `_planning/memory/2026-09-22_barion_pixel_pos_szamlazas.md`)
 
 > 💳 **A FIZETÉSI LÁNC ÉLESBEN (2026-09-22).** Barion: Full Pixel + éles POS + **ismétlődő
 > fizetés engedélyezve** (+0,2%; az egyszeri díj fix 1,69%, az Advanced 1,19%-hoz a -001-es
@@ -11,7 +11,20 @@ Utolsó frissítés: 2026-09-24 (Barion „Unsuccessful callback” levelek: a m
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-24 délelőtt — Barion setEncryptedEmail hotfix)
+## Aktív feladat (legfrissebb szál, 2026-09-24 délelőtt — párhuzamosság)
+
+**🛡️ „WORKTREE COMMIT ÖSSZEAKADÁSOK” — HÁROM GYÖKÉROK, MIND ZÁRVA (ADR-XXXX).** Jegyzet:
+`_planning/memory/2026-09-24_worktree_collision_root_causes.md`.
+- ① A „másik session commitolta a fájlomat” tettese a watchdog **címadója** volt (headless haiku,
+  bypass alatt minden eszközzel: `git worktree list` → cd → commit). Zárva CIT+MR: `--tools ""` +
+  üres cwd + `--selftest-title`. ② A **resume** foglalt fába támasztott fel (OF/MR fő fa) — most
+  saját worktree + `RC_NOTICE` első prompt, CIT·MR·OF (`--selftest-resume-guard`). ③ **Kapu-
+  versenyek**: `server-import-env-check` őr (a szerver importja ne írja a közös nyelvi
+  csomagokat), `lib/scratch-db.mts` + `lib/session-tmp.mts`, 22 őr per-run egyedi állapotra.
+- Nyitva: `copy-panel-check` a HEAD-en is bukik (`.cp-scale`); MR/OF örökölt fő-fás sessionök a
+  következő újraindításukkor költöznek.
+
+## Előző szál (2026-09-24 délelőtt — Barion setEncryptedEmail hotfix)
 
 **🚀 ÉLES = `263ef8dd` (tag `prod/20260924-1004`) — CSAK a hotfix a `dcb130b`-re** (tulaj: „ne vidd
 az egész maint”). A -001-es észrevétel oka: a bírálói linken nem volt pénztár, és a cím

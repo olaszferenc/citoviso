@@ -859,6 +859,18 @@ if [ -f scripts/guard-scratch-scope-check.mts ] && \
   echo "[pre-commit] guard-scratch-scope-check (egy őr ne törölje a másik fixture-jét)…"
   npx tsx scripts/guard-scratch-scope-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⛔ SZERVER-IMPORT MELLÉKHATÁS. A `console/server.js` / `server/public.js` importja
+# betöltéskor a valódi portra hallgat ÉS elindít egy háttér nyelvi-csomag feltöltést
+# (a KÖZÖS language_pack/kb_translation táblák írása ENNEK a fának a forrásából +
+# AI-hívás), hacsak CIT_SHOT=1 nincs beállítva. Mérve 2026-09-24: a `consent-check`
+# (MINDEN commiton fut) static importtal, env nélkül töltötte be — egy lemaradt fa
+# szövegei mentek a közös csomagokba pre-commitból. Az őr a hook hívó sorát VAGY a
+# script env-sorrendjét (env → dinamikus import) fogadja el. Gyors, csak forrást olvas.
+if [ -f scripts/server-import-env-check.mts ] && \
+   changed_files | grep -qE '^scripts/.*\.(mts|ts)$|^hooks/pre-commit$'; then
+  echo "[pre-commit] server-import-env-check (a szerver importja ne írja a közös nyelvi csomagokat)…"
+  npx tsx scripts/server-import-env-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⛔ ÁRVA ŐRÖK BEKÖTVE (ADR-0152 hatóköre egy szinttel feljebb). Mérve: négy
 # őr-viselkedésű script (állítást mér, nem-nulla kóddal bukik) él a `*-check.mts`
 # névkonvención KÍVÜL, és MIND A NÉGY árva volt — 51 állítás, amit soha semmi nem

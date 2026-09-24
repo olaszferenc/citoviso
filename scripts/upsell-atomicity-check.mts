@@ -25,8 +25,8 @@
 //
 // A HIBAINJEKTÁLÁS: egy BEFORE INSERT trigger a `module_entitlement`-en, ami KIZÁRÓLAG a
 // fixture tenant-jára és KIZÁRÓLAG egy megnevezett modulra dob hibát.
-// ⚠️ A dev-adatbázis KÖZÖS (~25 párhuzamos szál). Ezért a trigger tenant-re szűkített, egyedi
-// nevű, és a `finally` mindenképp eldobja — egy szál sem futhat bele.
+// ⚠️ A dev-adatbázis KÖZÖS (~25 párhuzamos szál). Ezért a trigger tenant-re szűkített, PID-UTÓTAGÚ
+// nevű (két párhuzamos futás sem üti egymást), és a `finally` mindenképp eldobja — egy szál sem futhat bele.
 //
 // Futtatás:
 //   npx tsx scripts/upsell-atomicity-check.mts
@@ -77,7 +77,9 @@ async function activateUpsellLegacy(tenantId: string, bought: readonly string[])
 
 const ids: { defId?: string; runId?: string; leadId?: string; tenantId?: string } = {};
 let faultOn = false;
-const TRG = `_upsell_atomicity_fault`;
+// Per-run trigger/function name: the dev DB is shared, and two runs of this guard with
+// one FIXED name would CREATE OR REPLACE / DROP each other's fault injector mid-run.
+const TRG = `_upsell_atomicity_fault_${process.pid}`;
 
 async function activeModules(tenantId: string): Promise<string[]> {
   const rows = await db
