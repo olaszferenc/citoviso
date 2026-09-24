@@ -68,6 +68,8 @@ let failed = 0;
 const failedWhat: string[] = [];
 /** A szervernek ténylegesen beküldött ár — a Z6 ehhez méri a Pixel `revenue`-ját. */
 let submittedPrice: number | null = null;
+/** A Fizetek ELŐTT kiment üzenetek — a Z9/b ezen mér (lásd walkToPayment). */
+let sentBeforePay: Sent[] = [];
 const say = (ok: boolean, what: string, detail = ""): void => {
   if (ok) {
     console.log(`✓ ${what}`);
@@ -149,7 +151,7 @@ async function buildPreview(broken: boolean): Promise<void> {
     // gyengítené — a „törött" fixture valójában ép lenne, és a piros kontroll
     // a unitPrice-ra szűkülne (a szűk felismerő ugyanúgy hamis zöld).
     for (const gone of [
-      'if (t && t.name === "buyer_email") pxEmail(t.value);',
+      'if (t && t.getAttribute && t.getAttribute("data-f") === "buyer_email") pxEmail(t.value);',
       'pxEmail(val("buyer_email"));',
     ]) {
       html = html.replace(gone, "");
@@ -362,6 +364,13 @@ async function walkToPayment(page: Page): Promise<string | null> {
     const input = page.locator(`[data-fw="${key}"] input`).first();
     if (await input.count()) await input.fill(value);
   }
+  // ⛔ A cím beírása UTÁN a vevő továbblép (blur → change) — és a Barion
+  // bírálója PONT ITT áll meg: beírja, de nem fizet. A `fill()` magától nem
+  // blurol, ezért az őr 2026-09-24-ig csak a Fizetek-ágon látta a
+  // setEncryptedEmailt, és a halott change-figyelő zöld maradt.
+  await page.locator('[data-fw="buyer_email"] input').first().press("Tab");
+  await page.waitForTimeout(400);
+  sentBeforePay = await sentEvents(page);
   // Minden LÁTHATÓ hozzájárulás-pipa — a gomb addig tiltott (ADR-0088 ⑨).
   const boxes = page.locator('.cit-cfg-consent input[type="checkbox"]');
   for (let i = 0; i < (await boxes.count()); i++) {
@@ -521,6 +530,15 @@ async function run(broken: boolean): Promise<void> {
     );
   }
 
+  // ── Z9/b: a cím a Fizetek ELŐTT megy ki ─────────────────────────────────────
+  // A bíráló (és a meggondolja-magát vevő) nem nyom Fizeteket. Ha az azonosító
+  // csak a fizetés-ágon indul, neki SOHA nem jelenik meg (-001, 2026-09-23).
+  say(
+    firstIndexOf(sentBeforePay, "setEncryptedEmail") >= 0,
+    "Z9/b: a setEncryptedEmail már a cím BEÍRÁSAKOR kimegy, Fizetek nélkül",
+    `a Fizetek előtt kiment: ${namesOf(sentBeforePay).join(", ") || "(semmi)"}`,
+  );
+
   // ── ZM: a Barion kötelező-minimuma, TÉTELESEN ───────────────────────────────
   // ⛔ Ez a kapu a BARION kérdését teszi fel, nem a miénket. Forrás:
   // docs.barion.com/Implementing_the_Full_Barion_Pixel „Mandatory events" —
@@ -551,7 +569,7 @@ await run(SELF_TEST);
 if (SELF_TEST) {
   // Törésenként EGY-EGY nevesített piros kell: a Z4 a unitPrice-é, a Z8 a
   // grantConsent-é, a Z9 a setEncryptedEmailé. Az összesítő ehhez kevés.
-  const mustFail = ["Z4", "Z8", "Z9"];
+  const mustFail = ["Z4", "Z8", "Z9:", "Z9/b"];
   const deadControls = mustFail.filter((z) => !failedWhat.some((w) => w.startsWith(z)));
   console.log(
     `\n🔴 ÖNTESZT: három szándékos törés (unitPrice elgépelve · grantConsent kiütve ·\n` +

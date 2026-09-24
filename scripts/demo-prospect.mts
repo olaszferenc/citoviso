@@ -15,6 +15,11 @@
 //
 //   npx tsx scripts/demo-prospect.mts
 //
+// ⚠️ Run it from the SERVER's working directory (local: the main tree; prod:
+// /opt/citoviso/app): mock_artifact.path is relative, and the server resolves it
+// against its own cwd — written from a worktree, /p/<token> answers "Ez az
+// előnézet már nem érhető el" (measured 2026-09-24).
+//
 // Local-first (deploy doctrine §0.1). On prod it only runs with the same explicit
 // permission any prod write needs — it refuses non-local DBs the same way
 // demo-tenant.mts does, and the prod copy is a deliberate, separate decision.
