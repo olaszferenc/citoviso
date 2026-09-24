@@ -46,3 +46,9 @@
   (43), elavult partner-képpel piros. Az admin-képek a pillanatkép-betűvel pixelre egyeztek a régivel.
 - ⚠️ Egy `sed`-em a `scripts/planning-index*.mts` `ADR-XXXX` mintáját is átírta — észrevettem és
   visszaállítottam a commit előtt (a helyőrző ott a MECHANIZMUS része).
+
+## Dev DB takarítás 2026-09-24 (tulaj: „mehet")
+- Törölve a közös `citoviso_dev`-ből: `Mineral Logistics kft.` partner (tenant nélkül, 0 bizonylat) + 2 kontaktja (kaszkád); visszamérve 0.
+- ⛔ A 4 „Olasz Ferenc" partner MARAD (tulaj döntés): nem kóbor sorok, hanem 4 élő dev-tenant
+  (Agrosz, Eldorádó, Aranykagyló 36, Rozé Fogadó) számlázási vevői — a megújítás (`src/payment/billing.ts`)
+  innen veszi a vevő adatait. A javaslatom feltevése hamis volt; a törlés előtti újramérés fogta meg.
