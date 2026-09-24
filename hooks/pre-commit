@@ -57,6 +57,102 @@ gate_failed() {
   fi
   exit "$rc"
 }
+# ⏱️ PÁRHUZAMOS KAPU-FUTTATÁS (mérve 2026-09-24; az ADR száma a `scripts/lib/gate-runner.mjs`
+# fejlécében). A 4 nagy felületi fájlt érintő
+# commit 98 kaput indított EGYMÁS UTÁN (~15 perc, a land ugyanezt még egyszer), egy 8 magos
+# gépen egyetlen magot járatva; kapunként ~1,8 s csak az `npx tsx` indulása.
+# A MECHANIKA: a kapu-sorok szövege VÁLTOZATLAN (a `guard-wiring-check` és a
+# `gate-output-check` a sor elejére horgonyoz). Az `npx`/`node` itt shell-függvény: a kaput
+# NEM futtatja, hanem feljegyzi (argv · környezet — a `PAYMENT_GATEWAY=mock` előtaggal együtt —
+# · cwd · a pipe-olt stdin · a `[pre-commit] …` felirat · elnémított-e a stdout-ja), és a
+# `gate_flush` a hook VÉGÉN a `scripts/lib/gate-runner.mjs`-sel lefuttatja mindet:
+#   ① párhuzamosan, Postgres-KÉNYSZERÍTETT csak-olvasó módban — egy kapu sem írhat bele a
+#      másik mérésébe; aki írni PRÓBÁLT, annak az ítélete eldobva, és
+#   ② sorosan, normál módban fut újra, a többi kapu után, senkivel át nem fedve.
+# Egyetlen kapu sem marad ki és egyik sem változik: a futtató azt dönti el, MIKOR fut, nem azt,
+# hogy fut-e. ⚠️ A bukó kaput ugyanaz a `gate_failed` írja ki, mint soros módban.
+# Soros mód (a régi viselkedés, hibakereséshez): CIT_GATE_JOBS=1. Őr: `scripts/gate-runner-check.mts`.
+CIT_ROOT="$PWD"
+if [ "${CIT_GATE_JOBS:-}" = "1" ]; then
+  # Serial: run in place, only skip the npm start-up of `npx tsx` (same tsx binary).
+  npx() {
+    if [ "${1:-}" = "tsx" ] && [ -x "$CIT_ROOT/node_modules/.bin/tsx" ]; then
+      shift
+      "$CIT_ROOT/node_modules/.bin/tsx" "$@"
+    else
+      command npx "$@"
+    fi
+  }
+else
+  # The hook's own stdin is not the gates' input (git gives a pre-commit hook none): with it
+  # closed, `[ -p /dev/stdin ]` below means exactly "this gate is fed by a pipe in the hook".
+  exec </dev/null
+  GATE_JOBS="$(mktemp -d -t cit-gate-jobs-XXXXXX)"
+  # ⛔ A recorded gate that never runs would be a SILENT GREEN. If the hook ends "successfully"
+  # without gate_flush (an early `exit 0` added one day), the exit trap turns it into a failure.
+  gate_exit() {
+    local rc=$?
+    rm -f "$GATE_LOG"
+    if [ "$rc" -eq 0 ] && [ -z "${GATE_FLUSHED:-}" ] && [ -n "$(ls -A "$GATE_JOBS" 2>/dev/null)" ]; then
+      builtin echo "⛔ A hook gate_flush NÉLKÜL ért véget: a feljegyzett kapuk NEM futottak le — ez bukás, nem zöld." >&2
+      rm -rf "$GATE_JOBS"
+      exit 1
+    fi
+    rm -rf "$GATE_JOBS"
+  }
+  trap gate_exit EXIT
+  GATE_SEQ=0
+  GATE_LABEL=""
+  # The gate label (`echo "[pre-commit] …"`) is recorded for the job, and printed by the runner
+  # together with the gate's output when it finishes; every other echo is untouched.
+  echo() {
+    if [ "$#" -eq 1 ] && [ "${1#\[pre-commit\] }" != "$1" ]; then GATE_LABEL="$1"; else builtin echo "$@"; fi
+  }
+  gate_enqueue() {
+    GATE_SEQ=$((GATE_SEQ + 1))
+    local j="$GATE_JOBS/$GATE_SEQ.$BASHPID"
+    printf '%s\0' "$@" >"$j.argv"
+    env -0 >"$j.env"
+    builtin printf '%s' "$PWD" >"$j.cwd"
+    builtin printf '%s' "$GATE_LABEL" >"$j.label"
+    if [ /dev/stdout -ef "$GATE_LOG" ]; then : >"$j.quiet"; fi
+    if [ -p /dev/stdin ]; then cat >"$j.stdin"; fi
+  }
+  npx() { gate_enqueue npx "$@"; }
+  node() { gate_enqueue node "$@"; }
+fi
+gate_flush() {
+  [ -n "${GATE_JOBS:-}" ] || return 0
+  GATE_FLUSHED=1
+  unset -f echo npx node
+  local rc=0 key=""
+  # Pass-cache key (see gate-runner.mjs): the tree the gates measure + the hash of the gated
+  # diff — ONLY when the worktree equals the index and nothing untracked (but the per-worktree
+  # symlinks) could be imported. Otherwise empty: nothing is reused, every gate runs.
+  if git diff --quiet 2>/dev/null && \
+     [ -z "$(git status --porcelain --untracked-files=normal 2>/dev/null | grep '^??' | grep -vE '^\?\? (sites/?|assets/Temp/?)$')" ]; then
+    local tree diffsum
+    # pipefail: a FAILED `git diff` must not turn into the hash of an empty diff.
+    if tree=$(git write-tree 2>/dev/null) && \
+       diffsum=$(set -o pipefail; if [ -n "${LAND_RANGE:-}" ]; then git diff --binary "$LAND_RANGE"; else git diff --cached --binary; fi 2>/dev/null | sha256sum); then
+      key="$tree ${diffsum%% *}"
+    fi
+  fi
+  CIT_GATE_KEY="$key" command node scripts/lib/gate-runner.mjs "$GATE_JOBS" "$CIT_ROOT" || rc=$?
+  [ "$rc" -eq 0 ] && return 0
+  [ -f "$GATE_JOBS/FAILED" ] || { echo "⛔ a kapu-futtató maga hibázott (kilépési kód: $rc)" >&2; exit "$rc"; }
+  local n i=0 grc label out err
+  n=$(wc -l <"$GATE_JOBS/FAILED")
+  while IFS=$'\t' read -r grc label out err; do
+    i=$((i + 1))
+    echo "$(cat "$label")"
+    cat "$err" >&2
+    cat "$out" >"$GATE_LOG"
+    # Every failed gate goes through the SAME gate_failed; all but the last in a subshell,
+    # so each is printed and the hook still exits with the last one's code.
+    if [ "$i" -lt "$n" ]; then ( (exit "$grc") || gate_failed ) || true; else (exit "$grc") || gate_failed; fi
+  done <"$GATE_JOBS/FAILED"
+}
 # ⛔ SYMLINK-TILALOM (2026-08-24, valós kár): a per-worktree `assets/Temp` symlink
 # bekerült egy commitba, és a fő fába landolva FELÜLÍRTA az ugyanott élő VALÓS
 # mappát — a tulaj bedobó-mappájának tartalma elveszett. A .gitignore `assets/Temp/`
@@ -1825,4 +1921,17 @@ if [ -f scripts/gate-output-check.mts ]; then
   echo "[pre-commit] gate-output-check (a bukó kapu kimenete eljut-e az operátorhoz)…"
   npx tsx scripts/gate-output-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ⏱️ A PÁRHUZAMOS FUTTATÓ SAJÁT ŐRE. A hook eleji mechanikát (feljegyzés → futtató)
+# a hookból KIVÁGVA, a valódi futtatóval, fixture-kapukon méri: minden kapu lefut · `VAR=x`
+# előtag és pipe-olt stdin eljut · a bukás kódja és kimenete kiíródik · az 1. fázis DB-je
+# csak-olvasó, az írni próbáló (a hibát lenyelő) kapu normál módban újrafut · egy szkript nem
+# fut önmagával párhuzamosan · gate_flush nélkül nincs zöld. Piros önteszttel (5 visszarontás).
+# ⚠️ DB-t igényel (az író-fixture egy visszagörgetett tranzakcióban próbál írni).
+if [ -f scripts/gate-runner-check.mts ] && \
+   changed_files | grep -qE '^hooks/pre-commit$|^scripts/(lib/gate-runner\.mjs|lib/gate-ro-preload\.mjs|gate-runner-check\.mts)$'; then
+  echo "[pre-commit] gate-runner-check (a párhuzamos futtató tartja-e a soros hook szerződését)…"
+  npx tsx scripts/gate-runner-check.mts >"$GATE_LOG" || gate_failed
+fi
+# Every gate above was only RECORDED in parallel mode — here they run (see the header).
+gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

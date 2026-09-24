@@ -11,6 +11,7 @@
 - [2026-09-24_tenant_admin_linear_build.md](2026-09-24_tenant_admin_linear_build.md) — Tenant-admin újratervezés — a „Linear” terv MEGÉPÍTVE (2026-09-24, átadott session)
 - [2026-09-24_platform_email_frame.md](2026-09-24_platform_email_frame.md) — 2026-09-24 — Rendszerlevelek profi kerete (E4 logó, „Citoviso” feladó, cégadatos lábléc)
 - [2026-09-24_penztarca_mentett_kartya.md](2026-09-24_penztarca_mentett_kartya.md) — 2026-09-24 — Pénztárca: a mentett kártya látható és cserélhető (ADR-0226)
+- [2026-09-24_parallel_gate_runner.md](2026-09-24_parallel_gate_runner.md) — 2026-09-24 — A pre-commit kapusor párhuzamos futtatása (ADR-XXXX)
 - [2026-09-24_elek_vendeg_szemevel.md](2026-09-24_elek_vendeg_szemevel.md) — 2026-09-24 — Elek NEGYEDIK szerepe: a VENDÉG (FK-008 + FK-008b) — a pilot előtti vendég-szemű bejárás
 - [2026-09-24_dev_test_recipient_viktoria.md](2026-09-24_dev_test_recipient_viktoria.md) — 2026-09-24 — Dev: új teszt-címzett (e-mail + MMS) engedélyezve
 - [2026-09-24_barion_setencryptedemail_hotfix.md](2026-09-24_barion_setencryptedemail_hotfix.md) — 2026-09-24 — Barion -001: a setEncryptedEmail sosem sült el — hotfix élesítve (csak ez)
