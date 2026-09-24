@@ -301,7 +301,18 @@ done
 echo "     ✓ szerkezet ép + az éles impresszum-adatok kitöltöttek"
 
 echo "── GATE 1c/kép — súgó-képek frissessége (újragyártás a cél-commiton, pixel-összevetés)…"
-kb_shot_gate "$SHA"
+# ⚠️ KIMONDOTT, EGYSZERI KIHAGYÁS (tulaj-döntés, 2026-09-24): egy ADR-0220 ELŐTTI
+# élesre épülő hotfix kb-shot-ja nem tud összevetni, és a kapunak nem volt kiútja —
+# egyetlen JS-sor javítása csak a teljes main (80 commit + 5 migráció) árán mehetett
+# volna ki. A kihagyás INDOKLÁST KÖVETEL, hangosan kiíródik, és az éles DEPLOYED-
+# naplóba is bekerül. Nem alapértelmezés: minden deploynál újra ki kell mondani.
+if [ -n "${KB_SHOT_GATE_WAIVE:-}" ]; then
+  [ "${#KB_SHOT_GATE_WAIVE}" -ge 20 ] || fail "KB_SHOT_GATE_WAIVE: az indoklás túl rövid (min. 20 karakter) — mondd ki, MIÉRT nem változhat súgó-kép"
+  echo "     ⚠️⚠️ KIHAGYVA (KB_SHOT_GATE_WAIVE): $KB_SHOT_GATE_WAIVE" >&2
+  WAIVED_NOTE=" kb-shot-gate-WAIVED[$(printf %s "$KB_SHOT_GATE_WAIVE" | tr -cd '[:alnum:] .,:;+/()-')]"
+else
+  kb_shot_gate "$SHA"
+fi
 
 # GATE 1c — tudásbázis-frissesség (ADR-0045/f, §J). The dev-time hooks guarantee the
 # DETERMINISTIC layer at every commit; deploy-time re-verifies it on the TARGET commit's
@@ -454,7 +465,7 @@ $SSH "journalctl -u citoviso-console -u citoviso-public --since '-2 min' -p err 
 
 # Version ledger on the machine + audit tag on GitHub.
 TS="$(date +%Y%m%d-%H%M)"
-$SSH "echo \"$(date '+%F %T') deployed=$SHA prev=${PROD_SHA:-none} tag=prod/$TS\" >> /opt/citoviso/DEPLOYED" </dev/null
+$SSH "echo \"$(date '+%F %T') deployed=$SHA prev=${PROD_SHA:-none} tag=prod/$TS${WAIVED_NOTE:-}\" >> /opt/citoviso/DEPLOYED" </dev/null
 git tag -f "prod/$TS" "$SHA" && GIT_SSH_COMMAND="ssh" git push -q origin "prod/$TS" || echo "⚠️  tag-push nem ment — a DEPLOYED ledger attól még hiteles"
 
 echo

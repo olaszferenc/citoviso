@@ -11,7 +11,15 @@ Utolsó frissítés: 2026-09-24 (Barion „Unsuccessful callback” levelek: a m
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-24 reggel)
+## Aktív feladat (legfrissebb szál, 2026-09-24 délelőtt — Barion setEncryptedEmail hotfix)
+
+**🚀 ÉLES = `263ef8dd` (tag `prod/20260924-1004`) — CSAK a hotfix a `dcb130b`-re** (tulaj: „ne vidd
+az egész maint”). A -001-es észrevétel oka: a bírálói linken nem volt pénztár, és a cím
+beírása nem küldte a `setEncryptedEmail`-t (halott `name`-figyelő). Mindkettő javítva, élesen
+mérve. Új bírálói link: `https://citoviso.com/p/review5b0455b4067b`. A válasz a tulajnál.
+Jegyzet: `_planning/memory/2026-09-24_barion_setencryptedemail_hotfix.md`.
+
+## Előző szál (2026-09-24 reggel)
 
 **📨 BARION „UNSUCCESSFUL CALLBACK” LEVELEK — OK MEGTALÁLVA ÉS JAVÍTVA, A MAINEN (86974c6e).
 Élesítés nem volt; a tulaj döntése: minden egyben megy mainről prodba.** Jegyzet:

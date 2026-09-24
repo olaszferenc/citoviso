@@ -239,7 +239,7 @@ Ezeket a gép írja be a **prod `.env`**-be, és állítja át:
 - [x] ③f Barion-logósor — élesen kint (deploy `prod/20260915-0927` = `fd4ec5e`)
 - [x] ③g ÁSZF-pótlás — élesen mérve: nyilv. szám 53483083 + telefon + e-mail a `/aszf`-en
 - [ ] ③h **Tárca-feltöltés banki átutalással a vállalkozói számláról** (azonosítás!) — ⚠️ TULAJ-TEENDŐ, enélkül a jóváhagyás nem zárulhat
-- [x] ③i Bírálói demó élesen (2026-09-15): vásárlás-út `https://citoviso.com/p/demo5b0455b4067b`
+- [x] ③i Bírálói demó élesen (2026-09-15) — ⚠️ **2026-09-24 óta a vásárlás-út: `https://citoviso.com/p/review5b0455b4067b`** (a régi `demo…` link a 09-20-as „már vásárolt” ág miatt pénztár nélkül megy; lásd `_planning/memory/2026-09-24_barion_setencryptedemail_hotfix.md`). Eredetileg: `https://citoviso.com/p/demo5b0455b4067b`
   (E2E mérve a sandbox `payUrl`-ig) · tenant-belépő `nyugalom-vendeghaz` / `folyo-kikoto-79` ·
   1 jelölt teszt-rendelés a prod DB-ben („CITOVISO PRÓBA (törölhető)", pending, sandbox) —
   a bírálat után a demó + a teszt-rendelés kitakarítandó
