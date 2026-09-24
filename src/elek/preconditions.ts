@@ -61,6 +61,9 @@ export const CHAIN: readonly ChainRound[] = [
   { fk: "FK-003b", needs: [] },
   { fk: "FK-004", needs: [] },
   { fk: "FK-004b", needs: ["trackedLink"] },
+  // A mock a VENDÉG szemével — a vásárlás ELŐTT, mert a vétel után a lap már
+  // „Ez az oldal már az Öné"-t mond, és a minta-űrlapok helyett a tulaj-utat méri.
+  { fk: "FK-008b", needs: ["trackedLink"] },
   { fk: "FK-005a", needs: ["trackedLink"] },
   { fk: "FK-001", needs: ["elekTenant"] },
   { fk: "FK-002", needs: ["elekTenant"] },
@@ -68,6 +71,8 @@ export const CHAIN: readonly ChainRound[] = [
   // A foglalás-seed az ELEK-tenant site-jaira ír, ezért a kör a tenanttól függ,
   // hiába nem hivatkozik egyetlen ELEK_* változóra sem.
   { fk: "FK-007", needs: ["elekTenant"] },
+  // A vendég-út (FK-008) az ELEK-tenant élő oldalán jár, saját seeddel az FK-007 után.
+  { fk: "FK-008", needs: ["elekTenant"] },
   // A dunning-létra és a visszaolvasztás az ELEK-bérlő előfizetés-óráját lépteti.
   { fk: "FK-006a", needs: ["elekTenant"] },
   { fk: "FK-006b", needs: ["elekTenant"] },

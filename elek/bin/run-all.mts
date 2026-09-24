@@ -207,8 +207,10 @@ if (!prospect) {
 env.ELEK_PROSPECT_PATH = `/p/${prospect.token}`;
 console.log(`  ELEK_PROSPECT_PATH=${env.ELEK_PROSPECT_PATH}`);
 
-step("A lead szemével, majd a vásárlás — innen jön a tenant");
-for (const fk of ["FK-004b", "FK-005a"]) if (wanted(fk)) runFk(fk);
+step("A lead szemével, a mock a vendég szemével, majd a vásárlás — innen jön a tenant");
+// FK-008b MUST precede FK-005a: after the purchase the tracked page turns into the
+// owner's "already yours" state, and the sample forms it measures are gone.
+for (const fk of ["FK-004b", "FK-008b", "FK-005a"]) if (wanted(fk)) runFk(fk);
 
 const tenant = await db
   .selectFrom("tenant")
@@ -257,6 +259,26 @@ await pool.query(readFileSync(path.join(ROOT, "scripts/seed-elek-booking.sql"), 
 console.log("  foglalás-seed lefutott");
 
 if (wanted("FK-007")) runFk("FK-007");
+
+// ── the guest's walk (FK-008): its own park on top of the booking seed ──
+if (wanted("FK-008")) {
+  step("Park: foglalás-állapot a vendég szemének (FK-007 elfogyasztotta a seedet)");
+  // FK-007 cancels the accepted stay and decides the pending ones, so the booking
+  // seed is re-applied, then the guest seed layers its own facts on it (no base
+  // price → quote path, future accepted stay, a blocked day, an open offer).
+  await pool.query(readFileSync(path.join(ROOT, "scripts/seed-elek-booking.sql"), "utf8"));
+  await pool.query(readFileSync(path.join(ROOT, "scripts/seed-elek-guest.sql"), "utf8"));
+  console.log("  foglalás-seed + vendég-seed lefutott");
+  // The live page is a SNAPSHOT rendered at purchase time: the room-card price and
+  // the price table come from unit_price at render, so a seed written after the
+  // render leaves the page priceless while the widget's API quotes (measured
+  // 2026-09-24: FK-008 steps 3/5 red on a product that was fine). The owner's
+  // admin re-renders on every save — the park does the same after seeding.
+  const { rerenderTenantSnapshot } = await import("../../src/tenant/editor.js");
+  const rerendered = await rerenderTenantSnapshot(tenant.id);
+  console.log(`  pillanatkép újrarenderelve: ${rerendered ? "igen" : "NEM (nincs szerkeszthető site)"}`);
+  runFk("FK-008");
+}
 
 // ── dunning: az ÁLLAPOT a mérés tárgya, ezért a sorrend az assertion ──
 

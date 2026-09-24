@@ -96,3 +96,27 @@ Egy futás terméke:
   fogynak, nem ismétlődnek.
 - **Bent maradt teszt-adat: mindig leltározott** — minden futás összegzése felsorolja a
   létrehozott `ELEK-TESZT` rekordokat.
+
+## Elek mint VENDÉG (tulajdonosi döntés, 2026-09-24)
+
+A nagy élesítés előtt a tulaj szava: *„Eleknek nem adtunk olyan szerepet, hogy ő egy kis
+érdeklődő, aki szállást szeretne foglalni, és ezzel a szemszögből nem néztük át az
+egyértelműséget és az ergonómiát. Minden folyamat: lemondja, módosítja stb. a foglalását, és
+minden modult, mint szálláskereső, tesztel."* — majd: *„Mehet, de mindent nézzen."*
+
+Elek eddig három bőrben járt: operátor (konzol), szállásadó/vevő (tenant-admin, vásárlás) és
+lead (a levél linkje). A NEGYEDIK szerep a **vendég**: az az ember, akinek a termék végül
+készül, és aki a rendszerről SEMMIT nem tud — se Citovisót, se modult, se mockot.
+
+- **Kinek a vendége:** az ELEK-TESZT Vendégház vendége. Az élő tenant-oldalon (`FK-008`) és a
+  szállásadónak küldött honlap-terven (`FK-008b`, ott a szállásadó „vendég-szemüvegét" viseli).
+- **Mit ítél:** nem azt, hogy a lépés végrehajtható-e (az a gépi zöld), hanem hogy egy első
+  látogató **segítség nélkül** végigmenne-e rajta: tudja-e, hol jár, mennyibe kerül, mi történt
+  az imént, mi a következő lépése, és mit tehet, ha meggondolja magát. Az **ERGONÓMIA** és a
+  **ZAVAROS** címke itt a fő műfaj; a méret-specifikus lelet (390px / 1280px) önálló lelet.
+- **Amit a vendég NEM láthat:** semmit, ami a Citovisóra, vásárlásra, „mintára", tervre utal
+  — az élő oldalon ez lelet. (A mockon a MINTA-jelölés a szállásadónak szól, ott az ŐSZINTESÉG
+  a mérce: semmi nem megy el, és a lap ezt kimondja.)
+- **Kőbe vésett határok változatlanok:** a vendég is CSAK `elek@citoviso.com` címmel foglal,
+  a lemondás/ajánlat-elfogadás CSAK a park seed-tokenjein történik, és a fagyasztott
+  vendég-lapot továbbra is az FK-006a méri.

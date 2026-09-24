@@ -15,6 +15,11 @@ kontraktus: kb/entries/console-lead/entry.hu.md
 ## Konfigurátor
 
 - [ ] A konfigurátor megnyílik és a megrendelés-út elindul (döntés-segítő ajánlat-kártyán át is)
+  # A Barion-hozzájárulás sávja (ADR-0186, 2026-09-16 óta) a lap ALJÁN fekszik, a
+  # konfigurátor „Tovább" gombja FÖLÖTT (z-index 2147483600 > 2147483001): amíg a vevő
+  # nem válaszol, a gomb nem kattintható — mérve 2026-09-24 (a runner „a célpontot
+  # takarja: button.cit-consent__no" lelete). A vevő előbb dönt a sávról.
+  tedd?: kattints ".cit-consent__yes"
   tedd?: kattints ".cit-cfg-escgo"
   tedd?: kattints ".cit-cfg-launch"
   tedd: kattints ".cit-cfg-next"
@@ -41,13 +46,15 @@ kontraktus: kb/entries/console-lead/entry.hu.md
   tedd: kattints ".cit-cfg-recurring"
   tedd: kattints ".cit-cfg-pay"
   tedd: várj "Próba-fizetés" 30
-  várd: látható "Fizetek ▸"
+  # A gomb az ÖSSZEGET is viseli (ADR-0164, 2026-09-20): „Fizetek — 9 500 Ft"; a régi
+  # „Fizetek ▸" alak a felirat-őrön azért maradt zöld, mert egy KOMMENT idézi.
+  várd: látható "Fizetek —"
   adat: ELEK-TESZT megrendelés + fizetési kérés (mock)
 
 ## Sikeres fizetés és aktiválás
 
 - [ ] A fizetés sikeres, az aktiválás megtörténik, a belépő-adatok látszanak
-  tedd: kattints "Fizetek ▸"
+  tedd: kattints "Fizetek —"
   tedd: várj "Sikeres fizetés" 60
   várd: látható "Sikeres fizetés"
   adat: ELEK-TESZT tenant + élő oldal + belépő (a levél elek@citoviso.com-ra megy)

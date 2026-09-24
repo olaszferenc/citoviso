@@ -17,6 +17,8 @@ esetet teszteljen és futtasson: Nem teljesült fizetés, időtúllépés mittom
 | FK-002 | Modulok-fül: kirakat, előnézet, tervsáv, díj-delta | írásra kész | ELEK-TESZT tenant |
 | FK-005 | Vásárlás-kör a mock-gateway-en: rendelés → fizetés → élesítés-út | írásra kész | ELEK-TESZT tenant + elek@ |
 | FK-006 | **Bukás-mátrix** (lásd lent) | tervezés | seed + időutazó-setup |
+| FK-008 | **A VENDÉG szemével** (tulaj, 2026-09-24: „mindent nézzen"): tájékozódás, szobák/árak, foglalás hibás és jó bemenettel, árajánlat-út, ajánlat elfogadása, lemondás a linkről, vélemény — egyértelműség + ergonómia | ✅ fut | ELEK-TESZT tenant + `scripts/seed-elek-guest.sql` |
+| FK-008b | A mock-lap a vendég szemével: minta-foglalás/-vélemény őszintesége, vendég-nézet vs. vásárlói sáv | ✅ fut | követett link (a vásárlás ELŐTT fut) |
 
 ## Eset-mátrix (a „lehető legtöbb eset" — tulaj-cél)
 

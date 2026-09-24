@@ -189,6 +189,27 @@ async function doAction(page: Page, action: string): Promise<void> {
     try {
       await loc.click({ timeout: STEP_TIMEOUT });
     } catch (e) {
+      // An INFINITE CSS animation (the configurator's "2 hó ingyen" nudge/shine,
+      // ADR-0211) keeps the target's box moving, so Playwright's stability wait
+      // never settles and the click times out — measured 2026-09-24 on FK-005a
+      // (green on 09-13, red after the animation landed). A human taps a moving
+      // button fine; click it where it is now. Only this one failure mode is
+      // forced — a hidden/detached/covered target still fails loudly.
+      if (String((e as Error).message).includes("not stable")) {
+        // A forced click lands wherever the box is NOW — so first ask the page
+        // what sits at that point. A covered button forced "successfully" would
+        // be a silent miss (the handler never runs, the step stays green).
+        const cover = await loc.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          if (!top || top === el || el.contains(top)) return null;
+          return `${top.tagName.toLowerCase()}${top.className ? "." + String(top.className).trim().split(/\s+/).join(".") : ""}` +
+            ` @ ${Math.round(r.x + r.width / 2)},${Math.round(r.y + r.height / 2)} (box ${Math.round(r.y)}–${Math.round(r.bottom)})`;
+        });
+        if (cover) throw new Error(`a célpontot takarja: ${cover} — ${String((e as Error).message).split("\n")[0]}`);
+        await loc.click({ force: true, timeout: STEP_TIMEOUT });
+        return;
+      }
       if ((await loc.count()) > 0) throw e;
     }
     return;
@@ -446,7 +467,12 @@ async function contextFor(user: string): Promise<BrowserContext> {
 }
 
 function armPage(page: Page): void {
-  page.on("pageerror", (e) => pageErrors.push(String(e)));
+  // A bare "SyntaxError: Invalid or unexpected token" names no file — the stack's
+  // first frame does (measured 2026-09-24: three runs to locate one broken script).
+  page.on("pageerror", (e) => {
+    const frame = String(e.stack ?? "").split("\n").find((l) => /https?:\/\//.test(l));
+    pageErrors.push(String(e) + (frame ? ` [${frame.trim()}]` : ""));
+  });
   page.on("console", (msg) => {
     if (msg.type() === "error") {
       const loc = msg.location();

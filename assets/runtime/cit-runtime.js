@@ -1628,7 +1628,20 @@
     });
   }
 
-  function boot() { hydrate(); initReveal(); initDemoForms(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
+  // ── Dev-only: the live review form posts to an absolute /api/velemeny. On the
+  // /t/<slug>/ dev path that lands on the platform host (405), so the guest's
+  // review could never be measured there; on a real tenant host API_BASE is ""
+  // and this is a no-op. Same rule the booking widget applies to /api/foglalas.
+  function initLiveFormBase() {
+    if (!API_BASE) return;
+    var forms = document.querySelectorAll("form.cit-rev-f:not([data-cit-demo])");
+    for (var i = 0; i < forms.length; i++) {
+      var a = forms[i].getAttribute("action") || "";
+      if (a.charAt(0) === "/" && a.indexOf(API_BASE) !== 0) forms[i].setAttribute("action", API_BASE + a);
+    }
+  }
+
+  function boot() { hydrate(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

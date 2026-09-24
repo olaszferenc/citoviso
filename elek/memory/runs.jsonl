@@ -14,3 +14,5 @@
 {"fk":"FK-006a","ts":"2026-09-06T14-02-14","steps":{"pass":2,"fail":0,"manual":1,"blocked":0},"leletek":{"HIBA":1,"REGRESSZIO":0,"KEZI_OK":3,"KEZI_KELL":0,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":2}}
 {"fk":"FK-006b","ts":"2026-09-06T14-03-04","steps":{"pass":2,"fail":0,"manual":2,"blocked":0},"leletek":{"HIBA":1,"REGRESSZIO":0,"KEZI_OK":3,"KEZI_KELL":0,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":6}}
 {"fk":"FK-003","ts":"2026-09-12T08-13-14","steps":{"pass":10,"fail":0,"manual":4,"blocked":0},"leletek":{"HIBA":0,"REGRESSZIO":0,"KEZI_OK":3,"KEZI_KELL":5,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":2,"ERGONOMIA":6,"ZAVAROS":6}}
+{"fk":"FK-008b","ts":"2026-09-24T18-49-53","steps":{"pass":1,"fail":0,"manual":6,"blocked":0},"leletek":{"HIBA":2,"REGRESSZIO":0,"KEZI_OK":2,"KEZI_KELL":4,"FORGATOKONYV_HIBA":0,"ELOFELTETEL_HIBA":0,"GYANU":4,"ERGONOMIA":7,"ZAVAROS":8}}
+{"fk":"FK-008","ts":"2026-09-24T19-21-38","steps":{"pass":6,"fail":0,"manual":25,"blocked":0},"leletek":{"HIBA":6,"REGRESSZIO":0,"KEZI_OK":12,"KEZI_KELL":5,"FORGATOKONYV_HIBA":1,"ELOFELTETEL_HIBA":0,"GYANU":2,"ERGONOMIA":9,"ZAVAROS":9}}
