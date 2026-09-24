@@ -319,7 +319,7 @@ const subscriptionAnnualFixture = {
 
 // ADR-0110 legal-panel fixture. The registry number is deliberately absent: the
 // entry explains the "hiányzó kötelező adat" warning, so the picture must contain it.
-// ADR-XXXX: a Pénztárca fixtúrája — a fixtúra-vendégház Visa-kártyája két
+// ADR-0226: a Pénztárca fixtúrája — a fixtúra-vendégház Visa-kártyája két
 // terheléssel és egy korábbi, lecserélt kártyával, hogy a kép a szócikk minden
 // szakaszát mutassa (kártya-kép, címke, „Korábbi kártyák", terhelés-lista).
 const walletFixture: WalletAdminData = {
@@ -376,7 +376,7 @@ const TAB_TO_ENTRY: readonly [tab: string, entryId: string][] = [
   ["modulok", "admin-modules"],
   ["modulok", "admin-subscription"],
   ["dokumentumok", "admin-documents"],
-  // ADR-XXXX: a Pénztárca fül képe a mentett kártyát (maszk, lejárat), a
+  // ADR-0226: a Pénztárca fül képe a mentett kártyát (maszk, lejárat), a
   // következő terhelést és a terhelés-listát mutatja — a szócikk ezekről beszél.
   ["penztarca", "admin-wallet"],
   ["uzenetek", "admin-messages"],
@@ -1013,7 +1013,7 @@ async function shoot(
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
     ...(tab === "fiok" ? { legal: legalFixture } : {}),
-    // ADR-XXXX: a mentett kártya + a következő terhelés összege a subscription
+    // ADR-0226: a mentett kártya + a következő terhelés összege a subscription
     // kártya szabályából (egy szám, egy forrás) — a fixtúra-vendégház Visa-kártyája.
     ...(tab === "penztarca" ? { wallet: walletFixture, subscription: sub } : {}),
     ...(domain ? { domain, domainView: {} } : {}),

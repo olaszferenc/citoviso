@@ -1777,13 +1777,13 @@ export function payMockPage(
   productName?: string | null,
   /** Translated labels of the modules an UPSELL buys (ADR-0192 ⑧.3). */
   upsellModules?: readonly string[],
-  /** ADR-XXXX: `cardPick` — this payment stores a token, so the tester picks WHICH
+  /** ADR-0226: `cardPick` — this payment stores a token, so the tester picks WHICH
    *  test card pays (the Pénztárca shows its mask afterwards); `verification` — a
    *  card_update: the amount is only HELD and released, never charged. */
   wallet?: { readonly cardPick?: boolean; readonly verification?: boolean; readonly cards?: readonly { id: string; label: string }[] },
 ): string {
   const lang = consoleLang();
-  // ADR-XXXX: the card picker rides INSIDE the "Fizetek" form, so the choice
+  // ADR-0226: the card picker rides INSIDE the "Fizetek" form, so the choice
   // posts with the click — the same body the mock gateway's webhook reads.
   const cardPicker =
     wallet?.cardPick && wallet.cards?.length

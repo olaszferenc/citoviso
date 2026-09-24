@@ -949,7 +949,7 @@ export function modulesSection(
           `<h3>${T(lang, "Automatikus kártyaterhelés")}</h3>` +
           `<p>${T(lang, "A fordulónapon magától levonjuk a díjat a mentett kártyáról — nincs teendője. A terhelés előtt 3 nappal e-mailt küldünk.")}</p>` +
           `<button class="adm-mand__btn" type="button" data-mand-revoke>${T(lang, "Megbízás visszavonása")}</button> ` +
-          // ADR-XXXX (wallet ⑨): the card itself lives on ONE surface — link, do not copy.
+          // ADR-0226 (wallet ⑨): the card itself lives on ONE surface — link, do not copy.
           `<a class="adm-mand__btn" href="/admin?tab=penztarca">${T(lang, "Pénztárca — melyik kártya, csere")}</a>` +
           `</div></div>`
       : `<div class="adm-mand">` +
@@ -962,7 +962,7 @@ export function modulesSection(
         // 3DS-challenged, customer-initiated payment, so there is no button that
         // can switch this back on by itself. The next pay-link payment re-grants
         // it — which is exactly what we say, instead of offering a fake switch.
-        // ADR-XXXX (wallet ⑨): the re-grant has a real path now — the Pénztárca's
+        // ADR-0226 (wallet ⑨): the re-grant has a real path now — the Pénztárca's
         // "Kártya megadása" (a 3DS round without a purchase). The old sentence
         // ("only at the next pay-link") is no longer the whole truth.
         `<p class="adm-mand__hint">${T(lang, "Újra bekapcsolni a Pénztárcában tud, a „Kártya megadása” gombbal (bankkártyás megerősítéssel) — vagy a következő fizetési link kiegyenlítésekor: az a fizetés is megadja a megbízást.")}</p>` +
@@ -1626,7 +1626,7 @@ export function modulesSection(
     `<span class="adm-planbar__sum">` +
     `<span class="adm-planbar__paynow" id="adm-plan-paynow" hidden>${T(lang, "Fizetendő most:")} <b id="adm-plan-paysum"></b><br></span>` +
     `${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span>` +
-    // ADR-XXXX (wallet ⑧): WHICH card pays — only when a mandate exists and there
+    // ADR-0226 (wallet ⑧): WHICH card pays — only when a mandate exists and there
     // is something to pay now (JS shows it). "Másik kártyával" is a promise the
     // server keeps: that pay-link initiates a token (requestPayment newCard).
     (sub?.autoCharge
@@ -1785,7 +1785,7 @@ export function modulesSection(
     `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDateS) })}</span></div>'}).join("");` +
     `if(paybox){paybox.hidden=payNow<=0;if(paysum)paysum.textContent=HUF(payNow)}` +
-    // ADR-XXXX (wallet ⑧): the card chooser follows the pay-now box, and the
+    // ADR-0226 (wallet ⑧): the card chooser follows the pay-now box, and the
     // button says which way the money goes — stored card now, or the gateway page.
     `var cardbox=document.getElementById("adm-plan-card");if(cardbox)cardbox.hidden=!(AUTOC&&payNow>0);` +
     `var cardNew=false;var cr=f.querySelector('input[name="card"]:checked');if(cr)cardNew=cr.value==="new";` +
@@ -3092,7 +3092,7 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string }
   // ADR-0084 (jóváhagyott terv): a bizonylatok és a kommunikáció két külön fül.
   // ⛔ A felirat „Dokumentumok" — tulajdonosi javítás: magyarul nem „Iratok".
   { id: "dokumentumok", label: T(lang, "Dokumentumok"), icon: "docs" },
-  // ADR-XXXX (jóváhagyott terv: design-refs/console/wallet, „B"): a mentett kártya
+  // ADR-0226 (jóváhagyott terv: design-refs/console/wallet, „B"): a mentett kártya
   // saját fület kap — látható, cserélhető, visszavonható; nem a Modulok alá bújtatva.
   { id: "penztarca", label: T(lang, "Pénztárca"), icon: "card" },
   { id: "uzenetek", label: T(lang, "Üzenetek"), icon: "mail" },
@@ -4071,7 +4071,7 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
  * on the page itself the row reads "— nincs megadva —" instead of quietly
  * disappearing, so the gap is visible on both sides (ADR-0110 ⑥).
  */
-// ── Pénztárca (ADR-XXXX, approved contract: design-refs/console/wallet/README.md) ──
+// ── Pénztárca (ADR-0226, approved contract: design-refs/console/wallet/README.md) ──
 // The stored card, VISIBLE and REPLACEABLE. Every sentence here is bound by the
 // contract's numbered points; the README says which.
 
@@ -4468,9 +4468,9 @@ export interface AdminOpts {
   readonly documents?: DocumentsAdminData | null;
   /** ADR-0110: a „Jogi adatok" panel adata (Fiók fül). */
   readonly legal?: LegalAdminData | null;
-  /** ADR-XXXX: a „Pénztárca" fül adata (mentett kártya, terhelések, előzmény). */
+  /** ADR-0226: a „Pénztárca" fül adata (mentett kártya, terhelések, előzmény). */
   readonly wallet?: WalletAdminData | null;
-  /** ADR-XXXX: what the card-change round just did (`?card=ok|fail|err`). */
+  /** ADR-0226: what the card-change round just did (`?card=ok|fail|err`). */
   readonly walletFlash?: "ok" | "fail" | "err" | null;
   /** ADR-0084: az „Üzenetek" fül adata (postaláda + szűrés). */
   readonly messages?: MessagesAdminData | null;

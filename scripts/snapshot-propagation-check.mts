@@ -39,7 +39,7 @@ const NO_RENDER_NEEDED: Record<string, string> = {
   "/admin/subscription/resume": "előfizetés — számlázás, nem oldal-tartalom",
   "/admin/subscription/settlement": "előfizetés — számlázás, nem oldal-tartalom",
   "/admin/subscription/auto-charge-off": "előfizetés — számlázás, nem oldal-tartalom",
-  // ADR-XXXX: a kártyacsere csak a megbízást cseréli (token + maszk a subscription-on) — a
+  // ADR-0226: a kártyacsere csak a megbízást cseréli (token + maszk a subscription-on) — a
   // publikus oldal egyetlen bájtja sem függ tőle.
   "/admin/wallet/change-card": "pénztárca — a mentett kártya cseréje, számlázás, nem oldal-tartalom",
   // ⚠️ Ez NEM „nem kell renderelni", hanem „MÁSHOL renderel". A sikeres terhelés

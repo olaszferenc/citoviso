@@ -3291,7 +3291,7 @@ async function handle(
     if (paid && kindRow?.kind === "multilang" && kindRow.tenantId) {
       return send(res, 200, await multilangPayResultPage(kindRow.tenantId, p.amount));
     }
-    // ADR-XXXX: a CARD-UPDATE round ends in the Pénztárca, whatever happened —
+    // ADR-0226: a CARD-UPDATE round ends in the Pénztárca, whatever happened —
     // nothing was bought, so neither the welcome page nor a receipt applies. The
     // tab's own banner says "the card is now X" / "the bank refused, nothing changed".
     if (kindRow?.kind === "card_update" && kindRow.tenantId) {
@@ -3473,7 +3473,7 @@ async function handle(
       res,
       200,
       payMockPage(mockPayMatch[1], p.amount, oneTime ? "oneoff" : p.period, p.status, p.leadName, upsellModules, {
-        // ADR-XXXX: a token-initiating payment lets the tester pick the test card,
+        // ADR-0226: a token-initiating payment lets the tester pick the test card,
         // so the Pénztárca's mask and the card swap run end to end locally.
         cardPick: p.initiatesRecurrence,
         verification: p.kind === "card_update",
@@ -3490,7 +3490,7 @@ async function handle(
     // A mock_ ref is by definition the mock gateway's — apply it directly. Routing
     // it through the CONFIGURED gateway's parser dropped it on a Barion-configured
     // process, and the page still claimed success (Elek FK-005a, 2026-09-05).
-    // ADR-XXXX: the picked test card rides on the form body — the same shape the
+    // ADR-0226: the picked test card rides on the form body — the same shape the
     // mock gateway's parseWebhook would give (card mask on a paid result).
     const body = await readBody(req);
     const pickedCard = mockCard(body.get("card") ?? "") ?? mockCard("visa4242");

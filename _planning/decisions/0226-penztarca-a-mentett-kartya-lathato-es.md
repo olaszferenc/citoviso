@@ -1,4 +1,4 @@
-## ADR-XXXX — Pénztárca: a mentett kártya látható és cserélhető (külön fül, 3DS-úton)
+## ADR-0226 — Pénztárca: a mentett kártya látható és cserélhető (külön fül, 3DS-úton)
 
 **Dátum:** 2026-09-24 · **Státusz:** elfogadva (tulaj: „B külön pénztárca") · **Kontraktus:**
 `assets/design-refs/console/wallet/README.md` · **Előzmény:** ADR-0080 ④/⑤ (token-terhelés),

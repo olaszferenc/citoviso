@@ -1,4 +1,4 @@
-# Pénztárca — a mentett kártya kezelése (ADR-XXXX — „B: külön fül")
+# Pénztárca — a mentett kártya kezelése (ADR-0226 — „B: külön fül")
 
 Tulajdonosi jóváhagyás: 2026-09-24 („B külön pénztárca"). A vázlat `wallet.html` (A/B egy fájlban;
 a **B** köt, az A elvetve), képek: `ui-wallet-{mobile,desktop}.png` (alapállapot),

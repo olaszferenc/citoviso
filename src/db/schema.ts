@@ -294,7 +294,7 @@ export interface OrderIntentTable {
     | "domain_upgrade"
     | "renewal"
     | "domain_settlement"
-    /** ADR-XXXX: kártya-csere hitelesítő fizetés — vásárlás nélkül, a tokenért. */
+    /** ADR-0226: kártya-csere hitelesítő fizetés — vásárlás nélkül, a tokenért. */
     | "card_update"
   >;
   /** ADR-0080: the period a kind='renewal' order covers (invoice line + the
@@ -466,7 +466,7 @@ export interface SubscriptionTable {
   /** 0040: the initiating payment's card-scheme TraceId — replayed on every MIT
    *  charge (3DS); without it the issuer declines. */
   recurrence_trace_id: string | null;
-  /** ADR-XXXX (0076): the stored card's MASK for the Pénztárca — brand, last 4,
+  /** ADR-0226 (0076): the stored card's MASK for the Pénztárca — brand, last 4,
    *  expiry, when it became the mandate. The full PAN never reaches us; NULL on a
    *  pre-0076 token until its next charge/renewal reports the card. */
   card_brand: string | null;
@@ -717,7 +717,7 @@ export interface PaymentTable {
   gateway_ref: string | null;
   pay_url: string | null;
   status: Generated<"pending" | "paid" | "failed" | "cancelled">;
-  /** ADR-XXXX (0076): this pay-link asked the gateway to store a token — the
+  /** ADR-0226 (0076): this pay-link asked the gateway to store a token — the
    *  webhook reads the FACT from here, not from the order kind (an upsell paid
    *  "with another card" and a card_update both initiate). */
   initiates_recurrence: Generated<boolean>;
@@ -725,7 +725,7 @@ export interface PaymentTable {
   paid_at: Timestamp | null;
 }
 
-/** ADR-XXXX (0076): a tenant's former stored cards (mask only) — replaced or
+/** ADR-0226 (0076): a tenant's former stored cards (mask only) — replaced or
  *  revoked; the Pénztárca "Korábbi kártyák" list. */
 export interface SavedCardHistoryTable {
   id: Generated<string>;

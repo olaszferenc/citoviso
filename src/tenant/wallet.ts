@@ -1,4 +1,4 @@
-// Pénztárca — the tenant's stored card, made visible and replaceable (ADR-XXXX,
+// Pénztárca — the tenant's stored card, made visible and replaceable (ADR-0226,
 // approved contract: assets/design-refs/console/wallet/README.md).
 //
 // The mandate (subscription.recurrence_token, ADR-0080 ④/⑤) charged for weeks
@@ -198,7 +198,7 @@ export interface CardUpdateOrder {
 }
 
 /**
- * ADR-XXXX: the order behind "Kártya cseréje" — a card_update that holds
+ * ADR-0226: the order behind "Kártya cseréje" — a card_update that holds
  * CARD_VERIFY_AMOUNT_HUF and is released the moment the token is stored.
  * Reuses a still-fresh open one (a second click must not mint a second hold).
  * Billing identity is inherited (0029 doctrine) so the order passes the same

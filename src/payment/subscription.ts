@@ -337,7 +337,7 @@ export async function setPendingBillingPeriod(
  */
 export async function revokeAutoCharge(tenantId: string): Promise<boolean> {
   const now = new Date();
-  // ADR-XXXX: the mask is read BEFORE it is dropped — RETURNING would only give
+  // ADR-0226: the mask is read BEFORE it is dropped — RETURNING would only give
   // the nulled row — so the Pénztárca can list it under "Korábbi kártyák — visszavonva".
   const prev = await db
     .selectFrom("subscription")
@@ -351,7 +351,7 @@ export async function revokeAutoCharge(tenantId: string): Promise<boolean> {
       payment_method: "invoice",
       recurrence_token: null,
       recurrence_trace_id: null,
-      // ADR-XXXX: the mask goes with the token — a revoked card is not "saved".
+      // ADR-0226: the mask goes with the token — a revoked card is not "saved".
       card_brand: null,
       card_last4: null,
       card_exp_month: null,

@@ -62,7 +62,7 @@ export class BarionGateway implements PaymentGateway {
   async createPayLink(req: PaymentRequest): Promise<PayLink> {
     const body = {
       POSKey: this.posKey,
-      // ADR-XXXX: a card-verification payment only HOLDS the amount (Reservation);
+      // ADR-0226: a card-verification payment only HOLDS the amount (Reservation);
       // the service releases it with FinishReservation(0) once the token is
       // stored. Docs: a finished-with-zero reservation ends Succeeded and the
       // whole amount goes back to the card. ⚠️ Token storage on a Reservation
@@ -234,7 +234,7 @@ export class BarionGateway implements PaymentGateway {
       Status?: string;
       TraceId?: string;
       Errors?: unknown[];
-      /** ADR-XXXX: the paying card's mask (docs: FundingInformation.BankCard). */
+      /** ADR-0226: the paying card's mask (docs: FundingInformation.BankCard). */
       FundingInformation?: {
         BankCard?: {
           MaskedPan?: string;
@@ -259,7 +259,7 @@ export class BarionGateway implements PaymentGateway {
     if (status === SUCCEEDED) {
       // 0040: the card-scheme TraceId of a token-initiating payment — the caller
       // stores it with the token; every MIT charge must replay it (3DS).
-      // ADR-XXXX: and the card's MASK — "MaskedPan" is documented as the LAST FOUR
+      // ADR-0226: and the card's MASK — "MaskedPan" is documented as the LAST FOUR
       // digits only; a longer value is still reduced to its last four, so the
       // Pénztárca never shows more than that whatever the gateway sends.
       const bc = data.FundingInformation?.BankCard;
@@ -285,7 +285,7 @@ export class BarionGateway implements PaymentGateway {
   }
 
   /**
-   * ADR-XXXX: close a Reservation for `total` — 0 releases the whole hold. The
+   * ADR-0226: close a Reservation for `total` — 0 releases the whole hold. The
    * transaction id comes from GetPaymentState (FinishReservation wants it, not
    * our POSTransactionId). Never throws: false = not released (the caller logs
    * loudly; the hold then expires by itself at ReservationPeriod).

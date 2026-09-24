@@ -1,4 +1,4 @@
--- 0076 PÉNZTÁRCA — a mentett kártya LÁTHATÓ és CSERÉLHETŐ (ADR-XXXX, jóváhagyott terv:
+-- 0076 PÉNZTÁRCA — a mentett kártya LÁTHATÓ és CSERÉLHETŐ (ADR-0226, jóváhagyott terv:
 -- assets/design-refs/console/wallet/).
 --
 -- A megbízás (recurrence_token, 0039/0040) eddig egy láthatatlan hitelesítő volt: a tulaj
@@ -26,11 +26,11 @@ ALTER TABLE subscription
   ADD COLUMN card_saved_at  timestamptz;
 
 COMMENT ON COLUMN subscription.card_brand IS
-  'ADR-XXXX: a mentett kártya márkája (Visa/MasterCard/…) az átjáró állapot-lekérdezéséből — csak kijelzésre.';
+  'ADR-0226: a mentett kártya márkája (Visa/MasterCard/…) az átjáró állapot-lekérdezéséből — csak kijelzésre.';
 COMMENT ON COLUMN subscription.card_last4 IS
-  'ADR-XXXX: a mentett kártya utolsó 4 számjegye — a teljes PAN SOHA nincs nálunk.';
+  'ADR-0226: a mentett kártya utolsó 4 számjegye — a teljes PAN SOHA nincs nálunk.';
 COMMENT ON COLUMN subscription.card_saved_at IS
-  'ADR-XXXX: mikor lett ez a kártya a megbízás (a token-regisztráló fizetés ideje).';
+  'ADR-0226: mikor lett ez a kártya a megbízás (a token-regisztráló fizetés ideje).';
 
 CREATE TABLE saved_card_history (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,13 +47,13 @@ CREATE TABLE saved_card_history (
 CREATE INDEX saved_card_history_tenant_idx ON saved_card_history (tenant_id, ended_at DESC);
 
 COMMENT ON TABLE saved_card_history IS
-  'ADR-XXXX: a tenant korábbi mentett kártyái (maszk) — cserélve vagy visszavonva; a Pénztárca „Korábbi kártyák” listája.';
+  'ADR-0226: a tenant korábbi mentett kártyái (maszk) — cserélve vagy visszavonva; a Pénztárca „Korábbi kártyák” listája.';
 
 ALTER TABLE payment
   ADD COLUMN initiates_recurrence boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN payment.initiates_recurrence IS
-  'ADR-XXXX: ez a pay-link tokent kért az átjárótól (InitiateRecurrence) — a webhook ebből tudja, hogy a fizetett kártya a megbízás lesz.';
+  'ADR-0226: ez a pay-link tokent kért az átjárótól (InitiateRecurrence) — a webhook ebből tudja, hogy a fizetett kártya a megbízás lesz.';
 
 -- A bevezetés előtti token-regisztráló fizetések: az initial/renewal pay-linkek mind kértek
 -- tokent (service.ts wantsToken), tehát a tény visszamenőleg is igaz.

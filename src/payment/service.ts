@@ -38,11 +38,11 @@ export interface RequestPaymentResult {
   readonly gatewayRef: string;
 }
 
-/** ADR-XXXX: the amount a card-verification payment HOLDS (and releases). */
+/** ADR-0226: the amount a card-verification payment HOLDS (and releases). */
 export const CARD_VERIFY_AMOUNT_HUF = 100;
 
 /** Create (or reuse a still-pending) pay-link for a submitted order intent.
- *  ADR-XXXX `newCard`: an UPSELL the tenant chose to pay "with another card" —
+ *  ADR-0226 `newCard`: an UPSELL the tenant chose to pay "with another card" —
  *  the pay-link then initiates a token, and the card that pays becomes the
  *  stored mandate (the plan-bar promise; without this it would be a lie). */
 export async function requestPayment(
@@ -154,7 +154,7 @@ export async function requestPayment(
   // ADR-0080 ④: a SUBSCRIPTION checkout stores a charge token (the payer consents
   // on the gateway's own pay page), so later renewals can charge automatically.
   // One-time purchases (multilang, domain) never initiate one — nothing recurs.
-  // ADR-XXXX: a card_update exists ONLY for the token, and an upsell paid "with
+  // ADR-0226: a card_update exists ONLY for the token, and an upsell paid "with
   // another card" initiates too (the new card replaces the mandate). The FACT is
   // written on the payment row — the webhook reads it from there, not from kind.
   const wantsToken =
@@ -263,7 +263,7 @@ export async function handleWebhook(
           .executeTakeFirst()
       : undefined;
     if (!known) return { ok: false };
-    // ADR-XXXX: a card-verification payment is a RESERVATION — "in flight" here
+    // ADR-0226: a card-verification payment is a RESERVATION — "in flight" here
     // means the card was authenticated and the hold stands. Release it (0) at
     // once; the gateway then reports Succeeded and the token + card get stored
     // on the re-read. No money ever moves. A release that fails is logged and
@@ -336,7 +336,7 @@ export async function applyWebhookResult(
     .select(["kind", "tenant_id"])
     .where("id", "=", payment.order_intent_id)
     .executeTakeFirst();
-  // ADR-XXXX CARD_UPDATE: nothing was bought — the hold is released by the
+  // ADR-0226 CARD_UPDATE: nothing was bought — the hold is released by the
   // caller (handleWebhook) and the ONLY deliverable is the mandate: the card
   // that just authenticated becomes the stored one. No invoice: no money moved.
   if (kindRow?.kind === "card_update") {
@@ -356,7 +356,7 @@ export async function applyWebhookResult(
   }
   if (kindRow?.kind === "upsell") {
     const bought = await settleUpsellPaid(payment.order_intent_id);
-    // ADR-XXXX: an upsell paid "with another card" initiated a token — that card
+    // ADR-0226: an upsell paid "with another card" initiated a token — that card
     // is the mandate now (no-op when the payment did not initiate one).
     await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null, res.card ?? null);
     await backfillCardMaskIfMissing(kindRow.tenant_id, res.card ?? null);
@@ -399,7 +399,7 @@ export async function applyWebhookResult(
     // ADR-0080 ④: a pay-link renewal that initiated a token upgrades the
     // subscription to auto-charge from the NEXT cycle on.
     await storeRecurrenceTokenIfInitiated(payment.id, payment.order_intent_id, res.traceId ?? null, res.card ?? null);
-    // ADR-XXXX: a MIT renewal on a pre-0076 token also reports the card — the
+    // ADR-0226: a MIT renewal on a pre-0076 token also reports the card — the
     // Pénztárca learns the mask of a mandate stored before masks existed.
     await backfillCardMaskIfMissing(kindRow.tenant_id, res.card ?? null);
     await issueInvoiceFor(payment.id);
@@ -468,7 +468,7 @@ async function storeRecurrenceTokenIfInitiated(
   card: import("./gateway.js").CardInfo | null = null,
 ): Promise<boolean> {
   if (!getGateway().chargeRecurring) return false;
-  // ADR-XXXX: the FACT that this pay-link asked for a token lives on the payment
+  // ADR-0226: the FACT that this pay-link asked for a token lives on the payment
   // row (0076) — kind alone no longer decides (upsell "másik kártyával", card_update).
   const pay = await db
     .selectFrom("payment")
@@ -493,7 +493,7 @@ async function storeRecurrenceTokenIfInitiated(
     tenantId = t?.id ?? null;
   }
   if (!tenantId) return false;
-  // ADR-XXXX: the card being REPLACED goes to the history (the Pénztárca's
+  // ADR-0226: the card being REPLACED goes to the history (the Pénztárca's
   // "Korábbi kártyák"). Only a real, different mandate counts — a replayed
   // webhook for the same payment must not write a bogus "replaced" row.
   const prev = await db
@@ -543,7 +543,7 @@ async function storeRecurrenceTokenIfInitiated(
 }
 
 /**
- * ADR-XXXX: a mandate stored BEFORE 0076 has a token but no mask. Every later
+ * ADR-0226: a mandate stored BEFORE 0076 has a token but no mask. Every later
  * charge on it (MIT renewal/upsell via the webhook) reports the card — fill the
  * mask in once, so the Pénztárca stops saying "a részletek a következő
  * terheléskor jelennek meg". Never overwrites a mask that is already there.

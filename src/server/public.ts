@@ -1600,7 +1600,7 @@ async function serveAdmin(
       owed: sub ? (sub.arrears?.amount ?? 0) : null,
     };
   } else if (tab === "penztarca") {
-    // ADR-XXXX: the wallet reads the card from its own loader and the next-charge
+    // ADR-0226: the wallet reads the card from its own loader and the next-charge
     // AMOUNT from the subscription card's rule — one number, one source.
     [wallet, subscription] = await Promise.all([
       getWalletAdmin(session.tenantId),
@@ -2022,7 +2022,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       );
       if (!order) return redirect(res, `/admin?tab=modulok&payerror=1${q ? `&${q}` : ""}`);
 
-      // ADR-XXXX (wallet ⑧): the tenant chose "Másik kártyával" — skip the stored
+      // ADR-0226 (wallet ⑧): the tenant chose "Másik kártyával" — skip the stored
       // card and mint a pay-link that INITIATES a token, so the card that pays
       // becomes the mandate (the plan bar promised exactly that).
       const newCard = form.get("card") === "new";
@@ -2167,12 +2167,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     await revokeAutoCharge(session.tenantId);
-    // ADR-XXXX: the revoke can start from the Pénztárca too — go back to where
+    // ADR-0226: the revoke can start from the Pénztárca too — go back to where
     // the tenant was (a fixed value, never a raw redirect target).
     const form = await readFormBody(req);
     return redirect(res, form.get("back") === "penztarca" ? "/admin?tab=penztarca" : "/admin?tab=modulok");
   }
-  // ── ADR-XXXX (wallet ④): „Kártya cseréje / megadása" — a card_update order whose
+  // ── ADR-0226 (wallet ④): „Kártya cseréje / megadása" — a card_update order whose
   // pay-link HOLDS the verification amount and initiates a token; the webhook
   // releases the hold and the paying card becomes the mandate. Fail closed at
   // every step: no order / no pay-link ⇒ nothing changed, and the tab SAYS so.

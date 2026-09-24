@@ -15,7 +15,7 @@ import type {
 } from "./gateway.js";
 
 /**
- * ADR-XXXX: the mock gateway's two test cards — the pay page offers them on a
+ * ADR-0226: the mock gateway's two test cards — the pay page offers them on a
  * token-initiating payment. Shapes mirror what Barion's FundingInformation
  * reports (brand as the scheme names it, last 4, expiry).
  */
@@ -45,13 +45,13 @@ export class MockGateway implements PaymentGateway {
   async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | null> {
     if (typeof params.gatewayRef !== "string") return null;
     if (params.status !== "paid" && params.status !== "failed") return null;
-    // ADR-XXXX: the mock pay page lets the tester pick WHICH test card paid, so the
+    // ADR-0226: the mock pay page lets the tester pick WHICH test card paid, so the
     // Pénztárca's card mask and the "másik kártya" swap run locally end to end.
     const card = typeof params.card === "string" ? mockCard(params.card) : null;
     return { gatewayRef: params.gatewayRef, status: params.status, ...(card ? { card } : {}) };
   }
 
-  /** ADR-XXXX: the mock holds nothing, so releasing is always a success. */
+  /** ADR-0226: the mock holds nothing, so releasing is always a success. */
   async finishReservation(gatewayRef: string, total: number): Promise<boolean> {
     console.log(`[payment:mock] zárolás lezárva · ${gatewayRef} · ${total} HUF`);
     return true;

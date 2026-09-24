@@ -25,7 +25,7 @@ export interface PaymentRequest {
    *  initiateRecurrence is set, and quoted verbatim at every later MIT charge. */
   readonly recurrenceId?: string;
   /**
-   * ADR-XXXX: a CARD-VERIFICATION payment — the tenant swaps the stored card
+   * ADR-0226: a CARD-VERIFICATION payment — the tenant swaps the stored card
    * without buying anything. The gateway should only HOLD the amount
    * (Barion PaymentType=Reservation); the caller releases it with
    * finishReservation(…, 0) the moment the token is stored, so no money moves.
@@ -61,7 +61,7 @@ export interface PayLink {
 }
 
 /**
- * ADR-XXXX: the MASK of the card that paid — what the Pénztárca may show. Never
+ * ADR-0226: the MASK of the card that paid — what the Pénztárca may show. Never
  * the PAN: the gateway holds the card, we hold four digits and an expiry.
  */
 export interface CardInfo {
@@ -77,7 +77,7 @@ export interface WebhookResult {
   readonly status: "paid" | "failed";
   /** 0040: card-scheme TraceId of a paid, token-initiating payment (Barion). */
   readonly traceId?: string | null;
-  /** ADR-XXXX: the paying card's mask, when the gateway reports one. */
+  /** ADR-0226: the paying card's mask, when the gateway reports one. */
   readonly card?: CardInfo | null;
 }
 
@@ -112,7 +112,7 @@ export interface PaymentGateway {
    */
   chargeRecurring?(req: RecurringChargeRequest): Promise<RecurringChargeResult>;
   /**
-   * ADR-XXXX: close a Reservation-type payment for `total` (0 = release the whole
+   * ADR-0226: close a Reservation-type payment for `total` (0 = release the whole
    * hold back to the card). Optional — a gateway without reservations cannot run
    * the card-verification flow, and the caller must not offer it.
    */

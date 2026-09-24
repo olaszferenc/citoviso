@@ -1,4 +1,4 @@
-# 2026-09-24 — Pénztárca: a mentett kártya látható és cserélhető (ADR-XXXX)
+# 2026-09-24 — Pénztárca: a mentett kártya látható és cserélhető (ADR-0226)
 
 **Tulaj kérése:** „ha a tenant vásárol bármit, az adminba tudjon változtatni a bankkártyán,
 sőt kell egy pénztárca rész, ahol tud változtatni a mentett kártyán." Terv A/B → **B, külön fül**

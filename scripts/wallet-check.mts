@@ -1,4 +1,4 @@
-// PÉNZTÁRCA őr — a mentett kártya látható, cserélhető, visszavonható (ADR-XXXX).
+// PÉNZTÁRCA őr — a mentett kártya látható, cserélhető, visszavonható (ADR-0226).
 //
 //   npx tsx scripts/wallet-check.mts [--self-test]
 //

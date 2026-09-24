@@ -90,7 +90,7 @@ export interface SubscriptionAdminData {
   // see or cancel is the "silent gate" failure). ──
   /** A usable stored mandate exists → the fordulónap charges automatically. */
   readonly autoCharge: boolean;
-  /** ADR-XXXX: the stored card named for the plan bar ("Visa ····4242");
+  /** ADR-0226: the stored card named for the plan bar ("Visa ····4242");
    *  null without a mandate — or on a pre-0076 token whose mask is unknown yet. */
   readonly cardLabel: string | null;
   /** The tenant's live welcome/campaign coupon for their NEXT purchase. */
