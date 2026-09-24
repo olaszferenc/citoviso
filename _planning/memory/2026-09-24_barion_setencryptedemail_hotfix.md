@@ -42,7 +42,7 @@ Pénztár email mezőjéhez… a setEncryptedEmail még nem jelent meg egyszer s
 
 ## Nyitott
 
-- A Barion-válasz (link + „előbb Elfogadom”) a tulajnál — beküldés az ő dolga.
+- ✅ A válasz BEKÜLDVE a -001-es észrevételre (tulaj, 2026-09-24): új link + lépéssor (előbb „Elfogadom”). **A Barion válaszára várunk** (cél: Advanced díjcsomag, 1,19%).
 - Az éles fa 80 commit mögött van a main-hez képest; a következő teljes élesítés a tulaj döntése.
 - A demó-TENANT linkje (`/p/demo…`) szándékosan vásárlás nélküli marad; a bírálat után mindkét
   demó-lead + a teszt-rendelés kitakarítandó a prodból.
