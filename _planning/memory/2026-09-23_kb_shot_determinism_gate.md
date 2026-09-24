@@ -31,3 +31,18 @@
 `scripts/kb-shot.mts` · `scripts/lib/png-pixel-diff.mts` · `scripts/deploy-prod.sh` · `hooks/pre-commit` ·
 `_planning/decisions/XXXX-a-sugo-kep-frissessege-deploy-kapu.md` · `_planning/decisions/0045-…md` ·
 `kb/entries/{console-dashboard,console-leads,console-outreach-draft,console-report}/assets/hu/screen.png`
+
+## Folytatás 2026-09-24 — partner-képek a kapu alatt (ADR-0220 kiegészítés)
+- **Lelet:** a `partner-kb-shot` a KÖZÖS dev DB-ből fényképezett — ott 12 partner (köztük a tulaj
+  cégeinek valós nevei) és 0 bizonylat; a 3 commitolt kép 1 hónapja elavult volt.
+- **Javítás:** saját, egyedi nevű scratch-DB (migrál → demo-seed → demo-tenant a kb-shot fixture
+  moduljaival: 6 070 Ft/hó → eldob), rögzített óra (`scripts/lib/frozen-clock.mjs`, a seed
+  gyerekfolyamatába is `--import`-tal; a `created_at DEFAULT now()` a scratch-DB-ben rögzítve).
+- **Második lelet:** rebase után 26 admin-kép ingadozott — a Google Fonts HÁLÓZATON jött. Most
+  `pinNetwork()` (`scripts/lib/kb-settle.mts`) a commitolt pillanatképből (`scripts/lib/kb-shot-fonts/`,
+  296 kB) szolgál ki, minden más külső kérést elutasít; hiányzó betű = hangos bukás (piros próba:
+  egy woff2 kivéve → 27 kérés megnevezve). Frissítés: `npx tsx scripts/kb-shot-fonts.mts --refresh`.
+- **Mérve:** `--determinism` 43/43 azonos nyugalomban + 3× 8 szálas terhelés alatt; kapu HEAD-en zöld
+  (43), elavult partner-képpel piros. Az admin-képek a pillanatkép-betűvel pixelre egyeztek a régivel.
+- ⚠️ Egy `sed`-em a `scripts/planning-index*.mts` `ADR-XXXX` mintáját is átírta — észrevettem és
+  visszaállítottam a commit előtt (a helyőrző ott a MECHANIZMUS része).

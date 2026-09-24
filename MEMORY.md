@@ -44,7 +44,7 @@ Session-jegyzet: `_planning/memory/2026-09-23_season_year_price.md`.
 **🖼️ SÚGÓ-KÉP FRISSESSÉG = DEPLOY-KAPU — KÉSZ LOKÁLBAN (ADR-0220).** A `kb-shot` determinisztikus
 (`settle()` minden felvétel előtt; próba: `npx tsx scripts/kb-shot.mts --determinism`, 8 gyártás
 terhelés alatt is 38/38 azonos). A `deploy-prod.sh` GATE 1c/kép a cél-commiton újragyárt és pixel-
-szinten összevet — eltérés = a deploy megáll (külön: `--kb-shot-gate <commit>`). ⚠️ Nyitott: egy
+szinten összevet — eltérés = a deploy megáll (külön: `--kb-shot-gate <commit>`). **2026-09-24:** a 3 partner-kép is a kapu alatt (saját scratch-DB + rögzített óra; a közös dev DB-ben valós nevek és 0 bizonylat ült), a Google Fonts a repóból jön (`scripts/lib/kb-shot-fonts/`) — 43 kép. ⚠️ Nyitott: egy
 kapu ELŐTTI commitra a rollback is megáll. Jegyzet: `_planning/memory/2026-09-23_kb_shot_determinism_gate.md`.
 
 ## Előző szálak (2026-09-23 délután — árazás, vélemény-kezelő, programajánló-minta)
