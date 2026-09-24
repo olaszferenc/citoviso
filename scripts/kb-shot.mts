@@ -73,6 +73,7 @@ import { isUnread } from "../src/tenant/messages.js";
 import { MESSAGE_TOPICS, topicOfKind, type MessageTopic } from "../src/tenant/messageTopics.js";
 import type { MonthView } from "../src/tenant/availability.js";
 import { describeDiff, identical, pixelDiff } from "./lib/png-pixel-diff.mts";
+import { pinNetwork, settle } from "./lib/kb-settle.mts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 // Language of the shot UI. Today the admin renders Hungarian; when the admin surface
@@ -833,91 +834,13 @@ async function snap(target: Page | Locator, treePath: string): Promise<void> {
   // --out: same relative path under the out dir; the tree's image stays the ÉP-ŐR baseline.
   const outPath = OUT_DIR ? path.join(OUT_DIR, rel.startsWith("..") ? path.basename(treePath) : rel) : treePath;
   await mkdir(path.dirname(outPath), { recursive: true });
-  await settle(target);
+  await settle(page, target);
   const prev = await pngSize(treePath);
   await target.screenshot({ path: outPath });
   const next = await pngSize(outPath);
   captures.push({ rel, prev, next });
 }
 
-// Motion off for the shot only — a guide image is a still anyway. The caret blinks too.
-const FREEZE_CSS =
-  "*,*::before,*::after{animation:none !important;transition:none !important;caret-color:transparent !important}";
-
-/**
- * A felvétel előtti BEÁLLÁS — minden kép ezen megy át (a `snap()` hívja), hogy ugyanaz a
- * commit futásról futásra ugyanazt a képet adja (ADR-0220). Sorrendben:
- *  1. animáció/átmenet ki (egy félúton lévő átmenet a capture pillanatától függ);
- *  2. betűtípusok + képek bevárva (a késve érkező betű átrendezi a sorokat — ez tolta el
- *     1–2 px-szel az outreach-draft felső sávját);
- *  3. görgetés EXPLICIT: viewport-képnél a horgonyra (ha van), különben a lap tetejére —
- *     a korábbi, betűtípus ELŐTTI horgony-görgetés az azóta átrendezett lapon rossz helyen áll;
- *     a konzol lead-lapja `hashchange`-re a saját (ragadó sávokat kerülő) görgetését futtatja;
- *  4. a RAGADÓ elemek a természetes helyükre (static) — elem-képnél mind (lent), viewport-
- *     képnél csak a nem elmozdultak (a settle() törzsében); az elem-capture görget, és
- *     a ragadó sáv a görgetés pillanatától függően hol a tartalomra festődött, hol nem (a
- *     source-panel.png-n a fülsor alatti mondat — mérve 7 623 px). A static a folyásban
- *     ugyanakkora helyet foglal, mint a sticky, tehát az elrendezés NEM változik;
- *  5. két képkocka, hogy a fenti változások (és az IntersectionObserver-visszahívások)
- *     lefessenek.
- * ⚠️ Szöveges `evaluate`: a tsx-átírt függvény-törzs `__name` segédet hivatkozhat, ami a
- * böngészőben nem létezik.
- */
-async function settle(target: Page | Locator): Promise<void> {
-  const isElement = target !== page;
-  await page.addStyleTag({ content: FREEZE_CSS });
-  // ⛔ A beállás NEM várhat örökké: egy soha fel nem oldó ígéret (lazy kép, beragadt betű)
-  // némán megakasztotta a teljes futást. Időkorlát → HANGOS bukás, a lap URL-jével.
-  let timer: NodeJS.Timeout | undefined;
-  const limit = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`kb-shot settle(): 15 s alatt sem állt be a lap (${page.url()})`)),
-      15_000,
-    );
-  });
-  const work = page.evaluate(`(async () => {
-    await document.fonts.ready;
-    // ⚠️ A lazy kép a látómezőn kívül SOSEM töltődik be, és a decode()-ja sosem old fel
-    // (mérve: a Modulok › Szobák felvétele örökre várt) — eager-re kapcsoljuk, így az
-    // elem-felvétel akkor is kész képet lő, ha a görgetés csak a capture-kor jön.
-    for (const i of Array.from(document.images)) if (i.loading === "lazy") i.loading = "eager";
-    await Promise.all(Array.from(document.images).map((i) =>
-      i.complete ? null : i.decode().catch(() => null)));
-    const stickies = Array.from(document.querySelectorAll("*"))
-      .filter((el) => getComputedStyle(el).position === "sticky");
-    if (${isElement}) {
-      for (const el of stickies) el.style.setProperty("position", "static", "important");
-    } else {
-      const id = decodeURIComponent(location.hash.replace(/^#/, ""));
-      const anchor = id ? document.getElementById(id) : null;
-      if (anchor) {
-        anchor.scrollIntoView({ block: "start", behavior: "instant" });
-        window.dispatchEvent(new HashChangeEvent("hashchange"));
-      } else {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-      }
-      // A viewport-képen a természetes helyén álló ragadó elem is static lesz: ott a kettő
-      // pixelre ugyanaz, de a sticky réteg kompozitálása futásonként eltért (mérve: a
-      // lead-lista táblázat-fejlécének alsó vonala hol teljes, hol csonka — 892 px).
-      // Ami ténylegesen TAPAD (a helye elmozdul a static-tól, pl. alsó sáv), az marad:
-      // a tulaj pont így látja a lapot.
-      for (const el of stickies) {
-        const before = el.getBoundingClientRect();
-        el.style.setProperty("position", "static", "important");
-        const after = el.getBoundingClientRect();
-        if (Math.abs(before.top - after.top) > 0.5 || Math.abs(before.left - after.left) > 0.5) {
-          el.style.removeProperty("position");
-        }
-      }
-    }
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  })()`);
-  try {
-    await Promise.race([work, limit]);
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 // ── --self-test: az ÉP-ŐR piros próbája, fényképezés NÉLKÜL ─────────────────
 // Egy őr, amit sosem láttunk pirosan, nem bizonyíték. A teljes kb-shot-futás ehhez
@@ -1018,6 +941,8 @@ const page = await browser.newPage({
   isMobile: true,
   deviceScaleFactor: 2,
 });
+// Google Fonts from the committed snapshot, every other external request refused (ADR-0220).
+const netMisses = await pinNetwork(page);
 
 async function shoot(
   tab: string,
@@ -1995,6 +1920,14 @@ await browser.close();
     );
     process.exit(1);
   }
+  // ⛔ A hálózat NEM szólhat bele a képbe: egy hiányzó betű csendben rendszer-betűre
+  // cserélődik, és a kép a gép/CDN függvénye lesz (ADR-0220).
+  if (netMisses.length) {
+    console.error(`\n⛔ ${netMisses.length} külső kérés nem a pillanatképből jött (elutasítva):`);
+    for (const u of [...new Set(netMisses)]) console.error(`   ${u}`);
+    console.error("   Új betű/külső erőforrás a nézetben? → npx tsx scripts/kb-shot-fonts.mts --refresh (és a FONT_CSS_URLS)");
+    process.exit(1);
+  }
   // ⛔ UTÓ-FELTÉTEL: ha a `snap()` mellett valaki új felvételi utat nyitna, a mérleg
   // NÉMÁN kevesebbet mérne, és ez a zöld sor hazudna.
   if (!captures.length) {
@@ -2004,7 +1937,28 @@ await browser.close();
   console.log("✅ ép-őr: egyetlen kép sem omlott be.");
 }
 
+// ── A PARTNER-SÚGÓ KÉPEI (ADR-0220) ──────────────────────────────────────────
+// Külön gyártó (saját scratch-DB + rögzített óra kell hozzá), de EGY paranccsal fut, hogy a
+// determinizmus-próba és a deploy-kapu ezt a három képet is lefedje — különben három
+// súgó-kép maradna a kapu alatt, amiről a kapu zöld sora hallgat.
+const partner = spawnSync(
+  "npx",
+  ["tsx", path.join(ROOT, "scripts/partner-kb-shot.mts"), ...(OUT_DIR ? ["--out", OUT_DIR] : [])],
+  { cwd: process.cwd(), env: process.env, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+);
+if (partner.status !== 0) {
+  console.error(`⛔ partner-kb-shot bukott (rc=${partner.status}):\n${partner.stdout ?? ""}\n${partner.stderr ?? ""}`);
+  process.exit(1);
+}
+process.stdout.write(partner.stdout ?? "");
 if (OUT_DIR) {
-  await writeFile(path.join(OUT_DIR, MANIFEST), JSON.stringify(captures.map((c) => c.rel)), "utf8");
+  const partnerRels = JSON.parse(
+    await readFile(path.join(OUT_DIR, "partner-kb-shot-manifest.json"), "utf8"),
+  ) as string[];
+  await writeFile(
+    path.join(OUT_DIR, MANIFEST),
+    JSON.stringify([...captures.map((c) => c.rel), ...partnerRels]),
+    "utf8",
+  );
 }
 console.log(`kb-shot: kész (${LANG})`);

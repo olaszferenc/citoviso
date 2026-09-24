@@ -66,3 +66,34 @@ A többi 34 kép pixelre egyezett.
 
 - **Visszafordíthatóság:** 🔄 a kapu egy függvényhívás a `deploy-prod.sh`-ban; a gyártó változása
   additív.
+
+### ADR-0220 kiegészítés (2026-09-24) — a partner-súgó képei is a kapu alatt; a betű és az óra rögzítve
+
+**Kontextus (mérve).** ① A `partner-kb-shot.mts` a KÖZÖS dev DB-ből fényképezett: ma 12 partner
+volt benne — köztük a tulaj saját cégeinek valós nevei — és 0 bizonylat. Egy friss kép tehát
+személyes adatot vitt volna a súgóba, a bizonylat-kép pedig ÜRES lett volna egy 14 bizonylatot
+magyarázó szöveg mellett; a három commitolt kép egy hónapja elavult volt, és semmi nem jelezte.
+② A rebase után a `--determinism` 26 admin-képen jelzett szórt glifa-eltérést (600–1 700 px): az
+admin a Google Fonts-ról, HÁLÓZATON tölti az Inter + Space Grotesk betűt, a kép így a CDN
+függvénye volt — a kapu egy változatlan képet „elavultnak" mondott volna.
+
+**Döntés.**
+1. **Partner-képek a valódi adatrétegből, saját scratch-DB-ből:** minden futás egyedi nevű
+   adatbázist hoz létre, migrál, a meglévő demo-seedet tölti bele (csak TESZT-jelölt adat), a
+   vevőhöz egy demo-tenantot köt UGYANAZOKKAL a modulokkal, mint a `kb-shot` fixture-je (galéria,
+   szobák, foglalás → 6 070 Ft/hó = 60 700 Ft/év, egyezik az admin súgóval), és a végén eldobja.
+   Kézzel írt fixture-t NEM használunk: a KPI/korosítás/fizetési szokás SQL-ben számolódik, egy
+   fixture ezeknek a szabályoknak a második példánya lenne.
+2. **Rögzített óra** (`scripts/lib/frozen-clock.mjs`, `2026-09-23T10:00+02:00`) a gyártóban ÉS a
+   seed gyerekfolyamatában; a DB-oldali `created_at DEFAULT now()` a scratch-DB-ben erre állítva.
+   Nélküle a kép naponta változna (lejárati napok, „Partner azóta").
+3. **Betű a repóból:** a képgyártók a Google Fonts kéréseit egy commitolt pillanatképből
+   szolgálják ki (`scripts/lib/kb-shot-fonts/`, 296 kB, OFL-licencű betűk), MINDEN más külső kérést
+   elutasítanak, és egy nem kiszolgált kérés HANGOS bukás (a hiányzó betű csendben rendszer-betűre
+   cserélődne). Frissítés csak tudatosan: `npx tsx scripts/kb-shot-fonts.mts --refresh`, utána
+   minden admin súgó-kép újragyártandó.
+4. **Egy parancs:** a `kb-shot` a végén a partner-gyártót is futtatja, így a `--determinism` és a
+   deploy GATE 1c/kép mind a 43 képet lefedi.
+
+**Határ.** A partner-képekre nincs ÉP-ŐR (beomlás-mérés) — a pixel-kapu a commitolttal veti
+össze őket, egy beomlott kép ott bukik.
