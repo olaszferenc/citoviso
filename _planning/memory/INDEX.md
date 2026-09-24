@@ -6,7 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [2026-09-24_worktree_collision_root_causes.md](2026-09-24_worktree_collision_root_causes.md) — 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-XXXX)
+- [2026-09-24_worktree_collision_root_causes.md](2026-09-24_worktree_collision_root_causes.md) — 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-0223)
 - [2026-09-24_barion_setencryptedemail_hotfix.md](2026-09-24_barion_setencryptedemail_hotfix.md) — 2026-09-24 — Barion -001: a setEncryptedEmail sosem sült el — hotfix élesítve (csak ez)
 - [2026-09-24_barion_callback_failed.md](2026-09-24_barion_callback_failed.md) — 2026-09-24 — Barion „Unsuccessful callback" levelek: a tesztkapu indított valódi sandbox-fizetést
 - [2026-09-23_season_year_price.md](2026-09-23_season_year_price.md) — 2026-09-23 — Évhez kötött szezonár: évsáv, szerkeszthető szezon, szezon végi kérdés (ADR-0221)

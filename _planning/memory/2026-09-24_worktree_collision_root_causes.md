@@ -1,4 +1,4 @@
-# 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-XXXX)
+# 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-0223)
 
 **Kiváltó (tulaj):** „sokadik napja fordul elő, hogy worktree commit összeakadások vannak a
 sessionok között… ez a probléma mindenhol fennáll: CIT MR OF… javítsunk mindent”.

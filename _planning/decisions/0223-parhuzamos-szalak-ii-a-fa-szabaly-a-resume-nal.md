@@ -1,4 +1,4 @@
-## ADR-XXXX — Párhuzamos szálak II.: a fa-szabály a RESUME-nál is, a headless Claude eszköz nélkül, a kapuk osztott állapota futásonként egyedi (2026-09-24)
+## ADR-0223 — Párhuzamos szálak II.: a fa-szabály a RESUME-nál is, a headless Claude eszköz nélkül, a kapuk osztott állapota futásonként egyedi (2026-09-24)
 
 - **Kiváltó (tulaj, 2026-09-24):** *„sokadik napja fordul elő, hogy worktree commit összeakadások
   vannak a sessionok között… ez a probléma mindenhol fennáll: CIT MR OF… javítsunk mindent”.*
