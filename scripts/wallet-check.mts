@@ -121,7 +121,7 @@ console.log("A) render — állapotok és a kontraktus feliratai");
   ok(onT.includes("Korábbi kártyák (1)") && onT.includes("MASTERCARD ····8810") && onT.includes("cserélve"), "előzmény: cserélve (④)");
   ok(on.includes("data-wal-change>") && onT.includes("Kártya cseréje"), "gomb: Kártya cseréje (④)");
   ok(on.includes("data-mand-revoke>") && on.includes('form="adm-mand-off"'), "gomb: Megbízás visszavonása + kétlépéses ablak (⑥)");
-  // ⑤ + ADR-XXXX: a bank-card Reservation IS a charge and Finish(0) a refund (sandbox-
+  // ⑤ + ADR-0228: a bank-card Reservation IS a charge and Finish(0) a refund (sandbox-
   // measured) — the sentence must say "terhelünk … visszautaljuk … legfeljebb 30 nap",
   // and the old "zárolunk / pénzt nem vonunk le" promise must be GONE, not merely joined.
   ok(onT.includes("10 Ft-ot terhelünk") && onT.includes("azonnal vissza is utaljuk") && onT.includes("legfeljebb 30 nap"), "csere-ablak: a hitelesítés ára IGAZON kimondva — terhelés + visszautalás, max 30 nap (⑤)");

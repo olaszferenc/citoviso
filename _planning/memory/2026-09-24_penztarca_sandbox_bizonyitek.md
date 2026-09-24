@@ -1,4 +1,4 @@
-# 2026-09-24 — Pénztárca: mock-kör + Barion-sandbox bizonyíték (ADR-XXXX)
+# 2026-09-24 — Pénztárca: mock-kör + Barion-sandbox bizonyíték (ADR-0228)
 
 Brief: `~/rc-briefs/penztarca-sandbox.md`. Előzmény: ADR-0226, `2026-09-24_penztarca_mentett_kartya.md`.
 
@@ -29,7 +29,7 @@ ezen a kártyán, modul él; visszavonás → NINCS MENTETT KÁRTYA, „visszavo
 `scripts/barion-sandbox-card-probe.mts start|state|mit|reap` (csak `api.test.barion.com`-on fut).
 Valódi termék-út, a callback a fő fa konzolján; 100 Ft és 10 Ft: Reservation → Finish(0) → Succeeded
 → token + maszk (Visa ····5559) → **MIT: Succeeded, RecurrenceResult Successful**. Részletek + táblázat:
-ADR-XXXX.
+ADR-0228.
 **Cáfolat:** a bankkártyás Reservation valódi terhelés, a Finish(0) visszatérítés (doksi: ≤30 nap), a
 Barion-gomb „Fizetek: …”. → Tulaj: „Marad a mód, kisebb összeg” → `CARD_VERIFY_AMOUNT_HUF = 10`, igaz
 mondat a csere-ablakban, siker-sávban, mock-lapon, Barion-leírásban, súgóban, kontraktus ⑤-ben.

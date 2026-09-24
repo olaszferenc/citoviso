@@ -1,4 +1,4 @@
-## ADR-XXXX — A kártyacsere Barion-úton igazolva: 10 Ft-os terhelés, azonnali visszatérítés, igaz mondattal
+## ADR-0228 — A kártyacsere Barion-úton igazolva: 10 Ft-os terhelés, azonnali visszatérítés, igaz mondattal
 
 **Dátum:** 2026-09-24 · **Státusz:** elfogadva (tulaj: „Marad a mód, kisebb összeg”) · **Előzmény:**
 ADR-0226 (Pénztárca) „Nyitott” — Barion-sandbox próba · **Kontraktus:**

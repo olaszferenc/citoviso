@@ -10,7 +10,7 @@
 - [2026-09-24_tenant_admin_linear_redesign.md](2026-09-24_tenant_admin_linear_redesign.md) — Tenant-admin újratervezés — „Linear” nyelv jóváhagyva (2026-09-24)
 - [2026-09-24_tenant_admin_linear_build.md](2026-09-24_tenant_admin_linear_build.md) — Tenant-admin újratervezés — a „Linear” terv MEGÉPÍTVE (2026-09-24, átadott session)
 - [2026-09-24_platform_email_frame.md](2026-09-24_platform_email_frame.md) — 2026-09-24 — Rendszerlevelek profi kerete (E4 logó, „Citoviso” feladó, cégadatos lábléc)
-- [2026-09-24_penztarca_sandbox_bizonyitek.md](2026-09-24_penztarca_sandbox_bizonyitek.md) — 2026-09-24 — Pénztárca: mock-kör + Barion-sandbox bizonyíték (ADR-XXXX)
+- [2026-09-24_penztarca_sandbox_bizonyitek.md](2026-09-24_penztarca_sandbox_bizonyitek.md) — 2026-09-24 — Pénztárca: mock-kör + Barion-sandbox bizonyíték (ADR-0228)
 - [2026-09-24_penztarca_mentett_kartya.md](2026-09-24_penztarca_mentett_kartya.md) — 2026-09-24 — Pénztárca: a mentett kártya látható és cserélhető (ADR-0226)
 - [2026-09-24_parallel_gate_runner.md](2026-09-24_parallel_gate_runner.md) — 2026-09-24 — A pre-commit kapusor párhuzamos futtatása (ADR-0227)
 - [2026-09-24_elek_vendeg_szemevel.md](2026-09-24_elek_vendeg_szemevel.md) — 2026-09-24 — Elek NEGYEDIK szerepe: a VENDÉG (FK-008 + FK-008b) — a pilot előtti vendég-szemű bejárás

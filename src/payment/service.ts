@@ -39,7 +39,7 @@ export interface RequestPaymentResult {
 }
 
 /**
- * ADR-0226 + ADR-XXXX: the amount a card-verification payment takes and refunds at once.
+ * ADR-0226 + ADR-0228: the amount a card-verification payment takes and refunds at once.
  * ⚠️ A Barion "Reservation" paid by BANK CARD is a real charge held in OUR wallet, and
  * FinishReservation(0) is a REFUND to the card (docs: up to 30 days, bank-dependent) —
  * NOT a hold release (measured in the sandbox 2026-09-24: CardPayment + RefundToBankCard).

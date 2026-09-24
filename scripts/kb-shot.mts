@@ -351,7 +351,7 @@ const walletFixture: WalletAdminData = {
     { on: "2026-06-28", orderKind: "initial", billingPeriod: "monthly", amount: 7240, status: "paid" },
   ],
   history: [{ brand: "MasterCard", last4: "8810", savedOn: "2026-03-10", endedOn: "2026-06-28", reason: "replaced" }],
-  verifyAmount: CARD_VERIFY_AMOUNT_HUF, // the product constant, not a second copy (ADR-XXXX)
+  verifyAmount: CARD_VERIFY_AMOUNT_HUF, // the product constant, not a second copy (ADR-0228)
   canChangeCard: true,
 };
 

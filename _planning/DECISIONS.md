@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-kartyacsere-barion-sandboxban-igazolva-10-ft.md) — A kártyacsere Barion-úton igazolva: 10 Ft-os terhelés, azonnali visszatérítés, igaz mondattal
+- [ADR-0228](decisions/0228-a-kartyacsere-barion-uton-igazolva-10-ft-os.md) — A kártyacsere Barion-úton igazolva: 10 Ft-os terhelés, azonnali visszatérítés, igaz mondattal
 - [ADR-0227](decisions/0227-parhuzamos-kapu-futtatas-az-olvaso-kapuk.md) — Párhuzamos kapu-futtatás: az olvasó kapuk Postgres-kényszerített csak-olvasó módban együtt, az írók utána sorban, és a land nem méri újra, amit a commit már megmért (2026-09-24)
 - [ADR-0226](decisions/0226-penztarca-a-mentett-kartya-lathato-es.md) — Pénztárca: a mentett kártya látható és cserélhető (külön fül, 3DS-úton)
 - [ADR-0225](decisions/0225-a-platform-levelek-kozos-kerete-e4-logo.md) — A platform-levelek közös kerete: E4 logó, „Citoviso” feladó, cégadatos lábléc (2026-09-24)
