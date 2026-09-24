@@ -1,4 +1,4 @@
-# 2026-09-24 — A pre-commit kapusor párhuzamos futtatása (ADR-XXXX)
+# 2026-09-24 — A pre-commit kapusor párhuzamos futtatása (ADR-0227)
 
 **Kérés:** a tulaj kétszer szólt a kapusor futásidejéért („Jaaa már 98 kapu van????”); brief:
 `~/rc-briefs/pre-commit-gate-speed.md`. Feltétel: kapu és állítás nem csökkenhet.

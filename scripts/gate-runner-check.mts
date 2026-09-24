@@ -1,4 +1,4 @@
-// GATE-RUNNER GUARD — a párhuzamos kapu-futtatás (ADR-XXXX) nem ad-e hamis zöldet, és nem
+// GATE-RUNNER GUARD — a párhuzamos kapu-futtatás (ADR-0227) nem ad-e hamis zöldet, és nem
 // tüntet-e el bukást.
 //
 // MIT VÉD. A `hooks/pre-commit` párhuzamos módban a kapukat csak FELJEGYZI, és a hook végén a

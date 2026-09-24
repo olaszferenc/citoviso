@@ -1,4 +1,4 @@
-// Parallel gate runner for hooks/pre-commit (ADR-XXXX).
+// Parallel gate runner for hooks/pre-commit (ADR-0227).
 //
 // WHY. The hook grew to ~180 gates; a commit touching the four big surface files starts ~98 of
 // them, one after the other, and `scripts/land.sh` runs the same list again on the rebased diff.

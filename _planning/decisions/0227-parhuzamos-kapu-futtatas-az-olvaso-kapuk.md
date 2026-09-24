@@ -1,4 +1,4 @@
-## ADR-XXXX — Párhuzamos kapu-futtatás: az olvasó kapuk Postgres-kényszerített csak-olvasó módban együtt, az írók utána sorban, és a land nem méri újra, amit a commit már megmért (2026-09-24)
+## ADR-0227 — Párhuzamos kapu-futtatás: az olvasó kapuk Postgres-kényszerített csak-olvasó módban együtt, az írók utána sorban, és a land nem méri újra, amit a commit már megmért (2026-09-24)
 
 - **Kiváltó (tulaj, 2026-09-24):** *„Megint nagyon sokáig fut”*, *„Jaaa már 98 kapu van????”* —
   majd: *„Indíts a javasolták szerint az őrökről egy külön szálat.”* (brief:
