@@ -1,4 +1,4 @@
-## ADR-XXXX — A platform-levelek közös kerete: E4 logó, „Citoviso” feladó, cégadatos lábléc (2026-09-24)
+## ADR-0225 — A platform-levelek közös kerete: E4 logó, „Citoviso” feladó, cégadatos lábléc (2026-09-24)
 
 - **Kiváltó (tulaj, 2026-09-24):** a belépési és a számla-levelet Gmailben nézve: *„ezek nem túl profi
   vállalat benyomását keltik…”*.

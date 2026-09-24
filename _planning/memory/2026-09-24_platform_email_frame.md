@@ -1,6 +1,6 @@
 # 2026-09-24 — Rendszerlevelek profi kerete (E4 logó, „Citoviso” feladó, cégadatos lábléc)
 
-**Szál:** a tulaj a belépési és a számla-levelet amatőrnek találta. Döntés: ADR-XXXX.
+**Szál:** a tulaj a belépési és a számla-levelet amatőrnek találta. Döntés: ADR-0225.
 
 ## Elvégezve
 - §2b terv-kör: A/B/C változat, mobil és asztali mérettel → **A** jóváhagyva, az E4 logóval.
