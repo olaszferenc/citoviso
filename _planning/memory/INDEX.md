@@ -10,6 +10,7 @@
 - [2026-09-24_tenant_admin_linear_redesign.md](2026-09-24_tenant_admin_linear_redesign.md) — Tenant-admin újratervezés — „Linear” nyelv jóváhagyva (2026-09-24)
 - [2026-09-24_platform_email_frame.md](2026-09-24_platform_email_frame.md) — 2026-09-24 — Rendszerlevelek profi kerete (E4 logó, „Citoviso” feladó, cégadatos lábléc)
 - [2026-09-24_penztarca_mentett_kartya.md](2026-09-24_penztarca_mentett_kartya.md) — 2026-09-24 — Pénztárca: a mentett kártya látható és cserélhető (ADR-0226)
+- [2026-09-24_dev_test_recipient_viktoria.md](2026-09-24_dev_test_recipient_viktoria.md) — 2026-09-24 — Dev: új teszt-címzett (e-mail + MMS) engedélyezve
 - [2026-09-24_barion_setencryptedemail_hotfix.md](2026-09-24_barion_setencryptedemail_hotfix.md) — 2026-09-24 — Barion -001: a setEncryptedEmail sosem sült el — hotfix élesítve (csak ez)
 - [2026-09-24_barion_callback_failed.md](2026-09-24_barion_callback_failed.md) — 2026-09-24 — Barion „Unsuccessful callback" levelek: a tesztkapu indított valódi sandbox-fizetést
 - [2026-09-24_barion_advanced_approved.md](2026-09-24_barion_advanced_approved.md) — 2026-09-24 — Barion: az Advanced díjcsomag jóváhagyva (ténylegesen 1,39%)
