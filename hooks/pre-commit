@@ -915,6 +915,15 @@ if [ -f scripts/console-linear-check.mts ] && \
   echo "[pre-commit] console-linear-check (a konzol kerete = a jóváhagyott Linear terv)…"
   npx tsx scripts/console-linear-check.mts >"$GATE_LOG" || gate_failed
 fi
+# linear-shell ⑧ — a konzol SÖTÉT MÓDJA a VALÓDI lapokon (nem fixture-ön): a munkafa konzolja
+# ideiglenes porton, 23 képernyő × 2 méret, sötét témában: ① nincs világos felület a keretben,
+# ② minden szöveg olvasható a TÉNYLEGES hátterén (4,5:1 / 3:1), ③ minden funkció saját lapján a
+# menü azt a pontot világítja és az útvonal azt mondja. Csak GET, CIT_SHOT=1 (nincs írás).
+if [ -f scripts/console-dark-scan.mts ] && \
+   changed_files | grep -qE '^(src/console/(views|partnerViews|nav)\.ts|public/assets/ui/citui-console(-table)?\.css|public/assets/ui/citui\.css)|^scripts/console-dark-scan'; then
+  echo "[pre-commit] console-dark-scan (sötét mód + menü-kiemelés a valódi konzol-lapokon)…"
+  npx tsx scripts/console-dark-scan.mts >"$GATE_LOG" || gate_failed
+fi
 # freeze-state-v2 ⑨ (tulajdonosi döntés, 2026-09-15): a tulaj azt is látja, ami az ÖVÉ
 # (belső előnézet), és azt is, amit a VILÁG (az 503-as udvarias lap). Az őr gerince:
 # amit az admin ÍGÉR a látogatói lapról, azt a VALÓDI vendég-lap renderjén keresi vissza

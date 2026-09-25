@@ -7441,7 +7441,7 @@ const QUAL_COLOR: Record<string, string> = {
   no_site: "#e5484d", // --citui-bad — no website at all = the prime target
   outdated: "#d29922", // --citui-warn
   modern: "#2fa96b", // --citui-ok
-  unknown: "#60748b", // --citui-muted
+  unknown: "#5a6d82", // --citui-muted
 };
 const QUAL_LABEL = (lang = "hu"): Record<string, string> => ({
   no_site: T(lang, "nincs honlapja"),
@@ -7509,7 +7509,7 @@ export function mapPage(
       });
       if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
     </script>`;
-  return layout(T(lang, "Térkép"), body, { active: "/scrape", head: LEAFLET_HEAD });
+  return layout(T(lang, "Térkép"), body, { active: "/scrape/map", head: LEAFLET_HEAD });
 }
 
 /**
@@ -7607,7 +7607,7 @@ export function regionsPage(
         var lon = a.centerLon != null ? a.centerLon : (a.west + a.east) / 2;
         var km = a.radiusKm != null ? a.radiusKm : 5;
         var c = L.circle([lat, lon], {
-          radius: km * 1000, color: a.active ? '#1fb6d6' : '#60748b',
+          radius: km * 1000, color: a.active ? '#1fb6d6' : '#5a6d82',
           weight: 1.5, fillOpacity: 0.06,
         }).bindTooltip(a.label + ' — ' + km.toFixed(1) + ' km · ' + a.leadCount + ' lead').addTo(map);
         bounds.push(c.getBounds());
@@ -7691,7 +7691,7 @@ export function regionsPage(
       });
       document.getElementById('id').addEventListener('input', function (ev) { ev.target.dataset.touched = '1'; });
     </script>`;
-  return layout(T(lang, "Területek"), body, { active: "/scrape", head: LEAFLET_HEAD });
+  return layout(T(lang, "Területek"), body, { active: "/scrape/regions", head: LEAFLET_HEAD });
 }
 
 /**

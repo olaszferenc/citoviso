@@ -7,7 +7,7 @@ kattintható** → a modul SAJÁT irányítópultja nyílik, és a fa alatta kin
 **Kapcsolódó:** ADR-0233 (ez a döntés), ADR-0224 (a tenant-admin Linear nyelve — a mag),
 ADR-0021 ① (dizájn-mag), ADR-0045 §J (súgó-horgonyok), ADR-0067 ③ (kérés-szintű nyelv),
 ADR-0188 (lead-lista), Elek FK-003 (a jelvény és a lista, amit nyit, ugyanazt mondja).
-**Hatókör:** `src/console/nav.ts` · `src/console/navCounts.ts` · `src/console/i18nCtx.ts` · `src/console/views.ts` · `src/console/server.ts` · `public/assets/ui/citui-console.css` · `public/assets/ui/citui-console-table.css` · `src/ui/icons.ts`
+**Hatókör:** `src/console/nav.ts` · `src/console/navCounts.ts` · `src/console/i18nCtx.ts` · `src/console/views.ts` · `src/console/server.ts` · `public/assets/ui/citui-console.css` · `public/assets/ui/citui-console-table.css` · `src/ui/icons.ts` · `src/console/partnerViews.ts` · `public/assets/ui/citui.css`
 (nav.ts: ÚJ, a fa; navCounts.ts: ÚJ, a számlálók; i18nCtx: a számlálók a kérés-kontextusban; views.ts: keret,
 kezdőlap, modul-irányítópult; a HTTP-belépési fájl: `/hub/<id>` + a számlálók betöltése; citui-console.css: keret +
 kezdőlap-blokk, hero és modul-kártya kivezetve; a table-css: háttér-token; icons: vékony `home`, `leads`.)
@@ -77,6 +77,12 @@ nyelvet beszéli (ADR-0224).
    konzolra mérte. A keret mellett az ígéret **csukott (ikonsáv) oldalsávval** áll; nyitottal a tábla
    **oldalra görgethető, ragadó Név-oszloppal**. A `lead-filter-label-check` és a `lead-list-plan-check`
    ezt méri. A dátum-cella nem tördelhet („2026-09-/04” tilos).
+
+10. **Sötét mód a VALÓDI lapokon:** a navy felirat-szerep a `--citui-ink-brand(-2)` tokeneken
+    (sötétben olvasható, világosban változatlan); cián háttéren a felirat navy marad. Minden
+    funkció saját lapja a SAJÁT útvonalát adja a keretnek (a menü azt világítja, az útvonal azt
+    mondja). Őr: `scripts/console-dark-scan.mts` (23 lap × 2 méret, sötétben: világos felület ·
+    kontraszt a tényleges háttéren · menü-kiemelés).
 
 ## Őr (`scripts/console-linear-check.mts`)
 

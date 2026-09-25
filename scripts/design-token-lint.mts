@@ -68,7 +68,7 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
     reason: "logó/hero SVG brand-art — SVG presentation-attribútumban a var() nem oldódik fel",
   },
   "src/console/views.ts": {
-    values: ["#1fb6d6", "#16283f", "#e5484d", "#d29922", "#2fa96b", "#60748b"],
+    values: ["#1fb6d6", "#16283f", "#e5484d", "#d29922", "#2fa96b", "#5a6d82"],
     reason: "logó (brand-konstans) + Leaflet szín-tükrök (SVG-attr, var() nem oldódik fel; a citui.css szemantikus tokenjeivel szinkronban tartandó)",
   },
   "src/generator/patternBadge.ts": {
@@ -77,7 +77,7 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
       "az operátori minta-jelölő IDEGEN dokumentumba (a generált mock) injektálódik, ahol a citui.css nincs betöltve és a :root a mock skinjéé — a dizájn-mag négy tokenje ezért a badge gyökerén, scope-olva tükröződik (--pb-*), nem globálisan; értékben a citui.css-szel szinkronban tartandó",
   },
   "src/console/photoProxy.ts": {
-    values: ["#eef7fa", "#e5484d", "#60748b"],
+    values: ["#eef7fa", "#e5484d", "#5a6d82"],
     reason:
       "a „nem tölthető be” helyettesítő kép ÖNÁLLÓ SVG-dokumentumként megy ki egy <img>-be (citui.css nincs betöltve, a var() nem oldódna fel) — a --citui-surface-2 / --citui-bad / --citui-muted tükrei, értékben a maggal szinkronban tartandó",
   },

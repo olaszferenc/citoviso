@@ -16,6 +16,7 @@
 // Flags:
 //   --tenant      shoot the tenant admin as a signed-in tenant (implies --public)
 //   --fold        viewport-only shot (above-the-fold judgment) instead of full page
+//   --dark        dark mode (console + tenant admin read the theme from localStorage)
 //   --out=<slug>  output name override (single target only)
 //
 // Output: assets/Temp/ui-<slug>-{mobile,desktop}.png — the owner's drop folder,
@@ -45,6 +46,9 @@ const usePublic = args.includes("--public") || args.includes("--tenant");
 // tenantként lő, különben a /login-ra terelne. Magában foglalja a --public-ot.
 const useTenant = args.includes("--tenant");
 const foldOnly = args.includes("--fold");
+// --dark: the console / tenant admin in DARK mode (the theme lives in localStorage —
+// set before any page script runs, exactly as the THEME_BOOT of the page reads it).
+const darkMode = args.includes("--dark");
 const outOverride = (args.find((a) => a.startsWith("--out=")) ?? "").split("=")[1] ?? "";
 const targets = args.filter((a) => !a.startsWith("--"));
 
@@ -176,10 +180,17 @@ async function main() {
           },
         ]);
       }
+      if (darkMode) {
+        await context.addInitScript(() => {
+          try {
+            localStorage.setItem("citui-theme", "dark");
+          } catch {}
+        });
+      }
       const page = await context.newPage();
       await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 }).catch(() => {});
       await page.waitForTimeout(600); // let webfonts + lazy images settle
-      const dest = path.join(OUT, `ui-${slugFor(target)}-${vp.tag}.png`);
+      const dest = path.join(OUT, `ui-${slugFor(target)}${darkMode ? "-dark" : ""}-${vp.tag}.png`);
       await page.screenshot({ path: dest, fullPage: !foldOnly });
       shots.push(dest);
       console.log(`  ${target} @${vp.width}px → ${dest}`);

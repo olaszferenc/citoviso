@@ -34,8 +34,8 @@
    machine check happily reported the label as "visible". A button's colour is
    decided by its variant; the link rule must not reach inside it.
    Kept generic on purpose: the next `<a class="citui-btn">` would fall in too. */
-.con a.citui-btn--primary,
-.con a.citui-btn--ghost { color: var(--citui-navy-900); }
+.con a.citui-btn--primary { color: var(--citui-navy-900); } /* on cyan: stays dark in both themes */
+.con a.citui-btn--ghost { color: var(--citui-ink-brand); }
 .con a.citui-btn--dark,
 .con a.citui-btn--secondary { color: var(--citui-white); }
 /* ⛔ …és NEM a súgó-ikonon sem. UGYANEZ A CSAPDA, HARMADSZOR: a `.con-help` (0,1,0) a
@@ -212,6 +212,10 @@
   .con-top { padding: 8px 12px; gap: 6px; }
   .con-top__menu { display: inline-flex; }
   .con-k, .con-top__lang, .con-top__help { display: none; }
+  /* The phone keeps the LAST parent + the page (`Partnerek › Vendégház…`): a four-part trail
+     left one letter of the page's own name visible (measured on the partner page, 390 px).
+     Children: a, svg, a, svg, …, b — the last three are „parent › page". */
+  .con-crumb > :not(:nth-last-child(-n+3)) { display: none; }
   .con-main__in { padding: 14px 14px 28px; }
   .con-bnav {
     display: grid; grid-template-columns: repeat(5, 1fr); position: sticky; bottom: 0; z-index: 50;
@@ -322,7 +326,7 @@
    üresnek.) ⛔ Vissza ne kerüljön: haladást csak VALÓS jelből mutatunk — a motor által
    jelentett szakasz neve, több sablonnál az elkészültek száma. Százalékot nem írunk:
    a szakaszok hossza erősen egyenetlen, az arányos csík a hátralévő időről hazudna. */
-.con-run-stage { font-weight: 700; color: var(--citui-navy-900); }
+.con-run-stage { font-weight: 700; color: var(--citui-ink-brand); }
 /* Bukás: UGYANAZ a sáv mondja meg, miért állt le — nem egy másik helyen, kisebb betűvel. */
 .con-runbar.bad {
   background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-panel));
@@ -378,7 +382,7 @@
   display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px;
   font-size: 0.9rem; font-weight: 600; color: var(--citui-muted);
 }
-.con-back:hover { color: var(--citui-navy-900); text-decoration: none; }
+.con-back:hover { color: var(--citui-ink-brand); text-decoration: none; }
 /* The tab strip stays put while a long panel scrolls, so the operator can switch
    sections without scrolling back up. Its `top` is set from JS to the live height
    of the sticky top menu (which wraps taller on phones), so it never hides under
@@ -416,7 +420,7 @@
 .con .con-ltab:hover {
   color: var(--citui-white); background: rgba(255, 255, 255, 0.13); text-decoration: none;
 }
-.con .con-ltab.on { background: var(--citui-panel); color: var(--citui-navy-900); }
+.con .con-ltab.on { background: var(--citui-panel); color: var(--citui-ink-brand); }
 /* THIS is the dossier effect: the active tab paints over the cyan closing line,
    so its white runs straight down into the sheet below. */
 .con-ltab.on::after {
@@ -430,7 +434,7 @@
 }
 .con-ltab.on .con-ltab__n {
   background: color-mix(in srgb, var(--citui-cyan-400) 22%, var(--citui-panel));
-  color: var(--citui-navy-900); border-color: transparent;
+  color: var(--citui-ink-brand); border-color: transparent;
 }
 .con-ltabs__sheet {
   background: var(--citui-panel);
@@ -554,7 +558,7 @@
   border-bottom: 2px solid var(--citui-navy-900);
   font-family: var(--citui-font-display);
   font-size: 1.05rem; font-weight: 700; letter-spacing: 0;
-  text-transform: none; color: var(--citui-navy-900);
+  text-transform: none; color: var(--citui-ink-brand);
 }
 /* min 200px, not 160: at 160 a wide screen produced six hairline columns and the
    values scattered. Each fact is a BOXED cell so the key and its value read as
@@ -803,7 +807,7 @@
 .con .mkt-row { padding: 10px 0; border-top: 1px solid var(--citui-line); }
 .con .mkt-row:first-of-type { border-top: 0; }
 .con .mkt-act { margin-top: 6px; }
-.con .mkt-act summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--citui-navy-700); }
+.con .mkt-act summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--citui-ink-brand-2); }
 .con .mkt-form { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin: 0; }
 .con .mkt-form input[type="text"] { flex: 1 1 300px; min-width: 0; font-size: 13px; }
 .con .mkt-log { margin: 8px 0 0; padding: 0; list-style: none; }
@@ -819,7 +823,7 @@
 .con .pill {
   display: inline-block; padding: 2px 10px; border-radius: 999px;
   font-size: 11.5px; font-weight: 600;
-  border: 0; color: var(--citui-navy-700); background: var(--citui-surface-2);
+  border: 0; color: var(--citui-ink-brand-2); background: var(--citui-surface-2);
   /* ⑧ A jelölés EGY SZÓKÉP (jóváhagyott terv ⑧). Mérve: a „✓ kiküldve" a szűk MOCK
      oszlopban két sorra esett szét, és a pipa külön sorba került a szótól — két
      félmondat egy állítás helyett. */
@@ -827,6 +831,12 @@
 }
 .con .panel h2 .pill { font-size: 11px; vertical-align: middle; }
 .con .pill.no_site, .con .pill.approved { color: var(--citui-ok-ink); background: var(--citui-ok-soft); }
+/* Muted text ON a soft tint (ok-soft, surface-2) fell just under 4,5:1 in BOTH themes
+   (4,31–4,48, console-dark-scan). One step toward the ink keeps it secondary and readable. */
+.con .pill .mut, .con .con-wf__st.done .con-wf__k, .con .con-wf__st.now .con-wf__k, .con-k kbd,
+.con-nav__it.is-active .con-nav__n {
+  color: color-mix(in srgb, var(--citui-muted) 72%, var(--citui-ink));
+}
 .con .pill.outdated {
   color: var(--citui-warn-ink);
   background: color-mix(in srgb, var(--citui-warn) 16%, transparent);
@@ -911,16 +921,16 @@
   border-bottom: 1px solid var(--citui-line);
 }
 .con .con-legend__head h3 {
-  margin: 0; font-size: 1.05rem; color: var(--citui-navy-900);
+  margin: 0; font-size: 1.05rem; color: var(--citui-ink-brand);
 }
 .con .con-legend__x {
   margin-left: auto; border: 0; background: none; cursor: pointer; padding: 4px;
   color: var(--citui-muted); line-height: 0; width: auto;
 }
-.con .con-legend__x:hover { color: var(--citui-navy-900); }
+.con .con-legend__x:hover { color: var(--citui-ink-brand); }
 .con .con-legend__list { margin: 0; padding: 14px 18px 18px; font-size: 0.88rem; line-height: 1.55; }
 .con .con-legend__row { margin-bottom: 10px; }
-.con .con-legend__row dt { font-weight: 800; color: var(--citui-navy-900); }
+.con .con-legend__row dt { font-weight: 800; color: var(--citui-ink-brand); }
 .con .con-legend__row dd { margin: 2px 0 0; color: var(--citui-muted); }
 .con .con-legend__sec {
   margin: 16px 0 10px; padding-top: 12px; border-top: 1px solid var(--citui-line);
@@ -956,7 +966,7 @@
 .con button {
   font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 14px; min-height: 34px;
   border-radius: var(--citui-radius-pill); cursor: pointer;
-  border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-navy-800);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-ink-brand-2);
   transition: var(--citui-transition);
 }
 .con button:hover { border-color: var(--citui-cyan-500); }
@@ -1001,7 +1011,7 @@
   width: min(400px, 92vw); background: var(--citui-panel); border-radius: 16px;
   padding: 30px 28px; box-shadow: 0 18px 50px color-mix(in srgb, var(--citui-navy-950) 40%, transparent);
 }
-.con-login .box h1 { font-family: var(--citui-font-display); font-size: 1.15rem; margin: 14px 0 18px; color: var(--citui-navy-900); }
+.con-login .box h1 { font-family: var(--citui-font-display); font-size: 1.15rem; margin: 14px 0 18px; color: var(--citui-ink-brand); }
 .con-login label { display: block; font-size: 0.85rem; color: var(--citui-muted); margin: 12px 0 4px; }
 .con-login input { width: 100%; box-sizing: border-box; }
 .con-login button { width: 100%; margin-top: 18px; background: var(--citui-cyan-500); border-color: var(--citui-cyan-500); color: var(--citui-navy-900); padding: 11px; }
@@ -1019,8 +1029,8 @@
   padding: 9px 15px; color: var(--citui-muted); font-weight: 600; font-size: 0.94rem;
   white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
-.con-tabs a:hover { color: var(--citui-navy-900); text-decoration: none; }
-.con-tabs a.active { color: var(--citui-navy-900); border-bottom-color: var(--citui-cyan-500); }
+.con-tabs a:hover { color: var(--citui-ink-brand); text-decoration: none; }
+.con-tabs a.active { color: var(--citui-ink-brand); border-bottom-color: var(--citui-cyan-500); }
 
 /* ── Qualification badge (icon + label) ──────────────────────────────────────
    In a 100-row list the qualification is the first thing the operator scans, so
@@ -1233,7 +1243,7 @@
   border: 1px solid transparent; border-radius: 6px; background: none;
   color: var(--citui-muted); cursor: pointer; width: auto;
 }
-.con .cf-btn:hover { background: var(--citui-surface-2); color: var(--citui-navy-900); }
+.con .cf-btn:hover { background: var(--citui-surface-2); color: var(--citui-ink-brand); }
 /* ⛔ `flex: 0 0 auto` KÖTELEZŐ: az `inline-flex` gomb a jelvény mellett 0,34 px-re
    zsugorította az ikont (mérve 2026-09-19) — a tölcsér NEM HIÁNYZOTT a markupból, csak
    nem volt szélessége, tehát a „megvan-e az ikon" forrás-ellenőrzés zöldet adott volna. */
@@ -1252,7 +1262,7 @@
 }
 /* KÜSZÖB: SZÖGLETES, körvonalas, `≥` jellel — más forma, más súly, más jelentés. */
 .con .cf-btn i.cf-thresh {
-  background: transparent; color: var(--citui-navy-700);
+  background: transparent; color: var(--citui-ink-brand-2);
   border: 1.5px solid var(--citui-navy-700); border-radius: 4px; padding: 0 3px;
 }
 /* ⛔ `fixed`, NEM `absolute` — a felugró KIMENEKÜL a görgető-dobozból.
@@ -1428,7 +1438,7 @@
 .con-kbox { border: 1px solid var(--citui-line); border-radius: 12px; padding: 10px 12px; background: var(--citui-panel); }
 .con-kbox__t { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--citui-muted); }
 .con-kbox__r { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; flex-wrap: wrap; }
-.con-kbox__v { font-family: var(--citui-font-display); font-weight: 700; font-size: 1.12rem; color: var(--citui-navy-900); }
+.con-kbox__v { font-family: var(--citui-font-display); font-weight: 700; font-size: 1.12rem; color: var(--citui-ink-brand); }
 .con-kbox__s { font-size: 11.5px; color: var(--citui-muted); }
 .con-kbox--bad .con-kbox__v { color: var(--citui-bad-ink); }
 
@@ -1577,7 +1587,7 @@
 .sp-chip[data-src="none"] .sp-dot, .sp-legend .sp-dot[data-src="none"] { background: var(--citui-bad); }
 .sp-quote { display: none; margin: 0 13px 11px; padding: 9px 12px;
   border-left: 3px solid var(--citui-cyan-500); background: var(--citui-surface);
-  font-size: 0.78rem; color: var(--citui-navy-700); border-radius: 0 10px 10px 0; line-height: 1.5; }
+  font-size: 0.78rem; color: var(--citui-ink-brand-2); border-radius: 0 10px 10px 0; line-height: 1.5; }
 .sp-quote b { display: block; font-size: 0.68rem; color: var(--citui-muted); font-weight: 600; margin-bottom: 3px; }
 .sp-quote.show { display: block; }
 
@@ -1700,7 +1710,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con-kb-tools button {
   font: inherit; font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0;
-  color: var(--citui-navy-900); text-decoration: underline;
+  color: var(--citui-ink-brand); text-decoration: underline;
 }
 /* ⛔ A jelölés a KÁRTYA fejlécén is pirula kell legyen: pirula nélkül a nagybetűs
    csoportcím FOLYTATÁSAKÉNT olvasódott („AZ OLDALAM ÜGYFÉL IS LÁTJA"), vagyis a témakör
@@ -2086,7 +2096,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   background: var(--citui-panel); border: 1px solid var(--citui-line); border-top: 0;
   padding: 10px 16px; font-size: 13px; line-height: 1.5;
 }
-.con .con-trust b { color: var(--citui-navy-900); }
+.con .con-trust b { color: var(--citui-ink-brand); }
 .con .con-trust.bad { background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-panel)); }
 .con .con-trust.base { background: color-mix(in srgb, var(--citui-warn) 9%, var(--citui-panel)); }
 .con .con-trust svg { flex: 0 0 auto; margin-top: 2px; }
@@ -2109,7 +2119,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con .con-arttbl thead th {
   background: var(--citui-surface-2); font-size: 10.5px; text-transform: uppercase;
-  letter-spacing: 0.04em; color: var(--citui-navy-700); white-space: nowrap;
+  letter-spacing: 0.04em; color: var(--citui-ink-brand-2); white-space: nowrap;
 }
 .con .con-arttbl tr.cur { background: color-mix(in srgb, var(--citui-ok) 5%, var(--citui-panel)); }
 .con .con-arttbl .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -2326,11 +2336,11 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 /* ④ A navigáció LINK, nem submit-gomb — így magától kimarad a navy gradiensből. */
 .con .con-linkact {
-  color: var(--citui-navy-700); text-decoration: none;
+  color: var(--citui-ink-brand-2); text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--citui-navy-700) 35%, transparent);
   font-size: 0.9rem;
 }
-.con .con-linkact:hover { color: var(--citui-navy-900); border-bottom-color: var(--citui-navy-900); }
+.con .con-linkact:hover { color: var(--citui-ink-brand); border-bottom-color: var(--citui-ink-brand); }
 .con .con-linkacts { gap: 14px; }
 /* ③ Új link ELŐTT a képernyő kimondja, mi lesz a mostanival — állandóan látszik,
    JS nélkül is; a gomb megerősítése csak ráadás. */
@@ -2363,7 +2373,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    be: két osztály ugyanarra a szerepre két igazság lenne ugyanazon a képernyőn. */
 .con button.ghost, .con button.ghost[type="submit"] {
   background: var(--citui-panel);
-  color: var(--citui-navy-900);
+  color: var(--citui-ink-brand);
   border: 1px solid var(--citui-line-strong);
 }
 
@@ -2406,7 +2416,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   border: 1px solid var(--citui-line-strong);
 }
 .con .pay-act .pay-act__quiet button[type="submit"]:not(.ok):not(.bad):not(.hp-alt):not(.ghost):hover {
-  color: var(--citui-navy-900); border-color: var(--citui-navy-900); filter: none;
+  color: var(--citui-ink-brand); border-color: var(--citui-ink-brand); filter: none;
 }
 
 /* A hivatkozási azonosító MÁSOLHATÓ — egy kódot képernyőről átgépelni nem művelet. */
@@ -2417,7 +2427,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .pay-ref button {
   min-height: 34px; padding: 7px 11px; border-radius: 8px; cursor: pointer;
   border: 1px solid var(--citui-line-strong);
-  background: var(--citui-panel); color: var(--citui-navy-900);
+  background: var(--citui-panel); color: var(--citui-ink-brand);
   font-weight: 600; font-size: 0.8rem;
 }
 .con .pay-ref button.is-done { border-color: var(--citui-ok); color: var(--citui-ok-ink); }

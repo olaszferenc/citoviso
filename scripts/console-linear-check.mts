@@ -183,7 +183,13 @@ for (const size of SIZES) {
 
   console.log(`${size.tag} — Lead-sor + lead-lap (funkció-lap a fában):`);
   await page.goto(pages.leads);
-  ok("útvonal: Konzol › CRM › Lead-sor, a CRM a modul-irányítópultra visz", (await page.locator(".con-crumb").innerText()).replace(/\s+/g, " ").trim() === "Konzol CRM Lead-sor" && (await page.locator('.con-crumb a[href="/hub/crm"]').count()) === 1);
+  // The markup always carries the whole trail; the phone SHOWS only „parent › page"
+  // (a four-part trail left one letter of the page name visible at 390 px).
+  ok("útvonal (a jelölésben): Konzol › CRM › Lead-sor, a CRM a modul-irányítópultra visz", (await page.locator(".con-crumb").textContent())!.replace(/\s+/g, "") === "KonzolCRMLead-sor" && (await page.locator('.con-crumb a[href="/hub/crm"]').count()) === 1);
+  ok(
+    mobile ? "telefonon LÁTSZIK: CRM › Lead-sor (a „Konzol” rejtve)" : "asztalin LÁTSZIK: Konzol › CRM › Lead-sor",
+    (await page.locator(".con-crumb").innerText()).replace(/\s+/g, " ").trim() === (mobile ? "CRM Lead-sor" : "Konzol CRM Lead-sor"),
+  );
   ok("a ← a CRM irányítópultjára mutat", (await page.locator(".con-back").getAttribute("href")) === "/hub/crm");
   ok("a CRM nyitva, a Lead-sor aktív, a többi csukva", (await page.locator(`${navSel} .con-nav__grp.is-open`).count()) === 1 && (await page.locator(`${navSel} .con-nav__sub.is-active[href="/leads"]`).count()) === 1);
   await page.goto(pages.leadPage);

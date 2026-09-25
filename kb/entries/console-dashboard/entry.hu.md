@@ -37,7 +37,8 @@ A menü egy fa: **„Irányítópult”**, alatta a modulok — **CRM**, **„P�
 - **← (vissza)** — egy szinttel feljebb visz: egy funkcióról a modul irányítópultjára, onnan a
   kezdőlapra. Az Irányítópulton nincs hova, ott a gomb nem látszik.
 - **Útvonal** — megmutatja, hol vagy: `Konzol › CRM › Lead-sor`; egy lead saját lapján a lead
-  neve zárja a sort. Minden tagja koppintható.
+  neve zárja a sort. Minden tagja koppintható. Telefonon a sor rövidebb: csak az eggyel
+  feljebb lévő szint és az aktuális lap látszik (például `Partnerek › Vendégház Panoráma…`).
 - **„Ugrás funkcióra…”** — a funkció-kereső (asztali gépen; a ⌘K / Ctrl+K billentyű is ide
   ugrik). Gépelj bele („bizonylat”, „partner”, „térkép”), és a találatok közül nyíllal vagy
   koppintással válassz; ha nincs ilyen funkció, azt mondja: **„Nincs ilyen funkció”**.

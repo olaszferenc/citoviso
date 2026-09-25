@@ -30,7 +30,7 @@
   /* Ink / neutrals (light-first) */
   --citui-ink:         #10243a; /* primary text */
   --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
-  --citui-muted:       #60748b; /* secondary text */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
   --citui-surface:     #f6fbfd; /* alt section background */
   --citui-surface-2:   #eef7fa; /* raised subtle */
   --citui-line:        rgba(14, 42, 71, 0.12);
@@ -123,6 +123,14 @@
   --citui-hover:  #f2f3f5; /* hover / active row */
   --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
   --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
 }
 
 /* Dark surface scope — flips neutrals; brand hues stay.
@@ -159,6 +167,8 @@
   /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
   --citui-on-bad: var(--citui-navy-900);
   --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
+  --citui-ink-brand:   var(--citui-ink);
+  --citui-ink-brand-2: color-mix(in srgb, var(--citui-ink) 80%, var(--citui-muted));
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -181,7 +191,7 @@ body.citui-menu-open { overflow: hidden; }
 
 h1, h2, h3, h4 {
   font-family: var(--citui-font-display);
-  color: var(--citui-navy-900);
+  color: var(--citui-ink-brand);
   line-height: 1.05;
   letter-spacing: -0.03em;
   margin: 0 0 0.6em;

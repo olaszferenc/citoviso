@@ -46,3 +46,26 @@ a modul-sor (CRM · Pénzügy · Riport · Rendszer) kattintható → a modul sa
   identitás-sáv, partner-fejléc) sötétben is navyk — külön kör.
 - A ⌘K a fa leveleit keresi; a képernyőkön belüli tartalmat (lead név, partner) nem — később bővíthető.
 - Élesítés: verzió megy ki (`deploy-prod.sh`), külön engedéllyel.
+
+## 2. kör (ugyanaz a nap) — „Javítsd”: sötét mód a konzol MINDEN képernyőjén
+
+- **Mérés, nem szem:** `scripts/console-dark-scan.mts` — a munkafa konzolja ideiglenes porton, 23 lap × 2 méret,
+  sötétben: ① világos felület a keretben · ② kontraszt a TÉNYLEGES (összetett) háttéren · ③ minden funkció saját
+  lapján a menü azt világítja és az útvonal azt mondja. Pre-commit kapu lett. `--light` = ugyanez világosban.
+- **Kiinduló lelet:** 0 világos felület (a `--citui-white`→`--citui-panel` csere bevált), de **21 olvashatatlan
+  felirat 12 lapon** — mind a navy SZÖVEG-szerep (aktív fül, alcím, `button.ghost`, `.con button`, `.pill`, küszöb-jel).
+- **Javítás:** két szöveg-token a magba — `--citui-ink-brand` / `--citui-ink-brand-2` (világosban = navy-900/-700,
+  sötétben olvasható tinta); a konzol 27 panelen ülő navy felirata erre; cián háttéren a navy marad (belépés, fizetés
+  gomb, aktív szűrőmező, avatar); halvány szöveg a halvány kitöltésen egy lépéssel a tinta felé (kész/most lépés,
+  jóváhagyott jelvény, ⌘K, aktív számláló). Eredmény: sötétben **0 lelet**.
+- **Menü-hiba, amit a kép mutatott meg:** a Térkép/Területek lap `active: "/scrape"`-ot adott → a menü és az útvonal
+  „Adatgyűjtés indítása”-t mondott. 5 lap most a SAJÁT útvonalát adja (Térkép, Területek, Új partner, partner-lap,
+  Új bizonylat). A mérő ③ ága fogja; negatív kontroll (régi értékek) → piros.
+- **Telefonos útvonal:** a négytagú sorból egy betű maradt a lap nevéből → telefonon „szülő › lap” (a jelölés teljes).
+- **A mérő saját hibái (kétszer):** a `color-mix()` `color(srgb …)` alakban jön vissza → „1,00:1” álbukás; mobilon a
+  rejtett oldalsávban nem talált „látható” kiemelést. Mindkettő javítva, és a mérő negatív kontrollal igazolva
+  (visszarontott token → piros; régi `active` → piros).
+- **Világos mód (korábbról) — a tulaj „Javítsd”-e után lezárva:** `--citui-muted` #60748b → **#5a6d82** (minden
+  halvány kitöltésen ≥4,61, fehéren 5,32); 11 határeset → 0. Mag-token: honlap + tenant-admin is kapja (46 súgó-kép
+  újralőve). A levél-sablonok inline `#60748b`-je érintetlen (fehér alap, 4,76).
+- `ui-shot --dark` kapcsoló (a konzol/admin sötét képe).

@@ -41,11 +41,26 @@ kifejezetten nyitva hagyta a konzolt — ez az ADR zárja.
    oldalra görgethető, a Név oszlop ragad** — ahogy telefonon ma is. A két lead-lista őr ezt méri
    (csukva: befér; nyitva: görgetéssel elérhető, nem levágott). A dátum-cella nem tördelhet.
 
+8. **Sötét mód a konzol MINDEN képernyőjén (kiegészítés, 2026-09-25, ugyanaz a nap):** a
+   `--citui-navy-*` a konzolban FELIRAT-szerepben is élt (aktív fül, alcím, másodlagos gomb,
+   jelvény, küszöb-jel) — sötét panelen 1,2:1 (mérve: `scripts/console-dark-scan.mts`, 21 lelet
+   12 képernyőn). A dizájn-mag két SZÖVEG-tokent kap: **`--citui-ink-brand`** és
+   **`--citui-ink-brand-2`** — világosban azonos a mai navy-900/-700-zal, sötétben olvasható
+   tinta. A konzol panelen ülő navy feliratai erre álltak; a **cián háttéren** ülők (belépés és
+   fizetés gombja, aktív szűrőmező, avatar) szándékosan navyk maradtak. A halvány szöveg a halvány
+   színes kitöltésen (kész/most lépés, jóváhagyott jelvény, ⌘K, aktív számláló) egy lépéssel a
+   tinta felé tolva. A lapok a keretnek a SAJÁT útvonalukat adják (Térkép, Területek, Új partner,
+   partner-lap, Új bizonylat) — különben a menü és az útvonal a szomszéd pontot mondta.
+   Kapu: `console-dark-scan` (pre-commit) — a valódi lapokon, negatív kontrollal igazolva.
+
 ### ② Amit NEM dönt el
 
-A ~40 képernyő belső elrendezését (a keretet kapják, saját kört nem — ADR-0224 ⑩ mintájára); a
-súgó-képek újralövését ez a szál végzi, de a többi konzol-képernyő sötét-módú finomítása
-(ahol a `--citui-white` nem háttér-, hanem tinta-szerepben marad) későbbi kör.
+A ~40 képernyő belső elrendezését (a keretet kapják, saját kört nem — ADR-0224 ⑩ mintájára).
+**Lezárva (világos mód, korábbról — tulajdonosi „Javítsd”, 2026-09-25):** a `--citui-muted` a halvány
+kitöltéseken (surface-2, ok-soft, field, accent-soft) 4,17–4,48:1 volt. A mag-token egy árnyalattal
+sötétebb: **#60748b → #5a6d82** (legrosszabb kitöltésen 4,61, fehéren 5,32). Minden felületet érint
+(honlap, tenant-admin, konzol) — csak kontrasztot ad, a szürke szerep marad; a sötét téma saját
+értéke változatlan. A levél-sablonok saját inline színe (fehér alap) nem része.
 
 ### ③ Kapuk
 

@@ -205,7 +205,7 @@ export function partnerNewPage(
       </div>
     </form>
   </div>`;
-  return layout(T(lang, "Új partner"), body, { active: "/partners" });
+  return layout(T(lang, "Új partner"), body, { active: "/partners/new" });
 }
 
 // ── Partner page (/partner/:id) ─────────────────────────────────────────────
@@ -334,7 +334,7 @@ export function partnerPage(
       ${bodyByTab[tab]}
     </div>
   </div>`;
-  return layout(d.name, body, { active: "/partners" });
+  return layout(d.name, body, { active: `/partner/${d.id}` });
 }
 
 /** Monthly breakdown chart (MineREAL "Havi bontás"): pure-SVG bars from the
@@ -867,7 +867,7 @@ export function documentNewPage(
               előbb azokat kell rögzíteni (.env), utána itt egy kattintás az entitás.</p>`
       }
     </div>`;
-    return layout(T(lang, "Új bizonylat"), body, { active: "/documents" });
+    return layout(T(lang, "Új bizonylat"), body, { active: "/documents/new" });
   }
 
   const partnerOpts = opts.partners
@@ -970,7 +970,7 @@ export function documentNewPage(
     </form>
     ${DOC_FILE_JS}
   </div>`;
-  return layout(T(lang, "Új bizonylat"), body, { active: "/documents" });
+  return layout(T(lang, "Új bizonylat"), body, { active: "/documents/new" });
 }
 
 /** Előfizetés tab (customer face only): what they subscribe to and where the
