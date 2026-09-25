@@ -24,6 +24,12 @@
 
 process.env.CIT_SHOT = "1";
 process.env.PUBLIC_PORT = "0";
+// ⛔ A söprés (maintainDatedPrices) a tulajdonosnak LEVELET küld; dev-ben EMAIL_PROVIDER=smtp
+// él, és a park 6 tenant-usere valódi (gmail) címet visel — a kapu minden commiton valódi
+// levelet küldhetett volna (mérve 2026-09-25: 0 ment ki, a lyuk ettől még nyitva volt). A mock
+// adapter outbox/-ba ír. A dinamikus import ELŐTT kell (a config az env-et betöltéskor olvassa).
+// Őr: scripts/server-import-env-check.mts (③ e-mail szabály).
+process.env.EMAIL_PROVIDER = "mock";
 
 import { once } from "node:events";
 import { mkdir, readdir, readFile, rm, stat } from "node:fs/promises";
