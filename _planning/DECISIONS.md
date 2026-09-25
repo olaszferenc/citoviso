@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-gep-szintu-varakozosor-a-kapu-futtatonak.md) — Gép-szintű várakozósor a kapu-futtatónak: az egész gépen egyszerre legfeljebb N kapu fut, `flock`-slotokon, sessiontől függetlenül (2026-09-25)
 - [ADR-0229](decisions/0229-iro-sav-a-kapu-futtatoban-a-kimondottan-own.md) — Író-sáv a kapu-futtatóban: a kimondottan „own-fixture-only” jelölt író kapuk egymással párhuzamosan, a többi utánuk sorban; a jelölés a kapu mellett él, őr méri, és a versenyt mértük (2026-09-25)
 - [ADR-0228](decisions/0228-a-kartyacsere-barion-uton-igazolva-10-ft-os.md) — A kártyacsere Barion-úton igazolva: 10 Ft-os terhelés, azonnali visszatérítés, igaz mondattal
 - [ADR-0227](decisions/0227-parhuzamos-kapu-futtatas-az-olvaso-kapuk.md) — Párhuzamos kapu-futtatás: az olvasó kapuk Postgres-kényszerített csak-olvasó módban együtt, az írók utána sorban, és a land nem méri újra, amit a commit már megmért (2026-09-24)

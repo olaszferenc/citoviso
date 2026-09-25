@@ -69,6 +69,8 @@ gate_failed() {
 #   ① párhuzamosan, Postgres-KÉNYSZERÍTETT csak-olvasó módban — egy kapu sem írhat bele a
 #      másik mérésébe; aki írni PRÓBÁLT, annak az ítélete eldobva, és
 #   ② sorosan, normál módban fut újra, a többi kapu után, senkivel át nem fedve.
+#   Mindkét fázis GÉPI slotban fut (~/.claude/cit-gate-slots, alapból 6 — sessiontől
+#   függetlenül ennyi kapu fut egyszerre az egész gépen; ADR a futtató fejlécében).
 # Egyetlen kapu sem marad ki és egyik sem változik: a futtató azt dönti el, MIKOR fut, nem azt,
 # hogy fut-e. ⚠️ A bukó kaput ugyanaz a `gate_failed` írja ki, mint soros módban.
 # Soros mód (a régi viselkedés, hibakereséshez): CIT_GATE_JOBS=1. Őr: `scripts/gate-runner-check.mts`.

@@ -39,11 +39,25 @@
 //
 // PASS CACHE: see the block above `signature()` — land skips only an identical, green run.
 //
+// MACHINE-WIDE SLOTS (ADR-XXXX). ~10 sessions share this 8-core machine; each runner's 4 threads
+// alone are fine, 10×4 of them trample each other (measured: the same commit took 90–270 s
+// depending on who else was committing). So every gate — phase ① and ② alike — runs inside
+// one of CIT_GATE_SLOT_COUNT (default 6) slots that are global to the MACHINE, not to the
+// session — and not to the USER either: the MR project (user `mineral`) lands on the same 8
+// cores with its own gate list, so the default lives in /run/lock/claude-gate-slots (1777, both
+// users write it, never age-cleaned; /tmp would be: systemd-tmpfiles unlinking a HELD lock file
+// would silently mint a second "slot 0"). The slot is the RUNNER's, not the gate's
+// (a nested runner under CIT_GATE_SLOT_HELD asks for none → no deadlock), and it is held by a
+// `cat` whose stdin is a pipe from this process: when the runner dies (kill -9, OOM) the pipe
+// closes, `cat` exits and the kernel releases the lock — no pid files, nothing to clean up.
+// CIT_GATE_SLOTS=<dir> moves the slot directory (the guard's fixture uses a private one);
+// CIT_GATE_SLOTS=0, a missing `flock` or an unwritable directory → runs without slots, loudly.
+//
 // Usage (from hooks/pre-commit only):  node scripts/lib/gate-runner.mjs <jobs-dir> <root>
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -129,9 +143,115 @@ function command(job) {
   return [cmd, rest];
 }
 
-function run(job, readOnly) {
+// ── MACHINE-WIDE SLOTS (see the header) ──────────────────────────────────────────────
+const SLOT_COUNT = Math.max(1, Number(process.env.CIT_GATE_SLOT_COUNT) || 6);
+const SLOT_DIR = process.env.CIT_GATE_SLOTS || "/run/lock/claude-gate-slots";
+const SLOT_BUSY = 250; // flock's conflict exit code (-E): "someone else holds it", not an error
+let slotsOff = null; // reason string once slots are off for this run
+if (process.env.CIT_GATE_SLOTS === "0") slotsOff = "CIT_GATE_SLOTS=0";
+else if (process.env.CIT_GATE_SLOT_HELD) slotsOff = `a futtató már egy slot alatt fut (${process.env.CIT_GATE_SLOT_HELD})`;
+else if (spawnSync("flock", ["--version"], { stdio: "ignore" }).status !== 0) slotsOff = "nincs flock";
+else {
+  try {
+    mkdirSync(SLOT_DIR, { recursive: true });
+    // Shared across users: sticky world-writable dir, world-readable slot files (flock locks a
+    // read-only fd too — measured). chmod fails harmlessly when another user created them.
+    try {
+      chmodSync(SLOT_DIR, 0o1777);
+    } catch {}
+    for (let n = 0; n < SLOT_COUNT; n++) {
+      const f = path.join(SLOT_DIR, String(n));
+      try {
+        closeSync(openSync(f, "a", 0o644));
+        chmodSync(f, 0o644);
+      } catch {}
+    }
+  } catch (e) {
+    slotsOff = `a slot-könyvtár nem írható (${e.message})`;
+  }
+}
+if (slotsOff) process.stdout.write(`   ⚠ kapu-futtató: gépi slot nélkül — ${slotsOff}\n`);
+let slotWaitMs = 0;
+let slotErrors = 0;
+
+/** One attempt on slot <n>: resolves {holder} when the lock is ours, null when busy. */
+function trySlot(n, waitSecs) {
+  return new Promise((resolve) => {
+    const file = path.join(SLOT_DIR, String(n));
+    const args = waitSecs ? ["-w", String(waitSecs)] : ["-n"];
+    // `-o`: the lock fd stays with flock only; `echo 1` = acquired; `cat` holds until our pipe closes.
+    const holder = spawn("flock", [...args, "-E", String(SLOT_BUSY), "-o", file, "-c", "echo 1; exec cat"], { stdio: ["pipe", "pipe", "ignore"] });
+    holder.stdin.on("error", () => {});
+    let got = false;
+    holder.stdout.on("data", () => {
+      if (got) return;
+      got = true;
+      resolve({ holder, n });
+    });
+    holder.on("exit", (code) => {
+      if (got) return;
+      got = true;
+      if (code !== SLOT_BUSY) slotErrors++;
+      resolve(null);
+    });
+    holder.on("error", () => {
+      if (got) return;
+      got = true;
+      slotErrors++;
+      resolve(null);
+    });
+  });
+}
+
+/** Take any free machine slot; blocks (round-robin, kernel wake-up) while all are held. */
+async function acquireSlot() {
+  if (slotsOff) return null;
+  const t0 = Date.now();
+  for (let round = 0; ; round++) {
+    for (let n = 0; n < SLOT_COUNT; n++) {
+      const s = await trySlot(n, 0);
+      if (s) {
+        slotWaitMs += Date.now() - t0;
+        return s;
+      }
+    }
+    if (slotErrors >= SLOT_COUNT * 3) {
+      // Not "busy" but broken (unwritable file, odd flock) — do not let the queue hang the hook.
+      slotsOff = "a flock hibázott";
+      process.stdout.write(`   ⚠ kapu-futtató: gépi slot nélkül folytatja — ${slotsOff}\n`);
+      return null;
+    }
+    // Whole seconds only: this machine's locale rejects `-w 0.25` (decimal comma; the guard caught it).
+    const s = await trySlot(round % SLOT_COUNT, 1);
+    if (s) {
+      slotWaitMs += Date.now() - t0;
+      return s;
+    }
+  }
+}
+function releaseSlot(slot) {
+  if (!slot) return;
+  const { holder } = slot;
+  holder.stdin.end(); // cat sees EOF → exits → flock exits → the kernel drops the lock
+  holder.stdout.destroy();
+  holder.unref(); // never keep this process alive for a holder
+  setTimeout(() => holder.kill("SIGKILL"), 2000).unref(); // a holder that ignores EOF is a bug, not a lock
+}
+
+/** With `held`, the caller already holds a slot for this gate (phase ② keeps one for its whole run). */
+async function run(job, readOnly, held = null) {
+  const slot = held ?? (await acquireSlot());
+  try {
+    return await runInSlot(job, readOnly, slot ? String(slot.n) : "");
+  } finally {
+    if (!held) releaseSlot(slot);
+  }
+}
+
+function runInSlot(job, readOnly, slotName) {
   return new Promise((resolve) => {
     const env = { ...job.env };
+    if (slotName) env.CIT_GATE_SLOT_HELD = slotName; // a nested runner asks for no slot of its own
     const mark = `${job.base}.ro`;
     if (readOnly) {
       env.PGOPTIONS = `${env.PGOPTIONS ? `${env.PGOPTIONS} ` : ""}-c default_transaction_read_only=on`;
@@ -291,6 +411,7 @@ await pool(queue, true, (job, r) => {
   } else show(job, r);
 });
 
+const phase1Secs = ((Date.now() - t0) / 1000).toFixed(0);
 if (WRITERS_FILE && newWriters.length) {
   try {
     appendFileSync(WRITERS_FILE, `${[...new Set(newWriters)].filter((s) => !knownWriters.has(s)).join("\n")}\n`);
@@ -306,11 +427,18 @@ const strict = serial.filter((j) => !lane.includes(j));
 const tLane = Date.now();
 if (failed.length === 0) await pool([...lane], false, show);
 const tStrict = Date.now();
-if (failed.length === 0) {
-  for (const job of strict) {
-    const r = await run(job, false);
-    show(job, r);
-    if (r.rc !== 0) break;
+if (failed.length === 0 && strict.length) {
+  // ONE slot for the whole strict lane: it runs one gate at a time anyway, and re-queueing behind
+  // a dozen waiting threads for every writer starved it (measured: 481 s for 14 writers vs ~170 s).
+  const held = await acquireSlot();
+  try {
+    for (const job of strict) {
+      const r = await run(job, false, held);
+      show(job, r);
+      if (r.rc !== 0) break;
+    }
+  } finally {
+    releaseSlot(held);
   }
 }
 const laneSecs = ((tStrict - tLane) / 1000).toFixed(0);
@@ -326,9 +454,11 @@ if (process.env.CIT_GATE_TIMES) {
       .join("\n") + "\n",
   );
 }
+const slotNote = slotsOff ? `gépi slot nélkül` : `${SLOT_COUNT} gépi slot, várt rá összesen ${(slotWaitMs / 1000).toFixed(0)} s`;
 console.log(
   `[pre-commit] kapu-futtató: ${jobs.length} kapu · ${phase1 - deferred} párhuzamosan (${PARALLEL} szál, csak-olvasó DB) · ` +
-    `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ${secs} s`,
+    `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ${secs} s ` +
+    `(① ${phase1Secs} s · ${slotNote})`,
 );
 if (failed.length) {
   writeFileSync(path.join(JOBS, "FAILED"), failed.map(([rc, id, r]) => `${rc}\t${path.join(JOBS, `${id}.label`)}\t${r.out}\t${r.err}`).join("\n") + "\n");

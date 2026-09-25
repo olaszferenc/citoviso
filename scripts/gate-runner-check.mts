@@ -15,6 +15,10 @@
 //   · a párhuzamosság valódi (különben a mechanika csak költség),
 //   · a ② fázis író-sávja (ADR-0229) CSAK a `// gate-lane: own-fixture-only` jelölt írókat futtatja
 //     egymással párhuzamosan, a jelöletlen író pedig UTÁNUK, egyedül indul,
+//   · a GÉPI slot-szemafor (ADR-XXXX) valóban futtatók KÖZÖTT korlátoz (két futtató, 1 slot:
+//     egyetlen kapu sem fed át, és mindkettő végigér — nincs holtpont), a futtató halálával
+//     (kill -9) a slot magától felszabadul, a slot alatt indított beágyazott futtató nem kér
+//     újat, és slot nélkül (CIT_GATE_SLOTS=0) is ugyanúgy kapuz,
 //   · `gate_flush` nélkül a hook NEM zárulhat zölden,
 //   · a zöld-gyorsítótár (land ≠ commit duplikáció) CSAK azonos fán + diffen + argv/stdin/
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
@@ -27,13 +31,13 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (tizenegy visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (tizenhárom visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
-//    feltétel ki · pipefail ki a kulcs-diffből · a sáv-jelölés vak · minden író a sávba —,
-//    mindegyiknek pirosat KELL adnia.)
+//    feltétel ki · pipefail ki a kulcs-diffből · a sáv-jelölés vak · minden író a sávba · gépi slot
+//    ki · a slot nem szabadul a futtató halálával —, mindegyiknek pirosat KELL adnia.)
 
-import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -87,6 +91,17 @@ const PAR = `import { appendFileSync } from "node:fs";
     const t0 = Date.now(); await new Promise((r) => setTimeout(r, 1200));
     appendFileSync(process.env.FIX_OUT + "/par", process.argv[2] + " " + t0 + " " + Date.now() + "\\n");`;
 const FAIL = `console.log("FAIL-STDOUT-" + process.argv[2]); process.exit(Number(process.argv[2]));`;
+// Slot scenarios: two par gates (1.2 s each) per runner; one slow gate to be killed under.
+const SLOT_GATES = String.raw`
+echo "[pre-commit] par-1…"
+node scripts/par1.mjs 1 >"$GATE_LOG" || gate_failed
+echo "[pre-commit] par-2…"
+node scripts/par2.mjs 2 >"$GATE_LOG" || gate_failed
+`;
+const SLOW_GATES = String.raw`
+echo "[pre-commit] slow…"
+node scripts/slow.mjs >"$GATE_LOG" || gate_failed
+`;
 
 const CACHE_GATES = String.raw`
 echo "[pre-commit] counted…"
@@ -127,12 +142,15 @@ const FIXTURES: Record<string, string> = {
   "env.mjs": `if (process.env.FIX_PREFIX !== "bar") { console.log("PREFIX-MISSING"); process.exit(1); }`,
   "stdin.mjs": `import { readFileSync } from "node:fs"; const s = readFileSync(0, "utf8");
     if (s !== "a\\nb\\n") { console.log("STDIN-WRONG " + JSON.stringify(s)); process.exit(1); }`,
+  // 2,5 s hold: under loadavg ~24 a 700 ms hold let two node start-ups drift apart and the
+  // "same script never overlaps itself" red control went GREEN once (2026-09-25); quiet machine 3/3 red.
   "same.mjs": `import { openSync, rmSync, appendFileSync } from "node:fs";
     const lock = process.env.FIX_OUT + "/same.lock";
     try { openSync(lock, "wx"); } catch { appendFileSync(process.env.FIX_OUT + "/overlap", "x"); }
-    await new Promise((r) => setTimeout(r, 700)); rmSync(lock, { force: true });`,
+    await new Promise((r) => setTimeout(r, 2500)); rmSync(lock, { force: true });`,
   "par1.mjs": PAR,
   "par2.mjs": PAR,
+  "slow.mjs": `await new Promise((r) => setTimeout(r, 4000));`,
   "lane1.mjs": WRITER_TIMED(true),
   "lane2.mjs": WRITER_TIMED(true),
   "strict1.mjs": WRITER_TIMED(false),
@@ -153,7 +171,14 @@ const FIXTURES: Record<string, string> = {
 };
 
 type Run = { rc: number; out: string; dir: string; read: (f: string) => string };
-type Fixture = { dir: string; out: string; run: (extra?: Record<string, string>) => Run; git: (...a: string[]) => string };
+type Fixture = {
+  dir: string;
+  out: string;
+  slots: string;
+  run: (extra?: Record<string, string>) => Run;
+  start: (extra?: Record<string, string>) => Promise<Run>;
+  git: (...a: string[]) => string;
+};
 
 function cleanEnv(): Record<string, string> {
   // ⛔ No GIT_* leaks into the fixture (feedback_hook_guard_inherits_git_dir) — and no
@@ -204,27 +229,65 @@ function prepare(v: Variant, gates: string, jobs: string, repo = false): Fixture
       return "";
     }
   };
-  const run = (extra: Record<string, string> = {}): Run => {
+  // ⛔ The fixture never touches the REAL machine queue (/run/lock/claude-gate-slots): a private one.
+  const slots = path.join(out, "slots");
+  const envFor = (extra: Record<string, string>): Record<string, string> => {
     const env = cleanEnv();
     env.FIX_OUT = out;
     env.CIT_GATE_WRITERS_FILE = path.join(out, "writers");
+    env.CIT_GATE_SLOTS = slots;
     if (jobs) env.CIT_GATE_JOBS = jobs;
     Object.assign(env, extra);
-    const r = spawnSync("bash", [path.join(dir, "hook")], { env, encoding: "utf8", timeout: 120_000 });
+    return env;
+  };
+  const run = (extra: Record<string, string> = {}): Run => {
+    const r = spawnSync("bash", [path.join(dir, "hook")], { env: envFor(extra), encoding: "utf8", timeout: 120_000 });
     return { rc: r.status ?? -1, out: `${r.stdout}${r.stderr}`, dir, read };
   };
-  return { dir, out, run, git };
+  const start = (extra: Record<string, string> = {}): Promise<Run> =>
+    new Promise((resolve) => {
+      const ch = spawn("bash", [path.join(dir, "hook")], { env: envFor(extra), stdio: ["ignore", "pipe", "pipe"] });
+      let text = "";
+      ch.stdout.on("data", (d) => (text += d));
+      ch.stderr.on("data", (d) => (text += d));
+      const timer = setTimeout(() => ch.kill("SIGKILL"), 120_000);
+      ch.on("close", (code) => {
+        clearTimeout(timer);
+        resolve({ rc: code ?? -1, out: text, dir, read });
+      });
+    });
+  return { dir, out, slots, run, start, git };
 }
 function dispose(f: Fixture): void {
+  // A holder a mutated runner may have left behind carries the private slot path in its argv.
+  spawnSync("pkill", ["-f", f.slots], { stdio: "ignore" });
   rmSync(f.dir, { recursive: true, force: true });
   rmSync(f.out, { recursive: true, force: true });
+}
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+/** Is the private slot <n> free right now? (flock -n from outside the runner.) */
+function slotFree(slots: string, n: number): boolean {
+  return spawnSync("flock", ["-n", path.join(slots, String(n)), "true"], { stdio: "ignore" }).status === 0;
+}
+function parIntervals(f: Fixture): number[][] {
+  let text = "";
+  try {
+    text = readFileSync(path.join(f.out, "par"), "utf8");
+  } catch {
+    text = "";
+  }
+  return text
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => l.split(" ").map(Number));
 }
 function runVariant(v: Variant, gates: string, jobs: string): Run & { fx: Fixture } {
   const fx = prepare(v, gates, jobs);
   return { ...fx.run(), fx };
 }
 
-function audit(v: Variant): string[] {
+async function audit(v: Variant): Promise<string[]> {
   const bad: string[] = [];
   const say = (ok: boolean, msg: string): void => {
     if (!ok) bad.push(msg);
@@ -265,6 +328,11 @@ function audit(v: Variant): string[] {
     writers = "";
   }
   say(writers.includes("scripts/writer.mts"), "A · az író kapu nem került az író-gyorsítótárba");
+  say(existsSync(path.join(a.fx.slots, "0")), "A · a futtató nem a slot-könyvtárban zárolt (a gépi slot nem is kért)");
+  // The default queue is the MACHINE's (both users), not this user's home: /run/lock, 1777, files 0644.
+  say(runnerText.includes('"/run/lock/claude-gate-slots"') && runnerText.includes("0o1777") && runnerText.includes("0o644"), "A · a slot-könyvtár alapértéke nem a felhasználók közötti közös út (/run/lock, 1777, 0644)");
+  say((statSync(path.join(a.fx.slots, "0")).mode & 0o777) === 0o644, "A · a slot-fájl nem 0644 (a másik user nem tudná megnyitni)");
+  say(/\d+ gépi slot, várt rá összesen \d+ s/.test(a.out), "A · az összegző sor nem mondja meg, hány gépi slot volt és mennyit várt rá");
   dispose(a.fx);
 
   // ── B: failures surface, with their output and exit code ──────────────────────────
@@ -358,6 +426,51 @@ function audit(v: Variant): string[] {
     say(st[0] >= Math.max(l1[1], l2[1]), `F · a JELÖLETLEN író a sávval EGYSZERRE futott (indult ${st[0] - Math.max(l1[1], l2[1])} ms-mal a sáv vége előtt)`);
   }
   dispose(f);
+
+  // ── G: machine-wide slots — across runners, deadlock-free, released on death ──────
+  // Two runners, ONE shared slot: their four 1.2 s gates must never overlap, both must finish.
+  const f1 = prepare(v, SLOT_GATES, "4");
+  const f2 = prepare(v, SLOT_GATES, "4");
+  const shared = { CIT_GATE_SLOTS: f1.slots, CIT_GATE_SLOT_COUNT: "1" };
+  const [r1, r2] = await Promise.all([f1.start(shared), f2.start(shared)]);
+  say(r1.rc === 0 && r2.rc === 0, `G · két futtató egy sloton: kilépési kódok ${r1.rc}/${r2.rc} (0/0 várt — holtpont vagy bukás)\n${(r1.out + r2.out).slice(-800)}`);
+  const iv = [...parIntervals(f1), ...parIntervals(f2)].sort((x, y) => x[1] - y[1]);
+  say(iv.length === 4, `G · a négy par-kapuból ${iv.length} futott le`);
+  let overlaps = 0;
+  for (let i = 1; i < iv.length; i++) if (iv[i][1] < iv[i - 1][2]) overlaps++;
+  say(overlaps === 0, `G · EGY gépi slot mellett ${overlaps} kapu-pár fedett át futtatók KÖZÖTT — a slot nem gép-szintű`);
+  const waits = [r1.out, r2.out].map((o) => Number((o.match(/várt rá összesen (\d+) s/) ?? [])[1] ?? -1));
+  say(Math.max(...waits) >= 1, `G · a várakozás nem jelenik meg az összegző sorban (várt: ${waits.join("/")} s, ≥1 várt)\n${(r1.out + r2.out).slice(-600)}`);
+  dispose(f1);
+  dispose(f2);
+  // Kill -9 the runner while it holds the only slot: the kernel must release it, no cleanup.
+  const f3 = prepare(v, SLOW_GATES, "4");
+  const p3 = f3.start({ CIT_GATE_SLOT_COUNT: "1" });
+  let held = false;
+  for (let i = 0; i < 100 && !held; i++) {
+    await sleep(50);
+    held = existsSync(path.join(f3.slots, "0")) && !slotFree(f3.slots, 0);
+  }
+  say(held, "G · a lassú kapu alatt a slot nem volt foglalt (a kill-teszt tárgya hiányzik)");
+  const pid = Number(spawnSync("pgrep", ["-f", `gate-runner.mjs .* ${f3.dir}$`], { encoding: "utf8" }).stdout.trim().split("\n")[0]);
+  say(pid > 0, "G · a futtató pid-je nem található a kill-teszthez");
+  if (pid > 0) process.kill(pid, "SIGKILL");
+  let freed = false;
+  for (let i = 0; i < 40 && !freed; i++) {
+    await sleep(50);
+    freed = slotFree(f3.slots, 0);
+  }
+  say(freed, "G · kill -9 után a slot 2 s-en belül NEM szabadult fel — a zár a futtató halálát túlélte");
+  const r3 = await p3;
+  say(r3.rc !== 0, `G · a megölt futtató hookja ZÖLDEN zárult (rc=${r3.rc})`);
+  dispose(f3);
+  // A nested runner (started under a held slot) asks for none; CIT_GATE_SLOTS=0 still gates.
+  const f4 = prepare(v, SLOT_GATES, "4");
+  const r4 = f4.run({ CIT_GATE_SLOT_HELD: "3" });
+  say(r4.rc === 0 && !existsSync(path.join(f4.slots, "0")), `G · a slot alatt indított beágyazott futtató mégis slotot kért (rc=${r4.rc})`);
+  const r5 = f4.run({ CIT_GATE_SLOTS: "0" });
+  say(r5.rc === 0 && r5.out.includes("gépi slot nélkül") && parIntervals(f4).length === 4, `G · CIT_GATE_SLOTS=0 mellett a futtató nem kapuzott ugyanúgy (rc=${r5.rc})`);
+  dispose(f4);
   return bad;
 }
 
@@ -384,10 +497,12 @@ if (SELF_TEST) {
     ["követetlen-fájl feltétel ki", { ...shipped, hook: mutate("untracked", hookText, '[ -z "$(git status --porcelain', '[ -z "$(true || git status --porcelain') }],
     ["a sáv-jelölés vak", { ...shipped, runner: mutate("lane-mark", runnerText, 'const LANE_MARK = "// gate-lane: own-fixture-only";', 'const LANE_MARK = "// gate-lane: nincs-ilyen";') }],
     ["minden író a sávba", { ...shipped, runner: mutate("lane-all", runnerText, "const lane = serial.filter((j) => laneMarked(j));", "const lane = serial.filter(() => true);") }],
+    ["gépi slot ki", { ...shipped, runner: mutate("slot", runnerText, "const slot = held ?? (await acquireSlot());", "const slot = null;") }],
+    ["a slot nem szabadul a futtató halálával", { ...shipped, runner: mutate("holder", runnerText, '"echo 1; exec cat"', '"echo 1; exec sleep 30"') }],
   ];
   let ok = true;
   for (const [name, v] of reds) {
-    const bad = audit(v);
+    const bad = await audit(v);
     console.log(`${bad.length ? "✅ piros, ahogy kell" : "⛔ ZÖLD MARADT"} — ${name}${bad.length ? ` (${bad.length} sértés; első: ${bad[0].split("\n")[0]})` : ""}`);
     if (!bad.length) ok = false;
   }
@@ -395,14 +510,14 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a tizenegy visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a tizenhárom visszarontás pirosat adott.");
   process.exit(0);
 }
 
-const bad = audit(shipped);
+const bad = await audit(shipped);
 if (bad.length) {
   console.log(`⛔ gate-runner-check: ${bad.length} sértés`);
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ gate-runner-check: a párhuzamos futtató mind a hat forgatókönyvben (A–F) tartja a soros hook szerződését.");
+console.log("✅ gate-runner-check: a párhuzamos futtató mind a hét forgatókönyvben (A–G) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");
