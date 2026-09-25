@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-09-24
+updated: 2026-09-25
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -17,7 +17,8 @@ oldala, és mi a következő teendője.
 - **Gépen** a bal oldali menü csoportokba rendezve mutatja a lapokat: **„Az oldalam”** (Szövegek,
   Fotók, Modulok), **„Vendégek”** (Foglalások, Üzenetek), **„Üzlet”** (Webcím, Forgalom,
   Dokumentumok) és **„Fiók”** (Fiók, Súgó). A Fotók és a Modulok mellett a darabszám, az Üzenetek
-  mellett az olvasatlanok száma áll. A menü tetején lévő nyíllal a menü keskeny ikonsávvá
+  mellett az olvasatlanok száma áll. A **„Modulok”** alatt lenyíló lista a beállítható moduljait
+  sorolja fel — egy névre kattintva az adott modul beállításai nyílnak meg. A menü tetején lévő nyíllal a menü keskeny ikonsávvá
   csukható, és úgy is marad, amíg vissza nem nyitja.
 - **Telefonon** az alsó sávban négy fő pont van (**„Áttekintés”**, **„Fotók”**, **„Foglalások”**,
   **„Üzenetek”**), az ötödik, a **„Menü”** nyitja meg a teljes listát egy bal oldali fiókban —

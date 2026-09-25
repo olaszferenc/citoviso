@@ -181,6 +181,10 @@ interface NavCounts {
   readonly modules: number;
   readonly unread: number;
   readonly unseenBookings: number;
+  /** Module sub-list under „Modulok" (contract: design-refs/tenant-admin/module-subnav). */
+  readonly subModules: readonly { readonly id: string; readonly label: string }[];
+  /** The module whose settings screen is open (`?m=`), or null. */
+  readonly openModule: string | null;
 }
 
 /** Count / badge cell for a nav item — the SAME rule on the sidebar, the drawer and
@@ -192,7 +196,8 @@ function navMark(id: string, c: NavCounts, lang: string, counts = true): string 
     return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} új foglalási kérés", { n: c.unseenBookings }))}">${c.unseenBookings > 99 ? "99+" : c.unseenBookings}</span>`;
   if (!counts) return "";
   if (id === "fotok" && c.photos > 0) return `<span class="adm-nav__n">${c.photos}</span>`;
-  if (id === "modulok" && c.modules > 0) return `<span class="adm-nav__n">${c.modules}</span>`;
+  // module-subnav ⑤: one row, one unit — the badge counts the list right under it.
+  if (id === "modulok" && c.subModules.length > 0) return `<span class="adm-nav__n">${c.subModules.length}</span>`;
   return "";
 }
 
@@ -206,11 +211,44 @@ function sideNav(active: string, lang: string, c: NavCounts): string {
       const label = groupLabel(group, lang);
       if (label) out += `<div class="adm-nav__g">${esc(label)}</div>`;
     }
-    out +=
-      `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active" aria-current="page"' : ""} title="${esc(t.label)}">` +
+    const current = t.id === active && !(t.id === "modulok" && c.openModule);
+    const link =
+      `<a href="/admin?tab=${t.id}"${current ? ' class="is-active" aria-current="page"' : ""} title="${esc(t.label)}">` +
       `${ic(t.icon, 16)}<span>${esc(t.label)}</span>${navMark(t.id, c, lang)}</a>`;
+    out += t.id === "modulok" ? moduleSubNav(link, active, lang, c, "side") : link;
   }
   return out;
+}
+
+/**
+ * The owner's modules under „Modulok" (contract: design-refs/tenant-admin/module-subnav).
+ * Open on the Modulok tab and on every module screen (server-side, so it holds without
+ * JS), closed elsewhere. The chevron toggles for THIS page only — nothing is remembered,
+ * so a click on „Modulok" always lands on an open list (the owner's ask, 2026-09-25).
+ * `where`: the sidebar or the phone drawer — same list, same rule.
+ */
+// ⛔ Literal class names (not `${base}__mod`): the contract's anchors are grepped as written.
+const SUBNAV_CLS = {
+  side: { mod: "adm-nav__mod", sub: "adm-nav__sub" },
+  drawer: { mod: "adm-menu__mod", sub: "adm-menu__sub" },
+} as const;
+
+function moduleSubNav(link: string, active: string, lang: string, c: NavCounts, where: keyof typeof SUBNAV_CLS): string {
+  const cls = SUBNAV_CLS[where];
+  if (c.subModules.length === 0) return link;
+  const open = active === "modulok";
+  const items = c.subModules
+    .map(
+      (m) =>
+        `<a href="/admin?tab=modulok&amp;m=${encodeURIComponent(m.id)}"${m.id === c.openModule ? ' class="is-active" aria-current="page"' : ""} title="${esc(m.label)}">` +
+        `<span>${esc(m.label)}</span></a>`,
+    )
+    .join("");
+  return (
+    `<div class="${cls.mod}${open ? " is-open" : ""}${c.openModule ? " is-parent" : ""}" data-subnav>${link}` +
+    `<button type="button" class="adm-nav__tg" data-subtg hidden aria-expanded="${open}" aria-label="${T(lang, "Modulok listája")}">${ic("chevron-down", 14)}</button></div>` +
+    `<div class="${cls.sub}">${items}</div>`
+  );
 }
 
 function groupLabel(group: string, lang: string): string {
@@ -258,9 +296,10 @@ function drawer(active: string, lang: string, c: NavCounts, siteName: string, sl
       const label = groupLabel(group, lang);
       if (label) links += `<div class="adm-menu__g">${esc(label)}</div>`;
     }
-    links +=
-      `<a href="/admin?tab=${t.id}"${t.id === active ? ' class="is-active"' : ""}>` +
+    const link =
+      `<a href="/admin?tab=${t.id}"${t.id === active && !(t.id === "modulok" && c.openModule) ? ' class="is-active"' : ""}>` +
       `${ic(t.icon, 16)}${esc(t.label)}${navMark(t.id, c, lang, false)}</a>`;
+    links += t.id === "modulok" ? moduleSubNav(link, active, lang, c, "drawer") : link;
   }
   return (
     `<div class="adm-drawer" id="adm-menu" role="dialog" aria-modal="true" aria-label="${T(lang, "Menü")}">` +
@@ -321,17 +360,21 @@ const SHELL_SCRIPT = (lang: string): string =>
   `<script>(function(){var d=document.documentElement;` +
   `var ICO={sun:${JSON.stringify(ic("sun", 16))},moon:${JSON.stringify(ic("moon", 16))},col:${JSON.stringify(ic("collapse", 14))},exp:${JSON.stringify(ic("expand", 14))}};` +
   `function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
+  `function subnav(o){$$('[data-subnav]').forEach(function(w){w.classList.toggle('is-open',o);var b=w.querySelector('[data-subtg]');if(b)b.setAttribute('aria-expanded',o?'true':'false')})}` +
   `function theme(){return d.getAttribute('data-citui-theme')==='dark'?'dark':'light'}` +
   `function paint(){var t=theme();$$('[data-theme-toggle]').forEach(function(b){b.hidden=false;var i=b.querySelector('[data-ic]');if(i)i.innerHTML=t==='dark'?ICO.sun:ICO.moon;` +
   `$$('[data-when]',b).forEach(function(s){s.hidden=s.getAttribute('data-when')!==t})});` +
   `var r=document.querySelector('[data-rail]');if(r)r.innerHTML=d.classList.contains('is-rail')?ICO.exp:ICO.col}` +
   `document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
   `var rb=e.target.closest('[data-rail]');if(rb){e.preventDefault();d.classList.toggle('is-rail');try{localStorage.setItem('citui-admin-rail',d.classList.contains('is-rail')?'1':'0')}catch(x){}paint();return}` +
+  `var tg=e.target.closest('[data-subtg]');if(tg){e.preventDefault();var o=!tg.parentNode.classList.contains('is-open');subnav(o);return}` +
+  `var ml=e.target.closest('[data-subnav]>a');if(ml)subnav(true);` +
   `var bk=e.target.closest('[data-back]');if(bk&&history.length>1&&document.referrer.indexOf(location.origin+'/admin')===0){e.preventDefault();history.back();return}` +
   `var dr=document.getElementById('adm-menu');if(!dr)return;` +
   `if(e.target.closest('[data-drawer-open]')){e.preventDefault();dr.classList.add('on');return}` +
   `if(e.target.closest('[data-drawer-close]')){e.preventDefault();dr.classList.remove('on');if(location.hash==='#adm-menu')history.replaceState(null,'',location.pathname+location.search)}});` +
   `document.addEventListener('keydown',function(e){if(e.key==='Escape'){var dr=document.getElementById('adm-menu');if(dr)dr.classList.remove('on')}});` +
+  `$$('[data-subtg]').forEach(function(b){b.hidden=false});` +
   `paint();})();</script>`;
 
 /* ═══ ADR-0224 ③ — PHOTOS: drop bar, grid / list, hover actions, lightbox, selection ═══
@@ -4911,6 +4954,8 @@ export interface AdminOpts {
   readonly chargeRetry?: string | null;
   /** ADR-0044: pre-rendered settings screen for ONE module (?m=<id>), when open. */
   readonly moduleSettingsHtml?: string | null;
+  /** module-subnav ②: the id of the module whose settings screen is open (`?m=`). */
+  readonly openModule?: string | null;
   /** ADR-0044/d: bookable units, so photos can be assigned to them on the Fotók tab. */
   readonly units?: readonly { id: string; name: string }[];
   /** ADR-0045: Súgó tab data — filtered topic list, the open entry (rendered), the query. */
@@ -4945,6 +4990,14 @@ export interface AdminOpts {
   readonly bookings?: BookingsTabData | null;
   /** Még nem látott foglalási kérések — a fülsor jelvénye. */
   readonly unseenBookings?: number;
+}
+
+/** module-subnav ④: on a module screen the path is `<site> › Modulok › <module>`. */
+function crumbTail(crumbLabel: string, c: NavCounts): string {
+  const open = c.openModule ? c.subModules.find((m) => m.id === c.openModule) : undefined;
+  return open
+    ? `<a href="/admin?tab=modulok">${esc(crumbLabel)}</a>${ic("fwd", 13)}<b>${esc(open.label)}</b>`
+    : `<b>${esc(crumbLabel)}</b>`;
 }
 
 /**
@@ -4990,7 +5043,7 @@ function frame(
     `<div class="adm-crumb">${
       overview
         ? `<b>${esc(siteName)}</b>`
-        : `<a href="/admin">${esc(siteName)}</a>${ic("fwd", 13)}<b>${esc(crumbLabel)}</b>`
+        : `<a href="/admin">${esc(siteName)}</a>${ic("fwd", 13)}${crumbTail(crumbLabel, counts)}`
     }</div>` +
     // README ③: the search slot is bound by PLACE only — the search itself is not part of the
     // plan, so no shortcut hint either (a ⌘K that does nothing would be a dead promise, §B.17).
@@ -5045,6 +5098,14 @@ export function adminDashboard(
     modules: mv ? mv.modules.filter((m) => m.active).length : 0,
     unread,
     unseenBookings: opts.unseenBookings ?? 0,
+    // module-subnav ①: the SAME predicate the Modulok tab runs before it offers
+    // „Beállítás" — a list entry is never a dead end.
+    subModules: mv
+      ? mv.modules
+          .filter((m) => m.active && !m.supersededBy && hasSettingsScreen(m.id))
+          .map((m) => ({ id: m.id, label: T(lang, m.label) }))
+      : [],
+    openModule: tab === "modulok" && opts.moduleSettingsHtml ? (opts.openModule ?? null) : null,
   };
   const siteName = session.displayName;
   const head = THEME_BOOT;

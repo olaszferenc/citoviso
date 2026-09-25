@@ -1705,6 +1705,7 @@ async function serveAdmin(
       guestViewUrl,
       chargeRetry: new URL(req.url ?? "/", "http://x").searchParams.get("ujra"),
       moduleSettingsHtml,
+      openModule: moduleSettingsHtml ? (moduleId ?? null) : null,
       units: adminUnits,
       help,
       multilang,

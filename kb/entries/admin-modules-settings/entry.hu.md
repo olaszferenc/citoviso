@@ -4,12 +4,18 @@ title: Modul-beállítások — mentés, visszaállítás, hogyan működik
 audience: tenant
 category: modules
 anchors: admin.modules.settings
-updated: 2026-08-21
+updated: 2026-09-25
 ---
 
 A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett
 megjelenő **„Beállítás”** linkkel nyitja meg. Egy képernyő mindig egy modulról szól — nem kell
 hosszú beállítás-oldalakon keresgélnie.
+
+Gyorsabb út a menüből: a bal oldali menüben a **„Modulok”** alatt lenyílik a moduljai listája
+(telefonon a **„Menü”** fiókban ugyanígy). Egy modul nevére kattintva rögtön annak a
+beállításai nyílnak meg, a listában pedig ki van emelve, melyiknél jár. A Modulok lapon és a
+modulok képernyőin a lista magától nyitva van, más lapokon a **„Modulok”** melletti kis nyíllal
+nyithatja le. A listában azok a modulok szerepelnek, amelyeknek van beállító-képernyője.
 
 ![Képernyőkép: egy modul beállító-képernyője telefonon](assets/hu/screen.png)
 

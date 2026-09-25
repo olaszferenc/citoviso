@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában
 - [2026-09-25_gate_writer_audit.md](2026-09-25_gate_writer_audit.md) — 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
 - [2026-09-25_gate_machine_slots.md](2026-09-25_gate_machine_slots.md) — 2026-09-25 — Gép-szintű várakozósor a kapu-futtatónak (ADR-0230)
 - [2026-09-25_booking_screen_month_end.md](2026-09-25_booking_screen_month_end.md) — 2026-09-25 — booking-screen-check: a hónap-végi piros negyedszer, és ezúttal a szabály cserélődött

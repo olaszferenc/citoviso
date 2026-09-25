@@ -108,6 +108,25 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
 .adm-nav a.is-active svg{color:var(--citui-link-ink)}
 .adm-nav__n{margin-left:auto;color:var(--citui-muted);font-size:.85em}
 .adm-nav a .adm-bdg{margin-left:auto}
+/* Module sub-list under „Modulok" — contract: design-refs/tenant-admin/module-subnav. */
+.adm-nav__mod,.adm-menu__mod{display:flex;align-items:center;position:relative}
+.adm-nav__mod>a,.adm-menu__mod>a{flex:1;min-width:0}
+.adm-nav__tg{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:0;
+  border-radius:6px;background:none;color:var(--citui-muted);cursor:pointer;position:absolute;right:4px;top:50%;transform:translateY(-50%)}
+.adm-nav__tg[hidden]{display:none}
+.adm-nav__tg:hover{background:var(--citui-hover);color:var(--citui-ink)}
+.adm-nav__tg svg{transition:transform .15s}
+.adm-nav__mod.is-open .adm-nav__tg svg,.adm-menu__mod.is-open .adm-nav__tg svg{transform:rotate(180deg)}
+.adm-nav__mod>a .adm-nav__n{margin-right:26px}
+.adm-nav__mod.is-parent>a,.adm-menu__mod.is-parent>a{font-weight:600}
+.adm-nav__mod.is-parent>a svg,.adm-menu__mod.is-parent>a svg{color:var(--citui-link-ink)}
+.adm-nav__sub,.adm-menu__sub{display:none;flex-direction:column;gap:1px;margin:1px 0 4px;position:relative}
+.adm-nav__mod.is-open+.adm-nav__sub,.adm-menu__mod.is-open+.adm-menu__sub{display:flex}
+.adm-nav__sub::before,.adm-menu__sub::before{content:"";position:absolute;left:16px;top:2px;bottom:2px;width:1px;background:var(--citui-line)}
+.adm-nav .adm-nav__sub a{font-size:.9em;font-weight:400;padding:5px 8px 5px 33px}
+.adm-nav__sub a span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-nav .adm-nav__sub a.is-active,.adm-menu .adm-menu__sub a.is-active{background:var(--citui-accent-soft);font-weight:600}
+.adm-nav__sub a.is-active::before,.adm-menu__sub a.is-active::before{content:"";position:absolute;left:15px;width:3px;height:16px;border-radius:2px;background:var(--citui-link-ink)}
 .adm-user{display:flex;align-items:center;gap:8px;padding:8px;border-top:1px solid var(--citui-line);margin-top:8px;font-size:.9em;white-space:nowrap}
 .adm-user__av{width:26px;height:26px;border-radius:50%;background:var(--citui-ink);color:var(--citui-bg);display:inline-flex;align-items:center;
   justify-content:center;font-size:.7em;font-weight:700;flex:0 0 auto}
@@ -122,6 +141,8 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
 .is-rail .adm-nav a .adm-bdg{position:absolute;top:2px;right:4px;min-width:16px;height:16px;font-size:.62em}
 .is-rail .adm-side__top{justify-content:center;flex-direction:column;gap:6px}
 .is-rail .adm-user{flex-direction:column;gap:4px;padding:8px 0}
+.is-rail .adm-nav__tg,.is-rail .adm-nav__sub{display:none!important}
+.is-rail .adm-nav__mod>a .adm-nav__n{margin-right:0}
 /* Subscription card (from the Midnight round) — REAL data, see adminViews subscriptionCard(). */
 .adm-plan{border:1px solid var(--citui-line);border-radius:8px;padding:10px;margin:8px 0 0;font-size:.86em;
   background:radial-gradient(120% 100% at 100% 0%,color-mix(in srgb,var(--citui-cyan-500) 18%,transparent),transparent 60%),var(--citui-panel)}
@@ -410,6 +431,9 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
 .adm-menu a .adm-bdg{margin-left:auto}
 .adm-menu a svg{color:var(--citui-muted)}
 .adm-menu a.is-active svg{color:var(--citui-link-ink)}
+.adm-menu__mod .adm-nav__tg{position:static;transform:none;width:40px;height:40px}
+.adm-menu__sub::before{left:18px}
+.adm-menu .adm-menu__sub a{font-size:.92em;font-weight:400;padding:9px 10px 9px 37px;position:relative}
 .adm-menu__g{font-size:.68em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);padding:12px 10px 4px}
 .adm-theme[hidden],.adm-theme-row[hidden]{display:none}
 @media(min-width:900px){

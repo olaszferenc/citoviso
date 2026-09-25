@@ -84,8 +84,8 @@ const common = {
 };
 
 const tmp = await mkdtemp(path.join(tmpdir(), "admin-linear-"));
-async function render(name: string, tab: string, own: boolean): Promise<string> {
-  const html = adminDashboard(session, contentOf(own), { ...common, tab })
+async function render(name: string, tab: string, own: boolean, extra: Partial<Parameters<typeof adminDashboard>[2]> = {}): Promise<string> {
+  const html = adminDashboard(session, contentOf(own), { ...common, tab, ...extra })
     .replaceAll('href="/assets/', `href="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`)
     .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
   const file = path.join(tmp, `${name}.html`);
@@ -97,6 +97,22 @@ const pages = {
   photosDemo: await render("photos-demo", "fotok", false),
   photosOwn: await render("photos-own", "fotok", true),
   texts: await render("texts", "szovegek", false),
+};
+
+// module-subnav (design-refs/tenant-admin/module-subnav): a superseded module and one
+// without a settings screen must NOT be listed — the list uses the „Beállítás" predicate.
+const MV_SUB = {
+  ...MV,
+  modules: [
+    ...MV.modules,
+    { id: "enquiry", label: "Időpontkérés, kapcsolat", group: "offer", active: true, spine: true, priceMonthly: 0, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: "booking", publicDesc: null },
+    { id: "booking", label: "Online foglalás", group: "offer", active: true, spine: false, priceMonthly: 990, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: null, publicDesc: null },
+    { id: "nosuchscreen", label: "Nincs képernyője", group: "offer", active: true, spine: false, priceMonthly: 290, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: null, publicDesc: null },
+  ],
+} as unknown as typeof MV;
+const subPages = {
+  photos: await render("sub-photos", "fotok", false, { modules: MV_SUB }),
+  rooms: await render("sub-rooms", "modulok", false, { modules: MV_SUB, moduleSettingsHtml: "<p>szobák</p>", openModule: "rooms" }),
 };
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
@@ -272,6 +288,59 @@ for (const size of SIZES) {
   await ctx.close();
 }
 
+// ── module-subnav: the owner's modules under „Modulok" ─────────────────────────────
+console.log("\n── Modul-almenü (module-subnav) ──");
+for (const size of SIZES) {
+  const ctx = await browser.newContext({ viewport: { width: size.width, height: size.height } });
+  const page = await ctx.newPage();
+  const errs: string[] = [];
+  page.on("pageerror", (e) => errs.push(String(e)));
+  const phone = size.width < 900;
+  const sub = phone ? ".adm-menu__sub" : ".adm-nav__sub";
+  const openMenu = async () => {
+    if (phone) {
+      await page.click(".adm-bnav a[data-drawer-open]");
+      await page.waitForTimeout(100);
+    }
+  };
+  // ③ a module screen: open on arrival, the module marked, the path three-deep
+  await page.goto(subPages.rooms);
+  if (SELF_TEST) await page.evaluate(() => document.querySelectorAll("[data-subnav]").forEach((w) => w.classList.remove("is-open")));
+  await openMenu();
+  const arrivedOpen = await page.locator(sub).isVisible();
+  ok(`${size.tag}: modul-képernyőn a lista NYITVA érkezik`, arrivedOpen);
+  if (SELF_TEST && !arrivedOpen) selfTestHits++;
+  const labels = await page.locator(`${sub} a`).allTextContents();
+  ok(`${size.tag}: a lista = a „Beállítás"-predikátum (kiváltott és képernyő nélküli kimarad): ${labels.join(" · ")}`,
+    labels.join("|") === "Képek a szállásról|Szobák, apartmanok|Online foglalás");
+  ok(`${size.tag}: a nyitott modul kiemelve`, (await page.locator(`${sub} a.is-active`).textContent()) === "Szobák, apartmanok");
+  if (!phone) {
+    ok("a Modulok számlálója = a lista elemszáma (3)", (await page.locator(".adm-nav__mod .adm-nav__n").textContent()) === "3");
+    ok("a szülő Modulok nem teli kiemelés a modul-képernyőn", (await page.locator(".adm-nav__mod > a.is-active").count()) === 0);
+    ok("útvonal: … › Modulok (link) › Szobák, apartmanok",
+      (await page.locator(".adm-crumb a[href='/admin?tab=modulok']").count()) === 1 && (await page.locator(".adm-crumb b").textContent()) === "Szobák, apartmanok");
+    await page.evaluate(() => document.documentElement.classList.add("is-rail"));
+    ok("ikonsávban a lista és a nyíl rejtve", !(await page.locator(".adm-nav__sub").isVisible()) && !(await page.locator(".adm-nav [data-subtg]").isVisible()));
+    await page.evaluate(() => document.documentElement.classList.remove("is-rail"));
+  }
+  // ① another tab: closed; the chevron opens it
+  await page.goto(subPages.photos);
+  await openMenu();
+  ok(`${size.tag}: más fülön a lista CSUKVA`, !(await page.locator(sub).isVisible()));
+  const tg = page.locator(`${phone ? ".adm-menu__mod" : ".adm-nav__mod"} [data-subtg]`);
+  await tg.click();
+  ok(`${size.tag}: a nyíl kinyitja (aria-expanded=true)`, (await page.locator(sub).isVisible()) && (await tg.getAttribute("aria-expanded")) === "true");
+  await tg.click();
+  ok(`${size.tag}: a nyíl be is csukja`, !(await page.locator(sub).isVisible()));
+  // ② the owner's ask: a click on „Modulok" opens the list AT ONCE (navigation held back here)
+  await page.evaluate(() => window.addEventListener("click", (e) => e.preventDefault()));
+  await page.click(`${phone ? ".adm-menu__mod" : ".adm-nav__mod"} > a`);
+  const opened = await page.locator(sub).isVisible();
+  ok(`${size.tag}: a Modulok-ra kattintás azonnal lenyitja a listát`, opened);
+  ok(`${size.tag}: JS-hiba 0`, errs.length === 0, errs.join(" | "));
+  await ctx.close();
+}
+
 await browser.close();
 await rm(tmp, { recursive: true, force: true });
 
@@ -283,8 +352,9 @@ if (WITH_KB) {
 
 if (SELF_TEST) {
   // The four red controls: back button removed, file field shown, #fff in dark, bottom bar item removed.
-  const pass = selfTestHits >= 4;
-  console.log(`\n${pass ? "✅" : "⛔"} --self-test: ${selfTestHits} szabotázst fogott meg a 4-ből`);
+  // + module-subnav: the list stripped of its server-side open state (one per size).
+  const pass = selfTestHits >= 6;
+  console.log(`\n${pass ? "✅" : "⛔"} --self-test: ${selfTestHits} szabotázst fogott meg a 6-ból`);
   process.exit(pass ? 0 : 1);
 }
 console.log(bad ? `\n⛔ admin-linear-check: ${bad} bukás` : "\n✅ admin-linear-check: a szállított admin = a jóváhagyott Linear terv");

@@ -11,7 +11,16 @@ Utolsó frissítés: 2026-09-25 (🚦 **Gép-szintű várakozósor a kapu-futtat
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Aktív feladat (legfrissebb szál, 2026-09-25 — gépi várakozósor a kapusornak)
+## Aktív feladat (legfrissebb szál, 2026-09-25 — modul-almenü az oldalsávban)
+
+**🧭 A MODULOK ALATT LENYÍLÓ MODUL-LISTA (tenant-admin oldalsáv + telefonos Menü-fiók) — lokálban kész, NEM élesítve.**
+Jegyzet: `_planning/memory/2026-09-25_modul_almenu.md`. §2b: A/B terv → a tulaj az **A**-t választotta
+(fa-vonal, a Modulok fülön és a modul-képernyőkön nyitva, máshol csukva) + „a Modulok-ra kattintva
+rögtön nyíljon le”. Kontraktus: `assets/design-refs/tenant-admin/module-subnav/`. A lista = a „Beállítás”-
+predikátum (aktív · nem kiváltott · van képernyője) → a számláló a lista elemszáma (Boróka: 10, a kártya
+„11 modul aktív” marad — a tulaj erre nem felelt, nyitott). Őr: `admin-linear-check` module-subnav blokk.
+
+## Párhuzamos szál (2026-09-25 — gépi várakozósor a kapusornak)
 
 **🚦 GÉP-SZINTŰ SLOT-SZEMAFOR A KAPU-FUTTATÓBAN (ADR-0230).** Jegyzet:
 `_planning/memory/2026-09-25_gate_machine_slots.md`. A `gate-runner.mjs` minden kaput (① olvasó és
