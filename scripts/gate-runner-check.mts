@@ -13,6 +13,8 @@
 //   · ugyanaz a szkript sosem fut önmagával párhuzamosan (`x --self-test` és `x` közös
 //     munkafa-kulcsú scratch-útvonalakon osztozik),
 //   · a párhuzamosság valódi (különben a mechanika csak költség),
+//   · a ② fázis író-sávja (ADR-XXXX) CSAK a `// gate-lane: own-fixture-only` jelölt írókat futtatja
+//     egymással párhuzamosan, a jelöletlen író pedig UTÁNUK, egyedül indul,
 //   · `gate_flush` nélkül a hook NEM zárulhat zölden,
 //   · a zöld-gyorsítótár (land ≠ commit duplikáció) CSAK azonos fán + diffen + argv/stdin/
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
@@ -25,9 +27,10 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (kilenc visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (tizenegy visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
-//    feltétel ki · pipefail ki a kulcs-diffből —, mindegyiknek pirosat KELL adnia.)
+//    feltétel ki · pipefail ki a kulcs-diffből · a sáv-jelölés vak · minden író a sávba —,
+//    mindegyiknek pirosat KELL adnia.)
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -93,6 +96,23 @@ node scripts/modeaware.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] flaky…"
 node scripts/flaky.mjs >"$GATE_LOG" || gate_failed
 `;
+// ── F: writer lanes. Three KNOWN writers (pre-registered, so they go straight to phase ②):
+// two carry the lane marker and must overlap; the unmarked one must start only after both ended.
+const LANE_GATES = String.raw`
+echo "[pre-commit] lane-1…"
+node scripts/lane1.mjs lane1 >"$GATE_LOG" || gate_failed
+echo "[pre-commit] lane-2…"
+node scripts/lane2.mjs lane2 >"$GATE_LOG" || gate_failed
+echo "[pre-commit] strict-1…"
+node scripts/strict1.mjs strict1 >"$GATE_LOG" || gate_failed
+`;
+const LANE_MARK = "// gate-lane: own-fixture-only";
+const WRITER_TIMED = (marked: boolean): string =>
+  `${marked ? LANE_MARK : "// (no lane marker)"}
+    import { appendFileSync } from "node:fs";
+    const t0 = Date.now(); await new Promise((r) => setTimeout(r, 1200));
+    appendFileSync(process.env.FIX_OUT + "/lane", process.argv[2] + " " + t0 + " " + Date.now() + "\\n");`;
+
 const COUNTER = (name: string, extra = ""): string =>
   `import { appendFileSync, existsSync } from "node:fs"; appendFileSync(process.env.FIX_OUT + "/${name}", "x");${extra}`;
 
@@ -113,6 +133,9 @@ const FIXTURES: Record<string, string> = {
     await new Promise((r) => setTimeout(r, 700)); rmSync(lock, { force: true });`,
   "par1.mjs": PAR,
   "par2.mjs": PAR,
+  "lane1.mjs": WRITER_TIMED(true),
+  "lane2.mjs": WRITER_TIMED(true),
+  "strict1.mjs": WRITER_TIMED(false),
   "fail7.mjs": FAIL,
   "fail5.mjs": FAIL,
   // Writes inside a rolled-back transaction (nothing persists), SWALLOWS any error and exits 0 —
@@ -312,6 +335,29 @@ function audit(v: Variant): string[] {
   e.run();
   say(count("count") === c1 + 3, "E · megváltozott fán a kapu a gyorsítótárból jött");
   dispose(e);
+
+  // ── F: the writer lane — marked writers overlap, the unmarked one waits for them ───────
+  const f = prepare(v, LANE_GATES, "4");
+  writeFileSync(path.join(f.out, "writers"), "scripts/lane1.mjs\nscripts/lane2.mjs\nscripts/strict1.mjs\n");
+  const fr = f.run();
+  say(fr.rc === 0, `F · a sávos futás kilépési kódja ${fr.rc} (0 várt)\n${fr.out.slice(-1200)}`);
+  say(fr.out.includes("2 író-sávban"), "F · az összegző sor nem mondja meg, hány író futott a sávban");
+  const lanes = new Map(
+    fr.read("lane").trim().split("\n").filter(Boolean).map((l) => {
+      const [name, a, b] = l.split(" ");
+      return [name, [Number(a), Number(b)]] as const;
+    }),
+  );
+  say(lanes.size === 3, `F · a három író kapuból ${lanes.size} futott le`);
+  if (lanes.size === 3) {
+    const l1 = lanes.get("lane1")!;
+    const l2 = lanes.get("lane2")!;
+    const st = lanes.get("strict1")!;
+    const overlap = Math.min(l1[1], l2[1]) - Math.max(l1[0], l2[0]);
+    say(overlap > 300, `F · a két JELÖLT író NEM futott párhuzamosan (átfedés ${overlap} ms) — a sáv nem működik`);
+    say(st[0] >= Math.max(l1[1], l2[1]), `F · a JELÖLETLEN író a sávval EGYSZERRE futott (indult ${st[0] - Math.max(l1[1], l2[1])} ms-mal a sáv vége előtt)`);
+  }
+  dispose(f);
   return bad;
 }
 
@@ -336,6 +382,8 @@ if (SELF_TEST) {
     ["diffet olvasó kapu is gyorsítótárazva", { ...shipped, runner: mutate("reads-diff", runnerText, 'if (READS_DIFF.test(readFileSync(file, "utf8"))) return null;', "") }],
     ["pipefail ki a kulcs-diffből", { ...shipped, hook: mutate("pipefail", hookText, "diffsum=$(set -o pipefail; ", "diffsum=$(") }],
     ["követetlen-fájl feltétel ki", { ...shipped, hook: mutate("untracked", hookText, '[ -z "$(git status --porcelain', '[ -z "$(true || git status --porcelain') }],
+    ["a sáv-jelölés vak", { ...shipped, runner: mutate("lane-mark", runnerText, 'const LANE_MARK = "// gate-lane: own-fixture-only";', 'const LANE_MARK = "// gate-lane: nincs-ilyen";') }],
+    ["minden író a sávba", { ...shipped, runner: mutate("lane-all", runnerText, "const lane = serial.filter((j) => laneMarked(j));", "const lane = serial.filter(() => true);") }],
   ];
   let ok = true;
   for (const [name, v] of reds) {
@@ -347,7 +395,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a kilenc visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a tizenegy visszarontás pirosat adott.");
   process.exit(0);
 }
 
@@ -357,4 +405,4 @@ if (bad.length) {
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ gate-runner-check: a párhuzamos futtató mind az öt forgatókönyvben (A–E) tartja a soros hook szerződését.");
+console.log("✅ gate-runner-check: a párhuzamos futtató mind a hat forgatókönyvben (A–F) tartja a soros hook szerződését.");

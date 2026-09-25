@@ -1,3 +1,7 @@
+// gate-lane: own-fixture-only
+//   ↑ ÍGÉRET (ADR-XXXX, audit 2026-09-25): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és
+//   olvassa vissza — a kapu-futtató ② fázisában a többi jelölt íróval PÁRHUZAMOSAN fut. Ha ide globális
+//   olvasás/söprés/kölcsönzött sor kerül, vedd le a jelölést. Őr: scripts/gate-lane-check.mts.
 // Regression gate: ONE PURCHASE, ONE NEXT-CHARGE DATE — and it is written for
 // a human (ADR-0080 ①, ADR-0036 §B.18).
 //

@@ -16,8 +16,14 @@
 //      the gate swallowed; the output is also scanned for the libpq text of the same refusal.
 //      A gate that tried to write has its phase-① verdict DISCARDED (it may have measured a
 //      fixture it never managed to set up) and moves to phase ②.
-//   ② Serial, normal. The writers run one by one, exactly as before, after phase ① finished —
-//      so a writer never overlaps any other gate of this run.
+//   ② Writers, normal mode, after phase ① finished. Two lanes (ADR-XXXX):
+//      · the WRITER LANE — gates whose source carries `// gate-lane: own-fixture-only` in the first
+//        40 lines run PARALLEL with each other (same PARALLEL, same "a script never overlaps itself").
+//        The marker is a PROMISE audited per gate (2026-09-25) and guarded by scripts/gate-lane-check.mts:
+//        the gate inserts and reads back ONLY its own run-stamped fixture — no borrowed row, no
+//        table-wide sweep, no DDL, no shared outbox/ deletion.
+//      · the STRICT lane — every other writer, one by one, in the hook's order, after the lane drained.
+//      So an unmarked writer still never overlaps any other gate of this run.
 //   The same script never runs twice at the same time (`x --self-test` and `x` share their
 //   per-worktree scratch paths).
 //
@@ -68,6 +74,18 @@ const WRITERS_FILE = process.env.CIT_GATE_WRITERS_FILE || (commonDir() ? path.jo
 const knownWriters = new Set(
   WRITERS_FILE && existsSync(WRITERS_FILE) ? readFileSync(WRITERS_FILE, "utf8").split("\n").filter(Boolean) : [],
 );
+
+/** `// gate-lane: own-fixture-only` in the gate's first 40 lines (see scripts/gate-lane-check.mts). */
+const LANE_MARK = "// gate-lane: own-fixture-only";
+function laneMarked(job) {
+  try {
+    return readFileSync(path.join(job.cwd, job.script), "utf8")
+      .split("\n", 40)
+      .some((l) => l.trim() === LANE_MARK);
+  } catch {
+    return false;
+  }
+}
 
 function parseNul(file) {
   return readFileSync(file, "utf8").split("\0").filter((s) => s.length > 0);
@@ -236,33 +254,41 @@ const phase1 = queue.length;
 let deferred = 0;
 const newWriters = [];
 
-// ── ① parallel, read-only ────────────────────────────────────────────────────────────
-await new Promise((resolveAll) => {
-  const running = new Set();
-  const busy = new Set();
-  const pump = () => {
-    if (failed.length === 0) {
-      for (let i = 0; i < queue.length && running.size < PARALLEL; i++) {
-        const job = queue[i];
-        if (busy.has(job.script)) continue;
-        queue.splice(i--, 1);
-        busy.add(job.script);
-        const p = run(job, true).then((r) => {
-          running.delete(p);
-          busy.delete(job.script);
-          if (r.wrote) {
-            deferred++;
-            serial.push(job);
-            newWriters.push(job.script);
-          } else show(job, r);
-          pump();
-        });
-        running.add(p);
+/** Run `list` on up to PARALLEL workers; a script never overlaps itself; after the first red
+ *  nothing new is scheduled. `onDone(job, r)` decides what a finished job means. */
+function pool(list, readOnly, onDone) {
+  return new Promise((resolveAll) => {
+    const running = new Set();
+    const busy = new Set();
+    const pump = () => {
+      if (failed.length === 0) {
+        for (let i = 0; i < list.length && running.size < PARALLEL; i++) {
+          const job = list[i];
+          if (busy.has(job.script)) continue;
+          list.splice(i--, 1);
+          busy.add(job.script);
+          const p = run(job, readOnly).then((r) => {
+            running.delete(p);
+            busy.delete(job.script);
+            onDone(job, r);
+            pump();
+          });
+          running.add(p);
+        }
       }
-    }
-    if (running.size === 0) resolveAll();
-  };
-  pump();
+      if (running.size === 0) resolveAll();
+    };
+    pump();
+  });
+}
+
+// ── ① parallel, read-only ────────────────────────────────────────────────────────────
+await pool(queue, true, (job, r) => {
+  if (r.wrote) {
+    deferred++;
+    serial.push(job);
+    newWriters.push(job.script);
+  } else show(job, r);
 });
 
 if (WRITERS_FILE && newWriters.length) {
@@ -273,15 +299,22 @@ if (WRITERS_FILE && newWriters.length) {
   }
 }
 
-// ── ② serial, normal — in the hook's own order ───────────────────────────────────────
+// ── ② writers, normal mode — the marked lane in parallel, then the strict lane in the hook's order ──
+serial.sort((a, b) => jobs.indexOf(a) - jobs.indexOf(b));
+const lane = serial.filter((j) => laneMarked(j));
+const strict = serial.filter((j) => !lane.includes(j));
+const tLane = Date.now();
+if (failed.length === 0) await pool([...lane], false, show);
+const tStrict = Date.now();
 if (failed.length === 0) {
-  serial.sort((a, b) => jobs.indexOf(a) - jobs.indexOf(b));
-  for (const job of serial) {
+  for (const job of strict) {
     const r = await run(job, false);
     show(job, r);
     if (r.rc !== 0) break;
   }
 }
+const laneSecs = ((tStrict - tLane) / 1000).toFixed(0);
+const strictSecs = ((Date.now() - tStrict) / 1000).toFixed(0);
 
 const secs = ((Date.now() - t0) / 1000).toFixed(0);
 if (process.env.CIT_GATE_TIMES) {
@@ -295,7 +328,7 @@ if (process.env.CIT_GATE_TIMES) {
 }
 console.log(
   `[pre-commit] kapu-futtató: ${jobs.length} kapu · ${phase1 - deferred} párhuzamosan (${PARALLEL} szál, csak-olvasó DB) · ` +
-    `${serial.length} sorosan (író) · ${reused} már zöld volt ugyanezen a fán · ${secs} s`,
+    `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ${secs} s`,
 );
 if (failed.length) {
   writeFileSync(path.join(JOBS, "FAILED"), failed.map(([rc, id, r]) => `${rc}\t${path.join(JOBS, `${id}.label`)}\t${r.out}\t${r.err}`).join("\n") + "\n");

@@ -1,3 +1,7 @@
+// gate-lane: own-fixture-only
+//   ↑ ÍGÉRET (ADR-XXXX, audit 2026-09-25): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és
+//   olvassa vissza — a kapu-futtató ② fázisában a többi jelölt íróval PÁRHUZAMOSAN fut. Ha ide globális
+//   olvasás/söprés/kölcsönzött sor kerül, vedd le a jelölést. Őr: scripts/gate-lane-check.mts.
 // Barion callback ACK guard (2026-09-24) — does our webhook answer 200 exactly when
 // Barion should consider the callback DELIVERED, and 400 only when it should retry?
 //

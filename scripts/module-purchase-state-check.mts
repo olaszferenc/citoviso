@@ -1,3 +1,7 @@
+// gate-lane: own-fixture-only
+//   ↑ ÍGÉRET (ADR-XXXX, audit 2026-09-25): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és
+//   olvassa vissza — a kapu-futtató ② fázisában a többi jelölt íróval PÁRHUZAMOSAN fut. Ha ide globális
+//   olvasás/söprés/kölcsönzött sor kerül, vedd le a jelölést. Őr: scripts/gate-lane-check.mts.
 // ŐR — „a kifizetett modul MONDJA KI, hogy ki van fizetve" (Elek FK-005b, 2026-09-11).
 //
 // A MÉRT HIBA: a tenant kifizetett 14 900 Ft-ot a Többnyelvű honlap modulért, és a

@@ -1922,6 +1922,20 @@ if [ -f scripts/gate-output-check.mts ]; then
   npx tsx scripts/gate-output-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ⏱️ A PÁRHUZAMOS FUTTATÓ SAJÁT ŐRE. A hook eleji mechanikát (feljegyzés → futtató)
+# Író-sáv (a döntés ADR-je a scripts/gate-lane-check.mts fejlécében): a jelölés (`// gate-lane: own-fixture-only`) egy ÍGÉRET — a jelölt író
+# kapuk a ② fázisban EGYMÁSSAL párhuzamosan futnak. Ez az őr a jelölt kapuk forrásán méri a
+# szerkezeti osztályt (szűretlen selectFrom/deleteFrom/updateTable, nyers count(*), LIKE-takarítás,
+# fix port, fix /tmp·assets/Temp, fix nevű scratch-DB, globális söprő hívás, közös outbox/,
+# kölcsönzött sor). MINDIG fut (szöveg-őr, ~1 s): egy jelölt kapu bármely szerkesztése átmegy
+# rajta. A saját változásakor a piros önteszt is (18 sértés + tiszta fixture + negatív kontroll).
+if [ -f scripts/gate-lane-check.mts ]; then
+  if changed_files | grep -qE '^scripts/(gate-lane-check\.mts|lib/gate-runner\.mjs)$'; then
+    echo "[pre-commit] gate-lane-check --self-test (az író-sáv őre változott — pirosra tud-e menni)…"
+    npx tsx scripts/gate-lane-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] gate-lane-check (a jelölt író kapuk tartják-e az „own-fixture-only” ígéretet)…"
+  npx tsx scripts/gate-lane-check.mts >"$GATE_LOG" || gate_failed
+fi
 # a hookból KIVÁGVA, a valódi futtatóval, fixture-kapukon méri: minden kapu lefut · `VAR=x`
 # előtag és pipe-olt stdin eljut · a bukás kódja és kimenete kiíródik · az 1. fázis DB-je
 # csak-olvasó, az írni próbáló (a hibát lenyelő) kapu normál módban újrafut · egy szkript nem

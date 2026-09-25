@@ -1,3 +1,7 @@
+// gate-lane: own-fixture-only
+//   ↑ ÍGÉRET (ADR-XXXX, audit 2026-09-25): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és
+//   olvassa vissza — a kapu-futtató ② fázisában a többi jelölt íróval PÁRHUZAMOSAN fut. Ha ide globális
+//   olvasás/söprés/kölcsönzött sor kerül, vedd le a jelölést. Őr: scripts/gate-lane-check.mts.
 // ŐR — ADR-0128: 29 nyelv és három sáv a Többnyelvű honlap modulban.
 // Kontraktus: assets/design-refs/console/multilang-tiers/ (a jóváhagyott A változat).
 //
