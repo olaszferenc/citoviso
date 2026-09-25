@@ -38,6 +38,16 @@ felvennie — de a képernyőről ide nem vezetett út, csak egy nem kattinthat�
 - `assets/design-refs/console/pricing-rooms-link/{plan.html,README.md,plan-mobile.png,plan-desktop.png}`
 - `src/i18n/catalog.json` (2 új kulcs)
 
+## Két idegen kapu, ami a landot blokkolta (mindkettő idő-/tempófüggő, javítva)
+- `booking-screen-check`: a hónap utolsó napjaiban a kézi blokk a KÖVETKEZŐ hónapba esik, a naptár
+  a mostanit mutatja → 2 csíkos nap a helyes, az őr 3-at várt. Most a jelvény hónap-szabályát követi
+  (2 várt, számon kérve, nem kihagyva).
+- `room-editor-check` [neg] „halvány képek": a visszarontó `opacity:1` után 80 ms-mal olvasott, de a
+  kép 220 ms-os átmenettel halványul → a görbe közepén (mérve 0,48) még „halvány" → a kontroll csak
+  LASSÚ gépen (párhuzamos kapuk alatt) ment át, véletlenül; önállóan mindig bukott. Most az átmenetet
+  is kikapcsolja és 300 ms-ot vár. Tanulság: átmenetes tulajdonságot a kontroll ne a görbe közepén
+  olvasson — a „zöld" a gép tempójától függött.
+
 ## Nyitva
 - Nem élesítve (a többi 09-23/24-es árazás-szállal együtt megy egy verzióban).
 - A KB fordítás-frissesség a deploy kapuja (ADR-0207) — a magyar forrás változott.

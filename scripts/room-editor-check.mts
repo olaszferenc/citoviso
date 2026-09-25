@@ -797,8 +797,12 @@ try {
     mustFail("asztalin a RÁCS látszik mögötte", p.x > 40 && p.x + p.w < 1280 - 40, `x=${p.x} w=${p.w}`);
     // ⑥ a halványítás kikapcsolva → nem látszik, mi tartozik ide
     await page.locator(`#szoba-${roomA.id} .rs-tab--kep`).click();
-    await page.addStyleTag({ content: ".rs-libcell img{opacity:1 !important}" });
-    await page.waitForTimeout(80);
+    // ⛔ 2026-09-25: a kép 220 ms-os átmenettel (--citui-transition) halványul, és a 80 ms-os
+    // olvasás a görbe közepén (mérve: 0,48) még „halványnak" látta → a kontroll csak LASSÚ
+    // gépen (párhuzamos kapuk alatt) ment át, véletlenül. Az átmenetet is kikapcsoljuk, és
+    // az olvasás megvárja, hogy a beszúrt szabály tényleg érvényre jusson.
+    await page.addStyleTag({ content: ".rs-libcell img{opacity:1 !important;transition:none !important}" });
+    await page.waitForTimeout(300);
     const opac = await page.evaluate((id) => {
       const out: { on: boolean; op: number }[] = [];
       for (const c of document.querySelectorAll(`#szoba-${id} .rs-libcell`)) {
