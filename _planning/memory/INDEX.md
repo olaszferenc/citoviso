@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-25_gate_writer_audit.md](2026-09-25_gate_writer_audit.md) — 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
+- [2026-09-25_booking_screen_month_end.md](2026-09-25_booking_screen_month_end.md) — 2026-09-25 — booking-screen-check: a hónap-végi piros negyedszer, és ezúttal a szabály cserélődött
 - [2026-09-25_barion_callback_failed_2.md](2026-09-25_barion_callback_failed_2.md) — 2026-09-25 — Barion „Unsuccessful callback" levelek a javítás UTÁN is: két új ok, fogadó oldali javítás
 - [2026-09-25_arak_szobak_gomb.md](2026-09-25_arak_szobak_gomb.md) — 2026-09-25 — Árak képernyő: gomb a Szobák szerkesztőhöz (jóváhagyott „B” terv)
 - [2026-09-24_worktree_collision_root_causes.md](2026-09-24_worktree_collision_root_causes.md) — 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-0223)

@@ -47,10 +47,35 @@ const plus = (n: number) => {
   d.setDate(d.getDate() + n);
   return iso(d);
 };
-
-/** Ugyanabba a naptári hónapba esik-e a két 'YYYY-MM-DD' nap? A naptár csak a MOSTANI
- *  hónapot mutatja, tehát a fixtúra minden napjának oda kell esnie. */
 const sameMonth = (a: string, b: string) => a.slice(0, 7) === b.slice(0, 7);
+
+// ⛔⛔ NEGYEDSZER UGYANITT (2026-09-25, mérve fagyasztott órával: 09-24 zöld · 09-25 és 09-26
+// PIROS · 09-27 zöld). A fixtúra a mai naptól +4…+9 napra tette a foglalást és a kézi blokkot;
+// a hónap utolsó napjain a kézi blokk átcsúszott a következő hónapba, a „KIHAGYVA" ág pedig
+// csak KIÍRTA a kihagyást — a szoba-naptár ⑥ állítása („mind a három zárt nap csíkos") mégis
+// lefutott, és 2-t kapott. Minden hónap 25–26-án mindenkit blokkolt, aki a foglalás-felülethez
+// nyúlt. Az előző három javítás mind a NAPOKAT tologatta a mostani hónapon belül — ez a
+// szabály maga volt rossz: a naptárnak VAN hónap-váltója (`ho=`, ‹ ›), és az őr eddig is a
+// `from` hónapjára nyitotta mindkét naptárt.
+//
+// A SZABÁLY MOST: a fixtúra EGY naptári hónapban ül, és az őr AZT a hónapot nyitja meg.
+// Ha a mai nap +4…+9 egy hónapba fér, ott marad (a mai hónap); ha nem, a KÖVETKEZŐ hónap
+// 1-jétől indul (1…6. — minden hónap ≥ 28 napos, tehát mindig belefér). Nincs kihagyó ág:
+// minden állítás minden napon lefut. Az a napok SORRENDJE (vendég-éjszakák, majd a kézi
+// blokk a távozás után) változatlan — a „első csíkos cella = vendég" állítás erre épül.
+function fixtureWindow(): { from: string; second: string; to: string; manual: string } {
+  const near = [4, 5, 6, 9].map(plus);
+  if (near.every((d) => sameMonth(d, near[0]))) return { from: near[0], second: near[1], to: near[2], manual: near[3] };
+  const first = new Date();
+  first.setDate(1);
+  first.setMonth(first.getMonth() + 1);
+  const day = (n: number) => {
+    const d = new Date(first);
+    d.setDate(n);
+    return iso(d);
+  };
+  return { from: day(1), second: day(2), to: day(3), manual: day(6) };
+}
 
 let leadId = "";
 let tenantId = "";
@@ -144,10 +169,8 @@ try {
   const whole = units.find((u) => u.isWholeProperty)!;
   const room = units.find((u) => !u.isWholeProperty)!;
 
-  // Elfogadott foglalás az EGÉSZ szállásra — két éjszakára, mától +4 naptól.
-  const from = plus(4);
-  const second = plus(5);
-  const to = plus(6);
+  // Elfogadott foglalás az EGÉSZ szállásra — két éjszakára; a hónapot a fixtureWindow() dönti el.
+  const { from, second, to, manual: manualDay } = fixtureWindow();
   const req = await db
     .insertInto("booking_request")
     .values({
@@ -173,48 +196,17 @@ try {
       .values({ unit_id: whole.id, day, state: "booked", source: `booking:${req.id}` })
       .execute();
   }
-  // Kézi blokk ugyanabban a hónapban: e nélkül a „kézi ≠ vendég-foglalás" mérés
-  // vakon menne át (nincs mit összehasonlítani).
-  //
-  // ⛔ MÉRT HIBA (2026-09-22): ez `plus(9)`-et írt, a naptárnak viszont NINCS
-  // hónap-váltója — csak a MOSTANI hónapot mutatja. A hónap utolsó ~9 napján a
-  // blokk átcsúszott a KÖVETKEZŐ hónapba, és az őr hamisan pirosra ment két
-  // állításon („van kézi blokk a hónapban", „a jelvény a foglalt napok számát
-  // mondja — 2 nap tele" a várt 3 helyett). A komment MÁR AKKOR is „ugyanabban a
-  // hónapban"-t mondott — a szándék jó volt, a számtan nem. Lappangott 2026-09-08
-  // óta, és mindenkit blokkolt, aki a diff-hatókörébe eső fájlhoz nyúlt.
-  //
-  // ⛔⛔ AZ ELSŐ JAVÍTÁSOM SZÜLTE A KÖVETKEZŐ HIBÁT (ugyanaznap, mérésből): a blokkot
-  // a foglalt napok ELÉ tettem (`plus(3)`), mire az ELSŐ csíkos cella a KÉZI blokk
-  // lett — annak pedig nincs vendége, így az „a csíkos nap megmondja, KI tartja"
-  // állítás jogosan pirosra ment. A SORREND tehát számít, és egy másik állítás épp
-  // arra épült. A blokk ezért a foglalt ablak UTÁN marad, csak közelebb húzva,
-  // amíg belefér a hónapba.
-  // ⛔ MÉRT HIBA (2026-09-24, harmadszor ugyanitt): a 9/8/7 napos jelöltek szept. 24-én
-  // mind októberbe estek. A `plus(6)` a távozás napja — a vendég-éjszakák UTÁN van, tehát
-  // a „első csíkos cella = vendég" állítás nem sérül, és a hónap utolsó napjain is belefér.
-  const manualDay =
-    [9, 8, 7, 6].map(plus).find((d) => sameMonth(d, from)) ?? plus(9);
+  // Kézi blokk a távozás UTÁN, ugyanabban a hónapban (fixtureWindow()): e nélkül a
+  // „kézi ≠ vendég-foglalás" mérés vakon menne át (nincs mit összehasonlítani).
   await db
     .insertInto("availability_day")
     .values({ unit_id: whole.id, day: manualDay, state: "blocked", source: "manual" })
     .execute();
-
-  // ⚠️ Ha még a foglalt ablak sem fér a hónapba, ez az őr nem tud mérni — és akkor
-  // HANGOSAN kihagy, nem hamisan bukik. Néma kihagyás sosem: a kimenet mondja ki.
-  // ⚠️ A próba a MEGJELENÍTETT hónaphoz mér, nem a fixtúra saját napjaihoz: ha a
-  // teljes ablak átcsúszna a következő hónapba, a napok EGYMÁSSAL konzisztensek
-  // lennének, és a „mérhető" hamisan igazat mondana — miközben a naptár továbbra is
-  // a mostani hónapot mutatja, és minden állítás elhasalna.
-  const shownMonth = iso(new Date()).slice(0, 7);
-  const measurable = [from, to, manualDay].every((d) => d.slice(0, 7) === shownMonth);
-  const manualInMonth = manualDay.slice(0, 7) === shownMonth;
-  if (!measurable) {
-    console.log(
-      `  ⚠️ KIHAGYVA: a fixtúra ablaka (${from} … ${to}, kézi: ${manualDay}) nem fér egy ` +
-        "naptári hónapba, a naptárnak pedig nincs hónap-váltója. Nem hamis pirosat adok.",
-    );
+  const shownMonth = from.slice(0, 7);
+  if (![second, to, manualDay].every((d) => sameMonth(d, from))) {
+    throw new Error(`fixtureWindow() hibás: ${from} … ${to}, kézi: ${manualDay} nem egy hónap`);
   }
+  console.log(`  fixtúra: ${from} … ${to}, kézi blokk: ${manualDay} — a naptár a ${shownMonth} hónapra nyílik`);
 
   // ── szerver + bejelentkezett tenant ────────────────────────────────────────
   const { server } = (await import("../src/server/public.js")) as { server: Server };
@@ -242,7 +234,7 @@ try {
     console.log(`\n${width}px`);
     const tag = width === 390 ? "mobile" : "desktop";
     await withPage(width, async (page) => {
-      await page.goto(`${base}/admin?tab=modulok&m=booking&e=${whole.id}&ho=${from.slice(0, 7)}`, {
+      await page.goto(`${base}/admin?tab=modulok&m=booking&e=${whole.id}&ho=${shownMonth}`, {
         waitUntil: "networkidle",
       });
 
@@ -272,11 +264,8 @@ try {
       const details = page.locator("details#cit-naptar");
       check("a naptár összecsukható (details)", (await details.count()) === 1);
       const badge = (await page.locator(".cal-sum__badge").textContent()) ?? "";
-      // 2 vendég-éjszaka + 1 kézi blokk
-      // ⛔ A „KIHAGYVA" sor eddig csak KIÍRTA a kihagyást, az állítások mégis lefutottak és
-      // hamisan buktak (2026-09-24). Ami a kézi blokkra épül, most TÉNYLEG kimarad — hangosan.
-      if (manualInMonth) check("a jelvény a foglalt napok számát mondja", /3 nap tele/.test(badge), badge);
-      else console.log("  ⚠️ KIHAGYVA: a jelvény-szám (a kézi blokk nem fér a mostani hónapba)");
+      // 2 vendég-éjszaka + 1 kézi blokk — mind a megnyitott hónapban (fixtureWindow()).
+      check("a jelvény a foglalt napok számát mondja", /3 nap tele/.test(badge), badge);
       await page.locator(".cal-sum").click();
       await page.waitForTimeout(150);
       check("koppintásra becsukódik", !(await page.locator(".cal-grid").isVisible()));
@@ -317,17 +306,13 @@ try {
       // ④/b A KÉZI blokk és a VENDÉG foglalása nem néz ki egyformán — az egyik
       //     koppintásra felold, a másik kártyát nyit (KB-őr lelete, 2026-09-08).
       const manualCell = page.locator(".cal-cell input:checked + label").first();
-      if (manualInMonth) {
-        check("van kézi blokk a hónapban (a méréshez)", (await manualCell.count()) === 1);
-        const manualBg = await manualCell.evaluate((el) => getComputedStyle(el).backgroundColor);
-        const bookedBg = await page
-          .locator(".cal-cell--booked a")
-          .first()
-          .evaluate((el) => getComputedStyle(el).backgroundColor);
-        check("a kézi blokk és a vendég-foglalás KÜLÖNBÖZŐ színű", manualBg !== bookedBg, `${manualBg} vs ${bookedBg}`);
-      } else {
-        console.log("  ⚠️ KIHAGYVA: kézi blokk ≠ vendég-foglalás színe (a kézi blokk nem fér a mostani hónapba)");
-      }
+      check("van kézi blokk a hónapban (a méréshez)", (await manualCell.count()) === 1);
+      const manualBg = await manualCell.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const bookedBg = await page
+        .locator(".cal-cell--booked a")
+        .first()
+        .evaluate((el) => getComputedStyle(el).backgroundColor);
+      check("a kézi blokk és a vendég-foglalás KÜLÖNBÖZŐ színű", manualBg !== bookedBg, `${manualBg} vs ${bookedBg}`);
       const legend = (await page.locator(".cal-legend").textContent()) ?? "";
       check(
         "a jelmagyarázat mindkettőt külön nevezi meg",
@@ -342,25 +327,18 @@ try {
 
       // ⑥ ADR-0114: a SZOBA naptárában ugyanaz a két éjszaka CSÍKOS, és a részlet
       //    megmondja, ki tartja, meg átvisz a másik egység naptárára
-      await page.goto(`${base}/admin?tab=modulok&m=booking&e=${room.id}&ho=${from.slice(0, 7)}`, {
+      await page.goto(`${base}/admin?tab=modulok&m=booking&e=${room.id}&ho=${shownMonth}`, {
         waitUntil: "networkidle",
       });
       // ADR-0114: a szobánál a fölérendelt egység MINDEN zárt napja csíkos —
       // a két vendég-éjszaka ÉS a kézi blokk is (a szoba sem adható ki, ha az
       // egész ház azon a napon nem elérhető).
       const linked = page.locator(".cal-cell--linked a");
-      // ⛔ Ugyanaz a hónap-szabály, mint a jelvénynél (2026-09-25: a hónap utolsó napjaiban
-      // a kézi blokk a KÖVETKEZŐ hónapba esik, a naptár a mostanit mutatja → 2 csíkos nap
-      // a helyes, és az őr mégis 3-at várt, mindenki land-ját blokkolva). Nem kihagyás:
-      // a két vendég-éjszaka csíkját ilyenkor is számon kérjük.
-      const expectLinked = manualInMonth ? 3 : 2;
-      if (!manualInMonth)
-        console.log("  ⚠️ a kézi blokk nem fér a mostani hónapba — a szobánál 2 csíkos nap a várt (a két vendég-éjszaka)");
-      check(
-        `a szobánál csíkos mind a ${manualInMonth ? "három" : "két"} zárt nap`,
-        (await linked.count()) === expectLinked,
-        `kapott: ${await linked.count()}`,
-      );
+      // ⚠️ IKER-JAVÍTÁS (2026-09-25): egy párhuzamos szál (351a8a6c) ugyanezt a hónap-végi
+      // pirosat úgy zárta, hogy kilógó kézi blokknál 2-t várt 3 helyett — vagyis a hónap két
+      // napján a „kézi blokk is csíkos a szobánál" állítás nem mért. A fixtureWindow() óta a
+      // blokk MINDIG a megnyitott hónapban van, ezért itt mindig 3 a várt, feltétel nélkül.
+      check("a szobánál csíkos mind a három zárt nap", (await linked.count()) === 3, `kapott: ${await linked.count()}`);
       check(
         "a jelmagyarázat megnevezi ezt az állapotot",
         /Másik egység foglalása/.test((await page.locator(".cal-legend").textContent()) ?? ""),
