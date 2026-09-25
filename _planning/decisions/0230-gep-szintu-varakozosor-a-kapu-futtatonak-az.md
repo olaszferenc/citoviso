@@ -1,4 +1,4 @@
-## ADR-XXXX — Gép-szintű várakozósor a kapu-futtatónak: az egész gépen egyszerre legfeljebb N kapu fut, `flock`-slotokon, sessiontől függetlenül (2026-09-25)
+## ADR-0230 — Gép-szintű várakozósor a kapu-futtatónak: az egész gépen egyszerre legfeljebb N kapu fut, `flock`-slotokon, sessiontől függetlenül (2026-09-25)
 
 - **Kiváltó (tulaj, 2026-09-25):** *„két párhuzamos lehetőség: várakozósor szervező + 14 író kapu
   auditja”* — ez az első (brief: `~/rc-briefs/gate-queue.md`). Az ADR-0227 óta a kapusor

@@ -15,7 +15,7 @@
 //   · a párhuzamosság valódi (különben a mechanika csak költség),
 //   · a ② fázis író-sávja (ADR-0229) CSAK a `// gate-lane: own-fixture-only` jelölt írókat futtatja
 //     egymással párhuzamosan, a jelöletlen író pedig UTÁNUK, egyedül indul,
-//   · a GÉPI slot-szemafor (ADR-XXXX) valóban futtatók KÖZÖTT korlátoz (két futtató, 1 slot:
+//   · a GÉPI slot-szemafor (ADR-0230) valóban futtatók KÖZÖTT korlátoz (két futtató, 1 slot:
 //     egyetlen kapu sem fed át, és mindkettő végigér — nincs holtpont), a futtató halálával
 //     (kill -9) a slot magától felszabadul, a slot alatt indított beágyazott futtató nem kér
 //     újat, és slot nélkül (CIT_GATE_SLOTS=0) is ugyanúgy kapuz,

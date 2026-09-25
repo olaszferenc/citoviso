@@ -39,7 +39,7 @@
 //
 // PASS CACHE: see the block above `signature()` — land skips only an identical, green run.
 //
-// MACHINE-WIDE SLOTS (ADR-XXXX). ~10 sessions share this 8-core machine; each runner's 4 threads
+// MACHINE-WIDE SLOTS (ADR-0230). ~10 sessions share this 8-core machine; each runner's 4 threads
 // alone are fine, 10×4 of them trample each other (measured: the same commit took 90–270 s
 // depending on who else was committing). So every gate — phase ① and ② alike — runs inside
 // one of CIT_GATE_SLOT_COUNT (default 6) slots that are global to the MACHINE, not to the

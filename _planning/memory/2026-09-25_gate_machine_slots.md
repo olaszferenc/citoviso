@@ -1,4 +1,4 @@
-# 2026-09-25 — Gép-szintű várakozósor a kapu-futtatónak (ADR-XXXX)
+# 2026-09-25 — Gép-szintű várakozósor a kapu-futtatónak (ADR-0230)
 
 **Kérés:** a tulaj két párhuzamos szálat nyitott a kapusorra („várakozósor szervező + 14 író kapu
 auditja”); ez az első. Brief: `~/rc-briefs/gate-queue.md`. Előzmény: ADR-0227.
