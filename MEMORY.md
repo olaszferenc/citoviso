@@ -18,7 +18,7 @@ című tenant-userének (`maintainDatedPrices` → `tenant_user.contact_email`, 
 nem fék). Mérve: 0 ment ki valaha. Zárva: `EMAIL_PROVIDER=mock` a dinamikus import előtt + a
 `server-import-env-check` ③ szabálya (4 piros + 3 kontroll önteszt). Jegyzet:
 `_planning/memory/2026-09-25_gate_email_mock.md`. Nyitva: termék-szintű fék (`CIT_SHOT` → csak-outbox).
-A tulaj sorrendje a maradékra: kb-shot → room-editor trigger → 5 kölcsönző kapu. **kb-freshness: a ② szabály volt hibás** (dátum-heurisztika, 45/45 kép pixelre friss) → a verdiktet a `kb-shot --check-committed` adja. **room-editor trigger-lyuk: TÖRÖLVE** (a CSS inline a `moduleConfigViews.ts`-ben, ami a triggerben van). **Kölcsönző/szemetelő kapuk ZÁRVA (ADR-XXXX):** 1 046 árva futás (6 kapu) + 5 kölcsönző → `scripts/lib/fixture-parent.mts` (saját szülő, exit-hook törlés) mind a 11-ben, őr `fixture-parent-check`, söprés 1 040+1 033 sor.
+A tulaj sorrendje a maradékra: kb-shot → room-editor trigger → 5 kölcsönző kapu. **kb-freshness: a ② szabály volt hibás** (dátum-heurisztika, 45/45 kép pixelre friss) → a verdiktet a `kb-shot --check-committed` adja. **room-editor trigger-lyuk: TÖRÖLVE** (a CSS inline a `moduleConfigViews.ts`-ben, ami a triggerben van). **Kölcsönző/szemetelő kapuk ZÁRVA (ADR-0231):** 1 046 árva futás (6 kapu) + 5 kölcsönző → `scripts/lib/fixture-parent.mts` (saját szülő, exit-hook törlés) mind a 11-ben, őr `fixture-parent-check`, söprés 1 040+1 033 sor.
 
 ## Aktív feladat (legfrissebb szál, 2026-09-25 — modul-almenü az oldalsávban)
 

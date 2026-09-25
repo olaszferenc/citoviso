@@ -1,4 +1,4 @@
-## ADR-XXXX — A kapu fixture-szülője SAJÁT és önmagát törli: nincs kölcsönzött és nincs hátrahagyott scrape_run (2026-09-25)
+## ADR-0231 — A kapu fixture-szülője SAJÁT és önmagát törli: nincs kölcsönzött és nincs hátrahagyott scrape_run (2026-09-25)
 
 - **Kiváltó (tulaj, 2026-09-25):** az ADR-0229 audit két leletét („5 kapu idegen `scrape_run` sorra
   akaszkodik”, „4 kapu 380+380 árva sort hagyott”) a tulaj a nyitott tételek közé sorolta: „ok deal
