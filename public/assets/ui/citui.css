@@ -66,6 +66,9 @@
   --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
   --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
   --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
 
   /* Elevation */
   --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
@@ -153,6 +156,8 @@
   --citui-bad-ink:  #ff8e8e;
   --citui-warn-ink: #f5c06b;
   --citui-link-ink: #4fd0ea;
+  /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
+  --citui-on-bad: var(--citui-navy-900);
   --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
 }
 

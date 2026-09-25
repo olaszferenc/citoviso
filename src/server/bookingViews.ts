@@ -1138,7 +1138,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-verdict summary::-webkit-details-marker{display:none}
 .bk-btn--ok{background:var(--citui-ok);color:var(--citui-white);border:0}
 .bk-btn--ghost{background:var(--citui-panel);color:var(--citui-ink);border:1.5px solid var(--citui-line-strong)}
-.bk-btn--danger{background:var(--citui-bad);color:var(--citui-white);border:0}
+.bk-btn--danger{background:var(--citui-bad);color:var(--citui-on-bad);border:0}
 .bk-verdict form,.bk-cancel form{border-top:1px dashed var(--citui-line);margin-top:10px;padding-top:10px}
 .bk-verdict label,.bk-cancel label{display:block;font-size:.78rem;font-weight:700;margin-bottom:6px}
 .bk-verdict textarea,.bk-cancel textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--citui-line);

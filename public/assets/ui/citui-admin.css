@@ -365,7 +365,7 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
   box-shadow:0 12px 30px color-mix(in srgb,var(--citui-navy-950) 25%,transparent)}
 .is-selmode .adm-bulk{display:flex}
 .adm-bulk .adm-btn{border-color:color-mix(in srgb,var(--citui-bg) 30%,transparent);background:transparent;color:var(--citui-bg)}
-.adm-bulk .adm-btn--danger{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+.adm-bulk .adm-btn--danger{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-on-bad)}
 .adm-bulk .adm-btn--danger[disabled]{opacity:.45}
 /* Lightbox: dark stage in BOTH themes (a photo viewer is dark by trade). */
 .adm-lb{position:fixed;inset:0;z-index:60;background:color-mix(in srgb,var(--citui-navy-950) 94%,transparent);display:none;flex-direction:column;color:var(--citui-white)}
@@ -401,14 +401,14 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
 .adm-dlg__box h3{margin:0 0 6px;font-size:1.05em}
 .adm-dlg__box p{margin:0 0 16px;font-size:.88em;color:var(--citui-muted);line-height:1.5}
 .adm-dlg__acts{display:flex;gap:8px;justify-content:flex-end}
-.adm-dlg .adm-btn--danger{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+.adm-dlg .adm-btn--danger{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-on-bad)}
 .adm-toast{position:fixed;left:50%;bottom:18px;transform:translate(-50%,20px);z-index:80;background:var(--citui-ink);color:var(--citui-bg);
   padding:10px 14px;border-radius:8px;font-size:.86em;font-weight:600;box-shadow:0 16px 40px color-mix(in srgb,var(--citui-navy-950) 30%,transparent);
   opacity:0;transition:opacity .25s,transform .25s;display:flex;gap:8px;align-items:center;max-width:calc(100% - 32px);pointer-events:none}
 .adm-toast.on{opacity:1;transform:translate(-50%,0)}
-.adm-toast.bad{background:var(--citui-bad);color:var(--citui-white)}
+.adm-toast.bad{background:var(--citui-bad);color:var(--citui-on-bad)}
 .adm-toast svg{color:var(--citui-cyan-500);flex:0 0 auto}
-.adm-toast.bad svg{color:var(--citui-white)}
+.adm-toast.bad svg{color:var(--citui-on-bad)}
 .adm-pageover{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
   background:color-mix(in srgb,var(--citui-cyan-500) 20%,color-mix(in srgb,var(--citui-panel) 85%,transparent));
   border:3px dashed var(--citui-cyan-500);font:700 1.1em var(--citui-font-text);color:var(--citui-ink);pointer-events:none}
@@ -622,6 +622,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-state__head{margin:0;padding:15px 28px;border-bottom:0}
 .adm-state__head h2,.adm-state__head .adm-ico{color:var(--citui-white)}
 .adm-state--bad .adm-state__head{background:var(--citui-bad)}
+.adm-state--bad .adm-state__head h2,.adm-state--bad .adm-state__head .adm-ico{color:var(--citui-on-bad)}
 .adm-state--ok .adm-state__head{background:var(--citui-ok)}
 .adm-state__dot{background:var(--citui-panel);margin-right:2px}
 .adm-state__grid{display:grid;gap:16px;padding:20px 28px 24px}
@@ -646,9 +647,9 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
    not quietly overwrite a decision the owner made on a picture). */
 .adm-owe__pay{display:flex;justify-content:center;width:100%;margin-top:14px;
   font-size:14px;padding:14px 24px;
-  background:var(--citui-bad);color:var(--citui-white);border-color:var(--citui-bad)}
+  background:var(--citui-bad);color:var(--citui-on-bad);border-color:var(--citui-bad)}
 .adm-owe__pay:hover{background:color-mix(in srgb,var(--citui-bad) 88%,black);
-  color:var(--citui-white)}
+  color:var(--citui-on-bad)}
 .adm-owe__note{font-size:10px;color:var(--citui-muted);line-height:1.5;margin:8px 0 0}
 /* Phone first: money and button BEFORE the explanation, so the decision is not
    behind a scroll. Desktop puts the text left and the money in a raised panel. */
@@ -675,19 +676,19 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
    Every colour comes from the design core; no raw hex (ADR-0021 ①). */
 .adm-frz{background:linear-gradient(160deg,var(--citui-bad),
     color-mix(in srgb,var(--citui-bad) 72%,var(--citui-navy-900)));
-  color:var(--citui-white);border-radius:var(--citui-radius);
+  color:var(--citui-on-bad);border-radius:var(--citui-radius);
   padding:22px;margin:0 0 18px;box-shadow:none}
 .adm-frz__head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.adm-frz__head h2{font:700 16px var(--citui-font-display);margin:0;color:var(--citui-white)}
+.adm-frz__head h2{font:700 16px var(--citui-font-display);margin:0;color:var(--citui-on-bad)}
 .adm-frz__dot{width:11px;height:11px;border-radius:50%;background:var(--citui-panel);
   flex:0 0 auto;box-shadow:0 0 0 4px color-mix(in srgb,var(--citui-white) 28%,transparent)}
 .adm-frz__grid{display:grid;gap:18px}
 /* The block overrides the shared .adm-owe__* tones: on the red panel the muted
    grey label and the red figure would both be unreadable (contrast measured). */
-.adm-frz .adm-owe__l{color:color-mix(in srgb,var(--citui-white) 90%,transparent)}
-.adm-frz .adm-owe__v{color:var(--citui-white);font-size:39px}
+.adm-frz .adm-owe__l{color:color-mix(in srgb,var(--citui-on-bad) 90%,transparent)}
+.adm-frz .adm-owe__v{color:var(--citui-on-bad);font-size:39px}
 .adm-frz .adm-owe__sub,
-.adm-frz .adm-owe__note{color:color-mix(in srgb,var(--citui-white) 88%,transparent)}
+.adm-frz .adm-owe__note{color:color-mix(in srgb,var(--citui-on-bad) 88%,transparent)}
 /* Inverted button: white on red beats red-on-red, which the first cut produced
    (feedback_link_rule_eats_button_label — measure the contrast, don't assume). */
 .adm-frz .adm-owe__pay{background:var(--citui-panel);color:var(--citui-bad);
@@ -695,10 +696,10 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-frz .adm-owe__pay:hover{background:var(--citui-surface);color:var(--citui-bad)}
 .adm-owe__dl{background:color-mix(in srgb,var(--citui-white) 14%,transparent);
   border-radius:var(--citui-radius-sm);padding:16px;display:flex;flex-direction:column;gap:6px}
-.adm-owe__dlv{font:700 22px/1.1 var(--citui-font-display);color:var(--citui-white)}
+.adm-owe__dlv{font:700 22px/1.1 var(--citui-font-display);color:var(--citui-on-bad)}
 .adm-owe__dl p{margin:0;font-size:10px;line-height:1.5;
-  color:color-mix(in srgb,var(--citui-white) 92%,transparent)}
-.adm-owe__dl p b{color:var(--citui-white)}
+  color:color-mix(in srgb,var(--citui-on-bad) 92%,transparent)}
+.adm-owe__dl p b{color:var(--citui-on-bad)}
 .adm-owe__bar{height:7px;border-radius:var(--citui-radius-pill);overflow:hidden;margin:4px 0;
   background:color-mix(in srgb,var(--citui-white) 28%,transparent)}
 .adm-owe__bar i{display:block;height:100%;background:var(--citui-panel)}
@@ -713,13 +714,13 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
    kompakt változatból sem esik ki: ott is ez a leghasznosabb mondat. */
 .adm-frz__guest{margin:16px 0 0;padding-top:14px;font-size:11px;line-height:1.55;
   border-top:1px solid color-mix(in srgb,var(--citui-white) 28%,transparent);
-  color:color-mix(in srgb,var(--citui-white) 92%,transparent)}
-.adm-frz__guest b{color:var(--citui-white)}
+  color:color-mix(in srgb,var(--citui-on-bad) 92%,transparent)}
+.adm-frz__guest b{color:var(--citui-on-bad)}
 /* Aláhúzott, fehér link a piros panelen — a konzol `.con a` szabálya cián színt adna,
    ami ezen a háttéren mérhetetlenül gyenge kontraszt (feedback_link_rule_eats_button_label). */
-.adm-frz__glink{color:var(--citui-white);font-weight:700;text-decoration:underline;
+.adm-frz__glink{color:var(--citui-on-bad);font-weight:700;text-decoration:underline;
   white-space:nowrap}
-.adm-frz__glink:hover{color:var(--citui-white);text-decoration:none}
+.adm-frz__glink:hover{color:var(--citui-on-bad);text-decoration:none}
 .adm-frz--compact .adm-frz__guest{margin-top:12px;padding-top:11px}
 @media (min-width:760px){
   .adm-frz{padding:28px 30px}
@@ -830,7 +831,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-danger summary{cursor:pointer;font-size:11px;font-weight:700;margin-top:6px}
 .adm-danger__done{background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));
   border-radius:6px;padding:9px;margin-top:8px;font-size:11px}
-.adm-btn-bad{background:var(--citui-bad);color:var(--citui-white)}
+.adm-btn-bad{background:var(--citui-bad);color:var(--citui-on-bad)}
 
 /* ══ ADR-0084 — „Dokumentumok" és „Üzenetek" fül ═══════════════════════════════
    Kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a*.
@@ -1316,9 +1317,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   border-radius:var(--citui-radius-sm);margin-bottom:5px}
 .adm-dep__list li b{font-variant-numeric:tabular-nums}
 /* A közös lemondás a ROMBOLÓ út: nézzen is annak ki, ne a semleges elsődlegesnek. */
-.adm-mdl__go--warn{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
-/* Dark scope lightens --citui-bad (#ff7b7b): white on it is 2,51 — dark ink reads 5,8. */
-[data-citui-theme="dark"] .adm-mdl__go--warn{color:var(--citui-navy-900)}
+.adm-mdl__go--warn{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-on-bad)}
 /* ── Pénztárca (ADR-0226, design-refs/console/wallet) ─────────────────────── */
 .adm-wal__two{display:grid;grid-template-columns:1fr;gap:16px}
 @media (min-width:900px){.adm-wal__two{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start}}
