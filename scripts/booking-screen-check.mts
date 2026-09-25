@@ -260,7 +260,7 @@ try {
       check("a naptár összecsukható (details)", (await details.count()) === 1);
       const badge = (await page.locator(".cal-sum__badge").textContent()) ?? "";
       // 2 vendég-éjszaka + 1 kézi blokk — mind a megnyitott hónapban (fixtureWindow()).
-      check("a jelvény a foglalt napok számát mondja", /3 nap tele/.test(badge), badge);
+      check("a jelvény a foglalt napok számát mondja", /3 nap nem kiadó/.test(badge), badge);
       await page.locator(".cal-sum").click();
       await page.waitForTimeout(150);
       check("koppintásra becsukódik", !(await page.locator(".cal-grid").isVisible()));
@@ -311,7 +311,7 @@ try {
       const legend = (await page.locator(".cal-legend").textContent()) ?? "";
       check(
         "a jelmagyarázat mindkettőt külön nevezi meg",
-        /Ön jelölte tele/.test(legend) && /Vendég foglalása/.test(legend),
+        /Ön jelölte: nem kiadó/.test(legend) && /Vendég foglalása/.test(legend),
         legend.replace(/\s+/g, " "),
       );
 

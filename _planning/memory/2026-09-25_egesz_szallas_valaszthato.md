@@ -41,8 +41,9 @@ a sidebaron; a naptár címe legyen „Mikor nem kiadó?”; az „egész ház�
 
 ## Nyitva
 
-- A naptár jelvénye („nincs tele nap” / „N tele nap”) maradt a régi szóval — a tulaj döntése kell,
-  ha azt is át akarja írni.
+- ~~A naptár jelvénye maradt a régi szóval~~ → három szókészlet képpel (A „zárt” / B „nem kiadó” /
+  C „tele”), tulaj: **B** — jelvény „minden nap kiadó” / „N nap nem kiadó”, jelmagyarázat „Ön jelölte:
+  nem kiadó”, nap-kártya „jelölte nem kiadónak”; KB + kép + őr átírva.
 - A B-kártya select-je JS nélkül kikapcsolt állapotban is aktív (a terv tiltotta) — a szerver
   kezeli; JS-rátét később, ha zavar.
 - Élesítés: nem történt; verzió-deploy külön engedéllyel (§0.3).

@@ -35,8 +35,9 @@ soha nem találkozik a fogalommal (ADR-0044/b).
 
 - **Összecsukható.** A fejléc-sorban: „Mikor nem kiadó? — <egység>" (2026-09-25-ig „Mikor van
   tele?", a tulaj írta át), alatta a hónap, jobbra
-  egy jelvény, ami **csukott állapotban is megmondja a lényeget**: `3 nap tele` /
-  `nincs tele nap`. A chevron forog.
+  egy jelvény, ami **csukott állapotban is megmondja a lényeget**: `3 nap nem kiadó` /
+  `minden nap kiadó` (2026-09-25-ig a „tele” szóval; a tulaj a cím szavára
+  írta át — a jelmagyarázat „Ön jelölte: nem kiadó”, a nap-kártya „jelölte nem kiadónak”). A chevron forog.
 - **Egység-váltáskor a naptár KINYÍLIK** — a tulaj azért váltott, hogy lássa.
 - A rács Monday-first, a múlt napjai halványak és nem kattinthatók.
 - Asztali gépen a rács **nem nő tovább** (max ~500px); a jelmagyarázat és a mentés a
@@ -59,7 +60,7 @@ A kártya tartalma nap-fajtánként:
 |---|---|
 | **Saját foglalás** | Vendég neve · státusz-címke · időszak (hány éjszaka) · létszám · ár · e-mail és telefon **kattintható** linkként · honnan jött · a vendég üzenete, ha van. Műveletek: „Foglalás megnyitása" (a Foglalások fülre) és „Írok a vendégnek". |
 | **Másik egység foglalása** (csíkos) | KI tartja (vendég), melyik egységen, milyen időszakban, és a mondat, hogy ezért nem foglalható itt. Műveletek: „Foglalás megnyitása" + **„Átváltok a naptárára"**. |
-| **Kézi blokk** | ⚠️ **ELTÉRÉS a vázlattól, megvalósításkor (2026-09-08).** A vázlaton a kézi napnak is kártyája volt („Ön jelölte tele" + „Mégis kiadom ezt a napot"). A szállított képernyőn NINCS: a kézi nap koppintásra AZONNAL felszabadul — ez a képernyő fő művelete („koppintson a napokra, amikor tele van"), és egy közbeiktatott kártya minden egyes napnál két koppintásra lassítaná. Cserébe a kézi nap MÁS SZÍNŰ, mint a vendég-foglalás, és a jelmagyarázat külön nevezi meg: **„Ön jelölte tele"** vs. **„Vendég foglalása"** — a vázlaton ez a kettő pixel-azonos volt, ami a tudásbázis-őr szerint épp a legkockázatosabb félreértés. |
+| **Kézi blokk** | ⚠️ **ELTÉRÉS a vázlattól, megvalósításkor (2026-09-08).** A vázlaton a kézi napnak is kártyája volt (a kézi jelölés felirata + egy visszavonó gomb; a jelmagyarázat mai szava: „Ön jelölte: nem kiadó”). A szállított képernyőn NINCS: a kézi nap koppintásra AZONNAL felszabadul — ez a képernyő fő művelete („koppintson a napokra, amikor tele van"), és egy közbeiktatott kártya minden egyes napnál két koppintásra lassítaná. Cserébe a kézi nap MÁS SZÍNŰ, mint a vendég-foglalás, és a jelmagyarázat külön nevezi meg: **„Ön jelölte: nem kiadó" (2026-09-25-ig a „tele” szóval)** vs. **„Vendég foglalása"** — a vázlaton ez a kettő pixel-azonos volt, ami a tudásbázis-őr szerint épp a legkockázatosabb félreértés. |
 | **Portál-nap** | A portál neve, az időszak, és hogy **itt nem módosítható** — ott kell kezelni. |
 
 A kártya bezárható (×), a sötét háttérre koppintva is. A nyitott naphoz a naptárban

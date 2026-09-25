@@ -60,7 +60,7 @@ A **„Mikor nem kiadó?”** naptárban koppintson azokra a napokra, amikor nem
 A **„Naptár mentése”** gombbal rögzíti a változást. A ‹ és › nyilakkal lapozhat a hónapok között.
 
 A naptár **összecsukható**: a fejléc-sorára koppintva becsukódik, és becsukva is kiírja, hány nap
-tele van abban a hónapban (például „3 nap tele”; ha egy sincs: **„nincs tele nap”**). Újra koppintva
+nem kiadó abban a hónapban (például „3 nap nem kiadó”; ha egy sincs: **„minden nap kiadó”**). Újra koppintva
 kinyílik.
 
 ## A nap-fajták — és melyik mit csinál koppintásra
@@ -72,7 +72,7 @@ ha tényleg van ilyen nap — ezért gyakran csak az első hármat látja:
 | Jelmagyarázat | Mit jelent | Mi történik, ha rákoppint |
 |---|---|---|
 | **„Szabad”** | Foglalható éjszaka | Tele lesz (sötétkék). Mentés után a vendég nem tudja lefoglalni. |
-| **„Ön jelölte tele”** | Az Ön saját blokkja (közepes kék) | **Újra szabaddá válik** — így vonja vissza, ha mégis ki tudja adni. |
+| **„Ön jelölte: nem kiadó”** | Az Ön saját blokkja (közepes kék) | **Újra szabaddá válik** — így vonja vissza, ha mégis ki tudja adni. |
 | **„Vendég foglalása”** | Egy elfogadott foglalás (legsötétebb, apró világoskék ponttal) | **Felugrik a foglalás részlete** — lásd a következő szakaszt. Felszabadítani itt nem lehet. |
 | **„Másik egység foglalása”** | Csíkos: a szállás egy másik egysége tartja. **Csak akkor jelenik meg, ha van ilyen nap.** | Felugrik, hogy **melyik egység** és **ki** tartja. Itt nem oldható fel. |
 
@@ -86,8 +86,8 @@ A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
   **„Foglalás megnyitása”** (a Foglalások fülre visz) és **„Írok a vendégnek”**.
 - **Csíkos napnál** az, hogy **melyik egység** tartja. Ha ott vendég-foglalás van, a vendég neve és
   az időszaka is látszik, és a **„Foglalás megnyitása”** gombbal megnyithatja; ha viszont csak
-  kézzel jelölte tele azt az egységet, a kártya ezt írja: „Ezt a napot a … naptárában jelölte
-  tele”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
+  kézzel jelölte nem kiadónak azt az egységet, a kártya ezt írja: „Ezt a napot a … naptárában
+  jelölte nem kiadónak”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
 
 A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.
 

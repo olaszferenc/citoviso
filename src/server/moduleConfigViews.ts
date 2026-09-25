@@ -948,7 +948,7 @@ function dayDetailCard(c: MonthView["cells"][number], moduleId: string, unitId: 
       `<strong>${esc(dayLabel(c.day, lang))}</strong>` +
       (holder ? `<span class="daycard__tag">${esc(holder)}</span>` : "");
     body =
-      `<p class="daycard__note">${T(lang, "Ezt a napot {art} {unit} naptárában jelölte tele, ezért itt sem adható ki.", { art: huArticleLower(holder), unit: esc(holder) })}</p>` +
+      `<p class="daycard__note">${T(lang, "Ezt a napot {art} {unit} naptárában jelölte nem kiadónak, ezért itt sem adható ki.", { art: huArticleLower(holder), unit: esc(holder) })}</p>` +
       (d.otherUnitId
         ? `<div class="daycard__acts"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=${encodeURIComponent(moduleId)}&e=${encodeURIComponent(d.otherUnitId)}&ho=${c.day.slice(0, 7)}">${T(lang, "Átváltok a naptárára")}</a></div>`
         : "");
@@ -1032,7 +1032,7 @@ function calendarLegend(mv: MonthView, lang = "hu"): string {
     `<span><i></i>${T(lang, "Szabad")}</span>` +
     // Two different things used to share one legend entry — and one of them is
     // re-tappable while the other is not (KB guard, 2026-09-08).
-    `<span><i class="is-manual"></i>${T(lang, "Ön jelölte tele")}</span>` +
+    `<span><i class="is-manual"></i>${T(lang, "Ön jelölte: nem kiadó")}</span>` +
     `<span><i class="is-full"></i>${T(lang, "Vendég foglalása")}</span>` +
     // ADR-0114: a night another unit holds looks different, because it behaves
     // differently — it cannot be released here.
@@ -2196,8 +2196,8 @@ function bookingEditor(
     `<span>${esc(mv.label)}</span></span>` +
     `<span class="cal-sum__badge${mv.blockedCount === 0 ? " is-free" : ""}">${
       mv.blockedCount === 0
-        ? T(lang, "nincs tele nap")
-        : T(lang, "{n} nap tele", { n: mv.blockedCount })
+        ? T(lang, "minden nap kiadó")
+        : T(lang, "{n} nap nem kiadó", { n: mv.blockedCount })
     }</span>` +
     `<span class="cal-sum__chev">${ic("chevron-down", 18)}</span>` +
     `</summary>` +

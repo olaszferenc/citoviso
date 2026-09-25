@@ -39,7 +39,7 @@ a szobánál is kapcsolható („a ház egészénél is” címke), **az egész 
 szumma** az Árak lapon (vendégnek soha). Befagyasztva: `assets/design-refs/tenant-admin/whole-property-choice/`.
 Őr: ÚJ `whole-property-choice-check` (①–⑦, pre-commit), `amenity-picker-check` és `whole-property-check` ⑥
 átírva. Súgó (rooms/booking/pricing) + képek frissítve. **+ két apró tétel:** sidebar-görgető tokenszínű,
-naptár címe „Mikor nem kiadó?”. Nyitva: a naptár-jelvény („nincs tele nap”) szava; élesítés külön engedéllyel.
+naptár címe „Mikor nem kiadó?”, és a jelvény/jelmagyarázat/nap-kártya is a cím szavára („minden nap kiadó” / „N nap nem kiadó” / „Ön jelölte: nem kiadó”, tulaj: B). Nyitva: élesítés külön engedéllyel.
 
 ## Előző szál (2026-09-25 — modul-almenü az oldalsávban)
 
