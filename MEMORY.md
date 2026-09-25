@@ -18,7 +18,7 @@ című tenant-userének (`maintainDatedPrices` → `tenant_user.contact_email`, 
 nem fék). Mérve: 0 ment ki valaha. Zárva: `EMAIL_PROVIDER=mock` a dinamikus import előtt + a
 `server-import-env-check` ③ szabálya (4 piros + 3 kontroll önteszt). Jegyzet:
 `_planning/memory/2026-09-25_gate_email_mock.md`. Nyitva: termék-szintű fék (`CIT_SHOT` → csak-outbox).
-A tulaj sorrendje a maradékra: kb-shot (súgó-képek) → room-editor trigger → 5 kölcsönző kapu.
+A tulaj sorrendje a maradékra: kb-shot → room-editor trigger → 5 kölcsönző kapu. **kb-freshness: a ② szabály volt hibás** (dátum-heurisztika, 45/45 kép pixelre friss) → a verdiktet a `kb-shot --check-committed` adja. **room-editor trigger-lyuk: TÖRÖLVE** (a CSS inline a `moduleConfigViews.ts`-ben, ami a triggerben van).
 
 ## Aktív feladat (legfrissebb szál, 2026-09-25 — modul-almenü az oldalsávban)
 

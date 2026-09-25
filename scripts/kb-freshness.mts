@@ -76,6 +76,18 @@ function checkProdDrift(): string {
     );  return prodSha;
 }
 
+/** The content verdict, computed once per sweep: regenerate to a temp dir and pixel-compare
+ *  with the committed images (kb-shot --check-committed, exit 0 = every image identical). */
+let contentVerdict: { fresh: boolean; summary: string } | null = null;
+function contentCheck(): { fresh: boolean; summary: string } {
+  if (contentVerdict) return contentVerdict;
+  const r = spawnSync("npx", ["tsx", "scripts/kb-shot.mts", "--check-committed"], { encoding: "utf8", timeout: 600_000 });
+  const lines = `${r.stdout}\n${r.stderr}`.split("\n").map((l) => l.trim()).filter(Boolean);
+  const summary = lines.filter((l) => /friss|eltér|⛔|✅/.test(l)).slice(-2).join(" · ") || lines.slice(-1).join("") || `rc=${r.status}`;
+  // ⚠️ Fail-closed: a generator that could not run is NOT "fresh" — it is a flag.
+  contentVerdict = { fresh: r.status === 0, summary: r.status === 0 ? summary : `a tartalmi ellenőrzés nem futott le (rc=${r.status}): ${summary}` };
+  return contentVerdict;
+}
 function checkScreenshotStaleness(): void {
   console.log("── ② screenshot-frissesség (audience-csoportonként)");
   for (const [audience, views] of Object.entries(VIEW_GROUPS)) {
@@ -84,9 +96,25 @@ function checkScreenshotStaleness(): void {
     if (viewTs === 0) continue;
     if (viewTs > assetTs) {
       const days = ((viewTs - assetTs) / 86400).toFixed(1);
-      flag(
-        `${audience}: view-fájl commit ÚJABB, mint bármely entry-screenshot (${days} nappal) — futtasd: npx tsx scripts/kb-shot.mts`,
-      );
+      // ⛔ A DÁTUM CSAK GYANÚ, NEM ÍTÉLET (mérve 2026-09-25). Ez a sor két napon át „failed"-re
+      // tette a szolgáltatást, miközben a 45 commitolt kép PIXELRE azonos volt a friss
+      // gyártással: a tenant-nézetek változtak, a képek nem — és a dátum-összevetés ezt sosem
+      // tudhatta meg (egy azonos újragyártás nem hoz új asset-commitot, tehát a jel örökre
+      // piros maradna). Fordítva is hazudott: az operátor-csoportot ZÖLDRE engedte, mert az
+      // `assetTs` BÁRMELY közönség képeire nézi az utolsó commitot. Ezért a gyanút a
+      // TARTALMI kapu dönti el: `kb-shot --check-committed` (ADR-0220, pixel-összevetés).
+      const verdict = contentCheck();
+      if (verdict.fresh) {
+        note(
+          `${audience}: a view-fájl commit ${days} nappal újabb a képeknél, de a tartalom azonos (` +
+            `kb-shot --check-committed: ${verdict.summary}) ✓`,
+        );
+      } else {
+        flag(
+          `${audience}: view-fájl commit ÚJABB (${days} nappal) ÉS a képek tartalma eltér — ` +
+            `${verdict.summary} — futtasd: npx tsx scripts/kb-shot.mts, és commitold a képeket`,
+        );
+      }
     } else {
       note(`${audience}: a screenshotok nem régebbiek a view-knál ✓`);
     }

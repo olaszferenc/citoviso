@@ -22,6 +22,20 @@ küldhet dev-tenantnak — kód-olvasásból, mérés kell.”
   előtt (vagy a hook sora adja). Önteszt +4 piros +3 kontroll; élő negatív kontroll a valódi fájlon.
   A szabálynak alanya van (≥2 importáló), különben üres zöld lenne.
 
+## A négy tétel sorsa (a tulaj sorrendje: 1 → 4 → 3 → 2)
+- **1. levél-kockázat — ZÁRVA** (fent).
+- **4. `citoviso-kb-freshness.service` failed — a szabály volt hibás, nem a képek.** `kb-shot` újragyártása
+  után 28 tenant-kép bájtra, 5 konzol-kép pixelre azonos (a PNG bájtjai tértek el — kódoló-zaj, nem
+  commitoltam). `kb-shot --check-committed`: 45/45 friss. A ② szabály commit-DÁTUMOT hasonlított, és
+  az `assetTs`-t BÁRMELY közönség képeiből vette: a tenant-csoportot hamisan pirosra, az operátort
+  hamisan zöldre tette, és egy azonos újragyártás sosem tudta volna kioltani. Javítva: a dátum csak
+  gyanú, a verdiktet a tartalmi kapu (`--check-committed`, pixel) adja; fail-closed, ha nem fut le.
+- **3. `room-editor-check` trigger-lyuk — TÖRÖLVE, bizonyítékkal.** A szoba-szerkesztő 120 `.rs-*`
+  CSS-szabálya INLINE a `moduleConfigViews.ts`-ben él (a triggerben), az `adminViews.ts`-ben és a
+  `citui-admin.css`-ben 0 ilyen szabály — a tegnapi állításom fájlnevekből következtetett, nem
+  szelektorokból (feedback_my_own_summary_line_can_be_the_false_premise).
+- **2. az 5 kölcsönző kapu** — következik.
+
 ## Nyitva
 - A hibaosztály tágabb (bármely kapu, ami termék-kódon át levelez): egy termék-szintű fék
   (`CIT_SHOT=1` → csak-outbox küldő) zárná egyben, de az Elek-futások és a config-mérő kapuk
@@ -30,3 +44,4 @@ küldhet dev-tenantnak — kód-olvasásból, mérés kell.”
 ## Fájlok
 - `scripts/booking-offer-check.mts`, `scripts/season-year-price-check.mts`
 - `scripts/server-import-env-check.mts`
+- `scripts/kb-freshness.mts` (② tartalmi verdikt)
