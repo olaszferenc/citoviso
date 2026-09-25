@@ -252,7 +252,7 @@ export async function openUpsellPayUrl(tenantId: string): Promise<string | null>
 export async function handleWebhook(
   params: Record<string, unknown>,
   headers: Record<string, string | string[] | undefined>,
-): Promise<{ ok: boolean; activated?: boolean; pending?: boolean }> {
+): Promise<{ ok: boolean; activated?: boolean; pending?: boolean; orphan?: boolean }> {
   const gw = getGateway();
   const res = await gw.parseWebhook(params, headers);
   if (!res) return { ok: false };
@@ -285,6 +285,28 @@ export async function handleWebhook(
       if (again && again !== "pending") return applyWebhookResult(again);
     }
     return { ok: true, pending: true };
+  }
+  // An UNKNOWN payment that ended WITHOUT money moving (Expired / Canceled / Failed /
+  // Rejected) has nothing to reconcile: acknowledge it, and log it loudly here.
+  // Measured 2026-09-24: after the market-gate-check fix, three more expired sandbox
+  // payments arrived from a hotfix branch that still carried the OLD check — every
+  // checkout of an old test script can leak one, and each one used to 400 → Barion
+  // CallbackFailed mail. Fixing the senders one version at a time never ends; the
+  // receiving side can tell the harmless case apart. An unknown SUCCEEDED payment
+  // (money arrived, no row) still falls through to applyWebhookResult → 400 → Barion
+  // retries and mails us: that is the alarm worth keeping.
+  if (res.status === "failed") {
+    const known = await db
+      .selectFrom("payment")
+      .select("id")
+      .where("gateway_ref", "=", res.gatewayRef)
+      .executeTakeFirst();
+    if (!known) {
+      console.warn(
+        `[payment] ismeretlen fizetés callbackje, pénzmozgás nélkül zárult (${res.gatewayRef}) — nyugtázva, nincs teendő`,
+      );
+      return { ok: true, orphan: true };
+    }
   }
   return applyWebhookResult(res);
 }

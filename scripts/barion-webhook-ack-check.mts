@@ -9,6 +9,13 @@
 //     buried the ONE mail that matters: a real payment whose row we do not have.
 // So the guard asserts BOTH directions: in-flight → ack, unknown/unreadable → loud.
 //
+// 2026-09-25, two more ways (the mails kept coming after the fix above):
+//   ③ an UNKNOWN payment that expired without money (a leak from an old checkout of a
+//     test script — a hotfix branch still had the pre-fix market-gate-check) → now ack;
+//     only an unknown SUCCEEDED payment stays loud — that is where money is at stake;
+//   ④ Barion answered GetPaymentState with 429 during a Reservation's call burst →
+//     the callback went 400 on a healthy payment → now a bounded retry.
+//
 // No network: GetPaymentState is stubbed; any other fetch throws.
 //
 //   npx tsx scripts/barion-webhook-ack-check.mts
@@ -21,12 +28,21 @@ process.env.BARION_PAYEE ||= "check@example.invalid";
 
 let nextAnswer: { body: string; contentType: string } = { body: "{}", contentType: "application/json" };
 let gatewayCalls = 0;
+/** How many of the next GetPaymentState calls answer 429 before the real answer. */
+let rateLimited = 0;
 globalThis.fetch = (async (input: string | URL | Request) => {
   const url = String(input instanceof Request ? input.url : input);
   if (!url.includes("/v2/Payment/GetPaymentState")) {
     throw new Error(`barion-webhook-ack-check: unexpected network call → ${url}`);
   }
   gatewayCalls++;
+  if (rateLimited > 0) {
+    rateLimited--;
+    return new Response("<html><body><h1>429 Too Many Requests</h1></body></html>", {
+      status: 429,
+      headers: { "content-type": "text/html", "retry-after": "0" },
+    });
+  }
   return new Response(nextAnswer.body, { status: 200, headers: { "content-type": nextAnswer.contentType } });
 }) as typeof fetch;
 
@@ -144,9 +160,32 @@ try {
   r = await handleWebhook({ paymentId: KNOWN }, {});
   check("Expired → ok (200)", r.ok === true && r.pending !== true, JSON.stringify(r));
   check("…és a fizetés 'failed' lett", (await statusOf()) === "failed");
-  state("Expired");
+
+  console.log("\n4. Ismeretlen fizetés: a PÉNZ dönt (2026-09-25)");
+  for (const s of ["Expired", "Canceled", "Failed", "Rejected"]) {
+    state(s);
+    r = await handleWebhook({ paymentId: UNKNOWN }, {});
+    check(`ISMERETLEN, pénzmozgás nélkül zárult (${s}) → ok (200), nincs mit rendezni`, r.ok === true, JSON.stringify(r));
+  }
+  state("Succeeded");
   r = await handleWebhook({ paymentId: UNKNOWN }, {});
-  check("ISMERETLEN fizetés, lejárt → 400 (ez a valódi riasztás)", r.ok === false, JSON.stringify(r));
+  check("ISMERETLEN, de SIKERES (pénz jött, sor nincs) → 400 — ez a valódi riasztás", r.ok === false, JSON.stringify(r));
+
+  console.log("\n5. A Barion 429-e „most ne”, nem „nem tudom” → újrakérdezünk");
+  await db.updateTable("payment").set({ status: "pending" }).where("id", "=", pay.id).execute();
+  state("Reserved");
+  rateLimited = 2;
+  let calls = gatewayCalls;
+  r = await handleWebhook({ paymentId: KNOWN }, {});
+  check("két 429 után a harmadik kérdés válaszol → ok (200)", r.ok === true && r.pending === true, JSON.stringify(r));
+  check("…pontosan 3 GetPaymentState-hívással", gatewayCalls - calls === 3, `${gatewayCalls - calls} hívás`);
+  rateLimited = 5;
+  calls = gatewayCalls;
+  r = await handleWebhook({ paymentId: KNOWN }, {});
+  check("tartós 429 → 400 (a korlát hangos marad, nem nyeljük el)", r.ok === false, JSON.stringify(r));
+  check("…és véges: legfeljebb 3 hívás", gatewayCalls - calls === 3, `${gatewayCalls - calls} hívás`);
+  rateLimited = 0;
+  check("…a fizetés közben sem változott", (await statusOf()) === "pending");
 } finally {
   if (ids.orderId) await db.deleteFrom("payment").where("order_intent_id", "=", ids.orderId).execute();
   if (ids.orderId) await db.deleteFrom("order_intent").where("id", "=", ids.orderId).execute();
@@ -160,5 +199,5 @@ if (fails) {
   console.error(`\n✗ barion-webhook-ack-check: ${fails} bukás`);
   process.exit(1);
 }
-console.log("\n✅ barion-webhook-ack-check: folyamatban → nyugta, ismeretlen → hangos, végleges → rendez.");
+console.log("\n✅ barion-webhook-ack-check: folyamatban → nyugta, ismeretlen-sikeres → hangos, ismeretlen-lejárt → nyugta, 429 → újrakérdez, végleges → rendez.");
 process.exit(0);

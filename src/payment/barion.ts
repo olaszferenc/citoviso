@@ -40,6 +40,31 @@ const IN_FLIGHT_STATES = new Set([
   "Authorized",
 ]);
 
+/**
+ * GET with a short, bounded retry on HTTP 429.
+ *
+ * Measured 2026-09-24 (card-verification probe): one Reservation triggers a burst of
+ * GetPaymentState calls for the SAME payment within a second — the in-flight callback,
+ * finishReservation's own read, the re-read after it, Barion's Succeeded callback and
+ * the buyer's /pay/done. The sandbox answered 429 to two of them; the callback then
+ * went 400 and Barion mailed "Unsuccessful callback", although the payment was fine.
+ * A 429 says "not now", not "unknown": wait a moment and ask again. Bounded (the
+ * callback must still answer quickly); after the last try the 429 goes back to the
+ * caller unchanged, so a persistent limit stays loud.
+ */
+const RATE_LIMIT_DELAYS_MS = [800, 1600];
+async function fetchWithRateLimitRetry(url: string): Promise<Response> {
+  let resp = await fetch(url);
+  for (const base of RATE_LIMIT_DELAYS_MS) {
+    if (resp.status !== 429) return resp;
+    const retryAfter = Number(resp.headers.get("retry-after"));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 3000) : base;
+    await new Promise((r) => setTimeout(r, waitMs));
+    resp = await fetch(url);
+  }
+  return resp;
+}
+
 export class BarionGateway implements PaymentGateway {
   readonly name = "barion";
   private readonly posKey: string;
@@ -214,7 +239,7 @@ export class BarionGateway implements PaymentGateway {
     const url = `${API}/v2/Payment/GetPaymentState?POSKey=${encodeURIComponent(
       this.posKey,
     )}&PaymentId=${encodeURIComponent(paymentId)}`;
-    const resp = await fetch(url);
+    const resp = await fetchWithRateLimitRetry(url);
     // ⛔ A GATEWAY NEM-JSON VÁLASZA NEM LEHET A MI 500-ASUNK (mérve 2026-09-15).
     // A Barion hibás kérésre HTML-lapot ad JSON helyett; a csupasz `resp.json()`
     // ilyenkor DOB, és mivel a `/pay/done` (a Barion RedirectUrl-je) ezt a hívást
@@ -295,7 +320,7 @@ export class BarionGateway implements PaymentGateway {
       const stateUrl = `${API}/v2/Payment/GetPaymentState?POSKey=${encodeURIComponent(
         this.posKey,
       )}&PaymentId=${encodeURIComponent(gatewayRef)}`;
-      const state = (await (await fetch(stateUrl)).json()) as {
+      const state = (await (await fetchWithRateLimitRetry(stateUrl)).json()) as {
         Status?: string;
         Transactions?: { TransactionId?: string; POSTransactionId?: string }[];
       };

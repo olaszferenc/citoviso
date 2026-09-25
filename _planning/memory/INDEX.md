@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-25_barion_callback_failed_2.md](2026-09-25_barion_callback_failed_2.md) — 2026-09-25 — Barion „Unsuccessful callback" levelek a javítás UTÁN is: két új ok, fogadó oldali javítás
 - [2026-09-24_worktree_collision_root_causes.md](2026-09-24_worktree_collision_root_causes.md) — 2026-09-24 — „Worktree commit összeakadások” — három gyökérok, mindhárom zárva (ADR-0223)
 - [2026-09-24_tenant_admin_linear_redesign.md](2026-09-24_tenant_admin_linear_redesign.md) — Tenant-admin újratervezés — „Linear” nyelv jóváhagyva (2026-09-24)
 - [2026-09-24_tenant_admin_linear_build.md](2026-09-24_tenant_admin_linear_build.md) — Tenant-admin újratervezés — a „Linear” terv MEGÉPÍTVE (2026-09-24, átadott session)
