@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-konzol-linear-keret-navigacios-fa.md) — A belső konzol kerete a tenant-admin „Linear” nyelvén, EGY bővíthető navigációs fából (2026-09-25)
+- [ADR-0233](decisions/0233-a-belso-konzol-kerete-a-tenant-admin-linear.md) — A belső konzol kerete a tenant-admin „Linear” nyelvén, EGY bővíthető navigációs fából (2026-09-25)
 - [ADR-0232](decisions/0232-az-egesz-szallas-valaszthato-egyseg-nem.md) — Az „egész szállás” VÁLASZTHATÓ egység: nem kötelező, törölhető, áttehető; saját árral (2026-09-25)
 - [ADR-0231](decisions/0231-a-kapu-fixture-szuloje-sajat-es-onmagat-torli.md) — A kapu fixture-szülője SAJÁT és önmagát törli: nincs kölcsönzött és nincs hátrahagyott scrape_run (2026-09-25)
 - [ADR-0230](decisions/0230-gep-szintu-varakozosor-a-kapu-futtatonak-az.md) — Gép-szintű várakozósor a kapu-futtatónak: az egész gépen egyszerre legfeljebb N kapu fut, `flock`-slotokon, sessiontől függetlenül (2026-09-25)

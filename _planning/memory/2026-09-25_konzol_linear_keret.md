@@ -1,6 +1,6 @@
 # 2026-09-25 — A belső konzol kerete a tenant-admin „Linear” nyelvén, egy bővíthető navigációs fából
 
-**Szál:** wt/citd2f7aee7 · **ADR:** ADR-XXXX (helyőrző, a land osztja ki) · **Kontraktus:** `assets/design-refs/console/linear-shell/`
+**Szál:** wt/citd2f7aee7 · **ADR:** ADR-0233 (helyőrző, a land osztja ki) · **Kontraktus:** `assets/design-refs/console/linear-shell/`
 · **Státusz:** lokálban kész, NEM élesítve.
 
 ## A tulaj kérése és a döntés

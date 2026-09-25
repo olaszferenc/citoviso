@@ -4,7 +4,7 @@
 oldalsáv-mintája) a B · „Modul-sáv” helyett; (2) módosítással: **a modul-sor maga is
 kattintható** → a modul SAJÁT irányítópultja nyílik, és a fa alatta kinyílik; (3) „**struktúrát
 építs** — lesz még számos alrész meg főrész is”: a navigáció EGY bővíthető fa, nem beégetett menü.
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0224 (a tenant-admin Linear nyelve — a mag),
+**Kapcsolódó:** ADR-0233 (ez a döntés), ADR-0224 (a tenant-admin Linear nyelve — a mag),
 ADR-0021 ① (dizájn-mag), ADR-0045 §J (súgó-horgonyok), ADR-0067 ③ (kérés-szintű nyelv),
 ADR-0188 (lead-lista), Elek FK-003 (a jelvény és a lista, amit nyit, ugyanazt mondja).
 **Hatókör:** `src/console/nav.ts` · `src/console/navCounts.ts` · `src/console/i18nCtx.ts` · `src/console/views.ts` · `src/console/server.ts` · `public/assets/ui/citui-console.css` · `public/assets/ui/citui-console-table.css` · `src/ui/icons.ts`

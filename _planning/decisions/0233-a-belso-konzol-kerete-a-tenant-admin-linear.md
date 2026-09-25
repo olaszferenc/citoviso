@@ -1,4 +1,4 @@
-## ADR-XXXX — A belső konzol kerete a tenant-admin „Linear” nyelvén, EGY bővíthető navigációs fából (2026-09-25)
+## ADR-0233 — A belső konzol kerete a tenant-admin „Linear” nyelvén, EGY bővíthető navigációs fából (2026-09-25)
 
 **Dátum:** 2026-09-25 · **Státusz:** elfogadva, megvalósítva (lokálban; nem élesítve) ·
 **Kapcsolódó:** ADR-0224 (a tenant-admin Linear nyelve — a mag), ADR-0021 ① (dizájn-mag),
