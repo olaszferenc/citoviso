@@ -17,6 +17,7 @@
 import { T } from "../i18n/mail.js";
 import type { TrafficReport } from "../analytics/trafficReport.js";
 import type { EmailMessage } from "./sender.js";
+import { bandBrand } from "./platformLayout.js";
 
 const NAVY = "#0e2a47";
 const CYAN = "#1fb6d6";
@@ -104,13 +105,15 @@ export function buildTrafficEmail(input: TrafficEmailInput): EmailMessage {
     )
     .join("");
 
+  // E4 logo, CID-inline (owner, 2026-09-25: not the old "CITOVISO." text mark).
+  const brand = bandBrand();
   const inner = tbl(
     `width="100%" style="width:100%;max-width:600px;background:#ffffff" bgcolor="#ffffff"`,
     `<tr><td style="padding:18px 20px 12px;border-bottom:2px solid ${CYAN}">` +
       tbl(
         `width="100%"`,
         `<tr><td align="left" style="font-family:${FONT};font-size:13px;font-weight:700;` +
-          `letter-spacing:2px;color:${NAVY};text-transform:uppercase">Citoviso<span style="color:${CYAN}">.</span></td>` +
+          `letter-spacing:2px;color:${NAVY};text-transform:uppercase">${brand.html}</td>` +
           `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;` +
           `color:${MUTED};text-transform:uppercase">${esc(T(lang, "Havi forgalom"))}</td></tr>`,
       ) +
@@ -145,5 +148,12 @@ export function buildTrafficEmail(input: TrafficEmailInput): EmailMessage {
     ) +
     `</body></html>`;
 
-  return { to, subject, text, html, audience: "platform" };
+  return {
+    to,
+    subject,
+    text,
+    html,
+    audience: "platform",
+    ...(brand.attachments.length ? { attachments: brand.attachments } : {}),
+  };
 }

@@ -20,13 +20,12 @@
 // table) — other clients get the fluid max-width table, because the fixed one CUTS
 // text off on a 390px phone. Structural guard: scripts/outlook-lint.mts.
 
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { T } from "../i18n/mail.js";
 import { config } from "../config.js";
 import type { OutreachDraft, OutreachParts } from "../outreach/draft.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
-import { LOGO_CID, LOGO_PATH, logoAttachment } from "./platformLayout.js";
+import { bandBrand } from "./platformLayout.js";
 
 /** CID of the embedded hero screenshot (referenced from the HTML). */
 export const HERO_CID = "hero-terv";
@@ -45,11 +44,6 @@ const PAGE_BG = "#eef2f6";
 
 /** A real, installed font first: Outlook falls over on `-apple-system`. */
 const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif";
-
-// The E4 logo (ADR-0225), smaller than in the platform frame: the header here is a
-// thin band. Same 492×108 PNG, so the ratio stays 4.56:1.
-const LOGO_W = 128;
-const LOGO_H = 28;
 
 const W = 600;
 const PAD = 20; // side padding → 560px of content, the same width as the hero image
@@ -86,15 +80,10 @@ function buildMail(
   t: OutreachParts,
   l: MailLinks,
   lang?: string,
-  hasLogo = false,
+  brand = `Citoviso<span style="color:${CYAN}">.</span>`,
 ): string {
   // ── header: two cells, NOT float (Outlook drops float) ───────────────────
-  // Owner, 2026-09-25: the letter carries the approved E4 logo, not the old
-  // "CITOVISO." text mark. The text mark stays only as the no-file fallback.
-  const brand = hasLogo
-    ? `<img src="cid:${LOGO_CID}" width="${LOGO_W}" height="${LOGO_H}" alt="Citoviso" ` +
-      `style="display:block;border:0;outline:none;width:${LOGO_W}px;height:${LOGO_H}px">`
-    : `Citoviso<span style="color:${CYAN}">.</span>`;
+  // `brand` = the E4 logo from bandBrand() (owner, 2026-09-25).
   const header =
     `<tr><td style="padding:16px ${PAD}px 12px;border-bottom:2px solid ${CYAN}">` +
     tbl(
@@ -233,13 +222,13 @@ export function buildOutreachEmail(
   }
 
   const hasShot = Boolean(opts.heroShotPath);
-  const hasLogo = existsSync(LOGO_PATH);
+  const brand = bandBrand();
   const inner = buildMail(
     hasShot ? `cid:${HERO_CID}` : null,
     draft.parts,
     { cta: draft.link, unsub: draft.unsubscribeLink, privacy: draft.privacyLink },
     opts.lang,
-    hasLogo,
+    brand.html,
   );
 
   const html =
@@ -248,7 +237,7 @@ export function buildOutreachEmail(
     `</body></html>`;
 
   const list: EmailAttachment[] = [
-    ...(hasLogo ? [logoAttachment()] : []),
+    ...brand.attachments,
     ...(hasShot
       ? [
           {

@@ -145,6 +145,28 @@ export function logoAttachment(): EmailAttachment {
   return { filename: "citoviso.png", path: LOGO_PATH, cid: LOGO_CID, contentType: "image/png" };
 }
 
+// The thin-band letters (outreach, traffic, programs) show the logo smaller than
+// the platform frame. Same 492×108 PNG, so the ratio stays 4.56:1.
+const BAND_LOGO_W = 128;
+const BAND_LOGO_H = 28;
+
+/**
+ * The E4 logo for a thin header band (owner, 2026-09-25: no letter may carry the
+ * old "CITOVISO." text mark). `html` goes into the left header cell; `attachments`
+ * must be merged into the message. The text mark is only the no-file fallback.
+ */
+export function bandBrand(): { html: string; attachments: EmailAttachment[] } {
+  if (!existsSync(LOGO_PATH)) {
+    return { html: `Citoviso<span style="color:${CYAN}">.</span>`, attachments: [] };
+  }
+  return {
+    html:
+      `<img src="cid:${LOGO_CID}" width="${BAND_LOGO_W}" height="${BAND_LOGO_H}" alt="Citoviso" ` +
+      `style="display:block;border:0;outline:none;width:${BAND_LOGO_W}px;height:${BAND_LOGO_H}px">`,
+    attachments: [logoAttachment()],
+  };
+}
+
 function headerHtml(hasLogo: boolean): string {
   const logo = hasLogo
     ? `<img src="cid:${LOGO_CID}" width="${LOGO_W}" height="${LOGO_H}" alt="Citoviso" ` +
