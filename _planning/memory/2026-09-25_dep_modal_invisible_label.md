@@ -16,6 +16,13 @@ Online foglalás él” párbeszédben a piros fő gomb felirat nélkül jelent 
 - Mérve Playwrighttal a valódi CSS-sel, mindkét témában. Felület-kapu: tulaj-engedélyes kivétel.
 - NEM élesítve.
 
-## Nyitott
-- A többi piros alapú gomb (`adm-btn--danger`, `adm-btn-bad`, `.adm-toast.bad`) sötét témában
-  fehér felirattal 2,51-es kontrasztú → közös „szöveg piros alapon” token javasolt.
+## Folytatás — közös token (ugyanaz a nap)
+- Új `--citui-on-bad` (`citui.css`): világosban fehér, `[data-citui-theme="dark"]` alatt navy-900.
+  Sötét téma CSAK a tenant-adminban van (`adminViews.ts` állítja), ezért a konzol/vendég-lap érintetlen.
+- Átkötve: `adm-bulk`/`adm-dlg` danger-gomb, `adm-toast.bad` (+ikon), `adm-state--bad` fej,
+  `adm-owe__pay` (+hover), `adm-btn-bad`, `adm-mdl__go--warn` (az egyedi felülírás helyett),
+  a fagyasztott panel (`adm-frz`, `adm-owe__dl`, `adm-frz__guest/glink`) szövegei, `bk-btn--danger`.
+- Mérve: a fagyasztott panel sötét színátmenetén a legrosszabb pont 2,22 → 3,59 (a navy felé
+  keveredő vég miatt ennél jobb egyetlen színnel nem érhető el).
+- Nyitott: a zöld (`--citui-ok` sötétben #3ddc97) tömör felületek (`bk-btn--ok`, `adm-state--ok`)
+  fehér felirata sötétben ugyanilyen gyenge — ugyanezzel a mintával `--citui-on-ok` kellene.
