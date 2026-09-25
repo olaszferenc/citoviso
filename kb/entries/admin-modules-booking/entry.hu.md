@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, egységek, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-09-23
+updated: 2026-09-25
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -56,7 +56,7 @@ A képernyő tetején egy sötét sáv áll: benne a modul neve és díja, alatt
 **„Vissza a modulokhoz”** link (előtte egy ‹ nyíl) és az **„Útmutató ehhez a képernyőhöz”**
 (ez nyitja ezt a súgót).
 
-A **„Mikor van tele?”** naptárban koppintson azokra a napokra, amikor nem tud vendéget fogadni.
+A **„Mikor nem kiadó?”** naptárban koppintson azokra a napokra, amikor nem tud vendéget fogadni.
 A **„Naptár mentése”** gombbal rögzíti a változást. A ‹ és › nyilakkal lapozhat a hónapok között.
 
 A naptár **összecsukható**: a fejléc-sorára koppintva becsukódik, és becsukva is kiírja, hány nap
@@ -104,10 +104,12 @@ pedig helyben rögzíti, hogy egyedi ajánlatot küld.
 Több egységnél a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
 Az egység nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
 
-### „A szállás egésze” — és miért csíkos néha egy nap
+### Az egész szállás — és miért csíkos néha egy nap
 
-A lista első eleme mindig **az egész szállás**, a fülön ez ki is van írva („az egész ház”). Ez az
-egység azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
+Ha a házat egyben is kiadja, az egyik egysége **az egész szállás** — a fülön ez ki is van írva
+(„az egész ház”). Melyik egység az, azt a Szobák, apartmanok modul beállító-képernyőjén, a rács
+fölötti **„Az egész szállás egyben”** kártyán dönti el; a második egység felvételekor a rendszer
+meg is kérdezi. Ez az egység azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
 
 - ha az **egész szállást** foglalják le egy napra, az összes szobája **automatikusan foglalt** lesz
   arra a napra;
@@ -115,5 +117,7 @@ egység azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
 
 Ezek a napok a másik egység naptárában **csíkosan** jelennek meg. Ott nem lehet felszabadítani őket
 (különben ugyanaz az éjszaka kétszer kelne el) — a napra koppintva viszont látja, ki tartja, és egy
-gombbal átválthat annak az egységnek a naptárára. Az egész szállás egysége ezért **nem törölhető**;
-átnevezni bármikor átnevezheti.
+gombbal átválthat annak az egységnek a naptárára. Ha nincs egész szállásnak jelölt egysége, a
+szobák egymástól függetlenül telnek be, és csíkos nap sincs. Bármelyik egység törölhető a sora
+**„Törlés”** gombjával — az egész szállás is —, kivéve az utolsót és azt, amelyikhez elfogadott
+jövőbeli foglalás tartozik.

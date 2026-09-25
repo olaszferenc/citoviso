@@ -12,7 +12,7 @@
 //     zero JavaScript. No spinner, no "saving…", no way to be left uncertain.
 //   · imported (portal) days are visibly different and not tappable — the owner is
 //     never invited to "free up" a day the portal considers sold.
-//   · jargon is banned: "Mikor van tele?", never "availability"; the word iCal
+//   · jargon is banned: "Mikor nem kiadó?", never "availability"; the word iCal
 //     never appears — the owner sees "Booking.com összekötése".
 //   · every screen states what happens next in plain terms.
 //
@@ -1086,10 +1086,10 @@ export interface EditorUnit {
  * VALUE is the catalogue's Hungarian label, because the label is what the
  * storage holds (see amenityCatalog.ts) — the id never leaves the code.
  *
- * `inherited` (per-unit mode): the site-wide picks render as dashed, untogglable
- * tiles with an "az egész szállásra" tag — the owner sees the full picture at
- * the room without being able to double-claim (approved decision: greyed, not
- * hidden and not editable).
+ * `inherited` (per-unit mode): the site-wide picks are offered at the room TOO,
+ * toggleable, with an "a ház egészénél is" tag for orientation (owner decision
+ * 2026-09-25, ADR-XXXX — replaces the greyed, untogglable tiles: a room may list
+ * what the house also has, the guest reads the room page on its own).
  */
 interface AmenityPickerOpts {
   /** "property" offers property+both, "unit" offers unit+both. */
@@ -1098,7 +1098,7 @@ interface AmenityPickerOpts {
   readonly selected: readonly string[];
   /** Stored free-text lines (the Egyéb box). */
   readonly other: readonly string[];
-  /** Site-wide picks shown greyed in unit mode. */
+  /** Site-wide picks — offered (toggleable) and tagged in unit mode. */
   readonly inherited?: readonly string[];
   /** Unique DOM id prefix — several pickers may share a page (one per room). */
   readonly idPrefix: string;
@@ -1118,27 +1118,18 @@ function amenityPicker(o: AmenityPickerOpts): string {
   let selectable = 0;
   for (const cat of AMENITY_CATEGORIES) {
     const items = AMENITY_CATALOG.filter((a) => a.category === cat.key && (fits(a) || inh.has(a.label)));
-    const inherited = items.filter((a) => inh.has(a.label));
-    const own = items.filter((a) => !inh.has(a.label) && fits(a));
-    if (!inherited.length && !own.length) continue;
-    selectable += own.length;
+    if (!items.length) continue;
+    selectable += items.length;
     tiles +=
       `<h3 class="ampick__cat">${T(lang, cat.label)}</h3><div class="ampick__grid">` +
-      inherited
+      items
         .map(
           (a) =>
-            `<div class="ampick__tile ampick__tile--inh" data-t="${esc(T(lang, a.label).toLowerCase())}" ` +
-            `title="${T(lang, "Az egész szállásra beállítva — a szoba automatikusan örökli")}">` +
-            `<span class="ampick__ico">${amenitySvg(a)}</span>` +
-            `<span>${T(lang, a.label)}<span class="ampick__inhtag">${T(lang, "az egész szállásra")}</span></span></div>`,
-        )
-        .join("") +
-      own
-        .map(
-          (a) =>
-            `<label class="ampick__tile" data-t="${esc(T(lang, a.label).toLowerCase())}">` +
+            `<label class="ampick__tile${inh.has(a.label) ? " ampick__tile--house" : ""}" data-t="${esc(T(lang, a.label).toLowerCase())}">` +
             `<input type="checkbox" name="${esc(o.checkName)}" value="${esc(a.label)}"${sel.has(a.label) ? " checked" : ""}>` +
-            `<span class="ampick__ico">${amenitySvg(a)}</span><span>${T(lang, a.label)}</span></label>`,
+            `<span class="ampick__ico">${amenitySvg(a)}</span><span>${T(lang, a.label)}` +
+            (inh.has(a.label) ? `<span class="ampick__inhtag">${T(lang, "a ház egészénél is")}</span>` : "") +
+            `</span></label>`,
         )
         .join("") +
       `</div>`;
@@ -1254,12 +1245,81 @@ function roomGate(u: EditorUnit): { ok: boolean; missing: ("photo" | "text")[] }
   return { ok: hasPhoto && hasText, missing };
 }
 
-function roomMeta(u: EditorUnit, lang: string): string {
+function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): string {
   const bits = [
     u.capacity ? T(lang, "{n} fő", { n: u.capacity }) : T(lang, "férőhely nincs megadva"),
-    u.isWholeProperty ? T(lang, "az egész ház") : "",
+    // ADR-XXXX: with one unit the concept is invisible — a renamed default ("Apartman 1")
+    // must not carry "az egész ház" on a screen where there is nothing else.
+    u.isWholeProperty && units.length > 1 ? T(lang, "az egész ház") : "",
   ].filter(Boolean);
   return bits.join(" · ");
+}
+
+/**
+ * ADR-XXXX (approved plan whole-property-choice B): the card above the rooms grid where
+ * the owner says whether the place is ALSO let as one, and which unit that is. Only
+ * with 2+ units — a single-unit owner never meets the concept. Plain form: works with
+ * zero JS; unchecked → no unit is the whole place, the rooms are independent.
+ */
+function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
+  if (units.length < 2) return "";
+  const whole = units.find((u) => u.isWholeProperty) ?? null;
+  const opts = units
+    .map(
+      (u) =>
+        `<option value="${esc(u.id)}"${u.isWholeProperty ? " selected" : ""}>${esc(u.name)}` +
+        (u.capacity ? ` · ${esc(T(lang, "{n} fő", { n: u.capacity }))}` : "") +
+        `</option>`,
+    )
+    .join("");
+  return (
+    `<form method="POST" action="/admin/units/whole" class="rs-wcard${whole ? " is-on" : ""}" data-cit-whole-card>` +
+    `<div class="rs-wcard__t"><b>${ic("modules", 15)}${T(lang, "Az egész szállás egyben")}</b>` +
+    `<p>` +
+    (whole
+      ? T(lang, "Az egész szállás most: {name}. Ha lefoglalják, minden más egység tele lesz arra az éjszakára — és bármelyik szoba foglalása az egészet zárja.", {
+          name: `<b>${esc(whole.name)}</b>`,
+        })
+      : T(lang, "Most minden egység külön naptárral, egymástól függetlenül telik be. Ha a házat egyben is kiadja, kapcsolja be, és mondja meg, melyik egység az.")) +
+    `</p></div>` +
+    `<div class="rs-wcard__c">` +
+    `<label class="rs-wtoggle"><input type="checkbox" name="on" value="1"${whole ? " checked" : ""} data-cit-whole-on>` +
+    `<span>${T(lang, "Kiadom egyben is")}</span></label>` +
+    `<select class="citui-input rs-wpick" name="unit" aria-label="${T(lang, "Melyik egység az egész szállás")}" data-cit-whole-pick>` +
+    (whole ? "" : `<option value="">${T(lang, "— melyik egység —")}</option>`) +
+    opts +
+    `</select>` +
+    `<button class="citui-btn citui-btn--ghost citui-btn--sm" type="submit">${T(lang, "Mentés")}</button>` +
+    `</div></form>`
+  );
+}
+
+/**
+ * ADR-XXXX: the question asked at the moment of adding the SECOND unit — inside the
+ * add form (required radios), because that is where the decision is made. With any
+ * other count the form has no such block and the flag stays as it is.
+ */
+function wholeQuestion(units: readonly { id: string; name: string }[], lang: string): string {
+  if (units.length !== 1) return "";
+  const first = units[0]!;
+  const opt = (value: string, title: string, why: string): string =>
+    `<label class="rs-wq__o"><input type="radio" name="whole" value="${value}" required>` +
+    `<span><b>${title}</b><small>${why}</small></span></label>`;
+  return (
+    `<fieldset class="rs-wq" data-cit-whole-q><legend>${T(lang, "Az egész szállást is kiadja egyben?")}</legend>` +
+    `<p>${T(lang, "Eddig egy egysége volt: {name}. A második felvételekor el kell dönteni, mi a viszonyuk.", { name: `<b>${esc(first.name)}</b>` })}</p>` +
+    opt(
+      "igen",
+      T(lang, "Igen, az egészet is kiadom egyben"),
+      T(lang, "{name} marad az egész szállás. A foglalása minden szobát lezár, és bármelyik szoba foglalása az egészet.", { name: esc(first.name) }),
+    ) +
+    opt(
+      "nem",
+      T(lang, "Nem, csak külön egységeket adok ki"),
+      T(lang, "{name} sima egység lesz. A szobák egymástól függetlenül telnek be. Később bármikor megjelölhet egyet az egész szállásnak.", { name: esc(first.name) }),
+    ) +
+    `</fieldset>`
+  );
 }
 
 /** The badge the GUEST sees on the public room card — the admin shows the same words.
@@ -1290,7 +1350,7 @@ function roomCard(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
     `<a class="rs-gcard" href="#szoba-${esc(u.id)}" data-rs-card="${esc(u.id)}">` +
     `<span class="rs-gim">${cover}` +
     `<span class="rs-gcount">${ic("photos", 11)}${esc(roomCountBadge(n, lang))}</span></span>` +
-    `<span class="rs-gbd"><b>${esc(u.name)}</b><span>${esc(roomMeta(u, lang))}</span>` +
+    `<span class="rs-gbd"><b>${esc(u.name)}</b><span>${esc(roomMeta(u, units, lang))}</span>` +
     `<span class="rs-b rs-b--${g.ok ? "ok" : "warn"}">${ic(g.ok ? "check" : "alert", 12)}` +
     `${g.ok ? T(lang, "Van saját oldala") : T(lang, "Hiányos")}</span>` +
     coverClash(u, units, lang) +
@@ -1507,7 +1567,7 @@ function roomAmenityPane(u: EditorUnit, ctx: UnitAmenityContext | undefined, lan
   // kiválasztva — a picker saját szkriptje utána élővé teszi ugyanezt a sort.
   return (
     `<div class="rs-sec"><h4>${ic("modules", 15)}${T(lang, "Felszereltség")}</h4>` +
-    `<p class="rs-why">${T(lang, "Csak azt sorolja fel, ami EBBEN az egységben van. A ház egészére vonatkozó tételek a Felszereltség modulnál maradnak.")}</p>` +
+    `<p class="rs-why">${T(lang, "Jelölje, ami EBBEN az egységben van — akkor is, ha a Felszereltség lapon a ház egészénél is szerepel: a vendég a szoba adatlapján külön látja.")}</p>` +
     (total ? `<div class="rs-ams" data-rs-chips>${chips}</div>` : "") +
     `<details class="rs-amcat"${total ? "" : " open"}>` +
     // ⛔ A felirat NEM írja bele a katalógus darabszámát: a „70 tételes lista" attól
@@ -1561,7 +1621,7 @@ function roomPopup(
     radio("fel") +
     `<div class="rs-pop__top">` +
     `<a class="rs-pop__x" href="#szobak" aria-label="${T(lang, "Bezárás")}">${ic("close", 16)}</a>` +
-    `<b>${esc(u.name)}</b><span class="rs-pop__meta">${esc(roomMeta(u, lang))}</span></div>` +
+    `<b>${esc(u.name)}</b><span class="rs-pop__meta">${esc(roomMeta(u, units, lang))}</span></div>` +
     `<div class="rs-tabs" role="tablist">` +
     tab("alap", T(lang, "Alapok"), null) +
     tab("kep", T(lang, "Képek"), n) +
@@ -1574,10 +1634,12 @@ function roomPopup(
     `</div>` +
     `<div class="rs-pop__foot">` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button>` +
-    // ADR-0114: az egész szállás nem törölhető (ő horgonyozza a kizárást), ezért a
-    // gombot nem is kínáljuk — a csak „nem lehet"-et válaszoló gomb rosszabb a semminél.
-    (units.length > 1 && !u.isWholeProperty
-      ? `<button class="rs-del" type="submit" formaction="/admin/units/delete">${T(lang, "Egység törlése")}</button>`
+    // ADR-XXXX: every unit is deletable while another remains — the whole place too
+    // (afterwards the rooms are independent). The last one has no button: a site with
+    // nothing bookable is not a state we allow (deleteUnit says so).
+    (units.length > 1
+      ? `<input type="hidden" name="back" value="rooms">` +
+        `<button class="rs-del" type="submit" formaction="/admin/units/delete">${T(lang, "Egység törlése")}</button>`
       : "") +
     `</div></form></div>`
   );
@@ -1691,11 +1753,13 @@ function roomsEditor(
     `<h1>${T(lang, "A szobái")}</h1>` +
     `<p>${T(lang, "A kártya azt mutatja, amit a vendég lát a honlapon. Koppintson rá — a szerkesztő felugrik.")}</p></div></div>` +
     newUnitFlash(nu, lang) +
+    wholePropertyCard(units, lang) +
     `<div class="rs-grid" id="szobak">${cards}</div>` +
     // A felvétel a MAI viselkedés marad (a terv szándékosan nem kötötte be), csak a
     // helye változik: a rács alatt, egyetlen szaggatott vezérlőben.
     `<details class="rs-new"><summary>${ic("plus")}${T(lang, "Új egység felvétele")}</summary>` +
     `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
+    wholeQuestion(units, lang) +
     `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
     `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
     `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
@@ -1712,7 +1776,7 @@ function roomsEditor(
 export interface UnitAmenityContext {
   /** Is the Felszereltség module active? false → conversion panel, no inputs. */
   readonly active: boolean;
-  /** Site-wide catalogue picks — shown greyed and untogglable on the room card. */
+  /** Site-wide catalogue picks — offered (toggleable) and tagged on the room card. */
   readonly siteSelected: readonly string[];
 }
 
@@ -1918,10 +1982,8 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
         `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
         `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
-        // ADR-0114: the whole place cannot be deleted (it anchors the exclusion), so
-        // the button is not offered — a button whose only answer is "nem lehet" is
-        // worse than no button.
-        (multi && !u.isWholeProperty
+        // ADR-XXXX: every unit is deletable while another remains — the whole place too.
+        (multi
           ? `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit" ` +
             `formaction="/admin/units/delete">${T(lang, "Törlés")}</button>`
           : "") +
@@ -1940,6 +2002,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
     `</p>` +
     rows +
     `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
+    wholeQuestion(booking.units, lang) +
     `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
     `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
     `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
@@ -2129,7 +2192,7 @@ function bookingEditor(
     `<details class="adm-card cal-card" id="cit-naptar" open>` +
     `<summary class="cal-sum">` +
     `<span class="adm-ico">${ic("overview")}</span>` +
-    `<span class="cal-sum__txt"><strong>${T(lang, "Mikor van tele?")}${multi ? ` — ${esc(unitName)}` : ""}</strong>` +
+    `<span class="cal-sum__txt"><strong>${T(lang, "Mikor nem kiadó?")}${multi ? ` — ${esc(unitName)}` : ""}</strong>` +
     `<span>${esc(mv.label)}</span></span>` +
     `<span class="cal-sum__badge${mv.blockedCount === 0 ? " is-free" : ""}">${
       mv.blockedCount === 0
@@ -2531,6 +2594,30 @@ function priceDecision(
  * Seasons are recurring MONTH-DAY, so a high season is entered once and holds every
  * year; making them re-enter it each January would guarantee stale prices.
  */
+/**
+ * ADR-XXXX (owner 2026-09-25): the whole place has its OWN price, never the rooms'
+ * sum — a derived figure would be a number nobody set (§B.17). This line is owner-side
+ * orientation only: what the rooms cost together, so the owner knows what to price
+ * against. The guest never sees it.
+ */
+function wholeSumHint(data: PricingEditorData, cur: string, today: string, lang: string): string {
+  const rooms = data.units.filter((u) => !u.isWholeProperty);
+  const bases = rooms.map((r) =>
+    (data.prices[r.id] ?? []).find((p) => p.isBase && !p.validFrom && (!p.validTo || p.validTo >= today)),
+  );
+  const sum = bases.reduce((s, b) => s + (b?.amount ?? 0), 0);
+  if (!sum) return "";
+  const missing = bases.filter((b) => !b).length;
+  return (
+    `<p class="citui-hint" data-cit-whole-sum style="margin:-8px 0 14px">` +
+    T(lang, "Tájékoztatásul: a szobák külön, együtt {sum} {cur} / éj.", { sum: grouped(sum), cur: esc(cur) }) +
+    (missing ? " " + T(lang, "({n} egységnek nincs alapára.)", { n: missing }) : "") +
+    " " +
+    T(lang, "Az egész szállás ára ettől független — azt Ön adja meg.") +
+    `</p>`
+  );
+}
+
 function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   // ⛔ Was `=== "EUR" ? "€" : "Ft"`, i.e. ANY other currency printed as forint.
   const cur = currencySign(data.currency);
@@ -2592,6 +2679,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +
         `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
+        (u.isWholeProperty && data.units.length > 1 ? wholeSumHint(data, cur, today, lang) : "") +
         priceDecision(u, Boolean(base), seasons.length > 0, data.status[u.id] ?? "none", lang) +
         (datedRows
           ? datedRows +

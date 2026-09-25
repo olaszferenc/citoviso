@@ -98,18 +98,24 @@ ok(
 );
 ok(/kézműves lekvár/.test(active), "a szabad szöveg az Egyéb mezőben van");
 {
-  // Inherited: present, labelled, and carries NO input — count both sides.
-  const inheritedTiles = (active.match(/ampick__tile--inh/g) ?? []).length;
-  ok(inheritedTiles >= 2, "az örökölt (szállás-szintű) tételek látszanak a szobánál", `talált: ${inheritedTiles}`);
-  const inhBlock = active.slice(active.indexOf("ampick__tile--inh"), active.indexOf("ampick__tile--inh") + 400);
-  ok(!/<input/.test(inhBlock), "az örökölt csempe NEM kapcsolható (nincs input)", inhBlock.slice(0, 120));
-  ok(/az egész szállásra/.test(active), "az örökölt csempe meg is mondja, miért nem kapcsolható");
+  // ADR-XXXX (owner 2026-09-25): the house-level picks are OFFERED at the room too —
+  // a toggleable tile with a tag, never a locked one. Both sides measured: the tag
+  // is there, the input is there, and the old locked class is gone.
+  const houseTiles = (active.match(/ampick__tile--house/g) ?? []).length;
+  ok(houseTiles >= 2 && houseTiles % 2 === 0, "a ház-szintű tételek (2 / szoba) a szobánál is látszanak, jelölve", `talált: ${houseTiles}`);
+  const houseBlock = active.slice(active.indexOf("ampick__tile--house"), active.indexOf("ampick__tile--house") + 1200);
+  ok(/<input type="checkbox"/.test(houseBlock), "a ház-szintű csempe KAPCSOLHATÓ (van input)", houseBlock.slice(0, 120));
+  ok(/a ház egészénél is/.test(houseBlock), "a csempe megmondja, hogy a ház egészénél is szerepel");
+  ok(!/ampick__tile--inh|az egész szállásra/.test(active), "nincs többé zárolt (örökölt) csempe");
+  // A house-level pick that is PROPERTY-only in the catalogue (Medence) is offered at
+  // the room exactly because the owner listed it for the house — toggleable.
+  ok(/ampick__tile ampick__tile--house[^>]*>\s*<input type="checkbox" name="am" value="Medence"/.test(active), "a ház-szintű Medence a szobánál is választható");
 }
 {
-  // Scope on the RENDERED surface, not just in compose: property-only items must
-  // not be offered on the room card (unless inherited), unit-only not on the site.
-  const pool = 'value="Medence"';
-  ok(!active.includes(pool), "CSAK-szállás tétel (Medence) nem választható a szobánál");
+  // Scope on the RENDERED surface, not just in compose: a property-only item the
+  // owner did NOT pick for the house is not offered on the room card.
+  const pool = 'value="Kert"';
+  ok(!active.includes(pool), "CSAK-szállás, nem kiválasztott tétel (Kert) nem választható a szobánál");
 }
 
 const locked = moduleSettingsSection("rooms", {

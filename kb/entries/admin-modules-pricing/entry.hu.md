@@ -149,6 +149,9 @@ szerkesztőre mutat.
 
 ## Az egész szállás árát is adja meg
 
-Az „A szállás egésze” nevű egység ugyanolyan egység, mint a szobák: ha a vendég a teljes szállást foglalja,
-ennek az egységnek az árát látja. Ha itt nincs ár, a teljes ház foglalásához nem tudunk árat
-mutatni — a szobák ára ilyenkor nem ugrik be helyette.
+Ha a házat egyben is kiadja, az egész szállásnak jelölt egység ugyanolyan egység, mint a szobák: ha a
+vendég a teljes szállást foglalja, ennek az egységnek az árát látja. Az árat Ön adja meg — a szobák
+ára nem adódik össze helyette, mert az egész ház ára a valóságban sem a részek összege. Segítségül
+a kártyáján az alapár alatt egy tájékoztató sor mutatja, mennyibe kerülnek a szobák külön, együtt
+(„Tájékoztatásul: a szobák külön, együtt … / éj.”) — ezt csak Ön látja, a vendég nem. Ha itt nincs
+ár, a teljes ház foglalásához nem tudunk árat mutatni: a vendég árajánlatot kér.

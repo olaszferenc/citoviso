@@ -136,11 +136,15 @@ try {
     check("az egészet MINDEN egység blokkolhatja", fromWhole.size === 3);
     check("a szobát csak önmaga és az egész", fromRoom.size === 2 && fromRoom.has(whole.id));
 
-    // ── ⑥ az egész szállás nem törölhető, a szoba igen ──────────────────────
-    const delWhole = await deleteUnit(siteId, whole.id);
-    check("az egész szállás törlése ELUTASÍTVA", !delWhole.ok, delWhole.reason ?? "");
+    // ── ⑥ (ADR-XXXX, 2026-09-25 — ADR-0114 ⑦ hatályon kívül) az egész szállás IS
+    //    törölhető, és utána a szobák egymástól függetlenek: a kizárás a jelölt sorral
+    //    együtt tűnik el, árnyék nem marad (④: levezetett, nem tárolt).
     const delRoom = await deleteUnit(siteId, room2.id);
     check("egy szoba törölhető", delRoom.ok, delRoom.reason ?? "");
+    const delWhole = await deleteUnit(siteId, whole.id);
+    check("az egész szállás is törölhető (ADR-XXXX)", delWhole.ok, delWhole.reason ?? "");
+    check("utána a szoba csak önmagát zárja", (await blockingUnitIds(room1.id)).join() === room1.id);
+    check("és nincs többé fölérendelt egység", (await wholePropertyUnitId(siteId)) === null);
   }
 } finally {
   // Takarítás — a közös dev DB-ben semmi nyom nem maradhat utánunk.

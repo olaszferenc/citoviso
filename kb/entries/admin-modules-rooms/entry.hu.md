@@ -36,6 +36,13 @@ képpel szerepel.
 férőhelyét, és nyomja meg a **„Hozzáadás”** gombot. Ha csak egyben adja ki az egész szállást, elég
 egyetlen egység — ilyenkor a vendég nem is találkozik a szobaválasztással.
 
+Amikor a **második** egységet veszi fel, ugyanebben az űrlapban egy kérdés vár: **„Az egész
+szállást is kiadja egyben?”** Két válasz közül kell választania, enélkül a **„Hozzáadás”** nem megy
+el. **„Igen, az egészet is kiadom egyben”**: az eddigi egysége marad az egész szállás, a most
+felvett szoba pedig külön naptárat kap — a kettő egymást zárja (lásd lejjebb). **„Nem, csak külön
+egységeket adok ki”**: az eddigi egysége sima szobává válik, és a szobák egymástól függetlenül
+telnek be. Ezt később a rács fölötti kártyán bármikor átállíthatja.
+
 Ha az Árak modul is be van kapcsolva, a **„Hozzáadás”** megnyomása ELŐTT ugyanitt az árat is
 megadhatja (**„Alapár”** mező), vagy bepipálhatja a gomb alatti négyzetet: **„Nem adok meg árat —
 egyedi ajánlatot küldök”**. Egyiket sem kötelező kitölteni, a szoba mindenképp felkerül. Ha a
@@ -86,9 +93,10 @@ Itt azt sorolja fel, ami **ebben az egységben** van (a ház egészére vonatkoz
 Felszereltség modulnál állítja). A kiválasztott tételek kis címkéken látszanak; újat a
 **„Hozzáadás a listából”** résznél vesz fel, ikonos csempéken. Ha még egy tétel sincs kiválasztva,
 a lista rögtön nyitva van. A kereső mezőbe beírva gyorsan megtalál bármit (pl. „stég”). Ami nincs
-a listában, azt az **„Egyéb, ami nincs a listában”** mezőbe írhatja, soronként egyet. Ami az egész
-szállásra vonatkozik (pl. medence, parkolás), az halvány, szaggatott csempeként látszik: azt a
-Felszereltség modulnál állítja, és a szoba automatikusan örökli.
+a listában, azt az **„Egyéb, ami nincs a listában”** mezőbe írhatja, soronként egyet. Amit a
+Felszereltség modulnál a ház egészénél már bejelölt (pl. wifi, reggeli), az itt is választható, és
+a csempéjén egy kis felirat jelzi: **„a ház egészénél is”**. Nyugodtan jelölje be a szobánál is —
+a vendég a szoba saját oldalán csak a szoba listáját olvassa.
 
 Ez a fül csak akkor szerkeszthető, ha a **Felszereltség** modul be van kapcsolva — ha nincs, a fül
 megmutatja, mit tudna itt beállítani, és a Modulok fülre hív.
@@ -103,10 +111,20 @@ vendéget hozhat. A rács kártyáján és az **„Alapok”** fülön is mindig
 egységnek lesz-e saját oldala, és ha nem, mi hiányzik hozzá. Üres oldalt sosem készítünk — az
 többet ártana, mint használna.
 
-## „A szállás egésze” — a fölérendelt egység
+## Az egész szállás egyben — ha a házat egyben is kiadja
 
-A lista első eleme mindig **az egész szállás**: ez azt jelenti, hogy valaki a teljes szállást
-foglalja le. Ezért ha az egész szállást lefoglalják egy napra, a szobái arra a napra
-automatikusan foglaltak lesznek — és fordítva, ha bármelyik szobája foglalt, az egész szállás
-nem adható ki aznap. Emiatt ez az egység **nem törölhető** (az **„Egység törlése”** gomb nem is
-jelenik meg a felugrójában); átnevezni bármikor átnevezheti.
+Ha egynél több egysége van, a rács fölött egy kártya áll: **„Az egész szállás egyben”**. Itt dönti
+el, hogy a házat egyben is kiadja-e. A **„Kiadom egyben is”** négyzet bepipálva, mellette a
+legördülőben kiválasztva, melyik egység jelenti az egész szállást — a **„Mentés”** gombbal rögzíti.
+Ennek az egységnek a kártyáján a rácson ott áll: „az egész ház”. Ha lefoglalják, minden más
+egység tele lesz arra az éjszakára — és fordítva, ha bármelyik szobája foglalt, az egész szállás
+nem adható ki aznap. A kártya mindig kiírja, melyik egység az egész.
+
+Ha a négyzet nincs bepipálva, nincs ilyen egység: a szobák egymástól függetlenül telnek be, és
+egyik kártyán sem szerepel „az egész ház”. Egyetlen egységnél a kártya nem is jelenik meg — ilyenkor
+nincs mit eldönteni.
+
+Bármelyik egységet törölheti a felugrója alján lévő **„Egység törlése”** gombbal — azt is, amelyik
+az egész szállás (utána a szobák egymástól függetlenül telnek be). Két kivétel: az utolsó egység
+nem törölhető (a gomb nem is jelenik meg), és az olyan egység sem, amelyikhez még elfogadott
+jövőbeli foglalás tartozik — ezt a képernyő tetején egy sáv mondja meg.

@@ -18,7 +18,7 @@
 //
 // ERGONOMICS (the target user has no digital footprint in 2026):
 //   · every field has a working default — an untouched module still behaves;
-//   · labels are the owner's words, never jargon ("Mikor van tele?", not "availability");
+//   · labels are the owner's words, never jargon ("Mikor nem kiadó?", not "availability");
 //   · few fields per module: each extra decision is a cost to the owner.
 // All owner-facing text sits in THIS file, so wrapping the module-config surface
 // for the language pack later is a single-file mechanical change (§B.18).

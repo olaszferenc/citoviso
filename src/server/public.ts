@@ -125,6 +125,7 @@ import {
   setUnitAmenities,
   setUnitSeasonalOnly,
   setUnitPriceOnRequest,
+  setWholeProperty,
   getUnits,
   unitBelongsToSite,
   updateUnit,
@@ -2506,7 +2507,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       if (id && (await unitBelongsToSite(siteId, id))) {
         await updateUnit(siteId, id, name, cap, form.get("description"));
       } else if (!id) {
+        const before = await getUnits(siteId);
         const created = await createUnit(siteId, name, cap, form.get("description"));
+        // ADR-XXXX: the SECOND unit is the moment the owner decides whether the place is
+        // also let as one — the add form asks (required radio), the answer sets or clears
+        // the flag on the unit that was there before. No answer (an older form, or a
+        // 3rd+ unit) leaves the flag as it is.
+        const whole = form.get("whole");
+        if (created && before.length === 1 && (whole === "igen" || whole === "nem")) {
+          await setWholeProperty(siteId, whole === "igen" ? before[0]!.id : null);
+        }
         // ADR-0208 ⑥.3 (approved plan price-on-request ②): with pricing on, the new-unit
         // row asks for the price or "nem adok meg árat". ⛔ It never refuses the save
         // (ADR-0193 ①) — a unit without either is created, and the flash says what
@@ -2543,16 +2553,34 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
     const siteId = await tenantSiteId(session.tenantId);
+    // The owner comes back to the screen the button was on (rooms editor or booking).
+    const back = form.get("back") === "rooms" ? "rooms" : "booking";
     if (siteId) {
       const result = await deleteUnit(siteId, form.get("id") ?? "");
       if (!result.ok && result.reason) {
         return redirect(
           res,
-          `/admin?tab=modulok&m=booking&hiba=${encodeURIComponent(result.reason)}`,
+          `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(result.reason)}`,
         );
       }
     }
-    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=booking&saved=1");
+    return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=${back}&saved=1`);
+  }
+  // POST /admin/units/whole — ADR-XXXX: which unit is the whole place, if any (the card
+  // above the rooms grid, approved plan whole-property-choice B). Unchecked → none.
+  if (req.method === "POST" && pathname === "/admin/units/whole") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const siteId = await tenantSiteId(session.tenantId);
+    if (siteId) {
+      const unit = form.get("unit") ?? "";
+      const on = form.get("on") !== null && unit && (await unitBelongsToSite(siteId, unit));
+      await setWholeProperty(siteId, on ? unit : null);
+    }
+    // The flag changes what the guest's calendar blocks and what the room card says —
+    // the snapshot is rebuilt like after any unit edit.
+    return redirectRerendered(res, session.tenantId, "/admin?tab=modulok&m=rooms&saved=1#szobak");
   }
   // POST /admin/photos/order — reorder; photos[0] is the cover in every template.
   if (req.method === "POST" && pathname === "/admin/photos/order") {

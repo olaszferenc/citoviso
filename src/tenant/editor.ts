@@ -436,7 +436,8 @@ export async function moduleContentFor(
         ...(own ? { photo: own } : {}),
         ...(mine.length > 1 ? { photos: mine } : {}),
         ...(hasPage ? { slug: u.slug! } : {}),
-        ...(u.isWholeProperty ? { wholeProperty: true } : {}),
+        // ADR-XXXX: with a single unit the concept does not exist for the guest either.
+        ...(u.isWholeProperty && units.length > 1 ? { wholeProperty: true } : {}),
       };
     });
     // ⛔ ADR-0209: the site-level amenities are NOT filtered against the units' lists.

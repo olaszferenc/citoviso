@@ -780,6 +780,15 @@ if [ -f scripts/whole-property-check.mts ] && \
   echo "[pre-commit] whole-property-check (ADR-0114: egész szállás ↔ szobák)…"
   npx tsx scripts/whole-property-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Az „egész szállás" VÁLASZTHATÓ egység (jóváhagyott terv: whole-property-choice „B", 2026-09-25):
+# a kártya a rács fölött, a 2. egység kérdése, bármely egység törölhető, a tájékoztató
+# szumma CSAK a tulajnak. A régi vissza-jelölő (ensureUnits) visszatérése pont a mért hibát
+# hozná vissza (átnevezett „Apartman 1" zárta a többi szobát). Saját eldobható fixture-rel mér.
+if [ -f scripts/whole-property-choice-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/units\.ts|src/tenant/unitScope\.ts|src/tenant/editor\.ts|src/server/(moduleConfigViews|public)\.ts)$|^scripts/whole-property-choice-check'; then
+  echo "[pre-commit] whole-property-choice-check (az egész szállás választható egység)…"
+  npx tsx scripts/whole-property-choice-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Az ÜZEMI RIASZTÁS minden beállított címre menjen (tulaj-kérés, 2026-09-12). A címzettet
 # beállítani ADDITÍV ÍRÁS — a mezőben látszó három cím nem bizonyítja, hogy a levél
 # mindhármat eléri. Az őr a kimenő levél To: fejlécét olvassa vissza (outbox, nem hálózat).

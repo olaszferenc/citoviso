@@ -121,10 +121,8 @@ export async function peekUnits(siteId: string): Promise<Unit[]> {
       },
     ];
   }
-  // ensureUnits() would mark the first unit as the whole place (ADR-0114) — say the same, unsaved.
-  return rows.some((u) => u.isWholeProperty)
-    ? rows
-    : rows.map((u, i) => (i === 0 ? { ...u, isWholeProperty: true } : u));
+  // ADR-XXXX: no unit is the whole place unless the owner said so — nothing to invent.
+  return rows;
 }
 
 /**
@@ -138,20 +136,10 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
     // Back-fill slugs for units created before 0026 — a unit without an address
     // cannot have a subpage, and silently skipping it would drop it from the sitemap.
     for (const u of existing) if (!u.slug) await assignSlug(siteId, u.id, u.name);
-    const withSlugs = existing.some((u) => !u.slug) ? await getUnits(siteId) : existing;
-    // ADR-0114: the whole place is not optional. Sites that predate 0059 with several
-    // renamed units may have none marked (the migration deliberately did not guess) —
-    // the FIRST unit is the one ensureUnits created as "the whole place", so it is.
-    if (!withSlugs.some((u) => u.isWholeProperty)) {
-      const first = withSlugs[0]!;
-      await db
-        .updateTable("site_unit")
-        .set({ is_whole_property: true })
-        .where("id", "=", first.id)
-        .execute();
-      return getUnits(siteId);
-    }
-    return withSlugs;
+    // ADR-XXXX (2026-09-25): the whole place is a CHOICE, not a given. The former
+    // back-fill marked the first unit as the whole place whenever none was — that is
+    // exactly how a renamed default ("Apartman 1") kept blocking the other rooms.
+    return existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
   }
   const row = await db
     .insertInto("site_unit")
@@ -163,8 +151,9 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
 }
 
 /**
- * The unit that IS the whole place (ADR-0114), or null for a site that has no units
- * yet. Every exclusion rule hangs off this one row, so it is read, never guessed.
+ * The unit that IS the whole place (ADR-0114), or null when the owner does not let the
+ * place as one (ADR-XXXX) or the site has no units yet. Every exclusion rule hangs off
+ * this one row, so it is read, never guessed; null means the rooms are independent.
  */
 export async function wholePropertyUnitId(siteId: string): Promise<string | null> {
   const row = await db
@@ -174,6 +163,31 @@ export async function wholePropertyUnitId(siteId: string): Promise<string | null
     .where("is_whole_property", "=", true)
     .executeTakeFirst();
   return row?.id ?? null;
+}
+
+/**
+ * ADR-XXXX — the owner's choice: this unit is the whole place (its booking blocks every
+ * room and vice versa, `unitScope.ts`), or nobody is (null → the rooms are independent).
+ * At most one per site: the partial unique index of 0059 still guards it, and clearing
+ * first makes the move atomic enough for a single owner's click.
+ */
+export async function setWholeProperty(siteId: string, unitId: string | null): Promise<void> {
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .updateTable("site_unit")
+      .set({ is_whole_property: false })
+      .where("site_id", "=", siteId)
+      .where("is_whole_property", "=", true)
+      .execute();
+    if (unitId) {
+      await trx
+        .updateTable("site_unit")
+        .set({ is_whole_property: true })
+        .where("id", "=", unitId)
+        .where("site_id", "=", siteId)
+        .execute();
+    }
+  });
 }
 
 /** True when the owner genuinely has several bookable things (drives the UI). */
@@ -276,16 +290,8 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   if (units.length <= 1) {
     return { ok: false, reason: "Legalább egy egységnek maradnia kell." };
   }
-  // ADR-0114 (tulaj): az egész szállás MINDIG van. Törölhetővé téve a kizárás
-  // horgonya tűnne el — a szobák onnantól újra egymástól függetlenül telnének be.
-  if (target.isWholeProperty) {
-    return {
-      ok: false,
-      reason:
-        "Az egész szállás nem törölhető: ez tartja össze a többi egység naptárát. " +
-        "Átnevezni átnevezheti.",
-    };
-  }
+  // ADR-XXXX: the whole place is deletable like any unit (the owner chose it, the owner
+  // can drop it) — afterwards the rooms are independent, and the screen says so.
   const today = new Date().toISOString().slice(0, 10);
   const booked = await db
     .selectFrom("booking_request")

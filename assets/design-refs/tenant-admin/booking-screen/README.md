@@ -33,7 +33,8 @@ soha nem találkozik a fogalommal (ADR-0044/b).
 
 ## 3. Amit a NAPTÁR köt
 
-- **Összecsukható.** A fejléc-sorban: „Mikor van tele? — <egység>", alatta a hónap, jobbra
+- **Összecsukható.** A fejléc-sorban: „Mikor nem kiadó? — <egység>" (2026-09-25-ig „Mikor van
+  tele?", a tulaj írta át), alatta a hónap, jobbra
   egy jelvény, ami **csukott állapotban is megmondja a lényeget**: `3 nap tele` /
   `nincs tele nap`. A chevron forog.
 - **Egység-váltáskor a naptár KINYÍLIK** — a tulaj azért váltott, hogy lássa.
