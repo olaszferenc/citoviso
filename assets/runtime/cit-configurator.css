@@ -755,7 +755,11 @@
 }
 
 .cit-cfg-foot {
-  padding: 14px 18px 18px;
+  /* The consent bar publishes its measured height on :root (--citui-consent-h) so
+   * host UIs can step out of its way. Measured 2026-09-24 (Elek FK-005a): at
+   * 1280×900 the bar sat ON the "Tovább a megrendeléshez" button until the buyer
+   * answered it — the primary action was unreachable. */
+  padding: 14px 18px calc(18px + var(--citui-consent-h, 0px));
   border-top: 1px solid #262b34;
   background: #14171c;
 }

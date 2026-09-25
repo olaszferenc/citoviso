@@ -94,6 +94,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · _planning/de
   tedd: írd "#cit-to" "2026-11-21"
   tedd: kattints "Foglalási kérés elküldése"
   várd: látható "Sajnos ezek a napok már foglaltak. Válasszon másik időpontot."
+  várd: nem látható "egyedi árat ad"
   kézi: a naptárban a 2026-11-20 foglalt napként JELÖLT-e, és a jelölés megkülönböztethető-e a szabad naptól (szín + nem csak szín); az üzenet segít-e másik időpontot találni, vagy csak elutasít
 
 - [ ] Múltbeli dátumra a rendszer nem fogadja el a kérést — és megmondja, mikortól lehet
@@ -102,16 +103,12 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · _planning/de
   tedd: írd "#cit-name" "Elek Vendég Egy"
   tedd: írd "#cit-email" "elek@citoviso.com"
   tedd: írd "#cit-phone" "+36 30 555 0001"
-  # Mérve 2026-09-24: múltbeli dátumra a widget NEM „múlt"-at mond, hanem „egyedi
-  # árat ad"-ot, és a gomb „Árajánlatot kérek"-re vált (nincs ár a múltra). Bármelyik
-  # gomb áll ott, a kérést el kell küldeni, hogy a SZERVER válasza mérhető legyen.
-  tedd?: kattints "Foglalási kérés elküldése"
-  tedd?: kattints "Árajánlatot kérek"
+  # 2026-09-24 (Elek Z3): múltbeli dátumra a widget „egyedi árat ad"-ot írt és
+  # árajánlat-gombra váltott; a „legkorábbi érkezés" csak a szerver 400-ából derült ki.
+  # Azóta a widget a beküldés ELŐTT mondja ki, és a gomb tiltott — kattintás nincs.
   várd: látható "A legkorábbi foglalható érkezés"
-  kézi: ZAVAROS-gyanú: a beküldés ELŐTT a doboz „egyedi árat ad"-ot ígért egy múltbeli időszakra — a vendég ezt hogyan érti?
-  tűrt-hiba: 400 /api/foglalas — a múltbeli dátumot a szerver 400-zal utasítja el, ez a mért viselkedés; a lelet az üzenet érthetősége, nem a státuszkód
-  # A dátum-mezőnek van min-korlátja, de gépelve/kitöltve átmegy — a vendég csak a
-  # beküldés UTÁN tudja meg, hogy a múltba foglalt. Elek ítéli: ez zavaró-e.
+  várd: nem látható "egyedi árat ad"
+  kézi: az üzenet a dátum-mezők KÖZELÉBEN van-e (390px-en is), és a gomb tiltottnak NÉZ-e ki
 
 - [ ] Név nélkül a rendszer a nevet kéri (jó dátumokkal)
   tedd: írd "#cit-from" "2026-10-24"
@@ -165,8 +162,10 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · _planning/de
   tedd: írd "#cit-email" "elek@citoviso.com"
   tedd: írd "#cit-phone" "+36 30 555 0002"
   tedd: kattints "Árajánlatot kérek"
-  tedd: várj "Elküldtük a kérését" 30
-  várd: látható "Elküldtük a kérését"
+  tedd: várj "Elküldtük az árajánlat-kérését" 30
+  várd: látható "Elküldtük az árajánlat-kérését"
+  várd: látható "árajánlattal válaszol"
+  várd: nem látható "lemondó linket"
   várd: látható "2026. 11. 05. — 2026. 11. 07."
   adat: ELEK-TESZT árajánlat-kérés (Elek Vendég Kettő, 2026-11-05 → 11-07)
   kézi: a nyugta megmondja-e, hogy ÁRAT fog kapni (nem visszaigazolást), és hogy mi történik azután — vagy ugyanaz a nyugta, mint egy áras foglalásnál, „Összesen" nélkül

@@ -372,7 +372,8 @@ export async function createBookingRequest(
   }
   const earliest = addDays(today(), leadTimeDays);
   if (dateFrom < earliest) {
-    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest) }));
+    // huDate ends with a dot and so does the sentence — "2026. 09. 24.." was Elek FK-008 H6.
+    errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest).replace(/\.$/, "") }));
   }
   if (dateFrom > addMonths(today(), horizonMonths)) {
     errors.push(T(lang, "Ennyire előre még nem lehet foglalni."));

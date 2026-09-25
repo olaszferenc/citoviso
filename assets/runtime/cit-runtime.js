@@ -318,6 +318,11 @@
        * A doboz üres, a gomb marad a foglalásnál — az árajánlat-mód ÁLLÍTÁS, nem
        * alapértelmezés. */
       if (!(n > 0)) { el.innerHTML = ""; el.classList.remove("cit-book__quote--ask"); setAskMode(false); return; }
+      /* Elek FK-008 H3 (2026-09-24): on BOOKED (or otherwise unbookable) nights the
+       * box said "egyedi árat ad", the button "Árajánlatot kérek", and the note
+       * "már foglaltak" — three answers to one question. The range's problem is
+       * the only message; no price and no quote path until it is fixed. */
+      if (problem()) { el.innerHTML = ""; el.classList.remove("cit-book__quote--ask"); setAskMode(false); return; }
       var q = quoteFor(a, b);
       /* ⛔ KONTRAKTUS ①–③: ez a pont eddig NÉMÁN kiürítette a dobozt. Mérve (valódi
        * böngésző, 2026-09-22): asztalon üres lyuk maradt a dátum-sáv alatt, mobilon
@@ -439,17 +444,30 @@
         : hostPhone
           ? tr("hívja a szállásadót: {phone}").replace("{phone}", hostPhone)
           : tr("keresse a szállásadót a honlapon megadott elérhetőségen");
-      var steps =
-        "<li>" + esc(when) + "</li>" +
-        "<li>" +
-        esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
-        " " + tr("Ha nem érkezik meg, nézze meg a levélszemét mappát is.") + "</li>" +
-        "<li>" + tr("Ha visszaigazolja, a levélben kap egy lemondó linket is — azzal bármikor lemondhatja.") + "</li>" +
-        "<li>" + esc(tr("Meggondolta magát addig? Nem baj — {reach}, és visszavonja a kérést.").replace("{reach}", reach)) + "</li>";
+      /* Elek FK-008 H4 (2026-09-24): the QUOTE request got the booking's receipt —
+       * "ha visszaigazolja, lemondó linket kap" — without a word about the price
+       * that is actually coming. `total` is null exactly when no price applied
+       * (the server's own quote-vs-book predicate), so the two receipts split here. */
+      var isQuote = !s.total;
+      var steps = isQuote
+        ? "<li>" + esc(tr("A szállásadó árajánlattal válaszol. A foglalás akkor válik véglegessé, ha Ön az ajánlatot elfogadja.")) + "</li>" +
+          "<li>" +
+          esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
+          ". " + tr("Ha nem érkezik meg, nézze meg a levélszemét mappát is.") + "</li>" +
+          "<li>" + tr("Az elküldéssel még nem vállal fizetési kötelezettséget.") + "</li>" +
+          "<li>" + esc(tr("Meggondolta magát addig? Nem baj — {reach}, és visszavonja a kérést.").replace("{reach}", reach)) + "</li>"
+        : "<li>" + esc(when) + "</li>" +
+          "<li>" +
+          esc(tr("A választ erre a címre küldjük: {email}").replace("{email}", s.guestEmail)) +
+          ". " + tr("Ha nem érkezik meg, nézze meg a levélszemét mappát is.") + "</li>" +
+          "<li>" + tr("Ha visszaigazolja, a levélben kap egy lemondó linket is — azzal bármikor lemondhatja.") + "</li>" +
+          "<li>" + esc(tr("Meggondolta magát addig? Nem baj — {reach}, és visszavonja a kérést.").replace("{reach}", reach)) + "</li>";
       return '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
-        "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
+        "<span>" + (isQuote ? tr("Elküldtük az árajánlat-kérését") : tr("Elküldtük a kérését")) + "</span></p>" +
         '<p class="cit-book__note">' +
-        tr("A foglalás még nem végleges — ez egy kérés, amit a szállásadónak vissza kell igazolnia.") +
+        (isQuote
+          ? tr("Ez még nem foglalás — a szállásadó előbb árat ad, és az Ön elfogadásával válik véglegessé.")
+          : tr("A foglalás még nem végleges — ez egy kérés, amit a szállásadónak vissza kell igazolnia.")) +
         "</p>" +
         '<div class="cit-book__receipt">' + facts + total + "</div>" +
         '<p class="cit-book__steph">' + tr("Mi a következő lépés?") + "</p>" +
@@ -524,6 +542,12 @@
     function problem() {
       var a = form.from.value, b = form.to.value;
       if (!a || !b) return "";
+      /* Elek FK-008 Z3 (2026-09-24): a typed PAST arrival slipped past the input's
+       * `min` and the widget answered "egyedi árat ad" (no price row for the past)
+       * — the guest learnt only from the server, after filling everything. Same
+       * sentence the server sends, said first. */
+      var minFrom = form.from.getAttribute("min");
+      if (minFrom && a < minFrom) return tr("A legkorábbi foglalható érkezés: {date}.").replace("{date}", huDay(minFrom).replace(/\.$/, ""));
       var n = nights(a, b);
       if (n < 1) return tr("A távozás legyen későbbi az érkezésnél.");
       if (n < minN) return tr("Legalább {n} éjszakára lehet foglalni.").replace("{n}", minN);
@@ -634,8 +658,18 @@
       validate();
       renderCal();
     });
-    form.from.addEventListener("change", renderCal);
-    form.to.addEventListener("change", renderCal);
+    /* Elek FK-008 E3 (2026-09-24): a date typed into the field left the calendar
+     * on the opening months, so the busy day the note complained about was never
+     * in view. Only a TYPED date snaps the calendar — a nav click keeps the month
+     * the guest paged to. */
+    function snapCalTo(iso) {
+      if (!iso) return;
+      var now = new Date(todayISO() + "T00:00:00Z"), d = new Date(iso + "T00:00:00Z");
+      var off = (d.getUTCFullYear() - now.getUTCFullYear()) * 12 + (d.getUTCMonth() - now.getUTCMonth());
+      if (off < calBase || off > calBase + 1) calBase = Math.min(maxBase, Math.max(0, off));
+    }
+    form.from.addEventListener("change", function () { snapCalTo(form.from.value); renderCal(); });
+    form.to.addEventListener("change", function () { snapCalTo(form.to.value); renderCal(); });
     renderCal();
     loadAvailability();
 
