@@ -1783,7 +1783,7 @@ await shootConsole(
   "[data-offer-form]",
 );
 // Finance chips/hub counters (the dashboard is a hub since the 2026-08-23 redesign).
-const finCounts = { docs: 12, open: 3, overdue: 1, partners: 7 };
+const finCounts = { docs: 12, open: 3, overdue: 1, partners: 7, aamYearNetHuf: 4_200_000, aamLimitHuf: 18_000_000, aamFxDocs: 0 };
 // ADR-0102: the sales badge and the per-module switches must be VISIBLE in the guide
 // images — captures taken with the defaults show the feature as if it did not exist,
 // and the entry that describes it would point at a picture without it. The fixtures
@@ -1795,7 +1795,7 @@ const salesLive = new Map([
   ["gallery", 7],
 ]);
 await shootConsole(
-  dashboardPage(funnel, false, "Ferenc", finCounts, { on: 13, all: 14 }),
+  dashboardPage({ r: funnel, scrapeRunning: false, operatorName: "Ferenc", fin: finCounts, sales: { on: 13, all: 14 }, stale: null }),
   conOut("console-dashboard"),
 );
 // The handbook's shot must show the list as the operator MEETS it: the default

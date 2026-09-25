@@ -1,0 +1,311 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TERV — Konzol a tenant-admin „Linear” nyelvén · A/B · világos/sötét</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#d9dee5;font-family:Inter,system-ui,sans-serif;color:#1a2230;-webkit-font-smoothing:antialiased}
+button,input{font-family:inherit}
+svg{flex:0 0 auto}
+.pl{padding:14px 12px 0;max-width:1240px;margin:0 auto}
+.pl h1{font-size:1.05rem;margin:0 0 3px}
+.pl p{margin:0 0 10px;font-size:.83rem;color:#3c5064;line-height:1.5}
+.szw{display:inline-flex;background:#fff;border:1px solid #b9c3cf;border-radius:999px;padding:3px;gap:3px;margin:0 8px 12px 0;vertical-align:middle}
+.szw button{border:0;background:transparent;font:700 .8rem/1 Inter,sans-serif;color:#60748b;padding:9px 15px;border-radius:999px;cursor:pointer}
+.szw button.on{background:#0e2a47;color:#fff}
+.stage{padding:0 12px 26px;max-width:1240px;margin:0 auto;overflow-x:auto}
+.frame{container-type:inline-size;position:relative;width:390px;height:800px;border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(14,42,71,.18);transition:width .2s;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:13px;line-height:1.5}
+body[data-size="desktop"] .frame{width:1180px;height:860px}
+/* ── tokens: the REAL --citui-* admin set (light) and [data-citui-theme=dark] (dark), hexed ONLY for the mock ── */
+.frame{--bg:#fff;--panel:#fff;--side:#fafafa;--field:#f6f7f8;--hover:#f2f3f5;--line:rgba(14,42,71,.12);--line-s:rgba(14,42,71,.22);--ink:#10243a;--muted:#60748b;
+  --ok:#2fa96b;--ok-ink:#19733f;--warn:#d29922;--warn-ink:#7d5a12;--bad:#e5484d;--bad-ink:#b3262b;--link:#10697a;--accent:#1fb6d6;--accent-ink:#06131b;--accent-soft:color-mix(in srgb,#1fb6d6 12%,transparent)}
+.frame[data-theme="dark"]{--bg:#0f1116;--panel:#151821;--side:#12151c;--field:#1b1f29;--hover:#1e2330;--line:#262b37;--line-s:#343a48;--ink:#e6e9ef;--muted:#8a93a3;
+  --ok:#3ddc97;--ok-ink:#4fe3a3;--warn:#f0b35a;--warn-ink:#f5c06b;--bad:#ff7b7b;--bad-ink:#ff8e8e;--link:#4fd0ea;--accent-soft:color-mix(in srgb,#1fb6d6 16%,transparent)}
+.frame a{color:var(--link)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 .86em/1 Inter,sans-serif;padding:9px 13px;border-radius:6px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--hover)}
+.btn--p{background:var(--accent);border-color:transparent;color:var(--accent-ink)}
+.btn--sm{padding:6px 10px;font-size:.8em}
+.ib{width:32px;height:32px;border-radius:6px;border:1px solid var(--line);background:var(--panel);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);padding:0}
+.ib:hover{background:var(--hover)}.ib--ghost{border-color:transparent;background:transparent}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:.78em;font-weight:600;border:1px solid var(--line);background:var(--panel);white-space:nowrap;color:var(--ink);cursor:pointer}
+.chip i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.chip--ok{color:var(--ok-ink);background:color-mix(in srgb,var(--ok) 12%,var(--panel));border-color:transparent}
+.chip--warn{color:var(--warn-ink);background:color-mix(in srgb,var(--warn) 14%,var(--panel));border-color:transparent}
+.chip--bad{color:var(--bad-ink);background:color-mix(in srgb,var(--bad) 12%,var(--panel));border-color:transparent}
+.chip--mute{color:var(--muted)}
+.chip--on{border-color:var(--accent);background:var(--accent-soft)}
+.bdg{display:inline-flex;min-width:18px;height:18px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:.72em;font-weight:700;align-items:center;justify-content:center}
+.muted{color:var(--muted)}
+.n{color:var(--muted);font-size:.85em;margin-left:auto;font-variant-numeric:tabular-nums}
+/* shell */
+.shell{display:grid;grid-template-rows:auto 1fr auto;height:100%}
+.side{display:none}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);min-height:48px}
+.crumb{display:flex;align-items:center;gap:2px;font-size:.92em;min-width:0;flex:1}
+.crumb a{color:var(--muted);text-decoration:none;cursor:pointer;padding:3px 6px;border-radius:5px;white-space:nowrap}.crumb a:hover{background:var(--hover);color:var(--ink)}
+.crumb b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:3px 6px}.crumb svg{color:var(--line-s)}
+.srch{display:none;position:relative}
+.top #helpBtn{display:none}
+.main{overflow:auto;position:relative}
+.main__in{padding:14px 14px 28px}
+.ph{margin-bottom:14px}
+.ph h1{font-size:1.45em;margin:0 0 2px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.ph h1 .ib{width:22px;height:22px;border:0;color:var(--muted)}
+.ph p{margin:0;color:var(--muted);font-size:.92em;line-height:1.5}
+.ph__row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}.ph__row>div{flex:1;min-width:200px}
+.ph__acts{display:flex;gap:6px;flex-wrap:wrap}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:-4px 0 14px;overflow-x:auto}
+.tabs a{padding:8px 10px;color:var(--muted);text-decoration:none;font-weight:500;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;font-size:.95em}
+.tabs a:hover{color:var(--ink)}.tabs a.is-active{color:var(--ink);border-color:var(--accent);font-weight:600}
+.tabs a .n{margin-left:6px}
+/* widgets */
+.w{display:grid;grid-template-columns:1fr;gap:10px}
+.wc{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--panel);min-width:0}
+.wc__h{display:flex;align-items:center;gap:8px;font-size:.85em;color:var(--muted);margin-bottom:8px}.wc__h svg{color:var(--link)}.wc__h .sp{flex:1}
+.wc__v{font-size:1.5em;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.wc__s{font-size:.82em;color:var(--muted);margin-top:2px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:.88em;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.kv span{color:var(--muted)}.kv b{font-weight:600;font-variant-numeric:tabular-nums}.kv a{text-decoration:none;cursor:pointer;color:var(--ink)}.kv a:hover{color:var(--link)}
+.issues{border:1px solid var(--line);border-radius:8px;margin-top:14px;background:var(--panel)}
+.issues__h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:.85em;font-weight:600}
+.issues__h .cnt{color:var(--muted);font-weight:500}.issues__h .sp{flex:1}
+.iss{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:.95em;cursor:pointer;text-decoration:none;color:var(--ink)}
+.iss:last-child{border-bottom:0}.iss:hover{background:var(--hover)}
+.iss__st{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:var(--muted)}
+.iss.is-warn .iss__st{background:var(--warn)}.iss.is-bad .iss__st{background:var(--bad)}.iss.is-info .iss__st{background:var(--accent)}
+.iss .m{margin-left:auto;color:var(--muted);font-size:.85em;white-space:nowrap}
+.iss span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* B: hub cards, Linear dress */
+.hub{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+.hc{border:1px solid var(--line);border-radius:8px;background:var(--panel);display:flex;flex-direction:column}
+.hc__h{display:flex;gap:10px;align-items:center;padding:12px 14px 8px;text-decoration:none;color:var(--ink);cursor:pointer}
+.hc__h svg{color:var(--link)}.hc__h b{display:block;font-size:1em}.hc__h small{display:block;color:var(--muted);font-size:.85em;line-height:1.4}
+.hc ul{list-style:none;margin:0;padding:0 6px 6px;flex:1}
+.hc li a{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--ink);cursor:pointer;font-size:.95em}
+.hc li a:hover{background:var(--hover)}.hc li a.hide{display:none}
+.hc li a em{font-style:normal;background:var(--accent-soft);border-radius:3px}
+.hc__f{border-top:1px solid var(--line);padding:8px 14px;font-size:.85em}.hc__f a{cursor:pointer;text-decoration:none;font-weight:600}
+.hc.hide{display:none}
+/* leads table */
+.tb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.tb .sp{flex:1}
+.pop{position:absolute;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.14);min-width:200px;font-size:.92em}
+.pop label{display:flex;gap:8px;align-items:center;padding:5px 6px;border-radius:5px;cursor:pointer}.pop label:hover{background:var(--hover)}
+.tw{border:1px solid var(--line);border-radius:8px;overflow:auto;background:var(--panel);max-height:calc(100% - 20px)}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:900px;font-size:.92em}
+th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2}
+td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}tbody tr:hover td{background:var(--hover)}
+th:first-child,td:first-child{position:sticky;left:0;background:var(--panel);z-index:1;box-shadow:1px 0 0 var(--line);min-width:150px;white-space:normal}
+th:first-child{z-index:3}tbody tr:hover td:first-child{background:var(--hover)}
+td a{text-decoration:none;font-weight:500}
+.num{text-align:right}
+.mut{color:var(--muted)}
+.tw.hidden-rows tr.hid{display:none}
+.tfoot{padding:8px 10px;font-size:.85em;color:var(--muted);border-top:1px solid var(--line)}
+/* stub */
+.fl{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin-top:14px}
+.fl__h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:.85em;font-weight:600}.fl__h .cnt{color:var(--muted);font-weight:500}
+.fl a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;cursor:pointer;font-size:.95em}
+.fl a:last-child{border-bottom:0}.fl a:hover{background:var(--hover)}.fl a svg{color:var(--muted)}.fl a .n,.fl a .chip{margin-left:auto}.fl a .go{color:var(--muted);margin-left:auto;display:inline-flex}.fl a .n+.go,.fl a .chip+.go{margin-left:8px}
+.stub{border:1px dashed var(--line-s);border-radius:8px;padding:20px;color:var(--muted);font-size:.92em;line-height:1.5;background:var(--panel)}
+.stub b{color:var(--ink)}
+/* mobile chrome */
+.bnav{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--panel);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.bnav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;color:var(--muted);font-size:.72em;font-weight:500;text-decoration:none;cursor:pointer;border-radius:6px;position:relative}
+.bnav a.is-active{color:var(--link);font-weight:600}
+.drawer{position:absolute;inset:0;z-index:55;display:none;background:rgba(6,10,18,.45)}
+.drawer.on{display:block}
+.drawer__box{position:absolute;top:0;bottom:0;left:0;width:290px;max-width:86%;background:var(--panel);color:var(--ink);padding:14px;overflow:auto;border-right:1px solid var(--line)}
+.menu a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:6px;text-decoration:none;color:var(--ink);font-weight:500;font-size:.95em;cursor:pointer}
+.menu a:hover{background:var(--hover)}.menu a.is-active{background:var(--accent-soft);font-weight:600}.menu a svg{color:var(--muted)}.menu a.is-active svg{color:var(--link)}
+.menu .g{font-size:.7em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+/* group row = a real link (module dashboard) + a chevron that only folds the tree */
+.grp{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;font-weight:600;font-size:.95em;color:var(--ink);cursor:pointer;margin-top:6px;white-space:nowrap}
+.grp:hover{background:var(--hover)}.grp svg{color:var(--muted)}.grp.is-active{background:var(--accent-soft)}.grp.is-active svg{color:var(--link)}
+.grp .chev{margin-left:auto;width:22px;height:22px;border:0;background:transparent;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;padding:0}
+.grp .chev:hover{background:var(--line)}.grp .chev svg{transition:transform .15s}.grp.is-open .chev svg{transform:rotate(90deg)}
+.grp .n{margin-left:0}
+.sub{padding-left:16px !important;font-size:.92em !important;position:relative}
+.sub::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--line-s)}
+.sub svg{display:none}
+.menu .sub{padding-left:38px !important}.menu .sub::before{left:26px}
+.menu .grp{margin-top:8px}
+.toast{position:absolute;left:50%;bottom:18px;transform:translate(-50%,20px);z-index:80;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:.86em;font-weight:600;opacity:0;transition:all .25s;display:flex;gap:8px;align-items:center;max-width:calc(100% - 32px);pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}.toast svg{color:var(--accent)}
+/* ⌘K dropdown */
+.srch__dd{position:absolute;top:36px;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.14);display:none;z-index:30;padding:4px;max-height:320px;overflow:auto}
+.srch__dd.on{display:block}
+.srch__dd a{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;color:var(--ink);text-decoration:none;cursor:pointer;font-size:.92em}
+.srch__dd a:hover,.srch__dd a.is-hi{background:var(--hover)}.srch__dd a small{color:var(--muted);margin-left:auto}
+.srch__dd em{font-style:normal;background:var(--accent-soft);border-radius:3px}
+.srch__dd .none{padding:8px;color:var(--muted);font-size:.9em}
+#mSrch{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:var(--field);margin-bottom:12px;position:relative}
+#mSrch input{border:0;background:transparent;flex:1;font:inherit;color:var(--ink);outline:0;min-width:0}
+@container (min-width:900px){
+  .shell{grid-template-columns:232px 1fr;grid-template-rows:auto 1fr}
+  .shell.is-rail{grid-template-columns:56px 1fr}
+  .side{display:flex;flex-direction:column;grid-row:1/3;background:var(--side);border-right:1px solid var(--line);padding:10px 8px;overflow:hidden}
+  .side__top{display:flex;align-items:center;gap:8px;padding:4px 6px 12px}
+  .side__top b{font-size:.95em;flex:1;white-space:nowrap}.side__top small{display:block;color:var(--muted);font-weight:400;font-size:.8em}
+  .side__top .ib{width:24px;height:24px;border:0;background:transparent;color:var(--muted)}
+  .nav{display:flex;flex-direction:column;gap:1px;flex:1;overflow:auto}
+  .nav .g{font-size:.72em;font-weight:600;color:var(--muted);padding:12px 8px 4px;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
+  .nav a{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:6px;color:var(--ink);font-size:.95em;text-decoration:none;cursor:pointer;white-space:nowrap}
+  .nav a:hover{background:var(--hover)}.nav a.is-active{background:var(--accent-soft);font-weight:600}
+  .nav a svg{color:var(--muted)}.nav a.is-active svg{color:var(--link)}
+  .nav a.sub{padding-left:30px}.nav a.sub::before{left:17px}
+    .is-rail .side__top b,.is-rail .nav a span,.is-rail .nav .g,.is-rail .nav a .n,.is-rail .nav a .bdg,.is-rail .user span,.is-rail .nav a.sub,.is-rail .nav .grp span{display:none}
+  .is-rail .nav .grp .chev{display:none}.is-rail .nav a,.is-rail .nav .grp{justify-content:center;padding:8px 0}.is-rail .side__top{justify-content:center}
+  .user{display:flex;align-items:center;gap:8px;padding:8px;border-top:1px solid var(--line);margin-top:8px;font-size:.9em;white-space:nowrap}
+  .user .av{width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-size:.7em;font-weight:700;flex:0 0 auto}
+  .user span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.user span small{display:block;color:var(--muted);font-size:.8em}
+  .user .ib{width:26px;height:26px;border:0;color:var(--muted)}
+  .top{padding:8px 16px}
+  .srch{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:5px 9px;width:280px;color:var(--muted);font-size:.9em;background:var(--field)}
+  .srch input{border:0;background:transparent;flex:1;font:inherit;color:var(--ink);outline:0;min-width:0}
+  .srch kbd{font:600 .8em Inter,sans-serif;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted)}
+  .main__in{padding:24px 32px 32px;max-width:1180px}
+  .ph h1{font-size:1.7em}
+  .w{grid-template-columns:repeat(3,1fr)}
+  .hub{grid-template-columns:repeat(2,1fr)}
+  .bnav,#topMenu,#mSrch{display:none}
+  .top #helpBtn{display:inline-flex}
+  .tw{max-height:none}
+}
+</style></head>
+<body data-size="mobile">
+<div class="pl"><h1>TERV — a belső konzol a tenant-admin „Linear” nyelvén (ADR-0224 kerete)</h1>
+<p><b>Amit eldönt:</b> a konzol ugyanazt a keretet kapja, mint a tenant-admin — fehér oldalsáv, útvonal-fejléc, EGY akcent, hajszálvonalak, világos/sötét. A navy fejléc, a gradiens hero és a színes ikon-négyzetek kivezetve. <b>A két változat abban különbözik, hova kerül a 16 funkció (a modulok második szintje):</b><br>
+<b>A · „Tükör” — a tulaj választása (2026-09-25) + módosítás:</b> a modul-sor (CRM · Pénzügy · Riport · Rendszer) maga is KATTINTHATÓ → a modul SAJÁT irányítópultja nyílik (widget + a modul figyelmeztetései + a funkció-lista), és a fa alatta KINYÍLIK; a többi modul csukva (mint a tenant-admin Modulok-almenüje). A nyíl csak hajtogat, nem navigál. Az Irányítópult = 3 widget + „Figyelmet kér”, modul-kártyák nélkül.<br>
+<b>B · „Modul-sáv”</b> — az oldalsáv csak az 5 modul-pontot viszi (mint a mai felső sáv, függőlegesen); a funkciók a modul-lapon FÜLSORKÉNT jelennek meg. Az Irányítópult megtartja a mai modul-kártyákat, Linear-ruhában.<br>
+Mindkettőben: ⌘K funkció-kereső (a mai „16 funkció” kereső ide költözik, működik), ← + útvonal minden lapon, mobilon 4 fő pont + Menü. <b>Valós adat</b>: dev DB 2026-09-25 (599 felmért · 260 kvalifikált · 11 jóváhagyott · 13 partner · 6 kiküldött · 13/14 eladó). A Lead-sor szűrője működik (Kvalifikáció-chip).</p>
+<span class="szw"><button id="vA" class="on" onclick="setVariant('A')">A · Tükör</button><button id="vB" onclick="setVariant('B')">B · Modul-sáv</button></span>
+<span class="szw"><button id="bM" class="on" onclick="setSize('mobile')">Mobil 390px</button><button id="bD" onclick="setSize('desktop')">Asztali</button></span>
+<span class="szw"><button id="tL" class="on" onclick="setTheme('light')">Világos</button><button id="tD" onclick="setTheme('dark')">Sötét</button></span></div>
+<div class="stage"><div class="frame" id="frame">
+<div class="shell" id="shell">
+  <aside class="side"><div class="side__top"><svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/><circle cx="22.5" cy="24" r="4.5" fill="currentColor"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg><b>Citoviso<small>belső konzol</small></b><button class="ib" onclick="toggleRail()" id="railBtn" title="Összecsuk"></button></div><nav class="nav" id="nav"></nav><div class="user"><span class="av">CT</span><span>claude-test<small>operátor · HU</small></span><button class="ib ib--ghost" onclick="toggleTheme()" title="Világos / sötét" id="themeBtn1"></button><button class="ib ib--ghost" title="Kilépés" onclick="toast('Kilépés')" id="logoutBtn"></button></div></aside>
+  <div class="top"><button class="ib ib--ghost" id="topMenu" onclick="openDrawer()"></button><button class="ib ib--ghost" id="topBack" onclick="back()"></button><div class="crumb" id="crumb"></div><div class="srch" id="srch"></div><button class="ib ib--ghost" id="themeBtn2" onclick="toggleTheme()" title="Világos / sötét"></button><button class="btn btn--sm" id="helpBtn" onclick="go('help')"></button></div>
+  <main class="main" id="main"><div class="main__in" id="view"></div></main>
+  <nav class="bnav" id="bnav"></nav>
+</div>
+<div class="drawer" id="drawer" onclick="if(event.target===this)this.classList.remove('on')"><div class="drawer__box" id="drawerBox"></div></div>
+<div class="toast" id="toast"></div>
+</div></div>
+<script>
+const ICON={home:'<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+leads:'<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>',
+pricing:'<path d="M12.6 3.5H6A2.5 2.5 0 0 0 3.5 6v6.6a2.5 2.5 0 0 0 .73 1.77l6.4 6.4a2.5 2.5 0 0 0 3.54 0l6.1-6.1a2.5 2.5 0 0 0 0-3.54l-6.4-6.4a2.5 2.5 0 0 0-1.77-.73Z"/><circle cx="8.4" cy="8.4" r="1.4"/>',
+report:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+settings:'<path d="M4 7h3M12.5 7H20M4 12h8.5M17.5 12H20M4 17h1.5M10.5 17H20"/><circle cx="9.75" cy="7" r="2.1"/><circle cx="15" cy="12" r="2.1"/><circle cx="8" cy="17" r="2.1"/>',
+help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7v.5"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>',
+menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',back:'<path d="M15 5l-7 7 7 7"/>',fwd:'<path d="m9 5 7 7-7 7"/>',
+search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',logout:'<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M9 12h10"/>',
+collapse:'<path d="M15 6l-6 6 6 6M4 4v16"/>',expand:'<path d="m9 6 6 6-6 6M20 4v16"/>',filter:'<path d="M4 6h16l-6 7v5l-4 2v-7z"/>',
+checkc:'<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/>',close:'<path d="M6 6l12 12M18 6 6 18"/>',
+partners:'<circle cx="8.6" cy="8.2" r="3.3"/><path d="M2.8 19.5c.8-3.2 3-4.9 5.8-4.9s5 1.7 5.8 4.9"/><path d="M15.2 5.4a3.3 3.3 0 0 1 0 5.6M17.5 14.9c2 .6 3.3 2.1 3.9 4.6"/>',
+mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3 8 9 6 9-6"/>'};
+function ic(n,s=18){return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON[n]||'')+'</svg>'}
+// REAL structure = src/console/views.ts MENU + dashboardPage modules; REAL numbers = dev DB 2026-09-25
+const MODS=[
+ {id:'dash',label:'Irányítópult',icon:'home'},
+ {id:'crm',label:'CRM',icon:'leads',role:'Lead-től a megrendelésig — akit megszólítunk, és ahol tart.',subs:[['leads','Lead-sor','599'],['approved','Jóváhagyott mockok','11'],['dups','Duplikátumok'],['scrape','Adatgyűjtés indítása'],['map','Térkép (lefedettség)'],['regions','Területek'],['pricing','Árazás és értékesítés','13/14 eladó','warn','Árazás']]},
+ {id:'fin',label:'Pénzügy',icon:'pricing',role:'Bizonylatok, partnerek, árazás — a pénz papír-oldala.',subs:[['docs','Bizonylat keresése','0'],['docnew','Új bizonylat rögzítése'],['open','Nyitott tételek'],['partners','Partnerek','13'],['partnernew','Új partner rögzítése']]},
+ {id:'report',label:'Riport',icon:'report',role:'Mi termel és mi szivárog — a döntéshez elég szám.',subs:[['funnel','Megkeresés-tölcsér — hol akadnak el','','','Megkeresés-tölcsér'],['sent','Kiküldött megkeresések','6'],['orders','Megkezdett rendelések','6']]},
+ {id:'sys',label:'Rendszer',icon:'settings',role:'Fiók, jelszó, működési beállítások.',subs:[['settings','Beállítások']]},
+ {id:'help',label:'Súgó',icon:'help'}];
+const PAGES={};MODS.forEach(m=>{PAGES[m.id]={label:m.label,mod:m.id};(m.subs||[]).forEach(s=>PAGES[s[0]]={label:s[1],mod:m.id,cnt:s[2],cls:s[3]})});
+PAGES.lead={label:'Lead adatlap',mod:'crm'};
+const LEADS=[['ELEK-TESZT Vendégház','2026-09-04','Balaton','HU','Balatonboglár','nincs','0','12','nincs találat','e-mail'],['Dencs Apartmanház','2026-08-21','Balaton','HU','Gyenesdiás','nincs','10+','16','0,69','e-mail'],['Boróka ház','2026-08-21','Balaton','HU','Siófok','nincs','10+','21','0,99','e-mail'],['Camping Carina','2026-08-21','Balaton','HU','Balatongyörök','elavult','10+','21','0,93','e-mail'],['Levendula Vendégház','2026-08-21','Balaton','HU','Balatonföldvár','nincs','0','1','0,96','nincs'],['Erika nyaralóház','2026-08-21','Balaton','HU','Balatonszárszó','nincs','0','1','nincs találat','SMS'],['Hajóállomás Appartman','2026-08-21','Balaton','HU','Tihany','nincs','0','1','nincs találat','nincs'],['Rozé Fogadó','2026-08-21','Balaton','HU','Révfülöp','nincs','10+','18','0,85','SMS'],['Ifjúsági Szállás Tihany','2026-08-21','Balaton','HU','Tihany','nincs','10+','17','0,85','e-mail'],['Villa Suzy Zamárdi','2026-08-21','Balaton','HU','Zamárdi','nincs','10+','53','0,85','e-mail']];
+const QUAL={nincs:['nincs honlap','bad'],elavult:['elavult','warn'],modern:['modern honlap','ok'],ismeretlen:['ismeretlen','mute']};
+let variant='A',cur='dash',openGrp={},qual={nincs:true,elavult:true,modern:false,ismeretlen:false};const stack=[];
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function setSize(s){document.body.dataset.size=s;$('#bM').classList.toggle('on',s==='mobile');$('#bD').classList.toggle('on',s==='desktop')}
+function setVariant(v){variant=v;$('#vA').classList.toggle('on',v==='A');$('#vB').classList.toggle('on',v==='B');render()}
+function setTheme(t){$('#frame').dataset.theme=t;try{localStorage.setItem('cit-console-theme',t)}catch(e){}$('#tL').classList.toggle('on',t==='light');$('#tD').classList.toggle('on',t==='dark');$$('#themeBtn1,#themeBtn2').forEach(b=>b.innerHTML=ic(t==='dark'?'sun':'moon',17))}
+function toggleTheme(){setTheme($('#frame').dataset.theme==='dark'?'light':'dark')}
+function toggleRail(){const s=$('#shell');s.classList.toggle('is-rail');const r=s.classList.contains('is-rail');try{localStorage.setItem('cit-console-rail',r?'1':'0')}catch(e){}$('#railBtn').innerHTML=ic(r?'expand':'collapse',16)}
+function go(id,opts={}){if(!PAGES[id])return;if(id===cur&&!opts.force)return;if(!opts.pop)stack.push(cur);cur=id;if(!opts.pop){try{history.pushState({p:id},'','#'+id)}catch(e){}}openGrp={};if(PAGES[id].mod!=='dash')openGrp[PAGES[id].mod]=true;$('#drawer').classList.remove('on');render();$('#main').scrollTop=0}
+function back(){if(!stack.length){go('dash');return}const id=stack.pop();go(id,{pop:true});try{history.back()}catch(e){}}
+window.addEventListener('popstate',e=>{const id=(e.state&&e.state.p)||location.hash.slice(1)||'dash';if(PAGES[id]){cur=id;openGrp={};if(PAGES[id].mod!=='dash')openGrp[PAGES[id].mod]=true;render()}});
+let toastT;function toast(msg){const t=$('#toast');t.innerHTML=ic('checkc',18)+'<span>'+esc(msg)+'</span>';requestAnimationFrame(()=>t.classList.add('on'));clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2200)}
+function toggleGrp(id,ev){ev.stopPropagation();openGrp[id]=!openGrp[id];render()}
+function openDrawer(){$('#drawer').classList.add('on')}
+function cnt(s,short){if(!s[2])return '';return s[3]==='warn'?'<span class="chip chip--warn" style="margin-left:auto;padding:1px 7px">'+esc(short?s[2].split(' ')[0]:s[2])+'</span>':'<span class="n">'+esc(s[2])+'</span>'}
+/* ── navigation: A = groups + every function; B = modules only ── */
+function navHtml(mobile){let h='';const act=(id)=>id===cur?' is-active':'';const modOf=PAGES[cur].mod;
+  h+='<a class="'+act('dash')+'" onclick="go(\'dash\')">'+ic('home',17)+'<span>Irányítópult</span></a>';
+  for(const m of MODS){if(!m.subs)continue;
+    if(variant==='A'||mobile){const open=!!openGrp[m.id];
+      h+='<div class="grp'+(cur===m.id?' is-active':'')+(open?' is-open':'')+'" onclick="go(\''+m.id+'\')" data-grp="'+m.id+'">'+ic(m.icon,17)+'<span>'+esc(m.label)+'</span><button class="chev" title="'+(open?'Összecsuk':'Kinyit')+'" onclick="toggleGrp(\''+m.id+'\',event)">'+ic('fwd',14)+'</button></div>';
+      if(open)for(const s of m.subs)h+='<a class="sub'+act(s[0])+'" onclick="go(\''+s[0]+'\')">'+ic(m.icon,16)+'<span>'+esc(s[4]||s[1])+'</span>'+cnt(s,true)+'</a>'}
+    else h+='<a class="'+(modOf===m.id?' is-active':'')+'" onclick="go(\''+m.subs[0][0]+'\')">'+ic(m.icon,17)+'<span>'+esc(m.label)+'</span></a>'}
+  h+='<a class="'+act('help')+'" onclick="go(\'help\')" style="margin-top:6px">'+ic('help',17)+'<span>Súgó</span></a>';
+  return h}
+function crumbHtml(){const p=PAGES[cur];const m=MODS.find(x=>x.id===p.mod);const mt=(m)=>variant==='A'?m.id:m.subs[0][0];
+  if(cur==='dash')return '<b>Irányítópult</b>';let h='<a onclick="go(\'dash\')">Konzol</a>';
+  if(m&&m.subs){h+=ic('fwd',13);if(cur===m.id)return h+'<b>'+esc(m.label)+'</b>';h+='<a onclick="go(\''+mt(m)+'\')">'+esc(m.label)+'</a>'}
+  if(cur==='lead')return h+ic('fwd',13)+'<a onclick="go(\'leads\')">Lead-sor</a>'+ic('fwd',13)+'<b>Boróka ház</b>';
+  return h+ic('fwd',13)+'<b>'+esc(p.label)+'</b>'}
+/* ── ⌘K: the hub's function search, now in the header — REAL 16 functions ── */
+const FUNCS=[];MODS.forEach(m=>(m.subs||[]).forEach(s=>FUNCS.push({id:s[0],n:s[1],m:m.label})));
+function hi(n,q){const i=n.toLowerCase().indexOf(q);return i<0?esc(n):esc(n.slice(0,i))+'<em>'+esc(n.slice(i,i+q.length))+'</em>'+esc(n.slice(i+q.length))}
+function ddHtml(q){q=q.trim().toLowerCase();const hits=q?FUNCS.filter(f=>(f.n+' '+f.m).toLowerCase().includes(q)):FUNCS;
+  if(!hits.length)return '<div class="none">Nincs ilyen funkció — '+FUNCS.length+' funkció van.</div>';
+  return hits.map((f,i)=>'<a class="'+(i===0?'is-hi':'')+'" onmousedown="go(\''+f.id+'\')"><span>'+hi(f.n,q)+'</span><small>'+esc(f.m)+'</small></a>').join('')}
+function bindSearch(inp,dd){inp.oninput=()=>{dd.innerHTML=ddHtml(inp.value);dd.classList.add('on');if(cur==='dash'&&variant==='B')filterHub(inp.value)};
+  inp.onfocus=()=>{dd.innerHTML=ddHtml(inp.value);dd.classList.add('on')};inp.onblur=()=>setTimeout(()=>dd.classList.remove('on'),120);
+  inp.onkeydown=e=>{if(e.key==='Enter'){const a=$('.is-hi',dd);if(a){a.dispatchEvent(new MouseEvent('mousedown'));inp.blur()}}if(e.key==='Escape'){inp.value='';dd.classList.remove('on');filterHub('')}}}
+function filterHub(q){q=q.trim().toLowerCase();let hits=0;$$('.hc').forEach(c=>{let any=false;$$('li a',c).forEach(a=>{const n=a.dataset.n;const ok=!q||n.toLowerCase().includes(q);a.classList.toggle('hide',!ok);a.innerHTML='<span>'+hi(n,q)+'</span>'+(a.dataset.c||'');if(ok){any=true;hits++}});c.classList.toggle('hide',!any)});const h=$('#hubHint');if(h)h.textContent=q?hits+' találat':FUNCS.length+' funkció'}
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();const i=$('#srchIn')||$('#mSrchIn');if(i)i.focus()}});
+/* ── pages ── */
+const ATT=[['warn','pricing','crm','<b>13/14 modul eladó</b> — egy modulnak nincs ára, ezért nem kínálható','Árazás'],['info','leads','crm','<b>260 kvalifikált lead</b> — nincs vagy elavult honlapja, és van legalább 1 képe','Lead-sor'],['','scrape','crm','<b>Adatgyűjtés áll</b> — az utolsó futás 2026-09-04','Adatgyűjtés']];
+function attention(mod){const rows=ATT.filter(a=>!mod||a[2]===mod);if(!rows.length)return '';
+  return '<div class="issues"><div class="issues__h">Figyelmet kér <span class="cnt">'+rows.length+'</span><span class="sp"></span><span class="cnt">ma</span></div>'+rows.map(a=>'<a class="iss'+(a[0]?' is-'+a[0]:'')+'" onclick="go(\''+a[1]+'\')"><i class="iss__st"></i><span>'+a[3]+'</span><span class="m">'+a[4]+'</span></a>').join('')+'</div>'}
+const WID={crm:
+ '<div class="wc"><div class="wc__h">'+ic('leads',16)+'CRM<span class="sp"></span></div><div class="wc__v">599</div><div class="wc__s">felmért szereplő, a diszkvalifikáltakkal</div><div class="kv"><span>Kvalifikált</span><b><a onclick="go(\'leads\')">260</a></b><span>Jóváhagyott mock</span><b><a onclick="go(\'approved\')">11</a></b><span>Eladó modul</span><b><a onclick="go(\'pricing\')">13 / 14</a></b></div></div>'
+ ,fin:'<div class="wc"><div class="wc__h">'+ic('pricing',16)+'Pénzügy<span class="sp"></span></div><div class="wc__v">0</div><div class="wc__s">nyitott bizonylat · nincs lejárt</div><div class="kv"><span>Bizonylat</span><b><a onclick="go(\'docs\')">0</a></b><span>Partner</span><b><a onclick="go(\'partners\')">13</a></b><span>AAM-limit</span><b class="muted">80% alatt</b></div></div>'
+ ,report:'<div class="wc"><div class="wc__h">'+ic('report',16)+'Megkeresések<span class="sp"></span></div><div class="wc__v">6</div><div class="wc__s">kiküldött megkeresés összesen</div><div class="kv"><span>Megkezdett rendelés</span><b><a onclick="go(\'orders\')">6</a></b><span>Tölcsér</span><b><a onclick="go(\'funnel\')">megnyitás</a></b></div></div>'};
+function widgets(mod){return '<div class="w">'+(mod?(WID[mod]||''):WID.crm+WID.fin+WID.report)+'</div>'}
+function section(){const m=MODS.find(x=>x.id===cur);
+  return '<div class="ph"><h1>'+esc(m.label)+'</h1><p>'+esc(m.role)+'</p></div>'+(WID[m.id]?widgets(m.id):'')+attention(m.id)+
+  '<div class="fl"><div class="fl__h">Funkciók <span class="cnt">'+m.subs.length+'</span></div>'+m.subs.map(s=>'<a onclick="go(\''+s[0]+'\')">'+ic(m.icon,16)+'<span>'+esc(s[1])+'</span>'+cnt(s)+'<span class="go">'+ic('fwd',14)+'</span></a>').join('')+'</div>'}
+function hub(){return '<div class="hub">'+MODS.filter(m=>m.subs).map(m=>'<article class="hc"><a class="hc__h" onclick="go(\''+m.subs[0][0]+'\')">'+ic(m.icon,22)+'<span><b>'+esc(m.label)+'</b><small>'+esc(m.role)+'</small></span></a><ul>'+
+ m.subs.map(s=>'<li><a data-n="'+esc(s[1])+'" data-c="'+esc(cnt(s))+'" onclick="go(\''+s[0]+'\')"><span>'+esc(s[1])+'</span>'+cnt(s)+'</a></li>').join('')+'</ul><div class="hc__f"><a onclick="go(\''+m.subs[0][0]+'\')">Modul megnyitása ▸</a></div></article>').join('')+'</div>'}
+function dash(){const mob='<div id="mSrch">'+ic('search',16)+'<input id="mSrchIn" placeholder="Ugrás funkcióra…" autocomplete="off"><span class="n" id="hubHint">'+FUNCS.length+' funkció</span><div class="srch__dd" id="mSrchDd"></div></div>';
+  return '<div class="ph"><h1>Irányítópult</h1><p>Szia, claude-test! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.</p></div>'+mob+(variant==='A'?widgets()+attention():attention()+hub())}
+function qualChip(){const on=Object.keys(qual).filter(k=>qual[k]);return '<span class="chip chip--on" id="qualChip" onclick="qualPop(event)">'+ic('filter',13)+'Kvalifikáció: '+(on.length?on.map(k=>QUAL[k][0]).join(', '):'mind')+'</span>'}
+function qualPop(e){e.stopPropagation();let p=$('#qualPop');if(p){p.remove();return}p=document.createElement('div');p.className='pop';p.id='qualPop';
+  p.innerHTML=Object.keys(QUAL).map(k=>'<label><input type="checkbox" '+(qual[k]?'checked':'')+' onchange="qual[\''+k+'\']=this.checked;applyFilter()"> '+esc(QUAL[k][0])+'</label>').join('');
+  const c=$('#qualChip');c.parentNode.insertBefore(p,c.nextSibling);p.style.top=(c.offsetTop+26)+'px';p.style.left=c.offsetLeft+'px';setTimeout(()=>{const h=e=>{const q=$('#qualPop');if(!q){document.removeEventListener('click',h);return}if(q.contains(e.target))return;q.remove();document.removeEventListener('click',h)};document.addEventListener('click',h)},0)}
+function applyFilter(){let n=0;$$('#leadTbl tbody tr').forEach(tr=>{const ok=!!qual[tr.dataset.q];tr.classList.toggle('hid',!ok);if(ok)n++});$('#rowCnt').textContent=n;const c=$('#qualChip');if(c)c.outerHTML=qualChip()}
+function leads(){const tabs=variant==='B'?'<nav class="tabs">'+MODS[1].subs.map(s=>'<a class="'+(s[0]===cur?'is-active':'')+'" onclick="go(\''+s[0]+'\')">'+esc(s[1])+(s[2]?'<span class="n">'+esc(s[2])+'</span>':'')+'</a>').join('')+'</nav>':'';
+  const rows=LEADS.map(l=>'<tr data-q="'+l[5]+'" onclick="go(\'lead\')"><td><a>'+esc(l[0])+'</a></td><td class="mut">'+l[1]+'</td><td class="mut">'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td><td><span class="chip chip--'+QUAL[l[5]][1]+'"><i></i>'+QUAL[l[5]][0]+'</span></td><td class="num"><b>'+l[6]+'</b></td><td class="num">'+l[7]+'</td><td class="num'+(l[8]==='nincs találat'?' mut':'')+'">'+l[8]+'</td><td>'+(l[9]==='nincs'?'<span class="chip chip--bad"><i></i>nincs</span>':'<b>'+l[9]+'</b>')+'</td></tr>').join('');
+  return tabs+'<div class="ph"><div class="ph__row"><div><h1>Aktív leadek <button class="ib" title="Súgó ehhez a képernyőhöz" onclick="go(\'help\')">'+ic('help',16)+'</button></h1><p><b id="rowCnt">10</b> sor a 597 aktív leadből — nincs lapozás, mind itt van. Oldalra görgetve jön a többi oszlop, a Név a helyén marad.</p></div>'+
+  '<div class="ph__acts"><button class="btn btn--sm" onclick="qual={nincs:true,elavult:true,modern:true,ismeretlen:true};applyFilter();toast(\'Szűrők törölve\')">Szűrők törlése</button><button class="btn btn--sm" onclick="toast(\'Diszkvalifikáltak nézete\')">Diszkvalifikáltak ▸</button></div></div></div>'+
+  '<div class="tb" style="position:relative">'+qualChip()+'<span class="chip chip--on">'+ic('filter',13)+'Anyag ≥ 1</span><span class="mut" style="font-size:.85em;margin-left:auto">Felmérve ↓</span></div>'+
+  '<div class="tw hidden-rows"><table id="leadTbl"><thead><tr><th>Név</th><th>Felmérve</th><th>Terület</th><th>Ország</th><th>Város</th><th>Kvalifikáció</th><th class="num">Fotók</th><th class="num">Anyag</th><th class="num">Match</th><th>Kontakt</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+function stub(){const p=PAGES[cur];const m=MODS.find(x=>x.id===p.mod);const tabs=variant==='B'&&m&&m.subs?'<nav class="tabs">'+m.subs.map(s=>'<a class="'+(s[0]===cur?'is-active':'')+'" onclick="go(\''+s[0]+'\')">'+esc(s[1])+(s[2]?'<span class="n">'+esc(s[2])+'</span>':'')+'</a>').join('')+'</nav>':'';
+  return tabs+'<div class="ph"><h1>'+esc(p.label)+'</h1><p>'+(m&&m.role?esc(m.role):'')+'</p></div><div class="stub"><b>Ez a lap a tartalmát megtartja</b> — csak a keretet kapja (oldalsáv, útvonal, tipográfia, sötét mód), ahogy a tenant-adminban a többi fül (ADR-0224 ⑩). A mock ezért nem rajzolja újra: a döntés a keretről szól.</div>'}
+function render(){const v=$('#view');const m=MODS.find(x=>x.id===cur);v.innerHTML=cur==='dash'?dash():cur==='leads'?leads():(m&&m.subs&&variant==='A')?section():stub();
+  $('#nav').innerHTML=navHtml(false);$('#crumb').innerHTML=crumbHtml();
+  $('#topBack').style.visibility=cur==='dash'?'hidden':'visible';$('#topBack').innerHTML=ic('back',18);$('#topMenu').innerHTML=ic('menu',18);
+  $('#railBtn').innerHTML=ic($('#shell').classList.contains('is-rail')?'expand':'collapse',16);$('#logoutBtn').innerHTML=ic('logout',16);
+  $('#helpBtn').innerHTML=ic('help',15)+'<span>Súgó</span>';
+  $('#srch').innerHTML=ic('search',16)+'<input id="srchIn" placeholder="Ugrás funkcióra…" autocomplete="off"><kbd>⌘K</kbd><div class="srch__dd" id="srchDd"></div>';bindSearch($('#srchIn'),$('#srchDd'));
+  const mi=$('#mSrchIn');if(mi)bindSearch(mi,$('#mSrchDd'));
+  const modOf=PAGES[cur].mod;const bn=[['dash','Irányítópult','home'],['crm','CRM','leads'],['fin','Pénzügy','pricing'],['report','Riport','report']];
+  $('#bnav').innerHTML=bn.map(b=>'<a class="'+(modOf===b[0]?'is-active':'')+'" onclick="go(\''+(b[0]==='dash'?'dash':variant==='A'?b[0]:MODS.find(m=>m.id===b[0]).subs[0][0])+'\')">'+ic(b[2],20)+b[1]+'</a>').join('')+'<a onclick="openDrawer()">'+ic('menu',20)+'Menü</a>';
+  $('#drawerBox').innerHTML='<div class="menu"><div style="display:flex;align-items:center;gap:8px;padding:4px 10px 8px"><b style="flex:1">claude-test</b><button class="ib ib--ghost" onclick="$(\'#drawer\').classList.remove(\'on\')">'+ic('close',18)+'</button></div>'+navHtml(true)+'<div class="g">Megjelenés</div><a onclick="toggleTheme()">'+ic($('#frame').dataset.theme==='dark'?'sun':'moon',17)+'<span id="drawerTheme">'+($('#frame').dataset.theme==='dark'?'Világos mód':'Sötét mód')+'</span></a><a onclick="toast(\'Kilépés\')">'+ic('logout',17)+'<span>Kilépés</span></a></div>';
+  const t=$('#frame').dataset.theme||'light';$$('#themeBtn1,#themeBtn2').forEach(b=>b.innerHTML=ic(t==='dark'?'sun':'moon',17))}
+/* boot: URL hash drives variant/page/theme for the screenshot script; localStorage remembers theme + rail */
+(function(){const h=new URLSearchParams(location.hash.replace(/^#/,'').replace(/^([a-z]+)$/,'p=$1'));
+  let th='light';try{th=localStorage.getItem('cit-console-theme')||'light'}catch(e){}if(h.get('t'))th=h.get('t');setTheme(th);
+  if(h.get('v'))variant=h.get('v');$('#vA').classList.toggle('on',variant==='A');$('#vB').classList.toggle('on',variant==='B');
+  if(h.get('p')&&PAGES[h.get('p')])cur=h.get('p');if(PAGES[cur].mod!=='dash')openGrp[PAGES[cur].mod]=true;
+  let rail=false;try{rail=localStorage.getItem('cit-console-rail')==='1'}catch(e){}if(rail)$('#shell').classList.add('is-rail');
+  setSize(h.get('s')||(window.innerWidth<900?'mobile':'desktop'));render()})();
+</script></body></html>

@@ -106,6 +106,9 @@ export const ICON: Readonly<Record<string, string>> = {
 // Every key the admin renders has a thin variant here; `icAdmin()` falls back to
 // the base set for anything else, so a missing variant degrades, never breaks.
 export const ICON_THIN: Readonly<Record<string, string>> = {
+  // The console frame (linear-shell): home + the CRM module's target, without the accent dot.
+  home: `<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>`,
+  leads: `<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>`,
   overview: `<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>`,
   texts: `<path d="M4 6h16M4 12h10M4 18h14"/>`,
   photos: `<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-4.5L8 19"/>`,

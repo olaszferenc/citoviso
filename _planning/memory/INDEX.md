@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában
+- [2026-09-25_konzol_linear_keret.md](2026-09-25_konzol_linear_keret.md) — 2026-09-25 — A belső konzol kerete a tenant-admin „Linear” nyelvén, egy bővíthető navigációs fából
 - [2026-09-25_gate_writer_audit.md](2026-09-25_gate_writer_audit.md) — 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
 - [2026-09-25_gate_machine_slots.md](2026-09-25_gate_machine_slots.md) — 2026-09-25 — Gép-szintű várakozósor a kapu-futtatónak (ADR-0230)
 - [2026-09-25_gate_email_mock.md](2026-09-25_gate_email_mock.md) — 2026-09-25 — Két kapu valódi levelet küldhetett volna a tulajdonosnak (mérve: 0 ment ki) — mock-átjáró + őr

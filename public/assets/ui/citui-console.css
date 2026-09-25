@@ -7,18 +7,22 @@
  * (topbar + menu), so every console page dresses from here, not from inline CSS.
  */
 
-/* ── App shell ──────────────────────────────────────────────────────────── */
-body.con {
+/* ── App shell — the „Linear" frame (contract: assets/design-refs/console/linear-shell) ──
+   Owner decree (2026-09-25): the tenant-admin's design is the base of the internal
+   console too. ONE accent (the logo's cyan) on the active row, the badge and the link;
+   green/amber/red only for state; hairline borders, no card shadow, 13 px dense type,
+   small radii, light/dark from the SAME --citui-* layer tokens the admin reads
+   (--citui-bg/panel/side/field/hover; `[data-citui-theme=dark]` flips them). The
+   navigation is ONE tree (src/console/nav.ts): the sidebar folds it, the phone's
+   drawer folds it, the bottom bar takes its first three modules. */
+.con {
+  --citui-radius-sm: 8px; --citui-radius: 10px; --citui-radius-lg: 12px;
+  --citui-font-display: var(--citui-font-text);
   margin: 0;
-  /* Not a flat slab: the same cyan glow the homepage hero uses, held very faint
-     so data stays readable but the surface has brand depth. */
-  background:
-    radial-gradient(circle at 8% -4%, color-mix(in srgb, var(--citui-cyan-400) 11%, transparent), transparent 30%),
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--citui-glow-blue) 7%, transparent), transparent 26%),
-    var(--citui-surface);
-  background-attachment: fixed;
+  background: var(--citui-bg);
   color: var(--citui-ink);
-  font: 14px/1.5 var(--citui-font-text);
+  font: 13px/1.5 var(--citui-font-text);
+  -webkit-font-smoothing: antialiased;
 }
 .con a { color: var(--citui-link-ink); text-decoration: none; }
 .con a:hover { text-decoration: underline; }
@@ -43,75 +47,206 @@ body.con {
 .con a.con-help { color: var(--citui-muted); opacity: 1; }
 .con a.citui-btn:hover { text-decoration: none; }
 
-/* Brand chrome (Hybrid): dark navy topbar carries the homepage identity, while
-   the content area below stays light and readable for data-dense operator work. */
+/* Frame kit: buttons, icon buttons, tags — the same shapes the admin's .adm-* kit has. */
+.con-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--citui-line); background: var(--citui-panel); color: var(--citui-ink);
+  font-weight: 600; font-size: 12.5px; padding: 0 12px; min-height: 34px; border-radius: 6px;
+  white-space: nowrap; cursor: pointer; text-decoration: none;
+}
+.con .con-btn { color: var(--citui-ink); }
+.con .con-btn:hover { background: var(--citui-hover); text-decoration: none; }
+.con-btn--sm { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.con-fib {
+  width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--citui-line);
+  background: var(--citui-panel); color: var(--citui-ink); padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: 0 0 auto;
+}
+.con .con-fib { color: var(--citui-ink); }
+.con .con-fib:hover { background: var(--citui-hover); text-decoration: none; }
+.con-fib--ghost { border-color: transparent; background: transparent; }
+.con-tag {
+  display: inline-flex; align-items: center; padding: 1px 7px; border-radius: var(--citui-radius-pill);
+  font-size: 11px; font-weight: 600; white-space: nowrap; margin-left: auto; flex: 0 0 auto;
+}
+.con-tag--ok { color: var(--citui-ok-ink); background: color-mix(in srgb, var(--citui-ok) 12%, var(--citui-panel)); }
+.con-tag--warn { color: var(--citui-warn-ink); background: color-mix(in srgb, var(--citui-warn) 14%, var(--citui-panel)); }
+.con-tag--bad { color: var(--citui-bad-ink); background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); }
+.con-sp { flex: 1; }
+/* ⛔ The console's generic `.con button` / `.con input` rules (pill buttons, bordered
+   fields) reach INTO the frame kit — measured 2026-09-25: every icon button rendered as
+   an empty circle, the ⌘K field grew a second border. The kit resets them by specificity. */
+.con button.con-fib, .con a.con-fib, .con button.con-nav__chev {
+  min-height: 0; min-width: 0; line-height: 0; padding: 0; margin: 0; box-shadow: none; font: inherit;
+  background: transparent; border-radius: 6px; text-transform: none; letter-spacing: 0;
+}
+.con button.con-fib:not(.con-fib--ghost), .con a.con-fib:not(.con-fib--ghost) { background: var(--citui-panel); }
+.con button.con-fib svg, .con a.con-fib svg, .con button.con-nav__chev svg { display: block; }
+.con .con-k input, .con .con-k input:focus {
+  border: 0; padding: 0; margin: 0; background: transparent; box-shadow: none; min-height: 0; border-radius: 0; font-size: 13px; outline: 0;
+}
+.con a.con-btn { text-transform: none; letter-spacing: 0; }
+
+/* Grid: sidebar | (top bar / main). The rail folds the sidebar to icons (56 px). */
+.con-shell {
+  display: grid; grid-template-columns: 232px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+}
+.is-rail .con-shell { grid-template-columns: 56px minmax(0, 1fr); }
+.con-side {
+  grid-row: 1 / 3; display: flex; flex-direction: column;
+  background: var(--citui-side); border-right: 1px solid var(--citui-line);
+  padding: 10px 8px; position: sticky; top: 0; height: 100vh; overflow: hidden;
+}
+.con-side__top { display: flex; align-items: center; gap: 8px; padding: 4px 6px 12px; color: var(--citui-ink); }
+.con-side__top b { font-size: 13px; flex: 1; white-space: nowrap; line-height: 1.25; }
+.con-side__top small { display: block; color: var(--citui-muted); font-weight: 400; font-size: 11px; }
+.con-side__top .con-fib { width: 24px; height: 24px; color: var(--citui-muted); }
+
+/* The tree. A group row = link to the module's dashboard + a chevron that only folds. */
+.con-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
+.con-nav__it {
+  display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 6px;
+  color: var(--citui-ink); font-size: 13px; white-space: nowrap; text-decoration: none; min-width: 0;
+}
+.con .con-nav__it { color: var(--citui-ink); }
+.con .con-nav__it:hover { background: var(--citui-hover); text-decoration: none; }
+.con-nav__it.is-active { background: var(--citui-accent-soft); font-weight: 600; }
+.con-nav__it svg { color: var(--citui-muted); flex: 0 0 auto; }
+.con-nav__it.is-active svg { color: var(--citui-link-ink); }
+.con-nav__it > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.con-nav__n { margin-left: auto; color: var(--citui-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.con-nav__grp { display: flex; align-items: center; margin-top: 6px; border-radius: 6px; }
+.con-nav__grp > .con-nav__it { flex: 1; font-weight: 600; }
+.con-nav__grp.is-active { background: var(--citui-accent-soft); }
+.con-nav__grp.is-active > .con-nav__it svg { color: var(--citui-link-ink); }
+.con-nav__chev {
+  width: 22px; height: 22px; border: 0; background: transparent; color: var(--citui-muted);
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; cursor: pointer; padding: 0; margin-right: 4px; flex: 0 0 auto;
+}
+.con-nav__chev:hover { background: var(--citui-line); }
+.con-nav__chev svg { transition: transform 0.15s; }
+.con-nav__grp.is-open .con-nav__chev svg { transform: rotate(90deg); }
+.con-nav__kids { display: flex; flex-direction: column; gap: 1px; }
+.con-nav__kids[hidden] { display: none; }
+.con-nav__sub { padding-left: 30px; font-size: 12.5px; position: relative; }
+.con-nav__sub::before { content: ""; position: absolute; left: 17px; top: 0; bottom: 0; width: 1px; background: var(--citui-line-strong); }
+.is-rail .con-side__top b, .is-rail .con-nav__it > span, .is-rail .con-nav__n, .is-rail .con-tag,
+.is-rail .con-nav__chev, .is-rail .con-nav__kids { display: none; }
+.is-rail .con-nav__it { justify-content: center; padding: 8px 0; }
+.is-rail .con-side__top { justify-content: center; }
+.con-user { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 8px 4px 0; border-top: 1px solid var(--citui-line); margin-top: 8px; }
+.is-rail .con-user { flex-direction: column; }
+
+/* Top bar: menu (phone) · ← · breadcrumb · ⌘K · theme · language · Súgó. */
 .con-top {
-  display: flex; align-items: center; gap: 20px;
-  padding: 11px 22px;
-  background: linear-gradient(120deg, var(--citui-navy-900), var(--citui-navy-700));
-  border-bottom: 2px solid var(--citui-cyan-500);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--citui-navy-950) 16%, transparent);
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px; min-height: 48px;
+  border-bottom: 1px solid var(--citui-line); background: var(--citui-panel);
   position: sticky; top: 0; z-index: 50;
 }
-.con-top .citui-brand__mark { width: 30px; height: 30px; }
-.con-top .citui-brand { font-size: 1.1rem; gap: 9px; flex: 0 0 auto; }
-/* On the navy bar the ink brand text must flip to white (mark stays cyan). */
-.con-top .citui-brand--ink { color: var(--citui-white); }
-
-/* The menu NEVER wraps into a broken column: on narrow screens it scrolls
-   horizontally instead (thumb-friendly, nothing overlaps the content). */
-.con-nav {
-  display: flex; align-items: center; gap: 4px;
-  flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; min-width: 0; flex: 1 1 auto;
+.con-top__menu { display: none; }
+.con-top__theme { flex: 0 0 auto; }
+.con-back.is-hidden { visibility: hidden; }
+.con-crumb { display: flex; align-items: center; gap: 2px; font-size: 13px; min-width: 0; flex: 1; }
+.con-crumb a { color: var(--citui-muted); padding: 3px 6px; border-radius: 5px; white-space: nowrap; }
+.con .con-crumb a:hover { background: var(--citui-hover); color: var(--citui-ink); text-decoration: none; }
+.con-crumb b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; }
+.con-crumb svg { color: var(--citui-line-strong); flex: 0 0 auto; }
+.con-k {
+  position: relative; display: flex; align-items: center; gap: 8px; width: 280px;
+  border: 1px solid var(--citui-line); border-radius: 6px; padding: 5px 9px;
+  color: var(--citui-muted); background: var(--citui-field);
 }
-.con-nav::-webkit-scrollbar { display: none; }
-.con-nav a {
-  display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 9px;
-  color: rgba(255, 255, 255, 0.72); font-weight: 600; font-size: 0.92rem; white-space: nowrap;
-  transition: color var(--citui-transition), background var(--citui-transition);
+.con-k input { border: 0; background: transparent; flex: 1; font: inherit; color: var(--citui-ink); outline: 0; min-width: 0; padding: 0; margin: 0; }
+.con-k input::-webkit-search-cancel-button { display: none; }
+.con-k kbd { font: 600 11px var(--citui-font-text); border: 1px solid var(--citui-line); border-radius: 4px; padding: 1px 5px; color: var(--citui-muted); }
+.con-k__dd {
+  position: absolute; top: 36px; left: 0; right: 0; z-index: 60; padding: 4px; max-height: 320px; overflow: auto;
+  background: var(--citui-panel); border: 1px solid var(--citui-line); border-radius: 8px;
+  box-shadow: var(--citui-shadow-md);
 }
-.con-nav a svg { width: 17px; height: 17px; flex: 0 0 auto; }
-.con-nav a:hover { color: var(--citui-white); background: rgba(255, 255, 255, 0.10); text-decoration: none; }
-.con-nav a.active { color: var(--citui-navy-900); background: var(--citui-cyan-400); }
+.con-k__dd[hidden] { display: none; }
+.con-k__dd a { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px; color: var(--citui-ink); font-size: 12.5px; }
+.con .con-k__dd a { color: var(--citui-ink); }
+.con .con-k__dd a:hover, .con-k__dd a.is-hi { background: var(--citui-hover); text-decoration: none; }
+.con-k__dd a small { color: var(--citui-muted); margin-left: auto; white-space: nowrap; }
+.con-k__dd em { font-style: normal; background: var(--citui-accent-soft); border-radius: 3px; }
+.con-k__none { padding: 8px; color: var(--citui-muted); }
+.con-lang { display: inline-flex; gap: 4px; align-items: center; margin: 0; }
+.con-lang select {
+  background: var(--citui-field); color: var(--citui-ink); border: 1px solid var(--citui-line);
+  border-radius: 6px; font: inherit; font-size: 12px; padding: 4px 6px;
+}
 
-.con-user { margin-left: auto; font-size: 0.88rem; white-space: nowrap; flex: 0 0 auto; }
-.con-user a { color: rgba(255, 255, 255, 0.78); }
-.con-user a:hover { color: var(--citui-white); }
+.con-main { min-width: 0; position: relative; }
+.con-main__in { padding: 22px 20px 32px; max-width: 1600px; margin: 0 auto; }
+/* Prospect/tenant-facing page inside the console (chrome: false): brand only. */
+.con-top--plain { justify-content: flex-start; }
+.con-top--plain .citui-brand__mark { width: 28px; height: 28px; }
+.con--plain .con-main__in { max-width: 1180px; }
 
-.con-main { padding: 20px 26px; max-width: min(1600px, 100%); margin: 0 auto; }
+/* Phone: no sidebar; a bottom bar with the first three modules + Menü; a left drawer. */
+.con-bnav { display: none; }
+.con-drawer { position: fixed; inset: 0; z-index: 90; display: none; }
+.con-drawer.on, .con-drawer:target { display: block; }
+.con-drawer__veil { position: absolute; inset: 0; background: color-mix(in srgb, var(--citui-navy-950) 45%, transparent); }
+.con-drawer__box {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 300px; max-width: 88%;
+  background: var(--citui-panel); color: var(--citui-ink); padding: 14px; overflow: auto;
+  border-right: 1px solid var(--citui-line);
+}
+.con-drawer__h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.con-drawer__h b { flex: 1; }
+.con-menu { display: flex; flex-direction: column; gap: 1px; }
+.con-menu__g { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--citui-muted); padding: 12px 10px 4px; }
+.con-menu .con-nav__it { padding: 9px 10px; font-size: 14px; }
+.con-menu .con-nav__grp { margin-top: 8px; }
+.con-menu .con-nav__sub { padding-left: 38px; font-size: 13px; }
+.con-menu .con-nav__sub::before { left: 26px; }
+.con-menu__lang { padding: 4px 10px; }
 
 /* ── Mobile (phone-first operator use is a REAL workflow, not an edge case) ── */
-@media (max-width: 760px) {
-  .con-top { flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; }
-  .con-top .citui-brand span { font-size: 1rem; }
-  .con-user { order: 2; }
-  .con-nav { order: 3; flex-basis: 100%; margin: 2px -14px 0; padding: 0 14px; }
-  .con-main { padding: 14px; }
-  .con .panel { padding: 14px 14px; border-radius: 16px; }
-  .con .panel h2 { margin: 0 0 12px !important; padding: 0; font-size: 1.05rem; }
-  .con-hero { padding: 18px 18px; }
+@media (max-width: 899px) {
+  .con-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .con-side { display: none; }
+  .con-top { padding: 8px 12px; gap: 6px; }
+  .con-top__menu { display: inline-flex; }
+  .con-k, .con-top__lang, .con-top__help { display: none; }
+  .con-main__in { padding: 14px 14px 28px; }
+  .con-bnav {
+    display: grid; grid-template-columns: repeat(5, 1fr); position: sticky; bottom: 0; z-index: 50;
+    border-top: 1px solid var(--citui-line); background: var(--citui-panel);
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  .con-bnav a {
+    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px;
+    color: var(--citui-muted); font-size: 10.5px; font-weight: 500; border-radius: 6px; text-decoration: none;
+  }
+  .con .con-bnav a { color: var(--citui-muted); }
+  .con .con-bnav a:hover { text-decoration: none; }
+  .con .con-bnav a.is-active { color: var(--citui-link-ink); font-weight: 600; }
+  .con .panel { padding: 14px 14px; }
+  .con .panel h2 { margin: 0 0 12px !important; padding: 0; font-size: 15px; }
   .con .kv { grid-template-columns: 1fr; gap: 0 0; }
   .con .kv dt { margin-top: 8px; }
 }
 
 /* ── Panels (cards) ─────────────────────────────────────────────────────── */
 .con .panel {
-  background: var(--citui-white);
+  background: var(--citui-panel);
   border: 1px solid var(--citui-line);
-  border-radius: 18px;
-  padding: 18px 20px;
-  margin: 0 0 16px;
-  box-shadow: var(--citui-shadow-sm);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 0 0 14px;
+  box-shadow: none;
 }
-/* Panel heading: a CLEAN display-face title inside the card (admin-hub mock) —
-   the old floating navy band ("kék fülecske") is retired by owner decree
-   (2026-08-23). !important defeats leftover inline margin overrides. */
+/* Panel heading: a clean title inside the card — the Linear language uses ONE family,
+   so the display face is the text face here (the old floating navy band is long gone). */
 .con .panel h2 {
-  margin: 0 0 14px !important; padding: 0;
-  font-family: var(--citui-font-display);
-  font-size: 1.15rem; letter-spacing: -0.02em; text-transform: none; font-weight: 700;
-  color: var(--citui-navy-900);
+  margin: 0 0 12px !important; padding: 0;
+  font-family: var(--citui-font-text);
+  font-size: 15px; letter-spacing: -0.01em; text-transform: none; font-weight: 600;
+  color: var(--citui-ink);
   background: none; border: 0; border-radius: 0;
 }
 
@@ -120,7 +255,7 @@ body.con {
    who this is, the match confidence as the single big metric (it gates every
    downstream action), the workflow-state pills, then the plain contact facts. */
 .con-lhead {
-  background: var(--citui-white); border: 1px solid var(--citui-line);
+  background: var(--citui-panel); border: 1px solid var(--citui-line);
   border-radius: 14px; box-shadow: var(--citui-shadow-sm); overflow: hidden; margin: 0 0 14px;
 }
 .con-lhead__band {
@@ -174,7 +309,7 @@ body.con {
 .con-runbar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 9px 18px; font-size: 0.9rem;
-  background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-panel));
   border-bottom: 1px solid var(--citui-line);
 }
 .con-runbar__mut { color: var(--citui-muted); }
@@ -190,7 +325,7 @@ body.con {
 .con-run-stage { font-weight: 700; color: var(--citui-navy-900); }
 /* Bukás: UGYANAZ a sáv mondja meg, miért állt le — nem egy másik helyen, kisebb betűvel. */
 .con-runbar.bad {
-  background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-panel));
   color: var(--citui-bad-ink); font-weight: 600;
 }
 /* ⭐ A LEZÁRÓ SOR (FK-003b L06): a futás VÉGÉT eddig SEMMI nem mondta ki — a sáv némán
@@ -281,12 +416,12 @@ body.con {
 .con .con-ltab:hover {
   color: var(--citui-white); background: rgba(255, 255, 255, 0.13); text-decoration: none;
 }
-.con .con-ltab.on { background: var(--citui-white); color: var(--citui-navy-900); }
+.con .con-ltab.on { background: var(--citui-panel); color: var(--citui-navy-900); }
 /* THIS is the dossier effect: the active tab paints over the cyan closing line,
    so its white runs straight down into the sheet below. */
 .con-ltab.on::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px;
-  background: var(--citui-white);
+  background: var(--citui-panel);
 }
 .con-ltab__n {
   padding: 1px 7px; border-radius: var(--citui-radius-pill); font-size: 11px;
@@ -294,11 +429,11 @@ body.con {
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 .con-ltab.on .con-ltab__n {
-  background: color-mix(in srgb, var(--citui-cyan-400) 22%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-cyan-400) 22%, var(--citui-panel));
   color: var(--citui-navy-900); border-color: transparent;
 }
 .con-ltabs__sheet {
-  background: var(--citui-white);
+  background: var(--citui-panel);
   border: 1px solid var(--citui-navy-900); border-top: 0;
   border-radius: 0 0 14px 14px; padding: 14px; box-shadow: var(--citui-shadow-sm);
 }
@@ -334,7 +469,7 @@ body.con {
      látszik"), contain left the frame half-empty — the fix is the ASSET, not
      the fit (scripts/shot-previews.mts). */
   display: block; width: 100%; flex: 1; min-height: 0; object-fit: cover; object-position: top center;
-  background: var(--citui-white);
+  background: var(--citui-panel);
   border: 2px solid var(--citui-cyan-500); border-radius: 10px;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);
 }
@@ -344,7 +479,7 @@ body.con {
    hogy olvasható-e benne a törzsszöveg. */
 .con .gen-2col #tpl-prev-frame {
   display: block; width: 100%; flex: 1; min-height: 320px; border: 0;
-  border-radius: 10px; background: var(--citui-white);
+  border-radius: 10px; background: var(--citui-panel);
   outline: 2px solid var(--citui-cyan-500); outline-offset: -2px;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--citui-cyan-500) 22%, transparent);
 }
@@ -363,7 +498,7 @@ body.con {
 }
 .con .tpl-card {
   display: block; position: relative; cursor: pointer; border: 1px solid var(--citui-line);
-  border-radius: 10px; overflow: hidden; background: var(--citui-white);
+  border-radius: 10px; overflow: hidden; background: var(--citui-panel);
   transition: border-color .15s, box-shadow .15s, transform .15s;
 }
 .con .tpl-card input { position: absolute; opacity: 0; pointer-events: none; }
@@ -378,7 +513,7 @@ body.con {
   position: absolute; top: 5px; left: 5px; width: 32px; height: 32px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--citui-line); border-radius: 8px; cursor: zoom-in;
-  background: color-mix(in srgb, var(--citui-white) 86%, transparent);
+  background: color-mix(in srgb, var(--citui-panel) 86%, transparent);
   color: var(--citui-ink); backdrop-filter: blur(2px);
 }
 .con .tpl-card__zoom:hover { border-color: var(--citui-cyan-500); color: var(--citui-link-ink); }
@@ -531,40 +666,49 @@ body.con {
    Warn, not bad: nothing is broken in the data, we simply could not ask. */
 .con .con-warn { color: var(--citui-warn-ink); }
 
-/* ── Console hero (dashboard greeting) ───────────────────────────────────────
-   Carries the homepage hero mood (navy glow + faint grid) into the app so the
-   operator lands on brand, not on a blank slab. */
-.con-hero {
-  position: relative; overflow: hidden;
-  border-radius: 16px; padding: 20px 24px; margin: 0 0 14px;
-  color: var(--citui-white);
-  background:
-    radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--citui-cyan-400) 34%, transparent), transparent 42%),
-    radial-gradient(circle at 88% 88%, color-mix(in srgb, var(--citui-glow-blue) 18%, transparent), transparent 44%),
-    linear-gradient(135deg, var(--citui-navy-950), var(--citui-navy-900) 55%, var(--citui-navy-700));
-  box-shadow: var(--citui-shadow-md);
-}
-.con-hero::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: linear-gradient(to bottom right, rgba(0, 0, 0, 0.65), transparent 82%);
-}
-.con-hero > * { position: relative; }
-.con-hero .eyebrow {
-  margin: 0 0 7px; font-family: var(--citui-font-display);
-  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--citui-cyan-300);
-}
-.con-hero h1 { margin: 0 0 6px; color: var(--citui-white); font-size: clamp(1.4rem, 3vw, 1.85rem); letter-spacing: -0.03em; }
-.con-hero p { margin: 0; color: rgba(255, 255, 255, 0.74); font-size: 0.96rem; max-width: 62ch; }
+/* ── Home + module dashboards (linear-shell README ④⑤) ───────────────────────
+   Page head, one widget per module, „Figyelmet kér" rows, the module's function list. */
+.con-ph { margin-bottom: 14px; }
+.con-ph h1 { font-size: 22px; margin: 0 0 2px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; color: var(--citui-ink); }
+.con-ph p { margin: 0; color: var(--citui-muted); font-size: 13px; }
+.con-wgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.con-wgrid--one { grid-template-columns: minmax(0, 1fr); max-width: 420px; }
+.con-w { border: 1px solid var(--citui-line); border-radius: 8px; padding: 12px 14px; background: var(--citui-panel); min-width: 0; }
+.con-w__h { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--citui-muted); margin-bottom: 8px; }
+.con-w__h svg { color: var(--citui-link-ink); }
+.con-w__v { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--citui-ink); }
+.con-w__s { font-size: 12px; color: var(--citui-muted); margin-top: 2px; }
+.con-w__kv { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; font-size: 12.5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--citui-line); }
+.con-w__kv span { color: var(--citui-muted); }
+.con-w__kv b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.con .con-w__kv a { color: var(--citui-ink); }
+.con .con-w__kv a:hover { color: var(--citui-link-ink); text-decoration: none; }
+.con-att, .con-fl { border: 1px solid var(--citui-line); border-radius: 8px; margin-top: 14px; background: var(--citui-panel); }
+.con-att__h, .con-fl__h { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--citui-line); font-size: 12px; font-weight: 600; }
+.con-att__cnt { color: var(--citui-muted); font-weight: 500; }
+.con-att__row, .con-fl a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--citui-line); font-size: 13px; color: var(--citui-ink); }
+.con .con-att__row, .con .con-fl a { color: var(--citui-ink); }
+.con .con-att__row:hover, .con .con-fl a:hover { background: var(--citui-hover); text-decoration: none; }
+.con-att__row:last-child, .con-fl a:last-child { border-bottom: 0; }
+.con-att__st { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: var(--citui-muted); }
+.con-att__row.is-warn .con-att__st { background: var(--citui-warn); }
+.con-att__row.is-bad .con-att__st { background: var(--citui-bad); }
+.con-att__row.is-info .con-att__st { background: var(--citui-cyan-500); }
+.con-att__row.is-ok .con-att__st { background: var(--citui-ok); }
+.con-att__row > span:first-of-type { min-width: 0; flex: 1; }
+.con-att__m { margin-left: auto; color: var(--citui-muted); font-size: 12px; white-space: nowrap; }
+.con-fl a svg { color: var(--citui-muted); flex: 0 0 auto; }
+.con-fl a > span:first-of-type { flex: 1; min-width: 0; }
+.con-fl .con-nav__n, .con-fl .con-tag { margin-left: auto; }
+.con-fl__go { margin-left: auto; display: inline-flex; }
+.con-fl .con-nav__n + .con-fl__go, .con-fl .con-tag + .con-fl__go { margin-left: 8px; }
+@media (max-width: 899px) { .con-wgrid { grid-template-columns: 1fr; } .con-wgrid--one { max-width: none; } }
 
 /* Dashboard stat cards */
 .con-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 12px; }
 .con-card {
   position: relative; overflow: hidden;
-  display: block; background: var(--citui-white); border: 1px solid var(--citui-line);
+  display: block; background: var(--citui-panel); border: 1px solid var(--citui-line);
   border-radius: 14px; padding: 14px 16px; color: inherit;
   transition: transform var(--citui-transition), box-shadow var(--citui-transition), border-color var(--citui-transition);
 }
@@ -756,14 +900,14 @@ body.con {
 .con .con-legend[hidden] { display: none; }
 .con .con-legend__box {
   width: min(100%, 620px); max-height: 82vh; overflow: auto;
-  background: var(--citui-white); border-radius: 16px;
+  background: var(--citui-panel); border-radius: 16px;
   box-shadow: 0 24px 60px color-mix(in srgb, var(--citui-ink) 28%, transparent);
 }
 /* A fejléc RAGAD a doboz tetején: 11 oszlop + 5 jelölés hosszabb, mint a képernyő, és a
    bezáró × nem görögthet ki a képből. */
 .con .con-legend__head {
   position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px;
-  padding: 16px 18px 12px; background: var(--citui-white);
+  padding: 16px 18px 12px; background: var(--citui-panel);
   border-bottom: 1px solid var(--citui-line);
 }
 .con .con-legend__head h3 {
@@ -812,7 +956,7 @@ body.con {
 .con button {
   font: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 14px; min-height: 34px;
   border-radius: var(--citui-radius-pill); cursor: pointer;
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-navy-800);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-navy-800);
   transition: var(--citui-transition);
 }
 .con button:hover { border-color: var(--citui-cyan-500); }
@@ -836,7 +980,7 @@ body.con {
 .con button.con-ib { display: inline-flex; align-items: center; gap: 6px; }
 .con button.con-ib svg { flex: 0 0 auto; color: var(--citui-cyan-500); }
 .con select, .con input, .con textarea {
-  background: var(--citui-white); color: var(--citui-ink);
+  background: var(--citui-panel); color: var(--citui-ink);
   border: 1px solid var(--citui-line-strong); border-radius: 10px; padding: 8px 11px; font: inherit;
   transition: border-color var(--citui-transition);
 }
@@ -846,7 +990,7 @@ body.con {
 }
 .con .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
 .con .filters label { font-size: 11px; color: var(--citui-muted); text-transform: uppercase; letter-spacing: 0.04em; display: flex; flex-direction: column; gap: 4px; }
-.con iframe { background: var(--citui-white); }
+.con iframe { background: var(--citui-panel); }
 
 /* ── Login page ─────────────────────────────────────────────────────────── */
 .con-login {
@@ -854,7 +998,7 @@ body.con {
   background: linear-gradient(160deg, var(--citui-navy-900), var(--citui-navy-700));
 }
 .con-login .box {
-  width: min(400px, 92vw); background: var(--citui-white); border-radius: 16px;
+  width: min(400px, 92vw); background: var(--citui-panel); border-radius: 16px;
   padding: 30px 28px; box-shadow: 0 18px 50px color-mix(in srgb, var(--citui-navy-950) 40%, transparent);
 }
 .con-login .box h1 { font-family: var(--citui-font-display); font-size: 1.15rem; margin: 14px 0 18px; color: var(--citui-navy-900); }
@@ -885,7 +1029,7 @@ body.con {
 .con .qbadge {
   display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   padding: 3px 8px 3px 6px; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
-  border: 1px solid currentColor; background: var(--citui-white);
+  border: 1px solid currentColor; background: var(--citui-panel);
 }
 .con .qbadge svg { width: 14px; height: 14px; flex: 0 0 auto; }
 .con .qbadge.qb-hot { color: var(--citui-bad-ink); }      /* no site = prime target */
@@ -987,8 +1131,15 @@ body.con {
    lapította, és a „ELEK-TESZT Vendégház" „Vend / éghá / z"-ként tördelődött. A telefonos
    táblázat úgyis oldalra görget (ott minden oszlop a kereten kívülre lóg), tehát a
    törhetőség CSAK a vágás ellen kell — a zsugorodás ellen nem. */
-.con .con-leadtbl td[data-col="name"] { overflow-wrap: anywhere; min-width: 13ch; }
+/* linear-shell (2026-09-25): beside the sidebar the browser squeezed this column to its
+   13ch floor and wrapped ordinary names (⑨ of the lead-list plan: the name's length must
+   not change the row height). Ordinary names stay on one line; `anywhere` still breaks a
+   name with no spaces at all. */
+.con .con-leadtbl td[data-col="name"] { overflow-wrap: anywhere; min-width: 13ch; white-space: nowrap; }
 .con .con-leadtbl th[data-col="name"] { min-width: 13ch; }
+/* A date never breaks („2026-09-/04”): measured 2026-09-25 beside the sidebar, the squeezed
+   column wrapped SOME rows to two lines — 57 vs 62 px rows, ⑨ of the lead-list plan. */
+.con .con-leadtbl td[data-col="surveyed"] { white-space: nowrap; }
 
 /* ── Jóváhagyott terv: `assets/design-refs/console/lead-list/` ───────────────────────
    ⑨ EGYENLETES SORMAGASSÁG. A fenti törhetőség (indokolt, marad) 1 és 3 soros sorokat
@@ -1035,7 +1186,7 @@ body.con {
 .con .tblwrap--leads.is-scrollx .con-leadtbl td[data-col="name"],
 .con .tblwrap--leads.is-scrollx .con-leadtbl th[data-col="name"] {
   position: sticky; left: 0; z-index: 2;
-  background: var(--citui-white);
+  background: var(--citui-panel);
   box-shadow: 1px 0 0 var(--citui-line);
 }
 .con .tblwrap--leads.is-scrollx .con-leadtbl thead th[data-col="name"] {
@@ -1068,7 +1219,7 @@ body.con {
    út a jelentéshez — a `title` elemleírás ott elérhetetlen, a tulaj pedig telefonról
    dolgozik. 26 px: ujjal is eltalálható, de nem versenyez a címmel. */
 .con .con-helpq {
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel);
   color: var(--citui-muted); border-radius: 50%; width: 26px; height: 26px;
   font-size: 14px; line-height: 1; padding: 0; cursor: pointer;
   display: inline-grid; place-items: center; font-weight: 700; flex: 0 0 auto;
@@ -1119,7 +1270,7 @@ body.con {
      környezetek), ezért a lap-szkript a fejléc ALÁ is szorítja (`citCfPlace`). */
   position: fixed; z-index: 80; min-width: 210px; max-width: min(280px, calc(100vw - 16px));
   display: flex; flex-direction: column; gap: 6px; padding: 10px;
-  background: var(--citui-white); border: 1px solid var(--citui-line-strong);
+  background: var(--citui-panel); border: 1px solid var(--citui-line-strong);
   border-radius: 10px; box-shadow: 0 10px 28px color-mix(in srgb, var(--citui-ink) 16%, transparent);
   font-weight: 400; text-transform: none; letter-spacing: 0;
 }
@@ -1237,75 +1388,11 @@ body.con {
   font-size: 0.72rem; color: var(--citui-muted); overflow-wrap: anywhere;
 }
 
-/* ── Module hub (admin-hub mock, owner decree 2026-08-23) ─────────────────────
-   The console home is a MODULE GRID: every card carries its own submenu list and
-   a "Modul megnyitása" foot — the top bar stays slim (module-level only), never
-   a flat list of every function. Ported from the owner's approved mock. */
-.con-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; position: relative; z-index: 1; }
-.con-chip {
-  display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px;
-  border-radius: var(--citui-radius-pill); min-height: 32px;
-  background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.18);
-  color: var(--citui-white); font-size: 12.5px; font-weight: 500; transition: var(--citui-transition);
-}
-.con-chip:hover { background: rgba(255, 255, 255, 0.18); text-decoration: none; color: var(--citui-white); }
-.con-chip b { font-weight: 700; }
-.con-chip .led { width: 7px; height: 7px; border-radius: 50%; background: var(--citui-cyan-400); }
-.con-chip--warn .led { background: var(--citui-warn); }
-.con-chip--bad .led { background: var(--citui-bad); }
-.con-chip--ok .led { background: var(--citui-ok); }
-
-.con-hubsearch {
-  display: flex; align-items: center; gap: 10px; margin: 16px 0 14px; padding: 11px 15px;
-  background: var(--citui-white); border: 1px solid var(--citui-line);
-  border-radius: var(--citui-radius-pill); box-shadow: var(--citui-shadow-sm);
-}
-.con-hubsearch svg { color: var(--citui-muted); flex: none; }
-.con-hubsearch input { flex: 1; border: 0; outline: 0; background: none; font-size: 14px; color: var(--citui-ink); min-width: 0; margin: 0; padding: 0; }
-.con-hubsearch .hint { color: var(--citui-muted); font-size: 12px; white-space: nowrap; }
-
-.con-modgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.con-mod {
-  background: var(--citui-white); border: 1px solid var(--citui-line); border-radius: 18px;
-  overflow: hidden; box-shadow: var(--citui-shadow-sm); display: flex; flex-direction: column;
-  transition: var(--citui-transition);
-}
-.con-mod:hover { box-shadow: var(--citui-shadow-md); border-color: var(--citui-line-strong); transform: translateY(-2px); }
-.con-mod__head { display: flex; gap: 12px; align-items: flex-start; padding: 16px 16px 12px; color: inherit; }
-.con-mod__head:hover { text-decoration: none; }
-.con-mod__ico {
-  width: 42px; height: 42px; flex: none; border-radius: 13px; display: grid; place-items: center;
-  color: var(--citui-white); background: linear-gradient(140deg, var(--citui-navy-800), var(--citui-navy-700));
-}
-.con-mod__t { display: block; font-family: var(--citui-font-display); font-weight: 600; font-size: 1.05rem; color: var(--citui-navy-900); }
-.con-mod__role { display: block; color: var(--citui-muted); font-size: 12.5px; margin-top: 3px; }
-.con-subs { list-style: none; margin: 0; padding: 0 8px 8px; display: flex; flex-direction: column; }
-.con-sub {
-  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
-  border-radius: 11px; min-height: 42px; color: inherit; border: 1px solid transparent;
-  transition: var(--citui-transition);
-}
-.con-sub:hover {
-  text-decoration: none;
-  background: color-mix(in srgb, var(--citui-cyan-400) 9%, transparent);
-  border-color: color-mix(in srgb, var(--citui-cyan-500) 24%, transparent);
-}
-.con-sub__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--citui-cyan-500); flex: none; opacity: 0.55; }
-.con-sub:hover .con-sub__dot { opacity: 1; }
-.con-sub__n { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; color: var(--citui-ink); }
-.con-sub__n em { font-style: normal; background: color-mix(in srgb, var(--citui-cyan-400) 32%, transparent); border-radius: 4px; }
-.con-sub .pill { margin-left: auto; }
-.con-mod__foot { margin-top: auto; padding: 10px 16px 14px; border-top: 1px solid var(--citui-line); }
-.con-mod__open { display: inline-flex; align-items: center; gap: 6px; color: var(--citui-link-ink); font-weight: 600; font-size: 12.5px; min-height: 32px; }
-
-@media (max-width: 960px) { .con-modgrid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .con-modgrid { grid-template-columns: 1fr; } }
-
 /* ── Partner header band (MineREAL reference, owner 2026-08-23) ──────────────
    One brand band: identity left (name, address, badges), compact KPI boxes
    right; the tab row rides directly under the band. */
 .con-phead {
-  background: var(--citui-white); border: 1px solid var(--citui-line);
+  background: var(--citui-panel); border: 1px solid var(--citui-line);
   border-radius: 18px; box-shadow: var(--citui-shadow-sm); overflow: hidden; margin: 0 0 16px;
 }
 .con-phead__band {
@@ -1338,7 +1425,7 @@ body.con {
 
 /* KPI strip (MineREAL: db · érték · al-metrika boxes in one row) */
 .con-kstrip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 4px 0 14px; }
-.con-kbox { border: 1px solid var(--citui-line); border-radius: 12px; padding: 10px 12px; background: var(--citui-white); }
+.con-kbox { border: 1px solid var(--citui-line); border-radius: 12px; padding: 10px 12px; background: var(--citui-panel); }
 .con-kbox__t { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--citui-muted); }
 .con-kbox__r { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; flex-wrap: wrap; }
 .con-kbox__v { font-family: var(--citui-font-display); font-weight: 700; font-size: 1.12rem; color: var(--citui-navy-900); }
@@ -1346,7 +1433,7 @@ body.con {
 .con-kbox--bad .con-kbox__v { color: var(--citui-bad-ink); }
 
 /* Monthly breakdown chart (pure SVG bars) */
-.con-chart { border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px; background: var(--citui-white); margin: 0 0 14px; }
+.con-chart { border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px; background: var(--citui-panel); margin: 0 0 14px; }
 .con-chart__t { font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--citui-muted); margin-bottom: 6px; }
 
 /* ── Column-filter table header (MineREAL kereső) ──────────────────────────
@@ -1371,7 +1458,7 @@ body.con {
    column, so it must react to ITS width, not the window's. */
 .cp-panel { container-type: inline-size; }
 .cp-scale {
-  display: flex; align-items: center; gap: 10px; background: var(--citui-white);
+  display: flex; align-items: center; gap: 10px; background: var(--citui-panel);
   border: 1px solid var(--citui-line); border-radius: var(--citui-radius);
   padding: 14px 16px; margin-bottom: 12px;
 }
@@ -1384,7 +1471,7 @@ body.con {
 .cp-scale .cp-n.miss { color: var(--citui-warn-ink); }
 .cp-scale .cp-t { font-size: 0.78rem; color: var(--citui-muted); line-height: 1.35; }
 
-.cp-doc { background: var(--citui-white); border: 1px solid var(--citui-line);
+.cp-doc { background: var(--citui-panel); border: 1px solid var(--citui-line);
   border-radius: var(--citui-radius); padding: 16px 18px; }
 .cp-eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--citui-muted); margin: 0 0 6px; }
@@ -1404,7 +1491,7 @@ body.con {
   font-family: inherit; min-height: 32px; background: none; }
 .cp-chip.used { background: var(--citui-ok-soft); color: var(--citui-ok-ink);
   border-color: color-mix(in srgb, var(--citui-ok) 30%, transparent); cursor: default; }
-.cp-chip.miss { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-white));
+.cp-chip.miss { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel));
   color: var(--citui-warn-ink);
   border-color: color-mix(in srgb, var(--citui-warn) 40%, transparent);
   cursor: pointer; transition: transform var(--citui-transition), box-shadow var(--citui-transition); }
@@ -1420,11 +1507,11 @@ body.con {
   min-height: 32px; }
 .cp-v.ok { background: var(--citui-ok-soft); color: color-mix(in srgb, var(--citui-ok) 78%, var(--citui-ink));
   border-color: color-mix(in srgb, var(--citui-ok) 30%, transparent); }
-.cp-v.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
+.cp-v.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-panel));
   color: color-mix(in srgb, var(--citui-bad) 80%, var(--citui-ink));
   border-color: color-mix(in srgb, var(--citui-bad) 30%, transparent); }
 .cp-v .cp-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
-.cp-why { display: none; margin: -6px 0 12px; padding: 11px 13px; background: var(--citui-white);
+.cp-why { display: none; margin: -6px 0 12px; padding: 11px 13px; background: var(--citui-panel);
   border: 1px solid var(--citui-line); border-left: 3px solid var(--citui-ok);
   border-radius: var(--citui-radius-sm); font-size: 0.82rem; line-height: 1.55; color: var(--citui-muted); }
 .cp-why.open { display: block; }
@@ -1436,7 +1523,7 @@ body.con {
 .cp-outcome.ok { border-color: color-mix(in srgb, var(--citui-ok) 35%, transparent);
   background: var(--citui-ok-soft); color: color-mix(in srgb, var(--citui-ok) 80%, var(--citui-ink)); }
 .cp-outcome.bad { border-color: color-mix(in srgb, var(--citui-bad) 38%, transparent);
-  background: color-mix(in srgb, var(--citui-bad) 9%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-bad) 9%, var(--citui-panel));
   color: color-mix(in srgb, var(--citui-bad) 82%, var(--citui-ink)); }
 .cp-hint { font-size: 0.78rem; color: var(--citui-muted); margin: 8px 0 0; line-height: 1.5; }
 
@@ -1462,7 +1549,7 @@ body.con {
 @container (min-width: 720px) { .sp-srcgrid { grid-template-columns: repeat(4, 1fr); } }
 .sp-src { border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
   padding: 11px 13px; background: var(--citui-surface); }
-.sp-src.missing { background: var(--citui-white); border-style: dashed; }
+.sp-src.missing { background: var(--citui-panel); border-style: dashed; }
 .sp-src h3 { margin: 0 0 5px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--citui-muted); display: flex; gap: 6px; align-items: center; }
 .sp-src .sp-v { font-family: var(--citui-font-display); font-size: 0.95rem; font-weight: 600; }
@@ -1471,7 +1558,7 @@ body.con {
 
 .sp-sect-t { margin: 0 0 8px; font-weight: 700; }
 .sp-elem { border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
-  margin-bottom: 10px; overflow: hidden; background: var(--citui-white); }
+  margin-bottom: 10px; overflow: hidden; background: var(--citui-panel); }
 .sp-elem-h { padding: 9px 13px; background: var(--citui-surface-2); font-size: 0.82rem; }
 .sp-elem-h .sp-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
   color: var(--citui-muted); display: block; margin-bottom: 3px; }
@@ -1479,7 +1566,7 @@ body.con {
 .sp-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 13px; }
 .sp-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem;
   border-radius: var(--citui-radius-pill); padding: 5px 12px; min-height: 30px;
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel);
   cursor: pointer; font-family: inherit; color: var(--citui-ink); }
 .sp-chip.open { background: var(--citui-surface-2); }
 .sp-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; display: inline-block; }
@@ -1497,7 +1584,7 @@ body.con {
 .sp-warn { display: flex; gap: 8px; align-items: center; border-radius: var(--citui-radius-sm);
   padding: 9px 13px; font-size: 0.82rem; font-weight: 500; margin-top: 12px; }
 .sp-warn.ok { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
-.sp-warn.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-white));
+.sp-warn.bad { background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-panel));
   color: color-mix(in srgb, var(--citui-bad) 80%, var(--citui-ink)); }
 .sp-warn svg { flex: none; }
 .sp-miss { margin-top: 10px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
@@ -1563,7 +1650,7 @@ body.con {
 }
 .con-kb-toc a:hover { border-color: var(--citui-cyan-500); }
 .con-kb-toc a.act {
-  background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-cyan-500) 12%, var(--citui-panel));
   border-color: color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
   font-weight: 600;
 }
@@ -1620,7 +1707,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    nevének látszott. Mérve az indulólapon; a szabály eddig csak a lista-fejlécre állt. */
 .con-kb-ghead .tag, .con-kb-sc h3 .tag {
   display: inline-block; border-radius: var(--citui-radius-pill); padding: 1px 8px;
-  background: color-mix(in srgb, var(--citui-cyan-500) 14%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-cyan-500) 14%, var(--citui-panel));
   border: 1px solid color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
   letter-spacing: 0; text-transform: none; font-weight: 600; font-size: 0.65rem;
   color: var(--citui-ink); white-space: nowrap;
@@ -1651,7 +1738,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con-kb-sc {
   border: 1px solid var(--citui-line); border-radius: 12px; padding: 12px 14px;
-  background: var(--citui-white);
+  background: var(--citui-panel);
 }
 .con-kb-sc h3 {
   margin: 0 0 7px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
@@ -1681,7 +1768,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con-nav__it > a { display: inline-flex; }
 .con-dd {
   display: none; position: absolute; top: 100%; left: 0; min-width: 230px;
-  background: var(--citui-white); border: 1px solid var(--citui-line-strong);
+  background: var(--citui-panel); border: 1px solid var(--citui-line-strong);
   border-radius: var(--citui-radius-sm); box-shadow: var(--citui-shadow-sm);
   padding: 6px; z-index: 60;
 }
@@ -1729,7 +1816,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pr-tier__chip {
   display: inline-flex; align-items: baseline; gap: 5px;
   padding: 2px 8px; border-radius: 999px; font-size: .78rem;
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white); color: var(--citui-ink);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-ink);
 }
 .pr-tier__chip i { font-style: normal; font-size: .72rem; color: var(--citui-muted); }
 .pr-tier__chip b {
@@ -1770,10 +1857,10 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 }
 .con-sell__track::after {
   content: ""; position: absolute; top: 2px; left: 15px; width: 13px; height: 13px;
-  border-radius: 50%; background: var(--citui-white); transition: left 0.15s;
+  border-radius: 50%; background: var(--citui-panel); transition: left 0.15s;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--citui-navy-950) 25%, transparent);
 }
-.con-sell input:not(:checked) + .con-sell__track { background: color-mix(in srgb, var(--citui-muted) 45%, var(--citui-white)); }
+.con-sell input:not(:checked) + .con-sell__track { background: color-mix(in srgb, var(--citui-muted) 45%, var(--citui-panel)); }
 .con-sell input:not(:checked) + .con-sell__track::after { left: 2px; }
 
 /* ── NYITÓKÉP-VÁLASZTÓ (jóváhagyott terv: assets/design-refs/console/hero-override/) ──
@@ -1796,7 +1883,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    a feliratok navy háttéren. Specificitás-kérdés (0,1,1 > 0,1,0), nem ízlésé: a csempe
    KÉP, nem gomb-alakú akció. Ezért `.con .hp-alt`. */
 .con .hp-alt { position: relative; padding: 0; min-height: 0;
-  border: 1px solid var(--citui-line); background: var(--citui-white); color: var(--citui-ink);
+  border: 1px solid var(--citui-line); background: var(--citui-panel); color: var(--citui-ink);
   border-radius: var(--citui-radius-sm); overflow: hidden; cursor: pointer; text-align: left;
   font-family: inherit; font-weight: 400;
   transition: border-color var(--citui-transition), transform var(--citui-transition); }
@@ -1832,7 +1919,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    a rendes kiút az újragenerálás. */
 .pg-box {
   margin-top: 10px; padding: 11px 13px; border-radius: var(--citui-radius);
-  background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-panel));
   border: 1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent);
 }
 .pg-head { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--citui-bad-ink); font-size: 0.86rem; }
@@ -1863,7 +1950,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pg-form textarea {
   flex: 1 1 320px; min-width: 0; font: inherit; font-size: 0.8rem; line-height: 1.45;
   padding: 8px 10px; border-radius: var(--citui-radius-sm);
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel);
   color: var(--citui-ink); resize: vertical; min-height: 60px;
 }
 .pg-count { margin: 5px 0 0; font-size: 0.72rem; color: var(--citui-muted); }
@@ -1893,7 +1980,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   border-radius: var(--citui-radius); padding: 9px 12px; font-size: 0.8rem; margin-bottom: 10px; }
 .hp-undo { background: none; border: 0; font: inherit; font-size: 0.8rem; text-decoration: underline;
   cursor: pointer; color: var(--citui-navy-800); padding: 0; }
-.hp-warnbox { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-white));
+.hp-warnbox { background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel));
   border: 1px solid color-mix(in srgb, var(--citui-warn) 42%, transparent);
   border-radius: var(--citui-radius); padding: 11px 13px; font-size: 0.82rem; line-height: 1.5; margin-top: 10px; }
 .hp-warnrow { display: flex; gap: 8px; margin-top: 9px; }
@@ -1925,7 +2012,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   padding: 12px 14px;
   border: 1px solid var(--citui-line-strong);
   border-radius: 10px;
-  background: var(--citui-white);
+  background: var(--citui-panel);
   color: var(--citui-ink);
   font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
   white-space: pre-wrap;
@@ -1946,7 +2033,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  background: color-mix(in srgb, var(--citui-white) 96%, transparent);
+  background: color-mix(in srgb, var(--citui-panel) 96%, transparent);
   border: 1px solid var(--citui-line-strong);
   border-radius: 14px;
   box-shadow: 0 -10px 30px color-mix(in srgb, var(--citui-navy-900) 12%, transparent);
@@ -1964,7 +2051,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 /* ① MUNKAMENET-SÁV a fejléc alatt. Asztalin hat állomás egy sorban; a görgetés csak
    végszükség (nagyon szűk ablaknál), a telefonos elrendezést a média-blokk rendezi. */
 .con .con-wf {
-  display: flex; background: var(--citui-white);
+  display: flex; background: var(--citui-panel);
   border-left: 1px solid var(--citui-line); border-right: 1px solid var(--citui-line);
   overflow: auto;
 }
@@ -1996,12 +2083,12 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 /* ② ADAT-MEGBÍZHATÓSÁG: egy sor a sáv alatt, mindig a KÖVETKEZMÉNYÉVEL. */
 .con .con-trust {
   display: flex; gap: 9px; align-items: flex-start; margin: 0;
-  background: var(--citui-white); border: 1px solid var(--citui-line); border-top: 0;
+  background: var(--citui-panel); border: 1px solid var(--citui-line); border-top: 0;
   padding: 10px 16px; font-size: 13px; line-height: 1.5;
 }
 .con .con-trust b { color: var(--citui-navy-900); }
-.con .con-trust.bad { background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white)); }
-.con .con-trust.base { background: color-mix(in srgb, var(--citui-warn) 9%, var(--citui-white)); }
+.con .con-trust.bad { background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-panel)); }
+.con .con-trust.base { background: color-mix(in srgb, var(--citui-warn) 9%, var(--citui-panel)); }
 .con .con-trust svg { flex: 0 0 auto; margin-top: 2px; }
 
 /* ③ FÜLSOR ALATTI MONDAT — a számláló helyett (az nem mondta meg, mit számol). */
@@ -2024,7 +2111,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   background: var(--citui-surface-2); font-size: 10.5px; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--citui-navy-700); white-space: nowrap;
 }
-.con .con-arttbl tr.cur { background: color-mix(in srgb, var(--citui-ok) 5%, var(--citui-white)); }
+.con .con-arttbl tr.cur { background: color-mix(in srgb, var(--citui-ok) 5%, var(--citui-panel)); }
 .con .con-arttbl .num { text-align: right; font-variant-numeric: tabular-nums; }
 .con .con-arttbl .why { display: block; font-size: 11.5px; color: var(--citui-muted); margin-top: 2px; }
 
@@ -2066,7 +2153,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 @media (min-width: 1040px) { .con .con-mkgrid { grid-template-columns: repeat(3, 1fr); } }
 
 .con .con-mk {
-  background: var(--citui-white); border: 1px solid var(--citui-line);
+  background: var(--citui-panel); border: 1px solid var(--citui-line);
   border-radius: var(--citui-radius-sm); overflow: hidden;
   display: flex; flex-direction: column;
   transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
@@ -2113,7 +2200,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-mk__ask {
   display: block; margin: 8px auto 0; font: 600 11.5px/1 var(--citui-font-text);
   padding: 7px 12px; border-radius: var(--citui-radius-pill);
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel);
   color: var(--citui-ink); cursor: pointer;
 }
 .con .con-mk__badge { position: absolute; top: 8px; left: 8px; z-index: 2; }
@@ -2148,10 +2235,10 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   background: var(--citui-ok-soft); color: var(--citui-ok-ink);
 }
 .con .con-mk__gate[data-verdict="flag"] {
-  background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-white)); color: var(--citui-warn-ink);
+  background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-panel)); color: var(--citui-warn-ink);
 }
 .con .con-mk__gate[data-verdict="fail"] {
-  background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-white)); color: var(--citui-bad-ink);
+  background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink);
 }
 
 .con .con-mk__act {
@@ -2191,7 +2278,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .cp-bar .b1 { background: var(--citui-ok-ink); }
 .con .cp-bar .b2 { background: var(--citui-warn-ink); }
 /* Semleges, NEM ítélő szín: az ismétlés se nem jó, se nem baj — a márka-tokenből keverve. */
-.con .cp-bar .b3 { background: color-mix(in srgb, var(--citui-navy-700) 45%, var(--citui-white)); }
+.con .cp-bar .b3 { background: color-mix(in srgb, var(--citui-navy-700) 45%, var(--citui-panel)); }
 .con .cp-leg { font-size: 12.5px; color: var(--citui-muted); line-height: 1.6; margin: 7px 0 0; }
 
 /* ⑩ TELEFONON: a sáv FÜGGŐLEGES lista, a mock-tábla sorokká bomlik — KÜLÖN tervezői
@@ -2224,7 +2311,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    gradienst viselt — a felület nem mondta meg, melyik kattintás ír. */
 .con .con-linkcard {
   border: 1px solid var(--citui-line); border-radius: 12px;
-  padding: 14px; margin-top: 12px; background: var(--citui-white);
+  padding: 14px; margin-top: 12px; background: var(--citui-panel);
 }
 .con .con-linkcard--live {
   border: 2px solid var(--citui-navy-900);
@@ -2275,7 +2362,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    ⚠️ Ez EGYETLEN másodlagos osztály. Az ADR-0169-ben bevezetett `con-btn2` ide olvadt
    be: két osztály ugyanarra a szerepre két igazság lenne ugyanazon a képernyőn. */
 .con button.ghost, .con button.ghost[type="submit"] {
-  background: var(--citui-white);
+  background: var(--citui-panel);
   color: var(--citui-navy-900);
   border: 1px solid var(--citui-line-strong);
 }
@@ -2330,7 +2417,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .pay-ref button {
   min-height: 34px; padding: 7px 11px; border-radius: 8px; cursor: pointer;
   border: 1px solid var(--citui-line-strong);
-  background: var(--citui-white); color: var(--citui-navy-900);
+  background: var(--citui-panel); color: var(--citui-navy-900);
   font-weight: 600; font-size: 0.8rem;
 }
 .con .pay-ref button.is-done { border-color: var(--citui-ok); color: var(--citui-ok-ink); }
@@ -2355,7 +2442,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   max-width: 540px; width: calc(100% - 32px);
   padding: 16px 18px; border-radius: var(--citui-radius);
   border: 1px solid color-mix(in srgb, var(--citui-bad) 38%, transparent);
-  background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-white));
+  background: color-mix(in srgb, var(--citui-bad) 7%, var(--citui-panel));
   color: var(--citui-ink); box-shadow: var(--citui-shadow-md);
 }
 .vg-dlg::backdrop { background: color-mix(in srgb, var(--citui-navy-950) 55%, transparent); }

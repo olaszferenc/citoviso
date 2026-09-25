@@ -181,6 +181,10 @@ async function open(html: string, width: number): Promise<void> {
   served = SELF_TEST ? html.replace("</head>", `<style>${BREAK_CSS}</style></head>`) : html;
   await page.setViewportSize({ width, height: 900 });
   await page.goto(`http://localhost:${assetPort}/`, { waitUntil: "load" });
+  // linear-shell (2026-09-25): the desktop promises of this plan hold with the console's
+  // 232 px sidebar COLLAPSED to the rail (the operator's persisted one-click choice);
+  // beside an open sidebar the table scrolls with a sticky name column instead.
+  if (width >= 900) await page.evaluate(() => document.documentElement.classList.add("is-rail"));
   await page.waitForTimeout(120);
 }
 

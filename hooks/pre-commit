@@ -904,6 +904,17 @@ if [ -f scripts/admin-linear-check.mts ] && \
   echo "[pre-commit] admin-linear-check (a szállított admin = a jóváhagyott Linear terv)…"
   npx tsx scripts/admin-linear-check.mts >"$GATE_LOG" || gate_failed
 fi
+# linear-shell (tulajdonosi döntés, 2026-09-25): a BELSŐ KONZOL kerete = a tenant-admin „Linear"
+# nyelve (design-refs/console/linear-shell). Az őr a VISELKEDÉST méri: minden modul csukva az
+# Irányítópulton és csak az aktív nyitva máshol; a nyíl hajtogat, nem navigál; a ← rejtve a
+# kezdőlapon, máshol egy szinttel feljebb mutat; a ⌘K ugyanabból a fából (nav.ts) épül; a téma
+# megmarad; sötétben nincs „fehér lyuk"; a telefon alsó sávján pontosan 5 elem. Böngészőt
+# indít (≈40 mp), ezért SZŰK a szűrője: a fa, a nézetek, a stíluslapok, az ikonok, a mag.
+if [ -f scripts/console-linear-check.mts ] && \
+   changed_files | grep -qE '^(src/console/(views|nav|i18nCtx)\.ts|public/assets/ui/citui-console(-table)?\.css|public/assets/ui/citui\.css|src/ui/icons\.ts)|^scripts/console-linear-check'; then
+  echo "[pre-commit] console-linear-check (a konzol kerete = a jóváhagyott Linear terv)…"
+  npx tsx scripts/console-linear-check.mts >"$GATE_LOG" || gate_failed
+fi
 # freeze-state-v2 ⑨ (tulajdonosi döntés, 2026-09-15): a tulaj azt is látja, ami az ÖVÉ
 # (belső előnézet), és azt is, amit a VILÁG (az 503-as udvarias lap). Az őr gerince:
 # amit az admin ÍGÉR a látogatói lapról, azt a VALÓDI vendég-lap renderjén keresi vissza

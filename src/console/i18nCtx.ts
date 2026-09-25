@@ -19,11 +19,14 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { DEFAULT_LANG } from "../i18n/lang.js";
+import type { NavNumbers } from "./nav.js";
 
 /** Mutable holder: the request enters the context BEFORE the operator (and thus
  *  their language) is known, and `currentOperator` fills it in when it loads. */
 export interface ConsoleLangCtx {
   lang: string;
+  /** Numbers beside the navigation nodes (navCounts.ts), loaded once per operator request. */
+  nav?: NavNumbers;
 }
 
 const store = new AsyncLocalStorage<ConsoleLangCtx>();
@@ -37,6 +40,17 @@ export function runWithConsoleLang<T>(fn: (ctx: ConsoleLangCtx) => T): T {
 export function setConsoleLang(lang: string): void {
   const ctx = store.getStore();
   if (ctx && lang) ctx.lang = lang;
+}
+
+/** Set the navigation numbers for the CURRENT request (no-op outside one). */
+export function setConsoleNav(nav: NavNumbers): void {
+  const ctx = store.getStore();
+  if (ctx) ctx.nav = nav;
+}
+
+/** The current request's navigation numbers — null outside a request or before they load. */
+export function consoleNav(): NavNumbers | null {
+  return store.getStore()?.nav ?? null;
 }
 
 /**

@@ -66,7 +66,8 @@ import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
 import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
-import { ic } from "../ui/icons.js";
+import { ic, icAdmin } from "../ui/icons.js";
+import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, type NavCounts, type NavNode } from "./nav.js";
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
@@ -74,7 +75,7 @@ import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
 import { uiLangs } from "../i18n/lang.js";
-import { consoleLang } from "./i18nCtx.js";
+import { consoleLang, consoleNav } from "./i18nCtx.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
@@ -120,48 +121,30 @@ const BRAND =
   `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
   `<span>Citoviso</span></a>`;
 
-/** Slim MODULE-level top bar (owner decree, 2026-08-23: never a flat list of
- *  every function — the hub's cards carry the submenus). `match` maps a page's
- *  legacy `active` href onto its module for highlighting. */
-// A FUNCTION of the reader's language (ADR-0067 ③): the labels are translated at
-// RENDER time, and the T() calls keep LITERAL source strings so the catalog
-// extractor can still see them. `match` is routing, not text — never translated.
-const MENU = (
-  lang = "hu",
-): ReadonlyArray<{
-  href: string;
-  label: string;
-  icon: string;
-  match: string[];
-  /** Dropdown entries under the top item (CSS hover/focus, no JS). */
-  sub?: ReadonlyArray<{ href: string; label: string; sep?: boolean }>;
-}> => [
-  { href: "/", label: T(lang, "Irányítópult"), icon: "overview", match: ["/"] },
-  {
-    href: "/leads",
-    label: T(lang, "CRM"),
-    icon: "leads",
-    match: ["/leads", "/lead/", "/scrape", "/duplicates", "/pricing"],
-    // Frozen plan (assets/design-refs/console/pricing-sales): the CRM top item
-    // opens a dropdown; pricing+sales lives INSIDE the CRM (owner, 2026-09-06).
-    sub: [
-      { href: "/leads", label: T(lang, "Lead-sor") },
-      { href: "/leads?mock=approved", label: T(lang, "Jóváhagyott mockok") },
-      { href: "/duplicates", label: T(lang, "Duplikátumok") },
-      { href: "/scrape", label: T(lang, "Adatgyűjtés indítása") },
-      { href: "/scrape/map", label: T(lang, "Térkép (lefedettség)") },
-      { href: "/pricing", label: T(lang, "Árazás és értékesítés"), sep: true },
-    ],
-  },
-  { href: "/documents", label: T(lang, "Pénzügy"), icon: "pricing", match: ["/documents", "/partner", "/accounting-document"] },
-  { href: "/report", label: T(lang, "Riport"), icon: "report", match: ["/report"] },
-  { href: "/settings", label: T(lang, "Beállítások"), icon: "settings", match: ["/settings"] },
-  // ⛔ A központi súgó eddig CSAK URL-ből vagy egy képernyő ⓘ-ikonjából nyílt: a menüben nem
-  // szerepelt, és a /help egyetlen menüpontot sem emelt ki — az operátor olyan lapon állt,
-  // ami a navigációban nem létezik. Pont az a felület volt rejtve, ami az első mentőöv.
-  // A helye a sor VÉGE (tulaj-döntés, 2026-09-13): a napi munka-menüpontok maradnak elöl.
-  { href: "/help", label: T(lang, "Súgó"), icon: "help", match: ["/help"] },
-];
+/* ═══ THE CONSOLE FRAME — the tenant-admin „Linear" language on the operator side ═══
+   Contract: assets/design-refs/console/linear-shell/README.md (owner, 2026-09-25: the
+   admin's design is the base of the internal console too; A · „Tükör" + module rows that
+   are pages and fold the tree). The navigation is ONE tree (nav.ts) — the sidebar, the
+   breadcrumb, the ⌘K index, the phone's drawer and bottom bar are all views of it. */
+
+/** The bare logo mark for the frame: the dot follows the ink, so it reads in both themes. */
+const LOGO_MARK =
+  `<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">` +
+  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
+  `<circle cx="22.5" cy="24" r="4.5" fill="currentColor"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>`;
+
+/** Frame icons: the THIN set (colour only for meaning); the screens keep `ic()`. */
+const icf = icAdmin;
+
+/**
+ * Runs in <head>, before the stylesheet: restores the operator's theme and rail choice
+ * so the first paint is already right (no light flash on a dark page). The theme key is
+ * shared with the tenant admin on purpose — one person, one browser, one preference.
+ */
+const THEME_BOOT =
+  `<script>(function(){try{var d=document.documentElement,t=localStorage.getItem('citui-theme');` +
+  `if(t==='dark'||t==='light')d.setAttribute('data-citui-theme',t);` +
+  `if(localStorage.getItem('citui-console-rail')==='1')d.classList.add('is-rail');}catch(e){}})();</script>`;
 
 /** ADR-0045/e §J: contextual help on a screen header. The data-kb-anchor is the
  *  coverage hook (kb-check --coverage, operator group): a screen carrying it MUST
@@ -181,26 +164,15 @@ export function helpLink(anchor: string, label = ""): string {
   );
 }
 
-/** Which module a page's `active` href belongs to (prefix match; "/" exact). */
-function activeModule(active: string | undefined): string | null {
-  if (!active) return null;
-  if (active === "/") return "/";
-  for (const m of MENU()) {
-    if (m.href === "/") continue;
-    if (m.match.some((p) => active === p || active.startsWith(p))) return m.href;
-  }
-  return null;
-}
-
 export interface LayoutOpts {
-  /** Menü-kiemelés: az aktív menüpont href-je. */
+  /** Menü-kiemelés: az aktív lap útvonala (a nav.ts fája ebből találja meg a helyét). */
   readonly active?: string;
   /** false → prospect/tenant-facing page: brand only, NO internal menu. */
   readonly chrome?: boolean;
   /** Extra markup injected into <head> (e.g. a map library's stylesheet). */
   readonly head?: string;
   /**
-   * "bare" → NO console shell at all: no navy topbar, no `.con` body class, and
+   * "bare" → NO console shell at all: no frame, no `.con` body class, and
    * the page paints its own surface edge to edge.
    *
    * ⛔ Why this exists (approved contract: design-refs/console/paydone-split ①):
@@ -214,11 +186,10 @@ export interface LayoutOpts {
 }
 
 /**
- * ADR-0067 ③ — the operator's OWN language switcher, in the header beside
- * "Kilépés". A plain form with an auto-submitting select; the no-JS path keeps a
- * visible button, because an operator on a locked-down machine must not be stuck
- * in a language they cannot read. The choice is stored on the ACCOUNT (0037), so
- * it follows the person to any browser.
+ * ADR-0067 ③ — the operator's OWN language switcher (in the top bar and the phone's
+ * drawer). A plain form with an auto-submitting select; the no-JS path keeps a visible
+ * button, because an operator on a locked-down machine must not be stuck in a language
+ * they cannot read. The choice is stored on the ACCOUNT (0037), so it follows the person.
  */
 function langSwitcher(lang: string): string {
   // ⛔ uiLangs(), NOT siteLangs() (ADR-0128): the sellable set is 29 languages, but this
@@ -230,16 +201,187 @@ function langSwitcher(lang: string): string {
     )
     .join("");
   return (
-    `<form class="con-lang" method="POST" action="/operator/lang" style="display:inline-flex;gap:4px;align-items:center">` +
-    // Tokens only (ADR-0021 ①). The header is dark, so the control takes the
-    // inverse ink and a hairline of the same colour — legible without shouting,
-    // and it never competes with "Kilépés" beside it.
-    `<select name="lang" aria-label="${esc(T(lang, "A konzol nyelve"))}" onchange="this.form.submit()" ` +
-    `style="background:color-mix(in srgb, var(--citui-ink-inverse) 12%, transparent);` +
-    `color:var(--citui-ink-inverse);border:1px solid color-mix(in srgb, var(--citui-ink-inverse) 35%, transparent);` +
-    `border-radius:var(--citui-radius-sm);font:inherit;font-size:.82rem;padding:3px 6px">${options}</select>` +
+    `<form class="con-lang" method="POST" action="/operator/lang">` +
+    `<select name="lang" aria-label="${esc(T(lang, "A konzol nyelve"))}" onchange="this.form.submit()">${options}</select>` +
     `<noscript><button type="submit">${esc(T(lang, "Vált"))}</button></noscript>` +
     `</form>`
+  );
+}
+
+/** A count or badge beside a node — the SAME mark in the sidebar, the drawer and the module page. */
+function navMark(id: string, counts: NavCounts): string {
+  const m = counts[id];
+  if (!m) return "";
+  if (m.badge) return `<span class="con-tag con-tag--${m.badge.tone}">${esc(m.badge.text)}</span>`;
+  if (m.n === undefined) return "";
+  return `<span class="con-nav__n"${m.title ? ` title="${esc(m.title)}"` : ""}>${esc(m.n)}</span>`;
+}
+
+/**
+ * The tree as sidebar / drawer markup. A GROUP row is a link to the module's own
+ * dashboard plus a chevron that only folds the list beneath it (README ②): the row
+ * is open when the active page lives under it, closed everywhere else — the same rule
+ * the tenant admin's module sub-menu follows.
+ */
+function navMarkup(
+  nodes: readonly NavNode[],
+  trail: readonly NavNode[],
+  counts: NavCounts,
+  lang: string,
+  depth = 0,
+): string {
+  return nodes
+    .map((n) => {
+      const inTrail = trail.includes(n);
+      const isActive = trail.length > 0 && trail[trail.length - 1] === n;
+      if (n.kind === "leaf") {
+        const label = depth > 0 && n.short ? n.short : n.label;
+        return (
+          `<a class="con-nav__it${depth > 0 ? " con-nav__sub" : ""}${isActive ? " is-active" : ""}" href="${esc(n.href)}"` +
+          `${isActive ? ' aria-current="page"' : ""} title="${esc(n.label)}">` +
+          `${depth === 0 && n.icon ? icf(n.icon, 17) : ""}<span>${esc(label)}</span>${navMark(n.id, counts)}</a>`
+        );
+      }
+      return (
+        `<div class="con-nav__grp${isActive ? " is-active" : ""}${inTrail ? " is-open" : ""}" data-grp="${esc(n.id)}">` +
+        `<a class="con-nav__it" href="${esc(n.href)}"${isActive ? ' aria-current="page"' : ""}>${icf(n.icon, 17)}<span>${esc(n.label)}</span></a>` +
+        `<button type="button" class="con-nav__chev" data-fold aria-expanded="${inTrail ? "true" : "false"}" ` +
+        `aria-label="${esc(inTrail ? T(lang, "Összecsuk") : T(lang, "Kinyit"))}">${icf("fwd", 14)}</button></div>` +
+        `<div class="con-nav__kids"${inTrail ? "" : " hidden"}>${navMarkup(n.children, trail, counts, lang, depth + 1)}</div>`
+      );
+    })
+    .join("");
+}
+
+/**
+ * Breadcrumb: `Konzol › CRM › Lead-sor`. A page BELOW a leaf (the lead's own page under
+ * the lead list, matched via `match`) adds its title as the last crumb and turns the leaf
+ * into a link: `Konzol › CRM › Lead-sor › Boróka ház`. A page outside the tree shows
+ * `Konzol › <title>`.
+ */
+function crumbHtml(trail: readonly NavNode[], active: string | undefined, title: string, lang: string): string {
+  if (trail.length === 1 && trail[0]!.id === "home") return `<b>${esc(T(lang, "Irányítópult"))}</b>`;
+  const sep = icf("fwd", 13);
+  const parts = [`<a href="/">${esc(T(lang, "Konzol"))}</a>`];
+  const last = trail[trail.length - 1];
+  const strip = (h: string) => h.replace(/[?#].*$/, "");
+  const below = !!last && !!active && strip(active) !== strip(last.href);
+  trail.forEach((n, i) => {
+    const isLast = i === trail.length - 1 && !below;
+    parts.push(isLast ? `<b>${esc(n.label)}</b>` : `<a href="${esc(n.href)}">${esc(n.label)}</a>`);
+  });
+  if (!trail.length || below) parts.push(`<b>${esc(title)}</b>`);
+  return parts.join(sep);
+}
+
+/** The phone's bottom bar: Irányítópult + the first three modules + Menü — exactly five (README ⑥). */
+function bottomNav(trail: readonly NavNode[], tree: readonly NavNode[], lang: string): string {
+  const groups = navGroups(tree).slice(0, 3);
+  const activeGroup = trail.find((n) => n.kind === "group");
+  const isHome = trail.length === 1 && trail[0]!.id === "home";
+  const items = [
+    `<a href="/"${isHome ? ' class="is-active" aria-current="page"' : ""}>${icf("home", 20)}${esc(T(lang, "Irányítópult"))}</a>`,
+    ...groups.map(
+      (g) =>
+        `<a href="${esc(g.href)}"${activeGroup === g ? ' class="is-active"' : ""}>${icf(g.icon, 20)}${esc(g.label)}</a>`,
+    ),
+  ];
+  const menuActive = !isHome && !(activeGroup && groups.includes(activeGroup));
+  items.push(
+    `<a href="#con-menu" data-drawer-open${menuActive ? ' class="is-active"' : ""}>${icf("menu", 20)}${esc(T(lang, "Menü"))}</a>`,
+  );
+  return `<nav class="con-bnav" aria-label="${esc(T(lang, "Fő menü"))}">${items.join("")}</nav>`;
+}
+
+/** The phone's left drawer: the whole tree (same fold rule), appearance, language, Kilépés. */
+function drawer(trail: readonly NavNode[], tree: readonly NavNode[], counts: NavCounts, lang: string): string {
+  return (
+    `<div class="con-drawer" id="con-menu" role="dialog" aria-modal="true" aria-label="${esc(T(lang, "Menü"))}">` +
+    `<a class="con-drawer__veil" href="#" data-drawer-close aria-label="${esc(T(lang, "Bezárás"))}"></a>` +
+    `<div class="con-drawer__box"><div class="con-drawer__h">${LOGO_MARK}<b>${esc(T(lang, "Citoviso konzol"))}</b>` +
+    `<a class="con-fib con-fib--ghost" href="#" data-drawer-close aria-label="${esc(T(lang, "Bezárás"))}">${icf("close", 18)}</a></div>` +
+    `<nav class="con-menu">${navMarkup(tree, trail, counts, lang)}` +
+    `<div class="con-menu__g">${esc(T(lang, "Megjelenés"))}</div>` +
+    `<a href="#" class="con-nav__it" data-theme-toggle hidden><span data-ic>${icf("moon", 16)}</span>` +
+    `<span data-when="light">${esc(T(lang, "Sötét mód"))}</span><span data-when="dark" hidden>${esc(T(lang, "Világos mód"))}</span></a>` +
+    `<div class="con-menu__g">${esc(T(lang, "Nyelv"))}</div><div class="con-menu__lang">${langSwitcher(lang)}</div>` +
+    `<a class="con-nav__it" href="/logout">${icf("logout", 16)}<span>${esc(T(lang, "Kilépés"))}</span></a></nav></div></div>`
+  );
+}
+
+/** The frame's own behaviour: theme + rail, fold, ←, the drawer and the ⌘K function search. */
+function shellScript(tree: readonly NavNode[], lang: string): string {
+  // The ⌘K index: every function with its module — the tree, flattened.
+  const index = navLeaves(tree).map(({ leaf, trail }) => ({
+    l: leaf.label,
+    h: leaf.href,
+    m: trail.map((g) => g.label).join(" › "),
+  }));
+  return (
+    `<script>(function(){var d=document.documentElement;` +
+    `var ICO={sun:${JSON.stringify(icf("sun", 16))},moon:${JSON.stringify(icf("moon", 16))},col:${JSON.stringify(icf("collapse", 14))},exp:${JSON.stringify(icf("expand", 14))}};` +
+    `var IDX=${JSON.stringify(index)};var NONE=${JSON.stringify(T(lang, "Nincs ilyen funkció"))};` +
+    `function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}` +
+    `function theme(){return d.getAttribute('data-citui-theme')==='dark'?'dark':'light'}` +
+    `function paint(){var t=theme();$$('[data-theme-toggle]').forEach(function(b){b.hidden=false;var i=b.querySelector('[data-ic]');if(i)i.innerHTML=t==='dark'?ICO.sun:ICO.moon;` +
+    `$$('[data-when]',b).forEach(function(s){s.hidden=s.getAttribute('data-when')!==t})});` +
+    `var r=document.querySelector('[data-rail]');if(r)r.innerHTML=d.classList.contains('is-rail')?ICO.exp:ICO.col}` +
+    `function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}` +
+    `function hi(n,q){var i=n.toLowerCase().indexOf(q);return i<0?esc(n):esc(n.slice(0,i))+'<em>'+esc(n.slice(i,i+q.length))+'</em>'+esc(n.slice(i+q.length))}` +
+    `function kdd(inp){var dd=inp.parentNode.querySelector('[data-k-dd]');if(!dd)return;var q=inp.value.trim().toLowerCase();` +
+    `var hits=IDX.filter(function(f){return !q||(f.l+' '+f.m).toLowerCase().indexOf(q)>=0});` +
+    `dd.innerHTML=hits.length?hits.map(function(f,i){return '<a href="'+esc(f.h)+'"'+(i===0?' class="is-hi"':'')+'><span>'+hi(f.l,q)+'</span><small>'+esc(f.m)+'</small></a>'}).join(''):'<div class="con-k__none">'+NONE+'</div>';dd.hidden=false}` +
+    `$$('[data-k]').forEach(function(inp){inp.addEventListener('input',function(){kdd(inp)});inp.addEventListener('focus',function(){kdd(inp)});` +
+    `inp.addEventListener('blur',function(){setTimeout(function(){var dd=inp.parentNode.querySelector('[data-k-dd]');if(dd)dd.hidden=true},150)});` +
+    `inp.addEventListener('keydown',function(e){var dd=inp.parentNode.querySelector('[data-k-dd]');if(!dd)return;var as=$$('a',dd);var i=as.findIndex(function(a){return a.classList.contains('is-hi')});` +
+    `if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!as.length)return;as.forEach(function(a){a.classList.remove('is-hi')});i=(i+(e.key==='ArrowDown'?1:-1)+as.length)%as.length;as[i].classList.add('is-hi');as[i].scrollIntoView({block:'nearest'})}` +
+    `else if(e.key==='Enter'){var a=dd.querySelector('a.is-hi');if(a){e.preventDefault();location.href=a.getAttribute('href')}}` +
+    `else if(e.key==='Escape'){inp.value='';dd.hidden=true;inp.blur()}})});` +
+    `document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K')){var inp=$$('[data-k]').filter(function(x){return x.offsetParent})[0];if(inp){e.preventDefault();inp.focus();inp.select()}}` +
+    `if(e.key==='Escape'){var dr=document.getElementById('con-menu');if(dr)dr.classList.remove('on')}});` +
+    `document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
+    `var rb=e.target.closest('[data-rail]');if(rb){e.preventDefault();d.classList.toggle('is-rail');try{localStorage.setItem('citui-console-rail',d.classList.contains('is-rail')?'1':'0')}catch(x){}paint();return}` +
+    `var f=e.target.closest('[data-fold]');if(f){e.preventDefault();var g=f.parentNode,k=g.nextElementSibling;var o=!g.classList.contains('is-open');g.classList.toggle('is-open',o);f.setAttribute('aria-expanded',o?'true':'false');if(k)k.hidden=!o;return}` +
+    `var bk=e.target.closest('[data-back]');if(bk&&history.length>1&&document.referrer.indexOf(location.origin+'/')===0){e.preventDefault();history.back();return}` +
+    `var dr=document.getElementById('con-menu');if(!dr)return;` +
+    `if(e.target.closest('[data-drawer-open]')){e.preventDefault();dr.classList.add('on');return}` +
+    `if(e.target.closest('[data-drawer-close]')){e.preventDefault();dr.classList.remove('on');if(location.hash==='#con-menu')history.replaceState(null,'',location.pathname+location.search)}});` +
+    `paint();})();</script>`
+  );
+}
+
+/** The operator frame around a page body: sidebar, top bar, main, bottom bar, drawer. */
+function frame(title: string, body: string, active: string | undefined, lang: string): string {
+  const tree = navTree(lang);
+  const counts = navCountsOf(consoleNav(), lang);
+  const trail = activeTrail(active, tree);
+  const isHome = trail.length === 1 && trail[0]!.id === "home";
+  // ← goes one level up the tree (the module dashboard from a function, home from a module).
+  const parent = trail.length > 1 ? trail[trail.length - 2]!.href : "/";
+  const side =
+    `<aside class="con-side"><div class="con-side__top">${LOGO_MARK}` +
+    `<b>Citoviso<small>${esc(T(lang, "belső konzol"))}</small></b>` +
+    `<button type="button" class="con-fib con-fib--ghost" data-rail title="${esc(T(lang, "Oldalsáv összecsukása"))}" aria-label="${esc(T(lang, "Oldalsáv összecsukása"))}">${icf("collapse", 14)}</button></div>` +
+    `<nav class="con-nav" aria-label="${esc(T(lang, "Fő menü"))}">${navMarkup(tree, trail, counts, lang)}</nav>` +
+    `<div class="con-user">` +
+    `<button type="button" class="con-fib con-fib--ghost" data-theme-toggle hidden title="${esc(T(lang, "Világos / sötét"))}" aria-label="${esc(T(lang, "Világos / sötét"))}"><span data-ic>${icf("moon", 16)}</span></button>` +
+    `<a class="con-fib con-fib--ghost" href="/logout" title="${esc(T(lang, "Kilépés"))}" aria-label="${esc(T(lang, "Kilépés"))}">${icf("logout", 16)}</a></div></aside>`;
+  const top =
+    `<div class="con-top">` +
+    `<a class="con-fib con-fib--ghost con-top__menu" href="#con-menu" data-drawer-open aria-label="${esc(T(lang, "Menü"))}">${icf("menu", 18)}</a>` +
+    `<a class="con-fib con-fib--ghost con-back${isHome ? " is-hidden" : ""}" href="${esc(parent)}" data-back title="${esc(T(lang, "Vissza"))}" aria-label="${esc(T(lang, "Vissza"))}"${isHome ? ' aria-hidden="true" tabindex="-1"' : ""}>${icf("back", 18)}</a>` +
+    `<div class="con-crumb">${crumbHtml(trail, active, title, lang)}</div>` +
+    `<div class="con-k">${icf("search", 15)}<input type="search" data-k placeholder="${esc(T(lang, "Ugrás funkcióra…"))}" aria-label="${esc(T(lang, "Ugrás funkcióra"))}" autocomplete="off"><kbd>${esc(T(lang, "⌘K"))}</kbd><div class="con-k__dd" data-k-dd hidden></div></div>` +
+    `<button type="button" class="con-fib con-fib--ghost con-top__theme" data-theme-toggle hidden title="${esc(T(lang, "Világos / sötét"))}" aria-label="${esc(T(lang, "Világos / sötét"))}"><span data-ic>${icf("moon", 16)}</span></button>` +
+    `<div class="con-top__lang">${langSwitcher(lang)}</div>` +
+    `<a class="con-btn con-btn--sm con-top__help" href="/help">${icf("help", 15)}<span>${esc(T(lang, "Súgó"))}</span></a>` +
+    `</div>`;
+  return (
+    `<div class="con-shell">${side}${top}<main class="con-main"><div class="con-main__in">${body}</div></main>` +
+    bottomNav(trail, tree, lang) +
+    `</div>` +
+    drawer(trail, tree, counts, lang) +
+    shellScript(tree, lang)
   );
 }
 
@@ -248,36 +390,22 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
   // view function instead of a parameter threaded through ~53 signatures.
   const lang = consoleLang();
   const chrome = opts.chrome !== false;
-  const mod = activeModule(opts.active);
-  const nav = chrome
-    ? `<nav class="con-nav">${MENU(lang)
-        .map((m) => {
-          const top = `<a href="${m.href}"${m.href === mod ? ` class="active"` : ""}>${ic(m.icon, 17)}${esc(m.label)}</a>`;
-          if (!m.sub) return top;
-          const dd = m.sub
-            .map(
-              (x) =>
-                `${x.sep ? `<div class="con-dd__sep"></div>` : ""}<a href="${x.href}">${esc(x.label)}</a>`,
-            )
-            .join("");
-          return `<span class="con-nav__it">${top}<div class="con-dd">${dd}</div></span>`;
-        })
-        .join("")}</nav>
-       <div class="con-user">${langSwitcher(lang)}<a href="/logout">${T(lang, "Kilépés")}</a></div>`
-    : "";
-  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
+  const head =
+    `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>
+<title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>${THEME_BOOT}
 <link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">
-<link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>
-${
-  opts.shell === "bare"
-    ? `<body class="paypage">${body}</body></html>`
-    : `<body class="con"><header class="con-top">${BRAND}${nav}</header>
-<main class="con-main">${body}</main></body></html>`
-}`;
+<link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>`;
+  if (opts.shell === "bare") return `${head}<body class="paypage">${body}</body></html>`;
+  if (!chrome) {
+    // Prospect/tenant-facing page inside the console server: brand only, no operator menu.
+    return `${head}<body class="con con--plain"><header class="con-top con-top--plain">${BRAND}</header><main class="con-main"><div class="con-main__in">${body}</div></main></body></html>`;
+  }
+  return `${head}<body class="con">${frame(title, body, opts.active, lang)}</body></html>`;
 }
 
 /**
@@ -6604,11 +6732,11 @@ export function outreachDraftPage(
       </div>
       <div style="margin-top:14px">
         <label class="small mut">${T(lang, "Így néz ki a levél a címzett postafiókjában (HTML-előnézet)")}</label>
-        <iframe id="cit-mailprev" src="/prospect/${esc(prospectId)}/email-preview" title="${T(lang, "E-mail előnézet")}"
-          scrolling="no" onload="citFitMailPreview(this)" data-cit-mailprev="1"
-          style="width:100%;height:1500px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-white);margin-top:4px"></iframe>
         <script>
-          /* ⛔ THE PREVIEW MUST SHOW THE WHOLE LETTER (Elek FK-004 ①). It used to be a
+          /* ⛔ Defined BEFORE the iframe: its onload can fire before a script placed after it
+             runs (the head's font stylesheet parser-blocks later inline scripts, the frame
+             does not wait) — measured 2026-09-25: ReferenceError on both sizes.
+             ⛔ THE PREVIEW MUST SHOW THE WHOLE LETTER (Elek FK-004 ①). It used to be a
              fixed 560px frame, which cut the letter off at the sign-off line — the
              signature, the small print, THE UNSUBSCRIBE LINK and the legal-basis footer
              were all below the fold, with no visible scrollbar. The operator was
@@ -6649,6 +6777,9 @@ export function outreachDraftPage(
             }
           }
         </script>
+        <iframe id="cit-mailprev" src="/prospect/${esc(prospectId)}/email-preview" title="${T(lang, "E-mail előnézet")}"
+          scrolling="no" onload="citFitMailPreview(this)" data-cit-mailprev="1"
+          style="width:100%;height:1500px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-white);margin-top:4px"></iframe>
         <div class="row" style="margin-top:4px">
           <a class="small" href="/prospect/${esc(prospectId)}/email-preview" target="_blank">${T(lang, "előnézet külön lapon ▸")}</a>
         </div>
@@ -7073,217 +7204,225 @@ export interface FinanceCounts {
 }
 
 /** One submenu entry on a hub module card. */
-interface HubSub {
-  readonly n: string;
-  readonly href: string;
-  readonly b?: string;
-  readonly bClass?: string;
-  /** What the badge NUMBER counts — a bare total next to a link that opens a
-   *  differently-filtered list reads as a contradiction (Elek FK-003). */
-  readonly bTitle?: string;
-}
+/* ═══ HOME + MODULE DASHBOARDS (linear-shell README ④⑤) ═══════════════════════════
+   The home is NOT a card grid any more: the sidebar already lists every function. It
+   shows what the operator cannot see from the tree — the numbers (one widget per
+   module) and what needs attention TODAY. A module's own dashboard shows the same two
+   things for that module plus its function list. Both read ONE data object. */
 
-/** Hub search: filters the cards' submenu items, hint shows the hit count. */
-const HUB_JS = `<script>
-(function(){
-  var q = document.getElementById('hubq'), hint = document.getElementById('hubqhint');
-  if (!q) return;
-  var total = document.querySelectorAll('.con-subs .con-sub').length;
-  q.addEventListener('input', function(){
-    var t = q.value.trim().toLowerCase(), hits = 0;
-    document.querySelectorAll('.con-mod').forEach(function(card){
-      var any = !t || (card.dataset.title || '').indexOf(t) !== -1;
-      card.querySelectorAll('.con-sub').forEach(function(a){
-        var name = a.dataset.n || '';
-        var hit = !t || name.toLowerCase().indexOf(t) !== -1 || (card.dataset.title || '').indexOf(t) !== -1;
-        a.parentElement.style.display = hit ? '' : 'none';
-        if (hit){ any = true; hits++; }
-        var label = a.querySelector('.con-sub__n');
-        if (t && name.toLowerCase().indexOf(t) !== -1){
-          var i = name.toLowerCase().indexOf(t);
-          label.innerHTML = name.slice(0,i) + '<em>' + name.slice(i, i+t.length) + '</em>' + name.slice(i+t.length);
-        } else { label.textContent = name; }
-      });
-      card.style.display = any ? '' : 'none';
-    });
-    hint.textContent = t ? hits + ' találat' : total + ' funkció';
-  });
-})();
-</script>`;
-
-/** The console home — the MODULE HUB (owner's admin-hub mock, 2026-08-23):
- *  hero + attention chips with live numbers + function search + module cards,
- *  each carrying its own submenu list and a "Modul megnyitása" foot. */
-export function dashboardPage(
-  r: FunnelReport,
-  scrapeRunning: boolean,
-  operatorName: string,
-  fin: FinanceCounts,
+/** Everything the home and the module dashboards render from — fetched once per request. */
+export interface HubData {
+  readonly r: FunnelReport;
+  readonly scrapeRunning: boolean;
+  readonly operatorName: string;
+  readonly fin: FinanceCounts;
   /** Module-sales badge: sellable / total catalogue count (frozen plan). */
-  sales: { on: number; all: number } = { on: 0, all: 0 },
+  readonly sales: { readonly on: number; readonly all: number };
   /** Test surface lagging behind origin/main, with the files blocking the sync
    *  (2026-09-08: it lagged 19 commits for two days and only a log file knew). */
-  stale: { behind: number; dirtyFiles: readonly string[] } | null = null,
-): string {
-  const lang = consoleLang();
-  const modules: ReadonlyArray<{
-    icon: string;
-    title: string;
-    role: string;
-    open: string;
-    subs: HubSub[];
-  }> = [
-    {
-      icon: "leads",
-      title: "CRM",
-      role: T(lang, "Lead-től a megrendelésig — akit megszólítunk, és ahol tart."),
-      open: "/leads",
-      subs: [
-        {
-          n: "Lead-sor",
-          href: "/leads?all=1",
-          b: String(r.leadTotals.players),
-          // The badge and the list it opens must not contradict each other: this is
-          // the WHOLE scraped stock, while a bare /leads is pre-filtered (Elek FK-003).
-          bTitle: T(lang, "{n} felmért szereplő összesen, a diszkvalifikáltakkal együtt — a link a szűretlen AKTÍV listát nyitja, a diszkvalifikáltak külön nézetben vannak", { n: r.leadTotals.players }),
-        },
-        { n: T(lang, "Jóváhagyott mockok"), href: "/leads?mock=approved", b: `${r.leadTotals.approved}` },
-        { n: T(lang, "Duplikátumok"), href: "/duplicates" },
-        { n: T(lang, "Adatgyűjtés indítása"), href: "/scrape", b: scrapeRunning ? "FUT" : undefined, bClass: "approved" },
-        { n: T(lang, "Térkép (lefedettség)"), href: "/scrape/map" },
-        { n: T(lang, "Területek"), href: "/scrape/regions" },
-        {
-          n: T(lang, "Árazás és értékesítés"),
-          href: "/pricing",
-          b: T(lang, "{on}/{all} eladó", { on: String(sales.on), all: String(sales.all) }),
-          bClass: sales.on < sales.all ? "rejected" : "approved",
-        },
-      ],
-    },
-    {
-      icon: "pricing",
-      title: T(lang, "Pénzügy / Admin"),
-      role: T(lang, "Bizonylatok, partnerek, árazás — a pénz papír-oldala."),
-      open: "/documents",
-      subs: [
-        { n: T(lang, "Bizonylat keresése"), href: "/documents", b: String(fin.docs) },
-        { n: T(lang, "Új bizonylat rögzítése"), href: "/documents/new" },
-        { n: T(lang, "Nyitott tételek"), href: "/documents?paid=0", b: fin.open ? String(fin.open) : undefined, bClass: fin.overdue ? "rejected" : "" },
-        { n: "Partnerek", href: "/partners", b: String(fin.partners) },
-        { n: T(lang, "Új partner rögzítése"), href: "/partners/new" },
-      ],
-    },
-    {
-      icon: "report",
-      title: "Riport",
-      role: T(lang, "Mi termel és mi szivárog — a döntéshez elég szám."),
-      open: "/report",
-      subs: [
-        { n: T(lang, "Megkeresés-tölcsér — hol akadnak el"), href: "/report" },
-        { n: T(lang, "Kiküldött megkeresések"), href: "/report", b: String(r.total.sent) },
-        { n: T(lang, "Megkezdett rendelések"), href: "/report", b: String(r.total.orderIntent) },
-      ],
-    },
-    {
-      icon: "settings",
-      title: "Rendszer",
-      role: T(lang, "Fiók, jelszó, működési beállítások."),
-      open: "/settings",
-      subs: [{ n: T(lang, "Beállítások"), href: "/settings" }],
-    },
-  ];
+  readonly stale: { readonly behind: number; readonly dirtyFiles: readonly string[] } | null;
+}
 
-  // AAM cap meter (owner, 2026-09-06): silent below 80% — from there a warn
-  // chip, from 100% red. Crossing means the crossing invoice is FULLY taxable
-  // + a 15-day NAV report, so the operator must see it coming.
-  const aamPct = Math.round((fin.aamYearNetHuf / fin.aamLimitHuf) * 100);
+interface AttentionRow {
+  readonly group: string;
+  readonly tone: "bad" | "warn" | "info" | "ok" | "";
+  readonly html: string;
+  readonly href: string;
+  readonly where: string;
+}
+
+/**
+ * What needs attention today — the SAME predicates the old hero chips carried, as rows
+ * with a destination. Each row belongs to a module, so the module dashboard shows only
+ * its own; the home shows all. Silent rows stay silent (AAM below 80%, no overdue).
+ */
+function attentionRows(d: HubData, lang: string): readonly AttentionRow[] {
+  const rows: AttentionRow[] = [];
+  const b = (s: string) => `<b>${s}</b>`;
+  // TEST-SURFACE STALENESS — the loudest row, because every other number here
+  // describes a system the operator may not actually be looking at. Silent when
+  // current; when blocked it names the file to clear, so the fix is one step away.
+  if (d.stale) {
+    rows.push({
+      group: "system",
+      tone: "bad",
+      html:
+        b(esc(T(lang, "⚠ A tesztfelület {n} committal elmarad", { n: d.stale.behind }))) +
+        (d.stale.dirtyFiles.length
+          ? ` — ${esc(T(lang, "A frissítést blokkolja: {list}", { list: d.stale.dirtyFiles.join(", ") }))}`
+          : ` — ${esc(T(lang, "A frissítés nem futott le."))}`),
+      href: "/help?topic=console.dashboard",
+      where: T(lang, "Súgó"),
+    });
+  }
+  // AAM cap meter (owner, 2026-09-06): silent below 80% — from there a warn row,
+  // from 100% red. Crossing means the crossing invoice is FULLY taxable + a 15-day
+  // NAV report, so the operator must see it coming.
+  const aamPct = Math.round((d.fin.aamYearNetHuf / d.fin.aamLimitHuf) * 100);
   const aamMillions = (n: number) => (n / 1e6).toFixed(1).replace(".", ",");
-  const aamChip =
-    aamPct >= 80
-      ? `<a class="con-chip ${aamPct >= 100 ? "con-chip--bad" : "con-chip--warn"}" href="/documents"` +
-        (fin.aamFxDocs
-          ? ` title="${esc(T(lang, "+{n} nem-HUF bizonylat nincs beszámítva (nincs árfolyam)", { n: fin.aamFxDocs }))}"`
-          : "") +
-        `><span class="led"></span>${T(lang, "AAM-limit")}: <b>${aamPct}%</b> (${aamMillions(fin.aamYearNetHuf)} / ${aamMillions(fin.aamLimitHuf)} M Ft)</a>`
-      : "";
+  if (aamPct >= 80) {
+    rows.push({
+      group: "finance",
+      tone: aamPct >= 100 ? "bad" : "warn",
+      html:
+        `${b(esc(T(lang, "AAM-limit")))}: ${b(`${aamPct}%`)} (${aamMillions(d.fin.aamYearNetHuf)} / ${aamMillions(d.fin.aamLimitHuf)} M Ft)` +
+        (d.fin.aamFxDocs
+          ? ` — ${esc(T(lang, "+{n} nem-HUF bizonylat nincs beszámítva (nincs árfolyam)", { n: d.fin.aamFxDocs }))}`
+          : ""),
+      href: "/documents",
+      where: T(lang, "Bizonylat keresése"),
+    });
+  }
+  if (d.fin.overdue) {
+    rows.push({
+      group: "finance",
+      tone: "bad",
+      html: `${b(String(d.fin.overdue))} ${esc(T(lang, "lejárt számla"))}`,
+      href: "/documents?paid=0",
+      where: T(lang, "Nyitott tételek"),
+    });
+  }
+  if (d.fin.open) {
+    rows.push({
+      group: "finance",
+      tone: "warn",
+      html: `${b(String(d.fin.open))} ${esc(T(lang, "nyitott bizonylat"))}`,
+      href: "/documents?paid=0",
+      where: T(lang, "Nyitott tételek"),
+    });
+  }
+  if (d.sales.on < d.sales.all) {
+    rows.push({
+      group: "crm",
+      tone: "warn",
+      html:
+        b(esc(T(lang, "{on}/{all} modul eladó", { on: String(d.sales.on), all: String(d.sales.all) }))) +
+        ` — ${esc(T(lang, "{k} modul ki van kapcsolva az értékesítésből", { k: d.sales.all - d.sales.on }))}`,
+      href: "/pricing",
+      where: T(lang, "Árazás és értékesítés"),
+    });
+  }
+  // Counts EXACTLY what /leads shows when clicked — same predicate, one source
+  // (defaultLeadQuery). The old chip counted qualification alone and said 267 next
+  // to a list that said 260, with nothing explaining the gap (Elek FK-003).
+  rows.push({
+    group: "crm",
+    tone: "info",
+    html:
+      `${b(String(d.r.leadTotals.leads))} ${esc(T(lang, "kvalifikált lead"))} — ` +
+      esc(T(lang, "nincs vagy elavult honlapja van, és legalább 1 összegyűjtött képe (Anyag) — pontosan az a lista, ami a linkre kattintva nyílik")),
+    href: "/leads",
+    where: T(lang, "Lead-sor"),
+  });
+  rows.push({
+    group: "crm",
+    tone: d.scrapeRunning ? "ok" : "",
+    html: `${b(esc(T(lang, "adatgyűjtés")))}: ${esc(d.scrapeRunning ? T(lang, "fut") : T(lang, "áll"))}`,
+    href: "/scrape",
+    where: T(lang, "Adatgyűjtés indítása"),
+  });
+  return rows;
+}
 
-  // TEST-SURFACE STALENESS — the loudest chip on the page, because every other
-  // number here describes a system the operator may not actually be looking at.
-  // Silent when current; when blocked it names the file to clear, so the fix is
-  // one step away instead of a log-file expedition.
-  const staleChip = stale
-    ? `<a class="con-chip con-chip--bad" href="/help?topic=console.dashboard"` +
-      ` title="${esc(
-        stale.dirtyFiles.length
-          ? T(lang, "A frissítést blokkolja: {list}", { list: stale.dirtyFiles.join(", ") })
-          : T(lang, "A frissítés nem futott le."),
-      )}"><span class="led"></span>${T(lang, "⚠ A tesztfelület {n} committal elmarad", { n: stale.behind })}${
-        stale.dirtyFiles.length ? ` — ${esc(stale.dirtyFiles[0]!)}` : ""
-      }</a>`
-    : "";
+function attentionHtml(rows: readonly AttentionRow[], lang: string): string {
+  if (!rows.length) return "";
+  return (
+    `<div class="con-att" data-attention><div class="con-att__h">${esc(T(lang, "Figyelmet kér"))} <span class="con-att__cnt">${rows.length}</span>` +
+    `<span class="con-sp"></span><span class="con-att__cnt">${esc(T(lang, "ma"))}</span></div>` +
+    rows
+      .map(
+        (r) =>
+          `<a class="con-att__row${r.tone ? ` is-${r.tone}` : ""}" href="${esc(r.href)}"><i class="con-att__st"></i><span>${r.html}</span><span class="con-att__m">${esc(r.where)}</span></a>`,
+      )
+      .join("") +
+    `</div>`
+  );
+}
 
-  const chips = [
-    staleChip,
-    aamChip,
-    fin.overdue
-      ? `<a class="con-chip con-chip--bad" href="/documents?paid=0"><span class="led"></span><b>${fin.overdue}</b> ${T(lang, "lejárt számla")}</a>`
-      : "",
-    fin.open
-      ? `<a class="con-chip con-chip--warn" href="/documents?paid=0"><span class="led"></span><b>${fin.open}</b> nyitott bizonylat</a>`
-      : "",
-    // Counts EXACTLY what /leads shows when clicked — same predicate, one source
-    // (defaultLeadQuery). The old chip counted qualification alone and said 267 next
-    // to a list that said 260, with nothing explaining the gap (Elek FK-003).
-    `<a class="con-chip" href="/leads" title="${esc(T(lang, "Nincs vagy elavult honlapja van, és legalább 1 összegyűjtött képe (Anyag) — pontosan az a lista, ami a linkre kattintva nyílik."))}"><span class="led"></span><b>${r.leadTotals.leads}</b> ${T(lang, "kvalifikált lead")}</a>`,
-    `<a class="con-chip${scrapeRunning ? " con-chip--ok" : ""}" href="/scrape"><span class="led"></span>${T(lang, "adatgyűjtés")}: ${scrapeRunning ? T(lang, "fut") : T(lang, "áll")}</a>`,
-  ]
+/** One widget per module — the numbers a tree cannot show. A module without one gets none. */
+function hubWidget(groupId: string, d: HubData, lang: string): string {
+  const kv = (rows: ReadonlyArray<readonly [string, string, string?]>) =>
+    `<div class="con-w__kv">${rows
+      .map(([k, v, href]) => `<span>${esc(k)}</span><b>${href ? `<a href="${esc(href)}">${esc(v)}</a>` : esc(v)}</b>`)
+      .join("")}</div>`;
+  const w = (icon: string, title: string, big: string, sub: string, rows: ReadonlyArray<readonly [string, string, string?]>) =>
+    `<div class="con-w" data-widget="${esc(groupId)}"><div class="con-w__h">${ic(icon, 16)}${esc(title)}</div>` +
+    `<div class="con-w__v">${esc(big)}</div><div class="con-w__s">${esc(sub)}</div>${kv(rows)}</div>`;
+  const t = d.r.leadTotals;
+  switch (groupId) {
+    case "crm":
+      return w("leads", "CRM", String(t.players), T(lang, "felmért szereplő, a diszkvalifikáltakkal együtt"), [
+        [T(lang, "Kvalifikált lead"), String(t.leads), "/leads"],
+        [T(lang, "Jóváhagyott mock"), String(t.approved), "/leads?mock=approved"],
+        [T(lang, "Eladó modul"), `${d.sales.on} / ${d.sales.all}`, "/pricing"],
+      ]);
+    case "finance": {
+      const pct = Math.round((d.fin.aamYearNetHuf / d.fin.aamLimitHuf) * 100);
+      return w(
+        "pricing",
+        T(lang, "Pénzügy"),
+        String(d.fin.open),
+        d.fin.overdue
+          ? T(lang, "nyitott bizonylat · {n} lejárt", { n: d.fin.overdue })
+          : T(lang, "nyitott bizonylat · nincs lejárt"),
+        [
+          [T(lang, "Bizonylat"), String(d.fin.docs), "/documents"],
+          [T(lang, "Partner"), String(d.fin.partners), "/partners"],
+          [T(lang, "AAM-limit"), `${pct}%`, "/documents"],
+        ],
+      );
+    }
+    case "report":
+      return w("report", T(lang, "Megkeresések"), String(d.r.total.sent), T(lang, "kiküldött megkeresés összesen"), [
+        [T(lang, "Megkezdett rendelés"), String(d.r.total.orderIntent), "/report"],
+        [T(lang, "Tölcsér"), T(lang, "megnyitás"), "/report"],
+      ]);
+    default:
+      return "";
+  }
+}
+
+/** The console home — Irányítópult: greeting, one widget per module, what needs attention. */
+export function dashboardPage(d: HubData): string {
+  const lang = consoleLang();
+  const widgets = navGroups(navTree(lang))
+    .map((g) => hubWidget(g.id, d, lang))
     .filter(Boolean)
     .join("");
+  const body =
+    `<div class="con-ph"><h1>${esc(T(lang, "Irányítópult"))} ${helpLink("console.dashboard")}</h1>` +
+    `<p>${esc(T(lang, "Szia, {name}! Ami ma figyelmet kér, itt sorban áll — a részletek a modulokban.", { name: d.operatorName }))}</p></div>` +
+    `<div class="con-wgrid">${widgets}</div>` +
+    attentionHtml(attentionRows(d, lang), lang);
+  return layout(T(lang, "Irányítópult"), body, { active: "/" });
+}
 
-  const totalSubs = modules.reduce((n, m) => n + m.subs.length, 0);
-  const cards = modules
-    .map(
-      (m) => `<article class="con-mod" data-title="${esc(m.title.toLowerCase())}">
-      <a class="con-mod__head" href="${m.open}">
-        <span class="con-mod__ico">${ic(m.icon, 22)}</span>
-        <span style="min-width:0">
-          <span class="con-mod__t">${esc(m.title)}</span>
-          <span class="con-mod__role">${esc(m.role)}</span>
-        </span>
-      </a>
-      <ul class="con-subs">
-        ${m.subs
-          .map(
-            (s) => `<li><a class="con-sub" href="${s.href}" data-n="${esc(s.n)}"${s.bTitle ? ` title="${esc(s.bTitle)}"` : ""}>
-            <span class="con-sub__dot"></span>
-            <span class="con-sub__n">${esc(s.n)}</span>
-            ${s.b ? `<span class="pill ${s.bClass ?? ""}">${esc(s.b)}</span>` : ""}
-          </a></li>`,
-          )
-          .join("")}
-      </ul>
-      <div class="con-mod__foot">
-        <a class="con-mod__open" href="${m.open}">${T(lang, "Modul megnyitása ▸")}</a>
-      </div>
-    </article>`,
+/**
+ * A module's OWN dashboard (`/hub/<id>`): its widget, its attention rows and its
+ * function list — the page the sidebar's module row opens. Unknown id → null (404).
+ */
+export function modulePage(groupId: string, d: HubData): string | null {
+  const lang = consoleLang();
+  const g = findGroup(groupId, navTree(lang));
+  if (!g) return null;
+  const counts = navCountsOf(consoleNav(), lang);
+  const list = g.children
+    .map((n) =>
+      n.kind === "leaf"
+        ? `<a href="${esc(n.href)}">${ic(g.icon, 16)}<span>${esc(n.label)}</span>${navMark(n.id, counts)}<span class="con-fl__go">${icf("fwd", 14)}</span></a>`
+        : `<a href="${esc(n.href)}">${ic(n.icon, 16)}<span>${esc(n.label)}</span><span class="con-nav__n">${n.children.length}</span><span class="con-fl__go">${icf("fwd", 14)}</span></a>`,
     )
     .join("");
-
-  const body = `
-    <section class="con-hero">
-      <p class="eyebrow">${T(lang, "Irányítópult")}</p>
-      <h1>Szia, ${esc(operatorName)}! ${helpLink("console.dashboard")}</h1>
-      <p>${T(lang, "Modulok egy belépési ponttal. Ami ma figyelmet kér:")}</p>
-      <div class="con-chips">${chips}</div>
-    </section>
-    <div class="con-hubsearch">
-      ${ic("zoom", 18)}
-      <input id="hubq" type="search" placeholder="${T(lang, "Ugrás funkcióra — pl. „bizonylat”, „partner”, „lead”")}" autocomplete="off">
-      <span class="hint" id="hubqhint">${T(lang, "{n} funkció", { n: totalSubs })}</span>
-    </div>
-    <div class="con-modgrid">${cards}</div>
-    ${HUB_JS}`;
-  return layout(T(lang, "Irányítópult"), body, { active: "/" });
+  const widget = hubWidget(g.id, d, lang);
+  const body =
+    `<div class="con-ph"><h1>${esc(g.label)}</h1><p>${esc(g.role)}</p></div>` +
+    (widget ? `<div class="con-wgrid con-wgrid--one">${widget}</div>` : "") +
+    attentionHtml(
+      attentionRows(d, lang).filter((r) => r.group === g.id),
+      lang,
+    ) +
+    `<div class="con-fl" data-functions><div class="con-fl__h">${esc(T(lang, "Funkciók"))} <span class="con-att__cnt">${g.children.length}</span></div>${list}</div>`;
+  return layout(g.label, body, { active: g.href });
 }
 
 // ── Scrape areas + map (0018) ───────────────────────────────────────────────

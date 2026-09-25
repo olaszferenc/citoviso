@@ -50,6 +50,7 @@ const VIEW_GROUPS = {
   ],
   operator: [
     "src/console/views.ts",
+    "src/console/nav.ts",
     // Lead-list column labels and column MEANINGS live here (one registry shared by
     // the view, the data layer and the label guard). A new copy-bearing file MUST
     // enter this list, or the handbook could quote a header the console stopped

@@ -258,7 +258,7 @@ async function measureConsoleOnly(): Promise<void> {
   }));
   await d.goto(`${conBase}/help`, { waitUntil: "domcontentloaded" });
   ok("a /help lapon a Súgó menüpont AKTÍV (a lap szerepel a navigációban)",
-     (await d.locator('.con-nav a[href="/help"].active').count()) === 1);
+     (await d.locator('.con-nav a[href="/help"].is-active').count()) === 1);
 
   // ⑨ INDULÓLAP: érkezéskor MINDEN cikkcím elérhető a jobb hasábból — a jobb panel nem
   //    kérhet olyat („Válassz témát a listából"), amit a bal nem kínál.

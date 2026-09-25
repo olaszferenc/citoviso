@@ -193,6 +193,11 @@ async function openDressed(html: string, width: number): Promise<void> {
   served = html;
   await page.setViewportSize({ width, height: 900 });
   await page.goto(`http://localhost:${assetPort}/`, { waitUntil: "load" });
+  // linear-shell (2026-09-25): the console has a 232 px sidebar. The plan's „fits at
+  // 1280" promise is measured with the sidebar COLLAPSED to the rail (the operator's
+  // one-click choice, persisted) — the 11-column table cannot fit beside an open
+  // sidebar at 1280, and there it scrolls with a sticky name column (measured below).
+  await page.evaluate(() => document.documentElement.classList.add("is-rail"));
 }
 
 // ── 1. Structure: a filter control lives in the header of the column it reads ──
@@ -779,6 +784,27 @@ for (const [label, q] of [
     check(
       m.overflow <= 0,
       `${label} @1280px: a táblázat BEFÉR a saját görgető-dobozába (túllógás: ${m.overflow}px)`,
+    );
+    // …and with the sidebar OPEN (232 px) the table may not fit — then it must be
+    // REACHABLE: a horizontal scroll box whose scrollable extent covers every cell and
+    // control. Clipped-and-unreachable is the failure the plan forbids; scrolling is not.
+    const e = await page.evaluate(() => {
+      document.documentElement.classList.remove("is-rail");
+      const wrap = document.querySelector(".tblwrap") as HTMLElement | null;
+      if (!wrap) return null;
+      const reach = wrap.getBoundingClientRect().left + wrap.clientLeft + wrap.scrollWidth;
+      let beyond = 0;
+      for (const el of wrap.querySelectorAll("thead th, thead th button, thead th a, tbody td, tbody td .pill, tbody td a")) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.right > reach + 0.5) beyond++;
+      }
+      const out = { beyond, overflowX: getComputedStyle(wrap).overflowX, overflow: wrap.scrollWidth - wrap.clientWidth };
+      document.documentElement.classList.add("is-rail");
+      return out;
+    });
+    check(
+      !!e && e.beyond === 0 && (e.overflow <= 0 || e.overflowX === "auto" || e.overflowX === "scroll"),
+      `${label} @1280px, NYITOTT oldalsávval: ami nem fér be, az görgetéssel elérhető, nem levágott (túllógás: ${e?.overflow ?? "?"}px, elérhetetlen: ${e?.beyond ?? "?"})`,
     );
   }
 

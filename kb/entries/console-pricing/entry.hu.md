@@ -12,8 +12,8 @@ modulonként, hogy egyáltalán **eladható-e**. Ezek az árak jelennek meg a pr
 és a nyilvános oldalon — és itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem
 hirdethet árat.
 
-**Hol találod:** a felső menüben a **„CRM”** menüpont legördülőjében, **„Árazás és értékesítés”**
-néven. (Korábban a **„Pénzügy”** alatt volt — 2026-09-06 óta a CRM-hez tartozik, mert
+**Hol találod:** a bal oldali menüben a **CRM** modul alatt, **„Árazás és értékesítés”**
+néven (a menüben röviden **„Árazás”**). (Korábban a **„Pénzügy”** alatt volt — 2026-09-06 óta a CRM-hez tartozik, mert
 értékesítési döntés.) Az Irányítópulton a CRM-kártyán is ott a sora, mellette egy jelvény, ami
 mutatja, hány modul eladható a katalógusból (például „13/14 eladó”).
 

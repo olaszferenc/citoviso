@@ -250,7 +250,7 @@ import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
 import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
 import type { PhotoGateView } from "./views.js";
-import { dashboardPage, operatorLoginPage, operatorLoginHelpPage, settingsPage } from "./views.js";
+import { dashboardPage, modulePage, operatorLoginPage, operatorLoginHelpPage, settingsPage, type HubData } from "./views.js";
 import { getTreeFreshness } from "./treeFreshness.js";
 import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
@@ -272,7 +272,9 @@ import {
   setOperatorSession,
 } from "../auth/operatorAuth.js";
 import path_mod from "node:path";
-import { consoleLang, runWithConsoleLang, setConsoleLang } from "./i18nCtx.js";
+import { consoleLang, runWithConsoleLang, setConsoleLang, setConsoleNav } from "./i18nCtx.js";
+import { getNavNumbers } from "./navCounts.js";
+import { HUB_PREFIX } from "./nav.js";
 import { uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
 import { prepareMailLang, T } from "../i18n/mail.js";
@@ -1167,6 +1169,9 @@ async function handle(
   if (!isPublicPath && !readOperatorSession(req)) {
     return redirect(res, "/login");
   }
+  // The sidebar's counts (nav.ts marks) — one cached read per operator request, so
+  // every screen's frame shows the same numbers the module dashboards do.
+  if (!isPublicPath) setConsoleNav(await getNavNumbers());
   // ── KINEK SZÓL EZ A LAP (ld. src/server/consent.ts) ──────────────────────────
   // A fenti lista azt mondja meg, KI ÉRHETI EL; ez azt, KINEK SZÓL — és a kettő
   // NEM ugyanaz. A kívülről elérhető hat útvonalból három a tenant VENDÉGÉNEK
@@ -1174,25 +1179,26 @@ async function handle(
   // MI vevőnknek szól. Ez a sor dönti el, hová kerül a süti-sáv és a Pixel.
   markAudience(res, consoleAudience(path));
 
-  // GET / — Irányítópult (module hub, owner's admin-hub mock).
-  if (method === "GET" && path === "/") {
+  // GET / — Irányítópult; GET /hub/<id> — a module's own dashboard (linear-shell README ④⑤).
+  // Both render from ONE data object, so a number on the home and on the module page
+  // can never disagree.
+  if (method === "GET" && (path === "/" || path.startsWith(HUB_PREFIX))) {
     const op = await currentOperator(req);
-    return send(
-      res,
-      200,
-      dashboardPage(
-        await getFunnelReport(),
-        getScrapeJob().running,
-        op?.displayName ?? "operátor",
-        await getFinanceCounts(),
-        await (async () => {
-          const dis = await getDisabledModules();
-          return { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length };
-        })(),
-        // Is this console even running today's code? (2026-09-08 silent-staleness fix)
-        await getTreeFreshness(),
-      ),
-    );
+    const data: HubData = {
+      r: await getFunnelReport(),
+      scrapeRunning: getScrapeJob().running,
+      operatorName: op?.displayName ?? "operátor",
+      fin: await getFinanceCounts(),
+      sales: await (async () => {
+        const dis = await getDisabledModules();
+        return { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length };
+      })(),
+      // Is this console even running today's code? (2026-09-08 silent-staleness fix)
+      stale: await getTreeFreshness(),
+    };
+    if (path === "/") return send(res, 200, dashboardPage(data));
+    const page = modulePage(path.slice(HUB_PREFIX.length), data);
+    return page ? send(res, 200, page) : send(res, 404, layout("404", `<p>${T(consoleLang(), "Nincs ilyen modul.")}</p>`));
   }
   // GET /help — searchable knowledge base (ADR-0045/e §J), help-center layout
   // (approved plan: design-refs/console/help-center). TWO-TIER model (owner

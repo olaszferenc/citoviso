@@ -14,6 +14,7 @@ const SCOPE_ENDS = [
   "src/server/moduleConfigViews.ts",
   "src/server/bookingViews.ts",
   "src/console/views.ts",
+  "src/console/nav.ts",
 ];
 
 let payload;

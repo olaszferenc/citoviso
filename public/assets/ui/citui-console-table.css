@@ -30,13 +30,13 @@
   color: color-mix(in srgb, var(--citui-white) 60%, transparent);
 }
 .con .dkpi__fx { font-size: 12px; color: color-mix(in srgb, var(--citui-white) 60%, transparent); }
-.con .dkpi__sep { width: 1px; height: 38px; background: color-mix(in srgb, var(--citui-white) 16%, transparent); }
+.con .dkpi__sep { width: 1px; height: 38px; background: color-mix(in srgb, var(--citui-panel) 16%, transparent); }
 @media (max-width: 900px) { .con .dkpi { gap: 14px; } .con .dkpi__sep { display: none; } }
 
 /* ── Table shell ──────────────────────────────────────────────────────────── */
 .con .ctbl-wrap {
   border: 1px solid var(--citui-line); border-radius: var(--citui-radius);
-  overflow: hidden; background: var(--citui-white); margin-top: 10px;
+  overflow: hidden; background: var(--citui-panel); margin-top: 10px;
 }
 .con .ctbl-bar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -50,7 +50,7 @@
 .con .ctbl-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .con .ctbl-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  background: var(--citui-white); border: 1px solid var(--citui-line-strong);
+  background: var(--citui-panel); border: 1px solid var(--citui-line-strong);
   border-radius: var(--citui-radius-pill); padding: 3px 6px 3px 11px;
   font-size: 12.5px; font-weight: 600; color: var(--citui-ink);
 }
@@ -63,7 +63,7 @@
 .con .ctbl-chip a:hover { background: var(--citui-bad); color: var(--citui-white); }
 .con .ctbl-clear {
   margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
-  border: 1px solid var(--citui-line-strong); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel);
   color: var(--citui-ink); border-radius: var(--citui-radius-pill);
   padding: 6px 14px; font-size: 13px; font-weight: 600; text-decoration: none;
 }
@@ -94,13 +94,13 @@
   width: 100%; min-width: 78px; box-sizing: border-box; font: inherit; font-size: 12px;
   font-weight: 500; text-transform: none; letter-spacing: 0;
   border: 1px solid color-mix(in srgb, var(--citui-white) 22%, transparent);
-  background: color-mix(in srgb, var(--citui-white) 10%, transparent);
+  background: color-mix(in srgb, var(--citui-panel) 10%, transparent);
   color: var(--citui-white); border-radius: var(--citui-radius-sm); padding: 5px 9px;
 }
 .con .ctbl-f input::placeholder { color: color-mix(in srgb, var(--citui-white) 50%, transparent); }
 .con .ctbl-f input:focus, .con .ctbl-f select:focus {
   outline: 2px solid var(--citui-cyan-400); outline-offset: -1px;
-  background: color-mix(in srgb, var(--citui-white) 17%, transparent);
+  background: color-mix(in srgb, var(--citui-panel) 17%, transparent);
 }
 /* A filled filter reads active — cyan field on the dark band */
 .con .ctbl-f.on input, .con .ctbl-f.on select {
@@ -131,7 +131,7 @@
   font-variant-numeric: tabular-nums; text-decoration: none;
 }
 .con .ctbl-pager__nav a {
-  color: var(--citui-ink); background: var(--citui-white);
+  color: var(--citui-ink); background: var(--citui-panel);
   border: 1px solid var(--citui-line-strong);
 }
 .con .ctbl-pager__nav a:hover { border-color: var(--citui-cyan-500); color: var(--citui-cyan-500); text-decoration: none; }
