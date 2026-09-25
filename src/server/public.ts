@@ -145,6 +145,7 @@ import {
   unseenRequestCount,
   parseOfferAmount,
 } from "../booking/requests.js";
+import { RE_GUEST_CANCEL, RE_GUEST_OFFER, RE_OWNER_OFFER, RE_OWNER_DECIDE, RE_OWNER_REVIEW, servesOnTenantHostToo } from "./mailLinkRoutes.js";
 import {
   guestOfferPage,
   guestOfferResultPage,
@@ -249,11 +250,8 @@ const MIME: Record<string, string> = {
  */
 const RE_MOCK_PREVIEW = /^\/m\/([a-f0-9]{8,64})$/;
 const RE_PREVIEW_SITE = /^\/site\/([A-Za-z0-9_-]{10,64})$/;
-const RE_GUEST_CANCEL = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/;
-// Booking-offer ⑪: the guest's offer page (GET shows, POST answers) — the guest's key.
-const RE_GUEST_OFFER = /^\/ajanlat\/([A-Za-z0-9_-]{16,80})(?:\/(elfogadom|nem-kerem))?$/;
-// Booking-offer ④: the owner's offer page — the owner's key (action_token).
-const RE_OWNER_OFFER = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/ajanlat$/;
+// The mail-linked routes live in ONE module, shared with the tenant-host dispatcher
+// below and with scripts/guest-link-host-check.mts (see mailLinkRoutes.ts for why).
 const GUEST_PAGE_ROUTES: readonly RegExp[] = [
   // A generált szállás-oldal MAGA, csak másik ajtón: a `/site/<preview_token>` ugyanazt
   // a `sites/<tenant>/index.html`-t adja ki, amit a tenant-host (mérve: bájtazonos
@@ -1850,7 +1848,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // the marketing homepage. Only 'live' sites resolve — a provisioned (paid-for
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
-  if (tenantSite) return serveTenantHost(req, res, tenantSite, pathname);
+  // ⛔ EXCEPT the routes our mails link to (+ the assets their pages load): the mail
+  // was built from THIS host (publicBaseUrl), and the tenant handler answered them
+  // with "Nincs ilyen oldal." — every owner/guest mail link was dead in production
+  // (measured 2026-09-24). They fall through to the platform handlers below, on
+  // the host the person is already on. One list: mailLinkRoutes.ts.
+  if (tenantSite && !servesOnTenantHostToo(pathname)) return serveTenantHost(req, res, tenantSite, pathname);
   // Dev-only slug path (never on the platform — see DEV_SLUG_PATH).
   //
   // ⛔ EZ AZ ÁG A CÍMZETT-DEKLARÁCIÓ ELŐTT VAN (2026-09-14). Korábban utána állt,
@@ -1877,7 +1880,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // azt a néhány útvonalat, amely ugyaninnen szolgálja ki a tenant VENDÉGÉT.
   markAudience(res, GUEST_PAGE_ROUTES.some((re) => re.test(pathname)) ? "guest" : "own");
   // An unresolved tenant subdomain must NOT fall through to the landing page.
-  if (isUnclaimedTenantHost(req)) {
+  // A RESOLVED one that got here is a mail-link/asset pass-through (above) — it is
+  // claimed, and the platform handler below is exactly what the mail pointed at.
+  if (!tenantSite && isUnclaimedTenantHost(req)) {
     return send(
       res,
       404,
@@ -3293,7 +3298,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // GET /foglalas/<token>/elfogadom|elutasitom — the owner's one-tap verdict
     // straight from the notification e-mail, with no login. This is what keeps the
     // module alive for an owner who will never open an admin to approve a booking.
-    const decideMatch = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/(elfogadom|elutasitom)$/.exec(pathname);
+    const decideMatch = RE_OWNER_DECIDE.exec(pathname);
     if (decideMatch) {
       const verdict = decideMatch[2] === "elfogadom" ? "accepted" : "declined";
       const r = await decideRequest(decideMatch[1]!, verdict, publicBaseUrl(req));
@@ -3334,7 +3339,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // GET /velemeny/<token>/kiteszem|nem-teszem-ki — the owner's one-tap verdict on a
     // review, straight from the e-mail with no login (ADR-0046). Idempotent, because
     // mail clients prefetch links and owners double-tap.
-    const revMatch = /^\/velemeny\/([A-Za-z0-9_-]{16,80})\/(kiteszem|nem-teszem-ki)$/.exec(pathname);
+    const revMatch = RE_OWNER_REVIEW.exec(pathname);
     if (revMatch) {
       const verdict = revMatch[2] === "kiteszem" ? "published" : "rejected";
       const r = await decideReview(revMatch[1]!, verdict, publicBaseUrl(req));

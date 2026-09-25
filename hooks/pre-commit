@@ -842,6 +842,15 @@ if [ -f scripts/guest-host-i18n-check.mts ] && \
   echo "[pre-commit] guest-host-i18n-check (a vendég hostján nincs beégetett magyar)…"
   npx tsx scripts/guest-host-i18n-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A levelekben kiküldött linkek a TENANT HOSTJÁN is élnek (mérve élesen 2026-09-24:
+# a tulaj elfogad/elutasít, a vendég lemondó/ajánlat linkje mind „Nincs ilyen oldal"
+# volt a szállás hostján — a levél a kérés hostjával épül). Az őr a valódi public
+# szerveren, nyers Host-fejléccel, a mailLinkRoutes.ts EGY listájából mér.
+if [ -f scripts/guest-link-host-check.mts ] && \
+   changed_files | grep -qE '^src/server/(public|mailLinkRoutes)\.ts|^scripts/guest-link-host-check'; then
+  echo "[pre-commit] guest-link-host-check (a levél-linkek a tenant hoston is élnek)…"
+  npx tsx scripts/guest-link-host-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0119 ① — a fenti KÉT őr a 13 fülből EGYET mér (mindkettő a modulesSection()
 # kimenetén dolgozik). A tulaj viszont az `attekintes` fülre LÉP BE, és ott mérve
 # (2026-09-14) a fagyás alatt 0× tartozás / 0× összeg / 0× fizetés-gomb volt, a

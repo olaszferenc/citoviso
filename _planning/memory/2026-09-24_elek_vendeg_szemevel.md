@@ -90,3 +90,19 @@ szálláskereső, tesztel."* → *„Mehet, de mindent nézzen."*
    widgetben, a hozzájárulás-sáv, a mock mobil-panel), melyik marad.
 3. Döntés: a „Citoviso készítette" credit maradjon-e a VENDÉG lapján.
 4. FK-007 dátum-frissítés; ELEK-TESZT lead szállás-jellegű adatra cserélése (a Z1 zaja).
+
+## 2026-09-25 — a tulaj döntései és a javítások (mind landolva)
+
+1. **Levél-link hiba (pilot-blokkoló) — JAVÍTVA, „tenant-hostos átengedés":** `src/server/mailLinkRoutes.ts`
+   (EGY lista: `RE_GUEST_CANCEL/OFFER`, `RE_OWNER_OFFER/DECIDE/REVIEW` + `servesOnTenantHostToo()`), az
+   elosztó a tenant hoston ezeket + az `/assets/`-et átengedi a platform-kezelőkhöz; a „nem birtokolt
+   aldomain" kapu (`isUnclaimedTenantHost`) csak FELOLDATLAN hostra üt (ez fogta másodjára). Őr:
+   `scripts/guest-link-host-check.mts` (valódi szerver, nyers Host-fejléc, a lista mintáira platform-
+   azonos válasz + css 200 + negatív kontroll), pre-commitban. Élesben 0 foglalás/0 vélemény volt →
+   senkit nem ért kár. ⚠️ Az élesen mért 404 csak a DEPLOY után fordul zöldre — újramérés jár.
+2. **„Másolom"-szkript** (views.ts) — engedéllyel commitolva (`3bead17b`).
+3. **Vendég-widget triázs** (Z3 múlt · H3 foglalt napok · E3 naptár-ugrás · H4 árajánlat-nyugta ·
+   H6 dupla pont · hozzájárulás-sáv a konfigurátor lába alatt) — `264bd414`, FK-008 31/31 tiszta.
+   FK-008b H-1 (mobilon nyitott vásárlói panel) valószínűleg a runner átméretezés-műterméke
+   (≤560 px-en betöltéskor csukódik) — friss 390-es betöltéssel a következő park-építésnél mérendő.
+4. **Credit a vendég lapján: MARAD** (tulaj).

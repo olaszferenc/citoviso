@@ -111,14 +111,12 @@ Nyitott élesítés előtt: éles 3DS (sandboxban nem fut), Barion-tárca díj-f
 KIÉRTÉKELVE.** Jegyzet: `_planning/memory/2026-09-24_elek_vendeg_szemevel.md`. Leletek:
 `elek/runs/FK-008-2026-09-24T19-21-38/LELETEK.md` (HIBA 6 · ZAVAROS 9 · ERGONÓMIA 9) és
 `elek/runs/FK-008b-2026-09-24T18-49-53/LELETEK.md` (HIBA 2 · ZAVAROS 8 · ERGONÓMIA 7).
-- ⛔⛔ **PILOT-BLOKKOLÓ, élesen igazolva (olvasással):** a foglalás-levelek linkjei a KÉRÉS hostjából
-  épülnek (`publicBaseUrl(req)`), élesben a tenant-hostra mutatnak, ahol MINDEN nem-gyökér út 404 —
-  a tulaj elfogad/elutasít és a vendég lemondó/ajánlat-linkje élesben halott. Javítás NEM történt
-  (tulajdonosi döntés: platform-bázis vs tenant-hostos kiszolgálás).
+- ✅ **A pilot-blokkoló levél-link hiba JAVÍTVA (09-25, tenant-hostos átengedés, `mailLinkRoutes.ts` +
+  `guest-link-host-check` őr)** — élesben a linkek a DEPLOY-ig még 404-ek; deploy után újramérés jár.
+  A „Másolom"-javítás és a vendég-widget triázs is landolt; a credit marad.
 - Javítva a fában (commitolva): dev-úti vélemény-űrlap `API_BASE`; FK-005a drift (hozzájárulás-sáv +
-  „Fizetek —" felirat); runner „mi takarja a célpontot" + pageerror-keret. **NEM commitolt, tulajra
-  vár:** `src/console/views.ts` „Másolom"-szkript idézőjel-javítás (SyntaxError minden fizetőoldalon,
-  élesen is él 09-15 óta) — a felület-kapu miatt külön engedéllyel megy.
+  „Fizetek —" felirat); runner „mi takarja a célpontot" + pageerror-keret. a „Másolom"-szkript
+  idézőjel-javítása (`3bead17b`) és a widget-triázs (`264bd414`) is fent.
 - Nyitva: a leletek triázsa a tulajjal; a „Citoviso készítette" credit a vendég lapján; FK-007 dátumai
   elavultak (09-21); az ELEK-TESZT lead vendéglő-adat (Z1 zaj).
 
