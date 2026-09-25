@@ -83,16 +83,11 @@ let siteId = "";
 
 try {
   // ── fixture ────────────────────────────────────────────────────────────────
-  const def = await db
-    .insertInto("scraper_definition")
-    .values({ label: "bookingscreen", country: "HU", region: "bs", industry: "szallas" } as never)
-    .returning("id")
-    .executeTakeFirstOrThrow();
-  const run = await db
-    .insertInto("scrape_run")
-    .values({ scraper_definition_id: def.id } as never)
-    .returning("id")
-    .executeTakeFirstOrThrow();
+  // Own, stamped parent — dropped on every exit path (scripts/lib/fixture-parent.mts).
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const parent = await createFixtureParent(db as never, "bookscr");
+  const def = { id: parent.defId };
+  const run = { id: parent.runId };
   const lead = await db
     .insertInto("lead")
     .values({ scrape_run_id: run.id, name: "Foglalás-képernyő teszt", raw: sql`'{}'::jsonb` } as never)

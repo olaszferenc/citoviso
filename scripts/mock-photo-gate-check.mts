@@ -379,15 +379,12 @@ async function main(): Promise<void> {
   await cleanup();
 
   try {
-    const run = await db
-      .selectFrom("scrape_run")
-      .select("id")
-      .orderBy("id")
-      .limit(1)
-      .executeTakeFirst();
-    if (!run) {
-      skip("a HTTP-úti kapu-próba", "nincs egyetlen scrape_run sem a DB-ben (üres park)");
-    } else {
+    // Own parent instead of a borrowed run (scripts/lib/fixture-parent.mts) — the "üres park"
+    // skip is gone with it: the gate always has a parent to seed under.
+    const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+    const parent = await createFixtureParent(db as never, "mockphoto");
+    const run = { id: parent.runId };
+    {
       const lead = await db
         .insertInto("lead")
         .values({ scrape_run_id: run.id, name: FIXTURE_LEAD, qualification: "no_site" } as never)

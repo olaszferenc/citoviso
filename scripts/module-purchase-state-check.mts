@@ -119,16 +119,11 @@ let orderId = "";
 
 try {
   // ── fixture ────────────────────────────────────────────────────────────────
-  const defRow = await db
-    .insertInto("scraper_definition")
-    .values({ label: "modpaychk", country: "HU", region: "modpaychk", industry: "szallas" } as never)
-    .returning("id")
-    .executeTakeFirstOrThrow();
-  const run = await db
-    .insertInto("scrape_run")
-    .values({ scraper_definition_id: defRow.id } as never)
-    .returning("id")
-    .executeTakeFirstOrThrow();
+  // Own, stamped parent — dropped on every exit path (scripts/lib/fixture-parent.mts).
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const parent = await createFixtureParent(db as never, "modpay");
+  const defRow = { id: parent.defId };
+  const run = { id: parent.runId };
   const lead = await db
     .insertInto("lead")
     .values({ scrape_run_id: run.id, name: "FK-005b őr", raw: sql`'{}'::jsonb` } as never)

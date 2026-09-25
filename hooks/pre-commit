@@ -1903,6 +1903,15 @@ if [ -f scripts/distill-notify-check.mts ] && \
   echo "[pre-commit] distill-notify-check (szól-e az értesítő, és igazat mond-e)…"
   npx tsx scripts/distill-notify-check.mts >"$GATE_LOG" || gate_failed
 fi
+# FIXTURE-SZÜLŐ ŐR (2026-09-25, mérve): egy kapu se kölcsönözze „az első scrape_run"-t (a testvér
+# törli alóla — CASCADE), és ne hagyjon hátra sajátot (1 046 árva futás volt a parkban, 6 kapuból).
+# A szülőt a scripts/lib/fixture-parent.mts adja, exit-hook törléssel. Forrás-szabály minden kapun +
+# viselkedés (exit(1) után is törlődik) + park-cenzus (halott pid-ű címkék söprése). ⚠️ DB-t igényel.
+if [ -f scripts/fixture-parent-check.mts ] && \
+   changed_files | grep -qE '^scripts/[^/]+-check\.mts$|^scripts/lib/fixture-parent\.mts$'; then
+  echo "[pre-commit] fixture-parent-check (kölcsönzött vagy hátrahagyott scrape_run egyetlen kapuban sem)…"
+  npx tsx scripts/fixture-parent-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⭐⭐ A META-ŐR — MINDIG FUT, és nincs diff-scope-ja. Ez szándékos: egy új árva őr úgy
 # keletkezik, hogy valaki LÉTREHOZ egy `scripts/*-check.mts`-t és ezt a fájlt nem nyitja
 # meg — vagyis pont akkor, amikor semmilyen hook-fájlra szűkített trigger nem tüzelne.

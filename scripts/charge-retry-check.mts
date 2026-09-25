@@ -113,8 +113,10 @@ async function sow(): Promise<void> {
   // scrape_run-hoz kötött, a `tenant` pedig egy leadhez. Egy találgatott alak itt
   // futásidőben hal meg (`scripts/` nincs típus-ellenőrizve —
   // reference_scripts_are_not_typechecked), ezért a meglévő futást használjuk fel.
-  const run = await db.selectFrom("scrape_run").select("id").executeTakeFirst();
-  if (!run) throw new Error("nincs egyetlen scrape_run sem — a fixtúra nem vethető");
+  // Own parent instead of a borrowed run (scripts/lib/fixture-parent.mts) — dropped on exit.
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const parent = await createFixtureParent(db as never, "chargeretry");
+  const run = { id: parent.runId };
 
   const lead = await db
     .insertInto("lead")

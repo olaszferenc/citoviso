@@ -265,8 +265,10 @@ async function reap(): Promise<void> {
   await db.deleteFrom("lead").where("id", "=", leadId).execute().catch(() => {});
 }
 try {
-  const run = await db.selectFrom("scrape_run").select("id").executeTakeFirst();
-  if (!run) throw new Error("nincs egyetlen scrape_run sem — a fixtúra nem vethető");
+  // Own parent instead of "the first scrape_run" (a sibling could drop that under us — CASCADE).
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const parent = await createFixtureParent(db as never, "wallet");
+  const run = { id: parent.runId };
   const lead = await db.insertInto("lead").values({ scrape_run_id: run.id as string, name: `Pénztárca-őr ${STAMP}` } as never).returning("id").executeTakeFirstOrThrow();
   leadId = lead.id as string;
   const tenant = await db.insertInto("tenant").values({ lead_id: leadId, display_name: `Pénztárca-őr ${STAMP}` } as never).returning("id").executeTakeFirstOrThrow();

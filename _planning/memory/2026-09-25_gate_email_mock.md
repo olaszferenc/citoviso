@@ -34,7 +34,12 @@ küldhet dev-tenantnak — kód-olvasásból, mérés kell.”
   CSS-szabálya INLINE a `moduleConfigViews.ts`-ben él (a triggerben), az `adminViews.ts`-ben és a
   `citui-admin.css`-ben 0 ilyen szabály — a tegnapi állításom fájlnevekből következtetett, nem
   szelektorokból (feedback_my_own_summary_line_can_be_the_false_premise).
-- **2. az 5 kölcsönző kapu** — következik.
+- **2. kölcsönző + szemetelő kapuk — ZÁRVA (ADR-XXXX).** Mérve: 1 046 árva `scrape_run` (6 szemetelő, nem 4),
+  5 kölcsönző; a lánc CASCADE, tehát egy sor törlése viszi az egész fixtúrát. `scripts/lib/fixture-parent.mts`
+  (bélyegzett szülő, exit-hook törlés `psql`-lel) mind a 11 kapuban; 11/11 zöld, 0 helper-maradvány.
+  Őr: `fixture-parent-check.mts` (①–⑤, 9 esetes piros önteszt); egyszeri söprés 1 040 + 1 033 sor.
+  ⚠️ A hook-ban rekedt NUL bájt a `module-purchase-state-check.mts`-ben: a sima `grep` binárisnak látja —
+  `grep -a` kell; az őr `readFileSync`-kel olvas, azt nem zavarja.
 
 ## Nyitva
 - A hibaosztály tágabb (bármely kapu, ami termék-kódon át levelez): egy termék-szintű fék
@@ -45,3 +50,5 @@ küldhet dev-tenantnak — kód-olvasásból, mérés kell.”
 - `scripts/booking-offer-check.mts`, `scripts/season-year-price-check.mts`
 - `scripts/server-import-env-check.mts`
 - `scripts/kb-freshness.mts` (② tartalmi verdikt)
+- `scripts/lib/fixture-parent.mts`, `scripts/fixture-parent-check.mts`, `hooks/pre-commit`, 11 kapu-szkript
+- `_planning/decisions/XXXX-a-kapu-fixture-szuloje-sajat-es-onmagat-torli.md`

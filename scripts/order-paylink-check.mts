@@ -83,7 +83,10 @@ interface Seed {
 
 /** Throwaway lead + two mocks: one awaiting curation, one explicitly refused. */
 async function seed(): Promise<Seed> {
-  const run = await db.selectFrom("scrape_run").select("id").executeTakeFirstOrThrow();
+  // Own parent instead of a borrowed run (scripts/lib/fixture-parent.mts) — dropped on exit.
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const parent = await createFixtureParent(db as never, "paylink");
+  const run = { id: parent.runId };
   const lead = await db
     .insertInto("lead")
     .values({

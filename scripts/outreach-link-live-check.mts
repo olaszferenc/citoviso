@@ -301,8 +301,10 @@ async function makeFixture(): Promise<{ leadId: string; expectedLiveToken: strin
   // A `lead.scrape_run_id` NOT NULL — egy MEGLÉVŐ futáshoz kötjük (csak olvassuk), és a
   // fixture-lead másodpercekig él. ⚠️ Kimondott korlát: ezalatt egy párhuzamosan futó
   // lista-őr eggyel több leadet látna abban a futásban; a név ezért beszédes.
-  const run = await db.selectFrom("scrape_run").select("id").orderBy("created_at", "desc").limit(1).executeTakeFirst();
-  if (!run) throw new Error("nincs scrape_run a dev DB-ben — a fixture nem építhető");
+  // Own parent instead of the newest borrowed run (scripts/lib/fixture-parent.mts) — dropped on exit.
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const parent = await createFixtureParent(db as never, "linklive");
+  const run = { id: parent.runId };
   const lead = await db
     .insertInto("lead")
     .values({ name: FIXTURE_NAME, scrape_run_id: run.id })
