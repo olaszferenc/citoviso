@@ -11,6 +11,13 @@ Utolsó frissítés: 2026-09-25 (🏠 **Az „egész szállás” VÁLASZTHATÓ 
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## ⏰ Emlékeztető a pilot / nagy deploy UTÁNRA (2026-09-25, tulaj)
+
+**Ellátás-funkció** (reggeli, félpanzió, teljes panzió stb.), ezek **felárai**, és a **„mit tartalmaz
+az ár”** leírási lehetőség. A tulaj tudatosan a pilot indulása (= a nagy deploy) utánra halasztotta —
+addig nem kezdjük el. Amint a nagy deploy lement, a session első válaszában jelezni kell.
+Jegyzet: `_planning/memory/2026-09-25_ellatas_emlekezteto.md`.
+
 ## Párhuzamos szál (2026-09-25 — a kapuk levelezése)
 
 **✉️ KÉT KAPU (booking-offer, season-year-price) VALÓDI LEVELET KÜLDHETETT VOLNA** a park 6 valódi
