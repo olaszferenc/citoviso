@@ -3323,6 +3323,9 @@
   // stays alive (the server row governs) and keeps showing in the price card.
   function mountEscalationCard() {
     if (!OFFER || OFFER.kind !== "escalation") return;
+    // ADR-0112: an opted-out visitor sees the price the server will charge, but
+    // we do not push — no decision card over the page they came back to by choice.
+    if (PRICING.offerQuiet) return;
     var dl = offerDeadline();
     if (!dl || dl.getTime() <= Date.now()) return;
     var veil = el('<div class="cit-cfg-escveil"></div>');

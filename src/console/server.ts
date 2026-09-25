@@ -2537,7 +2537,13 @@ async function handle(
             `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
         );
       }
-      const offer = tracked ? await bestActiveOfferForProspect(p.id) : null;
+      // ⛔ The offer is resolved for BOTH branches (ADR-0112, amended 2026-09-25).
+      // It used to be `tracked ? … : null`: an opted-out visitor saw the LIST
+      // price while handleOrderRequest charged the discounted one — the page and
+      // the charge disagreed (measured: 6 840 shown, 5 130 charged). The cold
+      // letter promised the discount in writing, so the price follows it; what
+      // the opt-out turns off is the PUSH (offerQuiet: no decision card).
+      const offer = await bestActiveOfferForProspect(p.id);
       // 0029: prefill the checkout from the lead + the prospect's contact address,
       // so the mandatory billing step is a confirmation rather than a form-fill.
       const pf = await db
@@ -2573,6 +2579,7 @@ async function handle(
                 percent: offer.percent,
                 expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null,
               },
+              ...(tracked ? {} : { offerQuiet: true }),
             }
           : {}),
       });

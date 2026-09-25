@@ -190,7 +190,11 @@ for (const [needle, why] of [
   ["const tracked = !p.unsubscribed", "a leiratkozott/követett ág megkülönböztetése"],
   ["tracked\n        ? await recordView(", "látogatás-rögzítés KIHAGYÁSA leiratkozottnál"],
   ["tracked ? await ensureEscalationOffer", "eszkalációs ajánlat NEM keletkezhet leiratkozottnál"],
-  ["tracked ? await bestActiveOfferForProspect", "ajánlat-kártya NEM jelenhet meg leiratkozottnál"],
+  // ADR-0112, módosítva 2026-09-25 (tulaj): az ÁR mindkét ágon ugyanazt az ajánlatot
+  // követi, amit a rendelés terhel — különben a lap listaárat mutat, a szerver pedig
+  // kedvezményeset von le. A leiratkozás a NYOMÁST kapcsolja ki (offerQuiet).
+  ["const offer = await bestActiveOfferForProspect(p.id);", "a lap ára = a terhelt ár (ajánlat mindkét ágon)"],
+  ["...(tracked ? {} : { offerQuiet: true })", "döntés-segítő kártya NEM jelenhet meg leiratkozottnál"],
   ["viewId ? { track:", "az esemény-beacon KIMARAD leiratkozottnál"],
 ] as const) {
   if (!src.includes(needle)) {

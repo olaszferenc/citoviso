@@ -82,6 +82,17 @@ kizárjuk abból, amit maga akar megnézni (pull). Amit a `tracked` flag kikapcs
 eszkalációs ajánlat MINTÁZÁSA és BÁRMILYEN ajánlat-kártya megjelenítése. Ami marad: a mock,
 a konfigurátor és a megrendelés.
 
+> **MÓDOSÍTVA — tulajdonosi döntés, 2026-09-25: az ÁR nem kártya.** Mérve: a leiratkozott
+> ágon a lap LISTAÁRAT mutatott (6 840 Ft), miközben a `handleOrderRequest` a prospect élő
+> ajánlatával KEDVEZMÉNYESEN terhelt (5 130 Ft) — a lap és a terhelés eltért. A hideg levél
+> a kedvezményt ÍRÁSBAN ígérte, ezért a leiratkozás nem vonja vissza. Mostantól:
+> - az ajánlatot a `/p/` MINDKÉT ágon feloldjuk (`bestActiveOfferForProspect`), ugyanazt,
+>   amit a rendelés terhel → a lap ára = a terhelt ár (áthúzott listaár + fizetendő);
+> - a leiratkozás a NYOMÁST kapcsolja ki: `offerQuiet` → a határidős döntés-segítő kártya
+>   (felugró, visszaszámláló) NEM jelenik meg; új eszkalációs ajánlat továbbra sem keletkezik.
+> Őrök: `optout-carrier-check.mts` (szerkezeti), `optout-offer-price-check.mts` (böngésző,
+> 390px + asztali, követett ágon kontrollként a kártya MEGJELENIK).
+
 **A lap nem hazudhat magáról (§B.17):** ezen az ágon NEM a követett lábazat megy ki — az azt
 állítja, hogy „a megtekintés adatai rögzülnek", ami itt valótlan volna. Helyette
 `injectOptedOutNotice` (kimondja: nem keressük többé, ezt a megtekintést nem rögzítjük, és ki

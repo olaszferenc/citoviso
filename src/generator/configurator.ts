@@ -130,6 +130,10 @@ export interface ConfiguratorManifest {
       /** ISO timestamp; null = no deadline (the intro offer). */
       readonly expiresAt: string | null;
     };
+    /** ADR-0112 (amended 2026-09-25): the visitor opted out — the PRICE still
+     *  follows the offer (the server charges it), but nothing pushes: no
+     *  decision card, no countdown pop-up. */
+    readonly offerQuiet?: boolean;
   };
   /**
    * What the buyer is ALREADY committed to at renewal, when their tenant has a
@@ -263,12 +267,15 @@ export interface ConfiguratorOpts {
    * be used as the invoice source of truth.
    */
   readonly billingPrefill?: BillingPrefill;
-  /** ADR-0088: the prospect's resolved best offer (tracked route only). */
+  /** ADR-0088: the prospect's resolved best offer — the SAME one the order
+   *  route charges (bestActiveOfferForProspect), on both /p/ branches. */
   readonly offer?: {
     readonly kind: "outreach" | "escalation" | "coupon" | "campaign";
     readonly percent: number;
     readonly expiresAt: string | null;
   };
+  /** ADR-0112: opted-out visitor — show the offer's price, never its push card. */
+  readonly offerQuiet?: boolean;
   /**
    * The LEAD this checkout runs against. Used for ONE thing: resolving whether
    * the buyer's tenant already has a cycle this purchase joins (ADR-0080 ①), so
@@ -338,6 +345,7 @@ export async function buildManifest(
       // charged in € and read "Ft" on the page they pay from (measured 2026-09-14).
       currency: getCurrency(),
       ...(opts.offer ? { offer: opts.offer } : {}),
+      ...(opts.offer && opts.offerQuiet ? { offerQuiet: true } : {}),
     },
     /**
      * WHAT the buyer is buying — the pay step names it (approved contract:

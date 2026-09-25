@@ -1698,6 +1698,14 @@ if [ -f scripts/order-send-failed-check.mts ] && \
   echo "[pre-commit] order-send-failed-check (nincs „Megkaptuk” visszaigazolás nélkül)…"
   npx tsx scripts/order-send-failed-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-0112 (módosítva 2026-09-25): a leiratkozott látogató ugyanazt az árat LÁTJA, amit a
+# rendelés terhel (az ajánlat mindkét ágon), de NINCS döntés-segítő kártya. Mérve: a lap
+# 6 840 Ft-ot mutatott, a szerver 5 130 Ft-ot vont volna le. 390px + asztali (~15 s).
+if [ -f scripts/optout-offer-price-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/console/server\.ts$|^src/payment/offers\.ts$|^scripts/optout-offer-price-check'; then
+  echo "[pre-commit] optout-offer-price-check (leiratkozottnál is a terhelt ár látszik, nyomás nélkül)…"
+  npx tsx scripts/optout-offer-price-check.mts >"$GATE_LOG" || gate_failed
+fi
 # 2026-09-25: a linkes fizetés két vevő-levele (visszaigazoló + fizetési link) — logó
 # CID-mellékletként, Reply-To az ügyfélszolgálat, és a két küldés TÉNYLEG be van kötve.
 if [ -f scripts/order-mail-check.mts ] && \
