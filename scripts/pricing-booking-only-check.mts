@@ -67,12 +67,12 @@ const prices = {
   ],
 };
 
-function render(bookingActive: boolean): string {
+function render(bookingActive: boolean, roomsActive = true): string {
   return moduleSettingsSection("pricing", {
     values: {},
     // ADR-0208 ⑥.2: the card reads each unit's price status (required; scripts/ is not
     // type-checked). The fixture unit has a timeless base → complete.
-    pricing: { units: [unit], prices, currency: "HUF", bookingActive, status: { "u-1": "complete" } },
+    pricing: { units: [unit], prices, currency: "HUF", bookingActive, roomsActive, status: { "u-1": "complete" } },
   } as Parameters<typeof moduleSettingsSection>[1]);
 }
 
@@ -106,6 +106,24 @@ for (const [state, html] of [["foglalás nélkül", noBooking], ["foglalással",
   check(`${state}: új időszak felvétele`, /action="\/admin\/prices\/season"/.test(html));
 }
 
+// ⑤ Approved plan B (design-refs/console/pricing-rooms-link, 2026-09-25): the note on
+// top carries a button to the rooms editor — but a module screen opens only for an
+// ACTIVE module, so without the rooms module the button must go to the Modulok tab.
+// Both forms rendered, both directions asserted (a wrong target here is a dead click).
+console.log("⑤ a Szobák-gomb a jegyzetben, célja a modul állapota szerint");
+{
+  const withRooms = render(true, true);
+  const noRooms = selftest ? withRooms : render(true, false);
+  const BTN = /<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="([^"]+)">([^<]+)<\/a>/;
+  const on = BTN.exec(withRooms);
+  const off = BTN.exec(noRooms);
+  check("aktív Szobák modul: a gomb a Szobák szerkesztőre visz", on?.[1] === "/admin?tab=modulok&m=rooms", on?.[1]);
+  check("aktív Szobák modul: felirat „Szobák, apartmanok szerkesztése”", on?.[2] === "Szobák, apartmanok szerkesztése", on?.[2]);
+  check("Szobák modul nélkül: a gomb a Modulok fülre visz (nem egy nem nyíló képernyőre)", off?.[1] === "/admin?tab=modulok", off?.[1]);
+  check("Szobák modul nélkül: felirat „Szobák modul bekapcsolása”", off?.[2] === "Szobák modul bekapcsolása", off?.[2]);
+  check("a gomb a jegyzet SORÁBAN ül (mcfg-note--act), nem külön blokkban", /<p class="mcfg-note mcfg-note--act"><span>/.test(withRooms));
+}
+
 // ④ Measured in a browser, not assumed: at phone width no field of the "add a period"
 // form may stick out of its card (2026-09-23: the second date field and the amount
 // were cut off at 390px — the rows were 482px wide in a 320px card), and on desktop
@@ -137,16 +155,23 @@ console.log("④ böngészőben mérve: az új-időszak űrlap a kártyán belü
             if (r.width) over = Math.max(over, r.right - card.right);
           });
           const dates = form.querySelectorAll(".price-new__dates .citui-input");
+          // Plan B: the rooms button stays inside its note; on the phone it spans the note.
+          const note = document.querySelector(".mcfg-note--act").getBoundingClientRect();
+          const btn = document.querySelector("[data-cit-rooms-link]").getBoundingClientRect();
+          const btnOver = Math.round(btn.right - note.right);
+          const btnSpan = Math.round((btn.width / (note.width - 28)) * 100);
           // A unit label ("Ft", "éj min.") broken over two lines reads as two words.
           const broken = [...form.querySelectorAll(".mcfg-suffix > span")]
             .filter((sp) => sp.getBoundingClientRect().height > parseFloat(getComputedStyle(sp).lineHeight || "0") * 1.5 ||
                             sp.getClientRects().length > 1)
             .map((sp) => sp.textContent);
-          return { over: Math.round(over), pageX: document.documentElement.scrollWidth - innerWidth, broken,
+          return { over: Math.round(over), pageX: document.documentElement.scrollWidth - innerWidth, broken, btnOver, btnSpan,
                    dateW: Math.round(dates[0].getBoundingClientRect().width),
                    sameRow: Math.abs(form.querySelector(".citui-input").getBoundingClientRect().top - dates[0].getBoundingClientRect().top) < 2 };
-        })()`)) as { over: number; pageX: number; dateW: number; sameRow: boolean; broken: string[] };
+        })()`)) as { over: number; pageX: number; dateW: number; sameRow: boolean; broken: string[]; btnOver: number; btnSpan: number };
         check(`${state} @${vw}px: semmi nem lóg ki a kártyából (túllógás ${m.over}px)`, m.over <= 0, m);
+        check(`${state} @${vw}px: a Szobák-gomb a jegyzeten belül marad (túllógás ${m.btnOver}px)`, m.btnOver <= 0, m);
+        if (vw === 390) check(`${state} @390px: a Szobák-gomb a jegyzet teljes szélességét kitölti (${m.btnSpan}%)`, m.btnSpan >= 95, m);
         check(`${state} @${vw}px: nincs vízszintes lapgörgetés`, m.pageX <= 0, m);
         check(`${state} @${vw}px: a mező-feliratok egy sorban (nem „éj / min.”)`, m.broken.length === 0, m.broken);
         if (vw === 1280) {

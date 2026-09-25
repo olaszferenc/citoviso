@@ -152,6 +152,14 @@ export const MODCFG_STYLE = `<style>
 .mcfg-suffix .citui-input{max-width:110px}
 .mcfg-suffix>span{color:var(--citui-muted);font-size:.9rem}
 .mcfg-bkline a{display:inline-block;margin-top:6px;font-weight:600;white-space:nowrap}
+/* Approved plan B (design-refs/console/pricing-rooms-link): the note is a row — text
+   left, the rooms button right; below 640px of ITS OWN width the button drops under
+   the text and spans it. @container on the note itself (the admin column is narrower
+   than the window, so @media would lie). */
+.mcfg-note--act{container-type:inline-size;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.mcfg-note--act>span{flex:1 1 320px}
+.mcfg-note--act .citui-btn{flex:0 0 auto;white-space:nowrap}
+@container (max-width:639px){.mcfg-note--act .citui-btn{width:100%}}
 
 /* ── calendar: COLLAPSIBLE card (owner, 2026-09-08) ───────────────── */
 /* A wide screen gets the legend + save BESIDE the grid; the grid itself stops
@@ -2208,6 +2216,14 @@ export interface PricingEditorData {
    * Required on purpose: a caller that forgets it must fail the type check.
    */
   readonly bookingActive: boolean;
+  /**
+   * Is the rooms module active? A module settings screen opens ONLY for an active
+   * module (serveAdmin), so the "edit your rooms" button on top of this screen must
+   * know where to send the owner: the rooms editor, or the Modulok tab to switch the
+   * module on first (approved plan design-refs/console/pricing-rooms-link, 2026-09-25).
+   * Required for the same reason as `bookingActive`.
+   */
+  readonly roomsActive: boolean;
   /** 0074: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
    *  the year card just saved or refused (`?ev=<seasonId>-<year>`). */
   readonly editSeason?: string | null;
@@ -2631,11 +2647,23 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     })
     .join("");
 
+  // Approved plan B (design-refs/console/pricing-rooms-link, 2026-09-25): the note
+  // keeps its sentence and gains a secondary button — the owner who wants to price
+  // ROOMS rather than the whole property must add them first, and this screen had
+  // no way there. A module screen opens only for an ACTIVE module (serveAdmin), so
+  // without the rooms module the button goes to the Modulok tab to switch it on.
+  const roomsHref = data.roomsActive ? "/admin?tab=modulok&m=rooms" : "/admin?tab=modulok";
+  const roomsLabel = data.roomsActive
+    ? T(lang, "Szobák, apartmanok szerkesztése")
+    : T(lang, "Szobák modul bekapcsolása");
+
   return (
-    `<p class="mcfg-note">${T(lang, "Az árat egységenként adja meg — a vendég is így látja majd.")} ` +
+    `<p class="mcfg-note mcfg-note--act"><span>${T(lang, "Az árat egységenként adja meg — a vendég is így látja majd.")} ` +
     (data.units.length > 1
       ? T(lang, "Minden szobának/apartmannak saját ára lehet.")
       : T(lang, "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál.")) +
+    `</span>` +
+    `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="${roomsHref}">${roomsLabel}</a>` +
     `</p>` +
     cards +
     seasonEditorScript(lang)

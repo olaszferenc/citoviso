@@ -349,7 +349,18 @@ try {
       // a két vendég-éjszaka ÉS a kézi blokk is (a szoba sem adható ki, ha az
       // egész ház azon a napon nem elérhető).
       const linked = page.locator(".cal-cell--linked a");
-      check("a szobánál csíkos mind a három zárt nap", (await linked.count()) === 3, `kapott: ${await linked.count()}`);
+      // ⛔ Ugyanaz a hónap-szabály, mint a jelvénynél (2026-09-25: a hónap utolsó napjaiban
+      // a kézi blokk a KÖVETKEZŐ hónapba esik, a naptár a mostanit mutatja → 2 csíkos nap
+      // a helyes, és az őr mégis 3-at várt, mindenki land-ját blokkolva). Nem kihagyás:
+      // a két vendég-éjszaka csíkját ilyenkor is számon kérjük.
+      const expectLinked = manualInMonth ? 3 : 2;
+      if (!manualInMonth)
+        console.log("  ⚠️ a kézi blokk nem fér a mostani hónapba — a szobánál 2 csíkos nap a várt (a két vendég-éjszaka)");
+      check(
+        `a szobánál csíkos mind a ${manualInMonth ? "három" : "két"} zárt nap`,
+        (await linked.count()) === expectLinked,
+        `kapott: ${await linked.count()}`,
+      );
       check(
         "a jelmagyarázat megnevezi ezt az állapotot",
         /Másik egység foglalása/.test((await page.locator(".cal-legend").textContent()) ?? ""),

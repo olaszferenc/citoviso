@@ -734,6 +734,9 @@ function moduleShotHtml(entryId: string): string {
         // Said out loud: the screen differs with and without booking, and scripts/ is not
         // type-checked, so a missing field would silently shoot the no-booking state.
         bookingActive: true,
+        // The rooms button on top of the screen (approved plan pricing-rooms-link):
+        // the guide shows the active-module form, "Szobák, apartmanok szerkesztése".
+        roomsActive: true,
         prices: {
           u1: [
             { id: "p1", label: "Alapár", from: null, to: null, amount: 24000, isBase: true },
@@ -1269,6 +1272,16 @@ await shoot(
   undefined,
   moduleShotHtml("admin-modules-pricing"),
   "#ar-u0",
+);
+// Approved plan pricing-rooms-link (2026-09-25): the rooms button sits in the note ABOVE
+// the first card — outside both captures above — and the guide's sentence about it
+// ("Szobák, apartmanok szerkesztése") needs its own picture.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "szobak-gomb.png"),
+  undefined,
+  moduleShotHtml("admin-modules-pricing"),
+  ".mcfg-note--act",
 );
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative
 // numbers the frozen plan mock uses (12/5/7 months, 8 000 floor, 20 000 buyout),

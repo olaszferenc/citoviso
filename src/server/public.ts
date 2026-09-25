@@ -1256,6 +1256,10 @@ async function serveAdmin(
             // The SAME predicate the page and the season rule use (isRenderedModule):
             // active AND not superseded — "is the calendar actually on the page?"
             bookingActive: await tenantRendersModule(session.tenantId, "booking"),
+            // The rooms button's target: the SAME predicate the screen gate above
+            // uses (`active` = m.active in the tenant's module list), so the button
+            // never points at a screen that would not open.
+            roomsActive: modules.modules.some((m) => m.id === "rooms" && m.active),
           };
         }
       }
