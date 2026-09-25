@@ -4,7 +4,7 @@
 Mehet így”) · **Változat:** **B — külön kártya a rács fölött** (az A — pipa a szerkesztő Alapok
 lapján — elvetve) · **Terv:** `plan.html` (önhordó, kattintható, MŰKÖDIK; a jóváhagyott D
 szoba-szerkesztőből származtatva) · **Képek:** `B-mobil-*.png`, `B-asztali-*.png` ·
-**ADR:** ADR-XXXX · **Hatókör:** `src/tenant/units.ts` · `src/server/moduleConfigViews.ts` ·
+**ADR:** ADR-0232 · **Hatókör:** `src/tenant/units.ts` · `src/server/moduleConfigViews.ts` ·
 `src/server/public.ts` · `src/tenant/editor.ts` · **Őr:** `scripts/whole-property-choice-check.mts`.
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.**

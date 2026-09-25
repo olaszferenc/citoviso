@@ -2509,7 +2509,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       } else if (!id) {
         const before = await getUnits(siteId);
         const created = await createUnit(siteId, name, cap, form.get("description"));
-        // ADR-XXXX: the SECOND unit is the moment the owner decides whether the place is
+        // ADR-0232: the SECOND unit is the moment the owner decides whether the place is
         // also let as one — the add form asks (required radio), the answer sets or clears
         // the flag on the unit that was there before. No answer (an older form, or a
         // 3rd+ unit) leaves the flag as it is.
@@ -2566,7 +2566,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirectRerendered(res, session.tenantId, `/admin?tab=modulok&m=${back}&saved=1`);
   }
-  // POST /admin/units/whole — ADR-XXXX: which unit is the whole place, if any (the card
+  // POST /admin/units/whole — ADR-0232: which unit is the whole place, if any (the card
   // above the rooms grid, approved plan whole-property-choice B). Unchecked → none.
   if (req.method === "POST" && pathname === "/admin/units/whole") {
     const session = await currentTenant(req);

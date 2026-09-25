@@ -1088,7 +1088,7 @@ export interface EditorUnit {
  *
  * `inherited` (per-unit mode): the site-wide picks are offered at the room TOO,
  * toggleable, with an "a ház egészénél is" tag for orientation (owner decision
- * 2026-09-25, ADR-XXXX — replaces the greyed, untogglable tiles: a room may list
+ * 2026-09-25, ADR-0232 — replaces the greyed, untogglable tiles: a room may list
  * what the house also has, the guest reads the room page on its own).
  */
 interface AmenityPickerOpts {
@@ -1248,7 +1248,7 @@ function roomGate(u: EditorUnit): { ok: boolean; missing: ("photo" | "text")[] }
 function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): string {
   const bits = [
     u.capacity ? T(lang, "{n} fő", { n: u.capacity }) : T(lang, "férőhely nincs megadva"),
-    // ADR-XXXX: with one unit the concept is invisible — a renamed default ("Apartman 1")
+    // ADR-0232: with one unit the concept is invisible — a renamed default ("Apartman 1")
     // must not carry "az egész ház" on a screen where there is nothing else.
     u.isWholeProperty && units.length > 1 ? T(lang, "az egész ház") : "",
   ].filter(Boolean);
@@ -1256,7 +1256,7 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
 }
 
 /**
- * ADR-XXXX (approved plan whole-property-choice B): the card above the rooms grid where
+ * ADR-0232 (approved plan whole-property-choice B): the card above the rooms grid where
  * the owner says whether the place is ALSO let as one, and which unit that is. Only
  * with 2+ units — a single-unit owner never meets the concept. Plain form: works with
  * zero JS; unchecked → no unit is the whole place, the rooms are independent.
@@ -1295,7 +1295,7 @@ function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
 }
 
 /**
- * ADR-XXXX: the question asked at the moment of adding the SECOND unit — inside the
+ * ADR-0232: the question asked at the moment of adding the SECOND unit — inside the
  * add form (required radios), because that is where the decision is made. With any
  * other count the form has no such block and the flag stays as it is.
  */
@@ -1634,7 +1634,7 @@ function roomPopup(
     `</div>` +
     `<div class="rs-pop__foot">` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Mentés")}</button>` +
-    // ADR-XXXX: every unit is deletable while another remains — the whole place too
+    // ADR-0232: every unit is deletable while another remains — the whole place too
     // (afterwards the rooms are independent). The last one has no button: a site with
     // nothing bookable is not a state we allow (deleteUnit says so).
     (units.length > 1
@@ -1982,7 +1982,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
         `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
         `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
-        // ADR-XXXX: every unit is deletable while another remains — the whole place too.
+        // ADR-0232: every unit is deletable while another remains — the whole place too.
         (multi
           ? `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit" ` +
             `formaction="/admin/units/delete">${T(lang, "Törlés")}</button>`
@@ -2595,7 +2595,7 @@ function priceDecision(
  * year; making them re-enter it each January would guarantee stale prices.
  */
 /**
- * ADR-XXXX (owner 2026-09-25): the whole place has its OWN price, never the rooms'
+ * ADR-0232 (owner 2026-09-25): the whole place has its OWN price, never the rooms'
  * sum — a derived figure would be a number nobody set (§B.17). This line is owner-side
  * orientation only: what the rooms cost together, so the owner knows what to price
  * against. The guest never sees it.

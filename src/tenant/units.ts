@@ -121,7 +121,7 @@ export async function peekUnits(siteId: string): Promise<Unit[]> {
       },
     ];
   }
-  // ADR-XXXX: no unit is the whole place unless the owner said so — nothing to invent.
+  // ADR-0232: no unit is the whole place unless the owner said so — nothing to invent.
   return rows;
 }
 
@@ -136,7 +136,7 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
     // Back-fill slugs for units created before 0026 — a unit without an address
     // cannot have a subpage, and silently skipping it would drop it from the sitemap.
     for (const u of existing) if (!u.slug) await assignSlug(siteId, u.id, u.name);
-    // ADR-XXXX (2026-09-25): the whole place is a CHOICE, not a given. The former
+    // ADR-0232 (2026-09-25): the whole place is a CHOICE, not a given. The former
     // back-fill marked the first unit as the whole place whenever none was — that is
     // exactly how a renamed default ("Apartman 1") kept blocking the other rooms.
     return existing.some((u) => !u.slug) ? getUnits(siteId) : existing;
@@ -152,7 +152,7 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
 
 /**
  * The unit that IS the whole place (ADR-0114), or null when the owner does not let the
- * place as one (ADR-XXXX) or the site has no units yet. Every exclusion rule hangs off
+ * place as one (ADR-0232) or the site has no units yet. Every exclusion rule hangs off
  * this one row, so it is read, never guessed; null means the rooms are independent.
  */
 export async function wholePropertyUnitId(siteId: string): Promise<string | null> {
@@ -166,7 +166,7 @@ export async function wholePropertyUnitId(siteId: string): Promise<string | null
 }
 
 /**
- * ADR-XXXX — the owner's choice: this unit is the whole place (its booking blocks every
+ * ADR-0232 — the owner's choice: this unit is the whole place (its booking blocks every
  * room and vice versa, `unitScope.ts`), or nobody is (null → the rooms are independent).
  * At most one per site: the partial unique index of 0059 still guards it, and clearing
  * first makes the move atomic enough for a single owner's click.
@@ -290,7 +290,7 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   if (units.length <= 1) {
     return { ok: false, reason: "Legalább egy egységnek maradnia kell." };
   }
-  // ADR-XXXX: the whole place is deletable like any unit (the owner chose it, the owner
+  // ADR-0232: the whole place is deletable like any unit (the owner chose it, the owner
   // can drop it) — afterwards the rooms are independent, and the screen says so.
   const today = new Date().toISOString().slice(0, 10);
   const booked = await db

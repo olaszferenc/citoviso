@@ -10,7 +10,7 @@
 - [2026-09-25_gate_writer_audit.md](2026-09-25_gate_writer_audit.md) — 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
 - [2026-09-25_gate_machine_slots.md](2026-09-25_gate_machine_slots.md) — 2026-09-25 — Gép-szintű várakozósor a kapu-futtatónak (ADR-0230)
 - [2026-09-25_gate_email_mock.md](2026-09-25_gate_email_mock.md) — 2026-09-25 — Két kapu valódi levelet küldhetett volna a tulajdonosnak (mérve: 0 ment ki) — mock-átjáró + őr
-- [2026-09-25_egesz_szallas_valaszthato.md](2026-09-25_egesz_szallas_valaszthato.md) — 2026-09-25 — Az „egész szállás” választható egység (ADR-XXXX) + sidebar-görgető + „Mikor nem kiadó?”
+- [2026-09-25_egesz_szallas_valaszthato.md](2026-09-25_egesz_szallas_valaszthato.md) — 2026-09-25 — Az „egész szállás” választható egység (ADR-0232) + sidebar-görgető + „Mikor nem kiadó?”
 - [2026-09-25_dep_modal_invisible_label.md](2026-09-25_dep_modal_invisible_label.md) — 2026-09-25 — A blokkoló lemondás gombja üres volt (piros felirat piros alapon)
 - [2026-09-25_booking_screen_month_end.md](2026-09-25_booking_screen_month_end.md) — 2026-09-25 — booking-screen-check: a hónap-végi piros negyedszer, és ezúttal a szabály cserélődött
 - [2026-09-25_barion_callback_failed_2.md](2026-09-25_barion_callback_failed_2.md) — 2026-09-25 — Barion „Unsuccessful callback" levelek a javítás UTÁN is: két új ok, fogadó oldali javítás

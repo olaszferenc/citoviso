@@ -29,7 +29,7 @@ elérhető. ERGO az egész szállás mint egység mindig van, alapértelmezett."
 egésze" csak NÉV — **a rendszer maga termelt dupla foglalást** (mérve).
 
 - A fölérendeltség **ADAT**, nem névegyezés: `site_unit.is_whole_property` (migráció 0059),
-  site-onként legfeljebb egy. ⚠️ **ADR-XXXX (2026-09-25) módosítás: a jelölés VÁLASZTÁS, nem
+  site-onként legfeljebb egy. ⚠️ **ADR-0232 (2026-09-25) módosítás: a jelölés VÁLASZTÁS, nem
   kényszer** — senki nem jelöli vissza (`ensureUnits` vissza-jelölő ága törölve), üres jelölés =
   a szobák függetlenek; az egész szállás **törölhető és áttehető** (Szobák képernyő, kártya a rács
   fölött; a 2. egység felvételekor kötelező kérdés). Egy egységnél a fogalom láthatatlan.

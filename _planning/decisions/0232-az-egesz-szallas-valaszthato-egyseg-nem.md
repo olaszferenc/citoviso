@@ -1,4 +1,4 @@
-## ADR-XXXX — Az „egész szállás” VÁLASZTHATÓ egység: nem kötelező, törölhető, áttehető; saját árral (2026-09-25)
+## ADR-0232 — Az „egész szállás” VÁLASZTHATÓ egység: nem kötelező, törölhető, áttehető; saját árral (2026-09-25)
 
 **Dátum:** 2026-09-25 · **Státusz:** elfogadva (megvalósítva, őrrel) · **Módosítja:** ADR-0114 ① és ⑦
 (a kizárás-szabály ②–⑥ és ⑧ VÁLTOZATLAN), ADR-0074 F-terv „örökölt, szürke csempe” része ·

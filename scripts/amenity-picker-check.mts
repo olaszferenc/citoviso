@@ -98,7 +98,7 @@ ok(
 );
 ok(/kézműves lekvár/.test(active), "a szabad szöveg az Egyéb mezőben van");
 {
-  // ADR-XXXX (owner 2026-09-25): the house-level picks are OFFERED at the room too —
+  // ADR-0232 (owner 2026-09-25): the house-level picks are OFFERED at the room too —
   // a toggleable tile with a tag, never a locked one. Both sides measured: the tag
   // is there, the input is there, and the old locked class is gone.
   const houseTiles = (active.match(/ampick__tile--house/g) ?? []).length;

@@ -588,13 +588,13 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .ampick__tile:has(input:checked){border-color:var(--citui-cyan-500);
   background:color-mix(in srgb,var(--citui-cyan-500) 8%,var(--citui-panel))}
 .ampick__tile:has(input:checked) .ampick__ico{color:var(--citui-cyan-500)}
-/* House-level picks on the room card (ADR-XXXX): toggleable like the rest, with a
+/* House-level picks on the room card (ADR-0232): toggleable like the rest, with a
    tag that says the Felszereltség screen lists them too — orientation, not a lock. */
 .ampick__inhtag{display:block;font:600 9px/1.3 var(--citui-font-text);letter-spacing:.04em;
   text-transform:uppercase;color:var(--citui-muted);margin-top:1px}
 .ampick__tile:has(input:checked) .ampick__inhtag{color:var(--citui-link-ink)}
 
-/* ADR-XXXX — the whole place is a CHOICE (approved plan whole-property-choice B):
+/* ADR-0232 — the whole place is a CHOICE (approved plan whole-property-choice B):
    the card above the rooms grid, and the question inside the add form. */
 .rs-wcard{display:grid;gap:10px;border:1px solid var(--citui-line-strong);border-radius:14px;padding:12px 14px;
   margin:0 0 12px;background:var(--citui-surface)}

@@ -1,5 +1,5 @@
 // Az „egész szállás” VÁLASZTHATÓ egység — ŐR
-// (ADR-XXXX, jóváhagyott terv: assets/design-refs/tenant-admin/whole-property-choice/, „B").
+// (ADR-0232, jóváhagyott terv: assets/design-refs/tenant-admin/whole-property-choice/, „B").
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver, a RENDERELT lapon):
 //   ① EGY egységnél a fogalom láthatatlan: nincs kártya, nincs „az egész ház” a rácson,

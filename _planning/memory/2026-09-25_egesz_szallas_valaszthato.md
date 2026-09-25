@@ -1,4 +1,4 @@
-# 2026-09-25 — Az „egész szállás” választható egység (ADR-XXXX) + sidebar-görgető + „Mikor nem kiadó?”
+# 2026-09-25 — Az „egész szállás” választható egység (ADR-0232) + sidebar-görgető + „Mikor nem kiadó?”
 
 **Session:** cit2d46298c · **Tulaj-bejelentés:** a Boróka-admin képernyőiről (3 kép): stock görgető
 a sidebaron; a naptár címe legyen „Mikor nem kiadó?”; az „egész ház” koncepció rossz — átnevezett
