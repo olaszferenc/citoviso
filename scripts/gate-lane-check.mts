@@ -1,4 +1,4 @@
-// GATE-LANE GUARD — a `// gate-lane: own-fixture-only` jelölés SZERKEZETI ígéretét méri (ADR-XXXX).
+// GATE-LANE GUARD — a `// gate-lane: own-fixture-only` jelölés SZERKEZETI ígéretét méri (ADR-0229).
 //
 // MIT VÉD. A kapu-futtató (`scripts/lib/gate-runner.mjs`, ADR-0227) a DB-be ÍRÓ kapukat a ②
 // fázisban futtatja. A jelölt írók egymással PÁRHUZAMOSAN mennek (író-sáv), a jelöletlenek

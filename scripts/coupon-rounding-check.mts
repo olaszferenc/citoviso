@@ -1,5 +1,5 @@
 // gate-lane: own-fixture-only
-//   ↑ ÍGÉRET (ADR-XXXX, audit 2026-09-25): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és
+//   ↑ ÍGÉRET (ADR-0229, audit 2026-09-25): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és
 //   olvassa vissza — a kapu-futtató ② fázisában a többi jelölt íróval PÁRHUZAMOSAN fut. Ha ide globális
 //   olvasás/söprés/kölcsönzött sor kerül, vedd le a jelölést. Őr: scripts/gate-lane-check.mts.
 // ⛔⛔ EGY KEREKÍTÉSI SZABÁLY — a képernyő száma és a terhelés száma ugyanaz.

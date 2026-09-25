@@ -13,7 +13,7 @@
 //   · ugyanaz a szkript sosem fut önmagával párhuzamosan (`x --self-test` és `x` közös
 //     munkafa-kulcsú scratch-útvonalakon osztozik),
 //   · a párhuzamosság valódi (különben a mechanika csak költség),
-//   · a ② fázis író-sávja (ADR-XXXX) CSAK a `// gate-lane: own-fixture-only` jelölt írókat futtatja
+//   · a ② fázis író-sávja (ADR-0229) CSAK a `// gate-lane: own-fixture-only` jelölt írókat futtatja
 //     egymással párhuzamosan, a jelöletlen író pedig UTÁNUK, egyedül indul,
 //   · `gate_flush` nélkül a hook NEM zárulhat zölden,
 //   · a zöld-gyorsítótár (land ≠ commit duplikáció) CSAK azonos fán + diffen + argv/stdin/

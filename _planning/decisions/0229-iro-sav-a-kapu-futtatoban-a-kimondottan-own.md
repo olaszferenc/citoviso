@@ -1,4 +1,4 @@
-## ADR-XXXX — Író-sáv a kapu-futtatóban: a kimondottan „own-fixture-only” jelölt író kapuk egymással párhuzamosan, a többi utánuk sorban; a jelölés a kapu mellett él, őr méri, és a versenyt mértük (2026-09-25)
+## ADR-0229 — Író-sáv a kapu-futtatóban: a kimondottan „own-fixture-only” jelölt író kapuk egymással párhuzamosan, a többi utánuk sorban; a jelölés a kapu mellett él, őr méri, és a versenyt mértük (2026-09-25)
 
 - **Kiváltó (tulaj, 2026-09-25):** *„két párhuzamos lehetőség: várakozósor szervező + 14 író kapu auditja”* —
   ez a második (brief: `~/rc-briefs/gate-writer-audit.md`). Előzmény: ADR-0227 ③ — az írók a ② fázisban

@@ -1,4 +1,4 @@
-# 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-XXXX)
+# 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
 
 **Kérés (tulaj, 2026-09-25):** „két párhuzamos lehetőség: várakozósor szervező + 14 író kapu auditja” —
 ez a MÁSODIK (brief: `~/rc-briefs/gate-writer-audit.md`). Előzmény: ADR-0227 (a ② fázis írói sorban,

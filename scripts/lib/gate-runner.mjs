@@ -16,7 +16,7 @@
 //      the gate swallowed; the output is also scanned for the libpq text of the same refusal.
 //      A gate that tried to write has its phase-① verdict DISCARDED (it may have measured a
 //      fixture it never managed to set up) and moves to phase ②.
-//   ② Writers, normal mode, after phase ① finished. Two lanes (ADR-XXXX):
+//   ② Writers, normal mode, after phase ① finished. Two lanes (ADR-0229):
 //      · the WRITER LANE — gates whose source carries `// gate-lane: own-fixture-only` in the first
 //        40 lines run PARALLEL with each other (same PARALLEL, same "a script never overlaps itself").
 //        The marker is a PROMISE audited per gate (2026-09-25) and guarded by scripts/gate-lane-check.mts:
