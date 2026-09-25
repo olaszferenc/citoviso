@@ -4,14 +4,20 @@ title: Szobák, apartmanok — egységek és saját aloldalaik
 audience: tenant
 category: bookings
 anchors: admin.modules.rooms
-updated: 2026-09-23
+updated: 2026-09-25
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
 el. Itt adja meg, milyen egységeket (szobákat, apartmanokat) ad ki, és mit tudjon róluk a vendég.
 
 Fontos: ugyanezeket az egységeket használja a foglalási naptár és az árazás is — elég egy helyen
-karbantartani, és mindenhol egyezni fog.
+karbantartani, és mindenhol egyezni fog. Ha a szobák megvannak, és árat adna nekik, nem kell
+keresgélnie: a képernyő tetején, a bevezető sor mellett az **„Árak, szezonok szerkesztése”** gomb
+egyenesen az ár-modul beállító-képernyőjére visz. Ha az Árak modul még nincs bekapcsolva, a gomb
+felirata **„Árak modul bekapcsolása”**, és a Modulok fülre visz — ott az Árak, szezonok kártyán a
+**„Hozzáadom”** gombbal kapcsolja be.
+
+![Képernyőkép: a képernyő tetején a bevezető sor, mellette az „Árak, szezonok szerkesztése” gomb](assets/hu/arak-gomb.png)
 
 ![Képernyőkép: a szobák rácsa telefonon](assets/hu/screen.png)
 

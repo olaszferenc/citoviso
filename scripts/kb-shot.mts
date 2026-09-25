@@ -723,6 +723,9 @@ function moduleShotHtml(entryId: string): string {
       photoLibrary: (content.photos ?? []) as never,
       // A második kép tárgya: a NYITOTT felugró Képek füle (a `:target` a hash-ből jön).
       roomsView: { openUnitId: "u1", tab: "kep" },
+      // The way back to pricing (mirror of pricing-rooms-link): the guide shows the
+      // active-module form, "Árak, szezonok szerkesztése".
+      newUnit: { pricingActive: true, currency: "HUF", back: "rooms", flash: null },
     });
   if (entryId === "admin-modules-pricing")
     return moduleSettingsSection("pricing", {
@@ -1281,6 +1284,14 @@ await shoot(
   path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "szobak-gomb.png"),
   undefined,
   moduleShotHtml("admin-modules-pricing"),
+  ".mcfg-note--act",
+);
+// …and the mirror on the rooms screen: the note with the way back to pricing.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-rooms", "assets", LANG, "arak-gomb.png"),
+  undefined,
+  moduleShotHtml("admin-modules-rooms"),
   ".mcfg-note--act",
 );
 // ADR-0094 ②: the settlement page (approved plan B) — the SAME representative

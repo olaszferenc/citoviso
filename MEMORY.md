@@ -77,6 +77,7 @@ akar árazni, jusson el az Árak képernyőről a Szobák felvételéhez. §2b: 
 → **tulaj: „B”**; befagyasztva `assets/design-refs/console/pricing-rooms-link/`. Gyökér-szabály: a
 modul-képernyő CSAK aktív modulra nyílik → a gomb aktív Szobák modulnál a szerkesztőre, különben a
 Modulok fülre visz (`PricingEditorData.roomsActive`, kötelező). Őr: `pricing-booking-only-check` ⑤.
+**Tükör is kész (tulaj-kivétel):** a Szobák képernyő jegyzetéből gomb az Árakhoz („Árak, szezonok szerkesztése” / „Árak modul bekapcsolása”), őr a `room-editor-check`-ben.
 ⚠️ Vázlat-tanulság: a relatív CSS-hivatkozást az RC-megjelenítő nem tölti be → CSS beágyazva.
 ⚠️ Mellékjavítás: a `booking-screen-check` a hónap utolsó napjaiban hamisan 3 csíkos napot várt (a kézi
 blokk a következő hónapba esik) — most a jelvény hónap-szabályát követi (2 várt, számon kérve).

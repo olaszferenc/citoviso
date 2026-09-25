@@ -31,12 +31,22 @@ felvennie — de a képernyőről ide nem vezetett út, csak egy nem kattinthat�
   feliratával; `screen.png` újralőve (kb-shot).
 
 ## Módosított fájlok
-- `src/server/moduleConfigViews.ts` (PricingEditorData.roomsActive, jegyzet-sor + gomb, CSS)
+- `src/server/moduleConfigViews.ts` (PricingEditorData.roomsActive, jegyzet-sor + gomb, CSS; `roomsNote()` tükör-gomb)
 - `src/server/public.ts` (roomsActive a builderben)
 - `scripts/kb-shot.mts`, `scripts/pricing-booking-only-check.mts` (fixture + ⑤/④ állítások)
-- `kb/entries/admin-modules-pricing/entry.hu.md` + `assets/hu/screen.png`
+- `kb/entries/admin-modules-pricing/entry.hu.md` + `assets/hu/{screen,nincs-ar,szobak-gomb}.png`
+- `kb/entries/admin-modules-rooms/entry.hu.md` + `assets/hu/arak-gomb.png`
 - `assets/design-refs/console/pricing-rooms-link/{plan.html,README.md,plan-mobile.png,plan-desktop.png}`
 - `src/i18n/catalog.json` (2 új kulcs)
+
+## Tükör: Szobák → Árak (tulaj: „ja lehessen visszamenni az árakhoz!”, §2b kivétel ugyanarra a B mintára)
+- A Szobák képernyő felső jegyzete („Ezek jelennek meg az oldalán…”) mellett gomb: aktív Árak modul →
+  **„Árak, szezonok szerkesztése”** → `m=pricing`; nem aktív → **„Árak modul bekapcsolása”** → Modulok fül.
+  Forrás: `NewUnitView.pricingActive` (a szerver `tenantHasModule` = ugyanaz a predikátum, mint a kapu);
+  `newUnit` nélküli hívó (csupasz fixtúra) gomb NÉLKÜLI jegyzetet kap — soha nem mért állapotot állító gombot.
+- Őr: `room-editor-check` új blokk az ÉLŐ oldalon: Árak modul nélkül → Modulok fül; entitlement bekapcsolva →
+  Árak képernyő; a gomb a jegyzeten belül, 390 px-en 99%; utána az állapot visszaáll (az új-egység sor ár nélkül marad).
+- Súgó: `admin-modules-rooms` bevezető + `arak-gomb.png`; a terv README-je a tükröt is köti (`data-cit-pricing-link`).
 
 ## Két idegen kapu, ami a landot blokkolta (mindkettő idő-/tempófüggő, javítva)
 - `booking-screen-check`: a hónap utolsó napjaiban a kézi blokk a KÖVETKEZŐ hónapba esik, a naptár

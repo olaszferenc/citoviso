@@ -2670,6 +2670,27 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   );
 }
 
+/**
+ * The rooms screen's top note, with the way BACK to the pricing screen — the mirror
+ * of the pricing screen's rooms button (approved plan B, design-refs/console/
+ * pricing-rooms-link; the mirror by owner exception, 2026-09-25). Same rule: a module
+ * screen opens only for an ACTIVE module, so without the pricing module the button
+ * goes to the Modulok tab. `newUnit` carries the pricing state the server already
+ * resolves for this screen (tenantHasModule = active in the tenant's module list);
+ * a caller without it (a bare fixture) gets the note without the button — never a
+ * button that claims a state nobody measured.
+ */
+function roomsNote(lang: string, nu: NewUnitView | undefined): string {
+  const text = T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.");
+  if (!nu) return `<p class="mcfg-note">${text}</p>`;
+  const href = nu.pricingActive ? "/admin?tab=modulok&m=pricing" : "/admin?tab=modulok";
+  const label = nu.pricingActive ? T(lang, "Árak, szezonok szerkesztése") : T(lang, "Árak modul bekapcsolása");
+  return (
+    `<p class="mcfg-note mcfg-note--act"><span>${text}</span>` +
+    `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-pricing-link href="${href}">${label}</a></p>`
+  );
+}
+
 export interface ModuleSettingsOpts {
   readonly values: ModuleConfigValues;
   readonly errors?: string[];
@@ -2907,7 +2928,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
           // (a szoba-oldal feltétele több egység), tehát a rács állapot-jelvénye
           // olyat állítana, ami egy egységnél nem igaz.
           opts.units.length > 1
-          ? `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
+          ? roomsNote(lang, opts.newUnit) +
             roomsEditor(
               opts.units,
               opts.photoLibrary ?? [],
@@ -2918,7 +2939,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
             ) +
             amenityPickerScript(lang) +
             roomEditorScript(lang)
-          : `<p class="mcfg-note">${T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.")}</p>` +
+          : roomsNote(lang, opts.newUnit) +
             unitsCard({ units: opts.units, unitId: opts.units[0]?.id ?? "" } as BookingEditorData, lang, opts.newUnit)
         : def.editor === "pricing" && opts.pricing
           ? pricingEditor(opts.pricing, lang)

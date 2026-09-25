@@ -27,10 +27,21 @@ nem kattintható mondat említette a modult. **Ez a terv KÖT.**
    a gombbal együtt készül (ADR-0220: a súgó-kép frissesség deploy-kapu).
 5. Minden felirat T()-fordított; nyers szín nincs, a gomb a dizájn-mag osztályait viseli.
 
+## Tükör: a Szobák képernyőről vissza az Árakhoz (tulajdonosi kivétel, 2026-09-25)
+
+A tulaj szava („ja lehessen visszamenni az árakhoz!”) + §2b kivétel ugyanerre a mintára,
+terv-kör nélkül. Ugyanaz a B: a Szobák képernyő felső jegyzete („Ezek jelennek meg az
+oldalán…”) mellett egy másodlagos gomb, a célja az Árak modul állapotától függ:
+- Árak modul AKTÍV → felirat **„Árak, szezonok szerkesztése”**, cél `/admin?tab=modulok&m=pricing`.
+- Árak modul NEM aktív → felirat **„Árak modul bekapcsolása”**, cél `/admin?tab=modulok`.
+Az állapot a `NewUnitView.pricingActive` (a szerver ugyanazzal a predikátummal oldja fel, mint a
+képernyő-kapu); a súgó `admin-modules-rooms` bejegyzése a feliratokkal egyezően vezet.
+
 ## Kötő horgony
 
 - `data-cit-rooms-link` — a gomb horga (az őr és a súgó-kép erre méri a jelenlétét és a célját)
 - `mcfg-note--act` — a kétoszlopos jegyzet-sor osztálya
+- `data-cit-pricing-link` — a tükör-gomb horga a Szobák képernyőn
 
 ## Képek
 

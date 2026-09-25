@@ -615,6 +615,27 @@ try {
 
   // ── FELSZERELTSÉG fül ──────────────────────────────────────────────────────
   console.log("\nfelszereltség");
+  // A visszaút az Árakhoz (a pricing-rooms-link terv tükre, tulaj-kivétel 2026-09-25):
+  // a fixtúra Árak modul NÉLKÜL indul → a gomb a Modulok fülre visz; bekapcsolva → az
+  // Árak képernyőre. Mindkét irány mérve, majd az állapot visszaáll, hogy a többi
+  // állítást (új-egység sor ár nélkül) ne billentse.
+  await withPage(390, async (page) => {
+    const BTN = 'a[data-cit-pricing-link]';
+    await page.goto(ROOMS, { waitUntil: "networkidle" });
+    const off = await page.locator(BTN).first();
+    check("Árak modul nélkül: a jegyzet gombja a Modulok fülre visz", (await off.getAttribute("href")) === "/admin?tab=modulok", String(await off.getAttribute("href")));
+    check("Árak modul nélkül: felirat „Árak modul bekapcsolása”", ((await off.textContent()) ?? "").trim() === "Árak modul bekapcsolása", (await off.textContent()) ?? "");
+    await db.insertInto("module_entitlement").values({ tenant_id: tenantId, module: "pricing", active: true } as never).execute();
+    await page.goto(ROOMS, { waitUntil: "networkidle" });
+    const on = await page.locator(BTN).first();
+    check("aktív Árak modul: a jegyzet gombja az Árak képernyőre visz", (await on.getAttribute("href")) === "/admin?tab=modulok&m=pricing", String(await on.getAttribute("href")));
+    check("aktív Árak modul: felirat „Árak, szezonok szerkesztése”", ((await on.textContent()) ?? "").trim() === "Árak, szezonok szerkesztése", (await on.textContent()) ?? "");
+    const inNote = await page.evaluate(`(() => { const b = document.querySelector('a[data-cit-pricing-link]'); const n = b.closest('.mcfg-note--act').getBoundingClientRect(); const r = b.getBoundingClientRect(); return { over: Math.round(r.right - n.right), span: Math.round(r.width / (n.width - 28) * 100) }; })()`) as { over: number; span: number };
+    check(`a gomb a jegyzeten belül marad (túllógás ${inNote.over}px)`, inNote.over <= 0, inNote);
+    check(`390px: a gomb a jegyzet teljes szélességét kitölti (${inNote.span}%)`, inNote.span >= 95, inNote);
+    await db.deleteFrom("module_entitlement").where("tenant_id", "=", tenantId as never).where("module", "=", "pricing" as never).execute();
+  }, { label: "390px · Árak-gomb" });
+
   await withPage(390, async (page) => {
     await page.goto(`${ROOMS}&e=${whole.id}&fl=fel#szoba-${whole.id}`, { waitUntil: "networkidle" });
     await dismissConsent(page);
