@@ -12,6 +12,7 @@
 - [2026-09-25_gate_email_mock.md](2026-09-25_gate_email_mock.md) — 2026-09-25 — Két kapu valódi levelet küldhetett volna a tulajdonosnak (mérve: 0 ment ki) — mock-átjáró + őr
 - [2026-09-25_ellatas_emlekezteto.md](2026-09-25_ellatas_emlekezteto.md) — 2026-09-25 — Emlékeztető: ellátás-funkció a pilot után
 - [2026-09-25_egesz_szallas_valaszthato.md](2026-09-25_egesz_szallas_valaszthato.md) — 2026-09-25 — Az „egész szállás” választható egység (ADR-0232) + sidebar-görgető + „Mikor nem kiadó?”
+- [2026-09-25_e4_logo_band_letters.md](2026-09-25_e4_logo_band_letters.md) — 2026-09-25 — E4 logó a vékony fejléces leveleken (megkereső, forgalmi, programajánló)
 - [2026-09-25_dep_modal_invisible_label.md](2026-09-25_dep_modal_invisible_label.md) — 2026-09-25 — A blokkoló lemondás gombja üres volt (piros felirat piros alapon)
 - [2026-09-25_booking_screen_month_end.md](2026-09-25_booking_screen_month_end.md) — 2026-09-25 — booking-screen-check: a hónap-végi piros negyedszer, és ezúttal a szabály cserélődött
 - [2026-09-25_barion_callback_failed_2.md](2026-09-25_barion_callback_failed_2.md) — 2026-09-25 — Barion „Unsuccessful callback" levelek a javítás UTÁN is: két új ok, fogadó oldali javítás
