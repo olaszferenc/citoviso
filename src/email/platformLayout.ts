@@ -24,7 +24,7 @@ import type { EmailAttachment, EmailMessage } from "./sender.js";
 export const PLATFORM_FROM_NAME = "Citoviso";
 
 export const LOGO_CID = "citoviso-logo";
-const LOGO_PATH = path.resolve(process.cwd(), "assets/brand/citoviso-logo-email.png");
+export const LOGO_PATH = path.resolve(process.cwd(), "assets/brand/citoviso-logo-email.png");
 // The PNG is 492×108 (3× of the rendered size, for sharp retina rendering).
 const LOGO_W = 164;
 const LOGO_H = 36;
@@ -140,6 +140,11 @@ function footerHtml(lang: string | undefined, siteName: string | null | undefine
   return [line1, line2, reason].filter(Boolean).join("<br>");
 }
 
+/** The E4 logo as a CID-inline attachment — shared with the outreach letter. */
+export function logoAttachment(): EmailAttachment {
+  return { filename: "citoviso.png", path: LOGO_PATH, cid: LOGO_CID, contentType: "image/png" };
+}
+
 function headerHtml(hasLogo: boolean): string {
   const logo = hasLogo
     ? `<img src="cid:${LOGO_CID}" width="${LOGO_W}" height="${LOGO_H}" alt="Citoviso" ` +
@@ -203,9 +208,7 @@ export function platformMail(input: PlatformMailInput): EmailMessage {
     `</td></tr></table></body></html>`;
 
   const attachments: EmailAttachment[] = [
-    ...(hasLogo
-      ? [{ filename: "citoviso.png", path: LOGO_PATH, cid: LOGO_CID, contentType: "image/png" }]
-      : []),
+    ...(hasLogo ? [logoAttachment()] : []),
     ...(input.attachments ?? []),
   ];
 

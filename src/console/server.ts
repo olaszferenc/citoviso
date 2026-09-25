@@ -133,6 +133,7 @@ import { renderPairSmsDraft } from "../outreach/draft.js";
 import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
 import { buildOutreachEmail, HERO_CID } from "../email/outreachEmail.js";
+import { LOGO_CID } from "../email/platformLayout.js";
 import {
   injectOptedOutBanner,
   injectOptedOutNotice,
@@ -3158,10 +3159,14 @@ async function handle(
       heroShotPath: shot,
     });
     // The CID-inline hero is substituted with the servable /hero.png URL for the preview.
-    const html = (msg.html ?? msg.text).replaceAll(
-      `cid:${HERO_CID}`,
-      `/prospect/${mailPrevMatch[1]}/hero.png`,
-    );
+    // The E4 logo is inlined as a data: URI (the preview is a browser page, not Gmail).
+    const logo = msg.attachments?.find((a) => a.cid === LOGO_CID);
+    const logoSrc = logo?.path
+      ? `data:image/png;base64,${(await readFile(logo.path)).toString("base64")}`
+      : "";
+    const html = (msg.html ?? msg.text)
+      .replaceAll(`cid:${HERO_CID}`, `/prospect/${mailPrevMatch[1]}/hero.png`)
+      .replaceAll(`cid:${LOGO_CID}`, logoSrc);
     return send(res, 200, html);
   }
   // GET /prospect/:id/hero.png — the cached hero shot for the e-mail preview.

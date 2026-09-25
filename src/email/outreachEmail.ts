@@ -20,11 +20,13 @@
 // table) — other clients get the fluid max-width table, because the fixed one CUTS
 // text off on a 390px phone. Structural guard: scripts/outlook-lint.mts.
 
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { T } from "../i18n/mail.js";
 import { config } from "../config.js";
 import type { OutreachDraft, OutreachParts } from "../outreach/draft.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
+import { LOGO_CID, LOGO_PATH, logoAttachment } from "./platformLayout.js";
 
 /** CID of the embedded hero screenshot (referenced from the HTML). */
 export const HERO_CID = "hero-terv";
@@ -43,6 +45,11 @@ const PAGE_BG = "#eef2f6";
 
 /** A real, installed font first: Outlook falls over on `-apple-system`. */
 const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif";
+
+// The E4 logo (ADR-0225), smaller than in the platform frame: the header here is a
+// thin band. Same 492×108 PNG, so the ratio stays 4.56:1.
+const LOGO_W = 128;
+const LOGO_H = 28;
 
 const W = 600;
 const PAD = 20; // side padding → 560px of content, the same width as the hero image
@@ -74,15 +81,28 @@ interface MailLinks {
  * attached; without a shot the hero row is omitted entirely rather than rendering a
  * broken image frame.
  */
-function buildMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, lang?: string): string {
+function buildMail(
+  heroSrc: string | null,
+  t: OutreachParts,
+  l: MailLinks,
+  lang?: string,
+  hasLogo = false,
+): string {
   // ── header: two cells, NOT float (Outlook drops float) ───────────────────
+  // Owner, 2026-09-25: the letter carries the approved E4 logo, not the old
+  // "CITOVISO." text mark. The text mark stays only as the no-file fallback.
+  const brand = hasLogo
+    ? `<img src="cid:${LOGO_CID}" width="${LOGO_W}" height="${LOGO_H}" alt="Citoviso" ` +
+      `style="display:block;border:0;outline:none;width:${LOGO_W}px;height:${LOGO_H}px">`
+    : `Citoviso<span style="color:${CYAN}">.</span>`;
   const header =
     `<tr><td style="padding:16px ${PAD}px 12px;border-bottom:2px solid ${CYAN}">` +
     tbl(
       `width="100%"`,
       `<tr>` +
         `<td align="left" style="font-family:${FONT};font-size:13px;font-weight:700;letter-spacing:2px;color:${NAVY};text-transform:uppercase">` +
-        `Citoviso<span style="color:${CYAN}">.</span></td>` +
+        brand +
+        `</td>` +
         `<td align="right" style="font-family:${FONT};font-size:10px;letter-spacing:1.5px;color:${MUTED};text-transform:uppercase">${esc(T(lang, "Előzetes látványterv"))}</td>` +
         `</tr>`,
     ) +
@@ -213,11 +233,13 @@ export function buildOutreachEmail(
   }
 
   const hasShot = Boolean(opts.heroShotPath);
+  const hasLogo = existsSync(LOGO_PATH);
   const inner = buildMail(
     hasShot ? `cid:${HERO_CID}` : null,
     draft.parts,
     { cta: draft.link, unsub: draft.unsubscribeLink, privacy: draft.privacyLink },
     opts.lang,
+    hasLogo,
   );
 
   const html =
@@ -225,16 +247,20 @@ export function buildOutreachEmail(
     inner +
     `</body></html>`;
 
-  const attachments: EmailAttachment[] | undefined = hasShot
-    ? [
-        {
-          filename: path.basename(opts.heroShotPath as string),
-          path: opts.heroShotPath as string,
-          cid: HERO_CID,
-          contentType: "image/png",
-        },
-      ]
-    : undefined;
+  const list: EmailAttachment[] = [
+    ...(hasLogo ? [logoAttachment()] : []),
+    ...(hasShot
+      ? [
+          {
+            filename: path.basename(opts.heroShotPath as string),
+            path: opts.heroShotPath as string,
+            cid: HERO_CID,
+            contentType: "image/png",
+          },
+        ]
+      : []),
+  ];
+  const attachments: EmailAttachment[] | undefined = list.length ? list : undefined;
 
   // RFC 2369 + RFC 8058 one-click unsubscribe. Not a "mild" bulk signal: measured
   // 2026-08-25, it is THE signal that tabs the mail under Gmail's "Frissítések",

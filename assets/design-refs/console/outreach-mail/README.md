@@ -48,8 +48,11 @@ A levél tördelt, egy-gondolat-egy-mondat. A mai egybefüggő tömbök helyett:
 1. **Citoviso-arculat, minden leadnél ugyanaz** (`--citui-*`-ból másolt hexek). ⛔ A levél
    NEM veszi fel a lead mockjának skinjét — ez kimondott döntés, nem elmaradt ötlet
    (ADR-0101; a Rozé Fogadónál a skin bordó `#6e1423` + krém lenne).
-2. **Vékony fejléc**: bal oldalt „CITOVISO" + ciános pont, jobbra „ELŐZETES LÁTVÁNYTERV"
-   kis kapitálissal, alatta 2px ciános vonal. Két TÁBLACELLA, nem float.
+2. **Vékony fejléc**: bal oldalt az **E4 logó** (`assets/brand/citoviso-logo-email.png`,
+   CID-inline, 128×28 — ugyanaz a jel, mint a platform-leveleken, ADR-0225), jobbra
+   „ELŐZETES LÁTVÁNYTERV" kis kapitálissal, alatta 2px ciános vonal. Két TÁBLACELLA, nem float.
+   ⛔ A régi „CITOVISO" + ciános pont szöveges jel FELÜLÍRVA (tulaj, 2026-09-25: „nem ebben
+   a logóban maradtunk") — csak akkor jelenik meg, ha a PNG hiányzik.
 3. **Hero kép** a terv nyitóképéről, kattintható, 560px-ig, mobilon folyékony.
 4. **Egy elsődleges gomb** („Megnézem a tervet", navy), ALATTA a nyers URL apró szürkével —
    a nyers URL bizalmi elem hideg levélben, nem elhagyható díszítés.
