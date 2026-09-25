@@ -1690,6 +1690,21 @@ if [ -f scripts/order-paylink-check.mts ] && \
   echo "[pre-commit] order-paylink-check (ADR-0129: a fizetni akaró vevő tud fizetni)…"
   PAYMENT_GATEWAY=mock npx tsx scripts/order-paylink-check.mts >"$GATE_LOG" || gate_failed
 fi
+# 2026-09-25: a konfigurátor „Megkaptuk a rendelését”-et CSAK szerver-visszaigazolásra
+# mondhat. Mérve: egy konzol-újraindulásba eső kattintás (proxy 502) is ezt kapta, miközben
+# NEM készült rendelés és NEM ment riasztás. 390px + asztali, valódi böngészőben (~20 s).
+if [ -f scripts/order-send-failed-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^scripts/order-send-failed-check'; then
+  echo "[pre-commit] order-send-failed-check (nincs „Megkaptuk” visszaigazolás nélkül)…"
+  npx tsx scripts/order-send-failed-check.mts >"$GATE_LOG" || gate_failed
+fi
+# 2026-09-25: a linkes fizetés két vevő-levele (visszaigazoló + fizetési link) — logó
+# CID-mellékletként, Reply-To az ügyfélszolgálat, és a két küldés TÉNYLEG be van kötve.
+if [ -f scripts/order-mail-check.mts ] && \
+   changed_files | grep -qE '^src/email/(orderEmail|platformLayout|sender)\.ts$|^src/console/(orderMail|server)\.ts$|^scripts/order-mail-check'; then
+  echo "[pre-commit] order-mail-check (a linkes fizetés vevő-levelei)…"
+  npx tsx scripts/order-mail-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0162: EGY összeg, EGY írásmód. Mérve 4535965-ön: ugyanaz a 99 900 HUF ÖT alakban
 # jött ki a kódból, és a hat dunning-levél „HUF"-ot írt oda, ahol a számla-levél „Ft"-ot.
 # A súlyosabb rés a PÉNZNEM volt: öt hely bármit kapott, „Ft"-ot írt — a fizetőoldal a

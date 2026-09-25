@@ -3214,12 +3214,44 @@
           track("module_dependency_unmet", { missing: (data.missing || []).join(",") });
           return;
         }
-        showThanks(chosen);
+        // ⛔ "Megkaptuk a rendelését" ONLY on the server's own confirmation: the
+        // order row exists and the house has been alerted (payLinkAlert.ts).
+        // Measured 2026-09-25: a click that landed while the console restarted got
+        // a proxy 502 (not JSON → {}), fell through to showThanks(), and told the
+        // buyer a colleague would call — while NO order was recorded and NO alert
+        // went out, so nobody ever would. Anything unconfirmed is a failed send.
+        if (data && data.ok === true && data.pending === true) {
+          showThanks(chosen);
+          return;
+        }
+        showSendFailed(data && data.error ? String(data.error) : "no_confirmation");
       })
       .catch(function () {
-        showThanks(chosen);
+        showSendFailed("network");
       });
   });
+
+  // The failed-send branch (2026-09-25). The server did NOT confirm the order, so
+  // the screen may not claim one exists. What is true: nothing was charged,
+  // nothing was recorded, and the form is still filled in — one more click
+  // retries it. The buyer stays on the same step; no data is lost.
+  function showSendFailed(reason) {
+    payBtn.removeAttribute("data-busy");
+    syncStrapAmount();
+    syncConsents();
+    var foot = panel.querySelector(".cit-cfg-foot");
+    if (!foot) return;
+    var n = foot.querySelector(".cit-cfg-sendfail");
+    if (!n) {
+      n = el('<p class="cit-cfg-depwarn cit-cfg-sendfail" role="alert"></p>');
+      foot.insertBefore(n, foot.firstChild);
+    }
+    n.textContent =
+      tr("Nem sikerült elküldeni a rendelését.") +
+      " " +
+      tr("Semmit nem rögzítettünk, és nem terheltük meg a kártyáját. Az adatai megmaradtak: nyomja meg újra a fizetés gombját.");
+    track("order_send_failed", { reason: reason });
+  }
 
   // The no-pay-link branch. ⛔ It used to promise "we'll e-mail you the pay-link" —
   // measured 2026-09-13, NO code sends such a mail, so the buyer was told a comforting

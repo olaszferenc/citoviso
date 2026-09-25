@@ -63,6 +63,9 @@ export const I18N_SOURCES = [
   // site-nyelvén kapja a fizetési felszólítást is (a freeze-értesítő pláne nem
   // mehet ki rossz nyelven: jogi vitában az a kérdés, értesítettük-e ÉRTHETŐEN).
   "src/email/billingEmail.ts",
+  // 2026-09-25: a linkes fizetés két vevő-levele (visszaigazoló + fizetési link) —
+  // a vevő a lead (mock) nyelvén kapja, mint minden más vevő-levelet.
+  "src/email/orderEmail.ts",
   // ADR-0070: the cold outreach mail's SUBJECT AND BODY live here, not in
   // email/outreachEmail.ts (which only wraps them in HTML). This file was missing
   // from the list until 2026-08-26 and was hardcoded Hungarian throughout — the

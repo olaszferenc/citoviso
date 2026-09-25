@@ -6925,6 +6925,7 @@ export const EVENT_LABEL = (lang = "hu"): Readonly<Record<string, string>> => ({
   photo_rights_declared: T(lang, "elfogadta a fotó-jog nyilatkozatot"),
   order_intent_submitted: T(lang, "ELKÜLDTE A MEGRENDELÉST"),
   checkout_redirect: T(lang, "továbbment a fizetéshez"),
+  order_send_failed: T(lang, "a rendelés beküldése NEM sikerült"),
 });
 
 /** Prospect activity page: sessions + event timeline + derived intent signals. */

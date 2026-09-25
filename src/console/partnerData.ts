@@ -708,6 +708,7 @@ const SIGNIFICANT_EVENTS: Readonly<Record<string, string>> = {
   photo_rights_declared: "elfogadta a fotó-jog nyilatkozatot",
   order_intent_submitted: "ELKÜLDTE A MEGRENDELÉST",
   checkout_redirect: "továbbment a fizetéshez",
+  order_send_failed: "a rendelés beküldése NEM sikerült",
 };
 
 /**

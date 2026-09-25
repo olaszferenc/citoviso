@@ -83,6 +83,7 @@ import { mockCard, MOCK_CARDS } from "../payment/mock.js";
 import { siteShotPath } from "../payment/siteShot.js";
 import { tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
+import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
 import {
   applyOffer,
   bestActiveOfferForProspect,
@@ -1019,6 +1020,10 @@ async function handleOrderRequest(
         buyerEmail: buyer.buyerEmail,
         reason: failReason,
       });
+      // Owner's decision, 2026-09-25: the buyer gets the same story in their inbox
+      // — proof of the order and how to reach us — not only on a screen they may
+      // already have closed.
+      await sendOrderReceivedMail(rec.orderIntentId);
     }
   }
   send(
@@ -3231,7 +3236,12 @@ async function handle(
       .where("order_intent.status", "=", "submitted")
       .orderBy("order_intent.created_at", "desc")
       .executeTakeFirst();
-    if (oi) await requestPayment(oi.id);
+    if (oi) {
+      // Owner's decision, 2026-09-25: the issued link goes to the buyer by mail —
+      // before this it existed only in our DB until someone copied it out by hand.
+      const pay = await requestPayment(oi.id);
+      if (pay) await sendOrderPayLinkMail(oi.id, pay.paymentId);
+    }
     // A fizetés-kérő gomb a „Csomag és fizetés" fül rendelés-panelján ül — oda vissza.
     return redirect(res, `/lead/${id}#ls-orders`);
   }
