@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-26_rendeles_fizetesi_link.md](2026-09-26_rendeles_fizetesi_link.md) — Rendelés → fizetés a vevő szemével: őszinte képernyő, vevő-levelek, tartós fizetési link (2026-09-25/26)
 - [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában
 - [2026-09-25_konzol_linear_keret.md](2026-09-25_konzol_linear_keret.md) — 2026-09-25 — A belső konzol kerete a tenant-admin „Linear” nyelvén, egy bővíthető navigációs fából
 - [2026-09-25_gate_writer_audit.md](2026-09-25_gate_writer_audit.md) — 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
