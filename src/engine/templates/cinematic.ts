@@ -83,6 +83,15 @@ const CINEMATIC_CSS = `
   /* NOT width:100% — that overrode .cn-wrap's 93% and put the headline on the screen's left
      edge with the subline clipped on the right at 390px (measured 2026-09-26, both leads). */
   .cn-cinein{position:relative;z-index:2;padding-bottom:150px}
+  /* LANDSCAPE PHONE (844×390): the same 640px-minimum + bottom-anchored copy as dark-luxury —
+     measured on the Laguna Panzió mock 2026-09-26: the headline's first line 4px under the
+     masthead's chip. The masthead joins the flow, the hero grows with its content; portrait
+     and desktop untouched (min-width:701px keeps the ≤700px phone rules intact). */
+  @media(max-height:500px) and (min-width:701px){
+    .cn-cine{height:auto;min-height:100svh;flex-direction:column;align-items:stretch;justify-content:flex-start}
+    .cn-cine .cit-mast{position:relative;inset:auto}
+    .cn-cinein{padding-top:24px;padding-bottom:48px}
+  }
   .cn-cinesub{overflow-wrap:anywhere}
   .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
   .cn-cine h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 88%, white)}
