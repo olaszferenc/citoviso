@@ -54,6 +54,8 @@ FK-010 19/19 pass; tabló + legjobb/leggyengébb 3 elküldve (★★★ fullblee
 ★ brutalism, wordmark-grow, aurora). Semmi nem ment ki. **Fekvő regresszió javítva** (a sáv-elrejtés csak ≤700 px-en; fekvő
 masthead 108–144 px) + lead-mobile-check: külső erőforrás-hiba nem JS-hiba (szülő kérése, 8/8 visszarontás piros).
 Az élő mock-fájlok (57) a landolás után `rerender-mock`-kal frissítve a fő fában.
+**SESSION LEZÁRVA 2026-09-26 este (fa: `~/wt/cita94801d0`, minden fent: `origin/main` = `8fb2d8fd` + a záró jegyzet-commit).**
+Következő lépés: a tulaj utólagos ítélete a tablón / a :4600-on; ha módosít, új kör a motorban.
 Nyitva: fekvőn a dark-luxury főcím első sora a masthead alatt (min-height 640 hero) és a tilted-gallery rögzített sávja a
 főcím utolsó során (FK-010 fekvő mérésében is így volt); a `-rw`/`=wN` Google-paraméter egyszeri sweep-pel igazolt.
 
