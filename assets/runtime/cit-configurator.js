@@ -1638,13 +1638,29 @@
       '<div class="cit-cfg-cuewrap"><div class="cit-cfg-scrollcue" hidden aria-hidden="true">' +
       I.chev +
       "</div></div>" +
-      // Three-step footer: step 1 = running total + "Tovább"; step 2 = billing
-      // period + §A declaration; step 3 = WHO is buying (0029) + pay button.
+      // Three-step footer (contract: design-refs/console/order-two-step, variant B,
+      // owner 2026-09-26 — overrides period-toggle-step1 ①②):
+      //   step 1 = packages + modules own the sheet; the foot is ONE row — a small
+      //            Havi|Éves switch, the running total and "Tovább";
+      //   step 2 = the money decision takes the sheet: Havi/Éves cards FIRST, the
+      //            "MOST FIZETENDŐ" card, VAT, next charge, §A declaration;
+      //   step 3 = WHO is buying (0029) + pay button (full surface).
+      // Measured defect this replaces (owner's phone, 2026-09-26): the pinned money
+      // block filled the 74vh bottom sheet and left ONE row of the package list.
       '<div class="cit-cfg-foot">' +
-      // billing-period toggle lives on STEP 1, right above the total it controls
-      // (owner decree 2026-09-01, contract: design-refs/console/period-toggle-step1):
-      // a step-2 toggle was undiscoverable on mobile — the price showed "/ év" with no
-      // switch in sight. Variant B (two option cards) makes the annual discount explicit.
+      // The step-2 region. It is the ONLY scroller on step 2; the action row
+      // (.cit-cfg-step2) stays pinned under it. On the pay step the sum/VAT/next
+      // charge still ride here (mobile: above the form; desktop: placeSummary()
+      // moves them into the action column and back).
+      '<div class="cit-cfg-s2scroll">' +
+      '<div class="cit-cfg-s2top">' +
+      '<button class="cit-cfg-back" type="button">' +
+      I.chevR +
+      "<span>" + tr("Vissza a csomagokhoz") + "</span></button>" +
+      '<div class="cit-cfg-recap"><span>' + tr("Választott csomag") + "</span><b></b></div>" +
+      '<p class="cit-cfg-q2">' + tr("Milyen gyakran fizet?") + "</p>" +
+      // The big period cards (contract period-badge: badge, green frame, "áráért"
+      // line) — the FIRST thing step 2 shows.
       '<div class="cit-cfg-permat" role="group" aria-label="' + tr("Fizetési gyakoriság") + '">' +
       // The badge and the gain line are filled by syncAnnualBadge() — the saving is
       // in forints and follows the selected sections (contract: period-badge ②⑤).
@@ -1656,6 +1672,7 @@
       '<span class="cit-cfg-popt__t">' + tr("Éves") + "</span>" +
       '<span class="cit-cfg-popt__s cit-cfg-popt__gain">' + tr("a legjobb ár") + "</span></button>" +
       "</div>" +
+      "</div>" + // /.cit-cfg-s2top
       '<p class="cit-cfg-sum"></p>' +
       // Contract ⑥: until this slice the whole purchase path said NOTHING about
       // VAT, on the one screen where "gross or net?" decides what the buyer owes.
@@ -1665,18 +1682,36 @@
       // Contract ⑦: the STANDING obligation, said before the money moves — not
       // only in the confirmation afterwards.
       '<p class="cit-cfg-nextcharge"></p>' +
-      '<button class="cit-cfg-next" type="button">' + tr("Tovább a megrendeléshez") +
-      I.chevR +
-      "</button>" +
-      '<div class="cit-cfg-step2" hidden>' +
-      '<button class="cit-cfg-back" type="button">' +
-      I.chevR +
-      "<span>" + tr("Vissza a modulokhoz") + "</span></button>" +
-      // (the billing-period toggle moved to step 1's footer — see above)
-      '<label class="cit-cfg-note" style="display:flex;gap:8px;align-items:flex-start;text-align:left;cursor:pointer">' +
+      '<label class="cit-cfg-note cit-cfg-s2decl" style="display:flex;gap:8px;align-items:flex-start;text-align:left;cursor:pointer">' +
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
       '<span class="cit-cfg-rights-text"></span></label>' +
+      "</div>" + // /.cit-cfg-s2scroll
+      // Measured, never assumed: the step-2 region scrolls on a short phone (the
+      // §A declaration is five lines), and a cut with no cue reads as the end.
+      '<div class="cit-cfg-cuewrap cit-cfg-cuewrap--s2"><div class="cit-cfg-scrollcue cit-cfg-s2cue" hidden aria-hidden="true">' +
+      I.chev +
+      "</div></div>" +
+      // Step 1's single row. The small switch carries the same `cit-cfg-popt` class
+      // and `data-period` as the cards, so ONE handler and ONE `period` state drive
+      // all three switches (see syncPeriodButtons) — the "/ hó" or "/ év" beside the
+      // total is never without its switch (period-toggle-step1's intent, kept small).
+      '<div class="cit-cfg-s1bar">' +
+      '<div class="cit-cfg-ppill" role="group" aria-label="' + tr("Fizetési gyakoriság") + '">' +
+      '<button class="cit-cfg-popt cit-cfg-popt--on" type="button" data-period="monthly">' + tr("Havi") + "</button>" +
+      '<button class="cit-cfg-popt" type="button" data-period="annual">' + tr("Éves") +
+      ' <span class="cit-cfg-ppill__g"></span></button>' +
+      "</div>" +
+      '<div class="cit-cfg-mini">' +
+      '<div class="cit-cfg-mini__tot"><small>' + tr("Összesen") + "</small>" +
+      '<b class="cit-cfg-mini__amt"></b>' +
+      '<span class="cit-cfg-mini__offer"></span></div>' +
+      '<button class="cit-cfg-next" type="button">' + tr("Tovább") +
+      I.chevR +
+      "</button>" +
+      "</div>" +
+      "</div>" + // /.cit-cfg-s1bar
+      '<div class="cit-cfg-step2" hidden>' +
       '<button class="cit-cfg-submit" type="button" disabled>' + tr("Tovább a számlázási adatokhoz") + I.chevR + "</button>" +
       '<p class="cit-cfg-note">' + tr("Nem kötelező. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
       "</div>" +
@@ -1892,27 +1927,67 @@
   // really is out of sight, and is recomputed on scroll, resize and step change.
   var bodyEl = panel.querySelector(".cit-cfg-body");
   var scrollCue = panel.querySelector(".cit-cfg-scrollcue");
+  var s2Scroll = panel.querySelector(".cit-cfg-s2scroll");
+  var s2Cue = panel.querySelector(".cit-cfg-s2cue");
+  function cueFor(box, cue) {
+    if (!box || !cue) return;
+    cue.hidden = box.scrollHeight - box.clientHeight - box.scrollTop <= 8;
+  }
   function syncMoreCue() {
-    if (!bodyEl || !scrollCue) return;
-    scrollCue.hidden = bodyEl.scrollHeight - bodyEl.clientHeight - bodyEl.scrollTop <= 8;
+    cueFor(bodyEl, scrollCue);
+    // Only step 2 makes the region a scroller; elsewhere it must stay silent.
+    if (s2Cue) {
+      if (panel.classList.contains("cit-cfg-panel--s2")) cueFor(s2Scroll, s2Cue);
+      else s2Cue.hidden = true;
+    }
   }
   if (bodyEl) bodyEl.addEventListener("scroll", syncMoreCue, { passive: true });
+  if (s2Scroll) s2Scroll.addEventListener("scroll", syncMoreCue, { passive: true });
   window.addEventListener("resize", syncMoreCue);
 
-  // step 1 ⇄ step 2 wiring (the choice itself is kept across steps)
+  // step 1 ⇄ step 2 wiring (the choice itself is kept across steps).
+  // Step 2 is a PANEL state (`cit-cfg-panel--s2`): the package list leaves the
+  // sheet and the money decision gets its room (contract order-two-step ②).
   var nextBtn = panel.querySelector(".cit-cfg-next");
   var step2El = panel.querySelector(".cit-cfg-step2");
-  nextBtn.addEventListener("click", function () {
-    nextBtn.setAttribute("hidden", "");
-    step2El.removeAttribute("hidden");
-    track("checkout_step", {});
+  function showStep2(on) {
+    panel.classList.toggle("cit-cfg-panel--s2", !!on);
+    if (on) {
+      nextBtn.setAttribute("hidden", "");
+      step2El.removeAttribute("hidden");
+      syncRecap();
+      if (s2Scroll) s2Scroll.scrollTop = 0;
+    } else {
+      step2El.setAttribute("hidden", "");
+      nextBtn.removeAttribute("hidden");
+    }
+    setStrap(on ? "choose" : false);
+    // The sheet changes height with the step; measure once it has settled.
     syncMoreCue();
+    setTimeout(syncMoreCue, 60);
+  }
+  nextBtn.addEventListener("click", function () {
+    showStep2(true);
+    track("checkout_step", {});
   });
   panel.querySelector(".cit-cfg-back").addEventListener("click", function () {
-    step2El.setAttribute("hidden", "");
-    nextBtn.removeAttribute("hidden");
-    syncMoreCue();
+    showStep2(false);
   });
+  /** Step 2's first line names what was chosen on step 1 — the list is out of
+   *  sight there, so the buyer must not have to go back to remember it. */
+  function syncRecap() {
+    var b = panel.querySelector(".cit-cfg-recap b");
+    if (!b) return;
+    var on = panel.querySelector(".cit-cfg-preset--on");
+    var id = on ? on.getAttribute("data-preset") : null;
+    var p = PRESETS.filter(function (x) {
+      return x.id === id;
+    })[0];
+    var n = MODULES.filter(function (m) {
+      return selected[m.id];
+    }).length;
+    b.textContent = (p ? p.label : tr("Egyedi")) + " · " + tr("{n} szekció").replace("{n}", String(n));
+  }
 
   // ── step 3 state + wiring (0029) ────────────────────────────────────────────
   var step3El = panel.querySelector(".cit-cfg-step3");
@@ -2029,7 +2104,9 @@
         if (i === 0) actEl.insertBefore(el, actEl.firstChild);
         else actEl.insertBefore(el, block[i - 1].nextSibling);
       } else if (el.parentNode === actEl) {
-        foot.insertBefore(el, step3El);
+        // Home is the step-2 region, in the authored order, above the declaration.
+        var home = panel.querySelector(".cit-cfg-s2scroll");
+        home.insertBefore(el, home.querySelector(".cit-cfg-s2decl"));
       }
     });
     syncScrollHint();
@@ -2131,14 +2208,18 @@
 
   /**
    * The header strap, step-aware (contract ④). On the paying screen it names the
-   * charge; anywhere else the browsing promise is TRUE and stays.
+   * charge; on step 2 ("choose") it names what comes next — still no charge, and it
+   * says so; while browsing the promise is TRUE and stays.
    */
   function setStrap(paying) {
     var h = panel.querySelector(".cit-cfg-head h2");
     var p = panel.querySelector(".cit-cfg-head p");
     if (!h || !p) return;
-    panel.querySelector(".cit-cfg-head").classList.toggle("cit-cfg-head--charge", !!paying);
-    if (paying) {
+    panel.querySelector(".cit-cfg-head").classList.toggle("cit-cfg-head--charge", paying === true);
+    if (paying === "choose") {
+      h.textContent = tr("Fizetés módja");
+      p.textContent = tr("Még nem fizet — a következő lépésben adja meg a számlázási adatokat.");
+    } else if (paying) {
       h.textContent = tr("Fizetés");
       // The amount is repeated here on purpose: the sentence that warns about the
       // charge should name it, not point vaguely at a number further down.
@@ -2154,10 +2235,10 @@
 
   panel.querySelector(".cit-cfg-back3").addEventListener("click", function () {
     step3El.setAttribute("hidden", "");
-    step2El.removeAttribute("hidden");
-    setStrap(false);
-    placeSummary();
     panel.classList.remove("cit-cfg-panel--billing");
+    placeSummary();
+    // back to the money decision (step 2), not to the package list
+    showStep2(true);
   });
 
   // billing-period toggle (monthly | annual)
@@ -2696,6 +2777,43 @@
   }
 
   /**
+   * Step 1's one-row total (contract order-two-step ①). It shows the SAME figure
+   * as the step-2 card — currentCharge(), what the card is charged first — so the
+   * two steps cannot disagree. With an offer the line under it says the discount
+   * is on the FIRST fee only; the card on step 2 carries the full offer wording.
+   * The change pulse lives here too: on step 1 this row is the total the eye is on.
+   */
+  var miniAmt = panel.querySelector(".cit-cfg-mini__amt");
+  var miniOffer = panel.querySelector(".cit-cfg-mini__offer");
+  var miniDeltaTimer = null;
+  function syncMini(diff) {
+    if (!miniAmt) return;
+    miniAmt.innerHTML =
+      esc(fmt(currentCharge())) + " <small>" + esc(period === "annual" ? tr("/ év") : tr("/ hó")) + "</small>";
+    if (diff) {
+      miniAmt.innerHTML += deltaHtml(diff);
+      if (miniDeltaTimer) clearTimeout(miniDeltaTimer);
+      miniDeltaTimer = setTimeout(function () {
+        var d = miniAmt.querySelector(".cit-cfg-delta");
+        if (d) d.classList.add("cit-cfg-delta--out");
+      }, 2200);
+    }
+    if (miniOffer) {
+      miniOffer.textContent = OFFER
+        ? tr("−{p}% az első díjból").replace("{p}", String(OFFER.percent)) +
+          (offerDeadline() ? " · " + tr("érvényes {d}-ig").replace("{d}", offerDeadlineText()) : "")
+        : "";
+    }
+    // The small switch's "−n hó": nothing to advertise when there are no free months
+    // (period-badge ②: never a zero).
+    var g = panel.querySelector(".cit-cfg-ppill__g");
+    if (g) {
+      var free = PRICING.annualFreeMonths;
+      g.textContent = free > 0 ? tr("−{n} hó").replace("{n}", String(free)) : "";
+    }
+  }
+
+  /**
    * Keeps the strap's amount and the pay button's label on the SAME number as the
    * price card. ⛔ A button reading "Fizetéshez" next to a big number was how the
    * two could drift apart unnoticed; naming the sum on the button makes any future
@@ -2938,6 +3056,7 @@
     // on every change, so a module toggle or a period switch cannot leave the pay
     // button advertising a stale amount.
     syncStrapAmount();
+    syncMini(diff);
     syncNextCharge();
     // …and so does the item box: contract ⑦ — switching the cycle must not leave
     // a single number on screen that belongs to the other one.
@@ -3012,6 +3131,7 @@
   submitBtn.addEventListener("click", function () {
     step2El.setAttribute("hidden", "");
     step3El.removeAttribute("hidden");
+    panel.classList.remove("cit-cfg-panel--s2");
     // The module list is done with by now; give the billing form the whole panel
     // so its pay button cannot land below an unscrollable fold (the foot is
     // deliberately flex:0 0 auto and a full form does not fit there).
@@ -3199,10 +3319,9 @@
           syncConsents();
           // A döntés a terv-lépésen születik, és az ÚJ összeg is ott látszik.
           step3El.setAttribute("hidden", "");
-          step2El.removeAttribute("hidden");
-          setStrap(false);
-          placeSummary();
           panel.classList.remove("cit-cfg-panel--billing");
+          placeSummary();
+          showStep2(true);
           showDepNotice(
             added
               .map(function (id) {

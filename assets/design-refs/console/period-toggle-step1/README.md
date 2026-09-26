@@ -7,6 +7,12 @@ a `/ év` ár már az 1. lépésen látszott.
 
 ## Amit a terv KÖT (elvárt viselkedés, nem stílus-javaslat)
 
+> ⚠️ **① és ② FELÜLÍRVA (ADR-XXXX, tulaj 2026-09-26, `design-refs/console/order-two-step`, B):**
+> telefonon a pinnelt lábléc (nagy kártyák, ár-kártya, ÁFA, terhelés) kiszorította a csomag-listát.
+> A nagy Havi/Éves kártyák a 2. lépés ELEJÉRE kerültek. Az 1. lépésen egy kis Havi | Éves kapcsoló
+> maradt a futó összeg mellett, így a szándék (az ár mellett mindig ott a váltás) megmarad.
+> A ③ és ④ pont érvényes.
+
 1. **A váltó az 1. lépés láblécében van** (`.cit-cfg-foot`), **közvetlenül az ÖSSZESEN
    ár-kártya fölött** — ugyanazon a képernyőn, ahol az ár, mielőtt a lead továbblép.
    A 2. lépésen NINCS többé fizetés-váltó.

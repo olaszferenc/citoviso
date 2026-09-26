@@ -279,7 +279,7 @@ kontraktus: assets/design-refs/prospect-page/framing/README.md · kb/entries/con
   tedd: várj "Ez lehet az Öné" 6
   tedd: kattints ".cit-cfg-launch"
   várd: látható "Ez az Ön leendő weboldala"
-  várd: látható "Tovább a megrendeléshez"
+  várd: látható "Tovább"
   kézi: a 390 px-es képen az alsó lap a képernyőn belül van-e, a fő gomb hüvelykujjal elérhető-e (alul, nem a süti-sáv alatt), és az első lap egy görgetéssel átlátható-e
 
 - [ ] Ugyanez egy világos, képes stíluson

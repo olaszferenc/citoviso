@@ -136,6 +136,12 @@
   .cit-cfg-cuewrap {
     display: none;
   }
+  /* step 2 likewise: one column, the panel is the scroller. (Doubled class: the
+   * base step-2 rule comes LATER in this file and would otherwise win.) */
+  .cit-cfg-panel.cit-cfg-panel--s2 .cit-cfg-s2scroll {
+    flex: none;
+    overflow: visible;
+  }
 }
 
 /* ── collapse handle: a small tab protruding from the panel's edge ────────────
@@ -889,6 +895,144 @@
   color: #7f8896;
 }
 
+/* ═══ TWO-STEP ORDER — contract: design-refs/console/order-two-step (variant B) ═══
+ * Measured on the owner's phone (2026-09-26): the pinned money block (period cards
+ * + "MOST FIZETENDŐ" card + VAT + next charge + button) filled the 74vh bottom
+ * sheet and left ONE row of the package list. Now:
+ *   step 1  — the list owns the sheet; the foot is .cit-cfg-s1bar (a small period
+ *             switch + the running total + "Tovább");
+ *   step 2  — `.cit-cfg-panel--s2`: the list leaves, .cit-cfg-s2scroll (period
+ *             cards FIRST, the card, VAT, next charge, §A) is the one scroller,
+ *             and the action row (.cit-cfg-step2) stays pinned under it;
+ *   step 3  — the pay step (checkout-fullscreen) is unchanged; the sum/VAT/next
+ *             charge still ride in .cit-cfg-s2scroll above the form on mobile. */
+.cit-cfg-panel:not(.cit-cfg-panel--s2):not(.cit-cfg-panel--billing) .cit-cfg-s2scroll {
+  display: none;
+}
+.cit-cfg-panel--s2 .cit-cfg-body,
+.cit-cfg-panel--s2 .cit-cfg-cuewrap:not(.cit-cfg-cuewrap--s2),
+.cit-cfg-panel--s2 .cit-cfg-s1bar,
+.cit-cfg-panel--billing .cit-cfg-s1bar,
+.cit-cfg-panel--billing .cit-cfg-s2top,
+.cit-cfg-panel--billing .cit-cfg-s2decl {
+  display: none;
+}
+.cit-cfg-panel--s2 .cit-cfg-foot {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 0;
+}
+.cit-cfg-panel--s2 .cit-cfg-s2scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 14px;
+}
+.cit-cfg-panel--s2 .cit-cfg-step2 {
+  flex: 0 0 auto;
+  padding-top: 12px;
+}
+.cit-cfg-panel--billing .cit-cfg-s2scroll {
+  flex: 0 0 auto;
+}
+.cit-cfg-recap {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 9px 12px;
+  border: 1px solid #2c323c;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.cit-cfg-recap span {
+  color: #9aa4b2;
+}
+.cit-cfg-recap b {
+  color: #e7ebf1;
+  text-align: right;
+}
+.cit-cfg-q2 {
+  /* 18px below: the annual card's badge rides 12px above the card (period-badge ⑦) */
+  margin: 0 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e7ebf1;
+}
+.cit-cfg-s2decl {
+  margin: 12px 0 4px;
+  font-size: 12px;
+  color: #cdd4de;
+}
+/* step 1's one row */
+.cit-cfg-ppill {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 2px;
+  border: 1px solid #2c323c;
+  border-radius: 999px;
+}
+.cit-cfg-ppill .cit-cfg-popt {
+  flex: none;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #9aa4b2;
+  font: 600 12.5px/1.2 system-ui, sans-serif;
+}
+.cit-cfg-ppill .cit-cfg-popt--on {
+  background: #1b2740;
+  color: #e7ebf1;
+  box-shadow: inset 0 0 0 1px #2f6feb;
+}
+.cit-cfg-ppill__g {
+  color: #7ee2a0;
+  font-weight: 700;
+}
+.cit-cfg-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cit-cfg-mini__tot {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.25;
+}
+.cit-cfg-mini__tot > small {
+  display: block;
+  font-size: 11.5px;
+  color: #9aa4b2;
+}
+.cit-cfg-mini__amt {
+  font-size: 17px;
+  color: #e7ebf1;
+  white-space: nowrap;
+}
+.cit-cfg-mini__amt small {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9aa4b2;
+}
+.cit-cfg-mini__offer {
+  display: block;
+  font-size: 11.5px;
+  color: #ffd889;
+}
+.cit-cfg-mini__offer:empty {
+  display: none;
+}
+.cit-cfg-mini .cit-cfg-next {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 12px 20px;
+}
+
 /* backdrop on mobile */
 .cit-cfg-scrim {
   position: fixed;
@@ -1082,6 +1226,11 @@
   }
   .cit-cfg-head {
     padding-top: 20px;
+  }
+  /* Step 2: the list is gone and the money decision needs its room — the sheet
+   * may rise (the preview's job is done once the package is chosen). */
+  .cit-cfg-panel--s2 {
+    max-height: 92vh;
   }
   /* Telefonon a JOBB SARKOT fogja, EGY sorban, 44 px (2026-09-26, first-screen-compact):
    * középen, 3 sorba törve 90 px-es korong volt a főcím közepén (mérve 19 sablonból ~14-en

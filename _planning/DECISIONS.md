@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-rendeles-ket-lepesben-a-lista-az-elso-lepese.md) — Rendelés két lépésben: az 1. lépés a csomag-listáé, a pénzügyi döntés a „Tovább” után
 - [ADR-0239](decisions/0239-minta-ar-a-mock-foglalas-widgetjeben-a-proba-a.md) — Minta-ár a mock foglalás-widgetjében (a próba a FOGLALÁS-utat játssza), és a főcím fekvőn sem ül rögzített réteg alatt
 - [ADR-0238](decisions/0238-programajanlo-sajat-program-a-tenanttol-alapbol.md) — Programajánló: saját program a tenanttól + alapból dátum szerinti sorrend
 - [ADR-0237](decisions/0237-a-telefonos-fejlec-a-foglalas-sav-felirata-es-a.md) — A telefonos fejléc, a Foglalás-sáv felirata és a Google-fotó mérete a mock-motorban (FK-009 átadott tételek)

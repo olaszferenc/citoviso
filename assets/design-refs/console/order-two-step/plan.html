@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendelés két lépésben — terv (A / B)</title>
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #14171c; --card: #1a1f27; --line: #2c323c; --line2: #262b34;
+    --ink: #e7ebf1; --mute: #9aa4b2; --blue: #2f6feb; --blue2: #3f7cf5; --on: #1b2740;
+    --green: #27a355; --green2: #2fbf62; --warn: #f0b429; --gainc: #45d483;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9ecf1; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2230; }
+  .top { position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 1px solid #d5dae2; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  .top h1 { font-size: 15px; margin: 0; }
+  .seg { display: inline-flex; border: 1px solid #b9c1cd; border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; background: #fff; padding: 7px 14px; font: 600 13px system-ui; cursor: pointer; color: #1c2230; }
+  .seg button.on { background: #1c2230; color: #fff; }
+  .explain { max-width: 1320px; margin: 14px auto 0; padding: 0 16px; font-size: 13.5px; }
+  .explain p { margin: 4px 0; }
+  .stagewrap { display: flex; justify-content: center; padding: 16px; }
+  /* the STAGE is the device; the panel lays out against ITS width (@container), not the window */
+  .stage { container-type: inline-size; container-name: dev; position: relative; overflow: hidden; background: #2a2016; border-radius: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .stage.mob { width: 390px; height: 844px; }
+  .stage.desk { width: 1280px; height: 800px; border-radius: 10px; }
+  @media (max-width: 1320px) { .stage.desk { width: calc(100vw - 32px); } }
+  /* the fake site behind the panel */
+  .site { position: absolute; inset: 0; color: #f3e9dc; }
+  .site .mast { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; background: #1d1611; }
+  .site .mast b { font: 400 26px/1.15 Georgia, serif; }
+  .site .mast span { border: 1px solid #b4432e; background: #b4432e; color: #fbe2d8; font: 600 12px system-ui; letter-spacing: 3px; padding: 10px 14px; border-radius: 4px; }
+  .site .hero { height: 360px; background: linear-gradient(160deg, #a44b33, #6e7d3a 60%, #2d3b20); }
+  .site .txt { padding: 20px 22px; font: 16px/1.6 Georgia, serif; color: #e6d7c4; }
+
+  /* ── the configurator panel ─────────────────────────────────────────── */
+  .pnl { position: absolute; z-index: 5; display: flex; flex-direction: column; background: var(--panel); color: var(--ink); font: 14px/1.5 system-ui, sans-serif; }
+  .stage.desk .pnl { top: 0; right: 0; bottom: 0; width: 440px; box-shadow: -18px 0 44px rgba(0,0,0,.4); }
+  .stage.mob .pnl { left: 0; right: 0; bottom: 0; max-height: 74%; border-radius: 18px 18px 0 0; box-shadow: 0 -18px 44px rgba(0,0,0,.5); }
+  .stage.mob .pnl.full { max-height: 100%; top: 0; border-radius: 0; }
+  /* step 2: the list is gone, so the sheet may rise — the decision must fit without hunting */
+  .stage.mob .pnl.s2 { max-height: 92%; }
+  .handle { position: absolute; left: 50%; top: -40px; transform: translateX(-50%); width: 64px; height: 40px; border-radius: 12px 12px 0 0; background: var(--panel); display: grid; place-items: center; color: var(--mute); }
+  .stage.desk .handle { display: none; }
+  .head { padding: 18px 18px 12px; border-bottom: 1px solid var(--line2); position: relative; flex: 0 0 auto; }
+  .head h2 { margin: 0; font-size: 18px; }
+  .head p { margin: 4px 0 0; color: var(--mute); font-size: 13px; }
+  .head .x { position: absolute; right: 14px; top: 14px; background: none; border: 0; color: var(--mute); font-size: 20px; cursor: pointer; }
+  .body { flex: 1 1 auto; overflow-y: auto; padding: 14px 18px; min-height: 0; }
+  .q { font-weight: 700; margin: 0 0 10px; font-size: 14px; }
+  .preset { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin: 0 0 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+  .preset.on { border-color: var(--blue); background: var(--on); }
+  .dot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #454d5a; position: relative; }
+  .preset.on .dot { border-color: var(--blue); }
+  .preset.on .dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--blue); }
+  .preset .nm { flex: 1; } .preset .nm b { display: block; } .preset .nm small { color: var(--mute); }
+  .preset .pr { font-weight: 700; white-space: nowrap; } .preset .pr small { color: var(--mute); font-weight: 400; }
+  .cbox { border: 1px solid var(--line); border-radius: 12px; background: #161a20; padding: 10px 12px; margin-top: 12px; }
+  .cbox > b { display: block; margin-bottom: 6px; }
+  .mod { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line2); cursor: pointer; }
+  .mod:first-of-type { border-top: 0; }
+  .mod input { width: 18px; height: 18px; accent-color: var(--blue); }
+  .mod span { flex: 1; } .mod em { font-style: normal; color: var(--mute); font-size: 12.5px; white-space: nowrap; }
+  .mod.inc em { color: #6f7b8c; }
+  .foot { flex: 0 0 auto; border-top: 1px solid var(--line2); background: var(--panel); padding: 12px 18px 16px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; border: 0; border-radius: 10px; background: var(--blue); color: #fff; font: 600 15px/1.1 system-ui, sans-serif; cursor: pointer; }
+  .btn:hover { background: var(--blue2); }
+  .btn[disabled] { background: #2a3140; color: #7f8a9a; cursor: not-allowed; }
+  .note { font-size: 12px; color: var(--mute); margin: 8px 0 0; }
+  [hidden] { display: none !important; }
+
+  /* step-1 compact foot (A): one row = running total + Tovább */
+  .mini { display: flex; align-items: center; gap: 12px; }
+  .mini .tot { flex: 1 1 auto; min-width: 0; line-height: 1.2; }
+  .mini .tot small { display: block; color: var(--mute); font-size: 11.5px; }
+  .mini .tot b { font-size: 17px; white-space: nowrap; }
+  .mini .tot b small { display: inline; font-size: 12px; font-weight: 400; color: var(--mute); }
+  .mini .btn { width: auto; flex: 0 0 auto; padding: 12px 18px; }
+  .mini .offer { color: var(--warn); font-size: 11.5px; display: block; }
+
+  /* B: tiny segmented period pill on step 1 */
+  .pill { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; margin-bottom: 8px; }
+  .pill button { border: 0; background: none; color: var(--mute); padding: 5px 12px; border-radius: 999px; font: 600 12.5px system-ui; cursor: pointer; }
+  .pill button.on { background: var(--on); color: var(--ink); box-shadow: inset 0 0 0 1px var(--blue); }
+  .pill .g { color: var(--gainc); font-weight: 700; }
+
+  /* step 2 (the pay-decision view) */
+  .back { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: #8fb3ff; font: 600 13px system-ui; cursor: pointer; padding: 0; margin: 0 0 12px; }
+  .s2t { font-size: 12px; letter-spacing: .8px; text-transform: uppercase; color: var(--mute); margin: 0 0 18px; }
+  .recap { display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; margin: 0 0 16px; font-size: 13px; }
+  .recap span { color: var(--mute); }
+  .permat { display: flex; gap: 8px; margin: 0 0 12px; }
+  .popt { flex: 1 1 0; position: relative; text-align: left; cursor: pointer; border: 1px solid var(--line); border-radius: 12px; background: #171b21; color: #cdd4de; padding: 18px 12px 10px; font: inherit; }
+  .popt.deal { border-color: var(--green); }
+  .popt.on { border-color: var(--blue); background: #1b2634; }
+  .popt b { display: block; font-size: 13px; color: var(--ink); } .popt small { display: block; margin-top: 4px; font-size: 11px; color: var(--mute); }
+  .popt.deal small { color: var(--gainc); }
+  .badge { position: absolute; top: -12px; right: 8px; padding: 5px 10px; border-radius: 999px; background: linear-gradient(135deg, var(--green2), #1c7a3e); color: #fff; font: 800 11.5px/1 system-ui; white-space: nowrap; box-shadow: 0 4px 14px rgba(39,163,85,.45); }
+  .sum { border: 1px solid var(--line); border-radius: 12px; background: #161c26; padding: 12px 14px; margin: 0 0 10px; }
+  .sum .l { display: flex; justify-content: space-between; font-size: 11.5px; letter-spacing: 1.4px; color: var(--mute); }
+  .sum .l s { letter-spacing: 0; }
+  .sum .big { font-size: 24px; font-weight: 800; margin: 4px 0 2px; } .sum .big small { font-size: 14px; font-weight: 400; color: var(--mute); }
+  .sum .of { color: var(--warn); font-size: 12.5px; } .sum .once { color: var(--mute); font-size: 12px; } .sum .gain { color: var(--gainc); font-weight: 700; font-size: 13px; }
+  .fine { font-size: 12px; color: var(--mute); margin: 0 0 6px; }
+  .decl { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #cdd4de; margin: 12px 0; cursor: pointer; }
+  .decl input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--blue); flex: 0 0 auto; }
+  .decl.bad { color: #ff9c8f; }
+  /* step 2 foot: only the action */
+  .s2foot .btn { margin: 0; }
+  .s3 { flex: 1; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--mute); }
+  .s3 b { color: var(--ink); display: block; font-size: 18px; margin-bottom: 6px; }
+
+  /* desktop step 1 foot: with the side panel's height the compact row still wins room,
+     but the drawer is tall — nothing else changes */
+  .tag { display: inline-block; font: 700 11px system-ui; padding: 3px 8px; border-radius: 6px; background: #ffe7a8; color: #5a4300; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 20px; max-width: 1320px; margin: 10px auto 0; padding: 0 16px; font-size: 13px; }
+  .legend div { background: #fff; border: 1px solid #d5dae2; border-radius: 10px; padding: 10px 12px; }
+  .legend b { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Rendelés két lépésben — terv</h1>
+  <div class="seg" id="varSeg"><button data-v="A">A — üres lábléc</button><button data-v="B" class="on">B — lábléc + kis váltó (JÓVÁHAGYVA)</button></div>
+  <div class="seg" id="sizeSeg"><button data-s="mob" class="on">Mobil 390px</button><button data-s="desk">Asztali</button></div>
+  <div class="seg" id="offSeg"><button data-o="1" class="on">Ajánlattal (−50%)</button><button data-o="0">Ajánlat nélkül</button></div>
+</div>
+<div class="legend">
+  <div><b>A — „csak a választás”</b>1. lépés lábléce EGY sor: futó összeg + „Tovább”. A Havi/Éves, a MOST FIZETENDŐ doboz, az ÁFA, a következő terhelés és a nyilatkozat a 2. lépésre kerül. Ott a 2. lépés első látványa a Havi/Éves váltó.</div>
+  <div><b>B — „kis váltó marad”</b>Mint az A, de egy APRÓ Havi | Éves kapcsoló (kb. 30 px) az 1. lépésen marad, így a „/ hó” vagy „/ év” ár mellett mindig ott van a váltás (a 09-01-es kontraktus szándéka). A nagy kártyák és a pénzügyi blokk a 2. lépésen vannak.</div>
+  <div><b>Mindkettőben</b>A „Tovább” után a lista a lapról eltűnik, és a lap a pénzügyi döntést mutatja. A „Tovább a számlázási adatokhoz” a MEGLÉVŐ teljes képernyős fizetés-lapra visz, az változatlan marad.</div>
+</div>
+<div class="stagewrap"><div class="stage mob" id="stage">
+  <div class="site">
+    <div class="mast"><b>Három Huszár<br>Apartments</b><span>FOGLALÁSI IGÉNY</span></div>
+    <div class="hero"></div>
+    <div class="txt">Csendes udvar, saját parkoló, 5 perc a belvárostól. Három apartman, mindegyikben konyha és terasz…</div>
+  </div>
+  <aside class="pnl" id="pnl" role="dialog" aria-label="Az Ön oldala">
+    <div class="handle">⌄</div>
+    <div class="head"><h2 id="h2">Ez az Ön leendő weboldala</h2><p id="hp">Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit.</p><button class="x" aria-label="Bezárás">×</button></div>
+
+    <!-- STEP 1: packages + modules own the sheet -->
+    <div class="body" id="s1body">
+      <div class="q">Milyen legyen az oldala?</div>
+      <div id="presets"></div>
+      <div class="cbox"><b>Testre szabom <span id="cnt" style="color:var(--mute);font-weight:400"></span></b><div id="mods"></div></div>
+    </div>
+    <div class="foot" id="s1foot">
+      <div class="pill" id="pill" role="group" aria-label="Fizetési gyakoriság">
+        <button data-p="monthly" class="on">Havi</button><button data-p="annual">Éves <span class="g" id="pillg"></span></button>
+      </div>
+      <div class="mini">
+        <div class="tot"><small>Összesen</small><b id="miniAmt"></b><span class="offer" id="miniOffer"></span></div>
+        <button class="btn" id="next">Tovább ›</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: the money decision takes the sheet -->
+    <div class="body" id="s2body" hidden>
+      <button class="back" id="back">‹ Vissza a csomagokhoz</button>
+      <div class="recap"><span>Választott csomag</span><b id="recap"></b></div>
+      <div class="q">Milyen gyakran fizet?</div>
+      <div class="permat" role="group" aria-label="Fizetési gyakoriság">
+        <button class="popt on" data-p="monthly"><b>Havi</b><small>rugalmas, bármikor</small></button>
+        <button class="popt deal" data-p="annual"><span class="badge" id="badge"></span><b>Éves</b><small>10 hónap áráért 12</small></button>
+      </div>
+      <div class="sum">
+        <div class="l"><span>MOST FIZETENDŐ</span><s id="list"></s></div>
+        <div class="big" id="big"></div>
+        <div class="of" id="of"></div>
+        <div class="once" id="once"></div>
+        <div class="gain" id="gain"></div>
+      </div>
+      <p class="fine">Az ár ÁFÁ-t nem tartalmaz — a szolgáltató alanyi adómentes (AAM).</p>
+      <p class="fine" id="nextc"></p>
+      <label class="decl" id="decl"><input type="checkbox" id="rights"><span>Kijelentem, hogy a honlapomon megjelenítendő fényképek tekintetében felhasználási joggal rendelkezem, vagy az élesítésig saját, jogtiszta képeket töltök fel. Szavatolom, hogy az általam jóváhagyott képek felhasználása harmadik személy jogát nem sérti, és vállalom, hogy az ebből eredő igények alól a Citoviso-t mentesítem (kártalanítás).</span></label>
+    </div>
+    <div class="foot s2foot" id="s2foot" hidden>
+      <button class="btn" id="submit">Tovább a számlázási adatokhoz ›</button>
+      <p class="note" id="subnote">Pipálja be a nyilatkozatot a továbblépéshez.</p>
+    </div>
+
+    <!-- STEP 3 placeholder: the EXISTING full-screen checkout (not part of this plan) -->
+    <div class="s3" id="s3" hidden><div><b>Itt nyílik a meglévő fizetés-lap</b>(számlázási adatok · 3 pipa · „Fizetek”) — ez a terv nem változtat rajta.<br><br><button class="back" id="back3">‹ Vissza</button></div></div>
+  </aside>
+</div></div>
+
+<script>
+(function () {
+  var FREE = 2, OFFER_PCT = 50, OFFER_UNTIL = "szept. 29. 19:58";
+  var BASE = 4880;
+  var MODS = [
+    { id: "gallery", n: "Galéria", p: 0 }, { id: "enquiry", n: "Érdeklődés-űrlap", p: 0 }, { id: "location", n: "Térkép, megközelítés", p: 0 },
+    { id: "rooms", n: "Szobák, apartmanok", p: 690 }, { id: "amenities", n: "Felszereltség", p: 390 }, { id: "usp", n: "Ami miatt ide jönnek", p: 490 },
+    { id: "reviews", n: "Vendégvélemények", p: 790 }, { id: "faq", n: "Gyakori kérdések", p: 390 }, { id: "offers", n: "Csomagajánlatok", p: 590 },
+    { id: "blog", n: "Hírek, cikkek", p: 490 }, { id: "lang", n: "Idegen nyelvű oldal", p: 990 }, { id: "booking", n: "Foglalási naptár", p: 1490 }
+  ];
+  var MIN = ["gallery", "enquiry", "location"], ESS = MIN.concat(["rooms", "amenities", "usp", "reviews"]);
+  var PRESETS = [
+    { id: "teljes", l: "Teljes", n: "Minden, amit kínálunk — ajánlott", m: MODS.map(function (x) { return x.id; }) },
+    { id: "ajanlott", l: "Ajánlott", n: "A lényeg, ami elad", m: ESS },
+    { id: "alap", l: "Alap", n: "A minimum: képek, elérhetőség, térkép", m: MIN }
+  ];
+  var sel = {}; MIN.forEach(function (i) { sel[i] = true; });
+  var period = "monthly", offer = true, step = 1, variant = "B";
+  var $ = function (i) { return document.getElementById(i); };
+  var fmt = function (n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; };
+  function monthlyOf(ids) { return BASE + MODS.filter(function (m) { return ids.indexOf(m.id) >= 0; }).reduce(function (s, m) { return s + m.p; }, 0); }
+  function chosen() { return MODS.filter(function (m) { return sel[m.id]; }).map(function (m) { return m.id; }); }
+  function samePreset() { var c = chosen().slice().sort().join(); for (var i = 0; i < PRESETS.length; i++) if (PRESETS[i].m.slice().sort().join() === c) return PRESETS[i]; return null; }
+  function renderPresets() {
+    var cur = samePreset();
+    $("presets").innerHTML = PRESETS.map(function (p) {
+      var mo = monthlyOf(p.m), v = period === "annual" ? mo * (12 - FREE) : mo;
+      return '<button class="preset' + (cur && cur.id === p.id ? " on" : "") + '" data-id="' + p.id + '"><span class="dot"></span><span class="nm"><b>' + p.l + '</b><small>' + p.n + ' · ' + p.m.length + ' szekció</small></span><span class="pr">' + fmt(v) + '<small>/' + (period === "annual" ? "év" : "hó") + '</small></span></button>';
+    }).join("");
+  }
+  function renderMods() {
+    $("mods").innerHTML = MODS.map(function (m) {
+      return '<label class="mod' + (m.p ? "" : " inc") + '"><input type="checkbox" data-m="' + m.id + '"' + (sel[m.id] ? " checked" : "") + (m.p ? "" : " disabled") + '><span>' + m.n + '</span><em>' + (m.p ? "+" + fmt(m.p) + "/hó" : "alapban") + '</em></label>';
+    }).join("");
+    $("cnt").textContent = "(" + chosen().length + "/" + MODS.length + " szekció)";
+  }
+  function sync() {
+    var mo = monthlyOf(chosen()), list = period === "annual" ? mo * (12 - FREE) : mo;
+    var pay = offer ? Math.floor(list * (100 - OFFER_PCT) / 100) : list, unit = period === "annual" ? "/ év" : "/ hó";
+    var cur = samePreset();
+    $("miniAmt").innerHTML = fmt(pay) + " <small>" + unit + "</small>";
+    $("miniOffer").textContent = offer ? "−" + OFFER_PCT + "% az első díjból · " + OFFER_UNTIL + "-ig" : "";
+    $("recap").textContent = (cur ? cur.l : "Egyedi") + " · " + chosen().length + " szekció";
+    $("badge").textContent = "−" + fmt(mo * FREE) + " · " + FREE + " hó ingyen";
+    $("pillg").textContent = "−" + FREE + " hó";
+    $("list").textContent = offer ? fmt(list) : "";
+    $("big").innerHTML = fmt(pay) + " <small>" + unit + (period === "annual" ? " (" + fmt(pay / 12) + "/hó · " + FREE + " hónap ingyen)" : "") + "</small>";
+    $("of").textContent = offer ? "Döntés-segítő ajánlat: −" + OFFER_PCT + "% az első díjból · érvényes " + OFFER_UNTIL + "-ig" : "";
+    $("once").textContent = offer ? "Egyszeri kedvezmény — utána " + fmt(list) + " " + unit + " a díj." : "";
+    $("gain").textContent = period === "annual" ? fmt(mo * FREE) + " megtakarítás a havi fizetéshez képest" : "";
+    $("nextc").textContent = "A következő terhelés a mai fizetéstől számítva " + (period === "annual" ? "2027. 09. 26." : "2026. 10. 26.") + ": " + fmt(list) + " " + unit + ", automatikusan.";
+    document.querySelectorAll("[data-p]").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-p") === period); });
+    $("pill").hidden = variant !== "B";
+    var ok = $("rights").checked;
+    $("submit").disabled = false; $("submit").setAttribute("data-off", ok ? "0" : "1");
+    $("submit").style.opacity = ok ? "" : ".55";
+    $("subnote").hidden = ok;
+    renderPresets();
+  }
+  function go(n) {
+    step = n;
+    $("s1body").hidden = $("s1foot").hidden = n !== 1;
+    $("s2body").hidden = $("s2foot").hidden = n !== 2;
+    $("s3").hidden = n !== 3;
+    $("pnl").classList.toggle("full", n === 3);
+    $("pnl").classList.toggle("s2", n === 2);
+    $("h2").textContent = n === 1 ? "Ez az Ön leendő weboldala" : n === 2 ? "Fizetés módja" : "Fizetés";
+    $("hp").textContent = n === 1 ? "Válassza ki, mit mutasson — azonnal látja. Most nem fizet semmit." : n === 2 ? "Még nem fizet — a következő lépésben adja meg a számlázási adatokat." : "A Fizetek gomb valódi kártyaterhelést indít.";
+    var b = n === 1 ? $("s1body") : $("s2body"); if (b) b.scrollTop = 0;
+  }
+  $("presets").addEventListener("click", function (e) {
+    var b = e.target.closest(".preset"); if (!b) return;
+    var p = PRESETS.filter(function (x) { return x.id === b.getAttribute("data-id"); })[0];
+    sel = {}; p.m.forEach(function (i) { sel[i] = true; }); renderMods(); sync();
+  });
+  $("mods").addEventListener("change", function (e) { var id = e.target.getAttribute("data-m"); sel[id] = e.target.checked; renderMods(); sync(); });
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-p]"); if (!b) return; period = b.getAttribute("data-p"); sync();
+  });
+  $("next").addEventListener("click", function () { go(2); });
+  $("back").addEventListener("click", function () { go(1); });
+  $("back3").addEventListener("click", function () { go(2); });
+  $("rights").addEventListener("change", function () { $("decl").classList.remove("bad"); sync(); });
+  $("submit").addEventListener("click", function () {
+    if (!$("rights").checked) { $("decl").classList.add("bad"); $("subnote").textContent = "Előbb pipálja be a nyilatkozatot (1 hiányzik)."; return; }
+    go(3);
+  });
+  function segs(id, attr, fn) {
+    $(id).addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      $(id).querySelectorAll("button").forEach(function (x) { x.classList.toggle("on", x === b); });
+      fn(b.getAttribute(attr));
+    });
+  }
+  segs("varSeg", "data-v", function (v) { variant = v; sync(); });
+  segs("sizeSeg", "data-s", function (s) { $("stage").className = "stage " + s; });
+  segs("offSeg", "data-o", function (o) { offer = o === "1"; sync(); });
+  var q = new URLSearchParams(location.search);
+  if (q.get("v")) document.querySelector('#varSeg [data-v="' + q.get("v") + '"]').click();
+  if (q.get("s")) document.querySelector('#sizeSeg [data-s="' + q.get("s") + '"]').click();
+  else if (window.innerWidth >= 900) document.querySelector('#sizeSeg [data-s="desk"]').click();
+  renderMods(); sync();
+  if (q.get("step")) go(+q.get("step"));
+  if (q.get("p")) { period = q.get("p"); sync(); }
+})();
+</script>
+</body>
+</html>

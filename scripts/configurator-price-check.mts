@@ -158,8 +158,9 @@ async function audit(page: Page, viewport: string): Promise<Result> {
   const expanded = await page.locator(".cit-cfg-customize").getAttribute("aria-expanded");
   if (expanded !== "true") failures.push(`a „Testre szabom" aria-expanded=${expanded} (nyitva kellene)`);
 
-  // 2) the running total is on screen right then
-  const sum = page.locator(".cit-cfg-sum");
+  // 2) the running total is on screen right then — step 1's one-row total since
+  //    the two-step order (contract order-two-step ①); the big card is on step 2.
+  const sum = page.locator(".cit-cfg-mini__amt");
   if (!(await sum.isVisible())) failures.push("az összeg-sor nem látszik");
   const box = await sum.boundingBox();
   const vh = page.viewportSize()!.height;
@@ -170,7 +171,13 @@ async function audit(page: Page, viewport: string): Promise<Result> {
   // 2b) ADR-0211 / contract design-refs/console/period-badge: MONTHLY is the
   // default, and the annual card's badge names the saving in forints =
   // monthly list total × free months (read independently from the manifest).
+  // The cards are on step 2 (order-two-step ②): measured THERE, where the badge
+  // is visible — a hidden badge would pass the "does not cover" test vacuously.
   {
+    const monthlyStep1 = amount(await sum.innerText());
+    await page.locator(".cit-cfg-next").click();
+    await page.waitForTimeout(250);
+    if (!(await page.locator(".cit-cfg-permat").isVisible())) failures.push("a 2. lépésen nem látszik a Havi/Éves kártya-pár");
     const st = await page.evaluate(() => {
       const el = document.querySelector("[data-cit-configurator]");
       const cfg = el ? JSON.parse(el.textContent || "{}") : {};
@@ -191,7 +198,7 @@ async function audit(page: Page, viewport: string): Promise<Result> {
     if (st.free > 0) {
       if (st.badge === null) failures.push("az Éves kártyán nincs látható „hó ingyen” jelvény");
       else {
-        const monthly = amount(await sum.innerText());
+        const monthly = monthlyStep1;
         const saving = amount(st.badge);
         if (!st.hasOffer && saving !== monthly * st.free) {
           failures.push(`a jelvény megtakarítása ${saving} (várt: ${monthly} × ${st.free} = ${monthly * st.free})`);
@@ -202,6 +209,8 @@ async function audit(page: Page, viewport: string): Promise<Result> {
     } else if (st.badge !== null) {
       failures.push(`0 ingyen hónapnál is van jelvény: "${st.badge}"`);
     }
+    await page.locator(".cit-cfg-back").click();
+    await page.waitForTimeout(250);
   }
 
   // 3) flipping a priced row moves the total by exactly that price
@@ -242,7 +251,7 @@ async function audit(page: Page, viewport: string): Promise<Result> {
       );
     }
     // the change must be ANNOUNCED, not just silently swapped
-    const delta = page.locator(".cit-cfg-delta");
+    const delta = page.locator(".cit-cfg-mini .cit-cfg-delta");
     if (!(await delta.count()) || !(await delta.first().isVisible())) {
       failures.push("nincs látható változás-jelzés (delta) az összeg mellett");
     }
@@ -284,13 +293,22 @@ async function audit(page: Page, viewport: string): Promise<Result> {
       if (!/sajat-nevem\.hu/.test(await status.innerText())) {
         failures.push(`saját név ellenőrzése nem adott találatot: "${await status.innerText()}"`);
       }
-      if (!/sajat-nevem\.hu/.test(await sum.innerText())) {
+      // The order summary (the card with the domain breakdown) is on step 2 since the
+      // two-step order (order-two-step ②) — read it THERE, as the buyer sees it.
+      await page.locator(".cit-cfg-next").click();
+      await page.waitForTimeout(200);
+      const cardText = await page.locator(".cit-cfg-sum").innerText();
+      await page.locator(".cit-cfg-back").click();
+      await page.waitForTimeout(200);
+      if (!/sajat-nevem\.hu/.test(cardText)) {
         failures.push("az ellenőrzött saját domain nem került be a megrendelés összegzőjébe");
       }
       // b) editing after a verdict drops the stale selection
       await input.fill("masik");
       await page.waitForTimeout(200);
-      if (/sajat-nevem\.hu/.test(await sum.innerText())) {
+      // ⛔ The card, not the one-row total: the row never names a domain, so asking
+      // IT whether a stale domain is gone would be green whatever happened.
+      if (/sajat-nevem\.hu/.test((await page.locator(".cit-cfg-sum").textContent()) ?? "")) {
         failures.push("szerkesztés után is az ELŐZŐ (már nem ellenőrzött) domain marad az összegzőben");
       }
       // c) a name without a TLD is refused with a plain reason
@@ -303,7 +321,7 @@ async function audit(page: Page, viewport: string): Promise<Result> {
       await input.fill("foglaltnev.hu");
       await btn.click();
       await page.waitForTimeout(400);
-      if (/foglaltnev\.hu/.test(await sum.innerText())) {
+      if (/foglaltnev\.hu/.test((await page.locator(".cit-cfg-sum").textContent()) ?? "")) {
         failures.push("FOGLALT domain is bekerült a megrendelésbe");
       }
     }

@@ -1618,6 +1618,17 @@ if [ -f scripts/checkout-item-block-check.mts ] && \
   echo "[pre-commit] checkout-item-block (a fizetőoldal megnevezi, mit vesz a vevő)…"
   npx tsx scripts/checkout-item-block-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A KÉT LÉPÉSES RENDELÉS kapuja (tulaj-döntés 2026-09-26, B; kontraktus:
+# assets/design-refs/console/order-two-step/README.md). Telefonon a pinnelt pénzügyi blokk
+# kiszorította a csomag-listát (egy sor látszott). Az 1. lépés a listáé, a Havi/Éves kártyák és
+# az ár-kártya a „Tovább” után jönnek. Álló és fekvő telefonon és asztalon mér,
+# elementFromPoint-tal, érintetlen görgetésnél. Önteszt: --self-test (3 visszarontás).
+# Az ŐR SAJÁT FÁJLJA is triggerel (ADR-0147 ③).
+if [ -f scripts/order-two-step-check.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-configurator\.(js|css)|src/generator/configurator\.ts|scripts/order-two-step-check\.mts)'; then
+  echo "[pre-commit] order-two-step (1. lépés: lista · 2. lépés: fizetés módja)…"
+  npx tsx scripts/order-two-step-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/contract-drift-check.mts ] && \
    changed_files | grep -qE '^assets/design-refs/|^assets/runtime/|^src/console/views\.ts|^src/server/adminViews\.ts|^src/generator/|^scripts/contract-drift-check'; then
   echo "[pre-commit] contract-drift-check (a befagyasztott terv és a kód nem csúszott szét)…"
