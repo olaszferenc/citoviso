@@ -526,12 +526,14 @@ export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
     border-top:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.22)" : "color-mix(in srgb, var(--cit-ink) 18%, transparent)"});
     border-bottom:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.22)" : "color-mix(in srgb, var(--cit-ink) 18%, transparent)"})}
   /* The 12px row padding moved INTO the links (guest-mobile-check, 2026-09-26): the same
-     look, but the booking link's tap target is 45px tall instead of 21px — the thumb hits the
-     rule lines' whole band, not a hairline of text. The hot underline is a text-decoration
-     so it stays under the letters, not under the padding. */
+     look, but the booking link's tap target is a MEASURED 44px instead of 21px — the thumb
+     hits the rule lines' whole band, not a hairline of text. min-height + inline-flex, not
+     padding arithmetic: 13px+line-height+13px came to 43px where a template set a tighter
+     line-height (brutalism, measured by the parent session) — a rule that passes by 1px
+     is a dead rule. The hot underline is a text-decoration so it stays under the letters. */
   .cit-mast-links a{color:var(--mast-linkink,${overlay ? "rgba(255,255,255,.85)" : "var(--cit-ink)"});
     text-decoration:none;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;transition:.25s;
-    padding:13px 4px;display:inline-block}
+    padding:0 4px;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
   .cit-mast-links a:hover{color:var(--mast-hover,var(--cit-accent))}
   .cit-mast-links a.cit-mast-hot{font-weight:600;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;
     text-decoration-color:var(--mast-hotline,${overlay ? "color-mix(in srgb, var(--cit-accent) 40%, #fff)" : "var(--cit-accent)"})}

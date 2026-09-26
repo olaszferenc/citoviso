@@ -491,7 +491,9 @@ async function main(): Promise<void> {
         const groups: Record<string, { n: number; ex: any }> = {};
         for (const s of st.small) { (groups[s.group] ??= { n: 0, ex: s }).n++; }
         for (const [g, v] of Object.entries(groups)) {
-          const tiny = (v.ex.w < 24 || v.ex.h < 24) && !v.ex.inlineText;
+          // the shared masthead's booking link is a PROMISED 44px (ADR-0235 ①): below that it is a
+          // defect, not an ergonomics note — a rule that only warns is a dead rule (parent session, 2026-09-26: 43px)
+          const tiny = ((v.ex.w < 24 || v.ex.h < 24) && !v.ex.inlineText) || g === "cit-mast-hot";
           F(P, vp.id, tiny ? "HIBA" : "ERGONÓMIA", "③érintési-cél", `${v.n}× .${g} < 44px (pl. „${v.ex.text}” ${v.ex.w}×${v.ex.h}px)`);
         }
         // ④ input font
