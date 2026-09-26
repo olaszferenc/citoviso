@@ -1,4 +1,4 @@
-## ADR-XXXX — A telefonos fejléc, a Foglalás-sáv felirata és a Google-fotó mérete a mock-motorban (FK-009 átadott tételek)
+## ADR-0237 — A telefonos fejléc, a Foglalás-sáv felirata és a Google-fotó mérete a mock-motorban (FK-009 átadott tételek)
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) · **Szál:** „Mobil · vendég-nézet 2” (a FK-009 lead-szál által a motornak átadott tételek)
 

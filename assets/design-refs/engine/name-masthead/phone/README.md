@@ -65,4 +65,4 @@ telefonon NEM visel rögzített sávot, a link-sáv a sablon alakját viselő pi
 Landolt: `src/engine/templateKit.ts` (`mastheadHtml` `phoneBar`, `mastheadCss` telefonos blokk,
 `mobCtaStat`, `MOBCTA_CSS`), a 14 masthead-es sablon (`phoneBar: true`, közös sáv-felirat; artdeco +
 claymorphism új sáv), `scripts/guest-mobile-check.mts` (②fejléc-blokk, ⑤sáv-felirat + 2 negatív
-kontroll). ADR: `ADR-XXXX` (a telefonos fejléc és a Foglalás-sáv a mock-motorban).
+kontroll). ADR: `ADR-0237` (a telefonos fejléc és a Foglalás-sáv a mock-motorban).

@@ -3,7 +3,7 @@
 **Brief:** `~/rc-briefs/mobil-vendeg-nezet-2-brief.md` (szülő: `cite8fb512d`). Előzmény: FK-010 (vendég-szál, ADR-0235) és
 FK-009 (lead-szál) ma zárultak; ez a szál a lead-szál által a motornak átadott 4 tételt viszi, majd egy tetszőleges lead mind
 a 19 stílusát generálja. Tulajdonosi mandátum: *„saját belátásuk szerint … utólag ellenőrzök”*; vezérelv: a 390 px-es KÉP.
-ADR: `ADR-XXXX` (a telefonos fejléc, a Foglalás-sáv és a Google-fotó mérete a mock-motorban).
+ADR: `ADR-0237` (a telefonos fejléc, a Foglalás-sáv és a Google-fotó mérete a mock-motorban).
 
 ## Mérés ELŐBB (a 38 élő mock, 390 px, saját próba: `scratchpad/probe390.mts`)
 
