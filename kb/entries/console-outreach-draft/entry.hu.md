@@ -161,13 +161,22 @@ kapott, aki már leiratkozott):
 > ingyen, az Ön nyilvánosan elérhető adataiból. Ez még nem élő oldal.
 > ▸ **Miért kaptam?**
 
+ℹ️ **Telefonon (2026-09-26 óta) a sáv rövidebb:** „Készítette: *(a hirdető neve)*. Ez még nem élő
+oldal.” — az „ingyen, az Ön nyilvánosan elérhető adataiból” tagmondat a **„Miért kaptam?”**
+részleteiben olvasható, és a süti-kérdés csak az első görgetésnél vagy érintésnél jelenik meg
+(addig semmi nem követ). Így a lead az első pillantással a tervet látja, nem a sávokat.
+
 A **„Miért kaptam?”** egy kattintásra, **helyben** nyitja ki a jogalapot (jogos érdekű
 megkeresés — Grt. 6. § / GDPR 6. cikk (1) f)), a mérésről szóló tájékoztatót, valamint az
 **Adatkezelési tájékoztató** és a **Leiratkozás** linkjét. Alapból csukva van, és JavaScript
 nélkül is nyílik.
 
 A **lap alján** változatlanul ott a teljes jogi lábazat a leiratkozó linkkel — az a kiút
-végpontja, a felső sáv nem váltja ki.
+végpontja, a felső sáv nem váltja ki. ⚠️ **A leiratkozó link megnyitása önmagában nem iratkoztat
+le** (2026-09-26 óta): egy rövid megerősítő lap nyílik egyetlen **„Leiratkozom”** gombbal, és csak
+a gomb megnyomása hat. Így a levelezőprogramok és vírusirtók link-ellenőrzése (amely a levél
+minden linkjét „megnyitja”) nem némít el egy megkeresést a címzett tudta nélkül. A levelezők saját
+egykattintásos leiratkozó gombja (List-Unsubscribe) továbbra is azonnal hat.
 
 ℹ️ **A kiküldött előnézeten nincs nyitó-animáció.** Két sablon egyébként egy teljes
 képernyős bevezetővel indul (a szállás neve úszik be, több másodpercig). A követett

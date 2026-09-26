@@ -3444,15 +3444,24 @@
     return out;
   }
 
+  /** The consent bar's published height right now (0 when it is not on the page). */
+  function consentH() {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--citui-consent-h")) || 0;
+  }
+
   function placeLaunch() {
     if (launch.hidden || !launch.classList.contains("cit-cfg-in")) return;
     if (launchBase === null) {
+      // The CSS offset WITHOUT the consent bar: the bar is added live below, because since
+      // 2026-09-26 it may appear AFTER the pill (deferred to the first scroll on the tracked
+      // page) — a base measured once, with or without it, went stale the moment the bar
+      // came or went, and the bar then lay on the pill (measured: the tap was intercepted).
       launch.style.removeProperty("bottom");
-      launchBase = parseFloat(getComputedStyle(launch).bottom) || 16;
+      launchBase = (parseFloat(getComputedStyle(launch).bottom) || 16) - consentH();
     }
     var h = launch.offsetHeight;
     var rects = blockingRects(launch.getBoundingClientRect());
-    var bottomY = window.innerHeight - launchBase; // where the pill's lower edge wants to be
+    var bottomY = window.innerHeight - (launchBase + consentH()); // where the pill's lower edge wants to be
     for (var step = 0; step < 8; step++) {
       var clash = null;
       for (var i = 0; i < rects.length; i++) {
@@ -3478,9 +3487,25 @@
     // the consent question first. The value is geometry the runtime already knows;
     // the footer reads it as `--citui-cfg-clear` (prospectNotice.ts), falling back to
     // the consent height alone when this script never ran.
+    // …and not only the pill's own top: a template's fixed bottom bar can be TALLER than
+    // the button the pill climbed over (its text wraps beside the button — measured at
+    // 360 px on cinematic), so the footer must clear the highest edge of every fixed
+    // layer that sits on the bottom of the screen.
+    var clearTop = bottomY - h;
+    var vh = window.innerHeight;
+    var fixedBottom = document.querySelectorAll("body > *, body > * > *, body > * > * > *");
+    for (var k = 0; k < fixedBottom.length; k++) {
+      var fb = fixedBottom[k];
+      if (fb === launch || (fb.closest && fb.closest('[class*="cit-cfg"]'))) continue;
+      var fcs = getComputedStyle(fb);
+      if (fcs.position !== "fixed" || fcs.display === "none" || fcs.visibility === "hidden") continue;
+      var fr = fb.getBoundingClientRect();
+      if (fr.height < 8 || fr.height > vh * 0.4 || fr.bottom < vh - 4 - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--citui-consent-h")) || 0) - 200) continue;
+      if (fr.bottom <= vh + 2 && fr.top < clearTop) clearTop = fr.top;
+    }
     document.documentElement.style.setProperty(
       "--citui-cfg-clear",
-      Math.max(0, Math.round(window.innerHeight - (bottomY - h) + 12)) + "px",
+      Math.max(0, Math.round(vh - clearTop + 12)) + "px",
     );
   }
 
@@ -3510,6 +3535,18 @@
       schedulePlace();
     });
     window.addEventListener("load", schedulePlace);
+    // The consent bar arriving or leaving changes what is under the pill — and it is
+    // not a resize. Watch the body for it.
+    if (window.MutationObserver) {
+      new MutationObserver(function (muts) {
+        for (var m = 0; m < muts.length; m++) {
+          var nodes = [].slice.call(muts[m].addedNodes).concat([].slice.call(muts[m].removedNodes));
+          for (var n = 0; n < nodes.length; n++) {
+            if (nodes[n] && nodes[n].id === "cit-consent") return schedulePlace();
+          }
+        }
+      }).observe(document.body, { childList: true });
+    }
     setTimeout(placeLaunch, 900);
   };
   /* cit-cfg-avoid-end */

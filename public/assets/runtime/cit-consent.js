@@ -227,9 +227,43 @@
     });
   }
 
+  /**
+   * A KIKÜLDÖTT LAPON (data-cit-consent-defer a <html>-en) a kérdés az ELSŐ görgetésig,
+   * érintésig vagy billentyűig vár (2026-09-26, first-screen-compact B): a lead előbb a
+   * tervet lássa, ne a sávot — követés addig sincs, a Pixel csak az „Elfogadom" után tölt.
+   * Minden más lapon azonnal kérdezünk, mint eddig.
+   */
+  function renderWhenEngaged() {
+    if (!document.documentElement.hasAttribute("data-cit-consent-defer")) return render();
+    var done = false;
+    function go() {
+      if (done) return;
+      done = true;
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pointerdown", go, true);
+      window.removeEventListener("keydown", go, true);
+      render();
+    }
+    function onScroll() {
+      if (window.scrollY > 40) go();
+    }
+    // ⛔ A vásárlói réteg (pirula, panel) érintése NEM „érintés": ha a pirula koppintása
+    // hozná be a sávot, a pirula az ujj alól csúszna feljebb (mérve: a koppintás 3 mp-ig
+    // instabil célpontra várt, a konfigurátor nem nyílt ki). A kérdés a LAP érintésére
+    // vagy görgetésre jön; a fizetés-lapon (nem halasztott) mindenképp megjelenik.
+    function onPointer(ev) {
+      var t = ev.target;
+      if (t && t.closest && t.closest('[class*="cit-cfg"]')) return;
+      go();
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pointerdown", onPointer, true);
+    window.addEventListener("keydown", go, true);
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", render);
+    document.addEventListener("DOMContentLoaded", renderWhenEngaged);
   } else {
-    render();
+    renderWhenEngaged();
   }
 })();

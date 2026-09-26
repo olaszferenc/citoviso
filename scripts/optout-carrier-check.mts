@@ -29,6 +29,7 @@ import {
   injectOptedOutBanner,
   injectOptedOutNotice,
   injectTrackingNotice,
+  unsubscribeConfirmBody,
 } from "../src/console/prospectNotice.js";
 import { normalizeProspectPath } from "../src/console/prospectPath.js";
 
@@ -48,6 +49,37 @@ const SLUG = "dencs-apartmanhaz";
 const UNSUB_ROUTE = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/;
 
 const problems: string[] = [];
+
+// ── 0. The opt-out ACTS on POST only; the GET asks first (2026-09-26). ───────
+// A mail scanner's GET must not unsubscribe anyone; the human gets a page with ONE
+// button, and that button POSTs to the very same route — the same POST that the
+// RFC 8058 List-Unsubscribe-Post header already sends. Measured on the source AND on
+// the rendered confirm page.
+{
+  const serverSrc = readFileSync(SERVER, "utf8");
+  const getBranch = /if \(method === "GET" && unsubMatch\) \{([\s\S]*?)\n  \}/.exec(serverSrc)?.[1] ?? "";
+  const postBranch = /if \(method === "POST" && unsubMatch\) \{([\s\S]*?)\n  \}/.exec(serverSrc)?.[1] ?? "";
+  if (!getBranch || /unsubscribeProspect\(/.test(getBranch) || !/unsubscribeConfirmBody\(/.test(getBranch)) {
+    problems.push(
+      "A GET /p/<token>/unsubscribe LEIRATKOZTAT (vagy nem a megerősítő lapot adja) — egy levél-előnéző " +
+        "GET-je így a címzett tudta nélkül némítja el a megkeresést. A GET kérdez, a POST cselekszik.",
+    );
+  }
+  if (!postBranch || !/unsubscribeProspect\(/.test(postBranch)) {
+    problems.push("A POST /p/<token>/unsubscribe nem hív unsubscribeProspect-et — a List-Unsubscribe-Post one-click megtört.");
+  }
+  const confirm = unsubscribeConfirmBody(TOKEN);
+  const form = /<form\b[^>]*>/i.exec(confirm)?.[0] ?? "";
+  if (!/method="post"/i.test(form) || !form.includes(`action="/p/${TOKEN}/unsubscribe"`)) {
+    problems.push("A megerősítő lap űrlapja nem POST-ol ugyanarra az /unsubscribe útra.");
+  }
+  if (!/<button[^>]*type="submit"[^>]*>Leiratkozom<\/button>/.test(confirm)) {
+    problems.push("A megerősítő lapon nincs „Leiratkozom” gomb.");
+  }
+  if (!confirm.includes(`href="/p/${TOKEN}"`)) {
+    problems.push("A megerősítő lapról nincs visszaút a tervhez (Mégsem).");
+  }
+}
 
 // ── 1. The notice carries the mandatories. ───────────────────────────────────
 const MOCK_BODY = "<html><body><h1>Mock</h1><footer>A szállás lábléce</footer></body></html>";

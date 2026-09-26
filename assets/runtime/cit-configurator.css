@@ -1083,9 +1083,32 @@
   .cit-cfg-head {
     padding-top: 20px;
   }
+  /* Telefonon a JOBB SARKOT fogja, EGY sorban, 44 px (2026-09-26, first-screen-compact):
+   * középen, 3 sorba törve 90 px-es korong volt a főcím közepén (mérve 19 sablonból ~14-en
+   * a címre ült). Jobbra igazítva kevesebb címet takar, és a Foglalás-sáv gombja fölé
+   * mászik (placeLaunch), nem elé. Asztalon marad a középső elhelyezés. */
   .cit-cfg-launch {
-    bottom: calc(16px + var(--citui-consent-h, 0px));
+    left: auto;
+    right: 16px;
+    bottom: calc(14px + var(--citui-consent-h, 0px));
     max-width: calc(100vw - 32px);
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
+    gap: 8px;
+    transform: translateY(24px);
+    text-align: center;
+  }
+  .cit-cfg-launch.cit-cfg-in {
+    transform: none;
+  }
+  .cit-cfg-launch:hover {
+    transform: translateY(-2px);
+  }
+  .cit-cfg-launch svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
   }
   /* Bottom sheet → the handle sits on TOP of the sheet; chevron points down
    * (hide) when open, up (bring back) when collapsed. */

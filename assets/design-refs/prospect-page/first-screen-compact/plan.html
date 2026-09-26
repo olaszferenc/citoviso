@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Első képernyő telefonon — tömör keret</title>
+<style>
+:root{--citui-navy-950:#0a1f36;--citui-white:#fff;--citui-cyan-500:#1fb6d6;--citui-ink:#0f172a;--citui-ink-muted:#5b6472;--citui-panel:#f6f8fa;--citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--fr-ink:#8a8f98;--fr-bg:#101216}
+html,body{margin:0;background:#e9edf1;font:14px/1.5 var(--citui-font-text);color:var(--citui-ink)}
+.bar{position:static;background:#fff;border-bottom:1px solid #d9dee5;padding:8px 12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px}
+.bar b{margin-right:4px}
+.bar button{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid #c9d1da;background:#fff;cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-navy-950);color:#fff;border-color:var(--citui-navy-950)}
+.note{max-width:900px;margin:10px auto;padding:0 12px;font-size:13px;color:var(--citui-ink-muted)}
+#stage{container-type:inline-size;margin:12px auto;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.18);position:relative;overflow:hidden}
+#stage[data-w="m"]{max-width:390px;height:844px}
+#stage[data-w="d"]{max-width:1280px;height:800px}
+.scroller{position:absolute;inset:0;overflow:auto;scroll-behavior:auto}
+/* ── a mock (Laguna, cinematic-szerű) ── */
+.mock{background:#0f1a24;color:#fff;min-height:1600px}
+.mast{display:flex;flex-direction:column;align-items:center;padding:22px 16px 0}
+.mast h1{margin:0;font:400 30px/1.15 Georgia,serif;letter-spacing:.01em}
+.mast .tag{margin-top:6px;font:600 11px/1 var(--citui-font-text);letter-spacing:.22em;color:#e0716a;text-transform:uppercase}
+.mast .nav{margin-top:14px;padding:10px 0;border-top:1px solid rgba(255,255,255,.28);border-bottom:1px solid rgba(255,255,255,.28);width:100%;text-align:center;font:600 12px/1 var(--citui-font-text);letter-spacing:.2em}
+.hero{position:relative;height:520px;background:url(https://lh3.googleusercontent.com/place-photos/AG9NLjC8XzWd788l0z-nHfzU9K8mFAgRTN7AWpmMc7wUWVC6QAtpJa3p5X9MeUF_c37jKS3zoI5nWHTe8dxqfGB2mE2H_w6asG00_fGEkml1DRzaQFN7bzO7_fK5IfKdSLfwyArqaOLLbMcruHLShg=s4800-w1200) center/cover;display:flex;align-items:flex-end;padding:0 16px 56px}
+.hero:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,26,36,.55),rgba(15,26,36,.15) 40%,rgba(15,26,36,.75))}
+.hero h2{position:relative;margin:0;font:400 40px/1.05 Georgia,serif}
+.hero h2 i{color:#f0938c}
+.body{padding:24px 16px;color:#cfd6de}
+.mobcta{position:absolute;left:0;right:0;bottom:var(--consent-h,0px);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:rgba(15,26,36,.96);border-top:1px solid rgba(255,255,255,.12);font-size:14px}
+.mobcta .btn{background:#e0716a;color:#fff;border-radius:10px;padding:14px 26px;font:700 13px/1 var(--citui-font-text);letter-spacing:.14em}
+@container (min-width:561px){ .mobcta{display:none} .mast h1{font-size:40px} .hero{height:620px} .hero h2{font-size:64px} }
+/* ── KERET-SÁV — tömör (a kontraktus három állítása marad: MI EZ · KITŐL · MIÉRT egy kattintásra) ── */
+.fr{background:var(--fr-bg);color:var(--fr-ink);font:400 12.5px/1.4 system-ui,sans-serif;padding:8px 14px}
+.fr-in{max-width:78ch;margin:0 auto}
+.fr strong{color:#fff;font-weight:600;display:block}
+.fr .who{display:inline}
+.fr .long{display:inline}
+.fr details{display:inline}
+.fr summary{display:inline-block;cursor:pointer;color:var(--fr-ink);text-decoration:underline;padding:4px 6px;margin-left:2px}
+.fr summary::-webkit-details-marker{display:none}
+.fr summary:before{content:"▸ ";}
+.fr details[open] summary:before{content:"▾ "}
+.fr .det{display:block;margin:4px auto 2px;line-height:1.55}
+.fr .det a{color:var(--fr-ink);display:inline-block;padding:6px 2px}
+@container (max-width:560px){ .fr .long{display:none} .fr{text-align:center} }
+@container (min-width:561px){ .fr{padding:9px 18px;font-size:13px;text-align:center} .fr-in{max-width:120ch} .fr strong{display:inline;margin-right:6px} }
+/* ── SÜTI-SÁV — tömör (≤560: a szöveg 12.5/1.4, gombok 44 px, 10 px padding) ── */
+#cit-consent{position:absolute;left:0;right:0;bottom:0;z-index:9;background:var(--citui-navy-950);color:#fff;box-shadow:0 -8px 24px rgba(10,31,54,.18);container-type:inline-size}
+#cit-consent .in{display:flex;gap:14px;align-items:center;max-width:1100px;margin:0 auto;padding:14px 16px}
+#cit-consent p{margin:0;flex:1;font-size:13px;line-height:1.5;color:rgba(255,255,255,.82)}
+#cit-consent p a{color:#fff}
+#cit-consent .b{display:flex;gap:8px;flex-shrink:0}
+#cit-consent button{border:0;border-radius:9px;padding:9px 16px;font:inherit;font-size:13px;font-weight:600;min-height:44px;font-family:var(--citui-font-text)}
+#cit-consent .yes{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+#cit-consent .no{background:transparent;color:#fff;border:1px solid currentColor}
+@container (max-width:560px){ #cit-consent .in{flex-direction:column;align-items:stretch;gap:8px;padding:10px 14px} #cit-consent p{font-size:12.5px;line-height:1.4} #cit-consent .b{width:100%} #cit-consent .b button{flex:1;padding:0 8px;font-size:12.5px} }
+#stage[data-consent="hidden"] #cit-consent{display:none}
+/* ── PIRULA — ≤560: jobb sarok, egy sor, 44 px; asztalin középen, mint ma ── */
+.pill{position:absolute;left:50%;bottom:calc(24px + var(--consent-h,0px) + var(--dock,0px));transform:translateX(-50%);z-index:8;display:inline-flex;align-items:center;gap:8px;padding:0 22px;height:48px;border-radius:999px;background:#e0716a;color:#fff;font:700 15px/1 system-ui,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.35);white-space:nowrap}
+.pill svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+@container (max-width:560px){ .pill{left:auto;right:16px;transform:none;height:44px;font-size:14px;padding:0 16px;bottom:calc(14px + var(--consent-h,0px) + var(--dock,0px));max-width:calc(100% - 32px);white-space:normal;text-align:center} }
+.legend{position:absolute;left:8px;bottom:calc(8px + var(--consent-h,0px) + var(--dock,0px));max-width:60%;background:rgba(255,255,255,.9);color:#000;font:600 11px/1 system-ui;padding:4px 6px;border-radius:6px;z-index:20}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Méret</b><button data-w="m" aria-pressed="true">Mobil 390</button><button data-w="d" aria-pressed="false">Asztali 1280</button>
+  <b style="margin-left:14px">Változat</b><button data-v="a" aria-pressed="true">A · tömör sáv + tömör süti + sarok-pirula</button><button data-v="b" aria-pressed="false">B · A + a süti-kérdés csak görgetésnél / érintésnél</button>
+  <button data-reset style="margin-left:auto">Újra (görgetés 0)</button>
+</div>
+<p class="note">Mindkét változatban a keret-sáv a lap TETEJÉN, a folyamban (lenyomja a lapot), a három állítással: MI EZ (félkövér) · KITŐL (név) · MIÉRT (egy kattintás, natív &lt;details&gt;, JS nélkül nyílik, benne a két link). Telefonon az „ingyen, az Ön nyilvánosan elérhető adataiból” a részletekbe kerül. A pirula telefonon a jobb sarokban, EGY sorban, 44 px; asztalin középen marad. B-ben a süti-sáv az első görgetésig/érintésig nem jelenik meg (követés addig sem indul — a Pixel csak elfogadás után tölt).</p>
+<div id="stage" data-w="m" data-v="a" data-consent="shown">
+  <div class="scroller" id="sc">
+    <div class="fr" data-cit-framing="tracked"><div class="fr-in">
+      <strong>Ez egy honlap-terv az Ön szállásáról.</strong>
+      <span class="who">Készítette: Olasz Ferenc e.v.<span class="long"> — ingyen, az Ön nyilvánosan elérhető adataiból</span>. Ez még nem élő oldal.</span>
+      <details><summary>Miért kaptam?</summary><div class="det">Ezt az előnézetet személyre szabottan Önnek készítettük, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdekű megkeresés — Grt. 6. § / GDPR 6. cikk (1) f)). A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot az igényeihez igazíthassuk. <a href="#">Adatkezelési tájékoztató</a> · <a href="#">Leiratkozás</a></div></details>
+    </div></div>
+    <div class="mock">
+      <div class="mast"><h1>Laguna Panzió</h1><div class="tag">Szántód, Balaton</div><div class="nav">FOGLALÁS</div></div>
+      <div class="hero"><h2><i>Fedett medence,</i><br>szauna és biliárd egy családbarát panzióban</h2></div>
+      <div class="body"><p>Szántód, a Balaton déli partja — a panzió 800 méterre a víztől, fedett medencével, szaunával és bőséges reggelivel várja a családokat és átutazókat.</p><p>Görgessen tovább a szobákhoz, árakhoz és a foglaláshoz.</p><p style="height:900px"></p></div>
+    </div>
+  </div>
+  <div class="mobcta"><span><b style="color:#f0938c">4,1</b> · Google-értékelés · 182 vélemény</span><span class="btn">FOGLALÁS</span></div>
+  <button class="pill" type="button"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span>Ez lehet az Öné — állítsa össze</span></button>
+  <div id="cit-consent"><div class="in"><p>A biztonságos kártyás fizetéshez a fizetési szolgáltatónk (Barion) csalásmegelőző sütiket használna. Enélkül az oldal ugyanúgy működik. <a href="#">Adatkezelési tájékoztató</a></p><div class="b"><button class="no" type="button">Csak a szükségeseket</button><button class="yes" type="button">Elfogadom</button></div></div></div>
+  <div class="legend" id="legend"></div>
+</div>
+<script>
+(function(){
+  var stage=document.getElementById('stage'), sc=document.getElementById('sc'), consent=document.getElementById('cit-consent'), legend=document.getElementById('legend');
+  var mobcta=document.querySelector('.mobcta'), pill=document.querySelector('.pill');
+  function measure(){
+    var isM=stage.dataset.w==='m';
+    var ch = stage.dataset.consent==='shown' ? consent.getBoundingClientRect().height : 0;
+    stage.style.setProperty('--consent-h', ch+'px');
+    var dock = isM ? mobcta.getBoundingClientRect().height : 0;
+    stage.style.setProperty('--dock', dock+'px');
+    var fr=document.querySelector('.fr').getBoundingClientRect().height;
+    var H=stage.getBoundingClientRect().height;
+    var pillH=pill.getBoundingClientRect().height;
+    var chrome=fr+ch+dock;
+    legend.textContent='sáv '+Math.round(fr)+' px · süti '+Math.round(ch)+' px · Foglalás-sáv '+Math.round(dock)+' px · pirula '+Math.round(pillH)+' px → nem-terv: '+Math.round(100*chrome/H)+'% ('+stage.dataset.v.toUpperCase()+', '+(isM?'390':'1280')+')';
+  }
+  function applyVariant(){
+    var b=stage.dataset.v==='b';
+    stage.dataset.consent = b && !stage.dataset.engaged ? 'hidden' : 'shown';
+    measure();
+  }
+  function engage(){ if(stage.dataset.v==='b' && !stage.dataset.engaged){ stage.dataset.engaged='1'; applyVariant(); } }
+  sc.addEventListener('scroll', function(){ if(sc.scrollTop>40) engage(); }, {passive:true});
+  sc.addEventListener('pointerdown', engage);
+  pill.addEventListener('click', engage);
+  document.querySelectorAll('[data-w]').forEach(function(b){ b.addEventListener('click', function(){ stage.dataset.w=b.dataset.w; document.querySelectorAll('[data-w]').forEach(function(x){x.setAttribute('aria-pressed', x===b)}); setTimeout(measure,50); }); });
+  document.querySelectorAll('[data-v]').forEach(function(b){ b.addEventListener('click', function(){ stage.dataset.v=b.dataset.v; delete stage.dataset.engaged; sc.scrollTop=0; document.querySelectorAll('[data-v]').forEach(function(x){x.setAttribute('aria-pressed', x===b)}); applyVariant(); }); });
+  document.querySelector('[data-reset]').addEventListener('click', function(){ delete stage.dataset.engaged; sc.scrollTop=0; applyVariant(); });
+  consent.addEventListener('click', function(e){ if(e.target.tagName==='BUTTON'){ stage.dataset.consent='hidden'; stage.dataset.engaged='1'; measure(); } });
+  document.querySelector('.fr details').addEventListener('toggle', measure);
+  var q=new URLSearchParams(location.search); if(q.get('v')) stage.dataset.v=q.get('v'); if(q.get('w')) stage.dataset.w=q.get('w');
+  document.querySelectorAll('[data-v]').forEach(function(x){x.setAttribute('aria-pressed', x.dataset.v===stage.dataset.v)});
+  document.querySelectorAll('[data-w]').forEach(function(x){x.setAttribute('aria-pressed', x.dataset.w===stage.dataset.w)});
+  if(q.get('open')) document.querySelector('.fr details').open=true;
+  applyVariant(); window.addEventListener('resize', measure); setTimeout(measure,600);
+})();
+</script>
+</body>
+</html>

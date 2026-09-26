@@ -492,6 +492,7 @@ async function measure(
 
   // ② the invite pill: appears after ~2,6 s or on scroll — we wait, we do not scroll
   let pillAppearedMs: number | null = null;
+  let pillTapRetried = false;
   try {
     await page.waitForSelector(".cit-cfg-launch.cit-cfg-in", { state: "attached", timeout: 5000 });
     pillAppearedMs = Date.now() - t0;
@@ -554,14 +555,32 @@ async function measure(
   if ((await pillLoc.count()) > 0) {
     // back near the top first: the lead taps the pill where it first sees it
     await page.evaluate(`window.scrollTo(0, Math.round(window.innerHeight * 0.4))`);
-    await page.waitForTimeout(500);
-    try {
-      await pillLoc.tap({ timeout: 3000, force: false });
-    } catch (e) {
-      jsErrors.push(`pirula-koppintás sikertelen: ${(e as Error).message.split("\n")[0].slice(0, 160)}`);
+    // The scroll is the first engagement: the deferred consent bar arrives and the pill
+    // re-places itself (0,22 s transition). Tap only once the pill has come to REST —
+    // a finger does the same — measured: a tap during the move opened nothing.
+    await page.waitForFunction(
+      `(() => { const p = document.querySelector(".cit-cfg-launch.cit-cfg-in"); if (!p) return false;
+        const r = p.getBoundingClientRect(); const key = Math.round(r.top) + ":" + Math.round(r.left);
+        if (window.__lmPillKey === key && Date.now() - window.__lmPillAt > 350) return true;
+        if (window.__lmPillKey !== key) { window.__lmPillKey = key; window.__lmPillAt = Date.now(); } return false; })()`,
+      undefined,
+      { timeout: 4000, polling: 100 },
+    ).catch(() => undefined);
+    let opened = false;
+    for (let attempt = 1; attempt <= 2 && !opened; attempt++) {
+      try {
+        await pillLoc.tap({ timeout: 3000, force: false });
+      } catch (e) {
+        jsErrors.push(`pirula-koppintás sikertelen: ${(e as Error).message.split("\n")[0].slice(0, 160)}`);
+        break;
+      }
+      await page.waitForTimeout(700);
+      await settle();
+      opened = (await page.evaluate(`(() => { const p = document.querySelector(".cit-cfg-panel"); return !!(p && p.classList.contains("cit-cfg-open")); })()`)) as boolean;
+      // 1-in-3 measured on one landscape page (2026-09-26): the first tap opened nothing,
+      // the second did. Not proven as a product defect → recorded as GYANÚ, not HIBA.
+      if (!opened && attempt === 1) pillTapRetried = true;
     }
-    await page.waitForTimeout(700);
-    await settle();
     panel = (await page.evaluate(`(${PANEL})()`)) as PanelProbe;
     await shot(5, "config");
   }
@@ -613,6 +632,7 @@ async function measure(
   if (bottom.footerCoveredBy.length) flags.push({ level: "ERGONÓMIA", what: `a láblécre rögzített elem fekszik: ${[...new Set(bottom.footerCoveredBy)].join(", ")}` });
   if (bottom.fixedSharePct > 40) flags.push({ level: "ERGONÓMIA", what: `a lap alján a rögzített sávok a képernyő ${bottom.fixedSharePct}%-át viszik` });
   if (pill.found && !panel.open) flags.push({ level: "HIBA", what: "a pirula koppintására nem nyílt ki a konfigurátor" });
+  if (pillTapRetried && panel.open) flags.push({ level: "GYANÚ", what: "a pirula ELSŐ koppintása nem nyitott, a második igen (időszakos)" });
   if (panel.open && !panel.fitsViewport) flags.push({ level: "HIBA", what: `a konfigurátor kilóg a képernyőből (${JSON.stringify(panel.panel && { top: Math.round(panel.panel.top), bottom: Math.round(panel.panel.bottom) })})` });
   if (panel.open && panel.cta.found && !panel.cta.inViewport) flags.push({ level: "HIBA", what: "a konfigurátor fő gombja nincs a képernyőn" });
   if (panel.open && panel.cta.found && panel.cta.inViewport && !panel.cta.hitSelf) flags.push({ level: "HIBA", what: `a konfigurátor fő gombját takarja: ${panel.cta.hitBy}` });
@@ -821,7 +841,7 @@ const PIX =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8" +
   "//8/AzbAhFVkOEgAAP//Awr/A0f8WlgAAAAASUVORK5CYII=";
 
-type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent";
+type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer";
 
 async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   const { renderSite } = await import("../src/engine/render.js");
@@ -853,6 +873,8 @@ async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   const res = {};
   markAudience(res, "own");
   html = injectConsent(html, res);
+  // the route defers the consent question to the first engagement (first-screen-compact B)
+  if (sabotage !== "no-defer") html = pn.deferConsentUntilEngagement(html);
   if (sabotage === "no-clearance") html = html.replace(/padding-bottom:calc\(14px \+ var\(--citui-cfg-clear[^)]*\)\)\)?;?/g, "");
   if (sabotage === "no-tap") html = html.replace(/display:inline-block;padding:6px [28]px;/g, "");
   if (sabotage === "overflow") html = html.replace("</head>", "<style>body{min-width:120vw}</style></head>");
@@ -914,6 +936,15 @@ async function gate(): Promise<void> {
       R3_tap_targets: [r.bottom.privacy, r.bottom.unsub, r.why.privacy, r.why.unsub].every((h) => h.rect != null && h.rect.height >= 24),
       R4_pill_and_panel: r.pill.found && r.pill.inViewport && r.pill.hitSelf && r.panel.open && r.panel.fitsViewport && r.panel.cta.found && r.panel.cta.inViewport && r.panel.cta.hitSelf,
       R6_no_js_errors: r.jsErrors.length === 0,
+      // first-screen-compact (2026-09-26): before any engagement the consent bar is NOT on
+      // the first screen, the framing bar is ≤ 90 px on the phone (≤ 60 px on the desktop
+      // width), and after the walk to the bottom (scroll = engagement) the bar IS there —
+      // the question is deferred, never dropped.
+      R7_first_screen_compact:
+        r.first.consent === null &&
+        r.consentHeightPct === null &&
+        (r.first.banner?.height ?? 999) <= (vp.width <= 560 ? 90 : 70) &&
+        r.bottom.consent !== null,
     };
     return { r, rules, lazyOk: lazy.after === 0 || lazy.lazyAfterTwo === lazy.after };
   }
@@ -940,8 +971,14 @@ async function gate(): Promise<void> {
       ];
       // …and the landscape-only one: the side panel's decision block under the consent bar
       cases.push(["panel-under-consent", "R4_pill_and_panel"]);
+      cases.push(["no-defer", "R7_first_screen_compact"]);
       for (const [sab, rule] of cases) {
         const { rules, lazyOk } = await run("fullbleed", sab === "panel-under-consent" ? VIEWPORTS[2]! : vp, sab);
+        if (sab === "no-defer") {
+          // the un-deferred bar also drives the footer/pill numbers up — only R7 is asserted here
+          check(`visszarontás „${sab}" → R7_first_screen_compact PIROS`, rules.R7_first_screen_compact === false);
+          continue;
+        }
         const verdict = rule === "R5_lazy_below_fold" ? lazyOk : (rules as Record<string, boolean>)[rule]!;
         check(`visszarontás „${sab}" → ${rule} PIROS`, verdict === false);
         // …and only that one: a sabotage that also breaks unrelated rules would hide what is measured

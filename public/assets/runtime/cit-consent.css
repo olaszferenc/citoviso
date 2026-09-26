@@ -80,7 +80,14 @@
    prózája ezt pontatlanul írta le, és a saját őröm is ebbe futott bele először.
    @container, nem @media — a sáv egy szűkebb dobozban is helyesen kell rendeződjön. */
 @container (max-width: 560px) {
-  #cit-consent .cit-consent__in { flex-direction: column; align-items: stretch; }
+  #cit-consent .cit-consent__in { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 14px; }
+  /* Tömörebb telefonon (2026-09-26, first-screen-compact): 12,5/1,4-es próza, 44 px-es
+     gombok 8 px-es belső térközzel — mérve 160 → 125 px; a szerkezet (próza fölül, két
+     fél-fél gomb egy sorban) a jóváhagyott képé marad. A gomb betűje NEM örökli a sablon
+     betűjét (`font: inherit` volt): egy szerif sablonon a „Csak a szükségeseket" két
+     sorra tört, és a sáv 190 px-re nőtt. */
+  #cit-consent .cit-consent__t { font-size: 12.5px; line-height: 1.4; }
   #cit-consent .cit-consent__b { width: 100%; }
-  #cit-consent .cit-consent__b button { flex: 1; }
+  #cit-consent .cit-consent__b button { flex: 1; min-height: 44px; padding: 0 8px; font-size: 12.5px;
+    font-family: var(--citui-font-text, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); }
 }

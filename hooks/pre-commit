@@ -733,6 +733,14 @@ if [ -f scripts/lead-mobile-check.mts ] && \
   echo "[pre-commit] lead-mobile-check (a kiküldött lap telefonon: lábléc elérhető, érintési cél, lazy, nincs túlfolyás)…"
   npx tsx scripts/lead-mobile-check.mts --gate --selftest >"$GATE_LOG" || gate_failed
 fi
+# A NYITÓKÉP A TELJES KÉPRŐL SZÓL (2026-09-26): a látás 92-t adott egy fél-fekete Places-fotóra
+# (az eget nézte, a talajt nem), és az lett 12 stílus hero-ja. A photoHealth.ts pixel-statisztikája
+# a tárolt verdiktbe von le; az őr szintetikus képeken méri, negatív kontrollal, hálózat nélkül.
+if [ -f scripts/hero-health-check.mts ] && \
+   changed_files | grep -qE '^(src/generator/photoHealth|src/generator/heroPick|src/generator/heroOverride|scripts/rerender-mock|scripts/hero-health-check)'; then
+  echo "[pre-commit] hero-health-check (a nyitókép a teljes képről szól — fél-fekete fotó nem hero)…"
+  npx tsx scripts/hero-health-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Ugyanaz a hibaosztály az OPERÁTOR oldalán: a „Megnyitások" fölött „látogatás" állt,
 # a „–" pedig egyszerre jelentett „nem mértünk"-et és „nullá"-t. Böngésző nélkül fut.
 if [ -f scripts/prospect-activity-label-check.mts ] && \

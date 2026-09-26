@@ -26,6 +26,7 @@ import {
   judgeHero,
   orderPhotosForHero,
   photoUrlKey,
+  healthAdjustCachedScores,
   readCachedScores,
   scoreHeroCandidates,
 } from "./heroPick.js";
@@ -104,7 +105,23 @@ export async function repointHero(
         "A választást elmentettük: a következő generálás már ezzel készül.",
     };
   }
+  return rerenderArtifactWithHero(row, url, actor);
+}
 
+/**
+ * A pillanatkép újrarenderelése az adott (vagy a gépi) nyitóképpel — az `offered`-őr
+ * NÉLKÜL. A `repointHero` hívja az őr után; a dev-eszköz (`scripts/rerender-mock.mts
+ * --rehero`) közvetlenül, miután maga bizonyította, hogy a mock linkje SOSEM ment ki
+ * (egy létrehozott, de el nem küldött követett link nem „megajánlás” — §I a KIKÜLDÖTT
+ * lapot fagyasztja). Tenant-oldalon nem fut.
+ */
+export async function rerenderArtifactWithHero(
+  row: { id: string; lead_id: string; path: string | null; inputs: unknown },
+  url: string | null,
+  actor: string,
+): Promise<RepointResult> {
+  if (!row.path) return { ok: false, message: "Ehhez a mockhoz nincs fájl — generálj újat." };
+  const artifactId = row.id;
   const inputs = (row.inputs ?? {}) as Record<string, unknown>;
   const recipe = inputs.recipe as Recipe | undefined;
   const siteData = inputs.siteData as SiteData | undefined;
@@ -121,6 +138,9 @@ export async function repointHero(
   }
 
   // A cache-elt ítéletek (ingyen) — kellenek az új hero verdiktjéhez, ÉS a visszaálláshoz.
+  // Előtte a KÉPMINŐSÉG utólagos levonása a régi sorokon (photoHealth.ts): a fél-fekete
+  // fotó 92-je csak így nem ugrik vissza a lap tetejére egy visszaálláskor.
+  await healthAdjustCachedScores(photos.map((p) => p.url)).catch(() => undefined);
   const scores = await scoreHeroCandidates(photos, siteData.name ?? "").catch(() => new Map());
   // ⚠️ MÉRT HIBA (2026-09-09, az őr fogta meg): a visszavonás nem elég a jelölés törléséhez.
   // Az előző választás a MENTETT fotó-sorrendet is átrendezte (a mock pillanatkép, a

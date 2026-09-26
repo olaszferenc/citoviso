@@ -148,6 +148,8 @@ import {
   injectTrackingNotice,
   lazyLoadBelowFold,
   containHorizontalOverflow,
+  unsubscribeConfirmBody,
+  deferConsentUntilEngagement,
 } from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import {
@@ -2446,9 +2448,22 @@ async function handle(
   const pPath = normalizeProspectPath(path);
 
   const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/.exec(pPath);
-  if ((method === "GET" || method === "POST") && unsubMatch) {
+  if (method === "GET" && unsubMatch) {
+    // ⛔ A GET NEM IRATKOZTAT LE (2026-09-26). Levél-előnézők és link-ellenőrzők
+    // (SafeLinks, iOS preview, vírusirtó) GET-tel járják a levél minden linkjét — egy
+    // ilyen gépi látogatás egy sosem olvasott levél címzettjét némította el. A GET egy
+    // megerősítő lap egyetlen gombbal; a tett a POST (lent).
+    return send(res, 200, layout("Leiratkozás", unsubscribeConfirmBody(unsubMatch[1]), { chrome: false }));
+  }
+  if (method === "POST" && unsubMatch) {
+    // RFC 8058 one-click (List-Unsubscribe-Post) ÉS a megerősítő lap gombja — mindkettő
+    // POST; a levelezőprogram szöveget vár és 2xx-et, az ember lapot.
+    const body = await readBody(req);
     await unsubscribeProspect(unsubMatch[1]);
-    if (method === "POST") return send(res, 200, "OK", "text/plain; charset=utf-8");
+    const oneClick =
+      body.get("List-Unsubscribe") === "One-Click" ||
+      !/text\/html/i.test(String(req.headers.accept ?? ""));
+    if (oneClick) return send(res, 200, "OK", "text/plain; charset=utf-8");
     return send(res, 200, unsubscribedPage());
   }
   // POST /p/:token/event — engagement/configurator event beacon.
@@ -2606,12 +2621,17 @@ async function handle(
         // 2026-09-14): on two templates a full-screen intro held the first screen
         // for ~5 s, the framing bar behind it. Both branches, because both are the
         // lead's first screen.
-        tracked
-          ? injectTrackingNotice(
-              injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
-              pMatch[1],
-            )
-          : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page)), pMatch[1]),
+        // …and the consent question waits for the first scroll/tap (first-screen-compact,
+        // 2026-09-26): the lead sees the plan before the cookie bar, and nothing tracks
+        // before the answer either way.
+        deferConsentUntilEngagement(
+          tracked
+            ? injectTrackingNotice(
+                injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
+                pMatch[1],
+              )
+            : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page)), pMatch[1]),
+        ),
       );
     } catch {
       // ⛔ A cold-message recipient is standing here, and since ADR-0112 this page

@@ -58,6 +58,53 @@ sorolja: keret-sáv + süti-sáv + Foglalás-sáv = az első képernyő 40–49 
 → `assets/design-refs/_drafts/lead-mobile/WOW-390.md` (a session alatt), összegezve a
 LELETEK.md-ben.
 
+
+## 2. kör — tulajdonosi mandátum: a talált tételek javítása saját belátás szerint (2026-09-26, du.)
+
+*„Javaslat szerint hajtsák végre a saját belátásuk szerint legjobb ergonómiai szempontból a talált
+tételek javítását a koordinációd mellett, majd utólag ellenőrzök."* — a §2b „megállsz és vársz" erre a
+körre feloldva; minden más szabály él; minden javítás a MOTORBAN (mock-fájl nem szerkesztve).
+
+### ① Első képernyő: tömör keret + halasztott süti + sarok-pirula — **B változat** (kontraktus:
+`assets/design-refs/prospect-page/first-screen-compact/`, a framing README kiegészítve)
+- Két működő mock (`plan.html`, A/B kapcsoló, méret-váltó, valós px-mérő): **A** 32 % / 17 % (390 / 1280)
+  nem-terv, **B** 17 % / 8 % — ma 40–49 %. B választva: a lead először a tervet lássa, a süti-kérdés az
+  első görgetésnél/érintésnél jöjjön (követés addig sincs; a Pixel csak „Elfogadom" után — `consent-check` zöld).
+- Motor: `injectTrackingBanner` tömör markup + saját `<style>` (telefonon az „ingyen…" tagmondat a
+  részletekbe, 77 px; asztalon egy sor; ▸/▾ saját jelölő, mert az `inline-block` a natívat eltünteti);
+  `deferConsentUntilEngagement()` a követett és leiratkozott ágon; `cit-consent.js`: `data-cit-consent-defer`
+  → görgetés (> 40 px) / a LAP érintése / billentyű — ⛔ a `.cit-cfg*` érintése NEM (a pirula koppintása
+  hozta volna be a sávot, a pirula az ujj alól csúszott — 3 mp-es instabil célpont, a konfigurátor nem
+  nyílt); `cit-consent.css` ≤ 560: 12,5/1,4, 44 px-es gombok, a gomb betűje nem a sabloné (160 → 125 px);
+  `cit-configurator.css` ≤ 560: pirula jobbra, egy sor, 44 px; `placeLaunch`: a CSS-alap a süti-sáv NÉLKÜL
+  mérve + a sáv élő magassága minden alkalommal (a később érkező sáv a pirulára feküdt — mérve), a sáv
+  jöttét/mentét MutationObserver figyeli; a lábléc-térköz az összes alsó fixed sáv legmagasabb élét kerüli
+  (a sablon Foglalás-sávja 360-on magasabb a gombjánál).
+- Őr: `lead-mobile-check` R7 (görgetés előtt nincs süti-sáv, sáv ≤ 90/70 px, a lap alján a sáv OTT van)
+  + piros kontroll (halasztó attribútum kivágva). `prospect-framing-check`, `configurator-float-check`,
+  `lead-page-surface-check`, `consent-check` zöld.
+
+### ② Leiratkozás: GET kérdez, POST cselekszik
+- `/p/<t>/unsubscribe` GET → `unsubscribeConfirmBody()` (prospectNotice, `layout` chrome nélkül): egy
+  „Leiratkozom" gomb (POST ugyanoda) + „Mégsem — vissza a tervhez"; POST → `unsubscribeProspect`; a
+  válasz one-clicknél (`List-Unsubscribe=One-Click` a testben vagy nem-HTML Accept) szöveges OK, embernek
+  a „Leiratkozott" lap. Az RFC 8058 List-Unsubscribe-Post (POST) változatlanul egykattintásos.
+- Őr: `optout-carrier-check` 0. blokk — a GET-ág forrása nem hív `unsubscribeProspect`-et és a megerősítő
+  lapot adja; a POST-ág hív; az űrlap POST ugyanarra az útra, „Leiratkozom" gomb, visszaút. KB
+  (console-outreach-draft) egy bekezdéssel.
+
+### ③ Hero-fotó a TELJES képen (generátor-réteg, a mandátummal)
+- Mérve: a Laguna Places-fotója (92 pont, „tiszta égbolt") — az ALSÓ fél 85 % fekete (L<40), átlag-luma 23:
+  posterizált sötétkék folt; a modell az eget ítélte. `src/generator/photoHealth.ts` (sharp, 320 px-en):
+  fél-fekete (≥ 60 % sötét ÉS átlag < 45) → −45; egészében sötét → −15. A levonás a TÁROLT verdiktbe kerül
+  (`scoreHeroCandidates` a már letöltött bájtokból; `healthAdjustCachedScores` a régi sorokat javítja,
+  idempotens `[képminőség]` jellel) → minden olvasó (generálás, élesítés, szerkesztő, felülbírálat) ugyanazt
+  látja, a sorrend nem billen vissza. A Laguna-hero 92 → 47 (kurátor-küszöb alatt), az új hero a 2. Places-kép.
+- `scripts/rerender-mock.mts --rehero`: cache-javítás + `rerenderArtifactWithHero` (a `repointHero` belseje,
+  `offered`-őr nélkül — de CSAK sosem kiküldött linkű mockon; a kezelői pin nyer). Laguna 19/19 CSERÉLVE,
+  Tihany 19/19 változatlan (nincs levonás). Őr: `scripts/hero-health-check.mts` (szintetikus képek, 7 állítás,
+  negatív kontroll), pre-commitban.
+
 ## Csapdák, amikbe belefutottam (a következő szálnak)
 
 - ⛔ **A `/p/<token>/unsubscribe` GET-re is leiratkoztat** (egykattintásos levél-link). A mérő

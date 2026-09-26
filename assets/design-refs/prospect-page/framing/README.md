@@ -96,3 +96,20 @@ lefutása után:
 - **álpozitív kontroll:** a követett sáv nem állíthatja azt, amit a leiratkozotté, és fordítva;
 - **piros önteszt** minden ágra (a sáv kivágva · a `<details>` `<div>`-re cserélve · a sáv a
   lap ALJÁRA téve · a linkek alap-kékkel).
+
+---
+
+## Kiegészítés — 2026-09-26: tömör első képernyő telefonon (B változat)
+
+A fenti 1–10. pont VÁLTOZATLANUL köt. Ami rájuk épült (tulajdonosi mandátum, Elek FK-009 után —
+a részletek és a képek: `../first-screen-compact/README.md`):
+
+- a sáv telefonon (≤ 560 px) **legfeljebb 90 px** (mérve 77): a KITŐL-mondat rövidebb — „Készítette:
+  X. Ez még nem élő oldal." —, az „ingyen, az Ön nyilvánosan elérhető adataiból" tagmondat a
+  „Miért kaptam?" részleteibe kerül (ott ugyanez áll); asztalon **egy sor**;
+- a „Miért kaptam?" saját ▸/▾ jelölőt visel (az érintési célhoz kellő `inline-block` a natív
+  jelölőt eltünteti), érintési célja ≥ 24 px;
+- a süti-kérdés a követett és a leiratkozott ágon az első görgetésig/érintésig vár
+  (`data-cit-consent-defer`) — a 9. pont („a vásárlási belépőt nem takarja") ezért kapott mérést a
+  sáv KÉSŐBBI megjelenésére is: a pirula alapja a sáv nélkül mérődik, a sáv élő magasságát
+  hozzáadja.

@@ -28,6 +28,7 @@ import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { toImageBlock } from "./images.js";
+import { HEALTH_MARK, applyHealth, measurePhotoHealth, measurePhotoHealthFromBuffer } from "./photoHealth.js";
 
 /**
  * Olcsó, gyors modell: ez OSZTÁLYOZÁS ("mit ábrázol"), nem ténykinyerés — a mock szövegét
@@ -437,16 +438,55 @@ export async function scoreHeroCandidates(
     // false, NEM „igaz, mert óvatosak vagyunk": egy téves true elvenné a fizető ügyfél
     // valódi szállás-fotóját. A kétes esetet a modell a `reason` „VÍZJEL?" előtagjával
     // jelzi, és az a kurátor csempéjén látszik.
+    // KÉPMINŐSÉG a teljes képen (photoHealth.ts): a látás a tárgyat ítéli, ez a pixeleket.
+    // A már letöltött bájtokból mérünk (nincs második letöltés), és a levonás a TÁROLT
+    // pontszámba kerül, hogy minden olvasó — élesítés, szerkesztő, újrarendezés — ugyanazt
+    // lássa. Mérve 2026-09-26: egy fél-fekete Places-fotó 92 ponttal volt 12 stílus hero-ja.
+    const health = await measurePhotoHealthFromBuffer(
+      Buffer.from((target.block as { source: { data: string } }).source.data, "base64"),
+    ).catch(() => null);
     const verdict: HeroScore = {
       subject,
-      score,
-      reason: (row.reason ?? "").trim(),
+      score: NEVER_HERO.has(subject) ? score : applyHealth(score, health),
+      reason: [(row.reason ?? "").trim(), health?.reason ?? ""].filter(Boolean).join(" · "),
       watermarked: row.watermarked === true,
     };
     const key = photoUrlKey(target.photo.url);
     scores.set(key, verdict);
     await writeCache(key, verdict).catch(() => {
       /* a cache elvesztése csak pénz, nem hiba — a verdikt már megvan */
+    });
+  }
+  return scores;
+}
+
+/**
+ * A MÁR TÁROLT verdiktek utólagos képminőség-levonása (photoHealth.ts).
+ *
+ * A látás-cache sorai a 2026-09-26 előtti pontozásból csak a TÁRGYAT tudják; a fél-fekete
+ * Laguna-fotó 92-vel ül bennük. Újrapontozni (AI) nem kell hozzá: a pixel-statisztika ingyen
+ * van. Idempotens: csak azt a sort méri, amelynek indoklásában még nincs ott a jel, és csak
+ * akkor ír, ha van levonás. A hiányzó/letölthetetlen kép érintetlen marad (nem lelet).
+ * A friss pontozás (scoreHeroCandidates) már levonva ír, tehát oda ez nem nyúl.
+ */
+export async function healthAdjustCachedScores(urls: readonly string[]): Promise<HeroScores> {
+  const keys = [...new Set(urls.map(photoUrlKey))];
+  const scores = await readCache(keys).catch(() => new Map<string, HeroScore>());
+  const byKey = new Map(urls.map((u) => [photoUrlKey(u), u] as const));
+  for (const [key, v] of scores) {
+    if (v.reason.includes(HEALTH_MARK) || NEVER_HERO.has(v.subject) || v.score === 0) continue;
+    const url = byKey.get(key);
+    if (!url) continue;
+    const health = await measurePhotoHealth(url);
+    if (!health || !health.penalty) continue;
+    const adjusted: HeroScore = {
+      ...v,
+      score: applyHealth(v.score, health),
+      reason: [v.reason, health.reason ?? ""].filter(Boolean).join(" · "),
+    };
+    scores.set(key, adjusted);
+    await writeCache(key, adjusted).catch(() => {
+      /* a cache elvesztése csak pénz/idő, a verdikt már megvan */
     });
   }
   return scores;

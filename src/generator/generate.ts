@@ -37,6 +37,7 @@ import { applyHeroPin, getHeroPin } from "./heroOverride.js";
 import {
   dropNeverShown,
   judgeHero,
+  healthAdjustCachedScores,
   orderPhotosForHero,
   scoreHeroCandidates,
   type HeroScores,
@@ -383,6 +384,8 @@ export async function resolveGatedPhotos(
     }
     photos = live.kept;
   }
+  // A régi (képminőség előtti) cache-sorok utólagos levonása — ingyen, AI nélkül.
+  await healthAdjustCachedScores(photos.map((p) => p.url)).catch(() => undefined);
   const heroScores = await scoreHeroCandidates(photos, lead.name).catch((e) => {
     // A pontozás bukása nem ölhet meg egy generálást: a nyers sorrend is valódi válasz.
     console.warn(`  ⚠️ nyitókép-pontozás kihagyva: ${(e as Error).message}`);

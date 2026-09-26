@@ -85,6 +85,42 @@ const TAP_LINK = "display:inline-block;padding:6px 2px;text-decoration:underline
  */
 const FOOTER_CLEARANCE = "padding-bottom:calc(14px + var(--citui-cfg-clear, var(--citui-consent-h, 0px)))";
 
+/**
+ * The framing bar's own rules — a <style> that travels with the bar, because the mock
+ * never loads citui.css. @media is right here: this is a real page in a real viewport.
+ * The expander keeps a visible ▸/▾ marker (the native one is dropped by
+ * `display:inline-block`, which the tap-target padding needs).
+ */
+const FRAMING_CSS =
+  `<style data-cit-framing-css>` +
+  `.cit-fr{padding:8px 14px}` +
+  `.cit-fr-in{max-width:78ch;margin:0 auto}` +
+  `.cit-fr strong{display:block}` +
+  `.cit-fr-det{display:inline}` +
+  `.cit-fr-det summary{display:inline-block;list-style:none;padding:4px 6px;margin-left:2px;font-size:12.5px}` +
+  `.cit-fr-det summary::-webkit-details-marker{display:none}` +
+  `.cit-fr-det summary::before{content:"\\25B8\\00a0"}` +
+  `.cit-fr-det[open] summary::before{content:"\\25BE\\00a0"}` +
+  `.cit-fr-body{display:block;margin:4px auto 2px;font-size:12.5px;line-height:1.55}` +
+  `@media (max-width:560px){.cit-fr-long{display:none}}` +
+  `@media (min-width:561px){.cit-fr{padding:9px 18px;font-size:13px}.cit-fr-in{max-width:none}` +
+  `.cit-fr strong{display:inline;margin-right:6px}}` +
+  `</style>`;
+
+/**
+ * THE CONSENT QUESTION WAITS FOR THE FIRST ENGAGEMENT on a page we send out
+ * (2026-09-26, owner's mandate — plan B of first-screen-compact). The bar took 13–24 %
+ * of the phone's first screen before the lead had seen anything. The runtime
+ * (cit-consent.js) reads this attribute and renders the bar on the first scroll,
+ * tap or key — never later than the first interaction, and nothing tracks before it:
+ * the Pixel still loads only after „Elfogadom". Only the tracked/opted-out branches of
+ * /p/<token> set it; every other page asks at once, as before.
+ */
+export function deferConsentUntilEngagement(html: string): string {
+  if (/<html[^>]*\sdata-cit-consent-defer/i.test(html)) return html;
+  return /<html\b/i.test(html) ? html.replace(/<html\b/i, "<html data-cit-consent-defer") : html;
+}
+
 /** The way out, and the full information — same markup wherever it appears. */
 function legalLinks(token: string): string {
   return (
@@ -144,23 +180,30 @@ export function injectTrackingBanner(html: string, token: string): string {
   // in front of an unknown company name forces the "a(z)" crutch, and the ADR-0101
   // letter round already ruled that the fix is to keep the NAME OUT of the
   // inflected clause, not to guess a better article.
+  // COMPACT ON THE PHONE (2026-09-26, owner's mandate after Elek FK-009): the bar was
+  // 107–127 px of a 844 px first screen (13–15 %), three sentences plus the expander on
+  // its own line. It stays the FIRST thing on the page with the contract's three
+  // statements — WHAT (bold), WHO (the name), WHY (one tap) — but at ≤560 px the
+  // "ingyen, az Ön nyilvánosan elérhető adataiból" clause moves into the expander
+  // (its first sentence says the same), the type is 12.5/1.4 and the padding 8 px:
+  // 77 px measured. On the desktop it is ONE line. Frozen plan:
+  // assets/design-refs/prospect-page/first-screen-compact/.
+  const dot = advertiser.endsWith(".") ? "" : ".";
   const made = advertiser
-    ? `Készítette: ${escapeHtml(advertiser)} — ingyen, az Ön nyilvánosan elérhető adataiból. ` +
-      `Ez még nem élő oldal.`
+    ? `Készítette: ${escapeHtml(advertiser)}${dot}<span class="cit-fr-long"> — ingyen, az Ön nyilvánosan ` +
+      `elérhető adataiból.</span> Ez még nem élő oldal.`
     : `Az Ön nyilvánosan elérhető adataiból készült, ingyen. Ez még nem élő oldal.`;
   const banner =
-    `<div data-cit-framing="tracked" style="padding:11px 18px;text-align:center;` +
-    `font:400 13px/1.55 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
-    `<div style="max-width:78ch;margin:0 auto">` +
+    FRAMING_CSS +
+    `<div data-cit-framing="tracked" class="cit-fr" style="text-align:center;` +
+    `font:400 12.5px/1.4 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
+    `<div class="cit-fr-in">` +
     `<strong style="color:#fff;font-weight:600">Ez egy honlap-terv az Ön szállásáról.</strong> ` +
     `${made}` +
-    `<details style="margin-top:5px">` +
-    // padding for a 24 px+ tap target; NOT display:inline-block — that would drop the
-    // native ▶ disclosure marker (the visible "this opens" affordance) in Chromium.
-    `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline;font-size:12.5px;` +
-    `padding:6px 8px">` +
+    `<details class="cit-fr-det">` +
+    `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline">` +
     `Miért kaptam?</summary>` +
-    `<div style="margin:8px auto 2px;font-size:12.5px;line-height:1.65">` +
+    `<div class="cit-fr-body">` +
     `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token)}</div>` +
     `</details></div></div>`;
   return prependToBody(html, banner);
@@ -395,6 +438,38 @@ export function containHorizontalOverflow(html: string): string {
   if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${style}</head>`);
   if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${style}`);
   return style + html;
+}
+
+/**
+ * THE OPT-OUT ASKS ONCE BEFORE IT ACTS (2026-09-26).
+ *
+ * The unsubscribe link used to opt the prospect out on a plain GET — convenient for the
+ * person clicking it, and exactly what a mail scanner does when it "visits" every link
+ * in a letter (Outlook SafeLinks, iOS link previews, corporate URL filters, Elek's own
+ * measuring run). One GET by a machine, and a lead who never read the letter was gone
+ * for good. So the GET renders THIS: a page that names what the button does and does
+ * nothing until the button is pressed. The actual opt-out is the POST — the same POST
+ * that RFC 8058's List-Unsubscribe-Post already sends from the mail client's own
+ * button, which stays one-click.
+ *
+ * Pure markup so the carrier guard can measure it without a server; the console wraps it
+ * in its chrome-less layout. Colours: citui tokens (this page IS a console page, it
+ * loads citui.css — unlike the mock underneath the framing bar).
+ */
+export function unsubscribeConfirmBody(token: string): string {
+  const action = `/p/${encodeURIComponent(token)}/unsubscribe`;
+  return (
+    `<div class="panel" data-cit-unsub-confirm style="max-width:480px;margin:48px auto;text-align:center">` +
+    `<h2>Leiratkozás</h2>` +
+    `<p class="mut">Ha leiratkozik, ezzel az ajánlattal nem keressük többé, és a megtekintési adatok ` +
+    `rögzítését leállítjuk. A honlap-tervet ezután is megnézheti.</p>` +
+    `<form method="post" action="${action}" style="margin:18px 0 0">` +
+    `<button type="submit" class="citui-btn citui-btn--primary" style="min-height:44px;padding:0 22px">Leiratkozom</button>` +
+    `</form>` +
+    `<p class="mut small" style="margin:14px 0 0"><a href="/p/${encodeURIComponent(token)}" ` +
+    `style="display:inline-block;padding:6px 4px">Mégsem — vissza a tervhez</a></p>` +
+    `</div>`
+  );
 }
 
 /** Put a block at the very END of the page (the opt-out lives at the bottom). */
