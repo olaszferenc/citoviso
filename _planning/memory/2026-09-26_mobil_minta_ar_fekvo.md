@@ -1,7 +1,7 @@
 # 2026-09-26 — Minta-ár a mock foglalás-widgetjében + a két fekvő-tartású lelet a motorban
 
 **Brief:** `~/rc-briefs/mobil-minta-ar-fekvo-brief.md` (szülő: `cite8fb512d`). Tulaj szó szerint: „Javítsd a fekvőket
-és legyen minta ár" — a saját ergonómiai belátás szerinti építés + utólagos ítélet mandátuma áll. **ADR-XXXX**
+és legyen minta ár" — a saját ergonómiai belátás szerinti építés + utólagos ítélet mandátuma áll. **ADR-0239**
 (`_planning/decisions/XXXX-minta-ar-a-mock-foglalas-widgetben-es-fekvo-focim.md`). Nem élesítve (a nagy deployjal megy).
 
 ## Mi épült (mind a MOTORBAN — a mock-fájlokat kézzel nem érintettem)

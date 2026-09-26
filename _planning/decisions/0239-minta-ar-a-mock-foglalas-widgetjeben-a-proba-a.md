@@ -1,4 +1,4 @@
-## ADR-XXXX — Minta-ár a mock foglalás-widgetjében (a próba a FOGLALÁS-utat játssza), és a főcím fekvőn sem ül rögzített réteg alatt
+## ADR-0239 — Minta-ár a mock foglalás-widgetjében (a próba a FOGLALÁS-utat játssza), és a főcím fekvőn sem ül rögzített réteg alatt
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (tulajdonosi mandátum: „Javítsd a fekvőket és legyen minta ár" — a
 saját ergonómiai belátás szerint, utólagos ítélettel) · **Kiegészíti:** ADR-0061 ② (minta-adat jelölt, tény nem
