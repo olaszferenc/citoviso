@@ -42,10 +42,15 @@ szempont; minden javítás a MOTORBAN (a `mock-*.html` kimenet). Őr: `scripts/g
 negatív kontroll + kapu-mód 30 sablon/archetípus 390 px-en, pre-commit). Elek: `FK-010` (`felület: fájl`,
 `nézet: telefon`), mátrix `elek/bin/run-guest-mobile.mts` → `elek/runs/FK-010-matrix-2026-09-26T08-25-52/` (28/38
 tiszta az EREDETI mockokon; aurora X a fejléc alatt, brutalism 515 px, fullbleed halott galéria — mind javítva).
-**NYITVA (tulaj):** ① §2b terv-kapu a foglalás-widget telefonos elrendezésére — `assets/design-refs/_drafts/guest-mobile-booking/`
-A (üzenet a mezőnél + ugrás) · B (két lépés) · C (ragadó összegző sáv); ② arch-frames/wordmark-grow: nincs CTA az első
-képernyőn (tervezői döntés); ③ a Laguna hero-fotó posterizált alsó fele (fotó-minőség kapu a hero-pontozóban, külön szál);
-④ a mockon „Árajánlatot kérek” gomb vs. „amikor a vendége foglal” nyugta (ADR-0061 minta-őszinteség).
+**Tulajdonosi mandátum (2026-09-26 du., „saját belátás szerint, utólag ellenőrzök”) — MEGÉPÍTVE a motorban, landolva:**
+① **B · két lépés** a foglalás-widgetben telefonon (naptár + állapot-mondat a dátum-sáv alatt + ár + „Tovább” → összegző sáv +
+mezők + küldő gomb; asztalon változatlan) — kontraktus `assets/design-refs/tenant-site/booking-mobile-two-step/` (README + plan.html
+a valódi runtime-on + shots), mérve: hiba 20 px-re a dátum-sávtól (volt ~750); ② arch-frames/wordmark-grow: pirula + menü az első
+képernyőn, fekvőn egy sor; ③ MINTA-felugró leírással + generikus felszereltséggel („MINTA · Apartman”, kemény tény nélkül);
+④ editorial tapadó menü egy görgethető sor. Őr: ⑥két-lépés + negatív kontroll; a widget 4 fogyasztó-kapuja és az FK-010 a
+„Tovább”-on át ér a mezőkhöz; FK-010 4 mockon 0 fail. **A TULAJ UTÓLAG ÍTÉL a kész felületen.**
+**Nyitva (nem az enyém):** a Laguna hero-fotó posterizált alsó fele → LEAD-szál (heroPick); a mockon „Árajánlatot kérek” gomb
+vs. „amikor a vendége foglal” nyugta (ADR-0061 minta-őszinteség) — tulajdonosi döntés.
 **Utóellenőrzés (szülő session, 2026-09-26):** a masthead „Foglalás” 43 px-et mért brutalismon (13+sor-magasság+13 —
 a sor-magasság sablononként 17–19 px) → `min-height:44px` + inline-flex, MÉRVE 44 mind a 14 masthead-es sablonon
 (a másik 5-nek saját navja van); az őr a `.cit-mast-hot` < 44-et HIBÁ-nak veszi.
