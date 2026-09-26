@@ -1,4 +1,4 @@
-## ADR-XXXX — A vendég telefonon: érintési-cél, rétegzés és tisztás-doktrína a mock-motorban (FK-010)
+## ADR-0235 — A vendég telefonon: érintési-cél, rétegzés és tisztás-doktrína a mock-motorban (FK-010)
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (lokál, nem élesítve) · **Szál:** „Mobil · Elek a VENDÉG szemével”
 
