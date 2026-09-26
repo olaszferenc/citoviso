@@ -56,6 +56,7 @@ async function buildHtml(): Promise<string> {
 
 const VIEWPORTS = [
   { tag: "telefon 390×844", size: { width: 390, height: 844 }, sheet: true, short: false },
+  { tag: "kis telefon 360×780", size: { width: 360, height: 780 }, sheet: true, short: false },
   { tag: "fekvő telefon 844×390", size: { width: 844, height: 390 }, sheet: false, short: true },
   { tag: "asztali 1280×800", size: { width: 1280, height: 800 }, sheet: false, short: false },
 ] as const;
@@ -208,6 +209,34 @@ async function audit(browser: Browser, file: string): Promise<string[]> {
     await page.waitForTimeout(200);
     p = (await page.evaluate(PROBE)) as Probe;
     f(p.body && !p.permat && !p.s2, "a „Vissza a csomagokhoz” után nem a lista-lépés jön vissza");
+
+    // ── the pay step: nothing of step 2 may stay behind and eat the form ──
+    // Measured regression (B thread, 2026-09-26): the §A declaration's inline
+    // `display:flex` beat the pay step's hide rule, and at 360×780 the billing form
+    // was left a 24 px window under the consents — the buyer could not fill it in.
+    await page.evaluate(`document.querySelector(".cit-cfg-next").click()`);
+    await page.waitForTimeout(200);
+    await page.evaluate(
+      `(function(){var r=document.querySelector(".cit-cfg-rights");r.checked=true;r.dispatchEvent(new Event("change",{bubbles:true}));document.querySelector(".cit-cfg-submit").click();})()`,
+    );
+    await page.waitForTimeout(400);
+    const pay = (await page.evaluate(`(function(){
+      var d = document.querySelector(".cit-cfg-s2decl"), t = document.querySelector(".cit-cfg-s2top");
+      var s = document.querySelector(".cit-cfg-co-scroll"), a = document.querySelector(".cit-cfg-co-act");
+      var sr = s.getBoundingClientRect(), ar = a.getBoundingClientRect();
+      return { decl: !!d && d.getBoundingClientRect().height > 0, top: !!t && t.getBoundingClientRect().height > 0,
+        formH: Math.round(s.clientHeight), overlap: Math.round(sr.bottom - ar.top) };
+    })()`)) as { decl: boolean; top: boolean; formH: number; overlap: number };
+    f(!pay.decl, "a fizetés-lapon is ott maradt a §A nyilatkozat (elveszi az űrlap helyét)");
+    f(!pay.top, "a fizetés-lapon is ott maradt a 2. lépés teteje (vissza / csomag / Havi-Éves kártyák)");
+    if (vp.sheet) {
+      // Portrait phones only: on desktop the two columns sit side by side (a vertical
+      // "overlap" means nothing), and sideways the 24 px window predates this contract
+      // (measured identical before ADR-0240) — that one is the pay step's own open item.
+      f(pay.overlap <= 0, `a pipa+Fizetek blokk rálóg a számlázási űrlapra (${pay.overlap} px)`);
+      // before ADR-0240 the form window was 127 px at 360×780 and 240 px at 390×844
+      f(pay.formH >= 110, `a számlázási űrlap ablaka csak ${pay.formH} px (min. 110)`);
+    }
     f(errors.length === 0, `JS-hiba: ${errors.slice(0, 2).join(" | ")}`);
     await page.close();
   }
@@ -230,6 +259,11 @@ const MUTATIONS: { name: string; from: RegExp; to: string }[] = [
     name: "az Éves kártya nem kap több helyet (az „áráért” sor kettétörik)",
     from: /\.cit-cfg-permat \.cit-cfg-popt--deal \{ flex-grow: 1\.2; \}/,
     to: "",
+  },
+  {
+    name: "a §A nyilatkozat inline display-t kap (a fizetés-lapon is ott marad)",
+    from: /'<label class="cit-cfg-note cit-cfg-s2decl">'/,
+    to: `'<label class="cit-cfg-note cit-cfg-s2decl" style="display:flex">'`,
   },
   {
     name: "a futó összeg nem követi a kártyát",

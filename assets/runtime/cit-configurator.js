@@ -1682,7 +1682,11 @@
       // Contract ⑦: the STANDING obligation, said before the money moves — not
       // only in the confirmation afterwards.
       '<p class="cit-cfg-nextcharge"></p>' +
-      '<label class="cit-cfg-note cit-cfg-s2decl" style="display:flex;gap:8px;align-items:flex-start;text-align:left;cursor:pointer">' +
+      // ⛔ No inline `display` here: an inline style beats the stylesheet, so the pay
+      // step's `.cit-cfg-panel--billing .cit-cfg-s2decl {display:none}` lost, and the
+      // five-line declaration stayed on the pay screen — measured at 360×780 it left
+      // the billing form a 24 px window under the consents (B thread, 2026-09-26).
+      '<label class="cit-cfg-note cit-cfg-s2decl">' +
       '<input class="cit-cfg-rights" type="checkbox" style="margin-top:3px;flex:0 0 auto">' +
       // §A: the label is the EXACT server-stamped wording (single source via manifest).
       '<span class="cit-cfg-rights-text"></span></label>' +

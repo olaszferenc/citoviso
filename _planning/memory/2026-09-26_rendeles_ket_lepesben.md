@@ -52,3 +52,14 @@ kártyában. A kód egy fölösleges „hónap”-ot tett a `period-badge` ⑤ s
 váltón (`@container ≥390px`) az Éves kártya `flex-grow: 1.2`-t kap (212 px). Az `order-two-step-check` méri
 (különböző sor-tetők száma; a `getClientRects().length` beágyazott spannál egy soron belül is 2-t ad), egy
 negyedik önteszt-mutációval.
+
+## Regresszió-javítás (B szál mérte): a §A nyilatkozat a FIZETÉS-LAPON is ott maradt
+A nyilatkozat `label`-jén inline `display:flex` volt (a régi kódból hozva). Az inline stílus veri a
+`.cit-cfg-panel--billing .cit-cfg-s2decl {display:none}` szabályt, ezért a fizetés-lap tetején bent
+maradt az öt soros szöveg. Mérve (mobil-emuláció, fizetés-lap, `.cit-cfg-co-scroll` ablaka):
+360×780: 24 px és rálógó pipa-blokk; 390×844: 102 px; 412×915: 192 px. ADR-0240 előtt ugyanez
+127 / 240 / 330 px volt, a javítás után 131 / 244 / 334 px. Javítás: az elrendezés CSS-osztályba került.
+Őr: az `order-two-step-check` a fizetés-lapig megy, új nézet 360×780 (s2decl/s2top rejtve, álló
+telefonon nincs átfedés, űrlap-ablak ≥ 110 px); ötödik önteszt-mutáció (inline display vissza) PIROS.
+⚠️ Fekvő 844×390-en a fizetés-lap űrlap-ablaka 24 px és a pipa-blokk 24 px-et rálóg — ez az ADR-0240
+ELŐTT is pontosan így volt mérve (nem ez hozta), a fizetés-lap / B szál nyitott tétele.
