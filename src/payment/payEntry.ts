@@ -21,10 +21,12 @@
 
 import { db } from "../db/client.js";
 import { handleWebhook, requestPayment } from "./service.js";
+import { ownedSiteForLead, type OwnedSite } from "../conversion/owned.js";
 
 export type PayEntryDecision =
   | { readonly kind: "redirect"; readonly url: string; readonly reissued: boolean }
   | { readonly kind: "unknown" }
+  | { readonly kind: "owned"; readonly owned: OwnedSite }
   | { readonly kind: "unavailable"; readonly orderIntentId: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,6 +39,7 @@ export async function resolvePayEntry(paymentId: string): Promise<PayEntryDecisi
     .where("id", "=", paymentId)
     .executeTakeFirst();
   if (!row?.orderIntentId) return { kind: "unknown" };
+  const orderIntentId = row.orderIntentId;
 
   // Refresh from the gateway first: our stored 'pending' may be long expired there.
   // EVERY pending payment of the order, not just this one — requestPayment's
@@ -46,7 +49,7 @@ export async function resolvePayEntry(paymentId: string): Promise<PayEntryDecisi
   const pending = await db
     .selectFrom("payment")
     .select("gateway_ref as ref")
-    .where("order_intent_id", "=", row.orderIntentId)
+    .where("order_intent_id", "=", orderIntentId)
     .where("status", "=", "pending")
     .execute();
   for (const p of pending) {
@@ -61,7 +64,7 @@ export async function resolvePayEntry(paymentId: string): Promise<PayEntryDecisi
   const pays = await db
     .selectFrom("payment")
     .select(["id", "status", "gateway_ref as ref", "pay_url as payUrl"])
-    .where("order_intent_id", "=", row.orderIntentId)
+    .where("order_intent_id", "=", orderIntentId)
     .orderBy("created_at", "desc")
     .execute();
 
@@ -73,15 +76,31 @@ export async function resolvePayEntry(paymentId: string): Promise<PayEntryDecisi
   const self = pays.find((p) => p.id === paymentId);
   if (self?.status === "pending" && self.payUrl) return { kind: "redirect", url: self.payUrl, reissued: false };
 
+  // ALREADY A CUSTOMER (measured 2026-09-26): an old, never-paid initial order
+  // whose lead has since bought through ANOTHER order. requestPayment refuses it
+  // (correctly — a second charge adds nothing), but the fallback then told the
+  // buyer "a colleague will contact you" and alerted the house about a "stuck
+  // order" that needs nothing. Say what is true instead: it is already theirs.
+  const kind = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .select(["order_intent.kind as kind", "prospect.lead_id as leadId"])
+    .where("order_intent.id", "=", orderIntentId)
+    .executeTakeFirst();
+  if (kind?.kind === "initial" && kind.leadId) {
+    const owned = await ownedSiteForLead(kind.leadId);
+    if (owned) return { kind: "owned", owned };
+  }
+
   // Dead link: a fresh payment for the same order. requestPayment re-applies every
   // gate (already-a-customer, approved mock, market) and reuses another live
   // pending payment if one exists.
-  const fresh = await requestPayment(row.orderIntentId);
+  const fresh = await requestPayment(orderIntentId);
   if (fresh?.payUrl) {
     console.log(
-      `[pay/go] lejárt/lezárt fizetés (${paymentId}) → élő fizetés ${fresh.paymentId} (új vagy már kiállított) ugyanarra a rendelésre (${row.orderIntentId})`,
+      `[pay/go] lejárt/lezárt fizetés (${paymentId}) → élő fizetés ${fresh.paymentId} (új vagy már kiállított) ugyanarra a rendelésre (${orderIntentId})`,
     );
     return { kind: "redirect", url: fresh.payUrl, reissued: fresh.paymentId !== paymentId };
   }
-  return { kind: "unavailable", orderIntentId: row.orderIntentId };
+  return { kind: "unavailable", orderIntentId: orderIntentId };
 }

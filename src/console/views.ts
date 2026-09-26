@@ -2050,6 +2050,25 @@ export function payUnknownRefPage(ref: string, supportEmail: string | null): str
 }
 
 /**
+ * The stable pay-link (/pay/go) was opened for an order whose lead has ALREADY
+ * bought (through another order). No payment was started — a second charge would
+ * add nothing. Same message as the configurator's already-a-customer branch.
+ */
+export function payAlreadyOwnedPage(siteUrl: string | null, loginUrl: string | null): string {
+  const lang = consoleLang();
+  const links = [
+    loginUrl ? `<a class="con-linkact" href="${esc(loginUrl)}">${T(lang, "Belépés a kezelőfelületre")}</a>` : "",
+    siteUrl ? `<a class="con-linkact" href="${esc(siteUrl)}">${T(lang, "A honlapja megtekintése")}</a>` : "",
+  ].filter(Boolean);
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
+    <h2 style="margin-top:0">${T(lang, "Ezt már megrendelte.")}</h2>
+    <p style="margin:0">${T(lang, "A honlapja már az Öné, ezért most nem indítottunk fizetést és nem terheltük meg a kártyáját.")}</p>
+    ${links.length ? `<div class="row" style="margin-top:18px">${links.join("")}</div>` : ""}
+  </div>`;
+  return layout(T(lang, "Már megrendelte"), body, { chrome: false });
+}
+
+/**
  * The stable pay-link (/pay/go) could not start a payment for this order — the
  * gates in requestPayment refused (e.g. the order is no longer payable). The house
  * has been alerted; the page says exactly that and nothing more (§B.17): no charge

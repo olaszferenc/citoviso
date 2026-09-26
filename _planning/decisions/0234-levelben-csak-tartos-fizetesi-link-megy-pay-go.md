@@ -15,7 +15,11 @@ megújítási/felszólító levelekben (`billing.ts`) és a domain-lezárás lev
 2. ha a rendelés már ki van fizetve → az eredmény-lap, soha nem második terhelés;
 3. ha a kattintott fizetés még él → tovább rá;
 4. ha halott → `requestPayment()` ugyanarra a rendelésre (minden kapuja újra fut) → tovább rá;
-5. ha fizetés nem indítható → őszinte lap („nem indítottunk fizetést, nem terheltünk”) + operátor-riasztás.
+5. ha a rendelés leadje egy MÁSIK rendeléssel már vásárolt → „Ezt már megrendelte” lap (belépés +
+   honlap link), új fizetés és riasztás NINCS (kiegészítés 2026-09-26: mérve, egy régi rendelés linkje
+   „kollégánk jelentkezik” lapot és két hamis megrekedt-rendelés riasztást adott egy élő ügyfélnek);
+6. ha fizetés nem indítható → őszinte lap („nem indítottunk fizetést, nem terheltünk”) + operátor-riasztás
+   a lead nevével, rendelésenként óránként legfeljebb egyszer.
 
 Az azonosító a payment-sor véletlen UUID-ja — ugyanaz a képesség, ami a nyers átjáró-link is volt.
 A felületen (fizetés-gomb, átirányítás) továbbra is a közvetlen átjáró-link megy, mert azt azonnal használják.

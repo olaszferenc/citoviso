@@ -99,6 +99,7 @@ import {
   payResultPage,
   payUnknownRefPage,
   payLinkUnavailablePage,
+  payAlreadyOwnedPage,
 } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
@@ -3269,20 +3270,35 @@ async function handle(
     const d = await resolvePayEntry(payGoMatch[1]!);
     if (d.kind === "redirect") return redirect(res, d.url);
     if (d.kind === "unknown") return send(res, 404, payUnknownRefPage(payGoMatch[1]!, config.supportEmail || null));
+    // Already theirs: nothing to fix, nobody to alert — say so and show the way in.
+    if (d.kind === "owned") return send(res, 200, payAlreadyOwnedPage(d.owned.siteUrl, d.owned.loginUrl));
     const oi = await db
       .selectFrom("order_intent")
-      .select(["price", "billing_period as period", "buyer_email as buyerEmail"])
-      .where("id", "=", d.orderIntentId)
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .innerJoin("lead", "lead.id", "prospect.lead_id")
+      .select([
+        "order_intent.price as price",
+        "order_intent.billing_period as period",
+        "order_intent.buyer_email as buyerEmail",
+        "lead.name as leadName",
+      ])
+      .where("order_intent.id", "=", d.orderIntentId)
       .executeTakeFirst();
     // The buyer came to PAY and could not — the same incident as a stuck order.
-    await alertStuckOrder({
-      orderIntentId: d.orderIntentId,
-      leadName: null,
-      amountHuf: oi?.price ?? null,
-      billingPeriod: oi?.period === "annual" ? "annual" : "monthly",
-      buyerEmail: oi?.buyerEmail ?? null,
-      reason: "paylink_reissue_refused",
-    });
+    // Once per order per hour: every refresh of this page would otherwise mail
+    // and text the house again (measured 2026-09-26: two clicks, two alerts).
+    const last = payGoAlerted.get(d.orderIntentId) ?? 0;
+    if (Date.now() - last > 60 * 60 * 1000) {
+      payGoAlerted.set(d.orderIntentId, Date.now());
+      await alertStuckOrder({
+        orderIntentId: d.orderIntentId,
+        leadName: oi?.leadName ?? null,
+        amountHuf: oi?.price ?? null,
+        billingPeriod: oi?.period === "annual" ? "annual" : "monthly",
+        buyerEmail: oi?.buyerEmail ?? null,
+        reason: "paylink_reissue_refused",
+      });
+    }
     return send(res, 200, payLinkUnavailablePage(config.supportEmail || null));
   }
   if (method === "GET" && path === "/pay/done") {
@@ -3610,6 +3626,10 @@ async function handle(
 
 // Exported so scripts/ui-shot.mts can boot this server on an ephemeral port
 // (CONSOLE_PORT=0) and read the assigned port back for screenshotting.
+/** /pay/go refusal alerts, per order: last sent (ms). In-process on purpose — a
+ *  restart may alert once more, which is the safe direction. */
+const payGoAlerted = new Map<string, number>();
+
 export const server = http.createServer((req, res) => {
   // ADR-0067 ③: every request runs inside its OWN language context. It starts as
   // Hungarian, and currentOperator() fills in the operator's language the moment

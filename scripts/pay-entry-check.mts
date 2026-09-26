@@ -12,6 +12,8 @@
 //        dead payment        → a NEW payment for the same order, and on to it
 //        clicked again       → the SAME new payment (no third one)
 //        order already paid  → the result page, never a second charge
+//        lead already bought → "already yours" (another order paid) — no payment,
+//                              no stuck-order alert
 //        unknown / malformed → "unknown", never a crash
 //   B) WIRING — every letter that carries a pay-link uses payEntryUrl(), not the
 //      gateway URL: order pay-link mail, renewal/dunning, domain settlement; and
@@ -58,7 +60,19 @@ async function payments(orderIntentId: string) {
     .execute();
 }
 
-async function seed(): Promise<{ leadId: string; orderIntentId: string }> {
+const BUYER = {
+  buyer_type: "individual",
+  buyer_name: "Teszt Elek",
+  buyer_country: "HU",
+  buyer_zip: "8360",
+  buyer_city: "Keszthely",
+  buyer_address: "Fő utca 1.",
+  buyer_email: "elek@citoviso.com",
+  withdrawal_waiver: true,
+  terms_accepted: true,
+};
+
+async function seed(): Promise<{ leadId: string; orderIntentId: string; artifactId: string }> {
   const { createFixtureParent } = await import("./lib/fixture-parent.mts");
   const parent = await createFixtureParent(db as never, "payentry");
   const lead = await db
@@ -76,20 +90,7 @@ async function seed(): Promise<{ leadId: string; orderIntentId: string }> {
     .values({ lead_id: lead.id, path: null, status: "approved", inputs: JSON.stringify({ guard: "pay-entry-check" }) })
     .returning("id")
     .executeTakeFirstOrThrow();
-  const v = await validateBuyer(
-    {
-      buyer_type: "individual",
-      buyer_name: "Teszt Elek",
-      buyer_country: "HU",
-      buyer_zip: "8360",
-      buyer_city: "Keszthely",
-      buyer_address: "Fő utca 1.",
-      buyer_email: "elek@citoviso.com",
-      withdrawal_waiver: true,
-      terms_accepted: true,
-    },
-    { requireTerms: false },
-  );
+  const v = await validateBuyer(BUYER, { requireTerms: false });
   if (!v.ok) throw new Error(`az őr vevő-adata érvénytelen: ${JSON.stringify(v.errors)}`);
   const rec = await recordOrderIntent({
     artifactId: art.id,
@@ -104,7 +105,7 @@ async function seed(): Promise<{ leadId: string; orderIntentId: string }> {
     buyer: v.value,
   });
   if (!rec) throw new Error("a rendelés-rögzítés nem adott vissza rekordot");
-  return { leadId: lead.id, orderIntentId: rec.orderIntentId };
+  return { leadId: lead.id, orderIntentId: rec.orderIntentId, artifactId: art.id };
 }
 
 async function run(): Promise<void> {
@@ -145,6 +146,43 @@ async function run(): Promise<void> {
     );
     check((await payments(s.orderIntentId)).length === 2, "kifizetett rendelésnél NEM indul újabb fizetés");
 
+    // ⑥ ALREADY A CUSTOMER (measured 2026-09-26): an OLD, never-paid order of a lead
+    //   that has since bought through another order (④ above paid this lead). The
+    //   link must say "already yours" — not "a colleague will call" + an alert.
+    const v2 = await validateBuyer(BUYER, { requireTerms: false });
+    if (!v2.ok) throw new Error("vevő-adat");
+    const stale = await recordOrderIntent({
+      artifactId: s.artifactId,
+      modules: [],
+      billingPeriod: "monthly",
+      price: 7240,
+      domainType: "citoviso_sub",
+      domainName: null,
+      commitmentMonths: null,
+      photoRightsDeclared: true,
+      recurringConsent: true,
+      buyer: v2.value,
+    });
+    if (!stale) throw new Error("a régi rendelés nem jött létre");
+    const deadPay = await db
+      .insertInto("payment")
+      .values({
+        order_intent_id: stale.orderIntentId,
+        amount: 7240,
+        currency: "HUF",
+        period: "monthly",
+        gateway: "mock",
+        status: "failed",
+        initiates_recurrence: true,
+        pay_url: "https://secure.test.barion.com/Pay?Id=dead",
+        gateway_ref: "mock_dead_fixture",
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const d6 = await resolve(deadPay.id);
+    check(d6.kind === "owned", `már vásárolt lead régi rendelése → „már az Öné” (mért: ${d6.kind})`);
+    check((await payments(stale.orderIntentId)).length === 1, "már vásárolt leadnél NEM indul új fizetés");
+
     // ⑤ unknown / malformed
     check((await resolvePayEntry("00000000-0000-4000-8000-000000000000")).kind === "unknown", "ismeretlen azonosító → unknown");
     check((await resolvePayEntry("nem-uuid")).kind === "unknown", "hibás azonosító → unknown (nem omlik össze)");
@@ -162,6 +200,7 @@ async function run(): Promise<void> {
   const pub = await src("src/server/public.ts");
   check(/payUrl: payEntryUrl\(pay\.paymentId\)/.test(pub), "a domain-lezárás levele a tartós linket viszi");
   const server = await src("src/console/server.ts");
+  check(/d\.kind === "owned"\) return send\(res, 200, payAlreadyOwnedPage/.test(server), "a konzol a már-vásárolt esetre a „már az Öné” lapot adja, riasztás nélkül");
   check(/\\\/pay\\\/go\\\//.test(server) && /resolvePayEntry\(/.test(server), "a konzol kiszolgálja a /pay/go útvonalat");
 }
 
