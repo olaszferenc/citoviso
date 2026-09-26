@@ -58,7 +58,7 @@ const WATERCOLOR_CSS = `
      wave-and-sun mark floats above the centered name; soft default hairlines. The
      old sticky nav is gone (no scroll behavior) — the masthead IS the header.
      The wc-lg classes stay for the footer logo. */
-  .wc-lg{display:flex;align-items:center;gap:10px;font-family:var(--cit-font-display);font-size:21px;font-weight:600;color:var(--cit-ink)}
+  .wc-lg{display:flex;align-items:center;gap:10px;font-family:var(--cit-font-display);font-size:21px;font-weight:600;color:var(--cit-ink);min-height:44px}
   .wc-lg svg{width:36px;height:22px;flex:none}
   .wc-wv{fill:none;stroke:var(--cit-accent);stroke-width:4;stroke-linecap:round}
   .wc-sn{fill:color-mix(in srgb, var(--cit-accent) 62%, var(--cit-surface))}

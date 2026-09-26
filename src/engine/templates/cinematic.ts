@@ -92,7 +92,7 @@ const CINEMATIC_CSS = `
   .cn-heroctas .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent)}
   .cn-dots{position:absolute;bottom:120px;right:5%;z-index:3;display:flex;gap:8px}
   /* the 4px bar is the DRAWING; the tap area is 24px tall (a 4px control cannot be hit by thumb — measured 2026-09-26) */
-  .cn-dots button{width:34px;height:24px;border:none;background:color-mix(in srgb, white 40%, transparent);background-clip:content-box;padding:10px 0;cursor:pointer;transition:.3s}
+  .cn-dots button{width:44px;height:44px;border:none;background:color-mix(in srgb, white 40%, transparent);background-clip:content-box;padding:20px 5px;cursor:pointer;transition:.3s}
   .cn-dots button.cn-vis{background:var(--cit-accent)}
 
   /* sticky booking dock — slid onto the hero's lower edge */

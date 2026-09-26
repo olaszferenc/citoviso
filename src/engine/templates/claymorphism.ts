@@ -55,7 +55,7 @@ const CLAY_CSS = `
      gradient clay drop floats above the centered name, gentle default hairlines.
      The old sticky pill nav is gone (no scroll behavior) — the masthead IS the
      header. The cl-lg classes stay for the footer brand line. */
-  .cl-lg{font-family:var(--cit-font-display);font-weight:600;font-size:20px;color:var(--cit-ink);display:flex;align-items:center;gap:9px}
+  .cl-lg{font-family:var(--cit-font-display);font-weight:600;font-size:20px;color:var(--cit-ink);display:flex;align-items:center;gap:9px;min-height:44px}
   .cl-lg i{width:26px;height:26px;border-radius:50%;background:linear-gradient(145deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink)));box-shadow:3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent)}
   body.cit-tpl-claymorphism .cit-mast{--mast-weight:600;padding-top:38px}
   body.cit-tpl-claymorphism .cit-mast-name::before{content:"";display:block;width:24px;height:24px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(145deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink)));box-shadow:3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent)}

@@ -95,13 +95,18 @@ export const CHROME_CSS = `  .cit-nav { position: sticky; top: 0; z-index: 50; b
     border-bottom: 1px solid var(--cit-line); }
   .cit-nav-inner { max-width: 1120px; margin: 0 auto; display: flex; align-items: center;
     justify-content: space-between; gap: 1rem; padding: .85rem clamp(1.25rem, 4vw, 2.5rem); }
+  /* Both are thumb targets: a MEASURED 44px (min-height + inline-flex), not a padding sum that
+     lands on 39–41 depending on the skin's line-height (guest-mobile-check, 2026-09-26). */
   .cit-nav-brand { font-family: var(--cit-font-display); font-size: 1.3rem; font-weight: 600;
-    color: var(--cit-ink); text-decoration: none; letter-spacing: .01em; }
+    color: var(--cit-ink); text-decoration: none; letter-spacing: .01em;
+    display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; }
   .cit-nav-cta { background: var(--cit-accent); color: var(--cit-on-accent); text-decoration: none;
-    padding: .55rem 1.2rem; border-radius: var(--cit-radius); font-weight: 600; font-size: .9rem; }
+    padding: 0 1.2rem; border-radius: var(--cit-radius); font-weight: 600; font-size: .9rem;
+    display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; }
   .cit-nav-links { display: none; list-style: none; margin: 0; padding: 0; gap: 1.7rem; }
   .cit-nav-links a { color: var(--cit-ink); text-decoration: none; font-size: .82rem;
-    letter-spacing: .12em; text-transform: uppercase; }
+    letter-spacing: .12em; text-transform: uppercase;
+    display: inline-flex; align-items: center; min-height: 44px; }
   .cit-nav-links a:hover { color: var(--cit-accent); }
   @media (min-width: 900px) { .cit-nav-links { display: flex; } }
   .cit-footer { background: var(--cit-surface); border-top: 1px solid var(--cit-line); color: var(--cit-muted); }

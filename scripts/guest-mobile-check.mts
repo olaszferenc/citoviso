@@ -219,8 +219,10 @@ const PROBE_STATIC = `(() => { ${LIB}
     const w = Math.round(rr.width), h = Math.round(rr.height);
     // calendar day cells: 7 in a 262px column cannot reach 44 — 36+ is the honest floor there
     // a bare <a> inside running text (phone number, e-mail, a link in a paragraph) is text, not a control
-    const inlineText = el.tagName === 'A' && !(el.className && /btn|cta|book|hot|go\b|nav/i.test(String(el.className)));
-    if (el.classList.contains('cit-book__day') ? (w < 36 || h < 36) : (w < 44 || h < 44)) out.small.push({ sel: name(el), text: txt(el), w, h, inlineText, group: (el.className && typeof el.className === 'string' ? el.className.trim().split(/\\s+/)[0] : el.tagName.toLowerCase()) });
+    const inNav = !!el.closest('nav, header, [role=navigation]');
+    const inlineText = el.tagName === 'A' && !inNav && !(el.className && /btn|cta|book|hot|go\b|nav/i.test(String(el.className)));
+    const ctx = (el.closest('nav, header, footer, p, li, dd, address, td, figcaption, small, form') || {}).tagName || '';
+    if (el.classList.contains('cit-book__day') ? (w < 36 || h < 36) : (w < 44 || h < 44)) out.small.push({ sel: name(el), text: txt(el), w, h, inlineText, ctx, group: (el.className && typeof el.className === 'string' ? el.className.trim().split(/\\s+/)[0] : el.tagName.toLowerCase()) });
   }
   // ④ input font-size < 16
   out.smallFont = [];

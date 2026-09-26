@@ -395,7 +395,15 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
   .cit-arch-editorial-press .cit-nav-inner { justify-content: center; gap: .5rem; padding-block: .6rem; }
   .cit-arch-editorial-press .cit-nav-brand { display: none; }
   .cit-arch-editorial-press .cit-nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; }
-  .cit-arch-editorial-press .cit-nav-links a { padding: .4rem .95rem; border-radius: 999px; }
+  .cit-arch-editorial-press .cit-nav-links a { padding: 0 .95rem; border-radius: 999px; }
+  /* Phone: one scrollable row — five 44px pills wrapped into a 211px sticky header (25% of the
+     screen) once the links became thumb-sized (guest-mobile-check, 2026-09-26). */
+  @media (max-width: 720px) {
+    .cit-arch-editorial-press .cit-nav-links { flex-wrap: nowrap; justify-content: flex-start;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 100%; }
+    .cit-arch-editorial-press .cit-nav-links::-webkit-scrollbar { display: none; }
+    .cit-arch-editorial-press .cit-nav-links a { white-space: nowrap; flex: none; }
+  }
   .cit-arch-editorial-press .cit-nav-links a:hover { background: var(--cit-ink); color: var(--cit-bg); }
   .cit-arch-editorial-press .cit-nav-cta { border-radius: 999px; }
   .cit-arch-editorial-press .cit-section-inner { max-width: 1100px; }

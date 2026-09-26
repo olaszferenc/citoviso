@@ -99,7 +99,8 @@ const TRANSIT_CSS = `
     .tb-table tr{padding:14px 0;border-bottom:1px solid var(--cit-line)}
     .tb-table td{border:0;padding:4px 0}
     .tb-table td.tb-u>span:last-child{white-space:normal}
-    .tb-table td.tb-u .tb-ulink{display:flex;width:100%}
+    .tb-table td.tb-u .tb-ulink{display:flex;width:100%;min-height:44px;align-items:center}
+    .tb-table a.tb-go{min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box}
     .tb-table td.tb-act{text-align:left;padding-top:10px}
     .tb-table a.tb-go{padding:12px 18px}
   }
