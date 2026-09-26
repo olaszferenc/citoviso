@@ -27,7 +27,16 @@
 
 **Eredmény (a két lead 38 mockja újrarenderelve a javított motorból, záró mérés):** 390 px: **132 → 0 HIBA** (113 ergonómiai lelet marad), 360 px: **133 → 0**, fekvő 844×390: **140 → 0**; kapu-mód (30 sablon+archetípus, 390): 0 HIBA; önteszt: 4 ültetett hiba piros. A megmaradt ERGONÓMIA-leletek: hibaüzenet ~750 px-re a dátum-sávtól és ár→gomb ~700 px (widget-elrendezés, §2b), a masthead-linkek 33 px (editorial/brutalism/tilted-gallery saját nav), szövegközi linkek 19 px, arch-frames/wordmark-grow: nincs CTA az első képernyőn és 0 link a fejlécben (tervezői döntés — a tulajé).
 
-## Nyitott: §2b terv-kapu — a foglalás-widget telefonos elrendezése
+## Tulajdonosi mandátum után (2026-09-26 délután): a négy tétel MEGÉPÍTVE a motorban
+
+Mandátum: „Javaslat szerint hajtsák végre a saját belátásuk szerint … utólag ellenőrzök” — a §2b várakozás erre a körre feloldva.
+① **B · két lépés** a runtime-ban (`syncSteps`, cit-modules.css „PHONE: TWO STEPS”), kontraktus befagyasztva: `assets/design-refs/tenant-site/booking-mobile-two-step/` (README = ami köt, plan.html a valódi runtime-on, shots/plan-mobil+asztal + a valódi editorial mock 5 állapotképe). Mérve 390-en: hiba 20 px-re a dátum-sávtól (volt ~750), „Tovább” 53 px, 2. lépésben összegző + mezők + küldő gomb, „Módosítom” visszavisz a naptárhoz; asztalon a két oszlop (523/423 px) változatlan, a két-lépés elemei rejtve.
+② **arch-frames + wordmark-grow:** pirula + menü az első képernyőn (nav 100/97 px, pirula 44 px, 3/2 link), a fotó-nyitány marad; a sablon `.x-nav a` szabálya a pirula feliratát is átszínezte (láthatatlan) — külön szabály.
+③ **MINTA-felugró:** „MINTA · Apartman”, minta-leírás, 4/3/3 generikus felszereltség (nincs szám, m², ár), lista-cím kimondja, hogy minta; ikonok 20 px (első körben 120 px-esre nőttek — mérve, javítva).
+④ **editorial:** a tapadó menü telefonon egy görgethető sor.
+Képek: `elek/runs/FK-010-kepek/*-utana.png`. A tulaj UTÓLAG a kész felületen ítél.
+
+## (Lezárt) §2b terv-kapu — a foglalás-widget telefonos elrendezése
 
 Három MŰKÖDŐ vázlat a valódi runtime-ra építve (`assets/design-refs/_drafts/guest-mobile-booking/`, méret-váltó, @container): **A** üzenet a dátum-sáv alatt + „Tovább az adataimhoz ↓” · **B** két lépés (naptár+ár → összegző sáv + adatok) · **C** ragadó összegző sáv a widget alján. Mindhárom: hiba a dátum mellett egy képernyőn; asztalon a jóváhagyott kéthasábos elrendezés változatlan (mérve). Képek: `…/shots/`. **Várunk a tulaj döntésére; kód nincs.**
 

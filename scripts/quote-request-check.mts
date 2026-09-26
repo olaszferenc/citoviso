@@ -129,6 +129,10 @@ try {
       days = page.locator("[data-day]:not([disabled]):not(.is-blocked):visible");
     }
     if ((await days.count()) >= 6) { await days.nth(3).click(); await page.waitForTimeout(150); await days.nth(5).click(); await page.waitForTimeout(600); }
+    // Plan B (2026-09-26): on a phone the unit selector and the button live in STEP 2, behind
+    // „Tovább” — the guest's path. The quote box stays readable (innerText of a non-rendered
+    // node is its text), so the ①–④ sentences are judged exactly as before.
+    if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
 
     const sel = page.locator('select[name="unit"]').first();
     const cta = page.locator(".cit-book__submit").first();

@@ -174,8 +174,12 @@ console.log("Vendég-oldali foglalási űrlap:");
 // A kivétel mostantól EGY piros állítás, és a verdikt kiíródik.
 try {
 check("az űrlap hidratálódott", await page.locator("form.cit-book--request").isVisible());
-check("több egységnél van egység-választó", await page.locator("select[name=unit]").isVisible());
-check("a név és e-mail mező kint van", await page.locator("#cit-name").isVisible());
+// Plan B (owner, 2026-09-26; contract design-refs/tenant-site/booking-mobile-two-step): on a
+// phone the fields live in STEP 2, behind the "Tovább" button — the guest's real path. They
+// are asserted where the guest meets them (after a valid range, below), not on page load.
+check("több egységnél van egység-választó (a 2. lépésben)", (await page.locator("select[name=unit]").count()) === 1);
+check("a név és e-mail mező kint van (a 2. lépésben)", (await page.locator("#cit-name").count()) === 1);
+check("⭐ telefonon a naptár után egy „Tovább” gomb áll (B terv)", await page.locator(".cit-book__go").isVisible());
 
 // ── ADR-0062: dramaturgia — a sáv karcsú, a teljes űrlap a szekcióban ────────
 check(
@@ -242,8 +246,14 @@ await page.fill("#cit-from", iso(20));
 await page.fill("#cit-to", iso(23));
 await page.waitForTimeout(250);
 check("szabad időszaknál újra küldhető", !(await page.locator(".cit-book__submit").isDisabled()));
+check("⭐ érvényes tartományra a „Tovább” aktív", !(await page.locator(".cit-book__go").isDisabled()));
 
 await page.screenshot({ path: "shot-guest-booking-mobile.png", fullPage: true });
+// STEP 2: the summary strip + the fields + the send button.
+await page.click(".cit-book__go");
+await page.waitForTimeout(300);
+check("⭐ a 2. lépésben az egység-választó és a mezők láthatók", (await page.locator("select[name=unit]").isVisible()) && (await page.locator("#cit-name").isVisible()));
+check("⭐ a 2. lépés összegzője az időszakot és az éjszakákat mondja", /éjszaka/.test((await page.locator(".cit-book__sum").textContent()) ?? ""));
 
 // Submitting: the form must be REPLACED by a confirmation, not left standing.
 await page.route("**/api/foglalas", (route) =>

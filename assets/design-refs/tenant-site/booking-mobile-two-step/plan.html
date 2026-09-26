@@ -1,3 +1,1368 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>B · Két lépés telefonon — foglalás-widget (jóváhagyott terv)</title>
+<style>
+:root{--cit-accent:#b8322b;--cit-on-accent:#fff;--cit-ink:#1f1a17;--cit-muted:#6b625c;--cit-bg:#fbf8f3;--cit-surface:#f3ede4;--cit-line:#e2d9cc;--cit-radius:12px;--cit-font-display:Georgia,"Times New Roman",serif;--cit-font-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--cit-shadow:0 10px 30px rgba(0,0,0,.08)}
+*{box-sizing:border-box}html{scroll-behavior:auto}
+body{margin:0;background:#e9e4dc;font-family:var(--cit-font-body);color:var(--cit-ink)}
+.mock-tools{position:fixed;top:0;left:0;right:0;z-index:2147483000;display:flex;gap:8px;align-items:center;padding:8px 12px;background:#1f1a17;color:#fff;font:600 13px/1 system-ui}
+.mock-tools button{font:inherit;padding:10px 14px;border-radius:8px;border:1px solid #777;background:#333;color:#fff;cursor:pointer}
+.mock-tools button[aria-pressed=true]{background:#b8322b;border-color:#b8322b}
+.mock-tools span{margin-left:auto;font-weight:400;opacity:.8}
+#stage{container-type:inline-size;container-name:mockvp;margin:56px auto 0;width:100%;max-width:1200px;background:var(--cit-bg);box-shadow:0 0 0 1px #d6cfc4;min-height:100vh}
+#stage.is-mobile{width:390px}
+.hd{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:58px;background:var(--cit-bg);border-bottom:1px solid var(--cit-line)}
+.hd b{font-family:var(--cit-font-display);font-size:20px}.hd a{color:var(--cit-on-accent);background:var(--cit-accent);text-decoration:none;padding:12px 16px;border-radius:8px;font-weight:700;font-size:14px}
+.hero{padding:28px 16px 22px}.hero h1{font-family:var(--cit-font-display);font-size:34px;line-height:1.1;margin:0 0 10px}.hero p{color:var(--cit-muted);margin:0}
+.rooms{padding:8px 16px 24px}.rooms h2{font-family:var(--cit-font-display);font-size:24px;margin:0 0 12px}.room{border:1px solid var(--cit-line);border-radius:12px;padding:14px;margin-bottom:10px;background:#fff}.room b{display:block;margin-bottom:4px}.room span{color:var(--cit-muted);font-size:14px}
+.book{padding:8px 16px 40px}.book h2{font-family:var(--cit-font-display);font-size:24px;margin:0 0 12px}
+.ft{padding:28px 16px;background:#1f1a17;color:#cfc7bd;font-size:13px}
+@container mockvp (min-width:860px){.hero{padding:48px 40px 30px}.hero h1{font-size:52px}.rooms,.book{padding-left:40px;padding-right:40px}.rooms .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}}
+.mock-note{margin:0 16px 12px;padding:10px 12px;border-radius:8px;background:#fff3cd;color:#5a4400;font-size:13px;line-height:1.45}
+</style><style data-cit-runtime>/* Citoviso module runtime — shared widget styles (UI-CONTRACT §A/§B, ADR-0011).
+ * Every rule reads ONLY the standard design tokens (with sane fallbacks), so a
+ * single widget adopts each archetype's skin automatically. Archetypes MUST
+ * declare the tokens in :root; the fallbacks here keep the widget usable if one
+ * is missing. Light-DOM (no shadow) so CSS custom properties inherit naturally. */
+
+/* Fallback token defaults in a LOW-PRIORITY cascade layer: a layered :root always
+ * loses to the page's own unlayered :root (the skin), regardless of source order — so
+ * inlining this runtime AFTER the skin can no longer clobber the skin tokens. Standalone
+ * widget fixtures (no page tokens) still get these fallbacks. */
+@layer cit-fallback {
+  :root {
+    --cit-accent: #b5122e;
+    --cit-on-accent: #ffffff;
+    --cit-ink: #1a1a1a;
+    --cit-muted: #6b6b6b;
+    --cit-bg: #ffffff;
+    --cit-surface: #f6f4f0;
+    --cit-line: #e3e0d8;
+    --cit-radius: 10px;
+    --cit-font-display: Georgia, "Times New Roman", serif;
+    --cit-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --cit-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  }
+  /* The shared module sections emit `.cit-btn` (review-form submit, the CTA band's link),
+     and 4 of the 19 templates never styled it (arch-frames, claymorphism, tilted-gallery,
+     wordmark-grow — measured 2026-09-26): a 21px unstyled <button> and a 23px bare link
+     were the guest's "send" and "book". Layered fallback: any template rule outranks it. */
+  .cit-btn {
+    display: inline-block;
+    background: var(--cit-accent);
+    color: var(--cit-on-accent);
+    border: 1px solid var(--cit-accent);
+    border-radius: calc(var(--cit-radius) * 0.7);
+    padding: 13px 24px;
+    min-height: 44px;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .cit-btn-disabled { opacity: 0.55; pointer-events: none; }
+}
+
+.cit-book * { box-sizing: border-box; }
+
+.cit-book {
+  font-family: var(--cit-font-body);
+  color: var(--cit-ink);
+  background: var(--cit-surface);
+  border: 1px solid var(--cit-line);
+  border-radius: var(--cit-radius);
+  box-shadow: var(--cit-shadow);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.cit-book__title {
+  font-family: var(--cit-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  /* the nowrap MINTA badge beside the title gave the card a 364px min-content: in a
+     fit-content wrapper (editorial-press) the page grew to 404px on a 390px phone and
+     the browser zoomed out (guest-mobile-check, 2026-09-26) — the badge may wrap under. */
+  flex-wrap: wrap;
+}
+.cit-book__title svg { width: 20px; height: 20px; stroke: var(--cit-accent); fill: none; }
+/* ADR-0059 ④ — the demo widget's honest sample marker (§B.17): visible AT the form,
+   not a footnote somewhere below it. Token-themed like everything else here. */
+.cit-book__demo {
+  margin-left: auto;
+  font-family: var(--cit-font-body, inherit);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  border-radius: 100px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.cit-book__fields { display: grid; gap: 12px; }
+/* The author display:grid outranks the UA's [hidden]{display:none} (author origin
+ * always wins) — measured trap 2026-09-06: the "hidden" element stayed visible on
+ * the screenshot everyone believed. Explicit rule, same specificity, later. */
+.cit-book__fields[hidden] { display: none; }
+.cit-book__field { display: grid; gap: 5px; }
+.cit-book__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cit-muted);
+  font-weight: 600;
+}
+.cit-book__input {
+  font: inherit;
+  color: var(--cit-ink);
+  background: var(--cit-bg);
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  padding: 11px 12px;
+  width: 100%;
+}
+.cit-book__input:focus { outline: 2px solid var(--cit-accent); outline-offset: 1px; }
+
+/* Guests stepper */
+.cit-book__stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  background: var(--cit-bg);
+  overflow: hidden;
+  width: fit-content;
+}
+.cit-book__step {
+  font: inherit;
+  border: 0;
+  background: transparent;
+  color: var(--cit-ink);
+  width: 44px;
+  height: 44px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.cit-book__step:hover { background: var(--cit-surface); }
+.cit-book__count { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.cit-book__submit {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  border-radius: calc(var(--cit-radius) * 0.7);
+  background: var(--cit-accent);
+  color: var(--cit-on-accent);
+  padding: 13px 18px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.cit-book__submit:hover { transform: translateY(-1px); filter: brightness(1.05); }
+
+.cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
+  .cit-rev-f__consent { min-height: 44px; align-items: center; }
+  .cit-rev-f__consent input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
+}
+.cit-book__note--err { color: var(--cit-accent); }
+
+/* Booking widget layout (owner decree 2026-08-23 — "milyen gagyi az elrendezése"):
+   the CALENDAR leads on the left (it is what sells the module), a compact request
+   panel on the right, one card, no floating islands. Single column on a phone. */
+.cit-book__cols { display: grid; gap: 22px; align-items: start; }
+@container mockvp (min-width: 860px) {
+  .cit-book__cols { grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.85fr); gap: 28px; }
+  .cit-book__formcol {
+    border-left: 1px solid var(--cit-line);
+    padding-left: 26px;
+  }
+}
+.cit-book__calcol { display: grid; gap: 12px; min-width: 0; }
+.cit-book__formcol { display: grid; gap: 14px; align-content: start; min-width: 0; }
+/* The picked range as a slim strip UNDER the calendar — real date inputs (OS picker
+   + keyboard path survive), but visually a summary, not two fat fields competing
+   with the calendar for attention. */
+.cit-book__dates {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.6);
+  background: color-mix(in srgb, var(--cit-ink) 3%, var(--cit-bg));
+}
+.cit-book__date { display: grid; gap: 2px; min-width: 0; }
+.cit-book__dinput {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cit-ink);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.cit-book__arrow { color: var(--cit-muted); font-size: 1rem; }
+/* Why book HERE — the process facts that answer the hesitation at the decision
+   point (and carry the module's own sales argument: no platform commission). */
+.cit-book__trust {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.cit-book__trust li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--cit-muted);
+}
+.cit-book__trust svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  stroke: var(--cit-accent);
+  fill: none;
+}
+.cit-book__nights {
+  margin-left: auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cit-accent);
+  white-space: nowrap;
+}
+
+/* Visible availability calendar: the guest SEES the owner-managed busy nights per
+   unit; tapping two free days fills the date inputs. Token-themed; two months side
+   by side where there is room, one on a phone. */
+.cit-book__field--wide { grid-column: 1 / -1; }
+.cit-book__cal {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--cit-line);
+  border-radius: calc(var(--cit-radius) * 0.7);
+  background: color-mix(in srgb, var(--cit-ink) 3%, var(--cit-bg));
+}
+.cit-book__calhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cit-book__callabel {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cit-muted);
+  font-weight: 600;
+}
+.cit-book__calnav {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px; /* the flex head shrank it to 28px beside the long label */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cit-line);
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.cit-book__calnav svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+.cit-book__calnav--next svg { transform: rotate(180deg); }
+.cit-book__calnav:disabled { opacity: 0.35; cursor: default; }
+/* Two months side by side, but only where BOTH fit properly — a squeezed second
+   month is what made the grid read as scattered dots (measured: 225px minimum was
+   too generous, the columns stretched and the days floated apart). */
+/* auto-fit, NOT a viewport media query: the calendar lives in the left COLUMN, which
+   is far narrower than the screen — sizing cells off the viewport made the grid
+   overflow into the form column (measured at 1440px). auto-fit asks the real
+   container, so two months fit when the column can hold them and one when it cannot. */
+.cit-book__months {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+}
+/* On a phone ONE month at a time — two stacked months turned the widget into a
+   scroll marathon before the guest reached the fields. The chevrons page through. */
+@container mockvp (max-width: 559px) { .cit-book__months > .cit-book__month + .cit-book__month { display: none; } }
+/* A month never stretches beyond a comfortable measure: without this the seven
+   columns drift apart into the "scattered dots" the owner called gagyi. */
+.cit-book__month { width: 100%; max-width: 300px; margin-inline: auto; }
+.cit-book__mlabel {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--cit-ink);
+  text-align: center;
+}
+/* Fixed 7 × 32px tracks, centred: the row does not stretch to the container width,
+   so the days stay a compact block instead of drifting to the far edges. */
+/* Fluid 7 columns inside the month's capped measure: the cells grow with the space
+   they actually have and can never overflow the column. */
+.cit-book__mgrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+.cit-book__dow {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--cit-muted);
+  text-align: center;
+  padding: 0 0 4px;
+  line-height: 1;
+}
+.cit-book__day {
+  aspect-ratio: 1;
+  min-height: 38px;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--cit-ink);
+  border-radius: 7px;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.cit-book__day:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cit-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--cit-accent) 45%, transparent);
+}
+.cit-book__day:disabled { color: color-mix(in srgb, var(--cit-muted) 45%, transparent); cursor: default; }
+.cit-book__day--busy {
+  text-decoration: line-through;
+  background: color-mix(in srgb, var(--cit-muted) 14%, transparent);
+  color: var(--cit-muted);
+}
+.cit-book__day--sel {
+  background: var(--cit-accent);
+  color: var(--cit-on-accent, #fff);
+  font-weight: 700;
+}
+.cit-book__day--range { background: color-mix(in srgb, var(--cit-accent) 16%, transparent); }
+/* ⛔ KONTRAKTUS ⑦: OLVASHATÓ JELMAGYARÁZAT. Mérve a régi lapon: 11,84 px,
+   kontraszt 3,99 (az AA-küszöb 4,5), és a „szabad" minta FEHÉR A FEHÉREN egy halvány
+   1 px-es kerettel. Itt: nagyobb betű, sötétebb szöveg (a szöveg-tokenből, nem a
+   muted-ból), és MINDEN mintának erős kerete van — színvakon is elkülönül. */
+.cit-book__legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--cit-ink);
+}
+.cit-book__lg { width: 15px; height: 15px; border-radius: 5px; display: inline-block;
+  border: 1.5px solid color-mix(in srgb, var(--cit-ink) 70%, transparent); }
+.cit-book__lg--free { background: var(--cit-bg); }
+.cit-book__lg--busy { background: color-mix(in srgb, var(--cit-muted) 30%, transparent); }
+.cit-book__legend .cit-book__lg--busy { margin-left: 8px; }
+
+/* Variant: bar — a compact horizontal booking bar (wide screens). */
+@container mockvp (min-width: 720px) {
+  .cit-book--bar { grid-template-columns: 1fr auto; align-items: end; }
+  .cit-book--bar .cit-book__title { grid-column: 1 / -1; }
+  .cit-book--bar .cit-book__fields {
+    grid-column: 1;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    align-items: end;
+  }
+  .cit-book--bar .cit-book__submit { grid-column: 2; height: 44px; align-self: end; white-space: nowrap; }
+  .cit-book--bar .cit-book__note { grid-column: 1 / -1; }
+  /* Approved "B" contract: once the contact block is open it takes the full bar
+     width and the submit moves under it — the button belongs after the fields
+     the guest is being asked to fill. */
+  .cit-book--bar [data-contact] { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+  .cit-book--bar:has([data-contact]:not([hidden])) .cit-book__submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* Variant: request — the REAL booking form (ADR-0044), mounted when the owner
+   bought the booking module. It carries more fields than the enquiry bar, so it
+   stays one readable column on a phone and only splits in two on a real screen. */
+.cit-book--request .cit-book__fields { gap: 14px; }
+.cit-book--request .cit-book__submit { width: 100%; margin-top: 4px; }
+.cit-book--request .cit-book__submit[disabled] { opacity: 0.55; cursor: not-allowed; }
+.cit-book--request textarea.cit-book__input { resize: vertical; min-height: 74px; }
+@container mockvp (min-width: 720px) {
+  .cit-book--request .cit-book__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cit-book--request .cit-book__field--wide { grid-column: 1 / -1; }
+  .cit-book--request .cit-book__submit { width: auto; min-width: 240px; }
+}
+/* …but inside the two-column layout the request panel is the NARROW column, so its
+   fields stay stacked and the CTA spans it fully (a 2-up grid there produced the
+   cramped half-width inputs). Wins on specificity over the rule above. */
+@container mockvp (min-width: 860px) {
+  .cit-book__formcol .cit-book__fields { grid-template-columns: 1fr; gap: 12px; }
+  .cit-book__formcol .cit-book__submit { width: 100%; min-width: 0; }
+}
+/* ── PHONE: TWO STEPS (owner's choice B, 2026-09-26 — contract:
+   design-refs/tenant-site/booking-mobile-two-step/README.md). Everything here is scoped to
+   narrow widths; on a desktop these elements stay hidden and the two-column card is untouched. */
+.cit-book__status, .cit-book__go, .cit-book__sum { display: none; }
+.cit-book__formcol, .cit-book__calcol { scroll-margin-top: var(--cit-stick, 0px); }
+@container mockvp (max-width: 559px) {
+  .cit-book__status.cit-book__status { display: block; margin: 8px 0 0; padding: 10px 12px; border-radius: calc(var(--cit-radius) * 0.6);
+    font-size: 0.9rem; line-height: 1.4; font-weight: 600; color: var(--cit-accent);
+    background: color-mix(in srgb, var(--cit-accent) 10%, var(--cit-bg));
+    border: 1px solid color-mix(in srgb, var(--cit-accent) 40%, transparent); }
+  .cit-book__status[hidden] { display: none; }
+  .cit-book__go { display: block; width: 100%; margin: 14px 0 0; padding: 0 16px; min-height: 48px; border: 0;
+    border-radius: calc(var(--cit-radius) * 0.7); background: var(--cit-accent); color: var(--cit-on-accent);
+    font: inherit; font-weight: 700; cursor: pointer; }
+  .cit-book__go[disabled] { opacity: 0.55; cursor: not-allowed; }
+  .cit-book--request:not(.cit-book--step2) .cit-book__formcol { display: none; }
+  .cit-book--step2 .cit-book__calcol { display: none; }
+  .cit-book--step2 .cit-book__sum { display: grid; gap: 4px; padding: 12px 14px; margin: 0 0 14px;
+    border-radius: calc(var(--cit-radius) * 0.6); background: color-mix(in srgb, var(--cit-ink) 4%, var(--cit-bg));
+    border: 1px solid var(--cit-line); font-size: 0.9rem; }
+  .cit-book__sum b { font-size: 1rem; }
+  .cit-book__edit { justify-self: start; font: inherit; font-weight: 700; color: var(--cit-accent); background: none;
+    border: 0; padding: 8px 0; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+}
+
+/* After sending, the form is REPLACED by the confirmation — a form left standing
+   invites the same guest to send the identical request twice. */
+.cit-book--done .cit-book__note { margin-top: 8px; }
+
+/* Variant: card — a stacked vertical panel (default / narrow / sidebar). */
+.cit-book--card { max-width: 420px; }
+
+/* ── gallery lightbox (module: gallery) ─────────────────────────────────────
+ * Progressive enhancement: the in-skin <img>s stay as authored; JS only adds a
+ * zoom affordance + this overlay. Token-themed so it matches every archetype. */
+[data-cit-module="gallery"] img { cursor: zoom-in; }
+[data-cit-module="gallery"] img:focus-visible {
+  outline: 3px solid var(--cit-accent);
+  outline-offset: 2px;
+}
+
+.cit-lb {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--cit-font-body);
+}
+.cit-lb[data-open] { display: flex; }
+.cit-lb__scrim { position: absolute; inset: 0; background: rgba(12, 10, 9, 0.88); }
+.cit-lb__stage {
+  position: relative;
+  margin: 0;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.cit-lb__img {
+  display: block;
+  max-width: 92vw;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: var(--cit-radius);
+  box-shadow: var(--cit-shadow);
+  background: var(--cit-surface);
+}
+.cit-lb__cap {
+  color: #f3efe9;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  text-align: center;
+  max-width: 60ch;
+}
+.cit-lb__btn {
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cit-accent);
+  color: var(--cit-on-accent);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.cit-lb__btn:hover { transform: scale(1.06); filter: brightness(1.08); }
+.cit-lb__btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; }
+.cit-lb__btn--close { top: 18px; right: 18px; }
+.cit-lb__btn--prev { top: 50%; left: 18px; transform: translateY(-50%); }
+.cit-lb__btn--next { top: 50%; right: 18px; transform: translateY(-50%) scaleX(-1); }
+.cit-lb__btn--prev:hover { transform: translateY(-50%) scale(1.06); }
+.cit-lb__btn--next:hover { transform: translateY(-50%) scaleX(-1) scale(1.06); }
+.cit-lb__count {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #f3efe9;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+@container mockvp (max-width: 560px) {
+  .cit-lb__btn { width: 44px; height: 44px; }
+  .cit-lb__btn--prev { left: 8px; }
+  .cit-lb__btn--next { right: 8px; }
+}
+
+/* ── map / location (module: map) ───────────────────────────────────────────
+ * Click-to-load facade → lazy Google embed only after opt-in (privacy). */
+.cit-map { margin-top: 16px; border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line); }
+.cit-map__load {
+  font: inherit;
+  font-family: var(--cit-font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 200px;
+  padding: 24px;
+  border: 0;
+  cursor: pointer;
+  color: var(--cit-ink);
+  background: var(--cit-surface);
+  font-weight: 600;
+}
+.cit-map__load:hover { filter: brightness(0.98); }
+.cit-map__load svg { width: 22px; height: 22px; stroke: var(--cit-accent); fill: none; }
+.cit-map__frame { display: block; width: 100%; height: 340px; border: 0; }
+
+/* ── reviews carousel (module: reviews) ─────────────────────────────────────
+ * The in-skin [data-cit-track] of real review cards becomes a snap scroller. */
+.cit-rev__track {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.cit-rev__track::-webkit-scrollbar { display: none; }
+.cit-rev__slide { scroll-snap-align: center; flex: 0 0 min(100%, 420px); }
+.cit-rev__nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
+.cit-rev__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--cit-line);
+  border-radius: 999px;
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.cit-rev__btn:hover { border-color: var(--cit-accent); }
+.cit-rev__btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; }
+.cit-rev__btn--next svg { transform: scaleX(-1); }
+.cit-rev__dots { display: inline-flex; align-items: center; gap: 8px; }
+.cit-rev__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cit-line);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.cit-rev__dot[aria-current="true"] { background: var(--cit-accent); transform: scale(1.3); }
+
+/* SAMPLE-photo watermark (owner decree 2026-08-23): a room photo standing in for a
+   room we do not know about must be unmistakable ON THE PICTURE — the lead who sees
+   an invented room reads it as a false claim about their own property and drops the
+   whole mock ("nálam nincs is apartman, ez nem az én szállásom"). A corner ribbon
+   was clipped by the card's overflow, so this is the classic centred watermark:
+   readable at any card size, drawn by the runtime over any flagged <img> so all 16
+   templates get it from one place. */
+/* Tight wrapper around the flagged image — the band belongs ON the picture, not on
+   whatever box happens to contain it (a table cell swallowed it whole).
+   ⛔⛔ `height:100%` MADE IT SWALLOW THE CARD AGAIN (measured 2026-09-13, 19 templates).
+   In a column-flex room card the li has a definite height (it is stretched by its row),
+   so the wrapper's 100% resolved against the WHOLE CARD instead of the picture: the
+   rotated band spilled past the card edges and covered the room name. That is the same
+   failure the tight wrapper was invented to fix — reintroduced by a sizing shortcut.
+   The wrapper now HUGS the image by default; where the picture genuinely filled its
+   frame's height, the runtime re-grants `height:100%` (it measures that, see
+   markSamplePhotos) instead of every wrapper claiming it blind.
+   Guard: scripts/room-card-overflow-check.mts */
+.cit-wmwrap {
+  position: relative;
+  display: block;
+  line-height: 0;
+  container-type: inline-size;
+  width: 100%;
+}
+.cit-wmwrap[data-cit-wmfill] {
+  height: 100%;
+}
+/* ⛔⛔ THE BAND IS ROTATED, SO ITS BOX IS BIGGER THAN THE PICTURE. A -14° rotation of a
+   300×200 slot reaches ~33px above and below it — enough to land the corners on the room
+   name underneath and to stick out past the card's edge. Measured on 19 templates
+   (2026-09-13) as "a kép takarja a szöveget", and it happened with a PERFECTLY LOADED
+   photo too, so it was never only a broken-image problem.
+   The clip layer is the answer that does not need a new number per template: the mark may
+   live anywhere ON the picture and nowhere else. It wraps the band (never the image), so a
+   template that rotates its own photo — tilted-gallery, scrapbook — keeps its picture
+   untouched. Guard: scripts/room-card-overflow-check.mts */
+.cit-wmclip {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* APPROVED PLAN, variant C (owner's pick, 2026-09-14 — assets/design-refs/engine/
+   roomcard-sample-mark/): a small "MINTA" pill in a corner of the picture instead of the
+   diagonal wash that covered the whole photo. The owner's reasoning: the photo is what
+   sells, so the mark must be unmistakable without dimming the image. §B.17 is still met —
+   the pill sits ON the picture it qualifies, and the section keeps its own "Minta" note. */
+.cit-wm {
+  position: absolute;
+  top: 8px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 100px;
+  font-family: var(--cit-font-body);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+/* WHICH CORNER IS MEASURED, NOT ASSUMED. Templates draw their own things on the picture —
+   `horizontal` puts the chapter number at top-LEFT, `watercolor`/`aurora` put a capacity
+   badge elsewhere. An opaque pill dropped on a fixed corner would bury one of them, and
+   unlike the old translucent wash it does not let the text through. The runtime picks the
+   free corner (see markSamplePhotos); this is only the default.
+   Guard: scripts/room-card-overflow-check.mts */
+.cit-wm { left: 8px; }
+.cit-wm--right { left: auto; right: 8px; }
+.cit-wm--bottom { top: auto; bottom: 8px; }
+/* A tiny picture (the transit row thumbnail is 50×36 on a phone) cannot hold a padded
+   pill: it would be clipped to a stub, which is not a mark but a defect. Smaller type,
+   tighter tracking, and it hugs the corner. */
+.cit-wm--sm {
+  top: 3px;
+  padding: 2px 5px;
+  letter-spacing: 0.04em;
+  font-size: 9px;
+}
+.cit-wm--sm.cit-wm--right { right: 3px; }
+.cit-wm--sm.cit-wm--bottom { top: auto; bottom: 3px; }
+.cit-wm--sm:not(.cit-wm--right) { left: 3px; }
+
+/* The rating badge is a link when we can point at Google's own reviews — it must
+   look clickable (owner request 2026-08-23). */
+a.cit-grat { transition: border-color 0.15s ease, transform 0.15s ease; }
+a.cit-grat:hover {
+  border-color: var(--cit-accent);
+  transform: translateY(-1px);
+}
+
+/* Server-side map embed (owner ruling 2026-09-01: the map renders, it is not a
+   click-to-load facade). Fills the slot it sits in; the address pin card behind it
+   stays as the no-frame fallback. */
+.cit-map__frame--inline { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+/* THE MAP SLOT IS NEVER JUST THE FRAME (Elek FK-004b H-1, measured 2026-09-13).
+   Until now the module-section map WAS the bare iframe, sized and framed by this
+   sheet — so the one time the embed did not paint, the lead was handed a 1120×340 px
+   bordered void: no map, no text, no error, nothing to tell them whether something
+   broke or it was built that way. The box now holds the pin card underneath (the
+   property's own name — real content, not a placeholder), and the frame floats over
+   it on z-index 1. Guard: scripts/lead-page-surface-check.mts ①. */
+.cit-modsec .cit-map-box { position: relative; min-height: 340px; margin-top: 16px;
+  border-radius: var(--cit-radius); overflow: hidden; border: 1px solid var(--cit-line);
+  background: var(--cit-surface); }
+.cit-map-pin { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 24px; }
+/* The shared pin icon is an OUTLINE everywhere else in a module section (stroke, no
+   fill) — `color` alone left it a solid black blob here. Same treatment as
+   .cit-modsec__item svg, one size up. */
+.cit-map-pin svg { width: 34px; height: 34px; stroke: var(--cit-accent); fill: none; stroke-width: 1.6; }
+.cit-map-pin strong { font-family: var(--cit-font-display); font-size: 1.2rem; color: var(--cit-ink); }
+
+/* ── stay quote (owner decree 2026-09-06) + NYITOTT BONTÁS (tulaj 2026-09-14,
+   design-refs/tenant-site/booking-price-clarity „A"): a bontás MINDIG látszik, az alap
+   ki van mondva, és a HELYSZÍNEN fizetendő külön dobozban áll — mert nem része a
+   szállásdíjnak. ── */
+.cit-book__quote{display:block;margin-top:10px;padding:12px 13px;border-radius:12px;
+  background:var(--cit-bg);border:1.5px solid var(--cit-accent)}
+.cit-book__quote:empty{display:none;border:0;padding:0}
+.cit-book__qh{display:block;font-size:.73rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-accent);margin-bottom:8px}
+.cit-book__qline{display:block;font-size:.83rem;color:var(--cit-ink,#10243a);line-height:1.55}
+.cit-book__qbasis{display:block;font-size:.78rem;color:var(--cit-muted,#60748b);
+  line-height:1.5;margin:4px 0 6px}
+.cit-book__qrow{display:flex;justify-content:space-between;gap:12px;font-size:.83rem;
+  line-height:1.55;padding:2px 0}
+.cit-book__qtotal{display:block;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;
+  color:var(--cit-ink,#10243a);border-top:1px solid var(--cit-line)}
+.cit-book__qtotal b{float:right}
+.cit-book__later{margin-top:9px;padding:9px 11px;border-radius:10px;font-size:.81rem;
+  line-height:1.5;color:var(--cit-ink,#10243a);
+  background:color-mix(in srgb,var(--cit-accent) 8%, var(--cit-bg));
+  border:1px solid color-mix(in srgb,var(--cit-accent) 30%, transparent)}
+/* ÁRAJÁNLAT-MÓD (kontraktus: design-refs/tenant-site/quote-request, tulaj 2026-09-22).
+   Ez a doboz ÁLL OTT, ahol eddig néma üresség volt: ha a tartózkodásra nem áll össze ár,
+   a vendég megtudja, MIÉRT nincs szám. A skin akcentszínéből derivál (nincs nyers hex),
+   de a sima ár-doboznál hangsúlyosabb kerettel — más állapot, más súly. */
+/* ⛔ A doboznak NINCS saját kerete: a `.cit-book__quote` konténer MÁR visel egy
+   1,5 px-es akcent-keretet + hátteret, és az első változatom egy másodikat tett bele —
+   kettős keret, a KÉPEN látszott, a gépi állításaim mind zölden álltak. Az ÁLLAPOTOT
+   ezért a konténer viseli (`--ask`), a tartalom csak tartalom. */
+.cit-book__ask{font-size:.86rem;line-height:1.5;color:var(--cit-ink,#10243a)}
+.cit-book__ask b{display:block;margin-bottom:3px}
+.cit-book__ask span{display:block}
+.cit-book__ask-sub{margin-top:5px;font-size:.8rem;color:var(--cit-muted)}
+/* Az árajánlat-állapot a KONTÉNEREN jelenik meg — egy keret, erősebb hangsúllyal. */
+.cit-book__quote--ask{background:color-mix(in srgb,var(--cit-accent) 10%, var(--cit-bg))}
+/* A gomb is más állapotot visel — de a felirat kontrasztja marad a mérce. */
+.cit-book__submit[data-cit-mode="ask"]{
+  background:color-mix(in srgb,var(--cit-accent) 82%, var(--cit-ink))}
+
+/* ⑤ a nyugta LÉPÉSEI — teendő, nem csak kód */
+.cit-book__steph{margin:12px 0 7px;font-size:.73rem;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-accent)}
+.cit-book__steps{counter-reset:citstep;list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.cit-book__steps li{counter-increment:citstep;position:relative;padding-left:32px;
+  font-size:.85rem;line-height:1.5;color:var(--cit-ink,#10243a)}
+.cit-book__steps li::before{content:counter(citstep);position:absolute;left:0;top:0;
+  width:23px;height:23px;border-radius:999px;background:var(--cit-accent);color:#fff;
+  display:grid;place-items:center;font-size:.76rem;font-weight:800}
+/* ── egy-egységes szállás: teljes szélességű panel (kontraktus ⑨) ── */
+.cit-whole{display:grid;gap:14px;border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);padding:16px}
+@container mockvp (min-width:760px){.cit-whole{grid-template-columns:1fr 1fr;align-items:start}}
+.cit-whole__img{width:100%;aspect-ratio:3/2;object-fit:cover;
+  border-radius:calc(var(--cit-radius) * 0.4)}
+.cit-whole__t{margin:0;font-size:1.05rem;font-weight:700;color:var(--cit-ink)}
+.cit-whole__note{margin:6px 0 0;font-size:.9rem;line-height:1.6;color:var(--cit-muted)}
+.cit-whole__facts{list-style:none;margin:12px 0 0;padding:0;display:grid;
+  grid-template-columns:1fr 1fr;gap:9px}
+.cit-whole__facts li{background:color-mix(in srgb,var(--cit-ink) 4%,transparent);
+  border-radius:10px;padding:9px 11px;font-size:.86rem;color:var(--cit-ink)}
+.cit-whole__facts b{display:block;font-size:.71rem;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--cit-muted);margin-bottom:2px}
+
+/* ── the guest's RECEIPT after sending (Elek FK-007, 2026-09-11) ──
+   Label/value rows so the numbers line up on a 390 px screen too: the label
+   shrinks, the value never wraps mid-figure (a broken "32 000" reads as two
+   prices). The total keeps the quote's own styling, so the number the guest
+   saw before sending and the number they read after are visibly the same one. */
+.cit-book__receipt{display:block;margin:10px 0;padding:12px 14px;border-radius:12px;
+  background:var(--cit-surface-2,rgba(16,36,58,.04));border:1px solid var(--cit-line,rgba(16,36,58,.12))}
+.cit-book__rrow{display:flex;gap:12px;align-items:baseline;justify-content:space-between;
+  font-size:.86rem;line-height:1.65}
+.cit-book__rrow>span{color:var(--cit-muted,#60748b);flex:0 1 auto}
+.cit-book__rrow>b{color:var(--cit-ink,#10243a);text-align:right;flex:1 1 auto;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.cit-book__receipt .cit-book__qline{margin-top:2px}
+.cit-book__receipt .cit-book__qtotal{margin-top:8px;padding-top:8px;font-size:1rem;
+  border-top:1px solid var(--cit-line,rgba(16,36,58,.12))}
+
+/* ══ ROOM CARD + DETAILS POPOVER ═══════════════════════════════════════════════
+   APPROVED PLAN, variant B (owner, 2026-09-21 — assets/design-refs/tenant-site/
+   rooms-card/: README.md is the contract, plan.html the reference implementation).
+
+   ONE markup, themed only from --cit-* → in-skin in all 19 templates by itself
+   (ADR-0011 hydrating runtime, ADR-0057 in-skin module). ⛔ A generic white modal
+   is forbidden: it would look borrowed on every single skin.
+
+   ⚠️ @container, NOT @media: the popover sits inside the page's own box and has to
+   react to THAT box. (The measurement frame the plan was judged in is 390px wide
+   while the window is not — a @media rule would have answered the wrong question.) */
+.cit-rooms-js .cit-rmore { display: none; }   /* JS lifts it into the popover */
+.cit-room__open { color: inherit; text-decoration: none; cursor: pointer; }
+.cit-room__open:focus-visible { outline: 2px solid var(--cit-accent); outline-offset: 4px; }
+/* ⛔ ZERO specificity on purpose (:where). The shell wraps markup each template
+   already lays out with its OWN class — `.cit-whole` is a flex panel, several room
+   cards are grids. A plain `.cit-room__open{display:block}` sits LATER in this sheet
+   than those rules and, at equal specificity, would silently win and flatten them.
+   (The console already paid for that exact lesson: a link rule ate a button's colour.)
+   `:where()` lets a template class take the layout back, while an anchor that
+   declares nothing still stops being inline. */
+:where(.cit-room__open) { display: block; }
+
+/* The badge is absolutely placed, so the photo box must be its positioning context.
+   `.tb-thumbwrap` is transit's table-row thumbnail; the others are the shared block. */
+.cit-whole__imwrap, .cit-modsec__roomim { position: relative; display: block; }
+/* ⛔⛔ THE SHELL MUST NOT SHRINK. `.cit-modsec__item` is a column flex with
+   align-items:flex-start, so wrapping the card's contents in the clickable shell turned
+   them into ONE flex item that shrank to its content — measured: the room photo went
+   from full card width to 75×50px, and the badge nearly covered the whole picture.
+   The wrapper is a shell, not a new layout: it inherits the width it replaced. */
+.cit-modsec__item > .cit-room__open, .cit-modsec__item > .cit-rmore { width: 100%; align-self: stretch; }
+.tb-thumbwrap { position: relative; display: inline-block; vertical-align: middle; }
+
+/* The explicit "Részletek" control next to Foglalás. One neutral, token-only style so
+   the affordance does not have to be re-styled in each of the 12 card markups. */
+.cit-rmbtn {
+  background: 0; border: 0; padding: 4px; cursor: pointer; font: inherit;
+  font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--cit-muted); text-decoration: underline; text-underline-offset: 4px;
+}
+.cit-rmbtn:hover { color: var(--cit-accent); }
+
+/* ── the badge ON the photo ────────────────────────────────────────────────────
+   ⭐ Owner ruling: the PHOTO must say it is clickable, and it must say so WITHOUT
+   hover — a phone has none. Measured opacity:1 with no interaction. It also reports
+   how many photos wait inside, a promise the popover then keeps. */
+.cit-rmhint {
+  position: absolute; right: 9px; bottom: 9px; z-index: 3;
+  display: flex; align-items: center; gap: 7px;
+  background: color-mix(in srgb, var(--cit-bg) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 55%, transparent);
+  color: var(--cit-ink); font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  padding: 7px 10px; backdrop-filter: blur(2px); transition: .25s;
+  max-width: calc(100% - 18px); white-space: nowrap; overflow: hidden;
+  /* ⛔ NO pointer-events:none. It was here so the whole card would be the click target
+     — which it is anyway, since the badge sits INSIDE the card's <a>. What it actually
+     did was make the badge invisible to hit-testing, so the room-card overflow guard
+     probed the badge's own text, got the IMG underneath, and reported "the photo covers
+     the text" on seven templates. The pill is painted ABOVE the photo; a measurement
+     that cannot see it will conclude the opposite. */
+}
+/* ⛔ The badge is absolutely placed, so it needs a positioned ancestor — and the photo
+   frame is a DIFFERENT element in each of the 12 card markups (.ad-im, .cn-im2, .og-im,
+   a bare <figure>…). Measured without this: on four templates the pill anchored to some
+   far ancestor and painted 200-900px away from its picture, one of them at y=-219, i.e.
+   off-screen. `:has` names the frame by what it CONTAINS instead of by 12 class names;
+   `:where` keeps it at zero specificity so a template that positions its own frame
+   deliberately still wins. */
+:where(.cit-room__open *:has(> .cit-rmhint)) { position: relative; }
+.cit-rmhint svg { flex: none; color: var(--cit-accent); }
+.cit-room__open:hover .cit-rmhint, .cit-room__open:focus-visible .cit-rmhint {
+  background: var(--cit-accent); color: var(--cit-on-accent); border-color: var(--cit-accent);
+}
+.cit-room__open:hover .cit-rmhint svg, .cit-room__open:focus-visible .cit-rmhint svg {
+  color: var(--cit-on-accent);
+}
+/* A thumbnail cannot hold a padded pill (the transit row image is 50×36 on a phone):
+   there the badge is the magnifier alone, riding the corner. Same lesson the SAMPLE
+   band already paid for. */
+.cit-rmhint--sm { right: 2px; bottom: 2px; padding: 3px; gap: 0; letter-spacing: 0; }
+.cit-rmhint--sm > span { display: none; }
+
+/* ── no-JS fallback: the SAME content, opened on the card ──────────────────── */
+.cit-rmore { margin-top: 14px; text-align: left; }
+.cit-rmore > summary {
+  cursor: pointer; font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--cit-accent); text-align: center; padding: 8px;
+}
+.cit-rmore__ph { display: flex; gap: 6px; overflow-x: auto; list-style: none; margin: 10px 0; padding: 0; }
+.cit-rmore__ph img { width: 96px; aspect-ratio: 4/3; object-fit: cover; display: block; }
+.cit-rmore__desc { color: var(--cit-muted); font-size: 14.5px; margin: 12px 0; }
+.cit-rmore__h {
+  font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: var(--cit-accent);
+  margin-top: 14px;
+}
+.cit-rmore__am { display: grid; gap: 8px 14px; grid-template-columns: 1fr 1fr; margin: 10px 0 0; padding: 0; }
+.cit-rmore__am li { display: flex; align-items: center; gap: 9px; list-style: none; font-size: 14px; }
+.cit-rmore__am svg { flex: none; color: var(--cit-accent); }
+.cit-rmore__empty { color: var(--cit-muted); font-size: 13.5px; font-style: italic; margin-top: 10px; }
+
+/* Anchor jumps (the nav's "Foglalás" → #cit-booking) land the target's top edge at the
+   screen's top edge — exactly where the sticky/fixed bar paints, so the section title was
+   hidden under it (measured on editorial + card-sidebar at 390px, 2026-09-26). The runtime
+   measures the bar and sets --cit-stick; every jump target keeps that much clear. */
+[data-cit-module], [id], .cit-book--done { scroll-margin-top: var(--cit-stick, 0px); }
+
+/* ── the popover ──────────────────────────────────────────────────────────── */
+.cit-rd { display: none; container-type: inline-size; }
+.cit-rd[data-open] { display: block; }
+/* ⛔⛔ !important, DELIBERATELY — an overlay a template can push off-screen is not an
+   overlay, so its position is not negotiable by page CSS.
+   MEASURED, not feared: `aurora`'s glass trick is
+       body>*:not(.au-aurora):not(.au-nav){position:relative;z-index:1}
+   which scores (0,2,1). A plain `.cit-rd` (0,1,0) lost, and so did a doubled
+   `.cit-rd.cit-rd` (0,2,0) — the "fixed" popover opened 4029px DOWN THE DOCUMENT with
+   zero height: the guest clicked a card and nothing happened. Specificity escalation is
+   a race a template can always win by adding one more `:not()`; a stated rule is not.
+   The SAME page rule has been silently hitting the shared lightbox all along, so it is
+   pinned here too. Any template may own its own stacking — neither may own these two. */
+.cit-rd { position: fixed !important; inset: 0 !important; z-index: 9000 !important; }
+.cit-lb { position: fixed !important; inset: 0 !important; z-index: 9999 !important; }
+/* ⛔ …AND THE STACKING ORDER (measured 2026-09-26, guest-mobile-check on aurora): the
+   position was pinned, the z-index was not — the same (0,2,1) rule set z-index:1 on the
+   popover and the lightbox, so aurora's fixed app bar (z 100) and mobile CTA bar (z 120)
+   painted OVER them: the X of both overlays sat under the bar, unreachable by thumb. */
+.cit-rd__veil {
+  position: absolute; inset: 0;
+  background: color-mix(in srgb, var(--cit-bg) 82%, transparent); backdrop-filter: blur(3px);
+}
+.cit-rd__panel {
+  position: absolute; inset: 0; overflow: hidden;
+  background: var(--cit-bg); color: var(--cit-ink); font-family: var(--cit-font-body);
+  border: 1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
+  display: flex; flex-direction: column; box-shadow: var(--cit-shadow);
+}
+/* Desktop: a centred dialog, never taller than the viewport.
+   ⛔ NOT 100cqh — the container is container-type:inline-size, so the block-axis cq
+   unit does not resolve against it. Measured on the plan: the panel overflowed by
+   141px and pushed the Foglalás button 106px out of the frame. The panel is absolutely
+   positioned inside .cit-rd (inset:0), so plain % is both correct and simpler. */
+@container (min-width: 900px) {
+  .cit-rd__panel {
+    /* ⚠️ 40→24px keret. A hangolás skin-függő volt (ami artdeco-n átment, a
+       wordmark-grow betűivel megbukott), ezért a helyet SZERKEZETILEG adjuk hozzá:
+       a párbeszéd közelebb ül a képernyő széléhez, és a nyert 32px minden skinen
+       ugyanannyi — nem a betűméret szerencséje. */
+    inset: 24px auto auto 50%; transform: translateX(-50%);
+    width: min(1060px, 92%); max-height: calc(100% - 48px);
+  }
+}
+.cit-rd__x {
+  position: absolute; top: 10px; right: 10px; z-index: 6; width: 44px; height: 44px;
+  border: 0; cursor: pointer; font-family: inherit; font-size: 22px; line-height: 1;
+  background: color-mix(in srgb, var(--cit-bg) 72%, transparent); color: var(--cit-ink);
+}
+.cit-rd__x:hover { color: var(--cit-accent); }
+.cit-rd__body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* gallery half — flex-shrink 1 so a long amenity list can reclaim its rows.
+   ⛔ IT IS A COLUMN FLEX ITSELF, and that is the whole point: when the wrapper gives
+   space back, the STAGE must absorb it and the thumb strip must keep its 68px. My own
+   first shrink-fix skipped this and the strip bled 5-13px OUT of its wrapper on three
+   templates — the same "the height sits on the wrapper" defect the plan already paid
+   for, re-created by the fix for something else. */
+.cit-rd__gal {
+  position: relative; flex: 0 1 auto; min-height: 0; background: #000;
+  display: flex; flex-direction: column;
+}
+.cit-rd__gal img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* ⭐⭐ THE FACTS GET THE SPACE; THE PICTURE TAKES WHAT IS LEFT.
+   Measured three times over: a 4/3 stage ate 292px of a 780px sheet and left 1 of 9
+   amenities in front of the guest. Tuning the stage to a fixed 16/10 then passed on
+   artdeco and still failed on arch-frames, tilted-gallery and wordmark-grow — because
+   the popover wears the SKIN's fonts, so a pixel budget that fits one skin is not a
+   rule, it is a coincidence (the "barely passing value" trap).
+   So the stage is ELASTIC (flex-shrink on the gallery, a vh target with a floor) and
+   the text column is what the layout protects. vh, not cq: this overlay is fixed to
+   the VIEWPORT — the @container rules below still own the LAYOUT. */
+.cit-rd__stage { flex: 0 1 auto; height: 24vh; min-height: 96px; max-height: 230px;
+  position: relative; cursor: zoom-in; }
+.cit-rd__nav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px;
+  border: 0; cursor: pointer; font-family: inherit; font-size: 20px;
+  background: color-mix(in srgb, var(--cit-bg) 60%, transparent); color: var(--cit-ink);
+}
+.cit-rd__nav:hover { background: var(--cit-accent); color: var(--cit-on-accent); }
+.cit-rd__nav--prev { left: 0; } .cit-rd__nav--next { right: 0; }
+.cit-rd__count {
+  position: absolute; bottom: 8px; right: 10px; font-size: 11px; letter-spacing: .14em;
+  padding: 4px 9px;
+  background: color-mix(in srgb, var(--cit-bg) 66%, transparent); color: var(--cit-ink);
+}
+.cit-rd__thumbs {
+  display: flex; gap: 6px; padding: 6px; overflow-x: auto; flex: none;
+  background: color-mix(in srgb, var(--cit-bg) 88%, #000);
+}
+/* ⛔⛔ display:flex BEATS the [hidden] attribute's UA display:none. Measured: with a
+   single photo the thumb strip still painted — a dead control the guest can SEE while
+   el.hidden === true. Three of four test units have exactly one photo, so this is the
+   BASE case, not the edge. Every hideable control below repeats the rule on purpose. */
+.cit-rd__thumbs[hidden], .cit-rd__nav[hidden], .cit-rd__count[hidden],
+.cit-rd__desc[hidden], .cit-rd__cap[hidden], .cit-rd__price[hidden],
+.cit-rd__empty[hidden] { display: none; }
+.cit-rd__thumbs button {
+  flex: none; width: 74px; aspect-ratio: 4/3; border: 1px solid transparent; padding: 0;
+  cursor: pointer; background: 0;
+}
+.cit-rd__thumbs button[aria-current="true"] { border-color: var(--cit-accent); }
+.cit-rd__thumbs img { width: 100%; height: 100%; object-fit: cover; opacity: .62; }
+.cit-rd__thumbs button[aria-current="true"] img { opacity: 1; }
+
+/* text half */
+.cit-rd__txt { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 18px; }
+.cit-rd__brow {
+  font-size: 11px; letter-spacing: .4em; text-transform: uppercase;
+  color: var(--cit-accent); font-weight: 600;
+}
+.cit-rd__txt h3 {
+  font-family: var(--cit-font-display); font-weight: 400; letter-spacing: .06em;
+  font-size: clamp(26px, 6vw, 38px); margin: 8px 0 4px;
+}
+.cit-rd__cap {
+  font-style: italic; font-size: 17px;
+  color: color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));
+}
+.cit-rd__price { font-weight: 600; font-size: 16px; margin-top: 6px; }
+.cit-rd__desc { color: var(--cit-muted); font-size: 15px; line-height: 1.7; margin-top: 12px; }
+.cit-rd__h4 {
+  font-size: 11px; letter-spacing: .34em; text-transform: uppercase; color: var(--cit-accent);
+  margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--cit-accent) 24%, transparent);
+}
+/* ⛔⛔ TWO COLUMNS ALREADY ON A PHONE. One column measured 1 of 9 amenities in front of
+   the guest — the contract binds SIX without scrolling, and "the <li> exists" is exactly
+   the answer that once reported 9 while the guest saw none. */
+.cit-rd__am { display: grid; gap: 9px 14px; grid-template-columns: 1fr 1fr; margin: 12px 0 0; padding: 0; }
+.cit-rd__am li {
+  display: flex; align-items: center; gap: 10px; list-style: none; font-size: 14.5px;
+  color: var(--cit-ink);
+}
+.cit-rd__am svg { flex: none; color: var(--cit-accent); }
+.cit-rd__empty { color: var(--cit-muted); font-size: 13.5px; font-style: italic; margin-top: 18px; }
+.cit-rd__cta {
+  flex: none; padding: 14px 18px; background: var(--cit-bg);
+  border-top: 1px solid color-mix(in srgb, var(--cit-accent) 28%, transparent);
+}
+.cit-rd__cta a {
+  display: block; width: 100%; text-align: center; text-decoration: none;
+  background: var(--cit-accent); color: var(--cit-on-accent);
+  font-size: 12px; letter-spacing: .24em; text-transform: uppercase; font-weight: 700;
+  padding: 16px 38px; font-family: inherit; transition: .25s;
+}
+.cit-rd__cta a:hover { filter: brightness(1.08); }
+/* ── DESKTOP ─────────────────────────────────────────────────────────────────
+   ⚠️ LAST in the file ON PURPOSE. The first version put this block right after
+   .cit-rd__stage, so every base rule below it — the 1-column amenity grid, the phone
+   padding — came LATER and silently won at equal specificity. Measured on a 1280px
+   viewport: 2 of 9 amenities in front of the guest where the contract binds all nine.
+   The rule read correctly and did nothing. */
+@container (min-width: 900px) {
+  /* ⛔ Measured on the plan: height + overflow:hidden on the WRAPPER put the 68px thumb
+     strip entirely below the box and clipped it away — the gallery the owner approved
+     did not exist. The height belongs on the STAGE; the wrapper grows with it. */
+  /* ⚠️ A padló 120→96: a dátum-mondat hozzáadása ~25px-et vitt el, és két sablonon
+     a 9. felszereltség a hajtás alá esett. A KÉP enged, nem a tények. */
+  .cit-rd__stage { height: 22vh; min-height: 96px; max-height: 250px; }
+  .cit-rd__txt { text-align: center; padding: 22px 44px 18px; }
+  .cit-rd__desc { margin-top: 10px; }
+  .cit-rd__am { grid-template-columns: repeat(3, 1fr); justify-items: center; }
+  .cit-rd__cta { text-align: center; border-top: 0; padding-bottom: 34px; }
+  .cit-rd__cta a { display: inline-block; width: auto; min-width: 280px; }
+}
+
+/* A bare photo-box for the three minimal templates whose card is just <figure> + caption:
+   they have no image wrapper of their own to hang the badge on. */
+.cit-rmbox { position: relative; display: block; }
+
+/* A közös tartalék szoba-kártyájának foglalás-gombja. Mérve 2026-09-22: a hét
+   tartalékra bízott sablonon NULLA volt belőle, vagyis ott a „szobánál a Foglalásra
+   kattintok" folyamat nem létezett — miközben a 12 saját szekciót rajzoló sablonon
+   végig megvolt. */
+.cit-modsec__roomcta {
+  display: inline-block; margin-top: 4px; padding: 9px 18px; text-decoration: none;
+  font-size: .82rem; font-weight: 700; letter-spacing: .04em;
+  background: var(--cit-accent); color: var(--cit-on-accent);
+  border-radius: calc(var(--cit-radius) * 0.6);
+}
+.cit-modsec__roomcta:hover { filter: brightness(1.07); }
+.cit-whole__cta { margin: 14px 0 0; }
+.cit-rd__pricenote { color: var(--cit-muted); font-size: 12.5px; font-style: italic;
+  margin-top: 2px; line-height: 1.45; }
+.cit-rd__pricenote[hidden] { display: none; }
+
+/* Ár a három szikár sablon szoba-feliratában (arch-frames, tilted-gallery,
+   wordmark-grow). Tulajdonosi döntés 2026-09-22: „szobáknál is legyen ár" — ezeken
+   a kártyákon eddig EGYÁLTALÁN nem volt ár, miközben a többi 16-on igen. A sablon
+   rajzát nem írja át: ugyanaz a felirat-stílus, egy sorral lejjebb. */
+.a-price, .w-price, .t-price { font-weight: 600; opacity: .95; }
+
+/* Touch ergonomics — at the END of the sheet on purpose: same-specificity rules above
+   (.cit-book__dinput{font-size:.9rem}) would otherwise win by source order.
+   (guest-mobile-check (guest-mobile-check, 2026-09-26 — measured on 38 mocks × 3 phone
+   viewports): below 16px iOS zooms the whole page when a field gets focus, and the
+   templates' body font is 13.8–14.4px, so every field inherited a zooming size. On a
+   phone the fields, the date strip and the review form's controls read at 16px, and
+   every control the thumb has to hit is at least 44px tall. */
+@container mockvp (max-width: 559px), (max-height: 500px) {
+  .cit-book__input, .cit-book__dinput,
+  .cit-rev-f input:not([type=checkbox]), .cit-rev-f select, .cit-rev-f textarea { font-size: 16px; }
+  .cit-book__input, .cit-rev-f input:not([type=checkbox]), .cit-rev-f select { min-height: 44px; }
+  .cit-book__dinput { min-height: 44px; }
+  .cit-price__tab, .cit-modsec__roomcta { min-height: 44px; display: inline-flex; align-items: center; }
+  .cit-rmbtn { min-height: 44px; padding: 4px 8px; }
+
+</style></head><body>
+<div class="mock-tools"><button id="bm" type="button">Mobil 390 px</button><button id="bd" type="button">Asztali</button><span>B · Két lépés telefonon</span></div>
+<div id="stage">
+<header class="hd"><b>Laguna Panzió</b><a href="#cit-booking">Foglalás</a></header>
+<div class="mock-note"><b>B — JÓVÁHAGYOTT (tulaj, 2026-09-26)</b> — telefonon a foglalás KÉT lépés: 1) naptár + napok + ár, egy nagy „Tovább” gombbal (a hiba a dátum-sáv alatt jelenik meg); 2) összegző sáv (napok · éj · ár · „Módosítom a napokat”) + az adatok + a küldő gomb. Asztalon a jóváhagyott kéthasábos elrendezés változatlan. Ez a lap a MOTOR valódi runtime-ját futtatja (cit-runtime.js), nem egy külön prototípust.</div>
+<section class="hero"><h1>Fedett medence, szauna és bőséges reggeli a Balatontól sétányira</h1><p>Szántód · Balaton — a vendég ITT dönt: tájékozódik, szobát néz, foglal.</p></section>
+<section class="rooms"><h2>Szobák</h2><div class="grid"><div class="room"><b>1. szoba</b><span>2 fő · saját fürdő · minta</span></div><div class="room"><b>2. szoba</b><span>3 fő · erkély · minta</span></div><div class="room"><b>3. szoba</b><span>4 fő · családi · minta</span></div></div></section>
+<section class="book cit-modsec" id="cit-booking" data-cit-module="booking-section"><div class="cit-modsec__in"><h2>Foglalás</h2>
+<div data-cit-module="booking" data-cit-variant="request" data-cit-name="Laguna Panzió" data-cit-email="laguna.szantod@hotmail.com" data-cit-phone="(06 84) 345 306" data-cit-demo="1" data-cit-units='[{"id": "minta-1", "name": "1. szoba"}, {"id": "minta-2", "name": "2. szoba"}, {"id": "minta-3", "name": "3. szoba"}]' data-cit-min-nights="1" data-cit-max-nights="30"></div>
+</div></section>
+<footer class="ft">Laguna Panzió · Siófoki út 1, Szántód · (06 84) 345 306 · Adatkezelés · Impresszum</footer>
+</div>
+<script data-cit-runtime>/* AN AMOUNT OF MONEY, in the browser — the mirror of src/text/money.ts.
+ *
+ * WHY A SECOND COPY. The buyer's checkout reprices on every checkbox click, so the
+ * server cannot hand down a finished string; the browser has to format. It cannot
+ * import TypeScript, so the rule exists twice ON PURPOSE. What makes that safe is
+ * not discipline — it is scripts/money-format-check.mts, which runs this file and
+ * the TS module over the same matrix and fails on the first byte that differs.
+ * An unmeasured second copy is exactly how the split this file closes was born:
+ * measured 2026-09-14, cit-runtime.js printed the guest's quote with a NON-BREAKING
+ * space while src/tenant/prices.ts printed the SAME quote with a plain one, and
+ * cit-configurator.js wrote "Ft" onto every amount because the server sent it the
+ * literal string "Ft" as the currency.
+ *
+ * Loaded by INLINING (generator/runtime.ts, generator/configurator.ts and the
+ * tenant-admin views all splice their scripts into the document), so this defines
+ * one global: `CitMoney`. No module system, no external fetch — a generated mock
+ * is opened from file:// and out of an e-mail client too.
+ */
+var CitMoney = (function () {
+  "use strict";
+
+  /** The domestic sign for the currencies we price in; anything else prints its code. */
+  var SIGN = { HUF: "Ft", EUR: "€" };
+
+  /** NBSP, NARROW NBSP, THIN SPACE — none may survive into our output (see the TS twin). */
+  var NON_BREAKING = /[\u00a0\u202f\u2009]/g;
+
+  function group(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
+  /** "HUF" → "Ft", "EUR" → "€", anything else (a sign already, or "RON") → itself. */
+  function currencySign(currency) {
+    var c = String(currency == null ? "" : currency).trim();
+    if (!c) return "";
+    return Object.prototype.hasOwnProperty.call(SIGN, c.toUpperCase()) ? SIGN[c.toUpperCase()] : c;
+  }
+
+  function finite(amount) {
+    return typeof amount === "number" && isFinite(amount);
+  }
+
+  /** The grouped number alone: 99900 → "99 900". For sentences carrying their own unit. */
+  function formatNumber(amount, lang) {
+    if (!finite(amount)) return "";
+    var n = Math.round(amount);
+    if (!lang || lang === "hu") return group(n);
+    try {
+      return new Intl.NumberFormat(lang, { maximumFractionDigits: 0 })
+        .format(n)
+        .replace(NON_BREAKING, " ");
+    } catch (e) {
+      return group(n);
+    }
+  }
+
+  /**
+   * 99900,"HUF" → "99 900 Ft" · 10,"EUR" → "10 €" · 50,"RON" → "50 RON".
+   *
+   * Only the Hungarian reader gets "Ft"; other packs go through Intl, so a German
+   * reads "99.900 HUF". Never throws: Intl's currency style raises on a non-ISO
+   * code, and we are handed those ("Ft", "€", ""), so the Hungarian branch catches.
+   */
+  function formatMoney(amount, currency, lang) {
+    if (!finite(amount)) return "";
+    var n = Math.round(amount);
+    if (lang && lang !== "hu") {
+      try {
+        return new Intl.NumberFormat(lang, {
+          style: "currency",
+          currency: String(currency == null ? "" : currency).trim().toUpperCase(),
+          maximumFractionDigits: 0,
+        })
+          .format(n)
+          .replace(NON_BREAKING, " ");
+      } catch (e) {
+        /* Not an ISO code — fall through to the Hungarian branch, which prints something true. */
+      }
+    }
+    var sign = currencySign(currency);
+    var num = group(n);
+    return sign ? num + " " + sign : num;
+  }
+
+  return { formatMoney: formatMoney, formatNumber: formatNumber, currencySign: currencySign };
+})();
+
+/* Node (the parity guard) loads this file as a script and reads CitMoney off the
+ * sandbox global; a browser gets the same binding from the var above. */
+if (typeof module !== "undefined" && module.exports) module.exports = CitMoney;
+
+/* A SZEZON-ILLESZTÉS SZABÁLYA — EGY példányban, mindkét oldalnak.
+ *
+ * WHY THIS FILE EXISTS. "Which price row applies to this night?" lived TWICE, and the
+ * two copies were never compared: src/tenant/prices.ts (seasonCovers + priceOn, the
+ * number that is FROZEN onto the booking request and mailed to the guest) and
+ * assets/runtime/cit-runtime.js (the same two functions, the number the guest READS
+ * before submitting). The money FORMATTER is also duplicated (cit-money.js), but that
+ * one is deliberate and held by a parity guard — an unequal formatter prints an ugly
+ * string. An unequal PRICE SELECTOR quotes a different amount than it charges, which is
+ * the ADR-0193 ② harm class. So this predicate is loaded by both sides and cannot drift,
+ * because there is only one of it.
+ *
+ * ⛔ THE GUARD IS NOT A THIRD CONSUMER. scripts/booking-price-coherence-check.mts keeps
+ * its OWN re-implementation on purpose, and must keep it: an oracle that imports the
+ * code under test cannot disagree with it. When this rule changes, that oracle is
+ * updated INDEPENDENTLY — that separation is the whole point of it.
+ *
+ * ⚠️ WHAT IS DELIBERATELY ENCODED HERE, in one place, so the next change has one site:
+ * a season is a RECURRING MONTH-DAY ("06-15"), with no year, so it holds every year
+ * (moduleConfigViews.ts: "making them re-enter it each January would guarantee stale
+ * prices"). Measured 2026-09-22: a stay in July 2027 — inside the 12-month booking
+ * horizon — is quoted the SAME amount as July 2026, and that amount is frozen onto the
+ * request. Year-bound rows (migration 0072: valid_from/valid_to) landed HERE, once —
+ * see rowFor's precedence — instead of in two places that would silently disagree.
+ *
+ * `.cjs` on purpose: package.json says "type": "module", so a `.js` here could not be
+ * require()d from the server at all. The browser gets the text spliced into the runtime
+ * <script>, where the trailing module.exports line is inert.
+ */
+var CitSeason = (function () {
+  /* Does a recurring 'MM-DD' range cover this month-day? Handles the year-end wrap
+   * (a "Téli szünet 12-20 – 01-05" range runs December → January). */
+  function covers(from, to, monthDay) {
+    if (!from || !to || !monthDay) return false;
+    return from <= to
+      ? monthDay >= from && monthDay <= to
+      : monthDay >= from || monthDay <= to;
+  }
+
+  /* 'YYYY-MM-DD' (or a full ISO stamp) → 'MM-DD'. The `slice(5, 10)` assumption lived
+   * in three files; it lives here now, so a year-aware rule has ONE place to change. */
+  function monthDayOf(isoDate) {
+    return String(isoDate).slice(5, 10);
+  }
+
+  /* Is a 'YYYY-MM-DD' date inside a row's YEAR-BOUND window (inclusive)? A row with
+   * no window (both ends null) is timeless and always "inside". Plain string compare
+   * is exact for zero-padded ISO dates. (migration 0072) */
+  function inWindow(row, isoDay) {
+    var a = row.validFrom, b = row.validTo;
+    if (!a || !b) return true;
+    return isoDay >= a && isoDay <= b;
+  }
+
+  function hasWindow(row) {
+    return !!(row.validFrom && row.validTo);
+  }
+
+  /* The row in effect on a given NIGHT ('YYYY-MM-DD'), or null for an unpriced night,
+   * which every caller must turn into "no quote at all" (§B.17).
+   *
+   * Precedence, most specific first (approved plan booking-offer, 2026-09-23):
+   *   1. a YEAR-BOUND season covering the night ("Főszezon 2027" beats the recurring one)
+   *   2. a recurring season covering the night
+   *   3. a DATED base whose window holds the night (the offer page writes these: a price
+   *      for the nights no season covers, until the owner's chosen day)
+   *   4. the timeless base
+   * Rows whose window does not hold the night do not exist for it. Inside each tier the
+   * owner's own order decides (first wins), so an overlap resolves the way the list
+   * reads top-down instead of by some hidden rule.
+   *
+   * `rows` is shape-agnostic on purpose — the server calls it with UnitPrice objects
+   * (`isBase`/`from`/`to`/`validFrom`/`validTo`) and the browser with the JSON the
+   * endpoint ships (`base`/…). `isBaseRow` tells the two apart without a second copy of
+   * the selection logic.
+   *
+   * ⛔ The second argument used to be a MONTH-DAY. It is a full date now, because a
+   * year-bound row cannot be judged from 'MM-DD' — a caller still passing '07-10' would
+   * silently skip every dated row, so a short argument is refused loudly. */
+  function rowFor(rows, isoDay, isBaseRow) {
+    if (!rows || !rows.length) return null;
+    if (String(isoDay).length < 10) throw new Error("CitSeason.rowFor: full YYYY-MM-DD date required, got " + isoDay);
+    var day = String(isoDay).slice(0, 10);
+    var md = monthDayOf(day);
+    var yearSeason = null, season = null, datedBase = null, base = null;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (!inWindow(r, day)) continue;
+      if (isBaseRow(r)) {
+        if (hasWindow(r)) { if (!datedBase) datedBase = r; }
+        else if (!base) base = r;
+        continue;
+      }
+      if (!covers(r.from, r.to, md)) continue;
+      if (hasWindow(r)) { if (!yearSeason) yearSeason = r; }
+      else if (!season) season = r;
+    }
+    return yearSeason || season || datedBase || base;
+  }
+
+  /* One YEAR's occurrence of a recurring season, named by the year it STARTS in
+   * (migration 0074, approved plan season-year-price). A range that wraps the year end
+   * (11-01 → 03-01) ends in the next calendar year, so its label is "2026/27" and its
+   * window runs 2026-11-01 … 2027-03-01. The Árazás page, the year-price writer and the
+   * public price table all name and date a year the SAME way — from here. */
+  function occurrence(from, to, year) {
+    var y = Number(year);
+    var wraps = from > to;
+    return {
+      year: y,
+      start: y + "-" + from,
+      end: (wraps ? y + 1 : y) + "-" + to,
+      label: wraps ? y + "/" + String(y + 1).slice(2) : String(y)
+    };
+  }
+
+  /* The first year whose occurrence has not ended by `isoToday` — the leftmost year the
+   * owner can still price (a season that closed yesterday offers next year first). */
+  function firstOpenYear(from, to, isoToday) {
+    var y = Number(String(isoToday).slice(0, 4)) - 1;
+    while (occurrence(from, to, y).end < String(isoToday).slice(0, 10)) y++;
+    return y;
+  }
+
+  /* What the owner typed → 'MM-DD', or null when it is not a real day of the year.
+   * "11-01", "11.01", "11. 01.", "11/1", "1101" all mean November 1 (approved plan
+   * season-year-price). Here, once: the Árazás page previews with it while the owner
+   * types, and the server stores with it — a preview that normalised differently
+   * would promise days the saved season does not have. */
+  var DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  function normMonthDay(raw) {
+    var t = String(raw == null ? "" : raw).replace(/\s+/g, "").replace(/\.$/, "");
+    var m = /^(\d{1,2})[.\-\/](\d{1,2})$/.exec(t) || /^(\d{2})(\d{2})$/.exec(t);
+    if (!m) return null;
+    var mo = Number(m[1]), d = Number(m[2]);
+    if (mo < 1 || mo > 12 || d < 1 || d > DIM[mo - 1]) return null;
+    return (mo < 10 ? "0" : "") + mo + "-" + (d < 10 ? "0" : "") + d;
+  }
+
+  return {
+    covers: covers, monthDayOf: monthDayOf, inWindow: inWindow, rowFor: rowFor,
+    occurrence: occurrence, firstOpenYear: firstOpenYear, normMonthDay: normMonthDay
+  };
+})();
+
+/* Node (server) requires this file; a browser gets the same binding from the var. */
+if (typeof module !== "undefined" && module.exports) module.exports = CitSeason;
+
 /* Citoviso module runtime (UI-CONTRACT §B, ADR-0011). Framework-free.
  *
  * Hydrates module slots regardless of the archetype's markup:
@@ -1778,3 +3143,8 @@
     boot();
   }
 })();
+</script>
+<script>(function(){var st=document.getElementById('stage'),bm=document.getElementById('bm'),bd=document.getElementById('bd');
+function set(m){st.classList.toggle('is-mobile',m);bm.setAttribute('aria-pressed',String(m));bd.setAttribute('aria-pressed',String(!m));window.dispatchEvent(new Event('resize'))}
+bm.onclick=function(){set(true)};bd.onclick=function(){set(false)};set(window.innerWidth<700)})();</script>
+</body></html>

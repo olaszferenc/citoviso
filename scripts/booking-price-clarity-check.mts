@@ -225,6 +225,8 @@ console.log("\n⑤ A nyugta TEENDŐT ad — és csak azt ígéri, ami létezik:"
 {
   const page = await open(browser, await pageFor({ ifa: true, units: 1 }), 390);
   await pickTwoDays(page);
+  // Plan B (2026-09-26): on a phone the fields sit in step 2, behind "Tovább".
+  if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
   await page.fill("#cit-name", "Teszt Vendég");
   await page.fill("#cit-email", "vendeg@example.com");
   await page.fill("#cit-phone", "+36301112222");

@@ -63,6 +63,8 @@ const EDITORIAL_CSS = `
   .e-nav{position:sticky;top:0;z-index:40;background:var(--cit-bg);border-bottom:2px solid var(--cit-ink);transition:box-shadow .3s}
   .e-nav.e-stuck{box-shadow:0 8px 24px color-mix(in srgb, var(--cit-ink) 14%, transparent)}
   .e-nav .e-wrap{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 0}
+  /* phone: one scrollable row — five 44px pills wrapped the sticky masthead menu to 97–138px (guest-mobile-check ⑤, 2026-09-26) */
+  @media(max-width:720px){.e-nav .e-wrap{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;scrollbar-width:none;padding:4px 0}.e-nav .e-wrap::-webkit-scrollbar{display:none}.e-nav a{white-space:nowrap;flex:none}}
   .e-nav a{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;padding:0 14px;border-radius:100px;transition:.25s;display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box}
   .e-nav a:hover{background:var(--cit-ink);color:var(--cit-bg)}
   .e-nav a.e-hot{background:var(--cit-accent);color:var(--cit-on-accent)}

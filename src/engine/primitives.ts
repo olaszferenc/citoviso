@@ -531,10 +531,14 @@ function sampleNote(text: string): string {
 // sees "Apartman", and concludes "nálam nincs is apartman, ez nem az én szállásom"
 // — we lose them on a detail we invented. A numbered placeholder claims nothing and
 // still shows the room module's shape; the owner names the real rooms in the admin.
+// The popover of a sample unit was EMPTY ("nincs leírás és felszereltség" + half a screen of
+// nothing — measured 2026-09-26): the lead could not picture what the guest gets. The sample
+// carries an illustrative description and a few generic amenities, every one of them under
+// the MINTA heading the runtime paints — and NO hard fact (no number, no m², no price; §B.17).
 export const SAMPLE_ROOMS: readonly Room[] = [
-  { name: "1. szoba", note: "Ide kerül a szoba neve és rövid leírása." },
-  { name: "2. szoba", note: "Ide kerül a szoba neve és rövid leírása." },
-  { name: "3. szoba", note: "Ide kerül a szoba neve és rövid leírása." },
+  { name: "1. szoba", sample: true, note: "Ide kerül a szoba neve és rövid leírása.", description: "Minta-leírás: ide kerül a szoba bemutatása a saját szavaival — hangulat, elrendezés, kilátás, kinek ajánlja. Az éles oldalon ezt Ön írja meg és cseréli.", amenities: [{ label: "Saját fürdőszoba" }, { label: "Ingyenes Wi-Fi" }, { label: "Klíma" }, { label: "Reggeli kérhető" }] },
+  { name: "2. szoba", sample: true, note: "Ide kerül a szoba neve és rövid leírása.", description: "Minta-leírás: ide kerül a szoba bemutatása a saját szavaival — hangulat, elrendezés, kilátás, kinek ajánlja. Az éles oldalon ezt Ön írja meg és cseréli.", amenities: [{ label: "Saját fürdőszoba" }, { label: "Erkély" }, { label: "Ingyenes Wi-Fi" }] },
+  { name: "3. szoba", sample: true, note: "Ide kerül a szoba neve és rövid leírása.", description: "Minta-leírás: ide kerül a szoba bemutatása a saját szavaival — hangulat, elrendezés, kilátás, kinek ajánlja. Az éles oldalon ezt Ön írja meg és cseréli.", amenities: [{ label: "Saját fürdőszoba" }, { label: "Családi elrendezés" }, { label: "Ingyenes Wi-Fi" }] },
 ];
 export const SAMPLE_REVIEWS: readonly Review[] = [
   { quote: "Az érkezéstől az utolsó reggeliig azt éreztük: itt tényleg ránk figyelnek.", author: "Anna", meta: "vendégértékelés" },

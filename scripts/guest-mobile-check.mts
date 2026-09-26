@@ -108,6 +108,7 @@ const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[] }[] = [
   { id: "selftest-tiny-controls", css: `.cit-book__calnav{width:20px!important;height:20px!important;flex-basis:20px!important} .cit-rd__x{width:20px!important;height:20px!important}`, expect: ["③érintési-cél", "⑦bezárás-kicsi"] },
   { id: "selftest-overflow", css: `body{min-width:600px}`, expect: ["①túlfolyás"] },
   { id: "selftest-calendar-dead", css: ``, expect: [] }, // the JS below kills the handler; judged by the "paged" probe
+  { id: "selftest-no-two-step", css: `.cit-book__go{display:none!important}`, expect: ["⑥két-lépés"] },
 ];
 // a dead "next month" button: the widget's own listener never runs (capture-phase stop)
 const SELFTEST_DEAD_JS = `<script>document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.cit-book__calnav--next'))e.stopImmediatePropagation()},true)</script>`;
@@ -306,7 +307,9 @@ const PROBE_BOOKING = `(async () => { ${LIB}
   out.datesToNote = dates && note ? Math.round(note.getBoundingClientRect().top - dates.getBoundingClientRect().bottom) : null;
   // reversed range via the inputs → error sentence: where is it, relative to the date strip?
   setDate(q('#cit-from'), shift(tISO, 40)); setDate(q('#cit-to'), shift(tISO, 38)); await new Promise(r => setTimeout(r, 80));
-  const err = form.querySelector('.cit-book__note--err');
+  // the phone mirror (plan B) counts as the error sentence when it is painted; else the note
+  const mirror = form.querySelector('.cit-book__status');
+  const err = (mirror && !mirror.hidden && vis(mirror)) ? mirror : form.querySelector('.cit-book__note--err');
   // scroll so the date strip is at the top: is the error on the same screen?
   const dsTop = dates.getBoundingClientRect().top + window.scrollY; window.scrollTo(0, Math.max(0, dsTop - stickyH - 8)); await new Promise(r => setTimeout(r, 60));
   out.reversed = { errShown: !!err, text: (err?.textContent||'').trim().slice(0,80), errR: err ? rect(err) : null, errInScreenWithDates: err ? fullyInView(err) : null, submitDisabled: submit?.disabled, distance: err ? Math.round(err.getBoundingClientRect().top - dates.getBoundingClientRect().bottom) : null };
@@ -316,6 +319,22 @@ const PROBE_BOOKING = `(async () => { ${LIB}
   out.past = { errShown: !!err2, text: (err2?.textContent||'').trim().slice(0,80), submitDisabled: submit?.disabled };
   // valid range typed → quote/ask + submit enabled; then the sample submit
   setDate(q('#cit-from'), shift(tISO, 40)); setDate(q('#cit-to'), shift(tISO, 42)); await new Promise(r => setTimeout(r, 80));
+  // plan B (phone only): a "go" button after the price, thumb-sized, and step 2 shows the summary + the send button
+  const go = form.querySelector('.cit-book__go');
+  const phoneLayout = W < 560;
+  out.twoStep = null;
+  if (phoneLayout) {
+    const goVis = go && vis(go);
+    const goR = go ? rect(go) : null; // BEFORE the click: step 2 hides the calendar column and the button with it
+    let step2 = null;
+    if (goVis) {
+      go.click(); await new Promise(r => setTimeout(r, 250));
+      const sumEl = form.querySelector('.cit-book__sum'); const sub = form.querySelector('.cit-book__submit');
+      const sr = sub ? sub.getBoundingClientRect() : null; const smr = sumEl ? sumEl.getBoundingClientRect() : null;
+      step2 = { on: form.classList.contains('cit-book--step2'), summary: (sumEl && sumEl.textContent || '').trim().slice(0, 80), summaryVis: !!(sumEl && vis(sumEl)), calHidden: !vis(form.querySelector('.cit-book__cal')), submitVis: !!(sub && vis(sub)), summaryToSubmit: smr && sr ? Math.round(sr.top - smr.top) : null };
+    }
+    out.twoStep = { goPresent: !!go, goVis: !!goVis, goR, goDisabled: go ? go.disabled : null, step2 };
+  }
   const stepBtns = [...form.querySelectorAll('.cit-book__step')].map(b => ({ r: rect(b), fs: parseFloat(getComputedStyle(b).fontSize) }));
   out.stepper = stepBtns;
   out.inputs = [...form.querySelectorAll('input:not([type=hidden]), select, textarea')].filter(vis).map(el => ({ sel: name(el), h: rect(el).h, fs: Math.round(parseFloat(getComputedStyle(el).fontSize)*10)/10 }));
@@ -514,10 +533,20 @@ async function main(): Promise<void> {
             if (b.reversed.errShown === false) F(P, vp.id, "HIBA", "⑥fordított-dátum", `fordított dátumra nincs hibaüzenet`);
             else if (b.reversed.errInScreenWithDates === false) F(P, vp.id, "ERGONÓMIA", "⑥hibaüzenet-távol", `a hibaüzenet („${b.reversed.text}”) ${b.reversed.distance}px-re a dátum-sávtól — nem egy képernyőn (${vp.height}px)`);
             if (b.past.errShown === false) F(P, vp.id, "HIBA", "⑥múltbeli-dátum", `múltbeli érkezésre nincs hibaüzenet`);
-            if (b.quoteToSubmit != null && b.quoteToSubmit > vp.height - 100) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `az ár-összegzés és a küldő gomb ${b.quoteToSubmit}px-re egymástól (képernyő ${vp.height}px)`);
+            if (!b.twoStep && b.quoteToSubmit != null && b.quoteToSubmit > vp.height - 100) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `az ár-összegzés és a küldő gomb ${b.quoteToSubmit}px-re egymástól (képernyő ${vp.height}px)`);
             for (const s of b.stepper) if (s.r.w < 44 || s.r.h < 44) { F(P, vp.id, "ERGONÓMIA", "⑥létszám-gomb", `a vendégszám ± gombja ${s.r.w}×${s.r.h}px`); break; }
             const smallIn = b.inputs.filter((i: any) => i.fs < 16);
             if (smallIn.length) F(P, vp.id, "ERGONÓMIA", "⑥widget-input-betű", `${smallIn.length} widget-mező < 16px: ${smallIn.slice(0, 3).map((i: any) => `${i.sel} ${i.fs}px`).join(", ")}`);
+            if (b.twoStep) {
+              const t = b.twoStep;
+              if (!t.goVis) F(P, vp.id, "HIBA", "⑥két-lépés", `telefonon nincs látható „Tovább” gomb a naptár után (B terv)`);
+              else {
+                if (t.goR.h < 44) F(P, vp.id, "ERGONÓMIA", "⑥két-lépés-gomb", `a „Tovább” gomb ${t.goR.w}×${t.goR.h}px`);
+                if (t.goDisabled) F(P, vp.id, "HIBA", "⑥két-lépés", `érvényes tartományra is tiltott a „Tovább” gomb`);
+                if (!t.step2 || !t.step2.on || !t.step2.summaryVis || !t.step2.submitVis || !t.step2.calHidden) F(P, vp.id, "HIBA", "⑥két-lépés", `a 2. lépés nem áll össze (step2=${t.step2 && t.step2.on}, összegző=${t.step2 && t.step2.summaryVis}, küldő=${t.step2 && t.step2.submitVis}, naptár rejtve=${t.step2 && t.step2.calHidden})`);
+                else if (t.step2.summaryToSubmit > vp.height - 60) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `a 2. lépésben az összegző és a küldő gomb ${t.step2.summaryToSubmit}px-re egymástól`);
+              }
+            }
             if (b.valid.submitDisabled) F(P, vp.id, "HIBA", "⑥gomb-tiltva", `érvényes tartományra is tiltott a küldő gomb`);
             if (b.valid.submitCovered) F(P, vp.id, "HIBA", "⑥gomb-takarva", `a küldő gombot takarja: ${b.valid.submitCovered}`);
             if (b.valid.submitR.h < 44) F(P, vp.id, "ERGONÓMIA", "⑥gomb-kicsi", `a küldő gomb ${b.valid.submitR.w}×${b.valid.submitR.h}px`);

@@ -6,6 +6,7 @@ import { tSync } from "../i18n/packs.js";
 import { iconSvg } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
+import { amenityIconSvg } from "./amenityIcon.js";
 
 /** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
  *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
@@ -348,6 +349,7 @@ export function roomShell(d: SiteData, r: Room, i: number, cls: string, inner: s
     (r.capacity ? ` data-cit-room-cap="${esc(r.capacity)}"` : "") +
     (r.price ? ` data-cit-room-price="${esc(r.price)}"` : "") +
     (r.wholeProperty ? ` data-cit-room-whole="1"` : "") +
+    (r.sample ? ` data-cit-room-sample="1"` : "") +
     // A kártya „Foglalás"-a ebből tudja meg, MELYIK egységre ugrik le.
     (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
     // ⛔ NO aria-label. The shell CONTAINS the room's name and capacity, so that text
@@ -386,12 +388,12 @@ export function roomDetails(d: SiteData, r: Room, i: number): string {
     : "";
   const descP = desc ? `<p class="cit-rmore__desc">${esc(desc)}</p>` : "";
   // ⛔ ADR-0181: no heading without items. An empty "Amit ez az egység kínál" box is a
-  // claim about the unit, not a layout detail.
+  // claim about the unit, not a layout detail. A SAMPLE unit's heading says so out loud.
   const amL = ams.length
-    ? `<p class="cit-rmore__h">${T(d, "Amit ez az egység kínál")}</p>` +
+    ? `<p class="cit-rmore__h">${r.sample ? T(d, "Minta-felszereltség — az éles oldalon az Ön tényleges listája kerül ide") : T(d, "Amit ez az egység kínál")}</p>` +
       `<ul class="cit-rmore__am">` +
       ams
-        .map((a) => `<li>${a.icon ?? ""}<span>${esc(a.label)}</span></li>`)
+        .map((a) => `<li>${a.icon ?? amenityIconSvg(a.label)}<span>${esc(a.label)}</span></li>`)
         .join("") +
       `</ul>`
     : "";

@@ -137,6 +137,9 @@ export interface Room {
    * must not cost us that: the subpage is the SEO entry point (ADR-0041).
    */
   readonly slug?: string;
+  /** A SAMPLE unit of the mock (ADR-0061): the popover heads it MINTA and the details are
+   *  illustrative placeholders, never a claim about the property (§B.17). */
+  readonly sample?: boolean;
   /** ADR-0114 — this unit IS the whole place; the popover says so instead of "Apartman". */
   readonly wholeProperty?: boolean;
   /**

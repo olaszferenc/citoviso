@@ -87,6 +87,23 @@ section{padding:clamp(70px,10vh,124px) 0}
 .w-nav a{color:var(--cit-ink);text-decoration:none;font-size:12.5px;letter-spacing:.02em}
 .w-nav .w-links,.w-nav .w-right{display:none;gap:24px;align-items:center}
 @media(min-width:880px){.w-nav .w-links,.w-nav .w-right{display:flex}}
+/* Phone (guest-mobile-check, 2026-09-26): the pill and the links were hidden below 880px —
+   no booking start on the first screen, 0 links. Brand + ink pill in one row, the two links
+   in a quiet second row; the wordmark opening below is untouched. */
+@media(max-width:879px){
+  .w-nav{grid-template-columns:1fr auto;grid-template-areas:"brand right" "links links";row-gap:0;padding:6px 18px 2px}
+  .w-nav .w-brand-s{grid-area:brand;text-align:left}
+  .w-nav .w-right{display:flex;grid-area:right}
+  .w-nav .w-right a:not(.w-pill){display:none}
+  .w-nav .w-links{display:flex;grid-area:links;gap:20px;overflow-x:auto;scrollbar-width:none}
+  .w-nav .w-links::-webkit-scrollbar{display:none}
+  .w-nav a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+  .w-nav .w-pill{min-height:44px;padding:0 20px;box-sizing:border-box}
+}
+/* .w-nav a (0,1,1) beat .w-pill (0,1,0): ink text on the ink pill, an invisible label (measured 2026-09-26) */
+.w-nav a.w-pill{color:var(--cit-bg)}
+@media(max-width:879px){
+}
 .w-nav .w-right{justify-content:flex-end}
 .w-nav .w-brand-s{text-align:center;font-family:var(--cit-font-display);font-size:17px;
   white-space:nowrap}

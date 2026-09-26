@@ -396,6 +396,31 @@
   .cit-book__formcol .cit-book__fields { grid-template-columns: 1fr; gap: 12px; }
   .cit-book__formcol .cit-book__submit { width: 100%; min-width: 0; }
 }
+/* ── PHONE: TWO STEPS (owner's choice B, 2026-09-26 — contract:
+   design-refs/tenant-site/booking-mobile-two-step/README.md). Everything here is scoped to
+   narrow widths; on a desktop these elements stay hidden and the two-column card is untouched. */
+.cit-book__status, .cit-book__go, .cit-book__sum { display: none; }
+.cit-book__formcol, .cit-book__calcol { scroll-margin-top: var(--cit-stick, 0px); }
+@media (max-width: 559px) {
+  .cit-book__status.cit-book__status { display: block; margin: 8px 0 0; padding: 10px 12px; border-radius: calc(var(--cit-radius) * 0.6);
+    font-size: 0.9rem; line-height: 1.4; font-weight: 600; color: var(--cit-accent);
+    background: color-mix(in srgb, var(--cit-accent) 10%, var(--cit-bg));
+    border: 1px solid color-mix(in srgb, var(--cit-accent) 40%, transparent); }
+  .cit-book__status[hidden] { display: none; }
+  .cit-book__go { display: block; width: 100%; margin: 14px 0 0; padding: 0 16px; min-height: 48px; border: 0;
+    border-radius: calc(var(--cit-radius) * 0.7); background: var(--cit-accent); color: var(--cit-on-accent);
+    font: inherit; font-weight: 700; cursor: pointer; }
+  .cit-book__go[disabled] { opacity: 0.55; cursor: not-allowed; }
+  .cit-book--request:not(.cit-book--step2) .cit-book__formcol { display: none; }
+  .cit-book--step2 .cit-book__calcol { display: none; }
+  .cit-book--step2 .cit-book__sum { display: grid; gap: 4px; padding: 12px 14px; margin: 0 0 14px;
+    border-radius: calc(var(--cit-radius) * 0.6); background: color-mix(in srgb, var(--cit-ink) 4%, var(--cit-bg));
+    border: 1px solid var(--cit-line); font-size: 0.9rem; }
+  .cit-book__sum b { font-size: 1rem; }
+  .cit-book__edit { justify-self: start; font: inherit; font-weight: 700; color: var(--cit-accent); background: none;
+    border: 0; padding: 8px 0; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+}
+
 /* After sending, the form is REPLACED by the confirmation — a form left standing
    invites the same guest to send the identical request twice. */
 .cit-book--done .cit-book__note { margin-top: 8px; }
@@ -852,6 +877,8 @@ a.cit-grat:hover {
 .cit-rmore__am { display: grid; gap: 8px 14px; grid-template-columns: 1fr 1fr; margin: 10px 0 0; padding: 0; }
 .cit-rmore__am li { display: flex; align-items: center; gap: 9px; list-style: none; font-size: 14px; }
 .cit-rmore__am svg { flex: none; color: var(--cit-accent); }
+/* catalogue icons carry no size of their own: the sample unit's list painted 120px glyphs (2026-09-26) */
+.cit-rmore__am svg, .cit-rd__am li svg { width: 20px; height: 20px; flex: none; }
 .cit-rmore__empty { color: var(--cit-muted); font-size: 13.5px; font-style: italic; margin-top: 10px; }
 
 /* Anchor jumps (the nav's "Foglalás" → #cit-booking) land the target's top edge at the

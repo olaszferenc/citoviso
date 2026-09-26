@@ -84,7 +84,12 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
   tedd: írd "#cit-from" "${ELEK_DAY_A}"
   tedd: írd "#cit-to" "${ELEK_DAY_B}"
   várd: látható "2 éjszaka"
-  kézi: az ár-doboz (vagy az „egyedi árat ad” mondat) és a küldő gomb között hány képernyőnyi űrlap van 390 px-en; a gomb felirata („Foglalási kérés elküldése” / „Árajánlatot kérek”) egyezik-e azzal, amit az ár-doboz ígér; a vendégszám ± gombja ujjal eltalálható-e
+  kézi: telefonon az 1. lépés: az ár-doboz (vagy az „egyedi árat ad” mondat) ALATT egy „Tovább a kérés adataihoz (N éjszaka)” gomb áll-e, ujjal eltalálhatóan; hibás dátumnál a gomb tiltott-e és a felirata mondja-e, hogy javítani kell
+
+- [ ] A „Tovább” gomb a kérés adataihoz visz: összegző sáv (időszak · éjszakák · ár), alatta a mezők és a küldő gomb egy képernyőn
+  tedd: kattints ".cit-book__go"
+  várd: látható "Módosítom a napokat"
+  kézi: a 2. lépés összegzője ugyanazt mondja-e, amit a naptárban választott; a naptár eltűnt-e; a mezők és a küldő gomb egy görgetésnyire vannak-e; a „Módosítom a napokat” visszavisz-e a naptárhoz (a képen: a sáv szövege és a mezők)
 
 - [ ] A minta-kérés elküldése után a nyugta a képernyőre görget, és kimondja, hogy ez csak próba volt
   tedd: írd "#cit-name" "Elek Vendég"

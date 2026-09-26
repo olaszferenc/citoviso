@@ -88,6 +88,23 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
   letter-spacing:.16em}
 .a-nav .a-links,.a-nav .a-right{display:none;gap:22px;align-items:center}
 @media(min-width:880px){.a-nav .a-links,.a-nav .a-right{display:flex}}
+/* Phone (guest-mobile-check, 2026-09-26): the pill sat in a hidden span, so the first screen
+   had NO booking start and the header 0 links. Same voice — small caps, hairline pill —
+   in two quiet rows: brand + pill, then the three links in a scrollable row; every link
+   a 44px thumb target. The photo opening below stays untouched. */
+@media(max-width:879px){
+  .a-nav{grid-template-columns:1fr auto;grid-template-areas:"brand right" "links links";row-gap:2px;padding:6px 16px 4px}
+  .a-nav .a-brand{grid-area:brand;text-align:left}
+  .a-nav .a-right{display:flex;grid-area:right}
+  .a-nav .a-right a:not(.a-pill){display:none}
+  .a-nav .a-links{display:flex;grid-area:links;gap:18px;overflow-x:auto;scrollbar-width:none}
+  .a-nav .a-links::-webkit-scrollbar{display:none}
+  .a-nav a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
+  .a-nav .a-pill{min-height:44px;padding:0 20px;box-sizing:border-box}
+}
+.a-nav a.a-pill{color:var(--cit-on-accent)}
+@media(max-width:879px){
+}
 .a-nav .a-right{justify-content:flex-end}
 .a-nav .a-brand{text-align:center;font-variant:small-caps;letter-spacing:.2em;font-size:15px;
   white-space:nowrap}
