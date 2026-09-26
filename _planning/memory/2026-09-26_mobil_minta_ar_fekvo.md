@@ -2,7 +2,7 @@
 
 **Brief:** `~/rc-briefs/mobil-minta-ar-fekvo-brief.md` (szülő: `cite8fb512d`). Tulaj szó szerint: „Javítsd a fekvőket
 és legyen minta ár" — a saját ergonómiai belátás szerinti építés + utólagos ítélet mandátuma áll. **ADR-0239**
-(`_planning/decisions/XXXX-minta-ar-a-mock-foglalas-widgetben-es-fekvo-focim.md`). Nem élesítve (a nagy deployjal megy).
+(`_planning/decisions/0239-minta-ar-a-mock-foglalas-widgetjeben-a-proba-a.md`). Nem élesítve (a nagy deployjal megy).
 
 ## Mi épült (mind a MOTORBAN — a mock-fájlokat kézzel nem érintettem)
 
@@ -63,11 +63,26 @@
   Az FK-008b foglalás-lépéseit (MINTA-jelölés, „Foglalási kérés elküldése" → „Így néz ki, amikor a vendége foglal",
   „Ez kipróbálás volt") a `mock-booking-sample-check` méri független felismerőkkel, és az FK-010 a fájlon.
 
+## Landolás és a fő fa
+- 1. land: `945959c9` (feature, 83 kapu zöld; a §2b felület-kapu a tulajdonosi mandátum kimondott kivételével,
+  naplózva) + `3e6eb3c0` (MEMORY.md) → `origin/main` = `f75dedbf` (ADR-0239 kiosztva). IGAZOLTAN FENT.
+- Az 57 mock a fő fából újrarenderelve (`rerender-mock` 19/19 × 3 lead), fájl-módban 390/360/fekvő (171 lap-nézet):
+  **0 HIBA**, 445 ergonómiai lelet (③érintési-cél 243 · ⑥ár→gomb-távol 114 · ⑥hibaüzenet-távol 57 · ⑤tapadó-sáv 21 ·
+  ②CTA-hajtás 6 · ②nav-üres 2 · ②CTA-takarva 1 · **②főcím-szorul 1: Laguna cinematic fekvőn 4 px a chip alatt**).
+- 2. kör: **cinematic** ugyanazt a 640 px-es hero-minimumot viselte → ugyanaz a fekvő javítás (`4879f8d1`, kapu-mód
+  0 HIBA mindhárom nézetben); a land után a 3 cinematic mock újrarenderelve a fő fából.
+- **FK-010 mátrix az 57 friss mockon: 57/57 pass, 0 fail** (17 kézi lépés/lap), három futásban (2 runnerrel ~100 s/lap:
+  az első 29-nél, a második 33-nál futott az időkorlátba; a `run-guest-mobile` fájl-argumentumot a lead ÖSSZES stílusára
+  bontja, ezért a maradékot `--lead=… --style=…`-vel). ⚠️ Egy megszakított futás 3 „fail"-t hagyott (a böngésző
+  bezárása a 16–18. lépésen), újrafuttatva 0 — a megszakított futás leletét ne olvasd hibának.
+- ⛔ Önpusztító `pgrep|kill`: a `pgrep -f "runner.mts|run-guest-mobile"` a SAJÁT parancssoromra illett → exit 144
+  (a memória szabálya, másodszor). PID-listát a mintával NEM egy parancsban.
+
 ## Módosított / új fájlok
 - `assets/runtime/cit-runtime.js` (demoPricing, renderQuote minta-jelölés, demo-nyugta askMode-ra), `assets/runtime/cit-modules.css` (`.cit-book__qsample`)
-- `src/engine/templates/darkLuxury.ts`, `src/engine/templates/tiltedGallery.ts`, `src/engine/archetypes.ts` (fekvő media-blokkok)
+- `src/engine/templates/darkLuxury.ts`, `src/engine/templates/tiltedGallery.ts`, `src/engine/templates/cinematic.ts`, `src/engine/archetypes.ts` (fekvő media-blokkok)
 - `scripts/guest-mobile-check.mts` (②főcím-takarva/szorul + selftest), **új** `scripts/mock-booking-sample-check.mts`, `hooks/pre-commit` (regisztráció)
-- `src/i18n/catalog.json` (+8 sztring), `_planning/decisions/XXXX-…md`, ez a jegyzet, `MEMORY.md` (külön commit)
+- `src/i18n/catalog.json` (+8 sztring), `_planning/decisions/0239-…md`, ez a jegyzet, `MEMORY.md` (külön commit)
 - Fő fa (a landolás után): az 57 mock `rerender-mock`-kal (Ifjúsági Szállás Tihany · Laguna Panzió · Alig-vár Tanya).
   ⚠️ A munkafa `mock-*.html`-jei SYMLINKEK a fő fába (rc-wt-prepare), ezért a munkafából futtatott `rerender-mock`
   a FŐ FA fájlját írja — a 3 Alig-vár (cinematic, dark-luxury, tilted) + az ELEK-TESZT mock így már a landolás
