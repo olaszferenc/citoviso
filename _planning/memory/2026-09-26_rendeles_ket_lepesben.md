@@ -45,3 +45,10 @@ Javítás: `> small`.
 - A B szál (lap-görgetés elfogása) és a C szál (indító gomb) ugyanezt a két fájlt érinti. Ha
   utánam landolnak, rebase-kor ütközhetnek a lábléc környékén.
 - Nincs élesítve (csak a nagy deployjal együtt).
+
+## Utójavítás (ugyanaznap, tulaj-kérés): az Éves kártya „áráért” sora egy sorban
+Asztalon és fekvő telefonon a „10 hónap áráért 12 hónap — 95 000 Ft/év” kettétört: 213 px-t kért egy 172 px-es
+kártyában. A kód egy fölösleges „hónap”-ot tett a `period-badge` ⑤ szövegéhez, ezt kivettem (177 px). A széles
+váltón (`@container ≥390px`) az Éves kártya `flex-grow: 1.2`-t kap (212 px). Az `order-two-step-check` méri
+(különböző sor-tetők száma; a `getClientRects().length` beágyazott spannál egy soron belül is 2-t ad), egy
+negyedik önteszt-mutációval.

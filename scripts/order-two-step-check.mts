@@ -113,6 +113,21 @@ const PROBE = `(function () {
     head: ((document.querySelector(".cit-cfg-head p") || {}).textContent || "").trim(),
     annualCardOn: !!document.querySelector('.cit-cfg-permat [data-period="annual"].cit-cfg-popt--on'),
     annualPillOn: !!document.querySelector('.cit-cfg-ppill [data-period="annual"].cit-cfg-popt--on'),
+    // LINES of the annual card's "áráért" line (the form that is shown: wide OR
+    // narrow). ⛔ Not getClientRects().length: an inline span with a nested span
+    // returns one rect per RUN, so a single line read 2 — count distinct line tops.
+    gainLines: (function () {
+      var w = document.querySelector(".cit-cfg-permat .cit-cfg-gain-w");
+      var n = document.querySelector(".cit-cfg-permat .cit-cfg-gain-n");
+      var shown = w && getComputedStyle(w).display !== "none" ? w : n;
+      if (!shown) return 0;
+      var tops = {};
+      Array.prototype.forEach.call(shown.getClientRects(), function (r) {
+        if (r.width > 0) tops[Math.round(r.top)] = 1;
+      });
+      return Object.keys(tops).length;
+    })(),
+    gainText: ((document.querySelector(".cit-cfg-permat .cit-cfg-popt__gain") || {}).innerText || "").trim(),
   };
 })()`;
 type Probe = {
@@ -120,7 +135,7 @@ type Probe = {
   permatHit: boolean; permatTop: number | null; sumTop: number | null; sumVis: boolean; pill: boolean;
   pillHit: boolean; mini: boolean; miniN: number | null; cardN: number | null; miniText: string;
   nextHit: boolean; submitHit: boolean; rights: boolean; recap: string; head: string;
-  annualCardOn: boolean; annualPillOn: boolean;
+  annualCardOn: boolean; annualPillOn: boolean; gainLines: number; gainText: string;
 };
 
 async function audit(browser: Browser, file: string): Promise<string[]> {
@@ -178,6 +193,8 @@ async function audit(browser: Browser, file: string): Promise<string[]> {
     f(p.permat && p.permatHit, "a 2. lépésen a Havi/Éves kártya nem látszik / nem koppintható érintetlen görgetésnél");
     f(p.permatTop !== null && p.sumTop !== null && p.permatTop < p.sumTop, "a 2. lépés első látványa nem a Havi/Éves kártya-pár (az összeg-kártya fölötte van)");
     f(p.sumVis, "a 2. lépésen nem látszik a MOST FIZETENDŐ kártya");
+    // owner, 2026-09-26: "10 hónap áráért 12 hónap —" / "95 000 Ft/év" broke in two on desktop
+    f(p.gainLines === 1, `az Éves kártya „áráért” sora nem egy sorban áll (${p.gainLines} sor: „${p.gainText}”)`);
     f(p.miniN !== null && p.miniN === p.cardN, `a két lépés összege eltér (1. lépés: ${p.miniN}, kártya: ${p.cardN})`);
     f(/szekció/.test(p.recap), `a 2. lépés nem nevezi meg a választott csomagot („${p.recap}”)`);
     f(!/Most nem fizet semmit/.test(p.head) && /Még nem fizet/.test(p.head), `a 2. lépés fejléce: „${p.head}”`);
@@ -207,6 +224,11 @@ const MUTATIONS: { name: string; from: RegExp; to: string }[] = [
   {
     name: "a 2. lépésen megmarad a lista",
     from: /\.cit-cfg-panel--s2 \.cit-cfg-body,\n/,
+    to: "",
+  },
+  {
+    name: "az Éves kártya nem kap több helyet (az „áráért” sor kettétörik)",
+    from: /\.cit-cfg-permat \.cit-cfg-popt--deal \{ flex-grow: 1\.2; \}/,
     to: "",
   },
   {

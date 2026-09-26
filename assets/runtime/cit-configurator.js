@@ -2288,7 +2288,10 @@
       .replace("{paid}", String(12 - free));
     gain.innerHTML =
       '<span class="cit-cfg-gain-n">' + esc(paid) + "</span>" +
-      '<span class="cit-cfg-gain-w">' + esc(paid + " " + tr("hónap") + " — ") +
+      // The wide form is the contract's own wording (period-badge ⑤: "{12−n} hónap
+      // áráért 12 — {éves ár}/év"). An extra "hónap" here pushed it to 213 px in a
+      // 172 px card and it broke onto two lines on every desktop (owner, 2026-09-26).
+      '<span class="cit-cfg-gain-w">' + esc(paid + " — ") +
       // the amount never breaks inside the number ("95 / 000 Ft")
       '<span class="cit-cfg-gain-amt">' + esc(fmt(yearly) + tr("/év")) + "</span></span>";
   }

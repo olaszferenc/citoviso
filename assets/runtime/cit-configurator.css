@@ -1407,6 +1407,10 @@
 @container (min-width: 390px) {
   .cit-cfg-gain-n { display: none; }
   .cit-cfg-gain-w { display: inline; }
+  /* The wide line ("10 hónap áráért 12 — 95 000 Ft/év", ~177 px) needs more than
+   * half of the 404 px switch; "Havi · rugalmas, bármikor" needs far less. Measured:
+   * equal halves gave 172 px and the line broke in two (owner, 2026-09-26). */
+  .cit-cfg-permat .cit-cfg-popt--deal { flex-grow: 1.2; }
 }
 .cit-cfg-save {
   display: block;
