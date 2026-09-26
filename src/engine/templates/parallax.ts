@@ -160,10 +160,15 @@ const PARALLAX_CSS = `
   .t-sample{margin-top:30px;font-size:12.5px;opacity:.55;letter-spacing:.5px;text-align:center}
 
   /* CONTACT split */
-  .t-congrid{display:grid;gap:40px;grid-template-columns:1fr;margin-top:44px;align-items:center}
-  @media(min-width:920px){.t-congrid{grid-template-columns:1fr 1fr}}
+  /* minmax(0,1fr): the photo column's min-content pushed the grid to 390px on a 360px phone (2026-09-26) */
+  .t-congrid{display:grid;gap:40px;grid-template-columns:minmax(0,1fr);margin-top:44px;align-items:center}
+  @media(min-width:920px){.t-congrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+  .t-conphoto{min-width:0}
   .t-conline{display:flex;align-items:center;gap:16px;padding:16px 0;border-top:1px solid var(--cit-line);font-size:16px}
   .t-conline svg{width:22px;height:22px;color:var(--cit-accent);flex:none}
+  /* an unbreakable e-mail in the bold line was the column's min-content (324px): at 360px the
+     page grew to 390 and zoomed out (guest-mobile-check, 2026-09-26) */
+  .t-conline>*{min-width:0}.t-conline b,.t-conline small{overflow-wrap:anywhere}
   .t-conline b{font-family:var(--cit-font-display);font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:.5px}
   .t-conline small{color:var(--cit-muted);font-size:13px;display:block;text-transform:none;letter-spacing:0}
   .t-conphoto img{border-radius:6px;box-shadow:var(--cit-shadow);aspect-ratio:4/3;object-fit:cover;width:100%}

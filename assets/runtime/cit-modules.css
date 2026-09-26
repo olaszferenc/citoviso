@@ -22,6 +22,25 @@
     --cit-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
     --cit-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   }
+  /* The shared module sections emit `.cit-btn` (review-form submit, the CTA band's link),
+     and 4 of the 19 templates never styled it (arch-frames, claymorphism, tilted-gallery,
+     wordmark-grow — measured 2026-09-26): a 21px unstyled <button> and a 23px bare link
+     were the guest's "send" and "book". Layered fallback: any template rule outranks it. */
+  .cit-btn {
+    display: inline-block;
+    background: var(--cit-accent);
+    color: var(--cit-on-accent);
+    border: 1px solid var(--cit-accent);
+    border-radius: calc(var(--cit-radius) * 0.7);
+    padding: 13px 24px;
+    min-height: 44px;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .cit-btn-disabled { opacity: 0.55; pointer-events: none; }
 }
 
 .cit-book * { box-sizing: border-box; }
@@ -46,6 +65,10 @@
   display: flex;
   align-items: center;
   gap: 9px;
+  /* the nowrap MINTA badge beside the title gave the card a 364px min-content: in a
+     fit-content wrapper (editorial-press) the page grew to 404px on a 390px phone and
+     the browser zoomed out (guest-mobile-check, 2026-09-26) — the badge may wrap under. */
+  flex-wrap: wrap;
 }
 .cit-book__title svg { width: 20px; height: 20px; stroke: var(--cit-accent); fill: none; }
 /* ADR-0059 ④ — the demo widget's honest sample marker (§B.17): visible AT the form,
@@ -103,8 +126,8 @@
   border: 0;
   background: transparent;
   color: var(--cit-ink);
-  width: 40px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   font-size: 1.2rem;
   cursor: pointer;
   line-height: 1;
@@ -126,6 +149,9 @@
 .cit-book__submit:hover { transform: translateY(-1px); filter: brightness(1.05); }
 
 .cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
+  .cit-rev-f__consent { min-height: 44px; align-items: center; }
+  .cit-rev-f__consent input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
+}
 .cit-book__note--err { color: var(--cit-accent); }
 
 /* Booking widget layout (owner decree 2026-08-23 — "milyen gagyi az elrendezése"):
@@ -221,8 +247,9 @@
   font-weight: 600;
 }
 .cit-book__calnav {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px; /* the flex head shrank it to 28px beside the long label */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -281,7 +308,7 @@
 }
 .cit-book__day {
   aspect-ratio: 1;
-  min-height: 34px;
+  min-height: 38px;
   min-width: 0;
   border: 1px solid transparent;
   background: transparent;
@@ -455,7 +482,7 @@
   opacity: 0.8;
 }
 @media (max-width: 560px) {
-  .cit-lb__btn { width: 40px; height: 40px; }
+  .cit-lb__btn { width: 44px; height: 44px; }
   .cit-lb__btn--prev { left: 8px; }
   .cit-lb__btn--next { right: 8px; }
 }
@@ -827,6 +854,12 @@ a.cit-grat:hover {
 .cit-rmore__am svg { flex: none; color: var(--cit-accent); }
 .cit-rmore__empty { color: var(--cit-muted); font-size: 13.5px; font-style: italic; margin-top: 10px; }
 
+/* Anchor jumps (the nav's "Foglalás" → #cit-booking) land the target's top edge at the
+   screen's top edge — exactly where the sticky/fixed bar paints, so the section title was
+   hidden under it (measured on editorial + card-sidebar at 390px, 2026-09-26). The runtime
+   measures the bar and sets --cit-stick; every jump target keeps that much clear. */
+[data-cit-module], [id], .cit-book--done { scroll-margin-top: var(--cit-stick, 0px); }
+
 /* ── the popover ──────────────────────────────────────────────────────────── */
 .cit-rd { display: none; container-type: inline-size; }
 .cit-rd[data-open] { display: block; }
@@ -840,8 +873,12 @@ a.cit-grat:hover {
    a race a template can always win by adding one more `:not()`; a stated rule is not.
    The SAME page rule has been silently hitting the shared lightbox all along, so it is
    pinned here too. Any template may own its own stacking — neither may own these two. */
-.cit-rd { position: fixed !important; inset: 0 !important; z-index: 9000; }
-.cit-lb { position: fixed !important; inset: 0 !important; }
+.cit-rd { position: fixed !important; inset: 0 !important; z-index: 9000 !important; }
+.cit-lb { position: fixed !important; inset: 0 !important; z-index: 9999 !important; }
+/* ⛔ …AND THE STACKING ORDER (measured 2026-09-26, guest-mobile-check on aurora): the
+   position was pinned, the z-index was not — the same (0,2,1) rule set z-index:1 on the
+   popover and the lightbox, so aurora's fixed app bar (z 100) and mobile CTA bar (z 120)
+   painted OVER them: the X of both overlays sat under the bar, unreachable by thumb. */
 .cit-rd__veil {
   position: absolute; inset: 0;
   background: color-mix(in srgb, var(--cit-bg) 82%, transparent); backdrop-filter: blur(3px);
@@ -868,7 +905,7 @@ a.cit-grat:hover {
   }
 }
 .cit-rd__x {
-  position: absolute; top: 10px; right: 10px; z-index: 6; width: 42px; height: 42px;
+  position: absolute; top: 10px; right: 10px; z-index: 6; width: 44px; height: 44px;
   border: 0; cursor: pointer; font-family: inherit; font-size: 22px; line-height: 1;
   background: color-mix(in srgb, var(--cit-bg) 72%, transparent); color: var(--cit-ink);
 }
@@ -1015,3 +1052,19 @@ a.cit-grat:hover {
    a kártyákon eddig EGYÁLTALÁN nem volt ár, miközben a többi 16-on igen. A sablon
    rajzát nem írja át: ugyanaz a felirat-stílus, egy sorral lejjebb. */
 .a-price, .w-price, .t-price { font-weight: 600; opacity: .95; }
+
+/* Touch ergonomics — at the END of the sheet on purpose: same-specificity rules above
+   (.cit-book__dinput{font-size:.9rem}) would otherwise win by source order.
+   (guest-mobile-check (guest-mobile-check, 2026-09-26 — measured on 38 mocks × 3 phone
+   viewports): below 16px iOS zooms the whole page when a field gets focus, and the
+   templates' body font is 13.8–14.4px, so every field inherited a zooming size. On a
+   phone the fields, the date strip and the review form's controls read at 16px, and
+   every control the thumb has to hit is at least 44px tall. */
+@media (max-width: 559px), (max-height: 500px) {
+  .cit-book__input, .cit-book__dinput,
+  .cit-rev-f input:not([type=checkbox]), .cit-rev-f select, .cit-rev-f textarea { font-size: 16px; }
+  .cit-book__input, .cit-rev-f input:not([type=checkbox]), .cit-rev-f select { min-height: 44px; }
+  .cit-book__dinput { min-height: 44px; }
+  .cit-price__tab, .cit-modsec__roomcta { min-height: 44px; display: inline-flex; align-items: center; }
+  .cit-rmbtn { min-height: 44px; padding: 4px 8px; }
+

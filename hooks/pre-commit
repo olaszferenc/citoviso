@@ -1535,6 +1535,17 @@ if [ -f scripts/mobile-sticky-check.mts ] && \
   echo "[pre-commit] mobile-sticky-check (foglaló-dokk mobil-takarás)…"
   npx tsx scripts/mobile-sticky-check.mts
 fi
+# Guest-on-a-phone gate (2026-09-26, FK-010): every template/archetype in a REAL phone context
+# (touch, 390px) — overflow, overlay stacking (the popover/lightbox X under a template bar),
+# touch targets, the calendar paging, the receipt landing in view. ~2 min headless render, so
+# it runs only when the runtime, the shared sections or a template is staged; --selftest first
+# (negative control: planted regressions must go red).
+if [ -f scripts/guest-mobile-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|templateKit\.ts|moduleSections\.ts|primitives\.ts|archetypes\.ts|render\.ts)|^src/generator/runtime\.ts|^assets/runtime/(cit-runtime\.js|cit-modules\.css)|^scripts/guest-mobile-check'; then
+  echo "[pre-commit] guest-mobile-check (vendég telefonon: túlfolyás · rétegzés · érintési cél · naptár · nyugta)…"
+  npx tsx scripts/guest-mobile-check.mts --selftest >"$GATE_LOG" || gate_failed
+  npx tsx scripts/guest-mobile-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Hero readability gate (2026-09-01, contract: design-refs/engine/hero-contrast): every
 # text-on-PHOTO hero headline must stay legible on a worst-case BRIGHT photo (WCAG
 # AA-large). Headless render + pixel-measure (~15s), so it runs only when engine template/

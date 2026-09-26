@@ -264,6 +264,11 @@ const HERO_IMMERSIVE_CSS = `  .cit-hero--immersive { position: relative; overflo
     align-items: flex-end; min-height: clamp(460px, 82vh, 780px); border-bottom: 0; }
   .cit-hero-bg { position: absolute; inset: 0; z-index: 0; background-size: cover;
     background-position: center; transform-origin: center; will-change: transform; }
+  /* The Ken Burns scale(1.12) on the background is 435px wide on a 390px phone: where the
+     hero variant did not clip it (masthead, collage — card-sidebar / editorial-press), the
+     mobile browser widened the layout viewport and ZOOMED THE WHOLE PAGE OUT (measured
+     2026-09-26, guest-mobile-check). Any hero that carries a background clips it. */
+  .cit-hero:has(> .cit-hero-bg), .cit-hero:has(.cit-hero-bg) { overflow: hidden; }
   .cit-hero--immersive .cit-hero-inner { position: relative; z-index: 2; width: 100%; }
   .cit-hero--immersive:not(.cit-hero--photo) { background: var(--cit-surface);
     border-bottom: 1px solid var(--cit-line); align-items: center; }

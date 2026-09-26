@@ -76,6 +76,10 @@ ${centredModsecCss("artdeco")}
   .ad-hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg, color-mix(in srgb, var(--cit-accent) 5%, transparent) 0 1px, transparent 1px 46px);pointer-events:none}
   .ad-poster{position:relative;padding:44px 26px;text-align:center}
   .ad-poster h1{font-size:clamp(44px,9vw,104px);letter-spacing:.1em;margin-bottom:6px}
+  /* A 44px floor with .1em tracking put "sétatávolságra" / "kirándulásokhoz" past the frame on
+     both sides at 390px (clipped, measured 2026-09-26): on a phone the poster type is smaller,
+     tighter, and long Hungarian compounds may hyphenate. */
+  @media(max-width:560px){.ad-poster{padding:34px 18px}.ad-poster h1{font-size:clamp(30px,9vw,44px);letter-spacing:.05em;hyphens:auto;overflow-wrap:anywhere}}
   .ad-poster h1 em{font-style:normal;color:var(--cit-accent)}
   .ad-poster .ad-sub{font-style:italic;font-size:clamp(17px,2.4vw,25px);color:color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));margin-bottom:26px}
   .ad-poster .ad-rule{max-width:420px;margin-bottom:26px}
@@ -143,8 +147,10 @@ ${centredModsecCss("artdeco")}
   .ad-tst blockquote{font-style:italic;font-size:clamp(22px,3.2vw,32px);line-height:1.5;margin-bottom:22px;color:var(--cit-ink)}
   .ad-tst cite{font-style:normal;font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--cit-accent)}
   .ad-tst .ad-sw{display:flex;justify-content:center;gap:16px;margin-top:34px}
-  .ad-tst .ad-sw button{width:11px;height:11px;background:transparent;border:1px solid var(--cit-accent);transform:rotate(45deg);cursor:pointer;padding:0}
-  .ad-tst .ad-sw button.ad-on{background:var(--cit-accent)}
+  /* the 11px diamond is the DRAWING (::before); the button itself is a 44px tap target */
+  .ad-tst .ad-sw button{width:44px;height:44px;background:transparent;border:0;position:relative;cursor:pointer;padding:0}
+  .ad-tst .ad-sw button::before{content:"";position:absolute;left:50%;top:50%;width:11px;height:11px;transform:translate(-50%,-50%) rotate(45deg);border:1px solid var(--cit-accent)}
+  .ad-tst .ad-sw button.ad-on::before{background:var(--cit-accent)}
 
   /* FAQ */
   .ad-faq{max-width:800px;margin:0 auto}

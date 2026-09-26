@@ -11,7 +11,14 @@ import type { ToleratedError } from "./stepVerdict.js";
 export const ELEK_ROOT = path.resolve(import.meta.dirname, "..", "..", "elek");
 export const SCENARIO_DIR = path.join(ELEK_ROOT, "scenarios");
 
-export type FkSurface = "konzol" | "tenant-admin" | "publikus";
+/** `fájl` (FK-010, 2026-09-26): the page under test is a self-contained HTML file (a
+ * generated mock is the guest's page itself — runtime inlined, opened from file://); no
+ * server boots, `út:` is a file path (env-substituted). */
+export type FkSurface = "konzol" | "tenant-admin" | "publikus" | "fájl";
+/** `nézet: telefon` — the run happens in a REAL phone context (390×844, touch, mobile
+ * flag): the checks and the clicks run at phone width, the 390 px frame is the PRIMARY
+ * evidence and the 1280 px one the secondary. Default `asztal` = the historic order. */
+export type FkView = "asztal" | "telefon";
 
 export interface FkStep {
   /** The human-truth checklist row (what a person expects to see). */
@@ -44,6 +51,7 @@ export interface FkScenario {
   title: string;
   cel: string;
   felulet: FkSurface;
+  nezet: FkView;
   kontraktus: string | null;
   sections: FkSection[];
   /** Source file path (absolute). */
@@ -58,6 +66,7 @@ export function parseFk(file: string): FkScenario {
   let title = "";
   let cel = "";
   let felulet: FkSurface | "" = "";
+  let nezet: FkView = "asztal";
   let kontraktus: string | null = null;
   const sections: FkSection[] = [];
   let sec: FkSection | null = null;
@@ -77,10 +86,15 @@ export function parseFk(file: string): FkScenario {
       step = null;
       continue;
     }
-    const head = line.match(/^(cél|felület|kontraktus):\s*(.*)$/);
+    const head = line.match(/^(cél|felület|nézet|kontraktus):\s*(.*)$/);
     if (head && !sec) {
       if (head[1] === "cél") cel = head[2].trim();
       if (head[1] === "felület") felulet = head[2].trim() as FkSurface;
+      if (head[1] === "nézet") {
+        const v = head[2].trim();
+        if (v !== "asztal" && v !== "telefon") throw new Error(`${file}: \`nézet:\` csak asztal | telefon (${v})`);
+        nezet = v;
+      }
       if (head[1] === "kontraktus") kontraktus = head[2].trim() || null;
       continue;
     }
@@ -131,13 +145,13 @@ export function parseFk(file: string): FkScenario {
   }
 
   if (!id) throw new Error(`${file}: hiányzó H1 (\`# FK-… — cím\`)`);
-  if (felulet !== "konzol" && felulet !== "tenant-admin" && felulet !== "publikus") {
+  if (felulet !== "konzol" && felulet !== "tenant-admin" && felulet !== "publikus" && felulet !== "fájl") {
     throw new Error(`${file}: érvénytelen vagy hiányzó \`felület:\` (${felulet || "üres"})`);
   }
   if (!sections.length || !sections.some((s) => s.steps.length)) {
     throw new Error(`${file}: nincs egyetlen checklist-lépés sem`);
   }
-  return { id, title, cel, felulet, kontraktus, sections, file };
+  return { id, title, cel, felulet, nezet, kontraktus, sections, file };
 }
 
 /** All scenarios in elek/scenarios/, sorted by id. */

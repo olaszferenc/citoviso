@@ -1039,7 +1039,11 @@
       im.setAttribute("role", "button");
       if (!im.getAttribute("aria-label")) im.setAttribute("aria-label", (im.alt || tr("Kép")) + " — " + tr("nagyítás"));
       im.style.cursor = "zoom-in";
-      im.addEventListener("click", function () { ensureLightbox().open(items, idx, im); });
+      // The tap is taken on the FIGURE when there is one: templates draw hover washes and
+      // captions over the picture (fullbleed's ::after), and a tap that lands on those never
+      // reached the <img> listener — the lightbox was dead on a phone (FK-010, 2026-09-26).
+      var tap = im.parentElement && im.parentElement.tagName === "FIGURE" ? im.parentElement : im;
+      tap.addEventListener("click", function () { ensureLightbox().open(items, idx, im); });
       im.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ensureLightbox().open(items, idx, im); }
       });
@@ -1675,7 +1679,35 @@
     }
   }
 
-  function boot() { hydrate(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
+  // ── sticky-bar clearance for anchor jumps (cit-modules.css: scroll-margin-top) ──
+  // Which bars WILL sit at the top when the guest jumps? A fixed bar at the top, and a
+  // sticky one whose computed `top` is (near) 0 — measured without scrolling, so a nav
+  // that only sticks after 275px (editorial) still counts. Re-measured on resize:
+  // orientation changes the bar's height.
+  function initStickClearance() {
+    function measure() {
+      var h = 0, all = document.body.getElementsByTagName("*");
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i], cs = getComputedStyle(el);
+        if (cs.position !== "fixed" && cs.position !== "sticky") continue;
+        // NOT skipped for opacity:0 / pointer-events:none: the "scrolled app bar" family
+        // (cinematic, aurora, dark-luxury, fullbleed, horizontal…) is invisible at the top
+        // and fades in on scroll — which is exactly when a jump lands under it (measured:
+        // --cit-stick was 8px on 11 templates whose bar is 66–83px once scrolled).
+        if (cs.display === "none" || cs.visibility === "hidden") continue;
+        var top = parseFloat(cs.top);
+        if (!(top <= 20)) continue; // aurora's floating bar sits at top:14px
+        var r = el.getBoundingClientRect();
+        if (r.width < window.innerWidth * 0.6 || r.height <= 0 || r.height > window.innerHeight * 0.4) continue;
+        if (r.height + top > h) h = r.height + top;
+      }
+      document.documentElement.style.setProperty("--cit-stick", Math.ceil(h + 8) + "px");
+    }
+    measure();
+    window.addEventListener("resize", measure);
+  }
+
+  function boot() { initStickClearance(); hydrate(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

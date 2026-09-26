@@ -306,7 +306,11 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
   .cit-arch-card-sidebar .cit-nav-inner, .cit-arch-card-sidebar .cit-footer-inner { max-width: 1140px; }
   .cit-arch-card-sidebar .cit-arch-cs-wrap { max-width: 1140px; margin: 0 auto;
     padding: 2rem clamp(1.25rem, 4vw, 2.5rem) 4rem; display: grid; gap: 2.5rem;
-    grid-template-columns: 1fr; }
+    grid-template-columns: minmax(0, 1fr); }
+  /* minmax(0,…) + min-width:0: a bare 1fr column is minmax(auto,1fr), and the widest
+     module's min-content made both columns 378px in a 350px wrap — the page was 398px
+     wide on a 390px phone and the browser zoomed it out (guest-mobile-check, 2026-09-26). */
+  .cit-arch-card-sidebar .cit-arch-cs-main, .cit-arch-card-sidebar .cit-arch-cs-side { min-width: 0; }
   @media (min-width: 960px) {
     .cit-arch-card-sidebar .cit-arch-cs-wrap { grid-template-columns: 1.6fr 1fr; align-items: start; }
     .cit-arch-card-sidebar .cit-arch-cs-side { position: sticky; top: 86px; }
@@ -379,6 +383,9 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
       rooms: "boutique",
     },
     css: `.cit-arch-editorial-press { display: flex; flex-direction: column; }
+  /* flex items default to min-width:auto (= min-content): the booking wrap grew to 404px on
+     a 390px phone and zoomed the page out (guest-mobile-check, 2026-09-26). */
+  .cit-arch-editorial-press > * { min-width: 0; }
   .cit-arch-editorial-press > * { order: 3; }
   .cit-arch-editorial-press > .cit-hero--masthead { order: 1; }
   .cit-arch-editorial-press > .cit-nav { order: 2; }
@@ -396,8 +403,8 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
   .cit-arch-editorial-press .cit-section-title { display: flex; align-items: center; gap: 1.1rem; }
   .cit-arch-editorial-press .cit-section-title::after { content: ""; flex: 1;
     border-top: 1px solid var(--cit-ink); }
-  .cit-arch-editorial-press .cit-arch-bookwrap { max-width: 1100px; margin: 0 auto;
-    padding-inline: clamp(1.25rem, 4vw, 2.5rem); }
+  .cit-arch-editorial-press .cit-arch-bookwrap { max-width: 1100px; margin: 0 auto; width: 100%;
+    box-sizing: border-box; padding-inline: clamp(1.25rem, 4vw, 2.5rem); }
   .cit-arch-editorial-press .cit-arch-bookwrap .cit-enquiry { border: 2px dashed var(--cit-ink);
     background: var(--cit-surface); }
   .cit-arch-editorial-press .cit-btn { border-radius: 0; letter-spacing: .08em;

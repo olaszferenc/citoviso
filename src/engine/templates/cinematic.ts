@@ -80,7 +80,10 @@ const CINEMATIC_CSS = `
      Lower band strengthened for a legible accent headline on a BRIGHT photo
      (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check). */
   .cn-cine::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.2) 38%, rgba(0,0,0,.6) 66%, rgba(0,0,0,.9) 100%);pointer-events:none}
-  .cn-cinein{position:relative;z-index:2;width:100%;padding-bottom:150px}
+  /* NOT width:100% — that overrode .cn-wrap's 93% and put the headline on the screen's left
+     edge with the subline clipped on the right at 390px (measured 2026-09-26, both leads). */
+  .cn-cinein{position:relative;z-index:2;padding-bottom:150px}
+  .cn-cinesub{overflow-wrap:anywhere}
   .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
   .cn-cine h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 88%, white)}
   .cn-cinesub{max-width:480px;color:color-mix(in srgb, white 88%, transparent);margin-bottom:28px}
@@ -88,7 +91,8 @@ const CINEMATIC_CSS = `
   .cn-heroctas .cit-btn-ghost{color:white;border-color:color-mix(in srgb, white 55%, transparent)}
   .cn-heroctas .cit-btn-ghost:hover{border-color:var(--cit-accent);color:var(--cit-accent)}
   .cn-dots{position:absolute;bottom:120px;right:5%;z-index:3;display:flex;gap:8px}
-  .cn-dots button{width:34px;height:4px;border:none;background:color-mix(in srgb, white 40%, transparent);cursor:pointer;padding:0;transition:.3s}
+  /* the 4px bar is the DRAWING; the tap area is 24px tall (a 4px control cannot be hit by thumb — measured 2026-09-26) */
+  .cn-dots button{width:34px;height:24px;border:none;background:color-mix(in srgb, white 40%, transparent);background-clip:content-box;padding:10px 0;cursor:pointer;transition:.3s}
   .cn-dots button.cn-vis{background:var(--cit-accent)}
 
   /* sticky booking dock — slid onto the hero's lower edge */
@@ -96,7 +100,9 @@ const CINEMATIC_CSS = `
   .cn-dock .cit-enquiry-bar-inner{max-width:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem clamp(16px,3vw,24px)}
   .cn-dock .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-size:1.3rem;color:var(--cit-ink)}
   /* mobile: never pin the tall booking form — it would cover the whole viewport (matches parallax .t-dock) */
-  @media(max-width:700px){.cn-dock{position:static}}
+  /* …but still POSITIONED: as position:static its z-index died and the positioned hero painted
+     over the dock's top 84px — the card's title sat under the hero (measured 2026-09-26). */
+  @media(max-width:700px){.cn-dock{position:relative;z-index:5}}
 
   /* room cards */
   .cn-rooms{display:grid;gap:26px;grid-template-columns:1fr;margin-top:46px}

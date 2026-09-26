@@ -120,7 +120,14 @@ try {
     check("⑤ az árazatlan egység a VÁLASZTÓBAN jelölve", opts.some((o) => /Árazatlan faház/.test(o) && /egyedi ár/.test(o)), opts);
     check("…és az árazott NINCS megjelölve", opts.some((o) => /Árazott apartman/.test(o) && !/egyedi ár/.test(o)), opts);
 
-    const days = page.locator("[data-day]:not([disabled]):not(.is-blocked)");
+    // ⛔ HÓNAP-VÉGI CSAPDA (2026-09-26, szept. 26-án piros): a 6. szabad nap a KÖVETKEZŐ hónapba
+    // esett, amit a telefon-nézet elrejt — a naptár lapoz egyet, ha a látható hónapban nincs elég.
+    let days = page.locator("[data-day]:not([disabled]):not(.is-blocked):visible");
+    if ((await days.count()) < 6) {
+      await page.locator(".cit-book__calnav--next").first().click();
+      await page.waitForTimeout(200);
+      days = page.locator("[data-day]:not([disabled]):not(.is-blocked):visible");
+    }
     if ((await days.count()) >= 6) { await days.nth(3).click(); await page.waitForTimeout(150); await days.nth(5).click(); await page.waitForTimeout(600); }
 
     const sel = page.locator('select[name="unit"]').first();

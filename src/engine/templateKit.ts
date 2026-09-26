@@ -513,7 +513,7 @@ export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
   return `
   .cit-mast{${overlay ? "position:absolute;inset:0 0 auto 0;" : "position:relative;"}z-index:40;text-align:center;
     color:var(--mast-ink,${overlay ? "#fff" : "var(--cit-ink)"});padding:30px 24px 0}
-  .cit-mast-name{display:block;font-family:var(--mast-font,var(--cit-font-display));
+  .cit-mast-name{display:block;padding:8px 0;margin:-8px 0;font-family:var(--mast-font,var(--cit-font-display));
     font-weight:var(--mast-weight,400);font-size:clamp(28px,3vw,40px);
     letter-spacing:var(--mast-track,.5px);line-height:1.1;color:inherit;text-decoration:none}
   .cit-mast-place{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px}
@@ -522,14 +522,19 @@ export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
   .cit-mast-place span{font-size:10.5px;letter-spacing:4.5px;text-transform:uppercase;font-weight:500;
     color:var(--mast-sub,${overlay ? "rgba(255,255,255,.75)" : "color-mix(in srgb, var(--cit-ink) 70%, transparent)"})}
   .cit-mast-links{display:flex;justify-content:center;gap:30px;align-items:center;margin:16px auto 0;
-    padding:12px 0;max-width:640px;
+    padding:0;max-width:640px;
     border-top:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.22)" : "color-mix(in srgb, var(--cit-ink) 18%, transparent)"});
     border-bottom:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.22)" : "color-mix(in srgb, var(--cit-ink) 18%, transparent)"})}
+  /* The 12px row padding moved INTO the links (guest-mobile-check, 2026-09-26): the same
+     look, but the booking link's tap target is 45px tall instead of 21px — the thumb hits the
+     rule lines' whole band, not a hairline of text. The hot underline is a text-decoration
+     so it stays under the letters, not under the padding. */
   .cit-mast-links a{color:var(--mast-linkink,${overlay ? "rgba(255,255,255,.85)" : "var(--cit-ink)"});
-    text-decoration:none;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;transition:.25s}
+    text-decoration:none;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;font-weight:500;transition:.25s;
+    padding:13px 4px;display:inline-block}
   .cit-mast-links a:hover{color:var(--mast-hover,var(--cit-accent))}
-  .cit-mast-links a.cit-mast-hot{font-weight:600;padding-bottom:2px;
-    border-bottom:1px solid var(--mast-hotline,${overlay ? "color-mix(in srgb, var(--cit-accent) 40%, #fff)" : "var(--cit-accent)"})}
+  .cit-mast-links a.cit-mast-hot{font-weight:600;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;
+    text-decoration-color:var(--mast-hotline,${overlay ? "color-mix(in srgb, var(--cit-accent) 40%, #fff)" : "var(--cit-accent)"})}
   @media(max-width:720px){
     .cit-mast-name{font-size:26px}
     .cit-mast-place span{letter-spacing:3.5px}

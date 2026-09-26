@@ -102,7 +102,8 @@ const BRUTALISM_CSS = `
   .b-hero-l{padding:54px 5% 46px}
   @media(max-width:959px){.b-hero-l{border-bottom:3px solid var(--cit-ink)}}
   @media(min-width:960px){.b-hero-l{border-right:3px solid var(--cit-ink)}}
-  .b-hero-l h1{font-size:clamp(42px,8.5vw,100px);margin-bottom:20px;overflow-wrap:anywhere}
+  /* hyphens first: overflow-wrap alone cut "SÉTATÁVOLSÁG|ÁBAN" with no hyphen at 390px (measured 2026-09-26). */
+  .b-hero-l h1{font-size:clamp(42px,8.5vw,100px);margin-bottom:20px;hyphens:auto;overflow-wrap:anywhere}
   .b-hero-l h1 em{font-style:normal;color:var(--cit-accent)}
   .b-hero-sub{max-width:480px;font-size:17px;margin-bottom:26px;color:color-mix(in srgb, var(--cit-ink) 78%, var(--cit-muted))}
   .b-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:30px}
@@ -145,8 +146,11 @@ const BRUTALISM_CSS = `
   .b-fc p{font-size:15px;line-height:1.5}
 
   /* gallery — taped polaroids (deterministic nth-child tilt, no randomness) */
-  .b-gal{display:grid;gap:28px;grid-template-columns:repeat(2,1fr);margin-top:44px}
-  @media(min-width:860px){.b-gal{grid-template-columns:repeat(3,1fr)}}
+  /* minmax(0,1fr), not 1fr: a bare 1fr is minmax(auto,1fr) and the tiles' min-content made
+     the two columns 242px each in a 360px phone — the page zoomed out (measured 2026-09-26). */
+  .b-gal{display:grid;gap:28px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:44px}
+  @media(min-width:860px){.b-gal{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  .b-tp{min-width:0}
   .b-tp{background:var(--cit-surface);border:3px solid var(--cit-ink);padding:8px 8px 24px;position:relative;transform:rotate(var(--r,0deg));transition:transform .2s}
   .b-tp:hover{transform:rotate(0) scale(1.03);z-index:2}
   .b-tp::before{content:"";position:absolute;top:-12px;left:50%;transform:translateX(-50%) rotate(-2deg);width:80px;height:24px;background:color-mix(in srgb, var(--cit-accent) 65%, var(--cit-bg));opacity:.85;border:1px solid color-mix(in srgb, var(--cit-ink) 25%, transparent)}

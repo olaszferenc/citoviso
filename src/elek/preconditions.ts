@@ -80,6 +80,9 @@ export const CHAIN: readonly ChainRound[] = [
   // A dunning-létra és a visszaolvasztás az ELEK-bérlő előfizetés-óráját lépteti.
   { fk: "FK-006a", needs: ["elekTenant"] },
   { fk: "FK-006b", needs: ["elekTenant"] },
+  // A VENDÉG telefonon, a generált mockokon (FK-010): nem az ELEK-parkon mér, hanem a dev
+  // leadek kész mock-fájljain (19 stílus × lead) — a park tényeitől független, önálló kör.
+  { fk: "FK-010", needs: [] },
 ];
 
 /** Amit a parkról MÉRTÜNK (nem amit feltételezünk róla). */

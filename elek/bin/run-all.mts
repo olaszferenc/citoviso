@@ -329,6 +329,20 @@ if (wanted("FK-006a") || wanted("FK-006b")) {
   if (wanted("FK-006b")) runFk("FK-006b");
 }
 
+// ───────────────────── FK-010 — a VENDÉG telefonon, a mockokon ─────────────────────
+// Önálló kör: nem az ELEK-parkon, hanem a dev leadek kész mock-fájljain mér (19 stílus ×
+// lead), telefon-kontextusban — a mátrixot a saját vezénylője futtatja (run-guest-mobile).
+if (wanted("FK-010")) {
+  step("FK-010 — a vendég telefonon (19 stílus × lead mátrix)");
+  const r = spawnSync("npx", ["tsx", "elek/bin/run-guest-mobile.mts", "--jobs=2"], { cwd: ROOT, env, encoding: "utf8", timeout: 5_400_000 });
+  const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
+  const t = /összesen: pass=(\d+) fail=(\d+) manual=(\d+) blocked=(\d+) · mátrix: (\S+)/.exec(out);
+  const o: Outcome = { fk: "FK-010", pass: Number(t?.[1] ?? 0), fail: Number(t?.[2] ?? 0), manual: Number(t?.[3] ?? 0), blocked: Number(t?.[4] ?? 0), dir: t?.[5] ?? "" };
+  if (!t) { o.skipped = "a mátrix-vezénylő nem adott összesítést"; console.log(out.trim().split("\n").slice(-6).join("\n")); }
+  console.log(`  ${o.fail > 0 || o.blocked > 0 ? "\x1b[31m✗\x1b[0m" : "\x1b[32m✓\x1b[0m"} FK-010: pass=${o.pass} fail=${o.fail} manual=${o.manual} blocked=${o.blocked}`);
+  outcomes.push(o);
+}
+
 // ────────────────────────────── összkép ──────────────────────────────
 
 const w = Math.max(...outcomes.map((o) => o.fk.length), 8);

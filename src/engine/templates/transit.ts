@@ -90,6 +90,19 @@ const TRANSIT_CSS = `
   .tb-table td.tb-u .cit-wmwrap{width:66px;height:46px;flex:none}
   .tb-table td.tb-u>span:last-child{white-space:nowrap}
   @media(max-width:620px){.tb-thumb,.tb-table td.tb-u .cit-wmwrap{width:50px;height:36px}.tb-table td.tb-u{font-size:17px;gap:9px}}
+  /* On a phone the timetable row is a CARD: a four-column table with a real room name, a
+     capacity and a price was 410px wide at 390px and the browser zoomed the page out; the
+     stacked cells keep every fact readable and the two controls thumb-sized. */
+  @media(max-width:560px){
+    .tb-table,.tb-table tbody,.tb-table tr,.tb-table td{display:block;width:100%}
+    .tb-table thead{display:none}
+    .tb-table tr{padding:14px 0;border-bottom:1px solid var(--cit-line)}
+    .tb-table td{border:0;padding:4px 0}
+    .tb-table td.tb-u>span:last-child{white-space:normal}
+    .tb-table td.tb-u .tb-ulink{display:flex;width:100%}
+    .tb-table td.tb-act{text-align:left;padding-top:10px}
+    .tb-table a.tb-go{padding:12px 18px}
+  }
   .tb-table td.tb-cap{color:var(--cit-muted)}
   .tb-table td.tb-pr{font-family:var(--cit-font-display);font-size:20px;color:var(--cit-accent);white-space:nowrap}
   .tb-table td.tb-act{text-align:right}

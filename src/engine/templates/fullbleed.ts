@@ -131,7 +131,9 @@ ${centredModsecCss("fullbleed")}
   .t-mosaic figure:hover img{transform:scale(1.06)}
   .t-mosaic figure:nth-child(1){grid-column:span 2;grid-row:span 2}
   .t-mosaic figure:nth-child(4){grid-row:span 2}
-  .t-mosaic figure::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,color-mix(in srgb, var(--cit-ink) 40%, transparent));opacity:0;transition:.35s}
+  /* pointer-events:none — this invisible hover wash sat ON the photo and swallowed every tap:
+     the lightbox never opened on a phone (Elek FK-010, 2026-09-26, both leads). */
+  .t-mosaic figure::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 60%,color-mix(in srgb, var(--cit-ink) 40%, transparent));opacity:0;transition:.35s}
   .t-mosaic figure:hover::after{opacity:1}
   @media(max-width:760px){.t-mosaic{grid-template-columns:1fr 1fr;grid-auto-rows:190px}.t-mosaic figure:nth-child(1){grid-column:span 2}}
 

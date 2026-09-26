@@ -29,6 +29,7 @@ process.env.PAYMENT_GATEWAY = "mock";
 import { existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { once } from "node:events";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Server } from "node:http";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
 
@@ -63,7 +64,10 @@ if (!fk) {
 }
 
 const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-const RUN_DIR = path.join(ROOT, "elek", "runs", `${fk.id}-${ts}`);
+// ELEK_RUN_TAG: a matrix orchestrator (FK-010: 19 styles × 2 leads) runs the SAME
+// scenario many times — the tag keeps the run folders apart and readable.
+const runTag = (process.env.ELEK_RUN_TAG ?? "").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+const RUN_DIR = path.join(ROOT, "elek", "runs", `${fk.id}-${runTag ? runTag + "-" : ""}${ts}`);
 const SHOTS = path.join(RUN_DIR, "shots");
 mkdirSync(SHOTS, { recursive: true });
 
@@ -78,6 +82,9 @@ async function bootConsole(): Promise<string> {
 }
 
 async function bootServer(): Promise<string> {
+  // `felület: fájl` — the page IS a file (a generated mock: runtime inlined, nothing to
+  // fetch). No server, no cookie; `út:` resolves to a file:// URL in gotoUrl().
+  if (fk!.felulet === "fájl") return "";
   // ⛔ THE PAY PAGES LIVE ON THE CONSOLE (measured 2026-09-11): a tenant-admin
   // scenario that walks a purchase leaves the public server at the pay-link — and
   // that link is built from PUBLIC_BASE_URL, i.e. it pointed at the MAIN TREE's
@@ -142,6 +149,15 @@ function subst(s: string): string {
     if (val == null) throw new Error(`hiányzó env-helyettesítő: \${${v}}`);
     return val;
   });
+}
+
+/** `út:` → navigable URL: a route on the booted server, or (felület: fájl) a file path
+ *  relative to the repo root — the generated mocks live there. */
+function gotoUrl(ut: string): string {
+  if (fk!.felulet !== "fájl") return base + ut;
+  const abs = path.isAbsolute(ut) ? ut : path.resolve(ROOT, ut);
+  if (!existsSync(abs)) throw new Error(`ELŐFELTÉTEL: nincs ilyen fájl: ${abs}`);
+  return pathToFileURL(abs).href;
 }
 
 function isSelector(s: string): boolean {
@@ -210,7 +226,29 @@ async function doAction(page: Page, action: string): Promise<void> {
         await loc.click({ force: true, timeout: STEP_TIMEOUT });
         return;
       }
-      if ((await loc.count()) > 0) throw e;
+      if ((await loc.count()) > 0) {
+        // "element is not visible" names nothing: say WHAT hides it (its own box, or the
+        // nearest ancestor that is display:none / zero-sized), so the next reader does not
+        // need three bisect runs to find out (FK-010, 2026-09-26).
+        if (/not visible/.test(String((e as Error).message))) {
+          const why = await loc.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            let hidden = "";
+            for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+              const acs = getComputedStyle(a);
+              const ar = a.getBoundingClientRect();
+              if (acs.display === "none" || acs.visibility === "hidden" || (ar.width === 0 && ar.height === 0)) {
+                hidden = `${a.tagName.toLowerCase()}${a.className ? "." + String(a.className).trim().split(/\s+/).join(".") : ""} display=${acs.display} visibility=${acs.visibility} box=${Math.round(ar.width)}×${Math.round(ar.height)}`;
+                break;
+              }
+            }
+            return `box ${Math.round(r.width)}×${Math.round(r.height)} @${Math.round(r.x)},${Math.round(r.y)} display=${cs.display} visibility=${cs.visibility} opacity=${cs.opacity}` + (hidden ? ` · rejtő ős: ${hidden}` : "") + ` · scrollY=${Math.round(window.scrollY)} vw=${window.innerWidth}`;
+          }).catch(() => "?");
+          throw new Error(`${String((e as Error).message).split("\n")[0]} — a célpont állapota: ${why}`);
+        }
+        throw e;
+      }
     }
     return;
   }
@@ -325,6 +363,14 @@ async function doCheck(page: Page, check: string): Promise<{ expr: string; ok: b
 // images. The `várd:` checks keep running at 1280 only, so verdicts are unchanged.
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 390, height: 844 };
+// `nézet: telefon` (FK-010): the context IS a phone (touch + mobile flag, 390 px), the
+// checks and clicks run there, and the SECONDARY frames are the landscape phone
+// (844×390 — orientation is not width: a landscape phone hid 8 of 10 controls once) and
+// the desktop. `shot_mobile` stays the 390 px frame in both modes, so every consumer of
+// result.jsonl keeps reading the same field for the same picture.
+const PHONE_MODE = fk.nezet === "telefon";
+const LANDSCAPE = { width: 844, height: 390 };
+const PRIMARY = PHONE_MODE ? MOBILE : DESKTOP;
 
 // A 60 000px tall list makes a full-page shot unjudgeable — cap it: very tall
 // pages get a viewport shot (the judgment surface a human would see). The cap was
@@ -338,6 +384,17 @@ const MOBILE = { width: 390, height: 844 };
 // At 1280px the two formulations are the same predicate — desktop behaviour is
 // unchanged by construction — while 390px gets the proportionally equal budget.
 const SHOT_AREA_CAP = 1280 * 12_000;
+
+// ELEK_TRACE_JS: a JS expression evaluated on the page after every action, check and
+// capture, printed with a tag — for the day a step fails and nothing else says why
+// (FK-010, 2026-09-26: the calendar month reset between two steps, unreproducible
+// outside the runner). Development aid; silent when unset.
+const TRACE = process.env.ELEK_TRACE_JS ?? "";
+async function trace(page: Page, tag: string): Promise<void> {
+  if (!TRACE) return;
+  const v = await page.evaluate(TRACE).catch((e) => `trace error: ${(e as Error).message}`);
+  console.log(`  [trace] ${tag}: ${typeof v === "string" ? v : JSON.stringify(v)}`);
+}
 
 /** One capture at the page's CURRENT viewport — all the hard-won settle rules. */
 async function capture(page: Page, file: string): Promise<void> {
@@ -392,6 +449,7 @@ async function capture(page: Page, file: string): Promise<void> {
   if (stickyOff) {
     await page.evaluate(() => (window as unknown as { __elekRestore?: () => void }).__elekRestore?.());
   }
+  await trace(page, `capture ${file}`);
 }
 
 let mobileCaptureMs = 0;
@@ -404,15 +462,20 @@ let mobileCaptureMs = 0;
  * `finally`, so a capture error cannot strand the run in mobile width.
  */
 async function captureMobile(page: Page, file: string): Promise<void> {
+  await captureAt(page, file, MOBILE);
+}
+
+/** Capture at another size and put the page BACK to the run's primary size (see above). */
+async function captureAt(page: Page, file: string, size: { width: number; height: number }): Promise<void> {
   const t0 = Date.now();
   try {
-    await page.setViewportSize(MOBILE);
+    await page.setViewportSize(size);
     // Let the width-driven relayout happen (media/container queries, srcset
     // swaps, JS resize handlers) before anything is measured or painted.
     await page.waitForTimeout(200);
     await capture(page, file);
   } finally {
-    await page.setViewportSize(DESKTOP).catch(() => {});
+    await page.setViewportSize(PRIMARY).catch(() => {});
     mobileCaptureMs += Date.now() - t0;
   }
 }
@@ -432,6 +495,8 @@ interface StepResult {
   shot: string | null;
   /** Telefonos felvétel (390px) UGYANARRÓL az állapotról — a kiértékelő MINDKETTŐT nézi. */
   shot_mobile: string | null;
+  /** `nézet: telefon` futásban: FEKVŐ telefon (844×390) — a tartás nem szélesség. */
+  shot_land?: string | null;
   error?: string;
   /** ADR-0131: recorded errors that a `tűrt-hiba:` line lawfully let through. */
   tolerated_errors?: { error: string; reason: string }[];
@@ -455,7 +520,10 @@ async function contextFor(user: string): Promise<BrowserContext> {
   // active tab while the DOM was correct (measured 2026-09-05, tabrepro5). A
   // manual tester's eye never sees that frame; the runner must not either.
   ctx = await browser.newContext({
-    viewport: { width: 1280, height: 900 },
+    viewport: PRIMARY,
+    // A phone is not a narrow desktop: touch events, the mobile flag (meta viewport,
+    // :hover semantics) — the guest's real browser. Only in `nézet: telefon` runs.
+    ...(PHONE_MODE ? { isMobile: true, hasTouch: true } : {}),
     reducedMotion: "reduce",
   });
   const cookie = await sessionCookie(user);
@@ -534,7 +602,7 @@ for (const sec of fk.sections) {
     try {
       if (st.user) currentUser = st.user;
       const page = await pageFor(currentUser);
-      if (st.ut) await page.goto(base + subst(st.ut), { timeout: STEP_TIMEOUT * 2 });
+      if (st.ut) await page.goto(gotoUrl(subst(st.ut)), { timeout: STEP_TIMEOUT * 2 });
       for (const action of st.tedd) {
         // `?`-prefixed = best-effort (tedd?:): overlays that only exist on some
         // visits. Failure is recorded in-band via the shot, never a step-fail.
@@ -547,12 +615,23 @@ for (const sec of fk.sections) {
           continue;
         }
         await doAction(page, subst(action));
+        await trace(page, `${stepNo}. tedd ${action.slice(0, 40)}`);
       }
       for (const check of st.vard) res.checks.push(await doCheck(page, subst(check)));
+      await trace(page, `${stepNo}. várd`);
       res.shot = `shots/${shotName}`;
       res.shot_mobile = `shots/${mobileShotName}`;
-      await capture(page, shotName);
-      await captureMobile(page, mobileShotName);
+      if (PHONE_MODE) {
+        // Primary = the phone frame the checks just ran on; then landscape + desktop.
+        const landName = `${String(stepNo).padStart(2, "0")}-fekvo.png`;
+        await capture(page, mobileShotName);
+        await captureAt(page, landName, LANDSCAPE);
+        res.shot_land = `shots/${landName}`;
+        await captureAt(page, shotName, DESKTOP);
+      } else {
+        await capture(page, shotName);
+        await captureMobile(page, mobileShotName);
+      }
       const failed = res.checks.some((c) => !c.ok);
       res.status = st.kezi ? "manual" : failed ? "fail" : "pass";
       if (failed && st.kezi) res.status = "fail"; // a manual step with failing machine checks is a fail
@@ -564,6 +643,7 @@ for (const sec of fk.sections) {
       try {
         const page = pages.get(currentUser);
         if (page) {
+          if (PHONE_MODE) await page.setViewportSize(DESKTOP);
           await page.screenshot({ path: path.join(SHOTS, shotName), fullPage: true });
           res.shot = `shots/${shotName}`;
           // ⛔ The FAILURE branches were the loudest part of the blind spot:
@@ -579,7 +659,7 @@ for (const sec of fk.sections) {
           } catch {
             // no mobile frame — the desktop one above still stands
           } finally {
-            await page.setViewportSize(DESKTOP).catch(() => {});
+            await page.setViewportSize(PRIMARY).catch(() => {});
           }
         }
       } catch {
@@ -624,7 +704,7 @@ for (const r of results) appendFileSync(path.join(RUN_DIR, "result.jsonl"), JSON
 
 const tally = { pass: 0, fail: 0, manual: 0, blocked: 0 };
 for (const r of results) tally[r.status]++;
-console.log(`${fk.id} — ${fk.title}`);
+console.log(`${fk.id} — ${fk.title}${PHONE_MODE ? " · TELEFON-nézet (390×844, touch)" : ""}`);
 console.log(`futás-mappa: ${path.relative(ROOT, RUN_DIR)}`);
 console.log(
   `lépések: ${results.length} · pass=${tally.pass} fail=${tally.fail} manual=${tally.manual} blocked=${tally.blocked}`,
