@@ -123,3 +123,17 @@ miatt minden sablon-commitot törékennyé tett. **Javítás:** a szűrő az `m.
 resource”/`net::ERR_` a `weight.failed` listába megy (GYANÚ), kivéve a saját origin erőforrásait (azok JS-hibák maradnak);
 két új negatív kontroll a `--gate --selftest`-ben: ültetett SAJÁT `throw` → R6 piros; ültetett KÜLSŐ kép 404 (az
 interceptor válaszol 404-gyel, hálózat nélkül) → R6 zöld, a bukás a sikertelen kérések közt. 8/8 visszarontás piros.
+
+## Session lezárva (2026-09-26 este, fa: `~/wt/cita94801d0`)
+
+- Landolt: `9884986e` + `8082672a` (ADR-0237 kiosztás) → a motor (①); `34ccb5c9` (fekvő javítás + lead-mobile-check őr) + `8fb2d8fd`
+  (MEMORY.md) — `origin/main` igazoltan tartalmazza (IGAZOLTAN FENT). Semmi nem ment élesre (csak a nagy deployjal, tulaj 2026-09-25).
+- Az 57 élő mock (Alig-vár Tanya, Tihany, Laguna) a fő fában `rerender-mock`-kal a végleges motorra frissítve (42 fájl viseli a
+  `data-cit-mast-bar`-t = 14 masthead-es sablon × 3 lead; 19 Alig-vár fájl srcset-tel).
+- Nem commitolt bizonyíték: `elek/runs/FK-010-matrix-2026-09-26T15-51-17/` (19/19 pass), a tabló és a 390-es képek a session
+  scratchpadjában (elküldve a tulajnak).
+- **Nyitva:** a tulaj utólagos ítélete (tabló); fekvőn dark-luxury főcím a masthead alatt + tilted-gallery sáv a főcím utolsó
+  során (nem ennek a körnek a tétele); brutalism / wordmark-grow / aurora első képernyője a leggyengébb; a Google-térkép
+  bootstrap-hibájának szűrése terhelés alatt mért, egyedül nem reprodukált (nem bizonyított javítás); a `-rw`/`=wN` Google
+  paraméter egyszeri sweep-pel igazolt.
+
