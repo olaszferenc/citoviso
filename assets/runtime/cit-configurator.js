@@ -3128,6 +3128,53 @@
     if (e.key === "Escape" && panel.classList.contains("cit-cfg-open")) collapse();
   });
 
+  // ── a drag on the panel scrolls the PANEL, never the page behind it ──────────
+  // Owner, 2026-09-26, on a phone: "nem a vásárlási szekció gördül, hanem a honlap
+  // maga". Measured (scripts/cfg-sheet-scroll-check.mts, raw touch events): a drag on
+  // the sheet's head or footer moved the page ~320 px, and a drag at the end of the
+  // list chained to the page. A touchmove is swallowed unless some scroller between
+  // the finger and the panel can still move that way; the scroller itself keeps
+  // native scrolling (and CSS overscroll-behavior:contain stops the chain mid-fling).
+  // ⛔ Not a page scroll-lock: the page next to / above the panel still scrolls under
+  // the finger, and revealChange() still scrolls it to the toggled section (the
+  // see-the-change preview is the whole sell).
+  var touchY = null;
+  var touchX = null;
+  function canScrollFrom(node, dy) {
+    for (var n = node; n && n.nodeType === 1; n = n.parentNode) {
+      var oy = getComputedStyle(n).overflowY;
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 1) {
+        // dy > 0: the finger moves down → the content wants to scroll up
+        if (dy > 0 ? n.scrollTop > 0 : n.scrollTop + n.clientHeight < n.scrollHeight - 1) return true;
+      }
+      if (n === panel) break;
+    }
+    return false;
+  }
+  panel.addEventListener(
+    "touchstart",
+    function (e) {
+      touchY = e.touches.length === 1 ? e.touches[0].clientY : null;
+      touchX = touchY === null ? null : e.touches[0].clientX;
+    },
+    { passive: true },
+  );
+  panel.addEventListener(
+    "touchmove",
+    function (e) {
+      if (touchY === null || e.touches.length !== 1) return; // pinch-zoom stays native
+      var y = e.touches[0].clientY;
+      var x = e.touches[0].clientX;
+      var dy = y - touchY;
+      var dx = x - touchX;
+      touchY = y;
+      touchX = x;
+      if (!dy || Math.abs(dx) > Math.abs(dy)) return; // sideways swipes are not ours
+      if (!canScrollFrom(e.target, dy) && e.cancelable) e.preventDefault();
+    },
+    { passive: false },
+  );
+
   // ── submit ──────────────────────────────────────────────────────────────────
   var submitBtn = panel.querySelector(".cit-cfg-submit");
   // §A photo-rights declaration gates the submit (server re-checks the flag).

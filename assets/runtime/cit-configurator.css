@@ -160,6 +160,7 @@
 @media (max-height: 520px) {
   .cit-cfg-panel {
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .cit-cfg-body {
     flex: none;
@@ -262,6 +263,8 @@
 .cit-cfg-body {
   flex: 1;
   overflow-y: auto;
+  /* the list's end must not hand the drag on to the page behind (owner, 2026-09-26) */
+  overscroll-behavior: contain;
   padding: 16px 16px 14px;
 }
 /* "There is more below" (Elek FK-005a H-2). The body scrolls inside a fixed panel and
@@ -2346,6 +2349,7 @@
     border-top: none;
     border-left: 1px solid #2a3f57;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .cit-cfg-bgrid { grid-template-columns: 1fr 1fr; }
 }

@@ -749,6 +749,16 @@ if [ -f scripts/lead-mobile-check.mts ] && \
   echo "[pre-commit] lead-mobile-check (a kiküldött lap telefonon: lábléc elérhető, érintési cél, lazy, nincs túlfolyás)…"
   npx tsx scripts/lead-mobile-check.mts --gate --selftest >"$GATE_LOG" || gate_failed
 fi
+# A RENDELÉS-PANEL GÖRGET, NEM A LAP (tulaj, 2026-09-26: „nem a vásárlási szekció gördül,
+# hanem a honlap maga"): telefonon a panel fején/láblécén húzva a lap ~320 px-t ment, a lista
+# végén a húzás átláncolt a lapra. Nyers érintés-eseményekkel (touchStart/Move/End), 3 sablon
+# × 390/360/FEKVŐ, a böngésző-, a 2. és a fizetés-lépésen; a lap a panel MELLETT görgethető
+# marad, és a modul-kapcsolás odagörget (élő előnézet). Piros önteszt: a javítás kivéve.
+if [ -f scripts/cfg-sheet-scroll-check.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-configurator\.(js|css)|src/generator/configurator|src/console/prospectNotice|scripts/cfg-sheet-scroll-check)'; then
+  echo "[pre-commit] cfg-sheet-scroll-check (telefonon a rendelés-panel görget, nem a mögötte lévő lap)…"
+  npx tsx scripts/cfg-sheet-scroll-check.mts --selftest >"$GATE_LOG" || gate_failed
+fi
 # A NYITÓKÉP A TELJES KÉPRŐL SZÓL (2026-09-26): a látás 92-t adott egy fél-fekete Places-fotóra
 # (az eget nézte, a talajt nem), és az lett 12 stílus hero-ja. A photoHealth.ts pixel-statisztikája
 # a tárolt verdiktbe von le; az őr szintetikus képeken méri, negatív kontrollal, hálózat nélkül.
