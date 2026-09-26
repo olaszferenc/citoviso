@@ -51,6 +51,10 @@ képernyőn, fekvőn egy sor; ③ MINTA-felugró leírással + generikus felszer
 „Tovább”-on át ér a mezőkhöz; FK-010 4 mockon 0 fail. **A TULAJ UTÓLAG ÍTÉL a kész felületen.**
 **Nyitva (nem az enyém):** a Laguna hero-fotó posterizált alsó fele → LEAD-szál (heroPick); a mockon „Árajánlatot kérek” gomb
 vs. „amikor a vendége foglal” nyugta (ADR-0061 minta-őszinteség) — tulajdonosi döntés.
+**SESSION LEZÁRVA 2026-09-26 (fa: `~/wt/citfd769e2b`, minden fent: `origin/main` = a MEMORY-commit előtti `51e90c1c`).**
+Következő lépés: a tulaj utólagos ítélete a kész felületen (B két lépés · arch-frames/wordmark-grow · MINTA-felugró · editorial) —
+képek elküldve; ha módosít, új kör a motorban. Az élő `mock-*.html` fájlok a következő generáláskor kapják meg a javításokat
+(a bizonyíték az újrarenderelt lapon készült). Élesítés: csak a nagy deployjal (tulaj, 2026-09-25).
 **Utóellenőrzés (szülő session, 2026-09-26):** a masthead „Foglalás” 43 px-et mért brutalismon (13+sor-magasság+13 —
 a sor-magasság sablononként 17–19 px) → `min-height:44px` + inline-flex, MÉRVE 44 mind a 14 masthead-es sablonon
 (a másik 5-nek saját navja van); az őr a `.cit-mast-hot` < 44-et HIBÁ-nak veszi.

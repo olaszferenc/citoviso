@@ -57,3 +57,7 @@ Három MŰKÖDŐ vázlat a valódi runtime-ra építve (`assets/design-refs/_dra
 ## Testvér-szálnak (→ testvér-szál)
 
 A mock-fájlban nincs burkolat (a `/p/<token>` adja); a burkolat leletei nem ebben a mérésben vannak. A pre-commitben mindkét szál új blokkja külön helyen ül (övék ~718., miénk ~1528. sor).
+
+## Session lezárva (2026-09-26)
+
+Landolt commitok: `8ba22c52` (mérés + közös javítások + őr + FK-010, ADR-0235), `2c18e47d` + `56d0cffe` (masthead 44 px, minden vezérlő ≥ 44), `9eba7027` (a mandátum négy tétele: B két lépés, arch-frames/wordmark-grow, MINTA-felugró, editorial), `08233106` (fekvő fejlécek, tilted-gallery linkek, runner DOM-hit-test), MEMORY.md-k külön. Nyitva a tulajnál: az utólagos ítélet a kész felületen; a hero-fotó minőség a LEAD-szálé; ADR-0061 gomb-vs-nyugta felirat.
