@@ -25,3 +25,8 @@ A FK-009 (a kiküldött terv első megnyitása telefonon, 19 stílus × 2 lead) 
 - A mock-fájlok STATIKUSAK: a 3 lead 57 élő mockja a következő generáláskor/`rerender-mock`-kor kapja meg; a bizonyíték az újrarenderelt lapon készült.
 - Egy új sablon telefonon VAGY rögzített sávot ad és `phoneBar: true`-t mond, VAGY a pirulás link-sávot kapja — a masthead ≤ 150 px-ét a kapu méri.
 - A Google-fotó változatai a Google URL-paraméterezésén állnak; ha a `-rw`/`=wN` valaha megszűnne, a `src` (eredeti) marad, a böngésző a `srcset` hibájára az eredetit tölti; a `photo-srcset-check` nem mér hálózatot — a park-sweep (102/102) egyszeri, dátumozott mérés.
+
+### Módosítás (2026-09-26 este — fekvő tartás)
+
+Az 1. pont „≤ 500 px magasságon … a link-sáv el is marad” része PONTOSÍTVA: a link-sáv csak ott marad el, ahol a sablon rögzített sávja tényleg látszik (`≤ 700 px` szélesség); fekvő telefonon (844×390) a tömör alak él (22 px-es név, pirula, 108–144 px). Mérve a 19 friss mockon: a magasságra kötött elrejtés 12 sablonban CTA nélkül hagyta a fekvő első képernyőt (`guest-mobile-check` ②CTA-hajtás, ergonómiai) — a saját javításom mellékterméke, a 3 nézetes fájl-mérés fogta meg.
+

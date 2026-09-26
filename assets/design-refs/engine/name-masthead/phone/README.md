@@ -47,7 +47,10 @@ telefonon NEM visel rögzített sávot, a link-sáv a sablon alakját viselő pi
 2. **Telefonon a masthead ≤ 150 px** (mérve 62–128 px a 14 sablonon, 390-en és fekvőn). Őr:
    `guest-mobile-check` ②fejléc-blokk (HIBA), negatív kontroll: 200 px-es padding → piros.
 3. **Ahol a sablon telefonon rögzített Foglalás-sávot visel** (`mastheadHtml(..., { phoneBar: true })` →
-   `data-cit-mast-bar`), **a link-sáv nem jelenik meg** — a CTA a sávban él, az első képernyőn egy
+   `data-cit-mast-bar`), **a link-sáv nem jelenik meg** — CSAK ott, ahol a sáv tényleg látszik (`≤ 700 px`
+   szélesség, a sablonok sáv-szabálya); **fekvő telefonon (844×390) a pirula marad** (mérve: a magasságra is
+   kötött elrejtés 12 sablont hagyott CTA nélkül fekvőn; javítva, a fekvő masthead 108–144 px, a név 22 px,
+   a claymorphism pöttye és a scrapbook kézírásos sora fekvőn lép vissza). A CTA a sávban él, az első képernyőn egy
    „Foglalás” gomb van a sávban + a hero saját gombja. Ma mind a 14 masthead-es sablon ilyen (artdeco
    és claymorphism 2026-09-26-tól kapott sávot: `.ad-mobcta`, `.cl-mobcta`).
 4. **Ahol nincs sáv:** a link-sávból CSAK a „Foglalás” marad, pirulaként (≥ 44 px, `--mast-chip` a

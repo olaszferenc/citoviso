@@ -78,6 +78,48 @@ artdeco 155/140/140. Asztalon azonos (artdeco 0 eltérő px). **C** választva �
 - Az `=s4800-wN` alakú Google-URL-eknél `N` NEM a valódi szélesség (a 780×800-as feltöltést Google nem nagyítja) — a
   `=w1200` kérés 780-at ad vissza, 2 MB-ban; a súlyt a WebP viszi le, nem a méret.
 
-## ② Egy tetszőleges lead mind a 19 stílusa
+## ② Egy tetszőleges lead mind a 19 stílusa — **Alig-vár Tanya** (Salföld, Káli-medence)
 
-→ ezen a jegyzeten belül folytatva a landolás UTÁN (lásd lent).
+**Miért ez:** `no_site`, mock nélkül, 10 Places-fotó, elfogadott e-mail, 2 listing (kali.hu, szallas.hu); TANYA-típus
+(a három 19-es lead: ifjúsági szállás, panzió, villa) és nem tóparti (Tihany/Szántód/Zamárdi után). Nem Elek-teszt lead, nem
+vevő. ⛔ Semmi nem ment ki (e-mail/SMS/MMS), prospect nem készült.
+**Hogyan:** a fő fából (`~/citoviso`, main = `8082672a`), a konzol saját útján — `generateEngineMock(loaded, undefined,
+{ template })` sorban mind a 19 `TEMPLATES`-kulcsra + `ensureHeroShot` (scratch-szkript, nem a repóban). 19/19 ✓,
+`recipeSource=template`, 6 fotó, dizájn PASS, kép OK; **AI-költség $5,72** (19 × $0,30 átlag; 42–87 s/mock). A tényhűség-őr
+18/19-en FLAG → kurátor-sor (forrástalan „Ingyenes Wi-Fi”, „Érkezés 14:00” stb. — a szokásos mock-generálási állapot, a
+kurátor dönt), a marketing-őr több sablonon egyszer újrageneráltatott (építőanyag/berendezés a főcímben).
+**Elérés:** `mock_artifact.path` = `mock-alig-var-tanya-<stílus>-<id>.html`, mind a 19 fájl a fő fában (0 hiányzik); a
+:4600 `/lead/46f8b0ae-c5a6-4e52-8594-b59690660703` lead-lapja és a `/mock/<id>` előnézet bejelentkezés után (303 → /login
+belépés nélkül, ezért a fájl-lét ellenőrizve a kiszolgált útvonalon).
+**Mérés a 19 friss mockon (a javított motor + friss AI-tervezés):** masthead 390-en 62–128 px (14 sablon), sáv 64–75 px,
+`srcset` 19/19, a lap 390 px széles 19/19; brutalism főcím 6 sor (nagybetűs, hosszú AI-főcím).
+Tabló: `wow-alig-var-tanya-19-stilus-390.png` (elküldve) + a legjobb 3 (fullbleed, horizontal, cinematic) és a leggyengébb 3
+(brutalism, wordmark-grow, aurora) külön.
+**Wow-ítélet (390, első képernyő):** ★★★ fullbleed, dark-luxury, horizontal, cinematic, parallax (a lombkorona-fotó + név +
+főcím + gomb egy képernyőn); ★★ editorial (újság, fotó + idézet), card-sidebar (app-szerű, de két „Foglalás” gomb), transit
+(fotó a lap alján), organic/watercolor/claymorphism (fotó csak a hajtás alján), artdeco, scrapbook, dopamine, tilted-gallery,
+arch-frames; ★ brutalism (nincs fotó a hajtás fölött, 6 soros verzál), wordmark-grow (a név apró a lap alján, fölül sötét lomb),
+aurora (a fotó félig lóg be, a sávban csak „★ 4,4”).
+**`guest-mobile-check` fájl-mód a 19 friss mockon, 390/360/fekvő (57 lap-nézet): 0 HIBA**, 147 ergonómiai lelet (a
+szokásos osztályok: szövegközi linkek, a 2. lépés távolsága fekvőn, a hero-gomb a lap saját sávja alatt egy görgetésre).
+**Elek FK-010 a 19 fájlon** (`run-guest-mobile.mts`, 2 párhuzamos runner, telefon-kontextus): **19/19 pass, 0 fail, 0 blocked**
+(323 manuális/vizuális lépés) — mátrix `elek/runs/FK-010-matrix-2026-09-26T15-51-17/` (nem commitolt bizonyíték).
+
+**Fekvő regresszió (a saját javításom mellékterméke, a 19-es 3 nézetes mérés fogta meg):** a masthead-sáv elrejtését a
+`max-height:500px` ágra is kötöttem, de a sablonok rögzített sávja csak `≤700 px` szélességen él → fekvőn 12 sablonban NEM
+volt CTA az első képernyőn (②CTA-hajtás 12×@land). Javítva: az elrejtés csak `≤700 px`-en; fekvőn a pirula marad, a név
+22 px; a telefonos szabály `.cit-mast.cit-mast` (a sablon-dialektus `padding-top`-ja erősebb volt: claymorphism 180,
+scrapbook 159, dopamine 151 fekvőn), a claymorphism pöttye fekvőn eltűnik, a scrapbook kézírásos sora 16 px → fekvő masthead
+108–144 px (57 mock), 390-en változatlan 62–128.
+
+## Őr-javítás a szülő session kérésére (2026-09-26 este, a 19-es kör után)
+
+A szülő a landolt ADR-0237 motoron saját fából ellenőrzött: guest-mobile önteszt 7/7 + kapu 0 HIBA, mobile-sticky 30/30, DE a
+`lead-mobile-check --gate` egy lapon piros (organic@390 R6: „console: Failed to load resource: net::ERR_FAILED”) — az én
+generálásom közben, terhelés alatt; egyedül újrafuttatva ZÖLD (6/6 visszarontás piros). **Mechanizmus:** a
+`page.on("console")` ágban a harmadik-fél szűrő `m.text()`-en futott, de a Chromium erőforrás-hiba szövegében NINCS URL (az
+`m.location().url`-ben van) → egy külső fotó/font/térkép hálózati bukása JS-hibaként buktatta a kaput, ami a sablon-trigger
+miatt minden sablon-commitot törékennyé tett. **Javítás:** a szűrő az `m.location()?.url`-re is köt; a „Failed to load
+resource”/`net::ERR_` a `weight.failed` listába megy (GYANÚ), kivéve a saját origin erőforrásait (azok JS-hibák maradnak);
+két új negatív kontroll a `--gate --selftest`-ben: ültetett SAJÁT `throw` → R6 piros; ültetett KÜLSŐ kép 404 (az
+interceptor válaszol 404-gyel, hálózat nélkül) → R6 zöld, a bukás a sikertelen kérések közt. 8/8 visszarontás piros.

@@ -556,7 +556,10 @@ export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
      not width (a landscape phone is 844px wide and 390px high): the same compact head
      applies under 500px of height, where the desktop lockup would take 45% of the screen. */
   @media(max-width:720px),(max-height:500px){
-    .cit-mast{padding-top:var(--mast-pad-m,${overlay ? "18px" : "22px"})}
+    /* .cit-mast.cit-mast (0,2,0): the templates' own dialect rule (body.cit-tpl-x .cit-mast, 0,1,1)
+       sets padding-top 34–38px and would win over a plain .cit-mast here — measured on a
+       landscape phone: claymorphism 180px, scrapbook 159px, dopamine 151px with the chip. */
+    .cit-mast.cit-mast{padding-top:var(--mast-pad-m,${overlay ? "18px" : "22px"})}
     .cit-mast-name{font-size:26px}
     .cit-mast-place{margin-top:6px;gap:10px}
     .cit-mast-place span{letter-spacing:3px;font-size:10px}
@@ -566,7 +569,19 @@ export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
     .cit-mast-links a.cit-mast-hot{text-decoration:none;padding:0 18px;
       border:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.4)" : "color-mix(in srgb, var(--cit-ink) 30%, transparent)"});
       border-radius:var(--mast-chip,999px)}
+  }
+  /* The band is dropped ONLY where the template's fixed booking bar is actually shown — the
+     bars live behind max-width:700px, so on a landscape phone (844 wide, 390 high) the
+     compact CHIP stays: measured 2026-09-26, tying this to max-height too left 12 templates
+     with no booking CTA on the landscape first screen. */
+  @media(max-width:700px){
     .cit-mast[data-cit-mast-bar] .cit-mast-links{display:none}
+  }
+  /* landscape phone (390px high): the chip stays, the name steps down a size so the lockup
+     holds ≤150px even where the template pads the head (measured 114–180 → ≤150) */
+  @media(max-height:500px) and (min-width:701px){
+    .cit-mast-name{font-size:22px}
+    .cit-mast-links{margin-top:6px}
   }`;
 }
 

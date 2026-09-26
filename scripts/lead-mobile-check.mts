@@ -6,7 +6,7 @@
 //   npx tsx scripts/lead-mobile-check.mts --vp=390        (csak egy nézet: 390 | 360 | land)
 //   npx tsx scripts/lead-mobile-check.mts --links=<fájl>  (más link-lista)
 //   npx tsx scripts/lead-mobile-check.mts --gate           (ŐR: 5 sablon fixture-ön, DB-lead nélkül)
-//   npx tsx scripts/lead-mobile-check.mts --gate --selftest (PIROS önteszt: 4 visszarontás)
+//   npx tsx scripts/lead-mobile-check.mts --gate --selftest (PIROS önteszt: 8 visszarontás)
 //
 // MIT MÉR, ÉS MIÉRT ÍGY
 //
@@ -446,7 +446,20 @@ async function measure(
   const thirdParty = (t: string): boolean => /maps\.gstatic\.com|maps\.googleapis\.com/.test(t);
   page.on("pageerror", (e) => { if (!thirdParty(String(e.stack || e.message))) jsErrors.push(e.message.slice(0, 200)); });
   page.on("console", (m) => {
-    if (m.type() === "error" && !thirdParty(m.text())) jsErrors.push(`console: ${m.text().slice(0, 200)}`);
+    if (m.type() !== "error") return;
+    const text = m.text();
+    // ⚠️ Chromium's resource-failure message carries NO url in its text ("Failed to load
+    // resource: net::ERR_FAILED") — the origin is in m.location().url. A third-party photo,
+    // font or map that fails under load is a FAILED REQUEST (GYANÚ), not a script error:
+    // measured 2026-09-26 as a red R6 on organic@390 while a sibling's generation ran,
+    // green alone. Our OWN scripts' errors and our own assets' failures still count.
+    const url = m.location()?.url ?? "";
+    if (thirdParty(text) || thirdParty(url)) return;
+    if (/Failed to load resource|net::ERR_/i.test(text) && url && !url.startsWith(origin)) {
+      weight.failed.push({ url, status: 0 });
+      return;
+    }
+    jsErrors.push(`console: ${text.slice(0, 200)}${url ? ` @ ${url.slice(0, 80)}` : ""}`);
   });
   const pending: Promise<void>[] = [];
   page.on("response", (res: Response) => {
@@ -845,7 +858,9 @@ const PIX =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8" +
   "//8/AzbAhFVkOEgAAP//Awr/A0f8WlgAAAAASUVORK5CYII=";
 
-type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer";
+type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer" | "js-error" | "ext-404";
+/** A third-party host the ext-404 sabotage points at — answered 404 by the interceptor, never the network. */
+const EXT_404_HOST = "https://kulso-pelda.example";
 
 async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   const { renderSite } = await import("../src/engine/render.js");
@@ -883,6 +898,9 @@ async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   if (sabotage === "no-tap") html = html.replace(/display:inline-block;padding:6px [28]px;/g, "");
   if (sabotage === "overflow") html = html.replace("</head>", "<style>body{min-width:120vw}</style></head>");
   if (sabotage === "panel-under-consent") html = html.replace(/height:\s*calc\(100% - var\(--citui-consent-h, 0px\)\);/, "height:100%;");
+  // our OWN script throwing → R6 must go red; a THIRD-PARTY image answering 404 → R6 must stay green
+  if (sabotage === "js-error") html = html.replace("</head>", `<script>throw new Error("ültetett saját JS-hiba");</script></head>`);
+  if (sabotage === "ext-404") html = html.replace("</body>", `<img src="${EXT_404_HOST}/ultetett-404.jpg" alt=""></body>`);
   return html;
 }
 
@@ -907,6 +925,7 @@ async function gate(): Promise<void> {
     const ctx = await browser.newContext({
       viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, userAgent: vp.ua, locale: "hu-HU",
     });
+    await ctx.route(`${EXT_404_HOST}/**`, (route) => route.fulfill({ status: 404, body: "" }));
     await ctx.route(`${GATE_ORIGIN}/**`, async (route) => {
       const u = new URL(route.request().url());
       if (u.pathname === `/${tpl}`) return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html });
@@ -989,6 +1008,11 @@ async function gate(): Promise<void> {
         const others = Object.entries(rules).filter(([k]) => k !== rule && k !== "R6_no_js_errors");
         check(`visszarontás „${sab}" a többi szabályt békén hagyja`, others.every(([, ok]) => ok), others.filter(([, ok]) => !ok).map(([k]) => k));
       }
+      // R6 both ways: a planted OWN script error is red; a planted THIRD-PARTY 404 is not a JS error
+      const je = await run("fullbleed", vp, "js-error");
+      check(`visszarontás „js-error" (saját script dob) → R6_no_js_errors PIROS`, je.rules.R6_no_js_errors === false, je.r.jsErrors);
+      const ext = await run("fullbleed", vp, "ext-404");
+      check(`visszarontás „ext-404" (külső kép 404) → R6 ZÖLD marad, a bukás a sikertelen kérések közt`, ext.rules.R6_no_js_errors === true && ext.r.weight.failed.some((f) => f.url.includes("ultetett-404")), { jsErrors: ext.r.jsErrors, failed: ext.r.weight.failed.map((f) => f.url) });
     }
   } finally {
     await browser.close();

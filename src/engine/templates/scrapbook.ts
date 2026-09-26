@@ -70,6 +70,8 @@ const SCRAPBOOK_CSS = `
   body.cit-tpl-scrapbook .cit-mast-place{transform:rotate(-1.5deg)}
   body.cit-tpl-scrapbook .cit-mast-place span{font-family:'Caveat',cursive;font-size:19px;letter-spacing:1px;text-transform:none;color:color-mix(in srgb, var(--cit-ink) 55%, var(--cit-accent))}
   body.cit-tpl-scrapbook .cit-mast-links{border-top:2px dashed var(--cit-muted);border-bottom:2px dashed var(--cit-muted)}
+  /* landscape phone: the handwritten place line steps down so the lockup with the chip holds ≤150px (measured 152) */
+  @media(max-height:500px){body.cit-tpl-scrapbook .cit-mast-place span{font-size:16px}body.cit-tpl-scrapbook .cit-mast-place{margin-top:2px}}
 
   /* HERO — scrapbook spread */
   .sb-hero{padding:44px 0 40px;overflow:hidden}

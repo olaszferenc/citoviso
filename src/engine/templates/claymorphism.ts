@@ -68,6 +68,8 @@ const CLAY_CSS = `
   body.cit-tpl-claymorphism .cit-mast{--mast-weight:600;padding-top:38px}
   body.cit-tpl-claymorphism .cit-mast-name::before{content:"";display:block;width:24px;height:24px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(145deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink)));box-shadow:3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent)}
   body.cit-tpl-claymorphism .cit-mast-links{max-width:700px}
+  /* landscape phone: the clay dot goes (measured 173 → 155 with a smaller dot, ≤150 only without it) */
+  @media(max-height:500px){body.cit-tpl-claymorphism .cit-mast-name::before{display:none}}
 
   /* hero */
   .cl-hero{padding:40px 0 40px}
