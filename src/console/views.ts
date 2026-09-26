@@ -34,6 +34,8 @@ import {
 } from "./leadFilters.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
 import { formatMoney } from "../text/money.js";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 /** Cache-busting asset version: stamped at module load, so every deploy+restart
  *  serves fresh CSS/JS through the CDN without needing a cache purge. */
@@ -2267,6 +2269,31 @@ function subscriptionBox(
  * Every colour comes from the design core (ADR-0021 ①); the only raw literals are
  * white/black alphas, which the token lint treats as neutral.
  */
+/**
+ * The E4 mark for the dark pay pages, read from the approved asset itself
+ * (assets/design-refs/console/brand-mark/README.md) — not redrawn, so it cannot
+ * drift. Inlined as a data: URI for the same reason the styles are inline: this
+ * page must never depend on a second request. The mark IS the "C", followed by
+ * "itoviso" (owner, 2026-09-23 — same lockup as the platform e-mails, ADR-0225).
+ */
+const PAY_MARK_SRC = (() => {
+  try {
+    const svg = readFileSync(path.resolve(process.cwd(), "assets/brand/mark-e4-dark.svg"));
+    return `data:image/svg+xml;base64,${svg.toString("base64")}`;
+  } catch {
+    return null;
+  }
+})();
+
+function payBrand(): string {
+  if (!PAY_MARK_SRC) return `<div class="pd-brand"><b>Citoviso</b></div>`;
+  return (
+    `<div class="pd-brand" role="img" aria-label="Citoviso">` +
+    `<img class="pd-brand__mark" src="${PAY_MARK_SRC}" width="34" height="34" alt="">` +
+    `<b aria-hidden="true">itoviso</b></div>`
+  );
+}
+
 function payDarkStyles(): string {
   // ⛔ INLINE, not a linked stylesheet — deliberately. This is the page a customer
   // lands on seconds after being charged, and a CDN that serves a stale or missing
@@ -2280,9 +2307,9 @@ function payDarkStyles(): string {
       radial-gradient(660px 420px at 88% 8%, color-mix(in srgb, var(--citui-cyan-500) 28%, transparent), transparent 62%),
       linear-gradient(160deg, var(--citui-navy-950), var(--citui-navy-900) 55%, var(--citui-navy-950));
     background-attachment:fixed;min-height:100vh}
-  .pd-brand{display:flex;align-items:center;gap:10px;padding:16px 24px}
-  .pd-brand__mark{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--citui-cyan-400);border-right-color:transparent}
-  .pd-brand b{font:700 15px/1 var(--citui-font-display)}
+  .pd-brand{display:flex;align-items:center;gap:0;padding:14px 24px}
+  .pd-brand__mark{display:block;width:34px;height:34px;flex:none}
+  .pd-brand b{font:700 21px/1 var(--citui-font-display);letter-spacing:-.01em;color:var(--citui-white);margin-left:-1px}
   /* ⛔ Room for the cookie bar: it is position:fixed at the bottom and was
      sitting ON the „Belépek és szerkesztem" button (measured 2026-09-20).
      The --citui-consent-h token is published by the consent runtime; 0 when hidden. */
@@ -2446,7 +2473,7 @@ function paySplitLayout(
   const support = (o.support ?? "").trim();
   return layout(
     o.title,
-    `<div class="pd-brand"><span class="pd-brand__mark"></span><b>Citoviso</b></div>
+    `${payBrand()}
     <div class="pd-split">
       <div class="pd-left">
         ${payStamp()}

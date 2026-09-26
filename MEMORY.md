@@ -11,6 +11,14 @@ Utolsó frissítés: 2026-09-26 (💳 **Rendelés→fizetés: őszinte képerny�
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-26 — E4 logó a fizetési lapok fejlécében)
+A tulaj a `/pay/done`-on: „itt még mindig a rossz logo van”. A `.pd-brand` a CSS-karikát mutatta.
+Most: a jóváhagyott `assets/brand/mark-e4-dark.svg` data: URI-ként a „C” helyén + fehér „itoviso”
+(a levelek lockupja, ADR-0225), tulaj-OK a képeken. `src/console/views.ts` `payBrand()`.
+Nyitott: a konzol-/admin-fejléc és a favikon még a régi jel (`~/rc-briefs/logo-c-lockup-brief.md`,
+a C-méret A/B döntés nyitott). Nincs élesítve (a nagy deployjal megy).
+Jegyzet: `_planning/memory/2026-09-26_paydone_e4_logo.md`.
+
 ## ⏰ Emlékeztető a pilot / nagy deploy UTÁNRA (2026-09-25, tulaj)
 
 **Ellátás-funkció** (reggeli, félpanzió, teljes panzió stb.), ezek **felárai**, és a **„mit tartalmaz
