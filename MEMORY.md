@@ -84,7 +84,7 @@ behajtott konzol-nav gombját nem éri el; az ELEK követett link a Laguna mocko
 mock már a land előtt új motorral). Jegyzet: `_planning/memory/2026-09-26_mobil_minta_ar_fekvo.md`. Képek a tulajnál
 (minta-ár 390/1280, fekvő előtte/utána). Nyitva: dark-luxury fekvőn a 4 soros lead-főcím a hajtás alá lóg (külön
 döntés: fekvő főcím-méret); a 2. lépés sávjában „72 000 / Ft" törhet.
-**LAND-ÁLLAPOT:** a feature-commit (`b2a777b8`, 83 kapu zöld, felület-kapu tulajdonosi kivétellel naplózva) + ez a MEMORY-commit egy land-ban; az 57 mock fő-fás `rerender-mock`-ja és fájl-módú mérése (390/360/fekvő) a land UTÁN, a záró jegyzet-commitban rögzítve.
+**LAND-ÁLLAPOT:** 1. land `origin/main`=`f75dedbf` (ADR-0239); az 57 mock a fő fából újrarenderelve, fájl-módban 171 lap-nézet **0 HIBA**; 2. kör: a cinematic ugyanazt a fekvő hibát viselte (Laguna, 4 px) → javítva (`4879f8d1`) és landolva, a 3 cinematic mock újrarenderelve. FK-010 mátrix 57/57 pass, 0 fail. **SESSION LEZÁRVA 2026-09-26 késő este (fa: `~/wt/citd29e2c1c`).**
 
 ## Előző szál (2026-09-26 — Mobil · vendég-nézet 2: a motor + egy lead 19 stílusa)
 
