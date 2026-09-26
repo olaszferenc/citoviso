@@ -33,7 +33,11 @@
 `assets/design-refs/console/brand-mark/*` · `_planning/decisions/XXXX-…`.
 
 ## Nyitott
-- **Számla-logó feltöltése** a Számlázz.hu-ba (tulaj).
+- **Számla-logó:** a tulaj a TESZT (OV) fiókba feltöltötte. Próbaszámlák: `OV-2026-59` (a repóbeli 1806×560-as,
+  margós PNG → a logó ~75 px, kicsi) és `OV-2026-60` (szorosan vágott, 988×358 → ~135 px, kitölti a helyet; a tulaj
+  ezt töltötte fel utoljára). NYITOTT: (1) az ÉLES (CITO) fiókba a tulajnak kell feltöltenie; (2) a repóban még a
+  margós változat van — cseréljük-e a szorosra (a tulaj nem válaszolt, nem cseréltem). A szoros vágás: a lockup
+  befoglalója + 6 % margó. A próbaszámla-kiállító: `SzamlazzAgent` a dev-kulccsal, szintetikus vevő, e-mail nélkül.
 - ~~A citoviso.com hero-illusztrációja~~ — KÉSZ ugyanaznap (tulaj: „igen javítsd”): `heroMarkSvg()`, E4-geometria
   fehér ívvel, világos-E4 szemmel, navy playjel a cián gömbön. A telefonos nézetben a „Megtalálnak a Google-ön” kártya
   a jel jobb szélét takarja — ez a régi rajzon is így volt (előtte/utána kép), elrendezési kérdés, nem a jelé.

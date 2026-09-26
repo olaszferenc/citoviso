@@ -15,8 +15,9 @@ Utolsó frissítés: 2026-09-26 (📱 **Mobil · Elek a VENDÉG szemével — 19
 A tulaj a §2b körben a **B**-t választotta (ikonméretű C, 1,6×; admin: a jel ikon marad; szállás-honlapok favikonja
 marad Citoviso). Egy forrás: `src/ui/brand.ts` (az E4 asset-fájlokat olvassa) + `citui.css` `.citui-lockup`; cserélve
 a konzol (oldalsáv, menü, belépő, sima lapok), a tulaj-admin, a citoviso.com fejléc/lábléc, a `/pay/*` és mindhárom
-favikon (világos E4); őr `brand-mark-check` (4 negatív kontroll). ADR-0236. **Nyitott:** a számla-PNG-t
-(`assets/brand/citoviso-logo-szamla.png`) a tulaj tölti fel a Számlázz.hu-ba; a citoviso.com hero-illusztrációja is
+favikon (világos E4); őr `brand-mark-check` (4 negatív kontroll). ADR-0236. **Nyitott:** a számla-logó a TESZT
+fiókban fent (szorosan vágott változat, próba: OV-2026-60) — az ÉLES fiókba a tulaj tölti fel, és döntés kell, hogy a
+repóbeli margós PNG-t a szorosra cseréljük-e; a citoviso.com hero-illusztrációja is
 E4 (`heroMarkSvg()`, fehér ív a cián gömbön). Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_logo_b_lockup_mindenhol.md`.
 
 ## Párhuzamos szál (2026-09-26 — E4 logó a fizetési lapok fejlécében)
