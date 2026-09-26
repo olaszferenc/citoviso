@@ -16,7 +16,7 @@ A tulaj telefonján a pinnelt pénzügyi lábléc kitöltötte a 74vh-s alsó la
 Jóváhagyott „B”: az 1. lépés lábléce egy sor (kis Havi|Éves + futó összeg + „Tovább”); a „Tovább” után a lista eltűnik,
 elöl a Havi/Éves kártyák, aztán MOST FIZETENDŐ, ÁFA, terhelés, §A; mindkét méreten. Kontraktus:
 `assets/design-refs/console/order-two-step/` (felülírja a `period-toggle-step1` ①②-t); őr `order-two-step-check`
-(3 nézet, önteszt 3/3). ADR-XXXX. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_rendeles_ket_lepesben.md`.
+(3 nézet, önteszt 3/3). ADR-0240. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_rendeles_ket_lepesben.md`.
 B (görgetés) és C (indító gomb) szál párhuzamosan ugyanezen a két fájlon.
 
 ## Párhuzamos szál (2026-09-26 — programajánló: SAJÁT program + alapból dátum-sorrend)

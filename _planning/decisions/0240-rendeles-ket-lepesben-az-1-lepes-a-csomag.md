@@ -1,4 +1,4 @@
-## ADR-XXXX — Rendelés két lépésben: az 1. lépés a csomag-listáé, a pénzügyi döntés a „Tovább” után
+## ADR-0240 — Rendelés két lépésben: az 1. lépés a csomag-listáé, a pénzügyi döntés a „Tovább” után
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (tulaj, B változat) · **Kontraktus:** `assets/design-refs/console/order-two-step/`
 

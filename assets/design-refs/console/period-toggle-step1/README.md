@@ -7,7 +7,7 @@ a `/ év` ár már az 1. lépésen látszott.
 
 ## Amit a terv KÖT (elvárt viselkedés, nem stílus-javaslat)
 
-> ⚠️ **① és ② FELÜLÍRVA (ADR-XXXX, tulaj 2026-09-26, `design-refs/console/order-two-step`, B):**
+> ⚠️ **① és ② FELÜLÍRVA (ADR-0240, tulaj 2026-09-26, `design-refs/console/order-two-step`, B):**
 > telefonon a pinnelt lábléc (nagy kártyák, ár-kártya, ÁFA, terhelés) kiszorította a csomag-listát.
 > A nagy Havi/Éves kártyák a 2. lépés ELEJÉRE kerültek. Az 1. lépésen egy kis Havi | Éves kapcsoló
 > maradt a futó összeg mellett, így a szándék (az ár mellett mindig ott a váltás) megmarad.

@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** tulaj, 2026-09-26, a **B változat** („lábléc + kis váltó”).
 **Hatókör:** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css`
-**Döntés:** ADR-XXXX. Felülírja a `period-toggle-step1` ① és ② pontját (lásd lent).
+**Döntés:** ADR-0240. Felülírja a `period-toggle-step1` ① és ② pontját (lásd lent).
 
 ## Kiváltó hiba (tulaj telefonja, 2026-09-26, Három Huszár Apartments)
 

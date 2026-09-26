@@ -1,4 +1,4 @@
-# 2026-09-26 — Rendelés két lépésben (telefon): az 1. lépés a csomag-listáé (A szál, ADR-XXXX)
+# 2026-09-26 — Rendelés két lépésben (telefon): az 1. lépés a csomag-listáé (A szál, ADR-0240)
 
 ## Kiváltó
 A tulaj telefonon (Három Huszár Apartments lead-mock, 20:02) azt látta, hogy a konfigurátor 74vh-s
