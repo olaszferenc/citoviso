@@ -31,6 +31,10 @@ vágódott el. ④ a visszaigazolás hallgatott a tartós kötelezettségről. �
    kártya, benne az összeg, a pipák és a gomb. ⛔ A mérce **nem** az `isVisible()`:
    a kapu `elementFromPoint`-tal, ÉRINTETLEN görgetési állapotban mér
    (`scripts/checkout-viewport-check.mts`).
+   ⚠️ **Kivétel — alacsony nézet (fekvő telefon, `max-height: 520px`), ADR-XXXX (tulaj,
+   2026-09-26):** ott a blokk fizikailag nem fér egy nézetbe (mérve 844×390-en a „Fizetek” a
+   képernyő alatt, elérhetetlenül), ezért a fizetés-lap EGY oszlopban görög: összeg → űrlap →
+   pipák → gomb. Őr: `scripts/cfg-sheet-scroll-check.mts` S8/S9.
 
 3. **Ha egy terület görgethető, azt a felület MEGMONDJA.** A jelzés MÉRT
    (`scrollHeight − clientHeight − scrollTop`), nem feltételezett, és eltűnik,

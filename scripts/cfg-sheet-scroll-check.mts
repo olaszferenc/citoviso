@@ -2,7 +2,7 @@
 // (tulajdonosi bejelentés, 2026-09-26: „nem is lehet vásárolni, mert nem a vásárlási
 // szekció gördül, hanem a honlap maga").
 //
-//   npx tsx scripts/cfg-sheet-scroll-check.mts             (ŐR: 3 sablon × 3 tartás)
+//   npx tsx scripts/cfg-sheet-scroll-check.mts             (ŐR: 3 sablon × 4 tartás: 390, 360, fekvő 844 és 932)
 //   npx tsx scripts/cfg-sheet-scroll-check.mts --selftest  (+ PIROS önteszt: a javítás kivéve)
 //
 // MIT MÉR, ÉS MIÉRT ÍGY
@@ -31,6 +31,7 @@
 //   S6  NEM lap-zár: a panel mellett/fölött látszó lap-sáv húzásra továbbra is görget
 //   S7  a 2. lépésen és a fizetés-lépésen (teljes felület) is: a panel fölső/közép/alsó sávján húzva a lap áll
 //   S8  …és az őr nem nyeli el a fizetés-űrlap SAJÁT görgetését: húzással a végéig ér
+//   S9  …és ott a „Fizetek” gomb a képernyőn van, és az ujj ŐT találja (fekvőn is — tulaj, 2026-09-26)
 //   S0  (a mérés hitele) csukott panellel ugyanaz a gesztus GÖRGETI a lapot
 //
 // Kimenet (gitignore-olt): assets/design-refs/_drafts/cfg-sheet-scroll/<sablon>-<tartás>.png
@@ -65,12 +66,14 @@ const VIEWPORTS: Vp[] = [
   { id: "390", width: 390, height: 844, ua: IPHONE_UA },
   { id: "360", width: 360, height: 780, ua: ANDROID_UA },
   { id: "land", width: 844, height: 390, ua: IPHONE_UA },
+  // a big phone sideways: ≥ 900 px wide, so the checkout's two-column grid branch is live too
+  { id: "land932", width: 932, height: 430, ua: IPHONE_UA },
 ];
 // fullbleed: fixed booking bar; brutalism: the page that widened the layout viewport;
 // dark-luxury: the owner's screenshot skin family
 const TEMPLATES = (process.env.CFG_ONLY ?? "fullbleed,brutalism,dark-luxury").split(",");
 
-type Sabotage = "none" | "no-fix";
+type Sabotage = "none" | "no-fix" | "no-landcol";
 
 function chromiumExe(): string {
   const candidates = [
@@ -105,6 +108,12 @@ async function fixture(tpl: string, sabotage: Sabotage): Promise<string> {
   let html = await injectRuntime(renderSite(recipe as never, data as never));
   html = await injectConfigurator(html, "00000000-0000-0000-0000-000000000000", data.name, {});
   html = pn.containHorizontalOverflow(html);
+  if (sabotage === "no-landcol") {
+    // the sideways one-column paying step, taken out: its media query can never match
+    const before = html;
+    html = html.replace("@media (max-height: 520px) {\n  .cit-cfg-panel--billing {", "@media (max-height: 1px) {\n  .cit-cfg-panel--billing {");
+    if (html === before) throw new Error("a no-landcol szabotázs nem találta a fekvő fizetés-blokkot");
+  }
   if (sabotage === "no-fix") {
     // the fix, taken out: the panel's touchmove guard never fires, no overscroll containment
     const before = html;
@@ -303,7 +312,13 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
       // S8 — …and the guard does not swallow the paying form's OWN scrolling: dragging the
       // form's middle up reaches the end of every scroller in the panel (consents + pay)
       if (billing) {
-        const mid = (await page.evaluate(`(() => { const n = document.querySelector(".cit-cfg-co-scroll") || document.querySelector(".cit-cfg-panel"); const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`)) as { x: number; y: number };
+        // the finger on the box that scrolls: the form's own scroller upright, the whole
+        // panel on a short/sideways screen (one column)
+        const mid = (await page.evaluate(`(() => {
+          const f = document.querySelector(".cit-cfg-co-scroll");
+          const own = f && /(auto|scroll)/.test(getComputedStyle(f).overflowY) && f.scrollHeight > f.clientHeight + 1;
+          const r = (own ? f : document.querySelector(".cit-cfg-panel")).getBoundingClientRect();
+          const t = Math.max(r.top, 0), b = Math.min(r.bottom, innerHeight); return { x: r.left + r.width / 2, y: (t + b) / 2 }; })()`)) as { x: number; y: number };
         const s0 = (await page.evaluate(STATE)) as State;
         for (let i = 0; i < 12; i++) {
           const st = (await page.evaluate(STATE)) as State;
@@ -312,7 +327,17 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
         }
         const s1 = (await page.evaluate(STATE)) as State;
         res.S8_paying_form_scrolls_itself = [s1.atEnd && (s0.scrollers.length === 0 || s1.panelScroll > s0.panelScroll || s0.atEnd), { before: s0.scrollers, after: s1.scrollers }];
-      } else res.S8_paying_form_scrolls_itself = [false, "fizetés-lépés nem nyílt"];
+        // S9 — …and at the end the pay button is ON the screen and a finger there hits IT
+        const pay = (await page.evaluate(`(() => { const b = document.querySelector(".cit-cfg-panel .cit-cfg-pay"); if (!b) return { found: false };
+          const r = b.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
+          const inView = r.top >= 0 && r.bottom <= innerHeight && r.height > 0;
+          const h = inView ? document.elementFromPoint(x, y) : null;
+          return { found: true, inView, hitSelf: !!(h && (h === b || b.contains(h))), rect: [Math.round(r.top), Math.round(r.bottom)], vh: innerHeight }; })()`)) as { found: boolean; inView?: boolean; hitSelf?: boolean };
+        res.S9_pay_button_reachable = [pay.found && !!pay.inView && !!pay.hitSelf, pay];
+      } else {
+        res.S8_paying_form_scrolls_itself = [false, "fizetés-lépés nem nyílt"];
+        res.S9_pay_button_reachable = [false, "fizetés-lépés nem nyílt"];
+      }
     }
 
     // S4 — close the panel: the page scrolls again (no stuck lock)
@@ -339,9 +364,12 @@ let failures = 0;
  * must not grade green).
  */
 const KNOWN_OPEN: Record<string, string> = {
-  "land:S8_paying_form_scrolls_itself":
-    "fekvő telefonon (844×390) a fizetés-lépés űrlap-ablaka ~24 px, a „Fizetek” gomb a képernyő alatt — a javítás " +
-    "(egy oszlopban görgő fizetés-lap) a checkout-fullscreen kontraktus ②-t írná felül → TULAJ-DÖNTÉS (2026-09-26, B szál)",
+  // (2026-09-26: the sideways paying step — "Fizetek" below the edge — was listed here
+  // until the owner decided: sideways, the paying step scrolls as one column. Fixed.)
+  "360:S8_paying_form_scrolls_itself":
+    "álló 360×780-on a fizetés-lépés számlázási űrlapjának ablaka ~24 px, a pipa-blokk takarja — a két-lépéses " +
+    "átszervezés (A szál, ADR-0240) után jelent meg (előtte 152 px, zöld); a „Fizetek” látszik, de az űrlap nem " +
+    "tölthető ki → az A szálnak / a koordinátornak jelezve (2026-09-26), a B szál hatókörén kívül",
 };
 let knownOpen = 0;
 const check = (name: string, ok: boolean, detail?: unknown): void => {
@@ -372,14 +400,24 @@ try {
     }
   }
   if (SELFTEST) {
-    console.log("\nPIROS ÖNTESZT — a javítás kivéve (nincs érintés-őr, nincs overscroll-elzárás): S1 és S7 legyen PIROS, S3/S6 zöld");
+    console.log("\nPIROS ÖNTESZT — a javítás kivéve (nincs érintés-őr, nincs overscroll-elzárás): S1 (és állón S7) legyen PIROS, S3/S6 zöld");
     for (const vp of [VIEWPORTS[0]!, VIEWPORTS[2]!]) {
       const r = await run(browser, "fullbleed", vp, "no-fix");
+      const upright = vp.height > vp.width;
       check(`no-fix @ ${vp.id} → S1 PIROS`, r.S1_drag_on_panel_keeps_page_still?.[0] === false, r.S1_drag_on_panel_keeps_page_still?.[1]);
       check(`no-fix @ ${vp.id} → S3 (előnézet) zöld marad`, r.S3_preview_scrolls_to_change?.[0] === true, r.S3_preview_scrolls_to_change?.[1]);
-      check(`no-fix @ ${vp.id} → S7 (2. lépés + fizetés) PIROS`, r.S7_order_steps_keep_page_still?.[0] === false, r.S7_order_steps_keep_page_still?.[1]);
+      // sideways the steps scroll as ONE panel column, so a band drag moves the panel, not
+      // the page, even without the guard (measured) — the red S7 control is upright only
+      if (upright) check(`no-fix @ ${vp.id} → S7 (2. lépés + fizetés) PIROS`, r.S7_order_steps_keep_page_still?.[0] === false, r.S7_order_steps_keep_page_still?.[1]);
       check(`no-fix @ ${vp.id} → S6 (a lap a panel mellett görget) zöld marad`, r.S6_page_beside_panel_still_scrolls?.[0] === true, r.S6_page_beside_panel_still_scrolls?.[1]);
     }
+    console.log("\nPIROS ÖNTESZT — a fekvő egy-oszlopos fizetés kivéve: S9 („Fizetek” elérhető) PIROS fekvőn, álló 390-en zöld");
+    for (const vp of [VIEWPORTS[2]!, VIEWPORTS[3]!]) {
+      const r = await run(browser, "fullbleed", vp, "no-landcol");
+      check(`no-landcol @ ${vp.id} → S9 PIROS`, r.S9_pay_button_reachable?.[0] === false, r.S9_pay_button_reachable?.[1]);
+    }
+    const r390 = await run(browser, "fullbleed", VIEWPORTS[0]!, "no-landcol");
+    check("no-landcol @ 390 → S9 zöld marad (állón a fekvő blokk nem sül el)", r390.S9_pay_button_reachable?.[0] === true, r390.S9_pay_button_reachable?.[1]);
   }
 } finally {
   await browser.close();

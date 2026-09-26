@@ -30,22 +30,22 @@ S8 a fizetés-űrlap saját görgetése. A gesztus helye a panel SAJÁT geometri
 lábléc sáv), nem szelektor-magasságból — az A szál átszervezése után is értelmes.
 Piros önteszt: a javítás kivéve → S1 és S7 PIROS, S3/S6 zöld (390 + fekvő).
 
-## Nyitott — TULAJ-DÖNTÉS
-**Fekvő telefonon (844×390) a fizetés-lépésen a „Fizetek" gomb a képernyő alatt van, görgetéssel
-sem érhető el** (az űrlap-ablak ~24 px, a pipa-blokk rálóg). A javításom ELŐTT is így volt. A
-javítás (a fizetés-lap fekvőben egy oszlopban görög, mint az 1. lépés `max-height:520px` ága) a
-`design-refs/configurator/checkout-fullscreen` kontraktus ② pontját („egy nézetben, görgetés
-nélkül") írná felül — ezért kérdés ment a tulajnak. Az őrben `KNOWN_OPEN`-ként hangosan kiírva
-(„ISMERT, NYITOTT — nem zöld"), és jelzi, ha megszűnt.
+## Fekvő fizetés — TULAJ DÖNTÖTT: egy oszlopban görög (ADR-XXXX)
+Fekvő telefonon (844×390) a fizetés-lépésen a „Fizetek" a képernyő alatt volt, görgetéssel sem
+elérhető (űrlap-ablak ~24 px, a pipa-blokk rálógott) — régi hiba. ⚠️ Előbb egy koordinátor-session
+tévedésből tulaj-döntésként küldte be a „fekvőben is legyen egy oszlopban" javaslatot; a munka
+félre lett téve (`~/rc-briefs/cfg-mobile-0926/parked/`), és a tulajt ÚJRA megkérdeztem
+(AskUserQuestion) → „Egy oszlopban görgessen". Megvalósítva: `@media (max-height:520px)` a
+`.cit-cfg-panel--billing`-re, a ≥900 px-es rács UTÁN (932×430 is). A checkout-fullscreen ② README
+kivétellel kiegészítve. Őr: S8 + új S9 („Fizetek" a képernyőn, az ujj őt találja), 844 és 932 fekvő
+tartás, `no-landcol` piros önteszt. Képek: `_drafts/cfg-sheet-scroll/fekvo-fizetes-*.png`.
 
-⚠️ Egy koordinátor-session tévedésből tulaj-döntésként küldte be a „fekvőben is legyen egy
-oszlopban görgethető a fizetés" javaslatot; a rá épített munka NEM landolt, hanem félre van téve:
-`~/rc-briefs/cfg-mobile-0926/parked/B-fekvo-fizetes-egy-oszlop.patch` (CSS `max-height:520px`
-blokk a `.cit-cfg-panel--billing`-re, a ≥900 px-es rács UTÁN, hogy a 932×430 is összecsukjon; +
-őr: S9 „Fizetek elérhető és az ujj őt találja", 932×430 tartás, `no-landcol` piros önteszt; az S8
-ujj-helye az űrlap saját görgetője, ha az görget — 360×780-on a panel közepe a pipa-blokkra esik).
-Részeredmény a patch-csel: fekvőn S8 zöld, a no-fix önteszt S7-e fekvőn már NEM piros (a panel
-egy oszlopként görget) → ott csak állón várható piros S7. A teljes futás nem ért véget.
+## ⛔ Új, NYITOTT lelet — az A szál után (nem B-hatókör)
+Az A szál (ADR-0240, két-lépéses rendelés) landolása UTÁN álló **360×780**-on a fizetés-lépés
+számlázási űrlapjának ablaka ~24 px, a pipa-blokk takarja (előtte 152 px, zöld) — a „Fizetek"
+látszik, de az űrlap nem tölthető ki. Ok: a fizetés-lépés tetején ott marad az összeg + ÁFA +
+terhelés + a §A nyilatkozat hosszú szövege. Jelentés: `~/rc-briefs/cfg-mobile-0926/B-jelentes-360-urlap.md`;
+az őrben `KNOWN_OPEN["360:S8…"]` (hangos, nem zöld).
 
 iOS Safari nincs a gépen (csak Chromium) — a `touchmove`+`preventDefault` út WebKiten is a
 szabványos, de ott nem mértem.
@@ -53,4 +53,6 @@ szabványos, de ott nem mértem.
 ## Fájlok
 - `assets/runtime/cit-configurator.js`, `assets/runtime/cit-configurator.css`
 - `scripts/cfg-sheet-scroll-check.mts` (új), `hooks/pre-commit`
+- `_planning/decisions/XXXX-fekvo-telefonon-a-fizetes-lap-egy-oszlopban-gorog.md` (ADR-XXXX),
+  `assets/design-refs/configurator/checkout-fullscreen/README.md` (② kivétel)
 - Képek/videók (gitignore-olt): `assets/design-refs/_drafts/cfg-sheet-scroll/`

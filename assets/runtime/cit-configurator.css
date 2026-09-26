@@ -2353,6 +2353,42 @@
   }
   .cit-cfg-bgrid { grid-template-columns: 1fr 1fr; }
 }
+/* A SHORT viewport — a phone held sideways — pays in ONE scrolling column (owner's
+   decision, 2026-09-26, ADR-XXXX; overrides checkout-fullscreen ② "one view, no scroll" for this
+   case only). Measured at 844×390: the pinned consents + pay block alone were taller
+   than the screen, the form's scroll box shrank to ~24 px under them and "Fizetek" sat
+   below the bottom edge, unreachable by any drag — sideways, nobody could pay. Same
+   cure as step 1's short-viewport branch: the panel is the one scroller, bar → form →
+   consents → pay, in reading order. Comes AFTER the ≥900 px grid so a wide phone
+   (932×430) folds into the column too. */
+@media (max-height: 520px) {
+  .cit-cfg-panel--billing {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .cit-cfg-panel--billing .cit-cfg-foot,
+  .cit-cfg-panel--billing .cit-cfg-step3,
+  .cit-cfg-panel--billing .cit-cfg-co-zone,
+  .cit-cfg-panel--billing .cit-cfg-co-scroll,
+  .cit-cfg-panel--billing .cit-cfg-co-act {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+  .cit-cfg-panel--billing .cit-cfg-step3 {
+    display: flex;
+    flex-direction: column;
+  }
+  .cit-cfg-panel--billing .cit-cfg-co-act {
+    padding: 11px 0 0;
+    border-left: none;
+    border-top: 1px solid #2a3f57;
+  }
+  /* the form no longer scrolls on its own, so "there is more form" has nothing to say */
+  .cit-cfg-panel--billing .cit-cfg-co-hint {
+    display: none !important;
+  }
+}
 
 /* ── ADR-0088 offer price card (approved plan: design-refs/console/offer-ui) ──
  * The running total becomes a bordered card when an offer is live: the struck
