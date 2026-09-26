@@ -230,6 +230,31 @@ async function doAction(page: Page, action: string): Promise<void> {
         // "element is not visible" names nothing: say WHAT hides it (its own box, or the
         // nearest ancestor that is display:none / zero-sized), so the next reader does not
         // need three bisect runs to find out (FK-010, 2026-09-26).
+        // "…subtree intercepts pointer events" names the cover but not WHY: say what the DOM
+        // hit-test returns at the click point and the cover's stacking (2026-09-26, aurora X).
+        if (/intercepts pointer events/.test(String((e as Error).message))) {
+          const why = await loc.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            const cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+            const stack = document.elementsFromPoint(cx, cy).slice(0, 4).map((n) => {
+              const cs = getComputedStyle(n);
+              return `${n.tagName.toLowerCase()}${n.className ? "." + String(n.className).trim().split(/\s+/)[0] : ""}(pos=${cs.position},z=${cs.zIndex},pe=${cs.pointerEvents})`;
+            });
+            const top = document.elementFromPoint(cx, cy);
+            const domSaysTarget = !!top && (top === el || el.contains(top));
+            return `${domSaysTarget ? "DOM-TOP " : ""}pont ${Math.round(cx)},${Math.round(cy)} · réteg-sor: ${stack.join(" > ")} · box ${Math.round(r.width)}×${Math.round(r.height)} · scrollY=${Math.round(window.scrollY)} vw=${window.innerWidth}`;
+          }).catch(() => "?");
+          // The DOM's own hit-test (elementFromPoint — what a real tap resolves to) says the
+          // target IS on top, Playwright's actionability check disagrees (measured 2026-09-26,
+          // aurora popover X at 390: DOM → button, Playwright → the img beneath it, after the
+          // three-viewport captures). A tap would land; click it where it is. A genuinely
+          // covered target (DOM says something else) still fails loudly, with the layer stack.
+          if (why.startsWith("DOM-TOP ")) {
+            await loc.click({ force: true, timeout: STEP_TIMEOUT });
+            return;
+          }
+          throw new Error(`${String((e as Error).message).split("\n")[0]} — a célpont takarva: ${why}`);
+        }
         if (/not visible/.test(String((e as Error).message))) {
           const why = await loc.evaluate((el) => {
             const r = el.getBoundingClientRect();

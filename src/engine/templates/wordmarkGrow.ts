@@ -100,6 +100,8 @@ section{padding:clamp(70px,10vh,124px) 0}
   .w-nav a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
   .w-nav .w-pill{min-height:44px;padding:0 20px;box-sizing:border-box}
 }
+/* landscape phone: one row, links folded (guest-mobile-check ⑤, 2026-09-26) */
+@media(max-width:879px) and (max-height:500px){.w-nav{grid-template-areas:"brand right";padding:2px 18px}.w-nav .w-links{display:none}}
 /* .w-nav a (0,1,1) beat .w-pill (0,1,0): ink text on the ink pill, an invisible label (measured 2026-09-26) */
 .w-nav a.w-pill{color:var(--cit-bg)}
 @media(max-width:879px){

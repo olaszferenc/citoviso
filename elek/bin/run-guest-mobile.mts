@@ -31,9 +31,15 @@ interface Target { lead: string; leadSlug: string; style: string; file: string }
 
 async function catalogue(): Promise<Target[]> {
   if (files.length) {
+    // The style is the LONGEST known template id the name ends with: a greedy split read
+    // "arch-frames" as lead "…-arch" + style "frames" (2026-09-26).
+    const { TEMPLATES } = await import("../../src/engine/templates.js");
+    const ids = Object.keys(TEMPLATES).sort((a, b) => b.length - a.length);
     return files.map((f) => {
       const base = path.basename(f).replace(/\.html?$/i, "");
-      const m = /^mock-(.+)-([a-z-]+)-[0-9a-f]{8}$/.exec(base);
+      const stem = base.replace(/-[0-9a-f]{8}$/, "");
+      const style = ids.find((id) => stem.endsWith("-" + id));
+      const m = style ? [base, stem.slice(5, stem.length - style.length - 1), style] : /^mock-(.+)-([a-z-]+)-[0-9a-f]{8}$/.exec(base);
       // The visible name lives on the booking slot (data-cit-name) — the file name is a slug.
       const name = /data-cit-name="([^"]+)"/.exec(readFileSync(path.resolve(f), "utf8"))?.[1]?.replace(/&amp;/g, "&");
       return { lead: name ?? m?.[1] ?? base, leadSlug: m?.[1] ?? base, style: m?.[2] ?? "?", file: path.resolve(f) };

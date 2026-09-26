@@ -73,7 +73,7 @@ section{padding:clamp(64px,9vh,104px) 0}
 .t-nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:22px;
   padding:14px 24px;background:color-mix(in srgb,var(--cit-bg) 88%,transparent);
   backdrop-filter:blur(9px);border-bottom:1px solid color-mix(in srgb,var(--cit-line) 70%,transparent)}
-.t-nav a{color:var(--cit-ink);text-decoration:none;font-size:13.5px}
+.t-nav a{color:var(--cit-ink);text-decoration:none;font-size:13.5px;display:inline-flex;align-items:center;min-height:44px}
 .t-nav .t-brand-s{font-family:var(--cit-font-display);font-size:16px;letter-spacing:.06em}
 .t-nav .t-links{display:none;gap:20px}
 @media(min-width:820px){.t-nav .t-links{display:flex}}

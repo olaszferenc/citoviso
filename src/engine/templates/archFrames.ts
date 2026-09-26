@@ -102,6 +102,8 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
   .a-nav a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
   .a-nav .a-pill{min-height:44px;padding:0 20px;box-sizing:border-box}
 }
+/* landscape phone: a 100px two-row header is 26% of a 390px-tall screen — one row, links folded (guest-mobile-check ⑤, 2026-09-26) */
+@media(max-width:879px) and (max-height:500px){.a-nav{grid-template-areas:"brand right";padding:2px 16px}.a-nav .a-links{display:none}}
 .a-nav a.a-pill{color:var(--cit-on-accent)}
 @media(max-width:879px){
 }

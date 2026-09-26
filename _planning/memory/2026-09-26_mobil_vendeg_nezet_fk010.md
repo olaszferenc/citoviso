@@ -34,6 +34,8 @@ Mandátum: „Javaslat szerint hajtsák végre a saját belátásuk szerint … 
 ② **arch-frames + wordmark-grow:** pirula + menü az első képernyőn (nav 100/97 px, pirula 44 px, 3/2 link), a fotó-nyitány marad; a sablon `.x-nav a` szabálya a pirula feliratát is átszínezte (láthatatlan) — külön szabály.
 ③ **MINTA-felugró:** „MINTA · Apartman”, minta-leírás, 4/3/3 generikus felszereltség (nincs szám, m², ár), lista-cím kimondja, hogy minta; ikonok 20 px (első körben 120 px-esre nőttek — mérve, javítva).
 ④ **editorial:** a tapadó menü telefonon egy görgethető sor.
+Záró mérés (38 lap × 3 nézet, javított motor): 390 és 360: 0 HIBA; fekvő: az arch-frames/wordmark-grow kétsoros fejléce 100/97 px = a 390 px-es képernyő 26%-a → fekvőn egy sor (48/49 px), a linksor becsukva, a pirula marad; tilted-gallery menülinkek 22 → 44 px. Maradék ergonómia: a 2. lépésben az összegző és a küldő gomb ~757 px-re (360×780-on és fekvőn egy képernyőnél több — a mezők vannak közte), a hibaüzenet fekvőn 20 px-re a sávtól, de a 390 px-es magasságba a naptár + sáv + üzenet nem fér egyszerre.
+**Runner:** Playwright „intercepts pointer events” ítélete az aurora felugró X-én ELTÉRT a DOM saját hit-testjétől (elementFromPoint → a gomb; Playwright → az alatta lévő kép, a három-nézetes felvételek után). A runner most kiírja a réteg-sort, és ha a DOM a célpontot mondja felülre, a helyén kattint; valódi takarás továbbra is hangosan bukik.
 Képek: `elek/runs/FK-010-kepek/*-utana.png`. A tulaj UTÓLAG a kész felületen ítél.
 
 ## (Lezárt) §2b terv-kapu — a foglalás-widget telefonos elrendezése
