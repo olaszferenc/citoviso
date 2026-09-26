@@ -30,11 +30,25 @@ egy kiegészítéssel: a Modulok menüpontra kattintva a lista AZONNAL nyíljon 
    előfizetés-kártya „N modul aktív” sora változatlan (az az aktív modulokat számolja).
 6. **Ikonsávvá csukott oldalsáv:** a lista és a nyíl rejtve, a Modulok ikon a fülre visz.
 7. **Telefon:** a Menü-fiókban ugyanez a lista, nagyobb érintési felülettel (a nyíl 40 px).
-8. Nincs aktív, beállítható modul → nincs nyíl, nincs lista, sima menüpont.
+8. Nincs aktív, beállítható modul ÉS nincs meg nem vett modul → nincs nyíl, nincs lista, sima menüpont.
+9. **A meg nem vett modulok** (kiegészítés, 2026-09-26 — a tulaj háromból az „A” változatot
+   választotta; terv: `meg-nem-vett-A.html`, képek: `meg-nem-vett-desktop.png`,
+   `meg-nem-vett-menu-mobile-sotet.png`, `meg-nem-vett-kattintas-mobile.png`):
+   - a megvett modulok ALATT, saját címke után („Még nem vette meg · N”), halvány sorokként,
+     jobb oldalt kerek cián + jellel;
+   - a tartalom ugyanaz a predikátum, amivel a Bővítés rész a kártyáit listázza (nem aktív,
+     nem gerinc) — minden sornak van kártyája, amire érkezik;
+   - kattintás = `/admin?tab=modulok#mod-<id>`: a Bővítés kártyájára ugrik, a kártya keretet
+     kap (`:target`), a telefonos Menü-fiók bezárul. A sor maga NEM vásárol — a vásárlás a
+     kártya gombján és a kosár-sávon marad;
+   - a Modulok melletti számláló TOVÁBBRA IS a megvett (beállítható) modulokat számolja (⑤); a
+     meg nem vettek száma a saját címkéjükben áll — egy szám = egy mértékegység;
+   - nyitás/csukás, ikonsáv, telefon: ugyanaz, mint ③ ⑥ ⑦.
 
 ## Kötő feliratok
 
 - **„Modulok listája”** — a nyíl akadálymentes neve (a vak felhasználó ebből tudja, mit nyit).
+- **„Még nem vette meg”** — a meg nem vett modulok címkéje (⑨); a darabszám külön elem mögötte.
 
 ## Kötő horgony
 
@@ -43,3 +57,5 @@ egy kiegészítéssel: a Modulok menüpontra kattintva a lista AZONNAL nyíljon 
 - `adm-menu__mod`
 - `adm-menu__sub`
 - `data-subtg`
+- `adm-nav__buyh`
+- `data-buy`

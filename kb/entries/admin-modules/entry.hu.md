@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-09-22
+updated: 2026-09-26
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -13,6 +13,16 @@ alatta **„Bővítés — amit még hozzáadhat”** (amit még választhat). A
 előnézetben, mielőtt dönt.
 
 ![Képernyőkép: a Modulok fül telefonon](assets/hu/screen.png)
+
+## A bal oldali menüben is látja, mi hiányzik még
+
+Asztali gépen a bal oldali menüben a **Modulok** alatt a megvett modulok listája áll. Alatta
+egy halvány **„Még nem vette meg”** címke után azok a modulok következnek, amelyeket még
+hozzáadhat — mindegyik mellett egy kerek, kék **+** jel. Ha egy ilyen sorra kattint, a lap a
+**„Bővítés — amit még hozzáadhat”** részben arra a modulra ugrik, és keretet kap; a hozzáadás
+ott történik, a szokásos **„Hozzáadom”** gombbal. Maga a sor nem vásárol semmit.
+Telefonon ugyanez a lista a **Menü** gomb mögött van. A lista a Modulok fülön és a modulok
+beállító képernyőin nyitva van, a többi fülön a Modulok melletti nyíllal nyitható le.
 
 ## „Így nézne ki az oldalamon” — nézze meg, mielőtt fizet
 

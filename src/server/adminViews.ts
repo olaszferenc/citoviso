@@ -179,6 +179,8 @@ interface NavCounts {
   readonly unseenBookings: number;
   /** Module sub-list under „Modulok" (contract: design-refs/tenant-admin/module-subnav). */
   readonly subModules: readonly { readonly id: string; readonly label: string }[];
+  /** Modules the owner has NOT bought — the shop's own predicate (module-subnav ⑨). */
+  readonly buyModules: readonly { readonly id: string; readonly label: string }[];
   /** The module whose settings screen is open (`?m=`), or null. */
   readonly openModule: string | null;
 }
@@ -231,15 +233,29 @@ const SUBNAV_CLS = {
 
 function moduleSubNav(link: string, active: string, lang: string, c: NavCounts, where: keyof typeof SUBNAV_CLS): string {
   const cls = SUBNAV_CLS[where];
-  if (c.subModules.length === 0) return link;
+  if (c.subModules.length === 0 && c.buyModules.length === 0) return link;
   const open = active === "modulok";
-  const items = c.subModules
+  const own = c.subModules
     .map(
       (m) =>
         `<a href="/admin?tab=modulok&amp;m=${encodeURIComponent(m.id)}"${m.id === c.openModule ? ' class="is-active" aria-current="page"' : ""} title="${esc(m.label)}">` +
         `<span>${esc(m.label)}</span></a>`,
     )
     .join("");
+  // module-subnav ⑨ (approved „A", 2026-09-26): what is still for sale, under its own
+  // label, muted, with a buy mark. The row leads to the shop card — buying stays there.
+  const buy = c.buyModules.length
+    ? `<div class="adm-nav__buyh">${T(lang, "Még nem vette meg")} <span>· ${c.buyModules.length}</span></div>` +
+      c.buyModules
+        .map(
+          (m) =>
+            `<a href="/admin?tab=modulok#mod-${encodeURIComponent(m.id)}" class="is-buy" data-buy="${esc(m.id)}"` +
+            ` title="${esc(T(lang, "{name} — még nem vette meg", { name: m.label }))}">` +
+            `<span>${esc(m.label)}</span><i class="adm-nav__plus" aria-hidden="true">${ic("plus", 12)}</i></a>`,
+        )
+        .join("")
+    : "";
+  const items = own + buy;
   return (
     `<div class="${cls.mod}${open ? " is-open" : ""}${c.openModule ? " is-parent" : ""}" data-subnav>${link}` +
     `<button type="button" class="adm-nav__tg" data-subtg hidden aria-expanded="${open}" aria-label="${T(lang, "Modulok listája")}">${ic("chevron-down", 14)}</button></div>` +
@@ -367,6 +383,7 @@ const SHELL_SCRIPT = (lang: string): string =>
   `var ml=e.target.closest('[data-subnav]>a');if(ml)subnav(true);` +
   `var bk=e.target.closest('[data-back]');if(bk&&history.length>1&&document.referrer.indexOf(location.origin+'/admin')===0){e.preventDefault();history.back();return}` +
   `var dr=document.getElementById('adm-menu');if(!dr)return;` +
+  `if(e.target.closest('a[data-buy]'))dr.classList.remove('on');` +
   `if(e.target.closest('[data-drawer-open]')){e.preventDefault();dr.classList.add('on');return}` +
   `if(e.target.closest('[data-drawer-close]')){e.preventDefault();dr.classList.remove('on');if(location.hash==='#adm-menu')history.replaceState(null,'',location.pathname+location.search)}});` +
   `document.addEventListener('keydown',function(e){if(e.key==='Escape'){var dr=document.getElementById('adm-menu');if(dr)dr.classList.remove('on')}});` +
@@ -1940,7 +1957,7 @@ export function modulesSection(
               ` href="${previewHref(m.id, committedIds)}">${eyeIcon}<span>${frozen ? T(lang, "Előnézet") : T(lang, "Megnézem az oldalamon")}</span></a>`
             : "";
           return (
-            `<article class="adm-shop__card${hasSurface ? "" : " adm-shop__card--plain"}" data-modrow="${esc(m.id)}">` +
+            `<article class="adm-shop__card${hasSurface ? "" : " adm-shop__card--plain"}" id="mod-${esc(m.id)}" data-modrow="${esc(m.id)}">` +
             (coupon && !m.spine && m.priceMonthly > 0
               ? `<span class="adm-shop__coupon">−${coupon.percent}%</span>`
               : "") +
@@ -5100,6 +5117,11 @@ export function adminDashboard(
       ? mv.modules
           .filter((m) => m.active && !m.supersededBy && hasSettingsScreen(m.id))
           .map((m) => ({ id: m.id, label: T(lang, m.label) }))
+      : [],
+    // module-subnav ⑨: the SAME predicate the shop („Bővítés") lists its cards by, so
+    // every row has a card to land on.
+    buyModules: mv
+      ? mv.modules.filter((m) => !m.active && !m.spine).map((m) => ({ id: m.id, label: T(lang, m.label) }))
       : [],
     openModule: tab === "modulok" && opts.moduleSettingsHtml ? (opts.openModule ?? null) : null,
   };

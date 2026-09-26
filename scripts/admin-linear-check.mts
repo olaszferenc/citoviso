@@ -108,11 +108,15 @@ const MV_SUB = {
     { id: "enquiry", label: "Időpontkérés, kapcsolat", group: "offer", active: true, spine: true, priceMonthly: 0, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: "booking", publicDesc: null },
     { id: "booking", label: "Online foglalás", group: "offer", active: true, spine: false, priceMonthly: 990, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: null, publicDesc: null },
     { id: "nosuchscreen", label: "Nincs képernyője", group: "offer", active: true, spine: false, priceMonthly: 290, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: null, publicDesc: null },
+    // module-subnav ⑨: not bought → listed under „Még nem vette meg", leading to its shop card
+    { id: "pricing", label: "Árak, szezonok", group: "offer", active: false, spine: false, priceMonthly: 490, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: null, publicDesc: "Árak." },
+    { id: "email", label: "Saját e-mail cím", group: "extra", active: false, spine: false, priceMonthly: 390, cancelAtPeriodEnd: false, awaitingFirstCharge: false, supersededBy: null, publicDesc: "Postafiók." },
   ],
 } as unknown as typeof MV;
 const subPages = {
   photos: await render("sub-photos", "fotok", false, { modules: MV_SUB }),
   rooms: await render("sub-rooms", "modulok", false, { modules: MV_SUB, moduleSettingsHtml: "<p>szobák</p>", openModule: "rooms" }),
+  shop: await render("sub-shop", "modulok", false, { modules: MV_SUB }),
 };
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
@@ -310,9 +314,14 @@ for (const size of SIZES) {
   const arrivedOpen = await page.locator(sub).isVisible();
   ok(`${size.tag}: modul-képernyőn a lista NYITVA érkezik`, arrivedOpen);
   if (SELF_TEST && !arrivedOpen) selfTestHits++;
-  const labels = await page.locator(`${sub} a`).allTextContents();
+  const labels = await page.locator(`${sub} a:not([data-buy])`).allTextContents();
   ok(`${size.tag}: a lista = a „Beállítás"-predikátum (kiváltott és képernyő nélküli kimarad): ${labels.join(" · ")}`,
     labels.join("|") === "Képek a szállásról|Szobák, apartmanok|Online foglalás");
+  const buyLabels = await page.locator(`${sub} a[data-buy]`).allTextContents();
+  ok(`${size.tag}: a meg nem vettek a „Még nem vette meg" címke alatt, + jellel: ${buyLabels.join(" · ")}`,
+    buyLabels.join("|") === "Árak, szezonok|Saját e-mail cím" &&
+      (await page.locator(`${sub} .adm-nav__buyh`).textContent())?.startsWith("Még nem vette meg") === true &&
+      (await page.locator(`${sub} a[data-buy] .adm-nav__plus`).count()) === 2);
   ok(`${size.tag}: a nyitott modul kiemelve`, (await page.locator(`${sub} a.is-active`).textContent()) === "Szobák, apartmanok");
   if (!phone) {
     ok("a Modulok számlálója = a lista elemszáma (3)", (await page.locator(".adm-nav__mod .adm-nav__n").textContent()) === "3");
@@ -341,6 +350,27 @@ for (const size of SIZES) {
   await ctx.close();
 }
 
+// ⑨ every „not bought" row lands on a shop card that exists (a row without its card would
+// scroll nowhere — the silent dead end this contract forbids)
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto(subPages.shop);
+  if (SELF_TEST) await page.evaluate(() => document.getElementById("mod-email")?.removeAttribute("id"));
+  const miss = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLAnchorElement>(".adm-nav__sub a[data-buy]")]
+      .filter((a) => {
+        const id = a.dataset.buy!;
+        return a.getAttribute("href") !== `/admin?tab=modulok#mod-${id}` || !document.querySelector(`#mod-${id}.adm-shop__card`);
+      })
+      .map((a) => a.dataset.buy),
+  );
+  const rowsToCards = miss.length === 0 && (await page.locator(".adm-nav__sub a[data-buy]").count()) === 2;
+  ok(`a „Még nem vette meg" sorai a Bővítés létező kártyájára visznek`, rowsToCards, miss.join(", "));
+  if (SELF_TEST && !rowsToCards) selfTestHits++;
+  await ctx.close();
+}
+
 await browser.close();
 await rm(tmp, { recursive: true, force: true });
 
@@ -352,9 +382,10 @@ if (WITH_KB) {
 
 if (SELF_TEST) {
   // The four red controls: back button removed, file field shown, #fff in dark, bottom bar item removed.
-  // + module-subnav: the list stripped of its server-side open state (one per size).
-  const pass = selfTestHits >= 6;
-  console.log(`\n${pass ? "✅" : "⛔"} --self-test: ${selfTestHits} szabotázst fogott meg a 6-ból`);
+  // + module-subnav: the list stripped of its server-side open state (one per size),
+  // and ⑨ a not-bought row whose shop card lost its anchor.
+  const pass = selfTestHits >= 7;
+  console.log(`\n${pass ? "✅" : "⛔"} --self-test: ${selfTestHits} szabotázst fogott meg a 7-ből`);
   process.exit(pass ? 0 : 1);
 }
 console.log(bad ? `\n⛔ admin-linear-check: ${bad} bukás` : "\n✅ admin-linear-check: a szállított admin = a jóváhagyott Linear terv");
