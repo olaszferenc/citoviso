@@ -221,7 +221,7 @@ try {
   check("⭐ a mentett felszereltség eljut az oldal adatába", (content.amenities ?? []).includes("Fedett kerékpártároló"), content.amenities);
   check("⭐ a mentett nyitvatartás eljut az oldal adatába", content.hours?.checkInFrom === "15:30", content.hours);
   const poi = content.poi ?? [];
-  // ADR-XXXX (owner, 2026-09-26: "alapértelmezés: dátum, fel/le override"): with no
+  // ADR-0238 (owner, 2026-09-26: "alapértelmezés: dátum, fel/le override"): with no
   // `order` stored the page is in DATE order — the pick (the latest) sits last.
   check("⭐ alapból DÁTUM szerint: a tulaj választása (a legkésőbbi) a sor végén, az átírt címével",
     poi[poi.length - 1]?.title === "_Mcfg átírt cím" && poi.every((p, i) => i === 0 || poi[i - 1]!.start <= p.start), poi.map((p) => `${p.start} ${p.title}`));

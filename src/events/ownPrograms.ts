@@ -1,5 +1,5 @@
 // The tenant's OWN programs in the weekly recommender (approved contract:
-// assets/design-refs/console/programajanlo-sajat/README.md, ADR-XXXX). A program the
+// assets/design-refs/console/programajanlo-sajat/README.md, ADR-0238). A program the
 // gathering did not find — the owner's own event, or one he knows of — typed in by
 // hand. It lives INSIDE the `poi` picks list (so the owner's order covers both kinds)
 // as `{ id: "own-xxxxxxxx", own: {...} }`.

@@ -53,7 +53,7 @@ export interface TenantPool {
   /** null when the settlement cache around the tenant is still cold (never gathered). */
   readonly own: Settlement | null;
   readonly events: PoolEvent[];
-  /** The cached circle — an own program's typed place is matched against it (ADR-XXXX). */
+  /** The cached circle — an own program's typed place is matched against it (ADR-0238). */
   readonly around: readonly Settlement[];
 }
 

@@ -265,7 +265,7 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
   // the owner's order (contract ③). Expired ids stay harmlessly in the row — the
   // render resolves them against the live pool, so they fall off by themselves (⑦).
   //
-  // ADR-XXXX (2026-09-26, additive — still v2): a pick may be the owner's OWN program
+  // ADR-0238 (2026-09-26, additive — still v2): a pick may be the owner's OWN program
   // (`{ id: "own-xxxxxxxx", own: { title, start, end, place, url } }`, rules in
   // src/events/ownPrograms.ts), and `order` says whether the page follows the dates
   // ("date", the default) or the owner's arrows ("manual").

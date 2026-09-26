@@ -1,4 +1,4 @@
-## ADR-XXXX — Programajánló: saját program a tenanttól + alapból dátum szerinti sorrend
+## ADR-0238 — Programajánló: saját program a tenanttól + alapból dátum szerinti sorrend
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (megvalósítva, őrrel) · **Kapcsolódó:** ADR-0214
 (automata heti programajánló), a `design-refs/console/programajanlo/` B kontraktus ③ pontját MÓDOSÍTJA.

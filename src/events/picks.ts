@@ -2,7 +2,7 @@
 // against the LIVE pool. One resolver for the admin picker, the save route, the page
 // render and the weekly owner mail, so they can never disagree about which programs
 // are "on the page": an id whose program expired (or left the circle) simply does not
-// resolve, and an own program past its last day neither (ADR-XXXX).
+// resolve, and an own program past its last day neither (ADR-0238).
 
 import { db } from "../db/client.js";
 import { addDays, distanceKm, WINDOW_DAYS } from "./gates.js";
@@ -17,7 +17,7 @@ export const PROGRAMS_ON_PAGE = 10;
 export type Pick = { readonly id: string; readonly title?: string } | { readonly id: string; readonly own: OwnProgram };
 
 /**
- * ADR-XXXX (owner, 2026-09-26: "alapértelmezés: dátum, fel/le override"): "date" keeps
+ * ADR-0238 (owner, 2026-09-26: "alapértelmezés: dátum, fel/le override"): "date" keeps
  * the page in date order; the first arrow click in the picker switches to "manual",
  * the owner's stored order. A row without the key is in date mode.
  */
@@ -164,7 +164,7 @@ export function autoFill(
  * What the PAGE shows: the picks inside the two-week window (an own program set for
  * next month waits — the block promises "a következő két hét"), the free slots
  * auto-filled, then ordered: date mode = all of it by date, manual = the owner's
- * order first, the auto-fill after (ADR-XXXX).
+ * order first, the auto-fill after (ADR-0238).
  */
 export function programsOnPage(
   cfg: Record<string, unknown>,

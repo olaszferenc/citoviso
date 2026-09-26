@@ -787,7 +787,7 @@ function moduleShotHtml(entryId: string): string {
         ],
         picks: [
           { id: "00000000-0000-4000-8000-000000000001" },
-          // ADR-XXXX: an own program, so the shot shows the "Saját ajánlás" row the entry names.
+          // ADR-0238: an own program, so the shot shows the "Saját ajánlás" row the entry names.
           {
             id: "own-a1b2c3d4",
             own: { title: "Borkóstoló a teraszunkon", start: "2026-10-02", end: null, place: null, url: null },

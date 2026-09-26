@@ -471,7 +471,7 @@ const PROGRAMS_MOBILE_FIRST = 5;
  * "Heti programajánló" — approved contract A (design-refs/public-site/programajanlo/).
  * Each row: date column · title · settlement + distance ("Helyben" / "N km") + weekday
  * or range · source link (§B.17 — no source, no row). The owner's OWN program
- * (ADR-XXXX) is the one exception: its source is the house itself, and the row SAYS
+ * (ADR-0238) is the one exception: its source is the house itself, and the row SAYS
  * so ("A szállás ajánlja") instead of a link. Order = the content builder's (date
  * by default, the tenant's arrows when he used them).
  */

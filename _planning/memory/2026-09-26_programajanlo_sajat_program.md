@@ -24,7 +24,7 @@ teljesen maga szerkeszt”.
 - `src/server/public.ts` — admin-adat + mentés; `src/tenant/editor.ts` — oldal-tartalom;
   `src/engine/moduleSections.ts` — „A szállás ajánlja” sor; `src/events/ownerMail.ts` — autoCount.
 - Súgó: `kb/entries/admin-modules-programs/` szöveg + kép (kb-shot fixture saját programmal).
-- ADR-XXXX; DOMAIN `05-MODULES.md` poi sora.
+- ADR-0238; DOMAIN `05-MODULES.md` poi sora.
 
 ## Őrök
 - `scripts/programs-editor-check.mts` bővítve (saját program, sorrend, DB-visszaolvasás, honlapi sor,

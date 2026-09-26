@@ -214,7 +214,7 @@ try {
     ok(errs.length === 0, `JS-hiba: ${errs.length}${errs.length ? " — " + errs[0] : ""}`);
   }
 
-  // ═══════════════ own programs + date order (contract programajanlo-sajat/, ADR-XXXX) ═══════════════
+  // ═══════════════ own programs + date order (contract programajanlo-sajat/, ADR-0238) ═══════════════
   console.log("\nsaját program + dátum-sorrend (asztali)");
   await db.deleteFrom("site_module_config").where("site_id", "=", tu.siteId).where("module", "=", "poi").execute();
   {

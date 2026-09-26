@@ -63,7 +63,7 @@ export async function sendWeeklyProgramMails(opts: { dryRun?: boolean; now?: Dat
         .where("module", "=", "poi")
         .executeTakeFirst();
       const picked = resolvePicks(readPicks((cfg?.config ?? {}) as Record<string, unknown>), programPool);
-      // Own programs take a slot but are not in the gathered pool (ADR-XXXX).
+      // Own programs take a slot but are not in the gathered pool (ADR-0238).
       const autoCount = Math.min(PROGRAMS_ON_PAGE - picked.length, events.length - picked.filter((p) => !p.own).length);
       const nearest = [...events]
         .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0) || a.start.localeCompare(b.start))

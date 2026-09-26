@@ -1325,7 +1325,7 @@ async function serveAdmin(
             sourceHost: e.sourceHost,
           })),
           // Own programs travel as their stored fields (the card edits THEM), with the
-          // resolved place label beside them (ADR-XXXX).
+          // resolved place label beside them (ADR-0238).
           picks: resolvePicks(storedPicks, programPool).map((p) =>
             p.own
               ? {
@@ -2445,7 +2445,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     const programPool = await siteProgramPool(siteId);
     const stored = readPicks((await getSiteModuleConfig(siteId, "poi")).config);
-    // ADR-XXXX: own programs pass the ONE rule set (src/events/ownPrograms.ts); a
+    // ADR-0238: own programs pass the ONE rule set (src/events/ownPrograms.ts); a
     // gathered id still has to be in THIS tenant's live pool.
     const picks = sanitizePicks(posted, programPool, stored);
     const order = form.get("order") === "manual" ? "manual" : "date";

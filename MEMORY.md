@@ -15,7 +15,7 @@ Utolsó frissítés: 2026-09-26 (📱 **Mobil · vendég-nézet 2 — a FK-009 �
 A tenant maga is felvehet programot (üres kártya a listában, jóváhagyott „A”), a honlapon „A szállás ajánlja”;
 a lista alapból DÁTUM szerint rendez, a ▲▼ felülír („saját sorrend”, visszaállítható). Kontraktus:
 `assets/design-refs/console/programajanlo-sajat/`; szabályok egy helyen: `src/events/ownPrograms.ts`; őr:
-`programs-editor-check` bővítve. ADR-XXXX. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_programajanlo_sajat_program.md`.
+`programs-editor-check` bővítve. ADR-0238. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_programajanlo_sajat_program.md`.
 
 ## Párhuzamos szál (2026-09-26 — a logó MINDENHOL: a jel maga a C, „B”, egy forrásból)
 A tulaj a §2b körben a **B**-t választotta (ikonméretű C, 1,6×; admin: a jel ikon marad; szállás-honlapok favikonja

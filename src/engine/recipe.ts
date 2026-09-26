@@ -209,7 +209,7 @@ export interface SiteProgram {
   /** Empty for an own program without a link. */
   readonly sourceUrl: string;
   readonly sourceHost: string;
-  /** ADR-XXXX: the owner typed it in — the row says "A szállás ajánlja" instead of a source. */
+  /** ADR-0238: the owner typed it in — the row says "A szállás ajánlja" instead of a source. */
   readonly own?: boolean;
   /** An own program at a place outside the known circle: no distance is shown. */
   readonly away?: boolean;

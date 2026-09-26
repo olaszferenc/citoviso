@@ -4,7 +4,7 @@
 alapján menjen” → pontosítva: „alapértelmezés: dátum, fel/le override”), §2b terv-kapu.
 **Ez a fájl KONTRAKTUS, nem stílus-javaslat.** A „KÖT” pontok elvárt viselkedés; eltérés
 esetén a kód a hibás. Kiegészíti — és a ③ pontban MÓDOSÍTJA — a
-`../programajanlo/README.md` kontraktust (ADR-XXXX).
+`../programajanlo/README.md` kontraktust (ADR-0238).
 
 | fájl | mi ez |
 |---|---|

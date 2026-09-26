@@ -293,7 +293,7 @@ export async function moduleContentFor(
     if (items.length) out.usp = items;
   }
   if (on("poi")) {
-    // The weekly program recommender: the tenant's picks (gathered + own, ADR-XXXX),
+    // The weekly program recommender: the tenant's picks (gathered + own, ADR-0238),
     // the free slots auto-filled with the nearest upcoming programs (owner ruling,
     // 2026-09-23 — an "Automata" module must not sit empty because nobody clicked),
     // in date order unless the owner arranged them himself.

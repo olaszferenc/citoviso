@@ -114,7 +114,7 @@ export const MODCFG_STYLE = `<style>
 .pa-refresh{margin:14px 0 0;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);
   padding:11px 13px;font-size:.82rem;color:var(--citui-muted);line-height:1.5}
 .pa-refresh b{color:var(--citui-ink)}
-/* ADR-XXXX — order line + the owner's own programs (contract programajanlo-sajat/) */
+/* ADR-0238 — order line + the owner's own programs (contract programajanlo-sajat/) */
 .pa-ord{margin-left:auto;font-size:.76rem;color:var(--citui-muted);text-align:right}
 .pa-lnk{border:0;background:none;padding:0;color:var(--citui-link-ink);font:600 .76rem/1.3 var(--citui-font-text);
   text-decoration:underline;text-underline-offset:2px;cursor:pointer}
@@ -2893,12 +2893,12 @@ export interface ProgramsEditorData {
   }[];
   /** The stored choice, in the stored order (contract ③). Ids whose program has
    *  expired are already filtered out by the caller — they fell off by themselves.
-   *  An `own` entry is the owner's own program (ADR-XXXX) with its resolved place. */
+   *  An `own` entry is the owner's own program (ADR-0238) with its resolved place. */
   readonly picks: readonly (
     | { id: string; title?: string }
     | { id: string; own: OwnProgram; settlement: string; distanceKm: number | null; away: boolean }
   )[];
-  /** ADR-XXXX: "date" (default) keeps the list in date order; "manual" = the arrows. */
+  /** ADR-0238: "date" (default) keeps the list in date order; "manual" = the arrows. */
   readonly order?: "date" | "manual";
   /** The tenant's own settlement — the "Helyben (…)" choice of the own-program card. */
   readonly ownSettlement?: string;
@@ -2940,7 +2940,7 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
     autoFill: T(lang, "A szabad {n} helyre automatikusan a legközelebbi programok kerülnek, amíg Ön nem választ."),
     noneThisWeek: T(lang, "Ezen a héten nem találtunk programot a környékén. Hétfő reggel újra keresünk."),
     emptySel: T(lang, "Még nincs kiválasztva program. Vegyen fel a javasoltak közül — legfeljebb 10-et."),
-    // ADR-XXXX — order and the owner's own programs (contract programajanlo-sajat/)
+    // ADR-0238 — order and the owner's own programs (contract programajanlo-sajat/)
     byDate: T(lang, "dátum szerint"),
     manual: T(lang, "saját sorrend"),
     resort: T(lang, "dátum szerint rendezem"),
