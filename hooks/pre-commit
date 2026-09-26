@@ -1715,7 +1715,7 @@ if [ -f scripts/optout-offer-price-check.mts ] && \
   echo "[pre-commit] optout-offer-price-check (leiratkozottnál is a terhelt ár látszik, nyomás nélkül)…"
   npx tsx scripts/optout-offer-price-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (2026-09-26): levélben CSAK tartós fizetési link (/pay/go/<id>) mehet — a Barion-
+# 2026-09-26 (ADR: tartós fizetési link a levelekben): levélben CSAK tartós fizetési link (/pay/go/<id>) mehet — a Barion-
 # fizetés 30 perc után lejár, a levél napokig él. Mérve: „Lejárt fizetési tranzakció” a levélből.
 # Mock átjáró, eldobható fixture-rendelés (~10 s).
 if [ -f scripts/pay-entry-check.mts ] && \
