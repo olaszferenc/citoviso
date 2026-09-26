@@ -1,4 +1,4 @@
-# 2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail (ADR-XXXX)
+# 2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail (ADR-0241)
 
 ## Kérés
 A tulaj a Térkép modul képernyőjén: „itt lehessen a szállás címét pontosítani ha kell! És az

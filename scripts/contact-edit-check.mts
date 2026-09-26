@@ -2,7 +2,7 @@
 //   ↑ ÍGÉRET (ADR-0229): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és olvassa
 //   vissza. Ha ide globális olvasás/söprés/kölcsönzött sor kerül, vedd le a jelölést.
 /**
- * Guard of the „Elérhetőség" tab + the Térkép screen's place card (ADR-XXXX), measured
+ * Guard of the „Elérhetőség" tab + the Térkép screen's place card (ADR-0241), measured
  * on the REAL screens served by THIS worktree.
  *
  *   npx tsx scripts/contact-edit-check.mts

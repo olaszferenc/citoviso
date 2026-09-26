@@ -120,9 +120,9 @@ type Overrides = {
   intro?: string;
   highlights?: string[];
   photos?: PhotoEdit[];
-  /** ADR-XXXX — the owner's own contact facts, stored WHOLE (the merge is shallow). */
+  /** ADR-0241 — the owner's own contact facts, stored WHOLE (the merge is shallow). */
   contact?: { email?: string; phone?: string; address?: string };
-  /** ADR-XXXX — the owner-placed map pin. */
+  /** ADR-0241 — the owner-placed map pin. */
   geo?: { lat: number; lon: number };
 };
 
@@ -885,7 +885,7 @@ export async function saveTenantContent(
   return { ok: await renderAndPersist(s, overrides) };
 }
 
-/** ADR-XXXX — the site's public contact facts as the page renders them (override > scrape). */
+/** ADR-0241 — the site's public contact facts as the page renders them (override > scrape). */
 export async function getTenantContact(tenantId: string): Promise<ContactFacts | null> {
   const s = await loadSiteForEdit(tenantId);
   if (!s) return null;
@@ -904,7 +904,7 @@ function contactOf(s: SiteForEdit): ContactFacts {
 }
 
 /**
- * ADR-XXXX — save the owner's contact edits and re-render. All-or-nothing: a bad
+ * ADR-0241 — save the owner's contact edits and re-render. All-or-nothing: a bad
  * phone number saves neither the phone nor the pin. `render: false` persists only,
  * for a caller that re-renders once itself (the Térkép module screen).
  */

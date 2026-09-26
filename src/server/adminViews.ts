@@ -3503,7 +3503,7 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string; 
   { id: "attekintes", label: T(lang, "Áttekintés"), icon: "overview", group: "home" },
   { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts", group: "site" },
   { id: "fotok", label: T(lang, "Fotók"), icon: "photos", group: "site" },
-  // ADR-XXXX (approved plan design-refs/tenant-admin/elerhetoseg, „B"): address, map pin,
+  // ADR-0241 (approved plan design-refs/tenant-admin/elerhetoseg, „B"): address, map pin,
   // phone and e-mail on their own tab — they are on the page with or without any module.
   { id: "elerhetoseg", label: T(lang, "Elérhetőség"), icon: "contact", group: "site" },
   { id: "modulok", label: T(lang, "Modulok"), icon: "modules", group: "site" },
@@ -4918,7 +4918,7 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
 
 export interface AdminOpts {
   readonly saved?: boolean;
-  /** ADR-XXXX — the „Elérhetőség" tab: the public contact facts + the browser maps key. */
+  /** ADR-0241 — the „Elérhetőség" tab: the public contact facts + the browser maps key. */
   readonly contact?: ContactView | null;
   /**
    * The pay-link for a module upsell could not be issued (0033). Shown because

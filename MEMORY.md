@@ -25,7 +25,7 @@ a lista alapból DÁTUM szerint rendez, a ▲▼ felülír („saját sorrend”
 `assets/design-refs/console/programajanlo-sajat/`; szabályok egy helyen: `src/events/ownPrograms.ts`; őr:
 `programs-editor-check` bővítve. ADR-0238. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_programajanlo_sajat_program.md`.
 
-## Párhuzamos szál (2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail, ADR-XXXX)
+## Párhuzamos szál (2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail, ADR-0241)
 Új **„Elérhetőség”** fül az „Az oldalam” alatt (jóváhagyott „B”): cím + Google-térkép húzható tűvel + címkeresés,
 telefon (SMS-szabállyal normalizálva, „+36 30 …”) + e-mail; ugyanez a hely-kártya a Térkép modul képernyőjén is, egy
 mentéssel. Tárolás: `edited_site_data.contact`/`geo`. Őr `contact-edit-check` (62 állítás). **Élesítés előtt kell

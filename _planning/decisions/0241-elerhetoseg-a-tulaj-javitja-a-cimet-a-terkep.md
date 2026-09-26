@@ -1,4 +1,4 @@
-## ADR-XXXX — Elérhetőség: a tulaj javítja a címet, a térkép-tűt, a telefont és az e-mailt
+## ADR-0241 — Elérhetőség: a tulaj javítja a címet, a térkép-tűt, a telefont és az e-mailt
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (tulaj, B változat) · **Kontraktus:** `assets/design-refs/tenant-admin/elerhetoseg/`
 

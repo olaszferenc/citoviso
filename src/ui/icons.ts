@@ -98,7 +98,7 @@ export const ICON: Readonly<Record<string, string>> = {
   bookings:
     `<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>` +
     `<path d="m8.6 14.6 2.2 2.2 4.4-4.4"/><circle cx="17.4" cy="17.6" r="1.9" ${CY_ACCENT}/>`,
-  // Elérhetőség tab (ADR-XXXX): handset + the cyan dot; pin = the map-pin card head.
+  // Elérhetőség tab (ADR-0241): handset + the cyan dot; pin = the map-pin card head.
   contact:
     `<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>` +
     `<circle cx="18.6" cy="5.4" r="1.9" ${CY_ACCENT}/>`,

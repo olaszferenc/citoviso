@@ -253,7 +253,7 @@ export const config = {
   barionPixelId: env("BARION_PIXEL_ID"),
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
   /**
-   * ADR-XXXX — the BROWSER key for the admin's pin-drop map (Maps JavaScript API +
+   * ADR-0241 — the BROWSER key for the admin's pin-drop map (Maps JavaScript API +
    * Geocoding). A SEPARATE key on purpose: it is printed into the page, so it must be
    * HTTP-referrer restricted in the Google console. The server key above is never
    * sent to a browser. Empty → the Elérhetőség screen works without the map.

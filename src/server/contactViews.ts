@@ -1,4 +1,4 @@
-// Elérhetőség — the site's public address, map pin, phone and e-mail (ADR-XXXX).
+// Elérhetőség — the site's public address, map pin, phone and e-mail (ADR-0241).
 //
 // Approved plan: assets/design-refs/tenant-admin/elerhetoseg/ (variant „B"). Two
 // screens share ONE place card and ONE data source:

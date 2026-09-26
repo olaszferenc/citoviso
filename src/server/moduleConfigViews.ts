@@ -2819,7 +2819,7 @@ function roomsNote(lang: string, nu: NewUnitView | undefined): string {
 
 export interface ModuleSettingsOpts {
   readonly values: ModuleConfigValues;
-  /** ADR-XXXX — Térkép module: the shared address + pin card rides on this screen too. */
+  /** ADR-0241 — Térkép module: the shared address + pin card rides on this screen too. */
   readonly place?: ContactView;
   readonly errors?: string[];
   readonly canRestore?: boolean;
@@ -3260,7 +3260,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
               : helpLink("admin.modules.settings", lang);
 
   // amenityStored set → the picker above IS the form; the generic one would duplicate it.
-  // ADR-XXXX (approved plan design-refs/tenant-admin/elerhetoseg): the Térkép screen opens
+  // ADR-0241 (approved plan design-refs/tenant-admin/elerhetoseg): the Térkép screen opens
   // with the SAME address + pin card as the Elérhetőség tab, and ONE save covers both —
   // the route saves the place first, then the module fields.
   const locationForm =

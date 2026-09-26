@@ -319,7 +319,7 @@ function redirect(res: http.ServerResponse, to: string): void {
  * admin save goes out through THIS door, and scripts/snapshot-propagation-check.mts
  * fails the build if a new one does not (or is not listed there with a reason).
  */
-/** ADR-XXXX — the contact form's fields; an absent field stays `undefined` (= keep). */
+/** ADR-0241 — the contact form's fields; an absent field stays `undefined` (= keep). */
 function contactEditsFrom(form: URLSearchParams): import("../tenant/contact.js").ContactEdits {
   const get = (k: string) => (form.has(k) ? (form.get(k) ?? "") : undefined);
   return { address: get("address"), phone: get("phone"), email: get("email"), lat: get("lat"), lon: get("lon") };
@@ -1391,7 +1391,7 @@ async function serveAdmin(
         };
       }
 
-      // ADR-XXXX: the Térkép screen carries the shared address + pin card.
+      // ADR-0241: the Térkép screen carries the shared address + pin card.
       const placeFacts = moduleId === "location" ? await getTenantContact(session.tenantId) : null;
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
         ...(placeFacts
@@ -1689,7 +1689,7 @@ async function serveAdmin(
       owed: sub ? (sub.arrears?.amount ?? 0) : null,
     };
   } else if (tab === "elerhetoseg") {
-    // ADR-XXXX: the public contact facts (owner override > scrape) + the browser map key.
+    // ADR-0241: the public contact facts (owner override > scrape) + the browser map key.
     const facts = await getTenantContact(session.tenantId);
     contact = facts
       ? {
@@ -2066,7 +2066,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     for (const [k, v] of [...back.entries()]) if (!v) back.delete(k);
     return redirect(res, `/admin?${back.toString()}`);
   }
-  // ADR-XXXX — POST /admin/elerhetoseg: address, map pin, phone, e-mail. All-or-nothing;
+  // ADR-0241 — POST /admin/elerhetoseg: address, map pin, phone, e-mail. All-or-nothing;
   // a refusal returns to the same screen with the failing fields named.
   if (req.method === "POST" && pathname === "/admin/elerhetoseg") {
     const session = await currentTenant(req);
@@ -2466,7 +2466,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         composeAmenities(form.getAll("am"), form.get("other") ?? "", "property").join("\n"),
       );
     }
-    // ADR-XXXX: the Térkép screen posts the shared place card too. Saved FIRST and
+    // ADR-0241: the Térkép screen posts the shared place card too. Saved FIRST and
     // without its own render — the redirect below re-renders once for both.
     if (moduleId === "location" && form.has("address")) {
       const place = await saveTenantContact(

@@ -1083,7 +1083,7 @@ async function shoot(
     // ÜRES állapotot fotózza („a foglalások akkor jelennek meg…"), mert a shot-tenanthoz
     // nincs bekapcsolt Foglalás modul — mérve, az első két próbálkozásomon.
     ...(tab === "foglalasok" ? { bookings: bookingsFixture } : {}),
-    // ADR-XXXX: the Elérhetőség tab — an invented guesthouse's public contact facts. The
+    // ADR-0241: the Elérhetőség tab — an invented guesthouse's public contact facts. The
     // map key is blank on purpose: pinNetwork refuses Google anyway, and the picture is
     // the phone/e-mail card (element capture below), which needs no map.
     ...(tab === "elerhetoseg"
@@ -1172,7 +1172,7 @@ for (const [tab, entryId] of TAB_TO_ENTRY) {
       : modules,
   );
 }
-// ADR-XXXX: the Elérhetőség guide shows the phone/e-mail card with its live
+// ADR-0241: the Elérhetőség guide shows the phone/e-mail card with its live
 // "A honlapon így: …" line — the map above it is Google's, never in a KB picture.
 await shoot("elerhetoseg", path.join(ROOT, "kb/entries/admin-contact/assets", LANG, "telefon-email.png"), undefined, undefined, "#ct_card");
 // Két KIS kép az admin-modules ÁRAZÁS szakaszához. A fül-képe az ELSŐ képernyőt
