@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-itt-rendelheti-meg-a-rendelo-gomb-mindig-kint-van.md) — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, és a Foglalás-sáv fölött ül
 - [ADR-0241](decisions/0241-elerhetoseg-a-tulaj-javitja-a-cimet-a-terkep.md) — Elérhetőség: a tulaj javítja a címet, a térkép-tűt, a telefont és az e-mailt
 - [ADR-0240](decisions/0240-rendeles-ket-lepesben-az-1-lepes-a-csomag.md) — Rendelés két lépésben: az 1. lépés a csomag-listáé, a pénzügyi döntés a „Tovább” után
 - [ADR-0239](decisions/0239-minta-ar-a-mock-foglalas-widgetjeben-a-proba-a.md) — Minta-ár a mock foglalás-widgetjében (a próba a FOGLALÁS-utat játssza), és a főcím fekvőn sem ül rögzített réteg alatt

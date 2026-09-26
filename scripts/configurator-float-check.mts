@@ -87,7 +87,7 @@ await mkdir(OUT, { recursive: true });
 
 // How long the buyer may be left without a way to buy. The budgets are derived from the
 // PRODUCT's own two constants, not guessed from a wall clock:
-const FALLBACK_MS = 2600; // cit-configurator.js — setTimeout(showPill, 2600)
+const FALLBACK_MS = 300; // cit-configurator.js — setTimeout(showPill, 300) (was 2600 until the order-pill plan, 2026-09-26)
 const FADE_MS = 500; //     cit-configurator.css — transition: opacity .5s
 // MEASURED 2026-09-14, aurora (the slowest template by far — its own scroll work decides,
 // not our code; the rest land ~10× faster):
@@ -98,7 +98,7 @@ const FADE_MS = 500; //     cit-configurator.css — transition: opacity .5s
 // just move the coin flip somewhere else.
 const LOAD_SLACK_MS = 4000;
 const SCROLL_BUDGET_MS = FADE_MS + LOAD_SLACK_MS; //           4 500 ms
-const STILL_BUDGET_MS = FALLBACK_MS + FADE_MS + LOAD_SLACK_MS; // 7 100 ms
+const STILL_BUDGET_MS = FALLBACK_MS + FADE_MS + LOAD_SLACK_MS; // 4 800 ms
 
 /** Measure the buyer's entry point on one page: fixed layer + PAINTED + inside viewport + hittable.
  *  With `shot`, also leaves a proof image behind (the owner judges pictures, not logs).
@@ -272,8 +272,8 @@ check(
 );
 
 // ── ④ The other half of the audience: the visitor who never scrolls. The entry is then
-// revealed only by the unconditional `setTimeout(showPill, 2600)`. Measured at ~2,54 s +
-// the fade; if that fallback ever breaks, a still visitor could never buy at all.
+// revealed only by the unconditional `setTimeout(showPill, 300)` (2600 until 2026-09-26,
+// measured then at ~2,54 s + the fade); if that fallback ever breaks, a still visitor could never buy at all.
 console.log("\n④ Aki EGYÁLTALÁN NEM görget — a belépőnek magától meg kell jelennie:\n");
 const still = await measure(browser, path.join(OUT, "aurora.html"), 1280, 900, { noScroll: true });
 check(

@@ -276,7 +276,7 @@ kontraktus: assets/design-refs/prospect-page/framing/README.md · kb/entries/con
 
 - [ ] A hívó pirula megtalálható és a konfigurátor első lapja megnyílik
   út: ${ELEK_P_TIHANY_ARTDECO}
-  tedd: várj "Ez lehet az Öné" 6
+  tedd: várj "Itt rendelheti meg" 6
   tedd: kattints ".cit-cfg-launch"
   várd: látható "Ez az Ön leendő weboldala"
   várd: látható "Tovább"
@@ -284,7 +284,7 @@ kontraktus: assets/design-refs/prospect-page/framing/README.md · kb/entries/con
 
 - [ ] Ugyanez egy világos, képes stíluson
   út: ${ELEK_P_LAGUNA_WATERCOLOR}
-  tedd: várj "Ez lehet az Öné" 6
+  tedd: várj "Itt rendelheti meg" 6
   tedd: kattints ".cit-cfg-launch"
   várd: látható "Ez az Ön leendő weboldala"
   kézi: mint fent (390 px-es kép)

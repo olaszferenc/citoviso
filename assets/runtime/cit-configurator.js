@@ -1581,9 +1581,9 @@
 
   var scrim = el('<div class="cit-cfg-scrim"></div>');
   var launch = el(
-    '<button class="cit-cfg-launch" type="button" aria-label="' + tr("Állítsa össze a saját oldalát") + '">' +
+    '<button class="cit-cfg-launch" type="button" aria-label="' + tr("Itt rendelheti meg a saját weboldalát") + '">' +
       I.spark +
-      "<span>" + tr("Ez lehet az Öné — állítsa össze") + "</span></button>"
+      "<span>" + tr("Itt rendelheti meg") + "</span></button>"
   );
   var panel = el(
     '<aside class="cit-cfg-panel" role="dialog" aria-label="' + tr("Az Ön oldala") + '">' +
@@ -3090,13 +3090,19 @@
     // The body only has measurable geometry once the panel is on stage.
     setTimeout(syncMoreCue, 340);
   }
-  // Collapse = slide away but keep the edge tab peeking (state survives);
-  // close (X) = fully gone, the invite pill returns.
+  // Collapse = slide away, the configuration survives; close (X) = reset the tab.
+  // ⛔ BOTH bring the order pill back (owner, 2026-09-26: "ennek mindig láthatónak kell
+  // lennie"). Collapse used to hide it and leave only the edge tab — a bare chevron
+  // that nobody reads as "this is where you order" — so a lead who swiped the sheet
+  // away lost the buy entry for good. The pill reopens the SAME configuration; the
+  // edge tab is hidden while collapsed (CSS), because on a phone it sat under the pill.
+  // Plan: assets/design-refs/prospect-page/order-pill/ (ADR-XXXX).
   function collapse() {
     panel.classList.remove("cit-cfg-open");
     panel.classList.add("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
-    launch.hidden = true;
+    launch.hidden = false;
+    if (armPillAvoidance) setTimeout(placeLaunch, 0);
     track("panel_collapse", {});
   }
   function close() {
@@ -3105,6 +3111,7 @@
     panel.classList.remove("cit-cfg-collapsed");
     scrim.classList.remove("cit-cfg-open");
     launch.hidden = false;
+    if (armPillAvoidance) setTimeout(placeLaunch, 0);
   }
   launch.addEventListener("click", open);
   scrim.addEventListener("click", collapse);
@@ -3526,10 +3533,19 @@
    * wrong differently on every template, every viewport and every scroll position. No
    * single static offset is right everywhere, so the offset is MEASURED, not chosen.
    *
-   * The pill's own column is swept upward until it clears whatever primary controls are
-   * in it. A bare text link does NOT count as a primary action — a footer full of them
-   * would walk the pill to the ceiling; only a control carrying its own fill or frame,
-   * and big enough to be a button, is worth stepping around.
+   * WHERE IT SITS (owner, 2026-09-26 — "a Foglalás-sáv fölé tedd"): the pill's lower
+   * edge rests just ABOVE the highest layer fixed to the bottom of the screen — a
+   * template's booking bar, the consent bar — and nowhere else. It used to sweep upward
+   * past EVERY primary control in its column, in-flow ones included, so on dark-luxury at
+   * 390 px it climbed over the hero's buttons and parked on the intro text, jumping
+   * again at every scroll step (plan round, 2026-09-26).
+   *
+   * An in-flow control under that spot is still never buried (FK-004b H-3 stands): the
+   * pill first changes SIDE (phone: right → left; desktop: centre → right → left), and
+   * only when every side is taken does it fall back to the old upward sweep. A bare text
+   * link does NOT count as a primary action — a footer full of them would walk the pill
+   * to the ceiling; only a control carrying its own fill or frame, and big enough to be a
+   * button, is worth stepping around.
    *
    * Guard: scripts/lead-page-surface-check.mts ② — occlusion measured independently with
    * elementFromPoint, and red-tested by stripping this very block out of the served JS.
@@ -3571,6 +3587,57 @@
     return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--citui-consent-h")) || 0;
   }
 
+  /** Top edge of the highest visible layer fixed to the bottom of the screen (or vh). */
+  function fixedBottomTop() {
+    var vh = window.innerHeight;
+    var top = vh;
+    var nodes = document.querySelectorAll("body > *, body > * > *, body > * > * > *");
+    for (var k = 0; k < nodes.length; k++) {
+      var fb = nodes[k];
+      if (fb === launch || (fb.closest && fb.closest('[class*="cit-cfg"]'))) continue;
+      var fcs = getComputedStyle(fb);
+      if (fcs.position !== "fixed" || fcs.display === "none" || fcs.visibility === "hidden") continue;
+      if (parseFloat(fcs.opacity) === 0) continue;
+      var fr = fb.getBoundingClientRect();
+      if (fr.height < 8 || fr.height > vh * 0.4 || fr.width < 40) continue;
+      // Anchored to the bottom: its lower edge reaches the last 40 px of the screen — or of
+      // the consent bar's top, because a template's booking bar STACKS on the consent bar
+      // (bottom: var(--citui-consent-h)). Measured 2026-09-26 (lead-mobile-check fixture,
+      // consent 125 px): with the screen edge alone the bar was not seen and the pill sat
+      // ON it instead of above it.
+      if (fr.bottom > vh + 2 || fr.bottom < vh - consentH() - 40) continue;
+      if (fr.top < top) top = fr.top;
+    }
+    return top;
+  }
+
+  // Horizontal slots, in order of preference. '' = the CSS default for the breakpoint
+  // (phone: right corner; desktop: centre).
+  function sideSlots() {
+    return window.matchMedia("(max-width:560px)").matches ? ["", "l"] : ["", "r", "l"];
+  }
+  function setSide(side) {
+    launch.classList.toggle("cit-cfg-launch--r", side === "r");
+    launch.classList.toggle("cit-cfg-launch--l", side === "l");
+  }
+  function slotRect(side, w) {
+    var vw = document.documentElement.clientWidth;
+    var m = window.matchMedia("(max-width:560px)").matches ? 16 : 24;
+    var phone = m === 16;
+    var left = side === "l" ? m : side === "r" || (side === "" && phone) ? vw - m - w : (vw - w) / 2;
+    return { left: left, right: left + w };
+  }
+  function clashAt(rects, bottomY, h) {
+    var clash = null;
+    for (var i = 0; i < rects.length; i++) {
+      var r = rects[i];
+      if (r.top - AVOID_GAP < bottomY && r.bottom + AVOID_GAP > bottomY - h) {
+        if (!clash || r.top < clash.top) clash = r;
+      }
+    }
+    return clash;
+  }
+
   function placeLaunch() {
     if (launch.hidden || !launch.classList.contains("cit-cfg-in")) return;
     if (launchBase === null) {
@@ -3582,23 +3649,39 @@
       launchBase = (parseFloat(getComputedStyle(launch).bottom) || 16) - consentH();
     }
     var h = launch.offsetHeight;
-    var rects = blockingRects(launch.getBoundingClientRect());
-    var bottomY = window.innerHeight - (launchBase + consentH()); // where the pill's lower edge wants to be
-    for (var step = 0; step < 8; step++) {
-      var clash = null;
-      for (var i = 0; i < rects.length; i++) {
-        var r = rects[i];
-        if (r.top - AVOID_GAP < bottomY && r.bottom + AVOID_GAP > bottomY - h) {
-          if (!clash || r.top < clash.top) clash = r;
-        }
+    var w = launch.offsetWidth;
+    // ① rest just above the bottom-fixed stack (booking bar, consent bar)
+    var bottomY = Math.min(
+      window.innerHeight - (launchBase + consentH()),
+      fixedBottomTop() - AVOID_GAP,
+    );
+    // ② an in-flow primary control under that spot → try the other side(s)
+    var slots = sideSlots();
+    var side = null;
+    for (var si = 0; si < slots.length; si++) {
+      var sr = slotRect(slots[si], w);
+      var pr = { left: sr.left, right: sr.right, top: bottomY - h, bottom: bottomY };
+      if (!clashAt(blockingRects(pr), bottomY, h)) {
+        side = slots[si];
+        break;
       }
-      if (!clash) break;
-      var lifted = clash.top - AVOID_GAP;
-      // Climbing off the top of the screen would hide the buy entry altogether —
-      // a worse failure than an overlap. Stay on stage and accept the last position.
-      if (lifted - h < 8) break;
-      bottomY = lifted;
     }
+    // ③ every side taken → the old upward sweep, on the default side
+    if (side === null) {
+      side = "";
+      var dr = slotRect("", w);
+      var rects = blockingRects({ left: dr.left, right: dr.right, top: 0, bottom: window.innerHeight });
+      for (var step = 0; step < 8; step++) {
+        var clash = clashAt(rects, bottomY, h);
+        if (!clash) break;
+        var lifted = clash.top - AVOID_GAP;
+        // Climbing off the top of the screen would hide the buy entry altogether —
+        // a worse failure than an overlap. Stay on stage and accept the last position.
+        if (lifted - h < 8) break;
+        bottomY = lifted;
+      }
+    }
+    setSide(side);
     launch.style.bottom = Math.round(window.innerHeight - bottomY) + "px";
     // Publish how much of the viewport's bottom the pill AND everything it climbed
     // over (a template's fixed booking bar, the consent bar) really take, so the
@@ -3673,6 +3756,32 @@
   };
   /* cit-cfg-avoid-end */
 
+  /**
+   * The order pill must never wear the mock's own button colour (owner, 2026-09-26:
+   * "a színe a mock gombjával egyezik — kurvára nem feltűnő"). It used to be
+   * `--cit-accent`, i.e. exactly the template's CTA colour, so it read as one more of
+   * the site's buttons. Now it is the platform cyan — and when the template's accent is
+   * itself within 45° of cyan on the colour wheel (claymorphism, wordmark-grow), violet.
+   * Approved variant "B" of the plan round (assets/design-refs/prospect-page/order-pill/).
+   */
+  var CYAN_HUE = 191; // --citui-cyan-500 #1fb6d6
+  function hueOf(hex) {
+    var m = /^#([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+    if (!m) return null;
+    var n = parseInt(m[1], 16);
+    var r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    var mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+    if (d < 0.08) return null; // achromatic accent: cannot clash with cyan
+    var hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    hh *= 60;
+    return hh < 0 ? hh + 360 : hh;
+  }
+  function pickLaunchColour() {
+    var ah = hueOf(getComputedStyle(document.documentElement).getPropertyValue("--cit-accent"));
+    var near = ah !== null && Math.min(Math.abs(ah - CYAN_HUE), 360 - Math.abs(ah - CYAN_HUE)) < 45;
+    launch.classList.toggle("cit-cfg-launch--alt", near);
+  }
+
   // ── mount ───────────────────────────────────────────────────────────────────
   function mount() {
     // ALL-IN on first paint (ADR-0047): the lead must SEE the full package in the
@@ -3698,7 +3807,10 @@
       currency: PRICING.currency,
       quantity: 1,
     });
-    // The invite pill enters AFTER the wow lands: a short beat, or on first scroll.
+    // The order pill is on stage from the start (owner, 2026-09-26: "ennek mindig
+    // láthatónak kell lennie") — a 0.3 s slide-in, not the old 2.6 s / first-scroll wait,
+    // during which a lead who read the first screen had no buy entry at all.
+    pickLaunchColour();
     var pillShown = false;
     function showPill() {
       if (pillShown) return;
@@ -3706,7 +3818,7 @@
       launch.classList.add("cit-cfg-in");
       if (armPillAvoidance) armPillAvoidance();
     }
-    setTimeout(showPill, 2600);
+    setTimeout(showPill, 300);
     window.addEventListener(
       "scroll",
       function () {

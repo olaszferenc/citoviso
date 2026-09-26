@@ -15,6 +15,7 @@
 - [2026-09-26_mobil_minta_ar_fekvo.md](2026-09-26_mobil_minta_ar_fekvo.md) — 2026-09-26 — Minta-ár a mock foglalás-widgetjében + a két fekvő-tartású lelet a motorban
 - [2026-09-26_meg_nem_vett_modulok_oldalsav.md](2026-09-26_meg_nem_vett_modulok_oldalsav.md) — 2026-09-26 — Meg nem vett modulok az admin oldalsávban, + jellel (module-subnav ⑨)
 - [2026-09-26_logo_b_lockup_mindenhol.md](2026-09-26_logo_b_lockup_mindenhol.md) — 2026-09-26 — A logó mindenhol: a jel maga a C („B”), egy forrásból (ADR-0236)
+- [2026-09-26_itt_rendelheti_meg_gomb.md](2026-09-26_itt_rendelheti_meg_gomb.md) — 2026-09-26 — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, a Foglalás-sáv fölött (C szál)
 - [2026-09-26_elerhetoseg_cim_terkep_tu.md](2026-09-26_elerhetoseg_cim_terkep_tu.md) — 2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail (ADR-0241)
 - [2026-09-26_elek_lead_telefonon.md](2026-09-26_elek_lead_telefonon.md) — 2026-09-26 — Elek a LEAD szemével, TELEFONON: a kiküldött terv első megnyitása (FK-009, 19 stílus × 2 lead)
 - [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában

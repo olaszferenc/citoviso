@@ -11,6 +11,15 @@ Utolsó frissítés: 2026-09-26 (➕ **Meg nem vett modulok az admin oldalsávba
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-26 este — „Itt rendelheti meg”: a lead-lap rendelő gombja, C szál)
+A tulaj telefonról: az „állítsa össze” gomb eltűnik, és a mock gombjának színét viseli. Most a felirat „Itt rendelheti meg”,
+a gomb MINDIG kint van (csak nyitott panelnél nincs; lecsukás után visszajön, a perem-fül lecsukva rejtve), a színe
+platform-cián, türkiz akcentű sablonon lila (jóváhagyott „B”), és a Foglalás-sáv fölött ül: lappal mozgó gomb elől oldalt
+vált, csak végső esetben lép feljebb. Mérve 19 stílus × 3 méret, 57/57; `lead-page-surface-check` és
+`configurator-float-check` zöld. ADR-XXXX, kontraktus `assets/design-refs/prospect-page/order-pill/`. Nem élesítve.
+⚠️ Az első „B” válasz tévedésből a koordinátortól jött; a tulaj utána maga megerősítette.
+Jegyzet: `_planning/memory/2026-09-26_itt_rendelheti_meg_gomb.md`.
+
 ## Párhuzamos szál (2026-09-26 — 📱 rendelés KÉT LÉPÉSBEN telefonon: az 1. lépés a csomag-listáé)
 A tulaj telefonján a pinnelt pénzügyi lábléc kitöltötte a 74vh-s alsó lapot, a csomag-listából egy sor látszott.
 Jóváhagyott „B”: az 1. lépés lábléce egy sor (kis Havi|Éves + futó összeg + „Tovább”); a „Tovább” után a lista eltűnik,

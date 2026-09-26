@@ -6,7 +6,7 @@
 //   npx tsx scripts/lead-mobile-check.mts --vp=390        (csak egy nézet: 390 | 360 | land)
 //   npx tsx scripts/lead-mobile-check.mts --links=<fájl>  (más link-lista)
 //   npx tsx scripts/lead-mobile-check.mts --gate           (ŐR: 5 sablon fixture-ön, DB-lead nélkül)
-//   npx tsx scripts/lead-mobile-check.mts --gate --selftest (PIROS önteszt: 8 visszarontás)
+//   npx tsx scripts/lead-mobile-check.mts --gate --selftest (PIROS önteszt: 9 visszarontás)
 //
 // MIT MÉR, ÉS MIÉRT ÍGY
 //
@@ -409,6 +409,8 @@ interface PageReport {
   first: FirstScreen;
   pill: HitProbe;
   pillAppearedMs: number | null;
+  /** Fixed bottom layers (booking bar, consent bar) the pill overlaps at the moment it is tapped. */
+  pillOnFixed: string[];
   why: { opened: boolean; block: HitProbe; privacy: HitProbe; unsub: HitProbe };
   consentHeightPct: number | null;
   bottom: BottomProbe;
@@ -503,11 +505,11 @@ async function measure(
   await page.goto(origin + link.path, { waitUntil: "load", timeout: 45_000 });
   await page.waitForTimeout(350);
   await settle();
-  // ① the first screen, before the pill's 2,6 s beat
+  // ① the first screen (the pill slides in after 0,3 s since 2026-09-26)
   const first = (await page.evaluate(`(${FIRST})(${JSON.stringify(link.leadName)})`)) as FirstScreen;
   await shot(1, "first");
 
-  // ② the invite pill: appears after ~2,6 s or on scroll — we wait, we do not scroll
+  // ② the order pill: appears after ~0,3 s — we wait, we do not scroll
   let pillAppearedMs: number | null = null;
   let pillTapRetried = false;
   try {
@@ -568,6 +570,7 @@ async function measure(
 
   // ⑤ the buyer's entry: tap the pill → the configurator's first page
   let panel: PanelProbe = { open: false, panel: null, fitsViewport: false, cta: { found: false } as HitProbe, sharePct: 0, bodyScrollable: false };
+  let pillOnFixed: string[] = [];
   const pillLoc = page.locator(".cit-cfg-launch.cit-cfg-in");
   if ((await pillLoc.count()) > 0) {
     // back near the top first: the lead taps the pill where it first sees it
@@ -583,6 +586,24 @@ async function measure(
       undefined,
       { timeout: 4000, polling: 100 },
     ).catch(() => undefined);
+    // R8 — the pill rests ABOVE the bottom-fixed stack (owner, 2026-09-26: "a Foglalás-sáv
+    // fölé"; ADR-XXXX). Measured independently of the runtime's own placement: every
+    // visible position:fixed layer outside our chrome whose box intersects the pill's box.
+    // Here, after the scroll, because that is when the deferred consent bar has arrived
+    // and a template's booking bar stacks on it — measured 2026-09-26: a placement that
+    // only looked at the screen's last 40 px did not see the bar and sat on it.
+    pillOnFixed = (await page.evaluate(`(() => { const l = document.querySelector(".cit-cfg-launch.cit-cfg-in"); if (!l) return [];
+      const p = l.getBoundingClientRect(); const out = [];
+      for (const e of document.querySelectorAll("body *")) {
+        if (e === l || l.contains(e) || e.closest('[class*="cit-cfg"]')) continue;
+        const c = getComputedStyle(e); if (c.position !== "fixed" || c.display === "none" || c.visibility === "hidden" || +c.opacity === 0) continue;
+        const r = e.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
+        if (r.bottom <= window.innerHeight * 0.5) continue; // top-anchored chrome is not a bottom layer
+        if (r.height > window.innerHeight * 0.6) continue; // a full-screen backdrop (aurora's glow) is not a bar
+        const ox = Math.min(r.right, p.right) - Math.max(r.left, p.left), oy = Math.min(r.bottom, p.bottom) - Math.max(r.top, p.top);
+        if (ox > 1 && oy > 1) out.push((e.id ? "#" + e.id : e.tagName.toLowerCase() + (e.className && e.className.toString ? "." + e.className.toString().trim().split(/\\s+/)[0] : "")) + " (" + Math.round(oy) + " px)");
+      }
+      return out; })()`)) as string[];
     let opened = false;
     for (let attempt = 1; attempt <= 2 && !opened; attempt++) {
       try {
@@ -649,6 +670,7 @@ async function measure(
   if (bottom.footerCoveredBy.length) flags.push({ level: "ERGONÓMIA", what: `a láblécre rögzített elem fekszik: ${[...new Set(bottom.footerCoveredBy)].join(", ")}` });
   if (bottom.fixedSharePct > 40) flags.push({ level: "ERGONÓMIA", what: `a lap alján a rögzített sávok a képernyő ${bottom.fixedSharePct}%-át viszik` });
   if (pill.found && !panel.open) flags.push({ level: "HIBA", what: "a pirula koppintására nem nyílt ki a konfigurátor" });
+  if (pillOnFixed.length) flags.push({ level: "HIBA", what: `a pirula rögzített alsó sávon ül (nem fölötte): ${pillOnFixed.join(", ")}` });
   if (pillTapRetried && panel.open) flags.push({ level: "GYANÚ", what: "a pirula ELSŐ koppintása nem nyitott, a második igen (időszakos)" });
   if (panel.open && !panel.fitsViewport) flags.push({ level: "HIBA", what: `a konfigurátor kilóg a képernyőből (${JSON.stringify(panel.panel && { top: Math.round(panel.panel.top), bottom: Math.round(panel.panel.bottom) })})` });
   if (panel.open && panel.cta.found && !panel.cta.inViewport) flags.push({ level: "HIBA", what: "a konfigurátor fő gombja nincs a képernyőn" });
@@ -669,6 +691,7 @@ async function measure(
     first,
     pill,
     pillAppearedMs,
+    pillOnFixed,
     why,
     consentHeightPct,
     bottom,
@@ -728,7 +751,7 @@ async function main(): Promise<void> {
         } catch (e) {
           rep = {
             lead: link.leadSlug, leadName: link.leadName, style: link.style, vp: vp.id, path: link.path,
-            first: null as unknown as FirstScreen, pill: { found: false } as HitProbe, pillAppearedMs: null,
+            first: null as unknown as FirstScreen, pill: { found: false } as HitProbe, pillAppearedMs: null, pillOnFixed: [],
             why: { opened: false, block: { found: false } as HitProbe, privacy: { found: false } as HitProbe, unsub: { found: false } as HitProbe },
             consentHeightPct: null, bottom: null as unknown as BottomProbe, panel: null as unknown as PanelProbe,
             weight: { requests: 0, bytes: { document: 0, image: 0, script: 0, stylesheet: 0, font: 0, other: 0, total: 0 }, images: [], failed: [] },
@@ -858,7 +881,7 @@ const PIX =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8" +
   "//8/AzbAhFVkOEgAAP//Awr/A0f8WlgAAAAASUVORK5CYII=";
 
-type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer" | "js-error" | "ext-404";
+type Sabotage = "none" | "no-clearance" | "no-tap" | "overflow" | "no-lazy" | "panel-under-consent" | "no-defer" | "js-error" | "ext-404" | "pill-on-bar";
 /** A third-party host the ext-404 sabotage points at — answered 404 by the interceptor, never the network. */
 const EXT_404_HOST = "https://kulso-pelda.example";
 
@@ -897,6 +920,12 @@ async function gateFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   if (sabotage === "no-clearance") html = html.replace(/padding-bottom:calc\(14px \+ var\(--citui-cfg-clear[^)]*\)\)\)?;?/g, "");
   if (sabotage === "no-tap") html = html.replace(/display:inline-block;padding:6px [28]px;/g, "");
   if (sabotage === "overflow") html = html.replace("</head>", "<style>body{min-width:120vw}</style></head>");
+  // the placement's bar detection cut out of the served JS → the pill rests on the booking bar → R8 red
+  if (sabotage === "pill-on-bar") {
+    const cut = html.replace("fixedBottomTop() - AVOID_GAP", "window.innerHeight");
+    if (cut === html) throw new Error("pill-on-bar: a visszarontás nem talált célt (fixedBottomTop) — az önteszt vak lenne");
+    html = cut;
+  }
   if (sabotage === "panel-under-consent") html = html.replace(/height:\s*calc\(100% - var\(--citui-consent-h, 0px\)\);/, "height:100%;");
   // our OWN script throwing → R6 must go red; a THIRD-PARTY image answering 404 → R6 must stay green
   if (sabotage === "js-error") html = html.replace("</head>", `<script>throw new Error("ültetett saját JS-hiba");</script></head>`);
@@ -959,6 +988,7 @@ async function gate(): Promise<void> {
       R3_tap_targets: [r.bottom.privacy, r.bottom.unsub, r.why.privacy, r.why.unsub].every((h) => h.rect != null && h.rect.height >= 24),
       R4_pill_and_panel: r.pill.found && r.pill.inViewport && r.pill.hitSelf && r.panel.open && r.panel.fitsViewport && r.panel.cta.found && r.panel.cta.inViewport && r.panel.cta.hitSelf,
       R6_no_js_errors: r.jsErrors.length === 0,
+      R8_pill_above_fixed_bars: r.pill.found && r.pillOnFixed.length === 0,
       // first-screen-compact (2026-09-26): before any engagement the consent bar is NOT on
       // the first screen, the framing bar is ≤ 90 px on the phone (≤ 60 px on the desktop
       // width), and after the walk to the bottom (scroll = engagement) the bar IS there —
@@ -995,6 +1025,7 @@ async function gate(): Promise<void> {
       // …and the landscape-only one: the side panel's decision block under the consent bar
       cases.push(["panel-under-consent", "R4_pill_and_panel"]);
       cases.push(["no-defer", "R7_first_screen_compact"]);
+      cases.push(["pill-on-bar", "R8_pill_above_fixed_bars"]);
       for (const [sab, rule] of cases) {
         const { rules, lazyOk } = await run("fullbleed", sab === "panel-under-consent" ? VIEWPORTS[2]! : vp, sab);
         if (sab === "no-defer") {

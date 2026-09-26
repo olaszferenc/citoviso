@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>„Itt rendelheti meg” — jóváhagyott terv (B)</title>
+<style>
+  /* Frozen plan for the order pill (ADR-XXXX). The page skin is a stand-in; the pill,
+   * its colour rule, its states and its resting place are the contract. */
+  :root{--ui-bg:#0f1116;--ui-panel:#151821;--ui-line:#262b37;--ui-ink:#e6e9ef;--ui-muted:#8a93a3;--lp-cyan:#1fb6d6;--lp-cyan-ink:#06131b;--lp-violet:#6d4aff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ui-bg);color:var(--ui-ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .bar{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 16px;border-bottom:1px solid var(--ui-line)}
+  .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .grp b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ui-muted)}
+  .seg{border:1px solid var(--ui-line);background:var(--ui-panel);color:var(--ui-ink);border-radius:999px;padding:8px 12px;min-height:40px;font:inherit;cursor:pointer}
+  .seg[aria-pressed="true"]{background:var(--lp-cyan);color:var(--lp-cyan-ink);border-color:var(--lp-cyan);font-weight:600}
+  .note{padding:8px 16px;color:var(--ui-muted);font-size:13px}
+  .stageWrap{display:flex;justify-content:center;padding:12px 16px 40px}
+  /* the device frame: a container, so the size switch really re-lays out (not @media) */
+  .dev{container-type:inline-size;position:relative;overflow:hidden;border:1px solid var(--ui-line);border-radius:14px;transform:translateZ(0)}
+  .dev.m{width:390px;height:780px}.dev.d{width:min(1100px,100%);height:640px}
+  .page{position:absolute;inset:0;overflow-y:auto;background:var(--s-bg);color:var(--s-ink);font-family:Georgia,serif}
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;background:var(--s-hdr)}
+  .hdr h1{margin:0;font-size:22px;font-weight:400}
+  .cta{background:var(--s-accent);color:var(--s-on);border:0;border-radius:6px;padding:12px 16px;font:600 12px/1 system-ui;letter-spacing:.12em;min-height:44px}
+  .hero{padding:28px 20px 12px}.hero h2{font-size:34px;line-height:1.15;margin:0 0 12px;font-weight:400}
+  .hero p{max-width:520px}
+  .heroBtns{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 24px}
+  .photo{height:260px;margin:0 20px;border-radius:10px;background:linear-gradient(135deg,var(--s-accent),var(--s-hdr))}
+  .filler{padding:20px}.filler p{opacity:.8}
+  /* the template's fixed booking bar — stacks ON the consent bar, like the real templates */
+  .book{position:absolute;left:0;right:0;bottom:var(--consent-h,0px);display:none;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--s-hdr);border-top:1px solid rgba(127,127,127,.3);z-index:5}
+  @container (max-width:560px){.book{display:flex}.hero h2{font-size:28px}}
+  .consent{position:absolute;left:0;right:0;bottom:0;height:125px;background:#1b1f29;color:#e6e9ef;padding:14px 16px;font:13px/1.4 system-ui;z-index:6;display:none}
+  .consent.on{display:block}
+  /* ── the order pill (contract) ── */
+  .pill{position:absolute;z-index:20;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;cursor:pointer;
+    font:700 16px/1.1 system-ui;padding:15px 28px;left:50%;transform:translateX(-50%);
+    background:var(--lp);color:var(--lp-ink);
+    box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.9);animation:pulse 2.1s ease-out infinite;
+    transition:bottom .22s ease,opacity .5s ease;opacity:0}
+  .pill.in{opacity:1}.pill[hidden]{display:none}
+  .pill svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+  @container (max-width:560px){.pill{left:auto;right:16px;transform:none;font-size:14px;padding:0 16px;min-height:44px}.pill.side-l{left:16px;right:auto}}
+  @keyframes pulse{0%{box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.9),0 0 0 2px color-mix(in srgb,var(--lp) 70%,transparent)}70%{box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.9),0 0 0 20px color-mix(in srgb,var(--lp) 0%,transparent)}100%{box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.9),0 0 0 2px color-mix(in srgb,var(--lp) 0%,transparent)}}
+  @media (prefers-reduced-motion:reduce){.pill{animation:none}}
+  /* panel stand-in: a bottom sheet on the phone, a side panel on the desktop */
+  .scrim{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:25;display:none}.scrim.on{display:block}
+  .panel{position:absolute;z-index:30;background:#14171c;color:#e7ebf1;font:14px/1.5 system-ui;padding:18px 20px;top:0;right:0;width:440px;height:calc(100% - var(--consent-h,0px));transform:translateX(100%);transition:transform .28s}
+  .panel.open{transform:none}
+  @container (max-width:560px){.panel{top:auto;bottom:var(--consent-h,0px);width:100%;height:60%;border-radius:18px 18px 0 0;transform:translateY(100%)}}
+  .panel .handle{position:absolute;left:-40px;top:50%;width:40px;height:64px;border:0;border-radius:12px 0 0 12px;background:#14171c;color:#e7ebf1;display:none}
+  .panel.seen .handle{display:block}.panel.collapsed .handle{display:none}
+  @container (max-width:560px){.panel .handle{left:50%;top:-40px;width:64px;height:40px;transform:translateX(-50%);border-radius:12px 12px 0 0}}
+  .panel .x{position:absolute;right:14px;top:12px;background:none;border:0;color:#e7ebf1;font-size:20px;min-width:44px;min-height:44px;cursor:pointer}
+  .log{padding:0 16px 12px;color:var(--ui-muted);font:12px/1.4 ui-monospace,monospace}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="grp" id="gS"><b>Stílus</b></div>
+  <div class="grp" id="gZ"><b>Méret</b></div>
+  <div class="grp"><b>Süti-sáv</b><button class="seg" id="tC" aria-pressed="false">kint</button></div>
+</div>
+<p class="note">A gomb: felirat „Itt rendelheti meg”; mindig kint, csak nyitott panelnél nincs; cián, türkiz akcentű sablonon lila; a Foglalás-sáv (és a süti-sáv) fölött ül. Próbáld: koppints a gombra → panel; a fül / mellé-koppintás / Esc / × után a gomb visszajön.</p>
+<div class="stageWrap"><div class="dev m" id="dev">
+  <div class="page" id="page">
+    <div class="hdr"><h1>Három Huszár</h1><button class="cta">FOGLALÁSI IGÉNY</button></div>
+    <div class="hero"><h2>Játszótér, árnyas kert és saját parkoló</h2><p>Csendes, kertes vidéki pihenő Köveskálon, ahol a család mindenki megtalálja a helyét.</p>
+      <div class="heroBtns"><button class="cta">FOGLALÁS</button><button class="cta" style="background:transparent;color:var(--s-ink);border:1px solid currentColor">FEDEZZE FEL</button></div></div>
+    <div class="photo"></div>
+    <div class="filler"><p>Szobák, árak, vélemények…</p><p>Megközelítés, programok…</p><p style="height:900px">Lábléc…</p></div>
+  </div>
+  <div class="book"><span>4,9 ★ · 56 vélemény</span><button class="cta">FOGLALÁS</button></div>
+  <div class="consent" id="consent">Sütik — elfogadja? (demó)</div>
+  <button class="pill" id="pill" type="button" aria-label="Itt rendelheti meg a saját weboldalát"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span>Itt rendelheti meg</span></button>
+  <div class="scrim" id="scrim"></div>
+  <aside class="panel" id="panel"><button class="handle" id="handle" aria-label="Panel elrejtése / megnyitása">›</button><button class="x" id="x" aria-label="Bezárás">×</button><h3 style="margin:0 0 6px">Ez az Ön leendő weboldala</h3><p>(a panel tartalma nem ennek a tervnek a része)</p></aside>
+</div></div>
+<div class="log" id="log"></div>
+<script>
+(function () {
+  var SKINS = {
+    "dark-luxury": { bg: "#0e0b09", hdr: "#1a1512", ink: "#f3ece6", accent: "#df9485", on: "#14100c" },
+    "arch-frames": { bg: "#efe9dd", hdr: "#e4dccb", ink: "#2a211b", accent: "#9b3a28", on: "#ffffff" },
+    "claymorphism": { bg: "#eef3f6", hdr: "#ffffff", ink: "#1d2b33", accent: "#3fb2b2", on: "#ffffff" },
+  };
+  var CYAN_HUE = 191;
+  function hueOf(hex) {
+    var m = /^#([0-9a-f]{6})$/i.exec(hex); if (!m) return null;
+    var n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    var mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); if (d < 0.08) return null;
+    var h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; return h < 0 ? h + 360 : h;
+  }
+  var dev = document.getElementById("dev"), pill = document.getElementById("pill"), panel = document.getElementById("panel");
+  var scrim = document.getElementById("scrim"), consent = document.getElementById("consent"), log = document.getElementById("log");
+  var st = { s: "dark-luxury", z: matchMedia("(max-width:700px)").matches ? "m" : "d", c: false };
+  function seg(g, label, key, val) { var b = document.createElement("button"); b.className = "seg"; b.textContent = label; b.dataset.k = key; b.dataset.v = val; b.onclick = function () { st[key] = val; apply(); }; document.getElementById(g).appendChild(b); }
+  Object.keys(SKINS).forEach(function (k) { seg("gS", k, "s", k); });
+  seg("gZ", "Mobil 390px", "z", "m"); seg("gZ", "Asztali", "z", "d");
+  document.getElementById("tC").onclick = function () { st.c = !st.c; apply(); };
+  function place() {
+    // rest just above the highest bottom-fixed layer (booking bar stacked on the consent bar)
+    var D = dev.getBoundingClientRect(), top = D.bottom;
+    [document.querySelector(".book"), consent].forEach(function (e) { var cs = getComputedStyle(e); if (cs.display === "none") return; var r = e.getBoundingClientRect(); if (r.top < top) top = r.top; });
+    var base = st.z === "m" ? 14 : 24;
+    pill.style.bottom = Math.max(base, Math.round(D.bottom - top + 10)) + "px";
+    log.textContent = "gomb: " + (pill.hidden ? "nincs kint (panel nyitva)" : "kint") + " · szín: " + getComputedStyle(pill).backgroundColor + " · alsó él " + pill.style.bottom + "-re a keret aljától";
+  }
+  function apply() {
+    var sk = SKINS[st.s], root = dev.style;
+    root.setProperty("--s-bg", sk.bg); root.setProperty("--s-hdr", sk.hdr); root.setProperty("--s-ink", sk.ink); root.setProperty("--s-accent", sk.accent); root.setProperty("--s-on", sk.on);
+    var ah = hueOf(sk.accent), near = ah !== null && Math.min(Math.abs(ah - CYAN_HUE), 360 - Math.abs(ah - CYAN_HUE)) < 45;
+    root.setProperty("--lp", near ? "var(--lp-violet)" : "var(--lp-cyan)"); root.setProperty("--lp-ink", near ? "#ffffff" : "var(--lp-cyan-ink)");
+    dev.className = "dev " + st.z;
+    consent.classList.toggle("on", st.c); root.setProperty("--consent-h", st.c ? "125px" : "0px");
+    document.querySelectorAll(".seg[data-k]").forEach(function (b) { b.setAttribute("aria-pressed", String(st[b.dataset.k] === b.dataset.v)); });
+    document.getElementById("tC").setAttribute("aria-pressed", String(st.c));
+    requestAnimationFrame(place);
+  }
+  function open() { panel.classList.add("open", "seen"); panel.classList.remove("collapsed"); scrim.classList.add("on"); pill.hidden = true; place(); }
+  function collapse() { panel.classList.remove("open"); panel.classList.add("collapsed"); scrim.classList.remove("on"); pill.hidden = false; place(); }
+  function close() { panel.classList.remove("open", "seen", "collapsed"); scrim.classList.remove("on"); pill.hidden = false; place(); }
+  pill.onclick = open; scrim.onclick = collapse; document.getElementById("x").onclick = close;
+  document.getElementById("handle").onclick = function () { panel.classList.contains("open") ? collapse() : open(); };
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && panel.classList.contains("open")) collapse(); });
+  addEventListener("resize", place);
+  apply();
+  setTimeout(function () { pill.classList.add("in"); place(); }, 300);
+})();
+</script>
+</body>
+</html>

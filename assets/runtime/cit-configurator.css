@@ -18,10 +18,18 @@
   box-sizing: border-box;
 }
 
-/* ── launcher: an inviting "pill" that slides up AFTER the wow lands ──────────
- * Bottom-center, hidden on first paint, revealed by a beat/scroll (JS). This is
- * NOT a persistent settings gear — the mock (the wow) leads; the pill invites. */
+/* ── launcher: the "Itt rendelheti meg" order pill ─────────────────────────────
+ * Always on stage except while the panel is open (owner, 2026-09-26; plan:
+ * assets/design-refs/prospect-page/order-pill/). Desktop: bottom-centre; phone:
+ * bottom-right. The runtime rests it just above a template's fixed booking bar and
+ * moves it sideways (--l / --r) when an in-flow button would sit under it. */
 .cit-cfg-launch {
+  /* Platform colour, NEVER the template accent (that is the mock's own CTA colour, so
+   * the pill read as one more site button). Mirrors --citui-cyan-500 / --citui-accent-ink
+   * (citui.css is not loaded on the mock page). --alt: violet, for templates whose own
+   * accent is cyan-near (picked in JS). */
+  --cit-lp: #1fb6d6;
+  --cit-lp-ink: #06131b;
   position: fixed;
   left: 50%;
   /* ADR-0186: a süti-sáv ezen a lapon is kinn van, és a lap ALJÁRA tapad. A hívó
@@ -36,13 +44,12 @@
   padding: 15px 28px;
   border: none;
   border-radius: 999px;
-  /* Accent-colored so it pops off the mock (skin accent when present) — no longer a dim dark
-   * pill that blends into dark footers. */
-  background: var(--cit-accent, #e5622b);
-  color: var(--cit-on-accent, #ffffff);
+  background: var(--cit-lp);
+  color: var(--cit-lp-ink);
   font: 700 16px/1.1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   cursor: pointer;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  /* the white rim keeps a cyan pill legible on a cyan-ish photo or a dark page alike */
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.9);
   transform: translateX(-50%) translateY(24px);
   opacity: 0;
   pointer-events: none;
@@ -59,18 +66,22 @@
   /* Pulsing accent halo draws the eye once the pill has slid in (attention, not a flash). */
   animation: citCfgPulse 2.1s ease-out infinite;
 }
+.cit-cfg-launch--alt {
+  --cit-lp: #6d4aff;
+  --cit-lp-ink: #ffffff;
+}
 @keyframes citCfgPulse {
   0% {
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35),
-      0 0 0 0 color-mix(in srgb, var(--cit-accent, #e5622b) 60%, transparent);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 0 0 2px color-mix(in srgb, var(--cit-lp) 70%, transparent);
   }
   70% {
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35),
-      0 0 0 18px color-mix(in srgb, var(--cit-accent, #e5622b) 0%, transparent);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 0 0 20px color-mix(in srgb, var(--cit-lp) 0%, transparent);
   }
   100% {
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35),
-      0 0 0 0 color-mix(in srgb, var(--cit-accent, #e5622b) 0%, transparent);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 0 0 2px color-mix(in srgb, var(--cit-lp) 0%, transparent);
   }
 }
 .cit-cfg-launch:hover {
@@ -90,6 +101,27 @@
 }
 .cit-cfg-launch[hidden] {
   display: none;
+}
+/* Side slots (desktop): the runtime moves the pill off the centre when an in-flow
+ * button would sit under it. */
+.cit-cfg-launch--r,
+.cit-cfg-launch--l {
+  transform: translateY(24px);
+}
+.cit-cfg-launch--r {
+  left: auto;
+  right: 24px;
+}
+.cit-cfg-launch--l {
+  left: 24px;
+}
+.cit-cfg-launch--r.cit-cfg-in,
+.cit-cfg-launch--l.cit-cfg-in {
+  transform: none;
+}
+.cit-cfg-launch--r:hover,
+.cit-cfg-launch--l:hover {
+  transform: translateY(-2px);
 }
 
 /* ── panel ──────────────────────────────────────────────────────────────────── */
@@ -178,6 +210,12 @@
 }
 .cit-cfg-panel.cit-cfg-seen .cit-cfg-handle {
   display: flex;
+}
+/* Collapsed: the order pill is back on stage and reopens the same configuration, so
+ * the edge tab steps aside — on a phone it sat right under the pill (plan round
+ * 2026-09-26, order-pill). */
+.cit-cfg-panel.cit-cfg-collapsed .cit-cfg-handle {
+  display: none;
 }
 /* Collapsed = panel off-screen, tab points back in (chevron flips). */
 .cit-cfg-panel.cit-cfg-collapsed .cit-cfg-handle svg {
@@ -1253,6 +1291,10 @@
   }
   .cit-cfg-launch:hover {
     transform: translateY(-2px);
+  }
+  .cit-cfg-launch--l {
+    left: 16px;
+    right: auto;
   }
   .cit-cfg-launch svg {
     width: 16px;
