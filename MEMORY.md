@@ -61,6 +61,15 @@ a sor-magasság sablononként 17–19 px) → `min-height:44px` + inline-flex, M
 ## Aktív feladat (legfrissebb szál, 2026-09-26 — Elek a LEAD szemével, TELEFONON)
 
 **📱 FK-009 — A KIKÜLDÖTT TERV ELSŐ MEGNYITÁSA TELEFONON, 19 stílus × 2 dev-lead — lokálban kész, NEM élesítve.**
+**2. kör (tulaj-mandátum, du.): a talált tételek javítása saját belátás szerint, utólagos ellenőrzéssel.**
+① **Első képernyő B változat** (kontraktus `assets/design-refs/prospect-page/first-screen-compact/`): tömör keret-sáv
+(77 px telefonon, 1 sor asztalon, ▸ jelölő), a **süti-kérdés az első görgetésig/érintésig vár** a /p/ lapon
+(`data-cit-consent-defer`; a pirula érintése nem számít), süti-sáv 160 → 125 px, pirula jobbra egy sorban 44 px —
+nem-terv az első képernyőn 40–49 % → **17 %** (asztalon 8 %); őr R7 + piros kontroll. ② **Leiratkozás: GET =
+megerősítő lap („Leiratkozom"), POST = tett**, RFC 8058 one-click marad; őr az `optout-carrier-check` 0. blokkja.
+③ **Hero a TELJES képen:** `photoHealth.ts` (fél-fekete → −45, sötét → −15) a TÁROLT verdiktbe; a Laguna
+hero 92 → 47, `rerender-mock --rehero` 19/19 cserélve (Tihany változatlan); őr `hero-health-check`. Részletek:
+`_planning/memory/2026-09-26_elek_lead_telefonon.md` 2. kör.
 Jegyzet: `_planning/memory/2026-09-26_elek_lead_telefonon.md`. Tulaj: „a wow effekthez a mobilnézet legyen
 hibátlan" + „kiemelten a VIZUÁLIS élményre". 38 követett link küldés nélkül (`scripts/seed-elek-lead-mobile-links.mts`,
 links.json), friss-betöltéses mérő 390/360/FEKVŐ (`scripts/lead-mobile-check.mts`, viewport-képek, ujj-találat,
