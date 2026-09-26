@@ -11,6 +11,14 @@ Utolsó frissítés: 2026-09-26 (➕ **Meg nem vett modulok az admin oldalsávba
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-26 — telefonon a rendelés-panel görget, nem a lap · cfg-mobile B)
+A tulaj: „nem a vásárlási szekció gördül, hanem a honlap maga”. Mérve (nyers érintés-események): a panel
+fején/láblécén húzva a lap ~320 px-t ment, a lista végén átláncolt. Javítás: `touchmove`-őr a panelen + 
+`overscroll-behavior:contain` — NEM lap-zár (a lap a panel mellett görgethető marad, a modul-kapcsolás odagörget).
+Őr `scripts/cfg-sheet-scroll-check.mts --selftest` (pre-commit). **Nyitott, TULAJ-DÖNTÉS:** fekvő telefonon a
+fizetés-lépés „Fizetek” gombja elérhetetlen (régi hiba; javítása a checkout-fullscreen ②-t írná felül; kész patch félretéve: `~/rc-briefs/cfg-mobile-0926/parked/`). Nincs
+élesítve. Jegyzet: `_planning/memory/2026-09-26_cfg_panel_gorgetes_telefon.md`.
+
 ## Párhuzamos szál (2026-09-26 este — „Itt rendelheti meg”: a lead-lap rendelő gombja, C szál)
 A tulaj telefonról: az „állítsa össze” gomb eltűnik, és a mock gombjának színét viseli. Most a felirat „Itt rendelheti meg”,
 a gomb MINDIG kint van (csak nyitott panelnél nincs; lecsukás után visszajön, a perem-fül lecsukva rejtve), a színe

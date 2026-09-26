@@ -18,6 +18,7 @@
 - [2026-09-26_itt_rendelheti_meg_gomb.md](2026-09-26_itt_rendelheti_meg_gomb.md) — 2026-09-26 — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, a Foglalás-sáv fölött (C szál)
 - [2026-09-26_elerhetoseg_cim_terkep_tu.md](2026-09-26_elerhetoseg_cim_terkep_tu.md) — 2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail (ADR-0241)
 - [2026-09-26_elek_lead_telefonon.md](2026-09-26_elek_lead_telefonon.md) — 2026-09-26 — Elek a LEAD szemével, TELEFONON: a kiküldött terv első megnyitása (FK-009, 19 stílus × 2 lead)
+- [2026-09-26_cfg_panel_gorgetes_telefon.md](2026-09-26_cfg_panel_gorgetes_telefon.md) — 2026-09-26 — Telefonon a rendelés-panel görget, nem a mögötte lévő lap (cfg-mobile B szál)
 - [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában
 - [2026-09-25_konzol_linear_keret.md](2026-09-25_konzol_linear_keret.md) — 2026-09-25 — A belső konzol kerete a tenant-admin „Linear” nyelvén, egy bővíthető navigációs fából
 - [2026-09-25_gate_writer_audit.md](2026-09-25_gate_writer_audit.md) — 2026-09-25 — Az író kapuk auditja: ki futhat az író-sávban (ADR-0229)
