@@ -190,6 +190,7 @@ import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readPicks, resolvePicks, siteProgramPool } from "../events/picks.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
 import { messagePreview } from "../tenant/messagePreview.js";
+import { faviconSvg, lockup } from "../ui/brand.js";
 import {
   computeAnnual,
   formatPrice,
@@ -426,6 +427,12 @@ async function serveHomepage(
   let rendered = html.replace(
     /<!--CIT_PRICE_BLOCK-->[\s\S]*?<!--\/CIT_PRICE_BLOCK-->/,
     `<!--CIT_PRICE_BLOCK-->${block}<!--/CIT_PRICE_BLOCK-->`,
+  );
+  // The header and the footer are dark: the "B" lockup (dark E4 + white word) from the
+  // one brand source (ADR-XXXX). The file only carries a plain-text fallback.
+  rendered = rendered.replace(
+    /<!--CIT_BRAND-->[\s\S]*?<!--\/CIT_BRAND-->/g,
+    () => lockup({ on: "dark", href: "#top", cls: "citui-lockup--lg" }),
   );
   rendered = await withAssetVersions(rendered);
   send(res, 200, rendered);
@@ -925,7 +932,8 @@ async function serveTenantHost(
   // console error under every green step (Elek FK-007, same lelet as the console's).
   if (pathname === "/favicon.ico") {
     try {
-      const svg = await readFile(path.resolve(process.cwd(), "public/assets/ui/mark-gradient.svg"));
+      // The one brand source (ADR-XXXX): the LIGHT E4 — the browser tab is light.
+      const svg = faviconSvg();
       res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
       res.end(svg);
       return;
@@ -1836,7 +1844,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // the tenant-host copy of this handler never runs). First, before any dispatch.
   if (req.method === "GET" && pathname === "/favicon.ico") {
     try {
-      const svg = await readFile(path.resolve(process.cwd(), "public/assets/ui/mark-gradient.svg"));
+      // The one brand source (ADR-XXXX): the LIGHT E4 — the browser tab is light.
+      const svg = faviconSvg();
       res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
       res.end(svg);
       return;

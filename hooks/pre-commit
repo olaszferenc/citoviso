@@ -464,6 +464,14 @@ if [ -f scripts/design-token-lint.mts ]; then
   echo "[pre-commit] design-token-lint…"
   npx tsx scripts/design-token-lint.mts
 fi
+# Logó-őr (assets/design-refs/console/brand-mark/README.md): a jel EGY forrásból (src/ui/brand.ts ← assets/brand/mark-e4-*.svg),
+# a favikon a világos változat, és böngészőben mérve témánként egy, a témához illő jel látszik.
+# Bármely src/ vagy public/ változásra fut: egy új, kézzel rajzolt jel bárhol megjelenhet.
+if [ -f scripts/brand-mark-check.mts ] && \
+   changed_files | grep -qE '^(src/|public/|assets/brand/mark-e4-|scripts/brand-mark-check)'; then
+  echo "[pre-commit] brand-mark-check (egy logó-forrás, világos favikon, téma szerinti jel)…"
+  npx tsx scripts/brand-mark-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Outlook-őr (ADR-0101): a levél NÉMÁN törik az Outlookban, miközben a böngésző és a
 # Gmail zöld — ezt csak szerkezeti ellenőrzés fogja meg, screenshot soha.
 if [ -f scripts/outlook-lint.mts ]; then

@@ -64,12 +64,12 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
       "mai --citui-navy-950 / --citui-white / --citui-cyan-500 értéke, azzal szinkronban tartandó.",
   },
   "public/index.html": {
-    values: ["#35c4e0", "#8be8f3", "#0e2a47"],
-    reason: "logó/hero SVG brand-art — SVG presentation-attribútumban a var() nem oldódik fel",
+    values: ["#0e2a47"],
+    reason: "hero SVG brand-art (a nagy fehér C) — SVG presentation-attribútumban a var() nem oldódik fel; a fejléc/lábléc logója a src/ui/brand.ts-ből jön (ADR-XXXX)",
   },
   "src/console/views.ts": {
-    values: ["#1fb6d6", "#16283f", "#e5484d", "#d29922", "#2fa96b", "#5a6d82"],
-    reason: "logó (brand-konstans) + Leaflet szín-tükrök (SVG-attr, var() nem oldódik fel; a citui.css szemantikus tokenjeivel szinkronban tartandó)",
+    values: ["#1fb6d6", "#e5484d", "#d29922", "#2fa96b", "#5a6d82"],
+    reason: "Leaflet szín-tükrök (SVG-attr, var() nem oldódik fel; a citui.css szemantikus tokenjeivel szinkronban tartandó)",
   },
   "src/generator/patternBadge.ts": {
     values: ["#0a1f36", "#0e2a47", "#35c4e0", "#eaf3f8"],
@@ -87,10 +87,6 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
       "/p/ előnézet keretezése: ENGINE-renderelt mock fölé kerül (--cit-* skin, citui.css nélkül) — " +
       "semleges szürkék; a cián a MEGERŐSÍTŐ 'már az Öné' sáv akcentje (pipa + gomb + alsó él), " +
       "értéke a --citui-cyan-400 token MÁSOLATA, nem új szín — a tokent itt a böngésző nem tudná feloldani",
-  },
-  "src/server/adminViews.ts": {
-    values: ["#1fb6d6", "#16283f"],
-    reason: "logó — brand-konstans, nem témázható",
   },
 };
 

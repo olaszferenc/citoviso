@@ -55,6 +55,7 @@ import {
   type MessageTopic,
 } from "../tenant/messageTopics.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
+import { lockup, markThemed } from "../ui/brand.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
  *  fresh CSS through the CDN without a cache purge. */
@@ -111,7 +112,7 @@ function shell(
     (opts.head ?? "") +
     `<link rel="preconnect" href="https://fonts.googleapis.com">` +
     `<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">` +
-    `<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">` +
+    `<link rel="icon" href="/favicon.ico" type="image/svg+xml">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}"><title>${esc(title)}</title></head>` +
     (opts.bodyClass
       ? `<body class="${opts.bodyClass}">${body}</body></html>`
@@ -119,19 +120,14 @@ function shell(
   );
 }
 
-const LOGO =
-  `<a class="citui-brand citui-brand--ink" href="/" style="justify-content:center">` +
-  `<svg class="citui-brand__mark" viewBox="0 0 48 48" aria-hidden="true">` +
-  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
-  `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
-  `<span>Citoviso</span></a>`;
+/** The "B" lockup on the login / help pages (light card; follows the theme like the
+ *  frame) — from the one brand source, src/ui/brand.ts (ADR-XXXX). */
+const LOGO = lockup({ on: "themed", href: "/", cls: "citui-lockup--lg" });
 
-/** The bare logo mark for the admin frame (ADR-0224): the dot follows the ink, so it
- *  reads in both themes — the cyan arc/arrow is the brand constant. */
-const LOGO_MARK =
-  `<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">` +
-  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
-  `<circle cx="22.5" cy="24" r="4.5" fill="currentColor"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>`;
+/** The bare mark for the admin frame (ADR-0224). Here it stands next to the TENANT's
+ *  name, not the word "Citoviso", so it stays an icon, not the letter C (owner,
+ *  2026-09-26); the E4 variant follows the theme. */
+const LOGO_MARK = markThemed(26);
 
 // Icons come from the shared bespoke set (src/ui/icons.ts) — the admin renders the
 // THIN variants (ADR-0224: colour only for meaning, no accent dot in the frame).

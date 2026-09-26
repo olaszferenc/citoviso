@@ -69,6 +69,7 @@ import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
 import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic, icAdmin } from "../ui/icons.js";
+import { lockup, markDataUri } from "../ui/brand.js";
 import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, type NavCounts, type NavNode } from "./nav.js";
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
@@ -115,13 +116,9 @@ export function jsStr(s: string): string {
 // citui.css (tokens + components) + citui-console.css (the internal-app layer,
 // token-driven). NO inline stylesheet here — change the core, the console follows.
 
-/** Brand block (same mark as the tenant admin / public site — one identity). */
-const BRAND =
-  `<a class="citui-brand citui-brand--ink" href="/">` +
-  `<svg class="citui-brand__mark" viewBox="0 0 48 48" aria-hidden="true">` +
-  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
-  `<circle cx="22.5" cy="24" r="4.5" fill="#16283f"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>` +
-  `<span>Citoviso</span></a>`;
+/** Brand block on the plain pages and the login card — the "B" lockup from the one
+ *  source (src/ui/brand.ts, ADR-XXXX); both sit on a theme-following panel. */
+const BRAND = lockup({ on: "themed", href: "/", cls: "con-brand" });
 
 /* ═══ THE CONSOLE FRAME — the tenant-admin „Linear" language on the operator side ═══
    Contract: assets/design-refs/console/linear-shell/README.md (owner, 2026-09-25: the
@@ -129,11 +126,10 @@ const BRAND =
    are pages and fold the tree). The navigation is ONE tree (nav.ts) — the sidebar, the
    breadcrumb, the ⌘K index, the phone's drawer and bottom bar are all views of it. */
 
-/** The bare logo mark for the frame: the dot follows the ink, so it reads in both themes. */
-const LOGO_MARK =
-  `<svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">` +
-  `<path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#1fb6d6" stroke-width="6" stroke-linecap="round"/>` +
-  `<circle cx="22.5" cy="24" r="4.5" fill="currentColor"/><path d="M34 18.5 42 24l-8 5.5z" fill="#1fb6d6"/></svg>`;
+/** The frame's lockup (sidebar + phone drawer): the mark follows the theme — the light
+ *  E4 on the light panel, the dark E4 on the dark one (src/ui/brand.ts, ADR-XXXX). */
+const frameLockup = (lang: string): string =>
+  lockup({ on: "themed", sub: esc(T(lang, "belső konzol")), cls: "con-lockup" });
 
 /** Frame icons: the THIN set (colour only for meaning); the screens keep `ic()`. */
 const icf = icAdmin;
@@ -300,7 +296,7 @@ function drawer(trail: readonly NavNode[], tree: readonly NavNode[], counts: Nav
   return (
     `<div class="con-drawer" id="con-menu" role="dialog" aria-modal="true" aria-label="${esc(T(lang, "Menü"))}">` +
     `<a class="con-drawer__veil" href="#" data-drawer-close aria-label="${esc(T(lang, "Bezárás"))}"></a>` +
-    `<div class="con-drawer__box"><div class="con-drawer__h">${LOGO_MARK}<b>${esc(T(lang, "Citoviso konzol"))}</b>` +
+    `<div class="con-drawer__box"><div class="con-drawer__h">${frameLockup(lang)}` +
     `<a class="con-fib con-fib--ghost" href="#" data-drawer-close aria-label="${esc(T(lang, "Bezárás"))}">${icf("close", 18)}</a></div>` +
     `<nav class="con-menu">${navMarkup(tree, trail, counts, lang)}` +
     `<div class="con-menu__g">${esc(T(lang, "Megjelenés"))}</div>` +
@@ -361,8 +357,7 @@ function frame(title: string, body: string, active: string | undefined, lang: st
   // ← goes one level up the tree (the module dashboard from a function, home from a module).
   const parent = trail.length > 1 ? trail[trail.length - 2]!.href : "/";
   const side =
-    `<aside class="con-side"><div class="con-side__top">${LOGO_MARK}` +
-    `<b>Citoviso<small>${esc(T(lang, "belső konzol"))}</small></b>` +
+    `<aside class="con-side"><div class="con-side__top">${frameLockup(lang)}` +
     `<button type="button" class="con-fib con-fib--ghost" data-rail title="${esc(T(lang, "Oldalsáv összecsukása"))}" aria-label="${esc(T(lang, "Oldalsáv összecsukása"))}">${icf("collapse", 14)}</button></div>` +
     `<nav class="con-nav" aria-label="${esc(T(lang, "Fő menü"))}">${navMarkup(tree, trail, counts, lang)}</nav>` +
     `<div class="con-user">` +
@@ -396,7 +391,7 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
     `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>${THEME_BOOT}
-<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
@@ -441,7 +436,7 @@ export function operatorLoginPage(error: string | null = null, publicLoginUrl = 
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${T(lang, "Belépés — Citoviso konzol")}</title>
-<link rel="icon" href="/assets/ui/mark-gradient.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS(lang)}</head>
 <body class="con"><div class="con-login"><div class="box">
@@ -2270,23 +2265,14 @@ function subscriptionBox(
  * white/black alphas, which the token lint treats as neutral.
  */
 /**
- * The E4 mark for the dark pay pages, read from the approved asset itself
- * (assets/design-refs/console/brand-mark/README.md) — not redrawn, so it cannot
- * drift. Inlined as a data: URI for the same reason the styles are inline: this
+ * The E4 mark for the dark pay pages, from the one brand source (src/ui/brand.ts,
+ * which reads the approved asset itself — not redrawn, so it cannot drift). Inlined as a data: URI for the same reason the styles are inline: this
  * page must never depend on a second request. The mark IS the "C", followed by
  * "itoviso" (owner, 2026-09-23 — same lockup as the platform e-mails, ADR-0225).
  */
-const PAY_MARK_SRC = (() => {
-  try {
-    const svg = readFileSync(path.resolve(process.cwd(), "assets/brand/mark-e4-dark.svg"));
-    return `data:image/svg+xml;base64,${svg.toString("base64")}`;
-  } catch {
-    return null;
-  }
-})();
+const PAY_MARK_SRC = markDataUri("dark");
 
 function payBrand(): string {
-  if (!PAY_MARK_SRC) return `<div class="pd-brand"><b>Citoviso</b></div>`;
   return (
     `<div class="pd-brand" role="img" aria-label="Citoviso">` +
     `<img class="pd-brand__mark" src="${PAY_MARK_SRC}" width="34" height="34" alt="">` +

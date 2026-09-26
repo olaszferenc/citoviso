@@ -11,12 +11,19 @@ Utolsó frissítés: 2026-09-26 (📱 **Mobil · Elek a VENDÉG szemével — 19
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-26 — a logó MINDENHOL: a jel maga a C, „B”, egy forrásból)
+A tulaj a §2b körben a **B**-t választotta (ikonméretű C, 1,6×; admin: a jel ikon marad; szállás-honlapok favikonja
+marad Citoviso). Egy forrás: `src/ui/brand.ts` (az E4 asset-fájlokat olvassa) + `citui.css` `.citui-lockup`; cserélve
+a konzol (oldalsáv, menü, belépő, sima lapok), a tulaj-admin, a citoviso.com fejléc/lábléc, a `/pay/*` és mindhárom
+favikon (világos E4); őr `brand-mark-check` (4 negatív kontroll). ADR-XXXX. **Nyitott:** a számla-PNG-t
+(`assets/brand/citoviso-logo-szamla.png`) a tulaj tölti fel a Számlázz.hu-ba; a citoviso.com hero-illusztráció (nagy
+fehér C) E4-re igazítása kérdés. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_logo_b_lockup_mindenhol.md`.
+
 ## Párhuzamos szál (2026-09-26 — E4 logó a fizetési lapok fejlécében)
 A tulaj a `/pay/done`-on: „itt még mindig a rossz logo van”. A `.pd-brand` a CSS-karikát mutatta.
 Most: a jóváhagyott `assets/brand/mark-e4-dark.svg` data: URI-ként a „C” helyén + fehér „itoviso”
 (a levelek lockupja, ADR-0225), tulaj-OK a képeken. `src/console/views.ts` `payBrand()`.
-Nyitott: a konzol-/admin-fejléc és a favikon még a régi jel (`~/rc-briefs/logo-c-lockup-brief.md`,
-a C-méret A/B döntés nyitott). Nincs élesítve (a nagy deployjal megy).
+(A konzol-/admin-fejléc és a favikon azóta szintén kész — lásd a fenti szálat.) Nincs élesítve (a nagy deployjal megy).
 Jegyzet: `_planning/memory/2026-09-26_paydone_e4_logo.md`.
 
 ## ⏰ Emlékeztető a pilot / nagy deploy UTÁNRA (2026-09-25, tulaj)

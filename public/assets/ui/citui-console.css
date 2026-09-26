@@ -102,6 +102,8 @@
 .con-side__top b { font-size: 13px; flex: 1; white-space: nowrap; line-height: 1.25; }
 .con-side__top small { display: block; color: var(--citui-muted); font-weight: 400; font-size: 11px; }
 .con-side__top .con-fib { width: 24px; height: 24px; color: var(--citui-muted); }
+/* The "B" lockup in the frame (src/ui/brand.ts): 16 px word → a 26 px mark, as before. */
+.con-lockup { font-size: 16px; flex: 1; min-width: 0; }
 
 /* The tree. A group row = link to the module's dashboard + a chevron that only folds. */
 .con-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
@@ -135,6 +137,8 @@
 .is-rail .con-nav__chev, .is-rail .con-nav__kids { display: none; }
 .is-rail .con-nav__it { justify-content: center; padding: 8px 0; }
 .is-rail .con-side__top { justify-content: center; }
+.is-rail .con-side__top .con-lockup { flex: 0 0 auto; }
+.is-rail .con-side__top .citui-lockup__word { display: none; }
 .con-user { display: flex; align-items: center; justify-content: flex-end; gap: 4px; padding: 8px 4px 0; border-top: 1px solid var(--citui-line); margin-top: 8px; }
 .is-rail .con-user { flex-direction: column; }
 
@@ -182,7 +186,7 @@
 .con-main__in { padding: 22px 20px 32px; max-width: 1600px; margin: 0 auto; }
 /* Prospect/tenant-facing page inside the console (chrome: false): brand only. */
 .con-top--plain { justify-content: flex-start; }
-.con-top--plain .citui-brand__mark { width: 28px; height: 28px; }
+.con-top--plain .con-brand { font-size: 17.5px; }
 .con--plain .con-main__in { max-width: 1180px; }
 
 /* Phone: no sidebar; a bottom bar with the first three modules + Menü; a left drawer. */
@@ -197,6 +201,7 @@
 }
 .con-drawer__h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .con-drawer__h b { flex: 1; }
+.con-drawer__h .con-lockup { font-size: 17px; }
 .con-menu { display: flex; flex-direction: column; gap: 1px; }
 .con-menu__g { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--citui-muted); padding: 12px 10px 4px; }
 .con-menu .con-nav__it { padding: 9px 10px; font-size: 14px; }
@@ -1007,6 +1012,7 @@
   min-height: 100vh; display: grid; place-items: center;
   background: linear-gradient(160deg, var(--citui-navy-900), var(--citui-navy-700));
 }
+.con-login .con-brand { font-size: 1.32rem; }
 .con-login .box {
   width: min(400px, 92vw); background: var(--citui-panel); border-radius: 16px;
   padding: 30px 28px; box-shadow: 0 18px 50px color-mix(in srgb, var(--citui-navy-950) 40%, transparent);

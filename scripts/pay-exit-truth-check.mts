@@ -347,7 +347,7 @@ async function main(): Promise<void> {
     // A „sima link" halmazból a MÁSODLAGOS gombok (pd-ghost: cím másolása,
     // megnyitom) is kimaradnak — azok sem sima linkek, csak halkabb kontrollok.
     const plain = ok.anchors.filter(
-      (a) => a !== cta && !/citui-btn|citui-brand|pd-cta|pd-ghost/.test(a.cls) && a.text,
+      (a) => a !== cta && !/citui-btn|citui-brand|citui-lockup|pd-cta|pd-ghost/.test(a.cls) && a.text,
     );
     check(plain.length > 0, "① van mihez hasonlítani (sima link ugyanazon a lapon)");
     const twins = plain.filter(

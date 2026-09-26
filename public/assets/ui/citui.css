@@ -360,6 +360,40 @@ button { border: 0; cursor: pointer; background: none; }
 .citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
 .citui-brand--ink { color: var(--citui-navy-900); }
 
+/* The Citoviso lockup "B" (src/ui/brand.ts, ADR-XXXX): the E4 mark IS the letter C,
+   then "itoviso". Mark = 1.6× the letter size, the word centred on it (the /pay/* ratio
+   the owner approved). Size it with font-size on the lockup. Dark surface → the dark mark
+   + white word; light surface → the light mark + navy word; "themed" follows the theme. */
+.citui-lockup {
+  display: inline-flex; color: var(--citui-navy-900); text-decoration: none;
+  font-family: var(--citui-font-display); font-weight: 700; letter-spacing: -0.01em; line-height: 1;
+  white-space: nowrap;
+}
+.citui-lockup.citui-lockup:hover { text-decoration: none; }
+.citui-lockup--lg { font-size: 1.32rem; } /* header / login size: word 21 px, mark 34 px (= /pay/*) */
+.citui-lockup__row { display: inline-flex; align-items: center; }
+.citui-lockup__mark { height: 1.6em; width: auto; flex: 0 0 auto; margin-right: 0.02em; }
+.citui-lockup__word { line-height: 1; }
+.citui-lockup__word small {
+  display: block; margin-top: 2px; font: 400 11px/1.3 var(--citui-font-text); letter-spacing: 0; color: var(--citui-muted);
+}
+/* ⚠️ Doubled class + :hover: a surface link rule (`.con a` 0,1,1 · `.con a:hover` 0,2,1)
+   otherwise paints the word link-cyan. */
+.citui-lockup.citui-lockup--on-dark, .citui-lockup.citui-lockup--on-dark:hover { color: var(--citui-white); }
+.citui-lockup.citui-lockup--on-light, .citui-lockup.citui-lockup--on-light:hover { color: var(--citui-navy-900); }
+.citui-lockup.citui-lockup--on-themed, .citui-lockup.citui-lockup--on-themed:hover { color: var(--citui-ink-brand); }
+.citui-mark-themed { display: inline-flex; flex: 0 0 auto; }
+.citui-mark-themed svg { height: var(--citui-mark-size, 26px); width: auto; }
+/* Theme switch. ⚠️ Element-qualified on purpose: a sizing rule like `.x svg{display:block}`
+   (0,1,1) beat a bare `.citui-mark--dark{display:none}` and showed BOTH marks. */
+svg.citui-mark--dark { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--light { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--dark { display: block; }
+.citui-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
 .citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 .citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
 .citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-logo-mindenhol-a-jel-maga-a-c.md) — A logó mindenhol: a jel maga a C („B” elrendezés), egy forrásból
 - [ADR-0235](decisions/0235-a-vendeg-telefonon-erintesi-cel-retegzes-es.md) — A vendég telefonon: érintési-cél, rétegzés és tisztás-doktrína a mock-motorban (FK-010)
 - [ADR-0234](decisions/0234-levelben-csak-tartos-fizetesi-link-megy-pay-go.md) — Levélben csak tartós fizetési link megy (`/pay/go/<fizetés-id>`)
 - [ADR-0233](decisions/0233-a-belso-konzol-kerete-a-tenant-admin-linear.md) — A belső konzol kerete a tenant-admin „Linear” nyelvén, EGY bővíthető navigációs fából (2026-09-25)

@@ -28,14 +28,9 @@
 
   <header style="background: var(--citui-navy-900);">
     <div class="citui-container citui-nav">
-      <a class="citui-brand" href="#">
-        <svg class="citui-brand__mark" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M34.5 10.5A17 17 0 1 0 34.5 37.5" fill="none" stroke="#35c4e0" stroke-width="6" stroke-linecap="round"/>
-          <circle cx="22.5" cy="24" r="4.5" fill="#ffffff"/>
-          <path d="M34 18.5 42 24l-8 5.5z" fill="#35c4e0"/>
-        </svg>
-        <span>Citoviso</span>
-      </a>
+      <!-- The logo is NOT drawn here: it has one source, src/ui/brand.ts (ADR-XXXX) — a
+           static page cannot import it, and a hand-copied mark is how four logos appeared. -->
+      <a class="citui-brand" href="#">Citoviso</a>
       <nav class="citui-nav-links">
         <a href="#colors">Színek</a><a href="#type">Tipográfia</a><a href="#buttons">Gombok</a><a href="#forms">Űrlapok</a><a href="#data">Adat</a>
       </nav>

@@ -284,6 +284,7 @@ import { HUB_PREFIX } from "./nav.js";
 import { uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
 import { prepareMailLang, T } from "../i18n/mail.js";
+import { faviconSvg } from "../ui/brand.js";
 import {
   fetchPhoto,
   photoFailReason,
@@ -1077,7 +1078,8 @@ async function handle(
   // the layout also declares it via <link rel="icon"> for modern browsers.
   if (method === "GET" && path === "/favicon.ico") {
     try {
-      const svg = await readFile(path_mod.resolve(process.cwd(), "public/assets/ui/mark-gradient.svg"));
+      // The one brand source (ADR-XXXX): the LIGHT E4 — the browser tab is light.
+      const svg = faviconSvg();
       res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
       res.end(svg);
       return;
