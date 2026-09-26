@@ -63,10 +63,6 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
       "ott él, ahol egyébként semmi sem lenne (ADR-0186 utószál). A három érték a dizájn-mag " +
       "mai --citui-navy-950 / --citui-white / --citui-cyan-500 értéke, azzal szinkronban tartandó.",
   },
-  "public/index.html": {
-    values: ["#0e2a47"],
-    reason: "hero SVG brand-art (a nagy fehér C) — SVG presentation-attribútumban a var() nem oldódik fel; a fejléc/lábléc logója a src/ui/brand.ts-ből jön (ADR-0236)",
-  },
   "src/console/views.ts": {
     values: ["#1fb6d6", "#e5484d", "#d29922", "#2fa96b", "#5a6d82"],
     reason: "Leaflet szín-tükrök (SVG-attr, var() nem oldódik fel; a citui.css szemantikus tokenjeivel szinkronban tartandó)",

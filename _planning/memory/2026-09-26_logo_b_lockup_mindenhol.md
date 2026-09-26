@@ -34,6 +34,7 @@
 
 ## Nyitott
 - **Számla-logó feltöltése** a Számlázz.hu-ba (tulaj).
-- **A citoviso.com hero-illusztrációja** (`.visual-core`, nagy fehér C, beljebb álló play) — nem volt a tervkörben;
-  az őr névvel engedi. E4-re igazítása tulajdonosi kérdés.
+- ~~A citoviso.com hero-illusztrációja~~ — KÉSZ ugyanaznap (tulaj: „igen javítsd”): `heroMarkSvg()`, E4-geometria
+  fehér ívvel, világos-E4 szemmel, navy playjel a cián gömbön. A telefonos nézetben a „Megtalálnak a Google-ön” kártya
+  a jel jobb szélét takarja — ez a régi rajzon is így volt (előtte/utána kép), elrendezési kérdés, nem a jelé.
 - Élesítés: NINCS (a nagy deployjal megy).

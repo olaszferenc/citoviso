@@ -42,7 +42,10 @@ logo használva és lecserélni mindenhol olyan logóra ahol a C betű a névben
 - A C-ív középpontja NEM a doboz közepe (x≈55,94): a 12..106 kivágás a C bal szélét laposra vágta (az 1806 px-es
   számla-renderen látszott, a kis méretű mockon nem) → `MARK_VIEWBOX = "7.5 12 95 96"` + ②b analitikus próba.
 
-### Nyitva
+### Kiegészítés (2026-09-26, ugyanaznap) — a citoviso.com hero-illusztrációja is E4
 
-- A citoviso.com hero-illusztrációja (`.visual-core`, nagy fehér C a cián gömbön, beljebb álló play) nem fejléc-logó,
-  a tervkörben nem szerepelt — az őr névvel engedi (`ARC_ALLOW`); E4-re igazítása tulajdonosi kérdés.
+A tulaj: *„igen javítsd”*. A nagy jel a cián gömbön (`.visual-core`) ugyanabból a forrásból jön
+(`heroMarkSvg()`, a szerver a `<!--CIT_HERO_MARK-->` jelölőbe tölti): E4-geometria, átszínezve arra
+az egy felületre, ahol a márka-cián a HÁTTÉR — fehér ív, a világos E4 szeme, navy play (cián ív és
+play a gömbbe olvadna). A teljes 120-as viewBox marad (a C ~102 px, mint a régi rajzé). Az őr
+névvel adott kivétele (`ARC_ALLOW`) és a token-lint `public/index.html` kivétele megszűnt.

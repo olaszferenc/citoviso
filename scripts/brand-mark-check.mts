@@ -38,10 +38,7 @@ const read = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 const C_ARC = /A\s*\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+0\s+1\s+0\s/;
 const RETIRED = /\b(?:mark-gradient|lockup-gradient|mark-mono|lockup-mono)\.svg\b/;
 /** Named exceptions — each with the reason it is not a logo instance. */
-const ARC_ALLOW: Record<string, string> = {
-  "public/index.html":
-    "a hero ILLUSZTRÁCIÓ (nagy fehér C a cián gömbön, `.visual-core`) — nem fejléc-logó; a tulaj kérdése nyitott (ADR-0236)",
-};
+const ARC_ALLOW: Record<string, string> = {};
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(path.join(ROOT, dir))) {
     const rel = path.join(dir, e);
@@ -113,10 +110,12 @@ const WIRED: Array<[string, RegExp, string]> = [
   ["src/server/adminViews.ts", /const LOGO = lockup\(/, "ügyfél-belépő lapok"],
   ["src/server/adminViews.ts", /const LOGO_MARK = markThemed\(/, "tulaj-admin keret (ikon)"],
   ["src/server/public.ts", /lockup\(\{ on: "dark"/, "főoldal fejléc + lábléc (sötét)"],
+  ["src/server/public.ts", /CIT_HERO_MARK[\s\S]{0,80}heroMarkSvg\(\)/, "főoldal hero-illusztráció (a cián gömbön)"],
 ];
 for (const [f, re, what] of WIRED) if (!re.test(read(f))) fail(`④ ${f}: ${what} — nem a közös forrásból`);
 const home = read("public/index.html");
 if ((home.match(/<!--CIT_BRAND-->/g) ?? []).length !== 2) fail("④ public/index.html: a fejléc+lábléc CIT_BRAND jelölője nem 2 db");
+if ((home.match(/<!--CIT_HERO_MARK-->/g) ?? []).length !== 1) fail("④ public/index.html: a hero CIT_HERO_MARK jelölője nem 1 db");
 
 // ── ⑤ seen in a browser ─────────────────────────────────────────────────────
 const CSS = read("public/assets/ui/citui.css") + read("public/assets/ui/citui-console.css");

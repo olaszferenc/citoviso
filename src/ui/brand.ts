@@ -106,3 +106,19 @@ export function lockup(o: LockupOpts): string {
     ? `<a class="${cls}" href="${o.href}">${inner}</a>`
     : `<span class="${cls}">${inner}</span>`;
 }
+
+/**
+ * The homepage hero illustration: the big mark on the CYAN sphere (`.visual-core`).
+ * Same E4 geometry (owner, 2026-09-26: "igen javítsd" — the old drawing had the play
+ * inside the C), recoloured for the one surface where the brand cyan is the BACKGROUND:
+ * a cyan arc and a cyan play would vanish into it, so the arc is white and the play navy;
+ * the eye is the light variant's (navy→cyan sphere with its highlight).
+ */
+export function heroMarkSvg(): string {
+  // The full 120 box, not the tight crop: in the 128 px slot that keeps the C at the
+  // old drawing's ~102 px, with the sphere's breathing room around it.
+  return markSvg("light")
+    .replace(`viewBox="${MARK_VIEWBOX}"`, 'viewBox="0 0 120 120"')
+    .replace('stroke="#1fb6d6"', 'stroke="#ffffff"')
+    .replace(/(<path d="M82 49 L82 71 L102 60 Z" fill=")#1fb6d6"/, '$1#0e2a47"');
+}

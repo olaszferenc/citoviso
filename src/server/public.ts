@@ -190,7 +190,7 @@ import { recordSiteVisit } from "../analytics/siteVisit.js";
 import { readPicks, resolvePicks, siteProgramPool } from "../events/picks.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
 import { messagePreview } from "../tenant/messagePreview.js";
-import { faviconSvg, lockup } from "../ui/brand.js";
+import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
 import {
   computeAnnual,
   formatPrice,
@@ -434,6 +434,8 @@ async function serveHomepage(
     /<!--CIT_BRAND-->[\s\S]*?<!--\/CIT_BRAND-->/g,
     () => lockup({ on: "dark", href: "#top", cls: "citui-lockup--lg" }),
   );
+  // The hero illustration: the same E4 mark, recoloured for the cyan sphere it sits on.
+  rendered = rendered.replace(/<!--CIT_HERO_MARK-->[\s\S]*?<!--\/CIT_HERO_MARK-->/, () => heroMarkSvg());
   rendered = await withAssetVersions(rendered);
   send(res, 200, rendered);
 }
