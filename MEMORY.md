@@ -39,6 +39,9 @@ tiszta az EREDETI mockokon; aurora X a fejléc alatt, brutalism 515 px, fullblee
 A (üzenet a mezőnél + ugrás) · B (két lépés) · C (ragadó összegző sáv); ② arch-frames/wordmark-grow: nincs CTA az első
 képernyőn (tervezői döntés); ③ a Laguna hero-fotó posterizált alsó fele (fotó-minőség kapu a hero-pontozóban, külön szál);
 ④ a mockon „Árajánlatot kérek” gomb vs. „amikor a vendége foglal” nyugta (ADR-0061 minta-őszinteség).
+**Utóellenőrzés (szülő session, 2026-09-26):** a masthead „Foglalás” 43 px-et mért brutalismon (13+sor-magasság+13 —
+a sor-magasság sablononként 17–19 px) → `min-height:44px` + inline-flex, MÉRVE 44 mind a 14 masthead-es sablonon
+(a másik 5-nek saját navja van); az őr a `.cit-mast-hot` < 44-et HIBÁ-nak veszi.
 ## Aktív feladat (legfrissebb szál, 2026-09-26 — Elek a LEAD szemével, TELEFONON)
 
 **📱 FK-009 — A KIKÜLDÖTT TERV ELSŐ MEGNYITÁSA TELEFONON, 19 stílus × 2 dev-lead — lokálban kész, NEM élesítve.**
