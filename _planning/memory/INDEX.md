@@ -13,6 +13,7 @@
 - [2026-09-26_mobil_vendeg_nezet_fk010.md](2026-09-26_mobil_vendeg_nezet_fk010.md) — 2026-09-26 — Mobil · Elek a VENDÉG szemével: a 19 stílus × 2 lead mockja telefonon (FK-010)
 - [2026-09-26_mobil_motor_fejlec_srcset.md](2026-09-26_mobil_motor_fejlec_srcset.md) — 2026-09-26 — Mobil · vendég-nézet 2: a FK-009 átadott tételei a mock-motorban (fejléc, Foglalás-sáv, Google-fotó méret, marquee) + egy lead 19 stílusa
 - [2026-09-26_mobil_minta_ar_fekvo.md](2026-09-26_mobil_minta_ar_fekvo.md) — 2026-09-26 — Minta-ár a mock foglalás-widgetjében + a két fekvő-tartású lelet a motorban
+- [2026-09-26_meg_nem_vett_modulok_oldalsav.md](2026-09-26_meg_nem_vett_modulok_oldalsav.md) — 2026-09-26 — Meg nem vett modulok az admin oldalsávban, + jellel (module-subnav ⑨)
 - [2026-09-26_logo_b_lockup_mindenhol.md](2026-09-26_logo_b_lockup_mindenhol.md) — 2026-09-26 — A logó mindenhol: a jel maga a C („B”), egy forrásból (ADR-0236)
 - [2026-09-26_elek_lead_telefonon.md](2026-09-26_elek_lead_telefonon.md) — 2026-09-26 — Elek a LEAD szemével, TELEFONON: a kiküldött terv első megnyitása (FK-009, 19 stílus × 2 lead)
 - [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában
