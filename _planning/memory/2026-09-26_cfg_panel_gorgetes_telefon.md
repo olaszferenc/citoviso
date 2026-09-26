@@ -30,7 +30,7 @@ S8 a fizetés-űrlap saját görgetése. A gesztus helye a panel SAJÁT geometri
 lábléc sáv), nem szelektor-magasságból — az A szál átszervezése után is értelmes.
 Piros önteszt: a javítás kivéve → S1 és S7 PIROS, S3/S6 zöld (390 + fekvő).
 
-## Fekvő fizetés — TULAJ DÖNTÖTT: egy oszlopban görög (ADR-XXXX)
+## Fekvő fizetés — TULAJ DÖNTÖTT: egy oszlopban görög (ADR-0243)
 Fekvő telefonon (844×390) a fizetés-lépésen a „Fizetek" a képernyő alatt volt, görgetéssel sem
 elérhető (űrlap-ablak ~24 px, a pipa-blokk rálógott) — régi hiba. ⚠️ Előbb egy koordinátor-session
 tévedésből tulaj-döntésként küldte be a „fekvőben is legyen egy oszlopban" javaslatot; a munka
@@ -55,6 +55,6 @@ szabványos, de ott nem mértem.
 ## Fájlok
 - `assets/runtime/cit-configurator.js`, `assets/runtime/cit-configurator.css`
 - `scripts/cfg-sheet-scroll-check.mts` (új), `hooks/pre-commit`
-- `_planning/decisions/XXXX-fekvo-telefonon-a-fizetes-lap-egy-oszlopban-gorog.md` (ADR-XXXX),
+- `_planning/decisions/XXXX-fekvo-telefonon-a-fizetes-lap-egy-oszlopban-gorog.md` (ADR-0243),
   `assets/design-refs/configurator/checkout-fullscreen/README.md` (② kivétel)
 - Képek/videók (gitignore-olt): `assets/design-refs/_drafts/cfg-sheet-scroll/`

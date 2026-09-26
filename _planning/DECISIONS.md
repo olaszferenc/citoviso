@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-fekvo-telefonon-a-fizetes-lap-egy-oszlopban-gorog.md) — Fekvő telefonon a fizetés-lap egy oszlopban görög (a checkout-fullscreen ② kivétele)
+- [ADR-0243](decisions/0243-fekvo-telefonon-a-fizetes-lap-egy-oszlopban.md) — Fekvő telefonon a fizetés-lap egy oszlopban görög (a checkout-fullscreen ② kivétele)
 - [ADR-0242](decisions/0242-itt-rendelheti-meg-a-lead-lap-rendelo-gombja.md) — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, és a Foglalás-sáv fölött ül
 - [ADR-0241](decisions/0241-elerhetoseg-a-tulaj-javitja-a-cimet-a-terkep.md) — Elérhetőség: a tulaj javítja a címet, a térkép-tűt, a telefont és az e-mailt
 - [ADR-0240](decisions/0240-rendeles-ket-lepesben-az-1-lepes-a-csomag.md) — Rendelés két lépésben: az 1. lépés a csomag-listáé, a pénzügyi döntés a „Tovább” után

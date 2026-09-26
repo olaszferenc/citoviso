@@ -2354,7 +2354,7 @@
   .cit-cfg-bgrid { grid-template-columns: 1fr 1fr; }
 }
 /* A SHORT viewport — a phone held sideways — pays in ONE scrolling column (owner's
-   decision, 2026-09-26, ADR-XXXX; overrides checkout-fullscreen ② "one view, no scroll" for this
+   decision, 2026-09-26, ADR-0243; overrides checkout-fullscreen ② "one view, no scroll" for this
    case only). Measured at 844×390: the pinned consents + pay block alone were taller
    than the screen, the form's scroll box shrank to ~24 px under them and "Fizetek" sat
    below the bottom edge, unreachable by any drag — sideways, nobody could pay. Same

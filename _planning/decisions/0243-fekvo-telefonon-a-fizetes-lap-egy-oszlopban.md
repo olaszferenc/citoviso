@@ -1,4 +1,4 @@
-## ADR-XXXX — Fekvő telefonon a fizetés-lap egy oszlopban görög (a checkout-fullscreen ② kivétele)
+## ADR-0243 — Fekvő telefonon a fizetés-lap egy oszlopban görög (a checkout-fullscreen ② kivétele)
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (tulaj, a „Fekvő fizetés” kérdésre: „Egy oszlopban görgessen”) · **Felülírja:** `assets/design-refs/configurator/checkout-fullscreen/README.md` ② — CSAK alacsony nézetre
 
