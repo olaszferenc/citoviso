@@ -34,6 +34,8 @@ A vázlatban **valós, mért adat** szerepel: a Balatonfüred 30 km-es körzeté
 - A számláló formátuma `N / 10`, és betelt állapotban kiemelt.
 
 ### ③ A sorrend a tenanté — ez a változat LÉTOKA
+> ⚠️ **MÓDOSÍTVA 2026-09-26 (ADR-XXXX):** alapból DÁTUM szerint rendez, a fel/le nyíl
+> kézi felülírás — lásd `../programajanlo-sajat/README.md` ③. A nyilak és a mentett sorrend maradnak.
 - A kiválasztott programok **fel/le mozgathatók**, és ez a sorrend megy ki a honlapra.
 - A legfelső kerül legelőre. A szélső elemeken a megfelelő nyíl **tiltott**.
 - ⛔ Ha a sorrend-vezérlés kikerül, a B változat elveszti az értelmét — akkor A vagy C

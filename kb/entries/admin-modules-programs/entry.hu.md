@@ -4,7 +4,7 @@ title: Automata heti programajánló — melyik 10 program legyen a honlapján
 audience: tenant
 category: modules
 anchors: admin.modules.programs
-updated: 2026-09-23
+updated: 2026-09-26
 ---
 
 Ez a modul minden héten összegyűjti a környéke programjait — fesztiválokat, falunapokat, vásárokat,
@@ -37,10 +37,35 @@ addig a képernyő ezt jelzi, és a honlapján még nem jelenik meg a szakasz.
 Telefonon a két lista két fülön van: a fülek feliratában lévő szám mutatja, hány program van az
 egyikben és a másikban.
 
-## A sorrend az Öné
+## Sorrend: alapból dátum szerint
 
-A kiválasztott programok mellett lévő nyilakkal (▲ ▼) mozgathatja őket fel és le. Ami legfelül van,
-az kerül a honlapján is legelőre.
+A kiválasztott programokat alapból dátum szerint soroljuk — minden újonnan felvett program a dátuma
+szerinti helyére kerül. A lista fölött ezt a **„dátum szerint”** felirat jelzi.
+
+Ha mást szeretne előre venni, a program melletti nyilakkal (▲ ▼) mozgathatja fel és le. Ettől kezdve
+az Ön sorrendje érvényes (a felirat: **„saját sorrend”**), és ami legfelül van, az kerül a honlapján is
+legelőre. A **„dátum szerint rendezem”** linkkel bármikor visszaállhat a dátum szerinti sorrendre.
+
+## Saját program felvétele
+
+Ha olyan programot ajánlana, amit mi nem találtunk — például a saját rendezvényét —, felveheti Ön is:
+
+1. Koppintson a **„Saját program hozzáadása”** sorra az „Az Ön oldalán” lista tetején (vagy a
+   **„Nincs a listán? Saját program”** sorra a javasolt programok alján).
+2. Írja be a program címét, és adja meg, mikor kezdődik. Ha több napos, a végét is.
+3. A **„Hol lesz?”** résznél hagyja a „Helyben” választást, ha a saját településén lesz; különben
+   válassza a **„Máshol”** lehetőséget, és írja be a település nevét.
+4. Ha van a programnak weboldala vagy Facebook-eseménye, a **„Webcím”** mezőbe beírhatja — nem
+   kötelező.
+5. Koppintson a **„Felveszem az oldalra”** gombra, majd a **„Mentés a honlapra”** gombra.
+
+A saját program is a 10 hely egyike. A listában **„Saját ajánlás”** jelölést kap, a honlapján pedig
+a forrás helyett az áll mellette, hogy a szállás ajánlja. Módosítani vagy törölni a program alatti
+**„szerkesztem”** gombbal tudja.
+
+A honlapon mindig a következő két hét programjai látszanak. Ha egy saját programot több héttel
+előre vesz fel, a képernyő megmondja, melyik naptól jelenik meg a honlapján. A lejárt saját programok
+— a többihez hasonlóan — maguktól lekerülnek.
 
 ## A cím átírása
 

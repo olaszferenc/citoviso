@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="hu" data-citui-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saját program a heti programajánlóban — A (jóváhagyva)</title>
+<style>
+  /* Tokens copied from public/assets/ui/citui.css (light :root + dark scope). */
+  :root{
+    --citui-navy-900:#0e2a47;--citui-navy-700:#203a59;--citui-cyan-500:#1fb6d6;--citui-cyan-300:#6fd8eb;--citui-white:#ffffff;
+    --citui-ink:#10243a;--citui-muted:#5a6d82;--citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+    --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+    --citui-ok-ink:#19733f;--citui-bad-ink:#b3262b;--citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;
+    --citui-bg:#ffffff;--citui-panel:#ffffff;--citui-field:#f6f7f8;--citui-hover:#f2f3f5;
+    --citui-accent-ink:#06131b;--citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+    --citui-radius-sm:14px;--citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,sans-serif;--citui-font-text:"Inter",system-ui,sans-serif;
+  }
+  [data-citui-theme="dark"]{
+    --citui-ink:#e6e9ef;--citui-muted:#8a93a3;--citui-surface:#12151c;--citui-surface-2:#1b1f29;
+    --citui-line:#262b37;--citui-line-strong:#343a48;
+    --citui-bg:#0f1116;--citui-panel:#151821;--citui-field:#1b1f29;--citui-hover:#1e2330;
+    --citui-ok:#3ddc97;--citui-warn:#f0b35a;--citui-bad:#ff7b7b;--citui-ok-soft:#14352a;
+    --citui-ok-ink:#4fe3a3;--citui-bad-ink:#ff8e8e;--citui-warn-ink:#f5c06b;--citui-link-ink:#4fd0ea;
+    --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+
+  /* Demo chrome (NOT product) */
+  .bar{position:relative;z-index:60;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;
+    background:var(--citui-navy-900);color:var(--citui-white)}
+  .bar b{font-size:12px;letter-spacing:.4px;margin-right:4px}
+  .bar .grp{display:flex;gap:4px;margin-right:10px}
+  .bar button{border:1px solid color-mix(in srgb,var(--citui-white) 28%,transparent);background:transparent;color:var(--citui-white);
+    padding:6px 11px;border-radius:var(--citui-radius-pill);font:600 12px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+  .vnote{max-width:1000px;margin:12px auto 0;padding:0 12px;font-size:.84rem;color:var(--citui-muted)}
+  .vnote b{color:var(--citui-ink)}
+  .stage{margin:10px auto 60px;container-type:inline-size;width:100%;max-width:1000px;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+
+  .adm-card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:16px;padding:20px}
+  .adm-card__head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .adm-card__head h2{margin:0;font:700 1.08rem/1.3 var(--citui-font-display)}
+  .adm-card__head svg{color:var(--citui-link-ink)}
+  .intro{font-size:.9rem;color:var(--citui-muted);margin:0 0 14px;line-height:1.55}
+  .intro b{color:var(--citui-ink)}
+
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tabs button{flex:1;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);
+    padding:9px 8px;font:700 .82rem/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer}
+  .tabs button.on{background:var(--citui-ink);border-color:var(--citui-ink);color:var(--citui-panel)}
+  .cols{display:grid;grid-template-columns:1fr;gap:16px}
+  .pane{min-width:0;display:flex;flex-direction:column}
+  .pane.hide{display:none}
+  @container (min-width:720px){
+    .tabs{display:none}
+    .cols{grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+    .pane.hide{display:flex}
+  }
+  .paneh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .paneh h3{margin:0;font:700 .92rem/1.3 var(--citui-font-display)}
+  .cnt{font-size:.8rem;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+  .ord{margin-left:auto;font-size:.76rem;color:var(--citui-muted)}
+  .lnk{border:0;background:none;padding:0;color:var(--citui-link-ink);font:600 .76rem/1.3 var(--citui-font-text);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+  .cnt.full{color:var(--citui-warn-ink);font-weight:700}
+  .box{border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:var(--citui-surface);padding:6px;flex:1;display:flex;flex-direction:column}
+  .box.sel{background:var(--citui-ok-soft);border-color:color-mix(in srgb,var(--citui-ok) 28%,transparent)}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:22px 12px;
+    text-align:center;color:var(--citui-muted);font-size:.84rem;min-height:120px}
+
+  .it{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--citui-panel);
+    border:1px solid var(--citui-line);border-radius:11px;padding:9px 10px;margin:5px 0}
+  .it.own{border-style:solid;border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+  .d{font:700 .72rem/1 var(--citui-font-display);color:var(--citui-link-ink);letter-spacing:.3px}
+  .n{font:600 .88rem/1.3 var(--citui-font-text);margin-top:3px;overflow-wrap:anywhere}
+  .m{font-size:.75rem;color:var(--citui-muted);margin-top:2px;overflow-wrap:anywhere}
+  .m a{color:var(--citui-link-ink);text-decoration:underline;text-underline-offset:2px}
+  .here{font-weight:700;color:var(--citui-ok-ink)}
+  .badge{display:inline-block;border-radius:6px;padding:1px 6px;font:700 .68rem/1.4 var(--citui-font-text);
+    background:var(--citui-accent-soft);color:var(--citui-link-ink)}
+  .later{margin-top:4px;font-size:.72rem;color:var(--citui-warn-ink)}
+  .acts{display:flex;gap:5px;align-items:center}
+  .ctrl{display:flex;flex-direction:column;gap:3px}
+  .ctrl button{width:28px;height:24px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:7px;
+    font:700 .8rem/1 var(--citui-font-text);color:var(--citui-ink);cursor:pointer;padding:0}
+  .ctrl button:disabled,.add:disabled{opacity:.3;cursor:not-allowed}
+  .add{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-cyan-500);background:var(--citui-panel);
+    color:var(--citui-link-ink);font:700 1.05rem/1 var(--citui-font-text);cursor:pointer;padding:0}
+  .rm{width:30px;height:30px;border-radius:50%;border:1px solid var(--citui-line-strong);background:var(--citui-panel);
+    color:var(--citui-muted);font:700 1rem/1 var(--citui-font-text);cursor:pointer;padding:0}
+  .pen{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:7px;padding:2px 8px;
+    font:600 .7rem/1.35 var(--citui-font-text);cursor:pointer;color:var(--citui-ink)}
+
+  /* The "new own program" entry points */
+  .newrow{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:5px 0;padding:11px 10px;
+    border:1.5px dashed color-mix(in srgb,var(--citui-cyan-500) 60%,transparent);border-radius:11px;background:transparent;
+    color:var(--citui-link-ink);font:700 .86rem/1.2 var(--citui-font-text);cursor:pointer}
+  .newrow--pool{margin-top:auto}
+  .newrow:disabled{opacity:.4;cursor:not-allowed}
+  .newbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--citui-cyan-500);background:transparent;
+    color:var(--citui-link-ink);border-radius:var(--citui-radius-pill);padding:8px 14px;font:700 .84rem/1 var(--citui-font-text);cursor:pointer}
+  .newbtn[hidden]{display:none}
+  .newbtn:disabled{opacity:.4;cursor:not-allowed}
+  .toprow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 12px}
+  .toprow .intro{margin:0;flex:1 1 320px}
+
+  /* Inline form (variant A) and dialog form (variant B) share the field styles */
+  .form{background:var(--citui-panel);border:1.5px solid var(--citui-cyan-500);border-radius:11px;padding:12px;margin:5px 0}
+  .fh{font:700 .8rem/1.3 var(--citui-font-display);color:var(--citui-link-ink);margin-bottom:8px;letter-spacing:.3px}
+  .f{display:block;margin-bottom:10px}
+  .f>span{display:block;font:600 .76rem/1.3 var(--citui-font-text);color:var(--citui-muted);margin-bottom:4px}
+  .f>span i{font-style:normal;font-weight:400}
+  .f input[type=text],.f input[type=date],.f input[type=url]{width:100%;font:16px/1.3 var(--citui-font-text);color:var(--citui-ink);
+    background:var(--citui-field);border:1px solid var(--citui-line-strong);border-radius:9px;padding:9px 10px;min-height:44px}
+  .f input:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .f input.bad{border-color:var(--citui-bad)}
+  .dates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .f input{min-width:0;max-width:100%}
+  @container (max-width:480px){ .dates{grid-template-columns:minmax(0,1fr);gap:0} }
+  .seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .seg label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);
+    padding:7px 12px;font-size:.84rem;cursor:pointer;min-height:36px}
+  .seg label:has(input:checked){border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+  .seg input{margin:0}
+  .err{font-size:.76rem;color:var(--citui-bad-ink);margin-top:4px}
+  .err[hidden],.hint[hidden]{display:none}
+  .hint{font-size:.74rem;color:var(--citui-muted);margin-top:4px}
+  .fbtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+  .btn{border:0;border-radius:var(--citui-radius-pill);padding:11px 18px;font:700 .88rem/1 var(--citui-font-text);cursor:pointer;min-height:40px}
+  .btn--primary{background:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+  .btn--primary:disabled{opacity:.45;cursor:not-allowed}
+  .btn--ghost{background:transparent;color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
+  .btn--del{background:transparent;color:var(--citui-bad-ink);border:0;margin-right:auto;padding-left:4px}
+
+  /* Variant B dialog: bottom sheet on the phone stage, centred dialog on desktop */
+  .ovl{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,var(--citui-navy-900) 55%,transparent);display:flex;align-items:center;justify-content:center;padding:16px}
+  .ovl[hidden]{display:none}
+  .sheet{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:16px;width:100%;max-width:680px;max-height:calc(100vh - 32px);overflow:auto;padding:18px}
+  .ovl.m{align-items:flex-end;padding:0}
+  .ovl.m .sheet{max-width:390px;border-radius:16px 16px 0 0;max-height:88vh}
+  .sheet h3{margin:0 0 4px;font:700 1rem/1.3 var(--citui-font-display)}
+  .sheet .sub{margin:0 0 14px;font-size:.84rem;color:var(--citui-muted)}
+  .sgrid{display:grid;grid-template-columns:1fr;gap:14px}
+  .ovl:not(.m) .sgrid{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+  .prev{background:var(--citui-surface-2);border-radius:11px;padding:12px}
+  .prev .ph{font:700 .72rem/1.3 var(--citui-font-display);color:var(--citui-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px}
+  .pv{border-left:3px solid var(--citui-cyan-500);padding:4px 0 4px 10px}
+  .pv .d{font-size:.78rem}
+  .pv .n{font-size:.95rem;overflow-wrap:break-word;hyphens:manual}
+  .pv .n.ph0{color:var(--citui-muted);font-weight:400;font-style:italic}
+
+  .full-msg{background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));border:1px solid color-mix(in srgb,var(--citui-warn) 45%,transparent);
+    border-radius:11px;padding:9px 11px;font:700 .8rem/1.4 var(--citui-font-text);color:var(--citui-warn-ink);margin-bottom:8px}
+  .full-msg[hidden],.saved[hidden]{display:none}
+  .auto{margin:0 0 10px;font-size:.84rem;color:var(--citui-muted)}
+  .foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)}
+  .sp{flex:1}
+  .saved{display:inline-flex;align-items:center;gap:6px;color:var(--citui-ok-ink);font-weight:700;font-size:.88rem}
+  .refresh{margin:14px 0 0;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:11px 13px;font-size:.82rem;color:var(--citui-muted);line-height:1.5}
+  .refresh b{color:var(--citui-ink)}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>SAJÁT PROGRAM</b>
+  <div class="grp"><button data-v="A" class="on">A · üres kártya a listában</button><button data-v="B">B · űrlap-ablak előnézettel</button></div>
+  <div class="grp"><button data-sz="m">Mobil 390px</button><button data-sz="d">Asztali</button></div>
+  <div class="grp"><button data-th="dark" class="on">Sötét</button><button data-th="light">Világos</button></div>
+</div>
+<p class="vnote" id="vnote"></p>
+
+<div class="stage" id="stage">
+  <div class="adm-card" id="card">
+    <div class="adm-card__head">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+      <h2>Automata heti programajánló</h2>
+    </div>
+    <div class="toprow">
+      <p class="intro">A héten összegyűjtött programokból válassza ki, <b>melyik 10 jelenjen meg a honlapján</b>. Alapból dátum szerint soroljuk őket; a nyilakkal Ön is átrendezheti — ami felül van, az kerül legelőre. <span id="introOwn"></span></p>
+      <button type="button" class="newbtn" id="newB" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        Saját program
+      </button>
+    </div>
+    <div class="tabs"><button id="tp" class="on">Javasolt (<span id="np">0</span>)</button><button id="ts">Az Ön oldalán (<span id="ns">0</span>)</button></div>
+    <p class="auto" id="auto"></p>
+    <div class="full-msg" id="full" hidden>Betelt a 10 hely. Vegyen le egyet, ha mást szeretne felvenni.</div>
+    <div class="cols">
+      <div class="pane" id="panePool"><div class="paneh"><h3>Javasolt programok</h3><span class="cnt" id="cPool"></span></div><div class="box" id="pool"></div></div>
+      <div class="pane hide" id="paneSel"><div class="paneh"><h3>Az Ön oldalán</h3><span class="cnt" id="cSel"></span><span class="ord" id="ord"></span></div><div class="box sel" id="sel"></div></div>
+    </div>
+    <div class="foot"><span class="sp"></span>
+      <span class="saved" id="saved" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5L20 7"/></svg> Mentve</span>
+      <button class="btn btn--primary" id="save" disabled>Mentés a honlapra</button>
+    </div>
+    <p class="refresh"><b>Következő frissítés:</b> hétfő reggel. Az Ön választása és sorrendje megmarad; a lejárt programok — a sajátjai is — maguktól lekerülnek a honlapjáról.</p>
+  </div>
+</div>
+
+<div class="ovl" id="ovl" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+  <h3 id="shT">Saját program</h3>
+  <p class="sub">Olyan program, amit mi nem találtunk: a saját rendezvénye, vagy amiről Ön tud. A honlapon ugyanúgy jelenik meg, mint a többi.</p>
+  <div class="sgrid"><div id="shForm"></div>
+    <div class="prev"><div class="ph">Így jelenik meg a honlapján</div><div class="pv" id="pv"></div></div></div>
+</div></div>
+
+<script>
+// Real data from the Camping Carina (Balatongyörök) picker, 2026-09-26 screenshot.
+const TODAY = "2026-09-26", OWN = "Balatongyörök", MAX = 10, WINDOW = 14, AHEAD = 90, SPAN = 31;
+const POOL = [
+  ["2026-09-26",null,"Gyerek szüret","Badacsonytomaj",13,"https://balatonnaptar.hu/"],
+  ["2026-09-26",null,"Családi gasztrokert kulturális programokkal","Káptalantóti",16,"https://balatonnaptar.hu/"],
+  ["2026-09-27",null,"XV. Családi Futónap","Fonyód",15,"https://fonyod.hu/"],
+  ["2026-10-01",null,"Miért szép? - Interaktív verses est Simándi Péterrel","Balatongyörök",null,"https://balatongyorok.hu/"],
+  ["2026-10-04",null,"Vezetett túra a Szent György-hegyen","Kisapáti",13,"https://visitbalaton365.hu/"],
+  ["2026-10-06",null,"Nemzeti Gyásznap – Aradi vértanúk emléknapja","Fonyód",15,"https://fonyod.hu/"],
+  ["2026-10-07",null,"Széchenyi Programiroda","Fonyód",15,"https://fonyod.hu/"],
+  ["2026-09-25","2026-09-27","Tapolcai Pisztráng és Borfesztivál","Tapolca",15,"https://csodalatosbalaton.hu/"],
+  ["2026-09-26",null,"XII. Természetgyógyász Nap","Keszthely",8,"https://balatonnaptar.hu/"],
+  ["2026-09-26",null,"Őszre főzve – Balaton, lecsó, őszi lassulás","Balatongyörök",null,"https://balatongyorok.hu/"],
+  ["2026-09-26",null,"Meseösvény átadó túrák","Fonyód",15,"https://fonyod.hu/"],
+  ["2026-09-27",null,"Gyalogló túra a balatongyöröki települési értékek mentén","Balatongyörök",null,"https://balatongyorok.hu/"],
+  ["2026-10-03",null,"Balatonlellei Murci Gasztrofesztivál 2026","Balatonlelle",27,"https://welovebalaton.hu/"],
+  ["2026-10-03",null,"Boldog születésnapot! Avagy hatan pizsamában","Balatonboglár",23,"https://utazzitthon.hu/"],
+  ["2026-10-01",null,"Idősek havi nyitóvacsora – Nemes Tibor","Fonyód",15,"https://fonyod.hu/"],
+].map((r,i)=>({id:"e"+i,start:r[0],end:r[1],name:r[2],settlement:r[3],km:r[4],url:r[5]}));
+const byId = {}; POOL.forEach(e=>byId[e.id]=e);
+let sel = POOL.slice(7).map(e=>e.id);   // 8 already picked, like the screenshot's 9/10 minus one
+let order = "date";                     // owner ruling 2026-09-26: date by default, arrows = manual override
+function byDate(a,b){ const x=byId[a], y=byId[b]; return x.start.localeCompare(y.start) || (x.end||x.start).localeCompare(y.end||y.start) || (x.km??0)-(y.km??0); }
+function settle(){ if(order==="date") sel.sort(byDate); }
+settle();
+let seq = 0, variant = "A", editing = null /* id being edited inline (A) or in dialog (B) */, draft = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const fmt = new Intl.DateTimeFormat("hu",{month:"short",day:"numeric",timeZone:"UTC"});
+const day = s => fmt.format(new Date(s+"T12:00:00Z"));
+const when = e => e.end && e.end!==e.start ? day(e.start)+" – "+day(e.end) : day(e.start);
+const addDays = (s,n) => { const d=new Date(s+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
+function host(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(_){ return ""; } }
+const ICON = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>';
+const PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>';
+
+/* ── The rules a custom program obeys (the real code must do the SAME) ──
+   title: whitespace-collapsed, 1..120 chars · start: required, today..today+90 ·
+   end: optional, >= start, span <= 31 days (the gatherer's own cap, ADR-0214) ·
+   place: "Helyben" (the tenant's own settlement) or a typed name · link: optional,
+   https:// added when missing, must have a dotted host, http(s) only. */
+function normUrl(v){
+  v = v.trim(); if(!v) return {ok:true,url:""};
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = "https://"+v;
+  try{ const u = new URL(v); if(!/^https?:$/.test(u.protocol) || !/\.[a-z]{2,}$/i.test(u.hostname)) throw 0; return {ok:true,url:u.href}; }
+  catch(_){ return {ok:false}; }
+}
+function validate(d){
+  const e = {}; const t = d.title.replace(/\s+/g," ").trim();
+  if(!t) e.title = "Adjon címet a programnak.";
+  else if(t.length>120) e.title = "Legfeljebb 120 karakter.";
+  if(!d.start) e.start = "Adja meg, mikor lesz.";
+  else if(d.start < TODAY) e.start = "Ez a nap már elmúlt.";
+  else if(d.start > addDays(TODAY,AHEAD)) e.start = "Legfeljebb 90 nappal előre vehet fel programot.";
+  if(d.end){ if(d.start && d.end < d.start) e.end = "A vége nem lehet a kezdete előtt.";
+             else if(d.start && d.end > addDays(d.start,SPAN)) e.end = "Legfeljebb 31 napos program lehet."; }
+  if(d.placeMode==="other" && !d.place.trim()) e.place = "Írja be a település nevét.";
+  const u = normUrl(d.url); if(!u.ok) e.url = "Ez nem webcím. Például: facebook.com/…";
+  return {errors:e, clean:{title:t,start:d.start,end:d.end && d.end!==d.start ? d.end : null,
+    settlement: d.placeMode==="here" ? OWN : d.place.replace(/\s+/g," ").trim(), km: d.placeMode==="here" ? null : undefined,
+    url: u.ok ? u.url : "", own:true}};
+}
+function laterNote(e){ const from = addDays(e.start,-WINDOW+1); return e.start > addDays(TODAY,WINDOW-1) ? "Megjelenik a honlapon: "+day(from)+" (a blokk mindig a következő két hetet mutatja)." : ""; }
+
+function meta(e, where){
+  const place = e.km===null ? '<span class="here">Helyben</span>' : esc(e.settlement)+(e.km!==undefined?" · "+e.km+" km":"");
+  const src = e.own
+    ? '<span class="badge">Saját ajánlás</span>'+(e.url?' · <a href="'+esc(e.url)+'" target="_blank" rel="noopener nofollow">'+esc(host(e.url))+'</a>':"")
+    : '<a href="'+esc(e.url)+'" target="_blank" rel="noopener nofollow">'+esc(host(e.url))+'</a>';
+  const base = e.km===null ? esc(e.settlement)+" · "+place : place;
+  return base+" · "+src+(where==="sel" ? ' · <button type="button" class="pen" data-act="'+(e.own?"editown":"edit")+'" data-id="'+e.id+'">'+(e.own?"szerkesztem":"átírom")+'</button>' : "");
+}
+function item(e, where, i){
+  const ctrl = where==="pool"
+    ? '<button type="button" class="add" data-act="add" data-id="'+e.id+'" aria-label="Felveszem: '+esc(e.name)+'"'+(sel.length>=MAX?" disabled":"")+'>+</button>'
+    : '<div class="ctrl"><button type="button" data-act="up" data-id="'+e.id+'" aria-label="Feljebb"'+(i===0?" disabled":"")+'>&#9650;</button>'
+      +'<button type="button" data-act="down" data-id="'+e.id+'" aria-label="Lejjebb"'+(i===sel.length-1?" disabled":"")+'>&#9660;</button></div>'
+      +'<button type="button" class="rm" data-act="remove" data-id="'+e.id+'" aria-label="Leveszem: '+esc(e.name)+'">&times;</button>';
+  const later = where==="sel" && e.own ? laterNote(e) : "";
+  return '<div class="it'+(e.own?" own":"")+'" data-item="'+e.id+'"><div><div class="d">'+esc(when(e))+'</div><div class="n">'+esc(e.name)+'</div>'
+    +'<div class="m">'+meta(e,where)+'</div>'+(later?'<div class="later">'+esc(later)+'</div>':"")+'</div><div class="acts">'+ctrl+'</div></div>';
+}
+
+/* One form markup for both variants; `inline` = variant A card */
+function formHTML(d, inline){
+  const isNew = !byId[d.id];
+  return (inline ? '<div class="form" data-form="'+d.id+'"><div class="fh">'+(isNew?"ÚJ SAJÁT PROGRAM":"SAJÁT PROGRAM SZERKESZTÉSE")+'</div>' : '<div data-form="'+d.id+'">')
+   +'<label class="f"><span>Cím</span><input type="text" name="title" maxlength="140" value="'+esc(d.title)+'" placeholder="pl. Borkóstoló a teraszunkon"><div class="err" data-err="title" hidden></div></label>'
+   +'<div class="dates"><label class="f"><span>Kezdete</span><input type="date" name="start" min="'+TODAY+'" value="'+esc(d.start)+'"><div class="err" data-err="start" hidden></div></label>'
+   +'<label class="f"><span>Vége <i>(ha több napos)</i></span><input type="date" name="end" min="'+TODAY+'" value="'+esc(d.end||"")+'"><div class="err" data-err="end" hidden></div></label></div>'
+   +'<div class="f"><span>Hol lesz?</span><div class="seg">'
+   +'<label><input type="radio" name="pm'+d.id+'" value="here"'+(d.placeMode==="here"?" checked":"")+'> Helyben ('+OWN+')</label>'
+   +'<label><input type="radio" name="pm'+d.id+'" value="other"'+(d.placeMode==="other"?" checked":"")+'> Máshol</label></div>'
+   +'<input type="text" name="place" value="'+esc(d.place)+'" placeholder="Település neve"'+(d.placeMode==="here"?" hidden":"")+'><div class="err" data-err="place" hidden></div></div>'
+   +'<label class="f"><span>Webcím <i>(nem kötelező — pl. a Facebook-esemény)</i></span><input type="url" name="url" inputmode="url" value="'+esc(d.url)+'" placeholder="facebook.com/events/…"><div class="err" data-err="url" hidden></div><div class="hint" data-hint="url" hidden></div></label>'
+   +'<div class="hint" data-hint="later" hidden></div>'
+   +'<div class="fbtns">'+(!isNew?'<button type="button" class="btn btn--del" data-act="fdel" data-id="'+d.id+'">Törlöm</button>':"")
+   +'<button type="button" class="btn btn--ghost" data-act="fcancel" data-id="'+d.id+'">Mégse</button>'
+   +'<button type="button" class="btn btn--primary" data-act="fok" data-id="'+d.id+'">'+(isNew?"Felveszem az oldalra":"Kész")+'</button></div></div>';
+}
+function readForm(root){
+  const q = n => root.querySelector('[name="'+n+'"]');
+  const pm = root.querySelector('input[type=radio]:checked');
+  return {id:root.dataset.form,title:q("title").value,start:q("start").value,end:q("end").value,
+    placeMode:pm?pm.value:"here",place:q("place").value,url:q("url").value};
+}
+function showErrors(root, errors, touchedAll){
+  root.querySelectorAll("[data-err]").forEach(el=>{ const k=el.dataset.err, m=errors[k];
+    const inp = root.querySelector('[name="'+k+'"]'); const touched = touchedAll || (inp && inp.dataset.t);
+    el.hidden = !(m && touched); el.textContent = m||""; if(inp) inp.classList.toggle("bad", !!(m && touched)); });
+  const d = readForm(root), u = normUrl(d.url), h = root.querySelector('[data-hint=url]');
+  h.hidden = !(u.ok && u.url && d.url.trim() && !/^https?:/i.test(d.url.trim())); h.textContent = "Így mentjük: "+u.url;
+  const v = validate(d), lh = root.querySelector('[data-hint=later]'), ln = v.clean.start && !errors.start ? laterNote(v.clean) : "";
+  lh.hidden = !ln; lh.textContent = ln;
+}
+function preview(d){
+  const v = validate(d).clean, pv = $("pv"); if(!pv) return;
+  const place = d.placeMode==="here" ? OWN+" · Helyben" : (v.settlement||"…");
+  pv.innerHTML = '<div class="d">'+esc(v.start?when({start:v.start,end:v.end}):"dátum")+'</div>'
+    +'<div class="n'+(v.title?"":" ph0")+'">'+esc(v.title||"A program címe")+'</div>'
+    +'<div class="m">'+esc(place)+(v.url?' · <a href="'+esc(v.url)+'" target="_blank" rel="noopener nofollow">'+esc(host(v.url))+'</a>':"")+'</div>';
+}
+
+function render(){
+  const pool = POOL.filter(e=>!e.own && sel.indexOf(e.id)<0);
+  const full = sel.length >= MAX || (editing && !byId[editing] && sel.length+1 > MAX);
+  $("pool").innerHTML = (pool.length ? pool.map(e=>item(e,"pool")).join("") : '<div class="empty">'+ICON+'<span>Minden javasolt programot felvett.</span></div>')
+    + (variant==="A" ? '<button type="button" class="newrow newrow--pool" data-act="new"'+(sel.length>=MAX||editing?" disabled":"")+'>'+PLUS+' Nincs a listán? Saját program</button>' : "");
+  let s = sel.map((id,i)=> (variant==="A" && editing===id) ? formHTML(draft,true) : item(byId[id],"sel",i)).join("");
+  if(variant==="A"){
+    const newForm = editing && !byId[editing] ? formHTML(draft,true) : "";
+    s = (newForm || '<button type="button" class="newrow" data-act="new"'+(sel.length>=MAX||editing?" disabled":"")+'>'+PLUS+' Saját program hozzáadása</button>') + s;
+  }
+  $("sel").innerHTML = s || '<div class="empty">'+ICON+'<span>Még nincs kiválasztva program.</span></div>';
+  $("cPool").textContent = pool.length+" program";
+  const c=$("cSel"); c.textContent = sel.length+" / "+MAX; c.classList.toggle("full", sel.length>=MAX);
+  $("ord").innerHTML = order==="date" ? "dátum szerint" : 'saját sorrend · <button type="button" class="lnk" data-act="resort">dátum szerint rendezem</button>';
+  $("np").textContent = pool.length; $("ns").textContent = sel.length;
+  $("full").hidden = sel.length < MAX;
+  $("auto").hidden = sel.length >= MAX; $("auto").textContent = "A szabad "+(MAX-sel.length)+" helyre automatikusan a legközelebbi programok kerülnek, amíg Ön nem választ.";
+  $("newB").hidden = variant!=="B"; $("newB").disabled = sel.length>=MAX;
+  $("introOwn").textContent = "";
+  $("save").disabled = JSON.stringify([order,sel.map(id=>byId[id])])===initialSnap || !!editing;
+  if(!$("save").disabled) $("saved").hidden = true;
+  const f = document.querySelector("#sel [data-form]"); if(f){ showErrors(f, validate(readForm(f)).errors, false); }
+}
+let initialSnap = JSON.stringify([order,sel.map(id=>byId[id])]);
+
+function openNew(){
+  if(sel.length>=MAX) return;
+  draft = {id:"own"+(++seq),title:"",start:"",end:"",placeMode:"here",place:"",url:""}; editing = draft.id;
+  if(variant==="B") openSheet(); else { showTab("sel"); render(); const t=document.querySelector('#sel [data-form] [name=title]'); if(t) t.focus(); }
+}
+function openEdit(id){
+  const e = byId[id];
+  draft = {id,title:e.name,start:e.start,end:e.end||"",placeMode:e.km===null?"here":"other",place:e.km===null?"":e.settlement,url:e.url};
+  editing = id;
+  if(variant==="B") openSheet(); else render();
+}
+function openSheet(){
+  $("ovl").hidden = false; $("ovl").classList.toggle("m", $("stage").classList.contains("m"));
+  $("shForm").innerHTML = formHTML(draft,false); const f=$("shForm").firstChild; showErrors(f, validate(readForm(f)).errors, false); preview(draft);
+  f.querySelector("[name=title]").focus(); render();
+}
+function closeForm(){ editing = null; draft = null; $("ovl").hidden = true; $("shForm").innerHTML = ""; render(); }
+function commit(root){
+  root.querySelectorAll("input").forEach(i=>i.dataset.t="1");
+  const d = readForm(root), v = validate(d);
+  showErrors(root, v.errors, true);
+  if(Object.keys(v.errors).length){ const first = root.querySelector(".bad"); if(first) first.focus(); return; }
+  const isNew = !byId[d.id];
+  byId[d.id] = {id:d.id,start:v.clean.start,end:v.clean.end,name:v.clean.title,settlement:v.clean.settlement,km:v.clean.km,url:v.clean.url,own:true};
+  if(isNew) sel.push(d.id);
+  settle();   // date mode: it lands where its date puts it (also after a date edit)
+  closeForm(); showTab("sel");
+}
+function showTab(t){
+  $("panePool").classList.toggle("hide", t!=="pool"); $("paneSel").classList.toggle("hide", t!=="sel");
+  $("tp").classList.toggle("on", t==="pool"); $("ts").classList.toggle("on", t==="sel");
+}
+
+document.addEventListener("click", ev=>{
+  const b = ev.target.closest("button"); if(!b) return;
+  if(b.dataset.v){ variant=b.dataset.v; document.querySelectorAll("[data-v]").forEach(x=>x.classList.toggle("on",x===b)); closeForm(); note(); return; }
+  if(b.dataset.sz){ setSize(b.dataset.sz); return; }
+  if(b.dataset.th){ document.documentElement.setAttribute("data-citui-theme",b.dataset.th); document.querySelectorAll("[data-th]").forEach(x=>x.classList.toggle("on",x===b)); return; }
+  if(b.id==="tp") return showTab("pool"); if(b.id==="ts") return showTab("sel");
+  if(b.id==="newB") return openNew();
+  if(b.id==="save"){ initialSnap = JSON.stringify([order,sel.map(id=>byId[id])]); $("saved").hidden=false; render(); $("saved").hidden=false; return; }
+  const a = b.dataset.act, id = b.dataset.id; if(!a) return;
+  if(a==="new") return openNew();
+  if(a==="fok") return commit(b.closest("[data-form]"));
+  if(a==="fcancel") return closeForm();
+  if(a==="fdel"){ sel.splice(sel.indexOf(id),1); delete byId[id]; return closeForm(); }
+  if(a==="editown") return openEdit(id);
+  if(a==="edit"){ const n=b.closest("[data-item]").querySelector(".n"); if(n.isContentEditable){ n.contentEditable="false"; byId[id].name=n.textContent.replace(/\s+/g," ").trim()||byId[id].name; render(); } else { n.contentEditable="true"; b.textContent="kész"; n.focus(); } return; }
+  const k = sel.indexOf(id);
+  if(a==="resort"){ order="date"; settle(); render(); return; }
+  if(a==="add" && k<0 && sel.length<MAX){ sel.push(id); settle(); }
+  else if(a==="remove" && k>=0){ sel.splice(k,1); if(byId[id].own) delete byId[id]; }
+  else if(a==="up" && k>0){ sel[k]=sel[k-1]; sel[k-1]=id; order="manual"; }
+  else if(a==="down" && k>=0 && k<sel.length-1){ sel[k]=sel[k+1]; sel[k+1]=id; order="manual"; }
+  render();
+});
+document.addEventListener("input", ev=>{
+  const f = ev.target.closest("[data-form]"); if(!f) return;
+  if(ev.target.type==="radio"){ f.querySelector("[name=place]").hidden = ev.target.value==="here"; if(ev.target.value==="other") f.querySelector("[name=place]").focus(); }
+  const d = readForm(f); showErrors(f, validate(d).errors, false); if(variant==="B") preview(d);
+});
+document.addEventListener("change", ev=>{ if(ev.target.closest("[data-form]") && ev.target.name && ev.target.type!=="radio"){ ev.target.dataset.t="1"; const f=ev.target.closest("[data-form]"); showErrors(f, validate(readForm(f)).errors, false); } });
+document.addEventListener("focusout", ev=>{ if(ev.target.closest && ev.target.closest("[data-form]") && ev.target.name && ev.target.value){ ev.target.dataset.t="1"; const f=ev.target.closest("[data-form]"); showErrors(f, validate(readForm(f)).errors, false); } });
+document.addEventListener("keydown", ev=>{
+  if(ev.key==="Escape" && editing) closeForm();
+  if(ev.key==="Enter" && ev.target.closest && ev.target.closest("[data-form]") && ev.target.tagName==="INPUT"){ ev.preventDefault(); commit(ev.target.closest("[data-form]")); }
+});
+$("ovl").addEventListener("click", ev=>{ if(ev.target===$("ovl")) closeForm(); });
+
+function setSize(s){ $("stage").classList.toggle("m", s==="m"); document.querySelectorAll("[data-sz]").forEach(x=>x.classList.toggle("on",x.dataset.sz===s)); $("ovl").classList.toggle("m", s==="m"); }
+function note(){ $("vnote").innerHTML = variant==="A"
+  ? "<b>A — üres kártya a listában.</b> Az „Az Ön oldalán” lista tetején szaggatott „Saját program hozzáadása” sor, és a javasoltak alján egy „Nincs a listán? Saját program” sor (mobilon ez a fül nyílik először). Rákattintva az „Az Ön oldalán” lista tetején helyben nyílik egy üres kártya a mezőkkel. Mentés után ugyanolyan sor lesz, mint a többi, „Saját ajánlás” jelvénnyel — „szerkesztem” gombbal ugyanide nyílik vissza."
+  : "<b>B — űrlap-ablak előnézettel.</b> A kártya tetején mindig látható „+ Saját program” gomb (mobilon mindkét fülről elérhető). Mobilon alulról felcsúszó lap, asztalon középre nyíló ablak, mellette élő előnézet: így jelenik meg a honlapon."; }
+setSize(window.innerWidth < 720 ? "m" : "d"); note(); render();
+</script>
+</body>
+</html>

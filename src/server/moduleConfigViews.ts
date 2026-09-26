@@ -33,6 +33,8 @@ import { icAdmin as ic } from "../ui/icons.js";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
+import { OWN_AHEAD_DAYS, OWN_PLACE_MAX, OWN_TITLE_MAX, type OwnProgram } from "../events/ownPrograms.js";
+import { MAX_SPAN_DAYS, WINDOW_DAYS } from "../events/gates.js";
 import {
   AMENITY_CATALOG,
   AMENITY_CATEGORIES,
@@ -112,6 +114,41 @@ export const MODCFG_STYLE = `<style>
 .pa-refresh{margin:14px 0 0;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);
   padding:11px 13px;font-size:.82rem;color:var(--citui-muted);line-height:1.5}
 .pa-refresh b{color:var(--citui-ink)}
+/* ADR-XXXX — order line + the owner's own programs (contract programajanlo-sajat/) */
+.pa-ord{margin-left:auto;font-size:.76rem;color:var(--citui-muted);text-align:right}
+.pa-lnk{border:0;background:none;padding:0;color:var(--citui-link-ink);font:600 .76rem/1.3 var(--citui-font-text);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.pa-new{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:5px 0;padding:11px 10px;min-height:44px;
+  border:1.5px dashed color-mix(in srgb,var(--citui-cyan-500) 60%,transparent);border-radius:11px;background:transparent;
+  color:var(--citui-link-ink);font:700 .86rem/1.2 var(--citui-font-text);cursor:pointer}
+.pa-new:disabled{opacity:.4;cursor:not-allowed}
+.pa-new--pool{margin-top:auto}
+.pa-it.is-own{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent)}
+.pa-badge{display:inline-block;border-radius:6px;padding:1px 6px;font:700 .68rem/1.4 var(--citui-font-text);
+  background:var(--citui-accent-soft);color:var(--citui-link-ink)}
+.pa-later{margin-top:4px;font-size:.72rem;color:var(--citui-warn-ink)}
+.pa-form{background:var(--citui-panel);border:1.5px solid var(--citui-cyan-500);border-radius:11px;padding:12px;margin:5px 0}
+.pa-fh{font:700 .8rem/1.3 var(--citui-font-display);color:var(--citui-link-ink);margin-bottom:8px;letter-spacing:.3px;text-transform:uppercase}
+.pa-f{display:block;margin-bottom:10px}
+.pa-f>span:first-child{display:block;font:600 .76rem/1.3 var(--citui-font-text);color:var(--citui-muted);margin-bottom:4px}
+.pa-f>span:first-child i{font-style:normal;font-weight:400}
+.pa-f input[type=text],.pa-f input[type=date],.pa-f input[type=url]{width:100%;min-width:0;max-width:100%;font:16px/1.3 var(--citui-font-text);
+  color:var(--citui-ink);background:var(--citui-field);border:1px solid var(--citui-line-strong);border-radius:9px;padding:9px 10px;min-height:44px}
+.pa-f input:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+.pa-f input.is-bad{border-color:var(--citui-bad)}
+.pa-f input[hidden]{display:none}
+.pa-dates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+@container (max-width:480px){.pa-dates{grid-template-columns:minmax(0,1fr);gap:0}}
+.pa-seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.pa-seg label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);
+  padding:7px 12px;font-size:.84rem;cursor:pointer;min-height:40px;color:var(--citui-ink)}
+.pa-seg label:has(input:checked){border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.pa-seg input{margin:0}
+.pa-err{display:block;font-size:.76rem;color:var(--citui-bad-ink);margin-top:4px}
+.pa-hint{display:block;font-size:.74rem;color:var(--citui-muted);margin:0 0 6px}
+.pa-err[hidden],.pa-hint[hidden]{display:none}
+.pa-fbtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+.pa-del{background:transparent;color:var(--citui-bad-ink);border:0;margin-right:auto;padding-left:4px}
 .mcfg-back{display:inline-flex;align-items:center;gap:6px;color:var(--citui-muted);
   text-decoration:none;font-size:.92rem;margin-bottom:12px}
 .mcfg-back:hover{color:var(--citui-ink)}
@@ -2854,9 +2891,21 @@ export interface ProgramsEditorData {
     sourceUrl: string;
     sourceHost: string;
   }[];
-  /** The stored choice, in the tenant's order (contract ③). Ids whose program has
-   *  expired are already filtered out by the caller — they fell off by themselves. */
-  readonly picks: readonly { id: string; title?: string }[];
+  /** The stored choice, in the stored order (contract ③). Ids whose program has
+   *  expired are already filtered out by the caller — they fell off by themselves.
+   *  An `own` entry is the owner's own program (ADR-XXXX) with its resolved place. */
+  readonly picks: readonly (
+    | { id: string; title?: string }
+    | { id: string; own: OwnProgram; settlement: string; distanceKm: number | null; away: boolean }
+  )[];
+  /** ADR-XXXX: "date" (default) keeps the list in date order; "manual" = the arrows. */
+  readonly order?: "date" | "manual";
+  /** The tenant's own settlement — the "Helyben (…)" choice of the own-program card. */
+  readonly ownSettlement?: string;
+  /** The circle's settlements with their distance — the "Máshol" suggestions. */
+  readonly places?: readonly { name: string; km: number | null }[];
+  /** Budapest today (ISO) — the card's date rules count from it. */
+  readonly today?: string;
   readonly saved?: boolean;
 }
 
@@ -2891,13 +2940,50 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
     autoFill: T(lang, "A szabad {n} helyre automatikusan a legközelebbi programok kerülnek, amíg Ön nem választ."),
     noneThisWeek: T(lang, "Ezen a héten nem találtunk programot a környékén. Hétfő reggel újra keresünk."),
     emptySel: T(lang, "Még nincs kiválasztva program. Vegyen fel a javasoltak közül — legfeljebb 10-et."),
+    // ADR-XXXX — order and the owner's own programs (contract programajanlo-sajat/)
+    byDate: T(lang, "dátum szerint"),
+    manual: T(lang, "saját sorrend"),
+    resort: T(lang, "dátum szerint rendezem"),
+    newSel: T(lang, "Saját program hozzáadása"),
+    newPool: T(lang, "Nincs a listán? Saját program"),
+    ownBadge: T(lang, "Saját ajánlás"),
+    editOwn: T(lang, "szerkesztem"),
+    formNew: T(lang, "Új saját program"),
+    formEdit: T(lang, "Saját program szerkesztése"),
+    fTitle: T(lang, "Cím"),
+    fTitlePh: T(lang, "pl. Borkóstoló a teraszunkon"),
+    fStart: T(lang, "Kezdete"),
+    fEnd: T(lang, "Vége"),
+    fEndNote: T(lang, "(ha több napos)"),
+    fWhere: T(lang, "Hol lesz?"),
+    fHere: T(lang, "Helyben ({place})"),
+    fAway: T(lang, "Máshol"),
+    fPlacePh: T(lang, "Település neve"),
+    fUrl: T(lang, "Webcím"),
+    fUrlNote: T(lang, "(nem kötelező — pl. a Facebook-esemény)"),
+    fUrlPh: T(lang, "facebook.com/events/…"),
+    urlSaved: T(lang, "Így mentjük: {url}"),
+    later: T(lang, "Megjelenik a honlapon: {day} (a blokk mindig a következő két hetet mutatja)."),
+    del: T(lang, "Törlöm"),
+    cancel: T(lang, "Mégse"),
+    addOwn: T(lang, "Felveszem az oldalra"),
+    saveOwn: T(lang, "Kész"),
+    eTitle: T(lang, "Adjon címet a programnak."),
+    eTitleLong: T(lang, "Legfeljebb 120 karakter."),
+    eStart: T(lang, "Adja meg, mikor lesz."),
+    ePast: T(lang, "Ez a nap már elmúlt."),
+    eFar: T(lang, "Legfeljebb 90 nappal előre vehet fel programot."),
+    eEnd: T(lang, "A vége nem lehet a kezdete előtt."),
+    eSpan: T(lang, "Legfeljebb 31 napos program lehet."),
+    ePlace: T(lang, "Írja be a település nevét."),
+    eUrl: T(lang, "Ez nem webcím. Például: facebook.com/…"),
   };
   const empty = (t: string): string =>
     `<div class="pa-empty">${ic("bookings", 30)}<span>${esc(t)}</span></div>`;
   return (
     `<div class="adm-card pa" data-pa-max="${PROGRAMS_MAX}">` +
     head +
-    `<p class="adm-lead pa-intro">${T(lang, "A héten összegyűjtött programokból válassza ki, <b>melyik 10 jelenjen meg a honlapján</b>. A sorrend is az Öné — ami felül van, az kerül legelőre.")}</p>` +
+    `<p class="adm-lead pa-intro">${T(lang, "A héten összegyűjtött programokból válassza ki, <b>melyik 10 jelenjen meg a honlapján</b>. Alapból dátum szerint soroljuk őket; a nyilakkal Ön is átrendezheti — ami felül van, az kerül legelőre.")}</p>` +
     `<div class="pa-tabs" role="tablist">` +
     `<button type="button" class="is-on" data-pa-tab="pool" role="tab">${T(lang, "Javasolt")} (<span data-pa-n="pool">0</span>)</button>` +
     `<button type="button" data-pa-tab="sel" role="tab">${T(lang, "Az Ön oldalán")} (<span data-pa-n="sel">0</span>)</button>` +
@@ -2907,81 +2993,178 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
     `<div class="pa-cols">` +
     `<div class="pa-pane" data-pa-pane="pool"><div class="pa-paneh"><h3>${T(lang, "Javasolt programok")}</h3><span class="pa-c" data-pa-c="pool"></span></div>` +
     `<div class="pa-box" data-pa-list="pool">${empty(L.emptyPool)}</div></div>` +
-    `<div class="pa-pane is-hide" data-pa-pane="sel"><div class="pa-paneh"><h3>${T(lang, "Az Ön oldalán")}</h3><span class="pa-c" data-pa-c="sel"></span></div>` +
+    `<div class="pa-pane is-hide" data-pa-pane="sel"><div class="pa-paneh"><h3>${T(lang, "Az Ön oldalán")}</h3><span class="pa-c" data-pa-c="sel"></span><span class="pa-ord" data-pa-ord></span></div>` +
     `<div class="pa-box pa-box--sel" data-pa-list="sel">${empty(L.emptySel)}</div></div>` +
     `</div>` +
+    `<datalist id="pa-places">${(data.places ?? []).map((x) => `<option value="${esc(x.name)}"></option>`).join("")}</datalist>` +
     `<form method="POST" action="/admin/programs" class="pa-foot">` +
     `<input type="hidden" name="picks" value="">` +
+    `<input type="hidden" name="order" value="">` +
     `<span class="pa-sp"></span>` +
     `<span class="pa-saved"${data.saved ? "" : " hidden"}>${ic("check", 16)} ${T(lang, "Mentve")}</span>` +
     `<button class="citui-btn citui-btn--primary" type="submit" data-pa-save disabled>${T(lang, "Mentés a honlapra")}</button>` +
     `</form>` +
-    `<p class="pa-refresh"><b>${T(lang, "Következő frissítés:")}</b> ${T(lang, "hétfő reggel. Az Ön választása és sorrendje megmarad; a lejárt programok maguktól lekerülnek a honlapjáról.")}</p>` +
-    `<script type="application/json" data-pa-data>${j({ pool: data.pool, picks: data.picks, lang, L })}</script>` +
+    `<p class="pa-refresh"><b>${T(lang, "Következő frissítés:")}</b> ${T(lang, "hétfő reggel. Az Ön választása és sorrendje megmarad; a lejárt programok — a sajátjai is — maguktól lekerülnek a honlapjáról.")}</p>` +
+    `<script type="application/json" data-pa-data>${j({
+      pool: data.pool,
+      picks: data.picks,
+      order: data.order ?? "date",
+      own: data.ownSettlement ?? "",
+      places: data.places ?? [],
+      today: data.today ?? new Date().toISOString().slice(0, 10),
+      rules: { ahead: OWN_AHEAD_DAYS, span: MAX_SPAN_DAYS, window: WINDOW_DAYS, titleMax: OWN_TITLE_MAX, placeMax: OWN_PLACE_MAX },
+      lang,
+      L,
+    })}</script>` +
     `</div>` +
     programsEditorScript()
   );
 }
 
-/** The picker's behaviour. Plain ES5 in a string, like the other editors' scripts. */
+/**
+ * The picker's behaviour. Plain ES5-ish in a string, like the other editors' scripts.
+ * The own-program rules MIRROR src/events/ownPrograms.ts for instant feedback — the
+ * save route re-runs the real ones and drops whatever they refuse.
+ */
 function programsEditorScript(): string {
-  return (
-    `<script>(function(){` +
-    `var root=document.querySelector(".pa");if(!root)return;` +
-    `var D=JSON.parse(root.querySelector("[data-pa-data]").textContent),L=D.L,MAX=+root.dataset.paMax;` +
-    `var byId={};D.pool.forEach(function(e){byId[e.id]=e});` +
-    `var sel=[],titles={};D.picks.forEach(function(p){if(byId[p.id]&&sel.indexOf(p.id)<0){sel.push(p.id);if(p.title)titles[p.id]=p.title}});` +
-    `var initial=JSON.stringify(state());` +
-    `var fmt;try{fmt=new Intl.DateTimeFormat(D.lang,{month:"short",day:"numeric",timeZone:"UTC"})}catch(_){fmt=new Intl.DateTimeFormat("hu",{month:"short",day:"numeric",timeZone:"UTC"})}` +
-    `function day(s){return fmt.format(new Date(s+"T12:00:00Z"))}` +
-    `function when(e){return e.end?day(e.start)+" – "+day(e.end):day(e.start)}` +
-    `function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}` +
-    `function dist(e){return e.distanceKm==null?L.here:L.km.replace("{n}",e.distanceKm)}` +
-    `function state(){return sel.map(function(id){return titles[id]?{id:id,title:titles[id]}:{id:id}})}` +
-    `function item(e,where,i){var ctrl=where==="pool"` +
-    `?'<button type="button" class="pa-add" data-pa-act="add" data-id="'+e.id+'" title="'+esc(L.add)+'" aria-label="'+esc(L.add+": "+e.name)+'"'+(sel.length>=MAX?" disabled":"")+'>+</button>'` +
-    `:'<div class="pa-ctrl"><button type="button" data-pa-act="up" data-id="'+e.id+'" title="'+esc(L.up)+'" aria-label="'+esc(L.up)+'"'+(i===0?" disabled":"")+'>&#9650;</button>'` +
-    `+'<button type="button" data-pa-act="down" data-id="'+e.id+'" title="'+esc(L.down)+'" aria-label="'+esc(L.down)+'"'+(i===sel.length-1?" disabled":"")+'>&#9660;</button></div>'` +
-    `+'<button type="button" class="pa-rm" data-pa-act="remove" data-id="'+e.id+'" title="'+esc(L.remove)+'" aria-label="'+esc(L.remove+": "+e.name)+'">&times;</button>';` +
-    `var name=where==="sel"&&titles[e.id]?titles[e.id]:e.name;` +
-    `return '<div class="pa-it" data-pa-item="'+e.id+'"><div class="pa-body"><div class="pa-d">'+esc(when(e))+'</div>'` +
-    `+'<div class="pa-n" data-pa-name="'+where+'">'+esc(name)+'</div>'` +
-    `+'<div class="pa-m">'+esc(e.settlement)+' · <span class="pa-dist'+(e.distanceKm==null?" is-here":"")+'">'+esc(dist(e))+'</span> · '` +
-    `+'<a href="'+esc(e.sourceUrl)+'" target="_blank" rel="noopener nofollow">'+esc(e.sourceHost)+'</a>'` +
-    `+(where==="sel"?' · <button type="button" class="pa-pen" data-pa-act="edit" data-id="'+e.id+'">'+esc(L.edit)+'</button>':"")` +
-    `+'</div></div><div class="pa-acts">'+ctrl+'</div></div>'}` +
-    `var emptyIcon=root.querySelector(".pa-empty svg");emptyIcon=emptyIcon?emptyIcon.outerHTML:"";` +
-    `function render(){var pool=D.pool.filter(function(e){return sel.indexOf(e.id)<0});` +
-    `root.querySelector('[data-pa-list=pool]').innerHTML=pool.length?pool.map(function(e){return item(e,"pool")}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(D.pool.length?L.emptyPool:L.noneThisWeek)+"</span></div>";` +
-    `root.querySelector('[data-pa-list=sel]').innerHTML=sel.length?sel.map(function(id,i){return item(byId[id],"sel",i)}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(L.emptySel)+"</span></div>";` +
-    `root.querySelector('[data-pa-c=pool]').textContent=L.programs.replace("{n}",pool.length);` +
-    `var c=root.querySelector('[data-pa-c=sel]');c.textContent=sel.length+" / "+MAX;c.classList.toggle("is-full",sel.length>=MAX);` +
-    `root.querySelector('[data-pa-n=pool]').textContent=pool.length;root.querySelector('[data-pa-n=sel]').textContent=sel.length;` +
-    `root.querySelector("[data-pa-full]").hidden=sel.length<MAX;` +
-    `var au=root.querySelector("[data-pa-auto]");au.hidden=sel.length>=MAX||!D.pool.length;au.textContent=L.autoFill.replace("{n}",MAX-sel.length);` +
-    `var st=JSON.stringify(state());root.querySelector("input[name=picks]").value=st;` +
-    `root.querySelector("[data-pa-save]").disabled=st===initial;` +
-    `if(st!==initial){var sv=root.querySelector(".pa-saved");if(sv)sv.hidden=true}}` +
-    `function commitEdit(){var t=root.querySelector('[data-pa-name=sel][contenteditable=true]');if(!t)return;` +
-    `var id=t.closest("[data-pa-item]").getAttribute("data-pa-item");var v=t.textContent.replace(/\\s+/g," ").trim().slice(0,120);` +
-    `if(v&&v!==byId[id].name)titles[id]=v;else delete titles[id]}` +
-    `root.addEventListener("click",function(ev){var b=ev.target.closest("button[data-pa-act],button[data-pa-tab]");if(!b)return;` +
-    `if(b.dataset.paTab){root.querySelectorAll("[data-pa-tab]").forEach(function(x){x.classList.toggle("is-on",x===b)});` +
-    `root.querySelectorAll("[data-pa-pane]").forEach(function(p){p.classList.toggle("is-hide",p.dataset.paPane!==b.dataset.paTab)});return}` +
-    `var id=b.dataset.id,a=b.dataset.paAct,k=sel.indexOf(id);` +
-    `if(a==="edit"){var t=b.closest("[data-pa-item]").querySelector("[data-pa-name]");` +
-    `if(t.getAttribute("contenteditable")==="true"){commitEdit();render()}` +
-    `else{commitEdit();t.setAttribute("contenteditable","true");b.textContent=L.done;t.focus()}return}` +
-    `commitEdit();` +
-    `if(a==="add"&&k<0&&sel.length<MAX)sel.push(id);` +
-    `else if(a==="remove"&&k>=0){sel.splice(k,1);delete titles[id]}` +
-    `else if(a==="up"&&k>0){sel[k]=sel[k-1];sel[k-1]=id}` +
-    `else if(a==="down"&&k>=0&&k<sel.length-1){sel[k]=sel[k+1];sel[k+1]=id}` +
-    `render()});` +
-    `root.addEventListener("keydown",function(ev){if(ev.key==="Enter"&&ev.target.matches("[contenteditable=true]")){ev.preventDefault();commitEdit();render()}});` +
-    `root.querySelector("form.pa-foot").addEventListener("submit",function(){commitEdit();render()});` +
-    `render()})();</script>`
-  );
+  return `<script>${String.raw`(function(){
+var root=document.querySelector(".pa");if(!root)return;
+var D=JSON.parse(root.querySelector("[data-pa-data]").textContent),L=D.L,R=D.rules,MAX=+root.dataset.paMax;
+var byId={};D.pool.forEach(function(e){byId[e.id]=e});
+var sel=[],titles={},order=D.order==="manual"?"manual":"date",editing=null,isNew=false;
+D.picks.forEach(function(p){if(sel.indexOf(p.id)>=0)return;
+ if(p.own){byId[p.id]=ownRow(p.id,p.own,p);sel.push(p.id)}
+ else if(byId[p.id]){sel.push(p.id);if(p.title)titles[p.id]=p.title}});
+var fmt;try{fmt=new Intl.DateTimeFormat(D.lang,{month:"short",day:"numeric",timeZone:"UTC"})}catch(_){fmt=new Intl.DateTimeFormat("hu",{month:"short",day:"numeric",timeZone:"UTC"})}
+function day(s){return fmt.format(new Date(s+"T12:00:00Z"))}
+function when(e){return e.end?day(e.start)+" – "+day(e.end):day(e.start)}
+function plus(s,n){var d=new Date(s+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
+function fold(s){return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim()}
+function hostOf(u){try{return new URL(u).hostname.replace(/^www\./,"")}catch(_){return""}}
+function ownRow(id,o,at){var r={id:id,own:o,name:o.title,start:o.start,end:o.end,sourceUrl:o.url||"",sourceHost:o.url?hostOf(o.url):""};
+ if(at){r.settlement=at.settlement;r.distanceKm=at.distanceKm;r.away=at.away}
+ else if(o.place===null){r.settlement=D.own;r.distanceKm=null;r.away=false}
+ else{var m=null;D.places.forEach(function(x){if(!m&&fold(x.name)===fold(o.place))m=x});
+  r.settlement=m?m.name:o.place;r.distanceKm=m?m.km:null;r.away=!m}
+ return r}
+function dist(e){return e.away?"":e.distanceKm==null?L.here:L.km.replace("{n}",e.distanceKm)}
+function byDate(a,b){var x=byId[a],y=byId[b];return x.start<y.start?-1:x.start>y.start?1:(x.end||x.start)<(y.end||y.start)?-1:(x.end||x.start)>(y.end||y.start)?1:(x.distanceKm||0)-(y.distanceKm||0)}
+function settle(){if(order==="date")sel.sort(byDate)}
+function state(){return sel.map(function(id){var e=byId[id];return e.own?{id:id,own:e.own}:titles[id]?{id:id,title:titles[id]}:{id:id}})}
+settle();
+var initial=JSON.stringify([order,state()]);
+function normUrl(v){v=String(v||"").trim();if(!v)return{ok:true,url:null};if(!/^[a-z][a-z0-9+.-]*:/i.test(v))v="https://"+v;
+ try{var u=new URL(v);if(!/^https?:$/.test(u.protocol)||!/\.[a-z]{2,}$/i.test(u.hostname))throw 0;return{ok:true,url:u.href}}catch(_){return{ok:false}}}
+function laterDay(start){return start>plus(D.today,R.window)?day(plus(start,-R.window)):""}
+function readForm(f){var q=function(n){return f.querySelector('[name="'+n+'"]')};var pm=f.querySelector("input[type=radio]:checked");
+ return{title:q("title").value,start:q("start").value,end:q("end").value,away:!!(pm&&pm.value==="away"),place:q("place").value,url:q("url").value}}
+function check(d,fresh){var e={},t=d.title.replace(/\s+/g," ").trim();
+ if(!t)e.title=L.eTitle;else if(t.length>R.titleMax)e.title=L.eTitleLong;
+ if(!d.start)e.start=L.eStart;else if(fresh&&d.start<D.today)e.start=L.ePast;else if(d.start>plus(D.today,R.ahead))e.start=L.eFar;
+ if(d.end&&d.start){if(d.end<d.start)e.end=L.eEnd;else if(d.end>plus(d.start,R.span))e.end=L.eSpan}
+ var p=d.place.replace(/\s+/g," ").trim();if(d.away&&(!p||p.length>R.placeMax))e.place=L.ePlace;
+ var u=normUrl(d.url);if(!u.ok)e.url=L.eUrl;
+ return{errors:e,own:{title:t,start:d.start,end:d.end&&d.end!==d.start?d.end:null,place:d.away?p:null,url:u.ok?u.url:null}}}
+function fresh(f){var id=f.getAttribute("data-pa-form"),old=byId[id];return !old||old.start!==readForm(f).start}
+function paint(f,all){var d=readForm(f),c=check(d,fresh(f));
+ f.querySelectorAll("[data-pa-err]").forEach(function(el){var k=el.getAttribute("data-pa-err"),inp=f.querySelector('[name="'+k+'"]'),m=c.errors[k],show=!!(m&&(all||(inp&&inp.getAttribute("data-t"))));
+  el.hidden=!show;el.textContent=m||"";if(inp)inp.classList.toggle("is-bad",show)});
+ var u=normUrl(d.url),h=f.querySelector("[data-pa-hint=url]");h.hidden=!(u.ok&&u.url&&!/^https?:/i.test(d.url.trim()));h.textContent=u.url?L.urlSaved.replace("{url}",u.url):"";
+ var lh=f.querySelector("[data-pa-hint=later]"),ld=d.start&&!c.errors.start?laterDay(d.start):"";lh.hidden=!ld;lh.textContent=ld?L.later.replace("{day}",ld):"";
+ f.querySelector("[name=place]").hidden=!d.away;return c}
+function form(id){var e=byId[id],o=e?e.own:{title:"",start:"",end:null,place:null,url:null},away=o.place!==null;
+ var fld=function(n,label,note,input){return'<label class="pa-f"><span>'+esc(label)+(note?' <i>'+esc(note)+'</i>':"")+'</span>'+input+'<span class="pa-err" data-pa-err="'+n+'" hidden></span></label>'};
+ return'<div class="pa-form" data-pa-form="'+id+'"><div class="pa-fh">'+esc(e?L.formEdit:L.formNew)+'</div>'
+ +fld("title",L.fTitle,"",'<input type="text" name="title" maxlength="140" value="'+esc(o.title)+'" placeholder="'+esc(L.fTitlePh)+'">')
+ +'<div class="pa-dates">'+fld("start",L.fStart,"",'<input type="date" name="start" min="'+D.today+'" max="'+plus(D.today,R.ahead)+'" value="'+esc(o.start)+'">')
+ +fld("end",L.fEnd,L.fEndNote,'<input type="date" name="end" min="'+D.today+'" value="'+esc(o.end||"")+'">')+'</div>'
+ +'<div class="pa-f"><span>'+esc(L.fWhere)+'</span><div class="pa-seg">'
+ +'<label><input type="radio" name="pm-'+id+'" value="here"'+(away?"":" checked")+'> '+esc(L.fHere.replace("{place}",D.own))+'</label>'
+ +'<label><input type="radio" name="pm-'+id+'" value="away"'+(away?" checked":"")+'> '+esc(L.fAway)+'</label></div>'
+ +'<input type="text" name="place" list="pa-places" maxlength="80" value="'+esc(away?o.place:"")+'" placeholder="'+esc(L.fPlacePh)+'"'+(away?"":" hidden")+'>'
+ +'<span class="pa-err" data-pa-err="place" hidden></span></div>'
+ +fld("url",L.fUrl,L.fUrlNote,'<input type="url" name="url" inputmode="url" value="'+esc(o.url||"")+'" placeholder="'+esc(L.fUrlPh)+'">')
+ +'<span class="pa-hint" data-pa-hint="url" hidden></span><span class="pa-hint" data-pa-hint="later" hidden></span>'
+ +'<div class="pa-fbtns">'+(e?'<button type="button" class="citui-btn pa-del" data-pa-act="fdel" data-id="'+id+'">'+esc(L.del)+'</button>':"")
+ +'<button type="button" class="citui-btn citui-btn--ghost" data-pa-act="fcancel">'+esc(L.cancel)+'</button>'
+ +'<button type="button" class="citui-btn citui-btn--primary" data-pa-act="fok">'+esc(e?L.saveOwn:L.addOwn)+'</button></div></div>'}
+function item(e,where,i){var ctrl=where==="pool"
+ ?'<button type="button" class="pa-add" data-pa-act="add" data-id="'+e.id+'" title="'+esc(L.add)+'" aria-label="'+esc(L.add+": "+e.name)+'"'+(sel.length>=MAX?" disabled":"")+'>+</button>'
+ :'<div class="pa-ctrl"><button type="button" data-pa-act="up" data-id="'+e.id+'" title="'+esc(L.up)+'" aria-label="'+esc(L.up)+'"'+(i===0?" disabled":"")+'>&#9650;</button>'
+ +'<button type="button" data-pa-act="down" data-id="'+e.id+'" title="'+esc(L.down)+'" aria-label="'+esc(L.down)+'"'+(i===sel.length-1?" disabled":"")+'>&#9660;</button></div>'
+ +'<button type="button" class="pa-rm" data-pa-act="remove" data-id="'+e.id+'" title="'+esc(L.remove)+'" aria-label="'+esc(L.remove+": "+e.name)+'">&times;</button>';
+ var name=where==="sel"&&titles[e.id]?titles[e.id]:e.name,d=dist(e);
+ var src=e.own?'<span class="pa-badge">'+esc(L.ownBadge)+'</span>'+(e.sourceUrl?' · <a href="'+esc(e.sourceUrl)+'" target="_blank" rel="noopener nofollow">'+esc(e.sourceHost)+'</a>':"")
+ :'<a href="'+esc(e.sourceUrl)+'" target="_blank" rel="noopener nofollow">'+esc(e.sourceHost)+'</a>';
+ var pen=where!=="sel"?"":e.own?' · <button type="button" class="pa-pen" data-pa-act="editown" data-id="'+e.id+'">'+esc(L.editOwn)+'</button>'
+ :' · <button type="button" class="pa-pen" data-pa-act="edit" data-id="'+e.id+'">'+esc(L.edit)+'</button>';
+ var ld=where==="sel"&&e.own?laterDay(e.start):"";
+ return'<div class="pa-it'+(e.own?" is-own":"")+'" data-pa-item="'+e.id+'"'+(e.own?' data-pa-own':"")+'><div class="pa-body"><div class="pa-d">'+esc(when(e))+'</div>'
+ +'<div class="pa-n" data-pa-name="'+where+'">'+esc(name)+'</div>'
+ +'<div class="pa-m">'+esc(e.settlement)+(d?' · <span class="pa-dist'+(e.distanceKm==null?" is-here":"")+'">'+esc(d)+'</span>':"")+' · '+src+pen+'</div>'
+ +(ld?'<div class="pa-later">'+esc(L.later.replace("{day}",ld))+'</div>':"")
+ +'</div><div class="pa-acts">'+ctrl+'</div></div>'}
+var emptyIcon=root.querySelector(".pa-empty svg");emptyIcon=emptyIcon?emptyIcon.outerHTML:"";
+var PLUS='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+function newRow(label,cls){return'<button type="button" class="pa-new'+(cls?" "+cls:"")+'" data-pa-act="new"'+(sel.length>=MAX||editing?" disabled":"")+'>'+PLUS+esc(label)+'</button>'}
+function render(){var keep=null,f0=root.querySelector("[data-pa-form]");if(f0){keep=readForm(f0);keep.t=[].map.call(f0.querySelectorAll("[data-t]"),function(x){return x.name})}
+ var pool=D.pool.filter(function(e){return sel.indexOf(e.id)<0});
+ root.querySelector('[data-pa-list=pool]').innerHTML=(pool.length?pool.map(function(e){return item(e,"pool")}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(D.pool.length?L.emptyPool:L.noneThisWeek)+"</span></div>")+newRow(L.newPool,"pa-new--pool");
+ var rows=sel.map(function(id,i){return editing===id&&!isNew?form(id):item(byId[id],"sel",i)}).join("");
+ root.querySelector('[data-pa-list=sel]').innerHTML=(editing&&isNew?form(editing):newRow(L.newSel))+(rows||'<div class="pa-empty">'+emptyIcon+"<span>"+esc(L.emptySel)+"</span></div>");
+ root.querySelector('[data-pa-c=pool]').textContent=L.programs.replace("{n}",pool.length);
+ var c=root.querySelector('[data-pa-c=sel]');c.textContent=sel.length+" / "+MAX;c.classList.toggle("is-full",sel.length>=MAX);
+ root.querySelector("[data-pa-ord]").innerHTML=order==="date"?esc(L.byDate):esc(L.manual)+' · <button type="button" class="pa-lnk" data-pa-act="resort">'+esc(L.resort)+'</button>';
+ root.querySelector('[data-pa-n=pool]').textContent=pool.length;root.querySelector('[data-pa-n=sel]').textContent=sel.length;
+ root.querySelector("[data-pa-full]").hidden=sel.length<MAX;
+ var au=root.querySelector("[data-pa-auto]");au.hidden=sel.length>=MAX||!D.pool.length;au.textContent=L.autoFill.replace("{n}",MAX-sel.length);
+ var st=JSON.stringify([order,state()]);root.querySelector("input[name=picks]").value=JSON.stringify(state());root.querySelector("input[name=order]").value=order;
+ root.querySelector("[data-pa-save]").disabled=st===initial||!!editing;
+ if(st!==initial){var sv=root.querySelector(".pa-saved");if(sv)sv.hidden=true}
+ var f=root.querySelector("[data-pa-form]");if(f){if(keep&&keep.t){var q=function(n){return f.querySelector('[name="'+n+'"]')};
+  ["title","start","end","place","url"].forEach(function(n){q(n).value=keep[n]});f.querySelector('input[type=radio][value="'+(keep.away?"away":"here")+'"]').checked=true;
+  keep.t.forEach(function(n){var x=q(n);if(x)x.setAttribute("data-t","1")})}paint(f,false)}}
+function commitEdit(){var t=root.querySelector('[data-pa-name=sel][contenteditable=true]');if(!t)return;
+ var id=t.closest("[data-pa-item]").getAttribute("data-pa-item");var v=t.textContent.replace(/\s+/g," ").trim().slice(0,120);
+ if(v&&v!==byId[id].name)titles[id]=v;else delete titles[id]}
+function showTab(t){root.querySelectorAll("[data-pa-tab]").forEach(function(x){x.classList.toggle("is-on",x.getAttribute("data-pa-tab")===t)});
+ root.querySelectorAll("[data-pa-pane]").forEach(function(p){p.classList.toggle("is-hide",p.getAttribute("data-pa-pane")!==t)})}
+function focusForm(){var t=root.querySelector("[data-pa-form] [name=title]");if(t)t.focus()}
+function openNew(){if(sel.length>=MAX||editing)return;commitEdit();editing="own-"+(Math.random().toString(36).slice(2)+"00000000").slice(0,8);isNew=true;showTab("sel");render();focusForm()}
+function closeForm(){editing=null;isNew=false;render()}
+function commitForm(f){f.querySelectorAll("input[name]").forEach(function(x){x.setAttribute("data-t","1")});
+ var c=paint(f,true);if(Object.keys(c.errors).length){var b=f.querySelector(".is-bad");if(b)b.focus();return}
+ var id=f.getAttribute("data-pa-form");byId[id]=ownRow(id,c.own,null);if(sel.indexOf(id)<0)sel.push(id);
+ settle();editing=null;isNew=false;render()}
+root.addEventListener("click",function(ev){var b=ev.target.closest("button[data-pa-act],button[data-pa-tab]");if(!b)return;
+ if(b.getAttribute("data-pa-tab")){showTab(b.getAttribute("data-pa-tab"));return}
+ var id=b.getAttribute("data-id"),a=b.getAttribute("data-pa-act"),k=sel.indexOf(id);
+ if(a==="new")return openNew();
+ if(a==="fok")return commitForm(b.closest("[data-pa-form]"));
+ if(a==="fcancel")return closeForm();
+ if(a==="fdel"){sel.splice(sel.indexOf(id),1);delete byId[id];return closeForm()}
+ if(a==="editown"){if(editing)return;commitEdit();editing=id;isNew=false;render();focusForm();return}
+ if(a==="edit"){var t=b.closest("[data-pa-item]").querySelector("[data-pa-name]");
+  if(t.getAttribute("contenteditable")==="true"){commitEdit();render()}
+  else{commitEdit();t.setAttribute("contenteditable","true");b.textContent=L.done;t.focus()}return}
+ commitEdit();
+ if(a==="resort"){order="date";settle()}
+ else if(a==="add"&&k<0&&sel.length<MAX){sel.push(id);settle()}
+ else if(a==="remove"&&k>=0){sel.splice(k,1);delete titles[id];if(byId[id].own)delete byId[id]}
+ else if(a==="up"&&k>0){sel[k]=sel[k-1];sel[k-1]=id;order="manual"}
+ else if(a==="down"&&k>=0&&k<sel.length-1){sel[k]=sel[k+1];sel[k+1]=id;order="manual"}
+ render()});
+root.addEventListener("input",function(ev){var f=ev.target.closest("[data-pa-form]");if(!f)return;
+ if(ev.target.type==="radio"&&ev.target.value==="away"){paint(f,false);f.querySelector("[name=place]").focus();return}paint(f,false)});
+root.addEventListener("focusout",function(ev){var f=ev.target.closest&&ev.target.closest("[data-pa-form]");if(!f||!ev.target.name||ev.target.type==="radio")return;
+ if(ev.target.value)ev.target.setAttribute("data-t","1");paint(f,false)});
+root.addEventListener("keydown",function(ev){var f=ev.target.closest&&ev.target.closest("[data-pa-form]");
+ if(f&&ev.key==="Escape"){ev.preventDefault();closeForm();return}
+ if(f&&ev.key==="Enter"&&ev.target.tagName==="INPUT"){ev.preventDefault();commitForm(f);return}
+ if(ev.key==="Enter"&&ev.target.matches("[contenteditable=true]")){ev.preventDefault();commitEdit();render()}});
+root.querySelector("form.pa-foot").addEventListener("submit",function(ev){if(editing){ev.preventDefault();return}commitEdit();render()});
+render()})();`}</script>`;
 }
 
 /** The settings screen for ONE module. */

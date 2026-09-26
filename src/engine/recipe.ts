@@ -204,10 +204,15 @@ export interface SiteProgram {
   readonly start: string;
   readonly end: string | null;
   readonly settlement: string;
-  /** null = "Helyben" (the tenant's own settlement). */
+  /** null = "Helyben" (the tenant's own settlement) — unless `away`. */
   readonly distanceKm: number | null;
+  /** Empty for an own program without a link. */
   readonly sourceUrl: string;
   readonly sourceHost: string;
+  /** ADR-XXXX: the owner typed it in — the row says "A szállás ajánlja" instead of a source. */
+  readonly own?: boolean;
+  /** An own program at a place outside the known circle: no distance is shown. */
+  readonly away?: boolean;
 }
 
 export interface SiteData {

@@ -187,7 +187,8 @@ import {
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
-import { readPicks, resolvePicks, siteProgramPool } from "../events/picks.js";
+import { readOrder, readPicks, resolvePicks, sanitizePicks, siteProgramPool } from "../events/picks.js";
+import { distanceKm } from "../events/gates.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
 import { messagePreview } from "../tenant/messagePreview.js";
 import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
@@ -1307,7 +1308,10 @@ async function serveAdmin(
       // render and the weekly mail use (src/events/picks.ts).
       let programs;
       if (moduleId === "poi") {
-        const { state, events } = await siteProgramPool(site.id);
+        const programPool = await siteProgramPool(site.id);
+        const { state, events } = programPool;
+        const storedPicks = readPicks(cfg.config);
+        const ownById = new Map(storedPicks.flatMap((x) => ("own" in x ? [[x.id, x.own] as const] : [])));
         programs = {
           state,
           pool: events.map((e) => ({
@@ -1320,9 +1324,29 @@ async function serveAdmin(
             sourceUrl: e.sourceUrl,
             sourceHost: e.sourceHost,
           })),
-          picks: resolvePicks(readPicks(cfg.config), events).map((p) =>
-            p.title !== p.name ? { id: p.id, title: p.title } : { id: p.id },
+          // Own programs travel as their stored fields (the card edits THEM), with the
+          // resolved place label beside them (ADR-XXXX).
+          picks: resolvePicks(storedPicks, programPool).map((p) =>
+            p.own
+              ? {
+                  id: p.id,
+                  own: ownById.get(p.id)!,
+                  settlement: p.settlement,
+                  distanceKm: p.distanceKm,
+                  away: p.away === true,
+                }
+              : p.title !== p.name
+                ? { id: p.id, title: p.title }
+                : { id: p.id },
           ),
+          order: readOrder(cfg.config),
+          ownSettlement: programPool.own?.name ?? "",
+          // The circle's settlements: the "Máshol" field suggests them and shows the
+          // distance at once (the server computes the same on save).
+          places: programPool.own
+            ? programPool.around.map((x) => ({ name: x.name, km: distanceKm(programPool.own!, x) }))
+            : [],
+          today: programPool.today,
           saved,
         };
       }
@@ -2419,11 +2443,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     } catch {
       posted = [];
     }
-    const { events } = await siteProgramPool(siteId);
-    const picks = resolvePicks(readPicks({ picks: posted }), events, 10).map((p) =>
-      p.title !== p.name ? { id: p.id, title: p.title } : { id: p.id },
-    );
-    const result = await setSiteModuleConfig(siteId, "poi", { picks }, session.tenantUserId);
+    const programPool = await siteProgramPool(siteId);
+    const stored = readPicks((await getSiteModuleConfig(siteId, "poi")).config);
+    // ADR-XXXX: own programs pass the ONE rule set (src/events/ownPrograms.ts); a
+    // gathered id still has to be in THIS tenant's live pool.
+    const picks = sanitizePicks(posted, programPool, stored);
+    const order = form.get("order") === "manual" ? "manual" : "date";
+    const result = await setSiteModuleConfig(siteId, "poi", { picks, order }, session.tenantUserId);
     const back = "/admin?tab=modulok&m=poi";
     if (!result.ok) {
       const q = result.errors.map((e) => `hiba=${encodeURIComponent(e)}`).join("&");

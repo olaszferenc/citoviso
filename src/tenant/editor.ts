@@ -36,7 +36,7 @@ import {
   reconcileMultilangState,
 } from "./multilangCore.js";
 import { renderableModules } from "../modules.js";
-import { PROGRAMS_ON_PAGE, autoFill, readPicks, resolvePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
+import { programsOnPage, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 
 export interface PhotoEdit {
   url: string;
@@ -293,13 +293,14 @@ export async function moduleContentFor(
     if (items.length) out.usp = items;
   }
   if (on("poi")) {
-    // The weekly program recommender: the tenant's picks in THEIR order, then the free
-    // slots auto-filled with the nearest upcoming programs (owner ruling, 2026-09-23 —
-    // an "Automata" module must not sit empty because nobody clicked).
-    const { state, events } = await siteProgramPool(siteId);
+    // The weekly program recommender: the tenant's picks (gathered + own, ADR-XXXX),
+    // the free slots auto-filled with the nearest upcoming programs (owner ruling,
+    // 2026-09-23 — an "Automata" module must not sit empty because nobody clicked),
+    // in date order unless the owner arranged them himself.
+    const programPool = await siteProgramPool(siteId);
+    const { state, events } = programPool;
     if (state === "ok" && events.length) {
-      const picked = resolvePicks(readPicks(cfg("poi")), events, PROGRAMS_ON_PAGE);
-      out.poi = [...picked, ...autoFill(events, picked, PROGRAMS_ON_PAGE)].map((e) => ({
+      out.poi = programsOnPage(cfg("poi"), programPool).map((e) => ({
         title: "title" in e ? e.title : e.name,
         start: e.start,
         end: e.end,
@@ -307,8 +308,10 @@ export async function moduleContentFor(
         distanceKm: e.distanceKm,
         sourceUrl: e.sourceUrl,
         sourceHost: e.sourceHost,
+        ...("own" in e && e.own ? { own: true } : {}),
+        ...("away" in e && e.away ? { away: true } : {}),
       }));
-      const own = events.find((e) => e.distanceKm === null)?.settlement ?? (await siteOwnSettlement(siteId));
+      const own = programPool.own?.name ?? (await siteOwnSettlement(siteId));
       if (own) out.poiArea = own;
     }
   }

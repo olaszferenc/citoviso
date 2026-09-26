@@ -23,6 +23,8 @@
 // All owner-facing text sits in THIS file, so wrapping the module-config surface
 // for the language pack later is a single-file mechanical change (§B.18).
 
+import { cleanOwnProgram, OWN_ID_RE } from "./events/ownPrograms.js";
+
 export type ModuleFieldType =
   | "text"
   | "textarea"
@@ -262,17 +264,31 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
   // orders them. `picks` = [{ id: local_event.id, title?: the owner's rewrite }], in
   // the owner's order (contract ③). Expired ids stay harmlessly in the row — the
   // render resolves them against the live pool, so they fall off by themselves (⑦).
+  //
+  // ADR-XXXX (2026-09-26, additive — still v2): a pick may be the owner's OWN program
+  // (`{ id: "own-xxxxxxxx", own: { title, start, end, place, url } }`, rules in
+  // src/events/ownPrograms.ts), and `order` says whether the page follows the dates
+  // ("date", the default) or the owner's arrows ("manual").
   poi: {
     version: 2,
     fields: [],
-    defaults: { picks: [] },
+    defaults: { picks: [], order: "date" },
     editor: "programs",
     validate: (cfg) => {
       const picks = cfg.picks;
       if (!Array.isArray(picks)) return ["A kiválasztott programok listája hibás."];
       if (picks.length > 10) return ["Legfeljebb 10 program választható."];
+      if (cfg.order !== undefined && cfg.order !== "date" && cfg.order !== "manual") {
+        return ["A programok sorrendje hibás."];
+      }
       for (const p of picks as unknown[]) {
-        const r = p as { id?: unknown; title?: unknown };
+        const r = p as { id?: unknown; title?: unknown; own?: unknown };
+        if (r && typeof r.id === "string" && OWN_ID_RE.test(r.id)) {
+          const o = (r.own ?? {}) as { start?: unknown };
+          const c = cleanOwnProgram(r.own, typeof o.start === "string" ? o.start : "", false);
+          if (!c.ok) return ["A saját program adatai hibásak."];
+          continue;
+        }
         if (!r || typeof r.id !== "string" || !/^[0-9a-f-]{36}$/.test(r.id)) {
           return ["A kiválasztott programok listája hibás."];
         }

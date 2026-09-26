@@ -11,6 +11,12 @@ Utolsó frissítés: 2026-09-26 (📱 **Mobil · vendég-nézet 2 — a FK-009 �
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-26 — programajánló: SAJÁT program + alapból dátum-sorrend)
+A tenant maga is felvehet programot (üres kártya a listában, jóváhagyott „A”), a honlapon „A szállás ajánlja”;
+a lista alapból DÁTUM szerint rendez, a ▲▼ felülír („saját sorrend”, visszaállítható). Kontraktus:
+`assets/design-refs/console/programajanlo-sajat/`; szabályok egy helyen: `src/events/ownPrograms.ts`; őr:
+`programs-editor-check` bővítve. ADR-XXXX. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_programajanlo_sajat_program.md`.
+
 ## Párhuzamos szál (2026-09-26 — a logó MINDENHOL: a jel maga a C, „B”, egy forrásból)
 A tulaj a §2b körben a **B**-t választotta (ikonméretű C, 1,6×; admin: a jel ikon marad; szállás-honlapok favikonja
 marad Citoviso). Egy forrás: `src/ui/brand.ts` (az E4 asset-fájlokat olvassa) + `citui.css` `.citui-lockup`; cserélve

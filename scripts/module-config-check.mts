@@ -221,7 +221,13 @@ try {
   check("⭐ a mentett felszereltség eljut az oldal adatába", (content.amenities ?? []).includes("Fedett kerékpártároló"), content.amenities);
   check("⭐ a mentett nyitvatartás eljut az oldal adatába", content.hours?.checkInFrom === "15:30", content.hours);
   const poi = content.poi ?? [];
-  check("⭐ a tulaj választása ELSŐ, az átírt címével", poi[0]?.title === "_Mcfg átírt cím", poi.map((p) => p.title));
+  // ADR-XXXX (owner, 2026-09-26: "alapértelmezés: dátum, fel/le override"): with no
+  // `order` stored the page is in DATE order — the pick (the latest) sits last.
+  check("⭐ alapból DÁTUM szerint: a tulaj választása (a legkésőbbi) a sor végén, az átírt címével",
+    poi[poi.length - 1]?.title === "_Mcfg átírt cím" && poi.every((p, i) => i === 0 || poi[i - 1]!.start <= p.start), poi.map((p) => `${p.start} ${p.title}`));
+  await setSiteModuleConfig(siteId, "poi", { picks: [{ id: evLater!.id, title: "_Mcfg átírt cím" }], order: "manual" }, "test");
+  const poiManual = (await moduleContentFor(tenant.id, siteId)).data.poi ?? [];
+  check("⭐ kézi sorrendben (a nyíl után) a tulaj választása ELSŐ", poiManual[0]?.title === "_Mcfg átírt cím", poiManual.map((p) => p.title));
   check("a szabad helyeket az automatika tölti ki (3 program a körben → 3 az oldalon)", poi.length === 3, poi.length);
   check("⭐ a saját település programja „Helyben” (distanceKm = null)", poi.find((p) => p.title === "_Mcfg helyi szüret")?.distanceKm === null, poi);
   check("a szomszéd település programja km-címkét kap (10 km)", poi.find((p) => p.title === "_Mcfg szomszéd vásár")?.distanceKm === 10, poi);

@@ -40,7 +40,7 @@ hiányában KIHAGYVA (sosem fabrikálva — ADR-0007/0009 tényhűség) · **[UP
 |---|---|---|---|
 | `usp` | „Miért mi" — valós megkülönböztető előnyök (turisztikailag releváns) | van valós, releváns megkülönböztető tény | [DATA] |
 | `reviews` | Valós vélemények (Google — enrichment) | van valós vélemény | [DATA] (kamu értékelés TILOS) |
-| `poi` | Környék/látnivalók, közelség | régió-kontextus / POI-enrichment | [DATA] |
+| `poi` | Automata heti programajánló: a kör gyűjtött programjai + a tenant SAJÁT programjai („A szállás ajánlja”), alapból dátum szerint (ADR-0214, ADR-XXXX) | heti település-kulcsos gyűjtés + a tenant bevitele | [DATA] |
 | `newsletter` | Ajánlatkérés/hírlevél-CTA | opcionális CTA | [UPSELL] |
 
 **Gerinc (mindig):** `hero` (az archetípus nyitánya, nem külön modul) + `enquiry` + lábléc-provenance.

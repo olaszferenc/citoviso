@@ -785,7 +785,23 @@ function moduleShotHtml(entryId: string): string {
           ev("4", "2026-10-03", "Gasztrofesztivál", "Balatonlelle", 7, "welovebalaton.hu"),
           ev("5", "2026-10-04", "Vezetett túra a Szent György-hegyen", "Kisapáti", 12, "visitbalaton365.hu"),
         ],
-        picks: [{ id: "00000000-0000-4000-8000-000000000001" }, { id: "00000000-0000-4000-8000-000000000004", title: "Murci-fesztivál" }],
+        picks: [
+          { id: "00000000-0000-4000-8000-000000000001" },
+          // ADR-XXXX: an own program, so the shot shows the "Saját ajánlás" row the entry names.
+          {
+            id: "own-a1b2c3d4",
+            own: { title: "Borkóstoló a teraszunkon", start: "2026-10-02", end: null, place: null, url: null },
+            settlement: "Révfülöp",
+            distanceKm: null,
+            away: false,
+          },
+          { id: "00000000-0000-4000-8000-000000000004", title: "Murci-fesztivál" },
+        ],
+        order: "date",
+        ownSettlement: "Révfülöp",
+        places: [],
+        // A fixed day: the card's date rules count from it, the shot must not drift.
+        today: "2026-09-26",
       },
     });
   }

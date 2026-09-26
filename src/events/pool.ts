@@ -53,6 +53,8 @@ export interface TenantPool {
   /** null when the settlement cache around the tenant is still cold (never gathered). */
   readonly own: Settlement | null;
   readonly events: PoolEvent[];
+  /** The cached circle — an own program's typed place is matched against it (ADR-XXXX). */
+  readonly around: readonly Settlement[];
 }
 
 /**
@@ -62,7 +64,7 @@ export interface TenantPool {
  */
 export async function tenantPool(loc: SiteLocation, today: string): Promise<TenantPool> {
   const around = await cachedSettlementsAround(loc.lat, loc.lon, RADIUS_KM);
-  if (!around) return { own: null, events: [] };
+  if (!around) return { own: null, events: [], around: [] };
   const own = ownSettlement(around, loc.lat, loc.lon, loc.address);
   const byId = new Map(around.map((s) => [s.osmId, s]));
   const rows = await db
@@ -90,5 +92,5 @@ export async function tenantPool(loc: SiteLocation, today: string): Promise<Tena
   events.sort(
     (a, b) => a.start.localeCompare(b.start) || (a.distanceKm ?? 0) - (b.distanceKm ?? 0) || a.name.localeCompare(b.name),
   );
-  return { own, events };
+  return { own, events, around };
 }

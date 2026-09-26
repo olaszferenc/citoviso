@@ -50,7 +50,8 @@ export async function sendWeeklyProgramMails(opts: { dryRun?: boolean; now?: Dat
         out.skippedAlready++;
         continue;
       }
-      const { state, events } = await siteProgramPool(s.siteId);
+      const programPool = await siteProgramPool(s.siteId);
+      const { state, events } = programPool;
       if (state !== "ok" || !events.length) {
         out.skippedEmpty++;
         continue;
@@ -61,8 +62,9 @@ export async function sendWeeklyProgramMails(opts: { dryRun?: boolean; now?: Dat
         .where("site_id", "=", s.siteId)
         .where("module", "=", "poi")
         .executeTakeFirst();
-      const picked = resolvePicks(readPicks((cfg?.config ?? {}) as Record<string, unknown>), events);
-      const autoCount = Math.min(PROGRAMS_ON_PAGE - picked.length, events.length - picked.length);
+      const picked = resolvePicks(readPicks((cfg?.config ?? {}) as Record<string, unknown>), programPool);
+      // Own programs take a slot but are not in the gathered pool (ADR-XXXX).
+      const autoCount = Math.min(PROGRAMS_ON_PAGE - picked.length, events.length - picked.filter((p) => !p.own).length);
       const nearest = [...events]
         .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0) || a.start.localeCompare(b.start))
         .slice(0, 5)

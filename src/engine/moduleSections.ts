@@ -470,11 +470,13 @@ const PROGRAMS_MOBILE_FIRST = 5;
 /**
  * "Heti programajánló" — approved contract A (design-refs/public-site/programajanlo/).
  * Each row: date column · title · settlement + distance ("Helyben" / "N km") + weekday
- * or range · source link (§B.17 — no source, no row). Order = the tenant's (the
- * content builder already put picks first, auto-fill after).
+ * or range · source link (§B.17 — no source, no row). The owner's OWN program
+ * (ADR-XXXX) is the one exception: its source is the house itself, and the row SAYS
+ * so ("A szállás ajánlja") instead of a link. Order = the content builder's (date
+ * by default, the tenant's arrows when he used them).
  */
 function programsBlock(d: SiteData): string {
-  const items = (d.poi ?? []).filter((e) => e.sourceUrl);
+  const items = (d.poi ?? []).filter((e) => e.sourceUrl || e.own);
   if (!items.length) return "";
   const lang = d.lang || "hu";
   const fmt = (o: Intl.DateTimeFormatOptions) => {
@@ -491,16 +493,22 @@ function programsBlock(d: SiteData): string {
   const rows = items
     .map((e, i) => {
       const when = e.end ? `${dm.format(at(e.start))} – ${dm.format(at(e.end))}` : wd.format(at(e.start));
-      const dist = e.distanceKm == null ? T(d, "Helyben") : T(d, "{n} km", { n: String(e.distanceKm) });
+      const dist = e.away ? "" : e.distanceKm == null ? T(d, "Helyben") : T(d, "{n} km", { n: String(e.distanceKm) });
+      const link = e.sourceUrl
+        ? `<a href="${esc(e.sourceUrl)}" target="_blank" rel="noopener nofollow">${esc(e.sourceHost)}${ICON_EXT}</a>`
+        : "";
+      const src = e.own
+        ? `<p class="cit-ev__src">${T(d, "A szállás ajánlja")}${link ? ` · ${link}` : ""}</p>`
+        : `<p class="cit-ev__src">${T(d, "Forrás:")} ${link}</p>`;
       return (
         `<li class="cit-ev__row${i >= PROGRAMS_MOBILE_FIRST ? " is-more" : ""}">` +
         `<div class="cit-ev__date"><b>${Number(e.start.slice(8, 10))}</b><span>${esc(mon.format(at(e.start)))}</span></div>` +
         `<div><h3>${esc(e.title)}</h3>` +
         `<p class="cit-ev__meta"><span class="cit-ev__where">${ICON_PIN}${esc(e.settlement)}</span>` +
-        `<span class="cit-ev__dist${e.distanceKm == null ? " is-here" : ""}">${esc(dist)}</span>` +
+        (dist ? `<span class="cit-ev__dist${e.distanceKm == null ? " is-here" : ""}">${esc(dist)}</span>` : "") +
         `<span>${esc(when)}</span></p>` +
-        `<p class="cit-ev__src">${T(d, "Forrás:")} <a href="${esc(e.sourceUrl)}" target="_blank" rel="noopener nofollow">` +
-        `${esc(e.sourceHost)}${ICON_EXT}</a></p></div></li>`
+        src +
+        `</div></li>`
       );
     })
     .join("");
