@@ -121,7 +121,7 @@ function shell(
 }
 
 /** The "B" lockup on the login / help pages (light card; follows the theme like the
- *  frame) — from the one brand source, src/ui/brand.ts (ADR-XXXX). */
+ *  frame) — from the one brand source, src/ui/brand.ts (ADR-0236). */
 const LOGO = lockup({ on: "themed", href: "/", cls: "citui-lockup--lg" });
 
 /** The bare mark for the admin frame (ADR-0224). Here it stands next to the TENANT's

@@ -1,4 +1,4 @@
-# 2026-09-26 — A logó mindenhol: a jel maga a C („B”), egy forrásból (ADR-XXXX)
+# 2026-09-26 — A logó mindenhol: a jel maga a C („B”), egy forrásból (ADR-0236)
 
 **Brief:** `~/rc-briefs/logo-c-lockup-brief.md` (a `wt/felszkapu` szál írta; a koordináló session frissítette).
 **Tulaj-döntés (§2b kör):** *„B, admin ikon marad, szállás-honlapoknál maradjon így”*.

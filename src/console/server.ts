@@ -1078,7 +1078,7 @@ async function handle(
   // the layout also declares it via <link rel="icon"> for modern browsers.
   if (method === "GET" && path === "/favicon.ico") {
     try {
-      // The one brand source (ADR-XXXX): the LIGHT E4 — the browser tab is light.
+      // The one brand source (ADR-0236): the LIGHT E4 — the browser tab is light.
       const svg = faviconSvg();
       res.writeHead(200, { "content-type": "image/svg+xml", "cache-control": "max-age=86400" });
       res.end(svg);

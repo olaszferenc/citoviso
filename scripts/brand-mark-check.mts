@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
  * brand-mark-check — the Citoviso logo comes from ONE place and shows the right variant
- * (ADR-XXXX; contract: assets/design-refs/console/brand-mark/README.md).
+ * (ADR-0236; contract: assets/design-refs/console/brand-mark/README.md).
  *
  * Why: until 2026-09-26 the console, the tenant admin, the homepage and the favicon each
  * carried their OWN hand-drawn mark (four different logos, one of them with the navy eye
@@ -40,7 +40,7 @@ const RETIRED = /\b(?:mark-gradient|lockup-gradient|mark-mono|lockup-mono)\.svg\
 /** Named exceptions — each with the reason it is not a logo instance. */
 const ARC_ALLOW: Record<string, string> = {
   "public/index.html":
-    "a hero ILLUSZTRÁCIÓ (nagy fehér C a cián gömbön, `.visual-core`) — nem fejléc-logó; a tulaj kérdése nyitott (ADR-XXXX)",
+    "a hero ILLUSZTRÁCIÓ (nagy fehér C a cián gömbön, `.visual-core`) — nem fejléc-logó; a tulaj kérdése nyitott (ADR-0236)",
 };
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(path.join(ROOT, dir))) {

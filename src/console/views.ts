@@ -117,7 +117,7 @@ export function jsStr(s: string): string {
 // token-driven). NO inline stylesheet here — change the core, the console follows.
 
 /** Brand block on the plain pages and the login card — the "B" lockup from the one
- *  source (src/ui/brand.ts, ADR-XXXX); both sit on a theme-following panel. */
+ *  source (src/ui/brand.ts, ADR-0236); both sit on a theme-following panel. */
 const BRAND = lockup({ on: "themed", href: "/", cls: "con-brand" });
 
 /* ═══ THE CONSOLE FRAME — the tenant-admin „Linear" language on the operator side ═══
@@ -127,7 +127,7 @@ const BRAND = lockup({ on: "themed", href: "/", cls: "con-brand" });
    breadcrumb, the ⌘K index, the phone's drawer and bottom bar are all views of it. */
 
 /** The frame's lockup (sidebar + phone drawer): the mark follows the theme — the light
- *  E4 on the light panel, the dark E4 on the dark one (src/ui/brand.ts, ADR-XXXX). */
+ *  E4 on the light panel, the dark E4 on the dark one (src/ui/brand.ts, ADR-0236). */
 const frameLockup = (lang: string): string =>
   lockup({ on: "themed", sub: esc(T(lang, "belső konzol")), cls: "con-lockup" });
 

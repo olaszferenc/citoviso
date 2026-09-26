@@ -1,4 +1,4 @@
-## ADR-XXXX — A logó mindenhol: a jel maga a C („B” elrendezés), egy forrásból
+## ADR-0236 — A logó mindenhol: a jel maga a C („B” elrendezés), egy forrásból
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) · **Szál:** „Logó: a jel maga a C”
 

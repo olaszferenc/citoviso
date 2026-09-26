@@ -1,5 +1,5 @@
 // The Citoviso mark and lockup — the ONE place our own surfaces get the logo from
-// (ADR-XXXX). Before this, three hand-drawn inline SVGs (console, tenant admin, the
+// (ADR-0236). Before this, three hand-drawn inline SVGs (console, tenant admin, the
 // homepage) and a fourth file (the favicon) showed four different marks.
 //
 // The geometry is NOT redrawn here: it is read from the owner-approved E4 asset files

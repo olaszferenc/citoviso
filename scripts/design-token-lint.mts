@@ -65,7 +65,7 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
   },
   "public/index.html": {
     values: ["#0e2a47"],
-    reason: "hero SVG brand-art (a nagy fehér C) — SVG presentation-attribútumban a var() nem oldódik fel; a fejléc/lábléc logója a src/ui/brand.ts-ből jön (ADR-XXXX)",
+    reason: "hero SVG brand-art (a nagy fehér C) — SVG presentation-attribútumban a var() nem oldódik fel; a fejléc/lábléc logója a src/ui/brand.ts-ből jön (ADR-0236)",
   },
   "src/console/views.ts": {
     values: ["#1fb6d6", "#e5484d", "#d29922", "#2fa96b", "#5a6d82"],

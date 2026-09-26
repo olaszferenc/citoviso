@@ -40,7 +40,7 @@ nem tokenből számolva.
 
 ---
 
-# Kiegészítés 2026-09-26 — a „B” lockup mindenhol (ADR-XXXX)
+# Kiegészítés 2026-09-26 — a „B” lockup mindenhol (ADR-0236)
 
 **Jóváhagyva:** 2026-09-26, tulaj: *„B, admin ikon marad, szállás-honlapoknál maradjon így”*.
 **Terv (befagyott):** `lockup-b-helyszinek.html` (önhordó, A/B + Mobil/Asztali váltó — a jóváhagyott a **B**),

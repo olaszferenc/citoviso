@@ -262,7 +262,7 @@ const ALLOW = new RegExp(
 );
 const PROPER = new Set([
   "Citoviso",
-  // The brand word after the mark that IS the "C" (the "B" lockup, ADR-XXXX) — the name,
+  // The brand word after the mark that IS the "C" (the "B" lockup, ADR-0236) — the name,
   // split by design; the lockup's accessible name is the whole "Citoviso".
   "itoviso",
   // Role identifiers are data, not labels (RBAC keys).
