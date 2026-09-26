@@ -1,4 +1,4 @@
-## ADR-XXXX — Levélben csak tartós fizetési link megy (`/pay/go/<fizetés-id>`)
+## ADR-0234 — Levélben csak tartós fizetési link megy (`/pay/go/<fizetés-id>`)
 
 **Státusz:** ELFOGADVA (2026-09-26, a tulaj hibabejelentése alapján) — lokálban él, élesre nem ment ki.
 
