@@ -19,6 +19,7 @@ esetet teszteljen és futtasson: Nem teljesült fizetés, időtúllépés mittom
 | FK-006 | **Bukás-mátrix** (lásd lent) | tervezés | seed + időutazó-setup |
 | FK-008 | **A VENDÉG szemével** (tulaj, 2026-09-24: „mindent nézzen"): tájékozódás, szobák/árak, foglalás hibás és jó bemenettel, árajánlat-út, ajánlat elfogadása, lemondás a linkről, vélemény — egyértelműség + ergonómia | ✅ fut | ELEK-TESZT tenant + `scripts/seed-elek-guest.sql` |
 | FK-008b | A mock-lap a vendég szemével: minta-foglalás/-vélemény őszintesége, vendég-nézet vs. vásárlói sáv | ✅ fut | követett link (a vásárlás ELŐTT fut) |
+| FK-009 | **A LEAD szemével, TELEFONON** (tulaj, 2026-09-26: „a wow effekthez a mobilnézet legyen hibátlan"): a kiküldött terv első megnyitása 390 px-en — első képernyő, végiggörgetés, vásárlói belépő, leiratkozás/lábléc, betöltési súly; 19 stílus × 2 dev-lead | ✅ fut | `scripts/seed-lead-mobile-links.mts` → links.json (küldés nélkül); friss-betöltéses mérés: `scripts/lead-mobile-check.mts` |
 
 ## Eset-mátrix (a „lehető legtöbb eset" — tulaj-cél)
 

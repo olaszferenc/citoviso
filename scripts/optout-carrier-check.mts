@@ -57,7 +57,14 @@ const page = injectTrackingNotice(MOCK_BODY, TOKEN);
 // and the recipient reaches it by opening the tracked preview. So "last thing on
 // the page" is a stated requirement now, not an accident of the implementation —
 // nothing of the mock may render below the legal footer.
-const noticeAt = page.lastIndexOf("<div style=\"padding:14px 18px");
+// The footer is found by its STRUCTURAL marker (data-cit-footer="tracked"), not by the
+// first bytes of its style attribute: the 2026-09-26 mobile fix put the marker in front
+// of the style, and the old string match reported the footer missing on a page that
+// carried it (feedback_label_change_breaks_its_quoters).
+const noticeAt = Math.max(
+  page.lastIndexOf('data-cit-footer="tracked"'),
+  page.lastIndexOf("<div style=\"padding:14px 18px"),
+);
 const mockTail = page.lastIndexOf("A szállás lábléce");
 if (noticeAt < 0 || mockTail > noticeAt) {
   problems.push(

@@ -146,6 +146,8 @@ import {
   disableIntroAnimation,
   injectTrackingBanner,
   injectTrackingNotice,
+  lazyLoadBelowFold,
+  containHorizontalOverflow,
 } from "./prospectNotice.js";
 import { normalizeProspectPath } from "./prospectPath.js";
 import {
@@ -2510,7 +2512,9 @@ async function handle(
     // and the footer here states we do NOT measure — it must be true.
     const owned = await ownedSiteForProspectToken(pMatch[1]);
     try {
-      const html = await readFile(p.artifactPath, "utf8");
+      // Below-the-fold photos lazy (serve-time, the file on disk is untouched):
+      // this link is opened on a phone, on mobile data — Elek FK-009, 2026-09-26.
+      const html = containHorizontalOverflow(lazyLoadBelowFold(await readFile(p.artifactPath, "utf8")));
       if (owned) {
         console.log(
           `[console] /p/${pMatch[1]}: MÁR VÁSÁROLT lead (állapot: ${owned.stage}` +

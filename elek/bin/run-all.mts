@@ -210,7 +210,36 @@ console.log(`  ELEK_PROSPECT_PATH=${env.ELEK_PROSPECT_PATH}`);
 step("A lead szemével, a mock a vendég szemével, majd a vásárlás — innen jön a tenant");
 // FK-008b MUST precede FK-005a: after the purchase the tracked page turns into the
 // owner's "already yours" state, and the sample forms it measures are gone.
-for (const fk of ["FK-004b", "FK-008b", "FK-005a"]) if (wanted(fk)) runFk(fk);
+for (const fk of ["FK-004b", "FK-008b"]) if (wanted(fk)) runFk(fk);
+
+// ── the lead on a PHONE (FK-009): 19 styles × 2 dev leads, NOT the ELEK park ──
+// The tracked links come from scripts/seed-elek-lead-mobile-links.mts (get-or-create,
+// nothing is sent) as links.json; each becomes an `${ELEK_P_<LEAD>_<STYLE>}`
+// variable the scenario navigates to. No file → the round is SKIPPED OUT LOUD
+// (an outcome row with the fix command), never a silent zero.
+if (wanted("FK-009")) {
+  step("A lead szemével, TELEFONON — a 38 stílus követett linkje");
+  const linksFile = path.join(ROOT, "assets/design-refs/_drafts/lead-mobile/links.json");
+  let linkCount = 0;
+  try {
+    const parsed = JSON.parse(readFileSync(linksFile, "utf8")) as { links: { envKey: string; path: string }[] };
+    for (const l of parsed.links) {
+      env[l.envKey] = l.path;
+      linkCount++;
+    }
+  } catch {
+    linkCount = 0;
+  }
+  if (linkCount) {
+    console.log(`  ${linkCount} követett link betöltve (${path.relative(ROOT, linksFile)})`);
+    runFk("FK-009");
+  } else {
+    console.log(`  ⛔ nincs ${path.relative(ROOT, linksFile)} — előbb: npx tsx scripts/seed-elek-lead-mobile-links.mts`);
+    outcomes.push({ fk: "FK-009", pass: 0, fail: 0, manual: 0, blocked: 0, dir: "", skipped: "nincs links.json (seed-elek-lead-mobile-links.mts)" });
+  }
+}
+
+if (wanted("FK-005a")) runFk("FK-005a");
 
 const tenant = await db
   .selectFrom("tenant")

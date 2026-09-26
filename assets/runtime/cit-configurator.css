@@ -99,7 +99,12 @@
   right: 0;
   z-index: 2147483001;
   width: min(440px, 94vw);
-  height: 100%;
+  /* The side panel ends ABOVE the consent bar, like the bottom sheet does: at
+   * 844×390 (a phone held sideways) a 100 % tall panel put its decision block —
+   * "Tovább a megrendeléshez" — under the consent bar's buttons, so the buy entry
+   * was unreachable until the visitor answered the cookie question. Measured
+   * 2026-09-26 (Elek FK-009), 38 pages, every landscape view. */
+  height: calc(100% - var(--citui-consent-h, 0px));
   display: flex;
   flex-direction: column;
   background: #14171c;
@@ -111,6 +116,26 @@
 }
 .cit-cfg-panel.cit-cfg-open {
   transform: translateX(0);
+}
+
+/* A SHORT viewport — a phone held sideways (844×390 measured, 2026-09-26): the
+ * head (~90 px) and the decision block (~220 px) alone are taller than the panel
+ * that ends above the consent bar (~300 px), so the decision block poked out UNDER
+ * the bar and "Tovább a megrendeléshez" could not be tapped. Here the panel scrolls
+ * as ONE column — head, list, decision — instead of pinning the decision block
+ * under a list that would have had 0 px left. The visitor scrolls the panel; the
+ * button is reached, and never covered, because the panel still ends above the bar. */
+@media (max-height: 520px) {
+  .cit-cfg-panel {
+    overflow-y: auto;
+  }
+  .cit-cfg-body {
+    flex: none;
+    overflow: visible;
+  }
+  .cit-cfg-cuewrap {
+    display: none;
+  }
 }
 
 /* ── collapse handle: a small tab protruding from the panel's edge ────────────
@@ -758,8 +783,12 @@
   /* The consent bar publishes its measured height on :root (--citui-consent-h) so
    * host UIs can step out of its way. Measured 2026-09-24 (Elek FK-005a): at
    * 1280×900 the bar sat ON the "Tovább a megrendeléshez" button until the buyer
-   * answered it — the primary action was unreachable. */
-  padding: 14px 18px calc(18px + var(--citui-consent-h, 0px));
+   * answered it — the primary action was unreachable. Since 2026-09-26 the PANEL
+   * itself ends above the bar (height: calc(100% − consent-h); the bottom sheet
+   * already had bottom: consent-h), so the room is made once, by the panel, not
+   * twice. Measured why it matters: at 844×390 the extra padding made the foot
+   * taller than the panel, and the button poked out UNDER the bar again. */
+  padding: 14px 18px 18px;
   border-top: 1px solid #262b34;
   background: #14171c;
 }

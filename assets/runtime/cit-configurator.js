@@ -3469,6 +3469,19 @@
       bottomY = lifted;
     }
     launch.style.bottom = Math.round(window.innerHeight - bottomY) + "px";
+    // Publish how much of the viewport's bottom the pill AND everything it climbed
+    // over (a template's fixed booking bar, the consent bar) really take, so the
+    // page's last in-flow block — the legal footer with the opt-out — can pad
+    // itself clear of the stack. Measured 2026-09-26 (Elek FK-009, 38 pages at
+    // 390 px): consent 160 px + fixed CTA 80 px + pill 90 px sat ON the footer's
+    // link line on every template; the way out was unreachable without dismissing
+    // the consent question first. The value is geometry the runtime already knows;
+    // the footer reads it as `--citui-cfg-clear` (prospectNotice.ts), falling back to
+    // the consent height alone when this script never ran.
+    document.documentElement.style.setProperty(
+      "--citui-cfg-clear",
+      Math.max(0, Math.round(window.innerHeight - (bottomY - h) + 12)) + "px",
+    );
   }
 
   var placeQueued = 0;

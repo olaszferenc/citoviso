@@ -64,6 +64,10 @@ export const CHAIN: readonly ChainRound[] = [
   // A mock a VENDÉG szemével — a vásárlás ELŐTT, mert a vétel után a lap már
   // „Ez az oldal már az Öné"-t mond, és a minta-űrlapok helyett a tulaj-utat méri.
   { fk: "FK-008b", needs: ["trackedLink"] },
+  // A lead szemével, TELEFONON (FK-009): NEM az ELEK-parkon mér, hanem a két dev-lead
+  // 19+19 stílusának követett linkjén (`scripts/seed-lead-mobile-links.mts` →
+  // links.json → `${ELEK_P_*}`); a futó a fájl hiányát hangosan kihagyja.
+  { fk: "FK-009", needs: [] },
   { fk: "FK-005a", needs: ["trackedLink"] },
   { fk: "FK-001", needs: ["elekTenant"] },
   { fk: "FK-002", needs: ["elekTenant"] },

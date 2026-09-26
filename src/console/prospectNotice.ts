@@ -59,14 +59,37 @@ const SURFACE = "#101216";
 function senderSentence(): string {
   const advertiser = advertiserName();
   // an unset env may not invent an identity — §B.17 binds us about ourselves too
-  return advertiser ? `A megkeresés küldője: ${escapeHtml(advertiser)}. ` : "";
+  // "Olasz Ferenc e.v.." — a name that ends with a period must not get a second one
+  // (measured on the served footer, 2026-09-26).
+  return advertiser ? `A megkeresés küldője: ${escapeHtml(advertiser)}${advertiser.endsWith(".") ? "" : "."} ` : "";
 }
+
+/**
+ * A finger-sized link. The footer and the bar are set in 12–12,5 px type, so a bare
+ * inline <a> is a 15 px tall target — measured on 38 pages at 390 px (Elek FK-009,
+ * 2026-09-26). WCAG 2.5.8 asks for 24 px; the padding buys it without changing the
+ * type size or the wording the framing contract binds.
+ */
+const TAP_LINK = "display:inline-block;padding:6px 2px;text-decoration:underline";
+
+/**
+ * Clearance under the LAST block of the page. On a phone the bottom of the viewport
+ * is a stack of fixed layers — the consent bar, a template's own fixed booking bar,
+ * and the configurator's invite pill climbing above both — and the legal footer,
+ * being the last in-flow block, ended up UNDER that stack: at the very bottom of
+ * the page the opt-out link was covered on every one of the 19 templates
+ * (measured 2026-09-26, 390/360/844×390). The configurator runtime measures the
+ * stack it sits on and publishes it as `--citui-cfg-clear`; without that script the
+ * consent runtime's own `--citui-consent-h` is the fallback, and with neither the
+ * padding is the plain 14 px it always was.
+ */
+const FOOTER_CLEARANCE = "padding-bottom:calc(14px + var(--citui-cfg-clear, var(--citui-consent-h, 0px)))";
 
 /** The way out, and the full information — same markup wherever it appears. */
 function legalLinks(token: string): string {
   return (
-    `<a href="/privacy" style="color:${INK_MUTED};text-decoration:underline">Adatkezelési tájékoztató</a> · ` +
-    `<a href="/p/${token}/unsubscribe" style="color:${INK_MUTED};text-decoration:underline">Leiratkozás</a>`
+    `<a href="/privacy" style="color:${INK_MUTED};${TAP_LINK}">Adatkezelési tájékoztató</a> · ` +
+    `<a href="/p/${token}/unsubscribe" style="color:${INK_MUTED};${TAP_LINK}">Leiratkozás</a>`
   );
 }
 
@@ -84,7 +107,7 @@ function legalLinks(token: string): string {
  */
 export function injectTrackingNotice(html: string, token: string): string {
   const notice =
-    `<div style="padding:14px 18px;text-align:center;font:12px/1.6 system-ui,sans-serif;` +
+    `<div data-cit-footer="tracked" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;font:12px/1.6 system-ui,sans-serif;` +
     `color:${INK_MUTED};background:${SURFACE}">${LEGAL_BASIS} ${senderSentence()}` +
     `${TRACKING_NOTICE} ` +
     legalLinks(token) +
@@ -132,7 +155,10 @@ export function injectTrackingBanner(html: string, token: string): string {
     `<strong style="color:#fff;font-weight:600">Ez egy honlap-terv az Ön szállásáról.</strong> ` +
     `${made}` +
     `<details style="margin-top:5px">` +
-    `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline;font-size:12.5px">` +
+    // padding for a 24 px+ tap target; NOT display:inline-block — that would drop the
+    // native ▶ disclosure marker (the visible "this opens" affordance) in Chromium.
+    `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline;font-size:12.5px;` +
+    `padding:6px 8px">` +
     `Miért kaptam?</summary>` +
     `<div style="margin:8px auto 2px;font-size:12.5px;line-height:1.65">` +
     `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token)}</div>` +
@@ -191,7 +217,7 @@ const OWNED_CSS =
   `border:1px solid ${CYAN};color:${SURFACE};background:${CYAN}}` +
   `.ow-det{margin-top:8px}` +
   `.ow-det summary{cursor:pointer;color:${INK_MUTED};text-decoration:underline;` +
-  `font-size:12.5px;text-align:center;list-style:none}` +
+  `font-size:12.5px;text-align:center;list-style:none;padding:6px 8px}` +
   `.ow-det summary::-webkit-details-marker{display:none}` +
   `.ow-det .ow-body{margin:8px auto 2px;font-size:12.5px;line-height:1.65;text-align:center}` +
   `@media (min-width:760px){` +
@@ -281,14 +307,14 @@ export function injectOwnedBanner(html: string, input: OwnedBannerInput): string
 export function injectOwnedNotice(html: string, input: OwnedBannerInput): string {
   const where = input.loginUrl
     ? ` Kezelőfelület: <a href="${escapeHtml(input.loginUrl)}" ` +
-      `style="color:${INK_MUTED};text-decoration:underline">${escapeHtml(prettyUrl(input.loginUrl))}</a> · `
+      `style="color:${INK_MUTED};${TAP_LINK}">${escapeHtml(prettyUrl(input.loginUrl))}</a> · `
     : " ";
   const notice =
-    `<div data-cit-footer="owned" style="padding:14px 18px;text-align:center;` +
+    `<div data-cit-footer="owned" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;` +
     `font:12px/1.6 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
     `Ön a Citoviso ügyfele — ezt az oldalt a korábbi megkeresésünk linkjéről nyitotta meg. ` +
     `A megtekintést nem rögzítjük.${where}` +
-    `<a href="/privacy" style="color:${INK_MUTED};text-decoration:underline">Adatkezelési tájékoztató</a>` +
+    `<a href="/privacy" style="color:${INK_MUTED};${TAP_LINK}">Adatkezelési tájékoztató</a>` +
     `</div>`;
   return appendToBody(html, notice);
 }
@@ -332,6 +358,45 @@ export function disableIntroAnimation(html: string): string {
   return style + withAttr;
 }
 
+/**
+ * Below-the-fold photos load lazily on a page we SEND OUT. Measured 2026-09-26 on the
+ * 38 tracked pages (19 templates × 2 leads) at 390 px: 8–17 <img> per page, NONE with
+ * loading="lazy", 1,2–5,3 MB per page, a single Google photo of 2 MB — all requested
+ * on first paint, on a link that is opened on a phone, on mobile data. The first two
+ * images are the hero and stay eager (LCP); every later <img> without its own
+ * loading attribute gets `loading="lazy" decoding="async"`. The artifact file on disk
+ * is untouched — this is the serve-time layer, like the framing bar.
+ */
+export function lazyLoadBelowFold(html: string, eager = 2): string {
+  let seen = 0;
+  return html.replace(/<img\b([^>]*)>/gi, (tag, attrs: string) => {
+    seen++;
+    if (seen <= eager || /\bloading\s*=/i.test(attrs)) return tag;
+    const decoding = /\bdecoding\s*=/i.test(attrs) ? "" : ' decoding="async"';
+    return `<img loading="lazy"${decoding}${attrs}>`;
+  });
+}
+
+/**
+ * NO SIDEWAYS OVERFLOW ON A PAGE WE SEND OUT. A phone does not scroll a too-wide
+ * page sideways — Chromium WIDENS the layout viewport to the content, and every
+ * fixed layer is laid out on that wider box. Measured 2026-09-26 (Elek FK-009):
+ * brutalism's nowrap marquee made a 390 px phone lay the page out at 515 px, so the
+ * consent bar and the invite pill were off the screen and the pill could not be
+ * tapped at all; parallax and brutalism did the same on the 360 px Android
+ * (390/380 px). The template owns the marquee (→ testvér-szál); this is the serve-
+ * time net under it: `overflow-x: clip` clips without creating a scroll container,
+ * so `position: sticky` in the templates keeps working (the `hidden` value would
+ * make <html>/<body> a scroller and break it). Idempotent via the marker.
+ */
+export function containHorizontalOverflow(html: string): string {
+  if (html.includes("data-cit-contain-x")) return html;
+  const style = `<style data-cit-contain-x>html,body{overflow-x:clip}</style>`;
+  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, `${style}</head>`);
+  if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${style}`);
+  return style + html;
+}
+
 /** Put a block at the very END of the page (the opt-out lives at the bottom). */
 function appendToBody(html: string, block: string): string {
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);
@@ -366,11 +431,11 @@ function advertiserName(): string {
 export function injectOptedOutNotice(html: string, _token: string): string {
   const who = advertiserName();
   const notice =
-    `<div style="padding:14px 18px;text-align:center;font:12px/1.6 system-ui,sans-serif;` +
+    `<div data-cit-footer="opted-out" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;font:12px/1.6 system-ui,sans-serif;` +
     `color:#8a8f98;background:#101216">Ön korábban leiratkozott, ezért nem keressük többé, ` +
     `és ezt a megtekintést nem rögzítjük. Ezt az oldalt Ön nyitotta meg. ` +
     (who ? `A megkeresés küldője volt: ${escapeHtml(who)}. ` : "") +
-    `<a href="/privacy" style="color:#8a8f98;text-decoration:underline">Adatkezelési tájékoztató</a></div>`;
+    `<a href="/privacy" style="color:#8a8f98;${TAP_LINK}">Adatkezelési tájékoztató</a></div>`;
   return appendToBody(html, notice);
 }
 

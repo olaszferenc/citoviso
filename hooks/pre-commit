@@ -715,6 +715,16 @@ if [ -f scripts/prospect-framing-check.mts ] && \
   echo "[pre-commit] prospect-framing-check (a keretezés minden látogatónak, a helyén)…"
   npx tsx scripts/prospect-framing-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A KIKÜLDÖTT LAP TELEFONON (Elek FK-009, 2026-09-26): a lap alján a süti-sáv + a sablon
+# rögzített Foglalás-sávja + a fölé mászó pirula 40 %-nyi réteg volt, ALATTA a jogi lábléc
+# linkjei — a kiút elérhetetlen; a linkek 15 px-es érintési célok; a képek lazy-load nélkül;
+# a brutalism marquee-ja 780 px-esre húzta a layout viewportot (a süti-sáv kicsúszott).
+# Fixture-ön, mobil-emulációval (isMobile+touch), 390 + FEKVŐ 844×390, négy piros önteszttel.
+if [ -f scripts/lead-mobile-check.mts ] && \
+   changed_files | grep -qE '^(src/console/prospectNotice|src/console/server|src/server/consent|src/generator/configurator|src/generator/runtime|src/engine/templates|assets/runtime/cit-configurator|public/assets/runtime/cit-consent|scripts/lead-mobile-check)'; then
+  echo "[pre-commit] lead-mobile-check (a kiküldött lap telefonon: lábléc elérhető, érintési cél, lazy, nincs túlfolyás)…"
+  npx tsx scripts/lead-mobile-check.mts --gate --selftest >"$GATE_LOG" || gate_failed
+fi
 # Ugyanaz a hibaosztály az OPERÁTOR oldalán: a „Megnyitások" fölött „látogatás" állt,
 # a „–" pedig egyszerre jelentett „nem mértünk"-et és „nullá"-t. Böngésző nélkül fut.
 if [ -f scripts/prospect-activity-label-check.mts ] && \
