@@ -132,3 +132,14 @@ körre feloldva; minden más szabály él; minden javítás a MOTORBAN (mock-fá
    azonnali — döntés kell (RFC 8058 a POST-ra épül, a GET-ág a mi kényelmünk).
 4. Az FK-009 futás (`elek/runs/FK-009-…`) teljes-lapos képei a runner 1280/390 párjában — a
    webes teszt-naplóba felvitel (`save-test-log.mts`) a következő park-építéskor.
+
+## Zárás (2026-09-26, du.)
+
+- Landolva: 1. kör `babe8e07`, 2. kör `5e1ab4bb` (origin/main igazoltan tartalmazza). Semmi nem ment élesre.
+- Runner FK-009 a végleges motoron: `elek/runs/FK-009-2026-09-26T13-07-50/` — 49 lépés, pass 1, manual 48, fail 0,
+  zaj 0; a LELETEK.md (1.+2. kör) benne. A 2. futás sora a `runs.jsonl`-be NEM került be (a land után nem nyitottam
+  új commitot érte) — a következő park-építéskor pótolandó.
+- Utolsó teljes mérés (114 lap-nézet, javított motor): álló tartásban 0 HIBA, fekvőben 1 időszakos (Gy5).
+- **Nyitva:** a tulaj utólagos ítélete a B első képernyőn; a felület-kapu kivétele (citui.css token) vétózható; Gy5;
+  a testvér-szálnak átadott motor-tételek (fejléc-blokk, srcset, Foglalás-sáv törés, marquee).
+
