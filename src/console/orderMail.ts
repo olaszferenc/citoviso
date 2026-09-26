@@ -9,6 +9,7 @@ import { getEmailSender } from "../email/sender.js";
 import { buildOrderPayLinkEmail, buildOrderReceivedEmail, type OrderMailBase } from "../email/orderEmail.js";
 import { langForLead, prepareMailLang } from "../i18n/mail.js";
 import { getCurrency } from "../pricing.js";
+import { payEntryUrl } from "../payment/payEntryUrl.js";
 
 interface OrderFacts {
   readonly base: OrderMailBase;
@@ -90,7 +91,9 @@ export async function sendOrderPayLinkMail(orderIntentId: string, paymentId: str
       );
       return false;
     }
-    await getEmailSender().send(buildOrderPayLinkEmail({ ...o.base, payUrl: pay.payUrl }));
+    // ⛔ The STABLE link, not the gateway's: the buyer opens this letter later than
+    // the payment window lasts (measured 2026-09-26: "Lejárt fizetési tranzakció").
+    await getEmailSender().send(buildOrderPayLinkEmail({ ...o.base, payUrl: payEntryUrl(paymentId) }));
     console.log(`[order-mail] fizetési link → ${o.base.to} (order ${orderIntentId}, payment ${paymentId})`);
     return true;
   } catch (e) {

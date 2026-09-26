@@ -84,6 +84,7 @@ import { siteShotPath } from "../payment/siteShot.js";
 import { tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
+import { resolvePayEntry } from "../payment/payEntry.js";
 import {
   applyOffer,
   bestActiveOfferForProspect,
@@ -97,6 +98,7 @@ import {
   payPendingPage,
   payResultPage,
   payUnknownRefPage,
+  payLinkUnavailablePage,
 } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
 import { ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
@@ -3258,6 +3260,31 @@ async function handle(
   // unreachable for it entirely) — so resolve the state through the SAME
   // idempotent webhook path (Barion adapter → GetPaymentState), then show the
   // buyer the result screen.
+  // GET /pay/go/:paymentId — the STABLE pay-link every letter carries (2026-09-26).
+  // A raw gateway link dies after its payment window (Barion: 30 min); this one
+  // decides at click time — paid → result page, live → on to it, dead → a fresh
+  // payment for the same order (src/payment/payEntry.ts).
+  const payGoMatch = /^\/pay\/go\/([0-9a-f-]{36})$/i.exec(path);
+  if (method === "GET" && payGoMatch) {
+    const d = await resolvePayEntry(payGoMatch[1]!);
+    if (d.kind === "redirect") return redirect(res, d.url);
+    if (d.kind === "unknown") return send(res, 404, payUnknownRefPage(payGoMatch[1]!, config.supportEmail || null));
+    const oi = await db
+      .selectFrom("order_intent")
+      .select(["price", "billing_period as period", "buyer_email as buyerEmail"])
+      .where("id", "=", d.orderIntentId)
+      .executeTakeFirst();
+    // The buyer came to PAY and could not — the same incident as a stuck order.
+    await alertStuckOrder({
+      orderIntentId: d.orderIntentId,
+      leadName: null,
+      amountHuf: oi?.price ?? null,
+      billingPeriod: oi?.period === "annual" ? "annual" : "monthly",
+      buyerEmail: oi?.buyerEmail ?? null,
+      reason: "paylink_reissue_refused",
+    });
+    return send(res, 200, payLinkUnavailablePage(config.supportEmail || null));
+  }
   if (method === "GET" && path === "/pay/done") {
   // One place for the tenant-admin base: the console serves these pages, so a
   // relative /admin would point at OUR console, not the buyer's own admin.

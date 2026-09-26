@@ -48,6 +48,7 @@ import { billingEmails } from "../billing/partner.js";
 import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
 import { applyOffer, bestActiveCouponForTenant } from "./offers.js";
+import { payEntryUrl } from "./payEntryUrl.js";
 
 type DunningStep = "pre_notice" | "charge" | "reminder" | "final_warning" | "freeze" | "cancel";
 
@@ -648,7 +649,10 @@ async function notify(
       console.error(`[billing] ${sub.displayName}: pay-link nem jött létre a(z) ${step} lépcsőhöz`);
       return 0;
     }
-    payUrl = pay.payUrl;
+    // ⛔ The STABLE link, not pay.payUrl: these letters are read hours or days
+    // later, and a gateway payment dies after its window (Barion: 30 min) —
+    // measured 2026-09-26, "Lejárt fizetési tranzakció" from a mailed link.
+    payUrl = payEntryUrl(pay.paymentId);
   }
 
   const base = { siteName: sub.displayName, amount, currency, dueDate, lang };

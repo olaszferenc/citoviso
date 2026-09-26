@@ -105,6 +105,7 @@ import {
   voidUnpaidSettlement,
 } from "../domains/domainSettlement.js";
 import { sendSettlementMail } from "../domains/settlementNotify.js";
+import { payEntryUrl } from "../payment/payEntryUrl.js";
 import { isMockDomainProvisioning, provisionOrderDomain } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
@@ -2189,7 +2190,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       monthsRemaining: quote?.commitment.remainingMonths ?? 0,
       penaltyBase: quote?.penaltyBase ?? 0,
       takeDomain,
-      payUrl: pay.payUrl,
+      // The STABLE link: the letter outlives the gateway's payment window.
+      payUrl: payEntryUrl(pay.paymentId),
       accessEndDate: quote?.accessEndDate ?? null,
     });
     return redirect(res, "/admin/subscription/settlement");

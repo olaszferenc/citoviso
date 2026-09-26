@@ -2050,6 +2050,26 @@ export function payUnknownRefPage(ref: string, supportEmail: string | null): str
 }
 
 /**
+ * The stable pay-link (/pay/go) could not start a payment for this order — the
+ * gates in requestPayment refused (e.g. the order is no longer payable). The house
+ * has been alerted; the page says exactly that and nothing more (§B.17): no charge
+ * was started, a person follows up, here is how to reach us.
+ */
+export function payLinkUnavailablePage(supportEmail: string | null): string {
+  const lang = consoleLang();
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
+    <h2 style="margin-top:0">${T(lang, "Ezzel a linkkel most nem tudunk fizetést indítani")}</h2>
+    <p style="margin:0">${T(lang, "Nem indítottunk fizetést, és nem terheltük meg a kártyáját. Szóltunk a kollégánknak, aki felveszi Önnel a kapcsolatot.")}</p>
+    ${
+      supportEmail
+        ? `<div class="row" style="margin-top:18px"><a class="con-linkact" href="mailto:${esc(supportEmail)}">${T(lang, "Írjon nekünk: {email}", { email: esc(supportEmail) })}</a></div>`
+        : ""
+    }
+  </div>`;
+  return layout(T(lang, "Fizetés nem indítható"), body, { chrome: false });
+}
+
+/**
  * Buyer returned from the gateway before the final payment state landed (Barion
  * may still report InProgress for a few seconds). Auto-refresh until /pay/done
  * can render the real outcome — never leave the buyer on a dead screen.
