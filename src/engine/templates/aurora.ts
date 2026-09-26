@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -275,7 +275,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     ...(faqsData ? [{ label: T(data, "GYIK"), href: "#au-faq" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero (dashboard) -----------------------------------------------------
   const widgetStack = hasWidgets
@@ -497,7 +497,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 
   const mobcta = hasContact
     ? `<div class="au-mobcta">
-    <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
+    ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
@@ -514,6 +514,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   ${renderSkinVars(skin, data.palette?.accent)}
 ${AURORA_CSS}
 ${mastheadCss("flow")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-aurora">

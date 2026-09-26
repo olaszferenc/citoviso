@@ -736,6 +736,15 @@ fi
 # A NYITÓKÉP A TELJES KÉPRŐL SZÓL (2026-09-26): a látás 92-t adott egy fél-fekete Places-fotóra
 # (az eget nézte, a talajt nem), és az lett 12 stílus hero-ja. A photoHealth.ts pixel-statisztikája
 # a tárolt verdiktbe von le; az őr szintetikus képeken méri, negatív kontrollal, hálózat nélkül.
+# A kiküldött lap telefonon, mobil-neten: a Google-fotók =w1200-on mentek (553 KB/kép,
+# 1,2–5,5 MB/lap), miközben a 390 px-es képernyőnek 480–800 px elég. A render.ts
+# `responsiveGooglePhotos` srcset-et/DPR-választós hátteret ad az lh3 URL-eknek — tisztán,
+# hálózat nélkül mérve, negatív kontrollal (a visszabontott lap bukik).
+if [ -f scripts/photo-srcset-check.mts ] && \
+   changed_files | grep -qE '^(src/engine/render\.ts|src/engine/templates/|scripts/photo-srcset-check)'; then
+  echo "[pre-commit] photo-srcset-check (Google-fotó telefon-méretben: srcset + DPR-választós háttér)…"
+  npx tsx scripts/photo-srcset-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/hero-health-check.mts ] && \
    changed_files | grep -qE '^(src/generator/photoHealth|src/generator/heroPick|src/generator/heroOverride|scripts/rerender-mock|scripts/hero-health-check)'; then
   echo "[pre-commit] hero-health-check (a nyitókép a teljes képről szól — fél-fekete fotó nem hero)…"

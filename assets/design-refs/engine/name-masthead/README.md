@@ -27,3 +27,11 @@ a hiba (a szállásnév apró sarok-brandként) egyetlen sablonban sem jelenhet 
 - Minta-implementáció: `src/engine/templates/fullbleed.ts` (ehhez mérünk).
 - Sweep-hám: `scripts/masthead-sweep.mts` (egy lead inputja minden sablonon át).
 - A jóváhagyott vizuális referencia: `approved-masthead.html` (Levendula-adattal).
+
+## Telefon (kiegészítés, 2026-09-26 — `phone/README.md`)
+
+Az 5. pont („mobilon a link-sávból csak a foglalás-CTA marad”) pontosítva, tulajdonosi mandátummal, „C”
+változat: a masthead telefonon ≤ 150 px (mérve 62–128), ahol a sablon rögzített Foglalás-sávot visel, a
+link-sáv nem jelenik meg (a CTA a sávban él), a fotós fejléc léniái eltűnnek, a tartás nem szélesség
+(fekvőn is a tömör alak). A rögzített sáv felirata egy szerkezet: érték nagyban, felirat egy sorban.
+Asztalon pixelre változatlan. Részletek, mért számok, képek: `phone/`.

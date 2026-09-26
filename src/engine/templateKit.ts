@@ -3,7 +3,7 @@
 // independent files and the registry (templates.ts) stays a plain import list.
 
 import { tSync } from "../i18n/packs.js";
-import { iconSvg } from "./icons.js";
+import { iconSvg, starIcon } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
@@ -451,7 +451,14 @@ export interface MastheadLink {
 
 export function mastheadHtml(
   d: SiteData,
-  o: { links: readonly MastheadLink[]; place?: string },
+  o: {
+    links: readonly MastheadLink[];
+    place?: string;
+    /** The template carries a FIXED booking bar on a phone (its own `*-mobcta`): the
+     *  masthead's link band is then dropped ≤720px — the CTA survives in the bar, and
+     *  the first screen stops showing the same button three times (FK-009 V2). */
+    phoneBar?: boolean;
+  },
 ): string {
   const links = o.links
     .map(
@@ -462,7 +469,7 @@ export function mastheadHtml(
   const place = o.place
     ? `<div class="cit-mast-place"><span>${esc(o.place)}</span></div>`
     : "";
-  return `<header class="cit-mast">
+  return `<header class="cit-mast"${o.phoneBar ? " data-cit-mast-bar" : ""}>
     <a class="cit-mast-name" href="#top">${esc(d.name)}</a>
     ${place}
     ${links ? `<nav class="cit-mast-links">${links}</nav>` : ""}
@@ -539,10 +546,46 @@ export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {
   .cit-mast-links a:hover{color:var(--mast-hover,var(--cit-accent))}
   .cit-mast-links a.cit-mast-hot{font-weight:600;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;
     text-decoration-color:var(--mast-hotline,${overlay ? "color-mix(in srgb, var(--cit-accent) 40%, #fff)" : "var(--cit-accent)"})}
-  @media(max-width:720px){
+  /* PHONE (≤720px) — contract amendment 2026-09-26 (design-refs/engine/name-masthead/phone,
+     FK-009 V2): the structure stays (name → place → band) but the band collapses to the hot
+     link as a CHIP in the template's shape (--mast-chip), the air tightens, and where the
+     template carries a fixed booking bar the band is dropped altogether — the CTA lives in
+     the bar. Measured: 148–200px → 69–96px on the bar templates, 155 → 140 with the chip;
+     the desktop lockup is byte-identical. Overlay heads also drop the hairlines so the top
+     of the photo belongs to the name and the picture, not to two rules. Orientation is
+     not width (a landscape phone is 844px wide and 390px high): the same compact head
+     applies under 500px of height, where the desktop lockup would take 45% of the screen. */
+  @media(max-width:720px),(max-height:500px){
+    .cit-mast{padding-top:var(--mast-pad-m,${overlay ? "18px" : "22px"})}
     .cit-mast-name{font-size:26px}
-    .cit-mast-place span{letter-spacing:3.5px}
-    .cit-mast-links{gap:18px;max-width:340px}
+    .cit-mast-place{margin-top:6px;gap:10px}
+    .cit-mast-place span{letter-spacing:3px;font-size:10px}
+    ${overlay ? ".cit-mast-place::before,.cit-mast-place::after{display:none}" : ""}
+    .cit-mast-links{border:0;margin-top:8px;gap:0;max-width:none}
     .cit-mast-links a:not(.cit-mast-hot){display:none}
+    .cit-mast-links a.cit-mast-hot{text-decoration:none;padding:0 18px;
+      border:1px solid var(--mast-line,${overlay ? "rgba(255,255,255,.4)" : "color-mix(in srgb, var(--cit-ink) 30%, transparent)"});
+      border-radius:var(--mast-chip,999px)}
+    .cit-mast[data-cit-mast-bar] .cit-mast-links{display:none}
   }`;
 }
+
+/**
+ * The fixed PHONE booking bar's left cell — the real Google rating (or the name) next to
+ * the "Foglalás" button. ONE structure for every template (FK-009, 2026-09-26): the value
+ * big with the star, the label small on ONE line with an ellipsis. The old inline
+ * "<b>4,3</b> · Google-értékelés · 30 vélemény" wrapped to 2–3 lines at 390px (transit: a
+ * 99px bar), and 12 templates each carried their own copy of it. The template's own
+ * `.x-mobcta span` colour/size rules still dress the outer span; MOBCTA_CSS only fixes
+ * the geometry.
+ */
+export function mobCtaStat(d: SiteData, stat?: { value: string; label: string } | null): string {
+  return stat
+    ? `<span class="cit-mobcta__t"><b>${esc(stat.value)} ${starIcon()}</b><small>${esc(stat.label)}</small></span>`
+    : `<span class="cit-mobcta__t"><b>${esc(d.name)}</b></span>`;
+}
+export const MOBCTA_CSS = `
+  .cit-mobcta__t{display:flex;flex-direction:column;min-width:0;line-height:1.25;gap:1px}
+  .cit-mobcta__t b{font-size:17px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cit-mobcta__t b svg{width:14px;height:14px;flex:none}
+  .cit-mobcta__t small{font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;text-transform:none;font-family:var(--cit-font-body)}`;

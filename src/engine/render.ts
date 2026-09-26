@@ -101,6 +101,69 @@ window.addEventListener('error',function(e){var t=e.target;if(t&&t.tagName==='IM
 document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('img').forEach(function(i){if(i.complete&&i.naturalWidth===0)f(i);});});
 })();</script>`;
 
+// ── Responsive Google photos (FK-009 E2/V4, 2026-09-26) ──────────────────────────
+// The page we send out is opened on a PHONE, on mobile data: 8–17 <img> per page at
+// `=s4800-w1200` (measured 553 KB for one Places photo) while a 390px screen needs 480–800px.
+// The lh3 URL's size suffix is honoured by Google (measured: =w480 → 480px / 110 KB,
+// =w800 → 302 KB, =w1200 → 553 KB), so the SAME photo is offered in three widths and the
+// browser picks by viewport + DPR. The `-rw` flag asks for WebP: a 780×800 upload that
+// Google re-encodes to a 2 034 KB JPEG comes back as 320 KB (=w780-rw) / 86 KB (=w480-rw);
+// swept on the park's 34 Google photos × 3 widths: 102/102 answered 200 image/webp
+// (2026-09-26). The `src` keeps the ORIGINAL URL — every consumer that reads it (liveness,
+// provenance, the curator's proxy) sees the stored photo, and a browser without srcset
+// support still gets the picture it always got. Nothing is stored or re-hosted (the provenance row keeps
+// the original URL; memory: source portal photos die — we never write the photo store from
+// here). Portal photos (hovamenjek, lake-balaton.com, apartman.hu) carry no size parameter
+// and are left untouched — named in the session note, not silently "optimised".
+//   <img src="…lh3…=s4800-w1200">           → + srcset (480/800/1200 w) + sizes
+//   style="background-image:url('…lh3…')"  → data-cit-bg + --cit-bg-{s,m,l} custom props,
+//                                             one <style data-cit-bgset> picks by width/DPR
+// Pure and idempotent; the guard `scripts/photo-srcset-check.mts` measures it.
+const LH3_SIZED = /^(https:\/\/lh3\.googleusercontent\.com\/[^"'\s=]+)=((?:s\d+-)?w(\d+))$/;
+const LH3_WIDTHS: readonly number[] = [480, 800, 1200];
+const BGSET_STYLE =
+  `<style data-cit-bgset>[data-cit-bg]{background-image:var(--cit-bg-l)}` +
+  `@media(max-width:480px){[data-cit-bg]{background-image:-webkit-image-set(var(--cit-bg-s) 1x,var(--cit-bg-m) 2x,var(--cit-bg-l) 3x);` +
+  `background-image:image-set(var(--cit-bg-s) 1x,var(--cit-bg-m) 2x,var(--cit-bg-l) 3x)}}</style>`;
+
+function lh3Candidates(url: string): { base: string; widths: number[] } | null {
+  const m = LH3_SIZED.exec(url);
+  if (!m) return null;
+  const max = Number(m[3]);
+  const widths = LH3_WIDTHS.filter((w) => w < max);
+  widths.push(max);
+  return { base: m[1]!, widths };
+}
+
+export function responsiveGooglePhotos(html: string): string {
+  if (html.includes("data-cit-bgset")) return html;
+  let heroSeen = false;
+  let bgSeen = false;
+  let out = html.replace(/<img\b([^>]*)>/gi, (tag, attrs: string) => {
+    if (/\bsrcset\s*=/i.test(attrs)) return tag;
+    const src = /\bsrc="([^"]+)"/i.exec(attrs);
+    const c = src ? lh3Candidates(src[1]!) : null;
+    if (!c) return tag;
+    const lazy = /\bloading\s*=\s*"lazy"/i.test(attrs);
+    // the hero: marked, or the first eager Google photo in document order — full width
+    const hero = /\bdata-cit-hero-img\b/.test(attrs) || (!heroSeen && !lazy);
+    if (hero) heroSeen = true;
+    const srcset = c.widths.map((w) => `${c.base}=w${w}-rw ${w}w`).join(", ");
+    // `auto` = the laid-out width for lazy images (Chromium); other engines fall through
+    const sizes = hero ? "100vw" : "auto, (max-width: 560px) 100vw, 50vw";
+    return `<img srcset="${srcset}" sizes="${sizes}"${attrs}>`;
+  });
+  out = out.replace(/style="background-image:url\('([^']+)'\)"/g, (decl, url: string) => {
+    const c = lh3Candidates(url);
+    if (!c) return decl;
+    bgSeen = true;
+    const at = (w: number): string => `${c.base}=w${Math.min(w, c.widths[c.widths.length - 1]!)}-rw`;
+    return `data-cit-bg style="--cit-bg-s:url('${at(480)}');--cit-bg-m:url('${at(800)}');--cit-bg-l:url('${at(1200)}')"`;
+  });
+  if (bgSeen) out = /<\/head>/i.test(out) ? out.replace(/<\/head>/i, `${BGSET_STYLE}</head>`) : BGSET_STYLE + out;
+  return out;
+}
+
 function injectImgFallback(html: string): string {
   return html.includes("</body>")
     ? html.replace("</body>", `${IMG_FALLBACK_JS}</body>`)
@@ -448,7 +511,7 @@ export function renderSite(
   const phase: RenderPhase = opts.phase ?? "mock";
   const modOpts = { sampleAllow: opts.sampleAllow, sampleDeny: opts.sampleDeny, demoForms: opts.demoForms };
   const finish = (page: string): string => {
-    const out = opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page;
+    const out = responsiveGooglePhotos(opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page);
     // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
     // tenant site and meaningless on a mock (no legal data about the lead, no such
     // page on the preview host). Cut here, once, for both render paths.

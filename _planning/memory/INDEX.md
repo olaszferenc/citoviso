@@ -9,6 +9,7 @@
 - [2026-09-26_rendeles_fizetesi_link.md](2026-09-26_rendeles_fizetesi_link.md) — Rendelés → fizetés a vevő szemével: őszinte képernyő, vevő-levelek, tartós fizetési link (2026-09-25/26)
 - [2026-09-26_paydone_e4_logo.md](2026-09-26_paydone_e4_logo.md) — 2026-09-26 — E4 logó a fizetési lapok (/pay/*) sötét fejlécében
 - [2026-09-26_mobil_vendeg_nezet_fk010.md](2026-09-26_mobil_vendeg_nezet_fk010.md) — 2026-09-26 — Mobil · Elek a VENDÉG szemével: a 19 stílus × 2 lead mockja telefonon (FK-010)
+- [2026-09-26_mobil_motor_fejlec_srcset.md](2026-09-26_mobil_motor_fejlec_srcset.md) — 2026-09-26 — Mobil · vendég-nézet 2: a FK-009 átadott tételei a mock-motorban (fejléc, Foglalás-sáv, Google-fotó méret, marquee) + egy lead 19 stílusa
 - [2026-09-26_logo_b_lockup_mindenhol.md](2026-09-26_logo_b_lockup_mindenhol.md) — 2026-09-26 — A logó mindenhol: a jel maga a C („B”), egy forrásból (ADR-0236)
 - [2026-09-26_elek_lead_telefonon.md](2026-09-26_elek_lead_telefonon.md) — 2026-09-26 — Elek a LEAD szemével, TELEFONON: a kiküldött terv első megnyitása (FK-009, 19 stílus × 2 lead)
 - [2026-09-25_modul_almenu.md](2026-09-25_modul_almenu.md) — 2026-09-25 — Modul-almenü a tenant-admin oldalsávjában

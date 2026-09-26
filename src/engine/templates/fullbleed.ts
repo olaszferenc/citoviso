@@ -10,20 +10,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  centredModsecCss,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  mastheadCss,
-  mastheadHtml,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -248,7 +235,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }] : []),
     ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero -----------------------------------------------------------------
   const heroBg = heroPhoto
@@ -426,7 +413,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   const mobcta = hasContact
     ? `<div class="t-mobcta">
-    <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
+    ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
@@ -443,6 +430,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${FULLBLEED_CSS}
 ${mastheadCss("overlay")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-fullbleed">

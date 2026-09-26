@@ -83,6 +83,13 @@ Minden vevő-oldali felirat nyelvi csomagon keresztül renderelődik; a HU forr�
     a rejtendő elem `.reveal` osztályt kap, a rejtés a `.cit-anim` mögött; **a `.cit-anim`-ot ÉS a `.in` felszabadítást a
     runtime végzi — az archetípus NE írjon saját IntersectionObserver-t.** A szekciók simuljanak a tartalomhoz
     (nincs fix/nagy vh/min-height, ami űrt hagy — főleg mobilon).
+- **Telefonos fejléc + Foglalás-sáv + fotó-méret (2026-09-26, ADR-0235 + ADR-XXXX):** a sablon-masthead
+  telefonon (≤720 px VAGY ≤500 px magas — a tartás nem szélesség) ≤150 px; ahol a sablon rögzített Foglalás-sávot
+  visel (`mastheadHtml({phoneBar:true})`), a link-sáv elmarad (a CTA a sávban él); a sáv felirata egy szerkezet
+  (`mobCtaStat`: érték nagyban + felirat egy sorban). A Google-fotó (`lh3…=s4800-wN`) `srcset`/`image-set`-tel három
+  szélességben, WebP-ben (`-rw`) megy ki; a `src` az eredeti URL marad; portál-fotó érintetlen (nincs méret-paraméter).
+  Kontraktus: `assets/design-refs/engine/name-masthead/phone/`; őr: `guest-mobile-check` ②fejléc-blokk / ⑤sáv-felirat,
+  `photo-srcset-check`.
 - **Következő modulok:** `reviews` valódi Google-review-enrichmenthez kötése (ma ritkán van adat);
   további interaktív modulok ugyanezen registry-minta szerint.
 - **Tényhűség a mockban:** a booking-widget NEM hazudik elérhetőséget/árat — érdeklődés/foglalási IGÉNYT állít

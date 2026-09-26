@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -232,7 +232,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#og-contact" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero (asymmetric: copy left, blob photos right) ----------------------
   const heroVisual = heroPhoto
@@ -468,7 +468,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
 
   const mobcta = hasContact
     ? `<div class="og-mobcta">
-    <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
+    ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`
     : "";
@@ -485,6 +485,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   ${renderSkinVars(skin, data.palette?.accent)}
 ${ORGANIC_CSS}
 ${mastheadCss("flow")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-organic">

@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, sampleRooms, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -260,7 +260,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#cn-contact" }] : []),
     ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- cinematic hero (crossfade) ------------------------------------------
   const slides = heroPhotos.length
@@ -486,7 +486,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   const mobcta = hasContact
     ? `<div class="cn-mobcta">
-    <span>${ratingStat ? `<b>${esc(ratingStat.value)}</b> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
+    ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
@@ -503,6 +503,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${CINEMATIC_CSS}
 ${mastheadCss("overlay")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-cinematic">

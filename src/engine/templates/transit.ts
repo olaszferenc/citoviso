@@ -17,7 +17,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const TRANSIT_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -66,6 +66,9 @@ const TRANSIT_CSS = `
   .tb-hl{padding:56px 0 50px}
   @media(min-width:960px){.tb-hl{padding-right:46px}}
   .tb-hero h1{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(40px,7.2vw,84px);line-height:1.04;margin-bottom:16px}
+  /* phone: the 40px tracked caps ran to 7 lines at 390px (Tihany, FK-009) — the board's
+     display voice stays, the size steps down so the headline holds in ≤5 lines */
+  @media(max-width:560px){.tb-hero h1{font-size:32px;letter-spacing:.01em}}
   .tb-hero h1 em{font-style:normal;color:var(--cit-accent)}
   .tb-hero p{color:var(--cit-muted);max-width:470px;margin:20px 0 28px}
   .tb-heroctas{display:flex;gap:12px;flex-wrap:wrap}
@@ -230,7 +233,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#tb-contact" }] : []),
     ...(hasContact ? [{ label: ctaLabel(data, phase), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero (split) ---------------------------------------------------------
   const heroImg = heroPhoto
@@ -447,7 +450,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
 
   const mobcta = hasContact
     ? `<div class="tb-mobcta">
-    <span>${ratingStat ? `<span class="tb-num">${esc(ratingStat.value)}</span> · ${esc(ratingStat.label)}` : esc(data.name)}</span>
+    ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`
     : "";
@@ -464,6 +467,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   ${renderSkinVars(skin, data.palette?.accent)}
 ${TRANSIT_CSS}
 ${mastheadCss("flow")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-transit">

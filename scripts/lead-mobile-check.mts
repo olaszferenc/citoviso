@@ -440,9 +440,13 @@ async function measure(
     images: [],
     failed: [],
   };
-  page.on("pageerror", (e) => jsErrors.push(e.message.slice(0, 200)));
+  // Google's own map-embed bootstrap ("google is not defined" thrown inside init_embed.js on
+  // maps.gstatic.com) is a third-party race the page cannot influence — measured 2026-09-26 as a
+  // red under the parallel gate runner, green alone. Our own scripts' errors still count.
+  const thirdParty = (t: string): boolean => /maps\.gstatic\.com|maps\.googleapis\.com/.test(t);
+  page.on("pageerror", (e) => { if (!thirdParty(String(e.stack || e.message))) jsErrors.push(e.message.slice(0, 200)); });
   page.on("console", (m) => {
-    if (m.type() === "error") jsErrors.push(`console: ${m.text().slice(0, 200)}`);
+    if (m.type() === "error" && !thirdParty(m.text())) jsErrors.push(`console: ${m.text().slice(0, 200)}`);
   });
   const pending: Promise<void>[] = [];
   page.on("response", (res: Response) => {

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-telefonos-fejlec-a-foglalas-sav-es-a-google-foto-merete-a-mock-motorban.md) — A telefonos fejléc, a Foglalás-sáv felirata és a Google-fotó mérete a mock-motorban (FK-009 átadott tételek)
 - [ADR-0236](decisions/0236-a-logo-mindenhol-a-jel-maga-a-c-b-elrendezes.md) — A logó mindenhol: a jel maga a C („B” elrendezés), egy forrásból
 - [ADR-0235](decisions/0235-a-vendeg-telefonon-erintesi-cel-retegzes-es.md) — A vendég telefonon: érintési-cél, rétegzés és tisztás-doktrína a mock-motorban (FK-010)
 - [ADR-0234](decisions/0234-levelben-csak-tartos-fizetesi-link-megy-pay-go.md) — Levélben csak tartós fizetési link megy (`/pay/go/<fizetés-id>`)

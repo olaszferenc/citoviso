@@ -216,7 +216,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalnék!"), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero stickers: REAL data only (§B.17 — never a fabricated offer/claim) --
   const sticker1 = ratingStat

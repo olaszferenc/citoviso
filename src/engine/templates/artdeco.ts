@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, sampleRooms, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -179,6 +179,14 @@ ${centredModsecCss("artdeco")}
   .ad-conline b{font-family:var(--cit-font-display);font-size:17px;letter-spacing:.04em}
   .ad-conline small{color:var(--cit-muted);font-size:12.5px;display:block;letter-spacing:.06em}
   .ad-cform .cit-btn{width:100%;text-align:center;margin-top:22px}
+  /* phone booking bar — ink surface, brass hairline; the masthead band is gone ≤720px */
+  .ad-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:110;background:color-mix(in srgb, var(--cit-bg) 96%, black);border-top:1px solid color-mix(in srgb, var(--cit-accent) 50%, transparent);padding:10px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .ad-mobcta .cit-mobcta__t{color:var(--cit-ink)}
+  .ad-mobcta .cit-mobcta__t b{color:var(--cit-accent)}
+  /* min-width: the invite pill steps around a control only if it is ≥100px wide — a 97px
+     „Foglalás” (measured on the Tihany page) let the pill land ON the bar's button */
+  .ad-mobcta .cit-btn{padding:0 22px;min-height:44px;min-width:124px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  @media(max-width:700px){.ad-mobcta{display:flex}body{padding-bottom:64px}}
 
   /* FOOTER */
   .ad-foot{border-top:1px solid color-mix(in srgb, var(--cit-accent) 35%, transparent);padding:62px 0 30px;background:var(--cit-surface);color:var(--cit-muted)}
@@ -249,7 +257,14 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#ad-contact" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
+  // phone booking bar (2026-09-26): the masthead's band is dropped ≤720px, the CTA lives here
+  const mobcta = hasContact
+    ? `<div class="ad-mobcta">
+    ${mobCtaStat(data, ratingStat)}
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
+  </div>`
+    : "";
 
   // -- hero — centered poster in a deco frame -------------------------------
   const heroFig = heroPhoto
@@ -513,6 +528,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   ${renderSkinVars(skin, data.palette?.accent)}
 ${ARTDECO_CSS}
 ${mastheadCss("flow")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-artdeco">
@@ -530,6 +546,7 @@ ${mastheadCss("flow")}
     ${contact}
     ${slotMarker("closing")}
     ${footer}
+    ${mobcta}
     <script>${ARTDECO_JS}</script>
 </body>
 </html>`;

@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, sampleRooms, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -47,6 +47,14 @@ const CLAY_CSS = `
   .cl-eyebrow{display:inline-block;font-family:var(--cit-font-display);font-weight:500;font-size:13px;color:var(--cit-accent);background:var(--cit-bg);padding:8px 18px;border-radius:100px;box-shadow:inset 3px 3px 7px color-mix(in srgb, var(--cit-ink) 14%, transparent), inset -3px -3px 7px rgba(255,255,255,.9);margin-bottom:16px}
   .cl-btn{display:inline-block;font-family:var(--cit-font-display);font-weight:600;font-size:16px;background:linear-gradient(145deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 80%, black));color:var(--cit-on-accent);padding:15px 32px;border-radius:100px;box-shadow:7px 7px 16px color-mix(in srgb, var(--cit-accent) 34%, transparent);transition:transform .15s;cursor:pointer}
   .cl-btn:hover{transform:translateY(-3px);filter:brightness(1.05)}
+  /* phone booking bar — clay surface floating above the page edge; masthead band gone ≤720px */
+  .cl-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:110;background:color-mix(in srgb, var(--cit-surface) 96%, transparent);backdrop-filter:blur(10px);box-shadow:0 -8px 24px color-mix(in srgb, var(--cit-ink) 10%, transparent);padding:10px 16px;gap:12px;align-items:center;justify-content:space-between}
+  .cl-mobcta .cit-mobcta__t{color:var(--cit-ink)}
+  .cl-mobcta .cit-mobcta__t b{color:var(--cit-accent)}
+  /* min-width: the invite pill steps around a control only if it is ≥100px wide — a 97px
+     „Foglalás” (measured on the Tihany page) let the pill land ON the bar's button */
+  .cl-mobcta .cl-btn{padding:0 22px;min-height:44px;min-width:124px;display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:15px}
+  @media(max-width:700px){.cl-mobcta{display:flex}body{padding-bottom:66px}}
   .cl-btn-soft{background:var(--cit-surface);color:var(--cit-ink);box-shadow:6px 6px 16px color-mix(in srgb, var(--cit-ink) 14%, transparent), -6px -6px 16px rgba(255,255,255,.9);margin-left:12px}
   .cl-btn-soft:hover{filter:none}
   .cl-btn-disabled{opacity:.5;pointer-events:none}
@@ -221,7 +229,14 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
     ...(faqsData ? [{ label: T(data, "GYIK"), href: "#cl-faq" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
+  // phone booking bar (2026-09-26): the masthead's band is dropped ≤720px, the CTA lives here
+  const mobcta = hasContact
+    ? `<div class="cl-mobcta">
+    ${mobCtaStat(data, ratingStat)}
+    <a class="cl-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
+  </div>`
+    : "";
 
   // -- hero — floating clay stat cards from REAL stats/rating only ----------
   const floatCards: string[] = [];
@@ -450,6 +465,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   ${renderSkinVars(skin, data.palette?.accent)}
 ${CLAY_CSS}
 ${mastheadCss("flow")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-claymorphism">
@@ -466,6 +482,7 @@ ${mastheadCss("flow")}
     ${contact}
     ${slotMarker("closing")}
     ${footer}
+    ${mobcta}
 </body>
 </html>`;
 }

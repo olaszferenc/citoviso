@@ -13,20 +13,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import {
-  accented,
-  bookingSlot,
-  copyOf,
-  ctaLabel,
-  esc,
-  firstSentence,
-  honestStarCount,
-  mastheadCss,
-  mastheadHtml,
-  T,
-  type ArtTemplate,
-  type MastheadLink,
-} from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 // Monospace stack for the "industrial" voice (labels, tags, marquee). System fonts only —
 // the skin decides the display/body families; the mono accent is template character.
@@ -288,7 +275,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ...(contactLines ? [{ label: T(data, "Kapcsolat"), href: "#b-contact" }] : []),
     { label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true },
   ];
-  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow });
+  const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero -----------------------------------------------------------------
   const tags = [
@@ -453,7 +440,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- mobile fixed CTA bar -------------------------------------------------
   const mobcta = hasContact
     ? `<div class="b-mobcta">
-    <span>${rating ? `${esc(rating.value)} — ${esc(rating.label)}` : esc(data.name)}</span>
+    ${mobCtaStat(data, rating)}
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`
     : "";
@@ -470,6 +457,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${BRUTALISM_CSS}
 ${mastheadCss("flow")}
+${MOBCTA_CSS}
   </style>
 </head>
 <body class="cit-tpl-brutalism">

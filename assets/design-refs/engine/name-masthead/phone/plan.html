@@ -1,0 +1,32 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefonos fejléc — A/B/C</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+body{margin:0;background:var(--citui-bg);color:var(--citui-ink);font-family:var(--citui-font-body,system-ui)}
+.bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:var(--citui-surface);border-bottom:1px solid var(--citui-line)}
+.bar b{margin-right:6px}.bar button{padding:8px 14px;border:1px solid var(--citui-line);background:var(--citui-bg);color:var(--citui-ink);border-radius:999px;cursor:pointer;font:inherit;min-height:44px}
+.bar button[aria-pressed=true]{background:var(--citui-accent);color:var(--citui-on-accent);border-color:var(--citui-accent)}
+.note{padding:12px 16px;font-size:14px;line-height:1.5;max-width:900px}
+.grid{display:grid;gap:16px;padding:16px;grid-template-columns:repeat(auto-fill,minmax(390px,1fr))}
+.grid.desk{grid-template-columns:1fr}
+.cell{display:flex;flex-direction:column;gap:6px}
+.cell h3{margin:0;font-size:14px;font-weight:600}
+iframe{border:1px solid var(--citui-line);background:#fff;width:390px;height:760px;display:block}
+.grid.desk iframe{width:100%;height:640px}
+.m{font-size:12px;color:var(--citui-muted)}
+</style></head><body>
+<div class="bar"><b>Változat</b><button data-v="A" aria-pressed="false">A · mai</button><button data-v="B" aria-pressed="false">B · pirula-csík</button><button data-v="C" aria-pressed="true">C · sáv nélkül + levegő</button>
+<b style="margin-left:12px">Méret</b><button data-s="m" aria-pressed="true">Mobil 390 px</button><button data-s="d" aria-pressed="false">Asztali</button></div>
+<div class="note"><b>Mit dönt el:</b> a masthead telefonos alakja (kontraktus: név → hely → link-sáv, 2026-08-30 — a szerkezet marad, a telefonos <em>sűrűség</em> és a link-sáv alakja változik) + a Foglalás-sáv szövege (érték nagyban, felirat egy sorban). <b>A</b> = a mai állapot. <b>B</b> = a link-sáv a sablon alakját viselő pirula, szűkebb levegő. <b>C</b> = B + ahol a telefonon rögzített Foglalás-sáv van, a fejléc nem ismétli a gombot; fotós (overlay) fejlécnél a léniák eltűnnek, a fotó lélegzik. Asztalon mindhárom AZONOS (a változás ≤ 720 px-re szól) — az asztali nézet ezt bizonyítja.</div>
+<div class="grid" id="g"><div class="cell"><h3>fullbleed</h3><iframe data-t="fullbleed" loading="lazy" title="fullbleed"></iframe><span class="m" data-m="fullbleed"></span></div><div class="cell"><h3>dark-luxury</h3><iframe data-t="dark-luxury" loading="lazy" title="dark-luxury"></iframe><span class="m" data-m="dark-luxury"></span></div><div class="cell"><h3>transit</h3><iframe data-t="transit" loading="lazy" title="transit"></iframe><span class="m" data-m="transit"></span></div><div class="cell"><h3>artdeco</h3><iframe data-t="artdeco" loading="lazy" title="artdeco"></iframe><span class="m" data-m="artdeco"></span></div><div class="cell"><h3>brutalism</h3><iframe data-t="brutalism" loading="lazy" title="brutalism"></iframe><span class="m" data-m="brutalism"></span></div></div>
+<script>
+let V="C",S="m";
+function apply(){document.querySelectorAll('.bar button[data-v]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===V)));document.querySelectorAll('.bar button[data-s]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===S)));
+document.getElementById('g').classList.toggle('desk',S==='d');
+document.querySelectorAll('iframe[data-t]').forEach(f=>{const src='../../../_drafts/masthead-phone/cell-'+f.dataset.t+'-'+V+'.html';if(f.getAttribute('src')!==src)f.setAttribute('src',src);});}
+document.querySelectorAll('.bar button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.v)V=b.dataset.v;if(b.dataset.s)S=b.dataset.s;apply();}));
+// live measurement inside each cell: masthead height + h1 top + bar height (same-origin file iframes)
+setInterval(()=>{document.querySelectorAll('iframe[data-t]').forEach(f=>{try{const d=f.contentDocument;if(!d||!d.body)return;const m=d.querySelector('.cit-mast'),h=d.querySelector('h1'),bar=d.querySelector('[class$="-mobcta"]');const r=e=>e?e.getBoundingClientRect():null;const mr=r(m),hr=r(h),br=r(bar);
+document.querySelector('[data-m="'+f.dataset.t+'"]').textContent='fejléc '+(mr?Math.round(mr.height)+' px':'–')+' · főcím teteje '+(hr?Math.round(hr.top)+' px':'–')+(br&&br.height?' · sáv '+Math.round(br.height)+' px':'');}catch(e){}});},800);
+if(matchMedia('(max-width:720px)').matches){S='m'}apply();
+</script></body></html>

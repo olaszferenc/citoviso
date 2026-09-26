@@ -89,7 +89,7 @@ const demo: SiteData = {
     { quote: "A tetőteraszról nézni a kivilágított várat — ezért önmagában megérte.", author: "Andrea", meta: "Budapest" },
     { quote: "Az árakat előre, pontosan láttuk.", author: "Péter", meta: "Nyíregyháza" },
   ],
-  stats: [{ value: "9,2", label: "vendégértékelés", icon: "star" }, { value: "84", label: "szoba" }],
+  stats: [{ value: "4,6", label: "Google-értékelés · 1 892 vélemény", icon: "star" }, { value: "84", label: "szoba" }],
   faqs: [{ q: "Mikor van check-in?", a: "Érkezés 15:00-tól, távozás 11:00-ig." }],
   rating: { value: 4.6, count: 1892 },
   place: { city: "Példaváros", country: "HU" },
@@ -103,7 +103,12 @@ interface Target { id: string; kind: "template" | "archetype" | "file"; html?: s
 // ── negative control (--selftest): the SAME page with deliberate regressions must go red on
 // the rules that claim to catch them; the clean render must not. A guard that cannot fail is
 // a false green (memory: guard_greenly_defended_the_bug).
-const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[] }[] = [
+const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: string }[] = [
+  // fullbleed carries the shared masthead AND a fixed booking bar (editorial has neither)
+  // (a 120px pad measured 149px — one px under the rule: a planted fault must fail by a margin,
+  //  not by luck — memory: barely passing value hides a dead rule)
+  { id: "selftest-tall-masthead", css: `.cit-mast{padding-top:200px!important}`, expect: ["②fejléc-blokk"], tpl: "fullbleed" },
+  { id: "selftest-bar-wrap", css: `.cit-mobcta__t small{white-space:normal!important;font-size:16px!important}`, expect: ["⑤sáv-felirat"], tpl: "fullbleed" },
   { id: "selftest-overlay-under-bar", css: `.cit-rd, .cit-lb { z-index: 1 !important } .st-bar{position:fixed;top:0;left:0;right:0;height:60px;background:#000;z-index:100}`, expect: ["⑦bezárás-elérhetetlen", "⑧bezárás-elérhetetlen"] },
   { id: "selftest-tiny-controls", css: `.cit-book__calnav{width:20px!important;height:20px!important;flex-basis:20px!important} .cit-rd__x{width:20px!important;height:20px!important}`, expect: ["③érintési-cél", "⑦bezárás-kicsi"] },
   { id: "selftest-overflow", css: `body{min-width:600px}`, expect: ["①túlfolyás"] },
@@ -115,11 +120,20 @@ const SELFTEST_DEAD_JS = `<script>document.addEventListener('click',function(e){
 
 async function targets(): Promise<Target[]> {
   if (selftest) {
-    const tpl = TEMPLATES["editorial"]!;
-    const recipe: Recipe = { template: "editorial", skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: baseSections };
-    const clean = await injectRuntime(renderSite(recipe, demo, { phase: "mock" }), demo.lang);
-    const out: Target[] = [{ id: "selftest-clean", kind: "template", html: clean }];
-    for (const r of SELFTEST_REGRESSIONS) out.push({ id: r.id, kind: "template", html: clean.replace("</body>", `<style>${r.css}</style>${r.id === "selftest-overlay-under-bar" ? '<div class="st-bar"></div>' : ""}${r.id === "selftest-calendar-dead" ? SELFTEST_DEAD_JS : ""}</body>`) });
+    const cleanOf = async (id: string): Promise<string> => {
+      const tpl = TEMPLATES[id]!;
+      const recipe: Recipe = { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: baseSections };
+      return injectRuntime(renderSite(recipe, demo, { phase: "mock" }), demo.lang);
+    };
+    const cleans: Record<string, string> = { editorial: await cleanOf("editorial"), fullbleed: await cleanOf("fullbleed") };
+    const out: Target[] = [
+      { id: "selftest-clean", kind: "template", html: cleans.editorial! },
+      { id: "selftest-clean-fullbleed", kind: "template", html: cleans.fullbleed! },
+    ];
+    for (const r of SELFTEST_REGRESSIONS) {
+      const clean = cleans[r.tpl ?? "editorial"]!;
+      out.push({ id: r.id, kind: "template", html: clean.replace("</body>", `<style>${r.css}</style>${r.id === "selftest-overlay-under-bar" ? '<div class="st-bar"></div>' : ""}${r.id === "selftest-calendar-dead" ? SELFTEST_DEAD_JS : ""}</body>`) });
+    }
     return out;
   }
   if (files.length) return files.map((f) => ({ id: path.basename(f).replace(/\.html?$/i, ""), kind: "file", file: path.resolve(f) }));
@@ -193,7 +207,10 @@ const PROBE_STATIC = `(() => { ${LIB}
   const ctaInFold = ctas.filter(fullyInView);
   out.ctaCount = ctas.length;
   const coverEl = (el) => { const r = el.getBoundingClientRect(); const top = document.elementFromPoint(r.x + r.width/2, r.y + r.height/2); return top && top !== el && !el.contains(top) && !top.contains(el) ? top : null; };
-  out.ctaInFold = ctaInFold.map(a => { const c = coverEl(a); const byOwnBar = !!(c && (c.closest('a[href="#cit-booking"], a[href="#cit-enquiry"]') || c.querySelector('a[href="#cit-booking"], a[href="#cit-enquiry"]'))); return { sel: name(a), text: txt(a), r: rect(a), covered: covered(a), byOwnBar }; });
+  // "own bar": the cover is the page's fixed booking bar (or anything inside it — its rating
+  // <b>, its label) that itself carries a booking link; one scroll frees the hero CTA
+  const fixedAncestor = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) if (getComputedStyle(e).position === 'fixed') return e; return null; };
+  out.ctaInFold = ctaInFold.map(a => { const c = coverEl(a); const bar = c && fixedAncestor(c); const byOwnBar = !!(c && (c.closest('a[href="#cit-booking"], a[href="#cit-enquiry"]') || c.querySelector('a[href="#cit-booking"], a[href="#cit-enquiry"]') || (bar && bar.querySelector('a[href="#cit-booking"], a[href="#cit-enquiry"]')))); return { sel: name(a), text: txt(a), r: rect(a), covered: covered(a), byOwnBar }; });
   const navs = [...document.querySelectorAll('nav, header')].filter(vis);
   out.nav = navs.slice(0, 3).map(n => ({ sel: name(n), pos: getComputedStyle(n).position, r: rect(n), links: [...n.querySelectorAll('a')].filter(vis).length }));
   out.hasHamburger = !!document.querySelector('[aria-label*="menü" i], [aria-label*="menu" i], .hamburger, .burger, [class*="nav-toggle"], [class*="menu-toggle"], button[aria-expanded]');
@@ -207,6 +224,9 @@ const PROBE_STATIC = `(() => { ${LIB}
     }
   }
   out.sticky = out.sticky.slice(0, 8);
+  // ② the shared masthead's height and ⑤ the fixed booking bar's text block (FK-009 V2 / bar wrap)
+  out.mast = (() => { const m = document.querySelector('.cit-mast'); if (!m || !vis(m)) return null; const r = m.getBoundingClientRect(); return { h: Math.round(r.height), links: !!(m.querySelector('.cit-mast-links') && vis(m.querySelector('.cit-mast-links'))) }; })();
+  out.barText = (() => { const t = document.querySelector('.cit-mobcta__t'); if (!t || !vis(t)) return null; const parts = [...t.querySelectorAll('b, small')].filter(vis).map(e => { const cs = getComputedStyle(e); const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.25; return { tag: e.tagName.toLowerCase(), lines: Math.round(e.getBoundingClientRect().height / lh) }; }); return { parts, h: Math.round(t.getBoundingClientRect().height) }; })();
   // ③ touch targets (visible controls, page-wide, excluding the runtime overlays which are closed now)
   out.small = []; out.controlCount = 0;
   for (const el of document.querySelectorAll(CONTROLS)) {
@@ -465,7 +485,8 @@ async function main(): Promise<void> {
       });
       const page = await ctx.newPage();
       const errors: string[] = [];
-      page.on("pageerror", (e) => errors.push(String(e).split("\n")[0]!));
+      // keep the first stack frame too: a third-party error must be recognisable by its ORIGIN
+      page.on("pageerror", (e) => { const lines = String((e as Error).stack || e).split("\n"); errors.push(lines.slice(0, 2).join(" ")); });
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 160)); });
       // Gate mode: never fetch remote images/fonts (speed, offline). File mode: let the real
       // photos load — their intrinsic size is part of the overflow question.
@@ -503,6 +524,11 @@ async function main(): Promise<void> {
           const links = st.nav.reduce((a: number, nv: any) => a + nv.links, 0);
           if (links === 0) F(P, vp.id, "ERGONÓMIA", "②nav-üres", `a fejléc/nav látható, de 0 link (${st.nav.map((x: any) => x.sel).join(",")})`);
         }
+        // ② the masthead block: the compact phone lockup is PROMISED ≤150px (contract amendment
+        // 2026-09-26, name-masthead/phone) — measured 148–200px before, 69–140 after
+        if (st.mast && st.mast.h > 150) F(P, vp.id, "HIBA", "②fejléc-blokk", `a masthead ${st.mast.h}px magas az első képernyőn (a telefonos alak ≤150px-et ígér)`);
+        // ⑤ the fixed booking bar's text: value + label on ONE line each (was 2–3 lines, transit 99px)
+        if (st.barText && st.barText.parts.some((p: any) => p.lines > 1)) F(P, vp.id, "HIBA", "⑤sáv-felirat", `a Foglalás-sáv felirata törik: ${st.barText.parts.map((p: any) => `${p.tag} ${p.lines} sor`).join(", ")} (blokk ${st.barText.h}px)`);
         // ⑤ sticky bands
         for (const s of st.sticky) {
           if (s.pct >= 25) F(P, vp.id, "HIBA", "⑤tapadó-sáv", `${s.sel} position:${s.pos}, ${s.h}px = a képernyő ${s.pct}%-a`);
@@ -616,7 +642,10 @@ async function main(): Promise<void> {
           }
         }
         // ⑩ JS errors
-        const jsErr = errors.filter((e) => !/net::ERR|Failed to load resource|ERR_NAME_NOT_RESOLVED|favicon/i.test(e));
+        // Google's own map-embed bootstrap ("google is not defined" thrown INSIDE init_embed.js on
+        // maps.gstatic.com) is a third-party race the page cannot influence — measured 2026-09-26 as a
+        // 2/30 pre-commit red under load, 0/2 alone. Our own scripts' errors still count.
+        const jsErr = errors.filter((e) => !/net::ERR|Failed to load resource|ERR_NAME_NOT_RESOLVED|favicon/i.test(e) && !/maps\.gstatic\.com|maps\.googleapis\.com/.test(e));
         if (jsErr.length) F(P, vp.id, "HIBA", "⑩js-hiba", jsErr.slice(0, 2).join(" · "));
         (raw[key] as any).errors = errors;
         console.log(`  ${String(n).padStart(3)}/${list.length * VIEWPORTS.length} ${t.kind.padEnd(9)} ${t.id.padEnd(46)} @${vp.id.padEnd(4)} — ${findings.filter((f) => f.page === P && f.vp === vp.id).length} lelet`);
@@ -648,7 +677,7 @@ async function main(): Promise<void> {
   if (selftest) {
     // ① the clean page carries no HIBA; ② every planted regression fires the rule that claims it
     let bad = 0;
-    const cleanHard = findings.filter((f) => f.page === "selftest-clean" && f.sev === "HIBA");
+    const cleanHard = findings.filter((f) => (f.page === "selftest-clean" || f.page === "selftest-clean-fullbleed") && f.sev === "HIBA");
     if (cleanHard.length) { bad++; console.error(`❌ önteszt: a tiszta lap HIBÁ-t kapott: ${cleanHard.map((f) => f.rule).join(", ")}`); }
     for (const r of SELFTEST_REGRESSIONS) {
       const got = new Set(findings.filter((f) => f.page === r.id).map((f) => f.rule));
