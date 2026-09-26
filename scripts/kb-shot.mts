@@ -1083,6 +1083,17 @@ async function shoot(
     // ÜRES állapotot fotózza („a foglalások akkor jelennek meg…"), mert a shot-tenanthoz
     // nincs bekapcsolt Foglalás modul — mérve, az első két próbálkozásomon.
     ...(tab === "foglalasok" ? { bookings: bookingsFixture } : {}),
+    // ADR-XXXX: the Elérhetőség tab — an invented guesthouse's public contact facts. The
+    // map key is blank on purpose: pinNetwork refuses Google anyway, and the picture is
+    // the phone/e-mail card (element capture below), which needs no map.
+    ...(tab === "elerhetoseg"
+      ? {
+          contact: {
+            facts: { address: "Szőlőhegy utca 12, Balatongyörök", phone: "+36 30 123 4567", email: "info@nyugalom-vendeghaz.hu", geo: { lat: 46.7506, lon: 17.3499 } },
+            mapsKey: "",
+          },
+        }
+      : {}),
     unreadMessages: messagesFixture.unread,
   })
     // Design core + fixture photos straight off disk instead of through the server.
@@ -1161,6 +1172,9 @@ for (const [tab, entryId] of TAB_TO_ENTRY) {
       : modules,
   );
 }
+// ADR-XXXX: the Elérhetőség guide shows the phone/e-mail card with its live
+// "A honlapon így: …" line — the map above it is Google's, never in a KB picture.
+await shoot("elerhetoseg", path.join(ROOT, "kb/entries/admin-contact/assets", LANG, "telefon-email.png"), undefined, undefined, "#ct_card");
 // Két KIS kép az admin-modules ÁRAZÁS szakaszához. A fül-képe az ELSŐ képernyőt
 // mutatja, az árcímke és a végösszeg viszont jóval a hajtás alatt van — a szöveg
 // különben olyasmiről beszélne, amit a saját képe nem mutat meg.

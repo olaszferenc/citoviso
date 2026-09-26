@@ -46,6 +46,8 @@ import {
   moveTenantPhoto,
   removeTenantPhoto,
   saveTenantContent,
+  getTenantContact,
+  saveTenantContact,
   setTenantPhotoCaption,
   setTenantPhotoUnits,
   setTenantUnitPhotos,
@@ -56,6 +58,7 @@ import {
   renderTenantModulePreview,
   moduleContentFor,
 } from "../tenant/editor.js";
+import { CONTACT_ERRORS, type ContactErrorKey } from "../tenant/contact.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import {
   adminDashboard,
@@ -316,6 +319,21 @@ function redirect(res: http.ServerResponse, to: string): void {
  * admin save goes out through THIS door, and scripts/snapshot-propagation-check.mts
  * fails the build if a new one does not (or is not listed there with a reason).
  */
+/** ADR-XXXX — the contact form's fields; an absent field stays `undefined` (= keep). */
+function contactEditsFrom(form: URLSearchParams): import("../tenant/contact.js").ContactEdits {
+  const get = (k: string) => (form.has(k) ? (form.get(k) ?? "") : undefined);
+  return { address: get("address"), phone: get("phone"), email: get("email"), lat: get("lat"), lon: get("lon") };
+}
+
+/** Refused fields travel back as `pe=<key>` — keys, never free text in the URL. */
+function contactErrorQuery(errors: readonly ContactErrorKey[]): string {
+  return errors.length ? "&" + errors.map((e) => `pe=${encodeURIComponent(e)}`).join("&") : "&pe=save";
+}
+
+function contactErrorsFrom(params: URLSearchParams): ContactErrorKey[] {
+  return params.getAll("pe").filter((k): k is ContactErrorKey => k in CONTACT_ERRORS);
+}
+
 async function redirectRerendered(
   res: http.ServerResponse,
   tenantId: string,
@@ -1373,7 +1391,20 @@ async function serveAdmin(
         };
       }
 
+      // ADR-XXXX: the Térkép screen carries the shared address + pin card.
+      const placeFacts = moduleId === "location" ? await getTenantContact(session.tenantId) : null;
       moduleSettingsHtml = moduleSettingsSection(moduleId, {
+        ...(placeFacts
+          ? {
+              place: {
+                facts: placeFacts,
+                mapsKey: config.googleMapsBrowserKey,
+                errors: contactErrorsFrom(new URL(req.url ?? "/", "http://x").searchParams),
+                failed: new URL(req.url ?? "/", "http://x").searchParams.getAll("pe").includes("save"),
+                lang: content?.lang ?? "hu",
+              },
+            }
+          : {}),
         // ADR-0067: the settings screens speak the tenant's own site language.
         lang: content?.lang ?? "hu",
         values: cfg.config,
@@ -1543,6 +1574,7 @@ async function serveAdmin(
   let documents: AdminOpts["documents"] = null;
   let legal: AdminOpts["legal"] = null;
   let wallet: AdminOpts["wallet"] = null;
+  let contact: AdminOpts["contact"] = null;
   let walletFlash: AdminOpts["walletFlash"] = null;
   let messages: AdminOpts["messages"] = null;
 
@@ -1656,6 +1688,18 @@ async function serveAdmin(
       // Kontraktus ⑦: MÉRT tartozás. Nincs előfizetés → a kérdés fel sem tehető → null.
       owed: sub ? (sub.arrears?.amount ?? 0) : null,
     };
+  } else if (tab === "elerhetoseg") {
+    // ADR-XXXX: the public contact facts (owner override > scrape) + the browser map key.
+    const facts = await getTenantContact(session.tenantId);
+    contact = facts
+      ? {
+          facts,
+          mapsKey: config.googleMapsBrowserKey,
+          errors: contactErrorsFrom(params),
+          failed: params.getAll("pe").includes("save"),
+          lang: content?.lang ?? "hu",
+        }
+      : null;
   } else if (tab === "penztarca") {
     // ADR-0226: the wallet reads the card from its own loader and the next-charge
     // AMOUNT from the subscription card's rule — one number, one source.
@@ -1753,6 +1797,7 @@ async function serveAdmin(
       legal,
       wallet,
       walletFlash,
+      contact,
       // A jelvény a navban ül → minden fülön aktuális kell legyen, nem csak az
       // Üzenetek lapon. Megnyitás után a frissen olvasottat már nem számoljuk.
       unreadMessages: messages ? messages.unread : unreadMessages,
@@ -2020,6 +2065,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     });
     for (const [k, v] of [...back.entries()]) if (!v) back.delete(k);
     return redirect(res, `/admin?${back.toString()}`);
+  }
+  // ADR-XXXX — POST /admin/elerhetoseg: address, map pin, phone, e-mail. All-or-nothing;
+  // a refusal returns to the same screen with the failing fields named.
+  if (req.method === "POST" && pathname === "/admin/elerhetoseg") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const r = await saveTenantContact(session.tenantId, contactEditsFrom(form));
+    if (!r.ok) return redirect(res, `/admin?tab=elerhetoseg${contactErrorQuery(r.errors)}`);
+    return redirect(res, "/admin?tab=elerhetoseg&saved=1");
   }
   if (req.method === "POST" && pathname === "/admin/text") {
     const session = await currentTenant(req);
@@ -2410,6 +2465,18 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         "items",
         composeAmenities(form.getAll("am"), form.get("other") ?? "", "property").join("\n"),
       );
+    }
+    // ADR-XXXX: the Térkép screen posts the shared place card too. Saved FIRST and
+    // without its own render — the redirect below re-renders once for both.
+    if (moduleId === "location" && form.has("address")) {
+      const place = await saveTenantContact(
+        session.tenantId,
+        { address: form.get("address") ?? "", lat: form.get("lat") ?? "", lon: form.get("lon") ?? "" },
+        { render: false },
+      );
+      if (!place.ok) {
+        return redirect(res, `/admin?tab=modulok&m=location${contactErrorQuery(place.errors)}`);
+      }
     }
     const result = await setSiteModuleConfig(
       siteId,

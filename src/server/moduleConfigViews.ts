@@ -30,6 +30,7 @@ import type { MonthView } from "../tenant/availability.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { icAdmin as ic } from "../ui/icons.js";
+import { CONTACT_CSS, placeCard, placeScript, saveBar, type ContactView } from "./contactViews.js";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
@@ -2818,6 +2819,8 @@ function roomsNote(lang: string, nu: NewUnitView | undefined): string {
 
 export interface ModuleSettingsOpts {
   readonly values: ModuleConfigValues;
+  /** ADR-XXXX — Térkép module: the shared address + pin card rides on this screen too. */
+  readonly place?: ContactView;
   readonly errors?: string[];
   readonly canRestore?: boolean;
   readonly booking?: BookingEditorData;
@@ -3257,7 +3260,41 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
               : helpLink("admin.modules.settings", lang);
 
   // amenityStored set → the picker above IS the form; the generic one would duplicate it.
-  const form = def.fields.length && !amenityStored
+  // ADR-XXXX (approved plan design-refs/tenant-admin/elerhetoseg): the Térkép screen opens
+  // with the SAME address + pin card as the Elérhetőség tab, and ONE save covers both —
+  // the route saves the place first, then the module fields.
+  const locationForm =
+    moduleId === "location" && opts.place && def.fields.length
+      ? CONTACT_CSS +
+        (opts.place.failed
+          ? `<div class="adm-banner adm-banner--bad" role="alert">${ic("alert", 18)} ${T(lang, "A mentés nem sikerült, semmi nem változott. Próbálja újra, vagy írjon nekünk.")}</div>`
+          : "") +
+        `<form method="POST" action="/admin/module-config" id="pl_form" novalidate>` +
+        `<input type="hidden" name="module" value="location">` +
+        placeCard(opts.place, T(lang, "Ezt a pontot mutatja a térkép a vendégnek, és ide vezet az „Útvonal” gomb.")) +
+        `<section class="adm-card"><div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span><h2>${T(lang, "Megközelítés")}</h2></div>` +
+        `<p class="adm-lead">${T(lang, "Amit a vendég a térkép mellett olvas.")}</p>` +
+        def.fields
+          .map((f) =>
+            renderField(f, opts.values[f.key], lang).replace(
+              `id="cfg_${f.key}"`,
+              `id="cfg_${f.key}" data-watch="${esc(T(lang, f.label).toLowerCase())}"`,
+            ),
+          )
+          .join("") +
+        `</section>` +
+        `<p class="citui-hint" style="margin:14px 0 0">${T(lang, "A telefonszám és az e-mail az {link} menüpontban szerkeszthető.", { link: `<a href="/admin?tab=elerhetoseg">${T(lang, "Elérhetőség")}</a>` })}</p>` +
+        saveBar(
+          lang,
+          opts.canRestore
+            ? `<button class="citui-btn citui-btn--ghost" type="submit" formaction="/admin/module-config/restore">${T(lang, "Vissza az előzőre")}</button>`
+            : "",
+        ) +
+        `</form>` +
+        placeScript(opts.place)
+      : "";
+
+  const form = locationForm || (def.fields.length && !amenityStored
     ? `<form method="POST" action="/admin/module-config" class="adm-card">` +
       `<input type="hidden" name="module" value="${esc(moduleId)}">` +
       `<div class="adm-card__head"><span class="adm-ico">${ic("settings")}</span>` +
@@ -3272,7 +3309,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         ? `<button class="citui-btn citui-btn--ghost" type="submit" formaction="/admin/module-config/restore">${T(lang, "Vissza az előzőre")}</button>`
         : "") +
       `</div></form>`
-    : "";
+    : "");
 
   const priceNote =
     opts.priceMonthly && opts.priceMonthly > 0

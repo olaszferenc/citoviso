@@ -323,6 +323,14 @@ if [ -f scripts/programs-editor-check.mts ] && \
   echo "[pre-commit] programs-editor (a programajánló-választó kontraktusa)…"
   npx tsx scripts/programs-editor-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Elérhetőség (tenant-admin, design-refs/tenant-admin/elerhetoseg): a szállás címe, térkép-tűje, telefonja és e-mailje — a szabály
+# (mindent vagy semmit), a mentés a DB-ig ÉS a renderelt honlapig, a Térkép képernyő egy
+# formja, és valódi böngészőben 390/1280 px. Saját eldobható fixture, böngészőt indít.
+if [ -f scripts/contact-edit-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(contact|editor)\.ts$|^src/server/(contactViews|moduleConfigViews|adminViews|public)\.ts$|^src/sms/sender\.ts$|^scripts/contact-edit-check'; then
+  echo "[pre-commit] contact-edit (Elérhetőség + Térkép-hely kontraktusa)…"
+  npx tsx scripts/contact-edit-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A kapott kedvezmény LÁTSZIK — és közben egy fillér sem mozdul. A tulaj 14 775 Ft-ot
 # fizetett, és nem tudta eldönteni, jó-e a szám: jó volt (19 700 Ft − 25 %), csak sehol
 # nem mondtuk ki. ⛔ A döntő állítás nem a szöveg, hanem a PÉNZ: a Számlázz.hu összeadja

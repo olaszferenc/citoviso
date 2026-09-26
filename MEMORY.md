@@ -25,6 +25,13 @@ a lista alapból DÁTUM szerint rendez, a ▲▼ felülír („saját sorrend”
 `assets/design-refs/console/programajanlo-sajat/`; szabályok egy helyen: `src/events/ownPrograms.ts`; őr:
 `programs-editor-check` bővítve. ADR-0238. Nincs élesítve. Jegyzet: `_planning/memory/2026-09-26_programajanlo_sajat_program.md`.
 
+## Párhuzamos szál (2026-09-26 — Elérhetőség: cím, térkép-tű, telefon, e-mail, ADR-XXXX)
+Új **„Elérhetőség”** fül az „Az oldalam” alatt (jóváhagyott „B”): cím + Google-térkép húzható tűvel + címkeresés,
+telefon (SMS-szabállyal normalizálva, „+36 30 …”) + e-mail; ugyanez a hely-kártya a Térkép modul képernyőjén is, egy
+mentéssel. Tárolás: `edited_site_data.contact`/`geo`. Őr `contact-edit-check` (62 állítás). **Élesítés előtt kell
+egy referrer-korlátozott `GOOGLE_MAPS_BROWSER_KEY`** (a szerver-kulcs korlátozatlan, lapra nem tehető). Nem élesítve.
+Jegyzet: `_planning/memory/2026-09-26_elerhetoseg_cim_terkep_tu.md`.
+
 ## Párhuzamos szál (2026-09-26 — a logó MINDENHOL: a jel maga a C, „B”, egy forrásból)
 A tulaj a §2b körben a **B**-t választotta (ikonméretű C, 1,6×; admin: a jel ikon marad; szállás-honlapok favikonja
 marad Citoviso). Egy forrás: `src/ui/brand.ts` (az E4 asset-fájlokat olvassa) + `citui.css` `.citui-lockup`; cserélve

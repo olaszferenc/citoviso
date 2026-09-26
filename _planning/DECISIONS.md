@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-elerhetoseg-cim-terkep-tu-telefon-email.md) — Elérhetőség: a tulaj javítja a címet, a térkép-tűt, a telefont és az e-mailt
 - [ADR-0240](decisions/0240-rendeles-ket-lepesben-az-1-lepes-a-csomag.md) — Rendelés két lépésben: az 1. lépés a csomag-listáé, a pénzügyi döntés a „Tovább” után
 - [ADR-0239](decisions/0239-minta-ar-a-mock-foglalas-widgetjeben-a-proba-a.md) — Minta-ár a mock foglalás-widgetjében (a próba a FOGLALÁS-utat játssza), és a főcím fekvőn sem ül rögzített réteg alatt
 - [ADR-0238](decisions/0238-programajanlo-sajat-program-a-tenanttol-alapbol.md) — Programajánló: saját program a tenanttól + alapból dátum szerinti sorrend

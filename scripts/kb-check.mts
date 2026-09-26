@@ -31,6 +31,8 @@ const VIEW_GROUPS = {
     // Booking-offer (2026-09-23): the owner's offer page is its own view file, reached
     // from the Foglalások tab and the owner's mail — its labels are quoted by the KB.
     "src/server/offerViews.ts",
+    // ADR-XXXX: the Elérhetőség tab + the Térkép screen's place card — own view file.
+    "src/server/contactViews.ts",
     // Module-settings field labels ("Hová küldjük a foglalási kéréseket?" …) are
     // DEFINED here and rendered verbatim on the tenant admin — corpus member.
     "src/moduleConfig.ts",

@@ -252,6 +252,13 @@ export const config = {
    */
   barionPixelId: env("BARION_PIXEL_ID"),
   googleMapsApiKey: env("GOOGLE_MAPS_API_KEY"),
+  /**
+   * ADR-XXXX — the BROWSER key for the admin's pin-drop map (Maps JavaScript API +
+   * Geocoding). A SEPARATE key on purpose: it is printed into the page, so it must be
+   * HTTP-referrer restricted in the Google console. The server key above is never
+   * sent to a browser. Empty → the Elérhetőség screen works without the map.
+   */
+  googleMapsBrowserKey: env("GOOGLE_MAPS_BROWSER_KEY"),
   /** Programmable Search Engine (CSE) id for the Custom Search JSON API. */
   googleCseId: env("GOOGLE_CSE_ID"),
   /** Brave Search API key — the PRIMARY web-search backend (ADR-0026; the Google

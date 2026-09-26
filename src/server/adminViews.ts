@@ -26,6 +26,7 @@ import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
 import { COUPON_JS } from "../payment/couponRule.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { icAdmin as ic } from "../ui/icons.js";
+import { contactSection, type ContactView } from "./contactViews.js";
 import { flagSvg } from "../ui/flags.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
@@ -3502,6 +3503,9 @@ const TABS = (lang = "hu"): readonly { id: string; label: string; icon: string; 
   { id: "attekintes", label: T(lang, "Áttekintés"), icon: "overview", group: "home" },
   { id: "szovegek", label: T(lang, "Szövegek"), icon: "texts", group: "site" },
   { id: "fotok", label: T(lang, "Fotók"), icon: "photos", group: "site" },
+  // ADR-XXXX (approved plan design-refs/tenant-admin/elerhetoseg, „B"): address, map pin,
+  // phone and e-mail on their own tab — they are on the page with or without any module.
+  { id: "elerhetoseg", label: T(lang, "Elérhetőség"), icon: "contact", group: "site" },
   { id: "modulok", label: T(lang, "Modulok"), icon: "modules", group: "site" },
   // Jóváhagyott terv 2026-09-06: a foglalási kérések SAJÁT felületet kapnak badge-dzsel —
   // a Modulok → Foglalás alá temetve nem látszottak (booking-luka triázs).
@@ -4914,6 +4918,8 @@ function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string 
 
 export interface AdminOpts {
   readonly saved?: boolean;
+  /** ADR-XXXX — the „Elérhetőség" tab: the public contact facts + the browser maps key. */
+  readonly contact?: ContactView | null;
   /**
    * The pay-link for a module upsell could not be issued (0033). Shown because
    * the alternative is a silent no-op: the owner ticks a module, gets bounced
@@ -5335,6 +5341,10 @@ export function adminDashboard(
       ? helpSection(opts.help ?? { topics: [], open: null, query: "" }, lang)
       : tab === "szovegek"
       ? textsSection(content, lang)
+      : tab === "elerhetoseg"
+      ? (opts.contact
+          ? contactSection(opts.contact)
+          : `<div class="adm-card"><p class="citui-hint">${T(lang, "Az elérhetőségek akkor szerkeszthetők, ha a honlapja már elkészült.")}</p></div>`)
       : tab === "fotok"
         ? photosCard(content, opts.units ?? [], lang, opts.photosView ?? "grid")
         : tab === "modulok"

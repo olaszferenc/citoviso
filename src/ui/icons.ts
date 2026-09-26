@@ -98,6 +98,11 @@ export const ICON: Readonly<Record<string, string>> = {
   bookings:
     `<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>` +
     `<path d="m8.6 14.6 2.2 2.2 4.4-4.4"/><circle cx="17.4" cy="17.6" r="1.9" ${CY_ACCENT}/>`,
+  // Elérhetőség tab (ADR-XXXX): handset + the cyan dot; pin = the map-pin card head.
+  contact:
+    `<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>` +
+    `<circle cx="18.6" cy="5.4" r="1.9" ${CY_ACCENT}/>`,
+  pin: `<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5" ${CY_ACCENT}/>`,
 };
 
 // ── ADR-0224 — the tenant-admin's THIN set (stroke 1.7, NO accent dot) ────────
@@ -110,6 +115,8 @@ export const ICON_THIN: Readonly<Record<string, string>> = {
   home: `<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>`,
   leads: `<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>`,
   overview: `<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>`,
+  contact: `<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>`,
+  pin: `<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>`,
   texts: `<path d="M4 6h16M4 12h10M4 18h14"/>`,
   photos: `<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-4.5L8 19"/>`,
   modules:

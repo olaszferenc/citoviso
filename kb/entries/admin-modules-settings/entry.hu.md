@@ -4,7 +4,7 @@ title: Modul-beállítások — mentés, visszaállítás, hogyan működik
 audience: tenant
 category: modules
 anchors: admin.modules.settings
-updated: 2026-09-25
+updated: 2026-09-26
 ---
 
 A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett
@@ -33,11 +33,21 @@ A **„Beállítások mentése”** gombbal rögzíti, amit beállított. A ment
 megvárnia semmit. Ha valamit nem tudtunk elmenteni (például egy mező hibás), a képernyő
 tetején pontosan kiírjuk, mit javítson.
 
+**Kivétel: a „Térkép, megközelítés” képernyő.** Ennek a tetején a szállás címe és a térkép-tű van
+(**„A szállás helye”** kártya), ezért ott a gomb neve **„Mentés és frissítés”**, és egy mentés a címet, a
+tűt és a megközelítés-leírást együtt menti. A cím vagy a tű hibáját ott a mező alatt írjuk ki. A részleteket
+az Elérhetőség súgója írja le (a kártya fejlécében a kérdőjel ikon oda visz).
+
 ## Elrontottam valamit — vissza tudom csinálni?
 
 Igen. Ha korábban már mentett beállítást, a mentés gomb mellett megjelenik a
 **„Vissza az előzőre”** gomb — ezzel egy koppintással visszaállítja a legutóbbi előtti állapotot.
 Nyugodtan kísérletezzen: egy rossz mentés nem végleges.
+
+A „Térkép, megközelítés” képernyőn a **„Vissza az előzőre”** csak a megközelítés-mezőket (térkép ki/be,
+„Hogyan találnak oda?”, parkolás) állítja vissza — a **címet és a térkép-tűt nem**. A tűt a térkép alatti
+**„Vissza a mentett helyre”** gomb teszi vissza oda, ahol legutóbb elmentette; a régi címet írja vissza a
+„Cím” mezőbe.
 
 ## Miért nem látom egy modul beállítását?
 

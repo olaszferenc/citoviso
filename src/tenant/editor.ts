@@ -36,6 +36,7 @@ import {
   reconcileMultilangState,
 } from "./multilangCore.js";
 import { renderableModules } from "../modules.js";
+import { applyContactEdits, type ContactEdits, type ContactErrorKey, type ContactFacts } from "./contact.js";
 import { programsOnPage, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 
 export interface PhotoEdit {
@@ -119,6 +120,10 @@ type Overrides = {
   intro?: string;
   highlights?: string[];
   photos?: PhotoEdit[];
+  /** ADR-XXXX — the owner's own contact facts, stored WHOLE (the merge is shallow). */
+  contact?: { email?: string; phone?: string; address?: string };
+  /** ADR-XXXX — the owner-placed map pin. */
+  geo?: { lat: number; lon: number };
 };
 
 export interface SiteForEdit {
@@ -878,6 +883,61 @@ export async function saveTenantContent(
     overrides.highlights = edits.highlights.map((h) => h.trim()).filter(Boolean).slice(0, 12);
   }
   return { ok: await renderAndPersist(s, overrides) };
+}
+
+/** ADR-XXXX — the site's public contact facts as the page renders them (override > scrape). */
+export async function getTenantContact(tenantId: string): Promise<ContactFacts | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return null;
+  return contactOf(s);
+}
+
+function contactOf(s: SiteForEdit): ContactFacts {
+  const c = s.overrides.contact ?? s.baseSiteData.contact ?? {};
+  const geo = s.overrides.geo ?? s.baseSiteData.geo ?? null;
+  return {
+    address: c.address ?? "",
+    phone: c.phone ?? "",
+    email: c.email ?? "",
+    geo: geo ? { lat: geo.lat, lon: geo.lon } : null,
+  };
+}
+
+/**
+ * ADR-XXXX — save the owner's contact edits and re-render. All-or-nothing: a bad
+ * phone number saves neither the phone nor the pin. `render: false` persists only,
+ * for a caller that re-renders once itself (the Térkép module screen).
+ */
+export async function saveTenantContact(
+  tenantId: string,
+  edits: ContactEdits,
+  opts: { render?: boolean } = {},
+): Promise<{ ok: true; changed: boolean } | { ok: false; errors: ContactErrorKey[] }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false, errors: [] };
+  const before = contactOf(s);
+  const r = applyContactEdits(before, edits);
+  if (!r.ok) return r;
+  const f = r.facts;
+  const changed =
+    f.address !== before.address || f.phone !== before.phone || f.email !== before.email ||
+    f.geo?.lat !== before.geo?.lat || f.geo?.lon !== before.geo?.lon;
+  if (!changed) return { ok: true, changed: false };
+  const contact: { email?: string; phone?: string; address?: string } = {};
+  if (f.email) contact.email = f.email;
+  if (f.phone) contact.phone = f.phone;
+  if (f.address) contact.address = f.address;
+  const overrides: Overrides = { ...s.overrides, contact };
+  if (f.geo) overrides.geo = { lat: f.geo.lat, lon: f.geo.lon };
+  if (opts.render === false) {
+    await db
+      .updateTable("site")
+      .set({ edited_site_data: JSON.stringify(overrides) })
+      .where("id", "=", s.id)
+      .execute();
+    return { ok: true, changed: true };
+  }
+  return (await renderAndPersist(s, overrides)) ? { ok: true, changed: true } : { ok: false, errors: [] };
 }
 
 /** A2: add owner photos. The FIRST upload switches the site off the demo photos
