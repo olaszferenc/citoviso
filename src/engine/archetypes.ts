@@ -499,7 +499,10 @@ export const ARCHETYPES: Readonly<Record<string, Archetype>> = {
     background: var(--cit-ink); box-shadow: 0 8px 24px rgba(0,0,0,.25);
     padding: .5rem clamp(1rem, 4vw, 2rem); }
   /* mobile: the dock's booking form stacks tall — never pin it, or it covers the viewport */
-  @media (max-width: 700px) { .cit-arch-immersive-parallax .cit-arch-dock { position: static; } }
+  /* phone (portrait) AND landscape phone: a sticky panel taller than a 390px-high screen pins
+     itself over everything that follows — measured 2026-09-26 at 844×390: the 4 900px dock sat
+     on the gallery, whose picture could not be tapped (guest-mobile-check ⑧). Static there. */
+  @media (max-width: 700px), (max-height: 500px) { .cit-arch-immersive-parallax .cit-arch-dock { position: static; } }
   .cit-arch-immersive-parallax .cit-arch-dock .cit-enquiry { background: none; }
   /* The runtime hydrates a surface-toned widget into the slot; re-dress it for the dark dock
      (the signature element) so the composition survives hydration. */

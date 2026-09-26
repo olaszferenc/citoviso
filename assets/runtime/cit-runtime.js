@@ -360,7 +360,12 @@
        *
        * Amit itt kötünk: a bontás mindig nyitva · az alap a beadás ELŐTT kimondva ·
        * a helyszínen fizetendő KÜLÖN dobozban · és kitalált szám SEHOL. */
-      var basis = q.perStay
+      // DEMO: the basis line names the sample too — the price list it explains is per_night
+      // (demoPricing), and a sentence starting "Az ár…" between two "minta-ár" labels was the
+      // weakest point of the box (tenyhuseg-or, 2026-09-26).
+      var basis = demo
+        ? tr("A minta-ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).")
+        : q.perStay
         ? tr("Az ár a TELJES TARTÓZKODÁSRA szól — a létszám nem befolyásolja (jelenleg {n} fő).")
         : pricing.unit === "per_person_night"
           ? tr("Az ár SZEMÉLYENKÉNT és éjszakánként értendő — {n} fővel számolva.")
@@ -372,7 +377,13 @@
       // A helyszíni tétel: ÖSSZEG csak akkor, ha a szállásadó megadta.
       // Nyilatkozott ÉS nulla → a lap nem is említi az IFA-t: az IFA-mentes szállásról
       // állítani, hogy adót szed, ugyanolyan valótlanság, mint kitalált összeget írni.
-      var onSite = ifaDeclared && !ifaPerPersonNight
+      // DEMO: the tax line would be a claim about the property (does it levy IFA?) that
+      // nobody made — the mock says what the live page does here, and who fills it.
+      var onSite = demo
+        ? '<div class="cit-book__later">' +
+          tr("Az éles oldalon itt jelenik meg, ami a helyszínen fizetendő (pl. idegenforgalmi adó) — az összeget Ön adja meg.") +
+          "</div>"
+        : ifaDeclared && !ifaPerPersonNight
         ? ""
         : ifaPerPersonNight
         ? '<div class="cit-book__later"><b>' + tr("A helyszínen fizetendő ezen felül:") + "</b><br>" +
@@ -387,12 +398,20 @@
         : '<div class="cit-book__later">' +
           tr("A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő — az összegéről a szállásadó tájékoztatja.") +
           "</div>";
+      /* DEMO (§B.17): the sample figure is named as such where the number is read — the
+       * heading, the total line (which the phone's step-2 summary bar mirrors verbatim) and
+       * one sentence about what stands here on the live page. Not a footnote. */
       el.innerHTML =
-        '<span class="cit-book__qh">' + tr("Az ár") + " — " + esc(huDay(a)) + " → " + esc(huDay(b)) + "</span>" +
+        '<span class="cit-book__qh">' + (demo ? tr("Minta-ár") : tr("Az ár")) + " — " + esc(huDay(a)) + " → " + esc(huDay(b)) + "</span>" +
         rows +
         '<span class="cit-book__qbasis">' + esc(basis.replace("{n}", String(guests))) + "</span>" +
         included +
-        '<span class="cit-book__qtotal">' + tr("Összesen a szállásért") + " <b>" + money(q.total, cur) + "</b></span>" +
+        '<span class="cit-book__qtotal">' + (demo ? tr("Összesen a szállásért (minta-ár)") : tr("Összesen a szállásért")) + " <b>" + money(q.total, cur) + "</b></span>" +
+        (demo
+          ? '<span class="cit-book__qsample">' +
+            tr("Ez minta-ár, nem az Ön szállásának ára — az éles oldalon itt a saját árlistája jelenik meg, éjszakánkénti bontásban.") +
+            "</span>"
+          : "") +
         onSite;
     }
     /* The guest's RECEIPT after sending (Elek FK-007, 2026-09-11): the old reply was
@@ -504,10 +523,25 @@
       });
       return b;
     }
+    /** Deterministic, clearly-marked SAMPLE price list for the demo widget (owner,
+     *  2026-09-26: "legyen minta ár"). Without a price list the runtime fell into the
+     *  QUOTE path (setAskMode, ADR-0215 "C"): the button said "Árajánlatot kérek" while the
+     *  sample receipt spoke of a booking the owner confirms — two processes on one screen.
+     *  With a sample list the try-out walks the BOOKING path the module actually sells:
+     *  price box → total → "Foglalási kérés elküldése" → booking receipt. A different round
+     *  figure per unit, so switching units visibly changes the price. §B.17 / ADR-0061: this
+     *  is NOT a claim about the property — renderQuote labels it "minta-ár" at the box, at
+     *  the total and in a sentence that says the live page shows the owner's own list. */
+    function demoPricing(unitId) {
+      var idx = 0;
+      units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
+      return { currency: "HUF", unit: "per_night", rows: [{ base: true, amount: 24000 + idx * 4000 }] };
+    }
     function loadAvailability() {
       blocked = {};
       if (demo) {
         blocked = demoBlocked(currentUnit());
+        pricing = demoPricing(currentUnit());
         validate();
         renderCal();
         return;
@@ -743,12 +777,37 @@
       if (demo) {
         // The full experience minus the send: the lead sees exactly what their guest
         // would see, and nothing leaves the page (no endpoint exists for it anyway).
+        /* ⛔ INVARIÁNS (tulaj, 2026-09-26): a küldő gomb és a próba-nyugta EGY folyamatról
+         * beszél. Mérve előtte: a gomb „Árajánlatot kérek", a nyugta „amikor a vendége
+         * foglal… Ön igazolja vissza" — egy képernyőn két folyamat. A minta-árlista a
+         * foglalás-utat játssza; ha az árajánlat-mód mégis előáll (askMode), a nyugta is
+         * arról szól — a kettőt UGYANAZ az állapot vezérli, nem két külön felirat.
+         * Őr: scripts/mock-booking-sample-check.mts (ültetett eltérés → piros). */
+        var qa = form.from.value, qb = form.to.value, qn = nights(qa, qb);
+        var dq = askMode ? null : quoteFor(qa, qb);
+        var unitName = "";
+        units.forEach(function (u) { if (u.id === currentUnit()) unitName = u.name; });
+        function rrow(label, value) {
+          return '<span class="cit-book__rrow"><span>' + label + "</span><b>" + esc(value) + "</b></span>";
+        }
+        var facts =
+          '<div class="cit-book__receipt">' +
+          rrow(tr("Időszak"), huDay(qa) + " — " + huDay(qb)) +
+          rrow(tr("Éjszakák"), tr("{n} éj").replace("{n}", qn)) +
+          rrow(tr("Létszám"), tr("{n} fő").replace("{n}", guests)) +
+          (unitName ? rrow(tr("Egység"), unitName) : "") +
+          (dq
+            ? '<span class="cit-book__qtotal">' + tr("Összesen (minta-ár):") + " <b>" + money(dq.total, pricing.currency) + "</b></span>"
+            : "") +
+          "</div>";
         slot.innerHTML =
-          '<div class="cit-book cit-book--done"><p class="cit-book__title">' + SVG_CAL +
-          "<span>" + tr("Így néz ki, amikor a vendége foglal") + "</span></p>" +
+          '<div class="cit-book cit-book--done" data-cit-done="' + (askMode ? "ask" : "book") + '"><p class="cit-book__title">' + SVG_CAL +
+          "<span>" + (askMode ? tr("Így néz ki, amikor a vendége árajánlatot kér") : tr("Így néz ki, amikor a vendége foglal")) + "</span></p>" +
           '<p class="cit-book__note">' +
-          tr("Ez kipróbálás volt — nem küldtünk el semmit. Az éles oldalon a kérés e-mailben Önhöz érkezik, és Ön igazolja vissza.") +
-          "</p></div>";
+          (askMode
+            ? tr("Ez kipróbálás volt — nem küldtünk el semmit. Az éles oldalon a kérés e-mailben Önhöz érkezik, és Ön árajánlattal válaszol.")
+            : tr("Ez kipróbálás volt — nem küldtünk el semmit. Az éles oldalon a kérés e-mailben Önhöz érkezik, és Ön igazolja vissza.")) +
+          "</p>" + facts + "</div>";
         showReceipt();
         return;
       }

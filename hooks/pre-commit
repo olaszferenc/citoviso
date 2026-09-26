@@ -706,6 +706,14 @@ if [ -f scripts/mock-form-honesty-check.mts ] && \
   echo "[pre-commit] mock-form-honesty-check (a mock jelölt, és nem ígér rögzítést)…"
   npx tsx scripts/mock-form-honesty-check.mts >"$GATE_LOG" || gate_failed
 fi
+
+# A mock foglalás-widgetje MINTA-ÁRRAL a foglalás-utat játssza, és a gomb + a próba-nyugta egy
+# folyamatról beszél (tulaj 2026-09-26); az éles lap nem mond mintát.
+if [ -f scripts/mock-booking-sample-check.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/(cit-runtime\.js|cit-modules\.css)|src/engine/moduleSections|src/generator/runtime|scripts/mock-booking-sample-check)'; then
+  echo "[pre-commit] mock-booking-sample-check (minta-ár a mockon · gomb és nyugta egy folyamat)…"
+  npx tsx scripts/mock-booking-sample-check.mts --selftest >"$GATE_LOG" || gate_failed
+fi
 # A mock ÁR-MINTÁJA (jóváhagyott terv „B — kitöltendő mezők", 2026-09-14): kitöltendőnek
 # látszó cellák, NULLA számjegy, és a képaláírás csak arról beszél, ami a képen van. 390-en
 # a fejléc-sor rejtett, tehát minden cella a SAJÁT oszlopnevét viszi.

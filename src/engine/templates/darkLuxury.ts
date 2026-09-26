@@ -88,6 +88,18 @@ const DARK_LUXURY_CSS = `
   .t-herosub{max-width:520px;color:color-mix(in srgb,var(--cit-ink) 72%,var(--cit-muted));margin-bottom:34px}
   .t-heroctas{display:flex;gap:16px;flex-wrap:wrap}
   @media(max-width:700px){.t-heroin{padding-bottom:96px}}
+  /* LANDSCAPE PHONE (844×390 — owner: "javítsd a fekvőket", 2026-09-26). The 640px minimum
+     with bottom-anchored copy put the headline's first line straight under the overlay
+     masthead (measured on Alig-vár Tanya: no air at all — the copy's TOP depends on how much
+     copy there is, the masthead's BOTTOM does not). Here the masthead joins the FLOW (column
+     layout), so the copy can only ever start below it, and the hero grows with its content
+     instead of parking 250px of it under the fold. Portrait phone and desktop: untouched
+     (min-width:701px keeps this off the ≤700px phone rules above). */
+  @media(max-height:500px) and (min-width:701px){
+    .t-hero{height:auto;min-height:100svh;flex-direction:column;align-items:stretch;justify-content:flex-start}
+    body.cit-tpl-dark-luxury .cit-mast{position:relative;inset:auto}
+    .t-heroin{padding-top:28px;padding-bottom:48px}
+  }
 
   /* booking dock — dark panel overlapping the hero bottom, hosting the canonical slot */
   .t-dock{position:relative;z-index:5;margin-top:-72px}

@@ -203,6 +203,18 @@ section{padding:clamp(64px,9vh,104px) 0}
 body{padding-bottom:76px}
 @media(max-width:640px){.t-book-in{padding:10px 0}.t-book-t small{display:none}
   .t-book a{padding:12px 18px}}
+/* LANDSCAPE PHONE (844×390 — owner: "javítsd a fekvőket", 2026-09-26). The 520px minimum
+   centred the name at y≈260 while the pinned bar took the bottom 70px of a 390px screen —
+   the headline's lower half sat UNDER the bar (measured on Alig-vár Tanya). Here the hero
+   keeps the bar's height free at its foot (the runtime's --cit-stick idea, in CSS: 70px bar
+   + the consent bar it stands on), fits the screen under the 73px sticky nav, and grows with
+   its content. The place line goes — the bar's own small print already says it — and the
+   scroll hint would sit behind the bar. Portrait and desktop: untouched. */
+@media(max-height:500px) and (min-width:641px){
+  .t-hero{height:auto;min-height:calc(100svh - 73px);padding-bottom:calc(70px + var(--citui-consent-h,0px))}
+  .t-mast .t-kick{display:none}
+  .t-scroll{display:none}
+}
 
 /* footer */
 .t-foot{background:color-mix(in srgb,var(--cit-ink) 94%,#000);color:color-mix(in srgb,var(--cit-on-accent) 82%,transparent);

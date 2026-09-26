@@ -12,6 +12,8 @@
 //   ② the booking CTA reachable in the first screen + a nav that does not eat the screen
 //   ③ touch targets: every visible control < 44×44 px (Apple HIG / WCAG 2.5.5)
 //   ④ inputs with font-size < 16 px (iOS zooms the page on focus)
+//   ② the first visible headline under a fixed/sticky band or the overlay masthead (paint
+//      order, any orientation — landscape is where it bit), or glued under the masthead
 //   ⑤ sticky/fixed bands that cover the viewport (any orientation)
 //   ⑥ the booking widget: calendar pages, two taps pick a range, a reversed/past range
 //      shows its error WITHIN ONE SCREEN of the date strip, the quote and the submit are
@@ -103,7 +105,7 @@ interface Target { id: string; kind: "template" | "archetype" | "file"; html?: s
 // ── negative control (--selftest): the SAME page with deliberate regressions must go red on
 // the rules that claim to catch them; the clean render must not. A guard that cannot fail is
 // a false green (memory: guard_greenly_defended_the_bug).
-const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: string }[] = [
+const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: string; js?: string }[] = [
   // fullbleed carries the shared masthead AND a fixed booking bar (editorial has neither)
   // (a 120px pad measured 149px — one px under the rule: a planted fault must fail by a margin,
   //  not by luck — memory: barely passing value hides a dead rule)
@@ -114,6 +116,9 @@ const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: s
   { id: "selftest-overflow", css: `body{min-width:600px}`, expect: ["①túlfolyás"] },
   { id: "selftest-calendar-dead", css: ``, expect: [] }, // the JS below kills the handler; judged by the "paged" probe
   { id: "selftest-no-two-step", css: `.cit-book__go{display:none!important}`, expect: ["⑥két-lépés"] },
+  // a fixed band painted over the lower half of the headline (tilted-gallery's pinned bar on a
+  // landscape phone, 2026-09-26); placed by script at the h1's own rect so it works on any page
+  { id: "selftest-h1-under-bar", css: ``, expect: ["②főcím-takarva"], tpl: "fullbleed", js: `<script>addEventListener('load',function(){var h=document.querySelector('h1');if(!h)return;var r=h.getBoundingClientRect();var d=document.createElement('div');d.className='st-h1bar';d.style.cssText='position:fixed;left:0;right:0;top:'+Math.round(r.top+window.scrollY+r.height/2)+'px;height:'+Math.round(r.height/2)+'px;background:#000;z-index:100';document.body.appendChild(d)})</script>` },
 ];
 // a dead "next month" button: the widget's own listener never runs (capture-phase stop)
 const SELFTEST_DEAD_JS = `<script>document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('.cit-book__calnav--next'))e.stopImmediatePropagation()},true)</script>`;
@@ -132,7 +137,7 @@ async function targets(): Promise<Target[]> {
     ];
     for (const r of SELFTEST_REGRESSIONS) {
       const clean = cleans[r.tpl ?? "editorial"]!;
-      out.push({ id: r.id, kind: "template", html: clean.replace("</body>", `<style>${r.css}</style>${r.id === "selftest-overlay-under-bar" ? '<div class="st-bar"></div>' : ""}${r.id === "selftest-calendar-dead" ? SELFTEST_DEAD_JS : ""}</body>`) });
+      out.push({ id: r.id, kind: "template", html: clean.replace("</body>", `<style>${r.css}</style>${r.id === "selftest-overlay-under-bar" ? '<div class="st-bar"></div>' : ""}${r.id === "selftest-calendar-dead" ? SELFTEST_DEAD_JS : ""}${r.js ?? ""}</body>`) });
     }
     return out;
   }
@@ -252,6 +257,42 @@ const PROBE_STATIC = `(() => { ${LIB}
     const fs = parseFloat(getComputedStyle(el).fontSize);
     if (fs < 16) out.smallFont.push({ sel: name(el), fs: Math.round(fs * 10) / 10 });
   }
+  // ② the HEADLINE under a painted-over layer (landscape findings, 2026-09-26: tilted-gallery's
+  // pinned bar on the name's lower half; dark-luxury's copy glued under the overlay masthead).
+  // Judged at the top of the page by elementFromPoint — PAINT order, not z-index guesses: aurora's
+  // fixed decorative backdrop lies UNDER the copy and must not count; a fixed/sticky band or the
+  // absolute masthead that actually takes the point does.
+  out.h1 = (() => {
+    window.scrollTo(0, 0);
+    const h1 = [...document.querySelectorAll('h1')].find(vis); if (!h1) return null;
+    const r = h1.getBoundingClientRect();
+    if (r.bottom <= 0 || r.top >= H) return { offscreen: true, r: rect(h1), text: txt(h1) };
+    const cs = getComputedStyle(h1); const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.15;
+    const lines = Math.max(1, Math.round(r.height / lh));
+    const layerOf = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const c = getComputedStyle(e); if (c.position === 'fixed' || c.position === 'sticky' || (c.position === 'absolute' && e.classList.contains('cit-mast'))) return e; } return null; };
+    // Sample each line's centre AND the box's first/last 3px: the real defects sat on the EDGES
+    // (tilted-gallery's bar on the name's descenders, dark-luxury's first line 20px up inside
+    // the masthead box) — a centre-only probe called both clean (measured 2026-09-26).
+    const ys = []; for (let i = 0; i < lines; i++) ys.push({ y: r.top + lh * (i + 0.5), line: i + 1 });
+    ys.push({ y: r.top + 3, line: 1 }, { y: r.bottom - 3, line: lines });
+    const hits = [];
+    for (const p of ys) {
+      const y = p.y; if (y < 0 || y > H) continue;
+      for (const x of [r.left + Math.min(24, r.width / 4), r.left + r.width / 2]) {
+        if (x < 0 || x > W) continue;
+        const top = document.elementFromPoint(x, y);
+        if (!top || top === h1 || h1.contains(top) || top.contains(h1)) continue;
+        const lay = layerOf(top); if (lay) hits.push({ line: p.line, by: name(lay) });
+      }
+    }
+    const mast = document.querySelector('.cit-mast');
+    const mr = mast && vis(mast) && getComputedStyle(mast).position === 'absolute' ? mast.getBoundingClientRect() : null;
+    // the nearest fixed/sticky band BELOW the headline (tilted-gallery's pinned bar stood 5px under
+    // the name's box on the old Alig-vár mock — touching, not covering: the soft rule's case)
+    let below = null;
+    for (const el of document.querySelectorAll('body *')) { const c = getComputedStyle(el); if (c.position !== 'fixed' && c.position !== 'sticky') continue; if (!vis(el) || c.pointerEvents === 'none') continue; const b = el.getBoundingClientRect(); if (b.width < W * 0.6 || b.top < r.bottom - 2 || b.top > H) continue; const gap = Math.round(b.top - r.bottom); if (below === null || gap < below.gap) below = { gap, by: name(el) }; }
+    return { r: rect(h1), lines, text: txt(h1), covered: [...new Set(hits.map(h => h.by))], coveredLines: [...new Set(hits.map(h => h.line))], gapUnderMast: mr ? Math.round(r.top - mr.bottom) : null, below };
+  })();
   // ② the CTA's JUMP: does the booking section land in view, or under the sticky bar?
   out.jump = null;
   const jumpA = ctaInFold[0] || ctas[0];
@@ -526,6 +567,9 @@ async function main(): Promise<void> {
         }
         // ② the masthead block: the compact phone lockup is PROMISED ≤150px (contract amendment
         // 2026-09-26, name-masthead/phone) — measured 148–200px before, 69–140 after
+        if (st.h1 && st.h1.covered && st.h1.covered.length) F(P, vp.id, "HIBA", "②főcím-takarva", `a főcím („${st.h1.text}”) ${st.h1.coveredLines.length}/${st.h1.lines} sora rögzített réteg alatt: ${st.h1.covered.join(", ")} (y=${st.h1.r.y}…${st.h1.r.b})`);
+        else if (st.h1 && st.h1.gapUnderMast != null && st.h1.gapUnderMast < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) ${st.h1.gapUnderMast}px-re indul a masthead alja alatt — nincs levegő`);
+        else if (st.h1 && st.h1.below && st.h1.below.gap < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) alja ${st.h1.below.gap}px-re a rögzített sávtól (${st.h1.below.by}) — nincs levegő`);
         if (st.mast && st.mast.h > 150) F(P, vp.id, "HIBA", "②fejléc-blokk", `a masthead ${st.mast.h}px magas az első képernyőn (a telefonos alak ≤150px-et ígér)`);
         // ⑤ the fixed booking bar's text: value + label on ONE line each (was 2–3 lines, transit 99px)
         if (st.barText && st.barText.parts.some((p: any) => p.lines > 1)) F(P, vp.id, "HIBA", "⑤sáv-felirat", `a Foglalás-sáv felirata törik: ${st.barText.parts.map((p: any) => `${p.tag} ${p.lines} sor`).join(", ")} (blokk ${st.barText.h}px)`);

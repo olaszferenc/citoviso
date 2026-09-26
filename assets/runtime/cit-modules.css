@@ -732,6 +732,9 @@ a.cit-grat:hover {
 .cit-book__ask b{display:block;margin-bottom:3px}
 .cit-book__ask span{display:block}
 .cit-book__ask-sub{margin-top:5px;font-size:.8rem;color:var(--cit-muted)}
+/* DEMO (mock): the sample-price sentence under the total — the same muted voice as the
+   quote-mode footnote, so the box reads as one thing, with the word MINTA in it. */
+.cit-book__qsample{display:block;margin-top:6px;font-size:.78rem;line-height:1.5;color:var(--cit-muted,#60748b)}
 /* Az árajánlat-állapot a KONTÉNEREN jelenik meg — egy keret, erősebb hangsúllyal. */
 .cit-book__quote--ask{background:color-mix(in srgb,var(--cit-accent) 10%, var(--cit-bg))}
 /* A gomb is más állapotot visel — de a felirat kontrasztja marad a mérce. */
