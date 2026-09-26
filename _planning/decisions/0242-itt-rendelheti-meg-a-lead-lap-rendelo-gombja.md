@@ -1,4 +1,4 @@
-## ADR-XXXX — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, és a Foglalás-sáv fölött ül
+## ADR-0242 — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, és a Foglalás-sáv fölött ül
 
 **Dátum:** 2026-09-26 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) · **Szál:** „C — indító gomb” (a telefonos rendelés-bejelentés három párhuzamos szálának egyike: A két lépés, B görgetés, C gomb)
 

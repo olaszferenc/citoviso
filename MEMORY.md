@@ -16,7 +16,7 @@ A tulaj telefonról: az „állítsa össze” gomb eltűnik, és a mock gombjá
 a gomb MINDIG kint van (csak nyitott panelnél nincs; lecsukás után visszajön, a perem-fül lecsukva rejtve), a színe
 platform-cián, türkiz akcentű sablonon lila (jóváhagyott „B”), és a Foglalás-sáv fölött ül: lappal mozgó gomb elől oldalt
 vált, csak végső esetben lép feljebb. Mérve 19 stílus × 3 méret, 57/57; `lead-page-surface-check` és
-`configurator-float-check` zöld. ADR-XXXX, kontraktus `assets/design-refs/prospect-page/order-pill/`. Nem élesítve.
+`configurator-float-check` zöld. ADR-0242, kontraktus `assets/design-refs/prospect-page/order-pill/`. Nem élesítve.
 ⚠️ Az első „B” válasz tévedésből a koordinátortól jött; a tulaj utána maga megerősítette.
 Jegyzet: `_planning/memory/2026-09-26_itt_rendelheti_meg_gomb.md`.
 

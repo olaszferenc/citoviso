@@ -1,7 +1,7 @@
 # 2026-09-26 — „Itt rendelheti meg”: a lead-lap rendelő gombja mindig kint van, platform-színű, a Foglalás-sáv fölött (C szál)
 
 **Brief:** `~/rc-briefs/cfg-mobile-0926/C-inditogomb.md` (+ `_kozos.md`). Ez a C szál a telefonos rendelés-bejelentés három
-párhuzamos szálából (A: két lépés, B: görgetés). ADR: `ADR-XXXX` (a land osztja ki). Kontraktus:
+párhuzamos szálából (A: két lépés, B: görgetés). ADR: `ADR-0242` (a land osztja ki). Kontraktus:
 `assets/design-refs/prospect-page/order-pill/`. Nincs élesítve, a nagy deployjal megy.
 
 ## Mit mértem a kódban (a bejelentés mögött)

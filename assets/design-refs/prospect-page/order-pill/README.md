@@ -4,7 +4,7 @@ A tulaj bejelentése (2026-09-26 20:02, telefonról, Három Huszár mock): az �
 néha eltűnik, és a színe egyezik a mock saját gombjáéval, ezért nem feltűnő. A §2b terv-körben a tulaj
 a **B** változatot választotta, és a gomb helyének **a Foglalás-sáv fölött**-et (kérdőív, 2026-09-26 este;
 egy korábbi, azonos tartalmú válasz tévedésből a koordinátortól jött — a tulaj utána maga erősítette meg).
-Döntés: ADR-XXXX. Kód: `assets/runtime/cit-configurator.js` + `.css` (`.cit-cfg-launch`).
+Döntés: ADR-0242. Kód: `assets/runtime/cit-configurator.js` + `.css` (`.cit-cfg-launch`).
 
 **Hatókör:** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css`
 

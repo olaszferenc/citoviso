@@ -3096,7 +3096,7 @@
   // that nobody reads as "this is where you order" — so a lead who swiped the sheet
   // away lost the buy entry for good. The pill reopens the SAME configuration; the
   // edge tab is hidden while collapsed (CSS), because on a phone it sat under the pill.
-  // Plan: assets/design-refs/prospect-page/order-pill/ (ADR-XXXX).
+  // Plan: assets/design-refs/prospect-page/order-pill/ (ADR-0242).
   function collapse() {
     panel.classList.remove("cit-cfg-open");
     panel.classList.add("cit-cfg-collapsed");

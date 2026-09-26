@@ -587,7 +587,7 @@ async function measure(
       { timeout: 4000, polling: 100 },
     ).catch(() => undefined);
     // R8 — the pill rests ABOVE the bottom-fixed stack (owner, 2026-09-26: "a Foglalás-sáv
-    // fölé"; ADR-XXXX). Measured independently of the runtime's own placement: every
+    // fölé"; ADR-0242). Measured independently of the runtime's own placement: every
     // visible position:fixed layer outside our chrome whose box intersects the pill's box.
     // Here, after the scroll, because that is when the deferred consent bar has arrived
     // and a template's booking bar stacks on it — measured 2026-09-26: a placement that
