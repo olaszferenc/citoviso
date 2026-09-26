@@ -69,7 +69,11 @@ nem-terv az első képernyőn 40–49 % → **17 %** (asztalon 8 %); őr R7 + pi
 megerősítő lap („Leiratkozom"), POST = tett**, RFC 8058 one-click marad; őr az `optout-carrier-check` 0. blokkja.
 ③ **Hero a TELJES képen:** `photoHealth.ts` (fél-fekete → −45, sötét → −15) a TÁROLT verdiktbe; a Laguna
 hero 92 → 47, `rerender-mock --rehero` 19/19 cserélve (Tihany változatlan); őr `hero-health-check`. Részletek:
-`_planning/memory/2026-09-26_elek_lead_telefonon.md` 2. kör.
+`_planning/memory/2026-09-26_elek_lead_telefonon.md` 2. kör. **Landolva: `5e1ab4bb` (2 kör, 4 commit), runner FK-009 a
+végleges motoron 49 lépés / 0 piros. NYITVA a tulajnak:** ① utólagos ítélet a B első képernyőn (:4600, a 38 dev-link él);
+② a felület-kapu kivétele (citui.css egyetlen tokenje) vétózható; ③ **Gy5:** fekvő 844×390-en a pirula ELSŐ koppintása
+3-ból 1-szer nem nyitotta a konfigurátort — mechanizmus nem bizonyított, nem javított. **→ testvér-szál:** egyforma
+fejléc-blokk 19/19, hero-fotó méretezés (srcset), Foglalás-sáv szövegtörés, brutalism marquee.
 Jegyzet: `_planning/memory/2026-09-26_elek_lead_telefonon.md`. Tulaj: „a wow effekthez a mobilnézet legyen
 hibátlan" + „kiemelten a VIZUÁLIS élményre". 38 követett link küldés nélkül (`scripts/seed-elek-lead-mobile-links.mts`,
 links.json), friss-betöltéses mérő 390/360/FEKVŐ (`scripts/lead-mobile-check.mts`, viewport-képek, ujj-találat,
