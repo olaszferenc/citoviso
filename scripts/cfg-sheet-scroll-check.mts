@@ -366,10 +366,8 @@ let failures = 0;
 const KNOWN_OPEN: Record<string, string> = {
   // (2026-09-26: the sideways paying step — "Fizetek" below the edge — was listed here
   // until the owner decided: sideways, the paying step scrolls as one column. Fixed.)
-  "360:S8_paying_form_scrolls_itself":
-    "álló 360×780-on a fizetés-lépés számlázási űrlapjának ablaka ~24 px, a pipa-blokk takarja — a két-lépéses " +
-    "átszervezés (A szál, ADR-0240) után jelent meg (előtte 152 px, zöld); a „Fizetek” látszik, de az űrlap nem " +
-    "tölthető ki → az A szálnak / a koordinátornak jelezve (2026-09-26), a B szál hatókörén kívül",
+  // (360:S8 — the billing form squeezed to ~24 px upright after the two-step rework —
+  // was listed here until the A thread fixed it, eca02c21: 24 → 131 px. Closed.)
 };
 let knownOpen = 0;
 const check = (name: string, ok: boolean, detail?: unknown): void => {

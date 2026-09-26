@@ -22,6 +22,6 @@ görgetése a natív jelzés). Álló nézeten és asztalon a ② változatlan.
 - Őr: `cfg-sheet-scroll-check` S8 (a fizetés-űrlap elérhető húzással) + S9 (a görgetés végén a
   „Fizetek” a képernyőn van, és az ujj ŐT találja), 844×390 és 932×430 tartáson; piros önteszt: a
   blokk kivéve → S9 PIROS fekvőn, álló 390-en zöld.
-- ⚠️ Nyitott, NEM ennek a döntésnek a része: álló 360×780-on az ADR-0240 átszervezése után a
+- ✅ Lezárva (az A szál javította, `eca02c21`), NEM ennek a döntésnek a része: álló 360×780-on az ADR-0240 átszervezése után a
   számlázási űrlap ablaka ~24 px (a pipa-blokk takarja) — jelezve a koordinátornak/A szálnak
   (`~/rc-briefs/cfg-mobile-0926/B-jelentes-360-urlap.md`); az őrben hangos ismert-nyitott tétel.

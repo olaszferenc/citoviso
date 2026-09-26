@@ -16,8 +16,8 @@ A tulaj: „nem a vásárlási szekció gördül, hanem a honlap maga”. Mérve
 fején/láblécén húzva a lap ~320 px-t ment, a lista végén átláncolt. Javítás: `touchmove`-őr a panelen + 
 `overscroll-behavior:contain` — NEM lap-zár (a lap a panel mellett görgethető marad, a modul-kapcsolás odagörget).
 Őr `scripts/cfg-sheet-scroll-check.mts --selftest` (pre-commit). **Fekvőn a fizetés-lap egy oszlopban
-görög** (tulaj-döntés, ADR-XXXX; addig a „Fizetek” elérhetetlen volt). ⛔ **Nyitott, A-szál utáni lelet:** álló 360×780-on
-a számlázási űrlap ablaka ~24 px (jelentés: `~/rc-briefs/cfg-mobile-0926/B-jelentes-360-urlap.md`). Nincs
+görög** (tulaj-döntés, ADR-XXXX; addig a „Fizetek” elérhetetlen volt). ✅ Az A-szál utáni 360-as lelet (számlázási
+űrlap ~24 px) LEZÁRVA — az A javította (`eca02c21`), az őr igazolta. Nincs
 élesítve. Jegyzet: `_planning/memory/2026-09-26_cfg_panel_gorgetes_telefon.md`.
 
 ## Párhuzamos szál (2026-09-26 este — „Itt rendelheti meg”: a lead-lap rendelő gombja, C szál)

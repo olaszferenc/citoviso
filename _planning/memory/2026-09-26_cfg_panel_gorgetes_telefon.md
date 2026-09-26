@@ -40,12 +40,14 @@ félre lett téve (`~/rc-briefs/cfg-mobile-0926/parked/`), és a tulajt ÚJRA me
 kivétellel kiegészítve. Őr: S8 + új S9 („Fizetek" a képernyőn, az ujj őt találja), 844 és 932 fekvő
 tartás, `no-landcol` piros önteszt. Képek: `_drafts/cfg-sheet-scroll/fekvo-fizetes-*.png`.
 
-## ⛔ Új, NYITOTT lelet — az A szál után (nem B-hatókör)
+## ✅ LEZÁRVA — az A szál utáni 360-as lelet (nem B-hatókör)
 Az A szál (ADR-0240, két-lépéses rendelés) landolása UTÁN álló **360×780**-on a fizetés-lépés
 számlázási űrlapjának ablaka ~24 px, a pipa-blokk takarja (előtte 152 px, zöld) — a „Fizetek"
 látszik, de az űrlap nem tölthető ki. Ok: a fizetés-lépés tetején ott marad az összeg + ÁFA +
 terhelés + a §A nyilatkozat hosszú szövege. Jelentés: `~/rc-briefs/cfg-mobile-0926/B-jelentes-360-urlap.md`;
-az őrben `KNOWN_OPEN["360:S8…"]` (hangos, nem zöld).
+az őrben `KNOWN_OPEN["360:S8…"]` volt. **Lezárva:** az A szál javította (`eca02c21`: a §A címke
+inline `display:flex`-e legyőzte a fizetés-lapi `display:none`-t; 24 → 131 px); az őr a rebase után
+mindhárom sablonon „MEGSZŰNT”-et jelzett, a bejegyzés kivéve.
 
 iOS Safari nincs a gépen (csak Chromium) — a `touchmove`+`preventDefault` út WebKiten is a
 szabványos, de ott nem mértem.
