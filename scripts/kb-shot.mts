@@ -1037,6 +1037,10 @@ async function shoot(
   /** ADR-0198: a szoba-szerkesztő felugrója `:target`-tel nyílik (nulla JS), tehát a
    *  KÉP is a valódi úton készül — a horgonnyal együtt töltjük be a lapot. */
   hash?: string,
+  /** season-datepicker: CLICK this control first (the real way the owner opens the
+   *  calendar), and shoot only if `mustShow` then really is visible — a picker that
+   *  does not open fails loudly instead of giving a picture of a closed form. */
+  clickFirst?: { click: string; mustShow: string },
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     ...(multilang ? { multilang } : {}),
@@ -1103,6 +1107,12 @@ async function shoot(
   await writeFile(file, html, "utf8");
   await page.goto(pathToFileURL(file).href + (hash ?? ""));
   await page.waitForTimeout(300);
+  if (clickFirst) {
+    await page.locator(clickFirst.click).first().click();
+    await page.mouse.move(0, 0); // no hover highlight left on a day of the picture
+    if (!(await page.locator(clickFirst.mustShow).first().isVisible()))
+      throw new Error(`kb-shot: a(z) ${clickFirst.click} kattintás után ${clickFirst.mustShow} nem látszik`);
+  }
   // A guide image must show what its entry describes — when the subject sits
   // below the fold (the room card's amenity picker), capture THAT element:
   // deterministic, no scroll-timing races.
@@ -1315,6 +1325,27 @@ await shoot(
   undefined,
   moduleShotHtml("admin-modules-pricing"),
   ".mcfg-note--act",
+);
+// Approved plan season-datepicker (2026-09-27): the guide walks the owner through the
+// calendar that opens on „Kezdete”, and the one-year calendar under the year strip —
+// both open on a click, so both are shot the real way: click, then capture.
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "naptar.png"),
+  undefined,
+  moduleShotHtml("admin-modules-pricing"),
+  ".adm-card:has([data-strip]) .price-new",
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  { click: '.adm-card:has([data-strip]) [data-sadd] [data-sdp="from"]', mustShow: ".adm-card:has([data-strip]) [data-sadd] [data-scal]" },
+);
+await shoot(
+  "modulok",
+  path.join(ROOT, "kb/entries", "admin-modules-pricing", "assets", LANG, "ev-naptar.png"),
+  undefined,
+  moduleShotHtml("admin-modules-pricing"),
+  ".season-block:has([data-ycal]:not([hidden]))",
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  { click: ".season-block .ys-days > summary", mustShow: ".season-block [data-ycal]" },
 );
 // …and the mirror on the rooms screen: the note with the way back to pricing.
 await shoot(

@@ -31,6 +31,7 @@ import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { CONTACT_CSS, placeCard, placeScript, saveBar, type ContactView } from "./contactViews.js";
+import { readFileSync } from "node:fs";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
@@ -384,20 +385,44 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .price-row__txt strong{display:block}
 .price-row__txt span{color:var(--citui-muted);font-size:.85rem}
 .price-row__amt{font-weight:600;white-space:nowrap}
-.price-new{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:14px}
-.price-new .citui-input{min-width:0}
-.price-new>.citui-input{flex:1;min-width:140px}
+.price-new{padding-top:14px}
+/* Season fields — approved plan season-datepicker: a label ABOVE every field (the
+   unlabelled row with a lone minimum unit was part of what the owner found unclear).
+   The layout follows the FORM's own width (@container), not the viewport: the admin
+   sidebar takes a third of a laptop screen. */
+.pn-wrap{container-type:inline-size}
+.pn-grid{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end;position:relative}
+.pn-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.pn-l{font-size:.84em;font-weight:600;color:var(--citui-muted)}
+.pn-f .citui-input{min-width:0}
+.pn-name{flex:1.3 1 150px}
+.pn-dates{flex:1.9 1 230px}
+.pn-amt{flex:1 1 120px}
+.pn-min{flex:.8 1 96px}
+.pn-go{flex:0 0 auto}
+.pn-full{flex:1 1 100%;min-width:0}
+/* desktop: every field in one row, the notes and the preview under it */
+.pn-grid>.sdp-near,.pn-grid>.sdp-took{order:1}
+.pn-grid>.sdp-year{order:2}
+.pn-grid>[data-sprev]{order:3}
+.pn-grid .mcfg-suffix .citui-input{flex:1 1 0;width:0;max-width:none}
+.pn-grid .mcfg-suffix>span{white-space:nowrap;color:var(--citui-muted)}
 .price-new__dates{display:flex;align-items:center;gap:6px}
-.price-new__dates .citui-input{width:88px;text-align:center}
-.price-new .mcfg-suffix>span{white-space:nowrap}
+.price-new__dates .citui-input{flex:1 1 0;width:0;text-align:center}
+@container (max-width:619px){
+  /* Measured 2026-09-23 @390px: flex items default to min-width:auto, so the inputs'
+     intrinsic width won and the second date field was cut off — every row shrinks. */
+  .pn-name,.pn-dates,.pn-go{flex:1 1 100%}
+  .pn-amt,.pn-min{flex:1 1 40%}
+  .pn-go{order:5}
+  .pn-grid>.sdp-near,.pn-grid>.sdp-took{order:1}
+  .pn-name{order:0}
+  .pn-dates{order:2}
+  .pn-grid>.sdp-cal{order:3}
+  .pn-amt,.pn-min{order:4}
+  .pn-grid>.sdp-year,.pn-grid>[data-sprev]{order:6}
+}
 @media(max-width:520px){
-  .price-new{flex-direction:column;align-items:stretch}
-  /* Measured 2026-09-23 @390px: the date and amount rows were 482px wide in a 320px
-     card — flex items default to min-width:auto, so the inputs' intrinsic width won
-     and the second date field was cut off. Let every row shrink to the card. */
-  .price-new>*{min-width:0}
-  .price-new__dates .citui-input,.price-new .mcfg-suffix .citui-input{flex:1 1 0;width:0;max-width:none}
-  .price-new .citui-btn{width:100%}
   .price-row__amt{margin-left:auto}
 }
 
@@ -713,10 +738,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .s-move button:disabled{opacity:.3;cursor:default}
 .s-move .up svg{transform:rotate(180deg)}
 .s-edit{background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);padding:12px;margin:4px 0 10px}
-.s-edit__grid{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.s-edit__grid>.citui-input{flex:1;min-width:140px}
-.s-edit .price-new__dates .citui-input{width:84px;text-align:center}
-.s-edit .mcfg-suffix>span{white-space:nowrap}
+.s-edit .pn-grid [data-sprev]:empty{display:none}
 .s-prev{margin:10px 0 0;font-size:.86rem;line-height:1.5;padding:9px 11px;border-radius:var(--citui-radius-sm);
   background:var(--citui-panel);border:1px solid var(--citui-line)}
 .s-prev b{color:var(--citui-ink)}
@@ -726,6 +748,96 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .s-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .s-flash{color:var(--citui-ok-ink);font-size:.84rem;font-weight:600;margin:6px 0 0}
 .s-err{color:var(--citui-bad);font-size:.84rem;margin:6px 0 0}
+.s-prev__next{color:var(--citui-muted)}
+/* ── the date pickers, the name list, the year calendar (cit-season-editor.js) ── */
+/* the admin's own field look (citui-admin.css .citui-input), so the two date buttons
+   sit in the row like the fields next to them */
+.sdp-btn{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:7px;align-self:stretch;padding:8px 10px;
+  border:1px solid var(--citui-line);border-radius:6px;background:var(--citui-field);
+  color:var(--citui-ink);font:inherit;font-size:.95em;cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden}
+.sdp-btn svg{flex:none;color:var(--citui-link-ink)}
+.sdp-btn span{overflow:hidden;text-overflow:ellipsis}
+.sdp-btn.is-ph{color:var(--citui-muted)}
+.sdp-btn.is-on,.sdp-btn:focus-visible{border-color:var(--citui-cyan-500);outline:0;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 22%,transparent)}
+.sdp-dash{color:var(--citui-muted)}
+.sdp-cal{position:fixed;z-index:30;width:540px;max-width:calc(100vw - 16px);box-sizing:border-box;padding:14px;
+  background:var(--citui-panel);border:1px solid var(--citui-line-strong);border-radius:12px;
+  box-shadow:0 18px 50px color-mix(in srgb,var(--citui-navy-950) 22%,transparent);color:var(--citui-ink);font-weight:400}
+.sdp-cal[hidden]{display:none}
+.sdp-cal.is-inline{position:static;width:auto;max-width:none;flex:1 1 100%;box-shadow:none}
+.sdp-ycal{position:static;width:auto;max-width:none;margin:4px 0 6px;box-shadow:none}
+.sdp-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+.sdp-top h4{margin:0 0 2px;font-size:.95rem}
+.sdp-step{font-size:.85rem;font-weight:600}
+.sdp-nav{display:flex;gap:6px;flex:none}
+.sdp-nav button{width:36px;height:36px;border-radius:8px;border:1px solid var(--citui-line);background:var(--citui-panel);
+  color:var(--citui-ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.sdp-months{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sdp-cal.is-inline .sdp-months,.sdp-cal.is-one .sdp-months{grid-template-columns:1fr}
+.sdp-mon h5{margin:0 0 8px;font-size:.92rem;font-weight:700;color:var(--citui-ink)}
+.sdp-cal:not(.sdp-ycal) .sdp-mon h5::first-letter{text-transform:uppercase}
+.sdp-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;text-align:center;
+  font-size:.72rem;font-weight:700;color:var(--citui-muted)}
+.sdp-wk .we{color:var(--citui-link-ink)}
+.sdp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.sdp-grid button{height:36px;border:0;border-radius:7px;background:transparent;color:var(--citui-ink);
+  font:500 .88rem var(--citui-font-text);cursor:pointer;padding:0}
+.sdp-grid button:hover:not(:disabled){background:var(--citui-hover,var(--citui-surface-2))}
+.sdp-grid button:disabled{color:var(--citui-muted);opacity:.4;cursor:default}
+.sdp-grid button.we{font-weight:700}
+.sdp-grid button.in{background:color-mix(in srgb,var(--citui-cyan-500) 18%,var(--citui-panel));border-radius:0}
+.sdp-grid button.end{background:var(--citui-cyan-500);color:var(--citui-accent-ink,var(--citui-navy-900));font-weight:700;border-radius:7px}
+.sdp-grid button.oth{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--citui-warn) 70%,transparent)}
+.sdp-pad{height:36px}
+.sdp-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:10px;
+  border-top:1px solid var(--citui-line);font-size:.8rem;color:var(--citui-muted);flex-wrap:wrap}
+.sdp-key{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle;
+  background:color-mix(in srgb,var(--citui-warn) 70%,transparent)}
+.sdp-sum{color:var(--citui-ink);font-size:.84rem;line-height:1.5;flex:1 1 260px}
+.sdp-muted{color:var(--citui-muted)}
+.sdp-acts{display:flex;gap:8px;flex-wrap:wrap}
+@container (max-width:619px){
+  .sdp-grid button,.sdp-pad{height:40px}
+  .sdp-foot .citui-btn{flex:1 1 auto}
+}
+.sdp-year__lbl{font-size:.78rem;font-weight:600;color:var(--citui-muted);margin:2px 0 5px}
+.sdp-year__bar{position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));height:58px;
+  border:1px solid var(--citui-line);border-radius:8px;overflow:hidden}
+.sdp-year__bar>button{border:0;border-right:1px solid var(--citui-line);background:var(--citui-panel);color:var(--citui-muted);
+  font:600 .7rem var(--citui-font-text);cursor:pointer;display:flex;justify-content:center;align-items:flex-start;padding:5px 0 0;
+  text-transform:capitalize;min-width:0;overflow:hidden}
+.sdp-year__bar>button:nth-child(12){border-right:0}
+.sdp-seg{position:absolute;height:11px;border-radius:4px;pointer-events:none}
+.sdp-seg.is-new{bottom:7px;background:var(--citui-cyan-500)}
+.sdp-seg.is-other{bottom:23px;background:color-mix(in srgb,var(--citui-warn) 55%,var(--citui-panel))}
+.sdp-year__key{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:6px;font-size:.76rem;color:var(--citui-muted)}
+.sdp-year__key i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.sdp-year__key i.is-new{background:var(--citui-cyan-500)}
+.sdp-year__key i.is-other{background:color-mix(in srgb,var(--citui-warn) 55%,var(--citui-panel))}
+.pn-name{position:relative}
+.sdp-lb{position:absolute;z-index:25;top:100%;left:0;margin:4px 0 0;padding:6px;list-style:none;box-sizing:border-box;
+  min-width:100%;width:max-content;max-width:min(420px,100cqw);max-height:320px;overflow:auto;
+  background:var(--citui-panel);border:1px solid var(--citui-line-strong);border-radius:10px;
+  box-shadow:0 18px 50px color-mix(in srgb,var(--citui-navy-950) 22%,transparent)}
+.sdp-lb[hidden]{display:none}
+.sdp-lb__h{padding:6px 10px 4px;font-size:.7rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--citui-muted)}
+.sdp-lb li[role=option]{display:flex;justify-content:space-between;align-items:center;gap:14px;min-height:40px;padding:8px 10px;
+  border-radius:7px;cursor:pointer;color:var(--citui-ink);font-size:.9rem;font-weight:600}
+.sdp-lb li[role=option] small{font-size:.76rem;font-weight:500;color:var(--citui-muted);text-align:right}
+.sdp-lb li[aria-selected=true],.sdp-lb li[role=option]:hover{background:var(--citui-hover,var(--citui-surface-2))}
+.sdp-lb li[aria-disabled=true]{cursor:default;color:var(--citui-muted)}
+.sdp-lb li[aria-disabled=true]:hover{background:none}
+.sdp-lb mark{background:none;color:var(--citui-link-ink);font-weight:800}
+@container (max-width:619px){.sdp-lb{width:100%;max-width:100%}}
+.sdp-near{margin:0;padding:8px 12px;border-radius:8px;background:var(--citui-surface-2);color:var(--citui-ink);
+  font-size:.86rem;line-height:2.1;font-weight:400}
+.sdp-near[hidden],.sdp-took[hidden]{display:none}
+.sdp-chip{display:inline-flex;align-items:center;min-height:34px;margin-left:8px;padding:0 12px;vertical-align:middle;
+  border:1px solid var(--citui-line-strong);border-radius:999px;background:var(--citui-panel);color:var(--citui-ink);
+  font:600 .84rem var(--citui-font-text);cursor:pointer}
+.sdp-took{margin:0;font-size:.82rem;color:var(--citui-muted);font-weight:400}
+.ys-cell.is-act{box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
 .wrap-tag{display:inline-block;margin-left:6px;font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:999px;
   background:color-mix(in srgb,var(--citui-cyan-400) 16%,var(--citui-panel));color:var(--citui-ink)}
 .ys-head{display:flex;align-items:center;gap:8px;margin:6px 0 8px}
@@ -2358,6 +2470,48 @@ function scriptJson(v: unknown): string {
 }
 
 /**
+ * The fields of a season — the add form and the edit form share them (approved plan
+ * season-datepicker, assets/design-refs/tenant-admin/season-datepicker/): a label
+ * ABOVE every field, and the days as plain month-day text fields that the script
+ * (cit-season-editor.js) turns into two calendar buttons. Without the script the text
+ * fields work as before, which is why the month-day hint stays for that case only.
+ */
+function seasonFields(
+  key: string,
+  lang: string,
+  cur: string,
+  bk: boolean,
+  v: { label: string; from: string; to: string; amount: string; minNights: number | null },
+  add?: { unit: string },
+): string {
+  return (
+    `<div class="pn-wrap"><div class="pn-grid">` +
+    `<div class="pn-f pn-name"><label class="pn-l" for="sn-${esc(key)}">${T(lang, "Időszak neve")}</label>` +
+    `<input class="citui-input" id="sn-${esc(key)}" name="label" value="${esc(v.label)}" placeholder="${T(lang, "Pl. Holtszezon")}"></div>` +
+    `<div class="pn-f pn-dates"><span class="pn-l">${T(lang, "Mettől meddig")}</span>` +
+    `<span class="price-new__dates" data-sdates>` +
+    `<input class="citui-input" name="from" value="${esc(v.from)}" placeholder="11-01" maxlength="7" aria-label="${T(lang, "Kezdet (hónap-nap)")}">` +
+    `<span>–</span>` +
+    `<input class="citui-input" name="to" value="${esc(v.to)}" placeholder="03-01" maxlength="7" aria-label="${T(lang, "Vég (hónap-nap)")}">` +
+    `</span></div>` +
+    `<label class="pn-f pn-amt"><span class="pn-l">${T(lang, "Ár / éjszaka")}</span><span class="mcfg-suffix">` +
+    `<input class="citui-input" name="amount"${add ? ` type="number" min="0"` : ""} inputmode="numeric" value="${esc(v.amount)}" placeholder="0"><span>${esc(cur)}</span></span></label>` +
+    // ADR-0049: the period carries its own minimum stay. Booking-only: without the
+    // calendar nothing would ever ask for it.
+    (bk
+      ? `<label class="pn-f pn-min"><span class="pn-l">${T(lang, "Legalább")}</span><span class="mcfg-suffix">` +
+        `<input class="citui-input" name="min_nights"${add ? ` type="number" min="1" max="60"` : ""} inputmode="numeric" value="${v.minNights ?? ""}" placeholder="—" ` +
+        `aria-label="${T(lang, "Legrövidebb foglalás ebben az időszakban")}"><span>${T(lang, "éj")}</span></span></label>`
+      : "") +
+    (add ? `<button class="citui-btn citui-btn--primary pn-go" type="submit">${T(lang, "Hozzáadás")}</button>` : "") +
+    `<div class="sdp-cal" data-scal hidden></div>` +
+    (add ? `<div class="sdp-year pn-full" data-syear hidden></div>` : "") +
+    `<div class="pn-full" data-sprev></div>` +
+    `</div></div>`
+  );
+}
+
+/**
  * One recurring season on the Árazás page — approved plan season-year-price (B·1):
  * the season row (move · Szerkesztés · Törlés) or its edit form, then the YEAR STRIP:
  * one card per year, the next card always peeking at the right edge, endless to the
@@ -2390,16 +2544,7 @@ function seasonBlock(
     head =
       `<form method="POST" action="/admin/prices/season/edit" class="s-edit" data-sedit="${esc(s.id)}">` +
       `<input type="hidden" name="id" value="${esc(s.id)}">` +
-      `<div class="s-edit__grid">` +
-      `<input class="citui-input" name="label" value="${esc(s.label)}" aria-label="${T(lang, "Időszak neve")}">` +
-      `<span class="price-new__dates"><input class="citui-input" name="from" value="${esc(from)}" maxlength="7" aria-label="${T(lang, "Kezdet (hónap-nap)")}">` +
-      `<span>–</span><input class="citui-input" name="to" value="${esc(to)}" maxlength="7" aria-label="${T(lang, "Vég (hónap-nap)")}"></span>` +
-      `<span class="mcfg-suffix"><input class="citui-input" name="amount" inputmode="numeric" value="${esc(grouped(s.amount))}" aria-label="${T(lang, "Ár")}"><span>${esc(cur)}</span></span>` +
-      (bk
-        ? `<span class="mcfg-suffix"><input class="citui-input" name="min_nights" inputmode="numeric" value="${s.minNights ?? ""}" placeholder="—" aria-label="${T(lang, "Legrövidebb foglalás ebben az időszakban")}"><span>${T(lang, "éj min.")}</span></span>`
-        : "") +
-      `</div>` +
-      `<div data-sprev></div>` +
+      seasonFields(s.id, lang, cur, bk, { label: s.label, from, to, amount: grouped(s.amount), minNights: s.minNights }) +
       (kept.length
         ? `<p class="citui-hint" style="margin:8px 0 0">${T(lang, "Az évre szóló árak ({years}) megmaradnak. Ahol nem adott meg saját napokat, ott az új napokra vonatkoznak.", { years: kept.join(", ") })}</p>`
         : "") +
@@ -2426,7 +2571,7 @@ function seasonBlock(
       (bk && s.minNights ? `<em style="display:block;font-style:normal;font-size:.8rem;color:var(--citui-muted)">${T(lang, "min. {n} éj", { n: s.minNights })}</em>` : "") +
       `</span>` +
       `<span class="season-act">${move}` +
-      `<a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&amp;m=pricing&amp;edit=${esc(s.id)}#s-${esc(s.id)}">${T(lang, "Szerkesztés")}</a>` +
+      `<a class="citui-btn citui-btn--ghost" data-sedit-link href="/admin?tab=modulok&amp;m=pricing&amp;edit=${esc(s.id)}#s-${esc(s.id)}">${T(lang, "Szerkesztés")}</a>` +
       `<form method="POST" action="/admin/prices/delete"><input type="hidden" name="id" value="${esc(s.id)}">` +
       `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit">${T(lang, "Törlés")}</button></form>` +
       `</span></div>` +
@@ -2453,7 +2598,10 @@ function seasonBlock(
     `data-amount="${esc(grouped(s.amount))}" data-last="${first + n - 1}">` +
     cells.join("") +
     `<div class="ys-more" aria-hidden="true">${ic("chevron-down", 18)}</div>` +
-    `</div></div></div>`
+    `</div></div>` +
+    // approved plan season-datepicker ⑨: one year's own days on a real calendar
+    `<div class="sdp-cal sdp-ycal" data-ycal hidden></div>` +
+    `</div>`
   );
 }
 
@@ -2495,12 +2643,30 @@ function yearCell(
   );
 }
 
+/** One recurring season of the place, for the name list (any unit). */
+interface SeasonName {
+  readonly label: string;
+  readonly from: string;
+  readonly to: string;
+  readonly unit: string;
+  readonly unitName: string;
+}
+
+/**
+ * The client side of the season editor: cit-season-editor.js (date pickers, name
+ * list, year calendar — approved plan season-datepicker). Read once at start, like
+ * SEASON_JS; its words are the `L` strings below, wrapped in T() here.
+ */
+const SEASON_EDITOR_JS = readFileSync(new URL("../../assets/runtime/cit-season-editor.js", import.meta.url), "utf8");
+
 /**
  * The strip and the live previews. Plain ES5, like the other editors' scripts. The
  * season rule (cit-season.cjs) rides along INLINE, so the preview names and dates a
- * year, and normalises "11.01", exactly as the server will store it.
+ * year, and normalises "11.01", exactly as the server will store it. `today` is the
+ * editor's day (tests pin it), so the preview's "Legközelebb" names the same year the
+ * server's strip starts with.
  */
-function seasonEditorScript(lang: string): string {
+function seasonEditorScript(lang: string, today: string, names: readonly SeasonName[]): string {
   const L = {
     drag: T(lang, "húzza oldalra a további évekért"),
     rec: T(lang, "az ismétlődő ár"),
@@ -2509,23 +2675,49 @@ function seasonEditorScript(lang: string): string {
     priceOf: T(lang, "{season} {year} ára"),
     startY: T(lang, "Kezdet ebben az évben"),
     endY: T(lang, "Vég ebben az évben"),
-    valid: T(lang, "Így érvényes: {range}, minden évben."),
     wrapRange: T(lang, "{from} – a következő év {to}"),
-    wrapEx: T(lang, "Átnyúlik az év végén, például {example}"),
     nextEx: T(lang, "Legközelebb: {example}"),
-    bad: T(lang, "A dátumot hónap-nap alakban kérjük, például 11-01 vagy 11.01."),
     overlap: T(lang, "Átfed ezzel: {name} ({range}). A közös napokon a listán feljebb álló időszak ára számít: {winner}."),
     thisNew: T(lang, "ez az időszak (az új)"),
     thisOne: T(lang, "ez az időszak"),
+    // approved plan season-datepicker (cit-season-editor.js)
+    start: T(lang, "Kezdete"),
+    end: T(lang, "Vége"),
+    pickStart: T(lang, "Válassza ki a kezdő napot"),
+    pickEnd: T(lang, "Most a záró napot"),
+    pickEndAfter: T(lang, "Most a záró napot ({from} után)"),
+    prevMonth: T(lang, "Előző hónap"),
+    nextMonth: T(lang, "Következő hónap"),
+    done: T(lang, "Kész"),
+    othersKey: T(lang, "másik időszak napjai ({names})"),
+    endMissing: T(lang, "A záró nap még hiányzik."),
+    needDays: T(lang, "Válassza ki a kezdő és a záró napot."),
+    every: T(lang, "Minden évben {range}"),
+    wraps: T(lang, "átnyúlik az év végén"),
+    yearLbl: T(lang, "Az év, egy pillantásra"),
+    newOne: T(lang, "az új időszak"),
+    usedNames: T(lang, "Eddig használt nevek"),
+    hereNames: T(lang, "Ennél a szobánál már van"),
+    editAbove: T(lang, "fent szerkeszthető"),
+    took: T(lang, "A napokat átvettük ({unit}): {range}"),
+    tookHint: T(lang, "Ha ennél a szobánál más, kattintson a dátumra."),
+    nearExact: T(lang, "Ez a név már szerepel {name} alakban. Egységesen írjuk?"),
+    nearSimilar: T(lang, "Hasonló név már van: {name}. Erre gondolt?"),
+    nearHere: T(lang, "Ennél a szobánál már van {name} időszak — a fenti listán szerkesztheti."),
+    goThere: T(lang, "Ugrás oda"),
+    yearTitle: T(lang, "{season} {year} — saját napok"),
+    days: T(lang, "{n} nap"),
+    recDays: T(lang, "Ismétlődő napok ebben az évben: {range}"),
+    onlyThisYear: T(lang, "Ez csak erre az évre szól, a többi év nem változik."),
+    cancel: T(lang, "Mégse"),
+    saveDays: T(lang, "Napok mentése"),
   };
   return (
-    `<script type="application/json" data-season-l>${scriptJson({ lang, L })}</script>` +
+    `<script type="application/json" data-season-l>${scriptJson({ lang, L, today })}</script>` +
+    `<script type="application/json" data-season-names>${scriptJson(names)}</script>` +
     `<script>${SEASON_JS}</script>` +
     `<script>(function(){` +
     `var D=JSON.parse(document.querySelector("[data-season-l]").textContent),L=D.L,S=window.CitSeason;if(!S)return;` +
-    `var TODAY=new Date().toISOString().slice(0,10);` +
-    `var fmt;try{fmt=new Intl.DateTimeFormat(D.lang,{month:"long",day:"numeric",timeZone:"UTC"})}catch(_){fmt=new Intl.DateTimeFormat("hu",{month:"long",day:"numeric",timeZone:"UTC"})}` +
-    `function md(x){return fmt.format(new Date("2000-"+x+"T12:00:00Z"))}` +
     `function nice(i){return i.slice(0,4)+". "+i.slice(5,7)+". "+i.slice(8,10)+"."}` +
     `function esc(x){return String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}` +
     `function sub(t,o){return t.replace(/\\{(\\w+)\\}/g,function(m,k){return o[k]!=null?o[k]:m})}` +
@@ -2556,22 +2748,9 @@ function seasonEditorScript(lang: string): string {
     // <body> (measured) — so the cursor goes in once the page has loaded.
     `if(!/[?&]saved=1/.test(location.search)){var inp=el.querySelector('input[name="amount"]');` +
     `if(inp){var go=function(){setTimeout(function(){el.scrollIntoView({block:"center"});inp.focus({preventScroll:true})},0)};if(document.readyState==="complete")go();else window.addEventListener("load",go)}}sync(st)}` +
-    // ── previews: what the typed days MEAN, and which other season shares them ──
-    `function preview(box,isNew){var out=box.querySelector("[data-sprev]");if(!out)return;` +
-    `var fi=box.querySelector('input[name="from"]'),ti=box.querySelector('input[name="to"]');` +
-    `if(!fi.value.trim()&&!ti.value.trim()){out.innerHTML="";return}` +
-    `var f=S.normMonthDay(fi.value),t=S.normMonthDay(ti.value);` +
-    `if(!f||!t){out.innerHTML='<p class="s-prev s-prev--bad">'+esc(L.bad)+"</p>";return}` +
-    `var w=f>t,o=S.occurrence(f,t,S.firstOpenYear(f,t,TODAY)),ex="<b>"+nice(o.start)+" – "+nice(o.end)+"</b>";` +
-    `var html='<p class="s-prev">'+sub(L.valid,{range:"<b>"+esc(w?sub(L.wrapRange,{from:md(f),to:md(t)}):md(f)+" – "+md(t))+"</b>"})+" "+sub(w?L.wrapEx:L.nextEx,{example:ex})+"</p>";` +
-    `var card=box.closest("[data-seasons]"),all=card?JSON.parse(card.dataset.seasons):[],self=box.dataset.sedit||null,idx=self?all.map(function(x){return x.id}).indexOf(self):all.length;` +
-    `all.forEach(function(x,i){if(x.id===self)return;var hit=false;for(var m=1;m<=12&&!hit;m++)for(var d=1;d<=31;d++){var k=(m<10?"0":"")+m+"-"+(d<10?"0":"")+d;` +
-    `if(S.normMonthDay(k)&&S.covers(f,t,k)&&S.covers(x.from,x.to,k)){hit=true;break}}` +
-    `if(hit)html+='<p class="s-warn">'+sub(L.overlap,{name:"<b>"+esc(x.label)+"</b>",range:'<span style="white-space:nowrap">'+esc(x.from+" – "+x.to)+"</span>",winner:"<b>"+esc(i<idx?x.label:(isNew?L.thisNew:L.thisOne))+"</b>"})+"</p>"});` +
-    `out.innerHTML=html}` +
-    `document.querySelectorAll("[data-sedit],[data-sadd]").forEach(function(box){var isNew=box.hasAttribute("data-sadd");` +
-    `box.addEventListener("input",function(e){if(e.target.name==="from"||e.target.name==="to")preview(box,isNew)});preview(box,isNew)});` +
-    `})();</script>`
+    `})();</script>` +
+    // the pickers, the name list, the year calendar (approved plan season-datepicker)
+    `<script>${SEASON_EDITOR_JS}</script>`
   );
 }
 
@@ -2725,31 +2904,18 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
           : "") +
         // ② seasons
         `<h3 class="mcfg-sub">${T(lang, "Időszaki árak")}</h3>` +
+        `<p class="citui-hint" style="margin:0 0 6px">${T(lang, "Egy időszakot elég egyszer megadni: minden évben ugyanazokon a napokon érvényes. Egy adott évre az alatta lévő évsávon adhat más árat vagy más napokat.")}</p>` +
         seasonRows +
         `<form method="POST" action="/admin/prices/season" class="price-new" data-sadd>` +
         `<input type="hidden" name="unit" value="${esc(u.id)}">` +
-        `<input class="citui-input" name="label" placeholder="${T(lang, "Pl. Holtszezon")}" aria-label="${T(lang, "Időszak neve")}">` +
-        `<span class="price-new__dates">` +
-        `<input class="citui-input" name="from" placeholder="11-01" aria-label="${T(lang, "Kezdet (hónap-nap)")}" maxlength="7">` +
-        `<span>–</span>` +
-        `<input class="citui-input" name="to" placeholder="03-01" aria-label="${T(lang, "Vég (hónap-nap)")}" maxlength="7">` +
-        `</span>` +
-        `<span class="mcfg-suffix"><input class="citui-input" name="amount" type="number" ` +
-        `inputmode="numeric" min="0" placeholder="0" aria-label="${T(lang, "Ár")}"><span>${esc(cur)}</span></span>` +
-        // ADR-0049: the period carries its own minimum stay. A fortnight in August is
-        // not a February weekend, and the owner should say so where they say the price.
-        // Booking-only: without the calendar nothing would ever ask for it.
-        (bk
-          ? `<span class="mcfg-suffix"><input class="citui-input" name="min_nights" type="number" ` +
-            `inputmode="numeric" min="1" max="60" placeholder="—" aria-label="${T(lang, "Legrövidebb foglalás ebben az időszakban")}">` +
-            `<span>${T(lang, "éj min.")}</span></span>`
-          : "") +
-        `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
-        `<div data-sprev style="flex-basis:100%"></div>` +
+        seasonFields(`new-${u.id}`, lang, cur, bk, { label: "", from: "", to: "", amount: "", minNights: null }, { unit: u.id }) +
         `</form>` +
-        `<p class="citui-hint" style="margin-top:10px">${T(lang, "A dátumot hónap-nap alakban kérjük (11-01). Ha a vége korábbi, mint az eleje (11-01 – 03-01), az időszak átnyúlik az év végén. Minden évben ugyanígy érvényes.")}` +
-        (bk ? ` ${T(lang, "A „éj min.” üresen hagyva a foglalás-modulnál beállított általános minimum érvényes.")}` : "") +
-        `</p>` +
+        // Only without the script: with it, the days are picked on a calendar and the
+        // sentence under the fields says what they mean (approved plan ④).
+        `<p class="citui-hint" data-sdp-nojs style="margin-top:10px">${T(lang, "A dátumot hónap-nap alakban kérjük (11-01). Ha a vége korábbi, mint az eleje (11-01 – 03-01), az időszak átnyúlik az év végén. Minden évben ugyanígy érvényes.")}</p>` +
+        (bk
+          ? `<p class="citui-hint" style="margin-top:10px">${T(lang, "A „Legalább … éj” mező nem kötelező. Üresen hagyva az Online foglalás modulban beállított legrövidebb foglalás érvényes.")}</p>`
+          : "") +
         // ③ is this unit let all year, or only in the listed periods? Booking-only,
         // like the minimum: without booking the switch would flip and change nothing,
         // so it is not offered — one line says what booking would add (approved plan B).
@@ -2792,7 +2958,15 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="${roomsHref}">${roomsLabel}</a>` +
     `</p>` +
     cards +
-    seasonEditorScript(lang)
+    seasonEditorScript(
+      lang,
+      data.today ?? new Date().toISOString().slice(0, 10),
+      data.units.flatMap((u) =>
+        (data.prices[u.id] ?? [])
+          .filter((r) => !r.isBase && !r.parentId && !r.validFrom && r.from && r.to && r.label)
+          .map((r) => ({ label: r.label, from: r.from!, to: r.to!, unit: u.id, unitName: u.name })),
+      ),
+    )
   );
 }
 

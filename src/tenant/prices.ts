@@ -155,6 +155,23 @@ export async function setBasePrice(unitId: string, amount: number | null): Promi
   }
 }
 
+/** A season name compared the way the owner reads it: case, accents and spacing aside
+ *  ("Főszezon", "főszezon", "Föszezon " are one name). */
+function foldLabel(label: string): string {
+  return label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Approved plan season-datepicker ⑦: two recurring seasons of ONE unit may not share a
+ * name. "Főszezon" next to "főszezon" is the owner typing the same thing twice, and the
+ * guest's price table would list both. The name list offers the existing one instead;
+ * this is the refusal behind it (the page's script is not the only way in).
+ */
+function sameNameSeason(rows: readonly UnitPrice[], label: string, selfId?: string): UnitPrice | undefined {
+  const k = foldLabel(label);
+  return rows.find((r) => !r.isBase && !r.parentId && !r.validFrom && r.id !== selfId && foldLabel(r.label) === k);
+}
+
 /** Add a season price to a unit. Validated in the owner's language. */
 export async function addSeasonPrice(
   unitId: string,
@@ -174,9 +191,11 @@ export async function addSeasonPrice(
     errors.push(T(lang, "Az időszak dátumait HÓNAP-NAP alakban kérjük (például: 06-15)."));
   }
   if (!Number.isFinite(amount) || amount <= 0) errors.push(T(lang, "Adjon meg egy árat."));
+  const existing = await getUnitPrices(unitId);
+  const twin = label.trim() ? sameNameSeason(existing, label) : undefined;
+  if (twin) errors.push(T(lang, "Ennél a szobánál már van „{name}” nevű időszak — a listán szerkesztheti.", { name: twin.label }));
   if (errors.length || !nFrom || !nTo) return { ok: false, errors };
 
-  const existing = await getUnitPrices(unitId);
   await db
     .insertInto("unit_price")
     .values({
@@ -259,6 +278,8 @@ export async function updateSeasonPrice(
   if (edit.minNights !== null && !(Number.isInteger(edit.minNights) && edit.minNights >= 1 && edit.minNights <= 60)) {
     errors.push(T(lang, "A minimum 1 és 60 éj között lehet."));
   }
+  const twin = edit.label.trim() ? sameNameSeason(await getUnitPrices(season.unitId), edit.label, season.id) : undefined;
+  if (twin) errors.push(T(lang, "Ennél a szobánál már van „{name}” nevű időszak — a listán szerkesztheti.", { name: twin.label }));
   if (errors.length || !nFrom || !nTo) return { ok: false, errors };
 
   const label = edit.label.trim().slice(0, 80);

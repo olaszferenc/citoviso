@@ -38,6 +38,9 @@ export const I18N_SOURCES = [
   "src/server/ownerLogin.ts",
   "assets/runtime/cit-runtime.js",
   "assets/runtime/cit-configurator.js",
+  // season-datepicker: the tenant admin's season editor — every word comes from the
+  // server's L (T()), so the lint keeps a stray literal from slipping in here.
+  "assets/runtime/cit-season-editor.js",
 
   // ── The OUTGOING MAIL chain (ADR-0067) ───────────────────────────────────
   // Every letter a CUSTOMER reads: the tenant, the buyer, the lead — and the

@@ -4,7 +4,7 @@ title: Árak — alapár és időszaki árak egységenként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
-updated: 2026-09-25
+updated: 2026-09-27
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
@@ -56,24 +56,43 @@ hetente e-mailben emlékeztetjük.
 
 Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes szakaszaira:
 
-1. Adjon nevet az időszaknak (pl. Főszezon).
-2. Adja meg a kezdetét és végét **hónap-nap** alakban (pl. 06-15 és 08-31) — évszám nélkül,
-   mert minden évben ugyanígy érvényes, nem kell januárban újra beírnia. Pontokkal is írhatja
-   (06.15), a rendszer átalakítja.
-3. Írja be az árat, és koppintson a **„Hozzáadás”** gombra.
+1. Az **„Időszak neve”** mezőbe írjon nevet (pl. Főszezon).
+2. A **„Mettől meddig”** alatt koppintson a **„Kezdete”** gombra: naptár nyílik. Koppintson a
+   kezdő napra, aztán a záró napra — a naptár ezután magától bezárul. A hónapok között a két
+   nyíllal lapozhat. A naptárban nincs évszám, mert az időszak minden évben ugyanazokon a napokon
+   érvényes, nem kell januárban újra megadnia.
+3. Az **„Ár / éjszaka”** mezőbe írja be az árat, és koppintson a **„Hozzáadás”** gombra.
 
-Gépelés közben a mezők alatt kiírjuk, pontosan mettől meddig lesz érvényes az időszak.
+A mezők alatt kiírjuk, mit jelent a választása — melyik naptól melyik napig érvényes minden
+évben, és mikor lesz legközelebb. A naptárban a szoba többi időszakának napjai alatt sárga
+vonal van, így látja, hol fednének át. Alatta **„Az év, egy pillantásra”** sáv mutatja az egész
+évet: kékkel az új időszakot, sárgával a meglévőket. Egy hónapjára koppintva a naptár oda ugrik.
 
-**Az év végén átnyúló időszak** (pl. téli holtszezon novembertől márciusig): írja be úgy, ahogy
-mondaná — kezdet 11-01, vég 03-01. Ha a vége korábbi, mint az eleje, az időszak átnyúlik az év
-végén, és a soron az **„átnyúlik az év végén”** jelölés áll. Az évek ilyenkor két évszámot
-kapnak, például 2026/27.
+![Képernyőkép: a „Kezdete” gombra nyíló naptár az új időszak mezői alatt](assets/hu/naptar.png)
+
+**Az év végén átnyúló időszak** (pl. téli holtszezon novembertől márciusig): válassza ki a
+kezdő napot novemberben, aztán lapozzon előre, és válassza ki a záró napot márciusban. Ilyenkor
+a mezők alatt és a soron az **„átnyúlik az év végén”** jelölés áll. Az évek ilyenkor két
+évszámot kapnak, például 2026/27.
+
+### A név: használja ugyanazt, mint a többi szobánál
+
+Ha a névmezőbe koppint, és a szálláson már van időszak, lenyílik a lista az eddig használt nevekkel. Az **„Eddig használt
+nevek”** alatt a szállás többi szobájának időszakai állnak, a napjaikkal és azzal, melyik
+szobánál használja. Gépelés közben a lista szűkül. Ha egy nevet kiválaszt, a napjait is
+átvesszük — ha ennél a szobánál más napokra esik, koppintson a dátumra, és módosítsa. Az
+**„Ennél a szobánál már van”** alatti nevek nem választhatók: azt az időszakot a listán fent
+szerkesztheti.
+
+Ha egy nevet kicsit másképp ír, mint ahogy korábban (pl. kisbetűvel vagy ékezet nélkül), a mező
+alatt szólunk, és egy gombbal egységesítheti — így a vendég ártáblájában sem áll két „főszezon”
+egymás alatt. Ugyanannál a szobánál két időszak nem kaphatja ugyanazt a nevet.
 
 ### Egy időszak módosítása
 
 A sor melletti **„Szerkesztés”** gombbal a nevet, a napokat és az árat átírhatja — ha online
-foglalása is van, a minimumot is —, majd **„Mentés”** (vagy **„Mégse”**). Az évekre megadott
-külön árak megmaradnak.
+foglalása is van, a minimumot is —, majd **„Mentés”** (vagy **„Mégse”**). A napokat itt is a
+naptárban választja ki; ha csak a záró napot változtatná, elég a **„Vége”** gombra koppintania. Az évekre megadott külön árak megmaradnak.
 
 Egy időszakot a **„Törlés”** gombbal távolíthat el — az évekre megadott külön árai is vele
 mennek, és utána ott újra az alapár érvényes. Ha nincs egyetlen időszaki ár sem, mindig az
@@ -96,10 +115,14 @@ Minden időszak alatt ott vannak az évek, egy-egy kártyán (a legközelebbi, m
 - Ahol nem ír semmit, ott **„az ismétlődő ár”** érvényes — semmi nem romlik el, ha nem ad meg
   külön árat.
 - A **„Vissza az ismétlődőre”** gomb törli az adott év külön árát.
-- Ha egy évben más napokra esik az időszak (pl. húsvét), a kártyán nyissa le a **„Más napokon
-  ebben az évben”** részt, adja meg a kezdetet és a véget, majd koppintson a kártya
-  **„Mentés”** gombjára. Ezután a kártyán „saját napok” áll, és a napokat a **„Napok
-  módosítása”** alatt írhatja át.
+- Ha egy évben más napokra esik az időszak (pl. húsvét, vagy szombattól szombatig adja ki),
+  koppintson a kártyán a **„Más napokon ebben az évben”** feliratra. Az évsáv alatt naptár nyílik
+  — ebben már az évszám és a hét napjai is látszanak. Válassza ki a kezdő és a záró napot; alul
+  kiírjuk, milyen napra esnek és hány nap. Koppintson a **„Napok mentése”** gombra. Ezután a
+  kártyán „saját napok” áll, és a napokat a **„Napok módosítása”** alatt változtathatja meg. Ez
+  csak arra az egy évre szól, a többi év nem változik.
+
+![Képernyőkép: egy év saját napjai a naptárban, évszámmal és a hét napjaival](assets/hu/ev-naptar.png)
 
 A honlapján az évet csak akkor írjuk ki, ha annak az időszaknak van külön éves ára — ilyenkor
 a vendég a foglalható hónapokra évenként látja az árat.
@@ -116,9 +139,10 @@ következő év kártyájára visz — ha előbb belépést kér, a belépés ut
 Ez a két beállítás a **foglalási naptárra** hat, ezért csak akkor jelenik meg, ha az Online
 foglalás modul is be van kapcsolva:
 
-- **„éj min.”** — az új időszak sorában, az ár mellett: ebben az időszakban legalább ennyi
-  éjszakára lehet foglalni (pl. nyáron 3). Ha üresen hagyja, a foglalás-modulnál beállított
-  általános minimum érvényes. A meglévő időszak sorában az ár alatt látja, amit megadott.
+- **„Legalább”** — az új időszak sorában, az ár mellett: ebben az időszakban legalább ennyi
+  éjszakára lehet foglalni (pl. nyáron 3). Nem kötelező: ha üresen hagyja, az Online foglalás
+  modulban beállított legrövidebb foglalás érvényes. A meglévő időszak sorában az ár alatt
+  látja, amit megadott.
 - **„Csak a felsorolt időszakokban adom ki”** — kapcsoló az egység kártyájának alján.
   Bekapcsolva a felsorolt időszakokon kívüli napokat a vendég a naptárban ki sem tudja
   választani (pl. télen zárva tart). Kikapcsolva egész évben foglalható, és az időszakok csak

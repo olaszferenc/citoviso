@@ -21,7 +21,7 @@
 //      a rejtés nem viheti el azt, amiért a tulaj az Árak modult megvette;
 //   ④ BÖNGÉSZŐBEN MÉRVE, a valódi stíluslapokkal: 390px-en az új-időszak űrlap egyetlen
 //      mezője sem lóg ki a kártyából (2026-09-23: 143px-t lógott, a második dátum-mező
-//      levágva), asztalon az egysoros elrendezés változatlan.
+//      levágva), asztalon egy sor marad (season-datepicker: feliratos mezők, naptár-gombok).
 //
 // A bekötést (a szerver tényleg átadja-e a foglalás-állapotot) nem ez az őr, hanem a
 // típus-ellenőrzés tartja: `PricingEditorData.bookingActive` KÖTELEZŐ mező, a hívás
@@ -86,7 +86,8 @@ const BOOKING_ONLY: readonly [string, RegExp][] = [
   ["a „csak a felsorolt időszakokban” kapcsoló", /name="seasonal_only"/],
   ["az „éj min.” mező az új időszaknál", /name="min_nights"/],
   ["a meglévő „min. 3 éj” jelölés", /min\. 3 éj/],
-  ["az általános minimumra utaló mondat", /foglalás-modulnál beállított általános minimum/],
+  // season-datepicker (2026-09-27): the sentence is now about the labelled „Legalább … éj” field.
+  ["az általános minimumra utaló mondat", /Online foglalás modulban beállított legrövidebb foglalás/],
 ];
 const ONE_LINE = /data-cit-booking-only[^>]*>[\s\S]*?href="\/admin\?tab=modulok"/;
 
@@ -154,7 +155,9 @@ console.log("④ böngészőben mérve: az új-időszak űrlap a kártyán belü
             const r = e.getBoundingClientRect();
             if (r.width) over = Math.max(over, r.right - card.right);
           });
-          const dates = form.querySelectorAll(".price-new__dates .citui-input");
+          // season-datepicker: the script turns the two text fields into calendar buttons
+          // (the page carries the script, so the buttons are what the owner sees).
+          const dates = form.querySelectorAll(".price-new__dates .sdp-btn");
           // Plan B: the rooms button stays inside its note; on the phone it spans the note.
           const note = document.querySelector(".mcfg-note--act").getBoundingClientRect();
           const btn = document.querySelector("[data-cit-rooms-link]").getBoundingClientRect();
@@ -166,17 +169,23 @@ console.log("④ böngészőben mérve: az új-időszak űrlap a kártyán belü
                             sp.getClientRects().length > 1)
             .map((sp) => sp.textContent);
           return { over: Math.round(over), pageX: document.documentElement.scrollWidth - innerWidth, broken, btnOver, btnSpan,
-                   dateW: Math.round(dates[0].getBoundingClientRect().width),
-                   sameRow: Math.abs(form.querySelector(".citui-input").getBoundingClientRect().top - dates[0].getBoundingClientRect().top) < 2 };
-        })()`)) as { over: number; pageX: number; dateW: number; sameRow: boolean; broken: string[]; btnOver: number; btnSpan: number };
+                   nBtn: dates.length,
+                   dateW: dates.length ? Math.round(dates[0].getBoundingClientRect().width) : 0,
+                   // one row = the name field, the date buttons and the add button share a bottom edge
+                   sameRow: dates.length > 0 &&
+                     Math.abs(form.querySelector('input[name="label"]').getBoundingClientRect().bottom - dates[0].getBoundingClientRect().bottom) < 2 &&
+                     Math.abs(form.querySelector(".pn-go").getBoundingClientRect().bottom - dates[0].getBoundingClientRect().bottom) < 2 };
+        })()`)) as { over: number; pageX: number; nBtn: number; dateW: number; sameRow: boolean; broken: string[]; btnOver: number; btnSpan: number };
         check(`${state} @${vw}px: semmi nem lóg ki a kártyából (túllógás ${m.over}px)`, m.over <= 0, m);
         check(`${state} @${vw}px: a Szobák-gomb a jegyzeten belül marad (túllógás ${m.btnOver}px)`, m.btnOver <= 0, m);
         if (vw === 390) check(`${state} @390px: a Szobák-gomb a jegyzet teljes szélességét kitölti (${m.btnSpan}%)`, m.btnSpan >= 95, m);
         check(`${state} @${vw}px: nincs vízszintes lapgörgetés`, m.pageX <= 0, m);
         check(`${state} @${vw}px: a mező-feliratok egy sorban (nem „éj / min.”)`, m.broken.length === 0, m.broken);
+        check(`${state} @${vw}px: a két dátum-mező naptár-gomb lett`, m.nBtn === 2, m);
         if (vw === 1280) {
-          // Desktop keeps the one-row layout with the compact 88px date fields.
-          check(`${state} @1280px: az asztali elrendezés változatlan (egy sor, 88px-es dátum)`, m.sameRow && m.dateW === 88, m);
+          // Approved plan season-datepicker: desktop keeps ONE row (name · dates · price ·
+          // [minimum] · add), and a date button is wide enough for "márc. 31." (≥ 100px).
+          check(`${state} @1280px: asztalon egy sor, a dátum-gomb ≥ 100px (${m.dateW}px)`, m.sameRow && m.dateW >= 100, m);
         }
         await p.close();
       }

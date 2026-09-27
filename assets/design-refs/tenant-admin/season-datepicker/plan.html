@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TERV 2. kör — Időszaki árak: naptár + évsáv, névlista, év-naptár</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A kiküldött terv (/p/<token>) alján ülő RÖGZÍTETT réteg MÉRT magassága: a
+     süti-sáv + a sablon saját Foglalás-sávja + a fölé mászó hívó pirula, együtt.
+     A konfigurátor-futó (`assets/runtime/cit-configurator.js`, placeLaunch) írja
+     a gyökérre, mert egyedül ő tudja, meddig kellett felmásznia. A jogi lábléc
+     (`prospectNotice.ts`) ebből tart magának alsó térközt — mérve 2026-09-26,
+     390 px-en 19 sablonból 19-en e nélkül a leiratkozó link a réteg ALATT volt.
+     Alapból 0: pirula nélkül (már megvett oldal, JS nélkül) a süti-sáv magassága
+     a tartalék. */
+  --citui-cfg-clear: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #e6e9ef;
+  --citui-muted:       #8a93a3;
+  --citui-surface:     #12151c;
+  --citui-surface-2:   #1b1f29;
+  --citui-line:        #262b37;
+  --citui-line-strong: #343a48;
+  /* ADR-0224: a tenant-admin sötét módja. Semleges (nem navy-tintált) sötét
+     rétegek — a Linear-terv sötét képei ezekből készültek. */
+  --citui-bg:     #0f1116;
+  --citui-panel:  #151821;
+  --citui-side:   #12151c;
+  --citui-field:  #1b1f29;
+  --citui-hover:  #1e2330;
+  /* A jelzés-hue-k VILÁGOSABB változata: a világos-módú telített zöld/piros a
+     sötét panelen 2,5–3,5 kontrasztot adna keretként és pöttyként. */
+  --citui-ok:      #3ddc97;
+  --citui-warn:    #f0b35a;
+  --citui-bad:     #ff7b7b;
+  --citui-ok-soft: #14352a;
+  /* ⛔ A négy FELIRAT-token a sötét panelre (#151821) KIMÉRVE (WCAG, ≥ 4,5, tartalékkal;
+     mérés: node-os luminancia-számítás, 2026-09-24):
+       ok-ink   #4fe3a3 → 10,85 · bad-ink #ff8e8e → 8,03 · warn-ink #f5c06b → 10,67 ·
+       link-ink #4fd0ea → 9,74 (a --citui-field #1b1f29 mezőn a legrosszabb: bad-ink 7,46;
+       a --citui-muted #8a93a3 a panelen 5,73). */
+  --citui-ok-ink:   #4fe3a3;
+  --citui-bad-ink:  #ff8e8e;
+  --citui-warn-ink: #f5c06b;
+  --citui-link-ink: #4fd0ea;
+  /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
+  --citui-on-bad: var(--citui-navy-900);
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
+  --citui-ink-brand:   var(--citui-ink);
+  --citui-ink-brand-2: color-mix(in srgb, var(--citui-ink) 80%, var(--citui-muted));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-ink-brand);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+/* The Citoviso lockup "B" (src/ui/brand.ts, ADR-0236): the E4 mark IS the letter C,
+   then "itoviso". Mark = 1.6× the letter size, the word centred on it (the /pay/* ratio
+   the owner approved). Size it with font-size on the lockup. Dark surface → the dark mark
+   + white word; light surface → the light mark + navy word; "themed" follows the theme. */
+.citui-lockup {
+  display: inline-flex; color: var(--citui-navy-900); text-decoration: none;
+  font-family: var(--citui-font-display); font-weight: 700; letter-spacing: -0.01em; line-height: 1;
+  white-space: nowrap;
+}
+.citui-lockup.citui-lockup:hover { text-decoration: none; }
+.citui-lockup--lg { font-size: 1.32rem; } /* header / login size: word 21 px, mark 34 px (= /pay/*) */
+.citui-lockup__row { display: inline-flex; align-items: center; }
+.citui-lockup__mark { height: 1.6em; width: auto; flex: 0 0 auto; margin-right: 0.02em; }
+.citui-lockup__word { line-height: 1; }
+.citui-lockup__word small {
+  display: block; margin-top: 2px; font: 400 11px/1.3 var(--citui-font-text); letter-spacing: 0; color: var(--citui-muted);
+}
+/* ⚠️ Doubled class + :hover: a surface link rule (`.con a` 0,1,1 · `.con a:hover` 0,2,1)
+   otherwise paints the word link-cyan. */
+.citui-lockup.citui-lockup--on-dark, .citui-lockup.citui-lockup--on-dark:hover { color: var(--citui-white); }
+.citui-lockup.citui-lockup--on-light, .citui-lockup.citui-lockup--on-light:hover { color: var(--citui-navy-900); }
+.citui-lockup.citui-lockup--on-themed, .citui-lockup.citui-lockup--on-themed:hover { color: var(--citui-ink-brand); }
+.citui-mark-themed { display: inline-flex; flex: 0 0 auto; }
+.citui-mark-themed svg { height: var(--citui-mark-size, 26px); width: auto; }
+/* Theme switch. ⚠️ Element-qualified on purpose: a sizing rule like `.x svg{display:block}`
+   (0,1,1) beat a bare `.citui-mark--dark{display:none}` and showed BOTH marks. */
+svg.citui-mark--dark { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--light { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--dark { display: block; }
+.citui-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+</style>
+<style>
+body{margin:0;background:var(--citui-surface);color:var(--citui-ink);font-family:var(--citui-font-text)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+.bar b{font-family:var(--citui-font-display);margin-right:6px}
+.bar button{font:600 .85rem var(--citui-font-text);padding:7px 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--citui-white) 25%,transparent);background:transparent;color:var(--citui-ink-inverse);cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-900)}
+.what{max-width:980px;margin:14px auto 0;padding:0 16px;font-size:.9rem;color:var(--citui-muted);line-height:1.5}
+.what strong{color:var(--citui-ink)}
+.what ol{margin:6px 0 0;padding-left:20px}
+.frame{container-type:inline-size;margin:14px auto 40px;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:18px;padding:22px;max-width:980px;box-sizing:border-box}
+.frame.is-phone{max-width:390px;padding:12px}
+
+.card{border:1px solid var(--citui-line);border-radius:14px;padding:18px 20px}
+.card h2{display:flex;gap:10px;align-items:center;font:700 1rem var(--citui-font-text);margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--citui-line)}
+.card h3{font:700 1.05rem var(--citui-font-text);margin:4px 0 4px}
+.muted{color:var(--citui-muted);font-size:.85rem;margin:0 0 10px}
+.suffix{display:flex;align-items:center;gap:6px}
+.suffix .citui-input{width:100%;min-width:0}
+.suffix em{font-style:normal;color:var(--citui-muted);font-size:.85rem;white-space:nowrap}
+.citui-input{min-height:44px;box-sizing:border-box;padding:10px 12px;font-size:.95rem}
+
+/* existing season */
+.sblock{border-bottom:1px solid var(--citui-line);padding:12px 0 14px}
+.srow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.srow__t strong{display:block}
+.srow__t span{color:var(--citui-muted);font-size:.84rem}
+.srow__r{display:flex;align-items:center;gap:8px}
+.srow__amt{font-weight:700;margin-right:6px}
+.wrap-tag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--citui-surface-2);color:var(--citui-link-ink);margin-left:6px}
+.ys-head{display:flex;align-items:center;gap:8px;margin:12px 0 8px;font-size:.84rem;color:var(--citui-muted)}
+.ys-head span{flex:1}.ys-head b{color:var(--citui-ink)}
+.ys-arrow{width:36px;height:36px;border-radius:50%;border:1px solid var(--citui-line-strong);background:var(--citui-white);cursor:pointer;display:grid;place-items:center;color:var(--citui-ink)}
+.ys{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px}
+.ys-cell{flex:0 0 80%;scroll-snap-align:start;border:1px solid var(--citui-line);border-radius:14px;padding:10px 12px;box-sizing:border-box;background:var(--citui-white)}
+@container (min-width:560px){.ys-cell{flex-basis:calc((100% - 20px) / 2.35)}}
+.ys-cell.own{border-color:color-mix(in srgb,var(--citui-cyan-400) 70%,transparent);background:color-mix(in srgb,var(--citui-cyan-400) 7%,var(--citui-white))}
+.ys-cell.act{box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+.ys-y{display:flex;justify-content:space-between;font-weight:700}
+.ys-y em{font-style:normal;font-size:.74rem;color:var(--citui-muted);font-weight:600;align-self:center}
+.ys-d{font-size:.8rem;color:var(--citui-muted);margin:2px 0 8px}
+.ys-d b{color:var(--citui-ink);font-weight:600}
+.ys-days{display:inline-flex;align-items:center;gap:6px;margin-top:8px;border:0;background:none;padding:6px 0;font:600 .82rem var(--citui-font-text);color:var(--citui-link-ink);cursor:pointer;text-decoration:underline}
+.ys-act{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.ys-act .citui-btn{padding:6px 12px;font-size:.82rem}
+
+/* dated (year) calendar panel */
+.ycal{border:1px solid var(--citui-line-strong);border-radius:16px;padding:14px;margin-top:4px;background:var(--citui-white);box-shadow:var(--citui-shadow-sm)}
+.ycal[hidden]{display:none}
+.ycal .mon h5{text-transform:none}
+.ycal h4{margin:0;font:700 1rem var(--citui-font-display)}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:.72rem;font-weight:700;color:var(--citui-muted);text-align:center;margin-bottom:3px}
+.wk span:nth-child(6),.wk span:nth-child(7){color:var(--citui-link-ink)}
+.grid button.we{font-weight:700}
+.grid .pad{height:38px}
+
+/* add form */
+.addf{display:grid;grid-template-columns:1.3fr 1.9fr 1fr .8fr auto;gap:10px 12px;align-items:end;margin-top:14px;position:relative}
+.fld{display:flex;flex-direction:column;gap:5px;font-size:.78rem;font-weight:600;color:var(--citui-muted);min-width:0;position:relative}
+.dates{display:flex;align-items:center;gap:6px}
+.dates>span{color:var(--citui-muted)}
+.dbtn{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--citui-line-strong);border-radius:12px;background:var(--citui-white);font:500 .95rem var(--citui-font-text);color:var(--citui-ink);cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden}
+.dbtn svg{flex:none;color:var(--citui-link-ink)}
+.dbtn.ph{color:var(--citui-muted)}
+.dbtn.on{border-color:var(--citui-cyan-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 22%,transparent)}
+.go{min-height:44px}
+.prev{grid-column:1/-1;font-size:.9rem;margin:2px 0 0;line-height:1.5}
+.prev.bad{color:var(--citui-bad-ink)}
+.prev .tag{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--citui-surface-2);color:var(--citui-link-ink);margin-left:6px}
+.warn{font-size:.88rem;padding:9px 12px;border-radius:10px;background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));color:var(--citui-warn-ink);margin:6px 0 0}
+.flash{font-size:.9rem;color:var(--citui-ok-ink);background:var(--citui-ok-soft);padding:8px 12px;border-radius:10px;margin:8px 0 0}
+.hint{font-size:.82rem;color:var(--citui-muted);margin:12px 0 0;line-height:1.5}
+
+/* name combobox */
+.lb{position:absolute;z-index:30;top:100%;left:0;margin-top:4px;min-width:100%;width:max-content;max-width:min(420px,100cqw);background:var(--citui-white);border:1px solid var(--citui-line-strong);border-radius:12px;box-shadow:var(--citui-shadow-md);padding:6px;list-style:none;margin-left:0;box-sizing:border-box}
+.lb[hidden]{display:none}
+.lb__h{font-size:.72rem;font-weight:700;letter-spacing:.02em;color:var(--citui-muted);padding:6px 10px 4px;text-transform:uppercase}
+.lb li[role=option]{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:9px 10px;border-radius:8px;cursor:pointer;font:600 .92rem var(--citui-font-text);color:var(--citui-ink);min-height:40px;box-sizing:border-box}
+.lb li[role=option] small{font-weight:500;color:var(--citui-muted);font-size:.78rem;text-align:right}
+.lb li[aria-selected=true],.lb li[role=option]:hover{background:var(--citui-surface-2)}
+.lb li[aria-disabled=true]{cursor:default;color:var(--citui-muted)}
+.lb li[aria-disabled=true]:hover{background:none}
+.lb mark{background:none;color:var(--citui-link-ink);font-weight:800}
+.near{font-size:.88rem;padding:9px 12px;border-radius:10px;background:var(--citui-surface-2);margin:0;line-height:2.2;grid-column:1/-1}
+.near[hidden]{display:none}
+.chip{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border-radius:99px;border:1px solid var(--citui-line-strong);background:var(--citui-white);font:600 .85rem var(--citui-font-text);color:var(--citui-ink);cursor:pointer;margin-left:8px;vertical-align:middle}
+.took{grid-column:1/-1;font-size:.84rem;color:var(--citui-muted);margin:0}
+.took[hidden]{display:none}
+
+/* recurring calendar popover */
+.cal{position:absolute;z-index:20;top:0;left:0;width:560px;max-width:100%;background:var(--citui-white);border:1px solid var(--citui-line-strong);border-radius:16px;box-shadow:var(--citui-shadow-md);padding:14px;box-sizing:border-box}
+.cal[hidden]{display:none}
+.cal__top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.cal__step{font-size:.85rem;font-weight:600}
+.cal__step b{color:var(--citui-link-ink)}
+.cal__nav{display:flex;gap:6px}
+.cal__nav button{width:40px;height:40px;border-radius:10px;border:1px solid var(--citui-line);background:var(--citui-white);cursor:pointer;color:var(--citui-ink);display:grid;place-items:center}
+.cal__months{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mon h5{margin:0 0 8px;font:700 .95rem var(--citui-font-display);text-transform:capitalize}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.grid button{height:38px;border:0;border-radius:8px;background:transparent;font:500 .9rem var(--citui-font-text);color:var(--citui-ink);cursor:pointer;padding:0}
+.grid button:hover{background:var(--citui-surface-2)}
+.grid button.in{background:color-mix(in srgb,var(--citui-cyan-500) 18%,var(--citui-white));border-radius:0}
+.grid button.end{background:var(--citui-cyan-500);color:var(--citui-navy-900);font-weight:700;border-radius:8px}
+.grid button.oth{box-shadow:inset 0 -3px 0 color-mix(in srgb,var(--citui-warn) 70%,transparent)}
+.cal__foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--citui-line);font-size:.82rem;color:var(--citui-muted)}
+.cal__foot .key{display:inline-block;width:14px;height:3px;background:color-mix(in srgb,var(--citui-warn) 70%,transparent);vertical-align:middle;margin-right:4px}
+.cal__sum{font-size:.85rem;color:var(--citui-ink)}
+
+/* year overview strip */
+.year{grid-column:1/-1;margin-top:4px}
+.year__lbl{font-size:.78rem;font-weight:600;color:var(--citui-muted);margin-bottom:5px}
+.year__bar{position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));border:1px solid var(--citui-line);border-radius:10px;overflow:hidden;height:62px}
+.year__bar>button{border:0;border-right:1px solid var(--citui-line);background:var(--citui-white);font:600 .72rem var(--citui-font-text);color:var(--citui-muted);cursor:pointer;display:flex;align-items:flex-start;justify-content:center;padding-top:5px;text-transform:capitalize}
+.year__bar>button:last-of-type{border-right:0}
+.seg{position:absolute;height:12px;border-radius:4px;pointer-events:none}
+.seg.me{bottom:7px;background:var(--citui-cyan-500)}
+.seg.ot{bottom:24px;background:color-mix(in srgb,var(--citui-warn) 55%,var(--citui-white))}
+.year__key{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--citui-muted);margin-top:6px}
+.year__key i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+@container (max-width:600px){
+  .addf{grid-template-columns:1fr 1fr}
+  .addf>*{order:5}.addf .f-name{order:1}.addf .near,.addf .took{order:2}.addf .f-dates{order:3}.addf .cal{order:4}
+  .addf .f-name,.addf .f-dates,.addf .go{grid-column:1/-1}
+  .cal{position:static;width:auto;top:auto!important;left:auto!important;grid-column:1/-1;box-shadow:none;padding:12px}
+  .cal__months{grid-template-columns:1fr}
+  .cal__months .mon:nth-child(2){display:none}
+  .grid button{height:42px}.grid .pad{height:42px}
+  .card{padding:14px}
+  .srow__r{width:100%;justify-content:flex-end}
+  .year__bar>button{font-size:.62rem}
+  .cal__foot{flex-direction:column;align-items:stretch}
+  .cal__foot .citui-btn{width:100%}
+  .lb{max-width:100%;width:100%}
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Időszaki árak — 2. kör</b>
+  <button data-size="phone" aria-pressed="false">Mobil 390px</button>
+  <button data-size="desk" aria-pressed="true">Asztali</button>
+</div>
+<div class="what"><strong>Mit dönt el ez a kör?</strong> A jóváhagyott „A + évsáv” irány, három új elemmel:
+<ol><li><strong>Névlista:</strong> kattintson az „Időszak neve” mezőbe — a szállás összes eddigi időszakneve lenyílik, gépelésre szűkül. Egy név kiválasztása a napjait is kitölti (módosítható).</li>
+<li><strong>Év szerkesztése:</strong> a Főszezon alatti évsávon a 2027-es kártyán „Más napok ebben az évben” — valódi naptár nyílik, <em>évszámmal és a hét napjaival</em>, a napok számával.</li>
+<li><strong>Szerkesztés:</strong> a meglévő időszak „Szerkesztés” gombja ugyanazt a naptárat kapja.</li></ol></div>
+
+<div class="frame" data-frame>
+  <div class="card">
+    <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Kuckó1</h2>
+    <h3>Időszaki árak</h3>
+    <p class="muted">Egy időszakot elég egyszer megadni: minden évben ugyanazokon a napokon érvényes. Egy adott évre az alatta lévő évsávon adhat más árat vagy más napokat.</p>
+    <div data-list></div>
+    <form class="addf" data-form autocomplete="off" novalidate>
+      <div class="fld f-name"><label for="nm">Időszak neve</label>
+        <input id="nm" class="citui-input" name="label" placeholder="Pl. Holtszezon" role="combobox" aria-expanded="false" aria-controls="nm-lb" aria-autocomplete="list">
+        <ul class="lb" id="nm-lb" role="listbox" hidden></ul></div>
+      <div class="fld f-dates" data-rdates></div>
+      <label class="fld">Ár / éjszaka<span class="suffix"><input class="citui-input" name="amount" inputmode="numeric" placeholder="0"><em>Ft</em></span></label>
+      <label class="fld">Legalább<span class="suffix"><input class="citui-input" name="min" inputmode="numeric" placeholder="—"><em>éj</em></span></label>
+      <button class="citui-btn citui-btn--primary go" type="submit">Hozzáadás</button>
+      <p class="near" data-near hidden></p>
+      <p class="took" data-took hidden></p>
+      <div class="cal" data-rcal hidden></div>
+      <div class="year" data-year></div>
+      <div class="prev" data-prev></div>
+    </form>
+    <p class="hint">A „Legalább … éj” mező nem kötelező. Üresen hagyva az Online foglalás modulban beállított legrövidebb foglalás érvényes.</p>
+  </div>
+</div>
+
+<script>
+/* A SZEZON-ILLESZTÉS SZABÁLYA — EGY példányban, mindkét oldalnak.
+ *
+ * WHY THIS FILE EXISTS. "Which price row applies to this night?" lived TWICE, and the
+ * two copies were never compared: src/tenant/prices.ts (seasonCovers + priceOn, the
+ * number that is FROZEN onto the booking request and mailed to the guest) and
+ * assets/runtime/cit-runtime.js (the same two functions, the number the guest READS
+ * before submitting). The money FORMATTER is also duplicated (cit-money.js), but that
+ * one is deliberate and held by a parity guard — an unequal formatter prints an ugly
+ * string. An unequal PRICE SELECTOR quotes a different amount than it charges, which is
+ * the ADR-0193 ② harm class. So this predicate is loaded by both sides and cannot drift,
+ * because there is only one of it.
+ *
+ * ⛔ THE GUARD IS NOT A THIRD CONSUMER. scripts/booking-price-coherence-check.mts keeps
+ * its OWN re-implementation on purpose, and must keep it: an oracle that imports the
+ * code under test cannot disagree with it. When this rule changes, that oracle is
+ * updated INDEPENDENTLY — that separation is the whole point of it.
+ *
+ * ⚠️ WHAT IS DELIBERATELY ENCODED HERE, in one place, so the next change has one site:
+ * a season is a RECURRING MONTH-DAY ("06-15"), with no year, so it holds every year
+ * (moduleConfigViews.ts: "making them re-enter it each January would guarantee stale
+ * prices"). Measured 2026-09-22: a stay in July 2027 — inside the 12-month booking
+ * horizon — is quoted the SAME amount as July 2026, and that amount is frozen onto the
+ * request. Year-bound rows (migration 0072: valid_from/valid_to) landed HERE, once —
+ * see rowFor's precedence — instead of in two places that would silently disagree.
+ *
+ * `.cjs` on purpose: package.json says "type": "module", so a `.js` here could not be
+ * require()d from the server at all. The browser gets the text spliced into the runtime
+ * <script>, where the trailing module.exports line is inert.
+ */
+var CitSeason = (function () {
+  /* Does a recurring 'MM-DD' range cover this month-day? Handles the year-end wrap
+   * (a "Téli szünet 12-20 – 01-05" range runs December → January). */
+  function covers(from, to, monthDay) {
+    if (!from || !to || !monthDay) return false;
+    return from <= to
+      ? monthDay >= from && monthDay <= to
+      : monthDay >= from || monthDay <= to;
+  }
+
+  /* 'YYYY-MM-DD' (or a full ISO stamp) → 'MM-DD'. The `slice(5, 10)` assumption lived
+   * in three files; it lives here now, so a year-aware rule has ONE place to change. */
+  function monthDayOf(isoDate) {
+    return String(isoDate).slice(5, 10);
+  }
+
+  /* Is a 'YYYY-MM-DD' date inside a row's YEAR-BOUND window (inclusive)? A row with
+   * no window (both ends null) is timeless and always "inside". Plain string compare
+   * is exact for zero-padded ISO dates. (migration 0072) */
+  function inWindow(row, isoDay) {
+    var a = row.validFrom, b = row.validTo;
+    if (!a || !b) return true;
+    return isoDay >= a && isoDay <= b;
+  }
+
+  function hasWindow(row) {
+    return !!(row.validFrom && row.validTo);
+  }
+
+  /* The row in effect on a given NIGHT ('YYYY-MM-DD'), or null for an unpriced night,
+   * which every caller must turn into "no quote at all" (§B.17).
+   *
+   * Precedence, most specific first (approved plan booking-offer, 2026-09-23):
+   *   1. a YEAR-BOUND season covering the night ("Főszezon 2027" beats the recurring one)
+   *   2. a recurring season covering the night
+   *   3. a DATED base whose window holds the night (the offer page writes these: a price
+   *      for the nights no season covers, until the owner's chosen day)
+   *   4. the timeless base
+   * Rows whose window does not hold the night do not exist for it. Inside each tier the
+   * owner's own order decides (first wins), so an overlap resolves the way the list
+   * reads top-down instead of by some hidden rule.
+   *
+   * `rows` is shape-agnostic on purpose — the server calls it with UnitPrice objects
+   * (`isBase`/`from`/`to`/`validFrom`/`validTo`) and the browser with the JSON the
+   * endpoint ships (`base`/…). `isBaseRow` tells the two apart without a second copy of
+   * the selection logic.
+   *
+   * ⛔ The second argument used to be a MONTH-DAY. It is a full date now, because a
+   * year-bound row cannot be judged from 'MM-DD' — a caller still passing '07-10' would
+   * silently skip every dated row, so a short argument is refused loudly. */
+  function rowFor(rows, isoDay, isBaseRow) {
+    if (!rows || !rows.length) return null;
+    if (String(isoDay).length < 10) throw new Error("CitSeason.rowFor: full YYYY-MM-DD date required, got " + isoDay);
+    var day = String(isoDay).slice(0, 10);
+    var md = monthDayOf(day);
+    var yearSeason = null, season = null, datedBase = null, base = null;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (!inWindow(r, day)) continue;
+      if (isBaseRow(r)) {
+        if (hasWindow(r)) { if (!datedBase) datedBase = r; }
+        else if (!base) base = r;
+        continue;
+      }
+      if (!covers(r.from, r.to, md)) continue;
+      if (hasWindow(r)) { if (!yearSeason) yearSeason = r; }
+      else if (!season) season = r;
+    }
+    return yearSeason || season || datedBase || base;
+  }
+
+  /* One YEAR's occurrence of a recurring season, named by the year it STARTS in
+   * (migration 0074, approved plan season-year-price). A range that wraps the year end
+   * (11-01 → 03-01) ends in the next calendar year, so its label is "2026/27" and its
+   * window runs 2026-11-01 … 2027-03-01. The Árazás page, the year-price writer and the
+   * public price table all name and date a year the SAME way — from here. */
+  function occurrence(from, to, year) {
+    var y = Number(year);
+    var wraps = from > to;
+    return {
+      year: y,
+      start: y + "-" + from,
+      end: (wraps ? y + 1 : y) + "-" + to,
+      label: wraps ? y + "/" + String(y + 1).slice(2) : String(y)
+    };
+  }
+
+  /* The first year whose occurrence has not ended by `isoToday` — the leftmost year the
+   * owner can still price (a season that closed yesterday offers next year first). */
+  function firstOpenYear(from, to, isoToday) {
+    var y = Number(String(isoToday).slice(0, 4)) - 1;
+    while (occurrence(from, to, y).end < String(isoToday).slice(0, 10)) y++;
+    return y;
+  }
+
+  /* What the owner typed → 'MM-DD', or null when it is not a real day of the year.
+   * "11-01", "11.01", "11. 01.", "11/1", "1101" all mean November 1 (approved plan
+   * season-year-price). Here, once: the Árazás page previews with it while the owner
+   * types, and the server stores with it — a preview that normalised differently
+   * would promise days the saved season does not have. */
+  var DIM = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  function normMonthDay(raw) {
+    var t = String(raw == null ? "" : raw).replace(/\s+/g, "").replace(/\.$/, "");
+    var m = /^(\d{1,2})[.\-\/](\d{1,2})$/.exec(t) || /^(\d{2})(\d{2})$/.exec(t);
+    if (!m) return null;
+    var mo = Number(m[1]), d = Number(m[2]);
+    if (mo < 1 || mo > 12 || d < 1 || d > DIM[mo - 1]) return null;
+    return (mo < 10 ? "0" : "") + mo + "-" + (d < 10 ? "0" : "") + d;
+  }
+
+  return {
+    covers: covers, monthDayOf: monthDayOf, inWindow: inWindow, rowFor: rowFor,
+    occurrence: occurrence, firstOpenYear: firstOpenYear, normMonthDay: normMonthDay
+  };
+})();
+
+/* Node (server) requires this file; a browser gets the same binding from the var. */
+if (typeof module !== "undefined" && module.exports) module.exports = CitSeason;
+
+</script>
+<script>
+(function(){
+var S=CitSeason;
+var MON=["január","február","március","április","május","június","július","augusztus","szeptember","október","november","december"];
+var MON3=["jan.","febr.","márc.","ápr.","máj.","jún.","júl.","aug.","szept.","okt.","nov.","dec."];
+var WD=["vasárnap","hétfő","kedd","szerda","csütörtök","péntek","szombat"];
+var DIM=[31,29,31,30,31,30,31,31,30,31,30,31];
+var TODAY="2026-09-26";
+var ICAL='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+var IL='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>';
+var IR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>';
+// this unit's seasons; `years` = own per-year rows {from,to (MM-DD), amount}
+var seasons=[{id:"s1",label:"Főszezon",from:"06-15",to:"08-31",amount:"24 000",years:{2027:{from:"06-15",to:"08-31",amount:"28 000"}}}];
+// seasons on the OTHER units of the place (server-side: this site's recurring season rows)
+var others=[{label:"Főszezon",from:"07-01",to:"08-20",on:"kuckó3, Faház"},{label:"Téli szünet",from:"12-20",to:"01-05",on:"kuckó3"},{label:"Előszezon",from:"05-01",to:"06-14",on:"Faház"},{label:"Hosszú hétvége",from:"04-18",to:"04-21",on:"Faház"}];
+
+function esc(x){return String(x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
+function md(x){return MON[+x.slice(0,2)-1]+" "+(+x.slice(3))+"."}
+function sh(x){return MON3[+x.slice(0,2)-1]+" "+(+x.slice(3))+"."}
+function nice(i){return i.slice(0,4)+". "+i.slice(5,7)+". "+i.slice(8,10)+"."}
+function key(m,d){return (m<10?"0":"")+m+"-"+(d<10?"0":"")+d}
+function fold(x){return String(x).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim()}
+function lev(a,b){var d=[],i,j;for(i=0;i<=a.length;i++)d[i]=[i];for(j=1;j<=b.length;j++)d[0][j]=j;
+ for(i=1;i<=a.length;i++)for(j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length]}
+function isLeap(y){return (y%4===0&&y%100!==0)||y%400===0}
+function dim(y,m){return m===2?(isLeap(y)?29:28):DIM[m-1]}
+function iso(y,m,d){return y+"-"+key(m,d)}
+function dow(s){return new Date(s+"T12:00:00Z").getUTCDay()}
+function longD(s){return s.slice(0,4)+". "+MON[+s.slice(5,7)-1]+" "+(+s.slice(8))+"., "+WD[dow(s)]}
+function nights(a,b){return Math.round((Date.parse(b+"T12:00:00Z")-Date.parse(a+"T12:00:00Z"))/864e5)}
+
+/* ── RECURRING picker (no year, no weekdays: the season repeats every year) ── */
+function RPicker(dates,cal,onChange,excludeId){
+ var st={from:null,to:null,pick:"from",view:10,open:false};
+ function others_(k){return seasons.some(function(s){return s.id!==excludeId&&S.covers(s.from,s.to,k)})}
+ function btns(){var b=function(k,ph){var v=st[k],on=st.open&&st.pick===k;
+  return '<button type="button" class="dbtn'+(v?"":" ph")+(on?" on":"")+'" data-open="'+k+'" aria-label="'+(k==="from"?"Kezdete":"Vége")+(v?": "+md(v):"")+'">'+ICAL+(v?sh(v):ph)+'</button>'};
+  dates.innerHTML='Mettől meddig<span class="dates">'+b("from","Kezdete")+'<span>–</span>'+b("to","Vége")+'</span>';
+  dates.querySelectorAll("[data-open]").forEach(function(x){x.addEventListener("click",function(){
+   st.pick=x.dataset.open;var v=st[st.pick]||st.from;if(v)st.view=+v.slice(0,2);st.open=true;draw()})})}
+ function calHtml(){var h='';[st.view,st.view%12+1].forEach(function(m){h+='<div class="mon"><h5>'+MON[m-1]+'</h5><div class="grid">';
+   for(var d=1;d<=DIM[m-1];d++){var k=key(m,d),c=[];if(st.from&&st.to&&S.covers(st.from,st.to,k))c.push("in");if(k===st.from||k===st.to)c.push("end");if(others_(k))c.push("oth");
+    h+='<button type="button" class="'+c.join(" ")+'" data-d="'+k+'" aria-label="'+md(k)+'">'+d+'</button>'}h+='</div></div>'});
+  var other=seasons.filter(function(s){return s.id!==excludeId});
+  return '<div class="cal__top"><span class="cal__step">'+(st.pick==="from"?'Válassza ki a <b>kezdő</b> napot':'Most a <b>záró</b> napot'+(st.from?' ('+md(st.from)+' után)':''))+'</span>'+
+   '<span class="cal__nav"><button type="button" data-nav="-1" aria-label="Előző hónap">'+IL+'</button><button type="button" data-nav="1" aria-label="Következő hónap">'+IR+'</button></span></div>'+
+   '<div class="cal__months">'+h+'</div><div class="cal__foot"><span>'+(other.length?'<i class="key"></i>másik időszak napjai ('+other.map(function(s){return esc(s.label)}).join(", ")+')':'')+'</span>'+
+   '<button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" data-done>Kész</button></div>'}
+ function draw(){btns();cal.hidden=!st.open;if(!st.open)return;cal.innerHTML=calHtml();
+  cal.querySelectorAll("[data-nav]").forEach(function(x){x.addEventListener("click",function(){st.view=(st.view-1+(+x.dataset.nav)+12)%12+1;draw()})});
+  cal.querySelectorAll("[data-d]").forEach(function(x){x.addEventListener("click",function(){
+   if(st.pick==="from"){st.from=x.dataset.d;st.to=null;st.pick="to"}else{st.to=x.dataset.d;st.open=false;st.pick="from"}draw();onChange()})});
+  cal.querySelector("[data-done]").addEventListener("click",function(){st.open=false;draw()});place()}
+ // Desktop: anchored to the date buttons, ABOVE them by default (owner, 2026-09-27);
+ // below only when the visible room above (minus the admin's sticky header) is too small.
+ function place(){var fr=document.querySelector("[data-frame]");cal.style.top=cal.style.left="";cal.classList.remove("is-below");
+  if(fr.classList.contains("is-phone"))return;
+  var box=dates.querySelector(".dates")||dates,r=box.getBoundingClientRect(),pr=cal.offsetParent.getBoundingClientRect(),h=cal.offsetHeight,STICKY=56;
+  var above=r.top-STICKY-8>=h;
+  cal.style.left=(r.left-pr.left)+"px";
+  cal.style.top=(above?(r.top-pr.top-h-8):(r.bottom-pr.top+8))+"px";
+  if(!above)cal.classList.add("is-below")}
+ return {st:st,draw:draw,set:function(f,t){st.from=f;st.to=t;st.open=false;st.pick="from";draw();onChange()},
+  jump:function(m){st.view=m;if(!st.open){st.open=true;st.pick=st.from&&!st.to?"to":"from"}draw()}};
+}
+
+/* ── the sentence under a recurring range: what it MEANS ── */
+function meaning(f,t,excludeId,isNew){
+ var w=f>t,o=S.occurrence(f,t,S.firstOpenYear(f,t,TODAY));
+ var h='<p class="prev" style="margin:0">Minden évben <b>'+md(f)+' – '+(w?'a következő év ':'')+md(t)+'</b>'+(w?'<span class="tag">átnyúlik az év végén</span>':'')+
+  '<br><span style="color:var(--citui-muted)">Legközelebb: '+nice(o.start)+' – '+nice(o.end)+'</span></p>';
+ seasons.forEach(function(s,i){if(s.id===excludeId)return;var hit=false;for(var m=1;m<=12&&!hit;m++)for(var d=1;d<=DIM[m-1];d++){var k=key(m,d);if(S.covers(f,t,k)&&S.covers(s.from,s.to,k)){hit=true;break}}
+  if(hit)h+='<p class="warn">Átfed ezzel: <b>'+esc(s.label)+'</b> ('+md(s.from)+' – '+md(s.to)+'). A közös napokon a listán feljebb álló időszak ára számít: <b>'+esc(isNew?s.label:s.label)+'</b>.</p>'});
+ return h}
+
+/* ── existing seasons + year strips ── */
+var list=document.querySelector("[data-list]");
+function firstYear(s){return S.firstOpenYear(s.from,s.to,TODAY)}
+function renderList(flash){
+ list.innerHTML=seasons.map(function(s){var w=s.from>s.to,y0=firstYear(s),cells="";
+  for(var y=y0;y<y0+6;y++){var own=s.years[y],f=own?own.from:s.from,t=own?own.to:s.to,o=S.occurrence(f,t,y),ownDays=own&&(own.from!==s.from||own.to!==s.to);
+   cells+='<div class="ys-cell'+(own?" own":"")+'" data-cell="'+s.id+'-'+y+'"><div class="ys-y">'+o.label+'<em>'+(own?"saját ár":"az ismétlődő ár")+'</em></div>'+
+    '<div class="ys-d">'+(ownDays?'<b>'+nice(o.start)+' – '+nice(o.end)+'</b> · saját napok':nice(o.start)+' – '+nice(o.end))+'</div>'+
+    '<span class="suffix"><input class="citui-input" inputmode="numeric" value="'+(own?esc(own.amount):"")+'" placeholder="'+esc(s.amount)+'" aria-label="'+esc(s.label)+' '+o.label+' ára"><em>Ft</em></span>'+
+    '<button type="button" class="ys-days" data-ydays="'+s.id+'|'+y+'">'+ICAL+(ownDays?'Napok módosítása':'Más napok ebben az évben')+'</button>'+
+    '<div class="ys-act"><button type="button" class="citui-btn citui-btn--primary" data-ysave="'+s.id+'|'+y+'">Mentés</button>'+(own?'<button type="button" class="citui-btn citui-btn--ghost" data-yclear="'+s.id+'|'+y+'">Vissza az ismétlődőre</button>':'')+'</div></div>'}
+  return '<div class="sblock" id="s-'+s.id+'" data-sb="'+s.id+'"><div class="srow" data-srow><div class="srow__t"><strong>'+esc(s.label)+'</strong><span>'+md(s.from)+' – '+(w?"a következő év ":"")+md(s.to)+' · minden évben'+(w?'<span class="wrap-tag">átnyúlik az év végén</span>':'')+'</span></div>'+
+   '<div class="srow__r"><span class="srow__amt">'+esc(s.amount)+' Ft</span><button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" data-edit="'+s.id+'">Szerkesztés</button><button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" data-del="'+s.id+'">Törlés</button></div></div>'+
+   '<div data-editbox></div>'+
+   '<div class="ys-head"><span><b>'+S.occurrence(s.from,s.to,y0).label+'</b> · húzza oldalra a további évekért</span><button type="button" class="ys-arrow" data-ys="-1" aria-label="Előző év">'+IL+'</button><button type="button" class="ys-arrow" data-ys="1" aria-label="Következő év">'+IR+'</button></div>'+
+   '<div class="ys" data-strip>'+cells+'</div><div class="ycal" data-ycal hidden></div>'+(flash&&flash.id===s.id?'<p class="flash">'+esc(flash.t)+'</p>':'')+'</div>'}).join("");
+ list.querySelectorAll("[data-ys]").forEach(function(b){b.addEventListener("click",function(){var st=b.closest(".sblock").querySelector("[data-strip]");st.scrollBy({left:(+b.dataset.ys)*(st.querySelector(".ys-cell").offsetWidth+10)})})});
+ list.querySelectorAll("[data-ydays]").forEach(function(b){b.addEventListener("click",function(){var p=b.dataset.ydays.split("|");openYear(p[0],+p[1])})});
+ list.querySelectorAll("[data-ysave]").forEach(function(b){b.addEventListener("click",function(){var p=b.dataset.ysave.split("|"),s=byId(p[0]),v=b.closest(".ys-cell").querySelector("input").value.trim();
+  if(!v){delete s.years[p[1]];}else{var o=s.years[p[1]]||{from:s.from,to:s.to};o.amount=v;s.years[p[1]]=o}renderList({id:s.id,t:"Mentve — "+s.label+" "+S.occurrence(s.from,s.to,+p[1]).label+(v?": "+v+" Ft.":": az ismétlődő ár érvényes.")})})});
+ list.querySelectorAll("[data-yclear]").forEach(function(b){b.addEventListener("click",function(){var p=b.dataset.yclear.split("|"),s=byId(p[0]);delete s.years[p[1]];renderList({id:s.id,t:"Mentve — "+p[1]+": az ismétlődő ár érvényes ("+s.amount+" Ft)."})})});
+ list.querySelectorAll("[data-edit]").forEach(function(b){b.addEventListener("click",function(){openEdit(b.dataset.edit)})});
+ list.querySelectorAll("[data-del]").forEach(function(b){b.addEventListener("click",function(){seasons=seasons.filter(function(s){return s.id!==b.dataset.del});renderList();renderYear();refreshNames()})});
+}
+function byId(id){return seasons.filter(function(s){return s.id===id})[0]}
+
+/* ── DATED picker for one year of a season: real calendar, weekdays, night count ── */
+function openYear(id,y){
+ var s=byId(id),blk=list.querySelector('[data-sb="'+id+'"]'),box=blk.querySelector("[data-ycal]");
+ blk.querySelectorAll(".ys-cell").forEach(function(c){c.classList.toggle("act",c.dataset.cell===id+"-"+y)});
+ var own=s.years[y],o=S.occurrence(own?own.from:s.from,own?own.to:s.to,y),rec=S.occurrence(s.from,s.to,y);
+ var st={from:o.start,to:o.end,pick:"from",vy:+o.start.slice(0,4),vm:+o.start.slice(5,7)};
+ function draw(){
+  var phone=document.querySelector("[data-frame]").classList.contains("is-phone"),h='',ms=[[st.vy,st.vm]];
+  if(!phone)ms.push(st.vm===12?[st.vy+1,1]:[st.vy,st.vm+1]);
+  ms.forEach(function(p){var Y=p[0],M=p[1],off=(dow(iso(Y,M,1))+6)%7;
+   h+='<div class="mon"><h5>'+Y+'. '+MON[M-1]+'</h5><div class="wk"><span>H</span><span>K</span><span>Sze</span><span>Cs</span><span>P</span><span>Szo</span><span>V</span></div><div class="grid">';
+   for(var i=0;i<off;i++)h+='<span class="pad"></span>';
+   for(var d=1;d<=dim(Y,M);d++){var k=iso(Y,M,d),c=[],wd=dow(k);if(st.from&&st.to&&k>=st.from&&k<=st.to)c.push("in");if(k===st.from||k===st.to)c.push("end");if(wd===0||wd===6)c.push("we");
+    h+='<button type="button" class="'+c.join(" ")+'" data-k="'+k+'" aria-label="'+longD(k)+'">'+d+'</button>'}
+   h+='</div></div>'});
+  var n=st.from&&st.to?nights(st.from,st.to)+1:0;
+  box.innerHTML='<div class="cal__top"><div><h4>'+esc(s.label)+' '+o.label+' — saját napok</h4><span class="cal__step">'+(st.pick==="from"?'Válassza ki a <b>kezdő</b> napot':'Most a <b>záró</b> napot')+'</span></div>'+
+   '<span class="cal__nav"><button type="button" data-n="-1" aria-label="Előző hónap">'+IL+'</button><button type="button" data-n="1" aria-label="Következő hónap">'+IR+'</button></span></div>'+
+   '<div class="cal__months">'+h+'</div>'+
+   '<div class="cal__foot"><span class="cal__sum">'+(st.from&&st.to?'<b>'+longD(st.from)+'</b> – <b>'+longD(st.to)+'</b> · '+n+' nap':'Kezdete: <b>'+longD(st.from)+'</b> · a záró nap még hiányzik')+
+   '<br><span style="color:var(--citui-muted)">Ismétlődő napok ebben az évben: '+nice(rec.start)+' – '+nice(rec.end)+' Ez csak erre az évre szól, a többi év nem változik.</span></span>'+
+   '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" data-x>Mégse</button><button type="button" class="citui-btn citui-btn--primary citui-btn--sm" data-ok'+(st.from&&st.to?'':' disabled')+'>Napok mentése</button></span></div>';
+  box.querySelectorAll("[data-n]").forEach(function(b){b.addEventListener("click",function(){st.vm+=+b.dataset.n;if(st.vm>12){st.vm=1;st.vy++}if(st.vm<1){st.vm=12;st.vy--}draw()})});
+  box.querySelectorAll("[data-k]").forEach(function(b){b.addEventListener("click",function(){var k=b.dataset.k;
+   if(st.pick==="from"){st.from=k;st.to=null;st.pick="to"}else{if(k<st.from){st.from=k;st.to=null;st.pick="to"}else{st.to=k;st.pick="from"}}draw()})});
+  box.querySelector("[data-x]").addEventListener("click",function(){box.hidden=true;blk.querySelectorAll(".ys-cell").forEach(function(c){c.classList.remove("act")})});
+  box.querySelector("[data-ok]").addEventListener("click",function(){var cur=s.years[y]||{amount:""};cur.from=st.from.slice(5);cur.to=st.to.slice(5);if(!cur.amount)cur.amount=s.amount;s.years[y]=cur;
+   renderList({id:id,t:"Mentve — "+s.label+" "+o.label+": "+nice(st.from)+" – "+nice(st.to)+". A többi év nem változott."})});
+ }
+ box.hidden=false;draw();box.scrollIntoView({block:"nearest"});
+}
+
+/* ── edit an existing season: the same recurring picker ── */
+function openEdit(id){
+ var s=byId(id),blk=list.querySelector('[data-sb="'+id+'"]'),eb=blk.querySelector("[data-editbox]");blk.querySelector("[data-srow]").hidden=true;
+ eb.innerHTML='<div class="addf" style="margin-top:0"><label class="fld f-name">Időszak neve<input class="citui-input" name="el" value="'+esc(s.label)+'"></label><div class="fld f-dates" data-ed></div>'+
+  '<label class="fld">Ár / éjszaka<span class="suffix"><input class="citui-input" name="ea" value="'+esc(s.amount)+'" inputmode="numeric"><em>Ft</em></span></label><label class="fld">Legalább<span class="suffix"><input class="citui-input" placeholder="—" inputmode="numeric"><em>éj</em></span></label>'+
+  '<span style="display:flex;gap:8px" class="go"><button type="button" class="citui-btn citui-btn--primary" data-eok>Mentés</button><button type="button" class="citui-btn citui-btn--ghost" data-ex>Mégse</button></span>'+
+  '<div class="cal" data-ec hidden></div><div class="prev" data-ep></div></div>'+
+  (Object.keys(s.years).length?'<p class="hint" style="margin-top:6px">Az évre szóló árak ('+Object.keys(s.years).join(", ")+') megmaradnak.</p>':'');
+ var ep=eb.querySelector("[data-ep]");
+ var P=RPicker(eb.querySelector("[data-ed]"),eb.querySelector("[data-ec]"),function(){ep.innerHTML=P.st.from&&P.st.to?meaning(P.st.from,P.st.to,id,false):""},id);
+ P.set(s.from,s.to);
+ eb.querySelector("[data-ex]").addEventListener("click",function(){renderList()});
+ eb.querySelector("[data-eok]").addEventListener("click",function(){if(!P.st.from||!P.st.to)return;s.label=eb.querySelector("[name=el]").value.trim()||s.label;s.from=P.st.from;s.to=P.st.to;s.amount=eb.querySelector("[name=ea]").value.trim()||s.amount;renderList({id:id,t:"Mentve."});renderYear();refreshNames()});
+}
+
+/* ── add form ── */
+var form=document.querySelector("[data-form]"),prev=document.querySelector("[data-prev]"),yr=document.querySelector("[data-year]");
+var R=RPicker(document.querySelector("[data-rdates]"),document.querySelector("[data-rcal]"),update,null);
+function pct(k,end){var m=+k.slice(0,2),d=+k.slice(3);return ((m-1)+(d-(end?0:1))/DIM[m-1])/12*100}
+function segs(f,t,cls,title){if(!f||!t)return"";var p=function(a,b){return '<span class="seg '+cls+'" title="'+esc(title)+'" style="left:calc('+a+'% + 2px);width:calc('+(b-a)+'% - 4px)"></span>'};return f<=t?p(pct(f),pct(t,1)):p(pct(f),100)+p(0,pct(t,1))}
+function renderYear(){var h='<div class="year__lbl">Az év, egy pillantásra</div><div class="year__bar">';
+ for(var i=0;i<12;i++)h+='<button type="button" data-m="'+(i+1)+'">'+MON3[i].replace(".","")+'</button>';
+ seasons.forEach(function(s){h+=segs(s.from,s.to,"ot",s.label)});h+=segs(R.st.from,R.st.to,"me","új időszak")+'</div><div class="year__key"><span><i style="background:var(--citui-cyan-500)"></i>az új időszak</span>'+
+ seasons.map(function(s){return '<span><i style="background:color-mix(in srgb,var(--citui-warn) 55%,var(--citui-white))"></i>'+esc(s.label)+' ('+sh(s.from)+' – '+sh(s.to)+')</span>'}).join("")+'</div>';
+ yr.innerHTML=h;yr.querySelectorAll("[data-m]").forEach(function(x){x.addEventListener("click",function(){R.jump(+x.dataset.m)})})}
+function update(){renderYear();var f=R.st.from,t=R.st.to;
+ if(!f&&!t){prev.innerHTML="";return}
+ if(!f||!t){prev.innerHTML='<p class="prev" style="margin:0">Kezdete: <b>'+(f?md(f):"—")+'</b> · Vége: <b>'+(t?md(t):"— válassza ki")+'</b></p>';return}
+ prev.innerHTML=meaning(f,t,null,true)}
+
+/* ── name combobox: every season name used at this place ── */
+var nm=form.label,lb=document.getElementById("nm-lb"),near=document.querySelector("[data-near]"),took=document.querySelector("[data-took]"),act=-1,opts=[];
+function names(){var m={},out=[];
+ seasons.forEach(function(s){m[fold(s.label)]={label:s.label,from:s.from,to:s.to,here:true}});
+ others.forEach(function(o){var k=fold(o.label);if(!m[k])m[k]={label:o.label,from:o.from,to:o.to,on:o.on}});
+ for(var k in m)out.push(m[k]);return out.sort(function(a,b){return a.here-b.here||a.label.localeCompare(b.label,"hu")})}
+function hl(label,q){if(!q)return esc(label);var i=fold(label).indexOf(q);return i<0?esc(label):esc(label.slice(0,i))+"<mark>"+esc(label.slice(i,i+q.length))+"</mark>"+esc(label.slice(i+q.length))}
+function openLb(){var q=fold(nm.value),all=names();opts=all.filter(function(n){return !q||fold(n.label).indexOf(q)>=0});
+ if(!opts.length){closeLb();return}
+ var free=opts.filter(function(n){return !n.here}),here=opts.filter(function(n){return n.here}),h='';
+ if(free.length)h+='<li class="lb__h" role="presentation">Eddig használt nevek</li>'+free.map(function(n){return '<li role="option" id="op'+opts.indexOf(n)+'" data-i="'+opts.indexOf(n)+'" aria-selected="false"><span>'+hl(n.label,q)+'</span><small>'+sh(n.from)+' – '+sh(n.to)+(n.on?'<br>'+esc(n.on):'')+'</small></li>'}).join("");
+ if(here.length)h+='<li class="lb__h" role="presentation">Ennél a szobánál már van</li>'+here.map(function(n){return '<li role="option" aria-disabled="true" data-i="'+opts.indexOf(n)+'" aria-selected="false"><span>'+hl(n.label,q)+'</span><small>'+sh(n.from)+' – '+sh(n.to)+'<br>fent szerkeszthető</small></li>'}).join("");
+ lb.innerHTML=h;lb.hidden=false;nm.setAttribute("aria-expanded","true");act=-1;
+ lb.querySelectorAll("li[data-i]").forEach(function(li){li.addEventListener("mousedown",function(e){e.preventDefault();choose(+li.dataset.i)})})}
+function closeLb(){lb.hidden=true;nm.setAttribute("aria-expanded","false");nm.removeAttribute("aria-activedescendant")}
+function choose(i){var n=opts[i];if(!n)return;
+ if(n.here){closeLb();var el=list.querySelector('[data-sb="'+byLabel(n.label)+'"]');if(el){el.scrollIntoView({block:"center"});el.querySelector("[data-edit]").focus()}return}
+ nm.value=n.label;closeLb();R.set(n.from,n.to);took.hidden=false;took.innerHTML='A napokat átvettük ('+esc(n.on)+'): '+md(n.from)+' – '+md(n.to)+' Ha ennél a szobánál más, kattintson a dátumra.';checkNear()}
+function byLabel(l){var s=seasons.filter(function(x){return fold(x.label)===fold(l)})[0];return s?s.id:""}
+function checkNear(){var v=nm.value,fv=fold(v),all=names(),exact=all.filter(function(n){return fold(n.label)===fv})[0],sim=null;
+ if(!exact&&fv.length>=4)sim=all.filter(function(n){return lev(fold(n.label),fv)<=2})[0];
+ var t=exact&&exact.label!==v.trim()?exact:sim;
+ if(t&&t.here){near.hidden=false;near.innerHTML='Ennél a szobánál már van <b>'+esc(t.label)+'</b> időszak — a fenti listán szerkesztheti.<button type="button" class="chip" data-go>Ugrás oda</button>';
+  near.querySelector("[data-go]").addEventListener("click",function(){var el=list.querySelector('[data-sb="'+byLabel(t.label)+'"]');el.scrollIntoView({block:"center"});el.querySelector("[data-edit]").focus()})}
+ else if(t){near.hidden=false;near.innerHTML=(exact?'Ez a név már szerepel <b>'+esc(t.label)+'</b> alakban. Egységesen írjuk?':'Hasonló név már van: <b>'+esc(t.label)+'</b>. Erre gondolt?')+'<button type="button" class="chip" data-fix>'+esc(t.label)+'</button>';
+  near.querySelector("[data-fix]").addEventListener("click",function(){nm.value=t.label;near.hidden=true;if(!t.here&&!R.st.from){R.set(t.from,t.to);took.hidden=false;took.innerHTML='A napokat átvettük ('+esc(t.on)+'): '+md(t.from)+' – '+md(t.to)}})}
+ else near.hidden=true}
+function refreshNames(){if(!lb.hidden)openLb()}
+nm.addEventListener("focus",openLb);nm.addEventListener("click",openLb);
+nm.addEventListener("input",function(){took.hidden=true;openLb();checkNear()});
+nm.addEventListener("blur",function(){setTimeout(closeLb,120);checkNear()});
+nm.addEventListener("keydown",function(e){if(lb.hidden&&e.key==="ArrowDown"){openLb();return}if(lb.hidden)return;
+ var items=[].slice.call(lb.querySelectorAll("li[data-i]"));
+ if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();act=(act+(e.key==="ArrowDown"?1:-1)+items.length)%items.length;items.forEach(function(li,i){li.setAttribute("aria-selected",i===act)});nm.setAttribute("aria-activedescendant",items[act].id||"");items[act].scrollIntoView({block:"nearest"})}
+ else if(e.key==="Enter"&&act>=0){e.preventDefault();choose(+items[act].dataset.i)}
+ else if(e.key==="Escape"){closeLb()}});
+
+form.addEventListener("submit",function(e){e.preventDefault();
+ var err=[],l=nm.value.trim();if(!l)err.push("Adjon nevet az időszaknak.");
+ if(seasons.some(function(s){return fold(s.label)===fold(l)}))err.push("Ennél a szobánál már van „"+l+"” — a listán szerkesztheti.");
+ if(!R.st.from||!R.st.to)err.push("Válassza ki a kezdő és a záró napot.");
+ if(!/^\d[\d\s]*$/.test(form.amount.value.trim()))err.push("Adja meg az árat.");
+ if(err.length){prev.innerHTML='<p class="prev bad" role="alert">'+esc(err.join(" "))+'</p>';return}
+ var id="n"+Date.now();seasons.push({id:id,label:l,from:R.st.from,to:R.st.to,amount:form.amount.value.trim(),years:{}});
+ form.reset();took.hidden=true;near.hidden=true;R.set(null,null);renderList({id:id,t:"Mentve — "+l+". Alatta az évsávon egy-egy évre más árat vagy napokat adhat."});update()});
+
+function setSize(s){document.querySelector("[data-frame]").classList.toggle("is-phone",s==="phone");
+ document.querySelectorAll("[data-size]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.size===s)});R.draw();var o=list.querySelector("[data-ycal]:not([hidden])");if(o){var c=list.querySelector(".ys-cell.act");if(c){var p=c.dataset.cell.split("-");openYear(p[0],+p[1])}}}
+document.querySelectorAll("[data-size]").forEach(function(b){b.addEventListener("click",function(){setSize(b.dataset.size)})});
+var q=new URLSearchParams(location.search);
+renderList();R.draw();update();setSize(q.get("size")||(innerWidth<700?"phone":"desk"));
+var demo=q.get("demo");
+if(demo==="names"){nm.focus();nm.value="sz";openLb()}
+if(demo==="year"){openYear("s1",2027)}
+if(demo==="yearpick"){openYear("s1",2027);var bx=list.querySelector("[data-ycal]");bx.querySelector('[data-k="2027-06-12"]').click();bx.querySelector('[data-n="1"]').click();bx.querySelector('[data-n="1"]').click();bx.querySelector('[data-k="2027-08-28"]').click()}
+if(demo==="new"){nm.value="Téli szünet";R.set("12-20","01-05");took.hidden=false;took.innerHTML='A napokat átvettük (kuckó3): december 20. – január 5. Ha ennél a szobánál más, kattintson a dátumra.';form.amount.value="21 000"}
+if(demo==="cal"){nm.value="Előszezon";R.set("05-20",null);R.st.pick="to";R.st.open=true;R.st.view=5;R.draw()}
+if(demo==="edit"){openEdit("s1")}
+})();
+</script>
+</body>
+</html>

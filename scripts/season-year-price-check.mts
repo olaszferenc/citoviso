@@ -162,6 +162,14 @@ try {
   const sXmas = await find(fahaz.id, "Ünnepek");
   const sWinter = await find(fahaz.id, "Téli ár");
   check("a „11.01 – 03.01” 11-01 – 03-01-ként tárolva", sOff.from === "11-01" && sOff.to === "03-01", sOff);
+  // season-datepicker ⑦: one unit, one name — case, accents and spacing aside
+  const dup = await P.addSeasonPrice(kert.id, " FÖszezon ", "07-01", "07-10", 30_000);
+  check("azonos név ugyanannál a szobánál (Föszezon ~ Főszezon) → elutasítva, a meglévőt megnevezve", !dup.ok && dup.errors.some((e) => e.includes("„Főszezon”")), dup);
+  check("…és semmi nem íródott", (await P.getUnitPrices(kert.id)).filter((r) => !r.isBase && !r.parentId).length === 2);
+  const dupEdit = await P.updateSeasonPrice(site.id, sWinter.id, { label: "ünnepek", from: "11-15", to: "02-28", amount: 13_000, minNights: null });
+  check("átnevezés egy másik időszak nevére ugyanannál a szobánál → elutasítva", !dupEdit.ok && dupEdit.errors.some((e) => e.includes("„Ünnepek”")), dupEdit);
+  const selfEdit = await P.updateSeasonPrice(site.id, sWinter.id, { label: "Téli ár", from: "11-15", to: "02-28", amount: 13_000, minNights: null });
+  check("⭐ pozitív kontroll: a saját nevével menthető (önmagával nem ütközik)", selfEdit.ok, selfEdit);
 
   const yMain = seasonRule.firstOpenYear("06-15", "08-31", today);
   const r1 = await P.setSeasonYearPrice(site.id, sMain.id, { year: yMain, amount: "35 000" });
@@ -260,23 +268,77 @@ try {
     const wrapCard = page.locator(`#ev-${sOff.id}-${yOff}`);
     check(`${label}: az átnyúló szezon kártyája „${yOff}/${String(yOff + 1).slice(2)}”, saját napokkal`, (await wrapCard.innerText()).includes(`${yOff}/${String(yOff + 1).slice(2)}`) && /saját napok/.test(await wrapCard.innerText()));
     check(`${label}: az „átnyúlik az év végén” jelölés a soron`, /átnyúlik az év végén/i.test(await page.locator(`#s-${sOff.id}`).innerText()));
-    // add form: live preview of a wrapping season + the overlap note
+    // add form (approved plan season-datepicker): the days are PICKED on a calendar —
+    // the two month-day text fields became hidden inputs behind two buttons.
     const add = page.locator(".adm-card", { hasText: "Kis faház" }).locator("[data-sadd]");
-    await add.locator('input[name="from"]').fill("11.01");
-    await add.locator('input[name="to"]').fill("03.01");
+    check(`${label}: a dátum-mezők naptár-gombok (a szöveges mező rejtett)`, (await add.locator("[data-sdp]").count()) === 2 && (await add.locator('input[name="from"]').getAttribute("type")) === "hidden");
+    await add.locator('[data-sdp="from"]').click();
+    const cal = add.locator("[data-scal]");
+    const geo = await page.evaluate(() => {
+      const c = document.querySelector('.adm-card [data-sadd] [data-scal]:not([hidden])')!.getBoundingClientRect();
+      const d = (document.querySelector('.adm-card [data-sadd] [data-scal]:not([hidden])')!.closest("form") as HTMLFormElement).querySelector("[data-sdates]")!.getBoundingClientRect();
+      const top = document.querySelector(".adm-top")?.getBoundingClientRect().bottom ?? 0;
+      return { calTop: c.top, calBottom: c.bottom, datesTop: d.top, datesBottom: d.bottom, roomAbove: d.top - Math.max(0, top) - 8, h: c.height,
+               fixed: getComputedStyle(document.querySelector('[data-scal]:not([hidden])')!).position };
+    });
+    if (width < 620) check(`${label}: a naptár a dátum-gombok ALATT, a folyamban nyílik`, geo.fixed === "static" && geo.calTop >= geo.datesBottom - 1, geo);
+    // owner, 2026-09-27: ABOVE the button whenever it fits under the sticky top bar
+    else check(`${label}: a naptár a dátum-gombhoz kötve, ${geo.roomAbove >= geo.h ? "FÖLÖTTE" : "alatta (fölötte nem fér el)"} nyílik`,
+      geo.fixed === "fixed" && (geo.roomAbove >= geo.h ? geo.calBottom <= geo.datesTop + 1 && geo.calBottom >= geo.datesTop - 16 : geo.calTop >= geo.datesBottom - 1), geo);
+    // an impossible day cannot be picked: February has 29 (the leap day), never 30
+    for (let i = 0; i < 12 && (await cal.locator('[data-d="02-01"]').count()) === 0; i++) await cal.locator('[data-nav="1"]').click();
+    check(`${label}: februárban 29 nap választható, 30. nincs`, (await cal.locator('[data-d^="02-"]').count()) === 29 && (await cal.locator('[data-d="02-30"]').count()) === 0);
+    for (let i = 0; i < 12 && (await cal.locator('[data-d="11-01"]').count()) === 0; i++) await cal.locator('[data-nav="1"]').click();
+    await cal.locator('[data-d="11-01"]').click();
+    for (let i = 0; i < 12 && (await cal.locator('[data-d="03-01"]').count()) === 0; i++) await cal.locator('[data-nav="1"]').click();
+    await cal.locator('[data-d="03-01"]').click();
+    check(`${label}: a választás a rejtett mezőkbe „11-01” / „03-01”-ként kerül`, (await add.locator('input[name="from"]').inputValue()) === "11-01" && (await add.locator('input[name="to"]').inputValue()) === "03-01");
+    check(`${label}: a záró nap után a naptár bezárul`, await cal.isHidden());
     const pv = await add.locator("[data-sprev]").innerText();
     const ex = seasonRule.occurrence("11-01", "03-01", seasonRule.firstOpenYear("11-01", "03-01", today));
-    check(`${label}: előnézet — „${isoNice(ex.start)} – ${isoNice(ex.end)}”, átnyúlik`, pv.includes(`${isoNice(ex.start)} – ${isoNice(ex.end)}`) && /Átnyúlik/.test(pv), pv);
+    check(`${label}: előnézet — „Minden évben november 1. – a következő év március 1.”, átnyúlik`, /Minden évben november 1\. – a következő év március 1\./.test(pv) && /átnyúlik az év végén/.test(pv), pv);
+    check(`${label}: előnézet — „Legközelebb: ${isoNice(ex.start)} – ${isoNice(ex.end)}”`, pv.includes(`Legközelebb: ${isoNice(ex.start)} – ${isoNice(ex.end)}`), pv);
     check(`${label}: előnézet — átfedés MINDKÉT időszakkal, a győztes megnevezve`, /Ünnepek/.test(pv) && /Téli ár/.test(pv) && /feljebb álló/.test(pv), pv);
     check(`${label}: előnézet — nincs dupla pont`, !/\.\./.test(pv), pv);
-    await add.locator('input[name="from"]').fill("13-01");
-    check(`${label}: lehetetlen napra hibaüzenet az előnézetben`, /hónap-nap/.test(await add.locator("[data-sprev]").innerText()));
+    check(`${label}: a régi „hónap-nap” útmutató szkripttel nem látszik`, !(await page.locator("[data-sdp-nojs]").first().isVisible()));
+    check(`${label}: évsáv az új időszak alatt — az új időszak két darabban (átnyúlik) + a szoba 2 időszaka`, (await add.locator(".sdp-seg.is-new").count()) === 2 && (await add.locator(".sdp-seg.is-other").count()) >= 2);
+    // the name list: every recurring season of the place; this unit's own ones not choosable
+    const nm = add.locator('input[name="label"]');
+    await nm.click();
+    const lb = add.locator(".sdp-lb");
+    const lbText = await lb.innerText();
+    check(`${label}: névlista — a másik szoba nevei választhatók (Nyári főszezon, Holtszezon)`, /Eddig használt nevek/i.test(lbText) && /Nyári főszezon/.test(lbText) && /Holtszezon/.test(lbText), lbText);
+    check(`${label}: névlista — a saját nevek „Ennél a szobánál már van”, nem választhatók`, /Ennél a szobánál már van/i.test(lbText) && (await lb.locator('li[aria-disabled="true"]', { hasText: "Ünnepek" }).count()) === 1, lbText);
+    await nm.fill("fősz");
+    check(`${label}: gépelésre szűkül (ékezet-független)`, (await lb.locator('li[role="option"]').count()) === 1);
+    await nm.press("ArrowDown");
+    await nm.press("Enter");
+    check(`${label}: a választott név a napjait is hozza (06-01 – 09-15)`, (await nm.inputValue()) === "Nyári főszezon" && (await add.locator('input[name="from"]').inputValue()) === "06-01" && (await add.locator('input[name="to"]').inputValue()) === "09-15");
+    check(`${label}: …és megmondja, honnan („A napokat átvettük (Kertre néző apartman)”)`, /A napokat átvettük \(Kertre néző apartman\)/.test(await add.locator(".sdp-took").innerText()));
+    await nm.fill("nyári föszezon");
+    await nm.blur();
+    await page.waitForTimeout(200);
+    check(`${label}: eltérő írásmód → „Ez a név már szerepel Nyári főszezon alakban”`, /már szerepel Nyári főszezon alakban/.test(await add.locator(".sdp-near").innerText()));
+    await add.locator(".sdp-near [data-fix]").click();
+    check(`${label}: …egy gombbal egységesítve`, (await nm.inputValue()) === "Nyári főszezon");
+    await nm.fill("Nyári fószezonn");
+    await nm.blur();
+    await page.waitForTimeout(200);
+    check(`${label}: elgépelés (2 betű eltérés) → „Hasonló név már van: Nyári főszezon”`, /Hasonló név már van: Nyári főszezon/.test(await add.locator(".sdp-near").innerText()));
+    await nm.fill("ünnepek");
+    await nm.blur();
+    await page.waitForTimeout(200);
+    check(`${label}: a szoba saját nevére „Ennél a szobánál már van … — a fenti listán szerkesztheti”`, /Ennél a szobánál már van Ünnepek/.test(await add.locator(".sdp-near").innerText()));
     await page.locator(`#s-${sMain.id}`).screenshot({ path: path.join(OUT, `evsav-${label}.png`) });
     // edit
     await page.goto(`${BASE}/admin?tab=modulok&m=pricing&edit=${sMain.id}#s-${sMain.id}`, { waitUntil: "networkidle" });
     const ed = page.locator(`[data-sedit="${sMain.id}"]`);
     check(`${label}: a Szerkesztés az adott szezon helyén nyílik, kitöltve`, (await ed.count()) === 1 && (await ed.locator('input[name="label"]').inputValue()) === "Nyári főszezon");
     check(`${label}: a szerkesztő kimondja, hogy az éves ár megmarad`, /megmaradnak/.test(await ed.innerText()));
+    check(`${label}: a szerkesztőben is naptár-gomb, a mentett napokkal (jún. 1. – szept. 15.)`, /jún\. 1\./.test(await ed.locator('[data-sdp="from"]').innerText()) && /szept\. 15\./.test(await ed.locator('[data-sdp="to"]').innerText()));
+    await ed.locator('[data-sdp="from"]').click();
+    check(`${label}: …a saját napjai ott nem „másik időszak”`, (await ed.locator("[data-scal] button.oth").count()) === 0);
+    await page.keyboard.press("Escape");
     await ed.screenshot({ path: path.join(OUT, `szerkesztes-${label}.png`) });
     // the mail link: #ev-<season>-<year> brings the card into view, cursor in its field
     await page.goto(`${BASE}/admin?tab=modulok&m=pricing#ev-${sMain.id}-${yMain + 1}`, { waitUntil: "networkidle" });
@@ -346,6 +408,43 @@ try {
     check("böngészős hibás összeg: a hiba A KÁRTYÁN áll, nem a lap tetején", /számmal/.test(await c3.innerText()) && (await page.locator(".mcfg-err").count()) === 0, await c3.innerText());
     await Promise.all([page.waitForNavigation({ waitUntil: "networkidle" }), page.locator(`#ev-${sMain.id}-${yMain + 1} button[value="clear"]`).click()]);
     check("„Vissza az ismétlődőre” → az éves sor törölve", (await onNight(kert.id, `${yMain + 1}-07-10`)) === 29_000);
+    await ctx.close();
+  }
+  // one YEAR of a season on a real calendar (approved plan season-datepicker ⑨)
+  for (const [label, width] of [["mobil", 390], ["asztali", 1280]] as const) {
+    const ctx = await browser.newContext({ viewport: { width, height: 1000 } });
+    await ctx.addCookies([{ name: "cit_session", value: mintTenantCookieValue(tu.id), url: BASE }]);
+    const page = await ctx.newPage();
+    page.on("pageerror", (e) => errs.push(`év-naptár ${label}: ${e.message}`));
+    const y = yMain + 2;
+    await page.goto(`${BASE}/admin?tab=modulok&m=pricing#s-${sMain.id}`, { waitUntil: "networkidle" });
+    const cell = page.locator(`#ev-${sMain.id}-${y}`);
+    await cell.locator(".ys-days > summary").click();
+    const yc = page.locator(`#s-${sMain.id} [data-ycal]`);
+    check(`${label}: „Más napokon ebben az évben” → naptár a sáv alatt, „Nyári főszezon ${y} — saját napok”`, (await yc.isVisible()) && (await yc.innerText()).includes(`Nyári főszezon ${y} — saját napok`));
+    const span = await yc.evaluate((el) => { const g = el.querySelector(".sdp-grid")!.getBoundingClientRect(); return g.width / el.getBoundingClientRect().width; });
+    check(`${label}: a hónap-rács kitölti a panelt (${Math.round(span * 100)}%${width < 620 ? ", egy hónap" : ", két hónap"})`, width < 620 ? span > 0.85 : span > 0.4 && span < 0.55, span);
+    check(`${label}: …a hét napjaival (7 fejléc) és évszámmal`, (await yc.locator(".sdp-wk").first().locator("span").count()) === 7 && new RegExp(`${y}\\.`).test(await yc.locator(".sdp-mon h5").first().innerText()));
+    // the first Saturday of June and the last Saturday of August, that year
+    const sat = (m: number, last: boolean): string => {
+      const days = [...Array(31)].map((_, i) => `${y}-${String(m).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`)
+        .filter((d) => !Number.isNaN(Date.parse(d)) && d.slice(5, 7) === String(m).padStart(2, "0") && new Date(`${d}T12:00:00Z`).getUTCDay() === 6 && new Date(`${d}T12:00:00Z`).getUTCMonth() === m - 1);
+      return last ? days[days.length - 1]! : days[0]!;
+    };
+    const a = sat(6, false);
+    const b = sat(8, true);
+    await yc.locator(`[data-k="${a}"]`).click();
+    for (let i = 0; i < 6 && (await yc.locator(`[data-k="${b}"]`).count()) === 0; i++) await yc.locator('[data-n="1"]').click();
+    await yc.locator(`[data-k="${b}"]`).click();
+    const sum = await yc.locator(".sdp-sum").innerText();
+    check(`${label}: az összegzés a hét napját is mondja („szombat”) és a napok számát`, (sum.match(/szombat/g) ?? []).length === 2 && /\d+ nap/.test(sum), sum);
+    check(`${label}: …és kimondja: „Ez csak erre az évre szól”`, /Ez csak erre az évre szól/.test(sum));
+    await Promise.all([page.waitForNavigation({ waitUntil: "networkidle" }), yc.locator("[data-ok]").click()]);
+    const kid = (await P.getUnitPrices(kert.id)).find((r) => r.parentId === sMain.id && r.validFrom?.startsWith(String(y)));
+    check(`${label}: „Napok mentése” → az évre szóló sor a választott napokkal (${a} – ${b}), az ismétlődő áron`, kid?.validFrom === a && kid?.validTo === b && kid?.amount === 29_000, kid);
+    check(`${label}: …a kártya „saját napok”`, /saját napok/.test(await page.locator(`#ev-${sMain.id}-${y}`).innerText()));
+    await P.setSeasonYearPrice(site.id, sMain.id, { year: y, amount: "" });
+    check(`${label}: (takarítás) az évre szóló sor törölve`, !(await P.getUnitPrices(kert.id)).some((r) => r.parentId === sMain.id && r.validFrom?.startsWith(String(y))));
     await ctx.close();
   }
   check("JS-hiba az Árazás lapon: 0", errs.length === 0, errs);

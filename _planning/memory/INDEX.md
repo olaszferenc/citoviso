@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-27_uzenetek_kattinthato_linkek.md](2026-09-27_uzenetek_kattinthato_linkek.md) — 2026-09-27 — Kattintható linkek az admin Üzenetek levéltörzsében
+- [2026-09-27_idoszaki_arak_datumvalaszto.md](2026-09-27_idoszaki_arak_datumvalaszto.md) — 2026-09-27 — Időszaki árak: dátumválasztó, névlista, év-naptár
 - [2026-09-27_cfg_mobile_koordinacio.md](2026-09-27_cfg_mobile_koordinacio.md) — 2026-09-26/27 — cfg-mobile koordinátor: három párhuzamos szál a lead-lap rendelés-paneljére
 - [2026-09-26_rendeles_ket_lepesben.md](2026-09-26_rendeles_ket_lepesben.md) — 2026-09-26 — Rendelés két lépésben (telefon): az 1. lépés a csomag-listáé (A szál, ADR-0240)
 - [2026-09-26_rendeles_fizetesi_link.md](2026-09-26_rendeles_fizetesi_link.md) — Rendelés → fizetés a vevő szemével: őszinte képernyő, vevő-levelek, tartós fizetési link (2026-09-25/26)
