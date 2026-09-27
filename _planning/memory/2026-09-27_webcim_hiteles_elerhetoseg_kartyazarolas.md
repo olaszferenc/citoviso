@@ -38,8 +38,15 @@ src/ui/icons.ts · src/db/schema.ts · migrations/0077_payment_domain_reservatio
 scripts/{domain-provision-check,kb-shot,resume-domains}.mts · kb/entries/admin-domain/ ·
 assets/design-refs/console/{domain,domain-zarolas}/ · ADR-0078 (módosítás-jel) · ADR-0251
 
+## 2. kör (tulaj: „Javítsuk ezeket is”)
+„Fizetek” mondat az Áttekintésen + a súgóban; a Wallet-ág megfigyelése (Apple/Google Pay DelayedCapture-nél
+rejtve, a Wallet marad — a doksi szerint csak kártya); a lead-konfigurátor jelölője hiteles; élő dev-próba siker.
+Menet közben két idegen kapu billegett (console-contrast, outreach-link-live: a lead-lap ~31 s) — tulaj-
+engedéllyel 90 s-os korlát; a gyökérokot a „Lead-lap lassú” szál javította (ADR-0250). A photo-normalize
+iker-javítás: a másik szálé maradt.
+
 ## Nyitott
 - Élő végigpróba a dev-en a tulaj telefonján (sandbox-kártya: 4444 8888 8888 5559). A bukás-ág egy
   „taken”-t tartalmazó szabad névvel próbálható ki (a dev regisztrátor mock).
-- Éles POS-on a DelayedCapture engedélyezettsége. A lead-konfigurátor jelölője még a régi (külön kör).
+- Éles POS-on a DelayedCapture engedélyezettsége (élesi írás → külön engedély). A Wallet-ág sandbox-fiókkal.
 - Nincs élesítve (a nagy deployjal megy).

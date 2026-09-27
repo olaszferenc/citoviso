@@ -63,3 +63,23 @@ A termék-út (rendelés → pay-link → webhook → regisztráció → lehív�
 - Ha a kibocsátó bank a lehívás előtt magától feloldja a blokkolást, a név már a miénk, de a díj
   nem jön be. Ezt hangos napló jelzi, a rendezés kézi.
 - A dev-en a regisztráció mock: a bukás-ág egy „taken”-t tartalmazó szabad névvel próbálható ki.
+
+### Kiegészítés (2026-09-27, tulaj: „Javítsuk ezeket is”)
+- **„Fizetek: …” a Barion-lapon.** A Barion fizetőlapja minden fizetés-típusnál „Fizetek: <összeg>”-et
+  ír, ezt a doksi szerint a kereskedő nem tudja átírni. Az Áttekintés a gomb alatt és a súgó is
+  kimondja: „A Barion oldalán a gomb felirata „Fizetek: …” — ekkor is csak zároljuk az összeget, és
+  csak bankkártyával lehet fizetni.”
+- **Barion Wallet / Apple Pay / Google Pay (sandboxban mérve).** `DelayedCapture`-nél a Barion
+  magától elrejti az Apple Pay-t és a Google Pay-t (`Immediate`-nél megjelennek). A „Barion Wallet”
+  ág megmarad, és e-mail-bejelentkezést kér. A doksi szerint egyenlegből delayed capture nem
+  fizethető, a Walletben tárolt kártyával igen, és az ugyanúgy kártyazárolás. Sandbox Barion-fiók
+  nélkül ez nem mérhető végig — **a doksi szerint igaz, sandboxban nem mérve**.
+- **Lead-konfigurátor (első megrendelés).** A javaslat- és az ellenőrzés-végpont ugyanazt a
+  regisztrátor-választ adja (`checkWebcimAvailability`). A jelölők: „Szabad” / „Foglalt” /
+  „Nálunk nem igényelhető” (nem választható). Nem ellenőrizhető név esetén marad a mai
+  „ellenőrizzük” (választható, a megrendeléskor visszaigazoljuk). Ott a vevő azonnal fizet, a
+  zárolásos ígéret NEM vonatkozik rá (ADR-0078 ② él tovább az első rendelésre).
+- **Élő végigpróba a dev-en** (Nyugalom Vendégház, sandbox-kártya): Szabad → Áttekintés → Barion →
+  Authorized → regisztráció (mock) → Capture → `paid`, számla OV-2026-68. A Barion oldalán
+  `Succeeded`, 1 000 Ft.
+

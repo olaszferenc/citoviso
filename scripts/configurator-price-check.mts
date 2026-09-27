@@ -121,7 +121,7 @@ async function stubDomainApi(page: Page): Promise<void> {
       body: JSON.stringify({
         suggestions: [
           { domain: "hotelpelda.hu", availability: "taken" },
-          { domain: "hotel-pelda.hu", availability: "probably_free" },
+          { domain: "hotel-pelda.hu", availability: "free" },
         ],
       }),
     }),
@@ -131,7 +131,7 @@ async function stubDomainApi(page: Page): Promise<void> {
     const clean = name.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
     const body = !clean.includes(".")
       ? { ok: false, reason: "Végződés is kell, például: pelda.hu" }
-      : { ok: true, domain: clean, availability: clean.startsWith("foglalt") ? "taken" : "probably_free" };
+      : { ok: true, domain: clean, availability: clean.startsWith("foglalt") ? "taken" : "free" };
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
 }

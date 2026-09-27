@@ -3511,6 +3511,10 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       `data-busy="${esc(T(lang, "Még egyszer ellenőrizzük a nevet…"))}">` +
       `${T(lang, "Tovább a fizetéshez (zárolás)")}</button>` +
       `<p class="adm-dlock">${ic("lock", 14)} ${T(lang, "Biztonságos fizetés a Barionnál — a kártyaadatait mi nem látjuk.")}</p>` +
+      // ADR-0251 kiegészítés: the Barion page reads „Fizetek: …” for EVERY payment type
+      // (its docs: the gateway UI is identical in all scenarios) — say so here, before
+      // the buyer meets it, so the hold is not mistaken for a charge.
+      `<p class="adm-dlock adm-dlock--note">${T(lang, "A Barion oldalán a gomb felirata „Fizetek: {amt}” — ekkor is csak zároljuk az összeget, és csak bankkártyával lehet fizetni.", { amt })}</p>` +
       back +
       `</div></div>` +
       // The server re-checks at the registrar before the pay-link (public.ts); the
@@ -3743,6 +3747,7 @@ const DOMAIN_STYLE =
   `.adm-dtl li b{display:block}.adm-dtl li span{color:var(--citui-muted)}` +
   `.adm-dlock{display:flex;gap:7px;align-items:center;justify-content:center;font-size:.82rem;color:var(--citui-muted);margin:10px 0 0;text-align:center}` +
   `.adm-dlock svg{flex:none}` +
+  `.adm-dlock--note{margin-top:4px;font-size:.8rem}` +
   `.adm-dprog__row.is-fail .adm-dprog__dot{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}` +
   `.adm-dres{border-radius:var(--citui-radius);padding:13px 15px;margin:12px 0;font-size:.92rem}` +
   `.adm-dres b{display:block;margin-bottom:3px}` +

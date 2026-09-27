@@ -67,9 +67,11 @@ megvásároljuk a nevet, és **csak a sikeres vétel után terheljük** a kárty
 közben elkelt, vagy bármi okból nem sikerül megvenni, a zárolást feloldjuk: egy forintot
 sem fizet, és az előfizetési vállalás sem indul el.
 
-Két dolgot érdemes tudnia a zárolásról. A bankja az alkalmazásában **függőben lévő
-tételként** mutathatja — ez még nem levonás. És mivel valódi kártyazárolás, **csak
-bankkártyával** lehet fizetni (Barion-egyenleggel nem).
+Három dolgot érdemes tudnia a zárolásról. A Barion fizetési oldalán a gomb felirata
+**„Fizetek: …”** — a Barion minden fizetésnél ugyanazt a gombot mutatja, ekkor is csak
+zároljuk az összeget. A bankja az alkalmazásában **függőben lévő tételként** mutathatja —
+ez még nem levonás. És mivel valódi kártyazárolás, **csak bankkártyával** lehet fizetni
+(Barion-egyenleggel, Apple Pay-jel vagy Google Pay-jel nem).
 
 **3. lépés — Kész.** A fülön lépésről lépésre követheti, hol tart: összeg zárolva →
 megvásároltuk a nevet → terheltük a kártyáját (a számlát e-mailben küldjük) → beállítjuk

@@ -105,11 +105,8 @@ import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js
 import { ownedSiteForArtifact, ownedSiteForProspectToken } from "../conversion/owned.js";
 import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
-import {
-  checkAvailability,
-  normalizeCustomDomain,
-  suggestWithAvailability,
-} from "../domains.js";
+import { normalizeCustomDomain, suggestDomains } from "../domains.js";
+import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
 import { renderSite } from "../engine/render.js";
@@ -2377,8 +2374,9 @@ async function handle(
   if (method === "GET" && cfgMatch) {
     return serveConfigure(res, cfgMatch[1]);
   }
-  // GET /configure/:artifactId/domains — custom-domain suggestions with a
-  // preliminary availability check (ADR-0020; cheap DNS+RDAP layer, no key).
+  // GET /configure/:artifactId/domains — custom-domain suggestions with the
+  // registrar's AUTHORITATIVE availability (ADR-0251; was the DNS+RDAP layer, which
+  // can never say "free" for .hu).
   const cfgDomMatch = /^\/configure\/([0-9a-f-]{36})\/domains$/i.exec(path);
   if (method === "GET" && cfgDomMatch) {
     const a = await db
@@ -2388,7 +2386,9 @@ async function handle(
       .where("mock_artifact.id", "=", cfgDomMatch[1])
       .executeTakeFirst();
     if (!a) return send(res, 404, JSON.stringify({ suggestions: [] }), "application/json");
-    const suggestions = await suggestWithAvailability(a.leadName);
+    const candidates = suggestDomains(a.leadName);
+    const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
+    const suggestions = candidates.map((domain, i) => ({ domain, availability: verdicts[i]! }));
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
   }
   // GET /configure/:artifactId/subdomain?label=... — preliminary availability of a buyer-chosen
@@ -2399,16 +2399,16 @@ async function handle(
     const r = await checkSubdomainAvailable(label);
     return send(res, 200, JSON.stringify({ ...r, host: r.normalized ? `${r.normalized}.citoviso.com` : "" }), "application/json");
   }
-  // GET /configure/:artifactId/domain-check?name=... — preliminary availability of a
-  // domain the buyer TYPED (when none of our suggestions appeals). Same cheap DNS+RDAP
-  // layer as the suggestions, so the verdict carries the same "preliminary" caveat.
+  // GET /configure/:artifactId/domain-check?name=... — availability of a domain the
+  // buyer TYPED (when none of our suggestions appeals). Same registrar verdict as the
+  // suggestions (ADR-0251).
   const cfgDomCheckMatch = /^\/configure\/([0-9a-f-]{36})\/domain-check$/i.exec(path);
   if (method === "GET" && cfgDomCheckMatch) {
     const norm = normalizeCustomDomain(url.searchParams.get("name") ?? "");
     if (!norm.ok) {
       return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
     }
-    const availability = await checkAvailability(norm.domain!);
+    const availability = await checkWebcimAvailability(norm.domain!);
     return send(
       res,
       200,

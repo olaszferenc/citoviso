@@ -2468,11 +2468,19 @@
   // domain choice wiring (only when the manifest carries the domain step)
   if (DOM) {
     var dlist = panel.querySelector(".cit-cfg-dlist");
+    // ADR-0251: the verdict is the REGISTRAR's own answer now (was DNS+RDAP, which
+    // could never say "free" for .hu). "unavailable" = the registrar refuses it for
+    // another reason — not "foglalt", and not choosable either. "unknown" = the
+    // registrar did not answer; kept choosable with the order-time confirmation.
     var AVAIL_LABEL = {
-      probably_free: [tr("szabadnak tűnik"), "free"],
-      taken: [tr("foglalt"), "taken"],
+      free: [tr("Szabad"), "free"],
+      taken: [tr("Foglalt"), "taken"],
+      unavailable: [tr("Nálunk nem igényelhető"), "taken"],
       unknown: [tr("ellenőrizzük"), "unknown"],
     };
+    function blocked(av) {
+      return av === "taken" || av === "unavailable";
+    }
 
     function setDomainOpt(which) {
       panel.querySelectorAll(".cit-cfg-dopt").forEach(function (o) {
@@ -2527,7 +2535,7 @@
       var firstFree = null;
       suggestions.forEach(function (s) {
         var a = AVAIL_LABEL[s.availability] || AVAIL_LABEL.unknown;
-        var taken = s.availability === "taken";
+        var taken = blocked(s.availability);
         var node = el(
           '<div class="cit-cfg-dsug' +
             (taken ? " cit-cfg-dsug--taken" : "") +
@@ -2542,7 +2550,7 @@
             "</span></div>",
         );
         if (!taken) {
-          if (!firstFree && s.availability === "probably_free") firstFree = { node: node, domain: s.domain };
+          if (!firstFree && s.availability === "free") firstFree = { node: node, domain: s.domain };
           node.addEventListener("click", function () {
             pickSuggestion(node, s.domain);
             track("domain_pick", { domain: s.domain });
@@ -2560,7 +2568,7 @@
       dlist.appendChild(
         el(
           '<p class="cit-cfg-dlist__note">' +
-            tr("Előzetes ellenőrzés — a végleges elérhetőséget a megrendeléskor erősítjük meg. Más nevet is választhat a megrendeléskor.") +
+            tr("Az elérhetőséget közvetlenül a domain-regisztrátornál ellenőriztük, most. Más nevet is választhat a megrendeléskor.") +
             "</p>",
         ),
       );
@@ -2649,9 +2657,13 @@
               return;
             }
             ownIn.value = j.domain; // show the cleaned form we actually checked
-            if (j.availability === "taken") {
-              // Taken = we cannot register it, so it must not become the selection.
-              setOwnStatus("bad", j.domain + " — " + tr("foglalt"));
+            if (blocked(j.availability)) {
+              // Taken / not available here = we cannot register it, so it must not
+              // become the selection.
+              setOwnStatus(
+                "bad",
+                j.domain + " — " + (j.availability === "taken" ? tr("Foglalt") : tr("Nálunk nem igényelhető")),
+              );
               return;
             }
             clearSuggestionPick();
@@ -2661,7 +2673,7 @@
               "ok",
               j.domain +
                 " — " +
-                (j.availability === "probably_free" ? tr("szabadnak tűnik") : tr("ellenőrizzük")),
+                (j.availability === "free" ? tr("Szabad") : tr("ellenőrizzük")),
             );
             updateSummary();
             track("own_domain_pick", { domain: j.domain });
@@ -2687,7 +2699,7 @@
           checkOwn();
         }
       });
-      // Editing after a verdict invalidates it — a stale "szabadnak tűnik" standing
+      // Editing after a verdict invalidates it — a stale "Szabad" standing
       // under a name it was not about is worse than no verdict at all. If the checked
       // name was the current selection, the selection goes with it (the order would
       // otherwise carry a domain nobody checked).
