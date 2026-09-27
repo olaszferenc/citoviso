@@ -158,6 +158,13 @@ async function open(browser: Awaited<ReturnType<typeof chromium.launch>>, html: 
 /** Két szabad nap kijelölése a naptárban → az ár megjelenik. */
 async function pickTwoDays(page: Page): Promise<void> {
   const free = page.locator(".cit-book__day:not(:disabled):visible");
+  // Late in a month a phone shows ONE month with only a few bookable days left
+  // (measured 2026-09-27 at 390 px: nth(4) did not exist, the gate timed out).
+  // Page forward like a guest would until the range fits.
+  for (let i = 0; i < 3 && (await free.count()) < 5; i++) {
+    await page.click(".cit-book__calnav--next");
+    await page.waitForTimeout(150);
+  }
   await free.nth(1).click();
   await free.nth(4).click();
   await page.waitForTimeout(250);

@@ -36,7 +36,7 @@ import {
   reconcileMultilangState,
 } from "./multilangCore.js";
 import { renderableModules } from "../modules.js";
-import { applyContactEdits, type ContactEdits, type ContactErrorKey, type ContactFacts } from "./contact.js";
+import { applyContactEdits, effectiveContact, type ContactEdits, type ContactErrorKey, type ContactFacts } from "./contact.js";
 import { programsOnPage, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 
 export interface PhotoEdit {
@@ -893,12 +893,10 @@ export async function getTenantContact(tenantId: string): Promise<ContactFacts |
 }
 
 function contactOf(s: SiteForEdit): ContactFacts {
-  const c = s.overrides.contact ?? s.baseSiteData.contact ?? {};
   const geo = s.overrides.geo ?? s.baseSiteData.geo ?? null;
   return {
-    address: c.address ?? "",
-    phone: c.phone ?? "",
-    email: c.email ?? "",
+    // ONE rule for the admin view and the booking letters (effectiveContact).
+    ...effectiveContact(s.overrides.contact, s.baseSiteData.contact),
     geo: geo ? { lat: geo.lat, lon: geo.lon } : null,
   };
 }
