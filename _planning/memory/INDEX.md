@@ -15,6 +15,7 @@
 - [2026-09-27_idoszaki_arak_datumvalaszto.md](2026-09-27_idoszaki_arak_datumvalaszto.md) — 2026-09-27 — Időszaki árak: dátumválasztó, névlista, év-naptár
 - [2026-09-27_foto_feltoltes_64kb_konvertalas.md](2026-09-27_foto_feltoltes_64kb_konvertalas.md) — 2026-09-27 — Fotó-feltöltés: a 64 KB-os body-határ + feltöltéskori konvertálás
 - [2026-09-27_foglalasi_levelek_uj_keret.md](2026-09-27_foglalasi_levelek_uj_keret.md) — 2026-09-27 — Foglalási levelek: professzionális keret, a szállás elérhetőségével; a tulajé a Foglalások fülre visz
+- [2026-09-27_foglalas_nyugta_kezdolap_gomb.md](2026-09-27_foglalas_nyugta_kezdolap_gomb.md) — 2026-09-27 — Vendég foglalási nyugta: „Vissza a kezdőlapra” gomb
 - [2026-09-27_fizetes_lap_mert_osszecsukas.md](2026-09-27_fizetes_lap_mert_osszecsukas.md) — 2026-09-27 — Fizetés-lap telefonon: mért összecsukás egy oszlopba (ADR-0247)
 - [2026-09-27_cfg_mobile_koordinacio.md](2026-09-27_cfg_mobile_koordinacio.md) — 2026-09-26/27 — cfg-mobile koordinátor: három párhuzamos szál a lead-lap rendelés-paneljére
 - [2026-09-26_rendeles_ket_lepesben.md](2026-09-26_rendeles_ket_lepesben.md) — 2026-09-26 — Rendelés két lépésben (telefon): az 1. lépés a csomag-listáé (A szál, ADR-0240)
