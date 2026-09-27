@@ -1828,7 +1828,12 @@ async function serveAdmin(
  */
 function publicBaseUrl(req: http.IncomingMessage): string {
   const host = String(req.headers["x-forwarded-host"] ?? req.headers.host ?? `localhost:${PORT}`);
-  const proto = String(req.headers["x-forwarded-proto"] ?? (host.startsWith("localhost") ? "http" : "https"));
+  // Without a proxy header the scheme is the socket's own: this server speaks plain
+  // HTTP, so guessing "https" for any non-localhost host (e.g. the dev box reached
+  // on its Tailscale IP) produced links that die with ERR_SSL_PROTOCOL_ERROR.
+  // Production nginx always sets X-Forwarded-Proto, so it is unaffected.
+  const encrypted = (req.socket as { encrypted?: boolean }).encrypted === true;
+  const proto = String(req.headers["x-forwarded-proto"] ?? (encrypted ? "https" : "http")).split(",")[0]!.trim();
   return `${proto}://${host}`;
 }
 
