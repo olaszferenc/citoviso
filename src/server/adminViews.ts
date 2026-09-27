@@ -79,6 +79,25 @@ function esc(s: unknown): string {
   );
 }
 
+// A message body is plain text, but the mails we store carry live links (the booking
+// request's one-tap „Elfogadom / Nem szabad", invoice and login links). Only
+// http(s) URLs become anchors; every other character is escaped as before. The URL
+// is matched on the RAW text and each piece escaped separately, so an `&` in a query
+// string is never double-escaped. Trailing sentence punctuation stays outside.
+const RE_BODY_URL = /https?:\/\/[^\s<>"']+/g;
+function linkifyText(s: string): string {
+  let out = "";
+  let last = 0;
+  for (const m of s.matchAll(RE_BODY_URL)) {
+    const url = m[0].replace(/[.,;:!?)\]]+$/, "");
+    const at = m.index!;
+    out += esc(s.slice(last, at)) +
+      `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`;
+    last = at + url.length;
+  }
+  return out + esc(s.slice(last));
+}
+
 // The BROWSER half of the money rule (assets/runtime/cit-money.js). Before this,
 // each inline script below carried its OWN formatter — and the four copies had
 // THREE different spellings of "99 900 Ft" between them.
@@ -4423,7 +4442,7 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
         `</span>` +
         `</a>` +
         (open
-          ? `<div class="adm-msg__body"><p>${esc(x.bodyText)}</p>` +
+          ? `<div class="adm-msg__body"><p>${linkifyText(x.bodyText)}</p>` +
             `<div class="adm-msg__meta">` +
             (x.channel === "sms" ? T(lang, "SMS") : T(lang, "E-mail")) +
             ` · ${esc(x.recipient)} · ${esc(fmtDateTime(x.sentAt, lang))}` +
