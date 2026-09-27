@@ -9,6 +9,7 @@
 - [2026-09-27_uzenetek_kattinthato_linkek.md](2026-09-27_uzenetek_kattinthato_linkek.md) — 2026-09-27 — Kattintható linkek az admin Üzenetek levéltörzsében
 - [2026-09-27_uzenetek_foglalasi_dontes_linkek.md](2026-09-27_uzenetek_foglalasi_dontes_linkek.md) — 2026-09-27 — Üzenetek fül: foglalási döntés-linkek (C terv) + https-séma javítás
 - [2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md](2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md) — 2026-09-27 — A mobil-kör három nyitott tétele: fekvő főcím a 19 sablonon · nem törő összeg · az Elek-park lánca
+- [2026-09-27_lead_lap_photo_health_lassu.md](2026-09-27_lead_lap_photo_health_lassu.md) — 2026-09-27 — A lead-lap ~31 s-os photo-health várakozása: a gazdagép-szünet a cache-találatra is lefutott
 - [2026-09-27_kapu_tiszta_main_proba.md](2026-09-27_kapu_tiszta_main_proba.md) — 2026-09-27 — „Piros a tiszta mainen is?”: a bukott kapu automatikus tiszta-main próbája
 - [2026-09-27_idoszaki_arak_datumvalaszto.md](2026-09-27_idoszaki_arak_datumvalaszto.md) — 2026-09-27 — Időszaki árak: dátumválasztó, névlista, év-naptár
 - [2026-09-27_foto_feltoltes_64kb_konvertalas.md](2026-09-27_foto_feltoltes_64kb_konvertalas.md) — 2026-09-27 — Fotó-feltöltés: a 64 KB-os body-határ + feltöltéskori konvertálás

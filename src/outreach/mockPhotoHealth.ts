@@ -49,10 +49,12 @@ import { T } from "../i18n/mail.js";
 // amit a konzol kép-proxyja kiszolgál — vagyis amit a kurátor csempéjén LÁT, és amit
 // ez a kapu MÉR, nem térhet el. Két külön lekérő két igazságot adna egy képernyőn.
 import {
+  cachedVerdict,
   fetchPhoto,
   photoFailReason,
   photoKey,
   type PhotoFailure,
+  type PhotoVerdict,
 } from "../console/photoProxy.js";
 
 /** Egy kép-hivatkozás a renderelt lapon. */
@@ -262,8 +264,31 @@ export async function probeImageRefs(
   const broken: BrokenImage[] = [];
   const hostTail = new Map<string, Promise<void>>();
 
+  const record = (ref: ImageRef, host: string, v: PhotoVerdict): void => {
+    if (v.ok) return;
+    broken.push({
+      url: ref.url,
+      reason: photoFailReason(v, lang, host),
+      where: ref.where,
+      refs: ref.refs,
+      ...(v.failure ? { failure: v.failure } : {}),
+    });
+  };
+
   const measure = async (ref: ImageRef): Promise<void> => {
     const host = hostOf(ref.url);
+    // ⛔⛔ MÉRT LASSÚSÁG (2026-09-27): a gazdagép-szünet a CACHE-TALÁLATRA is lefutott,
+    // pedig ott nincs kérés, tehát nincs burst, amit ritkítani kellene. 21 kép × 350 ms
+    // = 7,4 s artefaktumonként, a második futásra is — a lead-lap 20 artefaktumával a
+    // hálózat ~31 s-ig nem nyugodott el, és a rá `networkidle`-lel váró kapuk a
+    // Playwright 30 s-os határán billegtek. A friss cache-sor UGYANAZ a verdikt, amit a
+    // `fetchPhoto` is visszaadna (és amit a konzol proxyja a csempén mutat), ezért a
+    // mérés tartalma nem változik — csak a semmire várás marad el.
+    const hit = cachedVerdict(ref.url);
+    if (hit) {
+      record(ref, host, hit);
+      return;
+    }
     // Sorosítás gazdagépenként: a következő kérés megvárja az előzőt + a szünetet.
     const prev = hostTail.get(host) ?? Promise.resolve();
     let release = (): void => {};
@@ -273,17 +298,11 @@ export async function probeImageRefs(
       let v = await fetchPhoto(ref.url);
       if (!v.ok && !isPermanent(v.failure)) {
         await sleep(RETRY_PAUSE_MS);
-        v = await fetchPhoto(ref.url);
+        // ⚠️ `refresh`: az első bukás a cache-be került (5 perc), így a sima második
+        // hívás a SAJÁT bukását olvasta vissza — az újrapróba sosem ment ki a hálózatra.
+        v = await fetchPhoto(ref.url, { refresh: true });
       }
-      if (!v.ok) {
-        broken.push({
-          url: ref.url,
-          reason: photoFailReason(v, lang, host),
-          where: ref.where,
-          refs: ref.refs,
-          ...(v.failure ? { failure: v.failure } : {}),
-        });
-      }
+      record(ref, host, v);
     } finally {
       await sleep(HOST_GAP_MS);
       release();

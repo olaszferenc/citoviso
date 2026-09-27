@@ -56,6 +56,7 @@ interface CacheRow extends PhotoVerdict {
 }
 
 const cache = new Map<string, CacheRow>();
+const inflight = new Map<string, Promise<CacheRow>>();
 
 function fresh(row: CacheRow): boolean {
   return Date.now() - row.at < (row.ok ? OK_TTL_MS : FAIL_TTL_MS);
@@ -87,10 +88,22 @@ export function verifyPhotoSignature(url: string, sig: string): boolean {
  * Lekéri a képet (vagy visszaadja a friss cache-elt eredményt). A VERDIKT és a BÁJTOK
  * ugyanabból a kérésből származnak — nem mérhetünk mást, mint amit kiszolgálunk.
  */
-export async function fetchPhoto(url: string): Promise<CacheRow> {
+export async function fetchPhoto(url: string, opts: { readonly refresh?: boolean } = {}): Promise<CacheRow> {
   const key = photoKey(url);
   const hit = cache.get(key);
-  if (hit && fresh(hit)) return hit;
+  if (hit && fresh(hit) && !opts.refresh) return hit;
+  // One network request per URL at a time: the lead page asks for the health of every
+  // artifact at once, and they mostly share the same photos — without this, N parallel
+  // assessments would fire N identical requests at the same host (the burst that earns
+  // a 429). A `refresh` rides along an in-flight request too: that one is newer anyway.
+  const pending = inflight.get(key);
+  if (pending) return pending;
+  const p = fetchPhotoNow(url, key).finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
+async function fetchPhotoNow(url: string, key: string): Promise<CacheRow> {
 
   const put = (row: Omit<CacheRow, "at">): CacheRow => {
     const full = { ...row, at: Date.now() };

@@ -204,6 +204,49 @@ async function main(): Promise<void> {
     "az ép lapon NINCS törött kép (az őr nem mindenre mond pirosat)",
     healthyBroken.map((b) => b.url).join(" · "),
   );
+  // ⛔⛔ MÉRT LASSÚSÁG (2026-09-27): a gazdagép-szünet a cache-találatra is lefutott
+  // (21 kép × 350 ms = 7,4 s artefaktumonként), a lead-lap 20 artefaktumával ~31 s-ig
+  // nem nyugodott el a hálózat. Az ismételt mérés UGYANAZT mondja, és nem vár semmire.
+  const t0 = Date.now();
+  const again = await probeImageRefs(refs, "hu");
+  const againMs = Date.now() - t0;
+  check(
+    JSON.stringify(again) === JSON.stringify(broken),
+    "a cache-ből ismételt mérés UGYANAZT a verdiktet adja",
+    `első: ${broken.length} törött · ismételt: ${again.length} törött`,
+  );
+  check(
+    refs.length >= 3 && againMs < 250,
+    `a cache-ből ismételt mérés nem vár a gazdagép-szünetre (${refs.length} kép, ${againMs} ms)`,
+    "a régi úton ez ≥ képszám × 350 ms volt",
+  );
+  // ⛔⛔ A HALOTT ÚJRAPRÓBA (2026-09-27): az első bukás a cache-be került, a második
+  // `fetchPhoto` a SAJÁT bukását olvasta vissza — egy múló 503 így „törött” képet adott
+  // (téves piros a fizetni akaró vevő útján). Az újrapróbának a hálózatra kell mennie.
+  let flakyHits = 0;
+  const flaky = http.createServer((_req, res) => {
+    flakyHits++;
+    if (flakyHits === 1) {
+      res.writeHead(503);
+      res.end();
+      return;
+    }
+    res.writeHead(200, { "content-type": "image/png" });
+    res.end(PNG_1X1);
+  });
+  flaky.listen(0, "127.0.0.1");
+  await once(flaky, "listening");
+  const flakyUrl = `http://127.0.0.1:${(flaky.address() as { port: number }).port}/flaky-${Date.now()}.png`;
+  try {
+    const flakyBroken = await probeImageRefs([{ url: flakyUrl, where: "img", refs: 1 }], "hu");
+    check(
+      flakyHits === 2 && flakyBroken.length === 0,
+      "a múló hiba (503) újrapróbája kimegy a hálózatra, és az élő képet épnek méri",
+      `szerver-hívások: ${flakyHits} · törött: ${flakyBroken.length}`,
+    );
+  } finally {
+    flaky.close();
+  }
 
   // ── ④ A KAPU-PREDIKÁTUM igazságtáblája ───────────────────────────────────────
   console.log("\n③ Egy predikátum dönt — és a tudomásulvétel NÉVSORRA szól");
