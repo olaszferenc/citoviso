@@ -2389,6 +2389,27 @@
     display: none !important;
   }
 }
+/* The same column on a PORTRAIT phone whose pinned layout leaves the form no usable
+   window (ADR-XXXX). Not a breakpoint: the runtime MEASURES the window the pinned
+   layout would leave and sets `.cit-cfg-panel--fold` (syncFold). Owner, 2026-09-27,
+   ~390×690 in a browser tab: the form got 24 px between the sum card and the
+   consents, and the lead could not buy. Kept in step with the block above. */
+.cit-cfg-panel--billing.cit-cfg-panel--fold {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cit-cfg-panel--billing.cit-cfg-panel--fold .cit-cfg-foot,
+.cit-cfg-panel--billing.cit-cfg-panel--fold .cit-cfg-step3,
+.cit-cfg-panel--billing.cit-cfg-panel--fold .cit-cfg-co-zone,
+.cit-cfg-panel--billing.cit-cfg-panel--fold .cit-cfg-co-scroll,
+.cit-cfg-panel--billing.cit-cfg-panel--fold .cit-cfg-co-act {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+.cit-cfg-panel--billing.cit-cfg-panel--fold .cit-cfg-co-hint {
+  display: none !important;
+}
 
 /* ── ADR-0088 offer price card (approved plan: design-refs/console/offer-ui) ──
  * The running total becomes a bordered card when an offer is live: the struck

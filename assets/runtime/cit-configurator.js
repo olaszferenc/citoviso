@@ -2075,8 +2075,46 @@
     }
   }
 
+  /**
+   * ADR-XXXX: a portrait phone pays in ONE scrolling column whenever the pinned
+   * layout cannot give the form a usable window. Owner, 2026-09-27, on a phone in
+   * a browser tab (~390×690): "nem lehet görgetni, kitakar mindent, a lead nem
+   * tud vásárolni". Measured: the sum card + VAT + next charge (~180 px) above,
+   * the consents + pay block (~300 px) below, and the billing form got 24 px —
+   * with the "görgessen" pill sitting in those 24 px. At 360×640 the pay button
+   * was below the screen edge. The approved one-view layout (checkout-fullscreen
+   * ②) only fits a tall screen, so it is DECIDED BY MEASUREMENT, not by a
+   * breakpoint: the form window the pinned layout would leave is computed, and
+   * under FOLD_BELOW px the step folds into the ADR-0243 column (same CSS as the
+   * short-viewport branch). The gap between the two thresholds is hysteresis —
+   * the hint band exists only in the pinned state, so one threshold would flip
+   * back and forth on every resize at the boundary.
+   */
+  var FOLD_BELOW = 150;
+  var UNFOLD_ABOVE = 190;
+  function syncFold() {
+    if (!coScroll) return;
+    var billing = panel.classList.contains("cit-cfg-panel--billing");
+    var wide = !!(wideMq && wideMq.matches);
+    if (!billing || wide) {
+      panel.classList.remove("cit-cfg-panel--fold");
+      return;
+    }
+    // Everything in the panel except the form scroller is fixed-height in BOTH
+    // states, so this is the form window the pinned layout leaves (negative when
+    // the pinned blocks alone overflow the screen).
+    var win = panel.clientHeight - (panel.scrollHeight - coScroll.offsetHeight);
+    var folded = panel.classList.contains("cit-cfg-panel--fold");
+    if (!folded && win < FOLD_BELOW) panel.classList.add("cit-cfg-panel--fold");
+    else if (folded && win > UNFOLD_ABOVE) panel.classList.remove("cit-cfg-panel--fold");
+  }
+  window.addEventListener("resize", function () {
+    syncScrollHint();
+  });
+
   /** Contract ③: the affordance is MEASURED, and it disappears at the bottom. */
   function syncScrollHint() {
+    syncFold();
     if (!coScroll || !coHint) return;
     var more = coScroll.scrollHeight - coScroll.clientHeight - coScroll.scrollTop > 4;
     if (more) coHint.removeAttribute("hidden");
@@ -3205,6 +3243,9 @@
     placeSummary();
     syncConsents();
     syncScrollHint();
+    // A folded step (ADR-XXXX) scrolls the PANEL: arrive at its top, not wherever
+    // step 2 left it.
+    panel.scrollTop = 0;
     track("billing_step_open", {});
     var firstEmpty = ["buyer_name", "buyer_zip", "buyer_city", "buyer_address", "buyer_email"]
       .map(bInput)

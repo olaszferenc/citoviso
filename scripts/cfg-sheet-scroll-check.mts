@@ -2,7 +2,7 @@
 // (tulajdonosi bejelentés, 2026-09-26: „nem is lehet vásárolni, mert nem a vásárlási
 // szekció gördül, hanem a honlap maga").
 //
-//   npx tsx scripts/cfg-sheet-scroll-check.mts             (ŐR: 3 sablon × 4 tartás: 390, 360, fekvő 844 és 932)
+//   npx tsx scripts/cfg-sheet-scroll-check.mts             (ŐR: 3 sablon × 6 tartás: 390, 360, böngésző-lapos 390×690 és 360×640, fekvő 844 és 932)
 //   npx tsx scripts/cfg-sheet-scroll-check.mts --selftest  (+ PIROS önteszt: a javítás kivéve)
 //
 // MIT MÉR, ÉS MIÉRT ÍGY
@@ -32,6 +32,9 @@
 //   S7  a 2. lépésen és a fizetés-lépésen (teljes felület) is: a panel fölső/közép/alsó sávján húzva a lap áll
 //   S8  …és az őr nem nyeli el a fizetés-űrlap SAJÁT görgetését: húzással a végéig ér
 //   S9  …és ott a „Fizetek” gomb a képernyőn van, és az ujj ŐT találja (fekvőn is — tulaj, 2026-09-26)
+//   S10 …és a számlázási űrlapnak HASZNÁLHATÓ ablaka van (≥ 120 px): az S8 egy 24 px-es
+//       görgetőt is „végig tudott húzni” — zölden, miközben a tulaj telefonján (böngésző-lap,
+//       ~390×690) a lead nem tudott vásárolni (tulaj, 2026-09-27, ADR-XXXX)
 //   S0  (a mérés hitele) csukott panellel ugyanaz a gesztus GÖRGETI a lapot
 //
 // Kimenet (gitignore-olt): assets/design-refs/_drafts/cfg-sheet-scroll/<sablon>-<tartás>.png
@@ -65,6 +68,10 @@ interface Vp { id: string; width: number; height: number; ua: string }
 const VIEWPORTS: Vp[] = [
   { id: "390", width: 390, height: 844, ua: IPHONE_UA },
   { id: "360", width: 360, height: 780, ua: ANDROID_UA },
+  // a phone in a BROWSER TAB: the address bar + system bars take ~150 px of an 844 px
+  // screen — the owner's report came from exactly this (2026-09-27, ADR-XXXX)
+  { id: "390tab", width: 390, height: 690, ua: ANDROID_UA },
+  { id: "360tab", width: 360, height: 640, ua: ANDROID_UA },
   { id: "land", width: 844, height: 390, ua: IPHONE_UA },
   // a big phone sideways: ≥ 900 px wide, so the checkout's two-column grid branch is live too
   { id: "land932", width: 932, height: 430, ua: IPHONE_UA },
@@ -73,7 +80,7 @@ const VIEWPORTS: Vp[] = [
 // dark-luxury: the owner's screenshot skin family
 const TEMPLATES = (process.env.CFG_ONLY ?? "fullbleed,brutalism,dark-luxury").split(",");
 
-type Sabotage = "none" | "no-fix" | "no-landcol";
+type Sabotage = "none" | "no-fix" | "no-landcol" | "no-fold";
 
 function chromiumExe(): string {
   const candidates = [
@@ -109,10 +116,21 @@ async function fixture(tpl: string, sabotage: Sabotage): Promise<string> {
   html = await injectConfigurator(html, "00000000-0000-0000-0000-000000000000", data.name, {});
   html = pn.containHorizontalOverflow(html);
   if (sabotage === "no-landcol") {
-    // the sideways one-column paying step, taken out: its media query can never match
+    // the sideways one-column paying step, taken out: its media query can never match —
+    // and the measured fold (ADR-XXXX) too, which folds a sideways phone as well; with
+    // either one left in, the step still pays in one column and the control proves nothing
     const before = html;
     html = html.replace("@media (max-height: 520px) {\n  .cit-cfg-panel--billing {", "@media (max-height: 1px) {\n  .cit-cfg-panel--billing {");
     if (html === before) throw new Error("a no-landcol szabotázs nem találta a fekvő fizetés-blokkot");
+    const b2 = html;
+    html = html.replace('panel.classList.add("cit-cfg-panel--fold")', "void 0");
+    if (html === b2) throw new Error("a no-landcol szabotázs nem találta az összecsukást");
+  }
+  if (sabotage === "no-fold") {
+    // the measured portrait fold, taken out: the step never folds into one column
+    const before = html;
+    html = html.replace('panel.classList.add("cit-cfg-panel--fold")', "void 0");
+    if (html === before) throw new Error("a no-fold szabotázs nem találta az összecsukást");
   }
   if (sabotage === "no-fix") {
     // the fix, taken out: the panel's touchmove guard never fires, no overscroll containment
@@ -319,6 +337,13 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
           const own = f && /(auto|scroll)/.test(getComputedStyle(f).overflowY) && f.scrollHeight > f.clientHeight + 1;
           const r = (own ? f : document.querySelector(".cit-cfg-panel")).getBoundingClientRect();
           const t = Math.max(r.top, 0), b = Math.min(r.bottom, innerHeight); return { x: r.left + r.width / 2, y: (t + b) / 2 }; })()`)) as { x: number; y: number };
+        // S10 — measured BEFORE any drag: the window the buyer types the invoice data in
+        const win = (await page.evaluate(`(() => {
+          const f = document.querySelector(".cit-cfg-co-scroll");
+          const own = /(auto|scroll)/.test(getComputedStyle(f).overflowY) && f.scrollHeight > f.clientHeight + 1;
+          const r = (own ? f : document.querySelector(".cit-cfg-panel")).getBoundingClientRect();
+          return { own, px: Math.round(Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) }; })()`)) as { own: boolean; px: number };
+        res.S10_billing_form_has_a_window = [win.px >= 120, win];
         const s0 = (await page.evaluate(STATE)) as State;
         for (let i = 0; i < 12; i++) {
           const st = (await page.evaluate(STATE)) as State;
@@ -337,6 +362,7 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
       } else {
         res.S8_paying_form_scrolls_itself = [false, "fizetés-lépés nem nyílt"];
         res.S9_pay_button_reachable = [false, "fizetés-lépés nem nyílt"];
+        res.S10_billing_form_has_a_window = [false, "fizetés-lépés nem nyílt"];
       }
     }
 
@@ -399,7 +425,7 @@ try {
   }
   if (SELFTEST) {
     console.log("\nPIROS ÖNTESZT — a javítás kivéve (nincs érintés-őr, nincs overscroll-elzárás): S1 (és állón S7) legyen PIROS, S3/S6 zöld");
-    for (const vp of [VIEWPORTS[0]!, VIEWPORTS[2]!]) {
+    for (const vp of [VIEWPORTS[0]!, VIEWPORTS.find((v) => v.id === "land")!]) {
       const r = await run(browser, "fullbleed", vp, "no-fix");
       const upright = vp.height > vp.width;
       check(`no-fix @ ${vp.id} → S1 PIROS`, r.S1_drag_on_panel_keeps_page_still?.[0] === false, r.S1_drag_on_panel_keeps_page_still?.[1]);
@@ -410,10 +436,16 @@ try {
       check(`no-fix @ ${vp.id} → S6 (a lap a panel mellett görget) zöld marad`, r.S6_page_beside_panel_still_scrolls?.[0] === true, r.S6_page_beside_panel_still_scrolls?.[1]);
     }
     console.log("\nPIROS ÖNTESZT — a fekvő egy-oszlopos fizetés kivéve: S9 („Fizetek” elérhető) PIROS fekvőn, álló 390-en zöld");
-    for (const vp of [VIEWPORTS[2]!, VIEWPORTS[3]!]) {
+    for (const vp of VIEWPORTS.filter((v) => v.id.startsWith("land"))) {
       const r = await run(browser, "fullbleed", vp, "no-landcol");
       check(`no-landcol @ ${vp.id} → S9 PIROS`, r.S9_pay_button_reachable?.[0] === false, r.S9_pay_button_reachable?.[1]);
     }
+    console.log("\nPIROS ÖNTESZT — az álló összecsukás kivéve: S10 (az űrlap ablaka) PIROS böngésző-lapos 390×690-en, álló 390×844-en zöld");
+    const vTab = VIEWPORTS.find((v) => v.id === "390tab")!;
+    const rTab = await run(browser, "fullbleed", vTab, "no-fold");
+    check("no-fold @ 390tab → S10 PIROS", rTab.S10_billing_form_has_a_window?.[0] === false, rTab.S10_billing_form_has_a_window?.[1]);
+    const rTall = await run(browser, "fullbleed", VIEWPORTS[0]!, "no-fold");
+    check("no-fold @ 390 → S10 zöld marad (magas állón nincs mit összecsukni)", rTall.S10_billing_form_has_a_window?.[0] === true, rTall.S10_billing_form_has_a_window?.[1]);
     const r390 = await run(browser, "fullbleed", VIEWPORTS[0]!, "no-landcol");
     check("no-landcol @ 390 → S9 zöld marad (állón a fekvő blokk nem sül el)", r390.S9_pay_button_reachable?.[0] === true, r390.S9_pay_button_reachable?.[1]);
   }
