@@ -779,6 +779,13 @@ if [ -f scripts/photo-upload-body-check.mts ] && \
   echo "[pre-commit] photo-upload-body-check (egy 6 MB-os fotó törzse átjut, a túlméretes választ kap)…"
   npx tsx scripts/photo-upload-body-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A telefonos fotó feltöltéskor KONVERTÁLÓDIK (böngészőben + szerveren): ≤2560 px, álló,
+# EXIF/GPS nélkül; a két feltöltő lap szkriptje hibátlanul indul.
+if [ -f scripts/photo-normalize-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/photoUpload\.ts|src/server/adminViews\.ts|src/server/moduleConfigViews\.ts|scripts/photo-normalize-check)'; then
+  echo "[pre-commit] photo-normalize-check (feltöltött fotó: kicsinyítés, forgatás, GPS-törlés)…"
+  npx tsx scripts/photo-normalize-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/hero-health-check.mts ] && \
    changed_files | grep -qE '^(src/generator/photoHealth|src/generator/heroPick|src/generator/heroOverride|scripts/rerender-mock|scripts/hero-health-check)'; then
   echo "[pre-commit] hero-health-check (a nyitókép a teljes képről szól — fél-fekete fotó nem hero)…"

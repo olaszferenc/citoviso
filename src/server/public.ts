@@ -59,6 +59,7 @@ import {
   moduleContentFor,
 } from "../tenant/editor.js";
 import { CONTACT_ERRORS, type ContactErrorKey } from "../tenant/contact.js";
+import { normalizeUpload } from "../tenant/photoUpload.js";
 import { getAssetStore } from "../tenant/assetStore.js";
 import {
   adminDashboard,
@@ -3272,8 +3273,16 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           errors.push({ file: nameOf(it, i), reason: "a közös képtárba legfeljebb 24 kép fér" });
           continue;
         }
-        const ext = m[1] === "jpeg" ? "jpg" : m[1];
-        const a = await store.save(session.tenantId, ext, buf);
+        // Rotated upright, capped at the hero's width, metadata (GPS) stripped —
+        // src/tenant/photoUpload.ts; the browser has usually done it already.
+        let norm: Awaited<ReturnType<typeof normalizeUpload>>;
+        try {
+          norm = await normalizeUpload(buf);
+        } catch {
+          errors.push({ file: nameOf(it, i), reason: "nem kép (JPEG, PNG vagy WEBP kell)" });
+          continue;
+        }
+        const a = await store.save(session.tenantId, norm.ext, norm.data);
         room -= 1;
         saved.push({ url: a.url, alt, ...(unitOk ? { units: [unitId] } : {}) });
       }

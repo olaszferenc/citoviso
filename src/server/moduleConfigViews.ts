@@ -30,6 +30,7 @@ import type { MonthView } from "../tenant/availability.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { icAdmin as ic } from "../ui/icons.js";
+import { SHRINK_JS } from "../tenant/photoUpload.js";
 import { CONTACT_CSS, placeCard, placeScript, saveBar, type ContactView } from "./contactViews.js";
 import { readFileSync } from "node:fs";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
@@ -1977,6 +1978,7 @@ function roomEditorScript(lang: string): string {
     `});` +
     // Helyben feltöltés. A korlátok a SZERVER mért korlátai; a hiba MEGNEVEZI a
     // fájlt és az okot, és hibaként jelenik meg — nem sikerként.
+    `${SHRINK_JS}` +
     `function read(f){return new Promise(function(res,rej){var r=new FileReader();` +
     `r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}` +
     `function esc(s){return String(s).replace(/[&<>"]/g,function(c){` +
@@ -1991,12 +1993,14 @@ function roomEditorScript(lang: string): string {
     `for(var i=0;i<files.length;i++){var f=files[i];` +
     `if(["image/jpeg","image/png","image/webp"].indexOf(f.type)<0){` +
     `bad.push("<b>"+esc(f.name)+"</b> "+${j(T(lang, "nem kép (JPEG, PNG vagy WEBP kell)"))});continue}` +
-    `if(f.size>6000000){bad.push("<b>"+esc(f.name)+"</b> "+(f.size/1000000).toFixed(1).replace(".",",")+" MB — "+` +
-    `${j(T(lang, "a legnagyobb feltölthető méret 6 MB"))});continue}good.push(f)}` +
+    `good.push(f)}` +
     // One request per file: the server reads at most one photo's worth of body.
+    // Converted in the browser first (SHRINK_JS): the 6 MB cap is checked on what is SENT.
     `try{var res={count:0,becameCover:false,errors:[]};for(var j=0;j<good.length;j++){` +
+    `var b=await citShrink(good[j]);if(b.size>6000000){bad.push("<b>"+esc(good[j].name)+"</b> "+(b.size/1000000).toFixed(1).replace(".",",")+" MB — "+` +
+    `${j(T(lang, "a legnagyobb feltölthető méret 6 MB"))});continue}` +
     `var r1=await (await fetch("/admin/photos",{method:"POST",headers:{"Content-Type":"application/json"},` +
-    `body:JSON.stringify({images:[{dataUrl:await read(good[j]),name:good[j].name,alt:""}],unit:unit})})).json();` +
+    `body:JSON.stringify({images:[{dataUrl:await read(b),name:good[j].name,alt:""}],unit:unit})})).json();` +
     `if(!r1||r1.ok===false)r1={count:0,errors:[{file:good[j].name,reason:${j(T(lang, "a feltöltés nem sikerült"))}}]};` +
     `res.count+=r1.count||0;res.becameCover=res.becameCover||!!r1.becameCover;res.errors=res.errors.concat(r1.errors||[])}` +
     `(res.errors||[]).forEach(function(er){bad.push((er.file?"<b>"+esc(er.file)+"</b> ":"")+esc(er.reason))});` +

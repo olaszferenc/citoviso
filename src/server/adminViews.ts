@@ -24,6 +24,7 @@ import type { SubscriptionAdminData, SubscriptionSummary } from "../tenant/subsc
 import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
 import { COUPON_JS } from "../payment/couponRule.js";
+import { SHRINK_JS } from "../tenant/photoUpload.js";
 import type { TenantLegalIdentity } from "../legal.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { contactSection, type ContactView } from "./contactViews.js";
@@ -636,15 +637,17 @@ const PHOTO_SCRIPT = (lang = "hu"): string =>
   //    request per file so each row gets its own progress and its own refusal
   `var LIB=24,BATCH=12,BYTES=6000000;function mb(b){return (b/1e6).toFixed(1).replace('.',',')}` +
   `function read(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(f)})}` +
-  `function send(f,row){return read(f).then(function(d){return new Promise(function(res){var x=new XMLHttpRequest();x.open('POST','/admin/photos');x.setRequestHeader('Content-Type','application/json');` +
+  // converted in the browser first (SHRINK_JS): the 6 MB cap is checked on what is SENT
+  `${SHRINK_JS}` +
+  `function send(f,row){return citShrink(f).then(function(b){if(b.size>BYTES)return fmt(L.tooBig,{mb:mb(b.size)});return read(b).then(function(d){return new Promise(function(res){var x=new XMLHttpRequest();x.open('POST','/admin/photos');x.setRequestHeader('Content-Type','application/json');` +
   `x.upload.onprogress=function(e){if(e.lengthComputable){var p=Math.round(e.loaded/e.total*100);$('i',row).style.width=p+'%';$('.st',row).textContent=p+'%'}};` +
   `x.onload=function(){var j=null;try{j=JSON.parse(x.responseText)}catch(e){}var err=j&&j.errors&&j.errors.length?j.errors[0].reason:(!j||!j.ok?L.upFail:'');res(err)};x.onerror=function(){res(L.upFail)};` +
   // a stalled request must not hold up the files queued behind it
   `x.timeout=120000;x.ontimeout=function(){res(L.upFail)};` +
-  `x.send(JSON.stringify({images:[{dataUrl:d,alt:'',name:f.name}]}))})})}` +
+  `x.send(JSON.stringify({images:[{dataUrl:d,alt:'',name:f.name}]}))})})})}` +
   `var busy=false;function ingest(files){files=[].slice.call(files||[]);if(!files.length||busy)return;busy=true;var prog=$('#adm-prog');prog.innerHTML='';var errors=[];` +
   `if(files.length>BATCH){errors.push(fmt(L.batch,{n:files.length-BATCH}));files=files.slice(0,BATCH)}var room=own?Math.max(0,LIB-P.length):LIB;var rows=[];` +
-  `files.forEach(function(f){var okT=/^image\\/(jpeg|png|webp)$/.test(f.type),okS=f.size<=BYTES,reason='';if(!okT)reason=L.notImg;else if(!okS)reason=fmt(L.tooBig,{mb:mb(f.size)});else if(room<=0)reason=L.full;` +
+  `files.forEach(function(f){var okT=/^image\\/(jpeg|png|webp)$/.test(f.type),reason='';if(!okT)reason=L.notImg;else if(room<=0)reason=L.full;` +
   `var url=okT?URL.createObjectURL(f):'';var row=document.createElement('div');row.className='adm-prog__row'+(reason?' is-bad':'');` +
   `row.innerHTML=(url?'<img src="'+url+'" alt="">':'<span style="width:34px;display:inline-flex;justify-content:center">'+ICO.a16+'</span>')+'<span class="adm-prog__name"></span>'+(reason?'<span class="rs"></span>':'<span class="adm-prog__bar"><i></i></span><span class="st">0%</span>');` +
   `$('.adm-prog__name',row).textContent=f.name;if(reason)$('.rs',row).textContent=reason;prog.appendChild(row);if(reason)return;room--;rows.push({f:f,row:row})});` +
