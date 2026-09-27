@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-28_telefonos_menu_foglalas_sav_feluton.md](2026-09-28_telefonos_menu_foglalas_sav_feluton.md) — 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-XXXX
 - [2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md](2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md) — 2026-09-27 — Webcím: a vásárlás hibája + hiteles elérhetőség + kártyazárolás (ADR-0251)
 - [2026-09-27_uzenetek_kattinthato_linkek.md](2026-09-27_uzenetek_kattinthato_linkek.md) — 2026-09-27 — Kattintható linkek az admin Üzenetek levéltörzsében
 - [2026-09-27_uzenetek_foglalasi_dontes_linkek.md](2026-09-27_uzenetek_foglalasi_dontes_linkek.md) — 2026-09-27 — Üzenetek fül: foglalási döntés-linkek (C terv) + https-séma javítás

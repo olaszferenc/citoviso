@@ -200,7 +200,7 @@ section{padding:clamp(64px,9vh,104px) 0}
   text-decoration:none;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
   padding:13px 26px;border-radius:var(--cit-radius);white-space:nowrap}
 /* the bar must not cover the end of the page */
-body{padding-bottom:76px}
+@media(max-width:700px){body{padding-bottom:76px}}
 @media(max-width:640px){.t-book-in{padding:10px 0}.t-book-t small{display:none}
   .t-book a{padding:12px 18px}}
 /* LANDSCAPE PHONE (844×390 — owner: "javítsd a fekvőket", 2026-09-26). The 520px minimum
@@ -269,7 +269,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 
   const nav = `<nav class="t-nav">
     <span class="t-brand-s">${esc(data.name)}</span>
-    <span class="t-links">
+    <span class="t-links" data-cit-navsrc>
       <a href="#cit-rooms">${T(data, "Szobák")}</a>
       <a href="#cit-contact">${T(data, "Kapcsolat")}</a>
       <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
@@ -463,7 +463,7 @@ ${motionCss("calm")}
   ${bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
-  <div class="t-book">
+  <div class="t-book" data-cit-mobbar>
     <div class="t-book-in">
       <div class="t-book-t">${esc(data.name)}<small>${esc(place || data.tagline)}</small></div>
       <a href="#cit-enquiry">${T(data, "Foglalás")}</a>

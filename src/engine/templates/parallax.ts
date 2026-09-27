@@ -469,7 +469,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   </nav>`;
 
   const mobcta = hasContact
-    ? `<div class="t-mobcta">
+    ? `<div class="t-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

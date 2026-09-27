@@ -180,7 +180,10 @@ const DARK_LUXURY_CSS = `
   .t-foot{border-top:1px solid var(--cit-line);padding:64px 0 30px;color:var(--cit-muted);font-size:14px}
   .t-fgrid{display:grid;gap:36px;grid-template-columns:1fr;margin-bottom:44px}
   @media(min-width:760px){.t-fgrid{grid-template-columns:2fr 1fr 1fr}}
-  .t-foot .t-brand{font-size:18px}
+  /* the header brand is one ellipsised line; in the footer the name WRAPS — nowrap +
+     4px tracking made a 26-letter name 384px wide and widened a phone to 397–400px */
+  .t-foot .t-brand{font-size:18px;white-space:normal;overflow:visible}
+  .t-fgrid>*{min-width:0}
   .t-foot p{max-width:320px;margin-top:14px}
   .t-foot h4{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--cit-ink);margin-bottom:16px;font-weight:500}
   .t-foot a{display:block;padding:4px 0;transition:.25s}
@@ -471,7 +474,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="t-mobcta">
+    ? `<div class="t-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

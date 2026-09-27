@@ -90,6 +90,14 @@ Minden vevő-oldali felirat nyelvi csomagon keresztül renderelődik; a HU forr�
   szélességben, WebP-ben (`-rw`) megy ki; a `src` az eredeti URL marad; portál-fotó érintetlen (nincs méret-paraméter).
   Kontraktus: `assets/design-refs/engine/name-masthead/phone/`; őr: `guest-mobile-check` ②fejléc-blokk / ⑤sáv-felirat,
   `photo-srcset-check`.
+  ⚠️ A „link-sáv elmarad, a CTA a sávban él” rész FELÜLÍRVA (ADR-XXXX, 2026-09-27) — lásd alább.
+- **Telefonos menü + a foglalás-sáv csak félúton (2026-09-27, ADR-XXXX, felülírja az ADR-0237 ①–②-t):**
+  amíg a foglalási blokk (`#cit-booking`; foglalás-modul nélkül az érdeklődő űrlap `#cit-enquiry`-je) bármennyi része a
+  képernyőn van, SEMMILYEN ragadó foglalás-gomb nem látszik (telefonos sáv, ragadó fejléc CTA-ja, ragadó dokk — telefonon
+  ÉS asztalon); a sáv a hero után jön (ha a hero-nak nincs saját gombja, az első képernyőtől), asztalon nincs; ahol nincs
+  telefonos nav, menü-gomb nyitja a lap saját szekció-linkjeit. EGY hely: `initPhoneChrome` (cit-runtime.js) + a
+  „Phone chrome” blokk (cit-modules.css); a sablon csak jelöl: `data-cit-mobbar` · `data-cit-navsrc` · `data-cit-ownnav`.
+  Kontraktus: `assets/design-refs/tenant-site/mobile-chrome-B/`; őr: `scripts/mobile-chrome-check.mts`.
 - **Következő modulok:** `reviews` valódi Google-review-enrichmenthez kötése (ma ritkán van adat);
   további interaktív modulok ugyanezen registry-minta szerint.
 - **Tényhűség a mockban:** a booking-widget NEM hazudik elérhetőséget/árat — érdeklődés/foglalási IGÉNYT állít

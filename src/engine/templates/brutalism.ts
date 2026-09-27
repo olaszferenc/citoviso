@@ -448,7 +448,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- mobile fixed CTA bar -------------------------------------------------
   const mobcta = hasContact
-    ? `<div class="b-mobcta">
+    ? `<div class="b-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, rating)}
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`

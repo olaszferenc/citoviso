@@ -234,7 +234,11 @@ const PROBE_STATIC = `(() => { ${LIB}
   out.sticky = out.sticky.slice(0, 8);
   // ② the shared masthead's height and ⑤ the fixed booking bar's text block (FK-009 V2 / bar wrap)
   out.mast = (() => { const m = document.querySelector('.cit-mast'); if (!m || !vis(m)) return null; const r = m.getBoundingClientRect(); return { h: Math.round(r.height), links: !!(m.querySelector('.cit-mast-links') && vis(m.querySelector('.cit-mast-links'))) }; })();
-  out.barText = (() => { const t = document.querySelector('.cit-mobcta__t'); if (!t || !vis(t)) return null; const parts = [...t.querySelectorAll('b, small')].filter(vis).map(e => { const cs = getComputedStyle(e); const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.25; return { tag: e.tagName.toLowerCase(), lines: Math.round(e.getBoundingClientRect().height / lh) }; }); return { parts, h: Math.round(t.getBoundingClientRect().height) }; })();
+  // ⚠️ ADR-XXXX: the bar now arrives AFTER the hero (visibility:hidden on the first screen) —
+  // judged on whether it is RENDERED at this width (display chain), not whether it shows right
+  // now; its line geometry is the same either way. A vis() test here would silently empty ⑤.
+  const rendered = (el) => { for (let e = el; e && e !== document.documentElement; e = e.parentElement) if (getComputedStyle(e).display === 'none') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  out.barText = (() => { const t = document.querySelector('.cit-mobcta__t'); if (!t || !rendered(t)) return null; const parts = [...t.querySelectorAll('b, small')].filter(rendered).map(e => { const cs = getComputedStyle(e); const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.25; return { tag: e.tagName.toLowerCase(), lines: Math.round(e.getBoundingClientRect().height / lh) }; }); return { parts, h: Math.round(t.getBoundingClientRect().height) }; })();
   // ③ touch targets (visible controls, page-wide, excluding the runtime overlays which are closed now)
   out.small = []; out.controlCount = 0;
   for (const el of document.querySelectorAll(CONTROLS)) {

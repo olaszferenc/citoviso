@@ -463,7 +463,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="h-mobcta">
+    ? `<div class="h-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

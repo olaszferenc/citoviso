@@ -100,7 +100,10 @@ const CARD_SIDEBAR_CSS = `
   .meta-row .addr svg{width:15px;height:15px;color:var(--cit-accent)}
 
   /* two-column layout: content + sticky booking card */
-  .layout{display:grid;gap:48px;grid-template-columns:1fr;padding:26px 0 80px}
+  /* minmax(0,1fr) + min-width:0: a plain 1fr grew to the content's minimum (422px with the
+     enquiry form and a long name) and widened a phone to 444px (2026-09-27) */
+  .layout{display:grid;gap:48px;grid-template-columns:minmax(0,1fr);padding:26px 0 80px}
+  .layout>*{min-width:0}
   @media(min-width:960px){.layout{grid-template-columns:1.55fr 1fr;align-items:start}}
   .blk{padding:30px 0;border-bottom:1px solid var(--cit-line)}
   .blk:first-child{padding-top:6px}
@@ -160,9 +163,13 @@ const CARD_SIDEBAR_CSS = `
   .bc-line small{display:block;color:var(--cit-muted);font-size:12.5px}
   /* the canonical booking slot melts into the card (the card is the elevated surface) */
   .bcard .cit-book{background:none;border:0;box-shadow:none;padding:0}
-  .cit-tpl-card-sidebar .bcard .cit-book--bar{grid-template-columns:1fr}
+  /* minmax(0,1fr): the date inputs' 180px minimum made two 1fr columns 372px wide in a
+     296px phone card and widened the page to 420px (2026-09-27) */
+  .cit-tpl-card-sidebar .bcard .cit-book--bar{grid-template-columns:minmax(0,1fr)}
   .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__title{grid-column:auto}
-  .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__fields{grid-column:auto;grid-template-columns:1fr 1fr;align-items:start}
+  .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__fields{grid-column:auto;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__field{min-width:0}
+  .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__input{min-width:0}
   .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__fields .cit-book__field:last-child{grid-column:1/-1}
   .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__submit{grid-column:auto;height:auto;white-space:normal;width:100%}
   .cit-tpl-card-sidebar .bcard .cit-book--bar .cit-book__note{grid-column:auto}
@@ -245,7 +252,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   const header = `<header class="top">
     <div class="wrap top-in">
       <a class="brand" href="#top"><span class="mark">${BRAND_MARK}</span>${esc(data.name)}</a>
-      <ul class="top-nav">
+      <ul class="top-nav" data-cit-navsrc>
         ${navLinks}
       </ul>
       <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
@@ -389,7 +396,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
     </div>`;
 
   // -- mobile fixed booking bar ---------------------------------------------
-  const mobBook = `<div class="mob-book">
+  const mobBook = `<div class="mob-book" data-cit-mobbar>
     <div class="mb-rate">${
       rateText
         ? `${stars}<span>${esc(ratingValue)}<small>${

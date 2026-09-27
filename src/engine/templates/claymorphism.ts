@@ -234,7 +234,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
   // phone booking bar (2026-09-26): the masthead's band is dropped ≤720px, the CTA lives here
   const mobcta = hasContact
-    ? `<div class="cl-mobcta">
+    ? `<div class="cl-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cl-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

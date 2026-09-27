@@ -467,7 +467,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="og-mobcta">
+    ? `<div class="og-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`

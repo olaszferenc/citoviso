@@ -459,7 +459,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="tb-mobcta">
+    ? `<div class="tb-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

@@ -395,7 +395,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- mobile fixed CTA bar (only when a real contact target exists) ---------
   const mobcta = hasContact
-    ? `<div class="t-mobcta">
+    ? `<div class="t-mobcta" data-cit-mobbar>
     <span>${ratingStat ? `${starIcon()} <b>${esc(ratingStat.value)}</b>` : esc(data.name)}</span>
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>
   </div>`

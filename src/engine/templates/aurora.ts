@@ -496,7 +496,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="au-mobcta">
+    ? `<div class="au-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

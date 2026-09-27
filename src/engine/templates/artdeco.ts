@@ -272,7 +272,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
   // phone booking bar (2026-09-26): the masthead's band is dropped ≤720px, the CTA lives here
   const mobcta = hasContact
-    ? `<div class="ad-mobcta">
+    ? `<div class="ad-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`

@@ -233,7 +233,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   }
 
   const c0 = data.contact;
-  const nav = `<nav class="w-nav">
+  const nav = `<nav class="w-nav" data-cit-ownnav>
     <span class="w-links">
       <a href="#cit-about">${T(data, "A ház")}</a>
       <a href="#cit-rooms">${T(data, "Szobák")}</a>

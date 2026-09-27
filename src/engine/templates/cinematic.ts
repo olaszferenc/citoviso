@@ -61,9 +61,11 @@ const CINEMATIC_CSS = `
   .cit-mast{--mast-track:1.5px;--mast-sub:color-mix(in srgb, var(--cit-accent) 88%, white)}
   body.cit-tpl-cinematic .cit-mast-links{max-width:800px}
   .cn-nav.cn-on .cn-brand,.cn-nav.cn-on .cn-navlinks a{color:var(--cit-ink)}
-  .cn-nav .cn-wrap{display:flex;align-items:center;justify-content:space-between}
-  .cn-brand{font-family:var(--cit-font-display);font-size:20px;letter-spacing:1px;transition:.3s}
-  .cn-navlinks{display:flex;gap:28px;align-items:center}
+  .cn-nav .cn-wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  /* the name yields to the button (one ellipsised line) — it used to run under it at 390px */
+  .cn-brand{font-family:var(--cit-font-display);font-size:20px;letter-spacing:1px;transition:.3s;
+    min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cn-navlinks{display:flex;gap:28px;align-items:center;flex:none}
   .cn-navlinks a{font-size:14px;font-weight:500;transition:.25s}
   .cn-navlinks a:hover{color:var(--cit-accent)}
   @media(max-width:900px){.cn-navlinks a:not(.cit-btn){display:none}}
@@ -500,7 +502,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="cn-mobcta">
+    ? `<div class="cn-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>
   </div>`

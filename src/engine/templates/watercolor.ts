@@ -502,7 +502,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   </footer>`;
 
   const mobcta = hasContact
-    ? `<div class="wc-mobcta">
+    ? `<div class="wc-mobcta" data-cit-mobbar>
     ${mobCtaStat(data, ratingStat)}
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`

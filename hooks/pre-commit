@@ -1622,6 +1622,17 @@ if [ -f scripts/guest-mobile-check.mts ] && \
   npx tsx scripts/guest-mobile-check.mts --selftest >"$GATE_LOG" || gate_failed
   npx tsx scripts/guest-mobile-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Phone chrome gate (2026-09-28, contract: design-refs/tenant-site/mobile-chrome-B): while the
+# booking/enquiry block is on screen NO sticky booking button may show (phone bar, sticky
+# header CTA, sticky dock — phone AND desktop); a phone has a working menu; no bar on a
+# desktop; innerWidth = device. 19 templates × 2 pages × 2 viewports (~5 min headless), so
+# only when the runtime, the shared sections or a template is staged; --selftest first.
+if [ -f scripts/mobile-chrome-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|templateKit\.ts|moduleSections\.ts|primitives\.ts|render\.ts)|^src/generator/runtime\.ts|^assets/runtime/(cit-runtime\.js|cit-modules\.css)|^scripts/mobile-chrome-check'; then
+  echo "[pre-commit] mobile-chrome-check (foglalási blokknál nincs ragadó foglalás-gomb · telefonos menü)…"
+  npx tsx scripts/mobile-chrome-check.mts --selftest >"$GATE_LOG" || gate_failed
+  npx tsx scripts/mobile-chrome-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Hero readability gate (2026-09-01, contract: design-refs/engine/hero-contrast): every
 # text-on-PHOTO hero headline must stay legible on a worst-case BRIGHT photo (WCAG
 # AA-large). Headless render + pixel-measure (~15s), so it runs only when engine template/

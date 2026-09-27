@@ -151,7 +151,10 @@
 .cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
   .cit-rev-f__consent { min-height: 44px; align-items: center; }
   .cit-rev-f__consent input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
-}
+/* ⚠️ the two rules above look like a stray tail of the phone touch block (end of sheet) — a
+   lone "}" stood here and the sheet's LAST block was left open (2026-09-27). The "}" is
+   removed (the browser ignored it anyway); the two rules stay where they act today (every
+   width) — moving them is a behaviour change, not a fix for this thread. */
 .cit-book__note--err { color: var(--cit-accent); }
 
 /* Booking widget layout (owner decree 2026-08-23 — "milyen gagyi az elrendezése"):
@@ -1113,4 +1116,63 @@ a.cit-grat:hover {
   .cit-book__dinput { min-height: 44px; }
   .cit-price__tab, .cit-modsec__roomcta { min-height: 44px; display: inline-flex; align-items: center; }
   .cit-rmbtn { min-height: 44px; padding: 4px 8px; }
+}
+/* ⛔ that closing brace was missing on main (2026-09-27): the browser closes an open block
+   at the end of the sheet, so it went unnoticed — until a rule was appended after it and
+   silently became phone-only. Appending below this line is safe again. */
 
+/* ── Phone chrome (ADR-XXXX, contract: design-refs/tenant-site/mobile-chrome-B) ──────────
+   The behaviour lives in cit-runtime.js initPhoneChrome(); the templates only mark their
+   parts ([data-cit-mobbar], [data-cit-navsrc], [data-cit-ownnav]).
+   ① The phone booking bar is HIDDEN until the runtime says otherwise: it slides in after
+     the hero and leaves as soon as the booking block is on screen. No JS → no bar (the
+     hero's own button and the block are still there). No bottom bar above 700px at all.
+   ② A sticky booking button (header CTA, sticky dock) steps aside while the booking block
+     is on screen — every viewport.
+   ③ Where the page has no working phone nav, a menu button (top right) opens the page's
+     own section links; a phone's scrolled header then carries no booking button. */
+@media (max-width: 700px) {
+  html [data-cit-mobbar] { visibility: hidden; transform: translateY(110%);
+    transition: transform .28s ease, visibility 0s linear .28s; }
+  html [data-cit-mobbar].cit-mobbar--on { visibility: visible; transform: none;
+    transition: transform .28s ease, visibility 0s; }
+}
+@media (min-width: 701px) { html [data-cit-mobbar] { display: none !important; } }
+html .cit-away { visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+
+.cit-pmenu-btn, .cit-pmenu, .cit-pmenu-scrim { display: none; }
+@media (max-width: 720px), (max-height: 500px) {
+  html.cit-pnav [data-cit-topcta] { display: none !important; }
+  /* the name in a scrolled header / the masthead must not run under the round button */
+  html.cit-pnav [data-cit-topbar] { padding-right: 64px; box-sizing: border-box; }
+  html.cit-pnav .cit-mast { padding-left: 58px; padding-right: 58px; }
+  html.cit-pnav .cit-pmenu-btn { display: inline-flex; align-items: center; justify-content: center;
+    position: fixed; top: var(--cit-pmenu-top, 12px); right: 12px; z-index: 1002; width: 48px; height: 48px; padding: 0;
+    border-radius: 999px; cursor: pointer; color: var(--cit-bg);
+    border: 1px solid color-mix(in srgb, var(--cit-bg) 35%, transparent);
+    background: color-mix(in srgb, var(--cit-ink) 62%, transparent);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .cit-pmenu-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; }
+  .cit-pmenu-btn__close { display: none; }
+  .cit-pmenu-btn[aria-expanded="true"] .cit-pmenu-btn__open { display: none; }
+  .cit-pmenu-btn[aria-expanded="true"] .cit-pmenu-btn__close { display: inline-flex; }
+  html.cit-pnav .cit-pmenu-scrim:not([hidden]) { display: block; position: fixed; inset: 0; z-index: 1000;
+    background: color-mix(in srgb, var(--cit-ink) 45%, transparent); }
+  html.cit-pnav .cit-pmenu:not([hidden]) { display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
+    max-height: 100vh; overflow-y: auto; padding: calc(var(--cit-pmenu-top, 12px) + 60px) 20px 20px; box-sizing: border-box;
+    background: var(--cit-ink); color: var(--cit-bg);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--cit-ink) 35%, transparent); }
+  .cit-pmenu ul { list-style: none; margin: 0; padding: 0; }
+  .cit-pmenu li a { display: flex; align-items: center; min-height: 54px; color: var(--cit-bg);
+    text-decoration: none; font-family: var(--cit-font-body); font-size: 15px; letter-spacing: 2px;
+    text-transform: uppercase; border-bottom: 1px solid color-mix(in srgb, var(--cit-bg) 14%, transparent); }
+  .cit-pmenu__book { padding-top: 16px; }
+  .cit-pmenu li a.cit-pmenu__cta { justify-content: center; border: 0; min-height: 52px;
+    background: var(--cit-accent); color: var(--cit-on-accent); border-radius: var(--cit-radius); }
+  html.cit-pnav--open { overflow: hidden; }
+}
+
+/* The booking section already carries its own "Foglalás" heading (moduleSections,
+   #cit-booking h2) — the request card's title repeated it right under it. The card keeps
+   its title where it stands alone (receipt, sidebar dock, bar variant). */
+#cit-booking h2 ~ [data-cit-module="booking"] form.cit-book--request > .cit-book__title { display: none; }

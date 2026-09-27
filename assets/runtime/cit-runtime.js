@@ -36,6 +36,10 @@
   var SVG_CHEV =
     '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M15 5l-7 7 7 7"/></svg>';
+  // the shared icon set's "menu" glyph (src/ui/icons.ts) — the phone menu button
+  var SVG_MENU =
+    '<svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
+    '<path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   var SVG_CHECK =
     '<svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ' +
     'aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>';
@@ -1827,6 +1831,158 @@
     }
   }
 
+  // ── phone chrome: menu button + booking bar + sticky CTAs (ADR-XXXX, design-refs/
+  //    tenant-site/mobile-chrome-B). ONE behaviour for every template — the templates only
+  //    MARK their parts: the fixed phone booking bar [data-cit-mobbar], the nav whose links
+  //    the phone menu lists [data-cit-navsrc] (else the masthead's .cit-mast-links), and a
+  //    nav that already works on a phone [data-cit-ownnav] (no menu button there).
+  //
+  //  The owner's rule (2026-09-27, verbatim in the ADR): "amint elérjük a foglalási részt,
+  //  tűnjön el ez a sáv". A guest picked her dates and then tapped the bar's "Foglalás",
+  //  which stayed on screen the whole way, to send — it only jumps back up. So while ANY
+  //  of the booking (or enquiry-form) block is on screen, no sticky booking button shows
+  //  anywhere: not the phone bar, not a sticky header's CTA, not a sticky dock. The only
+  //  booking button in view there is the block's own submit.
+  function initPhoneChrome() {
+    var root = document.documentElement;
+    var book = document.getElementById("cit-booking");
+    var enq = document.getElementById("cit-enquiry");
+    // The block is the one holding the FORM: #cit-booking, else an enquiry section that
+    // carries a form. A CTA-only #cit-enquiry band is not "the block" — it is a CTA itself.
+    var block = book || (enq && enq.querySelector("form, [data-cit-module='booking'][data-cit-variant='bar']") ? enq : null);
+    var bar = document.querySelector("[data-cit-mobbar]");
+    var h1 = document.querySelector("h1");
+    var hero = h1 ? (h1.closest("header, section") || h1) : null;
+    var st = { hero: !!hero, block: false, menu: false };
+
+    function positioned(el) {
+      for (var e = el; e && e !== document.body; e = e.parentElement) {
+        var p = getComputedStyle(e).position;
+        if (p === "fixed" || p === "sticky") return e;
+      }
+      return null;
+    }
+    // Which booking buttons ride on something sticky? Measured, not declared: a header
+    // that sticks only on desktop (card-sidebar's card) or a dock that sticks only above
+    // 700px must be caught where — and only where — it sticks. Re-measured on resize.
+    var sticky = [];
+    function classify() {
+      sticky.forEach(function (s) {
+        s.target.classList.remove("cit-away");
+        s.a.removeAttribute("data-cit-topcta");
+      });
+      sticky = [];
+      var as = document.querySelectorAll('a[href="#cit-booking"], a[href="#cit-enquiry"]');
+      for (var i = 0; i < as.length; i++) {
+        var a = as[i];
+        if (a.closest("form, #cit-booking, #cit-pmenu")) continue;
+        var p = positioned(a);
+        if (!p) continue;
+        // A sticky enquiry DOCK hides as a whole (an empty band would remain otherwise);
+        // a CTA inside a header hides alone — the header's name and links stay.
+        var dock = p.id === "cit-enquiry" || p.closest("#cit-enquiry") || p.querySelector("#cit-enquiry") ? p : null;
+        var s = { a: a, target: dock || a };
+        if (!a.closest("[data-cit-mobbar]") && p.getBoundingClientRect().top < window.innerHeight / 2) {
+          a.setAttribute("data-cit-topcta", "");
+          p.setAttribute("data-cit-topbar", "");
+        }
+        sticky.push(s);
+      }
+      sync();
+    }
+    function sync() {
+      sticky.forEach(function (s) { s.target.classList.toggle("cit-away", st.block); });
+      if (bar) bar.classList.toggle("cit-mobbar--on", !st.hero && !st.block && !st.menu);
+    }
+    // The bar waits for the end of the hero only where the hero carries its OWN booking
+    // button (one booking button at a time). A hero without one (card-sidebar's mosaic,
+    // tilted-gallery's name) would otherwise leave the first screen with no way to book.
+    var heroCta = hero && [].some.call(hero.querySelectorAll('a[href="#cit-booking"], a[href="#cit-enquiry"]'), function (a) {
+      return !positioned(a) && a.offsetParent !== null;
+    });
+    if (!heroCta) { hero = null; st.hero = false; }
+    if ("IntersectionObserver" in window) {
+      if (hero) new IntersectionObserver(function (es) { st.hero = es[es.length - 1].isIntersecting; sync(); }).observe(hero);
+      if (block) new IntersectionObserver(function (es) { st.block = es[es.length - 1].isIntersecting; sync(); }).observe(block);
+    }
+    classify();
+    window.addEventListener("resize", classify);
+
+    // ── the phone menu (art templates without a working phone nav) ──
+    if (!/\bcit-tpl-/.test(document.body.className) || document.querySelector("[data-cit-ownnav]")) return;
+    var src = document.querySelector("[data-cit-navsrc]") || document.querySelector(".cit-mast-links");
+    if (!src) return;
+    var items = "", bookItem = "", seen = {};
+    var links = src.querySelectorAll('a[href^="#"]');
+    for (var j = 0; j < links.length; j++) {
+      var href = links[j].getAttribute("href"), label = (links[j].textContent || "").trim();
+      if (!label || href === "#" || href === "#top" || seen[href]) continue;
+      seen[href] = 1;
+      var li = '<li><a href="' + esc(href) + '">' + esc(label) + "</a></li>";
+      if (href === "#cit-booking" || href === "#cit-enquiry") bookItem = '<li class="cit-pmenu__book"><a class="cit-pmenu__cta" href="' + esc(href) + '">' + esc(label) + "</a></li>";
+      else items += li;
+    }
+    if (!items) return;
+    // the header's own booking button (outside the link list: card-sidebar) is the last row
+    if (!bookItem) {
+      var host = src.closest("header, nav, .cit-mast");
+      var cta = host && host.querySelector('a[href="#cit-booking"], a[href="#cit-enquiry"]');
+      if (cta && (cta.textContent || "").trim()) {
+        bookItem = '<li class="cit-pmenu__book"><a class="cit-pmenu__cta" href="' + esc(cta.getAttribute("href")) + '">' + esc(cta.textContent.trim()) + "</a></li>";
+      }
+    }
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cit-pmenu-btn";
+    btn.setAttribute("aria-controls", "cit-pmenu");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-label", tr("Menü"));
+    btn.innerHTML = '<span class="cit-pmenu-btn__open">' + SVG_MENU + '</span><span class="cit-pmenu-btn__close">' + SVG_X + "</span>";
+    var scrim = document.createElement("div");
+    scrim.className = "cit-pmenu-scrim";
+    scrim.hidden = true;
+    var menu = document.createElement("nav");
+    menu.id = "cit-pmenu";
+    menu.className = "cit-pmenu";
+    menu.setAttribute("aria-label", tr("Menü"));
+    menu.hidden = true;
+    menu.innerHTML = "<ul>" + items + bookItem + "</ul>";
+    document.body.appendChild(scrim);
+    document.body.appendChild(menu);
+    document.body.appendChild(btn);
+    root.classList.add("cit-pnav");
+    // The sent mock opens with the lead's framing bar ON TOP of the page (in flow, it
+    // scrolls away) — no layer may paint over it (prospect-framing-check). The button
+    // waits under it while it is on screen.
+    var framing = document.querySelector("[data-cit-framing]");
+    if (framing) {
+      var place = function () {
+        var b = framing.getBoundingClientRect().bottom;
+        root.style.setProperty("--cit-pmenu-top", Math.max(12, Math.round(b + 8)) + "px");
+      };
+      place();
+      window.addEventListener("scroll", place, { passive: true });
+      window.addEventListener("resize", place);
+    }
+    function set(open) {
+      menu.hidden = !open;
+      scrim.hidden = !open;
+      btn.setAttribute("aria-expanded", String(open));
+      btn.setAttribute("aria-label", open ? tr("Menü bezárása") : tr("Menü"));
+      root.classList.toggle("cit-pnav--open", open);
+      st.menu = open;
+      sync();
+      if (open) { var f = menu.querySelector("a"); if (f) f.focus({ preventScroll: true }); }
+    }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); set(menu.hidden); });
+    scrim.addEventListener("click", function () { set(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) { set(false); btn.focus(); } });
+    document.addEventListener("click", function (e) { if (!menu.hidden && !menu.contains(e.target)) set(false); });
+    // a chosen item closes the menu; the anchor's own jump then lands under the sticky
+    // bar (scroll-margin-top: --cit-stick, cit-modules.css)
+    menu.addEventListener("click", function (e) { if (e.target.closest("a")) set(false); });
+  }
+
   // ── sticky-bar clearance for anchor jumps (cit-modules.css: scroll-margin-top) ──
   // Which bars WILL sit at the top when the guest jumps? A fixed bar at the top, and a
   // sticky one whose computed `top` is (near) 0 — measured without scrolling, so a nav
@@ -1855,7 +2011,7 @@
     window.addEventListener("resize", measure);
   }
 
-  function boot() { initStickClearance(); hydrate(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
+  function boot() { initStickClearance(); hydrate(); initPhoneChrome(); initReveal(); initDemoForms(); initLiveFormBase(); markSamplePhotos(); initReviewPopup(); shiftSampleDates(); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

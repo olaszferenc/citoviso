@@ -93,11 +93,13 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
    in two quiet rows: brand + pill, then the three links in a scrollable row; every link
    a 44px thumb target. The photo opening below stays untouched. */
 @media(max-width:879px){
-  .a-nav{grid-template-columns:1fr auto;grid-template-areas:"brand right" "links links";row-gap:2px;padding:6px 16px 4px}
-  .a-nav .a-brand{grid-area:brand;text-align:left}
+  /* minmax(0,…) + min-width:0: a plain 1fr took the scrollable link row's full width (407px)
+     as its minimum and widened a phone to 423–454px (long name, 2026-09-27) */
+  .a-nav{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand right" "links links";row-gap:2px;padding:6px 16px 4px}
+  .a-nav .a-brand{grid-area:brand;text-align:left;min-width:0;overflow-wrap:anywhere}
   .a-nav .a-right{display:flex;grid-area:right}
   .a-nav .a-right a:not(.a-pill){display:none}
-  .a-nav .a-links{display:flex;grid-area:links;gap:18px;overflow-x:auto;scrollbar-width:none}
+  .a-nav .a-links{display:flex;grid-area:links;gap:18px;overflow-x:auto;scrollbar-width:none;min-width:0}
   .a-nav .a-links::-webkit-scrollbar{display:none}
   .a-nav a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap}
   .a-nav .a-pill{min-height:44px;padding:0 20px;box-sizing:border-box}
@@ -262,7 +264,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   }
 
   const c0 = data.contact;
-  const nav = `<nav class="a-nav">
+  const nav = `<nav class="a-nav" data-cit-ownnav>
     <span class="a-links">
       <a href="#cit-about">${T(data, "A ház")}</a>
       <a href="#cit-rooms">${T(data, "Szobák")}</a>

@@ -236,7 +236,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ]
     .filter(Boolean)
     .join("\n      ");
-  const nav = `<nav class="e-nav">
+  const nav = `<nav class="e-nav" data-cit-ownnav>
     <div class="e-wrap">
       ${navLinks}
     </div>
