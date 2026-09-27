@@ -1,4 +1,4 @@
-## ADR-XXXX — A kapu alanya saját fixture vagy kimondott predikátum, sosem a közös dev-DB „első sora” — és egy őr, ami a vak `limit(1)`-et megfogja
+## ADR-0252 — A kapu alanya saját fixture vagy kimondott predikátum, sosem a közös dev-DB „első sora” — és egy őr, ami a vak `limit(1)`-et megfogja
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (tulaj: „nyiss új sessiont”, brief `~/rc-briefs/kapu-sajat-fixture-elv.md`) · **Kapcsolódik:** ADR-0249 ⑥ (az elv első kimondása, a tiszta-main próba), ADR-0229/0230 (író-sáv, `own-fixture-only`), ADR-0198 (szoba-rács csak 2+ egységnél), ADR-0250/0251 (a lead-lap időzítése), ADR-0067 ③ (operátoronkénti konzol-nyelv)
 

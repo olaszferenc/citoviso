@@ -35,7 +35,7 @@ const say = (ok: boolean, what: string, detail = ""): void => {
 };
 
 /** A lead that really has tracked links — the guard must measure the shipped view. */
-// Named predicate, loud when unmet (ADR-XXXX) — not "the newest prospect's lead".
+// Named predicate, loud when unmet (ADR-0252) — not "the newest prospect's lead".
 const lead = await gateLeadWithMockAndProspect(db);
 const real = await getProspects(lead.id);
 say(real.length > 0, `van mérhető sor (${lead.name}: ${real.length} követett link)`);
@@ -124,7 +124,7 @@ for (const c of CASES.slice(0, 2)) {
 }
 
 // ── Z4: a kimásolható levél küldés UTÁN megmondja, hogy az a második példány ──
-// A draftable prospect (ADR-XXXX): without one Z4/Z6/Z7 used to be skipped without a word.
+// A draftable prospect (ADR-0252): without one Z4/Z6/Z7 used to be skipped without a word.
 const anyProspect = await gateDraftableProspect(db);
 const d = anyProspect ? await buildDraftForProspect(anyProspect.id) : null;
 if (d) {

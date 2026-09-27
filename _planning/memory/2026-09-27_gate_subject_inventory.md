@@ -1,4 +1,4 @@
-# 2026-09-27 — Kapu-alany leltár: melyik kapu mér a közös dev-DB vak „első során” (ADR-XXXX)
+# 2026-09-27 — Kapu-alany leltár: melyik kapu mér a közös dev-DB vak „első során” (ADR-0252)
 
 **Kiváltó:** brief `~/rc-briefs/kapu-sajat-fixture-elv.md` (a `cit873a226d` Webcím-szálból, tulaj: „nyiss új sessiont”). Egy napon három kapu volt piros a tiszta mainen a közös DB sorrendje miatt (photo-normalize · console-contrast · outreach-link-live).
 

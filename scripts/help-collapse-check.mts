@@ -373,7 +373,7 @@ async function measureFinanceHelpIcons(): Promise<void> {
   await ctx.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const pg = await ctx.newPage();
 
-  // A partner-lap valós azonosítót kér: aktív, kapcsolattartós partner (ADR-XXXX) — ha nincs,
+  // A partner-lap valós azonosítót kér: aktív, kapcsolattartós partner (ADR-0252) — ha nincs,
   // a gatePartnerWithContact ELŐFELTÉTEL-hibával bukik (a kihagyott eset nem zöld).
   const p = await gatePartnerWithContact(db);
   const screens: ReadonlyArray<{ url: string; anchor: string; label: string }> = [

@@ -57,7 +57,7 @@ async function bootConsole(): Promise<{ port: number; cookie: string }> {
   return { port: addr.port, cookie: mintOperatorCookieValue(op.id) };
 }
 
-/** A prospect the console can draft for (points at a mock) — named predicate, loud when unmet (ADR-XXXX). */
+/** A prospect the console can draft for (points at a mock) — named predicate, loud when unmet (ADR-0252). */
 async function pickProspect(): Promise<string> {
   const { db } = await import("../src/db/client.js");
   return (await gateDraftableProspect(db)).id;

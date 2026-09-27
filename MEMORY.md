@@ -11,7 +11,7 @@ Utolsó frissítés: 2026-09-27 (🏠 **Vendég foglalási nyugta: „Vissza a k
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-09-27 — kapu-alany: saját fixture vagy kimondott predikátum, ADR-XXXX)
+## Párhuzamos szál (2026-09-27 — kapu-alany: saját fixture vagy kimondott predikátum, ADR-0252)
 A brief (`~/rc-briefs/kapu-sajat-fixture-elv.md`): három kapu volt piros a tiszta mainen a közös DB „első sora” miatt.
 Leltár 230 fájlon: 40 vak „első sor” 22 kapuban (16 az operátor-belépés — az operátor `lang`-ja a konzol nyelve).
 36 javítva a nevesített alanyokra (`scripts/lib/gate-subject.mts`), 4 indokolt kivétel; őr: `scripts/gate-subject-check.mts`

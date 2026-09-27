@@ -30,7 +30,7 @@ const ok = (cond: boolean, msg: string): void => {
 try {
   if (!server.listening) await new Promise((r) => server.once("listening", r));
   const port = (server.address() as { port: number }).port;
-  // /admin/photos needs a tenant with a site; an arbitrary first login is a shared-DB accident (ADR-XXXX).
+  // /admin/photos needs a tenant with a site; an arbitrary first login is a shared-DB accident (ADR-0252).
   const user = await gateTenantUserWithSite(db);
   const cookie = `cit_session=${mintTenantCookieValue(user.id)}`;
 

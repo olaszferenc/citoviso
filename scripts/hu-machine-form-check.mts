@@ -538,7 +538,7 @@ async function loggedInSurfaces(): Promise<void> {
   // (ahol a „10-a/-e" élt) MEG SEM JELENIK. Először előfizetéssel rendelkezőt keresünk,
   // és csak ha nincs, esünk vissza bármelyikre — a lefedettség-tanú alább kimondja,
   // ha így a mérés lyukas maradt.
-  // Both choices are named predicates (ADR-XXXX): a tenant with a site AND a subscription,
+  // Both choices are named predicates (ADR-0252): a tenant with a site AND a subscription,
   // else a tenant with a site (gateTenantUserWithSite — loud when even that is missing).
   const tenantUser =
     (await db

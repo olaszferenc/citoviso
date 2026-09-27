@@ -1,4 +1,4 @@
-// GATE-SUBJECT GUARD — egy kapu nem mérhet a közös dev-DB „első során” (ADR-XXXX, ADR-0249 ⑥).
+// GATE-SUBJECT GUARD — egy kapu nem mérhet a közös dev-DB „első során” (ADR-0252, ADR-0249 ⑥).
 //
 // MIT VÉD. A kapuk a KÖZÖS dev-DB-n futnak (`citoviso_dev`, minden szál ugyanazt látja). Ha egy kapu
 // az alanyát „az első tenant_user / az első mock_artifact / a legújabb lead” módon veszi ki, akkor

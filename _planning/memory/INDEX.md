@@ -13,7 +13,7 @@
 - [2026-09-27_lead_lap_photo_health_lassu.md](2026-09-27_lead_lap_photo_health_lassu.md) — 2026-09-27 — A lead-lap ~31 s-os photo-health várakozása: a gazdagép-szünet a cache-találatra is lefutott
 - [2026-09-27_kapu_tiszta_main_proba.md](2026-09-27_kapu_tiszta_main_proba.md) — 2026-09-27 — „Piros a tiszta mainen is?”: a bukott kapu automatikus tiszta-main próbája
 - [2026-09-27_idoszaki_arak_datumvalaszto.md](2026-09-27_idoszaki_arak_datumvalaszto.md) — 2026-09-27 — Időszaki árak: dátumválasztó, névlista, év-naptár
-- [2026-09-27_gate_subject_inventory.md](2026-09-27_gate_subject_inventory.md) — 2026-09-27 — Kapu-alany leltár: melyik kapu mér a közös dev-DB vak „első során” (ADR-XXXX)
+- [2026-09-27_gate_subject_inventory.md](2026-09-27_gate_subject_inventory.md) — 2026-09-27 — Kapu-alany leltár: melyik kapu mér a közös dev-DB vak „első során” (ADR-0252)
 - [2026-09-27_foto_feltoltes_64kb_konvertalas.md](2026-09-27_foto_feltoltes_64kb_konvertalas.md) — 2026-09-27 — Fotó-feltöltés: a 64 KB-os body-határ + feltöltéskori konvertálás
 - [2026-09-27_foglalasi_levelek_uj_keret.md](2026-09-27_foglalasi_levelek_uj_keret.md) — 2026-09-27 — Foglalási levelek: professzionális keret, a szállás elérhetőségével; a tulajé a Foglalások fülre visz
 - [2026-09-27_foglalas_nyugta_kezdolap_gomb.md](2026-09-27_foglalas_nyugta_kezdolap_gomb.md) — 2026-09-27 — Vendég foglalási nyugta: „Vissza a kezdőlapra” gomb

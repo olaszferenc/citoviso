@@ -1,5 +1,5 @@
 // Named gate subjects from the SHARED dev DB — each one an explicit predicate, and a LOUD failure
-// when nothing satisfies it (ADR-XXXX, ADR-0249 ⑥; guard: scripts/gate-subject-check.mts).
+// when nothing satisfies it (ADR-0252, ADR-0249 ⑥; guard: scripts/gate-subject-check.mts).
 //
 // A gate that takes "the first operator_user / the newest lead / any partner" measures the shared
 // DB's row order, not the change under test: 2026-09-27 three gates were red on a clean origin/main

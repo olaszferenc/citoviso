@@ -112,7 +112,7 @@ const PORT = addr.port;
 if (!consoleServer.listening) await once(consoleServer, "listening");
 const CONSOLE_PORT = (consoleServer.address() as { port: number }).port;
 
-// A tenant-admin login with a site (ADR-XXXX): the former `claude-test ?? first row` never found a
+// A tenant-admin login with a site (ADR-0252): the former `claude-test ?? first row` never found a
 // `claude-test` tenant_user, so it measured whichever login the shared DB listed first.
 const tu = await gateTenantUserWithSite(db);
 
