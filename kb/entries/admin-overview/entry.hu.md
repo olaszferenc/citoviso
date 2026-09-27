@@ -15,8 +15,8 @@ oldala, és mi a következő teendője.
 ## A kezelőfelület felépítése
 
 - **Gépen** a bal oldali menü csoportokba rendezve mutatja a lapokat: **„Az oldalam”** (Szövegek,
-  Fotók, Modulok), **„Vendégek”** (Foglalások, Üzenetek), **„Üzlet”** (Webcím, Forgalom,
-  Dokumentumok) és **„Fiók”** (Fiók, Súgó). A Fotók és a Modulok mellett a darabszám, az Üzenetek
+  Fotók, Elérhetőség, Modulok), **„Vendégek”** (Foglalások, Üzenetek), **„Üzlet”** (Webcím, Forgalom,
+  Dokumentumok, Pénztárca) és **„Fiók”** (Fiók, Súgó). A Fotók és a Modulok mellett a darabszám, az Üzenetek
   mellett az olvasatlanok száma áll. A **„Modulok”** alatt lenyíló lista a beállítható moduljait
   sorolja fel — egy névre kattintva az adott modul beállításai nyílnak meg. A menü tetején lévő nyíllal a menü keskeny ikonsávvá
   csukható, és úgy is marad, amíg vissza nem nyitja.

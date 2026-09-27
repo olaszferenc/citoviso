@@ -7,7 +7,7 @@ anchors: admin.wallet
 updated: 2026-09-24
 ---
 
-A **Pénztárca** fülön látja, melyik bankkártyáról vonjuk le a díjait, mikor jön a
+A **Pénztárca** fül a menü **„Üzlet”** csoportjában, a Dokumentumok alatt áll. Itt látja, melyik bankkártyáról vonjuk le a díjait, mikor jön a
 következő terhelés, és itt tudja a kártyát lecserélni vagy az automatikus terhelést
 visszavonni. A teljes kártyaszámot sem mi, sem a felület nem tárolja: a kártya képén
 csak az **utolsó 4 számjegy** és a lejárat áll.
