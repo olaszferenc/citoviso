@@ -18,7 +18,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { tenantSiteUrl } from "../domains.js";
 import { huArticleLower } from "../hu.js";
-import { getEmailSender } from "../email/sender.js";
+import { getEmailSender, type EmailMessage } from "../email/sender.js";
 import {
   hostMailHtml,
   mailButtonGhost,
@@ -358,6 +358,94 @@ async function hostContact(siteId: string, hostName: string): Promise<HostContac
 }
 
 /**
+ * The frozen price as panel rows: the breakdown lines, then the emphasised total.
+ * An OFFER's price is captioned as such (booking-offer ⑧) — "the price list at
+ * booking time" would misdescribe where the number came from.
+ */
+function priceRows(req: RequestRow, lang: string): MailDetailRow[] {
+  if (!req.quoted_total) return [];
+  const lines = quoteRows(req, lang);
+  return [
+    ...(req.offered_at ? [{ label: T(lang, "Az ajánlott ár:"), value: "", caption: true, rule: true }] : []),
+    ...lines.map((r, i) => ({ label: r.label, value: r.value, rule: !req.offered_at && i === 0 })),
+    {
+      label: T(lang, "Összesen"),
+      value: formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"),
+      emphasis: true,
+      rule: !req.offered_at && !lines.length,
+    },
+  ];
+}
+
+/** Who asked — the first group of every OWNER-facing booking letter. */
+function guestRows(req: RequestRow, lang: string): MailDetailRow[] {
+  const phone = req.guest_phone ? displayPhone(req.guest_phone) : "";
+  return [
+    { label: T(lang, "Vendég"), value: req.guest_name },
+    ...(phone ? [{ label: T(lang, "Telefon"), value: phone, href: `tel:${phone.replace(/\s+/g, "")}` }] : []),
+    { label: T(lang, "E-mail"), value: req.guest_email, href: `mailto:${req.guest_email}` },
+  ];
+}
+
+/** The owner's way in: the admin's Foglalások tab (the login keeps it as `next`). */
+function adminBookingsUrl(): string {
+  return `${config.publicSiteUrl}/admin?tab=foglalasok`;
+}
+
+/**
+ * A GUEST-facing booking letter in the property's name (approved variant C):
+ * the caller's blocks, then the property's contact card and the reply hint.
+ */
+async function guestLetterHtml(
+  req: RequestRow,
+  ctx: SiteMailContext,
+  o: { subtitle: string; heading: string; kicker?: string; blocks: string[] },
+): Promise<string> {
+  return hostMailHtml({
+    lang: ctx.lang,
+    hostName: ctx.hostName,
+    subtitle: o.subtitle,
+    heading: o.heading,
+    ...(o.kicker ? { kicker: o.kicker } : {}),
+    blocks: [
+      ...o.blocks,
+      mailContactCard(ctx.lang, await hostContact(req.site_id, ctx.hostName)),
+      mailNote(esc(T(ctx.lang, "Kérdése van? Válaszoljon erre a levélre — közvetlenül a szállásadónak ír."))),
+    ],
+  });
+}
+
+/**
+ * An OWNER-facing booking letter (approved variant B): the platform frame, the
+ * admin's Foglalások tab as the main button. It carries the GUEST's personal
+ * data to their controller (the tenant) — audience stays "guest": no pilot BCC.
+ */
+function ownerLetter(o: {
+  to: string;
+  subject: string;
+  text: string;
+  lang: string;
+  hostName: string;
+  kicker: string;
+  heading: string;
+  blocks: string[];
+}): EmailMessage {
+  return {
+    ...platformMail({
+      to: o.to,
+      subject: o.subject,
+      text: o.text,
+      lang: o.lang,
+      kicker: o.kicker,
+      heading: o.heading,
+      blocks: [...o.blocks, mailButton(adminBookingsUrl(), T(o.lang, "Foglalások megnyitása"))],
+      siteName: o.hostName,
+    }),
+    audience: "guest",
+  };
+}
+
+/**
  * Guard around every booking mail: the DECISION is already committed when the
  * mail goes out, so a transport failure must not abort the rest of the flow —
  * measured (FK-007 first run): an SMTP 553 after the accept left the overlapping
@@ -370,15 +458,6 @@ async function mailSafe(label: string, send: () => Promise<void>): Promise<void>
   } catch (err) {
     console.error(`[booking:mail] ${label} — a levél NEM ment ki:`, err);
   }
-}
-
-/** Simple HTML rendering of a plain-text booking mail (shared by every letter). */
-function bookingHtml(body: string, quote?: string | null): string {
-  const quoted = quote
-    ? `<blockquote style="border-left:3px solid #35c4e0;margin:14px 0;padding:8px 14px;` +
-      `color:#33495e;font-style:italic">${esc(quote)}</blockquote>`
-    : "";
-  return `<p style="font-size:16px;line-height:1.7">${esc(body).replace(/\n/g, "<br>")}</p>${quoted}`;
 }
 
 /**
@@ -812,8 +891,6 @@ async function notifyOwner(
   // Approved plan (owner variant B, 2026-09-27): the admin's Foglalások tab is the
   // main path — the other requests and the calendar are there — the one-tap
   // verdict stays as a secondary link.
-  const adminUrl = `${config.publicSiteUrl}/admin?tab=foglalasok`;
-  const guestPhone = req.guest_phone ? displayPhone(req.guest_phone) : "";
   const blocks = [
     mailPara(
       esc(
@@ -831,11 +908,7 @@ async function notifyOwner(
         ]
       : []),
     mailDetails([
-      { label: T(lang, "Vendég"), value: req.guest_name },
-      ...(guestPhone
-        ? [{ label: T(lang, "Telefon"), value: guestPhone, href: `tel:${guestPhone.replace(/\s+/g, "")}` }]
-        : []),
-      { label: T(lang, "E-mail"), value: req.guest_email, href: `mailto:${req.guest_email}` },
+      ...guestRows(req, lang),
       ...stayRows(req, lang, true),
       ...(req.quoted_total
         ? [
@@ -849,7 +922,7 @@ async function notifyOwner(
         : []),
     ]),
     ...(req.message ? [mailQuote(T(lang, "A vendég üzenete:"), req.message)] : []),
-    mailButton(adminUrl, T(lang, "Foglalások megnyitása")),
+    mailButton(adminBookingsUrl(), T(lang, "Foglalások megnyitása")),
     mailNote(
       `${esc(T(lang, "Gyors döntés innen is:"))} ` +
         `<a href="${esc(isQuote ? offerUrl : yes)}" style="color:#0b6f86;font-weight:600">${esc(
@@ -1153,7 +1226,10 @@ async function sendGuestVerdict(
 
   let subject: string;
   let body: string;
+  let html: string;
   let attachments: { filename: string; content: Buffer; contentType: string }[] = [];
+  const greeting = mailPara(esc(T(lang, "Kedves {name}!", { name: req.guest_name })));
+  const noteBlock = note ? [mailQuote(T(lang, "A szállásadó üzenete:"), note)] : [];
 
   if (outcome === "accepted") {
     subject = T(lang, "Visszaigazolt foglalás: {from} — {to}", { from, to });
@@ -1179,6 +1255,34 @@ async function sendGuestVerdict(
           `\n${cancelUrl}`
         : "") +
       `\n\n${host}\n`;
+    html = await guestLetterHtml(req, ctx, {
+      subtitle: T(lang, "Visszaigazolt foglalás"),
+      kicker: mailLabel(T(lang, "Végleges foglalás"), "ok"),
+      heading: T(lang, "A foglalása végleges"),
+      blocks: [
+        greeting,
+        mailPara(esc(T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit: "" }))),
+        mailDetails([...stayRows(req, lang, false), ...priceRows(req, lang)]),
+        ...noteBlock,
+        mailPara(esc(T(lang, "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre."))),
+        mailNote(
+          esc(
+            T(
+              lang,
+              "A mellékelt naptár-fájllal a tartózkodást egy kattintással naptárába teheti (Google, Outlook, Apple).",
+            ),
+          ),
+        ),
+        ...(cancelUrl
+          ? [
+              mailNote(
+                `${esc(T(lang, "Ha mégsem tudnak jönni, kérjük, mondja le itt:"))} ` +
+                  `<a href="${esc(cancelUrl)}" style="color:#0b6f86;font-weight:600">${esc(T(lang, "Foglalás lemondása"))}</a>`,
+              ),
+            ]
+          : []),
+      ],
+    });
     // Plan C ②: the .ics is the "add to calendar" affordance — PUBLISH, one event.
     attachments = [
       {
@@ -1206,6 +1310,18 @@ async function sendGuestVerdict(
       (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
       T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
       `\n\n${host}\n`;
+    html = await guestLetterHtml(req, ctx, {
+      subtitle: T(lang, "Foglalási kérés"),
+      kicker: mailLabel(T(lang, "Nem szabad"), "wait"),
+      heading: T(lang, "A kért időpont sajnos nem szabad"),
+      blocks: [
+        greeting,
+        mailPara(esc(T(lang, "Sajnáljuk, a kért időpont ({from} — {to}) nem szabad{unit}.", { from, to, unit: "" }))),
+        mailDetails(stayRows(req, lang, false)),
+        ...noteBlock,
+        mailPara(esc(T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal."))),
+      ],
+    });
   } else {
     // auto_declined — another request won the same nights (approved plan ⑥).
     subject = T(lang, "A kért időszak időközben betelt: {from} — {to}", { from, to });
@@ -1220,6 +1336,25 @@ async function sendGuestVerdict(
       `\n\n` +
       T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal.") +
       `\n\n${host}\n`;
+    html = await guestLetterHtml(req, ctx, {
+      subtitle: T(lang, "Foglalási kérés"),
+      kicker: mailLabel(T(lang, "Az időszak betelt"), "wait"),
+      heading: T(lang, "A kért időszak időközben betelt"),
+      blocks: [
+        greeting,
+        mailPara(
+          esc(
+            T(
+              lang,
+              "Sajnáljuk — a kért időszakra ({from} — {to}) a szállásadó időközben másik foglalást igazolt vissza, így az betelt{unit}.",
+              { from, to, unit: "" },
+            ),
+          ),
+        ),
+        mailDetails(stayRows(req, lang, false)),
+        mailPara(esc(T(lang, "Ha más időpont is szóba jöhet, keressen minket bizalommal."))),
+      ],
+    });
   }
 
   await getEmailSender().send({
@@ -1229,7 +1364,7 @@ async function sendGuestVerdict(
     ...guestIdentity(ctx),
     subject,
     text: body,
-    html: bookingHtml(body),
+    html,
     ...(attachments.length ? { attachments } : {}),
   });
 }
@@ -1384,6 +1519,26 @@ export async function cancelRequest(opts: {
         "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést.",
       ) +
       `\n\n${ctx.hostName}\n`;
+    const guestHtml = await guestLetterHtml(req, ctx, {
+      subtitle: T(ctx.lang, "Foglalás lemondása"),
+      kicker: mailLabel(T(ctx.lang, "Lemondva"), "wait"),
+      heading: T(ctx.lang, "A szállásadó lemondta a foglalását"),
+      blocks: [
+        mailPara(esc(T(ctx.lang, "Kedves {name}!", { name: req.guest_name }))),
+        mailPara(
+          esc(
+            T(
+              ctx.lang,
+              "A szállásadó sajnálattal lemondta a {from} — {to} közötti, korábban visszaigazolt foglalását.",
+              hu,
+            ),
+          ),
+        ),
+        mailDetails(stayRows(req, ctx.lang, false)),
+        ...(note ? [mailQuote(T(ctx.lang, "A szállásadó üzenete:"), note)] : []),
+        mailNote(esc(T(ctx.lang, "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést."))),
+      ],
+    });
     await mailSafe("guest-cancelled-by-owner", () =>
       getEmailSender().send({
         to: req.guest_email,
@@ -1391,7 +1546,7 @@ export async function cancelRequest(opts: {
         ...guestIdentity(ctx),
         subject: T(ctx.lang, "Foglalása lemondva: {from} — {to}", hu),
         text: body,
-        html: bookingHtml(body),
+        html: guestHtml,
         attachments: [cancelIcs],
       }).then(() => undefined));
   } else {
@@ -1410,6 +1565,17 @@ export async function cancelRequest(opts: {
         "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést.",
       ) +
       `\n\n${ctx.hostName}\n`;
+    const guestHtml = await guestLetterHtml(req, ctx, {
+      subtitle: T(ctx.lang, "Foglalás lemondása"),
+      kicker: mailLabel(T(ctx.lang, "Lemondva"), "wait"),
+      heading: T(ctx.lang, "Lemondás megerősítve"),
+      blocks: [
+        mailPara(esc(T(ctx.lang, "Kedves {name}!", { name: req.guest_name }))),
+        mailPara(esc(T(ctx.lang, "Megerősítjük: a {from} — {to} közötti foglalását lemondta, a napok felszabadultak.", hu))),
+        mailDetails(stayRows(req, ctx.lang, false)),
+        mailNote(esc(T(ctx.lang, "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést."))),
+      ],
+    });
     await mailSafe("guest-cancel-ack", () =>
       getEmailSender().send({
         to: req.guest_email,
@@ -1417,7 +1583,7 @@ export async function cancelRequest(opts: {
         ...guestIdentity(ctx),
         subject: T(ctx.lang, "Lemondás megerősítve: {from} — {to}", hu),
         text: guestBody,
-        html: bookingHtml(guestBody),
+        html: guestHtml,
         attachments: [cancelIcs],
       }).then(() => undefined));
     // …and tell the OWNER their calendar just changed.
@@ -1434,15 +1600,30 @@ export async function cancelRequest(opts: {
         guest: req.guest_name,
         ...hu,
       });
-      await mailSafe("owner-notify-guest-cancel", () =>
-        getEmailSender().send({
-          to: ctx.notifyList.join(", "),
-          // The mail carries the guest's data to their controller (the tenant).
-          audience: "guest",
-          subject,
-          text: ownerBody,
-          html: bookingHtml(ownerBody),
-        }).then(() => undefined));
+      const ownerMsg = ownerLetter({
+        to: ctx.notifyList.join(", "),
+        subject,
+        text: ownerBody,
+        lang: ctx.lang,
+        hostName: ctx.hostName,
+        kicker: mailLabel(T(ctx.lang, "Foglalás lemondva"), "wait"),
+        heading: T(ctx.lang, "A vendég lemondta a foglalását"),
+        blocks: [
+          mailPara(
+            esc(
+              T(ctx.lang, "{guest} lemondta a {from} — {to} közötti, visszaigazolt foglalását.", {
+                guest: req.guest_name,
+                ...hu,
+              }),
+            ),
+          ),
+          mailDetails([...guestRows(req, ctx.lang), ...stayRows(req, ctx.lang, true)]),
+          ...(note ? [mailQuote(T(ctx.lang, "A vendég üzenete:"), note)] : []),
+          mailPara(esc(T(ctx.lang, "A napok újra szabadok a naptárban — a honlapon máris foglalhatók."))),
+        ],
+      });
+      // The mail carries the guest's data to their controller (the tenant).
+      await mailSafe("owner-notify-guest-cancel", () => getEmailSender().send(ownerMsg).then(() => undefined));
       if (ctx.tenantId) {
         await logTenantMessage({
           tenantId: ctx.tenantId,
@@ -1608,15 +1789,33 @@ async function sendOwnerExpired(req: RequestRow, hours: number): Promise<void> {
     `\n\n` +
     T(lang, "A válaszidőt a Foglalások fül beállításainál tudja módosítani.") +
     `\n\n${ctx.hostName}\n`;
-  await getEmailSender().send({
-    to: ctx.notifyList.join(", "),
-    // Carries the guest's data to their controller (the tenant) — same basis as
-    // the other owner-facing booking mails.
-    audience: "guest",
-    subject,
-    text: body,
-    html: bookingHtml(body),
-  });
+  // Carries the guest's data to their controller (the tenant) — same basis as
+  // the other owner-facing booking mails.
+  await getEmailSender().send(
+    ownerLetter({
+      to: ctx.notifyList.join(", "),
+      subject,
+      text: body,
+      lang,
+      hostName: ctx.hostName,
+      kicker: mailLabel(T(lang, "Lejárt kérés"), "wait"),
+      heading: T(lang, "Lejárt egy foglalási kérés"),
+      blocks: [
+        mailPara(
+          esc(
+            T(
+              lang,
+              "{guest} {from} — {to} közötti foglalási kérésére {n} órán belül nem érkezett válasz, ezért a kérés lejárt.",
+              { guest: req.guest_name, ...hu, n: hours },
+            ),
+          ),
+        ),
+        mailDetails([...guestRows(req, lang), ...stayRows(req, lang, true)]),
+        mailPara(esc(T(lang, "A vendégnek elküldtük az udvarias értesítést, és a napok újra szabadok a naptárban."))),
+        mailNote(esc(T(lang, "A válaszidőt a Foglalások fül beállításainál tudja módosítani."))),
+      ],
+    }),
+  );
   if (ctx.tenantId) {
     await logTenantMessage({
       tenantId: ctx.tenantId,
@@ -1654,7 +1853,25 @@ async function sendGuestExpired(req: RequestRow, hours: number): Promise<void> {
     ...guestIdentity(ctx),
     subject: T(lang, "Nem érkezett válasz a foglalási kérésére: {from} — {to}", hu),
     text: body,
-    html: bookingHtml(body),
+    html: await guestLetterHtml(req, ctx, {
+      subtitle: T(lang, "Foglalási kérés"),
+      kicker: mailLabel(T(lang, "Lejárt kérés"), "wait"),
+      heading: T(lang, "Nem érkezett válasz a foglalási kérésére"),
+      blocks: [
+        mailPara(esc(T(lang, "Kedves {name}!", { name: req.guest_name }))),
+        mailPara(
+          esc(
+            T(
+              lang,
+              "Sajnáljuk: a szállásadó {n} órán belül nem válaszolt a foglalási kérésére, ezért a kérés lejárt. A kért napokra ez a kérés már nem él — nyugodtan foglalhat máshol, vagy próbálkozhat újra.",
+              { n: hours },
+            ),
+          ),
+        ),
+        mailDetails(stayRows(req, lang, false)),
+        mailPara(esc(T(lang, "Elnézést kérünk a kellemetlenségért."))),
+      ],
+    }),
   });
 }
 
@@ -2007,11 +2224,30 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
     `\n\n${T(lang, "Az ajánlat megtekintése és elfogadása:")}\n${url}\n\n` +
     T(lang, "Ha nem kéri, ugyanezen a linken jelezheti.") +
     `\n\n${ctx.hostName}\n`;
-  const html =
-    bookingHtml(body) +
-    `<p style="margin:22px 0"><a href="${esc(url)}" style="display:inline-block;padding:14px 26px;` +
-    `background:#16283f;color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:600">` +
-    `${T(lang, "Megnézem és elfogadom")}</a></p>`;
+  const html = await guestLetterHtml(req, ctx, {
+    subtitle: T(lang, "Árajánlat"),
+    kicker: mailLabel(T(lang, "Árajánlat · elfogadásra vár"), "new"),
+    heading: T(lang, "Árajánlatot kapott"),
+    blocks: [
+      mailSteps([
+        { label: T(lang, "Kérés elküldve"), state: "done" },
+        { label: T(lang, "Árajánlat megérkezett"), state: "done" },
+        { label: T(lang, "Ön elfogadja"), state: "now" },
+      ]),
+      mailPara(esc(T(lang, "Kedves {name}!", { name: req.guest_name }))),
+      mailPara(esc(T(lang, "{host} árajánlatot küldött a kért időszakra{unit}.", { host: ctx.hostName, unit: "" }))),
+      mailDetails([...stayRows(req, lang, false), ...priceRows(req, lang)]),
+      ...(req.decision_note ? [mailQuote(T(lang, "A szállásadó üzenete:"), req.decision_note)] : []),
+      mailPara(
+        esc(
+          (expires ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires) }) + " " : "") +
+            T(lang, "A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja."),
+        ),
+      ),
+      mailButton(url, T(lang, "Megnézem és elfogadom")),
+      mailNote(esc(T(lang, "Ha nem kéri, ugyanezen a linken jelezheti."))),
+    ],
+  });
   await getEmailSender().send({
     to: req.guest_email,
     audience: "guest",
@@ -2216,13 +2452,27 @@ async function sendOwnerOfferNews(
     },
   }[kind];
   const body = `${M.body}\n\n${ctx.hostName}\n`;
-  await getEmailSender().send({
-    to: ctx.notifyList.join(", "),
-    audience: "guest",
-    subject: M.subject,
-    text: body,
-    html: bookingHtml(body),
-  });
+  const label = {
+    accepted: mailLabel(T(lang, "Végleges foglalás"), "ok"),
+    declined: mailLabel(T(lang, "Nem kérte"), "wait"),
+    conflict: mailLabel(T(lang, "Nem jött létre"), "wait"),
+    expired: mailLabel(T(lang, "Lejárt ajánlat"), "wait"),
+  }[kind];
+  await getEmailSender().send(
+    ownerLetter({
+      to: ctx.notifyList.join(", "),
+      subject: M.subject,
+      text: body,
+      lang,
+      hostName: ctx.hostName,
+      kicker: label,
+      heading: M.subject,
+      blocks: [
+        mailPara(esc(M.body)),
+        mailDetails([...guestRows(req, lang), ...stayRows(req, lang, true), ...priceRows(req, lang)]),
+      ],
+    }),
+  );
   if (ctx.tenantId) {
     await logTenantMessage({
       tenantId: ctx.tenantId,
@@ -2271,7 +2521,24 @@ async function sendGuestOfferExpired(req: RequestRow): Promise<void> {
     ...guestIdentity(ctx),
     subject: T(lang, "Az árajánlat lejárt: {from} — {to}", { from, to }),
     text: body,
-    html: bookingHtml(body),
+    html: await guestLetterHtml(req, ctx, {
+      subtitle: T(lang, "Árajánlat"),
+      kicker: mailLabel(T(lang, "Lejárt ajánlat"), "wait"),
+      heading: T(lang, "Az árajánlat lejárt"),
+      blocks: [
+        mailPara(esc(T(lang, "Kedves {name}!", { name: req.guest_name }))),
+        mailPara(
+          esc(
+            T(
+              lang,
+              "A {from} — {to} közötti időszakra küldött árajánlat lejárt, a napokat nem tartottuk tovább. Ha még szeretne jönni, kérjen új ajánlatot a szállás oldalán, vagy válaszoljon erre a levélre.",
+              { from, to },
+            ),
+          ),
+        ),
+        mailDetails(stayRows(req, lang, false)),
+      ],
+    }),
   });
 }
 

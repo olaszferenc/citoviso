@@ -25,7 +25,8 @@ lehessen megnyitni az admin felületet a foglalások résszel”.
 4. **A szöveges (text/plain) változat nem változik** — az őrök és a tenant-postafiók (ADR-0084) azt olvassák.
 
 ### Következmények
-- A többi foglalási levél (visszaigazolás, elutasítás, lejárat, ajánlat, lemondás) még a régi
-  `bookingHtml` keretben megy — ugyanerre a keretre hozásuk külön döntés.
+- 2026-09-27 (második kör, a tulaj „folytassuk” utasítására): a többi foglalási levél
+  (visszaigazolás, elutasítás, betelt, lemondások, lejáratok, ajánlat és kimenetele) is erre a két
+  keretre került; a régi `bookingHtml` megszűnt. Részletek: a kontraktus README „Hatókör” szakasza.
 - A levél annyira pontos, amennyire a tárolt elérhetőség: a Camping Carina címéből hiányzik a
   település — ezt a tulaj az Elérhetőség fülön javíthatja.

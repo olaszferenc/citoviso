@@ -19,11 +19,13 @@ const { NAVY, CYAN, INK, MUTED, FAINT, LINE, PANEL, LINK, FONT } = MAIL_COLORS;
 const WAIT_BG = "#fdf6e6";
 const WAIT_FG = "#9a6700";
 const NEW_BG = "#e6f6fa";
+const OK_BG = "#e8f5ee";
+const OK_FG = "#1d7a4d";
 
-/** A small rounded status label above the H1. */
-export function mailLabel(text: string, tone: "wait" | "new"): string {
-  const bg = tone === "wait" ? WAIT_BG : NEW_BG;
-  const fg = tone === "wait" ? WAIT_FG : LINK;
+/** A small rounded status label above the H1 (wait = amber, new = cyan, ok = green). */
+export function mailLabel(text: string, tone: "wait" | "new" | "ok"): string {
+  const bg = tone === "wait" ? WAIT_BG : tone === "ok" ? OK_BG : NEW_BG;
+  const fg = tone === "wait" ? WAIT_FG : tone === "ok" ? OK_FG : LINK;
   return (
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px"><tr>` +
     `<td style="background:${bg};border-radius:999px;padding:4px 10px;font-family:${FONT};font-size:12px;` +
@@ -155,13 +157,15 @@ export interface HostMailInput {
   /** Small line under the name ("Foglalási kérés visszaigazolása"). */
   readonly subtitle: string;
   readonly heading: string;
+  /** Ready markup above the H1 (a status label — mailLabel()). */
+  readonly kicker?: string;
   /** Body blocks (mailPara/mailDetails/mailSteps/mailContactCard…), in order. */
   readonly blocks: readonly string[];
 }
 
 /** The complete HTML of a guest-facing booking letter, in the property's name. */
 export function hostMailHtml(input: HostMailInput): string {
-  const { lang, hostName, subtitle, heading, blocks } = input;
+  const { lang, hostName, subtitle, heading, blocks, kicker } = input;
   const footer =
     esc(
       T(lang, "Ezt a levelet azért kapta, mert foglalási kérést küldött {art} {host} honlapján.", {
@@ -178,6 +182,7 @@ export function hostMailHtml(input: HostMailInput): string {
     `<div style="font-family:${FONT};font-size:20px;font-weight:700;line-height:1.25;color:${NAVY}">${esc(hostName)}</div>` +
     `<div style="margin-top:2px;font-family:${FONT};font-size:13px;color:${MUTED}">${esc(subtitle)}</div></td></tr>` +
     `<tr><td class="m-pad" style="padding:28px 32px 8px;font-family:${FONT};font-size:15px;line-height:1.6;color:${INK}">` +
+    (kicker ?? "") +
     `<h1 class="m-h1" style="margin:0 0 14px;font-family:${FONT};font-size:22px;line-height:1.3;color:${NAVY}">${esc(heading)}</h1>` +
     blocks.join("") +
     `</td></tr>` +

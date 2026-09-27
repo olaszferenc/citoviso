@@ -40,3 +40,18 @@ elé felirat kell („nem egyértelmű a foglaló üzenete rész... írjuk ki”
     megőrzi a célt). A gyors döntés másodlagos linkként marad: „Elfogadom · Nem szabad”
     (árajánlatnál „Ajánlatot küldök · Nem szabad” — ⛔ koppintásos elfogadás ott sincs, ADR-0208).
 11. **Mobil (≤520 px):** keskenyebb margó, a címke/érték sorok (adat-panel, elérhetőség) egymás alá kerülnek.
+
+## Hatókör (2026-09-27, második kör)
+
+Ugyanez a két keret viszi a TÖBBI foglalási levelet is (a jóváhagyott minta követése, §2b kivétel):
+
+- **Vendég (C-keret: szállás-fejléc, címke, adat-panel, elérhetőség-kártya, „Kérdése van?” sor):**
+  visszaigazolás (zöld „Végleges foglalás”, ár, a szállásadó üzenete feliratosan, lemondás-link),
+  „nem szabad”, „betelt”, a szállásadó lemondta, lemondás megerősítve, „nem érkezett válasz”,
+  árajánlat (lépés-jelző: elküldve ✓ → ajánlat megérkezett ✓ → Ön elfogadja; fő gomb
+  „Megnézem és elfogadom”), az ajánlat lejárt.
+- **Tulaj (B-keret: Citoviso-keret, címke, vendég + tartózkodás panel, „Foglalások megnyitása”):**
+  a vendég lemondta, lejárt kérés, az ajánlat kimenetele (elfogadta / nem kérte / lejárt / ütközés).
+- Ajánlatból lett foglalásnál az ár-csoport felirata „Az ajánlott ár:” (booking-offer ⑧) — a
+  „rögzítettük” levélnél (mindig árlistás) nincs felirat, az ott jóváhagyott kép változatlan.
+- A régi `bookingHtml` (nyers szöveg `<br>`-rel) megszűnt.

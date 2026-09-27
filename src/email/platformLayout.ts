@@ -84,6 +84,8 @@ export interface MailDetailRow {
   readonly rule?: boolean;
   /** Makes the value a link (tel:, mailto:, https:). */
   readonly href?: string;
+  /** A group caption across both columns (the label only; `value` is ignored). */
+  readonly caption?: boolean;
 }
 
 /** The label/value panel (credentials, invoice data). Values are escaped here. */
@@ -100,6 +102,12 @@ export function mailDetails(rows: readonly MailDetailRow[]): string {
         ? `<a href="${esc(r.href)}" style="color:${LINK};text-decoration:none">${esc(r.value)}</a>`
         : esc(r.value);
       const note = r.note ? ` <span style="font-weight:400;color:${MUTED}">${esc(r.note)}</span>` : "";
+      if (r.caption) {
+        return (
+          `<tr><td colspan="2" style="${pad};font-family:${FONT};font-size:13px;font-weight:600;color:${INK}${rule}">` +
+          `${esc(r.label)}</td></tr>`
+        );
+      }
       const value =
         `font-weight:${r.emphasis ? 700 : 600};color:${r.mono || r.emphasis ? NAVY : INK};` +
         `font-size:${r.mono || r.emphasis ? 16 : 14}px;` +
