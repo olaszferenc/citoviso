@@ -33,7 +33,7 @@ Jegyzet: `_planning/memory/2026-09-27_uzenetek_foglalasi_dontes_linkek.md`.
 `scripts/lib/main-probe.mjs` a `gate_flush`-ból: bukás után az első bukott kapu az origin/mainen is lefut
 (detached worktree, main futtatója, gépi slot, 300 s). Ítélet: nem a te változásod (+ gazda: commit +
 `Claude-Session`) / a te változásod / NEM DÖNTÖTT. Elv (ADR-0249): kapu = saját fixture, nem a közös DB
-véletlen sora. A `/lead/<id>` ~31 s-os networkidle-je gyökérokon javítva (ADR-0250, photo-health).
+véletlen sora. A `/lead/<id>` ~31 s-os networkidle-je gyökérokon javítva (ADR-0250, photo-health); a kapu kimondott 90 s-os korlátja ADR-0251 — a nyitott tétel lezárva.
 
 ## Párhuzamos szál (2026-09-27 — fotó-feltöltés: 64 KB-os határ + konvertálás)
 Tulaj telefonról: „Nem tölti fel a képeket”. Ok: `readRawBody` 64 KB, a kérés közben elvágva. Javítva

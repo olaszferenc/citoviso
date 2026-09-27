@@ -64,5 +64,7 @@ Ugyanez a hibaosztály már sokszor előfordult — a kapu bukása NEM a commito
   a hook nem hívja). Bekötve a pre-commitba (a hook/futtató/próba/őr változásakor).
 - Élesben mérve a valódi esetre (a javítás előtti origin/main, `a2df3252`): a `photo-normalize-check`
   bukására 13 s alatt „EZ NEM A TE VÁLTOZÁSOD”, gazda `ed651fdc` + a session linkje.
-- Nyitott: a `console-contrast-check` `/lead/<id>` időkorlátja (a gazdája dönt: a photo-health ne
-  tartsa nyitva a networkidle-t, vagy a kapu explicit feltételre várjon).
+- ~~Nyitott: a `console-contrast-check` `/lead/<id>` időkorlátja.~~ **Lezárva (2026-09-27):** a
+  gyökérok az ADR-0250 (`59b215e7`, a lead-lap networkidle 31 s → 12 s hidegen / 2,7 s melegen); a
+  kapu (és az `outreach-link-live-check`) kimondott, indokolt 90 s-os időkorlátot kapott —
+  `cit873a226d`, ADR-0251 (`0e81de2b`). A 90 s visszavétele a tulaj döntése.

@@ -23,7 +23,7 @@
 - `_planning/decisions/XXXX-bukott-kapu-tiszta-main-probaja.md`
 
 ## Nyitott
-- `console-contrast-check` időkorlátja — a gazdájánál.
+- ~~`console-contrast-check` időkorlátja~~ — lezárva: ADR-0250 (gyökérok) + ADR-0251 (90 s-os korlát, `cit873a226d`).
 - Soros módban (`CIT_GATE_JOBS=1`) nincs próba (a feljegyzés a futtatóé).
 - A „zöld a mainen” egyetlen futás; időzítés-érzékeny kapunál nem bizonyíték (ki van írva).
 
