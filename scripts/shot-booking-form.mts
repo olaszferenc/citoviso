@@ -275,6 +275,15 @@ await page.click(".cit-book__submit");
 await page.waitForTimeout(400);
 check("⭐ beküldés után visszaigazolás lép a helyére", await page.locator(".cit-book--done").isVisible());
 check("a beküldött űrlap eltűnt (nincs dupla küldés)", (await page.locator("form.cit-book--request").count()) === 0);
+// The receipt ends the guest's task — it must lead somewhere (owner, 2026-09-27:
+// "innen meg nem lehet visszamenni a főoldalra"), with a phone-sized tap target.
+const home = page.locator(".cit-book--done a.cit-book__home");
+const homeBox = (await home.count()) ? await home.boundingBox() : null;
+check(
+  "⭐ a nyugtán látható kiút a kezdőlapra (#top, ≥ 44 px magas)",
+  !!homeBox && homeBox.height >= 44 && (await home.getAttribute("href")) === "#top" && (await home.isVisible()),
+  homeBox ? `magasság ${Math.round(homeBox.height)} px` : "nincs link",
+);
 await page.screenshot({ path: "shot-guest-booking-done.png" });
 } catch (err) {
   check("a mérés végigfutott (nem dobott kivételt)", false, String(err).slice(0, 160));

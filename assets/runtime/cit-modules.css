@@ -756,6 +756,16 @@ a.cit-grat:hover {
 .cit-book__steps li::before{content:counter(citstep);position:absolute;left:0;top:0;
   width:23px;height:23px;border-radius:999px;background:var(--cit-accent);color:#fff;
   display:grid;place-items:center;font-size:.76rem;font-weight:800}
+/* ⑥ a nyugta KIÚTJA — a vendég feladata itt véget ért; a kártya mutassa, merre tovább.
+   Körvonalas (másodlagos) gomb: nem versenyez a nyugtával, de ≥ 44 px-es koppintási cél.
+   `.cit-book--done a.…` — a sablonok saját `a`-szabályai ne színezzék át. */
+.cit-book__homep{margin:16px 0 0}
+.cit-book--done a.cit-book__home{display:flex;align-items:center;justify-content:center;
+  min-height:44px;padding:0 16px;border:1.5px solid var(--cit-accent);
+  border-radius:calc(var(--cit-radius) * 0.6);color:var(--cit-accent);background:transparent;
+  font-size:.85rem;font-weight:700;text-decoration:none}
+@media(min-width:560px){.cit-book--done a.cit-book__home{display:inline-flex;padding:0 28px}}
+.cit-book--done a.cit-book__home:hover{background:color-mix(in srgb,var(--cit-accent) 8%, transparent)}
 /* ── egy-egységes szállás: teljes szélességű panel (kontraktus ⑨) ── */
 .cit-whole{display:grid;gap:14px;border:1px solid var(--cit-line);
   border-radius:var(--cit-radius);padding:16px}

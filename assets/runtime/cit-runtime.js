@@ -499,7 +499,22 @@
         "</p>" +
         '<div class="cit-book__receipt">' + facts + total + "</div>" +
         '<p class="cit-book__steph">' + tr("Mi a következő lépés?") + "</p>" +
-        '<ol class="cit-book__steps">' + steps + "</ol></div>";
+        '<ol class="cit-book__steps">' + steps + "</ol>" + homeLinkHtml() + "</div>";
+    }
+    /* The receipt is the END of the guest's task, and on a phone it sits ~10 000 px
+     * below the top with nothing on the card that leads anywhere (owner, 2026-09-27:
+     * "innen meg nem lehet visszamenni a főoldalra"). The brand in the header does
+     * jump to #top, but nothing tells the guest it is a link. On a unit subpage
+     * (/apartman/<slug>, also /<lang>/apartman/<slug>) the home is the site root of
+     * that language, not this page's top. "#top" also works on templates without an
+     * element of that id: the HTML spec scrolls to the document top for it. */
+    function homeHref() {
+      var m = /^(.*\/)apartman\/[^/]*$/.exec(location.pathname);
+      return m ? m[1] : "#top";
+    }
+    function homeLinkHtml() {
+      return '<p class="cit-book__homep"><a class="cit-book__home" href="' + esc(homeHref()) + '">' +
+        tr("Vissza a kezdőlapra") + "</a></p>";
     }
     /* Bring the reply the guest just earned onto the screen. Called by BOTH the live
      * and the demo branch — the demo replaces the same tall form with the same short
@@ -860,7 +875,7 @@
                 "<span>" + tr("Elküldtük a kérését") + "</span></p>" +
                 '<p class="cit-book__note">' +
                 tr("A szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.") +
-                "</p></div>";
+                "</p>" + homeLinkHtml() + "</div>";
             // ⛔ MÉRVE (B8, 2026-09-14): the receipt REPLACES a tall form with a short
             // card, so everything above it moves up while the scroll position stays —
             // on a page that has anything under the booking card (every real site has a
