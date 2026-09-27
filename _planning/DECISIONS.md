@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-feltoltott-foto-konvertalodik.md) — A tulaj feltöltött fotója konvertálódik: böngészőben és szerveren (≤2560 px, álló, metaadat nélkül)
 - [ADR-0247](decisions/0247-allo-telefonon-is-egy-oszlopba-csuk-a-fizetes.md) — Álló telefonon is egy oszlopba csuk a fizetés-lap, ha az űrlapnak nem marad ablak (mért, nem töréspont)
 - [ADR-0246](decisions/0246-fekvo-telefonon-a-focim-egesze-az-elso.md) — Fekvő telefonon a főcím EGÉSZE az első képernyőn: magassághoz kötött főcím-méret a motorban, „②főcím-hajtás” őr
 - [ADR-0245](decisions/0245-idoszaki-arak-datumvalaszto-nevlista-ev-naptar.md) — Időszaki árak: dátumválasztó, névlista, év-naptár (2026-09-27)
