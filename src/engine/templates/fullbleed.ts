@@ -83,7 +83,8 @@ ${centredModsecCss("fullbleed")}
   @media(max-height:500px) and (min-width:701px){
     .t-hero{height:auto;min-height:100svh;flex-direction:column;align-items:center;justify-content:flex-start}
     .t-hero .cit-mast{position:relative;inset:auto}
-    .t-heroin{padding:16px 24px 40px}
+    /* the glass booking card rides 72px up onto the hero (.t-bookwrap margin-top:-72px): the CTAs stay above it */
+    .t-heroin{padding:16px 24px 96px}
     .t-hero h1{font-size:clamp(26px,8vh,36px);max-width:26ch}
   }
   .t-herosub{font-size:clamp(16px,2vw,19px);color:rgba(255,255,255,.85);max-width:560px;margin:0 auto 38px}

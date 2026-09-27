@@ -180,6 +180,11 @@ const DOPAMINE_CSS = `
   .t-mobcta span svg{width:15px;height:15px;color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
   .t-mobcta .cit-btn{padding:10px 20px;font-size:13px;border-color:var(--cit-bg);box-shadow:3px 3px 0 color-mix(in srgb, var(--cit-accent) 45%, var(--cit-bg))}
   @media(max-width:700px){.t-mobcta{display:flex}body{padding-bottom:66px}}
+  /* PORTRAIT PHONE (390×844, parent session 2026-09-27): the dock's big „Szabad időpontok” button
+     peeked into the first screen at y=775 — exactly under the 64px fixed bar (guest-mobile-check
+     ②CTA-takarva). The hero keeps the bar's height free the way the other templates do: less top air,
+     the image wrap closer, so the dock button ends ABOVE the bar. Desktop untouched. */
+  @media(max-width:700px){.t-hero{padding-top:22px}.t-heroimgwrap{margin-top:14px}}
 `;
 
 const CONTACT_ICONS = {

@@ -61,6 +61,18 @@ a 2026-09-26-i mandátum áll (saját ergonómiai belátás, utólagos ítélet)
    gombot görgeti be → timeout. Új `görgess` ige a runnerben + a forgatókönyvben az EMBER útja („végigolvasom → a sáv
    nyit"); a „kiküldöd mégis?" ablak a park mockján tényleg felugrik (dizájn-őr lelet) → `tedd?: kattints "Kiküldöm mégis"`.
 
+## 2. kör — a szülő session ellenőrzése (a landolt `30cfd5bf` után)
+- **Lelet:** dark-luxury fekvőn a hero két CTA-gombját a rá úszó **dokk** félig takarta (nem a mobil-sáv: az 844-en `display:none`);
+  kapu-módban cinematic @fekvő és dopamine @390 (álló) ②CTA-takarva. Fájl-módban fekvőn 57-ből 6 lapon (cinematic ×2,
+  dark-luxury, fullbleed ×2 — mind `cit-enquiry-bar-inner`).
+- **Javítás egy mintában (ADR-0246 ⑤):** a hero kitartja az átfedést + 24 px-et (dark-luxury 96, cinematic 108, fullbleed 96);
+  dopamine ≤700: felső levegő 78→22, kép-keret 44→14 → a dokk gombja 757-nél ér véget (a sáv 780-tól). A tapadó dokkok
+  fekvőn statikusak (cinematic 83 px = 21 %, parallax 79 px = 20 %). ⛔ Az első dopamine-próba 777-et adott (3 px a sáv felett)
+  — „még éppen átment", ezért tovább húztam.
+- ⚠️ A „portré pixelre azonos" állítás alól a **dopamine ≤700 px** ettől a körtől KIVÉTEL (szándékolt álló változás).
+- Nem vittem: a ⑤tapadó-sáv fekvő maradéka (nav/sáv ≥15 % a 390-ből: tilted, editorial, card-sidebar) — sáv-tömörítés, külön
+  döntés; a tulaj kérdése („ha ebbe a mintába esik") — nem esik.
+
 ## Mérések
 - `guest-mobile-check` kapu-mód `--vp=390,land` (30 sablon+archetípus): **0 HIBA**; `--selftest`: tiszta lap 0 HIBA, **9 ültetett
   hiba mind piros** (új: `selftest-h1-under-fold`). 57 friss render fekvőn: a h1-es sablonokon 0 túllógás.

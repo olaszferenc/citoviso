@@ -98,7 +98,9 @@ const DARK_LUXURY_CSS = `
   @media(max-height:500px) and (min-width:701px){
     .t-hero{height:auto;min-height:100svh;flex-direction:column;align-items:stretch;justify-content:flex-start}
     body.cit-tpl-dark-luxury .cit-mast{position:relative;inset:auto}
-    .t-heroin{padding-top:28px;padding-bottom:48px}
+    /* the booking dock rides 72px up onto the hero (.t-dock margin-top:-72px): the copy must end above
+       it, or the hero's two CTA buttons get cut in half (parent session, 2026-09-27) — 72 + 24 air */
+    .t-heroin{padding-top:28px;padding-bottom:96px}
     /* the headline: 59px × 4 lines ended 37px under the fold — vh-bound size, wider measure */
     .t-hero h1{font-size:clamp(28px,9vh,40px);max-width:24ch;margin-bottom:12px}
     .t-herosub{margin-bottom:20px}

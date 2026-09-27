@@ -98,7 +98,8 @@ const PARALLAX_CSS = `
   .t-dock .cit-book{background:none;border:0;box-shadow:none}
   .t-dock .cit-enquiry-bar-inner{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.05rem 28px}
   .t-dock .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
-  @media(max-width:700px){.t-dock{position:static}}
+  /* landscape phone too: the 79px dock pinned on a 390px screen is 20% of it (⑤tapadó-sáv, 2026-09-27) */
+  @media(max-width:700px),(max-height:500px){.t-dock{position:static}}
 
   /* QUOTE / IMAGE BANDS between sections */
   .t-quote{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(22px,3.6vw,40px);text-transform:uppercase;max-width:22ch;text-align:center;margin:0 auto;line-height:1.15}

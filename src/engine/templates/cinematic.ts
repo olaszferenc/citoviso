@@ -90,7 +90,8 @@ const CINEMATIC_CSS = `
   @media(max-height:500px) and (min-width:701px){
     .cn-cine{height:auto;min-height:100svh;flex-direction:column;align-items:stretch;justify-content:flex-start}
     .cn-cine .cit-mast{position:relative;inset:auto}
-    .cn-cinein{padding-top:24px;padding-bottom:48px}
+    /* the dock rides 84px up onto the hero (.cn-dock margin-top:-84px): keep the CTAs above it — 84 + 24 air */
+    .cn-cinein{padding-top:24px;padding-bottom:108px}
   }
   .cn-cinesub{overflow-wrap:anywhere}
   .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
@@ -114,7 +115,9 @@ const CINEMATIC_CSS = `
   /* mobile: never pin the tall booking form — it would cover the whole viewport (matches parallax .t-dock) */
   /* …but still POSITIONED: as position:static its z-index died and the positioned hero painted
      over the dock's top 84px — the card's title sat under the hero (measured 2026-09-26). */
-  @media(max-width:700px){.cn-dock{position:relative;z-index:5}}
+  /* landscape phone too: an 83px dock pinned to the top of a 390px screen is 21% of it (guest-mobile-check
+     ⑤tapadó-sáv, 2026-09-27) — the same static-dock rule as ≤700px (the immersive-parallax archetype's pattern) */
+  @media(max-width:700px),(max-height:500px){.cn-dock{position:relative;z-index:5}}
 
   /* room cards */
   .cn-rooms{display:grid;gap:26px;grid-template-columns:1fr;margin-top:46px}

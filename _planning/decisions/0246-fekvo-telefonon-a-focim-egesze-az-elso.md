@@ -44,6 +44,23 @@ az öntesztben: az editorial egysoros neve 80vh-val lejjebb tolva és 120 px-re 
 nem hajszálon). A szabály minden nézeten fut; 390-en a 57 mockon 0 leletet ad (az arch-frames szekció-címe
 teljesen a hajtás alatt van, nem ez az osztály).
 
+### ⑤ Kiegészítés (2. kör, a szülő session ellenőrzése után, 2026-09-27)
+
+**Mérve a landolt motoron:** a főcím fekvőn rendben, de a dark-luxury hero két CTA-gombját („Foglalás", „Fedezze fel")
+a hero aljára ráúszó **foglalás-dokk** félig takarta (②CTA-takarva, ERGONÓMIA) — nem a mobil-sáv (az 844-en `display:none`),
+hanem a `.t-dock{margin-top:-72px}` (cinematic: −84, fullbleed: −72): a fekvő blokk 48 px-es alsó levegője kevesebb volt az
+átfedésnél. Kapu-módban ugyanez cinematic @fekvő és **dopamine @390 (ÁLLÓ)**, ahol a dokk nagy gombja a rögzített sáv alá
+lógott be az első képernyőn (y=775, a sáv 780-tól).
+
+**Döntés — a hero KITARTJA a rá úszó dokk / a rögzített sáv magasságát:** a fekvő blokkokban a másolat alsó levegője
+= átfedés + 24 px (dark-luxury 96, cinematic 108, fullbleed 96 px); dopamine állóban (≤700 px) kevesebb felső levegő és
+közelebbi kép-keret, hogy a dokk gombja a sáv FELETT érjen véget (757 < 780, 23 px-szel — nem hajszálon). **A tapadó dokk
+fekvőn is statikus** (cinematic `.cn-dock` 83 px = 21 %, parallax `.t-dock` 79 px = 20 % a 390 px-es képernyőből — ugyanaz
+a szabály, mint ≤700 px-en és az immersive-parallax archetípusnál, ADR-0239 ②). Kapu-módban ②CTA-takarva = 0 mindkét
+nézeten (a mérés a jegyzetben). **Nem ebbe a mintába esik:** a ⑤tapadó-sáv fekvő maradéka a navigációs/rögzített sávok
+15 % feletti részaránya (tilted nav 73 + sáv 70, editorial nav 66, card-sidebar fejléc 71 + sáv 69 px a 390-ből) — az a
+sávok tömörítése lenne, külön döntés.
+
 ### Következmény
 
 - 12 sablon kapott fekvő blokkot (dark-luxury, cinematic, tilted-gallery bővítve; artdeco, brutalism, dopamine,
