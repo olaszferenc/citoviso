@@ -93,10 +93,22 @@ export class BarionGateway implements PaymentGateway {
       // whole amount goes back to the card. ⚠️ Token storage on a Reservation
       // initiator is not spelled out by the docs (nothing forbids it either) —
       // the sandbox pass is the proof before this ships to production.
-      PaymentType: req.verification ? "Reservation" : "Immediate",
-      ...(req.verification ? { ReservationPeriod: "0.01:00:00" } : {}),
+      // ADR-XXXX: a custom-domain order is a DelayedCapture — the amount is only
+      // BLOCKED on the payer's card until we capture it (docs: "the payer is only
+      // charged upon the capture request"). NOT Reservation: that charges at once
+      // (ADR-0228). Seven days (Hungarian shops may go to 21): registration is
+      // seconds, and the resume timer settles a missed capture/release well within;
+      // a block that lapses is lifted by the bank — the promised "nothing charged".
+      PaymentType: req.reserve ? "DelayedCapture" : req.verification ? "Reservation" : "Immediate",
+      ...(req.reserve
+        ? { DelayedCapturePeriod: "7.00:00:00" }
+        : req.verification
+          ? { ReservationPeriod: "0.01:00:00" }
+          : {}),
       PaymentRequestId: req.paymentId,
-      FundingSources: ["All"],
+      // ADR-XXXX: a delayed capture exists only for bank cards (Barion balance and
+      // bank transfer are not supported) — offer only what can actually be blocked.
+      FundingSources: req.reserve ? ["BankCard"] : ["All"],
       GuestCheckOut: true,
       // ADR-0080 ④: store a charge token during this checkout, so the renewals
       // can charge merchant-initiated. The payer consents on Barion's own pay
@@ -307,6 +319,80 @@ export class BarionGateway implements PaymentGateway {
     // Empty status (Barion Errors[], e.g. unknown PaymentId) or an unknown value:
     // we do not know the state → null → 400, so Barion retries and alerts.
     return null;
+  }
+
+  /**
+   * ADR-XXXX: capture an Authorized DelayedCapture payment for `total` — ALL its
+   * transactions in one call (docs). Never throws; false = not captured (the
+   * caller keeps the row `reserved` and the resume timer retries).
+   */
+  async captureHold(gatewayRef: string, total: number): Promise<boolean> {
+    try {
+      const stateUrl = `${API}/v2/Payment/GetPaymentState?POSKey=${encodeURIComponent(
+        this.posKey,
+      )}&PaymentId=${encodeURIComponent(gatewayRef)}`;
+      const state = (await (await fetchWithRateLimitRetry(stateUrl)).json()) as {
+        Status?: string;
+        Transactions?: { TransactionId?: string; POSTransactionId?: string | null }[];
+      };
+      if (state.Status === SUCCEEDED) return true; // already captured
+      if (state.Status !== "Authorized") {
+        console.error(`[barion] Capture: a fizetés nem Authorized (${gatewayRef}: ${state.Status ?? "?"})`);
+        return false;
+      }
+      // Our own transaction carries our POSTransactionId (fee lines carry null).
+      const tx =
+        state.Transactions?.find((t) => t.POSTransactionId)?.TransactionId ??
+        state.Transactions?.[0]?.TransactionId;
+      if (!tx) return false;
+      const resp = await fetch(`${API}/v2/Payment/Capture`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          POSKey: this.posKey,
+          PaymentId: gatewayRef,
+          Transactions: [{ TransactionId: tx, Total: total }],
+        }),
+      });
+      const data = (await resp.json()) as {
+        IsSuccessful?: boolean;
+        Status?: string;
+        Errors?: { ErrorCode?: string; Title?: string; Description?: string }[];
+      };
+      if (data.Errors && data.Errors.length) {
+        const e = data.Errors[0]!;
+        console.error(`[barion] Capture hiba: ${e.ErrorCode ?? "?"} — ${e.Title ?? e.Description ?? ""}`);
+        return false;
+      }
+      return data.IsSuccessful !== false;
+    } catch (err) {
+      console.error(`[barion] Capture kivétel (${gatewayRef}):`, err);
+      return false;
+    }
+  }
+
+  /** ADR-XXXX: cancel an Authorized DelayedCapture payment — the card block is lifted. */
+  async releaseHold(gatewayRef: string): Promise<boolean> {
+    try {
+      const resp = await fetch(`${API}/v2/Payment/CancelAuthorization`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ POSKey: this.posKey, PaymentId: gatewayRef }),
+      });
+      const data = (await resp.json()) as {
+        IsSuccessful?: boolean;
+        Errors?: { ErrorCode?: string; Title?: string; Description?: string }[];
+      };
+      if (data.Errors && data.Errors.length) {
+        const e = data.Errors[0]!;
+        console.error(`[barion] CancelAuthorization hiba: ${e.ErrorCode ?? "?"} — ${e.Title ?? e.Description ?? ""}`);
+        return false;
+      }
+      return data.IsSuccessful !== false;
+    } catch (err) {
+      console.error(`[barion] CancelAuthorization kivétel (${gatewayRef}):`, err);
+      return false;
+    }
   }
 
   /**

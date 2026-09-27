@@ -1041,6 +1041,8 @@ async function shoot(
    *  calendar), and shoot only if `mustShow` then really is visible — a picker that
    *  does not open fails loudly instead of giving a picture of a closed form. */
   clickFirst?: { click: string; mustShow: string },
+  /** ADR-XXXX: the Webcím tab's view state (the review step is shot from this). */
+  domainView?: import("../src/server/adminViews.js").DomainViewState,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
     ...(multilang ? { multilang } : {}),
@@ -1078,7 +1080,7 @@ async function shoot(
     // ADR-0226: a mentett kártya + a következő terhelés összege a subscription
     // kártya szabályából (egy szám, egy forrás) — a fixtúra-vendégház Visa-kártyája.
     ...(tab === "penztarca" ? { wallet: walletFixture, subscription: sub } : {}),
-    ...(domain ? { domain, domainView: {} } : {}),
+    ...(domain ? { domain, domainView: domainView ?? {} } : {}),
     ...(tab === "forgalom" ? { traffic: trafficFixture } : {}),
     // ⛔ 2026-09-09, tudásbázis-őr lelete: a Foglalások fül képe eddig KÉZI capture volt,
     // valós teszt-tenant adataival a képre égve — és mivel semmilyen generátor nem
@@ -1243,6 +1245,31 @@ await shoot(
 // flow the tenant has (real money) and had NO image at all. The suggestion list is
 // the step the entry opens with, so that is what the guide shows — rendered from the
 // real view via adminDashboard's own domain opts, no view change needed.
+// ADR-XXXX: the FULL current shape (scripts/ is not type-checked — the old fixture
+// still carried priceYearly and no `eligible`, so the tab silently rendered its
+// "not eligible" branch). All four availability states on one image.
+const domainFixture: DomainAdminData = {
+  currentHost: "nyugalom-vendeghaz.citoviso.com",
+  customDomain: null,
+  status: "none",
+  error: null,
+  failedDomain: null,
+  money: null,
+  moneyAmount: null,
+  activeDomain: null,
+  suggestions: [
+    { domain: "nyugalomvendeghaz.hu", availability: "free" },
+    { domain: "nyugalom-vendeghaz.hu", availability: "free" },
+    { domain: "nyugalomvendeghaz.com", availability: "taken" },
+    { domain: "nyugalomvendeghaz.eu", availability: "unknown" },
+  ],
+  priceMonthly: 1000,
+  eligible: true,
+  minPackageMonthly: 7000,
+  currency: "HUF",
+  commitmentMonths: 12,
+  mockMode: false,
+};
 await shoot(
   "webcim",
   path.join(ROOT, "kb/entries", "admin-domain", "assets", LANG, "screen.png"),
@@ -1251,24 +1278,19 @@ await shoot(
   // Element shot: a viewport capture cuts off the "Tovább" button and two of the
   // three availability states — the very things the entry's step 1 instructs on.
   ".adm-card",
-  {
-    currentHost: "nyugalom-vendeghaz.citoviso.com",
-    customDomain: null,
-    status: "none",
-    error: null,
-    failedDomain: null,
-    // All three states on one image — the entry explains all three.
-    suggestions: [
-      { domain: "nyugalomvendeghaz.hu", availability: "probably_free" },
-      { domain: "nyugalom-vendeghaz.hu", availability: "probably_free" },
-      { domain: "nyugalomvendeghaz.com", availability: "taken" },
-      { domain: "nyugalomvendeghaz.eu", availability: "unknown" },
-    ],
-    priceYearly: 9900,
-    currency: "HUF",
-    commitmentMonths: 24,
-    mockMode: false,
-  },
+  domainFixture,
+);
+// ADR-XXXX: the review step — the entry's promise ("only charged once the name is
+// yours") lives on THIS screen, so the entry shows it, not only step 1.
+await shoot(
+  "webcim",
+  path.join(ROOT, "kb/entries", "admin-domain", "assets", LANG, "review.png"),
+  undefined,
+  undefined,
+  ".adm-card",
+  domainFixture,
+  undefined, undefined, undefined, undefined, undefined, undefined,
+  { picked: "nyugalomvendeghaz.hu", pickedAvailability: "free" },
 );
 // Elem-fotó: a viewport-kép a hajtásnál elvágja az arány-mondatot és a
 // hoszt-bontást — pont azt a kettőt, amit az entry elmagyaráz.

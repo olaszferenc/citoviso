@@ -18,7 +18,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { injectConsent, markAudience } from "./consent.js";
-import { isPlatformHosting, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
+import { isPlatformHosting, normalizeCustomDomain, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
 import { esc, privacyPage } from "../console/views.js";
 import { renderSuspendedPage, suspendedLang } from "./suspendedPage.js";
 import { TENANT_LEGAL_PATHS } from "../engine/legalPages.js";
@@ -100,6 +100,7 @@ import { countUnreadMessages, isUnread, listTenantMessages, markAllMessagesRead,
 import { isMessageTopic } from "../tenant/messageTopics.js";
 // ADR-0071/0078 — saját webcím: adat a fülhöz, rendelés, és a lokál-teszt kapu.
 import { loadDomainAdmin, checkTypedDomain } from "../domains/domainAdmin.js";
+import { checkWebcimAvailability } from "../domains/availability.js";
 import { createDomainUpgradeOrder } from "../domains/domainUpgrade.js";
 import { activeDomainCommitment } from "../domains/domainCommitment.js";
 import {
@@ -1501,10 +1502,16 @@ async function serveAdmin(
     domain = await loadDomainAdmin(session.tenantId, session.displayName);
     const typed = q.get("check");
     const picked = q.get("d");
+    // ADR-XXXX: the review step shows a FRESH registrar verdict ("Szabad — most
+    // ellenőrizve") — a name picked minutes ago may be gone, and a stale "free"
+    // would be the one promise the pay button rests on.
+    const pickedNorm = picked ? normalizeCustomDomain(picked) : null;
+    const pickedDomain = pickedNorm?.ok && pickedNorm.domain ? pickedNorm.domain : null;
     domainView = {
-      ...(picked ? { picked } : {}),
+      ...(pickedDomain ? { picked: pickedDomain, pickedAvailability: await checkWebcimAvailability(pickedDomain) } : {}),
       ...(typed ? { check: await checkTypedDomain(typed) } : {}),
       ...(q.get("payerror") === "1" ? { payError: true } : {}),
+      ...(q.get("uj") === "1" ? { restart: true } : {}),
     };
   }
 
@@ -1780,7 +1787,9 @@ async function serveAdmin(
       saved,
       // Read straight off the request: serveAdmin already carries nine positional
       // arguments, and a tenth for one banner flag would make every call site worse.
-      payError: new URL(req.url ?? "/", "http://x").searchParams.get("payerror") === "1",
+      // The Webcím tab renders its OWN pay-error (domainSection) — the frame banner
+      // speaks about "the new module", which on the domain page was simply false.
+      payError: tab !== "webcim" && new URL(req.url ?? "/", "http://x").searchParams.get("payerror") === "1",
       previewToken: site?.preview_token,
       modules,
       paidEmpty,
@@ -2420,6 +2429,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const wanted = String(form.get("domain") ?? "");
     await loadPricing();
+    // ADR-XXXX: once more at the registrar, right before the pay-link. Anything but
+    // "free" goes back to the review step, which re-checks and says why — we never
+    // open a payment for a name we do not know to be buyable this minute.
+    const wantedNorm = normalizeCustomDomain(wanted);
+    if (!wantedNorm.ok || !wantedNorm.domain || (await checkWebcimAvailability(wantedNorm.domain)) !== "free") {
+      return redirect(res, `/admin?tab=webcim&d=${encodeURIComponent(wanted)}`);
+    }
     const orderId = await createDomainUpgradeOrder(session.tenantId, wanted);
     if (!orderId) {
       console.error(`[domain] ${session.tenantId}: nem sikerült rendelést létrehozni (${wanted})`);

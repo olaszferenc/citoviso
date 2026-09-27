@@ -1,0 +1,703 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Webcím — bizalom (vázlat)</title><style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A kiküldött terv (/p/<token>) alján ülő RÖGZÍTETT réteg MÉRT magassága: a
+     süti-sáv + a sablon saját Foglalás-sávja + a fölé mászó hívó pirula, együtt.
+     A konfigurátor-futó (`assets/runtime/cit-configurator.js`, placeLaunch) írja
+     a gyökérre, mert egyedül ő tudja, meddig kellett felmásznia. A jogi lábléc
+     (`prospectNotice.ts`) ebből tart magának alsó térközt — mérve 2026-09-26,
+     390 px-en 19 sablonból 19-en e nélkül a leiratkozó link a réteg ALATT volt.
+     Alapból 0: pirula nélkül (már megvett oldal, JS nélkül) a süti-sáv magassága
+     a tartalék. */
+  --citui-cfg-clear: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #e6e9ef;
+  --citui-muted:       #8a93a3;
+  --citui-surface:     #12151c;
+  --citui-surface-2:   #1b1f29;
+  --citui-line:        #262b37;
+  --citui-line-strong: #343a48;
+  /* ADR-0224: a tenant-admin sötét módja. Semleges (nem navy-tintált) sötét
+     rétegek — a Linear-terv sötét képei ezekből készültek. */
+  --citui-bg:     #0f1116;
+  --citui-panel:  #151821;
+  --citui-side:   #12151c;
+  --citui-field:  #1b1f29;
+  --citui-hover:  #1e2330;
+  /* A jelzés-hue-k VILÁGOSABB változata: a világos-módú telített zöld/piros a
+     sötét panelen 2,5–3,5 kontrasztot adna keretként és pöttyként. */
+  --citui-ok:      #3ddc97;
+  --citui-warn:    #f0b35a;
+  --citui-bad:     #ff7b7b;
+  --citui-ok-soft: #14352a;
+  /* ⛔ A négy FELIRAT-token a sötét panelre (#151821) KIMÉRVE (WCAG, ≥ 4,5, tartalékkal;
+     mérés: node-os luminancia-számítás, 2026-09-24):
+       ok-ink   #4fe3a3 → 10,85 · bad-ink #ff8e8e → 8,03 · warn-ink #f5c06b → 10,67 ·
+       link-ink #4fd0ea → 9,74 (a --citui-field #1b1f29 mezőn a legrosszabb: bad-ink 7,46;
+       a --citui-muted #8a93a3 a panelen 5,73). */
+  --citui-ok-ink:   #4fe3a3;
+  --citui-bad-ink:  #ff8e8e;
+  --citui-warn-ink: #f5c06b;
+  --citui-link-ink: #4fd0ea;
+  /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
+  --citui-on-bad: var(--citui-navy-900);
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
+  --citui-ink-brand:   var(--citui-ink);
+  --citui-ink-brand-2: color-mix(in srgb, var(--citui-ink) 80%, var(--citui-muted));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-ink-brand);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+/* The Citoviso lockup "B" (src/ui/brand.ts, ADR-0236): the E4 mark IS the letter C,
+   then "itoviso". Mark = 1.6× the letter size, the word centred on it (the /pay/* ratio
+   the owner approved). Size it with font-size on the lockup. Dark surface → the dark mark
+   + white word; light surface → the light mark + navy word; "themed" follows the theme. */
+.citui-lockup {
+  display: inline-flex; color: var(--citui-navy-900); text-decoration: none;
+  font-family: var(--citui-font-display); font-weight: 700; letter-spacing: -0.01em; line-height: 1;
+  white-space: nowrap;
+}
+.citui-lockup.citui-lockup:hover { text-decoration: none; }
+.citui-lockup--lg { font-size: 1.32rem; } /* header / login size: word 21 px, mark 34 px (= /pay/*) */
+.citui-lockup__row { display: inline-flex; align-items: center; }
+.citui-lockup__mark { height: 1.6em; width: auto; flex: 0 0 auto; margin-right: 0.02em; }
+.citui-lockup__word { line-height: 1; }
+.citui-lockup__word small {
+  display: block; margin-top: 2px; font: 400 11px/1.3 var(--citui-font-text); letter-spacing: 0; color: var(--citui-muted);
+}
+/* ⚠️ Doubled class + :hover: a surface link rule (`.con a` 0,1,1 · `.con a:hover` 0,2,1)
+   otherwise paints the word link-cyan. */
+.citui-lockup.citui-lockup--on-dark, .citui-lockup.citui-lockup--on-dark:hover { color: var(--citui-white); }
+.citui-lockup.citui-lockup--on-light, .citui-lockup.citui-lockup--on-light:hover { color: var(--citui-navy-900); }
+.citui-lockup.citui-lockup--on-themed, .citui-lockup.citui-lockup--on-themed:hover { color: var(--citui-ink-brand); }
+.citui-mark-themed { display: inline-flex; flex: 0 0 auto; }
+.citui-mark-themed svg { height: var(--citui-mark-size, 26px); width: auto; }
+/* Theme switch. ⚠️ Element-qualified on purpose: a sizing rule like `.x svg{display:block}`
+   (0,1,1) beat a bare `.citui-mark--dark{display:none}` and showed BOTH marks. */
+svg.citui-mark--dark { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--light { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--dark { display: block; }
+.citui-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+</style></head><body><style>
+body{margin:0;background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink)}
+.mk-bar{position:sticky;top:0;z-index:20;background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:.85rem}
+.mk-bar b{font-family:var(--citui-font-display)}
+.mk-seg{display:inline-flex;border:1px solid color-mix(in srgb, var(--citui-white) 30%, transparent);border-radius:var(--citui-radius-pill);overflow:hidden}
+.mk-seg button{background:none;border:0;color:inherit;padding:6px 12px;font:inherit;cursor:pointer}
+.mk-seg button.on{background:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:600}
+.mk-note{flex:1 1 100%;opacity:.8;font-size:.78rem}
+.mk-stage{padding:18px 0 60px;display:flex;justify-content:center}
+.mk-frame{width:100%;max-width:1100px;container-type:inline-size;background:var(--citui-surface)}
+.mk-frame.is-phone{max-width:390px;border:1px solid var(--citui-line-strong);border-radius:24px;overflow:hidden;box-shadow:var(--citui-shadow-md)}
+.app{padding:18px}
+.crumb{display:flex;align-items:center;gap:8px;color:var(--citui-muted);font-size:.9rem;margin-bottom:14px}
+.crumb b{color:var(--citui-ink)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.step{border:1px solid var(--citui-line);border-radius:12px;padding:10px;text-align:center;font-size:.92rem;color:var(--citui-muted);background:var(--citui-white)}
+.step.done{border-color:var(--citui-ok);color:var(--citui-ok)}
+.step.now{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:var(--citui-navy-900)}
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:16px;padding:18px}
+.card h2{font-family:var(--citui-font-display);font-size:1.15rem;margin:0 0 4px}
+.lead{color:var(--citui-muted);margin:0 0 14px}
+.cur{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--citui-surface-2);margin-bottom:14px;font-size:.92rem}
+.cur span{color:var(--citui-muted)}
+.opt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--citui-line);border-radius:12px;padding:11px 12px;margin-bottom:8px;cursor:pointer}
+.opt.sel{border-color:var(--citui-cyan-500);background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-white))}
+.opt.off{opacity:.55;cursor:not-allowed}
+.opt input{accent-color:var(--citui-cyan-500);width:18px;height:18px;margin:0}
+.opt__n{font-weight:600;flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.8rem;font-weight:600;padding:3px 10px;border-radius:var(--citui-radius-pill)}
+.chip--free{background:var(--citui-ok-soft);color:var(--citui-ok)}
+.chip--taken{background:var(--citui-surface-2);color:var(--citui-muted)}
+.chip--err{background:color-mix(in srgb, var(--citui-warn) 14%, var(--citui-white));color:var(--citui-ink)}
+.chip--wait{background:var(--citui-surface-2);color:var(--citui-muted)}
+.src{display:flex;gap:8px;align-items:flex-start;font-size:.84rem;color:var(--citui-muted);margin:4px 0 14px}
+.src svg{flex:none;margin-top:1px;color:var(--citui-ok)}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px 16px;font:600 1rem var(--citui-font-text);cursor:pointer;text-align:center}
+.btn--p{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+.btn--p:disabled{opacity:.45;cursor:not-allowed}
+.btn--g{background:none;border:1px solid var(--citui-line-strong);color:var(--citui-ink);margin-top:9px}
+.btn--sm{display:inline-block;width:auto;padding:9px 14px;font-size:.9rem}
+.own{margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)}
+.own label{display:block;font-weight:600;margin-bottom:6px}
+.own__row{display:flex;gap:8px}
+.own__row input{flex:1;min-width:0;border:1px solid var(--citui-line-strong);border-radius:10px;padding:11px 12px;font:16px var(--citui-font-text)}
+.msg{margin:10px 0 0;font-size:.9rem}
+.msg--bad{color:var(--citui-bad)}
+.msg--info{color:var(--citui-muted)}
+.terms{background:var(--citui-surface-2);border-radius:12px;padding:14px 16px;margin:14px 0}
+.terms dl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:0}
+.terms dt{color:var(--citui-muted);font-size:.92rem}
+.terms dd{white-space:nowrap;font-size:.95rem}.terms dd{margin:0;text-align:right;font-weight:600}
+.terms .tot{border-top:1px solid var(--citui-line-strong);padding-top:10px;font-size:1.08rem;color:var(--citui-ink);font-weight:700}
+.terms .tot small{display:block;font-size:.78rem;font-weight:400;color:var(--citui-muted)}
+.guar{border:1.5px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:14px;padding:14px 16px;margin:14px 0}
+.guar h3{display:flex;gap:8px;align-items:center;margin:0 0 8px;font-size:1rem;font-family:var(--citui-font-display)}
+.guar h3 svg{color:var(--citui-ok)}
+.guar p{margin:0;font-size:.92rem}
+.tl{list-style:none;margin:10px 0 0;padding:0;counter-reset:t}
+.tl li{position:relative;padding:0 0 10px 34px;font-size:.92rem;counter-increment:t}
+.tl li::before{content:counter(t);position:absolute;left:0;top:-1px;width:24px;height:24px;border-radius:50%;background:var(--citui-white);border:1.5px solid var(--citui-ok);color:var(--citui-ok);font-weight:700;font-size:.8rem;display:grid;place-items:center}
+.tl li b{display:block}
+.tl li span{color:var(--citui-muted)}
+.lockline svg{flex:none}
+.lockline{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.84rem;color:var(--citui-muted);margin-top:10px;text-align:center}
+.banner{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:.92rem;background:var(--citui-ok-soft);border:1px solid color-mix(in srgb, var(--citui-ok) 40%, transparent)}
+.banner svg{flex:none;color:var(--citui-ok);margin-top:2px}
+.pay{border:1px dashed var(--citui-line-strong);border-radius:14px;padding:18px;text-align:center}
+.pay p{margin:0 0 12px;color:var(--citui-muted)}
+.pay .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.prog{list-style:none;padding:0;margin:12px 0}
+.prog li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:.94rem}
+.prog i{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--citui-line-strong);display:grid;place-items:center}
+.prog li.ok i{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+.prog li.no i{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+.prog li.now i{border-color:var(--citui-cyan-500)}
+.prog small{display:block;color:var(--citui-muted)}
+.res{border-radius:14px;padding:14px 16px;margin:12px 0;font-size:.95rem}
+.res--ok{background:var(--citui-ok-soft)}
+.res--bad{background:color-mix(in srgb, var(--citui-bad) 9%, var(--citui-white))}
+.res b{display:block;margin-bottom:4px}
+.hide{display:none!important}
+/* desktop layout: review screen in two columns — terms left, guarantee+button right */
+@container (min-width:760px){
+  .app{padding:28px 32px;max-width:980px;margin:0 auto}
+  .two{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start}
+  .two .guar{margin-top:0}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .card{padding:24px 26px}
+  .own__row input{max-width:420px}
+  .btn{max-width:none}
+}
+</style>
+
+<div class="mk-bar">
+  <b>Webcím · bizalom — vázlat</b>
+  <span class="mk-seg" id="segV">
+    <button data-v="A1" class="on">A1 · Zárolás, idővonal (JÓVÁHAGYVA)</button>
+  </span>
+  <span class="mk-seg" id="segS"><button data-s="phone">Mobil 390px</button><button data-s="desk" class="on">Asztali</button></span>
+  <span class="mk-note">Működő vázlat. A név-normalizálás a valódi szabály (domains.ts). Az elérhetőség SZIMULÁLT: foglalt = origo.hu, index.hu, lido.hu és minden „foglalt” szót tartalmazó név; „hiba” szóra a regisztrátor nem válaszol. A fizetési oldalon kiválaszthatod, sikerül-e a regisztráció.</span>
+</div>
+
+<div class="mk-stage"><div class="mk-frame" id="frame"><div class="app">
+  <div class="crumb">Lidó Wellness és Apartman › <b>Webcím</b></div>
+  <div class="steps"><span class="step" id="st1">1. Név</span><span class="step" id="st2">2. Áttekintés</span><span class="step" id="st3">3. Kész</span></div>
+
+  <!-- STEP 1 -->
+  <section class="card" id="s1">
+    <h2>Válasszon nevet</h2>
+    <p class="lead">A vendégei ezt a címet fogják beírni és látni a Google-ban.</p>
+    <div class="banner" data-only="A2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg><span><b>Kockázat nélkül:</b> csak akkor fizet, ha a név már az Öné. Ha nem sikerül regisztrálni, semmit nem terhelünk.</span></div>
+    <div class="cur"><b>lido-wellness-es-apartman.citoviso.com</b><span>most ez a címe</span></div>
+    <div class="opts" id="opts"></div>
+    <p class="src"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Az elérhetőséget közvetlenül a domain-regisztrátornál ellenőriztük, most. A „Szabad” azt jelenti: ebben a pillanatban bárki megveheti — mi is.</span></p>
+    <button class="btn btn--p" id="next1">Tovább</button>
+    <div class="own">
+      <label for="own">Vagy írja be a saját ötletét</label>
+      <div class="own__row"><input id="own" placeholder="pl. sajatnev.hu" autocapitalize="none" autocorrect="off"><button class="btn btn--g btn--sm" id="chk" style="margin:0">Ellenőrzés</button></div>
+      <div id="ownRes"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="card hide" id="s2">
+    <h2>Áttekintés</h2>
+    <p class="lead">A választott név: <b class="pick"></b> <span class="chip chip--free">✓ Szabad — most ellenőrizve</span></p>
+    <div class="two">
+      <div>
+        <div class="terms"><dl>
+          <dt>A választott cím</dt><dd class="pick"></dd>
+          <dt>A cím díja</dt><dd>1 000 Ft / hó</dd>
+          <dt>Előfizetés vállalása</dt><dd>12 hónap</dd>
+          <dt class="tot" data-only="A1 A2">Most zárolunk<small>csak sikeres regisztráció után terheljük</small></dt><dd class="tot" data-only="A1 A2">1 000 Ft</dd>
+          <dt class="tot" data-only="B">Most fizetendő<small>sikertelen regisztrációnál visszautaljuk</small></dt><dd class="tot" data-only="B">1 000 Ft</dd>
+        </dl></div>
+        <p class="msg msg--info">A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím (lido-wellness-es-apartman.citoviso.com) nem szűnik meg: automatikusan az újra irányít.</p>
+      </div>
+      <div>
+        <!-- A1: full timeline -->
+        <div class="guar" data-only="A1">
+          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Csak akkor fizet, ha a név már az Öné</h3>
+          <ol class="tl">
+            <li><b>Zároljuk az összeget a kártyáján</b><span>Ez még nem terhelés: a pénz a számláján marad.</span></li>
+            <li><b>Azonnal megvásároljuk a nevet</b><span>A regisztrátornál, általában egy percen belül.</span></li>
+            <li><b>Csak sikeres vétel után terheljük</b><span>Ha a név közben elkelt, vagy bármi okból nem sikerül, a zárolást feloldjuk — egy forintot sem fizet, és a 12 hónapos vállalás sem indul el.</span></li>
+          </ol>
+        </div>
+        <!-- A2: compact line -->
+        <div class="guar" data-only="A2">
+          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Nem sikerül? Nem fizet.</h3>
+          <p>Az 1 000 Ft-ot most csak zároljuk. Terhelni csak akkor terheljük, amikor a név már az Öné. Ha a regisztráció nem sikerül, a zárolást feloldjuk.</p>
+        </div>
+        <!-- B: refund -->
+        <div class="guar" data-only="B">
+          <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Pénz-visszafizetési garancia</h3>
+          <p>Ha a nevet bármi okból nem tudjuk regisztrálni, a teljes 1 000 Ft-ot automatikusan visszautaljuk a kártyájára, és a 12 hónapos vállalás sem indul el.</p>
+        </div>
+        <button class="btn btn--p" id="pay"></button>
+        <p class="lockline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Biztonságos fizetés a Barionnál — a kártyaadatait mi nem látjuk.</p>
+        <button class="btn btn--g" id="back2">Vissza</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIMULATED GATEWAY -->
+  <section class="card hide" id="sPay">
+    <h2>(Szimulált Barion-oldal)</h2>
+    <div class="pay"><p>Mi történjen a regisztrációnál? — ez csak a vázlat vezérlője, a valóságban nem látszik.</p>
+      <div class="row"><button class="btn btn--p btn--sm" id="okReg">A név regisztrálása sikerül</button><button class="btn btn--g btn--sm" id="badReg" style="margin:0">Közben elvitték a nevet</button></div></div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="card hide" id="s3">
+    <h2 id="s3h"></h2>
+    <ul class="prog" id="prog"></ul>
+    <div id="s3res"></div>
+    <button class="btn btn--g" id="restart">Vázlat újrakezdése</button>
+  </section>
+</div></div></div>
+
+<script>
+(function(){
+  var V="A1", picked=null, chosenOwn=null;
+  var TAKEN=["origo.hu","index.hu","lido.hu"];
+  var SUG=["lidowellness.hu","lido-wellness.hu","lidoapartman.hu","lido.hu","lidowellness.com"];
+  var $=function(s){return document.querySelector(s)}, $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+  // Mirror of domains.ts::normalizeCustomDomain — same rules, same messages.
+  function norm(input){
+    var raw=String(input||"").trim().toLowerCase().replace(/^[a-z]+:\/\//,"").replace(/^www\./,"").replace(/[/?#].*$/,"").replace(/\.$/,"");
+    if(!raw)return{ok:false,reason:"Adjon meg egy domain nevet"};
+    if(raw.length>253)return{ok:false,reason:"Túl hosszú domain név"};
+    var labels=raw.split(".");
+    if(labels.length<2)return{ok:false,reason:"Végződés is kell, például: pelda.hu"};
+    for(var i=0;i<labels.length;i++){var l=labels[i];
+      if(!l)return{ok:false,reason:"Hibás domain név (üres rész a pontok között)"};
+      if(l.length>63)return{ok:false,reason:"Túl hosszú rész a domain névben"};
+      if(!/^[a-z0-9-]+$/.test(l)||l.charAt(0)==="-"||l.slice(-1)==="-")return{ok:false,reason:"Csak angol betű, szám és kötőjel használható"};}
+    var tld=labels[labels.length-1];
+    if(!/^[a-z]{2,}$/.test(tld))return{ok:false,reason:"Hibás végződés (például: .hu, .com)"};
+    return{ok:true,domain:raw};
+  }
+  function art(d,cap){var a=/^[aeiouáéíóöőúüű]/i.test(d)?"az":"a";return cap?a.charAt(0).toUpperCase()+a.slice(1):a;}
+  function avail(d){ if(d.indexOf("hiba")>=0)return"err"; if(TAKEN.indexOf(d)>=0||d.indexOf("foglalt")>=0)return"taken"; return"free"; }
+  function chip(a){
+    if(a==="free")return'<span class="chip chip--free">✓ Szabad</span>';
+    if(a==="taken")return'<span class="chip chip--taken">Foglalt</span>';
+    if(a==="wait")return'<span class="chip chip--wait">Ellenőrizzük…</span>';
+    return'<span class="chip chip--err">Nem sikerült ellenőrizni</span>';
+  }
+  function renderOpts(){
+    var first=null;
+    $("#opts").innerHTML=SUG.map(function(d){var a=avail(d),off=a!=="free";if(!off&&first===null)first=d;
+      return'<label class="opt'+(off?" off":"")+'" data-d="'+d+'"><input type="radio" name="d" value="'+d+'"'+(off?" disabled":"")+'><span class="opt__n">'+d+'</span>'+chip(a)+'</label>';}).join("");
+    picked=picked||first; syncSel();
+    $$("#opts input").forEach(function(i){i.onchange=function(){picked=i.value;chosenOwn=null;syncSel();}});
+  }
+  function syncSel(){ $$("#opts .opt").forEach(function(o){var on=o.getAttribute("data-d")===picked;o.classList.toggle("sel",on);o.querySelector("input").checked=on;}); $("#next1").disabled=!picked; }
+  function variant(v){V=v;$$("#segV button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-v")===v)});
+    $$("[data-only]").forEach(function(e){e.classList.toggle("hide",e.getAttribute("data-only").split(" ").indexOf(v)<0)});
+    $("#pay").textContent=v==="B"?"Fizetés és megrendelés":"Tovább a fizetéshez (zárolás)";}
+  function show(id){["#s1","#s2","#sPay","#s3"].forEach(function(s){$(s).classList.toggle("hide",s!==id)});
+    $("#st1").className="step"+(id==="#s1"?" now":" done"); $("#st2").className="step"+(id==="#s2"||id==="#sPay"?" now":(id==="#s3"?" done":"")); $("#st3").className="step"+(id==="#s3"?" now":"");
+    window.scrollTo(0,0);}
+  function toReview(){ $$(".pick").forEach(function(e){e.textContent=picked}); show("#s2"); }
+  $("#next1").onclick=function(){ if(picked)toReview(); };
+  function check(){
+    var n=norm($("#own").value), box=$("#ownRes");
+    if(!n.ok){box.innerHTML='<p class="msg msg--bad">'+n.reason+'</p>';return;}
+    $("#own").value=n.domain;
+    box.innerHTML='<div class="opt" style="margin-top:10px"><span class="opt__n">'+n.domain+'</span>'+chip("wait")+'</div>';
+    setTimeout(function(){var a=avail(n.domain);
+      if(a==="taken"){box.innerHTML='<p class="msg msg--bad">A(z) <b>'+n.domain+'</b> már foglalt — válasszon másikat.</p>';return;}
+      if(a==="err"){box.innerHTML='<div class="opt" style="margin-top:10px"><span class="opt__n">'+n.domain+'</span>'+chip("err")+'<button class="btn btn--g btn--sm" id="retry" style="margin:0">Újra</button></div><p class="msg msg--info">A regisztrátor most nem válaszolt. Amíg nem tudjuk biztosan, hogy szabad, nem kínáljuk megvételre.</p>';$("#retry").onclick=check;return;}
+      box.innerHTML='<div class="opt sel" style="margin-top:10px"><span class="opt__n">'+n.domain+'</span>'+chip("free")+'<button class="btn btn--p btn--sm" id="takeOwn">Ezt kérem</button></div>';
+      $("#takeOwn").onclick=function(){picked=n.domain;toReview();};
+    },900);
+  }
+  $("#chk").onclick=check; $("#own").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();check();}};
+  $("#back2").onclick=function(){show("#s1")};
+  $("#pay").onclick=function(){
+    // the real flow re-checks at the registrar right before the gateway
+    $("#pay").disabled=true;$("#pay").textContent="Még egyszer ellenőrizzük a nevet…";
+    setTimeout(function(){$("#pay").disabled=false;variant(V);show("#sPay");},800);
+  };
+  function prog(rows){$("#prog").innerHTML=rows.map(function(r){return'<li class="'+r[0]+'"><i>'+(r[0]==="ok"?"✓":r[0]==="no"?"✕":"")+'</i><span>'+r[1]+'<small>'+r[2]+'</small></span></li>'}).join("");}
+  $("#okReg").onclick=function(){
+    $("#s3h").textContent="Az Öné: "+picked;
+    prog([["ok",V==="B"?"Fizetés megérkezett":"Összeg zárolva","1 000 Ft"],["ok","Megvásároltuk a nevet","A regisztrátornál, az Ön nevére tartjuk karban"],["ok",V==="B"?"Számla elküldve":"Most terheltük a kártyáját","1 000 Ft — a számlát e-mailben küldjük"],["now","Beállítjuk a címet és a biztonsági tanúsítványt","Általában néhány perc — e-mailben jelezzük, amint kész"]]);
+    $("#s3res").innerHTML='<div class="res res--ok"><b>Önnek nincs több teendője.</b>A 12 hónapos vállalás mától indul.</div>';
+    show("#s3");
+  };
+  $("#badReg").onclick=function(){
+    $("#s3h").textContent=art(picked,1)+" "+picked+" nevet nem tudtuk megvásárolni";
+    if(V==="B"){
+      prog([["ok","Fizetés megérkezett","1 000 Ft"],["no","A nevet közben más regisztrálta","A mi ellenőrzésünk és a vétel között elkelt"],["ok","Visszautaltuk a teljes összeget","1 000 Ft — a bankja néhány napon, legfeljebb 30 napon belül jóváírja"]]);
+      $("#s3res").innerHTML='<div class="res res--bad"><b>Nem fizet érte semmit.</b>A teljes összeget visszautaltuk, a 12 hónapos vállalás nem indult el. Válasszon másik nevet, ha szeretne.</div>';
+    } else {
+      prog([["ok","Összeg zárolva","1 000 Ft"],["no","A nevet közben más regisztrálta","A mi ellenőrzésünk és a vétel között elkelt"],["ok","A zárolást feloldottuk — nem terheltünk semmit","A bankjától függően néhány munkanapon belül eltűnik a számlájáról"]]);
+      $("#s3res").innerHTML='<div class="res res--bad"><b>Nem fizetett érte semmit.</b>A kártyáját nem terheltük, a 12 hónapos vállalás nem indult el. Válasszon másik nevet, ha szeretne.</div>';
+    }
+    $("#s3res").innerHTML+='<button class="btn btn--p" id="again">Másik név választása</button>';
+    $("#again").onclick=function(){picked=null;renderOpts();show("#s1")};
+    show("#s3");
+  };
+  $("#restart").onclick=function(){picked=null;renderOpts();$("#ownRes").innerHTML="";$("#own").value="";show("#s1")};
+  $$("#segV button").forEach(function(b){b.onclick=function(){variant(b.getAttribute("data-v"))}});
+  function size(s){$$("#segS button").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-s")===s)});$("#frame").classList.toggle("is-phone",s==="phone");}
+  $$("#segS button").forEach(function(b){b.onclick=function(){size(b.getAttribute("data-s"))}});
+  var q=new URLSearchParams(location.search);
+  renderOpts(); variant(q.get("v")||"A1"); size(q.get("s")||(matchMedia("(max-width:600px)").matches?"phone":"desk"));
+  var st=q.get("step"); if(st==="2")toReview(); if(st==="3ok"){toReview();$("#okReg").click();} if(st==="3bad"){toReview();$("#badReg").click();}
+})();
+</script>
+</body></html>

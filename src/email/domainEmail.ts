@@ -61,30 +61,45 @@ export function buildDomainFailedEmail(input: {
   domain: string;
   /** A tenant-admin „Webcím" fülének teljes URL-je. */
   adminUrl: string;
+  /** ADR-XXXX: the order was paid by a HOLD, and the hold was released. */
+  released?: boolean;
   lang?: string;
 }): EmailMessage {
-  const { to, domain, adminUrl, lang } = input;
+  const { to, domain, adminUrl, released, lang } = input;
 
-  // ⛔ Visszautalást NEM ígérünk (ADR-0078): a Barion Refund API létezik, de nálunk
-  // nincs megírva. A tenant másik nevet választ, arra fordítjuk az összeget.
-  const body = T(
-    lang,
-    "{Art} {domain} nevet sajnos időközben más lefoglalta, ezért nem tudtuk megvásárolni. A befizetett összeg nem vész el: egy másik névre fordítjuk.",
-    { Art: huArticle(domain), domain },
-  );
+  // ADR-XXXX: a held order that failed costs NOTHING — the hold is released, the
+  // commitment never starts. The legacy text stays for an order that was charged
+  // up front (before the reservation flow): that money goes to another name
+  // (ADR-0078 ②), and promising a refund we do not run would be false (§B.17).
+  const body = released
+    ? T(
+        lang,
+        "{Art} {domain} nevet sajnos nem tudtuk megvásárolni. A kártyáját nem terheltük: a zárolást feloldottuk, a bankjától függően néhány munkanapon belül eltűnik a számlájáról. Az előfizetési vállalás sem indult el.",
+        { Art: huArticle(domain), domain },
+      )
+    : T(
+        lang,
+        "{Art} {domain} nevet sajnos időközben más lefoglalta, ezért nem tudtuk megvásárolni. A befizetett összeg nem vész el: egy másik névre fordítjuk.",
+        { Art: huArticle(domain), domain },
+      );
 
+  // A held order can fail for more than "someone took it" (registrar outage, price
+  // cap) — its title names the outcome that matters to the buyer instead.
+  const title = released
+    ? T(lang, "Nem tudtuk megvásárolni a választott webcímet — nem terheltünk semmit")
+    : T(lang, "A választott webcím időközben elkelt");
   const text =
-    T(lang, "A választott webcím időközben elkelt") +
+    title +
     `\n\n${body}\n\n` +
     T(lang, "Válasszon másik nevet itt:") +
     ` ${adminUrl}\n`;
 
   return platformMail({
     to,
-    subject: T(lang, "A választott webcím időközben elkelt"),
+    subject: title,
     text,
     lang,
-    heading: T(lang, "A választott webcím időközben elkelt"),
+    heading: title,
     blocks: [mailPara(body), mailButton(adminUrl, T(lang, "Másik név választása"))],
   });
 }

@@ -31,6 +31,15 @@ export interface PaymentRequest {
    * finishReservation(…, 0) the moment the token is stored, so no money moves.
    */
   readonly verification?: boolean;
+  /**
+   * ADR-XXXX: a custom-domain order only BLOCKS the amount on the payer's card
+   * (Barion PaymentType=DelayedCapture — NOT Reservation: a Reservation charges the
+   * card at once and parks the money in OUR wallet, ADR-0228). The caller captures
+   * it with captureHold() once the registrar confirmed the purchase, and lifts the
+   * block with releaseHold() when the registration fails — the buyer is never
+   * charged for a name we could not get. Bank card only (Barion docs).
+   */
+  readonly reserve?: boolean;
 }
 
 /** ADR-0080 ④: a merchant-initiated charge with a stored token (payer absent). */
@@ -117,4 +126,11 @@ export interface PaymentGateway {
    * the card-verification flow, and the caller must not offer it.
    */
   finishReservation?(gatewayRef: string, total: number): Promise<boolean>;
+  /**
+   * ADR-XXXX: capture an authorized (DelayedCapture) payment for `total` — the
+   * moment the buyer is actually charged. Never throws: false = not captured.
+   */
+  captureHold?(gatewayRef: string, total: number): Promise<boolean>;
+  /** ADR-XXXX: cancel the authorization — the block on the card is lifted, 0 charged. */
+  releaseHold?(gatewayRef: string): Promise<boolean>;
 }

@@ -166,6 +166,10 @@ export const ICON_THIN: Readonly<Record<string, string>> = {
   zoom: `<circle cx="10.6" cy="10.6" r="6.6"/><path d="M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4"/>`,
   filter: `<path d="M4 6h16l-6 7v5l-4 2v-7z"/>`,
   partners: `<circle cx="8.6" cy="8.2" r="3.3"/><path d="M2.8 19.5c.8-3.2 3-4.9 5.8-4.9s5 1.7 5.8 4.9"/><path d="M15.2 5.4a3.3 3.3 0 0 1 0 5.6M17.5 14.9c2 .6 3.3 2.1 3.9 4.6"/>`,
+  // ADR-XXXX — the Webcím review's "only pay once the name is yours" guarantee +
+  // the secure-payment line under the pay button (approved A1 contract).
+  shield: `<path d="M12 3l8 3v6c0 4.5-3.4 8.4-8 9-4.6-.6-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>`,
+  lock: `<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>`,
 };
 
 /** The tenant-admin icon (ADR-0224): thin line, no accent dot. Unknown thin name →

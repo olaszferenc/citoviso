@@ -57,6 +57,17 @@ export class MockGateway implements PaymentGateway {
     return true;
   }
 
+  /** ADR-XXXX: the mock blocks nothing, so capture and release always succeed. */
+  async captureHold(gatewayRef: string, total: number): Promise<boolean> {
+    console.log(`[payment:mock] zárolás lehívva · ${gatewayRef} · ${total} HUF`);
+    return true;
+  }
+
+  async releaseHold(gatewayRef: string): Promise<boolean> {
+    console.log(`[payment:mock] zárolás feloldva · ${gatewayRef}`);
+    return true;
+  }
+
   /**
    * ADR-0080 ④: the mock MIT charge — succeeds instantly so the whole
    * auto-renewal loop runs locally. MOCK_RECURRING_FAIL=1 forces the failure

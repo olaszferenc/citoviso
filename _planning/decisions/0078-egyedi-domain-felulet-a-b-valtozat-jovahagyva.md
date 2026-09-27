@@ -10,6 +10,10 @@ választják. A jóváhagyott terv KONTRAKTUSKÉNT befagyasztva:
 `assets/design-refs/console/domain/` (HTML-ek + `README.md`, ami kimondja, mit KÖT a terv —
 elvárt viselkedés, nem stílus-javaslat). A kész felületet EHHEZ mérjük.
 
+> ⚠️ **② MÓDOSÍTVA — ADR-XXXX (2026-09-27):** az új domain-rendelés ZÁROLÁSSAL fizet, és
+> sikertelen beszerzésnél a zárolás feloldódik — a vevő nem fizet semmit. Az alábbi szabály
+> csak a zárolás ELŐTT, azonnal terhelt rendelésekre él tovább.
+
 **② Sikertelen beszerzés (a nevet a fizetés és a vétel között elviszik): A TENANT DÖNT.**
 Nincs automata visszautalás; a tenant másik nevet választ, és a befizetett összeg arra
 fordítódik.

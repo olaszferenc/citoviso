@@ -4,7 +4,7 @@ title: Saját webcím — hogyan kaphat egyedi domain nevet a honlapja
 audience: tenant
 category: billing
 anchors: admin.domain
-updated: 2026-09-07
+updated: 2026-09-27
 ---
 
 A honlapja induláskor egy nálunk lévő címen érhető el (például
@@ -17,14 +17,20 @@ számlát nyitni, DNS-t állítgatni vagy tanúsítványt intézni.
 
 ## Hogyan rendelhetem meg?
 
-**1. lépés — Név.** A fül tetején látja a honlapja jelenlegi címét. Alatta néhány
-javaslatot kínálunk a vállalkozása nevéből. Mindegyik mellett jelezzük, hogy
-mit tudunk róla:
+![Képernyőkép: a Webcím fül első lépése telefonon, a javasolt nevekkel](assets/hu/screen.png)
 
-- **szabadnak tűnik** — nagy eséllyel megvásárolható,
-- **foglalt** — valaki más már használja, ezt nem lehet kérni,
-- **nem tudjuk előre** — a végződésről nem kaptunk megbízható választ; ilyenkor a
-  vásárláskor derül ki. (Ha nem sikerül, nem veszít pénzt — lásd lent.)
+**1. lépés — Név.** A fül tetején látja a honlapja jelenlegi címét. Alatta néhány
+javaslatot kínálunk a vállalkozása nevéből. Az elérhetőséget **közvetlenül a
+domain-regisztrátornál** ellenőrizzük, abban a pillanatban, amikor megnyitja a fület.
+Mindegyik név mellett ott a válasz:
+
+- **Szabad** — most bárki megveheti, mi is; ezt kérheti,
+- **Foglalt** — valaki más már birtokolja, ezt nem lehet kérni,
+- **Nálunk nem igényelhető** — a regisztrátor ezt a nevet (például a végződése miatt)
+  nem adja el nekünk; válasszon másikat,
+- **Nem sikerült ellenőrizni** — a regisztrátor épp nem válaszolt. Amíg nem tudjuk
+  biztosan, hogy szabad, nem kínáljuk megvételre. Frissítse a lapot kicsit később (a saját
+  ötletnél erre az **„Újra”** gomb szolgál).
 
 Ha egyik javaslat sem tetszik, a **„Vagy írja be a saját ötletét”** mezőbe beírhatja
 a magáét, és az **„Ellenőrzés”** gombbal megnézzük. Nyugodtan írja úgy, ahogy a
@@ -35,24 +41,43 @@ Ha valami nem használható benne, egyszerű magyar mondatban megírjuk, miért.
 többszörösét kéri — nálunk nem lehet igényelni; ha ilyet ír be, ezt az
 ellenőrzésnél azonnal jelezzük, és érdemes másik nevet választani.
 
-A javasolt nevek listájában jelölje be azt, amelyiket kéri (a név elé kerül a pötty), majd
-koppintson a lista alatti **„Tovább”** gombra. Ha saját nevet írt be és azt ellenőriztette, az
-eredmény-doboznál az **„Ezt kérem”** gombbal viheti tovább.
+Az első szabad nevet eleve kijelöljük (a név előtti pötty). Ha másikat kér, koppintson
+arra, majd a lista alatti **„Tovább”** gombra. Ha a listában egyetlen szabad név sincs, a
+„Tovább” gomb nem nyomható — ilyenkor írjon be saját ötletet. Ha saját nevet írt be és
+azt ellenőriztette, az eredmény-doboznál az **„Ezt kérem”** gombbal viheti tovább.
 
-**2. lépés — Áttekintés.** Itt egy helyen látja, mit rendel: a választott címet, a
-cím **havi díját**, a vállalt előfizetési időt és a most fizetendő összeget. Ha
-meggondolta magát, a **„Vissza”** gombbal új nevet választhat. Ha rendben van,
-koppintson a **„Fizetés és megrendelés”** gombra — a biztonságos fizetési oldalra jut.
+![Képernyőkép: az Áttekintés lépés telefonon, a zárolás lépéseivel](assets/hu/review.png)
 
-**3. lépés — Kész.** A fizetés (díjmentes rendelésnél a megrendelés) után a rendszer
-magától megvásárolja a nevet, beállítja, és átköltözteti rá a honlapját. A fülön
-követheti, hol tart; e-mailben is szólunk, amint kész.
+**2. lépés — Áttekintés.** Ha ide lép, a nevet még egyszer megnézzük a regisztrátornál
+(„Szabad — most ellenőrizve”). Itt egy helyen látja, mit rendel: a választott címet, a
+cím **havi díját**, a vállalt előfizetési időt, és hogy most mennyit **zárolunk** a
+kártyáján. Ha meggondolta magát, a **„Vissza”** gombbal új nevet választhat. Ha rendben
+van, koppintson a **„Tovább a fizetéshez (zárolás)”** gombra — a Barion biztonságos
+fizetési oldalára jut.
 
-⚠️ **`.hu` névnél a képernyő két mondata pontatlan.** A beszerzés alatt a fülön ez fogadja:
-**„Már intézzük — Önnek nincs teendője.”** és **„Ez általában néhány percet vesz igénybe.
-E-mailben jelezzük, amint kész.”** Az első mondat igaz, a második **nem**: a `.hu` nevek
-bejegyzése nem percek, hanem **napok** kérdése — és mivel a felajánlott nevek többsége
-`.hu`, ez a jellemző eset, nem kivétel.
+Ha a név az újbóli ellenőrzéskor már nem szabad, a lépésen **nincs fizetés-gomb**: a lap
+megírja, hogy a név foglalt vagy nálunk nem igényelhető, és a **„Vissza”** gombbal
+választhat másikat. Ha a regisztrátor épp nem válaszolt, az **„Újra”** gombbal kérdezhet rá
+ismét. Ha a fizetési oldal nem nyílt meg, a lap tetején ez áll: „A fizetést nem sikerült
+elindítani. Kérjük, próbálja újra.” — ilyenkor semmit nem zároltunk.
+
+**Csak akkor fizet, ha a név már az Öné.** A fizetési oldalon az összeget **csak
+zároljuk** a kártyáján — ez még nem terhelés, a pénz a számláján marad. Ezután azonnal
+megvásároljuk a nevet, és **csak a sikeres vétel után terheljük** a kártyáját. Ha a név
+közben elkelt, vagy bármi okból nem sikerül megvenni, a zárolást feloldjuk: egy forintot
+sem fizet, és az előfizetési vállalás sem indul el.
+
+Két dolgot érdemes tudnia a zárolásról. A bankja az alkalmazásában **függőben lévő
+tételként** mutathatja — ez még nem levonás. És mivel valódi kártyazárolás, **csak
+bankkártyával** lehet fizetni (Barion-egyenleggel nem).
+
+**3. lépés — Kész.** A fülön lépésről lépésre követheti, hol tart: összeg zárolva →
+megvásároltuk a nevet → terheltük a kártyáját (a számlát e-mailben küldjük) → beállítjuk
+a címet és a biztonsági tanúsítványt. E-mailben is szólunk, amint kész.
+
+A `.hu` nevek bejegyzése napokig tart (lásd lent) — a képernyő ezt ki is írja („A .hu
+neveknél ez néhány nap”). A kártyáját ettől függetlenül már a név megvásárlásakor
+terheljük, nem a várakozás végén.
 
 Az ok: a magyar nyilvántartó (a `.hu` neveket kezelő szervezet) minden igénylést külön
 megerősítéshez köt. **Ezt a lépést mi végezzük el, nem Ön** — a nyilvántartó a mi
@@ -65,9 +90,10 @@ küldünk. Ne kattintson benne, hanem továbbítsa nekünk, és megnézzük.
 
 ## Meddig tart, és mi történik közben?
 
-Nem magyar (`.com`, `.eu` és hasonló) neveknél általában rövid: a képernyőn négy lépést
-lát — megvásároljuk a nevet → beállítjuk a címet → biztonsági tanúsítvány →
-átköltöztetés. A tanúsítvány az, ami miatt a böngésző lakatot mutat a cím mellett.
+Nem magyar (`.com`, `.eu` és hasonló) neveknél általában rövid: a név megvásárlása után
+a címet és a biztonsági tanúsítványt néhány perc alatt beállítjuk, és a honlapja
+átköltözik az új névre. A tanúsítvány az, ami miatt a böngésző lakatot mutat a cím
+mellett.
 
 ⚠️ **`.hu` névnél napokban számoljon**, nem percekben: a nyilvántartói megerősítés után is
 van egy nyolcnapos várakozási idő, amíg a név véglegessé válik. Ez a magyar szabályozás
@@ -82,12 +108,15 @@ szórólapok és a máshol elhelyezett hivatkozások is működnek tovább. A Go
 
 ## Mi van, ha a nevet közben elviszi valaki?
 
-Ritkán előfordul: a domain nevek érkezési sorrendben kelnek el, és a fizetés meg a
+Ritkán előfordul: a domain nevek érkezési sorrendben kelnek el, és az ellenőrzés meg a
 tényleges vásárlás között eltelik pár másodperc. Ha ez történik, a rendszer inkább
 leáll, mint hogy rossz nevet vegyen Önnek.
 
-**A befizetett összeg ilyenkor sem vész el:** egy másik névre fordítjuk. A fülön
-megjelenik, melyik nevet nem sikerült megszerezni, és rögtön választhat másikat.
+**Ilyenkor nem fizet semmit.** Mivel az összeget csak zároltuk, a zárolást feloldjuk, és a
+kártyáját nem terheljük. A bankjától függően néhány munkanapon belül eltűnik a
+számlájáról. Az előfizetési vállalás sem indul el. A fülön és e-mailben is
+megírjuk, melyik nevet nem sikerült megszerezni, és a **„Másik név választása”** gombbal
+rögtön választhat másikat.
 
 ## Mennyibe kerül?
 

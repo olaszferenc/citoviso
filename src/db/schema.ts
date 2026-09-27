@@ -716,7 +716,11 @@ export interface PaymentTable {
   /** Gateway payment reference (Barion PaymentId; mock: own ref). */
   gateway_ref: string | null;
   pay_url: string | null;
-  status: Generated<"pending" | "paid" | "failed" | "cancelled">;
+  /** ADR-XXXX (0077): `reserved` = the gateway holds the amount while the domain is
+   *  being registered; `released` = the hold was given back (nothing charged). */
+  status: Generated<"pending" | "paid" | "failed" | "cancelled" | "reserved" | "released">;
+  /** ADR-XXXX (0077): this pay-link asked for a HOLD (Reservation), not a charge. */
+  reservation: Generated<boolean>;
   /** ADR-0226 (0076): this pay-link asked the gateway to store a token — the
    *  webhook reads the FACT from here, not from the order kind (an upsell paid
    *  "with another card" and a card_update both initiate). */

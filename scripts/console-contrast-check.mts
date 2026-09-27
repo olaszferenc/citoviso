@@ -247,7 +247,13 @@ async function main(): Promise<void> {
       for (const w of [390, 1280]) {
         const p = await ctx.newPage();
         await p.setViewportSize({ width: w, height: 1000 });
-        const r = await p.goto(`http://127.0.0.1:${port}${route}`, { waitUntil: "networkidle" });
+        // ⏱️ Kimondott időkorlát (tulaj: „b)”, 2026-09-27). A lead-lap 20 photo-health
+        // kérést indít (egy-egy assessMockPhotos ~7–8 s), és a networkidle az origin/mainen
+        // is ~31 s-nál állt be — a Playwright-alap 30 s-os határon a kapu a gép terhelésén
+        // billegett, nem a feliraton (cit873a226d, háromszor piros · kétszer zöld ugyanarra).
+        // A mérés tartalma változatlan; csak a várakozás nem véletlen többé. A photo-health
+        // networkidle-t nyitva tartó volta a kapu gazdájának nyitott tétele.
+        const r = await p.goto(`http://127.0.0.1:${port}${route}`, { waitUntil: "networkidle", timeout: 90_000 });
         if (!r || r.status() >= 400) {
           if (w === 390) skippedRoutes.push(`${name} (HTTP ${r?.status() ?? "?"})`);
           await p.close();

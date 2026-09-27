@@ -1,5 +1,10 @@
 # Egyedi-domain felület — JÓVÁHAGYOTT TERV (ADR-0071 B blokk)
 
+> ⚠️ **2026-09-27, ADR-XXXX:** az elérhetőség-jelölő (3. pont), az Áttekintés pénz-blokkja
+> (5. pont), a folyamat-képernyő és a „Sikertelen beszerzés” szakasz **felülírva** — a
+> hatályos terv: `../domain-zarolas/` (hiteles elérhetőség + zárolásos fizetés). A három
+> lépés és a jelenlegi-cím sáv változatlanul él.
+
 **Tulajdonosi döntés, 2026-08-27: a B VÁLTOZAT.** Ez a mappa a megvalósítás
 **KONTRAKTUSA** — a kész felületet EHHEZ mérjük (§2b 5. pont).
 

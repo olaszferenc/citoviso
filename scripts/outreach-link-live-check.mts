@@ -151,7 +151,11 @@ async function measure(
   const page = await ctx.newPage();
   const errs: string[] = [];
   page.on("pageerror", (e) => errs.push(String(e)));
-  await page.goto(`${origin}/lead/${leadId}#prospects`, { waitUntil: "networkidle" });
+  // ⏱️ Kimondott időkorlát (tulaj: „ok” a B2-re, 2026-09-27). A konzol lead-lapja 20
+  // photo-health kérést indít (egy-egy ~7–8 s), a networkidle az origin/mainen is ~31 s —
+  // a Playwright 30 s-os alaphatárán a kapu a gép terhelésén billegett. A mérés
+  // változatlan; a gyökérok (a photo-health tartja nyitva a lapot) külön szálon.
+  await page.goto(`${origin}/lead/${leadId}#prospects`, { waitUntil: "networkidle", timeout: 90_000 });
   await page.waitForTimeout(350);
 
   const label = poison === "none" ? `${vp.tag} · lead ${leadId.slice(0, 8)}` : `${vp.tag} · MÉRGEZETT[${poison}]`;

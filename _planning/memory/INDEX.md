@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md](2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md) — 2026-09-27 — Webcím: a vásárlás hibája + hiteles elérhetőség + kártyazárolás (ADR-XXXX)
 - [2026-09-27_uzenetek_kattinthato_linkek.md](2026-09-27_uzenetek_kattinthato_linkek.md) — 2026-09-27 — Kattintható linkek az admin Üzenetek levéltörzsében
 - [2026-09-27_uzenetek_foglalasi_dontes_linkek.md](2026-09-27_uzenetek_foglalasi_dontes_linkek.md) — 2026-09-27 — Üzenetek fül: foglalási döntés-linkek (C terv) + https-séma javítás
 - [2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md](2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md) — 2026-09-27 — A mobil-kör három nyitott tétele: fekvő főcím a 19 sablonon · nem törő összeg · az Elek-park lánca

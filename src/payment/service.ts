@@ -21,12 +21,17 @@ import { upsertPartnerFromOrder } from "../billing/partner.js";
 import { activateUpsell, undeliveredUpsellModules } from "../tenant/moduleUpsell.js";
 import { alertUndeliveredUpsell } from "../console/payLinkAlert.js";
 import { syncEntitlementsToPaid } from "../tenant/paidEntitlements.js";
-import { provisionOrderDomain } from "../domains/provisionDomain.js";
+import {
+  provisionOrderDomain,
+  runDomainProvisioning,
+  startOrderDomainProvisioning,
+} from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
 import { computeAnnual, computeMonthly } from "../pricing.js";
 import { getGateway } from "./index.js";
+import { MockGateway } from "./mock.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
 import { applyRenewalPaid, ensureSubscriptionForOrder, nextChargeDate } from "./subscription.js";
 import { grantNewSubscriberCouponForOrder, redeemOfferForOrder } from "./offers.js";
@@ -58,7 +63,7 @@ export async function requestPayment(
 ): Promise<RequestPaymentResult | null> {
   const oi = await db
     .selectFrom("order_intent")
-    .select(["id", "price", "billing_period", "kind", "buyer_country"])
+    .select(["id", "price", "billing_period", "kind", "buyer_country", "domain_name"])
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi || oi.price == null) return null;
@@ -176,6 +181,15 @@ export async function requestPayment(
     return null;
   }
 
+  // ADR-XXXX: a custom-domain order is a HOLD, captured only once the name is ours.
+  // The review screen promises "a name we could not register costs nothing" — on a
+  // gateway that cannot release a hold that promise would be false, so refuse.
+  const reserve = oi.kind === "domain_upgrade";
+  if (reserve && !(gw.captureHold && gw.releaseHold)) {
+    console.warn(`[payment] domain_upgrade ${orderIntentId} MEGTAGADVA: az átjáró (${gw.name}) nem tud zárolni/feloldani`);
+    return null;
+  }
+
   const payment = await db
     .insertInto("payment")
     .values({
@@ -186,6 +200,7 @@ export async function requestPayment(
       gateway: gw.name,
       status: "pending",
       initiates_recurrence: wantsToken,
+      reservation: reserve,
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -206,11 +221,14 @@ export async function requestPayment(
             ? "Citoviso modul-bővítés — időarányos első díj"
             : oi.kind === "card_update"
               ? "Citoviso kártya-megerősítés — azonnal visszautalva"
-              : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+              : oi.kind === "domain_upgrade"
+                ? `Citoviso saját webcím${oi.domain_name ? ` (${oi.domain_name})` : ""} — csak sikeres regisztráció után terheljük`
+                : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
     ...(wantsToken ? { initiateRecurrence: true, recurrenceId: payment.id } : {}),
     ...(oi.kind === "card_update" ? { verification: true } : {}),
+    ...(reserve ? { reserve: true } : {}),
   });
 
   await db
@@ -265,7 +283,13 @@ export async function handleWebhook(
       ? await db
           .selectFrom("payment")
           .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
-          .select(["payment.id as id", "payment.status as status", "order_intent.kind as kind"])
+          .select([
+            "payment.id as id",
+            "payment.status as status",
+            "payment.reservation as reservation",
+            "order_intent.kind as kind",
+            "order_intent.id as orderIntentId",
+          ])
           .where("payment.gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
@@ -283,6 +307,12 @@ export async function handleWebhook(
       }
       const again = await gw.parseWebhook(params, headers);
       if (again && again !== "pending") return applyWebhookResult(again);
+    }
+    // ADR-XXXX: a domain order's hold now stands — the card authenticated, the
+    // amount is reserved. THIS is the trigger of the registration (not a charge):
+    // the capture follows only when the registrar confirmed the name.
+    if (known.reservation && known.kind === "domain_upgrade" && known.status === "pending") {
+      if (await markDomainReserved(known.id)) await fireReservedDomainProvisioning(known.orderIntentId);
     }
     return { ok: true, pending: true };
   }
@@ -323,10 +353,14 @@ export async function applyWebhookResult(
 ): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
   const payment = await db
     .selectFrom("payment")
-    .select(["id", "order_intent_id", "status"])
+    .select(["id", "order_intent_id", "status", "reservation"])
     .where("gateway_ref", "=", res.gatewayRef)
     .executeTakeFirst();
   if (!payment) return { ok: false };
+  // ADR-XXXX: a hold we gave back stays given back. Barion reports a zero-finished
+  // reservation as Succeeded — that must never flip into "paid" and an invoice.
+  if (payment.status === "released") return { ok: true, activated: false, alreadySettled: true };
+  if (payment.reservation) return applyDomainReservationResult(payment, res);
   // Idempotent — and SAY SO: the replayed "paid" click used to re-render the
   // "terhelés megtörtént" page on a charge that never happened (Elek FK-005b H1).
   //
@@ -879,6 +913,185 @@ export async function chargeUpsellWithToken(
 }
 
 /** Fire the automated domain beszerzés detached, with logging (ADR-0071). */
+// ── ADR-XXXX: the custom-domain HOLD (Barion DelayedCapture) ───────────────────
+// The promise on the review screen: "we only charge once the name is yours; if the
+// registration fails, the hold is released and you pay nothing". The lifecycle:
+//
+//   pending ──(gateway: Authorized / mock: paid)──▶ reserved ──▶ registration runs
+//   reserved ──(registrar confirmed)──▶ Capture(total) ──▶ paid + invoice
+//   reserved ──(registration failed)──▶ released ──▶ CancelAuthorization
+//
+// The amount is blocked ON THE BUYER'S CARD, not taken (DelayedCapture — a Barion
+// Reservation would charge at once, ADR-0228). `released` is written BEFORE the
+// cancel: whatever final state Barion then reports (a zero-finished payment may read
+// Succeeded), that callback must find a row that says "given back".
+
+/** The gateway that issued `name` (a mock_ row under a Barion-configured process too). */
+function gatewayFor(name: string): import("./gateway.js").PaymentGateway {
+  const gw = getGateway();
+  return gw.name === name ? gw : name === "mock" ? new MockGateway() : gw;
+}
+
+/** pending → reserved, atomically. True only for the call that made the move. */
+async function markDomainReserved(paymentId: string): Promise<boolean> {
+  const row = await db
+    .updateTable("payment")
+    .set({ status: "reserved" })
+    .where("id", "=", paymentId)
+    .where("status", "=", "pending")
+    .returning("id")
+    .executeTakeFirst();
+  return Boolean(row);
+}
+
+/** reserved → paid (the capture went through) + invoice, once. */
+async function settleCapturedDomainPayment(paymentId: string): Promise<boolean> {
+  const row = await db
+    .updateTable("payment")
+    .set({ status: "paid", paid_at: new Date() })
+    .where("id", "=", paymentId)
+    .where("status", "=", "reserved")
+    .returning("id")
+    .executeTakeFirst();
+  if (!row) return false;
+  await issueInvoiceFor(paymentId);
+  return true;
+}
+
+/** The webhook half of a reservation payment (the row says `reservation`). */
+async function applyDomainReservationResult(
+  payment: { id: string; order_intent_id: string; status: string },
+  res: import("./gateway.js").WebhookResult,
+): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
+  if (payment.status === "paid") return { ok: true, activated: true, alreadySettled: true };
+  if (res.status === "failed") {
+    if (payment.status === "reserved") {
+      // The hold lapsed or was cancelled at the gateway before we finished it: the
+      // money went back by itself. If the name WAS registered meanwhile, we paid
+      // for it and were not paid — that must be loud, never a silent loss.
+      const dp = await db
+        .selectFrom("domain_provisioning")
+        .select(["registrar_ref"])
+        .where("order_intent_id", "=", payment.order_intent_id)
+        .executeTakeFirst();
+      await db.updateTable("payment").set({ status: "released" }).where("id", "=", payment.id).execute();
+      if (dp?.registrar_ref) {
+        console.error(
+          `[domain] ⛔ a zárolás LEJÁRT/visszavonva, de a név MÁR MEGVÉVE (order ${payment.order_intent_id}) — ` +
+            `a díjat nem kaptuk meg, kézi rendezés kell`,
+        );
+      }
+      return { ok: true, activated: false };
+    }
+    await db.updateTable("payment").set({ status: "failed" }).where("id", "=", payment.id).execute();
+    return { ok: true, activated: false };
+  }
+  // paid on a PENDING row = the mock gateway confirming the hold (it has no separate
+  // Reserved state). Same move as the Barion Reserved callback.
+  if (payment.status === "pending") {
+    if (await markDomainReserved(payment.id)) await fireReservedDomainProvisioning(payment.order_intent_id);
+    return { ok: true, activated: true };
+  }
+  // paid on a RESERVED row = Barion's Succeeded after OUR full-total finish (a zero
+  // finish writes `released` first and never reaches here).
+  const settled = await settleCapturedDomainPayment(payment.id);
+  return { ok: true, activated: settled };
+}
+
+/**
+ * The registrar confirmed the name → take the money. No-op without a held payment
+ * (a legacy immediate-paid order, an initial order carrying a domain). A capture
+ * that fails stays `reserved` and is retried by settleDomainReservations().
+ */
+export async function captureDomainReservation(orderIntentId: string): Promise<boolean> {
+  const p = await db
+    .selectFrom("payment")
+    .select(["id", "gateway", "gateway_ref", "amount"])
+    .where("order_intent_id", "=", orderIntentId)
+    .where("reservation", "=", true)
+    .where("status", "=", "reserved")
+    .executeTakeFirst();
+  if (!p?.gateway_ref) return false;
+  const gw = gatewayFor(p.gateway);
+  const ok = gw.captureHold ? await gw.captureHold(p.gateway_ref, p.amount) : false;
+  if (!ok) {
+    console.error(`[domain] ⛔ a név megvéve, de a zárolt összeg lehívása NEM sikerült (${p.gateway_ref}) — újrapróba a resume-időzítőn`);
+    return false;
+  }
+  return settleCapturedDomainPayment(p.id);
+}
+
+/**
+ * The registration failed → give the hold back. Returns true when there WAS a hold
+ * (the tenant's letter then says "nothing was charged"). The row is marked first;
+ * a gateway that fails to release still lets the hold lapse by itself.
+ */
+export async function releaseDomainReservation(orderIntentId: string): Promise<boolean> {
+  const rows = await db
+    .updateTable("payment")
+    .set({ status: "released" })
+    .where("order_intent_id", "=", orderIntentId)
+    .where("reservation", "=", true)
+    .where("status", "in", ["reserved", "released"])
+    .returning(["id", "gateway", "gateway_ref", "amount"])
+    .execute();
+  for (const r of rows) {
+    if (!r.gateway_ref) continue;
+    const gw = gatewayFor(r.gateway);
+    const ok = gw.releaseHold ? await gw.releaseHold(r.gateway_ref) : false;
+    if (!ok) {
+      console.error(`[domain] a zárolás feloldása NEM sikerült (${r.gateway_ref}) — a zárolás magától lejár, terhelés nem történik`);
+    }
+  }
+  return rows.length > 0;
+}
+
+/**
+ * Timer sweep (scripts/resume-domains.mts): every hold still `reserved` is settled
+ * by its registration's state — bought ⇒ capture, failed before buying ⇒ release,
+ * still running ⇒ wait. This is what retries a capture the webhook-time run missed.
+ */
+export async function settleDomainReservations(): Promise<{ captured: number; released: number }> {
+  const rows = await db
+    .selectFrom("payment")
+    .innerJoin("domain_provisioning", "domain_provisioning.order_intent_id", "payment.order_intent_id")
+    .select([
+      "payment.order_intent_id as orderIntentId",
+      "domain_provisioning.registrar_ref as registrarRef",
+      "domain_provisioning.status as dpStatus",
+    ])
+    .where("payment.reservation", "=", true)
+    .where("payment.status", "=", "reserved")
+    .execute();
+  let captured = 0;
+  let released = 0;
+  for (const r of rows) {
+    if (r.registrarRef) {
+      if (await captureDomainReservation(r.orderIntentId)) captured++;
+    } else if (r.dpStatus === "failed") {
+      if (await releaseDomainReservation(r.orderIntentId)) released++;
+    }
+  }
+  return { captured, released };
+}
+
+/**
+ * ADR-XXXX: the held-payment variant — the beszerzés row (and the site's `pending`
+ * state) is written BEFORE returning, only the run is detached. The /pay/done redirect
+ * then always finds a registration in flight.
+ */
+async function fireReservedDomainProvisioning(orderIntentId: string): Promise<void> {
+  const id = await startOrderDomainProvisioning(orderIntentId);
+  if (!id) {
+    console.error(`[domain] zárolt rendelés beszerzés nélkül (${orderIntentId}) — a zárolást feloldjuk`);
+    await releaseDomainReservation(orderIntentId);
+    return;
+  }
+  runDomainProvisioning(id)
+    .then((status) => console.log(`[domain] zárolt beszerzés → ${status}: ${orderIntentId}`))
+    .catch((e) => console.error(`[domain] beszerzés-futtatás HIBA:`, e));
+}
+
 function fireDomainProvisioning(orderIntentId: string): void {
   provisionOrderDomain(orderIntentId)
     .then((status) => {
@@ -984,7 +1197,7 @@ export function buildInvoiceItems(
     : [subscriptionLine];
 }
 
-async function issueInvoiceFor(paymentId: string): Promise<void> {
+export async function issueInvoiceFor(paymentId: string): Promise<void> {
   const already = await db
     .selectFrom("invoice")
     .select("id")

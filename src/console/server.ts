@@ -3363,6 +3363,26 @@ async function handle(
     // A lap megmondja, MI TÖRTÉNT (nem találjuk ezt a fizetést), és HOVA MEHET
     // tovább — de NEM állít semmit a fizetésről, mert nem tudunk róla semmit (§B.17).
     if (!p) return send(res, 404, payUnknownRefPage(ref, config.supportEmail || null));
+    // ADR-XXXX: a custom-domain order ends on the Webcím tab whatever happened — a
+    // HOLD is not a purchase, so neither the welcome page nor a receipt applies; the
+    // tab shows where the registration is and what happened to the money.
+    {
+      const dom = await db
+        .selectFrom("payment")
+        .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+        .select(["order_intent.kind as kind", "order_intent.domain_name as domain", "payment.reservation as reservation"])
+        .where("payment.gateway_ref", "=", ref)
+        .executeTakeFirst();
+      if (dom?.kind === "domain_upgrade" && dom.reservation && p.status !== "pending") {
+        const q =
+          p.status === "failed" || p.status === "cancelled"
+            ? `&d=${encodeURIComponent(dom.domain ?? "")}&payerror=1`
+            : "";
+        res.writeHead(302, { location: `${adminBase()}/admin?tab=webcim${q}` });
+        res.end();
+        return;
+      }
+    }
     if (p.status === "pending") return send(res, 200, payPendingPage(gatewayRefreshFailed));
     const paid = p.status === "paid";
     // ⛔ A MULTILANG purchase is NOT an activation (measured defect, 2026-08-28):

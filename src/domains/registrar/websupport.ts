@@ -128,6 +128,23 @@ export class WebsupportRegistrar implements RegistrarAdapter {
     });
   }
 
+  /**
+   * ADR-XXXX: the AUTHORITATIVE answer the Webcím tab shows the buyer. Read-only
+   * (validate creates no order). Three verdicts, kept apart on purpose: "taken"
+   * is only what the registrar calls taken (ADR-0103: `errors.domain: ["Domain is
+   * taken."]`); any other refusal (unsupported ending, reserved label…) is
+   * "unavailable" — calling that "foglalt" would be a false statement. Throws on a
+   * transport/HTTP failure: the caller turns that into "we could not check".
+   */
+  async availability(domain: string): Promise<"free" | "taken" | "unavailable"> {
+    const r = await this.#validate(domain, 1);
+    if (r.status === "success") return "free";
+    const errs = Array.isArray((r.errors as { domain?: string[] })?.domain)
+      ? (r.errors as { domain: string[] }).domain
+      : [];
+    return errs.some((e) => /taken/i.test(e)) ? "taken" : "unavailable";
+  }
+
   /** True when the registrar considers the domain registrable right now. */
   async isAvailable(domain: string): Promise<boolean> {
     const r = await this.#validate(domain, 1);

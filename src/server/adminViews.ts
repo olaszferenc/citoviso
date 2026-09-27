@@ -20,6 +20,7 @@ import type { BookingsTabData } from "./bookingViews.js";
 import { domAnchorsOf } from "./modulePreview.js";
 import type { TrafficReport } from "../analytics/trafficReport.js";
 import type { DomainAdminData, DomainCheckResult } from "../domains/domainAdmin.js";
+import type { WebcimAvailability } from "../domains/availability.js";
 import type { SubscriptionAdminData, SubscriptionSummary } from "../tenant/subscriptionAdmin.js";
 import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
@@ -3167,15 +3168,30 @@ function money(n: number, currency: string): string {
   return formatMoney(n, currency);
 }
 
-/** Elérhetőség-jelölő. A három állapot a VALÓS `DomainAvailability`-t tükrözi: az
- *  előzetes csekk (DNS+RDAP) sosem hiteles, ezért a „nem tudjuk előre" külön eset —
- *  nem hazudunk zöldet olyanra, amit nem tudunk (§B.17). */
-function availChip(a: "taken" | "probably_free" | "unknown", lang: string): string {
+/** Elérhetőség-jelölő (ADR-XXXX, jóváhagyott A1 terv). A négy állapot a regisztrátor
+ *  HITELES válaszát tükrözi (domains/availability.ts): „Szabad" csak az lehet, amit a
+ *  regisztrátor megvehetőnek mond; ami nem ellenőrizhető, az nem kérhető (§B.17). */
+function availChip(a: WebcimAvailability, lang: string, fresh = false): string {
   if (a === "taken")
-    return `<span class="adm-dchip adm-dchip--taken">${T(lang, "foglalt")}</span>`;
+    return `<span class="adm-dchip adm-dchip--taken">${T(lang, "Foglalt")}</span>`;
+  if (a === "unavailable")
+    return `<span class="adm-dchip adm-dchip--taken">${T(lang, "Nálunk nem igényelhető")}</span>`;
   if (a === "unknown")
-    return `<span class="adm-dchip adm-dchip--unknown">${T(lang, "nem tudjuk előre")}</span>`;
-  return `<span class="adm-dchip adm-dchip--free">${ic("check", 14)} ${T(lang, "szabadnak tűnik")}</span>`;
+    return `<span class="adm-dchip adm-dchip--unknown">${T(lang, "Nem sikerült ellenőrizni")}</span>`;
+  return (
+    `<span class="adm-dchip adm-dchip--free">${ic("check", 14)} ` +
+    `${fresh ? T(lang, "Szabad — most ellenőrizve") : T(lang, "Szabad")}</span>`
+  );
+}
+
+/** One row of the money-aware status list (approved A1 contract, the 3. Kész screen). */
+function dRow(state: "ok" | "no" | "now" | "todo", title: string, sub: string): string {
+  const cls = state === "ok" ? " is-done" : state === "no" ? " is-fail" : state === "now" ? " is-now" : "";
+  const dot = state === "ok" ? ic("check", 14) : state === "no" ? ic("close", 14) : "";
+  return (
+    `<div class="adm-dprog__row${cls}"><span class="adm-dprog__dot">${dot}</span>` +
+    `<span><strong>${esc(title)}</strong><span>${esc(sub)}</span></span></div>`
+  );
 }
 
 /**
@@ -3291,6 +3307,10 @@ export interface DomainViewState {
   readonly check?: DomainCheckResult | null;
   /** Fizetési hiba a visszatéréskor. */
   readonly payError?: boolean;
+  /** ADR-XXXX: the registrar's FRESH verdict on `picked` (the review step re-checks). */
+  readonly pickedAvailability?: WebcimAvailability;
+  /** ADR-XXXX: „Másik név választása" after a released failure → back to step 1. */
+  readonly restart?: boolean;
 }
 
 export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "hu"): string {
@@ -3321,6 +3341,46 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     );
   }
 
+  // ADR-XXXX: a HELD order — the status list says where the money is at every
+  // step (approved A1 contract): held → bought → charged → address + certificate.
+  if (d.status !== "none" && d.status !== "failed" && (d.money === "reserved" || d.money === "paid")) {
+    const bought = progressDone(d.status) >= 1;
+    const amt = d.moneyAmount !== null ? money(d.moneyAmount, d.currency) : "";
+    const slow = /\.hu$/i.test(d.activeDomain ?? "");
+    const setupSub = slow
+      ? T(lang, "A .hu neveknél ez néhány nap — e-mailben jelezzük, amint kész")
+      : T(lang, "Általában néhány perc — e-mailben jelezzük, amint kész");
+    const rows =
+      dRow("ok", T(lang, "Összeg zárolva"), amt) +
+      (bought
+        ? dRow("ok", T(lang, "Megvásároltuk a nevet"), T(lang, "A regisztrátornál, az Ön nevére tartjuk karban"))
+        : dRow("now", T(lang, "Megvásároljuk a nevet"), T(lang, "A regisztrátornál, általában egy percen belül"))) +
+      (d.money === "paid"
+        ? dRow("ok", T(lang, "Most terheltük a kártyáját"), T(lang, "{amt} — a számlát e-mailben küldjük", { amt }))
+        : bought
+          ? dRow("now", T(lang, "A zárolt összeget most hívjuk le"), amt)
+          : dRow("todo", T(lang, "Csak sikeres vétel után terheljük"), T(lang, "Ha nem sikerül, a zárolást feloldjuk — egy forintot sem fizet"))) +
+      dRow(bought ? "now" : "todo", T(lang, "Beállítjuk a címet és a biztonsági tanúsítványt"), setupSub);
+    return (
+      `<div class="adm-dsteps"><span class="adm-dstep is-done">${T(lang, "1. Név")}</span>` +
+      `<span class="adm-dstep is-done">${T(lang, "2. Áttekintés")}</span>` +
+      `<span class="adm-dstep is-now">${T(lang, "3. Kész")}</span></div>` +
+      `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
+      `<p class="adm-lead">${
+        bought && d.activeDomain
+          ? T(lang, "Az Öné: {domain}", { domain: `<strong>${esc(d.activeDomain)}</strong>` })
+          : T(lang, "Már intézzük — Önnek nincs teendője.")
+      }</p>` +
+      `<div class="adm-dprog">${rows}</div>` +
+      (d.money === "paid"
+        ? `<div class="adm-dres adm-dres--ok"><b>${T(lang, "Önnek nincs több teendője.")}</b>` +
+          `${T(lang, "A {n} hónapos vállalás a név megvásárlásával indult.", { n: d.commitmentMonths })}</div>`
+        : "") +
+      mockNote +
+      `</div>`
+    );
+  }
+
   if (d.status !== "none" && d.status !== "failed") {
     return (
       `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
@@ -3341,6 +3401,34 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   // "Fizetés és megrendelés" button for an order the server refuses. The gate
   // therefore stands ABOVE the review step — but BELOW the status branches, so a
   // tenant who already HAS a domain keeps seeing its state if the package drops.
+  // ADR-XXXX: a HELD order whose registration failed — its own screen (approved A1
+  // contract, the failure state): what happened, and that NOTHING was charged.
+  if (d.status === "failed" && d.money === "released" && !st.restart) {
+    const dom = d.failedDomain ?? d.activeDomain ?? "";
+    const taken = /foglalt|taken/i.test(d.error ?? "");
+    const amt = d.moneyAmount !== null ? money(d.moneyAmount, d.currency) : "";
+    return (
+      `<div class="adm-dsteps"><span class="adm-dstep is-done">${T(lang, "1. Név")}</span>` +
+      `<span class="adm-dstep is-done">${T(lang, "2. Áttekintés")}</span>` +
+      `<span class="adm-dstep is-now">${T(lang, "3. Kész")}</span></div>` +
+      `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
+      `<p class="adm-lead">${T(lang, "{Art} {domain} nevet nem tudtuk megvásárolni", { Art: huArticle(dom), domain: `<strong>${esc(dom)}</strong>` })}</p>` +
+      `<div class="adm-dprog">` +
+      dRow("ok", T(lang, "Összeg zárolva"), amt) +
+      (taken
+        ? dRow("no", T(lang, "A nevet közben más regisztrálta"), T(lang, "A mi ellenőrzésünk és a vétel között elkelt"))
+        : dRow("no", T(lang, "A vásárlás nem sikerült"), T(lang, "A regisztráció nálunk akadt el — nem Ön hibázott"))) +
+      dRow("ok", T(lang, "A zárolást feloldottuk — nem terheltünk semmit"), T(lang, "A bankjától függően néhány munkanapon belül eltűnik a számlájáról")) +
+      `</div>` +
+      `<div class="adm-dres adm-dres--bad"><b>${T(lang, "Nem fizetett érte semmit.")}</b>` +
+      `${T(lang, "A kártyáját nem terheltük, a {n} hónapos vállalás nem indult el. Válasszon másik nevet, ha szeretne.", { n: d.commitmentMonths })}</div>` +
+      `<a class="citui-btn citui-btn--primary" href="/admin?tab=webcim&amp;uj=1" style="width:100%;display:flex;justify-content:center">` +
+      `${T(lang, "Másik név választása")}</a>` +
+      mockNote +
+      `</div>`
+    );
+  }
+
   if (!d.eligible) {
     return (
       `<div class="adm-card">${head(T(lang, "Saját webcím"))}` +
@@ -3358,43 +3446,88 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   }
 
   if (st.picked) {
-    return (
+    const steps =
       `<div class="adm-dsteps"><span class="adm-dstep is-done">${T(lang, "1. Név")}</span>` +
       `<span class="adm-dstep is-now">${T(lang, "2. Áttekintés")}</span>` +
-      `<span class="adm-dstep">${T(lang, "3. Kész")}</span></div>` +
-      `<form method="POST" action="/admin/domain/order" class="adm-card">${head(T(lang, "Áttekintés"))}` +
-      `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong></p>` +
+      `<span class="adm-dstep">${T(lang, "3. Kész")}</span></div>`;
+    const back =
+      `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:flex;justify-content:center">` +
+      `${T(lang, "Vissza")}</a>`;
+    const verdict = st.pickedAvailability ?? "unknown";
+    // ADR-XXXX: the pay button exists ONLY for a name the registrar just called
+    // free. Anything else says why — and never offers a payment it cannot back.
+    if (verdict !== "free") {
+      const why =
+        verdict === "taken"
+          ? T(lang, "{Art} {domain} már foglalt — válasszon másikat.", { Art: huArticle(st.picked), domain: `<b>${esc(st.picked)}</b>` })
+          : verdict === "unavailable"
+            ? T(lang, "{Art} {domain} nálunk nem igényelhető — válasszon másikat.", { Art: huArticle(st.picked), domain: `<b>${esc(st.picked)}</b>` })
+            : T(lang, "A regisztrátor most nem válaszolt. Amíg nem tudjuk biztosan, hogy szabad, nem kínáljuk megvételre.");
+      return (
+        steps +
+        `<div class="adm-card">${head(T(lang, "Áttekintés"))}` +
+        `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong> ${availChip(verdict, lang)}</p>` +
+        `<p class="adm-dmsg ${verdict === "unknown" ? "adm-dmsg--info" : "adm-dmsg--bad"}">${why}</p>` +
+        (verdict === "unknown"
+          ? `<a class="citui-btn citui-btn--primary" href="/admin?tab=webcim&amp;d=${encodeURIComponent(st.picked)}" style="width:100%;display:flex;justify-content:center;margin-top:12px">` +
+            `${T(lang, "Újra")}</a>`
+          : "") +
+        back +
+        `</div>`
+      );
+    }
+    const amt = esc(money(d.priceMonthly, d.currency));
+    return (
+      steps +
+      `<form method="POST" action="/admin/domain/order" class="adm-card" id="adm-dorder">${head(T(lang, "Áttekintés"))}` +
+      `<p class="adm-lead">${T(lang, "A választott név:")} <strong>${esc(st.picked)}</strong> ${availChip("free", lang, true)}</p>` +
       (st.payError
         ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
           `${ic("alert", 18)} ${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</div>`
         : "") +
       `<input type="hidden" name="domain" value="${esc(st.picked)}">` +
+      `<div class="adm-dtwo"><div>` +
       `<div class="adm-dterms"><dl>` +
       `<dt>${T(lang, "A választott cím")}</dt><dd>${esc(st.picked)}</dd>` +
-      // ADR-0109 ①: the fee is MONTHLY and flat — there is no waived (0 Ft) state
-      // any more, so the branch that explained one is gone with it.
-      `<dt>${T(lang, "A cím díja")}</dt><dd>${esc(money(d.priceMonthly, d.currency))} ${T(lang, "/ hó")}</dd>` +
+      // ADR-0109 ①: the fee is MONTHLY and flat.
+      `<dt>${T(lang, "A cím díja")}</dt><dd>${amt} ${T(lang, "/ hó")}</dd>` +
       `<dt>${T(lang, "Előfizetés vállalása")}</dt><dd>${T(lang, "{n} hónap", { n: d.commitmentMonths })}</dd>` +
-      `<dt class="adm-dtotal"><strong>${T(lang, "Most fizetendő")}</strong></dt>` +
-      `<dd class="adm-dtotal">${esc(money(d.priceMonthly, d.currency))}</dd></dl>` +
+      // ADR-XXXX: nothing is charged here — the amount is HELD (Barion Reservation).
+      `<dt class="adm-dtotal"><strong>${T(lang, "Most zárolunk")}</strong>` +
+      `<small>${T(lang, "csak sikeres regisztráció után terheljük")}</small></dt>` +
+      `<dd class="adm-dtotal">${amt}</dd></dl></div>` +
       (d.currentHost
-        ? `<p class="citui-hint" style="margin:11px 0 0">${T(lang, "A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím ({host}) nem szűnik meg: automatikusan az újra irányít, így a korábbi hivatkozások is működnek tovább.", { host: esc(d.currentHost) })}</p>`
+        ? `<p class="citui-hint" style="margin:0">${T(lang, "A saját nevet mi vásároljuk meg és tartjuk karban. A régi cím ({host}) nem szűnik meg: automatikusan az újra irányít, így a korábbi hivatkozások is működnek tovább.", { host: esc(d.currentHost) })}</p>`
         : "") +
-      `</div>` +
+      `</div><div>` +
+      `<div class="adm-dguar"><h3>${ic("shield", 20)} ${T(lang, "Csak akkor fizet, ha a név már az Öné")}</h3>` +
+      `<ol class="adm-dtl">` +
+      `<li><b>${T(lang, "Zároljuk az összeget a kártyáján")}</b><span>${T(lang, "Ez még nem terhelés: a pénz a számláján marad.")}</span></li>` +
+      `<li><b>${T(lang, "Azonnal megvásároljuk a nevet")}</b><span>${T(lang, "A regisztrátornál, általában egy percen belül.")}</span></li>` +
+      `<li><b>${T(lang, "Csak sikeres vétel után terheljük")}</b><span>${T(lang, "Ha a név közben elkelt, vagy bármi okból nem sikerül, a zárolást feloldjuk — egy forintot sem fizet, és a {n} hónapos vállalás sem indul el.", { n: d.commitmentMonths })}</span></li>` +
+      `</ol></div>` +
       mockNote +
-      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">` +
-      // ADR-0109: every custom-domain order now carries a fee, so the payment step
-      // always happens — no "free order" wording that would not match reality.
-      `${T(lang, "Fizetés és megrendelés")}</button>` +
-      `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:block;text-align:center">` +
-      `${T(lang, "Vissza")}</a>` +
+      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%" ` +
+      `data-busy="${esc(T(lang, "Még egyszer ellenőrizzük a nevet…"))}">` +
+      `${T(lang, "Tovább a fizetéshez (zárolás)")}</button>` +
+      `<p class="adm-dlock">${ic("lock", 14)} ${T(lang, "Biztonságos fizetés a Barionnál — a kártyaadatait mi nem látjuk.")}</p>` +
+      back +
+      `</div></div>` +
+      // The server re-checks at the registrar before the pay-link (public.ts); the
+      // button says so while that happens, and cannot be pressed twice.
+      `<script>(function(){var f=document.getElementById("adm-dorder");if(!f)return;` +
+      `f.addEventListener("submit",function(){var b=f.querySelector("button[type=submit]");` +
+      `if(b){b.disabled=true;b.textContent=b.getAttribute("data-busy");}});})();</script>` +
       `</form>`
     );
   }
 
   // ── LÉPÉS 1 — NÉV VÁLASZTÁSA ──
+  // A released hold has its own failure screen above (ADR-XXXX); after „Másik név
+  // választása" step 1 is clean — the legacy text below belongs to an order that was
+  // charged up front, where the money really does go to another name (ADR-0078 ②).
   const failedBox =
-    d.status === "failed"
+    d.status === "failed" && d.money !== "released"
       ? `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
         `${ic("alert", 18)} ` +
         (d.failedDomain
@@ -3404,17 +3537,25 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
         // ⛔ Visszautalást NEM ígérünk: a Barion Refund API létezik, de nálunk nincs
         // megírva (ADR-0078) — §B.17: magunkról sem állítunk valótlant.
         `<p class="citui-hint">${T(lang, "A befizetett összeg nem vész el: egy másik névre fordítjuk. Válassza ki, melyiket kéri helyette:")}</p>`
+      : st.payError
+      ? // The order could not even be created (POST /admin/domain/order → step 1) —
+        // this used to land here silently, under a frame banner about "the new module".
+        `<div class="adm-saved" role="alert" style="background:color-mix(in srgb, var(--citui-bad) 10%, transparent);color:var(--citui-bad)">` +
+        `${ic("alert", 18)} ${T(lang, "A fizetést nem sikerült elindítani. Kérjük, próbálja újra.")}</div>`
       : "";
 
   // A JÓVÁHAGYOTT B terv szerint: rádiógombos lista + EGY „Tovább" gomb — nem soronkénti
   // gomb. (Az első megvalósításom soronkénti gombot adott; a kontraktus-kép a mérce, §2b 5.)
   // A foglalt nevek kikapcsolva jelennek meg — látszik, hogy léteznek, de nem kérhetők.
-  const firstFree = d.suggestions.findIndex((s) => s.availability !== "taken");
+  // ADR-XXXX: only a name the registrar called FREE is selectable — "could not
+  // check" and "not available here" are shown, but cannot be ordered.
+  const firstFree = d.suggestions.findIndex((s) => s.availability === "free");
+  const anyFree = firstFree >= 0;
   const list = d.suggestions.length
     ? `<div class="adm-dlist">` +
       d.suggestions
         .map((s, i) => {
-          const off = s.availability === "taken";
+          const off = s.availability !== "free";
           return (
             `<label class="adm-dopt${off ? " is-off" : ""}${i === firstFree ? " is-sel" : ""}">` +
             `<input type="radio" name="d" value="${esc(s.domain)}"` +
@@ -3426,7 +3567,12 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
         })
         .join("") +
       `</div>` +
-      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Tovább")}</button>`
+      // Said only when it is TRUE of what is on screen: a "Szabad" chip exists only
+      // from the registrar's own answer (domains/availability.ts).
+      (anyFree
+        ? `<p class="adm-dsrc">${ic("check", 16)}<span>${T(lang, "Az elérhetőséget közvetlenül a domain-regisztrátornál ellenőriztük, most. A „Szabad” azt jelenti: ebben a pillanatban bárki megveheti — mi is.")}</span></p>`
+        : "") +
+      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%"${anyFree ? "" : " disabled"}>${T(lang, "Tovább")}</button>`
     : "";
 
   // A beírt név eredménye: normalizált alak + elérhetőség, vagy sima magyar indoklás.
@@ -3438,12 +3584,22 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
           ? // ADR-0093: over the operator-set purchase cap (premium domain) — not offerable.
             `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} prémium (emelt díjas) domain, ezért nálunk nem igényelhető — próbáljon másik nevet.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
           : st.check.availability === "taken"
-          ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} már foglalt — próbáljon másikat.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+          ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} már foglalt — válasszon másikat.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+          : st.check.availability === "unavailable"
+          ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} nálunk nem igényelhető — válasszon másikat.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
+          : st.check.availability !== "free"
+          ? // ADR-XXXX: no verdict → no order. A retry asks the registrar again.
+            `<div class="adm-dopt" style="margin-top:10px">` +
+            `<span class="adm-dopt__name">${esc(st.check.domain)}</span>` +
+            `<span class="adm-dopt__meta">${availChip("unknown", lang)}</span>` +
+            `<a class="citui-btn citui-btn--ghost citui-btn--sm adm-dopt__pick" ` +
+            `href="/admin?tab=webcim&amp;check=${encodeURIComponent(st.check.domain)}">${T(lang, "Újra")}</a></div>` +
+            `<p class="adm-dmsg adm-dmsg--info">${T(lang, "A regisztrátor most nem válaszolt. Amíg nem tudjuk biztosan, hogy szabad, nem kínáljuk megvételre.")}</p>`
           : `<div class="adm-dopt" style="margin-top:10px">` +
             `<span class="adm-dopt__name">${esc(st.check.domain)}</span>` +
-            `<span class="adm-dopt__meta">${availChip(st.check.availability ?? "unknown", lang)}</span>` +
+            `<span class="adm-dopt__meta">${availChip("free", lang)}</span>` +
             `<a class="citui-btn citui-btn--primary citui-btn--sm adm-dopt__pick" ` +
-            `href="/admin?tab=webcim&d=${encodeURIComponent(st.check.domain)}">${T(lang, "Ezt kérem")}</a></div>`
+            `href="/admin?tab=webcim&amp;d=${encodeURIComponent(st.check.domain)}">${T(lang, "Ezt kérem")}</a></div>`
         : ""
     : "";
 
@@ -3566,6 +3722,32 @@ const DOMAIN_STYLE =
   // A jelölő SAJÁT szélességét tartja; a full-width csak a burkolóra vonatkozik, különben
   // a chip háttere végignyúlna a soron (390px-en mérve).
   `.adm-dopt__meta{flex:none;display:flex}` +
+  // ADR-XXXX (approved A1): taken reads as neutral, not as an error; the source line,
+  // the review's two columns, the guarantee timeline and the result boxes.
+  `.adm-dchip--taken{background:var(--citui-surface-2);color:var(--citui-muted)}` +
+  `.adm-dchip--unknown{color:var(--citui-ink)}` +
+  `.adm-dterms dt.adm-dtotal{color:var(--citui-ink)}` +
+  `.adm-dsrc{display:flex;gap:8px;align-items:flex-start;font-size:.84rem;color:var(--citui-muted);margin:0 0 14px}` +
+  `.adm-dsrc svg{flex:none;margin-top:1px;color:var(--citui-ok)}` +
+  `.adm-dmsg--info{background:var(--citui-surface-2);color:var(--citui-muted)}` +
+  `.adm-dterms .adm-dtotal small{display:block;font-size:.76rem;font-weight:400;color:var(--citui-muted);font-family:var(--citui-font-text)}` +
+  `.adm-dtwo{display:grid;gap:4px 24px;align-items:start}` +
+  `@media (min-width:1000px){.adm-dtwo{grid-template-columns:1.15fr 1fr}.adm-dtwo .adm-dguar{margin-top:16px}}` +
+  `.adm-dguar{border:1.5px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:var(--citui-radius);padding:14px 16px;margin:14px 0}` +
+  `.adm-dguar h3{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-size:1rem;font-family:var(--citui-font-display)}` +
+  `.adm-dguar h3 svg{color:var(--citui-ok);flex:none}` +
+  `.adm-dtl{list-style:none;margin:0;padding:0;counter-reset:dtl}` +
+  `.adm-dtl li{position:relative;padding:0 0 10px 34px;font-size:.9rem;counter-increment:dtl}` +
+  `.adm-dtl li::before{content:counter(dtl);position:absolute;left:0;top:-1px;width:24px;height:24px;border-radius:50%;` +
+  `background:var(--citui-panel);border:1.5px solid var(--citui-ok);color:var(--citui-ok);font-weight:700;font-size:.8rem;display:grid;place-items:center}` +
+  `.adm-dtl li b{display:block}.adm-dtl li span{color:var(--citui-muted)}` +
+  `.adm-dlock{display:flex;gap:7px;align-items:center;justify-content:center;font-size:.82rem;color:var(--citui-muted);margin:10px 0 0;text-align:center}` +
+  `.adm-dlock svg{flex:none}` +
+  `.adm-dprog__row.is-fail .adm-dprog__dot{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}` +
+  `.adm-dres{border-radius:var(--citui-radius);padding:13px 15px;margin:12px 0;font-size:.92rem}` +
+  `.adm-dres b{display:block;margin-bottom:3px}` +
+  `.adm-dres--ok{background:var(--citui-ok-soft)}` +
+  `.adm-dres--bad{background:color-mix(in srgb, var(--citui-bad) 10%, transparent)}` +
   `@media (max-width:430px){.adm-dopt__name{flex:1 1 auto}` +
   `.adm-dopt__meta{flex-basis:100%;margin-left:31px}.adm-dopt__pick{margin-left:31px}}` +
   `</style>`;

@@ -56,6 +56,20 @@ ok(
   "initial rendelésnél a beszerzés az élesítés UTÁN indul (regisztrált domain eset)",
 );
 
+// ── 1a. ADR-XXXX: a domain-zárolás KÁRTYÁN blokkol, nem terhel ─────────────────
+// A Barion Reservation bankkártyánál VALÓDI terhelés (ADR-0228); a felület azt ígéri,
+// hogy „ez még nem terhelés”. Ez csak DelayedCapture-rel igaz — ha a típus visszacsúszna,
+// minden ígéret hamissá válna, miközben a mock-út zöld maradna. Sandboxban mérve
+// 2026-09-27: Authorized → Capture → Succeeded; Authorized → CancelAuthorization →
+// Canceled (CardPayment Reversed).
+const barion = readFileSync("src/payment/barion.ts", "utf8").replace(/^\s*\/\/.*$/gm, "");
+ok(/req\.reserve \? "DelayedCapture"/.test(barion),
+  "⭐ a domain-rendelés Barion-típusa DelayedCapture (kártyán blokkol), nem Reservation (az terhel)");
+ok(/\/v2\/Payment\/Capture/.test(barion) && /\/v2\/Payment\/CancelAuthorization/.test(barion),
+  "a lehívás Payment/Capture, a feloldás Payment/CancelAuthorization");
+ok(/captureHold/.test(svc) && /releaseHold/.test(svc) && !/finishReservation\(p\.gateway_ref/.test(svc),
+  "⭐ a domain-zárolást a captureHold/releaseHold zárja, nem a FinishReservation");
+
 // ── 1b. A FELÜLET BEKÖTÉSE (ADR-0078) — a motor semmit sem ér, ha a fül nem hívja ──
 const views = readFileSync("src/server/adminViews.ts", "utf8");
 const pub = readFileSync("src/server/public.ts", "utf8");
@@ -161,6 +175,13 @@ process.env.PGDATABASE = SCRATCH;
 process.env.DATABASE_URL = "";
 process.env.REGISTRAR_PROVIDER = "mock";
 process.env.DNS_PROVIDER = "mock";
+// ADR-XXXX: the reservation block below drives requestPayment + the webhook. Before
+// the dynamic imports (ESM runs static imports first): no real Barion hold, no real
+// invoice, no real letter, no registrar call from a gate.
+process.env.PAYMENT_GATEWAY = "mock";
+process.env.INVOICE_PROVIDER = "mock";
+process.env.EMAIL_PROVIDER = "mock";
+process.env.DOMAIN_AVAILABILITY_SOURCE = "mock";
 const { db } = await import("../src/db/client.js");
 const { sql } = await import("kysely");
 const { startDomainProvisioning, runDomainProvisioning, resumePendingDomainProvisionings } = await import("../src/domains/provisionDomain.js");
@@ -588,6 +609,104 @@ async function siteRow(siteId: string) {
   ok(swept.some((s) => s.id === id), "⭐ a poller felszedi a függő beszerzést", `felszedve: ${swept.map((s) => s.domain).join(",")}`);
   ok(!swept.some((s) => s.status === "live" && s.domain === "dnsfail-resume.hu"),
     "a mock dnsfail a pollerrel is dns_pending marad (nem hazudik live-ot)");
+}
+
+// ── ADR-XXXX: A DOMAIN-RENDELÉS ZÁROLÁS — csak sikeres regisztráció után terhelünk ──
+{
+  const { requestPayment, applyWebhookResult, settleDomainReservations } = await import("../src/payment/service.js");
+  const { MODULE_CATALOG } = await import("../src/modules.js");
+  const entitle = async (tenantId: string) => {
+    for (const m of MODULE_CATALOG) {
+      if (m.spine || m.billing === "once") continue;
+      await db.insertInto("module_entitlement").values({ tenant_id: tenantId, module: m.id, active: true } as never).execute();
+    }
+  };
+  const payRow = (id: string) =>
+    db.selectFrom("payment").select(["id", "status", "reservation", "paid_at", "gateway_ref"])
+      .where("order_intent_id", "=", id).orderBy("created_at", "desc").executeTakeFirstOrThrow();
+  const invoices = async (paymentId: string) =>
+    Number((await db.selectFrom("invoice").select(sql<number>`count(*)`.as("n"))
+      .where("payment_id", "=", paymentId).executeTakeFirstOrThrow()).n);
+  // The webhook fires the registration DETACHED — wait for the money to settle.
+  const settle = async (orderId: string, from: string): Promise<string> => {
+    for (let i = 0; i < 60; i++) {
+      const st = (await payRow(orderId)).status;
+      if (st !== from) return st;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return (await payRow(orderId)).status;
+  };
+
+  // ① SUCCESS: hold → registration → capture → invoice.
+  {
+    const { tenantId } = await makeSite("Hold", "domTokHold01");
+    await entitle(tenantId);
+    const orderId = await createDomainUpgradeOrder(tenantId, "zarolt-siker.hu");
+    ok(Boolean(orderId), "zárolás-teszt: a rendelés létrejön");
+    if (orderId) {
+      const link = await requestPayment(orderId);
+      ok(Boolean(link), "zárolás-teszt: van fizetési link");
+      const p0 = await payRow(orderId);
+      ok(p0.reservation === true && p0.status === "pending",
+        "⭐ a domain-rendelés fizetése ZÁROLÁS (reservation), nem azonnali terhelés", `reservation=${p0.reservation} status=${p0.status}`);
+      // The card authenticated (mock: 'paid' on the pay page = the hold stands).
+      await applyWebhookResult({ gatewayRef: p0.gateway_ref!, status: "paid" });
+      const st = await settle(orderId, "reserved");
+      const p1 = await payRow(orderId);
+      ok(st === "paid" && p1.paid_at !== null,
+        "⭐ sikeres regisztráció UTÁN a zárolt összeg lehívva (paid + paid_at)", `status=${st}`);
+      ok((await invoices(p1.id)) >= 1, "⭐ a lehívott összegről számla készül", `számla=${await invoices(p1.id)}`);
+      // Barion's Succeeded after our full-total finish must be idempotent.
+      await applyWebhookResult({ gatewayRef: p0.gateway_ref!, status: "paid" });
+      ok((await payRow(orderId)).status === "paid", "a lehívás utáni „Succeeded” callback idempotens");
+    }
+  }
+
+  // ② FAILURE: the name is gone at purchase time → the hold is released, NOTHING charged.
+  {
+    const { tenantId, siteId } = await makeSite("HoldFail", "domTokHoldF01");
+    await entitle(tenantId);
+    // Mock registrar: a label with "taken" fails AT register() — the race the promise covers.
+    const orderId = await createDomainUpgradeOrder(tenantId, "elvittek-taken.hu");
+    ok(Boolean(orderId), "bukás-teszt: a rendelés létrejön");
+    if (orderId) {
+      await requestPayment(orderId);
+      const p0 = await payRow(orderId);
+      await applyWebhookResult({ gatewayRef: p0.gateway_ref!, status: "paid" });
+      const st = await settle(orderId, "reserved");
+      ok(st === "released", "⭐ sikertelen regisztrációnál a zárolás FELOLDVA (released), nem terhelve", `status=${st}`);
+      const p1 = await payRow(orderId);
+      ok(p1.paid_at === null, "⭐ feloldott zárolásnak nincs paid_at-je (a hűségidő nem indul)", `paid_at=${p1.paid_at}`);
+      ok((await invoices(p1.id)) === 0, "⭐ feloldott zárolásról NINCS számla", `számla=${await invoices(p1.id)}`);
+      // Barion reports a zero-finished reservation as Succeeded — it must NOT flip to paid.
+      await applyWebhookResult({ gatewayRef: p0.gateway_ref!, status: "paid" });
+      const p2 = await payRow(orderId);
+      ok(p2.status === "released" && (await invoices(p2.id)) === 0,
+        "⭐ a nullás lezárás utáni „Succeeded” callback NEM fordítja fizetettre", `status=${p2.status}`);
+      const row = await siteRow(siteId);
+      ok(row.custom_domain_status === "failed", "a beszerzés 'failed' állapotban", `state=${row.custom_domain_status}`);
+    }
+  }
+
+  // ③ SWEEP: a capture the run missed is settled by the resume timer.
+  {
+    const { tenantId } = await makeSite("HoldSweep", "domTokHoldS01");
+    await entitle(tenantId);
+    const orderId = await createDomainUpgradeOrder(tenantId, "sweep-zarolt.hu");
+    if (orderId) {
+      await requestPayment(orderId);
+      const p0 = await payRow(orderId);
+      // Simulate a capture that failed: run the registration while the row is still
+      // 'pending' (the capture hook finds no hold), then mark the hold as standing.
+      const { provisionOrderDomain: pod } = await import("../src/domains/provisionDomain.js");
+      await db.updateTable("payment").set({ status: "pending" } as never).where("id", "=", p0.id).execute();
+      await pod(orderId);
+      await db.updateTable("payment").set({ status: "reserved" } as never).where("id", "=", p0.id).execute();
+      const r = await settleDomainReservations();
+      ok(r.captured >= 1 && (await payRow(orderId)).status === "paid",
+        "⭐ a resume-időzítő lehívja a kimaradt zárolást (megvett név → terhelés)", JSON.stringify(r));
+    }
+  }
 }
 
 await db.destroy();

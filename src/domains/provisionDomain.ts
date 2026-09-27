@@ -73,6 +73,8 @@ async function notifyTenant(
   siteId: string,
   outcome: "live" | "failed",
   domain: string,
+  /** ADR-XXXX: the failed purchase's hold was released — nothing was charged. */
+  released = false,
 ): Promise<void> {
   try {
     const user = await db
@@ -102,6 +104,7 @@ async function notifyTenant(
             to,
             domain,
             adminUrl: `${config.publicSiteUrl}/admin?tab=webcim`,
+            released,
             lang,
           });
     await getEmailSender().send(msg);
@@ -192,6 +195,18 @@ export async function startDomainProvisioning(input: StartDomainInput): Promise<
 export async function provisionOrderDomain(
   orderIntentId: string,
 ): Promise<DomainProvisioningStatus | null> {
+  const id = await startOrderDomainProvisioning(orderIntentId);
+  return id ? runDomainProvisioning(id) : null;
+}
+
+/**
+ * The SYNCHRONOUS half of provisionOrderDomain: create (or reuse) the beszerzés row
+ * and mark the site `pending`, without running it. ADR-XXXX: the held-payment path
+ * awaits this before answering, so the buyer returning from the gateway lands on the
+ * "zárolva → megvásároljuk" screen, not on step 1 of a registration that has not
+ * been recorded yet. Returns null when the order carries no custom domain.
+ */
+export async function startOrderDomainProvisioning(orderIntentId: string): Promise<string | null> {
   const order = await db
     .selectFrom("order_intent")
     .select(["tenant_id", "domain_type", "domain_name"])
@@ -222,14 +237,13 @@ export async function provisionOrderDomain(
     .executeTakeFirst();
   if (!site) return null;
 
-  const id = await startDomainProvisioning({
+  return startDomainProvisioning({
     tenantId,
     siteId: site.id,
     orderIntentId,
     domain: order.domain_name,
     years: 1, // the driver recomputes from commitment_months; kept for the type only
   });
-  return runDomainProvisioning(id);
 }
 
 /**
@@ -251,6 +265,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
       "domain_provisioning.status as status",
       "domain_provisioning.registrar_ref as registrarRef",
       "order_intent.commitment_months as commitmentMonths",
+      "domain_provisioning.order_intent_id as orderIntentId",
     ])
     .where("domain_provisioning.id", "=", provisioningId)
     .executeTakeFirst();
@@ -263,9 +278,11 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
   // 24-month commitment (ADR-0020) ⇒ 2 years; a plain order ⇒ 1 year.
   const years = Math.max(1, Math.ceil((p.commitmentMonths ?? 12) / 12));
 
+  // Outside the try: the catch must know whether the name was already bought
+  // (ADR-XXXX — a failure BEFORE the purchase releases the buyer's hold).
+  let registrarRef = p.registrarRef;
   try {
     let status = p.status as DomainProvisioningStatus;
-    let registrarRef = p.registrarRef;
 
     // 1) pending → registering → registered: atomic buy at the registrar.
     if (status === "pending" || status === "registering") {
@@ -293,6 +310,12 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
         .execute();
       await setStatus(p.id, p.siteId, "registered", { registrarRef });
       status = "registered";
+      // ADR-XXXX: the name is ours → NOW the held amount is taken (never before).
+      // A capture that fails stays `reserved`; the resume timer retries it.
+      if (p.orderIntentId) {
+        const { captureDomainReservation } = await import("../payment/service.js");
+        await captureDomainReservation(p.orderIntentId);
+      }
     }
 
     // 2) registered → dns_pending: create the zone, delegate NS, point at our server.
@@ -334,9 +357,17 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
     await setStatus(p.id, p.siteId, "failed", { error: msg });
+    // ADR-XXXX: failed BEFORE the purchase → the hold goes back, nothing is charged.
+    // (After the purchase the name is the tenant's; a later DNS/TLS failure is ours
+    // to fix, not a reason to refund a name we hold for them.)
+    let released = false;
+    if (!registrarRef && p.orderIntentId) {
+      const { releaseDomainReservation } = await import("../payment/service.js");
+      released = await releaseDomainReservation(p.orderIntentId);
+    }
     // A tenant fizetett és vár — a kudarcról MAGUNKTÓL szólunk, nem hagyjuk, hogy
     // legközelebbi belépéskor szembesüljön vele.
-    await notifyTenant(p.tenantId, p.siteId, "failed", p.domain);
+    await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released);
     return "failed";
   }
 }

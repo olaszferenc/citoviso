@@ -21,6 +21,20 @@ if (results.length === 0) {
   }
 }
 
+// ADR-XXXX: the custom-domain HOLDS. A capture the webhook-time run missed (gateway
+// hiccup) or a release after a failure is settled here: bought ⇒ take the money,
+// failed before buying ⇒ give the hold back. Own try/catch — a gateway outage must
+// not stop the registry watcher below.
+try {
+  const { settleDomainReservations } = await import("../src/payment/service.js");
+  const r = await settleDomainReservations();
+  if (r.captured || r.released) {
+    console.log(`[domain-resume] zárolások rendezve: ${r.captured} lehívva, ${r.released} feloldva`);
+  }
+} catch (e) {
+  console.error(`[domain-resume] a zárolások rendezése hibázott: ${(e as Error).message}`);
+}
+
 // A `.hu` Nyilvántartó megerősítő levelének figyelése (tulaj-rendelet 2026-09-09).
 //
 // UGYANEBBEN a timerben fut, nem külön cronban: a beszerzés folytatása és a

@@ -11,9 +11,8 @@ import {
   PLATFORM_DOMAIN,
   normalizeCustomDomain,
   suggestDomains,
-  checkAvailability,
-  type DomainAvailability,
 } from "../domains.js";
+import { checkWebcimAvailability, type WebcimAvailability } from "./availability.js";
 import {
   loadPricing,
   computeMonthly,
@@ -51,8 +50,17 @@ export async function exceedsPriceCap(domain: string): Promise<boolean> {
 
 export interface DomainSuggestionView {
   readonly domain: string;
-  readonly availability: DomainAvailability;
+  readonly availability: WebcimAvailability;
 }
+
+/**
+ * ADR-XXXX: what happened to the MONEY of the newest domain order — the status
+ * screens say it out loud ("zárolva", "terheltük", "nem terheltünk semmit").
+ *   reserved — held, registration running · paid — captured after the purchase
+ *   released — the purchase failed, the hold was given back (nothing charged)
+ *   charged  — a legacy order charged up front (before the hold flow)
+ */
+export type DomainMoneyState = "reserved" | "paid" | "released" | "charged" | null;
 
 export interface DomainAdminData {
   /** A honlap jelenlegi címe (<slug>.citoviso.com), ha van slug. */
@@ -65,6 +73,12 @@ export interface DomainAdminData {
   readonly error: string | null;
   /** Az a domain, amit a sikertelen beszerzés meg akart venni (hogy meg tudjuk nevezni). */
   readonly failedDomain: string | null;
+  /** ADR-XXXX: the newest domain order's money state (see DomainMoneyState). */
+  readonly money: DomainMoneyState;
+  /** ADR-XXXX: that order's amount (held / charged), for the status rows. */
+  readonly moneyAmount: number | null;
+  /** The domain the newest beszerzés is about (in flight or failed). */
+  readonly activeDomain: string | null;
   readonly suggestions: readonly DomainSuggestionView[];
   /** ADR-0109 ①: the custom domain's MONTHLY fee (was: yearly). */
   readonly priceMonthly: number;
@@ -88,7 +102,7 @@ export interface DomainCheckResult {
   readonly domain: string | null;
   /** Sima magyar indoklás, ha nem használható (a normalizálótól). */
   readonly reason: string | null;
-  readonly availability: DomainAvailability | null;
+  readonly availability: WebcimAvailability | null;
   /**
    * ADR-0093: a domain regisztrációs díja meghaladja az ár-plafont (prémium domain)
    * — nem kínálható fel; a nézet mondja ki a vevőnek, miért nem.
@@ -107,7 +121,7 @@ export async function checkTypedDomain(raw: string, region?: string): Promise<Do
   }
   await loadPricing();
   const [availability, tooExpensive] = await Promise.all([
-    checkAvailability(norm.domain),
+    checkWebcimAvailability(norm.domain),
     exceedsPriceCap(norm.domain),
   ]);
   return { input: raw, domain: norm.domain, reason: null, availability, tooExpensive };
@@ -147,13 +161,44 @@ export async function loadDomainAdmin(
     failedDomain = row?.domain ?? null;
   }
 
+  // ADR-XXXX: the money state of the newest domain order (the one the status
+  // screen talks about). A hold row says `reservation`; a legacy paid row does not.
+  let money: DomainMoneyState = null;
+  let moneyAmount: number | null = null;
+  let activeDomain: string | null = null;
+  if (status !== "none") {
+    const dp = await db
+      .selectFrom("domain_provisioning")
+      .select(["domain"])
+      .where("tenant_id", "=", tenantId)
+      .orderBy("created_at", "desc")
+      .executeTakeFirst();
+    activeDomain = dp?.domain ?? null;
+    const pay = await db
+      .selectFrom("domain_provisioning")
+      .innerJoin("payment", "payment.order_intent_id", "domain_provisioning.order_intent_id")
+      .select(["payment.status as status", "payment.reservation as reservation", "payment.amount as amount"])
+      .where("domain_provisioning.tenant_id", "=", tenantId)
+      .orderBy("domain_provisioning.created_at", "desc")
+      .orderBy("payment.created_at", "desc")
+      .executeTakeFirst();
+    if (pay) {
+      moneyAmount = pay.amount;
+      money = !pay.reservation
+        ? pay.status === "paid" ? "charged" : null
+        : pay.status === "reserved" || pay.status === "paid" || pay.status === "released"
+          ? pay.status
+          : null;
+    }
+  }
+
   await loadPricing();
   const suggestions: DomainSuggestionView[] = [];
   if (!inFlight) {
     const candidates = suggestDomains(displayName);
     const checks = await Promise.all(
       candidates.map(async (d) => ({
-        availability: await checkAvailability(d),
+        availability: await checkWebcimAvailability(d),
         // ADR-0093: a known-over-cap (premium) domain is never offered — see
         // exceedsPriceCap; generated suggestions simply drop it.
         overCap: await exceedsPriceCap(d),
@@ -170,6 +215,9 @@ export async function loadDomainAdmin(
     status,
     error: site?.domain_provision_error ?? null,
     failedDomain,
+    money,
+    moneyAmount,
+    activeDomain,
     suggestions,
     // ADR-0109: the SAME fee the order will charge (quoteDomainUpgrade). What the
     // review screen shows must equal what the pay-link takes (§B.17 on ourselves).
