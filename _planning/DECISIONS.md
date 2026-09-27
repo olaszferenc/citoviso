@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-lead-lap-foto-merese-cache-talalatra-nem-var.md) — A lead-lap fotó-mérése cache-találatra nem vár, és a múló hiba újrapróbája tényleg kimegy a hálózatra
+- [ADR-0250](decisions/0250-a-lead-lap-foto-merese-cache-talalatra-nem-var.md) — A lead-lap fotó-mérése cache-találatra nem vár, és a múló hiba újrapróbája tényleg kimegy a hálózatra
 - [ADR-0249](decisions/0249-a-bukott-kapu-automatikusan-lefut-a-tiszta.md) — A bukott kapu automatikusan lefut a tiszta origin/mainen is: „nem a te változásod” vagy „a te változásod” — és a kapu saját fixture-rel mér, nem a közös dev-DB véletlen sorával
 - [ADR-0248](decisions/0248-a-tulaj-feltoltott-fotoja-konvertalodik.md) — A tulaj feltöltött fotója konvertálódik: böngészőben és szerveren (≤2560 px, álló, metaadat nélkül)
 - [ADR-0247](decisions/0247-allo-telefonon-is-egy-oszlopba-csuk-a-fizetes.md) — Álló telefonon is egy oszlopba csuk a fizetés-lap, ha az űrlapnak nem marad ablak (mért, nem töréspont)

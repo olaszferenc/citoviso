@@ -14,7 +14,7 @@ Brief `~/rc-briefs/lead-lap-photo-health-lassu.md` (a `cit873a226d` Webcím-szá
 - `src/console/photoProxy.ts`: `fetchPhoto(url, { refresh })` + in-flight összevonás (egy URL = egy kérés).
 - `scripts/mock-photo-gate-check.mts`: 3 új sor (azonos verdikt · nincs szünet · 503→200 újrapróba), negatív
   kontrollal a régi kódon piros.
-- ADR-XXXX.
+- ADR-0250.
 
 ## Eredmény (lead `de9bcca7…`, fő fa vs. munkafa)
 networkidle hideg 31,9 → 11,7 s · meleg 29,1 → 2,7 s · `assessMockPhotos` meleg 7 404 → 7–20 ms.

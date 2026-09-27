@@ -1,4 +1,4 @@
-## ADR-XXXX — A lead-lap fotó-mérése cache-találatra nem vár, és a múló hiba újrapróbája tényleg kimegy a hálózatra
+## ADR-0250 — A lead-lap fotó-mérése cache-találatra nem vár, és a múló hiba újrapróbája tényleg kimegy a hálózatra
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (tulaj: a „G” út — a gyökérokot külön szál javítja; brief `~/rc-briefs/lead-lap-photo-health-lassu.md`) · **Kapcsolódik:** ADR-0134 (a renderelt artefaktumon mér), ADR-0150 (`nophoto`), ADR-0249 (bukott kapu a tiszta mainen)
 
