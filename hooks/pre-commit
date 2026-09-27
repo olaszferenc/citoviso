@@ -74,6 +74,7 @@ gate_failed() {
 # Egyetlen kapu sem marad ki és egyik sem változik: a futtató azt dönti el, MIKOR fut, nem azt,
 # hogy fut-e. ⚠️ A bukó kaput ugyanaz a `gate_failed` írja ki, mint soros módban.
 # Soros mód (a régi viselkedés, hibakereséshez): CIT_GATE_JOBS=1. Őr: `scripts/gate-runner-check.mts`.
+# ⚠️ Soros módban NINCS tiszta-main próba (a bukott kapu feljegyzése a futtatóé) — ott kézzel.
 CIT_ROOT="$PWD"
 if [ "${CIT_GATE_JOBS:-}" = "1" ]; then
   # Serial: run in place, only skip the npm start-up of `npx tsx` (same tsx binary).
@@ -143,17 +144,26 @@ gate_flush() {
   CIT_GATE_KEY="$key" command node scripts/lib/gate-runner.mjs "$GATE_JOBS" "$CIT_ROOT" || rc=$?
   [ "$rc" -eq 0 ] && return 0
   [ -f "$GATE_JOBS/FAILED" ] || { echo "⛔ a kapu-futtató maga hibázott (kilépési kód: $rc)" >&2; exit "$rc"; }
-  local n i=0 grc label out err
-  n=$(wc -l <"$GATE_JOBS/FAILED")
+  local grc label out err last=1 first=""
   while IFS=$'\t' read -r grc label out err; do
-    i=$((i + 1))
     echo "$(cat "$label")"
     cat "$err" >&2
     cat "$out" >"$GATE_LOG"
-    # Every failed gate goes through the SAME gate_failed; all but the last in a subshell,
-    # so each is printed and the hook still exits with the last one's code.
-    if [ "$i" -lt "$n" ]; then ( (exit "$grc") || gate_failed ) || true; else (exit "$grc") || gate_failed; fi
+    # Every failed gate goes through the SAME gate_failed, each in a subshell, so each is
+    # printed; the hook exits with the last one's code below.
+    ( (exit "$grc") || gate_failed ) || true
+    last=$grc
+    [ -n "$first" ] || first=$label
   done <"$GATE_JOBS/FAILED"
+  # 🔎 „PIROS A TISZTA MAINEN IS?” (az ADR száma a próba fejlécében). The FIRST failed gate is replayed once in a
+  # temporary detached worktree on origin/main: red there too → „EZ NEM A TE VÁLTOZÁSOD”, with
+  # the gate file's last commit on main; green there → your change fails. Diagnosis ONLY: its
+  # exit code is ignored and the hook exits with the gate's code (an exception is the owner's,
+  # ADR-0068). CIT_GATE_MAIN_PROBE=0 turns it off. Guard: scripts/main-probe-check.mts.
+  if [ -n "$first" ] && [ "${CIT_GATE_MAIN_PROBE:-1}" != "0" ] && [ -f scripts/lib/main-probe.mjs ]; then
+    command node scripts/lib/main-probe.mjs "$GATE_JOBS" "$CIT_ROOT" "$first" || true
+  fi
+  exit "$last"
 }
 # ⛔ SYMLINK-TILALOM (2026-08-24, valós kár): a per-worktree `assets/Temp` symlink
 # bekerült egy commitba, és a fő fába landolva FELÜLÍRTA az ugyanott élő VALÓS
@@ -2123,6 +2133,22 @@ if [ -f scripts/gate-runner-check.mts ] && \
    changed_files | grep -qE '^hooks/pre-commit$|^scripts/(lib/gate-runner\.mjs|lib/gate-ro-preload\.mjs|gate-runner-check\.mts)$'; then
   echo "[pre-commit] gate-runner-check (a párhuzamos futtató tartja-e a soros hook szerződését)…"
   npx tsx scripts/gate-runner-check.mts >"$GATE_LOG" || gate_failed
+fi
+# 🔎 A TISZTA-MAIN PRÓBA ŐRE (az ADR száma a scripts/lib/main-probe.mjs fejlécében). A `gate_flush` bukás után az első bukott kaput az
+# origin/mainen is lefuttatja (scripts/lib/main-probe.mjs): ez az őr egy eldobható repó +
+# worktree fixture-ön méri, hogy a mainen is piros kapura „nem a te változásod” + gazda, a csak a
+# diffben pirosra „a te változásod” jön, az örökölt GIT_DIR nem szivárog, van időkorlát, a
+# próba-fa nem marad ott, és a hook a kapu kódjával lép ki. ~15 s; az önteszt (7 visszarontás,
+# ~2 perc) csak a próba vagy az őr saját változásakor.
+if [ -f scripts/main-probe-check.mts ]; then
+  if changed_files | grep -qE '^scripts/(lib/main-probe\.mjs|main-probe-check\.mts)$'; then
+    echo "[pre-commit] main-probe-check --self-test (a tiszta-main próba őre változott — pirosra tud-e menni)…"
+    npx tsx scripts/main-probe-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  if changed_files | grep -qE '^hooks/pre-commit$|^scripts/(lib/main-probe\.mjs|lib/gate-runner\.mjs|main-probe-check\.mts)$'; then
+    echo "[pre-commit] main-probe-check (a bukott kapu tiszta-main próbája a helyes gazdát nevezi-e meg)…"
+    npx tsx scripts/main-probe-check.mts >"$GATE_LOG" || gate_failed
+  fi
 fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush

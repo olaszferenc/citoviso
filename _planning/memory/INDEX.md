@@ -8,6 +8,7 @@
 
 - [2026-09-27_uzenetek_kattinthato_linkek.md](2026-09-27_uzenetek_kattinthato_linkek.md) — 2026-09-27 — Kattintható linkek az admin Üzenetek levéltörzsében
 - [2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md](2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md) — 2026-09-27 — A mobil-kör három nyitott tétele: fekvő főcím a 19 sablonon · nem törő összeg · az Elek-park lánca
+- [2026-09-27_kapu_tiszta_main_proba.md](2026-09-27_kapu_tiszta_main_proba.md) — 2026-09-27 — „Piros a tiszta mainen is?”: a bukott kapu automatikus tiszta-main próbája
 - [2026-09-27_idoszaki_arak_datumvalaszto.md](2026-09-27_idoszaki_arak_datumvalaszto.md) — 2026-09-27 — Időszaki árak: dátumválasztó, névlista, év-naptár
 - [2026-09-27_foto_feltoltes_64kb_konvertalas.md](2026-09-27_foto_feltoltes_64kb_konvertalas.md) — 2026-09-27 — Fotó-feltöltés: a 64 KB-os body-határ + feltöltéskori konvertálás
 - [2026-09-27_foglalasi_levelek_uj_keret.md](2026-09-27_foglalasi_levelek_uj_keret.md) — 2026-09-27 — Foglalási levelek: professzionális keret, a szállás elérhetőségével; a tulajé a Foglalások fülre visz
