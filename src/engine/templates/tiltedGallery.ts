@@ -214,6 +214,8 @@ body{padding-bottom:76px}
   .t-hero{height:auto;min-height:calc(100svh - 73px);padding-bottom:calc(70px + var(--citui-consent-h,0px))}
   .t-mast .t-kick{display:none}
   .t-scroll{display:none}
+  /* the 76px name pushed the tagline's last line to 5–7px above the pinned bar — vh-bound name */
+  .t-mast h1{font-size:clamp(36px,13vh,56px)}
 }
 
 /* footer */

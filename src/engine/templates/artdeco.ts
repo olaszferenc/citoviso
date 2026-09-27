@@ -81,6 +81,18 @@ ${centredModsecCss("artdeco")}
      tighter, and long Hungarian compounds may hyphenate. */
   @media(max-width:560px){.ad-poster{padding:34px 18px}.ad-poster h1{font-size:clamp(30px,9vw,44px);letter-spacing:.05em;hyphens:auto;overflow-wrap:anywhere}}
   .ad-poster h1 em{font-style:normal;color:var(--cit-accent)}
+  /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
+     hero copy was placed right on the previous round, but the desktop-sized headline still ran under
+     the fold (measured on 57 live mocks: 10 of 19 templates). One landscape-only size — vh-bound, so
+     it scales with the screen's HEIGHT — keeps the whole headline on the first screen; portrait and
+     desktop are untouched (the min-width keeps this off the phone rules, the max-height off desktop). */
+  @media(max-height:500px) and (min-width:561px){
+    .ad-hero{padding:24px 0 24px}
+    .ad-poster{padding:20px 26px}
+    .ad-poster h1{font-size:clamp(28px,8.5vh,38px);letter-spacing:.06em}
+    .ad-poster .ad-sub{margin-bottom:14px}
+    .ad-poster .ad-rule{margin-bottom:14px}
+  }
   .ad-poster .ad-sub{font-style:italic;font-size:clamp(17px,2.4vw,25px);color:color-mix(in srgb, var(--cit-accent) 60%, var(--cit-ink));margin-bottom:26px}
   .ad-poster .ad-rule{max-width:420px;margin-bottom:26px}
   .ad-poster p.ad-intro{max-width:56ch;margin:0 auto 32px;color:var(--cit-muted)}

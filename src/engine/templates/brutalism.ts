@@ -92,6 +92,15 @@ const BRUTALISM_CSS = `
   /* hyphens first: overflow-wrap alone cut "SÉTATÁVOLSÁG|ÁBAN" with no hyphen at 390px (measured 2026-09-26). */
   .b-hero-l h1{font-size:clamp(42px,8.5vw,100px);margin-bottom:20px;hyphens:auto;overflow-wrap:anywhere}
   .b-hero-l h1 em{font-style:normal;color:var(--cit-accent)}
+  /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
+     hero copy was placed right on the previous round, but the desktop-sized headline still ran under
+     the fold (measured on 57 live mocks: 10 of 19 templates). One landscape-only size — vh-bound, so
+     it scales with the screen's HEIGHT — keeps the whole headline on the first screen; portrait and
+     desktop are untouched (the min-width keeps this off the phone rules, the max-height off desktop). */
+  @media(max-height:500px) and (min-width:701px){
+    .b-hero-l{padding:28px 5% 30px}
+    .b-hero-l h1{font-size:clamp(28px,9vh,40px);margin-bottom:14px}
+  }
   .b-hero-sub{max-width:480px;font-size:17px;margin-bottom:26px;color:color-mix(in srgb, var(--cit-ink) 78%, var(--cit-muted))}
   .b-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:30px}
   .b-tag{font-family:${MONO};font-size:12px;text-transform:uppercase;border:2px solid var(--cit-ink);padding:6px 12px;background:var(--cit-surface);display:inline-flex;align-items:center;gap:7px}

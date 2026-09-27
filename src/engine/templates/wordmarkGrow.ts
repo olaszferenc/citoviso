@@ -129,6 +129,16 @@ section{padding:clamp(70px,10vh,124px) 0}
   font-size:clamp(16px,2.2vw,24px);line-height:1.34;max-width:26ch;margin:.55em 0 0;
   color:color-mix(in srgb,var(--cit-on-accent) 92%,transparent)}
 .w-hero-copy .w-kick{color:color-mix(in srgb,var(--cit-on-accent) 90%,transparent);margin-bottom:12px}
+/* LANDSCAPE PHONE (844×390, 2026-09-27): the 420px hero minimum put the bottom-left copy at the fold
+   (guest-mobile-check ②főcím-hajtás, +45px on the fixture; −15px on the live mocks — a barely-passing
+   value is a dead rule). The hero fits the screen under the one-row nav, the copy sits higher, the
+   sizes are vh-bound; portrait (≤640) and desktop untouched. */
+@media(max-height:500px) and (min-width:641px){
+  .w-hero{height:calc(100svh - 52px);min-height:0}
+  .w-hero-copy{bottom:10%}
+  .w-hero-copy h1{font-size:clamp(26px,9vh,40px)}
+  .w-hero-copy .w-hero-line{font-size:clamp(14px,4.2vh,18px)}
+}
 
 /* alternating rows: rounded portrait card + copy */
 .w-row{display:grid;grid-template-columns:1fr 1fr;gap:min(72px,7vw);align-items:center}

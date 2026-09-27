@@ -20,7 +20,7 @@
 // őrzi, hogy a futó ne tudjon olyan kört indítani, ami ebből a táblából hiányzik.
 
 /** Amit a park TUD, és amit egy kör MEGKÖVETEL. Mérhető tény, nem szándék. */
-export type ParkFact = "trackedLink" | "elekTenant";
+export type ParkFact = "trackedLink" | "elekTenant" | "ownedLead";
 
 export interface FactSpec {
   /** Ahogy a futás kiírja — emberi név, nem mezőnév. */
@@ -42,12 +42,24 @@ export const FACTS: Readonly<Record<ParkFact, FactSpec>> = {
     producer: "FK-005a",
     produces: "a vásárlásból született bérlő + site → ELEK_TENANT_USER/PASSWORD",
   },
+  // ⛔ Mérve 2026-09-27: az FK-008b első lépése pirosra ment, mert a követett link már
+  // „Ez az oldal már az Öné" állapotban állt (ownedSiteForProspectToken) — a park egy
+  // KORÁBBI FK-005a-tól már túl volt a vásárláson. Ez nem hiányzó, hanem TÖBBLET tény:
+  // egy kör, ami a vásárlás ELŐTTI lapot méri, egy meleg parkon nem mérhető, és ezt az
+  // első sorban kell kimondani, nem a 7 blokkolt lépésből visszakövetkeztetni.
+  ownedLead: {
+    label: "az ELEK-lead már vásárolt (a követett link „már az Öné” állapotú)",
+    producer: "FK-005a",
+    produces: "a vásárlás utáni, vásárlási réteg nélküli követett lap",
+  },
 };
 
 export interface ChainRound {
   readonly fk: string;
   /** Amit a kör megkövetel — a futó LÁNC-POZÍCIÓJÁBÓL, nem szövegkeresésből. */
   readonly needs: readonly ParkFact[];
+  /** Amit a park NEM tudhat, különben a kör tárgya már nincs a lapon (meleg park). */
+  readonly forbids?: readonly ParkFact[];
 }
 
 /**
@@ -63,7 +75,7 @@ export const CHAIN: readonly ChainRound[] = [
   { fk: "FK-004b", needs: ["trackedLink"] },
   // A mock a VENDÉG szemével — a vásárlás ELŐTT, mert a vétel után a lap már
   // „Ez az oldal már az Öné"-t mond, és a minta-űrlapok helyett a tulaj-utat méri.
-  { fk: "FK-008b", needs: ["trackedLink"] },
+  { fk: "FK-008b", needs: ["trackedLink"], forbids: ["ownedLead"] },
   // A lead szemével, TELEFONON (FK-009): NEM az ELEK-parkon mér, hanem a két dev-lead
   // 19+19 stílusának követett linkjén (`scripts/seed-lead-mobile-links.mts` →
   // links.json → `${ELEK_P_*}`); a futó a fájl hiányát hangosan kihagyja.
@@ -92,7 +104,8 @@ export interface Problem {
   readonly fact: ParkFact;
   /** A kért körök, amelyek ezen a tényen állnak — mind megnevezve. */
   readonly blockedFks: readonly string[];
-  readonly reason: "missing" | "outOfOrder";
+  /** `obsolete`: a park már TÚL van a körön — a tényt nem hiányoljuk, hanem soknak találjuk. */
+  readonly reason: "missing" | "outOfOrder" | "obsolete";
 }
 
 export interface Plan {
@@ -140,6 +153,14 @@ export function planRun(requested: readonly string[], facts: ParkFacts): Plan {
       problems.push({ fact, blockedFks: blocked, reason: "outOfOrder" });
   }
 
+  // A meleg park: egy kör, aminek a tárgya a park egy MEGLÉVŐ ténye miatt már nincs a
+  // lapon. Nincs termelő, amit hozzá lehetne kérni — a javítás a park visszahűtése.
+  for (const fact of Object.keys(FACTS) as ParkFact[]) {
+    if (!facts[fact]) continue;
+    const blocked = selected.filter((fk) => (CHAIN[index.get(fk)!]!.forbids ?? []).includes(fact));
+    if (blocked.length) problems.push({ fact, blockedFks: blocked, reason: "obsolete" });
+  }
+
   return {
     rounds: CHAIN.filter((r) => selectedSet.has(r.fk)).map((r) => r.fk),
     skipped: full
@@ -157,7 +178,8 @@ export function planRun(requested: readonly string[], facts: ParkFacts): Plan {
 /** Az a parancs, ami a hiányt orvosolja — a termelő körökkel kiegészített kérés. */
 export function fixCommand(requested: readonly string[], problems: readonly Problem[]): string {
   const index = new Map(CHAIN.map((r, i) => [r.fk, i]));
-  const add = problems.map((p) => FACTS[p.fact].producer);
+  // Az elavult (meleg-parki) probléma nem javítható termelő körrel — hideg park kell.
+  const add = problems.filter((p) => p.reason !== "obsolete").map((p) => FACTS[p.fact].producer);
   const all = [...new Set([...requested, ...add])]
     .filter((fk) => index.has(fk))
     .sort((a, b) => index.get(a)! - index.get(b)!);

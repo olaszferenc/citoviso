@@ -76,6 +76,17 @@ const WATERCOLOR_CSS = `
   .wc-k{display:inline-block;font-size:13.5px;font-weight:700;color:var(--cit-accent);background:var(--cit-surface);border-radius:100px;padding:8px 18px;box-shadow:var(--cit-shadow);margin-bottom:20px}
   .wc-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,5.6vw,62px);line-height:1.12;margin-bottom:18px}
   .wc-hero h1 em{font-style:italic;color:var(--cit-accent)}
+  /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
+     hero copy was placed right on the previous round, but the desktop-sized headline still ran under
+     the fold (measured on 57 live mocks: 10 of 19 templates). One landscape-only size — vh-bound, so
+     it scales with the screen's HEIGHT — keeps the whole headline on the first screen; portrait and
+     desktop are untouched (the min-width keeps this off the phone rules, the max-height off desktop). */
+  @media(max-height:500px) and (min-width:701px){
+    .wc-hero{padding:18px 0 20px}
+    .wc-k{margin-bottom:12px}
+    .wc-hero h1{font-size:clamp(26px,8vh,36px);margin-bottom:12px}
+    .wc-herosub{margin-bottom:18px}
+  }
   .wc-herosub{color:var(--cit-muted);max-width:460px;margin-bottom:28px}
   .wc-heroctas{display:flex;gap:12px;flex-wrap:wrap}
   .wc-hvis{position:relative}

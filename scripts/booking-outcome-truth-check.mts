@@ -325,7 +325,14 @@ console.log(
     await page.goto(pathToFileURL(file).href);
     await page.waitForTimeout(500);
 
-    const days = page.locator(".cit-book__day:not(:disabled):visible");
+    // MONTH-END (measured 2026-09-27, the 27th): 3 free days left in the open month, `nth(4)`
+    // timed out. The widget has a month pager — page on when the month cannot give five days.
+    let days = page.locator(".cit-book__day:not(:disabled):visible");
+    if ((await days.count()) < 5) {
+      await page.click(".cit-book__calnav--next");
+      await page.waitForTimeout(250);
+      days = page.locator(".cit-book__day:not(:disabled):visible");
+    }
     await days.nth(1).click();
     await days.nth(4).click();
     // Plan B (2026-09-26): on a phone the fields sit in step 2, behind „Tovább”.

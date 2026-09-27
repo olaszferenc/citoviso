@@ -75,6 +75,17 @@ ${centredModsecCss("fullbleed")}
   .t-hero h1{font-family:var(--cit-font-display);font-weight:500;font-size:clamp(38px,5vw,64px);line-height:1.07;margin:0 auto 16px;max-width:18ch}
   .t-hero h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
   @media(max-width:700px){.t-hero h1{font-size:32px;max-width:100%}}
+  /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
+     hero copy was placed right on the previous round, but the desktop-sized headline still ran under
+     the fold (measured on 57 live mocks: 10 of 19 templates). One landscape-only size — vh-bound, so
+     it scales with the screen's HEIGHT — keeps the whole headline on the first screen; portrait and
+     desktop are untouched (the min-width keeps this off the phone rules, the max-height off desktop). */
+  @media(max-height:500px) and (min-width:701px){
+    .t-hero{height:auto;min-height:100svh;flex-direction:column;align-items:center;justify-content:flex-start}
+    .t-hero .cit-mast{position:relative;inset:auto}
+    .t-heroin{padding:16px 24px 40px}
+    .t-hero h1{font-size:clamp(26px,8vh,36px);max-width:26ch}
+  }
   .t-herosub{font-size:clamp(16px,2vw,19px);color:rgba(255,255,255,.85);max-width:560px;margin:0 auto 38px}
   .t-heroctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
 

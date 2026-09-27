@@ -417,6 +417,8 @@
     border-radius: calc(var(--cit-radius) * 0.6); background: color-mix(in srgb, var(--cit-ink) 4%, var(--cit-bg));
     border: 1px solid var(--cit-line); font-size: 0.9rem; }
   .cit-book__sum b { font-size: 1rem; }
+  /* the mirrored total line keeps the bar's own size and weight — only the amount's nowrap comes along */
+  .cit-book__sum span b { font-size: inherit; font-weight: inherit; }
   .cit-book__edit { justify-self: start; font: inherit; font-weight: 700; color: var(--cit-accent); background: none;
     border: 0; padding: 8px 0; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 }
@@ -716,6 +718,10 @@ a.cit-grat:hover {
 .cit-book__qtotal{display:block;font-size:1rem;font-weight:700;margin-top:6px;padding-top:7px;
   color:var(--cit-ink,#10243a);border-top:1px solid var(--cit-line)}
 .cit-book__qtotal b{float:right}
+/* An amount never breaks between its digits and its unit ("72 000 / Ft" on the phone's
+   step-2 bar, measured 2026-09-27): the string stays plain-spaced (ADR-0162 ⑤), the
+   element carries the rule. Written by cit-runtime.js moneyHtml(). */
+.cit-amt{white-space:nowrap}
 .cit-book__later{margin-top:9px;padding:9px 11px;border-radius:10px;font-size:.81rem;
   line-height:1.5;color:var(--cit-ink,#10243a);
   background:color-mix(in srgb,var(--cit-accent) 8%, var(--cit-bg));

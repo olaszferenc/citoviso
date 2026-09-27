@@ -94,6 +94,9 @@ const CINEMATIC_CSS = `
   }
   .cn-cinesub{overflow-wrap:anywhere}
   .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
+  /* landscape phone: 4 lines × 54px ended 6px above the fold on Laguna (2026-09-27) — a barely-passing
+     value is a dead rule; vh-bound size, AFTER the base rule so it wins at equal specificity */
+  @media(max-height:500px) and (min-width:701px){.cn-cine h1{font-size:clamp(28px,8.5vh,40px);max-width:24ch}}
   .cn-cine h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 88%, white)}
   .cn-cinesub{max-width:480px;color:color-mix(in srgb, white 88%, transparent);margin-bottom:28px}
   .cn-heroctas{display:flex;gap:14px;flex-wrap:wrap}

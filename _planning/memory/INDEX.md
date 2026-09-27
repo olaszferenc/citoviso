@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-27_uzenetek_kattinthato_linkek.md](2026-09-27_uzenetek_kattinthato_linkek.md) — 2026-09-27 — Kattintható linkek az admin Üzenetek levéltörzsében
+- [2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md](2026-09-27_mobil_nyitottak_fekvo_focim_osszeg_elek.md) — 2026-09-27 — A mobil-kör három nyitott tétele: fekvő főcím a 19 sablonon · nem törő összeg · az Elek-park lánca
 - [2026-09-27_idoszaki_arak_datumvalaszto.md](2026-09-27_idoszaki_arak_datumvalaszto.md) — 2026-09-27 — Időszaki árak: dátumválasztó, névlista, év-naptár
 - [2026-09-27_foglalasi_levelek_uj_keret.md](2026-09-27_foglalasi_levelek_uj_keret.md) — 2026-09-27 — Foglalási levelek: professzionális keret, a szállás elérhetőségével; a tulajé a Foglalások fülre visz
 - [2026-09-27_cfg_mobile_koordinacio.md](2026-09-27_cfg_mobile_koordinacio.md) — 2026-09-26/27 — cfg-mobile koordinátor: három párhuzamos szál a lead-lap rendelés-paneljére

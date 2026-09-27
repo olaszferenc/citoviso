@@ -99,6 +99,9 @@ const DARK_LUXURY_CSS = `
     .t-hero{height:auto;min-height:100svh;flex-direction:column;align-items:stretch;justify-content:flex-start}
     body.cit-tpl-dark-luxury .cit-mast{position:relative;inset:auto}
     .t-heroin{padding-top:28px;padding-bottom:48px}
+    /* the headline: 59px × 4 lines ended 37px under the fold — vh-bound size, wider measure */
+    .t-hero h1{font-size:clamp(28px,9vh,40px);max-width:24ch;margin-bottom:12px}
+    .t-herosub{margin-bottom:20px}
   }
 
   /* booking dock — dark panel overlapping the hero bottom, hosting the canonical slot */

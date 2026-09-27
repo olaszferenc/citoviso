@@ -118,6 +118,9 @@ const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: s
   { id: "selftest-no-two-step", css: `.cit-book__go{display:none!important}`, expect: ["⑥két-lépés"] },
   // a fixed band painted over the lower half of the headline (tilted-gallery's pinned bar on a
   // landscape phone, 2026-09-26); placed by script at the h1's own rect so it works on any page
+  // a headline that starts on the first screen and ends under the fold (dark-luxury landscape,
+  // 2026-09-27): editorial's one-line name pushed down by 80vh and blown up — must fail by a margin
+  { id: "selftest-h1-under-fold", css: `h1{margin-top:80vh!important;font-size:120px!important;line-height:1.1!important}`, expect: ["②főcím-hajtás"], tpl: "editorial" },
   { id: "selftest-h1-under-bar", css: ``, expect: ["②főcím-takarva"], tpl: "fullbleed", js: `<script>addEventListener('load',function(){var h=document.querySelector('h1');if(!h)return;var r=h.getBoundingClientRect();var d=document.createElement('div');d.className='st-h1bar';d.style.cssText='position:fixed;left:0;right:0;top:'+Math.round(r.top+window.scrollY+r.height/2)+'px;height:'+Math.round(r.height/2)+'px;background:#000;z-index:100';document.body.appendChild(d)})</script>` },
 ];
 // a dead "next month" button: the widget's own listener never runs (capture-phase stop)
@@ -570,6 +573,13 @@ async function main(): Promise<void> {
         if (st.h1 && st.h1.covered && st.h1.covered.length) F(P, vp.id, "HIBA", "②főcím-takarva", `a főcím („${st.h1.text}”) ${st.h1.coveredLines.length}/${st.h1.lines} sora rögzített réteg alatt: ${st.h1.covered.join(", ")} (y=${st.h1.r.y}…${st.h1.r.b})`);
         else if (st.h1 && st.h1.gapUnderMast != null && st.h1.gapUnderMast < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) ${st.h1.gapUnderMast}px-re indul a masthead alja alatt — nincs levegő`);
         else if (st.h1 && st.h1.below && st.h1.below.gap < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) alja ${st.h1.below.gap}px-re a rögzített sávtól (${st.h1.below.by}) — nincs levegő`);
+        // ② the headline's END on the first screen. A headline that STARTS on screen and ends under the
+        // fold is the landscape finding the owner sent back ("a nyitottakat még javítsd", 2026-09-27):
+        // dark-luxury's 59px × 4 lines ended 37px under the fold, and on the 57 live mocks 10 of 19
+        // templates did the same at 844×390 (up to +374px). A headline that is wholly below the fold
+        // (arch-frames, card-sidebar: the hero carries the name in another element by approved draft)
+        // is a different structure and is not this rule's subject — `offscreen` returns early above.
+        if (st.h1 && !st.h1.offscreen && st.h1.r.b > vp.height) F(P, vp.id, "ERGONÓMIA", "②főcím-hajtás", `a főcím („${st.h1.text}”) ${st.h1.lines} sora közül az utolsó a hajtás alatt: alja y=${st.h1.r.b}, a képernyő ${vp.height}px (${st.h1.r.b - vp.height}px lóg túl)`);
         if (st.mast && st.mast.h > 150) F(P, vp.id, "HIBA", "②fejléc-blokk", `a masthead ${st.mast.h}px magas az első képernyőn (a telefonos alak ≤150px-et ígér)`);
         // ⑤ the fixed booking bar's text: value + label on ONE line each (was 2–3 lines, transit 99px)
         if (st.barText && st.barText.parts.some((p: any) => p.lines > 1)) F(P, vp.id, "HIBA", "⑤sáv-felirat", `a Foglalás-sáv felirata törik: ${st.barText.parts.map((p: any) => `${p.tag} ${p.lines} sor`).join(", ")} (blokk ${st.barText.h}px)`);

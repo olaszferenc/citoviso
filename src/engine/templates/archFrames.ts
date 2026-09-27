@@ -132,6 +132,16 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
   font-size:clamp(30px,6.2vw,66px);line-height:1.04}
 .a-hero-line{font-family:var(--cit-font-display);font-size:clamp(16px,2.2vw,24px);
   line-height:1.34;max-width:26ch;margin:.5em auto 0;color:rgba(255,255,255,.94)}
+/* LANDSCAPE PHONE (844×390, 2026-09-27): the 460px hero minimum put the name at the very bottom of a
+   390px screen and the lead line under the fold. The hero fits the screen, the copy sits higher and
+   the vh-bound sizes keep name + lead on the first screen; portrait (≤640) and desktop untouched. */
+@media(max-height:500px) and (min-width:641px){
+  .a-hero{height:100svh;min-height:0}
+  .a-hero-copy{bottom:14%}
+  .a-hero-name{font-size:clamp(28px,10vh,44px)}
+  .a-hero-line{font-size:clamp(14px,4.2vh,18px);margin-top:.35em}
+  .a-scroll{display:none}
+}
 .a-scroll{position:absolute;bottom:18px;left:0;right:0;z-index:3;text-align:center;font-size:10px;
   letter-spacing:.34em;text-transform:uppercase;color:color-mix(in srgb,var(--cit-ink) 62%,transparent)}
 

@@ -31,7 +31,7 @@ import { once } from "node:events";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Server } from "node:http";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from "playwright-core";
 
 import { parseFk, findScenario, type FkScenario, type FkStep } from "../../src/elek/fkParse.js";
 import { classifyStepNoise, noiseErrorText } from "../../src/elek/stepVerdict.js";
@@ -164,6 +164,30 @@ function isSelector(s: string): boolean {
   return /^[#.[]/.test(s);
 }
 
+/**
+ * A quoted label resolves to the control a HUMAN would tap: the visible control whose
+ * WHOLE text is the label, before any control that merely CONTAINS it.
+ *
+ * ⛔ Measured 2026-09-27 (FK-004, "Követett link készül"): `has-text` is a substring
+ * match and `.first()` takes DOM order, so on the lead page `kattints "Megkeresés"`
+ * resolved to the operator console's FOLDED nav row "Megkeresés-tölcsér" (Riport
+ * group, `display:none`) — which sits BEFORE the visible "Megkeresés" tab in the DOM —
+ * and timed out on a control the human sees at once. The scenario was right; the
+ * resolver answered a different question. Order now: exact visible text → visible
+ * substring → the old substring-first, so a genuinely hidden target still fails
+ * loudly (and names its cover, below).
+ */
+async function labelLocator(page: Page, target: string): Promise<Locator> {
+  const tags = ["a", "button", "[role=button]", "label", "summary"];
+  const exact = tags.map((t) => `${t}:text-is("${target}")`).join(", ") + `, input[type=submit][value="${target}"]`;
+  const loose = tags.map((t) => `${t}:has-text("${target}")`).join(", ") + `, input[type=submit][value*="${target}"]`;
+  for (const sel of [exact, loose]) {
+    const vis = page.locator(sel).locator("visible=true");
+    if ((await vis.count()) > 0) return vis.first();
+  }
+  return page.locator(loose).first();
+}
+
 async function doAction(page: Page, action: string): Promise<void> {
   // `vissza` — the buyer's back button (failure-matrix territory: what does the
   // pay page do when they navigate back after a decline or a success?).
@@ -179,21 +203,13 @@ async function doAction(page: Page, action: string): Promise<void> {
     await page.reload({ timeout: STEP_TIMEOUT * 2 });
     return;
   }
-  const m = action.match(/^(kattints|írd|válaszd|várj)\s+(.*)$/);
+  const m = action.match(/^(kattints|írd|válaszd|várj|görgess)\s+(.*)$/);
   if (!m) throw new Error(`értelmezhetetlen akció: ${action}`);
   const [, verb, rest] = m;
   const q = quoted(rest);
   if (verb === "kattints") {
     const target = q[0] ?? rest.trim();
-    const loc = isSelector(target)
-      ? page.locator(target).first()
-      : page
-          .locator(
-            `a:has-text("${target}"), button:has-text("${target}"), ` +
-              `input[type=submit][value*="${target}"], [role=button]:has-text("${target}"), ` +
-              `label:has-text("${target}"), summary:has-text("${target}")`,
-          )
-          .first();
+    const loc = isSelector(target) ? page.locator(target).first() : await labelLocator(page, target);
     // A one-shot trigger REMOVES ITSELF on success (the outreach send button is
     // replaced by the "Az e-mail már kiment" note). Playwright then re-resolves
     // the now-detached locator and times out — reporting a failure for a click
@@ -275,6 +291,18 @@ async function doAction(page: Page, action: string): Promise<void> {
         throw e;
       }
     }
+    return;
+  }
+  if (verb === "görgess") {
+    // The human READS to a point before acting (the outreach send opens only once the
+    // letter's end — unsubscribe + legal basis — has been on screen, ADR-0160). A click
+    // alone scrolls the BUTTON into view, never the letter's end, so the gate stayed shut
+    // under the runner (FK-004 step 7, measured 2026-09-27). Scroll the target into view
+    // the way a reader would reach it, then let the page's observers fire.
+    const target = q[0] ?? rest.trim();
+    const loc = isSelector(target) ? page.locator(target).first() : page.getByText(target).first();
+    await loc.scrollIntoViewIfNeeded({ timeout: STEP_TIMEOUT });
+    await page.waitForTimeout(400);
     return;
   }
   if (verb === "írd") {

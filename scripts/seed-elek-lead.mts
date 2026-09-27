@@ -33,8 +33,8 @@ import { db } from "../src/db/client.js";
 import { fetchPhoto } from "../src/console/photoProxy.js";
 import { rescrapePhotos } from "../src/scraper/rescrapePhotos.js";
 
-const ELEK_NAME = "ELEK-TESZT Vendégház";
-const ELEK_EMAIL = "elek@citoviso.com";
+// ONE spelling for the park's identity — the driver resolves the lead by this name (src/elek/park.ts).
+import { ELEK_LEAD_NAME as ELEK_NAME, ELEK_EMAIL } from "../src/elek/park.js";
 const REFRESH = process.argv.includes("--refresh-photos");
 
 const existing = await db

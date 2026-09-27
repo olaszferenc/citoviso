@@ -285,6 +285,16 @@
     function money(amount, currency) {
       return CitMoney.formatMoney(amount, currency, document.documentElement.lang || "hu");
     }
+    /* The amount as MARKUP: one element that cannot break inside itself. The string
+     * keeps its plain spaces (ADR-0162 ⑤ — the separator is U+0020 everywhere; an
+     * NBSP shipped once and broke 28 literal expectations plus GSM-7 SMS), so the
+     * line-break rule is the stylesheet's: `.cit-amt{white-space:nowrap}`. Measured
+     * 2026-09-27 on the phone's step-2 summary bar: "…(minta-ár) 72 000 Ft" wrapped
+     * before "Ft" — the number and its unit on two lines. Every amount the widget
+     * writes into HTML goes through this, not just that bar. */
+    function moneyHtml(amount, currency) {
+      return '<span class="cit-amt">' + money(amount, currency) + "</span>";
+    }
     function quoteFor(a, b) {
       if (!pricing || !pricing.rows || !pricing.rows.length) return null;
       var lines = [], d = new Date(a + "T00:00:00Z"), end = Date.parse(b + "T00:00:00Z");
@@ -348,9 +358,9 @@
       var cur = pricing.currency;
       var rows = q.lines.map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
-          tr("{n} éj").replace("{n}", l.n) + " × " + money(l.per, cur) +
+          tr("{n} éj").replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
           (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
-          " = " + money(l.sum, cur) + "</span>";
+          " = " + moneyHtml(l.sum, cur) + "</span>";
       }).join("");
       /* ⛔ KONTRAKTUS ①–④ (booking-price-clarity, tulaj 2026-09-14: „A — nyitott
        * bontás"). Mérve a régi lapon: az ár EGYETLEN szám volt magyarázat nélkül
@@ -387,13 +397,12 @@
         ? ""
         : ifaPerPersonNight
         ? '<div class="cit-book__later"><b>' + tr("A helyszínen fizetendő ezen felül:") + "</b><br>" +
-          esc(
-            tr("Idegenforgalmi adó — {per} / fő / éj × {g} fő × {n} éj = {sum}")
-              .replace("{per}", money(ifaPerPersonNight, cur))
-              .replace("{g}", String(guests))
-              .replace("{n}", String(n))
-              .replace("{sum}", money(ifaPerPersonNight * guests * n, cur)),
-          ) +
+          // escape the SENTENCE first, then drop the amount markup into its slots
+          esc(tr("Idegenforgalmi adó — {per} / fő / éj × {g} fő × {n} éj = {sum}"))
+            .replace("{per}", moneyHtml(ifaPerPersonNight, cur))
+            .replace("{g}", esc(String(guests)))
+            .replace("{n}", esc(String(n)))
+            .replace("{sum}", moneyHtml(ifaPerPersonNight * guests * n, cur)) +
           "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") + "</div>"
         : '<div class="cit-book__later">' +
           tr("A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő — az összegéről a szállásadó tájékoztatja.") +
@@ -406,7 +415,7 @@
         rows +
         '<span class="cit-book__qbasis">' + esc(basis.replace("{n}", String(guests))) + "</span>" +
         included +
-        '<span class="cit-book__qtotal">' + (demo ? tr("Összesen a szállásért (minta-ár)") : tr("Összesen a szállásért")) + " <b>" + money(q.total, cur) + "</b></span>" +
+        '<span class="cit-book__qtotal">' + (demo ? tr("Összesen a szállásért (minta-ár)") : tr("Összesen a szállásért")) + " <b>" + moneyHtml(q.total, cur) + "</b></span>" +
         (demo
           ? '<span class="cit-book__qsample">' +
             tr("Ez minta-ár, nem az Ön szállásának ára — az éles oldalon itt a saját árlistája jelenik meg, éjszakánkénti bontásban.") +
@@ -428,9 +437,9 @@
       var cur = s.currency || "HUF";
       var rows = (s.lines || []).map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
-          tr("{n} éj").replace("{n}", l.nights) + " × " + money(l.perNight, cur) +
+          tr("{n} éj").replace("{n}", l.nights) + " × " + moneyHtml(l.perNight, cur) +
           (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
-          " = " + money(l.sum, cur) + "</span>";
+          " = " + moneyHtml(l.sum, cur) + "</span>";
       }).join("");
       var facts =
         '<span class="cit-book__rrow"><span>' + tr("Időszak") + "</span><b>" +
@@ -445,7 +454,7 @@
         '<span class="cit-book__rrow"><span>' + tr("Hivatkozás") + "</span><b>" + esc(s.ref) + "</b></span>";
       // §B.17: an unpriced stay prints NO total — silence beats a confident zero.
       var total = s.total
-        ? rows + '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + money(s.total, cur) + "</b></span>"
+        ? rows + '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + moneyHtml(s.total, cur) + "</b></span>"
         : "";
       // The deadline is the module's real setting, not a hard-coded 48.
       var when = s.expireHours
@@ -746,7 +755,8 @@
       var tot = q && q.querySelector(".cit-book__qtotal");
       sum.innerHTML = a && b
         ? "<b>" + esc(huDay(a)) + " → " + esc(huDay(b)) + " · " + esc(n) + "</b>" +
-          "<span>" + (ask ? tr("Egyedi ár — a szállásadó árajánlattal válaszol") : tot ? esc(tot.textContent) : "") + "</span>" +
+          // the total line is mirrored as MARKUP (not textContent): the amount keeps its .cit-amt element
+          "<span>" + (ask ? tr("Egyedi ár — a szállásadó árajánlattal válaszol") : tot ? tot.innerHTML : "") + "</span>" +
           '<button type="button" class="cit-book__edit">' + tr("Módosítom a napokat") + "</button>"
         : "";
     }
@@ -797,7 +807,7 @@
           rrow(tr("Létszám"), tr("{n} fő").replace("{n}", guests)) +
           (unitName ? rrow(tr("Egység"), unitName) : "") +
           (dq
-            ? '<span class="cit-book__qtotal">' + tr("Összesen (minta-ár):") + " <b>" + money(dq.total, pricing.currency) + "</b></span>"
+            ? '<span class="cit-book__qtotal">' + tr("Összesen (minta-ár):") + " <b>" + moneyHtml(dq.total, pricing.currency) + "</b></span>"
             : "") +
           "</div>";
         slot.innerHTML =

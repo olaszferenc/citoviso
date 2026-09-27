@@ -78,6 +78,17 @@ const PARALLAX_CSS = `
   .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.3) 30%,rgba(10,12,14,.6) 64%,rgba(10,12,14,.92) 100%)}
   .t-hero{padding-top:140px;padding-bottom:88px}
   .t-hero h1{font-size:clamp(36px,5.5vw,72px);color:#fff;margin-bottom:18px;max-width:16ch}
+  /* landscape phone (844×390, 2026-09-27): 5 lines × 46px ended 6px above the fold on Laguna — a
+     barely-passing value is a dead rule; vh-bound size after the base rule, portrait/desktop untouched */
+  @media(max-height:500px) and (min-width:701px){
+    /* the copy is bottom-anchored under an OVERLAY masthead: a shorter screen pushed the headline's
+       first line under the masthead's chip (measured on the first landscape pass). As in dark-luxury
+       and cinematic, the masthead joins the flow and the hero grows with its content. */
+    .t-par--hero{height:auto;min-height:100svh;flex-direction:column;align-items:stretch;justify-content:flex-start}
+    .t-par--hero .cit-mast{position:relative;inset:auto}
+    .t-hero{padding-top:16px;padding-bottom:40px}
+    .t-hero h1{font-size:clamp(26px,8vh,36px);max-width:24ch}
+  }
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
   .t-herosub{max-width:540px;font-size:18px;margin-bottom:34px;opacity:.92}
   .t-heroctas{display:inline-flex;gap:14px;flex-wrap:wrap}

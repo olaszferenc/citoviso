@@ -70,6 +70,16 @@ const TRANSIT_CSS = `
      display voice stays, the size steps down so the headline holds in ≤5 lines */
   @media(max-width:560px){.tb-hero h1{font-size:32px;letter-spacing:.01em}}
   .tb-hero h1 em{font-style:normal;color:var(--cit-accent)}
+  /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
+     hero copy was placed right on the previous round, but the desktop-sized headline still ran under
+     the fold (measured on 57 live mocks: 10 of 19 templates). One landscape-only size — vh-bound, so
+     it scales with the screen's HEIGHT — keeps the whole headline on the first screen; portrait and
+     desktop are untouched (the min-width keeps this off the phone rules, the max-height off desktop). */
+  @media(max-height:500px) and (min-width:561px){
+    .tb-hl{padding:28px 0 30px}
+    .tb-hero h1{font-size:clamp(28px,9vh,40px);margin-bottom:10px}
+    .tb-hero p{margin:12px 0 18px}
+  }
   .tb-hero p{color:var(--cit-muted);max-width:470px;margin:20px 0 28px}
   .tb-heroctas{display:flex;gap:12px;flex-wrap:wrap}
   .tb-hr{position:relative;min-height:320px;background:color-mix(in srgb, var(--cit-ink) 12%, var(--cit-surface))}

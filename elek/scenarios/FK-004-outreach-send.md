@@ -21,6 +21,10 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
   várd: darab "[data-cit-approved='1']" == 1
 
 - [ ] Követett link készül — a kapcsolati cím KIZÁRÓLAG elek@citoviso.com
+  # A „Megkeresés” a lead-lap LÁTHATÓ füle — ezt nyomja meg az ember, egy koppintással.
+  # 2026-09-26/27: a runner részszövegre illesztett, és a konzol BEHAJTOTT nav-sorát
+  # („Megkeresés-tölcsér”, Riport-csoport) találta meg előbb → timeout egy ép felületen.
+  # A forgatókönyv nem változott; a runner azóta a látható, TELJES feliratot veszi előre.
   tedd: kattints "Megkeresés"
   tedd: írd "#prospects input[name='email']" "elek@citoviso.com"
   tedd: kattints "Követett link készítése"
@@ -38,6 +42,8 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
   # kurátor egy kattintással vállalhat. (A „most kiküldhető”-re mérő sor egy ÉP terméken
   # buktatta volna el az egészet.)
   várd: látható "kiküldhető"
+  # A ragadó küldő-sáv ZÁRVA nyílik (ADR-0160): a levél vége (leiratkozás + jogalap) még nem volt a képernyőn.
+  várd: látható "Zárva: a levél végét"
 
 - [ ] KŐBE VÉSETT címzett-ellenőrzés: a küldés-gomb felirata az elek@citoviso.com címet viseli
   várd: látható "Küldés e-mailben — elek@citoviso.com"
@@ -49,11 +55,21 @@ kontraktus: kb/entries/console-outreach-draft/entry.hu.md
 
 ## Küldés
 
+- [ ] A küldés a levél VÉGÉN nyílik meg: Elek végigolvassa a levelet, és a sáv kinyit
+  # Az ember végigolvassa a levelet, és a ragadó sáv a végén nyit. A runner eddig a gombra
+  # kattintott, ami CSAK a gombot görgeti be — a kapu zárva maradt (mérve 2026-09-27, timeout).
+  # (A zárt állapotot az előző lépés méri — a várd: az akció UTÁN fut.)
+  tedd: görgess "#cit-letter-end"
+  várd: látható "a küldés nyitva"
+
 - [ ] A levél a rendszerből kimegy az elek@ címre, a felület visszaigazolja
   tedd: kattints "Küldés e-mailben — elek@citoviso.com"
   # ⚠️ Ha a mockon megerősítetlen őr- vagy kép-lelet ül, itt egy ablak kérdez rá
   # („kiküldöd mégis?”) — a kurátor döntése kiküldi. Elek ilyenkor a „Kiküldöm mégis”
   # gombot nyomja: a forgatókönyv tárgya a KIKÜLDÉS, nem a lelet elkerülése.
+  # Az ablak a park mockján TÉNYLEG felugrik (a generáláskori dizájn-őr lelete ül rajta, 2026-09-27) —
+  # a kurátor kattintása a kiküldés része, ezért a runner is megnyomja, ha ott van (tedd?: = ha van).
+  tedd?: kattints "Kiküldöm mégis"
   kézi: ha felugrik a „kiküldöd mégis?” ablak, nyomd meg a „Kiküldöm mégis” gombot
   várd: látható "Kiküldve"
   várd: látható "státusz: sent"

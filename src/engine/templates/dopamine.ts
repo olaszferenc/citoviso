@@ -70,6 +70,16 @@ const DOPAMINE_CSS = `
   .t-hero--flat{padding-bottom:92px}
   .t-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(42px,8.5vw,100px);line-height:1.05;text-shadow:4px 4px 0 var(--cit-ink);max-width:16ch;margin:0 auto}
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 18%, #fff)}
+  /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
+     hero copy was placed right on the previous round, but the desktop-sized headline still ran under
+     the fold (measured on 57 live mocks: 10 of 19 templates). One landscape-only size — vh-bound, so
+     it scales with the screen's HEIGHT — keeps the whole headline on the first screen; portrait and
+     desktop are untouched (the min-width keeps this off the phone rules, the max-height off desktop). */
+  @media(max-height:500px) and (min-width:701px){
+    .t-hero{padding-top:36px}
+    .t-hero h1{font-size:clamp(28px,9vh,40px);max-width:24ch}
+    .t-herosub{margin:12px auto 20px}
+  }
   .t-herosub{font-size:clamp(16px,2.2vw,19px);font-weight:600;max-width:560px;margin:18px auto 30px}
   .t-herocta{background:var(--cit-bg);color:var(--cit-ink);font-size:17px;padding:15px 34px;box-shadow:5px 5px 0 var(--cit-ink)}
   .t-heroimgwrap{position:relative;max-width:900px;margin:44px auto 0}

@@ -115,12 +115,33 @@ function runScript(args: string[], label: string): void {
 step("Előfeltétel-mérleg");
 const { planRun, fixCommand, FACTS, CHAIN } = await import("../../src/elek/preconditions.js");
 
-const facts = {
-  trackedLink: !!(await db
+// ⛔ THE PARK'S LINK IS THE LEAD'S, NOT THE ADDRESS'S (src/elek/park.ts, measured
+// 2026-09-27): 38 foreign tracked links carry elek@ since the FK-009 seed, so "any
+// prospect with Elek's address" was true with NO ELEK-TESZT link, and "the newest
+// elek@ row" was a Laguna Panzió link. Every prospect question below goes through
+// the lead id.
+const { ELEK_LEAD_NAME, elekProspectOf } = await import("../../src/elek/park.js");
+async function elekLeadId(): Promise<string | null> {
+  const lead = await db.selectFrom("lead").select("id").where("name", "=", ELEK_LEAD_NAME).executeTakeFirst();
+  return lead?.id ?? null;
+}
+async function elekProspect(): Promise<{ id: string; token: string; status: string } | null> {
+  const leadId = await elekLeadId();
+  if (!leadId) return null;
+  const rows = await db
     .selectFrom("prospect")
-    .select("id")
-    .where("contact_email", "=", "elek@citoviso.com")
-    .executeTakeFirst()),
+    .select(["id", "lead_id", "contact_email", "token", "status", "created_at"])
+    .where("lead_id", "=", leadId)
+    .execute();
+  return elekProspectOf(rows, leadId);
+}
+
+const { ownedSiteForProspectToken } = await import("../../src/conversion/owned.js");
+const elekLink = await elekProspect();
+const facts = {
+  trackedLink: !!elekLink,
+  // the SAME predicate the tracked page uses to switch to "Ez az oldal már az Öné"
+  ownedLead: !!(elekLink && (await ownedSiteForProspectToken(elekLink.token))),
   elekTenant: !!(await db
     .selectFrom("tenant")
     .select("id")
@@ -150,6 +171,14 @@ if (plan.problems.length) {
   console.error(`\n⛔ ELŐFELTÉTEL-HIBA — a futás el sem indul (egyetlen park-írás sem történt):`);
   for (const p of plan.problems) {
     const spec = FACTS[p.fact];
+    if (p.reason === "obsolete") {
+      // A park már TÚL van ezen a körön: a lap, amit mérne, nincs többé (mérve 2026-09-27:
+      // az FK-008b a „már az Öné" lapot kapta). Nincs termelő kör, ami segítene.
+      console.error(`   · a park már túl van rajta: ${spec.label}`);
+      console.error(`     ezért ezen a parkon nem mérhető: ${p.blockedFks.join(", ")}`);
+      console.error(`     hideg park kell hozzá (a vásárlás előtti állapot) — a közös parkot CSAK tulajdonosi döntéssel szabad visszahűteni (scripts/purge-test-data.mts).`);
+      continue;
+    }
     console.error(
       `   · hiányzik: ${spec.label}` +
         (p.reason === "outOfOrder" ? " — a termelő kör a láncban HÁTRÉBB van, mint a fogyasztója" : ""),
@@ -157,8 +186,10 @@ if (plan.problems.length) {
     console.error(`     ezt a(z) ${spec.producer} állítja elő: ${spec.produces}`);
     console.error(`     e nélkül nem mérhető: ${p.blockedFks.join(", ")}`);
   }
-  console.error(`\n   futtasd inkább:  ${fixCommand(only, plan.problems)}`);
-  console.error(`   ⚠️ a hiányzó körök VALÓDI munkát végeznek (kiküldés, vásárlás, LLM-generálás) — ez költség.`);
+  if (plan.problems.some((p) => p.reason !== "obsolete")) {
+    console.error(`\n   futtasd inkább:  ${fixCommand(only, plan.problems)}`);
+    console.error(`   ⚠️ a hiányzó körök VALÓDI munkát végeznek (kiküldés, vásárlás, LLM-generálás) — ez költség.`);
+  }
   await pool.end();
   process.exit(1);
 }
@@ -177,12 +208,17 @@ runScript(["scripts/seed-elek-lead.mts"], "lead-seed");
 step("Park: a megkeresés küldhető állapotba áll");
 // The outreach channel is ONE-SHOT by design: once sent, the button is replaced
 // by the "már kiment" note, so FK-004 cannot re-run. Re-arm it (dev park only).
-const rearmed = await db
-  .updateTable("prospect")
-  .set({ status: "created", sent_at: null, email_sent_at: null })
-  .where("contact_email", "=", "elek@citoviso.com")
-  .executeTakeFirst();
-console.log(`  visszaállítva: ${Number(rearmed.numUpdatedRows ?? 0)} követett link`);
+// Only the ELEK-TESZT lead's own links — the e-mail filter re-armed 38 foreign
+// (Tihany/Laguna) rows too, i.e. it rewrote another thread's park state.
+const rearmLead = await elekLeadId();
+const rearmed = rearmLead
+  ? await db
+      .updateTable("prospect")
+      .set({ status: "created", sent_at: null, email_sent_at: null })
+      .where("lead_id", "=", rearmLead)
+      .executeTakeFirst()
+  : { numUpdatedRows: 0n };
+console.log(`  visszaállítva: ${Number(rearmed.numUpdatedRows ?? 0)} követett link (csak az ELEK-TESZT leadé)`);
 
 // ───────────────────────── a lánc, sorrendben ─────────────────────────
 
@@ -192,12 +228,7 @@ for (const fk of ["FK-000", "FK-003", "FK-003b"]) if (wanted(fk)) runFk(fk);
 step("Kiküldés — innen jön a követett link");
 if (wanted("FK-004")) runFk("FK-004");
 
-const prospect = await db
-  .selectFrom("prospect")
-  .select(["token", "status"])
-  .where("contact_email", "=", "elek@citoviso.com")
-  .orderBy("created_at", "desc")
-  .executeTakeFirst();
+const prospect = await elekProspect();
 if (!prospect) {
   console.error("⛔ nincs követett link az ELEK-leadhez — az FK-004 előkészítése nem futott le.");
   process.exit(1);
