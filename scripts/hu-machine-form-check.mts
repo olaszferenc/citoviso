@@ -33,6 +33,7 @@
 //   npx tsx scripts/hu-machine-form-check.mts --fast        (böngésző nélkül: ② + ③ + vendég-oldal)
 //   npx tsx scripts/hu-machine-form-check.mts --self-test    (piros önteszt: fogjon-e egyáltalán)
 
+import { gateLeadWithMockAndProspect, gateOperator, gatePartnerWithContact, gateTenantUserWithSite } from "./lib/gate-subject.mts";
 process.env.CIT_SHOT = "1"; // no boot self-heal, no AI calls
 process.env.CONSOLE_PORT = "0";
 process.env.PUBLIC_PORT = "0";
@@ -530,27 +531,25 @@ async function loggedInSurfaces(): Promise<void> {
 
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
   const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
-  const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
-  const lead = await db
-    .selectFrom("lead")
-    .select(["id"])
-    .orderBy("created_at", "desc")
-    .limit(1)
-    .executeTakeFirst();
-  const partner = await db.selectFrom("partner").select(["id"]).limit(1).executeTakeFirst();
+  const op = await gateOperator(db);
+  const lead = await gateLeadWithMockAndProspect(db);
+  const partner = await gatePartnerWithContact(db);
   // ⛔ A FIXTURE NEM MINDEGY: egy tetszőleges bérlő admin-felületén az Előfizetés kártya
   // (ahol a „10-a/-e" élt) MEG SEM JELENIK. Először előfizetéssel rendelkezőt keresünk,
   // és csak ha nincs, esünk vissza bármelyikre — a lefedettség-tanú alább kimondja,
   // ha így a mérés lyukas maradt.
-  const tenantUserQ = db
-    .selectFrom("tenant_user")
-    .innerJoin("site", "site.tenant_id", "tenant_user.tenant_id")
-    .select(["tenant_user.id as id"]);
+  // Both choices are named predicates (ADR-XXXX): a tenant with a site AND a subscription,
+  // else a tenant with a site (gateTenantUserWithSite — loud when even that is missing).
   const tenantUser =
-    (await tenantUserQ
-      .innerJoin("subscription", "subscription.tenant_id", "tenant_user.tenant_id")
+    (await db
+      .selectFrom("tenant_user")
+      .select(["tenant_user.id as id"])
+      .where(({ exists, selectFrom }) => exists(selectFrom("site").select("site.id").whereRef("site.tenant_id", "=", "tenant_user.tenant_id")))
+      .where(({ exists, selectFrom }) => exists(selectFrom("subscription").select("subscription.id").whereRef("subscription.tenant_id", "=", "tenant_user.tenant_id")))
+      .orderBy("tenant_user.created_at", "asc")
+      .orderBy("tenant_user.id", "asc")
       .limit(1)
-      .executeTakeFirst()) ?? (await tenantUserQ.limit(1).executeTakeFirst());
+      .executeTakeFirst()) ?? (await gateTenantUserWithSite(db));
   line(!!op, "van operátor-fiók a körbejáráshoz");
   line(!!tenantUser, "van tenant-fiók (site-tal) a tenant-adminhoz");
   if (!op || !tenantUser) {

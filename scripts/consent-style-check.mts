@@ -67,6 +67,7 @@ process.env.CONSOLE_PORT = "0";
 process.env.CIT_SHOT = "1";
 
 import { once } from "node:events";
+import { gateTenantUserWithSite } from "./lib/gate-subject.mts";
 import { request as httpReq } from "node:http";
 
 import { chromium, type Browser, type Page } from "playwright-core";
@@ -111,13 +112,9 @@ const PORT = addr.port;
 if (!consoleServer.listening) await once(consoleServer, "listening");
 const CONSOLE_PORT = (consoleServer.address() as { port: number }).port;
 
-const tu =
-  (await db
-    .selectFrom("tenant_user")
-    .select("id")
-    .where("username", "=", "claude-test")
-    .executeTakeFirst()) ??
-  (await db.selectFrom("tenant_user").select("id").limit(1).executeTakeFirst());
+// A tenant-admin login with a site (ADR-XXXX): the former `claude-test ?? first row` never found a
+// `claude-test` tenant_user, so it measured whichever login the shared DB listed first.
+const tu = await gateTenantUserWithSite(db);
 
 const liveSite = await db
   .selectFrom("site")

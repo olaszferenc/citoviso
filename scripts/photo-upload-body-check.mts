@@ -19,6 +19,7 @@ process.env.CIT_SHOT = "1";
 const { server } = await import("../src/server/public.js");
 const { db } = await import("../src/db/client.js");
 const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
+const { gateTenantUserWithSite } = await import("./lib/gate-subject.mts");
 
 let failed = 0;
 const ok = (cond: boolean, msg: string): void => {
@@ -29,7 +30,8 @@ const ok = (cond: boolean, msg: string): void => {
 try {
   if (!server.listening) await new Promise((r) => server.once("listening", r));
   const port = (server.address() as { port: number }).port;
-  const user = await db.selectFrom("tenant_user").select("id").limit(1).executeTakeFirstOrThrow();
+  // /admin/photos needs a tenant with a site; an arbitrary first login is a shared-DB accident (ADR-XXXX).
+  const user = await gateTenantUserWithSite(db);
   const cookie = `cit_session=${mintTenantCookieValue(user.id)}`;
 
   const post = async (bytes: number) => {

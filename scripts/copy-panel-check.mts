@@ -1,6 +1,7 @@
 // Contract check for the mock copy panel — asserts, point by point, what the approved
 // plan BINDS (assets/design-refs/console/README.md). Run: npx tsx scripts/copy-panel-check.mts
 // Contract verification for the mock copy panel (assets/design-refs/console/README.md).
+import { gateOperator } from "./lib/gate-subject.mts";
 import { once } from "node:events";
 import type { Server } from "node:http";
 import { chromium } from "playwright-core";
@@ -13,7 +14,7 @@ if (!server.listening) await once(server, "listening");
 const addr = server.address() as { port: number };
 const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
 const { db } = await import("../src/db/client.js");
-const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
+const op = await gateOperator(db);
 const cookie = mintOperatorCookieValue(op!.id);
 
 const LEAD = "e16165d9-0686-448e-9c10-2ca5fa390739";

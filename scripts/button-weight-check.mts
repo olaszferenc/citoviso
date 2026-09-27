@@ -27,6 +27,7 @@
 //
 // Használat: npx tsx scripts/button-weight-check.mts [--self-test]
 
+import { gateLeadWithMockAndProspect, gateOperator } from "./lib/gate-subject.mts";
 import { once } from "node:events";
 import type { Server } from "node:http";
 
@@ -71,13 +72,7 @@ async function bootConsole(): Promise<{ port: number; cookie: string }> {
   if (!addr || typeof addr === "string") throw new Error("konzol szerver cím nélkül");
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
   const { db } = await import("../src/db/client.js");
-  const op =
-    (await db
-      .selectFrom("operator_user")
-      .select("id")
-      .where("username", "=", "claude-test")
-      .executeTakeFirst()) ??
-    (await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst());
+  const op = await gateOperator(db);
   if (!op) throw new Error("nincs operator_user a dev DB-ben");
   return { port: addr.port, cookie: mintOperatorCookieValue(op.id) };
 }
@@ -245,12 +240,7 @@ async function main(): Promise<void> {
   const { port, cookie } = await bootConsole();
   const origin = `http://localhost:${port}`;
   const { db } = await import("../src/db/client.js");
-  const lead = await db
-    .selectFrom("lead")
-    .select("id")
-    .orderBy("created_at", "desc")
-    .limit(1)
-    .executeTakeFirst();
+  const lead = await gateLeadWithMockAndProspect(db);
   if (!lead) throw new Error("nincs lead a dev DB-ben — az őr nem tud mit mérni");
   const routes = [`/lead/${lead.id}`, "/duplicates", "/leads"];
 

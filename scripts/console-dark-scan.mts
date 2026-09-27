@@ -10,6 +10,7 @@
 //   npx tsx scripts/console-dark-scan.mts            (report; exit 1 on any finding)
 //   npx tsx scripts/console-dark-scan.mts --light    (the same audit in LIGHT mode — control)
 
+import { gateDraftableProspect, gateLeadWithMockAndProspect, gateOperator, gatePartnerWithContact } from "./lib/gate-subject.mts";
 process.env.CIT_SHOT = "1";
 
 import { once } from "node:events";
@@ -28,16 +29,14 @@ if (!addr || typeof addr === "string") throw new Error("konzol cím nélkül");
 const base = `http://localhost:${addr.port}`;
 const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
 const { db } = await import("../src/db/client.js");
-const op =
-  (await db.selectFrom("operator_user").select("id").where("username", "=", "claude-test").executeTakeFirst()) ??
-  (await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst());
+const op = await gateOperator(db);
 if (!op) throw new Error("nincs operator_user");
 const cookie = mintOperatorCookieValue(op.id);
 
 // Real ids for the detail screens (read-only lookups).
-const lead = await db.selectFrom("lead").select("id").orderBy("created_at", "desc").limit(1).executeTakeFirst();
-const partner = await db.selectFrom("partner").select("id").limit(1).executeTakeFirst();
-const prospect = await db.selectFrom("prospect").select(["id"]).orderBy("created_at", "desc").limit(1).executeTakeFirst();
+const lead = await gateLeadWithMockAndProspect(db);
+const partner = await gatePartnerWithContact(db);
+const prospect = await gateDraftableProspect(db);
 
 const { navLeaves, navTree } = await import("../src/console/nav.js");
 /** Every function page of the tree, by path (query-less leaves only — a filtered list shares its path). */

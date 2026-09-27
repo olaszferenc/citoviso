@@ -2124,6 +2124,21 @@ if [ -f scripts/gate-lane-check.mts ]; then
   echo "[pre-commit] gate-lane-check (a jelölt író kapuk tartják-e az „own-fixture-only” ígéretet)…"
   npx tsx scripts/gate-lane-check.mts >"$GATE_LOG" || gate_failed
 fi
+# 🎯 KAPU-ALANY (az ADR száma a scripts/gate-subject-check.mts fejlécében): egy kapu nem mérhet a
+# közös dev-DB vak „első során” (első tenant_user / első mock_artifact / legújabb lead) — alanyt
+# saját fixture-ből vagy kimondott predikátummal (+ hangos ELŐFELTÉTEL-bukás) választ; a nevesített
+# alanyok: scripts/lib/gate-subject.mts. 2026-09-27: három kapu volt emiatt piros a tiszta mainen.
+# MINDIG fut (szöveg-őr a kapukon + minden horog-futtatott szkripten, ~1 s): egy új vak
+# `limit(1)` bármelyik kapuba így nem csúszik be. A saját változásakor a piros önteszt is
+# (14 sértés + tiszta fixture + CLI-n át vak fixture-kapu + a d3daca69 előtti történeti eset).
+if [ -f scripts/gate-subject-check.mts ]; then
+  if changed_files | grep -qE '^scripts/gate-subject-check\.mts$'; then
+    echo "[pre-commit] gate-subject-check --self-test (a kapu-alany őre változott — pirosra tud-e menni)…"
+    npx tsx scripts/gate-subject-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] gate-subject-check (nincs kapu, ami a közös DB vak „első sorával” mér)…"
+  npx tsx scripts/gate-subject-check.mts >"$GATE_LOG" || gate_failed
+fi
 # a hookból KIVÁGVA, a valódi futtatóval, fixture-kapukon méri: minden kapu lefut · `VAR=x`
 # előtag és pipe-olt stdin eljut · a bukás kódja és kimenete kiíródik · az 1. fázis DB-je
 # csak-olvasó, az írni próbáló (a hibát lenyelő) kapu normál módban újrafut · egy szkript nem

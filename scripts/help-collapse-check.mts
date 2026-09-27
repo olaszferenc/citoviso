@@ -14,6 +14,7 @@
 //   npx tsx scripts/help-collapse-check.mts
 //   npx tsx scripts/help-collapse-check.mts --self-test   (piros önteszt: a romlott állapotot fogja-e)
 
+import { gateOperator, gatePartnerWithContact, gateTenantUserWithSite } from "./lib/gate-subject.mts";
 process.env.CIT_SHOT = "1";
 process.env.CONSOLE_PORT = "0";
 process.env.PUBLIC_PORT = "0";
@@ -42,13 +43,8 @@ const pubBase = `http://127.0.0.1:${(publicServer.address() as { port: number })
 
 const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
 const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
-const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
-const tu = await db
-  .selectFrom("tenant_user")
-  .innerJoin("site", "site.tenant_id", "tenant_user.tenant_id")
-  .select(["tenant_user.id as id"])
-  .limit(1)
-  .executeTakeFirst();
+const op = await gateOperator(db);
+const tu = await gateTenantUserWithSite(db);
 if (!op || !tu) {
   console.log("⛔ nincs operátor- vagy tenant-fiók — az őr NEM futott le (ez nem zöld)");
   process.exit(1);
@@ -377,9 +373,9 @@ async function measureFinanceHelpIcons(): Promise<void> {
   await ctx.addCookies([{ ...OP_COOKIE, url: conBase }]);
   const pg = await ctx.newPage();
 
-  // A partner-lap valós azonosítót kér; ha a dev DB-ben nincs partner, azt KIMONDJUK, nem
-  // hallgatjuk el (a kihagyott eset nem zöld — csak nem mérhető).
-  const p = await db.selectFrom("partner").select("id").limit(1).executeTakeFirst();
+  // A partner-lap valós azonosítót kér: aktív, kapcsolattartós partner (ADR-XXXX) — ha nincs,
+  // a gatePartnerWithContact ELŐFELTÉTEL-hibával bukik (a kihagyott eset nem zöld).
+  const p = await gatePartnerWithContact(db);
   const screens: ReadonlyArray<{ url: string; anchor: string; label: string }> = [
     { url: "/partners", anchor: "console.partners", label: "Partnerek" },
     { url: "/partners/new", anchor: "console.partner_new", label: "Új partner" },

@@ -12,6 +12,7 @@
 //   npx tsx scripts/mock-card-plan-check.mts
 //   npx tsx scripts/mock-card-plan-check.mts --self-test   (PIROS önteszt)
 
+import { gateOperator } from "./lib/gate-subject.mts";
 process.env.CIT_SHOT = "1";
 
 import { once } from "node:events";
@@ -419,9 +420,7 @@ if (!SELF_TEST) {
   const addr = server.address() as AddressInfo;
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
   const { db } = await import("../src/db/client.js");
-  const op =
-    (await db.selectFrom("operator_user").select("id").where("username", "=", "claude-test").executeTakeFirst()) ??
-    (await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst());
+  const op = await gateOperator(db);
   // A `ready` ág csak akkor mérhető, ha VAN gyorstárazott kép. Ezért nem vakon a
   // legfrissebbet vesszük: végignézünk a legutóbbi néhányon, és ha van kész képű, AZT
   // mérjük (így a 200-as ág is futhat). Ha nincs, azt HANGOSAN kiírjuk — a ki nem mért ág

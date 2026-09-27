@@ -21,6 +21,7 @@
 // Usage: npx tsx scripts/outreach-preview-check.mts [--self-test]
 //   --self-test runs ONLY the negative control and expects it to fail.
 
+import { gateDraftableProspect, gateOperator } from "./lib/gate-subject.mts";
 import { once } from "node:events";
 import type { Server } from "node:http";
 
@@ -51,28 +52,15 @@ async function bootConsole(): Promise<{ port: number; cookie: string }> {
   if (!addr || typeof addr === "string") throw new Error("konzol szerver cím nélkül");
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
   const { db } = await import("../src/db/client.js");
-  const op =
-    (await db
-      .selectFrom("operator_user")
-      .select("id")
-      .where("username", "=", "claude-test")
-      .executeTakeFirst()) ??
-    (await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst());
+  const op = await gateOperator(db);
   if (!op) throw new Error("nincs operator_user a dev DB-ben");
   return { port: addr.port, cookie: mintOperatorCookieValue(op.id) };
 }
 
-/** Any prospect the console can draft for — the preview shape is the same for all. */
+/** A prospect the console can draft for (points at a mock) — named predicate, loud when unmet (ADR-XXXX). */
 async function pickProspect(): Promise<string> {
   const { db } = await import("../src/db/client.js");
-  const row = await db
-    .selectFrom("prospect")
-    .select("id")
-    .orderBy("created_at", "desc")
-    .limit(1)
-    .executeTakeFirst();
-  if (!row) throw new Error("nincs prospect a dev DB-ben — az őr nem tud mit mérni");
-  return row.id;
+  return (await gateDraftableProspect(db)).id;
 }
 
 interface Measurement {

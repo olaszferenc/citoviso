@@ -19,6 +19,7 @@
 //   npx tsx scripts/outreach-row-truth-check.mts --self-test   (pirosra KELL mennie)
 
 import { db } from "../src/db/client.js";
+import { gateDraftableProspect, gateLeadWithMockAndProspect } from "./lib/gate-subject.mts";
 import { getLead, getProspects, type ProspectView } from "../src/console/data.js";
 import { leadPage, outreachDraftPage } from "../src/console/views.js";
 import { buildDraftForProspect } from "../src/outreach/draft.js";
@@ -34,17 +35,8 @@ const say = (ok: boolean, what: string, detail = ""): void => {
 };
 
 /** A lead that really has tracked links — the guard must measure the shipped view. */
-const lead = await db
-  .selectFrom("prospect")
-  .innerJoin("lead", "lead.id", "prospect.lead_id")
-  .select(["lead.id as id", "lead.name as name"])
-  .orderBy("prospect.created_at", "desc")
-  .limit(1)
-  .executeTakeFirst();
-if (!lead) {
-  console.error("⛔ nincs egyetlen prospect sem a parkban — az őr nem tud mérni");
-  process.exit(1);
-}
+// Named predicate, loud when unmet (ADR-XXXX) — not "the newest prospect's lead".
+const lead = await gateLeadWithMockAndProspect(db);
 const real = await getProspects(lead.id);
 say(real.length > 0, `van mérhető sor (${lead.name}: ${real.length} követett link)`);
 
@@ -132,12 +124,8 @@ for (const c of CASES.slice(0, 2)) {
 }
 
 // ── Z4: a kimásolható levél küldés UTÁN megmondja, hogy az a második példány ──
-const anyProspect = await db
-  .selectFrom("prospect")
-  .select(["id"])
-  .orderBy("created_at", "desc")
-  .limit(1)
-  .executeTakeFirst();
+// A draftable prospect (ADR-XXXX): without one Z4/Z6/Z7 used to be skipped without a word.
+const anyProspect = await gateDraftableProspect(db);
 const d = anyProspect ? await buildDraftForProspect(anyProspect.id) : null;
 if (d) {
   const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);

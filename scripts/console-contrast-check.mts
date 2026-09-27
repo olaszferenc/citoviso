@@ -24,6 +24,7 @@
 // tenant-adminra és a vendég-oldalra is. Az őr ezt NÉVVEL engedi át, MEGSZÁMOLJA, és
 // KIÍRJA, hány elem ül benne. Ami nem ebben a névsorban van, az bukás.
 
+import { gateLeadWithMockAndProspect, gateOperator } from "./lib/gate-subject.mts";
 import { once } from "node:events";
 import type { Server } from "node:http";
 import { chromium } from "playwright-core";
@@ -209,12 +210,12 @@ async function main(): Promise<void> {
   const { server } = (await import("../src/console/server.js")) as { server: Server };
   if (!server.listening) await once(server, "listening");
   const port = (server.address() as { port: number }).port;
-  const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
+  const op = await gateOperator(db);
   if (!op) {
     console.error("⛔ nincs operator_user a DB-ben — az őr nem tud belépni, és a nulla mérésre írt pipa semmit nem jelentene");
     process.exit(1);
   }
-  const art = await db.selectFrom("mock_artifact").select("lead_id").limit(1).executeTakeFirst();
+  const art = { lead_id: (await gateLeadWithMockAndProspect(db)).id };
 
   const ROUTES: [string, string][] = [
     ["/", "irányítópult"],

@@ -11,6 +11,15 @@ Utolsó frissítés: 2026-09-27 (🏠 **Vendég foglalási nyugta: „Vissza a k
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-27 — kapu-alany: saját fixture vagy kimondott predikátum, ADR-XXXX)
+A brief (`~/rc-briefs/kapu-sajat-fixture-elv.md`): három kapu volt piros a tiszta mainen a közös DB „első sora” miatt.
+Leltár 230 fájlon: 40 vak „első sor” 22 kapuban (16 az operátor-belépés — az operátor `lang`-ja a konzol nyelve).
+36 javítva a nevesített alanyokra (`scripts/lib/gate-subject.mts`), 4 indokolt kivétel; őr: `scripts/gate-subject-check.mts`
+(pre-commit, mindig; önteszt + CLI-n át vak fixture-kapu + a `d3daca69` előtti történeti eset). Nyitott: 6 (b)-választás
+csendes kihagyással (consent-check, consent-style ×4 — a `mock_request`-ág a dev-DB-ben ma 0 sorral nem mérődik —,
+hero-override); a `copy-panel-check` és a `hero-override-ui-check` a mainen is piros (nincs a pre-commitban).
+Jegyzet: `_planning/memory/2026-09-27_gate_subject_inventory.md`.
+
 ## Párhuzamos szál (2026-09-27 — Webcím: hiteles elérhetőség + kártyazárolás, ADR-0251) — LEZÁRVA
 A tulaj: a domain-vásárlás elhasalt, és „nem bizalomgerjesztő… végig azt írjuk, hogy nem tudjuk előre”. A hiba
 a vevő-öröklés volt (landolva). Az új folyamat: regisztrátor-hiteles jelölők, Barion DelayedCapture (a kártyán

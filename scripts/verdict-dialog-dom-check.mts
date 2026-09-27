@@ -11,6 +11,7 @@
 // Clicking the confirm button here would send a REAL cold e-mail to a real person.
 //
 // Run: npx tsx scripts/verdict-dialog-dom-check.mts
+import { gateOperator } from "./lib/gate-subject.mts";
 import { once } from "node:events";
 import type { Server } from "node:http";
 
@@ -42,13 +43,7 @@ async function bootConsole(): Promise<{ port: number; cookie: string }> {
   if (!addr || typeof addr === "string") throw new Error("konzol szerver cím nélkül");
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
   const { db } = await import("../src/db/client.js");
-  const op =
-    (await db
-      .selectFrom("operator_user")
-      .select("id")
-      .where("username", "=", "claude-test")
-      .executeTakeFirst()) ??
-    (await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst());
+  const op = await gateOperator(db);
   if (!op) throw new Error("nincs operator_user a dev DB-ben — konzol-route nem lőhető");
   return { port: addr.port, cookie: mintOperatorCookieValue(op.id) };
 }

@@ -154,6 +154,7 @@ await mkdir(OUT, { recursive: true });
 // ── ① A PÉNZ-KAPU, ÉLESBEN ───────────────────────────────────────────────────
 console.log("\n① Pénz-kapu — a valódi requestPayment() egy MÁR VÁSÁROLT leaden");
 
+// gate-subject-allow: a join maga a predikátum (vásárolt lead = van tenantja), hiányában ELŐFELTÉTEL-bukás; a kapu a pénz-kaput MINDEN vásárolt leadre igaznak várja
 const ownedLead = await db
   .selectFrom("tenant")
   .innerJoin("lead", "lead.id", "tenant.lead_id")
@@ -331,6 +332,7 @@ await rm(OUT, { recursive: true, force: true });
 // nem-problémából). Ígéret őr nélkül elrohad, ezért itt a VALÓDI szerver felel.
 if (!SELFTEST) {
   console.log("\n⑦ Az éles útvonal — a lap nem mér, a rendelés nem hagy nyomot");
+  // gate-subject-allow: a két join a predikátum (vásárolt leadhez kötött, mockos prospect), hiányában ELŐFELTÉTEL-bukás
   const prospect = await db
     .selectFrom("prospect")
     .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-kapu-alany-sajat-fixture-vagy-kimondott-predikatum.md) — A kapu alanya saját fixture vagy kimondott predikátum, sosem a közös dev-DB „első sora” — és egy őr, ami a vak `limit(1)`-et megfogja
 - [ADR-0251](decisions/0251-webcim-hiteles-elerhetoseg-kartyazarolasos.md) — Webcím: hiteles elérhetőség + kártyazárolásos fizetés („csak akkor fizet, ha a név már az Öné”)
 - [ADR-0250](decisions/0250-a-lead-lap-foto-merese-cache-talalatra-nem-var.md) — A lead-lap fotó-mérése cache-találatra nem vár, és a múló hiba újrapróbája tényleg kimegy a hálózatra
 - [ADR-0249](decisions/0249-a-bukott-kapu-automatikusan-lefut-a-tiszta.md) — A bukott kapu automatikusan lefut a tiszta origin/mainen is: „nem a te változásod” vagy „a te változásod” — és a kapu saját fixture-rel mér, nem a közös dev-DB véletlen sorával

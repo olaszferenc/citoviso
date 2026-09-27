@@ -11,6 +11,7 @@
 //
 // Futtatás: npx tsx scripts/hero-override-ui-check.mts [leadId]
 
+import { gateOperator } from "./lib/gate-subject.mts";
 process.env.CIT_SHOT = "1";
 process.env.CONSOLE_PORT = "0";
 import { once } from "node:events";
@@ -52,7 +53,7 @@ if (!server.listening) await once(server, "listening");
 const addr = server.address();
 if (!addr || typeof addr === "string") throw new Error("a konzol nem kapott portot");
 const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
-const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
+const op = await gateOperator(db);
 if (!op) throw new Error("nincs operator_user a dev DB-ben");
 const base = `http://127.0.0.1:${addr.port}`;
 

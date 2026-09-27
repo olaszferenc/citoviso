@@ -71,6 +71,7 @@ const recipe = (templateId: string): Recipe =>
   }) as unknown as Recipe;
 
 /** An artifact id the configurator manifest can be built from (module list, prices). */
+// gate-subject-allow: az artefaktum-id csak a manifest requestUrl-jébe kerül (buildManifest), a sor tartalmát a mérés nem olvassa
 const art = await db
   .selectFrom("mock_artifact")
   .select("id")

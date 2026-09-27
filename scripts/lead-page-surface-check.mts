@@ -98,6 +98,7 @@ const recipe = (templateId: string): Recipe =>
     sections: [],
   }) as unknown as Recipe;
 
+// gate-subject-allow: az artefaktum-id csak a manifest requestUrl-jébe kerül (buildManifest), a sor tartalmát a mérés nem olvassa
 const art = await db
   .selectFrom("mock_artifact")
   .select("id")

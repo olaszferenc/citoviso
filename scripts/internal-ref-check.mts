@@ -26,6 +26,7 @@
 //   npx tsx scripts/internal-ref-check.mts
 //   npx tsx scripts/internal-ref-check.mts --self-test   (piros önteszt: fogjon-e egyáltalán)
 
+import { gateDraftableProspect, gateLeadWithMockAndProspect, gateOperator, gatePartnerWithContact, gateTenantUserWithSite } from "./lib/gate-subject.mts";
 process.env.CIT_SHOT = "1"; // no boot self-heal, no AI calls
 process.env.CONSOLE_PORT = "0";
 process.env.PUBLIC_PORT = "0";
@@ -408,22 +409,12 @@ async function renderedLayer(): Promise<void> {
 
   const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
   const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
-  const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirst();
+  const op = await gateOperator(db);
   // ⛔ Beégetett uuid nélkül: a halott azonosító törött lapot mutat, és az őr azt mérné.
-  const lead = await db
-    .selectFrom("lead")
-    .select(["id"])
-    .orderBy("created_at", "desc")
-    .limit(1)
-    .executeTakeFirst();
-  const prospect = await db.selectFrom("prospect").select(["id"]).limit(1).executeTakeFirst();
-  const partner = await db.selectFrom("partner").select(["id"]).limit(1).executeTakeFirst();
-  const tenantUser = await db
-    .selectFrom("tenant_user")
-    .innerJoin("site", "site.tenant_id", "tenant_user.tenant_id")
-    .select(["tenant_user.id as id"])
-    .limit(1)
-    .executeTakeFirst();
+  const lead = await gateLeadWithMockAndProspect(db);
+  const prospect = await gateDraftableProspect(db);
+  const partner = await gatePartnerWithContact(db);
+  const tenantUser = await gateTenantUserWithSite(db);
   line(!!op, "van operátor-fiók a körbejáráshoz");
   line(!!lead && !!prospect, "van lead + prospect fixture");
   line(!!tenantUser, "van tenant-fiók (site-tal) a tenant-adminhoz");

@@ -41,6 +41,7 @@
 //     státusz-szó, időzóna nélküli formázás egy UTC-ben járó szerveren). Mindnek
 //     PIROSRA kell váltania; ha zöld maradna, az őr nem a szabályt mérné.
 
+import { gateOperator } from "./lib/gate-subject.mts";
 process.env.DATABASE_URL = "";
 
 import { db } from "../src/db/client.js";
@@ -399,11 +400,7 @@ try {
     const addr = server.address();
     if (!addr || typeof addr === "string") throw new Error("konzol szerver cím nélkül");
     const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
-    const op = await db
-      .selectFrom("operator_user")
-      .select("id")
-      .limit(1)
-      .executeTakeFirstOrThrow();
+    const op = await gateOperator(db);
     const browser = await chromium.launch();
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await ctx.addCookies([

@@ -31,6 +31,7 @@
 // az őrnek ettől PIROSRA kell mennie: ha zöld marad, akkor nem a valós kimenetből
 // dolgozik, hanem egy beégetett elvárásból.
 
+import { gateOperator } from "./lib/gate-subject.mts";
 import http from "node:http";
 import { once } from "node:events";
 import { mkdir, rm, writeFile, readFile } from "node:fs/promises";
@@ -454,7 +455,7 @@ async function main(): Promise<void> {
       const { server } = (await import("../src/console/server.js")) as { server: http.Server };
       if (!server.listening) await once(server, "listening");
       const port = (server.address() as { port: number }).port;
-      const op = await db.selectFrom("operator_user").select("id").limit(1).executeTakeFirstOrThrow();
+      const op = await gateOperator(db);
       const cookie = `cit_op_session=${mintOperatorCookieValue(op.id as string)}`;
       const base = `http://127.0.0.1:${port}`;
       const post = async (p: string, body: Record<string, string>): Promise<Response> =>
