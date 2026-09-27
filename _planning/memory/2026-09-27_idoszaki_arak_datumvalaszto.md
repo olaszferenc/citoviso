@@ -11,7 +11,7 @@ akar módosítani?”.
   hiány volt, hogy ott is gépelni kellett → valódi, évszámos naptár.
 - 2. kör: lenyíló névlista + év-naptár → „igen, jó!”, kérés: a naptár a gomb FÖLÖTT → „nagyon jó így”.
 
-## Elvégezve (ADR-XXXX, nem élesítve)
+## Elvégezve (ADR-0245, nem élesítve)
 - `src/server/moduleConfigViews.ts`: `seasonFields()` (add + szerkesztés közös, feliratos mezők), év-naptár panel
   (`data-ycal`), `seasonEditorScript(lang, today, names)` — az `L` szövegek + `data-season-names`; a régi gépelős
   előnézet kivéve; CSS (`.pn-*`, `.sdp-*`).

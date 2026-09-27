@@ -1,4 +1,4 @@
-## ADR-XXXX — Időszaki árak: dátumválasztó, névlista, év-naptár (2026-09-27)
+## ADR-0245 — Időszaki árak: dátumválasztó, névlista, év-naptár (2026-09-27)
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (megvalósítva, őrrel; nem élesítve) ·
 **Kapcsolódó:** ADR-0221 (évsáv, évre szóló ár és napok — erre épít), ADR-0049 (időszakonkénti
