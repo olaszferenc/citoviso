@@ -35,7 +35,7 @@ vágódott el. ④ a visszaigazolás hallgatott a tartós kötelezettségről. �
    2026-09-26):** ott a blokk fizikailag nem fér egy nézetbe (mérve 844×390-en a „Fizetek” a
    képernyő alatt, elérhetetlenül), ezért a fizetés-lap EGY oszlopban görög: összeg → űrlap →
    pipák → gomb. Őr: `scripts/cfg-sheet-scroll-check.mts` S8/S9.
-   ⚠️ **Kivétel — álló telefon, ha a rögzített elrendezés nem hagy űrlapot, ADR-XXXX (tulaj,
+   ⚠️ **Kivétel — álló telefon, ha a rögzített elrendezés nem hagy űrlapot, ADR-0247 (tulaj,
    2026-09-27):** böngésző-lapban (~390×690) az űrlap 24 px-t kapott, és a lead nem tudott
    vásárolni. A futtatókód MÉRI, mekkora ablak maradna az űrlapnak; 150 px alatt ugyanabba az
    egy oszlopba csuk (`.cit-cfg-panel--fold`). Őr: `cfg-sheet-scroll-check` S10.

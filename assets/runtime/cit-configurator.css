@@ -2390,7 +2390,7 @@
   }
 }
 /* The same column on a PORTRAIT phone whose pinned layout leaves the form no usable
-   window (ADR-XXXX). Not a breakpoint: the runtime MEASURES the window the pinned
+   window (ADR-0247). Not a breakpoint: the runtime MEASURES the window the pinned
    layout would leave and sets `.cit-cfg-panel--fold` (syncFold). Owner, 2026-09-27,
    ~390×690 in a browser tab: the form got 24 px between the sum card and the
    consents, and the lead could not buy. Kept in step with the block above. */

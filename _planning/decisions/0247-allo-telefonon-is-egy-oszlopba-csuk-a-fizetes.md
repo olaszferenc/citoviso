@@ -1,4 +1,4 @@
-## ADR-XXXX — Álló telefonon is egy oszlopba csuk a fizetés-lap, ha az űrlapnak nem marad ablak (mért, nem töréspont)
+## ADR-0247 — Álló telefonon is egy oszlopba csuk a fizetés-lap, ha az űrlapnak nem marad ablak (mért, nem töréspont)
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (hibajavítás a tulaj bejelentésére: „Itt továbbra sem lehet görgetni, kitakar mindent, a lead nem tud vásárolni”) · **Kiterjeszti:** ADR-0243 · **Felülírja:** `assets/design-refs/configurator/checkout-fullscreen/README.md` ② — CSAK ott, ahol fizikailag nem fér ki
 

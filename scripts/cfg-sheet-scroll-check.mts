@@ -34,7 +34,7 @@
 //   S9  …és ott a „Fizetek” gomb a képernyőn van, és az ujj ŐT találja (fekvőn is — tulaj, 2026-09-26)
 //   S10 …és a számlázási űrlapnak HASZNÁLHATÓ ablaka van (≥ 120 px): az S8 egy 24 px-es
 //       görgetőt is „végig tudott húzni” — zölden, miközben a tulaj telefonján (böngésző-lap,
-//       ~390×690) a lead nem tudott vásárolni (tulaj, 2026-09-27, ADR-XXXX)
+//       ~390×690) a lead nem tudott vásárolni (tulaj, 2026-09-27, ADR-0247)
 //   S0  (a mérés hitele) csukott panellel ugyanaz a gesztus GÖRGETI a lapot
 //
 // Kimenet (gitignore-olt): assets/design-refs/_drafts/cfg-sheet-scroll/<sablon>-<tartás>.png
@@ -69,7 +69,7 @@ const VIEWPORTS: Vp[] = [
   { id: "390", width: 390, height: 844, ua: IPHONE_UA },
   { id: "360", width: 360, height: 780, ua: ANDROID_UA },
   // a phone in a BROWSER TAB: the address bar + system bars take ~150 px of an 844 px
-  // screen — the owner's report came from exactly this (2026-09-27, ADR-XXXX)
+  // screen — the owner's report came from exactly this (2026-09-27, ADR-0247)
   { id: "390tab", width: 390, height: 690, ua: ANDROID_UA },
   { id: "360tab", width: 360, height: 640, ua: ANDROID_UA },
   { id: "land", width: 844, height: 390, ua: IPHONE_UA },
@@ -117,7 +117,7 @@ async function fixture(tpl: string, sabotage: Sabotage): Promise<string> {
   html = pn.containHorizontalOverflow(html);
   if (sabotage === "no-landcol") {
     // the sideways one-column paying step, taken out: its media query can never match —
-    // and the measured fold (ADR-XXXX) too, which folds a sideways phone as well; with
+    // and the measured fold (ADR-0247) too, which folds a sideways phone as well; with
     // either one left in, the step still pays in one column and the control proves nothing
     const before = html;
     html = html.replace("@media (max-height: 520px) {\n  .cit-cfg-panel--billing {", "@media (max-height: 1px) {\n  .cit-cfg-panel--billing {");

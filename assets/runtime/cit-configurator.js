@@ -2076,7 +2076,7 @@
   }
 
   /**
-   * ADR-XXXX: a portrait phone pays in ONE scrolling column whenever the pinned
+   * ADR-0247: a portrait phone pays in ONE scrolling column whenever the pinned
    * layout cannot give the form a usable window. Owner, 2026-09-27, on a phone in
    * a browser tab (~390×690): "nem lehet görgetni, kitakar mindent, a lead nem
    * tud vásárolni". Measured: the sum card + VAT + next charge (~180 px) above,
@@ -3243,7 +3243,7 @@
     placeSummary();
     syncConsents();
     syncScrollHint();
-    // A folded step (ADR-XXXX) scrolls the PANEL: arrive at its top, not wherever
+    // A folded step (ADR-0247) scrolls the PANEL: arrive at its top, not wherever
     // step 2 left it.
     panel.scrollTop = 0;
     track("billing_step_open", {});
