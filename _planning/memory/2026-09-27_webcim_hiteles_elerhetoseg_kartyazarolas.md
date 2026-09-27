@@ -48,5 +48,5 @@ iker-javítás: a másik szálé maradt.
 ## Nyitott
 - Élő végigpróba a dev-en a tulaj telefonján (sandbox-kártya: 4444 8888 8888 5559). A bukás-ág egy
   „taken”-t tartalmazó szabad névvel próbálható ki (a dev regisztrátor mock).
-- Éles POS-on a DelayedCapture engedélyezettsége (élesi írás → külön engedély). A Wallet-ág sandbox-fiókkal.
+- ✅ Éles POS: DelayedCapture ELFOGADVA (egy nem kifizetett próba-Start, tulaj-engedéllyel). Nyitott: a Wallet-ág sandbox-fiókkal.
 - Nincs élesítve (a nagy deployjal megy).

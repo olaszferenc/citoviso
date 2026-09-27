@@ -83,3 +83,9 @@ A termék-út (rendelés → pay-link → webhook → regisztráció → lehív�
   Authorized → regisztráció (mock) → Capture → `paid`, számla OV-2026-68. A Barion oldalán
   `Succeeded`, 1 000 Ft.
 
+### Éles POS igazolva (2026-09-27, tulaj: „mehet az éles DelayedCapture-próba”)
+Egyetlen éles `Payment/Start` (DelayedCapture, 1 000 Ft, 30 perces ablak, „PRÓBA — nem fizetendő”,
+semleges callback): HTTP 200 → `Prepared`, `PaymentType: DelayedCapture`, azonosító
+`0850d826b5baf1119d1db8ca3a6352a2`. Senki nem fizette ki, magától lejár, pénz nem mozdult. **Az éles
+bolt elfogadja a DelayedCapture-t** — a „Nyitott” első pontja lezárva.
+
