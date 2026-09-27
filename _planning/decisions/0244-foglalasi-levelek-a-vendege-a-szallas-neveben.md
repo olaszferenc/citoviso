@@ -1,4 +1,4 @@
-## ADR-XXXX — Foglalási levelek: a vendégé a szállás nevében, elérhetőséggel; a tulajé az admin Foglalások felé vezet
+## ADR-0244 — Foglalási levelek: a vendégé a szállás nevében, elérhetőséggel; a tulajé az admin Foglalások felé vezet
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (tulaj: vendég C + tulaj B) · **Kontraktus:** `assets/design-refs/console/booking-email/`
 
