@@ -1,4 +1,4 @@
-## ADR-XXXX — A bukott kapu automatikusan lefut a tiszta origin/mainen is: „nem a te változásod” vagy „a te változásod” — és a kapu saját fixture-rel mér, nem a közös dev-DB véletlen sorával
+## ADR-0249 — A bukott kapu automatikusan lefut a tiszta origin/mainen is: „nem a te változásod” vagy „a te változásod” — és a kapu saját fixture-rel mér, nem a közös dev-DB véletlen sorával
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (tulaj: „Jó ötlet. Indítsd egy külön szálba.”) · **Kapcsolódik:** ADR-0171 (a bukás olvasható), ADR-0227 (párhuzamos kapu-futtató), ADR-0229 (író-sáv, `own-fixture-only`), ADR-0230 (gépi slotok), ADR-0052 (land)
 

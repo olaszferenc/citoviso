@@ -1,4 +1,4 @@
-// MAIN-PROBE GUARD — a „piros a tiszta mainen is?” próba (scripts/lib/main-probe.mjs, ADR-XXXX)
+// MAIN-PROBE GUARD — a „piros a tiszta mainen is?” próba (scripts/lib/main-probe.mjs, ADR-0249)
 // a helyes gazdát nevezi-e meg, és SOHA nem engedi-e át a bukott commitot.
 //
 // MIT VÉD. A hook `gate_flush`-a bukás UTÁN az első bukott kaput újrafuttatja egy ideiglenes,

@@ -1,4 +1,4 @@
-// „Piros a tiszta mainen is?" — a bukott kapu újrafuttatása a tiszta origin/mainen (ADR-XXXX).
+// „Piros a tiszta mainen is?" — a bukott kapu újrafuttatása a tiszta origin/mainen (ADR-0249).
 //
 // WHY. A gate that is red on the CLEAN main blocks every commit that happens to trigger it, and
 // the committer searches their own diff for a fault that is not there. Measured 2026-09-27: the

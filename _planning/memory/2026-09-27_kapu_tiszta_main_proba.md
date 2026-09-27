@@ -8,7 +8,7 @@
   worktree-ben az origin/mainen újrajátssza (main saját futtatója, gépi slot, 300 s időkorlát), és
   ítél: „EZ NEM A TE VÁLTOZÁSOD” (+ a kapu utolsó main-commitja és `Claude-Session` trailere) /
   „A TE VÁLTOZÁSOD BUKIK” / NEM DÖNTÖTT (új kapu · diffet olvasó kapu · időkorlát · próba-hiba).
-  Soha nem enged át; a hook a kapu kódjával lép ki. ADR-XXXX.
+  Soha nem enged át; a hook a kapu kódjával lép ki. ADR-0249.
 - Élesben mérve a valódi esetre (origin/main `a2df3252`, a javítás még nem landolt):
   13 s alatt „EZ NEM A TE VÁLTOZÁSOD”, gazda `ed651fdc` + session-link.
 - A `cit873a226d` szál közben egy második esetet küldött: a `console-contrast-check` `/lead/<id>`
