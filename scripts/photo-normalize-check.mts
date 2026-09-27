@@ -107,7 +107,19 @@ try {
   try {
     if (!server.listening) await new Promise((r) => server.once("listening", r));
     const port = (server.address() as { port: number }).port;
-    const user = await db.selectFrom("tenant_user").select("id").limit(1).executeTakeFirstOrThrow();
+    // The rooms page carries the uploader (and so the converter) only in its
+    // card-grid editor, i.e. for a tenant with MORE THAN ONE unit (ADR-0198). An
+    // arbitrary first tenant_user row made this assert depend on shared-DB order
+    // and went red on main for a single-unit tenant — pick one that has the grid.
+    const user = await db
+      .selectFrom("tenant_user")
+      .innerJoin("site", "site.tenant_id", "tenant_user.tenant_id")
+      .innerJoin("site_unit", "site_unit.site_id", "site.id")
+      .select("tenant_user.id")
+      .groupBy("tenant_user.id")
+      .having((eb) => eb.fn.count("site_unit.id"), ">", 1)
+      .limit(1)
+      .executeTakeFirstOrThrow(() => new Error("photo-normalize-check: no tenant with more than one unit in the DB — the rooms-grid route cannot be measured"));
     const ctx = await browser.newContext();
     await ctx.addCookies([{ name: "cit_session", value: mintTenantCookieValue(user.id), url: `http://127.0.0.1:${port}` }]);
     for (const route of ["/admin?tab=fotok", "/admin?tab=modulok&m=rooms"]) {
