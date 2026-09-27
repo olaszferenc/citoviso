@@ -99,6 +99,59 @@ function linkifyText(s: string): string {
   return out + esc(s.slice(last));
 }
 
+// The owner's booking-request mail ends in "Elfogadom: <url>" / "Nem szabad: <url>"
+// (or "Ajánlatot küldök: <url>") lines. The Üzenetek tab stores the TEXT part of the
+// mail, so those arrived here as two raw URLs — while the HTML mail itself already
+// carries the approved layout (design-refs/console/booking-email, owner B). Approved
+// plan (design-refs/console/mail-links, variant C): the main button goes to the
+// Foglalások tab, the one-tap verdicts stay as small icon links — and because each
+// is a GET that decides at once and mails the guest, it asks first (a <details>
+// box, no JS; the native confirm() is ruled out on this surface).
+const RE_BOOKING_ACTION =
+  /^(.+?):\s*(https?:\/\/\S+\/foglalas\/[A-Za-z0-9_-]{16,80}\/(elfogadom|elutasitom|ajanlat))\s*$/;
+function messageBodyHtml(text: string, lang: string): string {
+  const acts: { label: string; url: string; kind: string }[] = [];
+  const before: string[] = [];
+  const after: string[] = [];
+  for (const line of text.split("\n")) {
+    const m = RE_BOOKING_ACTION.exec(line);
+    if (m) acts.push({ label: m[1]!.trim(), url: m[2]!, kind: m[3]! });
+    else (acts.length ? after : before).push(line);
+  }
+  if (!acts.length) return `<p>${linkifyText(text)}</p>`;
+  const quick = acts
+    .map((a) => {
+      const link = (cls: string, inner: string): string =>
+        `<a class="${cls}" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
+      if (a.kind === "ajanlat") return link("adm-msg__qa", `${ic("fwd", 15)}<span>${esc(a.label)}</span>`);
+      const yes = a.kind === "elfogadom";
+      return (
+        `<details class="adm-msg__qd adm-msg__qd--${yes ? "ok" : "no"}">` +
+        `<summary>${ic(yes ? "check" : "close", 15)}<span>${esc(a.label)}</span></summary>` +
+        `<div class="adm-confirm"><b>${esc(
+          yes
+            ? T(lang, "Elfogadja a foglalást? A vendég azonnal visszaigazolást kap.")
+            : T(lang, "Elutasítja a kérést? A vendég azonnal értesítést kap róla."),
+        )}</b>` +
+        `<div class="adm-confirm__act">` +
+        link(
+          `citui-btn ${yes ? "citui-btn--primary" : "citui-btn--ghost"}`,
+          esc(yes ? T(lang, "Igen, elfogadom") : T(lang, "Igen, elutasítom")),
+        ) +
+        `</div></div></details>`
+      );
+    })
+    .join("");
+  const tail = after.join("\n").trim();
+  return (
+    `<p>${linkifyText(before.join("\n").trimEnd())}</p>` +
+    `<div class="adm-msg__acts"><a class="citui-btn citui-btn--dark" href="/admin?tab=foglalasok">` +
+    `${ic("bookings", 16)} ${esc(T(lang, "Foglalások megnyitása"))}</a></div>` +
+    `<div class="adm-msg__quick"><span class="adm-msg__qlbl">${esc(T(lang, "Gyors döntés innen is:"))}</span>${quick}</div>` +
+    (tail ? `<p class="adm-msg__tail">${linkifyText(tail)}</p>` : "")
+  );
+}
+
 // The BROWSER half of the money rule (assets/runtime/cit-money.js). Before this,
 // each inline script below carried its OWN formatter — and the four copies had
 // THREE different spellings of "99 900 Ft" between them.
@@ -4447,7 +4500,7 @@ export function messagesSection(m: MessagesAdminData, lang = "hu"): string {
         `</span>` +
         `</a>` +
         (open
-          ? `<div class="adm-msg__body"><p>${linkifyText(x.bodyText)}</p>` +
+          ? `<div class="adm-msg__body">${messageBodyHtml(x.bodyText, lang)}` +
             `<div class="adm-msg__meta">` +
             (x.channel === "sms" ? T(lang, "SMS") : T(lang, "E-mail")) +
             ` · ${esc(x.recipient)} · ${esc(fmtDateTime(x.sentAt, lang))}` +
