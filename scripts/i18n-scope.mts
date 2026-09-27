@@ -45,6 +45,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/modules.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/moduleConfig.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/domains.ts": "adat-regiszter (domain-ajánló szótöve) — nem levél-szöveg",
+  // 2026-09-27: a foglalási levél innen veszi az elérhetőség-szabályt (effectiveContact,
+  // displayPhone). A fájl magyar literáljai a CONTACT_ERRORS admin-űrlap hibakulcsai,
+  // amiket a nézet T()-vel fordít — levélbe egyik sem kerül.
+  "src/tenant/contact.ts": "admin-űrlap hibakulcsok (a nézet T()-vel fordítja) — levélbe nem kerül",
   // Operator-only pipeline reporting: reasons shown in the CONSOLE RUN REPORT,
   // never sent to the recipient (the mail body comes from draft.ts).
   "src/outreach/sendBatch.ts": "operátor-riport (skip-okok) — a címzett sosem látja",

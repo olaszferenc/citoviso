@@ -17,7 +17,26 @@ import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { tenantSiteUrl } from "../domains.js";
+import { huArticleLower } from "../hu.js";
 import { getEmailSender } from "../email/sender.js";
+import {
+  hostMailHtml,
+  mailButtonGhost,
+  mailContactCard,
+  mailLabel,
+  mailQuote,
+  mailSteps,
+  type HostContact,
+} from "../email/bookingLayout.js";
+import {
+  mailButton,
+  mailDetails,
+  mailNote,
+  mailPara,
+  platformMail,
+  type MailDetailRow,
+} from "../email/platformLayout.js";
+import { displayPhone, effectiveContact } from "../tenant/contact.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
@@ -266,25 +285,76 @@ function guestIdentity(ctx: SiteMailContext): {
  */
 function quoteBlock(req: RequestRow, lang: string): string {
   if (!req.quoted_total || !req.quoted_lines?.length) return "";
-  const cur = req.quoted_currency ?? "HUF";
-  const lines = req.quoted_lines
-    .map((l) => {
-      if (l.nights && l.per_night * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1) {
-        // per_stay: one price for the whole stay
-        return `  ${l.label}: ${T(lang, "a teljes tartózkodásra")} = ${formatAmount(l.sum, cur)}`;
-      }
-      const per = formatAmount(l.per_night, cur);
-      const guests = l.guests > 1 ? ` × ${T(lang, "{n} fő", { n: l.guests })}` : "";
-      return `  ${l.label}: ${T(lang, "{n} éj", { n: l.nights })} × ${per}${guests} = ${formatAmount(l.sum, cur)}`;
-    })
+  const lines = quoteRows(req, lang)
+    .map((r) => `  ${r.label} = ${r.value}`)
     .join("\n");
   return (
     // An OFFER's price was set by the owner for this very stay (booking-offer ⑧) —
     // "the price list at booking time" would misdescribe where the number came from.
     `\n${req.offered_at ? T(lang, "Az ajánlott ár:") : T(lang, "Ár (a foglaláskor érvényes árak szerint):")}\n` +
     lines +
-    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, cur)}\n`
+    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, req.quoted_currency ?? "HUF")}\n`
   );
+}
+
+/** The frozen breakdown as label/value pairs — the text block and the HTML panel
+ *  render the SAME rows ("Alapár: 7 éj × 90 000 Ft" → "630 000 Ft"). */
+function quoteRows(req: RequestRow, lang: string): { label: string; value: string }[] {
+  const cur = req.quoted_currency ?? "HUF";
+  return (req.quoted_lines ?? []).map((l) => {
+    if (l.nights && l.per_night * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1) {
+      // per_stay: one price for the whole stay
+      return { label: `${l.label}: ${T(lang, "a teljes tartózkodásra")}`, value: formatAmount(l.sum, cur) };
+    }
+    const per = formatAmount(l.per_night, cur);
+    const guests = l.guests > 1 ? ` × ${T(lang, "{n} fő", { n: l.guests })}` : "";
+    return {
+      label: `${l.label}: ${T(lang, "{n} éj", { n: l.nights })} × ${per}${guests}`,
+      value: formatAmount(l.sum, cur),
+    };
+  });
+}
+
+/**
+ * The stay block both booking letters show (reference · unit · dates · guests),
+ * opening a new group when `rule` is set.
+ */
+function stayRows(req: RequestRow, lang: string, rule: boolean): MailDetailRow[] {
+  const from = dayStr(req.date_from);
+  const to = dayStr(req.date_to);
+  return [
+    { label: T(lang, "Hivatkozás"), value: bookingRef(req.id), mono: true, rule },
+    ...(req.unit_name ? [{ label: T(lang, "Szállás"), value: req.unit_name }] : []),
+    { label: T(lang, "Érkezés"), value: huDate(from) },
+    { label: T(lang, "Távozás"), value: huDate(to), note: T(lang, "({n} éj)", { n: nights(from, to) }) },
+    { label: T(lang, "Létszám"), value: T(lang, "{n} fő", { n: req.guests }) },
+  ];
+}
+
+/**
+ * The property's contact facts for a guest letter — the SAME ones the live page
+ * shows (owner edit > scrape, ADR-0241) plus the live site URL. Missing facts
+ * stay missing.
+ */
+async function hostContact(siteId: string, hostName: string): Promise<HostContact> {
+  const row = await db
+    .selectFrom("site")
+    .leftJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
+    .select(["site.edited_site_data as edited", "mock_artifact.inputs as inputs"])
+    .where("site.id", "=", siteId)
+    .executeTakeFirst();
+  const edited = (row?.edited ?? {}) as { contact?: { address?: string; phone?: string; email?: string } };
+  const base = ((row?.inputs ?? {}) as { siteData?: { contact?: { address?: string; phone?: string; email?: string } } })
+    .siteData?.contact;
+  const c = effectiveContact(edited.contact, base);
+  const website = await siteUrlFor(siteId);
+  return {
+    name: hostName,
+    ...(c.address ? { address: c.address } : {}),
+    ...(c.phone ? { phone: displayPhone(c.phone) } : {}),
+    ...(c.email ? { email: c.email } : {}),
+    ...(website ? { website } : {}),
+  };
 }
 
 /**
@@ -558,7 +628,59 @@ async function sendGuestAck(id: string): Promise<void> {
       ? T(lang, "Árajánlat-kérését rögzítettük: {from} — {to}", { from, to })
       : T(lang, "Foglalási kérését rögzítettük: {from} — {to}", { from, to }),
     text: body,
-    html: bookingHtml(body),
+    html: hostMailHtml({
+      lang,
+      hostName: ctx.hostName,
+      subtitle: isQuote ? T(lang, "Árajánlat-kérés visszaigazolása") : T(lang, "Foglalási kérés visszaigazolása"),
+      heading: isQuote ? T(lang, "Megkaptuk az árajánlat-kérését") : T(lang, "Megkaptuk a foglalási kérését"),
+      blocks: [
+        mailSteps([
+          { label: T(lang, "Kérés elküldve"), state: "done" },
+          { label: isQuote ? T(lang, "Árajánlatot küld") : T(lang, "A szállásadó dönt"), state: "now" },
+          { label: T(lang, "Végleges foglalás"), state: "todo" },
+        ]),
+        mailPara(esc(T(lang, "Kedves {name}!", { name: req.guest_name }))),
+        // The unit is a row of the panel below — the sentence stays without it.
+        mailPara(
+          esc(
+            isQuote
+              ? T(lang, "Köszönjük! Az árajánlat-kérése megérkezett a szállásadóhoz{unit}.", { unit: "" })
+              : T(lang, "Köszönjük! A foglalási kérése megérkezett a szállásadóhoz{unit}.", { unit: "" }),
+          ),
+        ),
+        mailPara(
+          esc(
+            (isQuote
+              ? T(
+                  lang,
+                  "A szállásadó e-mailben árajánlatot küld Önnek. A foglalás csak akkor válik véglegessé, ha az ajánlatot elfogadja.",
+                )
+              : T(
+                  lang,
+                  "A foglalás még nem végleges — a szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.",
+                )) +
+              (ctx.expireHours
+                ? " " + T(lang, "Ha {n} órán belül nem érkezik válasz, arról is értesítjük.", { n: ctx.expireHours })
+                : ""),
+          ),
+        ),
+        mailDetails([
+          ...stayRows(req, lang, false),
+          ...(req.quoted_total
+            ? [
+                ...quoteRows(req, lang).map((r, i) => ({ label: r.label, value: r.value, rule: i === 0 })),
+                {
+                  label: T(lang, "Összesen"),
+                  value: formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"),
+                  emphasis: true,
+                },
+              ]
+            : []),
+        ]),
+        mailContactCard(lang, await hostContact(req.site_id, ctx.hostName)),
+        mailNote(esc(T(lang, "Ha addig kérdése van, válaszoljon erre a levélre — közvetlenül a szállásadónak ír."))),
+      ],
+    }),
   });
 }
 
@@ -617,7 +739,8 @@ async function notifyOwner(
   const owner = await db
     .selectFrom("site")
     .leftJoin("tenant_user", "tenant_user.tenant_id", "site.tenant_id")
-    .select(["site.tenant_id as tenantId", "tenant_user.contact_email as email"])
+    .innerJoin("tenant", "tenant.id", "site.tenant_id")
+    .select(["site.tenant_id as tenantId", "tenant_user.contact_email as email", "tenant.display_name as hostName"])
     .where("site.id", "=", req.site_id)
     .executeTakeFirst();
   const to = parseNotifyList(configuredEmail, owner?.email ?? null).join(", ");
@@ -630,6 +753,7 @@ async function notifyOwner(
   }
 
   const base = publicBaseUrl ?? "";
+  const hostName = owner?.hostName ?? "";
   const from = dayStr(req.date_from);
   const until = dayStr(req.date_to);
   const yes = `${base}/foglalas/${token}/elfogadom`;
@@ -685,42 +809,62 @@ async function notifyOwner(
       : `\n${T(lang, "Elfogadom:")} ${yes}\n${T(lang, "Nem szabad:")} ${no}\n\n` +
         T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött."));
 
-  const html =
-    `<p style="font-size:17px"><strong>${isQuote ? T(lang, "Új árajánlat-kérés") : T(lang, "Új foglalási kérés")}${esc(unit)}</strong></p>` +
-    (isQuote
-      ? `<p style="border-left:4px solid #d29922;background:#fdf6e6;padding:10px 12px;border-radius:6px;` +
-        `font-size:15px;line-height:1.55">${esc(quoteNote)}</p>`
-      : "") +
-    `<p style="font-size:16px;line-height:1.7">` +
-    `<strong>${esc(req.guest_name)}</strong><br>` +
-    `${T(lang, "Hivatkozás:")} ${esc(bookingRef(req.id))}<br>` +
-    `${esc(huDate(from))} — ${esc(huDate(until))}<br>` +
-    `${esc(T(lang, "{n} fő", { n: req.guests }))}` +
-    (req.quoted_total
-      ? `<br><strong>${esc(formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"))}</strong>`
-      : "") +
-    (req.guest_phone ? `<br>${T(lang, "Telefon:")} ${esc(req.guest_phone)}` : "") +
-    `</p>` +
-    (req.message ? `<p style="font-size:15px;color:#444">„${esc(req.message)}"</p>` : "") +
-    `<p style="margin:28px 0">` +
-    `<a href="${esc(isQuote ? offerUrl : yes)}" style="display:inline-block;padding:16px 28px;background:#16283f;` +
-    `color:#fff;text-decoration:none;border-radius:10px;font-size:17px;font-weight:600">${isQuote ? T(lang, "Ajánlatot küldök") : T(lang, "Elfogadom")}</a>` +
-    `&nbsp;&nbsp;` +
-    `<a href="${esc(no)}" style="display:inline-block;padding:16px 28px;border:1px solid #ccc;` +
-    `color:#16283f;text-decoration:none;border-radius:10px;font-size:17px">${T(lang, "Nem szabad")}</a>` +
-    `</p>` +
-    `<p style="font-size:14px;color:#666">${
-      isQuote
-        ? T(lang, "A foglalás csak akkor lesz végleges, ha a vendég elfogadja az ajánlatát.")
-        : T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött.")
-    }</p>`;
+  // Approved plan (owner variant B, 2026-09-27): the admin's Foglalások tab is the
+  // main path — the other requests and the calendar are there — the one-tap
+  // verdict stays as a secondary link.
+  const adminUrl = `${config.publicSiteUrl}/admin?tab=foglalasok`;
+  const guestPhone = req.guest_phone ? displayPhone(req.guest_phone) : "";
+  const blocks = [
+    mailPara(
+      esc(
+        T(lang, "{guest} foglalni szeretne {art} {host} szállásán.", {
+          guest: req.guest_name,
+          art: huArticleLower(hostName),
+          host: hostName,
+        }),
+      ),
+    ),
+    ...(isQuote
+      ? [
+          `<p style="margin:0 0 16px;border-left:4px solid #d29922;background:#fdf6e6;padding:10px 12px;` +
+            `border-radius:6px;font-size:14px;line-height:1.55">${esc(quoteNote)}</p>`,
+        ]
+      : []),
+    mailDetails([
+      { label: T(lang, "Vendég"), value: req.guest_name },
+      ...(guestPhone
+        ? [{ label: T(lang, "Telefon"), value: guestPhone, href: `tel:${guestPhone.replace(/\s+/g, "")}` }]
+        : []),
+      { label: T(lang, "E-mail"), value: req.guest_email, href: `mailto:${req.guest_email}` },
+      ...stayRows(req, lang, true),
+      ...(req.quoted_total
+        ? [
+            {
+              label: T(lang, "Ár (a foglaláskori árlista szerint)"),
+              value: formatAmount(req.quoted_total, req.quoted_currency ?? "HUF"),
+              emphasis: true,
+              rule: true,
+            },
+          ]
+        : []),
+    ]),
+    ...(req.message ? [mailQuote(T(lang, "A vendég üzenete:"), req.message)] : []),
+    mailButton(adminUrl, T(lang, "Foglalások megnyitása")),
+    mailNote(
+      `${esc(T(lang, "Gyors döntés innen is:"))} ` +
+        `<a href="${esc(isQuote ? offerUrl : yes)}" style="color:#0b6f86;font-weight:600">${esc(
+          isQuote ? T(lang, "Ajánlatot küldök") : T(lang, "Elfogadom"),
+        )}</a> · ` +
+        `<a href="${esc(no)}" style="color:#0b6f86;font-weight:600">${esc(T(lang, "Nem szabad"))}</a><br>` +
+        esc(
+          isQuote
+            ? T(lang, "A foglalás csak akkor lesz végleges, ha a vendég elfogadja az ajánlatát.")
+            : T(lang, "A vendég csak azután kap visszaigazolást, hogy Ön döntött."),
+        ),
+    ),
+  ];
 
-  const msg = {
-    to,
-    // Goes to the TENANT, but every line of it is their guest's personal data
-    // (name, phone, dates) — the tenant is its controller, so no pilot BCC.
-    audience: "guest" as const,
-    subject: isQuote
+  const subject = isQuote
       ? T(lang, "Árajánlat-kérés: {guest}, {from}–{to}", {
           guest: req.guest_name,
           from: huDate(from),
@@ -730,9 +874,23 @@ async function notifyOwner(
           guest: req.guest_name,
           from: huDate(from),
           to: huDate(until),
-        }),
-    text,
-    html,
+        });
+  const msg = {
+    ...platformMail({
+      to,
+      subject,
+      text,
+      lang,
+      kicker: isQuote
+        ? mailLabel(T(lang, "Új árajánlat-kérés · ajánlatra vár"), "new")
+        : mailLabel(T(lang, "Új foglalási kérés · döntésre vár"), "new"),
+      heading: (isQuote ? T(lang, "Új árajánlat-kérés") : T(lang, "Új foglalási kérés")) + unit,
+      blocks,
+      siteName: hostName,
+    }),
+    // Goes to the TENANT, but every line of it is their guest's personal data
+    // (name, phone, dates) — the tenant is its controller, so no pilot BCC.
+    audience: "guest" as const,
   };
   await getEmailSender().send(msg);
   // ADR-0084: also into the tenant's mailbox — the owner asked for ONE place for

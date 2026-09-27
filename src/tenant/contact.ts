@@ -52,6 +52,28 @@ export function prettyPhone(e164: string): string {
   return `+36 ${area} ${rest.slice(0, 3)} ${rest.slice(3)}`;
 }
 
+/** A stored phone as it is PRINTED (an unedited scrape keeps its raw "06305161631"
+ *  form in the site data; a letter shows the same readable shape the admin saves). */
+export function displayPhone(raw: string): string {
+  const n = normalizePhone(raw.trim().replace(/\//g, ""));
+  return n ? prettyPhone(n) : raw.trim();
+}
+
+type ContactFields = { readonly address?: string; readonly phone?: string; readonly email?: string };
+
+/**
+ * The contact facts the page renders: the owner's override replaces the scraped
+ * block WHOLE (the site-data merge is shallow) — one rule for the admin view and
+ * for every letter that quotes the property's contacts.
+ */
+export function effectiveContact(
+  override: ContactFields | null | undefined,
+  base: ContactFields | null | undefined,
+): { address: string; phone: string; email: string } {
+  const c = override ?? base ?? {};
+  return { address: c.address ?? "", phone: c.phone ?? "", email: c.email ?? "" };
+}
+
 export function cleanAddress(raw: string): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, 200);
 }

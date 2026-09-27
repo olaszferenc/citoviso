@@ -46,6 +46,9 @@ export const I18N_SOURCES = [
   // its mail in another.
   "src/i18n/mail.ts",
   "src/email/platformLayout.ts",
+  // 2026-09-27: the booking letters' frame (guest ack in the property's name,
+  // contact card, step indicator) — the GUEST reads it in the site's language.
+  "src/email/bookingLayout.ts",
   "src/email/loginEmail.ts",
   "src/email/invoiceEmail.ts",
   // Elek FK-001 E1: a SZÁMLA-TÉTEL neve. EGY regiszter szolgálja ki a tenant-admin

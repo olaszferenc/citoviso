@@ -37,6 +37,7 @@ const FAINT = "#8a97a6";
 const LINE = "#e3ecf2";
 const PANEL = "#f6f9fb";
 const PAGE = "#eef3f7";
+const LINK = "#0b6f86";
 const FONT = "'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif";
 const MONO = "Consolas,Menlo,'Courier New',monospace";
 
@@ -77,15 +78,28 @@ export interface MailDetailRow {
   readonly mono?: boolean;
   /** The row the reader came for (the amount): larger and navy. */
   readonly emphasis?: boolean;
+  /** Muted aside after the value ("(7 éj)"), plain text. */
+  readonly note?: string;
+  /** A thin rule above the row — starts a new group (guest | stay | price). */
+  readonly rule?: boolean;
+  /** Makes the value a link (tel:, mailto:, https:). */
+  readonly href?: string;
 }
 
 /** The label/value panel (credentials, invoice data). Values are escaped here. */
 export function mailDetails(rows: readonly MailDetailRow[]): string {
   const cells = rows
     .map((r, i) => {
-      const top = i === 0 ? 14 : 4;
+      const top = i === 0 ? 14 : r.rule ? 10 : 4;
       const bottom = i === rows.length - 1 ? 14 : 4;
       const pad = `padding:${top}px 18px ${bottom}px`;
+      const rule = r.rule && i > 0 ? `;border-top:1px solid ${LINE}` : "";
+      // Stacked on a phone the value cell sits UNDER its label — only the label
+      // carries the rule, or the group would get a second line mid-row.
+      const valueText = r.href
+        ? `<a href="${esc(r.href)}" style="color:${LINK};text-decoration:none">${esc(r.value)}</a>`
+        : esc(r.value);
+      const note = r.note ? ` <span style="font-weight:400;color:${MUTED}">${esc(r.note)}</span>` : "";
       const value =
         `font-weight:${r.emphasis ? 700 : 600};color:${r.mono || r.emphasis ? NAVY : INK};` +
         `font-size:${r.mono || r.emphasis ? 16 : 14}px;` +
@@ -93,8 +107,8 @@ export function mailDetails(rows: readonly MailDetailRow[]): string {
         // The amount must not break at its thousands separator ("54 / 300 Ft").
         (r.emphasis ? ";white-space:nowrap" : "");
       return (
-        `<tr class="m-stack"><td style="${pad};width:40%;font-family:${FONT};font-size:13px;color:${MUTED}">${esc(r.label)}</td>` +
-        `<td style="${pad};${value}">${esc(r.value)}</td></tr>`
+        `<tr class="m-stack"><td style="${pad};width:40%;font-family:${FONT};font-size:13px;color:${MUTED}${rule}">${esc(r.label)}</td>` +
+        `<td${r.rule ? ' class="m-rule"' : ""} style="${pad};${value}${rule}">${valueText}${note}</td></tr>`
       );
     })
     .join("");
@@ -167,6 +181,34 @@ export function bandBrand(): { html: string; attachments: EmailAttachment[] } {
   };
 }
 
+/**
+ * The HTML document around a letter card (shared with the booking letters,
+ * bookingLayout.ts): page background, centering, the Outlook width lock, and
+ * the phone rules.
+ */
+export function mailDocument(lang: string | undefined, card: string): string {
+  return (
+    `<!DOCTYPE html><html lang="${lang || "hu"}"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    // Phones: narrower gutters, stacked label/value rows. Clients that drop
+    // <style> still get a readable (just roomier) letter.
+    `<style>@media (max-width:520px){.m-pad{padding-left:20px!important;padding-right:20px!important}` +
+    `.m-stack td{display:block!important;width:auto!important}` +
+    `.m-stack td:first-child{padding-bottom:0!important}.m-stack td+td{padding-top:2px!important}` +
+    `.m-stack td.m-rule{border-top:0!important}.m-h1{font-size:21px!important}}</style>` +
+    `</head><body style="margin:0;padding:0;background:${PAGE}">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE}" style="background:${PAGE}">` +
+    `<tr><td align="center" style="padding:24px 12px">` +
+    `<!--[if mso]><table role="presentation" width="560" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
+    card +
+    `<!--[if mso]></td></tr></table><![endif]-->` +
+    `</td></tr></table></body></html>`
+  );
+}
+
+/** The frame's palette, for letters that build their own blocks on this frame. */
+export const MAIL_COLORS = { NAVY, CYAN, INK, MUTED, FAINT, LINE, PANEL, PAGE, LINK, FONT, MONO } as const;
+
 function headerHtml(hasLogo: boolean): string {
   const logo = hasLogo
     ? `<img src="cid:${LOGO_CID}" width="${LOGO_W}" height="${LOGO_H}" alt="Citoviso" ` +
@@ -188,6 +230,8 @@ export interface PlatformMailInput {
   readonly heading: string;
   /** Salutation line (plain text) — see mailGreeting(). */
   readonly greeting?: string | null;
+  /** Ready markup above the H1 (a status label — mailLabel()). */
+  readonly kicker?: string;
   /** Body blocks built with mailPara/mailDetails/mailButton/mailNote. */
   readonly blocks: readonly string[];
   /** The site the letter is about — names it in the footer's "why you got this". */
@@ -197,7 +241,7 @@ export interface PlatformMailInput {
 
 /** Wrap the body in the approved platform frame and return a complete message. */
 export function platformMail(input: PlatformMailInput): EmailMessage {
-  const { to, subject, text, lang, heading, greeting, blocks, siteName } = input;
+  const { to, subject, text, lang, heading, greeting, blocks, siteName, kicker } = input;
   const hasLogo = existsSync(LOGO_PATH);
 
   const card =
@@ -205,6 +249,7 @@ export function platformMail(input: PlatformMailInput): EmailMessage {
     `style="width:100%;max-width:560px;background:#ffffff;border:1px solid ${LINE};border-radius:10px">` +
     headerHtml(hasLogo) +
     `<tr><td class="m-pad" style="padding:28px 32px 8px;font-family:${FONT};font-size:15px;line-height:1.6;color:${INK}">` +
+    (kicker ?? "") +
     `<h1 class="m-h1" style="margin:0 0 14px;font-family:${FONT};font-size:22px;line-height:1.3;color:${NAVY}">${esc(heading)}</h1>` +
     (greeting ? `<p style="margin:0 0 12px">${esc(greeting)}</p>` : "") +
     blocks.join("") +
@@ -213,21 +258,7 @@ export function platformMail(input: PlatformMailInput): EmailMessage {
     `font-size:12px;line-height:1.6;color:${FAINT}">${footerHtml(lang, siteName)}</td></tr>` +
     `</table>`;
 
-  const html =
-    `<!DOCTYPE html><html lang="${lang || "hu"}"><head><meta charset="utf-8">` +
-    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
-    // Phones: narrower gutters, stacked label/value rows. Clients that drop
-    // <style> still get a readable (just roomier) letter.
-    `<style>@media (max-width:520px){.m-pad{padding-left:20px!important;padding-right:20px!important}` +
-    `.m-stack td{display:block!important;width:auto!important}` +
-    `.m-stack td:first-child{padding-bottom:0!important}.m-stack td+td{padding-top:2px!important}.m-h1{font-size:21px!important}}</style>` +
-    `</head><body style="margin:0;padding:0;background:${PAGE}">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE}" style="background:${PAGE}">` +
-    `<tr><td align="center" style="padding:24px 12px">` +
-    `<!--[if mso]><table role="presentation" width="560" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
-    card +
-    `<!--[if mso]></td></tr></table><![endif]-->` +
-    `</td></tr></table></body></html>`;
+  const html = mailDocument(lang, card);
 
   const attachments: EmailAttachment[] = [
     ...(hasLogo ? [logoAttachment()] : []),

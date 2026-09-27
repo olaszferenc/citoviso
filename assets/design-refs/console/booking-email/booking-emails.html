@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foglalási levelek — terv</title>
+<style>
+  /* Mock chrome (not part of the letters) */
+  :root { --page:#eef3f7; --navy:#0e2a47; --cyan:#1fb6d6; --ink:#10243a; --muted:#60748b; --faint:#8a97a6; --line:#e3ecf2; --panel:#f6f9fb; --ok:#1d7a4d; --okbg:#e8f5ee; --warn:#9a6700; --warnbg:#fdf6e6; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#dfe6ec; font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); }
+  .bar { position:sticky; top:0; z-index:5; background:#fff; border-bottom:1px solid var(--line); padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .bar b { font-size:13px; color:var(--muted); margin-right:4px; }
+  .bar button { font:inherit; font-size:13px; padding:7px 12px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; color:var(--ink); }
+  .bar button[aria-pressed="true"] { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .bar .sep { width:1px; height:24px; background:var(--line); margin:0 6px; }
+  .explain { max-width:760px; margin:14px auto 0; padding:0 16px; font-size:14px; line-height:1.55; color:var(--muted); }
+  .explain strong { color:var(--ink); }
+  .stage { margin:14px auto 40px; width:100%; max-width:900px; padding:0 12px; }
+  .stage.phone { max-width:390px; padding:0; }
+  .client { container-type:inline-size; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .client-head { padding:14px 18px; border-bottom:1px solid var(--line); font-size:13px; color:var(--muted); line-height:1.5; }
+  .client-head .subj { font-size:17px; color:var(--ink); margin-bottom:4px; }
+  .client-head .from b { color:var(--ink); }
+  .toast { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; font-size:13px; max-width:92vw; opacity:0; transition:opacity .2s; pointer-events:none; }
+  .toast.on { opacity:1; }
+
+  /* ── The letter (mirrors what the e-mail HTML will be: tables + inline-able rules) ── */
+  .mail { background:var(--page); padding:24px 12px; }
+  .card { max-width:560px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:15px; line-height:1.6; }
+  .hd { padding:20px 32px; border-bottom:2px solid var(--cyan); }
+  .hd img { display:block; width:164px; height:36px; }
+  .hd-host { font-size:20px; font-weight:700; color:var(--navy); letter-spacing:.2px; line-height:1.25; }
+  .hd-host small { display:block; font-size:13px; font-weight:400; color:var(--muted); letter-spacing:0; margin-top:2px; }
+  .hd-dark { background:var(--navy); border-bottom:3px solid var(--cyan); padding:22px 32px; }
+  .hd-dark .hd-host { color:#fff; }
+  .hd-dark .hd-host small { color:#b9c9d8; }
+  .bd { padding:28px 32px 8px; }
+  h1 { margin:0 0 14px; font-size:22px; line-height:1.3; color:var(--navy); }
+  p { margin:0 0 16px; }
+  .note { font-size:13px; color:var(--muted); }
+  .pill { display:inline-block; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; margin:0 0 14px; }
+  .pill.wait { background:var(--warnbg); color:var(--warn); }
+  .pill.new { background:#e6f6fa; color:#0b6f86; }
+  table.det { width:100%; border-collapse:separate; border-spacing:0; background:var(--panel); border:1px solid var(--line); border-radius:8px; margin:4px 0 20px; }
+  table.det td { padding:5px 18px; font-size:14px; vertical-align:top; }
+  table.det tr:first-child td { padding-top:14px; } table.det tr:last-child td { padding-bottom:14px; }
+  table.det td:first-child { width:40%; color:var(--muted); font-size:13px; }
+  table.det td + td { font-weight:600; }
+  table.det .ref { font-family:Consolas,Menlo,'Courier New',monospace; color:var(--navy); font-size:15px; letter-spacing:.5px; }
+  table.det .sum { color:var(--navy); font-size:16px; font-weight:700; white-space:nowrap; }
+  table.det tr.div td { border-top:1px solid var(--line); padding-top:10px; }
+  .steps { display:flex; gap:0; margin:4px 0 22px; }
+  .step { flex:1; text-align:center; font-size:12px; color:var(--faint); position:relative; }
+  .step .dot { width:24px; height:24px; border-radius:50%; margin:0 auto 6px; border:2px solid var(--line); background:#fff; font-size:12px; font-weight:700; line-height:20px; color:var(--faint); position:relative; z-index:1; }
+  .step::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:2px; background:var(--line); }
+  .step:first-child::before { display:none; }
+  .step.done .dot { background:var(--navy); border-color:var(--navy); color:#fff; }
+  .step.done, .step.now { color:var(--ink); font-weight:600; }
+  .step.now .dot { border-color:var(--cyan); color:#0b6f86; }
+  .step.done + .step::before { background:var(--navy); }
+  .btn { display:inline-block; padding:13px 26px; background:var(--navy); color:#fff; text-decoration:none; font-weight:600; border-radius:8px; font-size:15px; cursor:pointer; }
+  .btn.ghost { background:#fff; color:var(--navy); border:1px solid #c9d6e1; padding:12px 24px; }
+  .btn.link { background:none; color:#0b6f86; padding:0; font-weight:600; text-decoration:underline; }
+  .btns { margin:6px 0 22px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .quote { border-left:3px solid var(--cyan); background:var(--panel); padding:10px 14px; margin:0 0 20px; color:#33495e; font-style:italic; border-radius:0 6px 6px 0; }
+  .qlabel { font-size:13px; font-weight:600; color:var(--muted); margin:0 0 6px; }
+  .contact { border:1px solid var(--line); border-radius:8px; padding:16px 18px; margin:6px 0 22px; }
+  .contact h2 { margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+  .contact .name { font-weight:700; color:var(--navy); font-size:16px; margin-bottom:6px; }
+  .crow { display:flex; gap:10px; font-size:14px; padding:3px 0; }
+  .crow .k { width:74px; flex:none; color:var(--muted); font-size:13px; }
+  .crow a { color:#0b6f86; font-weight:600; text-decoration:none; }
+  .contact .btn { margin-top:12px; }
+  .ft { padding:18px 32px 22px; border-top:1px solid var(--line); font-size:12px; line-height:1.6; color:var(--faint); }
+  .ft b { color:var(--muted); font-weight:600; }
+  .ft-contact { font-size:13px; color:var(--muted); line-height:1.7; }
+  .ft-contact .n { color:var(--navy); font-weight:700; }
+  .ft-contact a { color:#0b6f86; text-decoration:none; font-weight:600; }
+  .ft-by { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+
+  /* Phone (≤520px) — same rules the real mail carries in its @media block */
+  @container (max-width:520px) {
+    .mail { padding:12px 8px; }
+    .hd, .hd-dark, .bd, .ft { padding-left:20px; padding-right:20px; }
+    h1 { font-size:21px; }
+    table.det td { display:block; width:auto !important; }
+    table.det td:first-child { padding-bottom:0; }
+    table.det td + td { padding-top:1px; padding-bottom:8px; }
+    table.det tr.div td + td { border-top:0; padding-top:1px; }
+    table.det tr:first-child td + td { padding-top:1px; }
+    .btns .btn { display:block; text-align:center; width:100%; }
+    .btns .btn.link { text-align:left; }
+    .contact .btn { display:block; text-align:center; }
+    .crow { flex-direction:column; gap:0; }
+  }
+</style>
+</head>
+<body>
+<div class="bar" role="toolbar">
+  <b>Levél:</b>
+  <button data-v="gA" aria-pressed="true">Vendég A</button>
+  <button data-v="gB" aria-pressed="false">Vendég B</button>
+  <button data-v="gC" aria-pressed="false">Vendég C</button>
+  <button data-v="oA" aria-pressed="false">Tulaj A</button>
+  <button data-v="oB" aria-pressed="false">Tulaj B</button>
+  <span class="sep"></span>
+  <button data-s="phone" aria-pressed="false">Mobil 390px</button>
+  <button data-s="desk" aria-pressed="true">Asztali</button>
+</div>
+<div class="explain" id="explain"></div>
+<div class="stage" id="stage">
+  <div class="client">
+    <div class="client-head" id="chead"></div>
+    <div class="mail" id="mail"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// Real sample: the 2026-09-27 test request at Camping Carina (DB values as stored).
+const D = {
+  host: "Camping Carina",
+  unit: "Kuckó1",
+  guest: "Olasz Ferenc", guestMail: "olaszferenc@gmail.com", guestPhone: "+36 30 516 1631",
+  ref: "FG-95D9CA", from: "2026. 11. 01.", to: "2026. 11. 08.", nights: 7, guests: 2,
+  line: "Alapár: 7 éj × 90 000 Ft", sum: "630 000 Ft", msg: "tesztelek",
+  address: "Ráckevei út 083/2 hrsz",
+  phone: "+36 30 516 1631", phoneTel: "+36305161631",
+  email: "olaszferenc@gmail.com",
+  web: "https://camping-carina.citoviso.com", webShown: "camping-carina.citoviso.com",
+  admin: "https://citoviso.com/admin?tab=foglalasok",
+  yes: "https://citoviso.com/foglalas/…/elfogadom", no: "https://citoviso.com/foglalas/…/elutasitom",
+  hours: 48,
+};
+
+const det = (extra = "") => `
+  <table class="det">
+    <tr><td>Hivatkozás</td><td class="ref">${D.ref}</td></tr>
+    <tr><td>Szállás</td><td>${D.unit}</td></tr>
+    <tr><td>Érkezés</td><td>${D.from}</td></tr>
+    <tr><td>Távozás</td><td>${D.to} <span style="font-weight:400;color:var(--muted)">(${D.nights} éj)</span></td></tr>
+    <tr><td>Létszám</td><td>${D.guests} fő</td></tr>
+    ${extra}
+    <tr class="div"><td>${D.line}</td><td>630 000 Ft</td></tr>
+    <tr><td>Összesen</td><td class="sum">${D.sum}</td></tr>
+  </table>`;
+
+const a = (href, label, cls = "btn") => `<a class="${cls}" data-href="${href}">${label}</a>`;
+
+const contactCard = () => `
+  <div class="contact">
+    <h2>A szállás elérhetősége</h2>
+    <div class="name">${D.host}</div>
+    <div class="crow"><span class="k">Cím</span><span>${D.address}</span></div>
+    <div class="crow"><span class="k">Telefon</span><a data-href="tel:${D.phoneTel}">${D.phone}</a></div>
+    <div class="crow"><span class="k">E-mail</span><a data-href="mailto:${D.email}">${D.email}</a></div>
+    <div class="crow"><span class="k">Honlap</span><a data-href="${D.web}">${D.webShown}</a></div>
+    ${a(D.web, "A szállás honlapja", "btn ghost")}
+  </div>`;
+
+const guestFooter = (withContact) => `
+  <div class="ft">
+    ${withContact ? `<div class="ft-contact"><span class="n">${D.host}</span><br>${D.address}<br>
+      <a data-href="tel:${D.phoneTel}">${D.phone}</a> · <a data-href="mailto:${D.email}">${D.email}</a><br>
+      <a data-href="${D.web}">${D.webShown}</a></div><div class="ft-by">` : "<div>"}
+    Ezt a levelet azért kapta, mert foglalási kérést küldött a(z) ${D.host} honlapján. A foglalási rendszert a <b>Citoviso</b> működteti.</div>
+  </div>`;
+
+const guestIntro = `
+  <p>Kedves ${D.guest}!</p>
+  <p>Köszönjük! A foglalási kérése megérkezett a szállásadóhoz.</p>`;
+const guestWait = `
+  <p>A foglalás <strong>még nem végleges</strong> — a szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk. Ha ${D.hours} órán belül nem érkezik válasz, arról is értesítjük.</p>`;
+const guestReply = `<p class="note">Kérdése van? Válaszoljon erre a levélre — közvetlenül a szállásadónak ír.</p>`;
+
+const ownerFooter = `
+  <div class="ft">Citoviso · [cégnév] · [székhely]<br>Adószám: [adószám] · [e-mail] · [telefon]<br>
+  Ezt a levelet azért kapta, mert a(z) ${D.host} oldalát a Citovisónál rendelte meg.</div>`;
+const ownerHeader = `<div class="hd"><img src="../../../brand/citoviso-logo-email.png" alt="Citoviso"></div>`;
+const ownerGuest = `
+  <table class="det">
+    <tr><td>Vendég</td><td>${D.guest}</td></tr>
+    <tr><td>Telefon</td><td><a style="color:#0b6f86;text-decoration:none" data-href="tel:${D.phoneTel}">${D.guestPhone}</a></td></tr>
+    <tr><td>E-mail</td><td><a style="color:#0b6f86;text-decoration:none" data-href="mailto:${D.guestMail}">${D.guestMail}</a></td></tr>
+    <tr class="div"><td>Hivatkozás</td><td class="ref">${D.ref}</td></tr>
+    <tr><td>Szállás</td><td>${D.unit}</td></tr>
+    <tr><td>Érkezés</td><td>${D.from}</td></tr>
+    <tr><td>Távozás</td><td>${D.to} <span style="font-weight:400;color:var(--muted)">(${D.nights} éj)</span></td></tr>
+    <tr><td>Létszám</td><td>${D.guests} fő</td></tr>
+    <tr class="div"><td>Ár (a foglaláskori árlista szerint)</td><td class="sum">${D.sum}</td></tr>
+  </table>
+  <div class="qlabel">A vendég üzenete:</div>
+  <div class="quote">„${D.msg}”</div>`;
+
+const V = {
+  gA: {
+    head: { subj: `Foglalási kérését rögzítettük: ${D.from} — ${D.to}`, from: `${D.host} — Citoviso`, to: D.guestMail },
+    explain: `<strong>Vendég A · Tiszta kártya, a szállás neve a fejlécben.</strong> Ugyanaz a keret, mint a jóváhagyott platform-leveleké (fehér kártya, cián vonal, adat-panel), de a fejlécben a <em>szállás</em> áll, nem a Citoviso — a vendég velük foglalt. Az elérhetőség külön kártyán, „A szállás honlapja” gombbal; lent csak egy kis sor: „a foglalási rendszert a Citoviso működteti”.`,
+    html: `<div class="card">
+      <div class="hd"><div class="hd-host">${D.host}<small>Foglalási kérés visszaigazolása</small></div></div>
+      <div class="bd">
+        <span class="pill wait">Kérés rögzítve · még nem végleges</span>
+        <h1>Megkaptuk a foglalási kérését</h1>
+        ${guestIntro}${guestWait}
+        ${det()}
+        ${contactCard()}
+        ${guestReply}
+      </div>${guestFooter(false)}</div>`,
+  },
+  gB: {
+    head: { subj: `Foglalási kérését rögzítettük: ${D.from} — ${D.to}`, from: `${D.host} — Citoviso`, to: D.guestMail },
+    explain: `<strong>Vendég B · Sötétkék szállás-sáv + lépés-jelző.</strong> Erősebb, „szállodás” fejléc. A lépés-jelző (Kérés elküldve → A szállásadó dönt → Végleges foglalás) egy pillantással megmondja, hogy ez <em>még nem</em> visszaigazolás. Az elérhetőség a láblécben, névjegy-szerűen (nincs külön kártya, rövidebb levél).`,
+    html: `<div class="card">
+      <div class="hd-dark"><div class="hd-host">${D.host}<small>${D.address}</small></div></div>
+      <div class="bd">
+        <h1>Megkaptuk a foglalási kérését</h1>
+        <div class="steps">
+          <div class="step done"><div class="dot">✓</div>Kérés elküldve</div>
+          <div class="step now"><div class="dot">2</div>A szállásadó dönt</div>
+          <div class="step"><div class="dot">3</div>Végleges foglalás</div>
+        </div>
+        ${guestIntro}${guestWait}
+        ${det()}
+        <div class="btns">${a(D.web, "A szállás honlapja", "btn ghost")}</div>
+        ${guestReply}
+      </div>${guestFooter(true)}</div>`,
+  },
+  gC: {
+    head: { subj: `Foglalási kérését rögzítettük: ${D.from} — ${D.to}`, from: `${D.host} — Citoviso`, to: D.guestMail },
+    explain: `<strong>Vendég C · A + B keveréke.</strong> A-nak a világos fejléce és elérhetőség-kártyája, B-nek a lépés-jelzője. A leginformatívabb, de a leghosszabb is.`,
+    html: `<div class="card">
+      <div class="hd"><div class="hd-host">${D.host}<small>Foglalási kérés visszaigazolása</small></div></div>
+      <div class="bd">
+        <h1>Megkaptuk a foglalási kérését</h1>
+        <div class="steps">
+          <div class="step done"><div class="dot">✓</div>Kérés elküldve</div>
+          <div class="step now"><div class="dot">2</div>A szállásadó dönt</div>
+          <div class="step"><div class="dot">3</div>Végleges foglalás</div>
+        </div>
+        ${guestIntro}${guestWait}
+        ${det()}
+        ${contactCard()}
+        ${guestReply}
+      </div>${guestFooter(false)}</div>`,
+  },
+  oA: {
+    head: { subj: `Foglalási kérés: ${D.guest}, ${D.from}–${D.to}`, from: "Citoviso", to: D.email },
+    explain: `<strong>Tulaj A · Jóváhagyott platform-keret (Citoviso logó).</strong> A két egy-kattintásos döntés-gomb marad (Elfogadom / Nem szabad), alattuk egy harmadik út: „Megnyitom az adminban” → a Foglalások fül. A vendég adatai egy panelen, a telefon és az e-mail kattintható.`,
+    html: `<div class="card">${ownerHeader}
+      <div class="bd">
+        <span class="pill new">Új foglalási kérés · döntésre vár</span>
+        <h1>Új foglalási kérés — ${D.unit}</h1>
+        <p>${D.guest} foglalni szeretne a(z) ${D.host} szállásán. Döntsön egy kattintással, vagy nézze meg a többi kéréssel együtt az admin felületen.</p>
+        ${ownerGuest}
+        <div class="btns">${a(D.yes, "Elfogadom")}${a(D.no, "Nem szabad", "btn ghost")}</div>
+        <p>${a(D.admin, "Megnyitom az adminban (Foglalások) →", "btn link")}</p>
+        <p class="note">A vendég csak azután kap visszaigazolást, hogy Ön döntött.</p>
+      </div>${ownerFooter}</div>`,
+  },
+  oB: {
+    head: { subj: `Foglalási kérés: ${D.guest}, ${D.from}–${D.to}`, from: "Citoviso", to: D.email },
+    explain: `<strong>Tulaj B · Az admin a fő út.</strong> Egyetlen nagy gomb: „Foglalások megnyitása” — ott látja a naptárt és az ütköző kéréseket is, mielőtt dönt. A gyors döntés kisebb, másodlagos linkként marad (telefonon, útközben hasznos).`,
+    html: `<div class="card">${ownerHeader}
+      <div class="bd">
+        <span class="pill new">Új foglalási kérés · döntésre vár</span>
+        <h1>Új foglalási kérés — ${D.unit}</h1>
+        <p>${D.guest} foglalni szeretne a(z) ${D.host} szállásán.</p>
+        ${ownerGuest}
+        <div class="btns">${a(D.admin, "Foglalások megnyitása")}</div>
+        <p class="note">Gyors döntés innen is: ${a(D.yes, "Elfogadom", "btn link")} · ${a(D.no, "Nem szabad", "btn link")}<br>A vendég csak azután kap visszaigazolást, hogy Ön döntött.</p>
+      </div>${ownerFooter}</div>`,
+  },
+};
+
+const $ = (id) => document.getElementById(id);
+let cur = "gA";
+function show(v) {
+  cur = v;
+  const x = V[v];
+  $("mail").innerHTML = x.html;
+  $("explain").innerHTML = x.explain;
+  $("chead").innerHTML = `<div class="subj">${x.head.subj}</div><div class="from"><b>${x.head.from}</b> · címzett: ${x.head.to}</div>`;
+  document.querySelectorAll("[data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
+}
+function size(s) {
+  $("stage").classList.toggle("phone", s === "phone");
+  document.querySelectorAll("[data-s]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === s)));
+}
+document.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => show(b.dataset.v)));
+document.querySelectorAll("[data-s]").forEach((b) => b.addEventListener("click", () => size(b.dataset.s)));
+let tt;
+document.addEventListener("click", (e) => {
+  const l = e.target.closest("[data-href]");
+  if (!l) return;
+  e.preventDefault();
+  const t = $("toast");
+  t.textContent = "A valódi levélben ez nyílna meg: " + l.dataset.href;
+  t.classList.add("on");
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove("on"), 2600);
+});
+const q = new URLSearchParams(location.search);
+show(V[q.get("v")] ? q.get("v") : "gA");
+size(q.get("s") || (window.innerWidth <= 520 ? "phone" : "desk"));
+</script>
+</body>
+</html>
