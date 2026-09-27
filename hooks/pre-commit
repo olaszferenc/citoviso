@@ -771,6 +771,14 @@ if [ -f scripts/photo-srcset-check.mts ] && \
   echo "[pre-commit] photo-srcset-check (Google-fotó telefon-méretben: srcset + DPR-választós háttér)…"
   npx tsx scripts/photo-srcset-check.mts >"$GATE_LOG" || gate_failed
 fi
+# 2026-09-27: a Fotók fülről EGY kép sem ment fel — a közös body-olvasó 64 KB-nál
+# elvágta a kérést, a telefon 100%-on megakadt, mögötte minden fájl 0%-on állt.
+# In-process szerver efemer porton, DB-írás nélkül; a régi olvasón piros.
+if [ -f scripts/photo-upload-body-check.mts ] && \
+   changed_files | grep -qE '^(src/server/public\.ts|scripts/photo-upload-body-check)'; then
+  echo "[pre-commit] photo-upload-body-check (egy 6 MB-os fotó törzse átjut, a túlméretes választ kap)…"
+  npx tsx scripts/photo-upload-body-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/hero-health-check.mts ] && \
    changed_files | grep -qE '^(src/generator/photoHealth|src/generator/heroPick|src/generator/heroOverride|scripts/rerender-mock|scripts/hero-health-check)'; then
   echo "[pre-commit] hero-health-check (a nyitókép a teljes képről szól — fél-fekete fotó nem hero)…"

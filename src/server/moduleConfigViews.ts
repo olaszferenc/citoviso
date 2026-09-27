@@ -1993,9 +1993,12 @@ function roomEditorScript(lang: string): string {
     `bad.push("<b>"+esc(f.name)+"</b> "+${j(T(lang, "nem kép (JPEG, PNG vagy WEBP kell)"))});continue}` +
     `if(f.size>6000000){bad.push("<b>"+esc(f.name)+"</b> "+(f.size/1000000).toFixed(1).replace(".",",")+" MB — "+` +
     `${j(T(lang, "a legnagyobb feltölthető méret 6 MB"))});continue}good.push(f)}` +
-    `try{var images=[];for(var j=0;j<good.length;j++){images.push({dataUrl:await read(good[j]),name:good[j].name,alt:""})}` +
-    `var res=images.length?await (await fetch("/admin/photos",{method:"POST",` +
-    `headers:{"Content-Type":"application/json"},body:JSON.stringify({images:images,unit:unit})})).json():{count:0,errors:[]};` +
+    // One request per file: the server reads at most one photo's worth of body.
+    `try{var res={count:0,becameCover:false,errors:[]};for(var j=0;j<good.length;j++){` +
+    `var r1=await (await fetch("/admin/photos",{method:"POST",headers:{"Content-Type":"application/json"},` +
+    `body:JSON.stringify({images:[{dataUrl:await read(good[j]),name:good[j].name,alt:""}],unit:unit})})).json();` +
+    `if(!r1||r1.ok===false)r1={count:0,errors:[{file:good[j].name,reason:${j(T(lang, "a feltöltés nem sikerült"))}}]};` +
+    `res.count+=r1.count||0;res.becameCover=res.becameCover||!!r1.becameCover;res.errors=res.errors.concat(r1.errors||[])}` +
     `(res.errors||[]).forEach(function(er){bad.push((er.file?"<b>"+esc(er.file)+"</b> ":"")+esc(er.reason))});` +
     `var parts=[];` +
     `if(res.count)parts.push(${j(T(lang, "{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez az egységhez."))}.replace("{n}",res.count));` +

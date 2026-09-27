@@ -280,19 +280,29 @@ function send(res: http.ServerResponse, code: number, body: string | Buffer, typ
   res.end(out);
 }
 
-async function readRawBody(req: http.IncomingMessage): Promise<string> {
+async function readRawBody(req: http.IncomingMessage, limit = 64_000): Promise<string> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const c of req) {
     size += (c as Buffer).length;
-    if (size > 64_000) throw new Error("body too large");
-    chunks.push(c as Buffer);
+    // Over the limit: keep DRAINING, stop keeping. Throwing inside the loop destroyed
+    // the request mid-upload, so the refusal never reached the browser and its XHR
+    // hung at 100% — holding up every file queued behind it.
+    if (size <= limit) chunks.push(c as Buffer);
   }
+  if (size > limit) throw new Error("body too large");
   return Buffer.concat(chunks).toString("utf8");
 }
 
-async function readJsonBody(req: http.IncomingMessage): Promise<Record<string, unknown>> {
-  const raw = await readRawBody(req);
+/**
+ * One photo per request (the Fotók tab and the room editor both send them one by
+ * one): 6 MB of image is ~8 MB as base64, plus the JSON around it. The global 64 KB
+ * cap refused every real photo.
+ */
+const PHOTO_BODY_LIMIT = 8_500_000;
+
+async function readJsonBody(req: http.IncomingMessage, limit?: number): Promise<Record<string, unknown>> {
+  const raw = await readRawBody(req, limit);
   if (!raw) return {};
   return JSON.parse(raw) as Record<string, unknown>;
 }
@@ -3213,7 +3223,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return send(res, 401, JSON.stringify({ ok: false }), MIME[".json"]);
     try {
-      const body = await readJsonBody(req);
+      const body = await readJsonBody(req, PHOTO_BODY_LIMIT);
       const all = Array.isArray(body.images) ? body.images : [];
       const images = all.slice(0, 12);
       // ⛔ ADR-0198: a refused file used to be a silent `continue` — the owner got

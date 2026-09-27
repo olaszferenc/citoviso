@@ -639,6 +639,8 @@ const PHOTO_SCRIPT = (lang = "hu"): string =>
   `function send(f,row){return read(f).then(function(d){return new Promise(function(res){var x=new XMLHttpRequest();x.open('POST','/admin/photos');x.setRequestHeader('Content-Type','application/json');` +
   `x.upload.onprogress=function(e){if(e.lengthComputable){var p=Math.round(e.loaded/e.total*100);$('i',row).style.width=p+'%';$('.st',row).textContent=p+'%'}};` +
   `x.onload=function(){var j=null;try{j=JSON.parse(x.responseText)}catch(e){}var err=j&&j.errors&&j.errors.length?j.errors[0].reason:(!j||!j.ok?L.upFail:'');res(err)};x.onerror=function(){res(L.upFail)};` +
+  // a stalled request must not hold up the files queued behind it
+  `x.timeout=120000;x.ontimeout=function(){res(L.upFail)};` +
   `x.send(JSON.stringify({images:[{dataUrl:d,alt:'',name:f.name}]}))})})}` +
   `var busy=false;function ingest(files){files=[].slice.call(files||[]);if(!files.length||busy)return;busy=true;var prog=$('#adm-prog');prog.innerHTML='';var errors=[];` +
   `if(files.length>BATCH){errors.push(fmt(L.batch,{n:files.length-BATCH}));files=files.slice(0,BATCH)}var room=own?Math.max(0,LIB-P.length):LIB;var rows=[];` +
