@@ -103,6 +103,39 @@ export async function createDomainUpgradeOrder(
     .executeTakeFirst();
   if (!prospect) return null;
 
+  // ⛔ BILLING IDENTITY, inherited (the moduleUpsell / multilang lesson): without
+  // buyer fields the order fails the 0029 invoice gate AND the ADR-0111 market gate
+  // — no buyer_country → requestPayment refuses the pay-link ("ismeretlen piac"),
+  // measured on this very path 2026-09-27. The buyer is the SAME legal person who
+  // declared themselves at checkout. FAIL CLOSED: no declared buyer ⇒ no order.
+  const buyer = await db
+    .selectFrom("order_intent")
+    .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+    .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+    .select([
+      "order_intent.buyer_type as buyerType",
+      "order_intent.buyer_name as buyerName",
+      "order_intent.buyer_tax_number as taxNumber",
+      "order_intent.buyer_eu_vat_number as euVat",
+      "order_intent.buyer_country as country",
+      "order_intent.buyer_zip as zip",
+      "order_intent.buyer_city as city",
+      "order_intent.buyer_address as address",
+      "order_intent.buyer_email as email",
+      "order_intent.vat_treatment as vatTreatment",
+      "order_intent.buyer_vies_status as viesStatus",
+      "order_intent.buyer_vies_name as viesName",
+      "order_intent.billing_emails as billingEmails",
+    ])
+    .where("tenant.id", "=", tenantId)
+    .where("order_intent.buyer_name", "is not", null)
+    .orderBy("order_intent.submitted_at", "desc")
+    .executeTakeFirst();
+  if (!buyer?.buyerName) {
+    console.warn(`[domain] ${tenantId}: nincs deklarált vevő korábbi rendelésen — domain-rendelés nem indul`);
+    return null;
+  }
+
   const row = await db
     .insertInto("order_intent")
     .values({
@@ -121,6 +154,19 @@ export async function createDomainUpgradeOrder(
       billing_period: "monthly",
       status: "submitted",
       submitted_at: new Date(),
+      buyer_type: buyer.buyerType,
+      buyer_name: buyer.buyerName,
+      buyer_tax_number: buyer.taxNumber,
+      buyer_eu_vat_number: buyer.euVat,
+      buyer_country: buyer.country,
+      buyer_zip: buyer.zip,
+      buyer_city: buyer.city,
+      buyer_address: buyer.address,
+      buyer_email: buyer.email,
+      vat_treatment: buyer.vatTreatment,
+      buyer_vies_status: buyer.viesStatus,
+      buyer_vies_name: buyer.viesName,
+      billing_emails: buyer.billingEmails,
     } as never)
     .returning("id")
     .executeTakeFirstOrThrow();

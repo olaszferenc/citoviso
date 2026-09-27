@@ -167,8 +167,31 @@ const { startDomainProvisioning, runDomainProvisioning, resumePendingDomainProvi
 const { createDomainUpgradeOrder, quoteDomainUpgrade } = await import("../src/domains/domainUpgrade.js");
 const { provisionOrderDomain } = await import("../src/domains/provisionDomain.js");
 
+// 0029 + ADR-0111: a real converted customer declared a buyer at checkout, and the
+// domain order INHERITS it (fail closed without one). The fixture used to skip this,
+// so the gate never saw that the order carried no buyer_country — and on dev every
+// domain order died at the market gate ("ismeretlen piac", 2026-09-27).
+async function declareBuyer(tenantId: string): Promise<void> {
+  const p = await db.selectFrom("prospect")
+    .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+    .select("prospect.id as id").where("tenant.id", "=", tenantId).executeTakeFirstOrThrow();
+  await db.insertInto("order_intent")
+    .values({
+      prospect_id: p.id, kind: "initial", modules: JSON.stringify([]), price: 4390,
+      billing_period: "annual", status: "submitted", submitted_at: new Date(),
+      buyer_type: "individual", buyer_name: "Teszt Vevő", buyer_country: "HU",
+      buyer_zip: "8600", buyer_city: "Siófok", buyer_address: "Fő u. 1.",
+      buyer_email: "teszt@pelda.hu",
+    } as never)
+    .execute();
+}
+
 let tok = 0;
-async function makeSite(name: string, preview: string): Promise<{ tenantId: string; siteId: string }> {
+async function makeSite(
+  name: string,
+  preview: string,
+  opts: { buyer?: boolean } = {},
+): Promise<{ tenantId: string; siteId: string }> {
   const def = await db.insertInto("scraper_definition")
     .values({ label: "g", country: "HU", region: "g", industry: "sz" } as never)
     .returning("id").executeTakeFirstOrThrow();
@@ -184,6 +207,7 @@ async function makeSite(name: string, preview: string): Promise<{ tenantId: stri
   const site = await db.insertInto("site")
     .values({ tenant_id: tenant.id, preview_token: preview, status: "live" } as never)
     .returning("id").executeTakeFirstOrThrow();
+  if (opts.buyer !== false) await declareBuyer(tenant.id);
   return { tenantId: tenant.id, siteId: site.id };
 }
 
@@ -268,6 +292,23 @@ async function siteRow(siteId: string) {
     }
   }
 
+  // Without a declared buyer the order is REFUSED (fail closed — no invoice, no money).
+  {
+    const bare = await makeSite("NoBuyer", "domTokNoBuy01", { buyer: false });
+    const { MODULE_CATALOG } = await import("../src/modules.js");
+    for (const m of MODULE_CATALOG) {
+      if (m.spine || m.billing === "once") continue;
+      await db.insertInto("module_entitlement")
+        .values({ tenant_id: bare.tenantId, module: m.id, active: true } as never)
+        .execute();
+    }
+    ok(
+      (await quoteDomainUpgrade(bare.tenantId, "vevonelkul.hu")) !== null &&
+        (await createDomainUpgradeOrder(bare.tenantId, "vevonelkul.hu")) === null,
+      "⭐ deklarált vevő nélkül (jogosult csomaggal is) nincs domain-rendelés (0029 fail-closed)",
+    );
+  }
+
   const quote = await quoteDomainUpgrade(tenantId, "uj-domain.hu");
   ok(quote?.domain === "uj-domain.hu", "a quote normalizálja a domaint");
   ok((quote?.price ?? 0) > 0, "a jogosult csomagnál a quote havi árat ad", `ár=${quote?.price}`);
@@ -292,6 +333,11 @@ async function siteRow(siteId: string) {
     ok(oi.domain_type === "citoviso_registered", "domain_type = citoviso_registered");
     ok(oi.domain_name === "uj-domain.hu", "a rendelés a választott domaint hordozza");
     ok(Number(oi.commitment_months) === 12, "⭐ 12 hó elköteleződés a rendelésen (ADR-0093)", `hó=${oi.commitment_months}`);
+    ok(oi.buyer_name === "Teszt Vevő" && oi.buyer_country === "HU",
+      "⭐ a rendelés ÖRÖKLI a deklarált vevőt (név + ország)", `név=${oi.buyer_name} ország=${oi.buyer_country}`);
+    const { isMarketApproved } = await import("../src/markets.js");
+    ok(await isMarketApproved(oi.buyer_country),
+      "⭐ a rendelés átmegy az ADR-0111 piac-kapun (különben nincs fizetési link)", `ország=${oi.buyer_country}`);
 
     // The webhook path: on 'paid', provisionOrderDomain runs the whole beszerzés.
     const status = await provisionOrderDomain(orderId);
@@ -429,6 +475,13 @@ async function siteRow(siteId: string) {
     ok(q?.domainName === "elszamolo.hu", "a quote a hűséggel érintett domaint nevezi meg", `domain=${q?.domainName}`);
 
     // 0029 fail-closed: no declared buyer anywhere in the chain → no order, no pay-link.
+    // The domain order now inherits the buyer, so the empty chain is made explicitly.
+    await db.updateTable("order_intent")
+      .set({ buyer_name: null } as never)
+      .where("prospect_id", "in", db.selectFrom("prospect")
+        .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+        .select("prospect.id").where("tenant.id", "=", tenantId))
+      .execute();
     const noBuyer = await createSettlementOrder(tenantId, false);
     ok(!noBuyer.ok && /számláz/.test(noBuyer.error ?? ""), "⭐ vevő-azonosság nélkül NINCS elszámolás-order (0029 fail-closed)", JSON.stringify(noBuyer));
 
