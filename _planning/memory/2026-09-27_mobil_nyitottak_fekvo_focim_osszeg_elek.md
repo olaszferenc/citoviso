@@ -1,7 +1,7 @@
 # 2026-09-27 — A mobil-kör három nyitott tétele: fekvő főcím a 19 sablonon · nem törő összeg · az Elek-park lánca
 
 **Brief:** `~/rc-briefs/mobil-nyitottak-brief.md` (szülő: `cite8fb512d`). Tulaj szó szerint: „a nyitottakat még javítsd" —
-a 2026-09-26-i mandátum áll (saját ergonómiai belátás, utólagos ítélet). **ADR-XXXX** (fekvő főcím). Nem élesítve
+a 2026-09-26-i mandátum áll (saját ergonómiai belátás, utólagos ítélet). **ADR-0246** (fekvő főcím). Nem élesítve
 (a nagy deployjal megy).
 
 ## ① Fekvő telefon (844×390): a főcím egésze az első képernyőn — MIND a 19 sablonon mérve

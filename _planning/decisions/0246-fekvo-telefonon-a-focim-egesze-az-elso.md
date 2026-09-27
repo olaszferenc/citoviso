@@ -1,4 +1,4 @@
-## ADR-XXXX — Fekvő telefonon a főcím EGÉSZE az első képernyőn: magassághoz kötött főcím-méret a motorban, „②főcím-hajtás” őr
+## ADR-0246 — Fekvő telefonon a főcím EGÉSZE az első képernyőn: magassághoz kötött főcím-méret a motorban, „②főcím-hajtás” őr
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (tulajdonosi mandátum: „a nyitottakat még javítsd" — a saját
 ergonómiai belátás szerint, utólagos ítélettel) · **Kiegészíti:** ADR-0239 ② (a főcím fekvőn nem ül rögzített

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-fekvo-telefonon-a-focim-egesze-az-elso-kepernyon.md) — Fekvő telefonon a főcím EGÉSZE az első képernyőn: magassághoz kötött főcím-méret a motorban, „②főcím-hajtás” őr
+- [ADR-0246](decisions/0246-fekvo-telefonon-a-focim-egesze-az-elso.md) — Fekvő telefonon a főcím EGÉSZE az első képernyőn: magassághoz kötött főcím-méret a motorban, „②főcím-hajtás” őr
 - [ADR-0245](decisions/0245-idoszaki-arak-datumvalaszto-nevlista-ev-naptar.md) — Időszaki árak: dátumválasztó, névlista, év-naptár (2026-09-27)
 - [ADR-0244](decisions/0244-foglalasi-levelek-a-vendege-a-szallas-neveben.md) — Foglalási levelek: a vendégé a szállás nevében, elérhetőséggel; a tulajé az admin Foglalások felé vezet
 - [ADR-0243](decisions/0243-fekvo-telefonon-a-fizetes-lap-egy-oszlopban.md) — Fekvő telefonon a fizetés-lap egy oszlopban görög (a checkout-fullscreen ② kivétele)
