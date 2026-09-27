@@ -3363,7 +3363,7 @@ async function handle(
     // A lap megmondja, MI TÖRTÉNT (nem találjuk ezt a fizetést), és HOVA MEHET
     // tovább — de NEM állít semmit a fizetésről, mert nem tudunk róla semmit (§B.17).
     if (!p) return send(res, 404, payUnknownRefPage(ref, config.supportEmail || null));
-    // ADR-XXXX: a custom-domain order ends on the Webcím tab whatever happened — a
+    // ADR-0251: a custom-domain order ends on the Webcím tab whatever happened — a
     // HOLD is not a purchase, so neither the welcome page nor a receipt applies; the
     // tab shows where the registration is and what happened to the money.
     {

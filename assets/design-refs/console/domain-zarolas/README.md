@@ -1,4 +1,4 @@
-# Webcím — hiteles elérhetőség + zárolásos fizetés — JÓVÁHAGYOTT TERV (ADR-XXXX)
+# Webcím — hiteles elérhetőség + zárolásos fizetés — JÓVÁHAGYOTT TERV (ADR-0251)
 
 **Tulajdonosi döntés, 2026-09-27: „A” mechanizmus (zárolás) + „A1” megjelenés (idővonal).**
 Ez a mappa a megvalósítás **KONTRAKTUSA** (§2b 5.). A korábbi `console/domain/` terv

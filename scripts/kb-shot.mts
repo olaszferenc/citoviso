@@ -1041,7 +1041,7 @@ async function shoot(
    *  calendar), and shoot only if `mustShow` then really is visible — a picker that
    *  does not open fails loudly instead of giving a picture of a closed form. */
   clickFirst?: { click: string; mustShow: string },
-  /** ADR-XXXX: the Webcím tab's view state (the review step is shot from this). */
+  /** ADR-0251: the Webcím tab's view state (the review step is shot from this). */
   domainView?: import("../src/server/adminViews.js").DomainViewState,
 ): Promise<void> {
   const html = adminDashboard(session, content, {
@@ -1245,7 +1245,7 @@ await shoot(
 // flow the tenant has (real money) and had NO image at all. The suggestion list is
 // the step the entry opens with, so that is what the guide shows — rendered from the
 // real view via adminDashboard's own domain opts, no view change needed.
-// ADR-XXXX: the FULL current shape (scripts/ is not type-checked — the old fixture
+// ADR-0251: the FULL current shape (scripts/ is not type-checked — the old fixture
 // still carried priceYearly and no `eligible`, so the tab silently rendered its
 // "not eligible" branch). All four availability states on one image.
 const domainFixture: DomainAdminData = {
@@ -1280,7 +1280,7 @@ await shoot(
   ".adm-card",
   domainFixture,
 );
-// ADR-XXXX: the review step — the entry's promise ("only charged once the name is
+// ADR-0251: the review step — the entry's promise ("only charged once the name is
 // yours") lives on THIS screen, so the entry shows it, not only step 1.
 await shoot(
   "webcim",

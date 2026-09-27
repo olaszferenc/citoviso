@@ -1,4 +1,4 @@
--- ADR-XXXX: a custom-domain order is paid by a CARD HOLD (Barion PaymentType=DelayedCapture).
+-- ADR-0251: a custom-domain order is paid by a CARD HOLD (Barion PaymentType=DelayedCapture).
 -- The amount is only BLOCKED on the buyer's card while we register the name; it is
 -- captured (Payment/Capture) once the registrar confirmed the purchase, and the block is
 -- lifted (Payment/CancelAuthorization) when the registration fails — a failed name costs

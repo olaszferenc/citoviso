@@ -21,7 +21,7 @@ if (results.length === 0) {
   }
 }
 
-// ADR-XXXX: the custom-domain HOLDS. A capture the webhook-time run missed (gateway
+// ADR-0251: the custom-domain HOLDS. A capture the webhook-time run missed (gateway
 // hiccup) or a release after a failure is settled here: bought ⇒ take the money,
 // failed before buying ⇒ give the hold back. Own try/catch — a gateway outage must
 // not stop the registry watcher below.

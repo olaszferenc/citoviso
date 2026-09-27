@@ -73,7 +73,7 @@ async function notifyTenant(
   siteId: string,
   outcome: "live" | "failed",
   domain: string,
-  /** ADR-XXXX: the failed purchase's hold was released — nothing was charged. */
+  /** ADR-0251: the failed purchase's hold was released — nothing was charged. */
   released = false,
 ): Promise<void> {
   try {
@@ -201,7 +201,7 @@ export async function provisionOrderDomain(
 
 /**
  * The SYNCHRONOUS half of provisionOrderDomain: create (or reuse) the beszerzés row
- * and mark the site `pending`, without running it. ADR-XXXX: the held-payment path
+ * and mark the site `pending`, without running it. ADR-0251: the held-payment path
  * awaits this before answering, so the buyer returning from the gateway lands on the
  * "zárolva → megvásároljuk" screen, not on step 1 of a registration that has not
  * been recorded yet. Returns null when the order carries no custom domain.
@@ -279,7 +279,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
   const years = Math.max(1, Math.ceil((p.commitmentMonths ?? 12) / 12));
 
   // Outside the try: the catch must know whether the name was already bought
-  // (ADR-XXXX — a failure BEFORE the purchase releases the buyer's hold).
+  // (ADR-0251 — a failure BEFORE the purchase releases the buyer's hold).
   let registrarRef = p.registrarRef;
   try {
     let status = p.status as DomainProvisioningStatus;
@@ -310,7 +310,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
         .execute();
       await setStatus(p.id, p.siteId, "registered", { registrarRef });
       status = "registered";
-      // ADR-XXXX: the name is ours → NOW the held amount is taken (never before).
+      // ADR-0251: the name is ours → NOW the held amount is taken (never before).
       // A capture that fails stays `reserved`; the resume timer retries it.
       if (p.orderIntentId) {
         const { captureDomainReservation } = await import("../payment/service.js");
@@ -357,7 +357,7 @@ export async function runDomainProvisioning(provisioningId: string): Promise<Dom
   } catch (err) {
     const msg = err instanceof DomainTakenError ? err.message : String((err as Error)?.message ?? err);
     await setStatus(p.id, p.siteId, "failed", { error: msg });
-    // ADR-XXXX: failed BEFORE the purchase → the hold goes back, nothing is charged.
+    // ADR-0251: failed BEFORE the purchase → the hold goes back, nothing is charged.
     // (After the purchase the name is the tenant's; a later DNS/TLS failure is ours
     // to fix, not a reason to refund a name we hold for them.)
     let released = false;

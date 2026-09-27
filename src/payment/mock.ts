@@ -57,7 +57,7 @@ export class MockGateway implements PaymentGateway {
     return true;
   }
 
-  /** ADR-XXXX: the mock blocks nothing, so capture and release always succeed. */
+  /** ADR-0251: the mock blocks nothing, so capture and release always succeed. */
   async captureHold(gatewayRef: string, total: number): Promise<boolean> {
     console.log(`[payment:mock] zárolás lehívva · ${gatewayRef} · ${total} HUF`);
     return true;

@@ -129,7 +129,7 @@ export class WebsupportRegistrar implements RegistrarAdapter {
   }
 
   /**
-   * ADR-XXXX: the AUTHORITATIVE answer the Webcím tab shows the buyer. Read-only
+   * ADR-0251: the AUTHORITATIVE answer the Webcím tab shows the buyer. Read-only
    * (validate creates no order). Three verdicts, kept apart on purpose: "taken"
    * is only what the registrar calls taken (ADR-0103: `errors.domain: ["Domain is
    * taken."]`); any other refusal (unsupported ending, reserved label…) is

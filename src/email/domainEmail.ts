@@ -61,13 +61,13 @@ export function buildDomainFailedEmail(input: {
   domain: string;
   /** A tenant-admin „Webcím" fülének teljes URL-je. */
   adminUrl: string;
-  /** ADR-XXXX: the order was paid by a HOLD, and the hold was released. */
+  /** ADR-0251: the order was paid by a HOLD, and the hold was released. */
   released?: boolean;
   lang?: string;
 }): EmailMessage {
   const { to, domain, adminUrl, released, lang } = input;
 
-  // ADR-XXXX: a held order that failed costs NOTHING — the hold is released, the
+  // ADR-0251: a held order that failed costs NOTHING — the hold is released, the
   // commitment never starts. The legacy text stays for an order that was charged
   // up front (before the reservation flow): that money goes to another name
   // (ADR-0078 ②), and promising a refund we do not run would be false (§B.17).

@@ -1,4 +1,4 @@
-## ADR-XXXX — Webcím: hiteles elérhetőség + kártyazárolásos fizetés („csak akkor fizet, ha a név már az Öné”)
+## ADR-0251 — Webcím: hiteles elérhetőség + kártyazárolásos fizetés („csak akkor fizet, ha a név már az Öné”)
 
 **Dátum:** 2026-09-27 · **Státusz:** ELFOGADVA (tulaj: „A)” mechanizmus + „A1” megjelenés) ·
 **Módosítja:** ADR-0078 ② (sikertelen beszerzés) · **Kontraktus:** `assets/design-refs/console/domain-zarolas/` ·

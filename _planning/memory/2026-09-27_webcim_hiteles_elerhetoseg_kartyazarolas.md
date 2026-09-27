@@ -1,4 +1,4 @@
-# 2026-09-27 — Webcím: a vásárlás hibája + hiteles elérhetőség + kártyazárolás (ADR-XXXX)
+# 2026-09-27 — Webcím: a vásárlás hibája + hiteles elérhetőség + kártyazárolás (ADR-0251)
 
 ## Bejelentés
 Tulaj, telefonon (dev :4800, Lidó): a saját webcím vásárlása „A fizetést nem sikerült elindítani”-val
@@ -36,7 +36,7 @@ src/domains/registrar/websupport.ts · src/payment/{service,barion,gateway,mock}
 src/server/{adminViews,public}.ts · src/console/server.ts · src/email/domainEmail.ts ·
 src/ui/icons.ts · src/db/schema.ts · migrations/0077_payment_domain_reservation.sql ·
 scripts/{domain-provision-check,kb-shot,resume-domains}.mts · kb/entries/admin-domain/ ·
-assets/design-refs/console/{domain,domain-zarolas}/ · ADR-0078 (módosítás-jel) · ADR-XXXX
+assets/design-refs/console/{domain,domain-zarolas}/ · ADR-0078 (módosítás-jel) · ADR-0251
 
 ## Nyitott
 - Élő végigpróba a dev-en a tulaj telefonján (sandbox-kártya: 4444 8888 8888 5559). A bukás-ág egy

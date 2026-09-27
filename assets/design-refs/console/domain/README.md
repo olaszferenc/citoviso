@@ -1,6 +1,6 @@
 # Egyedi-domain felület — JÓVÁHAGYOTT TERV (ADR-0071 B blokk)
 
-> ⚠️ **2026-09-27, ADR-XXXX:** az elérhetőség-jelölő (3. pont), az Áttekintés pénz-blokkja
+> ⚠️ **2026-09-27, ADR-0251:** az elérhetőség-jelölő (3. pont), az Áttekintés pénz-blokkja
 > (5. pont), a folyamat-képernyő és a „Sikertelen beszerzés” szakasz **felülírva** — a
 > hatályos terv: `../domain-zarolas/` (hiteles elérhetőség + zárolásos fizetés). A három
 > lépés és a jelenlegi-cím sáv változatlanul él.

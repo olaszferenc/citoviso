@@ -56,7 +56,7 @@ ok(
   "initial rendelésnél a beszerzés az élesítés UTÁN indul (regisztrált domain eset)",
 );
 
-// ── 1a. ADR-XXXX: a domain-zárolás KÁRTYÁN blokkol, nem terhel ─────────────────
+// ── 1a. ADR-0251: a domain-zárolás KÁRTYÁN blokkol, nem terhel ─────────────────
 // A Barion Reservation bankkártyánál VALÓDI terhelés (ADR-0228); a felület azt ígéri,
 // hogy „ez még nem terhelés”. Ez csak DelayedCapture-rel igaz — ha a típus visszacsúszna,
 // minden ígéret hamissá válna, miközben a mock-út zöld maradna. Sandboxban mérve
@@ -175,7 +175,7 @@ process.env.PGDATABASE = SCRATCH;
 process.env.DATABASE_URL = "";
 process.env.REGISTRAR_PROVIDER = "mock";
 process.env.DNS_PROVIDER = "mock";
-// ADR-XXXX: the reservation block below drives requestPayment + the webhook. Before
+// ADR-0251: the reservation block below drives requestPayment + the webhook. Before
 // the dynamic imports (ESM runs static imports first): no real Barion hold, no real
 // invoice, no real letter, no registrar call from a gate.
 process.env.PAYMENT_GATEWAY = "mock";
@@ -611,7 +611,7 @@ async function siteRow(siteId: string) {
     "a mock dnsfail a pollerrel is dns_pending marad (nem hazudik live-ot)");
 }
 
-// ── ADR-XXXX: A DOMAIN-RENDELÉS ZÁROLÁS — csak sikeres regisztráció után terhelünk ──
+// ── ADR-0251: A DOMAIN-RENDELÉS ZÁROLÁS — csak sikeres regisztráció után terhelünk ──
 {
   const { requestPayment, applyWebhookResult, settleDomainReservations } = await import("../src/payment/service.js");
   const { MODULE_CATALOG } = await import("../src/modules.js");

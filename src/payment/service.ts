@@ -181,7 +181,7 @@ export async function requestPayment(
     return null;
   }
 
-  // ADR-XXXX: a custom-domain order is a HOLD, captured only once the name is ours.
+  // ADR-0251: a custom-domain order is a HOLD, captured only once the name is ours.
   // The review screen promises "a name we could not register costs nothing" — on a
   // gateway that cannot release a hold that promise would be false, so refuse.
   const reserve = oi.kind === "domain_upgrade";
@@ -308,7 +308,7 @@ export async function handleWebhook(
       const again = await gw.parseWebhook(params, headers);
       if (again && again !== "pending") return applyWebhookResult(again);
     }
-    // ADR-XXXX: a domain order's hold now stands — the card authenticated, the
+    // ADR-0251: a domain order's hold now stands — the card authenticated, the
     // amount is reserved. THIS is the trigger of the registration (not a charge):
     // the capture follows only when the registrar confirmed the name.
     if (known.reservation && known.kind === "domain_upgrade" && known.status === "pending") {
@@ -357,7 +357,7 @@ export async function applyWebhookResult(
     .where("gateway_ref", "=", res.gatewayRef)
     .executeTakeFirst();
   if (!payment) return { ok: false };
-  // ADR-XXXX: a hold we gave back stays given back. Barion reports a zero-finished
+  // ADR-0251: a hold we gave back stays given back. Barion reports a zero-finished
   // reservation as Succeeded — that must never flip into "paid" and an invoice.
   if (payment.status === "released") return { ok: true, activated: false, alreadySettled: true };
   if (payment.reservation) return applyDomainReservationResult(payment, res);
@@ -913,7 +913,7 @@ export async function chargeUpsellWithToken(
 }
 
 /** Fire the automated domain beszerzés detached, with logging (ADR-0071). */
-// ── ADR-XXXX: the custom-domain HOLD (Barion DelayedCapture) ───────────────────
+// ── ADR-0251: the custom-domain HOLD (Barion DelayedCapture) ───────────────────
 // The promise on the review screen: "we only charge once the name is yours; if the
 // registration fails, the hold is released and you pay nothing". The lifecycle:
 //
@@ -1076,7 +1076,7 @@ export async function settleDomainReservations(): Promise<{ captured: number; re
 }
 
 /**
- * ADR-XXXX: the held-payment variant — the beszerzés row (and the site's `pending`
+ * ADR-0251: the held-payment variant — the beszerzés row (and the site's `pending`
  * state) is written BEFORE returning, only the run is detached. The /pay/done redirect
  * then always finds a registration in flight.
  */

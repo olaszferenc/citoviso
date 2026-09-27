@@ -1502,7 +1502,7 @@ async function serveAdmin(
     domain = await loadDomainAdmin(session.tenantId, session.displayName);
     const typed = q.get("check");
     const picked = q.get("d");
-    // ADR-XXXX: the review step shows a FRESH registrar verdict ("Szabad — most
+    // ADR-0251: the review step shows a FRESH registrar verdict ("Szabad — most
     // ellenőrizve") — a name picked minutes ago may be gone, and a stale "free"
     // would be the one promise the pay button rests on.
     const pickedNorm = picked ? normalizeCustomDomain(picked) : null;
@@ -2429,7 +2429,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const form = await readFormBody(req);
     const wanted = String(form.get("domain") ?? "");
     await loadPricing();
-    // ADR-XXXX: once more at the registrar, right before the pay-link. Anything but
+    // ADR-0251: once more at the registrar, right before the pay-link. Anything but
     // "free" goes back to the review step, which re-checks and says why — we never
     // open a payment for a name we do not know to be buyable this minute.
     const wantedNorm = normalizeCustomDomain(wanted);

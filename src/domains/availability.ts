@@ -1,4 +1,4 @@
-// ADR-XXXX — the AUTHORITATIVE availability answer of the tenant-admin „Webcím" tab.
+// ADR-0251 — the AUTHORITATIVE availability answer of the tenant-admin „Webcím" tab.
 //
 // The old answer (domains.ts::checkAvailability, DNS + RDAP) could never say "free":
 // rdap.org does not serve `.hu`, so every free Hungarian name read "nem tudjuk előre"

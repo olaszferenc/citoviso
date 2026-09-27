@@ -54,7 +54,7 @@ export interface DomainSuggestionView {
 }
 
 /**
- * ADR-XXXX: what happened to the MONEY of the newest domain order — the status
+ * ADR-0251: what happened to the MONEY of the newest domain order — the status
  * screens say it out loud ("zárolva", "terheltük", "nem terheltünk semmit").
  *   reserved — held, registration running · paid — captured after the purchase
  *   released — the purchase failed, the hold was given back (nothing charged)
@@ -73,9 +73,9 @@ export interface DomainAdminData {
   readonly error: string | null;
   /** Az a domain, amit a sikertelen beszerzés meg akart venni (hogy meg tudjuk nevezni). */
   readonly failedDomain: string | null;
-  /** ADR-XXXX: the newest domain order's money state (see DomainMoneyState). */
+  /** ADR-0251: the newest domain order's money state (see DomainMoneyState). */
   readonly money: DomainMoneyState;
-  /** ADR-XXXX: that order's amount (held / charged), for the status rows. */
+  /** ADR-0251: that order's amount (held / charged), for the status rows. */
   readonly moneyAmount: number | null;
   /** The domain the newest beszerzés is about (in flight or failed). */
   readonly activeDomain: string | null;
@@ -161,7 +161,7 @@ export async function loadDomainAdmin(
     failedDomain = row?.domain ?? null;
   }
 
-  // ADR-XXXX: the money state of the newest domain order (the one the status
+  // ADR-0251: the money state of the newest domain order (the one the status
   // screen talks about). A hold row says `reservation`; a legacy paid row does not.
   let money: DomainMoneyState = null;
   let moneyAmount: number | null = null;

@@ -3168,7 +3168,7 @@ function money(n: number, currency: string): string {
   return formatMoney(n, currency);
 }
 
-/** Elérhetőség-jelölő (ADR-XXXX, jóváhagyott A1 terv). A négy állapot a regisztrátor
+/** Elérhetőség-jelölő (ADR-0251, jóváhagyott A1 terv). A négy állapot a regisztrátor
  *  HITELES válaszát tükrözi (domains/availability.ts): „Szabad" csak az lehet, amit a
  *  regisztrátor megvehetőnek mond; ami nem ellenőrizhető, az nem kérhető (§B.17). */
 function availChip(a: WebcimAvailability, lang: string, fresh = false): string {
@@ -3307,9 +3307,9 @@ export interface DomainViewState {
   readonly check?: DomainCheckResult | null;
   /** Fizetési hiba a visszatéréskor. */
   readonly payError?: boolean;
-  /** ADR-XXXX: the registrar's FRESH verdict on `picked` (the review step re-checks). */
+  /** ADR-0251: the registrar's FRESH verdict on `picked` (the review step re-checks). */
   readonly pickedAvailability?: WebcimAvailability;
-  /** ADR-XXXX: „Másik név választása" after a released failure → back to step 1. */
+  /** ADR-0251: „Másik név választása" after a released failure → back to step 1. */
   readonly restart?: boolean;
 }
 
@@ -3341,7 +3341,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
     );
   }
 
-  // ADR-XXXX: a HELD order — the status list says where the money is at every
+  // ADR-0251: a HELD order — the status list says where the money is at every
   // step (approved A1 contract): held → bought → charged → address + certificate.
   if (d.status !== "none" && d.status !== "failed" && (d.money === "reserved" || d.money === "paid")) {
     const bought = progressDone(d.status) >= 1;
@@ -3401,7 +3401,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   // "Fizetés és megrendelés" button for an order the server refuses. The gate
   // therefore stands ABOVE the review step — but BELOW the status branches, so a
   // tenant who already HAS a domain keeps seeing its state if the package drops.
-  // ADR-XXXX: a HELD order whose registration failed — its own screen (approved A1
+  // ADR-0251: a HELD order whose registration failed — its own screen (approved A1
   // contract, the failure state): what happened, and that NOTHING was charged.
   if (d.status === "failed" && d.money === "released" && !st.restart) {
     const dom = d.failedDomain ?? d.activeDomain ?? "";
@@ -3454,7 +3454,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       `<a class="citui-btn citui-btn--ghost" href="/admin?tab=webcim" style="width:100%;margin-top:9px;display:flex;justify-content:center">` +
       `${T(lang, "Vissza")}</a>`;
     const verdict = st.pickedAvailability ?? "unknown";
-    // ADR-XXXX: the pay button exists ONLY for a name the registrar just called
+    // ADR-0251: the pay button exists ONLY for a name the registrar just called
     // free. Anything else says why — and never offers a payment it cannot back.
     if (verdict !== "free") {
       const why =
@@ -3492,7 +3492,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
       // ADR-0109 ①: the fee is MONTHLY and flat.
       `<dt>${T(lang, "A cím díja")}</dt><dd>${amt} ${T(lang, "/ hó")}</dd>` +
       `<dt>${T(lang, "Előfizetés vállalása")}</dt><dd>${T(lang, "{n} hónap", { n: d.commitmentMonths })}</dd>` +
-      // ADR-XXXX: nothing is charged here — the amount is HELD (Barion Reservation).
+      // ADR-0251: nothing is charged here — the amount is HELD (Barion Reservation).
       `<dt class="adm-dtotal"><strong>${T(lang, "Most zárolunk")}</strong>` +
       `<small>${T(lang, "csak sikeres regisztráció után terheljük")}</small></dt>` +
       `<dd class="adm-dtotal">${amt}</dd></dl></div>` +
@@ -3523,7 +3523,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   }
 
   // ── LÉPÉS 1 — NÉV VÁLASZTÁSA ──
-  // A released hold has its own failure screen above (ADR-XXXX); after „Másik név
+  // A released hold has its own failure screen above (ADR-0251); after „Másik név
   // választása" step 1 is clean — the legacy text below belongs to an order that was
   // charged up front, where the money really does go to another name (ADR-0078 ②).
   const failedBox =
@@ -3547,7 +3547,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
   // A JÓVÁHAGYOTT B terv szerint: rádiógombos lista + EGY „Tovább" gomb — nem soronkénti
   // gomb. (Az első megvalósításom soronkénti gombot adott; a kontraktus-kép a mérce, §2b 5.)
   // A foglalt nevek kikapcsolva jelennek meg — látszik, hogy léteznek, de nem kérhetők.
-  // ADR-XXXX: only a name the registrar called FREE is selectable — "could not
+  // ADR-0251: only a name the registrar called FREE is selectable — "could not
   // check" and "not available here" are shown, but cannot be ordered.
   const firstFree = d.suggestions.findIndex((s) => s.availability === "free");
   const anyFree = firstFree >= 0;
@@ -3588,7 +3588,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
           : st.check.availability === "unavailable"
           ? `<p class="adm-dmsg adm-dmsg--bad">${T(lang, "{Art} {domain} nálunk nem igényelhető — válasszon másikat.", { Art: huArticle(st.check.domain), domain: `<b>${esc(st.check.domain)}</b>` })}</p>`
           : st.check.availability !== "free"
-          ? // ADR-XXXX: no verdict → no order. A retry asks the registrar again.
+          ? // ADR-0251: no verdict → no order. A retry asks the registrar again.
             `<div class="adm-dopt" style="margin-top:10px">` +
             `<span class="adm-dopt__name">${esc(st.check.domain)}</span>` +
             `<span class="adm-dopt__meta">${availChip("unknown", lang)}</span>` +
@@ -3722,7 +3722,7 @@ const DOMAIN_STYLE =
   // A jelölő SAJÁT szélességét tartja; a full-width csak a burkolóra vonatkozik, különben
   // a chip háttere végignyúlna a soron (390px-en mérve).
   `.adm-dopt__meta{flex:none;display:flex}` +
-  // ADR-XXXX (approved A1): taken reads as neutral, not as an error; the source line,
+  // ADR-0251 (approved A1): taken reads as neutral, not as an error; the source line,
   // the review's two columns, the guarantee timeline and the result boxes.
   `.adm-dchip--taken{background:var(--citui-surface-2);color:var(--citui-muted)}` +
   `.adm-dchip--unknown{color:var(--citui-ink)}` +

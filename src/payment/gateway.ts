@@ -32,7 +32,7 @@ export interface PaymentRequest {
    */
   readonly verification?: boolean;
   /**
-   * ADR-XXXX: a custom-domain order only BLOCKS the amount on the payer's card
+   * ADR-0251: a custom-domain order only BLOCKS the amount on the payer's card
    * (Barion PaymentType=DelayedCapture — NOT Reservation: a Reservation charges the
    * card at once and parks the money in OUR wallet, ADR-0228). The caller captures
    * it with captureHold() once the registrar confirmed the purchase, and lifts the
@@ -127,10 +127,10 @@ export interface PaymentGateway {
    */
   finishReservation?(gatewayRef: string, total: number): Promise<boolean>;
   /**
-   * ADR-XXXX: capture an authorized (DelayedCapture) payment for `total` — the
+   * ADR-0251: capture an authorized (DelayedCapture) payment for `total` — the
    * moment the buyer is actually charged. Never throws: false = not captured.
    */
   captureHold?(gatewayRef: string, total: number): Promise<boolean>;
-  /** ADR-XXXX: cancel the authorization — the block on the card is lifted, 0 charged. */
+  /** ADR-0251: cancel the authorization — the block on the card is lifted, 0 charged. */
   releaseHold?(gatewayRef: string): Promise<boolean>;
 }

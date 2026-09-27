@@ -93,7 +93,7 @@ export class BarionGateway implements PaymentGateway {
       // whole amount goes back to the card. ⚠️ Token storage on a Reservation
       // initiator is not spelled out by the docs (nothing forbids it either) —
       // the sandbox pass is the proof before this ships to production.
-      // ADR-XXXX: a custom-domain order is a DelayedCapture — the amount is only
+      // ADR-0251: a custom-domain order is a DelayedCapture — the amount is only
       // BLOCKED on the payer's card until we capture it (docs: "the payer is only
       // charged upon the capture request"). NOT Reservation: that charges at once
       // (ADR-0228). Seven days (Hungarian shops may go to 21): registration is
@@ -106,7 +106,7 @@ export class BarionGateway implements PaymentGateway {
           ? { ReservationPeriod: "0.01:00:00" }
           : {}),
       PaymentRequestId: req.paymentId,
-      // ADR-XXXX: a delayed capture exists only for bank cards (Barion balance and
+      // ADR-0251: a delayed capture exists only for bank cards (Barion balance and
       // bank transfer are not supported) — offer only what can actually be blocked.
       FundingSources: req.reserve ? ["BankCard"] : ["All"],
       GuestCheckOut: true,
@@ -322,7 +322,7 @@ export class BarionGateway implements PaymentGateway {
   }
 
   /**
-   * ADR-XXXX: capture an Authorized DelayedCapture payment for `total` — ALL its
+   * ADR-0251: capture an Authorized DelayedCapture payment for `total` — ALL its
    * transactions in one call (docs). Never throws; false = not captured (the
    * caller keeps the row `reserved` and the resume timer retries).
    */
@@ -371,7 +371,7 @@ export class BarionGateway implements PaymentGateway {
     }
   }
 
-  /** ADR-XXXX: cancel an Authorized DelayedCapture payment — the card block is lifted. */
+  /** ADR-0251: cancel an Authorized DelayedCapture payment — the card block is lifted. */
   async releaseHold(gatewayRef: string): Promise<boolean> {
     try {
       const resp = await fetch(`${API}/v2/Payment/CancelAuthorization`, {
