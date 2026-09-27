@@ -11,6 +11,12 @@ Utolsó frissítés: 2026-09-26 (➕ **Meg nem vett modulok az admin oldalsávba
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-27 — cfg-mobile koordinátor: A/B/C lezárva)
+A tulaj telefonos panaszát (rendelés-panel) három szálra bontottam, mind landolt: A két lépés (ADR-0240) + 360-as
+javítás, B görgetés + fekvő fizetés (ADR-0243), C „Itt rendelheti meg” (ADR-0242). Nincs élesítve. Nyitott: élő telefonos
+végignézés. ⛔ Koordinátorként 5 SZÜRKE prompt-javaslatot küldtem be tulaj-üzenetként — `capture-pane -e`, `ESC[2m` = ne.
+Jegyzet: `_planning/memory/2026-09-27_cfg_mobile_koordinacio.md`.
+
 ## Párhuzamos szál (2026-09-26 — telefonon a rendelés-panel görget, nem a lap · cfg-mobile B)
 A tulaj: „nem a vásárlási szekció gördül, hanem a honlap maga”. Mérve (nyers érintés-események): a panel
 fején/láblécén húzva a lap ~320 px-t ment, a lista végén átláncolt. Javítás: `touchmove`-őr a panelen + 

@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-09-27_cfg_mobile_koordinacio.md](2026-09-27_cfg_mobile_koordinacio.md) — 2026-09-26/27 — cfg-mobile koordinátor: három párhuzamos szál a lead-lap rendelés-paneljére
 - [2026-09-26_rendeles_ket_lepesben.md](2026-09-26_rendeles_ket_lepesben.md) — 2026-09-26 — Rendelés két lépésben (telefon): az 1. lépés a csomag-listáé (A szál, ADR-0240)
 - [2026-09-26_rendeles_fizetesi_link.md](2026-09-26_rendeles_fizetesi_link.md) — Rendelés → fizetés a vevő szemével: őszinte képernyő, vevő-levelek, tartós fizetési link (2026-09-25/26)
 - [2026-09-26_programajanlo_sajat_program.md](2026-09-26_programajanlo_sajat_program.md) — 2026-09-26 — Programajánló: saját program a tenanttól + alapból dátum szerinti sorrend
