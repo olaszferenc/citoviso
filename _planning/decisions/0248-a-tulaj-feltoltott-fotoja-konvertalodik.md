@@ -1,4 +1,4 @@
-## ADR-XXXX — A tulaj feltöltött fotója konvertálódik: böngészőben és szerveren (≤2560 px, álló, metaadat nélkül)
+## ADR-0248 — A tulaj feltöltött fotója konvertálódik: böngészőben és szerveren (≤2560 px, álló, metaadat nélkül)
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (tulaj: „konvertáljuk a feltöltött képeket”) · **Kapcsolódik:** ADR-0198 (feltöltési szabályok), ADR-0224 (Fotók fül)
 

@@ -6,7 +6,7 @@
   Mérve: régi kódon 8 MB → 400.
 - Javítás 1 (`49fe1afe`): útvonalankénti határ (fotó: 8,5 MB), ürítés a határ felett, XHR-timeout,
   szoba-szerkesztő fájlonként.
-- Javítás 2 (`ed651fdc`, tulaj kérése): konvertálás böngészőben + szerveren (ADR-XXXX).
+- Javítás 2 (`ed651fdc`, tulaj kérése): konvertálás böngészőben + szerveren (ADR-0248).
   Tesztképen (9 MB, zaj — legrosszabb eset): szerver → 1,4 MB, böngésző → 2,05 MB, 1920×2560, GPS nélkül.
 
 ## Módosított fájlok
