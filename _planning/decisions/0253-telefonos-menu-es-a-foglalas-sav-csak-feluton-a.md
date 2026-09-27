@@ -1,4 +1,4 @@
-## ADR-XXXX — Telefonos menü, és a foglalás-sáv csak félúton: a foglalási blokknál semmilyen ragadó foglalás-gomb (felülírja az ADR-0237 ①–②-t)
+## ADR-0253 — Telefonos menü, és a foglalás-sáv csak félúton: a foglalási blokknál semmilyen ragadó foglalás-gomb (felülírja az ADR-0237 ①–②-t)
 
 **Dátum:** 2026-09-27 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) · **Szál:** „Mock-sablonok körképe → B megvalósítás”
 **Kontraktus:** `assets/design-refs/tenant-site/mobile-chrome-B/` · **Őr:** `scripts/mobile-chrome-check.mts`

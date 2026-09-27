@@ -224,7 +224,7 @@ A lapnak **kikapcsolt JS mellett is** végig kell működnie: minden tartalom l�
 - Mobilon az elsődleges CTA legyen elérhető görgetés nélkül is (pl. fix alsó sáv) — **de
   a teljes foglalási űrlap NE az első képernyőn legyen** (lásd §5).
 - ⛔ Ragadó foglalás-gomb (alsó sáv, ragadó fejléc CTA-ja) NE látsszon, amíg a foglalási/érdeklődő blokk a
-  képernyőn van — ott az egyetlen foglalás-gomb a beküldő (ADR-XXXX: a vendég a sáv gombjával akart beküldeni).
+  képernyőn van — ott az egyetlen foglalás-gomb a beküldő (ADR-0253: a vendég a sáv gombjával akart beküldeni).
   Telefonon legyen menü (a szekció-linkek ne tűnjenek el nyom nélkül).
 
 ### 4.6 Szöveg és ikon

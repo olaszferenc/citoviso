@@ -234,7 +234,7 @@ const PROBE_STATIC = `(() => { ${LIB}
   out.sticky = out.sticky.slice(0, 8);
   // ② the shared masthead's height and ⑤ the fixed booking bar's text block (FK-009 V2 / bar wrap)
   out.mast = (() => { const m = document.querySelector('.cit-mast'); if (!m || !vis(m)) return null; const r = m.getBoundingClientRect(); return { h: Math.round(r.height), links: !!(m.querySelector('.cit-mast-links') && vis(m.querySelector('.cit-mast-links'))) }; })();
-  // ⚠️ ADR-XXXX: the bar now arrives AFTER the hero (visibility:hidden on the first screen) —
+  // ⚠️ ADR-0253: the bar now arrives AFTER the hero (visibility:hidden on the first screen) —
   // judged on whether it is RENDERED at this width (display chain), not whether it shows right
   // now; its line geometry is the same either way. A vis() test here would silently empty ⑤.
   const rendered = (el) => { for (let e = el; e && e !== document.documentElement; e = e.parentElement) if (getComputedStyle(e).display === 'none') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };

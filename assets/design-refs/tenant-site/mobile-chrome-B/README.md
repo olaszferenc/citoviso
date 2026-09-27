@@ -6,7 +6,7 @@
 C: a lenti sáv maga a menü) a **B**-t választotta („B tényleg jó … igen, indulhat”). Terv: `plan.html` (a Lidó
 Wellness és Bor Villa valódi oldala; méret-váltó „Mobil 390px / Asztali”, az oldal egy valódi viewportban
 — iframe — fut, mert fix sávokat és görgetés-figyelőt mutat). Képek: `shots/terv-mobil.png`, `shots/terv-asztal.png`.
-Döntés: ADR-XXXX (felülírja az ADR-0237 ①–② pontját).
+Döntés: ADR-0253 (felülírja az ADR-0237 ①–② pontját).
 
 **Miért:** a tulaj a Lidó oldalán „Foglalás”-ra kattintott, napot választott, és a végig ott maradó alsó
 „FOGLALÁS” gombbal akarta véglegesíteni — az csak visszaugrik a blokk tetejére, a valódi beküldő gomb lejjebb volt.

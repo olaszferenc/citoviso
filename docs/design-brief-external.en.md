@@ -229,7 +229,7 @@ submittable (`mailto:` or a plain `POST` fallback), no empty bands.
 - On mobile the primary CTA should be reachable without scrolling (e.g. a fixed bottom bar) —
   **but the full booking form must NOT be on the first screen** (see §5).
 - ⛔ No sticky booking button (bottom bar, a sticky header's CTA) may show while the booking/enquiry block is
-  on screen — there the submit is the only booking button (ADR-XXXX: a guest tried to send with the bar's button).
+  on screen — there the submit is the only booking button (ADR-0253: a guest tried to send with the bar's button).
   A phone must have a menu (section links must not simply vanish).
 
 ### 4.6 Copy and icons

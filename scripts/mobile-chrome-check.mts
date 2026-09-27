@@ -1,4 +1,4 @@
-// Phone chrome gate (ADR-XXXX, contract: assets/design-refs/tenant-site/mobile-chrome-B).
+// Phone chrome gate (ADR-0253, contract: assets/design-refs/tenant-site/mobile-chrome-B).
 //
 // The owner's rule, verbatim: „amint elérjük a foglalási részt, tűnjön el ez a sáv”. A guest
 // tapped "Foglalás", picked her dates, and then tried to SEND with the phone bar's

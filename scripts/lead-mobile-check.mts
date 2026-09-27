@@ -1036,7 +1036,7 @@ async function gate(): Promise<void> {
         const verdict = rule === "R5_lazy_below_fold" ? lazyOk : (rules as Record<string, boolean>)[rule]!;
         check(`visszarontás „${sab}" → ${rule} PIROS`, verdict === false);
         // …and only that one: a sabotage that also breaks unrelated rules would hide what is measured
-        // ⚠️ "overflow" may ALSO take R4 down, and rightly (measured 2026-09-28, ADR-XXXX): the planted
+        // ⚠️ "overflow" may ALSO take R4 down, and rightly (measured 2026-09-28, ADR-0253): the planted
         // 120vw page widens the layout viewport to 469×1013 on the 390×844 phone, so a bottom-FIXED
         // pill sits at y=851 — outside what the guest sees, and the tap lands on the hero. Until then
         // the phone booking bar stood on the first screen and lifted the pill above it, which hid this

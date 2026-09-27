@@ -1831,7 +1831,7 @@
     }
   }
 
-  // ── phone chrome: menu button + booking bar + sticky CTAs (ADR-XXXX, design-refs/
+  // ── phone chrome: menu button + booking bar + sticky CTAs (ADR-0253, design-refs/
   //    tenant-site/mobile-chrome-B). ONE behaviour for every template — the templates only
   //    MARK their parts: the fixed phone booking bar [data-cit-mobbar], the nav whose links
   //    the phone menu lists [data-cit-navsrc] (else the masthead's .cit-mast-links), and a

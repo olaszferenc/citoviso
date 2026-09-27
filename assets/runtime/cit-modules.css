@@ -1121,7 +1121,7 @@ a.cit-grat:hover {
    at the end of the sheet, so it went unnoticed — until a rule was appended after it and
    silently became phone-only. Appending below this line is safe again. */
 
-/* ── Phone chrome (ADR-XXXX, contract: design-refs/tenant-site/mobile-chrome-B) ──────────
+/* ── Phone chrome (ADR-0253, contract: design-refs/tenant-site/mobile-chrome-B) ──────────
    The behaviour lives in cit-runtime.js initPhoneChrome(); the templates only mark their
    parts ([data-cit-mobbar], [data-cit-navsrc], [data-cit-ownnav]).
    ① The phone booking bar is HIDDEN until the runtime says otherwise: it slides in after

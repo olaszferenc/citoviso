@@ -1,4 +1,4 @@
-# 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-XXXX
+# 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-0253
 
 **Szál:** „Mock-sablonok körképe → B megvalósítás” (`~/wt/citde23c1a2`, koordinátor: `citfd41ef18`).
 **Státusz:** megvalósítva, NEM élesítve (a nagy deployjal megy).

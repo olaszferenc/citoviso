@@ -90,8 +90,8 @@ Minden vevő-oldali felirat nyelvi csomagon keresztül renderelődik; a HU forr�
   szélességben, WebP-ben (`-rw`) megy ki; a `src` az eredeti URL marad; portál-fotó érintetlen (nincs méret-paraméter).
   Kontraktus: `assets/design-refs/engine/name-masthead/phone/`; őr: `guest-mobile-check` ②fejléc-blokk / ⑤sáv-felirat,
   `photo-srcset-check`.
-  ⚠️ A „link-sáv elmarad, a CTA a sávban él” rész FELÜLÍRVA (ADR-XXXX, 2026-09-27) — lásd alább.
-- **Telefonos menü + a foglalás-sáv csak félúton (2026-09-27, ADR-XXXX, felülírja az ADR-0237 ①–②-t):**
+  ⚠️ A „link-sáv elmarad, a CTA a sávban él” rész FELÜLÍRVA (ADR-0253, 2026-09-27) — lásd alább.
+- **Telefonos menü + a foglalás-sáv csak félúton (2026-09-27, ADR-0253, felülírja az ADR-0237 ①–②-t):**
   amíg a foglalási blokk (`#cit-booking`; foglalás-modul nélkül az érdeklődő űrlap `#cit-enquiry`-je) bármennyi része a
   képernyőn van, SEMMILYEN ragadó foglalás-gomb nem látszik (telefonos sáv, ragadó fejléc CTA-ja, ragadó dokk — telefonon
   ÉS asztalon); a sáv a hero után jön (ha a hero-nak nincs saját gombja, az első képernyőtől), asztalon nincs; ahol nincs
