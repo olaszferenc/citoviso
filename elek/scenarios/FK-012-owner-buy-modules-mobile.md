@@ -62,6 +62,12 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
 # A kör MOST a valódi célt járja: minden modul a kosárba, utána egyetlen fizetés.
 # Ha egy kattintás takarás miatt kimarad, a `skipped_optional` napló kiírja.
 
+- [ ] Amit kínál (felszereltség) — a kosárba
+  tedd?: görgess-középre "#mod-amenities .adm-shop__add"
+  tedd?: kattints "#mod-amenities .adm-shop__add"
+  kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
 - [ ] Miért Önt válasszák — a kosárba
   tedd?: görgess-középre "#mod-usp .adm-shop__add"
   tedd?: kattints "#mod-usp .adm-shop__add"
@@ -116,6 +122,14 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
   várd: látható "Árak, szezonok"
   várd: látható "Online foglalás"
   várd: látható "Heti programajánló"
+  # ⛔ MÉRT LELET (2026-09-28): a záró ellenőrzés öt modult nézett, a felszereltség meg
+  # kimaradt a kosárból — a kör ZÖLDEN zárt, és a hiány csak a KÖVETKEZŐ körben (FK-013 ⑤)
+  # bukott ki, ott viszont „regressziónak" látszott. Egy lánc-kör záró állítása sorolja fel
+  # MINDET, amit meg kellett vennie.
+  várd: látható "Amit kínál (felszereltség)"
+  várd: látható "Vendégek véleménye"
+  várd: látható "Nyitvatartás, érkezés"
+  várd: látható "Miért Önt válasszák"
   kézi: 390-en végigolvasható-e a saját modulok listája; minden modulhoz van-e „Beállítás" gomb (ez lesz a következő kör útja); a Bővítés-lista kiürült-e (mi maradt benne és miért)
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 

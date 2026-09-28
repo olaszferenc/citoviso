@@ -197,6 +197,10 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 - [ ] A felszereltség-választó ujjal használható, és a mentés rögzül
   út: /admin?tab=modulok&m=amenities
+  # ⛔ ELŐFELTÉTEL, KIMONDVA (2026-09-28): ez a lépés CSAK akkor mér, ha a bérlőnek van
+  # AKTÍV `amenities` modulja — a modul-képernyő kapuja csak arra nyílik. Ha nincs, a lap
+  # a Modulok fület adja vissza, és a mező hiánya „regressziónak" látszik (mérve: egy
+  # futásban az FK-012 kihagyta a felszereltséget, és a hiba ITT jelent meg).
   várd: látható "Amit kínál"
   tedd: írd "textarea[name='other']" "Kerti grill\nKovácsoltvas kerti bútor\nNádtető alatti terasz"
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
