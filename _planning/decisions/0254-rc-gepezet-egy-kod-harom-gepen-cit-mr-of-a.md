@@ -51,3 +51,17 @@
 - A SUB a döntési anyagot a koordinálónak adja: a zárójelentésben útvonallal sorolja fel, és ezt a briefbe bele kell írni.
   A döntés a fő sessionben születik, a koordináló viszi vissza.
 - Szinkronizálva mindhárom gépre (`rc-watchdog-sync.sh`), a `CLAUDE.md` RC-STANDARD blokkjában.
+
+### ⑤ Kiegészítés — szál-jel (2026-09-28, tulaj: „hogy tudjam, mi a main session és a hozzá tartozó sub sessionök” → „szín + szám”)
+- Élő SUB-bal rendelkező main: `<KEY> ➕ 🟦1 …`; a SUB-jai: `<KEY> ➕ 🔴 SUB 🟦1 …`.
+  - A szín a számból jön (🟦🟩🟨🟧🟪🟫 körbe).
+  - Új számot a régebbi main kap előbb; a legkisebb szabad szám jár.
+- **⚪ = árva SUB:** a main archivált, nincs élő koordinátora.
+- SUB alatti SUB a gyökér jelét kapja; átadásnál a jel az utódra száll (a watchdog a teljes utód-azonosítót is rögzíti).
+- A main leveszi a jelét, ha már nincs élő SUB-ja.
+- A jelet kizárólag a watchdog kezeli (`tag_threads()`, helyben PUT); a cím szövegét nem írja át.
+- Önteszt: `--selftest-threads` (11 szabály + idempotens második kör; negatív kontroll: az utód-követés letiltása 3 bukást ad).
+- **Visszamenőleg** (`rc-sub-backfill.py`, tulaj-jóváhagyással): 9 session.
+  - CIT: `🟦1` Telefonos felület tesztelése + 3 SUB, és 1 ⚪.
+  - MR: 4 ⚪. Az egyik szülője csak valószínű: a brief beolvasása 30 mp-cel az indulás előtt.
+- Az `rc-new.sh` a SUB utódjának az eredeti szülőt adja (nem a visszavonuló elődöt), és a hívó által adott szál-jelet lecsupaszítja.

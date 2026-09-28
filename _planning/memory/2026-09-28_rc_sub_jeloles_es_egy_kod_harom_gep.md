@@ -51,3 +51,13 @@ A tulaj: a koordináló session a döntéshez szükséges fájlokat (pl. mock HT
   - hibaágak: `..`, ismeretlen id, saját fa, hiányzó minta, session nélküli hívás MR/OF-en — mind hangosan elhasal;
   - a hozott fájlt a git nem látja.
 - `rc-watchdog-sync.sh --check`: nincs eltérés.
+
+## Kiegészítés — szál-jel (ADR-0254 ⑤)
+A tulaj a „Kapu: saját fixture…” sessionre kérdezett rá: a „CIT ➕ Domain vásárlás fizetési link fix” (873a226d) indította
+2026-09-27 23:07-kor, a SUB-szabály előtt. A szülő azóta archivált, a gyerek ma is fut: árva.
+- **Döntés: szín + szám szál-jel.** Watchdog: `tag_threads()`; `rc-new.sh`: szülő-öröklés átadásnál.
+- **Új eszköz:** `rc-sub-backfill.py` (szinkronizált). Visszamenőleg 9 session jelölve, a tulaj jóváhagyásával.
+- **Öntesztek zöldek mindhárom gépen**; élesben idempotens (a következő kör „all healthy”).
+- ⚠️ Az `rc-new.sh` a CIT-en ~2 percig szintaktikailag hibás volt: egy aposztróf a bash-idézőjelben, 11:31–11:33.
+  A hívásnaplók szerint abban az ablakban csak ennek a sessionnek a tesztjei futottak; élő indítás nem bukott el.
+- **Nyitott:** az 5 ⚪ árva SUB (CIT 1, MR 4). A tulaj átveszi vagy archiválja őket.
