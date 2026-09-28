@@ -1,4 +1,4 @@
-## ADR-XXXX — RC-gépezet: egy kód három gépen (CIT · MR · OF) + a session által indított session „🔴 SUB” jelölése
+## ADR-0254 — RC-gépezet: egy kód három gépen (CIT · MR · OF) + a session által indított session „🔴 SUB” jelölése
 
 **Dátum:** 2026-09-28 · **Státusz:** ELFOGADVA (tulaj: „tegyük doktrína szintbe, megkerülhetetlenül” · „közös, legjobb-összeg”) ·
 **Hatókör:** a gép infrastruktúrája (a repón KÍVÜL: `~/bin`, `~/.claude`, `~/.config`) mindhárom környezetben ·

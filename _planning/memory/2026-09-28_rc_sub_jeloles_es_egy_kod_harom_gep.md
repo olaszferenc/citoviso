@@ -1,4 +1,4 @@
-# 2026-09-28 — RC-gépezet: 🔴 SUB-jelölés + egy kód három gépen (ADR-XXXX)
+# 2026-09-28 — RC-gépezet: 🔴 SUB-jelölés + egy kód három gépen (ADR-0254)
 
 ## Kérések
 1. A másik session által indított session neve `CIT+ / MR+ / OF+`, utána piros nagybetűs SUB, utána a cím. Doktrína, megkerülhetetlenül.

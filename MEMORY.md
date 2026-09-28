@@ -26,7 +26,7 @@ csendes kihagyással (consent-check, consent-style ×4 — a `mock_request`-ág 
 hero-override); a `copy-panel-check` és a `hero-override-ui-check` a mainen is piros (nincs a pre-commitban).
 Jegyzet: `_planning/memory/2026-09-27_gate_subject_inventory.md`.
 
-## Párhuzamos szál (2026-09-28 — RC-gépezet: 🔴 SUB + egy kód három gépen, ADR-XXXX) — LEZÁRVA
+## Párhuzamos szál (2026-09-28 — RC-gépezet: 🔴 SUB + egy kód három gépen, ADR-0254) — LEZÁRVA
 A session által indított session neve `<KEY> ➕ 🔴 SUB <cím>`: az `rc-new.sh` kényszeríti, a handoff örökli, és egy hook tiltja a
 közvetlen indítást. A watchdog, a szkriptek, a hookok és a `CLAUDE.md` RC-blokkja CIT·MR·OF-en betűre azonos, a gépenkénti eltérés
 a `~/.config/rc-watchdog.json`-ban él. Módosítás CSAK CIT-en, kivitel: `~/bin/rc-watchdog-sync.sh --push --go`. A tokent csak az MR forgatja.
