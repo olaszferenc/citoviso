@@ -70,6 +70,12 @@ tenant-admin ELSŐ munkamenetét rontotta, telefonon. A döntések a koordináto
   a végső adatból készül, eltérés csak valódi renderelő-hibánál van; a valódi bérlők kihagyása épp
   ezt vakította volna meg (a koordinátor elfogadta). Tanulság a körvezetőknek: a közös DB-ben
   félbemaradt teszt-bérlő zajként is megállíthat egy idegen land-ot → takarítás/jelölés a kör után.
+- ⭐ **Általános tanulság (a körön túl):** a 4. szoba NÉMÁN tűnt el két sablonon, és ezt egyetlen
+  fixture-es őr sem látta — mind legfeljebb 3 szobával mért. Csak egy VALÓDI szálláson, valódi
+  (4 egységes) adattal futó kör találta meg, egy olyan kapuval, ami a lapot a valódi bérlők adatához
+  méri. A fixture a hibaosztályt védi, ha már ismert; az ISMERETLEN hibát a valódi adat hozza elő —
+  ezért a valódi bérlőn mérő kapukat nem szabad „stabilitásért” fixture-re cserélni. A fixture-be pedig
+  a szerkezeti határ fölötti mennyiség kell (itt: több szoba, mint ahány oszlop).
 
 ## Mellékleletek (nem nyúltam hozzá)
 - `/api/foglalas` hibája a vendégnek: „Ismeretlen egység.” (a `hu-voice-check` nem látja a JSON-hibát).
