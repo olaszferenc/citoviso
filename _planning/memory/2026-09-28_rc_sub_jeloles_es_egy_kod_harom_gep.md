@@ -37,9 +37,9 @@
 - **Csak CIT:** `~/bin/rc-watchdog-sync.sh`, `~/bin/rc-standard.md`.
 - **Mentések:** `~/bin/_backup-sub-20260928-0818/`, `~/bin/_backup-sync-*` (mindhárom gépen).
 
-## Nyitott
-- Az OF repó `CLAUDE.md` §3 „Commit + push” elavult (nincs remote), egy OF-sessionből kell javítani.
-- Az MR cron `citoviso-creds-push` szünetel („PAUSED-for-design-login”); a CIT tokenje ma a watchdog saját továbbküldésével frissül. Döntés: visszakapcsoljuk-e?
+## Nyitott → lezárva (ugyanaznap)
+- OF repó `CLAUDE.md` §3 javítva (overseer `bb8b83f`, saját munkafából, `rc-land.sh`, a munkafa utána törölve).
+- A CIT-token-továbbküldés cron-sora szünetel, de nem teendő: két élő út tolja a tokent (watchdog fanout + `claude-creds-fanout.path`).
 
 ## Kiegészítés (ugyanaznap, a zárás helyett)
 A tulaj: a koordináló session a döntéshez szükséges fájlokat (pl. mock HTML) a SUB-ból a FŐ sessionbe hozza.

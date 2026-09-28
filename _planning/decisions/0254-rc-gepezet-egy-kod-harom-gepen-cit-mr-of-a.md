@@ -35,9 +35,11 @@
   Egy lejárat-közeli szárazfuttatás eldobta volna az egyetlen érvényes refresh tokent.
 - Az élesítéskor 3 halott (augusztusi) üres slot kivezetve.
 - Az OF sessionjei mostantól témára kapnak címet; a tulaj által adott név érinthetetlen.
-- **Nyitott:**
-  - Az OF repó `CLAUDE.md` §3 („Commit + push”) elavult; a globális OF-kiegészítés felülírja, de a repó szövegét egy OF-sessionből kell javítani.
-  - Az MR cronban a CIT-nek szóló token-továbbküldés szünetel („PAUSED-for-design-login”).
+- **Lezárt nyitott pontok (2026-09-28):**
+  - Az OF repó `CLAUDE.md` §3 („Commit + push”) javítva: zárás = tételes commit + `~/bin/rc-land.sh`
+    (overseer `bb8b83f`, „IGAZOLTAN A MAINEN”).
+  - Az MR cronban szüneteltetett CIT-token-továbbküldés NEM teendő. Csak harmadik tartalék volt; a tokent két élő út
+    tolja minden MR-megújítás után: a watchdog `fanout` és a `claude-creds-fanout.path`. Mérve: a CIT és az MR lejárata azonos.
 
 ### ④ Kiegészítés (2026-09-28, tulaj: „a koordináló session a döntésekhez szükséges fájlokat a fő sessionbe hozza a sub sessionből, pl. mock HTML fájlok”)
 - A tulaj a FŐ sessiont koordinálja. Ami a döntéséhez kell (mock HTML, screenshot, jelentés), azt a koordináló session
