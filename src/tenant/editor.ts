@@ -24,7 +24,7 @@ import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules, isRenderedModule } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
-import { ensureUnits, guestUnits, peekUnits } from "./units.js";
+import { bookableUnits, ensureUnits, guestUnits, isBookableUnit, isWholeOnlySite, peekUnits } from "./units.js";
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
 import { formatSpan, getSitePrices, isPriceActive, priceSpan, publicSeasons, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
@@ -353,8 +353,16 @@ export async function moduleContentFor(
   // 0074: the price table lists a season's years as far as a guest can book.
   const horizonMonths = Number(cfg("booking").horizonMonths ?? 12) || 12;
 
+  // ADR-XXXX (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): when the
+  // place is let ONLY as one, the rooms are shown for presentation — visible (cards,
+  // subpages, review picker read `units`), but never priced and never bookable. The price
+  // table and the booking picker read THIS list; a price row left on a room from before
+  // the switch must not surface as an offer the guest cannot take.
+  const wholeOnly = isWholeOnlySite(units);
+  const offerUnits = bookableUnits(units);
+
   if (on("pricing")) {
-    const priced = units
+    const priced = offerUnits
       .map((u) => {
         // 0072: a dated row that already expired can never be charged again, so it
         // must not reach the page. The base shown is the one IN FORCE today: a dated
@@ -402,7 +410,10 @@ export async function moduleContentFor(
           ? ""
           : " / éj";
     out.rooms = units.map((u) => {
-      const span = priceSpan(priceMap.get(u.id) ?? []);
+      // ADR-XXXX: a presentation room carries no price line — a split of the whole
+      // house's price would be a number nobody set (§B.17, ADR-0232 ⑦).
+      const presentation = wholeOnly && !isBookableUnit(u, units);
+      const span = presentation ? null : priceSpan(priceMap.get(u.id) ?? []);
       // The room card shows the unit's OWN photos when the owner assigned any;
       // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
       const mine = unitPhotos.get(u.id) ?? [];
@@ -453,6 +464,9 @@ export async function moduleContentFor(
         ...(hasPage ? { slug: u.slug! } : {}),
         // ADR-0232: with a single unit the concept does not exist for the guest either.
         ...(u.isWholeProperty && units.length > 1 ? { wholeProperty: true } : {}),
+        // ADR-XXXX: the whole place is the ONE offer; the other rooms only show what is in it.
+        ...(wholeOnly && u.isWholeProperty && units.length > 1 ? { wholeOnly: true } : {}),
+        ...(presentation ? { presentation: true } : {}),
       };
     });
     // ⛔ ADR-0209: the site-level amenities are NOT filtered against the units' lists.
@@ -521,7 +535,8 @@ export async function moduleContentFor(
   if (on("booking")) {
     const b = cfg("booking");
     out.booking = {
-      units: units.map((u) => ({
+      // ADR-XXXX: only what the guest can actually book — a presentation room is no option.
+      units: offerUnits.map((u) => ({
         id: u.id,
         name: u.name,
         ...(u.capacity ? { capacity: u.capacity } : {}),

@@ -136,7 +136,10 @@ import {
   settleFormerWhole,
   futureAcceptedBookings,
   getUnits,
+  bookableUnits,
   guestUnits,
+  isBookableUnit,
+  isWholeOnlySite,
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
@@ -851,7 +854,9 @@ async function serveTenantHost(
     // ADR-0256: a hidden unit (the whole place, not let as one) takes no NEW request — the
     // page does not offer it, and a hand-made POST must not either. Running bookings on it
     // are untouched (owner, 2026-09-28: „ok B").
-    if (!guestUnits(await getUnits(siteId)).some((u) => u.id === unitId)) {
+    // ADR-XXXX: likewise a presentation room when the place is let ONLY as one — the page
+    // offers the whole house alone, and a hand-made POST must not book a room of it.
+    if (!bookableUnits(await getUnits(siteId)).some((u) => u.id === unitId)) {
       return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
     }
     const result = await createBookingRequest(
@@ -1234,6 +1239,8 @@ async function serveAdmin(
             // and the wording differs for the whole place ("egy másik egység") and a
             // room ("az egész szállás").
             isWholeProperty: u.isWholeProperty,
+            // ADR-XXXX: the add-room form asks no price when the place is let only as one.
+            wholeOnly: u.wholeOnly,
           })),
           unitId: unit.id,
           links: await getCalendarLinks(unit.id),
@@ -1269,6 +1276,8 @@ async function serveAdmin(
           // ADR-0114: the card says "az egész ház" — it changes what the unit MEANS.
           isWholeProperty: u.isWholeProperty,
           priceOnRequest: u.priceOnRequest,
+          // ADR-XXXX: let only as one — the card's three states and the "csak bemutatásra" tag.
+          wholeOnly: u.wholeOnly,
         }));
         // The shared library the room card offers to pick from.
         photoLibrary = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
@@ -1316,6 +1325,10 @@ async function serveAdmin(
             roomsActive: modules.modules.some((m) => m.id === "rooms" && m.active),
             siteView: await priceSiteView(session.tenantId),
             guestHidden: list.filter((u) => !shownToGuest.has(u.id)).map((u) => u.id),
+            // ADR-XXXX: let only as one → the rooms are presentation, no price asked.
+            presentationRooms: isWholeOnlySite(list)
+              ? list.filter((u) => !isBookableUnit(u, list)).map((u) => u.id)
+              : [],
           };
         }
       }
@@ -2696,20 +2709,27 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         // also let as one — the add form asks (required radio), the answer sets or clears
         // the flag on the unit that was there before. No answer (an older form, or a
         // 3rd+ unit) leaves the flag as it is.
-        if (created && before.length === 1 && (whole === "igen" || whole === "nem")) {
-          await setWholeProperty(siteId, whole === "igen" ? before[0]!.id : null);
+        // ADR-XXXX: "csak" = the place is let ONLY as one — the unit so far is the whole
+        // place and the one offer; the new room (and every later one) is presentation.
+        if (created && before.length === 1 && (whole === "igen" || whole === "nem" || whole === "csak")) {
+          const letAsOne = whole === "igen" || whole === "csak";
+          await setWholeProperty(siteId, letAsOne ? before[0]!.id : null, whole === "csak");
           await settleFormerWhole(
             siteId,
             before[0]!.id,
-            whole === "igen" ? "egesz" : first === "rejt" ? "rejt" : "szoba",
+            letAsOne ? "egesz" : first === "rejt" ? "rejt" : "szoba",
             firstName,
           );
         }
+        // ADR-XXXX (owner: „szobák nem kérnek árát"): a presentation room is asked no price —
+        // the form shows no field, and a price sent anyway (an old form) is not stored.
+        const presentation =
+          whole === "csak" || (before.length > 1 && before.some((u) => u.wholeOnly && u.isWholeProperty));
         // ADR-0208 ⑥.3 (approved plan price-on-request ②): with pricing on, the new-unit
         // row asks for the price or "nem adok meg árat". ⛔ It never refuses the save
         // (ADR-0193 ①) — a unit without either is created, and the flash says what
         // that means and offers both ways out.
-        if (created && (await tenantHasModule(session.tenantId, "pricing"))) {
+        if (created && !presentation && (await tenantHasModule(session.tenantId, "pricing"))) {
           const amount = parseOfferAmount(form.get("price") ?? "");
           if (amount.value) {
             await setBasePrice(created, amount.value);
@@ -2763,8 +2783,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const siteId = await tenantSiteId(session.tenantId);
     if (siteId) {
       const unit = form.get("unit") ?? "";
-      const on = form.get("on") !== null && unit && (await unitBelongsToSite(siteId, unit));
-      await setWholeProperty(siteId, on ? unit : null);
+      // ADR-XXXX: three states (none / also / only); an older form sends the `on` checkbox.
+      const mode = form.get("mode") ?? (form.get("on") !== null ? "also" : "none");
+      const on = (mode === "also" || mode === "only") && unit && (await unitBelongsToSite(siteId, unit));
+      await setWholeProperty(siteId, on ? unit : null, mode === "only");
     }
     // The flag changes what the guest's calendar blocks and what the room card says —
     // the snapshot is rebuilt like after any unit edit.

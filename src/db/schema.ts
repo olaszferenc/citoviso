@@ -958,6 +958,10 @@ export interface SiteUnitTable {
    *  `is_whole_property`, which says whether it is LET as one. Represents-whole and
    *  not let as one → hidden from the guest (units.ts `isGuestVisibleUnit`). */
   represents_whole: Generated<boolean>;
+  /** 0079 (ADR-XXXX): the place is let ONLY as one — this (whole-property) unit is the one
+   *  thing a guest can book; every other unit is a room shown for presentation, never booked
+   *  and never asked for a price. Only ever true together with `is_whole_property` (CHECK). */
+  whole_only: Generated<boolean>;
   sort_order: Generated<number>;
   created_at: Generated<Timestamp>;
 }

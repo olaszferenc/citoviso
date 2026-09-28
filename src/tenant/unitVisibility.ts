@@ -32,3 +32,41 @@ export function guestUnits<T extends UnitVisibilityFacts>(
   const shown = units.filter(isGuestVisibleUnit);
   return shown.length ? shown : [...units];
 }
+
+/** The facts the bookability rule reads on top of visibility. */
+export interface UnitBookabilityFacts extends UnitVisibilityFacts {
+  readonly id: string;
+  /** 0079: the place is let ONLY as one (set on the whole-property unit). */
+  readonly wholeOnly: boolean;
+}
+
+/**
+ * ADR-XXXX — THE one rule for "can a guest BOOK this unit?" (owner, 2026-09-28: „csak egyben
+ * adom ki!!! És akkor szobák nem kérnek árat"). When the site's whole-property unit is let
+ * ONLY as one, it is the single bookable unit: every other unit is a room shown for
+ * presentation — visible (card, subpage, review picker go through `guestUnits`), but never
+ * in the booking picker, never accepted by /api/foglalas, and never asked for a price.
+ * Otherwise bookable = guest-visible (ADR-0256).
+ */
+export function isBookableUnit<T extends UnitBookabilityFacts>(
+  u: T,
+  siblings: readonly T[],
+): boolean {
+  const only = siblings.find((s) => s.wholeOnly && s.isWholeProperty);
+  if (only) return u.id === only.id;
+  return isGuestVisibleUnit(u);
+}
+
+/**
+ * The units a guest can book, in the owner's order. Never empty while the site has a unit
+ * (same fallback as `guestUnits`: the widget always needs something to book).
+ */
+export function bookableUnits<T extends UnitBookabilityFacts>(units: readonly T[]): T[] {
+  const b = units.filter((u) => isBookableUnit(u, units));
+  return b.length ? b : guestUnits(units);
+}
+
+/** True when the site is let only as one — the rooms are presentation, not offers. */
+export function isWholeOnlySite(units: readonly UnitBookabilityFacts[]): boolean {
+  return units.some((u) => u.wholeOnly && u.isWholeProperty);
+}

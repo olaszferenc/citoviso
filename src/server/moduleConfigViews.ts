@@ -422,6 +422,12 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
   background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad-ink);
   font-size:.86rem;line-height:1.45;font-weight:600}
 .unit-new__err[hidden]{display:none}
+.unit-new__price{display:contents}
+.unit-new__noprice{flex:1 1 100%;margin:0;padding:10px 12px;border-radius:10px;background:var(--citui-surface-2);color:var(--citui-muted);font-size:.86rem;line-height:1.45}
+.unit-new__noprice[data-cit-when-csak]{display:none}
+form:has(input[name=whole][value=csak]:checked) .unit-new__noprice[data-cit-when-csak]{display:block}
+form:has(input[name=whole][value=csak]:checked) .unit-new__price{display:none}
+.rs-wmodes{display:grid;gap:4px}
 .unit-new__err svg{flex:none;margin-top:1px}
 .rs-wq.is-missing{border-color:var(--citui-bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-bad) 22%,transparent)}
 .rs-wq.is-missing legend{color:var(--citui-bad-ink)}
@@ -1268,6 +1274,9 @@ export interface EditorUnit {
   /** ADR-0114 — this unit IS the whole place; it and the rooms exclude each other.
    *  The unit tabs say so, because it changes what a blocked day MEANS. */
   readonly isWholeProperty?: boolean;
+  /** ADR-XXXX — the place is let ONLY as one (set on the whole unit): the other units are
+   *  rooms shown for presentation — not bookable, no price asked. */
+  readonly wholeOnly?: boolean;
 }
 
 /**
@@ -1454,6 +1463,9 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
     // ADR-0232: with one unit the concept is invisible — a renamed default ("Apartman 1")
     // must not carry "az egész ház" on a screen where there is nothing else.
     u.isWholeProperty && units.length > 1 ? T(lang, "az egész ház") : "",
+    // ADR-XXXX: let only as one — the card says which is the offer and which only shows.
+    u.wholeOnly && units.length > 1 ? T(lang, "csak egyben kiadó") : "",
+    !u.isWholeProperty && units.some((o) => o.wholeOnly) ? T(lang, "csak bemutatásra") : "",
   ].filter(Boolean);
   return bits.join(" · ");
 }
@@ -1467,6 +1479,10 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
 function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
   if (units.length < 2) return "";
   const whole = units.find((u) => u.isWholeProperty) ?? null;
+  // ADR-XXXX (approved plan tenant-site/whole-only, admin „X"): three states instead of a
+  // switch — the same three answers the second-room question offers, so an owner who
+  // answered once can change it HERE later. Plain form: works with zero JS.
+  const mode = !whole ? "none" : whole.wholeOnly ? "only" : "also";
   const opts = units
     .map(
       (u) =>
@@ -1475,19 +1491,29 @@ function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
         `</option>`,
     )
     .join("");
+  const state = (value: string, title: string, why: string): string =>
+    `<label class="rs-wq__o"><input type="radio" name="mode" value="${value}"${mode === value ? " checked" : ""}>` +
+    `<span><b>${title}</b><small>${why}</small></span></label>`;
   return (
-    `<form method="POST" action="/admin/units/whole" class="rs-wcard${whole ? " is-on" : ""}" data-cit-whole-card>` +
+    `<form method="POST" action="/admin/units/whole" class="rs-wcard${whole ? " is-on" : ""}" data-cit-whole-card data-cit-whole-mode="${mode}">` +
     `<div class="rs-wcard__t"><b>${ic("modules", 15)}${T(lang, "Az egész szállás egyben")}</b>` +
     `<p>` +
-    (whole
-      ? T(lang, "Az egész szállás most: {name}. Ha lefoglalják, minden más szoba tele lesz arra az éjszakára — és bármelyik szoba foglalása az egészet zárja.", {
+    (mode === "only" && whole
+      ? T(lang, "A vendég csak ezt foglalhatja: {name}. A többi szoba a honlapon képpel és felszereltséggel látszik, de ár és foglalás nélkül — külön nem foglalható, és nem kell ára.", {
           name: `<b>${esc(whole.name)}</b>`,
         })
-      : T(lang, "Most minden szoba külön naptárral, egymástól függetlenül telik be. Ha a házat egyben is kiadja, kapcsolja be, és mondja meg, melyik az.")) +
+      : whole
+        ? T(lang, "Az egész szállás most: {name}. Ha lefoglalják, minden más szoba tele lesz arra az éjszakára — és bármelyik szoba foglalása az egészet zárja.", {
+            name: `<b>${esc(whole.name)}</b>`,
+          })
+        : T(lang, "Most minden szoba külön naptárral, egymástól függetlenül telik be. Ha a házat egyben is kiadja, válassza ki, hogyan, és mondja meg, melyik az.")) +
     `</p></div>` +
     `<div class="rs-wcard__c">` +
-    `<label class="rs-wtoggle"><input type="checkbox" name="on" value="1"${whole ? " checked" : ""} data-cit-whole-on>` +
-    `<span>${T(lang, "Kiadom egyben is")}</span></label>` +
+    `<div class="rs-wmodes" role="radiogroup" aria-label="${T(lang, "Az egész szállás egyben")}">` +
+    state("none", T(lang, "Nem adom ki egyben"), T(lang, "A szobák külön telnek be.")) +
+    state("also", T(lang, "Egyben is kiadom"), T(lang, "A szobák külön is foglalhatók.")) +
+    state("only", T(lang, "Csak egyben adom ki"), T(lang, "A szobák csak bemutatásra.")) +
+    `</div>` +
     `<select class="citui-input rs-wpick" name="unit" aria-label="${T(lang, "Melyik szoba az egész szállás")}" data-cit-whole-pick>` +
     (whole ? "" : `<option value="">${T(lang, "— melyik szoba —")}</option>`) +
     opts +
@@ -1535,6 +1561,13 @@ function wholeQuestion(
       "igen",
       T(lang, "Igen, az egészet is kiadom egyben"),
       T(lang, "{name} marad az egész szállás. A foglalása minden szobát lezár, és bármelyik szoba foglalása az egészet.", { name: esc(first.name) }),
+    ) +
+    // ADR-XXXX (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): the case
+    // that was missing — the rooms are shown, never booked, never priced.
+    opt(
+      "csak",
+      T(lang, "Csak egyben adom ki — a szobák bemutatásra"),
+      T(lang, "A vendég csak ezt foglalhatja: {name}. A szobák képpel, férőhellyel, felszereltséggel látszanak, de külön nem foglalhatók, és nem kell áruk.", { name: esc(first.name) }),
     ) +
     opt(
       "nem",
@@ -1957,22 +1990,33 @@ function newUnitDecl(nu: NewUnitView | undefined, lang: string): string {
  * `invalid` event is taken over, so the other fields' native checks still run.
  */
 function newUnitForm(
-  units: readonly { id: string; name: string }[],
+  units: readonly { id: string; name: string; wholeOnly?: boolean }[],
   nu: NewUnitView | undefined,
   lang: string,
 ): string {
   const q = wholeQuestion(units, lang, nu);
+  // ADR-XXXX: the place is let only as one → the new room is presentation: no price field,
+  // no "nem adok meg árat" — one sentence says why. At the second room the same happens
+  // the moment "Csak egyben" is picked (CSS `:has`, works without JS; the server ignores
+  // a price sent with that answer).
+  const wholeOnly = units.some((u) => u.wholeOnly);
+  const noPrice = (attr: string): string =>
+    `<p class="unit-new__noprice" ${attr}>` +
+    `${T(lang, "Ennek a szobának nem kell ár: a vendég csak az egész házat foglalja, árat csak arra kérünk.")}</p>`;
   return (
     `<details class="unit-more"><summary>${ic("plus")}${T(lang, "Új szoba felvétele")}</summary>` +
     `<div class="unit-new"><h3>${ic("plus")}${T(lang, "Új szoba felvétele")}</h3>` +
-    `<p>${T(lang, "Adja meg a nevét, férőhelyét és alapárát — a vendég a honlapon külön kártyán látja.")}</p>` +
+    `<p>${wholeOnly ? T(lang, "Adja meg a nevét és férőhelyét — a vendég a honlapon külön kártyán látja, a ház részeként.") : T(lang, "Adja meg a nevét, férőhelyét és alapárát — a vendég a honlapon külön kártyán látja.")}</p>` +
     `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new" data-cit-new-unit>` +
     `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új szoba neve")}">` +
     `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
     `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
-    newUnitPriceFields(nu, lang) +
-    newUnitDecl(nu, lang) +
+    (wholeOnly
+      ? `<input type="hidden" name="back" value="${nu?.back ?? "booking"}">` +
+        (nu?.pricingActive ? noPrice("data-cit-new-noprice") : "")
+      : `<span class="unit-new__price" data-cit-new-price>` + newUnitPriceFields(nu, lang) + newUnitDecl(nu, lang) + `</span>`) +
     q +
+    (q && nu?.pricingActive ? noPrice("data-cit-new-noprice data-cit-when-csak") : "") +
     `<div class="unit-new__go">` +
     `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
     (q
@@ -2594,6 +2638,9 @@ export interface PricingEditorData {
   readonly siteView: PriceSiteView | null;
   /** ADR-0256 ③: units the guest never sees — no missing-price line on their card. */
   readonly guestHidden?: readonly string[];
+  /** ADR-XXXX: rooms shown for PRESENTATION only (the place is let only as one) — the
+   *  screen asks no price for them: no card, one sentence says why. */
+  readonly presentationRooms?: readonly string[];
   /** 0074: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
    *  the year card just saved or refused (`?ev=<seasonId>-<year>`). */
   readonly editSeason?: string | null;
@@ -3060,7 +3107,10 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   // ⛔ Was `=== "EUR" ? "€" : "Ft"`, i.e. ANY other currency printed as forint.
   const cur = currencySign(data.currency);
   const bk = data.bookingActive;
-  const cards = data.units
+  // ADR-XXXX (owner: „szobák nem kérnek árát"): a presentation room gets no price card.
+  const shown = new Set(data.presentationRooms ?? []);
+  const priced = data.units.filter((u) => !shown.has(u.id));
+  const cards = priced
     .map((u) => {
       // 0072: a lapsed dated row can never price a night again — it is not shown
       // (the maintenance tick removes it). The "Alapár" field is the TIMELESS base
@@ -3117,7 +3167,8 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +
         `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
-        (u.isWholeProperty && data.units.length > 1 ? wholeSumHint(data, cur, today, lang) : "") +
+        // ADR-XXXX: let only as one, the rooms have no price to add up — no hint.
+        (u.isWholeProperty && data.units.length > 1 && !shown.size ? wholeSumHint(data, cur, today, lang) : "") +
         priceDecision(
           u,
           Boolean(base),
@@ -3179,15 +3230,22 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     : T(lang, "Szobák modul bekapcsolása");
 
   return (
-    `<p class="mcfg-note mcfg-note--act"><span>${T(lang, "Az árat szobánként adja meg — a vendég is így látja majd.")} ` +
-    (data.units.length > 1
+    `<p class="mcfg-note mcfg-note--act"><span>` +
+    // ADR-XXXX: let only as one, the price is the HOUSE's — "per room" would contradict the note below.
+    (shown.size
+      ? T(lang, "A házat csak egyben adja ki: árat csak az egész házra kérünk.")
+      : `${T(lang, "Az árat szobánként adja meg — a vendég is így látja majd.")} ` +
+        (data.units.length > 1
       ? T(lang, "Minden szobának/apartmannak saját ára lehet.")
-      : T(lang, "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál.")) +
+      : T(lang, "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál."))) +
     `</span>` +
     `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="${roomsHref}">${roomsLabel}</a>` +
     `</p>` +
     priceWhereBox(data.siteView, lang) +
     cards +
+    (shown.size
+      ? `<p class="mcfg-note" data-cit-presentation-note>${T(lang, "A házat csak egyben adja ki, ezért árat csak az egész házra kérünk. A {n} szoba csak bemutatásra van: a vendég képpel és felszereltséggel látja őket, de külön nem foglalhatja — áruk nem kell.", { n: shown.size })}</p>`
+      : "") +
     seasonEditorScript(
       lang,
       data.today ?? new Date().toISOString().slice(0, 10),

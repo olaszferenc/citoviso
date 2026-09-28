@@ -172,7 +172,8 @@ try {
   check("„nem” → a második is csak önmagát", (await blockingUnitIds(second.id)).join() === second.id);
   html = await get(ROOMS);
   check("2 egységnél VAN kártya", html.includes("data-cit-whole-card"));
-  check("a kártya kikapcsolva (nincs checked)", !/data-cit-whole-on[^>]*checked|checked[^>]*data-cit-whole-on/.test(html) && !/name="on" value="1" checked/.test(html));
+  // ADR-XXXX: the card has three states (none / also / only) instead of the old switch.
+  check("a kártya „Nem adom ki egyben” állásban", /name="mode" value="none" checked/.test(html) && !/name="mode" value="(also|only)" checked/.test(html));
   check("a rácson sehol „az egész ház”", !/az egész ház/.test(grid(html)));
   check("a kérdés már NEM jelenik meg", !html.includes("data-cit-whole-q"));
   check("mindkét egységnek van törlés-gombja", (html.match(/formaction="\/admin\/units\/delete"/g) ?? []).length === 2);
@@ -186,7 +187,7 @@ try {
   check("„igen” → az első foglalása mindkettőt zárja", (await blockingUnitIds(first.id)).sort().join() === [first.id, second2.id].sort().join());
   check("„igen” → a szoba foglalása az egészet is zárja", (await blockingUnitIds(second2.id)).sort().join() === [first.id, second2.id].sort().join());
   html = await get(ROOMS);
-  check("a kártya bekapcsolva", /name="on" value="1" checked/.test(html));
+  check("a kártya „Egyben is kiadom” állásban", /name="mode" value="also" checked/.test(html));
   check("a rácson az első kártyán „az egész ház”", new RegExp(`${first.name}</b><span>[^<]*az egész ház`).test(grid(html)));
 
   // ── ③ the card moves / clears the flag ────────────────────────────────

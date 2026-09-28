@@ -142,6 +142,12 @@ export interface Room {
   readonly sample?: boolean;
   /** ADR-0114 — this unit IS the whole place; the popover says so instead of "Apartman". */
   readonly wholeProperty?: boolean;
+  /** ADR-XXXX — the place is let ONLY as one and this (whole) unit is the single offer:
+   *  it leads the rooms section as the main band (`data-cit-whole-mode="main"`). */
+  readonly wholeOnly?: boolean;
+  /** ADR-XXXX — a room shown for PRESENTATION only (the place is let only as one): no
+   *  price, no "Foglalás" — its button is "Részletek", and the popover books the house. */
+  readonly presentation?: boolean;
   /**
    * The `site_unit` id this card stands for — so the card's "Foglalás" can carry WHICH
    * room down to the booking widget. Measured 2026-09-22: it could not, and the guest

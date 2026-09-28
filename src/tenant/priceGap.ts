@@ -11,7 +11,7 @@ import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
 import { siteRendersModule } from "./modules.js";
 import { getSitePrices, unitPriceStatus, type UnitPrice } from "./prices.js";
-import { guestUnits } from "./unitVisibility.js";
+import { bookableUnits } from "./unitVisibility.js";
 
 export interface PriceGap {
   readonly unitId: string;
@@ -38,7 +38,7 @@ export async function sitePriceGaps(
   const [units, prices] = await Promise.all([
     db
       .selectFrom("site_unit")
-      .select(["id", "name", "seasonal_only", "price_on_request", "represents_whole", "is_whole_property"])
+      .select(["id", "name", "seasonal_only", "price_on_request", "represents_whole", "is_whole_property", "whole_only"])
       .where("site_id", "=", siteId)
       .orderBy("sort_order")
       .orderBy("created_at")
@@ -53,6 +53,7 @@ export async function sitePriceGaps(
       priceOnRequest: u.price_on_request,
       representsWhole: u.represents_whole,
       isWholeProperty: u.is_whole_property,
+      wholeOnly: u.whole_only,
     })),
     prices,
     today,
@@ -73,11 +74,17 @@ export function priceGapsOf(
     readonly priceOnRequest: boolean;
     readonly representsWhole: boolean;
     readonly isWholeProperty: boolean;
+    /** ADR-XXXX (0079) — the place is let only as one. Optional for older fixtures. */
+    readonly wholeOnly?: boolean;
   }[],
   prices: ReadonlyMap<string, readonly UnitPrice[]>,
   today: string,
 ): PriceGap[] {
-  const shown = new Set(guestUnits(units).map((u) => u.id));
+  // ADR-XXXX (owner: „szobák nem kérnek árát"): when the place is let ONLY as one, the rooms
+  // are presentation — nobody can book them, so nobody asks their price: no to-do row, no
+  // Árak warning, no weekly mail. The SAME rule the booking picker filters by.
+  const facts = units.map((u) => ({ ...u, wholeOnly: u.wholeOnly ?? false }));
+  const shown = new Set(bookableUnits(facts).map((u) => u.id));
   const out: PriceGap[] = [];
   for (const u of units) {
     if (!shown.has(u.id)) continue;

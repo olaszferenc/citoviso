@@ -875,6 +875,14 @@ if [ -f scripts/whole-property-choice-check.mts ] && \
   echo "[pre-commit] whole-property-choice-check (az egész szállás választható egység)…"
   npx tsx scripts/whole-property-choice-check.mts >"$GATE_LOG" || gate_failed
 fi
+# „Csak egyben adom ki" — a szobák bemutatásra (jóváhagyott terv: tenant-site/whole-only, 2026-09-28):
+# a bemutató szoba látszik, de nem foglalható, és árat SEHOL nem kérünk tőle (felvevő űrlap,
+# Árak, teendő, heti levél). Saját eldobható fixture-rel, valódi HTTP-vel, negatív kontrollal mér.
+if [ -f scripts/whole-only-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/(units|unitVisibility|unitScope|editor|priceGap|priceSiteView|prices)\.ts|src/server/(moduleConfigViews|public)\.ts|src/engine/(recipe|moduleSections|templateKit)\.ts|migrations/0079_unit_whole_only\.sql)$|^scripts/whole-only-check'; then
+  echo "[pre-commit] whole-only-check (csak egyben kiadó ház, bemutató szobák)…"
+  npx tsx scripts/whole-only-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Az ÜZEMI RIASZTÁS minden beállított címre menjen (tulaj-kérés, 2026-09-12). A címzettet
 # beállítani ADDITÍV ÍRÁS — a mezőben látszó három cím nem bizonyítja, hogy a levél
 # mindhármat eléri. Az őr a kimenő levél To: fejlécét olvassa vissza (outbox, nem hálózat).

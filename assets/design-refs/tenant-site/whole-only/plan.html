@@ -1,0 +1,452 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Csak egyben kiadó ház, a szobák bemutatásra — terv</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Guest side wears the tenant skin (--cit-*, same as whole-unit-band/plan.html);
+   the owner side wears the design core (--citui-*, public/assets/ui/citui.css). */
+:root{
+  --cit-accent:#c54631;--cit-on-accent:#fff;--cit-ink:#2a1c14;--cit-muted:#6f5c4a;
+  --cit-bg:#f6efe2;--cit-surface:#fffdf7;--cit-line:#e6dac6;--cit-radius:12px;
+  --cit-font-display:'Playfair Display',Georgia,serif;--cit-font-body:'Manrope',system-ui,sans-serif;
+  --citui-ink:#10243a;--citui-muted:#5a6d82;--citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;--citui-white:#fff;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);--citui-cyan-500:#1fb6d6;
+  --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));
+  --citui-bad:#e5484d;--citui-bad-ink:#b3262b;--citui-ok-ink:#19733f;--citui-warn-ink:#7d5a12;
+  --citui-radius-sm:14px;--citui-font-display:"Space Grotesk",system-ui,sans-serif;--citui-font-text:"Inter",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e4dc;font-family:var(--cit-font-body);color:var(--cit-ink)}
+.mock-tools{position:relative;z-index:50;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:#1f1a17;color:#fff;font:600 13px/1 system-ui}
+.mock-tools button{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid #777;background:#333;color:#fff;cursor:pointer}
+.mock-tools button[aria-pressed=true]{background:var(--cit-accent);border-color:var(--cit-accent)}
+.mock-tools i{width:1px;height:22px;background:#666;margin:0 4px}
+.mock-tools .grp[hidden]{display:none}
+.mock-tools .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#stage{container-type:inline-size;container-name:vp;margin:0 auto 40px;width:100%;max-width:1200px;background:var(--cit-bg);box-shadow:0 0 0 1px #d6cfc4;position:relative;overflow:hidden}
+#stage.is-mobile{width:390px}
+.note{margin:0;padding:12px 16px;background:#fff3cd;color:#4a3800;font-size:14px;line-height:1.5}
+.note b{color:#2e2300}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:58px;background:var(--cit-ink);color:#fff}
+.hd b{font-family:var(--cit-font-display);font-size:20px}
+section{padding:40px 16px}
+section h2{font-family:var(--cit-font-display);font-size:28px;font-weight:600;margin:0 0 8px;text-align:center}
+.lead{max-width:640px;margin:0 auto 20px;text-align:center;color:var(--cit-muted);line-height:1.55}
+@container vp (min-width:860px){section{padding:56px 48px}}
+
+/* ── room cards: same shell as the priced ones, only the price row and the button differ ── */
+.grid{list-style:none;margin:0 auto;padding:0;display:grid;gap:12px;grid-template-columns:1fr;max-width:1060px}
+@container vp (min-width:860px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{display:flex;flex-direction:column;border:1px solid var(--cit-line);border-radius:14px;background:var(--cit-surface);overflow:hidden}
+.card .ph{aspect-ratio:16/10;background:linear-gradient(135deg,color-mix(in srgb,var(--cit-accent) 30%,var(--cit-bg)),color-mix(in srgb,var(--cit-ink) 35%,var(--cit-bg)));display:flex;align-items:flex-end;padding:8px}
+.card .ph span{font-size:12px;background:color-mix(in srgb,var(--cit-ink) 70%,transparent);color:#fff;padding:3px 8px;border-radius:99px}
+.card .bd{display:flex;flex-direction:column;gap:6px;padding:16px 18px 18px;flex:1}
+.card .bd .cta{margin-top:auto}
+.card strong{font-size:17px;font-weight:600}
+.cap{color:var(--cit-muted)}
+.ams{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0}
+.ams span{font-size:12.5px;padding:3px 9px;border-radius:99px;border:1px solid var(--cit-line);color:var(--cit-muted);background:var(--cit-bg)}
+.part{font-size:13px;color:var(--cit-muted)}
+.cta{align-self:flex-start;margin-top:6px;display:inline-flex;align-items:center;min-height:44px;padding:9px 18px;border-radius:8px;border:0;background:var(--cit-accent);color:var(--cit-on-accent);font:700 14px var(--cit-font-body);letter-spacing:.02em;cursor:pointer;text-decoration:none}
+.cta--ghost{background:transparent;color:var(--cit-accent);box-shadow:inset 0 0 0 2px var(--cit-accent)}
+.price{font-weight:700}
+.custom{font-weight:700}
+.custom small{display:block;font-weight:500;color:var(--cit-muted);font-size:13px;margin-top:2px;line-height:1.4}
+
+/* the whole house: the SAME band as whole-unit-band C, in its "main" state */
+.whole{max-width:1060px;margin:0 auto;padding:20px;border-radius:14px;display:flex;flex-direction:column;gap:8px;
+  border:2px solid var(--cit-accent);background:color-mix(in srgb,var(--cit-accent) 9%,var(--cit-surface))}
+.whole .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--cit-accent);font-weight:700}
+.whole h3{font-family:var(--cit-font-display);font-size:24px;margin:0;font-weight:600}
+.whole p{margin:0;line-height:1.5}
+.whole .price{font-size:18px}
+@container vp (min-width:860px){.whole{flex-direction:row;align-items:center;justify-content:space-between;gap:24px;padding:24px 28px}.whole .cta{align-self:center;flex:none}}
+.gap{height:16px}
+.sub{max-width:1060px;margin:28px auto 12px;font-family:var(--cit-font-display);font-size:20px;font-weight:600}
+
+/* C: one offer, its rooms inside */
+.house{max-width:1060px;margin:0 auto;border:2px solid var(--cit-accent);border-radius:16px;background:var(--cit-surface);overflow:hidden}
+.house .top{padding:20px;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--cit-accent) 9%,var(--cit-surface))}
+@container vp (min-width:860px){.house .top{flex-direction:row;justify-content:space-between;align-items:center;padding:24px 28px}}
+.house .rooms{padding:16px;display:grid;gap:10px;grid-template-columns:1fr}
+@container vp (min-width:860px){.house .rooms{grid-template-columns:repeat(3,1fr);padding:20px 28px 26px}}
+.mini{all:unset;display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;padding:8px;border:1px solid var(--cit-line);border-radius:12px;cursor:pointer;background:var(--cit-bg)}
+.mini:focus-visible{outline:2px solid var(--cit-accent);outline-offset:3px}
+.mini .ph{aspect-ratio:4/3;border-radius:8px;background:linear-gradient(135deg,color-mix(in srgb,var(--cit-accent) 30%,var(--cit-bg)),color-mix(in srgb,var(--cit-ink) 35%,var(--cit-bg)))}
+.mini b{display:block;font-size:15px}
+.mini small{color:var(--cit-muted);font-size:13px}
+.mini em{display:block;font-style:normal;color:var(--cit-accent);font-weight:700;font-size:13px;margin-top:2px}
+
+/* ── popover ── */
+.rd{position:fixed;inset:0;z-index:60;display:none}
+#stage.is-mobile .rd{left:50%;right:auto;width:390px;transform:translateX(-50%)}
+.rd[data-shown]{display:block}
+.rd__veil{position:absolute;inset:0;background:color-mix(in srgb,var(--cit-ink) 55%,transparent)}
+.rd__panel{position:absolute;inset:0;background:var(--cit-bg);display:flex;flex-direction:column}
+@container vp (min-width:860px){.rd__panel{inset:40px auto auto 50%;transform:translateX(-50%);width:min(760px,92%);max-height:calc(100% - 80px);border-radius:6px}}
+.rd__x{position:absolute;top:10px;right:10px;width:44px;height:44px;border:0;background:color-mix(in srgb,var(--cit-bg) 72%,transparent);color:var(--cit-ink);font-size:22px;cursor:pointer;z-index:2}
+.rd__ph{aspect-ratio:16/9;max-height:34vh;background:linear-gradient(135deg,color-mix(in srgb,var(--cit-accent) 30%,var(--cit-bg)),color-mix(in srgb,var(--cit-ink) 35%,var(--cit-bg)))}
+.rd__txt{padding:18px 22px;overflow:auto;flex:1}
+.rd__brow{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--cit-accent);font-weight:600}
+.rd__txt h3{font-family:var(--cit-font-display);font-size:28px;font-weight:600;margin:8px 0 10px}
+.rd__txt p{margin:0 0 10px;line-height:1.6;color:var(--cit-muted)}
+.rd__whole{padding:12px 14px;border-radius:10px;background:color-mix(in srgb,var(--cit-accent) 9%,var(--cit-surface));color:var(--cit-ink)!important}
+.rd__cta{padding:14px 18px 18px;border-top:1px solid var(--cit-line)}
+.rd__cta a{display:block;text-align:center;text-decoration:none;background:var(--cit-accent);color:var(--cit-on-accent);font-size:12px;letter-spacing:.24em;text-transform:uppercase;font-weight:700;padding:16px}
+@container vp (min-width:860px){.rd__txt{text-align:center;padding:22px 44px 18px}.rd__cta{text-align:center;border-top:0;padding-bottom:30px}.rd__cta a{display:inline-block;min-width:280px}}
+
+/* ── booking widget stub ── */
+.book{max-width:560px;margin:0 auto;padding:18px;border:1px solid var(--cit-line);border-radius:14px;background:var(--cit-surface)}
+.book .lbl{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--cit-muted);margin-bottom:6px}
+.book .only{padding:12px;border-radius:8px;border:1px solid var(--cit-line);background:var(--cit-bg);font-size:17px}
+.book .only small{display:block;color:var(--cit-muted);font-size:13px;margin-top:2px}
+.book .dates{margin:14px 0;padding:12px;border-radius:8px;background:var(--cit-bg);font-size:15px}
+.quote{padding:14px;border-radius:8px;background:color-mix(in srgb,var(--cit-accent) 9%,var(--cit-surface));border:1px solid color-mix(in srgb,var(--cit-accent) 30%,var(--cit-line));line-height:1.5;font-size:15px}
+.quote b{display:block;margin-bottom:4px}
+.sum{display:flex;justify-content:space-between;font-size:16px;padding:12px 0;border-top:1px solid var(--cit-line)}
+.book .go{width:100%;margin-top:12px;min-height:52px;border:0;border-radius:8px;background:var(--cit-accent);color:var(--cit-on-accent);font:700 16px var(--cit-font-body);cursor:pointer}
+.book .promise{margin:10px 0 0;font-size:13px;color:var(--cit-muted);line-height:1.5}
+.flash{animation:fl 1.2s ease}
+@keyframes fl{0%{box-shadow:0 0 0 4px var(--cit-accent)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* ── owner side (tenant admin), design core tokens ── */
+#admin{background:var(--citui-surface);font-family:var(--citui-font-text);color:var(--citui-ink);padding:20px 16px 40px}
+#admin h2{font:600 1.25rem/1.2 var(--citui-font-display);margin:0 0 4px;text-align:left}
+#admin .crumb{color:var(--citui-muted);font-size:.85rem;margin:0 0 16px}
+@container vp (min-width:860px){#admin{padding:32px 48px}#admin .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}}
+.a-box{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:14px 16px;margin-bottom:16px}
+.a-box h4{margin:0 0 10px;font:600 .95rem/1.2 var(--citui-font-display)}
+.a-in{width:100%;font:500 1rem var(--citui-font-text);padding:10px 12px;border-radius:10px;border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink)}
+.rs-wq{border:1px solid var(--citui-line-strong);border-radius:12px;padding:12px 14px;margin:12px 0 0}
+.rs-wq legend{font:600 .9rem var(--citui-font-display);padding:0 4px}
+.rs-wq p{margin:0 0 8px;color:var(--citui-muted);font-size:.84rem;line-height:1.5}
+.rs-wq__o{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.rs-wq__o:has(input:checked){border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.rs-wq__o input{margin-top:3px;width:18px;height:18px;flex:none}
+.rs-wq__o b{display:block;font-size:.92rem}
+.rs-wq__o small{display:block;color:var(--citui-muted);font-size:.8rem;line-height:1.45;margin-top:2px}
+.rs-wq__o .new{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-ok-ink);background:color-mix(in srgb,var(--citui-ok-ink) 10%,var(--citui-white));padding:2px 6px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.a-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:99px;border:0;background:var(--citui-ink);color:var(--citui-white);font:600 .9rem var(--citui-font-text);cursor:pointer;margin-top:12px}
+.a-btn--ghost{background:transparent;color:var(--citui-ink);box-shadow:inset 0 0 0 1px var(--citui-line-strong)}
+.a-ok{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--citui-ok-ink) 10%,var(--citui-white));color:var(--citui-ok-ink);font-size:.86rem;line-height:1.45}
+.a-err{margin:10px 0 0;color:var(--citui-bad-ink);font-size:.86rem}
+.rs-wcard{display:grid;gap:10px;border:1px solid var(--citui-line-strong);border-radius:14px;padding:12px 14px;background:var(--citui-white);margin-bottom:16px}
+.rs-wcard.is-on{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.rs-wcard b.t{font:600 .95rem/1.2 var(--citui-font-display)}
+.rs-wcard p{margin:0;color:var(--citui-muted);font-size:.82rem;line-height:1.5}
+.rs-wcard p b{color:var(--citui-ink)}
+.rs-wtoggle{display:flex;align-items:center;gap:8px;font:600 .88rem/1.3 var(--citui-font-text);cursor:pointer}
+.rs-wtoggle input{width:18px;height:18px}
+.a-rooms{display:grid;gap:8px}
+.a-room{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--citui-line);border-radius:12px;background:var(--citui-white);font-size:.9rem}
+.a-room small{color:var(--citui-muted);display:block;font-size:.78rem}
+.a-tag{font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.a-tag--book{background:color-mix(in srgb,var(--citui-ok-ink) 12%,var(--citui-white));color:var(--citui-ok-ink)}
+.a-tag--show{background:var(--citui-surface-2);color:var(--citui-muted)}
+.a-lbl{display:block;font-size:.8rem;font-weight:600;color:var(--citui-muted);margin:12px 0 6px}
+.a-noprice{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:var(--citui-surface-2);color:var(--citui-muted);font-size:.84rem;line-height:1.45}
+.a-pcard{padding:10px 12px;border:1px solid var(--citui-line);border-radius:12px;margin-bottom:8px;font-size:.9rem}
+.a-pcard b{display:block}
+.a-pcard .warn{color:var(--citui-warn-ink);font-size:.8rem}
+.a-pcard .muted{color:var(--citui-muted);font-size:.8rem}
+[hidden]{display:none!important}
+</style></head><body>
+<div class="mock-tools" role="toolbar">
+  <button data-size="m" aria-pressed="true">Mobil 390px</button><button data-size="d" aria-pressed="false">Asztali</button><i></i>
+  <button data-view="guest" aria-pressed="true">Vendég-oldal</button><button data-view="admin" aria-pressed="false">Tulaj (admin)</button><i></i>
+  <span class="grp" id="gGuest">
+    <button data-v="A" aria-pressed="true">A · a ház felül (javasolt)</button>
+    <button data-v="B" aria-pressed="false">B · a ház a szobák alatt</button>
+    <button data-v="C" aria-pressed="false">C · egy kártya</button><i></i>
+    <button data-price="1" aria-pressed="true">Van ára a háznak</button><button data-price="0" aria-pressed="false">Nincs ára</button>
+  </span>
+  <span class="grp" id="gAdmin" hidden>
+    <button data-av="X" aria-pressed="true">X · harmadik válasz (javasolt)</button>
+    <button data-av="Y" aria-pressed="false">Y · külön kapcsoló</button>
+  </span>
+</div>
+
+<div id="stage" class="is-mobile">
+  <p class="note" id="vnote"></p>
+
+  <div id="guest">
+    <div class="hd"><b>Hársfa Vendégház</b><span>Foglalás</span></div>
+    <section id="rooms"></section>
+    <section id="booking"><h2>Foglalás</h2>
+      <div class="book" id="book">
+        <span class="lbl">Amit foglal</span>
+        <div class="only" id="only"></div>
+        <div class="dates">Érkezés: <b>okt. 24.</b> → Távozás: <b>okt. 26.</b> · 2 éjszaka</div>
+        <div id="priced"><div class="sum"><span>2 éjszaka × <span id="nightly"></span></span><b id="total"></b></div></div>
+        <div id="quoted" class="quote" hidden><b>Erre az időszakra a szállásadó egyedi árat ad.</b>Küldje el a kérését, és a szállásadó árajánlattal válaszol. Az elküldéssel még nem vállal fizetési kötelezettséget.</div>
+        <button class="go" id="go" type="button"></button>
+        <p class="promise" id="promise"></p>
+      </div>
+    </section>
+  </div>
+
+  <div id="admin" hidden>
+    <h2>Szobák</h2>
+    <p class="crumb">Honlap › Modulok › Szobák — minta: a tulajnak eddig egy egysége volt („Hársfa Vendégház”), most veszi fel a másodikat.</p>
+    <div class="cols">
+      <div>
+        <form class="a-box" id="addForm" novalidate>
+          <h4>Új szoba felvétele</h4>
+          <input class="a-in" name="name" value="Hársfa szoba" aria-label="Az új szoba neve">
+          <fieldset class="rs-wq" id="wq"></fieldset>
+          <div id="priceF" class="a-price"><label class="a-lbl" for="pf">Alapár (Ft / éj)</label><input class="a-in" id="pf" inputmode="numeric" placeholder="Pl. 18 000">
+            <label class="rs-wtoggle" style="margin-top:8px"><input type="checkbox"> Nem adok meg árat — árajánlatot küldök</label></div>
+          <p class="a-noprice" id="noPrice" hidden>Ennek a szobának nem kell ár: a vendég csak az egész házat foglalja, árat csak arra kérünk.</p>
+          <p class="a-err" id="addErr" role="alert" hidden></p>
+          <button class="a-btn" type="submit">Hozzáadás</button>
+          <p class="a-ok" id="addOk" hidden></p>
+        </form>
+      </div>
+      <div>
+        <div id="card"></div>
+        <div class="a-box"><h4>A szobák, ahogy most állnak</h4><div class="a-rooms" id="aRooms"></div></div>
+        <div class="a-box"><h4>Árak képernyő</h4><div id="aPrices"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rd" id="rd" role="dialog" aria-modal="true" aria-labelledby="rdh">
+    <div class="rd__veil" data-close></div>
+    <div class="rd__panel">
+      <button class="rd__x" type="button" data-close aria-label="Bezárás">&times;</button>
+      <div class="rd__ph"></div>
+      <div class="rd__txt">
+        <div class="rd__brow" id="rdbrow"></div>
+        <h3 id="rdh"></h3>
+        <p id="rdcap"></p>
+        <div class="ams" id="rdams" style="justify-content:inherit"></div>
+        <p id="rddesc"></p>
+        <p class="rd__whole" id="rdwhole"></p>
+      </div>
+      <div class="rd__cta"><a href="#booking" id="rdcta" data-book></a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Sample data (not a real tenant): a guest house the owner lets ONLY as one; three rooms shown.
+var HOUSE = { name: "Hársfa Vendégház", cap: 9, price: 62000, from: true,
+  desc: "Egész ház a szőlőhegy alján: három hálószoba, két fürdő, közös konyha-nappali, fedett terasz, bekerített kert." };
+var ROOMS = [
+  { id: "harsfa", name: "Hársfa szoba", cap: 4, photos: 6, ams: ["franciaágy", "2 egyszemélyes ágy", "saját fürdő"],
+    desc: "A ház legnagyobb szobája, erkéllyel a kertre." },
+  { id: "diofa", name: "Diófa szoba", cap: 3, photos: 4, ams: ["franciaágy", "pótágy", "légkondicionáló"],
+    desc: "Csendes, hűvös szoba a ház északi oldalán." },
+  { id: "tetoter", name: "Tetőtéri szoba", cap: 2, photos: 3, ams: ["franciaágy", "tetőablak"],
+    desc: "Kis, meghitt szoba a tetőtérben — a csillagokra nyílik." }
+];
+var NOTES = {
+  A: "<b>A · A ház felül, fő ajánlatként (javaslatom).</b> A szekció első eleme az egyetlen foglalható dolog: a ház, árral és <b>Foglalás</b> gombbal, „Csak egyben kiadó” címkével. Alatta „A ház szobái” — fotó, férőhely, felszereltség, <b>Részletek</b> gomb, <b>ár nélkül</b>. Ugyanaz a sáv, mint a C-terv „egyben is kiadó” sávja, csak <i>fő</i> állapotban: kiemelt keret, a rács fölé kerül.",
+  B: "<b>B · Ugyanott, mint a C-tervben: a szobák alatt.</b> A rács a szobákkal kezdődik (ár nélkül, <b>Részletek</b>), egy bevezető mondat alattuk kimondja, hogy a házat egyben adják ki, és a ház-sáv a rács alatt áll, <b>kiemelt</b> állapotban. A két állapot itt ugyanazon a helyen van — csak a hangsúly fordul.",
+  C: "<b>C · Egy kártya: a ház, benne a szobái.</b> Egyetlen nagy kártya a ház árával és gombjával; a szobák kis csempékként benne ülnek, és a „Részletek” a felugrót nyitja. Vizuálisan a legerősebb „ez EGY dolog” — de ez már új markup, nem a meglévő szoba-kártya."
+};
+var v = "A", hasPrice = true, view = "guest", av = "X";
+var MODE = "only"; // owner state for the admin demo: "none" | "also" | "only"
+function fmt(n) { return n.toLocaleString("hu-HU").replace(/ | | /g, " ") + " Ft"; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+function housePrice() {
+  return hasPrice ? '<p class="price">' + fmt(HOUSE.price) + (HOUSE.from ? "-tól" : "") + " / éj · a teljes ház</p>"
+    : '<p class="custom">Egyedi ár<small>A szállásadó árajánlattal válaszol.</small></p>';
+}
+function houseBtn() { return hasPrice ? "Foglalás" : "Árajánlatot kérek"; }
+function ams(r) { return '<div class="ams">' + r.ams.map(function (a) { return "<span>" + esc(a) + "</span>"; }).join("") + "</div>"; }
+function band() {
+  return '<div class="whole" data-cit-whole-mode="main"><div>' +
+    '<div class="eyebrow">Csak egyben kiadó</div><h3>' + esc(HOUSE.name) + "</h3>" +
+    "<p>Az egész ház az Önöké: " + ROOMS.length + " szoba, legfeljebb " + HOUSE.cap + " fő.</p>" + housePrice() +
+    '</div><a class="cta" href="#booking" data-book>' + houseBtn() + "</a></div>";
+}
+function roomCard(r, i) {
+  return '<li class="card"><div class="ph"><span>' + r.photos + ' kép</span></div><div class="bd"><strong>' + esc(r.name) + "</strong>" +
+    '<span class="cap">' + r.cap + " fő</span>" + ams(r) +
+    '<span class="part">A ház része — a házzal együtt foglalható.</span>' +
+    '<button class="cta cta--ghost" type="button" data-open="' + i + '">Részletek</button></div></li>';
+}
+function renderGuest() {
+  var s = document.getElementById("rooms"), h;
+  if (v === "A") {
+    h = "<h2>A ház és a szobái</h2>" + band() + '<h3 class="sub">A ház szobái</h3><ul class="grid">' + ROOMS.map(roomCard).join("") + "</ul>";
+  } else if (v === "B") {
+    h = "<h2>Szobák</h2><p class=\"lead\">A házat csak egyben adjuk ki — ezek a szobái, hogy lássák, mi vár Önökre.</p>" +
+      '<ul class="grid">' + ROOMS.map(roomCard).join("") + '</ul><div class="gap"></div>' + band();
+  } else {
+    h = "<h2>A ház</h2>" + '<div class="house" data-cit-whole-mode="main"><div class="top"><div>' +
+      '<div class="eyebrow" style="font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--cit-accent);font-weight:700">Csak egyben kiadó</div>' +
+      '<h3 style="font-family:var(--cit-font-display);font-size:24px;margin:4px 0;font-weight:600">' + esc(HOUSE.name) + "</h3>" +
+      "<p style=\"margin:0 0 4px\">" + ROOMS.length + " szoba, legfeljebb " + HOUSE.cap + " fő.</p>" + housePrice() +
+      '</div><a class="cta" href="#booking" data-book>' + houseBtn() + '</a></div><div class="rooms">' +
+      ROOMS.map(function (r, i) {
+        return '<button class="mini" type="button" data-open="' + i + '"><span class="ph"></span><span><b>' + esc(r.name) + "</b><small>" + r.cap + " fő · " + esc(r.ams.slice(0, 2).join(", ")) + "</small><em>Részletek</em></span></button>";
+      }).join("") + "</div></div>";
+  }
+  s.innerHTML = h;
+  document.getElementById("only").innerHTML = esc(HOUSE.name) + "<small>A teljes ház · " + ROOMS.length + " szoba · legfeljebb " + HOUSE.cap + " fő</small>";
+  document.getElementById("priced").hidden = !hasPrice;
+  document.getElementById("quoted").hidden = hasPrice;
+  document.getElementById("nightly").textContent = fmt(HOUSE.price);
+  document.getElementById("total").textContent = fmt(HOUSE.price * 2);
+  document.getElementById("go").textContent = hasPrice ? "Tovább a kérés adataihoz (2 éjszaka)" : "Árajánlatot kérek";
+  document.getElementById("promise").textContent = hasPrice
+    ? "A szállásadó személyesen igazolja vissza. Fizetés a helyszínen."
+    : "A szállásadó árajánlattal válaszol. A foglalás akkor válik véglegessé, ha Ön az ajánlatot elfogadja.";
+  document.getElementById("vnote").innerHTML = NOTES[v] +
+    "<br><b>Mindhárom változatban:</b> a szoba-kártyán <b>nincs ár</b> (egy szétosztott ár olyan szám lenne, amit a szállásadó nem állított be — ADR-0232 ⑦), és <b>nincs Foglalás</b>; a foglalás-dobozban <b>nincs szoba-választó</b>, csak a ház.";
+}
+var opener = null;
+function openRd(i, from) {
+  var r = ROOMS[i]; opener = from || null;
+  document.getElementById("rdbrow").textContent = "A ház része";
+  document.getElementById("rdh").textContent = r.name;
+  document.getElementById("rdcap").textContent = r.cap + " fő";
+  document.getElementById("rdams").innerHTML = r.ams.map(function (a) { return "<span>" + esc(a) + "</span>"; }).join("");
+  document.getElementById("rddesc").textContent = r.desc;
+  document.getElementById("rdwhole").textContent = "Ez a szoba külön nem foglalható — a " + HOUSE.name + " csak egyben kiadó, " + ROOMS.length + " szobával.";
+  document.getElementById("rdcta").textContent = hasPrice ? "Az egész ház foglalása" : "Árajánlat az egész házra";
+  document.getElementById("rd").setAttribute("data-shown", "");
+  document.querySelector(".rd__x").focus();
+}
+function closeRd() { document.getElementById("rd").removeAttribute("data-shown"); if (opener) opener.focus(); }
+function jumpBook() {
+  var b = document.getElementById("book");
+  document.getElementById("booking").scrollIntoView({ block: "start" });
+  b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash");
+}
+
+// ── owner side ──
+var ADMIN_NOTES = {
+  X: "<b>X · Harmadik válasz ugyanabban a kérdésben (javaslatom).</b> A 2. szoba felvételekor a meglévő kérdés („Az egész szállást is kiadja egyben?”) egy ÚJ harmadik választ kap. Később a Szobák képernyő „Az egész szállás egyben” kártyáján a kapcsoló helyett <b>három állás</b> — ugyanaz a három mondat, így aki már beállította, ugyanott át is állíthatja. A mai „Igen”/„Nem” jelentése nem változik.",
+  Y: "<b>Y · Külön kapcsoló.</b> A kérdés marad kétválaszos; az „Igen” után a kártyán egy második kapcsoló jelenik meg: „A szobák csak bemutatásra — külön nem foglalhatók”. Kevesebb változás a meglévő kérdésen, de a tulaj a 2. szoba pillanatában NEM találkozik ezzel az esettel — utólag kell rájönnie, hogy van ilyen."
+};
+var CONSEQ = {
+  none: "Most minden szoba külön naptárral, egymástól függetlenül telik be.",
+  also: "A vendég a szobákat külön is, és a házat egyben is foglalhatja. A ház foglalása minden szobát lezár, és bármelyik szoba foglalása a házat.",
+  only: "A vendég csak az egész házat foglalhatja. A szobák a honlapon képpel és felszereltséggel látszanak, de ár és foglalás-gomb nélkül — külön nem foglalhatók."
+};
+function opt(name, value, title, why, isNew, checked) {
+  return '<label class="rs-wq__o"><input type="radio" name="' + name + '" value="' + value + '"' + (checked ? " checked" : "") + ' required><span><b>' + title +
+    (isNew ? '<span class="new">új</span>' : "") + "</b><small>" + why + "</small></span></label>";
+}
+function renderAdmin() {
+  var wq = document.getElementById("wq");
+  wq.innerHTML = "<legend>Az egész szállást is kiadja egyben?</legend><p>Eddig egy szobája volt: <b>Hársfa Vendégház</b>. A második felvételekor el kell dönteni, mi a viszonyuk.</p>" +
+    opt("whole", "igen", "Igen, az egészet is kiadom egyben", "Hársfa Vendégház marad az egész szállás. A foglalása minden szobát lezár, és bármelyik szoba foglalása az egészet.") +
+    (av === "X" ? opt("whole", "csak", "Csak egyben adom ki — a szobák bemutatásra", "A vendég csak Hársfa Vendégházat foglalhatja. A szobák képpel, férőhellyel, felszereltséggel látszanak, de külön nem foglalhatók, és nem kell áruk.", true) : "") +
+    opt("whole", "nem", "Nem, csak külön szobákat adok ki", "A szobák egymástól függetlenül telnek be.");
+  syncPriceField("");
+  var card = document.getElementById("card");
+  var on = MODE !== "none";
+  if (av === "X") {
+    card.innerHTML = '<form class="rs-wcard' + (on ? " is-on" : "") + '" id="wcard"><b class="t">Az egész szállás egyben</b><p id="conseq">' + CONSEQ[MODE] + "</p>" +
+      opt("mode", "none", "Nem adom ki egyben", "A szobák külön telnek be.", false, MODE === "none") +
+      opt("mode", "also", "Egyben is kiadom", "A szobák külön is foglalhatók.", false, MODE === "also") +
+      opt("mode", "only", "Csak egyben adom ki", "A szobák csak bemutatásra.", true, MODE === "only") +
+      '<select class="a-in" aria-label="Melyik szoba az egész szállás"' + (on ? "" : " disabled") + '><option>Hársfa Vendégház · 9 fő</option></select>' +
+      '<button class="a-btn a-btn--ghost" type="submit">Mentés</button><p class="a-ok" id="cardOk" hidden></p></form>';
+  } else {
+    card.innerHTML = '<form class="rs-wcard' + (on ? " is-on" : "") + '" id="wcard"><b class="t">Az egész szállás egyben</b><p id="conseq">' + CONSEQ[MODE] + "</p>" +
+      '<label class="rs-wtoggle"><input type="checkbox" name="on"' + (on ? " checked" : "") + "> Kiadom egyben is</label>" +
+      '<label class="rs-wtoggle" id="onlyT"' + (on ? "" : " hidden") + '><input type="checkbox" name="only"' + (MODE === "only" ? " checked" : "") + "> A szobák csak bemutatásra — külön nem foglalhatók <span class=\"new\" style=\"font-size:.68rem;color:var(--citui-ok-ink)\">ÚJ</span></label>" +
+      '<select class="a-in" aria-label="Melyik szoba az egész szállás"><option>Hársfa Vendégház · 9 fő</option></select>' +
+      '<button class="a-btn a-btn--ghost" type="submit">Mentés</button><p class="a-ok" id="cardOk" hidden></p></form>';
+  }
+  renderARooms();
+  document.getElementById("vnote").innerHTML = ADMIN_NOTES[av] +
+    "<br><b>Ár csak a házra:</b> „csak egyben” módban a bemutató szobától a rendszer SEHOL nem kér árat — a felvevő űrlapon nincs ár-mező, az Árak képernyőn nem szerepel, nincs „Nincs ára” figyelmeztetés, teendő és heti emlékeztető levél sem.<br><b>Meglévő bérlők:</b> a mai „igen” és „nem” változatlan marad (új adat-érték jön, a régiek jelentése nem változik); aki most „igen”-en van, a kártyán egy kattintással átállhat „csak egyben”-re.";
+}
+function syncPriceField(ans) {
+  var only = ans === "csak";
+  document.getElementById("priceF").hidden = only;
+  document.getElementById("noPrice").hidden = !only;
+}
+function renderAPrices() {
+  var rows = MODE === "only"
+    ? ['<div class="a-pcard"><b>Hársfa Vendégház — az egész ház</b><span class="muted">Alapár: 62 000 Ft / éj · ezt foglalja a vendég</span></div>',
+       '<div class="a-pcard"><span class="muted">A 3 szoba csak bemutatásra van, ezért itt nem szerepel, és nem kér árat.</span></div>']
+    : [{ n: "Hársfa Vendégház", w: 1 }].concat(ROOMS.map(function (r) { return { n: r.name }; })).filter(function (r) { return MODE === "also" || !r.w; })
+        .map(function (r) { return '<div class="a-pcard"><b>' + esc(r.n) + '</b><span class="warn">Nincs ára. A vendég nem lát árat — adjon meg alapárat.</span></div>'; });
+  document.getElementById("aPrices").innerHTML = rows.join("");
+}
+function renderARooms() {
+  renderAPrices();
+  var rows = [{ n: "Hársfa Vendégház", s: "az egész ház · 9 fő", whole: true }].concat(ROOMS.map(function (r) { return { n: r.name, s: r.cap + " fő" }; }));
+  document.getElementById("aRooms").innerHTML = rows.map(function (r) {
+    var book = MODE === "only" ? r.whole : MODE === "also" ? true : !r.whole;
+    var tag = book ? '<span class="a-tag a-tag--book">foglalható</span>' : '<span class="a-tag a-tag--show">' + (r.whole ? "rejtve" : "csak bemutatásra") + "</span>";
+    return '<div class="a-room"><span>' + esc(r.n) + "<small>" + esc(r.s) + "</small></span>" + tag + "</div>";
+  }).join("");
+}
+document.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var f = e.target;
+  if (f.id === "addForm") {
+    var c = f.querySelector("input[name=whole]:checked"), err = document.getElementById("addErr"), ok = document.getElementById("addOk");
+    ok.hidden = true;
+    if (!c) { err.textContent = "Válassza ki, kiadja-e a házat egyben is."; err.hidden = false; document.getElementById("wq").querySelector("input").focus(); return; }
+    err.hidden = true;
+    MODE = c.value === "igen" ? "also" : c.value === "csak" ? "only" : "none";
+    ok.textContent = "Felvéve: " + f.name.value + ". " + CONSEQ[MODE];
+    ok.hidden = false;
+    var ans = c.value; renderAdmin();
+    var r = document.querySelector('#wq input[value="' + ans + '"]'); if (r) r.checked = true; syncPriceField(ans);
+    document.getElementById("addOk").textContent = "Felvéve: " + f.name.value + ". " + CONSEQ[MODE]; document.getElementById("addOk").hidden = false;
+    return;
+  }
+  if (f.id === "wcard") {
+    if (av === "X") { var m = f.querySelector("input[name=mode]:checked"); MODE = m ? m.value : MODE; }
+    else { MODE = !f.on.checked ? "none" : f.only.checked ? "only" : "also"; }
+    renderAdmin();
+    var o = document.getElementById("cardOk"); o.textContent = "Mentve. " + CONSEQ[MODE]; o.hidden = false;
+  }
+});
+document.addEventListener("change", function (e) {
+  var t = e.target;
+  if (t.name === "whole") { document.getElementById("addErr").hidden = true; syncPriceField(t.value); }
+  if (t.name === "mode") { document.getElementById("conseq").textContent = CONSEQ[t.value]; }
+  if (t.name === "on" && av === "Y") document.getElementById("onlyT").hidden = !t.checked;
+});
+
+document.addEventListener("click", function (e) {
+  var t;
+  if ((t = e.target.closest("[data-size]"))) {
+    document.querySelectorAll("[data-size]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    document.getElementById("stage").classList.toggle("is-mobile", t.getAttribute("data-size") === "m"); return;
+  }
+  if ((t = e.target.closest("[data-view]"))) {
+    view = t.getAttribute("data-view");
+    document.querySelectorAll("[data-view]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    document.getElementById("guest").hidden = view !== "guest"; document.getElementById("admin").hidden = view !== "admin";
+    document.getElementById("gGuest").hidden = view !== "guest"; document.getElementById("gAdmin").hidden = view !== "admin";
+    view === "guest" ? renderGuest() : renderAdmin(); return;
+  }
+  if ((t = e.target.closest("[data-v]"))) {
+    v = t.getAttribute("data-v");
+    document.querySelectorAll("[data-v]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    renderGuest(); return;
+  }
+  if ((t = e.target.closest("[data-price]"))) {
+    hasPrice = t.getAttribute("data-price") === "1";
+    document.querySelectorAll("[data-price]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    renderGuest(); return;
+  }
+  if ((t = e.target.closest("[data-av]"))) {
+    av = t.getAttribute("data-av"); MODE = "only";
+    document.querySelectorAll("[data-av]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    renderAdmin(); return;
+  }
+  if ((t = e.target.closest("[data-open]"))) { e.preventDefault(); openRd(+t.getAttribute("data-open"), t); return; }
+  if ((t = e.target.closest("[data-close]"))) { closeRd(); return; }
+  if ((t = e.target.closest("a[data-book]"))) {
+    e.preventDefault();
+    if (t.id === "rdcta") document.getElementById("rd").removeAttribute("data-shown");
+    jumpBook();
+  }
+});
+document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.getElementById("rd").hasAttribute("data-shown")) closeRd(); });
+if (window.innerWidth >= 900) document.querySelector('[data-size="d"]').click();
+renderGuest();
+</script>
+</body></html>

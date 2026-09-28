@@ -39,14 +39,16 @@ egymás alatt: egy szobánál a meglévő szoba sora a **„Meglévő szobája�
 egyetlen szoba — ilyenkor a vendég nem is találkozik a szobaválasztással.
 
 Amikor a **második** szobát veszi fel, ugyanebben az űrlapban, közvetlenül a **„Hozzáadás”**
-fölött egy kérdés vár: **„Az egész szállást is kiadja egyben?”** Két válasz közül kell választania.
+fölött egy kérdés vár: **„Az egész szállást is kiadja egyben?”** Három válasz közül kell választania.
 Ha kihagyja, a gomb alatt piros sor mondja meg, mi hiányzik, és a kérdés pirosan kiemelődik —
 válasszon, és nyomja meg újra a gombot. **„Igen, az egészet is kiadom egyben”**: az eddigi szobája marad az egész szállás, a most
-felvett szoba pedig külön naptárat kap — a kettő egymást zárja (lásd lejjebb). **„Nem, csak külön
+felvett szoba pedig külön naptárat kap — a kettő egymást zárja (lásd lejjebb). **„Csak egyben adom ki — a szobák bemutatásra”**: a vendég csak az egész szállást foglalhatja; a
+szobák a honlapon képpel, férőhellyel és felszereltséggel látszanak, de külön nem foglalhatók, és
+árat sem kérünk tőlük — az ár mezője ilyenkor el is tűnik az űrlapról. **„Nem, csak külön
 szobákat adok ki”**: az eddigi szobája sima szobává válik, és a szobák egymástól függetlenül
 telnek be. Ezt később a rács fölötti kártyán bármikor átállíthatja.
 
-Ha az Árak modul is be van kapcsolva, a **„Hozzáadás”** megnyomása ELŐTT ugyanitt az árat is
+Ha az Árak modul is be van kapcsolva (és nem csak egyben adja ki a házat), a **„Hozzáadás”** megnyomása ELŐTT ugyanitt az árat is
 megadhatja (**„Alapár”** mező), vagy bepipálhatja az alatta lévő négyzetet: **„Nem adok meg árat —
 egyedi ajánlatot küldök”**. Egyiket sem kötelező kitölteni, a szoba mindenképp felkerül. Ha a
 beírt árat nem tudjuk értelmezni (például betűvel írta), a szoba ár nélkül kerül fel, és a sárga
@@ -117,14 +119,20 @@ többet ártana, mint használna.
 ## Az egész szállás egyben — ha a házat egyben is kiadja
 
 Ha egynél több szobája van, a rács fölött egy kártya áll: **„Az egész szállás egyben”**. Itt dönti
-el, hogy a házat egyben is kiadja-e. A **„Kiadom egyben is”** négyzet bepipálva, mellette a
-legördülőben kiválasztva, melyik szoba jelenti az egész szállást — a **„Mentés”** gombbal rögzíti.
-Ennek a szobának a kártyáján a rácson ott áll: „az egész ház”. Ha lefoglalják, minden más
-szoba tele lesz arra az éjszakára — és fordítva, ha bármelyik szobája foglalt, az egész szállás
-nem adható ki aznap. A kártya mindig kiírja, melyik szoba az egész.
+el három állás közül, hogyan adja ki a házat, a legördülőben kiválasztja, melyik szoba jelenti az
+egész szállást, és a **„Mentés”** gombbal rögzíti:
 
-Ha a négyzet nincs bepipálva, nincs ilyen szoba: a szobák egymástól függetlenül telnek be, és
-egyik kártyán sem szerepel „az egész ház”. Egyetlen szobánál a kártya nem is jelenik meg — ilyenkor
+- **„Nem adom ki egyben”**: nincs ilyen szoba, a szobák egymástól függetlenül telnek be, és egyik
+  kártyán sem szerepel „az egész ház”.
+- **„Egyben is kiadom”**: a kiválasztott szoba kártyáján a rácson ott áll: „az egész ház”. Ha
+  lefoglalják, minden más szoba tele lesz arra az éjszakára — és fordítva, ha bármelyik szobája
+  foglalt, az egész szállás nem adható ki aznap.
+- **„Csak egyben adom ki”**: a vendég csak az egész szállást foglalhatja. A többi szoba a rácson
+  „csak bemutatásra” jelölést kap: a honlapon képpel és felszereltséggel látszik, de ár és
+  foglalás nélkül. Árat csak az egész szállásra kérünk — az Árak lapon a szobáknak nincs kártyája,
+  és az ár hiánya miatt sem a teendők között, sem levélben nem szólunk.
+
+A kártya mindig kiírja, melyik szoba az egész, és mit jelent a választott állás. Egyetlen szobánál a kártya nem is jelenik meg — ilyenkor
 nincs mit eldönteni.
 
 Bármelyik szobát törölheti a felugrója alján lévő **„Szoba törlése”** gombbal — azt is, amelyik

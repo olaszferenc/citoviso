@@ -33,12 +33,15 @@ export interface Unit {
   /** ADR-0256 (0078) — this unit IS the place itself, not a room. Durable: switching
    *  off "egyben is kiadom" clears `isWholeProperty`, never this. */
   readonly representsWhole: boolean;
+  /** ADR-XXXX (0079) — the place is let ONLY as one: this unit is the only bookable one,
+   *  the others are rooms shown for presentation (`isBookableUnit`). Implies isWholeProperty. */
+  readonly wholeOnly: boolean;
 }
 
 // ADR-0256 — the guest-visibility rule lives in a string-free module so the MAIL path
 // (priceGap.ts → the weekly reminder) can call the SAME predicate without pulling this file's
 // Hungarian admin strings into the i18n scope. Re-exported here for every existing caller.
-export { isGuestVisibleUnit, guestUnits } from "./unitVisibility.js";
+export { isGuestVisibleUnit, guestUnits, isBookableUnit, bookableUnits, isWholeOnlySite } from "./unitVisibility.js";
 
 /**
  * A stable, unique slug for a unit within its site.
@@ -79,6 +82,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
       "is_whole_property",
       "price_on_request",
       "represents_whole",
+      "whole_only",
     ])
     .where("site_id", "=", siteId)
     .orderBy("sort_order")
@@ -96,6 +100,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
     isWholeProperty: r.is_whole_property,
     priceOnRequest: r.price_on_request,
     representsWhole: r.represents_whole,
+    wholeOnly: r.whole_only,
   }));
 }
 
@@ -129,6 +134,7 @@ export async function peekUnits(siteId: string): Promise<Unit[]> {
         isWholeProperty: true,
         priceOnRequest: false,
         representsWhole: true,
+        wholeOnly: false,
       },
     ];
   }
@@ -184,23 +190,30 @@ export async function wholePropertyUnitId(siteId: string): Promise<string | null
 }
 
 /**
+ * ADR-XXXX — `only` = the place is let ONLY as one (the rooms are shown, not booked).
  * ADR-0232 — the owner's choice: this unit is the whole place (its booking blocks every
  * room and vice versa, `unitScope.ts`), or nobody is (null → the rooms are independent).
  * At most one per site: the partial unique index of 0059 still guards it, and clearing
  * first makes the move atomic enough for a single owner's click.
  */
-export async function setWholeProperty(siteId: string, unitId: string | null): Promise<void> {
+export async function setWholeProperty(
+  siteId: string,
+  unitId: string | null,
+  only = false,
+): Promise<void> {
   await db.transaction().execute(async (trx) => {
+    // ADR-XXXX: whole_only lives only on the whole-property unit (CHECK), so it is
+    // cleared together with the flag and set together with it.
     await trx
       .updateTable("site_unit")
-      .set({ is_whole_property: false })
+      .set({ is_whole_property: false, whole_only: false })
       .where("site_id", "=", siteId)
-      .where("is_whole_property", "=", true)
+      .where((eb) => eb.or([eb("is_whole_property", "=", true), eb("whole_only", "=", true)]))
       .execute();
     if (unitId) {
       await trx
         .updateTable("site_unit")
-        .set({ is_whole_property: true })
+        .set({ is_whole_property: true, whole_only: only })
         .where("id", "=", unitId)
         .where("site_id", "=", siteId)
         .execute();
@@ -256,7 +269,7 @@ export async function settleFormerWhole(
   if (choice === "rejt") {
     await db
       .updateTable("site_unit")
-      .set({ represents_whole: true, is_whole_property: false })
+      .set({ represents_whole: true, is_whole_property: false, whole_only: false })
       .where("id", "=", unitId)
       .where("site_id", "=", siteId)
       .execute();
@@ -265,7 +278,7 @@ export async function settleFormerWhole(
   const clean = roomName.replace(/\s+/g, " ").trim().slice(0, 120);
   await db
     .updateTable("site_unit")
-    .set({ represents_whole: false, is_whole_property: false, ...(clean ? { name: clean } : {}) })
+    .set({ represents_whole: false, is_whole_property: false, whole_only: false, ...(clean ? { name: clean } : {}) })
     .where("id", "=", unitId)
     .where("site_id", "=", siteId)
     .execute();
