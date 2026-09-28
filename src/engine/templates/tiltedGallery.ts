@@ -211,11 +211,17 @@ section{padding:clamp(64px,9vh,104px) 0}
    its content. The place line goes — the bar's own small print already says it — and the
    scroll hint would sit behind the bar. Portrait and desktop: untouched. */
 @media(max-height:500px) and (min-width:641px){
-  .t-hero{height:auto;min-height:calc(100svh - 73px);padding-bottom:calc(70px + var(--citui-consent-h,0px))}
+  .t-hero{height:auto;min-height:calc(100svh - 73px)}
   .t-mast .t-kick{display:none}
   .t-scroll{display:none}
   /* the 76px name pushed the tagline's last line to 5–7px above the pinned bar — vh-bound name */
   .t-mast h1{font-size:clamp(36px,13vh,56px)}
+}
+/* ADR-0253: the bar exists only up to 700px wide (cit-modules.css hides it above), so only a
+   641–700px landscape phone still has it over the hero — the foot is kept free there alone
+   (844×390 kept 70px empty under the name for a bar that no longer paints, measured 2026-09-28). */
+@media(max-height:500px) and (min-width:641px) and (max-width:700px){
+  .t-hero{padding-bottom:calc(70px + var(--citui-consent-h,0px))}
 }
 
 /* footer */

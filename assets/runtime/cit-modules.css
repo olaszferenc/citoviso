@@ -149,12 +149,6 @@
 .cit-book__submit:hover { transform: translateY(-1px); filter: brightness(1.05); }
 
 .cit-book__note { margin: 0; font-size: 0.78rem; color: var(--cit-muted); }
-  .cit-rev-f__consent { min-height: 44px; align-items: center; }
-  .cit-rev-f__consent input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
-/* ⚠️ the two rules above look like a stray tail of the phone touch block (end of sheet) — a
-   lone "}" stood here and the sheet's LAST block was left open (2026-09-27). The "}" is
-   removed (the browser ignored it anyway); the two rules stay where they act today (every
-   width) — moving them is a behaviour change, not a fix for this thread. */
 .cit-book__note--err { color: var(--cit-accent); }
 
 /* Booking widget layout (owner decree 2026-08-23 — "milyen gagyi az elrendezése"):
@@ -1116,6 +1110,11 @@ a.cit-grat:hover {
   .cit-book__dinput { min-height: 44px; }
   .cit-price__tab, .cit-modsec__roomcta { min-height: 44px; display: inline-flex; align-items: center; }
   .cit-rmbtn { min-height: 44px; padding: 4px 8px; }
+  /* the review form's consent tick — written for this block (142b7e98, ADR-0235 ①: touch
+     targets on a phone) but committed next to .cit-book__note, where it hit EVERY width and
+     the desktop lost the base 18px box aligned to the text's first line (moved 2026-09-28). */
+  .cit-rev-f__consent { min-height: 44px; align-items: center; }
+  .cit-rev-f__consent input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
 }
 /* ⛔ that closing brace was missing on main (2026-09-27): the browser closes an open block
    at the end of the sheet, so it went unnoticed — until a rule was appended after it and
