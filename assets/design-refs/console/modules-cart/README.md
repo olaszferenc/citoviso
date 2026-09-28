@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-09-28, tulajdonosi döntés a §2b terv-körben. Az első körben A (csukott sáv),
 B (kosár-gomb) és C (tömör sáv) közül a tulaj a **B**-t választotta, két kikötéssel; a második kör
-(`modules-cart.html`) ezekkel készült, és erre mondta: „ez így ok.” Döntés: ADR-XXXX.
+(`modules-cart.html`) ezekkel készült, és erre mondta: „ez így ok.” Döntés: ADR-0255.
 **Hatókör:** `src/server/adminViews.ts` · `public/assets/ui/citui-admin.css`
 **Kiváltja:** a `modules-tab` ④ (kosár-sáv) és a `wallet` ⑧ pont (kártyaválasztó a sávban) helyét.
 

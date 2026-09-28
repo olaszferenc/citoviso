@@ -1,4 +1,4 @@
-## ADR-XXXX — Modulok fül: kosár a ragadó összegző sáv helyett (telefonon kosár-gomb, asztalin hasáb; a kártyaválasztó a fizetés-megerősítőbe költözik)
+## ADR-0255 — Modulok fül: kosár a ragadó összegző sáv helyett (telefonon kosár-gomb, asztalin hasáb; a kártyaválasztó a fizetés-megerősítőbe költözik)
 
 **Dátum:** 2026-09-28 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) · **Szál:** „modul-kirakat összegző sáv” (brief: `~/rc-briefs/modul-kirakat-osszegzo-sav.md`)
 **Kontraktus:** `assets/design-refs/console/modules-cart/` · **Felülírja:** `modules-tab` ④ (kosár-sáv), `wallet` ⑧ (a kártyaválasztó HELYE; ADR-0226)

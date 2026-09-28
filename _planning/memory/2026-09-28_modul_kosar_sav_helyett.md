@@ -1,4 +1,4 @@
-# 2026-09-28 — Modulok fül: kosár a 407 px-es összegző sáv helyett (ADR-XXXX)
+# 2026-09-28 — Modulok fül: kosár a 407 px-es összegző sáv helyett (ADR-0255)
 
 Brief: `~/rc-briefs/modul-kirakat-osszegzo-sav.md` (a koordinátor-session írta, az éjszakai kör lelete).
 A tulaj döntése a koordinátoron át jött: 1. kör → „B, de a kosár csak akkor jelenjen meg, ha valami belekerül;
