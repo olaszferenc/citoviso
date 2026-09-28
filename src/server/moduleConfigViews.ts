@@ -1486,13 +1486,33 @@ function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
  * ADR-0232: the question asked at the moment of adding the SECOND unit — inside the
  * add form (required radios), because that is where the decision is made. With any
  * other count the form has no such block and the flag stays as it is.
+ *
+ * ADR-XXXX (approved plan whole-property-second-question, owner 2026-09-28 „B"): on
+ * "Nem" a second question opens — what the unit so far WAS: the owner's first room (he
+ * names it) or nothing he lets (hidden from the guest, not deleted). It opens with CSS
+ * (`:has`), so it works without JS; the server applies the same rule on save
+ * (/admin/units/save), and the small script only says it in words before sending.
+ * The running-bookings sentence carries the REAL count and is absent at zero.
  */
-function wholeQuestion(units: readonly { id: string; name: string }[], lang: string): string {
+function wholeQuestion(
+  units: readonly { id: string; name: string }[],
+  lang: string,
+  nu?: NewUnitView,
+): string {
   if (units.length !== 1) return "";
   const first = units[0]!;
   const opt = (value: string, title: string, why: string): string =>
     `<label class="rs-wq__o"><input type="radio" name="whole" value="${value}" required>` +
     `<span><b>${title}</b><small>${why}</small></span></label>`;
+  const running = nu?.formerWholeBookings ?? 0;
+  const runningNote = running
+    ? `<small class="rs-wq2__run">${T(lang, "Ennek az egységnek {n} jövőbeli foglalása van — azok érvényben maradnak, csak új foglalás nem érkezhet rá.", { n: running })}</small>`
+    : "";
+  const L = {
+    pick: T(lang, "Válassza ki, mi legyen az eddigi „{name}” egységgel.", { name: first.name }),
+    name: T(lang, "Adjon nevet az első szobájának."),
+    same: T(lang, "A két szoba neve nem lehet ugyanaz."),
+  };
   return (
     `<fieldset class="rs-wq" data-cit-whole-q><legend>${T(lang, "Az egész szállást is kiadja egyben?")}</legend>` +
     `<p>${T(lang, "Eddig egy szobája volt: {name}. A második felvételekor el kell dönteni, mi a viszonyuk.", { name: `<b>${esc(first.name)}</b>` })}</p>` +
@@ -1504,9 +1524,35 @@ function wholeQuestion(units: readonly { id: string; name: string }[], lang: str
     opt(
       "nem",
       T(lang, "Nem, csak külön szobákat adok ki"),
-      T(lang, "{name} sima szoba lesz. A szobák egymástól függetlenül telnek be. Később bármikor megjelölhet egyet az egész szállásnak.", { name: esc(first.name) }),
+      T(lang, "A szobák egymástól függetlenül telnek be."),
     ) +
-    `</fieldset>`
+    `<div class="rs-wq2" data-cit-whole-q2>` +
+    `<p class="rs-wq2__q">${T(lang, "És mi legyen az eddigi {name} egységgel?", { name: `<b>${esc(first.name)}</b>` })}</p>` +
+    `<label class="rs-wq__o"><input type="radio" name="first" value="szoba"><span>` +
+    `<b>${T(lang, "Ez az első szobám — nevet adok neki")}</b>` +
+    `<small>${T(lang, "Ugyanúgy megmarad a naptára, a képei és az ára, csak a neve változik. A vendég szobaként látja.")}</small>` +
+    `<input class="citui-input rs-wq2__name" name="first_name" placeholder="${T(lang, "Pl. Nádas apartman")}" aria-label="${T(lang, "Az első szoba neve")}" autocomplete="off">` +
+    `</span></label>` +
+    `<label class="rs-wq__o"><input type="radio" name="first" value="rejt"><span>` +
+    `<b>${T(lang, "Nincs ilyen szobám — rejtse el")}</b>` +
+    `<small>${T(lang, "A vendég nem látja: se a honlapon, se a foglalásnál. Nem törlődik: ha később mégis egyben adja ki, az „Az egész szállás egyben” kártyán visszakapcsolhatja.")}</small>` +
+    runningNote +
+    `</span></label>` +
+    `<p class="rs-wq2__err" data-cit-whole-q2-err role="alert" hidden></p>` +
+    `</div></fieldset>` +
+    `<script>(function(){var s=document.currentScript,fs=s&&s.previousElementSibling,f=fs&&fs.closest("form");if(!f)return;` +
+    `var L=${scriptJson(L)},err=fs.querySelector("[data-cit-whole-q2-err]");` +
+    `function v(n){var e=f.querySelector("input[name="+n+"]:checked");return e?e.value:""}` +
+    `function nm(x){return String(x||"").replace(/\\s+/g," ").trim()}` +
+    `function fail(m,el){err.textContent=m;err.hidden=false;if(el&&el.focus)el.focus()}` +
+    // only the question's OWN fields clear the message: the name field's blur-change
+    // (Enter → message → focus moves) must not wipe it (measured on the mock)
+    `f.addEventListener("change",function(e){var n=e.target&&e.target.name;if(n==="whole"||n==="first"||n==="first_name")err.hidden=true});` +
+    `f.first_name.addEventListener("input",function(){err.hidden=true});` +
+    `f.addEventListener("submit",function(e){if(v("whole")!=="nem"||!nm(f.name.value))return;var c=v("first"),n=nm(f.first_name.value);` +
+    `var m=c!=="szoba"&&c!=="rejt"?[L.pick,f.querySelector("input[name=first]")]:c==="szoba"&&!n?[L.name,f.first_name]:` +
+    `c==="szoba"&&n.toLowerCase()===nm(f.name.value).toLowerCase()?[L.same,f.first_name]:null;` +
+    `if(m){e.preventDefault();fail(m[0],m[1])}});})();</script>`
   );
 }
 
@@ -1853,6 +1899,9 @@ export interface NewUnitView {
     readonly unitId: string;
     readonly unitName: string;
   } | null;
+  /** ADR-XXXX: accepted bookings still running on the ONLY unit so far — the second
+   *  question says they stay in force if the owner hides it. 0/absent → no sentence. */
+  readonly formerWholeBookings?: number;
 }
 
 /**
@@ -1897,7 +1946,7 @@ function newUnitForm(
   nu: NewUnitView | undefined,
   lang: string,
 ): string {
-  const q = wholeQuestion(units, lang);
+  const q = wholeQuestion(units, lang, nu);
   return (
     `<details class="unit-more"><summary>${ic("plus")}${T(lang, "Új szoba felvétele")}</summary>` +
     `<div class="unit-new"><h3>${ic("plus")}${T(lang, "Új szoba felvétele")}</h3>` +

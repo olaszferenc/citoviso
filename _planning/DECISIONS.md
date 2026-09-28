@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-nem-kiado-egesz-szallas-rejtve-a-widget-aras-egysegre-nyit.md) — A nem kiadó „egész szállás” a vendég elől rejtve (tartós jelölés), és a foglalási widget az első ÁRAS egységre nyit
 - [ADR-0255](decisions/0255-modulok-ful-kosar-a-ragado-osszegzo-sav-helyett.md) — Modulok fül: kosár a ragadó összegző sáv helyett (telefonon kosár-gomb, asztalin hasáb; a kártyaválasztó a fizetés-megerősítőbe költözik)
 - [ADR-0254](decisions/0254-rc-gepezet-egy-kod-harom-gepen-cit-mr-of-a.md) — RC-gépezet: egy kód három gépen (CIT · MR · OF) + a session által indított session „🔴 SUB” jelölése
 - [ADR-0253](decisions/0253-telefonos-menu-es-a-foglalas-sav-csak-feluton-a.md) — Telefonos menü, és a foglalás-sáv csak félúton: a foglalási blokknál semmilyen ragadó foglalás-gomb (felülírja az ADR-0237 ①–②-t)

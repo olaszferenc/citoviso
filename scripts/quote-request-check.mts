@@ -129,10 +129,10 @@ try {
       days = page.locator("[data-day]:not([disabled]):not(.is-blocked):visible");
     }
     if ((await days.count()) >= 6) { await days.nth(3).click(); await page.waitForTimeout(150); await days.nth(5).click(); await page.waitForTimeout(600); }
-    // Plan B (2026-09-26): on a phone the unit selector and the button live in STEP 2, behind
-    // „Tovább” — the guest's path. The quote box stays readable (innerText of a non-rendered
-    // node is its text), so the ①–④ sentences are judged exactly as before.
-    if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
+    // booking-unit-default ② (2026-09-28): on a phone the unit selector now LEADS step 1 (above
+    // the calendar) — the guest switches units where the price box is. Plan B's step 2 keeps
+    // the button and the note; innerText of a non-rendered node is its text, so the ①–④
+    // sentences are judged exactly as before, without leaving step 1.
 
     const sel = page.locator('select[name="unit"]').first();
     const cta = page.locator(".cit-book__submit").first();
@@ -159,6 +159,8 @@ try {
     // ki: a létszám léptetése újrarajzoltatja az árat, tehát átmegy ugyanazon a
     // visszaállító ágon. ⚠️ Az első próbám SZINTETIKUS volt — kézzel vette le a
     // hiba-osztályt, de a visszaállítót sosem hívta meg —, és a saját hibáján bukott.
+    // the guest stepper lives in STEP 2 on a phone — go there the guest's way first
+    if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }
     await page.locator('.cit-book__step[data-step="1"]').first().click();
     await page.waitForTimeout(700);
     check(
@@ -177,7 +179,8 @@ try {
     console.log(`     a magyarázó doboz: ${Math.round(box?.width ?? 0)}×${Math.round(box?.height ?? 0)} px`);
     await page.screenshot({ path: path.join(OUT, `ui-ask-${label}.png`) });
 
-    // ⑥ vissza — a jelzés ne ragadjon be
+    // ⑥ vissza — a jelzés ne ragadjon be (telefonon „Módosítom a napokat” → vissza az 1. lépésbe, ahol a választó áll)
+    if (await page.locator(".cit-book__edit").isVisible()) { await page.click(".cit-book__edit"); await page.waitForTimeout(300); }
     await sel.selectOption({ index: 0 }); await page.waitForTimeout(900);
     check("⑥ visszaváltva a gomb ÚJRA foglalást ígér (nem ragad be)", /Foglalási kérés/.test(await cta.innerText()), await cta.innerText());
     check("⑥ …és az ár is visszajön", /\d[\d\s]*Ft/.test(await page.locator("[data-quote]").innerText()));

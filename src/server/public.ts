@@ -133,7 +133,10 @@ import {
   setUnitSeasonalOnly,
   setUnitPriceOnRequest,
   setWholeProperty,
+  settleFormerWhole,
+  futureAcceptedBookings,
   getUnits,
+  guestUnits,
   unitBelongsToSite,
   updateUnit,
 } from "../tenant/units.js";
@@ -845,6 +848,12 @@ async function serveTenantHost(
     if (!(await unitBelongsToSite(siteId, unitId))) {
       return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
     }
+    // ADR-XXXX: a hidden unit (the whole place, not let as one) takes no NEW request — the
+    // page does not offer it, and a hand-made POST must not either. Running bookings on it
+    // are untouched (owner, 2026-09-28: „ok B").
+    if (!guestUnits(await getUnits(siteId)).some((u) => u.id === unitId)) {
+      return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
+    }
     const result = await createBookingRequest(
       {
         siteId,
@@ -1402,6 +1411,11 @@ async function serveAdmin(
           flash: flashUnit
             ? { state: state as NonNullable<NewUnitView["flash"]>["state"], unitId: flashUnit.id, unitName: flashUnit.name }
             : null,
+          // ADR-XXXX: the second question names the running bookings of the only unit so far.
+          formerWholeBookings: await (async () => {
+            const only = await getUnits(site.id);
+            return only.length === 1 ? futureAcceptedBookings(only[0]!.id) : 0;
+          })(),
         };
       }
 
@@ -2648,14 +2662,41 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         await updateUnit(siteId, id, name, cap, form.get("description"));
       } else if (!id) {
         const before = await getUnits(siteId);
+        const whole = form.get("whole");
+        // ADR-XXXX (approved plan whole-property-second-question): on "Nem" the owner also
+        // says what the unit so far WAS — his first room (with a name) or nothing he lets
+        // (hidden from the guest). The browser checks this before sending; this is the
+        // same rule for a form sent without JS, and it refuses BEFORE anything is written,
+        // so a half-answered form never leaves a new room behind with the old unit unsettled.
+        const first = form.get("first");
+        const firstName = (form.get("first_name") ?? "").replace(/\s+/g, " ").trim();
+        if (before.length === 1 && whole === "nem" && name.trim()) {
+          const why =
+            first !== "szoba" && first !== "rejt"
+              ? `Válassza ki, mi legyen az eddigi „${before[0]!.name}” egységgel.`
+              : first === "szoba" && !firstName
+                ? "Adjon nevet az első szobájának."
+                : first === "szoba" && firstName.toLowerCase() === name.replace(/\s+/g, " ").trim().toLowerCase()
+                  ? "A két szoba neve nem lehet ugyanaz."
+                  : "";
+          if (why) {
+            const back = form.get("back") === "rooms" ? "rooms" : "booking";
+            return redirect(res, `/admin?tab=modulok&m=${back}&hiba=${encodeURIComponent(why)}`);
+          }
+        }
         const created = await createUnit(siteId, name, cap, form.get("description"));
         // ADR-0232: the SECOND unit is the moment the owner decides whether the place is
         // also let as one — the add form asks (required radio), the answer sets or clears
         // the flag on the unit that was there before. No answer (an older form, or a
         // 3rd+ unit) leaves the flag as it is.
-        const whole = form.get("whole");
         if (created && before.length === 1 && (whole === "igen" || whole === "nem")) {
           await setWholeProperty(siteId, whole === "igen" ? before[0]!.id : null);
+          await settleFormerWhole(
+            siteId,
+            before[0]!.id,
+            whole === "igen" ? "egesz" : first === "rejt" ? "rejt" : "szoba",
+            firstName,
+          );
         }
         // ADR-0208 ⑥.3 (approved plan price-on-request ②): with pricing on, the new-unit
         // row asks for the price or "nem adok meg árat". ⛔ It never refuses the save

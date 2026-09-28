@@ -2023,6 +2023,15 @@ if [ -f scripts/quote-request-check.mts ] && \
   echo "[pre-commit] quote-request (ár nélkül nem foglalást ígérünk)…"
   npx tsx scripts/quote-request-check.mts >"$GATE_LOG" || gate_failed
 fi
+# NYITÓ-EGYSÉG (kontraktus: design-refs/tenant-site/booking-unit-default, tulaj 2026-09-28):
+# a widget az első ÁRAS egységre nyit, és telefonon a választó az 1. lépésben, a naptár
+# fölött áll. Mérve előtte: az ár nélküli „egész” egységre nyitott, a választó 0×0 volt,
+# minden vendég árajánlat-dobozt kapott — hiba nélkül, néma kerülőúton.
+if [ -f scripts/booking-unit-default-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-(runtime\.js|modules\.css)$|^src/tenant/(editor|units)\.ts$|^src/engine/recipe\.ts$|^assets/design-refs/tenant-site/booking-unit-default/|^scripts/booking-unit-default-check'; then
+  echo "[pre-commit] booking-unit-default (áras egységre nyit, választó az 1. lépésben)…"
+  npx tsx scripts/booking-unit-default-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ÁRAJÁNLAT-ÚT (kontraktus: design-refs/tenant-admin/booking-offer): ár nélküli
 # kérésnél a tulaj levele koppintással ÁR NÉLKÜL véglegesített. A lánc (tulaj-levél →
 # ajánlat-lap → árlista → vendég-levél → vendég-lap → foglalás) öt fájlban épül, ezért

@@ -30,6 +30,32 @@ export interface Unit {
   /** ADR-0208 ⑥.2 (0075): "nem adok meg árat" — where no price row covers a night,
    *  the owner quotes individually. A decision, so it is not reported as missing. */
   readonly priceOnRequest: boolean;
+  /** ADR-XXXX (0078) — this unit IS the place itself, not a room. Durable: switching
+   *  off "egyben is kiadom" clears `isWholeProperty`, never this. */
+  readonly representsWhole: boolean;
+}
+
+/**
+ * ADR-XXXX — THE one rule for "does the guest see this unit?" (owner, 2026-09-28: „Tűnjön
+ * el ha nem kiadó az egész egyben."). A unit that stands for the whole place, while the
+ * place is not let as one, is not something a guest can book: no room card, no option in
+ * the booking picker, no price row, no subpage. Everything guest-facing filters through
+ * here, and so does the owner's "nincs ára" warning — a unit nobody can book needs no price.
+ */
+export function isGuestVisibleUnit(u: Pick<Unit, "representsWhole" | "isWholeProperty">): boolean {
+  return !(u.representsWhole && !u.isWholeProperty);
+}
+
+/**
+ * The units a guest is offered, in the owner's order. Never empty while the site has a
+ * unit: if the owner deleted every room and only the hidden whole-place unit is left, it is
+ * the one thing there is to book — hiding it would leave the booking widget with no unit.
+ */
+export function guestUnits<T extends Pick<Unit, "representsWhole" | "isWholeProperty">>(
+  units: readonly T[],
+): T[] {
+  const shown = units.filter(isGuestVisibleUnit);
+  return shown.length ? shown : [...units];
 }
 
 /**
@@ -70,6 +96,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
       "seasonal_only",
       "is_whole_property",
       "price_on_request",
+      "represents_whole",
     ])
     .where("site_id", "=", siteId)
     .orderBy("sort_order")
@@ -86,6 +113,7 @@ export async function getUnits(siteId: string): Promise<Unit[]> {
     seasonalOnly: r.seasonal_only,
     isWholeProperty: r.is_whole_property,
     priceOnRequest: r.price_on_request,
+    representsWhole: r.represents_whole,
   }));
 }
 
@@ -118,6 +146,7 @@ export async function peekUnits(siteId: string): Promise<Unit[]> {
         seasonalOnly: false,
         isWholeProperty: true,
         priceOnRequest: false,
+        representsWhole: true,
       },
     ];
   }
@@ -143,7 +172,14 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
   }
   const row = await db
     .insertInto("site_unit")
-    .values({ site_id: siteId, name: DEFAULT_UNIT_NAME, sort_order: 0, is_whole_property: true })
+    .values({
+      site_id: siteId,
+      name: DEFAULT_UNIT_NAME,
+      sort_order: 0,
+      is_whole_property: true,
+      // ADR-XXXX: the default unit IS the place — until the owner says it is his first room.
+      represents_whole: true,
+    })
     .returning("id")
     .executeTakeFirstOrThrow();
   await assignSlug(siteId, row.id, DEFAULT_UNIT_NAME);
@@ -188,6 +224,70 @@ export async function setWholeProperty(siteId: string, unitId: string | null): P
         .execute();
     }
   });
+}
+
+/**
+ * ADR-XXXX — accepted bookings on this unit that have not ended yet. The owner may hide
+ * the whole-place unit while some are still running (owner, 2026-09-28: „ok B"): a booking
+ * is an agreement with a guest and an admin switch does not undo it — the screen says how
+ * many stay in force, with the REAL count, and says nothing when there are none.
+ */
+export async function futureAcceptedBookings(unitId: string): Promise<number> {
+  const today = new Date().toISOString().slice(0, 10);
+  const row = await db
+    .selectFrom("booking_request")
+    .select(db.fn.countAll<string>().as("n"))
+    .where("unit_id", "=", unitId)
+    .where("status", "=", "accepted")
+    .where("date_to", ">=", today)
+    .executeTakeFirst();
+  return Number(row?.n ?? 0);
+}
+
+/**
+ * ADR-XXXX (approved plan whole-property-second-question) — the owner's answer when the
+ * SECOND unit is added and the place is NOT let as one: what the unit so far was.
+ *   "szoba" → it is his first room: it stops standing for the place and takes the name he
+ *             gave. The slug is re-issued from the new name — safe exactly now, because a
+ *             single-unit site has no subpages (editor.ts), so no URL ever pointed at it.
+ *   "egesz" → ("Igen") it is the place, let as one — it stands for the place from now on
+ *             (the caller has already made it the whole-property unit).
+ *   "rejt"  → there is no such room: it keeps standing for the place, and as the place is
+ *             not let as one, the guest no longer sees it (isGuestVisibleUnit). Nothing is
+ *             deleted; switching "egyben is kiadom" back on shows it again.
+ */
+export async function settleFormerWhole(
+  siteId: string,
+  unitId: string,
+  choice: "egesz" | "szoba" | "rejt",
+  roomName: string,
+): Promise<void> {
+  if (choice === "egesz") {
+    await db
+      .updateTable("site_unit")
+      .set({ represents_whole: true })
+      .where("id", "=", unitId)
+      .where("site_id", "=", siteId)
+      .execute();
+    return;
+  }
+  if (choice === "rejt") {
+    await db
+      .updateTable("site_unit")
+      .set({ represents_whole: true, is_whole_property: false })
+      .where("id", "=", unitId)
+      .where("site_id", "=", siteId)
+      .execute();
+    return;
+  }
+  const clean = roomName.replace(/\s+/g, " ").trim().slice(0, 120);
+  await db
+    .updateTable("site_unit")
+    .set({ represents_whole: false, is_whole_property: false, ...(clean ? { name: clean } : {}) })
+    .where("id", "=", unitId)
+    .where("site_id", "=", siteId)
+    .execute();
+  if (clean) await assignSlug(siteId, unitId, clean);
 }
 
 /** True when the owner genuinely has several bookable things (drives the UI). */

@@ -639,6 +639,19 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .rs-wq__o input{margin:3px 0 0;accent-color:var(--citui-cyan-500);flex:none;width:16px;height:16px}
 .rs-wq__o b{display:block;font-size:.86rem;color:var(--citui-ink)}
 .rs-wq__o small{display:block;color:var(--citui-muted);font-size:.76rem;line-height:1.45;margin-top:3px}
+/* ADR-XXXX (whole-property-second-question): the second question opens on "Nem" — CSS,
+   so it works without JS; the name field only under "Ez az első szobám". */
+.rs-wq2{display:none;margin:2px 0 0 26px;gap:8px;padding:10px 0 0;border-top:1px dashed var(--citui-line-strong)}
+.rs-wq:has(input[name=whole][value=nem]:checked) .rs-wq2{display:grid}
+.rs-wq2__q{margin:0;font-size:.86rem;color:var(--citui-ink)}
+/* the option's radio rule above (16×16) must not size the text field — measured on the mock */
+.rs-wq__o>span{flex:1;min-width:0}
+.rs-wq__o input.rs-wq2__name{display:none;margin:8px 0 0;width:100%;height:auto;accent-color:auto}
+.rs-wq__o:has(input[name=first][value=szoba]:checked) input.rs-wq2__name{display:block}
+.rs-wq__o small.rs-wq2__run{color:var(--citui-ink);font-weight:600}
+.rs-wq2__err{margin:0;padding:8px 10px;border-radius:8px;font-size:.82rem;font-weight:600;color:var(--citui-bad);
+  background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));border:1px solid color-mix(in srgb,var(--citui-bad) 45%,transparent)}
+.rs-wq2__err[hidden]{display:none}
 .ampick__empty{font-size:11px;color:var(--citui-muted);padding:14px 2px}
 .ampick__foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--citui-line)}
 /* Locked state (module not bought): a conversion surface, not an error. */

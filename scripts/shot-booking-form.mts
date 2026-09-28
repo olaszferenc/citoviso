@@ -177,7 +177,10 @@ check("az űrlap hidratálódott", await page.locator("form.cit-book--request").
 // Plan B (owner, 2026-09-26; contract design-refs/tenant-site/booking-mobile-two-step): on a
 // phone the fields live in STEP 2, behind the "Tovább" button — the guest's real path. They
 // are asserted where the guest meets them (after a valid range, below), not on page load.
-check("több egységnél van egység-választó (a 2. lépésben)", (await page.locator("select[name=unit]").count()) === 1);
+check("több egységnél van egység-választó", (await page.locator("select[name=unit]").count()) === 1);
+// booking-unit-default ② (owner, 2026-09-28): on a phone the unit picker LEADS step 1 — the
+// busy nights and the price depend on it, so it is chosen before the dates.
+check("⭐ telefonon az egység-választó az 1. lépésben látható", await page.locator("select[name=unit]").isVisible());
 check("a név és e-mail mező kint van (a 2. lépésben)", (await page.locator("#cit-name").count()) === 1);
 check("⭐ telefonon a naptár után egy „Tovább” gomb áll (B terv)", await page.locator(".cit-book__go").isVisible());
 
@@ -255,7 +258,8 @@ await page.screenshot({ path: "shot-guest-booking-mobile.png", fullPage: true })
 // STEP 2: the summary strip + the fields + the send button.
 await page.click(".cit-book__go");
 await page.waitForTimeout(300);
-check("⭐ a 2. lépésben az egység-választó és a mezők láthatók", (await page.locator("select[name=unit]").isVisible()) && (await page.locator("#cit-name").isVisible()));
+check("⭐ a 2. lépésben a mezők láthatók", await page.locator("#cit-name").isVisible());
+check("⭐ …az egység-választó nem ismétlődik (az 1. lépésben állt)", !(await page.locator("select[name=unit]").isVisible()));
 check("⭐ a 2. lépés összegzője az időszakot és az éjszakákat mondja", /éjszaka/.test((await page.locator(".cit-book__sum").textContent()) ?? ""));
 
 // Submitting: the form must be REPLACED by a confirmation, not left standing.

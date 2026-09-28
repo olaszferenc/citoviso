@@ -25,4 +25,7 @@ valódi runtime-ját futtatja, nem külön prototípust). Képek: `shots/`.
 5. Feliratok `tr()`-rel (i18n), színek csak `--cit-*` tokenből; a görgetés-tisztás a tapadó sáv alatt (`--cit-stick`).
 6. A minta-nyugta és a küldés viselkedése változatlan (ADR-0061); a „Tovább” nem küld semmit.
 
+⭐ **Kiegészítve 2026-09-28** (`booking-unit-default/` ②, tulaj): több egységnél a „Melyiket foglalná?” választó az
+**1. lépésben**, a naptár fölött áll (a naptár foglaltsága és az ár attól függ), a 2. lépés összegzője megnevezi az egységet.
+
 Landolt: `src/engine`/`assets/runtime` (cit-runtime.js `syncSteps`, cit-modules.css „PHONE: TWO STEPS”), ADR-0235 kiegészítés.
