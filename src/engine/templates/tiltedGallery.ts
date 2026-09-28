@@ -208,20 +208,21 @@ section{padding:clamp(64px,9vh,104px) 0}
    the headline's lower half sat UNDER the bar (measured on Alig-vár Tanya). Here the hero
    keeps the bar's height free at its foot (the runtime's --cit-stick idea, in CSS: 70px bar
    + the consent bar it stands on), fits the screen under the 73px sticky nav, and grows with
-   its content. The place line goes — the bar's own small print already says it — and the
-   scroll hint would sit behind the bar. Portrait and desktop: untouched. */
+   its content. Portrait and desktop: untouched. */
 @media(max-height:500px) and (min-width:641px){
   .t-hero{height:auto;min-height:calc(100svh - 73px)}
-  .t-mast .t-kick{display:none}
-  .t-scroll{display:none}
   /* the 76px name pushed the tagline's last line to 5–7px above the pinned bar — vh-bound name */
   .t-mast h1{font-size:clamp(36px,13vh,56px)}
 }
 /* ADR-0253: the bar exists only up to 700px wide (cit-modules.css hides it above), so only a
    641–700px landscape phone still has it over the hero — the foot is kept free there alone
-   (844×390 kept 70px empty under the name for a bar that no longer paints, measured 2026-09-28). */
+   (844×390 kept 70px empty under the name for a bar that no longer paints, measured 2026-09-28).
+   Only here does the place line go (the bar's own small print already says it) and the scroll
+   hint (it would sit behind the bar); a wider landscape phone has no bar, so both stay (owner, 2026-09-28). */
 @media(max-height:500px) and (min-width:641px) and (max-width:700px){
   .t-hero{padding-bottom:calc(70px + var(--citui-consent-h,0px))}
+  .t-mast .t-kick{display:none}
+  .t-scroll{display:none}
 }
 
 /* footer */
