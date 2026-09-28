@@ -1,0 +1,247 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Az ár nélküli „egész szállás” a vendég előtt — terv (Három Huszár)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* The live site's own skin tokens (Három Huszár, editorial-warm) — the mock wears them. */
+:root{
+  --cit-accent:#c54631;--cit-on-accent:#fff;--cit-ink:#2a1c14;--cit-muted:#6f5c4a;
+  --cit-bg:#f6efe2;--cit-surface:#fffdf7;--cit-line:#e6dac6;--cit-radius:12px;
+  --cit-font-display:'Playfair Display',Georgia,serif;--cit-font-body:'Manrope',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e4dc;font-family:var(--cit-font-body);color:var(--cit-ink)}
+.mock-tools{position:relative;z-index:50;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:#1f1a17;color:#fff;font:600 13px/1 system-ui}
+.mock-tools button{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid #777;background:#333;color:#fff;cursor:pointer}
+.mock-tools button[aria-pressed=true]{background:var(--cit-accent);border-color:var(--cit-accent)}
+.mock-tools i{width:1px;height:22px;background:#666;margin:0 4px}
+#stage{container-type:inline-size;container-name:vp;margin:0 auto 40px;width:100%;max-width:1200px;background:var(--cit-bg);box-shadow:0 0 0 1px #d6cfc4;position:relative;overflow:hidden}
+#stage.is-mobile{width:390px}
+.note{margin:0;padding:12px 16px;background:#fff3cd;color:#4a3800;font-size:14px;line-height:1.5}
+.note b{color:#2e2300}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:58px;background:var(--cit-ink);color:#fff}
+.hd b{font-family:var(--cit-font-display);font-size:20px}
+section{padding:40px 16px}
+section h2{font-family:var(--cit-font-display);font-size:28px;font-weight:600;margin:0 0 20px;text-align:center}
+@container vp (min-width:860px){section{padding:56px 48px}}
+
+/* ── room cards (shared fallback card, ③ fixed: one fact per line) ── */
+.grid{list-style:none;margin:0 auto;padding:0;display:grid;gap:12px;grid-template-columns:1fr;max-width:1060px}
+@container vp (min-width:860px){.grid{grid-template-columns:repeat(4,1fr)}.grid.three{grid-template-columns:repeat(3,1fr)}}
+.card{display:flex;flex-direction:column;gap:6px;padding:18px 20px;border:1px solid var(--cit-line);border-radius:14px;background:var(--cit-surface)}
+.card .open{all:unset;display:flex;flex-direction:column;gap:6px;cursor:pointer}
+.card .open:focus-visible{outline:2px solid var(--cit-accent);outline-offset:4px}
+.card strong{font-size:17px;font-weight:600}
+.cap{color:var(--cit-muted)}
+.price{font-weight:700}
+.custom{font-weight:700;color:var(--cit-ink)}
+.custom small{display:block;font-weight:500;color:var(--cit-muted);font-size:13px;margin-top:2px;line-height:1.4}
+.cta{align-self:flex-start;margin-top:6px;display:inline-flex;align-items:center;min-height:44px;padding:9px 18px;border-radius:8px;border:0;background:var(--cit-accent);color:var(--cit-on-accent);font:700 14px var(--cit-font-body);letter-spacing:.02em;cursor:pointer;text-decoration:none}
+.cta--ghost{background:transparent;color:var(--cit-accent);box-shadow:inset 0 0 0 2px var(--cit-accent)}
+
+/* C: the whole house as its own band under the rooms */
+.whole{max-width:1060px;margin:16px auto 0;padding:20px;border:1px solid var(--cit-line);border-radius:14px;background:color-mix(in srgb,var(--cit-accent) 7%,var(--cit-surface));display:flex;flex-direction:column;gap:8px}
+.whole .eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--cit-accent);font-weight:700}
+.whole h3{font-family:var(--cit-font-display);font-size:22px;margin:0;font-weight:600}
+.whole p{margin:0;line-height:1.5}
+@container vp (min-width:860px){.whole{flex-direction:row;align-items:center;justify-content:space-between;gap:24px;padding:22px 28px}.whole .cta{align-self:center;flex:none}}
+
+/* ── popover (no photo → no photo box) ── */
+.rd{position:fixed;inset:0;z-index:60;display:none}
+#stage.is-mobile .rd{left:50%;right:auto;width:390px;transform:translateX(-50%)}
+.rd[data-shown]{display:block}
+.rd__veil{position:absolute;inset:0;background:color-mix(in srgb,var(--cit-ink) 55%,transparent)}
+.rd__panel{position:absolute;inset:0;background:var(--cit-bg);display:flex;flex-direction:column}
+@container vp (min-width:860px){.rd__panel{inset:40px auto auto 50%;transform:translateX(-50%);width:min(760px,92%);max-height:calc(100% - 80px);border-radius:6px}}
+.rd__x{position:absolute;top:10px;right:10px;width:44px;height:44px;border:0;background:color-mix(in srgb,var(--cit-bg) 72%,transparent);color:var(--cit-ink);font-size:22px;cursor:pointer}
+.rd__txt{padding:64px 22px 18px;overflow:auto;flex:1}
+.rd__brow{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--cit-accent);font-weight:600}
+.rd__txt h3{font-family:var(--cit-font-display);font-size:28px;font-weight:600;margin:8px 0 10px}
+.rd__txt p{margin:0 0 10px;line-height:1.6;color:var(--cit-muted)}
+.rd__txt .rd__price{color:var(--cit-ink);font-weight:700}
+.rd__cta{padding:14px 18px 18px;border-top:1px solid var(--cit-line)}
+.rd__cta a{display:block;text-align:center;text-decoration:none;background:var(--cit-accent);color:var(--cit-on-accent);font-size:12px;letter-spacing:.24em;text-transform:uppercase;font-weight:700;padding:16px}
+@container vp (min-width:860px){.rd__txt{text-align:center;padding:64px 44px 18px}.rd__cta{text-align:center;border-top:0;padding-bottom:30px}.rd__cta a{display:inline-block;min-width:280px}}
+
+/* ── booking widget stub (the real one's two modes, quote-request contract) ── */
+.book{max-width:560px;margin:0 auto;padding:18px;border:1px solid var(--cit-line);border-radius:14px;background:var(--cit-surface)}
+.book label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--cit-muted);margin-bottom:6px}
+.book select{width:100%;font:500 17px var(--cit-font-body);padding:12px;border-radius:8px;border:1px solid var(--cit-line);background:var(--cit-bg);color:var(--cit-ink)}
+.book .dates{margin:14px 0;padding:12px;border-radius:8px;background:var(--cit-bg);font-size:15px}
+.quote{padding:14px;border-radius:8px;background:color-mix(in srgb,var(--cit-accent) 9%,var(--cit-surface));border:1px solid color-mix(in srgb,var(--cit-accent) 30%,var(--cit-line));line-height:1.5;font-size:15px}
+.quote b{display:block;margin-bottom:4px}
+.sum{display:flex;justify-content:space-between;font-size:16px;padding:12px 0;border-top:1px solid var(--cit-line)}
+.book .go{width:100%;margin-top:12px;min-height:52px;border:0;border-radius:8px;background:var(--cit-accent);color:var(--cit-on-accent);font:700 16px var(--cit-font-body);cursor:pointer}
+.book .promise{margin:10px 0 0;font-size:13px;color:var(--cit-muted);line-height:1.5}
+.flash{animation:fl 1.2s ease}
+@keyframes fl{0%{box-shadow:0 0 0 4px var(--cit-accent)}100%{box-shadow:0 0 0 0 transparent}}
+[hidden]{display:none!important}
+</style></head><body>
+<div class="mock-tools" role="toolbar">
+  <button data-size="m" aria-pressed="true">Mobil 390px</button><button data-size="d" aria-pressed="false">Asztali</button><i></i>
+  <button data-v="A" aria-pressed="false">A · árajánlat</button>
+  <button data-v="B" aria-pressed="false">B · Foglalás + ár</button>
+  <button data-v="C" aria-pressed="true">C · külön sáv (javasolt)</button>
+</div>
+
+<div id="stage" class="is-mobile">
+  <p class="note" id="vnote"></p>
+  <div class="hd"><b>Három Huszár Apartments</b><span>Foglalás</span></div>
+
+  <section id="rooms"><h2>Szobák, apartmanok</h2>
+    <ul class="grid" id="grid"></ul>
+    <div class="whole" id="wholeband" hidden>
+      <div>
+        <div class="eyebrow">Egyben is kiadó</div>
+        <h3>A szállás egésze</h3>
+        <p>Mind a 3 egység egyben — csak az Önök társaságáé.</p>
+        <p class="custom">Egyedi ár<small>A szállásadó árajánlattal válaszol.</small></p>
+      </div>
+      <button class="cta" type="button" data-open="0">Részletek és árajánlat</button>
+    </div>
+  </section>
+
+  <section id="booking"><h2>Foglalás</h2>
+    <div class="book" id="book">
+      <label for="unit">Melyiket foglalná?</label>
+      <select id="unit"></select>
+      <div class="dates">Érkezés: <b>okt. 24.</b> → Távozás: <b>okt. 26.</b> · 2 éjszaka</div>
+      <div id="priced"><div class="sum"><span>2 éjszaka × <span id="nightly"></span></span><b id="total"></b></div></div>
+      <div id="quoted" class="quote" hidden><b>Erre az időszakra a szállásadó egyedi árat ad.</b>Küldje el a kérését, és a szállásadó árajánlattal válaszol. Az elküldéssel még nem vállal fizetési kötelezettséget.</div>
+      <button class="go" id="go" type="button"></button>
+      <p class="promise" id="promise"></p>
+    </div>
+  </section>
+
+  <div class="rd" id="rd" role="dialog" aria-modal="true" aria-labelledby="rdh">
+    <div class="rd__veil" data-close></div>
+    <div class="rd__panel">
+      <button class="rd__x" type="button" data-close aria-label="Bezárás">&times;</button>
+      <div class="rd__txt">
+        <div class="rd__brow" id="rdbrow"></div>
+        <h3 id="rdh"></h3>
+        <p id="rdcap"></p>
+        <p class="rd__price" id="rdprice"></p>
+        <p id="rddesc"></p>
+      </div>
+      <div class="rd__cta"><a href="#booking" id="rdcta"></a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Real data of the Három Huszár tenant (DB, 2026-09-28): the whole unit has NO price row
+// and no capacity; the three rooms have base prices (Nádas: two rows → "-tól").
+var UNITS = [
+  { id: "whole", name: "A szállás egésze", whole: true, cap: "", price: 0,
+    desc: "Nádfedeles parasztház felső szintje: két hálószoba, saját fürdő, tágas terasz a burjánzó kertre. Reggeli a kovácsoltvas asztalnál, csendben." },
+  { id: "nadas", name: "Nádas apartman", cap: "4 fő", price: 24000, from: true, desc: "" },
+  { id: "kishazi", name: "Kisházi szoba", cap: "2 fő", price: 16000, desc: "" },
+  { id: "kerti", name: "Kerti stúdió", cap: "3 fő", price: 19000, desc: "" }
+];
+var NOTES = {
+  A: "<b>A · Árajánlat a kártyán.</b> Az ár nélküli egység kártyája kimondja: <b>Egyedi ár</b>, és a gombja nem „Foglalás”, hanem <b>Árajánlatot kérek</b> — ugyanaz a szó, amit a foglalás-doboz gombja mond ezen az egységen. A kártya a helyén marad (első).",
+  B: "<b>B · Foglalás marad, az ár kimondva.</b> Minden kártyán ugyanaz a „Foglalás” gomb (egy szó, egy folyamat); az ár nélküli kártyán az ár helyén <b>Egyedi ár — a szállásadó árajánlattal válaszol</b>. A foglalás-dobozban derül ki, hogy a gomb ott „Árajánlatot kérek”.",
+  C: "<b>C · Az egész ház külön sávban (javaslatom).</b> A rácsban csak a 3 szoba áll; az egész ház alattuk, <b>saját sávban</b>, kimondva, mi az („Mind a 3 egység egyben”), és hogy egyedi ár jár rá. A szobák „Foglalás”-t mondanak, az egész ház „Részletek és árajánlat”-ot. A vendég első olvasata a szobák ára, nem egy üres kártya."
+};
+var v = "C";
+function fmt(n) { return n.toLocaleString("hu-HU").replace(/ /g, " ") + " Ft"; }
+function priceLine(u) { return u.price ? fmt(u.price) + (u.from ? "-tól" : "") + " / éj" : ""; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+function card(u, i) {
+  var body = '<button class="open" type="button" data-open="' + i + '"><strong>' + esc(u.name) + "</strong>" +
+    (u.cap ? '<span class="cap">' + esc(u.cap) + "</span>" : "") +
+    (u.price ? '<span class="price">' + priceLine(u) + "</span>"
+      : v === "A" ? '<span class="custom">Egyedi ár</span>'
+      : '<span class="custom">Egyedi ár<small>A szállásadó árajánlattal válaszol.</small></span>') +
+    "</button>";
+  var label = !u.price && v === "A" ? "Árajánlatot kérek" : "Foglalás";
+  return '<li class="card">' + body + '<a class="cta" href="#booking" data-unit="' + u.id + '">' + label + "</a></li>";
+}
+function renderCards() {
+  var list = v === "C" ? UNITS.filter(function (u) { return !u.whole; }) : UNITS;
+  var g = document.getElementById("grid");
+  g.className = "grid" + (list.length === 3 ? " three" : "");
+  g.innerHTML = list.map(function (u) { return card(u, UNITS.indexOf(u)); }).join("");
+  document.getElementById("wholeband").hidden = v !== "C";
+  document.getElementById("vnote").innerHTML = NOTES[v];
+}
+function renderSelect() {
+  var s = document.getElementById("unit");
+  var cur = s.value;
+  s.innerHTML = UNITS.map(function (u) {
+    return '<option value="' + u.id + '">' + esc(u.name) + (u.cap ? " · " + u.cap : "") + (u.price ? "" : " · egyedi ár") + "</option>";
+  }).join("");
+  // ADR-0256: the widget opens on the first PRICED unit.
+  s.value = cur || "nadas";
+  paintWidget();
+}
+function paintWidget() {
+  var u = UNITS.filter(function (x) { return x.id === document.getElementById("unit").value; })[0];
+  var priced = !!u.price;
+  document.getElementById("priced").hidden = !priced;
+  document.getElementById("quoted").hidden = priced;
+  if (priced) {
+    document.getElementById("nightly").textContent = fmt(u.price);
+    document.getElementById("total").textContent = fmt(u.price * 2);
+  }
+  document.getElementById("go").textContent = priced ? "Tovább a kérés adataihoz (2 éjszaka)" : "Árajánlatot kérek";
+  document.getElementById("promise").textContent = priced
+    ? "A szállásadó személyesen igazolja vissza. Fizetés a helyszínen."
+    : "A szállásadó árajánlattal válaszol. A foglalás akkor válik véglegessé, ha Ön az ajánlatot elfogadja.";
+}
+function jumpTo(unitId) {
+  var s = document.getElementById("unit");
+  s.value = unitId; paintWidget();
+  var b = document.getElementById("book");
+  document.getElementById("booking").scrollIntoView({ block: "start" });
+  b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash");
+}
+var opener = null;
+function openRd(i, from) {
+  var u = UNITS[i]; opener = from || null;
+  document.getElementById("rdbrow").textContent = u.whole ? "Egyben is kiadó" : "Apartman";
+  document.getElementById("rdh").textContent = u.name;
+  var cap = document.getElementById("rdcap");
+  cap.textContent = u.whole ? "Mind a 3 egység egyben" : u.cap; cap.hidden = !cap.textContent;
+  document.getElementById("rdprice").innerHTML = u.price ? priceLine(u)
+    : "Egyedi ár — a szállásadó árajánlattal válaszol.";
+  var d = document.getElementById("rddesc");
+  d.textContent = u.desc || "Ehhez az egységhez még nincs leírás és felszereltség megadva.";
+  var cta = document.getElementById("rdcta");
+  cta.textContent = u.price || v === "B" ? "Foglalás" : "Árajánlatot kérek";
+  cta.setAttribute("data-unit", u.id);
+  document.getElementById("rd").setAttribute("data-shown", "");
+  document.querySelector(".rd__x").focus();
+}
+function closeRd() {
+  document.getElementById("rd").removeAttribute("data-shown");
+  if (opener) opener.focus();
+}
+document.addEventListener("click", function (e) {
+  var t;
+  if ((t = e.target.closest("[data-size]"))) {
+    document.querySelectorAll("[data-size]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    document.getElementById("stage").classList.toggle("is-mobile", t.getAttribute("data-size") === "m");
+    return;
+  }
+  if ((t = e.target.closest("[data-v]"))) {
+    v = t.getAttribute("data-v");
+    document.querySelectorAll("[data-v]").forEach(function (b) { b.setAttribute("aria-pressed", b === t ? "true" : "false"); });
+    renderCards(); return;
+  }
+  if ((t = e.target.closest("[data-open]"))) { e.preventDefault(); openRd(+t.getAttribute("data-open"), t); return; }
+  if ((t = e.target.closest("[data-close]"))) { closeRd(); return; }
+  if ((t = e.target.closest("a[data-unit]"))) {
+    e.preventDefault();
+    if (t.id === "rdcta") document.getElementById("rd").removeAttribute("data-shown");
+    jumpTo(t.getAttribute("data-unit"));
+  }
+});
+document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.getElementById("rd").hasAttribute("data-shown")) closeRd(); });
+document.getElementById("unit").addEventListener("change", paintWidget);
+// Phones start on the mobile layout; a wide screen may switch.
+if (window.innerWidth >= 900) document.querySelector('[data-size="d"]').click();
+renderCards(); renderSelect();
+</script>
+</body></html>

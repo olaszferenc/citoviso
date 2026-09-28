@@ -38,6 +38,12 @@ szöveget és 5 súgó-cikket írt át; a fordítás kulcsa a magyar forrás-sz�
   `admin-bookings`) fordítása elavult → `npx tsx scripts/kb-translate.mts` a KB-szerkesztés UTÁN
   (a súgónak nincs magyar tartaléka).
 
+**⚠️ Runtime-változás a nagy deploy UTÁN: pillanatkép-újrarenderelés.** A `assets/runtime/cit-runtime.js`
+és `cit-modules.css` a bérlő STATIKUS pillanatképébe (`sites/<tenant>/index.html`) van beégetve a renderelés
+pillanatában — a kód kivitele egyetlen élő bérlő oldalát sem változtatja meg. Mérve 2026-09-28: a szobakártya-
+és felugró-javítás a lokál FK-014-ben NEM látszott, amíg a pillanatkép régi volt. Ezért deploy után:
+`npx tsx scripts/rerender-tenant.mts --all --dry` (lista), majd `--all`. (Élesi írás → külön engedéllyel, §0.3.)
+
 **Deploy menete:** backup `/opt/citoviso/backups/<szál>-<ts>/` → rsync CSAK a listázott fájlokat →
 `chown citoviso:citoviso` → érintett service restart → verifikáció a CF-edge-en, böngészővel,
 **390px-en is**.
