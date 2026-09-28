@@ -1292,6 +1292,9 @@ async function serveAdmin(
           // overview to-do and the weekly reminder read.
           const status: Record<string, UnitPriceStatus> = {};
           for (const u of list) status[u.id] = unitPriceStatus(prices[u.id] ?? [], u);
+          // ADR-0256 ③: the rooms a guest never sees get no "nincs ára" line — the same
+          // rule (guestUnits) the guest page, the to-do row and the reminder read.
+          const shownToGuest = new Set(guestUnits(list).map((u) => u.id));
           // 0074: which season is open for editing, which year card was just saved or
           // refused, and where the refusal text belongs (next to it, not at the top).
           const qp = new URL(req.url ?? "/", "http://x").searchParams;
@@ -1312,6 +1315,7 @@ async function serveAdmin(
             // never points at a screen that would not open.
             roomsActive: modules.modules.some((m) => m.id === "rooms" && m.active),
             siteView: await priceSiteView(session.tenantId),
+            guestHidden: list.filter((u) => !shownToGuest.has(u.id)).map((u) => u.id),
           };
         }
       }

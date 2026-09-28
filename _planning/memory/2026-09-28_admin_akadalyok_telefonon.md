@@ -49,10 +49,14 @@ tenant-admin ELSŐ munkamenetét rontotta, telefonon. A döntések a koordináto
   mindkét ág képviselve (tábla: 4, csak kártyák: 6); önteszt: 10 piros.
 - Saját hiba a tervben: „minden egységnél az alapárával” — az egész szállásnak nincs ára; javítva.
 
-## ⑤ „Nem kiadó egész → tűnjön el” — a Foglalás-szál viszi (`cit37b9296b-41`)
-- Tervezett: `site_unit.represents_whole` + `isGuestVisibleUnit(u)` (`src/tenant/units.ts`). Ha
-  landolt: a `unitPriceStatus` három olvasója (Árak-kártya, Áttekintés, heti emlékeztető) erre
-  épüljön. A doboz „Ár nélkül:” sora a lap adataiból jön, magától követi.
+## ⑤ „Nem kiadó egész → tűnjön el” — a Foglalás-szál landolta (ADR-0256), az admin-oldal rákötve
+- ADR-0256 ③ szerint a „nincs ára” figyelmeztetés ugyanazt a szabályt hívja: a rejtett egységért
+  (represents_whole és NEM is_whole_property) se Árak-kártya sor, se teendő, se heti emlékeztető.
+- A predikátum szöveg nélküli modulba költözött (`src/tenant/unitVisibility.ts`, a `units.ts`
+  re-exportálja), mert a levél-útvonal (`priceGap.ts`) nem húzhatja be a `units.ts` magyar szövegeit.
+- A `guestUnits` sosem üres: ha csak a rejtett egység maradt, azt árazni KELL (így is mérve).
+- Őr: `scripts/hidden-unit-price-gap-check.mts` (tiszta, DB nélkül — a dev DB-ben ma nincs rejtett
+  egység; `priceGapsOf` + a renderelt kártya, pozitív kontrollokkal; önteszt piros).
 
 ## Utókör: a 4. szoba eltűnt a lapról (e4d05534) — a price-where-check fogta meg
 - A koordinátor új bérlőjén (kemences-vendeghaz, 4 egység, `wordmark-grow` sablon) a ② bukott:

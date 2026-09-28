@@ -2577,6 +2577,8 @@ export interface PricingEditorData {
    * cannot say something the page does not do. null = the site has no page data yet.
    */
   readonly siteView: PriceSiteView | null;
+  /** ADR-0256 ③: units the guest never sees — no missing-price line on their card. */
+  readonly guestHidden?: readonly string[];
   /** 0074: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
    *  the year card just saved or refused (`?ev=<seasonId>-<year>`). */
   readonly editSeason?: string | null;
@@ -2912,6 +2914,8 @@ function priceDecision(
   lang: string,
   /** The page shows NO price for this room anywhere (siteView.nowhere). */
   nowhere = false,
+  /** ADR-0256 ③: the guest never sees this unit — a missing price is no gap. */
+  hidden = false,
 ): string {
   const box =
     `<form method="POST" action="/admin/prices/request">` +
@@ -2927,8 +2931,9 @@ function priceDecision(
     }</span></span></label>` +
     `<noscript><button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button></noscript>` +
     `</form>`;
-  const line =
-    status === "on_request"
+  const line = hidden
+    ? ""
+    : status === "on_request"
       ? `<p class="mcfg-empty mcfg-empty--said" data-price-state="on_request">${ic("check", 16)}<span>` +
         `<strong>${T(lang, "Kimondva: nem ad meg alapárat.")}</strong> ` +
         (hasSeasons
@@ -3105,6 +3110,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
           data.status[u.id] ?? "none",
           lang,
           Boolean(data.siteView?.nowhere.includes(u.id)),
+          Boolean(data.guestHidden?.includes(u.id)),
         ) +
         (datedRows
           ? datedRows +

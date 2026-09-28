@@ -35,28 +35,10 @@ export interface Unit {
   readonly representsWhole: boolean;
 }
 
-/**
- * ADR-0256 — THE one rule for "does the guest see this unit?" (owner, 2026-09-28: „Tűnjön
- * el ha nem kiadó az egész egyben."). A unit that stands for the whole place, while the
- * place is not let as one, is not something a guest can book: no room card, no option in
- * the booking picker, no price row, no subpage. Everything guest-facing filters through
- * here, and so does the owner's "nincs ára" warning — a unit nobody can book needs no price.
- */
-export function isGuestVisibleUnit(u: Pick<Unit, "representsWhole" | "isWholeProperty">): boolean {
-  return !(u.representsWhole && !u.isWholeProperty);
-}
-
-/**
- * The units a guest is offered, in the owner's order. Never empty while the site has a
- * unit: if the owner deleted every room and only the hidden whole-place unit is left, it is
- * the one thing there is to book — hiding it would leave the booking widget with no unit.
- */
-export function guestUnits<T extends Pick<Unit, "representsWhole" | "isWholeProperty">>(
-  units: readonly T[],
-): T[] {
-  const shown = units.filter(isGuestVisibleUnit);
-  return shown.length ? shown : [...units];
-}
+// ADR-0256 — the guest-visibility rule lives in a string-free module so the MAIL path
+// (priceGap.ts → the weekly reminder) can call the SAME predicate without pulling this file's
+// Hungarian admin strings into the i18n scope. Re-exported here for every existing caller.
+export { isGuestVisibleUnit, guestUnits } from "./unitVisibility.js";
 
 /**
  * A stable, unique slug for a unit within its site.

@@ -10,7 +10,8 @@ import { getEmailSender } from "../email/sender.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
 import { siteRendersModule } from "./modules.js";
-import { getSitePrices, unitPriceStatus } from "./prices.js";
+import { getSitePrices, unitPriceStatus, type UnitPrice } from "./prices.js";
+import { guestUnits } from "./unitVisibility.js";
 
 export interface PriceGap {
   readonly unitId: string;
@@ -33,24 +34,54 @@ export async function sitePriceGaps(
   if (!(await siteRendersModule(siteId, "pricing"))) return [];
   // ⛔ Read directly, not through units.ts: this module sends MAIL, and pulling units.ts
   // onto the mail path brings its Hungarian admin strings into the i18n scope (the
-  // i18n-scope gate). Only the four fields the rule needs; same order as getUnits.
+  // i18n-scope gate). Only the fields the rule needs; same order as getUnits.
   const [units, prices] = await Promise.all([
     db
       .selectFrom("site_unit")
-      .select(["id", "name", "seasonal_only", "price_on_request"])
+      .select(["id", "name", "seasonal_only", "price_on_request", "represents_whole", "is_whole_property"])
       .where("site_id", "=", siteId)
       .orderBy("sort_order")
       .orderBy("created_at")
       .execute(),
     getSitePrices(siteId),
   ]);
+  return priceGapsOf(
+    units.map((u) => ({
+      id: u.id,
+      name: u.name,
+      seasonalOnly: u.seasonal_only,
+      priceOnRequest: u.price_on_request,
+      representsWhole: u.represents_whole,
+      isWholeProperty: u.is_whole_property,
+    })),
+    prices,
+    today,
+  );
+}
+
+/**
+ * The rule itself, without the DB — so a guard can measure it on a hidden unit even when the
+ * shared dev DB has none (it may not be written to). ADR-0256 ③: a unit the guest never sees
+ * (the whole place, not let as one) needs no price — no to-do row, no reminder. The SAME rule
+ * the guest page filters by (guestUnits: never empty, so a lone hidden unit is still priced).
+ */
+export function priceGapsOf(
+  units: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly seasonalOnly: boolean;
+    readonly priceOnRequest: boolean;
+    readonly representsWhole: boolean;
+    readonly isWholeProperty: boolean;
+  }[],
+  prices: ReadonlyMap<string, readonly UnitPrice[]>,
+  today: string,
+): PriceGap[] {
+  const shown = new Set(guestUnits(units).map((u) => u.id));
   const out: PriceGap[] = [];
   for (const u of units) {
-    const status = unitPriceStatus(
-      prices.get(u.id) ?? [],
-      { seasonalOnly: u.seasonal_only, priceOnRequest: u.price_on_request },
-      today,
-    );
+    if (!shown.has(u.id)) continue;
+    const status = unitPriceStatus(prices.get(u.id) ?? [], u, today);
     if (status === "none" || status === "partial") out.push({ unitId: u.id, name: u.name, status });
   }
   return out;

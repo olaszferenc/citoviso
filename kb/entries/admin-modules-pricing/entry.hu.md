@@ -69,6 +69,9 @@ nincs ára.”** Ilyenkor a vendég ezekre az éjszakákra nem lát árat, és �
 kiút van: adjon meg alapárat, vagy pipálja be, hogy szándékosan nem ad meg. Amíg egyik sincs,
 hetente e-mailben emlékeztetjük.
 
+Kivétel az egész szállás, ha nem adja ki egyben, és a vendég elől el van rejtve: azt senki nem
+foglalhatja, ezért nem kérünk rá árat — se sárga sor, se teendő, se emlékeztető.
+
 ## Időszaki árak (pl. főszezon)
 
 Az **„Időszaki árak”** résznél adhat meg eltérő árat az év egyes szakaszaira:

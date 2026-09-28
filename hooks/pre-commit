@@ -1695,6 +1695,13 @@ if [ -f scripts/rooms-all-shown-check.mts ] && \
   echo "[pre-commit] rooms-all-shown-check (minden szoba a lapon, minden sablonon)…"
   npx tsx scripts/rooms-all-shown-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A VENDÉG ELŐL REJTETT EGYSÉGÉRT NEM KÉRÜNK ÁRAT (ADR-0256 ③): az Árak-kártya, a teendő és a heti
+# emlékeztető UGYANAZT a guestUnits-szabályt olvassa. Tiszta, DB nélkül.
+if [ -f scripts/hidden-unit-price-gap-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(priceGap|unitVisibility|units|prices)\.ts|^src/server/moduleConfigViews\.ts|^scripts/hidden-unit-price-gap-check'; then
+  echo "[pre-commit] hidden-unit-price-gap-check (rejtett egységért nincs „Nincs ára”)…"
+  npx tsx scripts/hidden-unit-price-gap-check.mts >"$GATE_LOG" || gate_failed
+fi
 
 # A JÓVÁHAGYOTT terv és a SZÁLLÍTOTT felület nem csúszhat szét. A §2b kapu az
 # „elfogadva”-nál véget ért, és utána senki nem nézte: az összesítő kihagyta a
