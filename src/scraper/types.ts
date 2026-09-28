@@ -139,6 +139,20 @@ export interface QualifiedLead {
   readonly photoCount?: number;
   /** A4 match-confidence (0..1) of the per-lead Places match, if one was scored. */
   readonly matchConfidence?: number;
+  /**
+   * Evidence behind the per-lead Places match (2026-09-28): WHICH place was matched
+   * and how far/how alike. Before this only the score was kept, so a wrong match
+   * could not be told from a right one afterwards. A medium-band match also parks
+   * its phone/website here instead of on the lead (enrichPlaces.ts).
+   */
+  readonly placesMatch?: {
+    readonly placeName: string;
+    readonly distanceMeters: number;
+    readonly nameSimilarity: number;
+    readonly band: "high" | "medium" | "low";
+    readonly heldPhone?: string;
+    readonly heldWebsite?: string;
+  };
   /** Assessment of the own site (only set for has_own leads after enrichment). */
   readonly assessment?: WebsiteAssessment;
   /** Gathered enrichment material (set after the material measurement pass). */

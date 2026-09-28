@@ -11,6 +11,14 @@ Utolsó frissítés: 2026-09-28 (🏷️ **RC-sessionök: SUB-sorszám + munka-j
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-28 — a szomszéd elérhetőségére nem megy mock, ADR-XXXX)
+A tulaj kérdése a scrape-átfedés duplikátumairól → mérés: az átfedés-dedup rendben (csak eldob), a rés a
+Places-párosításban volt (szakszóra illesztett, a közepes sáv telefonja/honlapja ellenőrzés nélkül a leadre ment →
+8 szomszéd-pár idegen elérhetőséggel). Kész, NEM élesítve: közös-elérhetőség küldési kapu (levél + mobil, csak
+„azonos tulaj” ítélet old fel), Places csak márka-szóra és csak magas sávból ad elérhetőséget, 20 régi pár összevonva.
+Nyitott: ~115 régi közepes sávú lead visszamenőleges rendezése (Places újrakérdezés — tulaj-döntés).
+Jegyzet: `_planning/memory/2026-09-28_szomszed_elerhetoseg_kapu.md`.
+
 ## Párhuzamos szál (2026-09-28 — Telefonos menü + a foglalás-sáv csak félúton, ADR-0253)
 Körkép 19 sablonon → §2b A/B/C mock → a tulaj a **B**-t választotta → megvalósítva, NEM élesítve.
 A meglévő mockok/tenant-pillanatképek a következő renderkor kapják meg (a Lidó `/t/…` pillanatképe még a régi —

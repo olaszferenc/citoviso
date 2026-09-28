@@ -1292,6 +1292,21 @@ if [ -f scripts/outreach-send-bar-check.mts ] && \
   echo "[pre-commit] outreach-send-bar-check (a küldés a levél után áll, tapad, és pixelben látszik)…"
   npx tsx scripts/outreach-send-bar-check.mts >"$GATE_LOG" || gate_failed
 fi
+# 2026-09-28 (tulaj): a mock ne menjen a szomszéd konkurenshez egy rosszul társított
+# elérhetőség miatt. A cím/szám, amit egy MÁSIK élő lead is visel, csak „azonos tulaj”
+# ítélettel mehet ki. Eldobható fixture a valódi DB-ben (~3 s).
+if [ -f scripts/shared-contact-gate-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(sharedContactGate|sendBatch|sendOutreachSms)\.ts$|^src/scraper/contactLedger\.ts$|^src/console/duplicates\.ts$|^scripts/shared-contact-gate-check'; then
+  echo "[pre-commit] shared-contact-gate-check (szomszéd elérhetőségére nem megy mock)…"
+  npx tsx scripts/shared-contact-gate-check.mts >"$GATE_LOG" || gate_failed
+fi
+# 2026-09-28: a Places-párosítás ne adja a szomszéd telefonját/honlapját a leadnek
+# (szakszó nem párosít; közepes sávból nem lesz elérhetőség). Tiszta, hálózat nélkül.
+if [ -f scripts/places-match-check.mts ] && \
+   changed_files | grep -qE '^src/scraper/(enrichPlaces|confidence|genericWords|contactLedger)\.ts$|^src/scraper/sources/googleMaps\.ts$|^scripts/places-match-check'; then
+  echo "[pre-commit] places-match-check (szomszéd elérhetősége nem kerül a leadre)…"
+  npx tsx scripts/places-match-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Elek FK-004 ③: az „egyszer megy ki" garancia a CÍMRE szól, nem a prospect-rekordra.
 if [ -f scripts/outreach-oneshot-check.mts ] && \
    changed_files | grep -qE '^src/outreach/sendBatch\.ts$|^scripts/outreach-oneshot-check'; then

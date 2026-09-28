@@ -37,6 +37,7 @@ import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
+import { sharedContactBlocks } from "./sharedContactGate.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -161,6 +162,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
       "prospect.id as id",
       "prospect.unsubscribed_at as unsubscribedAt",
       "prospect.mock_artifact_id as artifactId",
+      "lead.id as leadId",
       "lead.name as leadName",
     ])
     .where("prospect.id", "=", prospectId)
@@ -259,6 +261,11 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   if (await isPhoneSuppressed(to)) {
     return no("erre a telefonszámra korábban leiratkoztak (szám-szintű suppression) — küldés tilos");
   }
+
+  // SHARED-CONTACT gate (2026-09-28) — same rule as the mail path, one module. The
+  // owner's allowlisted test phone sits on several test leads by design.
+  const shared = await sharedContactBlocks(p.leadId, "phone", to, isAllowlistedTestNumber(to));
+  if (shared) return no(shared);
 
   const blocked = smsAllowlistBlocks(to);
   if (blocked) return no(blocked);

@@ -23,6 +23,7 @@ import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
 import { normalizeEmail } from "../email/address.js";
 import { db } from "../db/client.js";
+import { sharedContactBlocks } from "./sharedContactGate.js";
 import { huArticleLower } from "../hu.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
@@ -300,6 +301,7 @@ export async function sendOutreachMail(
       "prospect.contact_email as contactEmail",
       "prospect.unsubscribed_at as unsubscribedAt",
       "prospect.mock_artifact_id as artifactId",
+      "lead.id as leadId",
       "lead.name as leadName",
     ])
     .where("prospect.id", "=", prospectId)
@@ -345,6 +347,12 @@ export async function sendOutreachMail(
       outcome: { kind: "skipped", reason: "a címzett korábban leiratkozott (cím-szintű suppression) — küldés tilos" },
     };
   }
+
+  // SHARED-CONTACT gate (2026-09-28): the address also belongs to another live lead
+  // → the mock may be heading for the neighbour. Stops until the operator rules the
+  // pair same_owner or fixes the contact (sharedContactGate.ts).
+  const shared = await sharedContactBlocks(p.leadId, "email", p.contactEmail);
+  if (shared) return { ...base, outcome: { kind: "skipped", reason: shared } };
 
   // CURATOR SIGN-OFF gate (owner rule, 2026-08-06): a mock may be mailed ONLY after a HUMAN
   // curator approved its artifact (mock_artifact.status === 'approved', set via curateArtifact).

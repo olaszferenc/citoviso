@@ -1,6 +1,7 @@
 import { config } from "../../config.js";
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
+import { GENERIC_NAME_WORD } from "../genericWords.js";
 
 // Google Maps via the official Places API (New) — legally clean route. Requires
 // GOOGLE_MAPS_API_KEY. Without a key the source skips itself so OSM still runs.
@@ -283,6 +284,43 @@ function nameSimilarity(a: string, b: string): number {
 }
 
 /**
+ * Pick the closest in-box candidate whose name plausibly belongs to the lead.
+ *
+ * ⛔ The overlap must be on a BRAND word: until 2026-09-28 any shared word longer
+ * than three letters counted, so "apartman" or "hotel" was enough and the closest
+ * neighbour won — measured on the dev stock as eight neighbour pairs where one lead
+ * carried the other business's phone (Anita Apartman ← Judit Apartmanház, 109 m).
+ * A name made only of trade words has no brand to check, so it must match whole.
+ * Pure (no network) so scripts/places-match-check.mts can pin it.
+ */
+export function pickPlacesCandidate<P extends { location?: { latitude: number; longitude: number }; displayName?: { text?: string } }>(
+  name: string,
+  lat: number,
+  lon: number,
+  places: readonly P[],
+): { place: P; distanceMeters: number } | null {
+  const targetTokens = normName(name)
+    .split(" ")
+    .filter((t) => t.length > 3 && !GENERIC_NAME_WORD.has(t));
+  const wholeName = normName(name);
+  let best: P | undefined;
+  let bestDist = Infinity;
+  for (const p of places) {
+    const loc = p.location;
+    if (!loc) continue;
+    const d = metersBetween(lat, lon, loc.latitude, loc.longitude);
+    if (d >= bestDist) continue;
+    const cand = normName(p.displayName?.text ?? "");
+    const nameOk =
+      targetTokens.length === 0 ? cand === wholeName : targetTokens.some((t) => cand.includes(t));
+    if (!nameOk) continue;
+    best = p;
+    bestDist = d;
+  }
+  return best ? { place: best, distanceMeters: bestDist } : null;
+}
+
+/**
  * Per-lead Places lookup. Hard-restricts to the lead's area (box), then returns
  * the CLOSEST in-box candidate whose name plausibly overlaps the lead name,
  * WITH the signals A4 confidence scoring needs (distance, name similarity,
@@ -327,25 +365,9 @@ export async function placesLookup(
   const places = data.places ?? [];
   if (!places.length) return null;
 
-  // Pick the closest in-box candidate with at least a plausible name overlap.
-  const targetTokens = normName(name)
-    .split(" ")
-    .filter((t) => t.length > 3);
-  let best: NonNullable<PlacesResponse["places"]>[number] | undefined;
-  let bestDist = Infinity;
-  for (const p of places) {
-    const loc = p.location;
-    if (!loc) continue;
-    const d = metersBetween(lat, lon, loc.latitude, loc.longitude);
-    if (d >= bestDist) continue;
-    const cand = normName(p.displayName?.text ?? "");
-    const nameOk =
-      targetTokens.length === 0 || targetTokens.some((t) => cand.includes(t));
-    if (!nameOk) continue;
-    best = p;
-    bestDist = d;
-  }
-  if (!best) return null;
+  const picked = pickPlacesCandidate(name, lat, lon, places);
+  if (!picked) return null;
+  const { place: best, distanceMeters: bestDist } = picked;
 
   const photoRefs = (best.photos ?? [])
     .map((ph) => ph.name)

@@ -1,0 +1,36 @@
+# 2026-09-28 — A szomszéd elérhetőségére nem megy mock: közös-elérhetőség kapu + szigorított Places-párosítás (ADR-XXXX)
+
+## Kiváltó
+A tulaj: „ha a scrape-ben van területi átfedés, kezeljük a duplikátumokat?” → „mitől lesz biztos duplikátum a
+duplikátum? … annál rosszabb szinte nincs, mint hogy egy mockot a rossz elérhetőség miatt a szomszéd konkurenciának
+küldjünk el” → mérés → „Rád bízom”.
+
+## Mi történt
+- Mérés (dev DB): az átfedés-dedup (ADR-0039) rendben van (csak eldob). A valódi rés a Places-párosítás: szakszóra
+  („apartman”) is illesztett, és a közepes sáv telefonja/honlapja ellenőrzés nélkül a leadre került → 8 szomszéd-pár
+  idegen elérhetőséggel; közvetítői címek (booked.net support 3 leaden, iroda-gmail 10-en); 20 régi pontos duplikátum.
+- ① Küldési kapu: `src/outreach/sharedContactGate.ts`, bekötve a levél-útba és a mobil-útba (egy függvény). Csak
+  „azonos tulaj” ítélet old fel; „független” nem. Dev-állományon: 101 lead e-mailen, 110 telefonon áll meg (mind a 8
+  gyanús szomszéd benne; sok a tulaj teszt-címe és a már összevont régi párok).
+- ② Places: névszűrő márka-szóra (`src/scraper/genericWords.ts`, a portál-illesztő listája kiemelve), elérhetőség
+  csak magas sávból, közepesnél elutasított naplósor + `raw.placesMatch` bizonyíték. Tiszta függvényekre bontva
+  (`pickPlacesCandidate`, `applyPlacesMatch`).
+- ③ 20 régi pár összevonva `ruleOnPair`-rel (dev DB; kizárás, nem törlés).
+- Súgó: `kb/entries/console-outreach-draft/entry.hu.md` — a piros sor új oka és a feloldás útja.
+- Őrök (pre-commit): `shared-contact-gate-check` (16 állítás, valódi DB, eldobható fixture) és `places-match-check`
+  (12 állítás, tiszta); mindkettő negatív kontrollal igazolva (a bekötés kivétele / a régi szűrő → piros).
+  Lefuttatva a fájljaim által tüzelt meglévő kapuk: oneshot, suppression, verdict-gate, pair-repair, market-gate,
+  outreach-sendability, mock-photo-gate, places-outage, scrape-coverage, kb-check — mind zöld.
+
+## Módosított fájlok
+- `src/outreach/sharedContactGate.ts` (új), `src/outreach/sendBatch.ts`, `src/outreach/sendOutreachSms.ts`
+- `src/scraper/genericWords.ts` (új), `src/scraper/sources/portalListing.ts`, `src/scraper/sources/googleMaps.ts`,
+  `src/scraper/enrichPlaces.ts`, `src/scraper/contactLedger.ts` (`phoneKey` export), `src/scraper/types.ts`
+- `scripts/shared-contact-gate-check.mts` (új), `scripts/places-match-check.mts` (új), `hooks/pre-commit`
+- `kb/entries/console-outreach-draft/entry.hu.md`, ADR-XXXX, ez a jegyzet, `MEMORY.md`
+
+## Nyitott
+- ~115 meglévő közepes sávú lead elérhetősége a régi szabállyal került rájuk; ahol a szomszéd nem leadünk, a kapu
+  nem fogja. Visszamenőleges rendezés = Places újrakérdezés (~115 hívás) — tulaj-döntés.
+- Élesi állomány nincs mérve (olvasás szabad lenne) — a kapu a deploy után ott is ugyanígy fog.
+- Négy régi szakszó-lista másolat maradt; összevonás külön feladat.

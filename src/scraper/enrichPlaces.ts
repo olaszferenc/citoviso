@@ -6,6 +6,7 @@ import {
   type PlacesFailure,
   type PlacesMatch,
 } from "./sources/googleMaps.js";
+import { mergeContacts } from "./contactLedger.js";
 import type { QualifiedLead } from "./types.js";
 
 // Per-lead Google Places lookup + A4 confidence gating. Discovery's single bbox
@@ -101,37 +102,78 @@ export async function enrichPlaces(
       }
       return l;
     }
-    const { match, conf } = entry;
-    // A4 gate: never attribute a LOW-confidence match's data to the lead.
-    if (conf.band === "low") {
-      return { ...l, matchConfidence: conf.score };
-    }
-    const phone = l.phone ?? match.phone;
-    const website = l.website ?? match.website;
-    const photoCount = Math.max(l.photoCount ?? 0, match.photoRefs.length);
-    const status = classifyWebsite(website);
-    return {
-      ...l,
-      phone,
-      website,
-      photoCount,
-      // The lookup that just supplied phone/photos/rating IS a source of this
-      // lead's data, so it must say so. Until now only the DISCOVERY adapters
-      // were listed, and an OSM-discovered lead showed "Források: osm" while
-      // every photo on screen had come from Places — the label contradicted
-      // what the operator was looking at.
-      sources: l.sources.includes("google_places")
-        ? l.sources
-        : [...l.sources, "google_places"],
-      sourceRefs: match.placeId
-        ? { ...l.sourceRefs, google_places: match.placeId }
-        : l.sourceRefs,
-      // Geo facets from the verified match — the lead's own tags win when present.
-      country: l.country ?? match.country,
-      city: l.city ?? match.city,
-      websiteStatus: status,
-      matchConfidence: conf.score,
-      isLead: isMvpLead(status),
-    };
+    return applyPlacesMatch(l, entry.match, entry.conf);
   });
+}
+
+/**
+ * Apply ONE scored Places match to a lead — the A4 gate in one pure step, so
+ * scripts/places-match-check.mts can pin it without a network call.
+ */
+export function applyPlacesMatch(
+  l: QualifiedLead,
+  match: PlacesMatch,
+  conf: MatchConfidence,
+): QualifiedLead {
+  const evidence = {
+    placeName: match.placeName,
+    distanceMeters: Math.round(match.distanceMeters),
+    nameSimilarity: Number(match.nameSimilarity.toFixed(2)),
+    band: conf.band,
+  };
+  // A4 gate: never attribute a LOW-confidence match's data to the lead.
+  if (conf.band === "low") {
+    return { ...l, matchConfidence: conf.score, placesMatch: evidence };
+  }
+  // ⛔ CONTACT only from a HIGH match (2026-09-28). §F.17b says a medium match
+  // "needs contextual review", yet its phone and website went straight onto the
+  // lead — and a wrong phone is how a mock reaches the competitor next door. The
+  // website is held too: the own-site e-mail is read FROM it (enrichContact.ts).
+  // The phone still reaches the ledger, REJECTED with the reason, so the operator
+  // sees it and can take it over; photos/rating keep their existing route.
+  const medium = conf.band === "medium";
+  const heldPhone = medium && !l.phone ? match.phone : undefined;
+  const heldWebsite = medium && !l.website ? match.website : undefined;
+  const phone = l.phone ?? (medium ? undefined : match.phone);
+  const website = l.website ?? (medium ? undefined : match.website);
+  const contacts = heldPhone
+    ? mergeContacts(l.contacts, [
+        {
+          kind: "phone",
+          value: heldPhone,
+          source: "places",
+          accepted: false,
+          rejectedReason:
+            `csak közepes Places-egyezés („${match.placeName}”, ${Math.round(match.distanceMeters)} m) — ` +
+            `a szomszédé is lehet, ellenőrizd, mielőtt átveszed`,
+        },
+      ])
+    : l.contacts;
+  const photoCount = Math.max(l.photoCount ?? 0, match.photoRefs.length);
+  const status = classifyWebsite(website);
+  return {
+    ...l,
+    phone,
+    website,
+    photoCount,
+    // The lookup that just supplied phone/photos/rating IS a source of this
+    // lead's data, so it must say so. Until now only the DISCOVERY adapters
+    // were listed, and an OSM-discovered lead showed "Források: osm" while
+    // every photo on screen had come from Places — the label contradicted
+    // what the operator was looking at.
+    sources: l.sources.includes("google_places")
+      ? l.sources
+      : [...l.sources, "google_places"],
+    sourceRefs: match.placeId
+      ? { ...l.sourceRefs, google_places: match.placeId }
+      : l.sourceRefs,
+    // Geo facets from the verified match — the lead's own tags win when present.
+    country: l.country ?? match.country,
+    city: l.city ?? match.city,
+    websiteStatus: status,
+    matchConfidence: conf.score,
+    placesMatch: { ...evidence, heldPhone, heldWebsite },
+    contacts,
+    isLead: isMvpLead(status),
+  };
 }

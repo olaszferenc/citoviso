@@ -14,7 +14,7 @@
 import type { ContactCandidate } from "./types.js";
 
 /** Same phone written differently is the same phone: compare on digits only. */
-function phoneKey(v: string): string {
+export function phoneKey(v: string): string {
   const d = v.replace(/\D/g, "");
   // Hungarian numbers arrive as +36…, 0036…, 06… — normalise to the national part.
   if (d.startsWith("0036")) return d.slice(4);

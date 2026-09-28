@@ -34,20 +34,7 @@ import { keepUsablePhotos, probeImageSize } from "./portals/photoQuality.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
-
-/**
- * Trade words that identify no particular business. A name built only from these
- * ("Ifjúsági szállás") cannot be matched on the open web at all — the same guard
- * reenrich.ts applies, for the same reason: without a brand, every listing about
- * lodging in the region satisfies the check.
- */
-const GENERIC_NAME_WORD = new Set([
-  "szallas", "szallashely", "szallashelyek", "apartman", "apartmanok", "apartmanhaz",
-  "kemping", "camping", "udulo", "vendeghaz", "vendeghazak", "haz", "panzio",
-  "hotel", "tabor", "hely", "ifjusagi", "turistahaz", "motel", "resort", "villa",
-  "vendeglo", "etterem", "szoba", "szobak", "parton", "vadkempingezo",
-  "diakszallas", "kozossegi", "faluhaz", "porta", "birtok", "kiado", "balaton",
-]);
+import { GENERIC_NAME_WORD } from "../genericWords.js";
 
 /**
  * Accommodation TYPE words. Stripped from the brand (they identify nothing on

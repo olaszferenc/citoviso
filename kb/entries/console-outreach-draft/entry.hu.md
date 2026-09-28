@@ -27,6 +27,12 @@ A lap legfelső sora **azt** mondja meg, amit tudni akarsz. **Három** válasza 
    megmondja, miért: például ennek a címre már kiküldtük a hideg megkeresést, a címzett
    leiratkozott, a mock még kurátori jóváhagyásra vár, nincs renderelt lapja, vagy a
    jogszerűségi kapu FLAG-et adott.
+   Akkor is megáll, ha a cím (vagy SMS-nél a telefonszám) egy **másik szálláshoz is
+   tartozik** — ilyenkor könnyen lehet, hogy a szomszédé, és a mock a konkurenshez menne.
+   A sor megnevezi a másik szállást. Ha a kettőnek tényleg ugyanaz a tulajdonosa, jelöld
+   így a **Duplikátumok** lapon, és a küldés feloldódik; ha nem, javítsd a lead
+   elérhetőségét. Ha a cím sok szálláson szerepel, az egy közvetítő vagy iroda címe —
+   azt a lead saját elérhetőségére kell cserélni.
 
 Ez a sor ugyanazt futtatja le, amit a küldés-gomb — tehát amit itt olvasol, azt fogja a
 gomb is tenni.
