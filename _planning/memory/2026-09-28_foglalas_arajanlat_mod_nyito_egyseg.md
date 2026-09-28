@@ -47,10 +47,22 @@ Döntés: ADR-0256 (a land osztja ki). Nem élesítve — a nagy deployjal megy.
 - Munkafából szerver nem indítható (hook): a vendég-lapot a valódi snapshotba fűzött ÚJ runtime-mal mértem (fetch-shimmel),
   a közös `sites/`-t nem írtam felül.
 
+## Igazolás a land után (2026-09-28)
+
+- Dev DB: a `represents_whole` visszatöltése még egyszer lefutott, mert a fő fa régi kódja közben
+  `false`-szal hozta létre a `kemences-vendeghaz` egészét (1 egység).
+- A Három Huszár snapshotja újrarenderelve.
+- **FK-014:** a vendég FOGLALT: „Elküldtük a kérését” · „Hivatkozás” · „48 000” zöld; a levél „Foglalási kérését rögzítettük”.
+  Egyetlen piros: a vélemény 400 „Már küldött véleményt” — tesztadat-ismétlés (az első éjszakai kör ugyanazzal a címmel írt).
+- **FK-015:** 0/4/9. A forgatókönyv „56 000 Ft”-ot és egy „Elek Vendég Ajánlat” árajánlat-kérést vár, amit a lánc nem hoz létre
+  (48 000 Ft; az FK-014 ⑦ csak `tedd?`-del tölt). A `.adm-msg__qa` koppintására nincs megerősítő, a `.bk-ovnote` nem
+  található → a kérés `pending` marad, **FK-016 KIHAGYVA**. Átadva a koordinátornak (az éjszakai kör szála).
+- Közben: a `price-where-check` a tiszta mainen piros volt — a `wordmark-grow`/`arch-frames` sablon `rooms.slice(0, 3)`-mal
+  eldobta a 4. szobát (a kapu gazdája javította: e4d05534).
+
 ## Nyitott
 
-- A tulajnak a Három Huszár snapshotját újra kell renderelni a land után (a fő fa kódjával), hogy az új runtime kimenjen;
-  utána FK-014 → FK-015 → FK-016.
+- FK-015/FK-016 a tulaj-oldali utóélet forgatókönyv-igazítására vár (koordinátor).
 - Egy korábban megírt `apartman/<slug>.html` a rejtés után is kiszolgálható (a sitemap már nem listázza) — csak a kártyán
   utólag kikapcsolt egésznél fordulhat elő.
 - `quote-request-check --selftest` a visszarontott lapon kivétellel áll meg (`.cit-book__ask` boundingBox) — régi, piros marad.
