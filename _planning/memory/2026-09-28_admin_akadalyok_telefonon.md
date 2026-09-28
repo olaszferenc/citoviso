@@ -54,6 +54,19 @@ tenant-admin ELSŐ munkamenetét rontotta, telefonon. A döntések a koordináto
   landolt: a `unitPriceStatus` három olvasója (Árak-kártya, Áttekintés, heti emlékeztető) erre
   épüljön. A doboz „Ár nélkül:” sora a lap adataiból jön, magától követi.
 
+## Utókör: a 4. szoba eltűnt a lapról (e4d05534) — a price-where-check fogta meg
+- A koordinátor új bérlőjén (kemences-vendeghaz, 4 egység, `wordmark-grow` sablon) a ② bukott:
+  a doboz 19 000 Ft-ot mondott a Kerti stúdió kártyájára, a lapon nem volt ilyen kártya.
+- Ok: a `wordmark-grow` és az `arch-frames` `rooms.slice(0, 3)`-mal renderelt (3 oszlopos
+  mock-maradvány) → a 4. szoba kártyástul, árastul eltűnt, a foglaló választója viszont kínálta.
+- A kapu a TISZTA mainen is piros lett, és minden szál land-ját megállította — ezúttal HELYESEN
+  (valódi renderelő-hiba). Javítás: a vágás ki; őr `scripts/rooms-all-shown-check.mts` (19 sablon,
+  5 szoba, DB nélkül; az első, csak `<section>`-horgonyt kereső változat 9 sablont némán kihagyott).
+- ⚠️ Visszavont vállalás: a price-where-check-et NEM tettem fixture-re — a doboz és a lap ugyanabból
+  a végső adatból készül, eltérés csak valódi renderelő-hibánál van; a valódi bérlők kihagyása épp
+  ezt vakította volna meg (a koordinátor elfogadta). Tanulság a körvezetőknek: a közös DB-ben
+  félbemaradt teszt-bérlő zajként is megállíthat egy idegen land-ot → takarítás/jelölés a kör után.
+
 ## Mellékleletek (nem nyúltam hozzá)
 - `/api/foglalas` hibája a vendégnek: „Ismeretlen egység.” (a `hu-voice-check` nem látja a JSON-hibát).
 - Egy-szobás képernyőn a meglévő szoba „Mentés”-e nem küld `back=rooms`-t → a Foglalásra tér vissza.
