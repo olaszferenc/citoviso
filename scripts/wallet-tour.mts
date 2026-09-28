@@ -330,13 +330,23 @@ try {
 
   // ── 2. Modul-vásárlás másik kártyával ──────────────────────────────────────
   console.log("2) Modulok → fizetős modul → Másik kártyával → mock fizetőlap → Visa ····4242");
+  // modules-cart (owner-approved B, 2026-09-28): the card choice lives on the confirm
+  // card now — tick → (phone: open the cart) → „Tovább a fizetéshez” → confirm → pick.
+  const openConfirm = async (p: import("playwright-core").Page) => {
+    if (await p.locator("[data-fc-modal]").isVisible()) return;
+    const pill = p.locator("#adm-cartpill");
+    if (await pill.isVisible()) await pill.click();
+    await p.locator("#adm-plan-apply").click();
+    await p.locator("[data-fc-modal]").waitFor({ state: "visible" });
+  };
   const pickPaid = async (p: import("playwright-core").Page): Promise<string | null> => {
     const box = p.locator('input[name="module"][data-committed="0"][data-price]:not([data-price="0"])').first();
     if ((await box.count()) === 0) return null;
     const id = await box.getAttribute("value");
-    // The checkbox is visually hidden inside its "Hozzáadom" button-label — click
+    // The checkbox is visually hidden inside its „Kosárba teszem” button-label — click
     // what the owner clicks.
     await box.locator("xpath=ancestor::label[1]").click();
+    await openConfirm(p);
     await p.locator("#adm-plan-card").waitFor({ state: "visible" });
     await p.locator('input[name="card"][value="new"]').check();
     return id;
@@ -344,30 +354,24 @@ try {
   await P.goto(`${publicOrigin}/admin?tab=modulok`);
   const moduleId = await pickPaid(P);
   ok(!!moduleId, "van fizetős, nem birtokolt modul", String(moduleId));
-  const applyText = ((await P.locator("#adm-plan-apply").textContent()) ?? "").trim();
-  ok(applyText.includes("Fizetés másik kártyával"), "a gomb felirata: „Fizetés másik kártyával — …”", applyText);
-  ok((await text(P)).includes("Ez a kártya lesz ezután a mentett kártya"), "az ígéret a sávban");
+  const payText = ((await P.locator("[data-fc-go]").textContent()) ?? "").trim();
+  ok(payText.startsWith("Tovább a fizetéshez —"), "a megerősítő gombja: „Tovább a fizetéshez — …”", payText);
+  ok(((await P.locator("[data-fc-modal]").textContent()) ?? "").includes("Ez a kártya lesz ezután a mentett kártya"), "az ígéret a megerősítőn");
   await shot("modul-masik-kartya", async (p) => {
     await pickPaid(p);
   });
-  // 390 px: the plan bar shares the bottom edge with the fixed 3-row phone nav — can
-  // the owner actually reach (hit) the pay button, after scrolling to it?
+  // 390 px: can the owner actually reach (hit) the pay button on the confirm card?
   {
     const m = mob.page; // already in the "másik kártya" state from the shot's prep
-    const btn = m.locator("#adm-plan-apply");
-    await btn.scrollIntoViewIfNeeded();
+    const btn = m.locator("[data-fc-go]");
     const hit = await btn.evaluate((el) => {
       const r = el.getBoundingClientRect();
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       return { hit: !!top && (top === el || el.contains(top)), y: Math.round(r.top), h: innerHeight, over: top?.className ?? "" };
     });
-    ok(hit.hit, "390 px: a fizetés-gomb görgetés után kattintható (nem takarja a navigáció)", JSON.stringify(hit));
+    ok(hit.hit, "390 px: a fizetés-gomb kattintható (nem takarja semmi)", JSON.stringify(hit));
   }
   // ADR-0113: a paid addition confirms on an itemised card first.
-  const openConfirm = async (p: import("playwright-core").Page) => {
-    await p.locator("#adm-plan-apply").click();
-    await p.locator("[data-fc-modal]").waitFor({ state: "visible" });
-  };
   await openConfirm(P);
   const goText = ((await P.locator("[data-fc-go]").textContent()) ?? "").trim();
   console.log(`    megerősítő ablak gombja: „${goText}”`);

@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — Modulok fül: kosár (B, 2. kör)</title>
+<style>
+/* --- citui tokens (public/assets/ui/citui.css :root, copied) --- */
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;--citui-cyan-300:#6fd8eb;--citui-white:#ffffff;
+  --citui-ink:#10243a;--citui-ink-inverse:#eaf3f8;--citui-muted:#5a6d82;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-ok-ink:#19733f;--citui-warn-ink:#7d5a12;--citui-accent-ink:#06131b;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);--citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-pill:999px;
+  --citui-panel:#ffffff;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--citui-font-text);background:color-mix(in srgb,var(--citui-navy-900) 10%,var(--citui-white));color:var(--citui-ink)}
+button{font:inherit}
+
+/* ── mock chrome ─────────────────────────────────────────────── */
+.mock-bar{position:sticky;top:0;z-index:200;display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center;
+  padding:8px 12px;background:var(--citui-navy-950);color:var(--citui-ink-inverse);font-size:12px}
+.mock-bar b{margin-right:2px}
+.mock-bar .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.mock-bar button{border:1px solid color-mix(in srgb,var(--citui-white) 30%,transparent);background:transparent;color:inherit;
+  border-radius:var(--citui-radius-pill);padding:4px 10px;cursor:pointer}
+.mock-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink);font-weight:700}
+.mock-read{width:100%;font-variant-numeric:tabular-nums;color:var(--citui-cyan-300)}
+.mock-read b{color:var(--citui-white)}
+.mock-note{max-width:1200px;margin:10px auto 0;padding:0 12px;font-size:12.5px;line-height:1.5;color:var(--citui-ink)}
+.mock-note b{font-family:var(--citui-font-display)}
+
+/* ── device frame: the admin as the tenant sees it ───────────── */
+.frame{container:frame / inline-size;position:relative;margin:12px auto 24px;background:var(--citui-surface);
+  border:1px solid var(--citui-line-strong);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:var(--citui-shadow-md)}
+.frame[data-size="m"]{width:390px;max-width:100%;height:min(844px,calc(100dvh - 120px))}
+.frame[data-size="l"]{width:844px;max-width:100%;height:390px}
+.frame[data-size="d"]{width:1200px;max-width:calc(100% - 24px);height:min(800px,calc(100dvh - 120px))}
+.top{flex:none;height:49px;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--citui-panel);
+  border-bottom:1px solid var(--citui-line);font-size:14px}
+.top .crumb{color:var(--citui-muted)}
+.top .crumb b{color:var(--citui-ink)}
+.top .site{margin-left:auto;border:1px solid var(--citui-line-strong);border-radius:8px;padding:5px 10px;font-weight:600;color:var(--citui-navy-700)}
+.body{flex:1;display:flex;min-height:0}
+.side{display:none;flex:none;width:210px;background:var(--citui-panel);border-right:1px solid var(--citui-line);padding:14px 10px;font-size:13px}
+.side a{display:block;padding:8px 10px;border-radius:8px;color:var(--citui-muted);text-decoration:none}
+.side a.on{background:var(--citui-accent-soft,color-mix(in srgb,var(--citui-cyan-500) 12%,transparent));color:var(--citui-ink);font-weight:700}
+.scroll{flex:1;overflow:auto;position:relative;padding:14px 14px 12px;-webkit-overflow-scrolling:touch}
+.bnav{flex:none;height:59px;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--citui-line);background:var(--citui-panel)}
+.bnav span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:var(--citui-muted)}
+.bnav i{width:18px;height:18px;border:1.6px solid currentColor;border-radius:5px}
+.bnav span.on{color:var(--citui-navy-700);font-weight:700}
+@container frame (min-width:900px){
+  .side{display:block}
+  .bnav{display:none}
+}
+
+/* ── page content ─────────────────────────────────────────────── */
+.card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font:700 16px/1.3 var(--citui-font-display)}
+.lead{margin:0;color:var(--citui-muted);font-size:13px;line-height:1.5}
+.mine{list-style:none;margin:8px 0 0;padding:0}
+.mine li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--citui-line);font-size:13px}
+.mine li:first-child{border-top:0}
+.mine label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--citui-muted);cursor:pointer}
+.mine input{width:18px;height:18px;accent-color:var(--citui-cyan-500)}
+.mine li.is-dirty{background:color-mix(in srgb,var(--citui-warn) 10%,transparent)}
+.shop{display:grid;grid-template-columns:1fr;gap:14px}
+@container frame (min-width:600px){ .shop{grid-template-columns:1fr 1fr} }
+.mod{position:relative;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;overflow:visible}
+.mod.is-dirty{border-color:var(--citui-cyan-500);box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 15%,transparent)}
+.mod__thumb{height:110px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--citui-warn) 8%,var(--citui-panel)),var(--citui-panel));
+  font:italic 17px/1.2 Georgia,serif;color:var(--citui-navy-800);border-bottom:1px solid var(--citui-line)}
+/* ⛔ measured bug in the live admin: this badge had z-index:2 and painted OVER the
+   plan bar. The plan: the badge stays in its card's stacking context (z-index:auto
+   inside an isolated card), so any sticky layer covers it. */
+.mod{isolation:isolate}
+.mod__coupon{position:absolute;top:-9px;right:10px;border:1.5px dashed var(--citui-warn);background:var(--citui-panel);
+  color:var(--citui-warn-ink);font-weight:700;font-size:11px;border-radius:8px;padding:1px 7px}
+.mod__b{padding:12px 14px}
+.mod h3{margin:0 0 4px;font:700 15px/1.3 var(--citui-font-display)}
+.mod p{margin:0 0 10px;color:var(--citui-muted);font-size:13px;line-height:1.5}
+.mod__dep{display:none;font-size:12px;color:var(--citui-navy-700);background:var(--citui-surface-2);border-radius:8px;padding:6px 8px;margin:0 0 10px}
+.mod.is-dep .mod__dep{display:block}
+.mod__foot{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}
+.price s{display:block;font-size:11px;color:var(--citui-muted)}
+.price b{font-size:15px}
+.btn{border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);min-height:40px}
+.btn--pri{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.btn--ghost-inv{background:transparent;color:var(--citui-ink-inverse);border-color:color-mix(in srgb,var(--citui-ink-inverse) 35%,transparent)}
+.mod .add[aria-pressed="true"]{background:var(--citui-panel);color:var(--citui-ink);border-color:var(--citui-cyan-500)}
+.spacer{height:8px}
+.toast{position:absolute;left:50%;top:60px;transform:translateX(-50%);z-index:90;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  padding:8px 12px;border-radius:10px;font-size:12px;display:none;max-width:90%}
+.toast.show{display:block}
+.applied{display:none;background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+.applied.show{display:block}
+
+/* ── shared bits of every variant ───────────────────────────── */
+.pb{display:none}
+.pb.show{display:block}
+.pbrow{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0}
+.pbrow b{white-space:nowrap}
+.tag-add{font-weight:700;color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-panel))}
+.tag-del{font-weight:700;color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-panel))}
+.up{color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-panel));font-weight:700}
+.down{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-panel));font-weight:700}
+.paynow{color:var(--citui-cyan-300);font-weight:700}
+
+/* ════ A — collapsed sticky bar + details on demand ════════════ */
+.pbA{position:sticky;bottom:8px;z-index:20;margin-top:14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  border-radius:14px;box-shadow:var(--citui-shadow-md)}
+.pbA__det{display:none;padding:12px 14px 4px;max-height:calc(var(--fh,844px)*.45);overflow:auto;border-bottom:1px solid color-mix(in srgb,var(--citui-ink-inverse) 15%,transparent)}
+.pbA.open .pbA__det{display:block}
+.pbA__next{font-size:12px;margin:8px 0 10px}
+.pbA__row{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;min-height:56px}
+.pbA__tog{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:0}
+.pbA__tog small{display:block;font-size:11px;opacity:.8}
+.pbA__tog strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbA__chev{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 35%,transparent);
+  display:flex;align-items:center;justify-content:center;font-size:11px;transition:transform .15s}
+.pbA.open .pbA__chev{transform:rotate(180deg)}
+.pbA__chips{display:none}
+.pbA .reset-d{display:none}
+@container frame (min-width:900px){
+  /* desktop: one line, nothing hidden — the room is there */
+  .pbA__det{display:none!important}
+  .pbA__chev{display:none}
+  .pbA__row{min-height:64px;padding:10px 12px 10px 18px;gap:16px}
+  .pbA__chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+  .pbA__chips span{font-size:12px;border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 25%,transparent);border-radius:var(--citui-radius-pill);padding:4px 10px;white-space:nowrap}
+  .pbA__tog{flex:none;cursor:default}
+  .pbA__tog small{font-size:12px}
+  .pbA .reset-d{display:inline-flex}
+}
+.pbA__low{display:flex;justify-content:flex-end;padding:0 0 8px}
+
+/* ════ B — cart pill + summary sheet ═══════════════════════════ */
+.pill{position:sticky;bottom:10px;z-index:20;margin:14px 0 0 auto;width:max-content;max-width:100%;display:none;align-items:center;gap:8px;
+  background:var(--citui-navy-900);color:var(--citui-ink-inverse);border:0;border-radius:var(--citui-radius-pill);
+  padding:10px 16px;box-shadow:var(--citui-shadow-md);cursor:pointer;font-weight:700;font-size:13px;min-height:44px}
+.pill.show{display:flex}
+.pill .n{background:var(--citui-cyan-500);color:var(--citui-accent-ink);border-radius:var(--citui-radius-pill);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.sheet-veil{position:absolute;inset:0;z-index:60;background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent);display:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:61;max-height:88%;overflow:auto;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  border-radius:18px 18px 0 0;padding:14px 16px 16px;display:none}
+.sheet.show,.sheet-veil.show{display:block}
+.sheet h3{margin:0 0 8px;font:700 15px/1.3 var(--citui-font-display);display:flex;justify-content:space-between;align-items:center}
+.sheet h3 button{background:none;border:0;color:inherit;font-size:18px;cursor:pointer;min-width:40px;min-height:40px}
+.sheet .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sheet .btns .btn--pri{flex:1}
+/* desktop: the cart is a sticky side column next to the shop, not a sheet */
+.lay{display:block}
+.cartcol{display:none}
+@container frame (min-width:900px){
+  body[data-v="B"] .lay.has-cart{display:grid;grid-template-columns:1fr 290px;gap:16px;align-items:start}
+  body[data-v="B"] .lay.has-cart .cartcol{display:block;position:sticky;top:0;background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-radius:14px;padding:14px 16px}
+  body[data-v="B"] .pill{display:none!important}
+}
+.cartcol h3{margin:0 0 6px;font:700 14px/1.3 var(--citui-font-display)}
+.cartcol .empty{font-size:12px;opacity:.8}
+.cartcol .btns{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+
+/* ════ C — compact bar, everything stays in the bar ════════════ */
+.pbC{position:sticky;bottom:8px;z-index:20;margin-top:14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  border-radius:14px;box-shadow:var(--citui-shadow-md);padding:10px 12px;max-height:calc(var(--fh,844px)*.4);overflow:auto}
+.pbC__sum{font-size:12px;margin:4px 0 8px}
+.seg{display:flex;border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 30%,transparent);border-radius:10px;overflow:hidden;margin-bottom:8px}
+.seg label{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;padding:8px 6px;cursor:pointer;min-height:40px;text-align:center}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:color-mix(in srgb,var(--citui-cyan-500) 22%,transparent);font-weight:700}
+.pbC__btns{display:flex;gap:8px}
+.pbC__btns .btn--pri{flex:1}
+@container frame (min-width:900px){
+  .pbC{display:none}
+  .pbC.show{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;align-items:center;max-height:none}
+  .pbC__rows{grid-column:1;grid-row:1}
+  .seg{grid-column:2;grid-row:1}
+  .pbC__sum{margin:0;grid-column:1;grid-row:2;white-space:nowrap}
+  .pbC__btns{grid-column:2;grid-row:2}
+  .pbC__btns .btn{white-space:nowrap}
+  .seg{margin:0;min-width:260px}
+  .seg label{white-space:nowrap}
+}
+
+/* ── confirm dialog (ADR-0113 B — already live; plan moves the card choice here) ── */
+.veil{position:absolute;inset:0;z-index:120;background:color-mix(in srgb,var(--citui-navy-950) 55%,transparent);display:none}
+.mdl{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:121;width:min(92%,440px);max-height:92%;overflow:auto;
+  background:var(--citui-panel);border-radius:10px;padding:18px 18px 14px;box-shadow:var(--citui-shadow-md);display:none}
+.veil.show,.mdl.show{display:block}
+.mdl h3{margin:0 0 8px;font:700 15px/1.3 var(--citui-font-display)}
+.fcl{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:5px 0}
+.fcl b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.fcl--t{border-top:1px solid var(--citui-line);margin-top:6px;padding-top:9px;font-weight:700}
+.note{color:var(--citui-muted);font-size:11.5px;line-height:1.5;margin:10px 0 6px}
+.opts{display:grid;gap:6px;margin:10px 0 4px}
+.opt{display:flex;gap:9px;align-items:flex-start;border:1.5px solid var(--citui-line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12.5px;line-height:1.4}
+.opt:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 8%,transparent)}
+.opt input{margin-top:3px}
+.opt small{display:block;color:var(--citui-muted);font-size:11.5px}
+.mdl__btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.mdl__btns .btn--pri{flex:1 1 auto}
+.gw{display:none;background:var(--citui-surface-2);border:1px dashed var(--citui-line-strong);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:14px}
+.gw.show{display:block}
+</style>
+</head>
+<body data-v="B">
+<div class="mock-bar">
+  <b>TERV (működő mock)</b>
+  <span class="grp">Méret:
+    <button data-size="m" aria-pressed="true">Mobil 390</button>
+    <button data-size="l" aria-pressed="false">Fekvő telefon</button>
+    <button data-size="d" aria-pressed="false">Asztali</button></span>
+  <span class="grp">Változat:
+    <button data-v="B" aria-pressed="true">B — kosár (2. kör)</button></span>
+  <span class="grp">Fizetés:
+    <button data-pm="tok" aria-pressed="true">kártya-megbízás</button>
+    <button data-pm="inv" aria-pressed="false">díjbekérős</button></span>
+  <span class="mock-read" id="readout"></span>
+</div>
+<div class="mock-note" id="vnote"></div>
+
+<div class="frame" id="frame" data-size="m">
+  <div class="top"><span>☰</span><span class="crumb">Éden üdülőház › <b>Modulok</b></span><span class="site">Oldal</span></div>
+  <div class="body">
+    <nav class="side"><a>Áttekintés</a><a>Fotók</a><a>Foglalások</a><a>Üzenetek</a><a class="on">Modulok</a><a>Pénztárca</a></nav>
+    <div class="scroll" id="scroll">
+      <div class="applied" id="applied"></div>
+      <div class="gw" id="gw"></div>
+      <div class="lay" id="lay">
+        <div>
+          <div class="card">
+            <h2>Már az Öné</h2>
+            <p class="lead">Modulok együtt (6 db) · 3 340 Ft/hó · Következő számla (2026. 10. 25.): 7 240 Ft</p>
+            <ul class="mine" id="mine"></ul>
+          </div>
+          <div class="card" style="padding-bottom:6px">
+            <h2>Amit még hozzáadhat</h2>
+            <p class="lead">−25% kupon: az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk.</p>
+            <div class="spacer"></div>
+          </div>
+          <div class="shop" id="shop"></div>
+        </div>
+        <aside class="cartcol" id="cartcol"></aside>
+      </div>
+
+      <!-- A -->
+      <div class="pb pbA" id="pbA">
+        <div class="pbA__det" id="pbA-det">
+          <div id="pbA-rows"></div>
+          <div class="pbA__next" id="pbA-next"></div>
+          <div class="pbA__low"><button type="button" class="btn btn--ghost-inv" data-reset>Elvetem</button></div>
+        </div>
+        <div class="pbA__row">
+          <button type="button" class="pbA__tog" id="pbA-tog" aria-expanded="false">
+            <span class="pbA__chev" aria-hidden="true">▲</span>
+            <span style="min-width:0"><small id="pbA-cap"></small><strong id="pbA-main"></strong></span>
+          </button>
+          <span class="pbA__chips" id="pbA-chips"></span>
+          <button type="button" class="btn btn--ghost-inv reset-d" data-reset>Elvetem</button>
+          <button type="button" class="btn btn--pri" data-go id="pbA-go"></button>
+        </div>
+      </div>
+
+      <!-- B -->
+      <button type="button" class="pill" id="pill"></button>
+
+      <!-- C -->
+      <div class="pb pbC" id="pbC">
+        <div class="pbC__rows" id="pbC-rows"></div>
+        <div class="pbC__sum" id="pbC-sum"></div>
+        <div class="seg" id="pbC-seg">
+          <label><input type="radio" name="cardC" value="saved" checked>Mentett: Visa ····5559</label>
+          <label><input type="radio" name="cardC" value="new">Másik kártyával</label>
+        </div>
+        <div class="pbC__btns">
+          <button type="button" class="btn btn--ghost-inv" data-reset>Elvetem</button>
+          <button type="button" class="btn btn--pri" data-go id="pbC-go"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bnav"><span><i></i>Áttekintés</span><span><i></i>Fotók</span><span><i></i>Foglalások</span><span><i></i>Üzenetek</span><span class="on"><i></i>Menü</span></div>
+
+  <div class="sheet-veil" id="sveil"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-t">
+    <h3><span id="sheet-t">Kosár</span><button type="button" id="sheet-x" aria-label="Bezárom">×</button></h3>
+    <div id="sheet-body"></div>
+    <div class="btns"><button type="button" class="btn btn--ghost-inv" data-reset>Kiürítem a kosarat</button><button type="button" class="btn btn--pri" data-go id="sheet-go"></button></div>
+  </div>
+
+  <div class="veil" id="veil"></div>
+  <div class="mdl" id="mdl" role="dialog" aria-modal="true" aria-labelledby="mdl-t">
+    <h3 id="mdl-t">Fizetés és élesítés</h3>
+    <div id="mdl-lines"></div>
+    <div class="opts" id="mdl-card"></div>
+    <p class="note" id="mdl-note"></p>
+    <div class="mdl__btns"><button type="button" class="btn" id="mdl-keep">Mégsem</button><button type="button" class="btn btn--pri" id="mdl-pay"></button></div>
+  </div>
+
+  <div class="veil" id="dveil"></div>
+  <div class="mdl" id="dmdl" role="dialog" aria-modal="true">
+    <h3 id="dmdl-t"></h3><p class="note" id="dmdl-b"></p>
+    <div class="mdl__btns"><button type="button" class="btn" id="dmdl-keep">Mégsem, marad minden</button><button type="button" class="btn btn--pri" id="dmdl-all"></button></div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>/* A KUPON-KEREKÍTÉS SZABÁLYA — EGY példányban, mindkét oldalnak.
+ *
+ * WHY THIS FILE EXISTS AT ALL. The rule lived twice: the browser discounted MODULE BY
+ * MODULE (`Math.floor(p*FCM*(100-CPCT)/100)` per checkbox, then summed) while the server
+ * discounted the TOTAL (`applyOffer(monthly*months)`). Same inputs, two results — measured
+ * 2026-09-21 on live data: 1 626 Ft on the screen, 1 627 Ft on the card. `sum(floor(x_i))`
+ * and `floor(sum(x_i))` are simply not the same function. It stayed hidden because the
+ * park's only upsell is ANNUAL, where the two happen to coincide.
+ *
+ * ⛔ AND THAT IS WHY THERE IS NO TYPESCRIPT TWIN HERE. cit-money.js is a deliberate second
+ * copy kept honest by a parity guard, because a FORMATTER that disagrees prints an ugly
+ * string. A PRICE that disagrees charges a different amount than it promised — so this one
+ * is loaded by both sides (Node: require; browser: inlined into the admin script), and the
+ * predicate cannot drift because there is only one of it.
+ *
+ * `.cjs` on purpose: package.json says "type": "module", so a `.js` here could not be
+ * require()d from the server at all. The browser gets the text spliced into a <script>,
+ * where the trailing module.exports line is inert.
+ */
+var CitCoupon = (function () {
+  "use strict";
+
+  function int(v) {
+    var n = Math.round(Number(v));
+    return isFinite(n) ? n : 0;
+  }
+
+  /**
+   * The discounted amount for a list price. FLOOR, so a rounding step never
+   * overcharges the buyer — the house eats the fraction, not the customer.
+   */
+  function discount(listPrice, percent) {
+    var p = Math.min(100, Math.max(0, int(percent)));
+    return Math.floor((int(listPrice) * (100 - p)) / 100);
+  }
+
+  /**
+   * The prorated first charge for a basket of monthly module prices.
+   *
+   * `total` is THE number that gets charged and THE number the screen may show: it is
+   * discount() over the whole basket, so the browser's bar, the confirmation card and
+   * the server's order_intent.price are the same arithmetic, not three approximations.
+   *
+   * `lines[i]` is what the buyer sees next to module i. They are allocated by largest
+   * remainder, so THEY ADD UP TO `total` EXACTLY — otherwise the confirmation card would
+   * list amounts that do not sum to its own bottom line, which is the "two divisors on
+   * one row" failure in a different costume.
+   */
+  function splitFirstCharge(monthlyPrices, months, percent) {
+    var m = Math.max(1, int(months));
+    var p = Math.min(100, Math.max(0, int(percent)));
+    var k = 100 - p;
+    var prices = [];
+    var i;
+    for (i = 0; i < (monthlyPrices || []).length; i++) {
+      prices.push(Math.max(0, int(monthlyPrices[i])));
+    }
+
+    var list = 0;
+    for (i = 0; i < prices.length; i++) list += prices[i];
+    var total = discount(list * m, p);
+
+    var lines = [];
+    var rema = [];
+    var allocated = 0;
+    for (i = 0; i < prices.length; i++) {
+      var raw = prices[i] * m * k; // integers throughout: no float drift
+      var whole = Math.floor(raw / 100);
+      lines.push(whole);
+      rema.push({ i: i, r: raw % 100 });
+      allocated += whole;
+    }
+    // sum(floor) <= floor(sum) always, so the gap is non-negative and < lines.length.
+    var gap = total - allocated;
+    rema.sort(function (a, b) {
+      return b.r - a.r || a.i - b.i; // ties go to the earlier line: deterministic
+    });
+    for (i = 0; i < gap && i < rema.length; i++) lines[rema[i].i] += 1;
+
+    return { lines: lines, total: total };
+  }
+
+  return { discount: discount, splitFirstCharge: splitFirstCharge };
+})();
+
+/* Node (server + guard) requires this file; a browser gets the same binding from the var. */
+if (typeof module !== "undefined" && module.exports) module.exports = CitCoupon;
+</script>
+<script>
+(function(){
+// ── REAL DATA: Éden üdülőház, dev DB, 2026-09-28 (the tenant the geometry was measured on) ──
+var FCM = 1;            // proratedFirstChargeMonths: 2026-09-28 → 2026-10-25 = 1 started month
+var CPCT = 25;          // the tenant's live start coupon
+var BASE = 7240;        // #adm-next-total data-base (monthly, mult 1)
+var RENEW = "2026. 10. 25.";
+var CARD = "Visa ····5559";
+var OWNED = [
+  {id:"gallery",label:"Képek a szállásról",price:490},{id:"rooms",label:"Szobák, apartmanok",price:690},
+  {id:"amenities",label:"Amit kínál (felszereltség)",price:490},{id:"location",label:"Térkép, megközelítés",price:490},
+  {id:"usp",label:"Miért Önt válasszák",price:490},{id:"reviews",label:"Vendégek véleménye",price:690}];
+var SHOP = [
+  {id:"pricing",label:"Árak, szezonok",price:490,thumb:"Árak és szezonok",req:[{id:"rooms",why:"Több szoba vagy apartman esetén az ár mindig ahhoz tartozik, amit a vendég kivesz — a Szobák modul mondja meg, mire vonatkozik az összeg."}],
+   desc:"Árak és szezonok áttekinthető táblázatban — az árakat Ön adja meg, és bármikor módosíthatja."},
+  {id:"poi",label:"Heti programajánló",price:490,thumb:"Programok a környéken",req:[],
+   desc:"Minden héten automatikusan összegyűjtjük a környék programjait — fesztiválok, falunapok, vásárok, futóversenyek —, Ön pedig kiválasztja, melyik 10 jelenjen meg a honlapján."},
+  {id:"hours",label:"Nyitvatartás, érkezés",price:290,thumb:"Érkezés és távozás",req:[],
+   desc:"Be- és kijelentkezési idők egy helyen — a vendég tudja, mikor érkezhet, kevesebb telefonos kérdés."},
+  {id:"booking",label:"Online foglalás",price:990,thumb:"Foglalási naptár",req:[{id:"pricing",why:"Az online foglalás összeget mond a vendégnek a naptárban, és ugyanaz az összeg megy ki a visszaigazoló levélben is — az árakat az Árak modul adja."}],
+   desc:"Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére."},
+  {id:"newsletter",label:"Hírlevél feliratkozás",price:490,thumb:"Maradjunk kapcsolatban",req:[],
+   desc:"Feliratkozó-mező az oldalon — a visszatérő vendégeit később hírlevélben érheti el."}];
+
+var HUF=function(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft"};
+var ALL={};OWNED.forEach(function(m){m.committed=true;m.on=true;m.self=true;ALL[m.id]=m});
+SHOP.forEach(function(m){m.committed=false;m.on=false;m.self=false;ALL[m.id]=m});
+var v="B", autoc=true, cardNew=false;
+var $=function(id){return document.getElementById(id)};
+
+// ── render lists ──
+$("mine").innerHTML=OWNED.map(function(m){return '<li data-row="'+m.id+'"><span>'+m.label+' · '+HUF(m.price)+'/hó</span>'+
+  '<label><input type="checkbox" data-mine="'+m.id+'" checked> aktív</label></li>'}).join("");
+$("shop").innerHTML=SHOP.map(function(m){var disc=CitCoupon.splitFirstCharge([m.price],1,CPCT).total;
+  return '<article class="mod" data-row="'+m.id+'"><span class="mod__coupon">−'+CPCT+'%</span>'+
+  '<div class="mod__thumb">'+m.thumb+'</div><div class="mod__b"><h3>'+m.label+'</h3><p>'+m.desc+'</p>'+
+  '<div class="mod__dep" data-dep="'+m.id+'"></div>'+
+  '<div class="mod__foot"><span class="price"><s>'+HUF(m.price)+'</s><b>+'+HUF(disc)+'/hó</b></span>'+
+  '<button type="button" class="btn" data-look="'+m.id+'">Megnézem az oldalamon</button>'+
+  '<button type="button" class="btn btn--pri add" data-add="'+m.id+'" aria-pressed="false">Kosárba teszem</button></div></div></article>'}).join("");
+
+// ── dependency rule (mirror of adminViews markDeps / closure / blockers, ADR-0192) ──
+function closure(ids){var out=ids.slice();for(var g=0;g<12;g++){var more=false;
+  out.slice().forEach(function(id){(ALL[id].req||[]).forEach(function(r){if(out.indexOf(r.id)<0){out.push(r.id);more=true}})});if(!more)break}return out}
+function onIds(){return Object.keys(ALL).filter(function(k){return ALL[k].on})}
+function blockers(id){return onIds().filter(function(x){return x!==id&&(ALL[x].req||[]).some(function(r){return r.id===id})})}
+function setOn(id,on){var m=ALL[id];
+  if(on){m.on=true;m.self=true;closure([id]).forEach(function(d){if(!ALL[d].on){ALL[d].on=true;ALL[d].self=false}})}
+  else{var bl=blockers(id);if(bl.length){depOpen(id,bl);return}
+    m.on=false;m.self=m.committed;var keep=closure(onIds().filter(function(x){return ALL[x].committed||ALL[x].self}));
+    onIds().forEach(function(x){var b=ALL[x];if(!b.committed&&!b.self&&keep.indexOf(x)<0)b.on=false})}
+  sync()}
+
+// ── the plan (same arithmetic as the live bar: CitCoupon for pay-now, list delta for the invoice) ──
+function plan(){var add=[],rem=[],delta=0;Object.keys(ALL).forEach(function(k){var m=ALL[k];
+  if(m.on&&!m.committed){add.push(m);delta+=m.price}if(!m.on&&m.committed){rem.push(m);delta-=m.price}});
+  var sp=CitCoupon.splitFirstCharge(add.map(function(m){return m.price}),FCM,CPCT);
+  add.forEach(function(m,i){m.line=sp.lines[i]});
+  return {add:add,rem:rem,delta:delta,payNow:add.length?sp.total:0,n:add.length+rem.length}}
+function rowsHtml(p){return p.add.map(function(m){return '<div class="pbrow"><span><span class="tag-add">+ bekapcsol</span> · '+m.label+'</span><span>fizetés most: <b>'+HUF(m.line)+'</b></span></div>'}).join("")+
+  p.rem.map(function(m){return '<div class="pbrow"><span><span class="tag-del">− lemond</span> · '+m.label+'</span><span>'+RENEW+'-ig aktív maradna</span></div>'}).join("")}
+function nextHtml(p){return 'Következő számla így: <b>'+HUF(BASE+p.delta)+'</b> <span class="'+(p.delta>0?"up":"down")+'">('+(p.delta>0?"+":"−")+HUF(Math.abs(p.delta))+' a mostanihoz képest)</span>'}
+function goLabel(p,inBar){
+  if(!p.payNow)return "Alkalmazom a módosításokat";
+  if(v==="C")return autoc&&!cardNew?"Alkalmazom — a kártyáját "+HUF(p.payNow)+"-tal terheljük":autoc?"Fizetés másik kártyával — "+HUF(p.payNow):"Fizetés és alkalmazás";
+  return inBar?"Tovább a fizetéshez":"Tovább a fizetéshez"}
+
+function sync(){var p=plan();
+  // cards + owned list
+  SHOP.forEach(function(m){var b=document.querySelector('[data-add="'+m.id+'"]');b.setAttribute("aria-pressed",m.on?"true":"false");
+    b.textContent=m.on?"Kiveszem a kosárból":"Kosárba teszem";var row=b.closest(".mod");row.classList.toggle("is-dirty",m.on);
+    var drv=onIds().filter(function(x){return x!==m.id&&(ALL[x].req||[]).some(function(r){return r.id===m.id})});
+    var isDep=m.on&&drv.length>0&&!m.self;row.classList.toggle("is-dep",isDep);
+    if(isDep){var r=ALL[drv[0]].req.filter(function(x){return x.id===m.id})[0];row.querySelector("[data-dep]").textContent=ALL[drv[0]].label+" — ehhez jár. "+r.why}});
+  OWNED.forEach(function(m){var c=document.querySelector('[data-mine="'+m.id+'"]');c.checked=m.on;c.closest("li").classList.toggle("is-dirty",!m.on)});
+  var any=p.n>0;
+  // A
+  $("pbA").classList.toggle("show",v==="A"&&any);
+  $("pbA-rows").innerHTML=rowsHtml(p);$("pbA-next").innerHTML=nextHtml(p);
+  $("pbA-cap").textContent=p.n+" változás"+(p.payNow?" · most fizetendő":" · következő számla");
+  $("pbA-main").textContent=p.payNow?HUF(p.payNow):HUF(BASE+p.delta);
+  $("pbA-chips").innerHTML=p.add.map(function(m){return '<span>+ '+m.label+' · '+HUF(m.line)+'</span>'}).join("")+
+    p.rem.map(function(m){return '<span>− '+m.label+'</span>'}).join("")+'<span style="border:0;opacity:.85">'+nextHtml(p).replace(/<[^>]+>/g,"")+'</span>';
+  $("pbA-go").textContent=goLabel(p,true);
+  if(!any)setOpen(false);
+  // B
+  $("pill").classList.toggle("show",v==="B"&&any);
+  $("pill").innerHTML='<span class="n">'+p.n+'</span> Kosár'+(p.payNow?' · most '+HUF(p.payNow):'')+' <span aria-hidden="true">›</span>';
+  var summary=rowsHtml(p)+(p.payNow?'<div class="pbrow" style="margin-top:6px"><span class="paynow">Fizetendő most:</span><b class="paynow">'+HUF(p.payNow)+'</b></div>':'')+
+    '<div style="font-size:12px;margin-top:4px">'+nextHtml(p)+'</div>';
+  $("sheet-body").innerHTML=summary;$("sheet-go").textContent=goLabel(p,false);
+  // owner's rule: an EMPTY cart has no footprint at all — no pill, no side column
+  $("lay").classList.toggle("has-cart",any);
+  $("cartcol").innerHTML=any?'<h3>Kosár</h3>'+summary+'<div class="btns"><button type="button" class="btn btn--pri" data-go>'+goLabel(p,false)+'</button><button type="button" class="btn btn--ghost-inv" data-reset>Kiürítem a kosarat</button></div>':'';
+  if(!any)sheetClose();
+  // C
+  $("pbC").classList.toggle("show",v==="C"&&any);
+  $("pbC-rows").innerHTML=p.add.map(function(m){return '<div class="pbrow"><span><span class="tag-add">+</span> '+m.label+'</span><b>'+HUF(m.line)+'</b></div>'}).join("")+
+    p.rem.map(function(m){return '<div class="pbrow"><span><span class="tag-del">−</span> '+m.label+'</span><span>'+RENEW+'-ig aktív</span></div>'}).join("");
+  $("pbC-sum").innerHTML=(p.payNow?'<span class="paynow">Most: '+HUF(p.payNow)+'</span> · ':'')+'Köv. számla: <b>'+HUF(BASE+p.delta)+'</b> <span class="'+(p.delta>0?"up":"down")+'">('+(p.delta>0?"+":"−")+HUF(Math.abs(p.delta))+')</span>';
+  $("pbC-seg").style.display=autoc&&p.payNow?"flex":"none";
+  $("pbC-go").textContent=goLabel(p,true);
+  requestAnimationFrame(readout)}
+
+// ── A: open/close details ──
+function setOpen(o){$("pbA").classList.toggle("open",o);$("pbA-tog").setAttribute("aria-expanded",o?"true":"false");requestAnimationFrame(readout)}
+$("pbA-tog").addEventListener("click",function(){if($("frame").getAttribute("data-size")==="d")return;setOpen(!$("pbA").classList.contains("open"))});
+// ── B: sheet ──
+function sheetOpen(){$("sheet").classList.add("show");$("sveil").classList.add("show")}
+function sheetClose(){$("sheet").classList.remove("show");$("sveil").classList.remove("show")}
+$("pill").addEventListener("click",sheetOpen);$("sheet-x").addEventListener("click",sheetClose);$("sveil").addEventListener("click",sheetClose);
+
+// ── shared actions ──
+document.addEventListener("click",function(e){var t=e.target.closest("[data-add],[data-look],[data-reset],[data-go]");if(!t)return;
+  if(t.dataset.add){setOn(t.dataset.add,!ALL[t.dataset.add].on)}
+  else if(t.dataset.look){toast("Előnézet — a valódi lapon itt nyílik a saját oldala ezzel a modullal (a mockban nem nyílik).")}
+  else if(t.hasAttribute("data-reset")){Object.keys(ALL).forEach(function(k){ALL[k].on=ALL[k].committed;ALL[k].self=ALL[k].committed});setOpen(false);sheetClose();sync()}
+  else if(t.hasAttribute("data-go")){go()}});
+document.getElementById("mine").addEventListener("change",function(e){var id=e.target.dataset.mine;if(id){e.target.checked=ALL[id].on;setOn(id,!ALL[id].on)}});
+document.querySelectorAll('input[name="cardC"]').forEach(function(r){r.addEventListener("change",function(){cardNew=r.value==="new"&&r.checked;sync()})});
+
+function go(){var p=plan();$("applied").className="applied";$("gw").className="gw";
+  if(!p.payNow){finish(p);return}
+  $("mdl-lines").innerHTML=p.add.map(function(m){return '<div class="fcl"><span>'+m.label+' · '+FCM+' hó × '+HUF(m.price)+' − '+CPCT+'%</span><b>'+HUF(m.line)+'</b></div>'}).join("")+
+    '<div class="fcl fcl--t"><span>Fizetendő most</span><b>'+HUF(p.payNow)+'</b></div>'+
+    '<div class="fcl" style="color:var(--citui-muted)"><span>Következő számla ('+RENEW+') így</span><b>'+HUF(BASE+p.delta)+' ('+(p.delta>0?"+":"−")+HUF(Math.abs(p.delta))+')</b></div>';
+  // A & B: the card choice lives HERE (the moment of paying). C keeps it in the bar.
+  var cardHere=autoc&&v!=="C";
+  $("mdl-card").style.display=cardHere?"grid":"none";
+  if(cardHere)$("mdl-card").innerHTML=
+    '<label class="opt"><input type="radio" name="cardM" value="saved"'+(cardNew?'':' checked')+'><span><b>A mentett kártyámmal — '+CARD+'</b><small>Azonnal, átirányítás nélkül. Ez marad a mentett kártya.</small></span></label>'+
+    '<label class="opt"><input type="radio" name="cardM" value="new"'+(cardNew?' checked':'')+'><span><b>Másik kártyával</b><small>A fizetési szolgáltató oldalán adja meg, bankkártyás megerősítéssel. Ez a kártya lesz ezután a mentett kártya — a jövőbeli díjak erről mennek.</small></span></label>';
+  document.querySelectorAll('input[name="cardM"]').forEach(function(r){r.addEventListener("change",function(){cardNew=r.value==="new";payLabel()})});
+  $("mdl-note").textContent=(autoc&&!cardNew
+    ?"A tárolt kártya-megbízását terheljük. A modul a sikeres terheléskor azonnal élesedik; a következő ("+RENEW+") számlán már normál tételként szerepel."
+    :"A fizetőoldalra irányítjuk. A modul CSAK a fizetés beérkezése után jelenik meg az oldalán; a következő ("+RENEW+") számlán már normál tételként szerepel.")+
+    (p.rem.length?" A lemondása ettől függetlenül érvénybe lép — akkor is, ha ez a fizetés nem megy végbe.":"");
+  payLabel();$("veil").classList.add("show");$("mdl").classList.add("show");sheetClose();$("mdl-keep").focus()}
+function payLabel(){var p=plan();$("mdl-pay").textContent=autoc&&!cardNew?"Terhelés és élesítés — "+HUF(p.payNow):"Tovább a fizetéshez — "+HUF(p.payNow);
+  $("mdl-note").textContent=$("mdl-note").textContent.replace(/^A (tárolt|fizetőoldalra)[^.]*\./,autoc&&!cardNew?"A tárolt kártya-megbízását terheljük.":"A fizetőoldalra irányítjuk.")}
+function mclose(){$("veil").classList.remove("show");$("mdl").classList.remove("show")}
+$("mdl-keep").addEventListener("click",mclose);$("veil").addEventListener("click",mclose);
+$("mdl-pay").addEventListener("click",function(){mclose();finish(plan())});
+function finish(p){
+  if(p.payNow&&!(autoc&&!cardNew)){
+    $("gw").innerHTML="<b>→ Átirányítás a fizetőoldalra ("+HUF(p.payNow)+").</b> A modul CSAK a fizetés beérkezése után jelenik meg az oldalán. <i>(A mockban csak jelzés.)</i>";
+    $("gw").className="gw show";p.rem.forEach(function(m){m.committed=false;m.self=false})}
+  else{
+    $("applied").innerHTML=p.payNow?"<b>Kész.</b> A kártyáját megterheltük "+HUF(p.payNow)+"-tal — mostantól él: "+p.add.map(function(m){return m.label}).join(", ")+".":"<b>Kész.</b> A módosítás érvényes.";
+    $("applied").className="applied show";
+    Object.keys(ALL).forEach(function(k){var m=ALL[k];m.committed=m.on;m.self=m.on})}
+  $("scroll").scrollTo({top:0});setOpen(false);sync()}
+
+// ── dependency dialog (ADR-0192 ④.2 — an offer, not an action) ──
+var depGone=null;
+function depOpen(id,bl){depGone=[id].concat(bl);
+  $("dmdl-t").textContent=ALL[id].label+" nem kapcsolható ki, amíg "+bl.map(function(x){return "az "+ALL[x].label}).join(" és ")+" él.";
+  var r=null;bl.forEach(function(o){(ALL[o].req||[]).forEach(function(x){if(x.id===id)r=x})});$("dmdl-b").textContent=r?r.why:"";
+  $("dmdl-all").textContent="Mind a "+depGone.length+"-t lemondom";$("dveil").classList.add("show");$("dmdl").classList.add("show")}
+function dclose(){$("dveil").classList.remove("show");$("dmdl").classList.remove("show");depGone=null}
+$("dmdl-keep").addEventListener("click",dclose);$("dveil").addEventListener("click",dclose);
+$("dmdl-all").addEventListener("click",function(){depGone.forEach(function(x){ALL[x].on=false;ALL[x].self=ALL[x].committed&&false});dclose();sync()});
+
+function toast(t){var el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){el.classList.remove("show")},2600)}
+
+// ── live readout: how much of the screen the sticky layer takes ──
+function readout(){$("frame").style.setProperty("--fh",$("frame").getBoundingClientRect().height+"px");var sc=$("scroll"),r=sc.getBoundingClientRect(),fr=$("frame").getBoundingClientRect();
+  var el=v==="A"?$("pbA"):v==="B"?$("pill"):$("pbC");var cov=0,w=0;
+  if(el.offsetParent&&getComputedStyle(el).position==="sticky"){var b=el.getBoundingClientRect();cov=Math.max(0,r.bottom-Math.max(b.top-8,r.top));w=b.width}
+  var frameH=fr.height,left=Math.max(0,r.height-cov);
+  $("readout").innerHTML=cov?'Ragadó réteg: <b>'+Math.round(cov)+' px</b> = <b>'+Math.round(cov/frameH*100)+'%</b> a képernyőből'+(v==="B"?' (csak <b>'+Math.round(w)+' px</b> széles, jobbra)':'')+
+    ' · a tartalomnak marad: <b>'+Math.round(left)+' px</b> (most, ma: 310 px mobilon, fekvőben 0)':'Nincs ragadó réteg (válasszon ki egy modult, vagy asztali B-ben a kosár oldalsáv)'}
+$("scroll").addEventListener("scroll",function(){requestAnimationFrame(readout)});
+window.addEventListener("resize",function(){requestAnimationFrame(readout)});
+
+// ── mock chrome ──
+var NOTES={B2:"<b>B — kosár, 2. kör (a tulaj kikötéseivel).</b> ① Üres kosárnak NINCS lábnyoma: telefonon nincs gomb, asztalin nincs oldalhasáb — az első „Kosárba teszem” után jelenik meg. ② A kirakat gombja „Kosárba teszem” / „Kiveszem a kosárból”, a kosár ürítése „Kiürítem a kosarat”. ③ A „Következő számla így” sor utódja: a kinyitott kosár ÉS a fizetés-megerősítő (ez utóbbin mindenki átmegy, aki fizet). A kártyaválasztó a megerősítőben van.",
+  A:"<b>A — csukott sáv.</b> Telefonon egyetlen sor marad lent: hány változás, a most fizetendő összeg és a „Tovább a fizetéshez” gomb. A tételek és a következő számla a sorra koppintva nyílnak fel. A kártyaválasztó a fizetés-megerősítőbe költözik (az úgyis felugrik minden terhelés előtt). Asztalin egy sorban minden látszik.",
+  B:"<b>B — kosár-gomb.</b> Telefonon nincs széles sáv: jobbra lent egy kis „Kosár” gomb, a „Hozzáadom” gombok bal oldalon szabadon maradnak. Koppintásra alulról felcsúszik a teljes összegző. Asztalin a kosár a kirakat mellett, oldalsó hasábban áll. A kártyaválasztó itt is a megerősítőben van.",
+  C:"<b>C — tömör sáv.</b> Minden a sávban marad, ahogy ma, csak összenyomva: egy sor modulonként, egy sor a számoknak, a kártyaválasztó két gombbá zsugorodik (a magyarázó mondatok a megerősítőbe mennek). Ez a legkisebb változtatás, de a sáv modulonként nő, és fekvőben is csak így fér el, hogy legfeljebb 40% magas, és belül görgethető."};
+function press(attr,val){document.querySelectorAll(".mock-bar button["+attr+"]").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute(attr)===val?"true":"false")})}
+document.querySelectorAll(".mock-bar button[data-size]").forEach(function(b){b.addEventListener("click",function(){$("frame").setAttribute("data-size",b.dataset.size);press("data-size",b.dataset.size);setOpen(false);sync()})});
+document.querySelectorAll(".mock-bar button[data-v]").forEach(function(b){b.addEventListener("click",function(){v=b.dataset.v;document.body.dataset.v=v;press("data-v",v);$("vnote").innerHTML=NOTES[v];setOpen(false);sheetClose();sync()})});
+document.querySelectorAll(".mock-bar button[data-pm]").forEach(function(b){b.addEventListener("click",function(){autoc=b.dataset.pm==="tok";cardNew=false;press("data-pm",b.dataset.pm);sync()})});
+// start in the size the viewer holds (the owner mostly reads on a phone)
+var qs=new URLSearchParams(location.search);
+var s0=qs.get("size")||(innerWidth<=500?"m":innerWidth<900?"l":"d");$("frame").setAttribute("data-size",s0);press("data-size",s0);
+if(qs.get("v")){v=qs.get("v");document.body.dataset.v=v;press("data-v",v)}
+$("vnote").innerHTML=NOTES.B2;
+sync();
+})();
+</script>
+</body>
+</html>

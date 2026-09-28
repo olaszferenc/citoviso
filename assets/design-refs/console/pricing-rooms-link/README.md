@@ -17,7 +17,7 @@ nem kattintható mondat említette a modult. **Ez a terv KÖT.**
    - Szobák modul AKTÍV → felirat **„Szobák, apartmanok szerkesztése”**, cél
      `/admin?tab=modulok&m=rooms` (a Szobák szerkesztő).
    - Szobák modul NEM aktív → felirat **„Szobák modul bekapcsolása”**, cél `/admin?tab=modulok`
-     (a Modulok fül, ahol a modul a „Hozzáadom” gombbal kapcsolható be).
+     (a Modulok fül, ahol a modul a „Kosárba teszem” gombbal kerül a kosárba — 2026-09-28 óta, `../modules-cart/`).
    Az állapotot a nézet KAPJA (`PricingEditorData.roomsActive`, kötelező mező), ugyanazzal a
    predikátummal, amellyel a képernyő-kapu dönt (aktív modul a tenant modul-listájában).
 3. **Mindkét egység-számnál ott van** (egy „A szállás egésze” egységnél és több egységnél is) —

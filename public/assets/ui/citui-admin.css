@@ -819,28 +819,63 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-note a{color:var(--citui-ink);font-weight:700;text-decoration:underline;cursor:pointer}
 .adm-modrow.is-dirty .adm-mod{border-color:var(--citui-cyan-500);
   box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 15%,transparent)}
-.adm-planbar{position:sticky;bottom:10px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
-  border-radius:var(--citui-radius);padding:12px 14px;margin-top:14px;display:none;
-  box-shadow:var(--citui-shadow-md)}
-.adm-planbar.show{display:block}
-/* ⛔ MÉRT HIBA (2026-09-24, wallet-tour): on the phone layout the bar stuck at bottom:10px,
-   i.e. UNDER the fixed bottom tab bar — its pay button sat at y=770 of 844 px, covered for as
-   long as the bar was "helpfully" sticky. Lift it above the tab bar (same token as the cookie
-   bar). ⚠️ Must stay AFTER the base rule: an earlier copy inside the @media(max-width:899px)
-   block above lost to it on source order and changed nothing (measured). */
-@media(max-width:899px){
-  .adm-planbar{bottom:calc(var(--citui-admin-bottomnav-h) + env(safe-area-inset-bottom) + 10px)}
-}
+/* ── the cart (approved modules-cart contract, B, 2026-09-28) ─────────────────
+   ⛔ MEASURED (2026-09-28): the old sticky plan bar took 407 px = 48% of a 390×844
+   phone, and 284 px of a 390 px-tall landscape phone — it reached the header, so no
+   further add button was reachable at ANY scroll position. Now an empty cart has no
+   footprint; the phone gets a small cart button bottom-right (the add buttons are
+   left-aligned, it never covers them) that opens the summary as a sheet; the desktop
+   gets a sticky column beside the shop while the cart holds something. */
+.adm-planbar{display:none;background:var(--citui-navy-900);color:var(--citui-ink-inverse);
+  border-radius:var(--citui-radius);padding:14px 16px;box-shadow:var(--citui-shadow-md)}
+.adm-cart__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}
+.adm-cart__head h3{margin:0;font:700 14px/1.3 var(--citui-font-display);color:inherit}
+.adm-cart__x{display:none;background:none;border:0;color:inherit;cursor:pointer;min-width:44px;min-height:44px;
+  align-items:center;justify-content:center;margin:-10px -10px -10px 0}
 .adm-planbar__row{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:3px 0}
 .adm-planbar__tag{font-weight:700}
 .adm-planbar__tag--add{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-panel))}
 .adm-planbar__tag--del{color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-panel))}
-.adm-planbar__foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
-.adm-planbar__sum{font-size:12px}
+.adm-planbar__sum{font-size:12px;margin-top:8px;display:grid;gap:4px}
+.adm-planbar__paynow{display:flex;justify-content:space-between;gap:10px}
+.adm-planbar__paynow[hidden]{display:none}
+.adm-planbar__foot{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.adm-planbar__foot .citui-btn{justify-content:center}
 .adm-planbar__delta--up{color:color-mix(in srgb,var(--citui-warn) 65%,var(--citui-panel));font-weight:700}
 .adm-planbar__delta--down{color:color-mix(in srgb,var(--citui-ok) 55%,var(--citui-panel));font-weight:700}
 .adm-planbar .citui-btn--ghost{background:transparent;color:var(--citui-ink-inverse);
   border:1px solid color-mix(in srgb,var(--citui-ink-inverse) 35%,transparent)}
+.adm-cartpill{display:none}
+.adm-cartveil{display:none}
+/* desktop: a column beside the shop, only while the cart holds something */
+@media(min-width:900px){
+  .adm-modlay.has-cart{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start}
+  .adm-modlay__main{min-width:0}
+  .adm-modlay__cart{display:none}
+  .adm-modlay.has-cart .adm-modlay__cart{display:block;position:sticky;top:62px}
+  /* the column takes ~300 px: let the shop pick its column count from the width it
+     actually has (measured: the viewport-keyed 3 columns shrank cards to 211 px) */
+  .adm-modlay.has-cart .adm-shop{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+  .adm-planbar.show{display:block}
+}
+/* phone: a cart button, and the summary as a sheet over the page */
+@media(max-width:899px){
+  .adm-cartpill{position:fixed;right:14px;z-index:45;display:flex;align-items:center;gap:8px;
+    bottom:calc(var(--citui-admin-bottomnav-h) + env(safe-area-inset-bottom) + 12px);
+    min-height:44px;padding:10px 14px 10px 10px;border:0;border-radius:var(--citui-radius-pill);cursor:pointer;
+    background:var(--citui-navy-900);color:var(--citui-ink-inverse);font:700 13px/1.2 var(--citui-font-text);
+    box-shadow:var(--citui-shadow-md)}
+  .adm-cartpill[hidden]{display:none}
+  .adm-cartpill__n{min-width:22px;height:22px;border-radius:var(--citui-radius-pill);display:inline-flex;align-items:center;
+    justify-content:center;background:var(--citui-cyan-500);color:var(--citui-accent-ink);font-size:12px}
+  .adm-cartveil{position:fixed;inset:0;z-index:59;display:block;background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent)}
+  .adm-cartveil[hidden]{display:none}
+  .adm-planbar.open{display:block;position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:85dvh;overflow:auto;
+    border-radius:var(--citui-radius) var(--citui-radius) 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
+  .adm-planbar.open .adm-cart__x{display:inline-flex}
+  .adm-planbar__foot{flex-direction:row}
+  .adm-planbar__foot .citui-btn--primary{flex:1}
+}
 .adm-applied{background:var(--citui-ok-soft);border-radius:var(--citui-radius-sm);
   padding:12px;margin-top:12px;font-size:12px;line-height:1.6}
 /* ── nyugta-levezetés a vásárlás visszaigazolásán (jóváhagyott terv: C változat) ──
@@ -1295,7 +1330,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-coupon b{display:block;font:700 17px/1.2 var(--citui-font-display);color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink))}
 .adm-coupon span{font-size:11px;color:var(--citui-muted)}
 .adm-chip--coupon s{color:var(--citui-muted);font-weight:600;margin-right:5px;text-decoration-color:var(--citui-bad)}
-.adm-shop__card{position:relative}
+.adm-shop__card{position:relative;isolation:isolate}
 .adm-shop__coupon{position:absolute;top:-9px;right:10px;z-index:2;
   background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));border:1.5px dashed var(--citui-warn);
   color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink));border-radius:8px;padding:3px 8px;
@@ -1344,6 +1379,10 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-settle__done b{font-family:var(--citui-font-display)}
 /* ADR-0113 (approved B contract): pay-gated module activation */
 .adm-planbar__paynow{font-size:13px;font-weight:700;color:var(--citui-cyan-300)}
+/* NOT an .adm-fc__line: the item lines must add up to the total (coupon-rounding-check ④),
+   and the next-invoice figure is not an item */
+.adm-fc__next{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:5px 0;color:var(--citui-muted)}
+.adm-fc__next b{font-variant-numeric:tabular-nums;white-space:nowrap}
 .adm-fc__line{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:5px 0}
 .adm-fc__line b{font-variant-numeric:tabular-nums;white-space:nowrap}
 .adm-fc__line--total{border-top:1px solid var(--citui-line);margin-top:6px;padding-top:9px;font-weight:700}
@@ -1397,11 +1436,11 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-mdl__ghost{display:block;width:100%;margin-top:8px;border:1px solid var(--citui-line-strong);background:var(--citui-white);
   border-radius:10px;padding:11px;color:var(--citui-ink);font:600 .88rem/1.2 var(--citui-font-text);cursor:pointer}
 /* Terv-sáv kártyaválasztó (wallet ⑧) */
-.adm-planbar__card{display:grid;gap:6px;margin:8px 0 4px}
-.adm-planbar__opt{display:flex;gap:9px;align-items:flex-start;border:1.5px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:8px 10px;cursor:pointer;font-size:.84rem;line-height:1.4}
-.adm-planbar__opt:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 8%,transparent)}
-.adm-planbar__opt input{margin-top:3px;flex:0 0 auto}
-.adm-planbar__opt small{display:block;color:var(--citui-muted);font-size:.78rem}
+.adm-fc__card{display:grid;gap:6px;margin:10px 0 4px}
+.adm-fc__opt{display:flex;gap:9px;align-items:flex-start;border:1.5px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:8px 10px;cursor:pointer;font-size:.84rem;line-height:1.4}
+.adm-fc__opt:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 8%,transparent)}
+.adm-fc__opt input{margin-top:3px;flex:0 0 auto}
+.adm-fc__opt small{display:block;color:var(--citui-muted);font-size:.78rem}
 /* A két jobbra zárt cella (összeg · állapot) 390 px-en összeért („327 Ftelutasítva”) — mérve. */
 .adm-wal__tbl td.adm-wal__r,.adm-wal__tbl th.adm-wal__r{padding-left:10px}
 /* ── Üzenetek: a foglalási kérés döntés-linkjei (terv: design-refs/console/mail-links, C) ──

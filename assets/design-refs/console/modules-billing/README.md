@@ -13,6 +13,8 @@ stílus-javaslat. A kész felületet ehhez mérjük (ui-shot, mobil 390 + deskto
    - bekapcsolás → „azonnal élne — első díj: <fordulónap>" (ADR-0080 ② B-opció)
    - lemondás → „<fordulónap>-ig aktív maradna"
    Érvényesítés CSAK az „Alkalmazom a módosításokat" gombbal; „Elvetem" visszaáll.
+   (2026-09-28 óta a kosárban: „Tovább a fizetéshez" / „Alkalmazom a módosításokat", ürítés:
+   „Kiürítem a kosarat" — `../modules-cart/README.md`.)
 2. **A díj-változás INSTANT látszik, számmal** (tulajdonosi kiemelés): a tervsáv a
    következő számla új összegét ÉS a mostanihoz képesti különbséget is mutatja
    („7 730 Ft (+490 Ft a mostanihoz képest)"), színkódolva; az Előfizetés-kártya

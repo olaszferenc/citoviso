@@ -43,6 +43,8 @@ Kötelező elemek a fejlécében:
 A modul-váltás az előnézeten belül is működik, és a kosár azonnal követi.
 
 ### ④ Kosár-sáv (a mai `adm-planbar` viselkedése marad)
+> ⚠️ FELÜLÍRVA 2026-09-28: a sáv helyett kosár (telefonon kosár-gomb + felcsúszó kosár, asztalin hasáb),
+> a gombok „Kosárba teszem” / „Kiveszem a kosárból” / „Kiürítem a kosarat” — lásd `../modules-cart/README.md`.
 Változás esetén megjelenik: mi kapcsolna be / mit mondana le, a fordulónap
 dátumával, és **jelenlegi havi díj → új havi díj (delta)**. `Elvetem` /
 `Alkalmazom a módosításokat`. Alkalmazás után szöveges visszaigazolás.

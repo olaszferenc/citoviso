@@ -8,6 +8,7 @@
 
 - [2026-09-28_telefonos_menu_foglalas_sav_feluton.md](2026-09-28_telefonos_menu_foglalas_sav_feluton.md) — 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-0253
 - [2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md](2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md) — 2026-09-28 — RC-gépezet: 🔴 SUB-jelölés + egy kód három gépen (ADR-0254)
+- [2026-09-28_modul_kosar_sav_helyett.md](2026-09-28_modul_kosar_sav_helyett.md) — 2026-09-28 — Modulok fül: kosár a 407 px-es összegző sáv helyett (ADR-XXXX)
 - [2026-09-28_mobile_chrome_utojavitas.md](2026-09-28_mobile_chrome_utojavitas.md) — 2026-09-28 — ADR-0253 utójavítás: consent-szabályok a telefonos blokkba, tilted-gallery fekvő hero-alja és helység-sor
 - [2026-09-28_ejszakai_kor_tulaj_vendeg_telefonon.md](2026-09-28_ejszakai_kor_tulaj_vendeg_telefonon.md) — 2026-09-28 — Éjszakai kör: Elek megveszi, feltölti és vendégként kipróbálja a honlapot TELEFONON
 - [2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md](2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md) — 2026-09-27 — Webcím: a vásárlás hibája + hiteles elérhetőség + kártyazárolás (ADR-0251)

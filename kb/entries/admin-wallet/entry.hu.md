@@ -4,7 +4,7 @@ title: Pénztárca — a mentett bankkártya megtekintése, cseréje és visszav
 audience: tenant
 category: billing
 anchors: admin.wallet
-updated: 2026-09-24
+updated: 2026-09-28
 ---
 
 A **Pénztárca** fül a menü **„Üzlet”** csoportjában, a Dokumentumok alatt áll. Itt látja, melyik bankkártyáról vonjuk le a díjait, mikor jön a
@@ -84,8 +84,8 @@ megerősítéssel járó úton.
 
 ## Mi történik, ha modult vásárolok?
 
-Amikor a **Modulok** fülön fizetős modult kapcsol be és van mentett kártyája, a lap alján
-lévő sávban választhat: **„A mentett kártyámmal”** — ilyenkor azonnal, átirányítás nélkül
+Amikor a **Modulok** fülön fizetős modult vesz és van mentett kártyája, a fizetés előtti
+megerősítő kártyán választhat: **„A mentett kártyámmal”** — ilyenkor azonnal, átirányítás nélkül
 levonjuk az összeget, és a mentett kártya marad; vagy **„Másik kártyával”** — ilyenkor a
 fizetési szolgáltató oldalán adja meg a kártyát, és **az lesz ezután a mentett kártya**,
 a jövőbeli díjak erről mennek.

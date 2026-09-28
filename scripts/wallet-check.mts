@@ -160,7 +160,7 @@ console.log("A) render — állapotok és a kontraktus feliratai");
 }
 
 // ── B) TERV-SÁV — valódi kattintással ───────────────────────────────────────
-console.log("B) terv-sáv kártyaválasztó (⑧) — Playwright");
+console.log("B) kártyaválasztó a fizetés-megerősítőn (⑧, modules-cart ④) — Playwright");
 {
   const modules = await getTenantModules("00000000-0000-0000-0000-000000000000").catch(() => null);
   const render = (s: SubscriptionAdminData) =>
@@ -169,8 +169,13 @@ console.log("B) terv-sáv kártyaválasztó (⑧) — Playwright");
       .replaceAll('src="/assets/', `src="${pathToFileURL(path.join(ROOT, "public/assets")).href}/`);
   const withCard = render(sub);
   const noCard = render({ ...sub, autoCharge: false, cardLabel: null });
-  ok(withCard.includes('<input type="radio" name="card"') && strip(withCard).includes("Ez a kártya lesz ezután a mentett kártya"), "megbízással: a két rádió + az ígéret a sávban");
+  ok(withCard.includes('<input type="radio" name="card"') && strip(withCard).includes("Ez a kártya lesz ezután a mentett kártya"), "megbízással: a két rádió + az ígéret a fizetés-megerősítőben");
   ok(selfTest ? false : !noCard.includes('<input type="radio" name="card"'), selfTest ? "[self-test] választó megbízás nélkül → PIROS" : "megbízás nélkül: nincs kártyaválasztó");
+  // modules-cart ④ (owner-approved B, 2026-09-28): the chooser moved from the plan bar
+  // into the confirm card — the radios must stay INSIDE that card (and so inside the
+  // form), or the `card` field would not post.
+  const fcAt = withCard.indexOf("data-fc-modal"), cardAt = withCard.indexOf('id="adm-plan-card"'), noteAt = withCard.indexOf("data-fc-note");
+  ok(fcAt > 0 && cardAt > fcAt && cardAt < noteAt, "a kártyaválasztó a fizetés-megerősítő kártyán belül van (nem a kosárban)");
 
   const tmp = await mkdtemp(path.join(tmpdir(), "wallet-check-"));
   const file = path.join(tmp, "modulok.html");
@@ -184,8 +189,8 @@ console.log("B) terv-sáv kártyaválasztó (⑧) — Playwright");
     await page.goto(pathToFileURL(file).href);
     await page.waitForTimeout(200);
     const box = page.locator("#adm-plan-card");
-    ok(await box.isHidden(), "alapállapot: a választó rejtve (nincs fizetendő)");
-    // Tick the first PAID, not-yet-owned module — that is what puts money in the bar.
+    ok(await box.isHidden(), "alapállapot: a választó rejtve (nincs megnyitott fizetés)");
+    // Tick the first PAID, not-yet-owned module — that is what puts money in the cart.
     const paid = page.locator('input[name="module"][data-committed="0"][data-price]:not([data-price="0"])').first();
     if ((await paid.count()) === 0) {
       ok(false, "nincs fizetős, nem birtokolt modul a fixtúrán — a próba nem futtatható");
@@ -195,15 +200,19 @@ console.log("B) terv-sáv kártyaválasztó (⑧) — Playwright");
         el.dispatchEvent(new Event("change", { bubbles: true }));
       });
       await page.waitForTimeout(100);
-      ok(await box.isVisible(), "fizetős modul bepipálva → a választó látszik");
+      // Phone: the cart button → the cart sheet → „Tovább a fizetéshez” → the confirm card.
+      await page.locator("#adm-cartpill").click();
       const apply = page.locator("#adm-plan-apply");
-      ok(/a kártyáját .* terheljük/.test((await apply.textContent()) ?? ""), "mentett kártya kiválasztva → „a kártyáját … terheljük”");
-      await page.locator('input[name="card"][value="new"]').evaluate((el) => {
-        (el as HTMLInputElement).checked = true;
-        el.dispatchEvent(new Event("change", { bubbles: true }));
-      });
+      ok(((await apply.textContent()) ?? "").trim() === "Tovább a fizetéshez", "a kosár gombja: „Tovább a fizetéshez”");
+      await apply.click();
+      await page.locator("[data-fc-modal]").waitFor({ state: "visible" });
+      ok(await box.isVisible(), "fizetés megnyitva → a választó látszik a megerősítőn");
+      const go = page.locator("[data-fc-go]");
+      ok(/^Terhelés és élesítés — .*Ft$/.test(((await go.textContent()) ?? "").trim()), "mentett kártya kiválasztva → „Terhelés és élesítés — … Ft”");
+      await page.locator('input[name="card"][value="new"]').check();
       await page.waitForTimeout(100);
-      ok(((await apply.textContent()) ?? "").includes("Fizetés másik kártyával"), "másik kártya kiválasztva → „Fizetés másik kártyával — …”");
+      ok(/^Tovább a fizetéshez — .*Ft$/.test(((await go.textContent()) ?? "").trim()), "másik kártya kiválasztva → „Tovább a fizetéshez — … Ft”");
+      ok(((await page.locator("[data-fc-note]").textContent()) ?? "").startsWith("A fizetőoldalra irányítjuk"), "másik kártyánál a megjegyzés a fizetőoldalt mondja, nem a tárolt terhelést");
       ok(await page.locator('input[name="card"][value="new"]').isVisible(), "a „Másik kártyával” rádió LÁTHATÓ 390 px-en");
     }
     ok(errs.length === 0, `JS-hiba nincs${errs.length ? `: ${errs.join(" | ")}` : ""}`);

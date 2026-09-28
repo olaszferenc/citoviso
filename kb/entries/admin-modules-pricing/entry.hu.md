@@ -4,7 +4,7 @@ title: Árak — alapár és időszaki árak egységenként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
@@ -156,7 +156,7 @@ foglalást, ugyanúgy élnek tovább.
 
 Az Online foglalás külön havidíjas modul. A sor alatti **„Online foglalás”** link a Modulok
 fülre visz; ott a **„Bővítés — amit még hozzáadhat”** részben keresse meg az Online foglalás
-kártyáját — rajta látja a havidíjat is —, és koppintson a **„Hozzáadom”** gombra.
+kártyáját — rajta látja a havidíjat is —, és koppintson a **„Kosárba teszem”** gombra.
 
 ## Több szoba, több ár
 
@@ -166,7 +166,7 @@ de szobánként adna ki), azt előbb a szoba-modulnál tegye meg; az árazás ug
 látja. Nem kell keresgélnie: a képernyő tetején, a bevezető sor mellett a **„Szobák, apartmanok
 szerkesztése”** gomb egyenesen a szoba-modul beállító-képernyőjére visz. Ha a Szobák modul még nincs
 bekapcsolva, a gomb felirata **„Szobák modul bekapcsolása”**, és a Modulok fülre visz — ott a
-Szobák, apartmanok kártyán a **„Hozzáadom”** gombbal kapcsolja be, utána a gomb már a
+Szobák, apartmanok kártyán a **„Kosárba teszem”** gombbal tegye a kosarába, és a kosárban véglegesítse; utána a gomb már a
 szerkesztőre mutat.
 
 ![Képernyőkép: a képernyő tetején a bevezető sor, mellette a „Szobák, apartmanok szerkesztése” gomb](assets/hu/szobak-gomb.png)

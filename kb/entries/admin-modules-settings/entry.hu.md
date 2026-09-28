@@ -4,7 +4,7 @@ title: Modul-beállítások — mentés, visszaállítás, hogyan működik
 audience: tenant
 category: modules
 anchors: admin.modules.settings
-updated: 2026-09-26
+updated: 2026-09-28
 ---
 
 A legtöbb modulnak van saját beállító-képernyője: a Modulok fülön a bekapcsolt modul sora mellett
@@ -52,5 +52,6 @@ A „Térkép, megközelítés” képernyőn a **„Vissza az előzőre”** cs
 ## Miért nem látom egy modul beállítását?
 
 A **„Beállítás”** link csak a bekapcsolt moduloknál jelenik meg — előbb kapcsolja be a modult a
-listában, és véglegesítse az **„Alkalmazom a módosításokat”** gombbal. Van néhány modul, amelynél
+kirakatban (**„Kosárba teszem”**), és véglegesítse a kosárban (fizetős modulnál a
+**„Tovább a fizetéshez”** gombbal). Van néhány modul, amelynél
 nincs mit beállítani: azok maguktól, helyesen működnek.

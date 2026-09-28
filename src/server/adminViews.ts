@@ -2052,8 +2052,8 @@ export function modulesSection(
             (frozen
               ? `<span class="adm-shop__shut">${T(lang, "Rendezés után vehető fel")}</span>`
               : `<label class="citui-btn citui-btn--primary adm-shop__add">${cb(m, false)}` +
-                `<span class="adm-when-off">${T(lang, "Hozzáadom")}</span>` +
-                `<span class="adm-when-on">${T(lang, "Visszaveszem")}</span></label>`) +
+                `<span class="adm-when-off">${T(lang, "Kosárba teszem")}</span>` +
+                `<span class="adm-when-on">${T(lang, "Kiveszem a kosárból")}</span></label>`) +
             `</div></div></article>`
           );
         })
@@ -2115,32 +2115,35 @@ export function modulesSection(
 
   const blocks = mineCard + shopCard + mandateDialog;
 
-  // ── plan bar: collected diffs + live totals + delta; JS-driven, with a no-JS
-  //    fallback submit so the form never becomes a dead end. ──
+  // ── the cart (approved modules-cart contract, B, 2026-09-28) ──────────────
+  // Measured before: the old sticky plan bar was 407 px = 48% of a 390×844 phone
+  // (the card chooser alone 184 px), and in landscape it reached the header, so
+  // no further add button was reachable at any scroll position. Now: an EMPTY
+  // cart has no footprint at all; on the phone one small cart button sits at the
+  // bottom right (the add buttons are left-aligned, so it never covers them) and
+  // opens the summary as a sheet; on the desktop the summary is a sticky column
+  // beside the shop. The card chooser moved into the confirm card below — the
+  // moment of paying, which every paid submit passes through anyway.
+  // JS-driven, with a no-JS fallback submit so the form never becomes a dead end.
   const planBar =
-    `<div class="adm-planbar" id="adm-planbar">` +
+    `<div class="adm-planbar" id="adm-planbar" role="region" aria-labelledby="adm-cart-t">` +
+    `<div class="adm-cart__head"><h3 id="adm-cart-t">${T(lang, "Kosár")}</h3>` +
+    `<button type="button" class="adm-cart__x" id="adm-cart-x" aria-label="${esc(T(lang, "Bezárom"))}">${ic("close", 16)}</button></div>` +
     `<div id="adm-planrows"></div>` +
+    `<div class="adm-planbar__sum">` +
+    `<div class="adm-planbar__paynow" id="adm-plan-paynow" hidden><span>${T(lang, "Fizetendő most:")}</span> <b id="adm-plan-paysum"></b></div>` +
+    `<div>${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span></div>` +
+    `</div>` +
     `<div class="adm-planbar__foot">` +
-    `<span class="adm-planbar__sum">` +
-    `<span class="adm-planbar__paynow" id="adm-plan-paynow" hidden>${T(lang, "Fizetendő most:")} <b id="adm-plan-paysum"></b><br></span>` +
-    `${T(lang, "Következő számla így:")} <b id="adm-plan-total"></b> <span id="adm-plan-delta"></span>` +
-    // ADR-0226 (wallet ⑧): WHICH card pays — only when a mandate exists and there
-    // is something to pay now (JS shows it). "Másik kártyával" is a promise the
-    // server keeps: that pay-link initiates a token (requestPayment newCard).
-    (sub?.autoCharge
-      ? `<div class="adm-planbar__card" id="adm-plan-card" hidden>` +
-        `<label class="adm-planbar__opt"><input type="radio" name="card" value="saved" checked><span><b>${
-          sub.cardLabel
-            ? T(lang, "A mentett kártyámmal — {card}", { card: esc(sub.cardLabel) })
-            : T(lang, "A mentett kártyámmal")
-        }</b><small>${T(lang, "Azonnal, átirányítás nélkül. Ez marad a mentett kártya.")}</small></span></label>` +
-        `<label class="adm-planbar__opt"><input type="radio" name="card" value="new"><span><b>${T(lang, "Másik kártyával")}</b><small>${T(lang, "A fizetési szolgáltató oldalán adja meg, bankkártyás megerősítéssel. Ez a kártya lesz ezután a mentett kártya — a jövőbeli díjak erről mennek.")}</small></span></label>` +
-        `</div>`
-      : "") +
-    `</span>` +
-    `<span><button type="button" class="citui-btn citui-btn--ghost" id="adm-plan-reset">${T(lang, "Elvetem")}</button> ` +
-    `<button class="citui-btn citui-btn--primary" type="submit" id="adm-plan-apply">${T(lang, "Alkalmazom a módosításokat")}</button></span>` +
-    `</div></div>` +
+    `<button type="button" class="citui-btn citui-btn--ghost" id="adm-plan-reset">${T(lang, "Kiürítem a kosarat")}</button>` +
+    `<button class="citui-btn citui-btn--primary" type="submit" id="adm-plan-apply">${T(lang, "Alkalmazom a módosításokat")}</button>` +
+    `</div></div>`;
+  // Phone only (CSS): the cart button + the veil behind the opened sheet.
+  const cartPill =
+    `<button type="button" class="adm-cartpill" id="adm-cartpill" aria-controls="adm-planbar" aria-expanded="false" hidden>` +
+    `<span class="adm-cartpill__n" id="adm-cartpill-n"></span><span id="adm-cartpill-t"></span>${ic("fwd", 14)}</button>` +
+    `<div class="adm-cartveil" id="adm-cartveil" hidden></div>`;
+  const planModals =
     `<noscript><div class="adm-total"><span></span><button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Alkalmazom a módosításokat")}</button></div></noscript>` +
     // ADR-0113 approved "B" contract: paid additions confirm on an itemised card
     // BEFORE any money moves. Lives INSIDE the module form on purpose — its pay
@@ -2151,6 +2154,20 @@ export function modulesSection(
     `<div class="adm-mdl" role="dialog" aria-modal="true" aria-labelledby="adm-fc-t" data-fc-modal hidden>` +
     `<h3 id="adm-fc-t">${T(lang, "Fizetés és élesítés")}</h3>` +
     `<div data-fc-lines></div>` +
+    // ADR-0226 (wallet ⑧), moved here by the modules-cart contract: WHICH card
+    // pays — only with a mandate. "Másik kártyával" is a promise the server keeps:
+    // that pay-link initiates a token (requestPayment newCard). The radios stay
+    // INSIDE the form (this card is inside it), so the `card` field still posts.
+    (sub?.autoCharge
+      ? `<div class="adm-fc__card" id="adm-plan-card">` +
+        `<label class="adm-fc__opt"><input type="radio" name="card" value="saved" checked><span><b>${
+          sub.cardLabel
+            ? T(lang, "A mentett kártyámmal — {card}", { card: esc(sub.cardLabel) })
+            : T(lang, "A mentett kártyámmal")
+        }</b><small>${T(lang, "Azonnal, átirányítás nélkül. Ez marad a mentett kártya.")}</small></span></label>` +
+        `<label class="adm-fc__opt"><input type="radio" name="card" value="new"><span><b>${T(lang, "Másik kártyával")}</b><small>${T(lang, "A fizetési szolgáltató oldalán adja meg, bankkártyás megerősítéssel. Ez a kártya lesz ezután a mentett kártya — a jövőbeli díjak erről mennek.")}</small></span></label>` +
+        `</div>`
+      : "") +
     `<p class="adm-fc__note" data-fc-note></p>` +
     `<button class="adm-mdl__keep" type="button" data-fc-keep>${T(lang, "Mégsem")}</button>` +
     `<button class="adm-mdl__go" type="submit" data-fc-go></button>` +
@@ -2265,7 +2282,16 @@ export function modulesSection(
     `function fcAllocate(){var sp=CitCoupon.splitFirstCharge(` +
     `payAdds.map(function(c){return +c.dataset.price}),FCM,CPCT);` +
     `payNow=sp.total;payAdds.forEach(function(c,i){c.dataset.fcLine=sp.lines[i]})}` +
-    `var apply=document.getElementById("adm-plan-apply");` +
+    `var apply=document.getElementById("adm-plan-apply"),lastDelta=0;` +
+    `var lay=document.getElementById("adm-modlay"),pill=document.getElementById("adm-cartpill");` +
+    `var pillN=document.getElementById("adm-cartpill-n"),pillT=document.getElementById("adm-cartpill-t");` +
+    `var veil=document.getElementById("adm-cartveil"),cx=document.getElementById("adm-cart-x");` +
+    `var PILLPAY=${JSON.stringify(T(lang, "Kosár · most {sum}", { sum: "\u007f" }))};` +
+    // Phone: the cart opens as a sheet over the page; desktop CSS ignores .open.
+    `function cartOpen(){bar.classList.add("open");if(veil)veil.hidden=false;if(pill)pill.setAttribute("aria-expanded","true");if(cx)cx.focus()}` +
+    `function cartClose(){if(!bar.classList.contains("open"))return;bar.classList.remove("open");if(veil)veil.hidden=true;if(pill)pill.setAttribute("aria-expanded","false")}` +
+    `if(pill)pill.addEventListener("click",cartOpen);if(veil)veil.addEventListener("click",cartClose);if(cx)cx.addEventListener("click",cartClose);` +
+    `document.addEventListener("keydown",function(e){if(e.key==="Escape")cartClose()});` +
     `var paybox=document.getElementById("adm-plan-paynow"),paysum=document.getElementById("adm-plan-paysum");` +
     `function sync(){var add=[],rem=[],delta=0;payNow=0;payAdds=[];cbs.forEach(function(c){` +
     `var was=c.dataset.committed==="1",is=c.checked,p=+c.dataset.price;` +
@@ -2275,7 +2301,12 @@ export function modulesSection(
     // The basket is complete only now, and the discount is a property of the BASKET —
     // so the allocation happens here, once, before anything renders a number from it.
     `fcAllocate();` +
-    `bar.classList.toggle("show",add.length+rem.length>0);` +
+    `var any=add.length+rem.length>0;lastDelta=delta;bar.classList.toggle("show",any);` +
+    // modules-cart ①: an EMPTY cart has no footprint — no desktop column, no phone button.
+    `if(lay)lay.classList.toggle("has-cart",any);` +
+    `if(pill){pill.hidden=!any;pillN.textContent=String(add.length+rem.length);` +
+    `pillT.textContent=payNow>0?PILLPAY.replace("\\u007f",HUF(payNow)):"${T(lang, "Kosár")}"}` +
+    `if(!any)cartClose();` +
     `rows.innerHTML=add.map(function(c){var p=+c.dataset.price;` +
     `var what=c.dataset.rejoin?"${T(lang, "visszakapcsolás — ki van fizetve {date}-ig", { date: esc(renewDateS) })}"` +
     `:p>0?"${T(lang, "fizetés most:")} <b>"+HUF(fcLine(c))+"</b> ("+FCM+" ${T(lang, "hónap a fordulónapig")})"` +
@@ -2283,11 +2314,9 @@ export function modulesSection(
     `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDateS) })}</span></div>'}).join("");` +
     `if(paybox){paybox.hidden=payNow<=0;if(paysum)paysum.textContent=HUF(payNow)}` +
-    // ADR-0226 (wallet ⑧): the card chooser follows the pay-now box, and the
-    // button says which way the money goes — stored card now, or the gateway page.
-    `var cardbox=document.getElementById("adm-plan-card");if(cardbox)cardbox.hidden=!(AUTOC&&payNow>0);` +
-    `var cardNew=false;var cr=f.querySelector('input[name="card"]:checked');if(cr)cardNew=cr.value==="new";` +
-    `if(apply)apply.textContent=payNow>0?(AUTOC&&!cardNew?"${T(lang, "Alkalmazom — a kártyáját {sum} terheljük", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)+"-tal"):AUTOC?"${T(lang, "Fizetés másik kártyával — {sum}", { sum: "\u007f" })}".replace("\\u007f",HUF(payNow)):"${T(lang, "Fizetés és alkalmazás")}"):"${T(lang, "Alkalmazom a módosításokat")}";` +
+    // modules-cart ④: the card choice lives on the confirm card now, so the cart's
+    // button only says WHERE it leads; which way the money goes is said there.
+    `if(apply)apply.textContent=payNow>0?"${T(lang, "Tovább a fizetéshez")}":"${T(lang, "Alkalmazom a módosításokat")}";` +
     `if(tot)tot.textContent=HUF(base+delta*mult);` +
     `if(del){del.textContent=delta?"("+(delta>0?"+":"−")+HUF(Math.abs(delta*mult))+" ${T(lang, "a mostanihoz képest")}"+")":"";` +
     `del.className=delta>0?"adm-planbar__delta--up":"adm-planbar__delta--down"}` +
@@ -2384,7 +2413,7 @@ export function modulesSection(
     `depClose();sync()})}` +
     `var _sync0=sync;sync=function(){_sync0();markDeps()};` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
-    `[].forEach.call(f.querySelectorAll('input[name="card"]'),function(r){r.addEventListener("change",sync)});` +
+    `[].forEach.call(f.querySelectorAll('input[name="card"]'),function(r){r.addEventListener("change",fcPaint)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +
     `cbs.forEach(function(c){c.checked=c.dataset.committed==="1"});sync()});` +
     // ── ADR-0113 confirm card: a submit that would charge stops here first ──
@@ -2393,7 +2422,15 @@ export function modulesSection(
     `function fcOpen(){var lines=fcm.querySelector("[data-fc-lines]");` +
     `lines.innerHTML=payAdds.map(function(c){var p=+c.dataset.price;` +
     `return '<div class="adm-fc__line"><span>'+c.dataset.label+' · '+FCM+' ${T(lang, "hó")} × '+HUF(p)+(CPCT?' − '+CPCT+'%':'')+'</span><b>'+HUF(fcLine(c))+'</b></div>'}).join("")+` +
-    `'<div class="adm-fc__line adm-fc__line--total"><span>${T(lang, "Fizetendő most")}</span><b>'+HUF(payNow)+'</b></div>';` +
+    `'<div class="adm-fc__line adm-fc__line--total"><span>${T(lang, "Fizetendő most")}</span><b>'+HUF(payNow)+'</b></div>'+` +
+    // modules-cart ③: the next-invoice figure's named successor — every paid submit
+    // passes this card, so the owner sees what the next invoice becomes before paying.
+    `'<div class="adm-fc__next"><span>${T(lang, "Következő számla ({date}) így", { date: esc(renewDate) })}</span><b>'+` +
+    `HUF(base+lastDelta*mult)+(lastDelta?' ('+(lastDelta>0?'+':'−')+HUF(Math.abs(lastDelta*mult))+')':'')+'</b></div>';` +
+    `cartClose();fcPaint();` +
+    `fcm.hidden=false;fcv.hidden=false;fcm.querySelector("[data-fc-keep]").focus();}` +
+    // The note and the pay button follow the card choice (ADR-0226 wallet ⑧, now here).
+    `function fcPaint(){var cr=f.querySelector('input[name="card"]:checked');var saved=AUTOC&&!(cr&&cr.value==="new");` +
     // ⚠️ A MIXED submit's two halves do NOT share a fate, and this is the last
     // screen where we can still say so: the cancellations are written the moment
     // the form posts, while the purchase only lands if the money does. If the
@@ -2402,12 +2439,11 @@ export function modulesSection(
     // half behind. Said BEFORE the click, not in the banner afterwards: a warning
     // that arrives after the deed cannot change the decision, and the pay-page
     // detour would swallow the redirect that carried it anyway.
-    `fcm.querySelector("[data-fc-note]").textContent=(AUTOC` +
+    `fcm.querySelector("[data-fc-note]").textContent=(saved` +
     `?"${T(lang, "A tárolt kártya-megbízását terheljük. A modul a sikeres terheléskor azonnal élesedik; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}"` +
     `:"${T(lang, "A fizetőoldalra irányítjuk. A modul CSAK a fizetés beérkezése után jelenik meg az oldalán; a következő ({date}) számlán már normál tételként szerepel.", { date: esc(renewDate) })}")` +
     `+(remCount?" ${T(lang, "A lemondása ettől függetlenül érvénybe lép — akkor is, ha ez a fizetés nem megy végbe.")}":"");` +
-    `fcm.querySelector("[data-fc-go]").textContent=AUTOC?"${T(lang, "Terhelés és élesítés")}":"${T(lang, "Tovább a fizetéshez")}";` +
-    `fcm.hidden=false;fcv.hidden=false;fcm.querySelector("[data-fc-keep]").focus();}` +
+    `fcm.querySelector("[data-fc-go]").textContent=(saved?"${T(lang, "Terhelés és élesítés — {sum}", { sum: "\u007f" })}":"${T(lang, "Tovább a fizetéshez — {sum}", { sum: "\u007f" })}").replace("\\u007f",HUF(payNow));}` +
     `function fcClose(){fcm.hidden=true;fcv.hidden=true;}` +
     `if(fcm){f.addEventListener("submit",function(e){if(payNow>0&&!fcOk){e.preventDefault();fcOpen();}});` +
     `fcm.querySelector("[data-fc-keep]").addEventListener("click",fcClose);` +
@@ -2450,7 +2486,7 @@ export function modulesSection(
     `[].slice.call(ov.querySelectorAll("[data-pvw]")).forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.pvw===v))});fit()}` +
     // ADR-0119 ⑥: the preview overlay is a SECOND buying path — its footer offers
     // the same add button. The shop card alone would have left this one open
-    // (the guard found it: one "Hozzáadom" survived in this inline script).
+    // (the guard found it: one add label survived in this inline script).
     //
     // Under a freeze the add branch is not emitted AT ALL, rather than emitted
     // and skipped at runtime: an unreachable label is still shipped text, and a
@@ -2463,7 +2499,7 @@ export function modulesSection(
     (frozen
       ? `'<span class="adm-shop__shut">${T(lang, "Rendezés után vehető fel")}</span>'}`
       : `'<button type="button" class="citui-btn '+(on?"citui-btn--ghost":"citui-btn--primary")+'" data-pvadd="'+focus+'">'+` +
-        `(on?'${T(lang, "Visszaveszem")}':'${T(lang, "Hozzáadom")}')+'</button>'}`) +
+        `(on?'${T(lang, "Kiveszem a kosárból")}':'${T(lang, "Kosárba teszem")}')+'</button>'}`) +
     `else{foot.innerHTML='<span class="adm-chip">${T(lang, "Havi díj így:")} '+HUF(t)+'</span>'+` +
     `'<button type="button" class="citui-btn citui-btn--ghost" data-pvx="1">${T(lang, "Bezárom")}</button>'}` +
     `ttl.textContent=focus?LABEL[focus]+" — ${T(lang, "így nézne ki az oldalán")}":"${T(lang, "Így nézne ki az oldalán")}"}` +
@@ -2575,12 +2611,19 @@ export function modulesSection(
     // mostantól a `modules-intro-direction-check` őr köti a RENDERELT sorrendhez.
     `<p class="adm-lead">${
       frozen
-        ? T(lang, "Ami már az Öné, azt alább találja; amit még hozzáadhat, azt utána — az előnézet ilyenkor is megmutatja őket, de csak Önnek. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. A felfüggesztés alatt új modul nem vehető fel, és a meglévők sem jelennek meg a vendégeknek. Amit lemond, a már kifizetett időszak végéig az Öné marad.")
-        : T(lang, "Ami már az Öné, azt alább találja; amit még hozzáadhat, azt utána — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a lap alján összegyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")
+        ? T(lang, "Ami már az Öné, azt alább találja; amit még hozzáadhat, azt utána — az előnézet ilyenkor is megmutatja őket, de csak Önnek. A kapcsolók itt még nem élesítenek: a kosárba gyűjtjük, mi változna és mennyibe kerül. A felfüggesztés alatt új modul nem vehető fel, és a meglévők sem jelennek meg a vendégeknek. Amit lemond, a már kifizetett időszak végéig az Öné marad.")
+        : T(lang, "Ami már az Öné, azt alább találja; amit még hozzáadhat, azt utána — és mindegyiket meg is nézheti a saját oldalán, mielőtt dönt. A kapcsolók itt még nem élesítenek: a kosárba gyűjtjük, mi változna és mennyibe kerül. Fizetős modul a díj kifizetése után jelenik meg az oldalán — az első díj időarányos, a fordulónapig szól, utána a modul a normál számláján szerepel. Amit lemond, a már kifizetett időszak végéig aktív marad.")
     }</p>` +
     appliedBox +
+    // The desktop cart is a column beside the shop, but only while it holds
+    // something (JS sets .has-cart) — an empty cart takes no width.
+    `<div class="adm-modlay" id="adm-modlay"><div class="adm-modlay__main">` +
     blocks +
+    `</div><aside class="adm-modlay__cart">` +
     planBar +
+    `</aside></div>` +
+    cartPill +
+    planModals +
     `<p class="citui-hint" style="margin-top:14px">${T(lang, "Kérdése van a csomagról? Írjon:")} <a href="mailto:${esc(contactEmail)}">${esc(contactEmail)}</a></p>` +
     `</form>` +
     danger +

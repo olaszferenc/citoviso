@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-09-26
+updated: 2026-09-28
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -20,7 +20,7 @@ Asztali gépen a bal oldali menüben a **Modulok** alatt a megvett modulok list�
 egy halvány **„Még nem vette meg”** címke után azok a modulok következnek, amelyeket még
 hozzáadhat — mindegyik mellett egy kerek, kék **+** jel. Ha egy ilyen sorra kattint, a lap a
 **„Bővítés — amit még hozzáadhat”** részben arra a modulra ugrik, és keretet kap; a hozzáadás
-ott történik, a szokásos **„Hozzáadom”** gombbal. Maga a sor nem vásárol semmit.
+ott történik, a szokásos **„Kosárba teszem”** gombbal. Maga a sor nem vásárol semmit.
 Telefonon ugyanez a lista a **Menü** gomb mögött van. A lista a Modulok fülön és a modulok
 beállító képernyőin nyitva van, a többi fülön a Modulok melletti nyíllal nyitható le.
 
@@ -64,30 +64,35 @@ szokásos módon működik.
    szakasz kicsinyített képe, alatta hogy mit ad és mennyibe kerül. Az **„az árban”** címkéjű
    modulok az alapdíj részei, a többinél a felár szerepel — abban az ütemben, ahogyan Ön fizet
    (lásd a következő szakaszt).
-2. A **„Hozzáadom”** gombbal teszi a tervébe. Meggondolta magát? Ugyanott a **„Visszaveszem”**
-   gomb áll.
+2. A **„Kosárba teszem”** gombbal teszi a kosarába. Meggondolta magát? Ugyanott a
+   **„Kiveszem a kosárból”** gomb áll.
 3. Ami már az Öné, azt az **„Az én moduljaim”** részben a **„Kikapcsolom”** felirattal mondhatja
    le. Ez **aláhúzott szöveg a sor jobb szélén**, nem gomb — szándékosan halkabb a
    „Megnézem”/„Beállítás” gomboknál, de ugyanúgy egyetlen kattintás. Ha meggondolja magát,
    ugyanott a **„Mégis megtartom”** felirat áll. (Egy kivétel van: ha a modult egy másik, élő
    modul igényli, a kikapcsolás előbb egy kérdést tesz fel — lásd lentebb, *„Ha egy modul
    másik modullal jár együtt”*.)
-4. A gombok itt még **nem élesítenek**: a lap alján megjelenő sötét sáv összegyűjti, mi változna.
-   Fizetős új modulnál a sáv soronként mutatja a **most fizetendő** összeget és a
-   **„Fizetendő most”** végösszeget is; az ingyenes változásoknál csak azt, mi módosul.
-5. A záró gombbal véglegesít mindent egyszerre — fizetős bővítésnél a felirata
-   **„Fizetés és alkalmazás”** (tárolt kártya-megbízásnál azt mondja ki, mennyivel terheljük);
-   az **„Elvetem”** gomb mindent visszaállít.
+4. A gombok itt még **nem élesítenek**: mindent a **kosárba** gyűjtünk. Amíg a kosár üres,
+   sehol nem látszik. Amint beletesz valamit, **telefonon** jobbra lent megjelenik egy sötét
+   kosár-gomb — rajta a tételek száma, fizetős modulnál a most fizetendő összeg is —, és ha
+   rákoppint, alulról felcsúszik a kosár (a jobb felső **×** csukja be). **Asztali gépen** a
+   kosár a kirakat mellett, jobbra áll, és görgetéskor is a helyén marad. A kosár soronként
+   mutatja, mi kapcsolna be és mi mondódna le, alatta a **„Fizetendő most:”** végösszeget és a
+   **„Következő számla így:”** sort — ebből látja, mennyi lesz a következő számlája.
+5. A **„Tovább a fizetéshez”** gombbal véglegesít mindent egyszerre; fizetős bővítésnél előbb
+   egy megerősítő kártya nyílik (lásd lentebb). Ha a kosárban csak díjmentes változás van
+   (például lemondás), a gomb felirata **„Alkalmazom a módosításokat”**, és a változás azonnal
+   érvényes. A **„Kiürítem a kosarat”** gomb mindent visszaállít.
 
 ## Ha egy modul másik modullal jár együtt
 
 Van modul, amelyik csak egy másikkal együtt tud működni — például mert annak az adataira épül.
 Ilyenkor a lap ezt Ön helyett kezeli, és mindig ki is mondja, mit miért tett:
 
-- **Bekapcsoláskor a szükséges társ magától a tervébe kerül.** A sora megjelölve látszik: a
+- **Bekapcsoláskor a szükséges társ magától a kosarába kerül.** A sora megjelölve látszik: a
   neve mellett egy **„együtt jár”** címke áll, alatta pedig egy magyarázó sor megnevezi,
   melyik modul hozta magával („… — ehhez jár.”), és hogy miért van rá szükség. A társ modul
-  díja ugyanúgy számít: a lap alji összegző és a fejléc összege azonnal a együttes árat
+  díja ugyanúgy számít: a kosár és a fejléc összege azonnal az együttes árat
   mutatja — még a véglegesítés előtt, ahogy minden más kapcsolásnál.
 - **Ha visszaveszi, amit bekapcsolt, a magával hozott társ is visszakerül** — azért a
   modulért, ami csak a másikat szolgálta ki, nem marad fizetnivalója. Amit viszont Ön maga is
@@ -165,7 +170,7 @@ a lapon nem lehet kétféle összeg. A fejléc-címke azért van ott, hogy ne ke
 listát, ha csak a mai díjára kíváncsi.
 
 > **A kapcsolók azonnal átszámolják.** Ha egy modult a **„Kikapcsolom”** felirattal lemond vagy a
-> **„Hozzáadom”** gombbal betesz a tervébe, a végösszeg rögtön az új állapotot mutatja — a lista
+> **„Kosárba teszem”** gombbal a kosarába tesz, a végösszeg rögtön az új állapotot mutatja — a lista
 > alatti összegzőben és a fejléc **„Jelenleg”** kezdetű címkéjén egyszerre —, még mielőtt bármit
 > véglegesítene. Így előre látja, mit jelentene a döntés a számláján.
 
@@ -185,11 +190,18 @@ megerősítő kártya tételesen mutatja, mit, hány hónapra és mennyiért ves
   szól — éves fizetésnél sosem több, mint amennyi havi díj az éves csomagban egyébként is
   szerepel (az ajándékhónapokkal csökkentve). A következő számlán a modul már normál
   tételként szerepel.
-- Ha él a **tárolt kártya-megbízása**, a **„Terhelés és élesítés”** gombbal azonnal fizet, és a
+- A megerősítő kártyán a tételek és a **„Fizetendő most”** összeg alatt a következő számla is
+  ott áll, **„Következő számla”** kezdetű sorban, a változással együtt — így fizetés előtt
+  látja, mennyi lesz a következő számlája.
+- Ha él a **tárolt kártya-megbízása**, a megerősítő kártyán választ: **„A mentett kártyámmal”**
+  (azonnal, átirányítás nélkül) vagy **„Másik kártyával”** (a fizetési szolgáltató oldalán adja
+  meg, és az lesz ezután a mentett kártya). A mentett kártyával a **„Terhelés és élesítés”**
+  kezdetű gombbal azonnal fizet (a felirat végén az összeg áll), és a
   modul rögtön megjelenik az oldalán. Ha a bank a tárolt kártyát elutasítja, **a Modulok fülön
   marad** — nem kerül idegen fizetőoldalra —, és egy piros sáv mondja meg, mi történt (lásd
   alább: *Mi van, ha a fizetés nem sikerül?*).
-- Megbízás nélkül a **„Tovább a fizetéshez”** gomb a fizetőoldalra visz; a modul a fizetés
+- Megbízás nélkül — és ha a **„Másik kártyával”** lehetőséget választja — a **„Tovább a
+  fizetéshez”** kezdetű gomb a fizetőoldalra visz; a modul a fizetés
   beérkezésekor élesedik. Ha a fizetés elmarad, semmit nem kapcsolunk be és semmit nem
   számolunk fel.
 

@@ -16,7 +16,7 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
   tedd: várj "Áttekintés" 25
   # ⛔ MÉRT LELET (2026-09-27): a süti-sáv a BEJELENTKEZETT tenant-adminban is kint van
   # (gyökér div `position:fixed; z-index:2147483600`, belül `.cit-consent__*`), és 390
-  # px-en TAKARJA a Modulok fül „Hozzáadom" gombjait (pricing, reviews, hours,
+  # px-en TAKARJA a Modulok fül kirakat-gombjait (pricing, reviews, hours,
   # newsletter kártyáján mérve). A kör ezért lekezeli — de a lelet marad.
   tedd?: kattints ".cit-consent__yes"
   kézi: 390-en a belépés egy képernyőn elvégezhető-e (a billentyűzet nem takarja-e a gombot); a belépés utáni első képernyőn megmondja-e a felület, hol van a tulaj és mi a legfontosabb következő lépése
@@ -42,69 +42,62 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
 ## ② A kirakat — mit kap és mennyiért?
 
 - [ ] A kirakat kártyái olvashatók, és az áruk kiderül
-  kézi: 390-en: minden kártyán ott van-e a modul neve, mit ad, és a HAVI ÁRA; a csoport-fejlécek (Amit bemutat / Elérhetőség / Extrák) segítenek-e; a „Hozzáadom" gomb ujjal elérhető-e (≥ 44 px); kiderül-e, hogy az árak havonta ismétlődnek
+  kézi: 390-en: minden kártyán ott van-e a modul neve, mit ad, és a HAVI ÁRA; a csoport-fejlécek (Amit bemutat / Elérhetőség / Extrák) segítenek-e; a „Kosárba teszem" gomb ujjal elérhető-e (≥ 44 px); kiderül-e, hogy az árak havonta ismétlődnek
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
-## ③ Modulok EGYESÉVEL — mert telefonon ma csak így megy
+## ③ Mind a kosárba — EGY fizetéssel
 
-# ⛔ MÉRT LELET (2026-09-27, `_probe-planbar`): amint a tulaj hozzáad EGY modult, az
-# összegző sáv felúszik, és 390×844-en **407 px magas — a képernyő 48%-a** (367–774),
-# alatta az alsó navigáció (785–844). Középre görgetve MINDEN további modul „Hozzáadom"
-# gombja a sáv alá esik (mérve: usp · reviews · poi · hours · booking · newsletter — a
-# gomb közepén a `div.adm-planbar` ül); felülre görgetve a felső fejléc takarja. A gomb
-# csak a kettő közti ~310 px-es ablakban érhető el. Ezért a kör azt az utat járja, amit a
-# felület MA enged: modul → fizetés → következő modul. Ez maga a lelet.
+# ⛔ MÉRT LELET (2026-09-27, `_probe-planbar`): a régi összegző sáv 390×844-en 407 px
+# magas volt (a képernyő 48%-a), és minden további modul gombja alá esett — ezért a kör
+# akkor egyesével, öt külön terheléssel vitte végig a vásárlást. A jóváhagyott kosár-terv
+# (assets/design-refs/console/modules-cart/, 2026-09-28) óta: üres kosárnak nincs
+# lábnyoma, telefonon egy kis „Kosár" gomb áll jobbra lent, a gombok bal oldalon szabadok.
+# A kör MOST a valódi célt járja: minden modul a kosárba, utána egyetlen fizetés.
+# Ha egy kattintás takarás miatt kimarad, a `skipped_optional` napló kiírja.
 
-- [ ] Miért Önt válasszák
+- [ ] Miért Önt válasszák — a kosárba
   tedd?: görgess-középre "#mod-usp .adm-shop__add"
   tedd?: kattints "#mod-usp .adm-shop__add"
-  tedd?: kattints "#adm-plan-apply"
-  tedd?: kattints "[data-fc-go]"
-  tedd?: várj "Kész" 60
-  kézi: 390-en: a kártya gombja elérhető volt-e görgetés után, vagy a 407 px-es összegző sáv alá esett; a megerősítő felugró a képernyőre fért-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
+  kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-- [ ] Nyitvatartás, érkezés
+- [ ] Nyitvatartás, érkezés — a kosárba
   tedd?: görgess-középre "#mod-hours .adm-shop__add"
   tedd?: kattints "#mod-hours .adm-shop__add"
-  tedd?: kattints "#adm-plan-apply"
-  tedd?: kattints "[data-fc-go]"
-  tedd?: várj "Kész" 60
-  kézi: 390-en: a kártya gombja elérhető volt-e görgetés után, vagy a 407 px-es összegző sáv alá esett; a megerősítő felugró a képernyőre fért-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
+  kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-- [ ] Vendégek véleménye
+- [ ] Vendégek véleménye — a kosárba
   tedd?: görgess-középre "#mod-reviews .adm-shop__add"
   tedd?: kattints "#mod-reviews .adm-shop__add"
-  tedd?: kattints "#adm-plan-apply"
-  tedd?: kattints "[data-fc-go]"
-  tedd?: várj "Kész" 60
-  kézi: 390-en: a kártya gombja elérhető volt-e görgetés után, vagy a 407 px-es összegző sáv alá esett; a megerősítő felugró a képernyőre fért-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
+  kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-- [ ] Heti programajánló
+- [ ] Heti programajánló — a kosárba
   tedd?: görgess-középre "#mod-poi .adm-shop__add"
   tedd?: kattints "#mod-poi .adm-shop__add"
-  tedd?: kattints "#adm-plan-apply"
-  tedd?: kattints "[data-fc-go]"
-  tedd?: várj "Kész" 60
-  kézi: 390-en: a kártya gombja elérhető volt-e görgetés után, vagy a 407 px-es összegző sáv alá esett; a megerősítő felugró a képernyőre fért-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
+  kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-- [ ] Online foglalás
+- [ ] Online foglalás — a kosárba
   tedd?: görgess-középre "#mod-booking .adm-shop__add"
   tedd?: kattints "#mod-booking .adm-shop__add"
+  kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+- [ ] A kosár kinyílik, és egyetlen fizetéssel megy minden
+  tedd?: kattints "#adm-cartpill"
   tedd?: kattints "#adm-plan-apply"
   tedd?: kattints "[data-fc-go]"
   tedd?: várj "Kész" 60
-  kézi: 390-en: a kártya gombja elérhető volt-e görgetés után, vagy a 407 px-es összegző sáv alá esett; a megerősítő felugró a képernyőre fért-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
+  kézi: 390-en: a kinyitott kosár felsorolja-e az összes tételt; a megerősítő tételesen mutatja-e a modulokat, a „Fizetendő most" összeget ÉS a „Következő számla … így" sort; a kártyaválasztó a megerősítőn van-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-## ④ Az összegző sáv — mit fizetek most, és mit a következő számlán?
+## ④ A kosár — mit fizetek most, és mit a következő számlán?
 
-- [ ] A sáv megmondja a most fizetendőt és az új havi díjat
-  kézi: 390-en a sáv HÁROM száma (most fizetendő · következő számla · változás) elkülöníthető-e, és mind a három megnevezett-e; MEKKORA a sáv a képernyőhöz képest (mérve 48%), és marad-e elég hely a kirakatnak; az „Elvetem" és az „Alkalmazom" gomb összetéveszthetetlen-e
+- [ ] A kosár megmondja a most fizetendőt és az új havi díjat
+  kézi: 390-en a kinyitott kosár HÁROM száma (most fizetendő · következő számla · változás) elkülöníthető-e, és mind a három megnevezett-e; a kosár csukva MEKKORA a képernyőhöz képest (a régi sáv 48% volt), és marad-e elég hely a kirakatnak; a „Kiürítem a kosarat" és a „Tovább a fizetéshez" gomb összetéveszthetetlen-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 ## ⑥ Ellenőrzés: tényleg minden az övé?

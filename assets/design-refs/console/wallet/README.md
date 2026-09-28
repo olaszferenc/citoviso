@@ -47,7 +47,9 @@ stílus-javaslat.
 7. **Jobb hasáb:** „Következő terhelés" cella (dátum · összeg; kártya nélkül: „fizetési link
    e-mailben"), a T−3 e-mail mondata, és a **„Terhelések ezen a kártyán"** táblázat
    (dátum + tétel · összeg · `sikeres` / `elutasítva`). Üres: „Még nem volt terhelés."
-8. **Modul-vásárlás kártyaválasztó** (a Modulok fül terv-sávjában, amikor van mentett kártya
+8. ⚠️ HELYE FELÜLÍRVA 2026-09-28 (`../modules-cart/README.md` ⑦): a választó a fizetés-megerősítő
+   kártyán van, nem a sávban; a viselkedés és az ígéret változatlan.
+   **Modul-vásárlás kártyaválasztó** (a Modulok fül terv-sávjában, amikor van mentett kártya
    ÉS fizetendő összeg): **„A mentett kártyámmal"** + a kártya neve, pl. VISA ····4242 (azonnal, átirányítás nélkül,
    ez marad a mentett kártya) vagy **„Másik kártyával"** (Barion-oldal, bankkártyás
    megerősítéssel, **„Ez a kártya lesz ezután a mentett kártya"** a régi helyett). A gomb

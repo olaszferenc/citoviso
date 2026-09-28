@@ -60,7 +60,9 @@ const FORBIDDEN: ReadonlyArray<{ needle: string; why: string }> = [
   {
     // ADR-0119 ⑥ (owner ruling 2026-09-12). The debt card and a live "add to
     // cart" button on the SAME page is the same contradiction in money form.
-    needle: "Hozzáadom",
+    // ⚠️ The needle is the LIVE add label: after the modules-cart relabel
+    // (2026-09-28) the old "Hozzáadom" would match nothing and pass vacuously.
+    needle: "Kosárba teszem",
     why: "a bolt zárva: felfüggesztett honlap mellé nem adunk el új modult",
   },
 ];
@@ -77,7 +79,7 @@ const REQUIRED: ReadonlyArray<{ needle: string; why: string }> = [
 ];
 
 // ⚠️ The fixture must exercise BOTH lists, or half the rules are untested: an
-// all-active set renders an EMPTY shop, where "Hozzáadom" cannot appear whether
+// all-active set renders an EMPTY shop, where the add label cannot appear whether
 // the code is right or wrong (feedback_fixture_must_prove_its_own_path).
 const MODULES: TenantModuleView["modules"] = [
   ["gallery", "Képek a szállásról", true],
