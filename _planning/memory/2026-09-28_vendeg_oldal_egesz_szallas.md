@@ -11,7 +11,7 @@ Apartments (`harom-huszar-apartments`). A mérés a fő fa :4800-án (origin/mai
 | ÚJ | — | A kártya „Foglalás”-a a widgetet NEM állította: `document.querySelector('[name="unit"]')` a **vélemény-űrlap** választóját adta („Hol szállt meg nálunk?”), mert az a widget fölött áll. „A szállás egésze” gomb → a widget a Nádas apartmanon maradt | **Valódi, súlyos hiba**, minden olyan lapon, ahol a vélemény-űrlap a foglalás előtt áll. Javítva: `#cit-unit`. Az őr (`room-details-check` ①b) UGYANAZT a választót kérdezte, ezért ZÖLDEN védte a hibát |
 | ① felugró | fekete fotódoboz | `show()` fotó nélkül korán visszatért: a stage és két élő nyíl kint maradt | Javítva: fotó nélkül a galéria `hidden` (+ CSS `[hidden]` ismétlés, mert a `display:flex` üti), a szöveg a × alá lép (`data-nophoto`). A 390-es foglalás-gomb a mai fő fán LÁTSZIK a felugróban |
 | ③ | „Nádas apartman4 fő24 000 Ft / éj” | a közös tartalék kártyán a héj (`display:block`) a korábbi oszlop-flex gyerekeit inline sorrá tette | Javítva: `.cit-modsec__room.cit-room__open` oszlop-flex |
-| ① ár | az ár nélküli „egész” foglalás-gombbal | a widget erre az egységre árajánlat-módba vált, tehát az út járható — a kártya nem mondja meg | **§2b terv-kapu:** A/B/C mock a koordinátornál, javaslat: C (az egész ház külön sávban, „Egyedi ár”, „Részletek és árajánlat”). Kód nincs, amíg nincs döntés |
+| ① ár | az ár nélküli „egész” foglalás-gombbal | a widget erre az egységre árajánlat-módba vált, tehát az út járható — a kártya nem mondja meg | **§2b:** A/B/C mock → a tulaj: **„C”**. Megvalósítva: `splitWholeBand`/`injectWholeBand` (render.ts) + `wholeBandBlock` (moduleSections.ts) — mind a 19 sablonon a rácsban csak a szobák, alattuk a sáv; ár nélkül „Egyedi ár”, „Részletek és árajánlat”, a felugróban „Árajánlatot kérek”. Kontraktus `design-refs/tenant-site/whole-unit-band/` |
 
 ## Az őr bővítése (`scripts/room-details-check.mts`)
 
@@ -43,10 +43,16 @@ Apartments (`harom-huszar-apartments`). A mérés a fő fa :4800-án (origin/mai
 ## Módosított fájlok
 
 `assets/runtime/cit-runtime.js` · `assets/runtime/cit-modules.css` · `elek/bin/runner.mts` ·
-`scripts/room-details-check.mts` · ez a jegyzet. Döntési anyag (gitignore-olt): `assets/design-refs/_drafts/whole-unit-price/`.
+`scripts/room-details-check.mts` · ez a jegyzet · a C: `src/engine/render.ts` · `src/engine/moduleSections.ts` ·
+`src/engine/templateKit.ts` · `src/engine/recipe.ts` · `src/i18n/catalog.json` · `assets/design-refs/tenant-site/whole-unit-band/`. Döntési anyag (gitignore-olt): `assets/design-refs/_drafts/whole-unit-price/`.
+
+## Egy rendszer, két állapot (a testvér-szállal, cit2cd9905d-19, ADR-0257)
+
+A „csak egyben adom ki” (ADR-0257) ugyanezt a sávot használja: `data-cit-whole-mode="main"` (a `Room.wholeOnly`-ból),
+a szobák ELŐTT. A mód-váltó és a helye (előtte/utána) a sávban él; a „main” kinézete és a bemutató-szobák a testvér-száléi.
 
 ## Nyitva
 
-- ① tulaj-döntés (A/B/C) → utána a kártya/felugró kódja + kontraktus `design-refs/tenant-site/whole-unit-price/`.
-- Admin-javaslat (másik szál): a „Kiadom egyben is” pipánál az egész ház árának bekérése, vagy kimondott „ajánlatot adok”.
+- Admin-javaslat (a tulaj még nem döntött): a „Kiadom egyben is” pipánál az egész ház árának bekérése, vagy kimondott „ajánlatot adok”.
+- A kompozíciós (nem-sablonos) render-út nem kapja a sávot — élő bérlő ma mind sablonos; ha változik, ott is kell.
 - A lemondó lapon nincs kattintható szállásadó-elérhetőség (ítélet-kör FK-016/2) — nem ennek a briefnek a része.
