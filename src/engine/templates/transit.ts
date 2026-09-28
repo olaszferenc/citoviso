@@ -298,7 +298,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             )}${roomDetails(data, r, i)}</td>
             <td class="tb-cap">${r.capacity ? esc(r.capacity) : ""}</td>
             ${showPriceCol ? `<td class="tb-pr tb-num">${r.price ? esc(r.price) : ""}</td>` : ""}
-            <td class="tb-act"><button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>${hasContact ? `<a class="tb-go" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}</td>
+            <td class="tb-act"><button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>${hasContact && !r.presentation ? `<a class="tb-go" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}</td>
           </tr>`,
             )
             .join("\n          ")}

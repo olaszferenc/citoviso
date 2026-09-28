@@ -319,7 +319,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
             <div class="wc-ft">
               ${r.price ? `<span class="wc-pr">${esc(r.price)}</span>` : "<span></span>"}
               <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-              ${hasContact ? `<a href="#cit-enquiry">${T(data, "Kiválasztom")}</a>` : ""}
+              ${hasContact && !r.presentation ? `<a href="#cit-enquiry">${T(data, "Kiválasztom")}</a>` : ""}
             </div>
             ${roomDetails(data, r, i)}
           </div>

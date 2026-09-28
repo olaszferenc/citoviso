@@ -718,12 +718,19 @@ export function wholeBandBlock(
   const idx = d.rooms?.length ?? 0;
   const n = d.rooms?.length ?? 0;
   const mode = r.wholeOnly ? "main" : "band";
+  const main = mode === "main";
   const canAsk = Boolean(d.contact.email || d.contact.phone);
   const priced = Boolean(r.price);
+  // ADR-0257 (contract whole-only ⑧): "main" — the house is the ONLY offer. The label says
+  // so, and the sentence counts the rooms the guest sees below (never an invented figure).
   const inner =
-    `<p class="cit-wholeband__brow">${T(d, "Egyben is kiadó")}</p>` +
+    `<p class="cit-wholeband__brow">${main ? T(d, "Csak egyben kiadó") : T(d, "Egyben is kiadó")}</p>` +
     `<p class="cit-wholeband__t">${esc(r.name)}</p>` +
-    `<p class="cit-wholeband__all">${T(d, "Mind a {n} egység egyben — csak az Önök társaságáé.", { n })}</p>` +
+    `<p class="cit-wholeband__all">${
+      main
+        ? T(d, "Az egész ház az Önöké: {n} szoba.", { n })
+        : T(d, "Mind a {n} egység egyben — csak az Önök társaságáé.", { n })
+    }</p>` +
     (r.capacity ? `<p class="cit-wholeband__cap">${esc(r.capacity)}</p>` : "") +
     (priced
       ? `<p class="cit-wholeband__price">${esc(r.price!)}</p>`
@@ -732,18 +739,21 @@ export function wholeBandBlock(
   // ⛔ Without a price the band does not say "Foglalás": the booking box answers with a
   // quote request on this unit, so the button names what will happen — and opens the
   // details first, whose own button is "Árajánlatot kérek" (the runtime's word for it).
+  // "main" without a price: the house IS the offer, so the button goes straight to the
+  // booking box (which answers with a quote request on it) — "Árajánlatot kérek", the
+  // box's own word; there is no other unit the details would need to be compared with.
   const cta = !canAsk
     ? ""
-    : priced
+    : priced || main
       ? `<a class="cit-wholeband__cta" href="#cit-enquiry"` +
         (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
-        `>${esc(ctaLabel(d, phase))}</a>`
+        `>${priced ? esc(ctaLabel(d, phase)) : T(d, "Árajánlatot kérek")}</a>`
       : `<button class="cit-wholeband__cta" type="button" data-cit-room="${idx}">` +
         `${T(d, "Részletek és árajánlat")}</button>`;
   return (
     `<div class="cit-wholeband" data-cit-whole-mode="${mode}"` +
     // The popover's capacity line reads this: the sentence, not a made-up head count.
-    ` data-cit-whole-all="${esc(T(d, "Mind a {n} egység egyben", { n }))}"` +
+    ` data-cit-whole-all="${esc(main ? T(d, "{n} szoba, egyben", { n }) : T(d, "Mind a {n} egység egyben", { n }))}"` +
     (opts.slot ? ` data-cit-module="rooms"` : "") +
     `><div class="cit-wholeband__in">` +
     roomShell(d, r, idx, "cit-wholeband__txt", inner) +
@@ -766,8 +776,12 @@ function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
   // „Foglalás"-t — pontosan az ADR-0048 egy-szó-egy-folyamat szabályának megsértése.
   // Egy IDEGEN őr (module-slot-check) fogta meg, hat sablonon.
   const canAsk = Boolean(d.contact.email || d.contact.phone);
-  const cta = (r: (typeof rooms)[number]): string =>
-    canAsk
+  const cta = (r: (typeof rooms)[number], i = 0): string =>
+    // ADR-0257: a presentation room is not booked — its button opens the details, whose
+    // own button books the house.
+    r.presentation
+      ? `<button class="cit-modsec__roomcta cit-modsec__roomcta--more" type="button" data-cit-room="${i}">${T(d, "Részletek")}</button>`
+      : canAsk
       ? `<a class="cit-modsec__roomcta" href="#cit-enquiry"` +
         (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
         `>${esc(ctaLabel(d, phase))}</a>`
@@ -837,16 +851,20 @@ function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
             (r.capacity ? `<span style="color:var(--cit-muted)">${esc(r.capacity)}</span>` : "") +
             (r.price ? `<span style="font-weight:600">${esc(r.price)}</span>` : ""),
         ) +
-        cta(r) +
+        cta(r, i) +
         roomDetails(d, r, i) +
         `</li>`,
     )
     .join("");
   return (
     `<section class="cit-modsec" data-cit-module="rooms">` +
-    `<div class="cit-modsec__in"><h2>${T(d, "Szobák, apartmanok")}</h2>` +
+    // ADR-0257 (contract whole-only A): "main" — the house leads, its rooms follow under
+    // their own sub-heading, so the guest reads the offer first and then what is in it.
+    `<div class="cit-modsec__in"><h2>${d.wholeBand?.wholeOnly ? T(d, "A ház és a szobái") : T(d, "Szobák, apartmanok")}</h2>` +
     // "band" follows the rooms; "main" (ADR-0257: the house is the only offer) leads them.
-    (d.wholeBand?.wholeOnly ? wholeBandBlock(d, phase) : "") +
+    (d.wholeBand?.wholeOnly
+      ? wholeBandBlock(d, phase) + `<h3 class="cit-modsec__sub">${T(d, "A ház szobái")}</h3>`
+      : "") +
     `<ul class="cit-modsec__grid" style="list-style:none;margin:0;padding:0">${cards}</ul>` +
     (d.wholeBand && !d.wholeBand.wholeOnly ? wholeBandBlock(d, phase) : "") +
     `</div></section>`

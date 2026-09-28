@@ -47,3 +47,14 @@ szobát csak elrejteni lehetett (a tulaj nem ezt akarta) vagy foglalhatóvá ten
 mondata („szobák nem kérnek árát”) nem stílus-kérés volt: a kódban öt helyen (űrlap, Árak kártya, „Hol látják”
 doboz, teendő, heti levél) nyaggatta volna egy ilyen tulajt örökösen — a mockon a „Hol látják” doboz nem is
 szerepelt, csak a kész felület képe mutatta meg.
+
+### Megvalósítás — 2. land: a vendég-oldal (2026-09-28, a `whole-unit-band` C után)
+
+- A ház-sáv „main” állapota (`wholeBandBlock`): „Csak egyben kiadó”, „Az egész ház az Önöké: {n} szoba.”, teljes akcent-keret;
+  ár nélkül a gomb „Árajánlatot kérek”, egyenesen a foglalás-dobozra (nincs más egység, amivel össze kellene vetni).
+- A bemutató szoba (`Room.presentation`): a `roomShell` jelöli (`data-cit-room-show`) és beírja „A ház része — a házzal együtt
+  foglalható.”; a 9 saját sablon és a tartalék rács foglalás-linkje elmarad (a tartalékon „Részletek” gomb).
+- A felugró „A ház része” címkét, „Ez a szoba külön nem foglalható — {name} csak egyben kiadó.” mondatot és „Az egész ház
+  foglalása” gombot ad, a HÁZ egységével. A foglalás-doboz kimondja: „Amit foglal” + a ház. A bemutató szoba aloldala a házat foglalja.
+- Eltérés a mocktól, szándékosan: a felszereltség-címkék NEM a kártyán, hanem a felugróban (rooms-card kontraktus §1).
+- Őr: `scripts/whole-only-guest-check.mts` (19 sablon × 390/1280 × árral/ár nélkül + negatív kontroll).

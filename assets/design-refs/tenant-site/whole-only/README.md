@@ -36,17 +36,23 @@ A vendég-oldali rész (`moduleSections.ts`, `templateKit.ts`, `cit-runtime.js`)
    miért nincs a szobáknak kártyája.
 
 ### Vendég-oldal (A) — a `whole-unit-band` sáv „main” állapota
-8. A szobák szekciójának ELSŐ eleme a ház, kiemelt sávban (`data-cit-whole-mode="main"`): „Csak egyben kiadó” címke, a ház neve,
-   „Az egész ház az Önöké: N szoba, legfeljebb M fő.”, az ár („-tól” padlóval) és „Foglalás”; ár nélkül „Egyedi ár” + „A szállásadó
-   árajánlattal válaszol.” és „Árajánlatot kérek”. A szám a vendég-látható szobák SZÁMA, a fő a ház férőhelye — kitalált adat nincs.
-9. Alatta „A ház szobái”: ugyanaz a szoba-kártya (`roomShell`/`roomsBlock`, második kártya-markup NINCS), fotó, férőhely,
-   felszereltség, „A ház része — a házzal együtt foglalható.”, a gomb „Részletek” — **ár NINCS, „Foglalás” NINCS**
-   (egy szétosztott ár olyan szám lenne, amit senki nem állított be — ADR-0232 ⑦, §B.17).
-10. A felugróban „A ház része” felső címke, és: „Ez a szoba külön nem foglalható — a <ház> csak egyben kiadó, N szobával.”
-    A fő gomb „Az egész ház foglalása” (ár nélkül „Árajánlat az egész házra”), és a foglalás-dobozt a HÁZON hagyja.
-11. A foglalás-dobozban nincs szoba-választó: egyetlen egység, a ház (a `booking.units` csak a házat viszi).
+8. A szobák szekciójának ELSŐ eleme a ház, kiemelt sávban (`data-cit-whole-mode="main"`, teljes akcent-keret): **„Csak egyben kiadó”**
+   címke, a ház neve, **„Az egész ház az Önöké: {n} szoba.”** (n = a vendég-látható szobák SZÁMA), a ház férőhelye külön sorban
+   (ha megadta), az ár („-tól” padlóval) és „Foglalás”; ár nélkül „Egyedi ár” + „A szállásadó árajánlattal válaszol.” és
+   **„Árajánlatot kérek”** — ez EGYENESEN a foglalás-dobozra visz, a házon. Kitalált adat nincs. A tartalék sablonokon a szekció
+   címe **„A ház és a szobái”**, a rács fölött **„A ház szobái”**; a 12 saját sablonon a sáv a sablon szoba-konténere ELÉ kerül.
+9. A szobák kártyája ugyanaz a szoba-kártya (`roomShell`, második kártya-markup NINCS): fotó, férőhely, és egy sor:
+   **„A ház része — a házzal együtt foglalható.”** — **ár NINCS, „Foglalás” NINCS** (egy szétosztott ár olyan szám lenne, amit
+   senki nem állított be — ADR-0232 ⑦, §B.17). A tartalék rácson a gomb „Részletek”; a saját sablonok a meglévő „Részletek”
+   jelzésüket tartják, a foglalás-linkjük elmarad. A felszereltség a felugróban él (rooms-card kontraktus §1 — a mock kártyáin
+   látszó címkék ezért NEM kerültek a kártyára).
+10. A felugróban **„A ház része”** felső címke, az ár helyén: **„Ez a szoba külön nem foglalható — {name} csak egyben kiadó.”**
+    A fő gomb **„Az egész ház foglalása”** (ár nélkül **„Árajánlat az egész házra”**), és a HÁZ egységét viszi a foglalás-dobozba.
+11. A foglalás-dobozban nincs szoba-választó: **„Amit foglal”** + a ház neve (+ „legfeljebb N fő”) és
+    **„A teljes ház — a szobák külön nem foglalhatók.”** A bemutató szoba saját aloldala is a HÁZAT foglalja.
 
-⚠️ A vendég-oldali feliratok (8–10) kötő jelölése a megvalósítás UTOLSÓ lépése: amíg nincsenek a kódban, nem jelöljük kötőnek.
+Őr: `scripts/whole-only-guest-check.mts` — mind a 19 sablon, 390 és 1280 px, árral és ár nélkül, negatív kontrollal
+(az „egyben IS kiadó” állapoton a próbáknak pirosra kell menniük).
 
 ## Mérve a terven (Playwright, 390 touch + 1280)
 

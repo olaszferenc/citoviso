@@ -309,7 +309,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
             <div class="cl-ft">
               ${r.price ? `<span class="cl-pr">${esc(r.price)}</span>` : "<span></span>"}
               <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-              ${hasContact ? `<a class="cl-btn cl-btn-soft" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
+              ${hasContact && !r.presentation ? `<a class="cl-btn cl-btn-soft" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
             ${roomDetails(data, r, i)}
           </div>

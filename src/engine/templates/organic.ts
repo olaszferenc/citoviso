@@ -288,7 +288,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             <div class="og-ft">
               ${r.price ? `<span class="og-pr">${esc(r.price)}</span>` : "<span></span>"}
               <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-              ${hasContact ? `<a class="og-lk" href="#cit-enquiry">${T(data, "Kiválasztom")} →</a>` : "<span></span>"}
+              ${hasContact && !r.presentation ? `<a class="og-lk" href="#cit-enquiry">${T(data, "Kiválasztom")} →</a>` : "<span></span>"}
             </div>
             ${roomDetails(data, r, i)}
           </div>

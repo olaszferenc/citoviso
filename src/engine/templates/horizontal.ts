@@ -302,7 +302,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         <div class="h-ft">
           ${r.price ? `<span class="h-pr">${esc(r.price)}</span>` : "<span></span>"}
           <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-          ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
+          ${hasContact && !r.presentation ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
         ${roomDetails(data, r, i)}
       </div>

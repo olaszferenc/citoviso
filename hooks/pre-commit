@@ -883,6 +883,13 @@ if [ -f scripts/whole-only-check.mts ] && \
   echo "[pre-commit] whole-only-check (csak egyben kiadó ház, bemutató szobák)…"
   npx tsx scripts/whole-only-check.mts >"$GATE_LOG" || gate_failed
 fi
+# …és a VENDÉG-oldala (a tulaj „A”-ja): mind a 19 sablonon a ház-sáv „main” állapota elöl, a bemutató szobán
+# ár és foglalás-link nélkül, a felugró a HÁZAT foglalja — negatív kontrollal (az „egyben IS” állapoton pirosnak kell lennie).
+if [ -f scripts/whole-only-guest-check.mts ] && \
+   changed_files | grep -qE '^(src/engine/(render|recipe|moduleSections|templateKit)\.ts|src/engine/templates/[^/]+\.ts|assets/runtime/cit-(runtime\.js|modules\.css)|src/generator/runtime\.ts)$|^scripts/whole-only-guest-check'; then
+  echo "[pre-commit] whole-only-guest-check (csak egyben kiadó ház — vendég-oldal, 19 sablon)…"
+  npx tsx scripts/whole-only-guest-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Az ÜZEMI RIASZTÁS minden beállított címre menjen (tulaj-kérés, 2026-09-12). A címzettet
 # beállítani ADDITÍV ÍRÁS — a mezőben látszó három cím nem bizonyítja, hogy a levél
 # mindhármat eléri. Az őr a kimenő levél To: fejlécét olvassa vissza (outbox, nem hálózat).

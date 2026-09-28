@@ -235,8 +235,17 @@ export function unitPageData(
     // No room LIST on a room page, and only this unit's prices.
     rooms: undefined,
     ...(mine.length ? { pricing: { ...housePricing, units: mine } } : { pricing: undefined }),
+    // ADR-0257: a presentation room is not in the booking list (the place is let only as
+    // one) — its page books the HOUSE, never an empty widget.
     ...(base.booking
-      ? { booking: { ...base.booking, units: base.booking.units.filter((u) => u.id === unit.id) } }
+      ? {
+          booking: {
+            ...base.booking,
+            units: base.booking.units.some((u) => u.id === unit.id)
+              ? base.booking.units.filter((u) => u.id === unit.id)
+              : base.booking.units,
+          },
+        }
       : {}),
     ...(canonicalBase && unit.slug ? { canonicalUrl: `${canonicalBase}/apartman/${unit.slug}` } : {}),
   } as SiteData;
@@ -547,6 +556,7 @@ export async function moduleContentFor(
         // választó felépítésekor a többi egységről semmit nem tudna. A szerver viszont
         // render-időben már kezében tartja a teljes `priceMap`-et.
         ...((priceMap.get(u.id) ?? []).length ? {} : { unpriced: true }),
+        ...(wholeOnly && u.wholeOnly ? { wholeOnly: true } : {}),
       })),
       minNights: Number(b.minNights ?? 1),
       maxNights: Number(b.maxNights ?? 30),

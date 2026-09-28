@@ -345,7 +345,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
             <div class="au-row">
               ${r.price ? `<span class="au-pr">${esc(r.price)}</span>` : "<span></span>"}
               <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-              ${hasContact ? `<a class="au-go" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
+              ${hasContact && !r.presentation ? `<a class="au-go" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
             ${roomDetails(data, r, i)}
           </div>

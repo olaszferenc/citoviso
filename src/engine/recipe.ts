@@ -391,6 +391,9 @@ export interface SiteData {
        * unit at a time, so the browser could not know about the others.
        */
       readonly unpriced?: boolean;
+      /** ADR-0257 — the place is let ONLY as one and this is it: the widget names it
+       *  ("Amit foglal") instead of a hidden field — the guest sees WHAT he books. */
+      readonly wholeOnly?: boolean;
     }[];
     readonly minNights: number;
     readonly maxNights: number;

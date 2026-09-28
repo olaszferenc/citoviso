@@ -299,7 +299,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           <div class="sb-ft">
             ${r.price ? `<span class="sb-pr">${esc(r.price)}</span>` : "<span></span>"}
             <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-            ${hasContact ? `<a class="sb-cta" href="#cit-enquiry">${T(data, "Ezt kérjük")}</a>` : ""}
+            ${hasContact && !r.presentation ? `<a class="sb-cta" href="#cit-enquiry">${T(data, "Ezt kérjük")}</a>` : ""}
           </div>
           ${roomDetails(data, r, i)}
         </article>`,

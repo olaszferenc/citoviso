@@ -344,7 +344,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
             <div class="cn-ft">
               ${r.price ? `<span class="cn-pr">${esc(r.price)}</span>` : "<span></span>"}
               <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-              ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
+              ${hasContact && !r.presentation ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
             </div>
             ${roomDetails(data, r, i)}
           </div>

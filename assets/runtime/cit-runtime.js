@@ -145,7 +145,14 @@
             (u.unpriced ? " · " + tr("egyedi ár") : "") + "</option>";
         }).join("") +
         "</select></div>"
-      : '<input type="hidden" name="unit" value="' + esc(units[0].id) + '">';
+      : (units[0].wholeOnly
+          // ADR-0257 (contract whole-only ⑪): the house is the one thing to book — say so.
+          ? '<div class="cit-book__field cit-book__only"><span class="cit-book__label">' + tr("Amit foglal") + "</span>" +
+            '<p class="cit-book__onlyname"><b>' + esc(units[0].name) + "</b>" +
+            (units[0].capacity ? " · " + tr("legfeljebb {n} fő").replace("{n}", units[0].capacity) : "") +
+            "<br><span>" + tr("A teljes ház — a szobák külön nem foglalhatók.") + "</span></p></div>"
+          : "") +
+        '<input type="hidden" name="unit" value="' + esc(units[0].id) + '">';
 
     // ── LAYOUT (owner decree 2026-08-23: "milyen gagyi az elrendezése") ────────
     // Two columns where there is room: the CALENDAR leads on the left (it is the
@@ -1287,7 +1294,10 @@
       whole: shell.getAttribute("data-cit-room-whole") === "1",
       // whole-unit-band: "Mind a N egység egyben" — the band states it, the popover repeats it.
       wholeAll: (shell.closest(".cit-wholeband") || shell).getAttribute("data-cit-whole-all") || "",
+      wholeOnly: Boolean(shell.closest('.cit-wholeband[data-cit-whole-mode="main"]')),
       sample: shell.getAttribute("data-cit-room-sample") === "1",
+      // ADR-0257: a room shown for presentation — the place is let only as one.
+      show: shell.getAttribute("data-cit-room-show") === "1",
       unitId: shell.getAttribute("data-cit-room-unit") || "",
       photos: photos,
       desc: desc,
@@ -1371,7 +1381,13 @@
     function open(room, opener) {
       state.room = room;
       state.opener = opener || null;
-      q(".cit-rd__brow").textContent = (room.sample ? tr("MINTA") + " · " : "") + (room.whole ? tr("Egyben is kiadó") : tr("Apartman"));
+      // ADR-0257 (contract whole-only ⑩): a presentation room belongs to the house, which is
+      // the one thing to book — the popover says so and its button books the HOUSE.
+      var house = room.show ? document.querySelector('.cit-wholeband[data-cit-whole-mode="main"] [data-cit-room-unit]') : null;
+      var houseName = house ? house.getAttribute("data-cit-room-name") || "" : "";
+      var housePriced = Boolean(house && house.getAttribute("data-cit-room-price"));
+      q(".cit-rd__brow").textContent = (room.sample ? tr("MINTA") + " · " : "") +
+        (room.whole ? (room.wholeOnly ? tr("Csak egyben kiadó") : tr("Egyben is kiadó")) : room.show ? tr("A ház része") : tr("Apartman"));
       q("h3").textContent = room.name;
       var cap = q(".cit-rd__cap");
       var capTxt = room.whole && room.wholeAll ? (room.cap ? room.cap + " · " : "") + room.wholeAll : room.cap;
@@ -1380,7 +1396,11 @@
       // answer with a quote request on it, and the popover must not promise otherwise.
       var quoteOnly = room.whole && !room.price;
       var pr = q(".cit-rd__price");
-      pr.textContent = quoteOnly ? tr("Egyedi ár — a szállásadó árajánlattal válaszol.") : room.price;
+      pr.textContent = quoteOnly
+        ? tr("Egyedi ár — a szállásadó árajánlattal válaszol.")
+        : room.show && houseName
+          ? tr("Ez a szoba külön nem foglalható — {name} csak egyben kiadó.").replace("{name}", houseName)
+          : room.price;
       pr.hidden = !pr.textContent;
       // ⛔ Csak PADLÓ-árnál („24 000 Ft-tól"), és csak ha a lap tud is ajánlatot adni —
       // a szerver dönti el, itt már csak átvesszük. Egy árnál a mondat hazugság volna.
@@ -1403,10 +1423,14 @@
       // SERVER-rendered HTML — this CTA is built here, so a hard-coded #cit-enquiry
       // would have pointed at nothing on exactly the pages that sell booking.
       var target = document.querySelector("#cit-booking") ? "#cit-booking" : "#cit-enquiry";
+      var ctaUnit = house ? house.getAttribute("data-cit-room-unit") : room.unitId;
+      var ctaText = house
+        ? (housePriced ? tr("Az egész ház foglalása") : tr("Árajánlat az egész házra"))
+        : quoteOnly ? tr("Árajánlatot kérek") : tr("Foglalás");
       q(".cit-rd__cta").innerHTML =
         '<a href="' + target + '"' +
-        (room.unitId ? ' data-cit-room-unit="' + esc(room.unitId) + '"' : "") +
-        ' data-rd-cta>' + esc(quoteOnly ? tr("Árajánlatot kérek") : tr("Foglalás")) + "</a>";
+        (ctaUnit ? ' data-cit-room-unit="' + esc(ctaUnit) + '"' : "") +
+        ' data-rd-cta>' + esc(ctaText) + "</a>";
       thumbs.innerHTML = "";
       room.photos.forEach(function (p, n) {
         var b = document.createElement("button");

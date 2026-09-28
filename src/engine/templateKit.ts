@@ -351,6 +351,9 @@ export function roomShell(d: SiteData, r: Room, i: number, cls: string, inner: s
     (r.capacity ? ` data-cit-room-cap="${esc(r.capacity)}"` : "") +
     (r.price ? ` data-cit-room-price="${esc(r.price)}"` : "") +
     (r.wholeProperty ? ` data-cit-room-whole="1"` : "") +
+    // ADR-0257: a room shown for presentation (the place is let only as one) — the
+    // popover says so and books the HOUSE, not this room.
+    (r.presentation ? ` data-cit-room-show="1"` : "") +
     (r.sample ? ` data-cit-room-sample="1"` : "") +
     // A kártya „Foglalás"-a ebből tudja meg, MELYIK egységre ugrik le.
     (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
@@ -361,9 +364,20 @@ export function roomShell(d: SiteData, r: Room, i: number, cls: string, inner: s
     // counts name occurrences, and it was right to notice a third one appearing).
     // `aria-haspopup="dialog"` is what actually announces the popover.
     ` aria-haspopup="dialog"`;
+  // ADR-0257 (contract whole-only ⑨): the presentation card says, in one line, that it is
+  // part of the house — without it an unpriced card with no button reads as a gap.
+  // It goes INTO the card's last text block when there is one (measured on aurora: appended
+  // after it, the line sat outside the card's padding, flush to the edge).
+  const part = `<span class="cit-room__part">${T(d, "A ház része — a házzal együtt foglalható.")}</span>`;
+  const trimmed = inner.trimEnd();
+  const body = !r.presentation
+    ? inner
+    : trimmed.endsWith("</div>")
+      ? trimmed.slice(0, -"</div>".length) + part + "</div>"
+      : inner + part;
   return r.slug
-    ? `<a ${attrs} href="/apartman/${esc(r.slug)}">${inner}</a>`
-    : `<div ${attrs} role="button" tabindex="0">${inner}</div>`;
+    ? `<a ${attrs} href="/apartman/${esc(r.slug)}">${body}</a>`
+    : `<div ${attrs} role="button" tabindex="0">${body}</div>`;
 }
 
 /**

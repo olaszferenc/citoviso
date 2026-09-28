@@ -1093,7 +1093,18 @@ a.cit-grat:hover {
   color: var(--cit-ink); font-family: var(--cit-font-body, inherit);
 }
 .cit-wholeband *, .cit-wholeband *::before, .cit-wholeband *::after { box-sizing: border-box; }
-.cit-wholeband[data-cit-whole-mode="main"] { margin: 0 auto 16px; }
+/* ADR-0257 (contract whole-only A): "main" — the house is the ONLY offer, so the band is
+   the lead, not a footnote: a full accent frame and a stronger tint. */
+.cit-wholeband[data-cit-whole-mode="main"] {
+  margin: 0 auto 16px; border: 2px solid var(--cit-accent);
+  background: color-mix(in srgb, var(--cit-accent) 10%, var(--cit-surface, var(--cit-bg)));
+}
+.cit-wholeband[data-cit-whole-mode="main"] .cit-wholeband__t { font-size: 1.55rem; }
+.cit-wholeband[data-cit-whole-mode="main"] .cit-wholeband__price { font-size: 1.1rem; }
+/* Placed BEFORE a template's full-bleed rooms section, it keeps the page gutter and air. */
+.cit-wholeband[data-cit-whole-mode="main"]:has(+ section, + .h-rail) {
+  width: min(1120px, calc(100% - 32px)); margin: 40px auto 8px;
+}
 /* Where the template's rooms container IS its full-bleed section (tilted-gallery,
    arch-frames, wordmark-grow) or a full-bleed rail (horizontal), the band lands outside
    any padded column — measured 0..390 px on a phone, edge to edge. It keeps a gutter. */
@@ -1142,6 +1153,18 @@ section + .cit-wholeband, .h-rail + .cit-wholeband { width: min(1120px, calc(100
   border-radius: calc(var(--cit-radius) * 0.6);
 }
 .cit-modsec__roomcta:hover { filter: brightness(1.07); }
+/* ADR-0257: a presentation room's button opens its details — secondary, not a booking. */
+.cit-modsec__roomcta--more {
+  border: 0; cursor: pointer; font-family: inherit;
+  background: transparent; color: var(--cit-accent); box-shadow: inset 0 0 0 2px var(--cit-accent);
+}
+.cit-modsec__sub {
+  margin: 28px 0 12px; font-family: var(--cit-font-display, inherit); font-size: 1.25rem; font-weight: 600;
+}
+/* "A ház része — a házzal együtt foglalható." — on every template's presentation card. */
+.cit-book__onlyname { margin: 0; line-height: 1.45; }
+.cit-book__onlyname span { font-size: .85rem; color: var(--cit-muted); }
+.cit-room__part { display: block; margin-top: 4px; font-size: .82rem; line-height: 1.4; color: var(--cit-muted); }
 .cit-whole__cta { margin: 14px 0 0; }
 .cit-rd__pricenote { color: var(--cit-muted); font-size: 12.5px; font-style: italic;
   margin-top: 2px; line-height: 1.45; }

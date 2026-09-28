@@ -335,7 +335,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             <div class="ad-ft">
               ${r.price ? `<span class="ad-pr">${esc(r.price)}</span>` : ""}
               <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-              ${hasContact ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
+              ${hasContact && !r.presentation ? `<a class="cit-btn cit-btn-ghost" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
             </div>
             ${roomDetails(data, r, i)}
           </div>
