@@ -112,7 +112,8 @@ export async function applyModuleChange(
       // Module-sales switch: a NEW add of a disabled module is refused at the
       // write (the UI hides it, but a crafted POST must not get through either).
       // Withdrawing a cancellation is NOT a new sale — that path stays open.
-      if (disabledSales.has(m.id) && !(s?.active && s.cancel_at_period_end)) continue;
+      // A `retired` module is refused the same way (off the shelf for everyone).
+      if ((disabledSales.has(m.id) || m.retired) && !(s?.active && s.cancel_at_period_end)) continue;
       // ADR-0119 ⑥: under a billing freeze a NEW add is refused at the WRITE —
       // the shop's buttons are disabled too, but a crafted POST must not get
       // through either (feedback_additive_write_is_not_a_gate). Withdrawing a

@@ -1341,6 +1341,15 @@ if [ -f scripts/consent-style-check.mts ]; then
   # egy hálózati válaszon. Mérve 2026-09-15: barionnal 2 piros, mockkal 0.
   PAYMENT_GATEWAY=mock npx tsx scripts/consent-style-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A SÁV A TARTALOM MŰVELETEIT SEM TAKARHATJA (ADR-0145 ④ utószál, 2026-09-28). A fenti őr
+# a fül-sávot méri; a tartalmat nem — ezért a Megközelítés / Vélemények / Foglalás / Árak
+# legalsó mentés-gombja 390 px-en SOHA nem volt kigörgethető a sáv alól. Ez az őr a
+# legtöbb modult birtokló bérlő minden modul-képernyőjén méri, telefonon és asztalon.
+if [ -f scripts/consent-admin-actions-check.mts ] && \
+   changed_files | grep -qE '^public/assets/ui/citui(-admin)?\.css|^public/assets/runtime/cit-consent\.|^src/server/(adminViews|moduleConfigViews|consent)\.ts|^scripts/consent-admin-actions-check'; then
+  echo "[pre-commit] consent-admin-actions-check (a süti-sáv az admin műveleteit sem takarja)…"
+  PAYMENT_GATEWAY=mock npx tsx scripts/consent-admin-actions-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A BARION PIXEL AZT KÜLDI, AMIT A VEVŐ TESZ (ADR-0186). Valódi böngésző + a Barion
 # ÉLŐ bp.js-e és annak saját validátora: hiányzó kötelező mezőnél a Pixel némán eldobja
 # az eseményt, tehát egy elgépelt `unitPrice` zöld teszt mellett is adatvesztés volna.
@@ -1654,6 +1663,15 @@ if [ -f scripts/module-sales-check.mts ] && \
    changed_files | grep -qE '^src/moduleSales\.ts|^src/modules\.ts|^src/generator/configurator\.ts|^src/console/views\.ts|^src/tenant/|^scripts/module-sales-check'; then
   echo "[pre-commit] module-sales-check (ADR-0102: a kikapcsolt modul sehol nem kínálható)…"
   npx tsx scripts/module-sales-check.mts
+fi
+
+# A kivezetett (`retired`) modul a bérlői kirakatban sem vehető meg — a birtokosé
+# megmarad. Mérve 2026-09-28: a hírlevél „Hozzáadom" gombbal, 490 Ft/hó áron állt a
+# tenant-admin Modulok fülén, mert a `retired` kapcsolót a bérlői út nem olvasta.
+if [ -f scripts/retired-module-shop-check.mts ] && \
+   changed_files | grep -qE '^src/modules\.ts|^src/moduleSales\.ts|^src/tenant/|^scripts/retired-module-shop-check'; then
+  echo "[pre-commit] retired-module-shop-check (a kivezetett modul a bérlőnek sem vehető meg)…"
+  npx tsx scripts/retired-module-shop-check.mts
 fi
 
 # A JÓVÁHAGYOTT terv és a SZÁLLÍTOTT felület nem csúszhat szét. A §2b kapu az

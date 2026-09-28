@@ -166,8 +166,13 @@ export async function getTenantModules(tenantId: string): Promise<TenantModuleVi
   // Module-sales switch (owner decree 2026-09-06): a disabled module is hidden
   // from the tenant UNLESS they already hold it (existing subscriptions keep
   // running and stay manageable — the decree blocks NEW sales only).
+  // A `retired` module (src/modules.ts: taken off the shelf) follows the SAME rule:
+  // measured 2026-09-28, the retired newsletter stood in the tenant shop with its own
+  // "Hozzáadom" button at 490 Ft/hó — the flag was honoured everywhere except here.
   const modules: TenantModule[] = MODULE_CATALOG.filter(
-    (m) => m.billing !== "once" && (m.spine || activeIds.has(m.id) || !disabledSales.has(m.id)),
+    (m) =>
+      m.billing !== "once" &&
+      (m.spine || activeIds.has(m.id) || (!disabledSales.has(m.id) && !m.retired)),
   ).map((m) => ({
     id: m.id,
     label: m.publicLabel,
