@@ -239,8 +239,21 @@ async function measure(page: Page, t: Target, vp: { w: number; h: number; mobile
   const out: Finding[] = [];
   const F = (rule: string, msg: string) => out.push({ rule, msg });
   const errs: string[] = [];
-  const onErr = (e: Error) => errs.push(e.message.slice(0, 120));
-  const onCon = (m: any) => { if (m.type() === "error" && !/Failed to load resource|ERR_FAILED|favicon/.test(m.text())) errs.push(m.text().slice(0, 120)); };
+  // Google's map-embed bootstrap ("google is not defined" thrown INSIDE init_embed.js on
+  // maps.gstatic.com, a CORS-refused maps.googleapis.com RPC) is a third-party race the page
+  // cannot influence — same rule as guest-mobile-check ⑩; 2026-09-28 it failed 3–5 random pages
+  // per run. Recognised by the ORIGIN (the error's first stack frame), never by the message
+  // alone: our own scripts' errors still count.
+  const MAPS = /maps\.gstatic\.com|maps\.googleapis\.com/;
+  const onErr = (e: Error) => {
+    if (MAPS.test(String(e.stack || "").split("\n").slice(0, 2).join(" "))) return;
+    errs.push(e.message.slice(0, 120));
+  };
+  const onCon = (m: any) => {
+    if (m.type() !== "error" || /Failed to load resource|ERR_FAILED|favicon/.test(m.text())) return;
+    if (MAPS.test(m.location()?.url ?? "") || /^Access to XMLHttpRequest at 'https:\/\/maps\.googleapis\.com\//.test(m.text())) return;
+    errs.push(m.text().slice(0, 120));
+  };
   page.on("pageerror", onErr); page.on("console", onCon);
   try {
     if (t.file) await page.setContent(readFileSync(t.file, "utf8"), { waitUntil: "load", timeout: 30000 });
