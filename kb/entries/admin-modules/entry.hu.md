@@ -320,8 +320,9 @@ százalékban), és végül — az **„A kártyáját megterheltük”** sorban
 ténylegesen. Így utólag is ellenőrizheti, miből jött ki a szám.
 
 ⚠️ **A kedvezmény egyszeri.** A sáv alján ezért ott áll, mennyibe kerülnek ugyanezek a
-modulok a **következő megújításkor**, kedvezmény nélkül. Erre érdemes figyelni, hogy jövőre
-ne érje meglepetés.
+modulok a **következő megújításkor**, kedvezmény nélkül — a fiókja ütemében: havi fiókon havi,
+éves fiókon éves díjjal, pontosan azzal az összeggel, amivel a „Következő számla" tételei
+között szerepelnek. Erre érdemes figyelni, hogy a következő számlánál ne érje meglepetés.
 
 Ugyanez a számlára is felkerül: a tétel neve kimondja, hogy kedvezményes árról van szó, a
 számla megjegyzésében pedig ott a teljes levezetés. A fizetendő összeg természetesen az,

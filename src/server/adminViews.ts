@@ -1142,6 +1142,7 @@ function modulePriceForm(monthly: number, plus: boolean, annualMult: number, lan
  */
 function chargedNotice(
   applied: ModuleAppliedFlash,
+  sub: SubscriptionAdminData | null,
   lang: string,
   huf: (n: number) => string,
   labelOf: (id: string) => string,
@@ -1178,10 +1179,44 @@ function chargedNotice(
     ) +
     row(T(lang, "A kártyáját megterheltük"), esc(huf(paid)), "adm-rcpt__row--tot") +
     `</div>` +
-    `<span class="adm-rcpt__note">` +
-    T(lang, "A kedvezmény egyszeri — a következő megújításkor {sum}/év díjjal szerepelnek a számlán.", {
-      sum: esc(huf(listPrice)),
-    }) +
+    renewalNote(applied.charged ?? [], sub, lang, huf)
+  );
+}
+
+/**
+ * „A kedvezmény egyszeri — …": what the SAME modules will cost on the next invoice.
+ *
+ * ⛔ MÉRT HIBA (2026-09-28, egy-szállásos telefonos kör, Myrna Haus): a mondat a
+ * `chargedListPrice`-ot írta ki — az IDŐARÁNYOS, fordulónapig tartó díjat —, és
+ * beégetett „/év"-vel, egy HAVI fiókon. „4 620 Ft/év", miközben a következő számlán a
+ * nyolc modul havi listaára áll. Két hiba egy mondatban, mert a mondat a megújítás
+ * összegét nem a számlából vette, hanem egy másik számból, ami véletlenül a közelében volt.
+ *
+ * Now the figure is READ FROM `sub.nextInvoiceItems` — the very rows the „Következő
+ * számla" cell totals — × the SAME multiplier that cell uses (annualMultiplier: an
+ * annual account or an armed annual switch bills 12 − free months), and the unit
+ * follows the account's billing period. One list, one multiplier: the receipt cannot
+ * promise a renewal the invoice will not print (feedback_one_rule_two_copies).
+ * A charged module that is NOT on the next invoice (cancelled for the period end in
+ * the same breath) is not on it here either; with none left, the sentence stays silent
+ * rather than promising a number nobody will bill (§B.17).
+ */
+function renewalNote(
+  charged: readonly string[],
+  sub: SubscriptionAdminData | null,
+  lang: string,
+  huf: (n: number) => string,
+): string {
+  if (!sub) return "";
+  const monthly = sub.nextInvoiceItems.filter((i) => charged.includes(i.id)).reduce((s, i) => s + i.price, 0);
+  if (monthly <= 0) return "";
+  const mult = annualMultiplier(sub);
+  const sum = esc(huf(mult > 0 ? monthly * mult : monthly));
+  return (
+    `<span class="adm-rcpt__note" data-renew-sum="${mult > 0 ? monthly * mult : monthly}">` +
+    (mult > 0
+      ? T(lang, "A kedvezmény egyszeri — a következő megújításkor {sum}/év díjjal szerepelnek a számlán.", { sum })
+      : T(lang, "A kedvezmény egyszeri — a következő megújításkor {sum}/hó díjjal szerepelnek a számlán.", { sum })) +
     `</span>`
   );
 }
@@ -1556,7 +1591,7 @@ export function modulesSection(
       // so, so the only way to check was to read the database. If the OWNER cannot
       // verify his own charge, a customer certainly cannot.
       applied.charged?.length
-        ? chargedNotice(applied, lang, huf, labelOf)
+        ? chargedNotice(applied, sub, lang, huf, labelOf)
         : "",
       applied.chargePending
         ? T(lang, "A kártya-terhelés folyamatban van — az új modul a jóváíráskor magától élesedik.")

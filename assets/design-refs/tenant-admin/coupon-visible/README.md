@@ -6,6 +6,7 @@ B: külön kedvezmény-sor · C: nyugta-levezetés), a választása a **C** volt
 - Terv: `plan.html` (önhordó, kattintható; méret-váltó ÉS kupon-kapcsoló)
 - A jóváhagyott kép: `plan-mobile.png`, `plan-desktop.png`, `plan-nocoupon-mobile.png`
 - A LESZÁLLÍTOTT sáv: `shipped-mobile.png`, `shipped-desktop.png` (valós tenant, élő adat)
+- A havi fiókos megújítás-mondat (2026-09-28, Myrna Haus, havi): `shipped-monthly-mobile.png`, `shipped-monthly-desktop.png`
 
 **Hatókör:** `src/server/adminViews.ts` · `src/payment/service.ts` · `public/assets/ui/citui-admin.css`
 
@@ -47,7 +48,17 @@ teljes 19 700 Ft-ba kerül, és enélkül a vevő jövőre magyarázat nélküli
 - **„Üdvözlő kedvezmény ({pct}%)"** — a kedvezmény sora a levezetésben.
 - **„A kártyáját megterheltük"** — a végösszeg sora; ez a nyugta alja.
 - **„{n} modul a fordulónapig"** — a díj sora, ami megmondja, mennyi időre szól.
-- **„A kedvezmény egyszeri — a következő megújításkor {sum}/év díjjal szerepelnek a számlán."**
+- **„A kedvezmény egyszeri — a következő megújításkor {sum}/év díjjal szerepelnek a számlán."** — éves fiókon (vagy élesített éves váltásnál)
+- **„A kedvezmény egyszeri — a következő megújításkor {sum}/hó díjjal szerepelnek a számlán."** — havi fiókon
+
+> ⚠️ **Helyesbítés, 2026-09-28** (tulaj jóváhagyásával; Myrna Haus, egy-szállásos telefonos kör):
+> az eredeti kötő mondat csak `/év`-vel létezett, és a `{sum}` a nyugta díj-sorának
+> **időarányos, fordulónapig tartó** összege volt. Havi fiókon így „4 620 Ft/év" állt a sáv alján,
+> miközben a következő számlán a modulok havi listaára szerepel. A mondat mostantól a fiók
+> ÜTEMÉBEN szól, és a `{sum}` a **„Következő számla" tételei közül a most vett modulok sorainak
+> összege** × a számla szorzója (éves: 12 − ajándék hónap) — egy forrásból, nem második
+> számítással. Ha a most vett modul nincs a következő számlán, a mondat elmarad. A §2 célja
+> (a jövőbeli teljes díj látszik) változatlan.
 
 ## Kötő horgony
 
@@ -60,7 +71,9 @@ teljes 19 700 Ft-ba kerül, és enélkül a vevő jövőre magyarázat nélküli
 
 `scripts/coupon-visible-check.mts` (bekötve a `hooks/pre-commit`-be): méri a sávot kuponnal
 és kupon NÉLKÜL, a számla tételeit és a megjegyzést — és minden esetben visszaméri, hogy a
-**tételek összege pontosan a terhelt összeg** maradt. `--self-test` visszarontva 8 bukás
+**tételek összege pontosan a terhelt összeg** maradt. 2026-09-28 óta a megújítás-mondatot
+havi, éves és élesített-éves-váltásos fiókon is méri: az összege = a renderelt „A következő
+számla tételei" megfelelő sorai × a számla szorzója, az egysége a fiók üteme. `--self-test` visszarontva 8 bukás
 (köztük a tiltott kedvezmény-sor, ami elviszi a végösszeget).
 
 ⚠️ Az őr a sávot **mélység-helyesen** vágja ki (`sliceElement`), nem non-greedy regexszel: a

@@ -12,6 +12,8 @@ import { bestActiveCouponForTenant } from "../payment/offers.js";
 import { isBilledModule, type TenantModuleView } from "./modules.js";
 
 export interface NextInvoiceItem {
+  /** The module id — so a receipt can name ITS rows of this invoice, not re-price them. */
+  readonly id: string;
   readonly label: string;
   readonly price: number;
   /** ADR-0080 ②: appears on this invoice for the first time. */
@@ -158,6 +160,7 @@ export async function getSubscriptionAdmin(
   const items: NextInvoiceItem[] = mv.modules
     .filter(isBilledModule)
     .map((m) => ({
+      id: m.id,
       label: m.label,
       price: getModulePrice(m.id),
       isNew: m.awaitingFirstCharge,

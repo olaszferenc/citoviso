@@ -20,6 +20,7 @@
 // láttunk pirosan, nem bizonyíték.
 
 import { adminDashboard, type ModuleAppliedFlash } from "../src/server/adminViews.js";
+import type { SubscriptionAdminData } from "../src/tenant/subscriptionAdmin.js";
 import { buildInvoiceItems, invoiceComment } from "../src/payment/service.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
 import { MODULE_CATALOG } from "../src/modules.js";
@@ -71,11 +72,35 @@ function sliceElement(html: string, startMarker: string): string {
   return html.slice(from);
 }
 
-const banner = (flash: ModuleAppliedFlash): string => {
-  const html = adminDashboard(session, content, {
-    tab: "modulok", modules: MV, moduleApplied: flash, supportEmail: "e@x.hu",
+// ── az előfizetés — a „Következő számla" tételei ─────────────────────────────
+// A megújítás-mondat a KÖVETKEZŐ SZÁMLÁBÓL számol (2026-09-28, Myrna Haus: „4 620 Ft/év"
+// egy HAVI fiókon, ahol a 4 620 az időarányos díj volt). A fixtúrán a számlán egy
+// NEM-most-vett modul is áll, hogy a mondat ne a teljes számlát írja ki.
+const priceOf = (id: string) => MODULE_CATALOG.find((c) => c.id === id)!.priceMonthly;
+const EXTRA = MODULE_CATALOG.find((c) => c.priceMonthly > 0 && !MODS.includes(c.id))!;
+const ITEMS = [...MODS, EXTRA.id].map((id) => ({
+  id, label: MODULE_CATALOG.find((c) => c.id === id)!.publicLabel, price: priceOf(id), isNew: MODS.includes(id),
+}));
+const FREE = 2;
+const mkSub = (period: "monthly" | "annual", pendingAnnual = false): SubscriptionAdminData => {
+  const total = ITEMS.reduce((s, i) => s + i.price, 3900);
+  return {
+    status: "active", periodEnd: "2026-10-28", renewDay: 28,
+    nextInvoiceTotal: total, nextInvoiceItems: ITEMS, payUrl: null, arrears: null,
+    closesOn: "2026-11-27", frozenOn: null, restoredOn: null, settled: null, cancelAtPeriodEnd: false,
+    billingPeriod: period, pendingAnnual, pendingEffectiveDate: pendingAnnual ? "2026-10-28" : null,
+    annualTotal: total * (12 - FREE), annualSavings: total * FREE, annualFreeMonths: FREE,
+    autoCharge: false, coupon: null,
+  } as unknown as SubscriptionAdminData;
+};
+const MONTHLY = mkSub("monthly");
+
+const page = (flash: ModuleAppliedFlash, sub: SubscriptionAdminData | null = MONTHLY): string =>
+  adminDashboard(session, content, {
+    tab: "modulok", modules: MV, moduleApplied: flash, supportEmail: "e@x.hu", subscription: sub,
   });
-  const cut = sliceElement(html, '<div class="adm-applied"');
+const banner = (flash: ModuleAppliedFlash, sub: SubscriptionAdminData | null = MONTHLY): string => {
+  const cut = sliceElement(page(flash, sub), '<div class="adm-applied"');
   if (!cut) throw new Error("nincs .adm-applied sáv a lapon — a fixtúra nem azt méri, amit hisz");
   return cut;
 };
@@ -97,7 +122,7 @@ ok("a levezetés kiírja a teljes díjat", wcText.includes("19 700"), wcText.sli
 ok("kiírja a kedvezmény ÖSSZEGÉT", wcText.includes("4 925"));
 ok("kiírja a kedvezmény SZÁZALÉKÁT", /25\s*%/.test(wcText));
 ok("kiírja a terhelt összeget", wcText.includes("14 775"));
-ok("figyelmeztet a megújítás árára", /megújítás/.test(wcText) && wcText.includes("19 700"));
+ok("figyelmeztet a megújítás árára", /megújítás/.test(wcText) && /adm-rcpt__note/.test(withCoupon));
 // ⛔ A modulnevek MAGUK is vesszősek, ezért a vesszős felsorolás ÖT tételnek olvasódik
 // három helyett — pont így nézett ki a tulaj képernyője, miközben a számla „3 modul"-t írt.
 ok("a modulokat NEM vessző választja el", wcText.includes("·"), "elválasztó");
@@ -110,6 +135,54 @@ const noCoupon = strip(banner({
 ok("nincs kedvezmény-szó", !/kedvezmény/i.test(noCoupon), noCoupon.slice(0, 110));
 ok("nincs „−0 Ft” levezetés", !/−0|- 0 Ft/.test(noCoupon));
 ok("a terhelt összeg megvan", noCoupon.includes("19 700"));
+
+// ── ②b A MEGÚJÍTÁS-MONDAT = a következő számla megfelelő sorai ────────────────
+// ⛔ MÉRT HIBA (2026-09-28): „a következő megújításkor 4 620 Ft/év" egy HAVI fiókon —
+// az időarányos díj, beégetett „/év"-vel. A mondat összegét a RENDERELT „A következő
+// számla tételei" sorokból mérjük vissza (a most vett modulok sorai × a számla szorzója),
+// nem a fixtúrából: így a mondat és a számla csak EGYÜTT lehet igaz.
+console.log("\n── A megújítás-mondat a következő számla soraiból, a fiók ütemében");
+const huNum = (t: string) => Number(t.replace(/[^\d]/g, ""));
+const labelIds = new Map(ITEMS.map((i) => [i.label, i.id]));
+const renewCase = (name: string, sub: SubscriptionAdminData, unit: "/hó" | "/év") => {
+  let html = page({
+    added: [], cancelled: [], other: [], charged: MODS,
+    chargedAmount: PAID, chargedListPrice: LIST, chargedOfferPercent: PCT,
+  }, sub);
+  if (selfTest && unit === "/hó") {
+    // Visszarontás: a régi mondat — az időarányos listaár, beégetett „/év"-vel.
+    html = html.replace(/(<span class="adm-rcpt__note"[^>]*>)[\s\S]*?(<\/span>)/,
+      `$1A kedvezmény egyszeri — a következő megújításkor ${LIST.toLocaleString("hu-HU")} Ft/év díjjal szerepelnek a számlán.$2`);
+  }
+  const note = strip(/<span class="adm-rcpt__note"[^>]*>[\s\S]*?<\/span>/.exec(html)?.[0] ?? "");
+  const said = huNum(/megújításkor (.+?) Ft\//.exec(note)?.[1] ?? "");
+  // A számla renderelt sorai: címke → ár.
+  const items = /<details class="adm-sub__items"[^>]*>([\s\S]*?)<\/details>/.exec(html)?.[1] ?? "";
+  let rows = 0;
+  for (const m of items.matchAll(/<div class="adm-sub__row"><span>([\s\S]*?)<\/span><b>([^<]+)<\/b><\/div>/g)) {
+    const label = strip(m[1]!).replace(/\s*·\s*új$/, "");
+    if (MODS.includes(labelIds.get(label) ?? "")) rows += huNum(m[2]!);
+  }
+  const mult = /éves díj = (\d+) havi díj/.exec(strip(items))?.[1];
+  const want = rows * (mult ? Number(mult) : 1);
+  console.log(`   ${name}: „${note}"`);
+  ok(`${name}: a mondat a fiók ütemében szól (${unit})`, note.includes(`Ft${unit}`) && !note.includes(unit === "/hó" ? "/év" : "/hó"));
+  ok(`${name}: a mondat összege = a következő számla megfelelő sorai`, rows > 0 && said === want, `${said} Ft (a számla sorai: ${want} Ft)`);
+  // Csak ott értelmes, ahol a kettő különbözik: a fixtúra 19 700-as listaára épp a három
+  // modul ÉVES díja (1 970 × 10), tehát éves fiókon a helyes szám véletlenül egyezik vele.
+  if (want !== LIST) ok(`${name}: NEM az időarányos listaárat mondja`, said !== LIST);
+};
+renewCase("havi fiók", MONTHLY, "/hó");
+renewCase("éves fiók", mkSub("annual"), "/év");
+renewCase("havi fiók, éves váltás élesítve", mkSub("monthly", true), "/év");
+{
+  // Ha a most vett modul nincs a következő számlán, a mondat hallgat — nem ígér számot.
+  const none = banner({
+    added: [], cancelled: [], other: [], charged: MODS,
+    chargedAmount: PAID, chargedListPrice: LIST, chargedOfferPercent: PCT,
+  }, { ...MONTHLY, nextInvoiceItems: ITEMS.filter((i) => !MODS.includes(i.id)) } as SubscriptionAdminData);
+  ok("a számlán nem szereplő modulra nincs megújítás-ígéret", !/megújításkor/.test(strip(none)));
+}
 
 // ── ③ A SZÁMLA — és a pénz ───────────────────────────────────────────────────
 console.log("\n── A számla tételei és a végösszeg");

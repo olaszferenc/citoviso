@@ -11,6 +11,7 @@
 - [2026-09-28_szezon_naptar_es_programajanlo_gyujtes_alatt.md](2026-09-28_szezon_naptar_es_programajanlo_gyujtes_alatt.md) — 2026-09-28 — A tulaj nem tudta feltölteni a szezonárait és a programjait telefonon (brief: adatfeltoltes-szezon-program)
 - [2026-09-28_rc_sub_sorszam_es_munka_jel.md](2026-09-28_rc_sub_sorszam_es_munka_jel.md) — 2026-09-28 — RC-sessionök: SUB-sorszám (🟦1.2) és munka-jel (🟠/🟢)
 - [2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md](2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md) — 2026-09-28 — RC-gépezet: 🔴 SUB-jelölés + egy kód három gépen (ADR-0254)
+- [2026-09-28_modul_nyugta_ft_ev_havi_fiokon.md](2026-09-28_modul_nyugta_ft_ev_havi_fiokon.md) — 2026-09-28 — Modul-nyugta: a megújítás-mondat a fiók ütemében, a következő számlából
 - [2026-09-28_modul_kosar_sav_helyett.md](2026-09-28_modul_kosar_sav_helyett.md) — 2026-09-28 — Modulok fül: kosár a 407 px-es összegző sáv helyett (ADR-0255)
 - [2026-09-28_mobile_chrome_utojavitas.md](2026-09-28_mobile_chrome_utojavitas.md) — 2026-09-28 — ADR-0253 utójavítás: consent-szabályok a telefonos blokkba, tilted-gallery fekvő hero-alja és helység-sor
 - [2026-09-28_kep_itelet_telefonos_kor.md](2026-09-28_kep_itelet_telefonos_kor.md) — 2026-09-28 — A telefonos kör képeinek ítélete (FK-012…016): modulonként, tulaj- és vendég-oldalon
