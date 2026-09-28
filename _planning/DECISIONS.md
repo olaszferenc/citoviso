@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-szomszed-elerhetosegere-nem-megy-mock.md) — A szomszéd elérhetőségére nem megy mock: közös elérhetőség = küldési kapu, közepes Places-egyezésből nincs elérhetőség
+- [ADR-0258](decisions/0258-a-szomszed-elerhetosegere-nem-megy-mock-kozos.md) — A szomszéd elérhetőségére nem megy mock: közös elérhetőség = küldési kapu, közepes Places-egyezésből nincs elérhetőség
 - [ADR-0257](decisions/0257-csak-egyben-adom-ki-a-haz-az-egyetlen.md) — „Csak egyben adom ki”: a ház az egyetlen foglalható egység, a szobák bemutatásra — árat sem kérünk tőlük
 - [ADR-0256](decisions/0256-a-nem-kiado-egesz-szallas-a-vendeg-elol-rejtve.md) — A nem kiadó „egész szállás” a vendég elől rejtve (tartós jelölés), és a foglalási widget az első ÁRAS egységre nyit
 - [ADR-0255](decisions/0255-modulok-ful-kosar-a-ragado-osszegzo-sav-helyett.md) — Modulok fül: kosár a ragadó összegző sáv helyett (telefonon kosár-gomb, asztalin hasáb; a kártyaválasztó a fizetés-megerősítőbe költözik)

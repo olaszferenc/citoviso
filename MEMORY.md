@@ -11,7 +11,7 @@ Utolsó frissítés: 2026-09-28 (🏷️ **RC-sessionök: SUB-sorszám + munka-j
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-09-28 — a szomszéd elérhetőségére nem megy mock, ADR-XXXX)
+## Párhuzamos szál (2026-09-28 — a szomszéd elérhetőségére nem megy mock, ADR-0258)
 A tulaj kérdése a scrape-átfedés duplikátumairól → mérés: az átfedés-dedup rendben (csak eldob), a rés a
 Places-párosításban volt (szakszóra illesztett, a közepes sáv telefonja/honlapja ellenőrzés nélkül a leadre ment →
 8 szomszéd-pár idegen elérhetőséggel). Kész, NEM élesítve: közös-elérhetőség küldési kapu (levél + mobil, csak

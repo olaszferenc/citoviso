@@ -1,4 +1,4 @@
-## ADR-XXXX — A szomszéd elérhetőségére nem megy mock: közös elérhetőség = küldési kapu, közepes Places-egyezésből nincs elérhetőség
+## ADR-0258 — A szomszéd elérhetőségére nem megy mock: közös elérhetőség = küldési kapu, közepes Places-egyezésből nincs elérhetőség
 
 **Dátum:** 2026-09-28 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) · **Kiegészíti:** ADR-0039
 (kereszt-futás dedup), a Duplikátumok lap (`src/console/duplicates.ts`, `lead_link`), §F.17b (A4 konfidencia) ·

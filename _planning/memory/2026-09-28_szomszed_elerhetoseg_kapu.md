@@ -1,4 +1,4 @@
-# 2026-09-28 — A szomszéd elérhetőségére nem megy mock: közös-elérhetőség kapu + szigorított Places-párosítás (ADR-XXXX)
+# 2026-09-28 — A szomszéd elérhetőségére nem megy mock: közös-elérhetőség kapu + szigorított Places-párosítás (ADR-0258)
 
 ## Kiváltó
 A tulaj: „ha a scrape-ben van területi átfedés, kezeljük a duplikátumokat?” → „mitől lesz biztos duplikátum a
@@ -27,7 +27,7 @@ küldjünk el” → mérés → „Rád bízom”.
 - `src/scraper/genericWords.ts` (új), `src/scraper/sources/portalListing.ts`, `src/scraper/sources/googleMaps.ts`,
   `src/scraper/enrichPlaces.ts`, `src/scraper/contactLedger.ts` (`phoneKey` export), `src/scraper/types.ts`
 - `scripts/shared-contact-gate-check.mts` (új), `scripts/places-match-check.mts` (új), `hooks/pre-commit`
-- `kb/entries/console-outreach-draft/entry.hu.md`, ADR-XXXX, ez a jegyzet, `MEMORY.md`
+- `kb/entries/console-outreach-draft/entry.hu.md`, ADR-0258, ez a jegyzet, `MEMORY.md`
 
 ## Nyitott
 - ~115 meglévő közepes sávú lead elérhetősége a régi szabállyal került rájuk; ahol a szomszéd nem leadünk, a kapu
