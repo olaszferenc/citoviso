@@ -5,6 +5,12 @@ felület: tenant-admin
 nézet: telefon
 kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
 
+# ⚠️ ALANY: a kosár-út (③) csak olyan bérlőn mérhető, akinek van még megvehető modulja. A közös
+# Elek-park (`harom-huszar-apartments`) már mindent megvett — ott a kirakat-lépések üresen futnak.
+# Részben vásárolt alany env-ből, kód nélkül: `ELEK_NIGHT_LEAD="Villa Suzy Zamárdi" npx tsx
+# elek/bin/run-night.mts FK-012` (2026-09-28: usp · reviews · poi · booking a kosárba → EGY fizetés,
+# 1 995 Ft, egy order_intent; a `hours` ott már aktív volt, a kihagyása helyes).
+
 ## Előkészítés
 
 - [ ] Elek belép a saját adminjába a telefonján

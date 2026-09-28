@@ -43,6 +43,12 @@ KB: admin-modules · admin-modules-pricing · admin-modules-rooms · admin-modul
 kosárból) · kontraktusok: modules-tab ④ · wallet ⑧ · modules-billing · pricing-rooms-link (utaló sor).
 A régi befagyasztott HTML-tervek (`modules-tab.html` stb.) szándékosan érintetlenek — történeti döntések.
 
+## A kosár-út igazolása valódi kirakaton (a koordinátor futtatta)
+- `ELEK_NIGHT_LEAD="Villa Suzy Zamárdi"` (részben vásárolt bérlő) + `run-night.mts FK-012` a landolt kódon
+  (origin/main=30d3a8fa): 13 lépés · 0 fail · 0 blokkolt; usp · reviews · poi · booking a kosárba → EGY fizetés
+  (`payment.paid`, 1 995 Ft, egyetlen `order_intent` mind a négy modullal). A `hours` ott már aktív volt → a kihagyás helyes.
+- A meleg Elek-parkon ugyanez üresen fut (mindent megvett) — az alany-váltás az FK-012 fejlécében.
+
 ## Nyitott
 - A kosár-gomb telefonon a „Megnézem az oldalamon” gomb jobb szélét egyes görgetési helyzetekben érintheti
   (a kirakat-gombot nem) — a jóváhagyott terv ugyanígy mutatja; ha zavar, a kártya-lábléc jobb margója megoldja.
