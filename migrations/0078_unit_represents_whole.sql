@@ -1,4 +1,4 @@
--- „AZ EGÉSZ SZÁLLÁS" MINT TARTÓS JELÖLÉS — nem egy szoba, hanem maga a hely (ADR-XXXX;
+-- „AZ EGÉSZ SZÁLLÁS" MINT TARTÓS JELÖLÉS — nem egy szoba, hanem maga a hely (ADR-0256;
 -- jóváhagyott terv: assets/design-refs/tenant-admin/whole-property-second-question/,
 -- tulaj 2026-09-28, „B").
 --
@@ -21,4 +21,4 @@ ALTER TABLE site_unit ADD COLUMN IF NOT EXISTS represents_whole boolean NOT NULL
 UPDATE site_unit SET represents_whole = true WHERE is_whole_property AND NOT represents_whole;
 
 COMMENT ON COLUMN site_unit.represents_whole IS
-  'Ez az egyseg maga az egesz szallas, nem egy szoba (ADR-XXXX). Ha nem kiado egyben (is_whole_property=false), a vendeg nem latja.';
+  'Ez az egyseg maga az egesz szallas, nem egy szoba (ADR-0256). Ha nem kiado egyben (is_whole_property=false), a vendeg nem latja.';

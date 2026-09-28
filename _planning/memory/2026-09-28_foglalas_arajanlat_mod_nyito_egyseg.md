@@ -1,7 +1,7 @@
 # 2026-09-28 — A vendég nem tudott foglalni: a widget az ár nélküli „egész szállásra” nyitott (+ a nem kiadó egész rejtve)
 
 Brief: `~/rc-briefs/foglalas-arajanlat-mod.md` (az éjszakai kör FK-014 lelete). Koordinátor: `citded06a5f`.
-Döntés: ADR-XXXX (a land osztja ki). Nem élesítve — a nagy deployjal megy.
+Döntés: ADR-0256 (a land osztja ki). Nem élesítve — a nagy deployjal megy.
 
 ## A mechanizmus (mérve, 390 px valódi touch + 1440, dev bérlő `harom-huszar-apartments`)
 

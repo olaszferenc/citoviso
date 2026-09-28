@@ -1487,7 +1487,7 @@ function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
  * add form (required radios), because that is where the decision is made. With any
  * other count the form has no such block and the flag stays as it is.
  *
- * ADR-XXXX (approved plan whole-property-second-question, owner 2026-09-28 „B"): on
+ * ADR-0256 (approved plan whole-property-second-question, owner 2026-09-28 „B"): on
  * "Nem" a second question opens — what the unit so far WAS: the owner's first room (he
  * names it) or nothing he lets (hidden from the guest, not deleted). It opens with CSS
  * (`:has`), so it works without JS; the server applies the same rule on save
@@ -1899,7 +1899,7 @@ export interface NewUnitView {
     readonly unitId: string;
     readonly unitName: string;
   } | null;
-  /** ADR-XXXX: accepted bookings still running on the ONLY unit so far — the second
+  /** ADR-0256: accepted bookings still running on the ONLY unit so far — the second
    *  question says they stay in force if the owner hides it. 0/absent → no sentence. */
   readonly formerWholeBookings?: number;
 }

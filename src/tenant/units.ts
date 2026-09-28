@@ -30,13 +30,13 @@ export interface Unit {
   /** ADR-0208 ⑥.2 (0075): "nem adok meg árat" — where no price row covers a night,
    *  the owner quotes individually. A decision, so it is not reported as missing. */
   readonly priceOnRequest: boolean;
-  /** ADR-XXXX (0078) — this unit IS the place itself, not a room. Durable: switching
+  /** ADR-0256 (0078) — this unit IS the place itself, not a room. Durable: switching
    *  off "egyben is kiadom" clears `isWholeProperty`, never this. */
   readonly representsWhole: boolean;
 }
 
 /**
- * ADR-XXXX — THE one rule for "does the guest see this unit?" (owner, 2026-09-28: „Tűnjön
+ * ADR-0256 — THE one rule for "does the guest see this unit?" (owner, 2026-09-28: „Tűnjön
  * el ha nem kiadó az egész egyben."). A unit that stands for the whole place, while the
  * place is not let as one, is not something a guest can book: no room card, no option in
  * the booking picker, no price row, no subpage. Everything guest-facing filters through
@@ -177,7 +177,7 @@ export async function ensureUnits(siteId: string): Promise<Unit[]> {
       name: DEFAULT_UNIT_NAME,
       sort_order: 0,
       is_whole_property: true,
-      // ADR-XXXX: the default unit IS the place — until the owner says it is his first room.
+      // ADR-0256: the default unit IS the place — until the owner says it is his first room.
       represents_whole: true,
     })
     .returning("id")
@@ -227,7 +227,7 @@ export async function setWholeProperty(siteId: string, unitId: string | null): P
 }
 
 /**
- * ADR-XXXX — accepted bookings on this unit that have not ended yet. The owner may hide
+ * ADR-0256 — accepted bookings on this unit that have not ended yet. The owner may hide
  * the whole-place unit while some are still running (owner, 2026-09-28: „ok B"): a booking
  * is an agreement with a guest and an admin switch does not undo it — the screen says how
  * many stay in force, with the REAL count, and says nothing when there are none.
@@ -245,7 +245,7 @@ export async function futureAcceptedBookings(unitId: string): Promise<number> {
 }
 
 /**
- * ADR-XXXX (approved plan whole-property-second-question) — the owner's answer when the
+ * ADR-0256 (approved plan whole-property-second-question) — the owner's answer when the
  * SECOND unit is added and the place is NOT let as one: what the unit so far was.
  *   "szoba" → it is his first room: it stops standing for the place and takes the name he
  *             gave. The slug is re-issued from the new name — safe exactly now, because a

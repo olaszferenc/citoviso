@@ -848,7 +848,7 @@ async function serveTenantHost(
     if (!(await unitBelongsToSite(siteId, unitId))) {
       return sendJson(res, 400, { errors: [T(lang, "Ismeretlen egység.")] });
     }
-    // ADR-XXXX: a hidden unit (the whole place, not let as one) takes no NEW request — the
+    // ADR-0256: a hidden unit (the whole place, not let as one) takes no NEW request — the
     // page does not offer it, and a hand-made POST must not either. Running bookings on it
     // are untouched (owner, 2026-09-28: „ok B").
     if (!guestUnits(await getUnits(siteId)).some((u) => u.id === unitId)) {
@@ -1411,7 +1411,7 @@ async function serveAdmin(
           flash: flashUnit
             ? { state: state as NonNullable<NewUnitView["flash"]>["state"], unitId: flashUnit.id, unitName: flashUnit.name }
             : null,
-          // ADR-XXXX: the second question names the running bookings of the only unit so far.
+          // ADR-0256: the second question names the running bookings of the only unit so far.
           formerWholeBookings: await (async () => {
             const only = await getUnits(site.id);
             return only.length === 1 ? futureAcceptedBookings(only[0]!.id) : 0;
@@ -2663,7 +2663,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       } else if (!id) {
         const before = await getUnits(siteId);
         const whole = form.get("whole");
-        // ADR-XXXX (approved plan whole-property-second-question): on "Nem" the owner also
+        // ADR-0256 (approved plan whole-property-second-question): on "Nem" the owner also
         // says what the unit so far WAS — his first room (with a name) or nothing he lets
         // (hidden from the guest). The browser checks this before sending; this is the
         // same rule for a form sent without JS, and it refuses BEFORE anything is written,

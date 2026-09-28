@@ -4,7 +4,7 @@
 egész egyben.”* A három felismerési útból (a) név-függő · (b) kérdés a 2. szoba felvételekor · (c) kapcsoló
 a Szobák kártyán) a **(b)**-t választotta („B”), a terv képein „ok”. A futó foglalások kérdésére szintén
 „B”: a rejtés ENGEDETT, és kimondjuk, hogy a foglalások érvényben maradnak.
-Kapcsolódó: ADR-XXXX, ADR-0232 (az „egész szállás” választható egység — ezt egészíti ki), migráció `0078`.
+Kapcsolódó: ADR-0256, ADR-0232 (az „egész szállás” választható egység — ezt egészíti ki), migráció `0078`.
 
 - Terv: `plan.html` (önhordó, kattintható, a valódi admin-markupra épül; „Mobil 390 / Asztali” váltó;
   a „Hozzáadás” kiírja, mit mentene a rendszer)

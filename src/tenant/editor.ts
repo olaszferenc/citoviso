@@ -338,7 +338,7 @@ export async function moduleContentFor(
   // default unit and back-fills slugs — measured 2026-09-23, merely LOOKING at the
   // Szobák/Árak/Foglalás preview created a unit in the owner's account (ADR-0192 ⑧.5).
   const loadUnits = overrideActive ? peekUnits : ensureUnits;
-  // ADR-XXXX (owner: „Tűnjön el ha nem kiadó az egész egyben."): a unit that stands for the
+  // ADR-0256 (owner: „Tűnjön el ha nem kiadó az egész egyben."): a unit that stands for the
   // whole place while the place is not let as one is not offered — no room card, no price
   // row, no booking option, no review option, no subpage. ONE filter, here, because every
   // guest-facing list below (and the subpage writer, via `units`) reads this array.

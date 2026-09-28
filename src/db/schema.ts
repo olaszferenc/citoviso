@@ -954,7 +954,7 @@ export interface SiteUnitTable {
    *  the owner quotes each guest individually. A DECISION, not a gap: no to-do row,
    *  no reminder, and the page lists the unit as "Egyedi ajánlat alapján". */
   price_on_request: Generated<boolean>;
-  /** 0078 (ADR-XXXX): this unit IS the place itself, not a room — durable, unlike
+  /** 0078 (ADR-0256): this unit IS the place itself, not a room — durable, unlike
    *  `is_whole_property`, which says whether it is LET as one. Represents-whole and
    *  not let as one → hidden from the guest (units.ts `isGuestVisibleUnit`). */
   represents_whole: Generated<boolean>;

@@ -639,7 +639,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .rs-wq__o input{margin:3px 0 0;accent-color:var(--citui-cyan-500);flex:none;width:16px;height:16px}
 .rs-wq__o b{display:block;font-size:.86rem;color:var(--citui-ink)}
 .rs-wq__o small{display:block;color:var(--citui-muted);font-size:.76rem;line-height:1.45;margin-top:3px}
-/* ADR-XXXX (whole-property-second-question): the second question opens on "Nem" — CSS,
+/* ADR-0256 (whole-property-second-question): the second question opens on "Nem" — CSS,
    so it works without JS; the name field only under "Ez az első szobám". */
 .rs-wq2{display:none;margin:2px 0 0 26px;gap:8px;padding:10px 0 0;border-top:1px dashed var(--citui-line-strong)}
 .rs-wq:has(input[name=whole][value=nem]:checked) .rs-wq2{display:grid}

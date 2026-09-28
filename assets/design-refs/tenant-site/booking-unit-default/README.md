@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-09-28, tulajdonosi döntés („1 az irány”, majd a terv képein „ok”). Két változatot
 látott egy lapon: **MA** (mért állapot) és **1** (javasolt). A **1**-et hagyta jóvá.
-Kapcsolódó: ADR-XXXX, `booking-mobile-two-step/` (a két lépés, ezt egészíti ki), `quote-request/` (árajánlat-mód, változatlan).
+Kapcsolódó: ADR-0256, `booking-mobile-two-step/` (a két lépés, ezt egészíti ki), `quote-request/` (árajánlat-mód, változatlan).
 
 - Terv: `plan.html` (önhordó, kattintható; a MOTOR valódi runtime-ja és CSS-e fut benne, a Három Huszár
   valódi egységeivel és `/api/foglaltsag` válaszaival; „MA / 1 — javasolt” és „Mobil 390 / Asztali” váltó)

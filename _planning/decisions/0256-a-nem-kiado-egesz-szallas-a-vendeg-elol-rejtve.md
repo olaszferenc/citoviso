@@ -1,4 +1,4 @@
-## ADR-XXXX — A nem kiadó „egész szállás” a vendég elől rejtve (tartós jelölés), és a foglalási widget az első ÁRAS egységre nyit
+## ADR-0256 — A nem kiadó „egész szállás” a vendég elől rejtve (tartós jelölés), és a foglalási widget az első ÁRAS egységre nyit
 
 **Dátum:** 2026-09-28 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) ·
 **Kiegészíti:** ADR-0232 (az „egész szállás” választható egység), ADR-0235 / `booking-mobile-two-step` (két lépés telefonon) ·

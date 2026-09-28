@@ -1,5 +1,5 @@
 // ⛔⛔ A FOGLALÁSI WIDGET NYITÓ-EGYSÉGÉNEK ŐRE — kontraktus: assets/design-refs/tenant-site/booking-unit-default/
-// (tulajdonosi jóváhagyás 2026-09-28, „1 — javasolt”; ADR-XXXX).
+// (tulajdonosi jóváhagyás 2026-09-28, „1 — javasolt”; ADR-0256).
 //
 // A MÉRT LELET, amiért létezik (dev bérlő harom-huszar-apartments, 390 px, valódi touch): a widget
 // a lista ELSŐ egységére nyitott — egy ár nélküli „egész szállás” egységre —, ezért minden vendég

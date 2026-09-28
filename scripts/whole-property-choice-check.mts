@@ -14,7 +14,7 @@
 //      egész nélkül NINCS ilyen sor (a vendég-lapon SOHA — mérve a snapshoton);
 //   ⑥ `ensureUnits` nem jelöl vissza: két jelöletlen egység jelöletlen marad;
 //   ⑦ negatív kontroll: `peekUnits` sem talál ki egészet.
-//   ⑧ ADR-XXXX (terv: design-refs/tenant-admin/whole-property-second-question/, „B”): a „Nem”
+//   ⑧ ADR-0256 (terv: design-refs/tenant-admin/whole-property-second-question/, „B”): a „Nem”
 //      után a MÁSODIK kérdés — hiányos válasznál a szerver SEMMIT nem ír (három kimondott
 //      üzenet); a futó foglalás VALÓDI számmal áll a lapon (0-nál nincs mondat); „rejtse el” →
 //      az egység megmarad, a foglalása él, de a vendég nem látja (választó, szoba-kártya),
@@ -113,7 +113,7 @@ try {
   check("a kérdés két KÖTELEZŐ rádió (igen/nem)", /name="whole" value="igen" required/.test(html) && /name="whole" value="nem" required/.test(html));
   check("a kérdés megnevezi az eddigi egységet", html.includes(`Eddig egy szobája volt: <b>${first.name}</b>`));
 
-  // ── ①b the second question in a REAL browser (phone, touch) — ADR-XXXX ──
+  // ── ①b the second question in a REAL browser (phone, touch) — ADR-0256 ──
   // The server refuses a half answer (⑧), but the owner should hear it BEFORE sending, in
   // words, and the name field must be a field (the radio rule once sized it 16×16 px).
   console.log("\n①b a második kérdés böngészőben (390 px, touch)");
@@ -161,7 +161,7 @@ try {
 
   // ── ② the second unit ─────────────────────────────────────────────────
   console.log("\n② a második egység felvétele");
-  // ADR-XXXX: „nem” now carries the second answer — here „ez az első szobám”, keeping its
+  // ADR-0256: „nem” now carries the second answer — here „ez az első szobám”, keeping its
   // name, which is exactly what „nem” meant before (the first unit becomes a plain room).
   await post("/admin/units/save", { name: "Apartman 2", capacity: "2", back: "rooms", whole: "nem", first: "szoba", first_name: first.name });
   let units = await getUnits(site.id);
@@ -244,7 +244,7 @@ try {
   check("peekUnits sem jelöl", peek.every((u) => !u.isWholeProperty));
   check("a DB-ben sincs jelölt", (await wholeOf()) === null);
 
-  // ── ⑧ the second question (ADR-XXXX) ──────────────────────────────────
+  // ── ⑧ the second question (ADR-0256) ──────────────────────────────────
   console.log("\n⑧ a második kérdés: mi volt az eddigi egység?");
   const fresh = async () => {
     await db.deleteFrom("booking_request").where("site_id", "=", site.id).execute();
