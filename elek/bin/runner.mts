@@ -161,7 +161,15 @@ function gotoUrl(ut: string): string {
 }
 
 function isSelector(s: string): boolean {
-  return /^[#.[]/.test(s);
+  // ⛔ A SZŰK FELISMERŐ NÉMÁN SZÖVEGGÉ TESZ EGY SZELEKTORT (mérve 2026-09-27, FK-011):
+  // a `form[action$='/paid'] button` nem `#`/`.`/`[` kezdetű, ezért a runner LÁTHATÓ
+  // SZÖVEGKÉNT kereste — a próba-fizetés gombja sosem kapott kattintást, és a bukás
+  // egy lépéssel később, „nem jelent meg időben" alakban jelent meg. Ezért az
+  // elem-típussal kezdődő CSS-szelektorok (`form[…]`, `button.x`, `div#y`, `a > b`) is
+  // szelektorok. Magyar felirat nem kezdődik kisbetűs szóval + `[`/`.`/`#`/`>` jellel.
+  // A `:` is szelektor-jel (`form:has(…)`, `button:not(…)`) — enélkül a `form:has(...)`
+  // megint némán szöveggé vált (mérve kétszer, ugyanazon az éjszakán).
+  return /^[#.[]/.test(s) || /^[a-z][a-z0-9]*\s*(\[|\.[a-z_-]|#[a-z_-]|:[a-z]|>)/i.test(s);
 }
 
 /**
@@ -203,7 +211,7 @@ async function doAction(page: Page, action: string): Promise<void> {
     await page.reload({ timeout: STEP_TIMEOUT * 2 });
     return;
   }
-  const m = action.match(/^(kattints|írd|válaszd|várj|görgess)\s+(.*)$/);
+  const m = action.match(/^(kattints|írd|válaszd|várj|várj-kattinthatóra|görgess-középre|görgess|töltsd-fel)\s+(.*)$/);
   if (!m) throw new Error(`értelmezhetetlen akció: ${action}`);
   const [, verb, rest] = m;
   const q = quoted(rest);
@@ -293,6 +301,36 @@ async function doAction(page: Page, action: string): Promise<void> {
     }
     return;
   }
+  // `várj-kattinthatóra "<szelektor>" [mp]` — a `várj` a SZÖVEG megjelenésére vár, és egy
+  // `opacity: 0; pointer-events: none` réteg szövege MÁR LÁTHATÓ a Playwright szerint
+  // (mérve 2026-09-27: az ADR-0088 kedvezmény-kártya 1,4 mp késéssel úszik be 0,4 mp
+  // alatt; a `várj` azonnal teljesült, a rákövetkező kattintás a még nem interaktív
+  // rétegre ment, és — `tedd?:` lévén — NÉMÁN elnyelődött, majd a kártya a rendelő
+  // pirulán maradt). Ez a várakozás azt kérdezi, amit a lépés valójában akar: KATTINTHATÓ-e.
+  if (verb === "várj-kattinthatóra") {
+    const target = q[0] ?? rest.trim();
+    const secs = Number(rest.match(/"\s+(\d+)\s*$/)?.[1] ?? 0);
+    const deadline = Date.now() + (secs > 0 ? secs * 1000 : STEP_TIMEOUT);
+    const loc = page.locator(target).first();
+    for (;;) {
+      const ok = await loc.click({ trial: true, timeout: 1000 }).then(() => true).catch(() => false);
+      if (ok) return;
+      if (Date.now() > deadline) throw new Error(`várj-kattinthatóra: nem lett kattintható időben: "${target}"`);
+      await page.waitForTimeout(300);
+    }
+  }
+  // `görgess-középre "<szelektor>"` — a `görgess` (scrollIntoViewIfNeeded) csak akkor
+  // mozdít, ha az elem NEM látszik; egy tapadó sáv ALATT ülő gomb viszont "látszik",
+  // csak nem lehet rátenni az ujjat (mérve 2026-09-27, FK-012: az összegző sáv
+  // `Alkalmazom` gombja takarta a következő modul „Hozzáadom"-ját 390 px-en). Egy ember
+  // ilyenkor a képernyő KÖZEPÉRE húzza, amire nyomni akar — ezt teszi ez az ige.
+  if (verb === "görgess-középre") {
+    const target = q[0] ?? rest.trim();
+    const loc = isSelector(target) ? page.locator(target).first() : page.getByText(target).first();
+    await loc.evaluate((el) => el.scrollIntoView({ block: "center", inline: "nearest" }));
+    await page.waitForTimeout(400);
+    return;
+  }
   if (verb === "görgess") {
     // The human READS to a point before acting (the outreach send opens only once the
     // letter's end — unsubscribe + legal basis — has been on screen, ADR-0160). A click
@@ -305,9 +343,27 @@ async function doAction(page: Page, action: string): Promise<void> {
     await page.waitForTimeout(400);
     return;
   }
+  // `töltsd-fel "<szelektor>" "<fájl>[,<fájl>…]"` — the owner's own photos. The file
+  // input is deliberately `hidden` behind a <label> (a label click would open the OS
+  // dialog, which no runner can answer), so the files go on the input itself — the same
+  // thing the browser does when the human picks them. Paths are absolute, or relative
+  // to the repo root.
+  if (verb === "töltsd-fel") {
+    if (q.length < 2) throw new Error(`töltsd-fel: két idézett arg kell: ${action}`);
+    const files = q[1]
+      .split(",")
+      .map((f) => f.trim())
+      .filter(Boolean)
+      .map((f) => (path.isAbsolute(f) ? f : path.join(ROOT, f)));
+    for (const f of files) if (!existsSync(f)) throw new Error(`töltsd-fel: nincs ilyen fájl: ${f}`);
+    await page.locator(q[0]).first().setInputFiles(files, { timeout: STEP_TIMEOUT * 3 });
+    return;
+  }
   if (verb === "írd") {
     if (q.length < 2) throw new Error(`írd: két idézett arg kell: ${action}`);
-    await page.locator(q[0]).first().fill(q[1], { timeout: STEP_TIMEOUT });
+    // Egy `tedd:` sor EGY sor: a többsoros mezőket (soronként egy erősség, soronként egy
+    // felszereltség) `\n` escape-pel írja a forgatókönyv, és itt lesz valódi sortörés.
+    await page.locator(q[0]).first().fill(q[1].replace(/\\n/g, "\n"), { timeout: STEP_TIMEOUT });
     return;
   }
   if (verb === "válaszd") {
@@ -555,6 +611,11 @@ interface StepResult {
   tolerated_errors?: { error: string; reason: string }[];
   /** Declared `tűrt-hiba:` patterns that matched nothing here (stale licence). */
   tolerated_unused?: string[];
+  /** `tedd?:` actions that did NOT land. A best-effort action is allowed to be absent —
+   *  but a SILENT absence is indistinguishable from a working one, and its consequence
+   *  surfaces one step later as something else (measured 2026-09-27: the dismissed
+   *  discount card stayed open, and the next step reported the order pill as "covered"). */
+  skipped_optional?: string[];
 }
 
 const base = await bootServer();
@@ -662,8 +723,12 @@ for (const sec of fk.sections) {
         if (action.startsWith("?")) {
           try {
             await doAction(page, subst(action.slice(1)));
-          } catch {
-            // absent overlay — carry on
+          } catch (e) {
+            // Absent overlay — carry on, but SAY SO: a silently swallowed best-effort
+            // action is a hidden premise for every step after it.
+            (res.skipped_optional ??= []).push(
+              `${action.slice(1)} — ${String((e as Error).message).split("\n")[0].slice(0, 160)}`,
+            );
           }
           continue;
         }

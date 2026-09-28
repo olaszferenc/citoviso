@@ -140,12 +140,22 @@ console.log("\n② ELAVULÁS — a tábla a futó és a forgatókönyvek MÉRT h
 // A futó SAJÁT forrásából: melyik köröket indítja. Csak azokat a sorokat nézzük, amik
 // TÉNYLEGESEN indítanak/kapuznak — a fejléc-kommentek is említenek FK-neveket, és egy
 // nyers fájl-grep a saját magyarázatunkat mérné (ugyanaz a csapda, mint a KB-őrnél).
+// ⛔ KÉT FUTÓ VAN (2026-09-28): a park-lánc `run-all.mts`-e mellett az éjszakai kör
+// `run-night.mts`-e is indít köröket — a saját, hideg alanyán. Amíg ez a mérés csak az
+// elsőt olvasta, a hat új kör (FK-011…FK-016) a táblában „olyan kör, amit a futó nem
+// indít" hamis pirosat adott. A felismerő a futók LISTÁJÁRA szól, nem egy fájlra.
+const RUNNERS = ["elek/bin/run-all.mts", "elek/bin/run-night.mts"];
+// A park-futó forrása külön is kell: a prospect-feloldás szabályai (lent, ③) CSAK rá
+// szólnak — az éjszakai futó nem az ELEK-parkon dolgozik, saját hideg alanya van.
 const runnerSrc = readFileSync(path.join(ROOT, "elek/bin/run-all.mts"), "utf8");
 const dispatched = new Set<string>();
-for (const line of runnerSrc.split("\n")) {
-  if (line.trimStart().startsWith("//")) continue;
-  if (!/\brunFk\(|\bwanted\(/.test(line)) continue;
-  for (const m of line.matchAll(/"(FK-[0-9a-z]+)"/g)) dispatched.add(m[1]!);
+for (const runner of RUNNERS) {
+  for (const line of readFileSync(path.join(ROOT, runner), "utf8").split("\n")) {
+    if (line.trimStart().startsWith("//")) continue;
+    // `runFk(…)`/`wanted(…)` a park-futóban, `runRound(…)` és a `CHAIN` lista az éjszakaiban.
+    if (!/\brunFk\(|\bwanted\(|\brunRound\(|\bCHAIN\s*=/.test(line)) continue;
+    for (const m of line.matchAll(/"(FK-[0-9a-z]+)"/g)) dispatched.add(m[1]!);
+  }
 }
 const chainFks = new Set(CHAIN.map((r) => r.fk));
 check("a futó tényleg indít köröket (nem üres a mérés)", dispatched.size >= 10, dispatched.size);

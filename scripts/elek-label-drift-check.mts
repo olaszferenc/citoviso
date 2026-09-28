@@ -152,6 +152,21 @@ interface Assertion {
   readonly typed: string;
 }
 
+// ⛔ A LÁNC EGYIK KÖRE VISZI BE, A MÁSIK ELLENŐRZI (2026-09-28). Az éjszakai kör
+// (FK-011…FK-016) EGY bérlőt visz végig: az FK-013 gépeli be a „Nádas apartman"-t és a
+// települést, az FK-014 a vendég nevét — és az FK-014/FK-015/FK-016 ezekre MÉR. A
+// fájlon belüli `typed` erre vakon hamis riasztást adott (8 élő állításra), pedig az
+// adat forrása ugyanúgy a forgatókönyv-halmaz bemenete, csak egy körrel korábbról.
+// Ezért a begépelt értékek halmaza a TELJES forgatókönyv-készleté; UI-feliratot ez nem
+// old fel, mert a `tedd: írd` értéke sosem a termék szövege.
+let typedAll = "";
+for (const f of readdirSync(path.join(ROOT, "elek/scenarios"))) {
+  if (!f.endsWith(".md")) continue;
+  const src = readFileSync(path.join(ROOT, "elek/scenarios", f), "utf8");
+  typedAll += " " + [...src.matchAll(/tedd\??: (?:írd|válaszd) "[^"]*" "([^"]+)"/g)].map((m) => m[1]!).join(" ");
+}
+typedAll = digits(typedAll);
+
 const assertions: Assertion[] = [];
 for (const f of readdirSync(path.join(ROOT, "elek/scenarios"))) {
   if (!f.endsWith(".md")) continue;
@@ -177,6 +192,7 @@ const explains = (a: Assertion, s: string): boolean => {
     uiDigits.includes(digits(s)) ||
     templateResolves(s) ||
     a.typed.includes(digits(s)) ||
+    typedAll.includes(digits(s)) ||
     seedBlob.includes(digits(s))
   );
 };

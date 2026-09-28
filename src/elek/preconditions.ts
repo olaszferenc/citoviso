@@ -95,6 +95,19 @@ export const CHAIN: readonly ChainRound[] = [
   // A VENDÉG telefonon, a generált mockokon (FK-010): nem az ELEK-parkon mér, hanem a dev
   // leadek kész mock-fájljain (19 stílus × lead) — a park tényeitől független, önálló kör.
   { fk: "FK-010", needs: [] },
+  // ── Az ÉJSZAKAI KÖR (2026-09-28): egy bérlő teljes íve TELEFONON, SAJÁT alanyon ──
+  // Ezek NEM az ELEK-parkon mérnek: a vezénylőjük (`elek/bin/run-night.mts`) egy külön,
+  // hideg leadet visz végig (alapértelmezés: „Három Huszár Apartments”), és a lánc
+  // tényeit KÖRÖNKÉNT a DB-ből méri (bérlő · slug · belépés · lemondó-token ·
+  // ajánlat-token), nem az ELEK-park `trackedLink`/`elekTenant` tényeiből. Ezért a
+  // park-tábla felé `needs: []` — az ő előfeltételeiket a saját vezénylőjük ellenőrzi,
+  // és hiányzó bemenetnél KIMONDOTT kihagyást naplóz (nem néma átlépés).
+  { fk: "FK-011", needs: [] },
+  { fk: "FK-012", needs: [] },
+  { fk: "FK-013", needs: [] },
+  { fk: "FK-014", needs: [] },
+  { fk: "FK-015", needs: [] },
+  { fk: "FK-016", needs: [] },
 ];
 
 /** Amit a parkról MÉRTÜNK (nem amit feltételezünk róla). */
