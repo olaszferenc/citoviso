@@ -173,7 +173,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     [
       bookedCount ? T(lang, "{n} éj vendég-foglalás", { n: bookedCount }) : "",
       manualCount ? T(lang, "{n} nap kézi blokk", { n: manualCount }) : "",
-      linkedCount ? T(lang, "{n} nap másik egység foglalása", { n: linkedCount }) : "",
+      linkedCount ? T(lang, "{n} nap másik szoba foglalása", { n: linkedCount }) : "",
       m.importedCount ? T(lang, "{n} nap portál-naptárból", { n: m.importedCount }) : "",
     ]
       .filter(Boolean)

@@ -1,6 +1,6 @@
 ---
 id: admin-modules-booking
-title: Foglalás-beállítások — naptár, egységek, értesítési címek
+title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
@@ -8,7 +8,7 @@ updated: 2026-09-25
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
-el. Itt a naptárát, a kiadott egységeit és az értesítési címeit kezeli.
+el. Itt a naptárát, a kiadott szobáit és az értesítési címeit kezeli.
 
 ![Képernyőkép: a foglalás-képernyő telefonon, várakozó kéréssel](assets/hu/screen.png)
 
@@ -66,7 +66,7 @@ kinyílik.
 ## A nap-fajták — és melyik mit csinál koppintásra
 
 Az első három állapot mindig szerepel a jelmagyarázatban, akkor is, ha abban a hónapban
-egyetlen ilyen nap sincs. A **„Másik egység foglalása”** sor viszont csak akkor jelenik meg,
+egyetlen ilyen nap sincs. A **„Másik szoba foglalása”** sor viszont csak akkor jelenik meg,
 ha tényleg van ilyen nap — ezért gyakran csak az első hármat látja:
 
 | Jelmagyarázat | Mit jelent | Mi történik, ha rákoppint |
@@ -74,7 +74,7 @@ ha tényleg van ilyen nap — ezért gyakran csak az első hármat látja:
 | **„Szabad”** | Foglalható éjszaka | Tele lesz (sötétkék). Mentés után a vendég nem tudja lefoglalni. |
 | **„Ön jelölte: nem kiadó”** | Az Ön saját blokkja (közepes kék) | **Újra szabaddá válik** — így vonja vissza, ha mégis ki tudja adni. |
 | **„Vendég foglalása”** | Egy elfogadott foglalás (legsötétebb, apró világoskék ponttal) | **Felugrik a foglalás részlete** — lásd a következő szakaszt. Felszabadítani itt nem lehet. |
-| **„Másik egység foglalása”** | Csíkos: a szállás egy másik egysége tartja. **Csak akkor jelenik meg, ha van ilyen nap.** | Felugrik, hogy **melyik egység** és **ki** tartja. Itt nem oldható fel. |
+| **„Másik szoba foglalása”** | Csíkos: a szállás egy másik szobája tartja. **Csak akkor jelenik meg, ha van ilyen nap.** | Felugrik, hogy **melyik szoba** és **ki** tartja. Itt nem oldható fel. |
 
 ## Mi van egy foglalt nap mögött?
 
@@ -84,40 +84,41 @@ A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
   árlista), valamint az **e-mail címe és a telefonszáma — mindkettő kattintható**, tehát azonnal
   hívhatja vagy írhat neki. Ha a vendég üzenetet hagyott, az is itt olvasható. Gombok:
   **„Foglalás megnyitása”** (a Foglalások fülre visz) és **„Írok a vendégnek”**.
-- **Csíkos napnál** az, hogy **melyik egység** tartja. Ha ott vendég-foglalás van, a vendég neve és
+- **Csíkos napnál** az, hogy **melyik szoba** tartja. Ha ott vendég-foglalás van, a vendég neve és
   az időszaka is látszik, és a **„Foglalás megnyitása”** gombbal megnyithatja; ha viszont csak
-  kézzel jelölte nem kiadónak azt az egységet, a kártya ezt írja: „Ezt a napot a … naptárában
+  kézzel jelölte nem kiadónak azt a szobát, a kártya ezt írja: „Ezt a napot a … naptárában
   jelölte nem kiadónak”. Mindkét esetben ott az **„Átváltok a naptárára”** gomb.
 
 A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.
 
-## Egységek (szobák, apartmanok)
+## Szobák, apartmanok
 
 A **„Mit ad ki?”** részben veszi fel, amit kiad: ha több szobája vagy apartmanja van, mindegyiknek
-saját naptára lesz, így külön telhetnek be. Új egységet a név és a férőhely megadásával, a
-**„Hozzáadás”** gombbal vehet fel; a meglévőt átnevezheti, a **„Törlés”** gombbal eltávolíthatja.
+saját naptára lesz, így külön telhetnek be. Új szobát a szaggatott keretes **„Új szoba
+felvétele”** sávra koppintva, a név és a férőhely megadásával, a **„Hozzáadás”** gombbal vehet fel;
+a meglévőt (a **„Meglévő szobája”** felirat alatt) átnevezheti, a **„Törlés”** gombbal eltávolíthatja.
 Ha az Árak modul is be van kapcsolva, a **„Hozzáadás”** megnyomása ELŐTT az **„Alapár”** is
-megadható, vagy bepipálható a gomb alatti **„Nem adok meg árat — egyedi ajánlatot küldök”**.
+megadható, vagy bepipálható alatta a **„Nem adok meg árat — egyedi ajánlatot küldök”**.
 Egyik sem kötelező. Ha egyik sincs, a mentés után egy sárga sor figyelmeztet: az **„Árat adok
 meg”** gomb az Árazás lapra visz (ott írja be és mentse az árat), a **„Nem adok meg árat”** gomb
 pedig helyben rögzíti, hogy egyedi ajánlatot küld.
-Több egységnél a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
-Az egység nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
+Több szobánál a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
+A szoba nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
 
 ### Az egész szállás — és miért csíkos néha egy nap
 
-Ha a házat egyben is kiadja, az egyik egysége **az egész szállás** — a fülön ez ki is van írva
-(„az egész ház”). Melyik egység az, azt a Szobák, apartmanok modul beállító-képernyőjén, a rács
-fölötti **„Az egész szállás egyben”** kártyán dönti el; a második egység felvételekor a rendszer
-meg is kérdezi. Ez az egység azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
+Ha a házat egyben is kiadja, az egyik szobája **az egész szállás** — a fülön ez ki is van írva
+(„az egész ház”). Melyik szoba az, azt a Szobák, apartmanok modul beállító-képernyőjén, a rács
+fölötti **„Az egész szállás egyben”** kártyán dönti el; a második szoba felvételekor a rendszer
+meg is kérdezi. Ez a szoba azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
 
 - ha az **egész szállást** foglalják le egy napra, az összes szobája **automatikusan foglalt** lesz
   arra a napra;
 - ha **bármelyik szobája** foglalt, az egész szállás **nem adható ki** arra a napra.
 
-Ezek a napok a másik egység naptárában **csíkosan** jelennek meg. Ott nem lehet felszabadítani őket
+Ezek a napok a másik szoba naptárában **csíkosan** jelennek meg. Ott nem lehet felszabadítani őket
 (különben ugyanaz az éjszaka kétszer kelne el) — a napra koppintva viszont látja, ki tartja, és egy
-gombbal átválthat annak az egységnek a naptárára. Ha nincs egész szállásnak jelölt egysége, a
-szobák egymástól függetlenül telnek be, és csíkos nap sincs. Bármelyik egység törölhető a sora
+gombbal átválthat annak a szobának a naptárára. Ha nincs egész szállásnak jelölt szobája, a
+szobák egymástól függetlenül telnek be, és csíkos nap sincs. Bármelyik szoba törölhető a sora
 **„Törlés”** gombjával — az egész szállás is —, kivéve az utolsót és azt, amelyikhez elfogadott
 jövőbeli foglalás tartozik.

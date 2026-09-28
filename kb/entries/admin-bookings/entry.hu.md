@@ -95,9 +95,9 @@ Felül a **„Naptár”** sáv csukva egy sorban összegzi a hónapot; rákoppi
   a **„Rövid indoklás a vendégnek küldött levélbe (nem kötelező)”** mező. A **„Lemondom a
   foglalást”** gombbal a napok felszabadulnak, és a vendég lemondó e-mailt kap az indoklással; a
   **„Mégsem — megtartom”** gombbal minden marad a régiben. A lemondás nem vonható vissza.
-- **Csíkos nap:** azt a napot a szállás egy **másik egysége** tartja (például az egész
+- **Csíkos nap:** azt a napot a szállás egy **másik szobája** tartja (például az egész
   szállásra érkezett foglalás a szobákat is lefoglalja). Ez a nap **nem koppintható** — sem
-  feloldani, sem megnyitni nem lehet itt. A napot az az egység szabadítja fel, amelyik tartja.
+  feloldani, sem megnyitni nem lehet itt. A napot az a szoba szabadítja fel, amelyik tartja.
 
 ## Az összegző csempék
 
@@ -127,7 +127,7 @@ fiókja e-mail címére mennek.
 
 ## Csíkos napok a naptárban
 
-A csíkos nap azt jelenti, hogy a szállás **másik egysége** tartja azt az éjszakát: vagy az egész
+A csíkos nap azt jelenti, hogy a szállás **másik szobája** tartja azt az éjszakát: vagy az egész
 szállást foglalták le, vagy — ha épp az egész szállás naptárát nézi — az egyik szobája foglalt.
 Ezek a napok itt nem koppinthatók; a Modulok → Online foglalás naptárában a napra koppintva látja,
-melyik egység és ki tartja.
+melyik szoba és ki tartja.

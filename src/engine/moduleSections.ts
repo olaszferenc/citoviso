@@ -287,11 +287,21 @@ function money(amount: number, currency?: string, lang?: string): string {
  * The table earns its place only when it adds what the cards cannot hold: seasons,
  * or a pricing note, or a priced unit the rooms list does not show.
  */
-function pricingCoveredByRooms(d: SiteData): boolean {
+export function pricingCoveredByRooms(d: Pick<SiteData, "pricing" | "rooms">): boolean {
   const p = d.pricing;
   if (!p || p.note || !p.units?.length || !d.rooms?.length) return false;
   const pricedRooms = new Set(d.rooms.filter((r) => r.price).map((r) => r.name));
   return p.units.every((u) => !u.seasons?.length && pricedRooms.has(u.name));
+}
+
+/**
+ * Does the guest page carry the separate price TABLE? The renderer's own answer —
+ * the tenant admin's Árak screen reads THIS to tell the owner where their prices show
+ * (owner ruling 2026-09-28: "infót adjunk a tenantnak a felületen"), so the sentence
+ * on that screen can never drift from what the page actually does.
+ */
+export function siteShowsPriceTable(d: Pick<SiteData, "pricing" | "rooms">): boolean {
+  return Boolean(d.pricing) && !pricingCoveredByRooms(d);
 }
 
 /**
@@ -301,7 +311,7 @@ function pricingCoveredByRooms(d: SiteData): boolean {
  */
 function pricingBlock(d: SiteData): string {
   const p = d.pricing;
-  if (!p || pricingCoveredByRooms(d)) return "";
+  if (!p || !siteShowsPriceTable(d)) return "";
   const unitLabel =
     p.unit === "per_person_night"
       ? T(d, "fő / éjszaka")

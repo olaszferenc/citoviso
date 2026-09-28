@@ -58,6 +58,7 @@ import {
   renderTenantModulePreview,
   moduleContentFor,
 } from "../tenant/editor.js";
+import { priceSiteView } from "../tenant/priceSiteView.js";
 import { CONTACT_ERRORS, type ContactErrorKey } from "../tenant/contact.js";
 import { normalizeUpload } from "../tenant/photoUpload.js";
 import { getAssetStore } from "../tenant/assetStore.js";
@@ -1301,6 +1302,7 @@ async function serveAdmin(
             // uses (`active` = m.active in the tenant's module list), so the button
             // never points at a screen that would not open.
             roomsActive: modules.modules.some((m) => m.id === "rooms" && m.active),
+            siteView: await priceSiteView(session.tenantId),
           };
         }
       }

@@ -85,10 +85,10 @@ kép van kijelölve; a **„Mégse”** kilép a jelölésből). A törlés vég
 
 A bemutató képeken nincs törlés-gomb: azok maguktól eltűnnek, amint saját fotókat használ.
 
-## Melyik egységhez tartozik a kép?
+## Melyik szobához tartozik a kép?
 
-Ha több kiadható egysége van (több szoba vagy apartman), a lista-nézet minden sorában és a
-nagyításban megjelenik a **„Melyik egységhez?”** kérdés a szobái nevével. Pipálja ki, hova tartozik
-a kép, és koppintson a **„Mentés”** gombra. Egy kép több egységhez is tartozhat; amit nem jelöl meg
+Ha több kiadható szobája, apartmanja van, a lista-nézet minden sorában és a
+nagyításban megjelenik a **„Melyik szobához?”** kérdés a szobái nevével. Pipálja ki, hova tartozik
+a kép, és koppintson a **„Mentés”** gombra. Egy kép több szobához is tartozhat; amit nem jelöl meg
 sehova, az a ház közös galériájában marad. Így elég egyszer feltölteni minden képet — a
 szoba-aloldalak a megjelölt képeket mutatják majd.

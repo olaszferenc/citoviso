@@ -30,6 +30,7 @@ import type { MonthView } from "../tenant/availability.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { icAdmin as ic } from "../ui/icons.js";
+import type { PriceSiteView } from "../tenant/priceSiteView.js";
 import { SHRINK_JS } from "../tenant/photoUpload.js";
 import { CONTACT_CSS, placeCard, placeScript, saveBar, type ContactView } from "./contactViews.js";
 import { readFileSync } from "node:fs";
@@ -170,6 +171,20 @@ export const MODCFG_STYLE = `<style>
 /* ADR-0208 ⑥.2: the owner's STATED decision is not a warning — same shape, calm colour. */
 .mcfg-empty--said{background:var(--citui-surface-2);border-color:var(--citui-line)}
 .mcfg-empty--said svg{color:var(--citui-cyan-500)}
+/* „Hol látják a vendégek az árait?" (approved plan price-where-2) */
+.pr-where{display:grid;gap:8px;margin:0 0 14px;padding:14px 16px;border-radius:12px;border:1px solid var(--citui-line);background:var(--citui-panel)}
+.pr-where__t{display:flex;gap:8px;align-items:center;font:600 .95rem/1.25 var(--citui-font-display);color:var(--citui-ink);margin:0}
+.pr-where__t svg{width:16px;height:16px}
+.pr-where p{margin:0;font-size:.88rem;line-height:1.55;color:var(--citui-ink)}
+.pr-where ul{margin:0;padding:0 0 0 18px;font-size:.86rem;line-height:1.55;color:var(--citui-ink)}
+.pr-where__cards{display:flex;flex-wrap:wrap;gap:6px}
+.pr-where__cards span{display:inline-flex;gap:6px;align-items:baseline;padding:5px 9px;border-radius:var(--citui-radius-pill);
+  background:var(--citui-surface-2);border:1px solid var(--citui-line);font-size:.8rem}
+.pr-where__cards b{font-weight:600}
+.pr-where .pr-where__miss{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;font-size:.86rem;line-height:1.45;
+  background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-panel));color:var(--citui-warn-ink)}
+.pr-where__miss svg{flex:none;margin-top:2px}
+.pr-where__miss a{color:inherit;font-weight:600}
 .pr-decl{display:flex;align-items:flex-start;gap:10px;margin:0 0 12px;padding:11px 12px;
   border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);cursor:pointer;
   font-size:.92rem;line-height:1.45}
@@ -373,6 +388,28 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .unit-row__cap{width:90px}
 .unit-row__price{width:130px}
 .unit-row--new .pr-decl{flex-basis:100%;margin:0}
+/* ── új szoba (jóváhagyott terv room-add-B): csukott sáv → kiemelt doboz ── */
+.unit-sec{margin:16px 0 0;font:600 .78rem/1.2 var(--citui-font-display);letter-spacing:.02em;
+  text-transform:uppercase;color:var(--citui-muted)}
+.unit-more{margin-top:16px}
+.unit-more>summary{list-style:none;cursor:pointer;display:flex;gap:8px;align-items:center;justify-content:center;
+  padding:14px;border:1.5px dashed var(--citui-line-strong);border-radius:12px;font-weight:600;color:var(--citui-link-ink)}
+.unit-more>summary::-webkit-details-marker{display:none}
+.unit-more>summary svg,.unit-new>h3 svg{width:16px;height:16px}
+.unit-more:hover>summary{border-color:var(--citui-cyan-500)}
+.unit-more[open]>summary{display:none}
+.unit-new{padding:14px;border:1.5px solid var(--citui-cyan-500);border-radius:12px;background:var(--citui-accent-soft)}
+.unit-new>h3{margin:0 0 4px;font:600 1rem/1.25 var(--citui-font-display);color:var(--citui-ink);display:flex;gap:8px;align-items:center}
+.unit-new>p{margin:0 0 12px;font-size:.84rem;line-height:1.5;color:var(--citui-muted)}
+.unit-new .unit-row{border-bottom:0;padding:0}
+.unit-new__go{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.unit-new__err{flex:1 1 100%;margin:0;display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:10px;
+  background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad-ink);
+  font-size:.86rem;line-height:1.45;font-weight:600}
+.unit-new__err[hidden]{display:none}
+.unit-new__err svg{flex:none;margin-top:1px}
+.rs-wq.is-missing{border-color:var(--citui-bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-bad) 22%,transparent)}
+.rs-wq.is-missing legend{color:var(--citui-bad-ink)}
 .nu-flash{margin:0 0 16px;scroll-margin-top:16px}
 .nu-flash .mcfg-empty{margin:0}
 .nu-flash__acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -1069,7 +1106,7 @@ function dayDetailCard(c: MonthView["cells"][number], moduleId: string, unitId: 
       (b.guestPhone
         ? `<dt>${T(lang, "Telefon")}</dt><dd><a href="tel:${esc(b.guestPhone.replace(/\s+/g, ""))}">${esc(b.guestPhone)}</a></dd>`
         : "") +
-      (linked && holder ? `<dt>${T(lang, "Melyik egység")}</dt><dd>${esc(holder)}</dd>` : "") +
+      (linked && holder ? `<dt>${T(lang, "Melyik szoba")}</dt><dd>${esc(holder)}</dd>` : "") +
       `</dl>` +
       (b.message ? `<p class="daycard__note"><b>${T(lang, "A vendég üzenete:")}</b> ${esc(b.message)}</p>` : "");
     head =
@@ -1138,7 +1175,7 @@ function calendar(mv: MonthView, moduleId: string, unitId: string, lang = "hu"):
           c.detail?.booking?.guestName ??
           (c.source === "ical"
             ? (c.detail?.provider ?? T(lang, "portál"))
-            : (c.detail?.otherUnitName ?? T(lang, "másik egység")));
+            : (c.detail?.otherUnitName ?? T(lang, "másik szoba")));
         const title = T(lang, "{who} — koppintson a részletekért", { who: esc(who) });
         return (
           `<div class="cal-cell ${cls}">` +
@@ -1187,7 +1224,7 @@ function calendarLegend(mv: MonthView, lang = "hu"): string {
     `<span><i class="is-full"></i>${T(lang, "Vendég foglalása")}</span>` +
     // ADR-0114: a night another unit holds looks different, because it behaves
     // differently — it cannot be released here.
-    (linkedCount > 0 ? `<span><i class="is-linked"></i>${T(lang, "Másik egység foglalása")}</span>` : "") +
+    (linkedCount > 0 ? `<span><i class="is-linked"></i>${T(lang, "Másik szoba foglalása")}</span>` : "") +
     (mv.importedCount > 0 ? `<span><i class="is-portal"></i>${T(lang, "Portálról érkezett")}</span>` : "") +
     `</div>`
   );
@@ -1428,16 +1465,16 @@ function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
     `<div class="rs-wcard__t"><b>${ic("modules", 15)}${T(lang, "Az egész szállás egyben")}</b>` +
     `<p>` +
     (whole
-      ? T(lang, "Az egész szállás most: {name}. Ha lefoglalják, minden más egység tele lesz arra az éjszakára — és bármelyik szoba foglalása az egészet zárja.", {
+      ? T(lang, "Az egész szállás most: {name}. Ha lefoglalják, minden más szoba tele lesz arra az éjszakára — és bármelyik szoba foglalása az egészet zárja.", {
           name: `<b>${esc(whole.name)}</b>`,
         })
-      : T(lang, "Most minden egység külön naptárral, egymástól függetlenül telik be. Ha a házat egyben is kiadja, kapcsolja be, és mondja meg, melyik egység az.")) +
+      : T(lang, "Most minden szoba külön naptárral, egymástól függetlenül telik be. Ha a házat egyben is kiadja, kapcsolja be, és mondja meg, melyik az.")) +
     `</p></div>` +
     `<div class="rs-wcard__c">` +
     `<label class="rs-wtoggle"><input type="checkbox" name="on" value="1"${whole ? " checked" : ""} data-cit-whole-on>` +
     `<span>${T(lang, "Kiadom egyben is")}</span></label>` +
-    `<select class="citui-input rs-wpick" name="unit" aria-label="${T(lang, "Melyik egység az egész szállás")}" data-cit-whole-pick>` +
-    (whole ? "" : `<option value="">${T(lang, "— melyik egység —")}</option>`) +
+    `<select class="citui-input rs-wpick" name="unit" aria-label="${T(lang, "Melyik szoba az egész szállás")}" data-cit-whole-pick>` +
+    (whole ? "" : `<option value="">${T(lang, "— melyik szoba —")}</option>`) +
     opts +
     `</select>` +
     `<button class="citui-btn citui-btn--ghost citui-btn--sm" type="submit">${T(lang, "Mentés")}</button>` +
@@ -1458,7 +1495,7 @@ function wholeQuestion(units: readonly { id: string; name: string }[], lang: str
     `<span><b>${title}</b><small>${why}</small></span></label>`;
   return (
     `<fieldset class="rs-wq" data-cit-whole-q><legend>${T(lang, "Az egész szállást is kiadja egyben?")}</legend>` +
-    `<p>${T(lang, "Eddig egy egysége volt: {name}. A második felvételekor el kell dönteni, mi a viszonyuk.", { name: `<b>${esc(first.name)}</b>` })}</p>` +
+    `<p>${T(lang, "Eddig egy szobája volt: {name}. A második felvételekor el kell dönteni, mi a viszonyuk.", { name: `<b>${esc(first.name)}</b>` })}</p>` +
     opt(
       "igen",
       T(lang, "Igen, az egészet is kiadom egyben"),
@@ -1466,8 +1503,8 @@ function wholeQuestion(units: readonly { id: string; name: string }[], lang: str
     ) +
     opt(
       "nem",
-      T(lang, "Nem, csak külön egységeket adok ki"),
-      T(lang, "{name} sima egység lesz. A szobák egymástól függetlenül telnek be. Később bármikor megjelölhet egyet az egész szállásnak.", { name: esc(first.name) }),
+      T(lang, "Nem, csak külön szobákat adok ki"),
+      T(lang, "{name} sima szoba lesz. A szobák egymástól függetlenül telnek be. Később bármikor megjelölhet egyet az egész szállásnak.", { name: esc(first.name) }),
     ) +
     `</fieldset>`
   );
@@ -1557,7 +1594,7 @@ function roomBasicsPane(u: EditorUnit, lang: string): string {
   const form =
     `<div class="rs-sec"><h4>${ic("texts", 15)}${T(lang, "Alapadatok")}</h4>` +
     `<div class="rs-row2">` +
-    `<div class="citui-field" style="margin:0"><label class="citui-label" for="n_${esc(u.id)}">${T(lang, "Az egység neve")}</label>` +
+    `<div class="citui-field" style="margin:0"><label class="citui-label" for="n_${esc(u.id)}">${T(lang, "A szoba neve")}</label>` +
     `<input class="citui-input" id="n_${esc(u.id)}" name="name" value="${esc(u.name)}" data-rs-name></div>` +
     `<div class="citui-field" style="margin:0"><label class="citui-label" for="c_${esc(u.id)}">${T(lang, "Férőhely")}</label>` +
     `<input class="citui-input" id="c_${esc(u.id)}" name="capacity" type="number" min="1" max="50" ` +
@@ -1591,16 +1628,16 @@ function roomNotice(u: EditorUnit, notice: string | null | undefined, lang: stri
       return box(
         "ok",
         "check",
-        cover + " " + T(lang, "Egyben hozzá is rendeltem ehhez az egységhez."),
+        cover + " " + T(lang, "Egyben hozzá is rendeltem ehhez a szobához."),
       );
     // A levétel HÁROM külön tényállás — és a tulaj mindháromban mást kell hogy tudjon.
     case "le":
-      return box("ok", "check", T(lang, "A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is állhat."));
+      return box("ok", "check", T(lang, "A kép lekerült erről a szobáról. A közös képtárban benne marad, más szobánál is állhat."));
     case "lekov":
       return box(
         "ok",
         "check",
-        T(lang, "A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is állhat.") +
+        T(lang, "A kép lekerült erről a szobáról. A közös képtárban benne marad, más szobánál is állhat.") +
           " " +
           T(lang, "Ez volt a borítókép, ezért a sorban következő lépett a helyébe."),
       );
@@ -1608,7 +1645,7 @@ function roomNotice(u: EditorUnit, notice: string | null | undefined, lang: stri
       return box(
         "warn",
         "alert",
-        T(lang, "A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is állhat.") +
+        T(lang, "A kép lekerült erről a szobáról. A közös képtárban benne marad, más szobánál is állhat.") +
           " " +
           T(lang, "Ez volt a borítókép — most nincs borító, a honlap kártyáján nem lesz kép."),
       );
@@ -1628,7 +1665,7 @@ function roomPhotosPane(
   const picked = new Set(u.photoUrls ?? []);
   const hero = u.coverUrl
     ? `<img src="${esc(u.coverUrl)}" alt="" data-rs-hero>`
-    : `<span class="rs-cover__none">${T(lang, "Ennek az egységnek még nincs borítóképe — a honlap kártyáján nem lesz kép.")}</span>`;
+    : `<span class="rs-cover__none">${T(lang, "Ennek a szobának még nincs borítóképe — a honlap kártyáján nem lesz kép.")}</span>`;
   const clashNames = u.coverUrl
     ? units.filter((o) => o.id !== u.id && o.coverUrl === u.coverUrl).map((o) => o.name)
     : [];
@@ -1647,7 +1684,7 @@ function roomPhotosPane(
     `<label class="citui-btn citui-btn--primary citui-btn--sm rs-upbtn">${ic("plus", 15)}` +
     `${T(lang, "Kép feltöltése")}` +
     `<input type="file" multiple accept="image/jpeg,image/png,image/webp" data-rs-upload="${esc(u.id)}"></label>` +
-    `<span class="rs-why" style="align-self:center">${T(lang, "A feltöltött kép a közös képtárba kerül, és ehhez az egységhez rendelem.")}</span></div>`;
+    `<span class="rs-why" style="align-self:center">${T(lang, "A feltöltött kép a közös képtárba kerül, és ehhez a szobához rendelem.")}</span></div>`;
 
   const cells = library
     .map((p) => {
@@ -1658,7 +1695,7 @@ function roomPhotosPane(
         .map((o) => o.name);
       const title = owners.length
         ? T(lang, "Ehhez is tartozik: {names}", { names: esc(owners.join(", ")) })
-        : T(lang, "Még nincs egységhez rendelve");
+        : T(lang, "Még nincs szobához rendelve");
       return (
         `<label class="rs-libcell${on ? " is-on" : ""}" title="${title}">` +
         `<input type="checkbox" name="photo" value="${esc(p.url)}"${on ? " checked" : ""}>` +
@@ -1676,8 +1713,8 @@ function roomPhotosPane(
 
   const lib = library.length
     ? `<div class="rs-lib"><div class="rs-libgrid">${cells}</div>` +
-      `<p class="rs-libfoot">${T(lang, "A halvány képek még nem tartoznak ehhez az egységhez. A pipa rendeli hozzá, a csillag teszi borítóvá (a csillag hozzá is rendeli, ha még nem volt). A képtár a ház ÖSSZES képét tartalmazza — egy kép több szobánál is állhat.")}</p></div>`
-    : `<p class="rs-why">${T(lang, "Még nincs kép a képtárban. Töltsön fel egyet a fenti gombbal — rögtön ehhez az egységhez is rendelem.")}</p>`;
+      `<p class="rs-libfoot">${T(lang, "A halvány képek még nem tartoznak ehhez a szobához. A pipa rendeli hozzá, a csillag teszi borítóvá (a csillag hozzá is rendeli, ha még nem volt). A képtár a ház ÖSSZES képét tartalmazza — egy kép több szobánál is állhat.")}</p></div>`
+    : `<p class="rs-why">${T(lang, "Még nincs kép a képtárban. Töltsön fel egyet a fenti gombbal — rögtön ehhez a szobához is rendelem.")}</p>`;
 
   return (
     `<div class="rs-sec">` +
@@ -1687,7 +1724,7 @@ function roomPhotosPane(
     acts +
     `<div data-rs-msg>${roomNotice(u, notice, lang)}</div>` +
     `<h4>${ic("photos", 15)}${T(lang, "A ház közös képtára")}</h4>` +
-    `<p class="rs-why">${T(lang, "A {tick} rendeli a képet ehhez az egységhez, a {star} teszi borítóvá. Egy kép több szobánál is állhat — ezért tölt fel egyszer, és jelöli meg, hova tartozik.", { tick: `<b>${T(lang, "pipa")}</b>`, star: `<b>${T(lang, "csillag")}</b>` })}</p>` +
+    `<p class="rs-why">${T(lang, "A {tick} rendeli a képet ehhez a szobához, a {star} teszi borítóvá. Egy kép több szobánál is állhat — ezért tölt fel egyszer, és jelöli meg, hova tartozik.", { tick: `<b>${T(lang, "pipa")}</b>`, star: `<b>${T(lang, "csillag")}</b>` })}</p>` +
     lib +
     `</div>`
   );
@@ -1718,7 +1755,7 @@ function roomAmenityPane(u: EditorUnit, ctx: UnitAmenityContext | undefined, lan
   // kiválasztva — a picker saját szkriptje utána élővé teszi ugyanezt a sort.
   return (
     `<div class="rs-sec"><h4>${ic("modules", 15)}${T(lang, "Felszereltség")}</h4>` +
-    `<p class="rs-why">${T(lang, "Jelölje, ami EBBEN az egységben van — akkor is, ha a Felszereltség lapon a ház egészénél is szerepel: a vendég a szoba adatlapján külön látja.")}</p>` +
+    `<p class="rs-why">${T(lang, "Jelölje, ami EBBEN a szobában van — akkor is, ha a Felszereltség lapon a ház egészénél is szerepel: a vendég a szoba adatlapján külön látja.")}</p>` +
     (total ? `<div class="rs-ams" data-rs-chips>${chips}</div>` : "") +
     `<details class="rs-amcat"${total ? "" : " open"}>` +
     // ⛔ A felirat NEM írja bele a katalógus darabszámát: a „70 tételes lista" attól
@@ -1790,7 +1827,7 @@ function roomPopup(
     // nothing bookable is not a state we allow (deleteUnit says so).
     (units.length > 1
       ? `<input type="hidden" name="back" value="rooms">` +
-        `<button class="rs-del" type="submit" formaction="/admin/units/delete">${T(lang, "Egység törlése")}</button>`
+        `<button class="rs-del" type="submit" formaction="/admin/units/delete">${T(lang, "Szoba törlése")}</button>`
       : "") +
     `</div></form></div>`
   );
@@ -1839,6 +1876,57 @@ function newUnitDecl(nu: NewUnitView | undefined, lang: string): string {
     `<label class="pr-decl"><input type="checkbox" name="price_on_request" value="1">` +
     `<span><strong>${T(lang, "Nem adok meg árat — egyedi ajánlatot küldök")}</strong>` +
     `<span>${T(lang, "Később az Árazás lapon bármikor megadhatja.")}</span></span></label>`
+  );
+}
+
+/**
+ * The "new room" form — ONE component for the rooms screen (1 or more rooms) and the
+ * booking screen (approved plan `assets/design-refs/tenant-admin/room-add-B/`).
+ *
+ * ⛔ Measured 2026-09-28 (phone night-run FK-013): with one room already there, the
+ * required "whole place?" question stood ABOVE the fields, off-screen at 390 px, so
+ * „Hozzáadás" did NOTHING visible — the browser's validation jumped to a field the owner
+ * could not see. Now every decision of the form sits between the fields and the button,
+ * and a missing answer is said in words right under the button.
+ *
+ * The radios stay `required` (the no-JS path keeps the browser's own message); with JS the
+ * `invalid` event is taken over, so the other fields' native checks still run.
+ */
+function newUnitForm(
+  units: readonly { id: string; name: string }[],
+  nu: NewUnitView | undefined,
+  lang: string,
+): string {
+  const q = wholeQuestion(units, lang);
+  return (
+    `<details class="unit-more"><summary>${ic("plus")}${T(lang, "Új szoba felvétele")}</summary>` +
+    `<div class="unit-new"><h3>${ic("plus")}${T(lang, "Új szoba felvétele")}</h3>` +
+    `<p>${T(lang, "Adja meg a nevét, férőhelyét és alapárát — a vendég a honlapon külön kártyán látja.")}</p>` +
+    `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new" data-cit-new-unit>` +
+    `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új szoba neve")}">` +
+    `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
+    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
+    newUnitPriceFields(nu, lang) +
+    newUnitDecl(nu, lang) +
+    q +
+    `<div class="unit-new__go">` +
+    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
+    (q
+      ? `<p class="unit-new__err" role="alert" data-cit-whole-err hidden>${ic("alert", 16)}<span>` +
+        `${T(lang, "Még egy döntés hiányzik: kiadja-e az egész szállást egyben is? Válasszon, és nyomja meg újra a „Hozzáadás”-t.")}` +
+        `</span></p>`
+      : "") +
+    `</div></form></div></details>` +
+    (q
+      ? `<script>(function(){document.querySelectorAll("form[data-cit-new-unit]").forEach(function(f){` +
+        `var q=f.querySelector("[data-cit-whole-q]"),e=f.querySelector("[data-cit-whole-err]");if(!q||!e)return;` +
+        `q.addEventListener("invalid",function(ev){ev.preventDefault();e.hidden=false;q.classList.add("is-missing");` +
+        // The MESSAGE is brought into view (the question sits right above it); the page's
+        // scroll-padding keeps it clear of the consent bar and the bottom bar.
+        `e.scrollIntoView({block:"nearest"});},true);` +
+        `f.addEventListener("change",function(ev){if(ev.target.name==="whole"){q.classList.remove("is-missing");e.hidden=true}});` +
+        `})})()</script>`
+      : "")
   );
 }
 
@@ -1906,18 +1994,10 @@ function roomsEditor(
     newUnitFlash(nu, lang) +
     wholePropertyCard(units, lang) +
     `<div class="rs-grid" id="szobak">${cards}</div>` +
-    // A felvétel a MAI viselkedés marad (a terv szándékosan nem kötötte be), csak a
-    // helye változik: a rács alatt, egyetlen szaggatott vezérlőben.
-    `<details class="rs-new"><summary>${ic("plus")}${T(lang, "Új egység felvétele")}</summary>` +
-    `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
-    wholeQuestion(units, lang) +
-    `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
-    `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
-    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
-    newUnitPriceFields(nu, lang) +
-    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
-    newUnitDecl(nu, lang) +
-    `</form></details></div>` +
+    // The add form: collapsed under the grid, the SAME component as on the booking screen
+    // (approved plan room-add-B).
+    newUnitForm(units, nu, lang) +
+    `</div>` +
     pops
   );
 }
@@ -2005,7 +2085,7 @@ function roomEditorScript(lang: string): string {
     `res.count+=r1.count||0;res.becameCover=res.becameCover||!!r1.becameCover;res.errors=res.errors.concat(r1.errors||[])}` +
     `(res.errors||[]).forEach(function(er){bad.push((er.file?"<b>"+esc(er.file)+"</b> ":"")+esc(er.reason))});` +
     `var parts=[];` +
-    `if(res.count)parts.push(${j(T(lang, "{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez az egységhez."))}.replace("{n}",res.count));` +
+    `if(res.count)parts.push(${j(T(lang, "{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez a szobához."))}.replace("{n}",res.count));` +
     `if(res.becameCover)parts.push(${j(T(lang, "Mivel nem volt borítóképe, az első feltöltött lett a borító."))});` +
     `if(bad.length)parts.push(bad.join(" "));` +
     // A részleges sikert MINDKÉT felével megőrizzük az újratöltés után: a rácsnak
@@ -2122,7 +2202,7 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
   return (
     `<div class="adm-card unit-tabs-card">` +
     `<h3 class="unit-tabs__h">${T(lang, "Mit ad ki?")}</h3>` +
-    `<p class="adm-lead">${T(lang, "Minden egységnek külön naptára van, így külön telhet be.")}</p>` +
+    `<p class="adm-lead">${T(lang, "Minden szobának külön naptára van, így külön telhet be.")}</p>` +
     `<div class="unit-tabs" role="tablist">${tabs}</div></div>`
   );
 }
@@ -2135,7 +2215,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
       (u) =>
         `<form method="POST" action="/admin/units/save" class="unit-row">` +
         `<input type="hidden" name="id" value="${esc(u.id)}">` +
-        `<input class="citui-input unit-row__name" name="name" value="${esc(u.name)}" aria-label="${T(lang, "Egység neve")}">` +
+        `<input class="citui-input unit-row__name" name="name" value="${esc(u.name)}" aria-label="${T(lang, "Szoba neve")}">` +
         `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
         `inputmode="numeric" min="1" max="50" value="${u.capacity ?? ""}" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
@@ -2154,19 +2234,16 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
     newUnitFlash(nu, lang) +
     `<p class="adm-lead">` +
     (multi
-      ? T(lang, "Minden egységnek külön naptára van, így külön telhet be.")
+      ? T(lang, "Minden szobának külön naptára van, így külön telhet be.")
       : T(lang, "Ha nem egy egészet, hanem több szobát vagy apartmant ad ki, vegye fel őket külön — mindegyiknek saját naptára lesz.")) +
     `</p>` +
+    // Approved plan room-add-B: the existing row(s) are LABELLED, so the two look-alike
+    // forms can no longer be mistaken for each other (measured: the first night-run
+    // attempt typed the new room into the existing one's fields).
+    `<h3 class="unit-sec">${multi ? T(lang, "Meglévő szobái") : T(lang, "Meglévő szobája")}</h3>` +
     rows +
-    `<form method="POST" action="/admin/units/save" class="unit-row unit-row--new">` +
-    wholeQuestion(booking.units, lang) +
-    `<input class="citui-input unit-row__name" name="name" placeholder="${T(lang, "Pl. Kertre néző apartman")}" aria-label="${T(lang, "Új egység neve")}">` +
-    `<span class="mcfg-suffix"><input class="citui-input unit-row__cap" name="capacity" type="number" ` +
-    `inputmode="numeric" min="1" max="50" placeholder="2" aria-label="${T(lang, "Férőhely")}"><span>${T(lang, "fő")}</span></span>` +
-    newUnitPriceFields(nu, lang) +
-    `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Hozzáadás")}</button>` +
-    newUnitDecl(nu, lang) +
-    `</form></div>`
+    newUnitForm(booking.units, nu, lang) +
+    `</div>`
   );
 }
 
@@ -2329,7 +2406,7 @@ function bookingEditor(
           );
         })
         .join("")
-    : `<p class="mcfg-note">${T(lang, "Még nincs összekötve semmi. Ha máshol is hirdeti{what}, kösse össze — így soha nem lesz dupla foglalás.", { what: multi ? T(lang, " ezt az egységet") : T(lang, " a szállását") })}</p>`;
+    : `<p class="mcfg-note">${T(lang, "Még nincs összekötve semmi. Ha máshol is hirdeti{what}, kösse össze — így soha nem lesz dupla foglalás.", { what: multi ? T(lang, " ezt a szobát") : T(lang, " a szállását") })}</p>`;
 
   return (
     // Approved plan 2026-09-06: the requests moved to their OWN "Foglalások" tab
@@ -2376,7 +2453,7 @@ function bookingEditor(
       ? ""
       : `<div class="adm-card">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
-    `<p class="adm-lead">${T(lang, "Ha {what} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.", { what: multi ? T(lang, "ez az egység") : T(lang, "a szállása") })}</p>` +
+    `<p class="adm-lead">${T(lang, "Ha {what} fent van a Booking.com-on vagy az Airbnb-n, összekötjük a naptárakat. Amit ott lefoglalnak, itt is foglalt lesz.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") })}</p>` +
     linkCards +
     `<form method="POST" action="/admin/calendar-link">` +
     `<input type="hidden" name="unit" value="${esc(booking.unitId)}">` +
@@ -2396,7 +2473,7 @@ function bookingEditor(
       ? `<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--citui-line)">` +
         `<h3 class="mcfg-sub" style="margin-top:0">${T(lang, "A másik irány")}</h3>` +
         `<p class="citui-hint">${T(lang, "Adja meg ezt a linket a portálnak, hogy ő is lássa az itteni foglalásait")}` +
-        (multi ? ` ${T(lang, "{unit} egységnél", { unit: esc(unitName) })}` : "") +
+        (multi ? ` ${T(lang, "{unit} szobánál", { unit: esc(unitName) })}` : "") +
         `:</p>` +
         `<input class="citui-input" readonly value="${esc(booking.exportUrl)}" onclick="this.select()">` +
         `</div>`
@@ -2444,6 +2521,13 @@ export interface PricingEditorData {
    * Required for the same reason as `bookingActive`.
    */
   readonly roomsActive: boolean;
+  /**
+   * Where the owner's prices show on the GUEST page (owner ruling 2026-09-28, approved
+   * plan `design-refs/tenant-admin/price-where-2`). Built from the FINAL page data and
+   * the renderer's own `siteShowsPriceTable()` — never re-derived here, so the sentence
+   * cannot say something the page does not do. null = the site has no page data yet.
+   */
+  readonly siteView: PriceSiteView | null;
   /** 0074: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
    *  the year card just saved or refused (`?ev=<seasonId>-<year>`). */
   readonly editSeason?: string | null;
@@ -2777,6 +2861,8 @@ function priceDecision(
   hasSeasons: boolean,
   status: UnitPriceStatus,
   lang: string,
+  /** The page shows NO price for this room anywhere (siteView.nowhere). */
+  nowhere = false,
 ): string {
   const box =
     `<form method="POST" action="/admin/prices/request">` +
@@ -2803,6 +2889,10 @@ function priceDecision(
       : status === "none" || status === "partial"
         ? `<p class="mcfg-empty" data-price-state="${status}">${ic("alert", 16)}<span>` +
           `<strong>${status === "none" ? T(lang, "Nincs ára.") : T(lang, "Az év egy részére nincs ára.")}</strong> ` +
+          // Approved plan price-where-2: said HERE too, so the owner need not scroll up.
+          (status === "none" && nowhere
+            ? `<b data-cit-price-nowhere>${T(lang, "A honlapon a szobakártyáján nem lesz ár, és az ártáblázatban sem szerepel.")}</b> `
+            : "") +
           (status === "none"
             ? T(lang, "A vendég nem lát árat, és árajánlatot kér.")
             : T(lang, "Ott a vendég nem lát árat, és árajánlatot kér.")) +
@@ -2835,10 +2925,65 @@ function wholeSumHint(data: PricingEditorData, cur: string, today: string, lang:
   return (
     `<p class="citui-hint" data-cit-whole-sum style="margin:-8px 0 14px">` +
     T(lang, "Tájékoztatásul: a szobák külön, együtt {sum} {cur} / éj.", { sum: grouped(sum), cur: esc(cur) }) +
-    (missing ? " " + T(lang, "({n} egységnek nincs alapára.)", { n: missing }) : "") +
+    (missing ? " " + T(lang, "({n} szobának nincs alapára.)", { n: missing }) : "") +
     " " +
     T(lang, "Az egész szállás ára ettől független — azt Ön adja meg.") +
     `</p>`
+  );
+}
+
+/**
+ * „Hol látják a vendégek az árait?" — approved plan price-where-2 (owner, 2026-09-28).
+ *
+ * The owner pays for the Árak module and, with base prices only, finds no price table on
+ * the page: ADR-0059 §2 leaves it out because the room cards already carry the same
+ * numbers. The RULE stays; this box is the missing information. Every sentence is chosen
+ * by the renderer's own answer (`siteView`), so it says what the page does.
+ */
+function priceWhereBox(v: PriceSiteView | null, lang: string): string {
+  if (!v) return "";
+  const cards = v.cards.length
+    ? `<div class="pr-where__cards">` +
+      v.cards.map((c) => `<span>${esc(c.name)} <b>${esc(c.price)}</b></span>`).join("") +
+      `</div>`
+    : "";
+  const missing = v.unpriced.length
+    ? `<p class="pr-where__miss">${ic("alert", 16)}<span>${T(lang, "Ár nélkül:")} ` +
+      v.unpriced.map((u) => `<a href="#ar-${esc(u.id)}">${esc(u.name)}</a>`).join(", ") +
+      ` — ${T(lang, "a kártyáján nem lesz ár, a vendég árajánlatot kér.")}</span></p>`
+    : "";
+  let body: string;
+  if (v.table) {
+    const why =
+      v.tableBecause.seasons && v.tableBecause.note
+        ? T(lang, " — mert van időszaki ára, és megjegyzést írt az árakhoz.")
+        : v.tableBecause.seasons
+          ? T(lang, " — mert van időszaki ára.")
+          : v.tableBecause.note
+            ? T(lang, " — mert megjegyzést írt az árakhoz.")
+            : ".";
+    body = v.cards.length
+      ? `<p>${T(lang, "A honlapján az árai két helyen látszanak: a szobakártyákon, és egy külön ártáblázatban is")}${why}</p>` +
+        cards +
+        missing
+      : `<p>${T(lang, "A honlapján az árai egy külön ártáblázatban látszanak")}${why}</p>` + missing;
+  } else if (v.cards.length) {
+    body =
+      `<p>${T(lang, "Most a szobakártyákon — ezekkel az árakkal:")}</p>` +
+      cards +
+      missing +
+      `<p>${T(lang, "Külön ártáblázat ezért nem jelenik meg — ugyanezeket a számokat mutatná még egyszer, egy képernyővel lejjebb.")}</p>` +
+      `<p>${T(lang, "Az ártáblázat magától megjelenik, amint")}</p><ul>` +
+      `<li>${T(lang, "bármelyik szobához időszaki árat ad meg (lent, az „Időszaki árak” résznél), vagy")}</li>` +
+      `<li>${T(lang, "kitölti a „Megjegyzés az árakhoz” mezőt (a lap alján).")}</li></ul>`;
+  } else {
+    body = `<p>${T(lang, "Még egyetlen ára sem látszik a honlapján — adja meg lent az alapárakat.")}</p>` + missing;
+  }
+  return (
+    `<div class="pr-where" data-cit-price-where="${v.table ? "table" : "cards"}">` +
+    `<p class="pr-where__t">${ic("preview", 16)}${T(lang, "Hol látják a vendégek az árait?")}</p>` +
+    body +
+    `</div>`
   );
 }
 
@@ -2904,7 +3049,14 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `</form>` +
         `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
         (u.isWholeProperty && data.units.length > 1 ? wholeSumHint(data, cur, today, lang) : "") +
-        priceDecision(u, Boolean(base), seasons.length > 0, data.status[u.id] ?? "none", lang) +
+        priceDecision(
+          u,
+          Boolean(base),
+          seasons.length > 0,
+          data.status[u.id] ?? "none",
+          lang,
+          Boolean(data.siteView?.nowhere.includes(u.id)),
+        ) +
         (datedRows
           ? datedRows +
             `<p class="citui-hint" style="margin:6px 0 18px">${T(lang, "A dátumos alapár az árajánlatból került ide: a megadott napig érvényes, ahol nincs időszaki ár. Lejárat előtt e-mailben emlékeztetjük.")}</p>`
@@ -2957,13 +3109,14 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
     : T(lang, "Szobák modul bekapcsolása");
 
   return (
-    `<p class="mcfg-note mcfg-note--act"><span>${T(lang, "Az árat egységenként adja meg — a vendég is így látja majd.")} ` +
+    `<p class="mcfg-note mcfg-note--act"><span>${T(lang, "Az árat szobánként adja meg — a vendég is így látja majd.")} ` +
     (data.units.length > 1
       ? T(lang, "Minden szobának/apartmannak saját ára lehet.")
       : T(lang, "Ha több szobát ad ki külön, előbb vegye fel őket a „Szobák, apartmanok” modulnál.")) +
     `</span>` +
     `<a class="citui-btn citui-btn--ghost citui-btn--sm" data-cit-rooms-link href="${roomsHref}">${roomsLabel}</a>` +
     `</p>` +
+    priceWhereBox(data.siteView, lang) +
     cards +
     seasonEditorScript(
       lang,
@@ -2988,7 +3141,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
  * button that claims a state nobody measured.
  */
 function roomsNote(lang: string, nu: NewUnitView | undefined): string {
-  const text = T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket az egységeket használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.");
+  const text = T(lang, "Ezek jelennek meg az oldalán. Ugyanezeket a szobákat használja a foglalás és az árazás is, tehát elég egy helyen karbantartani.");
   if (!nu) return `<p class="mcfg-note">${text}</p>`;
   const href = nu.pricingActive ? "/admin?tab=modulok&m=pricing" : "/admin?tab=modulok";
   const label = nu.pricingActive ? T(lang, "Árak, szezonok szerkesztése") : T(lang, "Árak modul bekapcsolása");

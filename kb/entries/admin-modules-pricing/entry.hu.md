@@ -1,6 +1,6 @@
 ---
 id: admin-modules-pricing
-title: Árak — alapár és időszaki árak egységenként
+title: Árak — alapár és időszaki árak szobánként
 audience: tenant
 category: bookings
 anchors: admin.modules.pricing
@@ -8,14 +8,31 @@ updated: 2026-09-28
 ---
 
 Az ár-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri el.
-Az árat egységenként (szobánként, apartmanonként) adja meg — a vendég is így látja majd az oldalán.
-Minden egységnek saját kártyája van.
+Az árat szobánként (apartmanonként) adja meg — a vendég is így látja majd az oldalán.
+Minden szobának saját kártyája van.
 
 ![Képernyőkép: az ár-képernyő telefonon](assets/hu/screen.png)
 
+## Hol látják a vendégek az árait?
+
+A képernyő tetején, a jegyzet alatt egy doboz mondja meg, hol jelennek meg most az árai a
+honlapján. A szobakártyákon minden szobánál az az ár áll, amit a vendég lát (több ár esetén a
+legkisebb, „-tól” jelzéssel). A dobozban ezek fel is vannak sorolva.
+
+Külön **ártáblázat** csak akkor van a honlapon, ha többet mondana, mint a kártyák. Amíg minden
+szobának csak alapára van, a táblázat ugyanazokat a számokat ismételné egy képernyővel lejjebb,
+ezért ilyenkor nem jelenik meg — ezt a doboz ki is mondja. A táblázat magától megjelenik, amint
+bármelyik szobához **időszaki árat** ad meg, vagy kitölti a lap alján a **„Megjegyzés az
+árakhoz”** mezőt. Ilyenkor a doboz azt írja, hogy az árai két helyen látszanak, és megmondja,
+miért van táblázat.
+
+Ha egy szobának nincs ára, a doboz egy sárga, **„Ár nélkül:”** kezdetű sorban megnevezi — a névre koppintva
+a szoba kártyájára ugrik. Ott a sárga **„Nincs ára.”** sor is kimondja, hogy a honlapon a
+szobakártyáján nem lesz ár, és az ártáblázatban sem szerepel.
+
 ## Alapár
 
-Az **„Alapár”** mezőbe írja be, mennyibe kerül egy éjszaka ebben az egységben, és koppintson a
+Az **„Alapár”** mezőbe írja be, mennyibe kerül egy éjszaka ebben a szobában, és koppintson a
 **„Mentés”** gombra. Ez az ár érvényes mindig, amikor egyik időszaki ár sem — nyugodtan kezdje
 ennyivel, a többi ráér.
 
@@ -143,10 +160,10 @@ foglalás modul is be van kapcsolva:
   éjszakára lehet foglalni (pl. nyáron 3). Nem kötelező: ha üresen hagyja, az Online foglalás
   modulban beállított legrövidebb foglalás érvényes. A meglévő időszak sorában az ár alatt
   látja, amit megadott.
-- **„Csak a felsorolt időszakokban adom ki”** — kapcsoló az egység kártyájának alján.
+- **„Csak a felsorolt időszakokban adom ki”** — kapcsoló a szoba kártyájának alján.
   Bekapcsolva a felsorolt időszakokon kívüli napokat a vendég a naptárban ki sem tudja
   választani (pl. télen zárva tart). Kikapcsolva egész évben foglalható, és az időszakok csak
-  az árat és a minimumot finomítják. Egységenként külön állítható.
+  az árat és a minimumot finomítják. Szobánként külön állítható.
 
 Ha nincs online foglalása, a vendég időpontkérést küld, és azt Ön bírálja el — ilyenkor ez a
 kettő nem hat semmire, ezért nem is látja. A helyükön egy rövid sor mondja meg, mit adna hozzá
@@ -160,9 +177,9 @@ kártyáját — rajta látja a havidíjat is —, és koppintson a **„Kosárb
 
 ## Több szoba, több ár
 
-Ha több egysége van, mindegyik kártyáján külön árazhat — a kertre néző apartman kerülhet többe,
+Ha több szobája van, mindegyik kártyáján külön árazhat — a kertre néző apartman kerülhet többe,
 mint a padlásszoba. Ha még nem vette fel a szobáit (például eddig csak „A szállás egésze” szerepel,
-de szobánként adna ki), azt előbb a szoba-modulnál tegye meg; az árazás ugyanazokat az egységeket
+de szobánként adna ki), azt előbb a szoba-modulnál tegye meg; az árazás ugyanazokat a szobákat
 látja. Nem kell keresgélnie: a képernyő tetején, a bevezető sor mellett a **„Szobák, apartmanok
 szerkesztése”** gomb egyenesen a szoba-modul beállító-képernyőjére visz. Ha a Szobák modul még nincs
 bekapcsolva, a gomb felirata **„Szobák modul bekapcsolása”**, és a Modulok fülre visz — ott a
@@ -173,8 +190,8 @@ szerkesztőre mutat.
 
 ## Az egész szállás árát is adja meg
 
-Ha a házat egyben is kiadja, az egész szállásnak jelölt egység ugyanolyan egység, mint a szobák: ha a
-vendég a teljes szállást foglalja, ennek az egységnek az árát látja. Az árat Ön adja meg — a szobák
+Ha a házat egyben is kiadja, az egész szállásnak jelölt szobát ugyanúgy árazza, mint a többit: ha a
+vendég a teljes szállást foglalja, ennek a szobának az árát látja. Az árat Ön adja meg — a szobák
 ára nem adódik össze helyette, mert az egész ház ára a valóságban sem a részek összege. Segítségül
 a kártyáján az alapár alatt egy tájékoztató sor mutatja, mennyibe kerülnek a szobák külön, együtt
 („Tájékoztatásul: a szobák külön, együtt … / éj.”) — ezt csak Ön látja, a vendég nem. Ha itt nincs

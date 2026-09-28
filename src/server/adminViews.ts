@@ -498,7 +498,7 @@ function unitsForm(p: PhotoEdit, units: readonly { id: string; name: string }[],
   if (units.length < 2) return "";
   return (
     `<form method="POST" action="/admin/photos/units"><input type="hidden" name="url" value="${esc(p.url)}">` +
-    `<span class="adm-units__lbl">${T(lang, "Melyik egységhez?")}</span>` +
+    `<span class="adm-units__lbl">${T(lang, "Melyik szobához?")}</span>` +
     units
       .map(
         (u) =>

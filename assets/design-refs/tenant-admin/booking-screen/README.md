@@ -1,5 +1,7 @@
 # Online foglalás képernyő — kontraktus (tulajdonosi jóváhagyás, 2026-09-08)
 
+> ⚠️ **Felirat-csere (tulaj, 2026-09-28):** a tenant-admin minden feliratán „egység” → „szoba” (terv: `assets/design-refs/tenant-admin/room-add-B/`). Az alábbi idézetek már az új szöveget mondják.
+
 A tulaj szava (idézet, nem UI-felirat): *A változat + ha foglalt napra kattint, tudja megnézni
 a foglalások részleteit*, majd a részlet hordozójára: *felugró ablak de középre igazítva*.
 
@@ -18,7 +20,7 @@ Egyetlen sötét blokk, nem öt szétszórt sor. Benne: a modul neve (`Online fo
 az ára pirulában (`+990 Ft/hó`), alatta két szöveges link: `‹ Vissza a modulokhoz` és
 `Útmutató ehhez a képernyőhöz` (a KB-horgony, ADR-0045 §J).
 
-⛔ A régi állapot (cím + szállásnév + vissza-link + súgó-gomb + ár-sor + „Melyik egység?"
+⛔ A régi állapot (cím + szállásnév + vissza-link + súgó-gomb + ár-sor + „Melyik szoba?"
 felirat, mind külön sorban) nem térhet vissza.
 
 ## 2. Amit az EGYSÉG-VÁLASZTÓ köt
@@ -59,7 +61,7 @@ A kártya tartalma nap-fajtánként:
 | Nap | Mit mutat |
 |---|---|
 | **Saját foglalás** | Vendég neve · státusz-címke · időszak (hány éjszaka) · létszám · ár · e-mail és telefon **kattintható** linkként · honnan jött · a vendég üzenete, ha van. Műveletek: „Foglalás megnyitása" (a Foglalások fülre) és „Írok a vendégnek". |
-| **Másik egység foglalása** (csíkos) | KI tartja (vendég), melyik egységen, milyen időszakban, és a mondat, hogy ezért nem foglalható itt. Műveletek: „Foglalás megnyitása" + **„Átváltok a naptárára"**. |
+| **Másik szoba foglalása** (csíkos) | KI tartja (vendég), melyik egységen, milyen időszakban, és a mondat, hogy ezért nem foglalható itt. Műveletek: „Foglalás megnyitása" + **„Átváltok a naptárára"**. |
 | **Kézi blokk** | ⚠️ **ELTÉRÉS a vázlattól, megvalósításkor (2026-09-08).** A vázlaton a kézi napnak is kártyája volt (a kézi jelölés felirata + egy visszavonó gomb; a jelmagyarázat mai szava: „Ön jelölte: nem kiadó”). A szállított képernyőn NINCS: a kézi nap koppintásra AZONNAL felszabadul — ez a képernyő fő művelete („koppintson a napokra, amikor tele van"), és egy közbeiktatott kártya minden egyes napnál két koppintásra lassítaná. Cserébe a kézi nap MÁS SZÍNŰ, mint a vendég-foglalás, és a jelmagyarázat külön nevezi meg: **„Ön jelölte: nem kiadó" (2026-09-25-ig a „tele” szóval)** vs. **„Vendég foglalása"** — a vázlaton ez a kettő pixel-azonos volt, ami a tudásbázis-őr szerint épp a legkockázatosabb félreértés. |
 | **Portál-nap** | A portál neve, az időszak, és hogy **itt nem módosítható** — ott kell kezelni. |
 

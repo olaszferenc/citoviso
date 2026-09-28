@@ -1673,6 +1673,21 @@ if [ -f scripts/retired-module-shop-check.mts ] && \
   echo "[pre-commit] retired-module-shop-check (a kivezetett modul a bérlőnek sem vehető meg)…"
   npx tsx scripts/retired-module-shop-check.mts
 fi
+# A SZOBA-FELVÉTEL NEM BUKHAT NÉMÁN (room-add-B, tulaj 2026-09-28). Mérve: egy szobánál a
+# kötelező „egész szállás?” kérdés a mezők fölött, 390 px-en a képernyőn kívül állt, és a
+# „Hozzáadás” semmit nem csinált. Valódi böngésző, telefon + asztal; SOHA nem ment.
+if [ -f scripts/room-add-form-check.mts ] && \
+   changed_files | grep -qE '^src/server/moduleConfigViews\.ts|^scripts/room-add-form-check'; then
+  echo "[pre-commit] room-add-form-check (a szoba-felvétel nem bukhat némán)…"
+  npx tsx scripts/room-add-form-check.mts >"$GATE_LOG" || gate_failed
+fi
+# AZ ÁRAK KÉPERNYŐ AZT MONDJA, AMIT A LAP CSINÁL (price-where-2, tulaj 2026-09-28): a
+# „Hol látják a vendégek az árait?” doboz ítéletét a valódi bérlők renderelt lapjához méri.
+if [ -f scripts/price-where-check.mts ] && \
+   changed_files | grep -qE '^src/server/moduleConfigViews\.ts|^src/engine/moduleSections\.ts|^src/tenant/(priceSiteView|editor|prices)\.ts|^scripts/price-where-check'; then
+  echo "[pre-commit] price-where-check (az ár-tájékoztatás a lap saját válaszából)…"
+  npx tsx scripts/price-where-check.mts >"$GATE_LOG" || gate_failed
+fi
 
 # A JÓVÁHAGYOTT terv és a SZÁLLÍTOTT felület nem csúszhat szét. A §2b kapu az
 # „elfogadva”-nál véget ért, és utána senki nem nézte: az összesítő kihagyta a

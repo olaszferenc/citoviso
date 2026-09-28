@@ -758,6 +758,21 @@ function moduleShotHtml(entryId: string): string {
         // and the "nem adok meg alapárat" box the entry describes. REQUIRED: the view reads
         // it per unit, and scripts/ is not type-checked.
         status: { u0: "none", u1: "complete", u2: "complete" },
+        // Approved plan price-where-2: the „Hol látják a vendégek az árait?" box the entry
+        // describes. Consistent with the prices above — u1 has seasons, so the page DOES
+        // carry the table; the whole place has no price anywhere. REQUIRED for the same
+        // reason as `status` (scripts/ is not type-checked; a missing field hides the box).
+        siteView: {
+          table: true,
+          tableBecause: { seasons: true, note: false },
+          cards: [
+            // Several prices → the card shows the FLOOR with "-tól" (owner ruling 2026-09-22).
+            { name: editorUnits[1]!.name, price: "18 000 Ft-tól / éj" },
+            { name: editorUnits[2]!.name, price: "16 000 Ft / éj" },
+          ],
+          unpriced: [{ id: "u0", name: editorUnits[0]!.name }],
+          nowhere: ["u0"],
+        },
       },
     });
   if (entryId === "admin-modules-programs") {

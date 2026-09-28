@@ -1,5 +1,7 @@
 # „Nem adok meg árat” · új egység ára · heti emlékeztető — JÓVÁHAGYOTT TERV
 
+> ⚠️ **Felirat-csere (tulaj, 2026-09-28):** a tenant-admin minden feliratán „egység” → „szoba” (terv: `assets/design-refs/tenant-admin/room-add-B/`). Az alábbi idézetek már az új szöveget mondják.
+
 **Jóváhagyva:** 2026-09-23, tulajdonosi választás: **„A” — pipa az alapár alatt**
 (a „B” két-kártyás választó elvetve). A mezőnevet (`site_unit.price_on_request`) a tulaj
 jóváhagyta; az emlékeztető ütemét is (7 nap, utána hetente, korlát nélkül). ·
@@ -34,7 +36,7 @@ eddig egyetlen képernyő sem szólt.
    **„Az év egy részére nincs ára.”**, és kimondja, hogy hetente emlékeztetünk); kék, ha
    kimondott (**„Kimondva: nem ad meg alapárat.”**, és hogy emlékeztetőt nem küldünk); teljes
    árazásnál nincs sor.
-4. **Új egység felvétele** (Szobák és Foglalás lap): az árazás aktív → **„Alapár”** mező +
+4. **Új szoba felvétele** (Szobák és Foglalás lap): az árazás aktív → **„Alapár”** mező +
    **„Nem adok meg árat — egyedi ajánlatot küldök”** pipa. ⛔ A mentés **soha nem tagad
    meg**: ár és pipa nélkül is felveszi a szobát. A mentés után a visszajelzés ugyanarra a
    lapra jön, ahol a sor volt, és a hiányos kimenetnél kiutat ad: **„Árat adok meg”** (az

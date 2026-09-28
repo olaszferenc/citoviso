@@ -1,5 +1,7 @@
 # Tenant-admin újratervezés — „Linear” nyelv, egy akcent, világos/sötét — JÓVÁHAGYOTT TERV
 
+> ⚠️ **Felirat-csere (tulaj, 2026-09-28):** a tenant-admin minden feliratán „egység” → „szoba” (terv: `assets/design-refs/tenant-admin/room-add-B/`). Az alábbi idézetek már az új szöveget mondják.
+
 **Jóváhagyva:** 2026-09-24, tulajdonosi választás három körben: (1) a mai admin átrendezése
 ELVETVE („nem újragondolás”); (2) négy gyökeresen új nyelvből a **2.1 „Linear”** lett az alap;
 (3) a Linear + cián akcent + előfizetés-kártya + nyitókép-mutató + világos/sötét váltó két
@@ -86,7 +88,7 @@ tud visszalépni… ez nem képgaléria… a fájlok kiválasztása gomb 1995”
    bemutató kép **nem törölhető** (a törlés-gombok nem jelennek meg; a próbálkozás piros
    toast: **„A bemutató képeket nem kell törölnie — az első saját feltöltés lecseréli őket.”**).
    Sorrend: húzás + ‹ › + ★ → `POST /admin/photos/order`; aláírás: `onchange` → „Mentve” pöttyel
-   (`/admin/photos/caption`, max 160). Több egységnél a **„Melyik egységhez?”** a nagyításban/
+   (`/admin/photos/caption`, max 160). Több egységnél a **„Melyik szobához?”** a nagyításban/
    listában kap helyet (a mock nem mutatja, mert a Boróka ház egy egység — a megvalósítás
    NEM hagyhatja el, ADR-0044/d).
 8. **Világos / sötét mód:** váltó a fejlécben (asztali), a fiók-sorban és a mobil menü

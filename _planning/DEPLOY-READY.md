@@ -29,6 +29,15 @@ ls migrations/*.sql | wc -l ; $SSH "ls /opt/citoviso/app/migrations/*.sql | wc -
 #    (a `from "./…"` gráf bejárása; ha bármi hiányzik → NE fájlonként szemezgess)
 ```
 
+**⚠️ Nyelvi újrafordítás a nagy deploy ELŐTT (tulaj, 2026-09-28: „deploynál csak”).** Az
+„egység” → „szoba” felirat-csere (terv `design-refs/tenant-admin/room-add-B/`) ~35 tenant-admin
+szöveget és 5 súgó-cikket írt át; a fordítás kulcsa a magyar forrás-szöveg, tehát addig:
+- a **felületi nyelvi csomagokban** (de/en/hr/it/pl/sk) az érintett feliratok MAGYARUL jelennek meg
+  → a csomagokat a deploy előtt újra kell generálni;
+- a **súgóban** az öt cikk (`admin-modules-rooms`, `admin-modules-booking`, `admin-modules-pricing`, `admin-photos`,
+  `admin-bookings`) fordítása elavult → `npx tsx scripts/kb-translate.mts` a KB-szerkesztés UTÁN
+  (a súgónak nincs magyar tartaléka).
+
 **Deploy menete:** backup `/opt/citoviso/backups/<szál>-<ts>/` → rsync CSAK a listázott fájlokat →
 `chown citoviso:citoviso` → érintett service restart → verifikáció a CF-edge-en, böngészővel,
 **390px-en is**.

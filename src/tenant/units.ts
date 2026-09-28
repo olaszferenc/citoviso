@@ -286,9 +286,9 @@ export interface DeleteUnitResult {
 export async function deleteUnit(siteId: string, unitId: string): Promise<DeleteUnitResult> {
   const units = await getUnits(siteId);
   const target = units.find((u) => u.id === unitId);
-  if (!target) return { ok: false, reason: "Ez az egység nem található." };
+  if (!target) return { ok: false, reason: "Ez a szoba nem található." };
   if (units.length <= 1) {
-    return { ok: false, reason: "Legalább egy egységnek maradnia kell." };
+    return { ok: false, reason: "Legalább egy szobának maradnia kell." };
   }
   // ADR-0232: the whole place is deletable like any unit (the owner chose it, the owner
   // can drop it) — afterwards the rooms are independent, and the screen says so.
@@ -303,7 +303,7 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   if (booked) {
     return {
       ok: false,
-      reason: "Ehhez az egységhez még van elfogadott foglalás. Előbb azt kell rendezni.",
+      reason: "Ehhez a szobához még van elfogadott foglalás. Előbb azt kell rendezni.",
     };
   }
   await db.deleteFrom("site_unit").where("id", "=", unitId).where("site_id", "=", siteId).execute();

@@ -90,7 +90,7 @@ try {
   /** The grid only (the popups sit after it and repeat the meta line). */
   const grid = (html: string): string => {
     const i = html.indexOf('class="rs-grid"');
-    const j = html.indexOf('class="rs-new"', i);
+    const j = html.indexOf('class="unit-more"', i); // the add form under the grid (room-add-B)
     return i < 0 ? "" : html.slice(i, j < 0 ? undefined : j);
   };
   const wholeOf = async (): Promise<string | null> => (await getUnits(site.id)).find((u) => u.isWholeProperty)?.id ?? null;
@@ -105,7 +105,7 @@ try {
   check("nincs törlés-gomb (az utolsó egység)", !html.includes('formaction="/admin/units/delete"'));
   check("az add-form felteszi a kérdést", html.includes("data-cit-whole-q"));
   check("a kérdés két KÖTELEZŐ rádió (igen/nem)", /name="whole" value="igen" required/.test(html) && /name="whole" value="nem" required/.test(html));
-  check("a kérdés megnevezi az eddigi egységet", html.includes(`Eddig egy egysége volt: <b>${first.name}</b>`));
+  check("a kérdés megnevezi az eddigi egységet", html.includes(`Eddig egy szobája volt: <b>${first.name}</b>`));
 
   // ── ② the second unit ─────────────────────────────────────────────────
   console.log("\n② a második egység felvétele");

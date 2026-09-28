@@ -1,5 +1,7 @@
 # KONTRAKTUS — tenant-admin SZOBA-SZERKESZTŐ (D változat)
 
+> ⚠️ **Felirat-csere (tulaj, 2026-09-28):** a tenant-admin minden feliratán „egység” → „szoba” (terv: `assets/design-refs/tenant-admin/room-add-B/`). Az alábbi idézetek már az új szöveget mondják.
+
 **Jóváhagyta:** a tulaj, 2026-09-22 (§2b terv-jóváhagyási kapu) · **Változat:** **D — kártyarács
 + felugró + fülek** (a B rácsából, a C füleivel; az A, B, C külön is elvetve) ·
 **Terv:** `plan.html` (önhordó, kattintható, MŰKÖDIK) · **Képek:** `D-mobil-*.png`, `D-asztali-*.png`
@@ -45,7 +47,7 @@ A szobák **kártyarácsban** állnak, és a kártya **azt mutatja, amit a vend�
 6. **ütközés-jelvény**, ha a borító másik egység borítója is: `ugyanaz a borító, mint: <név>`
 
 **Elrendezés — KÖT:** mobil **két oszlop** (mind a 4 szoba egy képernyőn), asztali **négy oszlop**.
-A rács alatt `Új egység felvétele`.
+A rács alatt `Új szoba felvétele`.
 
 - ⛔ **KÖT: a jelvény a SZÖVEGÉIG ér, nem a kártya széléig** (`justify-self:start`) — rács-cellában
   a nyújtás az alapértelmezés, és attól teljes szélességű sávnak látszik.
@@ -237,31 +239,31 @@ szöveget.
   hiányzik: {mi}"** (az Alapok fülön, a hiányzó részek nevével)
 - a borító-ütközés: **„ugyanaz a borító, mint: {names}"**
 - **„nincs borítókép"** — az őszinte doboz üres borító helyén
-- **„Új egység felvétele"**
+- **„Új szoba felvétele"**
 
 ### A felugró
 
 - a három fül: **„Alapok"** · **„Képek"** · **„Felszereltség"**
-- a lábazat: **„Mentés"** · **„Egység törlése"**
-- Alapok: **„Az egység neve"** · **„Férőhely"** · **„Leírás"** · **„Ezt látja a vendég a honlapon"**
+- a lábazat: **„Mentés"** · **„Szoba törlése"**
+- Alapok: **„A szoba neve"** · **„Férőhely"** · **„Leírás"** · **„Ezt látja a vendég a honlapon"**
 
 ### Képek fül
 
 - a nagy borító-előnézet felirata: **„Ezt mutatja a honlap ezen a kártyán"**
-- üres borítónál: **„Ennek az egységnek még nincs borítóképe — a honlap kártyáján nem lesz kép."**
+- üres borítónál: **„Ennek a szobának még nincs borítóképe — a honlap kártyáján nem lesz kép."**
 - a feltöltés: **„Kép feltöltése"**, mellette **„A feltöltött kép a közös képtárba kerül, és ehhez
-  az egységhez rendelem."**
-- a nyugtázás mindkét fele: **„{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez az
-  egységhez."** és — csak ha nem volt borító — **„Mivel nem volt borítóképe, az első feltöltött
+  a szobához rendelem."**
+- a nyugtázás mindkét fele: **„{n} kép bekerült a közös képtárba, és hozzárendeltem ehhez a
+  szobához."** és — csak ha nem volt borító — **„Mivel nem volt borítóképe, az első feltöltött
   lett a borító."**
 - a visszautasítás megnevezi az okot: **„nem kép (JPEG, PNG vagy WEBP kell)"** ·
   **„a legnagyobb feltölthető méret 6 MB"** (a fájl nevét a felület a fájlból írja mellé)
 - a képtár: **„A ház közös képtára"**, a csillag súgója: **„Ez legyen a borítókép"**
 - borítóvá tétel: **„A honlap ezentúl ezt a képet mutatja {art} {name} kártyáján."**, és ha még
-  nem tartozott ide: **„Egyben hozzá is rendeltem ehhez az egységhez."** (⛔ a névelő `{art}`
+  nem tartozott ide: **„Egyben hozzá is rendeltem ehhez a szobához."** (⛔ a névelő `{art}`
   behelyettesítés, nem „a(z)": azt a `huArticleLower()` dönti el a névből — a gépies alakot a
   `hu-machine-form-check` jogosan buktatta)
-- a levétel: **„A kép lekerült erről az egységről. A közös képtárban benne marad, más szobánál is
+- a levétel: **„A kép lekerült erről a szobáról. A közös képtárban benne marad, más szobánál is
   állhat."**, kiegészítve **„Ez volt a borítókép, ezért a sorban következő lépett a helyébe."**
   vagy **„Ez volt a borítókép — most nincs borító, a honlap kártyáján nem lesz kép."**
 
@@ -269,7 +271,7 @@ szöveget.
 
 - **„Hozzáadás a listából"** (⛔ szándékosan darabszám NÉLKÜL: a „70 tételes lista” attól a
   pillanattól hazudna, hogy a katalógus bővül)
-- **„Csak azt sorolja fel, ami EBBEN az egységben van. A ház egészére vonatkozó tételek a
+- **„Csak azt sorolja fel, ami EBBEN a szobában van. A ház egészére vonatkozó tételek a
   Felszereltség modulnál maradnak."**
 
 ## Kötő horgony

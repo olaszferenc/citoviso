@@ -336,7 +336,7 @@ try {
       check("a szobánál csíkos mind a három zárt nap", (await linked.count()) === 3, `kapott: ${await linked.count()}`);
       check(
         "a jelmagyarázat megnevezi ezt az állapotot",
-        /Másik egység foglalása/.test((await page.locator(".cal-legend").textContent()) ?? ""),
+        /Másik szoba foglalása/.test((await page.locator(".cal-legend").textContent()) ?? ""),
       );
       await linked.first().click();
       await page.waitForTimeout(200);

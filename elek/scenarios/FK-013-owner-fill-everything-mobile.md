@@ -59,15 +59,17 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 - [ ] Az első egység felvétele
   út: /admin?tab=modulok&m=rooms
   várd: látható "A szobái"
-  tedd: kattints "Új egység felvétele"
+  tedd: kattints "Új szoba felvétele"
   tedd: írd "form:has(input[name='price_on_request']) input[name='name']" "Nádas apartman"
   tedd: írd "form:has(input[name='price_on_request']) input[name='capacity']" "4"
   tedd: írd "form:has(input[name='price_on_request']) input[name='price']" "24000"
   # ⛔ MÉRT LELET (2026-09-27): a szállásnak MÁR VAN egy egysége („A szállás egésze"),
   # ezért az ELSŐ saját egység felvételekor is KÖTELEZŐ az „Az egész szállást is kiadja
-  # egyben?" választás — az pedig a mezők FÖLÖTT, 390 px-en a képernyőn kívül van. A
-  # tulaj kitölti a nevet, a férőhelyet, az árat, megnyomja a „Hozzáadás"-t, és NEM
-  # TÖRTÉNIK SEMMI. A kör most kiválasztja, de a néma elakadás a lelet.
+  # egyben?" választás — az a mezők FÖLÖTT, 390 px-en a képernyőn kívül volt, és a
+  # „Hozzáadás" NÉMÁN nem csinált semmit. JAVÍTVA (2026-09-28, room-add-B): a kérdés a
+  # gomb fölött áll, kihagyva a gomb alatt piros sor mondja meg, mi hiányzik.
+  tedd: kattints "form:has(input[name='price_on_request']) button[type='submit']"
+  várd: látható "Még egy döntés hiányzik"
   tedd: kattints "label:has(input[name='whole'][value='igen'])"
   tedd: görgess-középre "form:has(input[name='price_on_request']) button[type='submit']"
   tedd: kattints "form:has(input[name='price_on_request']) button[type='submit']"
@@ -79,7 +81,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 
 - [ ] A második egység — itt a rendszer rákérdez az egész szállásra
-  tedd: kattints "Új egység felvétele"
+  tedd: kattints "Új szoba felvétele"
   tedd: írd "form:has(input[name='price_on_request']) input[name='name']" "Kisházi szoba"
   tedd: írd "form:has(input[name='price_on_request']) input[name='capacity']" "2"
   tedd: írd "form:has(input[name='price_on_request']) input[name='price']" "16000"
@@ -94,7 +96,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 
 - [ ] A harmadik egység
-  tedd: kattints "Új egység felvétele"
+  tedd: kattints "Új szoba felvétele"
   tedd: írd "form:has(input[name='price_on_request']) input[name='name']" "Kerti stúdió"
   tedd: írd "form:has(input[name='price_on_request']) input[name='capacity']" "3"
   tedd: írd "form:has(input[name='price_on_request']) input[name='price']" "19000"
