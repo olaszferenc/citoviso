@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-rc-gepezet-egy-kod-harom-gep-es-sub-jeloles.md) — RC-gépezet: egy kód három gépen (CIT · MR · OF) + a session által indított session „🔴 SUB” jelölése
 - [ADR-0253](decisions/0253-telefonos-menu-es-a-foglalas-sav-csak-feluton-a.md) — Telefonos menü, és a foglalás-sáv csak félúton: a foglalási blokknál semmilyen ragadó foglalás-gomb (felülírja az ADR-0237 ①–②-t)
 - [ADR-0252](decisions/0252-a-kapu-alanya-sajat-fixture-vagy-kimondott.md) — A kapu alanya saját fixture vagy kimondott predikátum, sosem a közös dev-DB „első sora” — és egy őr, ami a vak `limit(1)`-et megfogja
 - [ADR-0251](decisions/0251-webcim-hiteles-elerhetoseg-kartyazarolasos.md) — Webcím: hiteles elérhetőség + kártyazárolásos fizetés („csak akkor fizet, ha a név már az Öné”)

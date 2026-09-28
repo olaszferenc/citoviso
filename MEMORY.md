@@ -26,6 +26,12 @@ csendes kihagyással (consent-check, consent-style ×4 — a `mock_request`-ág 
 hero-override); a `copy-panel-check` és a `hero-override-ui-check` a mainen is piros (nincs a pre-commitban).
 Jegyzet: `_planning/memory/2026-09-27_gate_subject_inventory.md`.
 
+## Párhuzamos szál (2026-09-28 — RC-gépezet: 🔴 SUB + egy kód három gépen, ADR-XXXX) — LEZÁRVA
+A session által indított session neve `<KEY> ➕ 🔴 SUB <cím>`: az `rc-new.sh` kényszeríti, a handoff örökli, és egy hook tiltja a
+közvetlen indítást. A watchdog, a szkriptek, a hookok és a `CLAUDE.md` RC-blokkja CIT·MR·OF-en betűre azonos, a gépenkénti eltérés
+a `~/.config/rc-watchdog.json`-ban él. Módosítás CSAK CIT-en, kivitel: `~/bin/rc-watchdog-sync.sh --push --go`. A tokent csak az MR forgatja.
+Nyitott: az OF repó `CLAUDE.md` §3; az MR cron CIT-token-push szünetel. Jegyzet: `_planning/memory/2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md`.
+
 ## Párhuzamos szál (2026-09-27 — Webcím: hiteles elérhetőség + kártyazárolás, ADR-0251) — LEZÁRVA
 A tulaj: a domain-vásárlás elhasalt, és „nem bizalomgerjesztő… végig azt írjuk, hogy nem tudjuk előre”. A hiba
 a vevő-öröklés volt (landolva). Az új folyamat: regisztrátor-hiteles jelölők, Barion DelayedCapture (a kártyán
