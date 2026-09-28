@@ -196,7 +196,7 @@ import {
 } from "../tenant/availability.js";
 import { MODULE_CONFIG_REGISTRY, effectiveModuleConfig, type ModuleConfigValues } from "../moduleConfig.js";
 import { recordSiteVisit } from "../analytics/siteVisit.js";
-import { readOrder, readPicks, resolvePicks, sanitizePicks, siteProgramPool } from "../events/picks.js";
+import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { distanceKm } from "../events/gates.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
 import { messagePreview } from "../tenant/messagePreview.js";
@@ -1357,6 +1357,9 @@ async function serveAdmin(
         const { state, events } = programPool;
         const storedPicks = readPicks(cfg.config);
         const ownById = new Map(storedPicks.flatMap((x) => ("own" in x ? [[x.id, x.own] as const] : [])));
+        // Before the first gathering the circle may not be cached yet — the own-program
+        // card still says "Helyben (<settlement>)" (approved plan programajanlo-gyujtes A).
+        const ownName = programPool.own?.name ?? (await siteOwnSettlement(site.id)) ?? "";
         programs = {
           state,
           pool: events.map((e) => ({
@@ -1376,7 +1379,7 @@ async function serveAdmin(
               ? {
                   id: p.id,
                   own: ownById.get(p.id)!,
-                  settlement: p.settlement,
+                  settlement: p.settlement || ownName,
                   distanceKm: p.distanceKm,
                   away: p.away === true,
                 }
@@ -1385,7 +1388,7 @@ async function serveAdmin(
                 : { id: p.id },
           ),
           order: readOrder(cfg.config),
-          ownSettlement: programPool.own?.name ?? "",
+          ownSettlement: ownName,
           // The circle's settlements: the "Máshol" field suggests them and shows the
           // distance at once (the server computes the same on save).
           places: programPool.own

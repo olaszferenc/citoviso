@@ -42,6 +42,17 @@ function log(s: string): void {
 const env: Record<string, string> = { ...process.env } as Record<string, string>;
 env.ELEK_NIGHT_NAME = SUBJECT_LEAD;
 
+// The owner's own programs (FK-013 ⑨) must fall inside the page's two-week window, or
+// the guest round (FK-014) finds no section and the run measures the calendar, not the
+// product. Days counted from Budapest today, so the scenario never goes stale.
+const budapestDay = (plus: number): string => {
+  const d = new Date(`${new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" })}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + plus);
+  return d.toISOString().slice(0, 10);
+};
+env.ELEK_NIGHT_PROGRAM_DAY_1 = budapestDay(5);
+env.ELEK_NIGHT_PROGRAM_DAY_2 = budapestDay(6);
+
 // A tulaj SAJÁT fotói: a lead portál-képei, letöltve (tulajdonosi döntés 2026-09-27 —
 // valódi méret és tájolás, mert a konvertálás útját is próbára teszi). Két adag: 12 (a
 // megengedett maximum egyszerre) + 6, hogy a második feltöltés is mérve legyen.
@@ -145,7 +156,7 @@ async function ensureLogin(): Promise<void> {
 const NEEDS: Record<string, string[]> = {
   "FK-011": ["ELEK_NIGHT_PROSPECT_PATH"],
   "FK-012": ["ELEK_NIGHT_USER", "ELEK_NIGHT_PASSWORD"],
-  "FK-013": ["ELEK_NIGHT_USER", "ELEK_NIGHT_PASSWORD", "ELEK_NIGHT_PHOTOS_A", "ELEK_NIGHT_PHOTOS_B"],
+  "FK-013": ["ELEK_NIGHT_USER", "ELEK_NIGHT_PASSWORD", "ELEK_NIGHT_PHOTOS_A", "ELEK_NIGHT_PHOTOS_B", "ELEK_NIGHT_PROGRAM_DAY_1", "ELEK_NIGHT_PROGRAM_DAY_2"],
   "FK-014": ["ELEK_NIGHT_SLUG"],
   "FK-015": ["ELEK_NIGHT_USER", "ELEK_NIGHT_PASSWORD"],
   // ⚠️ Az ajánlat-token NEM előfeltétel: a kör gerince a lemondó link és a foglalt napok.

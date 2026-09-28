@@ -115,6 +115,21 @@ export const MODCFG_STYLE = `<style>
 .pa-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--citui-line)}
 .pa-sp{flex:1}
 .pa-saved{display:inline-flex;align-items:center;gap:6px;color:var(--citui-ok-ink);font-weight:700;font-size:.88rem}
+.pa-nochg{font-size:.8rem;color:var(--citui-muted)}
+.pa-nochg[hidden],.pa-guest[hidden]{display:none}
+.pa-guest{display:flex;gap:6px;align-items:flex-start;margin:10px 0 0;font-size:.8rem;color:var(--citui-ok-ink)}
+.pa-guest svg{flex:0 0 auto;margin-top:2px}
+/* approved plan programajanlo-gyujtes A: the gathering state inside the "Javasolt" column */
+.pa-gath{flex:1;display:flex;flex-direction:column;gap:8px;padding:16px 14px;min-height:150px;justify-content:center}
+.pa-gath__h{display:flex;align-items:center;gap:8px;font:700 .9rem/1.3 var(--citui-font-display);color:var(--citui-ink)}
+.pa-gath__h svg{color:var(--citui-link-ink);flex:0 0 auto}
+.pa-gath p{margin:0;font-size:.84rem;color:var(--citui-muted);line-height:1.5}
+.pa-gath p b{color:var(--citui-ink)}
+.pa-dots{display:inline-flex;gap:3px;margin-left:2px}
+.pa-dots i{width:5px;height:5px;border-radius:50%;background:var(--citui-cyan-500);opacity:.35;animation:pa-dot 1.2s infinite}
+.pa-dots i:nth-child(2){animation-delay:.2s}.pa-dots i:nth-child(3){animation-delay:.4s}
+@keyframes pa-dot{50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.pa-dots i{animation:none;opacity:.8}}
 .pa-refresh{margin:14px 0 0;background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);
   padding:11px 13px;font-size:.82rem;color:var(--citui-muted);line-height:1.5}
 .pa-refresh b{color:var(--citui-ink)}
@@ -3309,13 +3324,26 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
   const head =
     `<div class="adm-card__head"><span class="adm-ico">${ic("bookings")}</span>` +
     `<h2>${T(lang, "Automata heti programajánló")}</h2></div>`;
-  if (data.state !== "ok") {
-    const msg =
-      data.state === "no_location"
-        ? T(lang, "Nem ismerjük a szállás pontos helyét, ezért nem tudjuk, melyik környék programjait gyűjtsük. Írjon nekünk, és beállítjuk.")
-        : T(lang, "Most gyűjtjük a környéke programjait. Körülbelül egy órán belül itt lesznek — addig nincs miből választani, és a honlapján sem jelenik meg a szakasz.");
+  if (data.state === "no_location") {
+    const msg = T(lang, "Nem ismerjük a szállás pontos helyét, ezért nem tudjuk, melyik környék programjait gyűjtsük. Írjon nekünk, és beállítjuk.");
     return `<div class="adm-card">${head}<p class="adm-lead">${msg}</p></div>`;
   }
+  // Approved plan programajanlo-gyujtes A (owner, 2026-09-28): while the first gathering
+  // runs, the picker is ALREADY the picker — the "Javasolt" column says what is happening
+  // and when, and the owner can add own programs, which go on the page at once. When the
+  // programs arrive nothing moves: the column fills.
+  const gathering = data.state === "not_gathered";
+  const place = data.ownSettlement ?? "";
+  const gathBox =
+    `<div class="pa-gath" data-pa-gathering>` +
+    `<div class="pa-gath__h">${ic("clock", 18)}${T(lang, "Gyűjtjük a programokat")}<span class="pa-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>` +
+    `<p>${
+      place
+        ? T(lang, "Most gyűjtjük {place} és a környéke programjait. <b>Körülbelül egy órán belül</b> itt lesznek, és akkor választhat közülük.", { place: esc(place) })
+        : T(lang, "Most gyűjtjük a környéke programjait. <b>Körülbelül egy órán belül</b> itt lesznek, és akkor választhat közülük.")
+    }</p>` +
+    `<p>${T(lang, "<b>Addig is felvehet saját programot</b> — a saját rendezvényét, vagy amiről Ön tud. Az már most kikerül a honlapjára.")}</p>` +
+    `</div>`;
   // Every owner-facing string is born here, through T(), and handed to the client
   // as data — the i18n guard reads the T() argument, a client literal would escape it.
   const L = {
@@ -3332,6 +3360,11 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
     autoFill: T(lang, "A szabad {n} helyre automatikusan a legközelebbi programok kerülnek, amíg Ön nem választ."),
     noneThisWeek: T(lang, "Ezen a héten nem találtunk programot a környékén. Hétfő reggel újra keresünk."),
     emptySel: T(lang, "Még nincs kiválasztva program. Vegyen fel a javasoltak közül — legfeljebb 10-et."),
+    // approved plan programajanlo-gyujtes A
+    gathering: T(lang, "gyűjtés alatt"),
+    emptySelGath: T(lang, "Még nincs saját programja. A javasolt programok a gyűjtés után jönnek."),
+    guestAfter: T(lang, "Mentés után a honlapján megjelenik a „Programok a környéken” szakasz a saját programjaival (a következő két hétből). A gyűjtött programok a gyűjtés után mellé kerülnek."),
+    guestNow: T(lang, "A honlapján látszik a „Programok a környéken” szakasz a saját programjaival (a következő két hétből). A gyűjtött programok a gyűjtés után mellé kerülnek."),
     // ADR-0238 — order and the owner's own programs (contract programajanlo-sajat/)
     byDate: T(lang, "dátum szerint"),
     manual: T(lang, "saját sorrend"),
@@ -3384,7 +3417,8 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
     `<div class="pa-full" data-pa-full hidden>${T(lang, "Betelt a 10 hely. Vegyen le egyet, ha mást szeretne felvenni.")}</div>` +
     `<div class="pa-cols">` +
     `<div class="pa-pane" data-pa-pane="pool"><div class="pa-paneh"><h3>${T(lang, "Javasolt programok")}</h3><span class="pa-c" data-pa-c="pool"></span></div>` +
-    `<div class="pa-box" data-pa-list="pool">${empty(L.emptyPool)}</div></div>` +
+    `<div class="pa-box" data-pa-list="pool">${gathering ? gathBox : empty(L.emptyPool)}</div></div>` +
+    (gathering ? `<template data-pa-gath>${gathBox}</template>` : "") +
     `<div class="pa-pane is-hide" data-pa-pane="sel"><div class="pa-paneh"><h3>${T(lang, "Az Ön oldalán")}</h3><span class="pa-c" data-pa-c="sel"></span><span class="pa-ord" data-pa-ord></span></div>` +
     `<div class="pa-box pa-box--sel" data-pa-list="sel">${empty(L.emptySel)}</div></div>` +
     `</div>` +
@@ -3392,10 +3426,14 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
     `<form method="POST" action="/admin/programs" class="pa-foot">` +
     `<input type="hidden" name="picks" value="">` +
     `<input type="hidden" name="order" value="">` +
+    // The disabled button says WHY it is disabled, and the save says WHERE it went
+    // (FK-013 finding: "a Mentés a honlapra nem ad visszajelzést").
+    `<span class="pa-nochg" data-pa-nochg${data.saved ? " hidden" : ""}>${T(lang, "Nincs mentetlen változás.")}</span>` +
     `<span class="pa-sp"></span>` +
-    `<span class="pa-saved"${data.saved ? "" : " hidden"}>${ic("check", 16)} ${T(lang, "Mentve")}</span>` +
+    `<span class="pa-saved"${data.saved ? "" : " hidden"}>${ic("check", 16)} ${T(lang, "Mentve — kint van a honlapján")}</span>` +
     `<button class="citui-btn citui-btn--primary" type="submit" data-pa-save disabled>${T(lang, "Mentés a honlapra")}</button>` +
     `</form>` +
+    `<p class="pa-guest" data-pa-guest hidden>${ic("check", 14)}<span></span></p>` +
     `<p class="pa-refresh"><b>${T(lang, "Következő frissítés:")}</b> ${T(lang, "hétfő reggel. Az Ön választása és sorrendje megmarad; a lejárt programok — a sajátjai is — maguktól lekerülnek a honlapjáról.")}</p>` +
     `<script type="application/json" data-pa-data>${j({
       pool: data.pool,
@@ -3404,6 +3442,7 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
       own: data.ownSettlement ?? "",
       places: data.places ?? [],
       today: data.today ?? new Date().toISOString().slice(0, 10),
+      gathering,
       rules: { ahead: OWN_AHEAD_DAYS, span: MAX_SPAN_DAYS, window: WINDOW_DAYS, titleMax: OWN_TITLE_MAX, placeMax: OWN_PLACE_MAX },
       lang,
       L,
@@ -3502,18 +3541,22 @@ var PLUS='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="cu
 function newRow(label,cls){return'<button type="button" class="pa-new'+(cls?" "+cls:"")+'" data-pa-act="new"'+(sel.length>=MAX||editing?" disabled":"")+'>'+PLUS+esc(label)+'</button>'}
 function render(){var keep=null,f0=root.querySelector("[data-pa-form]");if(f0){keep=readForm(f0);keep.t=[].map.call(f0.querySelectorAll("[data-t]"),function(x){return x.name})}
  var pool=D.pool.filter(function(e){return sel.indexOf(e.id)<0});
- root.querySelector('[data-pa-list=pool]').innerHTML=(pool.length?pool.map(function(e){return item(e,"pool")}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(D.pool.length?L.emptyPool:L.noneThisWeek)+"</span></div>")+newRow(L.newPool,"pa-new--pool");
+ var gt=root.querySelector("template[data-pa-gath]");
+ root.querySelector('[data-pa-list=pool]').innerHTML=(D.gathering&&gt?gt.innerHTML+newRow(L.newSel,"pa-new--pool"):(pool.length?pool.map(function(e){return item(e,"pool")}).join(""):'<div class="pa-empty">'+emptyIcon+"<span>"+esc(D.pool.length?L.emptyPool:L.noneThisWeek)+"</span></div>")+newRow(L.newPool,"pa-new--pool"));
  var rows=sel.map(function(id,i){return editing===id&&!isNew?form(id):item(byId[id],"sel",i)}).join("");
- root.querySelector('[data-pa-list=sel]').innerHTML=(editing&&isNew?form(editing):newRow(L.newSel))+(rows||'<div class="pa-empty">'+emptyIcon+"<span>"+esc(L.emptySel)+"</span></div>");
- root.querySelector('[data-pa-c=pool]').textContent=L.programs.replace("{n}",pool.length);
+ root.querySelector('[data-pa-list=sel]').innerHTML=(editing&&isNew?form(editing):newRow(L.newSel))+(rows||'<div class="pa-empty">'+emptyIcon+"<span>"+esc(D.gathering?L.emptySelGath:L.emptySel)+"</span></div>");
+ root.querySelector('[data-pa-c=pool]').textContent=D.gathering?L.gathering:L.programs.replace("{n}",pool.length);
  var c=root.querySelector('[data-pa-c=sel]');c.textContent=sel.length+" / "+MAX;c.classList.toggle("is-full",sel.length>=MAX);
  root.querySelector("[data-pa-ord]").innerHTML=order==="date"?esc(L.byDate):esc(L.manual)+' · <button type="button" class="pa-lnk" data-pa-act="resort">'+esc(L.resort)+'</button>';
- root.querySelector('[data-pa-n=pool]').textContent=pool.length;root.querySelector('[data-pa-n=sel]').textContent=sel.length;
+ root.querySelector('[data-pa-n=pool]').textContent=D.gathering?"…":pool.length;root.querySelector('[data-pa-n=sel]').textContent=sel.length;
  root.querySelector("[data-pa-full]").hidden=sel.length<MAX;
  var au=root.querySelector("[data-pa-auto]");au.hidden=sel.length>=MAX||!D.pool.length;au.textContent=L.autoFill.replace("{n}",MAX-sel.length);
  var st=JSON.stringify([order,state()]);root.querySelector("input[name=picks]").value=JSON.stringify(state());root.querySelector("input[name=order]").value=order;
  root.querySelector("[data-pa-save]").disabled=st===initial||!!editing;
- if(st!==initial){var sv=root.querySelector(".pa-saved");if(sv)sv.hidden=true}
+ var sv=root.querySelector(".pa-saved");if(st!==initial&&sv)sv.hidden=true;
+ root.querySelector("[data-pa-nochg]").hidden=st!==initial||!!editing||!(sv&&sv.hidden);
+ var own=sel.some(function(id){var e=byId[id];return e.own&&e.start<=plus(D.today,R.window)}),gu=root.querySelector("[data-pa-guest]");gu.hidden=!D.gathering||!own;
+ gu.querySelector("span").textContent=st!==initial?L.guestAfter:L.guestNow;
  var f=root.querySelector("[data-pa-form]");if(f){if(keep&&keep.t){var q=function(n){return f.querySelector('[name="'+n+'"]')};
   ["title","start","end","place","url"].forEach(function(n){q(n).value=keep[n]});f.querySelector('input[type=radio][value="'+(keep.away?"away":"here")+'"]').checked=true;
   keep.t.forEach(function(n){var x=q(n);if(x)x.setAttribute("data-t","1")})}paint(f,false)}}

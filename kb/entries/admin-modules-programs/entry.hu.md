@@ -24,7 +24,10 @@ A település mellett látja, milyen messze van a szállásától. A saját tele
 mellett **„Helyben”** áll — ezek a legértékesebbek a vendégnek.
 
 Ha most vette meg a modult, körülbelül egy órán belül begyűjtjük a környéke programjait —
-addig a képernyő ezt jelzi, és a honlapján még nem jelenik meg a szakasz.
+addig a **„Javasolt programok”** hasábban (telefonon a **„Javasolt”** fülön) ez áll:
+**„Gyűjtjük a programokat”**. Közben már felvehet saját programot a **„Saját program hozzáadása”**
+gombbal: mentés után a saját programjai azonnal kikerülnek a honlapjára, a gyűjtött programok
+pedig a gyűjtés után mellé kerülnek.
 
 ## Kiválasztás
 

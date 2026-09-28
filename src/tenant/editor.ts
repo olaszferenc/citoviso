@@ -302,21 +302,24 @@ export async function moduleContentFor(
     // the free slots auto-filled with the nearest upcoming programs (owner ruling,
     // 2026-09-23 — an "Automata" module must not sit empty because nobody clicked),
     // in date order unless the owner arranged them himself.
+    // Approved plan programajanlo-gyujtes A (owner, 2026-09-28): the owner's OWN programs
+    // go on the page at once — while the first gathering runs, and on a week the gatherer
+    // found nothing. Only a site without coordinates has no block at all.
     const programPool = await siteProgramPool(siteId);
-    const { state, events } = programPool;
-    if (state === "ok" && events.length) {
-      out.poi = programsOnPage(cfg("poi"), programPool).map((e) => ({
+    const rows = programPool.state === "no_location" ? [] : programsOnPage(cfg("poi"), programPool);
+    if (rows.length) {
+      const own = programPool.own?.name ?? (await siteOwnSettlement(siteId));
+      out.poi = rows.map((e) => ({
         title: "title" in e ? e.title : e.name,
         start: e.start,
         end: e.end,
-        settlement: e.settlement,
+        settlement: e.settlement || own || "",
         distanceKm: e.distanceKm,
         sourceUrl: e.sourceUrl,
         sourceHost: e.sourceHost,
         ...("own" in e && e.own ? { own: true } : {}),
         ...("away" in e && e.away ? { away: true } : {}),
       }));
-      const own = programPool.own?.name ?? (await siteOwnSettlement(siteId));
       if (own) out.poiArea = own;
     }
   }

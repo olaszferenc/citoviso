@@ -306,36 +306,50 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 ## ⑨ Heti programajánló — több program, mobil fülekkel
 
+# ⛔ MÉRT LELET (2026-09-28): gyűjtés alatt a képernyő egyetlen mondat volt — saját programot
+# sem lehetett felvenni, a lépések `tedd?:` alakban NÉMÁN kimaradtak, és a vendég-lapon nem
+# volt szakasz. JAVÍTVA (jóváhagyott terv programajanlo-gyujtes A): a választó gyűjtés alatt
+# is él, a saját program azonnal kikerül. A lépések ezért KÖTELEZŐK, és a dátumokat a vezénylő
+# adja a mai naphoz képest (a honlap a következő két hetet mutatja — a rögzített októberi
+# dátumok sosem jelentek volna meg a vendégnek).
+
 - [ ] A programajánló képernyő megnyílik telefonon
   út: /admin?tab=modulok&m=poi
   várd: látható "programajánló"
-  kézi: 390-en mit lát a tulaj: javasolt programokat, vagy a „Most gyűjtjük a környéke programjait" üzenetet; a két fül (Javasolt / Az Ön oldalán) látszik-e és váltható-e ujjal; ha nincs mit választani, a felület megmondja-e, mikor lesz
+  várd: darab ".pa-new--pool" >= 1
+  kézi: 390-en mit lát a tulaj: javasolt programokat, vagy a „Gyűjtjük a programokat" állapotot a Javasolt fülön — és kiderül-e, mikor jön az adat és mit tehet addig; a két fül (Javasolt / Az Ön oldalán) látszik-e és váltható-e ujjal; a tiltott „Mentés a honlapra" mellett ott van-e, miért tiltott
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
 - [ ] Saját programot vesz fel — ELSŐ
-  tedd?: kattints "[data-pa-act='new']"
-  tedd?: írd "input[name='title']" "Borkóstoló a teraszunkon"
-  tedd?: írd "input[name='start']" "2026-10-24"
-  tedd?: kattints "[data-pa-act='fok']"
-  kézi: a saját program űrlapja 390-en kitölthető-e (cím, dátum, hol lesz); a „Helyben / Máshol" választás érthető-e; a felvétel után látszik-e a listán
+  tedd: kattints ".pa-new--pool"
+  tedd: írd "[data-pa-form] input[name='title']" "Borkóstoló a teraszunkon"
+  tedd: írd "[data-pa-form] input[name='start']" "${ELEK_NIGHT_PROGRAM_DAY_1}"
+  tedd: kattints "[data-pa-form] [data-pa-act='fok']"
+  várd: darab "[data-pa-own]" >= 1
+  adat: ELEK-NIGHT saját program (Borkóstoló, ${ELEK_NIGHT_PROGRAM_DAY_1})
+  kézi: a saját program űrlapja 390-en kitölthető-e (cím, dátum, hol lesz); a „Helyben / Máshol" választás érthető-e; a felvétel után látszik-e a listán, és a sor alatt kiderül-e, hogy mentés után a honlapon lesz
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
 - [ ] Saját programot vesz fel — MÁSODIK
-  tedd?: kattints "[data-pa-act='new']"
-  tedd?: írd "input[name='title']" "Szüreti felvonulás a faluban"
-  tedd?: írd "input[name='start']" "2026-10-25"
-  tedd?: kattints "[data-pa-act='fok']"
-  kézi: a második tétel felvétele után a sorrend követhető-e, és a „Mentés a honlapra" gomb AKTÍV lett-e (előtte tiltott volt)
+  tedd: kattints "[data-pa-list='sel'] [data-pa-act='new']"
+  tedd: írd "[data-pa-form] input[name='title']" "Szüreti felvonulás a faluban"
+  tedd: írd "[data-pa-form] input[name='start']" "${ELEK_NIGHT_PROGRAM_DAY_2}"
+  tedd: kattints "[data-pa-form] [data-pa-act='fok']"
+  várd: darab "[data-pa-own]" >= 2
+  adat: ELEK-NIGHT saját program (Szüreti felvonulás, ${ELEK_NIGHT_PROGRAM_DAY_2})
+  kézi: a második tétel felvétele után a sorrend követhető-e (dátum szerint), és a „Mentés a honlapra" gomb AKTÍV lett-e (előtte tiltott volt)
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
 - [ ] Mentés a honlapra
-  tedd?: kattints "[data-pa-save]"
-  tedd: várj "Mentve" 25
+  tedd: görgess-középre "[data-pa-save]"
+  tedd: kattints "[data-pa-save]"
+  tedd: várj "Mentve — kint van a honlapján" 25
+  várd: darab "[data-pa-own]" >= 2
   adat: ELEK-NIGHT programok (2 saját)
-  kézi: a mentés visszajelzése látszik-e; a tulaj tudja-e, hogy ez MOSTANTÓL kint van a honlapján
+  kézi: a mentés visszajelzése látszik-e; a tulaj tudja-e, hogy ez MOSTANTÓL kint van a honlapján (a „Programok a környéken" szakaszban)
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 

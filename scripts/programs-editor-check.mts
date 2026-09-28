@@ -384,6 +384,43 @@ try {
     ok(overflow <= 0, `nincs vízszintes túlfolyás (${overflow} px)`);
     ok(errs.length === 0, `JS-hiba: ${errs.length}${errs.length ? " — " + errs[0] : ""}`);
   }
+  // ═══════════ approved plan programajanlo-gyujtes A: the FIRST gathering still runs ═══════════
+  // Owner, 2026-09-28 („Programajánló A”): the picker already works, the "Javasolt" column
+  // says what is happening, own programs can be added and go on the page AT ONCE.
+  // Measured before the fix (FK-013): one sentence, no form, no section on the page.
+  console.log("\ngyűjtés alatt (390 px, touch)");
+  await db.deleteFrom("site_module_config").where("site_id", "=", tu.siteId).where("module", "=", "poi").execute();
+  await db.deleteFrom("event_gather_run").where("settlement_osm_id", "=", OWN).execute();
+  {
+    const gp = await siteProgramPool(tu.siteId);
+    ok(gp.state === "not_gathered" && gp.own?.name === "_Peofalva", `ELŐFELTÉTEL: a kör ismert, a gyűjtés még nem futott (${gp.state}, ${gp.own?.name})`);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await ctx.addCookies([{ name: "cit_session", value: mintTenantCookieValue(tu.id), domain: "127.0.0.1", path: "/" }]);
+    const p = await ctx.newPage();
+    const errs: string[] = [];
+    p.on("pageerror", (e) => errs.push(e.message));
+    await p.goto(URL_);
+    ok(await p.isVisible("[data-pa-gathering]"), "A: a Javasolt hasábban a gyűjtés állapota látszik");
+    ok(/Most gyűjtjük _Peofalva és a környéke programjait\. Körülbelül egy órán belül/.test((await p.textContent("[data-pa-gathering]"))?.replace(/\s+/g, " ") ?? ""), "A: megnevezi a települést és az ígért időt");
+    ok((await p.textContent("[data-pa-tab=pool]"))?.replace(/\s+/g, " ").trim() === "Javasolt (…)", "A: a fül nem „0”-t mond gyűjtés alatt");
+    ok(await p.isVisible("[data-pa-list=pool] .pa-new--pool") && !(await p.isDisabled("[data-pa-list=pool] .pa-new--pool")), "A: a Javasolt hasábban aktív saját-program belépő");
+    ok((await p.isDisabled("[data-pa-save]")) && (await p.isVisible("[data-pa-nochg]")), "A: a tiltott mentés mellett „Nincs mentetlen változás.”");
+    await p.locator("[data-pa-list=pool] .pa-new--pool").tap();
+    await p.fill("[data-pa-form] [name=title]", "Őrteszt gyűjtés alatt");
+    await p.fill("[data-pa-form] [name=start]", plus(2));
+    await p.locator("[data-pa-form] [data-pa-act=fok]").tap();
+    ok((await p.locator("[data-pa-own]").count()) === 1, "A: a saját program gyűjtés alatt is felvehető");
+    ok(await p.isVisible("[data-pa-guest]") && /^Mentés után a honlapján megjelenik/.test((await p.textContent("[data-pa-guest]"))?.trim() ?? ""), "A: mentés előtt: „Mentés után … megjelenik”");
+    ok(!(await p.isVisible("[data-pa-nochg]")), "A: változás után a „Nincs mentetlen változás.” eltűnik");
+    await Promise.all([p.waitForNavigation(), p.locator("[data-pa-save]").tap()]);
+    ok((await p.textContent(".pa-saved"))?.trim() === "Mentve — kint van a honlapján" && (await p.isVisible(".pa-saved")), "A: mentés után „Mentve — kint van a honlapján”");
+    ok(/^A honlapján látszik/.test((await p.textContent("[data-pa-guest]"))?.trim() ?? ""), "A: újratöltés után: „A honlapján látszik …”");
+    const html = await (await import("node:fs/promises")).readFile(path.resolve(process.cwd(), "sites", ids_tenant(), "index.html"), "utf8").catch(() => "");
+    ok(/data-cit-module="poi"/.test(html) && /Őrteszt gyűjtés alatt/.test(html) && /A szállás ajánlja/.test(html), "A: HONLAP — gyűjtés alatt a saját program kint van („A szállás ajánlja”)");
+    ok(/_Peofalva/.test(html), "A: HONLAP — a helyben tartott saját program települése nem üres");
+    ok(errs.length === 0, `JS-hiba: ${errs.length}${errs.length ? " — " + errs[0] : ""}`);
+    await ctx.close();
+  }
 } finally {
   await browser.close().catch(() => {});
   server.close();

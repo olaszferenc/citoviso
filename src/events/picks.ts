@@ -87,7 +87,9 @@ export async function siteProgramPool(siteId: string, today = budapestToday()): 
     .where("settlement_osm_id", "=", pool.own.osmId)
     .where("status", "=", "done")
     .executeTakeFirst();
-  if (!ran) return empty("not_gathered");
+  // Not gathered yet, but the circle is known: the own-program card still needs the
+  // "Helyben (…)" name and the "Máshol" distances (approved plan programajanlo-gyujtes A).
+  if (!ran) return { state: "not_gathered", events: [], own: pool.own, around: pool.around, today };
   return { state: "ok", events: pool.events, own: pool.own, around: pool.around, today };
 }
 
