@@ -9,6 +9,7 @@
 - [2026-09-28_vendeg_oldal_egesz_szallas.md](2026-09-28_vendeg_oldal_egesz_szallas.md) — 2026-09-28 — A vendég oldala: a „Foglalás” rossz választót állított, üres felugró, összetapadt kártya, a „Mégsem” zsákutcája
 - [2026-09-28_telefonos_menu_foglalas_sav_feluton.md](2026-09-28_telefonos_menu_foglalas_sav_feluton.md) — 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-0253
 - [2026-09-28_szezon_naptar_es_programajanlo_gyujtes_alatt.md](2026-09-28_szezon_naptar_es_programajanlo_gyujtes_alatt.md) — 2026-09-28 — A tulaj nem tudta feltölteni a szezonárait és a programjait telefonon (brief: adatfeltoltes-szezon-program)
+- [2026-09-28_rc_sub_sorszam_es_munka_jel.md](2026-09-28_rc_sub_sorszam_es_munka_jel.md) — 2026-09-28 — RC-sessionök: SUB-sorszám (🟦1.2) és munka-jel (🟠/🟢)
 - [2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md](2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md) — 2026-09-28 — RC-gépezet: 🔴 SUB-jelölés + egy kód három gépen (ADR-0254)
 - [2026-09-28_modul_kosar_sav_helyett.md](2026-09-28_modul_kosar_sav_helyett.md) — 2026-09-28 — Modulok fül: kosár a 407 px-es összegző sáv helyett (ADR-0255)
 - [2026-09-28_mobile_chrome_utojavitas.md](2026-09-28_mobile_chrome_utojavitas.md) — 2026-09-28 — ADR-0253 utójavítás: consent-szabályok a telefonos blokkba, tilted-gallery fekvő hero-alja és helység-sor
