@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-28_vendeg_oldal_egesz_szallas.md](2026-09-28_vendeg_oldal_egesz_szallas.md) — 2026-09-28 — A vendég oldala: a „Foglalás” rossz választót állított, üres felugró, összetapadt kártya, a „Mégsem” zsákutcája
+- [2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md](2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md) — Vendég-oldal: a tulaj Nyitóképe a hős, és az értékelés skálája a forrásé (2026-09-28 este)
 - [2026-09-28_telefonos_menu_foglalas_sav_feluton.md](2026-09-28_telefonos_menu_foglalas_sav_feluton.md) — 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-0253
 - [2026-09-28_szomszed_elerhetoseg_kapu.md](2026-09-28_szomszed_elerhetoseg_kapu.md) — 2026-09-28 — A szomszéd elérhetőségére nem megy mock: közös-elérhetőség kapu + szigorított Places-párosítás (ADR-0258)
 - [2026-09-28_szezon_naptar_es_programajanlo_gyujtes_alatt.md](2026-09-28_szezon_naptar_es_programajanlo_gyujtes_alatt.md) — 2026-09-28 — A tulaj nem tudta feltölteni a szezonárait és a programjait telefonon (brief: adatfeltoltes-szezon-program)

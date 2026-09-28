@@ -5,6 +5,7 @@
 // demo, not the owner's live site — §A demo-framing); the LIVE tenant page is indexable.
 
 import type { RenderPhase, SiteData } from "./recipe.js";
+import { ratingScale } from "./rating.js";
 
 /** Escape a string for an HTML attribute value (meta content). */
 function attr(s: string): string {
@@ -62,6 +63,8 @@ function jsonLd(d: SiteData, canonicalUrl?: string): string {
     node.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: d.rating.value,
+      // Schema.org assumes 5 when absent; stated so a ten-point source is not misread.
+      bestRating: ratingScale(d),
       ...(d.rating.count != null ? { reviewCount: d.rating.count } : {}),
     };
   }

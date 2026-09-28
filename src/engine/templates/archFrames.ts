@@ -19,12 +19,13 @@
 // the inner <img>, never the observed box (rule 4).
 
 import { starIcon } from "../icons.js";
+import { ratingScale } from "../rating.js";
 import { fadeIntroCss, fadeIntroHtml, fadeIntroJs, mo, motionCss, motionJs, parallax } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -232,7 +233,7 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
   const skin = SKINS[recipe.skin] ?? SKINS["sand-cream-airy"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
-  const hero = heroPhoto(data, 1);
+  const hero = heroPhoto(data);
   const rooms = roomsForMock(data);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");
@@ -387,10 +388,10 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
         <div class="a-title"><h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Vendégeink"))}</h2></div>
         ${
           rating
-            ? `<div class="a-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(5)}</div>
+            ? `<div class="a-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(honestStarCount(data))}</div>
         <div class="a-score" ${mo("up", 90)}>${esc(
           String(rating.value).replace(".", ","),
-        )}<span class="a-of"> / 10</span></div>
+        )}<span class="a-of"> / ${ratingScale(data)}</span></div>
         ${
           rating.count
             ? `<small ${mo("in", 170)}>${T(data, "{n} vendégértékelés átlaga", {

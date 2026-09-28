@@ -712,6 +712,25 @@ if [ -f scripts/empty-tagline-check.mts ] && \
   echo "[pre-commit] empty-tagline-check (nincs alcím → nincs üres doboz)…"
   npx tsx scripts/empty-tagline-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A TULAJ NYITÓKÉPE A HŐS, és feltöltött fotó nem ugródik át (2026-09-28, Myrna Haus):
+# az arch-frames a 2. feltöltést tette hősnek, az 1. (a „Nyitókép”) sehol nem látszott —
+# egy sablononkénti `heroPhoto(data, offset)` írta felül a tulaj/operátor/vision sorrendjét.
+# Böngészős mérés, mind a 19 sablon, asztali + 390 px, két piros önteszttel. ~20 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/cover-photo-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(templateKit|render)\.ts$|^scripts/cover-photo-check\.mts$'; then
+  echo "[pre-commit] cover-photo-check (a nyitókép a hős, nincs átugrott fotó)…"
+  npx tsx scripts/cover-photo-check.mts >"$GATE_LOG" || gate_failed
+fi
+# AZ ÉRTÉKELÉS SKÁLÁJA A FORRÁSÉ (§B.17, 2026-09-28): „4,4 / 10” egy Google ötös átlagra —
+# három sablon beégetett „/ 10”-et, kettő „/ 5”-öt hordozott. Két alany (Google · tízes
+# forrás), mind a 19 sablon, JSON-LD bestRating, csillagszám; két piros önteszt.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/rating-scale-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(templateKit|render|rating|seo|primitives|recipe)\.ts$|^scripts/rating-scale-check\.mts$'; then
+  echo "[pre-commit] rating-scale-check (a kiírt skála a forrásé)…"
+  npx tsx scripts/rating-scale-check.mts >"$GATE_LOG" || gate_failed
+fi
 # §B.17 a KIKÜLDÖTT mockon: a vélemény-űrlap — az egyetlen, ami nevet, e-mailt és
 # hozzájárulást kér — jelöletlen volt, és közzétételt ígért egy űrlapról, ami sehova
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt

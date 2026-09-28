@@ -16,6 +16,7 @@
 // without ever asking it to fill a screen.
 
 import { starIcon } from "../icons.js";
+import { ratingScale } from "../rating.js";
 import {
   introCss,
   introHtml,
@@ -30,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -201,7 +202,7 @@ section{padding:clamp(70px,10vh,124px) 0}
 function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
   const skin = SKINS[recipe.skin] ?? SKINS["coastal-fresh"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
-  const hero = heroPhoto(data, 2);
+  const hero = heroPhoto(data);
   const rooms = roomsForMock(data);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");
@@ -372,10 +373,10 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       ? `<section class="w-rev"><div class="w-wrap">
       ${
         rating
-          ? `<div class="w-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(5)}</div>
+          ? `<div class="w-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(honestStarCount(data))}</div>
       <div class="w-score" ${mo("up", 90)}>${esc(
         String(rating.value).replace(".", ","),
-      )}<span class="w-of"> / 10</span></div>
+      )}<span class="w-of"> / ${ratingScale(data)}</span></div>
       ${
         rating.count
           ? `<small ${mo("in", 170)}>${T(data, "{n} vendégértékelés átlaga", {

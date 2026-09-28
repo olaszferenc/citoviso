@@ -261,6 +261,9 @@ export interface SiteData {
   readonly rating?: {
     readonly value: number;
     readonly count?: number;
+    /** Top of the SOURCE's scale (a ten-point portal → 10). Absent = Google's 1–5, which is
+     *  every rating stored today. Templates read it via engine/rating.ts, never hard-code it. */
+    readonly scale?: number;
     /** ADR-0046 — Google's own reviews page for THIS place (built from the place id).
      *  Makes the badge clickable so a visitor can verify the number at the source;
      *  it doubles as the attribution the Places policy requires. */

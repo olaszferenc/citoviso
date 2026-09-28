@@ -7,6 +7,7 @@ import { iconSvg, starIcon } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
+import { ratingOnFiveStars } from "./rating.js";
 
 /** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
  *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
@@ -100,7 +101,7 @@ export function roomsLead(d: SiteData): string {
 /** §B.17: filled-star count mirroring the REAL rating (never a flattering 5-of-5 default).
  *  0 = no real rating → render no stars. */
 export function honestStarCount(data: SiteData): number {
-  return data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
+  return data.rating ? Math.max(1, Math.min(5, Math.round(ratingOnFiveStars(data)))) : 0;
 }
 
 /**
@@ -254,26 +255,20 @@ export function bookingSlot(d: SiteData, phase: RenderPhase = "live"): string {
  */
 
 /**
- * Which photo opens the page — and a DIFFERENT one per template.
+ * Which photo opens the page: photos[0], in EVERY template.
  *
- * ⛔ Measured complaint: three mocks of the same lead, three different templates,
- * and all three opened with the SAME first photo in the same crop, so the set read
- * as one design. The photo list is the portal's order, not an editorial ranking:
- * its first item is very often an interior (a bed, a kitchen), which is the weakest
- * possible opening for a full-bleed hero.
- *
- * Two rules, both deterministic (mock=live):
- *   · offset by template, so two templates on the same lead never open alike.
- * (A landscape-first rule would be better still, but the render input carries no
- *  photo dimensions yet — noted for a follow-up.)
+ * ⛔ Until 2026-09-28 this took a per-template OFFSET ("three mocks of the same lead
+ * must not open with the same photo"), from the days when the list was the portal's
+ * raw order. The order has since become an EDITORIAL decision — the vision hero pick
+ * (heroPick.ts), the operator's pin (heroOverride.ts) and, on a live site, the owner's
+ * own "Nyitókép" in the tenant admin all work by putting the chosen photo FIRST. The
+ * offset overrode all three: measured on a live tenant (Myrna Haus, arch-frames) the
+ * owner's cover was nowhere on the page and the 2nd upload was the hero. Templates
+ * differ by layout and crop, not by skipping the chosen cover.
+ * Guard: scripts/cover-photo-check.mts (all templates, rendered, both sizes).
  */
-export function heroPhoto(d: SiteData, offset = 0): Photo | undefined {
-  const photos = d.photos;
-  if (!photos.length) return undefined;
-  // ⚠️ SiteData.Photo carries no dimensions, so "prefer the landscape shot" is not
-  // available here — the portal record has width/height, the render input does not.
-  // Until that is threaded through, the offset alone does the separating.
-  return photos[offset % photos.length];
+export function heroPhoto(d: SiteData): Photo | undefined {
+  return d.photos[0];
 }
 
 export function photoFill(alt: string, opts: { icon?: string; compact?: boolean } = {}): string {

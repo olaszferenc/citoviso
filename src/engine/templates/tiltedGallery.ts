@@ -15,12 +15,13 @@
 // "the content is simply there" with JS off or reduced-motion set.
 
 import { starIcon } from "../icons.js";
+import { ratingScale } from "../rating.js";
 import { mo, motionCss, motionJs, parallax, words } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 const TILTED_CSS = `
 /* shared module sections (.cit-modsec) dressed to this template's rhythm (ADR-0057):
@@ -238,7 +239,7 @@ section{padding:clamp(64px,9vh,104px) 0}
 function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
   const skin = SKINS[recipe.skin] ?? SKINS["sand-cream-airy"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
-  const hero = heroPhoto(data, 0);
+  const hero = heroPhoto(data);
   const bandPhoto = photos[1] ?? photos[0];
   const rooms = roomsForMock(data);
   const heroCopy = copyOf(recipe, "hero");
@@ -409,8 +410,8 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const rating = data.rating;
   const review = rating
     ? `<section class="t-rev"><div class="t-wrap">
-      <div class="t-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(5)}</div>
-      <div class="t-score" ${mo("up", 90)}><b>${esc(String(rating.value).replace(".", ","))}</b> / 10</div>
+      <div class="t-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(honestStarCount(data))}</div>
+      <div class="t-score" ${mo("up", 90)}><b>${esc(String(rating.value).replace(".", ","))}</b> / ${ratingScale(data)}</div>
       ${rating.count ? `<small ${mo("in", 180)}>${T(data, "{n} vendégértékelés átlaga", { n: rating.count })}</small>` : ""}
       ${quoteBlock}
     </div></section>`

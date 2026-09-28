@@ -10,6 +10,7 @@
 
 import { iconSvg, matchIcon, starIcon, starRow } from "./icons.js";
 import { amenityIconSvg } from "./amenityIcon.js";
+import { ratingScale } from "./rating.js";
 import type { Faq, Review, Room, SectionCopy, SectionKind, SiteData } from "./recipe.js";
 // ⛔ These legacy archetype renderers have NO details popover: a real unit's
 // description and amenities arrive STRUCTURED now, so reading `r.note` raw would
@@ -1028,7 +1029,7 @@ function reviewsBand(d: SiteData, copy?: SectionCopy): string {
   const reviews = real;
   const note = real ? "" : sampleNote("Minta — ide az Ön vendégeinek értékelései kerülnek.");
   const ratingLine = d.rating
-    ? `${String(d.rating.value).replace(".", ",")} / 5${
+    ? `${String(d.rating.value).replace(".", ",")} / ${ratingScale(d)}${
         d.rating.count ? ` — ${d.rating.count} értékelés alapján` : ""
       }`
     : "";

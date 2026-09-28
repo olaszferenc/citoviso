@@ -11,6 +11,7 @@ import { iconSvg, matchIcon, starIcon, starRow } from "../icons.js";
 import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { ratingScale } from "../rating.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
@@ -300,7 +301,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<img src="${esc(heroPhoto.url)}" alt="${esc(heroPhoto.alt)}">`
     : `<div class="b-flat"></div>`;
   const heroStamp = rating
-    ? `<div class="b-stamp">${esc(rating.label)}<strong>${esc(rating.value)} / 5</strong></div>`
+    ? `<div class="b-stamp">${esc(rating.label)}<strong>${esc(rating.value)} / ${ratingScale(data)}</strong></div>`
     : "";
   const hero = `<header class="b-hero" id="top">
     <div class="b-hero-grid">
@@ -380,7 +381,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${secTag(revCopy.eyebrow ?? T(data, "Vendégek mondták"))}
           <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégek mondták")}</h2>
         </div>
-        ${rating ? `<div class="b-score-stamp">${esc(rating.label)}<strong>${esc(rating.value)} / 5</strong></div>` : ""}
+        ${rating ? `<div class="b-score-stamp">${esc(rating.label)}<strong>${esc(rating.value)} / ${ratingScale(data)}</strong></div>` : ""}
       </div>
       <div class="b-rev">
         ${reviewsData
