@@ -1274,7 +1274,7 @@ export interface EditorUnit {
   /** ADR-0114 — this unit IS the whole place; it and the rooms exclude each other.
    *  The unit tabs say so, because it changes what a blocked day MEANS. */
   readonly isWholeProperty?: boolean;
-  /** ADR-XXXX — the place is let ONLY as one (set on the whole unit): the other units are
+  /** ADR-0257 — the place is let ONLY as one (set on the whole unit): the other units are
    *  rooms shown for presentation — not bookable, no price asked. */
   readonly wholeOnly?: boolean;
 }
@@ -1463,7 +1463,7 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
     // ADR-0232: with one unit the concept is invisible — a renamed default ("Apartman 1")
     // must not carry "az egész ház" on a screen where there is nothing else.
     u.isWholeProperty && units.length > 1 ? T(lang, "az egész ház") : "",
-    // ADR-XXXX: let only as one — the card says which is the offer and which only shows.
+    // ADR-0257: let only as one — the card says which is the offer and which only shows.
     u.wholeOnly && units.length > 1 ? T(lang, "csak egyben kiadó") : "",
     !u.isWholeProperty && units.some((o) => o.wholeOnly) ? T(lang, "csak bemutatásra") : "",
   ].filter(Boolean);
@@ -1479,7 +1479,7 @@ function roomMeta(u: EditorUnit, units: readonly EditorUnit[], lang: string): st
 function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
   if (units.length < 2) return "";
   const whole = units.find((u) => u.isWholeProperty) ?? null;
-  // ADR-XXXX (approved plan tenant-site/whole-only, admin „X"): three states instead of a
+  // ADR-0257 (approved plan tenant-site/whole-only, admin „X"): three states instead of a
   // switch — the same three answers the second-room question offers, so an owner who
   // answered once can change it HERE later. Plain form: works with zero JS.
   const mode = !whole ? "none" : whole.wholeOnly ? "only" : "also";
@@ -1562,7 +1562,7 @@ function wholeQuestion(
       T(lang, "Igen, az egészet is kiadom egyben"),
       T(lang, "{name} marad az egész szállás. A foglalása minden szobát lezár, és bármelyik szoba foglalása az egészet.", { name: esc(first.name) }),
     ) +
-    // ADR-XXXX (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): the case
+    // ADR-0257 (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): the case
     // that was missing — the rooms are shown, never booked, never priced.
     opt(
       "csak",
@@ -1995,7 +1995,7 @@ function newUnitForm(
   lang: string,
 ): string {
   const q = wholeQuestion(units, lang, nu);
-  // ADR-XXXX: the place is let only as one → the new room is presentation: no price field,
+  // ADR-0257: the place is let only as one → the new room is presentation: no price field,
   // no "nem adok meg árat" — one sentence says why. At the second room the same happens
   // the moment "Csak egyben" is picked (CSS `:has`, works without JS; the server ignores
   // a price sent with that answer).
@@ -2638,7 +2638,7 @@ export interface PricingEditorData {
   readonly siteView: PriceSiteView | null;
   /** ADR-0256 ③: units the guest never sees — no missing-price line on their card. */
   readonly guestHidden?: readonly string[];
-  /** ADR-XXXX: rooms shown for PRESENTATION only (the place is let only as one) — the
+  /** ADR-0257: rooms shown for PRESENTATION only (the place is let only as one) — the
    *  screen asks no price for them: no card, one sentence says why. */
   readonly presentationRooms?: readonly string[];
   /** 0074: the season open for editing (`?edit=`), the one just saved (`?sv=`), and
@@ -3107,7 +3107,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
   // ⛔ Was `=== "EUR" ? "€" : "Ft"`, i.e. ANY other currency printed as forint.
   const cur = currencySign(data.currency);
   const bk = data.bookingActive;
-  // ADR-XXXX (owner: „szobák nem kérnek árát"): a presentation room gets no price card.
+  // ADR-0257 (owner: „szobák nem kérnek árát"): a presentation room gets no price card.
   const shown = new Set(data.presentationRooms ?? []);
   const priced = data.units.filter((u) => !shown.has(u.id));
   const cards = priced
@@ -3167,7 +3167,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         `</form>` +
         `<p class="citui-hint" style="margin:0 0 14px">${T(lang, "Ez érvényes, amikor egyik időszak sem.")}</p>` +
-        // ADR-XXXX: let only as one, the rooms have no price to add up — no hint.
+        // ADR-0257: let only as one, the rooms have no price to add up — no hint.
         (u.isWholeProperty && data.units.length > 1 && !shown.size ? wholeSumHint(data, cur, today, lang) : "") +
         priceDecision(
           u,
@@ -3231,7 +3231,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
 
   return (
     `<p class="mcfg-note mcfg-note--act"><span>` +
-    // ADR-XXXX: let only as one, the price is the HOUSE's — "per room" would contradict the note below.
+    // ADR-0257: let only as one, the price is the HOUSE's — "per room" would contradict the note below.
     (shown.size
       ? T(lang, "A házat csak egyben adja ki: árat csak az egész házra kérünk.")
       : `${T(lang, "Az árat szobánként adja meg — a vendég is így látja majd.")} ` +

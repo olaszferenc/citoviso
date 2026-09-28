@@ -1,4 +1,4 @@
-## ADR-XXXX — „Csak egyben adom ki”: a ház az egyetlen foglalható egység, a szobák bemutatásra — árat sem kérünk tőlük
+## ADR-0257 — „Csak egyben adom ki”: a ház az egyetlen foglalható egység, a szobák bemutatásra — árat sem kérünk tőlük
 
 **Dátum:** 2026-09-28 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy; a vendég-oldali rács a
 `whole-unit-band` land után készül) · **Kiegészíti:** ADR-0232 (az egész szállás választható egység), ADR-0256 (a nem

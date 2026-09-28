@@ -41,7 +41,7 @@ export interface UnitBookabilityFacts extends UnitVisibilityFacts {
 }
 
 /**
- * ADR-XXXX — THE one rule for "can a guest BOOK this unit?" (owner, 2026-09-28: „csak egyben
+ * ADR-0257 — THE one rule for "can a guest BOOK this unit?" (owner, 2026-09-28: „csak egyben
  * adom ki!!! És akkor szobák nem kérnek árat"). When the site's whole-property unit is let
  * ONLY as one, it is the single bookable unit: every other unit is a room shown for
  * presentation — visible (card, subpage, review picker go through `guestUnits`), but never

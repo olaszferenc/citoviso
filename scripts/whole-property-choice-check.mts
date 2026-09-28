@@ -172,7 +172,7 @@ try {
   check("„nem” → a második is csak önmagát", (await blockingUnitIds(second.id)).join() === second.id);
   html = await get(ROOMS);
   check("2 egységnél VAN kártya", html.includes("data-cit-whole-card"));
-  // ADR-XXXX: the card has three states (none / also / only) instead of the old switch.
+  // ADR-0257: the card has three states (none / also / only) instead of the old switch.
   check("a kártya „Nem adom ki egyben” állásban", /name="mode" value="none" checked/.test(html) && !/name="mode" value="(also|only)" checked/.test(html));
   check("a rácson sehol „az egész ház”", !/az egész ház/.test(grid(html)));
   check("a kérdés már NEM jelenik meg", !html.includes("data-cit-whole-q"));

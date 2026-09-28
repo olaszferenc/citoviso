@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-csak-egyben-kiado-haz-bemutato-szobak.md) — „Csak egyben adom ki”: a ház az egyetlen foglalható egység, a szobák bemutatásra — árat sem kérünk tőlük
+- [ADR-0257](decisions/0257-csak-egyben-adom-ki-a-haz-az-egyetlen.md) — „Csak egyben adom ki”: a ház az egyetlen foglalható egység, a szobák bemutatásra — árat sem kérünk tőlük
 - [ADR-0256](decisions/0256-a-nem-kiado-egesz-szallas-a-vendeg-elol-rejtve.md) — A nem kiadó „egész szállás” a vendég elől rejtve (tartós jelölés), és a foglalási widget az első ÁRAS egységre nyit
 - [ADR-0255](decisions/0255-modulok-ful-kosar-a-ragado-osszegzo-sav-helyett.md) — Modulok fül: kosár a ragadó összegző sáv helyett (telefonon kosár-gomb, asztalin hasáb; a kártyaválasztó a fizetés-megerősítőbe költözik)
 - [ADR-0254](decisions/0254-rc-gepezet-egy-kod-harom-gepen-cit-mr-of-a.md) — RC-gépezet: egy kód három gépen (CIT · MR · OF) + a session által indított session „🔴 SUB” jelölése

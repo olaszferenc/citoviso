@@ -33,7 +33,7 @@ export interface Unit {
   /** ADR-0256 (0078) — this unit IS the place itself, not a room. Durable: switching
    *  off "egyben is kiadom" clears `isWholeProperty`, never this. */
   readonly representsWhole: boolean;
-  /** ADR-XXXX (0079) — the place is let ONLY as one: this unit is the only bookable one,
+  /** ADR-0257 (0079) — the place is let ONLY as one: this unit is the only bookable one,
    *  the others are rooms shown for presentation (`isBookableUnit`). Implies isWholeProperty. */
   readonly wholeOnly: boolean;
 }
@@ -190,7 +190,7 @@ export async function wholePropertyUnitId(siteId: string): Promise<string | null
 }
 
 /**
- * ADR-XXXX — `only` = the place is let ONLY as one (the rooms are shown, not booked).
+ * ADR-0257 — `only` = the place is let ONLY as one (the rooms are shown, not booked).
  * ADR-0232 — the owner's choice: this unit is the whole place (its booking blocks every
  * room and vice versa, `unitScope.ts`), or nobody is (null → the rooms are independent).
  * At most one per site: the partial unique index of 0059 still guards it, and clearing
@@ -202,7 +202,7 @@ export async function setWholeProperty(
   only = false,
 ): Promise<void> {
   await db.transaction().execute(async (trx) => {
-    // ADR-XXXX: whole_only lives only on the whole-property unit (CHECK), so it is
+    // ADR-0257: whole_only lives only on the whole-property unit (CHECK), so it is
     // cleared together with the flag and set together with it.
     await trx
       .updateTable("site_unit")

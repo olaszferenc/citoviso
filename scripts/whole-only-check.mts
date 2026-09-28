@@ -1,5 +1,5 @@
 // „CSAK EGYBEN ADOM KI" — a szobák bemutatásra — ŐR
-// (ADR-XXXX, jóváhagyott terv: assets/design-refs/tenant-site/whole-only/, tulaj 2026-09-28:
+// (ADR-0257, jóváhagyott terv: assets/design-refs/tenant-site/whole-only/, tulaj 2026-09-28:
 // „Elfogadom a javaslatokat" — vendég-oldal A, admin X, `site_unit.whole_only`).
 //
 // Mit mér (eldobható fixtúra, valódi DB + valódi HTTP-szerver, a RENDERELT lapon — dev-bérlőt

@@ -353,7 +353,7 @@ export async function moduleContentFor(
   // 0074: the price table lists a season's years as far as a guest can book.
   const horizonMonths = Number(cfg("booking").horizonMonths ?? 12) || 12;
 
-  // ADR-XXXX (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): when the
+  // ADR-0257 (owner: „csak egyben adom ki!!! És akkor szobák nem kérnek árát"): when the
   // place is let ONLY as one, the rooms are shown for presentation — visible (cards,
   // subpages, review picker read `units`), but never priced and never bookable. The price
   // table and the booking picker read THIS list; a price row left on a room from before
@@ -410,7 +410,7 @@ export async function moduleContentFor(
           ? ""
           : " / éj";
     out.rooms = units.map((u) => {
-      // ADR-XXXX: a presentation room carries no price line — a split of the whole
+      // ADR-0257: a presentation room carries no price line — a split of the whole
       // house's price would be a number nobody set (§B.17, ADR-0232 ⑦).
       const presentation = wholeOnly && !isBookableUnit(u, units);
       const span = presentation ? null : priceSpan(priceMap.get(u.id) ?? []);
@@ -464,7 +464,7 @@ export async function moduleContentFor(
         ...(hasPage ? { slug: u.slug! } : {}),
         // ADR-0232: with a single unit the concept does not exist for the guest either.
         ...(u.isWholeProperty && units.length > 1 ? { wholeProperty: true } : {}),
-        // ADR-XXXX: the whole place is the ONE offer; the other rooms only show what is in it.
+        // ADR-0257: the whole place is the ONE offer; the other rooms only show what is in it.
         ...(wholeOnly && u.isWholeProperty && units.length > 1 ? { wholeOnly: true } : {}),
         ...(presentation ? { presentation: true } : {}),
       };
@@ -535,7 +535,7 @@ export async function moduleContentFor(
   if (on("booking")) {
     const b = cfg("booking");
     out.booking = {
-      // ADR-XXXX: only what the guest can actually book — a presentation room is no option.
+      // ADR-0257: only what the guest can actually book — a presentation room is no option.
       units: offerUnits.map((u) => ({
         id: u.id,
         name: u.name,

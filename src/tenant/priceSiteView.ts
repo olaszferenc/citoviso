@@ -32,7 +32,7 @@ export async function priceSiteView(tenantId: string): Promise<PriceSiteView | n
   const rooms = d.rooms ?? [];
   const inTable = new Set((d.pricing?.units ?? []).map((u) => u.name));
   const unpriced = rooms
-    // ADR-XXXX: a presentation room (the place is let only as one) has no price by design —
+    // ADR-0257: a presentation room (the place is let only as one) has no price by design —
     // it is not a gap and the guest does not ask it for a quote (the house is the offer).
     .filter((r) => !r.price && r.unitId && !r.presentation)
     .map((r) => ({ id: r.unitId!, name: r.name }));

@@ -74,13 +74,13 @@ export function priceGapsOf(
     readonly priceOnRequest: boolean;
     readonly representsWhole: boolean;
     readonly isWholeProperty: boolean;
-    /** ADR-XXXX (0079) — the place is let only as one. Optional for older fixtures. */
+    /** ADR-0257 (0079) — the place is let only as one. Optional for older fixtures. */
     readonly wholeOnly?: boolean;
   }[],
   prices: ReadonlyMap<string, readonly UnitPrice[]>,
   today: string,
 ): PriceGap[] {
-  // ADR-XXXX (owner: „szobák nem kérnek árát"): when the place is let ONLY as one, the rooms
+  // ADR-0257 (owner: „szobák nem kérnek árát"): when the place is let ONLY as one, the rooms
   // are presentation — nobody can book them, so nobody asks their price: no to-do row, no
   // Árak warning, no weekly mail. The SAME rule the booking picker filters by.
   const facts = units.map((u) => ({ ...u, wholeOnly: u.wholeOnly ?? false }));

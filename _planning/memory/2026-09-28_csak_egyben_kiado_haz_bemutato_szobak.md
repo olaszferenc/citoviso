@@ -1,4 +1,4 @@
-# 2026-09-28 — „Csak egyben adom ki”: a ház az egyetlen ajánlat, a szobák bemutatásra (ADR-XXXX)
+# 2026-09-28 — „Csak egyben adom ki”: a ház az egyetlen ajánlat, a szobák bemutatásra (ADR-0257)
 
 **Brief:** `~/rc-briefs/szobak-bemutatasra-kiadas-nelkul.md` · koordinátor: `citded06a5f-cc` · testvér-szál: `cit72ba9426-02` (whole-unit-band C).
 
@@ -10,7 +10,7 @@
 - A kész felület képéből derült ki, hogy a „Hol látják…” doboz a bemutató szobákat „Ár nélkül … a vendég árajánlatot kér”-ként sorolta — a mockon ez a doboz nem szerepelt. Javítva, őr + negatív kontroll.
 
 ## Módosított fájlok
-`migrations/0079_unit_whole_only.sql` · `src/db/schema.ts` · `src/tenant/{units,unitVisibility,editor,priceGap,priceSiteView}.ts` · `src/engine/recipe.ts` · `src/server/{public,moduleConfigViews}.ts` · `src/i18n/catalog.json` · `scripts/whole-only-check.mts` · `scripts/whole-property-choice-check.mts` (3 állású kártya) · `hooks/pre-commit` · `kb/entries/admin-modules-rooms/entry.hu.md` · `assets/design-refs/tenant-site/whole-only/` · ADR-XXXX.
+`migrations/0079_unit_whole_only.sql` · `src/db/schema.ts` · `src/tenant/{units,unitVisibility,editor,priceGap,priceSiteView}.ts` · `src/engine/recipe.ts` · `src/server/{public,moduleConfigViews}.ts` · `src/i18n/catalog.json` · `scripts/whole-only-check.mts` · `scripts/whole-property-choice-check.mts` (3 állású kártya) · `hooks/pre-commit` · `kb/entries/admin-modules-rooms/entry.hu.md` · `assets/design-refs/tenant-site/whole-only/` · ADR-0257.
 
 ## Nyitott
 - **Vendég-oldal (A):** a ház-sáv „main” állapota a rács fölött, a szoba-kártyán „Részletek” (ár/Foglalás nélkül), a felugró „Az egész ház foglalása” — a `whole-unit-band` land után (`moduleSections.ts` `roomsBlock`, `templateKit.ts` `roomShell`, `cit-runtime.js`). Addig a bemutató szoba kártyáján még „Foglalás” áll (a widget úgyis csak a házat kínálja).

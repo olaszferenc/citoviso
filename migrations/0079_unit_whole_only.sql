@@ -1,4 +1,4 @@
--- „CSAK EGYBEN ADOM KI" — a szobák bemutatásra vannak, külön nem foglalhatók (ADR-XXXX;
+-- „CSAK EGYBEN ADOM KI" — a szobák bemutatásra vannak, külön nem foglalhatók (ADR-0257;
 -- jóváhagyott terv: assets/design-refs/tenant-site/whole-only/, tulaj 2026-09-28:
 -- „Elfogadom a javaslatokat" — vendég-oldal A, admin X, ez a mező).
 --
@@ -22,4 +22,4 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 COMMENT ON COLUMN site_unit.whole_only IS
-  'A hely csak egyben kiado (ADR-XXXX): ez az egyseg az egyetlen foglalhato, a tobbi bemutato szoba (nem foglalhato, nem ker arat).';
+  'A hely csak egyben kiado (ADR-0257): ez az egyseg az egyetlen foglalhato, a tobbi bemutato szoba (nem foglalhato, nem ker arat).';
