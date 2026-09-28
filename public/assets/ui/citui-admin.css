@@ -195,7 +195,14 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
 
 /* ═══ 4. MAIN / PAGE HEAD / CARD ═══════════════════════════════════════════════ */
 .adm-main{grid-column:2;min-width:0}
-.adm-main__inner{max-width:1040px;margin:0 auto;padding:24px 32px 32px}
+/* ⭐ The consent bar (ADR-0145 ④) is a FIXED layer over the page bottom while the owner
+   has not decided yet — measured 2026-09-28 at 390×844: 125 px over the 660–784 band,
+   and the LAST action of a screen (Modulok „Megbízás visszavonása", Szobák „Mentés")
+   could never be scrolled out from under it. The content's bottom padding and the
+   scroll-into-view target therefore both reserve the bar's MEASURED height
+   (`--citui-consent-h`, 0 once decided) — the same token the sidebar already uses. */
+html{scroll-padding-bottom:calc(var(--citui-consent-bottom,0px) + var(--citui-consent-h,0px))}
+.adm-main__inner{max-width:1040px;margin:0 auto;padding:24px 32px calc(32px + var(--citui-consent-h,0px))}
 .adm-ph{margin-bottom:14px}
 .adm-ph h1{font-size:1.7em;margin:0 0 2px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
 .adm-ph p{margin:0;color:var(--citui-muted);font-size:.92em;line-height:1.5}
@@ -376,7 +383,7 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
   font-size:.68em;font-weight:700;padding:2px 7px;border-radius:var(--citui-radius-pill);opacity:0;transition:opacity .2s;pointer-events:none}
 .adm-r .adm-cap-saved{top:6px;bottom:auto}
 .adm-cap-saved.on{opacity:1}
-.adm-bulk{position:sticky;bottom:8px;z-index:5;display:none;align-items:center;gap:10px;background:var(--citui-ink);color:var(--citui-bg);
+.adm-bulk{position:sticky;bottom:calc(8px + var(--citui-consent-h,0px));z-index:5;display:none;align-items:center;gap:10px;background:var(--citui-ink);color:var(--citui-bg);
   padding:9px 12px;border-radius:8px;margin-top:12px;font-size:.86em;font-weight:600;
   box-shadow:0 12px 30px color-mix(in srgb,var(--citui-navy-950) 25%,transparent)}
 .is-selmode .adm-bulk{display:flex}
@@ -418,7 +425,7 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
 .adm-dlg__box p{margin:0 0 16px;font-size:.88em;color:var(--citui-muted);line-height:1.5}
 .adm-dlg__acts{display:flex;gap:8px;justify-content:flex-end}
 .adm-dlg .adm-btn--danger{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-on-bad)}
-.adm-toast{position:fixed;left:50%;bottom:18px;transform:translate(-50%,20px);z-index:80;background:var(--citui-ink);color:var(--citui-bg);
+.adm-toast{position:fixed;left:50%;bottom:calc(18px + var(--citui-consent-h,0px));transform:translate(-50%,20px);z-index:80;background:var(--citui-ink);color:var(--citui-bg);
   padding:10px 14px;border-radius:8px;font-size:.86em;font-weight:600;box-shadow:0 16px 40px color-mix(in srgb,var(--citui-navy-950) 30%,transparent);
   opacity:0;transition:opacity .25s,transform .25s;display:flex;gap:8px;align-items:center;max-width:calc(100% - 32px);pointer-events:none}
 .adm-toast.on{opacity:1;transform:translate(-50%,0)}
@@ -470,7 +477,7 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
   .adm-top{padding:8px 12px}
   .adm-top__menu{display:inline-flex}
   .adm-topsearch,.adm-top .adm-theme{display:none}
-  .adm-main__inner{padding:14px 14px calc(28px + var(--citui-admin-bottomnav-h))}
+  .adm-main__inner{padding:14px 14px calc(28px + var(--citui-admin-bottomnav-h) + var(--citui-consent-h,0px))}
   .adm-ph h1{font-size:1.45em}
   .adm-ph__acts{display:none}
   .adm-card{padding:14px 14px}
@@ -488,8 +495,9 @@ body.adm-body{background:var(--citui-bg);color:var(--citui-ink)}
     font-weight:500;text-decoration:none;border-radius:6px;position:relative;overflow-wrap:break-word;text-align:center;line-height:1.2}
   .adm-bnav a.is-active{color:var(--citui-link-ink);font-weight:600}
   .adm-bnav a .adm-bdg{position:absolute;top:2px;right:calc(50% - 20px)}
-  .adm-bulk{bottom:calc(8px + var(--citui-admin-bottomnav-h))}
-  .adm-toast{bottom:calc(18px + var(--citui-admin-bottomnav-h))}
+  /* + the consent bar's measured height while it is out (it sits on top of the bottom bar) */
+  .adm-bulk{bottom:calc(8px + var(--citui-admin-bottomnav-h) + var(--citui-consent-h,0px))}
+  .adm-toast{bottom:calc(18px + var(--citui-admin-bottomnav-h) + var(--citui-consent-h,0px))}
   .adm-lb{z-index:60}
 }
 
@@ -861,7 +869,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 /* phone: a cart button, and the summary as a sheet over the page */
 @media(max-width:899px){
   .adm-cartpill{position:fixed;right:14px;z-index:45;display:flex;align-items:center;gap:8px;
-    bottom:calc(var(--citui-admin-bottomnav-h) + env(safe-area-inset-bottom) + 12px);
+    bottom:calc(var(--citui-admin-bottomnav-h) + env(safe-area-inset-bottom) + 12px + var(--citui-consent-h,0px));
     min-height:44px;padding:10px 14px 10px 10px;border:0;border-radius:var(--citui-radius-pill);cursor:pointer;
     background:var(--citui-navy-900);color:var(--citui-ink-inverse);font:700 13px/1.2 var(--citui-font-text);
     box-shadow:var(--citui-shadow-md)}
@@ -870,7 +878,12 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
     justify-content:center;background:var(--citui-cyan-500);color:var(--citui-accent-ink);font-size:12px}
   .adm-cartveil{position:fixed;inset:0;z-index:59;display:block;background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent)}
   .adm-cartveil[hidden]{display:none}
-  .adm-planbar.open{display:block;position:fixed;left:0;right:0;bottom:0;z-index:60;max-height:85dvh;overflow:auto;
+  /* While the consent bar is out the sheet sits ABOVE it (bar + the bottom bar it rests on);
+     once decided `--citui-consent-h` is 0 and the min() collapses the lift back to 0 —
+     measured: at bottom:0 the bar covered the sheet's own „Bezárom" (consent-admin-actions-check ④). */
+  .adm-planbar.open{display:block;position:fixed;left:0;right:0;z-index:60;overflow:auto;
+    bottom:min(calc(var(--citui-consent-h,0px) * 1000), calc(var(--citui-consent-bottom,0px) + var(--citui-consent-h,0px)));
+    max-height:calc(85dvh - min(calc(var(--citui-consent-h,0px) * 1000), calc(var(--citui-consent-bottom,0px) + var(--citui-consent-h,0px))));
     border-radius:var(--citui-radius) var(--citui-radius) 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
   .adm-planbar.open .adm-cart__x{display:inline-flex}
   .adm-planbar__foot{flex-direction:row}

@@ -3189,7 +3189,11 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     `.adm-mlbar{display:none}` +
     `@media (max-width:560px){.adm-card .adm-total{display:none}` +
     `.adm-mlbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;` +
-    `position:sticky;bottom:0;z-index:7;margin:-20px 0 20px;padding:11px 15px 13px;` +
+    // Above the bottom bar AND the consent bar while it is out (--citui-consent-bottom =
+    // the bottom bar's height on the phone layout, --citui-consent-h = the bar's measured
+    // height, 0 once decided) — at bottom:0 the fixed layers covered the pay button.
+    `position:sticky;bottom:calc(var(--citui-consent-bottom,0px) + var(--citui-consent-h,0px));` +
+    `z-index:7;margin:-20px 0 20px;padding:11px 15px 13px;` +
     `background:var(--citui-surface-2);border:1px solid var(--citui-line);` +
     `border-radius:var(--citui-radius) var(--citui-radius) 0 0;box-shadow:var(--citui-shadow-md)}` +
     `.adm-mlbar>span{flex:1 1 100%}` +
