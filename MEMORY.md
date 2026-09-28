@@ -11,6 +11,11 @@ Utolsó frissítés: 2026-09-28 (🏷️ **RC-sessionök: SUB-sorszám + munka-j
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-28 — a telefonos kör képeinek ítélete, FK-012…016) — LEZÁRVA
+- 71 kézi lépés ítélve: 30 RENDBEN · 30 ZAVAROS · 11 HIÁNYZIK; modul-táblázat (tulaj ↔ vendég) + leletek súly szerint, kép-nevekkel: `_planning/memory/2026-09-28_kep_itelet_telefonos_kor.md`. Kód nem változott.
+- ⚠️ A legfrissebb FK-012/013 a Kemencés Vendégházon, az FK-014/015/016 a Három Huszáron futott (nem egy bérlő lánca); a javítás utáni FK-014 a `cit37b9296b` fában él.
+- Fő leletek: szezon nem vehető fel telefonon · programajánló gyűjtés alatt holt · lemondó lap „Mégsem” → hibalap · szoba-felugró az ár nélküli (kiadó) „A szállás egésze”-re nyit · „A szállás egésze” elöl az adminban. Javítás témakörönként külön SUB-sessionökben.
+
 ## Párhuzamos szál (2026-09-28 — Telefonos menü + a foglalás-sáv csak félúton, ADR-0253)
 Körkép 19 sablonon → §2b A/B/C mock → a tulaj a **B**-t választotta → megvalósítva, NEM élesítve.
 A meglévő mockok/tenant-pillanatképek a következő renderkor kapják meg (a Lidó `/t/…` pillanatképe még a régi —
