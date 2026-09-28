@@ -199,6 +199,9 @@ check("a foglalt nap nem kattintható", await busyBtn.isDisabled());
 // from the VISIBLE free days: on a phone only the current month is on screen (the
 // chevrons page through), so a fixed date could sit in the hidden second month.
 const freeDays = page.locator(".cit-book__day:not(:disabled):visible");
+// Month-end trap (red on main 2026-09-28): late in a month the visible month has fewer
+// than 4 free days left, so nth(3) waited 30s for a day that is not there. Page on first.
+if ((await freeDays.count()) < 4) await page.click(".cit-book__calnav--next");
 await freeDays.nth(1).click();
 await freeDays.nth(3).click();
 const picked = {
