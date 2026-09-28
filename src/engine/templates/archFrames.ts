@@ -314,7 +314,9 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       <div class="a-title"><h2 ${mo("up")}>${esc(roomsCopy.title ?? T(data, "Szobák"))}</h2></div>
       <div class="a-trio">
         ${rooms
-          .slice(0, 3)
+          // EVERY room, never the first three: the 3-column grid wraps. Measured 2026-09-28
+          // (price-where-check, kemences-vendeghaz): `.slice(0, 3)` dropped the 4th room from
+          // the page — card, photo and price — while the booking widget still offered it.
           .map(
             (r, i) => `<figure>${roomShell(
               data,

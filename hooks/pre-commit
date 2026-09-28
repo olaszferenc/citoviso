@@ -1688,6 +1688,13 @@ if [ -f scripts/price-where-check.mts ] && \
   echo "[pre-commit] price-where-check (az ár-tájékoztatás a lap saját válaszából)…"
   npx tsx scripts/price-where-check.mts >"$GATE_LOG" || gate_failed
 fi
+# MINDEN SZOBA KIKERÜL A LAPRA, MINDEN SABLONON (2026-09-28). Mérve: a wordmark-grow és az
+# arch-frames `rooms.slice(0, 3)`-mal a 4. szobát kártyástul-árastul eldobta. Tiszta render, 5 szoba.
+if [ -f scripts/rooms-all-shown-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|templateKit|render|primitives|moduleSections)|^scripts/rooms-all-shown-check'; then
+  echo "[pre-commit] rooms-all-shown-check (minden szoba a lapon, minden sablonon)…"
+  npx tsx scripts/rooms-all-shown-check.mts >"$GATE_LOG" || gate_failed
+fi
 
 # A JÓVÁHAGYOTT terv és a SZÁLLÍTOTT felület nem csúszhat szét. A §2b kapu az
 # „elfogadva”-nál véget ért, és utána senki nem nézte: az összesítő kihagyta a
