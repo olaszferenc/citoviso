@@ -100,7 +100,16 @@ async function bootServer(): Promise<string> {
   if (!server.listening) await once(server, "listening");
   const a = server.address();
   if (!a || typeof a === "string") throw new Error("public szerver cím nélkül");
-  return `http://127.0.0.1:${a.port}`;
+  const publicOrigin = `http://127.0.0.1:${a.port}`;
+  // ⛔ SAME TRAP AS THE PAY-LINKS, ON THE GUEST'S WAY BACK (measured 2026-09-28, FK-016):
+  // the guest pages build their absolute "back to the property" links from
+  // config.publicSiteUrl (tenantSiteUrl) — and that pointed at the MAIN TREE's :4800,
+  // not at this in-process server. The cancel page's "Mégsem — megtartom" landed on
+  // ERR_CONNECTION_REFUSED while :4800 was restarting, and even when it is up it shows
+  // OTHER CODE than the tree under test. config is read once at import, so the
+  // in-process servers (same module instance) are re-aimed here, after the port is known.
+  (config as { publicSiteUrl: string }).publicSiteUrl = publicOrigin;
+  return publicOrigin;
 }
 
 // ── forged sessions (stateless HMAC cookie, server-side mint — charter §világa) ──
