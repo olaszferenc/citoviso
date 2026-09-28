@@ -30,6 +30,7 @@ Jegyzet: `_planning/memory/2026-09-27_gate_subject_inventory.md`.
 A session által indított session neve `<KEY> ➕ 🔴 SUB <cím>`: az `rc-new.sh` kényszeríti, a handoff örökli, és egy hook tiltja a
 közvetlen indítást. A watchdog, a szkriptek, a hookok és a `CLAUDE.md` RC-blokkja CIT·MR·OF-en betűre azonos, a gépenkénti eltérés
 a `~/.config/rc-watchdog.json`-ban él. Módosítás CSAK CIT-en, kivitel: `~/bin/rc-watchdog-sync.sh --push --go`. A tokent csak az MR forgatja.
+Kiegészítés: a koordináló a SUB döntési fájljait (mock HTML stb.) a SAJÁT fájába hozza és onnan mutatja (`~/bin/rc-bring.sh <sub-sid> <minta>`).
 Nyitott: az OF repó `CLAUDE.md` §3; az MR cron CIT-token-push szünetel. Jegyzet: `_planning/memory/2026-09-28_rc_sub_jeloles_es_egy_kod_harom_gep.md`.
 
 ## Párhuzamos szál (2026-09-27 — Webcím: hiteles elérhetőség + kártyazárolás, ADR-0251) — LEZÁRVA

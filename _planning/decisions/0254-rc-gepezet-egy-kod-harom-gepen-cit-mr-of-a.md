@@ -38,3 +38,14 @@
 - **Nyitott:**
   - Az OF repó `CLAUDE.md` §3 („Commit + push”) elavult; a globális OF-kiegészítés felülírja, de a repó szövegét egy OF-sessionből kell javítani.
   - Az MR cronban a CIT-nek szóló token-továbbküldés szünetel („PAUSED-for-design-login”).
+
+### ④ Kiegészítés (2026-09-28, tulaj: „a koordináló session a döntésekhez szükséges fájlokat a fő sessionbe hozza a sub sessionből, pl. mock HTML fájlok”)
+- A tulaj a FŐ sessiont koordinálja. Ami a döntéséhez kell (mock HTML, screenshot, jelentés), azt a koordináló session
+  a SAJÁT fájába hozza, és onnan mutatja meg. RC-ben egy session csak a saját munkakönyvtára alatti fájlt tudja megnyitni.
+- Eszköz: `~/bin/rc-bring.sh <sub-sid> <minta>…` → `<saját fa>/_from-sub/<sid8>/…`.
+  - Gitből kizárva: a közös `.git/info/exclude`-ban.
+  - Élő és lezárt SUB-ból is hoz: az élő regiszterből vagy a watchdog-state-ből.
+  - A kiírt saját útvonalat kell a tulajnak küldeni.
+- A SUB a döntési anyagot a koordinálónak adja: a zárójelentésben útvonallal sorolja fel, és ezt a briefbe bele kell írni.
+  A döntés a fő sessionben születik, a koordináló viszi vissza.
+- Szinkronizálva mindhárom gépre (`rc-watchdog-sync.sh`), a `CLAUDE.md` RC-STANDARD blokkjában.

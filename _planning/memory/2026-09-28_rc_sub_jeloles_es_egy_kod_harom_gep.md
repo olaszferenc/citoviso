@@ -40,3 +40,14 @@
 ## Nyitott
 - Az OF repó `CLAUDE.md` §3 „Commit + push” elavult (nincs remote), egy OF-sessionből kell javítani.
 - Az MR cron `citoviso-creds-push` szünetel („PAUSED-for-design-login”); a CIT tokenje ma a watchdog saját továbbküldésével frissül. Döntés: visszakapcsoljuk-e?
+
+## Kiegészítés (ugyanaznap, a zárás helyett)
+A tulaj: a koordináló session a döntéshez szükséges fájlokat (pl. mock HTML) a SUB-ból a FŐ sessionbe hozza.
+- **Doktrína:** új pont a közös RC-STANDARD blokkban, mindhárom gépen.
+- **Eszköz:** `~/bin/rc-bring.sh` (szinkronizált, 10. közös fájl).
+- **Próba:**
+  - élő SUB-ból egy fájl;
+  - lezárt SUB-ból (state) két mock HTML `**/*.html` mintával;
+  - hibaágak: `..`, ismeretlen id, saját fa, hiányzó minta, session nélküli hívás MR/OF-en — mind hangosan elhasal;
+  - a hozott fájlt a git nem látja.
+- `rc-watchdog-sync.sh --check`: nincs eltérés.
