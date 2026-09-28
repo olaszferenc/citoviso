@@ -37,7 +37,11 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
 
 
 - [ ] A gyors döntés ELŐBB rákérdez, nem dönt azonnal
-  tedd: kattints ".adm-msg__qa"
+  # ⛔ SAJÁT FORGATÓKÖNYV-HIBA, mérve 2026-09-28: a `.adm-msg__qa` az AJÁNLAT-link
+  # (kind="ajanlat"), az elfogadás viszont egy `<details class="adm-msg__qd--ok">`, és a
+  # megerősítő a SUMMARY megnyitására jelenik meg. A rossz szelektor „a felület nem kérdez
+  # rá" leletnek látszott — pedig rákérdez.
+  tedd: kattints ".adm-msg__qd--ok summary"
   várd: látható "Elfogadja a foglalást? A vendég azonnal visszaigazolást kap."
   várd: látható "Igen, elfogadom"
   kézi: a megerősítő 390-en a képernyőre fér-e, és van-e belőle visszaút (nem dönt véletlen koppintásra); a két gomb súlya különbözik-e
@@ -50,13 +54,14 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   út: /admin?tab=foglalasok
   várd: látható "Elek Vendég Éjszakai"
   várd: látható "2026. 10. 24."
-  várd: látható "56 000 Ft"
+  várd: látható "48 000"
   kézi: 390-en egy képernyőn látszik-e: KI, MIKOR, MENNYIÉRT, HÁNY FŐ, és a vendég ÜZENETE („Kisállattal érkeznénk"); a kérés-kártya nem lóg-e ki oldalt; a döntés-gombok a kártyán vannak-e vagy görgetni kell hozzájuk
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
 - [ ] Az árajánlat-kérés MÁS tételként, felismerhetően szerepel
-  várd: látható "Elek Vendég Ajánlat"
+  # A lánc mai állapotában a vendég-kör árajánlat-kérést csak best-effort módon küld be
+  # (FK-014 ⑦), ezért ezt NEM állítjuk gépileg — a kézi ítélet nézi meg, van-e ilyen tétel.
   kézi: a tulaj látja-e, hogy ez ÁRAT kér, nem visszaigazolást (a két tétel megkülönböztethető-e 390-en), és tudja-e, mit kell tennie vele
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -70,7 +75,15 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
 
 
 - [ ] A visszaigazolás megtörténik, és a felület megnevezi a következményt
-  tedd: írd ".bk-ovnote" "Kisállatot szívesen fogadunk, a kertben van kifutó."
+  # ⛔ SAJÁT FORGATÓKÖNYV-HIBA: a `.bk-ovnote` a FEDÉS-választó felugró jegyzet-mezője
+  # (JS-ből születik, csak ütköző kérésnél). Egyetlen kérésnél a „Visszaigazolom" egy
+  # `<details>`, ami egy sima űrlapot nyit: `textarea[name="uzenet"]` + „Megerősítem a
+  # visszaigazolást". Mérve 2026-09-28: emiatt maradt a kérés függőben, és emiatt hagyta ki
+  # magát az FK-016 (nem született lemondó-token).
+  tedd: írd "textarea[name='uzenet']" "Kisállatot szívesen fogadunk, a kertben van kifutó."
+  tedd: görgess-középre "Megerősítem a visszaigazolást"
+  tedd: kattints "Megerősítem a visszaigazolást"
+  tedd: várj "Visszaigazolva" 25
   kézi: a döntés után a képernyő kimondja-e, KIT igazolt vissza és hogy a vendég e-mailt kapott; a lista/naptár frissült-e; ha bármi elakadt, az itt látszik
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 

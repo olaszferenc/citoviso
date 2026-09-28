@@ -33,6 +33,10 @@ kontraktus: assets/design-refs/console/booking-email/README.md
 
 ## ② Az ajánlat elfogadása telefonon
 
+# ⚠️ Ez a szakasz CSAK akkor mér, ha a láncban született árajánlat (a vendég-kör ⑦-je
+# best-effort módon kéri). Ha nincs, a runner a hiányzó `${ELEK_NIGHT_OFFER_PATH}`-on
+# hangosan megáll, és EZ a szakasz marad blokkolt — a lemondás-mérés (①, ⑤) attól még fut.
+
 - [ ] Az ajánlat-lap megmondja: ki, mire, mennyiért, meddig — és két világos válasz
   út: ${ELEK_NIGHT_OFFER_PATH}
   várd: látható "${ELEK_NIGHT_NAME}"

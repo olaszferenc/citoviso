@@ -148,7 +148,10 @@ const NEEDS: Record<string, string[]> = {
   "FK-013": ["ELEK_NIGHT_USER", "ELEK_NIGHT_PASSWORD", "ELEK_NIGHT_PHOTOS_A", "ELEK_NIGHT_PHOTOS_B"],
   "FK-014": ["ELEK_NIGHT_SLUG"],
   "FK-015": ["ELEK_NIGHT_USER", "ELEK_NIGHT_PASSWORD"],
-  "FK-016": ["ELEK_NIGHT_SLUG", "ELEK_NIGHT_CANCEL_PATH", "ELEK_NIGHT_OFFER_PATH"],
+  // ⚠️ Az ajánlat-token NEM előfeltétel: a kör gerince a lemondó link és a foglalt napok.
+  // Ha nincs ajánlat (a vendég-kör best-effort módon kéri), az ajánlat-szakasz hagyja ki
+  // magát — de a lemondás mérése akkor is megtörténik.
+  "FK-016": ["ELEK_NIGHT_SLUG", "ELEK_NIGHT_CANCEL_PATH"],
 };
 
 interface Outcome { fk: string; pass: number; fail: number; manual: number; blocked: number; dir: string; skipped?: string }
