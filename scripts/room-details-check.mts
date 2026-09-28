@@ -77,6 +77,7 @@ const UNITS = [
   { id: "u-kerti", name: "Kerti Appartman", capacity: 4 },
   { id: "u-teto", name: "Tetőtéri Appartman", capacity: 6 },
   { id: "u-kamra", name: "Kamra Szoba", capacity: 2 },
+  { id: "u-egesz", name: "Az egész ház" },
 ];
 
 const ROOMS: Room[] = [
@@ -85,7 +86,10 @@ const ROOMS: Room[] = [
     // ⭐ ÉS a TÖBB-ÁRÚ eset: a kártyán PADLÓ-ár („-tól"), a felugróban a dátum-mondat.
     name: "Teljes Szállás", unitId: "u-teljes", capacity: "12 fő",
     price: "24 000 Ft-tól / éj", priceFrom: true,
-    description: DESC_MANY, amenities: NINE, wholeProperty: true,
+    // ⚠️ NEM `wholeProperty` (2026-09-28): az egész ház a szobák mellett SÁVBA kerül
+    // (whole-unit-band), így ez a sok-fotós eset kiesne a rácsból. Az egész ház saját
+    // egységet kapott a lista végén.
+    description: DESC_MANY, amenities: NINE,
     photo: P[0], photos: P, slug: "teljes-szallas",
   },
   {
@@ -105,9 +109,16 @@ const ROOMS: Room[] = [
     // NINCS fotódoboz — mérve fekete doboz állt ott két élő nyíllal.
     name: "Kamra Szoba", unitId: "u-kamra", capacity: "2 fő", price: "9 000 Ft / éj",
   },
+  {
+    // ⭐ AZ EGÉSZ HÁZ, ár és fotó nélkül (a Három Huszár mért esete): a rácsból KI, a saját
+    // sávjába (design-refs/tenant-site/whole-unit-band). UTOLSÓ, hogy a kártyák indexe
+    // ne csússzon: a sáv indexe = a szobák száma.
+    name: "Az egész ház", unitId: "u-egesz", wholeProperty: true, description: DESC_MANY,
+  },
 ];
 
 const DATE_NOTE = "A pontos ár a dátumoktól függ.";
+const WHOLE = ROOMS.find((r) => r.wholeProperty)!;
 
 const EMPTY_SENTENCE = "Ehhez az egységhez még nincs leírás és felszereltség megadva.";
 const AM_HEADING = "Amit ez az egység kínál";
@@ -592,6 +603,48 @@ async function measure(page: Page, url: string, width: number) {
     }
   }
 
+  // ── ③ AZ EGÉSZ HÁZ SÁVJA (whole-unit-band, a tulaj „C”-je) ─────────────────────
+  // EGY sáv; a rácsban NINCS kártyája; ár nélkül a sáv gombja nem „Foglalás”; a felugró
+  // „Egyedi ár”-at mond és „Árajánlatot kérek”-et, és a gombja a FOGLALÁS választóját
+  // az egész házra állítja (outcome, nem attribútum).
+  if (!card.fatal) {
+    const band = (await page.evaluate(`(function(){
+      var bands = document.querySelectorAll(".cit-wholeband");
+      var inGrid = 0;
+      document.querySelectorAll(".cit-room__open").forEach(function(e){
+        if (!e.closest(".cit-wholeband") && (e.getAttribute("data-cit-room-name") || "") === ${JSON.stringify(WHOLE.name)}) inGrid++;
+      });
+      var cta = bands[0] ? bands[0].querySelector(".cit-wholeband__cta") : null;
+      return { n: bands.length, inGrid: inGrid, cta: cta ? (cta.textContent || "").trim() : null };
+    })()`)) as { n: number; inGrid: number; cta: string | null };
+    if (band.n !== 1) findings.push({ kind: "nem-egy-egesz-haz-sav", detail: `${band.n} sáv` });
+    if (band.inGrid) findings.push({ kind: "az-egesz-haz-a-racsban", detail: `${band.inGrid} kártya` });
+    if (band.cta === "Foglalás") findings.push({ kind: "ar-nelkuli-sav-foglalast-mond", detail: band.cta });
+    if (band.n === 1) {
+      await page.evaluate(`(function(){var c=document.querySelector(".cit-wholeband__cta");c.scrollIntoView({block:"center",behavior:"instant"});c.click();})()`);
+      await page.waitForTimeout(220);
+      const pop = (await page.evaluate(`(function(){
+        var rd = document.querySelector(".cit-rd[data-open]");
+        if (!rd) return null;
+        var a = rd.querySelector(".cit-rd__cta a");
+        var t = (rd.querySelector(".cit-rd__panel").innerText || "").toLowerCase();
+        var s = document.getElementById("cit-unit");
+        var label = a ? (a.textContent || "").trim() : "";
+        if (s) s.value = "";
+        if (a) a.click();
+        return { label: label, custom: t.indexOf("egyedi ár") >= 0, v: s ? s.value : null };
+      })()`)) as { label: string; custom: boolean; v: string | null } | null;
+      if (!pop) findings.push({ kind: "a-sav-felugroja-nem-nyilt-meg", detail: WHOLE.name });
+      else {
+        if (pop.label !== "Árajánlatot kérek") findings.push({ kind: "a-sav-felugroja-nem-arajanlatot-ker", detail: pop.label });
+        if (!pop.custom) findings.push({ kind: "a-sav-felugroja-nem-mondja-az-egyedi-arat", detail: WHOLE.name });
+        if (pop.v !== WHOLE.unitId) findings.push({ kind: "a-sav-foglalasa-nem-az-egesz-hazat-allitja", detail: String(pop.v) });
+      }
+      await page.waitForTimeout(120);
+      if (await page.evaluate(`!!document.querySelector(".cit-rd[data-open]")`)) await page.keyboard.press("Escape");
+    }
+  }
+
   page.off("pageerror", onErr);
   page.off("console", onConsole);
   // ⛔ KÖT: nulla JS-hiba. Egy néma kivétel pont a felugró felét ölné meg.
@@ -700,6 +753,14 @@ const REVERTS = [
         "</head>",
         `<style data-cit-selftest>.cit-modsec__room.cit-room__open{display:block!important}</style></head>`,
       ),
+  },
+  {
+    key: "az ár nélküli egész ház „Foglalás”-t ígér",
+    why: "a 2026-09-28-i mért állapot: ár nélkül foglalás-gomb, miközben a widget árajánlatot kér",
+    apply: (html: string) =>
+      html
+        .replace(`quoteOnly ? tr("Árajánlatot kérek") : tr("Foglalás")`, `tr("Foglalás")`)
+        .replace(/(<button class="cit-wholeband__cta"[^>]*>)[^<]*/g, "$1Foglalás"),
   },
   {
     key: "a sáv-alakú ár visszatérése",

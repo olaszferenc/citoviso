@@ -1081,6 +1081,52 @@ a.cit-grat:hover {
   .cit-rd__cta a { display: inline-block; width: auto; min-width: 280px; }
 }
 
+/* ── whole-unit-band (contract design-refs/tenant-site/whole-unit-band, owner: „C”) ──
+   The whole place as its own band beside the rooms. Its own box-sizing and font, because
+   on the 12 native templates it sits inside the template's section, not a .cit-modsec.
+   Container query, not @media: the band follows the width it is given. */
+.cit-wholeband {
+  box-sizing: border-box; container-type: inline-size; width: 100%; max-width: 1120px;
+  margin: 16px auto 0; padding: 20px; text-align: left;
+  border: 1px solid var(--cit-line); border-radius: calc(var(--cit-radius) * 0.9);
+  background: color-mix(in srgb, var(--cit-accent) 7%, var(--cit-surface, var(--cit-bg)));
+  color: var(--cit-ink); font-family: var(--cit-font-body, inherit);
+}
+.cit-wholeband *, .cit-wholeband *::before, .cit-wholeband *::after { box-sizing: border-box; }
+.cit-wholeband[data-cit-whole-mode="main"] { margin: 0 auto 16px; }
+/* Where the template's rooms container IS its full-bleed section (tilted-gallery,
+   arch-frames, wordmark-grow) or a full-bleed rail (horizontal), the band lands outside
+   any padded column — measured 0..390 px on a phone, edge to edge. It keeps a gutter. */
+section + .cit-wholeband, .h-rail + .cit-wholeband { width: min(1120px, calc(100% - 32px)); }
+.cit-wholeband__in { display: flex; flex-direction: column; gap: 12px; }
+.cit-wholeband .cit-wholeband__txt {
+  display: flex; flex-direction: column; gap: 4px; color: inherit; text-decoration: none; min-width: 0;
+}
+.cit-wholeband p { margin: 0; line-height: 1.5; }
+.cit-wholeband__brow {
+  font-size: 11px; letter-spacing: .3em; text-transform: uppercase; font-weight: 700;
+  color: var(--cit-accent);
+}
+.cit-wholeband__t {
+  font-family: var(--cit-font-display, inherit); font-size: 1.4rem; font-weight: 600; line-height: 1.25;
+}
+.cit-wholeband__cap { color: var(--cit-muted); }
+.cit-wholeband__price { font-weight: 700; }
+.cit-wholeband__custom b { display: block; font-weight: 700; }
+.cit-wholeband__custom span { display: block; font-size: .85rem; color: var(--cit-muted); }
+.cit-wholeband__cta {
+  align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px;
+  padding: 9px 18px; border: 0; cursor: pointer; text-decoration: none;
+  font: 700 .9rem/1.2 var(--cit-font-body, inherit); letter-spacing: .02em;
+  background: var(--cit-accent); color: var(--cit-on-accent);
+  border-radius: calc(var(--cit-radius) * 0.6);
+}
+.cit-wholeband__cta:hover { filter: brightness(1.07); }
+@container (min-width: 640px) {
+  .cit-wholeband__in { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; padding: 2px 8px; }
+  .cit-wholeband__cta { align-self: center; flex: none; }
+}
+
 /* A bare photo-box for the three minimal templates whose card is just <figure> + caption:
    they have no image wrapper of their own to hang the badge on. */
 .cit-rmbox { position: relative; display: block; }

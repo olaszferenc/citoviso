@@ -10,7 +10,7 @@ import { renderSeoHead, seoTitle } from "./seo.js";
 import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
-import { MODULE_SLOTS, moduleSectionGroups } from "./moduleSections.js";
+import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { roomsForMock, sampleRooms } from "./templateKit.js";
 
 /** Templates escape their text, so compare against the escaped form. */
@@ -492,6 +492,53 @@ function stripGallerySections(html: string): string {
   return out;
 }
 
+/**
+ * whole-unit-band (contract `design-refs/tenant-site/whole-unit-band/`, owner: „C”):
+ * with rooms beside it, the whole place is taken OUT of the room list. Measured
+ * (FK-014, 2026-09-28): as the grid's first card it stood with no price and no capacity,
+ * yet with a "Foglalás" button. A lone whole place stays in `rooms` — the one-unit
+ * panel is already the right shape for it.
+ */
+function splitWholeBand(data: SiteData): SiteData {
+  const rooms = data.rooms ?? [];
+  if (rooms.length < 2) return data;
+  const i = rooms.findIndex((r) => r.wholeProperty);
+  if (i < 0) return data;
+  return { ...data, rooms: rooms.filter((_, k) => k !== i), wholeBand: rooms[i] };
+}
+
+/**
+ * Put the band next to a template's OWN rooms container: after it ("band"), or before it
+ * ("main", ADR-0257). Templates without one get the shared fallback section, which
+ * draws the band itself (moduleSections `roomsBlock`) — so nothing prints twice.
+ * The container is found by its `data-cit-module="rooms"` marker and closed by
+ * counting its own tag, so a nested <div> inside a card cannot end it early.
+ */
+function injectWholeBand(html: string, data: SiteData, phase: RenderPhase): string {
+  if (!data.wholeBand) return html;
+  const pos = html.indexOf('data-cit-module="rooms"');
+  if (pos < 0) return html;
+  const open = html.lastIndexOf("<", pos);
+  const tag = /^<([a-z][a-z0-9]*)/i.exec(html.slice(open))?.[1]?.toLowerCase();
+  if (!tag) return html;
+  const re = new RegExp(`<${tag}\\b|</${tag}>`, "gi");
+  re.lastIndex = open;
+  let depth = 0;
+  let end = -1;
+  for (let m = re.exec(html); m; m = re.exec(html)) {
+    depth += m[0].startsWith("</") ? -1 : 1;
+    if (depth === 0) {
+      end = m.index + m[0].length;
+      break;
+    }
+  }
+  if (end < 0) return html;
+  const band = wholeBandBlock(data, phase, { slot: true });
+  return data.wholeBand.wholeOnly
+    ? html.slice(0, open) + band + html.slice(open)
+    : html.slice(0, end) + band + html.slice(end);
+}
+
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
@@ -529,7 +576,10 @@ export function renderSite(
     // ADR-0044: tenant-set module content (amenities/hours/pricing/POI/…) is woven
     // in HERE, once, for every template — writing it into all 16 would be the 100×N
     // trap the architecture forbids, and template no. 17 would silently ship without it.
-    const raw = TEMPLATES[recipe.template]!.render(recipe, data, phase);
+    // whole-unit-band (owner: „C”): the whole place leaves the room grid for its own
+    // band, in EVERY template — the templates only ever see the rooms.
+    data = splitWholeBand(data);
+    const raw = injectWholeBand(TEMPLATES[recipe.template]!.render(recipe, data, phase), data, phase);
     const page = stampSampleRoomPhotos(
       stampSellingPointsAnchor(withModuleSections(raw, data, phase, modOpts), data),
       data,

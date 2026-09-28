@@ -238,6 +238,13 @@ export interface SiteData {
   };
   readonly rooms?: readonly Room[];
   /**
+   * design-refs/tenant-site/whole-unit-band (owner: „C”, 2026-09-28): the whole place,
+   * taken OUT of `rooms` by the renderer when there are rooms beside it. The templates
+   * draw only the rooms; the shared band (`wholeBandBlock`) carries the whole place.
+   * Set by `splitWholeBand` in render.ts only — never by a data source.
+   */
+  readonly wholeBand?: Room;
+  /**
    * How many rooms the property really has, when a verified listing states the COUNT
    * but not the names (measured 2026-08-24: 4 leads of 36). The mock then renders
    * that many numbered sample cards, so the shape of the property is true even

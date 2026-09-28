@@ -1285,6 +1285,8 @@
       cap: shell.getAttribute("data-cit-room-cap") || "",
       price: shell.getAttribute("data-cit-room-price") || "",
       whole: shell.getAttribute("data-cit-room-whole") === "1",
+      // whole-unit-band: "Mind a N egység egyben" — the band states it, the popover repeats it.
+      wholeAll: (shell.closest(".cit-wholeband") || shell).getAttribute("data-cit-whole-all") || "",
       sample: shell.getAttribute("data-cit-room-sample") === "1",
       unitId: shell.getAttribute("data-cit-room-unit") || "",
       photos: photos,
@@ -1369,12 +1371,17 @@
     function open(room, opener) {
       state.room = room;
       state.opener = opener || null;
-      q(".cit-rd__brow").textContent = (room.sample ? tr("MINTA") + " · " : "") + (room.whole ? tr("A szállás egésze") : tr("Apartman"));
+      q(".cit-rd__brow").textContent = (room.sample ? tr("MINTA") + " · " : "") + (room.whole ? tr("Egyben is kiadó") : tr("Apartman"));
       q("h3").textContent = room.name;
       var cap = q(".cit-rd__cap");
-      cap.textContent = room.cap; cap.hidden = !room.cap;
+      var capTxt = room.whole && room.wholeAll ? (room.cap ? room.cap + " · " : "") + room.wholeAll : room.cap;
+      cap.textContent = capTxt; cap.hidden = !capTxt;
+      // ⛔ whole-unit-band: a whole place without a price says so — the booking box will
+      // answer with a quote request on it, and the popover must not promise otherwise.
+      var quoteOnly = room.whole && !room.price;
       var pr = q(".cit-rd__price");
-      pr.textContent = room.price; pr.hidden = !room.price;
+      pr.textContent = quoteOnly ? tr("Egyedi ár — a szállásadó árajánlattal válaszol.") : room.price;
+      pr.hidden = !pr.textContent;
       // ⛔ Csak PADLÓ-árnál („24 000 Ft-tól"), és csak ha a lap tud is ajánlatot adni —
       // a szerver dönti el, itt már csak átvesszük. Egy árnál a mondat hazugság volna.
       var pn = q(".cit-rd__pricenote");
@@ -1399,7 +1406,7 @@
       q(".cit-rd__cta").innerHTML =
         '<a href="' + target + '"' +
         (room.unitId ? ' data-cit-room-unit="' + esc(room.unitId) + '"' : "") +
-        ' data-rd-cta>' + esc(tr("Foglalás")) + "</a>";
+        ' data-rd-cta>' + esc(quoteOnly ? tr("Árajánlatot kérek") : tr("Foglalás")) + "</a>";
       thumbs.innerHTML = "";
       room.photos.forEach(function (p, n) {
         var b = document.createElement("button");

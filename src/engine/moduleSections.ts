@@ -691,6 +691,69 @@ function newsletterBlock(_d: SiteData, _opts: { demo?: boolean; sample?: boolean
  * module must not get nothing just because of which template their site drew.
  * The caller decides (see `alreadyShown`) so we never print the rooms twice.
  */
+/**
+ * The whole place as its own band beside the rooms — contract
+ * `design-refs/tenant-site/whole-unit-band/` (owner: „C”, 2026-09-28).
+ *
+ * Measured before (FK-014, Három Huszár): the whole place stood FIRST in the room grid,
+ * with no price and no capacity, yet with a "Foglalás" button — the guest's first read
+ * was an empty card instead of the rooms' prices. The band says what it is ("Egyben is
+ * kiadó", all N rooms together) and, without a price, that the owner quotes one.
+ *
+ * `slot`: on the 12 templates that draw their own rooms markup the band is a SEPARATE
+ * `[data-cit-module="rooms"]` slot (the runtime mounts every slot on its own), inserted
+ * after the template's rooms container; inside the shared fallback section it is not.
+ * `data-cit-whole-mode` is the one switch the sibling thread (ADR-0257, "main": the house
+ * is the only offer) reuses — one system, two states.
+ */
+export function wholeBandBlock(
+  d: SiteData,
+  phase: RenderPhase = "live",
+  opts: { slot?: boolean } = {},
+): string {
+  const r = d.wholeBand;
+  if (!r) return "";
+  // The band's index follows the cards', so inside the fallback section (one slot) the
+  // runtime never pairs it with a card's data.
+  const idx = d.rooms?.length ?? 0;
+  const n = d.rooms?.length ?? 0;
+  const mode = r.wholeOnly ? "main" : "band";
+  const canAsk = Boolean(d.contact.email || d.contact.phone);
+  const priced = Boolean(r.price);
+  const inner =
+    `<p class="cit-wholeband__brow">${T(d, "Egyben is kiadó")}</p>` +
+    `<p class="cit-wholeband__t">${esc(r.name)}</p>` +
+    `<p class="cit-wholeband__all">${T(d, "Mind a {n} egység egyben — csak az Önök társaságáé.", { n })}</p>` +
+    (r.capacity ? `<p class="cit-wholeband__cap">${esc(r.capacity)}</p>` : "") +
+    (priced
+      ? `<p class="cit-wholeband__price">${esc(r.price!)}</p>`
+      : `<p class="cit-wholeband__custom"><b>${T(d, "Egyedi ár")}</b>` +
+        `<span>${T(d, "A szállásadó árajánlattal válaszol.")}</span></p>`);
+  // ⛔ Without a price the band does not say "Foglalás": the booking box answers with a
+  // quote request on this unit, so the button names what will happen — and opens the
+  // details first, whose own button is "Árajánlatot kérek" (the runtime's word for it).
+  const cta = !canAsk
+    ? ""
+    : priced
+      ? `<a class="cit-wholeband__cta" href="#cit-enquiry"` +
+        (r.unitId ? ` data-cit-room-unit="${esc(r.unitId)}"` : "") +
+        `>${esc(ctaLabel(d, phase))}</a>`
+      : `<button class="cit-wholeband__cta" type="button" data-cit-room="${idx}">` +
+        `${T(d, "Részletek és árajánlat")}</button>`;
+  return (
+    `<div class="cit-wholeband" data-cit-whole-mode="${mode}"` +
+    // The popover's capacity line reads this: the sentence, not a made-up head count.
+    ` data-cit-whole-all="${esc(T(d, "Mind a {n} egység egyben", { n }))}"` +
+    (opts.slot ? ` data-cit-module="rooms"` : "") +
+    `><div class="cit-wholeband__in">` +
+    roomShell(d, r, idx, "cit-wholeband__txt", inner) +
+    cta +
+    `</div>` +
+    roomDetails(d, r, idx) +
+    `</div>`
+  );
+}
+
 function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
   const rooms = d.rooms ?? [];
   if (!rooms.length) return "";
@@ -714,7 +777,9 @@ function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
   // egy „6 fő" felirattal — a rács üzenete („válasszon a szobák közül") hamis, ha
   // nincs miből választani. Az „egész szállás" teljes szélességű panelt kap, és CSAK
   // azok a cellák jelennek meg, amelyekhez van adat: üres cella nem kerül ki.
-  if (rooms.length === 1) {
+  // With the whole place in its own band, a single remaining card is a ROOM — the
+  // one-unit "A szállás" panel would call it the whole place.
+  if (rooms.length === 1 && !d.wholeBand) {
     const r = rooms[0]!;
     const facts: [string, string][] = [];
     if (r.capacity) facts.push([T(d, "Férőhely"), r.capacity]);
@@ -780,7 +845,10 @@ function roomsBlock(d: SiteData, phase: RenderPhase = "live"): string {
   return (
     `<section class="cit-modsec" data-cit-module="rooms">` +
     `<div class="cit-modsec__in"><h2>${T(d, "Szobák, apartmanok")}</h2>` +
+    // "band" follows the rooms; "main" (ADR-0257: the house is the only offer) leads them.
+    (d.wholeBand?.wholeOnly ? wholeBandBlock(d, phase) : "") +
     `<ul class="cit-modsec__grid" style="list-style:none;margin:0;padding:0">${cards}</ul>` +
+    (d.wholeBand && !d.wholeBand.wholeOnly ? wholeBandBlock(d, phase) : "") +
     `</div></section>`
   );
 }

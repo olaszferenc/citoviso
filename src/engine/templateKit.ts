@@ -73,7 +73,9 @@ export function copyOf(recipe: Recipe, kind: string): SectionCopy {
  * az „egész szállás" egység a modell alapja).
  */
 function hasSeveralRooms(d: SiteData): boolean {
-  return (d.rooms?.length ?? 0) > 1;
+  // With the whole place split into its own band, even ONE remaining card is a room,
+  // not "A szállás" — the place as a whole is the band below it.
+  return (d.rooms?.length ?? 0) > 1 || Boolean(d.wholeBand);
 }
 
 /** Nav link / eyebrow: "Szobák" vs "A szállás". */

@@ -44,18 +44,27 @@ egységre árajánlat-módba vált (ez helyes), de a kártya ezt nem mondta meg,
 
 ## Feliratok, amiket a terv rögzít
 
-⚠️ A kötő jelölés a megvalósítás UTOLSÓ lépése: amíg a felirat nincs a kódban, nem jelöljük kötőnek.
-
-- „Egyben is kiadó” — a sáv felső címkéje
-- „Egyedi ár” + „A szállásadó árajánlattal válaszol.” — ár nélkül
-- „Részletek és árajánlat” — a sáv gombja ár nélkül
-- „Árajánlatot kérek” — a felugró fő gombja ár nélkül
+- **„Egyben is kiadó”** — a sáv felső címkéje (és a felugró címkéje az egész háznál)
+- **„Egyedi ár”** + **„A szállásadó árajánlattal válaszol.”** — ár nélkül, a sávon
+- **„Részletek és árajánlat”** — a sáv gombja ár nélkül
+- **„Árajánlatot kérek”** — a felugró fő gombja ár nélkül
+- **„Egyedi ár — a szállásadó árajánlattal válaszol.”** — a felugró ár-sora ár nélkül
 
 ## Mérve a terven (Playwright, 390 touch + 1280)
 
 - mindhárom változatban a felugró gombja után a foglalás-doboz választója az egész házon áll, a gomb
   „Árajánlatot kérek”; egy szoba „Foglalás”-a után a saját egységén, a gomb „Tovább a kérés adataihoz (2 éjszaka)”;
 - 0 JS-hiba mindkét méreten.
+
+## Mérve a megvalósításon (2026-09-28)
+
+- A Három Huszár VALÓDI adatából renderelve (fullbleed, tartalék kártya), 390 / fekvő 844 / 1280: a rácsban csak
+  a szobák, alattuk a sáv; a sáv gombja → felugró („Egyedi ár — …”, „Árajánlatot kérek”) → a foglalás választója
+  „A szállás egésze · egyedi ár”; minden szobakártya „Foglalás”-a a SAJÁT egységét állítja; 0 JS-hiba.
+- Mind a 19 sablonon (fixture, 390 + 1280): pontosan 1 sáv, az egész ház 0 kártyán a rácsban, a sáv a szobák UTÁN,
+  nincs vízszintes túlfolyás, a sáv 16 px-es oldalmargóval (4 széltől-szélig sablonon a margó javítva).
+- Őr: `scripts/room-details-check.mts` ③ (sáv-darab, rácsban-nincs, ár nélkül nem „Foglalás”, a felugró
+  „Egyedi ár” + „Árajánlatot kérek”, a gomb után `#cit-unit` = az egész ház) + visszarontás.
 
 ## Ami NEM ennek a tervnek a tárgya
 
