@@ -701,7 +701,14 @@
     if (open) open.place();
   }
   window.addEventListener("scroll", follow, { passive: true });
+  /* ⛔ Only a WIDTH change closes the calendar (rotation, a desktop window resized).
+   * A phone fires resize when its address bar slides in or out on scroll, and when the
+   * keyboard opens or closes — height only. Closing on those shut the calendar under the
+   * owner's thumb (measured 2026-09-28, 390 px touch: 844 → 760 px height closed it). */
+  var lastW = window.innerWidth;
   window.addEventListener("resize", function () {
+    if (window.innerWidth === lastW) return follow();
+    lastW = window.innerWidth;
     if (open) open.close();
     open = null;
   });

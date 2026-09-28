@@ -136,59 +136,88 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
-- [ ] Az első szezon: Főszezon — a dátumot NAPTÁRBÓL választja
-  tedd: kattints "Időszaki árak"
-  tedd: írd "input[name='label']" "Főszezon"
-  tedd: kattints "[data-sdp='from']"
-  tedd: kattints "[data-d='06-15']"
-  tedd: kattints "[data-done]"
-  tedd: kattints "[data-sdp='to']"
-  tedd: kattints "[data-d='08-31']"
-  tedd: kattints "[data-done]"
-  tedd: írd "input[name='amount']" "34000"
-  tedd: görgess-középre ".pn-go"
-  tedd: kattints ".pn-go"
-  tedd: várj "Főszezon" 20
-  várd: látható "Főszezon"
-  adat: ELEK-NIGHT szezon (Főszezon, 06-15 → 08-31, 34 000 Ft)
-  kézi: a naptár 390-en a mezők ALATT nyílik-e (nem takarva), egy hónap látszik-e egyszerre, és a hónap-léptetés ujjal megy-e; a kiválasztott nap visszajelzése látszik-e; a „Kész" gomb elérhető-e
+# ⛔ MÉRT LELET (2026-09-28): a korábbi lépések a LAP ELSŐ kártyájára („A szállás egésze")
+# találtak (szűkítetlen szelektorok), a naptár 390 px-en EGY hónapot mutat és a MAI
+# hónapra nyílik (a `06-15` nap nem volt a DOM-ban), a záró nap koppintása pedig magától
+# becsukja a naptárat (az utána kért `[data-done]` rejtett). A felület tap-pel mérve
+# hibátlan volt (06-15 → 08-31 rögzült, DB-ben visszaolvasva). Ezért: minden lépés a
+# Nádas kártyájára szűkítve, a hónapot az „Az év, egy pillantásra" sáv hónap-gombja
+# választja (ahogy egy tulaj is ugrana — és a mai dátumtól független), és a nyitott
+# naptár KÜLÖN lépés, hogy a képe megmaradjon.
+- [ ] Az első szezon: Főszezon — a naptár NYITVA (kép a következő ítélet-körnek)
+  tedd: írd ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] input[name='label']" "Főszezon"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-sdp='from']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='6']"
+  várd: darab ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='06-15']" >= 1
+  kézi: a naptár 390-en a mezők ALATT nyílik-e (nem takarva), egy hónap látszik-e, a „Válassza ki a kezdő napot” lépés-felirat érthető-e; az „Az év, egy pillantásra” hónap-gombja a jó hónapra ugrott-e; a hónap-léptetés nyilai ujjal elérhetők-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
-- [ ] A második szezon: Őszi szünet
-  tedd: kattints "Időszaki árak"
-  tedd: írd "input[name='label']" "Őszi szünet"
-  tedd: kattints "[data-sdp='from']"
-  tedd: kattints "[data-d='10-23']"
-  tedd: kattints "[data-done]"
-  tedd: kattints "[data-sdp='to']"
-  tedd: kattints "[data-d='11-02']"
-  tedd: kattints "[data-done]"
-  tedd: írd "input[name='amount']" "28000"
-  tedd: görgess-középre ".pn-go"
-  tedd: kattints ".pn-go"
-  tedd: várj "Őszi szünet" 20
-  várd: látható "Őszi szünet"
-  adat: ELEK-NIGHT szezon (Őszi szünet, 10-23 → 11-02, 28 000 Ft)
+- [ ] Az első szezon: Főszezon — kezdő és záró nap, ár, felvétel
+  # A runner a 390-es kép UTÁN fekvő és asztali képet is készít (szélesség-váltás), ami
+  # a naptárat szándékosan becsukja — ezért a hónap-gomb itt újranyitja.
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='6']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='06-15']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='8']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='08-31']"
+  tedd: írd ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] input[name='amount']" "34000"
+  tedd: görgess-középre ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] .pn-go"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] .pn-go"
+  tedd: várj "Mentve" 20
+  várd: darab ".adm-card:has(h2:text-is('Nádas apartman')) [data-strip][data-label='Főszezon']" >= 1
+  adat: ELEK-NIGHT szezon (Főszezon, 06-15 → 08-31, 34 000 Ft, Nádas apartman)
+  kézi: a felvétel után a Nádas kártyáján megjelenik-e a Főszezon az évsávval, és kiderül-e, hogy a többi szobára NEM vonatkozik
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
+- [ ] A második szezon: Őszi szünet — a naptár NYITVA (kép a következő ítélet-körnek)
+  tedd: írd ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] input[name='label']" "Őszi szünet"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-sdp='from']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='10']"
+  várd: darab ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='10-23']" >= 1
+  kézi: a nyitott naptárban a MÁR felvett Főszezon napjai jelölve vannak-e („másik időszak napjai”) — itt októberben nem, de a jelmagyarázat megjelenik-e
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
+- [ ] A második szezon: Őszi szünet — kezdő és záró nap, ár, felvétel
+  # A runner a 390-es kép UTÁN fekvő és asztali képet is készít (szélesség-váltás), ami
+  # a naptárat szándékosan becsukja — ezért a hónap-gomb itt újranyitja.
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='10']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='10-23']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='11']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='11-02']"
+  tedd: írd ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] input[name='amount']" "28000"
+  tedd: görgess-középre ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] .pn-go"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] .pn-go"
+  tedd: várj "Mentve" 20
+  várd: darab ".adm-card:has(h2:text-is('Nádas apartman')) [data-strip][data-label='Őszi szünet']" >= 1
+  adat: ELEK-NIGHT szezon (Őszi szünet, 10-23 → 11-02, 28 000 Ft, Nádas apartman)
   kézi: a MÁSODIK szezon felvétele után a lista 390-en átlátható-e (mi van elöl, mi a sorrend), és a két időszak nem fedi-e egymást észrevétlenül
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
-- [ ] A harmadik szezon: Szilveszter (átnyúlik az évfordulón)
-  tedd: kattints "Időszaki árak"
-  tedd: írd "input[name='label']" "Szilveszter"
-  tedd: kattints "[data-sdp='from']"
-  tedd: kattints "[data-d='12-28']"
-  tedd: kattints "[data-done]"
-  tedd: kattints "[data-sdp='to']"
-  tedd: kattints "[data-d='01-02']"
-  tedd: kattints "[data-done]"
-  tedd: írd "input[name='amount']" "39000"
-  tedd: görgess-középre ".pn-go"
-  tedd: kattints ".pn-go"
-  tedd: várj "Szilveszter" 20
-  várd: látható "Szilveszter"
-  adat: ELEK-NIGHT szezon (Szilveszter, 12-28 → 01-02, 39 000 Ft)
+- [ ] A harmadik szezon: Szilveszter (átnyúlik az évfordulón) — a naptár NYITVA (kép a következő ítélet-körnek)
+  tedd: írd ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] input[name='label']" "Szilveszter"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-sdp='from']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='12']"
+  várd: darab ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='12-28']" >= 1
+  kézi: a decemberi naptár 390-en; a záró napot a következő év januárjából választja — kiderül-e a lépés-feliratból („Most a záró napot (december 28. után)”), hogy januárt választhat
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
+- [ ] A harmadik szezon: Szilveszter (átnyúlik az évfordulón) — kezdő és záró nap, ár, felvétel
+  # A runner a 390-es kép UTÁN fekvő és asztali képet is készít (szélesség-váltás), ami
+  # a naptárat szándékosan becsukja — ezért a hónap-gomb itt újranyitja.
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='12']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='12-28']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-syear] [data-m='1']"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] [data-scal] [data-d='01-02']"
+  tedd: írd ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] input[name='amount']" "39000"
+  tedd: görgess-középre ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] .pn-go"
+  tedd: kattints ".adm-card:has(h2:text-is('Nádas apartman')) form[data-sadd] .pn-go"
+  tedd: várj "Mentve" 20
+  várd: darab ".adm-card:has(h2:text-is('Nádas apartman')) [data-strip][data-label='Szilveszter']" >= 1
+  adat: ELEK-NIGHT szezon (Szilveszter, 12-28 → 01-02, 39 000 Ft, Nádas apartman)
   kézi: az ÉVFORDULÓN átnyúló időszakot elfogadta-e, és a felület kimondja-e, hogy ez év végén kezdődik és a következő évben ér véget — vagy a tulaj azt hiheti, elgépelte
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 

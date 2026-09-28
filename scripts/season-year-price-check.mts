@@ -285,6 +285,13 @@ try {
     // owner, 2026-09-27: ABOVE the button whenever it fits under the sticky top bar
     else check(`${label}: a naptár a dátum-gombhoz kötve, ${geo.roomAbove >= geo.h ? "FÖLÖTTE" : "alatta (fölötte nem fér el)"} nyílik`,
       geo.fixed === "fixed" && (geo.roomAbove >= geo.h ? geo.calBottom <= geo.datesTop + 1 && geo.calBottom >= geo.datesTop - 16 : geo.calTop >= geo.datesBottom - 1), geo);
+    // A phone's address bar / keyboard changes the HEIGHT only and fires resize: the
+    // calendar must stay open under the owner's thumb (measured 2026-09-28, FK-013).
+    await page.setViewportSize({ width, height: 900 });
+    await page.waitForTimeout(150);
+    check(`${label}: csak-magasság-változásra (címsor, billentyűzet) a naptár NYITVA marad`, await cal.isVisible());
+    await page.setViewportSize({ width, height: 1000 });
+    await page.waitForTimeout(150);
     // an impossible day cannot be picked: February has 29 (the leap day), never 30
     for (let i = 0; i < 12 && (await cal.locator('[data-d="02-01"]').count()) === 0; i++) await cal.locator('[data-nav="1"]').click();
     check(`${label}: februárban 29 nap választható, 30. nincs`, (await cal.locator('[data-d^="02-"]').count()) === 29 && (await cal.locator('[data-d="02-30"]').count()) === 0);
