@@ -31,20 +31,28 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
-- [ ] Tizenkét fotót tölt fel egyszerre (a megengedett maximum)
+# ⛔ MÉRT (2026-09-28): a feltöltés a „… fotó feltöltve” jelzés után 1,3 mp-cel MAGÁTÓL
+# újratölti a lapot (`&saved=1`). A `várj` a jelzésre azonnal teljesült, a kép-készítés
+# a navigációba futott („Execution context was destroyed”) — runner-hiba, nem termékhiba.
+# Ezért a lépés a jelzés UTÁN megvárja az újratöltött lapot is, és AZT fényképezi.
+# A darabszám a vezénylőtől jön: 18+ saját fotónál 12 + 6 (a 12-es korlát mérve),
+# kevesebbnél két adag a SAJÁT képekből (idegen szállás képével nem töltünk fel).
+- [ ] Az első adag fotót tölti fel egyszerre (legfeljebb 12)
   tedd: töltsd-fel "#adm-file" "${ELEK_NIGHT_PHOTOS_A}"
   tedd: várj "feltöltve" 120
-  várd: látható "feltöltve"
-  adat: ELEK-NIGHT 12 fotó (portál-forrás, dev teszt)
-  kézi: a feltöltés közben látott-e a tulaj VISSZAJELZÉST (haladás képenként), és a végén megtudta-e, hány kép került fel; 390-en a rács átlátható-e; a nagy (fél megabájtos) képek átmentek-e
+  tedd: várj-címre "saved=1" 20
+  várd: darab "#adm-photos[data-own='1']" == 1
+  adat: ELEK-NIGHT ${ELEK_NIGHT_PHOTOS_A_N} saját fotó (portál-forrás, dev teszt)
+  kézi: a kép az ÚJRATÖLTÖTT lap (a „… fotó feltöltve” jelzést a `várj` gépileg mérte, a kép már utána készül): az újratöltés után is kiderül-e, hány kép került fel és hogy mostantól a SAJÁT képei vannak kint; 390-en a rács átlátható-e; a nagy (fél megabájtos) képek átmentek-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
-- [ ] Még hat fotót tölt fel — a könyvtár feltöltődik
+- [ ] Még egy adag fotót tölt fel — a könyvtár feltöltődik
   út: /admin?tab=fotok
   tedd: töltsd-fel "#adm-file" "${ELEK_NIGHT_PHOTOS_B}"
   tedd: várj "feltöltve" 120
-  adat: ELEK-NIGHT +6 fotó
+  tedd: várj-címre "saved=1" 20
+  adat: ELEK-NIGHT +${ELEK_NIGHT_PHOTOS_B_N} saját fotó
   kézi: a számláló (n / 24) követi-e a valóságot; a második feltöltés után is a SAJÁT képek látszanak-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -68,11 +76,16 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
   # egyben?" választás — az a mezők FÖLÖTT, 390 px-en a képernyőn kívül volt, és a
   # „Hozzáadás" NÉMÁN nem csinált semmit. JAVÍTVA (2026-09-28, room-add-B): a kérdés a
   # gomb fölött áll, kihagyva a gomb alatt piros sor mondja meg, mi hiányzik.
+  # ⚠️ MÉRT (2026-09-28, friss bérlő — Myrna Haus): az ELSŐ saját szobánál a kérdés már
+  # NEM jön elő („Még egy döntés hiányzik” nincs), a szoba azonnal felvéve, és az egész-ház
+  # döntést a lista fölötti „Az egész szállás egyben” panel kéri (ADR-0257). A régi,
+  # elhasznált parkon (Három Huszár) a kérdés még előjött — ezért itt best-effort, és a
+  # gépi bizonyíték a „Felvettük”.
   tedd: kattints "form:has(input[name='price_on_request']) button[type='submit']"
-  várd: látható "Még egy döntés hiányzik"
-  tedd: kattints "label:has(input[name='whole'][value='igen'])"
-  tedd: görgess-középre "form:has(input[name='price_on_request']) button[type='submit']"
-  tedd: kattints "form:has(input[name='price_on_request']) button[type='submit']"
+  tedd?: várj "Még egy döntés hiányzik" 4
+  tedd?: kattints "form:has(input[name='price_on_request']) label:has(input[name='whole'][value='igen'])"
+  tedd?: görgess-középre "form:has(input[name='price_on_request']) button[type='submit']"
+  tedd?: kattints "form:has(input[name='price_on_request']) button[type='submit']"
   tedd: várj "Felvettük" 20
   várd: látható "Nádas apartman"
   adat: ELEK-NIGHT egység (Nádas apartman, 4 fő, 24 000 Ft)
@@ -273,7 +286,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 - [ ] A cím megadása és a térkép-tű
   út: /admin?tab=modulok&m=location
   várd: látható "A szállás helye"
-  tedd: írd "#pl_addr" "Köveskál, Fő utca 12."
+  tedd: írd "#pl_addr" "${ELEK_NIGHT_CITY}, Fő utca 12."
   tedd: kattints "#pl_find"
   tedd: várj "Megközelítés" 15
   kézi: a „Megkeresem a térképen" megtalálta-e a címet 390-en; a térkép és a tű látszik-e, és a tű ujjal HÚZHATÓ-e; a tulaj tudja-e, hogy ez a pont vezeti majd a vendéget
@@ -281,7 +294,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 
 - [ ] Megközelítés és parkolás, majd mentés
-  tedd: írd "textarea[name='approachNote']" "A 71-es útról Köveskál felé, a templomtól a második utca jobbra. A kaputól a ház a kert végében."
+  tedd: írd "textarea[name='approachNote']" "A 71-es útról ${ELEK_NIGHT_CITY} felé, a templomtól a második utca jobbra. A kaputól a ház a kert végében."
   tedd: írd "input[name='parkingNote']" "Ingyenes parkolás az udvarban, két autónak."
   tedd: görgess-középre "#pl_save"
   tedd: kattints "#pl_save"

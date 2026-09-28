@@ -220,10 +220,22 @@ async function doAction(page: Page, action: string): Promise<void> {
     await page.reload({ timeout: STEP_TIMEOUT * 2 });
     return;
   }
-  const m = action.match(/^(kattints|írd|válaszd|várj|várj-kattinthatóra|görgess-középre|görgess|töltsd-fel)\s+(.*)$/);
+  const m = action.match(/^(kattints|írd|válaszd|várj|várj-kattinthatóra|várj-címre|görgess-középre|görgess|töltsd-fel)\s+(.*)$/);
   if (!m) throw new Error(`értelmezhetetlen akció: ${action}`);
   const [, verb, rest] = m;
   const q = quoted(rest);
+  // `várj-címre "<részlet>" [mp]` — a page that NAVIGATES BY ITSELF after an action (the
+  // photo upload shows its toast, then `location.href=…&saved=1` 1,3 s later). A `várj`
+  // on the toast returns at once, and the capture that follows ran INTO the navigation:
+  // "page.evaluate: Execution context was destroyed" (FK-013 ①, measured 2026-09-28).
+  // This waits for the URL the page is heading to, and for that page to load.
+  if (verb === "várj-címre") {
+    const part = q[0] ?? rest.trim();
+    const secs = Number(rest.match(/"\s+(\d+)\s*$/)?.[1] ?? 0);
+    const timeout = secs > 0 ? secs * 1000 : STEP_TIMEOUT;
+    await page.waitForURL((u) => u.href.includes(part), { timeout, waitUntil: "load" });
+    return;
+  }
   if (verb === "kattints") {
     const target = q[0] ?? rest.trim();
     const loc = isSelector(target) ? page.locator(target).first() : await labelLocator(page, target);
@@ -377,7 +389,18 @@ async function doAction(page: Page, action: string): Promise<void> {
   }
   if (verb === "válaszd") {
     if (q.length < 2) throw new Error(`válaszd: két idézett arg kell: ${action}`);
-    await page.locator(q[0]).first().selectOption({ label: q[1] }, { timeout: STEP_TIMEOUT });
+    const sel = page.locator(q[0]).first();
+    // An option label often carries data the scenario cannot know in advance
+    // ("A szállás egésze · 8 fő · egyedi ár"): an exact label first, then the ONE option
+    // whose label contains the text. Several matches = ambiguous = loud error.
+    const labels = await sel.locator("option").allTextContents();
+    const exact = labels.find((l) => l.trim() === q[1]);
+    const partial = labels.filter((l) => l.includes(q[1]));
+    const label = exact ?? (partial.length === 1 ? partial[0] : null);
+    if (!label) {
+      throw new Error(`válaszd: ${partial.length ? "több" : "nincs"} illeszkedő opció "${q[1]}" — opciók: ${labels.join(" | ")}`);
+    }
+    await sel.selectOption({ label }, { timeout: STEP_TIMEOUT });
     return;
   }
   // várj "<látható szöveg>" [mp] — optional timeout in seconds for long async
@@ -615,6 +638,8 @@ interface StepResult {
   shot_mobile: string | null;
   /** `nézet: telefon` futásban: FEKVŐ telefon (844×390) — a tartás nem szélesség. */
   shot_land?: string | null;
+  /** Action-less step: it judges the frame of THIS earlier step (no new capture). */
+  shot_reused_from?: number;
   error?: string;
   /** ADR-0131: recorded errors that a `tűrt-hiba:` line lawfully let through. */
   tolerated_errors?: { error: string; reason: string }[];
@@ -746,6 +771,22 @@ for (const sec of fk.sections) {
       }
       for (const check of st.vard) res.checks.push(await doCheck(page, subst(check)));
       await trace(page, `${stepNo}. várd`);
+      // ⛔ A step with no út/tedd/várd changes NOTHING on the page — capturing it again gave
+      // a byte-identical PNG under a new number (FK-012 01=02, 10=11, 12=13; FK-015 05=06,
+      // 10=11, 12=13, measured 2026-09-28), and a reader took the pair for two moments.
+      // Two of those six were real gaps (the cart was judged after it had closed; the
+      // review was "approved" without a tap). So an action-less step POINTS at the frame
+      // it judges, and says so — a missing action can no longer hide behind a fresh file.
+      const prev = results[results.length - 1];
+      if (!st.ut && !st.tedd.length && !st.vard.length && prev?.shot_mobile && prev.status !== "blocked") {
+        res.shot = prev.shot;
+        res.shot_mobile = prev.shot_mobile;
+        if (prev.shot_land) res.shot_land = prev.shot_land;
+        res.shot_reused_from = prev.shot_reused_from ?? prev.step;
+        res.status = st.kezi ? "manual" : "pass";
+        results.push(res);
+        continue;
+      }
       res.shot = `shots/${shotName}`;
       res.shot_mobile = `shots/${mobileShotName}`;
       if (PHONE_MODE) {
@@ -849,6 +890,10 @@ console.log(
 // exactly that step — say which, instead of letting the evaluator discover a gap.
 if (missingMobile.length) {
   console.log(`⚠️ telefonos felvétel NÉLKÜL maradt lépés: ${missingMobile.join(", ")}`);
+}
+const reused = results.filter((r) => r.shot_reused_from != null);
+if (reused.length) {
+  console.log(`ℹ️ akció nélküli lépés (a korábbi képet ítéli): ${reused.map((r) => `${r.step}→${r.shot_reused_from}`).join(", ")}`);
 }
 // ADR-0131: name the silent failures out loud — the whole point is that they no
 // longer need a human to read the JSONL to be noticed.

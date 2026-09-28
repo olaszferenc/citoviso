@@ -17,6 +17,7 @@
 - [2026-09-28_foglalas_beallitas_kerdezz_felelek_ai_chat_pilot_utan.md](2026-09-28_foglalas_beallitas_kerdezz_felelek_ai_chat_pilot_utan.md) — 2026-09-28 — A foglalás beállítása egyszerűbb lesz: kérdezz-felelek + fókuszált AI chat (PILOT UTÁN)
 - [2026-09-28_foglalas_arajanlat_mod_nyito_egyseg.md](2026-09-28_foglalas_arajanlat_mod_nyito_egyseg.md) — 2026-09-28 — A vendég nem tudott foglalni: a widget az ár nélküli „egész szállásra” nyitott (+ a nem kiadó egész rejtve)
 - [2026-09-28_ejszakai_kor_tulaj_vendeg_telefonon.md](2026-09-28_ejszakai_kor_tulaj_vendeg_telefonon.md) — 2026-09-28 — Éjszakai kör: Elek megveszi, feltölti és vendégként kipróbálja a honlapot TELEFONON
+- [2026-09-28_egy_szallasos_telefonos_kor_myrna_haus.md](2026-09-28_egy_szallasos_telefonos_kor_myrna_haus.md) — Egy-szállásos telefonos kör friss alanyon (Myrna Haus) — a tulaj feltöltése = a vendég látványa, végig
 - [2026-09-28_csak_egyben_kiado_haz_bemutato_szobak.md](2026-09-28_csak_egyben_kiado_haz_bemutato_szobak.md) — 2026-09-28 — „Csak egyben adom ki”: a ház az egyetlen ajánlat, a szobák bemutatásra (ADR-0257)
 - [2026-09-28_admin_akadalyok_telefonon.md](2026-09-28_admin_akadalyok_telefonon.md) — 2026-09-28 — Az admin első órájának akadályai telefonon (brief: admin-akadalyok-telefonon)
 - [2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md](2026-09-27_webcim_hiteles_elerhetoseg_kartyazarolas.md) — 2026-09-27 — Webcím: a vásárlás hibája + hiteles elérhetőség + kártyazárolás (ADR-0251)

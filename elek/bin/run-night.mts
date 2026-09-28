@@ -65,12 +65,24 @@ const photos = existsSync(photoDir)
       .sort((a, b) => (Number(a.replace(/\D/g, "")) || 0) - (Number(b.replace(/\D/g, "")) || 0))
       .map((f) => path.join(photoDir, f))
   : [];
+// ⚠️ A subject with FEWER own photos (Myrna Haus: 6 distinct place photos, 2026-09-28)
+// is still worth a run — the proof is that the guest sees what THIS owner uploaded, and
+// padding with another property's pictures would falsify exactly that. Two batches of
+// its own photos then, two thirds + one third; the 12-at-once ceiling is only measured
+// with 18+, and the log says which case ran.
 if (photos.length >= 18) {
   env.ELEK_NIGHT_PHOTOS_A = photos.slice(0, 12).join(",");
   env.ELEK_NIGHT_PHOTOS_B = photos.slice(12, 18).join(",");
+} else if (photos.length >= 3) {
+  const a = Math.ceil((photos.length * 2) / 3);
+  env.ELEK_NIGHT_PHOTOS_A = photos.slice(0, a).join(",");
+  env.ELEK_NIGHT_PHOTOS_B = photos.slice(a).join(",");
+  log(`⚠️ ${photoDir}: ${photos.length} saját fotó — két adag (${a} + ${photos.length - a}); a 12-es egyszerre-korlát ebben a körben NEM mérve`);
 } else {
-  console.log(`⚠️ ${photoDir}: csak ${photos.length} fotó (18 kell) — az FK-013 fotó-szakasza kihagyásra kerül`);
+  console.log(`⚠️ ${photoDir}: csak ${photos.length} fotó (legalább 3 kell) — az FK-013 fotó-szakasza kihagyásra kerül`);
 }
+env.ELEK_NIGHT_PHOTOS_A_N = String(env.ELEK_NIGHT_PHOTOS_A?.split(",").length ?? 0);
+env.ELEK_NIGHT_PHOTOS_B_N = String(env.ELEK_NIGHT_PHOTOS_B?.split(",").length ?? 0);
 
 const { db, pool } = await import("../../src/db/client.js");
 
@@ -78,6 +90,16 @@ async function leadId(): Promise<string> {
   const row = await db.selectFrom("lead").select("id").where("name", "=", SUBJECT_LEAD).executeTakeFirst();
   if (!row) throw new Error(`nincs ilyen lead a dev DB-ben: ${SUBJECT_LEAD}`);
   return row.id;
+}
+
+// The subject's own town: the guest round checks the page names it, the buyer's
+// address and the approach note use it. It was written into the scenarios as
+// "Köveskál" (Három Huszár), so any other subject failed on someone else's town.
+{
+  const row = await db.selectFrom("lead").select(["raw", "address"]).where("name", "=", SUBJECT_LEAD).executeTakeFirst();
+  const raw = (row?.raw ?? {}) as { city?: string };
+  env.ELEK_NIGHT_CITY = raw.city || "Köveskál";
+  env.ELEK_NIGHT_ZIP = /\b(\d{4})\b/.exec(row?.address ?? "")?.[1] ?? "8274";
 }
 
 /** Amit a lánc következő köre megkövetel — mérve, nem feltételezve. */

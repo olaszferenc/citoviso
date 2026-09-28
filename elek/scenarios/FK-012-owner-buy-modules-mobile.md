@@ -98,18 +98,35 @@ kontraktus: assets/design-refs/tenant-admin/dokumentumok-uzenetek-a-README.md
   kézi: 390-en: a „Kosárba teszem" gomb elérhető volt-e görgetés után (a kosár-gomb nem ült-e rá); a gomb felirata „Kiveszem a kosárból"-ra váltott-e; a kosár-gomb száma és összege nőtt-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-- [ ] A kosár kinyílik, és egyetlen fizetéssel megy minden
-  tedd?: kattints "#adm-cartpill"
-  tedd?: kattints "#adm-plan-apply"
-  tedd?: kattints "[data-fc-go]"
-  tedd?: várj "Kész" 60
-  kézi: 390-en: a kinyitott kosár felsorolja-e az összes tételt; a megerősítő tételesen mutatja-e a modulokat, a „Fizetendő most" összeget ÉS a „Következő számla … így" sort; a kártyaválasztó a megerősítőn van-e; a nyugta megmondta-e, mennyit terheltünk és mi él mostantól
+# ⛔ MÉRT (2026-09-28): a kinyitás, a megerősítő és a fizetés EGY lépés volt, a kosár
+# „három számát” kérdező ④ pedig akció nélkül utána állt — a képe bájtra azonos volt a
+# fizetés utáni nyugtáéval, vagyis a kosarat CSUKVA, a fizetés után ítéltük meg. Most
+# minden állapot saját lépés, saját képpel.
+- [ ] A kosár kinyílik, és felsorolja, ami benne van
+  tedd: kattints "#adm-cartpill"
+  tedd: várj-kattinthatóra "#adm-plan-apply" 10
+  # A gomb felirata az összegtől függ: „Tovább a fizetéshez”, ha most fizetni kell,
+  # „Alkalmazom a módosításokat”, ha nem (adminViews, `apply.textContent`).
+  várd: darab "#adm-cartpill[aria-expanded='true']" == 1
+  kézi: 390-en a kinyitott kosár felsorolja-e az összes tételt; a kosár HÁROM száma (most fizetendő · következő számla · változás) elkülöníthető-e, és mind a három megnevezett-e; marad-e elég hely a kirakatnak; a „Kiürítem a kosarat" és a továbblépő gomb összetéveszthetetlen-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-## ④ A kosár — mit fizetek most, és mit a következő számlán?
+## ④ A megerősítő — mit fizetek most, és mit a következő számlán?
 
-- [ ] A kosár megmondja a most fizetendőt és az új havi díjat
-  kézi: 390-en a kinyitott kosár HÁROM száma (most fizetendő · következő számla · változás) elkülöníthető-e, és mind a három megnevezett-e; a kosár csukva MEKKORA a képernyőhöz képest (a régi sáv 48% volt), és marad-e elég hely a kirakatnak; a „Kiürítem a kosarat" és a „Tovább a fizetéshez" gomb összetéveszthetetlen-e
+- [ ] A megerősítő tételesen mutatja, mit fizet most és mit a következő számlán
+  tedd: kattints "#adm-plan-apply"
+  tedd: várj-kattinthatóra "[data-fc-go]" 10
+  várd: látható "Fizetés és élesítés"
+  kézi: 390-en a megerősítő tételesen mutatja-e a modulokat, a „Fizetendő most" összeget ÉS a „Következő számla … így" sort; a kártyaválasztó a megerősítőn van-e; a fizető gomb felirata megmondja-e az összeget
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+- [ ] Egyetlen fizetéssel megy minden, és a nyugta megmondja, mi él mostantól
+  tedd: kattints "[data-fc-go]"
+  tedd?: várj "Próba-fizetés — valódi pénz nem mozdul" 20
+  tedd?: görgess "form[action$='/paid'] button"
+  tedd?: kattints "form[action$='/paid'] button"
+  tedd: várj "Kész" 60
+  kézi: a nyugta megmondta-e, mennyit terheltünk és mi él mostantól; ha próba-fizetőoldal jött közbe, az érthető volt-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 ## ⑥ Ellenőrzés: tényleg minden az övé?

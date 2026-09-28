@@ -83,7 +83,7 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
 
 
 - [ ] Hol van a szállás, és mit lehet ott csinálni
-  várd: látható "Köveskál"
+  várd: látható "${ELEK_NIGHT_CITY}"
   kézi: a térkép 390-en megjelenik-e és nem lóg-e ki; a megközelítés/parkolás szövege olvasható-e; a programajánló sorai (dátum, hely, forrás) a jövőben vannak-e, és a link kattintható méretű-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -126,7 +126,7 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
 - [ ] A dátumokra az ár AZONNAL kiírva, és a továbblépő gomb megnevezi az éjszakákat
   tedd: írd "#cit-from" "2026-10-24"
   tedd: írd "#cit-to" "2026-10-26"
-  kézi: LÁTSZIK-E egyáltalán az ár a dátumok megadása után (a mérés szerint a widget első lépése csak a „Tovább…" gombot mutatja) — ha nem, a vendég a második lépésig nem tudja, mennyibe kerül; az ár-összegzés (2 éj × 24 000) a gomb FÖLÖTT, olvashatóan van-e 390-en; az összeg egy sorban marad-e; a „Tovább a kérés adataihoz (2 éjszaka)" felirat megmondja-e, mi jön; fekvő tartásban a gomb elérhető-e
+  kézi: LÁTSZIK-E egyáltalán az ár a dátumok megadása után (a mérés szerint a widget első lépése csak a „Tovább…" gombot mutatja) — ha nem, a vendég a második lépésig nem tudja, mennyibe kerül; az ár-összegzés (2 éj × 28 000, a tulaj őszi szezonja) a gomb FÖLÖTT, olvashatóan van-e 390-en; az összeg egy sorban marad-e; a „Tovább a kérés adataihoz (2 éjszaka)" felirat megmondja-e, mi jön; fekvő tartásban a gomb elérhető-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 - [ ] A második lépésben jönnek a vendég adatai
@@ -144,18 +144,55 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
   tedd: várj "Elküldtük a kérését" 40
   várd: látható "Elküldtük a kérését"
   várd: látható "Hivatkozás"
-  várd: látható "48 000"
+  # ⚠️ 56 000 = 2 éj × 28 000: az FK-013 ④ a Nádasra októberre 28 000 Ft-os szezont
+  # visz fel (a korábbi 48 000 = 2 × 24 000 alapár a szezon-mentés elakadásának kora volt).
+  # EZ a lánc lényege: a vendég azt az árat látja, amit a tulaj felvitt.
+  várd: látható "56 000"
   adat: ELEK-NIGHT foglalási kérés (Elek Vendég Éjszakai, 2026-10-24 → 10-26)
   kézi: a nyugtából kiderül-e: (1) EZ MÉG NEM FOGLALÁS, (2) mennyi időn belül kap választ, (3) hova jön a válasz, (4) mit tehet, ha meggondolja magát; a nyugta 390-en egy görgetéssel átlátható-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-## ⑦ Árajánlat — ár nélküli időszakra
+## ⑦ Árajánlat — az egész ház, amire a tulaj nem adott árat
 
-- [ ] Ha az időszakra nincs ár, a felület árajánlat-kérésre vált
+# ⛔ MÉRT (2026-09-28): ez a szakasz eddig csak `tedd?:` dátumokat írt a widgetbe, és egy
+# ÁRAZOTT egységen — árajánlat-kérés sosem született, így az FK-015 ④ (ajánlat adása) és az
+# FK-016 ② (elfogadás) mindig üresen futott. A valódi út: az FK-013 ② a második szobánál
+# „az egész szállást is kiadja egyben?” → igen, ár nélkül → a vendég-oldalon az egész ház
+# a szobák alatt saját sávban áll, „Egyedi ár” felirattal (ADR-0257 „C”). Onnan indulunk,
+# ahogy egy vendég is: sáv → részletek → „Árajánlatot kérek” → a widget már erre az
+# egységre áll → dátum → adatok → elküldés. A dátum távol esik a ⑥ foglalásától.
+- [ ] Az egész ház sávja megmondja, hogy erre egyedi ár jár, és a részletekből árajánlatot lehet kérni
   út: /t/${ELEK_NIGHT_SLUG}/
-  tedd?: írd "#cit-from" "2027-03-05"
-  tedd?: írd "#cit-to" "2027-03-07"
-  kézi: a képen: mit mond a widget olyan időszakra, amire nincs külön ár — alapárat számol, vagy árajánlatot kér; a vendég érti-e, melyik történik; 390-en a doboz és a gomb egy képernyőn van-e
+  tedd: görgess-középre ".cit-wholeband__cta"
+  tedd: kattints ".cit-wholeband__cta"
+  tedd: várj-kattinthatóra "[data-rd-cta]" 10
+  várd: látható "Egyedi ár"
+  várd: szövege "[data-rd-cta]" = "Árajánlatot kérek"
+  kézi: a sáv 390-en megmondja-e, MI ez (az egész ház egyben) és hogy az árat a szállásadó adja; a felugró a képernyőre fér-e, és a gombja árajánlatot ígér-e, nem foglalást
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+- [ ] A felugró gombja a foglaló dobozhoz visz, és a doboz az egész házra áll
+  tedd: kattints "[data-rd-cta]"
+  tedd: írd "#cit-from" "2026-11-13"
+  tedd: írd "#cit-to" "2026-11-15"
+  várd: látható "Erre az időszakra a szállásadó egyedi árat ad."
+  kézi: a képen: a választó az egész házat mutatja-e (nem egy szobát); a magyarázó doboz megmondja-e, MIÉRT nincs szám, és hogy az elküldés még nem kötelez; NINCS-e sehol összeg
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+- [ ] Az árajánlat-kérés elmegy, és a nyugta nem foglalást ígér
+  tedd: kattints "Tovább a kérés adataihoz"
+  tedd: írd "#cit-name" "Elek Vendég Ajánlat"
+  tedd: írd "#cit-email" "elek@citoviso.com"
+  tedd: írd "#cit-phone" "+36 30 555 0102"
+  tedd?: írd "#cit-msg" "Baráti társasággal jönnénk, hat felnőtt."
+  tedd: kattints "Árajánlatot kérek"
+  # A nyugta címe árajánlatnál MÁS (cit-runtime `receiptHtml`, isQuote): mérve 2026-09-28 —
+  # a kérés beérkezett (DB: pending, egész ház), csak a régi cím nem jelent meg.
+  tedd: várj "Elküldtük az árajánlat-kérését" 40
+  várd: látható "Elküldtük az árajánlat-kérését"
+  várd: látható "A szállásadó árajánlattal válaszol."
+  adat: ELEK-NIGHT árajánlat-kérés (Elek Vendég Ajánlat, egész ház, 2026-11-13 → 11-15)
+  kézi: a nyugta kimondja-e, hogy ez ÁRAJÁNLAT-kérés (nem foglalás), hogy a szállásadó árral válaszol, és hogy a foglalás csak az ajánlat elfogadásával lesz végleges; nem szerepel-e benne összeg
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 ## ⑧ Vélemény — jártam ott, elmondom

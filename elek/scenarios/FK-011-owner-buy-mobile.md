@@ -97,8 +97,8 @@ kontraktus: assets/design-refs/prospect-page/order-pill/README.md
 - [ ] Magánszemélyként számláz, és kitölti az adatait
   tedd: kattints "[data-btype='individual']"
   tedd: írd "[data-f='buyer_name']" "Elek Éjszakai Tesztgazda"
-  tedd: írd "[data-f='buyer_zip']" "8274"
-  tedd: írd "[data-f='buyer_city']" "Köveskál"
+  tedd: írd "[data-f='buyer_zip']" "${ELEK_NIGHT_ZIP}"
+  tedd: írd "[data-f='buyer_city']" "${ELEK_NIGHT_CITY}"
   tedd: írd "[data-f='buyer_address']" "Fő utca 12."
   tedd: írd "[data-f='buyer_email']" "elek@citoviso.com"
   kézi: 390-en a mezők egy oszlopban, feliratozva állnak-e; a numerikus mezőknél számbillentyűzet jön-e; a billentyűzet nem takarja-e a következő mezőt és a fizető gombot; a hibaüzenet a mező MELLETT jelenik-e meg
