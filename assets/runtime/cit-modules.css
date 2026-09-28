@@ -830,6 +830,10 @@ a.cit-grat:hover {
    from full card width to 75×50px, and the badge nearly covered the whole picture.
    The wrapper is a shell, not a new layout: it inherits the width it replaced. */
 .cit-modsec__item > .cit-room__open, .cit-modsec__item > .cit-rmore { width: 100%; align-self: stretch; }
+/* ⛔ AND IT KEEPS THE COLUMN IT REPLACED. The name, the capacity and the price used to
+   be the <li>'s own column-flex children; inside the block shell they became inline
+   runs and read "Nádas apartman4 fő24 000 Ft / éj" (FK-014, 2026-09-28). */
+.cit-modsec__room.cit-room__open { display: flex; flex-direction: column; gap: 6px; color: inherit; text-decoration: none; }
 .tb-thumbwrap { position: relative; display: inline-block; vertical-align: middle; }
 
 /* The explicit "Részletek" control next to Foglalás. One neutral, token-only style so
@@ -1003,7 +1007,10 @@ a.cit-grat:hover {
    BASE case, not the edge. Every hideable control below repeats the rule on purpose. */
 .cit-rd__thumbs[hidden], .cit-rd__nav[hidden], .cit-rd__count[hidden],
 .cit-rd__desc[hidden], .cit-rd__cap[hidden], .cit-rd__price[hidden],
-.cit-rd__empty[hidden] { display: none; }
+.cit-rd__empty[hidden], .cit-rd__gal[hidden] { display: none; }
+/* Without a photo the text column is the top of the sheet — it steps below the
+   44px close button instead of running under it. */
+.cit-rd[data-nophoto] .cit-rd__txt { padding-top: 64px; }
 .cit-rd__thumbs button {
   flex: none; width: 74px; aspect-ratio: 4/3; border: 1px solid transparent; padding: 0;
   cursor: pointer; background: 0;

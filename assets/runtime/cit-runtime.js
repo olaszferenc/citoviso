@@ -1343,7 +1343,15 @@
      *  `hidden` alone is not enough because display:flex beats it (CSS repeats it). */
     function show(i) {
       var ph = state.room ? state.room.photos : [];
-      if (!ph.length) return;
+      // ⛔ NO PHOTO → NO PHOTO BOX. Measured 2026-09-28 (FK-014, "A szállás egésze"):
+      // the early return left the stage as a black box with two live arrows, and a
+      // second open painted the previous unit's placeholder — a frame that promises a
+      // picture the unit does not have. The whole gallery stands down instead.
+      var none = !ph.length;
+      q(".cit-rd__gal").hidden = none;
+      if (none) root.setAttribute("data-nophoto", "");
+      else root.removeAttribute("data-nophoto");
+      if (none) { img.removeAttribute("src"); return; }
       state.i = (i + ph.length) % ph.length;
       img.src = ph[state.i].src;
       img.alt = ph[state.i].alt;
@@ -1496,7 +1504,12 @@
           : null;
       var unitId = holder && holder.getAttribute("data-cit-room-unit");
       if (!unitId) return;
-      var sel = document.querySelector('[name="unit"]');
+      // ⛔ THE BOOKING WIDGET'S OWN SELECT, by its id — never the first name="unit" on
+      // the page. Measured 2026-09-28 (Három Huszár): the review form ("Hol szállt meg
+      // nálunk?") sits ABOVE the widget and also has a name="unit" select, so every card's
+      // "Foglalás" set the REVIEW form's unit and left the widget on its default — the
+      // guest tapped "A szállás egésze" and landed on the Nádas apartman's calendar.
+      var sel = document.getElementById("cit-unit");
       if (!sel || sel.value === unitId) return;
       // ⚠️ Csak akkor állítunk, ha a választóban TÉNYLEG van ilyen érték — különben némán
       // egy nem létező egységre váltanánk, és a naptár üresen maradna.

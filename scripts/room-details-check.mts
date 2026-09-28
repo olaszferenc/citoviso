@@ -76,6 +76,7 @@ const UNITS = [
   { id: "u-teljes", name: "Teljes Szállás", capacity: 12 },
   { id: "u-kerti", name: "Kerti Appartman", capacity: 4 },
   { id: "u-teto", name: "Tetőtéri Appartman", capacity: 6 },
+  { id: "u-kamra", name: "Kamra Szoba", capacity: 2 },
 ];
 
 const ROOMS: Room[] = [
@@ -99,6 +100,11 @@ const ROOMS: Room[] = [
     // ⭐ AZ ÜRES egység: se leírás, se felszereltség → őszinte mondat, alcím NÉLKÜL.
     name: "Tetőtéri Appartman", unitId: "u-teto", capacity: "6 fő", photo: P[2],
   },
+  {
+    // ⭐ A FOTÓ NÉLKÜLI egység (FK-014, 2026-09-28: „A szállás egésze”): a felugróban
+    // NINCS fotódoboz — mérve fekete doboz állt ott két élő nyíllal.
+    name: "Kamra Szoba", unitId: "u-kamra", capacity: "2 fő", price: "9 000 Ft / éj",
+  },
 ];
 
 const DATE_NOTE = "A pontos ár a dátumoktól függ.";
@@ -119,6 +125,10 @@ function siteData(): SiteData {
     // ⚠️ A foglalás-modul NÉLKÜL a „melyik szobáról ugrottam le" állítás nem mérhető:
     // nincs egység-választó, amit meg lehetne nézni. A hiba pont ott él, ahol pénz van.
     booking: { units: UNITS, minNights: 1, maxNights: 14, horizonMonths: 6, leadTimeDays: 0 },
+    // ⛔ A vélemény-űrlapnak SAJÁT name="unit" választója van, és a lapon a foglalás
+    // ELŐTT áll (mérve a Három Huszáron, 2026-09-28). Nélküle a „melyik választót
+    // állította a leugrás” kérdés szerkezetileg nem tehető fel: egy választó van.
+    reviewForm: { units: UNITS.map((u) => ({ id: u.id, name: u.name })) },
   } as unknown as SiteData;
 }
 
@@ -198,6 +208,15 @@ const PROBE = `(function (cfg) {
     var sh = shells[s2];
     sh.scrollIntoView({ block: "center", behavior: "instant" });
     var idx = sh.getAttribute("data-cit-room");
+    // ⛔ A NÉV, A FÉRŐHELY ÉS AZ ÁR NEM TAPADHAT EGYBE. Mérve (FK-014, 2026-09-28) a közös
+    // tartalék kártyán: „Nádas apartman4 fő24 000 Ft / éj” — a héj blokk-elem lett, a
+    // benne álló <strong>/<span> sorok inline futottak. A KIRAJZOLT szöveget nézzük.
+    var shTxt = (sh.innerText || "").toLowerCase();
+    var gName = (sh.getAttribute("data-cit-room-name") || "").toLowerCase();
+    var gCap = (sh.getAttribute("data-cit-room-cap") || "").toLowerCase();
+    if (gName && gCap && shTxt.indexOf(gName + gCap) >= 0) {
+      bad("osszetapadt-kartya-szoveg", "szoba #" + idx + ": " + gName + gCap);
+    }
     var want = cfg.hintByIndex[idx];
     var hint = sh.querySelector(".cit-rmhint");
     if (!want) continue;                       // ehhez a szobához nincs fotó → nincs jelvény
@@ -240,7 +259,14 @@ const PROBE = `(function (cfg) {
   // ⛔ Mérve 2026-09-22: a 2. szoba „Foglalás"-a leugrott a foglalás-szekcióra, és a
   // választót az 1. egységen hagyta — rossz naptár, rossz ár, és a beküldés a ROSSZ
   // egységre ment volna. A kérdés nem az, hogy odaugrik-e, hanem hogy MIT VISZ MAGÁVAL.
-  var sel = document.querySelector('[name="unit"]');
+  // ⛔ A FOGLALÁS SAJÁT választója (#cit-unit), nem az első name="unit": a vélemény-
+  // űrlapé előtte áll, és a runtime is azt állította — az őr ugyanazt kérdezte, ezért
+  // ZÖLDEN védte a hibát (2026-09-28).
+  var sel = document.getElementById("cit-unit");
+  var firstUnit = document.querySelector('[name="unit"]');
+  if (!firstUnit || firstUnit === sel) {
+    bad("a-fixture-nem-allitja-elo-a-csapdat", "a vélemény-űrlap választója nem előzi meg a foglalásét");
+  }
   var ctas = sec.querySelectorAll('a[href="#cit-booking"], a[href="#cit-enquiry"]');
   // ⚠️ A KÉRDÉS NEM A GOMB, HANEM AZ ÚT. Három sablon (arch-frames, tilted-gallery,
   // wordmark-grow) kártyája szándékosan szikár: fotó + név + férőhely + ár, CTA nélkül —
@@ -351,6 +377,14 @@ const PROBE_RD = `(function (want) {
   var count = panel.querySelector(".cit-rd__count");
   var live = 0;
   for (var i = 0; i < nav.length; i++) if (painted(nav[i])) live++;
+  // ⛔ FOTÓ NÉLKÜL NINCS FOTÓDOBOZ (FK-014, 2026-09-28: fekete doboz, két élő nyíl).
+  // ⚠️ A három szikár sablon (roomsForMock) a fotó nélküli szobának a HÁZ egy képét
+  // kölcsönzi „Minta —” jelöléssel: ott a kártyán VAN kép, és a felugró joggal mutatja.
+  // A kérdés tehát: a vendég KÁRTYÁJÁN nincs kép, a felugróban mégis képdoboz áll?
+  var cardImg = document.querySelector('.cit-room__open[data-cit-room="' + want.idx + '"] img');
+  if (want.photos === 0 && !cardImg && painted(panel.querySelector(".cit-rd__gal"))) {
+    bad("ures-fotodoboz-foto-nelkul", "kifestett galéria=" + JSON.stringify(box(panel.querySelector(".cit-rd__gal"))));
+  }
   if (want.photos < 2) {
     if (live) bad("halott-lepteto-nyil-egy-kepnel", live + " nyíl kifestve");
     if (painted(thumbs)) bad("halott-indexkep-sav-egy-kepnel", "kifestett doboz=" + JSON.stringify(box(thumbs)));
@@ -441,6 +475,7 @@ function expectations(minVisible: number): Expect[] {
     { idx: 0, name: "Teljes Szállás", cap: "12 fő", desc: DESC_MANY, photos: 4, amenities: 9, minVisible, priceFrom: true, unitId: "u-teljes" },
     { idx: 1, name: "Kerti Appartman", cap: "4 fő", desc: DESC_ONE, photos: 1, amenities: 2, minVisible, priceFrom: false, unitId: "u-kerti" },
     { idx: 2, name: "Tetőtéri Appartman", cap: "6 fő", desc: "", photos: 1, amenities: 0, minVisible, priceFrom: false, unitId: "u-teto" },
+    { idx: 3, name: "Kamra Szoba", cap: "2 fő", desc: "", photos: 0, amenities: 0, minVisible, priceFrom: false, unitId: "u-kamra" },
   ];
 }
 
@@ -536,6 +571,24 @@ async function measure(page: Page, url: string, width: number) {
       if (closed.focus !== String(want.idx)) {
         findings.push({ kind: "a-fokusz-nem-tert-vissza", detail: `${want.name}: ${closed.focus ?? "sehova"}` });
       }
+
+      // ⛔⛔ AZ OUTCOME: a felugró „Foglalás”-a után a FOGLALÁS választója ezen az
+      // egységen áll. Az attribútum megléte (fent) nem elég — 2026-09-28-ig minden
+      // attribútum stimmelt, és a leugrás a vélemény-űrlap választóját állította.
+      await page.evaluate(`window.__citOpen(${want.idx})`);
+      await page.waitForTimeout(200);
+      const carried = (await page.evaluate(
+        `(function(){var s=document.getElementById("cit-unit");var a=document.querySelector(".cit-rd[data-open] .cit-rd__cta a");` +
+        `if(!s||!a)return {v:null};var b=s.value;s.value="";a.click();var v=s.value;s.value=b;return {v:v};})()`,
+      )) as { v: string | null };
+      await page.waitForTimeout(120);
+      if (carried.v !== want.unitId) {
+        findings.push({ kind: "a-felugro-foglalasa-nem-allitotta-a-valasztot", detail: `${want.name}: ${carried.v ?? "nincs választó"}` });
+      }
+      if (await page.evaluate(`!!document.querySelector(".cit-rd[data-open]")`)) {
+        await page.keyboard.press("Escape");
+        await page.waitForTimeout(150);
+      }
     }
   }
 
@@ -616,12 +669,36 @@ const REVERTS = [
   {
     key: "a leugrás elfelejti a szobát",
     why: "a 2026-09-22-i bejelentett hiba: a gomb odaugrik, de a választót az 1. egységen hagyja",
+    // ⚠️ A HTML-BŐL vesszük ki, nem `load`-kor: a runtime a DOMContentLoaded-en már
+    // beolvasta a felugró adatait, így a `load`-os törlés a felugró útját érintetlenül
+    // hagyta — a három szikár sablonon (ahol a felugró az EGYETLEN út) 0/6 piros volt,
+    // vagyis az állítás ott sosem volt megmérve (mérve 2026-09-28, a HEAD-őrrel is).
+    // A minta a fixture `u-…` azonosítóira szűk, hogy a runtime kódjához ne nyúljon.
+    apply: (html: string) => html.replace(/ data-cit-room-unit="u-[a-z]+"/g, ""),
+  },
+  {
+    key: "a leugrás az ELSŐ name=unit választót állítja",
+    why: "a 2026-09-28-i hiba: a vélemény-űrlap választója előzi meg a foglalásét, és azt állította",
+    apply: (html: string) =>
+      html.replace(`document.getElementById("cit-unit");`, `document.querySelector('[name="unit"]');`),
+  },
+  {
+    key: "fotó nélkül is kifestett galéria",
+    why: "a 2026-09-28-i hiba: fekete fotódoboz két élő nyíllal egy fotó nélküli egységen",
+    // CSAK ott értelmes, ahol a fotó nélküli szoba KÁRTYÁJÁN sincs kép: a három szikár
+    // sablon (roomsForMock) a ház egy képét kölcsönzi neki, és ott a felugró joggal mutatja.
+    scope: "photoless" as const,
+    apply: (html: string) => html.replace(`q(".cit-rd__gal").hidden = none;`, ``),
+  },
+  {
+    key: "a tartalék kártya szövege összetapad",
+    why: "a 2026-09-28-i hiba: „Nádas apartman4 fő24 000 Ft / éj” a közös tartalék kártyán",
+    // CSAK a közös tartalékot használó sablonokon értelmes — a többi saját kártyát rajzol.
+    scope: "fallback" as const,
     apply: (html: string) =>
       html.replace(
-        "</body>",
-        `<script data-cit-selftest>window.addEventListener("load",function(){` +
-        `document.querySelectorAll("[data-cit-room-unit]").forEach(function(e){` +
-        `e.removeAttribute("data-cit-room-unit");});});</script></body>`,
+        "</head>",
+        `<style data-cit-selftest>.cit-modsec__room.cit-room__open{display:block!important}</style></head>`,
       ),
   },
   {
@@ -755,8 +832,28 @@ async function main(): Promise<void> {
     console.log(`  ✓ ${base.total} mérés zöld (${base.cards} kártya, ${base.shells} horgony)`);
 
     let bad = 0;
+    // A közös tartalék kártyát rajzoló sablonok — egy csak ott élő hibát csak ott lehet
+    // pirosnak látni. Üres halmaz = a visszarontás nem mérhető, és az HANGOS bukás.
+    const fallbackIds = ids.filter((id) => {
+      const tpl = TEMPLATES[id]!;
+      const recipe: Recipe = { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] };
+      return renderSite(recipe, siteData(), { phase: "live" }).includes("cit-modsec__room cit-room__open");
+    });
+    // A sablonok, ahol a fotó nélküli szoba kártyáján NINCS kép (nem kölcsönöz „Minta —” képet).
+    const photolessIds = ids.filter((id) => {
+      const tpl = TEMPLATES[id]!;
+      const recipe: Recipe = { template: id, skin: tpl.skins[0] ?? "editorial-warm", archetype: "stacked", sections: [] };
+      return !renderSite(recipe, siteData(), { phase: "live" }).includes("Minta — Kamra Szoba");
+    });
     for (const rv of REVERTS) {
-      const st = await runMatrix(ids, rv.apply, false);
+      const kind = "scope" in rv ? rv.scope : null;
+      const scope = kind === "fallback" ? fallbackIds : kind === "photoless" ? photolessIds : ids;
+      if (!scope.length) {
+        bad++;
+        console.log(`  ✗ ${rv.key.padEnd(38)} NEM MÉRHETŐ — a szűkített sablon-halmaz üres (${kind})`);
+        continue;
+      }
+      const st = await runMatrix(scope, rv.apply, false);
       const ok = st.failures === st.total; // MINDEN mérésnek pirosra kell mennie
       if (!ok) bad++;
       console.log(
