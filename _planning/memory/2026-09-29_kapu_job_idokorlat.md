@@ -22,7 +22,7 @@ bevezetve, a beragadókkal kezdve (`cfg-sheet-scroll-check`, `guest-mobile-check
 **Módosított fájlok:** `scripts/lib/gate-runner.mjs` · `scripts/gate-runner-check.mts` ·
 `_planning/decisions/XXXX-kapunkenti-idokorlat-a-kapu-futtatoban.md` · ez a jegyzet.
 
-## Helyesbítés, aznap (ADR-XXXX): a korlát CSEND-alapú
+## Helyesbítés, aznap (ADR-0269): a korlát CSEND-alapú
 A koordinátor jelezte: a 09-29-i `cfg-sheet-scroll-check` nem ragadt be, csak lassú volt. Kézzel ölték le
 (803 s / 438 s), és élő kimenettel haladt. Az `epoll_wait` a `waitForTimeout` normál állapota.
 

@@ -1,4 +1,4 @@
-## ADR-XXXX — A kapu-időkorlát CSEND-alapú, nem teljes-idő alapú (az ADR-0268 1. pontjának helyesbítése) (2026-09-29)
+## ADR-0269 — A kapu-időkorlát CSEND-alapú, nem teljes-idő alapú (az ADR-0268 1. pontjának helyesbítése) (2026-09-29)
 
 - **Kiváltó:** a kapu-koordinátor (`cit3bd83952`) helyesbítése, még aznap, az ADR-0268 landolása után. A
   2026-09-29-i `cfg-sheet-scroll-check --selftest` eset nem beragadás volt, hanem egy lassú kapu:

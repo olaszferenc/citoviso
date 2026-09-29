@@ -25,7 +25,7 @@
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
 //     a módot/diffet olvasó kaput sosem hagyja ki — viszont egy commit landolásakor tényleg
 //     újrahasznosít (különben csak költség),
-//   · (ADR-0268, ADR-XXXX) egy CIT_GATE_JOB_SILENCE ideje NÉMA kapu HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
+//   · (ADR-0268, ADR-0269) egy CIT_GATE_JOB_SILENCE ideje NÉMA kapu HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
 //     + utolsó kimenet), a TELJES folyamatfája (a külön folyamatcsoportú unoka is — mint a Playwright
 //     Chromiuma) halott, a többi kapu lefut, és se zöld-gyorsítótár, se kapuidő-előzmény nem íródik;
 //     a LASSÚ, de folyamatosan író kapu a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),

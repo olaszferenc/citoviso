@@ -65,7 +65,7 @@
 // CIT_GATE_SLOTS=<dir> moves the slot directory (the guard's fixture uses a private one);
 // CIT_GATE_SLOTS=0, a missing `flock` or an unwritable directory → runs without slots, loudly.
 //
-// JOB TIME LIMIT (ADR-0268, ADR-XXXX). A gate that never returns used to hold the whole land
+// JOB TIME LIMIT (ADR-0268, ADR-0269). A gate that never returns used to hold the whole land
 // hostage: 2026-09-27 guest-mobile-check --selftest sat SILENT in epoll_wait for 18 minutes (alone
 // it passes in ~2), until a human killed it by hand. Now a gate is stopped when it has been SILENT
 // (no new byte on stdout or stderr) for CIT_GATE_JOB_SILENCE seconds (default 900), or has run
