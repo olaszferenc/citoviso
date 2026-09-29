@@ -22,7 +22,7 @@
 //      saját 404-e — az átengedés nem nyitotta ki a hostot.
 //   ④ A predikátum maga: a lista minden mintáját igennel, az idegen utat nemmel ítéli
 //      (ha valaki a listából kivesz egy sort, ① azonnal piros — ez a kötés).
-//   ⑤ NEGATÍV KONTROLL a link HOSTJÁRA (ADR-XXXX): hamis `X-Forwarded-Host` fejléccel
+//   ⑤ NEGATÍV KONTROLL a link HOSTJÁRA (ADR-0278): hamis `X-Forwarded-Host` fejléccel
 //      a `publicBaseUrl(req)`-ből épített link a `Host`-ra (amiből a site feloldódik)
 //      mutat, nem a hamisra. Az éles nginx ezt a fejlécet NEM írja felül, tehát a kliens
 //      értéke változatlanul ér a Node-ig — a régi kódon egy foglalási kérés után a tulaj

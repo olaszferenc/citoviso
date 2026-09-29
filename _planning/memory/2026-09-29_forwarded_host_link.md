@@ -5,7 +5,7 @@ SUB a „Deploy-készenlét felderítés” (cit92d2a67e) alatt, brief: `~/rc-br
 ## Elvégzett munka
 - `src/server/public.ts` `publicBaseUrl(req)`: a host a `Host` fejlécből jön, az X-Forwarded-Host-ot nem olvassa
   (az éles nginx nem írja felül → kliens-hamisítható volt; a tulaj levelének action_token-es linkje idegen domainre
-  mutathatott). ADR-XXXX.
+  mutathatott). ADR-0278.
 - `scripts/guest-link-host-check.mts` ⑤: negatív kontroll hamis X-Forwarded-Host-tal (vélemény-POST consent
   nélkül, DB-írás nincs) + pozitív kontroll. Régi kódon piros, javítva zöld.
 - Élesi nginx olvasva: sehol nincs X-Forwarded-Host, minden location `Host $host`; cloudflared nem fut.

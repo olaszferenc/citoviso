@@ -1910,7 +1910,7 @@ async function serveAdmin(
  * and the calendar feed must be reachable from outside, so they cannot be relative.
  */
 function publicBaseUrl(req: http.IncomingMessage): string {
-  // ADR-XXXX: the host comes from `Host` — the header the site itself is resolved from —
+  // ADR-0278: the host comes from `Host` — the header the site itself is resolved from —
   // never from X-Forwarded-Host. Production nginx does not overwrite that header, so a
   // client-sent value reached Node untouched, and one forged booking request put the
   // owner's accept link (with its action_token) on a foreign domain. No legitimate

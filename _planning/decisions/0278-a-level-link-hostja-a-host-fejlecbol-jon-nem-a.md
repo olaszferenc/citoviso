@@ -1,4 +1,4 @@
-## ADR-XXXX — A levél-link hostja a Host fejlécből jön, nem a hamisítható X-Forwarded-Host-ból (2026-09-29)
+## ADR-0278 — A levél-link hostja a Host fejlécből jön, nem a hamisítható X-Forwarded-Host-ból (2026-09-29)
 
 - **Kiváltó (deploy-készenlét felderítés, SUB-brief `~/rc-briefs/dk-forwarded-host.md`):** a
   `publicBaseUrl(req)` (`src/server/public.ts`) ELSŐKÉNT az `X-Forwarded-Host` fejlécet vette, és csak utána
