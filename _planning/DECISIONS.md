@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-outreach-link-live-load-nem-networkidle.md) — Az outreach-link-live-check a lap `load` eseményére vár, nem a `networkidle`-re (2026-09-29)
 - [ADR-0265](decisions/0265-a-kapu-futtato-a-leghosszabb-kaput-inditja.md) — A kapu-futtató a leghosszabb kaput indítja először, tartós kapuidő-előzményből (`scripts/lib/gate-runner.mjs`) (2026-09-29)
 - [ADR-0264](decisions/0264-a-kovetkezo-negy-lassu-bongeszos-kapu-is-a.md) — A következő négy lassú böngészős kapu is a közös poolon mér (`room-card-overflow` · `configurator-float` · `configurator-placement` · `whole-only-guest`); a `mobile-chrome --selftest` kimarad (2026-09-29)
 - [ADR-0263](decisions/0263-a-negy-leglassabb-bongeszos-kapu-parhuzamos.md) — A négy leglassabb böngészős kapu párhuzamos munkásokkal mér, közös, sorrendtartó munkás-körrel (`scripts/lib/gate-pool.mts`) (2026-09-29)

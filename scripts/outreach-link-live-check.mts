@@ -146,11 +146,14 @@ async function measure(
   const page = await ctx.newPage();
   const errs: string[] = [];
   page.on("pageerror", (e) => errs.push(String(e)));
-  // ⏱️ Kimondott időkorlát (tulaj: „ok” a B2-re, 2026-09-27). A konzol lead-lapja 20
-  // photo-health kérést indít (egy-egy ~7–8 s), a networkidle az origin/mainen is ~31 s —
-  // a Playwright 30 s-os alaphatárán a kapu a gép terhelésén billegett. A mérés
-  // változatlan; a gyökérok (a photo-health tartja nyitva a lapot) külön szálon.
-  await page.goto(`${origin}/lead/${leadId}#prospects`, { waitUntil: "networkidle", timeout: 90_000 });
+  // ⏱️ "load", not "networkidle" (ADR-XXXX). The lead page fires ~20 photo-health
+  // fetches that download EXTERNAL portal photos server-side: networkidle took 5–10 s
+  // per page alone and ~31 s under load (measured 2026-09-29: dcl ≈0.5 s · load ≈0.7 s),
+  // which made this gate 299–675 s over 38 page loads. The #prospects panel is fully
+  // server-rendered and the photo-health callbacks never touch it (they are .catch-
+  // guarded), so nothing measured below waits on them. "load" still guarantees every
+  // stylesheet is applied — ③ reads the RENDERED gradient, which needs the CSS.
+  await page.goto(`${origin}/lead/${leadId}#prospects`, { waitUntil: "load", timeout: 90_000 });
   await page.waitForTimeout(350);
 
   const label = poison === "none" ? `${vp.tag} · lead ${leadId.slice(0, 8)}` : `${vp.tag} · MÉRGEZETT[${poison}]`;
