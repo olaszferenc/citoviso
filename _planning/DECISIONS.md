@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-csillagsor-meretet-es-lathatosagat-bongeszos-or.md) — A csillagsor MÉRETÉT és LÁTHATÓSÁGÁT böngészős őr méri mind a 19 sablonon (`star-size-check`) (2026-09-29)
 - [ADR-0261](decisions/0261-a-mobile-chrome-check-parhuzamos-munkasokkal.md) — A `mobile-chrome-check` párhuzamos munkásokkal mér, és az öntesztje a fő futással egy időben futhat (indokolt önátfedés-jelölés a kapu-futtatóban) (2026-09-29)
 - [ADR-0260](decisions/0260-a-land-tenyleg-ujrahasznositja-a-commitkori.md) — A land TÉNYLEG újrahasznosítja a commitkori zöldet: a git exec-path kimarad a kapu-aláírás PATH-jából (2026-09-29)
 - [ADR-0259](decisions/0259-a-galeria-a-tulaj-minden-fotojat-elerhetove.md) — A galéria a tulaj MINDEN fotóját elérhetővé teszi, és a lapon még nem látott képekkel indul

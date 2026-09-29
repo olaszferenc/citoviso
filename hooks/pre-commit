@@ -741,6 +741,18 @@ if [ -f scripts/live-sample-room-check.mts ] && \
   echo "[pre-commit] live-sample-room-check (élő lapon 0 „Minta” szobakép; a trió csillaga látszik)…"
   npx tsx scripts/live-sample-room-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A CSILLAGSOR LÁTSZIK ÉS ÉSSZERŰ MÉRETŰ (2026-09-29): a rossz méretet kétszer is csak kép
+# fogta meg — a trió 0×0 px-es SVG-je, a claymorphism vélemény-fejlécének ~115 px-es,
+# egymás alá tört csillagai. Böngészős mérés: 19 sablon × élő/mock × 390 px (telefon) és
+# 1280 px, a lap MINDEN csillagsora: nem 0×0, nem rejtett, viewporton belül, nem takart,
+# 0,5–2,2 em a sor szövegéhez, egy sorban. Egy böngésző, párhuzamos lapok; ~15 mp + önteszt
+# (a két régi hiba + 2 visszarontás). ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza.
+if [ -f scripts/star-size-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(templateKit|render|moduleSections|primitives|icons|motion)\.ts$|^src/generator/runtime\.ts$|^assets/runtime/(cit-runtime\.js|cit-modules\.css)$|^scripts/star-size-check\.mts$'; then
+  echo "[pre-commit] star-size-check (minden csillagsor látszik, ésszerű méretű, egy sorban)…"
+  npx tsx scripts/star-size-check.mts --self-test >"$GATE_LOG" || gate_failed
+  npx tsx scripts/star-size-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A TULAJ MINDEN FOTÓJA ELÉRHETŐ A GALÉRIÁBÓL (2026-09-29, kontraktus: design-refs/tenant-site/
 # gallery-cap): 6 feltöltésből az organic/claymorphism 4-et, a wordmark-grow 3-at mutatott,
 # a nagyítóban sem többet; az élő Kemences (12 fotó) vendége 3-at látott. Böngészős mérés:

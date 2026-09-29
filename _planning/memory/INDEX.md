@@ -11,6 +11,7 @@
 - [2026-09-29_lassu_land_vizsgalat.md](2026-09-29_lassu_land_vizsgalat.md) — 2026-09-29 — Miért lassú a land az ADR-0227/0230 után? (brief: lassu-land-vizsgalat)
 - [2026-09-29_galeria_korlat_minden_foto_elerheto.md](2026-09-29_galeria_korlat_minden_foto_elerheto.md) — Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
 - [2026-09-29_csillagszam_egy_szabaly.md](2026-09-29_csillagszam_egy_szabaly.md) — A csillagszám egyetlen, skála-tudatos szabályból (2026-09-29)
+- [2026-09-29_csillagmeret_or.md](2026-09-29_csillagmeret_or.md) — Böngészős méret-őr a csillagsorra, mind a 19 sablonon (2026-09-29)
 - [2026-09-28_vendeg_oldal_egesz_szallas.md](2026-09-28_vendeg_oldal_egesz_szallas.md) — 2026-09-28 — A vendég oldala: a „Foglalás” rossz választót állított, üres felugró, összetapadt kártya, a „Mégsem” zsákutcája
 - [2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md](2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md) — Vendég-oldal: a tulaj Nyitóképe a hős, és az értékelés skálája a forrásé (2026-09-28 este)
 - [2026-09-28_telefonos_menu_foglalas_sav_feluton.md](2026-09-28_telefonos_menu_foglalas_sav_feluton.md) — 2026-09-28 — Telefonos menü, és a foglalás-sáv csak félúton (B) — ADR-0253
