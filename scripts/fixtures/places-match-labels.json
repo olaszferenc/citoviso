@@ -1,0 +1,2414 @@
+[
+ {
+  "lead": "1000 jó villa",
+  "lat": 46.8902975,
+  "lon": 17.9893253,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Ezerjó Villa",
+  "placeLat": 46.8904934,
+  "placeLon": 17.989108899999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Adler (closed)",
+  "lat": 46.8966748,
+  "lon": 18.0185075,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Hotel Adler",
+  "placeLat": 46.8967563,
+  "placeLon": 18.0185583,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Alig-vár Tanya",
+  "lat": 46.8374751,
+  "lon": 17.5376291,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Aligvár Vendégház",
+  "placeLat": 46.8376598,
+  "placeLon": 17.5379292,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Salföld"
+ },
+ {
+  "lead": "Anchor Apartmanház",
+  "lat": 46.7916666,
+  "lon": 17.7081745,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Anchor Apartman by HelloBalatonlelle",
+  "placeLat": 46.7916378,
+  "placeLon": 17.7080678,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Anita Apartman",
+  "lat": 46.7700873,
+  "lon": 17.278529,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Kovács Apartmanok – Anita Apartmanház, Gyenesdiás",
+  "placeLat": 46.7701016,
+  "placeLon": 17.2784172,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Apartman Balaton",
+  "lat": 46.7929384,
+  "lon": 17.7051539,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Hullám Apartman",
+  "placeLat": 46.792606899999996,
+  "placeLon": 17.704853,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "wrong",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Aranyhal Apartmanház",
+  "lat": 46.7920168,
+  "lon": 17.7057098,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Aranyhal Apartman",
+  "placeLat": 46.7922799,
+  "placeLon": 17.7055363,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Aranyhal üdülőpark",
+  "lat": 46.8961058,
+  "lon": 17.7966891,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Aranyhal Üdülő Park",
+  "placeLat": 46.8961404,
+  "placeLon": 17.796767199999998,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonudvari"
+ },
+ {
+  "lead": "Aranymandula Apartmanház",
+  "lat": 46.8832965,
+  "lon": 17.7528681,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Aranymandula Apartmanok",
+  "placeLat": 46.883297299999995,
+  "placeLon": 17.7529789,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonakali"
+ },
+ {
+  "lead": "BL YachtClub & Apartments",
+  "lat": 46.7937828,
+  "lon": 17.7083712,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "BL YachtClub Étterem",
+  "placeLat": 46.793071999999995,
+  "placeLon": 17.707698,
+  "types": [
+   "restaurant",
+   "food",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "restaurant",
+  "label": "unsure",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Bacchus Apartman, Borbarlang, Vinotéka",
+  "lat": 46.7942089,
+  "lon": 17.5080174,
+  "sources": [
+   "osm"
+  ],
+  "place": "Bacchus Wine Cave Winery Apartment, Badacsony",
+  "placeLat": 46.7941472,
+  "placeLon": 17.5080864,
+  "types": [
+   "hotel",
+   "wine_bar",
+   "liquor_store",
+   "gift_shop",
+   "bar",
+   "store",
+   "lodging",
+   "food",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Badacsonytomaj"
+ },
+ {
+  "lead": "Bagyarik Apartman",
+  "lat": 46.8556734,
+  "lon": 17.8904923,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Bagyarik Apartmanok",
+  "placeLat": 46.855673499999995,
+  "placeLon": 17.8904554,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "BalaLand Residence",
+  "lat": 46.8787973,
+  "lon": 17.9055913,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Family Park - BalaLand",
+  "placeLat": 46.8792816,
+  "placeLon": 17.9068321,
+  "types": [
+   "amusement_park",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "amusement_park",
+  "label": "unsure",
+  "city": "Szántód"
+ },
+ {
+  "lead": "Balaton Panzió",
+  "lat": 46.8499954,
+  "lon": 17.8717131,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Balaton Panzió",
+  "placeLat": 46.8515563,
+  "placeLon": 17.8753754,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "Balatonakali Strand-Holiday Camping",
+  "lat": 46.8816761,
+  "lon": 17.7572201,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Balatontourist Strand-Holiday Camping",
+  "placeLat": 46.881063999999995,
+  "placeLon": 17.7542595,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Balatonakali"
+ },
+ {
+  "lead": "Balatontourist Camping Füred",
+  "lat": 46.9447707,
+  "lon": 17.8770408,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Balatontourist Füred Camping&Bungalows",
+  "placeLat": 46.9461294,
+  "placeLon": 17.8765228,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Balatonfüred"
+ },
+ {
+  "lead": "Barka",
+  "lat": 46.8985933,
+  "lon": 18.024865,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Barka Apartmanok Siófok - Apartment",
+  "placeLat": 46.8985596,
+  "placeLon": 18.0247994,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Bestapartman",
+  "lat": 46.7752938,
+  "lon": 17.6498506,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Bestapartman",
+  "placeLat": 46.775289,
+  "placeLon": 17.64972,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonboglár"
+ },
+ {
+  "lead": "Blue Bike Hostel",
+  "lat": 46.8116928,
+  "lon": 17.7722671,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Blue Bike szállás Balatonszemesen - egy éjszakára is kiadó családi szobák",
+  "placeLat": 46.8116785,
+  "placeLon": 17.772230999999998,
+  "types": [
+   "hostel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hostel",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Bodo Haus",
+  "lat": 46.765383,
+  "lon": 17.30405,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Bodó Ház",
+  "placeLat": 46.765409999999996,
+  "placeLon": 17.304171999999998,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Bánó Porta Köveskál",
+  "lat": 46.8816006,
+  "lon": 17.6083307,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Bánó Gábor",
+  "placeLat": 46.8816625,
+  "placeLon": 17.6090178,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Köveskál"
+ },
+ {
+  "lead": "Camping",
+  "lat": 46.8899791,
+  "lon": 17.9708822,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Morvay Nyaralóház és Camping",
+  "placeLat": 46.8902667,
+  "placeLon": 17.971211699999998,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Centrum Panzió",
+  "lat": 46.7883557,
+  "lon": 17.5045119,
+  "sources": [
+   "osm"
+  ],
+  "place": "Centrum Pension Badacsony",
+  "placeLat": 46.788382,
+  "placeLon": 17.5045131,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Badacsonytomaj"
+ },
+ {
+  "lead": "Coffee House Apartman",
+  "lat": 46.7837615,
+  "lon": 17.6793654,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Coffeehouse Apartman",
+  "placeLat": 46.7837993,
+  "placeLon": 17.6793568,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Corylus vendégház",
+  "lat": 46.903076,
+  "lon": 18.040862,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Corylus Panzió",
+  "placeLat": 46.9031276,
+  "placeLon": 18.041011299999997,
+  "types": [
+   "lodging",
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Csillag Vendégház",
+  "lat": 46.8039049,
+  "lon": 17.7702285,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Csillag Villa",
+  "placeLat": 46.8051282,
+  "placeLon": 17.7705692,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Csónakos ház",
+  "lat": 46.8058765,
+  "lon": 17.5296274,
+  "sources": [
+   "osm"
+  ],
+  "place": "Csónakos ház / The boat house - Two-Bedroom House",
+  "placeLat": 46.8060989,
+  "placeLon": 17.5297204,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Badacsonytomaj"
+ },
+ {
+  "lead": "DOKA ház",
+  "lat": 46.8358767,
+  "lon": 17.4480097,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Doka House",
+  "placeLat": 46.836017299999995,
+  "placeLon": 17.447996,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Hegymagas"
+ },
+ {
+  "lead": "Dencs Apartmanház",
+  "lat": 46.7692832,
+  "lon": 17.2936168,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Apartment Dencs",
+  "placeLat": 46.7693079,
+  "placeLon": 17.2936954,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Eke Vendégház és Pince",
+  "lat": 46.8241274,
+  "lon": 17.3723518,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Eke Pince",
+  "placeLat": 46.823488499999996,
+  "placeLon": 17.3727733,
+  "types": [
+   "winery",
+   "farm",
+   "food",
+   "manufacturer",
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "winery",
+  "label": "same",
+  "city": "Nemesvita"
+ },
+ {
+  "lead": "Eldorádó Fogadó, Guest House",
+  "lat": 46.7544692,
+  "lon": 17.316944,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Eldorado Inn & Camping",
+  "placeLat": 46.753887,
+  "placeLon": 17.316942,
+  "types": [
+   "campground",
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Vonyarcvashegy"
+ },
+ {
+  "lead": "Familia",
+  "lat": 46.8813013,
+  "lon": 17.9540628,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Familia Pelso Ltd.",
+  "placeLat": 46.8813095,
+  "placeLon": 17.953992799999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "unsure",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Family",
+  "lat": 46.8524898,
+  "lon": 17.8876117,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Sommer Panzió - Family Suite",
+  "placeLat": 46.852138499999995,
+  "placeLon": 17.8873806,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "wrong",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "Favorit Motel",
+  "lat": 46.8591431,
+  "lon": 17.9031335,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Favorit Ifjúsági Szálláshely",
+  "placeLat": 46.8592185,
+  "placeLon": 17.9028816,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Szántód"
+ },
+ {
+  "lead": "Fonyódligeti Gyermektábor",
+  "lat": 46.7630093,
+  "lon": 17.602423,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Fonyódligeti Erzsébet-tábor",
+  "placeLat": 46.7630926,
+  "placeLon": 17.60267,
+  "types": [
+   "childrens_camp",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "childrens_camp",
+  "label": "same",
+  "city": "Fonyód"
+ },
+ {
+  "lead": "Fortuna vendégház",
+  "lat": 46.7885736,
+  "lon": 17.5022851,
+  "sources": [
+   "osm"
+  ],
+  "place": "Fortuna Borozó - NAGY Családi BorPince",
+  "placeLat": 46.7885378,
+  "placeLon": 17.5020319,
+  "types": [
+   "winery",
+   "farm",
+   "food",
+   "manufacturer",
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "winery",
+  "label": "unsure",
+  "city": "Badacsonytomaj"
+ },
+ {
+  "lead": "Gizella Apartman",
+  "lat": 46.9088296,
+  "lon": 17.8887687,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Gizella Apartment",
+  "placeLat": 46.9088194,
+  "placeLon": 17.888768,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Tihany"
+ },
+ {
+  "lead": "Green Wood Vendégház",
+  "lat": 46.899852,
+  "lon": 18.0164464,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Green Café Pont Kft",
+  "placeLat": 46.899835499999995,
+  "placeLon": 18.016363700000003,
+  "types": [
+   "coffee_shop",
+   "cafe",
+   "food_store",
+   "store",
+   "food",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "coffee_shop",
+  "label": "wrong",
+  "city": "Siófok"
+ },
+ {
+  "lead": "H und R mobil camping",
+  "lat": 46.8013461,
+  "lon": 17.7500156,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "H&R Mobilcamping",
+  "placeLat": 46.8016678,
+  "placeLon": 17.750299899999998,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Happy Camp - Balatontourist Füred Camping&Bungalow",
+  "lat": 46.9463191,
+  "lon": 17.8771804,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Happy Camp Balaton",
+  "placeLat": 46.946548899999996,
+  "placeLon": 17.8770089,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Balatonfüred"
+ },
+ {
+  "lead": "Harmónia üdülőház",
+  "lat": 46.855325,
+  "lon": 17.6667962,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Harmónia Villa",
+  "placeLat": 46.856478499999994,
+  "placeLon": 17.667036799999998,
+  "types": [
+   "resort_hotel",
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "resort_hotel",
+  "label": "unsure",
+  "city": "Balatonszepezd"
+ },
+ {
+  "lead": "Haus Elisabeth",
+  "lat": 46.7764574,
+  "lon": 17.676877,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Elisabeth Pension",
+  "placeLat": 46.7765032,
+  "placeLon": 17.6767708,
+  "types": [
+   "apartment_building",
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "service",
+   "establishment"
+  ],
+  "primaryType": "apartment_building",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Holp Panzió",
+  "lat": 46.8388484,
+  "lon": 17.8834702,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Holp Pension - Pension Holp",
+  "placeLat": 46.838726199999996,
+  "placeLon": 17.8835145,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "Hotel Amigo",
+  "lat": 46.8826772,
+  "lon": 17.9475785,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Zama Hotel - Zamárdi",
+  "placeLat": 46.882678,
+  "placeLon": 17.947292,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "wrong",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Hotel Holiday",
+  "lat": 46.834239,
+  "lon": 17.8406784,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Holiday Resorts",
+  "placeLat": 46.834274199999996,
+  "placeLon": 17.840495999999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "unsure",
+  "city": "Balatonszárszó"
+ },
+ {
+  "lead": "Hotel Korona",
+  "lat": 46.9033468,
+  "lon": 18.0341714,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Crown Hotel",
+  "placeLat": 46.9036739,
+  "placeLon": 18.0340681,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "unsure",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Hotel Marina",
+  "lat": 46.9477025,
+  "lon": 17.881157,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "All Inclusive Hotel Marina, Balatonfüred",
+  "placeLat": 46.9480766,
+  "placeLon": 17.880546,
+  "types": [
+   "hotel",
+   "resort_hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonfüred"
+ },
+ {
+  "lead": "House4U",
+  "lat": 46.8093856,
+  "lon": 17.7759279,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "House4U - Five-Bedroom House",
+  "placeLat": 46.8095512,
+  "placeLon": 17.776010499999998,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Ildikó apartmanház",
+  "lat": 46.8886481,
+  "lon": 17.9730736,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Ildikó Apartment Hotels",
+  "placeLat": 46.888661,
+  "placeLon": 17.973353,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "service",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Jani Gyula",
+  "lat": 46.796973,
+  "lon": 17.445344,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Jani Apartman Szigliget",
+  "placeLat": 46.7973254,
+  "placeLon": 17.4455328,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "unsure",
+  "city": "Szigliget"
+ },
+ {
+  "lead": "Kenge Apartman",
+  "lat": 46.8063386,
+  "lon": 17.7712621,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Kenge Apartmanok - Apartment with Terrace",
+  "placeLat": 46.8061409,
+  "placeLon": 17.7712002,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Kerekerdő Panzió és Szabadidőközpont",
+  "lat": 46.9135919,
+  "lon": 17.3205681,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Uzsa - Kerekerdő",
+  "placeLat": 46.9135997,
+  "placeLon": 17.3205709,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Uzsa"
+ },
+ {
+  "lead": "Kiss Villa",
+  "lat": 46.8481774,
+  "lon": 17.874849,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Kiss Villa Bed and Breakfast",
+  "placeLat": 46.847986399999996,
+  "placeLon": 17.875218699999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "Korbély szálláshely",
+  "lat": 46.7956147,
+  "lon": 17.5118009,
+  "sources": [
+   "osm"
+  ],
+  "place": "Korbély apartman",
+  "placeLat": 46.796036099999995,
+  "placeLon": 17.512140199999997,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Badacsonytomaj"
+ },
+ {
+  "lead": "Kádár Apartman",
+  "lat": 46.7848788,
+  "lon": 17.6860206,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Kadar Apartments",
+  "placeLat": 46.7847399,
+  "placeLon": 17.6860108,
+  "types": [
+   "real_estate_agency",
+   "travel_agency",
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "travel_agency",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Köveskál Vendégház",
+  "lat": 46.88228,
+  "lon": 17.60494,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Köveskál Panzió",
+  "placeLat": 46.8822529,
+  "placeLon": 17.605168499999998,
+  "types": [
+   "bed_and_breakfast",
+   "guest_house",
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "bed_and_breakfast",
+  "label": "unsure",
+  "city": "Köveskál"
+ },
+ {
+  "lead": "Kőhíd Vendégház",
+  "lat": 46.9426325,
+  "lon": 17.7584664,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Nemesdombi Vendégház",
+  "placeLat": 46.943709999999996,
+  "placeLon": 17.7586984,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "wrong",
+  "city": "Vászoly"
+ },
+ {
+  "lead": "Kőröshegyi falusi vendégház",
+  "lat": 46.833,
+  "lon": 17.899,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Kőröshegyi Faluház",
+  "placeLat": 46.832144799999995,
+  "placeLon": 17.8985041,
+  "types": [
+   "community_center",
+   "event_venue",
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "community_center",
+  "label": "unsure",
+  "city": "Kőröshegy"
+ },
+ {
+  "lead": "Kővirág panzió étterem",
+  "lat": 46.8820493,
+  "lon": 17.6082571,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Kővirág X Pan'ni Artizán Budapest",
+  "placeLat": 46.881937099999995,
+  "placeLon": 17.6082782,
+  "types": [
+   "restaurant",
+   "food",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "restaurant",
+  "label": "wrong",
+  "city": "Köveskál"
+ },
+ {
+  "lead": "Laguna Panzió",
+  "lat": 46.8604621,
+  "lon": 17.9030054,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Hotel Laguna Pension",
+  "placeLat": 46.860499,
+  "placeLon": 17.902908,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Szántód"
+ },
+ {
+  "lead": "Lavia panzió",
+  "lat": 46.7690074,
+  "lon": 17.2852838,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Lavia Pension",
+  "placeLat": 46.7685928,
+  "placeLon": 17.2850856,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Lido Riviera Apartmanház",
+  "lat": 46.7885393,
+  "lon": 17.6931455,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Lido riviera apartman - Apartment",
+  "placeLat": 46.7885208,
+  "placeLon": 17.6933403,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Liliom vendégház",
+  "lat": 46.8520831,
+  "lon": 17.5166309,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Liliom Nyaralóház",
+  "placeLat": 46.8520743,
+  "placeLon": 17.5165559,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Káptalantóti"
+ },
+ {
+  "lead": "Liszkay",
+  "lat": 46.8993024,
+  "lon": 17.6287179,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Liszkay Borkúria a Magyar Toszkana -rendezvények, exkluzív esküvők, borvacsorák, borkóstolók, elegáns szálláshely",
+  "placeLat": 46.899341899999996,
+  "placeLon": 17.6284669,
+  "types": [
+   "winery",
+   "liquor_store",
+   "farm",
+   "manufacturer",
+   "store",
+   "lodging",
+   "food",
+   "point_of_interest",
+   "service",
+   "establishment"
+  ],
+  "primaryType": "winery",
+  "label": "same",
+  "city": "Monoszló"
+ },
+ {
+  "lead": "Lovász apartman",
+  "lat": 46.8805343,
+  "lon": 17.4269946,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Lovász Apartmanház",
+  "placeLat": 46.880610999999995,
+  "placeLon": 17.426838699999998,
+  "types": [
+   "real_estate_agency",
+   "travel_agency",
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "travel_agency",
+  "label": "same",
+  "city": "Tapolca"
+ },
+ {
+  "lead": "Lívia Apartman",
+  "lat": 46.7885549,
+  "lon": 17.6875243,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Lívia Apartmanok Balatonlelle – Kiadó Apartmanok",
+  "placeLat": 46.788545199999994,
+  "placeLon": 17.6875543,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "MCS Borház",
+  "lat": 46.8937146,
+  "lon": 17.5794533,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "MCS Borház és Apartman",
+  "placeLat": 46.892665199999996,
+  "placeLon": 17.5785955,
+  "types": [
+   "service",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "service",
+  "label": "same",
+  "city": "Szentbékkálla"
+ },
+ {
+  "lead": "Mandula Apartmanház",
+  "lat": 46.7878963,
+  "lon": 17.6886733,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Mandula Apartman",
+  "placeLat": 46.7878824,
+  "placeLon": 17.6888206,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Mandulakert Vendégház",
+  "lat": 46.8004507,
+  "lon": 17.4344014,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Szigligeti Mandula Kert Vendégház",
+  "placeLat": 46.8004282,
+  "placeLon": 17.4343872,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Szigliget"
+ },
+ {
+  "lead": "Marina Vendégház",
+  "lat": 46.9027723,
+  "lon": 18.0312096,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Marina Bed and Breakfast",
+  "placeLat": 46.902777799999996,
+  "placeLon": 18.0311111,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Mirabella Camping",
+  "lat": 46.8811,
+  "lon": 17.9133287,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Camping Mirabella (Ex Car)",
+  "placeLat": 46.8803993,
+  "placeLon": 17.915167999999998,
+  "types": [
+   "campground",
+   "camping_cabin",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Müller's Hotel",
+  "lat": 46.9033479,
+  "lon": 18.0422894,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Müller's 1",
+  "placeLat": 46.903441099999995,
+  "placeLon": 18.0422759,
+  "types": [
+   "bed_and_breakfast",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "bed_and_breakfast",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Napfény Kemping",
+  "lat": 46.8287919,
+  "lon": 17.6399684,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Balatontourist Camping Napfény",
+  "placeLat": 46.829012,
+  "placeLon": 17.6400124,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Révfülöp"
+ },
+ {
+  "lead": "Napsugár Hotel",
+  "lat": 46.7889451,
+  "lon": 17.6899472,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Sunshine Hotel",
+  "placeLat": 46.788888899999996,
+  "placeLon": 17.689999999999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "unsure",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Nárcisz panzió",
+  "lat": 46.7876586,
+  "lon": 17.686089,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Nárcisz Panzió Balatonlelle -szállás Balatonlelle, üdülőház Balatonlelle",
+  "placeLat": 46.7872469,
+  "placeLon": 17.6871658,
+  "types": [
+   "resort_hotel",
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Panoráma Apartman",
+  "lat": 46.7940109,
+  "lon": 17.5042484,
+  "sources": [
+   "osm"
+  ],
+  "place": "Panorama Apartmanhaz",
+  "placeLat": 46.7941208,
+  "placeLon": 17.504747500000004,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Badacsonytomaj"
+ },
+ {
+  "lead": "Park Hotel",
+  "lat": 46.7871996,
+  "lon": 17.682491,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Lelle Hotel",
+  "placeLat": 46.786898,
+  "placeLon": 17.684761899999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "wrong",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Part Hotel",
+  "lat": 46.9037004,
+  "lon": 18.0252378,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Plage Hotel Siófok",
+  "placeLat": 46.9035681,
+  "placeLon": 18.0251886,
+  "types": [
+   "hotel",
+   "resort_hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "unsure",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Pergola Panzió",
+  "lat": 46.8471251,
+  "lon": 17.8696775,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Pergola Bed and Breakfast",
+  "placeLat": 46.847044,
+  "placeLon": 17.869678099999998,
+  "types": [
+   "bed_and_breakfast",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "bed_and_breakfast",
+  "label": "same",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "Pipacs Apartman",
+  "lat": 46.7891534,
+  "lon": 17.7018355,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Pipacs ház",
+  "placeLat": 46.788528400000004,
+  "placeLon": 17.6990451,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Platán Hotel Zamárdi",
+  "lat": 46.8843848,
+  "lon": 17.9449515,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Platan",
+  "placeLat": 46.8844126,
+  "placeLon": 17.9449491,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Platán Üdülőház",
+  "lat": 46.8109707,
+  "lon": 17.7788796,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Magyar Vegyipari Dolgozók Szakszervezeti Szövetsége Platán Üdülőház",
+  "placeLat": 46.8110299,
+  "placeLon": 17.7794615,
+  "types": [
+   "educational_institution",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "educational_institution",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Pomagránát Vendégház - beltéri játszószobával",
+  "lat": 46.9284251,
+  "lon": 17.6686561,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Pomagranat guesthouse, accomodation for 5 pers.",
+  "placeLat": 46.9283431,
+  "placeLon": 17.6687535,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Balatoncsicsó"
+ },
+ {
+  "lead": "Preimusz Vendégház",
+  "lat": 46.9005478,
+  "lon": 18.0149141,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Preimusz Haus Apartmanház",
+  "placeLat": 46.9006596,
+  "placeLon": 18.0147863,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Princess Apartman",
+  "lat": 46.9042151,
+  "lon": 18.0348283,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Princess Apartment",
+  "placeLat": 46.9042107,
+  "placeLon": 18.034826,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Siófok"
+ },
+ {
+  "lead": "Pálkövei Ifjúsági Tábor",
+  "lat": 46.8216255,
+  "lon": 17.5932477,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Pálkövei Üdülőszálló",
+  "placeLat": 46.8212851,
+  "placeLon": 17.5943792,
+  "types": [
+   "childrens_camp",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "childrens_camp",
+  "label": "unsure",
+  "city": "Kővágóörs"
+ },
+ {
+  "lead": "Rajczi Panzió Ádám Vendégház",
+  "lat": 46.8091662,
+  "lon": 17.7735908,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Rajczi Pension",
+  "placeLat": 46.809153099999996,
+  "placeLon": 17.7736803,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Reider Beach",
+  "lat": 46.7974821,
+  "lon": 17.7284011,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Rider Beach Apartments & Rooms",
+  "placeLat": 46.7976082,
+  "placeLon": 17.7284285,
+  "types": [
+   "bed_and_breakfast",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "bed_and_breakfast",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Rózsa panzió",
+  "lat": 46.8929618,
+  "lon": 17.9901471,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Rózsa Panzió",
+  "placeLat": 46.8922822,
+  "placeLon": 17.9866672,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Schmuck apartmanház",
+  "lat": 46.8213179,
+  "lon": 17.4974686,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Schmuck Nyaralóház és Apartman",
+  "placeLat": 46.8210844,
+  "placeLon": 17.498458,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Nemesgulács"
+ },
+ {
+  "lead": "Schmuck nyaralóház",
+  "lat": 46.8210002,
+  "lon": 17.4974105,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Schmuck Nyaralóház és Apartman",
+  "placeLat": 46.8210844,
+  "placeLon": 17.498458,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Nemesgulács"
+ },
+ {
+  "lead": "Simply Szálló Balatonboglár",
+  "lat": 46.7691614,
+  "lon": 17.6290668,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Simply House",
+  "placeLat": 46.769211,
+  "placeLon": 17.629005,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "unsure",
+  "city": "Balatonboglár"
+ },
+ {
+  "lead": "Sylvia Üdülőház",
+  "lat": 46.8948102,
+  "lon": 17.890635,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Sylvia Ház",
+  "placeLat": 46.894598599999995,
+  "placeLon": 17.8904556,
+  "types": [
+   "bed_and_breakfast",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "bed_and_breakfast",
+  "label": "same",
+  "city": "Tihany"
+ },
+ {
+  "lead": "Szemes Vendégház",
+  "lat": 46.8115902,
+  "lon": 17.7796691,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Szem-s Vendégház",
+  "placeLat": 46.8115807,
+  "placeLon": 17.7796447,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Szent Benedek turistaszálló",
+  "lat": 46.8863392,
+  "lon": 17.5640114,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Napraforgó Turistaszálló",
+  "placeLat": 46.886912599999995,
+  "placeLon": 17.563771499999998,
+  "types": [
+   "hostel",
+   "campground",
+   "national_park",
+   "park",
+   "lodging",
+   "childrens_camp",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hostel",
+  "label": "wrong",
+  "city": "Szentbékkálla"
+ },
+ {
+  "lead": "Szent Ilona Kemping",
+  "lat": 46.781983,
+  "lon": 17.282933,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "St. Ilona Camping",
+  "placeLat": 46.782139900000004,
+  "placeLon": 17.2828168,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Szent István Hotel",
+  "lat": 46.7889005,
+  "lon": 17.6924099,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Szent István Hotel (Hotel Piros)",
+  "placeLat": 46.787499499999996,
+  "placeLon": 17.693074199999998,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Szent Kristóf Vendégház",
+  "lat": 46.9133877,
+  "lon": 17.8893665,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Christophorus vendégház",
+  "placeLat": 46.913353199999996,
+  "placeLon": 17.8893874,
+  "types": [
+   "guest_house",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "guest_house",
+  "label": "same",
+  "city": "Tihany"
+ },
+ {
+  "lead": "Sziklakert panzió",
+  "lat": 46.7941879,
+  "lon": 17.4308746,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Sziklakert vendégház Szigliget",
+  "placeLat": 46.7941545,
+  "placeLon": 17.4307931,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Szigliget"
+ },
+ {
+  "lead": "Szinbád Wellness Hotel",
+  "lat": 46.8109653,
+  "lon": 17.7820299,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Wellness Hotel Szindbad+",
+  "placeLat": 46.8102191,
+  "placeLon": 17.782542100000004,
+  "types": [
+   "hotel",
+   "buffet_restaurant",
+   "lodging",
+   "restaurant",
+   "food",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Balatonszemes"
+ },
+ {
+  "lead": "Szolnoki gyermek tábor",
+  "lat": 46.8356626,
+  "lon": 17.6440205,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Szolnoki Gyermek és Ifjúsági Alapítvány Balatonszepezdi Tábora",
+  "placeLat": 46.834835299999995,
+  "placeLon": 17.6448815,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonszepezd"
+ },
+ {
+  "lead": "Szántódi kemping",
+  "lat": 46.8739839,
+  "lon": 17.9049683,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Szántódi Kemping",
+  "placeLat": 46.874081399999994,
+  "placeLon": 17.9052206,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Szántód"
+ },
+ {
+  "lead": "Takács Panzió",
+  "lat": 46.768406,
+  "lon": 17.290847,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Pension Takács",
+  "placeLat": 46.768339499999996,
+  "placeLon": 17.2901956,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Tamás Apartmanház",
+  "lat": 46.8504497,
+  "lon": 17.8820593,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Tamás Apartman Balatonföldvár szívében- egész évben nyitva! - Apartment with Lake View",
+  "placeLat": 46.8504982,
+  "placeLon": 17.882080100000003,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Balatonföldvár"
+ },
+ {
+  "lead": "Tieff Apartmanház",
+  "lat": 46.8838563,
+  "lon": 17.944179,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Apartment TIEFFE",
+  "placeLat": 46.8838383,
+  "placeLon": 17.9441108,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Tulipán kemping",
+  "lat": 46.76486,
+  "lon": 17.290883,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Tulipan Bungalow Camping Resort",
+  "placeLat": 46.764934,
+  "placeLon": 17.2908748,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Tündérkert Kemping",
+  "lat": 46.7649897,
+  "lon": 17.285985,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Tündérkert Camping",
+  "placeLat": 46.76545,
+  "placeLon": 17.2861994,
+  "types": [
+   "campground",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "campground",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Vadócztanya sport- és ifjúsági tábor",
+  "lat": 46.7650488,
+  "lon": 17.2907198,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Vadóctanya Ifjúsági Tábor - Gyenesdiás",
+  "placeLat": 46.7652016,
+  "placeLon": 17.290662100000002,
+  "types": [
+   "hostel",
+   "bed_and_breakfast",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hostel",
+  "label": "same",
+  "city": "Gyenesdiás"
+ },
+ {
+  "lead": "Vasas Szakszervezet üdülője",
+  "lat": 46.7871882,
+  "lon": 17.6857546,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Vasas Dolgozók Üdülő",
+  "placeLat": 46.786912,
+  "placeLon": 17.685204,
+  "types": [
+   "resort_hotel",
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "resort_hotel",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Villa Elisabeth",
+  "lat": 46.7875956,
+  "lon": 17.687567,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Villa Elisabet",
+  "placeLat": 46.787307899999995,
+  "placeLon": 17.687693,
+  "types": [
+   "cottage",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "cottage",
+  "label": "same",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Villa Klapka",
+  "lat": 46.8888628,
+  "lon": 17.9564785,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Villa Klapka",
+  "placeLat": 46.8888016,
+  "placeLon": 17.9566212,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "same",
+  "city": "Zamárdi"
+ },
+ {
+  "lead": "Villa Tolnay Vendégház",
+  "lat": 46.8635601,
+  "lon": 17.5018644,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Villa Tolnay Wine House Ltd..",
+  "placeLat": 46.8634718,
+  "placeLon": 17.5017925,
+  "types": [
+   "wine_bar",
+   "liquor_store",
+   "bed_and_breakfast",
+   "lodging",
+   "bar",
+   "store",
+   "food",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "liquor_store",
+  "label": "same",
+  "city": "Gyulakeszi"
+ },
+ {
+  "lead": "Volánbusz üdülő",
+  "lat": 46.7854559,
+  "lon": 17.6787367,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Közúti Közlekedési Szakszervezet Üdülője",
+  "placeLat": 46.785387500000006,
+  "placeLon": 17.6777689,
+  "types": [
+   "resort_hotel",
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "resort_hotel",
+  "label": "unsure",
+  "city": "Balatonlelle"
+ },
+ {
+  "lead": "Átrium - Malom Panzió",
+  "lat": 46.835488,
+  "lon": 17.397555,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Atrium Mill Bed and Breakfast",
+  "placeLat": 46.835378,
+  "placeLon": 17.3973183,
+  "types": [
+   "hotel",
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "hotel",
+  "label": "same",
+  "city": "Nemesvita"
+ },
+ {
+  "lead": "Üdülő tábor",
+  "lat": 46.797401,
+  "lon": 17.445061,
+  "sources": [
+   "osm",
+   "google_places"
+  ],
+  "place": "Szentes Városi Üdülőtábor",
+  "placeLat": 46.797941599999994,
+  "placeLon": 17.445119,
+  "types": [
+   "lodging",
+   "point_of_interest",
+   "establishment"
+  ],
+  "primaryType": "lodging",
+  "label": "unsure",
+  "city": "Szigliget"
+ }
+]

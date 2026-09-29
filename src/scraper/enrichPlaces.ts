@@ -60,12 +60,14 @@ export async function enrichPlaces(
           lead.lat as number,
           lead.lon as number,
           apiKey,
+          lead.city,
         );
         if (match) {
           const conf = scoreMatch({
             distanceMeters: match.distanceMeters,
             nameSimilarity: match.nameSimilarity,
             corroboratedByOsm: lead.sources.includes("osm"),
+            placeKind: match.kind,
           });
           found.set(lead, { match, conf });
         }

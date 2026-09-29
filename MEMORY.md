@@ -16,7 +16,9 @@ A tulaj kérdése a scrape-átfedés duplikátumairól → mérés: az átfedés
 Places-párosításban volt (szakszóra illesztett, a közepes sáv telefonja/honlapja ellenőrzés nélkül a leadre ment →
 8 szomszéd-pár idegen elérhetőséggel). Kész, NEM élesítve: közös-elérhetőség küldési kapu (levél + mobil, csak
 „azonos tulaj” ítélet old fel), Places csak márka-szóra és csak magas sávból ad elérhetőséget, 20 régi pár összevonva.
-Nyitott: ~115 régi közepes sávú lead visszamenőleges rendezése (Places újrakérdezés — tulaj-döntés).
+2026-09-29 helyesbítés: a „közepes = semmi” túl szigorú volt (70 jó telefont vett volna le) → kalibrált pontozás
+(márka-arány + Places-típus + távolság; 115 címkézett páron jó→magas 72/85, rossz→magas 0). ⏸ A visszamenőleges
+rendezés (`scripts/places-medium-backfill.mts`: 21 telefon + 20 honlap le) írása a tulaj jóváhagyására vár.
 Jegyzet: `_planning/memory/2026-09-28_szomszed_elerhetoseg_kapu.md`.
 
 ## Párhuzamos szál (2026-09-28 — Telefonos menü + a foglalás-sáv csak félúton, ADR-0253)

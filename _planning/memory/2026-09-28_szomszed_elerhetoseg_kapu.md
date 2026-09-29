@@ -34,3 +34,14 @@ küldjünk el” → mérés → „Rád bízom”.
   nem fogja. Visszamenőleges rendezés = Places újrakérdezés (~115 hívás) — tulaj-döntés.
 - Élesi állomány nincs mérve (olvasás szabad lenne) — a kapu a deploy után ott is ugyanígy fog.
 - Négy régi szakszó-lista másolat maradt; összevonás külön feladat.
+
+## Folytatás (2026-09-29) — helyesbítés: a közepes sáv nagyrészt JÓ párosítás volt
+- A visszamenőleges száraz futás 70 jó telefont vett volna le → a „közepes = semmi” túl szigorú; a Jaccard a szakszót
+  eltérésnek számolta. Új pontozás: márka-arány (angol szakszavak + a lead települése kiesik), Places-típus (nem
+  szállás → max közepes), távolság (≤100 m, kemping ≤250 m); a mock-generálás is ezt használja.
+- Kalibrálva 115 kézzel címkézett páron (fixture): jó→magas 72/85, rossz→magas 0/8, bizonytalan→magas 5/22; őr ⑨
+  mindkét irányban + negatív kontroll.
+- `scripts/places-medium-backfill.mts`: száraz futás 78 megerősítve, 21 telefon + 20 honlap le (mind a rossz párok
+  köztük). ⏸ ÍRÁS A TULAJ JÓVÁHAGYÁSÁRA VÁR (a lista megmutatva).
+- Tanulság: a javítás HASZNÁT a bevezetés előtt kellett volna mérni — a „8 szomszéd-pár” állításom egy része téves volt
+  (Anita = azonos család).

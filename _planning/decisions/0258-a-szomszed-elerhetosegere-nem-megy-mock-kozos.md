@@ -57,3 +57,29 @@ konkurenciának küldjünk el.” — és a megvalósítást rám bízta („Rá
   nem volt eltárolva) — ~115 hívás, tulaj-döntés.
 - Az ötödik→hatodik szakszó-lista helyett ma egy közös (`genericWords.ts`) + négy régi másolat él (`duplicates.ts`,
   `reenrich.ts`, `enrichWebSearch.ts`, `generateEngine.ts`) — összevonás külön feladat.
+
+### Helyesbítés (2026-09-29) — a „közepes = semmi” túl szigorú volt; új pontozás, kalibrálva
+
+A visszamenőleges rendezés száraz futása (118 közepes sávú lead, a Places újrakérdezve) cáfolta a fenti feltevést: a
+közepes sáv **túlnyomórészt a HELYES helyet** találta meg, csak más névírással („Aranymandula Apartmanház” ↔
+„Aranymandula Apartmanok”) — a Jaccard-hasonlóság a szakszót eltérésnek számolta. A „közepes = nincs elérhetőség”
+szabály 70 valószínűleg jó telefont vett volna le. A fenti szomszéd-pár lista is túlzott: az Anita Apartman Google-
+bejegyzése „Kovács Apartmanok – Anita Apartmanház” (a Judit Apartmanházzal azonos család).
+
+**Az új szabály** (a közepes sáv változatlanul csak jelölt — a SÁVBA sorolás lett pontosabb):
+- **Név:** a lead MÁRKA-szavainak hány százaléka van meg a hely nevében (szakszavak — magyar ÉS a Places-címek angol
+  szavai, `PLACES_TRADE_WORD` — és a lead saját települése nem számít; írásváltozat: előtag / egy betű eltérés).
+- **Típus:** ha a hely a Places szerint nem szállás (kávézó, bolt, borozó szobák nélkül) → legfeljebb közepes.
+- **Távolság:** magas csak ≤100 m-en; kemping/gyerektábor (`large_site`) ≤250 m-en.
+- Ugyanez a pontozás fut a mock-generálásban (`generate.ts`) — egy szabály, egy helyen.
+
+**Kalibráció** 115 valódi, kézzel címkézett páron (`scripts/fixtures/places-match-labels.json`; a címke a session
+ítélete, nem ellenőrzött igazság): jó → magas **72/85**; rossz → magas **0/8**; bizonytalan → magas 5/22 (Familia, Jani
+Gyula, Panoráma Apartman, Pálkövei, Simply Szálló — mind szállás, ≤94 m, márka egyezik). Az őr
+(`places-match-check` ⑨) mindkét irányt köti: rossz soha nem magas, ÉS legalább 70 jó magas (a túl szigorú szabály is
+hiba). Negatív kontroll: a típus-/távolság-korlát kivétele → a Green Café és a Kővirág magasra ugrik, az őr piros.
+
+**Visszamenőleges rendezés:** `scripts/places-medium-backfill.mts` (száraz alapból; `--apply --backup`; `--cache`).
+A dev-állományon mérve: 78 megerősítve, 21 telefon és 20 honlap le (köztük mind a rossz pár), 10 érintetlen (a lead
+elérhetősége nem attól a helytől van), 3-nak ma már nincs találata. A levett érték ELUTASÍTOTT naplósorként, indokkal
+megmarad — átvehető. Futtatás a tulaj jóváhagyása után.

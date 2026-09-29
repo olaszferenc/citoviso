@@ -20,10 +20,17 @@
 //      place name in its reason, the website is held in the evidence
 //   ⑦ MEDIUM band never overwrites a contact the lead already had
 //   ⑧ LOW band: nothing lands, evidence kept
+//   ⑨ CALIBRATION on 115 real, hand-labelled lead ↔ place pairs (dev stock,
+//      scripts/fixtures/places-match-labels.json): NO wrong pair reaches HIGH, and
+//      at least 70 of the 85 right ones do — the second floor exists because the
+//      first version of this fix held 70 right phones back (over-strict is a defect
+//      too). The "unsure" pairs that reach HIGH are listed by name, capped at 5.
+//      Labels are the session's judgement, not ground truth (see the fixture).
 //
 // Usage: npx tsx scripts/places-match-check.mts
 
-import { pickPlacesCandidate } from "../src/scraper/sources/googleMaps.js";
+import { readFileSync } from "node:fs";
+import { nameSimilarity, pickPlacesCandidate, placeKindOf } from "../src/scraper/sources/googleMaps.js";
 import { applyPlacesMatch } from "../src/scraper/enrichPlaces.js";
 import { scoreMatch } from "../src/scraper/confidence.js";
 import type { QualifiedLead } from "../src/scraper/types.js";
@@ -89,6 +96,35 @@ ok(own.phone === "06 30 999 0000" && !own.placesMatch?.heldPhone, "⑦ közepes 
 
 const lo = applyPlacesMatch(lead, match, band(0.3));
 ok(lo.phone === undefined && lo.placesMatch?.band === "low", "⑧ alacsony sáv: semmi nem jön át, a bizonyíték megmarad");
+
+console.log("\nC) kalibráció 115 valódi, kézzel címkézett páron");
+type Labelled = {
+  lead: string; city?: string; lat: number; lon: number; sources?: string[];
+  place: string; placeLat: number; placeLon: number; types?: string[];
+  label: "same" | "wrong" | "unsure";
+};
+const labelled = JSON.parse(readFileSync("scripts/fixtures/places-match-labels.json", "utf8")) as Labelled[];
+const bandOf = (r: Labelled): string => {
+  const pick = pickPlacesCandidate(r.lead, r.lat, r.lon, [
+    { displayName: { text: r.place }, location: { latitude: r.placeLat, longitude: r.placeLon } },
+  ], r.city);
+  if (!pick) return "none";
+  return scoreMatch({
+    distanceMeters: pick.distanceMeters,
+    nameSimilarity: nameSimilarity(r.lead, r.place, r.city),
+    corroboratedByOsm: (r.sources ?? []).includes("osm"),
+    placeKind: placeKindOf(r.types),
+  }).band;
+};
+const wrongHigh = labelled.filter((r) => r.label === "wrong" && bandOf(r) === "high");
+const sameHigh = labelled.filter((r) => r.label === "same" && bandOf(r) === "high");
+const unsureHigh = labelled.filter((r) => r.label === "unsure" && bandOf(r) === "high");
+ok(labelled.length === 115, `⑨ a fixture 115 párt tartalmaz (${labelled.length})`);
+ok(wrongHigh.length === 0, "⑨ rossz pár SOHA nem magas", wrongHigh.map((r) => `${r.lead} ↔ ${r.place}`).join("; "));
+ok(sameHigh.length >= 70, `⑨ a jó párok legalább 70-e magas (${sameHigh.length}/85) — a túl szigorú szabály is hiba`);
+ok(unsureHigh.length <= 5, `⑨ bizonytalan → magas legfeljebb 5 (${unsureHigh.length}: ${unsureHigh.map((r) => r.lead).join(", ")})`);
+ok(bandOf(labelled.find((r) => r.lead === "Green Wood Vendégház")!) !== "high", "⑨ kávézó (nem szállás) nem lehet magas");
+ok(bandOf(labelled.find((r) => r.lead === "Mirabella Camping")!) === "high", "⑨ kemping 160 m-en még magas (nagy terület)");
 
 if (failures) {
   console.error(`\n🔴 places-match-check: ${failures} bukás`);

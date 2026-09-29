@@ -1,7 +1,7 @@
 import { config } from "../../config.js";
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
-import { GENERIC_NAME_WORD } from "../genericWords.js";
+import { GENERIC_NAME_WORD, PLACES_TRADE_WORD } from "../genericWords.js";
 
 // Google Maps via the official Places API (New) — legally clean route. Requires
 // GOOGLE_MAPS_API_KEY. Without a key the source skips itself so OSM still runs.
@@ -91,6 +91,7 @@ interface PlacesResponse {
     photos?: Array<{ name?: string }>;
     rating?: number;
     userRatingCount?: number;
+    types?: string[];
   }>;
   /** Present when the query has more pages (up to 60 results per query). */
   nextPageToken?: string;
@@ -111,6 +112,8 @@ export interface PlacesMatch {
   /** ISO-2 country + city from the match's addressComponents (geo facets). */
   country?: string;
   city?: string;
+  /** What kind of place it is by its Places types; undefined = types not returned. */
+  kind?: PlaceKind;
 }
 
 /**
@@ -245,7 +248,7 @@ export async function placesSearchText(
 // immediate area (≈±550m lat / ≈±420m lng at 47°N). A soft locationBias would let
 // Places return a same-name place in another town — a catastrophic photo mismatch.
 // Within the box, the match is SCORED (A4 confidence), not hard-accepted.
-const LOOKUP_BOX_DEG = 0.005;
+export const LOOKUP_BOX_DEG = 0.005;
 
 function metersBetween(
   aLat: number,
@@ -273,14 +276,92 @@ function normName(s: string): string {
     .trim();
 }
 
-/** Jaccard token overlap between two names (0..1) — a name-similarity signal. */
-function nameSimilarity(a: string, b: string): number {
-  const ta = new Set(normName(a).split(" ").filter(Boolean));
-  const tb = new Set(normName(b).split(" ").filter(Boolean));
-  if (!ta.size || !tb.size) return 0;
-  let inter = 0;
-  for (const t of ta) if (tb.has(t)) inter++;
-  return inter / new Set([...ta, ...tb]).size;
+/**
+ * Brand words of a name: significant tokens minus every trade word — and minus the
+ * lead's own town, which names the village, not the business ("Köveskál Vendégház"
+ * and "Köveskál Panzió" share only the village).
+ */
+export function brandTokens(name: string, city?: string): string[] {
+  const town = new Set(city ? normName(city).split(" ") : []);
+  return normName(name)
+    .split(" ")
+    .filter(
+      (t) => t.length > 3 && !GENERIC_NAME_WORD.has(t) && !PLACES_TRADE_WORD.has(t) && !town.has(t),
+    );
+}
+
+/** a and b differ by at most one insertion, deletion or substitution. */
+function withinOneEdit(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (b.length > a.length) j++;
+    else {
+      i++;
+      j++;
+    }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+
+/** Does one brand word of the lead appear in the place name (spelling variants allowed)? */
+function brandWordFound(t: string, candTokens: readonly string[], candJoined: string): boolean {
+  if (candJoined.includes(t)) return true; // "mandulakert" ↔ "Mandula Kert"
+  return candTokens.some(
+    (u) =>
+      (u.length >= 4 && t.startsWith(u)) || // "elisabeth" ↔ "Elisabet"
+      (t.length >= 5 && u.length >= 5 && withinOneEdit(t, u)), // "szinbad" ↔ "Szindbad"
+  );
+}
+
+/**
+ * How much of the LEAD's brand the place name carries (0..1).
+ *
+ * ⛔ Until 2026-09-28 this was a Jaccard over ALL words, so "Aranymandula
+ * Apartmanház" ↔ "Aranymandula Apartmanok" scored 0.33 — the trade word counted as
+ * a mismatch — and 70 of 118 medium-band matches turned out to be the right place
+ * in different wording. Trade words now carry no weight either way; the question is
+ * only whether the lead's own name is in the place's. A name made only of trade
+ * words has nothing to carry, so it scores 1 on an exact match and 0 otherwise.
+ */
+export function nameSimilarity(leadName: string, placeName: string, leadCity?: string): number {
+  const lead = brandTokens(leadName, leadCity);
+  const cand = normName(placeName);
+  if (!lead.length) return cand === normName(leadName) ? 1 : 0;
+  const candTokens = cand.split(" ").filter(Boolean);
+  const joined = candTokens.join("");
+  return lead.filter((t) => brandWordFound(t, candTokens, joined)).length / lead.length;
+}
+
+/**
+ * Places types that mean "you can sleep here". A name match on a café or a shop in
+ * the same building is the classic wrong match (Green Wood Vendégház ↔ Green Café,
+ * Kővirág panzió ↔ Kővirág X Pan'ni); the type is what tells them apart when the
+ * names cannot. Any type in the list counts, not just the primary one — a winery
+ * that also rents rooms (Liszkay, Villa Tolnay) carries "lodging" among its types.
+ * A LARGE site (campground, children's camp) is a lodging whose pin can sit far from
+ * the lead's pin: Mirabella and Balatontourist Füred matched right at 156–160 m.
+ */
+const LARGE_SITE_TYPE = new Set(["campground", "childrens_camp", "rv_park", "mobile_home_park"]);
+const LODGING_TYPE = new Set([
+  "lodging", "hotel", "guest_house", "bed_and_breakfast", "hostel", "resort_hotel", "motel",
+  "cottage", "private_guest_room", "inn", "extended_stay_hotel", "farmstay", "camping_cabin",
+]);
+export type PlaceKind = "large_site" | "lodging" | "other";
+export function placeKindOf(types: readonly string[] | undefined): PlaceKind | undefined {
+  if (!types?.length) return undefined;
+  if (types.some((t) => LARGE_SITE_TYPE.has(t))) return "large_site";
+  if (types.some((t) => LODGING_TYPE.has(t))) return "lodging";
+  return "other";
 }
 
 /**
@@ -298,10 +379,8 @@ export function pickPlacesCandidate<P extends { location?: { latitude: number; l
   lat: number,
   lon: number,
   places: readonly P[],
+  city?: string,
 ): { place: P; distanceMeters: number } | null {
-  const targetTokens = normName(name)
-    .split(" ")
-    .filter((t) => t.length > 3 && !GENERIC_NAME_WORD.has(t));
   const wholeName = normName(name);
   let best: P | undefined;
   let bestDist = Infinity;
@@ -310,9 +389,9 @@ export function pickPlacesCandidate<P extends { location?: { latitude: number; l
     if (!loc) continue;
     const d = metersBetween(lat, lon, loc.latitude, loc.longitude);
     if (d >= bestDist) continue;
-    const cand = normName(p.displayName?.text ?? "");
+    const cand = p.displayName?.text ?? "";
     const nameOk =
-      targetTokens.length === 0 ? cand === wholeName : targetTokens.some((t) => cand.includes(t));
+      brandTokens(name, city).length === 0 ? normName(cand) === wholeName : nameSimilarity(name, cand, city) > 0;
     if (!nameOk) continue;
     best = p;
     bestDist = d;
@@ -336,6 +415,7 @@ export async function placesLookup(
   lat: number,
   lon: number,
   apiKey: string,
+  leadCity?: string,
 ): Promise<PlacesMatch | null> {
   // Shared transport: rate-limited, and a per-minute 429 is waited out instead of
   // failing the lead (the caller still learns about day-quota/auth via the throw).
@@ -360,12 +440,12 @@ export async function placesLookup(
     apiKey,
     // places.id is Essentials-tier — free alongside the Pro fields already
     // requested here, and it is what makes the match linkable on Maps.
-    "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount",
+    "places.id,places.displayName,places.location,places.addressComponents,places.websiteUri,places.nationalPhoneNumber,places.photos,places.rating,places.userRatingCount,places.types",
   );
   const places = data.places ?? [];
   if (!places.length) return null;
 
-  const picked = pickPlacesCandidate(name, lat, lon, places);
+  const picked = pickPlacesCandidate(name, lat, lon, places, leadCity);
   if (!picked) return null;
   const { place: best, distanceMeters: bestDist } = picked;
 
@@ -377,7 +457,7 @@ export async function placesLookup(
     placeId: best.id,
     placeName: best.displayName?.text ?? name,
     distanceMeters: bestDist,
-    nameSimilarity: nameSimilarity(name, best.displayName?.text ?? ""),
+    nameSimilarity: nameSimilarity(name, best.displayName?.text ?? "", leadCity),
     rating: best.rating,
     userRatingCount: best.userRatingCount,
     phone: best.nationalPhoneNumber,
@@ -385,6 +465,7 @@ export async function placesLookup(
     photoRefs,
     country,
     city,
+    kind: placeKindOf(best.types),
   };
 }
 

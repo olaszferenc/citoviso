@@ -302,12 +302,14 @@ export async function resolveGatedPhotos(
         lead.lat,
         lead.lon,
         config.googleMapsApiKey,
+        lead.city,
       );
       if (m) {
         const conf = scoreMatch({
           distanceMeters: m.distanceMeters,
           nameSimilarity: m.nameSimilarity,
           corroboratedByOsm: lead.sources.includes("osm"),
+          placeKind: m.kind,
         });
         matchBand = conf.band;
         placeId = m.placeId;

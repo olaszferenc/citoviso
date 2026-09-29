@@ -13,6 +13,14 @@ export interface MatchSignals {
   readonly nameSimilarity: number;
   /** Did an independent source (OSM) also place this lead here? */
   readonly corroboratedByOsm: boolean;
+  /**
+   * What the matched place is by its Places types (2026-09-28, calibrated on 115
+   * hand-labelled pairs). "other" (a café, a shop, a winery with no rooms) caps the
+   * band at medium — a same-named business next door is exactly the wrong match whose
+   * phone would carry a mock to the neighbour. HIGH also needs the pins close: within
+   * 100 m, or 250 m for a "large_site" (campground), whose pin can sit far away.
+   */
+  readonly placeKind?: "large_site" | "lodging" | "other";
 }
 
 export type ConfidenceBand = "high" | "medium" | "low";
@@ -37,8 +45,11 @@ export function scoreMatch(s: MatchSignals): MatchConfidence {
     0,
     Math.min(1, 0.45 * nameScore + 0.4 * distScore + 0.15 * corrob),
   );
-  const band: ConfidenceBand =
+  const raw: ConfidenceBand =
     score >= HIGH ? "high" : score >= MEDIUM ? "medium" : "low";
+  const tooFar = s.distanceMeters > (s.placeKind === "large_site" ? 250 : 100);
+  const band: ConfidenceBand =
+    raw === "high" && (s.placeKind === "other" || tooFar) ? "medium" : raw;
 
   return {
     score,
@@ -47,6 +58,8 @@ export function scoreMatch(s: MatchSignals): MatchConfidence {
       `távolság ${Math.round(s.distanceMeters)}m (${distScore.toFixed(2)})`,
       `név-egyezés ${nameScore.toFixed(2)}`,
       `korroboráció ${s.corroboratedByOsm ? "OSM+Places" : "1 forrás"}`,
+      ...(s.placeKind === "other" ? ["a hely nem szállás-típusú → legfeljebb közepes"] : []),
+      ...(tooFar && raw === "high" ? ["a két pont túl messze van a magas sávhoz → közepes"] : []),
     ],
   };
 }
