@@ -2155,6 +2155,16 @@ if [ -f scripts/booking-offer-check.mts ] && \
   echo "[pre-commit] booking-offer (ár nélküli kérésre árajánlat, levéltől foglalásig)…"
   npx tsx scripts/booking-offer-check.mts >"$GATE_LOG" || gate_failed
 fi
+# IDŐUTAZÓ KARBANTARTÁS (deploy-készenlét, 2026-09-29): az óránkénti söprés két ága — az
+# ajánlat-lejárat (⑫) és a dátumos ár emlékeztetője + levétele (⑥) — HATÁRON és
+# IDEMPOTENSEN: 47 óra él / 48 óra + 1 perc lejár, a site saját határideje dönt, a 14. nap
+# szól / a 15. csendes, egy ablak = egy levél napokon át óránként söpörve, a lejárat napján
+# az ár még érvényes. Chromium nélkül; a söprés globális, ezért elő-ellenőrzéssel fut.
+if [ -f scripts/booking-maintenance-timetravel-check.mts ] && \
+   changed_files | grep -qE '^src/booking/requests\.ts$|^src/tenant/priceExpiry\.ts$|^scripts/booking-maintenance\.mts$|^scripts/booking-maintenance-timetravel-check'; then
+  echo "[pre-commit] booking-maintenance-timetravel (ajánlat-lejárat + dátumos ár az időben)…"
+  npx tsx scripts/booking-maintenance-timetravel-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ÉVHEZ KÖTÖTT SZEZONÁR (kontraktus: design-refs/tenant-admin/season-year-price): a szezon
 # MM-DD volt, év nélkül, ezért 2027 júliusára ugyanaz az ár fagyott be, mint idénre. A lánc
 # (éves ár · szerkesztés · sorrend · évsáv · honlap-ártábla · szezon végi kérdés · a lejárat-
