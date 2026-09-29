@@ -12,12 +12,12 @@ el. Itt adja meg, milyen szobákat, apartmanokat ad ki, és mit tudjon róluk a 
 
 Fontos: ugyanezeket a szobákat használja a foglalási naptár és az árazás is — elég egy helyen
 karbantartani, és mindenhol egyezni fog. Ha a szobák megvannak, és árat adna nekik, nem kell
-keresgélnie: a képernyő tetején, a bevezető sor mellett az **„Árak, szezonok szerkesztése”** gomb
+keresgélnie: a képernyő tetején, a bevezető szöveg alatt (számítógépen mellette) az **„Árak, szezonok szerkesztése”** gomb
 egyenesen az ár-modul beállító-képernyőjére visz. Ha az Árak modul még nincs bekapcsolva, a gomb
 felirata **„Árak modul bekapcsolása”**, és a Modulok fülre visz — ott az Árak, szezonok kártyán a
 **„Kosárba teszem”** gombbal tegye a kosarába, és a kosárban véglegesítse.
 
-![Képernyőkép: a képernyő tetején a bevezető sor, mellette az „Árak, szezonok szerkesztése” gomb](assets/hu/arak-gomb.png)
+![Képernyőkép: a képernyő tetején a bevezető sor, alatta az „Árak, szezonok szerkesztése” gomb](assets/hu/arak-gomb.png)
 
 ![Képernyőkép: a szobák rácsa telefonon](assets/hu/screen.png)
 

@@ -183,13 +183,13 @@ kártyáját — rajta látja a havidíjat is —, és koppintson a **„Kosárb
 Ha több szobája van, mindegyik kártyáján külön árazhat — a kertre néző apartman kerülhet többe,
 mint a padlásszoba. Ha még nem vette fel a szobáit (például eddig csak „A szállás egésze” szerepel,
 de szobánként adna ki), azt előbb a szoba-modulnál tegye meg; az árazás ugyanazokat a szobákat
-látja. Nem kell keresgélnie: a képernyő tetején, a bevezető sor mellett a **„Szobák, apartmanok
+látja. Nem kell keresgélnie: a képernyő tetején, a bevezető szöveg alatt (számítógépen mellette) a **„Szobák, apartmanok
 szerkesztése”** gomb egyenesen a szoba-modul beállító-képernyőjére visz. Ha a Szobák modul még nincs
 bekapcsolva, a gomb felirata **„Szobák modul bekapcsolása”**, és a Modulok fülre visz — ott a
 Szobák, apartmanok kártyán a **„Kosárba teszem”** gombbal tegye a kosarába, és a kosárban véglegesítse; utána a gomb már a
 szerkesztőre mutat.
 
-![Képernyőkép: a képernyő tetején a bevezető sor, mellette a „Szobák, apartmanok szerkesztése” gomb](assets/hu/szobak-gomb.png)
+![Képernyőkép: a képernyő tetején a bevezető sor, alatta a „Szobák, apartmanok szerkesztése” gomb](assets/hu/szobak-gomb.png)
 
 ## Az egész szállás árát is adja meg
 

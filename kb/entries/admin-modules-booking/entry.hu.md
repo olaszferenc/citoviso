@@ -10,7 +10,7 @@ updated: 2026-09-25
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
 el. Itt a naptárát, a kiadott szobáit és az értesítési címeit kezeli.
 
-![Képernyőkép: a foglalás-képernyő telefonon, várakozó kéréssel](assets/hu/screen.png)
+![Képernyőkép: a „Mikor nem kiadó?” naptár telefonon — az Ön jelölte, a vendég által foglalt és a másik szoba által foglalt napokkal](assets/hu/screen.png)
 
 ## Hol válaszolok a foglalási kérésekre?
 
