@@ -1,4 +1,4 @@
-// A tulaj foglaláskezelése TELEFONON — a jóváhagyott „A” terv őre (FK-015, ADR-XXXX).
+// A tulaj foglaláskezelése TELEFONON — a jóváhagyott „A” terv őre (FK-015, ADR-0274).
 // Kontraktus: assets/design-refs/tenant-admin/booking-phone/README.md.
 //
 // A TELJES admin-oldalt méri (`adminDashboard()` — a valódi keret: felső sáv, alsó

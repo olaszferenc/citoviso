@@ -49,7 +49,7 @@ ettől független kérdés volt, és arra is megvan a válasz.
    a naptár a viszonyítási pont, a tulaj egy pillantásból látja, van-e hely ahhoz a kéréshez,
    amit épp elbírál. Mobilon egy hasáb, naptár elöl — **két külön elrendezés, nem ugyanaz
    lekicsinyítve.**
-   > ⛔ **A telefonos sorrendet felülírta az ADR-XXXX (2026-09-29, `../booking-phone/` ②):**
+   > ⛔ **A telefonos sorrendet felülírta az ADR-0274 (2026-09-29, `../booking-phone/` ②):**
    > telefonon (álló és fekvő tartásban) a DÖNTÉSRE VÁRÓ kérések állnak elöl, a naptár közvetlenül
    > alattuk. Mérve: a naptár + csempék + tájékoztató alatt az első kártya gombjai a hajtás alá
    > kerültek. Az asztali „naptár bal, lista jobb” változatlan.

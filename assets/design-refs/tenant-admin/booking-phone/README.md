@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-09-29, a tulaj szavai: *„A) verzió. Igen a döntésre váró kell ami Kártyanyitás
 előtt is látszódjon a fő részen.”* (a koordinátor sessionön át). ·
-**Kapcsolódó:** ADR-XXXX (ez a döntés), `../foglalasok-README.md` ① (a jelvény szabályát felülírja),
+**Kapcsolódó:** ADR-0274 (ez a döntés), `../foglalasok-README.md` ① (a jelvény szabályát felülírja),
 `../booking-queue-urgency/` ⑥ (a telefonos sorrendet felülírja), `../../console/mail-links/` (az
 Üzenetek-fül döntés-linkjei — ④ változatlanul köt), `../booking-offer-scope/` (az ajánlat-lap, változatlan).
 **Őr:** `scripts/booking-phone-check.mts` (piros önteszttel, pre-commit). ·

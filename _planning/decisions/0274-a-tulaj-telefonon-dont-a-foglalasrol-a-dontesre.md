@@ -1,4 +1,4 @@
-## ADR-XXXX — A tulaj telefonon dönt a foglalásról: a döntésre váró kérés kártyanyitás nélkül is látszik, a döntés áll elöl, a megerősítő megnevezi a vendéget és van „Mégsem”
+## ADR-0274 — A tulaj telefonon dönt a foglalásról: a döntésre váró kérés kártyanyitás nélkül is látszik, a döntés áll elöl, a megerősítő megnevezi a vendéget és van „Mégsem”
 
 **Dátum:** 2026-09-29 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) ·
 **Felülírja:** `foglalasok-README.md` ① (a jelvény = „még nem látott” kérések) és a `booking-queue-urgency`

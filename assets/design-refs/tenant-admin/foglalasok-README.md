@@ -8,7 +8,7 @@ mellettük a jóváhagyáskori képek.
 
 1. **Önálló „Foglalások" fül** a tenant-admin navigációban, **badge** = a tulaj által még
    nem látott kérések száma; a fül megnyitása láttnak jelöl (`seen_at`).
-   > ⛔ **A badge szabályát felülírta az ADR-XXXX (2026-09-29, `booking-phone/` ①):** a jelvény a
+   > ⛔ **A badge szabályát felülírta az ADR-0274 (2026-09-29, `booking-phone/` ①):** a jelvény a
    > DÖNTÉSRE VÁRÓ kérések száma, és a fül megnyitásától NEM tűnik el. A `seen_at` marad — a kártya
    > „új” keretét adja.
 2. **Összecsukható naptár** felül: csukva egysoros összegzés („N éj vendég-foglalás · N nap

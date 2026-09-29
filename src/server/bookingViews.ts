@@ -38,7 +38,7 @@ export interface BookingsTabData {
   /**
    * The request a link pointed at (`?k=<token>` — the Üzenetek main button, the
    * Teendők row). Its card is marked and carries the `#kerelem` anchor; the calendar
-   * opens on its unit and month (ADR-XXXX ②④).
+   * opens on its unit and month (ADR-0274 ②④).
    */
   readonly targetId?: string | null;
   /** Every request of the site (pending + decided), newest data included. */
@@ -137,7 +137,7 @@ export function pendingInOrder(
 }
 
 /**
- * ADR-XXXX ④ (FK-015): which request the calendar opens on when the URL names no
+ * ADR-0274 ④ (FK-015): which request the calendar opens on when the URL names no
  * unit/month — the linked one (`?k=<token>`), else the most urgent pending one, else
  * the next arrival. Measured before: it opened on the first unit and TODAY's month,
  * „nincs foglalt nap", right next to „Következő érkezés 2026. 10. 24.".
@@ -187,7 +187,7 @@ function monthName(iso: string, lang: string): string {
   }).format(new Date(`${iso.slice(0, 7)}-01T00:00:00Z`));
 }
 
-/** The calendar opened on a request's unit and month (ADR-XXXX ④). */
+/** The calendar opened on a request's unit and month (ADR-0274 ④). */
 function calendarHrefFor(r: InboxItem): string {
   const unit = r.unitId ? `&u=${encodeURIComponent(r.unitId)}` : "";
   return tabHref(`${unit}&ho=${r.dateFrom.slice(0, 7)}&naptar=1#naptar`);
@@ -226,7 +226,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
   // ADR-0114: nights another unit holds are FULL nights here too — leaving them out
   // of the summary could print "nincs foglalt nap" over a month that is sold out.
   const linkedCount = m.cells.filter((c) => c.source === "linked").length;
-  // ADR-XXXX ④ — a PENDING request's nights on this unit: the owner decides against
+  // ADR-0274 ④ — a PENDING request's nights on this unit: the owner decides against
   // the calendar, so the nights asked for are drawn on it (dashed, not only a colour),
   // and the collapsed line names them. Only FREE nights are marked: a night that is
   // already booked or blocked keeps its own kind — that is the conflict to see.
@@ -428,7 +428,7 @@ function outcomeBanner(d: BookingsTabData, lang: string): string {
   const also = o.autoDeclined.length
     ? `<span class="bk-outcome__also">${T(lang, "Automatikusan elutasítva: {names} — mindannyian e-mailt kaptak.", { names: o.autoDeclined.map(esc).join(", ") })}</span>`
     : `<span class="bk-outcome__also">${T(lang, "A vendég e-mailt kapott róla.")}</span>`;
-  // ADR-XXXX ③: after a verdict the owner's next step is the next request — on a
+  // ADR-0274 ③: after a verdict the owner's next step is the next request — on a
   // phone it is below the (now open) calendar, so the banner names it and links it.
   const next = pendingInOrder(d.requests, d.expireHours)[0];
   const nextLink = next
@@ -618,7 +618,7 @@ function requestCard(
     .filter(Boolean)
     .join(" · ");
 
-  // ADR-XXXX ③ (FK-015, owner's choice „A", 2026-09-29): the confirmation opens IN
+  // ADR-0274 ③ (FK-015, owner's choice „A", 2026-09-29): the confirmation opens IN
   // THE CARD, full width, and NAMES the guest. Measured on 390 px before: the form
   // sat in the left half of the button row (~160 px, the button broke into two
   // lines), below the fold, and without the guest's name. The way back is a real
@@ -666,7 +666,7 @@ function requestCard(
         : heat === "warm"
           ? T(lang, "Holnap lejár")
           : T(lang, "Van még idő");
-  // ADR-XXXX ⑤: the guest is ONE tap away — the phone number was plain text.
+  // ADR-0274 ⑤: the guest is ONE tap away — the phone number was plain text.
   const reach =
     `<div class="bk-req__reach">` +
     (r.guestPhone
@@ -959,7 +959,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     // Modulok → Foglalás alatt, ahol NINCS ilyen — a portál-szinkron felülete ki van
     // kapcsolva (PORTAL_SYNC_UI = false). A tulaj hiába kereste volna. Amit tényleg
     // talál ott: az értesítési címek. §B.17: nem ígérünk nem létező felületet.
-    // ADR-XXXX ②: on a phone every line above the first request pushed its buttons
+    // ADR-0274 ②: on a phone every line above the first request pushed its buttons
     // below the fold, so this sentence moved to the END of the tab, and the guide link
     // (ADR-0045 §J, the kb-check coverage hook) became the help icon next to the title
     // — the same place every other admin tab keeps it (adminViews › pageHead).
@@ -981,7 +981,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     outcomeBanner(d, lang) +
     // Kontraktus ⑥ — asztalon a NAPTÁR a bal hasábban áll és tapad, a döntésre váró
     // kérések jobbra (tulajdonosi választás, „A": a naptár a viszonyítási pont).
-    // ⛔ ADR-XXXX ② (FK-015, 2026-09-29) — TELEFONON (álló és fekvő) a döntésre váró
+    // ⛔ ADR-0274 ② (FK-015, 2026-09-29) — TELEFONON (álló és fekvő) a döntésre váró
     // kérések állnak ELÖL, a naptár KÖZVETLENÜL utánuk, a csempék és a többi alattuk.
     // Mérve 390 px-en: a kártya a naptár + három csempe + a tájékoztató alatt y≈720-nál
     // kezdődött, a „Visszaigazolom" a hajtás alatt ült. A DOM-sorrend is ez (döntés →
@@ -1159,7 +1159,7 @@ function sentOffersSection(offers: readonly SentOffer[], expireHours: number, la
   );
 }
 
-/* ── the in-card confirmation (ADR-XXXX ③) ─────────────────────────────────
+/* ── the in-card confirmation (ADR-0274 ③) ─────────────────────────────────
  * Two small conveniences on top of the no-JS <details> panel: „Mégsem" closes it
  * in place (without JS it is a link back to the card), and an opened panel is
  * brought into view — on a phone it opens under the button the owner just tapped. */
@@ -1358,7 +1358,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-day--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel));color:var(--citui-ok)}
 .bk-day--sel{border-color:var(--citui-ok)}
 .bk-day--manual{background:var(--citui-navy-900);color:var(--citui-white)}
-/* ADR-XXXX ④: a night a PENDING request asks for — dashed, so it never reads as booked */
+/* ADR-0274 ④: a night a PENDING request asks for — dashed, so it never reads as booked */
 .bk-day--req{background:var(--citui-panel);border:2px dashed var(--citui-warn);font-weight:800}
 .bk-day--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-panel));color:var(--citui-warn);cursor:help}
 /* ADR-0114: held by ANOTHER unit — striped, not tappable, same language as the
@@ -1382,7 +1382,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-dayinfo>span{display:block;font-size:.8rem;color:var(--citui-ink);line-height:1.5}
 /* ── KONTRAKTUS ⑥ (tulaj választása, 2026-09-14): asztalon a NAPTÁR a bal hasábban
    áll és görgetéskor TAPAD, a döntésre váró kérések jobbra. A naptár a viszonyítási
-   pont. ⛔ ADR-XXXX ② (FK-015, 2026-09-29): TELEFONON a döntésre váró kérések ELÖL,
+   pont. ⛔ ADR-0274 ② (FK-015, 2026-09-29): TELEFONON a döntésre váró kérések ELÖL,
    a naptár közvetlenül utánuk — KÉT KÜLÖN elrendezés. A DOM-sorrend a telefoné; a
    rács teszi asztalon a naptárat balra (két soron át, hogy a lista ne szakadjon). */
 .bk-cols{display:block}
@@ -1472,7 +1472,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-hint.bk-req__qhint{margin:0 14px 12px;padding:9px 11px;border-radius:10px;color:var(--citui-warn-ink);
   background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));font-size:.8rem}
 .bk-req__act{display:flex;gap:8px;padding:0 14px 10px;flex-wrap:wrap}
-/* ⛔ ADR-XXXX: every decision control ≥ 48 px tall (the tap target was ~36 px) */
+/* ⛔ ADR-0274: every decision control ≥ 48 px tall (the tap target was ~36 px) */
 .bk-verdict{flex:1 1 40%;min-width:0}
 /* „>" on purpose: the confirmation's own message toggle is a <summary> too */
 .bk-verdict > summary{list-style:none;display:flex;align-items:center;justify-content:center;gap:7px;
@@ -1482,7 +1482,7 @@ export const BOOKINGS_STYLE = `<style>
 /* the admin frame's .citui-btn is 36 px (.adm-shell .citui-btn) — a decision needs 48 */
 .bk-req .bk-req__offer.citui-btn{flex:1 1 40%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:7px;
   font-weight:700;text-decoration:none;box-sizing:border-box;border-radius:999px;color:var(--citui-white)}
-/* ADR-XXXX ③: the opened confirmation takes the WHOLE row — its sibling decision
+/* ADR-0274 ③: the opened confirmation takes the WHOLE row — its sibling decision
    steps aside, so the owner never sees „Igen" next to the opposite verdict. */
 .bk-verdict[open]{flex-basis:100%}
 .bk-verdict[open] > summary{display:none}

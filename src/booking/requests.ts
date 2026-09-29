@@ -1671,7 +1671,7 @@ export async function cancelRequest(opts: {
 
 export interface InboxItem {
   readonly id: string;
-  /** The requested unit — the calendar opens on it (FK-015, ADR-XXXX ④). */
+  /** The requested unit — the calendar opens on it (FK-015, ADR-0274 ④). */
   readonly unitId?: string;
   readonly unitName: string;
   readonly guestName: string;
@@ -1805,7 +1805,7 @@ export async function bookingExpireHours(siteId: string): Promise<number> {
 }
 
 /**
- * Nav badge truth (ADR-XXXX ①, owner 2026-09-29): the requests still WAITING FOR A
+ * Nav badge truth (ADR-0274 ①, owner 2026-09-29): the requests still WAITING FOR A
  * DECISION. It used to count only the unseen ones, so opening the tab emptied the
  * badge while the decision was still ahead of the owner.
  */

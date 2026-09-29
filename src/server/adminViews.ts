@@ -135,7 +135,7 @@ function messageBodyHtml(text: string, lang: string): string {
       .join("\n");
   if (!acts.length) return `<p>${bodyLines(text.split("\n"))}</p>`;
 
-  // ADR-XXXX ② (FK-015, owner's choice „A", 2026-09-29): the DECISION stands at the
+  // ADR-0274 ② (FK-015, owner's choice „A", 2026-09-29): the DECISION stands at the
   // TOP of the opened letter — who, when, how much, the 48 px main button, the quick
   // verdict — and the full text follows. Measured before: the main button sat at
   // y≈865–901 on a 390×844 phone (below the fold, ~36 px tall), the quick verdict's
@@ -311,7 +311,7 @@ interface NavCounts {
   readonly photos: number;
   readonly modules: number;
   readonly unread: number;
-  /** ADR-XXXX ①: requests WAITING FOR A DECISION (not „not yet seen"). */
+  /** ADR-0274 ①: requests WAITING FOR A DECISION (not „not yet seen"). */
   readonly pendingBookings: number;
   /** Module sub-list under „Modulok" (contract: design-refs/tenant-admin/module-subnav). */
   readonly subModules: readonly { readonly id: string; readonly label: string }[];
@@ -3952,7 +3952,7 @@ export interface OverviewData {
   /** Unique visitors per day, oldest → newest, 7 entries (the sparkline). */
   readonly visitsByDay: readonly number[];
   /**
-   * ADR-XXXX ①: the requests waiting for the owner's decision, most urgent first —
+   * ADR-0274 ①: the requests waiting for the owner's decision, most urgent first —
    * the strip at the top of the tab and one Teendők row each. Absent = no booking module.
    */
   readonly pendingBookings?: { readonly items: readonly InboxItem[]; readonly expireHours: number };
@@ -4115,7 +4115,7 @@ function overviewSection(
       `<span class="adm-todo__acts"><a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok&m=pricing">${T(lang, "Megadom az árakat")}</a></span>` +
       `</span></li>`
     : "";
-  // ── ADR-XXXX ① (FK-015, owner 2026-09-29): a request WAITING FOR A DECISION is a
+  // ── ADR-0274 ① (FK-015, owner 2026-09-29): a request WAITING FOR A DECISION is a
   // to-do. Measured before: the new request stood only as a cut-off Üzenetek line,
   // the Teendők list said nothing about it. One row per request, most urgent first,
   // with the one action it needs; the strip at the top points here, because on a
@@ -5475,7 +5475,7 @@ export interface AdminOpts {
   readonly unreadMessages?: number;
   /** Jóváhagyott terv 2026-09-06: a „Foglalások" fül adata. */
   readonly bookings?: BookingsTabData | null;
-  /** Döntésre váró foglalási kérések — a fülsor jelvénye (ADR-XXXX ①; a fül megnyitásától nem tűnik el). */
+  /** Döntésre váró foglalási kérések — a fülsor jelvénye (ADR-0274 ①; a fül megnyitásától nem tűnik el). */
   readonly pendingBookings?: number;
 }
 
@@ -5916,7 +5916,7 @@ export function adminDashboard(
     tab === "attekintes" || tab === "fotok"
       ? ""
       : tab === "foglalasok"
-        ? // ADR-XXXX ②: the guide link moved from the tab body to the title (ADR-0045 §J
+        ? // ADR-0274 ②: the guide link moved from the tab body to the title (ADR-0045 §J
           // coverage hook kept) — every line above the first request cost its buttons.
           `<div class="adm-ph"><h1>${esc(tabLabel)}${helpLink("admin.bookings", lang)}</h1></div>`
         : `<div class="adm-ph"><h1>${esc(tabLabel)}</h1></div>`;

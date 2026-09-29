@@ -1472,7 +1472,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 /* ── Üzenetek: a foglalási kérés döntés-linkjei (terv: design-refs/console/mail-links, C) ──
    A nyers „Elfogadom: https://…” sorok helyett: fő gomb a Foglalások fülre, alatta a gyors
    döntés ikonos linkként — kattintásra ELŐBB rákérdez (a link GET-re azonnal dönt). */
-/* ADR-XXXX ② (FK-015, „A"): the decision block stands at the TOP of the opened letter —
+/* ADR-0274 ② (FK-015, „A"): the decision block stands at the TOP of the opened letter —
    who · when · how much, the 48 px main button, the quick verdict as 44 px buttons; the
    full text follows. Wide screens (landscape phone, desktop) put the quick verdict beside. */
 .adm-msg__body:has(.adm-msg__dec){container-type:inline-size}
@@ -1508,7 +1508,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   .adm-msg__sum,.adm-msg__acts{grid-column:1}
   .adm-msg__quick{grid-column:2;grid-row:1 / span 3;margin-top:0}
 }
-/* ADR-XXXX ①: the Áttekintés strip — requests waiting for a decision, above everything */
+/* ADR-0274 ①: the Áttekintés strip — requests waiting for a decision, above everything */
 .adm-pendstrip{display:flex;align-items:center;gap:11px;margin:0 0 14px;padding:11px 14px;min-height:56px;box-sizing:border-box;
   border:2px solid var(--citui-warn);border-radius:var(--citui-radius-sm);text-decoration:none;color:var(--citui-ink);
   background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel))}

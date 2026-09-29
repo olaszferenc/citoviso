@@ -325,7 +325,7 @@ console.log("\n⑤ A nap-panel a RÁCS FÖLÖTT, és a jóváhagyott elrendezés
       var panel = document.querySelector(".bk-dayinfo");
       var grid = document.querySelector(".bk-grid");
       var cal = document.querySelector(".bk-cols__cal");
-      // ADR-XXXX ② (FK-015): the list column is now the DECISION block (.bk-cols__dec)
+      // ADR-0274 ② (FK-015): the list column is now the DECISION block (.bk-cols__dec)
       // — first in the DOM, first on a phone; the grid puts the calendar left on desktop.
       var list = document.querySelector(".bk-cols__dec");
       if (!panel || !grid || !cal || !list) return null;
@@ -348,9 +348,9 @@ console.log("\n⑤ A nap-panel a RÁCS FÖLÖTT, és a jóváhagyott elrendezés
       check("@1280px ⭐⭐ a NAPTÁR BAL, a lista JOBB (tulajdonosi választás)", geo.sideBySide);
       check("@1280px a naptár görgetéskor TAPAD", geo.calSticky === "sticky");
     } else {
-      // ⛔ ADR-XXXX ② felülírta a „naptár ELÖL"-t: telefonon a DÖNTÉSRE VÁRÓ kérések
+      // ⛔ ADR-0274 ② felülírta a „naptár ELÖL"-t: telefonon a DÖNTÉSRE VÁRÓ kérések
       // állnak elöl, a naptár közvetlenül alattuk (tulaj, 2026-09-29, FK-015 „A").
-      check("@390px egy hasáb, a döntésre váró kérések ELÖL, a naptár utánuk (ADR-XXXX)", geo.stacked, JSON.stringify(geo.nums));
+      check("@390px egy hasáb, a döntésre váró kérések ELÖL, a naptár utánuk (ADR-0274)", geo.stacked, JSON.stringify(geo.nums));
     }
     await p.close();
   }

@@ -1207,7 +1207,7 @@ async function serveAdmin(
   if (overviewTab) {
     const series = await getVisitorSeries(session.tenantId, 7);
     const inbox = await listTenantMessages(session.tenantId);
-    // ADR-XXXX ①: the requests waiting for a decision reach the Áttekintés — a strip
+    // ADR-0274 ①: the requests waiting for a decision reach the Áttekintés — a strip
     // at the top and one Teendők row each. FK-015 measured the opposite: the new
     // request stood only as a cut-off line in the Üzenetek widget.
     const bookingOn = site?.id ? await tenantHasModule(session.tenantId, "booking") : false;
@@ -1653,7 +1653,7 @@ async function serveAdmin(
   let messages: AdminOpts["messages"] = null;
 
   // Jóváhagyott terv 2026-09-06: a Foglalások fül adata + a jelvény MINDEN fülön.
-  // ADR-XXXX ①: a jelvény a DÖNTÉSRE VÁRÓ kérések száma — a fül megnyitásától nem tűnik el.
+  // ADR-0274 ①: a jelvény a DÖNTÉSRE VÁRÓ kérések száma — a fül megnyitásától nem tűnik el.
   let bookings: AdminOpts["bookings"] = null;
   let pendingBookings = 0;
   const hasBooking = site?.id ? await tenantHasModule(session.tenantId, "booking") : false;
@@ -1661,17 +1661,17 @@ async function serveAdmin(
     if (tab === "foglalasok") {
       // The tab render marks the requests SEEN (the card's „new" frame). ⛔ It no
       // longer empties the badge: that counts what still WAITS for a decision
-      // (ADR-XXXX ①) — opening the tab is not deciding.
+      // (ADR-0274 ①) — opening the tab is not deciding.
       await markRequestsSeen(site.id);
       const requests = await getRequests(site.id, 100);
       const expireHours = await bookingExpireHours(site.id);
-      // ADR-XXXX ④ (FK-015): with no unit/month in the URL the calendar opens where
+      // ADR-0274 ④ (FK-015): with no unit/month in the URL the calendar opens where
       // the owner's NEXT DECISION is — the linked request (?k=), else the most urgent
       // pending one, else the next arrival. It used to open on the first unit and the
       // current month: „nincs foglalt nap", next to „Következő érkezés 2026. 10. 24.".
       const targetRow = params.get("k") ? requests.find((r) => r.token === params.get("k")) : undefined;
       // Right after a confirmation the calendar shows WHAT became booked: the decided
-      // request's unit and month, opened (ADR-XXXX ④, the approved mock's end state).
+      // request's unit and month, opened (ADR-0274 ④, the approved mock's end state).
       const justAccepted =
         params.get("mit") === "visszaigazolva" ? requests.find((r) => r.id === params.get("d")) : undefined;
       const focusRow = calendarFocus(requests, expireHours, params.get("k") ?? justAccepted?.token ?? null);

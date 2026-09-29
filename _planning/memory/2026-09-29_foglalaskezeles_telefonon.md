@@ -1,4 +1,4 @@
-# 2026-09-29 — A tulaj telefonon dönt a foglalásról (FK-015, „A” változat) — ADR-XXXX
+# 2026-09-29 — A tulaj telefonon dönt a foglalásról (FK-015, „A” változat) — ADR-0274
 
 SUB-szál (koordinátor: `citded06a5f`), brief: `~/rc-briefs/tulaj-foglalaskezeles-telefonon.md`.
 §2b kör → a tulaj: *„A) verzió. Igen a döntésre váró kell ami Kártyanyitás előtt is látszódjon a fő részen.”*
