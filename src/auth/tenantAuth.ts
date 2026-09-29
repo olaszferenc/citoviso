@@ -9,6 +9,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { sessionCookieAttrs } from "./loginGuard.js";
 
 const SESSION_TTL_DAYS = 30;
 const COOKIE = "cit_session";
@@ -69,7 +70,8 @@ function signValue(value: string): string {
 function setCookie(res: http.ServerResponse, value: string, maxAgeSec: number): void {
   res.setHeader(
     "Set-Cookie",
-    [`${COOKIE}=${value}`, "HttpOnly", "Path=/", "SameSite=Lax", `Max-Age=${maxAgeSec}`].join("; "),
+    // ADR-XXXX: `Secure` only over HTTPS — dev runs on plain HTTP (loginGuard.ts).
+    [`${COOKIE}=${value}`, ...sessionCookieAttrs(res.req, maxAgeSec)].join("; "),
   );
 }
 

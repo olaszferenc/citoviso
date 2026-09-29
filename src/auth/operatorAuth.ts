@@ -11,6 +11,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { hashPassword, verifyPassword } from "./tenantAuth.js";
+import { sessionCookieAttrs } from "./loginGuard.js";
 import { setConsoleLang } from "../console/i18nCtx.js";
 import { prepareMailLang } from "../i18n/mail.js";
 
@@ -47,7 +48,8 @@ function signValue(value: string): string {
 function setCookie(res: http.ServerResponse, value: string, maxAgeSec: number): void {
   res.setHeader(
     "Set-Cookie",
-    [`${COOKIE}=${value}`, "HttpOnly", "Path=/", "SameSite=Lax", `Max-Age=${maxAgeSec}`].join("; "),
+    // ADR-XXXX: `Secure` only over HTTPS — dev runs on plain HTTP (loginGuard.ts).
+    [`${COOKIE}=${value}`, ...sessionCookieAttrs(res.req, maxAgeSec)].join("; "),
   );
 }
 

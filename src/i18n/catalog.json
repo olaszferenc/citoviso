@@ -3495,6 +3495,8 @@
   "Tudomásul veszem — törött képekkel hagyom jóvá",
   "túl nagy ({mb} MB, a határ 6 MB)",
   "Túl sok próbálkozás. Kérjük, várjon pár percet.",
+  "Túl sok sikertelen belépési kísérlet. Kérjük, próbálja újra 10 perc múlva.",
+  "Túl sok sikertelen belépési kísérlet. Próbáld újra 10 perc múlva.",
   "tulaj-bemutatkozás",
   "Tulaj-bemutatkozás",
   "Tulajdonosi belépés",

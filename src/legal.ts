@@ -115,9 +115,11 @@ export const RECURRING_MANDATE_V1 =
 // 1.2 (2026-09-16): Barion acquirer remarks — §1 payment-provider exclusion on
 // operated sites, §2 statement descriptor + Apple Pay limitation, §4 exact
 // cancellation route. Substance changed → version bumped (ADR-0056).
-export const ASZF_VERSION = "1.2";
+// 1.3 (2026-09-29): §9 — a custom-domain order only BLOCKS the amount on the card
+// (Barion DelayedCapture, ADR-0251); the charge follows a successful registration (ADR-XXXX).
+export const ASZF_VERSION = "1.3";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
-export const ASZF_EFFECTIVE_FROM = "2026-09-16";
+export const ASZF_EFFECTIVE_FROM = "2026-09-29";
 
 /** One numbered chapter of a legal document. `body` entries are paragraphs. */
 export interface LegalSection {
@@ -313,6 +315,12 @@ export const ASZF_V1: readonly LegalSection[] = [
         "felhatalmazza a Szolgáltatót, hogy az általa kért domain nevet megvásárolja. A " +
         "domain a megvásárlásakor a Szolgáltató tulajdonába kerül, és a Szolgáltató azt a " +
         "Megrendelő honlapjához rendeli.",
+      "Az egyedi domain megrendelésekor a Szolgáltató a fizetési szolgáltatón keresztül a " +
+        "díj összegét a Megrendelő bankkártyáján csak zárolja; a zárolás nem terhelés. A " +
+        "kártya terhelésére kizárólag a domain sikeres regisztrációját követően kerül sor. Ha " +
+        "a domain nem regisztrálható, a Szolgáltató a zárolást feloldja, a Megrendelőt díj " +
+        "nem terheli, és a feloldott összeg a kártyakibocsátó bank eljárásától függően " +
+        "néhány munkanapon belül válik ismét elérhetővé.",
       "Az egyedi domain igénylése a mindenkori árlistában rögzített minimális elköteleződési " +
         "időszak (hűségidő) vállalását feltételezi; a vállalt hűségidőt a megrendelés rögzíti. " +
         "A domain éves díját a mindenkori árlista határozza meg; az árlistában rögzített havi " +

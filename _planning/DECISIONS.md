@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-belepes-secure-suti-fek-aszf-zarolas.md) — Belépés-keményítés a pilot elé: feltételes `Secure` süti, belépési fék, ÁSZF §9 kártyazárolás (2026-09-29)
 - [ADR-0276](decisions/0276-a-haz-riasztast-kap-ha-idozito-level-vagy.md) — A ház riasztást kap, ha időzítő, levél vagy webhook elhasal (2026-09-29)
 - [ADR-0275](decisions/0275-gepszintu-land-sor-a-landok-egy-flock-alatt.md) — Gépszintű land-sor: a landok egy `flock` alatt futnak, és nem futtatják újra egymás kapusorát (2026-09-29)
 - [ADR-0274](decisions/0274-a-tulaj-telefonon-dont-a-foglalasrol-a-dontesre.md) — A tulaj telefonon dönt a foglalásról: a döntésre váró kérés kártyanyitás nélkül is látszik, a döntés áll elöl, a megerősítő megnevezi a vendéget és van „Mégsem”

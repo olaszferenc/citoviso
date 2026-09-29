@@ -93,6 +93,7 @@ import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../paym
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { getMultilang } from "../tenant/multilangCore.js";
 import { multilangCardData } from "../tenant/multilangCard.js";
 import { composeAmenities, splitAmenities } from "../tenant/amenityCatalog.js";
@@ -2074,9 +2075,27 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // ── Tenant auth + admin (data-plane, ADR-0023) ──
   if (req.method === "POST" && pathname === "/login") {
     const form = await readFormBody(req);
-    const uid = await authenticate(form.get("username") ?? "", form.get("password") ?? "");
     const next = safeAdminNext(form.get("next"));
+    // ADR-XXXX: failed-attempt throttle per IP, checked BEFORE the password.
+    if (loginLocked("tenant", req)) {
+      const lang = await prepareMailLang(DEFAULT_LANG);
+      return send(
+        res,
+        429,
+        loginPage(
+          {
+            text: T(lang, "Túl sok sikertelen belépési kísérlet. Kérjük, próbálja újra 10 perc múlva."),
+            kind: "bad",
+          },
+          consoleLoginUrl(req),
+          lang,
+          next,
+        ),
+      );
+    }
+    const uid = await authenticate(form.get("username") ?? "", form.get("password") ?? "");
     if (!uid) {
+      recordLoginFailure("tenant", req);
       return send(
         res,
         401,

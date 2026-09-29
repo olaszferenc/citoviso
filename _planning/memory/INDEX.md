@@ -31,6 +31,7 @@
 - [2026-09-29_csillagmeret_or.md](2026-09-29_csillagmeret_or.md) — Böngészős méret-őr a csillagsorra, mind a 19 sablonon (2026-09-29)
 - [2026-09-29_cfg_sheet_scroll_kapu_gyorsitasa.md](2026-09-29_cfg_sheet_scroll_kapu_gyorsitasa.md) — 2026-09-29 — A `cfg-sheet-scroll-check` gyorsítása (pool + nyugvópont, ADR-0272)
 - [2026-09-29_booking_maintenance_idoutazo.md](2026-09-29_booking_maintenance_idoutazo.md) — Időutazó őr az óránkénti karbantartásra: ajánlat-lejárat + dátumos ár az időben (2026-09-29)
+- [2026-09-29_belepes_secure_suti_fek_aszf_zarolas.md](2026-09-29_belepes_secure_suti_fek_aszf_zarolas.md) — Belépés-keményítés: feltételes Secure süti, belépési fék, ÁSZF §9 zárolás (2026-09-29)
 - [2026-09-29_arajanlat_ara_csak_erre_a_keresre.md](2026-09-29_arajanlat_ara_csak_erre_a_keresre.md) — Az árajánlat ára alapból csak arra a kérésre szól + „Kiküldött ajánlatok” lista (2026-09-29)
 - [2026-09-28_vendeg_oldal_egesz_szallas.md](2026-09-28_vendeg_oldal_egesz_szallas.md) — 2026-09-28 — A vendég oldala: a „Foglalás” rossz választót állított, üres felugró, összetapadt kártya, a „Mégsem” zsákutcája
 - [2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md](2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md) — Vendég-oldal: a tulaj Nyitóképe a hős, és az értékelés skálája a forrásé (2026-09-28 este)

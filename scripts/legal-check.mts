@@ -162,6 +162,29 @@ check(
     "a Barion-bíráló az ÁSZF-ben keresi őket (BARION-APPLICATION.md 2b. #5) — az Impresszum-link nem számít bele",
   );
 }
+// ADR-XXXX: the custom-domain order only BLOCKS the amount on the card (ADR-0251, Barion
+// DelayedCapture) and charges after a successful registration — the checkout and the mail
+// promise exactly that, so the ÁSZF §9 must say it too. And the promise is only true while
+// the gateway really sends a DelayedCapture for a reserve order (a Reservation charges at
+// once — ADR-0228), so the clause is tied to the gateway source here.
+const DOMAIN_HOLD = (text: string): boolean =>
+  /zárolja/.test(text) &&
+  /zárolás nem terhelés/.test(text) &&
+  /sikeres regisztrációját követően/.test(text) &&
+  /zárolást feloldja/.test(text);
+{
+  const s9 = ASZF_V1.find((s) => /^9\. /.test(s.heading));
+  check(
+    !!s9 && DOMAIN_HOLD(s9.body.join(" ")),
+    "az ÁSZF §9 kimondja: a webcím-rendelésnél kártyazárolás, terhelés csak sikeres regisztráció után",
+    "a fizetési lap és a levél ezt ígéri (ADR-0251) — az ÁSZF nem hallgathat róla",
+  );
+  check(
+    /PaymentType:\s*req\.reserve\s*\?\s*"DelayedCapture"/.test(readFileSync("src/payment/barion.ts", "utf8")),
+    "a zárolás-ígéret igaz: a Barion-átjáró a webcím-rendelést DelayedCapture-ként küldi",
+    "Reservation-nél a kártya azonnal terhelődik (ADR-0228) — az ÁSZF §9 mondata hamis lenne",
+  );
+}
 // ADR-0093/0094: the fixed "2 éves" term became the operator-set hűségidő, and the
 // early exit is a SETTLEMENT (kötbér + optional domain purchase), not a free walk.
 check(
@@ -259,6 +282,16 @@ if (SELF_TEST) {
       : "✗ FAIL hiányos DPA-felsorolás átmenne",
   );
   if (!dpaCaught) failed++;
+
+  const s9 = ASZF_V1.find((s) => /^9\. /.test(s.heading))!;
+  const withoutHold = s9.body.filter((p) => !/zárolja/.test(p)).join(" ");
+  const holdCaught = !DOMAIN_HOLD(withoutHold);
+  console.log(
+    holdCaught
+      ? "✓ zárolás-bekezdés nélküli §9 PIROS"
+      : "✗ FAIL zárolás-bekezdés nélküli §9 átmenne",
+  );
+  if (!holdCaught) failed++;
 }
 
 if (failed) {

@@ -284,6 +284,7 @@ import { HUB_PREFIX } from "./nav.js";
 import { uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
 import { prepareMailLang, T } from "../i18n/mail.js";
+import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { faviconSvg } from "../ui/brand.js";
 import {
   fetchPhoto,
@@ -1124,9 +1125,21 @@ async function handle(
   if (path === "/login") {
     if (method === "GET") return send(res, 200, operatorLoginPage(null, publicLoginUrl));
     if (method === "POST") {
+      // ADR-XXXX: failed-attempt throttle per IP, checked BEFORE the password.
+      if (loginLocked("operator", req)) {
+        return send(
+          res,
+          429,
+          operatorLoginPage(
+            T(consoleLang(), "Túl sok sikertelen belépési kísérlet. Próbáld újra 10 perc múlva."),
+            publicLoginUrl,
+          ),
+        );
+      }
       const form = await readBody(req);
       const id = await authenticateOperator(form.get("username") ?? "", form.get("password") ?? "");
       if (!id) {
+        recordLoginFailure("operator", req);
         return send(
           res,
           200,
