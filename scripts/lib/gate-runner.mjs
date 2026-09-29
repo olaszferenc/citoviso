@@ -65,7 +65,7 @@
 // CIT_GATE_SLOTS=<dir> moves the slot directory (the guard's fixture uses a private one);
 // CIT_GATE_SLOTS=0, a missing `flock` or an unwritable directory → runs without slots, loudly.
 //
-// JOB TIME LIMIT (ADR-XXXX). A gate that never returns used to hold the whole land hostage: a
+// JOB TIME LIMIT (ADR-0268). A gate that never returns used to hold the whole land hostage: a
 // Playwright gate printed every ✓ and then sat in epoll_wait for 13–18 minutes (2026-09-27
 // guest-mobile-check --selftest, 2026-09-29 cfg-sheet-scroll-check --selftest), until a human
 // killed it by hand. Now every gate has a wall-clock limit, CIT_GATE_JOB_TIMEOUT seconds

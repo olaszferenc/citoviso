@@ -1,6 +1,6 @@
 # Kapunkénti időkorlát a kapu-futtatóban — a beragadt böngészős kapu nem tartja fel a landot (2026-09-29)
 
-SUB-szál (koordinátor: `cit3bd83952`) · brief: `~/rc-briefs/kapu-job-idokorlat.md` · ADR-XXXX.
+SUB-szál (koordinátor: `cit3bd83952`) · brief: `~/rc-briefs/kapu-job-idokorlat.md` · ADR-0268.
 
 **Elvégezve:**
 - `scripts/lib/gate-runner.mjs`: minden kapunak van időkorlátja, `CIT_GATE_JOB_TIMEOUT` s (alapból 600, nem

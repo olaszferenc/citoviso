@@ -1,4 +1,4 @@
-## ADR-XXXX — Kapunkénti időkorlát a kapu-futtatóban: a vissza nem térő kapu HANGOSAN piros, a teljes folyamatfája leállítva (`scripts/lib/gate-runner.mjs`) (2026-09-29)
+## ADR-0268 — Kapunkénti időkorlát a kapu-futtatóban: a vissza nem térő kapu HANGOSAN piros, a teljes folyamatfája leállítva (`scripts/lib/gate-runner.mjs`) (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** a kapu-koordinátor (`cit3bd83952`) javaslatára: *„ok elfogadom”*.
   Brief: `~/rc-briefs/kapu-job-idokorlat.md`.

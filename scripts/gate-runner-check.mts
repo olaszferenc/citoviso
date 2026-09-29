@@ -25,7 +25,7 @@
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
 //     a módot/diffet olvasó kaput sosem hagyja ki — viszont egy commit landolásakor tényleg
 //     újrahasznosít (különben csak költség),
-//   · (ADR-XXXX) egy vissza nem térő kapu a CIT_GATE_JOB_TIMEOUT után HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
+//   · (ADR-0268) egy vissza nem térő kapu a CIT_GATE_JOB_TIMEOUT után HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
 //     + utolsó kimenet), a TELJES folyamatfája (a külön folyamatcsoportú unoka is — mint a Playwright
 //     Chromiuma) halott, a többi kapu lefut, és se zöld-gyorsítótár, se kapuidő-előzmény nem íródik,
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
