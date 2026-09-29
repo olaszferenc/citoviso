@@ -39,3 +39,12 @@ döntés: ADR-0273 (`_planning/decisions/XXXX-lead-mobile-nyugvoponton-mer.md`).
 - ⛔ Hibám: a próbafutásaim leállítására `pkill -f "lead-mobile-check.mts --gate"`-et futtattam, ami
   gépszinten illeszkedik — az A szál (`cit0dea1902`) épp futó hookjának kapuját is megölhette. Jelentve.
   Csak PID szerint ölj.
+
+## Utóirat — guest-mobile ⑥ (a lead-mobile land után, CPU-égető nélkül)
+- Egyedül: rc=0 (a terheléses ⑥-lelet nem reprodukálódott). Kódból: fix 600 + 80 ms a görgetés után;
+  aurora `.au-nav` 0,3 s-os becsúszás → terhelésen `stickyH`=0 → a sáv a léptetőre kerül.
+- Javítás `scripts/guest-mobile-check.mts`: `restFixed()` a két fix várakozás helyett. Ellenpróba a RÉGI
+  időzítéssel: a késve becsúszó takarást (`selftest-calnav-covered-late`) nem vette észre → az önteszt bukott;
+  az újjal piros. 12 ültetett hiba mind piros, 2/2 kapu-futás zöld (58 s, mint előtte), 2/2 önteszt zöld.
+- Land-idők (lead-mobile, 4. land): 45 perc falióra = 3 kör (a push kétszer visszapattant); az utolsó kör
+  kapu-futtatója 361 s.

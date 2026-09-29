@@ -107,7 +107,7 @@ interface Target { id: string; kind: "template" | "archetype" | "file"; html?: s
 // ── negative control (--selftest): the SAME page with deliberate regressions must go red on
 // the rules that claim to catch them; the clean render must not. A guard that cannot fail is
 // a false green (memory: guard_greenly_defended_the_bug).
-const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: string; js?: string }[] = [
+const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; mustNot?: string[]; tpl?: string; js?: string }[] = [
   // fullbleed carries the shared masthead AND a fixed booking bar (editorial has neither)
   // (a 120px pad measured 149px — one px under the rule: a planted fault must fail by a margin,
   //  not by luck — memory: barely passing value hides a dead rule)
@@ -118,6 +118,18 @@ const SELFTEST_REGRESSIONS: { id: string; css: string; expect: string[]; tpl?: s
   { id: "selftest-overflow", css: `body{min-width:600px}`, expect: ["①túlfolyás"] },
   { id: "selftest-calendar-dead", css: ``, expect: [] }, // the JS below kills the handler; judged by the "paged" probe
   { id: "selftest-no-two-step", css: `.cit-book__go{display:none!important}`, expect: ["⑥két-lépés"] },
+  // ⑥ a fixed block (narrower than a top bar, so stickyH does not clear it) over the calendar
+  // head's right end, where "next month" sits → ⑥naptár-takarva must go red
+  { id: "selftest-calnav-covered", css: ``, expect: ["⑥naptár-takarva"], js: `<div style="position:fixed;top:0;right:0;width:45%;height:45vh;background:#000;z-index:1000"></div>` },
+  // …the same block arriving LATE (a scroll-triggered slide with a 0,8 s delay): read at a fixed
+  // moment (the old 600 + 80 ms) the button was still free → a false GREEN; read at REST (a
+  // transition in its delay phase already counts as running) → red. This is the case that
+  // tells a rest-read measurement from a timed one.
+  { id: "selftest-calnav-covered-late", css: `.st-late{position:fixed;top:0;right:0;width:45%;height:45vh;background:#000;z-index:1000;transform:translateY(-110%);transition:transform .4s linear .8s}.st-late.on{transform:none}`, expect: ["⑥naptár-takarva"], js: `<div class="st-late"></div><script>addEventListener('scroll',function(){document.querySelector('.st-late').classList.toggle('on',scrollY>40)},{passive:true})</script>` },
+  // …and the POSITIVE twin (aurora's app bar, 2026-09-29): a full-width top bar that slides in
+  // on scroll over 1,5 s. Read at rest, stickyH is its full height and the calendar is placed
+  // under it — no ⑥ may fire on it.
+  { id: "selftest-slow-topbar", css: `.st-slow{position:fixed;top:0;left:0;right:0;height:110px;background:#222;z-index:1000;transform:translateY(-100%);transition:transform 1.5s linear}.st-slow.on{transform:none}`, expect: [], mustNot: ["⑥naptár-takarva"], js: `<div class="st-slow"></div><script>addEventListener('scroll',function(){document.querySelector('.st-slow').classList.toggle('on',scrollY>40)},{passive:true})</script>` },
   // a fixed band painted over the lower half of the headline (tilted-gallery's pinned bar on a
   // landscape phone, 2026-09-26); placed by script at the h1's own rect so it works on any page
   // a headline that starts on the first screen and ends under the fold (dark-luxury landscape,
@@ -178,6 +190,27 @@ const LIB = `
   const txt = (el) => (el.getAttribute('aria-label') || el.textContent || el.value || '').trim().replace(/\\s+/g,' ').slice(0, 40);
   const rect = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), b: Math.round(r.bottom) }; };
   const inView = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < H && r.right > 0 && r.left < W; };
+  // ⏸ REST, not a timer (after ADR-0273): after a scroll, wait until every fixed/sticky layer is
+  // still — no finite animation/transition running on it (or inside it) and its box + opacity
+  // unchanged for 300 ms (page clock). Two frames first, so the page's own scroll handlers
+  // (aurora: .au-scrolled → 0,3 s fade/slide-in) have run and started their transitions.
+  // Measured 2026-09-29 under load: a fixed 600 ms read aurora's app bar before it arrived,
+  // stickyH came out 0, and the bar then lay on the calendar's "next month" button (false ⑥).
+  // Max 10 s; a page that never rests is measured anyway (nothing is skipped).
+  const restFixed = async () => {
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const layers = [...document.querySelectorAll('body *')].filter(e => { const p = getComputedStyle(e).position; return p === 'fixed' || p === 'sticky'; });
+    const key = () => Math.round(scrollY) + '|' + layers.map(e => { const r = e.getBoundingClientRect(); return [r.top, r.left, r.width, r.height].map(Math.round).join(',') + ',' + getComputedStyle(e).opacity; }).join('|');
+    const moving = () => document.getAnimations().some(a => a.playState === 'running' && a.effect && a.effect.target && a.effect.getTiming().iterations !== Infinity && layers.some(l => l === a.effect.target || l.contains(a.effect.target)));
+    const t0 = performance.now(); let k = key(), since = t0;
+    while (performance.now() - t0 < 10000) {
+      await new Promise(r => setTimeout(r, 50));
+      const k2 = key(), now = performance.now();
+      if (moving() || k2 !== k) { k = k2; since = now; continue; }
+      if (now - since >= 300) return true;
+    }
+    return false;
+  };
   const fullyInView = (el) => { const r = el.getBoundingClientRect(); return r.top >= -1 && r.bottom <= H + 1 && r.left >= -1 && r.right <= W + 1; };
   // an ANCESTOR on top counts as cover: a figure's ::after wash painted over the <img> takes the
   // tap, and the picture's own listener never runs (fullbleed, 2026-09-26) — only descendants pass
@@ -344,10 +377,10 @@ const PROBE_BOOKING = `(async () => { ${LIB}
   // measured AFTER scrolling there: the scrolled-in app bars (opacity 0 at the top) and the
   // late-sticking navs only exist at that scroll position
   const cal = q('.cit-book__cal'); const calTop = cal.getBoundingClientRect().top + window.scrollY;
-  window.scrollTo(0, Math.max(0, calTop - 8)); await new Promise(r => setTimeout(r, 600)); // the scrolled-in bars fade for .3s; under load longer
+  window.scrollTo(0, Math.max(0, calTop - 8)); out.rested = await restFixed(); // the scrolled-in bars fade/slide in (.3s; under load longer)
   const stickyH = (() => { let m = 0; for (const el of document.querySelectorAll('body *')) { const cs = getComputedStyle(el); if ((cs.position === 'sticky' || cs.position === 'fixed') && vis(el)) { const r = el.getBoundingClientRect(); if (r.top <= 20 && r.width >= W * 0.6 && r.height < H * 0.4) m = Math.max(m, r.bottom); } } return m; })();
   out.stickyTop = Math.round(stickyH);
-  window.scrollTo(0, Math.max(0, calTop - stickyH - 8)); await new Promise(r => setTimeout(r, 80));
+  window.scrollTo(0, Math.max(0, calTop - stickyH - 8)); out.rested = (await restFixed()) && out.rested;
   out.widgetTop = Math.round(calTop);
   out.widgetHeight = Math.round(form.getBoundingClientRect().height);
   // calendar controls
@@ -625,6 +658,7 @@ async function main(): Promise<void> {
         if (b) {
           if (!b.calPaged && b.calNav.next && !b.calNav.next.disabled) F(P, vp.id, "HIBA", "⑥naptár-lapoz", `a „következő hónap” gomb nem lapoz (címke változatlan)`);
           if (b.calNav.next?.covered) F(P, vp.id, "HIBA", "⑥naptár-takarva", `a hónap-léptetőt takarja: ${b.calNav.next.covered}`);
+          if (b.rested === false) F(P, vp.id, "GYANÚ", "⑥nyugvópont", `a rögzített sávok 10 s alatt sem álltak meg a naptárnál (mérve így is)`);
           if (b.day.minW < 32 || b.day.minH < 32) F(P, vp.id, b.day.minW < 24 || b.day.minH < 24 ? "HIBA" : "ERGONÓMIA", "⑥nap-cella", `a naptár napjai ${b.day.minW}×${b.day.minH}px (betű ${b.day.fs}px)`);
           if (b.picked && !(b.picked.from && b.picked.to)) F(P, vp.id, "HIBA", "⑥két-érintés", `két nap érintése nem adott tartományt (from=${b.picked.from} to=${b.picked.to})`);
           if (b.reversed.errShown === false) F(P, vp.id, "HIBA", "⑥fordított-dátum", `fordított dátumra nincs hibaüzenet`);
@@ -761,6 +795,7 @@ async function main(): Promise<void> {
     for (const r of SELFTEST_REGRESSIONS) {
       const got = new Set(findings.filter((f) => f.page === r.id).map((f) => f.rule));
       for (const e of r.expect) if (!got.has(e)) { bad++; console.error(`❌ önteszt: ${r.id} → a(z) ${e} szabály NEM szólalt meg (kapott: ${[...got].join(", ") || "semmi"})`); }
+      for (const e of r.mustNot ?? []) if (got.has(e)) { bad++; console.error(`❌ önteszt: ${r.id} → a(z) ${e} szabály HAMISAN szólalt meg (a mérés nem nyugvóponton olvasott)`); }
     }
     // the dead "next month" button: the paging probe must say so
     const dead = findings.some((f) => f.page === "selftest-calendar-dead" && f.rule === "⑥naptár-lapoz");

@@ -47,3 +47,13 @@ mérte; terhelésen félúton (top 695 a 844-ből).
 **Ami NEM segített volna:** a brief 3. pontja (soros futás, 1 munkás) — mérve 1 munkással is piros volt.
 
 **Bizonyítás:** lásd a session-jegyzetet (`_planning/memory/2026-09-29_lead_mobile_nyugvopont.md`).
+
+**Kiterjesztés — `guest-mobile-check` ⑥ (2026-09-29, ugyanez a szál):** terhelésen egyszer piros volt
+(aurora@390 „⑥naptár-takarva: div.au-glass.au-nv”), egyedül zöld. A ⑥ lépés a görgetés után FIX 600 ms-ot,
+majd 80 ms-ot várt, és onnan olvasta a `stickyH`-t és a takarást; az aurora app-bárja görgetésre 0,3 s alatt
+csúszik be. Javítás: `restFixed()` (két frame a lap görgetés-kezelőinek, utána minden fixed/sticky réteg
+300 ms-ig áll és nincs rajta/benne futó véges átmenet; 10 s után GYANÚ „⑥nyugvópont”, de mér).
+Mérés: a fix időzítés NEM CSAK hamis pirosat adhat — a késve érkező takarást ELNÉZTE (hamis zöld). Új
+visszarontás: `selftest-calnav-covered-late` (0,8 s késleltetéssel becsúszó blokk a léptetőn) — a régi
+időzítéssel NEM szólal meg, az újjal piros; + `selftest-calnav-covered` (azonnali takarás) és a pozitív iker
+`selftest-slow-topbar` (1,5 s-os teljes szélességű felső sáv: a naptár alá kerül, ⑥ nem szólalhat meg).
