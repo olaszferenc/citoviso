@@ -18,6 +18,7 @@ process.env.CIT_SHOT = "1";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { sql } from "kysely";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
@@ -100,17 +101,25 @@ async function leadId(): Promise<string> {
   const raw = (row?.raw ?? {}) as { city?: string };
   env.ELEK_NIGHT_CITY = raw.city || "Köveskál";
   env.ELEK_NIGHT_ZIP = /\b(\d{4})\b/.exec(row?.address ?? "")?.[1] ?? "8274";
+  // The owner types the subject's OWN address into the location module (FK-013 ⑧); a made-up
+  // "Fő utca 12." pinned the map somewhere the guest page then contradicted.
+  env.ELEK_NIGHT_ADDRESS = (row?.address ?? "").replace(/,?\s*Hungary$/i, "").trim() || `${env.ELEK_NIGHT_CITY}, Fő utca 12.`;
 }
 
 /** Amit a lánc következő köre megkövetel — mérve, nem feltételezve. */
 async function refreshFacts(): Promise<void> {
   const lid = await leadId();
 
+  // A lead with one prospect per style (Ifjúsági Szállás Tihany: 19, seeded for FK-009)
+  // must be opened on the APPROVED mock's link — the newest row is just the last style
+  // the seed happened to mint, an unapproved one.
   const prospect = await db
     .selectFrom("prospect")
-    .select(["token", "contact_email"])
-    .where("lead_id", "=", lid)
-    .orderBy("created_at", "desc")
+    .leftJoin("mock_artifact", "mock_artifact.id", "prospect.mock_artifact_id")
+    .select(["prospect.token as token", "prospect.contact_email as contact_email"])
+    .where("prospect.lead_id", "=", lid)
+    .orderBy(sql`coalesce(mock_artifact.status = 'approved', false)`, "desc")
+    .orderBy("prospect.created_at", "desc")
     .executeTakeFirst();
   if (prospect) env.ELEK_NIGHT_PROSPECT_PATH = `/p/${prospect.token}`;
 

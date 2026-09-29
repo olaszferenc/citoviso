@@ -132,7 +132,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 
 - [ ] Leírást ír az egységhez, és elmenti
-  tedd: írd "textarea[name='description']" "Nádfedeles parasztház felső szintje: két hálószoba, saját fürdő, tágas terasz a burjánzó kertre. Reggeli a kovácsoltvas asztalnál, csendben."
+  tedd: írd "textarea[name='description']" "Két hálószoba, saját fürdőszoba és felszerelt teakonyha. Csendes, világos szoba, reggel a teraszon lehet kávézni."
   tedd: kattints ".rs-pop__foot button[type='submit']"
   tedd: várj "Mentve" 20
   kézi: a mentés után hol van a tulaj (visszakerült-e a listára vagy a felugróban maradt), és tudja-e, hogy a leírás kint van; a szövegmező 390-en elég nagy-e a gépeléshez
@@ -244,7 +244,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
   # a Modulok fület adja vissza, és a mező hiánya „regressziónak" látszik (mérve: egy
   # futásban az FK-012 kihagyta a felszereltséget, és a hiba ITT jelent meg).
   várd: látható "Amit kínál"
-  tedd: írd "textarea[name='other']" "Kerti grill\nKovácsoltvas kerti bútor\nNádtető alatti terasz"
+  tedd: írd "textarea[name='other']" "Kerti grill\nKerti bútor\nFedett terasz"
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
   tedd: görgess-középre "Beállítások mentése"
   tedd: kattints "Beállítások mentése"
@@ -257,7 +257,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 - [ ] Négy erősséget ír be, és elmenti
   út: /admin?tab=modulok&m=usp
   várd: látható "Miért Önt válasszák"
-  tedd: írd "textarea[name='items']" "Nádfedeles parasztház a Káli-medence szívében\nÁrnyas, burjánzó kert, csendes zugokkal\nNincs átmenő forgalom — igazi vidéki nyugalom\nA Balaton 12 km, a Kőtenger 5 km"
+  tedd: írd "textarea[name='items']" "Csendes szállás ${ELEK_NIGHT_CITY} területén\nSaját parkoló, a kocsi a szállás mellett marad\nA házigazda személyesen fogadja a vendégeket\nRugalmas érkezés előzetes egyeztetéssel"
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
   tedd: görgess-középre "Beállítások mentése"
   tedd: kattints "Beállítások mentése"
@@ -286,7 +286,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 - [ ] A cím megadása és a térkép-tű
   út: /admin?tab=modulok&m=location
   várd: látható "A szállás helye"
-  tedd: írd "#pl_addr" "${ELEK_NIGHT_CITY}, Fő utca 12."
+  tedd: írd "#pl_addr" "${ELEK_NIGHT_ADDRESS}"
   tedd: kattints "#pl_find"
   tedd: várj "Megközelítés" 15
   kézi: a „Megkeresem a térképen" megtalálta-e a címet 390-en; a térkép és a tű látszik-e, és a tű ujjal HÚZHATÓ-e; a tulaj tudja-e, hogy ez a pont vezeti majd a vendéget
@@ -294,7 +294,7 @@ kontraktus: assets/design-refs/tenant-admin/season-datepicker/README.md
 
 
 - [ ] Megközelítés és parkolás, majd mentés
-  tedd: írd "textarea[name='approachNote']" "A 71-es útról ${ELEK_NIGHT_CITY} felé, a templomtól a második utca jobbra. A kaputól a ház a kert végében."
+  tedd: írd "textarea[name='approachNote']" "${ELEK_NIGHT_CITY} központjából a táblákat követve pár perc. Érkezéskor hívjon, és a kapunál várjuk."
   tedd: írd "input[name='parkingNote']" "Ingyenes parkolás az udvarban, két autónak."
   tedd: görgess-középre "#pl_save"
   tedd: kattints "#pl_save"

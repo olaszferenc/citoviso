@@ -176,6 +176,9 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
   tedd: írd "#cit-from" "2026-11-13"
   tedd: írd "#cit-to" "2026-11-15"
   várd: látható "Erre az időszakra a szállásadó egyedi árat ad."
+  # ADR-0270 (2026-09-29): árajánlat-módban a pipa nem „személyesen igazolja vissza” — az
+  # ajánlatból a VENDÉG elfogadásával lesz foglalás.
+  várd: szövege "[data-cit-trust-confirm]" = "Az ajánlat elfogadásáról Ön dönt"
   kézi: a képen: a választó az egész házat mutatja-e (nem egy szobát); a magyarázó doboz megmondja-e, MIÉRT nincs szám, és hogy az elküldés még nem kötelez; NINCS-e sehol összeg
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -200,7 +203,7 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
 - [ ] A vélemény beküldhető telefonon, és a válasz megmondja, mikor jelenik meg
   út: /t/${ELEK_NIGHT_SLUG}/
   tedd: írd ".cit-rev-f [name='name']" "Elek Vendég Éjszakai"
-  tedd: írd ".cit-rev-f [name='body']" "Csendes kert, nádfedeles ház, a házigazda mindenben segített. Jövünk máskor is."
+  tedd: írd ".cit-rev-f [name='body']" "Tiszta szoba, csendes éjszaka, a házigazda mindenben segített. Jövünk máskor is."
   tedd: írd ".cit-rev-f [name='email']" "elek@citoviso.com"
   tedd: kattints ".cit-rev-f [name='consent']"
   tedd: kattints "Vélemény elküldése"

@@ -22,6 +22,21 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
+## ⓪ A belépés után: mi vár döntésre?
+
+- [ ] Az Áttekintés tetején sáv, a Teendők között kérésenként egy sor, a jelvény a döntésre várókat számolja
+  # ADR-0274 ① (2026-09-29): a döntésre váró kérés KÁRTYANYITÁS NÉLKÜL látszik. Két kérés vár
+  # (foglalás + árajánlat) — a Teendők-sorok a kérés saját gombját adják.
+  várd: darab "[data-pending-strip]" == 1
+  várd: látható "2 kérés vár az Ön döntésére"
+  várd: darab "[data-todo='booking-pending']" == 2
+  várd: látható "Döntésre vár: Elek Vendég Éjszakai"
+  várd: látható "Árajánlatot vár: Elek Vendég Ajánlat"
+  tedd: görgess-középre "[data-todo='booking-pending']"
+  kézi: 390-en a belépés utáni ELSŐ képernyőn kiderül-e, hogy két vendég vár a tulaj döntésére (sáv + jelvény), és a Teendők-sorok „Döntök” / „Ajánlatot küldök” gombja ujjal eltalálható-e; a két kérés különbsége (foglalás vs. árat kér) kiolvasható-e
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
 ## ① Az értesítő-levél az Üzenetek fülön (a tulaj innen indul)
 
 - [ ] Az Üzenetek fülön ott a foglalási kérés, és a levél a lényeget mondja elöl
@@ -56,6 +71,14 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
+- [ ] A gyors döntés „Mégsem”-je bezárja a kérdést, és nem dönt
+  tedd: kattints ".adm-msg__qd--ok [data-msg-cfno]"
+  várd: darab ".adm-msg__qd--ok[open]" == 0
+  várd: látható "Gyors döntés innen is:"
+  kézi: a „Mégsem” után a tulaj ugyanott van-e, ahol a kérdés előtt (a levélben), és látszik-e, hogy SEMMI nem történt (a kérés továbbra is döntésre vár)
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
 ## ② A Foglalások fül telefonon — mi az, amit el kell dönteni?
 
 - [ ] A fülön ott a kérés, minden adatával
@@ -64,6 +87,9 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   várd: látható "2026. 10. 24."
   # 2 éj × 28 000 — a tulaj FK-013-ban felvitt őszi szezonja (lásd FK-014 ⑥).
   várd: látható "56 000"
+  # ADR-0274 ⑤: a vendég egy koppintásra (a vendég-kör telefonszámot is adott).
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) a[href^='tel:']" == 1
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) a[href^='mailto:']" >= 1
   kézi: 390-en egy képernyőn látszik-e: KI, MIKOR, MENNYIÉRT, HÁNY FŐ, és a vendég ÜZENETE („Kisállattal érkeznénk"); a kérés-kártya nem lóg-e ki oldalt; a döntés-gombok a kártyán vannak-e vagy görgetni kell hozzájuk
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -88,9 +114,30 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   # ADR-0274 (FK-015 „A"): a megerősítő a KÁRTYÁN belül nyílik, teljes szélességben.
   # A kérdés ÖSSZERAKOTT mondat („Visszaigazolja {name} foglalását?") — nem idézhető
   # literálként (elek-label-drift-check); a megerősítő megléte szelektorral mérve.
-  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) .bk-cf__q" == 1
+  # ⛔ MÉRT (2026-09-29, Tihany-kör): a kártyán a visszaigazoló ÉS az elutasító megerősítő
+  # is a DOM-ban ül (két `<details>`), a puszta `.bk-cf__q` 2-t adott egy hibátlan lapon —
+  # a NYITOTT megerősítőt kell számolni.
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) details[open] .bk-cf__q" == 1
   várd: látható "Igen, visszaigazolom"
   kézi: mi történt a koppintásra (a képen): megerősítő nyílt-e, a vendég NEVE szerepel-e benne, és 390-en a képernyőre fér-e; ha a megerősítő a görgető-dobozban ül, levágja-e a lap alja
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
+- [ ] A kártya „Mégsem”-je semmit nem dönt, és a döntés újra megnyitható
+  # ADR-0274 ③: „A »Mégsem« semmit nem változtat.” — a koppintás után a megerősítő csukva,
+  # a kérés továbbra is döntésre vár, és a „Visszaigazolom” újra ott van.
+  tedd: kattints ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) [data-bk-cfno]"
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) details[open] .bk-cf__q" == 0
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) summary.bk-btn--ok" == 1
+  tedd: görgess-középre ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) summary.bk-btn--ok"
+  kézi: a „Mégsem” után a kártya ugyanúgy áll-e, mint előtte (mindkét döntés-gomb látszik), és a tulaj nem ugrott-e el a lap más pontjára
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+
+- [ ] Újra megnyitja a visszaigazolást
+  tedd: kattints ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) summary.bk-btn--ok"
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) details[open] .bk-cf__q" == 1
+  kézi: a második megnyitás ugyanazt a megerősítőt adja-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 
@@ -124,20 +171,25 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   # helyes viselkedés, ezért itt csak a megjelenést mérjük.
   tedd: várj "Ajánlat küldése" 20
   várd: látható "Ajánlat küldése"
+  # ADR-0267 (2026-09-29): az ár ALAPBÓL csak erre a kérésre szól — a pipa üres, és a lap ki is
+  # mondja. ⛔ MÉRT (2026-09-29, Tihany-kör): ez eddig a KÜLDŐ lépésben állt, de a runner a
+  # `várd`-okat a `tedd`-ek UTÁN értékeli — a küldés után a lap már a nyugta, így a két
+  # mondat hiányát jelentette egy hibátlan lapon. Itt, küldés ELŐTT mérve.
+  várd: látható "Mentsem az árlistába is?"
+  várd: látható "Csak erre a kérésre."
+  várd: darab "[data-into]:checked" == 0
   kézi: az ajánlat-lap 390-en megmondja-e, KINEK és MELYIK időszakra ad árat, és hogy a vendég eddig nem látott összeget; az ár-mező numerikus billentyűzetet kér-e (inputmode), és a küldés-gomb nem esik-e a billentyűzet alá
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 - [ ] Árat ír, és elküldi — a vendég levélben kapja
   tedd: írd "[data-amount]" "90 000"
   tedd: írd "#of-note" "Hat főre a teljes ház, az ágyneműt odakészítjük."
-  # ADR-0267 (2026-09-29): az ár ALAPBÓL csak erre a kérésre szól — a pipa üres, és a lap ki is
-  # mondja. (Az ADR-0215 alatt ez a lépés a házat némán foglalhatóvá kapcsolta: 90 000 Ft alapár.)
-  várd: látható "Mentsem az árlistába is?"
-  várd: látható "Csak erre a kérésre."
+  # (Az ADR-0215 alatt ez a lépés a házat némán foglalhatóvá kapcsolta: 90 000 Ft alapár.)
   tedd: görgess-középre "[data-send]"
   tedd: kattints "[data-send]"
   tedd: várj "Ajánlat elküldve" 25
   várd: látható "Ajánlat elküldve"
+  várd: látható "árlistája nem változott"
   adat: ELEK-NIGHT árajánlat (Elek Vendég Ajánlat, 90 000 Ft/éj)
   kézi: a küldés előtt a lap kiírta-e az ÖSSZEGET (éjszakák × ár), és érthető-e 390-en, hogy az ár csak erre a kérésre szól, és mi történne a „Mentsem az árlistába is?” pipával; a küldés után kimondja-e, hogy a vendég levelet kapott, hogy az árlista nem változott, és mi a következő lépés; van-e út vissza a Foglalásokhoz
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
@@ -168,6 +220,8 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
 
 - [ ] A visszaigazolt foglalás napjai foglaltként jelennek meg
   út: /admin?tab=foglalasok&naptar=1
+  # ADR-0274 ④: a naptár a döntött kérés HÓNAPJÁN nyílik (a mai hónap helyett).
+  várd: látható "október"
   kézi: 390-en a naptár átlátható-e (nem kell vízszintesen görgetni), a foglalt napok jelölése nem csak színnel különbözik-e, és a nap-panel koppintásra a helyes vendéget mutatja-e; a naptár fekvő tartásban használhatóbb-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 

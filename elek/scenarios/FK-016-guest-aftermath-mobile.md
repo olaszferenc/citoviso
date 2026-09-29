@@ -82,6 +82,9 @@ kontraktus: assets/design-refs/console/booking-email/README.md
 
 - [ ] A vendég lemondja a foglalását, és tudja, mi jön
   út: ${ELEK_NIGHT_CANCEL_PATH}
+  # ADR-0270 (2026-09-29): a lemondó lapon a szállásadó koppintható (tel:/mailto:) — a
+  # módosítás egyetlen útja addig egy halott mondat volt.
+  várd: darab "[data-cit-host-reach] a[href^='tel:'], [data-cit-host-reach] a[href^='mailto:']" >= 1
   tedd: írd "textarea" "Közbejött egy családi esemény, elnézést."
   tedd: kattints "Igen, lemondom a foglalást"
   várd: látható "Foglalása lemondva"
