@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-negy-tovabbi-lassu-kapu-parhuzamos.md) — A következő négy lassú böngészős kapu is a közös poolon mér (`room-card-overflow` · `configurator-float` · `configurator-placement` · `whole-only-guest`); a `mobile-chrome --selftest` kimarad (2026-09-29)
 - [ADR-0263](decisions/0263-a-negy-leglassabb-bongeszos-kapu-parhuzamos.md) — A négy leglassabb böngészős kapu párhuzamos munkásokkal mér, közös, sorrendtartó munkás-körrel (`scripts/lib/gate-pool.mts`) (2026-09-29)
 - [ADR-0262](decisions/0262-a-csillagsor-meretet-es-lathatosagat-bongeszos.md) — A csillagsor MÉRETÉT és LÁTHATÓSÁGÁT böngészős őr méri mind a 19 sablonon (`star-size-check`) (2026-09-29)
 - [ADR-0261](decisions/0261-a-mobile-chrome-check-parhuzamos-munkasokkal.md) — A `mobile-chrome-check` párhuzamos munkásokkal mér, és az öntesztje a fő futással egy időben futhat (indokolt önátfedés-jelölés a kapu-futtatóban) (2026-09-29)

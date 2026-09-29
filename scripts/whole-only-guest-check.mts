@@ -22,6 +22,7 @@ import path from "node:path";
 import { chromium, type Page } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { err, out, pool, replay } from "./lib/gate-pool.mts";
 import { injectRuntime } from "../src/generator/runtime.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -182,48 +183,82 @@ async function main(): Promise<void> {
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
   let fail = 0, total = 0;
   try {
-    for (const vp of WIDTHS) {
-      const page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
-      await page.route("**/*", (r) => {
-        const u = r.request().url();
-        return u.startsWith("file:") || u.startsWith("data:") ? r.continue() : r.abort();
-      });
-      for (const id of ids) {
-        for (const priced of [true, false]) {
-          total++;
-          const file = await renderTo(dir, id, siteData("only", priced), priced ? "only" : "only-noprice");
-          const f = await measure(page, `file://${file}`, priced);
-          const head = `${id.padEnd(16)} ${vp.label.padEnd(8)} ${priced ? "árral  " : "ár nélk"}`;
-          if (f.length) {
-            fail++;
-            console.error(`  ✗ ${head} ${f.slice(0, 4).join(" · ")}`);
-          } else console.log(`  ✓ ${head}`);
-          if (priced && SHOT_IDS.has(id)) {
-            await page.goto(`file://${file}`, { waitUntil: "load" });
-            await page.waitForTimeout(200);
-            // The rooms area only (band + grid), not the whole page: that is what is judged.
-            const clip = (await page.evaluate(`(function(){
-              var t = 1e9, b = 0;
-              document.querySelectorAll('[data-cit-module="rooms"]').forEach(function(e){
-                var r = e.getBoundingClientRect(); t = Math.min(t, r.top + scrollY); b = Math.max(b, r.bottom + scrollY);
-              });
-              return { x: 0, y: Math.max(0, t - 24), width: innerWidth, height: Math.min(b - t + 48, 4000) };
-            })()`)) as { x: number; y: number; width: number; height: number };
-            await page.screenshot({ path: path.join(ROOT, "assets", "Temp", `_wog-${id}-${vp.label}.png`), fullPage: true, clip });
-          }
-        }
-        // NEGATIVE CONTROL: "egyben IS kiadó" — rooms priced and bookable, the band follows them.
-        total++;
-        const ctl = await renderTo(dir, id, siteData("also"), "control");
-        const cf = await measure(page, `file://${ctl}`, true);
-        const blind = !cf.some((x) => x.startsWith("main-sav-db")) || !cf.some((x) => x.startsWith("szoba-ar-attr"));
-        if (blind) {
-          fail++;
-          console.error(`  ✗ ${id.padEnd(16)} ${vp.label.padEnd(8)} KONTROLL: a próba nem ment pirosra a foglalható szobákon (${cf.join(" · ") || "0 lelet"})`);
+    // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). Every page is rendered FIRST,
+    // once, into this run's own mkdtemp — the serial loop re-rendered the same file for each
+    // width, which two workers would have raced on (one writing while the other navigates) —
+    // and the pool only READS them. The (width, template) units run on gateJobs() workers, each
+    // with its OWN page per width (the serial run reused one per width), the same goto → probe
+    // → popover steps; the verdict lines are replayed in the original (width, template) order.
+    // Screenshots keep their per-(template, width) names. CIT_GATE_JOBS=1 = the old serial behaviour.
+    const files = new Map<string, string>();
+    for (const id of ids) {
+      for (const priced of [true, false]) {
+        const tag = priced ? "only" : "only-noprice";
+        files.set(`${id}/${tag}`, await renderTo(dir, id, siteData("only", priced), tag));
+      }
+      files.set(`${id}/control`, await renderTo(dir, id, siteData("also"), "control"));
+    }
+    const units = WIDTHS.flatMap((vp) => ids.map((id) => ({ vp, id })));
+    const workerPages = new Map<string, Page>();
+    const results = await pool(units, async ({ vp, id }, _i, w) => {
+      let page = workerPages.get(`${w}/${vp.label}`);
+      if (!page) {
+        page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
+        await page.route("**/*", (r) => {
+          const u = r.request().url();
+          return u.startsWith("file:") || u.startsWith("data:") ? r.continue() : r.abort();
+        });
+        workerPages.set(`${w}/${vp.label}`, page);
+      }
+      let uFail = 0, uTotal = 0;
+      for (const priced of [true, false]) {
+        uTotal++;
+        const file = files.get(`${id}/${priced ? "only" : "only-noprice"}`)!;
+        const f = await measure(page, `file://${file}`, priced);
+        const head = `${id.padEnd(16)} ${vp.label.padEnd(8)} ${priced ? "árral  " : "ár nélk"}`;
+        if (f.length) {
+          uFail++;
+          err(`  ✗ ${head} ${f.slice(0, 4).join(" · ")}`);
+        } else out(`  ✓ ${head}`);
+        if (priced && SHOT_IDS.has(id)) {
+          await page.goto(`file://${file}`, { waitUntil: "load" });
+          await page.waitForTimeout(200);
+          // The rooms area only (band + grid), not the whole page: that is what is judged.
+          const clip = (await page.evaluate(`(function(){
+            var t = 1e9, b = 0;
+            document.querySelectorAll('[data-cit-module="rooms"]').forEach(function(e){
+              var r = e.getBoundingClientRect(); t = Math.min(t, r.top + scrollY); b = Math.max(b, r.bottom + scrollY);
+            });
+            return { x: 0, y: Math.max(0, t - 24), width: innerWidth, height: Math.min(b - t + 48, 4000) };
+          })()`)) as { x: number; y: number; width: number; height: number };
+          await page.screenshot({ path: path.join(ROOT, "assets", "Temp", `_wog-${id}-${vp.label}.png`), fullPage: true, clip });
         }
       }
-      await page.close();
-    }
+      // NEGATIVE CONTROL: "egyben IS kiadó" — rooms priced and bookable, the band follows them.
+      uTotal++;
+      const cf = await measure(page, `file://${files.get(`${id}/control`)!}`, true);
+      const blind = !cf.some((x) => x.startsWith("main-sav-db")) || !cf.some((x) => x.startsWith("szoba-ar-attr"));
+      if (blind) {
+        uFail++;
+        err(`  ✗ ${id.padEnd(16)} ${vp.label.padEnd(8)} KONTROLL: a próba nem ment pirosra a foglalható szobákon (${cf.join(" · ") || "0 lelet"})`);
+      }
+      return { fail: uFail, total: uTotal };
+    });
+    for (const pg of workerPages.values()) await pg.close();
+    units.forEach(({ vp, id }, i) => {
+      const r = results[i]!;
+      replay(r.lines);
+      if (r.ok) {
+        fail += r.value.fail;
+        total += r.value.total;
+      } else {
+        // ⛔ A unit without a result is a measurement that never happened — a failure, never a green.
+        // It stood for three measurements (árral, ár nélkül, kontroll); all three count as failed.
+        fail += 3;
+        total += 3;
+        console.error(`  ✗ ${id.padEnd(16)} ${vp.label.padEnd(8)} ⛔ a mérés nem futott le: ${String((r.error as Error)?.message ?? r.error).slice(0, 200)}`);
+      }
+    });
   } finally {
     await browser.close();
     if (KEEP) console.log(`  (a lapok: ${dir})`);

@@ -16,12 +16,13 @@
 //
 //   npx tsx scripts/configurator-placement-check.mts
 
-import { chromium } from "playwright-core";
+import { chromium, type Page } from "playwright-core";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../src/config.js";
+import { err, out, pool, replay } from "./lib/gate-pool.mts";
 import { MODULE_CATALOG } from "../src/modules.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -30,10 +31,10 @@ import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown): void {
-  if (cond) console.log(`  ✓ ${name}`);
+  if (cond) out(`  ✓ ${name}`);
   else {
     failures++;
-    console.error(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
+    err(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
   }
 }
 
@@ -51,7 +52,9 @@ const LEAD: SiteData = {
 };
 
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
-const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+/** A fresh page — the serial run used ONE page for everything, but every step below starts
+ *  with its own goto to its own file, so nothing carried over from one step to the next. */
+const newPage = () => browser.newPage({ viewport: { width: 1400, height: 900 } });
 
 const injected: string[] = [];
 const missing: string[] = [];
@@ -80,18 +83,19 @@ const OFFERED_SURFACES = SURFACES.filter(
 
 console.log(`ADR-0061 all-in mock (${Object.keys(TEMPLATES).length} sablon):\n`);
 
-for (const t of Object.keys(TEMPLATES)) {
+/** ① One template's all-in mock: server-side surfaces + marking, then first paint in a browser. */
+async function measureTemplate(t: string, page: Page) {
   const recipe: Recipe = { template: t, skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
   const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
 
   const absent = OFFERED_SURFACES.filter(([, re]) => !re.test(bare)).map(([n]) => n);
-  if (absent.length) missing.push(`${t}(${absent.join(",")})`);
+  const missingT = absent.length ? `${t}(${absent.join(",")})` : null;
   // The §B.17 marking lives ON the sampled sections: hours + pricing + poi at least.
   // The program sample marks itself in its lead sentence (owner's choice C, 2026-09-23).
   const pills = bare.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;
   const poiMarked = /data-cit-module="poi"[^>]*>(?:(?!<\/section>)[\s\S])*class="cit-ev__minta"/.test(bare);
-  if (pills < 2 || !poiMarked) unmarked.push(`${t}(${pills}${poiMarked ? "" : ",poi jelöletlen"})`);
+  const unmarkedT = pills < 2 || !poiMarked ? `${t}(${pills}${poiMarked ? "" : ",poi jelöletlen"})` : null;
 
   const dir = await mkdtemp(path.join(tmpdir(), "cfg-"));
   const f = path.join(dir, "p.html");
@@ -101,20 +105,8 @@ for (const t of Object.keys(TEMPLATES)) {
   await page.waitForTimeout(350);
 
   const res = await page.evaluate(() => document.querySelectorAll("[data-cit-sample]").length);
-  if (res > 0) injected.push(`${t}(${res})`);
+  return { missingT, unmarkedT, injectedT: res > 0 ? `${t}(${res})` : null };
 }
-
-check(
-  "⭐⭐ minden eladható modul felülete a SZERVER-oldali oldalon él (all-in, natívan)",
-  missing.length === 0,
-  missing.slice(0, 6),
-);
-check("a minta-adatú szekciók jelöltek (Minta-szalag ≥2 + a programajánló bevezetője)", unmarked.length === 0, unmarked.slice(0, 6));
-check(
-  "⭐⭐ új artifactra a konfigurátor NULLA generikus minta-kártyát injektál",
-  injected.length === 0,
-  injected.slice(0, 6),
-);
 
 // ── ⛔ §I: EVERY module toggle must VISIBLY change the page ───────────────────
 // Owner report 2026-08-23: switching between the three packages changed nothing on
@@ -122,7 +114,7 @@ check(
 // reviews) had no usable DOM anchor, so their toggle was a no-op while the price
 // changed. That is selling something the prospect cannot see. This measures the
 // PAGE HEIGHT before/after each toggle in a real browser — a proxy nothing can fake.
-{
+async function checkToggles(page: Page): Promise<void> {
   const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
   const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
@@ -171,7 +163,7 @@ check(
 //      package does not include.
 // The earlier version of this gate missed #2 because it skipped anchors shared by
 // several modules — which is exactly where the lie lived.
-{
+async function checkPresets(page: Page): Promise<void> {
   const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
   const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
@@ -286,7 +278,7 @@ check(
 }
 
 // ── legacy fallback: an OLD artifact (no stamp, no module sections) still sells ──
-{
+async function checkLegacy(page: Page): Promise<void> {
   const legacy =
     `<!doctype html><html><head><meta charset="utf-8"></head><body>` +
     `<section id="cit-enquiry" data-cit-module="booking" data-cit-name="Régi Mock"></section>` +
@@ -302,6 +294,67 @@ check(
     return s.filter((n) => (n as HTMLElement).offsetParent !== null).length;
   });
   check("régi (pecsét nélküli) artifacton a minta-kártya fallback ÉL (≥6 látszik)", res >= 6, res);
+}
+// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). The 19 template loads and the
+// three browser scenarios (toggles, packages, legacy fallback) ran one after the other on ONE
+// page; each of them navigates to its OWN freshly written mkdtemp file first, so they are
+// independent units. gateJobs() workers take them from one queue — the long package walk
+// first, so it does not become the tail — each worker on its own page. The results are
+// collected and printed in the SERIAL order: the three template verdicts (their detail lists
+// in template order), then the toggle, package and legacy checks. CIT_GATE_JOBS=1 = the old
+// serial behaviour (one page, same steps).
+type Unit = { kind: "template"; t: string } | { kind: "scenario"; run: (page: Page) => Promise<void> };
+const scenarios = [checkToggles, checkPresets, checkLegacy];
+const units: Unit[] = [
+  { kind: "scenario", run: checkPresets },
+  { kind: "scenario", run: checkToggles },
+  { kind: "scenario", run: checkLegacy },
+  ...Object.keys(TEMPLATES).map((t): Unit => ({ kind: "template", t })),
+];
+const workerPages = new Map<number, Page>();
+const results = await pool(units, async (u, _i, w) => {
+  let page = workerPages.get(w);
+  if (!page) {
+    page = await newPage();
+    workerPages.set(w, page);
+  }
+  if (u.kind === "template") return measureTemplate(u.t, page);
+  await u.run(page);
+  return null;
+});
+/** A unit without a result is a measurement that never happened — a failure, never a green. */
+function noResult(what: string, e: unknown): void {
+  failures++;
+  console.error(`  ✗ ${what}: ⛔ a mérés nem futott le: ${String((e as Error)?.message ?? e).slice(0, 200)}`);
+}
+units.forEach((u, i) => {
+  const r = results[i]!;
+  if (u.kind !== "template") return;
+  if (!r.ok) return noResult(u.t, r.error);
+  const v = r.value!;
+  if (v.missingT) missing.push(v.missingT);
+  if (v.unmarkedT) unmarked.push(v.unmarkedT);
+  if (v.injectedT) injected.push(v.injectedT);
+});
+
+check(
+  "⭐⭐ minden eladható modul felülete a SZERVER-oldali oldalon él (all-in, natívan)",
+  missing.length === 0,
+  missing.slice(0, 6),
+);
+check("a minta-adatú szekciók jelöltek (Minta-szalag ≥2 + a programajánló bevezetője)", unmarked.length === 0, unmarked.slice(0, 6));
+check(
+  "⭐⭐ új artifactra a konfigurátor NULLA generikus minta-kártyát injektál",
+  injected.length === 0,
+  injected.slice(0, 6),
+);
+
+
+for (const sc of scenarios) {
+  const i = units.findIndex((u) => u.kind === "scenario" && u.run === sc);
+  const r = results[i]!;
+  replay(r.lines);
+  if (!r.ok) noResult(sc.name, r.error);
 }
 await browser.close();
 

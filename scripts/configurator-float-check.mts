@@ -25,6 +25,7 @@ import { writeFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { chromium, type Browser } from "playwright-core";
 import { config } from "../src/config.js";
+import { err, out, pool, replay } from "./lib/gate-pool.mts";
 import { db } from "../src/db/client.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -40,10 +41,10 @@ const SCOPE = path.basename(path.resolve(import.meta.dirname, ".."));
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown): void {
-  if (cond) console.log(`  ✓ ${name}`);
+  if (cond) out(`  ✓ ${name}`);
   else {
     failures++;
-    console.error(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
+    err(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
   }
 }
 
@@ -176,6 +177,16 @@ const ids = Object.keys(TEMPLATES);
 console.log(`\n① A vásárlási belépő LEBEG mind a ${ids.length} sablonon (mobil + asztali):\n`);
 
 const armourStripped: string[] = [];
+
+// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). Every fixture is written FIRST,
+// serially, into this worktree's own `_cfgfloat-<tree>` directory; the pool then only READS
+// them. Each measurement already ran in its own fresh browser context (measure()), so the
+// templates are independent units: gateJobs() workers take them from one queue, and every
+// check line is replayed in the original template order — the output is the serial run's.
+// The timing budgets (LOAD_SLACK_MS) are unchanged: they were sized for a box running seven
+// parallel sessions, and four contexts of this gate are well inside that. CIT_GATE_JOBS=1 =
+// the old serial behaviour.
+const fixtureBroken = new Set<string>();
 for (const id of ids) {
   const html = await injectConfigurator(
     renderSite(recipe(id), DATA, { phase: "mock" }),
@@ -184,13 +195,14 @@ for (const id of ids) {
   );
   const file = path.join(OUT, `${id}.html`);
   await writeFile(file, html, "utf8");
+
   // Fail loudly if the fixture silently fell back to the archetype path: 17 identical
   // pages measured 17 times is fake coverage, not a guard.
   if (!new RegExp(`<body[^>]*class="[^"]*cit-tpl-${id}\\b`).test(html)) {
-    console.error(`  ✗ ${id}: a fixture NEM a sablon-úton renderelt — a mérés hamis lenne`);
-    failures++;
+    fixtureBroken.add(id);
     continue;
   }
+
   // The same page with the armour block removed — used later for the RED self-test.
   await writeFile(
     path.join(OUT, `${id}.noarmour.html`),
@@ -206,7 +218,15 @@ for (const id of ids) {
     "utf8",
   );
   armourStripped.push(id);
+}
 
+const perTemplate = await pool(ids, async (id) => {
+  if (fixtureBroken.has(id)) {
+    err(`  ✗ ${id}: a fixture NEM a sablon-úton renderelt — a mérés hamis lenne`);
+    failures++;
+    return;
+  }
+  const file = path.join(OUT, `${id}.html`);
   for (const [w, h, vp] of [
     [390, 844, "mobil"],
     [1280, 900, "asztali"],
@@ -231,21 +251,44 @@ for (const id of ids) {
       m,
     );
   }
+});
+perTemplate.forEach((r, i) => {
+  replay(r.lines);
+  // ⛔ A template without a result is a measurement that never happened — a failure, never a green.
+  if (!r.ok) {
+    failures++;
+    console.error(`  ✗ ${ids[i]}: ⛔ a mérés nem futott le: ${String((r.error as Error)?.message ?? r.error).slice(0, 200)}`);
+  }
+});
+
+// The four self-test measurements are independent pages too (own context each, distinct
+// screenshot names): measured side by side, judged below in the original order.
+const [selfBare, selfArmoured, selfGhost, selfStill] = await pool(
+  [
+    () => measure(browser, path.join(OUT, "aurora.noarmour.html"), 390, 844, { shot: "cfg-float-aurora-ELOTTE" }),
+    () => measure(browser, path.join(OUT, "aurora.html"), 390, 844, { shot: "cfg-float-aurora-UTANA" }),
+    () => measure(browser, path.join(OUT, "aurora.unpainted.html"), 1280, 900, { shot: "cfg-float-aurora-LATHATATLAN" }),
+    () => measure(browser, path.join(OUT, "aurora.html"), 1280, 900, { noScroll: true }),
+  ],
+  (run) => run(),
+);
+/** A self-test measurement that threw has no result — a hard failure, never a verdict. */
+function selfResult(r: typeof selfBare, what: string): Awaited<ReturnType<typeof measure>> {
+  if (r!.ok) return r!.value;
+  failures++;
+  console.error(`  ✗ ${what}: ⛔ a mérés nem futott le: ${String((r!.error as Error)?.message ?? r!.error).slice(0, 200)}`);
+  return null;
 }
 
 // ── RED self-test: without the armour, aurora (the template that caused this) must FAIL.
 console.log("\n② Önteszt — a páncél NÉLKÜL az aurora sablonnak buknia kell:\n");
-const bare = await measure(browser, path.join(OUT, "aurora.noarmour.html"), 390, 844, {
-  shot: "cfg-float-aurora-ELOTTE",
-});
+const bare = selfResult(selfBare, "aurora.noarmour");
 check(
   `az őr pirosra tud menni: páncél nélkül az aurora belépője kiesik (position=${bare?.position}, y=${bare?.y})`,
   bare?.position !== "fixed" || !bare?.inView,
   bare,
 );
-const armoured = await measure(browser, path.join(OUT, "aurora.html"), 390, 844, {
-  shot: "cfg-float-aurora-UTANA",
-});
+const armoured = selfResult(selfArmoured, "aurora");
 check(
   `ugyanaz a lap páncéllal viszont lebeg (y=${armoured?.y})`,
   armoured?.position === "fixed" && !!armoured?.inView && !!armoured?.hit,
@@ -258,9 +301,7 @@ check(
 // blind to this), while the "painted" verdict goes red. If both went red, this would prove
 // nothing about the new assertion.
 console.log("\n③ Önteszt — a láthatatlan (de kattintható) pirula: a régi őr ZÖLDJE:\n");
-const ghost = await measure(browser, path.join(OUT, "aurora.unpainted.html"), 1280, 900, {
-  shot: "cfg-float-aurora-LATHATATLAN",
-});
+const ghost = selfResult(selfGhost, "aurora.unpainted");
 check(
   `a geometriai verdikt itt ZÖLD marad — elementFromPoint az átlátszó pirulát is eltalálja (hit=${ghost?.hit}, pointer-events=${ghost?.pe})`,
   !!ghost?.inView && !!ghost?.hit && ghost?.position === "fixed",
@@ -276,7 +317,7 @@ check(
 // revealed only by the unconditional `setTimeout(showPill, 300)` (2600 until 2026-09-26,
 // measured then at ~2,54 s + the fade); if that fallback ever breaks, a still visitor could never buy at all.
 console.log("\n④ Aki EGYÁLTALÁN NEM görget — a belépőnek magától meg kell jelennie:\n");
-const still = await measure(browser, path.join(OUT, "aurora.html"), 1280, 900, { noScroll: true });
+const still = selfResult(selfStill, "aurora nulla görgetés");
 check(
   `aurora/asztali, nulla görgetés: a belépő magától kifestődik (${still?.paintedMs ?? "SOHA"} ms) és kattintható`,
   still?.paintedMs !== null && still?.opacity === "1" && !!still?.inView && !!still?.hit,

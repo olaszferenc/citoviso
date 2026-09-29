@@ -48,6 +48,7 @@ import path from "node:path";
 import { chromium, type Page } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { pool } from "./lib/gate-pool.mts";
 import { injectRuntime } from "../src/generator/runtime.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -514,47 +515,66 @@ async function runMatrix(
     if (failed) e.fail++;
   };
 
-  for (const vp of WIDTHS) {
-    const page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
-    // Külső hálózat KIZÁRVA: a betűkészlet-kérés nem lassíthatja a mérést, a
-    // "halott fotó" pedig determinisztikusan halott (nem DNS-szerencse kérdése).
-    await page.route("**/*", (route) => {
-      const u = route.request().url();
-      if (u.startsWith("file:") || u.startsWith("data:")) return route.continue();
-      return route.abort();
-    });
-    for (const p of pages) {
-      const res = await measure(page, `file://${p.file}`, p.roomNames);
-      const head = `${p.id.padEnd(15)} ${p.scenario.padEnd(20)} ${vp.label.padEnd(15)}`;
-      if (res.fatal || !res.cards) {
-        stats.failures++;
-        bump(p.scenario, true);
-        const why = res.fatal ?? "nulla szoba-kártya — a szekció horgonya megvan, a kártya nincs";
-        console.error(`  ✗ ${head} ⛔ ${why}`);
-        continue;
-      }
-      stats.measured += res.cards;
-      bump(p.scenario, res.findings.length > 0);
-      if (res.findings.length) {
-        stats.failures++;
-        const f = res.findings[0]!;
-        const detail =
-          f.kind === "kilóg-a-kártyából"
-            ? `kártya=${JSON.stringify(f.cardBox)} kép=${JSON.stringify(f.photoBox)} ${f.dist}px-re kívül (${f.hit})`
-            : `„${f.text}" @${JSON.stringify(f.at)} takarja: ${f.hit}`;
-        console.error(`  ✗ ${head} ${res.findings.length} lelet · ${f.kind}: ${detail}`);
-      } else {
-        stats.washed += res.washed;
-        if (verbose) {
-          console.log(
-            `  ✓ ${head} ${res.cards} kártya rendben` +
-              (res.washed ? ` (${res.washed} képre-írt felirat a vízjel fátyla alatt)` : ""),
-          );
-        }
+  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). The (width, page) pairs were
+  // measured one after the other on ONE page per width. Now gateJobs() workers take them from
+  // one queue; each worker keeps its OWN page per width, the way the serial run kept one — the
+  // same goto → 700 ms wait → PROBE steps, the same assertions. Every rendered file is written
+  // BEFORE the pool starts and only read inside it; the directory is this run's own mkdtemp.
+  // The verdict lines are printed in the original (width, page) order, as before.
+  // CIT_GATE_JOBS=1 = the old serial behaviour.
+  const pairs = WIDTHS.flatMap((vp) => pages.map((p) => ({ vp, p })));
+  const workerPages = new Map<string, Page>();
+  const results = await pool(pairs, async ({ vp, p }, _i, w) => {
+    let page = workerPages.get(`${w}/${vp.label}`);
+    if (!page) {
+      page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
+      // Külső hálózat KIZÁRVA: a betűkészlet-kérés nem lassíthatja a mérést, a
+      // "halott fotó" pedig determinisztikusan halott (nem DNS-szerencse kérdése).
+      await page.route("**/*", (route) => {
+        const u = route.request().url();
+        if (u.startsWith("file:") || u.startsWith("data:")) return route.continue();
+        return route.abort();
+      });
+      workerPages.set(`${w}/${vp.label}`, page);
+    }
+    return measure(page, `file://${p.file}`, p.roomNames);
+  });
+  for (const pg of workerPages.values()) await pg.close();
+
+  pairs.forEach(({ vp, p }, i) => {
+    const r = results[i]!;
+    // ⛔ A pair without a result is a measurement that never happened — a failure, never a green.
+    const res = r.ok
+      ? r.value
+      : { fatal: `a mérés nem futott le: ${String((r.error as Error)?.message ?? r.error).slice(0, 200)}`, findings: [], cards: 0, washed: 0 };
+    const head = `${p.id.padEnd(15)} ${p.scenario.padEnd(20)} ${vp.label.padEnd(15)}`;
+    if (res.fatal || !res.cards) {
+      stats.failures++;
+      bump(p.scenario, true);
+      const why = res.fatal ?? "nulla szoba-kártya — a szekció horgonya megvan, a kártya nincs";
+      console.error(`  ✗ ${head} ⛔ ${why}`);
+      return;
+    }
+    stats.measured += res.cards;
+    bump(p.scenario, res.findings.length > 0);
+    if (res.findings.length) {
+      stats.failures++;
+      const f = res.findings[0]!;
+      const detail =
+        f.kind === "kilóg-a-kártyából"
+          ? `kártya=${JSON.stringify(f.cardBox)} kép=${JSON.stringify(f.photoBox)} ${f.dist}px-re kívül (${f.hit})`
+          : `„${f.text}" @${JSON.stringify(f.at)} takarja: ${f.hit}`;
+      console.error(`  ✗ ${head} ${res.findings.length} lelet · ${f.kind}: ${detail}`);
+    } else {
+      stats.washed += res.washed;
+      if (verbose) {
+        console.log(
+          `  ✓ ${head} ${res.cards} kártya rendben` +
+            (res.washed ? ` (${res.washed} képre-írt felirat a vízjel fátyla alatt)` : ""),
+        );
       }
     }
-    await page.close();
-  }
+  });
   await browser.close();
 
   if (KEEP) console.log(`\n  (a renderelt lapok maradtak: ${dir})`);
