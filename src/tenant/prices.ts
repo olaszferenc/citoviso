@@ -428,12 +428,17 @@ export async function setSeasonYearPrice(
  * nights no season covers. Written by the offer page (approved plan booking-offer ⑥),
  * where the owner prices the nights a guest asked about. An earlier dated base whose
  * window overlaps is replaced, so one night never has two competing dated bases.
+ *
+ * `remind: false` (ADR-XXXX „a kért napokra"): the window is the stay itself, so the
+ * 14-day "hamarosan lejár egy ár" mail would only be noise — the row is born with the
+ * reminder stamp already set. It is still removed (and the page re-rendered) when it lapses.
  */
 export async function addDatedBasePrice(
   unitId: string,
   amount: number,
   validFrom: string,
   validTo: string,
+  opts: { remind?: boolean } = {},
 ): Promise<void> {
   await db.transaction().execute(async (trx) => {
     await trx
@@ -456,6 +461,7 @@ export async function addDatedBasePrice(
         sort_order: 0,
         valid_from: validFrom,
         valid_to: validTo,
+        ...(opts.remind === false ? { expiry_notified_at: new Date() } : {}),
       })
       .execute();
   });

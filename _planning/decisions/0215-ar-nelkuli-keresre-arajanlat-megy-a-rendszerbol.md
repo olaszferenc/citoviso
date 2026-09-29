@@ -1,6 +1,7 @@
 ## ADR-0215 — Ár nélküli kérésre ÁRAJÁNLAT megy a rendszerből, és az ár dátummal az árlistába kerül (2026-09-23)
 
-**Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrrel) · **Kapcsolódó:** ADR-0208 ⑥.1
+**Dátum:** 2026-09-23 · **Státusz:** elfogadva (megvalósítva, őrrel); **①.3 FELÜLÍRVA: ADR-XXXX**
+(2026-09-29 — az ár alapból csak arra a kérésre szól, az árlistába csak a tulaj választására kerül) · **Kapcsolódó:** ADR-0208 ⑥.1
 (ez a tétel), ADR-0208 ⑥.5 (évhez kötött ár — az ALAPJA itt landolt), ADR-0193 ① (nem blokkolunk),
 ADR-0192 ④.2 (a `booking` kemény függősége a `pricing`), ADR-0044 §6 (a foglalás KÉRÉS),
 §B.17 · **Kontraktus:** `assets/design-refs/tenant-admin/booking-offer/` · **Migráció:** 0072.

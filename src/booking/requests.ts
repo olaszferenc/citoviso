@@ -15,6 +15,7 @@
 
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { tenantSiteUrl } from "../domains.js";
 import { huArticleLower } from "../hu.js";
@@ -46,12 +47,17 @@ import { seasonalOnlyInForce } from "../tenant/seasonalOnly.js";
 import {
   addDatedBasePrice,
   formatAmount,
+  getSitePrices,
   getUnitPrices,
   priceOn,
   quoteStayFrom,
   seasonCovers,
   setBasePrice,
+  type UnitPrice,
 } from "../tenant/prices.js";
+// ⛔ unitVisibility, not units.ts: this module is on the mail path, and units.ts carries
+// owner-facing Hungarian (i18n-scope, ADR-0070). The rule is the same single copy.
+import { bookableUnits, guestUnits } from "../tenant/unitVisibility.js";
 import { seasonRule } from "../tenant/seasonRule.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
 
@@ -1701,6 +1707,68 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
   }));
 }
 
+/** One row of the Foglalások tab's „Kiküldött ajánlatok" list (ADR-XXXX). */
+export interface SentOffer {
+  readonly id: string;
+  readonly guestName: string;
+  readonly unitName: string;
+  readonly dateFrom: string;
+  readonly dateTo: string;
+  readonly guests: number;
+  readonly total: number | null;
+  readonly currency: string | null;
+  readonly offeredAt: Date;
+  readonly status: string;
+  readonly decidedBy: string | null;
+  /** Where the price went; null = an offer from before the choice existed (not known). */
+  readonly savedAs: OfferSaveAs | null;
+}
+
+/**
+ * Every offer the owner sent from the system, whatever became of it (owner, 2026-09-23:
+ * „nem fogja tudni nyomon követni, kinek mi ment el"). Waiting ones first, then newest.
+ * The request list above caps and mixes every request; this one is only offers.
+ */
+export async function getSentOffers(siteId: string, limit = 60): Promise<SentOffer[]> {
+  const rows = await db
+    .selectFrom("booking_request")
+    .innerJoin("site_unit", "site_unit.id", "booking_request.unit_id")
+    .select([
+      "booking_request.id as id",
+      "booking_request.guest_name as guestName",
+      "site_unit.name as unitName",
+      "booking_request.date_from as dateFrom",
+      "booking_request.date_to as dateTo",
+      "booking_request.guests as guests",
+      "booking_request.quoted_total as total",
+      "booking_request.quoted_currency as currency",
+      "booking_request.offered_at as offeredAt",
+      "booking_request.status as status",
+      "booking_request.decided_by as decidedBy",
+      "booking_request.offer_saved_as as savedAs",
+    ])
+    .where("booking_request.site_id", "=", siteId)
+    .where("booking_request.offered_at", "is not", null)
+    .orderBy(sql`(booking_request.status = 'offered')`, "desc")
+    .orderBy("booking_request.offered_at", "desc")
+    .limit(limit)
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    guestName: r.guestName,
+    unitName: r.unitName,
+    dateFrom: dayStr(r.dateFrom),
+    dateTo: dayStr(r.dateTo),
+    guests: r.guests,
+    total: r.total ?? null,
+    currency: r.currency ?? null,
+    offeredAt: new Date(r.offeredAt as unknown as string),
+    status: r.status,
+    decidedBy: (r.decidedBy as string | null) ?? null,
+    savedAs: (r.savedAs as OfferSaveAs | null) ?? null,
+  }));
+}
+
 /** The module's answer window for a site (0 = never expires) — for the admin UI. */
 export async function bookingExpireHours(siteId: string): Promise<number> {
   const rules = await bookingRules(siteId);
@@ -1952,6 +2020,52 @@ export interface OfferView {
   readonly seasons?: { label: string; from: string; to: string; amount: number }[];
   readonly today?: string;
   readonly expireHours?: number;
+  /** ADR-XXXX: the unit stands for the whole place ("az egész szállás") or is a room —
+   *  the consequence sentences name it, instead of calling a house "a szoba". */
+  readonly unitKind?: "whole" | "room";
+  /** ADR-XXXX + ADR-0256 ①: pricing this unit makes it the unit the guest's booking box
+   *  opens on (it is the first bookable unit in the owner's order with any price row, and
+   *  there is more than one to choose from). Said out loud on the "alapár" choice. */
+  readonly opensWidget?: boolean;
+}
+
+/** Where an offer's price goes (ADR-XXXX, owner 2026-09-29: „OK A)", „Kért Napok"). */
+export type OfferSaveAs = "request" | "dates" | "base";
+
+/**
+ * The unpriced nights as contiguous runs ({from, to} = first and LAST night, inclusive).
+ * A dated price is written per run, never across a night the list already prices:
+ * `addDatedBasePrice` replaces any dated window it overlaps, and a window spanning a
+ * priced night could replace a price the owner did not touch.
+ */
+export function missingRuns(missing: readonly string[]): { from: string; to: string }[] {
+  const runs: { from: string; to: string }[] = [];
+  for (const day of missing) {
+    const last = runs[runs.length - 1];
+    if (last && addDays(last.to, 1) === day) last.to = day;
+    else runs.push({ from: day, to: day });
+  }
+  return runs;
+}
+
+/**
+ * The offer's price as rows the ONE price rule reads (cit-season.cjs: season → dated base →
+ * base), without writing them. "Csak erre a kérésre" quotes through exactly the rows the
+ * "a kért napokra" choice would store — so the two can never produce different totals.
+ */
+export function offerOverlayRows(missing: readonly string[], amount: number): UnitPrice[] {
+  return missingRuns(missing).map((r) => ({
+    id: `offer-${r.from}`,
+    label: "",
+    from: null,
+    to: null,
+    amount: Math.round(amount),
+    isBase: true,
+    minNights: null,
+    validFrom: r.from,
+    validTo: r.to,
+    parentId: null,
+  }));
 }
 
 async function pricingConfigFor(siteId: string): Promise<{ currency: string; unitMode: string }> {
@@ -2032,7 +2146,41 @@ export async function loadOfferView(token: string): Promise<OfferView> {
       .map((p) => ({ label: p.label, from: p.from!, to: p.to!, amount: p.amount })),
     today,
     expireHours: ctx.expireHours,
+    ...(await offerUnitFacts(req.site_id, req.unit_id)),
   };
+}
+
+/** What the "alapár" consequence sentence may claim about this unit (see OfferView). */
+async function offerUnitFacts(
+  siteId: string,
+  unitId: string,
+): Promise<{ unitKind: "whole" | "room"; opensWidget: boolean }> {
+  // The facts the two rules read, in the owner's order — the same order getUnits() gives.
+  const all = (
+    await db
+      .selectFrom("site_unit")
+      .select(["id", "is_whole_property", "represents_whole", "whole_only"])
+      .where("site_id", "=", siteId)
+      .orderBy("sort_order")
+      .orderBy("created_at")
+      .execute()
+  ).map((u) => ({
+    id: u.id,
+    isWholeProperty: u.is_whole_property,
+    representsWhole: u.represents_whole,
+    wholeOnly: u.whole_only,
+  }));
+  const self = all.find((u) => u.id === unitId);
+  const unitKind = self && (self.representsWhole || self.isWholeProperty) ? "whole" : "room";
+  // The same list, in the same order, the page's booking box is built from (editor.ts).
+  const offer = bookableUnits(guestUnits(all));
+  const at = offer.findIndex((u) => u.id === unitId);
+  if (at < 0 || offer.length < 2) return { unitKind, opensWidget: false };
+  const priceMap = await getSitePrices(siteId);
+  // cit-runtime.js: the widget opens on the first unit NOT flagged `unpriced`, and the
+  // flag means "no price row at all" (editor.ts).
+  const opensWidget = offer.slice(0, at).every((u) => !(priceMap.get(u.id) ?? []).length);
+  return { unitKind, opensWidget };
 }
 
 export interface SendOfferResult {
@@ -2044,7 +2192,11 @@ export interface SendOfferResult {
   readonly currency?: string;
   readonly guestName?: string;
   readonly amount?: number;
-  readonly until?: string | null;
+  /** ADR-XXXX: where the price went; with 'dates', `runs` are the windows written. */
+  readonly savedAs?: OfferSaveAs;
+  readonly runs?: { from: string; to: string }[];
+  /** per_night | per_person_night | per_stay — what one `amount` means. */
+  readonly unitMode?: string;
   readonly expiresAt?: Date | null;
   readonly lang: string;
   readonly unitName?: string;
@@ -2053,15 +2205,20 @@ export interface SendOfferResult {
 /**
  * Send the price offer (POST of the owner's offer page).
  *
- * ⑤ The price ALWAYS lands in the price list: without `until` as the unit's
- * timeless base (there is none — otherwise no night would be unpriced), with it as a
- * dated base from today to `until`. Seasons keep their own price either way.
+ * ADR-XXXX (overrides ADR-0215 ①.3 „az ár MINDIG az árlistába kerül"; owner 2026-09-29):
+ * the price is for THIS request unless the owner ticks „Mentsem az árlistába is?":
+ *   'request' — nothing is written to the price list; the quote is computed through
+ *               in-memory rows (offerOverlayRows) and frozen on the request;
+ *   'dates'   — a dated base on the ASKED unpriced nights (one window per run), with no
+ *               expiry reminder (the window ends with the stay — a mail would be noise);
+ *   'base'    — the unit's timeless base (there is none — otherwise no night would be
+ *               unpriced). Seasons keep their own price in every case.
  * ⑧ The request moves to 'offered' with the recomputed quote FROZEN on it; the
  * nights stay free until the guest accepts.
  */
 export async function sendOffer(
   token: string,
-  input: { amount: string; until?: string | null; note?: string | null },
+  input: { amount: string; into?: boolean; save?: string | null; note?: string | null },
   publicBaseUrl: string | null,
 ): Promise<SendOfferResult> {
   const req = await loadRequest({ token });
@@ -2078,34 +2235,34 @@ export async function sendOffer(
 
   const errors: string[] = [];
   const amount = parseOfferAmount(input.amount);
-  const until = (input.until ?? "").trim() || null;
+  // Anything but an explicit choice is 'request' — the default writes nothing, so an old
+  // form (or a tampered value) can never put a price into the list unasked.
+  const save: OfferSaveAs = input.save === "dates" || input.save === "base" ? input.save : "request";
   if (missing.length) {
     if (amount.empty) errors.push(T(lang, "Írja be az árat."));
     else if (amount.error === "num") errors.push(T(lang, "Csak számot írjon, pl. 26 000."));
     else if (amount.error === "pos") errors.push(T(lang, "Az ár legyen nagyobb nullánál."));
     else if (amount.error === "big") errors.push(T(lang, "Ez túl nagy összeg — ellenőrizze a nullákat."));
-    if (until) {
-      const last = missing[missing.length - 1]!;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(until) || Number.isNaN(Date.parse(`${until}T00:00:00Z`))) {
-        errors.push(T(lang, "A dátumot év-hónap-nap alakban kérjük."));
-      } else if (until < last || until < today) {
-        errors.push(
-          T(lang, "Legalább {date} legyen — különben az ár erre a kérésre sem vonatkozik.", {
-            date: huDate(last),
-          }),
-        );
-      }
+    // Ticked, but no way chosen: ask — never fall back to a write the owner did not pick.
+    if (input.into && save === "request") {
+      errors.push(T(lang, "Válassza ki, hogyan kerüljön az árlistába: a kért napokra vagy alapárként."));
     }
   }
   if (errors.length) return { ok: false, outcome: "invalid", errors, lang };
 
-  if (missing.length && amount.value) {
-    if (until) await addDatedBasePrice(req.unit_id, amount.value, today, until);
-    else await setBasePrice(req.unit_id, amount.value);
+  const runs = missing.length ? missingRuns(missing) : [];
+  const writes = missing.length > 0 && !!amount.value && save !== "request";
+  if (writes && save === "dates") {
+    for (const r of runs) await addDatedBasePrice(req.unit_id, amount.value!, r.from, r.to, { remind: false });
+  } else if (writes && save === "base") {
+    await setBasePrice(req.unit_id, amount.value!);
   }
 
   const { currency, unitMode } = await pricingConfigFor(req.site_id);
-  const quote = quoteStayFrom(await getUnitPrices(req.unit_id), {
+  const listed = await getUnitPrices(req.unit_id);
+  const priceRows =
+    missing.length && amount.value && save === "request" ? [...listed, ...offerOverlayRows(missing, amount.value)] : listed;
+  const quote = quoteStayFrom(priceRows, {
     dateFrom: from,
     dateTo: to,
     guests: Math.max(1, Math.round(req.guests || 1)),
@@ -2130,6 +2287,9 @@ export async function sendOffer(
       offered_at: offeredAt,
       offer_token: offerToken,
       decision_note: note,
+      // Only a price the owner actually entered has a "where did it go" — a request whose
+      // nights were all priced already gets no answer (null), not a made-up 'request'.
+      offer_saved_as: missing.length ? save : null,
       quoted_total: quote.total,
       quoted_currency: quote.currency,
       quoted_lines: JSON.stringify(
@@ -2150,7 +2310,7 @@ export async function sendOffer(
 
   // The price list changed → the public page (price table, room-card span, the
   // booking widget's JSON is live already) must say the same thing.
-  if (missing.length && ctx.tenantId) {
+  if (writes && ctx.tenantId) {
     try {
       const { rerenderTenantSnapshot } = await import("../tenant/editor.js");
       await rerenderTenantSnapshot(ctx.tenantId);
@@ -2170,7 +2330,9 @@ export async function sendOffer(
     currency: quote.currency,
     guestName: req.guest_name,
     amount: amount.value,
-    until,
+    savedAs: missing.length ? save : undefined,
+    runs: save === "dates" ? runs : undefined,
+    unitMode,
     expiresAt,
     lang,
     unitName: req.unit_name ?? "",

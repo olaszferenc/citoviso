@@ -11,7 +11,7 @@
 import { T } from "../i18n/mail.js";
 import { formatDay } from "../text/day.js";
 import { currencySign, formatMoney } from "../text/money.js";
-import type { GuestOfferView, OfferView, SendOfferResult } from "../booking/requests.js";
+import { missingRuns, type GuestOfferView, type OfferView, type SendOfferResult } from "../booking/requests.js";
 import { readFileSync } from "node:fs";
 import { guestPageShell } from "./moduleConfigViews.js";
 
@@ -83,12 +83,17 @@ const OFFER_CSS = `
 .of-inp input[aria-invalid=true]{border-color:var(--citui-bad)}
 .of-inp em{font-style:normal;color:var(--citui-muted);font-size:.9rem}
 .of-err{color:var(--citui-bad-ink);font-size:.85rem;margin-top:4px}
-.of-valid{margin-top:8px;font-size:.85rem;line-height:1.5;border-radius:6px;padding:8px 10px}
-.of-valid--warn{background:var(--citui-white);border:1px solid var(--citui-warn);color:var(--citui-warn-ink)}
-.of-valid--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
 .of-total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--citui-ink);padding-top:10px;margin-top:4px}
 .of-total b{font-size:1.4rem} .of-total b.of-empty{color:var(--citui-muted);font-size:.95rem;font-weight:600}
-.of-into{font-size:.85rem;color:var(--citui-muted);margin:10px 0 0;line-height:1.5}
+.of-save{margin-top:14px;border:1px solid var(--citui-line-strong);border-radius:10px;padding:12px}
+.of-chk{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;line-height:1.45;cursor:pointer}
+.of-chk input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--citui-navy-800)}
+.of-chk small{display:block;color:var(--citui-muted);font-size:.8rem}
+.of-sub{margin:10px 0 0 30px;display:grid;gap:8px}
+.of-sub[hidden]{display:none}
+.of-cons{margin-top:12px;border-left:4px solid var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));padding:10px 12px;border-radius:6px;font-size:.9rem;line-height:1.55}
+.of-cons--warn{border-left-color:var(--citui-warn);background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white))}
+.of-cons b{display:block;margin-bottom:2px}
 .of-lbl{display:block;font-size:.85rem;font-weight:600;margin:14px 0 5px}
 .of-card textarea{width:100%;box-sizing:border-box;font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;min-height:70px}
 .of-acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
@@ -120,10 +125,17 @@ function perLabel(lang: string, cur: string, mode: string | undefined): string {
   return `${cur} / ${T(lang, "éj")}`;
 }
 
+/** What follows an amount in a sentence ("90 000 Ft" + " / éj") — perLabel without the sign. */
+function perSuffix(lang: string, mode: string | undefined): string {
+  if (mode === "per_person_night") return ` / ${T(lang, "fő / éj")}`;
+  if (mode === "per_stay") return ` ${T(lang, "a teljes tartózkodásra")}`;
+  return ` / ${T(lang, "éj")}`;
+}
+
 /** GET (and POST-with-errors) of the owner's offer page — contract ②–⑧. */
 export function ownerOfferPage(
   v: OfferView,
-  opts: { errors?: string[]; amount?: string; until?: string; note?: string } = {},
+  opts: { errors?: string[]; amount?: string; into?: boolean; save?: string; note?: string } = {},
 ): string {
   const lang = v.lang;
   if (v.outcome !== "open") return ownerOfferClosedPage(v);
@@ -159,25 +171,72 @@ export function ownerOfferPage(
       `placeholder="${esc(T(lang, "pl. 26 000"))}" value="${esc(opts.amount ?? "")}" data-amount>` +
       `<em>${esc(perLabel(lang, cur, mode))}</em></span></label>` +
       `<div class="of-err" data-amount-err></div>` +
-      `<label class="of-fld"><span>${T(lang, "Érvényes eddig (nem kötelező)")}</span>` +
-      `<span class="of-inp"><input name="until" type="date" min="${esc(v.today ?? "")}" value="${esc(opts.until ?? "")}" data-until>` +
-      `<button class="citui-btn citui-btn--ghost" type="button" data-clear-until>${T(lang, "Nincs vége")}</button></span></label>` +
-      `<div class="of-err" data-until-err></div>` +
-      // The no-JS text is the WARNING: an empty date is the default state, and the
-      // consequence has to be readable before any script runs.
-      `<div class="of-valid of-valid--warn" data-validity>` +
-      `<strong>${T(lang, "Nincs lejárati dátum.")}</strong> ` +
-      (seasonNames
-        ? T(
-            lang,
-            "Ez lesz a szoba alapára: minden olyan éjszakára érvényes, amelyre nincs szezonár — a következő módosításig. A szezonárak ({seasons}) a saját árukon maradnak.",
-            { seasons: seasonNames },
-          )
-        : T(
-            lang,
-            "Ez lesz a szoba alapára: minden olyan éjszakára érvényes, amelyre nincs szezonár — a következő módosításig.",
-          )) +
-      `</div></div></li>`
+      `</div></li>`
+    : "";
+
+  // ── ADR-XXXX (approved plan booking-offer-scope „A"): where the price goes ──────────
+  // Default: THIS request only. A ticked „Mentsem az árlistába is?" offers the asked nights
+  // or the timeless base, and the sentence under it says what each does to the guest's page.
+  const runs = missingRuns(missing);
+  const range = runs
+    .map((r) => `${huDate(r.from, lang)} – ${huDate(addDays(r.to, 1), lang)}`)
+    .join(", ");
+  const whole = v.unitKind === "whole";
+  const Unit = whole ? T(lang, "Az egész szállás") : T(lang, "Ez a szoba");
+  const unit = whole ? T(lang, "az egész szállás") : T(lang, "ez a szoba");
+  const cons = {
+    request: {
+      head: T(lang, "Csak erre a kérésre."),
+      body: T(
+        lang,
+        "Az árlistája nem változik: ahol nincs ára, ott a vendégek a honlapon továbbra is árajánlatot kérnek, és a következő kérésre újra Ön ad árat. Az ajánlat nyoma a Foglalások fül „Kiküldött ajánlatok” részében marad.",
+      ),
+    },
+    dates: {
+      head: T(lang, "A kért napokra az árlistába kerül ({range}).", { range }),
+      body: T(
+        lang,
+        "Ezekre az éjszakákra {unit} a honlapon {price} áron, árajánlat-kérés nélkül is foglalható; más napokra továbbra is árajánlatot kérnek. A tartózkodás utolsó éjszakája után az ár lekerül az árlistáról.",
+        { unit },
+      ),
+    },
+    base: {
+      head: T(lang, "Alapárként az árlistába kerül — dátum nélkül, a következő módosításig."),
+      body:
+        T(lang, "{unit} ettől foglalhatóvá válik: a vendég a honlapon {price} áron, árajánlat-kérés nélkül küldhet foglalási kérést.", {
+          unit: Unit,
+        }) +
+        (v.opensWidget ? " " + T(lang, "A foglalási doboz is ezzel nyílik.") : "") +
+        " " +
+        (seasonNames
+          ? T(lang, "Minden éjszakára érvényes, amelyre nincs szezonár — a szezonárak ({seasons}) a saját árukon maradnak —, és a honlap „Árak” részében is megjelenik.", {
+              seasons: seasonNames,
+            })
+          : T(lang, "Minden éjszakára érvényes, amelyre nincs szezonár, és a honlap „Árak” részében is megjelenik.")),
+    },
+    pick: {
+      head: T(lang, "Válassza ki, hogyan kerüljön az árlistába."),
+      body: "",
+    },
+  };
+  const into = !!opts.into;
+  const picked = into ? (opts.save === "dates" || opts.save === "base" ? opts.save : "pick") : "request";
+  const yourPrice = T(lang, "az Ön által megadott");
+  const consHtml = (k: keyof typeof cons): string =>
+    `<b>${esc(cons[k].head)}</b>${cons[k].body ? " " + esc(cons[k].body.split("{price}").join(yourPrice)) : ""}`;
+  const saveBlock = missing.length
+    ? `<div class="of-save">` +
+      `<label class="of-chk"><input type="checkbox" name="into" value="1" data-into${into ? " checked" : ""}>` +
+      `<span><b>${T(lang, "Mentsem az árlistába is?")}</b><small>${T(lang, "Alapból nem: az ár csak ennek a kérésnek szól.")}</small></span></label>` +
+      // Visible without JS (a no-JS owner must be able to choose); the script hides it
+      // while the box is unticked.
+      `<div class="of-sub" data-sub>` +
+      `<label class="of-chk"><input type="radio" name="save" value="dates"${opts.save === "dates" ? " checked" : ""}>` +
+      `<span>${T(lang, "Csak a kért napokra")}<small>${esc(range)}</small></span></label>` +
+      `<label class="of-chk"><input type="radio" name="save" value="base"${opts.save === "base" ? " checked" : ""}>` +
+      `<span>${T(lang, "Alapárként")}<small>${T(lang, "dátum nélkül, a következő módosításig")}</small></span></label>` +
+      `</div></div>` +
+      `<div class="of-cons${picked === "request" ? "" : " of-cons--warn"}" data-cons aria-live="polite">${consHtml(picked)}</div>`
     : "";
 
   // Client strings are translated HERE, on the server — the script only picks them.
@@ -185,13 +244,9 @@ export function ownerOfferPage(
     num: T(lang, "Csak számot írjon, pl. 26 000."),
     pos: T(lang, "Az ár legyen nagyobb nullánál."),
     big: T(lang, "Ez túl nagy összeg — ellenőrizze a nullákat."),
-    early: lastMissing
-      ? T(lang, "Legalább {date} legyen — különben az ár erre a kérésre sem vonatkozik.", { date: huDate(lastMissing, lang) })
-      : "",
-    okUntil: T(lang, "Mától {date}-ig érvényes. Utána erre a szobára — ahol nincs szezonár — újra nem lesz ár; a lejárat előtt emlékeztetjük."),
-    intoBase: T(lang, "Az ár alapárként kerül be a szoba árlistájába, és a honlapon is megjelenik."),
-    intoDated: T(lang, "Az ár {from} – {to} között kerül be a szoba árlistájába, és a honlapon is megjelenik."),
     empty: T(lang, "írja be az árat"),
+    yourPrice,
+    cons,
   };
   const cfg = {
     missing: missing.length,
@@ -199,10 +254,9 @@ export function ownerOfferPage(
     known: knownSum,
     mul: guestsMul,
     mode,
-    lastMissing,
-    today: v.today,
     lang,
     currency: v.currency ?? "HUF",
+    per: perSuffix(lang, mode),
     msg,
   };
 
@@ -224,7 +278,7 @@ export function ownerOfferPage(
     `<div class="of-grid">` +
     `<section class="of-card"><h2>${esc(T(lang, "{guest} kérése", { guest: v.guestName ?? "" }))}</h2>` +
     `<dl class="of-kv">` +
-    `<dt>${T(lang, "Szoba")}</dt><dd>${esc(v.unitName ?? "")}</dd>` +
+    `<dt>${T(lang, "Amit kér")}</dt><dd>${esc(v.unitName ?? "")}</dd>` +
     `<dt>${T(lang, "Érkezés")}</dt><dd>${esc(huDate(v.dateFrom!, lang))}</dd>` +
     `<dt>${T(lang, "Távozás")}</dt><dd>${esc(huDate(v.dateTo!, lang))} (${esc(T(lang, "{n} éj", { n: v.nights ?? 0 }))})</dd>` +
     `<dt>${T(lang, "Létszám")}</dt><dd>${esc(T(lang, "{n} fő", { n: v.guests ?? 1 }))}</dd>` +
@@ -239,9 +293,9 @@ export function ownerOfferPage(
     `<ul class="of-lines">${missRow}${knownRows}</ul>` +
     `<div class="of-total"><span>${T(lang, "Összesen")}</span>` +
     `<b class="${missing.length ? "of-empty" : ""}" data-total>${missing.length ? esc(msg.empty) : esc(money(knownSum))}</b></div>` +
-    `<p class="of-into" data-into></p>` +
     `<label class="of-lbl" for="of-note">${T(lang, "Üzenet a vendégnek (nem kötelező)")}</label>` +
     `<textarea id="of-note" name="note" maxlength="1000" placeholder="${esc(T(lang, "pl. A kiságyat szívesen odakészítjük, díjmentesen."))}">${esc(opts.note ?? "")}</textarea>` +
+    saveBlock +
     `<div class="of-acts">` +
     `<button class="citui-btn citui-btn--primary" type="submit" data-send>${T(lang, "Ajánlat küldése")}</button>` +
     `<a class="citui-btn citui-btn--ghost" href="/foglalas/${esc(v.token ?? "")}/elutasitom">${T(lang, "Nem szabad")}</a>` +
@@ -259,30 +313,28 @@ export function ownerOfferPage(
  * everything; this only makes the consequence visible before the tap. */
 const OFFER_JS = `(function(){
 var C=JSON.parse(document.getElementById("of-cfg").textContent),f=document.querySelector("[data-offer-form]");
-if(!f)return;var A=f.querySelector("[data-amount]"),U=f.querySelector("[data-until]"),S=f.querySelector("[data-send]");
+if(!f)return;var A=f.querySelector("[data-amount]"),S=f.querySelector("[data-send]"),I=f.querySelector("[data-into]"),B=f.querySelector("[data-sub]"),K=f.querySelector("[data-cons]");
 function grp(n){return CitMoney.formatNumber(n,"hu");}
 function money(n){return CitMoney.formatMoney(n,C.currency,C.lang);}
-function nice(iso){var p=iso.split("-");return p[0]+". "+p[1]+". "+p[2]+".";}
 function parse(raw){var s=String(raw||"").replace(/[\\s.\\u00a0]/g,"").replace(/ft$/i,"");if(s==="")return{empty:1};if(!/^\\d+$/.test(s))return{error:C.msg.num};var n=parseInt(s,10);if(!(n>0))return{error:C.msg.pos};if(n>10000000)return{error:C.msg.big};return{value:n};}
+function pick(){if(!I||!I.checked)return"request";var r=f.querySelector("input[name=save]:checked");return r?r.value:"pick";}
 function run(){
  if(!C.missing){S.disabled=false;return;}
  var r=parse(A.value),ae=f.querySelector("[data-amount-err]");ae.textContent=r.error||"";A.setAttribute("aria-invalid",r.error?"true":"false");
- var u=U.value,ue="";if(u&&(u<C.lastMissing||u<C.today))ue=C.msg.early;f.querySelector("[data-until-err]").textContent=ue;U.setAttribute("aria-invalid",ue?"true":"false");
- var v=f.querySelector("[data-validity]");
- if(!u){v.className="of-valid of-valid--warn";v.hidden=false;v.dataset.shown="warn";}
- else if(!ue){v.className="of-valid of-valid--ok";v.hidden=false;v.textContent=C.msg.okUntil.replace("{date}",nice(u).replace(/\\.$/,""));}
- else{v.hidden=true;}
+ B.hidden=!I.checked;
+ var k=pick(),m=C.msg.cons[k],price=r.value?money(r.value)+C.per:C.msg.yourPrice;
+ K.textContent="";var b=document.createElement("b");b.textContent=m.head;K.appendChild(b);
+ if(m.body)K.appendChild(document.createTextNode(" "+m.body.split("{price}").join(price)));
+ K.className="of-cons"+(k==="request"?"":" of-cons--warn");
  var add=0;if(r.value){add=C.mode==="per_stay"?(C.arrivalMissing?r.value:0):r.value*C.missing*C.mul;}
- var total=r.value&&!ue?(C.mode==="per_stay"?(C.arrivalMissing?r.value:C.known):C.known+add):null;
+ var total=r.value?(C.mode==="per_stay"?(C.arrivalMissing?r.value:C.known):C.known+add):null;
  f.querySelector("[data-sum]").textContent=r.value?money(C.mode==="per_stay"?(C.arrivalMissing?r.value:0):add):"\\u2014";
  var t=f.querySelector("[data-total]");t.textContent=total?money(total):C.msg.empty;t.classList.toggle("of-empty",!total);
- f.querySelector("[data-into]").textContent=r.value?(u&&!ue?C.msg.intoDated.replace("{from}",nice(C.today)).replace("{to}",nice(u)):C.msg.intoBase):"";
- S.disabled=!total;
+ S.disabled=!total||k==="pick";
 }
-var warnHtml=f.querySelector("[data-validity]")?f.querySelector("[data-validity]").innerHTML:"";
 if(C.missing){A.addEventListener("input",run);A.addEventListener("blur",function(){var r=parse(A.value);if(r.value)A.value=grp(r.value);});
-U.addEventListener("input",function(){if(!U.value)f.querySelector("[data-validity]").innerHTML=warnHtml;run();});U.addEventListener("change",function(){if(!U.value)f.querySelector("[data-validity]").innerHTML=warnHtml;run();});
-f.querySelector("[data-clear-until]").addEventListener("click",function(){U.value="";f.querySelector("[data-validity]").innerHTML=warnHtml;run();});}
+I.addEventListener("change",function(){if(I.checked&&!f.querySelector("input[name=save]:checked"))f.querySelector("input[name=save][value=dates]").checked=true;run();});
+f.querySelectorAll("input[name=save]").forEach(function(x){x.addEventListener("change",run);});}
 f.addEventListener("submit",function(e){if(S.disabled){e.preventDefault();return;}S.disabled=true;});
 run();
 })();`;
@@ -303,23 +355,26 @@ function ownerOfferClosedPage(v: OfferView): string {
     T(lang, "Árajánlat"),
     `<div class="of-card" style="max-width:520px;margin:40px auto"><p class="of-host">${esc(v.hostName ?? "")}</p>` +
       `<p style="line-height:1.6">${text}</p>` +
-      `<p style="margin-top:20px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">${T(lang, "Foglalások megnyitása")}</a></p></div>`,
+      `<p style="margin-top:20px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=foglalasok">${T(lang, "Foglalások megnyitása")}</a></p></div>`,
   );
 }
 
-/** POST success — contract step 3 (the owner's own card). */
+/** POST success — contract step 3 (the owner's own card). Its button opens the Foglalások tab
+ *  at „Kiküldött ajánlatok" (ADR-XXXX) — it used to open the booking MODULE settings, a page
+ *  with no request on it (tudásbázis-őr, 2026-09-29). */
 export function ownerOfferSentPage(r: SendOfferResult, hostName: string): string {
   const lang = r.lang;
   const money = (n: number): string => formatMoney(n, r.currency, lang);
-  const intoLine = r.amount
-    ? r.until
-      ? T(lang, "A szoba árlistájába bekerült: {amount}/éj ({from} – {to}).", {
-          amount: money(r.amount),
-          from: huDate(new Date().toISOString().slice(0, 10), lang),
-          to: huDate(r.until, lang),
-        })
-      : T(lang, "A szoba árlistájába bekerült: {amount}/éj alapárként.", { amount: money(r.amount) })
-    : "";
+  // ADR-XXXX: say where the price went — the list is untouched unless the owner chose so.
+  const price = r.amount ? money(r.amount) + perSuffix(lang, r.unitMode) : "";
+  const range = (r.runs ?? []).map((w) => `${huDate(w.from, lang)} – ${huDate(addDays(w.to, 1), lang)}`).join(", ");
+  const intoLine = !r.amount
+    ? ""
+    : r.savedAs === "dates"
+      ? T(lang, "A kért napokra ({range}) bekerült az árlistába: {price}.", { range, price })
+      : r.savedAs === "base"
+        ? T(lang, "Alapárként bekerült az árlistába: {price}.", { price })
+        : T(lang, "Az árlistája nem változott — ahol nincs ára, ott továbbra is árajánlatot kérnek.");
   const expires = r.expiresAt ? ` ${T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(r.expiresAt, lang) })}` : "";
   return pageShell(
     T(lang, "Ajánlat elküldve"),
@@ -333,7 +388,7 @@ export function ownerOfferSentPage(r: SendOfferResult, hostName: string): string
       esc(expires) +
       (intoLine ? ` ${esc(intoLine)}` : "") +
       `</div>` +
-      `<p style="margin-top:20px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">${T(lang, "Foglalások megnyitása")}</a></p></div>`,
+      `<p style="margin-top:20px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=foglalasok#kikuldott-ajanlatok">${T(lang, "Foglalások megnyitása")}</a></p></div>`,
   );
 }
 

@@ -1,5 +1,8 @@
 // ⛔⛔ AZ ÁRAJÁNLAT-ÚT ŐRE — kontraktus: assets/design-refs/tenant-admin/booking-offer/
-// (tulajdonosi jóváhagyás 2026-09-23, „B" út + érvényesség + tulaj-oldali rögzítés).
+// (tulajdonosi jóváhagyás 2026-09-23, „B" út + tulaj-oldali rögzítés) és
+// assets/design-refs/tenant-admin/booking-offer-scope/ (ADR-XXXX, 2026-09-29: az ár ALAPBÓL
+// csak arra a kérésre szól; „Mentsem az árlistába is?" → a kért napokra / alapárként;
+// „Kiküldött ajánlatok" lista). Az ADR-0215 ①.3 „mindig az árlistába" ága FELÜLÍRVA.
 //
 // A MÉRT LELET, amiért létezik. Ár nélküli kérésnél a tulaj levele az árat NÉMÁN
 // kihagyta, „Új foglalási kérés"-nek hívta, és egy koppintásos „Elfogadom" gombot adott,
@@ -117,7 +120,6 @@ try {
   if (`${year}-06-18` < today) year++;
   const ARR = `${year}-06-28`;
   const DEP = `${year}-07-03`;
-  const UNTIL = `${year}-09-30`;
 
   // ── fixture ───────────────────────────────────────────────────────────────
   const def = await db.insertInto("scraper_definition").values({ label: "_offer", country: "HU", region: "_t", industry: "accommodation", sources: JSON.stringify(["osm"]) }).returning("id").executeTakeFirstOrThrow();
@@ -228,7 +230,11 @@ try {
     check("④ a Főszezon a meglévő áron, fixen áll", /Főszezon · 2 éj × 32 000 Ft/.test(body));
     // The label is uppercased by CSS, so innerText reads "VENDÉG" — match case-free.
     check("④ a vendég üzenete „Vendég” címkével", /vendég\s*„Két felnőtt/i.test(body), body.slice(0, 600));
-    check("⑥ üres dátumnál a figyelmeztetés látszik, és megnevezi a szezont", /Nincs lejárati dátum\.[\s\S]*Főszezon/.test(await page.locator("[data-validity]").innerText()));
+    check("S① a kérés adatainál „Amit kér”, nem „Szoba”", /Amit kér/.test(body) && !/(^|\n)Szoba(\n|\t)/i.test(body));
+    check("S① sehol nem „a szoba alapára”", !/szoba alapára/.test(body));
+    const cons = async (): Promise<string> => page.locator("[data-cons]").innerText();
+    check("S② alapból a pipa üres, az al-opciók rejtve", !(await page.locator("[data-into]").isChecked()) && !(await page.locator("[data-sub]").isVisible()));
+    check("S② alapból: „Csak erre a kérésre.” — az árlista nem változik", /Csak erre a kérésre\.[\s\S]*árlistája nem változik/.test(await cons()), await cons());
     check("a küldés tiltva, amíg nincs ár", await page.locator("[data-send]").isDisabled());
     await page.fill("[data-amount]", "abc");
     check("⑦ hibás bevitelre hibaüzenet", /Csak számot írjon/.test(await page.locator("[data-amount-err]").innerText()));
@@ -237,15 +243,15 @@ try {
     check("⑦ „26.000” → összesen 142 000 Ft", /142 000 Ft/.test(await page.locator("[data-total]").innerText()), await page.locator("[data-total]").innerText());
     await page.locator("[data-amount]").blur();
     check("⑦ elhagyáskor „26 000”-re formáz", (await page.locator("[data-amount]").inputValue()) === "26 000");
-    await page.fill("[data-until]", addDays(ARR, 1));
-    check("⑥ a tartózkodásnál korábbi dátum hibát ad", /Legalább/.test(await page.locator("[data-until-err]").innerText()));
-    check("⑥ …és a küldés tiltva", await page.locator("[data-send]").isDisabled());
-    await page.fill("[data-until]", UNTIL);
-    check("⑥ érvényes dátumnál kimondja a lejáratot és az emlékeztetőt", /-ig érvényes[\s\S]*emlékeztetjük/.test(await page.locator("[data-validity]").innerText()));
-    await page.locator("[data-until]").fill("");
-    await page.locator("[data-until]").dispatchEvent("change");
-    check("⑥ „Nincs vége” után a figyelmeztetés visszajön", /Nincs lejárati dátum/.test(await page.locator("[data-validity]").innerText()));
-    await page.fill("[data-until]", UNTIL);
+    await page.locator("[data-into]").check();
+    check("S③ pipa → a két út látszik, a „kért napokra” előválasztva", (await page.locator("[data-sub]").isVisible()) && (await page.locator('input[name=save][value=dates]').isChecked()));
+    check("S③ „a kért napokra”: megnevezi a napokat és az árat, élőben", /A kért napokra az árlistába kerül[\s\S]*26 000 Ft \/ éj/.test(await cons()), await cons());
+    check("S③ …és kimondja, hogy más napokra továbbra is ajánlatot kérnek", /más napokra továbbra is árajánlatot kérnek/.test(await cons()));
+    await page.locator('input[name=save][value=base]').check();
+    check("S④ „alapárként”: foglalhatóvá válik — szobánál „Ez a szoba”", /Alapárként az árlistába kerül[\s\S]*Ez a szoba ettől foglalhatóvá válik/.test(await cons()), await cons());
+    check("S④ …és megnevezi a saját árán maradó szezont", /Főszezon/.test(await cons()));
+    await page.locator("[data-into]").uncheck();
+    check("S② a pipa levétele visszaállítja: „Csak erre a kérésre.”", /Csak erre a kérésre/.test(await cons()));
     await page.screenshot({ path: path.join(OUT, `offer-owner-${label}.png`), fullPage: true });
     // Layout ⑮: two columns on desktop, one on mobile.
     const cols = await page.locator(".of-grid > *").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
@@ -255,6 +261,10 @@ try {
       await Promise.all([page.waitForLoadState("networkidle"), page.locator("[data-send]").click()]);
       await page.waitForSelector("[data-offer-sent]");
       check("⑧ a tulaj lapja: „Ajánlat elküldve, 142 000 Ft”", /Ajánlat elküldve, 142 000 Ft/.test(await page.locator("[data-offer-sent]").innerText()));
+      check("S② …és kimondja: az árlista nem változott", /árlistája nem változott/.test(await page.locator("[data-offer-sent]").innerText()));
+      // tudásbázis-őr (2026-09-29): the button used to open the booking MODULE settings.
+      const back = await page.getByRole("link", { name: "Foglalások megnyitása" }).getAttribute("href");
+      check("S⑤ a „Foglalások megnyitása” a Foglalások fül „Kiküldött ajánlatok” részére visz", back === "/admin?tab=foglalasok#kikuldott-ajanlatok", back);
       await page.screenshot({ path: path.join(OUT, `offer-owner-sent-${label}.png`), fullPage: true });
     }
     check("nincs JS-hiba", jsErr.length === 0, jsErr);
@@ -268,33 +278,14 @@ try {
   check("⑩ a vendég kulcsa KÜLÖN kulcs", !!r1.offer_token && r1.offer_token !== r1.action_token);
   const days1 = await db.selectFrom("availability_day").select("day").where("source", "=", `booking:${r1.id}`).execute();
   check("⑧ a napok még szabadok", days1.length === 0, days1.length);
+  // ⛔ ADR-XXXX: the default („csak erre a kérésre") writes NOTHING into the price list.
   const prices = await getUnitPrices(upper.id);
-  const dated = prices.find((p) => p.isBase && p.validTo);
-  check("⑤⑥ az ár DÁTUMOS alapárként került az árlistába", !!dated && dated.amount === 26_000 && dated.validFrom === today && dated.validTo === UNTIL, prices);
-  const avail = (await (await fetch(`${BASE}/t/${slug}/api/foglaltsag/${upper.id}`)).json()) as { pricing: { rows: { validTo?: string }[] } };
-  check("a böngésző ugyanazt az ablakot kapja (JSON)", avail.pricing.rows.some((r) => r.validTo === UNTIL), avail.pricing);
+  check("S② alapból SEMMI nem került az árlistába (csak a Főszezon maradt)", prices.length === 1 && !prices.some((p) => p.isBase), prices);
+  check("S② a kérésen: offer_saved_as = 'request'", r1.offer_saved_as === "request", r1.offer_saved_as);
+  const avail = (await (await fetch(`${BASE}/t/${slug}/api/foglaltsag/${upper.id}`)).json()) as { pricing: { rows: { base?: boolean; amount?: number }[] } | null };
+  check("S② a vendég-widget JSON-ja sem kapott új sort", !(avail.pricing?.rows ?? []).some((r) => r.amount === 26_000), avail.pricing);
   const pub = await (await fetch(`${BASE}/t/${slug}/`)).text();
-  const untilCell = `– ${UNTIL.slice(0, 4)}. ${UNTIL.slice(5, 7)}. ${UNTIL.slice(8, 10)}.`;
-  check("a honlap ártáblája kimondja a záró napot (újrarenderelve)", pub.includes(untilCell));
-
-  // The three surfaces the offer flow changed outside the mock (surface gate): the
-  // public price table's end date, the pricing tab's dated row, the module-page card.
-  const { mintTenantCookieValue: mintCookie } = await import("../src/auth/tenantAuth.js");
-  for (const [label, width] of [["mobil", 390], ["asztali", 1280]] as const) {
-    const ctx = await browser.newContext({ viewport: { width, height: 1000 } });
-    await ctx.addCookies([{ name: "cit_session", value: mintCookie(tu.id), url: BASE }]);
-    const page = await ctx.newPage();
-    await page.goto(`${BASE}/t/${slug}/`, { waitUntil: "networkidle" });
-    const sec = page.locator('[data-cit-module="pricing"]').first();
-    check(`ártábla ${label}: a dátumos alapár sora a záró napot mutatja`, (await sec.innerText()).includes(untilCell), (await sec.innerText()).slice(0, 300));
-    await sec.screenshot({ path: path.join(OUT, `surface-pricetable-${label}.png`) });
-    await page.goto(`${BASE}/admin?tab=modulok&m=pricing`, { waitUntil: "networkidle" });
-    const card = page.locator(".adm-card", { hasText: "Emeleti szoba" }).filter({ hasText: "Alapár, dátummal" }).first();
-    check(`Árazás lap ${label}: „Alapár, dátummal” sor a dátumokkal`, (await card.count()) === 1 && (await card.innerText()).includes(`${UNTIL.slice(0, 4)}. ${UNTIL.slice(5, 7)}. ${UNTIL.slice(8, 10)}.`));
-    check(`Árazás lap ${label}: az „Alapár” mező üres marad (a dátumos nem tölti ki)`, (await card.locator('input[name="amount"]').first().inputValue()) === "");
-    await card.screenshot({ path: path.join(OUT, `surface-pricingtab-${label}.png`) });
-    await ctx.close();
-  }
+  check("S② a honlapon nincs 26 000 Ft", !pub.includes("26 000"));
 
   // ── ⑨ ⑩ the guest's letter and key ────────────────────────────────────────────
   console.log("\n⑨⑩ A vendég levele és kulcsa");
@@ -358,10 +349,17 @@ try {
 
   // ⑬ owner records — no date → the TIMELESS base
   const g1 = await mk(ground.id, addDays(ARR, 30), addDays(ARR, 32));
-  const s1 = await req.sendOffer(await tok(g1), { amount: "18 000", until: "" }, BASE);
-  check("dátum nélküli ajánlat elmegy", s1.ok && s1.total === 36_000, s1);
+  // No-JS: ticked, but no way chosen → asked, nothing written (never a silent default).
+  const noWay = await fetch(`${BASE}/foglalas/${await tok(g1)}/ajanlat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ amount: "18 000", into: "1" }),
+  });
+  check("S③ pipa út nélkül (JS nélkül) → hibaüzenet, semmi nem íródik", noWay.status === 400 && /Válassza ki, hogyan kerüljön az árlistába/.test(await noWay.text()) && (await getUnitPrices(ground.id)).length === 0);
+  const s1 = await req.sendOffer(await tok(g1), { amount: "18 000", into: true, save: "base" }, BASE);
+  check("alapárként küldött ajánlat elmegy", s1.ok && s1.total === 36_000 && s1.savedAs === "base", s1);
   const gp = await getUnitPrices(ground.id);
-  check("⑥ dátum nélkül IDŐTLEN alapár lett", gp.some((p) => p.isBase && !p.validFrom && p.amount === 18_000), gp);
+  check("S④ „alapárként” → IDŐTLEN alapár lett (piros kontroll: az írás él)", gp.some((p) => p.isBase && !p.validFrom && p.amount === 18_000), gp);
   onlyNew(await mailsTo(OWNER), seenOwner);
   const rec = await req.recordOfferAcceptedByOwner(await tok(g1), BASE);
   const g1row = await db.selectFrom("booking_request").select(["status", "decided_by"]).where("id", "=", g1).executeTakeFirstOrThrow();
@@ -376,10 +374,16 @@ try {
   const pAttic = await mk(attic.id, addDays(ARR, 80), addDays(ARR, 82));
   onlyNew(await mailsTo(OWNER), seenOwner);
   onlyNew(await mailsTo(GUEST), seenGuest);
-  await req.sendOffer(await tok(aDec), { amount: "15 000", until: addDays(ARR, 100) }, BASE);
-  await req.sendOffer(await tok(aExp), { amount: "", until: "" }, BASE);
-  await req.sendOffer(await tok(aCon), { amount: "", until: "" }, BASE);
-  await req.sendOffer(await tok(aOwn), { amount: "", until: "" }, BASE);
+  await req.sendOffer(await tok(aDec), { amount: "15 000", into: true, save: "dates" }, BASE);
+  const ap = await getUnitPrices(annex.id);
+  check("S③ „a kért napokra” → dátumos alapár PONTOSAN a kért éjszakákra", ap.length === 1 && ap[0]!.isBase && ap[0]!.validFrom === addDays(ARR, 40) && ap[0]!.validTo === addDays(ARR, 41), ap);
+  const apRow = await db.selectFrom("unit_price").select("expiry_notified_at").where("unit_id", "=", annex.id).executeTakeFirstOrThrow();
+  check("S③ …és emlékeztető NEM jár rá (a bélyeg születéskor beállítva)", apRow.expiry_notified_at != null);
+  // The other three are OUTSIDE that window → still unpriced, each priced for itself.
+  await req.sendOffer(await tok(aExp), { amount: "15 000" }, BASE);
+  await req.sendOffer(await tok(aCon), { amount: "15 000" }, BASE);
+  await req.sendOffer(await tok(aOwn), { amount: "15 000" }, BASE);
+  check("S② a „kért napok” ablaka nem árazta be a többi kérést", (await getUnitPrices(annex.id)).length === 1);
 
   // ── ⑬ the Foglalások tab, as the signed-in tenant, both sizes ──────────────────
   const { mintTenantCookieValue } = await import("../src/auth/tenantAuth.js");
@@ -392,6 +396,17 @@ try {
     await page.goto(`${BASE}/admin?tab=foglalasok`, { waitUntil: "networkidle" });
     const offeredCards = page.locator("[data-bk-offered]");
     check(`⑬ ${label}: a kiküldött ajánlatok külön blokkban („Ajánlatra vár”)`, (await offeredCards.count()) === 4 && /ajánlatra vár/i.test(await page.locator("body").innerText()), await offeredCards.count());
+    // ADR-XXXX: the „Kiküldött ajánlatok" list — every offer, where its price went.
+    const list = page.locator("[data-sent-offers]");
+    const shown = label === "mobil" ? list.locator(".bk-of__c") : list.locator(".bk-of__t tbody tr");
+    check(`S⑤ ${label}: a „Kiküldött ajánlatok” lista mind a 6 ajánlatot mutatja (${label === "mobil" ? "kártyák" : "táblázat"})`, (await shown.count()) === 6 && (await shown.first().isVisible()), await shown.count());
+    check(`S⑤ ${label}: a válaszra várók vannak felül`, /Válaszra vár/.test(await shown.first().innerText()));
+    const listText = await list.innerText();
+    check(`S⑤ ${label}: az Árlista-oszlop kimondja mindhárom utat`, /Nem került be/.test(listText) && /Alapárként bekerült/.test(listText) && /A kért napokra bekerült/.test(listText), listText.slice(0, 500));
+    await list.getByRole("button", { name: "Elfogadta" }).click();
+    const vis = await shown.evaluateAll((els) => els.filter((e) => (e as HTMLElement).offsetParent !== null).length);
+    check(`S⑤ ${label}: a szűrő működik („Elfogadta” → 2 sor)`, vis === 2, vis);
+    await list.getByRole("button", { name: "Mind" }).click();
     check(`⑬ ${label}: a kártya kimondja a lejáratot`, /Ajánlat kiküldve · lejár/.test(await offeredCards.first().innerText()));
     check(`⑬ ${label}: van „A vendég elfogadta” gomb`, (await page.getByRole("button", { name: "A vendég elfogadta (telefonon / levélben)" }).count()) === 4);
     const quoteCard = page.locator(`#req-${pAttic}`);
@@ -418,7 +433,7 @@ try {
   const offTok = async (id: string): Promise<string> =>
     (await db.selectFrom("booking_request").select("offer_token").where("id", "=", id).executeTakeFirstOrThrow()).offer_token!;
   const annexRows = await db.selectFrom("booking_request").select(["id", "status", "quoted_total"]).where("id", "in", [aDec, aExp, aCon]).execute();
-  check("a már árazott időszakra is elmegy az ajánlat (ár nem kell)", annexRows.every((r) => r.status === "offered" && r.quoted_total === 30_000), annexRows);
+  check("a három ajánlat elment, mindegyik a saját árával", annexRows.every((r) => r.status === "offered" && r.quoted_total === 30_000), annexRows);
   onlyNew(await mailsTo(OWNER), seenOwner);
 
   // „Nem kérem”
@@ -448,19 +463,78 @@ try {
 
   // ── ⑥ the dated price over time ──────────────────────────────────────────────
   console.log("\n⑥ A dátumos ár az időben");
-  await db.updateTable("unit_price").set({ valid_to: addDays(today, 5), expiry_notified_at: null }).where("unit_id", "=", upper.id).where("valid_to", "is not", null).execute();
+  // The „kért napokra" row (annex) moved to end within 14 days: born stamped → no mail.
+  await db.updateTable("unit_price").set({ valid_from: today, valid_to: addDays(today, 5) }).where("unit_id", "=", annex.id).where("valid_to", "is not", null).execute();
   onlyNew(await mailsTo(OWNER), seenOwner);
+  const m0 = await maintainDatedPrices(today);
+  check("S③ a „kért napokra” sorra NEM megy lejárat-emlékeztető", m0.reminded === 0 && onlyNew(await mailsTo(OWNER), seenOwner).every((m) => !/Hamarosan lejár/.test(m.subject)), m0);
+  // Piros kontroll: the SAME row without the stamp (an ADR-0215 row) still gets one.
+  await db.updateTable("unit_price").set({ expiry_notified_at: null }).where("unit_id", "=", annex.id).where("valid_to", "is not", null).execute();
   const m1 = await maintainDatedPrices(today);
-  check("⑥ 14 napon belüli lejáratnál emlékeztető megy", m1.reminded >= 1, m1);
-  check("⑥ …a tulaj megkapja", onlyNew(await mailsTo(OWNER), seenOwner).some((m) => /Hamarosan lejár egy ár: Emeleti szoba/.test(m.subject)));
+  check("⑥ bélyeg nélküli dátumos sornál az emlékeztető megy (a gépezet él)", m1.reminded >= 1, m1);
+  check("⑥ …a tulaj megkapja", onlyNew(await mailsTo(OWNER), seenOwner).some((m) => /Hamarosan lejár egy ár: Kerti ház/.test(m.subject)));
   const m2 = await maintainDatedPrices(today);
   check("⑥ másodszor NEM megy ki (egy ablak = egy levél)", m2.reminded === 0, m2);
-  await db.updateTable("unit_price").set({ valid_from: addDays(today, -10), valid_to: addDays(today, -1) }).where("unit_id", "=", upper.id).where("valid_to", "is not", null).execute();
+  await db.updateTable("unit_price").set({ valid_from: addDays(today, -10), valid_to: addDays(today, -1) }).where("unit_id", "=", annex.id).where("valid_to", "is not", null).execute();
   const m3 = await maintainDatedPrices(today);
-  const left = (await getUnitPrices(upper.id)).filter((p) => p.validTo);
+  const left = (await getUnitPrices(annex.id)).filter((p) => p.validTo);
   check("⑥ lejárat után a sor lekerül", m3.expired >= 1 && left.length === 0, { m3, left });
   const pub2 = await (await fetch(`${BASE}/t/${slug}/`)).text();
-  check("⑥ …és a honlap ártáblája már nem mutatja (újrarenderelve)", !pub2.includes("26 000"));
+  check("⑥ …és a honlap ártáblája már nem mutatja (újrarenderelve)", !pub2.includes("15 000"));
+
+  // ── S⑤ the list after every ending, both sizes — the finished surface ──────────
+  console.log("\nS⑤ Kiküldött ajánlatok — minden kimenet után");
+  for (const [label, width] of [["mobil", 390], ["asztali", 1280]] as const) {
+    const ctx = await browser.newContext({ viewport: { width, height: 1000 } });
+    await ctx.addCookies([{ name: "cit_session", value: mintTenantCookieValue(tu.id), url: BASE }]);
+    const page = await ctx.newPage();
+    const jsErr: string[] = [];
+    page.on("pageerror", (e) => jsErr.push(e.message));
+    await page.goto(`${BASE}/admin?tab=foglalasok`, { waitUntil: "networkidle" });
+    const list = page.locator("[data-sent-offers]");
+    const t = await list.innerText();
+    check(`S⑤ ${label}: minden kimenet a saját szavával`, ["Elfogadta — foglalás", "Nem kérte", "Lejárt — nem felelt", "Közben elkelt"].every((w) => t.includes(w)), t.slice(0, 700));
+    const sw = await page.evaluate(() => ({ iw: window.innerWidth, sw: document.documentElement.scrollWidth }));
+    check(`S⑤ ${label}: nincs vízszintes túlcsordulás`, sw.sw <= sw.iw, sw);
+    // The picture for the owner: the consent bar (fixed) and the sticky admin bar would
+    // cover an element shot on a phone — dismiss the bar, shoot the whole page.
+    const consent = page.getByRole("button", { name: "Csak a szükségeseket" });
+    if (await consent.count()) await consent.first().click().catch(() => {});
+    await page.screenshot({ path: path.join(OUT, `offer-sentlist-${label}.png`), fullPage: true });
+    check(`${label}: nincs JS-hiba`, jsErr.length === 0, jsErr);
+    await ctx.close();
+  }
+
+  // ── S⑥ ADR-0257: a whole-only house must not silently become bookable ──────────
+  console.log("\nS⑥ Csak egyben kiadó ház — az ajánlat nem kapcsolja foglalhatóvá");
+  const house = await db.insertInto("site_unit").values({ site_id: site.id, name: "A szállás egésze", capacity: 8, sort_order: 0, is_whole_property: true, represents_whole: true, whole_only: true }).returning("id").executeTakeFirstOrThrow();
+  await rerenderTenantSnapshot(tenant.id, { as: "live" });
+  const hq = await mk(house.id, addDays(ARR, 90), addDays(ARR, 92));
+  const hView = await req.loadOfferView(await tok(hq));
+  check("S⑥ az ajánlat-lap az egységet egész szállásnak ismeri", hView.unitKind === "whole" && hView.opensWidget === false, { k: hView.unitKind, w: hView.opensWidget });
+  const hCtx = await browser.newContext({ viewport: { width: 390, height: 1000 } });
+  const hPage = await hCtx.newPage();
+  await hPage.goto(`${BASE}/foglalas/${await tok(hq)}/ajanlat`, { waitUntil: "networkidle" });
+  await hPage.fill("[data-amount]", "90 000");
+  await hPage.locator("[data-into]").check();
+  await hPage.locator('input[name=save][value=base]').check();
+  const hCons = await hPage.locator("[data-cons]").innerText();
+  check("S⑥ alapárnál: „Az egész szállás ettől foglalhatóvá válik” (nem „szoba”)", /Az egész szállás ettől foglalhatóvá válik/.test(hCons) && !/szoba/i.test(hCons), hCons);
+  check("S⑥ …és nem ígér „foglalási doboz ezzel nyílik”-at (egyetlen foglalható egység)", !/foglalási doboz/.test(hCons));
+  await hPage.locator("[data-into]").uncheck();
+  await Promise.all([hPage.waitForLoadState("networkidle"), hPage.locator("[data-send]").click()]);
+  await hPage.waitForSelector("[data-offer-sent]");
+  await hCtx.close();
+  const hp = await getUnitPrices(house.id);
+  check("S⑥ ⛔ az alapértelmezett ajánlat után a háznak NINCS ára", hp.length === 0, hp);
+  const hRow = await db.selectFrom("booking_request").select(["status", "quoted_total", "offer_saved_as"]).where("id", "=", hq).executeTakeFirstOrThrow();
+  check("S⑥ …a kérésen mégis ott az ár (180 000), 'request'", hRow.status === "offered" && hRow.quoted_total === 180_000 && hRow.offer_saved_as === "request", hRow);
+  const hPub = await (await fetch(`${BASE}/t/${slug}/`)).text();
+  // The widget's unit list travels in the slot's data-cit-units attribute (cit-runtime.js).
+  const attr = /data-cit-units="([^"]*)"/.exec(hPub)?.[1] ?? "[]";
+  const wUnits = JSON.parse(attr.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&")) as { id: string; unpriced?: boolean }[];
+  const wHouse = wUnits.find((u) => u.id === house.id);
+  check("S⑥ …és a honlap foglalási doboza a házat továbbra is árazatlanként („egyedi ár”) kínálja", !!wHouse && wHouse.unpriced === true, wUnits);
 
   await browser.close();
 } finally {

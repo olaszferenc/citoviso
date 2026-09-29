@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-arajanlat-ara-alapbol-csak-arra-a-keresre.md) — Az árajánlat ára alapból csak arra a kérésre szól; az árlistába csak kérésre kerül (a kért napokra vagy alapárként), és a kiküldött ajánlatok listája megmondja, mi lett vele
 - [ADR-0266](decisions/0266-az-outreach-link-live-check-a-lap-load.md) — Az outreach-link-live-check a lap `load` eseményére vár, nem a `networkidle`-re (2026-09-29)
 - [ADR-0265](decisions/0265-a-kapu-futtato-a-leghosszabb-kaput-inditja.md) — A kapu-futtató a leghosszabb kaput indítja először, tartós kapuidő-előzményből (`scripts/lib/gate-runner.mjs`) (2026-09-29)
 - [ADR-0264](decisions/0264-a-kovetkezo-negy-lassu-bongeszos-kapu-is-a.md) — A következő négy lassú böngészős kapu is a közös poolon mér (`room-card-overflow` · `configurator-float` · `configurator-placement` · `whole-only-guest`); a `mobile-chrome --selftest` kimarad (2026-09-29)

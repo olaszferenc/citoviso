@@ -33,9 +33,13 @@ miközben a lap (ADR-0208) már árajánlat-kérést.
    szerint**: ami már árazott, az a meglévő áron, fixen áll; **csak a hiányzó éjszakákra**
    kér árat. Az összeg élőben számolódik, ugyanazzal a szabállyal, ami a vendég-lapon és a
    levélben az árat adja (egy példány, ADR-0208 ③).
+> ⛔ **Az 5. és 6. pontot felülírta az ADR-XXXX (2026-09-29, `../booking-offer-scope/`):** az ár
+> alapból CSAK arra a kérésre szól; az árlistába csak a „Mentsem az árlistába is?” pipával kerül — a
+> kért napokra vagy alapárként. Érvényesség-dátum mező nincs. A lánc többi pontja változatlan.
+
 5. **Az ár MINDIG az árlistába kerül.** Nincs „csak erre a kérésre” kiút (tulajdonosi döntés:
    a hiányzó ár ne ismétlődhessen).
-6. **Érvényesség:** „Érvényes eddig” dátum, nem kötelező.
+6. (felülírva, lásd fent) **Érvényesség:** „Érvényes eddig” dátum, nem kötelező.
    - **Dátum nélkül** az egység **alapára** lesz — minden éjszakára, amire nincs szezonár, a
      következő módosításig. A lap ezt **figyelmeztetésként** kimondja, a meglévő szezonárak
      nevével együtt, amelyek a saját árukon maradnak.

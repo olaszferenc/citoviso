@@ -156,6 +156,7 @@ import {
   recordOfferAcceptedByOwner,
   respondToOffer,
   sendOffer,
+  getSentOffers,
   unseenRequestCount,
   parseOfferAmount,
 } from "../booking/requests.js";
@@ -1717,6 +1718,7 @@ async function serveAdmin(
             ? panelParam
             : null,
         requests,
+        sentOffers: await getSentOffers(site.id),
         yearAccepted: yearLive,
         yearCancelled: yearGone,
         outcome,
@@ -3082,9 +3084,13 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (ownerOfferPost) {
     const token = ownerOfferPost[1]!;
     const form = await readFormBody(req);
+    // ADR-XXXX (approved plan booking-offer-scope, „A"): the price goes into the list only
+    // when „Mentsem az árlistába is?" is ticked AND one of its two ways is chosen.
+    const into = form.get("into") === "1";
     const input = {
       amount: form.get("amount") ?? "",
-      until: form.get("until"),
+      into,
+      save: into ? form.get("save") : "request",
       note: form.get("note"),
     };
     const r = await sendOffer(token, input, publicBaseUrl(req));
@@ -3099,7 +3105,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       ownerOfferPage(v, {
         errors: r.errors,
         amount: input.amount,
-        until: input.until ?? "",
+        into,
+        save: input.save ?? "",
         note: input.note ?? "",
       }),
     );

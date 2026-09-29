@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-09-23
+updated: 2026-09-29
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -43,22 +43,26 @@ ajánlatot:
 2. A lap felsorolja a kért éjszakákat. Amire már van ára (például a főszezonra), az a meglévő
    áron fixen áll. Csak a hiányzó éjszakákhoz kell árat írnia az **„Ár éjszakánként”** mezőbe —
    az összeg azonnal kiszámolódik alatta.
-3. Az **„Érvényes eddig (nem kötelező)”** mezőben megadhatja, meddig érvényes ez az ár. A dátum
-   nem lehet korábbi a kért tartózkodás utolsó ár nélküli éjszakájánál — különben az ár erre a
-   kérésre sem vonatkozna, és a lap ezt hibaüzenettel jelzi. Ha üresen hagyja (vagy a **„Nincs
-   vége”** gombra koppint), ez lesz a szoba alapára: minden olyan éjszakára érvényes, amelyre
-   nincs időszaki ár, a következő módosításig — ezt a lap sárga figyelmeztetésben ki is mondja.
-   Ha dátumot ad meg, az ár addig érvényes, és a lejárat előtt legfeljebb két héttel e-mailben
-   emlékeztetjük.
-4. Írhat üzenetet a vendégnek (például „A kiságyat szívesen odakészítjük.”), majd koppintson az
-   **„Ajánlat küldése”** gombra. Ha mégsem tudja fogadni, ugyanitt a **„Nem szabad”** gombbal
-   elutasíthatja.
+3. Írhat üzenetet a vendégnek (például „A kiságyat szívesen odakészítjük.”).
+4. Az ár alapból **csak erre a kérésre** szól: az árlistája nem változik, és ahol nincs ára, ott
+   a vendégek a honlapon továbbra is árajánlatot kérnek. Ha az árat az árlistába is fel akarja
+   venni, pipálja be a **„Mentsem az árlistába is?”** négyzetet, és válasszon:
+   - **„Csak a kért napokra”** — az ár csak ezekre az éjszakákra kerül az árlistába; ezekre a
+     napokra a honlapon ajánlatkérés nélkül is foglalható lesz, más napokra továbbra is
+     árajánlatot kérnek. A tartózkodás utolsó éjszakája után az ár lekerül az árlistáról.
+   - **„Alapárként”** — dátum nélkül, a következő módosításig: minden olyan éjszakára érvényes,
+     amelyre nincs szezonár. Ettől a szoba (vagy az egész szállás) a honlapon **foglalhatóvá
+     válik** — a vendégek onnantól ajánlatkérés nélkül küldhetnek foglalási kérést, amit Ön igazol
+     vissza.
 
-![Képernyőkép: az ajánlat-lap ár-része telefonon, beírt árral és a figyelmeztetéssel](assets/hu/offer.png)
+   A választás alatti keretes mondat mindig kimondja, mi lesz a választásának a következménye.
+5. Koppintson az **„Ajánlat küldése”** gombra. Ha mégsem tudja fogadni, ugyanitt a
+   **„Nem szabad”** gombbal elutasíthatja.
 
-Küldés után a lap zöld dobozban megerősíti, mennyi ment ki és mi került az árlistába; a
-**„Foglalások megnyitása”** gombbal visszatérhet ide. Az ár mindig bekerül a szoba árlistájába,
-így a következő vendég már árat lát az oldalon.
+![Képernyőkép: az ajánlat-lap ár-része telefonon, beírt árral, a „Mentsem az árlistába is?” négyzettel és a „Csak erre a kérésre.” mondattal](assets/hu/offer.png)
+
+Küldés után a lap zöld dobozban megerősíti, mennyi ment ki, és azt is, hogy az ár bekerült-e az
+árlistába; a **„Foglalások megnyitása”** gomb ide, a „Kiküldött ajánlatok” listához hozza vissza.
 
 A vendég e-mailben kapja meg az ajánlatot, és egy gombbal elfogadhatja. **Az ajánlat még nem
 foglalás:** a napok addig szabadok maradnak, amíg a vendég el nem fogadja. Ha közben más
@@ -68,12 +72,19 @@ beállításaiban az **„Ennyi idő után magától lejár a kérés”** mező
 ajánlat lejár — erről Ön és a vendég is értesítést kap. (Ha ott 0 áll, az ajánlat nem jár le.)
 Ha a vendég nem kéri az ajánlatot, e-mailben szólunk, és a napok szabadok maradnak.
 
-A kiküldött ajánlatok az **„Ajánlatra vár”** részben látszanak, a lejárat idejével. Ha a vendég
+A válaszra váró ajánlatok az **„Ajánlatra vár”** részben látszanak, a lejárat idejével. Ha a vendég
 nem a levél gombjával, hanem telefonon vagy válaszlevélben mondja, hogy kéri, koppintson az
 **„A vendég elfogadta (telefonon / levélben)”** gombra — ugyanaz történik, mintha ő nyomta
 volna meg: a napok foglalttá válnak, és a vendég megkapja a visszaigazolást az árral.
 
-A dátummal megadott árat a Modulok fülön, az „Árak, szezonok” modulnál **„Alapár, dátummal”**
+A Foglalások fül alján a **„Kiküldött ajánlatok”** lista minden ajánlatát mutatja, amit a
+rendszerből küldött — azokat is, amelyek már lezárultak: kinek, mire, mennyiért, mikor ment ki,
+mi lett vele (például „Elfogadta — foglalás”, „Nem kérte”, „Lejárt — nem felelt”, „Közben elkelt”),
+és az **„Árlista”** oszlopban (telefonon a kártya „Árlista:” sorában) azt, hogy az ár bekerült-e az
+árlistába. A lista felett szűrhet:
+**„Mind”**, **„Válaszra vár”**, **„Elfogadta”**, **„Nem lett belőle”**.
+
+A kért napokra mentett árat a Modulok fülön, az „Árak, szezonok” modulnál **„Alapár, dátummal”**
 sorként látja, a dátumokkal együtt; ott törölheti is.
 
 ## Ha többen kérik ugyanazt az időszakot

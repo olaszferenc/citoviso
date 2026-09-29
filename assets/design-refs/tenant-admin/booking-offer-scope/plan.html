@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jóváhagyott terv — az árajánlat ára alapból csak arra a kérésre szól</title>
+<style>
+:root{
+  --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59; --citui-cyan-500:#1fb6d6;
+  --citui-ink:#10243a; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-ink:#19733f; --citui-warn-ink:#7d5a12; --citui-bad-ink:#b3262b; --citui-link-ink:#10697a;
+  --citui-white:#fff; --citui-radius-sm:14px;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --warn-soft:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white));
+  --info-soft:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));
+  --r:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--citui-font-text);color:var(--citui-ink);background:color-mix(in srgb,var(--citui-navy-900) 8%,var(--citui-white))}
+.wrap{max-width:1240px;margin:0 auto;padding:14px}
+h1{font-size:19px;margin:0 0 4px}
+.lede{color:var(--citui-muted);font-size:14px;line-height:1.55;margin:0 0 12px}
+.bar{position:static;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--citui-navy-900);color:var(--citui-white);padding:10px 12px;border-radius:var(--r);margin-bottom:14px}
+.bar .grp{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bar .grp b{font-size:12px;opacity:.8;margin-right:2px}
+.bar .sp{flex:1 1 auto}
+.bar button,.bar select{font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:transparent;color:var(--citui-white);cursor:pointer}
+.bar select option{color:var(--citui-ink)}
+.bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#06232b;font-weight:700}
+.vdesc{background:var(--citui-white);border:1px solid var(--citui-line-strong);border-radius:var(--r);padding:10px 14px;font-size:14px;line-height:1.55;margin-bottom:14px}
+.vdesc b{color:var(--citui-navy-900)}
+.stage{container-type:inline-size;margin:0 auto;transition:max-width .18s ease}
+body[data-size="mobile"] .stage{max-width:390px}
+@media (min-width:900px){ .bar{position:sticky;top:0} }
+body[data-size="desktop"] .stage{max-width:1240px}
+.tag{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;margin:18px 0 8px}
+
+/* tenant admin page shell */
+.adm{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:var(--r);padding:16px}
+.adm__host{font-weight:800;color:var(--citui-navy-900);padding-bottom:10px;border-bottom:1px solid var(--citui-line);margin-bottom:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.adm__host small{font-weight:500;color:var(--citui-muted)}
+.grid{display:grid;gap:14px}
+@container (min-width:760px){ .grid{grid-template-columns:5fr 7fr;align-items:start} }
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--r);padding:14px}
+.card h2{margin:0 0 10px;font-size:16px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;line-height:1.5;margin:0}
+.kv dt{color:var(--citui-muted)} .kv dd{margin:0;font-weight:600}
+.gq{margin-top:12px;border-left:4px solid var(--citui-cyan-500);background:var(--citui-surface-2);padding:9px 11px;border-radius:6px;font-size:14px;line-height:1.5}
+.gq b{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted);display:block;margin-bottom:2px}
+.saw{margin-top:12px;font-size:13.5px;color:var(--citui-warn-ink);display:flex;gap:7px;align-items:flex-start;line-height:1.45}
+.saw svg{flex:none;margin-top:2px}
+.lines{margin:0 0 10px;padding:0;list-style:none}
+.lines li{padding:10px 8px;background:var(--warn-soft);border-radius:8px;font-size:14.5px}
+.lines .hd{display:flex;justify-content:space-between;gap:8px}
+.lines small{display:block;color:var(--citui-muted);font-size:12.5px}
+.sum{font-weight:700;white-space:nowrap}
+.fld{margin-top:9px}
+.fld>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
+.inp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.inp input[type=text],.inp input[type=date]{font:inherit;font-size:16px;width:160px;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-white)}
+.inp input[aria-invalid="true"]{border-color:var(--citui-bad);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-bad) 18%,transparent)}
+.inp em{font-style:normal;color:var(--citui-muted);font-size:14px}
+@container (max-width:520px){ .inp input[type=text],.inp input[type=date]{width:100%} }
+.err{color:var(--citui-bad-ink);font-size:13px;margin-top:4px;min-height:0}
+.err:empty{display:none}
+.total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--citui-navy-900);padding-top:10px;margin-top:12px;font-size:15px}
+.total b{font-size:20px;white-space:nowrap}
+textarea{width:100%;font:inherit;font-size:15px;min-height:70px;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;margin-top:4px}
+.lbl{display:block;font-size:12.5px;font-weight:600;margin-top:12px}
+
+/* the new block: where does the price go */
+.save{margin-top:14px;border:1px solid var(--citui-line-strong);border-radius:10px;padding:12px;background:var(--citui-white)}
+.save h3{margin:0 0 8px;font-size:14.5px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.45;cursor:pointer}
+.chk input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--citui-navy-800)}
+.chk small{display:block;color:var(--citui-muted);font-size:12.5px}
+.subopts{margin:10px 0 0 30px;display:grid;gap:8px}
+.subopts[hidden]{display:none}
+.seg{display:grid;gap:8px}
+@container (min-width:760px){ .seg{grid-template-columns:repeat(3,1fr)} }
+.seg label{border:1px solid var(--citui-line-strong);border-radius:10px;padding:10px;cursor:pointer;font-size:14px;line-height:1.4;display:flex;gap:8px;align-items:flex-start}
+.seg label small{display:block;color:var(--citui-muted);font-size:12.5px}
+.seg label:has(input:checked){border-color:var(--citui-navy-800);box-shadow:0 0 0 2px var(--citui-navy-800) inset;background:var(--citui-surface-2)}
+.seg input{margin-top:2px;accent-color:var(--citui-navy-800)}
+.cons{margin-top:12px;border-left:4px solid var(--citui-cyan-500);background:var(--info-soft);padding:10px 12px;border-radius:6px;font-size:14px;line-height:1.55}
+.cons--warn{border-left-color:var(--citui-warn);background:var(--warn-soft)}
+.cons b{display:block;margin-bottom:2px}
+.until{margin-top:6px}
+.until[hidden]{display:none}
+.expire{font-size:13px;color:var(--citui-muted);line-height:1.5;margin-top:12px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.btn{font:inherit;font-size:15px;font-weight:600;padding:11px 18px;border-radius:10px;border:1px solid var(--citui-navy-800);cursor:pointer;text-decoration:none;display:inline-block}
+.btn--pri{background:var(--citui-navy-800);color:var(--citui-white)}
+.btn--pri[disabled]{opacity:.45;cursor:not-allowed}
+.btn--gh{background:var(--citui-white);color:var(--citui-navy-800)}
+.btn--sm{font-size:13.5px;padding:7px 12px}
+@container (max-width:520px){ .acts .btn{flex:1 1 100%;text-align:center} }
+.done{border:1px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:10px;padding:14px;font-size:14.5px;line-height:1.55}
+.done b{display:block;font-size:16px;color:var(--citui-ok-ink);margin-bottom:4px}
+.done[hidden],.form[hidden]{display:none}
+
+/* sent offers list */
+.list{margin-top:18px}
+.list h2{font-size:17px;margin:0 0 4px}
+.list .intro{font-size:13.5px;color:var(--citui-muted);margin:0 0 10px;line-height:1.5}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chips button{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--citui-navy-800);color:var(--citui-white);border-color:var(--citui-navy-800)}
+table.of{width:100%;border-collapse:collapse;font-size:14px;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--r);overflow:hidden}
+table.of th{text-align:left;font-size:12px;color:var(--citui-muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--citui-line-strong);background:var(--citui-surface-2)}
+table.of td{padding:10px;border-bottom:1px solid var(--citui-line);vertical-align:top}
+table.of td small{display:block;color:var(--citui-muted);font-size:12.5px}
+table.of tr.new td{background:color-mix(in srgb,var(--citui-cyan-500) 7%,var(--citui-white))}
+.st{display:inline-block;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.st--wait{background:var(--warn-soft);color:var(--citui-warn-ink)}
+.st--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.st--no{background:var(--citui-surface-2);color:var(--citui-muted)}
+.pl{font-size:13px}
+.pl--none{color:var(--citui-muted)}
+.cards{display:none}
+@container (max-width:700px){
+  table.of{display:none}
+  .cards{display:grid;gap:10px}
+}
+.oc{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--r);padding:12px;font-size:14px;line-height:1.5}
+.oc.new{border-color:var(--citui-cyan-500)}
+.oc .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.oc .who{font-weight:700}
+.oc .amt{font-weight:700;white-space:nowrap}
+.oc .meta{color:var(--citui-muted);font-size:13px}
+.oc .pl{margin-top:6px}
+.later{margin-top:8px;border-top:1px dashed var(--citui-line-strong);padding-top:8px}
+.later[hidden]{display:none}
+.later .opts{display:grid;gap:6px;margin:6px 0}
+.later label{font-size:13.5px;display:flex;gap:6px;align-items:flex-start}
+.later .cons{font-size:13px;margin-top:6px}
+.empty{font-size:13.5px;color:var(--citui-muted);padding:10px}
+.note{font-size:12.5px;color:var(--citui-muted);margin-top:8px}
+</style>
+</head>
+<body data-size="desktop">
+<div class="wrap">
+  <h1>Árajánlat — hova kerül az ár? (jóváhagyott „A”, 2026-09-29)</h1>
+  <p class="lede">Myrna Haus · „A szállás egésze” · 2026. nov. 13 – nov. 15 (2 éj) · 6 fő. Az egész háznak nincs ára, ezért a vendég árajánlatot kért. Az ár <b>alapból csak erre a kérésre</b> szól. A „Mentsem az árlistába is?” pipa alatt két út: <b>a kért napokra</b> vagy <b>alapárként</b>. A tulaj döntése: „OK A)”, „Kért Napok”. Az árat írja be, kattintson — a mondatok élőben a valódi szabályt mondják.</p>
+
+  <div class="bar">
+    <div class="grp" role="group" aria-label="Változat"><b>Változat</b>
+      <button type="button" data-v="A" aria-pressed="true">A · pipa</button>
+    </div>
+    <span class="sp"></span>
+    <div class="grp" role="group" aria-label="Méret"><b>Méret</b>
+      <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+      <button type="button" data-size="desktop" aria-pressed="true">Asztali</button>
+    </div>
+    <div class="grp"><b>Próba: a ház</b>
+      <select data-house aria-label="A ház beállítása">
+        <option value="also">Egyben is kiadom</option>
+        <option value="only">Csak egyben adom ki</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="vdesc" data-vdesc></div>
+
+  <div class="stage">
+    <span class="tag">Ajánlat-lap (a levél „Ajánlatot küldök” gombja, ill. Foglalások fül)</span>
+    <div class="adm">
+      <div class="adm__host">Myrna Haus <small>Árajánlat küldése</small></div>
+
+      <div class="done" data-done hidden></div>
+
+      <div class="grid form" data-form>
+        <section class="card">
+          <h2>Elek Vendég Ajánlat kérése</h2>
+          <dl class="kv">
+            <dt>Amit kér</dt><dd>A szállás egésze</dd>
+            <dt>Érkezés</dt><dd>2026. nov. 13.</dd>
+            <dt>Távozás</dt><dd>2026. nov. 15. (2 éj)</dd>
+            <dt>Létszám</dt><dd>6 fő</dd>
+            <dt>E-mail</dt><dd>elek@citoviso.com</dd>
+          </dl>
+          <div class="gq"><b>Vendég</b>„Baráti társasággal jönnénk, hat felnőtt.”</div>
+          <p class="saw"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span>A vendég az oldalon nem látott összeget — amit itt beír, az lesz az első ár, amit megtud.</span></p>
+        </section>
+
+        <section class="card">
+          <h2>Az ár</h2>
+          <ul class="lines"><li>
+            <div class="hd"><div>Új ár · 2 éj<small>nov. 13 – nov. 15 — erre nincs ára</small></div><span class="sum" data-linesum>—</span></div>
+            <label class="fld"><span>Ár éjszakánként</span>
+              <span class="inp"><input type="text" inputmode="numeric" placeholder="pl. 26 000" data-amount aria-describedby="amt-err"><em>Ft / éj</em></span></label>
+            <div class="err" id="amt-err" data-amount-err></div>
+          </li></ul>
+          <div class="total"><span>Összesen</span><b data-total>—</b></div>
+
+          <label class="lbl" for="note">Üzenet a vendégnek (nem kötelező)</label>
+          <textarea id="note" placeholder="pl. A kiságyat szívesen odakészítjük, díjmentesen."></textarea>
+
+          <div class="save" data-save></div>
+          <div class="cons" data-cons></div>
+
+          <p class="expire">Az ajánlat még nem foglalás: a napok addig szabadok maradnak, amíg Elek Vendég Ajánlat el nem fogadja. Ha 48 órán belül nem felel, az ajánlat lejár, és erről mindketten értesítést kapnak.</p>
+          <div class="acts">
+            <button class="btn btn--pri" type="button" data-send disabled>Ajánlat küldése</button>
+            <a class="btn btn--gh" href="#" data-nofree>Nem szabad</a>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <span class="tag">Foglalások fül — új szakasz: a kiküldött ajánlatok (ma nincs ilyen lista)</span>
+    <div class="adm list">
+      <h2>Kiküldött ajánlatok</h2>
+      <p class="intro">Minden árajánlat, amit a rendszerből küldött — kinek, mennyiért, mikorra, és mi lett vele. A válaszra várók vannak felül. Az „Árlista” oszlop megmondja, bekerült-e az ár az árlistájába is.</p>
+      <div class="chips" role="group" aria-label="Szűrés">
+        <button type="button" data-f="all" aria-pressed="true">Mind</button>
+        <button type="button" data-f="wait" aria-pressed="false">Válaszra vár</button>
+        <button type="button" data-f="ok" aria-pressed="false">Elfogadta</button>
+        <button type="button" data-f="no" aria-pressed="false">Nem lett belőle</button>
+      </div>
+      <table class="of" data-table>
+        <thead><tr><th>Vendég</th><th>Mit, mikorra</th><th>Ár</th><th>Kiküldve</th><th>Mi lett vele</th><th>Árlista</th></tr></thead>
+        <tbody data-tbody></tbody>
+      </table>
+      <div class="cards" data-cards></div>
+      <p class="note">Mintaadat. A „—” az Árlista-oszlopban: a döntés (2026-09-29) előtti ajánlat, ahol nem tudjuk, hova került az ár.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const NBSP = " ";
+  const keep = (t) => t.replace(/(\.) (\d)/g, "$1\u00a0$2").replace(/ (\d+ (éj|fő))/g, "\u00a0$1");
+  const money = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP) + NBSP + "Ft";
+  const TODAY = "2026-09-29";
+  const LAST_MISSING = "2026-11-14"; // last unpriced night of the stay
+  const NIGHTS = 2;
+  const MONTHS = ["jan.", "febr.", "márc.", "ápr.", "máj.", "jún.", "júl.", "aug.", "szept.", "okt.", "nov.", "dec."];
+  const huDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return y + ". " + MONTHS[m - 1] + " " + d + "."; };
+
+  const VDESC = {
+    A: "<b>A · pipa az ár alatt.</b> Egy alapból üres pipa: „Mentsem az árlistába is?”. Bepipálva két lehetőség: „Csak a kért napokra” (előválasztva) vagy „Alapárként”. Pipa nélkül az ár csak erre a kérésre szól.",
+    B: "<b>B · három gomb, mind látszik.</b> „Csak erre a kérésre” (előválasztva) · „Egy időszakra az árlistába” · „Alapárként az árlistába”. Nincs rejtett lépés — a tulaj mindhárom következményt látja, mielőtt dönt.",
+    C: "<b>C · az ajánlat-lap csak ajánlatot küld; az árlista később, a listából.</b> Az ajánlat-lapon nincs választó, egy mondat mondja: az árlista nem változik. A „Kiküldött ajánlatok” sorában „Árlistába teszem…” — ott, akkor dönt, ha akar.",
+  };
+
+  const state = { v: "A", house: "also", sent: false, amount: null, save: "none", until: "", filter: "all" };
+
+  // Owner-facing consequence text — mirrors the real rules (cit-season.cjs layering,
+  // ADR-0256 first priced unit, ADR-0257 whole-only, priceExpiry 14-day reminder).
+  function consequence(mode, amount, until) {
+    const per = amount ? money(amount) + " / éj" : "az Ön ára";
+    if (mode === "none") {
+      return { warn: false, head: "Csak erre a kérésre.",
+        body: "Az árlistája nem változik: ahol nincs ára, ott a vendégek a honlapon továbbra is árajánlatot kérnek, és a következő kérésre újra Ön ad árat. Az ajánlat nyoma a Foglalások fül „Kiküldött ajánlatok” részében marad." };
+    }
+    if (mode === "dated") {
+      return { warn: true, head: "A kért napokra az árlistába kerül (nov. 13 – nov. 15).",
+        body: "Ezekre az éjszakákra az egész szállás a honlapon " + per + " áron, árajánlat-kérés nélkül is foglalható; más napokra továbbra is árajánlatot kérnek. A tartózkodás utolsó éjszakája után az ár lekerül az árlistáról." };
+    }
+    const bookable = "Az egész szállás ettől foglalhatóvá válik: a vendég a honlapon " + per + " áron, árajánlat-kérés nélkül küldhet foglalási kérést." +
+      (state.house === "only" ? "" : " A foglalási doboz is ezzel nyílik.");
+    return { warn: true, head: "Alapárként az árlistába kerül — dátum nélkül, a következő módosításig.",
+      body: bookable + " Minden éjszakára érvényes, amelyre nincs szezonár, és a honlap „Árak” részében is megjelenik." };
+  }
+
+  function untilField(id) {
+    return '<label class="fld until" data-untilwrap hidden><span>Meddig érvényes</span>' +
+      '<span class="inp"><input type="date" min="' + TODAY + '" value="' + (state.until || "") + '" data-until id="' + id + '"></span></label>' +
+      '<div class="err" data-until-err></div>';
+  }
+
+  function renderSave() {
+    const box = $("[data-save]");
+    if (state.v === "A") {
+      box.innerHTML =
+        '<label class="chk"><input type="checkbox" data-savechk' + (state.save !== "none" ? " checked" : "") + '>' +
+        '<span><b>Mentsem az árlistába is?</b><small>Alapból nem: az ár csak ennek a kérésnek szól.</small></span></label>' +
+        '<div class="subopts" data-sub' + (state.save === "none" ? " hidden" : "") + '>' +
+        '<label class="chk"><input type="radio" name="sa" value="dated"' + (state.save === "dated" ? " checked" : "") + '><span>Csak a kért napokra<small>nov. 13 – nov. 15</small></span></label>' +
+        '<label class="chk"><input type="radio" name="sa" value="base"' + (state.save === "base" ? " checked" : "") + '><span>Alapárként<small>dátum nélkül, a következő módosításig</small></span></label>' +
+        "</div>";
+    } else if (state.v === "B") {
+      const opt = (val, t, s) => '<label><input type="radio" name="sb" value="' + val + '"' + (state.save === val ? " checked" : "") + "><span><b>" + t + "</b><small>" + s + "</small></span></label>";
+      box.innerHTML = "<h3>Hova kerüljön az ár?</h3><div class=\"seg\">" +
+        opt("none", "Csak erre a kérésre", "az árlista nem változik") +
+        opt("dated", "Egy időszakra az árlistába", "mától egy megadott napig") +
+        opt("base", "Alapárként az árlistába", "dátum nélkül") + "</div>" + untilField("ub");
+    } else {
+      box.innerHTML = '<p style="margin:0;font-size:14px;line-height:1.5"><b>Az ár csak erre a kérésre szól.</b> Ha később az árlistájába is felvenné, a „Kiküldött ajánlatok” között a sornál megteheti.</p>';
+      state.save = "none";
+    }
+    const uw = $("[data-untilwrap]");
+    if (uw) uw.hidden = state.save !== "dated";
+  }
+
+  function validate() {
+    const raw = ($("[data-amount]").value || "").replace(/[\s. ]/g, "").replace(/ft$/i, "");
+    let err = "";
+    state.amount = null;
+    if (raw === "") err = "";
+    else if (!/^\d+$/.test(raw)) err = "Csak számot írjon, pl. 26 000.";
+    else if (!(parseInt(raw, 10) > 0)) err = "Az ár legyen nagyobb nullánál.";
+    else if (parseInt(raw, 10) > 10000000) err = "Ez túl nagy összeg — ellenőrizze a nullákat.";
+    else state.amount = parseInt(raw, 10);
+    $("[data-amount-err]").textContent = err;
+    $("[data-amount]").setAttribute("aria-invalid", err ? "true" : "false");
+
+    let uerr = "";
+    const u = $("[data-until]");
+
+    const ue = $("[data-until-err]");
+    if (ue) ue.textContent = uerr;
+    if (u) u.setAttribute("aria-invalid", uerr ? "true" : "false");
+
+    $("[data-linesum]").textContent = state.amount ? "2 éj × " + money(state.amount) : "—";
+    $("[data-total]").textContent = state.amount ? money(state.amount * NIGHTS) : "írja be az árat";
+    const c = consequence(state.save, state.amount, state.until);
+    const cons = $("[data-cons]");
+    cons.className = "cons" + (c.warn ? " cons--warn" : "");
+    cons.innerHTML = "<b>" + c.head + "</b>" + c.body;
+    $("[data-send]").disabled = !state.amount || !!uerr;
+  }
+
+  // ── the sent-offers list ─────────────────────────────────────────────
+  const ROWS = [
+    { id: "r1", who: "Szabó Péter", what: "A szállás egésze", when: "okt. 17 – okt. 19 · 2 éj · 5 fő", total: 170000, per: 85000, sent: "szept. 21.", st: "no", stTxt: "Lejárt — nem felelt", pl: "none" },
+    { id: "r2", who: "Elek Vendég Ajánlat", what: "A szállás egésze", when: "nov. 13 – nov. 15 · 2 éj · 2 fő", total: 180000, per: 90000, sent: "szept. 28.", st: "ok", stTxt: "Elfogadta — foglalás", pl: "base-legacy" },
+    { id: "r3", who: "Nagy Réka", what: "A szállás egésze", when: "dec. 27 – jan. 1 · 5 éj · 8 fő", total: 550000, per: 110000, sent: "szept. 26.", st: "no", stTxt: "Nem kérte", pl: "none" },
+  ];
+  function plText(r) {
+    if (r.pl === "none") return '<span class="pl">Nem került be</span>';
+    if (r.pl === "base-legacy") return '<span class="pl pl--none">—</span>';
+    if (r.pl === "base") return '<span class="pl">Alapárként bekerült</span>';
+    return '<span class="pl">A kért napokra bekerült</span>';
+  }
+  function laterBlock(r) {
+    if (state.v !== "C" || r.pl !== "none") return "";
+    return '<button class="btn btn--gh btn--sm" type="button" data-later="' + r.id + '" style="margin-top:6px">Árlistába teszem…</button>' +
+      '<div class="later" data-laterbox="' + r.id + '" hidden>' +
+      '<div class="opts"><label><input type="radio" name="l' + r.id + '" value="dated"> Egy időszakra (mától egy megadott napig)</label>' +
+      '<label class="fld" style="margin:0 0 0 22px;display:block"><span>Meddig érvényes</span><span class="inp"><input type="date" min="' + TODAY + '" data-lu="' + r.id + '"></span></label>' +
+      '<label><input type="radio" name="l' + r.id + '" value="base"> Alapárként (dátum nélkül)</label></div>' +
+      '<div class="cons cons--warn" data-lcons="' + r.id + '">Válassza ki, hogyan kerüljön be ' + money(r.per) + ' / éj.</div>' +
+      '<div class="acts" style="margin-top:8px"><button class="btn btn--pri btn--sm" type="button" data-lsave="' + r.id + '" disabled>Árlistába teszem</button>' +
+      '<button class="btn btn--gh btn--sm" type="button" data-lcancel="' + r.id + '">Mégsem</button></div></div>';
+  }
+  function visible(r) {
+    return state.filter === "all" || state.filter === r.st;
+  }
+  function renderList() {
+    const order = { wait: 0, ok: 1, no: 2 };
+    const rows = ROWS.slice().sort((a, b) => order[a.st] - order[b.st]).filter(visible);
+    $("[data-tbody]").innerHTML = rows.length ? rows.map((r) =>
+      '<tr class="' + (r.fresh ? "new" : "") + '"><td><b>' + r.who + "</b></td><td>" + r.what + "<small>" + keep(r.when) + "</small></td>" +
+      '<td><b>' + money(r.total) + "</b><small>" + money(r.per) + " / éj</small></td><td>" + r.sent + "</td>" +
+      '<td><span class="st st--' + r.st + '">' + r.stTxt + "</span></td><td>" + plText(r) + laterBlock(r) + "</td></tr>").join("")
+      : '<tr><td colspan="6" class="empty">Ebben a szűrésben nincs ajánlat.</td></tr>';
+    $("[data-cards]").innerHTML = rows.length ? rows.map((r) =>
+      '<div class="oc' + (r.fresh ? " new" : "") + '"><div class="top"><div><div class="who">' + r.who + '</div><div class="meta">' + r.what + " · " + keep(r.when) + '</div></div><div class="amt">' + money(r.total) + "</div></div>" +
+      '<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="st st--' + r.st + '">' + r.stTxt + '</span><span class="meta">kiküldve ' + r.sent + "</span></div>" +
+      '<div class="pl">Árlista: ' + plText(r) + "</div>" + laterBlock(r) + "</div>").join("")
+      : '<div class="empty">Ebben a szűrésben nincs ajánlat.</div>';
+  }
+
+  function sendOffer() {
+    validate();
+    if ($("[data-send]").disabled) return;
+    const pl = state.save === "none" ? "none" : state.save === "base" ? "base" : "dated";
+    ROWS.unshift({ id: "rn" + ROWS.length, who: "Elek Vendég Ajánlat", what: "A szállás egésze", when: "nov. 13 – nov. 15 · 2 éj · 6 fő",
+      total: state.amount * NIGHTS, per: state.amount, sent: "ma", st: "wait", stTxt: "Válaszra vár · lejár okt. 1. 16:10", pl, until: state.until, fresh: true });
+    const where = pl === "none" ? "Az árlistája nem változott — ahol nincs ára, ott továbbra is árajánlatot kérnek."
+      : pl === "base" ? "Alapárként bekerült az árlistába: " + money(state.amount) + " / éj."
+      : "A kért napokra (nov. 13 – nov. 15) bekerült az árlistába: " + money(state.amount) + " / éj.";
+    const d = $("[data-done]");
+    d.innerHTML = "<b>Ajánlat elküldve, " + money(state.amount * NIGHTS) + "</b>Elek Vendég Ajánlat e-mailben megkapta. A napok még szabadok — ha elfogadja, értesítjük, és akkor válnak foglalttá. " + where +
+      ' <div class="acts"><a class="btn btn--gh btn--sm" href="#kikuldott" data-tolist>Kiküldött ajánlatok</a><button class="btn btn--gh btn--sm" type="button" data-reset>Próba: újra</button></div>';
+    d.hidden = false;
+    $("[data-form]").hidden = true;
+    state.sent = true;
+    renderList();
+  }
+
+  function reset() {
+    for (let i = ROWS.length - 1; i >= 0; i--) if (ROWS[i].fresh) ROWS.splice(i, 1);
+    state.sent = false;
+    $("[data-done]").hidden = true;
+    $("[data-form]").hidden = false;
+    renderList();
+  }
+
+  function setVariant(v) {
+    state.v = v;
+    state.save = "none";
+    state.until = "";
+    $("[data-amount]").value = "";
+    if (state.sent) reset();
+    $$("[data-v]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
+    $("[data-vdesc]").innerHTML = VDESC[v];
+    renderSave();
+    validate();
+    renderList();
+  }
+  function setSize(s) {
+    document.body.dataset.size = s;
+    $$("[data-size]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === s)));
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button,a");
+    if (!t) return;
+    if (t.dataset.v) setVariant(t.dataset.v);
+    else if (t.dataset.size && t.tagName === "BUTTON") setSize(t.dataset.size);
+    else if (t.hasAttribute("data-send")) sendOffer();
+    else if (t.hasAttribute("data-reset")) reset();
+    else if (t.hasAttribute("data-nofree")) { e.preventDefault(); }
+    else if (t.hasAttribute("data-tolist")) { e.preventDefault(); document.querySelector(".list").scrollIntoView({ block: "start" }); }
+    else if (t.dataset.f) { state.filter = t.dataset.f; $$("[data-f]").forEach((b) => b.setAttribute("aria-pressed", String(b === t))); renderList(); }
+    else if (t.dataset.later) { $$('[data-laterbox="' + t.dataset.later + '"]').forEach((b) => (b.hidden = false)); $$('[data-later="' + t.dataset.later + '"]').forEach((b) => (b.hidden = true)); }
+    else if (t.dataset.lcancel) { renderList(); }
+    else if (t.dataset.lsave) {
+      const box = t.closest("[data-laterbox]");
+      const r = ROWS.find((x) => x.id === t.dataset.lsave);
+      const pick = box.querySelector('input[type=radio]:checked');
+      if (!r || !pick) return;
+      r.pl = pick.value;
+      r.until = box.querySelector("[data-lu]").value;
+      renderList();
+    }
+  });
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.matches("[data-amount],[data-until]")) validate();
+    if (t.matches("[data-lu]")) laterConsequence(t.closest("[data-laterbox]"));
+  });
+  document.addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.matches("[data-house]")) { state.house = t.value; validate(); return; }
+    if (t.matches("[data-savechk]")) {
+      state.save = t.checked ? "dated" : "none"; // product: ticking pre-selects „Csak a kért napokra"
+      renderSave(); validate(); return;
+    }
+    if (t.name === "sa" || t.name === "sb") {
+      state.save = t.value;
+      const uw = $("[data-untilwrap]"); if (uw) uw.hidden = state.save !== "dated";
+      validate(); return;
+    }
+    if (t.closest("[data-laterbox]")) laterConsequence(t.closest("[data-laterbox]"));
+  });
+  function laterConsequence(box) {
+    const id = box.dataset.laterbox;
+    const r = ROWS.find((x) => x.id === id);
+    const pick = box.querySelector("input[type=radio]:checked");
+    const u = box.querySelector("[data-lu]").value;
+    const btn = box.querySelector("[data-lsave]");
+    const out = box.querySelector("[data-lcons]");
+    if (!pick) { btn.disabled = true; return; }
+    if (pick.value === "dated" && (!u || u < TODAY)) {
+      out.textContent = "Adja meg, meddig érvényes.";
+      btn.disabled = true; return;
+    }
+    const c = consequence(pick.value, r.per, u >= LAST_MISSING ? u : "");
+    out.innerHTML = "<b>" + (pick.value === "dated" ? "Mától " + huDate(u).replace(/\.$/, "") + "-ig az árlistába kerül." : c.head) + "</b>" + c.body;
+    btn.disabled = false;
+  }
+
+  if (window.matchMedia("(max-width: 600px)").matches) setSize("mobile");
+  setVariant("A");
+})();
+</script>
+</body>
+</html>

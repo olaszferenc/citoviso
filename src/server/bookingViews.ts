@@ -18,7 +18,7 @@
 
 import { T } from "../i18n/mail.js";
 import type { MonthView } from "../tenant/availability.js";
-import type { InboxItem } from "../booking/requests.js";
+import type { InboxItem, SentOffer } from "../booking/requests.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { formatAmount } from "../tenant/prices.js";
 import { huArticle } from "../hu.js";
@@ -37,6 +37,8 @@ export interface BookingsTabData {
   readonly panel: "pend" | "arr" | "year" | null;
   /** Every request of the site (pending + decided), newest data included. */
   readonly requests: readonly InboxItem[];
+  /** ADR-XXXX: every price offer sent, whatever became of it („Kiküldött ajánlatok"). */
+  readonly sentOffers?: readonly SentOffer[];
   /**
    * Confirmations made this year that STILL STAND — the tile's headline number.
    * Elek FK-007: the tile read "2 foglalás" with not one live booking left, because
@@ -852,11 +854,128 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
       ? decided.map((r) => historyRow(r, d.expireHours, viewState(d), lang)).join("")
       : `<div class="bk-empty">${T(lang, "Még nincs eldöntött kérés.")}</div>`) +
     `</div></div>` +
+    (d.sentOffers ? sentOffersSection(d.sentOffers, d.expireHours, lang) : "") +
     overlapScript(popupData, lang) +
     // Only where a cancel form can actually exist (day panel or an accepted row).
     (d.openDayBooking || d.requests.some((r) => r.status === "accepted")
       ? cancelScript(lang)
       : "")
+  );
+}
+
+/* ── „Kiküldött ajánlatok" (ADR-XXXX, approved plan booking-offer-scope) ──── */
+
+/** The Budapest wall-clock of a deadline, short ("okt. 1. 16:10"). */
+function shortWhen(d: Date): string {
+  return new Intl.DateTimeFormat("hu-HU", {
+    timeZone: "Europe/Budapest",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
+/** What became of an offer: the filter group and the owner-facing words. */
+function offerFate(o: SentOffer, expireHours: number, lang: string): { group: "wait" | "ok" | "no"; label: string } {
+  switch (o.status) {
+    case "offered": {
+      const exp = expireHours ? new Date(o.offeredAt.getTime() + expireHours * 3_600_000) : null;
+      return {
+        group: "wait",
+        label: exp ? T(lang, "Válaszra vár · lejár {when}", { when: shortWhen(exp) }) : T(lang, "Válaszra vár"),
+      };
+    }
+    case "accepted":
+      return { group: "ok", label: T(lang, "Elfogadta — foglalás") };
+    case "cancelled":
+      return { group: "no", label: T(lang, "Elfogadta, később lemondva") };
+    case "expired":
+      return { group: "no", label: T(lang, "Lejárt — nem felelt") };
+    case "declined":
+      // requests.ts: the guest's „Nem kérem" is decided_by 'guest'; „közben elkelt" is 'auto'.
+      if (o.decidedBy === "guest") return { group: "no", label: T(lang, "Nem kérte") };
+      if (o.decidedBy === "auto") return { group: "no", label: T(lang, "Közben elkelt") };
+      return { group: "no", label: T(lang, "Elutasítva") };
+    default:
+      return { group: "no", label: o.status };
+  }
+}
+
+/** Did the price go into the list? Null = an offer from before the choice existed. */
+function offerListLine(o: SentOffer, lang: string): string {
+  if (o.savedAs === "base") return T(lang, "Alapárként bekerült");
+  if (o.savedAs === "dates") return T(lang, "A kért napokra bekerült");
+  if (o.savedAs === "request") return T(lang, "Nem került be");
+  return "—";
+}
+
+function sentOffersSection(offers: readonly SentOffer[], expireHours: number, lang: string): string {
+  const rows = offers.map((o) => {
+    const fate = offerFate(o, expireHours, lang);
+    const nights = Math.round((Date.parse(`${o.dateTo}T00:00:00Z`) - Date.parse(`${o.dateFrom}T00:00:00Z`)) / 86_400_000);
+    // A date never breaks inside itself on a phone ("2027. 09.⏎08."): its spaces are hard.
+    const hard = (t: string): string => t.replace(/ /g, "\u00a0");
+    const when =
+      `${hard(huDay(o.dateFrom, lang))} – ${hard(huDay(o.dateTo, lang))} · ` +
+      `${hard(T(lang, "{n} éj", { n: nights }))} · ${hard(T(lang, "{n} fő", { n: o.guests }))}`;
+    const total = o.total != null ? formatAmount(o.total, o.currency ?? "HUF") : "—";
+    const sent = huDay(o.offeredAt.toISOString().slice(0, 10), lang);
+    return { o, fate, when, total, sent, list: offerListLine(o, lang) };
+  });
+  const chip = (g: string, text: string, on = false): string =>
+    `<button type="button" class="bk-of__f" data-of-f="${g}" aria-pressed="${on}">${text}</button>`;
+  const table =
+    `<table class="bk-of__t"><thead><tr>` +
+    `<th>${T(lang, "Vendég")}</th><th>${T(lang, "Mit, mikorra")}</th><th>${T(lang, "Ár")}</th>` +
+    `<th>${T(lang, "Kiküldve")}</th><th>${T(lang, "Mi lett vele")}</th><th>${T(lang, "Árlista")}</th>` +
+    `</tr></thead><tbody>` +
+    rows
+      .map(
+        (r) =>
+          `<tr data-of-g="${r.fate.group}"><td><b>${esc(r.o.guestName)}</b></td>` +
+          `<td>${esc(r.o.unitName)}<small>${esc(r.when)}</small></td>` +
+          `<td><b>${esc(r.total)}</b></td><td>${esc(r.sent)}</td>` +
+          `<td><span class="bk-of__st bk-of__st--${r.fate.group}">${esc(r.fate.label)}</span></td>` +
+          `<td class="bk-of__pl">${esc(r.list)}</td></tr>`,
+      )
+      .join("") +
+    `</tbody></table>`;
+  const cards =
+    `<div class="bk-of__cards">` +
+    rows
+      .map(
+        (r) =>
+          `<div class="bk-of__c" data-of-g="${r.fate.group}">` +
+          `<div class="bk-of__top"><div><b>${esc(r.o.guestName)}</b><small>${esc(r.o.unitName)} · ${esc(r.when)}</small></div>` +
+          `<b class="bk-of__amt">${esc(r.total)}</b></div>` +
+          `<div class="bk-of__row"><span class="bk-of__st bk-of__st--${r.fate.group}">${esc(r.fate.label)}</span>` +
+          `<small>${T(lang, "kiküldve {when}", { when: esc(r.sent) })}</small></div>` +
+          `<div class="bk-of__pl">${T(lang, "Árlista:")} ${esc(r.list)}</div></div>`,
+      )
+      .join("") +
+    `</div>`;
+  return (
+    `<section class="bk-of" id="kikuldott-ajanlatok" data-sent-offers>` +
+    `<h2 class="bk-of__h">${T(lang, "Kiküldött ajánlatok")}</h2>` +
+    (offers.length
+      ? `<p class="bk-of__intro">${T(lang, "Minden árajánlat, amit a rendszerből küldött — kinek, mennyiért, mikorra, és mi lett vele. A válaszra várók vannak felül. Az „Árlista” oszlop megmondja, bekerült-e az ár az árlistájába is.")}</p>` +
+        // The filter needs the script; without it every row simply shows.
+        `<div class="bk-of__fs" role="group" aria-label="${esc(T(lang, "Szűrés"))}" hidden data-of-fs>` +
+        chip("all", T(lang, "Mind"), true) +
+        chip("wait", T(lang, "Válaszra vár")) +
+        chip("ok", T(lang, "Elfogadta")) +
+        chip("no", T(lang, "Nem lett belőle")) +
+        `</div>` +
+        table +
+        cards +
+        `<script>(function(){var s=document.querySelector("[data-sent-offers]");if(!s)return;var fs=s.querySelector("[data-of-fs]");fs.hidden=false;` +
+        `fs.addEventListener("click",function(e){var b=e.target.closest("[data-of-f]");if(!b)return;var g=b.getAttribute("data-of-f");` +
+        `fs.querySelectorAll("[data-of-f]").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));});` +
+        `s.querySelectorAll("[data-of-g]").forEach(function(r){r.hidden=g!=="all"&&r.getAttribute("data-of-g")!==g;});});})();</script>`
+      : `<div class="bk-empty">${T(lang, "Még nem küldött árajánlatot. Ha egy vendég ár nélkül kér ajánlatot, és Ön válaszol neki, itt látja, kinek mi ment ki.")}</div>`) +
+    `</section>`
   );
 }
 
@@ -1259,4 +1378,33 @@ export const BOOKINGS_STYLE = `<style>
   border-color:color-mix(in srgb,var(--citui-bad) 30%,transparent)}
 .bk-outcome__t{flex:1;min-width:0;font-size:.92rem;line-height:1.55}
 .bk-outcome__also{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:3px}
+/* „Kiküldött ajánlatok" — table where it fits, cards on a phone (two layouts) */
+.bk-of{container-type:inline-size;margin-top:22px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:16px;padding:16px}
+.bk-of__h{font-size:1.05rem;margin:0 0 4px}
+.bk-of__intro{font-size:.86rem;color:var(--citui-muted);margin:0 0 10px;line-height:1.5}
+.bk-of__fs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.bk-of__fs[hidden]{display:none}
+.bk-of__f{font:inherit;font-size:.82rem;padding:6px 12px;border-radius:999px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);cursor:pointer}
+.bk-of__f[aria-pressed="true"]{background:var(--citui-navy-800);color:var(--citui-white);border-color:var(--citui-navy-800)}
+.bk-of__t{width:100%;border-collapse:collapse;font-size:.88rem}
+.bk-of__t th{text-align:left;font-size:.75rem;color:var(--citui-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--citui-line-strong);background:var(--citui-surface-2)}
+.bk-of__t td{padding:10px;border-bottom:1px solid var(--citui-line);vertical-align:top}
+.bk-of__t small,.bk-of__c small{display:block;color:var(--citui-muted);font-size:.8rem}
+.bk-of__t tr[hidden],.bk-of__c[hidden]{display:none}
+.bk-of__st{display:inline-block;font-size:.78rem;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.bk-of__st--wait{background:color-mix(in srgb,var(--citui-warn) 16%,var(--citui-panel));color:var(--citui-warn-ink)}
+.bk-of__st--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.bk-of__st--no{background:var(--citui-surface-2);color:var(--citui-muted)}
+.bk-of__pl{font-size:.84rem}
+.bk-of__cards{display:none}
+@container (max-width:700px){
+  .bk-of__t{display:none}
+  .bk-of__cards{display:grid;gap:10px}
+}
+.bk-of__c{border:1px solid var(--citui-line);border-radius:12px;padding:12px;font-size:.88rem;line-height:1.5}
+.bk-of__top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.bk-of__amt{white-space:nowrap}
+.bk-of__row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.bk-of__row small{display:inline}
+.bk-of__c .bk-of__pl{margin-top:6px}
 </style>`;

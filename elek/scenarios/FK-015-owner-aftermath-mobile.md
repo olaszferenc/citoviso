@@ -120,12 +120,16 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
 - [ ] Árat ír, és elküldi — a vendég levélben kapja
   tedd: írd "[data-amount]" "90 000"
   tedd: írd "#of-note" "Hat főre a teljes ház, az ágyneműt odakészítjük."
+  # ADR-XXXX (2026-09-29): az ár ALAPBÓL csak erre a kérésre szól — a pipa üres, és a lap ki is
+  # mondja. (Az ADR-0215 alatt ez a lépés a házat némán foglalhatóvá kapcsolta: 90 000 Ft alapár.)
+  várd: látható "Mentsem az árlistába is?"
+  várd: látható "Csak erre a kérésre."
   tedd: görgess-középre "[data-send]"
   tedd: kattints "[data-send]"
   tedd: várj "Ajánlat elküldve" 25
   várd: látható "Ajánlat elküldve"
   adat: ELEK-NIGHT árajánlat (Elek Vendég Ajánlat, 90 000 Ft/éj)
-  kézi: a küldés előtt a lap kiírta-e az ÖSSZEGET (éjszakák × ár), és a küldés után kimondja-e, hogy a vendég levelet kapott és mi a következő lépés; van-e út vissza a Foglalásokhoz
+  kézi: a küldés előtt a lap kiírta-e az ÖSSZEGET (éjszakák × ár), és érthető-e 390-en, hogy az ár csak erre a kérésre szól, és mi történne a „Mentsem az árlistába is?” pipával; a küldés után kimondja-e, hogy a vendég levelet kapott, hogy az árlista nem változott, és mi a következő lépés; van-e út vissza a Foglalásokhoz
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
 

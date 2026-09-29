@@ -1845,10 +1845,10 @@ async function shootConsole(
 const conOut = (entryId: string): string =>
   path.join(ROOT, "kb/entries", entryId, "assets", "hu", "screen.png");
 // ADR-0215 / tudásbázis-őr lelete (2026-09-23): the offer page is the flow's main NEW
-// screen — the owner types a price there and reads the yellow warning — and the entry
-// had no picture of it. Rendered from the REAL view (ownerOfferPage) with a price
-// typed in, so the live total and the "no end date" warning both show; element shot
-// of the price card, because the request card sits above it on a phone.
+// screen — the owner types a price there — and the entry had no picture of it. Rendered
+// from the REAL view (ownerOfferPage) with a price typed in, in its DEFAULT state (ADR-XXXX:
+// „Mentsem az árlistába is?" unticked, „Csak erre a kérésre."); element shot of the price
+// card, because the request card sits above it on a phone.
 await shootConsole(
   ownerOfferPage(
     {
