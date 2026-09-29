@@ -39,6 +39,18 @@
 //
 // PASS CACHE: see the block above `signature()` — land skips only an identical, green run.
 //
+// LONGEST FIRST (ADR-XXXX). After every run the wall-clock of each gate that actually ran (green
+// AND red: a red one took that long too) is folded into <git-common-dir>/cit-gate-history.json,
+// keyed by the gate's STABLE identity (its argv — not the pass-cache signature, which changes
+// with every diff). Before phase ① the waiting gates are ordered by that history, longest first,
+// so a 180 s gate no longer starts at the tail of the queue and stretches it. A gate with no
+// history goes FIRST: a new gate may well be a long browser gate, and with no history at all the
+// order is exactly the hook's (stable sort). Only the START order of phase ① changes: the
+// self-exclusion, the writer lane, the strict lane and the machine slots are untouched, and the
+// output is printed in completion order, as before. A missing or corrupt history file = no
+// history, never an error; the file is replaced atomically (tmp + rename) because several
+// sessions land at once. CIT_GATE_HISTORY_FILE moves it (the guard's fixture uses a private one).
+//
 // MACHINE-WIDE SLOTS (ADR-0230). ~10 sessions share this 8-core machine; each runner's 4 threads
 // alone are fine, 10×4 of them trample each other (measured: the same commit took 90–270 s
 // depending on who else was committing). So every gate — phase ① and ② alike — runs inside
@@ -57,7 +69,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -112,6 +124,46 @@ function laneMarked(job) {
       .some((l) => l.trim() === LANE_MARK);
   } catch {
     return false;
+  }
+}
+
+// ── RUN-TIME HISTORY (longest first, see the header) ─────────────────────────────────
+const HISTORY_FILE = process.env.CIT_GATE_HISTORY_FILE || (commonDir() ? path.join(commonDir(), "cit-gate-history.json") : null);
+const HISTORY_WEIGHT = 0.5; // moving average: half the new run, half the past — one noisy run cannot swing it
+function readHistory() {
+  try {
+    const h = JSON.parse(readFileSync(HISTORY_FILE, "utf8"));
+    return h && typeof h === "object" && !Array.isArray(h) ? h : {};
+  } catch {
+    return {}; // missing or corrupt = no history
+  }
+}
+const history = HISTORY_FILE ? readHistory() : {};
+const historyKey = (job) => job.argv.join(" ");
+function pastSecs(job) {
+  const v = history[historyKey(job)];
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : Infinity; // unknown = first
+}
+/** Longest first; a STABLE sort, so equal (and all-unknown) gates keep the hook's order. */
+function longestFirst(list) {
+  return list
+    .map((job, i) => ({ job, i, s: pastSecs(job) }))
+    .sort((a, b) => (a.s === b.s ? a.i - b.i : a.s > b.s ? -1 : 1))
+    .map((x) => x.job);
+}
+function writeHistory(ran) {
+  if (!HISTORY_FILE || ran.length === 0) return;
+  try {
+    const h = readHistory(); // re-read: another session may have written meanwhile
+    for (const [key, secs] of ran) {
+      const old = h[key];
+      h[key] = Math.round((typeof old === "number" && Number.isFinite(old) ? old * (1 - HISTORY_WEIGHT) + secs * HISTORY_WEIGHT : secs) * 10) / 10;
+    }
+    const tmp = `${HISTORY_FILE}.${process.pid}.tmp`;
+    writeFileSync(tmp, `${JSON.stringify(h, null, 1)}\n`);
+    renameSync(tmp, HISTORY_FILE);
+  } catch (e) {
+    process.stdout.write(`   ⚠ kapu-futtató: a kapuidő-előzmény nem íródott (${e.message}) — a következő futás régi sorrenddel indul\n`);
   }
 }
 
@@ -375,7 +427,7 @@ if (CACHE_DIR && existsSync(CACHE_DIR)) {
 const failed = [];
 const times = [];
 function show(job, r) {
-  times.push([r.secs, job.label || job.script, job.script]);
+  times.push([r.secs, job.label || job.script, historyKey(job)]);
   if (r.rc !== 0) {
     failed.push([r.rc, job.id, r]);
     return;
@@ -402,6 +454,8 @@ for (const j of jobs) {
   (knownWriters.has(j.script) ? serial : queue).push(j);
 }
 const phase1 = queue.length;
+const known = queue.filter((j) => pastSecs(j) !== Infinity).length;
+queue.splice(0, queue.length, ...longestFirst(queue));
 let deferred = 0;
 const newWriters = [];
 
@@ -478,6 +532,7 @@ const laneSecs = ((tStrict - tLane) / 1000).toFixed(0);
 const strictSecs = ((Date.now() - tStrict) / 1000).toFixed(0);
 
 const secs = ((Date.now() - t0) / 1000).toFixed(0);
+writeHistory(times.map(([s, , key]) => [key, s]));
 if (process.env.CIT_GATE_TIMES) {
   writeFileSync(
     process.env.CIT_GATE_TIMES,
@@ -490,7 +545,8 @@ if (process.env.CIT_GATE_TIMES) {
 const slotNote = slotsOff ? `gépi slot nélkül` : `${SLOT_COUNT} gépi slot, várt rá összesen ${(slotWaitMs / 1000).toFixed(0)} s`;
 console.log(
   `[pre-commit] kapu-futtató: ${jobs.length} kapu · ${phase1 - deferred} párhuzamosan (${PARALLEL} szál, csak-olvasó DB) · ` +
-    `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ${secs} s ` +
+    `${lane.length} író-sávban (jelölt, ${PARALLEL} szál, ${laneSecs} s) · ${strict.length} sorosan (író, ${strictSecs} s) · ${reused} már zöld volt ugyanezen a fán · ` +
+    `leghosszabb-először (${known}/${phase1} kapunak volt előzménye) · ${secs} s ` +
     `(① ${phase1Secs} s · ${slotNote})`,
 );
 if (failed.length) {

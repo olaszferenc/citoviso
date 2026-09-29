@@ -24,7 +24,10 @@
 //   · a zöld-gyorsítótár (land ≠ commit duplikáció) CSAK azonos fán + diffen + argv/stdin/
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
 //     a módot/diffet olvasó kaput sosem hagyja ki — viszont egy commit landolásakor tényleg
-//     újrahasznosít (különben csak költség).
+//     újrahasznosít (különben csak költség),
+//   · (ADR-XXXX) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
+//     előzmény nélküli kaput a legelején; az előzményt minden futás tartósan frissíti, és egy
+//     sérült előzmény-fájl nem bukás.
 //
 // ⛔ A mérés a hookból KIVÁGOTT, ténylegesen szállított mechanikán és a valódi futtatón fut,
 // fixture-kapukkal egy eldobható könyvtárban — nem egy újraírt másolaton (gate-output-check
@@ -32,14 +35,15 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (tizenhét visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (tizenkilenc visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
 //    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
 //    kihagyva · a self-overlap jelölés hatástalan · indok nélküli jelölés is elég · a sáv-jelölés vak · minden író a sávba · gépi slot
-//    ki · a slot nem szabadul a futtató halálával —, mindegyiknek pirosat KELL adnia.)
+//    ki · a slot nem szabadul a futtató halálával · a leghosszabb-először rendezés ki · az előzmény
+//    nélküli kapu hátra sorolva —, mindegyiknek pirosat KELL adnia.)
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -149,6 +153,27 @@ const SAME_HOLD = (name: string, marker: string): string =>
     try { openSync(lock, "wx"); } catch { appendFileSync(process.env.FIX_OUT + "/${name}-overlap", "x"); }
     await new Promise((r) => setTimeout(r, 2500)); rmSync(lock, { force: true });`;
 
+// ── I: longest first. Five gates, two threads; the history (pre-seeded, keyed by argv) says the
+// fourth is by far the longest, the fifth has none. Each gate appends its name when it STARTS and
+// holds its thread 1.5 s, so the third starter can only begin after one of the first two ENDED:
+// the first two lines of `order` are the two gates the runner started first — read, not timed.
+const ORDER_GATES = String.raw`
+echo "[pre-commit] short-1…"
+node scripts/o1.mjs >"$GATE_LOG" || gate_failed
+echo "[pre-commit] short-2…"
+node scripts/o2.mjs >"$GATE_LOG" || gate_failed
+echo "[pre-commit] short-3…"
+node scripts/o3.mjs >"$GATE_LOG" || gate_failed
+echo "[pre-commit] long…"
+node scripts/olong.mjs >"$GATE_LOG" || gate_failed
+echo "[pre-commit] unknown…"
+node scripts/onew.mjs >"$GATE_LOG" || gate_failed
+`;
+const ORDER_SEED = { "node scripts/o1.mjs": 1, "node scripts/o2.mjs": 2, "node scripts/o3.mjs": 3, "node scripts/olong.mjs": 100 };
+const STARTS = (name: string): string =>
+  `import { appendFileSync } from "node:fs"; appendFileSync(process.env.FIX_OUT + "/order", "${name}\\n");
+    await new Promise((r) => setTimeout(r, 1500));`;
+
 const COUNTER = (name: string, extra = ""): string =>
   `import { appendFileSync, existsSync } from "node:fs"; appendFileSync(process.env.FIX_OUT + "/${name}", "x");${extra}`;
 
@@ -177,6 +202,11 @@ const FIXTURES: Record<string, string> = {
   "lane1.mjs": WRITER_TIMED(true),
   "lane2.mjs": WRITER_TIMED(true),
   "strict1.mjs": WRITER_TIMED(false),
+  "o1.mjs": STARTS("o1"),
+  "o2.mjs": STARTS("o2"),
+  "o3.mjs": STARTS("o3"),
+  "olong.mjs": STARTS("olong"),
+  "onew.mjs": STARTS("onew"),
   "fail7.mjs": FAIL,
   "fail5.mjs": FAIL,
   // Writes inside a rolled-back transaction (nothing persists), SWALLOWS any error and exits 0 —
@@ -261,6 +291,8 @@ function prepare(v: Variant, gates: string, jobs: string, repo = false): Fixture
     const env = cleanEnv();
     env.FIX_OUT = out;
     env.CIT_GATE_WRITERS_FILE = path.join(out, "writers");
+    // ⛔ Never the real run-time history (<git-common-dir>/cit-gate-history.json): a private one.
+    env.CIT_GATE_HISTORY_FILE = path.join(out, "history.json");
     env.CIT_GATE_SLOTS = slots;
     if (jobs) env.CIT_GATE_JOBS = jobs;
     Object.assign(env, extra);
@@ -484,6 +516,32 @@ async function audit(v: Variant): Promise<string[]> {
   say(h.read("samenr-overlap") === "", "H · az INDOK NÉLKÜLI jelölésű szkript önmagával átfedett — a jelölés indok nélkül is elég");
   dispose(h.fx);
 
+  // ── I: longest first, from a durable history; unknown gates first; corrupt history ≠ failure ─
+  const io = prepare(v, ORDER_GATES, "2");
+  const hist = path.join(io.out, "history.json");
+  writeFileSync(hist, JSON.stringify(ORDER_SEED));
+  const i1 = io.run();
+  say(i1.rc === 0, `I · a leghosszabb-először futás nem zöld (rc=${i1.rc})\n${i1.out.slice(-800)}`);
+  const order = i1.read("order").trim().split("\n").filter(Boolean);
+  say(order.length === 5, `I · az öt kapuból ${order.length} indult el`);
+  const firstTwo = order.slice(0, 2).sort().join(",");
+  say(firstTwo === "olong,onew", `I · az első két indított kapu ${firstTwo} (olong,onew várt: az előzmény nélküli és a leghosszabb) — sorrend: ${order.join(" ")}`);
+  say(/leghosszabb-először \(4\/5 kapunak volt előzménye\)/.test(i1.out), "I · az összegző sor nem mondja meg, hány kapunak volt előzménye");
+  let h1: Record<string, unknown> = {};
+  try {
+    h1 = JSON.parse(readFileSync(hist, "utf8"));
+  } catch {
+    h1 = {};
+  }
+  say(typeof h1["node scripts/onew.mjs"] === "number", `I · az előzmény nélküli kapu ideje nem került az előzménybe (${JSON.stringify(h1)})`);
+  const longNow = h1["node scripts/olong.mjs"];
+  say(typeof longNow === "number" && longNow < 100 && longNow > 1, `I · a lefutott kapu előzménye nem frissült (olong: ${String(longNow)}, 100-ról lefelé várt)`);
+  say(!readdirSync(io.out).some((f) => f.endsWith(".tmp")) && readFileSync(hist, "utf8").trim().endsWith("}"), "I · az előzmény-fájl nem ép JSON-ként maradt hátra");
+  writeFileSync(hist, "{sérült");
+  const i2 = io.run();
+  say(i2.rc === 0, `I · sérült előzmény-fájl mellett a futás nem zöld (rc=${i2.rc}) — a sérült előzmény = nincs előzmény\n${i2.out.slice(-600)}`);
+  dispose(io);
+
   // ── G: machine-wide slots — across runners, deadlock-free, released on death ──────
   // Two runners, ONE shared slot: their four 1.2 s gates must never overlap, both must finish.
   const f1 = prepare(v, SLOT_GATES, "4");
@@ -560,6 +618,8 @@ if (SELF_TEST) {
     ["indok nélküli self-overlap jelölés is elég", { ...shipped, runner: mutate("self-noreason", runnerText, ".trim().length >= 20)", ".trim().length >= 0)") }],
     ["gépi slot ki", { ...shipped, runner: mutate("slot", runnerText, "const slot = held ?? (await acquireSlot());", "const slot = null;") }],
     ["a slot nem szabadul a futtató halálával", { ...shipped, runner: mutate("holder", runnerText, '"echo 1; exec cat"', '"echo 1; exec sleep 30"') }],
+    ["a leghosszabb-először rendezés ki", { ...shipped, runner: mutate("lpt", runnerText, "queue.splice(0, queue.length, ...longestFirst(queue));", "") }],
+    ["az előzmény nélküli kapu hátra sorolva", { ...shipped, runner: mutate("lpt-unknown", runnerText, ": Infinity; // unknown = first", ": -1; // unknown = first") }],
   ];
   let ok = true;
   for (const [name, v] of reds) {
@@ -571,7 +631,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a tizenhét visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a tizenkilenc visszarontás pirosat adott.");
   process.exit(0);
 }
 
@@ -581,4 +641,4 @@ if (bad.length) {
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ gate-runner-check: a párhuzamos futtató mind a nyolc forgatókönyvben (A–H) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");
+console.log("✅ gate-runner-check: a párhuzamos futtató mind a kilenc forgatókönyvben (A–I) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");

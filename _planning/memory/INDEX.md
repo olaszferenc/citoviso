@@ -11,6 +11,7 @@
 - [2026-09-29_negy_lassu_kapu_parhuzamositasa.md](2026-09-29_negy_lassu_kapu_parhuzamositasa.md) — 2026-09-29 — A négy leglassabb böngészős kapu párhuzamosítása (közös `gate-pool`)
 - [2026-09-29_mobile_chrome_check_parhuzamositas.md](2026-09-29_mobile_chrome_check_parhuzamositas.md) — 2026-09-29 — A `mobile-chrome-check` párhuzamosítása + indokolt önátfedés a futtatóban (A+B)
 - [2026-09-29_lassu_land_vizsgalat.md](2026-09-29_lassu_land_vizsgalat.md) — 2026-09-29 — Miért lassú a land az ADR-0227/0230 után? (brief: lassu-land-vizsgalat)
+- [2026-09-29_kapu_leghosszabb_eloszor.md](2026-09-29_kapu_leghosszabb_eloszor.md) — 2026-09-29 — A kapu-futtató a leghosszabb kaput indítja először (brief: kapu-leghosszabb-eloszor, „A” opció)
 - [2026-09-29_galeria_korlat_minden_foto_elerheto.md](2026-09-29_galeria_korlat_minden_foto_elerheto.md) — Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
 - [2026-09-29_csillagszam_egy_szabaly.md](2026-09-29_csillagszam_egy_szabaly.md) — A csillagszám egyetlen, skála-tudatos szabályból (2026-09-29)
 - [2026-09-29_csillagmeret_or.md](2026-09-29_csillagmeret_or.md) — Böngészős méret-őr a csillagsorra, mind a 19 sablonon (2026-09-29)
