@@ -28,7 +28,8 @@
 //   · (ADR-0268, ADR-0269) egy CIT_GATE_JOB_SILENCE ideje NÉMA kapu HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
 //     + utolsó kimenet), a TELJES folyamatfája (a külön folyamatcsoportú unoka is — mint a Playwright
 //     Chromiuma) halott, a többi kapu lefut, és se zöld-gyorsítótár, se kapuidő-előzmény nem íródik;
-//     a LASSÚ, de folyamatosan író kapu a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),
+//     a LASSÚ, de folyamatosan író kapu — és a kimenetét a végéig PUFFERELŐ, de egységenként
+//     szívverő poolos kapu (CIT_GATE_HEARTBEAT) — a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),
 //     és csak a teljes-idő plafon (CIT_GATE_JOB_MAX) állítja meg,
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
 //     előzmény nélküli kaput a legelején; az előzményt minden futás tartósan frissíti, és egy
@@ -40,12 +41,12 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (huszonnégy visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (huszonöt visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
 //    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
 //    kihagyva · a self-overlap jelölés hatástalan · indok nélküli jelölés is elég · a sáv-jelölés vak · minden író a sávba · gépi slot
 //    ki · a slot nem szabadul a futtató halálával · a leghosszabb-először rendezés ki · az előzmény
-//    nélküli kapu hátra sorolva · a csend-korlát ki · teljes idő a csend helyett · a plafon ki ·
+//    nélküli kapu hátra sorolva · a csend-korlát ki · teljes idő a csend helyett · a szívverés ki · a plafon ki ·
 //    csak a közvetlen gyerek ölve · a beragadás ideje az előzménybe kerül —, mindegyiknek pirosat KELL adnia.)
 
 import { spawn, spawnSync } from "node:child_process";
@@ -192,6 +193,15 @@ const TRICKLE_GATES = String.raw`
 echo "[pre-commit] trickle…"
 node scripts/trickle.mjs >"$GATE_LOG" || gate_failed
 `;
+// A POOLED gate (scripts/lib/gate-pool.mts, the real one) buffers every line until its replay at
+// the end: 20 units × 1 s on one worker = 20 s without a byte, but a heartbeat after every unit.
+// It must stay GREEN under an 8 s silence limit (the tsx start-up before the first beat took >3 s
+// on a loaded machine), with its lines replayed unchanged and in order.
+const POOL_SILENCE = "8";
+const POOLED_GATES = String.raw`
+echo "[pre-commit] pooled…"
+npx tsx scripts/pooled.mts
+`;
 const HANG_GATES = String.raw`
 echo "[pre-commit] hang…"
 node scripts/hang.mjs >"$GATE_LOG" || gate_failed
@@ -232,6 +242,9 @@ const FIXTURES: Record<string, string> = {
   "par1.mjs": PAR,
   "par2.mjs": PAR,
   "hang.mjs": HANG,
+  "pooled.mts": `const { pool, out, replay } = await import(${JSON.stringify(path.join(ROOT, "scripts/lib/gate-pool.mts"))});
+    const res = await pool(Array.from({ length: 20 }, (_, i) => i), async (i) => { out("egység " + i); await new Promise((r) => setTimeout(r, 1000)); return i; }, 1);
+    for (const r of res) { replay(r.lines); if (!r.ok) process.exit(1); }`,
   "trickle.mjs": `for (let i = 0; i < 7; i++) { console.log("haladok " + i); await new Promise((r) => setTimeout(r, 1000)); }`,
   "slow.mjs": `await new Promise((r) => setTimeout(r, 4000));`,
   "lane1.mjs": WRITER_TIMED(true),
@@ -626,6 +639,13 @@ async function audit(v: Variant): Promise<string[]> {
   const t2 = tx.run({ CIT_GATE_JOB_SILENCE: JOB_LIMIT, CIT_GATE_JOB_MAX: "4" });
   say(t2.rc === 124 && t2.out.includes("teljes-idő plafon: CIT_GATE_JOB_MAX=4 s"), `J · a 4 s-os teljes-idő plafon nem állította meg a 7 s-ig író kaput (rc=${t2.rc})\n${t2.out.slice(-600)}`);
   dispose(tx);
+  const px = prepare(v, POOLED_GATES, "4");
+  const p1 = px.run({ CIT_GATE_JOB_SILENCE: POOL_SILENCE });
+  const units = [...p1.out.matchAll(/^egység (\d+)$/gm)].map((m) => m[1]).join(",");
+  const want = Array.from({ length: 20 }, (_, i) => i).join(",");
+  say(p1.rc === 0 && !p1.out.includes("IDŐTÚLLÉPÉS"), `J · a PUFFERELŐ, de szívverő poolos kapu (20 s kimenet nélkül, egységenként szívverés, csend-korlát ${POOL_SILENCE} s) HAMIS PIROS lett (rc=${p1.rc}) — a szívverés nem számít haladásnak\n${p1.out.slice(-600)}`);
+  say(units === want, `J · a poolos kapu kimenete megváltozott (egységek: „${units}”, „${want}” várt) — a szívverés nem nyúlhat a kimenethez`);
+  dispose(px);
 
   // ── G: machine-wide slots — across runners, deadlock-free, released on death ──────
   // Two runners, ONE shared slot: their four 1.2 s gates must never overlap, both must finish.
@@ -707,6 +727,7 @@ if (SELF_TEST) {
     ["az előzmény nélküli kapu hátra sorolva", { ...shipped, runner: mutate("lpt-unknown", runnerText, ": Infinity; // unknown = first", ": -1; // unknown = first") }],
     ["a csend-korlát ki", { ...shipped, runner: mutate("silence", runnerText, "if (now - lastGrowth >= JOB_SILENCE_S * 1000)", "if (false)") }],
     ["teljes idő a csend helyett", { ...shipped, runner: mutate("total", runnerText, "        lastGrowth = now;\n", "") }],
+    ["a szívverés ki", { ...shipped, runner: mutate("heartbeat", runnerText, "    env.CIT_GATE_HEARTBEAT = beat;\n", "") }],
     ["a teljes-idő plafon ki", { ...shipped, runner: mutate("max", runnerText, "else if (now - t0 >= JOB_MAX_S * 1000)", "else if (false)") }],
     ["csak a közvetlen gyerek ölve", { ...shipped, runner: mutate("tree", runnerText, "const seen = new Set(processTree(root));", "const seen = new Set([root]);") }],
     ["a beragadás a kapuidő-előzménybe kerül", { ...shipped, runner: mutate("timeout-history", runnerText, "times.filter(([, , , hung]) => !hung)", "times") }],
@@ -721,7 +742,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a huszonnégy visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a huszonöt visszarontás pirosat adott.");
   process.exit(0);
 }
 

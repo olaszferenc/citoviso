@@ -408,6 +408,8 @@ function runInSlot(job, readOnly, slotName) {
     const tag = readOnly ? "p" : "s";
     const out = `${job.base}.${tag}.out`;
     const err = `${job.base}.${tag}.err`;
+    const beat = `${job.base}.${tag}.hb`; // the pool's progress touch, see the silence limit below
+    env.CIT_GATE_HEARTBEAT = beat;
     const [cmd, args] = command(job);
     const t0 = Date.now();
     const child = spawn(cmd, args, {
@@ -418,11 +420,18 @@ function runInSlot(job, readOnly, slotName) {
     let killing = null;
     let why = "";
     // SILENCE, not total time: a slow gate that keeps printing is progressing and is left alone.
+    // A pooled gate (scripts/lib/gate-pool.mts) buffers its lines until the replay at the end —
+    // measured: lead-page-surface-check writes its first byte after 98 s, i.e. at exit — so it
+    // touches this heartbeat file after every finished unit instead; that counts as output.
     let lastSize = -1;
     let lastGrowth = t0;
     const outSize = () => {
+      let hb = 0;
       try {
-        return statSync(out).size + statSync(err).size;
+        hb = statSync(beat).mtimeMs;
+      } catch {}
+      try {
+        return `${statSync(out).size + statSync(err).size}:${hb}`;
       } catch {
         return lastSize;
       }
@@ -435,7 +444,7 @@ function runInSlot(job, readOnly, slotName) {
         lastGrowth = now;
       }
       if (killing) return;
-      if (now - lastGrowth >= JOB_SILENCE_S * 1000) why = `${JOB_SILENCE_S} s óta egy bájtot sem írt (csend-korlát: CIT_GATE_JOB_SILENCE=${JOB_SILENCE_S} s)`;
+      if (now - lastGrowth >= JOB_SILENCE_S * 1000) why = `${JOB_SILENCE_S} s óta egy bájtot sem írt és szívverést sem adott (csend-korlát: CIT_GATE_JOB_SILENCE=${JOB_SILENCE_S} s)`;
       else if (now - t0 >= JOB_MAX_S * 1000) why = `${JOB_MAX_S} s után sem tért vissza, bár írt (teljes-idő plafon: CIT_GATE_JOB_MAX=${JOB_MAX_S} s)`;
       else return;
       process.stdout.write(`   ⏱ kapu-futtató: ${(job.label || job.script).trim()} — ${why} — leállítom (pid ${child.pid})\n`);

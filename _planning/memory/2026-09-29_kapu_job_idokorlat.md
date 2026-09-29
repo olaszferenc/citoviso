@@ -33,3 +33,16 @@ Az ADR-0268 600 s-os teljes-idő korlátja ugyanezt a hamis pirosat gyártotta v
 - **önteszt:** +3 visszarontás.
 
 A böngésző-zárás „gyökérok” visszavonva: nem bizonyított, csak reprodukált beragadás esetén kerül újra elő.
+
+## Szívverés a poolos kapuknak (ADR-XXXX)
+A koordinátor jelezte, és a mérés igazolta: a `gate-pool.mts` a kimenetet a végéig puffereli.
+- A `lead-page-surface-check` első bájtja egyedül 98 s-nál, 4 CPU-égetővel 183 s-nál jön, vagyis mindig a kilépéskor.
+- A 900 s-os csend-korlát így egy nagy poolos kaput hamisan pirosra ölne.
+
+A javítás:
+- A futtató minden kapunak átad egy `CIT_GATE_HEARTBEAT` fájlt.
+- A pool minden befejezett egység után megérinti; a kapu kimenete nem változik.
+- A csend = sem kimenet, sem szívverés.
+- Őr: J-forgatókönyv, poolos fixture (20 s pufferelve, 8 s-os korlát mellett zöld), + visszarontás „szívverés ki”.
+
+Mellékes: a `lead-page-surface-check` 4 égető alatt rc 1 lett — nincs kivizsgálva.

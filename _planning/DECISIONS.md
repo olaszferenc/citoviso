@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-poolos-kapu-szivverese.md) — A poolos kapu szívverése: a csend-korlát a pufferelt kimenetű kaput nem öli meg (2026-09-29)
 - [ADR-0270](decisions/0270-a-tulaj-admin-listaiban-a-nem-kiado-egesz.md) — A tulaj admin-listáiban a nem kiadó „egész szállás” a végére kerül, és naptár-fület csak foglalható egység kap
 - [ADR-0269](decisions/0269-a-kapu-idokorlat-csend-alapu-nem-teljes-ido.md) — A kapu-időkorlát CSEND-alapú, nem teljes-idő alapú (az ADR-0268 1. pontjának helyesbítése) (2026-09-29)
 - [ADR-0268](decisions/0268-kapunkenti-idokorlat-a-kapu-futtatoban-a-vissza.md) — Kapunkénti időkorlát a kapu-futtatóban: a vissza nem térő kapu HANGOSAN piros, a teljes folyamatfája leállítva (`scripts/lib/gate-runner.mjs`) (2026-09-29)

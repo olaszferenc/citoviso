@@ -14,15 +14,35 @@
 //
 //   CIT_GATE_JOBS=<n>        workers per gate (default 4; 1 = the old serial behaviour)
 //   CIT_GATE_POOL_TIMES=<f>  append one JSON line per pool (wall ms + every unit's ms) — where the time goes
+//   CIT_GATE_HEARTBEAT=<f>   set by scripts/lib/gate-runner.mjs: touched after every FINISHED unit, so the
+//                            runner's silence limit (ADR-XXXX) sees progress although the buffered output
+//                            appears only at replay. It never changes the gate's output (verdict lines
+//                            are the contract); a unit that never finishes never beats.
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, closeSync, openSync, utimesSync } from "node:fs";
 import path from "node:path";
 
 export type Line = { stream: "out" | "err"; text: string };
 export type Settled<R> = { ok: true; value: R; lines: Line[] } | { ok: false; error: unknown; lines: Line[] };
 
 const sink = new AsyncLocalStorage<Line[]>();
+
+/** Progress signal for the gate runner's silence limit — a touch, no output. */
+function heartbeat(): void {
+  const f = process.env.CIT_GATE_HEARTBEAT;
+  if (!f) return;
+  try {
+    const now = new Date();
+    try {
+      utimesSync(f, now, now);
+    } catch {
+      closeSync(openSync(f, "a"));
+    }
+  } catch {
+    // A missed beat only risks a (loud) silence stop, never a wrong verdict.
+  }
+}
 
 /** Workers per gate: CIT_GATE_JOBS, default 4, never below 1. */
 export function gateJobs(): number {
@@ -79,6 +99,7 @@ export async function pool<T, R>(
         results[i] = { ok: false, error, lines };
       }
       ms[i] = Math.round(performance.now() - u0);
+      heartbeat();
     }
   }
   await Promise.all(Array.from({ length: Math.min(Math.max(1, jobs), items.length) }, (_, w) => worker(w)));
