@@ -18,6 +18,7 @@
 - [2026-09-29_galeria_korlat_minden_foto_elerheto.md](2026-09-29_galeria_korlat_minden_foto_elerheto.md) — Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
 - [2026-09-29_csillagszam_egy_szabaly.md](2026-09-29_csillagszam_egy_szabaly.md) — A csillagszám egyetlen, skála-tudatos szabályból (2026-09-29)
 - [2026-09-29_csillagmeret_or.md](2026-09-29_csillagmeret_or.md) — Böngészős méret-őr a csillagsorra, mind a 19 sablonon (2026-09-29)
+- [2026-09-29_cfg_sheet_scroll_kapu_gyorsitasa.md](2026-09-29_cfg_sheet_scroll_kapu_gyorsitasa.md) — 2026-09-29 — A `cfg-sheet-scroll-check` gyorsítása (pool + nyugvópont, ADR-XXXX)
 - [2026-09-29_arajanlat_ara_csak_erre_a_keresre.md](2026-09-29_arajanlat_ara_csak_erre_a_keresre.md) — Az árajánlat ára alapból csak arra a kérésre szól + „Kiküldött ajánlatok” lista (2026-09-29)
 - [2026-09-28_vendeg_oldal_egesz_szallas.md](2026-09-28_vendeg_oldal_egesz_szallas.md) — 2026-09-28 — A vendég oldala: a „Foglalás” rossz választót állított, üres felugró, összetapadt kártya, a „Mégsem” zsákutcája
 - [2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md](2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md) — Vendég-oldal: a tulaj Nyitóképe a hős, és az értékelés skálája a forrásé (2026-09-28 este)

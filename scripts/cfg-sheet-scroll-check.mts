@@ -5,6 +5,12 @@
 //   npx tsx scripts/cfg-sheet-scroll-check.mts             (ŐR: 3 sablon × 6 tartás: 390, 360, böngésző-lapos 390×690 és 360×640, fekvő 844 és 932)
 //   npx tsx scripts/cfg-sheet-scroll-check.mts --selftest  (+ PIROS önteszt: a javítás kivéve)
 //
+//   Every (template × holding) unit and every red-selftest unit is its own browser context, run
+//   on CIT_GATE_JOBS workers (scripts/lib/gate-pool.mts, ADR-0263); the verdict lines come out in
+//   the serial order, and a unit that threw is a loud failure. After a swipe the gate waits for
+//   the page AND every scroller to come to REST (not a fixed sleep) — under load a fixed sleep
+//   measured a fling still in flight (ADR-0168).
+//
 // MIT MÉR, ÉS MIÉRT ÍGY
 //
 //  · VALÓDI ÉRINTÉS-GESZTUS (CDP Input.dispatchTouchEvent: touchStart → touchMove×N → touchEnd),
@@ -35,6 +41,8 @@
 //   S10 …és a számlázási űrlapnak HASZNÁLHATÓ ablaka van (≥ 120 px): az S8 egy 24 px-es
 //       görgetőt is „végig tudott húzni” — zölden, miközben a tulaj telefonján (böngésző-lap,
 //       ~390×690) a lead nem tudott vásárolni (tulaj, 2026-09-27, ADR-0247)
+//   S11 (a mérés hitele) minden húzás után a lap és minden görgető NYUGVÓPONTRA ért (≤ 4 s) —
+//       ha nem, a következő leolvasás mozgó lapra esne: PIROS, nem figyelmeztetés
 //   S0  (a mérés hitele) csukott panellel ugyanaz a gesztus GÖRGETI a lapot
 //
 // Kimenet (gitignore-olt): assets/design-refs/_drafts/cfg-sheet-scroll/<sablon>-<tartás>.png
@@ -47,9 +55,10 @@ process.env.PAYMENT_GATEWAY = "mock";
 import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { chromium, type Browser, type Page } from "playwright-core";
+import { chromium, type Browser, type CDPSession, type Page } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { gateJobs, pool } from "./lib/gate-pool.mts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, "assets", "design-refs", "_drafts", "cfg-sheet-scroll");
@@ -92,7 +101,16 @@ function chromiumExe(): string {
   throw new Error("nincs használható Chromium (CHROMIUM_PATH?)");
 }
 
-async function fixture(tpl: string, sabotage: Sabotage): Promise<string> {
+const fixtures = new Map<string, Promise<string>>();
+/** One render per (template, sabotage) — the units of a pool share it read-only. */
+function fixture(tpl: string, sabotage: Sabotage): Promise<string> {
+  const key = `${tpl}/${sabotage}`;
+  let f = fixtures.get(key);
+  if (!f) fixtures.set(key, (f = renderFixture(tpl, sabotage)));
+  return f;
+}
+
+async function renderFixture(tpl: string, sabotage: Sabotage): Promise<string> {
   const { renderSite } = await import("../src/engine/render.js");
   const { TEMPLATES: T } = await import("../src/engine/templates.js");
   const { injectRuntime } = await import("../src/generator/runtime.js");
@@ -174,7 +192,9 @@ async function swipe(page: Page, x: number, y: number, dy: number): Promise<void
   // Raw touchStart → touchMove×N → touchEnd, the path a finger takes. (Measured:
   // Input.synthesizeScrollGesture scrolls NOTHING in this headless Chromium — not even a
   // plain 4000 px page — so a guard built on it would be green on everything.)
-  const cdp = await page.context().newCDPSession(page);
+  // one CDP session per page, reused: opening and detaching one per swipe cost ~0.3 s under load
+  let cdp = cdps.get(page);
+  if (!cdp) cdps.set(page, (cdp = await page.context().newCDPSession(page)));
   const steps = 12;
   await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
   for (let i = 1; i <= steps; i++) {
@@ -182,8 +202,37 @@ async function swipe(page: Page, x: number, y: number, dy: number): Promise<void
     await page.waitForTimeout(16);
   }
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await cdp.detach();
-  await page.waitForTimeout(450); // fling/momentum settles
+  // fling/momentum settles; a swipe that never came to rest is recorded against its unit
+  if (!(await waitForRest(page))) restless.get(page)?.push({ x, y, dy });
+}
+
+const cdps = new WeakMap<Page, CDPSession>();
+/** Per page: the swipes after which nothing came to rest within the ceiling (rule S11). */
+const restless = new WeakMap<Page, { x: number; y: number; dy: number }[]>();
+
+/**
+ * Wait until the page and every scroller on it stand still: the same offsets over ≥ 8
+ * consecutive animation frames AND ≥ 160 ms (a starved renderer paints no frame, so it cannot
+ * fake a rest), at least 250 ms after the touchEnd (the old fixed wait was 450 ms and the fling
+ * never started later than that). Ceiling 4 s → false: the next reading would be taken on a
+ * moving page, so the unit's S11 goes RED (a verdict read in motion proves nothing either way —
+ * in a red selftest it could be the false green of ADR-0168).
+ */
+async function waitForRest(page: Page): Promise<boolean> {
+  return (await page.evaluate(`new Promise((done) => {
+    const sc = [document.scrollingElement, ...document.querySelectorAll("*")].filter((n) => n && n.scrollHeight > n.clientHeight + 1);
+    const read = () => sc.map((n) => n.scrollTop).join(",") + "|" + window.scrollY;
+    const t0 = performance.now();
+    let last = read(), since = t0, frames = 0;
+    const tick = () => {
+      const now = performance.now(), cur = read();
+      if (cur !== last) { last = cur; since = now; frames = 0; } else frames++;
+      if (frames >= 8 && now - since >= 160 && now - t0 >= 250) return done(true);
+      if (now - t0 > 4000) return done(false);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  })`)) as boolean;
 }
 
 async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): Promise<Record<string, [boolean, unknown]>> {
@@ -207,6 +256,8 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
     return route.fulfill({ status: 200, contentType: "text/plain", body: "" });
   });
   const page = await ctx.newPage();
+  const unrested: { x: number; y: number; dy: number }[] = [];
+  restless.set(page, unrested);
   const jsErrors: string[] = [];
   page.on("pageerror", (e) => jsErrors.push(e.message));
   await page.goto(`${ORIGIN}/${tpl}`, { waitUntil: "load" });
@@ -374,6 +425,7 @@ async function run(browser: Browser, tpl: string, vp: Vp, sabotage: Sabotage): P
     const b = (await page.evaluate(`Math.round(window.scrollY)`)) as number;
     res.S4_page_scrolls_after_close = [Math.abs(b - a) > 20, { before: a, after: b }];
     res.S5_no_js_errors = [jsErrors.length === 0, jsErrors];
+    res.S11_measured_at_rest = [unrested.length === 0, { note: "nyugvópont nem állt be 4 s alatt", swipes: unrested }];
     (res as Record<string, unknown>).__zones = z;
   } finally {
     await ctx.close();
@@ -403,30 +455,65 @@ const check = (name: string, ok: boolean, detail?: unknown): void => {
     console.error(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail).slice(0, 400)}`}`);
   }
 };
+// every measurement as one pool unit: the main (template × holding) runs, then the red
+// selftest runs — all measured concurrently, all reported below in the serial order
+interface Unit { tpl: string; vp: Vp; sabotage: Sabotage }
+const vpById = (id: string): Vp => VIEWPORTS.find((v) => v.id === id)!;
+const MAIN: Unit[] = TEMPLATES.flatMap((tpl) => VIEWPORTS.map((vp) => ({ tpl, vp, sabotage: "none" as Sabotage })));
+const SELF: Record<string, Unit> = {
+  noFix390: { tpl: "fullbleed", vp: vpById("390"), sabotage: "no-fix" },
+  noFixLand: { tpl: "fullbleed", vp: vpById("land"), sabotage: "no-fix" },
+  noLandcolLand: { tpl: "fullbleed", vp: vpById("land"), sabotage: "no-landcol" },
+  noLandcolLand932: { tpl: "fullbleed", vp: vpById("land932"), sabotage: "no-landcol" },
+  noFold390tab: { tpl: "fullbleed", vp: vpById("390tab"), sabotage: "no-fold" },
+  noFold390: { tpl: "fullbleed", vp: vpById("390"), sabotage: "no-fold" },
+  noLandcol390: { tpl: "fullbleed", vp: vpById("390"), sabotage: "no-landcol" },
+};
+const selfKeys = SELFTEST ? Object.keys(SELF) : [];
+const units: Unit[] = [...MAIN, ...selfKeys.map((k) => SELF[k]!)];
+type Res = Record<string, [boolean, unknown]>;
 try {
   if (process.env.CFG_ONLY) console.log(`⚠️  SZŰKÍTVE (CFG_ONLY=${process.env.CFG_ONLY}) — a többi sablon KIHAGYVA`);
+  const settled = await pool(units, (u) => run(browser, u.tpl, u.vp, u.sabotage), gateJobs());
+  // ⛔ a unit without a result is a measurement that never happened: a loud failure, never a green
+  const failedUnit = (i: number): string | null => {
+    const r = settled[i]!;
+    return r.ok ? null : String((r.error as Error)?.stack ?? r.error).slice(0, 600);
+  };
+  const resOf = (i: number): Res => {
+    const r = settled[i]!;
+    return r.ok ? r.value : {};
+  };
   console.log(`\nŐR — telefonon a rendelés-panel görget, nem a lap (${TEMPLATES.length} sablon × ${VIEWPORTS.map((v) => v.id).join("/")})`);
-  for (const tpl of TEMPLATES) {
-    for (const vp of VIEWPORTS) {
-      const r = await run(browser, tpl, vp, "none");
-      console.log(`\n${tpl} @ ${vp.id}`);
-      for (const [k, v] of Object.entries(r)) {
-        if (k.startsWith("__")) continue;
-        const [ok, detail] = v as [boolean, unknown];
-        const known = KNOWN_OPEN[`${vp.id}:${k}`];
-        if (known && !ok) {
-          knownOpen++;
-          console.log(`  ⚠ ${k} — ISMERT, NYITOTT (nem zöld): ${known}`);
-        } else if (known && ok) {
-          console.log(`  ✓ ${k} — a KNOWN_OPEN kivétel MEGSZŰNT, vedd ki a listából`);
-        } else check(k, ok, ok ? undefined : detail);
-      }
+  MAIN.forEach(({ tpl, vp }, i) => {
+    console.log(`\n${tpl} @ ${vp.id}`);
+    const fail = failedUnit(i);
+    if (fail) return check("a mérés lefutott", false, fail);
+    for (const [k, v] of Object.entries(resOf(i))) {
+      if (k.startsWith("__")) continue;
+      const [ok, detail] = v as [boolean, unknown];
+      const known = KNOWN_OPEN[`${vp.id}:${k}`];
+      if (known && !ok) {
+        knownOpen++;
+        console.log(`  ⚠ ${k} — ISMERT, NYITOTT (nem zöld): ${known}`);
+      } else if (known && ok) {
+        console.log(`  ✓ ${k} — a KNOWN_OPEN kivétel MEGSZŰNT, vedd ki a listából`);
+      } else check(k, ok, ok ? undefined : detail);
     }
-  }
+  });
   if (SELFTEST) {
+    const self = (key: string): Res => {
+      const i = MAIN.length + selfKeys.indexOf(key);
+      const fail = failedUnit(i);
+      if (fail) check(`${SELF[key]!.sabotage} @ ${SELF[key]!.vp.id}: a mérés lefutott`, false, fail);
+      // a red control read on a moving page could be a false red OR a false green: it must rest
+      else if (resOf(i).S11_measured_at_rest?.[0] !== true) check(`${SELF[key]!.sabotage} @ ${SELF[key]!.vp.id}: nyugvóponton mérve (S11)`, false, resOf(i).S11_measured_at_rest?.[1]);
+      return resOf(i);
+    };
     console.log("\nPIROS ÖNTESZT — a javítás kivéve (nincs érintés-őr, nincs overscroll-elzárás): S1 (és állón S7) legyen PIROS, S3/S6 zöld");
-    for (const vp of [VIEWPORTS[0]!, VIEWPORTS.find((v) => v.id === "land")!]) {
-      const r = await run(browser, "fullbleed", vp, "no-fix");
+    for (const key of ["noFix390", "noFixLand"]) {
+      const vp = SELF[key]!.vp;
+      const r = self(key);
       const upright = vp.height > vp.width;
       check(`no-fix @ ${vp.id} → S1 PIROS`, r.S1_drag_on_panel_keeps_page_still?.[0] === false, r.S1_drag_on_panel_keeps_page_still?.[1]);
       check(`no-fix @ ${vp.id} → S3 (előnézet) zöld marad`, r.S3_preview_scrolls_to_change?.[0] === true, r.S3_preview_scrolls_to_change?.[1]);
@@ -436,17 +523,16 @@ try {
       check(`no-fix @ ${vp.id} → S6 (a lap a panel mellett görget) zöld marad`, r.S6_page_beside_panel_still_scrolls?.[0] === true, r.S6_page_beside_panel_still_scrolls?.[1]);
     }
     console.log("\nPIROS ÖNTESZT — a fekvő egy-oszlopos fizetés kivéve: S9 („Fizetek” elérhető) PIROS fekvőn, álló 390-en zöld");
-    for (const vp of VIEWPORTS.filter((v) => v.id.startsWith("land"))) {
-      const r = await run(browser, "fullbleed", vp, "no-landcol");
-      check(`no-landcol @ ${vp.id} → S9 PIROS`, r.S9_pay_button_reachable?.[0] === false, r.S9_pay_button_reachable?.[1]);
+    for (const key of ["noLandcolLand", "noLandcolLand932"]) {
+      const r = self(key);
+      check(`no-landcol @ ${SELF[key]!.vp.id} → S9 PIROS`, r.S9_pay_button_reachable?.[0] === false, r.S9_pay_button_reachable?.[1]);
     }
     console.log("\nPIROS ÖNTESZT — az álló összecsukás kivéve: S10 (az űrlap ablaka) PIROS böngésző-lapos 390×690-en, álló 390×844-en zöld");
-    const vTab = VIEWPORTS.find((v) => v.id === "390tab")!;
-    const rTab = await run(browser, "fullbleed", vTab, "no-fold");
+    const rTab = self("noFold390tab");
     check("no-fold @ 390tab → S10 PIROS", rTab.S10_billing_form_has_a_window?.[0] === false, rTab.S10_billing_form_has_a_window?.[1]);
-    const rTall = await run(browser, "fullbleed", VIEWPORTS[0]!, "no-fold");
+    const rTall = self("noFold390");
     check("no-fold @ 390 → S10 zöld marad (magas állón nincs mit összecsukni)", rTall.S10_billing_form_has_a_window?.[0] === true, rTall.S10_billing_form_has_a_window?.[1]);
-    const r390 = await run(browser, "fullbleed", VIEWPORTS[0]!, "no-landcol");
+    const r390 = self("noLandcol390");
     check("no-landcol @ 390 → S9 zöld marad (állón a fekvő blokk nem sül el)", r390.S9_pay_button_reachable?.[0] === true, r390.S9_pay_button_reachable?.[1]);
   }
 } finally {

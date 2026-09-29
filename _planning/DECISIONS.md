@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-cfg-sheet-scroll-kapu-is-a-kozos-poolon-mer.md) — A `cfg-sheet-scroll-check` is a közös poolon mér, a húzás után NYUGVÓPONTRA vár (nem fix alvás), és a nem nyugvó mérés PIROS (S11) (2026-09-29)
 - [ADR-0271](decisions/0271-a-poolos-kapu-szivverese-a-csend-korlat-a.md) — A poolos kapu szívverése: a csend-korlát a pufferelt kimenetű kaput nem öli meg (2026-09-29)
 - [ADR-0270](decisions/0270-a-tulaj-admin-listaiban-a-nem-kiado-egesz.md) — A tulaj admin-listáiban a nem kiadó „egész szállás” a végére kerül, és naptár-fület csak foglalható egység kap
 - [ADR-0269](decisions/0269-a-kapu-idokorlat-csend-alapu-nem-teljes-ido.md) — A kapu-időkorlát CSEND-alapú, nem teljes-idő alapú (az ADR-0268 1. pontjának helyesbítése) (2026-09-29)
