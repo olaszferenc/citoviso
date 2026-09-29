@@ -16,6 +16,7 @@
 - [2026-09-29_lassu_land_vizsgalat.md](2026-09-29_lassu_land_vizsgalat.md) — 2026-09-29 — Miért lassú a land az ADR-0227/0230 után? (brief: lassu-land-vizsgalat)
 - [2026-09-29_kapu_leghosszabb_eloszor.md](2026-09-29_kapu_leghosszabb_eloszor.md) — 2026-09-29 — A kapu-futtató a leghosszabb kaput indítja először (brief: kapu-leghosszabb-eloszor, „A” opció)
 - [2026-09-29_kapu_job_idokorlat.md](2026-09-29_kapu_job_idokorlat.md) — Kapunkénti időkorlát a kapu-futtatóban — a beragadt böngészős kapu nem tartja fel a landot (2026-09-29)
+- [2026-09-29_gepszintu_land_sor.md](2026-09-29_gepszintu_land_sor.md) — 2026-09-29 — Gépszintű land-sor (flock) a land.sh-ban
 - [2026-09-29_galeria_korlat_minden_foto_elerheto.md](2026-09-29_galeria_korlat_minden_foto_elerheto.md) — Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
 - [2026-09-29_foglalaskezeles_telefonon.md](2026-09-29_foglalaskezeles_telefonon.md) — 2026-09-29 — A tulaj telefonon dönt a foglalásról (FK-015, „A” változat) — ADR-0274
 - [2026-09-29_csillagszam_egy_szabaly.md](2026-09-29_csillagszam_egy_szabaly.md) — A csillagszám egyetlen, skála-tudatos szabályból (2026-09-29)

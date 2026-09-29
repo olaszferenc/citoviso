@@ -41,6 +41,13 @@ if [ -n "$UNTRACKED" ]; then
   echo "$UNTRACKED"
 fi
 
+# MACHINE-WIDE LAND QUEUE (scripts/land-lock.sh): everything from the fetch to the verification runs under one
+# lock shared by every worktree, so parallel lands no longer bounce each other's push and re-run
+# the whole gate suite. The fetch comes AFTER the lock: whatever landed while we waited is rebased
+# onto once. Released after the main-tree refresh (see below) or, at the latest, when this shell exits.
+. "$ROOT/scripts/land-lock.sh"
+land_lock_acquire "$ROOT" || fail "a gépszintű land-zár nem szerezhető meg"
+
 git fetch origin || fail "git fetch origin sikertelen"
 
 ATTEMPT=0
@@ -110,6 +117,9 @@ while :; do
       echo "⚠️  Fő fa ff-frissítése nem ment (elágazott?) — a :4600 tesztfelület NEM frissült."
     fi
   fi
+  # The queue ends here: the push is verified and the main tree refresh + server restart are done
+  # (kept inside so two lands never ff/restart at once). Cleanup and warnings below need no lock.
+  land_lock_release
 
   # §2b terv-vázlatok takarítása (ADR-0077; tulaj kérése 2026-08-27: „ha nincs valami
   # trigger ami törölné a fileokat akkor legyen, mert így kurva sok szemét lesz").

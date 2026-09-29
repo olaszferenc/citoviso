@@ -219,6 +219,13 @@ if [ -f scripts/planning-index-land-check.mts ] && \
   echo "[pre-commit] planning-index-land-check (a land feloldja-e a generált indexeket, és CSAK azokat)…"
   npx tsx scripts/planning-index-land-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A GÉPSZINTŰ LAND-SOR (scripts/land-lock.sh): eldobható repóban a valódi `land-lock.sh` — két land sorba áll,
+# a leölt zártartó elenged, a land.sh a fetch előtt zár; 3 visszarontás piros. ~20 s.
+if [ -f scripts/land-lock-check.mts ] && \
+   changed_files | grep -qE '^scripts/(land\.sh|land-lock\.sh|land-lock-check\.mts)$'; then
+  echo "[pre-commit] land-lock-check (a landok gépszintű sora: sorosít-e, elenged-e a halott land)…"
+  npx tsx scripts/land-lock-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ⛔ FELÜLET-KAPU strukturális iker (§2b, ADR-0066/0076). The runtime PreToolUse hook
 # (surface-plan-scan.mjs) blocks surface EDITS; this blocks the COMMIT boundary — a
 # rendered surface cannot land without an approval/exception token on the branch. Commit
