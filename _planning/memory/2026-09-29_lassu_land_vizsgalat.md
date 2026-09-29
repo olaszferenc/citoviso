@@ -5,7 +5,7 @@
 1. **A „már megmért” felismerés SOHA nem működött a landnál.** A 20 futásban mindenhol
    `0 már zöld volt`. A git a hook `PATH`-jának elejére teszi a `/usr/lib/git-core`-t, a
    `land.sh` sima `bash`-sel hív → más környezet → más aláírás. A galéria land2-je (egy commit,
-   a main nem mozdult, nem volt ADR) így 892 s-ot futott feleslegesen. Javítva: ADR-XXXX
+   a main nem mozdult, nem volt ADR) így 892 s-ot futott feleslegesen. Javítva: ADR-0260
    (`scripts/lib/gate-runner.mjs` + `scripts/gate-runner-check.mts` E forgatókönyv valódi
    `git commit`-tel, 2 új visszarontás, 15/15 piros).
    ⚠️ Korlát: ha a main mozdult, a land ADR-t oszt ki, vagy több commit landol, a kulcs
@@ -20,7 +20,7 @@
 
 **Útközben:** a `gate-lane-check --self-test` a tiszta mainen is piros volt (a negatív kontroll,
 a `wallet-check.mts` 09-25 óta javítva → 0 lelet). A kontroll mostantól a commithoz kötött
-`0b3bfeae~1:scripts/wallet-check.mts` (ADR-XXXX ④). Tanulság: élő fájl negatív kontrollnak
+`0b3bfeae~1:scripts/wallet-check.mts` (ADR-0260 ④). Tanulság: élő fájl negatív kontrollnak
 törékeny — a kapu megjavítása megvakítja az őrt.
 
 **Javaslat a koordinátornak (döntésre vár, nem implementálva):** ① a `mobile-chrome-check`

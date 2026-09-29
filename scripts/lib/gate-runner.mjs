@@ -298,7 +298,7 @@ const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const CACHE_DIR = CACHE_KEY && process.env.CIT_GATE_CACHE !== "0" && commonDir() ? path.join(commonDir(), "cit-gate-pass") : null;
 const VOLATILE = /^(GIT_\w*|LAND_RANGE|PWD|OLDPWD|SHLVL|_|CIT_GATE_\w*)$/;
 const READS_DIFF = /LAND_RANGE|--cached|git diff|"diff"/;
-// ⛔ (ADR-XXXX) git PREPENDS its exec-path (`/usr/lib/git-core`) to PATH for every hook it runs, so the
+// ⛔ (ADR-0260) git PREPENDS its exec-path (`/usr/lib/git-core`) to PATH for every hook it runs, so the
 // commit-time PATH never equalled the land-time PATH (land.sh calls the hook with plain bash)
 // and NO commit-time green was ever reused at land (measured 2026-09-29: 0 of 20 lands). That
 // directory holds only git's own subcommands (`git-*`, `scalar`, `mergetools`) — it cannot

@@ -1,4 +1,4 @@
-## ADR-XXXX — A land TÉNYLEG újrahasznosítja a commitkori zöldet: a git exec-path kimarad a kapu-aláírás PATH-jából (2026-09-29)
+## ADR-0260 — A land TÉNYLEG újrahasznosítja a commitkori zöldet: a git exec-path kimarad a kapu-aláírás PATH-jából (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** *„hát ez extrém hosszan tart...”* — a galéria-szál (ADR-0259)
   második landja ~15 percig futtatta a teljes böngészős kapusort (brief: `~/rc-briefs/lassu-land-vizsgalat.md`).
