@@ -1,6 +1,6 @@
 // ŐR: a tulaj MINDEN fotója elérhető a vendég-oldal galériájából, és a galéria a lapon
-// még NEM LÁTOTT képekkel indul — wordmark-grow (kártyapakli), organic (blob-sáv),
-// claymorphism (4 + helyben kinyíló). Kontraktus: assets/design-refs/tenant-site/gallery-cap/.
+// még NEM LÁTOTT képekkel indul — arch-frames (ív-sáv), wordmark-grow (kártyapakli),
+// organic (blob-sáv), claymorphism (4 + helyben kinyíló). Kontraktus: assets/design-refs/tenant-site/gallery-cap/.
 //
 // A LELET (2026-09-28/29): 6 feltöltésből az organic és a claymorphism 4-et mutatott
 // (`slice(0, 4)`), a wordmark-grow 3-at; az élő Kemences Vendégház (wordmark-grow, 12 fotó)
@@ -27,7 +27,8 @@ import { renderSite } from "../src/engine/render.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
-const TPLS = ["wordmark-grow", "organic", "claymorphism"] as const;
+const TPLS = ["arch-frames", "wordmark-grow", "organic", "claymorphism"] as const;
+const STRIP: readonly string[] = ["arch-frames", "organic"];
 
 const url = (i: number) => `https://gallery-reach.test/photo-${i}.png`;
 const PNG = Buffer.from(
@@ -142,7 +143,7 @@ try {
           await page.keyboard.press("Escape");
           await page.waitForTimeout(150);
           // ③ behaviour
-          if (t === "organic") {
+          if (STRIP.includes(t)) {
             const c0 = await page.textContent("[data-cit-gcount]");
             const pvDis0 = await page.$eval("[data-cit-gprev]", (e) => (e as HTMLButtonElement).disabled);
             // A strip that fits entirely has a disabled „›” — judge it, never time out on it.

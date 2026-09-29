@@ -1,7 +1,7 @@
 ## ADR-0259 — A galéria a tulaj MINDEN fotóját elérhetővé teszi, és a lapon még nem látott képekkel indul
 
-**Dátum:** 2026-09-29 · **Státusz:** elfogadva a wordmark-grow, organic és claymorphism sablonra (lokál, nem élesítve —
-a nagy deployjal megy); **arch-frames NYITOTT** (a tulaj döntésére vár) · **Kiegészíti:** a nyitókép-döntés
+**Dátum:** 2026-09-29 · **Státusz:** elfogadva mind a négy sablonra (lokál, nem élesítve — a nagy deployjal megy); az arch-frames
+külön körben dőlt el (2026-09-29, „lapozható ív sáv”) · **Kiegészíti:** a nyitókép-döntés
 (`heroPhoto(d)` = `photos[0]`, 2026-09-28) · **Kontraktus:** `assets/design-refs/tenant-site/gallery-cap/` ·
 **Őr:** `scripts/gallery-reach-check.mts`
 
@@ -20,7 +20,10 @@ hiba, de látni kell mit okoz a mockbann”.
    + „Galéria organic c”:
    - wordmark-grow → **kártyapakli** (az egy kártya helyén pakli, lapozható, „1 / N”);
    - organic → **lapozható blob-sáv** (egy sornyi, húzható, nyilak + „1 / N”);
-   - claymorphism → **4 kártya + „Összes fotó (N)”**, HELYBEN kinyíló.
+   - claymorphism → **4 kártya + „Összes fotó (N)”**, HELYBEN kinyíló;
+   - arch-frames → **lapozható ív-sáv** („lapozható ív sáv”): új „Képek a portáról” szakasz a széles képsáv után
+     (a sablonnak eddig nem volt galériája); a galéria-horog az „A ház” felszereltség-szakaszról ide került, így
+     Képek modul nélkül a felszereltség marad.
 2. **Minden fotó a galéria-slotban van** → a közös nagyító mindet végiglapozza.
 3. **A galéria a lapon még nem látott képekkel indul** — „a még nem látott képekkel induljon a galéria”: előbb a lap
    többi állandó szakaszán nem szereplő fotók (a tulaj sorrendjében), a már látottak a végére. A „látott” halmazt a
@@ -44,5 +47,4 @@ hiba, de látni kell mit okoz a mockbann”.
 
 ### Nyitott
 
-- **arch-frames:** ma NINCS galéria-szakasza (4 képhely); a terv-kör változatai: ív-kolonnád / lapozható ív-sáv /
-  „+9 fotó” ív — a tulaj döntésére vár.
+- Nincs. (Az arch-frames 2026-09-29-én eldőlt: lapozható ív-sáv.)

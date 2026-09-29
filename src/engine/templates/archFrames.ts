@@ -25,7 +25,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -156,6 +156,11 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 .a-arch::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   border:1px solid color-mix(in srgb,var(--cit-line) 90%,transparent)}
 .a-frame{position:relative;aspect-ratio:3/4}
+/* gallery strip — contract design-refs/tenant-site/gallery-cap (B): one swipeable row of arches */
+.a-gal{padding:clamp(64px,9vw,120px) 0}
+.a-gtrack{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:6px 2px 14px;-webkit-overflow-scrolling:touch}
+.a-gtrack::-webkit-scrollbar{display:none}
+.a-gtrack .a-frame{flex:none;width:min(250px,62vw);scroll-snap-align:start}
 
 /* section title with the watercolour blot (generated from the accent token) */
 .a-title{position:relative;display:grid;place-items:center;margin-bottom:36px}
@@ -341,7 +346,10 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     : "";
 
   const highlights = data.highlights.slice(0, 10);
-  const feature = `<section data-cit-module="gallery" style="padding-top:0">
+  // The gallery hook moved to the swipeable arch strip below (contract design-refs/tenant-site/
+  // gallery-cap, B): this is the house/amenities story, and without the Képek module it must
+  // stay. A photo-less lead has no strip, so the hook stays here — the module slot must exist.
+  const feature = `<section${photos.length ? "" : ' data-cit-module="gallery"'} style="padding-top:0">
     <div class="a-sprig l">${SPRIG}</div>
     <div class="a-wrap">
       <div class="a-title"><h2 ${mo("up")}>${esc(featCopy.title ?? T(data, "A ház"))}</h2></div>
@@ -372,6 +380,25 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
         bandPhoto.alt,
       )}" loading="lazy"></div>`
     : "";
+
+  // Contract: assets/design-refs/tenant-site/gallery-cap (B) — the template had NO gallery (4
+  // photo slots). A new section after the band: ONE swipeable row of arches holding EVERY
+  // photo (the shared lightbox pages through all), a „1 / N” pager under it. Order: photos
+  // the page does not show elsewhere first (`galleryOrder`, called below).
+  const galleryOf = (ordered: readonly { url: string; alt: string }[]): string =>
+    ordered.length
+      ? `<section class="a-gal" data-cit-module="gallery">
+    <div class="a-wrap">
+      <div class="a-title"><h2 ${mo("up")}>${T(data, "Képek a portáról")}</h2></div>
+      <div class="a-gstrip" data-cit-gstrip>
+        <div class="a-gtrack" data-cit-gtrack>${ordered
+          .map((p) => `<div class="a-frame a-arch"><img src="${esc(p.url)}" alt="${esc(p.alt || data.name)}" loading="lazy"></div>`)
+          .join("")}</div>
+        ${galleryPager(data, ordered.length)}
+      </div>
+    </div>
+  </section>`
+      : "";
 
   // Real guest quotes only — a sample review must never reach a page (§B.17).
   const quotes = (data.reviews ?? []).slice(0, 3);
@@ -433,6 +460,8 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     </div>
   </footer>`;
 
+  const gallery = galleryOf(galleryOrder(photos, [heroBlock, about, roomsBlock, feature, band, review, footer].join("")));
+
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -457,6 +486,7 @@ ${fadeIntroCss()}
   ${slotMarker("showcase")}
   ${feature}
   ${band}
+  ${gallery}
   ${slotMarker("trust")}
   ${review}
   ${slotMarker("practical")}

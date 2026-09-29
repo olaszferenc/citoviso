@@ -48,10 +48,16 @@ nyitott**.
 
 `src/engine/templateKit.ts` · `src/engine/templates/{wordmarkGrow,organic,claymorphism}.ts` ·
 `assets/runtime/cit-runtime.js` · `assets/runtime/cit-modules.css` · `src/i18n/catalog.json` ·
-`scripts/gallery-reach-check.mts` (új) · `hooks/pre-commit` · `assets/design-refs/tenant-site/gallery-cap/` (új) ·
+`src/engine/templates/archFrames.ts` · `scripts/gallery-reach-check.mts` (új) · `hooks/pre-commit` · `assets/design-refs/tenant-site/gallery-cap/` (új) ·
 `_planning/decisions/XXXX-a-galeria-minden-fotot-elerhetove-teszi.md` (új)
+
+## arch-frames (második land, ugyanaz a nap)
+
+A tulaj: „lapozható ív sáv” → új „Képek a portáról” szakasz a széles képsáv után, egy sornyi ív, „1 / N”.
+A galéria-horog az „A ház” felszereltség-szakaszról az ív-sávra került (fotó nélküli leadnél marad a régi helyén,
+hogy a modul-slot meglegyen). Élőn a Kemences #5-tel indul (#1–#4: hős, szöveg-ív, felszereltség-ív, széles sáv).
+Őr: a `gallery-reach-check` 4 sablonra bővült; `cover-photo-check` arch-frames 4/6 → 6/6.
 
 ## Nyitott
 
-- **arch-frames** — a tulaj döntésére vár (ív-kolonnád / lapozható ív-sáv / „+9 fotó” ív); a mockok a szál fájában:
-  `elek/runs/galeria-korlat/2-mockok/galeria-arch-frames.html`.
+- Nincs a szál hatókörében. (A mockok és a döntési anyag: `elek/runs/galeria-korlat/`, gitignore-olt.)

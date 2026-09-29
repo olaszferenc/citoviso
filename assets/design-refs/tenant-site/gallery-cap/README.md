@@ -1,13 +1,12 @@
-# KONTRAKTUS — a galéria minden fotót elérhetővé tesz (wordmark-grow · organic · claymorphism)
+# KONTRAKTUS — a galéria minden fotót elérhetővé tesz (arch-frames · wordmark-grow · organic · claymorphism)
 
 **Jóváhagyta:** a tulaj, 2026-09-29 (§2b terv-jóváhagyási kapu; a koordináló session szó szerint hozta) ·
-**Változatok:** wordmark-grow **A — Kártyapakli**, organic **C — Lapozható blob-sáv**, claymorphism **C — 4 kártya + helyben kinyíló galéria** ·
-**Terv:** `plan-wordmark-grow.html`, `plan-organic.html`, `plan-claymorphism.html` (önhordó, kattintható; fülek: „Ma” + a jóváhagyott változat; „Mobil 390px / Asztali” váltó) ·
-**Képek:** `A-wordmark-grow-{asztali,mobil}.png`, `C-organic-{asztali,mobil}.png`, `C-claymorphism-{asztali,mobil}[-kinyitva].png`
-**Hatókör:** `src/engine/templateKit.ts` · `src/engine/templates/wordmarkGrow.ts` · `src/engine/templates/organic.ts` · `src/engine/templates/claymorphism.ts` · `assets/runtime/cit-runtime.js` · `assets/runtime/cit-modules.css`
+**Változatok:** arch-frames **B — Lapozható ív-sáv** (külön körben: „lapozható ív sáv”), wordmark-grow **A — Kártyapakli**, organic **C — Lapozható blob-sáv**, claymorphism **C — 4 kártya + helyben kinyíló galéria** ·
+**Terv:** `plan-arch-frames.html`, `plan-wordmark-grow.html`, `plan-organic.html`, `plan-claymorphism.html` (önhordó, kattintható; fülek: „Ma” + a jóváhagyott változat; „Mobil 390px / Asztali” váltó) ·
+**Képek:** `B-arch-frames-{asztali,mobil}.png`, `A-wordmark-grow-{asztali,mobil}.png`, `C-organic-{asztali,mobil}.png`, `C-claymorphism-{asztali,mobil}[-kinyitva].png`
+**Hatókör:** `src/engine/templateKit.ts` · `src/engine/templates/archFrames.ts` · `src/engine/templates/wordmarkGrow.ts` · `src/engine/templates/organic.ts` · `src/engine/templates/claymorphism.ts` · `assets/runtime/cit-runtime.js` · `assets/runtime/cit-modules.css`
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.** A kódot ehhez mérjük.
-⚠️ **arch-frames NEM része** — a tulaj döntése rá még nyitott (a terv-körben: A ív-kolonnád / B ív-sáv / C „+9 fotó” ív).
 
 ## Miért
 
@@ -17,7 +16,7 @@ látott, a belső képeket (#10–#12) egyiket sem. A tulaj fizet a Képek modul
 enged) — a vendég a képei egy részét soha nem látta, a nagyítóban sem (az csak a galéria-slot képein lapoz).
 A tulaj: „Ez egy nagy hiba, de látni kell mit okoz a mockbann”.
 
-## KÖT — mindhárom sablonon
+## KÖT — mind a négy sablonon
 
 1. **Minden fotó elérhető a galériából.** A galéria-slot (`data-cit-module="gallery"`) MINDEN fotót
    `<img>`-ként tartalmaz; a közös nagyító (runtime `mountGallery`) így mindet végiglapozza.
@@ -33,6 +32,15 @@ A tulaj: „Ez egy nagy hiba, de látni kell mit okoz a mockbann”.
 5. **JS nélkül is minden fotó elérhető** (§B no-JS): a sáv és a pakli natív, ujjal húzható sor, a
    lapozó rejtve; a claymorphism mind a 12 kártyát mutatja, a gomb rejtve. A runtime a `data-on`
    attribútummal kapcsolja be a JS-es viselkedést.
+
+## arch-frames — B · Lapozható ív-sáv (KÖT)
+
+- **Új szakasz** a széles képsáv UTÁN (a sablonnak eddig nem volt galériája): cím **„Képek a portáról”**,
+  alatta **egy sornyi, vízszintesen húzható ív-keretes** kép (a sablon ívei), asztalin nyilakkal is,
+  „1 / N” számlálóval; az elején a „‹”, a sáv végén a „›” tiltott.
+- Ív-szélesség: asztalin ~250 px, mobilon a képernyő ~62%-a (a következő ív kilóg → jelzi, hogy húzható).
+- A galéria-horog (`data-cit-module="gallery"`) ERRE a szakaszra kerül: az „A ház” felszereltség-szakasz
+  eddig viselte, egy képpel — Képek modul nélkül így a felszereltség-lista marad, és a sáv tűnik el.
 
 ## wordmark-grow — A · Kártyapakli (KÖT)
 
