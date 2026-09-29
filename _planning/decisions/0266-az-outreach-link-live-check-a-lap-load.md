@@ -1,4 +1,4 @@
-## ADR-XXXX — Az outreach-link-live-check a lap `load` eseményére vár, nem a `networkidle`-re (2026-09-29)
+## ADR-0266 — Az outreach-link-live-check a lap `load` eseményére vár, nem a `networkidle`-re (2026-09-29)
 
 - **Kiváltó:** a soros kapu-sáv farka (ADR-0265 mérése): a `scripts/outreach-link-live-check.mts`
   egymagában 298,7 s, ill. 674,6 s ugyanazon a diffen. Brief: `~/rc-briefs/outreach-link-live-gyorsitas.md`

@@ -3,7 +3,7 @@
 - **Szál:** `cit21b5f556`, SUB a `cit3bd83952` kapu-koordinátor alatt. Brief: `~/rc-briefs/outreach-link-live-gyorsitas.md`.
 - **Ok:** 38 lapbetöltés `networkidle`-re várt; a lead-lap 19–20 photo-health kérése külső portálfotókat tölt
   → 5–10 s/lap egyedül, ~31 s terhelés alatt. `load` ≈0,7 s.
-- **Javítás:** `waitUntil: "load"`, lásd ADR-XXXX (`outreach-link-live-load-nem-networkidle`). Állítások, viewportok, önteszt változatlan.
+- **Javítás:** `waitUntil: "load"`, lásd ADR-0266 (`outreach-link-live-load-nem-networkidle`). Állítások, viewportok, önteszt változatlan.
 - **Mérés:** előtte 208 s, utána 38/39 s; 421 ítélet-sor betűre azonos (normalizálva: szerver-napló sorrend, fixture UUID).
   Önteszt 3/2/1 piros.
 - **Marad író** (teljes prospect-tábla enumeráció + saját fixture).

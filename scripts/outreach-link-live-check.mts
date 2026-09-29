@@ -146,7 +146,7 @@ async function measure(
   const page = await ctx.newPage();
   const errs: string[] = [];
   page.on("pageerror", (e) => errs.push(String(e)));
-  // ⏱️ "load", not "networkidle" (ADR-XXXX). The lead page fires ~20 photo-health
+  // ⏱️ "load", not "networkidle" (ADR-0266). The lead page fires ~20 photo-health
   // fetches that download EXTERNAL portal photos server-side: networkidle took 5–10 s
   // per page alone and ~31 s under load (measured 2026-09-29: dcl ≈0.5 s · load ≈0.7 s),
   // which made this gate 299–675 s over 38 page loads. The #prospects panel is fully
