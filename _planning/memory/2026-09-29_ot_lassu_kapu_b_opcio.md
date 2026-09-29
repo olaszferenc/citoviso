@@ -1,4 +1,4 @@
-# 2026-09-29 — A következő lassú kapuk párhuzamosítása („B” opció, ADR-XXXX)
+# 2026-09-29 — A következő lassú kapuk párhuzamosítása („B” opció, ADR-0264)
 
 Brief: `~/rc-briefs/ot-lassu-kapu-parhuzamositasa.md` (koordinátor `cit3bd83952`, tulaj: „Ok a és b”).
 

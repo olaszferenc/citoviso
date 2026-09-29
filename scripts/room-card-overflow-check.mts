@@ -515,7 +515,7 @@ async function runMatrix(
     if (failed) e.fail++;
   };
 
-  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). The (width, page) pairs were
+  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0264, after ADR-0263). The (width, page) pairs were
   // measured one after the other on ONE page per width. Now gateJobs() workers take them from
   // one queue; each worker keeps its OWN page per width, the way the serial run kept one — the
   // same goto → 700 ms wait → PROBE steps, the same assertions. Every rendered file is written

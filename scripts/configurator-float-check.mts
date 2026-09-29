@@ -178,7 +178,7 @@ console.log(`\n① A vásárlási belépő LEBEG mind a ${ids.length} sablonon (
 
 const armourStripped: string[] = [];
 
-// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). Every fixture is written FIRST,
+// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0264, after ADR-0263). Every fixture is written FIRST,
 // serially, into this worktree's own `_cfgfloat-<tree>` directory; the pool then only READS
 // them. Each measurement already ran in its own fresh browser context (measure()), so the
 // templates are independent units: gateJobs() workers take them from one queue, and every

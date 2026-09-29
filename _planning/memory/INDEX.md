@@ -7,7 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-29_trio_minta_szobakep_es_csillagsor.md](2026-09-29_trio_minta_szobakep_es_csillagsor.md) — A trió: élő lapon nincs „Minta” szobakép + a csillagsor látszik (2026-09-29)
-- [2026-09-29_ot_lassu_kapu_b_opcio.md](2026-09-29_ot_lassu_kapu_b_opcio.md) — 2026-09-29 — A következő lassú kapuk párhuzamosítása („B” opció, ADR-XXXX)
+- [2026-09-29_ot_lassu_kapu_b_opcio.md](2026-09-29_ot_lassu_kapu_b_opcio.md) — 2026-09-29 — A következő lassú kapuk párhuzamosítása („B” opció, ADR-0264)
 - [2026-09-29_negy_lassu_kapu_parhuzamositasa.md](2026-09-29_negy_lassu_kapu_parhuzamositasa.md) — 2026-09-29 — A négy leglassabb böngészős kapu párhuzamosítása (közös `gate-pool`)
 - [2026-09-29_mobile_chrome_check_parhuzamositas.md](2026-09-29_mobile_chrome_check_parhuzamositas.md) — 2026-09-29 — A `mobile-chrome-check` párhuzamosítása + indokolt önátfedés a futtatóban (A+B)
 - [2026-09-29_lassu_land_vizsgalat.md](2026-09-29_lassu_land_vizsgalat.md) — 2026-09-29 — Miért lassú a land az ADR-0227/0230 után? (brief: lassu-land-vizsgalat)

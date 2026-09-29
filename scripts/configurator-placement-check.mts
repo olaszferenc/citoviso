@@ -295,7 +295,7 @@ async function checkLegacy(page: Page): Promise<void> {
   });
   check("régi (pecsét nélküli) artifacton a minta-kártya fallback ÉL (≥6 látszik)", res >= 6, res);
 }
-// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). The 19 template loads and the
+// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0264, after ADR-0263). The 19 template loads and the
 // three browser scenarios (toggles, packages, legacy fallback) ran one after the other on ONE
 // page; each of them navigates to its OWN freshly written mkdtemp file first, so they are
 // independent units. gateJobs() workers take them from one queue — the long package walk

@@ -183,7 +183,7 @@ async function main(): Promise<void> {
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
   let fail = 0, total = 0;
   try {
-    // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0263). Every page is rendered FIRST,
+    // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0264, after ADR-0263). Every page is rendered FIRST,
     // once, into this run's own mkdtemp — the serial loop re-rendered the same file for each
     // width, which two workers would have raced on (one writing while the other navigates) —
     // and the pool only READS them. The (width, template) units run on gateJobs() workers, each

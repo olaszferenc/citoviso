@@ -1,4 +1,4 @@
-## ADR-XXXX — A következő négy lassú böngészős kapu is a közös poolon mér (`room-card-overflow` · `configurator-float` · `configurator-placement` · `whole-only-guest`); a `mobile-chrome --selftest` kimarad (2026-09-29)
+## ADR-0264 — A következő négy lassú böngészős kapu is a közös poolon mér (`room-card-overflow` · `configurator-float` · `configurator-placement` · `whole-only-guest`); a `mobile-chrome --selftest` kimarad (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** „Ok a és b” — a „B” opció a koordinátor (`cit3bd83952`) javaslatából:
   a következő öt lassú kapu párhuzamosítása. Brief: `~/rc-briefs/ot-lassu-kapu-parhuzamositasa.md`.
