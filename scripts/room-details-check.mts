@@ -834,7 +834,7 @@ async function runMatrix(
 
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
   const stats: Stats = { failures: 0, total: pages.length * WIDTHS.length, shells: 0, cards: 0, perWidth: new Map() };
-  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). The (width, template) pairs were
+  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0263, after ADR-0261). The (width, template) pairs were
   // measured one after the other on ONE page per width (182 s alone). Now gateJobs() workers take
   // them from one queue; each worker keeps its OWN page per width, the way the serial run kept
   // one — the same goto → measure() steps, the same assertions. Every rendered file is written

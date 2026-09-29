@@ -1,5 +1,5 @@
 // Guest-on-a-phone gate + measurement (FK-010 companion, 2026-09-26).
-// gate-runner: self-overlap-safe — renders in memory (setContent), writes no file, no row, no shared path unless --shots/--json name one (the hook passes neither); the --selftest and the gate may run side by side (ADR-XXXX)
+// gate-runner: self-overlap-safe — renders in memory (setContent), writes no file, no row, no shared path unless --shots/--json name one (the hook passes neither); the --selftest and the gate may run side by side (ADR-0263)
 //
 // The generated site is used by a GUEST on a phone: she reads rooms and prices, pages
 // the gallery, picks dates on the calendar, sends a (sample) request, writes a review.
@@ -521,7 +521,7 @@ async function shot(page: Page, id: string, vp: string, moment: string): Promise
 async function main(): Promise<void> {
   const list = await targets();
   const browser: Browser = await chromium.launch({ executablePath: config.chromiumPath });
-  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). The (target, viewport) units ran
+  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0263, after ADR-0261). The (target, viewport) units ran
   // one after the other (~210 s alone, +88 s --selftest). Now gateJobs() workers take them from
   // one queue. Each unit already had its OWN browser context and page and wrote nothing (the
   // --shots / --json evidence goes to per-(target, viewport) names, or once at the end); its

@@ -1,6 +1,6 @@
 # 2026-09-29 — A négy leglassabb böngészős kapu párhuzamosítása (közös `gate-pool`)
 
-Brief: `~/rc-briefs/lassu-kapuk-parhuzamositasa.md` (tulaj: „Igen”). Döntés: ADR-XXXX
+Brief: `~/rc-briefs/lassu-kapuk-parhuzamositasa.md` (tulaj: „Igen”). Döntés: ADR-0263
 (`XXXX-a-negy-lassu-bongeszos-kapu-parhuzamos-munkasokkal.md`). Menet közben koordinátor-váltás
 (citded06a5f → cit3bd83952, a tulaj: „mi a tököm tart eddig”) — a mérést a meglévő számokkal zártam.
 

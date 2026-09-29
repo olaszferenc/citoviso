@@ -824,7 +824,7 @@ if (!ONLY) {
   } });
 }
 
-// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). Every unit above — one (template,
+// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0263, after ADR-0261). Every unit above — one (template,
 // viewport) of ① and of ②, one viewport of ③, one self-test branch of ④ — opens its OWN browser
 // context and closes it; the fixtures were all written before, and the files a unit writes carry
 // its own name (`_nopin`, `_norow`, `<id>.noavoid`, `_oscillate`, `…-panel-<vp>.png`). So

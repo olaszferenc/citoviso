@@ -1005,7 +1005,7 @@ async function gate(): Promise<void> {
 
   try {
     const vps = VIEWPORTS.filter((v) => v.id === "390" || v.id === "land");
-    // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). Every run() is already its own
+    // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-0263, after ADR-0261). Every run() is already its own
     // context, its own served fixture and its own shot directory (<tpl>-<sabotage>/<vp>-NN-…);
     // the 10 clean runs and the 9 sabotaged ones were simply awaited one after the other. Now
     // gateJobs() workers take them from one queue, and the verdicts below are checked and

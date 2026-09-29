@@ -1,4 +1,4 @@
-## ADR-XXXX — A négy leglassabb böngészős kapu párhuzamos munkásokkal mér, közös, sorrendtartó munkás-körrel (`scripts/lib/gate-pool.mts`) (2026-09-29)
+## ADR-0263 — A négy leglassabb böngészős kapu párhuzamos munkásokkal mér, közös, sorrendtartó munkás-körrel (`scripts/lib/gate-pool.mts`) (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** a koordinátor kérdésére („A négy lassú kapu gyorsítása: kiosszam
   egy szálra?”): *„Igen”*. Brief: `~/rc-briefs/lassu-kapuk-parhuzamositasa.md`. Az ADR-0261 után a

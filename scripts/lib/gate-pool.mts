@@ -1,4 +1,4 @@
-// Ordered worker pool for the browser gates (ADR-XXXX, after ADR-0261).
+// Ordered worker pool for the browser gates (ADR-0263, after ADR-0261).
 //
 // A browser gate measures many independent (page, viewport) units one after the other. The
 // pool runs them on JOBS workers and hands the results back IN THE ORIGINAL ORDER, so the
