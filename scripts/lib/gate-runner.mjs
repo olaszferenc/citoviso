@@ -65,6 +65,20 @@
 // CIT_GATE_SLOTS=<dir> moves the slot directory (the guard's fixture uses a private one);
 // CIT_GATE_SLOTS=0, a missing `flock` or an unwritable directory → runs without slots, loudly.
 //
+// JOB TIME LIMIT (ADR-XXXX). A gate that never returns used to hold the whole land hostage: a
+// Playwright gate printed every ✓ and then sat in epoll_wait for 13–18 minutes (2026-09-27
+// guest-mobile-check --selftest, 2026-09-29 cfg-sheet-scroll-check --selftest), until a human
+// killed it by hand. Now every gate has a wall-clock limit, CIT_GATE_JOB_TIMEOUT seconds
+// (default 600: the longest healthy gate measured ~112 s, so a 3–4× load stretch still fits
+// with margin; a missing, zero or non-numeric value falls back to the default — the limit
+// cannot be switched off). On expiry the gate's WHOLE process tree (tsx → node → Chromium,
+// which Playwright puts in its own process group, so a pgid kill alone would miss it) is
+// collected from /proc by parent pid, SIGTERMed, and SIGKILLed after a grace — by PID only,
+// never by a name pattern. The gate is then RED (rc 124), with the collected output and a loud
+// "időtúllépés" line: never green, never "skipped", no pass-cache entry, no history entry (a
+// hang is not the gate's duration). No attempt is made to read a verdict from the output: a
+// gate that did not return gave none (the 2026-09-27 hang was mid-run, not at close).
+//
 // Usage (from hooks/pre-commit only):  node scripts/lib/gate-runner.mjs <jobs-dir> <root>
 
 import { spawn, spawnSync } from "node:child_process";
@@ -83,6 +97,9 @@ const PARALLEL = Math.max(1, Number(process.env.CIT_GATE_JOBS) || Math.min(4, Ma
 const PRELOAD = path.join(ROOT, "scripts/lib/gate-ro-preload.mjs");
 const LOCAL_TSX = path.join(ROOT, "node_modules/.bin/tsx");
 const RO_TEXT = /read-only transaction/;
+const JOB_TIMEOUT_S = Number(process.env.CIT_GATE_JOB_TIMEOUT) > 0 ? Number(process.env.CIT_GATE_JOB_TIMEOUT) : 600;
+const KILL_GRACE_MS = 5000;
+const TIMEOUT_RC = 124; // GNU timeout's code: "did not finish in time"
 
 function commonDir() {
   try {
@@ -314,6 +331,64 @@ async function run(job, readOnly, held = null) {
   }
 }
 
+/** Every live descendant of `root` (by parent pid, from /proc), root included. */
+function processTree(root) {
+  const kids = new Map();
+  for (const d of readdirSync("/proc")) {
+    if (!/^\d+$/.test(d)) continue;
+    try {
+      const stat = readFileSync(`/proc/${d}/stat`, "utf8");
+      const ppid = Number(stat.slice(stat.lastIndexOf(")") + 2).split(" ")[1]);
+      if (!kids.has(ppid)) kids.set(ppid, []);
+      kids.get(ppid).push(Number(d));
+    } catch {
+      // gone meanwhile
+    }
+  }
+  const out = [];
+  const walk = (p) => {
+    out.push(p);
+    for (const c of kids.get(p) ?? []) walk(c);
+  };
+  walk(root);
+  return out;
+}
+const alive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return !readFileSync(`/proc/${pid}/stat`, "utf8").includes(") Z ");
+  } catch {
+    return false;
+  }
+};
+/** SIGTERM the whole tree, SIGKILL whatever is left after the grace. Resolves with the pids. */
+async function killTree(root) {
+  const seen = new Set(processTree(root));
+  for (const p of seen) {
+    try {
+      process.kill(p, "SIGTERM");
+    } catch {}
+  }
+  for (let t = 0; t < KILL_GRACE_MS && [...seen].some(alive); t += 100) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (alive(root)) for (const p of processTree(root)) seen.add(p); // forked during the grace
+  }
+  for (const p of seen) {
+    if (!alive(p)) continue;
+    try {
+      process.kill(p, "SIGKILL");
+    } catch {}
+  }
+  return [...seen];
+}
+function lastLines(file, n) {
+  try {
+    return readFileSync(file, "utf8").split("\n").filter((l) => l.trim()).slice(-n);
+  } catch {
+    return [];
+  }
+}
+
 function runInSlot(job, readOnly, slotName) {
   return new Promise((resolve) => {
     const env = { ...job.env };
@@ -334,9 +409,30 @@ function runInSlot(job, readOnly, slotName) {
       env,
       stdio: [job.stdin ? openSync(job.stdin, "r") : "ignore", openSync(out, "w"), openSync(err, "w")],
     });
-    const done = (rc) => {
+    let killing = null;
+    const timer = setTimeout(() => {
+      process.stdout.write(`   ⏱ kapu-futtató: ${(job.label || job.script).trim()} ${JOB_TIMEOUT_S} s után sem tért vissza — leállítom (pid ${child.pid})\n`);
+      killing = killTree(child.pid);
+    }, JOB_TIMEOUT_S * 1000);
+    const done = async (rc) => {
+      clearTimeout(timer);
+      const secs = (Date.now() - t0) / 1000;
+      if (killing) {
+        const pids = await killing;
+        const left = pids.filter(alive);
+        const tail = [...lastLines(out, 5), ...lastLines(err, 3)];
+        appendFileSync(
+          err,
+          `\n⛔ IDŐTÚLLÉPÉS: a kapu ${JOB_TIMEOUT_S} s után sem tért vissza — a futtató leállította ` +
+            `(${pids.length} folyamat, pid ${pids.join(" ")}${left.length ? `; ⛔ ÉLVE MARADT: ${left.join(" ")}` : ""}).\n` +
+            `   Ez PIROS, nem kihagyás és nem zöld: a kapu nem adott ítéletet, a kimenetéből zöldre következtetni tilos.\n` +
+            `   Korlát: CIT_GATE_JOB_TIMEOUT=${JOB_TIMEOUT_S} s (${job.argv.join(" ")}).\n` +
+            `   Utolsó kimenet:\n${tail.length ? tail.map((l) => `     │ ${l}`).join("\n") : "     │ (semmi — a kapu egy sort sem írt)"}\n`,
+        );
+        rc = TIMEOUT_RC;
+      }
       const text = `${readFileSync(out, "utf8")}\n${readFileSync(err, "utf8")}`;
-      resolve({ rc, out, err, secs: (Date.now() - t0) / 1000, wrote: existsSync(mark) || (readOnly && RO_TEXT.test(text)) });
+      resolve({ rc, out, err, secs, timedOut: !!killing, wrote: existsSync(mark) || (readOnly && RO_TEXT.test(text)) });
     };
     child.on("error", (e) => {
       appendFileSync(err, `gate-runner: spawn failed: ${e.message}\n`);
@@ -427,7 +523,7 @@ if (CACHE_DIR && existsSync(CACHE_DIR)) {
 const failed = [];
 const times = [];
 function show(job, r) {
-  times.push([r.secs, job.label || job.script, historyKey(job)]);
+  times.push([r.secs, job.label || job.script, historyKey(job), r.timedOut]);
   if (r.rc !== 0) {
     failed.push([r.rc, job.id, r]);
     return;
@@ -491,7 +587,7 @@ function pool(list, readOnly, onDone) {
 
 // ── ① parallel, read-only ────────────────────────────────────────────────────────────
 await pool(queue, true, (job, r) => {
-  if (r.wrote) {
+  if (r.wrote && !r.timedOut) { // a hung gate is red, not "retry as a writer"
     deferred++;
     serial.push(job);
     newWriters.push(job.script);
@@ -532,13 +628,13 @@ const laneSecs = ((tStrict - tLane) / 1000).toFixed(0);
 const strictSecs = ((Date.now() - tStrict) / 1000).toFixed(0);
 
 const secs = ((Date.now() - t0) / 1000).toFixed(0);
-writeHistory(times.map(([s, , key]) => [key, s]));
+writeHistory(times.filter(([, , , hung]) => !hung).map(([s, , key]) => [key, s])); // a hang is not a duration
 if (process.env.CIT_GATE_TIMES) {
   writeFileSync(
     process.env.CIT_GATE_TIMES,
     times
       .sort((a, b) => b[0] - a[0])
-      .map(([s, l]) => `${s.toFixed(1)}\t${l}`)
+      .map(([s, l, , hung]) => `${s.toFixed(1)}\t${l}${hung ? "\t⛔ IDŐTÚLLÉPÉS" : ""}`)
       .join("\n") + "\n",
   );
 }

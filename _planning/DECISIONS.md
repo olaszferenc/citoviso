@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-kapunkenti-idokorlat-a-kapu-futtatoban.md) — Kapunkénti időkorlát a kapu-futtatóban: a vissza nem térő kapu HANGOSAN piros, a teljes folyamatfája leállítva (`scripts/lib/gate-runner.mjs`) (2026-09-29)
 - [ADR-0267](decisions/0267-az-arajanlat-ara-alapbol-csak-arra-a-keresre.md) — Az árajánlat ára alapból csak arra a kérésre szól; az árlistába csak kérésre kerül (a kért napokra vagy alapárként), és a kiküldött ajánlatok listája megmondja, mi lett vele
 - [ADR-0266](decisions/0266-az-outreach-link-live-check-a-lap-load.md) — Az outreach-link-live-check a lap `load` eseményére vár, nem a `networkidle`-re (2026-09-29)
 - [ADR-0265](decisions/0265-a-kapu-futtato-a-leghosszabb-kaput-inditja.md) — A kapu-futtató a leghosszabb kaput indítja először, tartós kapuidő-előzményből (`scripts/lib/gate-runner.mjs`) (2026-09-29)
