@@ -3844,6 +3844,17 @@
       schedulePlace();
     });
     window.addEventListener("load", schedulePlace);
+    // The phone booking bar SLIDES in and out (ADR-0253: an IO callback toggles it after the
+    // hero, 0,28 s transform) — neither a scroll nor a resize. Measured 2026-09-29
+    // (lead-mobile-check at rest, loaded machine): when the scroll stopped before the bar
+    // arrived, the pill stayed ON the bar for good. Re-place once its slide has ended.
+    document.addEventListener(
+      "transitionend",
+      function (e) {
+        if (e.target && e.target.matches && e.target.matches("[data-cit-mobbar]")) schedulePlace();
+      },
+      true,
+    );
     // The consent bar arriving or leaving changes what is under the pill — and it is
     // not a resize. Watch the body for it.
     if (window.MutationObserver) {

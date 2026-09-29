@@ -392,6 +392,20 @@ const PANEL = `() => {
     bodyScrollable: !!(body && body.scrollHeight > body.clientHeight + 4) };
 }`;
 
+/** R8 probe: the visible bottom-fixed layers (outside our chrome) the pill's box intersects. */
+const PILL_ON_FIXED = `(() => { const l = document.querySelector(".cit-cfg-launch.cit-cfg-in"); if (!l) return [];
+      const p = l.getBoundingClientRect(); const out = [];
+      for (const e of document.querySelectorAll("body *")) {
+        if (e === l || l.contains(e) || e.closest('[class*="cit-cfg"]')) continue;
+        const c = getComputedStyle(e); if (c.position !== "fixed" || c.display === "none" || c.visibility === "hidden" || +c.opacity === 0) continue;
+        const r = e.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
+        if (r.bottom <= window.innerHeight * 0.5) continue; // top-anchored chrome is not a bottom layer
+        if (r.height > window.innerHeight * 0.6) continue; // a full-screen backdrop (aurora's glow) is not a bar
+        const ox = Math.min(r.right, p.right) - Math.max(r.left, p.left), oy = Math.min(r.bottom, p.bottom) - Math.max(r.top, p.top);
+        if (ox > 1 && oy > 1) out.push((e.id ? "#" + e.id : e.tagName.toLowerCase() + (e.className && e.className.toString ? "." + e.className.toString().trim().split(/\\s+/)[0] : "")) + " (" + Math.round(oy) + " px)");
+      }
+      return out; })()`;
+
 // ── the run ─────────────────────────────────────────────────────────────────
 
 interface Weight {
@@ -501,6 +515,37 @@ async function measure(
   };
   const settle = (): Promise<void> =>
     page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(undefined)))));
+  // ⏸ REST, not a timer (ADR-XXXX, after ADR-0168): the layers every verdict below reads —
+  // the pill, the phone booking bar, the consent bar, the configurator panel — and the scroll
+  // position must be still for 400 ms (page clock), with none of their finite animations or
+  // transitions running. Measured 2026-09-29 under load (load1 ~21): the fixed waits read the
+  // panel mid-slide (top 695 of 844) and the pill while the bar was still sliding away — red
+  // on a clean page, and a green "pill-on-bar" sabotage. The fixed waits stay as MINIMUMS
+  // (they cover the runtime's own timers, e.g. placeLaunch at 0,9 s); rest is awaited after.
+  // A page that never comes to rest is not skipped: it is measured as before and flagged.
+  const unrested: string[] = [];
+  const rest = async (what: string): Promise<void> => {
+    await page.evaluate(`window.__lmRestKey = null`); // a still window starts NOW, never an earlier call's
+    const ok = await page
+      .waitForFunction(
+        `(() => { const els = [".cit-cfg-launch", "[data-cit-mobbar]", "#cit-consent", ".cit-cfg-panel"]
+          .map((s) => document.querySelector(s)).filter(Boolean);
+        const key = Math.round(window.scrollY) + "|" + els.map((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+          return [r.top, r.left, r.width, r.height].map(Math.round).join(",") + "," + c.visibility + "," + c.opacity; }).join("|");
+        const moving = document.getAnimations().some((a) => a.playState === "running" && a.effect && a.effect.target &&
+          a.effect.getTiming().iterations !== Infinity && els.some((e) => e === a.effect.target || e.contains(a.effect.target)));
+        const now = performance.now();
+        if (moving || window.__lmRestKey !== key) { window.__lmRestKey = key; window.__lmRestAt = now; return false; }
+        return now - window.__lmRestAt >= 400; })()`,
+        undefined,
+        { timeout: 10_000, polling: 100 },
+      )
+      .then(
+        () => true,
+        () => false,
+      );
+    if (!ok) unrested.push(what);
+  };
 
   const t0 = Date.now();
   await page.goto(origin + link.path, { waitUntil: "load", timeout: 45_000 });
@@ -520,6 +565,7 @@ async function measure(
   } catch {
     pillAppearedMs = null;
   }
+  await rest("② pirula");
   await settle();
   const pill = (await page.evaluate(`(${HIT})(${JSON.stringify({ selector: ".cit-cfg-launch.cit-cfg-in" })})`)) as HitProbe;
   const consentNow = (await page.evaluate(`(() => { const c = document.getElementById("cit-consent"); if (!c) return null;
@@ -538,6 +584,7 @@ async function measure(
       await summary.click({ timeout: 3000 }).catch(() => {});
     }
     await page.waitForTimeout(250);
+    await rest("③ Miért kaptam?");
     await settle();
     why.opened = await page.evaluate(`(() => { const d = document.querySelector("[data-cit-framing] details"); return !!(d && d.open); })()`);
     why.block = (await page.evaluate(`(${HIT})(${JSON.stringify({ selector: "[data-cit-framing] details > div" })})`)) as HitProbe;
@@ -565,8 +612,15 @@ async function measure(
       if (de.scrollHeight === last && Math.abs(window.scrollY + window.innerHeight - de.scrollHeight) < 3) break; last = de.scrollHeight; }
     de.style.scrollBehavior = ""; })()`);
   await page.waitForTimeout(700); // placeLaunch after scroll (120 ms debounce + transition)
+  await rest("④ lap alja");
   await settle();
   const bottom = (await page.evaluate(`(${BOTTOM})()`)) as BottomProbe;
+  // R8 at the bottom, AT REST: the scroll was the first engagement, so the deferred consent bar
+  // is there, and below the hero the phone booking bar is up and stacks on it — the state the
+  // placement must clear. Until 2026-09-29 R8 was read only near the top, during the page's
+  // SMOOTH scroll back up, while the bar was still leaving: the sabotage went red only by that
+  // timing, and a loaded machine let it through (the hero was back in view, the bar gone).
+  const pillOnFixedBottom = (await page.evaluate(PILL_ON_FIXED)) as string[];
   await shot(4, "bottom");
 
   // ⑤ the buyer's entry: tap the pill → the configurator's first page
@@ -575,51 +629,41 @@ async function measure(
   const pillLoc = page.locator(".cit-cfg-launch.cit-cfg-in");
   if ((await pillLoc.count()) > 0) {
     // back near the top first: the lead taps the pill where it first sees it
-    await page.evaluate(`window.scrollTo(0, Math.round(window.innerHeight * 0.4))`);
-    // The scroll is the first engagement: the deferred consent bar arrives and the pill
-    // re-places itself (0,22 s transition). Tap only once the pill has come to REST —
-    // a finger does the same — measured: a tap during the move opened nothing.
-    await page.waitForFunction(
-      `(() => { const p = document.querySelector(".cit-cfg-launch.cit-cfg-in"); if (!p) return false;
-        const r = p.getBoundingClientRect(); const key = Math.round(r.top) + ":" + Math.round(r.left);
-        if (window.__lmPillKey === key && Date.now() - window.__lmPillAt > 350) return true;
-        if (window.__lmPillKey !== key) { window.__lmPillKey = key; window.__lmPillAt = Date.now(); } return false; })()`,
-      undefined,
-      { timeout: 4000, polling: 100 },
-    ).catch(() => undefined);
+    // ⚠️ instant: the templates set scroll-behavior:smooth, and a smooth scroll back up ran ~0,8 s
+    // (measured 4708 → 338 px) — the pill was "still" while the page and the booking bar moved.
+    await page.evaluate(`window.scrollTo({ top: Math.round(window.innerHeight * 0.4), behavior: "instant" })`);
+    // The scroll re-places the pill (0,22 s transition) and moves the booking bar. Tap only once
+    // everything under the finger has come to REST — measured: a tap during the move opened nothing.
+    await page.waitForTimeout(350); // placeLaunch's 120 ms scroll throttle, as a minimum
+    await rest("⑤ pirula görgetés után");
     // R8 — the pill rests ABOVE the bottom-fixed stack (owner, 2026-09-26: "a Foglalás-sáv
     // fölé"; ADR-0242). Measured independently of the runtime's own placement: every
     // visible position:fixed layer outside our chrome whose box intersects the pill's box.
     // Here, after the scroll, because that is when the deferred consent bar has arrived
     // and a template's booking bar stacks on it — measured 2026-09-26: a placement that
     // only looked at the screen's last 40 px did not see the bar and sat on it.
-    pillOnFixed = (await page.evaluate(`(() => { const l = document.querySelector(".cit-cfg-launch.cit-cfg-in"); if (!l) return [];
-      const p = l.getBoundingClientRect(); const out = [];
-      for (const e of document.querySelectorAll("body *")) {
-        if (e === l || l.contains(e) || e.closest('[class*="cit-cfg"]')) continue;
-        const c = getComputedStyle(e); if (c.position !== "fixed" || c.display === "none" || c.visibility === "hidden" || +c.opacity === 0) continue;
-        const r = e.getBoundingClientRect(); if (r.width < 1 || r.height < 1) continue;
-        if (r.bottom <= window.innerHeight * 0.5) continue; // top-anchored chrome is not a bottom layer
-        if (r.height > window.innerHeight * 0.6) continue; // a full-screen backdrop (aurora's glow) is not a bar
-        const ox = Math.min(r.right, p.right) - Math.max(r.left, p.left), oy = Math.min(r.bottom, p.bottom) - Math.max(r.top, p.top);
-        if (ox > 1 && oy > 1) out.push((e.id ? "#" + e.id : e.tagName.toLowerCase() + (e.className && e.className.toString ? "." + e.className.toString().trim().split(/\\s+/)[0] : "")) + " (" + Math.round(oy) + " px)");
-      }
-      return out; })()`)) as string[];
+    pillOnFixed = [...pillOnFixedBottom.map((x) => `lap alján: ${x}`), ...((await page.evaluate(PILL_ON_FIXED)) as string[])];
     let opened = false;
     for (let attempt = 1; attempt <= 2 && !opened; attempt++) {
       try {
-        await pillLoc.tap({ timeout: 3000, force: false });
+        // Playwright's actionability wait (visible · stable over two frames · receives the event)
+        // IS a rest wait: 3 s ran out at load1 ~28 while the tap had in fact landed (the sheet
+        // was found mid-slide afterwards). Same ceiling as rest(); force stays false.
+        await pillLoc.tap({ timeout: 10_000, force: false });
       } catch (e) {
         jsErrors.push(`pirula-koppintás sikertelen: ${(e as Error).message.split("\n")[0].slice(0, 160)}`);
         break;
       }
       await page.waitForTimeout(700);
+      await rest(`⑤ panel (${attempt}. koppintás)`); // the sheet slides in (0,28 s); measured mid-slide at top 695
       await settle();
       opened = (await page.evaluate(`(() => { const p = document.querySelector(".cit-cfg-panel"); return !!(p && p.classList.contains("cit-cfg-open")); })()`)) as boolean;
       // 1-in-3 measured on one landscape page (2026-09-26): the first tap opened nothing,
       // the second did. Not proven as a product defect → recorded as GYANÚ, not HIBA.
       if (!opened && attempt === 1) pillTapRetried = true;
     }
+    await rest("⑤ panel"); // also after a failed tap: never judge a sheet mid-slide
+    await settle();
     panel = (await page.evaluate(`(${PANEL})()`)) as PanelProbe;
     await shot(5, "config");
   }
@@ -672,6 +716,7 @@ async function measure(
   if (bottom.fixedSharePct > 40) flags.push({ level: "ERGONÓMIA", what: `a lap alján a rögzített sávok a képernyő ${bottom.fixedSharePct}%-át viszik` });
   if (pill.found && !panel.open) flags.push({ level: "HIBA", what: "a pirula koppintására nem nyílt ki a konfigurátor" });
   if (pillOnFixed.length) flags.push({ level: "HIBA", what: `a pirula rögzített alsó sávon ül (nem fölötte): ${pillOnFixed.join(", ")}` });
+  if (unrested.length) flags.push({ level: "GYANÚ", what: `nem állt nyugvópontra 10 s alatt (mérve így is): ${unrested.join(", ")}` });
   if (pillTapRetried && panel.open) flags.push({ level: "GYANÚ", what: "a pirula ELSŐ koppintása nem nyitott, a második igen (időszakos)" });
   if (panel.open && !panel.fitsViewport) flags.push({ level: "HIBA", what: `a konfigurátor kilóg a képernyőből (${JSON.stringify(panel.panel && { top: Math.round(panel.panel.top), bottom: Math.round(panel.panel.bottom) })})` });
   if (panel.open && panel.cta.found && !panel.cta.inViewport) flags.push({ level: "HIBA", what: "a konfigurátor fő gombja nincs a képernyőn" });
