@@ -10,7 +10,7 @@ Előtte/utána képek (390 és asztali, gitignore-olt, de maradandó): `elek/run
 
 1. **Admin egység-sorrend** (DÖNTÉS, a tulaj: „legyen A)”): a nem kiadó „egész szállás” a tulaj négy listájában
    a VÉGÉRE kerül (Szobák rács, szoba-felugró, Árak kártyák, Online foglalás naptár-fül). Az egyben is kiadó egész
-   elöl marad, csak-egyben módban pedig mindenképp elöl. → ADR-XXXX, `adminUnitOrder()` (`unitVisibility.ts`),
+   elöl marad, csak-egyben módban pedig mindenképp elöl. → ADR-0270, `adminUnitOrder()` (`unitVisibility.ts`),
    őr: `scripts/admin-unit-order-check.mts`. A negatív kontroll az „egyben is” állapot (ugyanaz a próba ELÖL-t mér).
    Piros kontroll kézzel: a rendezést kikapcsolva 4 bukás.
 2. **Kontraszt:** az Online foglalás (és minden modul) sötét fejlécében a cím és az ár-pirula sötét betűvel állt

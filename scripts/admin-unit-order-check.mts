@@ -1,4 +1,4 @@
-// AZ ADMIN EGYSÉG-SORRENDJÉNEK ŐRE (ADR-XXXX, tulaj 2026-09-29: „legyen A)").
+// AZ ADMIN EGYSÉG-SORRENDJÉNEK ŐRE (ADR-0270, tulaj 2026-09-29: „legyen A)").
 //
 // A mért lelet (Elek FK-013, 2026-09-28): „A szállás egésze” a tulaj MINDEN listájában elöl állt
 // (Szobák rács, szoba-felugró, Árak kártyák, Online foglalás naptár-fül) — akkor is, ha nem adja ki

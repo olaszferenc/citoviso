@@ -72,7 +72,7 @@ export function isWholeOnlySite(units: readonly UnitBookabilityFacts[]): boolean
 }
 
 /**
- * ADR-XXXX — the order of the units in the OWNER's admin lists (rooms grid, room popup, price
+ * ADR-0270 — the order of the units in the OWNER's admin lists (rooms grid, room popup, price
  * cards, the booking calendar's unit tabs). Measured (Elek FK-013, 2026-09-28): the whole-place
  * unit sat first everywhere, even when it is not let as one — the owner's first tap and first
  * typed price went to a unit no guest can book. Owner ruling „legyen A)": a whole-place unit the

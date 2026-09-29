@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-admin-egyseg-sorrend-a-nem-kiado-egesz-a-vegen.md) — A tulaj admin-listáiban a nem kiadó „egész szállás” a végére kerül, és naptár-fület csak foglalható egység kap
+- [ADR-0270](decisions/0270-a-tulaj-admin-listaiban-a-nem-kiado-egesz.md) — A tulaj admin-listáiban a nem kiadó „egész szállás” a végére kerül, és naptár-fület csak foglalható egység kap
 - [ADR-0269](decisions/0269-a-kapu-idokorlat-csend-alapu-nem-teljes-ido.md) — A kapu-időkorlát CSEND-alapú, nem teljes-idő alapú (az ADR-0268 1. pontjának helyesbítése) (2026-09-29)
 - [ADR-0268](decisions/0268-kapunkenti-idokorlat-a-kapu-futtatoban-a-vissza.md) — Kapunkénti időkorlát a kapu-futtatóban: a vissza nem térő kapu HANGOSAN piros, a teljes folyamatfája leállítva (`scripts/lib/gate-runner.mjs`) (2026-09-29)
 - [ADR-0267](decisions/0267-az-arajanlat-ara-alapbol-csak-arra-a-keresre.md) — Az árajánlat ára alapból csak arra a kérésre szól; az árlistába csak kérésre kerül (a kért napokra vagy alapárként), és a kiküldött ajánlatok listája megmondja, mi lett vele

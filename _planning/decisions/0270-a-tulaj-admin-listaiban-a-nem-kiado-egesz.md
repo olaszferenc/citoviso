@@ -1,4 +1,4 @@
-## ADR-XXXX — A tulaj admin-listáiban a nem kiadó „egész szállás” a végére kerül, és naptár-fület csak foglalható egység kap
+## ADR-0270 — A tulaj admin-listáiban a nem kiadó „egész szállás” a végére kerül, és naptár-fület csak foglalható egység kap
 
 **Dátum:** 2026-09-29 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) ·
 **Kiegészíti:** ADR-0256 (a nem kiadó egész a vendég elől rejtve; `isGuestVisibleUnit`), ADR-0257 (csak egyben
