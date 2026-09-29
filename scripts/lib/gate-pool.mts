@@ -15,7 +15,7 @@
 //   CIT_GATE_JOBS=<n>        workers per gate (default 4; 1 = the old serial behaviour)
 //   CIT_GATE_POOL_TIMES=<f>  append one JSON line per pool (wall ms + every unit's ms) — where the time goes
 //   CIT_GATE_HEARTBEAT=<f>   set by scripts/lib/gate-runner.mjs: touched after every FINISHED unit, so the
-//                            runner's silence limit (ADR-XXXX) sees progress although the buffered output
+//                            runner's silence limit (ADR-0271) sees progress although the buffered output
 //                            appears only at replay. It never changes the gate's output (verdict lines
 //                            are the contract); a unit that never finishes never beats.
 

@@ -1,4 +1,4 @@
-## ADR-XXXX — A poolos kapu szívverése: a csend-korlát a pufferelt kimenetű kaput nem öli meg (2026-09-29)
+## ADR-0271 — A poolos kapu szívverése: a csend-korlát a pufferelt kimenetű kaput nem öli meg (2026-09-29)
 
 - **Kiváltó:** a kapu-koordinátor (`cit3bd83952`) az ADR-0269 után jelezte a kockázatot: a `scripts/lib/gate-pool.mts`
   az egységek kimenetét PUFFERELI, és csak a végén játssza vissza (`replay`).

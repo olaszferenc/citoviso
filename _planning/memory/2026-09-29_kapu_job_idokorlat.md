@@ -34,7 +34,7 @@ Az ADR-0268 600 s-os teljes-idő korlátja ugyanezt a hamis pirosat gyártotta v
 
 A böngésző-zárás „gyökérok” visszavonva: nem bizonyított, csak reprodukált beragadás esetén kerül újra elő.
 
-## Szívverés a poolos kapuknak (ADR-XXXX)
+## Szívverés a poolos kapuknak (ADR-0271)
 A koordinátor jelezte, és a mérés igazolta: a `gate-pool.mts` a kimenetet a végéig puffereli.
 - A `lead-page-surface-check` első bájtja egyedül 98 s-nál, 4 CPU-égetővel 183 s-nál jön, vagyis mindig a kilépéskor.
 - A 900 s-os csend-korlát így egy nagy poolos kaput hamisan pirosra ölne.
