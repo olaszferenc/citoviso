@@ -298,6 +298,23 @@ const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const CACHE_DIR = CACHE_KEY && process.env.CIT_GATE_CACHE !== "0" && commonDir() ? path.join(commonDir(), "cit-gate-pass") : null;
 const VOLATILE = /^(GIT_\w*|LAND_RANGE|PWD|OLDPWD|SHLVL|_|CIT_GATE_\w*)$/;
 const READS_DIFF = /LAND_RANGE|--cached|git diff|"diff"/;
+// ⛔ (ADR-XXXX) git PREPENDS its exec-path (`/usr/lib/git-core`) to PATH for every hook it runs, so the
+// commit-time PATH never equalled the land-time PATH (land.sh calls the hook with plain bash)
+// and NO commit-time green was ever reused at land (measured 2026-09-29: 0 of 20 lands). That
+// directory holds only git's own subcommands (`git-*`, `scalar`, `mergetools`) — it cannot
+// change which node/tsx/npx a gate runs — so it is dropped from the PATH that is hashed.
+// Every other PATH entry, and its order, still counts.
+const GIT_EXEC_PATH = (() => {
+  const r = spawnSync("git", ["--exec-path"], { encoding: "utf8" });
+  return r.status === 0 ? r.stdout.trim() : "";
+})();
+function signedValue(k, v) {
+  if (k !== "PATH" || !GIT_EXEC_PATH) return v;
+  return v
+    .split(":")
+    .filter((p) => p !== GIT_EXEC_PATH)
+    .join(":");
+}
 
 function signature(job) {
   if (!CACHE_DIR) return null;
@@ -310,7 +327,7 @@ function signature(job) {
   const h = createHash("sha256");
   h.update(`${CACHE_KEY}\0${job.argv.join("\0")}\0\0`);
   h.update(job.stdin ? readFileSync(job.stdin) : "");
-  for (const k of Object.keys(job.env).sort()) if (!VOLATILE.test(k)) h.update(`\0${k}=${job.env[k]}`);
+  for (const k of Object.keys(job.env).sort()) if (!VOLATILE.test(k)) h.update(`\0${k}=${signedValue(k, job.env[k])}`);
   return h.digest("hex");
 }
 function cachedPass(job) {

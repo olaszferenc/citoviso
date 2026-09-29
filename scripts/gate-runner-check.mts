@@ -31,9 +31,10 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (tizenhárom visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (tizenöt visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
-//    feltétel ki · pipefail ki a kulcs-diffből · a sáv-jelölés vak · minden író a sávba · gépi slot
+//    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
+//    kihagyva · a sáv-jelölés vak · minden író a sávba · gépi slot
 //    ki · a slot nem szabadul a futtató halálával —, mindegyiknek pirosat KELL adnia.)
 
 import { spawn, spawnSync } from "node:child_process";
@@ -178,6 +179,9 @@ type Fixture = {
   run: (extra?: Record<string, string>) => Run;
   start: (extra?: Record<string, string>) => Promise<Run>;
   git: (...a: string[]) => string;
+  /** `git commit` with the fixture hook installed as a REAL pre-commit hook — git, not this guard,
+   *  builds the hook's environment (it prepends its exec-path to PATH, among others). */
+  commitViaGit: (msg: string) => Run;
 };
 
 function cleanEnv(): Record<string, string> {
@@ -256,7 +260,19 @@ function prepare(v: Variant, gates: string, jobs: string, repo = false): Fixture
         resolve({ rc: code ?? -1, out: text, dir, read });
       });
     });
-  return { dir, out, slots, run, start, git };
+  const commitViaGit = (msg: string): Run => {
+    // Outside the repo: an untracked hooks dir would (rightly) empty the pass-cache key.
+    const hooks = path.join(out, "githooks");
+    mkdirSync(hooks, { recursive: true });
+    writeFileSync(path.join(hooks, "pre-commit"), `#!/usr/bin/env bash\nexec bash ${JSON.stringify(path.join(dir, "hook"))}\n`, { mode: 0o755 });
+    const r = spawnSync(
+      "git",
+      ["-C", dir, "-c", `core.hooksPath=${hooks}`, "-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", msg],
+      { env: envFor({}), encoding: "utf8", timeout: 120_000 },
+    );
+    return { rc: r.status ?? -1, out: `${r.stdout}${r.stderr}`, dir, read };
+  };
+  return { dir, out, slots, run, start, git, commitViaGit };
 }
 function dispose(f: Fixture): void {
   // A holder a mutated runner may have left behind carries the private slot path in its argv.
@@ -387,11 +403,23 @@ async function audit(v: Variant): Promise<string[]> {
   const before = count("flaky");
   e.run();
   say(count("flaky") === before + 1, "E · egy PIROS ítélet a gyorsítótárba került — a következő futás le sem futtatta a kaput");
-  // commit-mode key == land-mode key for the same single commit (the case the cache is for)
-  e.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "v2");
+  // commit-mode key == land-mode key for the same single commit (the case the cache is for).
+  // The commit-time run is made BY GIT, as in real life: git prepends its exec-path to the hook's
+  // PATH, and a guard that ran the hook itself both times never saw that (measured 2026-09-29:
+  // 0 of 20 lands reused a single commit-time green).
+  writeFileSync(path.join(e.dir, "tracked.txt"), "v2b\n");
+  e.git("add", "tracked.txt");
+  const cm0 = count("count");
+  const cm = e.commitViaGit("v2");
+  say(cm.rc === 0 && count("count") === cm0 + 1, `E · a git által futtatott hook nem futtatta le a kaput (rc=${cm.rc}, futás ${cm0}→${count("count")})\n${cm.out.slice(-800)}`);
   const c0 = count("count");
   const e6 = e.run({ LAND_RANGE: "HEAD~1...HEAD" });
-  say(e6.rc === 0 && count("count") === c0, `E · a landolás (ugyanaz a fa + diff) nem használta a commitkori zöldet (futás ${c0}→${count("count")})`);
+  say(e6.rc === 0 && count("count") === c0, `E · a landolás (ugyanaz a fa + diff) nem használta a GIT által futtatott commitkori zöldet (futás ${c0}→${count("count")}) — eltér a két környezet (PATH?)`);
+  // …but ONLY git's exec-path is dropped from the hashed PATH: any other PATH change runs again.
+  const binDir = path.join(e.out, "bin");
+  mkdirSync(binDir, { recursive: true });
+  e.run({ LAND_RANGE: "HEAD~1...HEAD", PATH: `${binDir}:${cleanEnv().PATH ?? ""}` });
+  say(count("count") === c0 + 1, `E · más PATH mellett is a gyorsítótárból jött (futás ${c0}→${count("count")}) — csak a git exec-path hagyható el`);
   // a FAILED diff (a range that does not exist) must not yield a key — it runs
   const c1 = count("count");
   e.run({ LAND_RANGE: "nincs-ilyen-ag...HEAD" });
@@ -497,6 +525,8 @@ if (SELF_TEST) {
     ["követetlen-fájl feltétel ki", { ...shipped, hook: mutate("untracked", hookText, '[ -z "$(git status --porcelain', '[ -z "$(true || git status --porcelain') }],
     ["a sáv-jelölés vak", { ...shipped, runner: mutate("lane-mark", runnerText, 'const LANE_MARK = "// gate-lane: own-fixture-only";', 'const LANE_MARK = "// gate-lane: nincs-ilyen";') }],
     ["minden író a sávba", { ...shipped, runner: mutate("lane-all", runnerText, "const lane = serial.filter((j) => laneMarked(j));", "const lane = serial.filter(() => true);") }],
+    ["a git exec-path is a hash-elt PATH-ban", { ...shipped, runner: mutate("git-path", runnerText, 'if (k !== "PATH" || !GIT_EXEC_PATH) return v;', "return v;") }],
+    ["a teljes PATH kihagyva a hash-ből", { ...shipped, runner: mutate("path-all", runnerText, 'if (k !== "PATH" || !GIT_EXEC_PATH) return v;', 'if (k === "PATH") return ""; if (!GIT_EXEC_PATH) return v;') }],
     ["gépi slot ki", { ...shipped, runner: mutate("slot", runnerText, "const slot = held ?? (await acquireSlot());", "const slot = null;") }],
     ["a slot nem szabadul a futtató halálával", { ...shipped, runner: mutate("holder", runnerText, '"echo 1; exec cat"', '"echo 1; exec sleep 30"') }],
   ];
@@ -510,7 +540,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a tizenhárom visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a tizenöt visszarontás pirosat adott.");
   process.exit(0);
 }
 

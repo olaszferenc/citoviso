@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-land-ujrahasznalja-a-commitkori-zoldet-git-exec-path.md) — A land TÉNYLEG újrahasznosítja a commitkori zöldet: a git exec-path kimarad a kapu-aláírás PATH-jából (2026-09-29)
 - [ADR-0259](decisions/0259-a-galeria-a-tulaj-minden-fotojat-elerhetove.md) — A galéria a tulaj MINDEN fotóját elérhetővé teszi, és a lapon még nem látott képekkel indul
 - [ADR-0258](decisions/0258-a-szomszed-elerhetosegere-nem-megy-mock-kozos.md) — A szomszéd elérhetőségére nem megy mock: közös elérhetőség = küldési kapu, közepes Places-egyezésből nincs elérhetőség
 - [ADR-0257](decisions/0257-csak-egyben-adom-ki-a-haz-az-egyetlen.md) — „Csak egyben adom ki”: a ház az egyetlen foglalható egység, a szobák bemutatásra — árat sem kérünk tőlük

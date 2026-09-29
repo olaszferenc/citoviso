@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-09-29_trio_minta_szobakep_es_csillagsor.md](2026-09-29_trio_minta_szobakep_es_csillagsor.md) — A trió: élő lapon nincs „Minta” szobakép + a csillagsor látszik (2026-09-29)
+- [2026-09-29_lassu_land_vizsgalat.md](2026-09-29_lassu_land_vizsgalat.md) — 2026-09-29 — Miért lassú a land az ADR-0227/0230 után? (brief: lassu-land-vizsgalat)
 - [2026-09-29_galeria_korlat_minden_foto_elerheto.md](2026-09-29_galeria_korlat_minden_foto_elerheto.md) — Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
 - [2026-09-28_vendeg_oldal_egesz_szallas.md](2026-09-28_vendeg_oldal_egesz_szallas.md) — 2026-09-28 — A vendég oldala: a „Foglalás” rossz választót állított, üres felugró, összetapadt kártya, a „Mégsem” zsákutcája
 - [2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md](2026-09-28_vendeg_nyitokep_es_ertekeles_skala.md) — Vendég-oldal: a tulaj Nyitóképe a hős, és az értékelés skálája a forrásé (2026-09-28 este)

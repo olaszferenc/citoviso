@@ -49,6 +49,7 @@
 //   (szintetikus jelölt fixture-ök: egy tiszta = zöld; ①–⑦ mindegyike külön fájlban = piros;
 //    üres indokú allow = piros; és a szállított jelölt készlet minden tagja egyenként zöld.)
 
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -307,14 +308,21 @@ if (SELF_TEST) {
     const marked = markedScripts();
     console.log(`— a szállított jelölt készlet: ${marked.length} kapu`);
     for (const rel of marked) if (!report(rel, readFileSync(path.join(ROOT, rel), "utf8"), tables)) ok = false;
-    // and an UNMARKED probe of a known-serial gate must find something (the recognizer sees the class)
-    const control = "scripts/wallet-check.mts";
-    try {
-      const c = audit(readFileSync(path.join(ROOT, control), "utf8"), tables);
+    // and an UNMARKED probe of a known-serial gate must find something (the recognizer sees the class).
+    // ⛔ PINNED to a commit, not the live file: the live `wallet-check.mts` stopped borrowing the
+    // first scrape_run in 0b3bfeae (2026-09-25, fixture-parent helper), and from then on this
+    // control saw 0 findings and turned the self-test red on a clean main — unnoticed for four
+    // days, because it only runs when the runner or this guard changes (measured 2026-09-29).
+    // A fixed gate must never blind the control, so the control is the last REAL serial version.
+    const control = "0b3bfeae~1:scripts/wallet-check.mts";
+    const shown = spawnSync("git", ["-C", ROOT, "show", control], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+    if (shown.status !== 0) {
+      console.log(`⛔ negatív kontroll (${control}) nem olvasható: ${String(shown.stderr).trim().slice(0, 160)}`);
+      ok = false;
+    } else {
+      const c = audit(shown.stdout, tables);
       console.log(`${c.findings.length ? "✅" : "⛔"} negatív kontroll (${control}, soros): ${c.findings.length} lelet${c.findings.length ? ` — ${c.findings[0].rule}@${c.findings[0].line}` : " (a felismerő nem lát semmit egy ismert globális olvasón)"}`);
       if (!c.findings.length) ok = false;
-    } catch {
-      console.log(`ℹ️ negatív kontroll (${control}) nincs meg — kihagyva`);
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
