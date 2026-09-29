@@ -1,4 +1,4 @@
-## ADR-XXXX — A `mobile-chrome-check` párhuzamos munkásokkal mér, és az öntesztje a fő futással egy időben futhat (indokolt önátfedés-jelölés a kapu-futtatóban) (2026-09-29)
+## ADR-0261 — A `mobile-chrome-check` párhuzamos munkásokkal mér, és az öntesztje a fő futással egy időben futhat (indokolt önátfedés-jelölés a kapu-futtatóban) (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** a lassú-land vizsgálat (ADR-0260) javaslatára, a koordinátor
   kérdésére („Mehet az A + B? Ugyanez a szál csinálná meg, mert nála van a mérés.”): *„mehet”*.

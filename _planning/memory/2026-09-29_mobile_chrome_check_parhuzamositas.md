@@ -1,7 +1,7 @@
 # 2026-09-29 — A `mobile-chrome-check` párhuzamosítása + indokolt önátfedés a futtatóban (A+B)
 
 A lassú-land vizsgálat (ADR-0260) javaslata; a tulaj a koordinátoron át jóváhagyta („mehet”).
-Döntés: ADR-XXXX (`XXXX-mobile-chrome-check-parhuzamos-munkasok-es-onatfedes.md`).
+Döntés: ADR-0261 (`XXXX-mobile-chrome-check-parhuzamos-munkasok-es-onatfedes.md`).
 
 **Mérve (a gépen közben 2–7 idegen kapu-futtató):**
 - a kapu egyedül: 546 s → 189 · 182 · 163 s (4 munkás, 3/3 zöld);

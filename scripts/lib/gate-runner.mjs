@@ -92,7 +92,7 @@ const knownWriters = new Set(
 /** `// gate-lane: own-fixture-only` in the gate's first 40 lines (see scripts/gate-lane-check.mts). */
 const LANE_MARK = "// gate-lane: own-fixture-only";
 // A script never overlaps ITSELF (`x --selftest` and `x` share worktree-keyed scratch paths) —
-// unless its header declares, WITH a reason, that it has none (ADR-XXXX: `mobile-chrome-check`
+// unless its header declares, WITH a reason, that it has none (ADR-0261: `mobile-chrome-check`
 // renders in memory and writes nothing, and its --selftest + gate pair was one 741 s chain on
 // the critical path). A marker without a reason (< 20 characters) does not count.
 const SELF_OVERLAP_MARK = "// gate-runner: self-overlap-safe —";

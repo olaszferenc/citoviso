@@ -1,5 +1,5 @@
 // Phone chrome gate (ADR-0253, contract: assets/design-refs/tenant-site/mobile-chrome-B).
-// gate-runner: self-overlap-safe — renders in memory (setContent), writes no file, no row, no shared path; the --selftest and the gate may run side by side (ADR-XXXX)
+// gate-runner: self-overlap-safe — renders in memory (setContent), writes no file, no row, no shared path; the --selftest and the gate may run side by side (ADR-0261)
 //
 // The owner's rule, verbatim: „amint elérjük a foglalási részt, tűnjön el ez a sáv”. A guest
 // tapped "Foglalás", picked her dates, and then tried to SEND with the phone bar's
@@ -293,7 +293,7 @@ const VIEWPORTS = [
   { id: "1440", w: 1440, h: 900, mobile: false },
 ];
 
-// ⏱️ PARALLEL, SAME MEASUREMENT (lassu-land-vizsgalat, ADR-XXXX). The gate was the critical path of
+// ⏱️ PARALLEL, SAME MEASUREMENT (lassu-land-vizsgalat, ADR-0261). The gate was the critical path of
 // every template-touching land: 76 page × viewport measurements one after another, 577 s alone
 // (+164 s --selftest). Now JOBS workers take the (viewport, target) pairs from one queue. Each
 // worker owns its OWN browser context per viewport, and every target still gets a FRESH page,
