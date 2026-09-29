@@ -1,4 +1,4 @@
-// Login hardening guard (ADR-XXXX) — both realms, on the REAL servers.
+// Login hardening guard (ADR-0277) — both realms, on the REAL servers.
 //
 //   ① Secure session cookie: present over HTTPS (X-Forwarded-Proto: https from nginx,
 //      CF-Visitor from Cloudflare), ABSENT over plain HTTP — dev runs on http://, and a
@@ -182,7 +182,7 @@ server.close();
 consoleServer.close();
 await db.destroy();
 if (failed) {
-  console.error(`\n⛔ login-hardening-check: ${failed} ellenőrzés bukott (ADR-XXXX).`);
+  console.error(`\n⛔ login-hardening-check: ${failed} ellenőrzés bukott (ADR-0277).`);
   process.exit(1);
 }
 console.log("\n✅ login-hardening-check: Secure süti csak HTTPS-en, belépési fék mindkét birodalomban.");

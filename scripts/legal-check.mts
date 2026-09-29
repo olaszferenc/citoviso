@@ -162,7 +162,7 @@ check(
     "a Barion-bíráló az ÁSZF-ben keresi őket (BARION-APPLICATION.md 2b. #5) — az Impresszum-link nem számít bele",
   );
 }
-// ADR-XXXX: the custom-domain order only BLOCKS the amount on the card (ADR-0251, Barion
+// ADR-0277: the custom-domain order only BLOCKS the amount on the card (ADR-0251, Barion
 // DelayedCapture) and charges after a successful registration — the checkout and the mail
 // promise exactly that, so the ÁSZF §9 must say it too. And the promise is only true while
 // the gateway really sends a DelayedCapture for a reserve order (a Reservation charges at

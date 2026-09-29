@@ -1,5 +1,5 @@
 // Login hardening shared by both auth realms (tenant /login on :4800, operator /login on
-// :4600): the Secure cookie decision and the failed-attempt throttle (ADR-XXXX).
+// :4600): the Secure cookie decision and the failed-attempt throttle (ADR-0277).
 import http from "node:http";
 
 /**

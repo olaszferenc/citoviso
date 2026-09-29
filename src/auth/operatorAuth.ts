@@ -48,7 +48,7 @@ function signValue(value: string): string {
 function setCookie(res: http.ServerResponse, value: string, maxAgeSec: number): void {
   res.setHeader(
     "Set-Cookie",
-    // ADR-XXXX: `Secure` only over HTTPS — dev runs on plain HTTP (loginGuard.ts).
+    // ADR-0277: `Secure` only over HTTPS — dev runs on plain HTTP (loginGuard.ts).
     [`${COOKIE}=${value}`, ...sessionCookieAttrs(res.req, maxAgeSec)].join("; "),
   );
 }

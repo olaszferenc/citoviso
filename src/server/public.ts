@@ -2076,7 +2076,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (req.method === "POST" && pathname === "/login") {
     const form = await readFormBody(req);
     const next = safeAdminNext(form.get("next"));
-    // ADR-XXXX: failed-attempt throttle per IP, checked BEFORE the password.
+    // ADR-0277: failed-attempt throttle per IP, checked BEFORE the password.
     if (loginLocked("tenant", req)) {
       const lang = await prepareMailLang(DEFAULT_LANG);
       return send(

@@ -116,7 +116,7 @@ export const RECURRING_MANDATE_V1 =
 // operated sites, §2 statement descriptor + Apple Pay limitation, §4 exact
 // cancellation route. Substance changed → version bumped (ADR-0056).
 // 1.3 (2026-09-29): §9 — a custom-domain order only BLOCKS the amount on the card
-// (Barion DelayedCapture, ADR-0251); the charge follows a successful registration (ADR-XXXX).
+// (Barion DelayedCapture, ADR-0251); the charge follows a successful registration (ADR-0277).
 export const ASZF_VERSION = "1.3";
 /** Effective date of ASZF_VERSION, shown on the page and in the acceptance record. */
 export const ASZF_EFFECTIVE_FROM = "2026-09-29";

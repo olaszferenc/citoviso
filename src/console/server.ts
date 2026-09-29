@@ -1125,7 +1125,7 @@ async function handle(
   if (path === "/login") {
     if (method === "GET") return send(res, 200, operatorLoginPage(null, publicLoginUrl));
     if (method === "POST") {
-      // ADR-XXXX: failed-attempt throttle per IP, checked BEFORE the password.
+      // ADR-0277: failed-attempt throttle per IP, checked BEFORE the password.
       if (loginLocked("operator", req)) {
         return send(
           res,

@@ -1,6 +1,6 @@
 # Belépés-keményítés: feltételes Secure süti, belépési fék, ÁSZF §9 zárolás (2026-09-29)
 
-SUB-szál (koordinátor: `cit92d2a67e`, „Deploy-készenlét felderítés”) · brief: `~/rc-briefs/dk-biztonsag-apro.md` · ADR-XXXX.
+SUB-szál (koordinátor: `cit92d2a67e`, „Deploy-készenlét felderítés”) · brief: `~/rc-briefs/dk-biztonsag-apro.md` · ADR-0277.
 
 ## Elvégezve
 - `src/auth/loginGuard.ts` (új): `isHttpsRequest` / `sessionCookieAttrs` + `loginLocked` / `recordLoginFailure` (10 hibás / 10 perc / IP / birodalom).

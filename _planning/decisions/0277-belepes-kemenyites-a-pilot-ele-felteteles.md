@@ -1,4 +1,4 @@
-## ADR-XXXX — Belépés-keményítés a pilot elé: feltételes `Secure` süti, belépési fék, ÁSZF §9 kártyazárolás (2026-09-29)
+## ADR-0277 — Belépés-keményítés a pilot elé: feltételes `Secure` süti, belépési fék, ÁSZF §9 kártyazárolás (2026-09-29)
 
 - **Kiváltó:** a deploy-készenlét felderítés (koordinátor: `cit92d2a67e`, brief: `~/rc-briefs/dk-biztonsag-apro.md`)
   három apró rést mért: ① a munkamenet-süti (`tenantAuth.ts`, `operatorAuth.ts`) `HttpOnly; SameSite=Lax`, de `Secure`
