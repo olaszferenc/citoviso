@@ -698,6 +698,9 @@ export function quoteStayFrom(
     readonly unitMode: string;
     /** Label for base-price lines, already in the site's language. */
     readonly baseLabel: string;
+    /** Per-night label override (e.g. an owner's offer price for the nights it
+     *  priced — that is not the price list's base, whatever row carries it). */
+    readonly labelOn?: (day: string) => string | undefined;
   },
 ): StayQuote | null {
   if (!prices.length) return null;
@@ -706,9 +709,11 @@ export function quoteStayFrom(
   const end = Date.parse(`${opts.dateTo}T00:00:00Z`);
   if (!(d.getTime() < end)) return null;
   while (d.getTime() < end) {
-    const p = priceOn(prices, d.toISOString().slice(0, 10));
+    const day = d.toISOString().slice(0, 10);
+    const p = priceOn(prices, day);
     if (!p) return null; // an unpriced night → no quote at all
-    nights.push({ rowId: p.id, label: p.isBase ? opts.baseLabel : p.label, amount: p.amount });
+    const label = opts.labelOn?.(day) ?? (p.isBase ? opts.baseLabel : p.label);
+    nights.push({ rowId: p.id, label, amount: p.amount });
     d.setUTCDate(d.getUTCDate() + 1);
   }
 

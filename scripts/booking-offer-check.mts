@@ -284,6 +284,11 @@ try {
   const prices = await getUnitPrices(upper.id);
   check("S② alapból SEMMI nem került az árlistába (csak a Főszezon maradt)", prices.length === 1 && !prices.some((p) => p.isBase), prices);
   check("S② a kérésen: offer_saved_as = 'request'", r1.offer_saved_as === "request", r1.offer_saved_as);
+  // 3rd phone round (2026-09-29): the offered nights were frozen as "Alapár: 2 éj × …" and
+  // the guest read a price-list price. The nights the OFFER priced say so; the nights the
+  // list already priced keep their own (season) label.
+  const labels1 = (r1.quoted_lines ?? []).map((l) => l.label);
+  check("S⑦ az ajánlott éjszakák sora „Egyedi ár”, nem „Alapár”", labels1.includes("Egyedi ár") && !labels1.includes("Alapár"), labels1);
   const avail = (await (await fetch(`${BASE}/t/${slug}/api/foglaltsag/${upper.id}`)).json()) as { pricing: { rows: { base?: boolean; amount?: number }[] } | null };
   check("S② a vendég-widget JSON-ja sem kapott új sort", !(avail.pricing?.rows ?? []).some((r) => r.amount === 26_000), avail.pricing);
   const pub = await (await fetch(`${BASE}/t/${slug}/`)).text();
@@ -309,6 +314,7 @@ try {
     page.on("pageerror", (e) => jsErr.push(e.message));
     await page.goto(local(guestUrl!), { waitUntil: "networkidle" });
     check(`⑪ ${label}: a lap megmutatja az ajánlatot`, /Az ajánlat[\s\S]*142 000 Ft/.test(await page.locator("body").innerText()));
+    check(`S⑦ ${label}: az ajánlat-lapon „Egyedi ár”, sehol „Alapár”`, /Egyedi ár/.test(await page.locator("body").innerText()) && !/Alapár/.test(await page.locator("body").innerText()));
     await page.screenshot({ path: path.join(OUT, `offer-guest-${label}.png`), fullPage: true });
     check(`${label}: nincs JS-hiba`, jsErr.length === 0, jsErr);
     await ctx.close();
@@ -362,6 +368,8 @@ try {
   check("alapárként küldött ajánlat elmegy", s1.ok && s1.total === 36_000 && s1.savedAs === "base", s1);
   const gp = await getUnitPrices(ground.id);
   check("S④ „alapárként” → IDŐTLEN alapár lett (piros kontroll: az írás él)", gp.some((p) => p.isBase && !p.validFrom && p.amount === 18_000), gp);
+  const g1lines = (await db.selectFrom("booking_request").select("quoted_lines").where("id", "=", g1).executeTakeFirstOrThrow()).quoted_lines ?? [];
+  check("S⑦ „alapárként” mentve is: az ajánlat sora „Egyedi ár”", g1lines.length > 0 && g1lines.every((l) => l.label === "Egyedi ár"), g1lines);
   onlyNew(await mailsTo(OWNER), seenOwner);
   const rec = await req.recordOfferAcceptedByOwner(await tok(g1), BASE);
   const g1row = await db.selectFrom("booking_request").select(["status", "decided_by"]).where("id", "=", g1).executeTakeFirstOrThrow();
@@ -381,6 +389,8 @@ try {
   check("S③ „a kért napokra” → dátumos alapár PONTOSAN a kért éjszakákra", ap.length === 1 && ap[0]!.isBase && ap[0]!.validFrom === addDays(ARR, 40) && ap[0]!.validTo === addDays(ARR, 41), ap);
   const apRow = await db.selectFrom("unit_price").select("expiry_notified_at").where("unit_id", "=", annex.id).executeTakeFirstOrThrow();
   check("S③ …és emlékeztető NEM jár rá (a bélyeg születéskor beállítva)", apRow.expiry_notified_at != null);
+  const aDecLines = (await db.selectFrom("booking_request").select("quoted_lines").where("id", "=", aDec).executeTakeFirstOrThrow()).quoted_lines ?? [];
+  check("S⑦ „a kért napokra” mentve is: az ajánlat sora „Egyedi ár”", aDecLines.length > 0 && aDecLines.every((l) => l.label === "Egyedi ár"), aDecLines);
   // The other three are OUTSIDE that window → still unpriced, each priced for itself.
   await req.sendOffer(await tok(aExp), { amount: "15 000" }, BASE);
   await req.sendOffer(await tok(aCon), { amount: "15 000" }, BASE);

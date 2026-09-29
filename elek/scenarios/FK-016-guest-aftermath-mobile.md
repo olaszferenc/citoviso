@@ -41,6 +41,11 @@ kontraktus: assets/design-refs/console/booking-email/README.md
   út: ${ELEK_NIGHT_OFFER_PATH}
   várd: látható "${ELEK_NIGHT_NAME}"
   várd: látható "Elfogadom az ajánlatot"
+  # A kérés 6 fővel ment be (FK-014 ⑦) — az ajánlat-lap ugyanazt mondja. Az ajánlat
+  # ára „Egyedi ár”, nem „Alapár” (ADR-0267: alapból csak erre a kérésre szól).
+  várd: látható "6 fő"
+  várd: látható "Egyedi ár"
+  várd: nem látható "Alapár"
   kézi: 390-en az ár, az időszak és az érvényességi határidő látszik-e görgetés nélkül; az elfogadás következménye (végleges foglalás, helyszíni fizetés) a gomb ELŐTT kimondott-e; a két gomb súlya különbözik-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 

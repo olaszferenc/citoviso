@@ -2292,6 +2292,7 @@ export async function sendOffer(
 
   const { currency, unitMode } = await pricingConfigFor(req.site_id);
   const listed = await getUnitPrices(req.unit_id);
+  const offered = new Set(amount.value ? missing : []);
   const priceRows =
     missing.length && amount.value && save === "request" ? [...listed, ...offerOverlayRows(missing, amount.value)] : listed;
   const quote = quoteStayFrom(priceRows, {
@@ -2301,6 +2302,9 @@ export async function sendOffer(
     currency,
     unitMode,
     baseLabel: T(lang, "Alapár"),
+    // The nights this offer priced carry the offer's own label, whichever path saved
+    // it: "Alapár" there reads as a price-list price, which an offer is not (ADR-0267).
+    labelOn: (day) => (offered.has(day) ? T(lang, "Egyedi ár") : undefined),
   });
   if (!quote) {
     // The price was written, yet the rule still finds an unpriced night: a defect,

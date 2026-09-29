@@ -182,19 +182,33 @@ kontraktus: assets/design-refs/tenant-site/booking-price-clarity/README.md · as
   kézi: a képen: a választó az egész házat mutatja-e (nem egy szobát); a magyarázó doboz megmondja-e, MIÉRT nincs szám, és hogy az elküldés még nem kötelez; NINCS-e sehol összeg
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
-- [ ] Az árajánlat-kérés elmegy, és a nyugta nem foglalást ígér
+- [ ] A kérés adatainál a vendég megadja a létszámot (hat felnőtt)
   tedd: kattints "Tovább a kérés adataihoz"
   tedd: írd "#cit-name" "Elek Vendég Ajánlat"
   tedd: írd "#cit-email" "elek@citoviso.com"
   tedd: írd "#cit-phone" "+36 30 555 0102"
   tedd?: írd "#cit-msg" "Baráti társasággal jönnénk, hat felnőtt."
+  # MÉRT (2026-09-29, 3. telefonos kör): a kérés 2 fővel ment be, mert a kör sosem
+  # állította a léptetőt (alapérték 2) — a widget a léptető értékét küldi, a kérés,
+  # a tulaj-kártya, a levél és az ajánlat-lap ugyanazt a `guests`-t mutatja.
+  tedd: kattints "[data-step='1']"
+  tedd: kattints "[data-step='1']"
+  tedd: kattints "[data-step='1']"
+  tedd: kattints "[data-step='1']"
+  # A `várd`-ok a `tedd`-ek UTÁN értékelődnek: a léptető értékét a küldés ELŐTT,
+  # külön lépésben mérjük (a küldés után a doboz már a nyugta).
+  várd: szövege "[data-guests]" = "6"
+  kézi: a léptető 390-en ujjal eltalálható-e, és a „6” a képen olvasható-e
+  tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
+
+- [ ] Az árajánlat-kérés elmegy, és a nyugta nem foglalást ígér
   tedd: kattints "Árajánlatot kérek"
   # A nyugta címe árajánlatnál MÁS (cit-runtime `receiptHtml`, isQuote): mérve 2026-09-28 —
   # a kérés beérkezett (DB: pending, egész ház), csak a régi cím nem jelent meg.
   tedd: várj "Elküldtük az árajánlat-kérését" 40
   várd: látható "Elküldtük az árajánlat-kérését"
   várd: látható "A szállásadó árajánlattal válaszol."
-  adat: ELEK-NIGHT árajánlat-kérés (Elek Vendég Ajánlat, egész ház, 2026-11-13 → 11-15)
+  adat: ELEK-NIGHT árajánlat-kérés (Elek Vendég Ajánlat, egész ház, 6 fő, 2026-11-13 → 11-15)
   kézi: a nyugta kimondja-e, hogy ez ÁRAJÁNLAT-kérés (nem foglalás), hogy a szállásadó árral válaszol, és hogy a foglalás csak az ajánlat elfogadásával lesz végleges; nem szerepel-e benne összeg
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
