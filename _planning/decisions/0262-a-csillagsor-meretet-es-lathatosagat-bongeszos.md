@@ -1,4 +1,4 @@
-## ADR-XXXX — A csillagsor MÉRETÉT és LÁTHATÓSÁGÁT böngészős őr méri mind a 19 sablonon (`star-size-check`) (2026-09-29)
+## ADR-0262 — A csillagsor MÉRETÉT és LÁTHATÓSÁGÁT böngészős őr méri mind a 19 sablonon (`star-size-check`) (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29, a koordinátoron át):** a kérdésre („Csillagméret-őr: … Épüljön rá egy
   böngészős őr mind a 19 sablonra?”): *„Igen”*. Brief: `~/rc-briefs/csillagmeret-or.md`.

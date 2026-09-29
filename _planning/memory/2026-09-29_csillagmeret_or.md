@@ -2,7 +2,7 @@
 
 SUB-szál (koordinátor: `citded06a5f`) · brief: `~/rc-briefs/csillagmeret-or.md` · tulaj: „Igen”.
 Előzmények: `2026-09-29_trio_minta_szobakep_es_csillagsor.md`, `2026-09-29_csillagszam_egy_szabaly.md`
-(„Nyitott”: a méret-őr). Döntés: ADR-XXXX (a land osztja ki a számot).
+(„Nyitott”: a méret-őr). Döntés: ADR-0262 (a land osztja ki a számot).
 
 ## Mi készült
 
