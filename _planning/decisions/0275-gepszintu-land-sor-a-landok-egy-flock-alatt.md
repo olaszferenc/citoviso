@@ -1,4 +1,4 @@
-## ADR-XXXX — Gépszintű land-sor: a landok egy `flock` alatt futnak, és nem futtatják újra egymás kapusorát (2026-09-29)
+## ADR-0275 — Gépszintű land-sor: a landok egy `flock` alatt futnak, és nem futtatják újra egymás kapusorát (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29, a kapu-koordinátoron át — brief: `~/rc-briefs/land-sor.md`):** „Gépszintű land-sor”.
   Mérve: a `cit48c5979c` landja (a24d552e) 45 perc 15 s falióra, HÁROM kör (1145 s · 1020 s · 361 s):

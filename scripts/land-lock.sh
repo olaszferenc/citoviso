@@ -1,4 +1,4 @@
-# land-lock — the machine-wide land queue (ADR-XXXX), SOURCED by scripts/land.sh.
+# land-lock — the machine-wide land queue (ADR-0275), SOURCED by scripts/land.sh.
 #
 # Measured 2026-09-29 (cit48c5979c, a24d552e): one land took 45 min wall-clock in THREE rounds —
 # the push bounced twice because a parallel land moved main, and every bounce re-ran fetch +

@@ -1,4 +1,4 @@
-// ⭐ A GÉPSZINTŰ LAND-SOR ŐRE (ADR-XXXX) — tényleg sorba állnak-e a landok, és elenged-e a halott land?
+// ⭐ A GÉPSZINTŰ LAND-SOR ŐRE (ADR-0275) — tényleg sorba állnak-e a landok, és elenged-e a halott land?
 //
 // Mérve 2026-09-29: egy land 45 perc falióra, három kör — a párhuzamos landok egymás pusht
 // pattintották vissza, és minden kör a teljes kapusort futtatta újra. A javítás: a `land.sh`

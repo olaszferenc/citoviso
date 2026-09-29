@@ -1,6 +1,6 @@
 # 2026-09-29 — Gépszintű land-sor (flock) a land.sh-ban
 
-**Brief:** `~/rc-briefs/land-sor.md` (koordinátor: cit3bd83952). **Döntés:** ADR-XXXX (gépszintű land-sor).
+**Brief:** `~/rc-briefs/land-sor.md` (koordinátor: cit3bd83952). **Döntés:** ADR-0275 (gépszintű land-sor).
 
 ## Elvégezve
 - `scripts/land-lock.sh` (új): `land_lock_acquire` / `land_lock_release`; zárfájl a közös git-dir alatt,
