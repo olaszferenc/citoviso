@@ -42,6 +42,9 @@ küldjünk el” → mérés → „Rád bízom”.
 - Kalibrálva 115 kézzel címkézett páron (fixture): jó→magas 72/85, rossz→magas 0/8, bizonytalan→magas 5/22; őr ⑨
   mindkét irányban + negatív kontroll.
 - `scripts/places-medium-backfill.mts`: száraz futás 78 megerősítve, 21 telefon + 20 honlap le (mind a rossz párok
-  köztük). ⏸ ÍRÁS A TULAJ JÓVÁHAGYÁSÁRA VÁR (a lista megmutatva).
+  köztük). ✅ 2026-09-29 LEFUTOTT a dev DB-n a tulaj jóváhagyásával: 105 lead kapott `placesMatch` bizonyítékot, 21-ről
+  lekerült a telefon (elutasított naplósorként megmaradt). Mentés: `~/backups/places-medium-backfill-2026-09-29.json`
+  (az eredeti `raw` soronként — visszaállításhoz). A küldési kapu ezután: 81 lead e-mailen, 72 telefonon állna meg
+  (előtte 101 / 110). Éles állomány: a deploy után ugyanez a szkript kell (előbb száraz futás).
 - Tanulság: a javítás HASZNÁT a bevezetés előtt kellett volna mérni — a „8 szomszéd-pár” állításom egy része téves volt
   (Anita = azonos család).
