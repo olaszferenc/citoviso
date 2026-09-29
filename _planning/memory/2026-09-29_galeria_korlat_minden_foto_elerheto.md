@@ -1,6 +1,6 @@
 # Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
 
-SUB-szál (koordinátor: `citded06a5f`) · brief: `~/rc-briefs/galeria-korlat-sablonok.md` · döntés: ADR-XXXX ·
+SUB-szál (koordinátor: `citded06a5f`) · brief: `~/rc-briefs/galeria-korlat-sablonok.md` · döntés: ADR-0259 ·
 kontraktus: `assets/design-refs/tenant-site/gallery-cap/` · őr: `scripts/gallery-reach-check.mts`.
 
 ## Mit okozott (valódi adat, élő render, 1280 + 390 px)

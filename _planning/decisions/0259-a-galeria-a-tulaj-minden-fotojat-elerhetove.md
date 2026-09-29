@@ -1,4 +1,4 @@
-## ADR-XXXX — A galéria a tulaj MINDEN fotóját elérhetővé teszi, és a lapon még nem látott képekkel indul
+## ADR-0259 — A galéria a tulaj MINDEN fotóját elérhetővé teszi, és a lapon még nem látott képekkel indul
 
 **Dátum:** 2026-09-29 · **Státusz:** elfogadva a wordmark-grow, organic és claymorphism sablonra (lokál, nem élesítve —
 a nagy deployjal megy); **arch-frames NYITOTT** (a tulaj döntésére vár) · **Kiegészíti:** a nyitókép-döntés
