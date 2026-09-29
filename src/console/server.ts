@@ -83,6 +83,7 @@ import { mockCard, MOCK_CARDS } from "../payment/mock.js";
 import { siteShotPath } from "../payment/siteShot.js";
 import { tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
+import { alertWebhookFailure } from "./houseAlert.js";
 import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
 import { resolvePayEntry } from "../payment/payEntry.js";
 import {
@@ -3644,14 +3645,26 @@ async function handle(
     return redirect(res, `/pay/done?paymentId=${encodeURIComponent(mockPayDoMatch[1])}`);
   }
   // POST /pay/webhook/:gateway — JSON webhook endpoint (real gateway / tests).
-  const webhookMatch = /^\/pay\/webhook\/[a-z]+$/i.exec(path);
+  const webhookMatch = /^\/pay\/webhook\/([a-z]+)$/i.exec(path);
   if (method === "POST" && webhookMatch) {
     const params = await readWebhookParams(req, url);
-    const r = await handleWebhook(
-      params,
-      req.headers as Record<string, string | string[] | undefined>,
-    );
-    return send(res, r.ok ? 200 : 400, JSON.stringify(r), "application/json");
+    // ADR-XXXX: a refused (400) or crashed (500) callback used to be a status code only
+    // the gateway saw. Now the house hears it too — fire-and-forget, deduped per
+    // payment + status, so the gateway's retries do not flood the inbox.
+    const ref = String(params.paymentId ?? params.PaymentId ?? params.gatewayRef ?? "");
+    let r: Awaited<ReturnType<typeof handleWebhook>>;
+    try {
+      r = await handleWebhook(
+        params,
+        req.headers as Record<string, string | string[] | undefined>,
+      );
+    } catch (err) {
+      alertWebhookOnce(webhookMatch[1], ref, 500, err instanceof Error ? err.message : String(err));
+      throw err; // the outer handler still answers 500, as before
+    }
+    if (!r.ok) alertWebhookOnce(webhookMatch[1], ref, 400, r.reason ?? "ismeretlen ok");
+    const { reason: _reason, ...body } = r;
+    return send(res, r.ok ? 200 : 400, JSON.stringify(body), "application/json");
   }
   // GET /site/:token — the provisioned private preview (opaque token).
   const siteMatch = /^\/site\/([A-Za-z0-9_-]{16,})$/.exec(path);
@@ -3675,6 +3688,27 @@ async function handle(
 /** /pay/go refusal alerts, per order: last sent (ms). In-process on purpose — a
  *  restart may alert once more, which is the safe direction. */
 const payGoAlerted = new Map<string, number>();
+
+/** Webhook failure alerts, per payment + status: last sent (ms). In-process like
+ *  payGoAlerted — Barion retries a failed callback many times, one mail per hour is enough. */
+const webhookAlerted = new Map<string, number>();
+const WEBHOOK_ALERT_EVERY_MS = 3_600_000;
+/** The endpoint is public: random refs must not flood the inbox — at most this many
+ *  webhook alerts per hour in total (the rest only reach the log). */
+const WEBHOOK_ALERT_HOURLY_CAP = 10;
+function alertWebhookOnce(gateway: string, paymentRef: string, status: number, reason: string): void {
+  const now = Date.now();
+  paymentRef = paymentRef.slice(0, 120); // attacker-controlled on a public endpoint
+  const key = `${paymentRef}|${status}`;
+  if (now - (webhookAlerted.get(key) ?? 0) < WEBHOOK_ALERT_EVERY_MS) return;
+  for (const [k, t] of webhookAlerted) if (now - t >= WEBHOOK_ALERT_EVERY_MS) webhookAlerted.delete(k);
+  if (webhookAlerted.size >= WEBHOOK_ALERT_HOURLY_CAP) {
+    console.error(`[house-alert:webhook] ${status} ${paymentRef} (${reason}) — óránkénti riasztási plafon elérve, levél nem ment`);
+    return;
+  }
+  webhookAlerted.set(key, now);
+  void alertWebhookFailure({ gateway, paymentRef, status, reason });
+}
 
 export const server = http.createServer((req, res) => {
   // ADR-0067 ③: every request runs inside its OWN language context. It starts as

@@ -18,6 +18,11 @@ if (Number.isNaN(now.getTime())) {
   process.exit(1);
 }
 
+// ADR-XXXX: a side step that fails must not end the run (billing already happened),
+// but it must not exit 0 either — the unit's OnFailure= mails the house only on a
+// non-zero exit, and a swallowed error was exactly the silence we are closing.
+let sideStepFailed = false;
+
 const r = await runBillingCycle(now, tenantId ? { tenantId } : undefined);
 console.log(`billing-cycle @ ${now.toISOString()}:`, JSON.stringify(r));
 // ADR-0088 §4b: the escalation follow-up rides the same daily tick — its
@@ -28,6 +33,7 @@ try {
   console.log(`offer-followup @ ${now.toISOString()}:`, JSON.stringify(f));
 } catch (e) {
   console.error("offer-followup HIBA:", e);
+  sideStepFailed = true;
 }
 // ADR-0098: the AAM-cap SMS guard rides the same daily tick — the threshold is
 // crossed at most twice a year, daily resolution is plenty. Loud, non-blocking.
@@ -36,5 +42,7 @@ try {
   console.log(`aam-alert @ ${now.toISOString()}:`, JSON.stringify(a));
 } catch (e) {
   console.error("aam-alert HIBA:", e);
+  sideStepFailed = true;
 }
 await db.destroy();
+if (sideStepFailed) process.exitCode = 1;

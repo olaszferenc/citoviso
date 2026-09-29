@@ -20,6 +20,7 @@ import { db } from "../db/client.js";
 import { tenantSiteUrl } from "../domains.js";
 import { huArticleLower } from "../hu.js";
 import { getEmailSender, type EmailMessage } from "../email/sender.js";
+import { alertBookingMailFailure } from "../console/houseAlert.js";
 import {
   hostMailHtml,
   mailButtonGhost,
@@ -456,13 +457,17 @@ function ownerLetter(o: {
  * mail goes out, so a transport failure must not abort the rest of the flow —
  * measured (FK-007 first run): an SMTP 553 after the accept left the overlapping
  * loser request pending FOREVER because the auto-decline loop never ran. Loud on
- * stderr; the state machine marches on.
+ * stderr AND a house alert (ADR-XXXX); the state machine marches on.
+ * Exported for scripts/house-alert-check.mts only.
  */
-async function mailSafe(label: string, send: () => Promise<void>): Promise<void> {
+export async function mailSafe(label: string, requestId: string, send: () => Promise<void>): Promise<void> {
   try {
     await send();
   } catch (err) {
     console.error(`[booking:mail] ${label} — a levél NEM ment ki:`, err);
+    // ADR-XXXX: stderr alone reached nobody — the house gets a mail. alertHouse never
+    // throws, and a failed alert is only logged (no loop).
+    await alertBookingMailFailure(label, requestId, err);
   }
 }
 
@@ -624,11 +629,11 @@ export async function createBookingRequest(
 
   // Fire-and-forget (measured, FK-007: two synchronous Zoho sends held the guest's
   // "Küldés…" spinner >10 s): the request row IS committed — the mails follow.
-  void mailSafe("owner-notify", () => notifyOwner(row.id, token, String(rules.notifyEmail ?? ""), publicBaseUrl));
+  void mailSafe("owner-notify", row.id, () => notifyOwner(row.id, token, String(rules.notifyEmail ?? ""), publicBaseUrl));
   // Approved plan C ① (owner decision 2026-09-06): the guest gets an immediate
   // "rögzítettük" mail — on-screen confirmation alone dies with the browser tab,
   // and the 48-hour promise needs to live somewhere the guest can re-read it.
-  void mailSafe("guest-ack", () => sendGuestAck(row.id));
+  void mailSafe("guest-ack", row.id, () => sendGuestAck(row.id));
 
   const unitRow = await db
     .selectFrom("site_unit")
@@ -1092,7 +1097,7 @@ export async function decideRequest(
       })
       .where("id", "=", req.id)
       .execute();
-    void mailSafe("guest-declined", () => sendGuestVerdict(req, "declined", publicBaseUrl, decisionNote));
+    void mailSafe("guest-declined", req.id, () => sendGuestVerdict(req, "declined", publicBaseUrl, decisionNote));
     return { ok: true, outcome: "declined", id: req.id, ...base };
   }
 
@@ -1177,7 +1182,7 @@ async function acceptCore(
   // Reload: an accepted OFFER carries the price frozen when it was sent, and the
   // confirmation must quote exactly that.
   const fresh = (await loadRequest({ id: req.id })) ?? req;
-  void mailSafe("guest-accepted", () => sendGuestVerdict(fresh, "accepted", publicBaseUrl, decisionNote));
+  void mailSafe("guest-accepted", fresh.id, () => sendGuestVerdict(fresh, "accepted", publicBaseUrl, decisionNote));
 
   // Approved plan ⑥: the nights are gone — every overlapping pending request is
   // auto-declined NOW, with an honest mail, instead of rotting until expiry.
@@ -1199,7 +1204,7 @@ async function acceptCore(
       })
       .where("id", "=", loser.id)
       .execute();
-    void mailSafe("guest-auto-declined", () => sendGuestVerdict(loser, "auto_declined", publicBaseUrl, null));
+    void mailSafe("guest-auto-declined", loser.id, () => sendGuestVerdict(loser, "auto_declined", publicBaseUrl, null));
   }
   return {
     ok: true,
@@ -1567,7 +1572,7 @@ export async function cancelRequest(opts: {
         mailNote(esc(T(ctx.lang, "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést."))),
       ],
     });
-    await mailSafe("guest-cancelled-by-owner", () =>
+    await mailSafe("guest-cancelled-by-owner", req.id, () =>
       getEmailSender().send({
         to: req.guest_email,
         audience: "guest",
@@ -1604,7 +1609,7 @@ export async function cancelRequest(opts: {
         mailNote(esc(T(ctx.lang, "Ha korábban naptárába vette a foglalást, a mellékelt frissítés törli a bejegyzést."))),
       ],
     });
-    await mailSafe("guest-cancel-ack", () =>
+    await mailSafe("guest-cancel-ack", req.id, () =>
       getEmailSender().send({
         to: req.guest_email,
         audience: "guest",
@@ -1651,7 +1656,7 @@ export async function cancelRequest(opts: {
         ],
       });
       // The mail carries the guest's data to their controller (the tenant).
-      await mailSafe("owner-notify-guest-cancel", () => getEmailSender().send(ownerMsg).then(() => undefined));
+      await mailSafe("owner-notify-guest-cancel", req.id, () => getEmailSender().send(ownerMsg).then(() => undefined));
       if (ctx.tenantId) {
         await logTenantMessage({
           tenantId: ctx.tenantId,
@@ -1855,11 +1860,11 @@ export async function expireStaleRequests(): Promise<number> {
       .execute();
     // The docstring's promise, now kept (gap found 2026-09-06): the guest is TOLD
     // the window passed — a silently expired request looks exactly like being ignored.
-    await mailSafe("guest-expired", () => sendGuestExpired(r as unknown as RequestRow, hours));
+    await mailSafe("guest-expired", String(r.id), () => sendGuestExpired(r as unknown as RequestRow, hours));
     // …and so is the OWNER (gap found 2026-09-11): a lost booking was the one
     // event the owner learned about from nobody. Of 31 messages not one mentioned
     // it; they had to scroll ~1750px down the Foglalások tab to find out at all.
-    await mailSafe("owner-expired", () => sendOwnerExpired(r as unknown as RequestRow, hours));
+    await mailSafe("owner-expired", String(r.id), () => sendOwnerExpired(r as unknown as RequestRow, hours));
     expired++;
   }
   return expired;
@@ -2356,7 +2361,7 @@ export async function sendOffer(
   }
 
   const fresh = (await loadRequest({ id: req.id }))!;
-  void mailSafe("guest-offer", () => sendGuestOffer(fresh, publicBaseUrl));
+  void mailSafe("guest-offer", fresh.id, () => sendGuestOffer(fresh, publicBaseUrl));
   const expiresAt = ctx.expireHours ? new Date(offeredAt.getTime() + ctx.expireHours * 3_600_000) : null;
   return {
     ok: true,
@@ -2549,7 +2554,7 @@ export async function respondToOffer(
       .where("status", "=", "offered")
       .executeTakeFirst();
     if (Number(upd.numUpdatedRows)) {
-      await mailSafe("owner-offer-declined", () =>
+      await mailSafe("owner-offer-declined", req.id, () =>
         sendOwnerOfferNews(req, "declined"),
       );
     }
@@ -2558,7 +2563,7 @@ export async function respondToOffer(
 
   const r = await acceptCore(req, "guest", "offered", req.decision_note ?? null, publicBaseUrl, base);
   if (r.outcome === "accepted") {
-    await mailSafe("owner-offer-accepted", () => sendOwnerOfferNews(req, "accepted"));
+    await mailSafe("owner-offer-accepted", req.id, () => sendOwnerOfferNews(req, "accepted"));
     return { ...view, outcome: "accepted_now" };
   }
   if (r.outcome === "conflict") {
@@ -2574,7 +2579,7 @@ export async function respondToOffer(
       .where("id", "=", req.id)
       .where("status", "=", "offered")
       .execute();
-    await mailSafe("owner-offer-conflict", () => sendOwnerOfferNews(req, "conflict"));
+    await mailSafe("owner-offer-conflict", req.id, () => sendOwnerOfferNews(req, "conflict"));
     return { ...view, outcome: "conflict" };
   }
   return { ...view, outcome: "accepted" };
@@ -2694,8 +2699,8 @@ async function expireOffer(req: RequestRow): Promise<boolean> {
     .where("status", "=", "offered")
     .executeTakeFirst();
   if (!Number(upd.numUpdatedRows)) return false;
-  await mailSafe("guest-offer-expired", () => sendGuestOfferExpired(req));
-  await mailSafe("owner-offer-expired", () => sendOwnerOfferNews(req, "expired"));
+  await mailSafe("guest-offer-expired", req.id, () => sendGuestOfferExpired(req));
+  await mailSafe("owner-offer-expired", req.id, () => sendOwnerOfferNews(req, "expired"));
   return true;
 }
 

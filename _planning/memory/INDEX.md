@@ -20,6 +20,7 @@
 - [2026-09-29_kapu_leghosszabb_eloszor.md](2026-09-29_kapu_leghosszabb_eloszor.md) — 2026-09-29 — A kapu-futtató a leghosszabb kaput indítja először (brief: kapu-leghosszabb-eloszor, „A” opció)
 - [2026-09-29_kapu_koordinator_osszegzes.md](2026-09-29_kapu_koordinator_osszegzes.md) — 2026-09-29 — Kapu-koordinátor: a land 16+ percről ~6 percre, és nincs többé háromszoros újrafuttatás
 - [2026-09-29_kapu_job_idokorlat.md](2026-09-29_kapu_job_idokorlat.md) — Kapunkénti időkorlát a kapu-futtatóban — a beragadt böngészős kapu nem tartja fel a landot (2026-09-29)
+- [2026-09-29_haz_riasztas_idozito_level_webhook.md](2026-09-29_haz_riasztas_idozito_level_webhook.md) — A ház riasztást kap, ha időzítő, foglalási levél vagy fizetési webhook elhasal (2026-09-29)
 - [2026-09-29_harmadik_telefonos_kor_tihany.md](2026-09-29_harmadik_telefonos_kor_tihany.md) — A 3. telefonos ellenőrző kör (Ifjúsági Szállás Tihany) — a mai javítások együtt működnek
 - [2026-09-29_harmadik_kor_aprosagai.md](2026-09-29_harmadik_kor_aprosagai.md) — 2026-09-29 — A 3. telefonos kör apróságai: létszám, „Alapár:” az ajánlaton, két lebegő pirula
 - [2026-09-29_gepszintu_land_sor.md](2026-09-29_gepszintu_land_sor.md) — 2026-09-29 — Gépszintű land-sor (flock) a land.sh-ban

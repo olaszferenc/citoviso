@@ -270,10 +270,11 @@ export async function openUpsellPayUrl(tenantId: string): Promise<string | null>
 export async function handleWebhook(
   params: Record<string, unknown>,
   headers: Record<string, string | string[] | undefined>,
-): Promise<{ ok: boolean; activated?: boolean; pending?: boolean; orphan?: boolean }> {
+): Promise<{ ok: boolean; activated?: boolean; pending?: boolean; orphan?: boolean; reason?: string }> {
   const gw = getGateway();
   const res = await gw.parseWebhook(params, headers);
-  if (!res) return { ok: false };
+  // `reason` feeds the house alert of the 400 branch (ADR-XXXX) — never shown to the gateway as a promise.
+  if (!res) return { ok: false, reason: "a visszahívás nem értelmezhető / nem igazolható a szolgáltatónál" };
   if (res === "pending") {
     // In-flight at the gateway: acknowledge (200) — but ONLY for a payment we
     // actually issued. An unknown id stays loud (400 → the gateway alerts us),
@@ -293,7 +294,7 @@ export async function handleWebhook(
           .where("payment.gateway_ref", "=", ref)
           .executeTakeFirst()
       : undefined;
-    if (!known) return { ok: false };
+    if (!known) return { ok: false, reason: "folyamatban lévő fizetés, amihez nincs payment-sorunk" };
     // ADR-0226: a card-verification payment is a RESERVATION — "in flight" here
     // means the card was authenticated and the hold stands. Release it (0) at
     // once; the gateway then reports Succeeded and the token + card get stored
@@ -350,13 +351,13 @@ export async function handleWebhook(
  */
 export async function applyWebhookResult(
   res: import("./gateway.js").WebhookResult,
-): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
+): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean; reason?: string }> {
   const payment = await db
     .selectFrom("payment")
     .select(["id", "order_intent_id", "status", "reservation"])
     .where("gateway_ref", "=", res.gatewayRef)
     .executeTakeFirst();
-  if (!payment) return { ok: false };
+  if (!payment) return { ok: false, reason: `ismeretlen fizetés (${res.status}) — nincs payment-sorunk hozzá` };
   // ADR-0251: a hold we gave back stays given back. Barion reports a zero-finished
   // reservation as Succeeded — that must never flip into "paid" and an invoice.
   if (payment.status === "released") return { ok: true, activated: false, alreadySettled: true };

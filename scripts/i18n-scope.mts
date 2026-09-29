@@ -86,6 +86,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // címzett a TULAJ a konzol /settings címzettjein. A VEVŐ-nek szánt mondat nem itt
   // születik, hanem a konfigurátor futtatójában, tr()-rel.
   "src/console/payLinkAlert.ts": "belső tulaj-riasztás (megrekedt rendelés) — a címzett az operátor, nem vevő",
+  // 2026-09-29: a ház-riasztás (elhasalt időzítő / foglalási levél / fizetési webhook) —
+  // ugyanaz a fajta belső üzemi levél, a címzett az app_setting.alert_email (a TULAJ),
+  // vevőhöz vagy vendéghez ez a szöveg soha nem jut el.
+  "src/console/houseAlert.ts": "belső tulaj-riasztás (időzítő / foglalási levél / webhook hiba) — a címzett az operátor, nem vevő",
   // ADR-0112: a törött mobil-pár feladás-riasztása ugyanaz a fajta belső üzemi
   // levél+SMS, mint az AAM-riasztás — a címzett a TULAJ, nem a lead. A leadnek
   // szánt SMS-törzs nem itt születik, hanem a draft.ts renderPairSmsDraft-jában

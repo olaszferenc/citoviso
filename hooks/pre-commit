@@ -698,6 +698,15 @@ if [ -f scripts/barion-webhook-ack-check.mts ] && \
   echo "[pre-commit] barion-webhook-ack-check (callback-nyugta: 200 vs. 400)…"
   npx tsx scripts/barion-webhook-ack-check.mts >"$GATE_LOG" || gate_failed
 fi
+# HÁZ-RIASZTÁS (2026-09-29, a döntés: „A ház riasztást kap, ha időzítő, levél vagy webhook
+# elhasal”). Mindhárom ág mock levélküldővel, negatív kontrollal: prod service OnFailure nélkül
+# = piros; elhasalt foglalási levél → riasztás a booking_request id-val; webhook 400/500 → riasztás
+# (valódi route, efemer port, mock gateway), az ártalmatlan árva callback csendes. DB-t csak olvas.
+if [ -f scripts/house-alert-check.mts ] && \
+   changed_files | grep -qE '^src/console/houseAlert\.ts$|^src/booking/requests\.ts$|^src/payment/service\.ts$|^src/console/server\.ts$|^deploy/systemd/|^scripts/(systemd-units|house-alert-check|unit-failure-alert)\.mts$'; then
+  echo "[pre-commit] house-alert-check (időzítő / foglalási levél / webhook → a ház riasztást kap)…"
+  npx tsx scripts/house-alert-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0059: one content type appears ONCE, inside the template's native section —
 # module data weaves in, the shared block carries only the measured leftover; the
 # mock's sample rooms wear real photos and its booking slot is a clickable demo.

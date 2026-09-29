@@ -1,0 +1,20 @@
+[Unit]
+# ADR-XXXX: a ház riasztást kap, ha egy időzített feladat elhasal. Minden prod
+# service-ben `OnFailure=citoviso-alert@%n.service` hívja; a példány-név (%i) a
+# megbukott egység, a szkript annak utolsó ~40 journal-sorát küldi az
+# app_setting.alert_email címre (a meglévő levélküldőn át).
+# ⛔ SAJÁT OnFailure= NINCS és nem is lehet: egy elhasalt riasztás csak napló, különben hurok.
+Description=Citoviso riasztás: %i elhasalt
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A journal olvasásához (journalctl -u %i) — a citoviso user magában nem látja a rendszer-naplót.
+SupplementaryGroups=systemd-journal
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/unit-failure-alert.mts %i
+TimeoutStartSec=120
+StandardOutput=append:/home/citoviso/.claude/citoviso-alert.log
+StandardError=inherit

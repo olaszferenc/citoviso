@@ -16,6 +16,16 @@ Nincs kapcsoló, ami átugorja. A pre-commit (`systemd-units check`) nem enged n
 nélküli időzítőt a repóba. Mérve 2026-09-23: a renderelő a kézzel telepített 8 éles egységgel
 **bájtra** egyezik — a GATE 6 első futása csak a hiányzót teszi fel.
 
+## `citoviso-alert@` — a ház riasztást kap, ha egy időzített feladat elhasal (ADR-XXXX)
+
+Minden prod service `[Unit]`-jában `OnFailure=citoviso-alert@%n.service`. Ha az egység `failed`
+állapotba kerül, a systemd elindítja a sablon egy példányát (`%i` = a megbukott egység neve), ami a
+`scripts/unit-failure-alert.mts`-szel az egység utolsó 40 journal-sorát elküldi az
+`app_setting.alert_email` címre (konzol /settings). A sablon a `targets.json` `services` listáján
+`prod`: a GATE 6 telepíti és visszaméri, de NEM engedélyezi (nincs mit — az `OnFailure=` indítja).
+⛔ A sablonnak nincs és nem lehet saját `OnFailure=`-je (hurok); a `systemd-units check` ezt, és a
+prod service-ekből hiányzó sort is pirosra méri. A dev gépen a sablon nincs telepítve.
+
 Az alábbi „Telepítés" receptek a **dev gépre** vonatkoznak (ott nincs deploy-kapu).
 
 ## `citoviso-domain-resume` (ADR-0071)
