@@ -25,9 +25,11 @@
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
 //     a módot/diffet olvasó kaput sosem hagyja ki — viszont egy commit landolásakor tényleg
 //     újrahasznosít (különben csak költség),
-//   · (ADR-0268) egy vissza nem térő kapu a CIT_GATE_JOB_TIMEOUT után HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
+//   · (ADR-0268, ADR-XXXX) egy CIT_GATE_JOB_SILENCE ideje NÉMA kapu HANGOSAN PIROS (124, „IDŐTÚLLÉPÉS”
 //     + utolsó kimenet), a TELJES folyamatfája (a külön folyamatcsoportú unoka is — mint a Playwright
-//     Chromiuma) halott, a többi kapu lefut, és se zöld-gyorsítótár, se kapuidő-előzmény nem íródik,
+//     Chromiuma) halott, a többi kapu lefut, és se zöld-gyorsítótár, se kapuidő-előzmény nem íródik;
+//     a LASSÚ, de folyamatosan író kapu a csend-korlátnál tovább futva is ZÖLD (nincs hamis piros),
+//     és csak a teljes-idő plafon (CIT_GATE_JOB_MAX) állítja meg,
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
 //     előzmény nélküli kaput a legelején; az előzményt minden futás tartósan frissíti, és egy
 //     sérült előzmény-fájl nem bukás.
@@ -38,13 +40,13 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (huszonkét visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (huszonnégy visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
 //    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
 //    kihagyva · a self-overlap jelölés hatástalan · indok nélküli jelölés is elég · a sáv-jelölés vak · minden író a sávba · gépi slot
 //    ki · a slot nem szabadul a futtató halálával · a leghosszabb-először rendezés ki · az előzmény
-//    nélküli kapu hátra sorolva · az időkorlát ki · csak a közvetlen gyerek ölve · a beragadás
-//    ideje az előzménybe kerül —, mindegyiknek pirosat KELL adnia.)
+//    nélküli kapu hátra sorolva · a csend-korlát ki · teljes idő a csend helyett · a plafon ki ·
+//    csak a közvetlen gyerek ölve · a beragadás ideje az előzménybe kerül —, mindegyiknek pirosat KELL adnia.)
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
@@ -178,12 +180,18 @@ const STARTS = (name: string): string =>
   `import { appendFileSync } from "node:fs"; appendFileSync(process.env.FIX_OUT + "/order", "${name}\\n");
     await new Promise((r) => setTimeout(r, 1500));`;
 
-// ── J: job time limit. The hanging gate prints a last line, then spawns a grandchild in its OWN
-// process group (as Playwright launches Chromium) and both sleep HANG_S — "forever" against a
-// 3 s limit, but finite, so a mutated runner without a limit ends (green: exactly the danger)
-// instead of leaving orphans behind. Each start is counted (the pass cache must not skip it).
+// ── J: job time limit (silence-based). The hanging gate prints a last line, then spawns a grandchild
+// in its OWN process group (as Playwright launches Chromium) and both sleep HANG_S — "forever"
+// against a 3 s silence limit, but finite, so a mutated runner without a limit ends (green: exactly
+// the danger) instead of leaving orphans behind. Each start is counted (the pass cache must not
+// skip it). The trickle gate runs 2× the silence limit but prints every second: slow, progressing
+// → must stay GREEN; under a 4 s total cap it must be stopped.
 const HANG_S = 25;
 const JOB_LIMIT = "3";
+const TRICKLE_GATES = String.raw`
+echo "[pre-commit] trickle…"
+node scripts/trickle.mjs >"$GATE_LOG" || gate_failed
+`;
 const HANG_GATES = String.raw`
 echo "[pre-commit] hang…"
 node scripts/hang.mjs >"$GATE_LOG" || gate_failed
@@ -224,6 +232,7 @@ const FIXTURES: Record<string, string> = {
   "par1.mjs": PAR,
   "par2.mjs": PAR,
   "hang.mjs": HANG,
+  "trickle.mjs": `for (let i = 0; i < 7; i++) { console.log("haladok " + i); await new Promise((r) => setTimeout(r, 1000)); }`,
   "slow.mjs": `await new Promise((r) => setTimeout(r, 4000));`,
   "lane1.mjs": WRITER_TIMED(true),
   "lane2.mjs": WRITER_TIMED(true),
@@ -587,12 +596,12 @@ async function audit(v: Variant): Promise<string[]> {
   // ── J: a gate that never returns is killed after the limit — whole tree, loudly red ────────
   const jx = prepare(v, HANG_GATES, "4", true);
   const jt0 = Date.now();
-  const j1 = jx.run({ CIT_GATE_JOB_TIMEOUT: JOB_LIMIT });
+  const j1 = jx.run({ CIT_GATE_JOB_SILENCE: JOB_LIMIT });
   const jSecs = (Date.now() - jt0) / 1000;
   say(j1.rc === 124, `J · a beragadt kapu futásának kilépési kódja ${j1.rc} (124 várt: időtúllépés) — ${jSecs.toFixed(0)} s\n${j1.out.slice(-1200)}`);
   say(jSecs < HANG_S - 5, `J · a futás ${jSecs.toFixed(0)} s-ig tartott — a ${JOB_LIMIT} s-os korlát nem vágta el a ${HANG_S} s-ig alvó kaput`);
   say(!j1.out.includes("✅ minden kapu zöld"), "J · időtúllépés mellett is kiírta a zöld záró sort");
-  say(j1.out.includes(`IDŐTÚLLÉPÉS: a kapu ${JOB_LIMIT} s után sem tért vissza`), "J · a bukás nem mondja ki hangosan, hogy időtúllépés volt, és mennyi után");
+  say(j1.out.includes(`IDŐTÚLLÉPÉS: a kapu ${JOB_LIMIT} s óta egy bájtot sem írt`), "J · a bukás nem mondja ki hangosan, hogy csend miatti időtúllépés volt, és mennyi után");
   say(/Utolsó kimenet:\n\s+│ ✓ HANG-LAST-LINE/.test(j1.out), "J · a bukás nem mutatja a kapu utolsó kimenetét");
   say(j1.out.includes("EZ A KAPU ELBUKOTT") && j1.out.includes("[pre-commit] hang…"), "J · az időtúllépés nem a gate_failed blokkal, a kapu nevével jelent meg");
   say(parIntervals(jx).length === 2, `J · a többi kapu nem futott le (par: ${parIntervals(jx).length}/2)`);
@@ -607,9 +616,16 @@ async function audit(v: Variant): Promise<string[]> {
     jh = {};
   }
   say(!("node scripts/hang.mjs" in jh), `J · az időtúllépés ideje a kapuidő-előzménybe került (${String(jh["node scripts/hang.mjs"])}) — a beragadás nem a kapu hossza`);
-  const j2 = jx.run({ CIT_GATE_JOB_TIMEOUT: JOB_LIMIT });
+  const j2 = jx.run({ CIT_GATE_JOB_SILENCE: JOB_LIMIT });
   say(j2.rc === 124 && j1.read("hang-runs") === "xx", `J · a második futásban a beragadt kapu nem futott újra (rc=${j2.rc}, indulások ${j1.read("hang-runs").length}) — zöldként tárolódott?`);
   dispose(jx);
+  // A slow gate that keeps printing is progressing: green past the silence limit; the total cap stops it.
+  const tx = prepare(v, TRICKLE_GATES, "4");
+  const t1 = tx.run({ CIT_GATE_JOB_SILENCE: JOB_LIMIT });
+  say(t1.rc === 0 && !t1.out.includes("IDŐTÚLLÉPÉS"), `J · a LASSÚ, de másodpercenként író kapu (7 s, csend-korlát ${JOB_LIMIT} s) HAMIS PIROS lett (rc=${t1.rc}) — a korlát a teljes időt méri, nem a csendet\n${t1.out.slice(-600)}`);
+  const t2 = tx.run({ CIT_GATE_JOB_SILENCE: JOB_LIMIT, CIT_GATE_JOB_MAX: "4" });
+  say(t2.rc === 124 && t2.out.includes("teljes-idő plafon: CIT_GATE_JOB_MAX=4 s"), `J · a 4 s-os teljes-idő plafon nem állította meg a 7 s-ig író kaput (rc=${t2.rc})\n${t2.out.slice(-600)}`);
+  dispose(tx);
 
   // ── G: machine-wide slots — across runners, deadlock-free, released on death ──────
   // Two runners, ONE shared slot: their four 1.2 s gates must never overlap, both must finish.
@@ -689,7 +705,9 @@ if (SELF_TEST) {
     ["a slot nem szabadul a futtató halálával", { ...shipped, runner: mutate("holder", runnerText, '"echo 1; exec cat"', '"echo 1; exec sleep 30"') }],
     ["a leghosszabb-először rendezés ki", { ...shipped, runner: mutate("lpt", runnerText, "queue.splice(0, queue.length, ...longestFirst(queue));", "") }],
     ["az előzmény nélküli kapu hátra sorolva", { ...shipped, runner: mutate("lpt-unknown", runnerText, ": Infinity; // unknown = first", ": -1; // unknown = first") }],
-    ["az időkorlát ki", { ...shipped, runner: mutate("timeout", runnerText, "}, JOB_TIMEOUT_S * 1000);", "}, 1e9);") }],
+    ["a csend-korlát ki", { ...shipped, runner: mutate("silence", runnerText, "if (now - lastGrowth >= JOB_SILENCE_S * 1000)", "if (false)") }],
+    ["teljes idő a csend helyett", { ...shipped, runner: mutate("total", runnerText, "        lastGrowth = now;\n", "") }],
+    ["a teljes-idő plafon ki", { ...shipped, runner: mutate("max", runnerText, "else if (now - t0 >= JOB_MAX_S * 1000)", "else if (false)") }],
     ["csak a közvetlen gyerek ölve", { ...shipped, runner: mutate("tree", runnerText, "const seen = new Set(processTree(root));", "const seen = new Set([root]);") }],
     ["a beragadás a kapuidő-előzménybe kerül", { ...shipped, runner: mutate("timeout-history", runnerText, "times.filter(([, , , hung]) => !hung)", "times") }],
   ];
@@ -703,7 +721,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a huszonkét visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a huszonnégy visszarontás pirosat adott.");
   process.exit(0);
 }
 

@@ -21,3 +21,15 @@ bevezetve, a beragadókkal kezdve (`cfg-sheet-scroll-check`, `guest-mobile-check
 
 **Módosított fájlok:** `scripts/lib/gate-runner.mjs` · `scripts/gate-runner-check.mts` ·
 `_planning/decisions/XXXX-kapunkenti-idokorlat-a-kapu-futtatoban.md` · ez a jegyzet.
+
+## Helyesbítés, aznap (ADR-XXXX): a korlát CSEND-alapú
+A koordinátor jelezte: a 09-29-i `cfg-sheet-scroll-check` nem ragadt be, csak lassú volt. Kézzel ölték le
+(803 s / 438 s), és élő kimenettel haladt. Az `epoll_wait` a `waitForTimeout` normál állapota.
+
+Az ADR-0268 600 s-os teljes-idő korlátja ugyanezt a hamis pirosat gyártotta volna, ezért lecseréltük:
+- **csend-korlát:** `CIT_GATE_JOB_SILENCE` (alapból 900 s: ennyi idő új kimeneti bájt nélkül);
+- **teljes-idő plafon:** `CIT_GATE_JOB_MAX` (alapból 3600 s, végső védőháló);
+- **őr:** a J-forgatókönyvben egy lassú, de író kapu ZÖLD marad, a plafon pedig megállítja;
+- **önteszt:** +3 visszarontás.
+
+A böngésző-zárás „gyökérok” visszavonva: nem bizonyított, csak reprodukált beragadás esetén kerül újra elő.

@@ -65,19 +65,23 @@
 // CIT_GATE_SLOTS=<dir> moves the slot directory (the guard's fixture uses a private one);
 // CIT_GATE_SLOTS=0, a missing `flock` or an unwritable directory → runs without slots, loudly.
 //
-// JOB TIME LIMIT (ADR-0268). A gate that never returns used to hold the whole land hostage: a
-// Playwright gate printed every ✓ and then sat in epoll_wait for 13–18 minutes (2026-09-27
-// guest-mobile-check --selftest, 2026-09-29 cfg-sheet-scroll-check --selftest), until a human
-// killed it by hand. Now every gate has a wall-clock limit, CIT_GATE_JOB_TIMEOUT seconds
-// (default 600: the longest healthy gate measured ~112 s, so a 3–4× load stretch still fits
-// with margin; a missing, zero or non-numeric value falls back to the default — the limit
-// cannot be switched off). On expiry the gate's WHOLE process tree (tsx → node → Chromium,
-// which Playwright puts in its own process group, so a pgid kill alone would miss it) is
-// collected from /proc by parent pid, SIGTERMed, and SIGKILLed after a grace — by PID only,
-// never by a name pattern. The gate is then RED (rc 124), with the collected output and a loud
-// "időtúllépés" line: never green, never "skipped", no pass-cache entry, no history entry (a
-// hang is not the gate's duration). No attempt is made to read a verdict from the output: a
-// gate that did not return gave none (the 2026-09-27 hang was mid-run, not at close).
+// JOB TIME LIMIT (ADR-0268, ADR-XXXX). A gate that never returns used to hold the whole land
+// hostage: 2026-09-27 guest-mobile-check --selftest sat SILENT in epoll_wait for 18 minutes (alone
+// it passes in ~2), until a human killed it by hand. Now a gate is stopped when it has been SILENT
+// (no new byte on stdout or stderr) for CIT_GATE_JOB_SILENCE seconds (default 900), or has run
+// CIT_GATE_JOB_MAX seconds in all (default 3600, a backstop). Silence, not total time: a slow gate
+// that keeps printing is progressing (2026-09-29: cfg-sheet-scroll-check --selftest, >13 min under
+// load, printing per template/viewport, was killed by hand as "hung" — it was only slow; a first
+// 600 s total-time limit, ADR-0268, would have made that same mistake), and an idle renderer in
+// epoll_wait is the NORMAL state of a waitForTimeout measurement, not a hang sign. A missing, zero
+// or non-numeric value falls back to the default — the limit cannot be switched off. On expiry the
+// gate's WHOLE process tree (tsx → node → Chromium, which Playwright puts in its own process group,
+// so a pgid kill alone would miss it) is collected from /proc by parent pid, SIGTERMed, and
+// SIGKILLed after a grace — by PID only, never by a name pattern. The gate is then RED (rc 124),
+// with the collected output and a loud "időtúllépés" line: never green, never "skipped", no pass-
+// cache entry, no history entry (a hang is not the gate's duration). No attempt is made to read a
+// verdict from the output: a gate that did not return gave none (the 2026-09-27 hang was mid-run,
+// not at close).
 //
 // Usage (from hooks/pre-commit only):  node scripts/lib/gate-runner.mjs <jobs-dir> <root>
 
@@ -97,7 +101,9 @@ const PARALLEL = Math.max(1, Number(process.env.CIT_GATE_JOBS) || Math.min(4, Ma
 const PRELOAD = path.join(ROOT, "scripts/lib/gate-ro-preload.mjs");
 const LOCAL_TSX = path.join(ROOT, "node_modules/.bin/tsx");
 const RO_TEXT = /read-only transaction/;
-const JOB_TIMEOUT_S = Number(process.env.CIT_GATE_JOB_TIMEOUT) > 0 ? Number(process.env.CIT_GATE_JOB_TIMEOUT) : 600;
+const envSecs = (k, dflt) => (Number(process.env[k]) > 0 ? Number(process.env[k]) : dflt);
+const JOB_SILENCE_S = envSecs("CIT_GATE_JOB_SILENCE", 900); // no new output byte for this long = stuck
+const JOB_MAX_S = envSecs("CIT_GATE_JOB_MAX", 3600); // backstop for a gate that trickles output forever
 const KILL_GRACE_MS = 5000;
 const TIMEOUT_RC = 124; // GNU timeout's code: "did not finish in time"
 
@@ -410,12 +416,33 @@ function runInSlot(job, readOnly, slotName) {
       stdio: [job.stdin ? openSync(job.stdin, "r") : "ignore", openSync(out, "w"), openSync(err, "w")],
     });
     let killing = null;
-    const timer = setTimeout(() => {
-      process.stdout.write(`   ⏱ kapu-futtató: ${(job.label || job.script).trim()} ${JOB_TIMEOUT_S} s után sem tért vissza — leállítom (pid ${child.pid})\n`);
+    let why = "";
+    // SILENCE, not total time: a slow gate that keeps printing is progressing and is left alone.
+    let lastSize = -1;
+    let lastGrowth = t0;
+    const outSize = () => {
+      try {
+        return statSync(out).size + statSync(err).size;
+      } catch {
+        return lastSize;
+      }
+    };
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const size = outSize();
+      if (size !== lastSize) {
+        lastSize = size;
+        lastGrowth = now;
+      }
+      if (killing) return;
+      if (now - lastGrowth >= JOB_SILENCE_S * 1000) why = `${JOB_SILENCE_S} s óta egy bájtot sem írt (csend-korlát: CIT_GATE_JOB_SILENCE=${JOB_SILENCE_S} s)`;
+      else if (now - t0 >= JOB_MAX_S * 1000) why = `${JOB_MAX_S} s után sem tért vissza, bár írt (teljes-idő plafon: CIT_GATE_JOB_MAX=${JOB_MAX_S} s)`;
+      else return;
+      process.stdout.write(`   ⏱ kapu-futtató: ${(job.label || job.script).trim()} — ${why} — leállítom (pid ${child.pid})\n`);
       killing = killTree(child.pid);
-    }, JOB_TIMEOUT_S * 1000);
+    }, Math.min(1000, JOB_SILENCE_S * 250));
     const done = async (rc) => {
-      clearTimeout(timer);
+      clearInterval(timer);
       const secs = (Date.now() - t0) / 1000;
       if (killing) {
         const pids = await killing;
@@ -423,10 +450,10 @@ function runInSlot(job, readOnly, slotName) {
         const tail = [...lastLines(out, 5), ...lastLines(err, 3)];
         appendFileSync(
           err,
-          `\n⛔ IDŐTÚLLÉPÉS: a kapu ${JOB_TIMEOUT_S} s után sem tért vissza — a futtató leállította ` +
+          `\n⛔ IDŐTÚLLÉPÉS: a kapu ${why} — a futtató ${secs.toFixed(0)} s után leállította ` +
             `(${pids.length} folyamat, pid ${pids.join(" ")}${left.length ? `; ⛔ ÉLVE MARADT: ${left.join(" ")}` : ""}).\n` +
             `   Ez PIROS, nem kihagyás és nem zöld: a kapu nem adott ítéletet, a kimenetéből zöldre következtetni tilos.\n` +
-            `   Korlát: CIT_GATE_JOB_TIMEOUT=${JOB_TIMEOUT_S} s (${job.argv.join(" ")}).\n` +
+            `   Kapu: ${job.argv.join(" ")}\n` +
             `   Utolsó kimenet:\n${tail.length ? tail.map((l) => `     │ ${l}`).join("\n") : "     │ (semmi — a kapu egy sort sem írt)"}\n`,
         );
         rc = TIMEOUT_RC;
