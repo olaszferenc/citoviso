@@ -325,14 +325,16 @@ console.log("\n⑤ A nap-panel a RÁCS FÖLÖTT, és a jóváhagyott elrendezés
       var panel = document.querySelector(".bk-dayinfo");
       var grid = document.querySelector(".bk-grid");
       var cal = document.querySelector(".bk-cols__cal");
-      var list = document.querySelector(".bk-cols__list");
+      // ADR-XXXX ② (FK-015): the list column is now the DECISION block (.bk-cols__dec)
+      // — first in the DOM, first on a phone; the grid puts the calendar left on desktop.
+      var list = document.querySelector(".bk-cols__dec");
       if (!panel || !grid || !cal || !list) return null;
       var pr = panel.getBoundingClientRect(), gr = grid.getBoundingClientRect();
       var cr = cal.getBoundingClientRect(), lr = list.getBoundingClientRect();
       return {
         panelAboveGrid: pr.bottom <= gr.top + 1,
         sideBySide: cr.right <= lr.left + 1 && Math.abs(cr.top - lr.top) < 60,
-        stacked: lr.top >= cr.bottom - 1,
+        stacked: cr.top >= lr.bottom - 1,
         nums: { calTop: Math.round(cr.top), calBottom: Math.round(cr.bottom),
                 listTop: Math.round(lr.top), listLeft: Math.round(lr.left), calLeft: Math.round(cr.left) },
         calSticky: getComputedStyle(cal).position
@@ -346,7 +348,9 @@ console.log("\n⑤ A nap-panel a RÁCS FÖLÖTT, és a jóváhagyott elrendezés
       check("@1280px ⭐⭐ a NAPTÁR BAL, a lista JOBB (tulajdonosi választás)", geo.sideBySide);
       check("@1280px a naptár görgetéskor TAPAD", geo.calSticky === "sticky");
     } else {
-      check("@390px egy hasáb, a naptár ELÖL (külön elrendezés, nem lekicsinyítve)", geo.stacked, JSON.stringify(geo.nums));
+      // ⛔ ADR-XXXX ② felülírta a „naptár ELÖL"-t: telefonon a DÖNTÉSRE VÁRÓ kérések
+      // állnak elöl, a naptár közvetlenül alattuk (tulaj, 2026-09-29, FK-015 „A").
+      check("@390px egy hasáb, a döntésre váró kérések ELÖL, a naptár utánuk (ADR-XXXX)", geo.stacked, JSON.stringify(geo.nums));
     }
     await p.close();
   }

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-foglalaskezeles-telefonon.md) — A tulaj telefonon dönt a foglalásról: a döntésre váró kérés kártyanyitás nélkül is látszik, a döntés áll elöl, a megerősítő megnevezi a vendéget és van „Mégsem”
 - [ADR-0273](decisions/0273-a-lead-mobile-check-nyugvoponton-mer-instant.md) — A lead-mobile-check nyugvóponton mér (instant görgetés, közös nyugvópont-várás, R8 a lap alján is), és a pirula a foglalás-sáv beúszása után újrahelyeződik (2026-09-29)
 - [ADR-0272](decisions/0272-a-cfg-sheet-scroll-check-is-a-kozos-poolon-mer.md) — A `cfg-sheet-scroll-check` is a közös poolon mér, a húzás után NYUGVÓPONTRA vár (nem fix alvás), és a nem nyugvó mérés PIROS (S11) (2026-09-29)
 - [ADR-0271](decisions/0271-a-poolos-kapu-szivverese-a-csend-korlat-a.md) — A poolos kapu szívverése: a csend-korlát a pufferelt kimenetű kaput nem öli meg (2026-09-29)

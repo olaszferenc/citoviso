@@ -1671,6 +1671,8 @@ export async function cancelRequest(opts: {
 
 export interface InboxItem {
   readonly id: string;
+  /** The requested unit — the calendar opens on it (FK-015, ADR-XXXX ④). */
+  readonly unitId?: string;
   readonly unitName: string;
   readonly guestName: string;
   readonly guestEmail: string;
@@ -1708,6 +1710,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
     .execute();
   return rows.map((r) => ({
     id: r.id,
+    unitId: r.unit_id,
     unitName: r.unit_name,
     guestName: r.guest_name,
     guestEmail: r.guest_email,
@@ -1801,14 +1804,17 @@ export async function bookingExpireHours(siteId: string): Promise<number> {
   return Number(rules.autoDeclineHours ?? 48);
 }
 
-/** Nav badge truth: pending requests the owner has not yet laid eyes on. */
-export async function unseenRequestCount(siteId: string): Promise<number> {
+/**
+ * Nav badge truth (ADR-XXXX ①, owner 2026-09-29): the requests still WAITING FOR A
+ * DECISION. It used to count only the unseen ones, so opening the tab emptied the
+ * badge while the decision was still ahead of the owner.
+ */
+export async function pendingRequestCount(siteId: string): Promise<number> {
   const row = await db
     .selectFrom("booking_request")
     .select(db.fn.countAll().as("n"))
     .where("site_id", "=", siteId)
     .where("status", "=", "pending")
-    .where("seen_at", "is", null)
     .executeTakeFirst();
   return Number(row?.n ?? 0);
 }

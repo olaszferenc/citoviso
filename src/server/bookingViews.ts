@@ -18,7 +18,7 @@
 
 import { T } from "../i18n/mail.js";
 import type { MonthView } from "../tenant/availability.js";
-import type { InboxItem, SentOffer } from "../booking/requests.js";
+import { bookingRef, type InboxItem, type SentOffer } from "../booking/requests.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { formatAmount } from "../tenant/prices.js";
 import { huArticle } from "../hu.js";
@@ -35,6 +35,12 @@ export interface BookingsTabData {
   readonly openDayBooking: InboxItem | null;
   /** Which summary tile is expanded. */
   readonly panel: "pend" | "arr" | "year" | null;
+  /**
+   * The request a link pointed at (`?k=<token>` — the Üzenetek main button, the
+   * Teendők row). Its card is marked and carries the `#kerelem` anchor; the calendar
+   * opens on its unit and month (ADR-XXXX ②④).
+   */
+  readonly targetId?: string | null;
   /** Every request of the site (pending + decided), newest data included. */
   readonly requests: readonly InboxItem[];
   /** ADR-0267: every price offer sent, whatever became of it („Kiküldött ajánlatok"). */
@@ -89,7 +95,7 @@ function nightsOf(r: InboxItem): number {
 }
 
 /** Hours left before expiry (null → no deadline / already past). */
-function hoursLeft(r: InboxItem, expireHours: number): number | null {
+export function hoursLeft(r: InboxItem, expireHours: number): number | null {
   if (!expireHours) return null;
   const left = Math.round(
     (r.createdAt.getTime() + expireHours * 3_600_000 - Date.now()) / 3_600_000,
@@ -130,6 +136,28 @@ export function pendingInOrder(
   return pend.sort((a, b) => deadline(a) - deadline(b) || byStay(a, b));
 }
 
+/**
+ * ADR-XXXX ④ (FK-015): which request the calendar opens on when the URL names no
+ * unit/month — the linked one (`?k=<token>`), else the most urgent pending one, else
+ * the next arrival. Measured before: it opened on the first unit and TODAY's month,
+ * „nincs foglalt nap", right next to „Következő érkezés 2026. 10. 24.".
+ */
+export function calendarFocus(
+  requests: readonly InboxItem[],
+  expireHours: number,
+  targetToken: string | null,
+  todayIso: string = new Date().toISOString().slice(0, 10),
+): InboxItem | undefined {
+  const target = targetToken ? requests.find((r) => r.token === targetToken) : undefined;
+  return (
+    target ??
+    pendingInOrder(requests, expireHours)[0] ??
+    requests
+      .filter((r) => r.status === "accepted" && r.dateFrom >= todayIso)
+      .sort((a, b) => (a.dateFrom < b.dateFrom ? -1 : 1))[0]
+  );
+}
+
 /** How loud the deadline is: ≤24h / ≤36h / above. Null window → no urgency at all. */
 function urgency(left: number | null): "hot" | "warm" | "cool" {
   if (left == null) return "cool";
@@ -149,6 +177,33 @@ function overlapGroups(pend: readonly InboxItem[]): Map<string, InboxItem[]> {
 }
 
 const tabHref = (extra: string) => `/admin?tab=foglalasok${extra}`;
+
+/** "2026. október" in the reader's language — the calendar link names its target. */
+function monthName(iso: string, lang: string): string {
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {
+    year: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${iso.slice(0, 7)}-01T00:00:00Z`));
+}
+
+/** The calendar opened on a request's unit and month (ADR-XXXX ④). */
+function calendarHrefFor(r: InboxItem): string {
+  const unit = r.unitId ? `&u=${encodeURIComponent(r.unitId)}` : "";
+  return tabHref(`${unit}&ho=${r.dateFrom.slice(0, 7)}&naptar=1#naptar`);
+}
+
+/** Every night of a stay (check-in … the night before check-out), ISO days. */
+function stayNights(r: InboxItem): string[] {
+  const out: string[] = [];
+  const d = new Date(`${r.dateFrom}T00:00:00Z`);
+  const end = r.dateTo;
+  while (d.toISOString().slice(0, 10) < end) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return out;
+}
 
 /**
  * The calendar state to come BACK to after a POST. ⛔ MÉRVE (B8, 2026-09-14):
@@ -171,8 +226,28 @@ function calendarCard(d: BookingsTabData, lang: string): string {
   // ADR-0114: nights another unit holds are FULL nights here too — leaving them out
   // of the summary could print "nincs foglalt nap" over a month that is sold out.
   const linkedCount = m.cells.filter((c) => c.source === "linked").length;
+  // ADR-XXXX ④ — a PENDING request's nights on this unit: the owner decides against
+  // the calendar, so the nights asked for are drawn on it (dashed, not only a colour),
+  // and the collapsed line names them. Only FREE nights are marked: a night that is
+  // already booked or blocked keeps its own kind — that is the conflict to see.
+  const reqByDay = new Map<string, InboxItem>();
+  for (const r of pendingInOrder(d.requests, d.expireHours)) {
+    if (!r.unitId || r.unitId !== d.unitId) continue;
+    for (const n of stayNights(r)) if (!reqByDay.has(n)) reqByDay.set(n, r);
+  }
+  const reqCells = m.cells.filter((c) => !c.past && !c.source && reqByDay.has(c.day));
+  const reqsHere = [...new Set(reqCells.map((c) => reqByDay.get(c.day)!))];
+  const reqSummary = reqsHere.map((r) => {
+    const inMonth = m.cells.filter((c) => stayNights(r).includes(c.day));
+    const allFree = inMonth.every((c) => !c.source);
+    return (
+      T(lang, "Kérés vár: {from} → {to}", { from: huDay(r.dateFrom, lang), to: huDay(r.dateTo, lang) }) +
+      (allFree ? ` — ${T(lang, "a napok szabadok")}` : "")
+    );
+  });
   const summary =
     [
+      ...reqSummary,
       bookedCount ? T(lang, "{n} éj vendég-foglalás", { n: bookedCount }) : "",
       manualCount ? T(lang, "{n} nap kézi blokk", { n: manualCount }) : "",
       linkedCount ? T(lang, "{n} nap másik szoba foglalása", { n: linkedCount }) : "",
@@ -205,6 +280,13 @@ function calendarCard(d: BookingsTabData, lang: string): string {
                 ? " bk-day--linked"
                 : "";
       return `<span class="bk-day bk-day--past${src}">${c.dom}</span>`;
+    }
+    // A requested night links to its card — the decision is made THERE, not by
+    // blocking the night by hand under a guest who is waiting for an answer.
+    const asked = !c.source ? reqByDay.get(c.day) : undefined;
+    if (asked) {
+      const t = T(lang, "{name} kéri — döntésre vár, még nem foglalt", { name: asked.guestName });
+      return `<a class="bk-day bk-day--req" id="nap-${c.day}" href="#req-${esc(asked.id)}" title="${esc(t)}" aria-label="${esc(`${huDay(c.day, lang)}: ${t}`)}">${c.dom}</a>`;
     }
     if (c.source === "booking") {
       const on = d.openDay === c.day ? " bk-day--sel" : "";
@@ -287,7 +369,9 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     `<div class="bk-cal${d.calendarOpen ? " is-open" : ""}" id="naptar">` +
     `<a class="bk-cal__top" href="${tabHref(`${qsBase}${openQs}`)}#naptar" data-bk-caltoggle>` +
     `<span class="bk-cal__ico">${ic("bookings", 20)}</span>` +
-    `<span class="bk-cal__t"><b>${T(lang, "Naptár")} — ${esc(m.label)}</b><span>${esc(summary)}</span></span>` +
+    `<span class="bk-cal__t"><b>${T(lang, "Naptár")} — ${esc(m.label)}${
+      d.units.length > 1 ? ` · ${esc(d.units.find((u) => u.id === d.unitId)?.name ?? "")}` : ""
+    }</b><span>${esc(summary)}</span></span>` +
     `<span class="bk-cal__chev">${ic("close", 16)}</span>` +
     `</a>` +
     `<div class="bk-cal__body">` +
@@ -304,6 +388,9 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     `<div class="bk-grid">${dows}${"<span class=\"bk-day bk-day--out\"></span>".repeat(m.leadingBlanks)}${m.cells.map(dayCell).join("")}</div>` +
     `<div class="bk-legend">` +
     `<span><i class="bk-lg bk-lg--free"></i>${T(lang, "szabad — koppintásra blokkolható")}</span>` +
+    (reqCells.length
+      ? `<span><i class="bk-lg bk-lg--req"></i>${T(lang, "kért éjszaka — döntésre vár, még NEM foglalt")}</span>`
+      : "") +
     `<span><i class="bk-lg bk-lg--booked"></i>${T(lang, "vendég-foglalás — koppintásra lemondható")}</span>` +
     `<span><i class="bk-lg bk-lg--manual"></i>${T(lang, "kézzel blokkolva")}</span>` +
     (m.importedCount
@@ -341,9 +428,15 @@ function outcomeBanner(d: BookingsTabData, lang: string): string {
   const also = o.autoDeclined.length
     ? `<span class="bk-outcome__also">${T(lang, "Automatikusan elutasítva: {names} — mindannyian e-mailt kaptak.", { names: o.autoDeclined.map(esc).join(", ") })}</span>`
     : `<span class="bk-outcome__also">${T(lang, "A vendég e-mailt kapott róla.")}</span>`;
+  // ADR-XXXX ③: after a verdict the owner's next step is the next request — on a
+  // phone it is below the (now open) calendar, so the banner names it and links it.
+  const next = pendingInOrder(d.requests, d.expireHours)[0];
+  const nextLink = next
+    ? `<a class="bk-outcome__next" href="#req-${esc(next.id)}">${T(lang, "Következő kérés: {name}", { name: esc(next.guestName) })} ›</a>`
+    : "";
   return (
     `<div class="bk-outcome${bad ? " bk-outcome--bad" : ""}" role="status">` +
-    `${ic(bad ? "close" : "check", 18)}<span class="bk-outcome__t"><b>${head}</b>${also}</span>` +
+    `${ic(bad ? "close" : "check", 18)}<span class="bk-outcome__t"><b>${head}</b>${also}${nextLink}</span>` +
     `</div>`
   );
 }
@@ -508,29 +601,59 @@ function requestCard(
   overlaps: InboxItem[] | undefined,
   expireHours: number,
   lang: string,
+  target = false,
 ): string {
   const left = hoursLeft(r, expireHours);
   const fresh = !r.seen;
+  const quote = !r.quotedTotal;
   const conflictNote = overlaps?.length
     ? `<span class="bk-conflict">${ic("alert", 13)}${T(lang, "Fedés: az időszakot {names} is kéri — visszaigazoláskor a rendszer választatni fog.", { names: overlaps.map((o) => o.guestName).join(", ") })}</span>`
     : "";
+  const when = `${huDay(r.dateFrom, lang)} → ${huDay(r.dateTo, lang)}`;
+  const confirmLine = [
+    when,
+    r.unitName,
+    r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF") : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
+  // ADR-XXXX ③ (FK-015, owner's choice „A", 2026-09-29): the confirmation opens IN
+  // THE CARD, full width, and NAMES the guest. Measured on 390 px before: the form
+  // sat in the left half of the button row (~160 px, the button broke into two
+  // lines), below the fold, and without the guest's name. The way back is a real
+  // „Mégsem" — a link to this card, so it works without JS too (the script only
+  // closes the panel in place).
   const verdictPanel = (accept: boolean): string =>
     `<details class="bk-verdict"><summary class="${accept ? "bk-btn--ok" : "bk-btn--ghost"}">` +
     `${ic(accept ? "check" : "close", 15)}${accept ? T(lang, "Visszaigazolom") : T(lang, "Elutasítom")}</summary>` +
-    `<form method="post" action="/admin/booking/decide"${accept && overlaps?.length ? ` data-bk-overlap="${esc(r.id)}"` : ""}>` +
-    `<input type="hidden" name="token" value="${esc(r.token)}">` +
-    `<input type="hidden" name="verdict" value="${accept ? "accepted" : "declined"}">` +
-    `<label>${accept ? T(lang, "Üzenet a vendégnek a visszaigazoló levélbe (nem kötelező)") : T(lang, "Miért utasítja el? (a vendég ezt olvassa majd — nem kötelező)")}</label>` +
-    `<textarea name="uzenet" maxlength="1000"></textarea>` +
-    `<p class="bk-hint">${
+    `<div class="bk-cf${accept ? "" : " bk-cf--no"}" role="group">` +
+    `<p class="bk-cf__q">${
+      accept
+        ? T(lang, "Visszaigazolja {name} foglalását?", { name: esc(r.guestName) })
+        : T(lang, "Elutasítja {name} kérését?", { name: esc(r.guestName) })
+    }</p>` +
+    `<p class="bk-cf__s">${esc(confirmLine)}</p>` +
+    `<p class="bk-cf__c">${
       accept
         ? T(lang, "A visszaigazolással a napok foglalttá válnak a naptárban, a vendég e-mailt kap naptár-melléklettel, benne az Ön üzenetével és a lemondó-linkkel.")
         : T(lang, "A vendég udvarias elutasító e-mailt kap; ha ír ide üzenetet, az bekerül a levélbe. A napok szabadok maradnak.")
     }</p>` +
-    `<div class="bk-row"><button type="submit" class="citui-btn ${accept ? "bk-btn--ok" : "bk-btn--danger"}">` +
-    `${accept ? T(lang, "Megerősítem a visszaigazolást") : T(lang, "Elutasítás küldése")}</button></div>` +
-    `</form></details>`;
+    `<form method="post" action="/admin/booking/decide"${accept && overlaps?.length ? ` data-bk-overlap="${esc(r.id)}"` : ""}>` +
+    `<input type="hidden" name="token" value="${esc(r.token)}">` +
+    `<input type="hidden" name="verdict" value="${accept ? "accepted" : "declined"}">` +
+    // The message is optional, so it waits behind one tap: open, the textarea would
+    // push the two buttons below a phone's fold (measured in the §2b mock).
+    `<details class="bk-cf__msg"><summary>${
+      accept ? T(lang, "+ Üzenetet írok a vendégnek") : T(lang, "+ Megírom, miért (nem kötelező)")
+    }</summary>` +
+    `<label>${accept ? T(lang, "Üzenet a vendégnek a visszaigazoló levélbe (nem kötelező)") : T(lang, "Miért utasítja el? (a vendég ezt olvassa majd — nem kötelező)")}</label>` +
+    `<textarea name="uzenet" maxlength="1000"></textarea></details>` +
+    `<div class="bk-cf__row">` +
+    `<a class="citui-btn bk-btn--ghost" href="${tabHref(`#req-${esc(r.id)}`)}" data-bk-cfno>${T(lang, "Mégsem")}</a>` +
+    `<button type="submit" class="citui-btn ${accept ? "bk-btn--ok" : "bk-btn--danger"}">` +
+    `${accept ? T(lang, "Igen, visszaigazolom") : T(lang, "Igen, elutasítom")}</button></div>` +
+    `</form></div></details>`;
 
   // Kontraktus ③: a sürgősség a KÁRTYÁN is látszik, nem csak a sorrendben — és a
   // megkülönböztetés nem csak színen múlik: a felirat kimondja, a szám mellette áll.
@@ -543,30 +666,54 @@ function requestCard(
         : heat === "warm"
           ? T(lang, "Holnap lejár")
           : T(lang, "Van még idő");
+  // ADR-XXXX ⑤: the guest is ONE tap away — the phone number was plain text.
+  const reach =
+    `<div class="bk-req__reach">` +
+    (r.guestPhone
+      ? `<a class="citui-btn bk-btn--ghost" href="tel:${esc(r.guestPhone.replace(/[^\d+]/g, ""))}">${ic("contact", 15)}${T(lang, "Felhívom")}</a>`
+      : "") +
+    `<a class="citui-btn bk-btn--ghost" href="mailto:${esc(r.guestEmail)}">${ic("mail", 15)}${T(lang, "Írok neki")}</a>` +
+    `<span class="bk-req__reacht">${r.guestPhone ? `${esc(r.guestPhone)} · ` : ""}${esc(r.guestEmail)}</span>` +
+    `</div>`;
   return (
-    `<div class="bk-req bk-req--${heat}${fresh ? " is-new" : ""}" id="req-${esc(r.id)}">` +
+    `<div class="bk-req bk-req--${heat}${fresh ? " is-new" : ""}${target ? " is-target" : ""}" id="req-${esc(r.id)}">` +
+    (target ? `<span class="bk-anchor" id="kerelem"></span>` : "") +
+    `<div class="bk-req__grid"><div class="bk-req__main">` +
     `<div class="bk-req__hd">` +
     `<span class="bk-req__ico">${ic("account", 20)}</span>` +
     `<div class="bk-req__t">` +
-    `<strong>${esc(r.guestName)}</strong>` +
-    `<span class="bk-req__dates">${esc(huDay(r.dateFrom, lang))} → ${esc(huDay(r.dateTo, lang))} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
+    `<span class="bk-req__who"><strong>${esc(r.guestName)}</strong>` +
+    `<span class="bk-req__kind${quote ? " bk-req__kind--q" : ""}">${quote ? T(lang, "Árajánlat-kérés") : T(lang, "Foglalási kérés")}</span></span>` +
+    `<span class="bk-req__dates">${esc(when)} · ${T(lang, "{n} éj", { n: nightsOf(r) })} · ${T(lang, "{n} fő", { n: r.guests })}${
       r.quotedTotal ? ` · <b>${esc(formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF"))}</b>` : ""
     }</span>` +
-    `<span class="bk-req__meta">${esc(r.guestEmail)}${r.guestPhone ? ` · ${esc(r.guestPhone)}` : ""}${r.unitName ? ` · ${esc(r.unitName)}` : ""}</span>` +
+    `<span class="bk-req__meta">${r.unitName ? `${esc(r.unitName)} · ` : ""}${esc(bookingRef(r.id))}</span>` +
     (left != null
       ? `<span class="bk-deadline bk-deadline--${heat}">${ic("clock", 13)}` +
         `<b>${esc(heatWord)}</b> — ${T(lang, "még {n} óra a válaszra", { n: left })}</span> `
       : "") +
     conflictNote +
     `</div></div>` +
-    (r.message ? `<div class="bk-req__msg">„${esc(r.message)}"</div>` : "") +
+    (r.message
+      ? `<div class="bk-req__msg"><span class="bk-req__msgwho">${T(lang, "Vendég")}</span>„${esc(r.message)}"</div>`
+      : "") +
     // Booking-offer ②: NO frozen price = the guest asked for a quote. A "Visszaigazolom"
     // here would confirm a stay at no price at all — the card offers the offer page.
-    (r.quotedTotal
-      ? `<div class="bk-req__act">${verdictPanel(true)}${verdictPanel(false)}</div>`
-      : `<p class="bk-hint" data-bk-quote>${T(lang, "A vendég nem látott árat — árajánlatot kért. Adja meg az árat, és a rendszer elküldi neki.")}</p>` +
-        `<div class="bk-req__act"><a class="citui-btn bk-btn--ok" href="/foglalas/${esc(r.token)}/ajanlat">` +
-        `${ic("check", 15)}${T(lang, "Ajánlatot küldök")}</a>${verdictPanel(false)}</div>`) +
+    // FK-015 ⑦: the hint sits INSIDE the card's padding (it used to run to its edge).
+    (quote
+      ? `<p class="bk-hint bk-req__qhint" data-bk-quote>${T(lang, "A vendég nem látott árat — árajánlatot kért. Adja meg az árat, és a rendszer elküldi neki.")}</p>`
+      : "") +
+    `</div><div class="bk-req__side">` +
+    (quote
+      ? `<div class="bk-req__act"><a class="citui-btn bk-btn--ok bk-req__offer" href="/foglalas/${esc(r.token)}/ajanlat">` +
+        `${ic("check", 15)}${T(lang, "Ajánlatot küldök")}</a>${verdictPanel(false)}</div>`
+      : `<div class="bk-req__act">${verdictPanel(true)}${verdictPanel(false)}</div>`) +
+    reach +
+    `</div></div>` +
+    `<a class="bk-req__cal" href="${calendarHrefFor(r)}">${ic("bookings", 15)}${T(lang, "Megnézem a naptárban ({month}, {unit})", {
+      month: esc(monthName(r.dateFrom, lang)),
+      unit: esc(r.unitName),
+    })}</a>` +
     `</div>`
   );
 }
@@ -812,11 +959,12 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
     // Modulok → Foglalás alatt, ahol NINCS ilyen — a portál-szinkron felülete ki van
     // kapcsolva (PORTAL_SYNC_UI = false). A tulaj hiába kereste volna. Amit tényleg
     // talál ott: az értesítési címek. §B.17: nem ígérünk nem létező felületet.
-    `<p class="bk-intro">${T(lang, "Itt válaszol a vendégek foglalási kéréseire. A beállítások (például az értesítési címek) a")} ` +
-    `<a href="/admin?tab=modulok&m=booking">${T(lang, "Modulok → Foglalás")}</a> ${T(lang, "alatt vannak.")}</p>` +
-    // ADR-0045 §J: textual guide entry for this screen; the data-kb-anchor is the
-    // coverage hook (kb-check) tying the surface to its KB entry.
-    `<p class="bk-intro"><a data-kb-anchor="admin.bookings" href="/admin?tab=sugo&topic=${encodeURIComponent("admin.bookings")}">${ic("help", 15)} ${T(lang, "Útmutató ehhez a képernyőhöz")}</a></p>`;
+    // ADR-XXXX ②: on a phone every line above the first request pushed its buttons
+    // below the fold, so this sentence moved to the END of the tab, and the guide link
+    // (ADR-0045 §J, the kb-check coverage hook) became the help icon next to the title
+    // — the same place every other admin tab keeps it (adminViews › pageHead).
+    `<p class="bk-intro bk-intro--end">${T(lang, "Itt válaszol a vendégek foglalási kéréseire. A beállítások (például az értesítési címek) a")} ` +
+    `<a href="/admin?tab=modulok&m=booking">${T(lang, "Modulok → Foglalás")}</a> ${T(lang, "alatt vannak.")}</p>`;
 
   const note = d.expireHours
     ? `<div class="bk-note">${T(lang, "A vendég minden döntéséről (visszaigazolás, elutasítás, lemondás) automatikus e-mailt kap. Ha {n} órán belül nem válaszol egy kérésre, az lejár, és a vendég udvarias „sajnos nem kaptunk választ” levelet kap.", { n: d.expireHours })}</div>`
@@ -831,20 +979,28 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
   return (
     BOOKINGS_STYLE +
     outcomeBanner(d, lang) +
-    intro +
     // Kontraktus ⑥ — asztalon a NAPTÁR a bal hasábban áll és tapad, a döntésre váró
     // kérések jobbra (tulajdonosi választás, „A": a naptár a viszonyítási pont).
-    // Mobilon egy hasáb, naptár elöl — két külön elrendezés, nem ugyanaz lekicsinyítve.
-    `<div class="bk-cols"><div class="bk-cols__cal">` +
-    calendarCard(d, lang) +
-    `</div><div class="bk-cols__list">` +
-    tiles(d, pend, arrivals, lang) +
-    note +
-    `<h2 class="bk-sect" id="kerelmek">${T(lang, "Döntésre váró kérések")}</h2>` +
+    // ⛔ ADR-XXXX ② (FK-015, 2026-09-29) — TELEFONON (álló és fekvő) a döntésre váró
+    // kérések állnak ELÖL, a naptár KÖZVETLENÜL utánuk, a csempék és a többi alattuk.
+    // Mérve 390 px-en: a kártya a naptár + három csempe + a tájékoztató alatt y≈720-nál
+    // kezdődött, a „Visszaigazolom" a hajtás alatt ült. A DOM-sorrend is ez (döntés →
+    // naptár → többi); asztalon a rács teszi a naptárat a bal hasábba.
+    `<div class="bk-cols"><div class="bk-cols__dec">` +
+    `<h2 class="bk-sect" id="kerelmek">${T(lang, "Döntésre váró kérések")}${
+      pend.length ? ` <span class="bk-sect__n">${pend.length}</span>` : ""
+    }</h2>` +
     orderNote +
     (pend.length
-      ? pend.map((r) => requestCard(r, groups.get(r.id), d.expireHours, lang)).join("")
+      ? pend
+          .map((r) => requestCard(r, groups.get(r.id), d.expireHours, lang, r.id === d.targetId))
+          .join("")
       : `<div class="bk-empty">${T(lang, "Most nincs döntésre váró kérés.")} ✔<br>${T(lang, "Az újakról e-mailt is kap.")}</div>`) +
+    `</div><div class="bk-cols__cal">` +
+    calendarCard(d, lang) +
+    `</div><div class="bk-cols__rest">` +
+    tiles(d, pend, arrivals, lang) +
+    note +
     (offered.length
       ? `<h2 class="bk-sect">${T(lang, "Ajánlatra vár")}</h2>` +
         offered.map((r) => offeredCard(r, d.expireHours, lang)).join("")
@@ -855,6 +1011,8 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
       : `<div class="bk-empty">${T(lang, "Még nincs eldöntött kérés.")}</div>`) +
     `</div></div>` +
     (d.sentOffers ? sentOffersSection(d.sentOffers, d.expireHours, lang) : "") +
+    intro +
+    (pend.length ? verdictScript() : "") +
     overlapScript(popupData, lang) +
     // Only where a cancel form can actually exist (day panel or an accepted row).
     (d.openDayBooking || d.requests.some((r) => r.status === "accepted")
@@ -998,6 +1156,24 @@ function sentOffersSection(offers: readonly SentOffer[], expireHours: number, la
         `s.querySelectorAll("[data-of-g]").forEach(function(r){r.hidden=g!=="all"&&r.getAttribute("data-of-g")!==g;});});})();</script>`
       : `<div class="bk-empty">${T(lang, "Még nem küldött árajánlatot. Ha egy vendég ár nélkül kér ajánlatot, és Ön válaszol neki, itt látja, kinek mi ment ki.")}</div>`) +
     `</section>`
+  );
+}
+
+/* ── the in-card confirmation (ADR-XXXX ③) ─────────────────────────────────
+ * Two small conveniences on top of the no-JS <details> panel: „Mégsem" closes it
+ * in place (without JS it is a link back to the card), and an opened panel is
+ * brought into view — on a phone it opens under the button the owner just tapped. */
+
+function verdictScript(): string {
+  return (
+    `<script>(function(){` +
+    `document.querySelectorAll("details.bk-verdict").forEach(function(d){` +
+    `d.addEventListener("toggle",function(){if(!d.open)return;var p=d.querySelector(".bk-cf");` +
+    `if(p&&p.scrollIntoView)p.scrollIntoView({block:"nearest"});});});` +
+    `document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("[data-bk-cfno]");` +
+    `if(!a)return;var d=a.closest("details.bk-verdict");if(!d)return;e.preventDefault();d.open=false;` +
+    `var s=d.querySelector("summary");if(s)s.focus();});` +
+    `})();</script>`
   );
 }
 
@@ -1182,6 +1358,8 @@ export const BOOKINGS_STYLE = `<style>
 .bk-day--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel));color:var(--citui-ok)}
 .bk-day--sel{border-color:var(--citui-ok)}
 .bk-day--manual{background:var(--citui-navy-900);color:var(--citui-white)}
+/* ADR-XXXX ④: a night a PENDING request asks for — dashed, so it never reads as booked */
+.bk-day--req{background:var(--citui-panel);border:2px dashed var(--citui-warn);font-weight:800}
 .bk-day--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-panel));color:var(--citui-warn);cursor:help}
 /* ADR-0114: held by ANOTHER unit — striped, not tappable, same language as the
    module screen so the two calendars cannot tell the owner different things. */
@@ -1194,6 +1372,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-lg--free{background:var(--citui-surface-2)}
 .bk-lg--booked{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel))}
 .bk-lg--manual{background:var(--citui-navy-900)}
+.bk-lg--req{background:var(--citui-panel);border:2px dashed var(--citui-warn);box-sizing:border-box}
 .bk-lg--ical{background:color-mix(in srgb,var(--citui-warn) 26%,var(--citui-panel))}
 .bk-lg--sel{background:var(--citui-panel);border:2px solid var(--citui-ok);box-sizing:border-box}
 .bk-lg--past{background:color-mix(in srgb,var(--citui-ok) 22%,var(--citui-panel));opacity:.35}
@@ -1203,12 +1382,22 @@ export const BOOKINGS_STYLE = `<style>
 .bk-dayinfo>span{display:block;font-size:.8rem;color:var(--citui-ink);line-height:1.5}
 /* ── KONTRAKTUS ⑥ (tulaj választása, 2026-09-14): asztalon a NAPTÁR a bal hasábban
    áll és görgetéskor TAPAD, a döntésre váró kérések jobbra. A naptár a viszonyítási
-   pont. Mobilon egy hasáb, naptár elöl — KÉT KÜLÖN elrendezés. */
+   pont. ⛔ ADR-XXXX ② (FK-015, 2026-09-29): TELEFONON a döntésre váró kérések ELÖL,
+   a naptár közvetlenül utánuk — KÉT KÜLÖN elrendezés. A DOM-sorrend a telefoné; a
+   rács teszi asztalon a naptárat balra (két soron át, hogy a lista ne szakadjon). */
 .bk-cols{display:block}
 @media(min-width:900px){
-  .bk-cols{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
-  .bk-cols__cal{position:sticky;top:18px}
+  .bk-cols{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);grid-template-rows:auto 1fr;
+    column-gap:20px;align-items:start}
+  .bk-cols__cal{position:sticky;top:18px;grid-column:1;grid-row:1 / span 2}
+  .bk-cols__dec{grid-column:2;grid-row:1}
+  .bk-cols__rest{grid-column:2;grid-row:2}
 }
+.bk-cols__cal .bk-cal{margin-top:4px}
+.bk-sect__n{display:inline-block;margin-left:6px;background:var(--citui-navy-800);color:var(--citui-white);
+  border-radius:999px;padding:1px 8px;font-size:.72rem;letter-spacing:0;vertical-align:1px}
+.bk-cols__dec .bk-sect{margin-top:4px}
+.bk-intro--end{margin-top:18px;font-size:.84rem}
 /* a rendezési kulcs KIMONDVA (kontraktus ②) */
 .bk-order{margin:-4px 0 12px;font-size:.79rem;line-height:1.5;color:var(--citui-muted)}
 /* tiles */
@@ -1245,7 +1434,10 @@ export const BOOKINGS_STYLE = `<style>
 .bk-sect{font-size:.8rem;font-weight:700;color:var(--citui-muted);text-transform:uppercase;
   letter-spacing:.06em;margin:20px 0 10px}
 /* request cards */
-.bk-req{border:1px solid var(--citui-line);border-radius:15px;margin-bottom:11px;background:var(--citui-panel)}
+.bk-req{border:1px solid var(--citui-line);border-radius:15px;margin-bottom:11px;background:var(--citui-panel);
+  container-type:inline-size;scroll-margin-top:64px}
+.bk-req.is-target{box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.bk-anchor{display:block;height:0;scroll-margin-top:64px}
 .bk-req.is-new{border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 9%,transparent)}
 .bk-req__hd{display:flex;gap:11px;align-items:flex-start;padding:13px 14px}
@@ -1271,12 +1463,63 @@ export const BOOKINGS_STYLE = `<style>
   background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));color:var(--citui-bad)}
 .bk-req__msg{background:var(--citui-surface-2);border-radius:10px;padding:10px 12px;margin:0 14px 12px;
   font-size:.83rem;line-height:1.55;color:var(--citui-ink)}
-.bk-req__act{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
-.bk-verdict{flex:1 1 45%}
-.bk-verdict summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  border-radius:999px;padding:11px 18px;font-size:.84rem;font-weight:700;cursor:pointer;width:100%;
-  box-sizing:border-box;min-height:40px}
-.bk-verdict summary::-webkit-details-marker{display:none}
+.bk-req__msgwho{display:block;font-size:.66rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:color-mix(in srgb,var(--citui-cyan-500) 72%,var(--citui-navy-900));margin-bottom:1px}
+.bk-req__who{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bk-req__kind{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted)}
+.bk-req__kind--q{color:var(--citui-warn-ink)}
+/* FK-015 ⑦: inside the card's padding, like every other line of the card */
+.bk-hint.bk-req__qhint{margin:0 14px 12px;padding:9px 11px;border-radius:10px;color:var(--citui-warn-ink);
+  background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));font-size:.8rem}
+.bk-req__act{display:flex;gap:8px;padding:0 14px 10px;flex-wrap:wrap}
+/* ⛔ ADR-XXXX: every decision control ≥ 48 px tall (the tap target was ~36 px) */
+.bk-verdict{flex:1 1 40%;min-width:0}
+/* „>" on purpose: the confirmation's own message toggle is a <summary> too */
+.bk-verdict > summary{list-style:none;display:flex;align-items:center;justify-content:center;gap:7px;
+  border-radius:999px;padding:10px 14px;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;
+  box-sizing:border-box;min-height:48px}
+.bk-verdict > summary::-webkit-details-marker{display:none}
+/* the admin frame's .citui-btn is 36 px (.adm-shell .citui-btn) — a decision needs 48 */
+.bk-req .bk-req__offer.citui-btn{flex:1 1 40%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:7px;
+  font-weight:700;text-decoration:none;box-sizing:border-box;border-radius:999px;color:var(--citui-white)}
+/* ADR-XXXX ③: the opened confirmation takes the WHOLE row — its sibling decision
+   steps aside, so the owner never sees „Igen" next to the opposite verdict. */
+.bk-verdict[open]{flex-basis:100%}
+.bk-verdict[open] > summary{display:none}
+.bk-req__act:has(.bk-verdict[open]) > :not(.bk-verdict[open]){display:none}
+.bk-cf{border:2px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:13px;padding:11px 12px;
+  scroll-margin:64px 0 calc(var(--citui-admin-bottomnav-h, 0px) + 16px)}
+.bk-cf--no{border-color:var(--citui-bad);background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-panel))}
+.bk-cf__q{margin:0;font-size:.98rem;font-weight:800;line-height:1.35;color:var(--citui-ink)}
+.bk-cf__s{margin:3px 0 0;font-size:.84rem;font-weight:700;color:var(--citui-ink)}
+.bk-cf__c{margin:6px 0 0;font-size:.8rem;line-height:1.5;color:var(--citui-ink)}
+.bk-verdict .bk-cf form{border-top:0;margin-top:0;padding-top:0}
+.bk-cf__msg summary{list-style:none;display:inline-block;margin-top:8px;font-size:.84rem;font-weight:700;
+  color:var(--citui-link-ink);text-decoration:underline;cursor:pointer}
+.bk-cf__msg summary::-webkit-details-marker{display:none}
+.bk-cf__msg[open] summary{display:none}
+.bk-cf__msg label{margin-top:8px}
+.bk-cf__row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:10px}
+.bk-req .bk-cf__row .citui-btn{min-height:48px;display:flex;align-items:center;justify-content:center;text-align:center;
+  box-sizing:border-box;padding:8px 10px;text-decoration:none;font-weight:700;line-height:1.25}
+.bk-req__reach{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 8px}
+.bk-req .bk-req__reach .citui-btn{flex:1 1 40%;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;
+  text-decoration:none;font-weight:700;box-sizing:border-box;padding:0 8px;white-space:nowrap}
+.bk-req__reacht{flex:1 1 100%;font-size:.76rem;color:var(--citui-muted);word-break:break-word}
+.bk-req__cal{display:flex;align-items:center;gap:6px;margin:0 14px 12px;font-size:.8rem;font-weight:700;
+  color:var(--citui-link-ink)}
+/* Wide card (landscape phone, desktop column): decisions in their own column at the
+   TOP of the card — in 390 px of height the buttons would otherwise sit under the
+   message. While a confirmation is open the card falls back to one column, so the
+   panel gets the full width. */
+@container (min-width:560px){
+  .bk-req__grid{display:grid;grid-template-columns:minmax(0,1fr) 250px;align-items:start}
+  .bk-req__side{padding-top:13px}
+  .bk-req__side .bk-req__act{flex-direction:column}
+  .bk-req__side .bk-verdict,.bk-req__side .bk-req__offer{flex:0 0 auto}
+  .bk-req:has(.bk-verdict[open]) .bk-req__grid{display:block}
+  .bk-req:has(.bk-verdict[open]) .bk-req__side{padding-top:0}
+}
 .bk-btn--ok{background:var(--citui-ok);color:var(--citui-white);border:0}
 .bk-btn--ghost{background:var(--citui-panel);color:var(--citui-ink);border:1.5px solid var(--citui-line-strong)}
 .bk-btn--danger{background:var(--citui-bad);color:var(--citui-on-bad);border:0}
@@ -1400,6 +1643,7 @@ export const BOOKINGS_STYLE = `<style>
   border-color:color-mix(in srgb,var(--citui-bad) 30%,transparent)}
 .bk-outcome__t{flex:1;min-width:0;font-size:.92rem;line-height:1.55}
 .bk-outcome__also{display:block;font-size:.82rem;color:var(--citui-muted);margin-top:3px}
+.bk-outcome__next{display:inline-flex;align-items:center;min-height:44px;font-size:.88rem;font-weight:700;color:var(--citui-link-ink)}
 /* „Kiküldött ajánlatok" — table where it fits, cards on a phone (two layouts) */
 .bk-of{container-type:inline-size;margin-top:22px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:16px;padding:16px}
 .bk-of__h{font-size:1.05rem;margin:0 0 4px}

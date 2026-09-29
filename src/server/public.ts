@@ -70,6 +70,7 @@ import {
   loginHelpPage,
   loginPage,
 } from "./adminViews.js";
+import { calendarFocus, pendingInOrder } from "./bookingViews.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -158,7 +159,7 @@ import {
   respondToOffer,
   sendOffer,
   getSentOffers,
-  unseenRequestCount,
+  pendingRequestCount,
   parseOfferAmount,
 } from "../booking/requests.js";
 import { RE_GUEST_CANCEL, RE_GUEST_OFFER, RE_OWNER_OFFER, RE_OWNER_DECIDE, RE_OWNER_REVIEW, servesOnTenantHostToo } from "./mailLinkRoutes.js";
@@ -1206,7 +1207,14 @@ async function serveAdmin(
   if (overviewTab) {
     const series = await getVisitorSeries(session.tenantId, 7);
     const inbox = await listTenantMessages(session.tenantId);
+    // ADR-XXXX ①: the requests waiting for a decision reach the Áttekintés — a strip
+    // at the top and one Teendők row each. FK-015 measured the opposite: the new
+    // request stood only as a cut-off line in the Üzenetek widget.
+    const bookingOn = site?.id ? await tenantHasModule(session.tenantId, "booking") : false;
+    const expire = bookingOn && site?.id ? await bookingExpireHours(site.id) : 0;
+    const pendingNow = bookingOn && site?.id ? pendingInOrder(await getRequests(site.id, 100), expire) : [];
     overview = {
+      pendingBookings: { items: pendingNow, expireHours: expire },
       visitors7: series.visitors,
       visitsByDay: series.byDay,
       messages: inbox.rows.slice(0, 3).map((m) => ({
@@ -1645,21 +1653,36 @@ async function serveAdmin(
   let messages: AdminOpts["messages"] = null;
 
   // Jóváhagyott terv 2026-09-06: a Foglalások fül adata + a jelvény MINDEN fülön.
+  // ADR-XXXX ①: a jelvény a DÖNTÉSRE VÁRÓ kérések száma — a fül megnyitásától nem tűnik el.
   let bookings: AdminOpts["bookings"] = null;
-  let unseenBookings = 0;
+  let pendingBookings = 0;
   const hasBooking = site?.id ? await tenantHasModule(session.tenantId, "booking") : false;
   if (site?.id && hasBooking) {
     if (tab === "foglalasok") {
-      // The tab render IS the acknowledgement: count first (so the owner can still
-      // see what was new on arrival is not needed — the contract says opening marks
-      // seen and the badge empties), then mark.
+      // The tab render marks the requests SEEN (the card's „new" frame). ⛔ It no
+      // longer empties the badge: that counts what still WAITS for a decision
+      // (ADR-XXXX ①) — opening the tab is not deciding.
       await markRequestsSeen(site.id);
       const requests = await getRequests(site.id, 100);
+      const expireHours = await bookingExpireHours(site.id);
+      // ADR-XXXX ④ (FK-015): with no unit/month in the URL the calendar opens where
+      // the owner's NEXT DECISION is — the linked request (?k=), else the most urgent
+      // pending one, else the next arrival. It used to open on the first unit and the
+      // current month: „nincs foglalt nap", next to „Következő érkezés 2026. 10. 24.".
+      const targetRow = params.get("k") ? requests.find((r) => r.token === params.get("k")) : undefined;
+      // Right after a confirmation the calendar shows WHAT became booked: the decided
+      // request's unit and month, opened (ADR-XXXX ④, the approved mock's end state).
+      const justAccepted =
+        params.get("mit") === "visszaigazolva" ? requests.find((r) => r.id === params.get("d")) : undefined;
+      const focusRow = calendarFocus(requests, expireHours, params.get("k") ?? justAccepted?.token ?? null);
       const bkUnit =
-        adminUnits.find((u) => u.id === params.get("u")) ?? adminUnits[0] ?? null;
+        adminUnits.find((u) => u.id === params.get("u")) ??
+        (!params.get("u") && focusRow ? adminUnits.find((u) => u.id === focusRow.unitId) : undefined) ??
+        adminUnits[0] ??
+        null;
       const bkMonth = await getMonthAvailability(
         bkUnit?.id ?? "",
-        normaliseMonth(params.get("ho")),
+        normaliseMonth(params.get("ho") ?? (!params.get("u") && focusRow ? focusRow.dateFrom.slice(0, 7) : null)),
       );
       const openDay = /^\d{4}-\d{2}-\d{2}$/.test(params.get("nap") ?? "")
         ? params.get("nap")
@@ -1721,7 +1744,8 @@ async function serveAdmin(
         units: adminUnits,
         unitId: bkUnit?.id ?? "",
         month: bkMonth,
-        calendarOpen: params.get("naptar") === "1" || openDay != null,
+        calendarOpen:
+          params.get("naptar") === "1" || openDay != null || (params.get("mit") === "visszaigazolva" && !params.get("u")),
         openDay,
         openDayBooking,
         panel:
@@ -1729,15 +1753,15 @@ async function serveAdmin(
             ? panelParam
             : null,
         requests,
+        targetId: targetRow?.id ?? null,
         sentOffers: await getSentOffers(site.id),
         yearAccepted: yearLive,
         yearCancelled: yearGone,
         outcome,
-        expireHours: await bookingExpireHours(site.id),
+        expireHours,
       };
-    } else {
-      unseenBookings = await unseenRequestCount(site.id);
     }
+    pendingBookings = await pendingRequestCount(site.id);
   }
   if (tab === "dokumentumok") {
     const [invoices, agreements, sub] = await Promise.all([
@@ -1871,7 +1895,7 @@ async function serveAdmin(
       // Üzenetek lapon. Megnyitás után a frissen olvasottat már nem számoljuk.
       unreadMessages: messages ? messages.unread : unreadMessages,
       bookings,
-      unseenBookings,
+      pendingBookings,
       subSummary,
       overview,
       siteSlug: site?.slug ?? null,

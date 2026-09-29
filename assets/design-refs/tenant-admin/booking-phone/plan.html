@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Foglaláskezelés telefonon — FK-015 terv (3 változat)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-muted:#5a6d82; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+  --citui-bg:#fff; --citui-panel:#fff; --citui-side:#fafafa; --citui-field:#f6f7f8; --citui-hover:#f2f3f5;
+  --citui-accent-ink:#06131b; --citui-accent-soft:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  --citui-shadow-md:0 24px 60px rgba(14,42,71,.14);
+  --citui-radius-sm:14px;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --warn-soft:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-white));
+  --bad-soft:color-mix(in srgb,var(--citui-bad) 9%,var(--citui-white));
+  --info-soft:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));
+  --manual:color-mix(in srgb,var(--citui-navy-700) 45%,var(--citui-white));
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--citui-font-text);color:var(--citui-ink);background:color-mix(in srgb,var(--citui-navy-900) 8%,var(--citui-white))}
+button{font:inherit}
+a{color:var(--citui-link-ink)}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg.i--s{width:15px;height:15px}
+
+/* ── the mock's own control strip (NOT part of the design) ─────────────── */
+.mk{background:var(--citui-navy-900);color:var(--citui-white);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.mk__row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mk__row b{font-size:12px;opacity:.8;margin-right:2px;min-width:62px}
+.mk button{font-size:13px;padding:7px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:transparent;color:var(--citui-white);cursor:pointer}
+.mk button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-accent-ink);font-weight:700}
+.mk__desc{font-size:13.5px;line-height:1.5;background:rgba(255,255,255,.08);border-radius:10px;padding:8px 10px}
+.mk__desc b{color:var(--citui-cyan-500)}
+.mk-show{position:fixed;right:0;top:40%;z-index:90;writing-mode:vertical-rl;background:var(--citui-navy-900);color:var(--citui-white);border:0;border-radius:8px 0 0 8px;padding:10px 5px;font-size:12px;cursor:pointer}
+body.nobar .mk{display:none}
+body:not(.nobar) .mk-show{display:none}
+
+/* ── phone / desktop frame, scaled to fit ──────────────────────────────── */
+.fitwrap{padding:14px 8px 40px;display:flex;justify-content:center}
+.fit{position:relative;flex:none}
+.frame{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--citui-bg);border:1px solid var(--citui-line-strong);border-radius:18px;overflow:hidden;box-shadow:var(--citui-shadow-md)}
+.scroller{position:absolute;inset:0;overflow:auto}
+.fold{position:absolute;left:-6px;right:-6px;border-top:2px dashed var(--citui-bad);pointer-events:none;z-index:5}
+.fold span{position:absolute;right:6px;top:2px;font-size:11px;font-weight:700;color:var(--citui-bad-ink);background:var(--citui-white);padding:1px 6px;border-radius:6px}
+body.noframe .fitwrap{padding:0;display:block}
+body.noframe .fit{width:auto!important;height:auto!important}
+body.noframe .frame{position:static;transform:none!important;width:auto!important;height:auto!important;border:0;border-radius:0;overflow:visible;box-shadow:none}
+body.noframe .scroller{position:static;overflow:visible}
+body.noframe .fold{display:none}
+
+/* ── the tenant-admin shell ────────────────────────────────────────────── */
+.app{container-type:inline-size;min-height:100%;display:flex;flex-direction:column;background:var(--citui-bg)}
+.shell{flex:1;display:flex;flex-direction:column;min-height:100%}
+.top{position:sticky;top:0;z-index:30;height:48px;display:flex;align-items:center;gap:6px;padding:0 10px;background:var(--citui-panel);border-bottom:1px solid var(--citui-line)}
+.top__ib{width:36px;height:36px;display:grid;place-items:center;border:0;background:none;color:var(--citui-ink);cursor:pointer;border-radius:8px}
+.top__crumb{flex:1;min-width:0;font-size:13px;color:var(--citui-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top__crumb b{color:var(--citui-ink)}
+.top__site{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--citui-navy-800);border:1px solid var(--citui-line-strong);border-radius:8px;padding:6px 9px;background:none}
+.body{flex:1;display:flex}
+.side{display:none}
+.main{flex:1;min-width:0;padding:14px 14px 22px}
+.bnav{position:sticky;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--citui-panel);border-top:1px solid var(--citui-line);height:62px}
+.bnav button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;color:var(--citui-muted);cursor:pointer;position:relative}
+.bnav button[aria-current="page"]{color:var(--citui-navy-800);font-weight:700}
+.bdg{position:absolute;top:5px;left:calc(50% + 4px);min-width:17px;height:17px;border-radius:9px;background:var(--citui-cyan-500);color:var(--citui-accent-ink);font-size:10px;font-weight:800;display:grid;place-items:center;padding:0 4px}
+@container (min-width:1000px){
+  .bnav{display:none}
+  .side{display:flex;flex-direction:column;gap:2px;width:230px;flex:none;background:var(--citui-side);border-right:1px solid var(--citui-line);padding:14px 8px;position:sticky;top:48px;align-self:flex-start;height:calc(100vh - 48px)}
+  .side__h{font-weight:800;padding:4px 8px 12px;color:var(--citui-navy-900)}
+  .side__h small{display:block;font-weight:500;font-size:11px;color:var(--citui-muted)}
+  .side button{display:flex;align-items:center;gap:9px;border:0;background:none;padding:8px 9px;border-radius:8px;font-size:13.5px;color:var(--citui-ink);cursor:pointer;text-align:left;position:relative}
+  .side button[aria-current="page"]{background:var(--citui-accent-soft);font-weight:700}
+  .side .bdg{position:static;margin-left:auto}
+  .main{padding:22px 34px 40px}
+  .top__menu{display:none}
+}
+
+/* ── shared admin pieces ───────────────────────────────────────────────── */
+.ph{display:flex;align-items:center;gap:8px;margin:2px 0 4px}
+.ph h1{font-size:22px;margin:0}
+.ph__help{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;color:var(--citui-link-ink)}
+.lede{font-size:13.5px;color:var(--citui-muted);margin:0 0 12px;line-height:1.5}
+.sect{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:18px 0 2px;color:var(--citui-navy-900);display:flex;align-items:center;gap:8px}
+.sect .n{background:var(--citui-navy-800);color:var(--citui-white);font-size:11.5px;border-radius:999px;padding:1px 8px;letter-spacing:0}
+.order{font-size:12.5px;color:var(--citui-muted);margin:0 0 10px;line-height:1.45}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--citui-navy-800);background:var(--citui-white);color:var(--citui-navy-800);font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;line-height:1.2;text-align:center}
+.btn--dark{background:var(--citui-navy-800);color:var(--citui-white)}
+.btn--ok{background:var(--citui-ok);border-color:var(--citui-ok);color:var(--citui-white)}
+.btn--bad{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-white)}
+.btn--gh{background:var(--citui-white)}
+.btn--lg{min-height:48px;font-size:15.5px}
+.btn--sm{min-height:40px;font-size:14px;padding:0 12px}
+.btn--wide{width:100%}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.row2 .btn{padding:0 10px}
+.empty{border:1px dashed var(--citui-line-strong);border-radius:12px;padding:16px;text-align:center;color:var(--citui-muted);font-size:14px;line-height:1.5}
+.note{background:var(--info-soft);border:1px solid color-mix(in srgb,var(--citui-cyan-500) 35%,var(--citui-white));border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.5;margin:12px 0}
+.outcome{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:12px;padding:10px 12px;margin:6px 0 10px;font-size:14px;line-height:1.45;color:var(--citui-ok-ink)}
+.outcome--bad{border-color:var(--citui-bad);background:var(--bad-soft);color:var(--citui-bad-ink)}
+.outcome b{display:block;color:var(--citui-ink)}
+.outcome__next{display:inline-block;margin-top:6px;font-weight:700}
+
+/* request card */
+.req{background:var(--citui-panel);border:1px solid var(--citui-line-strong);border-left:5px solid var(--citui-cyan-500);border-radius:14px;padding:12px 14px 14px;margin-bottom:12px;scroll-margin:60px}
+.req.is-target{box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+.req__who{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.req__who strong{font-size:17px}
+.req__kind{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);white-space:nowrap}
+.req__kind--q{color:var(--citui-warn-ink)}
+.req__when{font-size:15px;font-weight:700;margin-top:3px;line-height:1.4}
+.req__meta{font-size:13px;color:var(--citui-muted);margin-top:2px}
+.dl svg{vertical-align:-3px;margin-right:4px}
+.dl{display:inline-block;font-size:12.5px;background:var(--citui-surface-2);border-radius:999px;padding:3px 10px;margin-top:6px;color:var(--citui-ink)}
+.msg{background:var(--citui-surface-2);border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.45;margin-top:9px}
+.msg small{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-link-ink);margin-bottom:1px}
+.qhint{font-size:13.5px;line-height:1.45;color:var(--citui-warn-ink);background:var(--warn-soft);border-radius:10px;padding:8px 10px;margin-top:9px}
+.acts{margin-top:10px}
+.contact{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.contact .btn{flex:1 1 0}
+.callink{font-size:13.5px}
+.calgo{display:inline-flex;align-items:center;gap:5px;margin-top:9px;font-size:13.5px;font-weight:600;background:none;border:0;padding:4px 0;color:var(--citui-link-ink);cursor:pointer;text-decoration:underline}
+@container (min-width:600px) and (max-width:999px){
+  .req__grid{display:grid;grid-template-columns:1fr 250px;gap:6px 16px;align-items:start}
+  .req__side{grid-column:2;grid-row:1 / span 3}
+  .req__side .row2{grid-template-columns:1fr}
+  .req__side .acts{margin-top:0}
+}
+@container (min-width:1000px){
+  .req__grid{display:grid;grid-template-columns:1fr 240px;gap:6px 16px;align-items:start}
+  .req__side{grid-column:2;grid-row:1 / span 3}
+  .req__side .row2{grid-template-columns:1fr}
+  .req__side .acts{margin-top:0}
+}
+
+/* inline confirm (variant A) */
+.cf{border:2px solid var(--citui-ok);background:var(--citui-ok-soft);border-radius:12px;padding:11px 12px;margin-top:10px;scroll-margin:60px 0 70px}
+.cf--no{border-color:var(--citui-bad);background:var(--bad-soft)}
+.cf__q{font-size:15.5px;font-weight:800;line-height:1.35;margin:0}
+.cf__s{font-size:13.5px;margin:3px 0 0;font-weight:600}
+.cf__c{font-size:13px;line-height:1.45;margin:6px 0 0;color:var(--citui-ink)}
+.cf__msgbtn{background:none;border:0;padding:6px 0 0;font-size:13.5px;font-weight:600;color:var(--citui-link-ink);text-decoration:underline;cursor:pointer}
+.cf textarea{width:100%;font:inherit;font-size:16px;min-height:66px;padding:8px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;margin-top:6px;background:var(--citui-white)}
+.cf__lbl{display:block;font-size:12.5px;font-weight:700;margin-top:6px}
+.cf .row2{margin-top:10px}
+
+/* modal (variant B) — the system's own .bk-ovl/.bk-ovm shape */
+.ovl{position:absolute;inset:0;z-index:80;background:rgba(10,31,54,.55);display:grid;place-items:center;padding:14px}
+body.noframe .ovl{position:fixed}
+.ovl__in{display:contents}
+.ovm{width:min(440px,100%);max-height:calc(100% - 8px);overflow:auto;background:var(--citui-panel);border-radius:16px;box-shadow:var(--citui-shadow-md);display:flex;flex-direction:column}
+body.noframe .ovm{max-height:calc(100vh - 28px)}
+.ovm__hd{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 4px}
+.ovm__hd b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+.ovm__bd{padding:0 14px 10px}
+.ovm__ft{position:sticky;bottom:0;background:var(--citui-panel);padding:10px 14px 14px;border-top:1px solid var(--citui-line)}
+
+/* C: compact list row + focus view + sticky decision bar */
+.qrow{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:var(--citui-panel);border:1px solid var(--citui-line-strong);border-left:5px solid var(--citui-cyan-500);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;min-height:64px}
+.qrow__t{flex:1;min-width:0}
+.qrow__t strong{display:block;font-size:15.5px}
+.qrow__t span{display:block;font-size:13px;color:var(--citui-muted);margin-top:2px}
+.fback{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px;font-size:14px}
+.fback button{background:none;border:0;color:var(--citui-link-ink);font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:3px;padding:6px 0;min-height:36px}
+.dbar{position:sticky;bottom:62px;z-index:25;background:var(--citui-panel);border-top:1px solid var(--citui-line-strong);box-shadow:0 -8px 20px rgba(14,42,71,.10);padding:10px 14px 12px;margin:14px -14px -22px;scroll-margin:0}
+@container (min-width:1000px){ .dbar{bottom:0;margin:14px 0 0;border:1px solid var(--citui-line-strong);border-radius:12px} }
+.dbar .cf{margin:0;border-width:0;background:none;padding:0}
+.fgrid{display:grid;gap:12px}
+@container (min-width:1000px){ .fgrid{grid-template-columns:minmax(0,1fr) 400px;align-items:start} }
+
+/* calendar */
+.cal{background:var(--citui-panel);border:1px solid var(--citui-line-strong);border-radius:14px;margin:12px 0;scroll-margin:60px}
+.cal__top{display:flex;gap:10px;align-items:center;width:100%;background:none;border:0;padding:12px 14px;cursor:pointer;text-align:left;min-height:56px}
+.cal__ico{width:36px;height:36px;border-radius:9px;background:var(--citui-surface-2);display:grid;place-items:center;flex:none}
+.cal__t{flex:1;min-width:0}
+.cal__t b{display:block;font-size:15.5px;color:var(--citui-navy-900)}
+.cal__t span{display:block;font-size:13px;color:var(--citui-muted);margin-top:1px;line-height:1.35}
+.cal__body{padding:0 12px 12px}
+.cal__sel{width:100%;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-field)}
+.cal__hd{display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px}
+.cal__hd b{font-size:16px}
+.cal__nav{width:40px;height:40px;border-radius:9px;border:1px solid var(--citui-line-strong);background:var(--citui-white);cursor:pointer;font-size:18px}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{font-size:11.5px;color:var(--citui-muted);text-align:center;font-weight:700;padding:2px 0}
+.day{position:relative;aspect-ratio:1.15;min-height:36px;border-radius:8px;border:1px solid transparent;background:var(--citui-surface-2);display:grid;place-items:center;font-size:13.5px;cursor:pointer;color:var(--citui-ink);padding:0}
+.day--out{background:none;cursor:default}
+.day--past{opacity:.4;cursor:default}
+.day--req{background:var(--citui-white);border:2px dashed var(--citui-warn);font-weight:800}
+.day--booked{background:var(--citui-navy-800);color:var(--citui-white);font-weight:700}
+.day--booked::after{content:"";position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--citui-cyan-500)}
+.day--linked{background:repeating-linear-gradient(135deg,var(--citui-surface-2) 0 5px,color-mix(in srgb,var(--citui-navy-700) 30%,var(--citui-white)) 5px 8px);color:var(--citui-ink)}
+.day--manual{background:var(--manual);color:var(--citui-white)}
+.day--sel{outline:3px solid var(--citui-cyan-500);outline-offset:1px}
+.legend{display:grid;gap:5px;margin-top:10px;font-size:12.5px;color:var(--citui-ink)}
+.legend span{display:flex;gap:8px;align-items:center}
+.legend i{width:16px;height:14px;border-radius:4px;flex:none;position:relative}
+.dp{border:1px solid var(--citui-line-strong);border-radius:10px;padding:10px;margin:8px 0;font-size:14px;line-height:1.45;background:var(--citui-surface)}
+.dp b{display:block}
+/* phone (portrait AND landscape): the decisions come first, the calendar right after them */
+@container (max-width:999px){
+  .cols{display:flex;flex-direction:column}
+  .cols__list{display:contents}
+  .cols__dec{order:1}
+  .cols__cal{order:2}
+  .cols__rest{order:3}
+  .cal:not(.is-open) .cal__body{display:none}
+}
+@container (min-width:1000px){
+  .cal__top svg:last-child{display:none}
+  .cal .day{aspect-ratio:1.35}
+  .cols{display:grid;grid-template-columns:400px minmax(0,1fr);gap:22px;align-items:start}
+  .cols__cal{position:sticky;top:64px}
+  .cols__cal .cal{margin-top:0}
+}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.tile{background:var(--citui-surface-2);border-radius:12px;padding:10px 12px;border:0;text-align:left;cursor:pointer;font:inherit;color:inherit;min-height:64px}
+.tile small{display:block;font-size:12px;color:var(--citui-muted);font-weight:600}
+.tile b{font-size:15px}
+.tile span{font-size:12.5px;color:var(--citui-muted)}
+@container (min-width:600px){ .tiles{grid-template-columns:repeat(3,1fr)} }
+
+/* history */
+.hist{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13.5px;line-height:1.45}
+.hist strong{font-size:15px}
+.chip{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-top:6px}
+.chip--ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.chip--no{background:var(--bad-soft);color:var(--citui-bad-ink)}
+
+/* Üzenetek */
+.mrow{scroll-margin:56px;border:1px solid var(--citui-line-strong);border-radius:12px;margin-bottom:9px;background:var(--citui-panel)}
+.mrow__h{display:flex;gap:10px;align-items:flex-start;width:100%;background:none;border:0;padding:11px 12px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.mrow__ic{position:relative;width:34px;height:34px;border-radius:9px;background:var(--citui-surface-2);display:grid;place-items:center;flex:none}
+.mrow__ic.unread::after{content:"";position:absolute;right:-2px;top:-2px;width:9px;height:9px;border-radius:50%;background:var(--citui-cyan-500);border:2px solid var(--citui-white)}
+.mrow__t{flex:1;min-width:0}
+.mrow__t b{display:block;font-size:14.5px;color:var(--citui-link-ink);line-height:1.35}
+.mrow__t span{display:block;font-size:12.5px;color:var(--citui-muted);margin-top:2px}
+.mrow__r{font-size:11.5px;color:var(--citui-muted);text-align:right;white-space:nowrap}
+.mbody{padding:0 12px 12px}
+.mact{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:12px;padding:10px}
+.mact__s{font-size:14.5px;font-weight:700;line-height:1.4}
+.mact__m{font-size:13px;color:var(--citui-muted);margin:2px 0 9px}
+.mact__ql{font-size:12.5px;color:var(--citui-muted);font-weight:700;margin:10px 0 5px}
+@container (min-width:600px){
+  .mact{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;align-items:start}
+  .mact__s,.mact__m{grid-column:1}
+  .mact > .btn--dark{grid-column:1}
+  .mact__q{grid-column:2;grid-row:1 / span 4}
+  .mact__q .mact__ql{margin-top:0}
+}
+.mact__h{font-size:12.5px;color:var(--citui-muted);margin:8px 0 0;line-height:1.45}
+.mtext{font-size:13.5px;line-height:1.55;white-space:pre-line;margin:12px 0 0;color:var(--citui-ink)}
+.mtext__h{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);margin-top:12px}
+
+/* Áttekintés */
+.urgent{display:flex;gap:10px;align-items:center;border:2px solid var(--citui-warn);background:var(--warn-soft);border-radius:12px;padding:10px 12px;margin:8px 0 12px;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;min-height:56px}
+.urgent b{display:block;font-size:15px}
+.urgent span{font-size:13px;color:var(--citui-warn-ink)}
+.wc{border:1px solid var(--citui-line-strong);border-radius:12px;padding:12px;margin-bottom:12px;font-size:13.5px}
+.wc__h{font-size:13px;color:var(--citui-muted);margin-bottom:6px}
+.todo{border:1px solid var(--citui-line-strong);border-radius:12px;padding:12px}
+.todo__h{font-weight:800;font-size:15px;margin-bottom:6px}
+.todo__h span{font-size:12px;font-weight:600;color:var(--citui-muted);margin-left:6px}
+.todo__i{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--citui-line);font-size:14px;line-height:1.4}
+.todo__i:first-of-type{border-top:0}
+.todo__dot{width:14px;height:14px;border-radius:50%;flex:none;margin-top:3px;border:2px solid var(--citui-warn)}
+.todo__dot--ok{background:var(--citui-ok);border-color:var(--citui-ok)}
+.todo__t{flex:1}
+.todo__t small{display:block;color:var(--citui-muted);font-size:12.5px}
+.todo__i--done .todo__t{text-decoration:line-through;color:var(--citui-muted)}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-white);font-size:13.5px;line-height:1.4;padding:10px 14px;border-radius:10px;max-width:min(420px,calc(100vw - 24px));z-index:95;box-shadow:var(--citui-shadow-md)}
+.toast[hidden]{display:none}
+.intro{font-size:13px;color:var(--citui-muted);line-height:1.5;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="mk" id="mk">
+  <div class="mk__row"><b>Változat</b>
+    <button data-v="A">A · döntés a kártyán</button>
+    <button data-v="B">B · döntés felugró ablakban</button>
+    <button data-v="C">C · egy kérés = egy képernyő</button>
+  </div>
+  <div class="mk__row"><b>Méret</b>
+    <button data-size="mobile">Mobil 390</button>
+    <button data-size="land">Fekvő 844×390</button>
+    <button data-size="desk">Asztali</button>
+    <button data-fold aria-pressed="true">Hajtás-vonal</button>
+  </div>
+  <div class="mk__row"><b>Innen indul</b>
+    <button data-start="uzenetek">Levél (Üzenetek)</button>
+    <button data-start="attekintes">Áttekintés</button>
+    <button data-start="foglalasok">Foglalások</button>
+    <button data-reset>Alaphelyzet</button>
+    <button data-hidebar>Sáv elrejtése</button>
+  </div>
+  <div class="mk__desc" id="mkdesc"></div>
+</div>
+<button class="mk-show" data-showbar>Tervező-sáv</button>
+<div class="fitwrap"><div class="fit" id="fit"><div class="frame" id="frame"><div class="scroller" id="scroller"><div class="app" id="app"></div></div><div id="ovlhost"></div></div><div class="fold" id="fold"><span>a telefon képernyőjének alja</span></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ── icons (subset of src/ui/icons.ts, the plain admin set) ── */
+var IC={
+  home:'<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  photos:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-4.5L8 19"/>',
+  bookings:'<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3 8 9 6 9-6"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
+  external:'<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7v.5"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>',
+  check:'<path d="m5 12 4.5 4.5L19 7"/>', close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  clock:'<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4v5l3.3 2"/>',
+  contact:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+  alert:'<path d="M12 3 2.5 20h19z"/><path d="M12 10v4"/><circle cx="12" cy="17" r=".7" fill="currentColor"/>',
+  account:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  report:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  modules:'<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'
+};
+function ic(n,s){return '<svg class="i'+(s?' i--s':'')+'" viewBox="0 0 24 24" aria-hidden="true">'+IC[n]+'</svg>';}
+function e(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+/* ── real data (dev DB, Myrna Haus, 2026-09-28 run) ── */
+var TODAY="2026-09-29";
+var UNITS=[{id:"egesz",name:"A szállás egésze",whole:true},{id:"nadas",name:"Nádas apartman"},{id:"kishazi",name:"Kisházi szoba"},{id:"kerti",name:"Kerti stúdió"}];
+function unitName(id){for(var i=0;i<UNITS.length;i++)if(UNITS[i].id===id)return UNITS[i].name;return "";}
+var BASE_REQS=[
+  {id:"r1",name:"Elek Vendég Éjszakai",email:"elek@citoviso.com",phone:"+36 30 555 0101",unit:"nadas",from:"2026-10-24",to:"2026-10-26",guests:2,total:56000,msg:"Kisállattal érkeznénk, lehetséges?",ref:"FG-96A0CB",left:48,got:"2026. 09. 28. 19:52"},
+  {id:"r2",name:"Elek Vendég Ajánlat",email:"elek@citoviso.com",phone:"+36 30 555 0102",unit:"egesz",from:"2026-11-13",to:"2026-11-15",guests:2,total:null,msg:"Baráti társasággal jönnénk, hat felnőtt.",ref:"FG-3C71D2",left:48,got:"2026. 09. 28. 19:55"}
+];
+var DESC={
+  A:"<b>A — döntés a kártyán.</b> Telefonon a döntésre váró kérések állnak legfelül (a naptár és a csempék alájuk kerülnek). A „Visszaigazolom” a kártyán belül, teljes szélességben nyit megerősítőt: benne a vendég neve, a „Mégsem”, és egy koppintásra nyíló üzenet-mező. A levélből ugyanez: a gombok a levél tetején, a gyors döntés is rákérdez, és van „Mégsem”.",
+  B:"<b>B — döntés felugró ablakban.</b> Ugyanaz a sorrend, mint A-nál, de a megerősítő a rendszer SAJÁT, középre nyíló ablaka (ugyanaz, mint a lemondásnál): a gombsora mindig a képernyőn van, bármilyen hosszú az üzenet. A levél gyors döntése is ezt az ablakot nyitja.",
+  C:"<b>C — egy kérés = egy képernyő.</b> A levélből, a Teendőkből és a listából EGY kérés lapja nyílik: az adatai, a „Felhívom”, és alatta a naptár épp arra a hónapra és szobára, a kért éjszakákkal. A döntés-sáv a képernyő alján tapad; koppintásra ugyanott kéri a megerősítést. A levélben nincs gyors döntés — egy helyen dől el."
+};
+
+var S; // state
+function fresh(){
+  return {v:S?S.v:"A",size:S?S.size:"mobile",fold:S?S.fold:true,screen:"uzenetek",focus:null,
+    st:{r1:"pending",r2:"pending"},confirm:null,msgOpen:"m1",mailDone:{},
+    cal:null,calOpen:false,manual:{},day:null,outcome:null,target:null,text:{}};
+}
+
+/* ── dates ── */
+function pd(s){var p=s.split("-");return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
+function iso(d){return d.toISOString().slice(0,10);}
+function hu(s){return s.slice(0,4)+". "+s.slice(5,7)+". "+s.slice(8,10)+".";}
+function nightsOf(r){return Math.round((pd(r.to)-pd(r.from))/864e5);}
+function nightList(r){var o=[],d=pd(r.from);while(iso(d)<r.to){o.push(iso(d));d.setUTCDate(d.getUTCDate()+1);}return o;}
+var HO=["január","február","március","április","május","június","július","augusztus","szeptember","október","november","december"];
+function monthLabel(m){return m.slice(0,4)+". "+HO[+m.slice(5,7)-1];}
+function ft(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ")+" Ft";}
+function req(id){for(var i=0;i<BASE_REQS.length;i++)if(BASE_REQS[i].id===id)return BASE_REQS[i];}
+function pend(){return BASE_REQS.filter(function(r){return S.st[r.id]==="pending";});}
+function isQuote(r){return !r.total;}
+function whenLine(r){return hu(r.from)+" → "+hu(r.to)+" · "+nightsOf(r)+" éj · "+r.guests+" fő"+(r.total?" · "+ft(r.total):"");}
+function telHref(p){return "tel:"+p.replace(/\s+/g,"");}
+
+/* booked / linked / requested nights per unit — the SAME rule as the admin calendar
+   (ADR-0114: a room's booking locks the whole house; the whole house locks every room) */
+function dayKind(unit,day){
+  var k="free",who=null;
+  BASE_REQS.forEach(function(r){
+    if(S.st[r.id]!=="accepted")return;
+    if(nightList(r).indexOf(day)<0)return;
+    if(r.unit===unit){k="booked";who=r;}
+    else if(k!=="booked"&&(r.unit==="egesz"||unit==="egesz")){k="linked";who=r;}
+  });
+  if(k==="free"&&S.manual[unit+"|"+day])k="manual";
+  if(k==="free"){
+    BASE_REQS.forEach(function(r){
+      if(S.st[r.id]==="pending"&&r.unit===unit&&nightList(r).indexOf(day)>=0){k="req";who=r;}
+    });
+  }
+  return {k:k,who:who};
+}
+/* the calendar opens where the owner's next decision is: the first pending request's
+   unit + month; with none, the next arrival; else today's month on the first unit */
+function defaultCal(){
+  var p=pend();
+  if(p.length)return {unit:p[0].unit,month:p[0].from.slice(0,7)};
+  var arr=BASE_REQS.filter(function(r){return S.st[r.id]==="accepted"&&r.from>=TODAY;}).sort(function(a,b){return a.from<b.from?-1:1;});
+  if(arr.length)return {unit:arr[0].unit,month:arr[0].from.slice(0,7)};
+  return {unit:"egesz",month:TODAY.slice(0,7)};
+}
+function cal(){if(!S.cal)S.cal=defaultCal();return S.cal;}
+
+/* ── render pieces ── */
+function shell(inner){
+  var p=pend().length;
+  var nav=[["attekintes","home","Áttekintés"],["fotok","photos","Fotók"],["foglalasok","bookings","Foglalások"],["uzenetek","mail","Üzenetek"],["menu","menu","Menü"]];
+  var crumb={attekintes:"Áttekintés",uzenetek:"Üzenetek",foglalasok:"Foglalások"}[S.screen];
+  var bd=function(id){
+    if(id==="foglalasok"&&p)return '<span class="bdg" aria-label="'+p+' kérés vár döntésre">'+p+'</span>';
+    if(id==="uzenetek"){var u=unreadCount();return u?'<span class="bdg" aria-label="'+u+' olvasatlan">'+u+'</span>':"";}
+    return "";
+  };
+  return '<div class="shell"><div class="top">'+
+    '<button class="top__ib top__menu" aria-label="Menü">'+ic("menu")+'</button>'+
+    '<button class="top__ib" aria-label="Vissza">'+ic("back")+'</button>'+
+    '<span class="top__crumb">Myrna Haus › <b>'+crumb+(S.focus?" › "+e(req(S.focus).name):"")+'</b></span>'+
+    '<button class="top__site">'+ic("external","s")+'Oldal</button></div>'+
+    '<div class="body"><nav class="side"><div class="side__h">Myrna Haus<small>myrna-haus · Élő</small></div>'+
+    nav.filter(function(n){return n[0]!=="menu";}).map(function(n){
+      return '<button data-go="'+n[0]+'"'+(S.screen===n[0]?' aria-current="page"':"")+'>'+ic(n[1])+n[2]+bd(n[0])+'</button>';}).join("")+
+    '</nav><main class="main" id="main">'+inner+'</main></div>'+
+    '<nav class="bnav">'+nav.map(function(n){
+      return '<button data-go="'+n[0]+'"'+(S.screen===n[0]?' aria-current="page"':"")+'>'+ic(n[1])+n[2]+bd(n[0])+'</button>';}).join("")+'</nav></div>';
+}
+function unreadCount(){var n=0;if(!S.mailDone.m1&&S.msgOpen!=="m1"&&S.st.r1==="pending")n++;if(S.msgOpen!=="m2"&&S.st.r2==="pending")n++;return n;}
+
+/* confirm content — shared by A (inline), B (modal), C (decision bar) */
+function confirmBody(r,kind,from){
+  var ok=kind==="ok";
+  var q=ok?"Visszaigazolja "+r.name+" foglalását?":"Elutasítja "+r.name+" kérését?";
+  var cons=ok
+    ?"A napok foglalttá válnak a naptárban, a vendég e-mailt kap naptár-melléklettel"+(from==="mail"?" és a lemondó-linkkel.":", benne az Ön üzenetével és a lemondó-linkkel.")
+    :"A vendég udvarias elutasító e-mailt kap"+(from==="mail"?".":"; ha ír ide üzenetet, az bekerül a levélbe.")+" A napok szabadok maradnak.";
+  var key=r.id+kind;
+  var msgPart="";
+  if(from!=="mail"){
+    msgPart=S.text[key]!=null
+      ?'<label class="cf__lbl" for="tx-'+key+'">'+(ok?"Üzenet a vendégnek a visszaigazoló levélbe (nem kötelező)":"Miért utasítja el? (a vendég ezt olvassa majd — nem kötelező)")+'</label>'+
+       '<textarea id="tx-'+key+'" data-tx="'+key+'" maxlength="1000">'+e(S.text[key])+'</textarea>'
+      :'<button type="button" class="cf__msgbtn" data-addmsg="'+key+'">'+(ok?"+ Üzenetet írok a vendégnek":"+ Megírom, miért (nem kötelező)")+'</button>';
+  } else {
+    msgPart='<p class="cf__c" style="color:var(--citui-muted)">Üzenetet a Foglalások fülön írhat mellé.</p>';
+  }
+  return '<p class="cf__q">'+e(q)+'</p>'+
+    '<p class="cf__s">'+e(hu(r.from)+" → "+hu(r.to)+" · "+unitName(r.unit)+(r.total?" · "+ft(r.total):""))+'</p>'+
+    '<p class="cf__c">'+e(cons)+'</p>'+msgPart;
+}
+function confirmButtons(r,kind){
+  var ok=kind==="ok";
+  return '<div class="row2"><button class="btn btn--gh btn--lg" data-cancel data-decide-ui>Mégsem</button>'+
+    '<button class="btn btn--lg '+(ok?"btn--ok":"btn--bad")+'" data-do="'+r.id+'|'+kind+'" data-decide-ui>'+(ok?ic("check")+"Igen, visszaigazolom":ic("close")+"Igen, elutasítom")+'</button></div>';
+}
+function inlineConfirm(r,kind,from){
+  return '<div class="cf'+(kind==="no"?" cf--no":"")+'" id="cf" role="group" aria-label="Megerősítés">'+confirmBody(r,kind,from)+confirmButtons(r,kind)+'</div>';
+}
+
+function decisionButtons(r){
+  if(isQuote(r))return '<div class="acts row2"><button class="btn btn--ok btn--lg" data-offer="'+r.id+'" data-decide-ui>'+ic("check")+'Ajánlatot küldök</button>'+
+    '<button class="btn btn--gh btn--lg" data-ask="'+r.id+'|no|card" data-decide-ui>'+ic("close")+'Elutasítom</button></div>';
+  return '<div class="acts row2"><button class="btn btn--ok btn--lg" data-ask="'+r.id+'|ok|card" data-decide-ui>'+ic("check")+'Visszaigazolom</button>'+
+    '<button class="btn btn--gh btn--lg" data-ask="'+r.id+'|no|card" data-decide-ui>'+ic("close")+'Elutasítom</button></div>';
+}
+function contactRow(r){
+  return '<div class="contact"><a class="btn btn--sm btn--gh" href="'+telHref(r.phone)+'" data-tel>'+ic("contact","s")+'Felhívom</a>'+
+    '<a class="btn btn--sm btn--gh" href="mailto:'+e(r.email)+'">'+ic("mail","s")+'Írok neki</a></div>'+
+    '<div class="req__meta callink">'+e(r.phone)+' · '+e(r.email)+'</div>';
+}
+function cardHead(r){
+  return '<div class="req__who"><strong>'+e(r.name)+'</strong><span class="req__kind'+(isQuote(r)?" req__kind--q":"")+'">'+(isQuote(r)?"Árajánlat-kérés":"Foglalási kérés")+'</span></div>'+
+    '<div class="req__when">'+e(whenLine(r))+'</div>'+
+    '<div class="req__meta">'+e(unitName(r.unit))+' · '+e(r.ref)+'</div>'+
+    '<span class="dl">'+ic("clock","s")+'<b>Van még idő</b> — még '+r.left+' óra a válaszra</span>';
+}
+function reqCard(r){
+  var inl=S.v==="A"&&S.confirm&&S.confirm.id===r.id&&S.confirm.from==="card";
+  var body='<div class="req__grid"><div>'+cardHead(r)+
+    (isQuote(r)?'<p class="qhint">A vendég nem látott árat — árajánlatot kért. Adja meg az árat, és a rendszer elküldi neki.</p>':"")+
+    '<div class="msg"><small>Vendég</small>„'+e(r.msg)+'”</div></div>'+
+    '<div class="req__side">'+(inl?"":decisionButtons(r))+contactRow(r)+'</div></div>'+
+    (inl?inlineConfirm(r,S.confirm.kind,"card"):"")+
+    '<button class="calgo" data-calto="'+r.id+'">'+ic("bookings","s")+'Megnézem a naptárban ('+monthLabel(r.from.slice(0,7))+', '+e(unitName(r.unit))+')</button>';
+  return '<div class="req'+(S.target===r.id?" is-target":"")+'" id="req-'+r.id+'">'+body+'</div>';
+}
+
+function calendarCard(){
+  var c=cal(),m=c.month,y=+m.slice(0,4),mo=+m.slice(5,7);
+  var first=new Date(Date.UTC(y,mo-1,1)),days=new Date(Date.UTC(y,mo,0)).getUTCDate();
+  var lead=(first.getUTCDay()+6)%7;
+  var cnt={booked:0,linked:0,manual:0,req:0},reqs={};
+  var cells="";
+  for(var i=0;i<lead;i++)cells+='<span class="day day--out"></span>';
+  for(var d=1;d<=days;d++){
+    var day=m+"-"+(d<10?"0":"")+d, k=dayKind(c.unit,day), past=day<TODAY;
+    if(k.k!=="free")cnt[k.k]++; if(k.k==="req")reqs[k.who.id]=k.who;
+    var cls="day"+(k.k!=="free"?" day--"+k.k:"")+(past?" day--past":"")+(S.day===day?" day--sel":"");
+    var lbl=hu(day)+": "+({free:"szabad",req:"kért éjszaka — döntésre vár",booked:"vendég-foglalás",linked:"másik szoba / az egész ház foglalása",manual:"kézzel blokkolva"}[k.k]);
+    cells+='<button class="'+cls+'" data-day="'+day+'"'+(past?" disabled":"")+' aria-label="'+e(lbl)+'" title="'+e(lbl)+'">'+d+'</button>';
+  }
+  var sum=[];
+  var rk=Object.keys(reqs);
+  if(rk.length)rk.forEach(function(id){var r=reqs[id];sum.push("Kérés vár: "+hu(r.from)+" → "+hu(r.to)+" — a napok szabadok");});
+  if(cnt.booked)sum.push(cnt.booked+" éj vendég-foglalás");
+  if(cnt.linked)sum.push(cnt.linked+" nap másik szoba foglalása");
+  if(cnt.manual)sum.push(cnt.manual+" nap kézi blokk");
+  var summary=sum.join(" · ")||"nincs foglalt nap";
+  var panel="";
+  if(S.day){
+    var k2=dayKind(c.unit,S.day);
+    if(k2.k==="req")panel='<div class="dp"><b>'+e(k2.who.name)+' kéri — döntésre vár</b>'+e(whenLine(k2.who))+'<div style="margin-top:8px"><button class="btn btn--sm btn--dark" data-open="'+k2.who.id+'">Megnyitom a kérést</button></div></div>';
+    else if(k2.k==="booked"||k2.k==="linked")panel='<div class="dp"><b>'+e(k2.who.name)+(k2.k==="linked"?" — "+e(unitName(k2.who.unit)):"")+'</b>'+e(whenLine(k2.who))+'<div class="contact"><a class="btn btn--sm btn--gh" href="'+telHref(k2.who.phone)+'">'+ic("contact","s")+'Felhívom</a><button class="btn btn--sm btn--gh" data-toast="A meglévő, jóváhagyott lemondó ablak nyílna (nevesíti a vendéget, „Mégsem — megtartom”) — ezt a terv nem változtatja.">Foglalás lemondása</button></div></div>';
+  }
+  var open=S.calOpen;
+  return '<div class="cal'+(open?" is-open":"")+'" id="naptar">'+
+    '<button class="cal__top" data-caltoggle aria-expanded="'+open+'"><span class="cal__ico">'+ic("bookings")+'</span>'+
+    '<span class="cal__t"><b>Naptár — '+monthLabel(m)+' · '+e(unitName(c.unit))+'</b><span>'+e(summary)+'</span></span>'+ic(open?"close":"fwd","s")+'</button>'+
+    ('<div class="cal__body"><select class="cal__sel" data-unit aria-label="Melyik szoba naptára">'+UNITS.map(function(u){return '<option value="'+u.id+'"'+(u.id===c.unit?" selected":"")+'>'+e(u.name)+'</option>';}).join("")+'</select>'+
+      '<div class="cal__hd"><button class="cal__nav" data-mon="-1" aria-label="Előző hónap">‹</button><b>'+monthLabel(m)+'</b><button class="cal__nav" data-mon="1" aria-label="Következő hónap">›</button></div>'+
+      panel+
+      '<div class="grid7">'+["H","K","Sze","Cs","P","Szo","V"].map(function(x){return '<span class="dow">'+x+'</span>';}).join("")+cells+'</div>'+
+      '<div class="legend">'+
+      '<span><i style="background:var(--citui-surface-2)"></i>szabad — koppintásra blokkolható</span>'+
+      '<span><i style="background:var(--citui-white);border:2px dashed var(--citui-warn)"></i>kért éjszaka — döntésre vár, még NEM foglalt</span>'+
+      '<span><i style="background:var(--citui-navy-800);box-shadow:inset -4px 4px 0 -1px var(--citui-cyan-500)"></i>vendég-foglalás (pöttyel) — koppintásra részletek</span>'+
+      '<span><i style="background:repeating-linear-gradient(135deg,var(--citui-surface-2) 0 3px,color-mix(in srgb,var(--citui-navy-700) 30%,var(--citui-white)) 3px 5px)"></i>másik szoba / az egész ház foglalása (csíkos)</span>'+
+      '<span><i style="background:var(--manual)"></i>kézzel blokkolva</span></div></div>')+
+    '</div>';
+}
+function tiles(){
+  var p=pend(),arr=BASE_REQS.filter(function(r){return S.st[r.id]==="accepted"&&r.from>=TODAY;}).sort(function(a,b){return a.from<b.from?-1:1;});
+  var acc=BASE_REQS.filter(function(r){return S.st[r.id]==="accepted";}).length;
+  return '<div class="tiles">'+
+    '<button class="tile" data-jump="kerelmek"><small>Döntésre vár</small><b>'+(p.length?p.length+" kérés":"Nincs döntésre váró kérés")+'</b>'+(p.length?' <span>· a legsürgősebb '+p[0].left+' óra</span>':"")+'</button>'+
+    '<button class="tile" data-arr><small>Következő érkezés</small><b>'+(arr.length?hu(arr[0].from):"Nincs bejelentett érkezés")+'</b></button>'+
+    '<button class="tile"><small>Idén visszaigazolt — jelenleg érvényes</small><b>'+acc+' foglalás</b></button></div>';
+}
+function outcome(){
+  if(!S.outcome)return "";
+  var o=S.outcome,r=req(o.id),ok=o.kind==="ok";
+  var next=pend()[0];
+  return '<div class="outcome'+(ok?"":" outcome--bad")+'" role="status">'+ic(ok?"check":"close")+'<span><b>'+(ok?"Visszaigazolva: ":"Elutasítva: ")+e(r.name)+' ('+hu(r.from)+' — '+hu(r.to)+')</b>A vendég e-mailt kapott róla.'+
+    (ok?' A napok foglaltak: '+e(unitName(r.unit))+', '+hu(r.from)+' → '+hu(r.to):"")+
+    (next?'<br><button class="calgo outcome__next" data-open="'+next.id+'" style="margin-top:4px">Következő kérés: '+e(next.name)+' ›</button>':"")+'</span></div>';
+}
+function history(){
+  var d=BASE_REQS.filter(function(r){return S.st[r.id]!=="pending";});
+  if(!d.length)return '<div class="empty">Még nincs eldöntött kérés.</div>';
+  return d.map(function(r){var ok=S.st[r.id]==="accepted";
+    return '<div class="hist"><strong>'+e(r.name)+'</strong><br>'+e(hu(r.from)+" — "+hu(r.to)+" · "+nightsOf(r)+" éj · "+r.guests+" fő"+(r.total?" · "+ft(r.total):"")+" · döntés: "+hu(TODAY))+
+      '<div class="msg"><small>Vendég</small>„'+e(r.msg)+'”</div>'+
+      (S.text[r.id+(ok?"ok":"no")]?'<div class="msg" style="border-left:3px solid var(--citui-navy-800)"><small style="color:var(--citui-navy-800)">Ön</small>„'+e(S.text[r.id+(ok?"ok":"no")])+'”</div>':"")+
+      '<span class="chip '+(ok?"chip--ok":"chip--no")+'">'+(ok?"Visszaigazolva":"Elutasítva")+'</span></div>';}).join("");
+}
+function tail(){
+  return '<div class="note">A vendég minden döntéséről (visszaigazolás, elutasítás, lemondás) automatikus e-mailt kap. Ha 48 órán belül nem válaszol egy kérésre, az lejár, és a vendég udvarias „sajnos nem kaptunk választ” levelet kap.</div>'+
+    '<h2 class="sect">Korábbi kérések</h2>'+history()+
+    '<h2 class="sect" id="kikuldott-ajanlatok">Kiküldött ajánlatok</h2><div class="empty">Még nem küldött árajánlatot. Ha egy vendég ár nélkül kér ajánlatot, és Ön válaszol neki, itt látja, kinek mi ment ki.</div>'+
+    '<p class="intro">Itt válaszol a vendégek foglalási kéréseire. A beállítások (például az értesítési címek) a <a href="#">Modulok → Foglalás</a> alatt vannak.</p>';
+}
+function pageHead(){
+  return '<div class="ph"><h1>Foglalások</h1><a class="ph__help" href="#" aria-label="Útmutató ehhez a képernyőhöz" title="Útmutató ehhez a képernyőhöz">'+ic("help")+'</a></div>';
+}
+
+/* ── screens ── */
+function scrBookings(){
+  if(S.v==="C"&&S.focus)return scrFocus(req(S.focus));
+  var p=pend();
+  var list;
+  if(S.v==="C"){
+    list=p.length?p.map(function(r){return '<button class="qrow" data-open="'+r.id+'" id="req-'+r.id+'" data-decide-ui><span class="qrow__t"><strong>'+e(r.name)+'</strong><span>'+e(whenLine(r))+'</span><span>'+(isQuote(r)?"Árajánlatot kér · ":"")+e(unitName(r.unit))+' · még '+r.left+' óra a válaszra</span></span>'+ic("fwd")+'</button>';}).join("")
+      :'<div class="empty">Most nincs döntésre váró kérés. ✔<br>Az újakról e-mailt is kap.</div>';
+  } else {
+    list=p.length?p.map(reqCard).join(""):'<div class="empty">Most nincs döntésre váró kérés. ✔<br>Az újakról e-mailt is kap.</div>';
+  }
+  var head='<h2 class="sect" id="kerelmek">Döntésre vár'+(p.length?' <span class="n">'+p.length+'</span>':"")+'</h2>'+
+    '<p class="order">A sorrendet a válasz-határidő adja: aki hamarabb lejár, az van felül.</p>';
+  // mobile/landscape: requests FIRST; desktop: the approved "calendar left, list right"
+  return pageHead()+outcome()+
+    '<div class="cols"><div class="cols__cal">'+calendarCard()+'</div><div class="cols__list"><div class="cols__dec">'+head+list+'</div><div class="cols__rest">'+tiles()+tail()+'</div></div></div>';
+}
+function scrFocus(r){
+  var p=pend(),idx=p.indexOf(r);
+  var st=S.st[r.id];
+  if(st!=="pending"){S.focus=null;return scrBookings();}
+  var c=S.cal; // the focus view pins the calendar to THIS request
+  S.cal={unit:r.unit,month:r.from.slice(0,7)}; S.calOpen=true;
+  var calHtml=calendarCard(); S.cal=c||S.cal;
+  var conf=S.confirm&&S.confirm.id===r.id;
+  var bar='<div class="dbar" id="dbar">'+(conf
+      ?'<div class="cf'+(S.confirm.kind==="no"?" cf--no":"")+'" id="cf">'+confirmBody(r,S.confirm.kind,"card")+confirmButtons(r,S.confirm.kind)+'</div>'
+      :decisionButtons(r))+'</div>';
+  return '<div class="fback"><button data-list>'+ic("back","s")+'Összes kérés ('+p.length+')</button>'+
+    (p.length>1?'<button data-open="'+p[(idx+1)%p.length].id+'">Következő kérés'+ic("fwd","s")+'</button>':"")+'</div>'+
+    '<div class="fgrid"><div><div class="req" id="req-'+r.id+'">'+cardHead(r)+
+    (isQuote(r)?'<p class="qhint">A vendég nem látott árat — árajánlatot kért. Adja meg az árat, és a rendszer elküldi neki.</p>':"")+
+    '<div class="msg"><small>Vendég</small>„'+e(r.msg)+'”</div>'+contactRow(r)+'</div></div>'+
+    '<div><h2 class="sect" style="margin-top:4px">A kért éjszakák a naptárban</h2>'+calHtml+'</div></div>'+bar;
+}
+function scrOverview(){
+  var p=pend();
+  var todoRows=p.map(function(r){
+    return '<div class="todo__i"><span class="todo__dot"></span><span class="todo__t"><strong>'+(isQuote(r)?"Árajánlatot vár: ":"Döntésre vár: ")+e(r.name)+'</strong><small>'+e(whenLine(r))+' · '+e(unitName(r.unit))+' · még '+r.left+' óra a válaszra</small></span>'+
+      '<button class="btn btn--sm btn--dark" data-open="'+r.id+'">'+(isQuote(r)?"Ajánlatot küldök":"Döntök")+'</button></div>';}).join("");
+  return '<div class="ph"><h1>Áttekintés</h1><a class="ph__help" href="#" aria-label="Útmutató">'+ic("help")+'</a></div>'+
+    '<p class="lede">Az oldala állapota egy képernyőn — ami teendő, az itt sorban áll.</p>'+
+    (p.length?'<button class="urgent" data-jump-todo>'+ic("alert")+'<span><b>'+p.length+' kérés vár az Ön döntésére</b><span>A legsürgősebb '+p[0].left+' óra múlva lejár — lent, a Teendők között.</span></span>'+ic("fwd")+'</button>':"")+
+    '<div class="wc"><div class="wc__h">Állapot</div><b style="color:var(--citui-ok-ink)">Élő (publikus)</b></div>'+
+    '<div class="wc"><div class="wc__h">Látogatók · 7 nap</div><b>0</b> egyedi látogató, robotok nélkül</div>'+
+    // the real page's Üzenetek widget + cover block stay where they are today — the Teendők box
+    // is BELOW them (≈ y 800+ on a 390 phone), which is why the strip above exists
+    '<div class="wc"><div class="wc__h">Üzenetek</div>'+p.map(function(r){return '<div style="padding:5px 0;color:var(--citui-link-ink)">'+(isQuote(r)?"Árajánlat-kérés: ":"Foglalási kérés: ")+e(r.name)+'…</div>';}).join("")+'</div>'+
+    '<div class="wc" style="height:230px;display:grid;place-items:center;background:var(--citui-surface-2);color:var(--citui-muted)">Saját nyitókép (a mai Áttekintés képe — változatlan)</div>'+
+    '<div class="todo" id="teendok"><div class="todo__h">Teendők<span>'+p.length+' nyitott</span></div>'+todoRows+
+    '<div class="todo__i todo__i--done"><span class="todo__dot todo__dot--ok"></span><span class="todo__t">A saját fotói fent vannak</span></div>'+
+    '<div class="todo__i todo__i--done"><span class="todo__dot todo__dot--ok"></span><span class="todo__t">A bemutatkozó szövege kész</span></div>'+
+    '<div class="todo__i todo__i--done"><span class="todo__dot todo__dot--ok"></span><span class="todo__t">Az oldala élő és nyilvános</span></div></div>';
+}
+function mailRow(id,r){
+  var open=S.msgOpen===id, unread=!open&&S.st[r.id]==="pending";
+  var subj=(isQuote(r)?"Árajánlat-kérés: ":"Foglalási kérés: ")+r.name+", "+hu(r.from)+"–"+hu(r.to);
+  var body="";
+  if(open){
+    var done=S.st[r.id]!=="pending";
+    var act;
+    if(done){
+      var ok=S.st[r.id]==="accepted";
+      act='<div class="outcome'+(ok?"":" outcome--bad")+'">'+ic(ok?"check":"close")+'<span><b>'+(ok?"Visszaigazolva: ":"Elutasítva: ")+e(r.name)+' ('+hu(r.from)+' — '+hu(r.to)+')</b>A vendég e-mailt kapott róla.</span></div>'+
+        '<button class="btn btn--dark btn--lg btn--wide" data-go="foglalasok" data-decide-ui>'+ic("bookings")+'Foglalások megnyitása</button>';
+    } else if(S.v==="C"){
+      act='<button class="btn btn--dark btn--lg btn--wide" data-open="'+r.id+'" data-decide-ui>'+ic("bookings")+(isQuote(r)?"Megnyitom — ajánlatot adok":"Megnyitom a kérést")+'</button>'+
+        '<div class="contact"><a class="btn btn--sm btn--gh" href="'+telHref(r.phone)+'" data-tel>'+ic("contact","s")+'Felhívom</a></div>'+
+        '<p class="mact__h">A döntés a kérés lapján születik: ott látja a naptárat is, és üzenetet írhat a vendégnek.</p>';
+    } else {
+      var inl=S.v==="A"&&S.confirm&&S.confirm.id===r.id&&S.confirm.from==="mail";
+      act='<button class="btn btn--dark btn--lg btn--wide" data-open="'+r.id+'" data-decide-ui>'+ic("bookings")+'Foglalások megnyitása</button>'+
+        '<div class="mact__q"><div class="mact__ql">Gyors döntés innen is:</div>'+
+        (inl?inlineConfirm(r,S.confirm.kind,"mail")
+          :'<div class="row2">'+(isQuote(r)
+            ?'<button class="btn btn--gh btn--lg" data-offer="'+r.id+'" data-decide-ui>'+ic("check")+'Ajánlatot küldök</button>'
+            :'<button class="btn btn--gh btn--lg" data-ask="'+r.id+'|ok|mail" data-decide-ui>'+ic("check")+'Elfogadom</button>')+
+           '<button class="btn btn--gh btn--lg" data-ask="'+r.id+'|no|mail" data-decide-ui>'+ic("close")+'Nem szabad</button></div>')+
+        '<p class="mact__h">'+(isQuote(r)?"A foglalás csak akkor lesz végleges, ha a vendég elfogadja az ajánlatát.":"A vendég csak azután kap visszaigazolást, hogy Ön döntött.")+'</p></div>';
+    }
+    body='<div class="mbody"><div class="mact"><div class="mact__s">'+e(r.name)+'</div><div class="mact__m">'+e(whenLine(r))+' · '+e(unitName(r.unit))+(isQuote(r)?" · árajánlatot kér":"")+'</div>'+act+'</div>'+
+      '<div class="mtext__h">A levél teljes szövege</div><div class="mtext">'+
+      e(isQuote(r)?"Új árajánlat-kérés — "+unitName(r.unit):"Új foglalási kérés — "+unitName(r.unit))+"\n\n"+
+      (isQuote(r)?e("A vendég nem látott árat. "+unitName(r.unit)+": "+nightsOf(r)+" éjszakára nincs megadott ár ("+hu(r.from)+" – "+hu(r.to)+"). Adja meg itt, és a rendszer elküldi neki az ajánlatot.")+"\n\n":"")+
+      e("Vendég: "+r.name+"\nHivatkozás: "+r.ref+"\nÉrkezés: "+hu(r.from)+"\nTávozás: "+hu(r.to)+"\nLétszám: "+r.guests+" fő\n")+
+      (r.total?e("Ár összesen (a foglaláskori árlista szerint): "+ft(r.total)+"\n"):"")+
+      'Telefon: <a href="'+telHref(r.phone)+'">'+e(r.phone)+'</a>\nE-mail: <a href="mailto:'+e(r.email)+'">'+e(r.email)+'</a>\n\nÜzenete:\n'+e(r.msg)+
+      '</div><p class="mact__h">E-mail · elek@citoviso.com · '+e(r.got)+'</p></div>';
+  }
+  return '<div class="mrow" id="msg-'+id+'"><button class="mrow__h" data-msg="'+id+'"><span class="mrow__ic'+(unread?" unread":"")+'">'+ic("mail")+'</span>'+
+    '<span class="mrow__t"><b>'+e(subj)+'</b><span>'+(isQuote(r)?"Új árajánlat-kérés":"Új foglalási kérés")+' — '+e(unitName(r.unit))+'</span></span>'+
+    '<span class="mrow__r">'+e(r.got.slice(0,13))+'<br>'+(open?"Bezárom ▴":"Megnyitom ▾")+'</span></button>'+body+'</div>';
+}
+function scrMessages(){
+  return '<div class="ph"><h1>Üzenetek</h1></div>'+
+    '<p class="lede">Minden értesítés, amit Önnek küldtünk — e-mailben és SMS-ben.</p>'+
+    mailRow("m2",req("r2"))+mailRow("m1",req("r1"))+
+    '<div class="mrow"><button class="mrow__h"><span class="mrow__ic">'+ic("mail")+'</span><span class="mrow__t"><b>Belépési adatai – Myrna Haus</b><span>Elkészült a Myrna Haus oldala</span></span><span class="mrow__r">2026. 09. 28.<br>Megnyitom ▾</span></button></div>';
+}
+function modal(){
+  if(S.v!=="B"||!S.confirm)return "";
+  var r=req(S.confirm.id),k=S.confirm.kind;
+  return '<div class="ovl" id="ovl"><div class="ovm" role="dialog" aria-modal="true" aria-label="Megerősítés">'+
+    '<div class="ovm__hd"><b>'+(k==="ok"?"Visszaigazolás":"Elutasítás")+'</b><button class="top__ib" data-cancel aria-label="Bezárás">'+ic("close")+'</button></div>'+
+    '<div class="ovm__bd"><div class="cf'+(k==="no"?" cf--no":"")+'" style="margin:0">'+confirmBody(r,k,S.confirm.from)+'</div></div>'+
+    '<div class="ovm__ft">'+confirmButtons(r,k)+'</div></div></div>';
+}
+
+/* ── mount ── */
+var app=document.getElementById("app"),frame=document.getElementById("frame"),fit=document.getElementById("fit"),fold=document.getElementById("fold");
+var SIZES={mobile:[390,844],land:[844,390],desk:[1280,800]};
+var noframe=false;
+function layout(){
+  var sz=SIZES[S.size],W=sz[0],H=sz[1];
+  noframe=document.body.classList.contains("noframe");
+  if(noframe){return;}
+  var avail=Math.min(document.documentElement.clientWidth-16,1400);
+  var k=Math.min(1,avail/W);
+  frame.style.width=W+"px";frame.style.height=H+"px";frame.style.transform="scale("+k+")";
+  frame.style.setProperty("--fw",W+"px");frame.style.setProperty("--fh",H+"px");
+  fit.style.width=(W*k)+"px";fit.style.height=(H*k)+"px";
+  fold.style.top=(H*k)+"px";fold.style.display=S.fold&&S.size!=="desk"?"block":"none";
+}
+function render(scrollTo){
+  var inner={uzenetek:scrMessages,attekintes:scrOverview,foglalasok:scrBookings}[S.screen]();
+  app.innerHTML=shell(inner);document.getElementById("ovlhost").innerHTML=modal();
+  document.querySelectorAll("[data-v]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.v===S.v));});
+  document.querySelectorAll("[data-size]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.size===S.size));});
+  document.querySelector("[data-fold]").setAttribute("aria-pressed",String(S.fold));
+  document.getElementById("mkdesc").innerHTML=DESC[S.v];
+  layout();
+  if(scrollTo==="top"){ if(noframe)window.scrollTo(0,0); else document.getElementById("scroller").scrollTop=0; }
+  else if(scrollTo){var el=document.getElementById(scrollTo);if(el)el.scrollIntoView({block:scrollTo==="cf"?"nearest":"start"});}
+  var ta=document.querySelector("textarea[data-tx]");if(ta&&S._focusTx){ta.focus();S._focusTx=false;}
+}
+var toastT;
+function toast(t){var el=document.getElementById("toast");el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){el.hidden=true;},4200);}
+
+function openRequest(id){
+  var r=req(id);
+  S.confirm=null;S.screen="foglalasok";S.day=null;
+  if(S.v==="C"){S.focus=id;render("top");return;}
+  S.target=id;S.cal={unit:r.unit,month:r.from.slice(0,7)};
+  render("req-"+id);
+}
+function decide(id,kind){
+  S.st[id]=kind==="ok"?"accepted":"declined";
+  var from=S.confirm&&S.confirm.from;
+  S.confirm=null;S.target=null;
+  if(from==="mail"){S.mailDone[id]=true;render();return;}
+  S.outcome={id:id,kind:kind};S.focus=null;S.cal=null;S.calOpen=kind==="ok";S.day=null;
+  if(kind==="ok"){var r=req(id);S.cal={unit:r.unit,month:r.from.slice(0,7)};}
+  render("top");
+}
+
+document.addEventListener("click",function(ev){
+  var t=ev.target.closest("button,a");if(!t)return;
+  var d=t.dataset;
+  if(d.v){S.v=d.v;S.confirm=null;S.focus=null;render();return;}
+  if(d.size){S.size=d.size;render();return;}
+  if(t.hasAttribute("data-fold")){S.fold=!S.fold;render();return;}
+  if(d.start){S=fresh();S.screen=d.start;render(d.start==="uzenetek"?"msg-m1":"top");return;}
+  if(t.hasAttribute("data-reset")){S=fresh();render("top");return;}
+  if(t.hasAttribute("data-hidebar")){document.body.classList.add("nobar");return;}
+  if(t.hasAttribute("data-showbar")){document.body.classList.remove("nobar");return;}
+  if(d.go){ev.preventDefault();if(["attekintes","uzenetek","foglalasok"].indexOf(d.go)<0){toast("Ez a mock csak a döntés-út három képernyőjét mutatja.");return;}
+    S.screen=d.go;S.focus=null;S.confirm=null;S.target=null;render("top");return;}
+  if(d.msg){S.msgOpen=S.msgOpen===d.msg?null:d.msg;S.confirm=null;render(S.msgOpen?"msg-"+S.msgOpen:null);return;}
+  if(d.open){ev.preventDefault();openRequest(d.open);return;}
+  if(t.hasAttribute("data-list")){S.focus=null;S.confirm=null;render("top");return;}
+  if(d.ask){var p=d.ask.split("|");S.confirm={id:p[0],kind:p[1],from:p[2]};render(S.v==="B"?null:"cf");return;}
+  if(t.hasAttribute("data-cancel")){S.confirm=null;render();return;}
+  if(d.do){var q=d.do.split("|");var ta=document.querySelector("textarea[data-tx]");if(ta)S.text[ta.dataset.tx]=ta.value.trim();decide(q[0],q[1]);return;}
+  if(d.addmsg){S.text[d.addmsg]="";S._focusTx=true;render("cf");return;}
+  if(d.offer){toast("Az ajánlat-lap nyílna (jóváhagyott terv: booking-offer-scope) — azt ez a terv nem változtatja.");return;}
+  if(d.calto){var r=req(d.calto);S.cal={unit:r.unit,month:r.from.slice(0,7)};S.calOpen=true;S.day=null;render("naptar");return;}
+  if(t.hasAttribute("data-caltoggle")){S.calOpen=!S.calOpen;cal();render();return;}
+  if(d.mon){var c=cal(),y=+c.month.slice(0,4),m=+c.month.slice(5,7)-1+(+d.mon);var dt=new Date(Date.UTC(y,m,1));S.cal={unit:c.unit,month:iso(dt).slice(0,7)};S.day=null;render();return;}
+  if(d.day){var c2=cal(),k=dayKind(c2.unit,d.day);
+    if(k.k==="free"||k.k==="manual"){var key=c2.unit+"|"+d.day;if(S.manual[key])delete S.manual[key];else S.manual[key]=true;S.day=null;
+      toast(k.k==="free"?hu(d.day)+": kézzel blokkolva — a vendég nem foglalhatja.":hu(d.day)+": kézi blokk feloldva.");}
+    else S.day=S.day===d.day?null:d.day;
+    render();return;}
+  if(d.jump){var el=document.getElementById(d.jump);if(el)el.scrollIntoView({block:"start"});return;}
+  if(t.hasAttribute("data-jump-todo")){document.getElementById("teendok").scrollIntoView({block:"start"});return;}
+  if(t.hasAttribute("data-arr")){var a=BASE_REQS.filter(function(r){return S.st[r.id]==="accepted";})[0];if(a){S.cal={unit:a.unit,month:a.from.slice(0,7)};S.calOpen=true;S.day=a.from;render("naptar");}return;}
+  if(d.toast){toast(d.toast);return;}
+  if(t.hasAttribute("data-tel")){ev.preventDefault();toast("Tárcsázó nyílna: "+t.getAttribute("href").slice(4)+" (tel: link — telefonon egy koppintás).");return;}
+  if(t.getAttribute("href")&&t.getAttribute("href").indexOf("mailto:")===0){ev.preventDefault();toast("Levelező nyílna: "+t.getAttribute("href").slice(7));return;}
+  if(t.getAttribute("href")==="#"){ev.preventDefault();}
+});
+document.addEventListener("change",function(ev){
+  if(ev.target.matches("[data-unit]")){S.cal={unit:ev.target.value,month:cal().month};S.day=null;render();}
+});
+document.addEventListener("input",function(ev){if(ev.target.matches("textarea[data-tx]"))S.text[ev.target.dataset.tx]=ev.target.value;});
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape"&&S.confirm){S.confirm=null;render();}});
+document.getElementById("ovlhost").addEventListener("click",function(ev){if(ev.target.id==="ovl"){S.confirm=null;render();}});
+window.addEventListener("resize",layout);
+
+/* URL: ?v=A|B|C &size=mobile|land|desk &start=… &bar=0 &frame=0 (frame=0: the page IS the phone — for measuring) */
+var qs=new URLSearchParams(location.search);
+S=fresh();
+if(qs.get("v"))S.v=qs.get("v");
+S.size=qs.get("size")||(window.innerWidth<700?"mobile":"desk");
+if(qs.get("start"))S.screen=qs.get("start");
+if(qs.get("bar")==="0")document.body.classList.add("nobar");
+if(qs.get("shot")==="1")document.querySelector(".mk-show").style.display="none";
+if(qs.get("frame")==="0"||(window.innerWidth<700&&!qs.get("size")))document.body.classList.add("noframe");
+render(S.screen==="uzenetek"?"msg-m1":null);
+window.__mock={state:function(){return S;},open:openRequest};
+})();
+</script>
+</body>
+</html>

@@ -48,8 +48,10 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   # megerősítő a SUMMARY megnyitására jelenik meg. A rossz szelektor „a felület nem kérdez
   # rá" leletnek látszott — pedig rákérdez.
   tedd: kattints ".adm-msg__qd--ok summary"
-  várd: látható "Elfogadja a foglalást? A vendég azonnal visszaigazolást kap."
+  # ADR-XXXX (FK-015 „A", 2026-09-29): a kérdés a vendég NEVÉT viszi, és van „Mégsem".
+  várd: látható "Elfogadja Elek Vendég Éjszakai foglalását? A vendég azonnal visszaigazolást kap."
   várd: látható "Igen, elfogadom"
+  várd: darab ".adm-msg__qd--ok [data-msg-cfno]" == 1
   kézi: a megerősítő 390-en a képernyőre fér-e, és van-e belőle visszaút (nem dönt véletlen koppintásra); a két gomb súlya különbözik-e
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -83,6 +85,11 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   # Két kérés van a fülön (foglalás + árajánlat): a döntés a FOGLALÁS kártyájára szűkítve.
   tedd: görgess-középre ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) summary.bk-btn--ok"
   tedd: kattints ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) summary.bk-btn--ok"
+  # ADR-XXXX (FK-015 „A"): a megerősítő a KÁRTYÁN belül nyílik, teljes szélességben.
+  # A kérdés ÖSSZERAKOTT mondat („Visszaigazolja {name} foglalását?") — nem idézhető
+  # literálként (elek-label-drift-check); a megerősítő megléte szelektorral mérve.
+  várd: darab ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) .bk-cf__q" == 1
+  várd: látható "Igen, visszaigazolom"
   kézi: mi történt a koppintásra (a képen): megerősítő nyílt-e, a vendég NEVE szerepel-e benne, és 390-en a képernyőre fér-e; ha a megerősítő a görgető-dobozban ül, levágja-e a lap alja
   tűrt-hiba: 429 — a forrás-portál fotó-korlátja (a bemutató-képek onnan jönnek), nem a felület hibája
 
@@ -93,6 +100,9 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
   # `<details>`, ami egy sima űrlapot nyit: `textarea[name="uzenet"]` + „Megerősítem a
   # visszaigazolást". Mérve 2026-09-28: emiatt maradt a kérés függőben, és emiatt hagyta ki
   # magát az FK-016 (nem született lemondó-token).
+  # ADR-XXXX (2026-09-29): az üzenet-mező egy koppintásra nyílik („+ Üzenetet írok a
+  # vendégnek"), a gomb felirata „Igen, visszaigazolom".
+  tedd: kattints ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) .bk-cf__msg summary"
   tedd: írd ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) details[open] textarea[name='uzenet']" "Kisállatot szívesen fogadunk, a kertben van kifutó."
   tedd: görgess-középre ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) details[open] button[type='submit']"
   tedd: kattints ".bk-req:has(strong:text-is('Elek Vendég Éjszakai')) details[open] button[type='submit']"

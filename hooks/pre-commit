@@ -1162,6 +1162,15 @@ if [ -f scripts/booking-queue-urgency-check.mts ] && \
   echo "[pre-commit] booking-queue-urgency-check (a sorrendet a határidő adja)…"
   npx tsx scripts/booking-queue-urgency-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A JÓVÁHAGYOTT telefonos foglaláskezelés (design-refs/tenant-admin/booking-phone, FK-015 „A"):
+# a TELJES admin-oldalt méri 390×844 és 844×390 méretben — a döntő gombok a képernyőn,
+# ≥ 44 px, a megerősítő megnevezi a vendéget és van „Mégsem", tel: link, a naptár a kért
+# hónapon, a jelvény a döntésre várókat számolja. Geometria, nem DOM — piros önteszttel.
+if [ -f scripts/booking-phone-check.mts ] && \
+   changed_files | grep -qE '^(src/server/(bookingViews|adminViews)\.ts|public/assets/ui/citui-admin\.css|scripts/booking-phone-check\.mts|assets/design-refs/tenant-admin/booking-phone/)'; then
+  echo "[pre-commit] booking-phone-check (a tulaj telefonon dönt a foglalásról)…"
+  npx tsx scripts/booking-phone-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A foglalás-sor IGAZAT mondjon arról, mi történt (ki mondta le, döntés volt-e,
 # melyik ablak járt le), a lemondás vigye vissza a tulajt oda, ahol dolgozott, és a
 # beadás után a vendég LÁSSA a nyugtát. Az utóbbi geometriai ítélet: a kártya a DOM-ban

@@ -15,7 +15,8 @@ import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
 import { isBilledModule, type TenantModule, type TenantModuleView } from "../tenant/modules.js";
 import { MODCFG_STYLE, hasSettingsScreen } from "./moduleConfigViews.js";
-import { bookingsSection } from "./bookingViews.js";
+import { bookingsSection, hoursLeft } from "./bookingViews.js";
+import type { InboxItem } from "../booking/requests.js";
 import type { BookingsTabData } from "./bookingViews.js";
 import { domAnchorsOf } from "./modulePreview.js";
 import type { TrafficReport } from "../analytics/trafficReport.js";
@@ -38,6 +39,7 @@ import { huArticle, huArticleLower } from "../hu.js";
 // A vevőnek mutatott support-cím EGY forrása (a hívók is ezt adják át).
 import { config } from "../config.js";
 import { formatDay, formatDayStem, formatMonthDay } from "../text/day.js";
+import { formatAmount } from "../tenant/prices.js";
 // Elek FK-001 E1: WHAT the invoice is for. The label is DERIVED from the order,
 // and the SAME register names the item in the covering mail's subject.
 import {
@@ -119,22 +121,69 @@ function messageBodyHtml(text: string, lang: string): string {
     if (m) acts.push({ label: m[1]!.trim(), url: m[2]!, kind: m[3]! });
     else (acts.length ? after : before).push(line);
   }
-  if (!acts.length) return `<p>${linkifyText(text)}</p>`;
+  // FK-015: the guest's phone number in the letter is a tap-to-call link.
+  const telLabel = T(lang, "Telefon:");
+  const bodyLines = (lines: string[]): string =>
+    lines
+      .map((l) => {
+        if (!l.startsWith(telLabel)) return linkifyText(l);
+        const num = l.slice(telLabel.length).trim();
+        return num
+          ? `${esc(telLabel)} <a href="tel:${esc(num.replace(/[^\d+]/g, ""))}">${esc(num)}</a>`
+          : linkifyText(l);
+      })
+      .join("\n");
+  if (!acts.length) return `<p>${bodyLines(text.split("\n"))}</p>`;
+
+  // ADR-XXXX ② (FK-015, owner's choice „A", 2026-09-29): the DECISION stands at the
+  // TOP of the opened letter — who, when, how much, the 48 px main button, the quick
+  // verdict — and the full text follows. Measured before: the main button sat at
+  // y≈865–901 on a 390×844 phone (below the fold, ~36 px tall), the quick verdict's
+  // confirmation at y≈970–1075, with no way back but the opposite verdict under it.
+  // The summary is read off the letter's own labelled lines (the owner's language),
+  // so it can never say more than the letter does.
+  const field = (label: string): string => {
+    const l = before.find((x) => x.startsWith(label));
+    return l ? l.slice(label.length).trim() : "";
+  };
+  const guest = field(T(lang, "Vendég:"));
+  const from = field(T(lang, "Érkezés:"));
+  const to = field(T(lang, "Távozás:"));
+  const count = field(T(lang, "Létszám:"));
+  const price = field(T(lang, "Ár összesen (a foglaláskori árlista szerint):"));
+  const unit = (before[0] ?? "").split(" — ")[1]?.trim() ?? "";
+  // An amount never breaks inside itself („56 / 000 Ft" on a phone, measured).
+  const keep = (x: string): string => x.replace(/(\d) (?=\d{3}\b)/g, "$1\u00a0").replace(/ (Ft|EUR|€)\b/g, "\u00a0$1");
+  const sumLine = [from && to ? `${from} → ${to}` : "", count, keep(price), unit].filter(Boolean).join(" · ");
+  const token = /\/foglalas\/([A-Za-z0-9_-]{16,80})\//.exec(acts[0]!.url)?.[1] ?? "";
+  const open = token ? `/admin?tab=foglalasok&k=${encodeURIComponent(token)}#kerelem` : "/admin?tab=foglalasok";
+
   const quick = acts
     .map((a) => {
       const link = (cls: string, inner: string): string =>
         `<a class="${cls}" href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${inner}</a>`;
       if (a.kind === "ajanlat") return link("adm-msg__qa", `${ic("fwd", 15)}<span>${esc(a.label)}</span>`);
       const yes = a.kind === "elfogadom";
+      const q = guest
+        ? yes
+          ? T(lang, "Elfogadja {name} foglalását? A vendég azonnal visszaigazolást kap.", { name: esc(guest) })
+          : T(lang, "Elutasítja {name} kérését? A vendég azonnal értesítést kap róla.", { name: esc(guest) })
+        : esc(
+            yes
+              ? T(lang, "Elfogadja a foglalást? A vendég azonnal visszaigazolást kap.")
+              : T(lang, "Elutasítja a kérést? A vendég azonnal értesítést kap róla."),
+          );
       return (
         `<details class="adm-msg__qd adm-msg__qd--${yes ? "ok" : "no"}">` +
         `<summary>${ic(yes ? "check" : "close", 15)}<span>${esc(a.label)}</span></summary>` +
-        `<div class="adm-confirm"><b>${esc(
-          yes
-            ? T(lang, "Elfogadja a foglalást? A vendég azonnal visszaigazolást kap.")
-            : T(lang, "Elutasítja a kérést? A vendég azonnal értesítést kap róla."),
-        )}</b>` +
+        `<div class="adm-confirm"><b>${q}</b>` +
+        (sumLine ? `<span class="adm-confirm__s">${esc(sumLine)}</span>` : "") +
+        // The one-tap link carries no message — said here, not discovered afterwards.
+        `<span class="adm-confirm__n">${esc(T(lang, "Üzenetet a Foglalások fülön írhat mellé."))}</span>` +
         `<div class="adm-confirm__act">` +
+        // The way back is its own button — before, the next tappable thing under the
+        // box was the OPPOSITE verdict. Without JS it reloads the tab (panel closed).
+        `<a class="citui-btn citui-btn--ghost" href="/admin?tab=uzenetek" data-msg-cfno>${esc(T(lang, "Mégsem"))}</a>` +
         link(
           `citui-btn ${yes ? "citui-btn--primary" : "citui-btn--ghost"}`,
           esc(yes ? T(lang, "Igen, elfogadom") : T(lang, "Igen, elutasítom")),
@@ -145,11 +194,22 @@ function messageBodyHtml(text: string, lang: string): string {
     .join("");
   const tail = after.join("\n").trim();
   return (
-    `<p>${linkifyText(before.join("\n").trimEnd())}</p>` +
-    `<div class="adm-msg__acts"><a class="citui-btn citui-btn--dark" href="/admin?tab=foglalasok">` +
+    `<div class="adm-msg__dec">` +
+    (guest || sumLine
+      ? `<div class="adm-msg__sum">${guest ? `<b>${esc(guest)}</b>` : ""}${sumLine ? `<span>${esc(sumLine)}</span>` : ""}</div>`
+      : "") +
+    `<div class="adm-msg__acts"><a class="citui-btn citui-btn--dark" href="${esc(open)}">` +
     `${ic("bookings", 16)} ${esc(T(lang, "Foglalások megnyitása"))}</a></div>` +
     `<div class="adm-msg__quick"><span class="adm-msg__qlbl">${esc(T(lang, "Gyors döntés innen is:"))}</span>${quick}</div>` +
-    (tail ? `<p class="adm-msg__tail">${linkifyText(tail)}</p>` : "")
+    (tail ? `<p class="adm-msg__tail">${linkifyText(tail)}</p>` : "") +
+    `</div>` +
+    `<p>${bodyLines(before).trimEnd()}</p>` +
+    // The opened confirmation is brought into view — on a phone it opens under the
+    // button just tapped, i.e. under the fold (measured by booking-phone-check).
+    `<script>(function(){document.querySelectorAll(".adm-msg__qd").forEach(function(d){d.addEventListener("toggle",function(){` +
+    `if(!d.open)return;var c=d.querySelector(".adm-confirm");if(c&&c.scrollIntoView)c.scrollIntoView({block:"nearest"});});});` +
+    `document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("[data-msg-cfno]");` +
+    `if(!a)return;var d=a.closest("details");if(!d)return;e.preventDefault();d.open=false;});})();</script>`
   );
 }
 
@@ -251,7 +311,8 @@ interface NavCounts {
   readonly photos: number;
   readonly modules: number;
   readonly unread: number;
-  readonly unseenBookings: number;
+  /** ADR-XXXX ①: requests WAITING FOR A DECISION (not „not yet seen"). */
+  readonly pendingBookings: number;
   /** Module sub-list under „Modulok" (contract: design-refs/tenant-admin/module-subnav). */
   readonly subModules: readonly { readonly id: string; readonly label: string }[];
   /** Modules the owner has NOT bought — the shop's own predicate (module-subnav ⑨). */
@@ -265,8 +326,8 @@ interface NavCounts {
 function navMark(id: string, c: NavCounts, lang: string, counts = true): string {
   if (id === "uzenetek" && c.unread > 0)
     return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} olvasatlan üzenet", { n: c.unread }))}">${c.unread > 99 ? "99+" : c.unread}</span>`;
-  if (id === "foglalasok" && c.unseenBookings > 0)
-    return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} új foglalási kérés", { n: c.unseenBookings }))}">${c.unseenBookings > 99 ? "99+" : c.unseenBookings}</span>`;
+  if (id === "foglalasok" && c.pendingBookings > 0)
+    return `<span class="adm-bdg" aria-label="${esc(T(lang, "{n} kérés vár döntésre", { n: c.pendingBookings }))}">${c.pendingBookings > 99 ? "99+" : c.pendingBookings}</span>`;
   if (!counts) return "";
   if (id === "fotok" && c.photos > 0) return `<span class="adm-nav__n">${c.photos}</span>`;
   // module-subnav ⑤: one row, one unit — the badge counts the list right under it.
@@ -3890,6 +3951,11 @@ export interface OverviewData {
   readonly visitors7: number;
   /** Unique visitors per day, oldest → newest, 7 entries (the sparkline). */
   readonly visitsByDay: readonly number[];
+  /**
+   * ADR-XXXX ①: the requests waiting for the owner's decision, most urgent first —
+   * the strip at the top of the tab and one Teendők row each. Absent = no booking module.
+   */
+  readonly pendingBookings?: { readonly items: readonly InboxItem[]; readonly expireHours: number };
   /** The 3 latest messages, newest first. */
   readonly messages: readonly {
     readonly id: string;
@@ -4049,8 +4115,62 @@ function overviewSection(
       `<span class="adm-todo__acts"><a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=modulok&m=pricing">${T(lang, "Megadom az árakat")}</a></span>` +
       `</span></li>`
     : "";
+  // ── ADR-XXXX ① (FK-015, owner 2026-09-29): a request WAITING FOR A DECISION is a
+  // to-do. Measured before: the new request stood only as a cut-off Üzenetek line,
+  // the Teendők list said nothing about it. One row per request, most urgent first,
+  // with the one action it needs; the strip at the top points here, because on a
+  // phone this box sits below the cover photo, under the fold.
+  const pendingItems = ov?.pendingBookings?.items ?? [];
+  const pendingExpire = ov?.pendingBookings?.expireHours ?? 0;
+  const pendingRows = pendingItems
+    .map((r) => {
+      const quote = !r.quotedTotal;
+      const left = hoursLeft(r, pendingExpire);
+      const nights = Math.max(1, Math.round((Date.parse(r.dateTo) - Date.parse(r.dateFrom)) / 86_400_000));
+      const line = [
+        `${formatDay(r.dateFrom, lang)} → ${formatDay(r.dateTo, lang)}`,
+        T(lang, "{n} éj", { n: nights }),
+        T(lang, "{n} fő", { n: r.guests }),
+        r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? "HUF") : "",
+        r.unitName,
+        left != null ? T(lang, "még {n} óra a válaszra", { n: left }) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const act = quote
+        ? `<a class="citui-btn citui-btn--primary citui-btn--sm" href="/foglalas/${encodeURIComponent(r.token)}/ajanlat">${T(lang, "Ajánlatot küldök")}</a>`
+        : `<a class="citui-btn citui-btn--primary citui-btn--sm" href="/admin?tab=foglalasok&k=${encodeURIComponent(r.token)}#kerelem">${T(lang, "Döntök")}</a>`;
+      return (
+        `<li class="pending adm-todo__paid" data-todo="booking-pending">` +
+        `<i class="adm-todo__st"></i><span class="adm-todo__body">` +
+        `<strong>${
+          quote
+            ? T(lang, "Árajánlatot vár: {name}", { name: esc(r.guestName) })
+            : T(lang, "Döntésre vár: {name}", { name: esc(r.guestName) })
+        }</strong>` +
+        `<span class="adm-todo__note">${esc(line)}</span>` +
+        `<span class="adm-todo__acts">${act}</span>` +
+        `</span></li>`
+      );
+    })
+    .join("");
+  const soonest = pendingItems.length ? hoursLeft(pendingItems[0]!, pendingExpire) : null;
+  const pendingStrip = pendingItems.length
+    ? `<a class="adm-pendstrip" href="#teendok" data-pending-strip>${ic("alert", 18)}<span>` +
+      `<b>${
+        pendingItems.length === 1
+          ? T(lang, "1 kérés vár az Ön döntésére")
+          : T(lang, "{n} kérés vár az Ön döntésére", { n: pendingItems.length })
+      }</b>` +
+      `<span>${
+        soonest != null
+          ? T(lang, "A legsürgősebb {n} óra múlva lejár — lent, a Teendők között.", { n: soonest })
+          : T(lang, "Lent, a Teendők között.")
+      }</span></span></a>`
+    : "";
   const introDone = Boolean(content.intro && content.intro.length > 40);
   const todo =
+    pendingRows +
     paidEmptyRows +
     priceGapRow +
     todoItem(
@@ -4082,6 +4202,7 @@ function overviewSection(
       suspended ? "modulok" : "webcim",
     );
   const openCount =
+    pendingItems.length +
     paidEmpty.length + (priceGaps.length ? 1 : 0) + (content.usingOwnPhotos ? 0 : 1) + (introDone ? 0 : 1) + (live ? 0 : 1);
   // ── the three widgets (README ⑤) ────────────────────────────────────────────
   const statusTag =
@@ -4145,9 +4266,10 @@ function overviewSection(
     `<section class="adm-ov">` +
     `<div class="adm-ph"><h1>${T(lang, "Áttekintés")}${helpLink("admin.overview", lang)}</h1>` +
     `<p>${T(lang, "Az oldala állapota egy képernyőn — ami teendő, az itt sorban áll.")}</p></div>` +
+    pendingStrip +
     `<div class="adm-w">${wStatus}${wVisits}${wMsgs}</div>` +
     showcase +
-    `<div class="adm-todobox"><div class="adm-todo__h">${T(lang, "Teendők")} <span class="cnt">${T(lang, "{n} nyitott", { n: openCount })}</span>` +
+    `<div class="adm-todobox" id="teendok"><div class="adm-todo__h">${T(lang, "Teendők")} <span class="cnt">${T(lang, "{n} nyitott", { n: openCount })}</span>` +
     `<span class="adm-sp"></span><span class="cnt">${
       billedActiveCount === activeCount
         ? T(lang, "{n} modul", { n: activeCount })
@@ -5353,8 +5475,8 @@ export interface AdminOpts {
   readonly unreadMessages?: number;
   /** Jóváhagyott terv 2026-09-06: a „Foglalások" fül adata. */
   readonly bookings?: BookingsTabData | null;
-  /** Még nem látott foglalási kérések — a fülsor jelvénye. */
-  readonly unseenBookings?: number;
+  /** Döntésre váró foglalási kérések — a fülsor jelvénye (ADR-XXXX ①; a fül megnyitásától nem tűnik el). */
+  readonly pendingBookings?: number;
 }
 
 /** module-subnav ④: on a module screen the path is `<site> › Modulok › <module>`. */
@@ -5462,7 +5584,7 @@ export function adminDashboard(
     photos: content?.photos?.length ?? 0,
     modules: mv ? mv.modules.filter((m) => m.active).length : 0,
     unread,
-    unseenBookings: opts.unseenBookings ?? 0,
+    pendingBookings: opts.pendingBookings ?? 0,
     // module-subnav ①: the SAME predicate the Modulok tab runs before it offers
     // „Beállítás" — a list entry is never a dead end.
     subModules: mv
@@ -5790,7 +5912,14 @@ export function adminDashboard(
 
   // The Áttekintés and the Fotók render their own page head (title + sentence);
   // every other tab gets the plain H1 here.
-  const pageHead = tab === "attekintes" || tab === "fotok" ? "" : `<div class="adm-ph"><h1>${esc(tabLabel)}</h1></div>`;
+  const pageHead =
+    tab === "attekintes" || tab === "fotok"
+      ? ""
+      : tab === "foglalasok"
+        ? // ADR-XXXX ②: the guide link moved from the tab body to the title (ADR-0045 §J
+          // coverage hook kept) — every line above the first request cost its buttons.
+          `<div class="adm-ph"><h1>${esc(tabLabel)}${helpLink("admin.bookings", lang)}</h1></div>`
+        : `<div class="adm-ph"><h1>${esc(tabLabel)}</h1></div>`;
 
   return shell(
     T(lang, "Admin"),
