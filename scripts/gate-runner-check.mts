@@ -25,7 +25,7 @@
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
 //     a módot/diffet olvasó kaput sosem hagyja ki — viszont egy commit landolásakor tényleg
 //     újrahasznosít (különben csak költség),
-//   · (ADR-XXXX) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
+//   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
 //     előzmény nélküli kaput a legelején; az előzményt minden futás tartósan frissíti, és egy
 //     sérült előzmény-fájl nem bukás.
 //

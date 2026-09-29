@@ -1,6 +1,6 @@
 # 2026-09-29 — A kapu-futtató a leghosszabb kaput indítja először (brief: kapu-leghosszabb-eloszor, „A” opció)
 
-**Elvégezve (ADR-XXXX):** a `scripts/lib/gate-runner.mjs` minden futás után a `<git-common-dir>/cit-gate-history.json`-ba
+**Elvégezve (ADR-0265):** a `scripts/lib/gate-runner.mjs` minden futás után a `<git-common-dir>/cit-gate-history.json`-ba
 írja a ténylegesen lefutott kapuk idejét (argv-kulcs, ½-½ mozgóátlag, tmp + rename, sérült fájl = nincs előzmény), és az
 ① fázis várakozó kapuit ez alapján csökkenő sorrendben indítja (előzmény nélküli elöl, stabil rendezés → előzmény nélkül
 pontosan a hook-sorrend). Az író-sáv, a soros írók, az önkizárás és a gépi slotok változatlanok. Őr:

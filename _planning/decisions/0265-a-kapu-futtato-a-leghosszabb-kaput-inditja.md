@@ -1,4 +1,4 @@
-## ADR-XXXX — A kapu-futtató a leghosszabb kaput indítja először, tartós kapuidő-előzményből (`scripts/lib/gate-runner.mjs`) (2026-09-29)
+## ADR-0265 — A kapu-futtató a leghosszabb kaput indítja először, tartós kapuidő-előzményből (`scripts/lib/gate-runner.mjs`) (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** a koordinátor „A” és „B” javaslatára: *„Ok a és b”*. Brief:
   `~/rc-briefs/kapu-leghosszabb-eloszor.md`. Az „A” opció ez; a „B” (öt böngészős kapu belső

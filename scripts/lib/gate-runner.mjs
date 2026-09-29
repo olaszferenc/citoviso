@@ -39,7 +39,7 @@
 //
 // PASS CACHE: see the block above `signature()` — land skips only an identical, green run.
 //
-// LONGEST FIRST (ADR-XXXX). After every run the wall-clock of each gate that actually ran (green
+// LONGEST FIRST (ADR-0265). After every run the wall-clock of each gate that actually ran (green
 // AND red: a red one took that long too) is folded into <git-common-dir>/cit-gate-history.json,
 // keyed by the gate's STABLE identity (its argv — not the pass-cache signature, which changes
 // with every diff). Before phase ① the waiting gates are ordered by that history, longest first,
