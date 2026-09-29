@@ -3084,7 +3084,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   if (ownerOfferPost) {
     const token = ownerOfferPost[1]!;
     const form = await readFormBody(req);
-    // ADR-XXXX (approved plan booking-offer-scope, „A"): the price goes into the list only
+    // ADR-0267 (approved plan booking-offer-scope, „A"): the price goes into the list only
     // when „Mentsem az árlistába is?" is ticked AND one of its two ways is chosen.
     const into = form.get("into") === "1";
     const input = {

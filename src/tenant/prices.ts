@@ -429,7 +429,7 @@ export async function setSeasonYearPrice(
  * where the owner prices the nights a guest asked about. An earlier dated base whose
  * window overlaps is replaced, so one night never has two competing dated bases.
  *
- * `remind: false` (ADR-XXXX „a kért napokra"): the window is the stay itself, so the
+ * `remind: false` (ADR-0267 „a kért napokra"): the window is the stay itself, so the
  * 14-day "hamarosan lejár egy ár" mail would only be noise — the row is born with the
  * reminder stamp already set. It is still removed (and the page re-rendered) when it lapses.
  */

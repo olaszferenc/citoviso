@@ -4,7 +4,7 @@
 mentett ár a kért napokra szól, nem mától), a mezőnévre **„igen”** (`booking_request.offer_saved_as`).
 A §2b kör három változata (A: pipa · B: három gomb · C: később, a listából) a
 `elek/runs/arajanlat-ar/` alatt maradt; ez a mappa az **A**-t köti. ·
-**Kapcsolódó:** ADR-XXXX (ez a döntés), ADR-0215 ①.3 (amit felülír), ADR-0256 ① (a widget az első áras
+**Kapcsolódó:** ADR-0267 (ez a döntés), ADR-0215 ①.3 (amit felülír), ADR-0256 ① (a widget az első áras
 egységen nyílik), ADR-0257 (csak egyben kiadó ház), `../booking-offer/` (a lánc többi része változatlan).
 
 `plan.html` a megvalósítás **KONTRAKTUSA, nem stílus-javaslat**. A kész felületet ehhez mérjük (mobil 390 +

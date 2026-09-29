@@ -1,4 +1,4 @@
-## ADR-XXXX — Az árajánlat ára alapból csak arra a kérésre szól; az árlistába csak kérésre kerül (a kért napokra vagy alapárként), és a kiküldött ajánlatok listája megmondja, mi lett vele
+## ADR-0267 — Az árajánlat ára alapból csak arra a kérésre szól; az árlistába csak kérésre kerül (a kért napokra vagy alapárként), és a kiküldött ajánlatok listája megmondja, mi lett vele
 
 **Dátum:** 2026-09-29 · **Státusz:** elfogadva (lokál, nem élesítve — a nagy deployjal megy) ·
 **Felülírja:** ADR-0215 ①.3 („az ár MINDIG az árlistába kerül … dátum nélkül időtlen alapárként”) és a

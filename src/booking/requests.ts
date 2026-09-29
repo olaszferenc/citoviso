@@ -1707,7 +1707,7 @@ export async function getRequests(siteId: string, limit = 40): Promise<InboxItem
   }));
 }
 
-/** One row of the Foglalások tab's „Kiküldött ajánlatok" list (ADR-XXXX). */
+/** One row of the Foglalások tab's „Kiküldött ajánlatok" list (ADR-0267). */
 export interface SentOffer {
   readonly id: string;
   readonly guestName: string;
@@ -2020,16 +2020,16 @@ export interface OfferView {
   readonly seasons?: { label: string; from: string; to: string; amount: number }[];
   readonly today?: string;
   readonly expireHours?: number;
-  /** ADR-XXXX: the unit stands for the whole place ("az egész szállás") or is a room —
+  /** ADR-0267: the unit stands for the whole place ("az egész szállás") or is a room —
    *  the consequence sentences name it, instead of calling a house "a szoba". */
   readonly unitKind?: "whole" | "room";
-  /** ADR-XXXX + ADR-0256 ①: pricing this unit makes it the unit the guest's booking box
+  /** ADR-0267 + ADR-0256 ①: pricing this unit makes it the unit the guest's booking box
    *  opens on (it is the first bookable unit in the owner's order with any price row, and
    *  there is more than one to choose from). Said out loud on the "alapár" choice. */
   readonly opensWidget?: boolean;
 }
 
-/** Where an offer's price goes (ADR-XXXX, owner 2026-09-29: „OK A)", „Kért Napok"). */
+/** Where an offer's price goes (ADR-0267, owner 2026-09-29: „OK A)", „Kért Napok"). */
 export type OfferSaveAs = "request" | "dates" | "base";
 
 /**
@@ -2192,7 +2192,7 @@ export interface SendOfferResult {
   readonly currency?: string;
   readonly guestName?: string;
   readonly amount?: number;
-  /** ADR-XXXX: where the price went; with 'dates', `runs` are the windows written. */
+  /** ADR-0267: where the price went; with 'dates', `runs` are the windows written. */
   readonly savedAs?: OfferSaveAs;
   readonly runs?: { from: string; to: string }[];
   /** per_night | per_person_night | per_stay — what one `amount` means. */
@@ -2205,7 +2205,7 @@ export interface SendOfferResult {
 /**
  * Send the price offer (POST of the owner's offer page).
  *
- * ADR-XXXX (overrides ADR-0215 ①.3 „az ár MINDIG az árlistába kerül"; owner 2026-09-29):
+ * ADR-0267 (overrides ADR-0215 ①.3 „az ár MINDIG az árlistába kerül"; owner 2026-09-29):
  * the price is for THIS request unless the owner ticks „Mentsem az árlistába is?":
  *   'request' — nothing is written to the price list; the quote is computed through
  *               in-memory rows (offerOverlayRows) and frozen on the request;

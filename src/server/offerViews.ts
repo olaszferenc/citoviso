@@ -174,7 +174,7 @@ export function ownerOfferPage(
       `</div></li>`
     : "";
 
-  // ── ADR-XXXX (approved plan booking-offer-scope „A"): where the price goes ──────────
+  // ── ADR-0267 (approved plan booking-offer-scope „A"): where the price goes ──────────
   // Default: THIS request only. A ticked „Mentsem az árlistába is?" offers the asked nights
   // or the timeless base, and the sentence under it says what each does to the guest's page.
   const runs = missingRuns(missing);
@@ -360,12 +360,12 @@ function ownerOfferClosedPage(v: OfferView): string {
 }
 
 /** POST success — contract step 3 (the owner's own card). Its button opens the Foglalások tab
- *  at „Kiküldött ajánlatok" (ADR-XXXX) — it used to open the booking MODULE settings, a page
+ *  at „Kiküldött ajánlatok" (ADR-0267) — it used to open the booking MODULE settings, a page
  *  with no request on it (tudásbázis-őr, 2026-09-29). */
 export function ownerOfferSentPage(r: SendOfferResult, hostName: string): string {
   const lang = r.lang;
   const money = (n: number): string => formatMoney(n, r.currency, lang);
-  // ADR-XXXX: say where the price went — the list is untouched unless the owner chose so.
+  // ADR-0267: say where the price went — the list is untouched unless the owner chose so.
   const price = r.amount ? money(r.amount) + perSuffix(lang, r.unitMode) : "";
   const range = (r.runs ?? []).map((w) => `${huDate(w.from, lang)} – ${huDate(addDays(w.to, 1), lang)}`).join(", ");
   const intoLine = !r.amount

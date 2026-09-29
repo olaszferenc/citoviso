@@ -1038,7 +1038,7 @@ export interface BookingRequestTable {
   offered_at: Timestamp | null;
   /** 0072: the GUEST's single-use key to accept the offer — never the owner's action_token. */
   offer_token: string | null;
-  /** 0080 (ADR-XXXX): where the offer's price went — 'request' (this request only),
+  /** 0080 (ADR-0267): where the offer's price went — 'request' (this request only),
    *  'dates' (the asked nights, into the price list), 'base' (timeless base); null = not an
    *  offer, or an offer from before the choice existed. */
   offer_saved_as: "request" | "dates" | "base" | null;

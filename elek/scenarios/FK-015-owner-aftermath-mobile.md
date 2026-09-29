@@ -120,7 +120,7 @@ kontraktus: assets/design-refs/tenant-admin/foglalasok-README.md · assets/desig
 - [ ] Árat ír, és elküldi — a vendég levélben kapja
   tedd: írd "[data-amount]" "90 000"
   tedd: írd "#of-note" "Hat főre a teljes ház, az ágyneműt odakészítjük."
-  # ADR-XXXX (2026-09-29): az ár ALAPBÓL csak erre a kérésre szól — a pipa üres, és a lap ki is
+  # ADR-0267 (2026-09-29): az ár ALAPBÓL csak erre a kérésre szól — a pipa üres, és a lap ki is
   # mondja. (Az ADR-0215 alatt ez a lépés a házat némán foglalhatóvá kapcsolta: 90 000 Ft alapár.)
   várd: látható "Mentsem az árlistába is?"
   várd: látható "Csak erre a kérésre."

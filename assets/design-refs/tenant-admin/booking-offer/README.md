@@ -33,7 +33,7 @@ miközben a lap (ADR-0208) már árajánlat-kérést.
    szerint**: ami már árazott, az a meglévő áron, fixen áll; **csak a hiányzó éjszakákra**
    kér árat. Az összeg élőben számolódik, ugyanazzal a szabállyal, ami a vendég-lapon és a
    levélben az árat adja (egy példány, ADR-0208 ③).
-> ⛔ **Az 5. és 6. pontot felülírta az ADR-XXXX (2026-09-29, `../booking-offer-scope/`):** az ár
+> ⛔ **Az 5. és 6. pontot felülírta az ADR-0267 (2026-09-29, `../booking-offer-scope/`):** az ár
 > alapból CSAK arra a kérésre szól; az árlistába csak a „Mentsem az árlistába is?” pipával kerül — a
 > kért napokra vagy alapárként. Érvényesség-dátum mező nincs. A lánc többi pontja változatlan.
 

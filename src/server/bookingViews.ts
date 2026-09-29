@@ -37,7 +37,7 @@ export interface BookingsTabData {
   readonly panel: "pend" | "arr" | "year" | null;
   /** Every request of the site (pending + decided), newest data included. */
   readonly requests: readonly InboxItem[];
-  /** ADR-XXXX: every price offer sent, whatever became of it („Kiküldött ajánlatok"). */
+  /** ADR-0267: every price offer sent, whatever became of it („Kiküldött ajánlatok"). */
   readonly sentOffers?: readonly SentOffer[];
   /**
    * Confirmations made this year that STILL STAND — the tile's headline number.
@@ -863,7 +863,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
   );
 }
 
-/* ── „Kiküldött ajánlatok" (ADR-XXXX, approved plan booking-offer-scope) ──── */
+/* ── „Kiküldött ajánlatok" (ADR-0267, approved plan booking-offer-scope) ──── */
 
 /** The Budapest wall-clock of a deadline, short ("okt. 1. 16:10"). */
 function shortWhen(d: Date): string {

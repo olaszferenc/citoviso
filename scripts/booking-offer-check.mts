@@ -1,6 +1,6 @@
 // ⛔⛔ AZ ÁRAJÁNLAT-ÚT ŐRE — kontraktus: assets/design-refs/tenant-admin/booking-offer/
 // (tulajdonosi jóváhagyás 2026-09-23, „B" út + tulaj-oldali rögzítés) és
-// assets/design-refs/tenant-admin/booking-offer-scope/ (ADR-XXXX, 2026-09-29: az ár ALAPBÓL
+// assets/design-refs/tenant-admin/booking-offer-scope/ (ADR-0267, 2026-09-29: az ár ALAPBÓL
 // csak arra a kérésre szól; „Mentsem az árlistába is?" → a kért napokra / alapárként;
 // „Kiküldött ajánlatok" lista). Az ADR-0215 ①.3 „mindig az árlistába" ága FELÜLÍRVA.
 //
@@ -278,7 +278,7 @@ try {
   check("⑩ a vendég kulcsa KÜLÖN kulcs", !!r1.offer_token && r1.offer_token !== r1.action_token);
   const days1 = await db.selectFrom("availability_day").select("day").where("source", "=", `booking:${r1.id}`).execute();
   check("⑧ a napok még szabadok", days1.length === 0, days1.length);
-  // ⛔ ADR-XXXX: the default („csak erre a kérésre") writes NOTHING into the price list.
+  // ⛔ ADR-0267: the default („csak erre a kérésre") writes NOTHING into the price list.
   const prices = await getUnitPrices(upper.id);
   check("S② alapból SEMMI nem került az árlistába (csak a Főszezon maradt)", prices.length === 1 && !prices.some((p) => p.isBase), prices);
   check("S② a kérésen: offer_saved_as = 'request'", r1.offer_saved_as === "request", r1.offer_saved_as);
@@ -396,7 +396,7 @@ try {
     await page.goto(`${BASE}/admin?tab=foglalasok`, { waitUntil: "networkidle" });
     const offeredCards = page.locator("[data-bk-offered]");
     check(`⑬ ${label}: a kiküldött ajánlatok külön blokkban („Ajánlatra vár”)`, (await offeredCards.count()) === 4 && /ajánlatra vár/i.test(await page.locator("body").innerText()), await offeredCards.count());
-    // ADR-XXXX: the „Kiküldött ajánlatok" list — every offer, where its price went.
+    // ADR-0267: the „Kiküldött ajánlatok" list — every offer, where its price went.
     const list = page.locator("[data-sent-offers]");
     const shown = label === "mobil" ? list.locator(".bk-of__c") : list.locator(".bk-of__t tbody tr");
     check(`S⑤ ${label}: a „Kiküldött ajánlatok” lista mind a 6 ajánlatot mutatja (${label === "mobil" ? "kártyák" : "táblázat"})`, (await shown.count()) === 6 && (await shown.first().isVisible()), await shown.count());

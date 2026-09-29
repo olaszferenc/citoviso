@@ -1,4 +1,4 @@
--- AZ ÁRAJÁNLAT ÁRA ALAPBÓL CSAK ARRA A KÉRÉSRE SZÓL (ADR-XXXX; jóváhagyott terv:
+-- AZ ÁRAJÁNLAT ÁRA ALAPBÓL CSAK ARRA A KÉRÉSRE SZÓL (ADR-0267; jóváhagyott terv:
 -- assets/design-refs/tenant-admin/booking-offer-scope/, tulaj 2026-09-29: „OK A)", „Kért Napok",
 -- a mezőnév: „igen").
 --

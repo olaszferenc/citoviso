@@ -1,6 +1,6 @@
 # Az árajánlat ára alapból csak arra a kérésre szól + „Kiküldött ajánlatok” lista (2026-09-29)
 
-SUB-szál (koordinátor: `citded06a5f`) · brief: `~/rc-briefs/arajanlat-csak-erre-a-keresre.md` · ADR-XXXX ·
+SUB-szál (koordinátor: `citded06a5f`) · brief: `~/rc-briefs/arajanlat-csak-erre-a-keresre.md` · ADR-0267 ·
 kontraktus: `assets/design-refs/tenant-admin/booking-offer-scope/` („A”).
 Tulaj (a koordinátoron át, szó szerint): „OK A)” · „Kért Napok” · a mezőnévre „igen” · a Myrna-sorra
 „Leszarom mert teszt adat”, majd „minek javítunk dev rekordot?” (→ nem nyúltunk hozzá, nincs backfill).
@@ -38,7 +38,7 @@ ADR-0256 ① miatt azon nyílt. whole_only egység nincs a dev DB-ben. Alsó kor
 - A tudásbázis-őr FLAG-je (javítva): a „Foglalások megnyitása” a modul-beállításra vitt; a súgó „foglalhatnak”-ot
   ígért „foglalási kérés” helyett; telefonon nincs „oszlop”. Őr-állítás a gomb céljára.
 - A widget `unpriced` jele „nincs ársor” — egy élő „kért napokra” ablak alatt az egység nem „egyedi ár”
-  (ADR-XXXX „Ami tudottan nyitva marad”).
+  (ADR-0267 „Ami tudottan nyitva marad”).
 - A mockban a lista ár/éj alsora a megvalósításban elmaradt (nincs tárolt mező rá) — a README kimondja.
 
 ## Fájlok
