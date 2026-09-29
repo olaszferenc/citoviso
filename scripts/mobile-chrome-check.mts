@@ -1,4 +1,5 @@
 // Phone chrome gate (ADR-0253, contract: assets/design-refs/tenant-site/mobile-chrome-B).
+// gate-runner: self-overlap-safe — renders in memory (setContent), writes no file, no row, no shared path; the --selftest and the gate may run side by side (ADR-XXXX)
 //
 // The owner's rule, verbatim: „amint elérjük a foglalási részt, tűnjön el ez a sáv”. A guest
 // tapped "Foglalás", picked her dates, and then tried to SEND with the phone bar's
@@ -292,35 +293,61 @@ const VIEWPORTS = [
   { id: "1440", w: 1440, h: 900, mobile: false },
 ];
 
+// ⏱️ PARALLEL, SAME MEASUREMENT (lassu-land-vizsgalat, ADR-XXXX). The gate was the critical path of
+// every template-touching land: 76 page × viewport measurements one after another, 577 s alone
+// (+164 s --selftest). Now JOBS workers take the (viewport, target) pairs from one queue. Each
+// worker owns its OWN browser context per viewport, and every target still gets a FRESH page,
+// so parallel pages share no storage, fragment or focus; the measure() steps and every rule are
+// unchanged. Results are printed in the original (viewport, target) order, so the output is the
+// same as the serial run's. CIT_MCC_JOBS=1 = the old serial behaviour (one context per viewport).
+const JOBS = Math.max(1, Number(process.env.CIT_MCC_JOBS) || 4);
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
 const list = await targets();
 let failed = 0;
 const selfBad: string[] = [];
-for (const vp of VIEWPORTS) {
-  const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, isMobile: vp.mobile, hasTouch: vp.mobile, deviceScaleFactor: 1 });
-  await ctx.route("**/*", (r) => { const rt = r.request().resourceType(); return rt === "image" || rt === "font" || rt === "media" ? r.abort() : r.continue(); });
-  for (const t of list) {
-    // a FRESH page per target: a reused one keeps the previous #fragment (the menu-item
-    // jump), and the next document would load already scrolled to it
-    const page = await ctx.newPage();
-    const fs = await measure(page, t, vp);
-    await page.close();
-    if (selftest) {
-      const got = new Set(fs.map((f) => f.rule));
-      const exp = t.expect ?? [];
-      // a planted fault shows on the viewport it is planted for; the clean pages must stay green on both
-      const relevant = exp.filter((r) => (r.startsWith("③asztali") ? !vp.mobile : r.startsWith("②") || r.startsWith("④") ? vp.mobile : true));
-      const planted = t.id.includes("header-cta") ? !vp.mobile : t.id.includes("desktop") ? !vp.mobile : t.id.includes("bar-stays") || t.id.includes("menu") || t.id.includes("overflow") ? vp.mobile : true;
-      if (!exp.length && fs.length) selfBad.push(`${t.id} @${vp.id}: TISZTA lap piros: ${fs.map((f) => f.rule + " " + f.msg).join(" / ")}`);
-      if (exp.length && planted) for (const r of relevant) if (!got.has(r)) selfBad.push(`${t.id} @${vp.id}: a beültetett hibát (${r}) NEM fogta meg — ${fs.map((f) => f.rule).join(",") || "zöld"}`);
-      console.log(`${fs.length ? "🔴" : "🟢"} ${t.id.padEnd(30)} @${vp.id}  ${fs.map((f) => f.rule).join(", ")}`);
-      continue;
+type Vp = (typeof VIEWPORTS)[number];
+const work: { vp: Vp; t: Target; fs?: Finding[] }[] = [];
+for (const vp of VIEWPORTS) for (const t of list) work.push({ vp, t });
+let next = 0;
+async function worker(): Promise<void> {
+  const ctxs = new Map<string, Awaited<ReturnType<typeof browser.newContext>>>();
+  try {
+    while (next < work.length) {
+      const w = work[next++]!;
+      let ctx = ctxs.get(w.vp.id);
+      if (!ctx) {
+        ctx = await browser.newContext({ viewport: { width: w.vp.w, height: w.vp.h }, isMobile: w.vp.mobile, hasTouch: w.vp.mobile, deviceScaleFactor: 1 });
+        await ctx.route("**/*", (r) => { const rt = r.request().resourceType(); return rt === "image" || rt === "font" || rt === "media" ? r.abort() : r.continue(); });
+        ctxs.set(w.vp.id, ctx);
+      }
+      // a FRESH page per target: a reused one keeps the previous #fragment (the menu-item
+      // jump), and the next document would load already scrolled to it
+      const page = await ctx.newPage();
+      w.fs = await measure(page, w.t, w.vp);
+      await page.close();
     }
-    if (fs.length) failed++;
-    console.log(`${fs.length ? "🔴" : "🟢"} ${t.id.padEnd(30)} @${vp.id}`);
-    for (const f of fs) console.log(`     ${f.rule}  ${f.msg}`);
+  } finally {
+    for (const c of ctxs.values()) await c.close();
   }
-  await ctx.close();
+}
+await Promise.all(Array.from({ length: Math.min(JOBS, work.length) }, () => worker()));
+for (const { vp, t, fs: found } of work) {
+  // ⛔ A pair without a result is a measurement that never happened — never a green.
+  const fs = found ?? [{ rule: "⑤futás", msg: "a mérés nem futott le (nincs eredmény)" }];
+  if (selftest) {
+    const got = new Set(fs.map((f) => f.rule));
+    const exp = t.expect ?? [];
+    // a planted fault shows on the viewport it is planted for; the clean pages must stay green on both
+    const relevant = exp.filter((r) => (r.startsWith("③asztali") ? !vp.mobile : r.startsWith("②") || r.startsWith("④") ? vp.mobile : true));
+    const planted = t.id.includes("header-cta") ? !vp.mobile : t.id.includes("desktop") ? !vp.mobile : t.id.includes("bar-stays") || t.id.includes("menu") || t.id.includes("overflow") ? vp.mobile : true;
+    if (!exp.length && fs.length) selfBad.push(`${t.id} @${vp.id}: TISZTA lap piros: ${fs.map((f) => f.rule + " " + f.msg).join(" / ")}`);
+    if (exp.length && planted) for (const r of relevant) if (!got.has(r)) selfBad.push(`${t.id} @${vp.id}: a beültetett hibát (${r}) NEM fogta meg — ${fs.map((f) => f.rule).join(",") || "zöld"}`);
+    console.log(`${fs.length ? "🔴" : "🟢"} ${t.id.padEnd(30)} @${vp.id}  ${fs.map((f) => f.rule).join(", ")}`);
+    continue;
+  }
+  if (fs.length) failed++;
+  console.log(`${fs.length ? "🔴" : "🟢"} ${t.id.padEnd(30)} @${vp.id}`);
+  for (const f of fs) console.log(`     ${f.rule}  ${f.msg}`);
 }
 await browser.close();
 if (selftest) {
@@ -328,5 +355,5 @@ if (selftest) {
   console.log("\n✅ önteszt: a tiszta lapok zöldek, minden beültetett hiba piros");
   process.exit(0);
 }
-console.log(failed ? `\n⛔ mobile-chrome-check: ${failed} lap/nézet bukott` : `\n✅ mobile-chrome-check: ${list.length} lap × ${VIEWPORTS.length} nézet zöld`);
+console.log(failed ? `\n⛔ mobile-chrome-check: ${failed} lap/nézet bukott` : `\n✅ mobile-chrome-check: ${list.length} lap × ${VIEWPORTS.length} nézet zöld (${JOBS} párhuzamos munkás)`);
 process.exit(failed ? 1 : 0);

@@ -19,6 +19,7 @@
 //     egyetlen kapu sem fed át, és mindkettő végigér — nincs holtpont), a futtató halálával
 //     (kill -9) a slot magától felszabadul, a slot alatt indított beágyazott futtató nem kér
 //     újat, és slot nélkül (CIT_GATE_SLOTS=0) is ugyanúgy kapuz,
+//   · egy szkript önmagával csak INDOKOLT `// gate-runner: self-overlap-safe — …` jelöléssel fed át,
 //   · `gate_flush` nélkül a hook NEM zárulhat zölden,
 //   · a zöld-gyorsítótár (land ≠ commit duplikáció) CSAK azonos fán + diffen + argv/stdin/
 //     környezeten hasznosít újra, követetlen fájl mellett nem, piros ítéletet sosem tárol, és
@@ -31,10 +32,10 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (tizenöt visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
+//   (tizenhét visszarontás — csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
 //    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
-//    kihagyva · a sáv-jelölés vak · minden író a sávba · gépi slot
+//    kihagyva · a self-overlap jelölés hatástalan · indok nélküli jelölés is elég · a sáv-jelölés vak · minden író a sávba · gépi slot
 //    ki · a slot nem szabadul a futtató halálával —, mindegyiknek pirosat KELL adnia.)
 
 import { spawn, spawnSync } from "node:child_process";
@@ -129,6 +130,25 @@ const WRITER_TIMED = (marked: boolean): string =>
     const t0 = Date.now(); await new Promise((r) => setTimeout(r, 1200));
     appendFileSync(process.env.FIX_OUT + "/lane", process.argv[2] + " " + t0 + " " + Date.now() + "\\n");`;
 
+// ── H: self-overlap. A script with the reasoned marker may overlap ITSELF; one whose marker has
+// no real reason may not (it falls back to the default exclusion).
+const SELF_GATES = String.raw`
+echo "[pre-commit] self-ok-a…"
+node scripts/sameok.mjs a >"$GATE_LOG" || gate_failed
+echo "[pre-commit] self-ok-b…"
+node scripts/sameok.mjs b >"$GATE_LOG" || gate_failed
+echo "[pre-commit] self-noreason-a…"
+node scripts/samenr.mjs a >"$GATE_LOG" || gate_failed
+echo "[pre-commit] self-noreason-b…"
+node scripts/samenr.mjs b >"$GATE_LOG" || gate_failed
+`;
+const SAME_HOLD = (name: string, marker: string): string =>
+  `${marker}
+    import { openSync, rmSync, appendFileSync } from "node:fs";
+    const lock = process.env.FIX_OUT + "/${name}.lock";
+    try { openSync(lock, "wx"); } catch { appendFileSync(process.env.FIX_OUT + "/${name}-overlap", "x"); }
+    await new Promise((r) => setTimeout(r, 2500)); rmSync(lock, { force: true });`;
+
 const COUNTER = (name: string, extra = ""): string =>
   `import { appendFileSync, existsSync } from "node:fs"; appendFileSync(process.env.FIX_OUT + "/${name}", "x");${extra}`;
 
@@ -149,6 +169,8 @@ const FIXTURES: Record<string, string> = {
     const lock = process.env.FIX_OUT + "/same.lock";
     try { openSync(lock, "wx"); } catch { appendFileSync(process.env.FIX_OUT + "/overlap", "x"); }
     await new Promise((r) => setTimeout(r, 2500)); rmSync(lock, { force: true });`,
+  "sameok.mjs": SAME_HOLD("sameok", "// gate-runner: self-overlap-safe — renders in memory, writes no file and no row"),
+  "samenr.mjs": SAME_HOLD("samenr", "// gate-runner: self-overlap-safe — ok"),
   "par1.mjs": PAR,
   "par2.mjs": PAR,
   "slow.mjs": `await new Promise((r) => setTimeout(r, 4000));`,
@@ -455,6 +477,13 @@ async function audit(v: Variant): Promise<string[]> {
   }
   dispose(f);
 
+  // ── H: the reasoned self-overlap marker lets a script overlap itself; a bare one does not ─
+  const h = runVariant(v, SELF_GATES, "4");
+  say(h.rc === 0, `H · a futás nem zöld (rc=${h.rc})\n${h.out.slice(-800)}`);
+  say(h.read("sameok-overlap") !== "", "H · az indokolt self-overlap-safe jelölésű szkript NEM fedett át önmagával — a jelölés hatástalan");
+  say(h.read("samenr-overlap") === "", "H · az INDOK NÉLKÜLI jelölésű szkript önmagával átfedett — a jelölés indok nélkül is elég");
+  dispose(h.fx);
+
   // ── G: machine-wide slots — across runners, deadlock-free, released on death ──────
   // Two runners, ONE shared slot: their four 1.2 s gates must never overlap, both must finish.
   const f1 = prepare(v, SLOT_GATES, "4");
@@ -517,7 +546,7 @@ if (SELF_TEST) {
     ["csak-olvasó opció ki", { ...shipped, runner: mutate("ro", runnerText, "-c default_transaction_read_only=on", "-c application_name=x") }],
     ["író-jelölő ki", { ...shipped, preload: mutate("mark", preloadText, 'if (!err || err.code !== "25006") return;', "return;") }],
     ["flush-őr ki", { ...shipped, hook: mutate("flush", hookText, "      rm -rf \"$GATE_JOBS\"\n      exit 1\n", "      rm -rf \"$GATE_JOBS\"\n") }],
-    ["szkript-kizárás ki", { ...shipped, runner: mutate("busy", runnerText, "if (busy.has(job.script)) continue;", "") }],
+    ["szkript-kizárás ki", { ...shipped, runner: mutate("busy", runnerText, "if (exclusive && busy.has(job.script)) continue;", "") }],
     ["bukás-kiírás ki", { ...shipped, hook: mutate("print", hookText, '    cat "$out" >"$GATE_LOG"\n', "    : >\"$GATE_LOG\"\n") }],
     ["piros ítélet is a gyorsítótárba", { ...shipped, runner: mutate("red-store", runnerText, "function show(job, r) {\n", "function show(job, r) {\n  storePass(job);\n") }],
     ["diffet olvasó kapu is gyorsítótárazva", { ...shipped, runner: mutate("reads-diff", runnerText, 'if (READS_DIFF.test(readFileSync(file, "utf8"))) return null;', "") }],
@@ -527,6 +556,8 @@ if (SELF_TEST) {
     ["minden író a sávba", { ...shipped, runner: mutate("lane-all", runnerText, "const lane = serial.filter((j) => laneMarked(j));", "const lane = serial.filter(() => true);") }],
     ["a git exec-path is a hash-elt PATH-ban", { ...shipped, runner: mutate("git-path", runnerText, 'if (k !== "PATH" || !GIT_EXEC_PATH) return v;', "return v;") }],
     ["a teljes PATH kihagyva a hash-ből", { ...shipped, runner: mutate("path-all", runnerText, 'if (k !== "PATH" || !GIT_EXEC_PATH) return v;', 'if (k === "PATH") return ""; if (!GIT_EXEC_PATH) return v;') }],
+    ["a self-overlap jelölés hatástalan", { ...shipped, runner: mutate("self-off", runnerText, "const exclusive = !selfOverlapSafe(job);", "const exclusive = true;") }],
+    ["indok nélküli self-overlap jelölés is elég", { ...shipped, runner: mutate("self-noreason", runnerText, ".trim().length >= 20)", ".trim().length >= 0)") }],
     ["gépi slot ki", { ...shipped, runner: mutate("slot", runnerText, "const slot = held ?? (await acquireSlot());", "const slot = null;") }],
     ["a slot nem szabadul a futtató halálával", { ...shipped, runner: mutate("holder", runnerText, '"echo 1; exec cat"', '"echo 1; exec sleep 30"') }],
   ];
@@ -540,7 +571,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a tizenöt visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a tizenhét visszarontás pirosat adott.");
   process.exit(0);
 }
 
@@ -550,4 +581,4 @@ if (bad.length) {
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ gate-runner-check: a párhuzamos futtató mind a hét forgatókönyvben (A–G) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");
+console.log("✅ gate-runner-check: a párhuzamos futtató mind a nyolc forgatókönyvben (A–H) tartja a soros hook szerződését, az író-sávval és a gépi slottal együtt.");

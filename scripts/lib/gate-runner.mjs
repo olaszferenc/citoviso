@@ -91,6 +91,20 @@ const knownWriters = new Set(
 
 /** `// gate-lane: own-fixture-only` in the gate's first 40 lines (see scripts/gate-lane-check.mts). */
 const LANE_MARK = "// gate-lane: own-fixture-only";
+// A script never overlaps ITSELF (`x --selftest` and `x` share worktree-keyed scratch paths) —
+// unless its header declares, WITH a reason, that it has none (ADR-XXXX: `mobile-chrome-check`
+// renders in memory and writes nothing, and its --selftest + gate pair was one 741 s chain on
+// the critical path). A marker without a reason (< 20 characters) does not count.
+const SELF_OVERLAP_MARK = "// gate-runner: self-overlap-safe —";
+function selfOverlapSafe(job) {
+  try {
+    return readFileSync(path.join(job.cwd, job.script), "utf8")
+      .split("\n", 40)
+      .some((l) => l.trim().startsWith(SELF_OVERLAP_MARK) && l.trim().slice(SELF_OVERLAP_MARK.length).trim().length >= 20);
+  } catch {
+    return false;
+  }
+}
 function laneMarked(job) {
   try {
     return readFileSync(path.join(job.cwd, job.script), "utf8")
@@ -391,7 +405,8 @@ const phase1 = queue.length;
 let deferred = 0;
 const newWriters = [];
 
-/** Run `list` on up to PARALLEL workers; a script never overlaps itself; after the first red
+/** Run `list` on up to PARALLEL workers; a script never overlaps itself (unless it declares it
+ *  safe, see SELF_OVERLAP_MARK); after the first red
  *  nothing new is scheduled. `onDone(job, r)` decides what a finished job means. */
 function pool(list, readOnly, onDone) {
   return new Promise((resolveAll) => {
@@ -401,12 +416,13 @@ function pool(list, readOnly, onDone) {
       if (failed.length === 0) {
         for (let i = 0; i < list.length && running.size < PARALLEL; i++) {
           const job = list[i];
-          if (busy.has(job.script)) continue;
+          const exclusive = !selfOverlapSafe(job);
+          if (exclusive && busy.has(job.script)) continue;
           list.splice(i--, 1);
-          busy.add(job.script);
+          if (exclusive) busy.add(job.script);
           const p = run(job, readOnly).then((r) => {
             running.delete(p);
-            busy.delete(job.script);
+            if (exclusive) busy.delete(job.script);
             onDone(job, r);
             pump();
           });
