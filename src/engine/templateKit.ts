@@ -164,6 +164,24 @@ export function roomsForMock(d: SiteData): readonly Room[] {
 }
 
 /**
+ * The rooms a template renders, by phase — the ONE §B.17 phase gate for every template.
+ *
+ * MOCK: the real rooms wearing a marked, borrowed gallery photo where they have none,
+ * or numbered samples when the lead named no rooms (roomsForMock). LIVE: the real rooms
+ * exactly as the owner gave them — no "Minta —" photo, no sample room; a photoless room
+ * gets the template's icon panel, like on every other template — and `null` when there
+ * are none, which means "no rooms section, no rooms link".
+ *
+ * Measured 2026-09-28 (Myrna Haus, arch-frames, live): three templates called
+ * roomsForMock() whatever the phase, so all three of the owner's rooms showed a gallery
+ * photo labelled "Minta — <room>" on the published site.
+ */
+export function roomsFor(d: SiteData, phase: RenderPhase): readonly Room[] | null {
+  if (phase === "mock") return roomsForMock(d);
+  return d.rooms?.length ? d.rooms : null;
+}
+
+/**
  * The page's call-to-action wording (ADR-0048).
  *
  * ADR-0044 settled that booking and enquiry share ONE slot ("ha van foglalás, nincs

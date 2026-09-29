@@ -25,7 +25,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -204,6 +204,9 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 .a-rev .a-score{font-family:var(--cit-font-display);font-size:58px;line-height:1}
 .a-rev .a-of{color:var(--cit-muted);font-size:20px}
 .a-stars{color:var(--cit-accent);display:inline-flex;gap:2px}
+/* A viewBox-only SVG in an inline-flex row has no size of its own: without this the row
+   measured 0×0 px and the stars never showed (2026-09-28, Myrna Haus). */
+.a-stars svg{width:20px;height:20px}
 .a-rev small{display:block;color:var(--cit-muted);font-size:12.5px;margin-top:10px;
   font-variant:small-caps;letter-spacing:.12em}
 .a-quotes{display:grid;gap:38px;margin-top:48px}
@@ -234,7 +237,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const skin = SKINS[recipe.skin] ?? SKINS["sand-cream-airy"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
   const hero = heroPhoto(data);
-  const rooms = roomsForMock(data);
+  const rooms = roomsFor(data, phase);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");
   const featCopy = copyOf(recipe, "features");
@@ -268,7 +271,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const nav = `<nav class="a-nav" data-cit-ownnav>
     <span class="a-links">
       <a href="#cit-about">${T(data, "A ház")}</a>
-      <a href="#cit-rooms">${T(data, "Szobák")}</a>
+      ${rooms ? `<a href="#cit-rooms">${T(data, "Szobák")}</a>` : ""}
       <a href="#cit-contact">${T(data, "Kapcsolat")}</a>
     </span>
     <span class="a-brand">${esc(data.name)}${place ? `<small>${esc(place)}</small>` : ""}</span>
@@ -310,7 +313,8 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     </div>
   </section>`;
 
-  const roomsBlock = `<section id="cit-rooms" data-cit-module="rooms" style="padding-top:0">
+  const roomsBlock = rooms
+    ? `<section id="cit-rooms" data-cit-module="rooms" style="padding-top:0">
     <div class="a-wrap">
       <div class="a-title"><h2 ${mo("up")}>${esc(roomsCopy.title ?? T(data, "Szobák"))}</h2></div>
       <div class="a-trio">
@@ -333,7 +337,8 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
           .join("")}
       </div>
     </div>
-  </section>`;
+  </section>`
+    : "";
 
   const highlights = data.highlights.slice(0, 10);
   const feature = `<section data-cit-module="gallery" style="padding-top:0">

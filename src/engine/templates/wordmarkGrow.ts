@@ -31,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -182,6 +182,8 @@ section{padding:clamp(70px,10vh,124px) 0}
 .w-rev .w-score{font-family:var(--cit-font-display);font-size:60px;line-height:1}
 .w-rev .w-of{color:var(--cit-muted);font-size:20px}
 .w-stars{color:var(--cit-accent);display:inline-flex;gap:2px}
+/* viewBox-only SVGs: sized here, or the row is 0×0 px (measured 2026-09-28). */
+.w-stars svg{width:20px;height:20px}
 .w-rev small{display:block;color:var(--cit-muted);font-size:12.5px;margin-top:10px}
 .w-quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:26px;margin-top:46px}
 .w-quotes figure{margin:0;background:var(--cit-surface);border:1px solid var(--cit-line);
@@ -203,7 +205,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const skin = SKINS[recipe.skin] ?? SKINS["coastal-fresh"] ?? Object.values(SKINS)[0]!;
   const photos = data.photos;
   const hero = heroPhoto(data);
-  const rooms = roomsForMock(data);
+  const rooms = roomsFor(data, phase);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");
   const featCopy = copyOf(recipe, "features");
@@ -237,7 +239,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const nav = `<nav class="w-nav" data-cit-ownnav>
     <span class="w-links">
       <a href="#cit-about">${T(data, "A ház")}</a>
-      <a href="#cit-rooms">${T(data, "Szobák")}</a>
+      ${rooms ? `<a href="#cit-rooms">${T(data, "Szobák")}</a>` : ""}
     </span>
     <span class="w-brand-s">${esc(data.name)}</span>
     <span class="w-right">
@@ -296,7 +298,8 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     </div>
   </section>`;
 
-  const roomsBlock = `<section id="cit-rooms" data-cit-module="rooms" style="padding-top:0">
+  const roomsBlock = rooms
+    ? `<section id="cit-rooms" data-cit-module="rooms" style="padding-top:0">
     <div class="w-wrap">
       <span class="w-spark">${SPARK}</span>
       <h2 style="font-size:clamp(26px,4vw,46px)" ${mo("up")}>${esc(
@@ -322,7 +325,8 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           .join("")}
       </div>
     </div>
-  </section>`;
+  </section>`
+    : "";
 
   // Wrap around instead of slicing: a lead with two photos would otherwise lose
   // the gallery section entirely — and with it the module hook (measured by

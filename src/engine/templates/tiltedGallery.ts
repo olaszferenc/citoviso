@@ -21,7 +21,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsForMock, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, type ArtTemplate } from "../templateKit.js";
 
 const TILTED_CSS = `
 /* shared module sections (.cit-modsec) dressed to this template's rhythm (ADR-0057):
@@ -178,6 +178,8 @@ section{padding:clamp(64px,9vh,104px) 0}
 .t-rev .t-score{display:inline-flex;align-items:baseline;gap:10px;font-family:var(--cit-font-display)}
 .t-rev .t-score b{font-size:54px;font-weight:400;line-height:1}
 .t-stars{color:var(--cit-accent);display:inline-flex;gap:2px}
+/* viewBox-only SVGs: sized here, or the row is 0×0 px (measured 2026-09-28). */
+.t-stars svg{width:20px;height:20px}
 .t-rev small{display:block;color:var(--cit-muted);font-size:12.5px;margin-top:10px}
 .t-quotes{display:grid;gap:38px;margin-top:52px}
 .t-quotes figure{margin:0}
@@ -241,7 +243,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const photos = data.photos;
   const hero = heroPhoto(data);
   const bandPhoto = photos[1] ?? photos[0];
-  const rooms = roomsForMock(data);
+  const rooms = roomsFor(data, phase);
   const heroCopy = copyOf(recipe, "hero");
   const roomsCopy = copyOf(recipe, "rooms");
   const featCopy = copyOf(recipe, "features");
@@ -253,7 +255,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   // Mood cluster: the tail of the photo set, so it never repeats the hero/rooms.
   // Wrap around rather than slice past the end: a photo-poor lead must still get
   // the (smaller) mood cluster — it carries this template's gallery module hook.
-  const moodStart = Math.min(rooms.length + 2, Math.max(0, photos.length - 1));
+  const moodStart = Math.min((rooms?.length ?? 0) + 2, Math.max(0, photos.length - 1));
   const mood = photos.length
     ? Array.from({ length: Math.min(4, photos.length) }, (_, i) => photos[(moodStart + i) % photos.length]!)
     : [];
@@ -278,7 +280,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const nav = `<nav class="t-nav">
     <span class="t-brand-s">${esc(data.name)}</span>
     <span class="t-links" data-cit-navsrc>
-      <a href="#cit-rooms">${T(data, "Szobák")}</a>
+      ${rooms ? `<a href="#cit-rooms">${T(data, "Szobák")}</a>` : ""}
       <a href="#cit-contact">${T(data, "Kapcsolat")}</a>
       <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
     </span>
@@ -325,7 +327,8 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       </div></section>`
     : "";
 
-  const roomsBlock = `<section class="t-rooms" id="cit-rooms" data-cit-module="rooms" style="padding-bottom:0">
+  const roomsBlock = rooms
+    ? `<section class="t-rooms" id="cit-rooms" data-cit-module="rooms" style="padding-bottom:0">
     <div class="t-wrap" style="text-align:center">
       <div class="t-kick" ${mo("in")}>${T(data, "Szobák")}</div>
       <h2 style="font-size:clamp(25px,4.2vw,40px);margin-top:.4em" ${mo("up", 90)}>${esc(
@@ -349,7 +352,8 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
         .join("")}
     </div>
     <div class="t-runhint">${T(data, "húzza oldalra")}</div>
-  </section>`;
+  </section>`
+    : "";
 
   const highlights = data.highlights.slice(0, 8);
   const featurePhoto = photos[Math.min(2, Math.max(0, photos.length - 1))];
