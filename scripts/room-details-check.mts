@@ -31,6 +31,7 @@ import path from "node:path";
 import { chromium, type Page } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { pool } from "./lib/gate-pool.mts";
 import { injectRuntime } from "../src/generator/runtime.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
@@ -833,37 +834,53 @@ async function runMatrix(
 
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
   const stats: Stats = { failures: 0, total: pages.length * WIDTHS.length, shells: 0, cards: 0, perWidth: new Map() };
-  for (const vp of WIDTHS) {
-    stats.perWidth.set(vp.label, 0);
-    const page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
-    // Külső hálózat kizárva: a betűkészlet-kérés nem lassíthatja a mérést, és a
-    // párhuzamos szálak DNS-szerencséje nem befolyásolhatja az eredményt.
-    await page.route("**/*", (route) => {
-      const u = route.request().url();
-      return u.startsWith("file:") || u.startsWith("data:") ? route.continue() : route.abort();
-    });
-    for (const p of pages) {
-      const res = await measure(page, `file://${p.file}`, vp.w);
-      const head = `${p.id.padEnd(15)} ${vp.label.padEnd(15)}`;
-      if (res.fatal) {
-        stats.failures++;
-        stats.perWidth.set(vp.label, stats.perWidth.get(vp.label)! + 1);
-        console.error(`  ✗ ${head} ⛔ ${res.fatal}`);
-        continue;
-      }
-      stats.shells += res.shells;
-      stats.cards += res.cards;
-      if (res.findings.length) {
-        stats.failures++;
-        stats.perWidth.set(vp.label, stats.perWidth.get(vp.label)! + 1);
-        const shown = res.findings.slice(0, 3).map((f) => `${f.kind}: ${f.detail}`).join(" · ");
-        console.error(`  ✗ ${head} ${res.findings.length} lelet · ${shown}`);
-      } else if (verbose) {
-        console.log(`  ✓ ${head} ${res.cards} kártya · ${res.shells} horgony — a kontraktus áll`);
-      }
+  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). The (width, template) pairs were
+  // measured one after the other on ONE page per width (182 s alone). Now gateJobs() workers take
+  // them from one queue; each worker keeps its OWN page per width, the way the serial run kept
+  // one — the same goto → measure() steps, the same assertions. Every rendered file is written
+  // BEFORE the pool starts and only read inside it; the directory is this run's own mkdtemp.
+  // The verdict lines are printed in the original (width, template) order, as before.
+  // CIT_GATE_JOBS=1 = the old serial behaviour.
+  const pairs = WIDTHS.flatMap((vp) => pages.map((p) => ({ vp, p })));
+  const workerPages = new Map<string, Page>();
+  const results = await pool(pairs, async ({ vp, p }, _i, w) => {
+    let page = workerPages.get(`${w}/${vp.label}`);
+    if (!page) {
+      page = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
+      // Külső hálózat kizárva: a betűkészlet-kérés nem lassíthatja a mérést, és a
+      // párhuzamos szálak DNS-szerencséje nem befolyásolhatja az eredményt.
+      await page.route("**/*", (route) => {
+        const u = route.request().url();
+        return u.startsWith("file:") || u.startsWith("data:") ? route.continue() : route.abort();
+      });
+      workerPages.set(`${w}/${vp.label}`, page);
     }
-    await page.close();
-  }
+    return measure(page, `file://${p.file}`, vp.w);
+  });
+  for (const pg of workerPages.values()) await pg.close();
+  for (const vp of WIDTHS) stats.perWidth.set(vp.label, 0);
+  pairs.forEach(({ vp, p }, i) => {
+    const r = results[i]!;
+    // ⛔ A pair without a result is a measurement that never happened — a failure, never a green.
+    const res = r.ok ? r.value : { fatal: `a mérés nem futott le: ${String((r.error as Error)?.message ?? r.error).slice(0, 200)}`, findings: [], shells: 0, cards: 0 };
+    const head = `${p.id.padEnd(15)} ${vp.label.padEnd(15)}`;
+    if (res.fatal) {
+      stats.failures++;
+      stats.perWidth.set(vp.label, stats.perWidth.get(vp.label)! + 1);
+      console.error(`  ✗ ${head} ⛔ ${res.fatal}`);
+      return;
+    }
+    stats.shells += res.shells;
+    stats.cards += res.cards;
+    if (res.findings.length) {
+      stats.failures++;
+      stats.perWidth.set(vp.label, stats.perWidth.get(vp.label)! + 1);
+      const shown = res.findings.slice(0, 3).map((f) => `${f.kind}: ${f.detail}`).join(" · ");
+      console.error(`  ✗ ${head} ${res.findings.length} lelet · ${shown}`);
+    } else if (verbose) {
+      console.log(`  ✓ ${head} ${res.cards} kártya · ${res.shells} horgony — a kontraktus áll`);
+    }
+  });
   await browser.close();
   if (KEEP) console.log(`\n  (a renderelt lapok maradtak: ${dir})`);
   else await rm(dir, { recursive: true, force: true });

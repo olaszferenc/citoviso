@@ -57,13 +57,14 @@ import { TEMPLATES } from "../src/engine/templates.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
+import { err, out, pool, replay } from "./lib/gate-pool.mts";
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown): void {
-  if (cond) console.log(`  ✓ ${name}`);
+  if (cond) out(`  ✓ ${name}`);
   else {
     failures++;
-    console.error(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
+    err(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
   }
 }
 
@@ -404,7 +405,7 @@ async function interiorColours(p: Page, i: number): Promise<number> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const n = await sampleColours(p, i);
     if (n === prev) return n; // két egymás utáni mérés egyezik → nyugvópont
-    if (attempt > 0) console.log(`      ⏱ a kivágás még mozgott (${prev} → ${n} szín), újramérés`);
+    if (attempt > 0) out(`      ⏱ a kivágás még mozgott (${prev} → ${n} szín), újramérés`);
     prev = n;
     await p.waitForTimeout(250);
   }
@@ -537,81 +538,85 @@ for (const id of ids) {
   files[id] = file;
 }
 
+/** One independent measurement: its section, a name for a unit that threw, and the work. */
+type Unit = { s: 1 | 2 | 3 | 4; label: string; run: () => Promise<void> };
+const units: Unit[] = [];
+
 // ── ① no empty framed box, with the map frame hung ───────────────────────────
-console.log(
-  `\n① Üres, jelöletlen doboz SEHOL (a térkép-keret FÜGGŐBEN — ez a fényképezett állapot; ${ids.length} sablon × 2 méret):\n`,
-);
 for (const [id, file] of Object.entries(files)) {
   for (const [w, h, vp] of VIEWPORTS) {
-    const { ctx, p } = await open(browser, file, w, h);
-    await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await p.waitForTimeout(500);
-    await p.evaluate(() => window.scrollTo(0, 0));
-    // Fixture fidelity, geometrically: the map slot must stand at its DESIGNED size.
-    // A 300×150 box means the module stylesheet never arrived, and everything measured
-    // after that would be a page no lead receives (measured 2026-09-14 — the first cut
-    // of this guard reported exactly that box).
-    const mapH = await p.evaluate(() => {
-      const el = document.querySelector('[data-cit-module="map"] iframe, [data-cit-module="map"] .cit-map-box');
-      return el ? Math.round(el.getBoundingClientRect().height) : 0;
-    });
-    check(`${id}/${vp}: a térkép-slot a tervezett méretében áll (h=${mapH})`, mapH >= 300);
-    const boxes = await emptyBoxes(p);
-    check(`${id}/${vp}: nincs üres keretezett doboz`, boxes.length === 0, boxes);
-    await ctx.close();
+    units.push({ s: 1, label: `①${id}/${vp}`, run: async () => {
+      const { ctx, p } = await open(browser, file, w, h);
+      await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await p.waitForTimeout(500);
+      await p.evaluate(() => window.scrollTo(0, 0));
+      // Fixture fidelity, geometrically: the map slot must stand at its DESIGNED size.
+      // A 300×150 box means the module stylesheet never arrived, and everything measured
+      // after that would be a page no lead receives (measured 2026-09-14 — the first cut
+      // of this guard reported exactly that box).
+      const mapH = await p.evaluate(() => {
+        const el = document.querySelector('[data-cit-module="map"] iframe, [data-cit-module="map"] .cit-map-box');
+        return el ? Math.round(el.getBoundingClientRect().height) : 0;
+      });
+      check(`${id}/${vp}: a térkép-slot a tervezett méretében áll (h=${mapH})`, mapH >= 300);
+      const boxes = await emptyBoxes(p);
+      check(`${id}/${vp}: nincs üres keretezett doboz`, boxes.length === 0, boxes);
+      await ctx.close();
 
-    // ①b THE OTHER FAILURE MODE — the frame refused. Chromium then paints its own
-    // opaque error page over anything behind it, and no code in the parent page can
-    // tell (a cross-origin error page fires `load` exactly like a map). So the
-    // section must carry readable location text OUTSIDE the frame, where no third
-    // party can paint over it. ⚠️ The pixel check alone passes this state, because
-    // the browser's torn-document glyph counts as ink — it was green on a visibly
-    // broken page until this second measurement was added.
-    const ref = await open(browser, file, w, h, "refuse");
-    await ref.p.evaluate(() => {
-      document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
-    });
-    await ref.p.waitForTimeout(400);
-    const outside = await ref.p.evaluate(() => {
-      const sec = document.querySelector<HTMLElement>('[data-cit-module="map"]');
-      if (!sec) return { ok: false, text: "nincs térkép-szekció" };
-      // Everything the section says with the frame's own contents excluded.
-      const clone = sec.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll("iframe, .cit-map-pin, h1, h2, h3").forEach((n) => n.remove());
-      const text = (clone.textContent || "").replace(/\s+/g, " ").trim();
-      return { ok: text.length >= 8, text: text.slice(0, 60) };
-    });
-    check(
-      `${id}/${vp}: elutasított keret mellett is mond valamit a szekció („${outside.text}”)`,
-      outside.ok,
-      outside,
-    );
-    await ref.ctx.close();
+      // ①b THE OTHER FAILURE MODE — the frame refused. Chromium then paints its own
+      // opaque error page over anything behind it, and no code in the parent page can
+      // tell (a cross-origin error page fires `load` exactly like a map). So the
+      // section must carry readable location text OUTSIDE the frame, where no third
+      // party can paint over it. ⚠️ The pixel check alone passes this state, because
+      // the browser's torn-document glyph counts as ink — it was green on a visibly
+      // broken page until this second measurement was added.
+      const ref = await open(browser, file, w, h, "refuse");
+      await ref.p.evaluate(() => {
+        document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
+      });
+      await ref.p.waitForTimeout(400);
+      const outside = await ref.p.evaluate(() => {
+        const sec = document.querySelector<HTMLElement>('[data-cit-module="map"]');
+        if (!sec) return { ok: false, text: "nincs térkép-szekció" };
+        // Everything the section says with the frame's own contents excluded.
+        const clone = sec.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll("iframe, .cit-map-pin, h1, h2, h3").forEach((n) => n.remove());
+        const text = (clone.textContent || "").replace(/\s+/g, " ").trim();
+        return { ok: text.length >= 8, text: text.slice(0, 60) };
+      });
+      check(
+        `${id}/${vp}: elutasított keret mellett is mond valamit a szekció („${outside.text}”)`,
+        outside.ok,
+        outside,
+      );
+      await ref.ctx.close();
+    } });
   }
 }
 
 // ── ② the floating pill buries no primary action ─────────────────────────────
-console.log(`\n② A lebegő pirula nem takar elsődleges műveletet (${ids.length} sablon × 2 méret):\n`);
 for (const [id, file] of Object.entries(files)) {
   for (const [w, h, vp] of VIEWPORTS) {
-    const { ctx, p } = await open(browser, file, w, h);
-    await wakePill(p);
-    // A PIXELRE várunk, nem órára: a kikerülés animált, és a mozgó pirula bármelyik
-    // gombra ráeshet egy pillanatra anélkül, hogy a lead valaha is takarva látná.
-    const st = await settlePill(p);
-    const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as {
-      error?: string;
-      pill?: number[];
-      buried?: { label: string; coveredFrac: number; fullyBlocked: boolean }[];
-    };
-    // A meg nem álló pirula ÖNMAGÁBAN lelet (a kikerülő oszcillál) — nem elnyelt timeout.
-    check(
-      `${id}/${vp}: a pirula MEGÁLL (${st.ms} ms)`,
-      st.settled,
-      st.settled ? "" : { ...st, ceiling: PILL_SETTLE_CEILING_MS },
-    );
-    check(`${id}/${vp}: a pirula senkit nem temet be (y=${r.pill?.[1]})`, !r.error && r.buried?.length === 0, r);
-    await ctx.close();
+    units.push({ s: 2, label: `②${id}/${vp}`, run: async () => {
+      const { ctx, p } = await open(browser, file, w, h);
+      await wakePill(p);
+      // A PIXELRE várunk, nem órára: a kikerülés animált, és a mozgó pirula bármelyik
+      // gombra ráeshet egy pillanatra anélkül, hogy a lead valaha is takarva látná.
+      const st = await settlePill(p);
+      const r = (await p.evaluate(callProbe(OCCLUSION_PROBE))) as {
+        error?: string;
+        pill?: number[];
+        buried?: { label: string; coveredFrac: number; fullyBlocked: boolean }[];
+      };
+      // A meg nem álló pirula ÖNMAGÁBAN lelet (a kikerülő oszcillál) — nem elnyelt timeout.
+      check(
+        `${id}/${vp}: a pirula MEGÁLL (${st.ms} ms)`,
+        st.settled,
+        st.settled ? "" : { ...st, ceiling: PILL_SETTLE_CEILING_MS },
+      );
+      check(`${id}/${vp}: a pirula senkit nem temet be (y=${r.pill?.[1]})`, !r.error && r.buried?.length === 0, r);
+      await ctx.close();
+    } });
   }
 }
 
@@ -622,52 +627,53 @@ for (const [id, file] of Object.entries(files)) {
 // there rows" alone; it is that the box never presents itself as an openable package
 // with nothing to show, that its header count equals the rows that exist (the label
 // derives from what it describes), and that a cut list says so.
-console.log("\n③ A „Testre szabom” doboz — vagy tétel van benne, vagy nem nyitható:\n");
 for (const [w, h, vp] of VIEWPORTS) {
-  const { ctx, p } = await open(browser, files["fullbleed"] ?? Object.values(files)[0]!, w, h);
-  await wakePill(p);
-  await p.evaluate(() => (document.querySelector(".cit-cfg-launch") as HTMLElement)?.click());
-  await p.waitForTimeout(700);
-  // Step 2 is the state the finding was photographed in: the taller footer is what
-  // shrinks the body until the list disappears below the fold.
-  for (const step of ["1", "2"] as const) {
-    if (step === "2") {
-      await p.evaluate(() => (document.querySelector(".cit-cfg-next") as HTMLElement)?.click());
-      await p.waitForTimeout(400);
+  units.push({ s: 3, label: `③${vp}`, run: async () => {
+    const { ctx, p } = await open(browser, files["fullbleed"] ?? Object.values(files)[0]!, w, h);
+    await wakePill(p);
+    await p.evaluate(() => (document.querySelector(".cit-cfg-launch") as HTMLElement)?.click());
+    await p.waitForTimeout(700);
+    // Step 2 is the state the finding was photographed in: the taller footer is what
+    // shrinks the body until the list disappears below the fold.
+    for (const step of ["1", "2"] as const) {
+      if (step === "2") {
+        await p.evaluate(() => (document.querySelector(".cit-cfg-next") as HTMLElement)?.click());
+        await p.waitForTimeout(400);
+      }
+      const r = await p.evaluate(() => {
+        const box = document.querySelector<HTMLElement>(".cit-cfg-custombox");
+        const detail = document.querySelector<HTMLElement>(".cit-cfg-detail");
+        const body = document.querySelector<HTMLElement>(".cit-cfg-body");
+        const cue = document.querySelector<HTMLElement>(".cit-cfg-scrollcue");
+        const rows = detail ? detail.querySelectorAll(".cit-cfg-rowbox").length : 0;
+        const badge = (document.querySelector(".cit-cfg-customize__n")?.textContent || "").trim();
+        return {
+          boxShown: !!box && !box.hidden && box.getBoundingClientRect().height > 0,
+          openable: !!document.querySelector(".cit-cfg-customize"),
+          rows,
+          badge,
+          badgeNum: Number((badge.match(/\d+/) || [])[0] ?? -1),
+          hiddenBelow: body ? Math.round(body.scrollHeight - body.clientHeight - body.scrollTop) : 0,
+          cueShown: !!cue && !cue.hidden,
+        };
+      });
+      check(
+        `${vp}/lépés ${step}: nyitható csomag nem lehet üres (sorok=${r.rows})`,
+        !r.boxShown || r.rows > 0,
+        r,
+      );
+      check(`${vp}/lépés ${step}: a fejléc száma a MEGLÉVŐ sorokat mondja (${r.badge || "—"})`, !r.boxShown || r.badgeNum === r.rows, r);
+      check(
+        `${vp}/lépés ${step}: ha ${r.hiddenBelow} px lóg a látható rész alá, a lap ezt jelzi`,
+        r.hiddenBelow <= 8 ? !r.cueShown : r.cueShown,
+        r,
+      );
     }
-    const r = await p.evaluate(() => {
-      const box = document.querySelector<HTMLElement>(".cit-cfg-custombox");
-      const detail = document.querySelector<HTMLElement>(".cit-cfg-detail");
-      const body = document.querySelector<HTMLElement>(".cit-cfg-body");
-      const cue = document.querySelector<HTMLElement>(".cit-cfg-scrollcue");
-      const rows = detail ? detail.querySelectorAll(".cit-cfg-rowbox").length : 0;
-      const badge = (document.querySelector(".cit-cfg-customize__n")?.textContent || "").trim();
-      return {
-        boxShown: !!box && !box.hidden && box.getBoundingClientRect().height > 0,
-        openable: !!document.querySelector(".cit-cfg-customize"),
-        rows,
-        badge,
-        badgeNum: Number((badge.match(/\d+/) || [])[0] ?? -1),
-        hiddenBelow: body ? Math.round(body.scrollHeight - body.clientHeight - body.scrollTop) : 0,
-        cueShown: !!cue && !cue.hidden,
-      };
+    await p.screenshot({
+      path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-panel-${vp}.png`),
     });
-    check(
-      `${vp}/lépés ${step}: nyitható csomag nem lehet üres (sorok=${r.rows})`,
-      !r.boxShown || r.rows > 0,
-      r,
-    );
-    check(`${vp}/lépés ${step}: a fejléc száma a MEGLÉVŐ sorokat mondja (${r.badge || "—"})`, !r.boxShown || r.badgeNum === r.rows, r);
-    check(
-      `${vp}/lépés ${step}: ha ${r.hiddenBelow} px lóg a látható rész alá, a lap ezt jelzi`,
-      r.hiddenBelow <= 8 ? !r.cueShown : r.cueShown,
-      r,
-    );
-  }
-  await p.screenshot({
-    path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-panel-${vp}.png`),
-  });
-  await ctx.close();
+    await ctx.close();
+  } });
 }
 
 // ⛔ A ④ ÖNTESZT A TELJES KÖRHÖZ TARTOZIK — szűkített futásban KIHAGYJUK, hangosan.
@@ -679,40 +685,41 @@ for (const [w, h, vp] of VIEWPORTS) {
 // ha nem lenne: pont abban a helyzetben félrevezet, amikor egy valódi hibát keresel.
 if (!ONLY) {
   // ── ④ RED self-test — the halves must be able to fail ────────────────────────
-  console.log("\n④ Önteszt — az őrnek pirosra kell tudnia menni:\n");
 
   // ④a the map box WITHOUT its pin card — the bug exactly as it was reported
   const victim = files["fullbleed"] ?? Object.values(files)[0]!;
   const src = await readFile(victim, "utf8");
-  const bare = path.join(OUT, "_nopin.html");
-  const noPin = src.replace(/<div class="cit-map-pin">[\s\S]*?<\/div>\s*<\/div>/g, "</div>");
-  await writeFile(bare, noPin, "utf8");
-  // ⚠️ Assert on the MARKUP, not on the class name: the inlined stylesheet also contains
-  // ".cit-map-pin", so "the string is gone" was false even when the card had been cut.
-  check(
-    "az önteszthez a pin-kártya tényleg kivágódott",
-    noPin !== src && !noPin.includes('<div class="cit-map-pin">'),
-  );
-  {
-    const { ctx, p } = await open(browser, bare, 1280, 900);
-    await p.evaluate(() => {
-      document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
-    });
-    await p.waitForTimeout(500);
-    const boxes = (await emptyBoxes(p)) as { mod?: string }[];
+  units.push({ s: 4, label: "④a pin-kártya nélkül", run: async () => {
+    const bare = path.join(OUT, "_nopin.html");
+    const noPin = src.replace(/<div class="cit-map-pin">[\s\S]*?<\/div>\s*<\/div>/g, "</div>");
+    await writeFile(bare, noPin, "utf8");
+    // ⚠️ Assert on the MARKUP, not on the class name: the inlined stylesheet also contains
+    // ".cit-map-pin", so "the string is gone" was false even when the card had been cut.
     check(
-      "pin-kártya nélkül, függő keretnél a térkép-doboz ÜRESNEK mérődik (az őr él)",
-      boxes.some((b) => b.mod === "map"),
-      boxes,
+      "az önteszthez a pin-kártya tényleg kivágódott",
+      noPin !== src && !noPin.includes('<div class="cit-map-pin">'),
     );
-    await p.screenshot({
-      path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-map-ELOTTE.png`),
-    });
-    await ctx.close();
-  }
+    {
+      const { ctx, p } = await open(browser, bare, 1280, 900);
+      await p.evaluate(() => {
+        document.querySelector('[data-cit-module="map"]')?.scrollIntoView();
+      });
+      await p.waitForTimeout(500);
+      const boxes = (await emptyBoxes(p)) as { mod?: string }[];
+      check(
+        "pin-kártya nélkül, függő keretnél a térkép-doboz ÜRESNEK mérődik (az őr él)",
+        boxes.some((b) => b.mod === "map"),
+        boxes,
+      );
+      await p.screenshot({
+        path: path.resolve(import.meta.dirname, `../assets/Temp/leadsurface-${SCOPE}-map-ELOTTE.png`),
+      });
+      await ctx.close();
+    }
+  } });
 
   // ④a2 the section WITHOUT the address row outside the frame — the refused-frame state
-  {
+  units.push({ s: 4, label: "④a2 cím-sor nélkül", run: async () => {
     // ⚠️ Cut INSIDE the map section only. The unanchored pattern matched the first
     // `cit-modsec__grid` on the page — a different module's list — so the row under the
     // map survived and the self-test "failed" for the wrong reason.
@@ -745,13 +752,13 @@ if (!ONLY) {
       { outside },
     );
     await ctx.close();
-  }
+  } });
 
   // ④b with the avoidance block CUT OUT of the served JS, the pill must bury a button
   // again — the bug exactly as Elek photographed it. No test switch lives in the shipped
   // runtime; the block is removed from the page, the same way the float-check strips the
   // CSS armour.
-  {
+  units.push({ s: 4, label: "④b kerülő-blokk nélkül", run: async () => {
     let caught: unknown = null;
     let stripCount = 0;
     for (const [id, file] of Object.entries(files)) {
@@ -784,39 +791,64 @@ if (!ONLY) {
     }
     check("a kerülő-blokk tényleg kivágódott a kiszolgált JS-ből", stripCount > 0, { stripCount });
     check("ütközés-kerülés nélkül a pirula tényleg betemet egy gombot (az őr él)", !!caught, caught);
+  } });
 
-    // ④d A MEG NEM ÁLLÓ pirula is lelet — és ennek az állításnak is kell piros ikre.
-    // Enélkül a „a pirula MEGÁLL" sor csupa zöldje semmit nem bizonyítana: egy olyan
-    // várakozás, ami SOHA nem tud settled=false-t adni, nem mérés, hanem díszlet.
-    // Szintetikusan oszcilláltatjuk a pirulát (minden képkockán mozdul egyet), és
-    // elvárjuk, hogy a nyugvópont-várás a plafonig fusson és PIROSAT mondjon.
-    {
-      const victimFile = files["fullbleed"] ?? Object.values(files)[0]!;
-      const osc = path.join(OUT, "_oscillate.html");
-      await writeFile(
-        osc,
-        (await readFile(victimFile, "utf8")).replace(
-          "</body>",
-          `<script>(function(){function t(){var e=document.querySelector(".cit-cfg-launch");
+  // ④d A MEG NEM ÁLLÓ pirula is lelet — és ennek az állításnak is kell piros ikre.
+  // Enélkül a „a pirula MEGÁLL" sor csupa zöldje semmit nem bizonyítana: egy olyan
+  // várakozás, ami SOHA nem tud settled=false-t adni, nem mérés, hanem díszlet.
+  // Szintetikusan oszcilláltatjuk a pirulát (minden képkockán mozdul egyet), és
+  // elvárjuk, hogy a nyugvópont-várás a plafonig fusson és PIROSAT mondjon.
+  units.push({ s: 4, label: "④d oszcilláló pirula", run: async () => {
+    const victimFile = files["fullbleed"] ?? Object.values(files)[0]!;
+    const osc = path.join(OUT, "_oscillate.html");
+    await writeFile(
+      osc,
+      (await readFile(victimFile, "utf8")).replace(
+        "</body>",
+        `<script>(function(){function t(){var e=document.querySelector(".cit-cfg-launch");
   if(e){e.style.setProperty("transition","none","important");
   e.style.setProperty("bottom",(24+(Math.floor(performance.now()/16)%40))+"px","important");}
   requestAnimationFrame(t);}requestAnimationFrame(t);})();</script></body>`,
-        ),
-        "utf8",
-      );
-      const { ctx, p } = await open(browser, osc, 390, 844);
-      await wakePill(p);
-      const st = await settlePill(p);
-      await ctx.close();
-      check(
-        "⭐ oszcilláló pirulát a nyugvópont-várás PIROSNAK lát (settled=false)",
-        st.settled === false,
-        st,
-      );
-    }
-  }
-} else {
-  console.log("\n④ Önteszt — KIHAGYVA a szűkített futásban (csak a teljes kör méri).\n");
+      ),
+      "utf8",
+    );
+    const { ctx, p } = await open(browser, osc, 390, 844);
+    await wakePill(p);
+    const st = await settlePill(p);
+    await ctx.close();
+    check(
+      "⭐ oszcilláló pirulát a nyugvópont-várás PIROSNAK lát (settled=false)",
+      st.settled === false,
+      st,
+    );
+  } });
+}
+
+// ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). Every unit above — one (template,
+// viewport) of ① and of ②, one viewport of ③, one self-test branch of ④ — opens its OWN browser
+// context and closes it; the fixtures were all written before, and the files a unit writes carry
+// its own name (`_nopin`, `_norow`, `<id>.noavoid`, `_oscillate`, `…-panel-<vp>.png`). So
+// gateJobs() workers run them from one queue, each unit's lines are buffered (`out`/`err` in
+// check()), and the sections are printed in the ORIGINAL order with their headers: the output is
+// the same as the serial run's. The pill's waits were already "wait for rest, not for a clock"
+// (PILL_SETTLE_CEILING_MS, measured under ~16 parallel threads), and ④d still proves the ceiling
+// can say red. ⛔ A unit that threw is a FAILURE, never a green. CIT_GATE_JOBS=1 = serial.
+const settled = await pool(units, (u) => u.run());
+const HEADERS: Record<Unit["s"], string> = {
+  1: `\n① Üres, jelöletlen doboz SEHOL (a térkép-keret FÜGGŐBEN — ez a fényképezett állapot; ${ids.length} sablon × 2 méret):\n`,
+  2: `\n② A lebegő pirula nem takar elsődleges műveletet (${ids.length} sablon × 2 méret):\n`,
+  3: "\n③ A „Testre szabom” doboz — vagy tétel van benne, vagy nem nyitható:\n",
+  4: ONLY
+    ? "\n④ Önteszt — KIHAGYVA a szűkített futásban (csak a teljes kör méri).\n"
+    : "\n④ Önteszt — az őrnek pirosra kell tudnia menni:\n",
+};
+for (const sec of [1, 2, 3, 4] as const) {
+  console.log(HEADERS[sec]);
+  settled.forEach((r, i) => {
+    if (units[i]!.s !== sec) return;
+    replay(r.lines);
+    if (!r.ok) check(`${units[i]!.label}: a mérés nem futott le`, false, String((r.error as Error)?.stack ?? r.error).slice(0, 400));
+  });
 }
 
 await browser.close();

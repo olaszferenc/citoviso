@@ -42,6 +42,7 @@ import type { Server } from "node:http";
 import { chromium, type Browser, type BrowserContext, type Page, type Response } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { pool } from "./lib/gate-pool.mts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const DRAFTS = path.join(ROOT, "assets", "design-refs", "_drafts", "lead-mobile");
@@ -1004,30 +1005,56 @@ async function gate(): Promise<void> {
 
   try {
     const vps = VIEWPORTS.filter((v) => v.id === "390" || v.id === "land");
+    // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). Every run() is already its own
+    // context, its own served fixture and its own shot directory (<tpl>-<sabotage>/<vp>-NN-…);
+    // the 10 clean runs and the 9 sabotaged ones were simply awaited one after the other. Now
+    // gateJobs() workers take them from one queue, and the verdicts below are checked and
+    // printed in the original order, so the output is the same as the serial run's.
+    // ⛔ A run without a result is a failure (`⑤futás`), never a green. CIT_GATE_JOBS=1 = serial.
+    type Job = { tpl: string; why?: string; vp: Viewport; sab: Sabotage };
+    const jobs: Job[] = [];
+    for (const [tpl, why] of GATE_TEMPLATES) for (const vp of vps) jobs.push({ tpl, why, vp, sab: "none" });
+    const vp390 = VIEWPORTS[0]!;
+    const cases: [Sabotage, string][] = [
+      ["no-clearance", "R2_footer_links_tappable"],
+      ["no-tap", "R3_tap_targets"],
+      ["overflow", "R1_no_overflow"],
+      ["no-lazy", "R5_lazy_below_fold"],
+    ];
+    // …and the landscape-only one: the side panel's decision block under the consent bar
+    cases.push(["panel-under-consent", "R4_pill_and_panel"]);
+    cases.push(["no-defer", "R7_first_screen_compact"]);
+    cases.push(["pill-on-bar", "R8_pill_above_fixed_bars"]);
+    if (selftest) {
+      for (const [sab] of cases) jobs.push({ tpl: "fullbleed", vp: sab === "panel-under-consent" ? VIEWPORTS[2]! : vp390, sab });
+      jobs.push({ tpl: "fullbleed", vp: vp390, sab: "js-error" });
+      jobs.push({ tpl: "fullbleed", vp: vp390, sab: "ext-404" });
+    }
+    const settled = await pool(jobs, (j) => run(j.tpl, j.vp, j.sab));
+    const result = (i: number): Awaited<ReturnType<typeof run>> | null => {
+      const s = settled[i]!;
+      if (s.ok) return s.value;
+      check(`⑤futás ${jobs[i]!.tpl} @ ${jobs[i]!.vp.id} „${jobs[i]!.sab}" — a mérés nem futott le`, false, String((s.error as Error)?.stack ?? s.error).slice(0, 300));
+      return null;
+    };
+
     console.log(`\nŐR — a kiküldött lap telefonon (${GATE_TEMPLATES.length} sablon × ${vps.map((v) => v.id).join("/")})`);
-    for (const [tpl, why] of GATE_TEMPLATES) {
-      for (const vp of vps) {
-        const { r, rules, lazyOk } = await run(tpl, vp, "none");
-        console.log(`\n${tpl} @ ${vp.id} — ${why}`);
-        for (const [k, ok] of Object.entries(rules)) check(k, ok, ok ? undefined : r.flags.map((f) => f.what));
-        check("R5_lazy_below_fold", lazyOk);
-      }
+    let i = 0;
+    for (; i < jobs.length && jobs[i]!.sab === "none"; i++) {
+      const { tpl, why, vp } = jobs[i]!;
+      console.log(`\n${tpl} @ ${vp.id} — ${why}`);
+      const got = result(i);
+      if (!got) continue;
+      const { r, rules, lazyOk } = got;
+      for (const [k, ok] of Object.entries(rules)) check(k, ok, ok ? undefined : r.flags.map((f) => f.what));
+      check("R5_lazy_below_fold", lazyOk);
     }
     if (selftest) {
       console.log("\nPIROS ÖNTESZT — minden visszarontás a SAJÁT szabályát fordítsa pirosra (fullbleed @ 390)");
-      const vp = VIEWPORTS[0]!;
-      const cases: [Sabotage, string][] = [
-        ["no-clearance", "R2_footer_links_tappable"],
-        ["no-tap", "R3_tap_targets"],
-        ["overflow", "R1_no_overflow"],
-        ["no-lazy", "R5_lazy_below_fold"],
-      ];
-      // …and the landscape-only one: the side panel's decision block under the consent bar
-      cases.push(["panel-under-consent", "R4_pill_and_panel"]);
-      cases.push(["no-defer", "R7_first_screen_compact"]);
-      cases.push(["pill-on-bar", "R8_pill_above_fixed_bars"]);
       for (const [sab, rule] of cases) {
-        const { rules, lazyOk } = await run("fullbleed", sab === "panel-under-consent" ? VIEWPORTS[2]! : vp, sab);
+        const got = result(i++);
+        if (!got) continue;
+        const { rules, lazyOk } = got;
         if (sab === "no-defer") {
           // the un-deferred bar also drives the footer/pill numbers up — only R7 is asserted here
           check(`visszarontás „${sab}" → R7_first_screen_compact PIROS`, rules.R7_first_screen_compact === false);
@@ -1045,11 +1072,12 @@ async function gate(): Promise<void> {
         check(`visszarontás „${sab}" a többi szabályt békén hagyja`, others.every(([, ok]) => ok), others.filter(([, ok]) => !ok).map(([k]) => k));
       }
       // R6 both ways: a planted OWN script error is red; a planted THIRD-PARTY 404 is not a JS error
-      const je = await run("fullbleed", vp, "js-error");
-      check(`visszarontás „js-error" (saját script dob) → R6_no_js_errors PIROS`, je.rules.R6_no_js_errors === false, je.r.jsErrors);
-      const ext = await run("fullbleed", vp, "ext-404");
-      check(`visszarontás „ext-404" (külső kép 404) → R6 ZÖLD marad, a bukás a sikertelen kérések közt`, ext.rules.R6_no_js_errors === true && ext.r.weight.failed.some((f) => f.url.includes("ultetett-404")), { jsErrors: ext.r.jsErrors, failed: ext.r.weight.failed.map((f) => f.url) });
+      const je = result(i++);
+      if (je) check(`visszarontás „js-error" (saját script dob) → R6_no_js_errors PIROS`, je.rules.R6_no_js_errors === false, je.r.jsErrors);
+      const ext = result(i++);
+      if (ext) check(`visszarontás „ext-404" (külső kép 404) → R6 ZÖLD marad, a bukás a sikertelen kérések közt`, ext.rules.R6_no_js_errors === true && ext.r.weight.failed.some((f) => f.url.includes("ultetett-404")), { jsErrors: ext.r.jsErrors, failed: ext.r.weight.failed.map((f) => f.url) });
     }
+    if (i !== jobs.length) check(`minden mérés ítéletet kapott (${i}/${jobs.length})`, false);
   } finally {
     await browser.close();
   }

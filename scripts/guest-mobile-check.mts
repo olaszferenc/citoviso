@@ -1,4 +1,5 @@
 // Guest-on-a-phone gate + measurement (FK-010 companion, 2026-09-26).
+// gate-runner: self-overlap-safe — renders in memory (setContent), writes no file, no row, no shared path unless --shots/--json name one (the hook passes neither); the --selftest and the gate may run side by side (ADR-XXXX)
 //
 // The generated site is used by a GUEST on a phone: she reads rooms and prices, pages
 // the gallery, picks dates on the calendar, sends a (sample) request, writes a review.
@@ -44,6 +45,7 @@ import { pathToFileURL } from "node:url";
 import { chromium, type Browser, type Page } from "playwright-core";
 
 import { config } from "../src/config.js";
+import { pool } from "./lib/gate-pool.mts";
 import { ARCHETYPES } from "../src/engine/archetypes.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderSite } from "../src/engine/render.js";
@@ -519,200 +521,219 @@ async function shot(page: Page, id: string, vp: string, moment: string): Promise
 async function main(): Promise<void> {
   const list = await targets();
   const browser: Browser = await chromium.launch({ executablePath: config.chromiumPath });
-  let n = 0;
-  for (const t of list) {
-    for (const vp of VIEWPORTS) {
-      n++;
-      const ctx = await browser.newContext({
-        viewport: { width: vp.width, height: vp.height },
-        isMobile: true,
-        hasTouch: true,
-        deviceScaleFactor: 1,
-        userAgent: PORTAL_USER_AGENT,
-        reducedMotion: "reduce",
+  // ⏱️ PARALLEL, SAME MEASUREMENT (ADR-XXXX, after ADR-0261). The (target, viewport) units ran
+  // one after the other (~210 s alone, +88 s --selftest). Now gateJobs() workers take them from
+  // one queue. Each unit already had its OWN browser context and page and wrote nothing (the
+  // --shots / --json evidence goes to per-(target, viewport) names, or once at the end); its
+  // findings and raw record are collected per unit (the local F/raw below shadow the global
+  // ones) and merged — and the progress lines printed — in the ORIGINAL order, so the report
+  // is the same as the serial run's. A unit that threw stops the gate exactly where the serial
+  // run would have stopped: after the units before it, with its stack. CIT_GATE_JOBS=1 = serial.
+  const units = list.flatMap((t) => VIEWPORTS.map((vp) => ({ t, vp })));
+  const settled = await pool(units, async ({ t, vp }) => {
+    const mine: Finding[] = [];
+    const raw: Record<string, unknown> = {};
+    const F = (page: string, vpId: string, sev: Finding["sev"], rule: string, detail: string): void => {
+      mine.push({ page, vp: vpId, sev, rule, detail });
+    };
+    const ctx = await browser.newContext({
+      viewport: { width: vp.width, height: vp.height },
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 1,
+      userAgent: PORTAL_USER_AGENT,
+      reducedMotion: "reduce",
+    });
+    const page = await ctx.newPage();
+    const errors: string[] = [];
+    // keep the first stack frame too: a third-party error must be recognisable by its ORIGIN
+    page.on("pageerror", (e) => { const lines = String((e as Error).stack || e).split("\n"); errors.push(lines.slice(0, 2).join(" ")); });
+    page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 160)); });
+    // Gate mode: never fetch remote images/fonts (speed, offline). File mode: let the real
+    // photos load — their intrinsic size is part of the overflow question.
+    if (t.kind !== "file") {
+      await page.route("**/*", (route) => {
+        const rt = route.request().resourceType();
+        return rt === "image" || rt === "font" || rt === "media" ? route.abort() : route.continue();
       });
-      const page = await ctx.newPage();
-      const errors: string[] = [];
-      // keep the first stack frame too: a third-party error must be recognisable by its ORIGIN
-      page.on("pageerror", (e) => { const lines = String((e as Error).stack || e).split("\n"); errors.push(lines.slice(0, 2).join(" ")); });
-      page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 160)); });
-      // Gate mode: never fetch remote images/fonts (speed, offline). File mode: let the real
-      // photos load — their intrinsic size is part of the overflow question.
-      if (t.kind !== "file") {
-        await page.route("**/*", (route) => {
-          const rt = route.request().resourceType();
-          return rt === "image" || rt === "font" || rt === "media" ? route.abort() : route.continue();
-        });
+    }
+    try {
+      if (t.kind === "file") await page.goto(pathToFileURL(t.file!).href, { waitUntil: "load", timeout: 30_000 }).catch(() => {});
+      else await page.setContent(t.html!, { waitUntil: "load", timeout: 20_000 });
+      await page.waitForSelector("form.cit-book--request, .cit-book", { timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(t.kind === "file" ? 900 : 200);
+      // Intro overlays (arch-frames / wordmark-grow) play out first
+      await page.evaluate(() => document.querySelectorAll(".cit-fintro,.cit-intro").forEach((e) => e.remove()));
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await shot(page, t.id, vp.id, "1-fold");
+      await walk(page);
+      await page.evaluate(`window.__vpW = ${vp.width}`);
+      const st = (await page.evaluate(PROBE_STATIC)) as Record<string, any>;
+      const key = `${t.id}@${vp.id}`;
+      raw[key] = { static: st };
+      const P = t.id;
+      // ① overflow
+      if (st.overflowX) F(P, vp.id, "HIBA", "①túlfolyás", st.zoomedOut ? `a lap szélesebb a készüléknél, a böngésző kicsinyít (elrendezés ${st.scrollW}px a ${vp.width}px-es telefonon)` : `a lap ${st.scrollW}px széles (${vp.width}px nézetben) — kilóg: ${st.overflowCulprits.map((c: any) => `${c.sel} (jobb széle ${c.right}px)`).join(", ") || "?"}`);
+      // ② CTA in fold
+      if (st.ctaCount && !st.ctaInFold.length) F(P, vp.id, "ERGONÓMIA", "②CTA-hajtás", `van foglalás-CTA a lapon (${st.ctaCount}), de az első képernyőn egy sem látható`);
+      for (const c of st.ctaInFold) {
+        if (c.covered) F(P, vp.id, c.byOwnBar ? "ERGONÓMIA" : "HIBA", "②CTA-takarva", `az első képernyő CTA-ját (${c.text}) takarja: ${c.covered}${c.byOwnBar ? " (a lap saját foglalás-sávja — egy görgetéssel szabad)" : ""}`);
+        if (c.r.h < 44) F(P, vp.id, "ERGONÓMIA", "②CTA-kicsi", `az első képernyő CTA-ja (${c.text}) ${c.r.w}×${c.r.h}px`);
       }
-      try {
+      if (st.jump && st.jump.coveredBy) F(P, vp.id, "ERGONÓMIA", "②CTA-ugrás-takart", `a CTA ugrása (${st.jump.href}) után a cél címe („${st.jump.titleText}”) ${st.jump.coveredBy === "képernyőn kívül" ? "a képernyőn kívül" : "a tapadó sáv alatt: " + st.jump.coveredBy} (y=${st.jump.titleY})`);
+      if (!st.hasHamburger && st.nav.length) {
+        const links = st.nav.reduce((a: number, nv: any) => a + nv.links, 0);
+        if (links === 0) F(P, vp.id, "ERGONÓMIA", "②nav-üres", `a fejléc/nav látható, de 0 link (${st.nav.map((x: any) => x.sel).join(",")})`);
+      }
+      // ② the masthead block: the compact phone lockup is PROMISED ≤150px (contract amendment
+      // 2026-09-26, name-masthead/phone) — measured 148–200px before, 69–140 after
+      if (st.h1 && st.h1.covered && st.h1.covered.length) F(P, vp.id, "HIBA", "②főcím-takarva", `a főcím („${st.h1.text}”) ${st.h1.coveredLines.length}/${st.h1.lines} sora rögzített réteg alatt: ${st.h1.covered.join(", ")} (y=${st.h1.r.y}…${st.h1.r.b})`);
+      else if (st.h1 && st.h1.gapUnderMast != null && st.h1.gapUnderMast < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) ${st.h1.gapUnderMast}px-re indul a masthead alja alatt — nincs levegő`);
+      else if (st.h1 && st.h1.below && st.h1.below.gap < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) alja ${st.h1.below.gap}px-re a rögzített sávtól (${st.h1.below.by}) — nincs levegő`);
+      // ② the headline's END on the first screen. A headline that STARTS on screen and ends under the
+      // fold is the landscape finding the owner sent back ("a nyitottakat még javítsd", 2026-09-27):
+      // dark-luxury's 59px × 4 lines ended 37px under the fold, and on the 57 live mocks 10 of 19
+      // templates did the same at 844×390 (up to +374px). A headline that is wholly below the fold
+      // (arch-frames, card-sidebar: the hero carries the name in another element by approved draft)
+      // is a different structure and is not this rule's subject — `offscreen` returns early above.
+      if (st.h1 && !st.h1.offscreen && st.h1.r.b > vp.height) F(P, vp.id, "ERGONÓMIA", "②főcím-hajtás", `a főcím („${st.h1.text}”) ${st.h1.lines} sora közül az utolsó a hajtás alatt: alja y=${st.h1.r.b}, a képernyő ${vp.height}px (${st.h1.r.b - vp.height}px lóg túl)`);
+      if (st.mast && st.mast.h > 150) F(P, vp.id, "HIBA", "②fejléc-blokk", `a masthead ${st.mast.h}px magas az első képernyőn (a telefonos alak ≤150px-et ígér)`);
+      // ⑤ the fixed booking bar's text: value + label on ONE line each (was 2–3 lines, transit 99px)
+      if (st.barText && st.barText.parts.some((p: any) => p.lines > 1)) F(P, vp.id, "HIBA", "⑤sáv-felirat", `a Foglalás-sáv felirata törik: ${st.barText.parts.map((p: any) => `${p.tag} ${p.lines} sor`).join(", ")} (blokk ${st.barText.h}px)`);
+      // ⑤ sticky bands
+      for (const s of st.sticky) {
+        if (s.pct >= 25) F(P, vp.id, "HIBA", "⑤tapadó-sáv", `${s.sel} position:${s.pos}, ${s.h}px = a képernyő ${s.pct}%-a`);
+        else if (s.pct >= 15) F(P, vp.id, "ERGONÓMIA", "⑤tapadó-sáv", `${s.sel} position:${s.pos}, ${s.h}px = a képernyő ${s.pct}%-a`);
+      }
+      // ③ touch targets — grouped
+      const groups: Record<string, { n: number; ex: any }> = {};
+      for (const s of st.small) { (groups[s.group] ??= { n: 0, ex: s }).n++; }
+      for (const [g, v] of Object.entries(groups)) {
+        // the shared masthead's booking link is a PROMISED 44px (ADR-0235 ①): below that it is a
+        // defect, not an ergonomics note — a rule that only warns is a dead rule (parent session, 2026-09-26: 43px)
+        const tiny = ((v.ex.w < 24 || v.ex.h < 24) && !v.ex.inlineText) || g === "cit-mast-hot";
+        F(P, vp.id, tiny ? "HIBA" : "ERGONÓMIA", "③érintési-cél", `${v.n}× .${g} < 44px (pl. „${v.ex.text}” ${v.ex.w}×${v.ex.h}px)`);
+      }
+      // ④ input font
+      if (st.smallFont.length) F(P, vp.id, "ERGONÓMIA", "④input-betű", `${st.smallFont.length} mező < 16px (iOS nagyít): ${st.smallFont.slice(0, 3).map((x: any) => `${x.sel} ${x.fs}px`).join(", ")}`);
+      // map
+      if (st.map?.overflow) F(P, vp.id, "HIBA", "④térkép-túlfolyás", `a térkép-keret jobb széle ${st.map.r.x + st.map.r.w}px`);
+      // ⑥ booking
+      if (st.hasBooking) {
+        const b = (await page.evaluate(PROBE_BOOKING)) as Record<string, any> | null;
+        raw[key] = { ...(raw[key] as object), booking: b };
+        if (b) {
+          if (!b.calPaged && b.calNav.next && !b.calNav.next.disabled) F(P, vp.id, "HIBA", "⑥naptár-lapoz", `a „következő hónap” gomb nem lapoz (címke változatlan)`);
+          if (b.calNav.next?.covered) F(P, vp.id, "HIBA", "⑥naptár-takarva", `a hónap-léptetőt takarja: ${b.calNav.next.covered}`);
+          if (b.day.minW < 32 || b.day.minH < 32) F(P, vp.id, b.day.minW < 24 || b.day.minH < 24 ? "HIBA" : "ERGONÓMIA", "⑥nap-cella", `a naptár napjai ${b.day.minW}×${b.day.minH}px (betű ${b.day.fs}px)`);
+          if (b.picked && !(b.picked.from && b.picked.to)) F(P, vp.id, "HIBA", "⑥két-érintés", `két nap érintése nem adott tartományt (from=${b.picked.from} to=${b.picked.to})`);
+          if (b.reversed.errShown === false) F(P, vp.id, "HIBA", "⑥fordított-dátum", `fordított dátumra nincs hibaüzenet`);
+          else if (b.reversed.errInScreenWithDates === false) F(P, vp.id, "ERGONÓMIA", "⑥hibaüzenet-távol", `a hibaüzenet („${b.reversed.text}”) ${b.reversed.distance}px-re a dátum-sávtól — nem egy képernyőn (${vp.height}px)`);
+          if (b.past.errShown === false) F(P, vp.id, "HIBA", "⑥múltbeli-dátum", `múltbeli érkezésre nincs hibaüzenet`);
+          if (!b.twoStep && b.quoteToSubmit != null && b.quoteToSubmit > vp.height - 100) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `az ár-összegzés és a küldő gomb ${b.quoteToSubmit}px-re egymástól (képernyő ${vp.height}px)`);
+          for (const s of b.stepper) if (s.r.w < 44 || s.r.h < 44) { F(P, vp.id, "ERGONÓMIA", "⑥létszám-gomb", `a vendégszám ± gombja ${s.r.w}×${s.r.h}px`); break; }
+          const smallIn = b.inputs.filter((i: any) => i.fs < 16);
+          if (smallIn.length) F(P, vp.id, "ERGONÓMIA", "⑥widget-input-betű", `${smallIn.length} widget-mező < 16px: ${smallIn.slice(0, 3).map((i: any) => `${i.sel} ${i.fs}px`).join(", ")}`);
+          if (b.twoStep) {
+            const t = b.twoStep;
+            if (!t.goVis) F(P, vp.id, "HIBA", "⑥két-lépés", `telefonon nincs látható „Tovább” gomb a naptár után (B terv)`);
+            else {
+              if (t.goR.h < 44) F(P, vp.id, "ERGONÓMIA", "⑥két-lépés-gomb", `a „Tovább” gomb ${t.goR.w}×${t.goR.h}px`);
+              if (t.goDisabled) F(P, vp.id, "HIBA", "⑥két-lépés", `érvényes tartományra is tiltott a „Tovább” gomb`);
+              if (!t.step2 || !t.step2.on || !t.step2.summaryVis || !t.step2.submitVis || !t.step2.calHidden) F(P, vp.id, "HIBA", "⑥két-lépés", `a 2. lépés nem áll össze (step2=${t.step2 && t.step2.on}, összegző=${t.step2 && t.step2.summaryVis}, küldő=${t.step2 && t.step2.submitVis}, naptár rejtve=${t.step2 && t.step2.calHidden})`);
+              else if (t.step2.summaryToSubmit > vp.height - 60) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `a 2. lépésben az összegző és a küldő gomb ${t.step2.summaryToSubmit}px-re egymástól`);
+            }
+          }
+          if (b.valid.submitDisabled) F(P, vp.id, "HIBA", "⑥gomb-tiltva", `érvényes tartományra is tiltott a küldő gomb`);
+          if (b.valid.submitCovered) F(P, vp.id, "HIBA", "⑥gomb-takarva", `a küldő gombot takarja: ${b.valid.submitCovered}`);
+          if (b.valid.submitR.h < 44) F(P, vp.id, "ERGONÓMIA", "⑥gomb-kicsi", `a küldő gomb ${b.valid.submitR.w}×${b.valid.submitR.h}px`);
+          if (b.demo && b.receipt && !b.receipt.shown) F(P, vp.id, "HIBA", "⑥nyugta", `minta-beküldés után nincs nyugta`);
+          if (b.demo && b.receipt?.shown && !b.receipt.topInView) F(P, vp.id, "HIBA", "⑥nyugta-képen-kívül", `a nyugta teteje a képernyőn kívül (y=${b.receipt.r.y})`);
+          else if (b.demo && b.receipt?.shown && b.receipt.headCovered) F(P, vp.id, "ERGONÓMIA", "⑥nyugta-takarva", `a nyugta címét a tapadó sáv takarja: ${b.receipt.headCovered} (y=${b.receipt.headR.y})`);
+          await shot(page, t.id, vp.id, "6-nyugta");
+        }
+      } else if (t.kind === "file") F(P, vp.id, "GYANÚ", "⑥nincs-widget", `nincs foglalás-widget a lapon (modulok: ${st.modules.join(",")})`);
+      // ⑦ rooms — a FRESH page state (the booking probe left a receipt behind).
+      // ⛔ NOT page.reload(): a setContent() page reloads to about:blank, so in gate mode the
+      // rooms/gallery/review probes silently never ran (caught by --selftest, 2026-09-26).
+      if (st.hasRooms) {
         if (t.kind === "file") await page.goto(pathToFileURL(t.file!).href, { waitUntil: "load", timeout: 30_000 }).catch(() => {});
         else await page.setContent(t.html!, { waitUntil: "load", timeout: 20_000 });
-        await page.waitForSelector("form.cit-book--request, .cit-book", { timeout: 3000 }).catch(() => {});
-        await page.waitForTimeout(t.kind === "file" ? 900 : 200);
-        // Intro overlays (arch-frames / wordmark-grow) play out first
+        await page.waitForTimeout(t.kind === "file" ? 700 : 200);
         await page.evaluate(() => document.querySelectorAll(".cit-fintro,.cit-intro").forEach((e) => e.remove()));
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await shot(page, t.id, vp.id, "1-fold");
         await walk(page);
-        await page.evaluate(`window.__vpW = ${vp.width}`);
-        const st = (await page.evaluate(PROBE_STATIC)) as Record<string, any>;
-        const key = `${t.id}@${vp.id}`;
-        raw[key] = { static: st };
-        const P = t.id;
-        // ① overflow
-        if (st.overflowX) F(P, vp.id, "HIBA", "①túlfolyás", st.zoomedOut ? `a lap szélesebb a készüléknél, a böngésző kicsinyít (elrendezés ${st.scrollW}px a ${vp.width}px-es telefonon)` : `a lap ${st.scrollW}px széles (${vp.width}px nézetben) — kilóg: ${st.overflowCulprits.map((c: any) => `${c.sel} (jobb széle ${c.right}px)`).join(", ") || "?"}`);
-        // ② CTA in fold
-        if (st.ctaCount && !st.ctaInFold.length) F(P, vp.id, "ERGONÓMIA", "②CTA-hajtás", `van foglalás-CTA a lapon (${st.ctaCount}), de az első képernyőn egy sem látható`);
-        for (const c of st.ctaInFold) {
-          if (c.covered) F(P, vp.id, c.byOwnBar ? "ERGONÓMIA" : "HIBA", "②CTA-takarva", `az első képernyő CTA-ját (${c.text}) takarja: ${c.covered}${c.byOwnBar ? " (a lap saját foglalás-sávja — egy görgetéssel szabad)" : ""}`);
-          if (c.r.h < 44) F(P, vp.id, "ERGONÓMIA", "②CTA-kicsi", `az első képernyő CTA-ja (${c.text}) ${c.r.w}×${c.r.h}px`);
-        }
-        if (st.jump && st.jump.coveredBy) F(P, vp.id, "ERGONÓMIA", "②CTA-ugrás-takart", `a CTA ugrása (${st.jump.href}) után a cél címe („${st.jump.titleText}”) ${st.jump.coveredBy === "képernyőn kívül" ? "a képernyőn kívül" : "a tapadó sáv alatt: " + st.jump.coveredBy} (y=${st.jump.titleY})`);
-        if (!st.hasHamburger && st.nav.length) {
-          const links = st.nav.reduce((a: number, nv: any) => a + nv.links, 0);
-          if (links === 0) F(P, vp.id, "ERGONÓMIA", "②nav-üres", `a fejléc/nav látható, de 0 link (${st.nav.map((x: any) => x.sel).join(",")})`);
-        }
-        // ② the masthead block: the compact phone lockup is PROMISED ≤150px (contract amendment
-        // 2026-09-26, name-masthead/phone) — measured 148–200px before, 69–140 after
-        if (st.h1 && st.h1.covered && st.h1.covered.length) F(P, vp.id, "HIBA", "②főcím-takarva", `a főcím („${st.h1.text}”) ${st.h1.coveredLines.length}/${st.h1.lines} sora rögzített réteg alatt: ${st.h1.covered.join(", ")} (y=${st.h1.r.y}…${st.h1.r.b})`);
-        else if (st.h1 && st.h1.gapUnderMast != null && st.h1.gapUnderMast < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) ${st.h1.gapUnderMast}px-re indul a masthead alja alatt — nincs levegő`);
-        else if (st.h1 && st.h1.below && st.h1.below.gap < 12) F(P, vp.id, "ERGONÓMIA", "②főcím-szorul", `a főcím („${st.h1.text}”) alja ${st.h1.below.gap}px-re a rögzített sávtól (${st.h1.below.by}) — nincs levegő`);
-        // ② the headline's END on the first screen. A headline that STARTS on screen and ends under the
-        // fold is the landscape finding the owner sent back ("a nyitottakat még javítsd", 2026-09-27):
-        // dark-luxury's 59px × 4 lines ended 37px under the fold, and on the 57 live mocks 10 of 19
-        // templates did the same at 844×390 (up to +374px). A headline that is wholly below the fold
-        // (arch-frames, card-sidebar: the hero carries the name in another element by approved draft)
-        // is a different structure and is not this rule's subject — `offscreen` returns early above.
-        if (st.h1 && !st.h1.offscreen && st.h1.r.b > vp.height) F(P, vp.id, "ERGONÓMIA", "②főcím-hajtás", `a főcím („${st.h1.text}”) ${st.h1.lines} sora közül az utolsó a hajtás alatt: alja y=${st.h1.r.b}, a képernyő ${vp.height}px (${st.h1.r.b - vp.height}px lóg túl)`);
-        if (st.mast && st.mast.h > 150) F(P, vp.id, "HIBA", "②fejléc-blokk", `a masthead ${st.mast.h}px magas az első képernyőn (a telefonos alak ≤150px-et ígér)`);
-        // ⑤ the fixed booking bar's text: value + label on ONE line each (was 2–3 lines, transit 99px)
-        if (st.barText && st.barText.parts.some((p: any) => p.lines > 1)) F(P, vp.id, "HIBA", "⑤sáv-felirat", `a Foglalás-sáv felirata törik: ${st.barText.parts.map((p: any) => `${p.tag} ${p.lines} sor`).join(", ")} (blokk ${st.barText.h}px)`);
-        // ⑤ sticky bands
-        for (const s of st.sticky) {
-          if (s.pct >= 25) F(P, vp.id, "HIBA", "⑤tapadó-sáv", `${s.sel} position:${s.pos}, ${s.h}px = a képernyő ${s.pct}%-a`);
-          else if (s.pct >= 15) F(P, vp.id, "ERGONÓMIA", "⑤tapadó-sáv", `${s.sel} position:${s.pos}, ${s.h}px = a képernyő ${s.pct}%-a`);
-        }
-        // ③ touch targets — grouped
-        const groups: Record<string, { n: number; ex: any }> = {};
-        for (const s of st.small) { (groups[s.group] ??= { n: 0, ex: s }).n++; }
-        for (const [g, v] of Object.entries(groups)) {
-          // the shared masthead's booking link is a PROMISED 44px (ADR-0235 ①): below that it is a
-          // defect, not an ergonomics note — a rule that only warns is a dead rule (parent session, 2026-09-26: 43px)
-          const tiny = ((v.ex.w < 24 || v.ex.h < 24) && !v.ex.inlineText) || g === "cit-mast-hot";
-          F(P, vp.id, tiny ? "HIBA" : "ERGONÓMIA", "③érintési-cél", `${v.n}× .${g} < 44px (pl. „${v.ex.text}” ${v.ex.w}×${v.ex.h}px)`);
-        }
-        // ④ input font
-        if (st.smallFont.length) F(P, vp.id, "ERGONÓMIA", "④input-betű", `${st.smallFont.length} mező < 16px (iOS nagyít): ${st.smallFont.slice(0, 3).map((x: any) => `${x.sel} ${x.fs}px`).join(", ")}`);
-        // map
-        if (st.map?.overflow) F(P, vp.id, "HIBA", "④térkép-túlfolyás", `a térkép-keret jobb széle ${st.map.r.x + st.map.r.w}px`);
-        // ⑥ booking
-        if (st.hasBooking) {
-          const b = (await page.evaluate(PROBE_BOOKING)) as Record<string, any> | null;
-          raw[key] = { ...(raw[key] as object), booking: b };
-          if (b) {
-            if (!b.calPaged && b.calNav.next && !b.calNav.next.disabled) F(P, vp.id, "HIBA", "⑥naptár-lapoz", `a „következő hónap” gomb nem lapoz (címke változatlan)`);
-            if (b.calNav.next?.covered) F(P, vp.id, "HIBA", "⑥naptár-takarva", `a hónap-léptetőt takarja: ${b.calNav.next.covered}`);
-            if (b.day.minW < 32 || b.day.minH < 32) F(P, vp.id, b.day.minW < 24 || b.day.minH < 24 ? "HIBA" : "ERGONÓMIA", "⑥nap-cella", `a naptár napjai ${b.day.minW}×${b.day.minH}px (betű ${b.day.fs}px)`);
-            if (b.picked && !(b.picked.from && b.picked.to)) F(P, vp.id, "HIBA", "⑥két-érintés", `két nap érintése nem adott tartományt (from=${b.picked.from} to=${b.picked.to})`);
-            if (b.reversed.errShown === false) F(P, vp.id, "HIBA", "⑥fordított-dátum", `fordított dátumra nincs hibaüzenet`);
-            else if (b.reversed.errInScreenWithDates === false) F(P, vp.id, "ERGONÓMIA", "⑥hibaüzenet-távol", `a hibaüzenet („${b.reversed.text}”) ${b.reversed.distance}px-re a dátum-sávtól — nem egy képernyőn (${vp.height}px)`);
-            if (b.past.errShown === false) F(P, vp.id, "HIBA", "⑥múltbeli-dátum", `múltbeli érkezésre nincs hibaüzenet`);
-            if (!b.twoStep && b.quoteToSubmit != null && b.quoteToSubmit > vp.height - 100) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `az ár-összegzés és a küldő gomb ${b.quoteToSubmit}px-re egymástól (képernyő ${vp.height}px)`);
-            for (const s of b.stepper) if (s.r.w < 44 || s.r.h < 44) { F(P, vp.id, "ERGONÓMIA", "⑥létszám-gomb", `a vendégszám ± gombja ${s.r.w}×${s.r.h}px`); break; }
-            const smallIn = b.inputs.filter((i: any) => i.fs < 16);
-            if (smallIn.length) F(P, vp.id, "ERGONÓMIA", "⑥widget-input-betű", `${smallIn.length} widget-mező < 16px: ${smallIn.slice(0, 3).map((i: any) => `${i.sel} ${i.fs}px`).join(", ")}`);
-            if (b.twoStep) {
-              const t = b.twoStep;
-              if (!t.goVis) F(P, vp.id, "HIBA", "⑥két-lépés", `telefonon nincs látható „Tovább” gomb a naptár után (B terv)`);
-              else {
-                if (t.goR.h < 44) F(P, vp.id, "ERGONÓMIA", "⑥két-lépés-gomb", `a „Tovább” gomb ${t.goR.w}×${t.goR.h}px`);
-                if (t.goDisabled) F(P, vp.id, "HIBA", "⑥két-lépés", `érvényes tartományra is tiltott a „Tovább” gomb`);
-                if (!t.step2 || !t.step2.on || !t.step2.summaryVis || !t.step2.submitVis || !t.step2.calHidden) F(P, vp.id, "HIBA", "⑥két-lépés", `a 2. lépés nem áll össze (step2=${t.step2 && t.step2.on}, összegző=${t.step2 && t.step2.summaryVis}, küldő=${t.step2 && t.step2.submitVis}, naptár rejtve=${t.step2 && t.step2.calHidden})`);
-                else if (t.step2.summaryToSubmit > vp.height - 60) F(P, vp.id, "ERGONÓMIA", "⑥ár→gomb-távol", `a 2. lépésben az összegző és a küldő gomb ${t.step2.summaryToSubmit}px-re egymástól`);
-              }
-            }
-            if (b.valid.submitDisabled) F(P, vp.id, "HIBA", "⑥gomb-tiltva", `érvényes tartományra is tiltott a küldő gomb`);
-            if (b.valid.submitCovered) F(P, vp.id, "HIBA", "⑥gomb-takarva", `a küldő gombot takarja: ${b.valid.submitCovered}`);
-            if (b.valid.submitR.h < 44) F(P, vp.id, "ERGONÓMIA", "⑥gomb-kicsi", `a küldő gomb ${b.valid.submitR.w}×${b.valid.submitR.h}px`);
-            if (b.demo && b.receipt && !b.receipt.shown) F(P, vp.id, "HIBA", "⑥nyugta", `minta-beküldés után nincs nyugta`);
-            if (b.demo && b.receipt?.shown && !b.receipt.topInView) F(P, vp.id, "HIBA", "⑥nyugta-képen-kívül", `a nyugta teteje a képernyőn kívül (y=${b.receipt.r.y})`);
-            else if (b.demo && b.receipt?.shown && b.receipt.headCovered) F(P, vp.id, "ERGONÓMIA", "⑥nyugta-takarva", `a nyugta címét a tapadó sáv takarja: ${b.receipt.headCovered} (y=${b.receipt.headR.y})`);
-            await shot(page, t.id, vp.id, "6-nyugta");
-          }
-        } else if (t.kind === "file") F(P, vp.id, "GYANÚ", "⑥nincs-widget", `nincs foglalás-widget a lapon (modulok: ${st.modules.join(",")})`);
-        // ⑦ rooms — a FRESH page state (the booking probe left a receipt behind).
-        // ⛔ NOT page.reload(): a setContent() page reloads to about:blank, so in gate mode the
-        // rooms/gallery/review probes silently never ran (caught by --selftest, 2026-09-26).
-        if (st.hasRooms) {
-          if (t.kind === "file") await page.goto(pathToFileURL(t.file!).href, { waitUntil: "load", timeout: 30_000 }).catch(() => {});
-          else await page.setContent(t.html!, { waitUntil: "load", timeout: 20_000 });
-          await page.waitForTimeout(t.kind === "file" ? 700 : 200);
-          await page.evaluate(() => document.querySelectorAll(".cit-fintro,.cit-intro").forEach((e) => e.remove()));
-          await walk(page);
-          const r = (await page.evaluate(PROBE_ROOMS)) as Record<string, any> | null;
-          raw[key] = { ...(raw[key] as object), rooms: r };
-          if (r) {
-            if (!r.opened) F(P, vp.id, "HIBA", "⑦szoba-felugró", `a szoba-kártya érintése nem nyit felugrót (${r.openerCovered ? "takarja: " + r.openerCovered : "nincs data-open"})`);
-            else {
-              await page.evaluate(`(async()=>{const o=document.querySelector('.cit-room__open[data-cit-room]');o&&o.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0}));await new Promise(r=>setTimeout(r,200));})()`);
-              await shot(page, t.id, vp.id, "7-szoba");
-              await page.evaluate(() => (document.querySelector(".cit-rd__x") as HTMLElement | null)?.click());
-              if (!r.panel.fits) F(P, vp.id, "HIBA", "⑦felugró-levágva", `a szoba-felugró panelje nem fér a képernyőre (${r.panel.r.w}×${r.panel.r.h}, y=${r.panel.r.y}…${r.panel.r.b})`);
-              if (!r.panel.scrollable && r.panel.contentH > r.panel.r.h + 4) F(P, vp.id, "HIBA", "⑦felugró-nem-görgethető", `a felugró tartalma ${r.panel.contentH}px, a panel ${r.panel.r.h}px, és nem görgethető`);
-              if (r.close && (!r.close.inView || r.close.covered)) F(P, vp.id, "HIBA", "⑦bezárás-elérhetetlen", `a felugró X gombja ${r.close.inView ? "takarva: " + r.close.covered : "képernyőn kívül"}`);
-              if (r.close && (r.close.r.w < 44 || r.close.r.h < 44)) F(P, vp.id, "ERGONÓMIA", "⑦bezárás-kicsi", `a felugró X gombja ${r.close.r.w}×${r.close.r.h}px`);
-              if (r.cta && !r.cta.inView && !r.panel.scrollable) F(P, vp.id, "ERGONÓMIA", "⑦felugró-CTA", `a felugró „${r.cta.text}” gombja nem látszik és a panel nem görgethető`);
-              if (!r.closed) F(P, vp.id, "HIBA", "⑦bezárás", `az X nem zárja a felugrót`);
-            }
+        const r = (await page.evaluate(PROBE_ROOMS)) as Record<string, any> | null;
+        raw[key] = { ...(raw[key] as object), rooms: r };
+        if (r) {
+          if (!r.opened) F(P, vp.id, "HIBA", "⑦szoba-felugró", `a szoba-kártya érintése nem nyit felugrót (${r.openerCovered ? "takarja: " + r.openerCovered : "nincs data-open"})`);
+          else {
+            await page.evaluate(`(async()=>{const o=document.querySelector('.cit-room__open[data-cit-room]');o&&o.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0}));await new Promise(r=>setTimeout(r,200));})()`);
+            await shot(page, t.id, vp.id, "7-szoba");
+            await page.evaluate(() => (document.querySelector(".cit-rd__x") as HTMLElement | null)?.click());
+            if (!r.panel.fits) F(P, vp.id, "HIBA", "⑦felugró-levágva", `a szoba-felugró panelje nem fér a képernyőre (${r.panel.r.w}×${r.panel.r.h}, y=${r.panel.r.y}…${r.panel.r.b})`);
+            if (!r.panel.scrollable && r.panel.contentH > r.panel.r.h + 4) F(P, vp.id, "HIBA", "⑦felugró-nem-görgethető", `a felugró tartalma ${r.panel.contentH}px, a panel ${r.panel.r.h}px, és nem görgethető`);
+            if (r.close && (!r.close.inView || r.close.covered)) F(P, vp.id, "HIBA", "⑦bezárás-elérhetetlen", `a felugró X gombja ${r.close.inView ? "takarva: " + r.close.covered : "képernyőn kívül"}`);
+            if (r.close && (r.close.r.w < 44 || r.close.r.h < 44)) F(P, vp.id, "ERGONÓMIA", "⑦bezárás-kicsi", `a felugró X gombja ${r.close.r.w}×${r.close.r.h}px`);
+            if (r.cta && !r.cta.inView && !r.panel.scrollable) F(P, vp.id, "ERGONÓMIA", "⑦felugró-CTA", `a felugró „${r.cta.text}” gombja nem látszik és a panel nem görgethető`);
+            if (!r.closed) F(P, vp.id, "HIBA", "⑦bezárás", `az X nem zárja a felugrót`);
           }
         }
-        // ⑧ gallery
-        if (st.hasGallery) {
-          const g = (await page.evaluate(PROBE_GALLERY)) as Record<string, any> | null;
-          raw[key] = { ...(raw[key] as object), gallery: g };
-          if (g) {
-            if (g.galleryOverflow) F(P, vp.id, "HIBA", "⑧galéria-túlfolyás", `galéria-elem kilóg: ${g.galleryOverflow.sel} (jobb széle ${g.galleryOverflow.right}px)`);
-            if (!g.opened) F(P, vp.id, "HIBA", "⑧nagyítás", `a galéria-kép érintése nem nyit nagyítót${g.thumbCovered ? " (takarja: " + g.thumbCovered + ")" : ""}`);
-            else {
-              await page.evaluate(`(async()=>{const i=[...document.querySelectorAll('[data-cit-module="gallery"] img')].find(e=>e.getBoundingClientRect().width>0);if(i){const r=i.getBoundingClientRect();(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)||i).dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0}));}await new Promise(r=>setTimeout(r,200));})()`);
-              await shot(page, t.id, vp.id, "8-galeria");
-              await page.evaluate(() => (document.querySelector(".cit-lb__btn--close") as HTMLElement | null)?.click());
-              if (!g.img.fits) F(P, vp.id, "HIBA", "⑧nagyított-kép-kilóg", `a nagyított kép ${g.img.r.w}×${g.img.r.h} @${g.img.r.x},${g.img.r.y} nem fér a képernyőre`);
-              if (g.next?.vis && (g.next.r.w < 44 || g.next.r.h < 44)) F(P, vp.id, "ERGONÓMIA", "⑧lapozó-kicsi", `a nagyító lapozója ${g.next.r.w}×${g.next.r.h}px`);
-              if (g.next?.vis && g.countAfterNext === g.count) F(P, vp.id, "HIBA", "⑧lapozás", `a nagyító „következő” gombja nem lép (${g.count})`);
-              if (g.close && (!g.close.inView || g.close.covered)) F(P, vp.id, "HIBA", "⑧bezárás-elérhetetlen", `a nagyító X gombja ${g.close.inView ? "takarva" : "képernyőn kívül"}`);
-              if (!g.closed) F(P, vp.id, "HIBA", "⑧bezárás", `az X nem zárja a nagyítót`);
-            }
+      }
+      // ⑧ gallery
+      if (st.hasGallery) {
+        const g = (await page.evaluate(PROBE_GALLERY)) as Record<string, any> | null;
+        raw[key] = { ...(raw[key] as object), gallery: g };
+        if (g) {
+          if (g.galleryOverflow) F(P, vp.id, "HIBA", "⑧galéria-túlfolyás", `galéria-elem kilóg: ${g.galleryOverflow.sel} (jobb széle ${g.galleryOverflow.right}px)`);
+          if (!g.opened) F(P, vp.id, "HIBA", "⑧nagyítás", `a galéria-kép érintése nem nyit nagyítót${g.thumbCovered ? " (takarja: " + g.thumbCovered + ")" : ""}`);
+          else {
+            await page.evaluate(`(async()=>{const i=[...document.querySelectorAll('[data-cit-module="gallery"] img')].find(e=>e.getBoundingClientRect().width>0);if(i){const r=i.getBoundingClientRect();(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)||i).dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0}));}await new Promise(r=>setTimeout(r,200));})()`);
+            await shot(page, t.id, vp.id, "8-galeria");
+            await page.evaluate(() => (document.querySelector(".cit-lb__btn--close") as HTMLElement | null)?.click());
+            if (!g.img.fits) F(P, vp.id, "HIBA", "⑧nagyított-kép-kilóg", `a nagyított kép ${g.img.r.w}×${g.img.r.h} @${g.img.r.x},${g.img.r.y} nem fér a képernyőre`);
+            if (g.next?.vis && (g.next.r.w < 44 || g.next.r.h < 44)) F(P, vp.id, "ERGONÓMIA", "⑧lapozó-kicsi", `a nagyító lapozója ${g.next.r.w}×${g.next.r.h}px`);
+            if (g.next?.vis && g.countAfterNext === g.count) F(P, vp.id, "HIBA", "⑧lapozás", `a nagyító „következő” gombja nem lép (${g.count})`);
+            if (g.close && (!g.close.inView || g.close.covered)) F(P, vp.id, "HIBA", "⑧bezárás-elérhetetlen", `a nagyító X gombja ${g.close.inView ? "takarva" : "képernyőn kívül"}`);
+            if (!g.closed) F(P, vp.id, "HIBA", "⑧bezárás", `az X nem zárja a nagyítót`);
           }
         }
-        // ⑨ review form
-        if (st.hasReviewForm) {
-          const rv = (await page.evaluate(PROBE_REVIEW)) as Record<string, any> | null;
-          raw[key] = { ...(raw[key] as object), review: rv };
-          if (rv) {
-            await shot(page, t.id, vp.id, "9-velemeny");
-            const smallC = rv.controls.filter((c: any) => c.h < 44);
-            if (smallC.length) F(P, vp.id, "ERGONÓMIA", "⑨vélemény-vezérlő", `${smallC.length} vezérlő < 44px magas: ${smallC.slice(0, 3).map((c: any) => `${c.sel} ${c.w}×${c.h}`).join(", ")}`);
-            const sf = rv.controls.filter((c: any) => c.fs < 16 && /input|select|textarea/.test(c.sel));
-            if (sf.length) F(P, vp.id, "ERGONÓMIA", "⑨vélemény-betű", `${sf.length} mező < 16px`);
-            if (rv.controls.some((c: any) => c.overflow)) F(P, vp.id, "HIBA", "⑨vélemény-túlfolyás", `vezérlő kilóg: ${rv.controls.filter((c: any) => c.overflow).map((c: any) => c.sel).join(",")}`);
-            if (rv.demo && rv.submitted && !rv.submitted.formGone) F(P, vp.id, "HIBA", "⑨vélemény-küldés", `a minta-vélemény beküldése után az űrlap marad, nincs válasz`);
-          }
+      }
+      // ⑨ review form
+      if (st.hasReviewForm) {
+        const rv = (await page.evaluate(PROBE_REVIEW)) as Record<string, any> | null;
+        raw[key] = { ...(raw[key] as object), review: rv };
+        if (rv) {
+          await shot(page, t.id, vp.id, "9-velemeny");
+          const smallC = rv.controls.filter((c: any) => c.h < 44);
+          if (smallC.length) F(P, vp.id, "ERGONÓMIA", "⑨vélemény-vezérlő", `${smallC.length} vezérlő < 44px magas: ${smallC.slice(0, 3).map((c: any) => `${c.sel} ${c.w}×${c.h}`).join(", ")}`);
+          const sf = rv.controls.filter((c: any) => c.fs < 16 && /input|select|textarea/.test(c.sel));
+          if (sf.length) F(P, vp.id, "ERGONÓMIA", "⑨vélemény-betű", `${sf.length} mező < 16px`);
+          if (rv.controls.some((c: any) => c.overflow)) F(P, vp.id, "HIBA", "⑨vélemény-túlfolyás", `vezérlő kilóg: ${rv.controls.filter((c: any) => c.overflow).map((c: any) => c.sel).join(",")}`);
+          if (rv.demo && rv.submitted && !rv.submitted.formGone) F(P, vp.id, "HIBA", "⑨vélemény-küldés", `a minta-vélemény beküldése után az űrlap marad, nincs válasz`);
         }
-        // ⑩ JS errors
-        // Google's own map-embed bootstrap ("google is not defined" thrown INSIDE init_embed.js on
-        // maps.gstatic.com) is a third-party race the page cannot influence — measured 2026-09-26 as a
-        // 2/30 pre-commit red under load, 0/2 alone. Our own scripts' errors still count.
-        const jsErr = errors.filter((e) => !/net::ERR|Failed to load resource|ERR_NAME_NOT_RESOLVED|favicon/i.test(e) && !/maps\.gstatic\.com|maps\.googleapis\.com/.test(e));
-        if (jsErr.length) F(P, vp.id, "HIBA", "⑩js-hiba", jsErr.slice(0, 2).join(" · "));
-        (raw[key] as any).errors = errors;
-        console.log(`  ${String(n).padStart(3)}/${list.length * VIEWPORTS.length} ${t.kind.padEnd(9)} ${t.id.padEnd(46)} @${vp.id.padEnd(4)} — ${findings.filter((f) => f.page === P && f.vp === vp.id).length} lelet`);
+      }
+      // ⑩ JS errors
+      // Google's own map-embed bootstrap ("google is not defined" thrown INSIDE init_embed.js on
+      // maps.gstatic.com) is a third-party race the page cannot influence — measured 2026-09-26 as a
+      // 2/30 pre-commit red under load, 0/2 alone. Our own scripts' errors still count.
+      const jsErr = errors.filter((e) => !/net::ERR|Failed to load resource|ERR_NAME_NOT_RESOLVED|favicon/i.test(e) && !/maps\.gstatic\.com|maps\.googleapis\.com/.test(e));
+      if (jsErr.length) F(P, vp.id, "HIBA", "⑩js-hiba", jsErr.slice(0, 2).join(" · "));
+      (raw[key] as any).errors = errors;
       } finally {
         await ctx.close();
       }
-    }
-  }
+    return { findings: mine, raw };
+  });
   await browser.close();
+  settled.forEach((u, i) => {
+    const { t, vp } = units[i]!;
+    if (!u.ok) throw u.error; // → main().catch: ❌ + stack, exit 1 — the serial run's behaviour
+    findings.push(...u.value.findings);
+    Object.assign(raw, u.value.raw);
+    // ⚠️ counted over ALL findings so far, as the serial line did: a template and an archetype
+    // share two ids (dark-luxury, card-sidebar), and the serial count included the earlier one
+    console.log(`  ${String(i + 1).padStart(3)}/${list.length * VIEWPORTS.length} ${t.kind.padEnd(9)} ${t.id.padEnd(46)} @${vp.id.padEnd(4)} — ${findings.filter((f) => f.page === t.id && f.vp === vp.id).length} lelet`);
+  });
 
   // ── report ───────────────────────────────────────────────────────────────────────────
   const by = (sev: Finding["sev"]) => findings.filter((f) => f.sev === sev);
