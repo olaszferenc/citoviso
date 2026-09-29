@@ -28,6 +28,7 @@
 - [2026-09-29_forwarded_host_link.md](2026-09-29_forwarded_host_link.md) — 2026-09-29 — A levél-link hostja a Host fejlécből (X-Forwarded-Host kizárva)
 - [2026-09-29_foglalaskezeles_telefonon.md](2026-09-29_foglalaskezeles_telefonon.md) — 2026-09-29 — A tulaj telefonon dönt a foglalásról (FK-015, „A” változat) — ADR-0274
 - [2026-09-29_deploy_ready_ujrairas.md](2026-09-29_deploy_ready_ujrairas.md) — 2026-09-29 — DEPLOY-READY.md újraírva: menet, ellenőrzőlista, vészterv, füst-próba
+- [2026-09-29_deploy_keszenlet_felderites_koordinator.md](2026-09-29_deploy_keszenlet_felderites_koordinator.md) — 2026-09-29/30 — Deploy-készenlét felderítés: 5 deploy előtti ❌ → 6 SUB egy éjjel, mind landolt
 - [2026-09-29_csillagszam_egy_szabaly.md](2026-09-29_csillagszam_egy_szabaly.md) — A csillagszám egyetlen, skála-tudatos szabályból (2026-09-29)
 - [2026-09-29_csillagmeret_or.md](2026-09-29_csillagmeret_or.md) — Böngészős méret-őr a csillagsorra, mind a 19 sablonon (2026-09-29)
 - [2026-09-29_cfg_sheet_scroll_kapu_gyorsitasa.md](2026-09-29_cfg_sheet_scroll_kapu_gyorsitasa.md) — 2026-09-29 — A `cfg-sheet-scroll-check` gyorsítása (pool + nyugvópont, ADR-0272)
