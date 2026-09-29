@@ -25,6 +25,7 @@
 - [2026-09-29_harmadik_kor_aprosagai.md](2026-09-29_harmadik_kor_aprosagai.md) — 2026-09-29 — A 3. telefonos kör apróságai: létszám, „Alapár:” az ajánlaton, két lebegő pirula
 - [2026-09-29_gepszintu_land_sor.md](2026-09-29_gepszintu_land_sor.md) — 2026-09-29 — Gépszintű land-sor (flock) a land.sh-ban
 - [2026-09-29_galeria_korlat_minden_foto_elerheto.md](2026-09-29_galeria_korlat_minden_foto_elerheto.md) — Galéria-korlát: a tulaj minden fotója elérhető, a galéria a még nem látott képekkel indul (2026-09-29)
+- [2026-09-29_forwarded_host_link.md](2026-09-29_forwarded_host_link.md) — 2026-09-29 — A levél-link hostja a Host fejlécből (X-Forwarded-Host kizárva)
 - [2026-09-29_foglalaskezeles_telefonon.md](2026-09-29_foglalaskezeles_telefonon.md) — 2026-09-29 — A tulaj telefonon dönt a foglalásról (FK-015, „A” változat) — ADR-0274
 - [2026-09-29_deploy_ready_ujrairas.md](2026-09-29_deploy_ready_ujrairas.md) — 2026-09-29 — DEPLOY-READY.md újraírva: menet, ellenőrzőlista, vészterv, füst-próba
 - [2026-09-29_csillagszam_egy_szabaly.md](2026-09-29_csillagszam_egy_szabaly.md) — A csillagszám egyetlen, skála-tudatos szabályból (2026-09-29)
