@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -128,11 +128,12 @@ const ORGANIC_CSS = `
   .og-chip svg{width:20px;height:20px;color:var(--cit-accent);flex:none}
 
   /* gallery — organic masks, scattered baseline */
-  .og-gal{display:grid;gap:20px;grid-template-columns:repeat(2,1fr);margin-top:50px}
-  @media(min-width:840px){.og-gal{grid-template-columns:repeat(4,1fr)}}
-  .og-gal figure{aspect-ratio:3/4;overflow:hidden;background:color-mix(in srgb, var(--cit-ink) 10%, var(--cit-surface))}
-  .og-gal figure:nth-child(odd){margin-top:22px}
-  .og-gal img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  /* gallery — contract design-refs/tenant-site/gallery-cap (C): one swipeable row of blobs */
+  .og-gal{margin-top:44px}
+  .og-gtrack{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:6px 2px 14px;-webkit-overflow-scrolling:touch}
+  .og-gtrack::-webkit-scrollbar{display:none}
+  .og-gal figure{flex:none;width:min(270px,68vw);scroll-snap-align:start;margin:0;aspect-ratio:1/1.08;overflow:hidden;background:color-mix(in srgb, var(--cit-ink) 10%, var(--cit-surface))}
+  .og-gal img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
   .og-gal figure:hover img{transform:scale(1.06)}
 
   /* reviews — handwritten-ish notes */
@@ -341,23 +342,30 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     : "";
 
   // -- gallery (blob-masked, scattered) ------------------------------------
-  const gallery = photos.length
-    ? `<section class="og-sec" id="og-gallery" style="padding-top:0">
+  // Contract: assets/design-refs/tenant-site/gallery-cap (C) — ONE swipeable row of blobs
+  // holding EVERY photo (the shared lightbox pages through all), a „1 / N” pager under it.
+  // Order: photos the page does not show elsewhere first. Built after the other sections —
+  // see `galleryOrder`.
+  const galleryOf = (ordered: readonly { url: string; alt: string }[]): string =>
+    ordered.length
+      ? `<section class="og-sec" id="og-gallery" style="padding-top:0">
     <div class="og-wrap">
       ${galCopy.eyebrow ? `<span class="og-eyeb">${esc(galCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Galéria")}</span>`}
       <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Évszakról évszakra")}</h2>
-      <div class="og-gal" data-cit-module="gallery">
-        ${photos
-          .slice(0, 4)
+      <div class="og-gal" data-cit-module="gallery" data-cit-gstrip>
+        <div class="og-gtrack" data-cit-gtrack>
+        ${ordered
           .map(
             (p, i) =>
-              `<figure class="${["og-blob-a", "og-blob-b", "og-blob-c", "og-blob-a"][i % 4]}"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`,
+              `<figure class="${["og-blob-a", "og-blob-b", "og-blob-c", "og-blob-a"][i % 4]}"><img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy"></figure>`,
           )
           .join("\n        ")}
+        </div>
+        ${galleryPager(data, ordered.length)}
       </div>
     </div>
   </section>`
-    : "";
+      : "";
 
   // -- reviews (handwritten notes) -----------------------------------------
   const stars5 = starCount ? `<div class="og-st">${starIcon().repeat(starCount)}</div>` : "";
@@ -472,6 +480,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalás")}</a>
   </div>`
     : "";
+
+  const gallery = galleryOf(galleryOrder(photos, [mast, hero, rooms, rhythm, chips, reviews, faq, contact, footer, mobcta].join("")));
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

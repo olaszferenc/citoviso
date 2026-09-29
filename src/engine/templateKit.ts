@@ -289,6 +289,45 @@ export function heroPhoto(d: SiteData): Photo | undefined {
   return d.photos[0];
 }
 
+/**
+ * The gallery's photo ORDER (owner ruling 2026-09-29, contract:
+ * assets/design-refs/tenant-site/gallery-cap/): „a még nem látott képekkel induljon a
+ * galéria” — the photos the page does NOT already show elsewhere come first, in the
+ * owner's order; the ones already on the page follow, so the lightbox still pages
+ * through every photo and none is lost.
+ *
+ * `elsewhere` is the markup of the page's STANDING sections (hero, story, rooms,
+ * contact…) — never the <head> (JSON-LD lists every photo) and never a one-shot intro
+ * animation. Derived from the markup, not from fixed indices: which photo a section
+ * shows changes with the data (a room with or without its own photo, a lead with 2 or
+ * 24 photos), and a hard-coded "skip #1–#4" would be wrong on both ends.
+ */
+export function galleryOrder(photos: readonly Photo[], elsewhere: string): Photo[] {
+  const shown = (p: Photo): boolean => {
+    const u = esc(p.url);
+    return elsewhere.includes(`${u}"`) || elsewhere.includes(`${u}'`) || elsewhere.includes(`${u})`);
+  };
+  return [...photos.filter((p) => !shown(p)), ...photos.filter(shown)];
+}
+
+const GPAGER_PREV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;
+const GPAGER_NEXT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
+
+/**
+ * Prev · „1 / N” · next — the pager of a swipeable gallery strip or card deck (contract:
+ * design-refs/tenant-site/gallery-cap). Born `hidden`: only the runtime that wires it takes
+ * the attribute off, so a page without JS — or rendered without the runtime at all — never
+ * shows dead arrows, and the strip stays a native swipe row.
+ */
+export function galleryPager(d: SiteData, n: number): string {
+  if (n < 2) return "";
+  return `<div class="cit-gpager" data-cit-gpager hidden>
+    <button type="button" data-cit-gprev aria-label="${T(d, "Előző kép")}">${GPAGER_PREV}</button>
+    <span data-cit-gcount aria-live="polite">1 / ${n}</span>
+    <button type="button" data-cit-gnext aria-label="${T(d, "Következő kép")}">${GPAGER_NEXT}</button>
+  </div>`;
+}
+
 export function photoFill(alt: string, opts: { icon?: string; compact?: boolean } = {}): string {
   // `compact` is for small image slots (a table thumbnail): the full panel's 76px
   // icon and 170px floor would blow a 66×46 cell apart.

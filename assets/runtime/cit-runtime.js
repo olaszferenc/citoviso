@@ -1247,7 +1247,97 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ensureLightbox().open(items, idx, im); }
       });
     });
+    mountGalleryStrip(slot);
+    mountGalleryDeck(slot);
+    mountGalleryExpand(slot);
   });
+
+  // ── gallery: every photo reachable (contract design-refs/tenant-site/gallery-cap) ──
+  // The slot holds EVERY photo (the lightbox above pages through all); these three
+  // enhance how the page SHOWS them. Each sets [data-on] on its own box: the CSS keys
+  // on it, so without JS the strip/deck stay native swipe rows and the expander shows
+  // every card — no dead arrows, no photo out of reach.
+  function ownOrInside(slot, sel) { return slot.matches(sel) ? slot : slot.querySelector(sel); }
+
+  function wirePager(box, count, go) {
+    var pv = box.querySelector("[data-cit-gprev]"), nx = box.querySelector("[data-cit-gnext]"), ct = box.querySelector("[data-cit-gcount]");
+    if (!pv || !nx || !ct) return null;
+    pv.addEventListener("click", function () { go(-1); });
+    nx.addEventListener("click", function () { go(1); });
+    var pager = box.querySelector("[data-cit-gpager]");
+    if (pager) pager.hidden = false;
+    return function show(i, atEnd, wrap) {
+      ct.textContent = (i + 1) + " / " + count;
+      pv.disabled = !wrap && i === 0;
+      nx.disabled = !wrap && atEnd;
+    };
+  }
+
+  // organic C — one swipeable row; arrows + „1 / N”, first/last arrow disabled at the ends.
+  function mountGalleryStrip(slot) {
+    var box = ownOrInside(slot, "[data-cit-gstrip]");
+    var track = box && box.querySelector("[data-cit-gtrack]");
+    if (!track) return;
+    var items = [].slice.call(track.children);
+    if (items.length < 2) return;
+    function at() {
+      var x = track.scrollLeft, best = 0, d = 1e9, base = items[0].offsetLeft;
+      items.forEach(function (it, i) { var dd = Math.abs(it.offsetLeft - base - x); if (dd < d) { d = dd; best = i; } });
+      return best;
+    }
+    function atEnd() { return track.scrollLeft + track.clientWidth >= track.scrollWidth - 4; }
+    var show = wirePager(box, items.length, function (k) {
+      var i = Math.max(0, Math.min(items.length - 1, at() + k));
+      track.scrollTo({ left: items[i].offsetLeft - items[0].offsetLeft, behavior: "smooth" });
+    });
+    if (!show) return;
+    function upd() { var end = atEnd(); show(end ? items.length - 1 : at(), end, false); }
+    track.addEventListener("scroll", upd, { passive: true });
+    window.addEventListener("resize", upd, { passive: true });
+    box.setAttribute("data-on", "");
+    upd();
+  }
+
+  // wordmark-grow A — a stacked deck: the top card, at most two peeking behind; the
+  // arrows wrap around. Only the top card takes taps (it opens the lightbox on itself).
+  function mountGalleryDeck(slot) {
+    var box = ownOrInside(slot, "[data-cit-gdeck]");
+    var wrap = box && box.querySelector("[data-cit-gcards]");
+    if (!wrap) return;
+    var cards = [].slice.call(wrap.children);
+    if (cards.length < 2) return;
+    var top = 0;
+    function lay() {
+      cards.forEach(function (el, k) {
+        var o = (k - top + cards.length) % cards.length;
+        el.style.zIndex = String(cards.length - o);
+        el.style.transform = o === 0 ? "none" : o < 3 ? "translate(" + o * 14 + "px," + o * 10 + "px) rotate(" + (o * 3.2).toFixed(1) + "deg)" : "translate(28px,20px) rotate(6.4deg)";
+        el.style.opacity = o < 3 ? "1" : "0";
+        el.setAttribute("aria-hidden", o === 0 ? "false" : "true");
+      });
+      show(top, false, true);
+    }
+    var show = wirePager(box, cards.length, function (k) { top = (top + k + cards.length) % cards.length; lay(); });
+    if (!show) return;
+    box.setAttribute("data-on", "");
+    lay();
+  }
+
+  // claymorphism C — the first cards show; the button opens the rest IN PLACE (no popup).
+  function mountGalleryExpand(slot) {
+    if (!slot.hasAttribute("data-cit-gexpandable") || !slot.id) return;
+    var btn = document.querySelector('[data-cit-gexpand="' + slot.id + '"]');
+    if (!btn) return;
+    slot.setAttribute("data-on", "");
+    btn.hidden = false;
+    btn.addEventListener("click", function () {
+      var open = !slot.hasAttribute("data-open");
+      if (open) slot.setAttribute("data-open", ""); else slot.removeAttribute("data-open");
+      btn.setAttribute("aria-expanded", String(open));
+      btn.textContent = btn.getAttribute(open ? "data-less" : "data-more");
+      if (!open) (slot.closest("section") || slot).scrollIntoView({ block: "start" });
+    });
+  }
 
   // ── room details popover (module: rooms) ────────────────────────────────────
   // APPROVED PLAN, variant B (owner, 2026-09-21). Contract + reference implementation:

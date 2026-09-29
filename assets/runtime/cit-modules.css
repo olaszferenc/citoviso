@@ -1255,3 +1255,16 @@ html .cit-away { visibility: hidden !important; opacity: 0 !important; pointer-e
    #cit-booking h2) — the request card's title repeated it right under it. The card keeps
    its title where it stands alone (receipt, sidebar dock, bar variant). */
 #cit-booking h2 ~ [data-cit-module="booking"] form.cit-book--request > .cit-book__title { display: none; }
+
+/* ── gallery: every photo reachable (contract design-refs/tenant-site/gallery-cap) ──
+   The pager under a swipe strip / card deck is born [hidden]; the runtime unhides it when
+   it wires it — without JS the row is swiped natively and no dead arrow is drawn. The
+   in-place expander hides its extra cards ONLY with JS on — no JS = every card shown. */
+.cit-gpager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px;
+  color: var(--cit-muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.cit-gpager[hidden] { display: none; }
+.cit-gpager button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--cit-line);
+  background: var(--cit-surface); color: var(--cit-ink); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.cit-gpager button:disabled { opacity: 0.35; cursor: default; }
+.cit-gpager svg { width: 18px; height: 18px; }
+[data-cit-gexpandable][data-on]:not([data-open]) [data-cit-gextra] { display: none; }

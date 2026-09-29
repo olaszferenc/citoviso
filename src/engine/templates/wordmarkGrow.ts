@@ -31,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -147,6 +147,22 @@ section{padding:clamp(70px,10vh,124px) 0}
 .w-card{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:20px;
   box-shadow:0 30px 64px -38px color-mix(in srgb,var(--cit-ink) 66%,transparent)}
 .w-card img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+/* gallery deck — contract design-refs/tenant-site/gallery-cap (A). No JS: a native swipe row
+   (every card reachable); the runtime sets [data-on] and stacks it into the deck. */
+.w-deckcards{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.w-deckcards::-webkit-scrollbar{display:none}
+.w-deckcards .w-dcard{flex:0 0 82%;scroll-snap-align:start}
+/* the peeking cards reach ~50px right of the top card (28px shift + the 6.4° turn's box):
+   leave them that room — a phone widens the layout viewport on an overhang (measured
+   390 → 417 px), and the guest-mobile gate flags a card box past the screen edge even
+   when clipped (397 px). clip-x stays as the backstop. */
+.w-deck[data-on]{overflow-x:clip;overflow-y:visible;padding-bottom:6px}
+.w-deck[data-on] .w-deckcards{display:block;position:relative;overflow:visible;aspect-ratio:4/5;width:min(440px,calc(100% - 72px));margin-inline:auto}
+.w-deck[data-on] .cit-gpager{margin-top:26px}
+.w-deck[data-on] .w-dcard{position:absolute;inset:0;transition:transform .35s ease,opacity .35s ease;
+  box-shadow:0 14px 34px color-mix(in srgb,var(--cit-ink) 22%,transparent);background:var(--cit-surface)}
+.w-deck[data-on] .w-dcard[aria-hidden="true"]{pointer-events:none}
+@media (prefers-reduced-motion:reduce){.w-deck[data-on] .w-dcard{transition:none}}
 .w-row h2{font-size:clamp(26px,4vw,46px);line-height:1.16;margin-bottom:.5em}
 .w-row p{margin:0 0 1em;max-width:44ch;color:color-mix(in srgb,var(--cit-ink) 86%,transparent)}
 @media(max-width:860px){.w-row,.w-row.rev{grid-template-columns:1fr;gap:30px}
@@ -328,14 +344,25 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   </section>`
     : "";
 
-  // Wrap around instead of slicing: a lead with two photos would otherwise lose
-  // the gallery section entirely — and with it the module hook (measured by
-  // configurator-placement-check). The data-poor branch is the blind branch.
-  const galPhoto = photos.length ? photos[Math.min(2, photos.length - 1)] : undefined;
-  const gallery = `<section data-cit-module="gallery" style="padding-top:0">
+  // Contract: assets/design-refs/tenant-site/gallery-cap (A) — the single card became a
+  // DECK holding EVERY photo (the shared lightbox pages through all), a „1 / N” pager
+  // under it. Order: photos the page does not show elsewhere first (`galleryOrder`,
+  // called below once the other sections exist). The section ALWAYS renders — with no
+  // photo a designed fill card — or the module hook would vanish on a data-poor lead
+  // (measured by configurator-placement-check).
+  const galleryOf = (ordered: readonly { url: string; alt: string }[]): string => `<section data-cit-module="gallery" style="padding-top:0">
       <div class="w-wrap">
         <div class="w-row rev">
-          <div class="w-fig">${card(galPhoto, data.name, 80)}</div>
+          <div class="w-fig">${
+            ordered.length
+              ? `<div class="w-deck" data-cit-gdeck>
+            <div class="w-deckcards" data-cit-gcards>${ordered
+              .map((p) => `<div class="w-card w-dcard"><img src="${esc(p.url)}" alt="${esc(p.alt || data.name)}" loading="lazy"></div>`)
+              .join("")}</div>
+            ${galleryPager(data, ordered.length)}
+          </div>`
+              : card(undefined, data.name, 80)
+          }</div>
           <div>
             <span class="w-spark">${SPARK}</span>
             <h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Képek"))}</h2>
@@ -415,6 +442,9 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       </div>
     </div>
   </footer>`;
+
+  // The one-shot intro flash is NOT "shown on the page" — it is gone after two seconds.
+  const gallery = galleryOf(galleryOrder(photos, [heroBlock, about, roomsBlock, review, footer].join("")));
 
   const intro = {
     name: esc(data.name),

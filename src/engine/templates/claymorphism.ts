@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, galleryOrder, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -133,9 +133,13 @@ const CLAY_CSS = `
   .cl-bu strong{display:block;font-family:var(--cit-font-display);font-size:16px;margin-bottom:4px}
 
   /* gallery */
-  .cl-gal{display:grid;gap:22px;grid-template-columns:repeat(2,1fr);margin-top:46px}
+  /* gallery — contract design-refs/tenant-site/gallery-cap (C): square clay cards, 4 + in-place „Összes fotó” */
+  .cl-gal{display:grid;gap:22px;grid-template-columns:repeat(2,1fr);margin-top:36px}
   @media(min-width:860px){.cl-gal{grid-template-columns:repeat(4,1fr)}}
-  .cl-gal figure{border-radius:var(--cit-radius);overflow:hidden;aspect-ratio:3/4;box-shadow:8px 8px 20px color-mix(in srgb, var(--cit-ink) 14%, transparent), -8px -8px 20px rgba(255,255,255,.9)}
+  .cl-gal figure{margin:0;border-radius:26px;overflow:hidden;aspect-ratio:1/1;box-shadow:10px 10px 24px color-mix(in srgb, var(--cit-ink) 16%, transparent), -8px -8px 20px rgba(255,255,255,.85)}
+  .cl-gact{text-align:center;margin-top:30px}
+  .cl-gact .cl-btn{border:0}
+  .cl-gact .cl-btn[hidden]{display:none} /* .cl-btn's inline-block would beat [hidden]: no-JS shows no dead button */
   .cl-gal img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
   .cl-gal figure:hover img{transform:scale(1.06)}
 
@@ -339,18 +343,27 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
     : "";
 
   // -- gallery --------------------------------------------------------------
-  const gallery = photos.length
-    ? `<section class="cl-sec" id="cl-gallery" style="padding-top:0"><div class="cl-wrap">
+  // Contract: assets/design-refs/tenant-site/gallery-cap (C). EVERY photo is in the slot
+  // (the shared lightbox pages through all); 4 show, the rest open IN PLACE under
+  // „Összes fotó ({n})”. Order: photos the page does not show elsewhere first. Built after
+  // the other sections — see `galleryOrder`.
+  const galleryOf = (ordered: readonly { url: string; alt: string }[]): string =>
+    ordered.length
+      ? `<section class="cl-sec" id="cl-gallery" style="padding-top:0"><div class="cl-wrap">
       ${galCopy.eyebrow ? `<span class="cl-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Galéria")}</span>`}
       <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül nálunk")}</h2>
-      <div class="cl-gal" data-cit-module="gallery">
-        ${photos
-          .slice(0, 4)
-          .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
+      <div class="cl-gal" id="cl-galgrid" data-cit-module="gallery" data-cit-gexpandable>
+        ${ordered
+          .map((p, i) => `<figure${i >= 4 ? " data-cit-gextra" : ""}><img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy"></figure>`)
           .join("\n        ")}
       </div>
+      ${
+        ordered.length > 4
+          ? `<div class="cl-gact"><button type="button" class="cl-btn" data-cit-gexpand="cl-galgrid" aria-controls="cl-galgrid" aria-expanded="false" data-more="${esc(T(data, "Összes fotó ({n})", { n: ordered.length }))}" data-less="${esc(T(data, "Kevesebb fotó"))}" hidden>${T(data, "Összes fotó ({n})", { n: ordered.length })}</button></div>`
+          : ""
+      }
     </div></section>`
-    : "";
+      : "";
 
   // -- reviews --------------------------------------------------------------
   const stars5 = starCount ? `<span class="cl-st">${starIcon().repeat(starCount)}</span>` : "";
@@ -454,6 +467,8 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
       <span><a href="/adatvedelem">${T(data, "Adatkezelés")}</a></span>
     </div>
   </div></div></footer>`;
+
+  const gallery = galleryOf(galleryOrder(photos, [mast, hero, rooms, wellness, reviews, faq, contact, footer, mobcta].join("")));
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

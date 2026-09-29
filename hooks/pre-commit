@@ -741,6 +741,18 @@ if [ -f scripts/live-sample-room-check.mts ] && \
   echo "[pre-commit] live-sample-room-check (élő lapon 0 „Minta” szobakép; a trió csillaga látszik)…"
   npx tsx scripts/live-sample-room-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A TULAJ MINDEN FOTÓJA ELÉRHETŐ A GALÉRIÁBÓL (2026-09-29, kontraktus: design-refs/tenant-site/
+# gallery-cap): 6 feltöltésből az organic/claymorphism 4-et, a wordmark-grow 3-at mutatott,
+# a nagyítóban sem többet; az élő Kemences (12 fotó) vendége 3-at látott. Böngészős mérés:
+# 3 sablon × asztali/390/360 px × JS / no-JS / runtime nélkül — minden fotó a slotban és a
+# nagyítóban, a galéria a még nem látott képekkel indul, a pakli/sáv/kinyitás működik, a lap
+# nem szélesedik ki telefonon; két piros önteszt. ~60 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/gallery-reach-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/(wordmarkGrow|organic|claymorphism)\.ts$|^src/engine/(templateKit|render)\.ts$|^assets/runtime/(cit-runtime\.js|cit-modules\.css)$|^src/generator/runtime\.ts$|^scripts/gallery-reach-check\.mts$'; then
+  echo "[pre-commit] gallery-reach-check (minden fotó elérhető, a még nem látottal indul)…"
+  npx tsx scripts/gallery-reach-check.mts >"$GATE_LOG" || gate_failed
+fi
 # §B.17 a KIKÜLDÖTT mockon: a vélemény-űrlap — az egyetlen, ami nevet, e-mailt és
 # hozzájárulást kér — jelöletlen volt, és közzétételt ígért egy űrlapról, ami sehova
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt
