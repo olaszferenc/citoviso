@@ -29,7 +29,10 @@ oldalait N párhuzamos lapon/kontextusban futtatni (ugyanazok az állítások, v
 erre a szkriptre, ha nincs közös scratch-útvonala (−164 s a kritikus útról); ③ leghosszabb-először
 ütemezés a futtatóban a `CIT_GATE_TIMES`-előzményből (kisebb nyereség, a lánc alsó korlát marad).
 
-**Élő bizonyíték a javításra:** lásd lent (a commit utáni land-hívás mása).
+**Élő bizonyíték a javításra:** a commit (git-hookon át) 55 kapu, 117 s, `0 már zöld volt`; utána a
+land-hívás mása (`LAND_RANGE=origin/main...HEAD bash hooks/pre-commit`, ugyanazon a fán): **50 már zöld
+volt**, csak a 4 diffet/módot olvasó kapu futott, 40 s. (Az egyetlen piros a `planning-index` volt: a
+helyőrző-ADR-t a valódi land `assign` lépése osztja ki a kapuk előtt — a mása ezt kihagyta, várt.)
 
 **Módosított fájlok:** `scripts/lib/gate-runner.mjs`, `scripts/gate-runner-check.mts`, `scripts/gate-lane-check.mts`,
 `_planning/decisions/XXXX-a-land-ujrahasznalja-a-commitkori-zoldet-git-exec-path.md`, ez a jegyzet.
