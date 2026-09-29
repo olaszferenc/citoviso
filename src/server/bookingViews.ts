@@ -911,6 +911,28 @@ function offerListLine(o: SentOffer, lang: string): string {
   return "—";
 }
 
+/**
+ * The per-night price under the total (approved plan booking-offer-scope, the list's
+ * „X Ft / éj” line — left out at first, restored on the owner's word „2. OK”, 2026-09-29).
+ * Read from the frozen lines the offer went out with: one price → "90 000 Ft / éj"; a stay
+ * spanning several prices → their range; per-person pricing says so. Nothing to read (or a
+ * mix of per-person and per-stay lines) → no line: a number nobody set is not shown (§B.17).
+ */
+function offerPerNight(o: SentOffer, lang: string): string {
+  if (!o.lines.length) return "";
+  const perPerson = o.lines[0]!.guests > 1;
+  if (o.lines.some((l) => l.guests > 1 !== perPerson)) return "";
+  const cur = o.currency ?? "HUF";
+  const pers = [...new Set(o.lines.map((l) => l.perNight))].sort((a, b) => a - b);
+  // A range names the currency once ("26 000 – 32 000 Ft"): twice it did not fit a phone card.
+  const hi = formatAmount(pers[pers.length - 1]!, cur);
+  const lo = formatAmount(pers[0]!, cur);
+  const unit = hi.replace(/^[\d\s\u00a0.,]+/, "");
+  const price =
+    pers.length === 1 ? lo : `${unit && lo.endsWith(unit) ? lo.slice(0, -unit.length).trim() : lo} – ${hi}`;
+  return perPerson ? T(lang, "{price} / fő / éj", { price }) : T(lang, "{price} / éj", { price });
+}
+
 function sentOffersSection(offers: readonly SentOffer[], expireHours: number, lang: string): string {
   const rows = offers.map((o) => {
     const fate = offerFate(o, expireHours, lang);
@@ -922,7 +944,7 @@ function sentOffersSection(offers: readonly SentOffer[], expireHours: number, la
       `${hard(T(lang, "{n} éj", { n: nights }))} · ${hard(T(lang, "{n} fő", { n: o.guests }))}`;
     const total = o.total != null ? formatAmount(o.total, o.currency ?? "HUF") : "—";
     const sent = huDay(o.offeredAt.toISOString().slice(0, 10), lang);
-    return { o, fate, when, total, sent, list: offerListLine(o, lang) };
+    return { o, fate, when, total, per: offerPerNight(o, lang), sent, list: offerListLine(o, lang) };
   });
   const chip = (g: string, text: string, on = false): string =>
     `<button type="button" class="bk-of__f" data-of-f="${g}" aria-pressed="${on}">${text}</button>`;
@@ -936,7 +958,7 @@ function sentOffersSection(offers: readonly SentOffer[], expireHours: number, la
         (r) =>
           `<tr data-of-g="${r.fate.group}"><td><b>${esc(r.o.guestName)}</b></td>` +
           `<td>${esc(r.o.unitName)}<small>${esc(r.when)}</small></td>` +
-          `<td><b>${esc(r.total)}</b></td><td>${esc(r.sent)}</td>` +
+          `<td><b>${esc(r.total)}</b>${r.per ? `<small class="bk-of__per">${esc(r.per)}</small>` : ""}</td><td>${esc(r.sent)}</td>` +
           `<td><span class="bk-of__st bk-of__st--${r.fate.group}">${esc(r.fate.label)}</span></td>` +
           `<td class="bk-of__pl">${esc(r.list)}</td></tr>`,
       )
@@ -949,7 +971,7 @@ function sentOffersSection(offers: readonly SentOffer[], expireHours: number, la
         (r) =>
           `<div class="bk-of__c" data-of-g="${r.fate.group}">` +
           `<div class="bk-of__top"><div><b>${esc(r.o.guestName)}</b><small>${esc(r.o.unitName)} · ${esc(r.when)}</small></div>` +
-          `<b class="bk-of__amt">${esc(r.total)}</b></div>` +
+          `<div class="bk-of__amt"><b>${esc(r.total)}</b>${r.per ? `<small class="bk-of__per">${esc(r.per)}</small>` : ""}</div></div>` +
           `<div class="bk-of__row"><span class="bk-of__st bk-of__st--${r.fate.group}">${esc(r.fate.label)}</span>` +
           `<small>${T(lang, "kiküldve {when}", { when: esc(r.sent) })}</small></div>` +
           `<div class="bk-of__pl">${T(lang, "Árlista:")} ${esc(r.list)}</div></div>`,
@@ -1403,7 +1425,8 @@ export const BOOKINGS_STYLE = `<style>
 }
 .bk-of__c{border:1px solid var(--citui-line);border-radius:12px;padding:12px;font-size:.88rem;line-height:1.5}
 .bk-of__top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.bk-of__amt{white-space:nowrap}
+.bk-of__amt{white-space:nowrap;text-align:right}
+.bk-of__t .bk-of__per{white-space:nowrap}
 .bk-of__row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
 .bk-of__row small{display:inline}
 .bk-of__c .bk-of__pl{margin-top:6px}

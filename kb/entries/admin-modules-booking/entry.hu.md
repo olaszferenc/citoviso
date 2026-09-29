@@ -103,6 +103,9 @@ Egyik sem kötelező. Ha egyik sincs, a mentés után egy sárga sor figyelmezte
 meg”** gomb az Árazás lapra visz (ott írja be és mentse az árat), a **„Nem adok meg árat”** gomb
 pedig helyben rögzíti, hogy egyedi ajánlatot küld.
 Több szobánál a naptár fölött **fülek** vannak: arra koppint, amelyiknek a naptárát nézni akarja.
+Fület csak az kap, amit a vendég le is foglalhat. Ha a házat csak egyben adja ki, a szobák a fülek
+alatt egy mondatban szerepelnek („a házzal együtt foglalható, ezért nincs külön naptára”), mert
+foglalás csak a házra érkezhet. Ha az egész szállást nem adja ki egyben, annak nincs naptára.
 A szoba nevének átírása után a sor **„Mentés”** gombjával rögzíti a változást.
 
 ### Az egész szállás — és miért csíkos néha egy nap

@@ -943,6 +943,14 @@ if [ -f scripts/whole-only-guest-check.mts ] && \
   echo "[pre-commit] whole-only-guest-check (csak egyben kiadó ház — vendég-oldal, 19 sablon)…"
   npx tsx scripts/whole-only-guest-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Az admin egység-sorrendje (tulaj 2026-09-29, „legyen A)”): a nem kiadó egész a tulaj négy listájában
+# (Szobák rács, felugró, Árak, naptár-fül) a VÉGÉN, az egyben is / csak egyben kiadó elöl; naptár-fület csak
+# foglalható egység kap. Negatív kontroll: az „egyben is kiadó” állapotban ugyanaz a próba ELÖL-t mér.
+if [ -f scripts/admin-unit-order-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/(units|unitVisibility)\.ts|src/server/(moduleConfigViews|public)\.ts)$|^scripts/admin-unit-order-check'; then
+  echo "[pre-commit] admin-unit-order-check (a nem kiadó egész a lista végén)…"
+  npx tsx scripts/admin-unit-order-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Az ÜZEMI RIASZTÁS minden beállított címre menjen (tulaj-kérés, 2026-09-12). A címzettet
 # beállítani ADDITÍV ÍRÁS — a mezőben látszó három cím nem bizonyítja, hogy a levél
 # mindhármat eléri. Az őr a kimenő levél To: fejlécét olvassa vissza (outbox, nem hálózat).

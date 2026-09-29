@@ -70,3 +70,16 @@ export function bookableUnits<T extends UnitBookabilityFacts>(units: readonly T[
 export function isWholeOnlySite(units: readonly UnitBookabilityFacts[]): boolean {
   return units.some((u) => u.wholeOnly && u.isWholeProperty);
 }
+
+/**
+ * ADR-XXXX — the order of the units in the OWNER's admin lists (rooms grid, room popup, price
+ * cards, the booking calendar's unit tabs). Measured (Elek FK-013, 2026-09-28): the whole-place
+ * unit sat first everywhere, even when it is not let as one — the owner's first tap and first
+ * typed price went to a unit no guest can book. Owner ruling „legyen A)": a whole-place unit the
+ * guest does not see (`isGuestVisibleUnit` false) moves to the END; otherwise the owner's order
+ * stands (a whole place let as one — and always when let ONLY as one — stays in front).
+ * Display order only: `sort_order` is not rewritten. Stable.
+ */
+export function adminUnitOrder<T extends UnitVisibilityFacts>(units: readonly T[]): T[] {
+  return [...units.filter(isGuestVisibleUnit), ...units.filter((u) => !isGuestVisibleUnit(u))];
+}

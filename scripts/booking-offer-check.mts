@@ -197,6 +197,8 @@ try {
   check("② a tárgy „Árajánlat-kérés”", /^Árajánlat-kérés/.test(om?.subject ?? ""), om?.subject);
   check("② kimondja: a vendég nem látott árat", /A vendég nem látott árat/.test(om?.body ?? ""));
   check("② megnevezi a 3 árazatlan éjszakát", /3 éjszakára nincs megadott ár/.test(om?.body ?? ""), (om?.body ?? "").slice(0, 400));
+  // ADR-0267: the letter tells the rule, not the overruled ADR-0215 ①.3 ("always into the list").
+  check("② a levél a valódi szabályt mondja: az ár alapból csak erre a kérésre szól", /csak erre a kérésre szól/.test(om?.body ?? "") && !/bekerül az árlistájába/.test(om?.body ?? ""), (om?.body ?? "").slice(0, 400));
   check("② ⛔ NINCS benne koppintásos /elfogadom", !/\/elfogadom/.test(om?.body ?? ""));
   const offerUrl = /(https?:\/\/[^\s"<]+\/foglalas\/[A-Za-z0-9_-]+\/ajanlat)/.exec(om?.body ?? "")?.[1];
   check("② van benne ajánlat-link", !!offerUrl);
@@ -401,6 +403,10 @@ try {
     const shown = label === "mobil" ? list.locator(".bk-of__c") : list.locator(".bk-of__t tbody tr");
     check(`S⑤ ${label}: a „Kiküldött ajánlatok” lista mind a 6 ajánlatot mutatja (${label === "mobil" ? "kártyák" : "táblázat"})`, (await shown.count()) === 6 && (await shown.first().isVisible()), await shown.count());
     check(`S⑤ ${label}: a válaszra várók vannak felül`, /Válaszra vár/.test(await shown.first().innerText()));
+    // The plan's „X Ft / éj" line under every total (restored 2026-09-29, owner: „2. OK"):
+    // read from the offer's frozen lines, so each of the 6 rows must carry it.
+    const perNightRows = await shown.evaluateAll((els) => els.filter((e) => /\d[\d\u00a0 ]*\s?Ft \/ (fő \/ )?éj/.test((e as HTMLElement).innerText)).length);
+    check(`S⑤ ${label}: minden sorban ott az éjszakánkénti ár („… Ft / éj”)`, perNightRows === 6, perNightRows);
     const listText = await list.innerText();
     check(`S⑤ ${label}: az Árlista-oszlop kimondja mindhárom utat`, /Nem került be/.test(listText) && /Alapárként bekerült/.test(listText) && /A kért napokra bekerült/.test(listText), listText.slice(0, 500));
     await list.getByRole("button", { name: "Elfogadta" }).click();

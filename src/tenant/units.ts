@@ -41,7 +41,7 @@ export interface Unit {
 // ADR-0256 — the guest-visibility rule lives in a string-free module so the MAIL path
 // (priceGap.ts → the weekly reminder) can call the SAME predicate without pulling this file's
 // Hungarian admin strings into the i18n scope. Re-exported here for every existing caller.
-export { isGuestVisibleUnit, guestUnits, isBookableUnit, bookableUnits, isWholeOnlySite } from "./unitVisibility.js";
+export { isGuestVisibleUnit, guestUnits, isBookableUnit, bookableUnits, isWholeOnlySite, adminUnitOrder } from "./unitVisibility.js";
 
 /**
  * A stable, unique slug for a unit within its site.

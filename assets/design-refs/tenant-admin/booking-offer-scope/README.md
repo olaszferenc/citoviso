@@ -46,7 +46,9 @@ ki”: ár nélküli házra árajánlat-kérés). A tulaj: *„Ez a döntés am�
    napokra (…) bekerült az árlistába: …” / „Alapárként bekerült az árlistába: …”).
 9. **„Kiküldött ajánlatok”** — új szakasz a Foglalások fül alján, teljes szélességben: minden ajánlat, ami a
    rendszerből ment (`offered_at IS NOT NULL`), lezártak is. Oszlopok: **Vendég · Mit, mikorra · Ár ·
-   Kiküldve · Mi lett vele · Árlista**. A válaszra várók felül. „Mi lett vele”: „Válaszra vár · lejár …”,
+   Kiküldve · Mi lett vele · Árlista**. Az összeg alatt az éjszakánkénti ár (pl. 90 000 Ft / éj; több áron
+   átívelő tartózkodásnál a tartomány, fős árazásnál „/ fő / éj”) — a táblázatban és a telefonos kártyán is,
+   az ajánlat befagyasztott soraiból (pótolva 2026-09-29, a tulaj: „2. OK”). A válaszra várók felül. „Mi lett vele”: „Válaszra vár · lejár …”,
    „Elfogadta — foglalás”, „Elfogadta, később lemondva”, „Nem kérte”, „Közben elkelt”, „Lejárt — nem felelt”.
    „Árlista”: „Nem került be” / „A kért napokra bekerült” / „Alapárként bekerült”; a döntés előtti
    ajánlatnál „—” (nem tudjuk — nem találunk ki értéket). Szűrők: „Mind” · „Válaszra vár” · „Elfogadta” ·
@@ -56,9 +58,7 @@ ki”: ár nélküli házra árajánlat-kérés). A tulaj: *„Ez a döntés am�
 
 ## Amit NEM köt
 
-A színek és margók a `--citui-*` tokenekből jönnek. A mockban az ár/éj külön sora a listában elmaradt a
-megvalósításban (a kérés befagyasztott összege és éjszakái látszanak; az éjszakánkénti ár a kérésen nem
-tárolt külön mezőként).
+A színek és margók a `--citui-*` tokenekből jönnek.
 
 ## Őr
 

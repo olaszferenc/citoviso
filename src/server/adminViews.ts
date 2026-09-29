@@ -3520,7 +3520,7 @@ export function domainSection(d: DomainAdminData, st: DomainViewState, lang = "h
           `<span>${T(lang, "most ez a címe")}</span></div>`
         : "") +
       `<p class="citui-hint" style="margin-top:12px">${T(lang, "A név díja {price}/hó, és {n} hónapos előfizetés vállalásával jár. A hűségidő letelte után a név díjmentesen az Öné, a havidíj a fenntartásért fut tovább.", { price: esc(money(d.priceMonthly, d.currency)), n: d.commitmentMonths })}</p>` +
-      `<a class="citui-btn citui-btn--primary" href="/admin?tab=modulok" style="margin-top:12px;display:inline-block">` +
+      `<a class="citui-btn citui-btn--primary" href="/admin?tab=modulok" style="margin-top:12px">` +
       `${T(lang, "Csomag bővítése")}</a>` +
       mockNote +
       `</div>`

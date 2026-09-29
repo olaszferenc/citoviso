@@ -376,10 +376,15 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .mhead{background:var(--citui-navy-900);color:var(--citui-white);border-radius:var(--citui-radius-sm);
   padding:14px 15px;margin:0 0 14px}
 .mhead__top{display:flex;align-items:center;gap:10px}
-.mhead__top h2{font-family:var(--citui-font-display);font-size:1.06rem;margin:0;flex:1;min-width:0}
+.mhead__top h2{font-family:var(--citui-font-display);font-size:1.06rem;margin:0;flex:1;min-width:0;
+  color:inherit}
 .mhead__ico{display:inline-flex;color:var(--citui-cyan-400)}
 .mhead__price{font-size:.78rem;padding:4px 10px;border-radius:var(--citui-radius-pill);
   background:color-mix(in srgb,var(--citui-white) 16%,transparent);white-space:nowrap}
+/* Measured (Elek FK-013 26, 2026-09-28): the global h1–h4 rule (ink-brand) and the price
+   list's own ink/muted colours won over the header's white — dark text on navy, unreadable.
+   Inside this dark block the title and the price take the block's colour. */
+.mhead__price .adm-price__lead,.mhead__price .adm-price__alt{color:inherit}
 .mhead__links{display:flex;gap:14px;margin-top:9px;font-size:.82rem;flex-wrap:wrap}
 .mhead__links a{color:var(--citui-white);opacity:.82;text-decoration:none}
 .mhead__links a:hover{opacity:1;text-decoration:underline}
@@ -1278,6 +1283,8 @@ export interface EditorUnit {
   /** ADR-0257 — the place is let ONLY as one (set on the whole unit): the other units are
    *  rooms shown for presentation — not bookable, no price asked. */
   readonly wholeOnly?: boolean;
+  /** `bookableUnits` — can a guest book it? Only these get a calendar tab (undefined = yes). */
+  readonly bookable?: boolean;
 }
 
 /**
@@ -2292,8 +2299,27 @@ function requestsCard(reqs: EditorRequest[], multiUnit: boolean, lang = "hu"): s
  * the whole house (ADR-0114 made it the unit the others hang off).
  */
 function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu"): string {
-  if (booking.units.length < 2) return "";
-  const tabs = booking.units
+  // ADR-0257 open point (Elek FK-013): a presentation room or the hidden whole place kept a
+  // calendar here although no booking can land on it. Only bookable units get a tab, and the
+  // left-out ones are NAMED, so the owner does not look for a room that "disappeared".
+  const tabUnits = booking.units.filter((u) => u.bookable !== false);
+  const left = booking.units.filter((u) => u.bookable === false);
+  // Let only as one → the left-out units are presentation rooms; otherwise it is the whole
+  // place, hidden because it is not let as one (ADR-0256).
+  const wholeOnlySite = booking.units.some((u) => u.wholeOnly);
+  const leftNames = esc(left.map((u) => u.name).join(", "));
+  const leftNote = (margin: string): string =>
+    left.length
+      ? `<p class="adm-lead" style="margin:${margin}" data-cit-unit-nocal>${
+          wholeOnlySite
+            ? T(lang, "{names}: a házzal együtt foglalható, ezért nincs külön naptára.", { names: leftNames })
+            : T(lang, "{names}: nem kiadó egyben, ezért nincs naptára.", { names: leftNames })
+        }</p>`
+      : "";
+  if (tabUnits.length < 2) {
+    return left.length ? `<div class="adm-card unit-tabs-card">${leftNote("0")}</div>` : "";
+  }
+  const tabs = tabUnits
     .map((u) => {
       const meta = [
         u.capacity ? T(lang, "{n} fő", { n: u.capacity }) : T(lang, "férőhely nincs megadva"),
@@ -2312,7 +2338,7 @@ function unitSwitcher(booking: BookingEditorData, moduleId: string, lang = "hu")
     `<div class="adm-card unit-tabs-card">` +
     `<h3 class="unit-tabs__h">${T(lang, "Mit ad ki?")}</h3>` +
     `<p class="adm-lead">${T(lang, "Minden szobának külön naptára van, így külön telhet be.")}</p>` +
-    `<div class="unit-tabs" role="tablist">${tabs}</div></div>`
+    `<div class="unit-tabs" role="tablist">${tabs}</div>${leftNote("12px 0 0")}</div>`
   );
 }
 
@@ -3943,7 +3969,7 @@ export function guestPageShell(
   const foot =
     opts.back && opts.backLabel
       ? `<p style="margin:18px 0 0"><a href="${esc(opts.back)}" class="citui-btn citui-btn--ghost" ` +
-        `style="text-decoration:none;display:inline-block">${esc(opts.backLabel)}</a></p>`
+        `style="text-decoration:none">${esc(opts.backLabel)}</a></p>`
       : "";
   return (
     `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
@@ -3967,6 +3993,31 @@ export interface GuestCancelView {
   readonly siteUrl?: string;
   /** Booking reference, so the guest can see WHICH stay this is about. */
   readonly ref?: string;
+  /** The host's phone (printed form) and e-mail, from the property's own contact data. */
+  readonly hostPhone?: string;
+  readonly hostEmail?: string;
+}
+
+/**
+ * Elek FK-016 (2026-09-28): the cancel page told the guest to "write to the host" and gave
+ * no way to — the only route to CHANGE a stay was a dead sentence. Tappable tel:/mailto:
+ * buttons from the property's own contact data; nothing is rendered for a missing fact.
+ */
+function guestReach(v: GuestCancelView, lang: string): string {
+  // A long address breaks after the "@" first (<wbr>), mid-word only as a last resort.
+  const btn = (href: string, text: string) =>
+    `<a class="citui-btn citui-btn--ghost citui-btn--sm" href="${esc(href)}" ` +
+    `style="text-decoration:none;max-width:100%;overflow-wrap:anywhere;padding-block:6px;line-height:1.35">${esc(text).replace("@", "@<wbr>")}</a>`;
+  const items = [
+    v.hostPhone ? btn(`tel:${v.hostPhone.replace(/[^\d+]/g, "")}`, v.hostPhone) : "",
+    v.hostEmail ? btn(`mailto:${v.hostEmail}`, v.hostEmail) : "",
+  ].filter(Boolean);
+  if (!items.length) return "";
+  return (
+    `<div data-cit-host-reach style="margin:0 0 14px">` +
+    `<p style="font-weight:700;font-size:.88rem;margin:0 0 8px">${T(lang, "A szállásadó elérhetősége")}</p>` +
+    `<div style="display:flex;gap:9px;flex-wrap:wrap">${items.join("")}</div></div>`
+  );
 }
 
 /** GET /foglalas/<token>/lemondom — the confirm step (nothing has happened yet). */
@@ -3995,6 +4046,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       `<b>${esc(v.guestName ?? "")} · ${when}</b>${v.ref ? ` · ${esc(v.ref)}` : ""}<br>` +
       `${T(lang, "A lemondás végleges: a napok felszabadulnak, és a szállásadó azonnal értesítést kap. Ha csak módosítani szeretne, inkább írjon a szállásadónak.")}` +
       `</div>` +
+      guestReach(v, lang) +
       `<form method="post" action="/foglalas/${esc(token)}/lemondom">` +
       `<label style="display:block;font-weight:700;font-size:.88rem;margin-bottom:6px">${T(lang, "Üzenet a szállásadónak (nem kötelező)")}</label>` +
       `<textarea name="uzenet" maxlength="1000" style="width:100%;box-sizing:border-box;border:1.5px solid var(--citui-line);border-radius:11px;padding:10px 12px;font:inherit;min-height:72px"></textarea>` +
@@ -4004,7 +4056,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       // sat under the red button as the only alternative (Elek FK-007). The way back
       // must be a BUTTON next to the irreversible one, not a sentence below it.
       (v.siteUrl
-        ? `<a href="${esc(v.siteUrl)}" class="citui-btn citui-btn--ghost" style="text-decoration:none;display:inline-block">${T(lang, "Mégsem — megtartom")}</a>`
+        ? `<a href="${esc(v.siteUrl)}" class="citui-btn citui-btn--ghost" style="text-decoration:none">${T(lang, "Mégsem — megtartom")}</a>`
         : "") +
       `</div></form>` +
       `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin-top:16px">${T(lang, "Amíg nem nyomja meg a piros gombot, a foglalása változatlanul él.")}</p>`,
@@ -4021,6 +4073,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
 export function guestCancelDonePage(v: GuestCancelView): string {
   const lang = v.lang ?? "hu";
   if (v.outcome !== "cancelled") return guestCancelConfirmPage(v, "");
+  const reach = guestReach(v, lang);
   const when = `${esc(huDay(v.dateFrom!))} — ${esc(huDay(v.dateTo!))}`;
   return guestPageShell(
     T(lang, "Foglalása lemondva"),
@@ -4029,7 +4082,8 @@ export function guestCancelDonePage(v: GuestCancelView): string {
       `border-radius:13px;padding:14px 16px;font-size:.95rem;line-height:1.7">` +
       T(lang, "A {when} közötti foglalás lemondva, a napok felszabadultak. A szállásadó értesítést kapott, és Ön is kap egy megerősítő e-mailt.", { when }) +
       (v.ref ? `<br><span style="font-size:.85rem">${T(lang, "Hivatkozás:")} ${esc(v.ref)}</span>` : "") +
-      `</div>`,
+      `</div>` +
+      (reach ? `<div style="margin-top:14px">${reach}</div>` : ""),
     { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára") },
   );
 }

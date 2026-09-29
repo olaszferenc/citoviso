@@ -136,6 +136,7 @@ import {
   settleFormerWhole,
   futureAcceptedBookings,
   getUnits,
+  adminUnitOrder,
   bookableUnits,
   guestUnits,
   isBookableUnit,
@@ -1227,8 +1228,16 @@ async function serveAdmin(
       // so a single-unit owner never meets the concept — no picker, no choice.
       let booking;
       if (moduleId === "booking") {
-        const units = await ensureUnits(site.id);
-        const unit = (unitId && units.find((u) => u.id === unitId)) || units[0]!;
+        const units = adminUnitOrder(await ensureUnits(site.id));
+        // A calendar only for a unit a guest can BOOK (ADR-0257 open point): a presentation
+        // room or the hidden whole place gets no booking can land on it — its calendar would
+        // ask the owner to mark nights nobody can take. An old link to one opens the first
+        // bookable unit instead.
+        const bookable = new Set(bookableUnits(units).map((u) => u.id));
+        const unit =
+          (unitId && units.find((u) => u.id === unitId && bookable.has(u.id))) ||
+          units.find((u) => bookable.has(u.id)) ||
+          units[0]!;
         booking = {
           month: await getMonthAvailability(unit.id, normaliseMonth(month)),
           units: units.map((u) => ({
@@ -1242,6 +1251,8 @@ async function serveAdmin(
             isWholeProperty: u.isWholeProperty,
             // ADR-0257: the add-room form asks no price when the place is let only as one.
             wholeOnly: u.wholeOnly,
+            // The calendar tabs list only these (see `bookable` above).
+            bookable: bookable.has(u.id),
           })),
           unitId: unit.id,
           links: await getCalendarLinks(unit.id),
@@ -1256,7 +1267,7 @@ async function serveAdmin(
       let photoLibrary;
       let unitAmenities;
       if (moduleId === "rooms" || moduleId === "pricing") {
-        const list = await ensureUnits(site.id);
+        const list = adminUnitOrder(await ensureUnits(site.id));
         const libraryPhotos = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
         const assigned = photosByUnit(libraryPhotos);
         units = list.map((u) => ({

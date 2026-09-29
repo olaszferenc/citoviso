@@ -251,6 +251,10 @@ button { border: 0; cursor: pointer; background: none; }
 /* Buttons */
 .citui-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  /* A label that wraps (a long label on a phone) stays centred too: `justify-content`
+     centres the text box, `text-align` the lines inside it (a <button> does it by default,
+     an <a> does not — Elek FK-016: „Vissza a szállás oldalára” hung left). */
+  text-align: center;
   min-height: 52px; padding: 0 22px;
   border-radius: var(--citui-radius-sm);
   font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;

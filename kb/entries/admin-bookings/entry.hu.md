@@ -78,7 +78,8 @@ nem a levél gombjával, hanem telefonon vagy válaszlevélben mondja, hogy kér
 volna meg: a napok foglalttá válnak, és a vendég megkapja a visszaigazolást az árral.
 
 A Foglalások fül alján a **„Kiküldött ajánlatok”** lista minden ajánlatát mutatja, amit a
-rendszerből küldött — azokat is, amelyek már lezárultak: kinek, mire, mennyiért, mikor ment ki,
+rendszerből küldött — azokat is, amelyek már lezárultak: kinek, mire, mennyiért (az összeg alatt az
+éjszakánkénti árral), mikor ment ki,
 mi lett vele (például „Elfogadta — foglalás”, „Nem kérte”, „Lejárt — nem felelt”, „Közben elkelt”),
 és az **„Árlista”** oszlopban (telefonon a kártya „Árlista:” sorában) azt, hogy az ár bekerült-e az
 árlistába. A lista felett szűrhet:

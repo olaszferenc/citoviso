@@ -192,7 +192,10 @@
         tr("A szállásadó személyesen igazolja vissza"),
         tr("Fizetés a helyszínen"),
       ]
-        .map(function (t) { return "<li>" + SVG_CHECK + "<span>" + t + "</span></li>"; })
+        .map(function (t, i) {
+          // The 2nd fact is the one the QUOTE path changes (setAskMode swaps it).
+          return "<li>" + SVG_CHECK + "<span" + (i === 1 ? " data-cit-trust-confirm" : "") + ">" + t + "</span></li>";
+        })
         .join("") +
       "</ul></div>" +
       '<div class="cit-book__formcol"><div class="cit-book__fields">' +
@@ -245,6 +248,13 @@
     /* A mondat, amit a validáció visszaállít, ha nincs hiba — az ÁLLAPOTTAL mozog. */
     var restNote = baseNote;
     var askLabel = tr("Árajánlatot kérek");
+    /* Elek (Myrna Haus, 2026-09-28, vendeg-arajanlat-doboz.png): in quote mode the tick still
+     * said "A szállásadó személyesen igazolja vissza" — but a quote is not confirmed by the
+     * host; it becomes a booking when the GUEST accepts the offer. "Fizetés a helyszínen"
+     * stays true: an accepted offer is confirmed with the same on-site payment. */
+    var trustConfirm = form.querySelector("[data-cit-trust-confirm]");
+    var bookTrust = tr("A szállásadó személyesen igazolja vissza");
+    var askTrust = tr("Az ajánlat elfogadásáról Ön dönt");
     var askNote = tr("A szállásadó árajánlattal válaszol. A foglalás akkor válik véglegessé, ha Ön az ajánlatot elfogadja.");
     var askMode = false;
     function setAskMode(on) {
@@ -252,6 +262,7 @@
       askMode = on;
       submit.textContent = on ? askLabel : bookLabel;
       submit.setAttribute("data-cit-mode", on ? "ask" : "book");
+      if (trustConfirm) trustConfirm.textContent = on ? askTrust : bookTrust;
       /* ⛔ MÉRT SAJÁT HIBA (2026-09-22, a shot-booking-form őre fogta meg): ez eleinte
        * KÖZVETLENÜL írt a `note` elembe — csakhogy az elem KÖZÖS: a `say()` ugyanide
        * teszi a validációs hibát („ezek a napok foglaltak"), hiba nélkül pedig az
@@ -657,7 +668,12 @@
     var calWrap = form.querySelector(".cit-book__cal");
     var nightsEl = form.querySelector("[data-nights]");
     var calBase = 0; // month offset of the left month
-    var maxBase = Math.max(0, horizon - 2);
+    /* The last month must be reachable as the LEFT month on a phone, where it is the only one
+     * shown; on desktop two are shown, so the left one stops one earlier. */
+    function shownMonths() {
+      return window.matchMedia && window.matchMedia("(max-width: 559px)").matches ? 1 : 2;
+    }
+    function maxBaseNow() { return Math.max(0, horizon - shownMonths()); }
 
     function dowHeads() {
       // Monday-first narrow weekday letters in the page language (2026-01-05 is a Monday).
@@ -702,7 +718,7 @@
         (calBase <= 0 ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
         '<span class="cit-book__callabel">' + tr("Válassza ki az érkezés és a távozás napját") + "</span>" +
         '<button type="button" class="cit-book__calnav cit-book__calnav--next" data-calnav="1" aria-label="' + tr("Következő hónap") + '"' +
-        (calBase >= maxBase ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
+        (calBase >= maxBaseNow() ? " disabled" : "") + ">" + SVG_CHEV + "</button>" +
         "</div>" +
         '<div class="cit-book__months">' + monthHtml(calBase) + monthHtml(calBase + 1) + "</div>" +
         '<div class="cit-book__legend">' +
@@ -722,7 +738,7 @@
     calWrap.addEventListener("click", function (e) {
       var nav = e.target.closest("[data-calnav]");
       if (nav && !nav.disabled) {
-        calBase = Math.min(maxBase, Math.max(0, calBase + Number(nav.getAttribute("data-calnav"))));
+        calBase = Math.min(maxBaseNow(), Math.max(0, calBase + Number(nav.getAttribute("data-calnav"))));
         renderCal();
         return;
       }
@@ -747,7 +763,10 @@
       if (!iso) return;
       var now = new Date(todayISO() + "T00:00:00Z"), d = new Date(iso + "T00:00:00Z");
       var off = (d.getUTCFullYear() - now.getUTCFullYear()) * 12 + (d.getUTCMonth() - now.getUTCMonth());
-      if (off < calBase || off > calBase + 1) calBase = Math.min(maxBase, Math.max(0, off));
+      /* Elek (Myrna Haus, 2026-09-28, vendeg-foglalt-napok.png): on a phone only ONE month is
+       * shown (cit-modules.css hides the second under 560 px), so "already in view" must not
+       * count the hidden second month — an October date typed in September stayed hidden. */
+      if (off < calBase || off > calBase + shownMonths() - 1) calBase = Math.min(maxBaseNow(), Math.max(0, off));
     }
     form.from.addEventListener("change", function () { snapCalTo(form.from.value); renderCal(); });
     form.to.addEventListener("change", function () { snapCalTo(form.to.value); renderCal(); });

@@ -855,13 +855,16 @@ async function notifyOwner(
   const offerUrl = `${base}/foglalas/${token}/ajanlat`;
   const missing = isQuote ? await unpricedNights(req.unit_id, from, until) : [];
   const unitName = req.unit_name ?? "";
+  // ADR-0267: the offer's price is for THIS request by default; it reaches the price list only
+  // when the owner ticks „Mentsem az árlistába is?” on the offer page — the letter must not
+  // promise the opposite (it said "az ár bekerül az árlistájába" until 2026-09-29).
   const quoteNote = isQuote
     ? T(lang, "A vendég nem látott árat.") +
       " " +
       (missing.length
         ? T(
             lang,
-            "{unit}: {n} éjszakára nincs megadott ár ({from} – {to}). Adja meg itt, és a rendszer elküldi neki az ajánlatot — az ár bekerül az árlistájába, így a következő vendég már látja.",
+            "{unit}: {n} éjszakára nincs megadott ár ({from} – {to}). Adja meg itt, és a rendszer elküldi neki az ajánlatot. Az ár alapból csak erre a kérésre szól: az árlistájába csak akkor kerül, ha az ajánlat-lapon bejelöli.",
             {
               unit: unitName,
               n: missing.length,
@@ -1396,6 +1399,19 @@ async function siteUrlFor(siteId: string): Promise<string | undefined> {
   return tenantSiteUrl(config.publicSiteUrl, row.slug, custom) ?? undefined;
 }
 
+/**
+ * The host's phone and e-mail for a guest-facing page — the SAME facts the booking
+ * letters' contact card shows (`hostContact`). Elek FK-016 (2026-09-28): the cancel page
+ * said "inkább írjon a szállásadónak" with no way to do so. Missing facts stay missing.
+ */
+async function guestPageReach(
+  siteId: string,
+  hostName: string,
+): Promise<{ hostPhone?: string; hostEmail?: string }> {
+  const c = await hostContact(siteId, hostName);
+  return { ...(c.phone ? { hostPhone: c.phone } : {}), ...(c.email ? { hostEmail: c.email } : {}) };
+}
+
 export async function peekCancelView(token: string): Promise<CancelResult> {
   const req = await loadRequest({ token });
   if (!req) return { ok: false, outcome: "unknown" };
@@ -1408,6 +1424,7 @@ export async function peekCancelView(token: string): Promise<CancelResult> {
     lang: ctx.lang,
     siteUrl: await siteUrlFor(req.site_id),
     ref: bookingRef(req.id),
+    ...(await guestPageReach(req.site_id, ctx.hostName)),
   };
   if (req.status === "cancelled") return { ok: true, outcome: "already", ...base };
   if (req.status !== "accepted") return { ok: false, outcome: "not_accepted", ...base };
@@ -1432,6 +1449,10 @@ export interface CancelResult {
   readonly siteUrl?: string;
   /** Reference of the booking being cancelled ("FG-3F9A21"). */
   readonly ref?: string;
+  /** The host's own contact facts (printed phone form / e-mail) — the guest's way to
+   *  change a stay instead of cancelling it. */
+  readonly hostPhone?: string;
+  readonly hostEmail?: string;
 }
 
 /**
@@ -1467,6 +1488,7 @@ export async function cancelRequest(opts: {
     lang: ctx.lang,
     siteUrl: await siteUrlFor(req.site_id),
     ref: bookingRef(req.id),
+    ...(await guestPageReach(req.site_id, ctx.hostName)),
   };
   if (req.status === "cancelled") return { ok: true, outcome: "already", ...base };
   if (req.status !== "accepted") return { ok: false, outcome: "not_accepted", ...base };
@@ -1722,6 +1744,8 @@ export interface SentOffer {
   readonly decidedBy: string | null;
   /** Where the price went; null = an offer from before the choice existed (not known). */
   readonly savedAs: OfferSaveAs | null;
+  /** The frozen price lines the offer was sent with (per-night price, nights, multiplier). */
+  readonly lines: readonly { perNight: number; guests: number }[];
 }
 
 /**
@@ -1746,6 +1770,7 @@ export async function getSentOffers(siteId: string, limit = 60): Promise<SentOff
       "booking_request.status as status",
       "booking_request.decided_by as decidedBy",
       "booking_request.offer_saved_as as savedAs",
+      "booking_request.quoted_lines as lines",
     ])
     .where("booking_request.site_id", "=", siteId)
     .where("booking_request.offered_at", "is not", null)
@@ -1766,6 +1791,7 @@ export async function getSentOffers(siteId: string, limit = 60): Promise<SentOff
     status: r.status,
     decidedBy: (r.decidedBy as string | null) ?? null,
     savedAs: (r.savedAs as OfferSaveAs | null) ?? null,
+    lines: ((r.lines as RequestRow["quoted_lines"]) ?? []).map((l) => ({ perNight: l.per_night, guests: l.guests })),
   }));
 }
 
