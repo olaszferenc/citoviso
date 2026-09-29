@@ -10,6 +10,7 @@
 - [2026-09-29_telefonos_kor_koordinator_zaras.md](2026-09-29_telefonos_kor_koordinator_zaras.md) — 2026-09-28/29 — A telefonos kör koordinátorának zárása: a kör deploy-kész, és ami NEM volt tesztelve
 - [2026-09-29_telefonos_kor_apro_hibak_takarito.md](2026-09-29_telefonos_kor_apro_hibak_takarito.md) — 2026-09-29: a telefonos kör apró hibái (takarító SUB-szál): nyolc tétel
 - [2026-09-29_sugo_kepek_frissitese.md](2026-09-29_sugo_kepek_frissitese.md) — A 10 elavult súgó-kép újragyártva a nagy deploy előtt (2026-09-29)
+- [2026-09-29_sugo_javitas_deploy_gate_1c.md](2026-09-29_sugo_javitas_deploy_gate_1c.md) — Súgó-javítás a deploy GATE 1c-hez: második kérdés, „Meglévő szobája”, KB_PATHS (2026-09-29)
 - [2026-09-29_outreach_link_live_gyorsitas.md](2026-09-29_outreach_link_live_gyorsitas.md) — 2026-09-29 — outreach-link-live-check: 208 s → 38 s (networkidle → load)
 - [2026-09-29_ot_lassu_kapu_b_opcio.md](2026-09-29_ot_lassu_kapu_b_opcio.md) — 2026-09-29 — A következő lassú kapuk párhuzamosítása („B” opció, ADR-0264)
 - [2026-09-29_negy_lassu_kapu_parhuzamositasa.md](2026-09-29_negy_lassu_kapu_parhuzamositasa.md) — 2026-09-29 — A négy leglassabb böngészős kapu párhuzamosítása (közös `gate-pool`)

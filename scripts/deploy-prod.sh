@@ -320,7 +320,7 @@ fi
 # evidence: a fresh, range-bound tudasbazis-or PASS token (kb-gate.mjs). The guard
 # detects and blocks — it never writes guide content at deploy time (a guide nobody
 # reviewed is the "hamis súgó" §J.24 forbids).
-KB_PATHS="src/console/views.ts src/console/partnerViews.ts src/console/partnerData.ts src/server/adminViews.ts src/server/moduleConfigViews.ts src/server/modulePreview.ts src/kb kb/entries scripts/kb-check.mts"
+KB_PATHS="src/console/views.ts src/console/partnerViews.ts src/console/partnerData.ts src/server/adminViews.ts src/server/moduleConfigViews.ts src/server/modulePreview.ts src/server/bookingViews.ts src/server/offerViews.ts src/server/contactViews.ts src/kb kb/entries scripts/kb-check.mts"
 if [ -n "$PROD_SHA" ]; then
   KB_DIFF="$(git diff --name-only "$PROD_SHA" "$SHA" -- $KB_PATHS || true)"
   if [ -z "$KB_DIFF" ]; then

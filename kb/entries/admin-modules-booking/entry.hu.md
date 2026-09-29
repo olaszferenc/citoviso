@@ -96,7 +96,9 @@ A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintv
 A **„Mit ad ki?”** részben veszi fel, amit kiad: ha több szobája vagy apartmanja van, mindegyiknek
 saját naptára lesz, így külön telhetnek be. Új szobát a szaggatott keretes **„Új szoba
 felvétele”** sávra koppintva, a név és a férőhely megadásával, a **„Hozzáadás”** gombbal vehet fel;
-a meglévőt (a **„Meglévő szobája”** felirat alatt) átnevezheti, a **„Törlés”** gombbal eltávolíthatja.
+a meglévőt (a **„Meglévő szobája”** felirat alatt — több szobánál **„Meglévő szobái”**)
+átnevezheti, és ha már több szobája van, a **„Törlés”** gombbal eltávolíthatja — az egyetlen
+szobánál ez a gomb nem látszik.
 Ha az Árak modul is be van kapcsolva, a **„Hozzáadás”** megnyomása ELŐTT az **„Alapár”** is
 megadható, vagy bepipálható alatta a **„Nem adok meg árat — egyedi ajánlatot küldök”**.
 Egyik sem kötelező. Ha egyik sincs, a mentés után egy sárga sor figyelmeztet: az **„Árat adok
@@ -113,7 +115,8 @@ A szoba nevének átírása után a sor **„Mentés”** gombjával rögzíti a
 Ha a házat egyben is kiadja, az egyik szobája **az egész szállás** — a fülön ez ki is van írva
 („az egész ház”). Melyik szoba az, azt a Szobák, apartmanok modul beállító-képernyőjén, a rács
 fölötti **„Az egész szállás egyben”** kártyán dönti el; a második szoba felvételekor a rendszer
-meg is kérdezi. Ez a szoba azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
+meg is kérdezi (a kérdést és a **„Nem, csak külön szobákat adok ki”** után nyíló második kérdést a
+Szobák, apartmanok súgója írja le részletesen). Ez a szoba azt jelenti, hogy valaki a **teljes szállást** foglalja le. Ezért:
 
 - ha az **egész szállást** foglalják le egy napra, az összes szobája **automatikusan foglalt** lesz
   arra a napra;

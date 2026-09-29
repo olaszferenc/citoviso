@@ -34,8 +34,8 @@ képpel szerepel.
 
 Új szobát a lap alján, a szaggatott keretes **„Új szoba felvétele”** sávra koppintva vesz fel:
 kinyílik egy kiemelt doboz, abban adja meg a nevét, a férőhelyét, és nyomja meg a
-**„Hozzáadás”** gombot. A doboz alapból csukva van, hogy a lapon ne álljon két egyforma űrlap
-egymás alatt: egy szobánál a meglévő szoba sora a **„Meglévő szobája”** felirat alatt áll. Ha csak egyben adja ki az egész szállást, elég
+**„Hozzáadás”** gombot. A doboz alapból csukva van, hogy ne keverje össze a meglévőkkel: a
+meglévő szobái fölötte, a kártyarácsban állnak, és azokat a kártyájukra koppintva szerkeszti. Ha csak egyben adja ki az egész szállást, elég
 egyetlen szoba — ilyenkor a vendég nem is találkozik a szobaválasztással.
 
 Amikor a **második** szobát veszi fel, ugyanebben az űrlapban, közvetlenül a **„Hozzáadás”**
@@ -45,8 +45,24 @@ válasszon, és nyomja meg újra a gombot. **„Igen, az egészet is kiadom egyb
 felvett szoba pedig külön naptárat kap — a kettő egymást zárja (lásd lejjebb). **„Csak egyben adom ki — a szobák bemutatásra”**: a vendég csak az egész szállást foglalhatja; a
 szobák a honlapon képpel, férőhellyel és felszereltséggel látszanak, de külön nem foglalhatók, és
 árat sem kérünk tőlük — az ár mezője ilyenkor el is tűnik az űrlapról. **„Nem, csak külön
-szobákat adok ki”**: az eddigi szobája sima szobává válik, és a szobák egymástól függetlenül
-telnek be. Ezt később a rács fölötti kártyán bármikor átállíthatja.
+szobákat adok ki”**: a szobák egymástól függetlenül telnek be — és ekkor a válaszok alatt egy
+második kérdés nyílik: mi legyen az eddigi egységgel (a kérdés a nevén nevezi). Két válasz közül
+választhat:
+
+- **„Ez az első szobám — nevet adok neki”**: írja be a mezőbe az első szoba új nevét. A naptára,
+  a képei és az ára megmarad, csak a neve változik, és a vendég szobaként látja. A név nem lehet
+  ugyanaz, mint a most felvett szobáé.
+- **„Nincs ilyen szobám — rejtse el”**: a vendég nem látja, se a honlapon, se a foglalásnál.
+  Nem törlődik: ha később mégis egyben adja ki, az **„Az egész szállás egyben”** kártyán
+  visszakapcsolhatja. Ha az egységnek van jövőbeli foglalása, egy sor megmondja, hány — azok
+  érvényben maradnak, csak új foglalás nem érkezhet rá.
+
+Ha a második kérdést kihagyja, a **„Hozzáadás”** megnyomása után a kérdés alatt piros sor
+kéri, hogy válasszon; ha nevet ad, de üresen hagyja a mezőt: **„Adjon nevet az első
+szobájának.”**; ha ugyanazt a nevet írja be, mint az új szobáé: **„A két szoba neve nem lehet
+ugyanaz.”**
+
+A három válasz közti döntést később a rács fölötti kártyán bármikor átállíthatja.
 
 Ha az Árak modul is be van kapcsolva (és nem csak egyben adja ki a házat), a **„Hozzáadás”** megnyomása ELŐTT ugyanitt az árat is
 megadhatja (**„Alapár”** mező), vagy bepipálhatja az alatta lévő négyzetet: **„Nem adok meg árat —
