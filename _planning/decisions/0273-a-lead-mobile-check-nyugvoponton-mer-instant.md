@@ -1,4 +1,4 @@
-## ADR-XXXX — A lead-mobile-check nyugvóponton mér (instant görgetés, közös nyugvópont-várás, R8 a lap alján is), és a pirula a foglalás-sáv beúszása után újrahelyeződik (2026-09-29)
+## ADR-0273 — A lead-mobile-check nyugvóponton mér (instant görgetés, közös nyugvópont-várás, R8 a lap alján is), és a pirula a foglalás-sáv beúszása után újrahelyeződik (2026-09-29)
 
 - **Kiváltó:** a kapu-koordinátor (`cit3bd83952`) briefje, `~/rc-briefs/lead-mobile-terhelesen-piros.md`:
   a teljes pre-commit alatt (114 kapu, load1 5–9) a `lead-mobile-check --gate --selftest` 2/2 PIROS volt

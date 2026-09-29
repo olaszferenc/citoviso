@@ -515,7 +515,7 @@ async function measure(
   };
   const settle = (): Promise<void> =>
     page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(undefined)))));
-  // ⏸ REST, not a timer (ADR-XXXX, after ADR-0168): the layers every verdict below reads —
+  // ⏸ REST, not a timer (ADR-0273, after ADR-0168): the layers every verdict below reads —
   // the pill, the phone booking bar, the consent bar, the configurator panel — and the scroll
   // position must be still for 400 ms (page clock), with none of their finite animations or
   // transitions running. Measured 2026-09-29 under load (load1 ~21): the fixed waits read the

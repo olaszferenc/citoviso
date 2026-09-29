@@ -1,7 +1,7 @@
 # A lead-mobile-check terhelésen piros volt — nyugvópont-mérés + a pirula újrahelyezése a sáv beúszása után (2026-09-29)
 
 SUB-szál (koordinátor: `cit3bd83952`, kapu-koordinátor) · brief: `~/rc-briefs/lead-mobile-terhelesen-piros.md` ·
-döntés: ADR-XXXX (`_planning/decisions/XXXX-lead-mobile-nyugvoponton-mer.md`).
+döntés: ADR-0273 (`_planning/decisions/XXXX-lead-mobile-nyugvoponton-mer.md`).
 
 ## Reprodukció (8 CPU-égető, 8 mag, csak ez a kapu, main = af925571)
 - `CIT_GATE_JOBS=4`: rc=1 (fullbleed@390 R8 a `t-mobcta`-n) · `CIT_GATE_JOBS=1`: rc=1 (R4 panel top 695, + a
