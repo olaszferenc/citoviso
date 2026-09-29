@@ -37,6 +37,7 @@ import { readFileSync } from "node:fs";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
+import { honestStars } from "../engine/rating.js";
 import { OWN_AHEAD_DAYS, OWN_PLACE_MAX, OWN_TITLE_MAX, type OwnProgram } from "../events/ownPrograms.js";
 import { MAX_SPAN_DAYS, WINDOW_DAYS } from "../events/gates.js";
 import {
@@ -2444,6 +2445,8 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
       }</span></p>`
     : "";
 
+  // A Google average is always on Google's five-point scale (scale absent = 5).
+  const googleStars = data.google ? honestStars({ rating: { value: data.google.value } }) : 0;
   // The Google card mirrors the owner's toggle: with it off the number is REMOVED from
   // the page (tenant/editor.ts), so "this is on your page now" would be false.
   const googleCard = data.google
@@ -2451,9 +2454,9 @@ function reviewsEditor(data: ReviewsEditorData, showGoogle: boolean, lang = "hu"
       `<div class="adm-card__head"><span class="adm-ico">${ic("star")}</span><h2>${T(lang, "Google-értékelés")}</h2></div>` +
       `<div class="rv-gr${showGoogle ? "" : " is-off"}"><span class="rv-gr__num">${data.google.value
         .toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>` +
-      // The same rounding the page's stars use (honestStarCount) — this row shows what the visitor sees.
-      `<span class="rv-stars" role="img" aria-label="${esc(T(lang, "{n} csillag az oldalon", { n: Math.max(1, Math.min(5, Math.round(data.google.value))) }))}">` +
-      `<span class="rv-stars__g" aria-hidden="true"><span class="on">${"★".repeat(Math.max(1, Math.min(5, Math.round(data.google.value))))}</span></span></span>` +
+      // The page's own rule (engine/rating.ts honestStars) — this row shows what the visitor sees.
+      `<span class="rv-stars" role="img" aria-label="${esc(T(lang, "{n} csillag az oldalon", { n: googleStars }))}">` +
+      `<span class="rv-stars__g" aria-hidden="true"><span class="on">${"★".repeat(googleStars)}</span></span></span>` +
       `<span class="rv-gr__cnt">${T(lang, "{n} értékelés a Google-on", { n: data.google.count })}</span></div>` +
       (showGoogle
         ? `<p class="rv-gr-state rv-gr-state--on">${ic("check", 16)}<span>${T(lang, "Ez látszik most az oldalán. A vendég rákattintva a Google-véleményekhez jut.")}</span></p>`

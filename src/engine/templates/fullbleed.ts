@@ -10,7 +10,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -337,7 +337,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
   const reviewsData = realReviews;
   // §B.17: the star row mirrors the REAL rating (rounded) — never a flattering 5-of-5 default.
-  const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
+  const starCount = honestStarCount(data);
   const stars5 = starCount ? `<div class="t-stars">${starIcon().repeat(starCount)}</div>` : "";
   const reviews = reviewsData
     ? `<section class="t-sec t-rev" id="t-reviews" data-cit-module="reviews">

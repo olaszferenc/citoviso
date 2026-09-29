@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, galleryOrder, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, galleryOrder, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -147,8 +147,12 @@ const CLAY_CSS = `
   .cl-revs{display:grid;gap:26px;grid-template-columns:1fr;margin-top:46px}
   @media(min-width:880px){.cl-revs{grid-template-columns:repeat(3,1fr)}}
   .cl-rv{padding:28px}
-  .cl-rv .cl-st{display:flex;gap:3px;margin-bottom:12px}
-  .cl-rv .cl-st svg{width:16px;height:16px;color:var(--cit-accent)}
+  /* Sized for BOTH rows: scoped to .cl-rv only, the review-head row next to the score
+     drew unsized viewBox SVGs — four ~115 px stars stacked in a column (2026-09-29). */
+  .cl-st{display:flex;gap:3px}
+  .cl-rv .cl-st{margin-bottom:12px}
+  .cl-revscore .cl-st{margin-bottom:4px}
+  .cl-st svg{width:16px;height:16px;color:var(--cit-accent)}
   .cl-rv p{font-size:15px;margin-bottom:18px}
   .cl-rv footer{font-family:var(--cit-font-display);font-size:14.5px;color:var(--cit-accent)}
   .cl-revscore{display:flex;align-items:center;gap:16px;margin-top:14px}
@@ -215,7 +219,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
-  const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
+  const starCount = honestStarCount(data);
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
   const roomsData = roomsFor(data, phase);

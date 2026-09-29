@@ -7,7 +7,7 @@ import { iconSvg, starIcon } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
-import { ratingOnFiveStars } from "./rating.js";
+import { honestStars } from "./rating.js";
 
 /** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
  *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
@@ -99,9 +99,9 @@ export function roomsLead(d: SiteData): string {
 }
 
 /** §B.17: filled-star count mirroring the REAL rating (never a flattering 5-of-5 default).
- *  0 = no real rating → render no stars. */
+ *  0 = no real rating → render no stars. The rule itself lives in engine/rating.ts. */
 export function honestStarCount(data: SiteData): number {
-  return data.rating ? Math.max(1, Math.min(5, Math.round(ratingOnFiveStars(data)))) : 0;
+  return honestStars(data);
 }
 
 /**

@@ -20,3 +20,13 @@ export function ratingOnFiveStars(d: Pick<SiteData, "rating">): number {
   if (!d.rating) return 0;
   return (d.rating.value / ratingScale(d)) * 5;
 }
+
+/**
+ * §B.17: how many FILLED stars the page draws — the ONE rule every star row uses
+ * (4,4/5 → 4 · 8,7/10 → 4; never a flattering 5-of-5). 0 = no real rating → no stars.
+ * Measured 2026-09-29: ten templates had their own `Math.round(rating.value)` copy and drew
+ * 5 stars for an 8,7-of-10 source; rating-scale-check now counts the RENDERED row.
+ */
+export function honestStars(d: Pick<SiteData, "rating">): number {
+  return d.rating ? Math.max(1, Math.min(5, Math.round(ratingOnFiveStars(d)))) : 0;
+}

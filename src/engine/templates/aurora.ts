@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -234,7 +234,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const hasWidgets = statWidgets.length > 0 || Boolean(heroPhoto);
 
   const ratingStat = data.stats?.find((s) => s.icon === "star");
-  const starCount = data.rating ? Math.max(1, Math.min(5, Math.round(data.rating.value))) : 0;
+  const starCount = honestStarCount(data);
 
   // §B.17 phase gate: real → render; none → MOCK sample (marked), LIVE dropped.
   const roomsData = roomsFor(data, phase);
