@@ -1,4 +1,4 @@
-## ADR-XXXX — A `cfg-sheet-scroll-check` is a közös poolon mér, a húzás után NYUGVÓPONTRA vár (nem fix alvás), és a nem nyugvó mérés PIROS (S11) (2026-09-29)
+## ADR-0272 — A `cfg-sheet-scroll-check` is a közös poolon mér, a húzás után NYUGVÓPONTRA vár (nem fix alvás), és a nem nyugvó mérés PIROS (S11) (2026-09-29)
 
 - **Kiváltó (tulaj, 2026-09-29):** „Ok a és b” — a lassú kapuk párhuzamosítása (koordinátor `cit3bd83952`).
   Brief: `~/rc-briefs/cfg-sheet-scroll-gyorsitas.md`. A kapu a `cit48c5979c` landjában 803 s után is

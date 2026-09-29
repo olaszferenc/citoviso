@@ -1,4 +1,4 @@
-# 2026-09-29 — A `cfg-sheet-scroll-check` gyorsítása (pool + nyugvópont, ADR-XXXX)
+# 2026-09-29 — A `cfg-sheet-scroll-check` gyorsítása (pool + nyugvópont, ADR-0272)
 
 Brief: `~/rc-briefs/cfg-sheet-scroll-gyorsitas.md` (koordinátor `cit3bd83952`, tulaj: „Ok a és b”).
 
