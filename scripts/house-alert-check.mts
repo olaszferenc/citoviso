@@ -1,4 +1,4 @@
-// GUARD (ADR-XXXX): the house gets a mail when a timer, a booking mail or a payment
+// GUARD (ADR-0276): the house gets a mail when a timer, a booking mail or a payment
 // webhook fails — proven for all three branches, each with a NEGATIVE control, against
 // a mock mail sender (nothing leaves the machine, the DB is only read).
 //

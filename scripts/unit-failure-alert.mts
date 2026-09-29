@@ -1,4 +1,4 @@
-// A systemd unit failed → mail the house (ADR-XXXX).
+// A systemd unit failed → mail the house (ADR-0276).
 //
 // Invoked by deploy/systemd/citoviso-alert@.service, which every prod service names in
 // its `OnFailure=citoviso-alert@%n.service`; the instance name is the failed unit.

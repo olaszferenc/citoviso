@@ -1,5 +1,5 @@
 // HOUSE ALERT — the house gets a mail when a timer, a booking mail or a payment webhook
-// fails (ADR-XXXX).
+// fails (ADR-0276).
 //
 // Why this exists: measured on prod 2026-09-29, three failure classes were SILENT.
 // The citoviso-* timers had no OnFailure=, so a crashed billing tick left nothing but a

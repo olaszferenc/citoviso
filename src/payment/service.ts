@@ -273,7 +273,7 @@ export async function handleWebhook(
 ): Promise<{ ok: boolean; activated?: boolean; pending?: boolean; orphan?: boolean; reason?: string }> {
   const gw = getGateway();
   const res = await gw.parseWebhook(params, headers);
-  // `reason` feeds the house alert of the 400 branch (ADR-XXXX) — never shown to the gateway as a promise.
+  // `reason` feeds the house alert of the 400 branch (ADR-0276) — never shown to the gateway as a promise.
   if (!res) return { ok: false, reason: "a visszahívás nem értelmezhető / nem igazolható a szolgáltatónál" };
   if (res === "pending") {
     // In-flight at the gateway: acknowledge (200) — but ONLY for a payment we

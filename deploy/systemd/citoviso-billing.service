@@ -5,7 +5,7 @@
 Description=Citoviso előfizetés-megújulás és dunning napi tick (ADR-0080)
 After=network-online.target
 Wants=network-online.target
-# ADR-XXXX: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).
+# ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).
 OnFailure=citoviso-alert@%n.service
 
 [Service]

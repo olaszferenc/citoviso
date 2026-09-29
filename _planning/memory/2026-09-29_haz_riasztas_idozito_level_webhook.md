@@ -1,7 +1,7 @@
 # A ház riasztást kap, ha időzítő, foglalási levél vagy fizetési webhook elhasal (2026-09-29)
 
 SUB-szál (koordinátor: „Deploy-készenlét felderítés”, `cit92d2a67e`) · brief: `~/rc-briefs/dk-riasztas.md` ·
-ADR-XXXX („A ház riasztást kap, ha időzítő, levél vagy webhook elhasal”).
+ADR-0276 („A ház riasztást kap, ha időzítő, levél vagy webhook elhasal”).
 
 ## Mérés (éles, csak olvasás)
 

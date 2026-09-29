@@ -29,7 +29,7 @@ export interface Manifest {
 }
 
 /**
- * ADR-XXXX: every prod service names this template in OnFailure=, so a failed tick
+ * ADR-0276: every prod service names this template in OnFailure=, so a failed tick
  * mails the house (scripts/unit-failure-alert.mts). The template itself must NOT carry
  * an OnFailure= — a failed alert is only logged, never alerted about (no loop).
  */
@@ -63,7 +63,7 @@ export function checkUnits(manifest: Manifest, files: Record<string, string>): s
     if (!manifest.timers[t]) problems.push(`${t}: NINCS a targets.json-ban — döntsd el: prod vagy dev (indoklással)`);
   }
   // A service without a timer of its own is invisible to the timer list — it must be
-  // declared by name, or a deploy would never install it (ADR-XXXX: the alert template).
+  // declared by name, or a deploy would never install it (ADR-0276: the alert template).
   for (const f of Object.keys(files).filter((x) => x.endsWith(".service"))) {
     if (!files[f.replace(/\.service$/, ".timer")] && !services[f]) {
       problems.push(`${f}: időzítő nélküli service, és NINCS a targets.json „services” listáján — döntsd el: prod vagy dev`);
@@ -103,7 +103,7 @@ export function checkUnits(manifest: Manifest, files: Record<string, string>): s
           problems.push(`${u}: az éles alakban nincs WorkingDirectory=${PROD_DIR}`);
         }
         if (u.endsWith(".service") && !out.split("\n").includes(ON_FAILURE_LINE)) {
-          problems.push(`${u}: prod service „${ON_FAILURE_LINE}” nélkül — ha elhasal, senki nem tud róla (ADR-XXXX)`);
+          problems.push(`${u}: prod service „${ON_FAILURE_LINE}” nélkül — ha elhasal, senki nem tud róla (ADR-0276)`);
         }
       }
     }
@@ -208,7 +208,7 @@ function selfTest(): number {
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────────
-// Only when run directly: scripts/house-alert-check.mts imports checkUnits (ADR-XXXX).
+// Only when run directly: scripts/house-alert-check.mts imports checkUnits (ADR-0276).
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [cmd, a, b] = process.argv.slice(2);
   if (cmd === "--self-test") process.exit(selfTest() ? 1 : 0);

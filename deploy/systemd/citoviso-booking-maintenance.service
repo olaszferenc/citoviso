@@ -8,7 +8,7 @@
 Description=Citoviso foglalás-karbantartó: portál-szinkron + kérés-lejáratás
 After=network-online.target
 Wants=network-online.target
-# ADR-XXXX: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).
+# ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).
 OnFailure=citoviso-alert@%n.service
 
 [Service]

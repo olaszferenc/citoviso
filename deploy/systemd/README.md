@@ -16,7 +16,7 @@ Nincs kapcsoló, ami átugorja. A pre-commit (`systemd-units check`) nem enged n
 nélküli időzítőt a repóba. Mérve 2026-09-23: a renderelő a kézzel telepített 8 éles egységgel
 **bájtra** egyezik — a GATE 6 első futása csak a hiányzót teszi fel.
 
-## `citoviso-alert@` — a ház riasztást kap, ha egy időzített feladat elhasal (ADR-XXXX)
+## `citoviso-alert@` — a ház riasztást kap, ha egy időzített feladat elhasal (ADR-0276)
 
 Minden prod service `[Unit]`-jában `OnFailure=citoviso-alert@%n.service`. Ha az egység `failed`
 állapotba kerül, a systemd elindítja a sablon egy példányát (`%i` = a megbukott egység neve), ami a

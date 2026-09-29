@@ -457,7 +457,7 @@ function ownerLetter(o: {
  * mail goes out, so a transport failure must not abort the rest of the flow —
  * measured (FK-007 first run): an SMTP 553 after the accept left the overlapping
  * loser request pending FOREVER because the auto-decline loop never ran. Loud on
- * stderr AND a house alert (ADR-XXXX); the state machine marches on.
+ * stderr AND a house alert (ADR-0276); the state machine marches on.
  * Exported for scripts/house-alert-check.mts only.
  */
 export async function mailSafe(label: string, requestId: string, send: () => Promise<void>): Promise<void> {
@@ -465,7 +465,7 @@ export async function mailSafe(label: string, requestId: string, send: () => Pro
     await send();
   } catch (err) {
     console.error(`[booking:mail] ${label} — a levél NEM ment ki:`, err);
-    // ADR-XXXX: stderr alone reached nobody — the house gets a mail. alertHouse never
+    // ADR-0276: stderr alone reached nobody — the house gets a mail. alertHouse never
     // throws, and a failed alert is only logged (no loop).
     await alertBookingMailFailure(label, requestId, err);
   }

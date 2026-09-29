@@ -3648,7 +3648,7 @@ async function handle(
   const webhookMatch = /^\/pay\/webhook\/([a-z]+)$/i.exec(path);
   if (method === "POST" && webhookMatch) {
     const params = await readWebhookParams(req, url);
-    // ADR-XXXX: a refused (400) or crashed (500) callback used to be a status code only
+    // ADR-0276: a refused (400) or crashed (500) callback used to be a status code only
     // the gateway saw. Now the house hears it too — fire-and-forget, deduped per
     // payment + status, so the gateway's retries do not flood the inbox.
     const ref = String(params.paymentId ?? params.PaymentId ?? params.gatewayRef ?? "");

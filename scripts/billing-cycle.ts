@@ -18,7 +18,7 @@ if (Number.isNaN(now.getTime())) {
   process.exit(1);
 }
 
-// ADR-XXXX: a side step that fails must not end the run (billing already happened),
+// ADR-0276: a side step that fails must not end the run (billing already happened),
 // but it must not exit 0 either — the unit's OnFailure= mails the house only on a
 // non-zero exit, and a swallowed error was exactly the silence we are closing.
 let sideStepFailed = false;

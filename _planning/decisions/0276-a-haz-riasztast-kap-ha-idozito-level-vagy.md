@@ -1,4 +1,4 @@
-## ADR-XXXX — A ház riasztást kap, ha időzítő, levél vagy webhook elhasal (2026-09-29)
+## ADR-0276 — A ház riasztást kap, ha időzítő, levél vagy webhook elhasal (2026-09-29)
 
 **Dátum:** 2026-09-29 · **Státusz:** elfogadva (deploy-készenléti SUB, koordinátor: „Deploy-készenlét
 felderítés”; brief: `~/rc-briefs/dk-riasztas.md`) · **Kapcsolódó:** ADR-0129 (a fulfilment-kapu nem

@@ -1,5 +1,5 @@
 [Unit]
-# ADR-XXXX: a ház riasztást kap, ha egy időzített feladat elhasal. Minden prod
+# ADR-0276: a ház riasztást kap, ha egy időzített feladat elhasal. Minden prod
 # service-ben `OnFailure=citoviso-alert@%n.service` hívja; a példány-név (%i) a
 # megbukott egység, a szkript annak utolsó ~40 journal-sorát küldi az
 # app_setting.alert_email címre (a meglévő levélküldőn át).
