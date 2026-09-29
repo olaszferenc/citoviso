@@ -247,8 +247,24 @@ async function load(page: Page, html: string, hash = ""): Promise<string[]> {
     return route.fulfill({ status: 204, body: "" });
   });
   await page.goto(`http://guard.local/admin${hash}`);
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(150);
+  await settle(page);
   return errs;
+}
+
+/**
+ * Wait until the page stops scrolling. `html{scroll-behavior:smooth}` (citui.css) turns the
+ * product's scrollIntoView into an ANIMATION — a fixed 150 ms wait measured it mid-flight
+ * under land load (y 872 → a false red). Two equal readings 120 ms apart, at most 4 s.
+ */
+async function settle(page: Page): Promise<void> {
+  let last = -1;
+  for (let i = 0; i < 33; i++) {
+    const y = (await page.evaluate("scrollY")) as number;
+    if (y === last) return;
+    last = y;
+    await page.waitForTimeout(120);
+  }
 }
 
 type Geo = { found: boolean; top: number; bottom: number; h: number; field: [number, number] };
@@ -322,7 +338,8 @@ for (const [tag, w, h] of [["álló", 390, 844], ["fekvő", 844, 390]] as const)
     const telGeo = await geo(page, `${R} .bk-req__reach a[href^="tel:"]`);
     check(`${P} ⑤ „Felhívom” = tel: link, látható, ≥44 px`, tel === "tel:+36305550101" && telGeo.found && telGeo.h >= 44, { tel, h: telGeo.h });
     await page.click(`${R} details.bk-verdict:first-of-type > summary`);
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(120);
+    await settle(page);
     await shot(page, `${tag}-2-megerosito`);
     const cf = await page.evaluate((r) => (document.querySelector(`${r} .bk-cf`) as HTMLElement | null)?.innerText ?? "", R);
     check(`${P} ③ a megerősítő MEGNEVEZI a vendéget`, cf.includes("Visszaigazolja Elek Vendég Éjszakai foglalását?"), cf.slice(0, 80));
@@ -371,7 +388,8 @@ for (const [tag, w, h] of [["álló", 390, 844], ["fekvő", 844, 390]] as const)
     check(`${P} ② a fő gomb AZT a kérést nyitja`, href === `/admin?tab=foglalasok&k=${R1.token}#kerelem`, href);
     await onScreen(page, `${P} ② gyors döntés „Elfogadom” a képernyőn, ≥44 px`, ".adm-msg__qd--ok > summary");
     await page.click(".adm-msg__qd--ok > summary");
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(120);
+    await settle(page);
     await shot(page, `${tag}-4-level-megerosito`);
     const q = await page.evaluate(() => (document.querySelector(".adm-msg__qd--ok .adm-confirm") as HTMLElement | null)?.innerText ?? "");
     check(`${P} ② a gyors döntés megerősítője megnevezi a vendéget`, q.includes("Elek Vendég Éjszakai"), q.slice(0, 80));
