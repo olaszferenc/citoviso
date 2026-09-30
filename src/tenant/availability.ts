@@ -101,13 +101,13 @@ function dayString(v: unknown): string {
 }
 
 /** Normalise a 'YYYY-MM' input; falls back to the current month IN `tz` — the
- *  accommodation's zone (ADR-XXXX; callers with a tenant pass it). */
+ *  accommodation's zone (ADR-0290; callers with a tenant pass it). */
 export function normaliseMonth(input: string | null | undefined, tz: string = APP_TZ): string {
   if (input && /^\d{4}-\d{2}$/.test(input)) {
     const mm = Number(input.slice(5, 7));
     if (mm >= 1 && mm <= 12) return input;
   }
-  // The owner's current month — on the accommodation's clock (ADR-XXXX), not the server's.
+  // The owner's current month — on the accommodation's clock (ADR-0290), not the server's.
   const now = partsIn(new Date(), tz);
   return `${now.year}-${String(now.month).padStart(2, "0")}`;
 }
@@ -258,7 +258,7 @@ export async function getMonthAvailability(unitId: string, month: string): Promi
   const year = Number(m.slice(0, 4));
   const monthIdx = Number(m.slice(5, 7)) - 1;
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  // The accommodation's "today" (ADR-XXXX) — the ONE today of the booking domain.
+  // The accommodation's "today" (ADR-0290) — the ONE today of the booking domain.
   const todayIso = todayIn(tz);
 
   // ADR-0114: the month shows what is REALLY unavailable here — including the nights
@@ -539,7 +539,7 @@ export async function applyImportedDays(
   days: string[],
 ): Promise<number> {
   const source = `ical:${linkId}`;
-  // "Past" = before the accommodation's today (ADR-XXXX).
+  // "Past" = before the accommodation's today (ADR-0290).
   const today = todayIn(await unitTimeZone(unitId));
   const wanted = [...new Set(days.filter((d) => d >= today))].sort();
 

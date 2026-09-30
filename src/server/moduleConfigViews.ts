@@ -3146,7 +3146,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
       // (the maintenance tick removes it). The "Alapár" field is the TIMELESS base
       // only; a dated base from the offer page is its own row below, with its dates,
       // so saving the field can neither overwrite it nor hide it.
-      const today = data.today ?? viewToday(); // the accommodation's today (ADR-XXXX)
+      const today = data.today ?? viewToday(); // the accommodation's today (ADR-0290)
       const rows = (data.prices[u.id] ?? []).filter((r) => !r.validTo || r.validTo >= today);
       const base = rows.find((r) => r.isBase && !r.validFrom);
       // 0074: a year price hangs under its season (parentId); only RECURRING seasons

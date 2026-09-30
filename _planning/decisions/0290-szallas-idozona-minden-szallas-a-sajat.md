@@ -1,4 +1,4 @@
-## ADR-XXXX — Szállás-időzóna: minden szállás a saját időzónájában él; egyetlen „ma” (2026-09-30)
+## ADR-0290 — Szállás-időzóna: minden szállás a saját időzónájában él; egyetlen „ma” (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; brief: `~/rc-briefs/szallas-idozona.md`,
 MÓDOSÍTÁS: „kód készüljön, ne várjon a mock-jóváhagyásra” — a felület „A” változata elkészült, a tulaj utólag ítél) ·

@@ -27,7 +27,7 @@ emlékeztető ugyanazt a `sendWindowOpen`-t használja (élesen UTC-n eddig 10�
 Őr: `send-window-tz-check` (3 zóna × nyár/tél).
 ⮕ **4. kör:** a tulaj/vevő/partner felé mutatott idők is Budapest szerint (ADR-0289): közös `src/text/budapestTime.ts`
 (a `sendWindow.ts` innen), fizetési bélyeg, „Utoljára frissült”, forgalmi jelentés + havi levél, ma/tegnap, AAM-adóév, év-csempe.
-⮕ **5. kör — SZÁLLÁS-IDŐZÓNA (ADR-XXXX):** `tenant.time_zone` (migráció 0082, alap az országból, kódban), EGY „ma”: `todayIn()`
+⮕ **5. kör — SZÁLLÁS-IDŐZÓNA (ADR-0290):** `tenant.time_zone` (migráció 0082, alap az országból, kódban), EGY „ma”: `todayIn()`
 (`zoneTime.ts`) + `tenant/timeZone.ts` feloldók; ~20 foglalási/árazási hely átállítva, tenant-admin nézet-zóna (`zoneCtx.ts`);
 felület „A”: Fiók fül + konzol lead „Időzóna” (közös `zonePicker.ts`). Platform marad Budapest (számla-kelte most már az!).
 Őr `tenant-zone-check` (mutációval 7/1/2/1/1/1). A tulaj a felületet UTÓLAG ítéli (A vs B). Őr: `escalation-config-check` ⑥⑦⑧.

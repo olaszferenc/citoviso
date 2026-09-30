@@ -2,7 +2,7 @@
 
 **Állapot:** 2026-09-30. A tulaj kimondta: „kód készüljön, ne várjon a mock-jóváhagyásra” (brief:
 `~/rc-briefs/szallas-idozona.md`, MÓDOSÍTÁS). Az „A” változat készült el; ha a tulaj a „B”-t választja, a tenant-admin
-kártya csak-olvasható sorra cserélhető, a konzol-oldal változatlan. Kapcsolódó: ADR-XXXX (a szállás időzónája),
+kártya csak-olvasható sorra cserélhető, a konzol-oldal változatlan. Kapcsolódó: ADR-0290 (a szállás időzónája),
 ADR-0287/0288/0289 (a kimenő ablakok és a platform-idők Budapest szerint).
 
 - Terv: `plan.html` (önhordó, kattintható: kereső, ország-alapérték, élő óra, figyelmeztetés, mentés; „Mobil 390px / Asztali” váltó)

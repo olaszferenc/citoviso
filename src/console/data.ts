@@ -791,7 +791,7 @@ export interface ConversionView {
   /** The accounting partner behind this tenant (born at payment), if any —
    *  the two surfaces reference each other (partner decree #1). */
   readonly partnerId: string | null;
-  /** ADR-XXXX: the accommodation's time zone (+ its country default) for the picker. */
+  /** ADR-0290: the accommodation's time zone (+ its country default) for the picker. */
   readonly zone: ZonePickerData;
   readonly leadId: string;
 }

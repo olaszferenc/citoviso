@@ -1363,7 +1363,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     return recordFailure(reason, true);
   }
 
-  // OUR invoice's date (platform billing, ADR-XXXX): the Hungarian calendar day — UTC's
+  // OUR invoice's date (platform billing, ADR-0290): the Hungarian calendar day — UTC's
   // date named yesterday for every invoice issued between 00:00 and 02:00.
   const today = budapestIsoDay(new Date());
   // Cadence for the buyer-facing mail; 'multilang' and the ADR-0094 settlement

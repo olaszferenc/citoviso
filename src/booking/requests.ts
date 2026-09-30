@@ -527,7 +527,7 @@ export async function createBookingRequest(
   if (n > maxNights) {
     errors.push(T(lang, "Legfeljebb {n} éjszakára lehet foglalni.", { n: maxNights }));
   }
-  // The accommodation's "today" (ADR-XXXX), not UTC's: at 00:30 Budapest UTC is still yesterday.
+  // The accommodation's "today" (ADR-0290), not UTC's: at 00:30 Budapest UTC is still yesterday.
   const today = await todayForSite(input.siteId);
   const earliest = addDays(today, leadTimeDays);
   if (dateFrom < earliest) {
@@ -2379,7 +2379,7 @@ export async function sendOffer(
   };
 }
 
-/** "2026. szept. 25. 14:05" in the ACCOMMODATION's time zone (ADR-XXXX) — the guest
+/** "2026. szept. 25. 14:05" in the ACCOMMODATION's time zone (ADR-0290) — the guest
  *  books a place, and its deadlines are that place's wall clock. */
 function huDateTime(d: Date, tz: string): string {
   const parts = new Intl.DateTimeFormat("hu-HU", {

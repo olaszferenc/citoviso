@@ -2505,7 +2505,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pr-esc__live { margin-top: 6px; font-size: 12px; color: var(--citui-warn-ink); }
 .pr-esc__sum { margin-left: 10px; font-size: 12px; color: var(--citui-bad-ink); }
 
-/* ── ADR-XXXX: accommodation time zone on the lead page's converted block
+/* ── ADR-0290: accommodation time zone on the lead page's converted block
    (src/tenant/zonePicker.ts — the same markup the tenant admin styles). */
 .tz-line { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--citui-line); }
 .tz-line__k { color: var(--citui-muted); font-size: 12.5px; min-width: 74px; }

@@ -2005,7 +2005,7 @@ function convertedBlock(c: ConversionView): string {
 }
 
 /**
- * ADR-XXXX — the accommodation's time zone on the converted block (frozen plan:
+ * ADR-0290 — the accommodation's time zone on the converted block (frozen plan:
  * assets/design-refs/tenant-admin/szallas-idozona/, variant A: the owner sets it on the
  * „Fiók" tab, the operator here). The shared picker; the POST validates the IANA name.
  */
@@ -7377,7 +7377,7 @@ import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
  *  on every row, and the owner read it to reason about what happened when. The
  *  zone belongs to the READER, so it is named here, not inherited from whichever
  *  machine happens to render. */
-const CONSOLE_TZ = APP_TZ; // the operator console is platform-side (ADR-XXXX)
+const CONSOLE_TZ = APP_TZ; // the operator console is platform-side (ADR-0290)
 
 function consoleDateTime(d: Date | string, lang: string): string {
   return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {

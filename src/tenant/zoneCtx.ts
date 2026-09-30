@@ -1,4 +1,4 @@
-// ADR-XXXX — the tenant-admin request's ACCOMMODATION ZONE, for the view layer.
+// ADR-0290 — the tenant-admin request's ACCOMMODATION ZONE, for the view layer.
 //
 // Same reasoning as the console's language context (src/console/i18nCtx.ts): the tenant
 // admin has dozens of date formatters (fmtDate, fmtDateTime, relDay, the booking deadline

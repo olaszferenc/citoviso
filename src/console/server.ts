@@ -3283,7 +3283,7 @@ async function handle(
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
   // POST /lead/:id/timezone — the operator sets the converted accommodation's time zone
-  // (ADR-XXXX). Only a real IANA name is stored.
+  // (ADR-0290). Only a real IANA name is stored.
   const tzMatch = /^\/lead\/([0-9a-f-]{36})\/timezone$/i.exec(path);
   if (method === "POST" && tzMatch) {
     const id = tzMatch[1]!;

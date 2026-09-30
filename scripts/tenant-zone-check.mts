@@ -1,4 +1,4 @@
-// ADR-XXXX — every accommodation lives in its OWN time zone (tenant.time_zone).
+// ADR-0290 — every accommodation lives in its OWN time zone (tenant.time_zone).
 //
 // What this proves — each leg is a way the rule could silently stop meaning anything:
 //   ① THE ONE "today" (todayIn) is the accommodation's calendar day around midnight, under

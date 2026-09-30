@@ -229,7 +229,7 @@ export async function setWholeProperty(
  * many stay in force, with the REAL count, and says nothing when there are none.
  */
 export async function futureAcceptedBookings(unitId: string): Promise<number> {
-  const today = await todayForUnit(unitId); // the accommodation's today (ADR-XXXX)
+  const today = await todayForUnit(unitId); // the accommodation's today (ADR-0290)
   const row = await db
     .selectFrom("booking_request")
     .select(db.fn.countAll<string>().as("n"))
@@ -388,7 +388,7 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
   }
   // ADR-0232: the whole place is deletable like any unit (the owner chose it, the owner
   // can drop it) — afterwards the rooms are independent, and the screen says so.
-  const today = await todayForSite(siteId); // the accommodation's today (ADR-XXXX)
+  const today = await todayForSite(siteId); // the accommodation's today (ADR-0290)
   const booked = await db
     .selectFrom("booking_request")
     .select("id")

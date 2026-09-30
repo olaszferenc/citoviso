@@ -102,7 +102,7 @@ export async function latestMultilangGeneration(
 export function paidStateOf(
   gen: LatestMultilangGeneration | null,
   now = new Date(),
-  /** The accommodation's zone — the buyer reads the stamp against their own bank (ADR-XXXX). */
+  /** The accommodation's zone — the buyer reads the stamp against their own bank (ADR-0290). */
   tz: string = APP_TZ,
 ): MultilangPaidState | null {
   if (!gen || gen.payStatus !== "paid" || gen.genStatus === "done") return null;
@@ -132,7 +132,7 @@ export function paidStateOf(
 }
 
 /** Wall-clock stamp in the ACCOMMODATION's zone, which the buyer matches against their
- *  bank statement (ADR-0289: never the process zone — UTC on prod; ADR-XXXX: the
+ *  bank statement (ADR-0289: never the process zone — UTC on prod; ADR-0290: the
  *  accommodation's zone, not the platform's). */
 export function fmtStamp(d: Date, tz: string = APP_TZ): string {
   const p = (n: number) => String(n).padStart(2, "0");

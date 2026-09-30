@@ -121,7 +121,7 @@ export async function syncAllCalendarLinks(): Promise<{ links: number; ok: numbe
  * change from a poll.
  */
 export async function buildUnitFeed(unitId: string, unitName: string): Promise<string> {
-  const today = await todayForUnit(unitId); // the accommodation's today (ADR-XXXX)
+  const today = await todayForUnit(unitId); // the accommodation's today (ADR-0290)
   const days = await getBlockedDaysFrom(unitId, today);
   const newest = days.length ? days[days.length - 1]! : today;
   return buildIcs({

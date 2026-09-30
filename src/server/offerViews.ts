@@ -40,7 +40,7 @@ function addDays(iso: string, n: number): string {
 
 function huDateTime(d: Date, lang: string): string {
   const parts = new Intl.DateTimeFormat("hu-HU", {
-    timeZone: APP_TZ, // a lead's offer is platform business (ADR-XXXX)
+    timeZone: APP_TZ, // a lead's offer is platform business (ADR-0290)
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

@@ -31,7 +31,7 @@ export interface PriceGap {
  */
 export async function sitePriceGaps(
   siteId: string,
-  /** The accommodation's today; resolved from the site when not pinned (ADR-XXXX). */
+  /** The accommodation's today; resolved from the site when not pinned (ADR-0290). */
   todayArg?: string,
 ): Promise<PriceGap[]> {
   const today = todayArg ?? (await todayForSite(siteId));
@@ -128,7 +128,7 @@ export async function maintainPriceGaps(
   now: Date = new Date(),
   opts: { readonly onlySiteId?: string } = {},
 ): Promise<{ started: number; ended: number; reminded: number }> {
-  // Each site is judged on ITS accommodation's today (ADR-XXXX), not one global day.
+  // Each site is judged on ITS accommodation's today (ADR-0290), not one global day.
   // Live sites, plus any site still carrying an episode (it may have gone offline or
   // lost the module since — the stamp must still be cleared).
   const sites = await db

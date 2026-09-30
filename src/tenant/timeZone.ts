@@ -1,4 +1,4 @@
-// ADR-XXXX — the ACCOMMODATION's time zone (tenant.time_zone), resolved from whatever id
+// ADR-0290 — the ACCOMMODATION's time zone (tenant.time_zone), resolved from whatever id
 // the caller holds (tenant, site, unit). Every booking/pricing "today", deadline and time
 // shown for one accommodation reads its zone here, then computes with src/text/zoneTime.ts
 // (todayIn / isoDayIn / …) — never with the process clock, never with UTC.

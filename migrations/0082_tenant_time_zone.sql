@@ -1,4 +1,4 @@
--- A SZÁLLÁS IDŐZÓNÁJA (ADR-XXXX; terv: assets/design-refs/tenant-admin/szallas-idozona/, tulaj 2026-09-30:
+-- A SZÁLLÁS IDŐZÓNÁJA (ADR-0290; terv: assets/design-refs/tenant-admin/szallas-idozona/, tulaj 2026-09-30:
 -- „minden szállás a saját időzónájában él").
 --
 -- MIÉRT KELL. A foglalási és árazási „ma" ~20 helyen UTC-napként számolt (00:00–02:00 Budapest között a

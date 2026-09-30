@@ -778,7 +778,7 @@ async function serveTenantHost(
     if (!siteId || !(await unitBelongsToSite(siteId, unitId))) {
       return sendJson(res, 404, { error: "unknown_unit" });
     }
-    const today = todayIn(await tenantTimeZone(site.tenantId)); // the accommodation's today (ADR-XXXX)
+    const today = todayIn(await tenantTimeZone(site.tenantId)); // the accommodation's today (ADR-0290)
     // Only busy DATES leave the building — no guest name, no contact, nothing personal.
     // Prices ride along (owner decree 2026-09-06): the widget shows the stay total
     // at booking time. Public data — the same numbers the pricing section renders.
@@ -1328,7 +1328,7 @@ async function serveAdmin(
           // ADR-0208 ⑥.2–⑥.4: the card's state line comes from the ONE predicate the
           // overview to-do and the weekly reminder read.
           const status: Record<string, UnitPriceStatus> = {};
-          const priceToday = viewToday(); // the accommodation's today (ADR-XXXX)
+          const priceToday = viewToday(); // the accommodation's today (ADR-0290)
           for (const u of list) status[u.id] = unitPriceStatus(prices[u.id] ?? [], u, priceToday);
           // ADR-0256 ③: the rooms a guest never sees get no "nincs ára" line — the same
           // rule (guestUnits) the guest page, the to-do row and the reminder read.
@@ -1715,7 +1715,7 @@ async function serveAdmin(
       // used to print the wrong one as if it were the other (Elek FK-007: it read
       // "2 foglalás" with nothing left standing). The headline is what EXISTS now;
       // the cancellations are named next to it, not folded into it or dropped.
-      // Midnight of 1 January in the ACCOMMODATION's zone (ADR-XXXX) — the same year
+      // Midnight of 1 January in the ACCOMMODATION's zone (ADR-0290) — the same year
       // bookingViews counts in (both read the request's view zone).
       const yearStart = midnightIn(`${yearIn(new Date(), viewZone())}-01-01`, viewZone());
       const countYear = async (status: "accepted" | "cancelled"): Promise<number> => {
@@ -1813,7 +1813,7 @@ async function serveAdmin(
     const c = params.get("card");
     walletFlash = c === "ok" || c === "fail" || c === "err" ? c : null;
   } else if (tab === "fiok") {
-    // ADR-XXXX: the accommodation's time zone picker.
+    // ADR-0290: the accommodation's time zone picker.
     zone = await zonePickerDataFor(session.tenantId);
     // ADR-0110: the published legal identity, seeded from the buyer record. Loaded
     // only for this tab — every other tab would pay two queries for nothing.
@@ -3365,7 +3365,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     return redirect(res, "/admin?tab=modulok&m=reviews");
   }
 
-  // ADR-XXXX — the owner sets the accommodation's time zone (Fiók tab). Only a real IANA
+  // ADR-0290 — the owner sets the accommodation's time zone (Fiók tab). Only a real IANA
   // name is stored; anything else (a hand-made POST, an empty filtered select) keeps
   // the stored zone and says so.
   if (req.method === "POST" && pathname === "/admin/timezone") {
@@ -3872,7 +3872,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
 // Exported so scripts/ui-shot.mts can boot this server on an ephemeral port
 // (PUBLIC_PORT=0) and read the assigned port back for screenshotting.
 export const server = http.createServer((req, res) => {
-  // ADR-XXXX: each request gets its own accommodation-zone context (views read it).
+  // ADR-0290: each request gets its own accommodation-zone context (views read it).
   runWithViewZone(() => handle(req, res)).catch((err) => {
     console.error("[public] handler error:", err);
     if (!res.headersSent) send(res, 500, "Internal Server Error", "text/plain");

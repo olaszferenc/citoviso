@@ -214,7 +214,7 @@ export async function convertLead(
     .where("lead_id", "=", leadId)
     .executeTakeFirst();
   if (!tenant) {
-    // ADR-XXXX: the accommodation starts in its country's zone (the scrape area's
+    // ADR-0290: the accommodation starts in its country's zone (the scrape area's
     // country — the same source the market gate uses); the owner can change it.
     const origin = await db
       .selectFrom("lead")

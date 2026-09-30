@@ -576,7 +576,7 @@ function programsSampleBlock(d: SiteData): string {
   const mon = fmt({ month: "short" });
   const dm = fmt({ month: "short", day: "numeric" });
   const wd = fmt({ weekday: "long" });
-  // A DEMO sample (platform content, ADR-XXXX): its dates count from the platform's today.
+  // A DEMO sample (platform content, ADR-0290): its dates count from the platform's today.
   const today = todayIn(APP_TZ);
   const at = (n: number) => {
     const x = new Date(`${today}T12:00:00Z`);

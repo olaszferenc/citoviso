@@ -1,7 +1,7 @@
 // The PLATFORM's wall clock (ADR-0289) — a thin layer over src/text/zoneTime.ts with
 // the zone fixed to APP_TZ (Europe/Budapest).
 //
-// Since ADR-XXXX every ACCOMMODATION lives in its own zone (tenant.time_zone): anything
+// Since ADR-0290 every ACCOMMODATION lives in its own zone (tenant.time_zone): anything
 // shown to, or decided for, one accommodation (its "today", deadlines, the times its
 // owner or guest sees) uses zoneTime.ts with the tenant's zone. This module is for what
 // belongs to the platform itself: outreach send windows, the operator console, the

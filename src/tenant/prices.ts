@@ -367,7 +367,7 @@ export async function setSeasonYearPrice(
   input: YearPriceInput,
   todayArg?: string,
 ): Promise<SavePriceResult & { cleared?: boolean }> {
-  // The accommodation's today (ADR-XXXX); a guard may pin it.
+  // The accommodation's today (ADR-0290); a guard may pin it.
   const today = todayArg ?? (await todayForSite(siteId));
   const season = await ownedSeason(siteId, seasonId);
   if (!season) return { ok: false, errors: [] };
@@ -551,7 +551,7 @@ export const PRICE_HORIZON_DAYS = 365;
 export function unitPriceStatus(
   prices: readonly UnitPrice[],
   unit: { readonly seasonalOnly: boolean; readonly priceOnRequest: boolean },
-  /** The accommodation's today (todayForSite, ADR-XXXX) — required: a default hid a UTC day. */
+  /** The accommodation's today (todayForSite, ADR-0290) — required: a default hid a UTC day. */
   today: string,
 ): UnitPriceStatus {
   const active = prices.filter((p) => isPriceActive(p, today));
@@ -643,7 +643,7 @@ export function formatAmount(amount: number, currency: string, lang?: string): s
  */
 export function priceSpan(
   prices: readonly UnitPrice[],
-  /** The accommodation's today (todayForSite, ADR-XXXX) — required: a default hid a UTC day. */
+  /** The accommodation's today (todayForSite, ADR-0290) — required: a default hid a UTC day. */
   today: string,
 ): { min: number; max: number } | null {
   // An expired dated row can never be charged again — it must not widen the span.

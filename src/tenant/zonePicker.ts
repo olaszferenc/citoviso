@@ -1,4 +1,4 @@
-// ADR-XXXX — the accommodation time-zone picker, ONE renderer for both surfaces that set
+// ADR-0290 — the accommodation time-zone picker, ONE renderer for both surfaces that set
 // it (tenant admin „Fiók" tab, console lead page). Frozen plan:
 // assets/design-refs/tenant-admin/szallas-idozona/ (variant A).
 //

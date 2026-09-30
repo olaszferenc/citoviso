@@ -71,7 +71,7 @@ export function readOrder(cfg: Record<string, unknown>): ProgramOrder {
 export type PoolState = "ok" | "no_location" | "not_gathered";
 
 export async function siteProgramPool(siteId: string, todayArg?: string): Promise<ProgramPool> {
-  // The accommodation's today (ADR-XXXX): which program is past, which is coming.
+  // The accommodation's today (ADR-0290): which program is past, which is coming.
   const today = todayArg ?? (await todayForSite(siteId));
   const empty = (state: PoolState): ProgramPool => ({ state, events: [], own: null, around: [], today });
   const loc = await siteLocation(siteId);

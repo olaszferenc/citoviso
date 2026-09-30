@@ -11,7 +11,7 @@
 //   ② not at all when next year already has its own price — the question is answered;
 //   ③ only within NUDGE_WINDOW_DAYS of the end: a season that ended months ago (or the
 //      first run after a deploy) must not dig up old questions;
-//   ④ not before MORNING_LOCAL_HOUR on the ACCOMMODATION's clock (ADR-XXXX) — "the
+//   ④ not before MORNING_LOCAL_HOUR on the ACCOMMODATION's clock (ADR-0290) — "the
 //      morning after", not a mail at 00:05.
 // "Nothing to do if it stays" is said in the mail: no answer is a valid answer, the
 // recurring price simply holds next year too.
@@ -28,7 +28,7 @@ import { tenantTimeZone } from "./timeZone.js";
 import { partsIn, todayIn } from "../text/zoneTime.js";
 
 export const NUDGE_WINDOW_DAYS = 7;
-/** 07:00 on the accommodation's own clock (ADR-XXXX; it was 06:00 UTC = 07/08 in Hungary). */
+/** 07:00 on the accommodation's own clock (ADR-0290; it was 06:00 UTC = 07/08 in Hungary). */
 export const MORNING_LOCAL_HOUR = 7;
 
 function addDays(iso: string, n: number): string {
@@ -104,7 +104,7 @@ export async function maintainSeasonNudges(
   const pricingOn = new Map<string, boolean>();
   for (const s of seasons) {
     if (!s.tenantId) continue;
-    // The accommodation's morning and today (ADR-XXXX), not UTC's.
+    // The accommodation's morning and today (ADR-0290), not UTC's.
     const tz = await tenantTimeZone(s.tenantId);
     if (partsIn(now, tz).hour < MORNING_LOCAL_HOUR) continue;
     const today = todayIn(tz, now);

@@ -370,7 +370,7 @@ export async function moduleContentFor(
   // the switch must not surface as an offer the guest cannot take.
   const wholeOnly = isWholeOnlySite(units);
   const offerUnits = bookableUnits(units);
-  // The accommodation's today (ADR-XXXX) — which dated price is in force, which has lapsed.
+  // The accommodation's today (ADR-0290) — which dated price is in force, which has lapsed.
   const today = await todayForTenant(tenantId);
 
   if (on("pricing")) {

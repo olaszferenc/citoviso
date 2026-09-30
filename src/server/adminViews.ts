@@ -487,7 +487,7 @@ function subscriptionCard(
   let meter: string;
   let line: string;
   if (sum.billingPeriod === "annual") {
-    // `start` is a calendar day (periodStart); `now` is read on the accommodation's clock (ADR-XXXX).
+    // `start` is a calendar day (periodStart); `now` is read on the accommodation's clock (ADR-0290).
     const z = partsIn(now, viewZone());
     let k = (z.year - start.getFullYear()) * 12 + (z.month - 1 - start.getMonth());
     if (z.day < start.getDate()) k -= 1;
@@ -939,7 +939,7 @@ function daysUntil(iso: string): number {
   const day = 86_400_000;
   const target = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(target)) return 0;
-  // Our billing calendar (platform, ADR-XXXX): the freeze/close days are Budapest days.
+  // Our billing calendar (platform, ADR-0290): the freeze/close days are Budapest days.
   const t = budapestIsoDay(new Date());
   const today = Date.UTC(Number(t.slice(0, 4)), Number(t.slice(5, 7)) - 1, Number(t.slice(8, 10)));
   return Math.max(0, Math.round((target - today) / day));
@@ -3974,7 +3974,7 @@ export interface OverviewData {
 
 /** „ma" / „tegnap" / a short date — the message widget's right column. */
 function relDay(d: Date, lang: string, now: Date = new Date()): string {
-  // The accommodation's calendar days (ADR-XXXX): on the UTC server a 00:30 message was "tegnap".
+  // The accommodation's calendar days (ADR-0290): on the UTC server a 00:30 message was "tegnap".
   const diff = isoDayDiff(isoDayIn(d, viewZone()), isoDayIn(now, viewZone()));
   if (diff <= 0) return T(lang, "ma");
   if (diff === 1) return T(lang, "tegnap");
@@ -4319,7 +4319,7 @@ function fmtDate(d: Date, lang: string): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    // PLATFORM calendar (ADR-XXXX): every caller is our billing — invoices, agreements,
+    // PLATFORM calendar (ADR-0290): every caller is our billing — invoices, agreements,
     // the renewal day — and most pass a Postgres `date` (process-local midnight). Budapest
     // lies east of UTC, so such a value keeps its day; a zone WEST of UTC would print
     // the day before. Instants of the accommodation go through fmtDateTime.
@@ -4336,7 +4336,7 @@ function fmtDateTime(d: Date, lang: string): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: viewZone(), // ADR-XXXX — the accommodation's clock, not the server's (UTC on prod)
+    timeZone: viewZone(), // ADR-0290 — the accommodation's clock, not the server's (UTC on prod)
   }).format(d);
 }
 
@@ -5330,7 +5330,7 @@ function accountSection(session: TenantSession, lang = "hu"): string {
 }
 
 /**
- * ADR-XXXX — „Szállás időzónája" (frozen plan: assets/design-refs/tenant-admin/szallas-idozona/,
+ * ADR-0290 — „Szállás időzónája" (frozen plan: assets/design-refs/tenant-admin/szallas-idozona/,
  * variant A): the owner picks the zone their accommodation lives in; every booking/price
  * "today", deadline and shown time follows it. Native select (works without JS), enhanced
  * by the shared picker script; the server validates the IANA name.
@@ -5499,7 +5499,7 @@ export interface AdminOpts {
   readonly documents?: DocumentsAdminData | null;
   /** ADR-0110: a „Jogi adatok" panel adata (Fiók fül). */
   readonly legal?: LegalAdminData | null;
-  /** ADR-XXXX: the accommodation's time zone (the „Fiók" tab's picker). */
+  /** ADR-0290: the accommodation's time zone (the „Fiók" tab's picker). */
   readonly zone?: ZonePickerData | null;
   /** The last POST carried no valid IANA zone (nothing was saved). */
   readonly zoneError?: boolean;

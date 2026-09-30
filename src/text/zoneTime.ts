@@ -1,4 +1,4 @@
-// Wall-clock arithmetic in an EXPLICIT IANA zone (ADR-XXXX) — pure, no DB.
+// Wall-clock arithmetic in an EXPLICIT IANA zone (ADR-0290) — pure, no DB.
 //
 // Every accommodation lives in its own time zone (tenant.time_zone); the platform itself
 // (outreach windows, operator console, traffic report) lives in APP_TZ. Both read the

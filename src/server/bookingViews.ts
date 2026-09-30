@@ -571,7 +571,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
   }
   // year — the panel must ADD UP to the tile, otherwise tapping it contradicts it
   // (Elek FK-007: tile "2 foglalás", panel "Idén még nincs visszaigazolt foglalás").
-  // The accommodation's calendar year on both sides (ADR-XXXX) — must match the year
+  // The accommodation's calendar year on both sides (ADR-0290) — must match the year
   // tile's yearStart (public.ts reads the same request view zone).
   const yearNow = yearIn(new Date(), viewZone());
   const thisYear = (r: InboxItem): boolean =>
@@ -729,7 +729,7 @@ function requestCard(
  */
 function offeredCard(r: InboxItem, expireHours: number, lang: string): string {
   const exp = r.offeredAt && expireHours ? new Date(r.offeredAt.getTime() + expireHours * 3_600_000) : null;
-  // The accommodation's clock (ADR-XXXX) — the server's own zone is not the owner's.
+  // The accommodation's clock (ADR-0290) — the server's own zone is not the owner's.
   const when = exp
     ? new Intl.DateTimeFormat("hu-HU", {
         timeZone: viewZone(),
@@ -930,7 +930,7 @@ function historyRow(r: InboxItem, expireHours: number, view: string, lang: strin
 export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
   const pend = pendingInOrder(d.requests, d.expireHours);
   const groups = overlapGroups(pend);
-  const today = viewToday(); // the accommodation's today (ADR-XXXX)
+  const today = viewToday(); // the accommodation's today (ADR-0290)
   const arrivals = d.requests
     .filter((r) => r.status === "accepted" && r.dateFrom >= today)
     .sort((a, b) => (a.dateFrom < b.dateFrom ? -1 : 1));
@@ -1027,7 +1027,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
 
 /* ── „Kiküldött ajánlatok" (ADR-0267, approved plan booking-offer-scope) ──── */
 
-/** The accommodation's wall-clock of a deadline, short ("okt. 1. 16:10"; ADR-XXXX). */
+/** The accommodation's wall-clock of a deadline, short ("okt. 1. 16:10"; ADR-0290). */
 function shortWhen(d: Date): string {
   return new Intl.DateTimeFormat("hu-HU", {
     timeZone: viewZone(),

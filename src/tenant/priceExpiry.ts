@@ -37,10 +37,10 @@ function niceIso(iso: string): string {
 }
 
 export async function maintainDatedPrices(
-  /** A guard's pinned day for EVERY site; the product passes none (ADR-XXXX). */
+  /** A guard's pinned day for EVERY site; the product passes none (ADR-0290). */
   todayArg?: string,
 ): Promise<{ reminded: number; expired: number }> {
-  // Each accommodation's own today (ADR-XXXX). The query takes a window wide enough for
+  // Each accommodation's own today (ADR-0290). The query takes a window wide enough for
   // every zone (UTC−12 … UTC+14 is within a day of UTC's date); each row is then judged
   // on its tenant's day.
   const utcToday = new Date().toISOString().slice(0, 10);

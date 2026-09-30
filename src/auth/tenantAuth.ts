@@ -153,7 +153,7 @@ export async function currentTenant(req: http.IncomingMessage): Promise<TenantSe
     ])
     .where("tenant_user.id", "=", tenantUserId)
     .executeTakeFirst();
-  // ADR-XXXX: the request's views format times in THIS accommodation's zone.
+  // ADR-0290: the request's views format times in THIS accommodation's zone.
   if (row) setViewZone(await tenantTimeZone(row.tenantId));
   return row ?? null;
 }

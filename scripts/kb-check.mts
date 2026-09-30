@@ -49,14 +49,14 @@ const VIEW_GROUPS = {
     // filter bar, so the handbook quotes them. A copy-bearing file MUST be in the
     // corpus, or the KB could walk the owner to a chip the tab stopped showing.
     "src/tenant/messageTopics.ts",
-    // The accommodation time-zone picker (ADR-XXXX): ONE renderer shared by the Fiók tab
+    // The accommodation time-zone picker (ADR-0290): ONE renderer shared by the Fiók tab
     // and the console lead page — its labels („Időzóna mentése", „Vissza az ország
     // alapértékére" …) live HERE, so it is a corpus member of BOTH audiences.
     "src/tenant/zonePicker.ts",
   ],
   operator: [
     "src/console/views.ts",
-    // ADR-XXXX: the shared time-zone picker (see the tenant list).
+    // ADR-0290: the shared time-zone picker (see the tenant list).
     "src/tenant/zonePicker.ts",
     "src/console/nav.ts",
     // Lead-list column labels and column MEANINGS live here (one registry shared by
