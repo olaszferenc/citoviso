@@ -1,4 +1,4 @@
-## ADR-XXXX — Minden kimenő küldési ablak és kimenő határidő Budapest-idő szerint számol, a szerver zónájától függetlenül (2026-09-30)
+## ADR-0288 — Minden kimenő küldési ablak és kimenő határidő Budapest-idő szerint számol, a szerver zónájától függetlenül (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; brief: `~/rc-briefs/sms-ablak-idozona.md`) ·
 **Kapcsolódó:** ADR-0287 (az óránkénti emlékeztető, ahol a hiba kiderült), ADR-0282 (MMS-relé, 19:30-as vágás), ADR-0112

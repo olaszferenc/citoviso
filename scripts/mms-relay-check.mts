@@ -317,7 +317,7 @@ try {
         say(at(tz, "2026-09-30T05:59:00Z") !== null, `⑫ [${tz}] 07:59 (Budapest) → NEM húz`);
       }
       // Morning: the MMS starts exactly when the companion SMS's gate opens — 08:00
-      // BUDAPEST on a UTC process too (ADR-XXXX; it used to open at 08:00 UTC = 10:00 Budapest).
+      // BUDAPEST on a UTC process too (ADR-0288; it used to open at 08:00 UTC = 10:00 Budapest).
       for (const tz of ["Europe/Budapest", "UTC"]) {
         say(at(tz, "2026-09-30T06:00:00Z") === null, `⑫ [${tz}] nyáron 08:00 (Budapest) → húz (az SMS-kapu nyitva)`);
         say(at(tz, "2026-12-01T07:00:00Z") === null, `⑫ [${tz}] télen 08:00 (Budapest) → húz`);

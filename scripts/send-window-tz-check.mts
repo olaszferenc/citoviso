@@ -1,4 +1,4 @@
-// ADR-XXXX — every outbound window and outbound deadline is read on the BUDAPEST wall
+// ADR-0288 — every outbound window and outbound deadline is read on the BUDAPEST wall
 // clock, whatever zone the process runs in. The live VPS runs in UTC, the dev box in
 // Europe/Budapest: a rule that read the process-local hour (Date#getHours / setHours)
 // opened the cold-SMS window at 10:00 and closed it at 22:00 Budapest time on prod,

@@ -1,7 +1,7 @@
 // The outbound sending window — ONE rule for the SMS gate, the pair start, the MMS
 // relay and the escalation follow-up mail (ADR-0287).
 //
-// ADR-XXXX: every one of them reads the window on the BUDAPEST wall clock
+// ADR-0288: every one of them reads the window on the BUDAPEST wall clock
 // (sendWindowOpen / minutesUntilWindowCloses). It used to be the PROCESS-local clock
 // (Date#getHours): the dev box runs in Europe/Budapest, the live VPS in UTC, so the
 // same code opened the cold-SMS window at 10:00 and closed it at 22:00 Budapest time
@@ -22,7 +22,7 @@
  *  so this gate exists only on this channel (jog/provenance-őr finding). */
 export const SEND_WINDOW = { fromHour: 8, toHour: 20 } as const;
 
-/** The ONE zone every outbound window and outbound deadline is read in (ADR-XXXX). */
+/** The ONE zone every outbound window and outbound deadline is read in (ADR-0288). */
 export const SEND_WINDOW_TZ = "Europe/Budapest";
 
 /** The last minute an MMS may be pulled, Budapest wall-clock (exclusive). */

@@ -22,7 +22,7 @@ NINCS; mező-közi szabályok (eszk. % > bemutatkozó %, kikapcsolva is; emléke
 a régi (rögzítés nélküli) kiküldés a konstans 25-öt kapja. Az emlékeztető-késleltetés a futókra is hat (tulaj: rendben).
 ⮕ **2. kör:** az emlékeztető a tulaj döntésére ÓRÁNKÉNT megy (ADR-0287): külön `citoviso-offer-followup.timer` (prod),
 8–20 Europe/Budapest a kódban (az éles VPS UTC!), atomi foglalás → ajánlatonként egy levél; a napi billing többi lépése változatlan.
-⮕ **3. kör:** MINDEN kimenő ablak és határidő Budapest szerint (ADR-XXXX): az SMS-kapu, a mobil-pár határa, az MMS-relé és az
+⮕ **3. kör:** MINDEN kimenő ablak és határidő Budapest szerint (ADR-0288): az SMS-kapu, a mobil-pár határa, az MMS-relé és az
 emlékeztető ugyanazt a `sendWindowOpen`-t használja (élesen UTC-n eddig 10–22 lett volna); az emlékeztető-levél határideje is.
 Őr: `send-window-tz-check` (3 zóna × nyár/tél). Nem kimenő helyi-órás helyek felsorolva az ADR-ben (nem javítva). Őr: `escalation-config-check` ⑥⑦⑧.
 Jegyzet: `_planning/memory/2026-09-30_lead_ajanlatok_idozites.md`.

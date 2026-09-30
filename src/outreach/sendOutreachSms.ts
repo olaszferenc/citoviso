@@ -106,7 +106,7 @@ const PAIR_WINDOW_HEADROOM_MIN = 60;
  */
 export function pairWindowBlocks(phoneE164: string, now: Date = new Date()): string | null {
   if (isAllowlistedTestNumber(phoneE164)) return null;
-  // Budapest wall clock (ADR-XXXX) — the server's own zone is UTC on prod.
+  // Budapest wall clock (ADR-0288) — the server's own zone is UTC on prod.
   const minutesLeft = minutesUntilWindowCloses(now);
   if (minutesLeft >= PAIR_WINDOW_HEADROOM_MIN) return null;
   return (
@@ -274,7 +274,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
 
   // Sending window — a cold message at night is a complaint, not a lead. It
   // protects the RECIPIENT, so the owner's allowlisted test number is exempt.
-  // Budapest wall clock (ADR-XXXX): on the UTC server the process-local hour opened
+  // Budapest wall clock (ADR-0288): on the UTC server the process-local hour opened
   // this window at 10:00 and closed it at 22:00 Budapest time.
   const now = new Date();
   if (!isAllowlistedTestNumber(to) && !sendWindowOpen(now)) {

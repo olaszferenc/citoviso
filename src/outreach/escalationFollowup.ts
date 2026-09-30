@@ -58,7 +58,7 @@ export function followupWindowBlocks(now: Date): string | null {
 export function deadlineText(d: Date, lang: string): string {
   try {
     return (
-      // ADR-XXXX: the Budapest wall clock, like the decision card on the page this
+      // ADR-0288: the Budapest wall clock, like the decision card on the page this
       // mail links to (offerViews.ts) — the server's zone (UTC on prod) would put
       // a deadline 1–2 hours earlier in the mail than on the page (§I).
       d.toLocaleDateString(lang, { month: "short", day: "numeric", timeZone: SEND_WINDOW_TZ }) +

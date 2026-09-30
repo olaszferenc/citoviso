@@ -48,7 +48,7 @@ Fájlok: `src/outreach/escalationFollowup.ts`, `src/payment/offers.ts`, `scripts
 `deploy/systemd/citoviso-offer-followup.{timer,service}`, `deploy/systemd/targets.json`, `deploy/systemd/README.md`,
 `src/console/views.ts`, `src/i18n/catalog.json`, `scripts/escalation-config-check.mts`, `hooks/pre-commit`, KB/README/GLOSSARY/ADR/MEMORY.
 
-## 3. kör (2026-09-30 este) — kimenő ablakok Budapest-idő szerint (ADR-XXXX)
+## 3. kör (2026-09-30 este) — kimenő ablakok Budapest-idő szerint (ADR-0288)
 A 2. kör mellék-lelete (az SMS-kapu a szerver helyi óráját olvasta; élesen UTC → 10–22 Budapest) a tulaj döntésére javítva.
 Egy függvény (`sendWindowOpen` / `minutesUntilWindowCloses` / `budapestHhmm`, `SEND_WINDOW_TZ`) a `sendWindow.ts`-ben: SMS-kapu,
 mobil-pár határ, MMS-relé, emlékeztető-ablak. + Az emlékeztető levél határideje Budapest szerint (eddig szerver-zóna → a lap
