@@ -12,7 +12,13 @@
 // the page it links to must not disagree (§I).
 
 import { db } from "../db/client.js";
-import { escalationFollowupsDue, getEscalationConfig } from "../payment/offers.js";
+import {
+  claimFollowup,
+  escalationFollowupsDue,
+  getEscalationConfig,
+  releaseFollowup,
+} from "../payment/offers.js";
+import { SEND_WINDOW, budapestMinutes } from "../sms/sendWindow.js";
 import {
   advertiserIdentity,
   buildDraftForProspect,
@@ -26,12 +32,28 @@ import { getBaseMonthly } from "../pricing.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { isEmailSuppressed } from "./sendBatch.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
-import { getEmailSender } from "../email/sender.js";
+import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { T } from "../i18n/mail.js";
 
 export interface FollowupRunResult {
   readonly sent: number;
   readonly skipped: number;
+  /** Set when the run was outside the send window: nothing was queried or sent. */
+  readonly deferred?: string;
+}
+
+/**
+ * ADR-XXXX: the follow-up runs hourly (citoviso-offer-followup.timer), but no mail goes
+ * out at night. The window reuses the cold-outreach hours (SEND_WINDOW, 8–20) read on
+ * the BUDAPEST wall clock — the live VPS runs in UTC, so the process-local hour would
+ * shift it by 1–2 hours. A due reminder outside the window waits for the first run
+ * inside it. Returns why the window is shut, or null when it is open.
+ */
+export function followupWindowBlocks(now: Date): string | null {
+  const m = budapestMinutes(now);
+  if (m >= SEND_WINDOW.fromHour * 60 && m < SEND_WINDOW.toHour * 60) return null;
+  const hhmm = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  return `az emlékeztető ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 (Budapest) között megy (most ${hhmm})`; // i18n-exempt: operátori napló, sosem éri el a leadet
 }
 
 function deadlineText(d: Date, lang: string): string {
@@ -46,11 +68,21 @@ function deadlineText(d: Date, lang: string): string {
   }
 }
 
-/** Run one follow-up tick (invoked from the daily billing-cycle script). */
+/**
+ * Run one follow-up tick (hourly: scripts/offer-followup.mts, ADR-XXXX). `sender` and
+ * `onlyProspects` are for the guard only: the dev DB is shared, and a guard run must
+ * neither mail nor claim another thread's offers. Product code passes neither.
+ */
 export async function sendEscalationFollowups(
   now: Date = new Date(),
+  opts: { readonly sender?: EmailSender; readonly onlyProspects?: ReadonlySet<string> } = {},
 ): Promise<FollowupRunResult> {
-  const due = await escalationFollowupsDue(now);
+  const blocked = followupWindowBlocks(now);
+  if (blocked) return { sent: 0, skipped: 0, deferred: blocked };
+  const sender = opts.sender ?? getEmailSender();
+  const due = (await escalationFollowupsDue(now)).filter(
+    (f) => !opts.onlyProspects || opts.onlyProspects.has(f.prospectId),
+  );
   const { followupHours } = await getEscalationConfig();
   let sent = 0;
   let skipped = 0;
@@ -135,20 +167,21 @@ export async function sendEscalationFollowups(
       continue;
     }
     const msg = buildOutreachEmail(draft, email, { lang });
-    try {
-      await getEmailSender().send(msg);
-    } catch (e) {
-      // Loud per-prospect failure; the un-stamped offer retries next tick.
-      console.error(`[offer] follow-up küldés HIBA · prospect ${f.prospectId}:`, e);
+    // Claim BEFORE the send (ADR-XXXX): an overlapping or repeated run loses here and
+    // sends nothing; an offer that expired since the query cannot be claimed.
+    if (!(await claimFollowup(f.offerId, now))) {
       skipped++;
       continue;
     }
-    // Stamp AFTER the send succeeded — a failed send retries on the next tick.
-    await db
-      .updateTable("offer")
-      .set({ followup_sent_at: now })
-      .where("id", "=", f.offerId)
-      .execute();
+    try {
+      await sender.send(msg);
+    } catch (e) {
+      // Loud per-prospect failure; the claim is released, so the next run retries.
+      console.error(`[offer] follow-up küldés HIBA · prospect ${f.prospectId}:`, e);
+      await releaseFollowup(f.offerId, now);
+      skipped++;
+      continue;
+    }
     console.log(
       `[offer] eszkalációs follow-up elküldve (${followupHours}h+ · −${f.percent}%, ` + // i18n-exempt: operátori napló, sosem éri el a leadet
         `lejárat ${f.expiresAt.toISOString()}) · ${email}`, // i18n-exempt: operátori napló, sosem éri el a leadet

@@ -1,0 +1,19 @@
+[Unit]
+# ADR-XXXX: az eszkalációs ajánlat emlékeztető levele (ADR-0088 §4b), óránként. Korábban a
+# napi 07:00-s billing-tick vitte; a késleltetés ADR-0286 óta 1 órától állítható.
+# Idempotens: az offer.followup_sent_at atomi foglalása miatt egy ajánlatra egyszer megy ki.
+Description=Citoviso eszkalációs emlékeztető óránkénti tick (ADR-XXXX)
+After=network-online.target
+Wants=network-online.target
+# ADR-0276: ha elhasal, a ház levelet kap (citoviso-alert@.service → alert_email).
+OnFailure=citoviso-alert@%n.service
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052 integrációs pont).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/offer-followup.mts
+TimeoutStartSec=600
+StandardOutput=append:/home/citoviso/.claude/citoviso-offer-followup.log
+StandardError=inherit

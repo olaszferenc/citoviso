@@ -37,3 +37,13 @@
 - Az emlékeztetőt a **napi 07:00-s** billing-futás küldi: a beállított óra a legkorábbi időpont, 24 óránál rövidebb
   maradék-ablaknál nem mindenki kapja meg. A felület kimondja. Óránkéntire tenni = külön infra-döntés (tulaj).
 - Élesítés: a koordinátor viszi (a nagy deploy utáni kör, külön engedéllyel). Migráció nincs.
+
+## 2. kör (2026-09-30 este) — az emlékeztető óránként (ADR-XXXX)
+Tulaj-döntés 17:45 után (élesen `e263b580`). Új időzítő `citoviso-offer-followup.{timer,service}` (prod, GATE 6),
+`scripts/offer-followup.mts`; a `billing-cycle.ts`-ből kivéve (a többi lépés napi marad). Ablak 8–20 Europe/Budapest a
+KÓDBAN (`followupWindowBlocks`), mert az éles VPS UTC. Idempotencia: `claimFollowup` (atomi, küldés előtt) +
+`releaseFollowup`. Őr ⑨ (mutációval 3/1/1 piros). Szövegek: felület, KB, kontraktus, GLOSSARY, outreach-mail README,
+ADR-0286 §5 mutató. Mellék-lelet: az SMS-kapu helyi órát olvas (élesen UTC lenne) — nem javítva, jelezve.
+Fájlok: `src/outreach/escalationFollowup.ts`, `src/payment/offers.ts`, `scripts/offer-followup.mts`, `scripts/billing-cycle.ts`,
+`deploy/systemd/citoviso-offer-followup.{timer,service}`, `deploy/systemd/targets.json`, `deploy/systemd/README.md`,
+`src/console/views.ts`, `src/i18n/catalog.json`, `scripts/escalation-config-check.mts`, `hooks/pre-commit`, KB/README/GLOSSARY/ADR/MEMORY.

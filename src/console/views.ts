@@ -66,6 +66,7 @@ import {
 import type { PricingSnapshot } from "../pricing.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
+import { SEND_WINDOW } from "../sms/sendWindow.js";
 import {
   ESCALATION_CONFIG_DEFAULT,
   ESCALATION_FOLLOWUP_HOURS_MIN,
@@ -996,9 +997,9 @@ function escalationSection(
     fLow: T(lang, "Legalább {min} óra: az emlékeztető az oldalon megjelent ajánlat UTÁN megy ki.", { min: s(ESCALATION_FOLLOWUP_HOURS_MIN) }),
     fCross: T(lang, "Kevesebb kell, mint az ajánlat érvényessége ({h} óra): különben az emlékeztető lejárt ajánlatról szólna.", { h: "{h}" }),
     fHint: T(lang, "Utána legfeljebb még {r} óra marad a döntésre.", { r: "{r}" }),
-    fTight: T(lang, "Az emlékeztetőt naponta egyszer, reggel küldjük: ha a késleltetés után kevesebb mint 24 óra marad a lejáratig, nem minden lead kapja meg.", {}),
+    fTight: T(lang, "Az emlékeztetőt {from} és {to} óra között küldjük: ha a késleltetés után legfeljebb {g} óra marad a lejáratig, egy éjszakára eső lead nem kapja meg.", { from: s(SEND_WINDOW.fromHour), to: s(SEND_WINDOW.toHour), g: s(24 - (SEND_WINDOW.toHour - SEND_WINDOW.fromHour)) }),
     off: T(lang, "Kikapcsolva: nem keletkezik új döntés-segítő ajánlat. A lead a levelében ígért bemutatkozó kedvezménynél marad, bárhányszor nyitja meg."),
-    on: T(lang, "Így fut: az ezután kiküldött levél −{o}% bemutatkozó kedvezményt ígér. A lead a {n}. megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára; ha legkorábban {f} óra múlva, a napi reggeli küldéskor sem vásárolt, egy emlékeztető levél megy ki ugyanerről.", { o: "{o}", n: "{n}", p: "{p}", h: "{h}", f: "{f}" }),
+    on: T(lang, "Így fut: az ezután kiküldött levél −{o}% bemutatkozó kedvezményt ígér. A lead a {n}. megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára; ha {f} óra múlva sem vásárolt, egy emlékeztető levél megy ki ugyanerről (óránként küldjük, {from} és {to} óra között — az éjjel esedékes reggel {from} után megy).", { o: "{o}", n: "{n}", p: "{p}", h: "{h}", f: "{f}", from: s(SEND_WINDOW.fromHour), to: s(SEND_WINDOW.toHour) }),
     example: T(lang, "Példa — {tier} csomag: {list} helyett {price} az első hónapra, utána listaáron.", { tier: "{tier}", list: "{list}", price: "{price}" }),
     bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
     sumOne: T(lang, "A mentés addig nem megy, amíg a jelölt mező hibás."),
@@ -1016,6 +1017,8 @@ function escalationSection(
     hMin: ESCALATION_HOURS_MIN,
     hMax: ESCALATION_HOURS_MAX,
     fMin: ESCALATION_FOLLOWUP_HOURS_MIN,
+    // The longest a due reminder can wait for the send window (the night gap, ADR-XXXX).
+    nightGap: 24 - (SEND_WINDOW.toHour - SEND_WINDOW.fromHour),
     saved: cfg,
     live: { count: live.count, pcts: live.percents.map((p) => `−${p}%`).join(", ") },
     example: example ? { tier: example.label, list: example.list, fmtList: fmtHuf(example.list) } : null,
@@ -1137,7 +1140,7 @@ const ESCALATION_SECTION_JS = `(function(){
     $("h_out_p").textContent = ok("o") && D.example ? fill(M.oHint, {tier: D.example.tier, list: nb(D.example.fmtList), price: price(r.o.v)}) : "";
     $("h_esc_h").textContent = en && ok("h") ? (r.h.v % 24 === 0 ? fill(M.hDays, {d: r.h.v / 24}) : fill(M.hDaysApprox, {d: String(Math.round(r.h.v / 2.4) / 10).replace(".", ",")})) : "";
     var rem = en && ok("h") && ok("f") ? r.h.v - r.f.v : null;
-    $("h_esc_f").textContent = rem == null ? "" : fill(M.fHint, {r: rem}) + (rem < 24 ? " " + M.fTight : "");
+    $("h_esc_f").textContent = rem == null ? "" : fill(M.fHint, {r: rem}) + (rem <= D.nightGap ? " " + M.fTight : "");
     if (!en) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.off; }
     else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
     else {

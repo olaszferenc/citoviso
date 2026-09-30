@@ -45,6 +45,10 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   "src/modules.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/moduleConfig.ts": "adat-regiszter — mezőnév szerinti betakarítás fordítja",
   "src/domains.ts": "adat-regiszter (domain-ajánló szótöve) — nem levél-szöveg",
+  // ADR-XXXX: az eszkalációs emlékeztető (escalationFollowup.ts) innen veszi a küldési
+  // ablak ÓRÁIT és a budapesti falióra-számítást. A fájl magyar literáljai operátori/relé
+  // napló-okok (mmsPullBlocks) — levélbe egyik sem kerül.
+  "src/sms/sendWindow.ts": "küldési ablak (órák + Budapest-idő) — a magyar literálok operátori napló-okok, levélbe nem kerülnek",
   // 2026-09-27: a foglalási levél innen veszi az elérhetőség-szabályt (effectiveContact,
   // displayPhone). A fájl magyar literáljai a CONTACT_ERRORS admin-űrlap hibakulcsai,
   // amiket a nézet T()-vel fordít — levélbe egyik sem kerül.

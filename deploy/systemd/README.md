@@ -126,6 +126,30 @@ sudo systemctl enable --now citoviso-booking-maintenance.timer
 **Ellenőrzés:** `systemctl list-timers citoviso-booking-maintenance.timer` +
 `tail ~/.claude/citoviso-booking-maintenance.log`.
 
+## `citoviso-offer-followup` (ADR-XXXX — 2026-09-30)
+
+**Mit csinál.** Óránként lefuttatja a `scripts/offer-followup.mts`-t: az eszkalációs ajánlat
+emlékeztető levelét küldi ki (ADR-0088 §4b) azoknak a leadeknek, akiknél a /pricing-on beállított
+késleltetés letelt, és még nem vásároltak.
+
+**Miért kell külön.** Korábban a napi 07:00-s `citoviso-billing` vitte. ADR-0286 óta a késleltetés
+1 órától állítható, a napi tick ezért akár egy napot késett, és rövid ajánlatnál ki is maradt. A billing
+többi lépése (megújulás, AAM-riasztás, számla-újrapróba) napi maradt, csak az emlékeztető vált le.
+
+**Küldési ablak.** 8:00–20:00 **Europe/Budapest** — a KÓD tartja (`followupWindowBlocks`), nem a
+naptár: az éles gép UTC-ben fut. Ablakon kívül a futás semmit nem kérdez le és nem küld; az éjjel
+esedékes emlékeztető a reggel 8 utáni első futással megy.
+
+**Miért veszélytelen gyakran futni.** Egy ajánlatra egy levél: a küldés ELŐTT atomi foglalás
+(`claimFollowup`: `followup_sent_at` csak ha üres, és az ajánlat még él); lejárt ajánlat nem
+foglalható; elbukott küldés után a foglalás feloldódik, a következő óra újrapróbálja.
+
+**Telepítés:** `prod` — a deploy GATE 6 telepíti és engedélyezi (`targets.json`). A dev gépen nincs
+rá szükség (ott a levélküldő mock).
+
+**Ellenőrzés:** `systemctl list-timers citoviso-offer-followup.timer` +
+`tail ~/.claude/citoviso-offer-followup.log` (dev) · élesen `journalctl -u citoviso-offer-followup`.
+
 ## `citoviso-pair-repair` (ADR-0112)
 
 **Mit csinál.** Percenként megnézi, van-e **törött mobil-pár** (`mms_sent_at` kitöltve,

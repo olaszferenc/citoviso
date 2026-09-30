@@ -107,5 +107,5 @@ interaktív részét (méret-váltó, összevetés) Playwrighttal végigkattinta
 ⚠️ Próba-küldésnél a gomb SOHA ne a tracked `/p/<token>` linkre menjen, hanem a követés nélküli
 `/configure/<artifactId>`-ra: a tracked linken a /pricing-on beállított N. megnyitás (alapból a 3.,
 −50%) eszkalációs ajánlatot mintáz (`offers.ts getEscalationConfig`, ADR-0285), és a /pricing-on beállított késleltetés (alapból
-24 óra) után a napi billing-tick VALÓDI
+24 óra) után az óránkénti emlékeztető-futás (8–20 óra, ADR-XXXX) VALÓDI
 levelet küld a VALÓDI szállásadónak. A leiratkozó-link próbában legyen halott példa-útvonal.

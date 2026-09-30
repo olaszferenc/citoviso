@@ -4,7 +4,6 @@
 //   tsx scripts/billing-cycle.ts [--now=2026-09-29] [--tenant=<uuid>]
 // --tenant: dev/teszt szűkítés EGY tenantra (FK-006 időutazás a közös dev DB-ben).
 import { runBillingCycle } from "../src/payment/billing.js";
-import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { checkAamAlert } from "../src/console/aamAlert.js";
 import { retryFailedInvoices } from "../src/billing/invoiceRetry.js";
 import { db } from "../src/db/client.js";
@@ -26,16 +25,9 @@ let sideStepFailed = false;
 
 const r = await runBillingCycle(now, tenantId ? { tenantId } : undefined);
 console.log(`billing-cycle @ ${now.toISOString()}:`, JSON.stringify(r));
-// ADR-0088 §4b: the escalation follow-up rides the same daily tick — its
-// 24–48h window is wider than the tick interval, so daily resolution suffices.
-// Failures are per-prospect and loud; they never block the billing result.
-try {
-  const f = await sendEscalationFollowups(now);
-  console.log(`offer-followup @ ${now.toISOString()}:`, JSON.stringify(f));
-} catch (e) {
-  console.error("offer-followup HIBA:", e);
-  sideStepFailed = true;
-}
+// ADR-0088 §4b: the escalation follow-up NO LONGER rides this daily tick — its delay is
+// operator-set from 1 hour (ADR-0286), so it runs hourly on its own timer
+// (citoviso-offer-followup.timer → scripts/offer-followup.mts, ADR-XXXX).
 // ADR-0098: the AAM-cap SMS guard rides the same daily tick — the threshold is
 // crossed at most twice a year, daily resolution is plenty. Loud, non-blocking.
 try {

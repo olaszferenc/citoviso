@@ -1,0 +1,14 @@
+[Unit]
+Description=Citoviso eszkalációs emlékeztető óránként (ADR-XXXX)
+
+[Timer]
+# Óránként, egész nap: a küldési ablakot (8:00–20:00 Europe/Budapest) a KÓD tartja,
+# nem ez a naptár — az éles gép UTC-ben fut, egy óra-szűrt OnCalendar 1–2 órát csúszna.
+# Ablakon kívül a futás semmit nem kérdez le és nem küld.
+OnCalendar=hourly
+# Ha a gép aludt, induláskor pótolja; a kétszeri küldést az atomi foglalás zárja ki.
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

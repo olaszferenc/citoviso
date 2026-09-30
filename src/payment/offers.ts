@@ -545,6 +545,34 @@ export async function redeemOfferForOrder(orderIntentId: string): Promise<void> 
   if (oi?.offer_id) await redeemOffer(oi.offer_id);
 }
 
+/**
+ * ADR-XXXX: the follow-up runs HOURLY, so its one-send guarantee cannot rest on
+ * "one tick a day". Atomic claim BEFORE the send: the stamp is written only if the
+ * offer is still un-followed, live and unused — a second (overlapping or repeated)
+ * run gets false and sends nothing, and an expired offer can never be claimed.
+ */
+export async function claimFollowup(offerId: string, now: Date): Promise<boolean> {
+  const r = await db
+    .updateTable("offer")
+    .set({ followup_sent_at: now })
+    .where("id", "=", offerId)
+    .where("followup_sent_at", "is", null)
+    .where("expires_at", ">", now)
+    .whereRef("used_count", "<", "max_uses")
+    .executeTakeFirst();
+  return Number(r.numUpdatedRows ?? 0) > 0;
+}
+
+/** The send failed after the claim: release it (only OUR stamp) so the next run retries. */
+export async function releaseFollowup(offerId: string, claimedAt: Date): Promise<void> {
+  await db
+    .updateTable("offer")
+    .set({ followup_sent_at: null })
+    .where("id", "=", offerId)
+    .where("followup_sent_at", "=", claimedAt)
+    .execute();
+}
+
 export interface EscalationFollowupDue {
   readonly offerId: string;
   readonly prospectId: string;

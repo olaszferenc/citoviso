@@ -2,6 +2,7 @@
   "_doc": "Every *.timer in deploy/systemd MUST be listed here (scripts/systemd-units.mts check, pre-commit). target=prod → deploy-prod.sh GATE 6 installs it on the live VPS (rendered to the prod form), enables it and VERIFIES it is enabled+active, or the deploy fails. target=dev → never installed on prod; `why` is mandatory. A timer running on prod that is not listed here as prod also fails the deploy.",
   "timers": {
     "citoviso-billing.timer": { "target": "prod" },
+    "citoviso-offer-followup.timer": { "target": "prod" },
     "citoviso-booking-maintenance.timer": { "target": "prod" },
     "citoviso-domain-resume.timer": { "target": "prod" },
     "citoviso-traffic-mail.timer": { "target": "prod" },

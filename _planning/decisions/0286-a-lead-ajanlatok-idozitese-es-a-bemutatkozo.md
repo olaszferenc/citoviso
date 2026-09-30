@@ -28,7 +28,8 @@ levélben ígérttől eltérő kedvezményt kapott volna (dev-DB, 2026-09-30: 12
 4. **Az érvényesség a kiadáskor pecsételődik** (`offer.expires_at`), a futó ajánlatot nem érinti. **Az emlékeztető
    késleltetése minden futáskor a configból jön**, ezért a már futó ajánlatokra is hat (tulaj: „rendben így”); a
    felület és a KB kimondja.
-5. **Az emlékeztető óraszáma a legkorábbi időpont.** A follow-up a napi billing-futással (`citoviso-billing.timer`,
+5. **Az emlékeztető óraszáma a legkorábbi időpont.** ⮕ *Felülírva: ADR-XXXX (az emlékeztető óránként megy,
+   8–20 óra között, Budapest szerint).* A follow-up a napi billing-futással (`citoviso-billing.timer`,
    07:00) megy, ezért a felület „legkorábban … a napi reggeli küldéskor” formában ígér. Ha a késleltetés után 24 óránál
    kevesebb marad a lejáratig, a mező alatt kimondja, hogy nem minden lead kapja meg.
 

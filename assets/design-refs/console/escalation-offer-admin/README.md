@@ -45,9 +45,10 @@ bemutatkozó %-ot idézi), `pricing-sales/` (a /pricing kötött elemei, változ
    összesítő (hány mező hibás). A szerver ugyanazzal a szabállyal (`escalationConfigErrors`) újra ellenőriz, és hibás
    értéknél SEMMIT nem ment (az árakat sem).
 7. **Előnézet:** egy mondat arról, mit fog tenni a beállítás: a levél −O %-ot ígér, a lead az N. megnyitáskor −P %-ot
-   kap H órára, és **legkorábban** F óra múlva, a napi reggeli küldéskor emlékeztetőt. Az emlékeztetőt a napi billing-futás
-   küldi, ezért az óraszám a legkorábbi időpont, nem pontos időpont. Ha az emlékeztető után 24 óránál kevesebb marad
-   a lejáratig, a mező alatti sor kimondja, hogy nem minden lead kapja meg. A Magyarország oldalon valós példa is
+   kap H órára, és F óra múlva emlékeztetőt. Az emlékeztetőt óránként küldjük, csak 8:00 és 20:00 (Europe/Budapest)
+   között (`citoviso-offer-followup.timer`, ADR-XXXX), ezért legfeljebb egy órát késik, és az éjjel esedékes reggel 8
+   után megy. Ha az emlékeztető után legfeljebb 12 óra (az éjszakai szünet) marad a lejáratig, a mező alatti sor
+   kimondja, hogy egy éjszakára eső lead nem kapja meg. Egy ajánlatra legfeljebb egy emlékeztető megy (atomi foglalás). A Magyarország oldalon valós példa is
    tartozik hozzá (a középső díjcsomag listaára → a kedvezményes ár, `floor`, ugyanaz a matek, mint a szerveren).
    Kikapcsolva az előnézet ezt mondja ki.
 8. **A már kiadott ígéretek nem változnak, és a felület ezt kimondja, ha az érték változott:**

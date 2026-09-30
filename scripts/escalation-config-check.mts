@@ -16,7 +16,10 @@
 //   ⑦ ADR-0286 „a levél %-a köt”: after the intro percent is changed, a lead whose letter
 //      already went out — opened or not — gets the percent the letter quoted; a legacy send
 //      (no stamped row) gets the constant it quoted; a new send quotes and stamps the new value;
-//   ⑧ every send path that stamps prospect.sent_at also stamps the intro offer (structural).
+//   ⑧ every send path that stamps prospect.sent_at also stamps the intro offer (structural);
+//   ⑨ ADR-XXXX the HOURLY follow-up: nothing outside 8–20 Budapest (summer AND winter time, the
+//      live VPS runs in UTC); ONE mail per offer even when two runs overlap (atomic claim);
+//      an expired offer is never claimed; a failed send releases the claim.
 //
 // Reverting ensureEscalationOffer to the ESCALATION_VISIT_THRESHOLD / ESCALATION_OFFER_PERCENT
 // constants turns ① red (measured when this guard was written: 3 failures).
@@ -45,6 +48,9 @@ import {
   type EscalationConfig,
 } from "../src/payment/offers.js";
 import { markProspectSent } from "../src/console/data.js";
+import { claimFollowup, releaseFollowup } from "../src/payment/offers.js";
+import { followupWindowBlocks, sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
+import type { EmailMessage, EmailSender } from "../src/email/sender.js";
 import { renderDraft } from "../src/outreach/draft.js";
 import { loadPricing, pricingRegions, pricingSnapshot } from "../src/pricing.js";
 import { pricingPage } from "../src/console/views.js";
@@ -223,6 +229,77 @@ try {
   check("⑧ a sent_at-ot pecsételő küldési utak megvannak (≥ 4)", stampers.length >= 4, true);
   check("⑧ mindegyik a bemutatkozó %-ot is rögzíti (stampOutreachOffer)",
     stampers.filter((f) => !readFileSync(f, "utf8").includes("stampOutreachOffer(")), []);
+
+  // ⑨ the hourly follow-up.
+  overrideEscalationConfigInProcess(cfg({ followupHours: 24, offerHours: 72 }));
+  const at = (iso: string) => followupWindowBlocks(new Date(iso)) === null;
+  check("⑨ ablak nyári időben: 07:59 zárva · 08:00 nyitva · 19:59 nyitva · 20:00 zárva",
+    [at("2026-07-01T07:59:00+02:00"), at("2026-07-01T08:00:00+02:00"), at("2026-07-01T19:59:00+02:00"), at("2026-07-01T20:00:00+02:00")],
+    [false, true, true, false]);
+  check("⑨ ablak téli időben (UTC-s gépen is Budapest szerint): 07:30 zárva · 08:00 nyitva · 20:00 zárva",
+    [at("2026-12-01T07:30:00+01:00"), at("2026-12-01T08:00:00+01:00"), at("2026-12-01T20:00:00+01:00")],
+    [false, true, false]);
+
+  // A prospect the real draft path can build (lead → scrape_run → scraper_definition).
+  const joinLead = await db
+    .selectFrom("lead")
+    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+    .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+    .select("lead.id")
+    .where("scraper_definition.country", "=", "HU")
+    .limit(1)
+    .executeTakeFirstOrThrow();
+  const fp = await db
+    .insertInto("prospect")
+    .values({
+      lead_id: joinLead.id,
+      token: `esc-config-check-fu2-${process.pid}`,
+      sent_at: new Date(),
+      contact_email: `esc-config-check-${process.pid}@example.invalid`,
+    } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  made.push(fp.id);
+  const inWindow = new Date("2026-10-01T10:00:00+02:00");
+  const hoursBefore = (h: number) => new Date(inWindow.getTime() - h * 3_600_000);
+  const fo = await db.insertInto("offer").values({
+    kind: "escalation", prospect_id: fp.id, percent: 50, scope: "initial",
+    expires_at: new Date(inWindow.getTime() + 40 * 3_600_000),
+    created_at: hoursBefore(30),
+    note: "escalation-config-check",
+  } as never).returning("id").executeTakeFirstOrThrow();
+  const mine = new Set([fp.id]);
+  const sent: EmailMessage[] = [];
+  const fake: EmailSender = { send: async (m: EmailMessage) => { sent.push(m); return { id: "fake", provider: "mock" } as never; } } as EmailSender;
+  const stamp = async () => (await db.selectFrom("offer").select("followup_sent_at").where("id", "=", fo.id).executeTakeFirstOrThrow()).followup_sent_at;
+
+  const night = await sendEscalationFollowups(new Date("2026-10-01T03:00:00+02:00"), { sender: fake, onlyProspects: mine });
+  check("⑨ éjjel (03:00 Budapest): semmi nem megy ki, a futás halasztást jelez", [sent.length, !!night.deferred, await stamp()], [0, true, null]);
+
+  const [r1, r2] = await Promise.all([
+    sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine }),
+    sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine }),
+  ]);
+  const ours = sent.filter((m) => JSON.stringify(m).includes(`esc-config-check-${process.pid}@`));
+  check(`⑨ két EGYSZERRE induló futás → pontosan 1 levél erre az ajánlatra (futások: ${JSON.stringify([r1, r2])})`, ours.length, 1);
+  await sendEscalationFollowups(new Date(inWindow.getTime() + 3_600_000), { sender: fake, onlyProspects: mine });
+  check("⑨ a következő órás futás sem küldi újra", sent.filter((m) => JSON.stringify(m).includes(`esc-config-check-${process.pid}@`)).length, 1);
+  check("⑨ a foglalás bélyege az ajánlaton", (await stamp()) !== null, true);
+
+  // claim / release on a bare offer.
+  const cp = await touchedProspect("claim");
+  const mk = async (expiresInH: number) => (await db.insertInto("offer").values({
+    kind: "escalation", prospect_id: cp, percent: 50, scope: "initial",
+    expires_at: new Date(Date.now() + expiresInH * 3_600_000), note: "escalation-config-check",
+  } as never).returning("id").executeTakeFirstOrThrow()).id;
+  const live = await mk(10);
+  const t0 = new Date();
+  check("⑨ foglalás: először igen, másodszor nem", [await claimFollowup(live, t0), await claimFollowup(live, t0)], [true, false]);
+  await releaseFollowup(live, t0);
+  check("⑨ elbukott küldés után a feloldás újra foglalhatóvá teszi", await claimFollowup(live, new Date()), true);
+  await db.deleteFrom("offer").where("id", "=", live).execute();
+  const expired = await mk(-1);
+  check("⑨ lejárt ajánlat SOHA nem foglalható", await claimFollowup(expired, new Date()), false);
 } finally {
   overrideEscalationConfigInProcess(null);
   if (made.length) await db.deleteFrom("prospect").where("id", "in", made).execute();

@@ -41,9 +41,10 @@ bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése men
 
 Hogyan működik: a kiküldött levél egy bemutatkozó kedvezményt ígér, ez az első megnyitástól határidő nélkül él. Ha
 a lead a tervet a megadott számú alkalommal megnyitja, és még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat
-neki: nagyobb kedvezményt az első díjból, a megadott ideig. Ha addig sem rendel, a megadott késleltetés után, a
-következő reggeli küldéskor e-mailben is emlékeztetjük rá, ha van e-mail címe, nem iratkozott le, és az ajánlat még
-nem járt le. Egy kiküldött tervre az ajánlat egyszer jár.
+neki: nagyobb kedvezményt az első díjból, a megadott ideig. Ha addig sem rendel, a megadott késleltetés után
+e-mailben is emlékeztetjük rá, ha van e-mail címe, nem iratkozott le, és az ajánlat még nem járt le. Az emlékeztetőt
+óránként küldjük, reggel 8 és este 8 óra között: az éjjel esedékes emlékeztető reggel 8 után megy ki. Egy ajánlatra
+legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer jár.
 
 **Bemutatkozó ajánlat**
 
@@ -67,9 +68,9 @@ nem járt le. Egy kiküldött tervre az ajánlat egyszer jár.
    lead soha nem kapná meg.
 4. **„Az ajánlat érvényessége”**: egész óra 24 és 168 (7 nap) között. Alatta napban is látod (pl. „= 3 nap”).
 5. **„Emlékeztető levél a kiadás után”**: egész óra, legalább 1, és kevesebb az érvényességnél. Alatta ez áll:
-   „Utána legfeljebb még … óra marad a döntésre.” Az emlékeztetőt naponta egyszer, reggel küldjük, ezért az
-   óraszám a legkorábbi időpont. Ha utána 24 óránál kevesebb marad a lejáratig, a mező alatt az is megjelenik,
-   hogy nem minden lead kapja meg.
+   „Utána legfeljebb még … óra marad a döntésre.” Az emlékeztetőt óránként küldjük, 8 és 20 óra között, ezért a
+   levél legfeljebb egy órával a beállított idő után megy ki, éjjel pedig reggel 8-ig vár. Ha az emlékeztető után
+   legfeljebb 12 óra marad a lejáratig, a mező alatt az is megjelenik, hogy egy éjszakára eső lead nem kapja meg.
 
 **Hibák és mentés**
 
@@ -92,7 +93,7 @@ nem járt le. Egy kiküldött tervre az ajánlat egyszer jár.
   megjelenik, hány darab fut és hány százalékkal.
 - Ha a bemutatkozó kedvezményt állítod át, ott az jelenik meg, hogy a már kiküldött levelek a bennük ígért
   kedvezményt tartják.
-- Az emlékeztető késleltetése viszont a már futó ajánlatokra is hat: minden reggeli küldés a kiadás óta eltelt
+- Az emlékeztető késleltetése viszont a már futó ajánlatokra is hat: minden óránkénti küldés a kiadás óta eltelt
   időből számol. Ha az ajánlat addigra lejár, nem megy ki emlékeztető. A felület ezt is kiírja, ha a késleltetést
   átállítod.
 

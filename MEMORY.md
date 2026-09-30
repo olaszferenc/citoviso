@@ -20,8 +20,8 @@ NINCS; mező-közi szabályok (eszk. % > bemutatkozó %, kikapcsolva is; emléke
 „a levél %-a köt”:** a bemutatkozó `offer` sor eddig LUSTÁN, az első megnyitáskor született a mindenkori %-kal → most a
 4 küldési út a sikeres küldés után rögzíti (`stampOutreachOffer`, meglévő `offer` tábla), a draft a prospect %-át idézi,
 a régi (rögzítés nélküli) kiküldés a konstans 25-öt kapja. Az emlékeztető-késleltetés a futókra is hat (tulaj: rendben).
-⚠️ Az emlékeztetőt a NAPI 07:00-s billing-futás küldi → az óra csak „legkorábban”; 24 h alatti maradéknál nem mindenki
-kapja meg (a felület kimondja; óránkéntire tenni = nyitott infra-döntés). Őr: `escalation-config-check` ⑥⑦⑧.
+⮕ **2. kör:** az emlékeztető a tulaj döntésére ÓRÁNKÉNT megy (ADR-XXXX): külön `citoviso-offer-followup.timer` (prod),
+8–20 Europe/Budapest a kódban (az éles VPS UTC!), atomi foglalás → ajánlatonként egy levél; a napi billing többi lépése változatlan. Őr: `escalation-config-check` ⑥⑦⑧.
 Jegyzet: `_planning/memory/2026-09-30_lead_ajanlatok_idozites.md`.
 
 ## Párhuzamos szál (2026-09-30 — NAV Online Számla összekötés, CITO fiók) — LEZÁRVA
