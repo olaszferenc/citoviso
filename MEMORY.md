@@ -11,6 +11,12 @@ Utolsó frissítés: 2026-09-30 (🚀 **NAGY DEPLOY KÉSZ — 3 deploy egy nap a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-30 — NAV Online Számla összekötés, CITO fiók) — LEZÁRVA
+
+- Az éles 97 Ft-os próbavásárlás számlája `Számlázz error 378`-cal bukott: a CITO fiók nem volt NAV-hoz kötve. A tulaj összekötötte (technikai felhasználó: csak Számlák kezelése + lekérdezése) → **Aktív kapcsolat (számlázás)** ✅.
+- Az újra-kiállítás no-op volt: egy másik szál 08:06 UTC-kor kipurge-olta a Muschel tesztleadet a fizetéssel és a `failed` számlával együtt (mentés: `/opt/citoviso/backups/testlead-muschel-20260930-080641.json`).
+- 🔴 Nyitott: befolyt-e a 97 Ft (ha igen → kézi számla); purge-őr a számlázatlan `paid` fizetésre; konzol-jelzés `failed` számlára. Jegyzet: `_planning/memory/2026-09-30_nav_online_szamla_osszekotes.md`.
+
 ## Párhuzamos szál (2026-09-30 — DEPLOY-KOORDINÁTOR: a nagy deploy végrehajtása, `citc4db0d86`) — LEZÁRVA, 3 deploy kint
 
 - **Éles ma:** 06:39 `a1b134e6` (prod/20260930-0839; 344 commit, 0071–0080; a GATE 5 elsőre a 7 `{Art}`-os angol stringen bukott →
