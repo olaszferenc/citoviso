@@ -1433,11 +1433,11 @@ if [ -f scripts/pair-repair-check.mts ] && \
   echo "[pre-commit] pair-repair-check (ADR-0112: a törött pár magától helyreáll)…"
   npx tsx scripts/pair-repair-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX: az MMS élesről relay-en megy a dev gép modemjére (sor → pull → küldés →
+# Az MMS-relay ADR-je (decisions/*-mms-relay-a-dev-gep-modemjere-sharp.md): az MMS élesről relay-en megy a dev gép modemjére (sor → pull → küldés →
 # ack). Eldobható fixture a valódi DB-ben, MOCK modemmel — valódi MMS soha nem megy ki.
 if [ -f scripts/mms-relay-check.mts ] && \
    changed_files | grep -qE '^src/mms/|^src/outreach/sendOutreachPair\.ts$|^scripts/mms-relay|^migrations/0081_'; then
-  echo "[pre-commit] mms-relay-check (ADR-XXXX: az MMS sorból a modemre, az ack zárja a párt)…"
+  echo "[pre-commit] mms-relay-check (MMS-relay: az MMS sorból a modemre, az ack zárja a párt)…"
   npx tsx scripts/mms-relay-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
