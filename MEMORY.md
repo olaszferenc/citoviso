@@ -98,6 +98,11 @@ vásárlás → minden modul → adatfeltöltés → vendég-út → (utóélet:
 ② a modul-összegző sáv 48%-os magassága; ③ süti-sáv a bejelentkezett adminban; ④ a szoba-felvétel néma elakadása;
 ⑤ a kivezetett hírlevél-modul a kirakatban; ⑥ „Árak” modul megvéve, de a honlapon nem látszik (ADR-0059 §2 — tulajdonosi döntés).
 Nyitott mérések: szezon-naptár telefonon, programajánló mentése, második fotó-adag.
+## Lezárt szál (2026-09-27→30 — deploy-előkészítés: száraz futás + KB-őr; a deploy MÁSIK szálban ment)
+Száraz futás zöld a `42a41f36`-ra (6 additív migráció, 4 új systemd-időzítő); a tudasbazis-or FLAG-je (Áttekintés menü-térkép:
+Elérhetőség + Pénztárca hiányzott) javítva és landolva; a tulaj súlyos hibát talált → a javítás és a deploy másik szálban.
+Itt élesre semmi nem ment ki. Jegyzet: `_planning/memory/2026-09-27_deploy_elokeszites_kb_or.md`.
+
 ## Aktív szál (2026-09-27 — a mobil-kör nyitottjai: fekvő főcím · nem törő összeg · Elek-park)
 A 2026-09-26-i „Nyitva” tételek lezárva a motorban és az Elek-eszközökben (ADR-0246 + ⑤ kiegészítés: a hero kitartja a dokk/sáv magasságát). Nyitva: az FK-008b csak HIDEG parkon
 mérhető (a közös park ELEK-leadje már vásárolt → a lap „már az Öné”); a visszahűtés (`purge-test-data`) tulajdonosi döntés.
