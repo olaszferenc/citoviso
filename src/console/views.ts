@@ -68,12 +68,14 @@ import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
 import {
   ESCALATION_CONFIG_DEFAULT,
-  ESCALATION_OFFER_HOURS,
+  ESCALATION_FOLLOWUP_HOURS_MIN,
+  ESCALATION_HOURS_MAX,
+  ESCALATION_HOURS_MIN,
   ESCALATION_PERCENT_MAX,
-  ESCALATION_PERCENT_MIN,
   ESCALATION_THRESHOLD_MAX,
   ESCALATION_THRESHOLD_MIN,
-  OUTREACH_OFFER_PERCENT,
+  OUTREACH_PERCENT_MAX,
+  OUTREACH_PERCENT_MIN,
   type EscalationConfig,
 } from "../payment/offers.js";
 import { formatDay } from "../text/day.js";
@@ -936,14 +938,16 @@ export function pricingPage(
 }
 
 /**
- * ADR-0285 — „Lead-ajánlatok”: the escalation offer's operator-set threshold and
- * percent (frozen plan: assets/design-refs/console/escalation-offer-admin/, variant A).
+ * ADR-0285 + ADR-XXXX — „Lead-ajánlatok”: the intro percent and the escalation offer's
+ * operator-set threshold, percent, validity and follow-up delay (frozen plan:
+ * assets/design-refs/console/escalation-offer-admin/, variant A of both rounds).
  *
  * GLOBAL: the same fields on every region page, saved with whichever region's form
  * is submitted. The bounds come from offers.ts (the server enforces them on POST;
  * the script below only mirrors them so the operator sees the error before saving).
  * Disabled inputs are not submitted — the POST then keeps the stored numbers, so
- * switching off and on again does not lose them.
+ * switching off and on again does not lose them. The intro field is outside the
+ * switch: it belongs to the letter, not to the escalation offer.
  */
 function escalationSection(
   lang: ReturnType<typeof consoleLang>,
@@ -963,41 +967,75 @@ function escalationSection(
           list: computeMonthly(sellableModuleIds(mid.modules, disabledSales), snap.region),
         }
       : null;
+  const s = String;
   const msgs = {
-    nEmpty: T(lang, "Adj meg egy számot ({min}–{max}).", { min: String(ESCALATION_THRESHOLD_MIN), max: String(ESCALATION_THRESHOLD_MAX) }),
-    nNan: T(lang, "Egész szám kell — hányadik megnyitás ({min}–{max}).", { min: String(ESCALATION_THRESHOLD_MIN), max: String(ESCALATION_THRESHOLD_MAX) }),
-    nLow: T(lang, "Legalább {min}: az 1. megnyitás maga a levél linkje — ott még a bemutatkozó −{o}% a helyén.", { min: String(ESCALATION_THRESHOLD_MIN), o: String(OUTREACH_OFFER_PERCENT) }),
-    nHigh: T(lang, "Legfeljebb {max}: ennyi megnyitás után már nem döntés-segítés, hanem utolsó esély, amit a lead ritkán ér meg.", { max: String(ESCALATION_THRESHOLD_MAX) }),
-    pEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}).", { min: String(ESCALATION_PERCENT_MIN), max: String(ESCALATION_PERCENT_MAX) }),
-    pNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: String(ESCALATION_PERCENT_MIN), max: String(ESCALATION_PERCENT_MAX) }),
-    pLow: T(lang, "Nagyobbnak kell lennie a bemutatkozó −{o}%-nál: a kedvezmények nem adódnak össze, mindig a legnagyobb él — ennyivel az ajánlat soha nem érvényesülne.", { o: String(OUTREACH_OFFER_PERCENT) }),
-    pHigh: T(lang, "Legfeljebb {max}%: a 100% ingyenes első díj lenne, az már nem ajánlat.", { max: String(ESCALATION_PERCENT_MAX) }),
-    off: T(lang, "Kikapcsolva: nem keletkezik új döntés-segítő ajánlat. A lead a bemutatkozó −{o}%-nál marad, bárhányszor nyitja meg.", { o: String(OUTREACH_OFFER_PERCENT) }),
-    on: T(lang, "Így fut: a lead a {n}. megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára.", { n: "{n}", p: "{p}", h: String(ESCALATION_OFFER_HOURS) }),
+    oEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}).", { min: s(OUTREACH_PERCENT_MIN), max: s(OUTREACH_PERCENT_MAX) }),
+    oNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: s(OUTREACH_PERCENT_MIN), max: s(OUTREACH_PERCENT_MAX) }),
+    oLow: T(lang, "Legalább {min}%: ennél kisebb kedvezményt a levélben nem érdemes ajánlatként hirdetni.", { min: s(OUTREACH_PERCENT_MIN) }),
+    oHigh: T(lang, "Legfeljebb {max}%: fölötte a döntés-segítő ajánlatnak (legfeljebb {pmax}%) alig marad tere.", { max: s(OUTREACH_PERCENT_MAX), pmax: s(ESCALATION_PERCENT_MAX) }),
+    oCross: T(lang, "Kisebbnek kell lennie a döntés-segítő −{p}%-nál, különben az az ajánlat soha nem érvényesülne.", { p: "{p}" }),
+    oCrossOff: T(lang, "Kisebbnek kell lennie a (kikapcsolt) döntés-segítő −{p}%-nál: visszakapcsoláskor az az ajánlat soha nem érvényesülne.", { p: "{p}" }),
+    oHint: T(lang, "Példa — {tier} csomag: {list} → {price} az első hónapra.", { tier: "{tier}", list: "{list}", price: "{price}" }),
+    nEmpty: T(lang, "Adj meg egy számot ({min}–{max}).", { min: s(ESCALATION_THRESHOLD_MIN), max: s(ESCALATION_THRESHOLD_MAX) }),
+    nNan: T(lang, "Egész szám kell — hányadik megnyitás ({min}–{max}).", { min: s(ESCALATION_THRESHOLD_MIN), max: s(ESCALATION_THRESHOLD_MAX) }),
+    nLow: T(lang, "Legalább {min}: az 1. megnyitás maga a levél linkje — ott még a bemutatkozó kedvezmény a helyén.", { min: s(ESCALATION_THRESHOLD_MIN) }),
+    nHigh: T(lang, "Legfeljebb {max}: ennyi megnyitás után már nem döntés-segítés, hanem utolsó esély, amit a lead ritkán ér meg.", { max: s(ESCALATION_THRESHOLD_MAX) }),
+    pEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}).", { min: "{min}", max: s(ESCALATION_PERCENT_MAX) }),
+    pNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: "{min}", max: s(ESCALATION_PERCENT_MAX) }),
+    pLow: T(lang, "Nagyobbnak kell lennie a bemutatkozó −{o}%-nál: a kedvezmények nem adódnak össze, mindig a legnagyobb él — ennyivel az ajánlat soha nem érvényesülne.", { o: "{o}" }),
+    pHigh: T(lang, "Legfeljebb {max}%: a 100% ingyenes első díj lenne, az már nem ajánlat.", { max: s(ESCALATION_PERCENT_MAX) }),
+    hEmpty: T(lang, "Adj meg egy óraszámot ({min}–{max}).", { min: s(ESCALATION_HOURS_MIN), max: s(ESCALATION_HOURS_MAX) }),
+    hNan: T(lang, "Egész óra kell ({min}–{max}).", { min: s(ESCALATION_HOURS_MIN), max: s(ESCALATION_HOURS_MAX) }),
+    hLow: T(lang, "Legalább {min} óra: rövidebb idő alatt a lead gyakran meg sem látja az ajánlatot, nemhogy dönteni tudjon.", { min: s(ESCALATION_HOURS_MIN) }),
+    hHigh: T(lang, "Legfeljebb {max} óra (7 nap): a közeli határidő visz döntésre — messzi határidővel az ajánlat újra halasztható.", { max: s(ESCALATION_HOURS_MAX) }),
+    hCross: T(lang, "Több kell, mint az emlékeztető késleltetése ({f} óra): különben az emlékeztető lejárt ajánlatról szólna.", { f: "{f}" }),
+    hDays: T(lang, "= {d} nap", { d: "{d}" }),
+    hDaysApprox: T(lang, "≈ {d} nap", { d: "{d}" }),
+    fEmpty: T(lang, "Adj meg egy óraszámot (legalább {min}).", { min: s(ESCALATION_FOLLOWUP_HOURS_MIN) }),
+    fNan: T(lang, "Egész óra kell (legalább {min}).", { min: s(ESCALATION_FOLLOWUP_HOURS_MIN) }),
+    fLow: T(lang, "Legalább {min} óra: az emlékeztető az oldalon megjelent ajánlat UTÁN megy ki.", { min: s(ESCALATION_FOLLOWUP_HOURS_MIN) }),
+    fCross: T(lang, "Kevesebb kell, mint az ajánlat érvényessége ({h} óra): különben az emlékeztető lejárt ajánlatról szólna.", { h: "{h}" }),
+    fHint: T(lang, "Utána legfeljebb még {r} óra marad a döntésre.", { r: "{r}" }),
+    fTight: T(lang, "Az emlékeztetőt naponta egyszer, reggel küldjük: ha a késleltetés után kevesebb mint 24 óra marad a lejáratig, nem minden lead kapja meg.", {}),
+    off: T(lang, "Kikapcsolva: nem keletkezik új döntés-segítő ajánlat. A lead a levelében ígért bemutatkozó kedvezménynél marad, bárhányszor nyitja meg."),
+    on: T(lang, "Így fut: az ezután kiküldött levél −{o}% bemutatkozó kedvezményt ígér. A lead a {n}. megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára; ha legkorábban {f} óra múlva, a napi reggeli küldéskor sem vásárolt, egy emlékeztető levél megy ki ugyanerről.", { o: "{o}", n: "{n}", p: "{p}", h: "{h}", f: "{f}" }),
     example: T(lang, "Példa — {tier} csomag: {list} helyett {price} az első hónapra, utána listaáron.", { tier: "{tier}", list: "{list}", price: "{price}" }),
     bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
     sumOne: T(lang, "A mentés addig nem megy, amíg a jelölt mező hibás."),
-    sumTwo: T(lang, "A mentés addig nem megy, amíg a két jelölt mező hibás."),
-    live: T(lang, "Most {count} élő döntés-segítő ajánlat fut ({pcts}). Az a sajátját tartja a lejáratáig — a változás csak az ezután kiadott ajánlatokra hat.", { count: "{count}", pcts: "{pcts}" }),
+    sumMany: T(lang, "A mentés addig nem megy, amíg a {k} jelölt mező hibás.", { k: "{k}" }),
+    liveOut: T(lang, "A már kiküldött levelek a bennük ígért bemutatkozó kedvezményt tartják — az is, akinek a leadje még meg sem nyitotta. Az új −{o}% csak az ezután kiküldött levelekre vonatkozik.", { o: "{o}" }),
+    live: T(lang, "Most {count} élő döntés-segítő ajánlat fut ({pcts}). Az a saját kedvezményét és lejáratát tartja — a változás csak az ezután kiadott ajánlatokra hat.", { count: "{count}", pcts: "{pcts}" }),
+    liveF: T(lang, "Az emlékeztető késleltetése viszont a már futó ajánlatokra IS hat: a kiadás óta eltelt időből számol, és ha az ajánlat addigra lejár, nem megy ki emlékeztető."),
   };
   const data = {
+    oMin: OUTREACH_PERCENT_MIN,
+    oMax: OUTREACH_PERCENT_MAX,
     nMin: ESCALATION_THRESHOLD_MIN,
     nMax: ESCALATION_THRESHOLD_MAX,
-    pMin: ESCALATION_PERCENT_MIN,
     pMax: ESCALATION_PERCENT_MAX,
+    hMin: ESCALATION_HOURS_MIN,
+    hMax: ESCALATION_HOURS_MAX,
+    fMin: ESCALATION_FOLLOWUP_HOURS_MIN,
     saved: cfg,
     live: { count: live.count, pcts: live.percents.map((p) => `−${p}%`).join(", ") },
     example: example ? { tier: example.label, list: example.list, fmtList: fmtHuf(example.list) } : null,
     msgs,
   };
-  const field = (id: string, name: string, label: string, value: number, unit: string, errId: string): string =>
+  const field = (
+    id: string,
+    name: string,
+    label: string,
+    value: number,
+    unit: string,
+    opts: { gated: boolean; hint?: boolean },
+  ): string =>
     `<div class="pr-field" id="f_${id}">
       <label class="pr-field__l" for="${id}">${esc(label)}</label>
       <div class="pr-input">
-        <input id="${id}" name="${name}" inputmode="numeric" value="${esc(value)}"${cfg.enabled ? "" : " disabled"}>
+        <input id="${id}" name="${name}" inputmode="numeric" value="${esc(value)}"${opts.gated && !cfg.enabled ? " disabled" : ""}>
         <span class="pr-input__u">${esc(unit)}</span>
       </div>
-      <div class="pr-ferr" id="${errId}" role="alert"></div>
+      <div class="pr-ferr" id="e_${id}" role="alert"></div>${opts.hint ? `\n      <div class="pr-hint" id="h_${id}"></div>` : ""}
     </div>`;
   return `
         <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-esc">
@@ -1005,16 +1043,22 @@ function escalationSection(
           <p class="mut small" style="margin:2px 0 10px">${T(lang, "A kiküldött tervet megnyitó lead kedvezményei. A kedvezmények nem adódnak össze — mindig a legnagyobb él.")}
             <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
           <input type="hidden" name="esc_present" value="1">
-          <label class="pr-esc__head">
+          <div class="pr-esc__sub"><b>${T(lang, "Bemutatkozó ajánlat")}</b> <span class="mut">— ${T(lang, "a kiküldött levél ígéri, az első megnyitástól él, határidő nélkül")}</span></div>
+          <div class="con-edit-grid">
+            ${field("out_p", "out_percent", T(lang, "Bemutatkozó kedvezmény (a levéllel jár)"), cfg.outreachPercent, "%", { gated: false, hint: true })}
+          </div>
+          <label class="pr-esc__head" style="margin-top:18px">
             <span class="con-sell"><input type="checkbox" id="esc_on" name="esc_on"${cfg.enabled ? " checked" : ""}><span class="con-sell__track"></span></span>
             <b>${T(lang, "Döntés-segítő (eszkalációs) ajánlat")}</b>
           </label>
-          <div class="con-edit-grid" style="margin-top:10px">
-            ${field("esc_n", "esc_threshold", T(lang, "Hányadik megnyitásnál kapja"), cfg.threshold, T(lang, ". megnyitás"), "e_n")}
-            ${field("esc_p", "esc_percent", T(lang, "Kedvezmény az első díjból"), cfg.percent, "%", "e_p")}
-            <div class="pr-field">
-              <span class="pr-field__l">${T(lang, "Összevetésül: bemutatkozó kedvezmény")}</span>
-              <div class="pr-static">${T(lang, "−{p}% (a levéllel jár, itt nem állítható)", { p: String(OUTREACH_OFFER_PERCENT) })}</div>
+          <div class="pr-esc__gated">
+            <div class="con-edit-grid" style="margin-top:10px">
+              ${field("esc_n", "esc_threshold", T(lang, "Hányadik megnyitásnál kapja"), cfg.threshold, T(lang, ". megnyitás"), { gated: true })}
+              ${field("esc_p", "esc_percent", T(lang, "Kedvezmény az első díjból"), cfg.percent, "%", { gated: true })}
+              ${field("esc_h", "esc_hours", T(lang, "Az ajánlat érvényessége"), cfg.offerHours, T(lang, "óra"), { gated: true, hint: true })}
+            </div>
+            <div class="con-edit-grid" style="margin-top:12px">
+              ${field("esc_f", "esc_followup", T(lang, "Emlékeztető levél a kiadás után"), cfg.followupHours, T(lang, "óra múlva"), { gated: true, hint: true })}
             </div>
           </div>
           <div class="pr-esc__preview" id="esc_preview"></div>
@@ -1041,14 +1085,16 @@ const ESCALATION_SECTION_JS = `(function(){
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); return; }
   init();
   function init(){
-  var D = JSON.parse(document.getElementById("esc_data").textContent), M = D.msgs;
+  var D = JSON.parse(document.getElementById("esc_data").textContent), M = D.msgs, S = D.saved;
   var sec = document.getElementById("pr-esc"), form = sec.closest("form");
-  var on = document.getElementById("esc_on"), nIn = document.getElementById("esc_n"), pIn = document.getElementById("esc_p");
-  var fN = document.getElementById("f_esc_n"), fP = document.getElementById("f_esc_p");
-  var eN = document.getElementById("e_n"), eP = document.getElementById("e_p");
+  var on = document.getElementById("esc_on");
+  var IN = {o: "out_p", n: "esc_n", p: "esc_p", h: "esc_h", f: "esc_f"};
+  Object.keys(IN).forEach(function(k){ IN[k] = document.getElementById(IN[k]); });
+  var GATED = ["n", "p", "h", "f"];
   var prev = document.getElementById("esc_preview"), live = document.getElementById("esc_live");
   var btn = form.querySelector("button[type=submit]"), sum = null;
   if (btn) { sum = document.createElement("span"); sum.className = "pr-esc__sum"; sum.setAttribute("role", "alert"); btn.parentNode.appendChild(sum); }
+  function $(id){ return document.getElementById(id); }
   function fill(t, v){ return t.replace(/\\{(\\w+)\\}/g, function(_, k){ return v[k] != null ? v[k] : "{" + k + "}"; }); }
   // The ONE money rule (cit-money.js, embedded with this script), with no-break
   // spaces: a preview sentence must not wrap an amount into "7" / "240 Ft".
@@ -1057,34 +1103,66 @@ const ESCALATION_SECTION_JS = `(function(){
   function norm(v){ return String(v).trim().replace(/\\s+/g, "").replace(/%$/, "").replace(",", "."); }
   function num(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\\d+(\\.\\d+)?$/.test(s)) return {err:"nan"};
     var x = Number(s); if (x !== Math.floor(x)) return {err:"nan"}; return {v:x}; }
-  function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (r.v > hi) return m[3]; return ""; }
+  function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (hi != null && r.v > hi) return m[3]; return ""; }
+  function price(p){ return D.example ? fmt(Math.floor(D.example.list * (100 - p) / 100)) : ""; }
   function render(){
     var en = on.checked;
-    nIn.disabled = !en; pIn.disabled = !en; sec.classList.toggle("is-off", !en);
-    var rn = num(nIn.value), rp = num(pIn.value);
-    var a = en ? chk(rn, D.nMin, D.nMax, [M.nEmpty, M.nNan, M.nLow, M.nHigh]) : "";
-    var b = en ? chk(rp, D.pMin, D.pMax, [M.pEmpty, M.pNan, M.pLow, M.pHigh]) : "";
-    fN.classList.toggle("err", !!a); eN.textContent = a;
-    fP.classList.toggle("err", !!b); eP.textContent = b;
-    var bad = (a ? 1 : 0) + (b ? 1 : 0);
+    GATED.forEach(function(k){ IN[k].disabled = !en; }); sec.classList.toggle("is-off", !en);
+    var r = {}; Object.keys(IN).forEach(function(k){ r[k] = num(IN[k].value); });
+    var e = {};
+    e.o = chk(r.o, D.oMin, D.oMax, [M.oEmpty, M.oNan, M.oLow, M.oHigh]);
+    var oV = e.o ? S.outreachPercent : r.o.v, pMin = oV + 1;
+    // Disabled fields are not submitted: the stored numbers stand for them.
+    var pV = en ? r.p : {v: S.percent};
+    if (en) {
+      e.n = chk(r.n, D.nMin, D.nMax, [M.nEmpty, M.nNan, M.nLow, M.nHigh]);
+      e.p = chk(r.p, 1, D.pMax, [fill(M.pEmpty, {min: pMin}), fill(M.pNan, {min: pMin}), fill(M.pLow, {o: oV}), M.pHigh]);
+      e.h = chk(r.h, D.hMin, D.hMax, [M.hEmpty, M.hNan, M.hLow, M.hHigh]);
+      e.f = chk(r.f, D.fMin, null, [M.fEmpty, M.fNan, M.fLow, ""]);
+    }
+    // Cross ①: escalation % > intro % — also while switched off (its kept number counts).
+    if (!e.o && !e.p && !pV.err && pV.v <= r.o.v) {
+      if (en) e.p = fill(M.pLow, {o: r.o.v});
+      e.o = fill(en ? M.oCross : M.oCrossOff, {p: pV.v});
+    }
+    // Cross ②: follow-up delay < validity.
+    if (en && !e.h && !e.f && r.f.v >= r.h.v) { e.f = fill(M.fCross, {h: r.h.v}); e.h = fill(M.hCross, {f: r.f.v}); }
+    var bad = 0;
+    Object.keys(IN).forEach(function(k){
+      var id = IN[k].id; $("f_" + id).classList.toggle("err", !!e[k]); $("e_" + id).textContent = e[k] || ""; if (e[k]) bad++;
+    });
     if (btn) btn.disabled = bad > 0;
-    if (sum) sum.textContent = bad === 1 ? M.sumOne : bad === 2 ? M.sumTwo : "";
+    if (sum) sum.textContent = bad === 1 ? M.sumOne : bad > 1 ? fill(M.sumMany, {k: bad}) : "";
+    function ok(k){ return !e[k] && !r[k].err; }
+    $("h_out_p").textContent = ok("o") && D.example ? fill(M.oHint, {tier: D.example.tier, list: nb(D.example.fmtList), price: price(r.o.v)}) : "";
+    $("h_esc_h").textContent = en && ok("h") ? (r.h.v % 24 === 0 ? fill(M.hDays, {d: r.h.v / 24}) : fill(M.hDaysApprox, {d: String(Math.round(r.h.v / 2.4) / 10).replace(".", ",")})) : "";
+    var rem = en && ok("h") && ok("f") ? r.h.v - r.f.v : null;
+    $("h_esc_f").textContent = rem == null ? "" : fill(M.fHint, {r: rem}) + (rem < 24 ? " " + M.fTight : "");
     if (!en) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.off; }
     else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
     else {
       prev.className = "pr-esc__preview";
-      var t = fill(M.on, {n: rn.v, p: rp.v});
-      if (D.example) t += " " + fill(M.example, {tier: D.example.tier, list: nb(D.example.fmtList),
-        price: fmt(Math.floor(D.example.list * (100 - rp.v) / 100))});
+      var t = fill(M.on, {o: r.o.v, n: r.n.v, p: r.p.v, h: r.h.v, f: r.f.v});
+      if (D.example) t += " " + fill(M.example, {tier: D.example.tier, list: nb(D.example.fmtList), price: price(r.p.v)});
       prev.textContent = t;
     }
-    var changed = en !== D.saved.enabled || (en && !bad && (rn.v !== D.saved.threshold || rp.v !== D.saved.percent));
-    live.hidden = !(D.live.count > 0 && changed);
-    live.textContent = fill(M.live, {count: D.live.count, pcts: D.live.pcts});
+    // What a save does to promises already made — only for the values that changed.
+    var lines = [];
+    if (ok("o") && r.o.v !== S.outreachPercent) lines.push(fill(M.liveOut, {o: r.o.v}));
+    var escChanged = en !== S.enabled || (en && ["n", "p", "h"].some(function(k){
+      return ok(k) && r[k].v !== S[{n: "threshold", p: "percent", h: "offerHours"}[k]]; }));
+    if (D.live.count > 0 && escChanged) lines.push(fill(M.live, {count: D.live.count, pcts: D.live.pcts}));
+    if (D.live.count > 0 && en && ok("f") && r.f.v !== S.followupHours) lines.push(M.liveF);
+    live.hidden = lines.length === 0;
+    live.textContent = "";
+    lines.forEach(function(l){ var p = document.createElement("p"); p.textContent = l; live.appendChild(p); });
   }
-  function tidy(el){ var r = num(el.value); if (!r.err) el.value = r.v; render(); }
-  [on, nIn, pIn].forEach(function(el){ el.addEventListener("input", render); el.addEventListener("change", render); });
-  nIn.addEventListener("blur", function(){ tidy(nIn); }); pIn.addEventListener("blur", function(){ tidy(pIn); });
+  function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
+  on.addEventListener("change", render);
+  Object.keys(IN).forEach(function(k){
+    IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
+    IN[k].addEventListener("blur", function(){ tidy(IN[k]); });
+  });
   render();
   }
 })();`;

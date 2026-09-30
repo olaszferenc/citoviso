@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-lead-ajanlatok-idozites-es-bemutatkozo-allithato.md) — A lead-ajánlatok időzítése és a bemutatkozó kedvezmény a /pricing-on állítható; a levél %-a köt (2026-09-30)
 - [ADR-0285](decisions/0285-az-eszkalacios-ajanlat-kuszobe-es-kedvezmenye-a.md) — Az eszkalációs ajánlat küszöbe és kedvezménye a /pricing-on állítható (2026-09-30)
 - [ADR-0284](decisions/0284-a-hos-cim-merete-a-szoveg-hosszatol-es-a.md) — A hős-cím mérete a SZÖVEG HOSSZÁTÓL és a nézetablak MAGASSÁGÁTÓL is függ, egy közös szabállyal (2026-09-30)
 - [ADR-0283](decisions/0283-a-bukott-szamla-riaszt-es-ujrakibocsathato-2026.md) — A bukott számla riaszt és újrakibocsátható (2026-09-30)

@@ -22,7 +22,8 @@
 // a handled inbox — the opt-out route is the link. Revisit with a dedicated
 // number + inbound handling before volume outreach.
 
-import { buildDraftForProspect } from "./draft.js";
+import { buildDraftForProspect, draftOfferPercent } from "./draft.js";
+import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachSms } from "./outreachCheck.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import {
@@ -331,6 +332,9 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
     return no("az SMS küldése nem sikerült (modem/relay hiba) — a szerver-log mondja meg, miért; újra próbálható");
   }
 
+  // ADR-XXXX: the intro percent binds from the first message on (the SMS quotes none,
+  // but a later mail to this lead must quote — and honour — the same one).
+  await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
   // First-touch stamp (H1 funnel base) — only if no channel got there first (ADR-0082).
   await db
     .updateTable("prospect")

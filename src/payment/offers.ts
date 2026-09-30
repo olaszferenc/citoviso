@@ -19,16 +19,20 @@ import { db } from "../db/client.js";
 import { couponRule } from "./couponRule.js";
 
 // ── Tunable parameters (ADR-0088: percentages/deadlines are parameters, not law).
-export const OUTREACH_OFFER_PERCENT = 25;
 /**
- * ADR-0285: DEFAULT/SEED only. The live threshold and percent are operator-set on
- * /pricing (app_setting 'escalation_offer') and read via getEscalationConfig() —
- * minting code must never use these two constants directly.
+ * ADR-0285 + ADR-XXXX: DEFAULT/SEED only. The live values are operator-set on /pricing
+ * (app_setting 'escalation_offer') and read via getEscalationConfig() — minting,
+ * drafting and scheduling code must never use these constants directly.
+ *
+ * OUTREACH_OFFER_PERCENT has ONE more, deliberate use: the percent of a letter sent
+ * BEFORE the send paths stamped their offer (ADR-XXXX). Every such letter quoted this
+ * constant, so that is what binds for its lead (see legacyOutreachPercent).
  */
+export const OUTREACH_OFFER_PERCENT = 25;
 export const ESCALATION_OFFER_PERCENT = 50;
 export const ESCALATION_VISIT_THRESHOLD = 3;
 export const ESCALATION_OFFER_HOURS = 72;
-/** §4b: the follow-up mail goes this long after the on-page offer appeared. */
+/** §4b: the follow-up mail goes at the earliest this long after the on-page offer appeared. */
 export const ESCALATION_FOLLOWUP_HOURS = 24;
 export const NEW_SUBSCRIBER_COUPON_PERCENT = 25;
 export const NEW_SUBSCRIBER_COUPON_DAYS = 90;
@@ -41,16 +45,17 @@ export const NEW_SUBSCRIBER_COUPON_DAYS = 90;
 
 const ESCALATION_SETTING_KEY = "escalation_offer";
 
-/** Owner-approved bounds (2026-09-30). */
+/** Owner-approved bounds (2026-09-30; hours and the intro percent: ADR-XXXX). */
 export const ESCALATION_THRESHOLD_MIN = 2;
 export const ESCALATION_THRESHOLD_MAX = 10;
-/**
- * Discounts never stack — the single largest wins. At or below the outreach
- * percent the escalation offer could never win, so the floor is derived from it
- * (not a literal: if the outreach percent moves, the floor moves with it).
- */
-export const ESCALATION_PERCENT_MIN = OUTREACH_OFFER_PERCENT + 1;
 export const ESCALATION_PERCENT_MAX = 90;
+export const ESCALATION_HOURS_MIN = 24;
+export const ESCALATION_HOURS_MAX = 168;
+export const ESCALATION_FOLLOWUP_HOURS_MIN = 1;
+export const OUTREACH_PERCENT_MIN = 5;
+export const OUTREACH_PERCENT_MAX = 50;
+// The escalation percent has no fixed floor any more: it must exceed the (now
+// operator-set) intro percent — a cross-field rule in escalationConfigErrors.
 
 export interface EscalationConfig {
   /** Off = no NEW escalation offer is minted; live ones run to their expiry. */
@@ -58,39 +63,72 @@ export interface EscalationConfig {
   /** The mock_view count (nth opening of the tracked link) that mints the offer. */
   readonly threshold: number;
   readonly percent: number;
+  /** How long a minted escalation offer runs (stamped into offer.expires_at). */
+  readonly offerHours: number;
+  /**
+   * The follow-up mail's EARLIEST time after minting. Read at every tick, so a change
+   * applies to offers already running too (owner ruling, ADR-XXXX).
+   */
+  readonly followupHours: number;
+  /** The intro percent a NEW outreach letter quotes (stamped at send, ADR-XXXX). */
+  readonly outreachPercent: number;
 }
 
 export const ESCALATION_CONFIG_DEFAULT: EscalationConfig = {
   enabled: true,
   threshold: ESCALATION_VISIT_THRESHOLD,
   percent: ESCALATION_OFFER_PERCENT,
+  offerHours: ESCALATION_OFFER_HOURS,
+  followupHours: ESCALATION_FOLLOWUP_HOURS,
+  outreachPercent: OUTREACH_OFFER_PERCENT,
 };
 
-export type EscalationFieldError = "threshold" | "percent";
+export type EscalationFieldError =
+  | "threshold"
+  | "percent"
+  | "offerHours"
+  | "followupHours"
+  | "outreachPercent";
 
 /**
  * The ONE validity rule — used by the POST handler, by the reader (a stored row
  * that fails it is not trusted) and mirrored by the /pricing page script.
  * Returns the offending fields; empty = valid.
+ *
+ * Every field is checked whatever `enabled` says: a switched-off section keeps its
+ * numbers, and switching it back on must not revive an offer that could never win.
+ * The two cross-field rules only run between individually valid values, and mark
+ * BOTH fields (either one may be the one to change):
+ * - escalation percent > intro percent — discounts never stack, the single largest
+ *   wins, so at or below the intro percent the escalation offer could never win;
+ * - follow-up delay < offer validity — otherwise the reminder would carry an
+ *   expired offer.
  */
 export function escalationConfigErrors(c: {
   threshold: number;
   percent: number;
+  offerHours: number;
+  followupHours: number;
+  outreachPercent: number;
 }): EscalationFieldError[] {
-  const errs: EscalationFieldError[] = [];
-  if (
-    !Number.isInteger(c.threshold) ||
-    c.threshold < ESCALATION_THRESHOLD_MIN ||
-    c.threshold > ESCALATION_THRESHOLD_MAX
-  )
-    errs.push("threshold");
-  if (
-    !Number.isInteger(c.percent) ||
-    c.percent < ESCALATION_PERCENT_MIN ||
-    c.percent > ESCALATION_PERCENT_MAX
-  )
-    errs.push("percent");
-  return errs;
+  const bad = (v: number, lo: number, hi: number): boolean =>
+    !Number.isInteger(v) || v < lo || v > hi;
+  const errs = new Set<EscalationFieldError>();
+  if (bad(c.threshold, ESCALATION_THRESHOLD_MIN, ESCALATION_THRESHOLD_MAX)) errs.add("threshold");
+  if (bad(c.percent, 1, ESCALATION_PERCENT_MAX)) errs.add("percent");
+  if (bad(c.offerHours, ESCALATION_HOURS_MIN, ESCALATION_HOURS_MAX)) errs.add("offerHours");
+  if (bad(c.followupHours, ESCALATION_FOLLOWUP_HOURS_MIN, Number.MAX_SAFE_INTEGER)) errs.add("followupHours");
+  if (bad(c.outreachPercent, OUTREACH_PERCENT_MIN, OUTREACH_PERCENT_MAX)) errs.add("outreachPercent");
+  if (!errs.has("percent") && !errs.has("outreachPercent") && c.percent <= c.outreachPercent) {
+    errs.add("percent");
+    errs.add("outreachPercent");
+  }
+  if (!errs.has("offerHours") && !errs.has("followupHours") && c.followupHours >= c.offerHours) {
+    errs.add("followupHours");
+    errs.add("offerHours");
+  }
+  const order: EscalationFieldError[] = ["threshold", "percent", "offerHours", "followupHours", "outreachPercent"];
+  return order.filter((f) => errs.has(f));
 }
 
 /**
@@ -105,22 +143,39 @@ export function overrideEscalationConfigInProcess(c: EscalationConfig | null): v
   escalationOverride = c;
 }
 
+/**
+ * The stored row → config. A MISSING key takes its default (a row written before
+ * ADR-XXXX carries only enabled/threshold/percent and stays valid as it is); a row
+ * that is corrupt or fails the rule as a whole gives null — the caller falls back to
+ * the full default, so a broken row cannot mint an offer nobody set.
+ */
+export function parseEscalationSetting(raw: string): EscalationConfig | null {
+  try {
+    const v = JSON.parse(raw) as Partial<Record<keyof EscalationConfig, unknown>> | null;
+    if (!v || typeof v !== "object") return null;
+    const d = ESCALATION_CONFIG_DEFAULT;
+    const n = (x: unknown, fallback: number): number => (x === undefined ? fallback : Number(x));
+    const c: EscalationConfig = {
+      enabled: v.enabled !== false,
+      threshold: n(v.threshold, d.threshold),
+      percent: n(v.percent, d.percent),
+      offerHours: n(v.offerHours, d.offerHours),
+      followupHours: n(v.followupHours, d.followupHours),
+      outreachPercent: n(v.outreachPercent, d.outreachPercent),
+    };
+    return escalationConfigErrors(c).length === 0 ? c : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The live escalation parameters: the stored row, else the default/seed. */
 export async function getEscalationConfig(): Promise<EscalationConfig> {
   if (escalationOverride) return escalationOverride;
   const raw = await getSetting(ESCALATION_SETTING_KEY);
   if (raw === null) return ESCALATION_CONFIG_DEFAULT;
-  try {
-    const v = JSON.parse(raw) as Partial<Record<keyof EscalationConfig, unknown>>;
-    const c: EscalationConfig = {
-      enabled: v.enabled !== false,
-      threshold: Number(v.threshold),
-      percent: Number(v.percent),
-    };
-    if (escalationConfigErrors(c).length === 0) return c;
-  } catch {
-    // fall through — a corrupt row must not mint an offer nobody set
-  }
+  const c = parseEscalationSetting(raw);
+  if (c) return c;
   console.warn(`[offer] app_setting '${ESCALATION_SETTING_KEY}' érvénytelen — az alapértéket használom`); // i18n-exempt: operátori napló
   return ESCALATION_CONFIG_DEFAULT;
 }
@@ -131,7 +186,14 @@ export async function setEscalationConfig(c: EscalationConfig): Promise<void> {
   if (errs.length) throw new Error(`invalid escalation config: ${errs.join(", ")}`);
   await setSetting(
     ESCALATION_SETTING_KEY,
-    JSON.stringify({ enabled: c.enabled, threshold: c.threshold, percent: c.percent }),
+    JSON.stringify({
+      enabled: c.enabled,
+      threshold: c.threshold,
+      percent: c.percent,
+      offerHours: c.offerHours,
+      followupHours: c.followupHours,
+      outreachPercent: c.outreachPercent,
+    }),
   );
 }
 
@@ -143,7 +205,8 @@ export async function setEscalationConfig(c: EscalationConfig): Promise<void> {
  *   must leave the stored config alone, not reset it (ADR-0128: a save must not drop
  *   fields it did not show).
  * - Disabled inputs are not submitted, so a switched-off section keeps the STORED
- *   numbers — switching off and on again loses nothing.
+ *   numbers — switching off and on again loses nothing. The intro percent is never
+ *   disabled (it is not part of the switchable offer); missing, it stays as stored.
  * - Normalised like the page script: spaces, a trailing "%", decimal comma; a
  *   fraction or junk becomes NaN, which the validator rejects.
  */
@@ -162,6 +225,9 @@ export function escalationFromForm(
     enabled: form.get("esc_on") === "on",
     threshold: intOf("esc_threshold", current.threshold),
     percent: intOf("esc_percent", current.percent),
+    offerHours: intOf("esc_hours", current.offerHours),
+    followupHours: intOf("esc_followup", current.followupHours),
+    outreachPercent: intOf("out_percent", current.outreachPercent),
   };
 }
 
@@ -269,9 +335,69 @@ export async function bestActiveCouponForTenant(
   return row ? toActive(row) : null;
 }
 
+// ── ADR-XXXX: THE LETTER'S PERCENT BINDS. The intro percent is operator-set, so the
+// offer row can no longer be minted lazily at the first visit with "the current
+// value": a lead who got −25% in the letter and opens it after the operator set 20
+// would get 20. Every send path stamps the percent its message quoted, right after
+// the send succeeded (stampOutreachOffer); the (prospect_id, kind) unique index
+// keeps the FIRST stamp, so a later message to the same prospect cannot rewrite it,
+// and the draft quotes the stamped value (outreachPercentForProspect).
+
+/**
+ * The percent a letter sent before ADR-XXXX promised. Those send paths stamped no
+ * offer row, and every one of them quoted the constant — so a prospect with sent_at
+ * but no outreach row is owed exactly this, whatever the setting says today.
+ */
+export function legacyOutreachPercent(): number {
+  return OUTREACH_OFFER_PERCENT;
+}
+
+/**
+ * Stamp the intro offer at the percent the outgoing message quoted. Call AFTER the
+ * send succeeded (a failed send promised nothing). First stamp wins (unique index).
+ */
+export async function stampOutreachOffer(prospectId: string, percent: number): Promise<void> {
+  await db
+    .insertInto("offer")
+    .values({
+      kind: "outreach",
+      prospect_id: prospectId,
+      percent,
+      scope: "initial",
+      note: "ADR-0088 §3 / ADR-XXXX: outreach intro offer, stamped at send",
+    })
+    .onConflict((oc) => oc.doNothing())
+    .execute();
+}
+
+/**
+ * The intro percent a message to this prospect must quote: what an earlier message
+ * already promised (the stamped row, or the legacy constant for a pre-ADR-XXXX send),
+ * else the operator-set value for a first contact.
+ */
+export async function outreachPercentForProspect(prospectId: string): Promise<number> {
+  const row = await db
+    .selectFrom("offer")
+    .select("percent")
+    .where("prospect_id", "=", prospectId)
+    .where("kind", "=", "outreach")
+    .executeTakeFirst();
+  if (row) return row.percent;
+  const p = await db
+    .selectFrom("prospect")
+    .select("sent_at")
+    .where("id", "=", prospectId)
+    .executeTakeFirst();
+  if (p?.sent_at) return legacyOutreachPercent();
+  return (await getEscalationConfig()).outreachPercent;
+}
+
 /**
  * Intro offer from the outreach entitlement (see header). Idempotent by the
  * partial unique index; a prospect never touched by outreach gets nothing.
+ *
+ * Since ADR-XXXX this only materialises a LEGACY send (sent_at set, no stamped row):
+ * the letter quoted the constant, so the constant binds — never the current setting.
  */
 export async function ensureOutreachOffer(prospectId: string): Promise<void> {
   const p = await db
@@ -285,9 +411,9 @@ export async function ensureOutreachOffer(prospectId: string): Promise<void> {
     .values({
       kind: "outreach",
       prospect_id: prospectId,
-      percent: OUTREACH_OFFER_PERCENT,
+      percent: legacyOutreachPercent(),
       scope: "initial",
-      note: "ADR-0088 §3: outreach intro offer (auto)",
+      note: "ADR-0088 §3: outreach intro offer (auto, legacy send)",
     })
     .onConflict((oc) => oc.doNothing())
     .execute();
@@ -334,7 +460,7 @@ export async function ensureEscalationOffer(
   if (Number(views?.n ?? 0) < cfg.threshold) return null;
   if (await prospectHasPaidOrder(prospectId)) return null;
 
-  const expiresAt = new Date(Date.now() + ESCALATION_OFFER_HOURS * 3_600_000);
+  const expiresAt = new Date(Date.now() + cfg.offerHours * 3_600_000);
   const created = await db
     .insertInto("offer")
     .values({
@@ -434,6 +560,9 @@ export interface EscalationFollowupDue {
 export async function escalationFollowupsDue(
   now: Date = new Date(),
 ): Promise<EscalationFollowupDue[]> {
+  // Read at every tick → a changed delay applies to offers already running too
+  // (owner ruling, ADR-XXXX). The offer's own expires_at is never touched.
+  const { followupHours } = await getEscalationConfig();
   const rows = await db
     .selectFrom("offer")
     .select(["id", "prospect_id", "percent", "expires_at", "created_at"])
@@ -443,7 +572,7 @@ export async function escalationFollowupsDue(
     .where(
       "created_at",
       "<",
-      new Date(now.getTime() - ESCALATION_FOLLOWUP_HOURS * 3_600_000) as unknown as never,
+      new Date(now.getTime() - followupHours * 3_600_000) as unknown as never,
     )
     .whereRef("used_count", "<", "max_uses")
     .execute();

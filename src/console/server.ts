@@ -1533,14 +1533,14 @@ async function handle(
       if (t.priceId === "multilang") continue; // az Alap a katalógus-sorral azonos
       modulePrices[t.priceId] = num(`m_${t.priceId}`, snap.modulePrices.get(t.priceId) ?? t.priceDefault);
     }
-    // ADR-0285: the GLOBAL escalation-offer parameters ride on every region's form.
+    // ADR-0285 / ADR-XXXX: the GLOBAL lead-offer parameters ride on every region's form.
     // Validated BEFORE anything is written — a refused value must not leave half a save.
     const escalation = escalationFromForm(form, await getEscalationConfig());
     if (escalation && escalationConfigErrors(escalation).length) {
       return redirect(
         res,
         `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
-          "hiba:Nem mentettem: a döntés-segítő ajánlat küszöbe vagy kedvezménye a megengedett tartományon kívül esik.",
+          "hiba:Nem mentettem: a Lead-ajánlatok egyik mezője a megengedett tartományon kívül esik, vagy ütközik egy másikkal.",
         )}`,
       );
     }

@@ -8,7 +8,8 @@
 // sending domain). Default cap + inter-send delay are deliberately conservative;
 // the operator raises them consciously per run, not by default.
 
-import { buildDraftForProspect } from "./draft.js";
+import { buildDraftForProspect, draftOfferPercent } from "./draft.js";
+import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
@@ -628,6 +629,8 @@ export async function sendOutreachMail(
 
   try {
     const result = await getEmailSender().send(msg);
+    // ADR-XXXX: the letter's percent binds — stamped once it is out, not at the first visit.
+    await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
     return { ...base, outcome: { kind: "sent", emailId: result.id, provider: result.provider } };
   } catch (e) {
     // Send failed after the claim → best-effort revert so a later run retries: clear the

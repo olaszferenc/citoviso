@@ -1251,7 +1251,7 @@ if [ -f scripts/offer-selftest.ts ] && \
   npx tsx scripts/offer-selftest.ts >"$GATE_LOG" || gate_failed
 fi
 if [ -f scripts/escalation-config-check.mts ] && \
-   changed_files | grep -qE '^(src/payment/offers\.ts|src/console/(views|server)\.ts|scripts/escalation-config-check\.mts)$'; then
+   changed_files | grep -qE '^(src/payment/offers\.ts|src/console/(views|server|data)\.ts|src/outreach/(draft|sendBatch|sendOutreachSms|sendOutreachPair|escalationFollowup)\.ts|scripts/escalation-config-check\.mts)$'; then
   echo "[pre-commit] escalation-config-check (a /pricing-on állított küszöb és % tényleg a mintázott ajánlatba jut)…"
   npx tsx scripts/escalation-config-check.mts >"$GATE_LOG" || gate_failed
 fi

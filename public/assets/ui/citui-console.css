@@ -2485,7 +2485,13 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    the fields reuse .pr-field/.pr-input; only the error state, the preview and the
    live-offer notice are new. */
 .pr-esc__head { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
-.pr-esc.is-off .pr-input { opacity: 0.45; }
+.pr-esc.is-off .pr-esc__gated .pr-input { opacity: 0.45; }
+/* ADR-XXXX: the intro field sits OUTSIDE the switch, so only the gated block dims. */
+.pr-esc__sub { margin: 4px 0 8px; font-size: 13px; }
+.pr-esc__sub .mut { font-size: 12px; }
+.pr-hint { margin-top: 4px; font-size: 11.5px; color: var(--citui-muted); }
+.pr-hint:empty, .pr-field.err .pr-hint { display: none; }
+.pr-esc__live p { margin: 4px 0; }
 .pr-field.err .pr-input { border-color: var(--citui-bad); }
 .pr-field.err .pr-input__u { color: var(--citui-bad-ink); }
 .pr-ferr { margin-top: 4px; font-size: 11.5px; color: var(--citui-bad-ink); }

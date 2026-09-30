@@ -32,38 +32,65 @@ régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globá
 - **Saját domain** — a rajtunk keresztül intézett egyedi domain havi díja.
 - **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
 
-## Lead-ajánlatok — a döntés-segítő ajánlat
+## Lead-ajánlatok — a bemutatkozó és a döntés-segítő ajánlat
 
-A **„Lead-ajánlatok”** szekció az „Alap-előfizetés” blokk alatt, az „Egyedi domain — feltételek” előtt van. Itt állítod be, mikor és mekkora
-plusz kedvezményt kap az a lead, aki többször is megnyitja a neki küldött tervet, de még nem
-rendelt. Ez a beállítás **„minden piacra érvényes”**: bármelyik régió oldalán ugyanazt látod, és
-bármelyik régió mentése menti.
+A **„Lead-ajánlatok”** szekció az „Alap-előfizetés” blokk alatt, az „Egyedi domain — feltételek” előtt van. Itt állítod be,
+mekkora kedvezményt ígér a kiküldött levél, és mikor, mekkora, meddig érvényes plusz kedvezményt kap az a lead,
+aki többször is megnyitja a neki küldött tervet, de még nem rendelt. Ez a beállítás **„minden piacra érvényes”**:
+bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése menti.
 
-Hogyan működik: a kiküldött levéllel a lead egy bemutatkozó kedvezményt kap (−25%, ezt itt nem
-állítod, csak összevetésül látod). Ha a lead a tervet a megadott számú alkalommal megnyitja, és
-még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat neki: nagyobb kedvezményt az első díjból,
-72 óráig. Ha addig sem rendel, legkorábban egy nappal később, még a lejárat előtt e-mailben is
-emlékeztetjük rá, ha van e-mail címe, és nem iratkozott le. Egy kiküldött tervre az ajánlat egyszer jár.
+Hogyan működik: a kiküldött levél egy bemutatkozó kedvezményt ígér, ez az első megnyitástól határidő nélkül él. Ha
+a lead a tervet a megadott számú alkalommal megnyitja, és még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat
+neki: nagyobb kedvezményt az első díjból, a megadott ideig. Ha addig sem rendel, a megadott késleltetés után, a
+következő reggeli küldéskor e-mailben is emlékeztetjük rá, ha van e-mail címe, nem iratkozott le, és az ajánlat még
+nem járt le. Egy kiküldött tervre az ajánlat egyszer jár.
 
-1. A **„Döntés-segítő (eszkalációs) ajánlat”** kapcsolóval kapcsolod be vagy ki. Kikapcsolva
-   egyetlen leadnek sem születik új ajánlat; a legutóbb mentett számok megmaradnak, visszakapcsoláskor
-   nem kell újra beírnod őket.
-2. **„Hányadik megnyitásnál kapja”** — egész szám 2 és 10 között. Az első megnyitás maga a levél
-   linkje, ott még a bemutatkozó kedvezmény a helyén, ezért legalább 2.
-3. **„Kedvezmény az első díjból”** — egész százalék 26 és 90 között. A kedvezmények nem adódnak
-   össze, mindig a legnagyobb érvényes: ha 25% vagy kevesebb lenne, a lead soha nem kapná meg.
-4. A mezők alatti keretes mondat előre megmutatja, mit fog tenni a beállításod, a Magyarország
-   oldalon egy valós csomagár-példával.
-5. Ha valamelyik vagy mindkét mező üres, nem egész szám, vagy a tartományon kívül esik, a hibás
-   mező pirosan keretezett, alatta ott az ok, és az **„Árazás mentése”** gomb addig nem nyomható
-   meg. A gomb a lap alján van, mellette ez áll: „A mentés addig nem megy, amíg a jelölt mező
-   hibás.” — ha mindkét mező hibás: „A mentés addig nem megy, amíg a két jelölt mező hibás.” A
-   javítandó mezőt a piros keret mutatja fent, a „Lead-ajánlatok” szekcióban — telefonon oda
-   vissza kell görgetned.
+**Bemutatkozó ajánlat**
 
-A már kiadott ajánlatok megtartják a saját kedvezményüket a lejáratukig: a változtatás csak az
-ezután születő ajánlatokra hat. Ha átállítasz valamit, miközben ilyen ajánlatok futnak, a mezők
-alatt megjelenik, hány darab fut és hány százalékkal.
+1. **„Bemutatkozó kedvezmény (a levéllel jár)”**: egész százalék 5 és 50 között. Ezt a százalékot írja bele a
+   levél az ajánlatba. Kisebbnek kell lennie a döntés-segítő kedvezménynél. A mező alatt a Magyarország oldalon egy
+   példa mutatja, mennyi lesz a középső csomag első havi díja.
+2. A levél %-a köt: a kiküldéskor a rendszer rögzíti, hány százalékot ígért a levél. Ha később átállítod, a már
+   kiküldött levelek leadjei a levelükben ígért kedvezményt kapják, akkor is, ha még meg sem nyitották. Az új érték
+   csak az ezután kiküldött levelekre vonatkozik. Ha ugyanannak a leadnek később újabb levél megy, az is az első
+   levél százalékát idézi.
+
+**Döntés-segítő (eszkalációs) ajánlat**
+
+1. A **„Döntés-segítő (eszkalációs) ajánlat”** kapcsolóval kapcsolod be vagy ki. Kikapcsolva egyetlen leadnek sem
+   születik új ajánlat, a négy mező tiltott, a legutóbb mentett számok megmaradnak, visszakapcsoláskor nem kell újra
+   beírnod őket. A bemutatkozó kedvezményt a kapcsoló nem érinti.
+2. **„Hányadik megnyitásnál kapja”**: egész szám 2 és 10 között. Az első megnyitás maga a levél linkje, ott még a
+   bemutatkozó kedvezmény a helyén, ezért legalább 2.
+3. **„Kedvezmény az első díjból”**: egész százalék, nagyobb a bemutatkozó kedvezménynél, legfeljebb 90. A
+   kedvezmények nem adódnak össze, mindig a legnagyobb érvényes: ha a bemutatkozóval egyenlő vagy kisebb lenne, a
+   lead soha nem kapná meg.
+4. **„Az ajánlat érvényessége”**: egész óra 24 és 168 (7 nap) között. Alatta napban is látod (pl. „= 3 nap”).
+5. **„Emlékeztető levél a kiadás után”**: egész óra, legalább 1, és kevesebb az érvényességnél. Alatta ez áll:
+   „Utána legfeljebb még … óra marad a döntésre.” Az emlékeztetőt naponta egyszer, reggel küldjük, ezért az
+   óraszám a legkorábbi időpont. Ha utána 24 óránál kevesebb marad a lejáratig, a mező alatt az is megjelenik,
+   hogy nem minden lead kapja meg.
+
+**Hibák és mentés**
+
+- A mezők alatti keretes mondat előre megmutatja, mit fog tenni a beállításod, a Magyarország oldalon egy valós
+  csomagár-példával.
+- Ha egy mező üres, nem egész szám, vagy a tartományon kívül esik, a hibás mező pirosan keretezett, alatta ott az
+  ok. Két mező egymáshoz képest is lehet hibás: ha a döntés-segítő kedvezmény nem nagyobb a bemutatkozónál, vagy
+  az emlékeztető nem korábbi a lejáratnál, mindkét mező piros lesz, bármelyiket javíthatod. A bemutatkozó
+  kedvezményt kikapcsolt döntés-segítőnél is a tárolt döntés-segítő kedvezményhez méri.
+- Hiba esetén az **„Árazás mentése”** gomb nem nyomható meg. A gomb a lap alján van, mellette ez áll: „A mentés
+  addig nem megy, amíg a jelölt mező hibás.” Ha több mező hibás, a szám is ott áll, pl. „A mentés addig nem megy,
+  amíg a 2 jelölt mező hibás.” A javítandó mezőt a piros keret mutatja fent, a „Lead-ajánlatok” szekcióban.
+  Telefonon oda vissza kell görgetned.
+
+**Mi történik a már futó ajánlatokkal?**
+
+- A már kiadott döntés-segítő ajánlat megtartja a saját kedvezményét és lejáratát. Ha átállítasz valamit,
+  miközben ilyen ajánlatok futnak, a mezők alatt megjelenik, hány darab fut és hány százalékkal.
+- Az emlékeztető késleltetése viszont a már futó ajánlatokra is hat: minden reggeli küldés a kiadás óta eltelt
+  időből számol. Ha az ajánlat addigra lejár, nem megy ki emlékeztető. A felület ezt is kiírja, ha a késleltetést
+  átállítod.
 
 ## Modul-felárak és értékesítés — az eladhatóság kapcsolója
 

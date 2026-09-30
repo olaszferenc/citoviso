@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eszkalációs ajánlat — jóváhagyott terv (A)</title><style>
+<title>Lead-ajánlatok — jóváhagyott terv (A, 2. kör)</title><style>
 :root{
   --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-700:#203a59;
   --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;
@@ -79,16 +79,57 @@ h3{font:600 14.5px var(--citui-font-display);margin:22px 0 6px}
 .live{margin-top:6px;font-size:12px;color:var(--citui-warn-ink)}
 .esc.disabled .pr-input{opacity:.45}
 .glob{font-size:12px;color:var(--citui-muted);margin:4px 0 0}
+
+.pill.open{background:color-mix(in srgb,var(--citui-bad) 14%,transparent);color:var(--citui-bad-ink)}
+.pr-hint{margin-top:4px;font-size:11.5px;color:var(--citui-muted)}
+.err .pr-hint{display:none}
+.sub{margin:16px 0 8px;font:600 13px var(--citui-font-display)}
+.sub .mut{font:400 12px var(--citui-font-text)}
+.esc.disabled .gated .pr-input{opacity:.45}
+.esc.disabled .gated .pr-field__l{opacity:.6}
+.live p{margin:4px 0}
+.live .keep{color:var(--citui-muted)}
+/* B: two cards */
+.twocards{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-top:10px}
+.subcard{border:1px solid var(--citui-line);border-radius:10px;padding:12px 14px 14px;background:var(--citui-white)}
+.subcard h4{margin:0 0 4px;font:600 13.5px var(--citui-font-display);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.subcard .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.subcard .lbl{margin:12px 0 6px;font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--citui-muted)}
+/* C: timeline */
+.tl{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:12px;position:relative}
+.tl-step{position:relative;padding:26px 12px 0 0;min-width:0}
+.tl-step::before{content:"";position:absolute;top:9px;left:0;right:0;height:2px;background:var(--citui-line-strong)}
+.tl-step:last-child::before{right:auto;width:12px}
+.tl-dot{position:absolute;top:2px;left:0;width:16px;height:16px;border-radius:50%;background:var(--citui-cyan-500);border:3px solid var(--citui-white);box-shadow:0 0 0 1px var(--citui-cyan-500)}
+.tl-step.end .tl-dot{background:var(--citui-line-strong);box-shadow:0 0 0 1px var(--citui-line-strong)}
+.tl-when{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);margin-bottom:4px}
+.tl-what{font:600 13px var(--citui-font-display);margin-bottom:8px}
+.tl-step .pr-field{margin-bottom:8px}
+.tl-step p{margin:0;font-size:12px;color:var(--citui-muted)}
+.esc.disabled .tl-step.gated .tl-dot{background:var(--citui-line-strong);box-shadow:0 0 0 1px var(--citui-line-strong)}
+.bar{margin-top:14px}
+.bar-track{position:relative;height:10px;border-radius:5px;background:var(--citui-surface-2);border:1px solid var(--citui-line)}
+.bar-fill{position:absolute;inset:0;border-radius:5px;background:color-mix(in srgb,var(--citui-cyan-500) 30%,transparent)}
+.bar-mark{position:absolute;top:-5px;width:3px;height:18px;border-radius:2px;background:var(--citui-navy-900)}
+.bar-legend{display:flex;justify-content:space-between;font-size:11.5px;color:var(--citui-muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.bar.bad .bar-mark{background:var(--citui-bad)}
 @container (max-width:560px){
   .grid3{grid-template-columns:1fr}
   .pr-modgrid{grid-template-columns:1fr}
   .card{padding:14px 12px 16px}
   .pr-mod__u{width:auto}
+  .twocards{grid-template-columns:1fr}
+  .subcard .grid2{grid-template-columns:1fr}
+  .tl{grid-template-columns:1fr}
+  .tl-step{padding:0 0 14px 28px}
+  .tl-step::before{top:0;bottom:0;left:7px;right:auto;width:2px;height:auto}
+  .tl-step:last-child::before{display:none}
+  .tl-dot{top:0}
 }
 </style></head><body>
-<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A, 2026-09-30) — „Lead-ajánlatok” saját szekció az alapdíj alatt, minden régió-oldalon</b><span>· méret:</span>
+<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A, 2026-09-30, 2. kör) — „Lead-ajánlatok”: bemutatkozó sor + döntés-segítő két sorban, minden régió-oldalon</b><span>· méret:</span>
 <button id="szMob" type="button" aria-pressed="false">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="true">Asztali</button>
-<span class="mut" style="color:inherit;opacity:.7">működő vázlat — a mezők, a kapcsoló, a régió-váltó és a mentés kattintható</span></div>
+<span style="opacity:.7">működő vázlat — minden mező él, a validáció a javasolt szabályt futtatja; a mentés csak a lapon belül ment</span></div>
 <div id="stage">
 <div class="crumb">Konzol › CRM › Árazás és értékesítés</div>
 <div class="card">
@@ -106,109 +147,175 @@ h3{font:600 14.5px var(--citui-font-display);margin:22px 0 6px}
  <div class="pr-field"><label class="pr-field__l" for="b3">Saját domain (rajtunk keresztül)</label><div class="pr-input"><input id="b3" value="1000" inputmode="numeric"><span class="pr-input__u">Ft / hó</span></div></div>
 </div>
 <section id="esc" class="esc">
- <h3 style="margin-top:24px">Lead-ajánlatok</h3>
+<h3 style="margin-top:24px">Lead-ajánlatok</h3>
  <p class="mut small" style="margin:0 0 10px">A kiküldött tervet megnyitó lead kedvezményei. A kedvezmények nem adódnak össze — mindig a legnagyobb él.
  <span class="pill info">minden piacra érvényes</span></p>
- <div class="esc-head">
+ <div class="sub">Bemutatkozó ajánlat <span class="mut">— a kiküldött levél ígéri, az első megnyitástól él, határidő nélkül</span></div>
+ <div class="grid3"><div class="pr-field" id="f_out_p"><label class="pr-field__l" for="out_p">Bemutatkozó kedvezmény (a levéllel jár)</label>
+   <div class="pr-input"><input id="out_p" value="25" inputmode="numeric"><span class="pr-input__u">%</span></div><div class="ferr" id="e_out_p"></div><div class="pr-hint" id="h_out"></div></div></div>
+ <div class="sub" style="margin-top:20px"><div class="esc-head">
   <label class="con-sell"><input type="checkbox" id="esc_on" checked aria-label="Döntés-segítő ajánlat bekapcsolva"><span class="con-sell__track"></span></label>
-  <b>Döntés-segítő (eszkalációs) ajánlat</b>
- </div>
- <div class="grid3" style="margin-top:10px">
-  <div class="pr-field" id="f_n"><label class="pr-field__l" for="esc_n">Hányadik megnyitásnál kapja</label>
-   <div class="pr-input"><input id="esc_n" value="3" inputmode="numeric"><span class="pr-input__u">. megnyitás</span></div><div class="ferr" id="e_n"></div></div>
-  <div class="pr-field" id="f_p"><label class="pr-field__l" for="esc_p">Kedvezmény az első díjból</label>
-   <div class="pr-input"><input id="esc_p" value="50" inputmode="numeric"><span class="pr-input__u">%</span></div><div class="ferr" id="e_p"></div></div>
-  <div class="pr-field"><span class="pr-field__l">Összevetésül: bemutatkozó kedvezmény</span><div class="pr-static">−25% (a levéllel jár, itt nem állítható)</div></div>
- </div>
- <div id="preview" class="preview"></div>
- <div id="live" class="live"></div>
+  <b>Döntés-segítő (eszkalációs) ajánlat</b></div></div>
+ <div class="gated">
+ <div class="grid3" style="margin-top:4px"><div class="pr-field" id="f_esc_n"><label class="pr-field__l" for="esc_n">Hányadik megnyitásnál kapja</label>
+   <div class="pr-input"><input id="esc_n" value="3" inputmode="numeric"><span class="pr-input__u">. megnyitás</span></div><div class="ferr" id="e_esc_n"></div></div><div class="pr-field" id="f_esc_p"><label class="pr-field__l" for="esc_p">Kedvezmény az első díjból</label>
+   <div class="pr-input"><input id="esc_p" value="50" inputmode="numeric"><span class="pr-input__u">%</span></div><div class="ferr" id="e_esc_p"></div></div><div class="pr-field" id="f_esc_h"><label class="pr-field__l" for="esc_h">Az ajánlat érvényessége</label>
+   <div class="pr-input"><input id="esc_h" value="72" inputmode="numeric"><span class="pr-input__u">óra</span></div><div class="ferr" id="e_esc_h"></div><div class="pr-hint" id="h_h"></div></div></div>
+ <div class="grid3" style="margin-top:12px"><div class="pr-field" id="f_esc_f"><label class="pr-field__l" for="esc_f">Emlékeztető levél a kiadás után</label>
+   <div class="pr-input"><input id="esc_f" value="24" inputmode="numeric"><span class="pr-input__u">óra múlva</span></div><div class="ferr" id="e_esc_f"></div><div class="pr-hint" id="h_f"></div></div></div></div>
+ <div id="preview" class="preview"></div><div id="live" class="live"></div>
 </section>
 <div class="skip">… Egyedi domain — feltételek · Díjcsomagok · Modul-felárak és értékesítés (változatlan, a vázlatból kihagyva) …</div>
 <div class="confirm"><input type="checkbox" checked id="conf"><label for="conf"><b>Az árak véglegesek, élesíthetők</b><br><span class="mut small">Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat.</span></label></div>
 <div class="save"><button id="save" type="button"><span id="saveLbl">Árazás mentése (Magyarország)</span></button><span id="sum" class="sum" role="alert"></span></div>
 </div></div>
 <script>
+var VARIANT = "A";
 (function(){
-  var OUTREACH = 25, SAMPLE_LIST = 7240, SAVED = {on:true, n:3, p:50}, LIVE_ESC = 1;
-  var VARIANT = "A";
-  var st = document.getElementById("stage");
-  var bM = document.getElementById("szMob"), bD = document.getElementById("szDesk");
+  // Proposed bounds (the owner decides on this mock). Mirrors the planned escalationConfigErrors().
+  var B = {outMin:5, outMax:50, nMin:2, nMax:10, pMax:90, hMin:24, hMax:168, fMin:1};
+  // Dev-DB sample (2026-09-30): 1 live escalation offer.
+  var SAMPLE_LIST = 7240, LIVE_ESC = 1;
+  var SAVED = {on:true, out:25, n:3, p:50, h:72, f:24};
+  function $(id){ return document.getElementById(id); }
+  var st = $("stage"), bM = $("szMob"), bD = $("szDesk");
   function setSize(m){ st.classList.toggle("mobile", m); bM.setAttribute("aria-pressed", m); bD.setAttribute("aria-pressed", !m); }
   bM.onclick = function(){ setSize(true); }; bD.onclick = function(){ setSize(false); };
   setSize(window.matchMedia("(max-width: 600px)").matches);
 
-  var on = document.getElementById("esc_on"), nIn = document.getElementById("esc_n"), pIn = document.getElementById("esc_p");
-  var fN = document.getElementById("f_n"), fP = document.getElementById("f_p");
-  var eN = document.getElementById("e_n"), eP = document.getElementById("e_p");
-  var prev = document.getElementById("preview"), live = document.getElementById("live");
-  var btn = document.getElementById("save"), sum = document.getElementById("sum"), note = document.getElementById("notice");
-  var box = document.getElementById("esc");
-  function fmt(x){ return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0"); }
+  var on = $("esc_on"), IN = {out:$("out_p"), n:$("esc_n"), p:$("esc_p"), h:$("esc_h"), f:$("esc_f")};
+  var box = $("esc"), prev = $("preview"), live = $("live"), btn = $("save"), sum = $("sum"), note = $("notice");
+  var ESC_KEYS = ["n", "p", "h", "f"];
+  function fmt(x){ return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
   // Same normalisation as a numeric form field: trim, drop spaces, a trailing "%" or ".", comma = decimal point.
-  function norm(v){ return String(v).trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", "."); }
-  function parseInt2(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\d+(\.\d+)?$/.test(s)) return {err:"nan"};
+  function norm(v){ return String(v).trim().replace(/\s+/g, "").replace(/%$/, "").replace(/\.$/, "").replace(",", "."); }
+  function num(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\d+(\.\d+)?$/.test(s)) return {err:"nan"};
     var x = Number(s); if (x !== Math.floor(x)) return {err:"frac"}; return {v:x}; }
-  function checkN(){ var r = parseInt2(nIn.value);
-    if (r.err === "empty") return "Adj meg egy számot (2–10).";
-    if (r.err) return "Egész szám kell — hányadik megnyitás (2–10).";
-    if (r.v < 2) return "Legalább 2: az 1. megnyitás maga a levél linkje — ott még a bemutatkozó −" + OUTREACH + "% a helyén.";
-    if (r.v > 10) return "Legfeljebb 10: ennyi megnyitás után már nem döntés-segítés, hanem utolsó esély, amit a lead ritkán ér meg.";
-    return ""; }
-  function checkP(){ var r = parseInt2(pIn.value);
-    if (r.err === "empty") return "Adj meg egy százalékot (" + (OUTREACH + 1) + "–90).";
-    if (r.err) return "Egész százalék kell (" + (OUTREACH + 1) + "–90).";
-    if (r.v <= OUTREACH) return "Nagyobbnak kell lennie a bemutatkozó −" + OUTREACH + "%-nál: a kedvezmények nem adódnak össze, mindig a legnagyobb él — ennyivel az ajánlat soha nem érvényesülne.";
-    if (r.v > 90) return "Legfeljebb 90%: a 100% ingyenes első díj lenne, az már nem ajánlat.";
-    return ""; }
+
+  // Per-field checks first, then the two cross-field rules (only between individually valid values).
+  function errors(enabled){
+    var r = {}, e = {};
+    Object.keys(IN).forEach(function(k){ r[k] = num(IN[k].value); });
+    var o = r.out;
+    if (o.err === "empty") e.out = "Adj meg egy százalékot (" + B.outMin + "–" + B.outMax + ").";
+    else if (o.err) e.out = "Egész százalék kell (" + B.outMin + "–" + B.outMax + ").";
+    else if (o.v < B.outMin) e.out = "Legalább " + B.outMin + "%: ennél kisebb kedvezményt a levélben nem érdemes ajánlatként hirdetni.";
+    else if (o.v > B.outMax) e.out = "Legfeljebb " + B.outMax + "%: fölötte a döntés-segítő ajánlatnak (legfeljebb " + B.pMax + "%) alig marad tere.";
+    var outV = e.out ? null : o.v, pMin = (outV === null ? SAVED.out : outV) + 1;
+    if (enabled) {
+      if (r.n.err === "empty") e.n = "Adj meg egy számot (" + B.nMin + "–" + B.nMax + ").";
+      else if (r.n.err) e.n = "Egész szám kell — hányadik megnyitás (" + B.nMin + "–" + B.nMax + ").";
+      else if (r.n.v < B.nMin) e.n = "Legalább " + B.nMin + ": az 1. megnyitás maga a levél linkje — ott még a bemutatkozó kedvezmény a helyén.";
+      else if (r.n.v > B.nMax) e.n = "Legfeljebb " + B.nMax + ": ennyi megnyitás után már nem döntés-segítés, hanem utolsó esély, amit a lead ritkán ér meg.";
+      if (r.p.err === "empty") e.p = "Adj meg egy százalékot (" + pMin + "–" + B.pMax + ").";
+      else if (r.p.err) e.p = "Egész százalék kell (" + pMin + "–" + B.pMax + ").";
+      else if (r.p.v > B.pMax) e.p = "Legfeljebb " + B.pMax + "%: a 100% ingyenes első díj lenne, az már nem ajánlat.";
+      if (r.h.err === "empty") e.h = "Adj meg egy óraszámot (" + B.hMin + "–" + B.hMax + ").";
+      else if (r.h.err) e.h = "Egész óra kell (" + B.hMin + "–" + B.hMax + ").";
+      else if (r.h.v < B.hMin) e.h = "Legalább " + B.hMin + " óra: rövidebb idő alatt a lead gyakran meg sem látja az ajánlatot, nemhogy dönteni tudjon.";
+      else if (r.h.v > B.hMax) e.h = "Legfeljebb " + B.hMax + " óra (7 nap): a közeli határidő visz döntésre — messzi határidővel az ajánlat újra halasztható.";
+      if (r.f.err === "empty") e.f = "Adj meg egy óraszámot (legalább " + B.fMin + ").";
+      else if (r.f.err) e.f = "Egész óra kell (legalább " + B.fMin + ").";
+      else if (r.f.v < B.fMin) e.f = "Legalább " + B.fMin + " óra: az emlékeztető az oldalon megjelent ajánlat UTÁN megy ki.";
+    }
+    // Cross rule ①: escalation % > intro %. With the escalation switched off its (kept) percent still counts:
+    // switching it back on must not revive an offer that could never win.
+    var pV = r.p.err ? null : r.p.v;
+    if (outV !== null && pV !== null && !e.p && pV <= outV) {
+      if (enabled) e.p = "Nagyobbnak kell lennie a bemutatkozó −" + outV + "%-nál: a kedvezmények nem adódnak össze, mindig a legnagyobb él — ennyivel az ajánlat soha nem érvényesülne.";
+      e.out = enabled
+        ? "Kisebbnek kell lennie a döntés-segítő −" + pV + "%-nál, különben az az ajánlat soha nem érvényesülne."
+        : "Kisebbnek kell lennie a (kikapcsolt) döntés-segítő −" + pV + "%-nál: visszakapcsoláskor az az ajánlat soha nem érvényesülne.";
+    }
+    // Cross rule ②: reminder delay < validity — otherwise the reminder would carry an expired offer.
+    if (enabled && !e.h && !e.f && r.f.v >= r.h.v) {
+      e.f = "Kevesebb kell, mint az ajánlat érvényessége (" + r.h.v + " óra): különben az emlékeztető lejárt ajánlatról szólna.";
+      e.h = "Több kell, mint az emlékeztető késleltetése (" + r.f.v + " óra): különben az emlékeztető lejárt ajánlatról szólna.";
+    }
+    return {r:r, e:e};
+  }
+
   function render(){
     var enabled = on.checked;
-    nIn.disabled = !enabled; pIn.disabled = !enabled;
+    ESC_KEYS.forEach(function(k){ IN[k].disabled = !enabled; });
     box.classList.toggle("disabled", !enabled);
-    var a = enabled ? checkN() : "", b = enabled ? checkP() : "";
-    fN.classList.toggle("err", !!a); eN.textContent = a;
-    fP.classList.toggle("err", !!b); eP.textContent = b;
-    var bad = (a ? 1 : 0) + (b ? 1 : 0);
+    var x = errors(enabled), e = x.e, r = x.r;
+    Object.keys(IN).forEach(function(k){
+      var f = $("f_" + IN[k].id); f.classList.toggle("err", !!e[k]); $("e_" + IN[k].id).textContent = e[k] || "";
+    });
+    var bad = Object.keys(e).length;
     btn.disabled = bad > 0;
-    sum.textContent = bad ? "A mentés addig nem megy, amíg " + (bad === 1 ? "a jelölt mező" : "a két jelölt mező") + " hibás." : "";
+    sum.textContent = bad ? "A mentés addig nem megy, amíg " + (bad === 1 ? "a jelölt mező" : "a " + bad + " jelölt mező") + " hibás." : "";
+    var ok = function(k){ return !e[k] && !r[k].err; };
+    if (ok("out")) { IN.out.value = r.out.v;
+      $("h_out").textContent = "Példa — Ajánlott csomag: " + fmt(SAMPLE_LIST) + " → " + fmt(Math.floor(SAMPLE_LIST * (100 - r.out.v) / 100)) + " Ft/hó az első hónapra."; }
+    else $("h_out").textContent = "";
+    if (ok("h")) { IN.h.value = r.h.v; $("h_h").textContent = r.h.v % 24 === 0 ? "= " + (r.h.v / 24) + " nap" : "≈ " + (Math.round(r.h.v / 24 * 10) / 10).toString().replace(".", ",") + " nap"; }
+    else $("h_h").textContent = "";
+    if (ok("f") && ok("h")) { IN.f.value = r.f.v; var rem = r.h.v - r.f.v; $("h_f").textContent = "Utána legfeljebb még " + rem + " óra marad a döntésre." + (rem < 24 ? " Az emlékeztetőt naponta egyszer, reggel küldjük: ha a késleltetés után kevesebb mint 24 óra marad a lejáratig, nem minden lead kapja meg." : ""); }
+    else $("h_f").textContent = "";
+    ["n", "p"].forEach(function(k){ if (enabled && ok(k)) IN[k].value = r[k].v; });
+
+    var bar = $("barMark");
+    if (bar) {
+      var barOk = enabled && ok("f") && ok("h");
+      $("bar").classList.toggle("bad", !barOk);
+      bar.style.display = barOk ? "" : "none";
+      if (barOk) bar.style.left = "calc(" + (r.f.v / r.h.v * 100) + "% - 1px)";
+      $("barMid").textContent = barOk ? "emlékeztető: " + r.f.v + ". óra" : "";
+      $("barEnd").textContent = enabled && ok("h") ? "lejárat: " + r.h.v + ". óra" : "";
+    }
+
+    var outShown = ok("out") ? r.out.v : SAVED.out;
     if (!enabled) {
       prev.className = "preview off";
-      prev.innerHTML = "Kikapcsolva: <b>nem keletkezik új döntés-segítő ajánlat</b>. A lead a bemutatkozó −" + OUTREACH + "%-nál marad, bárhányszor nyitja meg.";
+      prev.innerHTML = "Kikapcsolva: <b>nem keletkezik új döntés-segítő ajánlat</b>. A lead a levelében ígért bemutatkozó kedvezménynél marad, bárhányszor nyitja meg.";
     } else if (!bad) {
-      var n = parseInt2(nIn.value).v, p = parseInt2(pIn.value).v;
-      nIn.value = n; pIn.value = p;
-      var off = Math.floor(SAMPLE_LIST * (100 - p) / 100);
+      var pOff = Math.floor(SAMPLE_LIST * (100 - r.p.v) / 100), oOff = Math.floor(SAMPLE_LIST * (100 - r.out.v) / 100);
       prev.className = "preview";
-      prev.innerHTML = "Így fut: a lead a <b>" + n + ". megnyitáskor</b> (ha még nem vásárolt) <b>−" + p + "%</b> döntés-segítő ajánlatot kap az első díjból, 72 órára. " +
-        "Példa — Ajánlott csomag: <s>" + fmt(SAMPLE_LIST) + " Ft/hó</s> → <b>" + fmt(off) + " Ft/hó</b> az első hónapra, utána listaáron.";
+      prev.innerHTML = "Így fut: az ezután kiküldött levél <b>−" + r.out.v + "%</b> bemutatkozó kedvezményt ígér. A lead a <b>" + r.n.v + ". megnyitáskor</b> (ha még nem vásárolt) <b>−" + r.p.v + "%</b> döntés-segítő ajánlatot kap az első díjból, <b>" + r.h.v + " órára</b>; ha legkorábban <b>" + r.f.v + " óra</b> múlva, a napi reggeli küldéskor sem vásárolt, egy emlékeztető levél megy ki ugyanerről. " +
+        "Példa — Ajánlott csomag: <s>" + fmt(SAMPLE_LIST) + " Ft/hó</s> → " + fmt(oOff) + " Ft/hó, a döntés-segítővel <b>" + fmt(pOff) + " Ft/hó</b> az első hónapra, utána listaáron.";
     } else {
       prev.className = "preview off";
       prev.textContent = "Az előnézet a hibás mező javítása után frissül.";
     }
-    var changed = enabled !== SAVED.on || (enabled && !bad && (parseInt2(nIn.value).v !== SAVED.n || parseInt2(pIn.value).v !== SAVED.p));
-    live.style.display = LIVE_ESC && changed ? "block" : "none";
-    live.textContent = "Figyelem: most " + LIVE_ESC + " élő döntés-segítő ajánlat fut (−" + SAVED.p + "%, a " + SAVED.n + ". megnyitásból). Az a sajátját tartja a lejáratáig — a változás csak az ezután kiadott ajánlatokra hat.";
+
+    // What a save would do to promises already made — only the lines whose value changed.
+    var lines = [];
+    if (ok("out") && r.out.v !== SAVED.out) {
+      lines.push("A már kiküldött levelek a bennük ígért bemutatkozó kedvezményt tartják — az is, akinek a leadje még meg sem nyitotta. Az új −" + r.out.v + "% csak az ezután kiküldött levelekre vonatkozik.");
+    }
+    var escChanged = enabled !== SAVED.on || (enabled && ["n", "p", "h"].some(function(k){ return ok(k) && r[k].v !== SAVED[k]; }));
+    if (LIVE_ESC && escChanged) {
+      lines.push("Most " + LIVE_ESC + " élő döntés-segítő ajánlat fut (−" + SAVED.p + "%). Az a saját kedvezményét és lejáratát tartja — a változás csak az ezután kiadott ajánlatokra hat.");
+    }
+    if (LIVE_ESC && enabled && ok("f") && r.f.v !== SAVED.f) {
+      lines.push("Az emlékeztető késleltetése viszont a már futó ajánlatokra IS hat: a kiadás óta eltelt időből számol, és ha az ajánlat addigra lejár, nem megy ki emlékeztető.");
+    }
+    live.style.display = lines.length ? "block" : "none";
+    live.innerHTML = lines.map(function(l){ return "<p>" + l + "</p>"; }).join("");
   }
-  [on, nIn, pIn].forEach(function(el){ el.addEventListener("input", render); el.addEventListener("change", render); });
-  nIn.addEventListener("blur", render); pIn.addEventListener("blur", render);
-  btn.onclick = function(e){ e.preventDefault(); if (btn.disabled) return;
-    SAVED = {on:on.checked, n:parseInt2(nIn.value).v || SAVED.n, p:parseInt2(pIn.value).v || SAVED.p};
-    note.classList.add("show"); note.textContent = "Árazás mentve." + (on.checked ? " Döntés-segítő ajánlat: " + SAVED.n + ". megnyitás, −" + SAVED.p + "%." : " Döntés-segítő ajánlat kikapcsolva.");
+  on.addEventListener("change", render);
+  Object.keys(IN).forEach(function(k){ IN[k].addEventListener("input", render); IN[k].addEventListener("change", render); IN[k].addEventListener("blur", render); });
+  btn.onclick = function(ev){ ev.preventDefault(); if (btn.disabled) return;
+    var r = errors(on.checked).r;
+    SAVED = {on:on.checked, out:r.out.v, n:on.checked ? r.n.v : SAVED.n, p:on.checked ? r.p.v : SAVED.p, h:on.checked ? r.h.v : SAVED.h, f:on.checked ? r.f.v : SAVED.f};
+    note.classList.add("show");
+    note.textContent = "Árazás mentve. Bemutatkozó: −" + SAVED.out + "%. " + (SAVED.on
+      ? "Döntés-segítő ajánlat: " + SAVED.n + ". megnyitás, −" + SAVED.p + "%, " + SAVED.h + " óra, emlékeztető " + SAVED.f + " óra múlva."
+      : "Döntés-segítő ajánlat kikapcsolva.");
     render(); window.scrollTo(0, 0); };
 
   // Region chips — the setting is GLOBAL (app_setting), not per pricing_config row.
-  var chips = document.querySelectorAll(".regions [data-region]"), regT = document.getElementById("regT");
+  var chips = document.querySelectorAll(".regions [data-region]");
   chips.forEach(function(c){ c.onclick = function(){
-    chips.forEach(function(x){ x.classList.toggle("approved", x === c); });
-    var r = c.getAttribute("data-region");
-    regT.textContent = r === "hu" ? "Magyarország" : "Globális (fallback)";
-    document.getElementById("saveLbl").textContent = r === "hu" ? "Árazás mentése (Magyarország)" : "Árazás mentése (Globális)";
-    if (VARIANT === "B") {
-      document.getElementById("escEdit").style.display = r === "hu" ? "" : "none";
-      document.getElementById("escElse").style.display = r === "hu" ? "none" : "";
-    }
+    chips.forEach(function(y){ y.classList.toggle("approved", y === c); });
+    var g = c.getAttribute("data-region") === "hu";
+    $("regT").textContent = g ? "Magyarország" : "Globális (fallback)";
+    $("saveLbl").textContent = g ? "Árazás mentése (Magyarország)" : "Árazás mentése (Globális)";
     note.classList.remove("show");
   }; });
-  var gh = document.getElementById("goHu"); if (gh) gh.onclick = function(){ chips[0].click(); };
   render();
 })();
+
 </script></body></html>

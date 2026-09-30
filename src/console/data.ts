@@ -22,6 +22,7 @@ import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
 import { normalizeEmail } from "../email/address.js";
+import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offers.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -1466,6 +1467,9 @@ export async function markProspectSent(
   prospectId: string,
   channel: OutreachChannel,
 ): Promise<void> {
+  // ADR-XXXX: resolved BEFORE sent_at is stamped — the hand-sent draft quoted this
+  // (an earlier message's percent, else the operator setting), and it binds.
+  const percent = await outreachPercentForProspect(prospectId);
   const now = new Date();
   const q = db.updateTable("prospect").where("id", "=", prospectId);
   if (channel === "sms") {
@@ -1480,6 +1484,7 @@ export async function markProspectSent(
     .where("id", "=", prospectId)
     .where("sent_at", "is", null)
     .execute();
+  await stampOutreachOffer(prospectId, percent);
   // Only the created→sent edge counts; later statuses must not regress.
   await db
     .updateTable("prospect")

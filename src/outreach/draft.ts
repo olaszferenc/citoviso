@@ -20,7 +20,7 @@ import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { loadPricing, getBaseMonthly } from "../pricing.js";
-import { applyOffer, OUTREACH_OFFER_PERCENT } from "../payment/offers.js";
+import { applyOffer, OUTREACH_OFFER_PERCENT, outreachPercentForProspect } from "../payment/offers.js";
 
 /**
  * §C.2 sender-identity block — SHARED by every outreach body (cold draft AND
@@ -162,6 +162,18 @@ export interface DraftInput {
    * Load the pack with prepareMailLang() before rendering — T() here is sync.
    */
   readonly lang: string;
+  /**
+   * ADR-XXXX: the intro percent THIS letter quotes — resolved per prospect by
+   * buildDraftForProspect (an earlier message's stamped percent, else the operator
+   * setting), and stamped by the send path after the send. Optional only for the
+   * offline copy tools that render a sample lead; they get the default.
+   */
+  readonly offerPercent?: number;
+}
+
+/** The intro percent a draft quotes (and its send path must stamp). */
+export function draftOfferPercent(d: DraftInput): number {
+  return d.offerPercent ?? OUTREACH_OFFER_PERCENT;
 }
 
 /**
@@ -263,9 +275,9 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // their own name. This form fits for 336 of 389 (86%), name AND point visible.
   const subject = T(d.lang, "{name} – honlap-terv", { name: d.leadName });
 
-  const percent = String(OUTREACH_OFFER_PERCENT);
+  const percent = String(draftOfferPercent(d));
   const priceList = formatHuf(getBaseMonthly());
-  const priceOffer = formatHuf(applyOffer(getBaseMonthly(), { percent: OUTREACH_OFFER_PERCENT }));
+  const priceOffer = formatHuf(applyOffer(getBaseMonthly(), { percent: draftOfferPercent(d) }));
 
   // ⛔ NYELVI TILALMAK (ADR-0101, tulaj-kifogás: "gépi szöveg"): nincs "a(z)", nincs
   // csupa nagybetűs kiabálás, nincs "személyre szabott", nincs 40+ szavas körmondat.
@@ -483,6 +495,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     rating,
     token: r.token,
     lang,
+    offerPercent: await outreachPercentForProspect(prospectId),
   };
   // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
   // send path gets the same verdict. The gate itself stays synchronous (it is a pure

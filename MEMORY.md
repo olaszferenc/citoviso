@@ -11,6 +11,19 @@ Utolsó frissítés: 2026-09-30 (🚀 **NAGY DEPLOY KÉSZ — 3 deploy egy nap a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-30 — SUB cit782078ba: lead-ajánlatok időzítése + bemutatkozó % állítható, ADR-XXXX) — LANDOLVA, élesítés a koordinátoré
+
+A tulaj kérése: a 72 h érvényesség, a 24 h emlékeztető és a −25% bemutatkozó kedvezmény is a /pricing
+„Lead-ajánlatok” szekciójában legyen állítható. §2b: 3 mock, a tulaj az „A”-t választotta (egy rács). Kulcsok ugyanabban
+az `escalation_offer` JSON-ban (`offerHours` 24–168, `followupHours` ≥1 és < érvényesség, `outreachPercent` 5–50), migráció
+NINCS; mező-közi szabályok (eszk. % > bemutatkozó %, kikapcsolva is; emlékeztető < érvényesség). **Lelet → tulaj-döntés
+„a levél %-a köt”:** a bemutatkozó `offer` sor eddig LUSTÁN, az első megnyitáskor született a mindenkori %-kal → most a
+4 küldési út a sikeres küldés után rögzíti (`stampOutreachOffer`, meglévő `offer` tábla), a draft a prospect %-át idézi,
+a régi (rögzítés nélküli) kiküldés a konstans 25-öt kapja. Az emlékeztető-késleltetés a futókra is hat (tulaj: rendben).
+⚠️ Az emlékeztetőt a NAPI 07:00-s billing-futás küldi → az óra csak „legkorábban”; 24 h alatti maradéknál nem mindenki
+kapja meg (a felület kimondja; óránkéntire tenni = nyitott infra-döntés). Őr: `escalation-config-check` ⑥⑦⑧.
+Jegyzet: `_planning/memory/2026-09-30_lead_ajanlatok_idozites.md`.
+
 ## Párhuzamos szál (2026-09-30 — NAV Online Számla összekötés, CITO fiók) — LEZÁRVA
 
 - Az éles 97 Ft-os próbavásárlás számlája `Számlázz error 378`-cal bukott: a CITO fiók nem volt NAV-hoz kötve. A tulaj összekötötte (technikai felhasználó: csak Számlák kezelése + lekérdezése) → **Aktív kapcsolat (számlázás)** ✅.

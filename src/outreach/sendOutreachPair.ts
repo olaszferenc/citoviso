@@ -30,7 +30,8 @@
 // happens in the PUBLIC process, where this registry does not reach.
 
 import { db } from "../db/client.js";
-import { renderPairSmsDraft } from "./draft.js";
+import { draftOfferPercent, renderPairSmsDraft } from "./draft.js";
+import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachSms } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
@@ -249,6 +250,8 @@ export async function sendPairSmsHalf(
   }
 
   const now = new Date();
+  // ADR-XXXX: the intro percent binds from the first message on.
+  await stampOutreachOffer(prospectId, draftOfferPercent(gate.d.input));
   await db
     .updateTable("prospect")
     .set({ sms_sent_at: now })

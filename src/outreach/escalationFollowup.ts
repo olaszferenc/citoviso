@@ -1,6 +1,7 @@
 // ADR-0088 §4b — the escalation follow-up mail. SEQUENTIAL by owner ruling:
 // the on-page decision card leads; if the prospect still has not purchased
-// ESCALATION_FOLLOWUP_HOURS after the offer was minted, ONE follow-up mail
+// the operator-set follow-up delay (ADR-XXXX; getEscalationConfig().followupHours)
+// after the offer was minted, ONE follow-up mail
 // carries the same offer and deadline ("kell más személy is a döntéshez" case).
 // Never re-sent (offer.followup_sent_at), never after purchase or expiry
 // (escalationFollowupsDue re-checks both), and every §C gate applies: opt-out
@@ -11,10 +12,7 @@
 // the page it links to must not disagree (§I).
 
 import { db } from "../db/client.js";
-import {
-  ESCALATION_FOLLOWUP_HOURS,
-  escalationFollowupsDue,
-} from "../payment/offers.js";
+import { escalationFollowupsDue, getEscalationConfig } from "../payment/offers.js";
 import {
   advertiserIdentity,
   buildDraftForProspect,
@@ -53,6 +51,7 @@ export async function sendEscalationFollowups(
   now: Date = new Date(),
 ): Promise<FollowupRunResult> {
   const due = await escalationFollowupsDue(now);
+  const { followupHours } = await getEscalationConfig();
   let sent = 0;
   let skipped = 0;
   for (const f of due) {
@@ -151,7 +150,7 @@ export async function sendEscalationFollowups(
       .where("id", "=", f.offerId)
       .execute();
     console.log(
-      `[offer] eszkalációs follow-up elküldve (${ESCALATION_FOLLOWUP_HOURS}h+ · −${f.percent}%, ` + // i18n-exempt: operátori napló, sosem éri el a leadet
+      `[offer] eszkalációs follow-up elküldve (${followupHours}h+ · −${f.percent}%, ` + // i18n-exempt: operátori napló, sosem éri el a leadet
         `lejárat ${f.expiresAt.toISOString()}) · ${email}`, // i18n-exempt: operátori napló, sosem éri el a leadet
     );
     sent++;
