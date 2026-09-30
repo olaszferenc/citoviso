@@ -4,7 +4,7 @@
 //   'cli'   → the PROVEN `sudo mms-send` tool on THIS Debian box (docs/mms-send.md):
 //             wap APN → Telekom WAP proxy → hand-built M-Send.req to the MMSC.
 //             One JSON line on stdout, exit 0/1.
-//   'queue' → (ADR-XXXX) prod: the JPEG bytes go into mms_outbox; the Debian-box
+//   'queue' → (ADR-0282) prod: the JPEG bytes go into mms_outbox; the Debian-box
 //             relay (scripts/mms-relay.mts) pulls them and runs the CLI. ok:true
 //             here means QUEUED, not accepted by the MMSC — `queued` says so.
 //
@@ -65,7 +65,7 @@ export function isJpeg(buf: Uint8Array): boolean {
  * Any raster image → an MMS-ready JPEG buffer: longest edge ≤1280 px (never
  * enlarged), quality 85 then −10 steps until ≤290 KB or the step at/below 40 —
  * the same ladder as the documented PIL recipe (85, 75, 65, 55, 45, 35).
- * sharp, not python3+PIL (ADR-XXXX): the prod VPS has no Pillow, and the console
+ * sharp, not python3+PIL (ADR-0282): the prod VPS has no Pillow, and the console
  * preview died there on `ModuleNotFoundError: No module named 'PIL'`.
  * Throws when even the last step is over the ceiling.
  */
@@ -143,7 +143,7 @@ export function cliErrorDetail(err: unknown): string {
 }
 
 /**
- * Remote-queue adapter (ADR-XXXX): the JPEG bytes go into mms_outbox; the
+ * Remote-queue adapter (ADR-0282): the JPEG bytes go into mms_outbox; the
  * Debian-box relay sends them. One pending MMS per prospect (unique index) —
  * a double click loses at the insert, not after a billed send.
  */

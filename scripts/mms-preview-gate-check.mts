@@ -28,7 +28,7 @@
  *  ⑧ ÖNTESZT — a REGRESSZIÓ szimulálása: a `failed` lapba visszainjektálom a régi, feltétel
  *     nélküli `<img>`-et és az élő gombot; a detektornak MINDKETTŐT el KELL utasítania.
  *     Aki sosem bukott, azt senki nem tesztelte.
- *  ⑨ A KÉP-ELŐÁLLÍTÁS Python nélkül (ADR-XXXX): élesen a route 500-at adott, mert a VPS-en
+ *  ⑨ A KÉP-ELŐÁLLÍTÁS Python nélkül (ADR-0282): élesen a route 500-at adott, mert a VPS-en
  *     nincs Pillow. Az `ensureMmsJpeg` sharp-pal dolgozik: nagy PNG → JPEG, leghosszabb
  *     él ≤1280 px, ≤290 KB; kis kép NEM nagyítódik; az átlátszóság fehérre simul; a
  *     plafon fölé nem engedhető kép DOB (nem csúszik ki csendben túlméretesen); és a

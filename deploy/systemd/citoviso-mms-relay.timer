@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso MMS-relay percenként (ADR-XXXX)
+Description=Citoviso MMS-relay percenként (ADR-0282)
 
 [Timer]
 # 1 perc, soronként EGY MMS (docs/mms-send.md). Egy még futó oneshotot a timer

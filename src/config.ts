@@ -102,7 +102,7 @@ export const config = {
    * MMS delivery adapter (ADR-0083): 'mock' writes to outbox-mms/; 'cli' runs the
    * proven `sudo mms-send` on THIS Debian box (the modem never leaves it —
    * docs/mms-send.md). ~60–90 s per send, exclusive modem access. 'queue'
-   * (ADR-XXXX, prod) enqueues into mms_outbox; the Debian-box relay
+   * (ADR-0282, prod) enqueues into mms_outbox; the Debian-box relay
    * (scripts/mms-relay.mts) sends it over the SMS relay's pull/ack secret.
    */
   mmsProvider: env("MMS_PROVIDER", "mock"),

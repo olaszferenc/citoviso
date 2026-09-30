@@ -17,7 +17,7 @@
     },
     "citoviso-mms-relay.timer": {
       "target": "dev",
-      "why": "a helyi GSM-modem (SIM800C) a dev gépen ül; a relay a távoli MMS-sort erre a modemre üríti (ADR-XXXX, CLAUDE.md §8)"
+      "why": "a helyi GSM-modem (SIM800C) a dev gépen ül; a relay a távoli MMS-sort erre a modemre üríti (ADR-0282, CLAUDE.md §8)"
     },
     "citoviso-multilang-resume.timer": {
       "target": "dev",

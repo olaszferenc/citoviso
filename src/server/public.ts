@@ -3551,7 +3551,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     return sendJson(res, 200, { ok: true });
   }
 
-  // ── ADR-XXXX MMS-relay API: the same Debian-box modem, the same bearer secret. ──
+  // ── ADR-0282 MMS-relay API: the same Debian-box modem, the same bearer secret. ──
   // One message per pull (a send is ~90 s); a stale 'sending' becomes 'unknown',
   // never re-sent; the ack stamps the pair's mms_sent_at and starts its SMS half.
   if (req.method === "POST" && pathname === "/api/mms-relay/pull") {

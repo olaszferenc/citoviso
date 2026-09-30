@@ -1,4 +1,4 @@
-// MMS-relay — the DEBIAN-BOX side (ADR-XXXX): pull ONE queued MMS from the remote
+// MMS-relay — the DEBIAN-BOX side (ADR-0282): pull ONE queued MMS from the remote
 // mms_outbox, make sure it is an MMS-ready JPEG (sharp), send it with the proven
 // `sudo mms-send` CLI, ack. The script (scripts/mms-relay.mts) is a thin shell over
 // runMmsRelayOnce so the guard can drive the whole cycle with a mock modem.

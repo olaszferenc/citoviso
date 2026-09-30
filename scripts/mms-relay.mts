@@ -1,4 +1,4 @@
-// MMS relay (ADR-XXXX) — drains a REMOTE mms_outbox onto the GSM modem living on
+// MMS relay (ADR-0282) — drains a REMOTE mms_outbox onto the GSM modem living on
 // THIS Debian box, one message per tick (~60–90 s per MMS). The twin of
 // scripts/sms-relay.mts; the logic lives in src/mms/relayClient.ts.
 //

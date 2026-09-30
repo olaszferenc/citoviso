@@ -42,7 +42,7 @@ címzett hálózatán múlik (mobiladat kell a letöltéséhez a címzett telefo
 
 ## Képkonverzió (PNG screenshot → MMS-kész JPEG)
 
-A kódban a konverzió **sharp** (`toMmsJpeg` / `ensureMmsJpeg`, `src/mms/sender.ts`, ADR-XXXX) —
+A kódban a konverzió **sharp** (`toMmsJpeg` / `ensureMmsJpeg`, `src/mms/sender.ts`, ADR-0282) —
 ugyanazzal a szabállyal, mint az alábbi PIL-recept, de Python nélkül (élesen nincs Pillow).
 Kézi használatra a recept:
 
@@ -69,7 +69,7 @@ EOF
   USB2 (ehci-pci) port jó** (`lsusb -t`-ben `Driver=ch341` az `ehci-pci` fa alatt legyen).
 - **`masik mms-send fut eppen`** — várd meg az előzőt (lock: `/var/lock/mms-send.lock`).
 
-## Integrációs minta — az `mms-relay` (ADR-XXXX, MEGÉPÍTVE)
+## Integrációs minta — az `mms-relay` (ADR-0282, MEGÉPÍTVE)
 
 Élesen `MMS_PROVIDER=queue`: a küldés az `mms_outbox` sorba kerül (a JPEG bájtjaival),
 a dev gépi `scripts/mms-relay.mts` (`citoviso-mms-relay.timer`, percenként) a

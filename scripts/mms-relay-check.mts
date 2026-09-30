@@ -1,4 +1,4 @@
-// Gate: the MMS relay (ADR-XXXX) — queue → pull → send → ack, with a MOCK modem.
+// Gate: the MMS relay (ADR-0282) — queue → pull → send → ack, with a MOCK modem.
 //
 // Why it exists: measured 2026-09-30, the owner's picture-SMS from prod never left —
 // prod has no modem, the `cli` provider only exists on the Debian box, and the MMS

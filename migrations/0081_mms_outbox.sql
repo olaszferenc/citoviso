@@ -1,4 +1,4 @@
--- 0081 MMS OUTBOX — távoli MMS-sor a Debian-gépi GSM-modemhez (ADR-XXXX).
+-- 0081 MMS OUTBOX — távoli MMS-sor a Debian-gépi GSM-modemhez (ADR-0282).
 --
 -- Mérve 2026-09-30: élesen a képes SMS (az ADR-0083 páros MMS-fele) nem ment ki —
 -- a `cli` provider a `sudo mms-send`-et hívja, ami CSAK a dev gépen létezik, és
@@ -47,4 +47,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS mms_outbox_one_pending_per_prospect
   ON mms_outbox(prospect_id) WHERE status IN ('queued', 'sending');
 
 COMMENT ON TABLE mms_outbox IS
-  'ADR-XXXX: távoli MMS-sor — a küldő környezet ide ír (MMS_PROVIDER=queue), a Debian-gépi relay a pull/ack API-n át üríti a GSM-modemre (mms-send).';
+  'ADR-0282: távoli MMS-sor — a küldő környezet ide ír (MMS_PROVIDER=queue), a Debian-gépi relay a pull/ack API-n át üríti a GSM-modemre (mms-send).';

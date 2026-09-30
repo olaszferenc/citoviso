@@ -499,7 +499,7 @@ export interface SmsOutboxTable {
   sent_at: Timestamp | null;
 }
 
-/** 0081 (ADR-XXXX): the remote MMS queue — prod enqueues (MMS_PROVIDER=queue),
+/** 0081 (ADR-0282): the remote MMS queue — prod enqueues (MMS_PROVIDER=queue),
  *  the Debian-box relay drains it onto the modem. A stale 'sending' becomes
  *  'unknown' (never auto-resent: a cold MMS twice is worse than a human decision). */
 export interface MmsOutboxTable {

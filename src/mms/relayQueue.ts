@@ -1,4 +1,4 @@
-// MMS-relay — the SERVER side of the remote MMS queue (ADR-XXXX). The twin of the
+// MMS-relay — the SERVER side of the remote MMS queue (ADR-0282). The twin of the
 // ADR-0080 ⑦ SMS relay (src/server/public.ts /api/sms-relay/*), with the
 // differences an MMS forces:
 //

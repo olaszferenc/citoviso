@@ -22,7 +22,7 @@
 // draft page polls the job registry. Single-process console; a restart mid-job
 // loses only the progress DISPLAY — the DB stamps stay truthful.
 //
-// ADR-XXXX — MMS_PROVIDER=queue (prod, no modem): the MMS half is only ENQUEUED
+// ADR-0282 — MMS_PROVIDER=queue (prod, no modem): the MMS half is only ENQUEUED
 // into mms_outbox; the Debian-box relay sends it, and its ACK stamps mms_sent_at
 // and starts the SMS half (src/mms/relayQueue.ts). So in queue mode nothing is
 // claimed here — the one-pending-MMS-per-prospect index is the double-click

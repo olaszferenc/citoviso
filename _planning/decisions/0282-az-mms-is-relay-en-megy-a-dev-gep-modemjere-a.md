@@ -1,4 +1,4 @@
-## ADR-XXXX — Az MMS is relay-en megy a dev gép modemjére; a kép-előkészítés sharp
+## ADR-0282 — Az MMS is relay-en megy a dev gép modemjére; a kép-előkészítés sharp
 
 **Dátum:** 2026-09-30 · **Státusz:** ELFOGADVA (a Deploy-koordinátor briefje, SUB `mmsrelay`) ·
 **Kapcsolódó:** ADR-0080 ⑦ (SMS-relay), ADR-0083 (MMS+SMS páros), ADR-0112 (törött pár),

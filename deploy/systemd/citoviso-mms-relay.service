@@ -1,9 +1,9 @@
 [Unit]
-# ADR-XXXX: a GSM-modem EZEN a Debian-gépen él (ADR-0080 ⑦). A relay a távoli
+# ADR-0282: a GSM-modem EZEN a Debian-gépen él (ADR-0080 ⑦). A relay a távoli
 # mms_outbox sort üríti a modemre (sudo mms-send), percenként EGY üzenetet
 # (~60–90 mp/db). A beragadt 'sending' sor a szerveren 'unknown' lesz, nem küldjük
 # újra; a sikeres küldést a relay ack ELŐTT helyi naplóba írja.
-Description=Citoviso MMS-relay — távoli MMS-sor ürítése a helyi GSM-modemre (ADR-XXXX)
+Description=Citoviso MMS-relay — távoli MMS-sor ürítése a helyi GSM-modemre (ADR-0282)
 After=network-online.target gammu-smsd.service
 Wants=network-online.target
 
