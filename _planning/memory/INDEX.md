@@ -10,6 +10,7 @@
 - [2026-09-30_public_console_unit_repo_teszt_riasztas.md](2026-09-30_public_console_unit_repo_teszt_riasztas.md) — 2026-09-30 — public/console unit a repóban OnFailure-rel + [TESZT] riasztás-tárgy (ADR-0279)
 - [2026-09-30_mms_relay.md](2026-09-30_mms_relay.md) — MMS élesről relay-en a dev gép modemjére; a kép-előkészítés sharp (2026-09-30)
 - [2026-09-30_i18n_art_ujraproba.md](2026-09-30_i18n_art_ujraproba.md) — 2026-09-30 — A 7 `{Art}`-os angol UI-string: a fordító újrapróbál, a magyar névelő nem szivárog (SUB i18nart)
+- [2026-09-30_deploy_utomunka_3.md](2026-09-30_deploy_utomunka_3.md) — 2026-09-30 — Deploy-utómunka 3: Számla újra gomb · névelő-újrafordítás · MMS esti tiltás
 - [2026-09-30_arazasigeret.md](2026-09-30_arazasigeret.md) — Árazás-lap halott ígérete ki, fojtás-kulcs Cloudflare-tudatos, KB-útvonallista kódból, deploy utáni teendők (2026-09-30)
 - [2026-09-29_trio_minta_szobakep_es_csillagsor.md](2026-09-29_trio_minta_szobakep_es_csillagsor.md) — A trió: élő lapon nincs „Minta” szobakép + a csillagsor látszik (2026-09-29)
 - [2026-09-29_telefonos_kor_koordinator_zaras.md](2026-09-29_telefonos_kor_koordinator_zaras.md) — 2026-09-28/29 — A telefonos kör koordinátorának zárása: a kör deploy-kész, és ami NEM volt tesztelve
