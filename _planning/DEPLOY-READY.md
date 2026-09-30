@@ -224,6 +224,64 @@ hívásaid `mock_view` sorokat írnak a lead-statisztikába.
 
 ---
 
+## 4b. Deploy UTÁNI teendők (tulaj, 2026-09-30)
+
+A tulaj kérései a nagy deploy UTÁNRA — nem blokkolják a deployt, de a következő szálak innen indulnak.
+
+### 4b.1 Lejárat előtti értesítő a dátumos árakra
+> „legyen lejárat előtti értesítő, mint ahogy ígérjük”
+
+- **Előzmény:** az Árazás lap mondata („…Lejárat előtt e-mailben emlékeztetjük.”) 2026-09-30-án KIKERÜLT
+  (`src/server/moduleConfigViews.ts`, a dátumos alapár alatti súgó-sor), mert élesben hamis volt (§B.17). Ez a
+  tétel a mondat UTÓDJA: ha az értesítő él, a mondat visszajöhet.
+- **Miért halott ma:** a dátumos alapár egyetlen írója az ajánlat-út (`sendOffer` → `addDatedBasePrice(…, { remind: false })`),
+  ami ADR-0267 ③ óta bélyeggel (`expiry_notified_at` kitöltve születéskor) írja a sort → a `maintainDatedPrices`
+  (`src/tenant/priceExpiry.ts`) 14 napos ága (`expiry_notified_at IS NULL`) rá SOHA nem sül el. Mérés:
+  `scripts/booking-maintenance-timetravel-check.mts`, jegyzet: `_planning/memory/2026-09-29_booking_maintenance_idoutazo.md`.
+- **Megoldási irányok (döntés kell):** (a) a bélyeg-szűrő újragondolása — az ajánlatból született sor is kapjon
+  emlékeztetőt; vagy (b) a levél-ág a bélyeges sorokra is, külön szöveggel.
+
+### 4b.2 Az emlékeztető levél hamis mondata
+A `maintainDatedPrices` levele: „…Utána azokra az éjszakákra, amelyekre nincs időszaki ár, **a vendég nem lát árat**,
+és árajánlatot kér.” (`src/tenant/priceExpiry.ts`). Hamis, ha a szobának időtlen alapára is van (akkor az lép
+életbe). Ma a halott ág miatt élesben nem jelentkezik — a 4b.1 élesztésével EGYÜTT javítandó (feltételes mondat:
+van-e időtlen alapár).
+
+### 4b.3 Élesi őrködés — e-mail + SMS, ha egy külső folyamat megakad
+> „ha valamely külső folyamat megakad, arról jöjjön értesítés + SMS: ha a tenant fizetési folyamata megakad, ha a
+> saját domain regisztrálás nem megy le, ha a számlázás nem megy, ha valamelyik API kulcs hal meg stb.”
+
+**Ami MA van** (kódból felmérve, 2026-09-30):
+
+| Riasztó | Mit fed | Csatorna |
+|---|---|---|
+| `src/console/houseAlert.ts` (ADR-0276) | elbukott `citoviso-*` időzítő (OnFailure=), bukott foglalási levél, elutasított/elbukott Barion-webhook | csak e-mail (`app_setting.alert_email`) |
+| `src/console/payLinkAlert.ts` | a vevő leadta a rendelést, de fizetési linket NEM kapott (megrekedt rendelés) | e-mail + SMS |
+| `src/console/aamAlert.ts` (ADR-0098) | AAM-keret 80% / 100% | e-mail + SMS |
+| `src/domains/registryConfirmWatch.ts` | `.hu` Nyilvántartó megerősítő levele megérkezett, kattintásra vár | e-mail + SMS |
+| `src/invoicing/keyGuard.ts` | teszt-módú Számlázz-kulcs élesen → a folyamat el sem indul (boot-kapu) | — (fail-closed, nem riaszt) |
+
+Az SMS-csatorna címzettje: konzol `/settings` telefonszám, tartalék `OWNER_ALERT_PHONE` — ez **élesen üres**, tehát
+az „e-mail + SMS” sorok élesen ma csak e-mailt küldenek, ha a `/settings`-ben sincs szám.
+
+**Ami HIÁNYZIK** (ebből induljon a következő szál; ne a fenti riasztók másolataként, hanem a meglévő `alertHouse`
+csatornájának bővítéseként — egy szabály, egy példány):
+1. **SMS-csatorna a `houseAlert`-hez** + élesi címzett (`/settings` telefonszám vagy `OWNER_ALERT_PHONE`). Ma a
+   `houseAlert` szándékosan csak e-mail (a fejléce mondja ki).
+2. **Megakadt fizetés:** `payment` sor `pending`-ben > N óra (a vevő elindította, a Barion nem zárta le, webhook
+   nem jött). Ma nincs erre söprés; a `payLinkAlert` csak azt fedi, ha link sem született.
+3. **Domain-regisztráció bukása:** a `provisionDomain.ts` `failed` ága a TENANT-ot értesíti (`notifyTenant`) és a
+   foglalást feloldja, de a HÁZ nem kap jelzést. Ugyanígy a hosszan `pending`/félúton álló provisioning (a vevő
+   fizetett és vár).
+4. **Számlázás bukása:** az `issueInvoiceFor` (`src/payment/service.ts`) hibánál `failed` számla-sort ír +
+   `console.error` — riasztás és újrapróba nincs. A vevő fizetett, számlát nem kap, senki nem tud róla.
+5. **API-kulcs halála (401/403):** a hívók egy része már OSZTÁLYOZZA az auth-hibát (`scraper/sources/googleMaps.ts`
+   `"auth"`, `webSearch.ts`, `generator/images.ts`, `console/photoProxy.ts`), de riasztás sehol. Hiányzik a
+   Barion, Számlázz, Websupport (regisztrátor/DNS), Places és Anthropic hívások 401/403-ának egységes jelzése a
+   házhoz — naponta egyszer kulcsonként (bélyeggel), nem minden hívásnál.
+
+---
+
 ## 5. Pilot utánra halasztva (tulaj-döntés, 2026-09-29)
 
 Tudatosan NEM a nagy deploy része — ne kérd számon, ne blokkolja:
@@ -232,7 +290,9 @@ Tudatosan NEM a nagy deploy része — ne kérd számon, ne blokkolja:
 - **GDPR érintetti kérelem** kiszolgálása (hozzáférés/törlés folyamat);
 - **CSRF-token** az űrlapokon;
 - **idegen nyelvű jogi oldalak** (országonkénti jogi csomag, §B.18);
-- **`x-forwarded-for` hamisíthatósága** (a rate-limit kulcsa);
+- ~~**`x-forwarded-for` hamisíthatósága** (a rate-limit kulcsa)~~ — **KÉSZ 2026-09-30 (ADR-XXXX):** a foglalási és a
+  belépési fék is a `clientIp()`-re kulcsol (nginx által felülírt `X-Real-IP`; Cloudflare-él mögött a csak élről
+  elfogadott `CF-Connecting-IP`; proxy nélkül a socket-cím);
 - **napi éles `pg_dump`-időzítő + off-site mentés** — addig a GATE 3 és a §2 kézi lehúzása a mentés.
 
 ---

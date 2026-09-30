@@ -1,6 +1,7 @@
 // Login hardening shared by both auth realms (tenant /login on :4800, operator /login on
 // :4600): the Secure cookie decision and the failed-attempt throttle (ADR-0277).
 import http from "node:http";
+import { clientIp } from "../server/clientIp.js";
 
 /**
  * Was this request made over HTTPS (as the BROWSER sees it)?
@@ -38,11 +39,6 @@ export const LOGIN_FAIL_WINDOW_MS = 10 * 60_000;
 export type LoginRealm = "tenant" | "operator";
 
 const failures = new Map<string, { n: number; until: number }>();
-
-/** Same IP extraction as the public booking throttle (public.ts `throttled`). */
-export function clientIp(req: http.IncomingMessage): string {
-  return String(req.headers["x-forwarded-for"] ?? req.socket?.remoteAddress ?? "?").split(",")[0]!.trim();
-}
 
 function key(realm: LoginRealm, req: http.IncomingMessage): string {
   return `${realm}|${clientIp(req)}`;

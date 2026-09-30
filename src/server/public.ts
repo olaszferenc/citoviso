@@ -207,6 +207,7 @@ import { readOrder, readPicks, resolvePicks, sanitizePicks, siteOwnSettlement, s
 import { distanceKm } from "../events/gates.js";
 import { getTrafficReport, getVisitorSeries } from "../analytics/trafficReport.js";
 import { messagePreview } from "../tenant/messagePreview.js";
+import { clientIp } from "./clientIp.js";
 import { faviconSvg, heroMarkSvg, lockup } from "../ui/brand.js";
 import {
   computeAnnual,
@@ -630,10 +631,11 @@ function tenantCanonicalHost(site: TenantHostSite): string | null {
  *  else 404 in-site. A slug host with a live custom domain 301s there (ADR-0041 — otherwise
  *  the ranking equity accrued on the slug would be lost at the domain upsell). */
 /** Crude per-IP throttle for the public booking endpoints — a guest form is an open
- *  door, and a booking row is cheap to create but expensive to clean up. */
+ *  door, and a booking row is cheap to create but expensive to clean up. Keyed on
+ *  `clientIp()` (ADR-XXXX) — the same rule as the login brake. */
 const bookingHits = new Map<string, { n: number; until: number }>();
 function throttled(req: http.IncomingMessage, limit: number, windowMs: number): boolean {
-  const ip = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "?").split(",")[0]!.trim();
+  const ip = clientIp(req);
   const now = Date.now();
   const hit = bookingHits.get(ip);
   if (!hit || hit.until < now) {

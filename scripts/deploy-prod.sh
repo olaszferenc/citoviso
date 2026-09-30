@@ -192,8 +192,63 @@ kb_shot_gate() { # $1 = commit sha
   rm -f "$log"
 }
 
+# ── GATE 1c — which paths the guide depends on, computed from the code of a commit ──
+# ① every src/ file that puts a help anchor on screen (a literal `data-kb-anchor` or the
+#   `helpLink("…")` helper); ② the view corpus kb-check itself reads (VIEW_GROUPS in THAT
+#   commit's scripts/kb-check.mts): the files whose labels the entries quote — booking/
+#   offer views carry no anchor, yet a label change there breaks the guide; ③ the fixed
+#   items. One path per line, sorted. Pure git reads: works on any commit, no checkout.
+kb_paths() { # $1 = commit
+  {
+    git grep -lE 'data-kb-anchor|helpLink\(' "$1" -- src | sed "s|^$1:||"
+    git show "$1:scripts/kb-check.mts" 2>/dev/null | sed -n '/^const VIEW_GROUPS/,/^};/p' | grep -oE '"src/[^"]+"' | tr -d '"'
+    printf '%s\n' src/kb kb/entries scripts/kb-check.mts
+  } | sort -u
+}
+
+# RED TEST for kb_paths — in a throwaway repo (never the real one: a hook-run inherits
+# GIT_DIR, so it is dropped explicitly). A fictitious anchored file MUST enter the list,
+# a corpus-only file too, a file with neither must not.
+kb_paths_self_test() {
+  local tmp got want bad=0
+  tmp="$(mktemp -d)"
+  (
+    unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_OBJECT_DIRECTORY
+    cd "$tmp" || exit 1
+    git init -q . && mkdir -p src/x scripts
+    printf '%s\n' 'const a = `<a data-kb-anchor="admin.fake">?</a>`;' > src/x/fakeAnchor.ts
+    printf '%s\n' 'const b = helpLink("admin.other", lang);' > src/x/viaHelper.ts
+    printf '%s\n' 'export const label = "Foglalások";' > src/x/corpusOnly.ts
+    printf '%s\n' 'export const nothing = 1;' > src/x/unrelated.ts
+    printf '%s\n' 'const VIEW_GROUPS = {' '  tenant: [' '    "src/x/corpusOnly.ts",' '  ],' '};' > scripts/kb-check.mts
+    git add -A && git -c user.name=t -c user.email=t@t commit -qm t
+  ) || { echo "  FAIL kb_paths: a teszt-repó nem jött létre"; rm -rf "$tmp"; return 1; }
+  got="$(unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_OBJECT_DIRECTORY; cd "$tmp" && kb_paths "$(git rev-parse HEAD)")"
+  want="$(printf '%s\n' kb/entries scripts/kb-check.mts src/kb src/x/corpusOnly.ts src/x/fakeAnchor.ts src/x/viaHelper.ts | sort -u)"
+  rm -rf "$tmp"
+  echo "kb-útvonal-lista önteszt (hermetikus teszt-repó):"
+  if [ "$got" = "$want" ]; then
+    echo "  ok   ⭐ fiktív horgonyos fájl + helpLink-es + korpusz-fájl bent, a semleges kint"
+  else
+    echo "  FAIL kb_paths"; echo "       várt:   [$(echo $want)]"; echo "       kapott: [$(echo $got)]"; bad=1
+  fi
+  # The real repo at HEAD: the files the old hand list missed until 2026-09-29 are in.
+  for f in src/server/bookingViews.ts src/server/offerViews.ts src/server/contactViews.ts; do
+    if kb_paths HEAD | grep -qxF "$f"; then echo "  ok   HEAD: $f a listán"
+    else echo "  FAIL HEAD: $f hiányzik a listáról"; bad=1; fi
+  done
+  [ "$bad" -eq 0 ] || { echo "⛔ ÖNTESZT: a kb-útvonal-lista NEM azt számolja, amire való." >&2; return 1; }
+  echo "✅ ÖNTESZT: a kb-útvonal-lista a kódból jön (horgony + korpusz + fix tételek)."
+}
+
 [ $# -ge 1 ] || fail "használat: deploy-prod.sh <commit-ish> [--go]  ·  önteszt: --self-test"
-if [ "$1" = "--self-test" ]; then residue_self_test; exit $?; fi
+if [ "$1" = "--self-test" ]; then
+  rc=0
+  residue_self_test || rc=1
+  echo
+  kb_paths_self_test || rc=1
+  exit $rc
+fi
 if [ "$1" = "--kb-shot-gate" ]; then
   [ $# -ge 2 ] || fail "használat: deploy-prod.sh --kb-shot-gate <commit-ish>"
   cd "$(git rev-parse --show-toplevel)" || fail "nem git-fa"
@@ -320,8 +375,12 @@ fi
 # evidence: a fresh, range-bound tudasbazis-or PASS token (kb-gate.mjs). The guard
 # detects and blocks — it never writes guide content at deploy time (a guide nobody
 # reviewed is the "hamis súgó" §J.24 forbids).
-KB_PATHS="src/console/views.ts src/console/partnerViews.ts src/console/partnerData.ts src/server/adminViews.ts src/server/moduleConfigViews.ts src/server/modulePreview.ts src/server/bookingViews.ts src/server/offerViews.ts src/server/contactViews.ts src/kb kb/entries scripts/kb-check.mts"
 if [ -n "$PROD_SHA" ]; then
+  # The watched paths are COMPUTED from both ends of the range (kb_paths above) — a
+  # hand-kept list missed bookingViews/offerViews/contactViews until 2026-09-29.
+  KB_PATHS="$( { kb_paths "$PROD_SHA"; kb_paths "$SHA"; } | sort -u | tr '\n' ' ')"
+  echo "── GATE 1c — a tudásbázis-kapu figyelt útvonalai (kódból számolva, $(echo $KB_PATHS | wc -w) db):"
+  echo "$KB_PATHS" | tr ' ' '\n' | sed '/^$/d; s/^/     · /'
   KB_DIFF="$(git diff --name-only "$PROD_SHA" "$SHA" -- $KB_PATHS || true)"
   if [ -z "$KB_DIFF" ]; then
     echo "── GATE 1c — tudásbázis: nincs KB-releváns változás a tartományban ✓"

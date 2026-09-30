@@ -7,6 +7,12 @@
 //   ② Failed-login throttle: LOGIN_FAIL_LIMIT wrong passwords from one IP → the next
 //      POST /login is a 429 with the throttle message, BEFORE the password is checked;
 //      another IP and the other realm are untouched. Unknown usernames only — no DB write.
+//   ③ The brakes key on `clientIp()` (ADR-XXXX): X-Real-IP (nginx OVERWRITES it), else the
+//      socket address; behind a Cloudflare edge CF-Connecting-IP (trusted only from an
+//      edge) — NEVER X-Forwarded-For (nginx APPENDS to the client's value). Negative
+//      control: a fresh X-Forwarded-For on every request must NOT reset the login brake nor
+//      the public booking/enquiry throttle (real server, /t/<slug>/api/erdeklodes with an
+//      empty form — throttled before validation, 400 without a DB write).
 //
 // Run:  npx tsx scripts/login-hardening-check.mts
 //       npx tsx scripts/login-hardening-check.mts --self-test   (must go RED — proves it measures)
@@ -108,25 +114,114 @@ for (const { name, port, ipA, ipB } of [
 ]) {
   const statuses: number[] = [];
   for (let i = 0; i < guard.LOGIN_FAIL_LIMIT; i++) {
-    statuses.push((await call(port, "POST", "/login", { "X-Forwarded-For": ipA }, BAD)).status);
+    statuses.push((await call(port, "POST", "/login", { "X-Real-IP": ipA }, BAD)).status);
   }
   check(
     statuses.every((s) => s !== 429),
     `${name}: az első ${guard.LOGIN_FAIL_LIMIT} hibás próba még NEM 429`,
     statuses.join(","),
   );
-  const locked = await call(port, "POST", "/login", { "X-Forwarded-For": ipA }, BAD);
+  const locked = await call(port, "POST", "/login", { "X-Real-IP": ipA }, BAD);
   check(locked.status === 429, `${name}: a ${guard.LOGIN_FAIL_LIMIT + 1}. próba 429`, `status=${locked.status}`);
   check(THROTTLE_HU.test(locked.body), `${name}: a 429 kimondja, mi történt (felhasználói üzenet)`);
   check(locked.setCookie.length === 0, `${name}: a letiltott próba nem ad munkamenet-sütit`);
-  const other = await call(port, "POST", "/login", { "X-Forwarded-For": ipB }, BAD);
-  check(other.status !== 429, `${name}: MÁSIK IP nincs letiltva`, `status=${other.status}`);
+  const other = await call(port, "POST", "/login", { "X-Real-IP": ipB }, BAD);
+  check(other.status !== 429, `${name}: MÁSIK IP (X-Real-IP) nincs letiltva`, `status=${other.status}`);
 }
 guard.resetLoginThrottle();
 
+// ── ③ The key: X-Real-IP / socket, never X-Forwarded-For (ADR-XXXX) ─────────────
+console.log("\n── ③ A fék kulcsa: X-Real-IP / socket, SOHA nem az X-Forwarded-For ──");
+// A client-invented X-Forwarded-For, fresh on every request (what nginx would pass on
+// in front of its own appended address).
+const spoof = (i: number): string => `198.18.${(i >> 8) & 255}.${i & 255}`;
+for (const { name, port } of [
+  { name: "tenant /login", port: PUB },
+  { name: "operátor /login", port: CON },
+]) {
+  const statuses: number[] = [];
+  for (let i = 0; i <= guard.LOGIN_FAIL_LIMIT; i++) {
+    statuses.push((await call(port, "POST", "/login", { "X-Forwarded-For": spoof(i) }, BAD)).status);
+  }
+  check(
+    statuses.at(-1) === 429,
+    `${name}: kérésenként ÚJ X-Forwarded-For mellett is lezár (a socket-cím számít)`,
+    statuses.join(","),
+  );
+  const behindNginx = await call(port, "POST", "/login", { "X-Real-IP": "203.0.113.30", "X-Forwarded-For": spoof(999) }, BAD);
+  check(behindNginx.status !== 429, `${name}: X-Real-IP-vel külön kliens = külön számláló`, `status=${behindNginx.status}`);
+  // A direct-to-origin client inventing a fresh CF-Connecting-IP per request: still ONE key.
+  const cfSpoof: number[] = [];
+  for (let i = 0; i <= guard.LOGIN_FAIL_LIMIT; i++) {
+    cfSpoof.push((await call(port, "POST", "/login", { "X-Real-IP": "203.0.113.31", "CF-Connecting-IP": spoof(i) }, BAD)).status);
+  }
+  check(cfSpoof.at(-1) === 429, `${name}: nem-CF társtól kérésenként ÚJ CF-Connecting-IP mellett is lezár`, cfSpoof.join(","));
+  // Two guests behind the SAME Cloudflare edge: separate counters (one locked, one free).
+  for (let i = 0; i <= guard.LOGIN_FAIL_LIMIT; i++) {
+    await call(port, "POST", "/login", { "X-Real-IP": "162.159.114.119", "CF-Connecting-IP": "203.0.113.32" }, BAD);
+  }
+  const guestB = await call(port, "POST", "/login", { "X-Real-IP": "162.159.114.119", "CF-Connecting-IP": "203.0.113.33" }, BAD);
+  check(guestB.status !== 429, `${name}: ugyanazon CF-él mögötti MÁSIK vendég nincs letiltva`, `status=${guestB.status}`);
+}
+guard.resetLoginThrottle();
+
+// The public booking/enquiry throttle (public.ts `throttled`, 5 / 10 min) on the real server.
+{
+  const row = await db
+    .selectFrom("site")
+    .select("slug")
+    .where("status", "=", "live")
+    .where("slug", "is not", null)
+    .orderBy("slug")
+    .executeTakeFirst();
+  if (check(Boolean(row?.slug), "foglalási fék: van élő dev-oldal, amin mérhető (/t/<slug>/)")) {
+    const path = `/t/${row!.slug}/api/erdeklodes`;
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) statuses.push((await call(PUB, "POST", path, { "X-Forwarded-For": spoof(i) }, "x=1")).status);
+    check(
+      statuses.slice(0, 5).every((s) => s === 400) && statuses[5] === 429,
+      "foglalási fék: kérésenként ÚJ X-Forwarded-For mellett a 6. kérés 429",
+      statuses.join(","),
+    );
+    const realA = await call(PUB, "POST", path, { "X-Real-IP": "203.0.113.40", "X-Forwarded-For": spoof(5) }, "x=1");
+    check(realA.status === 400, "foglalási fék: X-Real-IP-vel külön kliens = külön számláló", `status=${realA.status}`);
+    // Behind one Cloudflare edge: guest A uses up the limit, guest B still gets through.
+    const edge = { "X-Real-IP": "104.23.248.217" };
+    const aStatuses: number[] = [];
+    for (let i = 0; i < 6; i++) aStatuses.push((await call(PUB, "POST", path, { ...edge, "CF-Connecting-IP": "203.0.113.41" }, "x=1")).status);
+    const guestB = await call(PUB, "POST", path, { ...edge, "CF-Connecting-IP": "203.0.113.42" }, "x=1");
+    check(
+      aStatuses[5] === 429 && guestB.status === 400,
+      "foglalási fék: ugyanazon CF-él mögött az A vendég lezár, a B vendég átjut",
+      `A=${aStatuses.join(",")} B=${guestB.status}`,
+    );
+  }
+}
+
+// The helper itself, and that no brake reads X-Forwarded-For on its own again.
+{
+  const { clientIp } = await import("../src/server/clientIp.js");
+  const req = (headers: Record<string, string | string[]>, remoteAddress = "10.0.0.1") =>
+    ({ headers, socket: { remoteAddress } }) as never;
+  check(clientIp(req({ "x-real-ip": "203.0.113.5", "x-forwarded-for": "1.2.3.4" })) === "203.0.113.5", "clientIp: X-Real-IP nyer");
+  check(clientIp(req({ "x-forwarded-for": "1.2.3.4" })) === "10.0.0.1", "clientIp: X-Forwarded-For-ot NEM olvas (socket)");
+  check(clientIp(req({ "x-real-ip": "  " })) === "10.0.0.1", "clientIp: üres X-Real-IP → socket");
+  // Prod runs behind Cloudflare: the nginx peer is the EDGE, the client is CF-Connecting-IP —
+  // trusted only from an edge (IPv4, IPv6 and the IPv4-mapped socket form).
+  check(clientIp(req({ "x-real-ip": "162.159.114.119", "cf-connecting-ip": "203.0.113.7" })) === "203.0.113.7", "clientIp: CF-él (IPv4) mögött a CF-Connecting-IP a kliens");
+  check(clientIp(req({ "x-real-ip": "2606:4700:3031::1", "cf-connecting-ip": "2001:db8::7" })) === "2001:db8::7", "clientIp: CF-él (IPv6) mögött a CF-Connecting-IP a kliens");
+  check(clientIp(req({ "cf-connecting-ip": "203.0.113.8" }, "::ffff:104.23.248.217")) === "203.0.113.8", "clientIp: CF-él socket-címe (::ffff:) is él");
+  check(clientIp(req({ "x-real-ip": "198.51.100.9", "cf-connecting-ip": "203.0.113.9" })) === "198.51.100.9", "clientIp: NEM CF-társtól a CF-Connecting-IP-t figyelmen kívül hagyja (közvetlen origin-hívás)");
+  check(clientIp(req({ "x-real-ip": "162.159.114.119" })) === "162.159.114.119", "clientIp: CF-él CF-Connecting-IP nélkül → a társ címe");
+  const { readFileSync } = await import("node:fs");
+  for (const f of ["src/server/public.ts", "src/auth/loginGuard.ts", "src/console/server.ts"]) {
+    check(!/x-forwarded-for/i.test(readFileSync(f, "utf8")), `${f}: nem olvassa az X-Forwarded-For-t (egy szabály: clientIp)`);
+  }
+}
+
 // Realm isolation + window expiry + "checked before the password", on the module itself.
 {
-  const fake = (ip: string) => ({ headers: { "x-forwarded-for": ip }, socket: {} }) as never;
+  const fake = (ip: string) => ({ headers: { "x-real-ip": ip }, socket: {} }) as never;
   const t0 = 1_000_000;
   for (let i = 0; i < guard.LOGIN_FAIL_LIMIT; i++) guard.recordLoginFailure("tenant", fake("198.51.100.1"), t0);
   check(guard.loginLocked("tenant", fake("198.51.100.1"), t0 + 1), "modul: limit után zárva");
@@ -172,17 +267,26 @@ if (SELF_TEST) {
   // "SecureX"/"Secured" in a value must not count as the attribute.
   bites("Secure-szerű érték nem attribútum", !hasSecure({ status: 200, body: "", setCookie: ["x=Secured; HttpOnly"] }));
   // A throttle that never locks: after LIMIT failures, not locked → the ② assertion is red.
-  const fake = { headers: { "x-forwarded-for": "192.0.2.99" }, socket: {} } as never;
+  const fake = { headers: { "x-real-ip": "192.0.2.99" }, socket: {} } as never;
   for (let i = 0; i < guard.LOGIN_FAIL_LIMIT - 1; i++) guard.recordLoginFailure("tenant", fake);
   bites("limit alatt nincs zár (LIMIT-1 próba)", !guard.loginLocked("tenant", fake));
   guard.resetLoginThrottle();
+  // The old key (first X-Forwarded-For element): the ③ negative control must see it
+  // as a DIFFERENT client per request, i.e. the brake would never close.
+  const oldKey = (xff: string) => xff.split(",")[0]!.trim();
+  bites("régi kulcs (XFF első eleme): kérésenként új kliens", oldKey(`${spoof(1)}, 10.0.0.1`) !== oldKey(`${spoof(2)}, 10.0.0.1`));
+  // A naive "always trust CF-Connecting-IP" key: a direct-to-origin client picks its own.
+  const { isCloudflareEdge } = await import("../src/server/clientIp.js");
+  bites("CF-Connecting-IP feltétel nélkül: nem-CF társ is választ kulcsot", !isCloudflareEdge("203.0.113.31"));
+  // A key that ignores Cloudflare: every guest of a PoP shares the edge's counter.
+  bites("CF-él = egy kliens: a PoP összes vendége egy számlálón", isCloudflareEdge("162.159.114.119"));
 }
 
 server.close();
 consoleServer.close();
 await db.destroy();
 if (failed) {
-  console.error(`\n⛔ login-hardening-check: ${failed} ellenőrzés bukott (ADR-0277).`);
+  console.error(`\n⛔ login-hardening-check: ${failed} ellenőrzés bukott (ADR-0277, ADR-XXXX).`);
   process.exit(1);
 }
 console.log("\n✅ login-hardening-check: Secure süti csak HTTPS-en, belépési fék mindkét birodalomban.");

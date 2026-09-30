@@ -1276,7 +1276,7 @@ fi
 # an unconditional Secure kills every dev login), and both /login routes stop an IP after
 # LOGIN_FAIL_LIMIT wrong passwords. Boots both servers on port 0, no DB write, ~10 s.
 if [ -f scripts/login-hardening-check.mts ] && \
-   changed_files | grep -qE '^(src/auth/|src/server/public\.ts|src/console/server\.ts)|^scripts/login-hardening-check'; then
+   changed_files | grep -qE '^(src/auth/|src/server/public\.ts|src/server/clientIp\.ts|src/console/server\.ts)|^scripts/login-hardening-check'; then
   echo "[pre-commit] login-hardening-check (Secure süti + belépési fék)…"
   npx tsx scripts/login-hardening-check.mts >"$GATE_LOG" || gate_failed
 fi
