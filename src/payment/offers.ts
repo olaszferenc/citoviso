@@ -21,7 +21,7 @@ import { couponRule } from "./couponRule.js";
 // ── Tunable parameters (ADR-0088: percentages/deadlines are parameters, not law).
 export const OUTREACH_OFFER_PERCENT = 25;
 /**
- * ADR-XXXX: DEFAULT/SEED only. The live threshold and percent are operator-set on
+ * ADR-0285: DEFAULT/SEED only. The live threshold and percent are operator-set on
  * /pricing (app_setting 'escalation_offer') and read via getEscalationConfig() —
  * minting code must never use these two constants directly.
  */
@@ -33,7 +33,7 @@ export const ESCALATION_FOLLOWUP_HOURS = 24;
 export const NEW_SUBSCRIBER_COUPON_PERCENT = 25;
 export const NEW_SUBSCRIBER_COUPON_DAYS = 90;
 
-// ── ADR-XXXX: the escalation offer's operator-set parameters (frozen plan:
+// ── ADR-0285: the escalation offer's operator-set parameters (frozen plan:
 // assets/design-refs/console/escalation-offer-admin/). GLOBAL, not per pricing
 // region: an offer is minted for a prospect, and a prospect has no pricing region
 // (the page picks the region by the visitor). One app_setting row, JSON — the
@@ -307,7 +307,7 @@ export async function prospectHasPaidOrder(prospectId: string): Promise<boolean>
 }
 
 /**
- * §4: on the operator-set nth visit (getEscalationConfig().threshold; ADR-XXXX)
+ * §4: on the operator-set nth visit (getEscalationConfig().threshold; ADR-0285)
  * without a purchase, mint the one-time, deadline-bound decision-helper offer at
  * the operator-set percent. Switched off = nothing new is minted. Returns the offer when this
  * call created it (the caller logs/reacts), null otherwise. EGYSZERI by the

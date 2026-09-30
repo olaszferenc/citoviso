@@ -29,7 +29,7 @@ kontraktus: assets/design-refs/prospect-page/order-pill/README.md
 ## ② Rendelés, 1. lépés — a csomag
 
 - [ ] A kedvezmény-kártya (ha feljön) nem zsákutca: el lehet halasztani
-  # ADR-0088: a /pricing-on beállított N. megnyitáskor (ADR-XXXX, alapból a harmadiknál) a lap
+  # ADR-0088: a /pricing-on beállított N. megnyitáskor (ADR-0285, alapból a harmadiknál) a lap
   # egy döntés-segítő kártyát dob fel — ezért opcionális lépés, a küszöbtől függetlenül fut. MÉRVE
   # (2026-09-27, ez a futás): a kártya TAKARTA a rendelő pirulát 390 px-en — a kattintás
   # a kártya egyik span-jére esett (elementFromPoint), és a teljes vásárlási lánc megállt.

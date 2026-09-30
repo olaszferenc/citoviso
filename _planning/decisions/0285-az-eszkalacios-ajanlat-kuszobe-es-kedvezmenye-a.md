@@ -1,4 +1,4 @@
-## ADR-XXXX — Az eszkalációs ajánlat küszöbe és kedvezménye a /pricing-on állítható (2026-09-30)
+## ADR-0285 — Az eszkalációs ajánlat küszöbe és kedvezménye a /pricing-on állítható (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; brief:
 `~/rc-briefs/eszkalacios-ajanlat-admin.md`; a felület §2b-terve jóváhagyva: „A” változat) ·

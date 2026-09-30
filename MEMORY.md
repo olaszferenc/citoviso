@@ -11,7 +11,7 @@ Utolsó frissítés: 2026-09-29 (📱 **Telefonos kör koordinátor ZÁRVA — a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-09-30 — SUB cit7785fd02: eszkalációs ajánlat állítható a /pricing-on, ADR-XXXX) — LANDOLVA
+## Párhuzamos szál (2026-09-30 — SUB cit7785fd02: eszkalációs ajánlat állítható a /pricing-on, ADR-0285) — LANDOLVA
 
 A tulaj kérése: a „hányadik megnyitásnál” (eddig beégetett 3) és a „mekkora kedvezmény” (50%) a /pricing-on legyen
 állítható. §2b: két mock, a tulaj az „A”-t választotta (saját „Lead-ajánlatok” szekció az Alap-előfizetés alatt).

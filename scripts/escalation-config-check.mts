@@ -1,4 +1,4 @@
-// ADR-XXXX — the escalation offer's threshold and percent are OPERATOR-SET on /pricing
+// ADR-0285 — the escalation offer's threshold and percent are OPERATOR-SET on /pricing
 // (app_setting 'escalation_offer'; frozen plan: assets/design-refs/console/escalation-offer-admin/).
 //
 // What this proves — each leg is a way the setting could silently stop meaning anything:

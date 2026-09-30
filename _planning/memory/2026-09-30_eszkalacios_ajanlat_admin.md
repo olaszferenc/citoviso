@@ -1,4 +1,4 @@
-# 2026-09-30 — Eszkalációs ajánlat: küszöb és kedvezmény a /pricing-on (ADR-XXXX)
+# 2026-09-30 — Eszkalációs ajánlat: küszöb és kedvezmény a /pricing-on (ADR-0285)
 
 SUB session (`cit7785fd02`), koordinátor: CIT fő session. Brief: `~/rc-briefs/eszkalacios-ajanlat-admin.md`.
 

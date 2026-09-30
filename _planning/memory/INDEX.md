@@ -11,7 +11,7 @@
 - [2026-09-30_mock_hos_cim_tipografia.md](2026-09-30_mock_hos_cim_tipografia.md) — 2026-09-30 — Mock hős-cím tipográfia: a hosszú mondat nem veri szét az oldalt (ADR-0284)
 - [2026-09-30_mms_relay.md](2026-09-30_mms_relay.md) — MMS élesről relay-en a dev gép modemjére; a kép-előkészítés sharp (2026-09-30)
 - [2026-09-30_i18n_art_ujraproba.md](2026-09-30_i18n_art_ujraproba.md) — 2026-09-30 — A 7 `{Art}`-os angol UI-string: a fordító újrapróbál, a magyar névelő nem szivárog (SUB i18nart)
-- [2026-09-30_eszkalacios_ajanlat_admin.md](2026-09-30_eszkalacios_ajanlat_admin.md) — 2026-09-30 — Eszkalációs ajánlat: küszöb és kedvezmény a /pricing-on (ADR-XXXX)
+- [2026-09-30_eszkalacios_ajanlat_admin.md](2026-09-30_eszkalacios_ajanlat_admin.md) — 2026-09-30 — Eszkalációs ajánlat: küszöb és kedvezmény a /pricing-on (ADR-0285)
 - [2026-09-30_deploy_utomunka_3.md](2026-09-30_deploy_utomunka_3.md) — 2026-09-30 — Deploy-utómunka 3: Számla újra gomb · névelő-újrafordítás · MMS esti tiltás
 - [2026-09-30_arazasigeret.md](2026-09-30_arazasigeret.md) — Árazás-lap halott ígérete ki, fojtás-kulcs Cloudflare-tudatos, KB-útvonallista kódból, deploy utáni teendők (2026-09-30)
 - [2026-09-29_trio_minta_szobakep_es_csillagsor.md](2026-09-29_trio_minta_szobakep_es_csillagsor.md) — A trió: élő lapon nincs „Minta” szobakép + a csillagsor látszik (2026-09-29)

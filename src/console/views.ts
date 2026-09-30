@@ -686,7 +686,7 @@ export function pricingPage(
   disabledSales: ReadonlySet<string> = new Set(),
   /** Active module_entitlement counts per module id — context for switching off. */
   liveCounts: ReadonlyMap<string, number> = new Map(),
-  /** ADR-XXXX: the GLOBAL escalation-offer parameters + the offers still running. */
+  /** ADR-0285: the GLOBAL escalation-offer parameters + the offers still running. */
   escalation: {
     readonly cfg: EscalationConfig;
     readonly live: { readonly count: number; readonly percents: readonly number[] };
@@ -936,7 +936,7 @@ export function pricingPage(
 }
 
 /**
- * ADR-XXXX — „Lead-ajánlatok”: the escalation offer's operator-set threshold and
+ * ADR-0285 — „Lead-ajánlatok”: the escalation offer's operator-set threshold and
  * percent (frozen plan: assets/design-refs/console/escalation-offer-admin/, variant A).
  *
  * GLOBAL: the same fields on every region page, saved with whichever region's form

@@ -2480,7 +2480,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .pay-cards legend{padding:0 4px}
 .con .pay-cards__opt{display:block;font-size:.88rem;padding:3px 0;cursor:pointer}
 
-/* ── Lead-ajánlatok on /pricing (ADR-XXXX; frozen plan:
+/* ── Lead-ajánlatok on /pricing (ADR-0285; frozen plan:
    assets/design-refs/console/escalation-offer-admin/). The switch reuses .con-sell,
    the fields reuse .pr-field/.pr-input; only the error state, the preview and the
    live-offer notice are new. */

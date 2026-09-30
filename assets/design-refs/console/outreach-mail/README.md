@@ -106,5 +106,5 @@ interaktív részét (méret-váltó, összevetés) Playwrighttal végigkattinta
 
 ⚠️ Próba-küldésnél a gomb SOHA ne a tracked `/p/<token>` linkre menjen, hanem a követés nélküli
 `/configure/<artifactId>`-ra: a tracked linken a /pricing-on beállított N. megnyitás (alapból a 3.,
-−50%) eszkalációs ajánlatot mintáz (`offers.ts getEscalationConfig`, ADR-XXXX), és 24 óra múlva a napi billing-tick VALÓDI
+−50%) eszkalációs ajánlatot mintáz (`offers.ts getEscalationConfig`, ADR-0285), és 24 óra múlva a napi billing-tick VALÓDI
 levelet küld a VALÓDI szállásadónak. A leiratkozó-link próbában legyen halott példa-útvonal.

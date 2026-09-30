@@ -16,7 +16,7 @@ alapérték — a valódi érték ma a /pricing „Lead-ajánlatok” szekciój�
    szerver számolja és pecsételi. Amit mutatunk = amit terhelünk (§B.17).
 3. **EGY legnagyobb kedvezmény** jelenik meg; kedvezmények SOSEM adódnak össze.
 4. **Eszkalációs döntés-kártya** (a /pricing-on beállított N. megnyitás — alapból a 3. —, szerver-mintázta
-   ajánlat; a küszöb és a % 2026-09-30 óta operátor-állítható, ADR-XXXX, `escalation-offer-admin/`): asztali nézetben
+   ajánlat; a küszöb és a % 2026-09-30 óta operátor-állítható, ADR-0285, `escalation-offer-admin/`): asztali nézetben
    középre emelt fehér kártya fátyollal, mobilon alulra horgonyzott; élő óra/perc/mp
    visszaszámláló; CTA a panelt nyitja; „Most még gondolkodom" csak a kártyát rejti el —
    az ajánlat él, és az ár-kártyában tovább látszik. Lejáratkor a kedvezmény MINDENHOL
