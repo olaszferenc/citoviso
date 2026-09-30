@@ -14,6 +14,7 @@
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
 import { getGateway } from "../payment/index.js";
 import { CARD_VERIFY_AMOUNT_HUF } from "../payment/service.js";
 
@@ -64,6 +65,8 @@ export interface WalletAdminData {
   readonly canChangeCard: boolean;
 }
 
+/** A Postgres `date` VALUE (current_period_end) → 'YYYY-MM-DD'. Instants (timestamptz)
+ *  go through budapestIsoDay instead (ADR-XXXX). */
 function isoDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -111,7 +114,7 @@ export async function getWalletAdmin(tenantId: string): Promise<WalletAdminData 
         last4: sub.card_last4,
         expMonth: sub.card_exp_month,
         expYear: sub.card_exp_year,
-        savedOn: isoDate(savedAt ?? new Date()),
+        savedOn: budapestIsoDay(savedAt ?? new Date()),
       }
     : null;
 
@@ -157,7 +160,7 @@ export async function getWalletAdmin(tenantId: string): Promise<WalletAdminData 
   const charges: WalletCharge[] = chargeRows
     .filter((r) => r.kind !== "card_update") // the hold is not a charge — nothing moved
     .map((r) => ({
-      on: isoDate(new Date((r.paidAt ?? r.createdAt) as unknown as string)),
+      on: budapestIsoDay(new Date((r.paidAt ?? r.createdAt) as unknown as string)),
       orderKind: r.kind,
       billingPeriod: r.period as "monthly" | "annual",
       amount: r.amount,
@@ -182,8 +185,8 @@ export async function getWalletAdmin(tenantId: string): Promise<WalletAdminData 
     history: historyRows.map((h) => ({
       brand: h.card_brand,
       last4: h.card_last4,
-      savedOn: isoDate(new Date(h.saved_at as unknown as string)),
-      endedOn: isoDate(new Date(h.ended_at as unknown as string)),
+      savedOn: budapestIsoDay(new Date(h.saved_at as unknown as string)),
+      endedOn: budapestIsoDay(new Date(h.ended_at as unknown as string)),
       reason: h.end_reason,
     })),
     verifyAmount: CARD_VERIFY_AMOUNT_HUF,

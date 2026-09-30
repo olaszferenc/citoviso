@@ -14,6 +14,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { APP_TZ, budapestParts } from "../text/budapestTime.js";
 import { config } from "../config.js";
 import { getEmailSender } from "../email/sender.js";
 import { buildTrafficEmail } from "../email/trafficEmail.js";
@@ -28,12 +29,12 @@ export interface TrafficMailResult {
   readonly failed: number;
 }
 
-/** „augusztus" — a lezárt hónap neve a címzett nyelvén. */
-function monthLabel(d: Date, lang: string): string {
+/** „augusztus" — a lezárt hónap neve a címzett nyelvén, BUDAPEST szerinti hónap (ADR-XXXX). */
+export function monthLabel(d: Date, lang: string): string {
   try {
-    return d.toLocaleDateString(lang, { month: "long" });
+    return d.toLocaleDateString(lang, { month: "long", timeZone: APP_TZ });
   } catch {
-    return String(d.getMonth() + 1);
+    return String(budapestParts(d).month);
   }
 }
 
@@ -52,8 +53,7 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
     .where("site.status", "=", "live")
     .execute();
 
-  const periodStart = new Date(now);
-  periodStart.setDate(periodStart.getDate() - 30);
+  const periodStart = new Date(now.getTime() - 30 * 86_400_000);
 
   for (const t of tenants) {
     try {
@@ -63,7 +63,10 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
         .select("id")
         .where("tenant_id", "=", t.tenantId)
         .where("kind", "=", "traffic")
-        .where(sql<boolean>`sent_at >= date_trunc('month', ${now}::timestamptz)`)
+        // The month starts at Budapest midnight (ADR-XXXX) — not in the DB session's zone.
+        .where(
+          sql<boolean>`sent_at >= (date_trunc('month', ${now}::timestamptz AT TIME ZONE ${sql.lit(APP_TZ)}) AT TIME ZONE ${sql.lit(APP_TZ)})`,
+        )
         .executeTakeFirst();
       if (already) {
         out.skippedAlready++;

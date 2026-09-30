@@ -16,6 +16,7 @@ import path from "node:path";
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
+import { budapestMidnight, budapestYear } from "../text/budapestTime.js";
 import { config } from "../config.js";
 import { injectConsent, markAudience } from "./consent.js";
 import { isPlatformHosting, normalizeCustomDomain, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
@@ -1708,7 +1709,8 @@ async function serveAdmin(
       // used to print the wrong one as if it were the other (Elek FK-007: it read
       // "2 foglalás" with nothing left standing). The headline is what EXISTS now;
       // the cancellations are named next to it, not folded into it or dropped.
-      const yearStart = new Date(`${new Date().getFullYear()}-01-01T00:00:00Z`);
+      // Budapest midnight of 1 January (ADR-XXXX) — the same year bookingViews counts in.
+      const yearStart = budapestMidnight(`${budapestYear(new Date())}-01-01`);
       const countYear = async (status: "accepted" | "cancelled"): Promise<number> => {
         const row = await db
           .selectFrom("booking_request")

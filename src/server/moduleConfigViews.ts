@@ -24,6 +24,7 @@ import {
   type ModuleField,
 } from "../moduleConfig.js";
 import { currencySign } from "../text/money.js";
+import { APP_TZ } from "../text/budapestTime.js";
 import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
@@ -2527,7 +2528,7 @@ function bookingEditor(
           const state = l.lastError
             ? T(lang, "Nem sikerült frissíteni: {err}", { err: l.lastError })
             : l.lastSyncAt
-              ? T(lang, "Utoljára frissült: {date}", { date: new Date(l.lastSyncAt).toLocaleString("hu-HU") }) +
+              ? T(lang, "Utoljára frissült: {date}", { date: new Date(l.lastSyncAt).toLocaleString("hu-HU", { timeZone: APP_TZ }) }) +
                 (l.lastDayCount !== null ? ` · ${l.lastDayCount} foglalt nap` : "")
               : T(lang, "Még nem frissült");
           return (

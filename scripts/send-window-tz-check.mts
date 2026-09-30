@@ -9,7 +9,13 @@
 //      may not start; 10:00 Budapest → it may;
 //   ③ the follow-up window (followupWindowBlocks) is the same rule;
 //   ④ the follow-up mail prints its deadline on the Budapest clock (like the page's card);
-//   ⑤ STRUCTURE: no outbound file reads the process-local clock (getHours/setHours/…).
+//   ⑤ STRUCTURE: no outbound file reads the process-local clock (getHours/setHours/…);
+//   ⑥ ADR-XXXX the shared clock (src/text/budapestTime.ts) and what owners/buyers see: the
+//      buyer's payment stamp, the traffic report's day start (Budapest midnight, 23/25-hour
+//      DST days), the monthly mail's month name — right around midnight, where UTC and
+//      Budapest disagree;
+//   ⑦ STRUCTURE: the owner/buyer-facing files read no local getter, every date formatter in
+//      them names the zone, every SQL day/month boundary says AT TIME ZONE.
 // Pure: no DB, no network.
 //
 // Run: npx tsx scripts/send-window-tz-check.mts
@@ -18,6 +24,10 @@ import { readFileSync } from "node:fs";
 import { minutesUntilWindowCloses, sendWindowOpen } from "../src/sms/sendWindow.js";
 import { pairWindowBlocks } from "../src/outreach/sendOutreachSms.js";
 import { deadlineText, followupWindowBlocks } from "../src/outreach/escalationFollowup.js";
+import { budapestIsoDay, budapestMidnight, budapestDayStart, budapestYear } from "../src/text/budapestTime.js";
+import { fmtStamp } from "../src/tenant/multilangCard.js";
+import { since } from "../src/analytics/trafficReport.js";
+import { monthLabel } from "../src/analytics/trafficMail.js";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown): void {
@@ -45,7 +55,21 @@ try {
       check(`③ [${tz}, ${season}] emlékeztető-ablak 07:59 zárva · 08:00 nyitva · 20:00 zárva`,
         ["07:59", "08:00", "20:00"].map((t) => followupWindowBlocks(at(t)) === null), [false, true, false]);
       check(`④ [${tz}, ${season}] a levél határideje Budapest szerint (16:10)`, /16:10/.test(deadlineText(at("16:10"), "hu")), true);
+      // ⑥ 00:30 Budapest = the previous day in UTC (and in New York).
+      check(`⑥ [${tz}, ${season}] 00:30 Budapest: a nap és a fizetési bélyeg a budapesti`,
+        [budapestIsoDay(at("00:30")), fmtStamp(at("00:30"))],
+        season === "nyár" ? ["2026-07-01", "2026. 07. 01. 00:30"] : ["2026-12-01", "2026. 12. 01. 00:30"]);
+      check(`⑥ [${tz}, ${season}] a jelentés napja budapesti éjféltől indul`,
+        since(0, at("00:30")).toISOString(), season === "nyár" ? "2026-06-30T22:00:00.000Z" : "2026-11-30T23:00:00.000Z");
     }
+    check(`⑥ [${tz}] DST: a tavaszi nap 23, az őszi 25 órás (budapesti éjféltől éjfélig)`,
+      [(budapestMidnight("2026-03-30").getTime() - budapestMidnight("2026-03-29").getTime()) / 3_600_000,
+       (budapestMidnight("2026-10-26").getTime() - budapestMidnight("2026-10-25").getTime()) / 3_600_000], [23, 25]);
+    check(`⑥ [${tz}] 7 napos ablak kezdete DST-váltáson át`, budapestDayStart(6, new Date("2026-10-27T10:00:00+01:00")).toISOString(), "2026-10-20T22:00:00.000Z");
+    check(`⑥ [${tz}] szilveszter 23:30 / újév 00:30 Budapest: az év a budapesti`,
+      [budapestYear(new Date("2026-12-31T23:30:00+01:00")), budapestYear(new Date("2027-01-01T00:30:00+01:00"))], [2026, 2027]);
+    check(`⑥ [${tz}] a havi levél hónapneve budapesti: augusztus 31. 23:30 → augusztus, szept. 1. 00:30 → szeptember`,
+      [monthLabel(new Date("2026-08-31T23:30:00+02:00"), "hu"), monthLabel(new Date("2026-09-01T00:30:00+02:00"), "hu")], ["augusztus", "szeptember"]);
   }
 } finally {
   if (origTz === undefined) delete process.env.TZ;
@@ -65,6 +89,40 @@ const OUTBOUND = [
 const LOCAL = /\.(getHours|setHours|getMinutes|setMinutes|getDate|setDate|getDay)\(/;
 check("⑤ a kimenő döntés-fájlok nem olvassák a folyamat helyi óráját",
   OUTBOUND.filter((f) => LOCAL.test(readFileSync(f, "utf8"))), []);
+
+// ⑦ structure: the owner/buyer-facing time readers.
+const FACING = [
+  "src/tenant/multilangCard.ts",
+  "src/analytics/trafficReport.ts",
+  "src/analytics/trafficMail.ts",
+  "src/tenant/documents.ts",
+  "src/console/aamAlert.ts",
+  "src/console/partnerData.ts",
+  "src/console/partnerViews.ts",
+];
+check("⑦ a tulaj/vevő-felé néző idő-olvasók nem használnak helyi gettert",
+  FACING.filter((f) => LOCAL.test(readFileSync(f, "utf8"))), []);
+// Every date formatter call in these files names its zone (a number formatter is exempt).
+const FORMATTERS = [...FACING, "src/server/adminViews.ts", "src/server/moduleConfigViews.ts", "src/outreach/escalationFollowup.ts"];
+const zoneless: string[] = [];
+for (const f of FORMATTERS) {
+  const lines = readFileSync(f, "utf8").split("\n");
+  lines.forEach((l, i) => {
+    if (!/new Intl\.DateTimeFormat\(|\.toLocale(Date|Time)?String\(/.test(l)) return;
+    const call = lines.slice(i, i + 10).join("\n");
+    const end = call.indexOf(".format(") >= 0 ? call.indexOf(".format(") : call.indexOf(")", call.indexOf("String(") + 7) + 1;
+    const body = call.slice(0, end > 0 ? end : undefined);
+    if (/timeZone/.test(body)) return;
+    if (/Fraction|currency|style:/.test(body) || /toLocaleString\(\s*"hu-HU"\s*\)/.test(l) && !/Date|At\b|At\)/.test(l)) return;
+    zoneless.push(`${f}:${i + 1}`);
+  });
+}
+check("⑦ minden dátum-formázó kimondja a zónát (timeZone)", zoneless, []);
+const sqlBad = ["src/analytics/trafficReport.ts", "src/analytics/trafficMail.ts"].filter((f) => {
+  const src = readFileSync(f, "utf8");
+  return [...src.matchAll(/(to_char\(occurred_at[^)]*\)|date_trunc\('month'[^`]*)/g)].some((m) => !/AT TIME ZONE/.test(m[0]));
+});
+check("⑦ az SQL nap/hónap-határ AT TIME ZONE-nal számol", sqlBad, []);
 
 if (failures > 0) {
   console.error(`\n✗ SEND-WINDOW-TZ-CHECK: ${failures} bukott ellenőrzés`);

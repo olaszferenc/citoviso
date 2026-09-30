@@ -16,6 +16,7 @@
 
 import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
+import { budapestParts } from "../text/budapestTime.js";
 import { blockingUnitIds } from "./unitScope.js";
 import { formatAmount, getUnitPrices, seasonCovers } from "./prices.js";
 import { seasonRule } from "./seasonRule.js";
@@ -104,8 +105,9 @@ export function normaliseMonth(input: string | null | undefined): string {
     const mm = Number(input.slice(5, 7));
     if (mm >= 1 && mm <= 12) return input;
   }
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  // The owner's current month — on the Budapest clock (ADR-XXXX), not the server's.
+  const now = budapestParts(new Date());
+  return `${now.year}-${String(now.month).padStart(2, "0")}`;
 }
 
 function shiftMonth(month: string, delta: number): string {
@@ -253,7 +255,9 @@ export async function getMonthAvailability(unitId: string, month: string): Promi
   const year = Number(m.slice(0, 4));
   const monthIdx = Number(m.slice(5, 7)) - 1;
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  const todayIso = iso(new Date());
+  // "Today" stays on the booking domain's ONE convention — the UTC calendar day, like
+  // the ~20 other booking/price "today"s (ADR-XXXX lists moving them to Budapest together).
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   // ADR-0114: the month shows what is REALLY unavailable here — including the nights
   // another unit holds (the whole place, or a room the whole place cannot be sold over).

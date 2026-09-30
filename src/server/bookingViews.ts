@@ -17,6 +17,7 @@
 // collapse animation on top.
 
 import { T } from "../i18n/mail.js";
+import { budapestYear } from "../text/budapestTime.js";
 import type { MonthView } from "../tenant/availability.js";
 import { bookingRef, type InboxItem, type SentOffer } from "../booking/requests.js";
 import { icAdmin as ic } from "../ui/icons.js";
@@ -569,9 +570,10 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
   }
   // year — the panel must ADD UP to the tile, otherwise tapping it contradicts it
   // (Elek FK-007: tile "2 foglalás", panel "Idén még nincs visszaigazolt foglalás").
-  const yearNow = new Date().getFullYear();
+  // Budapest calendar year on both sides (ADR-XXXX) — must match the year tile's yearStart.
+  const yearNow = budapestYear(new Date());
   const thisYear = (r: InboxItem): boolean =>
-    Boolean(r.decidedAt) && r.decidedAt!.getFullYear() === yearNow;
+    Boolean(r.decidedAt) && budapestYear(r.decidedAt!) === yearNow;
   const acc = d.requests.filter((r) => r.status === "accepted" && thisYear(r));
   const gone = d.requests.filter((r) => r.status === "cancelled" && thisYear(r));
   const line = (r: InboxItem, live: boolean): string =>

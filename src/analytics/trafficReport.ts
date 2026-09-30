@@ -15,6 +15,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { APP_TZ, addIsoDays, budapestDayStart, budapestIsoDay } from "../text/budapestTime.js";
 
 export interface TrafficReport {
   /** Hány NAPRA szól (30 vagy 7) — a felirat ebből jön. */
@@ -56,13 +57,14 @@ export interface TrafficReport {
   readonly isEmpty: boolean;
 }
 
-/** Az időszak kezdete: N nappal ezelőtt, a nap elejétől. */
-function since(days: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  d.setHours(0, 0, 0, 0);
-  return d;
+/** Az időszak kezdete: N nappal ezelőtt, a nap elejétől — BUDAPESTI éjféltől (ADR-XXXX:
+ *  az éles gép UTC-ben fut, a helyi éjfél ott 1–2 órával később van; DST-napon is helyes). */
+export function since(days: number, now: Date = new Date()): Date {
+  return budapestDayStart(days, now);
 }
+
+/** The Budapest calendar day of a visit, in SQL — the per-day series groups by it. */
+const visitDay = sql<string>`to_char(occurred_at AT TIME ZONE ${sql.lit(APP_TZ)}, 'YYYY-MM-DD')`;
 
 export async function getTrafficReport(tenantId: string, days = 30): Promise<TrafficReport> {
   const from = since(days);
@@ -142,13 +144,13 @@ export async function getVisitorSeries(tenantId: string, days = 7): Promise<Visi
   const rows = await db
     .selectFrom("site_visit")
     .select([
-      sql<string>`to_char(occurred_at, 'YYYY-MM-DD')`.as("day"),
+      visitDay.as("day"),
       sql<number>`count(distinct visitor_hash)`.as("n"),
     ])
     .where("tenant_id", "=", tenantId)
     .where("is_bot", "=", false)
     .where(sql<boolean>`occurred_at >= ${from}`)
-    .groupBy(sql`to_char(occurred_at, 'YYYY-MM-DD')`)
+    .groupBy(visitDay)
     .execute();
   const total = await db
     .selectFrom("site_visit")
@@ -159,11 +161,7 @@ export async function getVisitorSeries(tenantId: string, days = 7): Promise<Visi
     .executeTakeFirst();
   const byKey = new Map(rows.map((r) => [r.day, Number(r.n)]));
   const byDay: number[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    byDay.push(byKey.get(key) ?? 0);
-  }
+  const today = budapestIsoDay(new Date());
+  for (let i = days - 1; i >= 0; i--) byDay.push(byKey.get(addIsoDays(today, -i)) ?? 0);
   return { days, visitors: Number(total?.n ?? 0), byDay };
 }

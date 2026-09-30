@@ -17,35 +17,23 @@
 //      at 19:29 leaves ~30 min for the 60–90 s send + the companion SMS before 20:00.
 // Rows outside the window stay 'queued' and go out in the morning.
 
+import { APP_TZ, budapestHhmm, budapestMinutes } from "../text/budapestTime.js";
+
 /** Local hours in which a cold SMS may go out. A marketing SMS at 23:00 lands on a
  *  private phone and turns a lead into a complaint; the mail has no such problem,
  *  so this gate exists only on this channel (jog/provenance-őr finding). */
 export const SEND_WINDOW = { fromHour: 8, toHour: 20 } as const;
 
-/** The ONE zone every outbound window and outbound deadline is read in (ADR-0288). */
-export const SEND_WINDOW_TZ = "Europe/Budapest";
+/** The zone every outbound window and outbound deadline is read in — the product's ONE
+ *  zone (src/text/budapestTime.ts); re-exported so the window has a readable name. */
+export const SEND_WINDOW_TZ = APP_TZ;
 
 /** The last minute an MMS may be pulled, Budapest wall-clock (exclusive). */
 export const MMS_PULL_CUTOFF = { hour: 19, minute: 30, timeZone: SEND_WINDOW_TZ } as const;
 
-
-/** Minutes since local midnight in Europe/Budapest (DST-correct, process TZ irrelevant). */
-export function budapestMinutes(now: Date): number {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: SEND_WINDOW_TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(now);
-  const num = (t: string): number => Number(parts.find((p) => p.type === t)?.value ?? 0);
-  return num("hour") * 60 + num("minute");
-}
-
-/** "HH:MM" on the Budapest wall clock — for the operator-facing reasons below. */
-export function budapestHhmm(now: Date): string {
-  const m = budapestMinutes(now);
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-}
+// The Budapest clock readers live in ONE module (ADR-XXXX); re-exported for the
+// existing callers of this file.
+export { budapestHhmm, budapestMinutes };
 
 /** Is the outbound window open at `now` (Budapest wall clock, whatever the server's zone)? */
 export function sendWindowOpen(now: Date): boolean {

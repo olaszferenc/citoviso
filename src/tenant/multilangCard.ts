@@ -15,6 +15,7 @@
 // can measure the very same function the admin page renders.
 
 import { db } from "../db/client.js";
+import { budapestParts } from "../text/budapestTime.js";
 import { DEFAULT_LANG, LANG_REGIONS, langName, siteLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS, multilangTier, DEFAULT_MULTILANG_TIER } from "../modules.js";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
@@ -127,10 +128,12 @@ export function paidStateOf(
   };
 }
 
-/** Local wall-clock stamp the buyer can match against their bank statement. */
-function fmtStamp(d: Date): string {
+/** Budapest wall-clock stamp the buyer can match against their bank statement
+ *  (ADR-XXXX: the process zone is UTC on prod — the stamp read 1–2 hours early). */
+export function fmtStamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}. ${p(d.getMonth() + 1)}. ${p(d.getDate())}. ${p(d.getHours())}:${p(d.getMinutes())}`;
+  const z = budapestParts(d);
+  return `${z.year}. ${p(z.month)}. ${p(z.day)}. ${p(z.hour)}:${p(z.minute)}`;
 }
 
 export interface MultilangCardInput {

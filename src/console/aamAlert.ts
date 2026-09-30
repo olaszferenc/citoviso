@@ -14,6 +14,7 @@
 //     branch must fail visibly and stay due until a recipient exists).
 
 import { db } from "../db/client.js";
+import { budapestYear } from "../text/budapestTime.js";
 import { getEmailSender } from "../email/sender.js";
 import { sendSms } from "../sms/sender.js";
 import { getAlertRecipients } from "./appSettings.js";
@@ -88,7 +89,7 @@ async function stamp(year: number, tier: number, channel: Channel): Promise<void
 export async function checkAamAlert(now: Date): Promise<AamAlertResult> {
   const { netHuf } = await getAamYearNet();
   const pct = Math.round((netHuf / AAM_ANNUAL_LIMIT_HUF) * 100);
-  const year = now.getFullYear();
+  const year = budapestYear(now);
   const sent: string[] = [];
   const rcpt = await getAlertRecipients();
 

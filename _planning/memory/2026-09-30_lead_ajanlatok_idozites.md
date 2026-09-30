@@ -57,3 +57,11 @@ kártyájától 1–2 órával eltért). A `mms-relay-check` ⑫ a HIBÁT rögz�
 `moduleConfigViews.ts` „Utoljára frissült”, `trafficReport.ts since()`, `trafficMail.ts monthLabel`.
 Fájlok: `src/sms/sendWindow.ts`, `src/outreach/sendOutreachSms.ts`, `src/outreach/escalationFollowup.ts`,
 `scripts/send-window-tz-check.mts` (új), `scripts/mms-relay-check.mts`, `hooks/pre-commit`, ADR, MEMORY.
+
+## 4. kör (2026-09-30 este) — a tulaj/vevő-felé mutatott idők Budapest szerint (ADR-XXXX)
+Közös zóna-segéd `src/text/budapestTime.ts` (a `sendWindow.ts` innen re-exportál). Javítva: `multilangCard fmtStamp`,
+`moduleConfigViews` „Utoljára frissült”, `trafficReport since()` + sparkline (SQL `AT TIME ZONE`), `trafficMail monthLabel` +
+havi határ, `adminViews relDay/fmtDate/fmtDateTime/éves mérő`, `availability` aktuális hónap, `documents` év, `wallet` pillanat-napok,
+`aamAlert/partnerData/partnerViews` adóév, `bookingViews/public` év-csempe. Őr ⑥⑦ (mutációval 5/5/3/1/1/1 piros).
+**Visszacsinálva, szándékosan:** a „ma” átírása 4 helyen — a foglalási tartomány ~20 helyen UTC-napot használ, a részleges átírás
+két „ma”-t csinált volna; a teljes söprés tulaj-döntés (ADR-ben felsorolva). Postgres `date`-matek (billing stb.) nem zóna-kérdés.

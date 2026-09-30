@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-tulaj-es-vevo-fele-mutatott-idok-budapest-szerint.md) — A tulaj, a vevő és a partner felé mutatott idők Budapest szerint; egy közös zóna-segéd (2026-09-30)
 - [ADR-0288](decisions/0288-minden-kimeno-kuldesi-ablak-es-kimeno-hatarido.md) — Minden kimenő küldési ablak és kimenő határidő Budapest-idő szerint számol, a szerver zónájától függetlenül (2026-09-30)
 - [ADR-0287](decisions/0287-az-eszkalacios-emlekezteto-orankent-megy-8-20.md) — Az eszkalációs emlékeztető óránként megy, 8–20 óra között (Budapest), ajánlatonként egyszer (2026-09-30)
 - [ADR-0286](decisions/0286-a-lead-ajanlatok-idozitese-es-a-bemutatkozo.md) — A lead-ajánlatok időzítése és a bemutatkozó kedvezmény a /pricing-on állítható; a levél %-a köt (2026-09-30)

@@ -9,6 +9,7 @@
 // `invoicePdf()` takes the tenant id too and does not trust the invoice id alone.
 
 import { db } from "../db/client.js";
+import { budapestYear } from "../text/budapestTime.js";
 import { fetchIssuedInvoicePdf } from "../invoicing/szamlazz.js";
 import {
   invoiceItemKey,
@@ -100,7 +101,7 @@ export async function listTenantInvoices(tenantId: string): Promise<TenantInvoic
       hasPdf: Boolean(r.hasPdf),
       periodStart: r.periodStart ? new Date(r.periodStart as unknown as string) : null,
       periodEnd: r.periodEnd ? new Date(r.periodEnd as unknown as string) : null,
-      year: String(issuedAt.getFullYear()),
+      year: String(budapestYear(issuedAt)),
     };
   });
 }
@@ -221,7 +222,7 @@ export async function listTenantAgreements(tenantId: string): Promise<TenantAgre
       push({
         key: "order",
         acceptedAt: at,
-        year: String(at.getFullYear()),
+        year: String(budapestYear(at)),
         text: null,
         facts: [
           { key: "billingPeriod", value: o.billingPeriod },
@@ -233,14 +234,14 @@ export async function listTenantAgreements(tenantId: string): Promise<TenantAgre
     }
     if (o.termsAt) {
       const at = new Date(o.termsAt as unknown as string);
-      push({ key: "terms", acceptedAt: at, year: String(at.getFullYear()), text: o.termsText, facts: [] });
+      push({ key: "terms", acceptedAt: at, year: String(budapestYear(at)), text: o.termsText, facts: [] });
     }
     if (o.photoAt) {
       const at = new Date(o.photoAt as unknown as string);
       push({
         key: "photo_rights",
         acceptedAt: at,
-        year: String(at.getFullYear()),
+        year: String(budapestYear(at)),
         text: o.photoText,
         facts: [],
       });
@@ -250,7 +251,7 @@ export async function listTenantAgreements(tenantId: string): Promise<TenantAgre
       push({
         key: "withdrawal_waiver",
         acceptedAt: at,
-        year: String(at.getFullYear()),
+        year: String(budapestYear(at)),
         text: o.waiverText,
         facts: [],
       });

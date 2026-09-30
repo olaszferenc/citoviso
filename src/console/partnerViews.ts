@@ -13,6 +13,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import { DOC_TYPE_OPTIONS, docTypeLabelOf, dueReadout } from "./partnerData.js";
 // ADR-0067 ③: operator surface, prepared for a non-Hungarian colleague.
 import { T } from "../i18n/mail.js";
+import { budapestYear } from "../text/budapestTime.js";
 import { consoleLang } from "./i18nCtx.js";
 import type {
   MoneyByCurrency,
@@ -342,7 +343,7 @@ export function partnerPage(
  *  running year. No client JS, renders everywhere. */
 function monthlyChart(docs: PartnerDocuments): string {
   const lang = consoleLang();
-  const year = new Date().getFullYear();
+  const year = budapestYear(new Date());
   const out = Array(12).fill(0) as number[];
   const inc = Array(12).fill(0) as number[];
   for (const r of docs.rows) {

@@ -10,6 +10,7 @@ import {
   type MultiUnitState,
 } from "../modules.js";
 import { readFileSync } from "node:fs";
+import { APP_TZ, budapestIsoDay, budapestParts, isoDayDiff } from "../text/budapestTime.js";
 import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
@@ -483,8 +484,10 @@ function subscriptionCard(
   let meter: string;
   let line: string;
   if (sum.billingPeriod === "annual") {
-    let k = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-    if (now.getDate() < start.getDate()) k -= 1;
+    // `start` is a calendar day (periodStart); `now` is read on the Budapest clock (ADR-XXXX).
+    const z = budapestParts(now);
+    let k = (z.year - start.getFullYear()) * 12 + (z.month - 1 - start.getMonth());
+    if (z.day < start.getDate()) k -= 1;
     k = Math.min(12, Math.max(1, k + 1));
     line = T(lang, "megújul {date} · {n} modul aktív · {k}. hónap a 12-ből", { date: renews, n: activeModules, k });
     meter = `<div class="adm-plan__bars">${Array.from({ length: 12 }, (_, i) => `<i${i < k ? ' class="on"' : ""}></i>`).join("")}</div>`;
@@ -3967,11 +3970,11 @@ export interface OverviewData {
 
 /** „ma" / „tegnap" / a short date — the message widget's right column. */
 function relDay(d: Date, lang: string, now: Date = new Date()): string {
-  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  const diff = Math.round((day(now) - day(d)) / 86_400_000);
+  // Budapest calendar days (ADR-XXXX): on the UTC server a 00:30 message was "tegnap".
+  const diff = isoDayDiff(budapestIsoDay(d), budapestIsoDay(now));
   if (diff <= 0) return T(lang, "ma");
   if (diff === 1) return T(lang, "tegnap");
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { month: "short", day: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { month: "short", day: "numeric", timeZone: APP_TZ }).format(d);
 }
 
 /** Overview (ADR-0224 ⑤): title · 3 widgets · cover showcase · to-do list · (phone) plan card. */
@@ -4312,6 +4315,7 @@ function fmtDate(d: Date, lang: string): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    timeZone: APP_TZ, // ADR-XXXX — the owner's clock, not the server's (UTC on prod)
   }).format(d);
 }
 
@@ -4324,6 +4328,7 @@ function fmtDateTime(d: Date, lang: string): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: APP_TZ, // ADR-XXXX — the owner's clock, not the server's (UTC on prod)
   }).format(d);
 }
 

@@ -8,6 +8,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { budapestMidnight, budapestYear } from "../text/budapestTime.js";
 import { huArticleLower } from "../hu.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { formatMoney } from "../text/money.js";
@@ -341,7 +342,8 @@ export const AAM_ANNUAL_LIMIT_HUF = 18_000_000;
  *  Exported: the dashboard chip AND the daily SMS alert (aamAlert.ts) read the
  *  SAME number — two meters would drift. */
 export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
-  const yearStart = new Date(new Date().getFullYear(), 0, 1);
+  // The tax year starts at Budapest midnight, whatever the server's zone (ADR-XXXX).
+  const yearStart = budapestMidnight(`${budapestYear(new Date())}-01-01`);
   const sys = await db
     .selectFrom("invoice")
     .select(({ fn }) => fn.sum("net").as("net"))
