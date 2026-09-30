@@ -14,7 +14,7 @@ Utolsó frissítés: 2026-09-29 (📱 **Telefonos kör koordinátor ZÁRVA — a
 ## Párhuzamos szál (2026-09-30 — SUB i18nart: a 7 `{Art}`-os angol string) — LANDOLVA
 
 A deploy GATE 5 élesen 7 UI-stringet hiányolt: a fordító a placeholder-sértőt újrapróba nélkül eldobta. Most 2 újrapróba-kör
-+ hangos bukás; a magyar névelő-var (`art`/`Art`/`art2`) nem-magyar fordításban üres (ADR-XXXX); GATE 5 akkor is fut, ha az éles
++ hangos bukás; a magyar névelő-var (`art`/`Art`/`art2`) nem-magyar fordításban üres (ADR-0281); GATE 5 akkor is fut, ha az éles
 pack-status nem zöld. Nyitott: 2 torzult régi fordítás + a kliens `data-art`. Jegyzet: `_planning/memory/2026-09-30_i18n_art_ujraproba.md`.
 
 ## Párhuzamos szál (2026-09-29/30 — Deploy-készenlét felderítés, koordinátor `cit92d2a67e`) — 2. kör fut

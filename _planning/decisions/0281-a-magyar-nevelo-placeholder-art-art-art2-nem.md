@@ -1,4 +1,4 @@
-## ADR-XXXX — A magyar névelő-placeholder ({art}/{Art}/{art2}) nem-magyar nyelven üres; a fordító újrapróbál (2026-09-30)
+## ADR-0281 — A magyar névelő-placeholder ({art}/{Art}/{art2}) nem-magyar nyelven üres; a fordító újrapróbál (2026-09-30)
 
 **Kontextus — mérve.** A nagy deploy GATE 5-je élesen elbukott: `en: 3694/3701 — 7 UI-string hiányzik`,
 és a boot-öngyógyítás ugyanazt a hetet bukta kétszer (determinisztikus). Mind a hét `{Art} {domain} …`

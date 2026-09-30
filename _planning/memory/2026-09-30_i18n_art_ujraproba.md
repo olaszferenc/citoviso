@@ -13,7 +13,7 @@
 
 **Változott:** `src/i18n/packs.ts` (placeholderProblem, interpolate, translateStrings + 2 újrapróba-kör),
 `src/i18n/mail.ts` (T → interpolate; a sablon-oldali `templateKit.ts` T-jét névelő-var nem éri, nem változott), `scripts/deploy-prod.sh` (GATE 5 kiváltó),
-`scripts/i18n-retry-check.mts` (új őr), `hooks/pre-commit` (bekötés), ADR-XXXX.
+`scripts/i18n-retry-check.mts` (új őr), `hooks/pre-commit` (bekötés), ADR-0281.
 
 **Nyitott:** a 2 torzult fordítás és a kliens-oldali `data-art` (adminViews `art(id)`) — a jelentésben DÖNTÉS KELL.
 A `catalog.json` nem változott.

@@ -58,7 +58,7 @@ function placeholders(s: string): string[] {
   return [...s.matchAll(/\{[a-zA-Z0-9_]+\}/g)].map((m) => m[0]).sort();
 }
 
-// ADR-XXXX: {art}/{Art}/{art2} carry the HUNGARIAN definite article (huArticle → "A"/"Az").
+// ADR-0281: {art}/{Art}/{art2} carry the HUNGARIAN definite article (huArticle → "A"/"Az").
 // Measured 2026-09-30 on the dev packs: every language kept the token, so the English UI
 // printed "We couldn't purchase A example.hu"; and production dropped 7 strings outright
 // because the translator (rightly) omitted it and the integrity check demanded it. In a

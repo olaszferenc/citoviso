@@ -1,5 +1,5 @@
 // i18n-retry-check — the UI-string translator RETRIES what it dropped, and fails LOUDLY
-// when the retry fails too (ADR-XXXX).
+// when the retry fails too (ADR-0281).
 //
 // ⛔ MEASURED 2026-09-30, production deploy GATE 5: `en: 3694/3701 — 7 UI-string hiányzik`.
 // All seven carried the Hungarian article placeholder {Art}; the translator omitted it
