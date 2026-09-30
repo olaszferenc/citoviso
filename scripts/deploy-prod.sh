@@ -488,6 +488,10 @@ if [ -n "$PROD_SHA" ] && git diff --name-only "$PROD_SHA" "$SHA" 2>/dev/null \
   NEEDS_I18N=1
 elif [ -z "$PROD_SHA" ]; then
   NEEDS_I18N=1   # első sync: nincs mihez diffelni, ezért frissítünk
+elif ! $SSH "cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts >/dev/null 2>&1" </dev/null; then
+  # ⛔ Mérve 2026-09-30: a HEAD-egyező újrafuttatásnál (üres diff) a kapu kimaradt, miközben
+  # az éles csomagból 7 string hiányzott. Az éles fedettség (ensure NÉLKÜL, csak olvas) is kiváltó.
+  NEEDS_I18N=1
 else
   NEEDS_I18N=0
 fi

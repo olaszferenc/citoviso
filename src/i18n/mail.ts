@@ -14,7 +14,7 @@
 
 import { db } from "../db/client.js";
 import { DEFAULT_LANG, langForCountry } from "./lang.js";
-import { ensureLanguagePack, tSync } from "./packs.js";
+import { ensureLanguagePack, interpolate, tSync } from "./packs.js";
 
 /**
  * Translate one mail string to `lang` (the Hungarian source IS the key), with
@@ -25,9 +25,7 @@ export function T(
   hu: string,
   vars?: Record<string, string | number>,
 ): string {
-  let s = tSync(lang, hu);
-  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
-  return s;
+  return interpolate(lang, hu, tSync(lang, hu), vars);
 }
 
 /**

@@ -58,6 +58,57 @@ function placeholders(s: string): string[] {
   return [...s.matchAll(/\{[a-zA-Z0-9_]+\}/g)].map((m) => m[0]).sort();
 }
 
+// ADR-XXXX: {art}/{Art}/{art2} carry the HUNGARIAN definite article (huArticle → "A"/"Az").
+// Measured 2026-09-30 on the dev packs: every language kept the token, so the English UI
+// printed "We couldn't purchase A example.hu"; and production dropped 7 strings outright
+// because the translator (rightly) omitted it and the integrity check demanded it. In a
+// non-Hungarian rendering the token is therefore blanked, and the translator may omit it.
+const ARTICLE_VAR = /^art\d*$/i;
+
+function isArticleToken(tok: string): boolean {
+  return ARTICLE_VAR.test(tok.slice(1, -1));
+}
+
+/**
+ * Why a translation breaks the placeholder contract, or null if it keeps it. Every
+ * non-article placeholder must survive verbatim; article placeholders are optional, but
+ * a translation must not invent one the source does not have.
+ */
+export function placeholderProblem(hu: string, tr: string): string | null {
+  const src = placeholders(hu);
+  const out = placeholders(tr);
+  const need = src.filter((t) => !isArticleToken(t));
+  const got = out.filter((t) => !isArticleToken(t));
+  if (need.join("|") !== got.join("|"))
+    return `placeholder-eltérés: várt ${need.join(" ") || "(nincs)"}, kapott ${got.join(" ") || "(nincs)"}`;
+  const foreign = out.filter((t) => isArticleToken(t) && !src.includes(t));
+  if (foreign.length) return `idegen névelő-placeholder: ${foreign.join(" ")}`;
+  return null;
+}
+
+/**
+ * Substitute {vars} into an already-looked-up string — the shared body of both T()s.
+ * When the string really IS a translation (not the Hungarian fallback), the Hungarian
+ * article vars render empty, together with one adjacent space.
+ */
+export function interpolate(
+  lang: string | undefined,
+  hu: string,
+  s: string,
+  vars?: Record<string, string | number>,
+): string {
+  if (!vars) return s;
+  const translated = (lang || DEFAULT_LANG) !== DEFAULT_LANG && s !== hu;
+  for (const [k, v] of Object.entries(vars)) {
+    if (translated && ARTICLE_VAR.test(k)) {
+      s = s.replace(new RegExp(`\\{${k}\\} ?| ?\\{${k}\\}`, "g"), "");
+      continue;
+    }
+    s = s.replaceAll(`{${k}}`, String(v));
+  }
+  return s;
+}
+
 /**
  * Install a pack directly into the in-memory cache, bypassing the DB.
  *
@@ -87,47 +138,117 @@ export async function loadPack(lang: string): Promise<Record<string, string> | n
   return strings;
 }
 
-/** AI-translate the given Hungarian strings to `lang`. Returns hu→translated. Placeholders
- *  ({name}, {price}…) must survive verbatim; violations are dropped so the guard re-flags. */
+/** One model round-trip: system + user prompt → the raw text answer (null = no text). */
+export type AskModel = (system: string, user: string) => Promise<string | null>;
+
+/** Retry rounds after the first pass — each only for the strings the previous one dropped. */
+const MAX_RETRY_ROUNDS = 2;
+
+/**
+ * Translate `strings` to `lang` through `ask`, with placeholder-integrity checking and
+ * RETRY. Measured 2026-09-30 in production: 7 strings failed the check, were dropped, and
+ * nothing asked again — the boot self-heal failed the same 7 twice, so the pack could
+ * never become complete. Now a dropped string is re-asked (up to MAX_RETRY_ROUNDS) in a
+ * small batch whose prompt lists, per string, the placeholders that must appear verbatim.
+ * What still fails is reported LOUDLY and returned in `rejected`.
+ */
+export async function translateStrings(
+  lang: string,
+  strings: string[],
+  ask: AskModel,
+  opts: { maxRetryRounds?: number } = {},
+): Promise<{ out: Record<string, string>; rejected: Record<string, string> }> {
+  const maxRetry = opts.maxRetryRounds ?? MAX_RETRY_ROUNDS;
+  const system =
+    `Professzionális UI-honosító vagy. A megadott magyar felület-feliratokat fordítsd ` +
+    `${langName(lang)} nyelvre. Szabályok: (1) tömör, természetes UI-nyelv, a szállás/vendéglátás ` +
+    `regiszterében; (2) a {kapcsos} placeholdereket VÁLTOZATLANUL őrizd meg; kivétel az {art}, {Art}, ` +
+    `{art2}: ezek a magyar határozott névelőt (a/az) jelölik, nem-magyar nyelven üresen jelennek meg — ` +
+    `a fordításból hagyd ki őket; (3) tulajdonneveket (Citoviso, Google) ne fordíts; ` +
+    `(4) semmi magyarázat — CSAK a kért JSON.`;
+  const out: Record<string, string> = {};
+  let rejected: Record<string, string> = {};
+
+  const runBatch = async (batch: string[], user: string): Promise<void> => {
+    let parsed: Record<string, string>;
+    try {
+      const text = await ask(system, user);
+      if (!text) throw new Error("üres válasz");
+      parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as Record<string, string>;
+    } catch (err) {
+      for (const hu of batch) rejected[hu] = `a válasz nem értelmezhető: ${(err as Error).message}`;
+      return;
+    }
+    for (const hu of batch) {
+      const tr = parsed[hu];
+      if (typeof tr !== "string" || !tr.trim()) {
+        rejected[hu] = "hiányzik a válaszból";
+        continue;
+      }
+      // Placeholder integrity: a broken translation is worse than a re-run.
+      const problem = placeholderProblem(hu, tr);
+      if (problem) {
+        rejected[hu] = problem;
+        continue;
+      }
+      out[hu] = tr;
+    }
+  };
+
+  // Modest batches keep each response well-formed and reviewable.
+  for (let i = 0; i < strings.length; i += 40) {
+    const batch = strings.slice(i, i + 40);
+    await runBatch(
+      batch,
+      `Add vissza JSON objektumként: {"<magyar>": "<fordítás>", ...} pontosan ezekre:\n` +
+        JSON.stringify(batch, null, 1),
+    );
+  }
+
+  for (let round = 1; round <= maxRetry && Object.keys(rejected).length; round++) {
+    const again = Object.keys(rejected);
+    console.error(`[i18n] újrapróba ${round}/${maxRetry} (${lang}): ${again.length} string`);
+    rejected = {};
+    for (let i = 0; i < again.length; i += 10) {
+      const batch = again.slice(i, i + 10);
+      const spec = batch.map((hu) => {
+        const req = placeholders(hu).filter((t) => !isArticleToken(t));
+        return { magyar: hu, kotelezo_placeholderek: req };
+      });
+      await runBatch(
+        batch,
+        `Az előző fordításod ezeknél megsértette a placeholder-szabályt. Fordítsd újra őket; a ` +
+          `"kotelezo_placeholderek" MINDEGYIKE betűre, kapcsos zárójellel szerepeljen a fordításban, ` +
+          `más {kapcsos} token ne (az {art}/{Art}/{art2} maradjon ki). ` +
+          `Add vissza JSON objektumként: {"<magyar>": "<fordítás>", ...}:\n` +
+          JSON.stringify(spec, null, 1),
+      );
+    }
+  }
+
+  for (const [hu, why] of Object.entries(rejected))
+    console.error(`[i18n] ⛔ fordítás ELDOBVA újrapróba után is (${lang}): "${hu}" — ${why}`);
+  return { out, rejected };
+}
+
+/** AI-translate the given Hungarian strings to `lang`. Returns hu→translated; strings that
+ *  keep breaking the placeholder contract are left out so the coverage guard re-flags them. */
 async function translateBatch(lang: string, strings: string[]): Promise<Record<string, string>> {
   if (!config.anthropicApiKey) throw new Error("i18n: nincs ANTHROPIC_API_KEY a csomag-generáláshoz");
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic();
-  const out: Record<string, string> = {};
-  // Modest batches keep each response well-formed and reviewable.
-  for (let i = 0; i < strings.length; i += 40) {
-    const batch = strings.slice(i, i + 40);
+  const ask: AskModel = async (system, user) => {
     const res = await client.messages.create({
       model: "claude-opus-4-8",
       max_tokens: 4000,
-      system:
-        `Professzionális UI-honosító vagy. A megadott magyar felület-feliratokat fordítsd ` +
-        `${langName(lang)} nyelvre. Szabályok: (1) tömör, természetes UI-nyelv, a szállás/vendéglátás ` +
-        `regiszterében; (2) a {kapcsos} placeholdereket VÁLTOZATLANUL őrizd meg; (3) tulajdonneveket ` +
-        `(Citoviso, Google) ne fordíts; (4) semmi magyarázat — CSAK a kért JSON.`,
-      messages: [
-        {
-          role: "user",
-          content:
-            `Add vissza JSON objektumként: {"<magyar>": "<fordítás>", ...} pontosan ezekre:\n` +
-            JSON.stringify(batch, null, 1),
-        },
-      ],
+      system,
+      messages: [{ role: "user", content: user }],
     });
     recordAiUsage("translateUiBatch", "claude-opus-4-8", res.usage);
     const block = res.content.find((b) => b.type === "text");
-    if (!block || block.type !== "text") continue;
-    const jsonText = block.text.slice(block.text.indexOf("{"), block.text.lastIndexOf("}") + 1);
-    const parsed = JSON.parse(jsonText) as Record<string, string>;
-    for (const hu of batch) {
-      const tr = parsed[hu];
-      if (typeof tr !== "string" || !tr.trim()) continue;
-      // Placeholder integrity: a broken translation is worse than a re-run.
-      if (placeholders(hu).join("|") !== placeholders(tr).join("|")) continue;
-      out[hu] = tr;
-    }
-  }
-  return out;
+    return block && block.type === "text" ? block.text : null;
+  };
+  return (await translateStrings(lang, strings, ask)).out;
 }
 
 export interface PackStatus {
