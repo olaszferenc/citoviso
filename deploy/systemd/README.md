@@ -26,7 +26,7 @@ Minden prod service `[Unit]`-jában `OnFailure=citoviso-alert@%n.service`. Ha az
 ⛔ A sablonnak nincs és nem lehet saját `OnFailure=`-je (hurok); a `systemd-units check` ezt, és a
 prod service-ekből hiányzó sort is pirosra méri. A dev gépen a sablon nincs telepítve.
 
-## `citoviso-public` / `citoviso-console` — a két hosszan futó szerver is a repóból (ADR-XXXX)
+## `citoviso-public` / `citoviso-console` — a két hosszan futó szerver is a repóból (ADR-0279)
 
 2026-09-30-ig a két szervert kézzel telepítették a VPS-re, ezért nem kaptak `OnFailure=`-t. Most a
 `targets.json` `services` listáján `prod`-ként állnak: a GATE 6 a többivel együtt telepíti (csak ha a
@@ -56,7 +56,7 @@ Emiatt a levelezést a `scripts/unit-failure-alert.mts` ritkítja (`unitAlertDue
   egy `StartLimitIntervalSec=300` / `StartLimitBurst=5` a publikus oldalt 5 összeomlás után VÉGLEG leállítaná
   (kézi `reset-failed`-ig), cserébe egyetlen levelet adna.
 
-## `[TESZT]` a riasztás tárgyában, ha nem az éles hoston fut (ADR-XXXX)
+## `[TESZT]` a riasztás tárgyában, ha nem az éles hoston fut (ADR-0279)
 
 `alertHouse` minden tárgy elé `[TESZT] `-et tesz, ha `isLiveHost(config.publicBaseUrl)` hamis
 (`src/invoicing/keyGuard.ts` — az „éles” egyetlen definíciója). A dev NINCS némítva: küld, csak jelölve.

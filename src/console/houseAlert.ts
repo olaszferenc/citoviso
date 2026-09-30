@@ -18,7 +18,7 @@
 //
 // Internal operator text — outside the §B.18 customer-facing i18n scope.
 //
-// ADR-XXXX: off the live host every subject starts with "[TESZT] " — dev still SENDS
+// ADR-0279: off the live host every subject starts with "[TESZT] " — dev still SENDS
 // (the owner tests with it), but a test alert must never read like a production one.
 // "Live" has ONE definition: isLiveHost(config.publicBaseUrl) (src/invoicing/keyGuard.ts).
 

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-szerverek-is-a-reporol-onfailure-rel-teszt-riasztas.md) — A hosszan futó service-ek is a repóból települnek OnFailure-rel; a nem éles riasztás [TESZT]-tel jelölt (2026-09-30)
+- [ADR-0279](decisions/0279-a-hosszan-futo-service-ek-is-a-repobol.md) — A hosszan futó service-ek is a repóból települnek OnFailure-rel; a nem éles riasztás [TESZT]-tel jelölt (2026-09-30)
 - [ADR-0278](decisions/0278-a-level-link-hostja-a-host-fejlecbol-jon-nem-a.md) — A levél-link hostja a Host fejlécből jön, nem a hamisítható X-Forwarded-Host-ból (2026-09-29)
 - [ADR-0277](decisions/0277-belepes-kemenyites-a-pilot-ele-felteteles.md) — Belépés-keményítés a pilot elé: feltételes `Secure` süti, belépési fék, ÁSZF §9 kártyazárolás (2026-09-29)
 - [ADR-0276](decisions/0276-a-haz-riasztast-kap-ha-idozito-level-vagy.md) — A ház riasztást kap, ha időzítő, levél vagy webhook elhasal (2026-09-29)

@@ -1,4 +1,4 @@
-## ADR-XXXX — A hosszan futó service-ek is a repóból települnek OnFailure-rel; a nem éles riasztás [TESZT]-tel jelölt (2026-09-30)
+## ADR-0279 — A hosszan futó service-ek is a repóból települnek OnFailure-rel; a nem éles riasztás [TESZT]-tel jelölt (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (deploy-készenléti SUB, koordinátor: „Deploy-készenlét
 felderítés”; brief: `~/rc-briefs/dk2-public-console-unit-repo.md`) · **Kapcsolódó:** ADR-0276 (a ház

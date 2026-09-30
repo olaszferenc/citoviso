@@ -14,7 +14,7 @@
 //              unknown paid payment → 400 + alert; malformed body → 400 + alert; a DB error
 //              → 500 + alert; unknown FAILED payment (the harmless orphan) → 200, NO alert;
 //              the same 400 again → deduped, no second mail.
-// ④ servers  — ADR-XXXX: citoviso-public/console are prod units in the repo WITH OnFailure=,
+// ④ servers  — ADR-0279: citoviso-public/console are prod units in the repo WITH OnFailure=,
 //              their prod render equals the live unit (deploy/systemd/prod-snapshot/, sha
 //              measured on the VPS 2026-09-30) plus exactly that one line; a crash loop mails
 //              the 1st, 11th, 101st… crash only.

@@ -1,4 +1,4 @@
-# 2026-09-30 — public/console unit a repóban OnFailure-rel + [TESZT] riasztás-tárgy (ADR-XXXX)
+# 2026-09-30 — public/console unit a repóban OnFailure-rel + [TESZT] riasztás-tárgy (ADR-0279)
 
 **Szál:** deploy-készenléti SUB (koordinátor: „Deploy-készenlét felderítés”, cit92d2a67e), brief
 `~/rc-briefs/dk2-public-console-unit-repo.md`. Semmi nem ment élesre; élesről csak OLVASTAM.
