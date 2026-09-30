@@ -135,20 +135,23 @@ a KÜLDÉS a lap alján, a levél alatt:”** blokk két kártyája már csak az
    akkor is, ha a kimenő MMS képe nem áll elő („nincs kép”).
 
    **Hogyan megy ki az MMS (2026-09-30 óta):** a kép nem a szerverről indul, hanem **sorba
-   kerül**, és a dev gép modemje küldi el (relay). Ezért a „Páros indítása” után a kártya ezt
-   írja: „az MMS sorba került — a dev gép relay-e küldi (~1–3 perc), utána megy a kísérő
-   SMS”, az idővonal első lépése pedig futó (kék) marad, amíg a relay nem nyugtázza. A kísérő
-   SMS az MMS nyugtájakor indul magától. Ha újra megnyomnád, amíg a sor tart: „ennél a
-   prospectnél már sorban áll az MMS — a dev gép relay-e küldi”. Az MMS csak **8:00 és 19:30
-   között** megy ki (a kísérő SMS esti ablaka miatt); ami később kerül sorba, reggel megy.
+   kerül**, és a dev gép modemje küldi el (relay). Ezért a „Páros indítása” után a lap TETEJÉN, a
+   jogszerűségi verdikt alatti zöld pirulában ez áll: „az MMS sorba került — a dev gép relay-e
+   küldi (~1–3 perc), utána megy a kísérő SMS”; a Mobil-megkeresés kártya közben azt írja, hogy
+   **„Küldés folyamatban — az idővonal lent mutatja, hol tart. A lap magától frissül.”**, az
+   idővonal első lépése pedig futó (kék) marad, amíg a relay nem nyugtázza. A kísérő SMS az MMS
+   nyugtájakor indul magától. Ha újra megnyomnád, amíg a sor tart, a felső pirula pirosan, „Nem
+   küldhető — ” előtaggal írja: „ennél a prospectnél már sorban áll az MMS — a dev gép relay-e
+   küldi”. Az MMS csak **8:00 és 19:30 között** megy ki (a kísérő SMS esti ablaka miatt); ami
+   később kerül sorba, reggel megy (az éles gép UTC-órája miatt a gyakorlatban nyáron ~10:00-kor).
    Két piros eset az idővonalon:
    - „MMS-hiba (relay): … — semmi nem ment ki, a pár újraindítható” — a modem vagy a
      hálózat háromszor elhasalt; nézd meg a hibaszöveget, és indítsd újra a párost.
    - „az MMS kimenete ISMERETLEN (a relay nem nyugtázta) — automatikusan nem küldjük újra; a
      ház riasztást kapott” — a küldés közben szakadt meg a relay; nem tudjuk, kiment-e.
-     Szándékosan nem küldjük újra (a lead kétszer kapná, kétszer fizetnénk). A gomb ilyenkor
-     ezt írja: „az előző MMS kimenete ismeretlen (a relay nem nyugtázta) — előbb nézd meg a
-     relay naplóját”: a dev gépen a relay naplója (`journalctl -u citoviso-mms-relay`)
+     Szándékosan nem küldjük újra (a lead kétszer kapná, kétszer fizetnénk). Újraindításkor a
+     felső piros pirula ezt írja: „az előző MMS kimenete ismeretlen (a relay nem nyugtázta) —
+     előbb nézd meg a relay naplóját”: a dev gépen a relay naplója (`journalctl -u citoviso-mms-relay`)
      mondja meg, elment-e; utána a lead-lapon kézzel dől el a folytatás.
 
 ### Az alsó sáv — ez küld

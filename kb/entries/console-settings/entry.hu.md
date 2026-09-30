@@ -27,9 +27,10 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
   küszöbönként egyszer;
 - a **törött MMS+SMS pár** (a leadnél kép maradt link és leiratkozás nélkül);
 - a **sorban álló MMS, ami elbukott vagy ismeretlen kimenetű** (tárgy: „Citoviso: MMS
-  bukott — <szám>” vagy „Citoviso: MMS ismeretlen — <szám>”): a dev gép relay-e háromszor
-  nem tudta elküldeni, vagy küldés közben szakadt meg és nem nyugtázta; a levél megírja a
-  címzettet, a prospectet, a kísérletek számát és a teendőt (a relay naplója a dev gépen);
+  3 kísérlet után sem ment ki — <szám>” vagy „Citoviso: MMS kimenete ISMERETLEN — <szám>”):
+  a dev gép relay-e háromszor nem tudta elküldeni, vagy küldés közben szakadt meg és nem
+  nyugtázta; a levél megírja a címzettet, a prospectet, a kísérletek számát és a teendőt (a
+  relay naplója a dev gépen);
 - a **.hu Nyilvántartó megerősítő linkje**;
 - a **kifizetett, de többszöri automatikus próbálkozás után sem elkészült
   modul-generálás** — ilyenkor a vevő fizetett, a termék pedig nincs meg;
