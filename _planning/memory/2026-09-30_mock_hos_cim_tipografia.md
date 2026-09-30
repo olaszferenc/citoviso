@@ -1,4 +1,4 @@
-# 2026-09-30 — Mock hős-cím tipográfia: a hosszú mondat nem veri szét az oldalt (ADR-XXXX)
+# 2026-09-30 — Mock hős-cím tipográfia: a hosszú mondat nem veri szét az oldalt (ADR-0284)
 
 **Kérés (tulaj, az éles mockokat nézve):** „sok mocknál a szöveg kinyírja az oldalt. Extrém nagy a szöveg.”
 Koordináló session (nem SUB — a tulaj kérésére a SUB-jel levéve, a jelölőfájl `~/.claude/rc-sub-removed/`).

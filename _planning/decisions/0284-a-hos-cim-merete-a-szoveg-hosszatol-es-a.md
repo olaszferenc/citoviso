@@ -1,4 +1,4 @@
-## ADR-XXXX — A hős-cím mérete a SZÖVEG HOSSZÁTÓL és a nézetablak MAGASSÁGÁTÓL is függ, egy közös szabállyal (2026-09-30)
+## ADR-0284 — A hős-cím mérete a SZÖVEG HOSSZÁTÓL és a nézetablak MAGASSÁGÁTÓL is függ, egy közös szabállyal (2026-09-30)
 
 **Kontextus — mérve.** A tulaj a 19 skint legenerálta egy leadre élesen („[TESZT] Muschel Panzió”), és
 laptopon nézve: „nagyon gáz! sok mocknál a szöveg kinyírja az oldalt. Extrém nagy a szöveg.” A hős-`<h1>`
