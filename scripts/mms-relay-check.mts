@@ -316,12 +316,13 @@ try {
         say(at(tz, "2026-12-01T18:31:00Z") !== null, `⑫ [${tz}] télen 19:31 (Budapest) → NEM húz`);
         say(at(tz, "2026-09-30T05:59:00Z") !== null, `⑫ [${tz}] 07:59 (Budapest) → NEM húz`);
       }
-      // Morning: the MMS never starts before the companion SMS's gate opens.
-      say(at("Europe/Budapest", "2026-09-30T06:00:00Z") === null, "⑫ [Europe/Budapest] 08:00 (Budapest) → húz (az SMS-kapu nyitva)");
-      say(
-        at("UTC", "2026-09-30T06:30:00Z") !== null && at("UTC", "2026-09-30T08:00:00Z") === null,
-        "⑫ [UTC] 08:30 (Budapest) még NEM húz, mert az SMS-kapu a szerver óráján 8:00 UTC-kor nyit; 10:00-kor húz",
-      );
+      // Morning: the MMS starts exactly when the companion SMS's gate opens — 08:00
+      // BUDAPEST on a UTC process too (ADR-XXXX; it used to open at 08:00 UTC = 10:00 Budapest).
+      for (const tz of ["Europe/Budapest", "UTC"]) {
+        say(at(tz, "2026-09-30T06:00:00Z") === null, `⑫ [${tz}] nyáron 08:00 (Budapest) → húz (az SMS-kapu nyitva)`);
+        say(at(tz, "2026-12-01T07:00:00Z") === null, `⑫ [${tz}] télen 08:00 (Budapest) → húz`);
+        say(at(tz, "2026-12-01T06:59:00Z") !== null, `⑫ [${tz}] télen 07:59 (Budapest) → NEM húz`);
+      }
     } finally {
       if (origTz === undefined) delete process.env.TZ;
       else process.env.TZ = origTz;

@@ -18,7 +18,7 @@ import {
   getEscalationConfig,
   releaseFollowup,
 } from "../payment/offers.js";
-import { SEND_WINDOW, budapestMinutes } from "../sms/sendWindow.js";
+import { SEND_WINDOW, SEND_WINDOW_TZ, budapestHhmm, sendWindowOpen } from "../sms/sendWindow.js";
 import {
   advertiserIdentity,
   buildDraftForProspect,
@@ -50,18 +50,20 @@ export interface FollowupRunResult {
  * inside it. Returns why the window is shut, or null when it is open.
  */
 export function followupWindowBlocks(now: Date): string | null {
-  const m = budapestMinutes(now);
-  if (m >= SEND_WINDOW.fromHour * 60 && m < SEND_WINDOW.toHour * 60) return null;
-  const hhmm = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-  return `az emlékeztető ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 (Budapest) között megy (most ${hhmm})`; // i18n-exempt: operátori napló, sosem éri el a leadet
+  if (sendWindowOpen(now)) return null;
+  return `az emlékeztető ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 (Budapest) között megy (most ${budapestHhmm(now)})`; // i18n-exempt: operátori napló, sosem éri el a leadet
 }
 
-function deadlineText(d: Date, lang: string): string {
+/** The deadline as the follow-up mail prints it (exported for the send-window guard). */
+export function deadlineText(d: Date, lang: string): string {
   try {
     return (
-      d.toLocaleDateString(lang, { month: "short", day: "numeric" }) +
+      // ADR-XXXX: the Budapest wall clock, like the decision card on the page this
+      // mail links to (offerViews.ts) — the server's zone (UTC on prod) would put
+      // a deadline 1–2 hours earlier in the mail than on the page (§I).
+      d.toLocaleDateString(lang, { month: "short", day: "numeric", timeZone: SEND_WINDOW_TZ }) +
       " " +
-      d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" })
+      d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit", timeZone: SEND_WINDOW_TZ })
     );
   } catch {
     return d.toISOString().slice(0, 16).replace("T", " ");

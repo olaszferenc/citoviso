@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-kimeno-ablakok-budapest-ido-szerint.md) — Minden kimenő küldési ablak és kimenő határidő Budapest-idő szerint számol, a szerver zónájától függetlenül (2026-09-30)
 - [ADR-0287](decisions/0287-az-eszkalacios-emlekezteto-orankent-megy-8-20.md) — Az eszkalációs emlékeztető óránként megy, 8–20 óra között (Budapest), ajánlatonként egyszer (2026-09-30)
 - [ADR-0286](decisions/0286-a-lead-ajanlatok-idozitese-es-a-bemutatkozo.md) — A lead-ajánlatok időzítése és a bemutatkozó kedvezmény a /pricing-on állítható; a levél %-a köt (2026-09-30)
 - [ADR-0285](decisions/0285-az-eszkalacios-ajanlat-kuszobe-es-kedvezmenye-a.md) — Az eszkalációs ajánlat küszöbe és kedvezménye a /pricing-on állítható (2026-09-30)

@@ -36,7 +36,12 @@ import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
-import { SEND_WINDOW } from "../sms/sendWindow.js";
+import {
+  SEND_WINDOW,
+  budapestHhmm,
+  minutesUntilWindowCloses,
+  sendWindowOpen,
+} from "../sms/sendWindow.js";
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
@@ -101,9 +106,8 @@ const PAIR_WINDOW_HEADROOM_MIN = 60;
  */
 export function pairWindowBlocks(phoneE164: string, now: Date = new Date()): string | null {
   if (isAllowlistedTestNumber(phoneE164)) return null;
-  const closes = new Date(now);
-  closes.setHours(SEND_WINDOW.toHour, 0, 0, 0);
-  const minutesLeft = Math.floor((closes.getTime() - now.getTime()) / 60_000);
+  // Budapest wall clock (ADR-XXXX) — the server's own zone is UTC on prod.
+  const minutesLeft = minutesUntilWindowCloses(now);
   if (minutesLeft >= PAIR_WINDOW_HEADROOM_MIN) return null;
   return (
     `a küldési ablak (${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00) ${Math.max(0, minutesLeft)} perc múlva zár — ` +
@@ -270,13 +274,12 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
 
   // Sending window — a cold message at night is a complaint, not a lead. It
   // protects the RECIPIENT, so the owner's allowlisted test number is exempt.
-  const hour = new Date().getHours();
-  if (
-    !isAllowlistedTestNumber(to) &&
-    (hour < SEND_WINDOW.fromHour || hour >= SEND_WINDOW.toHour)
-  ) {
+  // Budapest wall clock (ADR-XXXX): on the UTC server the process-local hour opened
+  // this window at 10:00 and closed it at 22:00 Budapest time.
+  const now = new Date();
+  if (!isAllowlistedTestNumber(to) && !sendWindowOpen(now)) {
     return no(
-      `hideg mobil-megkeresés csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${hour}:00 van) — a levél-csatorna éjjel is használható`,
+      `hideg mobil-megkeresés csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${budapestHhmm(now)} van) — a levél-csatorna éjjel is használható`,
     );
   }
 

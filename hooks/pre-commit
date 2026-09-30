@@ -1449,9 +1449,16 @@ fi
 # Az MMS-relay ADR-je (decisions/*-mms-relay-a-dev-gep-modemjere-sharp.md): az MMS élesről relay-en megy a dev gép modemjére (sor → pull → küldés →
 # ack). Eldobható fixture a valódi DB-ben, MOCK modemmel — valódi MMS soha nem megy ki.
 if [ -f scripts/mms-relay-check.mts ] && \
-   changed_files | grep -qE '^src/mms/|^src/outreach/sendOutreachPair\.ts$|^scripts/mms-relay|^migrations/0081_'; then
+   changed_files | grep -qE '^src/mms/|^src/sms/sendWindow\.ts$|^src/outreach/sendOutreachPair\.ts$|^scripts/mms-relay|^migrations/0081_'; then
   echo "[pre-commit] mms-relay-check (MMS-relay: az MMS sorból a modemre, az ack zárja a párt)…"
   npx tsx scripts/mms-relay-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX: every outbound window/deadline on the BUDAPEST clock, whatever the server's zone
+# (the live VPS is UTC). Pure — no DB. Runs the readings under Budapest, UTC and New York.
+if [ -f scripts/send-window-tz-check.mts ] && \
+   changed_files | grep -qE '^src/sms/sendWindow\.ts$|^src/outreach/(sendOutreachSms|sendOutreachPair|sendBatch|escalationFollowup|pairRepair)\.ts$|^src/mms/relayQueue\.ts$|^scripts/send-window-tz-check\.mts$'; then
+  echo "[pre-commit] send-window-tz-check (a kimenő ablakok és határidők Budapest szerint, UTC-s szerveren is)…"
+  npx tsx scripts/send-window-tz-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
 # hole was real (measured 2026-08-26): three live tenants held 10, 12 and 1 unpaid
