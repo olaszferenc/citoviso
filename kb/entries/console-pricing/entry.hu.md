@@ -54,11 +54,12 @@ emlékeztetjük rá, ha van e-mail címe, és nem iratkozott le. Egy kiküldött
    össze, mindig a legnagyobb érvényes: ha 25% vagy kevesebb lenne, a lead soha nem kapná meg.
 4. A mezők alatti keretes mondat előre megmutatja, mit fog tenni a beállításod, a Magyarország
    oldalon egy valós csomagár-példával.
-5. Ha valamelyik mező üres, nem egész szám, vagy a tartományon kívül esik, a mező pirosan
-   keretezett, alatta ott az ok, és az **„Árazás mentése”** gomb addig nem nyomható meg. A gomb a
-   lap alján van, mellette ez áll: „A mentés addig nem megy, amíg a jelölt mező hibás.” A javítandó
-   mezőt a piros keret mutatja fent, a „Lead-ajánlatok” szekcióban — telefonon oda vissza kell
-   görgetned.
+5. Ha valamelyik vagy mindkét mező üres, nem egész szám, vagy a tartományon kívül esik, a hibás
+   mező pirosan keretezett, alatta ott az ok, és az **„Árazás mentése”** gomb addig nem nyomható
+   meg. A gomb a lap alján van, mellette ez áll: „A mentés addig nem megy, amíg a jelölt mező
+   hibás.” — ha mindkét mező hibás: „A mentés addig nem megy, amíg a két jelölt mező hibás.” A
+   javítandó mezőt a piros keret mutatja fent, a „Lead-ajánlatok” szekcióban — telefonon oda
+   vissza kell görgetned.
 
 A már kiadott ajánlatok megtartják a saját kedvezményüket a lejáratukig: a változtatás csak az
 ezután születő ajánlatokra hat. Ha átállítasz valamit, miközben ilyen ajánlatok futnak, a mezők
