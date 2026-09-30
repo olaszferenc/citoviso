@@ -1091,7 +1091,9 @@ async function shoot(
       : {}),
     ...(tab === "dokumentumok" ? { documents: documentsFixture } : {}),
     ...(tab === "uzenetek" ? { messages: messagesFixture } : {}),
-    ...(tab === "fiok" ? { legal: legalFixture } : {}),
+    ...(tab === "fiok"
+        ? { legal: legalFixture, zone: { timeZone: "Europe/Budapest", country: "HU", countryDefault: "Europe/Budapest" } }
+        : {}),
     // ADR-0226: a mentett kártya + a következő terhelés összege a subscription
     // kártya szabályából (egy szám, egy forrás) — a fixtúra-vendégház Visa-kártyája.
     ...(tab === "penztarca" ? { wallet: walletFixture, subscription: sub } : {}),

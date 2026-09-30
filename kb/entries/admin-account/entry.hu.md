@@ -46,7 +46,8 @@ Csak akkor változtassa, ha a szállás máshol van — például a Kanári-szig
 2. Válassza ki az **„Időzóna”** listából a megfelelőt. Alatta azonnal látja, mennyi most ott az idő,
    és melyik nap számít ott „ma”-nak („Most itt: …”).
 3. Ha a választás eltér a szállás országának alapértékétől, egy figyelmeztetés kéri, hogy
-   ellenőrizze. Ha meggondolta magát, a **„Vissza az ország alapértékére”** gomb visszaállítja.
+   ellenőrizze. A **„Vissza az ország alapértékére”** gomb az ország alapzónáját (pl. Budapest)
+   választja ki újra.
 4. Koppintson az **„Időzóna mentése”** gombra. A gomb csak akkor nyomható meg, ha valóban mást
    választott, mint ami eddig be volt állítva.
 
