@@ -124,6 +124,13 @@ export const config = {
    */
   outreachSmsAllowlist: env("OUTREACH_SMS_ALLOWLIST", ""),
   /**
+   * TEMPORARY owner switch (2026-09-30, live funnel test): "1" lifts the mobile send
+   * windows — the 8–20 SMS window, the pair head-room rule and the 19:30 MMS pull
+   * cutoff — for EVERY number. E-mail windows (escalation reminder) are untouched.
+   * Remove the line from .env when the test is over; empty = the normal rules.
+   */
+  mobileSendWindowOff: env("MOBILE_SEND_WINDOW_OFF", "") === "1",
+  /**
    * The owner's personal number for INTERNAL alerts (ADR-0098: AAM-cap SMS).
    * ⚠️ NOT the modem's own SIM — self-loopback measurably never arrives
    * (ADR-0095 finding). Empty = the alert logs loudly instead of sending.

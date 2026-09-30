@@ -18,6 +18,12 @@
 // Rows outside the window stay 'queued' and go out in the morning.
 
 import { APP_TZ, budapestHhmm, budapestMinutes } from "../text/budapestTime.js";
+import { config } from "../config.js";
+
+/** The owner's temporary MOBILE_SEND_WINDOW_OFF switch (live test): SMS/MMS go out at any hour. */
+export function mobileWindowOff(): boolean {
+  return config.mobileSendWindowOff;
+}
 
 /** Local hours in which a cold SMS may go out. A marketing SMS at 23:00 lands on a
  *  private phone and turns a lead into a complaint; the mail has no such problem,
@@ -48,6 +54,7 @@ export function minutesUntilWindowCloses(now: Date): number {
 
 /** Why an MMS may not be pulled at `now`, or null when it may. */
 export function mmsPullBlocks(now: Date): string | null {
+  if (mobileWindowOff()) return null;
   const bud = budapestMinutes(now);
   const cutoff = MMS_PULL_CUTOFF.hour * 60 + MMS_PULL_CUTOFF.minute;
   const hhmm = budapestHhmm(now);

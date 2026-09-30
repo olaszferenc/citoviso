@@ -40,6 +40,7 @@ import {
   SEND_WINDOW,
   budapestHhmm,
   minutesUntilWindowCloses,
+  mobileWindowOff,
   sendWindowOpen,
 } from "../sms/sendWindow.js";
 import { config } from "../config.js";
@@ -105,7 +106,7 @@ const PAIR_WINDOW_HEADROOM_MIN = 60;
  * The owner's allowlisted test number is exempt, like the window itself.
  */
 export function pairWindowBlocks(phoneE164: string, now: Date = new Date()): string | null {
-  if (isAllowlistedTestNumber(phoneE164)) return null;
+  if (isAllowlistedTestNumber(phoneE164) || mobileWindowOff()) return null;
   // Budapest wall clock (ADR-0288) — the server's own zone is UTC on prod.
   const minutesLeft = minutesUntilWindowCloses(now);
   if (minutesLeft >= PAIR_WINDOW_HEADROOM_MIN) return null;
@@ -277,7 +278,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   // Budapest wall clock (ADR-0288): on the UTC server the process-local hour opened
   // this window at 10:00 and closed it at 22:00 Budapest time.
   const now = new Date();
-  if (!isAllowlistedTestNumber(to) && !sendWindowOpen(now)) {
+  if (!isAllowlistedTestNumber(to) && !mobileWindowOff() && !sendWindowOpen(now)) {
     return no(
       `hideg mobil-megkeresés csak ${SEND_WINDOW.fromHour}:00–${SEND_WINDOW.toHour}:00 között megy ki (most ${budapestHhmm(now)} van) — a levél-csatorna éjjel is használható`,
     );
