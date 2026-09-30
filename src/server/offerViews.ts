@@ -8,6 +8,7 @@
 // Both are Citoviso surfaces on the tenant's host (like the verdict and cancel pages):
 // citui tokens only, no skin.
 
+import { APP_TZ } from "../text/zoneTime.js";
 import { T } from "../i18n/mail.js";
 import { formatDay } from "../text/day.js";
 import { currencySign, formatMoney } from "../text/money.js";
@@ -39,7 +40,7 @@ function addDays(iso: string, n: number): string {
 
 function huDateTime(d: Date, lang: string): string {
   const parts = new Intl.DateTimeFormat("hu-HU", {
-    timeZone: "Europe/Budapest",
+    timeZone: APP_TZ, // a lead's offer is platform business (ADR-XXXX)
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

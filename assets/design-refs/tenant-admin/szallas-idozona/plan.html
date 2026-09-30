@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Szállás időzónája — A változat</title><style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-white:#fff;--citui-ink:#10243a;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-ok-ink:#1d6b43;
+  --citui-warn-ink:#7d5a12;--citui-bad:#e5484d;--citui-bad-ink:#b3262b;
+  --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,sans-serif;
+  --citui-font-text:"Inter",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 var(--citui-font-text);color:var(--citui-ink);background:var(--citui-surface)}
+.draft-bar{display:flex;gap:8px;align-items:center;padding:8px 14px;flex-wrap:wrap;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px}
+.draft-bar b{font-family:var(--citui-font-display)}
+.draft-bar button{border:1px solid var(--citui-cyan-500);background:transparent;color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 12px;cursor:pointer;font:inherit}
+.draft-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+#stage{margin:0 auto;container-type:inline-size;max-width:1100px;padding:14px 16px 40px}
+#stage.mobile{max-width:390px;padding:10px 10px 40px}
+.surf{margin:0 0 26px}
+.surf-l{font:600 11px var(--citui-font-text);letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 8px}
+.shell{display:grid;grid-template-columns:200px 1fr;gap:16px}
+.side{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;padding:10px;font-size:13px}
+.side a{display:block;padding:6px 8px;border-radius:8px;color:var(--citui-ink);text-decoration:none}
+.side a.on{background:var(--citui-surface-2);font-weight:600}
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;padding:18px;margin-bottom:14px}
+.card h2{font:600 16px var(--citui-font-display);margin:0 0 4px}
+.card h3{font:600 14px var(--citui-font-display);margin:0 0 4px}
+.mut{color:var(--citui-muted)} .small{font-size:12.5px}
+.field{margin:12px 0}
+.label{display:block;font-size:12.5px;color:var(--citui-muted);margin-bottom:4px}
+.input{width:100%;padding:9px 11px;border:1px solid var(--citui-line-strong);border-radius:8px;font:inherit;background:var(--citui-white);color:inherit}
+.input:focus{outline:2px solid var(--citui-cyan-500);outline-offset:0;border-color:var(--citui-cyan-500)}
+.input[readonly]{background:var(--citui-surface-2)}
+.err .input{border-color:var(--citui-bad)}
+.ferr{display:none;margin-top:4px;font-size:12px;color:var(--citui-bad-ink)}
+.err .ferr{display:block}
+.hint{margin-top:4px;font-size:12px;color:var(--citui-muted)}
+.list{margin-top:6px;border:1px solid var(--citui-line);border-radius:8px;max-height:210px;overflow:auto;background:var(--citui-white)}
+.list button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--citui-line);background:transparent;padding:8px 10px;font:inherit;cursor:pointer;color:inherit}
+.list button:last-child{border-bottom:0}
+.list button:hover,.list button[aria-selected="true"]{background:var(--citui-surface-2)}
+.list .off{color:var(--citui-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.list .none{padding:10px;color:var(--citui-muted);font-size:12.5px}
+.now{margin-top:12px;padding:10px 12px;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface-2);border-radius:0 8px 8px 0;font-size:13px}
+.now b{font-variant-numeric:tabular-nums}
+.btn{border:1px solid var(--citui-navy-900);background:var(--citui-white);color:var(--citui-navy-900);border-radius:var(--citui-radius-pill);padding:7px 16px;font:600 13px var(--citui-font-text);cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--citui-navy-900);color:var(--citui-white)}
+.link{background:none;border:0;padding:0;color:var(--citui-navy-700);text-decoration:underline;font:inherit;cursor:pointer}
+.notice{display:none;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--citui-ok-soft);color:var(--citui-ok-ink);font-size:13px}
+.notice.show{display:block}
+.pill{display:inline-block;padding:2px 9px;border-radius:var(--citui-radius-pill);font-size:11.5px;font-weight:600;background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.con{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;padding:16px;font-size:13px}
+.con h2{font:600 15px var(--citui-font-display);margin:0 0 8px}
+.tzline{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--citui-line)}
+.tzline .k{color:var(--citui-muted);font-size:12.5px;min-width:74px}
+.edit{display:none;margin-top:8px}
+.edit.open{display:block}
+.warn{margin-top:8px;font-size:12.5px;color:var(--citui-warn-ink)}
+@container (max-width:640px){
+  .shell{grid-template-columns:1fr}
+  .side{display:none}
+  .card{padding:14px}
+}
+</style></head><body>
+<div class="draft-bar"><b>MEGVALÓSÍTOTT TERV (A, 2026-09-30) — önkiszolgáló: a tulaj a Fiók fülön állítja, az operátor a konzolon is</b><span>· méret:</span>
+<button id="szMob" type="button" aria-pressed="false">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="true">Asztali</button>
+<span style="opacity:.7">működő vázlat — a keresés, az ország-alapérték, az élő óra és a mentés kattintható</span></div>
+<div id="stage">
+ <section class="surf"><p class="surf-l">Tenant-admin › Fiók</p>
+<div class="shell">
+  <nav class="side"><a>Áttekintés</a><a>Szövegek</a><a>Fotók</a><a>Foglalások</a><a>Üzenetek</a><a>Webcím</a><a>Pénztárca</a><a class="on">Fiók</a><a>Súgó</a></nav>
+  <div>
+<div class="card"><h2>Fiók</h2>
+  <div class="field"><label class="label">Felhasználónév (belépéshez)</label><input class="input" readonly value="alig-var-tanya"></div>
+  <div class="field"><label class="label">Kommunikációs e-mail (ide küldünk értesítést)</label><input class="input" value="tulaj@example.hu"></div>
+  <p class="mut small" style="margin:0">… jelszó módosítása (változatlan, a vázlatból kihagyva) …</p>
+</div>
+<div class="card">
+  <div class="notice" id="tA_note" role="status"></div>
+  <h2>Szállás időzónája</h2>
+  <p class="mut small" style="margin:0">Ennek az órája szerint számolunk minden napot: mikor „ma” egy foglalás, mikor jár le egy ár vagy egy kérés,
+  és milyen időpontot lát a vendég. Alapból a szállás országa adja; csak akkor változtasd, ha a szállás máshol van.</p>
+  
+<div class="tzp" id="tA" data-country="HU" data-saved="Europe/Budapest" data-who="tulaj">
+  <div class="field" data-f>
+    <label class="label" for="tA_q">Időzóna</label>
+    <input class="input" id="tA_q" autocomplete="off" placeholder="Keress várost vagy országot, pl. Bécs, Lisszabon, Kanári">
+    <div class="ferr" data-e></div>
+    <div class="hint" data-h></div>
+    <div class="list" role="listbox" data-l></div>
+  </div>
+  <div class="now" data-now></div>
+  <div class="warn" data-w></div>
+  <div class="row" style="margin-top:12px"><button class="btn primary" type="button" data-save>Időzóna mentése</button>
+    <button class="link" type="button" data-reset>Vissza az ország alapértékére</button></div>
+</div>
+</div></div>
+</div></section>
+ <section class="surf"><p class="surf-l">Konzol › Lead › átalakított ügyfél</p>
+<div class="con">
+  <div class="notice" id="cA_note" role="status"></div>
+  <h2>Alig-vár Tanya — átalakítva</h2>
+  <div class="row"><span class="pill ok">live</span><a class="small" href="#">privát előnézet ▸</a><a class="small" href="#">tenant-admin ▸</a></div>
+  <div class="tzline"><span class="k">Időzóna</span><b id="c_cur">Budapest (Europe/Budapest)</b><span class="mut small" id="c_now"></span>
+    <button class="link small" type="button" id="c_open">Módosítás</button></div>
+  <div class="edit" id="c_edit">
+<div class="tzp" id="cA" data-country="HU" data-saved="Europe/Budapest" data-who="operátor">
+  <div class="field" data-f>
+    <label class="label" for="cA_q">Új időzóna</label>
+    <input class="input" id="cA_q" autocomplete="off" placeholder="Keress várost vagy országot, pl. Bécs, Lisszabon, Kanári">
+    <div class="ferr" data-e></div>
+    <div class="hint" data-h></div>
+    <div class="list" role="listbox" data-l></div>
+  </div>
+  <div class="now" data-now></div>
+  <div class="warn" data-w></div>
+  <div class="row" style="margin-top:12px"><button class="btn primary" type="button" data-save>Időzóna mentése</button>
+    <button class="link" type="button" data-reset>Vissza az ország alapértékére</button></div>
+</div>
+  <p class="mut small" style="margin:8px 0 0">A tulaj a saját Fiók fülén is átállíthatja.</p></div>
+</div></section>
+</div>
+<script>var VARIANT = "a";
+(function(){
+  // Same data the server hands the page: country → default zone, Hungarian aliases for search.
+  var COUNTRY_TZ = {HU:"Europe/Budapest", AT:"Europe/Vienna", SK:"Europe/Bratislava", RO:"Europe/Bucharest", HR:"Europe/Zagreb",
+    SI:"Europe/Ljubljana", RS:"Europe/Belgrade", CZ:"Europe/Prague", PL:"Europe/Warsaw", DE:"Europe/Berlin", IT:"Europe/Rome",
+    ES:"Europe/Madrid", PT:"Europe/Lisbon", GR:"Europe/Athens"};
+  var ALIAS = {"Europe/Vienna":"Bécs", "Europe/Bratislava":"Pozsony", "Europe/Prague":"Prága", "Europe/Warsaw":"Varsó",
+    "Europe/Lisbon":"Lisszabon", "Atlantic/Canary":"Kanári-szigetek", "Atlantic/Madeira":"Madeira", "Atlantic/Azores":"Azori-szigetek",
+    "Europe/Paris":"Párizs", "Europe/Rome":"Róma", "Europe/Belgrade":"Belgrád", "Europe/Bucharest":"Bukarest", "Europe/Zagreb":"Zágráb",
+    "Europe/Athens":"Athén", "Europe/Berlin":"Berlin", "Europe/Budapest":"Budapest", "Europe/Madrid":"Madrid", "Europe/London":"London"};
+  var ZONES = (Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : Object.keys(ALIAS)).filter(function(z){ return z.indexOf("/") > 0; });
+  if (ZONES.indexOf("Europe/Budapest") < 0) ZONES.push("Europe/Budapest");
+
+  var st = document.getElementById("stage"), bM = document.getElementById("szMob"), bD = document.getElementById("szDesk");
+  function setSize(m){ st.classList.toggle("mobile", m); bM.setAttribute("aria-pressed", m); bD.setAttribute("aria-pressed", !m); }
+  bM.onclick = function(){ setSize(true); }; bD.onclick = function(){ setSize(false); };
+  setSize(window.matchMedia("(max-width: 600px)").matches);
+
+  function city(z){ return ALIAS[z] || z.split("/").pop().replace(/_/g, " "); }
+  function label(z){ return city(z) + " (" + z + ")"; }
+  function fold(s){ return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function offset(z){
+    try { var p = new Intl.DateTimeFormat("en-GB", {timeZone: z, timeZoneName: "shortOffset"}).formatToParts(new Date());
+      var o = p.find(function(x){ return x.type === "timeZoneName"; }); return o ? o.value.replace("GMT", "GMT") : ""; } catch (e) { return ""; }
+  }
+  function nowIn(z){
+    return new Intl.DateTimeFormat("hu-HU", {timeZone: z, month: "long", day: "numeric", weekday: "long", hour: "2-digit", minute: "2-digit"}).format(new Date());
+  }
+  function dayIn(z){ return new Intl.DateTimeFormat("en-CA", {timeZone: z}).format(new Date()); }
+
+  function mount(root, onSaved){
+    var q = root.querySelector("input"), list = root.querySelector("[data-l]"), f = root.querySelector("[data-f]"),
+        e = root.querySelector("[data-e]"), h = root.querySelector("[data-h]"), now = root.querySelector("[data-now]"),
+        w = root.querySelector("[data-w]"), save = root.querySelector("[data-save]"), reset = root.querySelector("[data-reset]");
+    var country = root.getAttribute("data-country"), saved = root.getAttribute("data-saved"), chosen = saved;
+    var def = COUNTRY_TZ[country] || "Europe/Budapest";
+    h.textContent = "Az ország (" + country + ") alapértéke: " + label(def) + ".";
+    function renderList(){
+      list.hidden = !open;
+      var t = chosen && q.value === label(chosen) ? "" : fold(q.value.trim());
+      var hits = ZONES.filter(function(z){ return !t || fold(z).indexOf(t) >= 0 || fold(city(z)).indexOf(t) >= 0; }).slice(0, 40);
+      list.innerHTML = hits.length ? "" : '<div class="none">Nincs ilyen időzóna. Próbáld a legközelebbi nagyvárossal (pl. „Lisszabon”).</div>';
+      hits.forEach(function(z){
+        var b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "option");
+        b.setAttribute("aria-selected", z === chosen ? "true" : "false"); b.dataset.z = z;
+        b.innerHTML = "<span></span><span class=\"off\"></span>";
+        b.firstChild.textContent = label(z); b.lastChild.textContent = offset(z);
+        b.onclick = function(){ choose(z); };
+        list.appendChild(b);
+      });
+    }
+    function choose(z){ chosen = z; q.value = label(z); open = false; render(); renderList(); }
+    function render(){
+      var ok = ZONES.indexOf(chosen) >= 0 && q.value === label(chosen);
+      f.classList.toggle("err", !ok);
+      e.textContent = ok ? "" : "Válassz egy időzónát a listából — szabad szöveget nem mentünk.";
+      save.disabled = !ok || chosen === saved;
+      now.innerHTML = ok ? "Most itt: <b>" + nowIn(chosen) + "</b> · " + offset(chosen) + " · a „ma” ennél a szállásnál: <b>" + dayIn(chosen) + "</b>"
+                         : "Az előnézet a választás után frissül.";
+      w.textContent = ok && chosen !== def ? "Ez eltér az ország alapértékétől (" + label(def) + ") — ellenőrizd, hogy a szállás tényleg ott van." : "";
+    }
+    var open = false;
+    q.addEventListener("input", function(){ chosen = null; open = true; render(); renderList(); });
+    q.addEventListener("focus", function(){ open = true; renderList(); });
+    reset.onclick = function(){ choose(def); };
+    save.onclick = function(){ if (save.disabled) return; saved = chosen; render(); onSaved(chosen); };
+    q.value = label(chosen); render(); renderList();
+    return { get: function(){ return saved; } };
+  }
+
+  var notes = { tA: document.getElementById("tA_note"), cA: document.getElementById("cA_note") };
+  function flash(n, z){ if (!n) return; n.classList.add("show"); n.textContent = "Mentve: " + label(z) + ". A „ma” és minden határidő mostantól ennek az órája szerint számol."; }
+  var t = document.getElementById("tA"); if (t) mount(t, function(z){ flash(notes.tA, z); });
+  var cur = document.getElementById("c_cur"), cnow = document.getElementById("c_now");
+  var c = mount(document.getElementById("cA"), function(z){ cur.textContent = label(z); cnow.textContent = "most " + nowIn(z).split(" ").slice(-1)[0]; flash(notes.cA, z); document.getElementById("c_edit").classList.remove("open"); });
+  cnow.textContent = "most " + nowIn("Europe/Budapest").split(" ").slice(-1)[0];
+  document.getElementById("c_open").onclick = function(){ document.getElementById("c_edit").classList.toggle("open"); };
+  var tb = document.getElementById("tB_now"); if (tb) tb.innerHTML = "Most itt: <b>" + nowIn("Europe/Budapest") + "</b> · " + offset("Europe/Budapest");
+})();
+</script></body></html>

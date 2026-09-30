@@ -10,6 +10,8 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { sessionCookieAttrs } from "./loginGuard.js";
+import { tenantTimeZone } from "../tenant/timeZone.js";
+import { setViewZone } from "../tenant/zoneCtx.js";
 
 const SESSION_TTL_DAYS = 30;
 const COOKIE = "cit_session";
@@ -151,6 +153,8 @@ export async function currentTenant(req: http.IncomingMessage): Promise<TenantSe
     ])
     .where("tenant_user.id", "=", tenantUserId)
     .executeTakeFirst();
+  // ADR-XXXX: the request's views format times in THIS accommodation's zone.
+  if (row) setViewZone(await tenantTimeZone(row.tenantId));
   return row ?? null;
 }
 

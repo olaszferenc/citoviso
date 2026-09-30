@@ -4,6 +4,7 @@
 // are "on the page": an id whose program expired (or left the circle) simply does not
 // resolve, and an own program past its last day neither (ADR-0238).
 
+import { todayForSite } from "../tenant/timeZone.js";
 import { db } from "../db/client.js";
 import { addDays, distanceKm, WINDOW_DAYS } from "./gates.js";
 import { cleanOwnProgram, matchSettlement, OWN_ID_RE, ownExpired, type OwnProgram } from "./ownPrograms.js";
@@ -41,10 +42,6 @@ export interface ProgramPool {
   readonly today: string;
 }
 
-export function budapestToday(): string {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Budapest" });
-}
-
 /** Parse whatever the row holds into clean picks; junk is dropped, not trusted. */
 export function readPicks(cfg: Record<string, unknown>): Pick[] {
   const raw = Array.isArray(cfg.picks) ? (cfg.picks as unknown[]) : [];
@@ -73,7 +70,9 @@ export function readOrder(cfg: Record<string, unknown>): ProgramOrder {
 
 export type PoolState = "ok" | "no_location" | "not_gathered";
 
-export async function siteProgramPool(siteId: string, today = budapestToday()): Promise<ProgramPool> {
+export async function siteProgramPool(siteId: string, todayArg?: string): Promise<ProgramPool> {
+  // The accommodation's today (ADR-XXXX): which program is past, which is coming.
+  const today = todayArg ?? (await todayForSite(siteId));
   const empty = (state: PoolState): ProgramPool => ({ state, events: [], own: null, around: [], today });
   const loc = await siteLocation(siteId);
   if (!loc) return empty("no_location");

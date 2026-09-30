@@ -10,7 +10,10 @@ import {
   type MultiUnitState,
 } from "../modules.js";
 import { readFileSync } from "node:fs";
-import { APP_TZ, budapestIsoDay, budapestParts, isoDayDiff } from "../text/budapestTime.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
+import { APP_TZ, isoDayDiff, isoDayIn, partsIn } from "../text/zoneTime.js";
+import { viewZone } from "../tenant/zoneCtx.js";
+import { zonePickerHtml, type ZonePickerData } from "../tenant/zonePicker.js";
 import { getCurrency } from "../pricing.js";
 import { formatMoney } from "../text/money.js";
 import type { PhotoEdit, TenantContentEdits } from "../tenant/editor.js";
@@ -484,8 +487,8 @@ function subscriptionCard(
   let meter: string;
   let line: string;
   if (sum.billingPeriod === "annual") {
-    // `start` is a calendar day (periodStart); `now` is read on the Budapest clock (ADR-0289).
-    const z = budapestParts(now);
+    // `start` is a calendar day (periodStart); `now` is read on the accommodation's clock (ADR-XXXX).
+    const z = partsIn(now, viewZone());
     let k = (z.year - start.getFullYear()) * 12 + (z.month - 1 - start.getMonth());
     if (z.day < start.getDate()) k -= 1;
     k = Math.min(12, Math.max(1, k + 1));
@@ -931,13 +934,14 @@ export interface DomainSettleState {
 // whatever currency arrived.
 const hufAmount = (n: number) => formatMoney(n, getCurrency());
 
-/** Whole days from today (UTC midnight) to an ISO date — never negative. */
+/** Whole days from today (Budapest, our billing calendar) to an ISO date — never negative. */
 function daysUntil(iso: string): number {
   const day = 86_400_000;
   const target = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(target)) return 0;
-  const now = new Date();
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  // Our billing calendar (platform, ADR-XXXX): the freeze/close days are Budapest days.
+  const t = budapestIsoDay(new Date());
+  const today = Date.UTC(Number(t.slice(0, 4)), Number(t.slice(5, 7)) - 1, Number(t.slice(8, 10)));
   return Math.max(0, Math.round((target - today) / day));
 }
 
@@ -3970,11 +3974,11 @@ export interface OverviewData {
 
 /** „ma" / „tegnap" / a short date — the message widget's right column. */
 function relDay(d: Date, lang: string, now: Date = new Date()): string {
-  // Budapest calendar days (ADR-0289): on the UTC server a 00:30 message was "tegnap".
-  const diff = isoDayDiff(budapestIsoDay(d), budapestIsoDay(now));
+  // The accommodation's calendar days (ADR-XXXX): on the UTC server a 00:30 message was "tegnap".
+  const diff = isoDayDiff(isoDayIn(d, viewZone()), isoDayIn(now, viewZone()));
   if (diff <= 0) return T(lang, "ma");
   if (diff === 1) return T(lang, "tegnap");
-  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { month: "short", day: "numeric", timeZone: APP_TZ }).format(d);
+  return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, { month: "short", day: "numeric", timeZone: viewZone() }).format(d);
 }
 
 /** Overview (ADR-0224 ⑤): title · 3 widgets · cover showcase · to-do list · (phone) plan card. */
@@ -4315,7 +4319,11 @@ function fmtDate(d: Date, lang: string): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    timeZone: APP_TZ, // ADR-0289 — the owner's clock, not the server's (UTC on prod)
+    // PLATFORM calendar (ADR-XXXX): every caller is our billing — invoices, agreements,
+    // the renewal day — and most pass a Postgres `date` (process-local midnight). Budapest
+    // lies east of UTC, so such a value keeps its day; a zone WEST of UTC would print
+    // the day before. Instants of the accommodation go through fmtDateTime.
+    timeZone: APP_TZ,
   }).format(d);
 }
 
@@ -4328,7 +4336,7 @@ function fmtDateTime(d: Date, lang: string): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: APP_TZ, // ADR-0289 — the owner's clock, not the server's (UTC on prod)
+    timeZone: viewZone(), // ADR-XXXX — the accommodation's clock, not the server's (UTC on prod)
   }).format(d);
 }
 
@@ -5321,6 +5329,27 @@ function accountSection(session: TenantSession, lang = "hu"): string {
   );
 }
 
+/**
+ * ADR-XXXX — „Szállás időzónája" (frozen plan: assets/design-refs/tenant-admin/szallas-idozona/,
+ * variant A): the owner picks the zone their accommodation lives in; every booking/price
+ * "today", deadline and shown time follows it. Native select (works without JS), enhanced
+ * by the shared picker script; the server validates the IANA name.
+ */
+function zoneSection(zone: ZonePickerData, lang = "hu", error = false): string {
+  return (
+    `<div class="adm-card" id="idozona">` +
+    `<div class="adm-card__head"><span class="adm-ico">${ic("bookings")}</span><h2>${T(lang, "Szállás időzónája")}</h2>${helpLink("admin.account", lang)}</div>` +
+    `<p class="citui-hint" style="margin-top:0">${T(lang, "Ennek az órája szerint számolunk minden napot: mikor „ma” egy foglalás, mikor jár le egy ár vagy egy kérés, és milyen időpontot lát a vendég. Alapból a szállás országa adja; csak akkor változtasd, ha a szállás máshol van.")}</p>` +
+    (error
+      ? `<div class="adm-saved" role="alert">${ic("alert", 18)} ${T(lang, "Nem mentettük: válassz egy időzónát a listából.")}</div>`
+      : "") +
+    `<form method="POST" action="/admin/timezone">` +
+    zonePickerHtml("adm-tz", zone, lang) +
+    `<button class="citui-btn citui-btn--primary" type="submit" style="margin-top:12px">${T(lang, "Időzóna mentése")}</button>` +
+    `</form></div>`
+  );
+}
+
 /** Searchable knowledge base surface (ADR-0045): topic list + one open guide.
  *  Pure view — the entries are loaded and filtered by the caller (public.ts). */
 function helpSection(help: NonNullable<AdminOpts["help"]>, lang = "hu"): string {
@@ -5470,6 +5499,10 @@ export interface AdminOpts {
   readonly documents?: DocumentsAdminData | null;
   /** ADR-0110: a „Jogi adatok" panel adata (Fiók fül). */
   readonly legal?: LegalAdminData | null;
+  /** ADR-XXXX: the accommodation's time zone (the „Fiók" tab's picker). */
+  readonly zone?: ZonePickerData | null;
+  /** The last POST carried no valid IANA zone (nothing was saved). */
+  readonly zoneError?: boolean;
   /** ADR-0226: a „Pénztárca" fül adata (mentett kártya, terhelések, előzmény). */
   readonly wallet?: WalletAdminData | null;
   /** ADR-0226: what the card-change round just did (`?card=ok|fail|err`). */
@@ -5899,6 +5932,7 @@ export function adminDashboard(
             ? walletSection(opts.wallet ?? null, opts.subscription ?? null, opts.walletFlash ?? null, lang)
           : tab === "fiok"
             ? accountSection(session, lang) +
+              (opts.zone ? zoneSection(opts.zone, lang, opts.zoneError ?? false) : "") +
               (opts.legal ? legalSection(opts.legal, lang) : "")
             : overviewSection(
                 content,

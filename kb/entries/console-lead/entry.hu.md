@@ -400,6 +400,14 @@ modulok a tulaj konfigurátor-választásából jönnek, nem kézből.
 **„Részletek ▾”** gombra — a konvertáló űrlap (és a mock törlése, az AI-költség, a recept)
 ott nyílik ki. Visszazárni a **„Bezárom ▴”** felirattal lehet, ugyanazon a gombon.
 
+**Időzóna.** A konvertált ügyfél blokkjában (ugyanitt, a **„Részletek ▾”** alatt) az **„Időzóna”** sor
+mutatja, melyik zóna órája szerint él a szállás (pl. „Budapest (Europe/Budapest)”, mellette „most
+HH:MM”). A **„Módosítás”** ugyanazt a választót nyitja, amit a tulaj a saját **„Fiók”** fülén lát:
+keresés, lista, a „Most itt: …” előnézet, figyelmeztetés, ha eltér az ország alapértékétől, és a
+**„Vissza az ország alapértékére”** gomb. Az **„Időzóna mentése”** csak valódi időzónát ment; a
+mentés után a lap tetején „Időzóna mentve: …” áll. Az új szállás a gyűjtés országának alapzónájával
+jön létre; ezen csak akkor kell állítani, ha a szállás máshol van (pl. Kanári-szigetek).
+
 ## Ha a számla nem készült el
 
 Ha a vevő fizetett, de a számlázó (Számlázz.hu) nem állította ki a számlát, a lead lapján a

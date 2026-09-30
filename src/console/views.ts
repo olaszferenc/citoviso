@@ -2,6 +2,8 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
+import { APP_TZ } from "../text/zoneTime.js";
+import { nowInLabel, zoneLabel, zonePickerHtml } from "../tenant/zonePicker.js";
 import type {
   ArtifactView,
   ConversionView,
@@ -1998,7 +2000,30 @@ function convertedBlock(c: ConversionView): string {
       ${c.partnerId ? `<a class="small" href="/partner/${esc(c.partnerId)}">${T(lang, "Partner-lap (pénzügy) ▸")}</a>` : ""}
     </div>
     <div class="row" style="margin-top:8px">${mods}</div>
-    <div class="mut small" style="margin-top:6px">${T(lang, "Privát előnézet — a nyilvános élesítés fizetés után, nálunk indul.")}</div>`;
+    <div class="mut small" style="margin-top:6px">${T(lang, "Privát előnézet — a nyilvános élesítés fizetés után, nálunk indul.")}</div>
+    ${zoneLine(c)}`;
+}
+
+/**
+ * ADR-XXXX — the accommodation's time zone on the converted block (frozen plan:
+ * assets/design-refs/tenant-admin/szallas-idozona/, variant A: the owner sets it on the
+ * „Fiók" tab, the operator here). The shared picker; the POST validates the IANA name.
+ */
+function zoneLine(c: ConversionView): string {
+  const lang = consoleLang();
+  const hhmm = nowInLabel(c.zone.timeZone, lang).split(" ").pop() ?? "";
+  return `<div class="tz-line" id="idozona">
+      <span class="tz-line__k">${T(lang, "Időzóna")}</span>
+      <b>${esc(zoneLabel(c.zone.timeZone, lang))}</b>
+      <span class="mut small">${T(lang, "most {t}", { t: esc(hhmm) })}</span>
+      <details class="tz-edit"><summary>${T(lang, "Módosítás")}</summary>
+        <form method="post" action="/lead/${esc(c.leadId)}/timezone">
+          ${zonePickerHtml("con-tz", c.zone, lang)}
+          <div class="row" style="margin-top:10px"><button class="ok" type="submit">${T(lang, "Időzóna mentése")}</button></div>
+          <div class="mut small" style="margin-top:6px">${T(lang, "A tulaj a saját Fiók fülén is átállíthatja.")}</div>
+        </form>
+      </details>
+    </div>`;
 }
 
 /**
@@ -7352,7 +7377,7 @@ import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
  *  on every row, and the owner read it to reason about what happened when. The
  *  zone belongs to the READER, so it is named here, not inherited from whichever
  *  machine happens to render. */
-const CONSOLE_TZ = "Europe/Budapest";
+const CONSOLE_TZ = APP_TZ; // the operator console is platform-side (ADR-XXXX)
 
 function consoleDateTime(d: Date | string, lang: string): string {
   return new Intl.DateTimeFormat(lang === "hu" ? "hu-HU" : lang, {

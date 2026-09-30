@@ -18,6 +18,7 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { todayForTenant } from "./timeZone.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
@@ -36,8 +37,16 @@ function niceIso(iso: string): string {
 }
 
 export async function maintainDatedPrices(
-  today: string = new Date().toISOString().slice(0, 10),
+  /** A guard's pinned day for EVERY site; the product passes none (ADR-XXXX). */
+  todayArg?: string,
 ): Promise<{ reminded: number; expired: number }> {
+  // Each accommodation's own today (ADR-XXXX). The query takes a window wide enough for
+  // every zone (UTC−12 … UTC+14 is within a day of UTC's date); each row is then judged
+  // on its tenant's day.
+  const utcToday = new Date().toISOString().slice(0, 10);
+  const lo = todayArg ?? addDays(utcToday, -1);
+  const hi = todayArg ?? addDays(utcToday, 1);
+  const todayOf = async (tenantId: string | null): Promise<string> => todayArg ?? (await todayForTenant(tenantId));
   // ① Reminders — the window ends within REMIND_DAYS and nobody was told yet.
   const due = await db
     .selectFrom("unit_price")
@@ -58,12 +67,14 @@ export async function maintainDatedPrices(
     // false. Next year's price is asked by the end-of-season question instead.
     .where("unit_price.date_from", "is", null)
     .where("unit_price.expiry_notified_at", "is", null)
-    .where("unit_price.valid_to", ">=", today)
-    .where("unit_price.valid_to", "<=", addDays(today, REMIND_DAYS))
+    .where("unit_price.valid_to", ">=", lo)
+    .where("unit_price.valid_to", "<=", addDays(hi, REMIND_DAYS))
     .execute();
 
   let reminded = 0;
   for (const r of due) {
+    const today = await todayOf(r.tenantId);
+    if (!(r.validTo! >= today && r.validTo! <= addDays(today, REMIND_DAYS))) continue;
     // Claim first (conditional UPDATE): two overlapping ticks send one mail, not two.
     const claim = await db
       .updateTable("unit_price")
@@ -85,13 +96,16 @@ export async function maintainDatedPrices(
     .selectFrom("unit_price")
     .innerJoin("site_unit", "site_unit.id", "unit_price.unit_id")
     .innerJoin("site", "site.id", "site_unit.site_id")
-    .select(["unit_price.id as id", "site.tenant_id as tenantId"])
+    .select(["unit_price.id as id", "unit_price.valid_to as validTo", "site.tenant_id as tenantId"])
     .where("unit_price.valid_to", "is not", null)
-    .where("unit_price.valid_to", "<", today)
+    .where("unit_price.valid_to", "<", hi)
     .execute();
   const tenants = new Set<string>();
+  let expired = 0;
   for (const r of lapsed) {
+    if (!(r.validTo! < (await todayOf(r.tenantId)))) continue;
     await db.deleteFrom("unit_price").where("id", "=", r.id).execute();
+    expired++;
     if (r.tenantId) tenants.add(r.tenantId);
   }
   if (tenants.size) {
@@ -104,7 +118,7 @@ export async function maintainDatedPrices(
       }
     }
   }
-  return { reminded, expired: lapsed.length };
+  return { reminded, expired };
 }
 
 async function remindOwner(

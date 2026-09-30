@@ -4,11 +4,11 @@ title: Fiók — e-mail-cím és jelszó kezelése
 audience: tenant
 category: account
 anchors: admin.account
-updated: 2026-09-08
+updated: 2026-09-30
 ---
 
-A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, és — a lap alján —
-a honlapján közzétett jogi adatait (impresszum, adatkezelési tájékoztató).
+A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, a szállása
+időzónáját, és — a lap alján — a honlapján közzétett jogi adatait (impresszum, adatkezelési tájékoztató).
 
 ![Képernyőkép: a Fiók fül telefonon](assets/hu/screen.png)
 
@@ -32,6 +32,27 @@ A **„Jelszó módosítása”** részben cserélheti le a jelszavát:
    de más nem talál ki — például három, egymáshoz nem kapcsolódó szó egybeírva.
 3. Ismételje meg az **„Új jelszó még egyszer”** mezőben — ez véd az elgépeléstől.
 4. Koppintson a **„Jelszó módosítása”** gombra. A következő belépéskor már az új jelszót használja.
+
+## Szállás időzónája
+
+A **„Szállás időzónája”** kártyán azt látja, melyik időzóna órája szerint számolunk a szállásánál:
+mikor „ma” egy foglalás, mikor jár le egy ár vagy egy kérés, és milyen időpontot lát a vendég.
+Alapból a szállás országa adja (Magyarországon Budapest), így a legtöbb szállásnál nincs vele teendő.
+Csak akkor változtassa, ha a szállás máshol van — például a Kanári-szigeteken vagy Portugáliában.
+
+1. A **„Keresés”** mezőbe írja be a legközelebbi nagyváros vagy a sziget nevét (pl. „Lisszabon”,
+   „Kanári”, „Bécs”). A lista szűkül; ha nincs találat, ezt írja: „Nincs ilyen időzóna. Próbáld a
+   legközelebbi nagyvárossal (pl. „Lisszabon”).”
+2. Válassza ki az **„Időzóna”** listából a megfelelőt. Alatta azonnal látja, mennyi most ott az idő,
+   és melyik nap számít ott „ma”-nak („Most itt: …”).
+3. Ha a választás eltér a szállás országának alapértékétől, egy figyelmeztetés kéri, hogy
+   ellenőrizze. Ha meggondolta magát, a **„Vissza az ország alapértékére”** gomb visszaállítja.
+4. Koppintson az **„Időzóna mentése”** gombra. A gomb csak akkor nyomható meg, ha valóban mást
+   választott, mint ami eddig be volt állítva.
+
+A mentés után a foglalási naptár, a lejáró árak, a foglalási kérések és a vendégnek küldött
+ajánlatok határideje ennek a zónának az órája szerint számol. A tőlünk kapott számlák és a
+szerződések dátuma nem változik: azok a magyar naptár szerint szólnak.
 
 ## Jogi adatok
 

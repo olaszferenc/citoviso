@@ -15,6 +15,7 @@
 // hang the admin or fill the disk.
 
 import { buildIcs, importIcsBlockedDays } from "./ical.js";
+import { todayForUnit } from "../tenant/timeZone.js";
 import {
   applyImportedDays,
   allImportLinks,
@@ -120,7 +121,7 @@ export async function syncAllCalendarLinks(): Promise<{ links: number; ok: numbe
  * change from a poll.
  */
 export async function buildUnitFeed(unitId: string, unitName: string): Promise<string> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await todayForUnit(unitId); // the accommodation's today (ADR-XXXX)
   const days = await getBlockedDaysFrom(unitId, today);
   const newest = days.length ? days[days.length - 1]! : today;
   return buildIcs({

@@ -1515,3 +1515,18 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
 .adm-pendstrip b{display:block;font-size:.98rem;color:var(--citui-ink)}
 .adm-pendstrip span span{display:block;font-size:.84rem;color:var(--citui-warn-ink);margin-top:1px}
 .adm-msg__body p.adm-msg__tail{color:var(--citui-muted)}
+
+/* ── ADR-XXXX: accommodation time-zone picker (src/tenant/zonePicker.ts; plan:
+   assets/design-refs/tenant-admin/szallas-idozona/, variant A). Shared markup with the
+   console — the same class names are styled in citui-console.css. */
+.tzp{margin-top:12px}
+.tzp__l{display:block;margin:10px 0 4px;font-size:.85em;color:var(--citui-muted)}
+.tzp__q,.tzp__s{width:100%;padding:9px 11px;border:1px solid var(--citui-line-strong);border-radius:8px;font:inherit;background:var(--citui-white);color:inherit}
+.tzp__s[size]:not([size="0"]){padding:4px}
+.tzp__none{margin-top:6px;font-size:.85em;color:var(--citui-muted)}
+.tzp__hint{margin-top:6px;font-size:.85em;color:var(--citui-muted)}
+.tzp__now{margin-top:12px;padding:10px 12px;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface-2);border-radius:0 8px 8px 0;font-size:.92em}
+.tzp__warn{margin-top:8px;font-size:.85em;color:var(--citui-warn-ink)}
+.tzp__warn:empty{display:none}
+.tzp__reset{margin-top:8px;padding:0;border:0;background:none;color:var(--citui-navy-700);text-decoration:underline;font:inherit;font-size:.9em;cursor:pointer}
+#idozona .citui-btn:disabled{opacity:.45;cursor:not-allowed}

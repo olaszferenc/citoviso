@@ -17,7 +17,8 @@
 // collapse animation on top.
 
 import { T } from "../i18n/mail.js";
-import { budapestYear } from "../text/budapestTime.js";
+import { yearIn } from "../text/zoneTime.js";
+import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import type { MonthView } from "../tenant/availability.js";
 import { bookingRef, type InboxItem, type SentOffer } from "../booking/requests.js";
 import { icAdmin as ic } from "../ui/icons.js";
@@ -147,7 +148,7 @@ export function calendarFocus(
   requests: readonly InboxItem[],
   expireHours: number,
   targetToken: string | null,
-  todayIso: string = new Date().toISOString().slice(0, 10),
+  todayIso: string = viewToday(),
 ): InboxItem | undefined {
   const target = targetToken ? requests.find((r) => r.token === targetToken) : undefined;
   return (
@@ -570,10 +571,11 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
   }
   // year — the panel must ADD UP to the tile, otherwise tapping it contradicts it
   // (Elek FK-007: tile "2 foglalás", panel "Idén még nincs visszaigazolt foglalás").
-  // Budapest calendar year on both sides (ADR-0289) — must match the year tile's yearStart.
-  const yearNow = budapestYear(new Date());
+  // The accommodation's calendar year on both sides (ADR-XXXX) — must match the year
+  // tile's yearStart (public.ts reads the same request view zone).
+  const yearNow = yearIn(new Date(), viewZone());
   const thisYear = (r: InboxItem): boolean =>
-    Boolean(r.decidedAt) && budapestYear(r.decidedAt!) === yearNow;
+    Boolean(r.decidedAt) && yearIn(r.decidedAt!, viewZone()) === yearNow;
   const acc = d.requests.filter((r) => r.status === "accepted" && thisYear(r));
   const gone = d.requests.filter((r) => r.status === "cancelled" && thisYear(r));
   const line = (r: InboxItem, live: boolean): string =>
@@ -727,10 +729,10 @@ function requestCard(
  */
 function offeredCard(r: InboxItem, expireHours: number, lang: string): string {
   const exp = r.offeredAt && expireHours ? new Date(r.offeredAt.getTime() + expireHours * 3_600_000) : null;
-  // The pilot's clock is Budapest's — the server's own zone is not the owner's.
+  // The accommodation's clock (ADR-XXXX) — the server's own zone is not the owner's.
   const when = exp
     ? new Intl.DateTimeFormat("hu-HU", {
-        timeZone: "Europe/Budapest",
+        timeZone: viewZone(),
         month: "short",
         day: "numeric",
         hour: "2-digit",
@@ -928,7 +930,7 @@ function historyRow(r: InboxItem, expireHours: number, view: string, lang: strin
 export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
   const pend = pendingInOrder(d.requests, d.expireHours);
   const groups = overlapGroups(pend);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = viewToday(); // the accommodation's today (ADR-XXXX)
   const arrivals = d.requests
     .filter((r) => r.status === "accepted" && r.dateFrom >= today)
     .sort((a, b) => (a.dateFrom < b.dateFrom ? -1 : 1));
@@ -1025,10 +1027,10 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
 
 /* ── „Kiküldött ajánlatok" (ADR-0267, approved plan booking-offer-scope) ──── */
 
-/** The Budapest wall-clock of a deadline, short ("okt. 1. 16:10"). */
+/** The accommodation's wall-clock of a deadline, short ("okt. 1. 16:10"; ADR-XXXX). */
 function shortWhen(d: Date): string {
   return new Intl.DateTimeFormat("hu-HU", {
-    timeZone: "Europe/Budapest",
+    timeZone: viewZone(),
     month: "short",
     day: "numeric",
     hour: "2-digit",

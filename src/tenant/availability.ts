@@ -16,7 +16,8 @@
 
 import { randomBytes } from "node:crypto";
 import { db } from "../db/client.js";
-import { budapestParts } from "../text/budapestTime.js";
+import { APP_TZ, partsIn, todayIn } from "../text/zoneTime.js";
+import { unitTimeZone } from "./timeZone.js";
 import { blockingUnitIds } from "./unitScope.js";
 import { formatAmount, getUnitPrices, seasonCovers } from "./prices.js";
 import { seasonRule } from "./seasonRule.js";
@@ -99,14 +100,15 @@ function dayString(v: unknown): string {
   return typeof v === "string" ? v.slice(0, 10) : iso(new Date(v as string));
 }
 
-/** Normalise a 'YYYY-MM' input; falls back to the current month. */
-export function normaliseMonth(input: string | null | undefined): string {
+/** Normalise a 'YYYY-MM' input; falls back to the current month IN `tz` — the
+ *  accommodation's zone (ADR-XXXX; callers with a tenant pass it). */
+export function normaliseMonth(input: string | null | undefined, tz: string = APP_TZ): string {
   if (input && /^\d{4}-\d{2}$/.test(input)) {
     const mm = Number(input.slice(5, 7));
     if (mm >= 1 && mm <= 12) return input;
   }
-  // The owner's current month — on the Budapest clock (ADR-0289), not the server's.
-  const now = budapestParts(new Date());
+  // The owner's current month — on the accommodation's clock (ADR-XXXX), not the server's.
+  const now = partsIn(new Date(), tz);
   return `${now.year}-${String(now.month).padStart(2, "0")}`;
 }
 
@@ -251,13 +253,13 @@ async function resolveDayDetails(rows: BlockRow[]): Promise<Map<string, DayDetai
 
 /** One month of availability for a unit, ready for the admin calendar. */
 export async function getMonthAvailability(unitId: string, month: string): Promise<MonthView> {
-  const m = normaliseMonth(month);
+  const tz = await unitTimeZone(unitId);
+  const m = normaliseMonth(month, tz);
   const year = Number(m.slice(0, 4));
   const monthIdx = Number(m.slice(5, 7)) - 1;
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-  // "Today" stays on the booking domain's ONE convention — the UTC calendar day, like
-  // the ~20 other booking/price "today"s (ADR-0289 lists moving them to Budapest together).
-  const todayIso = new Date().toISOString().slice(0, 10);
+  // The accommodation's "today" (ADR-XXXX) — the ONE today of the booking domain.
+  const todayIso = todayIn(tz);
 
   // ADR-0114: the month shows what is REALLY unavailable here — including the nights
   // another unit holds (the whole place, or a room the whole place cannot be sold over).
@@ -328,7 +330,7 @@ export async function setManualMonthBlocks(
   month: string,
   blockedDays: string[],
 ): Promise<void> {
-  const m = normaliseMonth(month);
+  const m = normaliseMonth(month, await unitTimeZone(unitId));
   const wanted = new Set(blockedDays.filter((d) => d.startsWith(`${m}-`)));
 
   await db.transaction().execute(async (trx) => {
@@ -537,7 +539,8 @@ export async function applyImportedDays(
   days: string[],
 ): Promise<number> {
   const source = `ical:${linkId}`;
-  const today = new Date().toISOString().slice(0, 10);
+  // "Past" = before the accommodation's today (ADR-XXXX).
+  const today = todayIn(await unitTimeZone(unitId));
   const wanted = [...new Set(days.filter((d) => d >= today))].sort();
 
   await db.transaction().execute(async (trx) => {

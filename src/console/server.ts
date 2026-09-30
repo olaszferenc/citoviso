@@ -2,6 +2,8 @@
 // A tiny hand-rolled router over the console data/views + the generator service.
 // Long-running: it does NOT close the shared pool. Post/Redirect/Get for mutations.
 
+import { setTenantTimeZone } from "../tenant/timeZone.js";
+import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
@@ -82,7 +84,7 @@ import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
 import { mockCard, MOCK_CARDS } from "../payment/mock.js";
 import { siteShotPath } from "../payment/siteShot.js";
-import { tenantCoverPhoto } from "../tenant/editor.js";
+import { rerenderTenantSnapshot, tenantCoverPhoto } from "../tenant/editor.js";
 import { alertStuckOrder } from "./payLinkAlert.js";
 import { alertWebhookFailure } from "./houseAlert.js";
 import { sendOrderPayLinkMail, sendOrderReceivedMail } from "./orderMail.js";
@@ -3280,6 +3282,24 @@ async function handle(
     return redirect(res, `/prospect/${sendMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
   // POST /lead/:id/convert — approved mock → provisioned private preview.
+  // POST /lead/:id/timezone — the operator sets the converted accommodation's time zone
+  // (ADR-XXXX). Only a real IANA name is stored.
+  const tzMatch = /^\/lead\/([0-9a-f-]{36})\/timezone$/i.exec(path);
+  if (method === "POST" && tzMatch) {
+    const id = tzMatch[1]!;
+    const form = await readBody(req);
+    const tz = form.get("time_zone") ?? "";
+    const tenant = await db.selectFrom("tenant").select("id").where("lead_id", "=", id).executeTakeFirst();
+    if (!tenant || !isValidTimeZone(tz)) {
+      const msg = !tenant ? "Ehhez a leadhez nincs ügyfél-fiók." : "Nem mentettem: válassz egy időzónát a listából.";
+      return redirect(res, `/lead/${id}?flash=${encodeURIComponent(msg)}&flashKind=bad#ls-mocks`);
+    }
+    await setTenantTimeZone(tenant.id, tz);
+    // The published page is a snapshot whose "today" (dated prices, programs) follows the
+    // zone — re-render it, as the owner's own save does.
+    await rerenderTenantSnapshot(tenant.id);
+    return redirect(res, `/lead/${id}?flash=${encodeURIComponent(`Időzóna mentve: ${tz}.`)}#ls-mocks`);
+  }
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);
   if (method === "POST" && convMatch) {
     const id = convMatch[1];

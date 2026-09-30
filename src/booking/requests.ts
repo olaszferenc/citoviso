@@ -61,6 +61,7 @@ import {
 import { bookableUnits, guestUnits } from "../tenant/unitVisibility.js";
 import { seasonRule } from "../tenant/seasonRule.js";
 import { buildStayCancelIcs, buildStayIcs } from "./ical.js";
+import { siteTimeZone, todayForSite } from "../tenant/timeZone.js";
 
 export interface BookingRequestInput {
   readonly siteId: string;
@@ -146,10 +147,6 @@ function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function huDate(iso: string): string {
@@ -530,12 +527,14 @@ export async function createBookingRequest(
   if (n > maxNights) {
     errors.push(T(lang, "Legfeljebb {n} éjszakára lehet foglalni.", { n: maxNights }));
   }
-  const earliest = addDays(today(), leadTimeDays);
+  // The accommodation's "today" (ADR-XXXX), not UTC's: at 00:30 Budapest UTC is still yesterday.
+  const today = await todayForSite(input.siteId);
+  const earliest = addDays(today, leadTimeDays);
   if (dateFrom < earliest) {
     // huDate ends with a dot and so does the sentence — "2026. 09. 24.." was Elek FK-008 H6.
     errors.push(T(lang, "A legkorábbi foglalható érkezés: {date}.", { date: huDate(earliest).replace(/\.$/, "") }));
   }
-  if (dateFrom > addMonths(today(), horizonMonths)) {
+  if (dateFrom > addMonths(today, horizonMonths)) {
     errors.push(T(lang, "Ennyire előre még nem lehet foglalni."));
   }
   if (errors.length) return { ok: false, errors };
@@ -2158,7 +2157,7 @@ export async function loadOfferView(token: string): Promise<OfferView> {
       known.push({ label, nights: 1, perNight: p.amount, from: day, to: addDays(day, 1) });
     }
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await todayForSite(req.site_id);
   return {
     outcome: "open",
     status: req.status,
@@ -2267,7 +2266,7 @@ export async function sendOffer(
   }
   const from = dayStr(req.date_from);
   const to = dayStr(req.date_to);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await todayForSite(req.site_id);
   const missing = await unpricedNights(req.unit_id, from, to);
 
   const errors: string[] = [];
@@ -2380,10 +2379,11 @@ export async function sendOffer(
   };
 }
 
-/** "2026. szept. 25. 14:05" in the site's time zone (Budapest for the pilot). */
-function huDateTime(d: Date): string {
+/** "2026. szept. 25. 14:05" in the ACCOMMODATION's time zone (ADR-XXXX) — the guest
+ *  books a place, and its deadlines are that place's wall clock. */
+function huDateTime(d: Date, tz: string): string {
   const parts = new Intl.DateTimeFormat("hu-HU", {
-    timeZone: "Europe/Budapest",
+    timeZone: tz,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -2404,6 +2404,7 @@ export function offerExpiresAt(offeredAt: Date | null, hours: number): Date | nu
 /** ⑨ The guest's offer letter: the price, the owner's word, the deadline, one link. */
 async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Promise<void> {
   const ctx = await siteMailContext(req.site_id);
+  const tz = await siteTimeZone(req.site_id);
   const lang = ctx.lang;
   const from = huDate(dayStr(req.date_from));
   const to = huDate(dayStr(req.date_to));
@@ -2421,7 +2422,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
     `\n` +
     (req.decision_note ? `${T(lang, "A szállásadó üzenete:")} „${req.decision_note}"\n\n` : "") +
     (expires
-      ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires) }) + " "
+      ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz) }) + " "
       : "") +
     T(lang, "A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja.") +
     `\n\n${T(lang, "Az ajánlat megtekintése és elfogadása:")}\n${url}\n\n` +
@@ -2443,7 +2444,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
       ...(req.decision_note ? [mailQuote(T(lang, "A szállásadó üzenete:"), req.decision_note)] : []),
       mailPara(
         esc(
-          (expires ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires) }) + " " : "") +
+          (expires ? T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(expires, tz) }) + " " : "") +
             T(lang, "A foglalás az elfogadással válik véglegessé — addig a napokat más is lefoglalhatja."),
         ),
       ),

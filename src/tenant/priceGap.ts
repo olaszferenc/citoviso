@@ -6,6 +6,8 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { tenantTimeZone, todayForSite } from "./timeZone.js";
+import { todayIn } from "../text/zoneTime.js";
 import { getEmailSender } from "../email/sender.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
 import { logTenantMessage } from "./messages.js";
@@ -29,8 +31,10 @@ export interface PriceGap {
  */
 export async function sitePriceGaps(
   siteId: string,
-  today: string = new Date().toISOString().slice(0, 10),
+  /** The accommodation's today; resolved from the site when not pinned (ADR-XXXX). */
+  todayArg?: string,
 ): Promise<PriceGap[]> {
+  const today = todayArg ?? (await todayForSite(siteId));
   if (!(await siteRendersModule(siteId, "pricing"))) return [];
   // ⛔ Read directly, not through units.ts: this module sends MAIL, and pulling units.ts
   // onto the mail path brings its Hungarian admin strings into the i18n scope (the
@@ -124,7 +128,7 @@ export async function maintainPriceGaps(
   now: Date = new Date(),
   opts: { readonly onlySiteId?: string } = {},
 ): Promise<{ started: number; ended: number; reminded: number }> {
-  const today = now.toISOString().slice(0, 10);
+  // Each site is judged on ITS accommodation's today (ADR-XXXX), not one global day.
   // Live sites, plus any site still carrying an episode (it may have gone offline or
   // lost the module since — the stamp must still be cleared).
   const sites = await db
@@ -139,6 +143,7 @@ export async function maintainPriceGaps(
   let reminded = 0;
   for (const s of sites) {
     // A suspended/deactivated site is not selling — no mail about its prices.
+    const today = todayIn(await tenantTimeZone(s.tenant_id), now);
     const gaps = s.status === "live" ? await sitePriceGaps(s.id, today) : [];
     if (!gaps.length) {
       if (s.price_gap_since) {

@@ -17,6 +17,7 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
+import { defaultTimeZoneForCountry } from "../text/zoneTime.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { dropNeverShown, photoUrlKey, readCachedScores } from "../generator/heroPick.js";
@@ -213,9 +214,22 @@ export async function convertLead(
     .where("lead_id", "=", leadId)
     .executeTakeFirst();
   if (!tenant) {
+    // ADR-XXXX: the accommodation starts in its country's zone (the scrape area's
+    // country — the same source the market gate uses); the owner can change it.
+    const origin = await db
+      .selectFrom("lead")
+      .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+      .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+      .select("scraper_definition.country")
+      .where("lead.id", "=", leadId)
+      .executeTakeFirst();
     tenant = await db
       .insertInto("tenant")
-      .values({ lead_id: leadId, display_name: lead.name })
+      .values({
+        lead_id: leadId,
+        display_name: lead.name,
+        time_zone: defaultTimeZoneForCountry(origin?.country),
+      })
       .returning("id")
       .executeTakeFirstOrThrow();
   }

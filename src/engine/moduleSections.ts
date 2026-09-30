@@ -17,6 +17,7 @@
 // from the skin's --cit-* contract, so the block inherits whatever template it
 // lands in instead of fighting it.
 
+import { APP_TZ, todayIn } from "../text/zoneTime.js";
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
@@ -575,7 +576,8 @@ function programsSampleBlock(d: SiteData): string {
   const mon = fmt({ month: "short" });
   const dm = fmt({ month: "short", day: "numeric" });
   const wd = fmt({ weekday: "long" });
-  const today = new Date().toISOString().slice(0, 10);
+  // A DEMO sample (platform content, ADR-XXXX): its dates count from the platform's today.
+  const today = todayIn(APP_TZ);
   const at = (n: number) => {
     const x = new Date(`${today}T12:00:00Z`);
     x.setUTCDate(x.getUTCDate() + n);

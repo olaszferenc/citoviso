@@ -15,7 +15,8 @@
 // can measure the very same function the admin page renders.
 
 import { db } from "../db/client.js";
-import { budapestParts } from "../text/budapestTime.js";
+import { APP_TZ, partsIn } from "../text/zoneTime.js";
+import { siteTimeZone, tenantTimeZone } from "./timeZone.js";
 import { DEFAULT_LANG, LANG_REGIONS, langName, siteLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS, multilangTier, DEFAULT_MULTILANG_TIER } from "../modules.js";
 import { applyOffer, bestActiveCouponForTenant } from "../payment/offers.js";
@@ -101,6 +102,8 @@ export async function latestMultilangGeneration(
 export function paidStateOf(
   gen: LatestMultilangGeneration | null,
   now = new Date(),
+  /** The accommodation's zone — the buyer reads the stamp against their own bank (ADR-XXXX). */
+  tz: string = APP_TZ,
 ): MultilangPaidState | null {
   if (!gen || gen.payStatus !== "paid" || gen.genStatus === "done") return null;
   // ⛔ ÉLETJEL, nem indulási idő (ADR-0118). A régi mérce ("20 perce indult") egy
@@ -123,16 +126,17 @@ export function paidStateOf(
     langNames: gen.languages.map((l) => langName(l)),
     amount: gen.amount,
     ref: publicPaymentRef(gen.paymentId),
-    paidAt: fmtStamp(gen.paidAt ?? gen.createdAt),
+    paidAt: fmtStamp(gen.paidAt ?? gen.createdAt, tz),
     tierId: multilangTier(gen.tier).id,
   };
 }
 
-/** Budapest wall-clock stamp the buyer can match against their bank statement
- *  (ADR-0289: the process zone is UTC on prod — the stamp read 1–2 hours early). */
-export function fmtStamp(d: Date): string {
+/** Wall-clock stamp in the ACCOMMODATION's zone, which the buyer matches against their
+ *  bank statement (ADR-0289: never the process zone — UTC on prod; ADR-XXXX: the
+ *  accommodation's zone, not the platform's). */
+export function fmtStamp(d: Date, tz: string = APP_TZ): string {
   const p = (n: number) => String(n).padStart(2, "0");
-  const z = budapestParts(d);
+  const z = partsIn(d, tz);
   return `${z.year}. ${p(z.month)}. ${p(z.day)}. ${p(z.hour)}:${p(z.minute)}`;
 }
 
@@ -200,7 +204,7 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
   const primaryLang = input.primaryLang ?? DEFAULT_LANG;
   const state = await getMultilang(input.siteId);
   const gen = await latestMultilangGeneration(input.siteId);
-  const paid = paidStateOf(gen);
+  const paid = paidStateOf(gen, new Date(), await tenantTimeZone(input.tenantId));
   // ADR-0088 §6: the welcome coupon redeems on the NEXT purchase — it used to
   // apply SILENTLY at charge time while the card kept the list price (Elek
   // FK-005b H3/G1). The card must show what will actually be charged.
@@ -271,7 +275,7 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
  */
 export async function multilangPurchaseBlockedReason(siteId: string): Promise<string | null> {
   const gen = await latestMultilangGeneration(siteId);
-  const paid = paidStateOf(gen);
+  const paid = paidStateOf(gen, new Date(), await siteTimeZone(siteId));
   if (!paid) return null;
   // A visszautasítás INDOKA is igaz legyen, ne csak a tény (ADR-0118): amíg van
   // hátra próbálkozás, a rendszer tényleg újraindítja; utána ember viszi tovább.

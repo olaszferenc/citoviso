@@ -38,6 +38,7 @@ import {
 import { renderableModules } from "../modules.js";
 import { applyContactEdits, effectiveContact, type ContactEdits, type ContactErrorKey, type ContactFacts } from "./contact.js";
 import { programsOnPage, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
+import { todayForTenant } from "./timeZone.js";
 
 export interface PhotoEdit {
   url: string;
@@ -369,6 +370,8 @@ export async function moduleContentFor(
   // the switch must not surface as an offer the guest cannot take.
   const wholeOnly = isWholeOnlySite(units);
   const offerUnits = bookableUnits(units);
+  // The accommodation's today (ADR-XXXX) — which dated price is in force, which has lapsed.
+  const today = await todayForTenant(tenantId);
 
   if (on("pricing")) {
     const priced = offerUnits
@@ -378,7 +381,6 @@ export async function moduleContentFor(
         // base (written on the offer page) whose window holds today, else the timeless
         // one. The maintenance tick re-renders when a window closes, so the table does
         // not keep quoting a price that has lapsed.
-        const today = new Date().toISOString().slice(0, 10);
         const rows = (priceMap.get(u.id) ?? []).filter((r) => isPriceActive(r, today));
         const baseRow =
           rows.find((r) => r.isBase && r.validFrom && r.validFrom <= today) ??
@@ -422,7 +424,7 @@ export async function moduleContentFor(
       // ADR-0257: a presentation room carries no price line — a split of the whole
       // house's price would be a number nobody set (§B.17, ADR-0232 ⑦).
       const presentation = wholeOnly && !isBookableUnit(u, units);
-      const span = presentation ? null : priceSpan(priceMap.get(u.id) ?? []);
+      const span = presentation ? null : priceSpan(priceMap.get(u.id) ?? [], today);
       // The room card shows the unit's OWN photos when the owner assigned any;
       // otherwise no photo at all rather than borrowing an unrelated one (§B.17).
       const mine = unitPhotos.get(u.id) ?? [];

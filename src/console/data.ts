@@ -23,6 +23,8 @@ import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
 import { normalizeEmail } from "../email/address.js";
 import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offers.js";
+import { zonePickerDataFor } from "../tenant/timeZone.js";
+import type { ZonePickerData } from "../tenant/zonePicker.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -789,6 +791,9 @@ export interface ConversionView {
   /** The accounting partner behind this tenant (born at payment), if any —
    *  the two surfaces reference each other (partner decree #1). */
   readonly partnerId: string | null;
+  /** ADR-XXXX: the accommodation's time zone (+ its country default) for the picker. */
+  readonly zone: ZonePickerData;
+  readonly leadId: string;
 }
 
 /** Conversion state for a lead, or null if it has not been converted yet. */
@@ -826,6 +831,8 @@ export async function getConversion(leadId: string): Promise<ConversionView | nu
     sourceArtifactId: site?.source_artifact_id ?? null,
     modules: mods.map((m) => m.module),
     partnerId: partner?.id ?? null,
+    zone: await zonePickerDataFor(tenant.id),
+    leadId,
   };
 }
 

@@ -8,6 +8,7 @@
 // public hosting (custom domain + TLS) is the deferred hosting slice — here it means
 // the DB state + the existing /site/<token> snapshot. Idempotent on the gateway ref.
 
+import { budapestIsoDay } from "../text/budapestTime.js";
 import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
@@ -1362,7 +1363,9 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     return recordFailure(reason, true);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  // OUR invoice's date (platform billing, ADR-XXXX): the Hungarian calendar day — UTC's
+  // date named yesterday for every invoice issued between 00:00 and 02:00.
+  const today = budapestIsoDay(new Date());
   // Cadence for the buyer-facing mail; 'multilang' and the ADR-0094 settlement
   // are one-time fees, not a period.
   const cadence: "monthly" | "annual" | "once" =

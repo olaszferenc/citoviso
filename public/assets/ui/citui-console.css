@@ -2504,3 +2504,18 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .pr-esc__preview.is-off { border-left-color: var(--citui-line-strong); color: var(--citui-muted); }
 .pr-esc__live { margin-top: 6px; font-size: 12px; color: var(--citui-warn-ink); }
 .pr-esc__sum { margin-left: 10px; font-size: 12px; color: var(--citui-bad-ink); }
+
+/* ── ADR-XXXX: accommodation time zone on the lead page's converted block
+   (src/tenant/zonePicker.ts — the same markup the tenant admin styles). */
+.tz-line { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--citui-line); }
+.tz-line__k { color: var(--citui-muted); font-size: 12.5px; min-width: 74px; }
+.tz-edit > summary { cursor: pointer; color: var(--citui-navy-700); text-decoration: underline; font-size: 12.5px; list-style: none; }
+.tz-edit > summary::-webkit-details-marker { display: none; }
+.tzp { margin-top: 8px; max-width: 520px; }
+.tzp__l { display: block; margin: 8px 0 4px; font-size: 12px; color: var(--citui-muted); }
+.tzp__q, .tzp__s { width: 100%; padding: 7px 9px; border: 1px solid var(--citui-line-strong); border-radius: 8px; font: inherit; background: var(--citui-white); color: inherit; }
+.tzp__none, .tzp__hint { margin-top: 6px; font-size: 12px; color: var(--citui-muted); }
+.tzp__now { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--citui-cyan-500); background: var(--citui-surface-2); border-radius: 0 8px 8px 0; font-size: 12.5px; }
+.tzp__warn { margin-top: 6px; font-size: 12px; color: var(--citui-warn-ink); }
+.tzp__warn:empty { display: none; }
+.tzp__reset { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--citui-navy-700); text-decoration: underline; font: inherit; font-size: 12px; cursor: pointer; }

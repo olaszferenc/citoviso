@@ -1460,6 +1460,14 @@ if [ -f scripts/send-window-tz-check.mts ] && \
   echo "[pre-commit] send-window-tz-check (kimenő ablakok, határidők és a tulaj/vevő-felé mutatott idők Budapest szerint, UTC-s szerveren is)…"
   npx tsx scripts/send-window-tz-check.mts >"$GATE_LOG" || gate_failed
 fi
+# The szallas-idozona ADR: every accommodation lives in its OWN zone (tenant.time_zone) — the ONE
+# "today" (todayIn), the resolvers, the owner's calendar, the view context, validated saves.
+# Read-only against the shared dev DB (process-local zone override).
+if [ -f scripts/tenant-zone-check.mts ] && \
+   changed_files | grep -qE '^src/text/(zoneTime|budapestTime)\.ts$|^src/tenant/(timeZone|zoneCtx|zonePicker|availability|units|prices|priceGap|priceExpiry|seasonNudge|editor|multilangCard)\.ts$|^src/booking/(requests|sync)\.ts$|^src/server/(public|adminViews|bookingViews|moduleConfigViews)\.ts$|^src/console/(server|views|data)\.ts$|^src/events/picks\.ts$|^src/conversion/provision\.ts$|^src/auth/tenantAuth\.ts$|^scripts/tenant-zone-check\.mts$'; then
+  echo "[pre-commit] tenant-zone-check (minden szállás a saját időzónájában: „ma”, naptár, nézetek, mentés)…"
+  npx tsx scripts/tenant-zone-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
 # hole was real (measured 2026-08-26): three live tenants held 10, 12 and 1 unpaid
 # modules, because convertLead/activateUpsell only ever write `active: true`.

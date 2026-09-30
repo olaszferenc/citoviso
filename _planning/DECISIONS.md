@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-szallas-idozona-minden-szallas-a-sajat-zonajaban.md) — Szállás-időzóna: minden szállás a saját időzónájában él; egyetlen „ma” (2026-09-30)
 - [ADR-0289](decisions/0289-a-tulaj-a-vevo-es-a-partner-fele-mutatott-idok.md) — A tulaj, a vevő és a partner felé mutatott idők Budapest szerint; egy közös zóna-segéd (2026-09-30)
 - [ADR-0288](decisions/0288-minden-kimeno-kuldesi-ablak-es-kimeno-hatarido.md) — Minden kimenő küldési ablak és kimenő határidő Budapest-idő szerint számol, a szerver zónájától függetlenül (2026-09-30)
 - [ADR-0287](decisions/0287-az-eszkalacios-emlekezteto-orankent-megy-8-20.md) — Az eszkalációs emlékeztető óránként megy, 8–20 óra között (Budapest), ajánlatonként egyszer (2026-09-30)

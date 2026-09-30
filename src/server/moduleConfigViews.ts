@@ -24,7 +24,7 @@ import {
   type ModuleField,
 } from "../moduleConfig.js";
 import { currencySign } from "../text/money.js";
-import { APP_TZ } from "../text/budapestTime.js";
+import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
@@ -2528,7 +2528,7 @@ function bookingEditor(
           const state = l.lastError
             ? T(lang, "Nem sikerült frissíteni: {err}", { err: l.lastError })
             : l.lastSyncAt
-              ? T(lang, "Utoljára frissült: {date}", { date: new Date(l.lastSyncAt).toLocaleString("hu-HU", { timeZone: APP_TZ }) }) +
+              ? T(lang, "Utoljára frissült: {date}", { date: new Date(l.lastSyncAt).toLocaleString("hu-HU", { timeZone: viewZone() }) }) +
                 (l.lastDayCount !== null ? ` · ${l.lastDayCount} foglalt nap` : "")
               : T(lang, "Még nem frissült");
           return (
@@ -3146,7 +3146,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
       // (the maintenance tick removes it). The "Alapár" field is the TIMELESS base
       // only; a dated base from the offer page is its own row below, with its dates,
       // so saving the field can neither overwrite it nor hide it.
-      const today = data.today ?? new Date().toISOString().slice(0, 10);
+      const today = data.today ?? viewToday(); // the accommodation's today (ADR-XXXX)
       const rows = (data.prices[u.id] ?? []).filter((r) => !r.validTo || r.validTo >= today);
       const base = rows.find((r) => r.isBase && !r.validFrom);
       // 0074: a year price hangs under its season (parentId); only RECURRING seasons
@@ -3278,7 +3278,7 @@ function pricingEditor(data: PricingEditorData, lang = "hu"): string {
       : "") +
     seasonEditorScript(
       lang,
-      data.today ?? new Date().toISOString().slice(0, 10),
+      data.today ?? viewToday(),
       data.units.flatMap((u) =>
         (data.prices[u.id] ?? [])
           .filter((r) => !r.isBase && !r.parentId && !r.validFrom && r.from && r.to && r.label)
@@ -3529,7 +3529,7 @@ function programsEditor(data: ProgramsEditorData, lang = "hu"): string {
       order: data.order ?? "date",
       own: data.ownSettlement ?? "",
       places: data.places ?? [],
-      today: data.today ?? new Date().toISOString().slice(0, 10),
+      today: data.today ?? viewToday(),
       gathering,
       rules: { ahead: OWN_AHEAD_DAYS, span: MAX_SPAN_DAYS, window: WINDOW_DAYS, titleMax: OWN_TITLE_MAX, placeMax: OWN_PLACE_MAX },
       lang,

@@ -65,3 +65,12 @@ havi határ, `adminViews relDay/fmtDate/fmtDateTime/éves mérő`, `availability
 `aamAlert/partnerData/partnerViews` adóév, `bookingViews/public` év-csempe. Őr ⑥⑦ (mutációval 5/5/3/1/1/1 piros).
 **Visszacsinálva, szándékosan:** a „ma” átírása 4 helyen — a foglalási tartomány ~20 helyen UTC-napot használ, a részleges átírás
 két „ma”-t csinált volna; a teljes söprés tulaj-döntés (ADR-ben felsorolva). Postgres `date`-matek (billing stb.) nem zóna-kérdés.
+
+## 5. kör (2026-09-30 este) — szállás-időzóna (ADR-XXXX)
+Tulaj: „minden szállás a saját időzónájában él”, és (MÓDOSÍTÁS) ne várjunk a mock-jóváhagyásra. Mock: A (önkiszolgáló: Fiók fül +
+konzol) és B (csak operátor) — `assets/design-refs/tenant-admin/szallas-idozona/` (plan.html = A, alt-b.html = B, live-*.png).
+**Javasolt és megírt oszlop: `tenant.time_zone`** (text, NOT NULL, DEFAULT 'Europe/Budapest', migráció 0082) — a tulaj utólag hagyja jóvá.
+Ország-alapérték kódban (`COUNTRY_DEFAULT_TIME_ZONE`), mert a `market` jogi tábla. Egyetlen „ma”: `todayIn()`. Szállás-kontextus:
+foglalás/naptár/árak/lejáratok/szezon-kérdés/programok/vendég-levél/tenant-admin idők. Platform: kiküldés, konzol, forgalom, számlák,
+AAM. Mellék-javítás: a számla kelte eddig UTC-nap volt (éjfél után tegnapi dátum) → Budapest.
+Konzolon a zóna-sor a forrás-mock „Részletek ▾” paneljén van (rejtettebb; a tulaj önkiszolgálása az elsődleges út).

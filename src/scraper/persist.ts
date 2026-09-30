@@ -3,6 +3,7 @@
 // (running → completed/failed lifecycle) → lead (+ lead_provenance).
 // The JSON file stays as a debug/replay artifact; the DB is now the source of truth.
 
+import { APP_TZ } from "../text/zoneTime.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { partitionNewLeads, type LeadIdentity } from "./dedupe.js";
@@ -135,7 +136,7 @@ function operatorTime(d: Date): string {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    timeZone: "Europe/Budapest",
+    timeZone: APP_TZ,
   }).format(d);
 }
 

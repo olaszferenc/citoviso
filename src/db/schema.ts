@@ -423,6 +423,8 @@ export interface TenantTable {
   display_name: string;
   status: Generated<"active" | "suspended" | "closed">;
   created_at: Generated<Timestamp>;
+  /** 0082 (ADR-XXXX): the accommodation's IANA time zone — its "today", deadlines and shown times. */
+  time_zone: Generated<string>;
 }
 
 export interface ModuleEntitlementTable {
