@@ -17,7 +17,7 @@
 //      already went out — opened or not — gets the percent the letter quoted; a legacy send
 //      (no stamped row) gets the constant it quoted; a new send quotes and stamps the new value;
 //   ⑧ every send path that stamps prospect.sent_at also stamps the intro offer (structural);
-//   ⑨ ADR-XXXX the HOURLY follow-up: nothing outside 8–20 Budapest (summer AND winter time, the
+//   ⑨ ADR-0287 the HOURLY follow-up: nothing outside 8–20 Budapest (summer AND winter time, the
 //      live VPS runs in UTC); ONE mail per offer even when two runs overlap (atomic claim);
 //      an expired offer is never claimed; a failed send releases the claim.
 //

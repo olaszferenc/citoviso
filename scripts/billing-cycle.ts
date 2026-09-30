@@ -27,7 +27,7 @@ const r = await runBillingCycle(now, tenantId ? { tenantId } : undefined);
 console.log(`billing-cycle @ ${now.toISOString()}:`, JSON.stringify(r));
 // ADR-0088 §4b: the escalation follow-up NO LONGER rides this daily tick — its delay is
 // operator-set from 1 hour (ADR-0286), so it runs hourly on its own timer
-// (citoviso-offer-followup.timer → scripts/offer-followup.mts, ADR-XXXX).
+// (citoviso-offer-followup.timer → scripts/offer-followup.mts, ADR-0287).
 // ADR-0098: the AAM-cap SMS guard rides the same daily tick — the threshold is
 // crossed at most twice a year, daily resolution is plenty. Loud, non-blocking.
 try {

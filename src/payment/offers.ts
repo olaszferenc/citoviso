@@ -546,7 +546,7 @@ export async function redeemOfferForOrder(orderIntentId: string): Promise<void> 
 }
 
 /**
- * ADR-XXXX: the follow-up runs HOURLY, so its one-send guarantee cannot rest on
+ * ADR-0287: the follow-up runs HOURLY, so its one-send guarantee cannot rest on
  * "one tick a day". Atomic claim BEFORE the send: the stamp is written only if the
  * offer is still un-followed, live and unused — a second (overlapping or repeated)
  * run gets false and sends nothing, and an expired offer can never be claimed.

@@ -1,4 +1,4 @@
-// ADR-XXXX — the escalation follow-up tick, HOURLY (citoviso-offer-followup.timer).
+// ADR-0287 — the escalation follow-up tick, HOURLY (citoviso-offer-followup.timer).
 // It used to ride the daily 07:00 billing tick; with an operator-set delay from 1 hour
 // (ADR-0286) a daily tick made the reminder late by up to a day and let it miss short
 // offers entirely. Outside 8–20 Budapest the run sends nothing (followupWindowBlocks);

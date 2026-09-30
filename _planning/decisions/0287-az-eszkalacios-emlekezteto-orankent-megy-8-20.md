@@ -1,4 +1,4 @@
-## ADR-XXXX — Az eszkalációs emlékeztető óránként megy, 8–20 óra között (Budapest), ajánlatonként egyszer (2026-09-30)
+## ADR-0287 — Az eszkalációs emlékeztető óránként megy, 8–20 óra között (Budapest), ajánlatonként egyszer (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; brief:
 `~/rc-briefs/eszkalacio-emlekezteto-orankent.md`; tulaj-döntés 17:45) · **Kapcsolódó:** ADR-0286 §5 (ezt írja felül),

@@ -1017,7 +1017,7 @@ function escalationSection(
     hMin: ESCALATION_HOURS_MIN,
     hMax: ESCALATION_HOURS_MAX,
     fMin: ESCALATION_FOLLOWUP_HOURS_MIN,
-    // The longest a due reminder can wait for the send window (the night gap, ADR-XXXX).
+    // The longest a due reminder can wait for the send window (the night gap, ADR-0287).
     nightGap: 24 - (SEND_WINDOW.toHour - SEND_WINDOW.fromHour),
     saved: cfg,
     live: { count: live.count, pcts: live.percents.map((p) => `−${p}%`).join(", ") },

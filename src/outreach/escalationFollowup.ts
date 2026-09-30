@@ -43,7 +43,7 @@ export interface FollowupRunResult {
 }
 
 /**
- * ADR-XXXX: the follow-up runs hourly (citoviso-offer-followup.timer), but no mail goes
+ * ADR-0287: the follow-up runs hourly (citoviso-offer-followup.timer), but no mail goes
  * out at night. The window reuses the cold-outreach hours (SEND_WINDOW, 8–20) read on
  * the BUDAPEST wall clock — the live VPS runs in UTC, so the process-local hour would
  * shift it by 1–2 hours. A due reminder outside the window waits for the first run
@@ -69,7 +69,7 @@ function deadlineText(d: Date, lang: string): string {
 }
 
 /**
- * Run one follow-up tick (hourly: scripts/offer-followup.mts, ADR-XXXX). `sender` and
+ * Run one follow-up tick (hourly: scripts/offer-followup.mts, ADR-0287). `sender` and
  * `onlyProspects` are for the guard only: the dev DB is shared, and a guard run must
  * neither mail nor claim another thread's offers. Product code passes neither.
  */
@@ -167,7 +167,7 @@ export async function sendEscalationFollowups(
       continue;
     }
     const msg = buildOutreachEmail(draft, email, { lang });
-    // Claim BEFORE the send (ADR-XXXX): an overlapping or repeated run loses here and
+    // Claim BEFORE the send (ADR-0287): an overlapping or repeated run loses here and
     // sends nothing; an offer that expired since the query cannot be claimed.
     if (!(await claimFollowup(f.offerId, now))) {
       skipped++;

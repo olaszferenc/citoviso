@@ -38,7 +38,7 @@
   maradék-ablaknál nem mindenki kapja meg. A felület kimondja. Óránkéntire tenni = külön infra-döntés (tulaj).
 - Élesítés: a koordinátor viszi (a nagy deploy utáni kör, külön engedéllyel). Migráció nincs.
 
-## 2. kör (2026-09-30 este) — az emlékeztető óránként (ADR-XXXX)
+## 2. kör (2026-09-30 este) — az emlékeztető óránként (ADR-0287)
 Tulaj-döntés 17:45 után (élesen `e263b580`). Új időzítő `citoviso-offer-followup.{timer,service}` (prod, GATE 6),
 `scripts/offer-followup.mts`; a `billing-cycle.ts`-ből kivéve (a többi lépés napi marad). Ablak 8–20 Europe/Budapest a
 KÓDBAN (`followupWindowBlocks`), mert az éles VPS UTC. Idempotencia: `claimFollowup` (atomi, küldés előtt) +

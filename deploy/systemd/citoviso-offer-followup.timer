@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso eszkalációs emlékeztető óránként (ADR-XXXX)
+Description=Citoviso eszkalációs emlékeztető óránként (ADR-0287)
 
 [Timer]
 # Óránként, egész nap: a küldési ablakot (8:00–20:00 Europe/Budapest) a KÓD tartja,

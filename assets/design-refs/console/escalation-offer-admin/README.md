@@ -46,7 +46,7 @@ bemutatkozó %-ot idézi), `pricing-sales/` (a /pricing kötött elemei, változ
    értéknél SEMMIT nem ment (az árakat sem).
 7. **Előnézet:** egy mondat arról, mit fog tenni a beállítás: a levél −O %-ot ígér, a lead az N. megnyitáskor −P %-ot
    kap H órára, és F óra múlva emlékeztetőt. Az emlékeztetőt óránként küldjük, csak 8:00 és 20:00 (Europe/Budapest)
-   között (`citoviso-offer-followup.timer`, ADR-XXXX), ezért legfeljebb egy órát késik, és az éjjel esedékes reggel 8
+   között (`citoviso-offer-followup.timer`, ADR-0287), ezért legfeljebb egy órát késik, és az éjjel esedékes reggel 8
    után megy. Ha az emlékeztető után legfeljebb 12 óra (az éjszakai szünet) marad a lejáratig, a mező alatti sor
    kimondja, hogy egy éjszakára eső lead nem kapja meg. Egy ajánlatra legfeljebb egy emlékeztető megy (atomi foglalás). A Magyarország oldalon valós példa is
    tartozik hozzá (a középső díjcsomag listaára → a kedvezményes ár, `floor`, ugyanaz a matek, mint a szerveren).

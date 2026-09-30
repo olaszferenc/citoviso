@@ -20,7 +20,7 @@ NINCS; mező-közi szabályok (eszk. % > bemutatkozó %, kikapcsolva is; emléke
 „a levél %-a köt”:** a bemutatkozó `offer` sor eddig LUSTÁN, az első megnyitáskor született a mindenkori %-kal → most a
 4 küldési út a sikeres küldés után rögzíti (`stampOutreachOffer`, meglévő `offer` tábla), a draft a prospect %-át idézi,
 a régi (rögzítés nélküli) kiküldés a konstans 25-öt kapja. Az emlékeztető-késleltetés a futókra is hat (tulaj: rendben).
-⮕ **2. kör:** az emlékeztető a tulaj döntésére ÓRÁNKÉNT megy (ADR-XXXX): külön `citoviso-offer-followup.timer` (prod),
+⮕ **2. kör:** az emlékeztető a tulaj döntésére ÓRÁNKÉNT megy (ADR-0287): külön `citoviso-offer-followup.timer` (prod),
 8–20 Europe/Budapest a kódban (az éles VPS UTC!), atomi foglalás → ajánlatonként egy levél; a napi billing többi lépése változatlan. Őr: `escalation-config-check` ⑥⑦⑧.
 Jegyzet: `_planning/memory/2026-09-30_lead_ajanlatok_idozites.md`.
 

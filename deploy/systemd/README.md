@@ -126,7 +126,7 @@ sudo systemctl enable --now citoviso-booking-maintenance.timer
 **Ellenőrzés:** `systemctl list-timers citoviso-booking-maintenance.timer` +
 `tail ~/.claude/citoviso-booking-maintenance.log`.
 
-## `citoviso-offer-followup` (ADR-XXXX — 2026-09-30)
+## `citoviso-offer-followup` (ADR-0287 — 2026-09-30)
 
 **Mit csinál.** Óránként lefuttatja a `scripts/offer-followup.mts`-t: az eszkalációs ajánlat
 emlékeztető levelét küldi ki (ADR-0088 §4b) azoknak a leadeknek, akiknél a /pricing-on beállított
