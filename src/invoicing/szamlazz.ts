@@ -52,6 +52,27 @@ function pick(m: RegExpExecArray | null): string | null {
   return m ? m[1]!.trim() : null;
 }
 
+/**
+ * The `szlahu_error` header as a human sentence (ADR-0283). The header is form-encoded
+ * (spaces as „+”) and carries HTML: measured on prod 2026-09-30, error 378 arrived as
+ * „A+bizonylat+kibocsátáshoz+…<br>Részletes+információt+<a …>ITT+TALÁLSZ</a>…” — and that
+ * string went into the failed row verbatim, i.e. into the operator's alert mail.
+ */
+export function szamlazzErrorText(raw: string): string {
+  let s = raw.replace(/\+/g, " ");
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    // a malformed %-sequence: keep the text as it is rather than lose it
+  }
+  return s
+    .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export class SzamlazzAgent implements InvoiceProvider {
   readonly name = "szamlazz";
   private readonly key: string;
@@ -170,7 +191,7 @@ export class SzamlazzAgent implements InvoiceProvider {
 
     if (errCode) {
       const msg = resp.headers.get("szlahu_error") ?? "";
-      throw new Error(`Számlázz error ${errCode}: ${decodeURIComponent(msg)}`);
+      throw new Error(`Számlázz error ${errCode}: ${szamlazzErrorText(msg)}`);
     }
     const ok = /<sikeres>\s*true\s*<\/sikeres>/i.test(body);
     if (!ok) {

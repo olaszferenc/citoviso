@@ -24,7 +24,7 @@
 //   ⑨ manually spent budget — failed manual attempts count too; the one that spends the
 //                   last attempt still sends the exhaustion mail, later ones stay quiet.
 //   ⑧ wire        — the Számlázz XML carries szamlaKulsoAzon + rendelesSzam where the
-//                   XSD sequence puts them.
+//                   XSD sequence puts them; the error header becomes a readable sentence.
 //
 // ⚠️ The DB is the SHARED dev DB: every tick runs scoped to this run's payment ids
 // (RetryScope), the fixture is stamped and removed on every exit path.
@@ -35,7 +35,7 @@ process.env.EMAIL_PROVIDER = "mock";
 const { db } = await import("../src/db/client.js");
 const { setHouseAlertDeps, INVOICE_AUTO_RETRY_LIMIT } = await import("../src/console/houseAlert.js");
 const { setInvoiceProvider } = await import("../src/invoicing/index.js");
-const { SzamlazzAgent } = await import("../src/invoicing/szamlazz.js");
+const { SzamlazzAgent, szamlazzErrorText } = await import("../src/invoicing/szamlazz.js");
 const { issueInvoiceFor } = await import("../src/payment/service.js");
 const { retryFailedInvoices, retryInvoice, INVOICE_RETRY_SPACING_HOURS } = await import(
   "../src/billing/invoiceRetry.js"
@@ -307,6 +307,19 @@ try {
   ok(pos("szamlaKulsoAzon") > pos("valaszVerzio") && pos("szamlaKulsoAzon") < xml.indexOf("</beallitasok>"), "szamlaKulsoAzon a <beallitasok>-ban, a valaszVerzio után");
   ok(pos("rendelesSzam") > pos("penznem") && pos("rendelesSzam") < pos("fizetve"), "rendelesSzam a <fejlec>-ben, a fizetve előtt (XSD-sorrend)");
   ok(xml.includes(`<szamlaKulsoAzon>citoviso-payment-${C}</szamlaKulsoAzon>`), "a külső azonosító a payment.id-ból képződik");
+  // The header as prod sent it on 2026-09-30 (form-encoded, with HTML) → a readable sentence.
+  const logged =
+    "A+bizonylat+kibocsátáshoz+össze+kell+kötnöd+fiókodat+a+NAV+Online+Számla+rendszerével.+<br>Részletes+" +
+    'információt+<a+target="_blank"+href="https://www.szamlazz.hu/nav-online-szamlazas-regisztracios-segedlet/">ITT+TALÁLSZ</a>+(új+ablakban+nyílik).';
+  const header = logged.split("+").map(encodeURIComponent).join("+");
+  const text = szamlazzErrorText(header);
+  ok(
+    text.startsWith("A bizonylat kibocsátáshoz össze kell kötnöd fiókodat a NAV Online Számla rendszerével.") &&
+      !/[+<>]/.test(text) &&
+      text.includes("(https://www.szamlazz.hu/nav-online-szamlazas-regisztracios-segedlet/)"),
+    "a Számlázz hibafejléce olvasható mondat lesz (szóköz, HTML nélkül, a link megmarad)",
+    text,
+  );
 } catch (e) {
   fails++;
   console.error("  FAIL  az őr maga elhasalt:", e);

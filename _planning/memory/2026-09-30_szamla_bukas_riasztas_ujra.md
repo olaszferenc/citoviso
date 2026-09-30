@@ -28,7 +28,7 @@ tulajé; a kód-hiba: failed sor + `console.error`, se riasztás, se újrapróba
   „számla: sikertelen (N×)” + hibaszöveg + „Számla újra ▸”), `server.ts` (`POST /payment/:id/invoice-retry`), KB
   console-lead szakasz — patch: `~/rc-briefs/reports/deploy-keszenlet/szamlaretry-ui.patch`, képek ugyanott
   (`szamlaretry-ui-{mobile,desktop}.png`). Addig a kézi út a CLI, a riasztó levél ezt a parancsot írja ki.
-- Őr: `scripts/invoice-retry-check.mts` (41 ellenőrzés), bekötve a `hooks/pre-commit`-be. Mutációs próba: zár nélkül
+- Őr: `scripts/invoice-retry-check.mts` (42 ellenőrzés), bekötve a `hooks/pre-commit`-be. Mutációs próba: zár nélkül
   3 szolgáltató-hívás + hamis failed sor (piros), külső azonosító nélkül 6 hiba (piros).
 - KB: `kb/entries/console-settings/entry.hu.md` (riasztás-lista, a levél és a teendő). `_planning/DEPLOY-READY.md` §4b.3 #4 → kész.
 - A (várakozó) gomb ellenőrzése: ui-shot 390 px + asztali (in-process konzol, eldobható fixtúra), valódi route-on végigkattintva:
@@ -39,6 +39,13 @@ tulajé; a kód-hiba: failed sor + `console.error`, se riasztás, se újrapróba
   kigörgette volna a flash-sávot; sikernél horgonnyal, flash nélkül — a hős-csere precedensének alakjában, amit a
   `lead-tab-anchor-check` elfogad); (2) a kézi próba is fogyasztja
   a keretet, ezért a kimerülés-levél bárki okozza, egyszer kimegy (új őr-ág ⑨), a KB kimondja.
+
+- 2. commit: `szamlazzErrorText` (`src/invoicing/szamlazz.ts`) — az éles naplóban a 378-as hiba form-kódolva
+  („A+bizonylat+…”) és HTML-lel (`<br>`, `<a href…>`) jött, és így került volna a failed sorba és a riasztó levélbe.
+  Most olvasható mondat, a link zárójelben megmarad (őr ⑧).
+- ⚠️ Élesen 2026-09-30 ~08:40 (csak olvasás): a `payment acadc176…` / `invoice d1f07194…` / tenant `79d847b8…` már
+  NINCS az éles DB-ben (a tesztadatot 08:05 körül kitakarították; a 07:32-es 378-as bukást a journal igazolja).
+  Ezt a számlát tehát nincs mit utólag kiadni — a NAV-összekötés után egy ÚJ próbavásárlás mutatja meg, hogy megy.
 
 ## Tanulság
 - A zár nélküli verseny nem csak dupla hívás: a második `issued` beszúrás az egyedi indexen elhasal, és a catch
