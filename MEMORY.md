@@ -11,6 +11,15 @@ Utolsó frissítés: 2026-09-29 (📱 **Telefonos kör koordinátor ZÁRVA — a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-30 — SUB cit7785fd02: eszkalációs ajánlat állítható a /pricing-on, ADR-XXXX) — LANDOLVA
+
+A tulaj kérése: a „hányadik megnyitásnál” (eddig beégetett 3) és a „mekkora kedvezmény” (50%) a /pricing-on legyen
+állítható. §2b: két mock, a tulaj az „A”-t választotta (saját „Lead-ajánlatok” szekció az Alap-előfizetés alatt).
+Globális `app_setting` sor (`escalation_offer`), migráció NINCS. Küszöb 2–10, kedvezmény 26–90%, külön kapcsoló;
+a már kiadott ajánlat megtartja a %-át. Őr: `escalation-config-check` (a konstansokra visszarontva 3 piros).
+Élesítés: **a nagy deploy UTÁNI első kör** (DEPLOY-READY §4b.4). Nem hatókör: 72 h, 24 h, −25%.
+Jegyzet: `_planning/memory/2026-09-30_eszkalacios_ajanlat_admin.md`.
+
 ## Párhuzamos szál (2026-09-30 — Mock hős-cím tipográfia, koordináló `cit66a15e89`, ADR-0284) — LANDOLVA, élesre a deployjal
 - A tulaj: „a szöveg kinyírja az oldalt” — mérve: 150%-os laptop (~1320×570) a hiba, a h1 clamp-je csak a szélességet nézte.
 - Egy közös szabály (`templateKit.ts` `heroFit`/`HERO_FIT_CSS`: hossz-sáv → magasság-plafon), 14 sablon bekötve + ráúszó-fejléces skinek alacsony asztalon fejléc a folyásban; mind a 47 éles mock (teszt-lead 19 + 28 másik) lemérve 4 méretben: előtte 23 hibás, utána 1 (watercolor, elrendezés).

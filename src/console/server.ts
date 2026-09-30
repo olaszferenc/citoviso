@@ -92,6 +92,11 @@ import {
   bestActiveOfferForProspect,
   bestActiveOfferForProspectToken,
   ensureEscalationOffer,
+  escalationConfigErrors,
+  getEscalationConfig,
+  liveEscalationOffers,
+  escalationFromForm,
+  setEscalationConfig,
 } from "../payment/offers.js";
 import {
   heroShotFailReason,
@@ -1498,7 +1503,10 @@ async function handle(
     return send(
       res,
       200,
-      pricingPage(pricingSnapshot(region), pricingRegions(), notice, await getDisabledModules(), liveCounts),
+      pricingPage(pricingSnapshot(region), pricingRegions(), notice, await getDisabledModules(), liveCounts, {
+        cfg: await getEscalationConfig(),
+        live: await liveEscalationOffers(),
+      }),
     );
   }
   // POST /pricing — persist the prices + the "confirmed" gate flip (per region).
@@ -1525,7 +1533,19 @@ async function handle(
       if (t.priceId === "multilang") continue; // az Alap a katalógus-sorral azonos
       modulePrices[t.priceId] = num(`m_${t.priceId}`, snap.modulePrices.get(t.priceId) ?? t.priceDefault);
     }
+    // ADR-XXXX: the GLOBAL escalation-offer parameters ride on every region's form.
+    // Validated BEFORE anything is written — a refused value must not leave half a save.
+    const escalation = escalationFromForm(form, await getEscalationConfig());
+    if (escalation && escalationConfigErrors(escalation).length) {
+      return redirect(
+        res,
+        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+          "hiba:Nem mentettem: a döntés-segítő ajánlat küszöbe vagy kedvezménye a megengedett tartományon kívül esik.",
+        )}`,
+      );
+    }
     try {
+      if (escalation) await setEscalationConfig(escalation);
       await savePricing({
         region: snap.region,
         currency: snap.currency,
@@ -2565,8 +2585,8 @@ async function handle(
             (req.headers.referer as string | undefined) ?? null,
           )
         : null;
-      // ADR-0088 §4: 3rd visit without a purchase mints the one-time, deadline-
-      // bound decision-helper offer — BEFORE resolution, so this very view
+      // ADR-0088 §4: the operator-set nth visit (ADR-XXXX, /pricing; default 3)
+      // without a purchase mints the one-time, deadline-bound decision-helper offer — BEFORE resolution, so this very view
       // already renders the decision card. Never for an opted-out visitor: that
       // is the "push" half, and they asked us to stop.
       const escalation = tracked ? await ensureEscalationOffer(p.id) : null;

@@ -4,7 +4,7 @@ title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdet�
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-09-13
+updated: 2026-09-30
 ---
 
 Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
@@ -29,8 +29,38 @@ régiónak saját ár-sora van; amelyik régióra nincs mentett ár, az a globá
 - **„Alapdíj (a gerinccel együtt)”** — a havi előfizetés alapára; a gerinc (honlap + érdeklődés-CTA)
   benne van.
 - Éves előfizetésnél ingyenes hónapokat adsz (12 − N hónap árát fizeti).
-- **Saját domain** — a rajtunk keresztül intézett egyedi domain éves díja.
+- **Saját domain** — a rajtunk keresztül intézett egyedi domain havi díja.
 - **Modul-árak** — modulonkénti havi felár, a konfigurátor ugyanebből számol.
+
+## Lead-ajánlatok — a döntés-segítő ajánlat
+
+A **„Lead-ajánlatok”** szekció az „Alap-előfizetés” blokk alatt, az „Egyedi domain — feltételek” előtt van. Itt állítod be, mikor és mekkora
+plusz kedvezményt kap az a lead, aki többször is megnyitja a neki küldött tervet, de még nem
+rendelt. Ez a beállítás **„minden piacra érvényes”**: bármelyik régió oldalán ugyanazt látod, és
+bármelyik régió mentése menti.
+
+Hogyan működik: a kiküldött levéllel a lead egy bemutatkozó kedvezményt kap (−25%, ezt itt nem
+állítod, csak összevetésül látod). Ha a lead a tervet a megadott számú alkalommal megnyitja, és
+még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat neki: nagyobb kedvezményt az első díjból,
+72 óráig. Ha addig sem rendel, legkorábban egy nappal később, még a lejárat előtt e-mailben is
+emlékeztetjük rá, ha van e-mail címe, és nem iratkozott le. Egy kiküldött tervre az ajánlat egyszer jár.
+
+1. A **„Döntés-segítő (eszkalációs) ajánlat”** kapcsolóval kapcsolod be vagy ki. Kikapcsolva
+   egyetlen leadnek sem születik új ajánlat; a legutóbb mentett számok megmaradnak, visszakapcsoláskor
+   nem kell újra beírnod őket.
+2. **„Hányadik megnyitásnál kapja”** — egész szám 2 és 10 között. Az első megnyitás maga a levél
+   linkje, ott még a bemutatkozó kedvezmény a helyén, ezért legalább 2.
+3. **„Kedvezmény az első díjból”** — egész százalék 26 és 90 között. A kedvezmények nem adódnak
+   össze, mindig a legnagyobb érvényes: ha 25% vagy kevesebb lenne, a lead soha nem kapná meg.
+4. A mezők alatti keretes mondat előre megmutatja, mit fog tenni a beállításod, a Magyarország
+   oldalon egy valós csomagár-példával.
+5. Ha valamelyik szám a tartományon kívül esik, a mező pirosan keretezett, alatta ott az ok, és
+   az **„Árazás mentése”** gomb addig nem nyomható meg. A gomb a lap alján van; mellette ott áll,
+   melyik mezőt kell javítanod.
+
+A már kiadott ajánlatok megtartják a saját kedvezményüket a lejáratukig: a változtatás csak az
+ezután születő ajánlatokra hat. Ha átállítasz valamit, miközben ilyen ajánlatok futnak, a mezők
+alatt megjelenik, hány darab fut és hány százalékkal.
 
 ## Modul-felárak és értékesítés — az eladhatóság kapcsolója
 
@@ -126,4 +156,5 @@ tényleg véglegesek.
 Az **„Árazás mentése”** gomb (a felirat mögött ott a régió neve is) a kiválasztott régió árait
 és az eladhatóság-kapcsolókat menti. A mentés azonnal él: a következő
 konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Régiónként külön ments —
-a magyar mentés a globálist nem írja át.
+a magyar mentés a globálist nem írja át. Kivétel a **„Lead-ajánlatok”** szekció: az minden
+piacra közös, ezért bármelyik régió mentése menti.

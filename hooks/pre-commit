@@ -1250,6 +1250,11 @@ if [ -f scripts/offer-selftest.ts ] && \
   echo "[pre-commit] offer-selftest (az ajánlat-választás egy legjobb ÉLŐ ajánlatot ad)…"
   npx tsx scripts/offer-selftest.ts >"$GATE_LOG" || gate_failed
 fi
+if [ -f scripts/escalation-config-check.mts ] && \
+   changed_files | grep -qE '^(src/payment/offers\.ts|src/console/(views|server)\.ts|scripts/escalation-config-check\.mts)$'; then
+  echo "[pre-commit] escalation-config-check (a /pricing-on állított küszöb és % tényleg a mintázott ajánlatba jut)…"
+  npx tsx scripts/escalation-config-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/period-switch-selftest.ts ] && \
    changed_files | grep -qE '^(src/payment/subscription\.ts|scripts/period-switch-selftest\.ts)$'; then
   echo "[pre-commit] period-switch-selftest (a havi→éves váltás a KÖVETKEZŐ fordulónapon él)…"

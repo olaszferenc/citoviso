@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eszkalációs ajánlat — jóváhagyott terv (A)</title><style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-400:#35c4e0;
+  --citui-white:#fff;--citui-ink:#10243a;--citui-muted:#60748b;
+  --citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-ok-ink:#1d6b43;
+  --citui-warn:#d29922;--citui-warn-ink:#7d5a12;--citui-bad:#e5484d;--citui-bad-ink:#b3262b;
+  --citui-radius-sm:14px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,sans-serif;
+  --citui-font-text:"Inter",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.45 var(--citui-font-text);color:var(--citui-ink);background:var(--citui-surface)}
+.draft-bar{display:flex;gap:8px;align-items:center;padding:8px 14px;flex-wrap:wrap;background:var(--citui-navy-950);color:var(--citui-white);font-size:12px}
+.draft-bar b{font-family:var(--citui-font-display)}
+.draft-bar button{border:1px solid var(--citui-cyan-500);background:transparent;color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 12px;cursor:pointer;font:inherit}
+.draft-bar button[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-navy-950)}
+#stage{margin:0 auto;container-type:inline-size;max-width:1000px;padding:14px 16px 40px}
+#stage.mobile{max-width:390px;padding:10px 10px 40px}
+.crumb{font-size:12px;color:var(--citui-muted);margin:4px 0 10px}
+.card{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;padding:18px 18px 20px}
+h2{font:600 15px var(--citui-font-display);margin:0 0 6px}
+h3{font:600 14.5px var(--citui-font-display);margin:22px 0 6px}
+.mut{color:var(--citui-muted)} .small{font-size:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:var(--citui-radius-pill);font-size:11.5px;font-weight:600;background:var(--citui-surface-2);color:var(--citui-muted);text-decoration:none;cursor:pointer;border:0;font-family:inherit}
+.pill.approved{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.pill.info{background:var(--citui-surface-2);color:var(--citui-navy-700)}
+.pill.warn{background:color-mix(in srgb,var(--citui-warn) 16%,transparent);color:var(--citui-warn-ink)}
+.regions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 4px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pr-field{min-width:0}
+.pr-field__l{display:block;margin-bottom:4px;font-size:.78rem;color:var(--citui-muted)}
+.pr-input{display:flex;align-items:stretch;overflow:hidden;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-surface)}
+.pr-input:focus-within{border-color:var(--citui-cyan-500)}
+.pr-input input{flex:1 1 auto;min-width:0;border:0;background:transparent;outline:none;padding:9px 10px;text-align:right;font-size:.95rem;font-variant-numeric:tabular-nums;font-family:inherit;color:inherit}
+.pr-input__u{display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--citui-line);background:var(--citui-surface-2);color:var(--citui-muted);font-size:.78rem;white-space:nowrap}
+.pr-static{display:flex;align-items:center;padding:9px 10px;min-height:40px;border:1px dashed var(--citui-line-strong);border-radius:8px;background:var(--citui-surface-2);color:var(--citui-muted);font-size:.85rem}
+.pr-field.err .pr-input{border-color:var(--citui-bad)}
+.pr-field.err .pr-input__u{color:var(--citui-bad-ink)}
+.ferr{display:none;margin-top:4px;font-size:11.5px;color:var(--citui-bad-ink)}
+.err .ferr{display:block}
+.pr-group{margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--citui-line);font-size:.78rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.pr-modgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 26px}
+.pr-mod{display:flex;align-items:center;gap:8px;padding:2px 0;flex-wrap:wrap}
+.pr-mod__name{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.pr-mod__price{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+.pr-mod__price input{width:76px;padding:3px 7px;text-align:right;font:inherit;border:1px solid var(--citui-line-strong);border-radius:8px;color:inherit;background:var(--citui-white)}
+.pr-mod__price input:disabled{opacity:.45}
+.pr-mod.err .pr-mod__price input{border-color:var(--citui-bad)}
+.pr-mod .ferr{flex-basis:100%;text-align:right}
+.pr-mod__u{color:var(--citui-muted);font-size:11.5px;width:64px}
+.pr-modgrid.one{grid-template-columns:1fr;max-width:560px}
+.one .pr-mod__u{width:92px;white-space:nowrap}
+.con-sell{position:relative;display:inline-block;width:30px;height:18px;flex:0 0 auto;cursor:pointer}
+.con-sell input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.con-sell__track{position:absolute;inset:0;border-radius:9px;background:var(--citui-line-strong);transition:background .15s}
+.con-sell__track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--citui-white);transition:transform .15s}
+.con-sell input:checked+.con-sell__track{background:var(--citui-ok)}
+.con-sell input:checked+.con-sell__track::after{transform:translateX(12px)}
+.con-sell input:focus-visible+.con-sell__track{outline:2px solid var(--citui-cyan-500);outline-offset:2px}
+.skip{margin:18px 0 0;padding:10px 12px;border:1px dashed var(--citui-line-strong);border-radius:8px;color:var(--citui-muted);font-size:12px}
+.confirm{margin-top:18px;display:flex;gap:10px;padding:12px 14px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-surface-2)}
+.save{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.save button{border:1px solid var(--citui-navy-900);background:var(--citui-white);color:var(--citui-navy-900);border-radius:var(--citui-radius-pill);padding:7px 16px;font:600 13px var(--citui-font-text);cursor:pointer}
+.save button:disabled{opacity:.45;cursor:not-allowed}
+.save .sum{font-size:12px;color:var(--citui-bad-ink)}
+.notice{display:none;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--citui-ok-soft);color:var(--citui-ok-ink);font-size:12.5px}
+.notice.show{display:block}
+.esc{margin-top:6px}
+.esc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.esc-head h3{margin:0}
+.preview{margin-top:10px;padding:10px 12px;border-left:3px solid var(--citui-cyan-500);background:var(--citui-surface-2);border-radius:0 8px 8px 0;font-size:12.5px}
+.preview.off{border-left-color:var(--citui-line-strong);color:var(--citui-muted)}
+.preview b{font-variant-numeric:tabular-nums}
+.live{margin-top:6px;font-size:12px;color:var(--citui-warn-ink)}
+.esc.disabled .pr-input{opacity:.45}
+.glob{font-size:12px;color:var(--citui-muted);margin:4px 0 0}
+@container (max-width:560px){
+  .grid3{grid-template-columns:1fr}
+  .pr-modgrid{grid-template-columns:1fr}
+  .card{padding:14px 12px 16px}
+  .pr-mod__u{width:auto}
+}
+</style></head><body>
+<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A, 2026-09-30) — „Lead-ajánlatok” saját szekció az alapdíj alatt, minden régió-oldalon</b><span>· méret:</span>
+<button id="szMob" type="button" aria-pressed="false">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="true">Asztali</button>
+<span class="mut" style="color:inherit;opacity:.7">működő vázlat — a mezők, a kapcsoló, a régió-váltó és a mentés kattintható</span></div>
+<div id="stage">
+<div class="crumb">Konzol › CRM › Árazás és értékesítés</div>
+<div class="card">
+<div id="notice" class="notice" role="status"></div>
+<h2>Árazás és értékesítés</h2>
+<p class="mut small" style="margin:0">Ez az árazás EGYETLEN forrása — a konfigurátor, a megrendelés-rögzítés és a levél ár-sora is innen olvas.</p>
+<div class="regions"><span class="mut small">Piac / régió:</span>
+<button type="button" class="pill approved" data-region="hu">Magyarország (HUF)</button>
+<button type="button" class="pill" data-region="global">Globális (fallback) (EUR)</button></div>
+<span class="pill approved">az árak véglegesítve — a levelek árat hirdethetnek</span>
+<h3>Alap-előfizetés — <span id="regT">Magyarország</span></h3>
+<div class="grid3">
+ <div class="pr-field"><label class="pr-field__l" for="b1">Alapdíj (a gerinccel együtt)</label><div class="pr-input"><input id="b1" value="3900" inputmode="numeric"><span class="pr-input__u">Ft / hó</span></div></div>
+ <div class="pr-field"><label class="pr-field__l" for="b2">Éves előfizetés — ingyen hónapok</label><div class="pr-input"><input id="b2" value="2" inputmode="numeric"><span class="pr-input__u">hónap</span></div></div>
+ <div class="pr-field"><label class="pr-field__l" for="b3">Saját domain (rajtunk keresztül)</label><div class="pr-input"><input id="b3" value="1000" inputmode="numeric"><span class="pr-input__u">Ft / hó</span></div></div>
+</div>
+<section id="esc" class="esc">
+ <h3 style="margin-top:24px">Lead-ajánlatok</h3>
+ <p class="mut small" style="margin:0 0 10px">A kiküldött tervet megnyitó lead kedvezményei. A kedvezmények nem adódnak össze — mindig a legnagyobb él.
+ <span class="pill info">minden piacra érvényes</span></p>
+ <div class="esc-head">
+  <label class="con-sell"><input type="checkbox" id="esc_on" checked aria-label="Döntés-segítő ajánlat bekapcsolva"><span class="con-sell__track"></span></label>
+  <b>Döntés-segítő (eszkalációs) ajánlat</b>
+ </div>
+ <div class="grid3" style="margin-top:10px">
+  <div class="pr-field" id="f_n"><label class="pr-field__l" for="esc_n">Hányadik megnyitásnál kapja</label>
+   <div class="pr-input"><input id="esc_n" value="3" inputmode="numeric"><span class="pr-input__u">. megnyitás</span></div><div class="ferr" id="e_n"></div></div>
+  <div class="pr-field" id="f_p"><label class="pr-field__l" for="esc_p">Kedvezmény az első díjból</label>
+   <div class="pr-input"><input id="esc_p" value="50" inputmode="numeric"><span class="pr-input__u">%</span></div><div class="ferr" id="e_p"></div></div>
+  <div class="pr-field"><span class="pr-field__l">Összevetésül: bemutatkozó kedvezmény</span><div class="pr-static">−25% (a levéllel jár, itt nem állítható)</div></div>
+ </div>
+ <div id="preview" class="preview"></div>
+ <div id="live" class="live"></div>
+</section>
+<div class="skip">… Egyedi domain — feltételek · Díjcsomagok · Modul-felárak és értékesítés (változatlan, a vázlatból kihagyva) …</div>
+<div class="confirm"><input type="checkbox" checked id="conf"><label for="conf"><b>Az árak véglegesek, élesíthetők</b><br><span class="mut small">Enélkül a levél nem hirdethet árat, és a nyilvános oldal „Egyedi ajánlat”-ot mutat.</span></label></div>
+<div class="save"><button id="save" type="button"><span id="saveLbl">Árazás mentése (Magyarország)</span></button><span id="sum" class="sum" role="alert"></span></div>
+</div></div>
+<script>
+(function(){
+  var OUTREACH = 25, SAMPLE_LIST = 7240, SAVED = {on:true, n:3, p:50}, LIVE_ESC = 1;
+  var VARIANT = "A";
+  var st = document.getElementById("stage");
+  var bM = document.getElementById("szMob"), bD = document.getElementById("szDesk");
+  function setSize(m){ st.classList.toggle("mobile", m); bM.setAttribute("aria-pressed", m); bD.setAttribute("aria-pressed", !m); }
+  bM.onclick = function(){ setSize(true); }; bD.onclick = function(){ setSize(false); };
+  setSize(window.matchMedia("(max-width: 600px)").matches);
+
+  var on = document.getElementById("esc_on"), nIn = document.getElementById("esc_n"), pIn = document.getElementById("esc_p");
+  var fN = document.getElementById("f_n"), fP = document.getElementById("f_p");
+  var eN = document.getElementById("e_n"), eP = document.getElementById("e_p");
+  var prev = document.getElementById("preview"), live = document.getElementById("live");
+  var btn = document.getElementById("save"), sum = document.getElementById("sum"), note = document.getElementById("notice");
+  var box = document.getElementById("esc");
+  function fmt(x){ return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0"); }
+  // Same normalisation as a numeric form field: trim, drop spaces, a trailing "%" or ".", comma = decimal point.
+  function norm(v){ return String(v).trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", "."); }
+  function parseInt2(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\d+(\.\d+)?$/.test(s)) return {err:"nan"};
+    var x = Number(s); if (x !== Math.floor(x)) return {err:"frac"}; return {v:x}; }
+  function checkN(){ var r = parseInt2(nIn.value);
+    if (r.err === "empty") return "Adj meg egy számot (2–10).";
+    if (r.err) return "Egész szám kell — hányadik megnyitás (2–10).";
+    if (r.v < 2) return "Legalább 2: az 1. megnyitás maga a levél linkje — ott még a bemutatkozó −" + OUTREACH + "% a helyén.";
+    if (r.v > 10) return "Legfeljebb 10: ennyi megnyitás után már nem döntés-segítés, hanem utolsó esély, amit a lead ritkán ér meg.";
+    return ""; }
+  function checkP(){ var r = parseInt2(pIn.value);
+    if (r.err === "empty") return "Adj meg egy százalékot (" + (OUTREACH + 1) + "–90).";
+    if (r.err) return "Egész százalék kell (" + (OUTREACH + 1) + "–90).";
+    if (r.v <= OUTREACH) return "Nagyobbnak kell lennie a bemutatkozó −" + OUTREACH + "%-nál: a kedvezmények nem adódnak össze, mindig a legnagyobb él — ennyivel az ajánlat soha nem érvényesülne.";
+    if (r.v > 90) return "Legfeljebb 90%: a 100% ingyenes első díj lenne, az már nem ajánlat.";
+    return ""; }
+  function render(){
+    var enabled = on.checked;
+    nIn.disabled = !enabled; pIn.disabled = !enabled;
+    box.classList.toggle("disabled", !enabled);
+    var a = enabled ? checkN() : "", b = enabled ? checkP() : "";
+    fN.classList.toggle("err", !!a); eN.textContent = a;
+    fP.classList.toggle("err", !!b); eP.textContent = b;
+    var bad = (a ? 1 : 0) + (b ? 1 : 0);
+    btn.disabled = bad > 0;
+    sum.textContent = bad ? "A mentés addig nem megy, amíg " + (bad === 1 ? "a jelölt mező" : "a két jelölt mező") + " hibás." : "";
+    if (!enabled) {
+      prev.className = "preview off";
+      prev.innerHTML = "Kikapcsolva: <b>nem keletkezik új döntés-segítő ajánlat</b>. A lead a bemutatkozó −" + OUTREACH + "%-nál marad, bárhányszor nyitja meg.";
+    } else if (!bad) {
+      var n = parseInt2(nIn.value).v, p = parseInt2(pIn.value).v;
+      nIn.value = n; pIn.value = p;
+      var off = Math.floor(SAMPLE_LIST * (100 - p) / 100);
+      prev.className = "preview";
+      prev.innerHTML = "Így fut: a lead a <b>" + n + ". megnyitáskor</b> (ha még nem vásárolt) <b>−" + p + "%</b> döntés-segítő ajánlatot kap az első díjból, 72 órára. " +
+        "Példa — Ajánlott csomag: <s>" + fmt(SAMPLE_LIST) + " Ft/hó</s> → <b>" + fmt(off) + " Ft/hó</b> az első hónapra, utána listaáron.";
+    } else {
+      prev.className = "preview off";
+      prev.textContent = "Az előnézet a hibás mező javítása után frissül.";
+    }
+    var changed = enabled !== SAVED.on || (enabled && !bad && (parseInt2(nIn.value).v !== SAVED.n || parseInt2(pIn.value).v !== SAVED.p));
+    live.style.display = LIVE_ESC && changed ? "block" : "none";
+    live.textContent = "Figyelem: most " + LIVE_ESC + " élő döntés-segítő ajánlat fut (−" + SAVED.p + "%, a " + SAVED.n + ". megnyitásból). Az a sajátját tartja a lejáratáig — a változás csak az ezután kiadott ajánlatokra hat.";
+  }
+  [on, nIn, pIn].forEach(function(el){ el.addEventListener("input", render); el.addEventListener("change", render); });
+  nIn.addEventListener("blur", render); pIn.addEventListener("blur", render);
+  btn.onclick = function(e){ e.preventDefault(); if (btn.disabled) return;
+    SAVED = {on:on.checked, n:parseInt2(nIn.value).v || SAVED.n, p:parseInt2(pIn.value).v || SAVED.p};
+    note.classList.add("show"); note.textContent = "Árazás mentve." + (on.checked ? " Döntés-segítő ajánlat: " + SAVED.n + ". megnyitás, −" + SAVED.p + "%." : " Döntés-segítő ajánlat kikapcsolva.");
+    render(); window.scrollTo(0, 0); };
+
+  // Region chips — the setting is GLOBAL (app_setting), not per pricing_config row.
+  var chips = document.querySelectorAll(".regions [data-region]"), regT = document.getElementById("regT");
+  chips.forEach(function(c){ c.onclick = function(){
+    chips.forEach(function(x){ x.classList.toggle("approved", x === c); });
+    var r = c.getAttribute("data-region");
+    regT.textContent = r === "hu" ? "Magyarország" : "Globális (fallback)";
+    document.getElementById("saveLbl").textContent = r === "hu" ? "Árazás mentése (Magyarország)" : "Árazás mentése (Globális)";
+    if (VARIANT === "B") {
+      document.getElementById("escEdit").style.display = r === "hu" ? "" : "none";
+      document.getElementById("escElse").style.display = r === "hu" ? "none" : "";
+    }
+    note.classList.remove("show");
+  }; });
+  var gh = document.getElementById("goHu"); if (gh) gh.onclick = function(){ chips[0].click(); };
+  render();
+})();
+</script></body></html>

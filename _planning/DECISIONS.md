@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-az-eszkalacios-ajanlat-kuszobe-es-kedvezmenye-a-pricing-on-allithato.md) — Az eszkalációs ajánlat küszöbe és kedvezménye a /pricing-on állítható (2026-09-30)
 - [ADR-0284](decisions/0284-a-hos-cim-merete-a-szoveg-hosszatol-es-a.md) — A hős-cím mérete a SZÖVEG HOSSZÁTÓL és a nézetablak MAGASSÁGÁTÓL is függ, egy közös szabállyal (2026-09-30)
 - [ADR-0283](decisions/0283-a-bukott-szamla-riaszt-es-ujrakibocsathato-2026.md) — A bukott számla riaszt és újrakibocsátható (2026-09-30)
 - [ADR-0282](decisions/0282-az-mms-is-relay-en-megy-a-dev-gep-modemjere-a.md) — Az MMS is relay-en megy a dev gép modemjére; a kép-előkészítés sharp

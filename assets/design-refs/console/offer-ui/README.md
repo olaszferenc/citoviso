@@ -2,7 +2,8 @@
 
 Tulajdonosi jóváhagyás: 2026-08-31 („B) verzió, de érdemes lenne tudatni, hogy meddig ér…
 asszem abba maradtunk, hogy egyszeri tranzakció"). A `offer-ui.html` a jóváhagyott működő
-vázlat; a képek a döntéskori állapotok. **Ez a terv KÖT — elvárt viselkedés, nem stílus-javaslat.**
+vázlat; a képek a döntéskori állapotok (a vázlat −50 %-a és „3. látogatás” gombja a döntéskori
+alapérték — a valódi érték ma a /pricing „Lead-ajánlatok” szekciójából jön). **Ez a terv KÖT — elvárt viselkedés, nem stílus-javaslat.**
 
 ## Amit a terv KÖT
 
@@ -14,7 +15,8 @@ vázlat; a képek a döntéskori állapotok. **Ez a terv KÖT — elvárt viselk
    a matek, mint a szerveren (`src/payment/offers.ts applyOffer`); a terhelt összeget a
    szerver számolja és pecsételi. Amit mutatunk = amit terhelünk (§B.17).
 3. **EGY legnagyobb kedvezmény** jelenik meg; kedvezmények SOSEM adódnak össze.
-4. **Eszkalációs döntés-kártya** (3. látogatás, szerver-mintázta ajánlat): asztali nézetben
+4. **Eszkalációs döntés-kártya** (a /pricing-on beállított N. megnyitás — alapból a 3. —, szerver-mintázta
+   ajánlat; a küszöb és a % 2026-09-30 óta operátor-állítható, ADR-XXXX, `escalation-offer-admin/`): asztali nézetben
    középre emelt fehér kártya fátyollal, mobilon alulra horgonyzott; élő óra/perc/mp
    visszaszámláló; CTA a panelt nyitja; „Most még gondolkodom" csak a kártyát rejti el —
    az ajánlat él, és az ár-kártyában tovább látszik. Lejáratkor a kedvezmény MINDENHOL

@@ -14,11 +14,17 @@
 // path stays at list price by structure (ADR-0088 §1). New send channels are
 // covered automatically the moment they stamp sent_at.
 
+import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
 import { couponRule } from "./couponRule.js";
 
 // ── Tunable parameters (ADR-0088: percentages/deadlines are parameters, not law).
 export const OUTREACH_OFFER_PERCENT = 25;
+/**
+ * ADR-XXXX: DEFAULT/SEED only. The live threshold and percent are operator-set on
+ * /pricing (app_setting 'escalation_offer') and read via getEscalationConfig() —
+ * minting code must never use these two constants directly.
+ */
 export const ESCALATION_OFFER_PERCENT = 50;
 export const ESCALATION_VISIT_THRESHOLD = 3;
 export const ESCALATION_OFFER_HOURS = 72;
@@ -26,6 +32,153 @@ export const ESCALATION_OFFER_HOURS = 72;
 export const ESCALATION_FOLLOWUP_HOURS = 24;
 export const NEW_SUBSCRIBER_COUPON_PERCENT = 25;
 export const NEW_SUBSCRIBER_COUPON_DAYS = 90;
+
+// ── ADR-XXXX: the escalation offer's operator-set parameters (frozen plan:
+// assets/design-refs/console/escalation-offer-admin/). GLOBAL, not per pricing
+// region: an offer is minted for a prospect, and a prospect has no pricing region
+// (the page picks the region by the visitor). One app_setting row, JSON — the
+// same pattern as module_sales_disabled, so no migration.
+
+const ESCALATION_SETTING_KEY = "escalation_offer";
+
+/** Owner-approved bounds (2026-09-30). */
+export const ESCALATION_THRESHOLD_MIN = 2;
+export const ESCALATION_THRESHOLD_MAX = 10;
+/**
+ * Discounts never stack — the single largest wins. At or below the outreach
+ * percent the escalation offer could never win, so the floor is derived from it
+ * (not a literal: if the outreach percent moves, the floor moves with it).
+ */
+export const ESCALATION_PERCENT_MIN = OUTREACH_OFFER_PERCENT + 1;
+export const ESCALATION_PERCENT_MAX = 90;
+
+export interface EscalationConfig {
+  /** Off = no NEW escalation offer is minted; live ones run to their expiry. */
+  readonly enabled: boolean;
+  /** The mock_view count (nth opening of the tracked link) that mints the offer. */
+  readonly threshold: number;
+  readonly percent: number;
+}
+
+export const ESCALATION_CONFIG_DEFAULT: EscalationConfig = {
+  enabled: true,
+  threshold: ESCALATION_VISIT_THRESHOLD,
+  percent: ESCALATION_OFFER_PERCENT,
+};
+
+export type EscalationFieldError = "threshold" | "percent";
+
+/**
+ * The ONE validity rule — used by the POST handler, by the reader (a stored row
+ * that fails it is not trusted) and mirrored by the /pricing page script.
+ * Returns the offending fields; empty = valid.
+ */
+export function escalationConfigErrors(c: {
+  threshold: number;
+  percent: number;
+}): EscalationFieldError[] {
+  const errs: EscalationFieldError[] = [];
+  if (
+    !Number.isInteger(c.threshold) ||
+    c.threshold < ESCALATION_THRESHOLD_MIN ||
+    c.threshold > ESCALATION_THRESHOLD_MAX
+  )
+    errs.push("threshold");
+  if (
+    !Number.isInteger(c.percent) ||
+    c.percent < ESCALATION_PERCENT_MIN ||
+    c.percent > ESCALATION_PERCENT_MAX
+  )
+    errs.push("percent");
+  return errs;
+}
+
+/**
+ * PROCESS-LOCAL override for guards. The dev DB is shared by parallel worktrees:
+ * a guard that rewrote the real row would change what every other thread's
+ * minting sees (the module_sales_disabled lesson, 2026-09-23). null = read the row.
+ * Product code never calls this.
+ */
+let escalationOverride: EscalationConfig | null = null;
+
+export function overrideEscalationConfigInProcess(c: EscalationConfig | null): void {
+  escalationOverride = c;
+}
+
+/** The live escalation parameters: the stored row, else the default/seed. */
+export async function getEscalationConfig(): Promise<EscalationConfig> {
+  if (escalationOverride) return escalationOverride;
+  const raw = await getSetting(ESCALATION_SETTING_KEY);
+  if (raw === null) return ESCALATION_CONFIG_DEFAULT;
+  try {
+    const v = JSON.parse(raw) as Partial<Record<keyof EscalationConfig, unknown>>;
+    const c: EscalationConfig = {
+      enabled: v.enabled !== false,
+      threshold: Number(v.threshold),
+      percent: Number(v.percent),
+    };
+    if (escalationConfigErrors(c).length === 0) return c;
+  } catch {
+    // fall through — a corrupt row must not mint an offer nobody set
+  }
+  console.warn(`[offer] app_setting '${ESCALATION_SETTING_KEY}' érvénytelen — az alapértéket használom`); // i18n-exempt: operátori napló
+  return ESCALATION_CONFIG_DEFAULT;
+}
+
+/** Persist the escalation parameters; throws on an invalid value (never stores one). */
+export async function setEscalationConfig(c: EscalationConfig): Promise<void> {
+  const errs = escalationConfigErrors(c);
+  if (errs.length) throw new Error(`invalid escalation config: ${errs.join(", ")}`);
+  await setSetting(
+    ESCALATION_SETTING_KEY,
+    JSON.stringify({ enabled: c.enabled, threshold: c.threshold, percent: c.percent }),
+  );
+}
+
+/**
+ * The /pricing POST → escalation config (not yet validated; the caller refuses an
+ * invalid one with escalationConfigErrors before writing ANYTHING).
+ *
+ * - null when the form does not carry the section (`esc_present`): an older open tab
+ *   must leave the stored config alone, not reset it (ADR-0128: a save must not drop
+ *   fields it did not show).
+ * - Disabled inputs are not submitted, so a switched-off section keeps the STORED
+ *   numbers — switching off and on again loses nothing.
+ * - Normalised like the page script: spaces, a trailing "%", decimal comma; a
+ *   fraction or junk becomes NaN, which the validator rejects.
+ */
+export function escalationFromForm(
+  form: { get(name: string): string | null },
+  current: EscalationConfig,
+): EscalationConfig | null {
+  if (form.get("esc_present") !== "1") return null;
+  const intOf = (name: string, fallback: number): number => {
+    const raw = form.get(name);
+    if (raw === null) return fallback;
+    const s = raw.trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", ".");
+    return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : Number.NaN;
+  };
+  return {
+    enabled: form.get("esc_on") === "on",
+    threshold: intOf("esc_threshold", current.threshold),
+    percent: intOf("esc_percent", current.percent),
+  };
+}
+
+/** Escalation offers still running (for the "live ones keep their percent" notice). */
+export async function liveEscalationOffers(): Promise<{ count: number; percents: number[] }> {
+  const rows = await db
+    .selectFrom("offer")
+    .select(["percent"])
+    .where("kind", "=", "escalation")
+    .where("expires_at", ">", new Date())
+    .whereRef("used_count", "<", "max_uses")
+    .execute();
+  return {
+    count: rows.length,
+    percents: [...new Set(rows.map((r) => r.percent))].sort((a, b) => a - b),
+  };
+}
 
 export interface ActiveOffer {
   readonly id: string;
@@ -154,8 +307,9 @@ export async function prospectHasPaidOrder(prospectId: string): Promise<boolean>
 }
 
 /**
- * §4: on the ESCALATION_VISIT_THRESHOLD-th visit without a purchase, mint the
- * one-time, deadline-bound decision-helper offer. Returns the offer when this
+ * §4: on the operator-set nth visit (getEscalationConfig().threshold; ADR-XXXX)
+ * without a purchase, mint the one-time, deadline-bound decision-helper offer at
+ * the operator-set percent. Switched off = nothing new is minted. Returns the offer when this
  * call created it (the caller logs/reacts), null otherwise. EGYSZERI by the
  * unique index: once expired or used it is never re-issued.
  */
@@ -169,13 +323,15 @@ export async function ensureEscalationOffer(
     .executeTakeFirst();
   // Outreach-entitled prospects only — the direct path is list-priced (§1).
   if (!p?.sent_at) return null;
+  const cfg = await getEscalationConfig();
+  if (!cfg.enabled) return null;
 
   const views = await db
     .selectFrom("mock_view")
     .select(db.fn.countAll<number>().as("n"))
     .where("prospect_id", "=", prospectId)
     .executeTakeFirst();
-  if (Number(views?.n ?? 0) < ESCALATION_VISIT_THRESHOLD) return null;
+  if (Number(views?.n ?? 0) < cfg.threshold) return null;
   if (await prospectHasPaidOrder(prospectId)) return null;
 
   const expiresAt = new Date(Date.now() + ESCALATION_OFFER_HOURS * 3_600_000);
@@ -184,10 +340,10 @@ export async function ensureEscalationOffer(
     .values({
       kind: "escalation",
       prospect_id: prospectId,
-      percent: ESCALATION_OFFER_PERCENT,
+      percent: cfg.percent,
       scope: "initial",
       expires_at: expiresAt,
-      note: "ADR-0088 §4: 3rd-visit decision-helper (auto)",
+      note: `ADR-0088 §4: visit #${cfg.threshold} decision-helper (auto)`,
     })
     .onConflict((oc) => oc.doNothing())
     .returning(["id", "kind", "percent", "expires_at"])

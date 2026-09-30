@@ -282,6 +282,12 @@ csatornájának bővítéseként — egy szabály, egy példány):
    Barion, Számlázz, Websupport (regisztrátor/DNS), Places és Anthropic hívások 401/403-ának egységes jelzése a
    házhoz — naponta egyszer kulcsonként (bélyeggel), nem minden hívásnál.
 
+### 4b.4 Eszkalációs ajánlat: küszöb + % a /pricing-on (ADR-XXXX) — a nagy deploy utáni ELSŐ kör
+A kód landolt a mainen, de a tulaj döntése szerint **nem a nagy deployjal megy, hanem utána azonnal, külön körben**
+(külön engedéllyel). Migráció NINCS: a beállítás egy `app_setting` sor (`escalation_offer`), és amíg élesen nincs
+ilyen sor, a mai 3. megnyitás / −50% él. Füst-próba élesen: /pricing → a „Lead-ajánlatok” szekció látszik, 1 és 25% beírására hibaüzenet jön
+(mentés nélkül elhagyható); egy érvényes mentés után a konzol „Árazás mentve.” jelzést ad.
+
 ---
 
 ## 5. Pilot utánra halasztva (tulaj-döntés, 2026-09-29)
@@ -309,3 +315,4 @@ Ha egy szálnak deploy-előfeltétele vagy deploy utáni teendője van, **ide, e
 |---|---|---|
 | Pillanatkép-runtime (2026-09-28) | `rerender-tenant --all` a deploy után | §4.2 |
 | Places medium (ADR-0258) | `places-medium-backfill` szárazon, majd `--apply --backup` | §4.8 |
+| Eszkalációs ajánlat admin (ADR-XXXX) | **a nagy deploy utáni első kör** (tulaj); migráció nincs | §4b.4 |

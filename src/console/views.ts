@@ -66,6 +66,16 @@ import {
 import type { PricingSnapshot } from "../pricing.js";
 import { huArticle, huArticleLower } from "../hu.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
+import {
+  ESCALATION_CONFIG_DEFAULT,
+  ESCALATION_OFFER_HOURS,
+  ESCALATION_PERCENT_MAX,
+  ESCALATION_PERCENT_MIN,
+  ESCALATION_THRESHOLD_MAX,
+  ESCALATION_THRESHOLD_MIN,
+  OUTREACH_OFFER_PERCENT,
+  type EscalationConfig,
+} from "../payment/offers.js";
 import { formatDay } from "../text/day.js";
 import { computeMonthly, computeAnnual, getModulePrice } from "../pricing.js";
 import { ic, icAdmin } from "../ui/icons.js";
@@ -676,6 +686,11 @@ export function pricingPage(
   disabledSales: ReadonlySet<string> = new Set(),
   /** Active module_entitlement counts per module id — context for switching off. */
   liveCounts: ReadonlyMap<string, number> = new Map(),
+  /** ADR-XXXX: the GLOBAL escalation-offer parameters + the offers still running. */
+  escalation: {
+    readonly cfg: EscalationConfig;
+    readonly live: { readonly count: number; readonly percents: readonly number[] };
+  } = { cfg: ESCALATION_CONFIG_DEFAULT, live: { count: 0, percents: [] } },
 ): string {
   const lang = consoleLang();
   // Currency unit for the selected region (module add-ons stay global HUF).
@@ -882,6 +897,8 @@ export function pricingPage(
         <p class="mut small" style="margin:6px 0 0">Az „ingyen hónapok” az éves előrefizetés
           kedvezménye — pl. <strong>2</strong> ${T(lang, "= két hónap ingyen, azaz 10 hónap árát fizeti.")}</p>
 
+        ${escalationSection(lang, escalation.cfg, escalation.live, snap, disabledSales)}
+
         <h3 style="margin-top:22px">${T(lang, "Egyedi domain — feltételek")}</h3>
         <div class="con-edit-grid">
           ${
@@ -917,6 +934,160 @@ export function pricingPage(
     </div>`;
   return layout(T(lang, "Árazás és értékesítés"), body, { active: "/pricing" });
 }
+
+/**
+ * ADR-XXXX — „Lead-ajánlatok”: the escalation offer's operator-set threshold and
+ * percent (frozen plan: assets/design-refs/console/escalation-offer-admin/, variant A).
+ *
+ * GLOBAL: the same fields on every region page, saved with whichever region's form
+ * is submitted. The bounds come from offers.ts (the server enforces them on POST;
+ * the script below only mirrors them so the operator sees the error before saving).
+ * Disabled inputs are not submitted — the POST then keeps the stored numbers, so
+ * switching off and on again does not lose them.
+ */
+function escalationSection(
+  lang: ReturnType<typeof consoleLang>,
+  cfg: EscalationConfig,
+  live: { readonly count: number; readonly percents: readonly number[] },
+  snap: PricingSnapshot,
+  disabledSales: ReadonlySet<string>,
+): string {
+  // The worked example uses a REAL package price (the middle tier) — only on the HU
+  // page, where the package prices are honest (see tierBlock).
+  const tiers = presetsAscending();
+  const mid = tiers[Math.min(1, tiers.length - 1)];
+  const example =
+    snap.region === "hu" && mid
+      ? {
+          label: mid.label,
+          list: computeMonthly(sellableModuleIds(mid.modules, disabledSales), snap.region),
+        }
+      : null;
+  const msgs = {
+    nEmpty: T(lang, "Adj meg egy számot ({min}–{max}).", { min: String(ESCALATION_THRESHOLD_MIN), max: String(ESCALATION_THRESHOLD_MAX) }),
+    nNan: T(lang, "Egész szám kell — hányadik megnyitás ({min}–{max}).", { min: String(ESCALATION_THRESHOLD_MIN), max: String(ESCALATION_THRESHOLD_MAX) }),
+    nLow: T(lang, "Legalább {min}: az 1. megnyitás maga a levél linkje — ott még a bemutatkozó −{o}% a helyén.", { min: String(ESCALATION_THRESHOLD_MIN), o: String(OUTREACH_OFFER_PERCENT) }),
+    nHigh: T(lang, "Legfeljebb {max}: ennyi megnyitás után már nem döntés-segítés, hanem utolsó esély, amit a lead ritkán ér meg.", { max: String(ESCALATION_THRESHOLD_MAX) }),
+    pEmpty: T(lang, "Adj meg egy százalékot ({min}–{max}).", { min: String(ESCALATION_PERCENT_MIN), max: String(ESCALATION_PERCENT_MAX) }),
+    pNan: T(lang, "Egész százalék kell ({min}–{max}).", { min: String(ESCALATION_PERCENT_MIN), max: String(ESCALATION_PERCENT_MAX) }),
+    pLow: T(lang, "Nagyobbnak kell lennie a bemutatkozó −{o}%-nál: a kedvezmények nem adódnak össze, mindig a legnagyobb él — ennyivel az ajánlat soha nem érvényesülne.", { o: String(OUTREACH_OFFER_PERCENT) }),
+    pHigh: T(lang, "Legfeljebb {max}%: a 100% ingyenes első díj lenne, az már nem ajánlat.", { max: String(ESCALATION_PERCENT_MAX) }),
+    off: T(lang, "Kikapcsolva: nem keletkezik új döntés-segítő ajánlat. A lead a bemutatkozó −{o}%-nál marad, bárhányszor nyitja meg.", { o: String(OUTREACH_OFFER_PERCENT) }),
+    on: T(lang, "Így fut: a lead a {n}. megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára.", { n: "{n}", p: "{p}", h: String(ESCALATION_OFFER_HOURS) }),
+    example: T(lang, "Példa — {tier} csomag: {list} helyett {price} az első hónapra, utána listaáron.", { tier: "{tier}", list: "{list}", price: "{price}" }),
+    bad: T(lang, "Az előnézet a hibás mező javítása után frissül."),
+    sumOne: T(lang, "A mentés addig nem megy, amíg a jelölt mező hibás."),
+    sumTwo: T(lang, "A mentés addig nem megy, amíg a két jelölt mező hibás."),
+    live: T(lang, "Most {count} élő döntés-segítő ajánlat fut ({pcts}). Az a sajátját tartja a lejáratáig — a változás csak az ezután kiadott ajánlatokra hat.", { count: "{count}", pcts: "{pcts}" }),
+  };
+  const data = {
+    nMin: ESCALATION_THRESHOLD_MIN,
+    nMax: ESCALATION_THRESHOLD_MAX,
+    pMin: ESCALATION_PERCENT_MIN,
+    pMax: ESCALATION_PERCENT_MAX,
+    saved: cfg,
+    live: { count: live.count, pcts: live.percents.map((p) => `−${p}%`).join(", ") },
+    example: example ? { tier: example.label, list: example.list, fmtList: fmtHuf(example.list) } : null,
+    msgs,
+  };
+  const field = (id: string, name: string, label: string, value: number, unit: string, errId: string): string =>
+    `<div class="pr-field" id="f_${id}">
+      <label class="pr-field__l" for="${id}">${esc(label)}</label>
+      <div class="pr-input">
+        <input id="${id}" name="${name}" inputmode="numeric" value="${esc(value)}"${cfg.enabled ? "" : " disabled"}>
+        <span class="pr-input__u">${esc(unit)}</span>
+      </div>
+      <div class="pr-ferr" id="${errId}" role="alert"></div>
+    </div>`;
+  return `
+        <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-esc">
+          <h3 style="margin-top:22px">${T(lang, "Lead-ajánlatok")}</h3>
+          <p class="mut small" style="margin:2px 0 10px">${T(lang, "A kiküldött tervet megnyitó lead kedvezményei. A kedvezmények nem adódnak össze — mindig a legnagyobb él.")}
+            <span class="pill">${T(lang, "minden piacra érvényes")}</span></p>
+          <input type="hidden" name="esc_present" value="1">
+          <label class="pr-esc__head">
+            <span class="con-sell"><input type="checkbox" id="esc_on" name="esc_on"${cfg.enabled ? " checked" : ""}><span class="con-sell__track"></span></span>
+            <b>${T(lang, "Döntés-segítő (eszkalációs) ajánlat")}</b>
+          </label>
+          <div class="con-edit-grid" style="margin-top:10px">
+            ${field("esc_n", "esc_threshold", T(lang, "Hányadik megnyitásnál kapja"), cfg.threshold, T(lang, ". megnyitás"), "e_n")}
+            ${field("esc_p", "esc_percent", T(lang, "Kedvezmény az első díjból"), cfg.percent, "%", "e_p")}
+            <div class="pr-field">
+              <span class="pr-field__l">${T(lang, "Összevetésül: bemutatkozó kedvezmény")}</span>
+              <div class="pr-static">${T(lang, "−{p}% (a levéllel jár, itt nem állítható)", { p: String(OUTREACH_OFFER_PERCENT) })}</div>
+            </div>
+          </div>
+          <div class="pr-esc__preview" id="esc_preview"></div>
+          <div class="pr-esc__live" id="esc_live" hidden></div>
+          <script type="application/json" id="esc_data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>
+          <script>${ESCALATION_MONEY_JS}\n${ESCALATION_SECTION_JS}</script>
+        </section>`;
+}
+
+// The browser half of the money rule travels WITH the script (adminViews.ts has the
+// measured reason: a section rendered standalone never gets a page-level copy).
+const ESCALATION_MONEY_JS = readFileSync(
+  new URL("../../assets/runtime/cit-money.js", import.meta.url),
+  "utf8",
+);
+
+/**
+ * Live mirror of escalationConfigErrors() + the preview sentence. The server stays
+ * the authority (POST re-validates); this only keeps the operator from submitting
+ * a value the server will refuse, and tells what the saved value will DO.
+ */
+const ESCALATION_SECTION_JS = `(function(){
+  // The script sits INSIDE the form, before its submit button is parsed.
+  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); return; }
+  init();
+  function init(){
+  var D = JSON.parse(document.getElementById("esc_data").textContent), M = D.msgs;
+  var sec = document.getElementById("pr-esc"), form = sec.closest("form");
+  var on = document.getElementById("esc_on"), nIn = document.getElementById("esc_n"), pIn = document.getElementById("esc_p");
+  var fN = document.getElementById("f_esc_n"), fP = document.getElementById("f_esc_p");
+  var eN = document.getElementById("e_n"), eP = document.getElementById("e_p");
+  var prev = document.getElementById("esc_preview"), live = document.getElementById("esc_live");
+  var btn = form.querySelector("button[type=submit]"), sum = null;
+  if (btn) { sum = document.createElement("span"); sum.className = "pr-esc__sum"; sum.setAttribute("role", "alert"); btn.parentNode.appendChild(sum); }
+  function fill(t, v){ return t.replace(/\\{(\\w+)\\}/g, function(_, k){ return v[k] != null ? v[k] : "{" + k + "}"; }); }
+  // The ONE money rule (cit-money.js, embedded with this script), with no-break
+  // spaces: a preview sentence must not wrap an amount into "7" / "240 Ft".
+  function nb(t){ return String(t).replace(/ /g, "\\u00a0"); }
+  function fmt(x){ return nb(CitMoney.formatMoney(x, "HUF", "hu")); }
+  function norm(v){ return String(v).trim().replace(/\\s+/g, "").replace(/%$/, "").replace(",", "."); }
+  function num(v){ var s = norm(v); if (s === "") return {err:"empty"}; if (!/^-?\\d+(\\.\\d+)?$/.test(s)) return {err:"nan"};
+    var x = Number(s); if (x !== Math.floor(x)) return {err:"nan"}; return {v:x}; }
+  function chk(r, lo, hi, m){ if (r.err === "empty") return m[0]; if (r.err) return m[1]; if (r.v < lo) return m[2]; if (r.v > hi) return m[3]; return ""; }
+  function render(){
+    var en = on.checked;
+    nIn.disabled = !en; pIn.disabled = !en; sec.classList.toggle("is-off", !en);
+    var rn = num(nIn.value), rp = num(pIn.value);
+    var a = en ? chk(rn, D.nMin, D.nMax, [M.nEmpty, M.nNan, M.nLow, M.nHigh]) : "";
+    var b = en ? chk(rp, D.pMin, D.pMax, [M.pEmpty, M.pNan, M.pLow, M.pHigh]) : "";
+    fN.classList.toggle("err", !!a); eN.textContent = a;
+    fP.classList.toggle("err", !!b); eP.textContent = b;
+    var bad = (a ? 1 : 0) + (b ? 1 : 0);
+    if (btn) btn.disabled = bad > 0;
+    if (sum) sum.textContent = bad === 1 ? M.sumOne : bad === 2 ? M.sumTwo : "";
+    if (!en) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.off; }
+    else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
+    else {
+      prev.className = "pr-esc__preview";
+      var t = fill(M.on, {n: rn.v, p: rp.v});
+      if (D.example) t += " " + fill(M.example, {tier: D.example.tier, list: nb(D.example.fmtList),
+        price: fmt(Math.floor(D.example.list * (100 - rp.v) / 100))});
+      prev.textContent = t;
+    }
+    var changed = en !== D.saved.enabled || (en && !bad && (rn.v !== D.saved.threshold || rp.v !== D.saved.percent));
+    live.hidden = !(D.live.count > 0 && changed);
+    live.textContent = fill(M.live, {count: D.live.count, pcts: D.live.pcts});
+  }
+  function tidy(el){ var r = num(el.value); if (!r.err) el.value = r.v; render(); }
+  [on, nIn, pIn].forEach(function(el){ el.addEventListener("input", render); el.addEventListener("change", render); });
+  nIn.addEventListener("blur", function(){ tidy(nIn); }); pIn.addEventListener("blur", function(){ tidy(pIn); });
+  render();
+  }
+})();`;
 
 /**
  * MATCH cella — jóváhagyott terv ④ + ⑥ (`assets/design-refs/console/lead-list/`).
