@@ -1,0 +1,19 @@
+[Unit]
+# ADR-XXXX: a GSM-modem EZEN a Debian-gépen él (ADR-0080 ⑦). A relay a távoli
+# mms_outbox sort üríti a modemre (sudo mms-send), percenként EGY üzenetet
+# (~60–90 mp/db). A beragadt 'sending' sor a szerveren 'unknown' lesz, nem küldjük
+# újra; a sikeres küldést a relay ack ELŐTT helyi naplóba írja.
+Description=Citoviso MMS-relay — távoli MMS-sor ürítése a helyi GSM-modemre (ADR-XXXX)
+After=network-online.target gammu-smsd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut (ADR-0052); SMS_RELAY_URL/SECRET a fő fa .env-jéből jön (config.ts).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/mms-relay.mts
+# Az mms-send saját plafonja 180 s; + pull/ack.
+TimeoutStartSec=300
+StandardOutput=append:/home/citoviso/.claude/citoviso-mms-relay.log
+StandardError=inherit

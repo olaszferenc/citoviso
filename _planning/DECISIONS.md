@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-mms-relay-a-dev-gep-modemjere-sharp.md) — Az MMS is relay-en megy a dev gép modemjére; a kép-előkészítés sharp
 - [ADR-0281](decisions/0281-a-magyar-nevelo-placeholder-art-art-art2-nem.md) — A magyar névelő-placeholder ({art}/{Art}/{art2}) nem-magyar nyelven üres; a fordító újrapróbál (2026-09-30)
 - [ADR-0280](decisions/0280-a-fojtas-a-proxy-altal-felulirt-x-real-ip-re.md) — A fojtás a proxy által felülírt X-Real-IP-re kulcsol (Cloudflare mögött a CF-Connecting-IP-re) (2026-09-30)
 - [ADR-0279](decisions/0279-a-hosszan-futo-service-ek-is-a-repobol.md) — A hosszan futó service-ek is a repóból települnek OnFailure-rel; a nem éles riasztás [TESZT]-tel jelölt (2026-09-30)

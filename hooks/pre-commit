@@ -456,7 +456,7 @@ fi
 # alatta ÉLŐ „Páros indítása" gomb valódi SIM-re. Az őr a RENDERELT lapot méri, mind a
 # négy állapotban, és a REGRESSZIÓT is szimulálja (piros önteszt).
 if [ -f scripts/mms-preview-gate-check.mts ] && \
-   changed_files | grep -qE '^(src/console/(views|server)\.ts|src/outreach/heroShot\.ts|public/assets/ui/citui-console\.css)|^scripts/mms-preview-gate-check'; then
+   changed_files | grep -qE '^(src/console/(views|server)\.ts|src/outreach/heroShot\.ts|src/mms/sender\.ts|public/assets/ui/citui-console\.css)|^scripts/mms-preview-gate-check'; then
   echo "[pre-commit] mms-preview-gate (kép nélkül nincs páros, és a lap kimondja)…"
   npx tsx scripts/mms-preview-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
@@ -1432,6 +1432,13 @@ if [ -f scripts/pair-repair-check.mts ] && \
    changed_files | grep -qE '^src/outreach/(pairRepair|sendOutreachPair|sendOutreachSms)\.ts$|^scripts/pair-repair\.mts$|^migrations/0058|^scripts/pair-repair-check'; then
   echo "[pre-commit] pair-repair-check (ADR-0112: a törött pár magától helyreáll)…"
   npx tsx scripts/pair-repair-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX: az MMS élesről relay-en megy a dev gép modemjére (sor → pull → küldés →
+# ack). Eldobható fixture a valódi DB-ben, MOCK modemmel — valódi MMS soha nem megy ki.
+if [ -f scripts/mms-relay-check.mts ] && \
+   changed_files | grep -qE '^src/mms/|^src/outreach/sendOutreachPair\.ts$|^scripts/mms-relay|^migrations/0081_'; then
+  echo "[pre-commit] mms-relay-check (ADR-XXXX: az MMS sorból a modemre, az ack zárja a párt)…"
+  npx tsx scripts/mms-relay-check.mts >"$GATE_LOG" || gate_failed
 fi
 # ADR-0072: a LIVE tenant's active modules must be exactly what it PAID for. The
 # hole was real (measured 2026-08-26): three live tenants held 10, 12 and 1 unpaid

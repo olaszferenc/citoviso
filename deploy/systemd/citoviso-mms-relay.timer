@@ -1,0 +1,13 @@
+[Unit]
+Description=Citoviso MMS-relay percenként (ADR-XXXX)
+
+[Timer]
+# 1 perc, soronként EGY MMS (docs/mms-send.md). Egy még futó oneshotot a timer
+# nem indít újra, így két MMS-relay nem fedheti egymást. Üres sor = egy könnyű
+# HTTP-kérés; URL/secret nélkül a script no-op.
+OnBootSec=150
+OnUnitActiveSec=60
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

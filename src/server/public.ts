@@ -3551,6 +3551,30 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     return sendJson(res, 200, { ok: true });
   }
 
+  // ── ADR-XXXX MMS-relay API: the same Debian-box modem, the same bearer secret. ──
+  // One message per pull (a send is ~90 s); a stale 'sending' becomes 'unknown',
+  // never re-sent; the ack stamps the pair's mms_sent_at and starts its SMS half.
+  if (req.method === "POST" && pathname === "/api/mms-relay/pull") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    const { pullMms } = await import("../mms/relayQueue.js");
+    return sendJson(res, 200, { messages: await pullMms() });
+  }
+  if (req.method === "POST" && pathname === "/api/mms-relay/ack") {
+    if (!smsRelayAuthorized(req)) return send(res, 404, "Not found");
+    const b = await readJsonBody(req);
+    const results = (Array.isArray(b.results) ? b.results : []).map((r) => {
+      const o = r as { id?: unknown; ok?: unknown; messageId?: unknown; error?: unknown };
+      return {
+        id: String(o.id ?? ""),
+        ok: o.ok === true,
+        messageId: o.messageId ? String(o.messageId).slice(0, 200) : undefined,
+        error: o.error ? String(o.error) : undefined,
+      };
+    });
+    const { ackMms } = await import("../mms/relayQueue.js");
+    return sendJson(res, 200, { ok: true, sent: await ackMms(results) });
+  }
+
   if (req.method === "POST" && pathname === "/api/mock-request") {
     try {
       const b = await readJsonBody(req);

@@ -42,6 +42,10 @@ címzett hálózatán múlik (mobiladat kell a letöltéséhez a címzett telefo
 
 ## Képkonverzió (PNG screenshot → MMS-kész JPEG)
 
+A kódban a konverzió **sharp** (`toMmsJpeg` / `ensureMmsJpeg`, `src/mms/sender.ts`, ADR-XXXX) —
+ugyanazzal a szabállyal, mint az alábbi PIL-recept, de Python nélkül (élesen nincs Pillow).
+Kézi használatra a recept:
+
 ```bash
 python3 - <<'EOF'
 from PIL import Image
@@ -65,11 +69,18 @@ EOF
   USB2 (ehci-pci) port jó** (`lsusb -t`-ben `Driver=ch341` az `ehci-pci` fa alatt legyen).
 - **`masik mms-send fut eppen`** — várd meg az előzőt (lock: `/var/lock/mms-send.lock`).
 
-## Integrációs minta (queue-alapú, az sms-relay analógiájára)
+## Integrációs minta — az `mms-relay` (ADR-XXXX, MEGÉPÍTVE)
 
-Az `scripts/sms-relay.mts` mintájára építhető `mms-relay`: távoli sor → pull →
-`sudo mms-send` hívás soronként → ack a message_id-vel. A ~90 mp/darab miatt
-**percenkénti timer + soronként EGY üzenet** a jó ütem, nem batch.
+Élesen `MMS_PROVIDER=queue`: a küldés az `mms_outbox` sorba kerül (a JPEG bájtjaival),
+a dev gépi `scripts/mms-relay.mts` (`citoviso-mms-relay.timer`, percenként) a
+`/api/mms-relay/pull` végponton lehúz EGY üzenetet, `sudo mms-send`-del küldi, és a
+`/api/mms-relay/ack`-kal nyugtáz (ugyanaz az `SMS_RELAY_URL` + `SMS_RELAY_SECRET`, mint az
+SMS-relaynél). A ~90 mp/darab miatt **percenkénti timer + soronként EGY üzenet**.
+- Beragadt `sending` (a relay küldés közben halt meg) → `unknown` + riasztás, NEM küldjük újra
+  (dupla fizetős hideg MMS). A sikeres küldés az ack előtt a helyi naplóba kerül
+  (`outbox-mms/relay-journal.json`), a következő futás onnan utólag nyugtáz.
+- A páros (ADR-0083) `mms_sent_at`-ját az ack írja, és a kísérő SMS csak utána indul.
+- Őr: `npx tsx scripts/mms-relay-check.mts` (mock modem).
 
 ⚠️ **Jogi őrszem (ld. CLAUDE.md §7):** a lead-MMS ugyanúgy közvetlen üzletszerzés,
 mint a hideg e-mail — célzott, személyre szabott, és legyen benne lemondási út

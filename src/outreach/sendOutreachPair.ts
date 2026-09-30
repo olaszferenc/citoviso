@@ -21,6 +21,13 @@
 // cycle, so the console starts the pair as an in-process background job and the
 // draft page polls the job registry. Single-process console; a restart mid-job
 // loses only the progress DISPLAY — the DB stamps stay truthful.
+//
+// ADR-XXXX — MMS_PROVIDER=queue (prod, no modem): the MMS half is only ENQUEUED
+// into mms_outbox; the Debian-box relay sends it, and its ACK stamps mms_sent_at
+// and starts the SMS half (src/mms/relayQueue.ts). So in queue mode nothing is
+// claimed here — the one-pending-MMS-per-prospect index is the double-click
+// guard — and the timeline reads the queue row (pairJobState), because the ack
+// happens in the PUBLIC process, where this registry does not reach.
 
 import { db } from "../db/client.js";
 import { renderPairSmsDraft } from "./draft.js";
@@ -29,6 +36,7 @@ import { ensureHeroShot } from "./heroShot.js";
 import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
 import { sendSms } from "../sms/sender.js";
 import { ensureMmsJpeg, sendMms } from "../mms/sender.js";
+import { config } from "../config.js";
 
 export interface PairJobState {
   /** mms = uploading to the modem; sms = companion text; done/failed = terminal. */
@@ -43,6 +51,49 @@ const jobs = new Map<string, PairJobState>();
 
 export function getPairJob(prospectId: string): PairJobState | null {
   return jobs.get(prospectId) ?? null;
+}
+
+/**
+ * The timeline's state. With the queue provider the newest mms_outbox row is the
+ * truth (the relay's ack lands in another process); otherwise the in-process job.
+ */
+export async function pairJobState(prospectId: string): Promise<PairJobState | null> {
+  if (config.mmsProvider !== "queue") return getPairJob(prospectId);
+  const row = await db
+    .selectFrom("mms_outbox")
+    .innerJoin("prospect", "prospect.id", "mms_outbox.prospect_id")
+    .select([
+      "mms_outbox.status as status",
+      "mms_outbox.last_error as lastError",
+      "mms_outbox.message_id as messageId",
+      "mms_outbox.created_at as createdAt",
+      "prospect.sms_sent_at as smsSentAt",
+    ])
+    .where("mms_outbox.prospect_id", "=", prospectId)
+    .orderBy("mms_outbox.created_at", "desc")
+    .limit(1)
+    .executeTakeFirst();
+  if (!row) return getPairJob(prospectId);
+  const startedAt = new Date(row.createdAt as unknown as string).toISOString();
+  const messageId = row.messageId ?? undefined;
+  if (row.status === "queued" || row.status === "sending") return { phase: "mms", startedAt };
+  if (row.status === "sent") {
+    // The SMS half is started by the ack; a missing sms_sent_at is the broken
+    // pair the page already renders from the stamps (retry the SMS half only).
+    return { phase: row.smsSentAt ? "done" : "failed", startedAt, mmsMessageId: messageId };
+  }
+  if (row.status === "unknown") {
+    return {
+      phase: "failed",
+      startedAt,
+      error: "az MMS kimenete ISMERETLEN (a relay nem nyugtázta) — automatikusan nem küldjük újra; a ház riasztást kapott",
+    };
+  }
+  return {
+    phase: "failed",
+    startedAt,
+    error: `MMS-hiba (relay): ${row.lastError ?? "ismeretlen"} — semmi nem ment ki, a pár újraindítható`,
+  };
 }
 
 /** ASCII-only MMS subject (WSP text-string; the CLI transliterates, we pre-empt). */
@@ -86,6 +137,21 @@ export async function startOutreachPair(
   if (prior?.mms_sent_at) {
     return { ok: false, message: "az MMS már kint van — a megszakadt pár SMS-fele küldhető újra, nem az egész" };
   }
+  const queueMode = config.mmsProvider === "queue";
+  if (queueMode) {
+    // A pending row = the pair is already on its way; an 'unknown' one may have
+    // reached the lead — a human decides that, not a second click.
+    const open = await db
+      .selectFrom("mms_outbox")
+      .select("status")
+      .where("prospect_id", "=", prospectId)
+      .where("status", "in", ["queued", "sending", "unknown"])
+      .executeTakeFirst();
+    if (open?.status === "unknown") {
+      return { ok: false, message: "az előző MMS kimenete ismeretlen (a relay nem nyugtázta) — előbb nézd meg a relay naplóját" };
+    }
+    if (open) return { ok: false, message: "ennél a prospectnél már sorban áll az MMS — a dev gép relay-e küldi" };
+  }
 
   // §C on the PAIR's companion text (the message that actually goes out).
   const pairSms = renderPairSmsDraft(d.input);
@@ -99,6 +165,14 @@ export async function startOutreachPair(
   const shot = await ensureHeroShot(artifactId);
   if (!shot) return { ok: false, message: "a mock hero-képe nem állítható elő — MMS nélkül a párnak nincs értelme" };
   const jpeg = await ensureMmsJpeg(shot);
+
+  if (queueMode) {
+    // Enqueue only; the relay's ack claims (mms_sent_at) and starts the SMS half.
+    const mms = await sendMms({ to, imagePath: jpeg, subject: asciiSubject(d.input.leadName), prospectId });
+    if (!mms.ok) return { ok: false, message: `MMS-hiba: ${mms.error ?? "ismeretlen"} — semmi nem ment ki` };
+    jobs.set(prospectId, { phase: "mms", startedAt: new Date().toISOString() });
+    return { ok: true, message: "az MMS sorba került — a dev gép relay-e küldi (~1–3 perc), utána megy a kísérő SMS" };
+  }
 
   // Atomic CLAIM: stamp mms_sent_at only if still NULL — a double click loses here.
   const now = new Date();

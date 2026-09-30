@@ -130,7 +130,7 @@ import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
-import { startOutreachPair, sendPairSmsHalf, getPairJob } from "../outreach/sendOutreachPair.js";
+import { startOutreachPair, sendPairSmsHalf, pairJobState } from "../outreach/sendOutreachPair.js";
 import { renderPairSmsDraft } from "../outreach/draft.js";
 import { ensureMmsJpeg } from "../mms/sender.js";
 import { normalizePhone } from "../sms/sender.js";
@@ -3077,7 +3077,7 @@ async function handle(
           emailAddressMailed: p?.contact_email ? await emailAlreadyMailed(p.contact_email) : false,
           smsSentAt: chState?.smsSentAt ?? null,
           mmsSentAt: chState?.mmsSentAt ?? null,
-          pairJob: getPairJob(draftMatch[1]),
+          pairJob: await pairJobState(draftMatch[1]),
           // The pair CANNOT start without this image (sendOutreachPair refuses) —
           // so the surface states it and kills the button, instead of letting the
           // operator learn it from a rejection banner after the confirm.

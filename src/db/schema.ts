@@ -499,6 +499,25 @@ export interface SmsOutboxTable {
   sent_at: Timestamp | null;
 }
 
+/** 0081 (ADR-XXXX): the remote MMS queue — prod enqueues (MMS_PROVIDER=queue),
+ *  the Debian-box relay drains it onto the modem. A stale 'sending' becomes
+ *  'unknown' (never auto-resent: a cold MMS twice is worse than a human decision). */
+export interface MmsOutboxTable {
+  id: Generated<string>;
+  prospect_id: string | null;
+  to_phone: string;
+  subject: string;
+  image: Buffer;
+  status: Generated<"queued" | "sending" | "sent" | "failed" | "unknown">;
+  attempts: Generated<number>;
+  last_error: string | null;
+  message_id: string | null;
+  created_at: Generated<Timestamp>;
+  pulled_at: Timestamp | null;
+  sent_at: Timestamp | null;
+  alerted_at: Timestamp | null;
+}
+
 /** 0051+0052 (ADR-0098): AAM-cap alert stamp — exactly ONE send per (year,
  *  tier%, channel) triple however often the daily billing tick fires; a new
  *  year resets naturally. Per-channel (dunning_event style): a failed email
@@ -1427,6 +1446,7 @@ export interface Database {
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;
+  mms_outbox: MmsOutboxTable;
   aam_alert: AamAlertTable;
   app_setting: AppSettingTable;
   tenant_message: TenantMessageTable;

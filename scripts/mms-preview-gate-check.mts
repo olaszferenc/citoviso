@@ -28,6 +28,11 @@
  *  ⑧ ÖNTESZT — a REGRESSZIÓ szimulálása: a `failed` lapba visszainjektálom a régi, feltétel
  *     nélküli `<img>`-et és az élő gombot; a detektornak MINDKETTŐT el KELL utasítania.
  *     Aki sosem bukott, azt senki nem tesztelte.
+ *  ⑨ A KÉP-ELŐÁLLÍTÁS Python nélkül (ADR-XXXX): élesen a route 500-at adott, mert a VPS-en
+ *     nincs Pillow. Az `ensureMmsJpeg` sharp-pal dolgozik: nagy PNG → JPEG, leghosszabb
+ *     él ≤1280 px, ≤290 KB; kis kép NEM nagyítódik; az átlátszóság fehérre simul; a
+ *     plafon fölé nem engedhető kép DOB (nem csúszik ki csendben túlméretesen); és a
+ *     forrásban nincs `python3`/`PIL` hívás.
  *
  * Futtatás: npx tsx scripts/mms-preview-gate-check.mts
  */
@@ -273,6 +278,64 @@ check(
   found.some((v) => v.rule.includes("a gomb ÉLŐ")),
   "elkapja a törött előnézet alatti ÉLŐ páros-gombot",
 );
+
+// ── ⑨ a JPEG-előállítás Python nélkül (sharp) ────────────────────────────────
+console.log("\n⑨ az MMS-JPEG sharp-pal áll elő (az élesen nincs Pillow)");
+{
+  const sharp = (await import("sharp")).default;
+  const { ensureMmsJpeg, toMmsJpeg, isJpeg, MMS_MAX_BYTES } = await import("../src/mms/sender.js");
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(path.join(tmpdir(), "cit-mms-jpeg-"));
+  try {
+    // A screenshot-like PNG: large, with an alpha channel and some texture.
+    const big = await sharp({
+      create: { width: 2600, height: 1700, channels: 4, background: { r: 30, g: 110, b: 150, alpha: 0.6 } },
+    })
+      .composite([
+        {
+          input: await sharp({ create: { width: 2600, height: 1700, channels: 3, noise: { type: "gaussian", mean: 128, sigma: 18 } } })
+            .png()
+            .toBuffer(),
+          blend: "overlay",
+        },
+      ])
+      .png()
+      .toBuffer();
+    const src = path.join(dir, "hero.png");
+    await writeFile(src, big);
+    const out = await ensureMmsJpeg(src);
+    const buf = await readFile(out);
+    const meta = await sharp(buf).metadata();
+    check(out.endsWith("hero.mms.jpg"), "ensureMmsJpeg a forrás mellé ír (<név>.mms.jpg)");
+    check(isJpeg(buf) && meta.format === "jpeg", "a kimenet JPEG (magic bytes + formátum)");
+    check(buf.length <= MMS_MAX_BYTES, `a kimenet ≤${MMS_MAX_BYTES} bájt (${buf.length})`);
+    check(Math.max(meta.width ?? 0, meta.height ?? 0) === 1280, `a leghosszabb él 1280 px (${meta.width}×${meta.height})`);
+    check(!meta.hasAlpha, "az átlátszóság kisimítva (JPEG-ben nincs alfa)");
+
+    const small = await toMmsJpeg(await sharp({ create: { width: 400, height: 300, channels: 3, background: { r: 1, g: 2, b: 3 } } }).png().toBuffer());
+    const sm = await sharp(small).metadata();
+    check(sm.width === 400 && sm.height === 300, `kis kép NEM nagyítódik (${sm.width}×${sm.height})`);
+
+    // Pure full-strength noise defeats JPEG: the ladder must end in a THROW, not an oversize file.
+    const noise = await sharp({ create: { width: 1280, height: 1280, channels: 3, noise: { type: "gaussian", mean: 128, sigma: 120 } } })
+      .png()
+      .toBuffer();
+    let verdict = "";
+    try {
+      const n = await toMmsJpeg(noise);
+      verdict = n.length <= MMS_MAX_BYTES ? "ok" : `túlméretes (${n.length})`;
+    } catch (e) {
+      verdict = /plafon/.test((e as Error).message) ? "dob" : `más hiba: ${(e as Error).message}`;
+    }
+    check(verdict === "ok" || verdict === "dob", `a plafon fölé nem engedhető kép dob vagy belefér — soha nem túlméretes (${verdict})`);
+
+    const code = await readFile(path.join(process.cwd(), "src/mms/sender.ts"), "utf8");
+    check(!/python3|from PIL|"PIL"/.test(code.replace(/^\s*(\/\/|\*).*$/gm, "")), "src/mms/sender.ts kódjában nincs python3/PIL hívás");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
 console.log(bad ? `\n⛔ ${bad} sértés` : "\n✅ MMS-előnézet kapu: minden állítás áll");
 process.exit(bad ? 1 : 0);
