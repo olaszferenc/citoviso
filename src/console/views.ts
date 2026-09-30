@@ -938,7 +938,7 @@ export function pricingPage(
 }
 
 /**
- * ADR-0285 + ADR-XXXX — „Lead-ajánlatok”: the intro percent and the escalation offer's
+ * ADR-0285 + ADR-0286 — „Lead-ajánlatok”: the intro percent and the escalation offer's
  * operator-set threshold, percent, validity and follow-up delay (frozen plan:
  * assets/design-refs/console/escalation-offer-admin/, variant A of both rounds).
  *

@@ -20,12 +20,12 @@ import { couponRule } from "./couponRule.js";
 
 // ── Tunable parameters (ADR-0088: percentages/deadlines are parameters, not law).
 /**
- * ADR-0285 + ADR-XXXX: DEFAULT/SEED only. The live values are operator-set on /pricing
+ * ADR-0285 + ADR-0286: DEFAULT/SEED only. The live values are operator-set on /pricing
  * (app_setting 'escalation_offer') and read via getEscalationConfig() — minting,
  * drafting and scheduling code must never use these constants directly.
  *
  * OUTREACH_OFFER_PERCENT has ONE more, deliberate use: the percent of a letter sent
- * BEFORE the send paths stamped their offer (ADR-XXXX). Every such letter quoted this
+ * BEFORE the send paths stamped their offer (ADR-0286). Every such letter quoted this
  * constant, so that is what binds for its lead (see legacyOutreachPercent).
  */
 export const OUTREACH_OFFER_PERCENT = 25;
@@ -45,7 +45,7 @@ export const NEW_SUBSCRIBER_COUPON_DAYS = 90;
 
 const ESCALATION_SETTING_KEY = "escalation_offer";
 
-/** Owner-approved bounds (2026-09-30; hours and the intro percent: ADR-XXXX). */
+/** Owner-approved bounds (2026-09-30; hours and the intro percent: ADR-0286). */
 export const ESCALATION_THRESHOLD_MIN = 2;
 export const ESCALATION_THRESHOLD_MAX = 10;
 export const ESCALATION_PERCENT_MAX = 90;
@@ -67,10 +67,10 @@ export interface EscalationConfig {
   readonly offerHours: number;
   /**
    * The follow-up mail's EARLIEST time after minting. Read at every tick, so a change
-   * applies to offers already running too (owner ruling, ADR-XXXX).
+   * applies to offers already running too (owner ruling, ADR-0286).
    */
   readonly followupHours: number;
-  /** The intro percent a NEW outreach letter quotes (stamped at send, ADR-XXXX). */
+  /** The intro percent a NEW outreach letter quotes (stamped at send, ADR-0286). */
   readonly outreachPercent: number;
 }
 
@@ -145,7 +145,7 @@ export function overrideEscalationConfigInProcess(c: EscalationConfig | null): v
 
 /**
  * The stored row → config. A MISSING key takes its default (a row written before
- * ADR-XXXX carries only enabled/threshold/percent and stays valid as it is); a row
+ * ADR-0286 carries only enabled/threshold/percent and stays valid as it is); a row
  * that is corrupt or fails the rule as a whole gives null — the caller falls back to
  * the full default, so a broken row cannot mint an offer nobody set.
  */
@@ -335,7 +335,7 @@ export async function bestActiveCouponForTenant(
   return row ? toActive(row) : null;
 }
 
-// ── ADR-XXXX: THE LETTER'S PERCENT BINDS. The intro percent is operator-set, so the
+// ── ADR-0286: THE LETTER'S PERCENT BINDS. The intro percent is operator-set, so the
 // offer row can no longer be minted lazily at the first visit with "the current
 // value": a lead who got −25% in the letter and opens it after the operator set 20
 // would get 20. Every send path stamps the percent its message quoted, right after
@@ -344,7 +344,7 @@ export async function bestActiveCouponForTenant(
 // and the draft quotes the stamped value (outreachPercentForProspect).
 
 /**
- * The percent a letter sent before ADR-XXXX promised. Those send paths stamped no
+ * The percent a letter sent before ADR-0286 promised. Those send paths stamped no
  * offer row, and every one of them quoted the constant — so a prospect with sent_at
  * but no outreach row is owed exactly this, whatever the setting says today.
  */
@@ -364,7 +364,7 @@ export async function stampOutreachOffer(prospectId: string, percent: number): P
       prospect_id: prospectId,
       percent,
       scope: "initial",
-      note: "ADR-0088 §3 / ADR-XXXX: outreach intro offer, stamped at send",
+      note: "ADR-0088 §3 / ADR-0286: outreach intro offer, stamped at send",
     })
     .onConflict((oc) => oc.doNothing())
     .execute();
@@ -372,7 +372,7 @@ export async function stampOutreachOffer(prospectId: string, percent: number): P
 
 /**
  * The intro percent a message to this prospect must quote: what an earlier message
- * already promised (the stamped row, or the legacy constant for a pre-ADR-XXXX send),
+ * already promised (the stamped row, or the legacy constant for a pre-ADR-0286 send),
  * else the operator-set value for a first contact.
  */
 export async function outreachPercentForProspect(prospectId: string): Promise<number> {
@@ -396,7 +396,7 @@ export async function outreachPercentForProspect(prospectId: string): Promise<nu
  * Intro offer from the outreach entitlement (see header). Idempotent by the
  * partial unique index; a prospect never touched by outreach gets nothing.
  *
- * Since ADR-XXXX this only materialises a LEGACY send (sent_at set, no stamped row):
+ * Since ADR-0286 this only materialises a LEGACY send (sent_at set, no stamped row):
  * the letter quoted the constant, so the constant binds — never the current setting.
  */
 export async function ensureOutreachOffer(prospectId: string): Promise<void> {
@@ -561,7 +561,7 @@ export async function escalationFollowupsDue(
   now: Date = new Date(),
 ): Promise<EscalationFollowupDue[]> {
   // Read at every tick → a changed delay applies to offers already running too
-  // (owner ruling, ADR-XXXX). The offer's own expires_at is never touched.
+  // (owner ruling, ADR-0286). The offer's own expires_at is never touched.
   const { followupHours } = await getEscalationConfig();
   const rows = await db
     .selectFrom("offer")

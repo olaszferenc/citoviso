@@ -3,7 +3,7 @@
 **Jóváhagyva:** 2026-09-30, két körben, tulajdonosi döntés a koordináló sessionön át.
 - **1. kör (ADR-0285):** az „A” változat (saját szekció az alapdíj alatt): kapcsoló, küszöb, kedvezmény. A nem
   választott „B” a modul-sorok után, kompakt sorokban ült, és csak a Magyarország oldalon volt szerkeszthető.
-- **2. kör (ADR-XXXX):** ismét az „A” változat (egy rács: bemutatkozó sor, alatta a döntés-segítő két sorban).
+- **2. kör (ADR-0286):** ismét az „A” változat (egy rács: bemutatkozó sor, alatta a döntés-segítő két sorban).
   Új mező az ajánlat érvényessége, az emlékeztető késleltetése és a bemutatkozó kedvezmény. A nem választott „B”
   két kártyát tett egymás mellé, a „C” idővonal-lépésekbe rendezte a mezőket.
 

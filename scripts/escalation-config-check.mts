@@ -10,10 +10,10 @@
 //   ④ the /pricing POST parse: no section → null (an old tab resets nothing), switched off →
 //      the STORED numbers survive, "40%" / " 4 " normalise, "2,5" is refused;
 //   ⑤ the page renders the section with the stored values and the live-offer data;
-//   ⑥ ADR-XXXX: the configured VALIDITY lands in offer.expires_at, the configured FOLLOW-UP
+//   ⑥ ADR-0286: the configured VALIDITY lands in offer.expires_at, the configured FOLLOW-UP
 //      delay decides which offers are due, a stored row missing the new keys stays valid
 //      (defaults fill in), a row failing the rule is not trusted;
-//   ⑦ ADR-XXXX „a levél %-a köt”: after the intro percent is changed, a lead whose letter
+//   ⑦ ADR-0286 „a levél %-a köt”: after the intro percent is changed, a lead whose letter
 //      already went out — opened or not — gets the percent the letter quoted; a legacy send
 //      (no stamped row) gets the constant it quoted; a new send quotes and stamps the new value;
 //   ⑧ every send path that stamps prospect.sent_at also stamps the intro offer (structural).
@@ -186,7 +186,7 @@ try {
   check("⑥ 5 órás ajánlat, emlékeztető 4 óra → esedékes", await dueFor(4), true);
   check("⑥ 5 órás ajánlat, emlékeztető 6 óra → még nem", await dueFor(6), false);
 
-  // ⑦ the letter's percent binds (owner ruling, ADR-XXXX).
+  // ⑦ the letter's percent binds (owner ruling, ADR-0286).
   // 30, not the 25 constant: a send that stamped nothing would fall back to the legacy 25,
   // and an equal number would let a missing stamp pass.
   overrideEscalationConfigInProcess(cfg({ outreachPercent: 30 }));

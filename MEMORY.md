@@ -11,7 +11,7 @@ Utolsó frissítés: 2026-09-30 (🚀 **NAGY DEPLOY KÉSZ — 3 deploy egy nap a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-09-30 — SUB cit782078ba: lead-ajánlatok időzítése + bemutatkozó % állítható, ADR-XXXX) — LANDOLVA, élesítés a koordinátoré
+## Párhuzamos szál (2026-09-30 — SUB cit782078ba: lead-ajánlatok időzítése + bemutatkozó % állítható, ADR-0286) — LANDOLVA, élesítés a koordinátoré
 
 A tulaj kérése: a 72 h érvényesség, a 24 h emlékeztető és a −25% bemutatkozó kedvezmény is a /pricing
 „Lead-ajánlatok” szekciójában legyen állítható. §2b: 3 mock, a tulaj az „A”-t választotta (egy rács). Kulcsok ugyanabban

@@ -1,4 +1,4 @@
-# 2026-09-30 — Lead-ajánlatok: érvényesség, emlékeztető és bemutatkozó % állítható; a levél %-a köt (ADR-XXXX)
+# 2026-09-30 — Lead-ajánlatok: érvényesség, emlékeztető és bemutatkozó % állítható; a levél %-a köt (ADR-0286)
 
 **Szál:** SUB `cit782078ba` (koordinátor: CIT fő session). Briefek: `~/rc-briefs/eszkalacio-idozites-bemutatkozo-allithato-sub.md`,
 `~/rc-briefs/eszkalacio-idozites-sub-dontes.md`.

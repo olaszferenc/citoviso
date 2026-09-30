@@ -1467,7 +1467,7 @@ export async function markProspectSent(
   prospectId: string,
   channel: OutreachChannel,
 ): Promise<void> {
-  // ADR-XXXX: resolved BEFORE sent_at is stamped — the hand-sent draft quoted this
+  // ADR-0286: resolved BEFORE sent_at is stamped — the hand-sent draft quoted this
   // (an earlier message's percent, else the operator setting), and it binds.
   const percent = await outreachPercentForProspect(prospectId);
   const now = new Date();

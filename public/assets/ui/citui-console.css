@@ -2486,7 +2486,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
    live-offer notice are new. */
 .pr-esc__head { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
 .pr-esc.is-off .pr-esc__gated .pr-input { opacity: 0.45; }
-/* ADR-XXXX: the intro field sits OUTSIDE the switch, so only the gated block dims. */
+/* ADR-0286: the intro field sits OUTSIDE the switch, so only the gated block dims. */
 .pr-esc__sub { margin: 4px 0 8px; font-size: 13px; }
 .pr-esc__sub .mut { font-size: 12px; }
 .pr-hint { margin-top: 4px; font-size: 11.5px; color: var(--citui-muted); }

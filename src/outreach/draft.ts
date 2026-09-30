@@ -163,7 +163,7 @@ export interface DraftInput {
    */
   readonly lang: string;
   /**
-   * ADR-XXXX: the intro percent THIS letter quotes — resolved per prospect by
+   * ADR-0286: the intro percent THIS letter quotes — resolved per prospect by
    * buildDraftForProspect (an earlier message's stamped percent, else the operator
    * setting), and stamped by the send path after the send. Optional only for the
    * offline copy tools that render a sample lead; they get the default.

@@ -1,4 +1,4 @@
-## ADR-XXXX — A lead-ajánlatok időzítése és a bemutatkozó kedvezmény a /pricing-on állítható; a levél %-a köt (2026-09-30)
+## ADR-0286 — A lead-ajánlatok időzítése és a bemutatkozó kedvezmény a /pricing-on állítható; a levél %-a köt (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; briefek:
 `~/rc-briefs/eszkalacio-idozites-bemutatkozo-allithato-sub.md`, `~/rc-briefs/eszkalacio-idozites-sub-dontes.md`;

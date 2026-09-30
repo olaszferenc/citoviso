@@ -1,6 +1,6 @@
 // ADR-0088 §4b — the escalation follow-up mail. SEQUENTIAL by owner ruling:
 // the on-page decision card leads; if the prospect still has not purchased
-// the operator-set follow-up delay (ADR-XXXX; getEscalationConfig().followupHours)
+// the operator-set follow-up delay (ADR-0286; getEscalationConfig().followupHours)
 // after the offer was minted, ONE follow-up mail
 // carries the same offer and deadline ("kell más személy is a döntéshez" case).
 // Never re-sent (offer.followup_sent_at), never after purchase or expiry

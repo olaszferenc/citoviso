@@ -250,7 +250,7 @@ export async function sendPairSmsHalf(
   }
 
   const now = new Date();
-  // ADR-XXXX: the intro percent binds from the first message on.
+  // ADR-0286: the intro percent binds from the first message on.
   await stampOutreachOffer(prospectId, draftOfferPercent(gate.d.input));
   await db
     .updateTable("prospect")

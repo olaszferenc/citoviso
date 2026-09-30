@@ -629,7 +629,7 @@ export async function sendOutreachMail(
 
   try {
     const result = await getEmailSender().send(msg);
-    // ADR-XXXX: the letter's percent binds — stamped once it is out, not at the first visit.
+    // ADR-0286: the letter's percent binds — stamped once it is out, not at the first visit.
     await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
     return { ...base, outcome: { kind: "sent", emailId: result.id, provider: result.provider } };
   } catch (e) {

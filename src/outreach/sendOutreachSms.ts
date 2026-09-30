@@ -332,7 +332,7 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
     return no("az SMS küldése nem sikerült (modem/relay hiba) — a szerver-log mondja meg, miért; újra próbálható");
   }
 
-  // ADR-XXXX: the intro percent binds from the first message on (the SMS quotes none,
+  // ADR-0286: the intro percent binds from the first message on (the SMS quotes none,
   // but a later mail to this lead must quote — and honour — the same one).
   await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
   // First-touch stamp (H1 funnel base) — only if no channel got there first (ADR-0082).
