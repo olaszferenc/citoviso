@@ -160,9 +160,11 @@ export function alertInvoiceFailure(a: {
     : a.willRetry
       ? `Az automatikus újrapróba naponta egyszer, a reggeli számlázási tickben fut ` +
         `(összesen legfeljebb ${INVOICE_AUTO_RETRY_LIMIT}-szer). Ha a hiba oka a Számlázz-fiók ` +
-        `beállítása, javítsd, és azonnal kiadhatod: npx tsx scripts/invoice-retry.mts ${a.paymentId}`
+        `beállítása, javítsd, és azonnal kiadhatod a lead-lap „Számla újra ▸” gombjával ` +
+        `(vagy: npx tsx scripts/invoice-retry.mts ${a.paymentId})`
       : `Az automatikus újrapróbák ELFOGYTAK — magától többet NEM próbálkozunk. A hiba ` +
-        `elhárítása után így adhatod ki: npx tsx scripts/invoice-retry.mts ${a.paymentId}`;
+        `elhárítása után a lead-lap „Számla újra ▸” gombjával adhatod ki ` +
+        `(vagy: npx tsx scripts/invoice-retry.mts ${a.paymentId})`;
   return alertHouse({
     tag: "invoice",
     subject:

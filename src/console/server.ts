@@ -76,6 +76,7 @@ import { reenrichOne } from "../scraper/reenrichOne.js";
 import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
+import { leadIdOfPayment, retryInvoice } from "../billing/invoiceRetry.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
 import { applyWebhookResult, getActivationSummary, handleWebhook, requestPayment } from "../payment/service.js";
@@ -3272,6 +3273,28 @@ async function handle(
     }
     // A konvertáló gomb az artefaktum-kártyán van („Mock és generálás" fül) — oda vissza.
     return redirect(res, `/lead/${id}#ls-mocks`);
+  }
+  // POST /payment/:id/invoice-retry — re-issue a failed invoice now (ADR-0283). The
+  // operator clicked, the operator reads the answer on the lead page. The exhaustion mail
+  // aside (service.ts recordFailure), this path does not mail the house.
+  const invRetryMatch = /^\/payment\/([0-9a-f-]{36})\/invoice-retry$/i.exec(path);
+  if (method === "POST" && invRetryMatch) {
+    const paymentId = invRetryMatch[1]!;
+    const r = await retryInvoice(paymentId, "console");
+    const leadId = await leadIdOfPayment(paymentId);
+    if (!leadId) return redirect(res, "/");
+    const ok = r.status === "issued" || r.status === "already-issued";
+    const msg =
+      r.status === "failed"
+        ? `A számla most sem készült el (${r.attempts}. kísérlet): ${r.error}`
+        : r.status === "not-paid"
+          ? `Nem kifizetett fizetés (${r.paymentStatus}) — számla nem adható ki.`
+          : "Nincs ilyen fizetés.";
+    const flash = ok ? "" : `?flash=${encodeURIComponent(msg)}&flashKind=bad`;
+    // Success: back to the tab — the row itself now reads „· számla: <szám>”, the button
+    // is gone. Anything else: WITHOUT the anchor, like the hero swap — the .con-flash bar
+    // renders above the tabs and #ls-orders would scroll it out of view.
+    return redirect(res, `/lead/${leadId}${flash}${flash ? "" : "#ls-orders"}`);
   }
   // POST /lead/:id/request-payment — issue a pay-link for the lead's latest
   // submitted order intent (pilot: per-cycle pay-link, non-pay → deactivate).

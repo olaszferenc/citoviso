@@ -1803,7 +1803,16 @@ function orderIntentsPanel(
               const inv = p.invoiceNumber
                 ? ` <span class="mut small">${T(lang, "· számla: {number}", { number: esc(p.invoiceNumber) })}</span>`
                 : "";
-              return `<span class="pill ${cls}">${T(lang, "fizetés: {status}", { status: esc(p.status) })}</span>${link}${inv}`;
+              // ADR-0283: a paid payment whose invoice failed — the error, and the way back.
+              const invFail =
+                p.status === "paid" && p.invoiceFailure
+                  ? `<div class="small" style="margin-top:4px;flex-basis:100%">
+                       <span class="pill rejected">${T(lang, "számla: sikertelen ({n}×)", { n: p.invoiceFailure.attempts })}</span>
+                       <span class="mut">${esc(p.invoiceFailure.error)}</span>
+                       <form method="post" action="/payment/${esc(p.paymentId)}/invoice-retry" style="display:inline;margin-left:6px">
+                         <button type="submit">${T(lang, "Számla újra ▸")}</button></form></div>`
+                  : "";
+              return `<span class="pill ${cls}">${T(lang, "fizetés: {status}", { status: esc(p.status) })}</span>${link}${inv}${invFail}`;
             })
             .join(" ")
         : "";

@@ -1020,6 +1020,7 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
 }
 
 export interface PaymentView {
+  readonly paymentId: string;
   readonly orderIntentId: string;
   readonly status: string;
   readonly amount: number;
@@ -1029,6 +1030,11 @@ export interface PaymentView {
   readonly createdAt: string;
   /** Issued invoice number for this payment, if any (AAM auto-invoice). */
   readonly invoiceNumber: string | null;
+  /**
+   * ADR-0283: no issued invoice, but failed attempts — the last error and how many.
+   * The panel shows it with the „Számla újra” button.
+   */
+  readonly invoiceFailure: { readonly error: string; readonly attempts: number } | null;
 }
 
 /** Payments (+ issued invoice number) for a lead, newest first, via order_intent. */
@@ -1041,6 +1047,7 @@ export async function getPayments(leadId: string): Promise<PaymentView[]> {
       join.onRef("invoice.payment_id", "=", "payment.id").on("invoice.status", "=", "issued"),
     )
     .select([
+      "payment.id as paymentId",
       "payment.order_intent_id as orderIntentId",
       "payment.status as status",
       "payment.amount as amount",
@@ -1053,7 +1060,27 @@ export async function getPayments(leadId: string): Promise<PaymentView[]> {
     .where("prospect.lead_id", "=", leadId)
     .orderBy("payment.created_at", "desc")
     .execute();
+  const failedRows = rows.length
+    ? await db
+        .selectFrom("invoice")
+        .select(["payment_id", "error", "issued_at"])
+        .where("status", "=", "failed")
+        .where(
+          "payment_id",
+          "in",
+          rows.map((r) => r.paymentId),
+        )
+        .orderBy("issued_at", "asc")
+        .execute()
+    : [];
+  const failures = new Map<string, { error: string; attempts: number }>();
+  for (const f of failedRows) {
+    const prev = failures.get(f.payment_id);
+    failures.set(f.payment_id, { error: f.error ?? "", attempts: (prev?.attempts ?? 0) + 1 });
+  }
   return rows.map((r) => ({
+    paymentId: r.paymentId,
+    invoiceFailure: r.invoiceNumber ? null : (failures.get(r.paymentId) ?? null),
     orderIntentId: r.orderIntentId,
     status: r.status,
     amount: r.amount,

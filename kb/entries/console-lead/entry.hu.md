@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-09-20
+updated: 2026-09-30
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -399,6 +399,38 @@ modulok a tulaj konfigurátor-választásából jönnek, nem kézből.
 ⚠️ **Ez a gomb el van rejtve, amíg ki nem nyitod.** A jóváhagyott mock kártyáján kattints a
 **„Részletek ▾”** gombra — a konvertáló űrlap (és a mock törlése, az AI-költség, a recept)
 ott nyílik ki. Visszazárni a **„Bezárom ▴”** felirattal lehet, ugyanazon a gombon.
+
+## Ha a számla nem készült el
+
+Ha a vevő fizetett, de a számlázó (Számlázz.hu) nem állította ki a számlát, a lead lapján a
+**„Csomag és fizetés”** fülön, a fizetés sora alatt egy piros *számla: sikertelen* jelölés
+áll — utána zárójelben, hányszor próbáltuk (pl. 1×) —, mellette a számlázó saját hibaszövege, és
+egy **„Számla újra ▸”** gomb. Erről levelet is kapsz (lásd a Beállítások súgójában az üzemi
+riasztásokat).
+
+1. **Olvasd el a hibaszöveget.** Ha a Számlázz.hu fiók beállításáról szól (például „össze
+   kell kötnöd fiókodat a NAV Online Számla rendszerével”), azt a Számlázz.hu felületén kell
+   rendbe tenni — a gomb addig ugyanazzal a hibával bukik.
+2. Ha a hiba nem a fiók beállításáról szól, vagy azt már rendbe tetted, koppints a
+   **„Számla újra ▸”** gombra. Siker esetén a lap a „Csomag és fizetés” fülre tér vissza, és a
+   fizetés sorában a gomb helyén „· számla: …” áll, a kiállított számla számával. A vevő a
+   számlát a szokásos számla-levélben kapja meg. Ha most sem sikerült, a lap TETEJÉN, a fülek
+   fölött piros sáv mondja meg, miért (és hányadik kísérlet volt).
+3. Ha nem nyúlsz hozzá, a rendszer naponta egyszer (a reggeli számlázási futásban) magától is
+   újrapróbálja. Az első bukás után **összesen legfeljebb három újrapróba** jár — és ebbe a
+   sikertelen gombnyomásaid is beleszámítanak (két sikertelen kattintás után egy automatikus
+   próba marad). Amikor a keret elfogy, egy „újrapróbák elfogytak” levél jön; onnantól csak a
+   gomb adja ki.
+
+**Nem lesz belőle két számla.** Ha közben már elkészült a számla (például a reggeli futás
+kiadta), a gomb nem ad ki újat: a lap a „Csomag és fizetés” fülre tér vissza, és a fizetés
+sorában a meglévő számla száma áll. Ha egy korábbi próbánál a
+számlázó kiállította a számlát, de a válasza nem ért vissza hozzánk, az újrapróba ugyanazt a
+számlát kapja vissza, nem egy másodikat.
+
+**Ha a hiba „Nincs számlázási nyilatkozat az orderen”** — ez egy régi rendelés, amihez a vevő
+nem adott meg számlázási adatot. Ilyenkor újrapróba nem segít, és a rendszer magától nem is
+próbálkozik: a számlát kézzel kell kiállítani a Számlázz.hu felületén.
 
 ## Diszkvalifikálás
 
