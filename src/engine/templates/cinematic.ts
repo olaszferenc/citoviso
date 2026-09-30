@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -95,8 +95,15 @@ const CINEMATIC_CSS = `
     /* the dock rides 84px up onto the hero (.cn-dock margin-top:-84px): keep the CTAs above it — 84 + 24 air */
     .cn-cinein{padding-top:24px;padding-bottom:108px}
   }
+  /* short DESKTOP too (a 150%-scaled laptop is ~1320×570, 2026-09-30): the same bottom-anchored
+     copy ran into the overlay masthead's nav. The masthead joins the flow as on the landscape phone,
+     the copy stays bottom-anchored and keeps its desktop size. */
+  @media(min-width:701px) and (min-height:501px) and (max-height:760px){
+    .cn-cine{height:auto;min-height:max(100svh,640px);flex-direction:column;align-items:stretch;justify-content:space-between}
+    .cn-cine .cit-mast{position:relative;inset:auto}
+  }
   .cn-cinesub{overflow-wrap:anywhere}
-  .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,6.4vw,74px);line-height:1.06;max-width:16ch;margin:16px 0 16px}
+  .cn-cine h1{font-family:var(--cit-font-display);font-weight:600;font-size:min(clamp(38px,6.4vw,74px),var(--cit-hero-cap,999px));line-height:1.06;max-width:var(--cit-hero-measure,16ch);margin:16px 0 16px}
   /* landscape phone: 4 lines × 54px ended 6px above the fold on Laguna (2026-09-27) — a barely-passing
      value is a dead rule; vh-bound size, AFTER the base rule so it wins at equal specificity */
   @media(max-height:500px) and (min-width:701px){.cn-cine h1{font-size:clamp(28px,8.5vh,40px);max-width:24ch}}
@@ -301,7 +308,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ${slides}
     ${mast}
     <div class="cn-wrap cn-cinein">
-      <h1>${accented(h1, heroCopy.accent)}</h1>
+      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="cn-cinesub">${esc(sub)}</p>` : ""}
       <div class="cn-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -520,6 +527,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${CINEMATIC_CSS}
 ${mastheadCss("overlay")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

@@ -13,7 +13,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const WATERCOLOR_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -74,7 +74,7 @@ const WATERCOLOR_CSS = `
   .wc-hgrid{position:relative;z-index:1;display:grid;gap:36px;grid-template-columns:1fr;align-items:center}
   @media(min-width:940px){.wc-hgrid{grid-template-columns:1.05fr .95fr}}
   .wc-k{display:inline-block;font-size:13.5px;font-weight:700;color:var(--cit-accent);background:var(--cit-surface);border-radius:100px;padding:8px 18px;box-shadow:var(--cit-shadow);margin-bottom:20px}
-  .wc-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(38px,5.6vw,62px);line-height:1.12;margin-bottom:18px}
+  .wc-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:min(clamp(38px,5.6vw,62px),var(--cit-hero-cap,999px));line-height:1.12;margin-bottom:18px}
   .wc-hero h1 em{font-style:italic;color:var(--cit-accent)}
   /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
      hero copy was placed right on the previous round, but the desktop-sized headline still ran under
@@ -273,7 +273,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="wc-hgrid">
         <div>
           ${data.contact.address ? `<span class="wc-k">${esc(data.contact.address)}</span>` : ""}
-          <h1>${accented(h1, heroCopy.accent)}</h1>
+          <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
           ${sub ? `<p class="wc-herosub">${esc(sub)}</p>` : ""}
           <div class="wc-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -520,6 +520,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   ${renderSkinVars(skin, data.palette?.accent)}
 ${WATERCOLOR_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

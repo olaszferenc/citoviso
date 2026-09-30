@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, galleryOrder, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, galleryOrder, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -75,7 +75,7 @@ const CLAY_CSS = `
   .cl-hero{padding:40px 0 40px}
   .cl-hgrid{display:grid;gap:34px;grid-template-columns:1fr;align-items:center}
   @media(min-width:940px){.cl-hgrid{grid-template-columns:1.05fr .95fr}}
-  .cl-hero h1{font-size:clamp(36px,5.4vw,60px);margin-bottom:18px}
+  .cl-hero h1{font-size:min(clamp(36px,5.4vw,60px),var(--cit-hero-cap,999px));margin-bottom:18px}
   .cl-hero h1 em{font-style:normal;background:linear-gradient(120deg, var(--cit-accent), color-mix(in srgb, var(--cit-accent) 55%, var(--cit-ink)));-webkit-background-clip:text;background-clip:text;color:transparent}
   .cl-hero p{color:var(--cit-muted);max-width:470px;margin-bottom:30px}
   .cl-hvis{position:relative}
@@ -268,7 +268,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const hero = `<header class="cl-hero" id="top"><div class="cl-wrap">
     <div class="cl-hgrid">
       <div>
-        <h1>${accented(h1, heroCopy.accent)}</h1>
+        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div>
           ${hasContact ? `<a class="cl-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -486,6 +486,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   ${renderSkinVars(skin, data.palette?.accent)}
 ${CLAY_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

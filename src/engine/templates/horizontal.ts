@@ -12,7 +12,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const HORIZONTAL_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -78,7 +78,15 @@ ${centredModsecCss("horizontal")}
      --cit-bg is light). Contract: design-refs/engine/hero-contrast. */
   .h-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 22%,rgba(0,0,0,.52) 60%,rgba(0,0,0,.8) 100%),linear-gradient(180deg, color-mix(in srgb, var(--cit-bg) 62%, transparent), transparent 40%),radial-gradient(95% 95% at 50% 115%, color-mix(in srgb, var(--cit-bg) 96%, transparent), transparent 62%),linear-gradient(90deg, color-mix(in srgb, var(--cit-bg) 78%, transparent), transparent 70%)}
   .h-heroin{position:relative;z-index:2;max-width:640px;padding-bottom:96px}
-  .h-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:clamp(40px,7vw,84px);line-height:1.05;margin:18px 0 20px}
+  /* short DESKTOP too (a 150%-scaled laptop is ~1320×570, 2026-09-30): the bottom-anchored copy
+     outgrew the space under the overlay masthead and ran into the nav even with a 3-row title.
+     Same geometry as the landscape-phone rule — the masthead joins the flow, the hero grows with
+     its content — but the copy stays bottom-anchored and the type keeps its desktop size. */
+  @media(min-width:701px) and (min-height:501px) and (max-height:760px){
+    .h-hero{height:auto;min-height:max(100svh,620px);flex-direction:column;align-items:stretch;justify-content:space-between}
+    .h-hero .cit-mast{position:relative;inset:auto}
+  }
+  .h-hero h1{font-family:var(--cit-font-display);font-weight:600;font-size:min(clamp(40px,7vw,84px),var(--cit-hero-cap,999px));line-height:1.05;margin:18px 0 20px}
   .h-hero h1 em{font-style:italic;color:var(--cit-accent)}
   /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
      hero copy was placed right on the previous round, but the desktop-sized headline still ran under
@@ -265,7 +273,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ${heroBg}
     ${mast}
     <div class="h-wrap h-heroin">
-      <h1>${accented(h1, heroCopy.accent)}</h1>
+      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="h-herosub">${esc(sub)}</p>` : ""}
       <div class="h-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -481,6 +489,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   ${renderSkinVars(skin, data.palette?.accent)}
 ${HORIZONTAL_CSS}
 ${mastheadCss("overlay")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

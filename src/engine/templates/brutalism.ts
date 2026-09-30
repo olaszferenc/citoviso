@@ -14,7 +14,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { ratingScale } from "../rating.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 // Monospace stack for the "industrial" voice (labels, tags, marquee). System fonts only —
 // the skin decides the display/body families; the mono accent is template character.
@@ -91,7 +91,7 @@ const BRUTALISM_CSS = `
   @media(max-width:959px){.b-hero-l{border-bottom:3px solid var(--cit-ink)}}
   @media(min-width:960px){.b-hero-l{border-right:3px solid var(--cit-ink)}}
   /* hyphens first: overflow-wrap alone cut "SÉTATÁVOLSÁG|ÁBAN" with no hyphen at 390px (measured 2026-09-26). */
-  .b-hero-l h1{font-size:clamp(42px,8.5vw,100px);margin-bottom:20px;hyphens:auto;overflow-wrap:anywhere}
+  .b-hero-l h1{font-size:min(clamp(42px,8.5vw,100px),var(--cit-hero-cap,999px));margin-bottom:20px;hyphens:auto;overflow-wrap:anywhere}
   .b-hero-l h1 em{font-style:normal;color:var(--cit-accent)}
   /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
      hero copy was placed right on the previous round, but the desktop-sized headline still ran under
@@ -306,7 +306,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const hero = `<header class="b-hero" id="top">
     <div class="b-hero-grid">
       <div class="b-hero-l">
-        <h1>${accented(h1, heroCopy.accent)}<em>.</em></h1>
+        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}<em>.</em></h1>
         ${sub ? `<p class="b-hero-sub">${esc(sub)}</p>` : ""}
         ${tags ? `<div class="b-tags">${tags}</div>` : ""}
         <div class="b-ctas">
@@ -467,6 +467,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${BRUTALISM_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

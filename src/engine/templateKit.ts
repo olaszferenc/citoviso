@@ -672,3 +672,36 @@ export const MOBCTA_CSS = `
   .cit-mobcta__t b{font-size:17px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cit-mobcta__t b svg{width:14px;height:14px;flex:none}
   .cit-mobcta__t small{font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;text-transform:none;font-family:var(--cit-font-body)}`;
+
+/**
+ * HERO TITLE FIT — the hero <h1> is the lead's UNIQUE sentence (8–12 words, 50–80 chars),
+ * but every template sized it with a width-only clamp (`clamp(42px,7vw,86px)`), tuned for
+ * a 3-word name. On a laptop with OS scaling (1920×1080 at 150% = a ~1320×570 CSS
+ * viewport) the width term maxes out while the height is tiny: dark-luxury's 5-line title
+ * rose above its 100vh hero into the masthead, horizontal's 8 lines left the viewport,
+ * transit/brutalism filled the whole fold (owner, 2026-09-30: "a szöveg kinyírja az oldalt").
+ *
+ * ONE rule for every template: the length band of the title (s ≤ 28 · m ≤ 48 · l ≤ 72 ·
+ * xl > 72 visible chars) sets a HEIGHT-bound ceiling, `--cit-hero-cap`, and each template's own
+ * clamp is wrapped as `min(<own clamp>, var(--cit-hero-cap, 999px))`. The ceiling only
+ * bites on short viewports — at 1920×1080 a long title keeps ~81px. The short bands (s, m)
+ * are loose on purpose: the 28 older live mocks carry 20–41 character titles that fit their
+ * 2–3 rows at 95px on the same laptop, and a tighter cap only shrank what was not broken. A long sentence also
+ * gets a width term (9vw) that only a phone reaches: 42px stacked it into 6 rows at 390px,
+ * 35px keeps it at ~4–5; shorter titles keep the template's own mobile size. The px floor
+ * keeps a landscape phone legible (the templates' own max-height:500px rules still apply
+ * underneath).
+ *
+ * A template that narrows its title to a few `ch` (dark-luxury 14ch, parallax/cinematic
+ * 16ch) reads `max-width:var(--cit-hero-measure, <own>)`: a long sentence gets 22ch, so it
+ * shrinks in lines instead of stacking 3-word rows up into the overlay masthead.
+ */
+export function heroFit(text: string): string {
+  const n = text.replace(/\s+/g, " ").trim().length;
+  return `data-cit-hero-fit="${n <= 28 ? "s" : n <= 48 ? "m" : n <= 72 ? "l" : "xl"}"`;
+}
+export const HERO_FIT_CSS = `
+  h1[data-cit-hero-fit="s"]{--cit-hero-cap:max(34px,16vh)}
+  h1[data-cit-hero-fit="m"]{--cit-hero-cap:max(30px,12vh)}
+  h1[data-cit-hero-fit="l"]{--cit-hero-cap:min(max(28px,7.5vh),max(30px,9vw));--cit-hero-measure:22ch}
+  h1[data-cit-hero-fit="xl"]{--cit-hero-cap:min(max(26px,6vh),max(28px,8vw));--cit-hero-measure:24ch}`;

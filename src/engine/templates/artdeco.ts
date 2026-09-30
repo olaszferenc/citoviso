@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -75,7 +75,7 @@ ${centredModsecCss("artdeco")}
   .ad-hero{padding:60px 0 40px;position:relative;overflow:hidden}
   .ad-hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg, color-mix(in srgb, var(--cit-accent) 5%, transparent) 0 1px, transparent 1px 46px);pointer-events:none}
   .ad-poster{position:relative;padding:44px 26px;text-align:center}
-  .ad-poster h1{font-size:clamp(44px,9vw,104px);letter-spacing:.1em;margin-bottom:6px}
+  .ad-poster h1{font-size:min(clamp(44px,9vw,104px),var(--cit-hero-cap,999px));letter-spacing:.1em;margin-bottom:6px}
   /* A 44px floor with .1em tracking put "sétatávolságra" / "kirándulásokhoz" past the frame on
      both sides at 390px (clipped, measured 2026-09-26): on a phone the poster type is smaller,
      tighter, and long Hungarian compounds may hyphenate. */
@@ -285,7 +285,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const hero = `<header class="ad-hero" id="top">
     <div class="ad-wrap">
       <div class="ad-frame ad-poster">
-        <h1>${accented(h1, heroCopy.accent)}</h1>
+        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p class="ad-sub">${esc(sub)}</p>` : ""}
         ${decoRule}
         ${intro ? `<p class="ad-intro">${esc(intro)}</p>` : ""}
@@ -540,6 +540,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   ${renderSkinVars(skin, data.palette?.accent)}
 ${ARTDECO_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

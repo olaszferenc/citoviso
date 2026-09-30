@@ -12,7 +12,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -77,7 +77,10 @@ const PARALLAX_CSS = `
      (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check) */
   .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.3) 30%,rgba(10,12,14,.6) 64%,rgba(10,12,14,.92) 100%)}
   .t-hero{padding-top:140px;padding-bottom:88px}
-  .t-hero h1{font-size:clamp(36px,5.5vw,72px);color:#fff;margin-bottom:18px;max-width:16ch}
+  /* short desktop (a 150%-scaled laptop is ~1320×570, 2026-09-30): the centred copy outgrows the
+     panel and rests on this padding, but the overlay masthead reaches 163px — clear it */
+  @media(min-width:901px) and (max-height:760px){.t-hero{padding-top:190px}}
+  .t-hero h1{font-size:min(clamp(36px,5.5vw,72px),var(--cit-hero-cap,999px));color:#fff;margin-bottom:18px;max-width:var(--cit-hero-measure,16ch)}
   /* landscape phone (844×390, 2026-09-27): 5 lines × 46px ended 6px above the fold on Laguna — a
      barely-passing value is a dead rule; vh-bound size after the base rule, portrait/desktop untouched */
   @media(max-height:500px) and (min-width:701px){
@@ -253,7 +256,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hero = `${heroPanelOpen}
     ${mast}
     <div class="t-wrap t-parin t-hero">
-      <h1>${accented(h1, heroCopy.accent)}</h1>
+      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -487,6 +490,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   ${renderSkinVars(skin, data.palette?.accent)}
 ${PARALLAX_CSS}
 ${mastheadCss("overlay")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

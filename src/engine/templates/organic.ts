@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -68,7 +68,7 @@ const ORGANIC_CSS = `
     radial-gradient(46% 40% at 8% 78%, color-mix(in srgb, var(--cit-accent) 14%, transparent), transparent 70%)}
   .og-hero-in{position:relative;display:grid;gap:34px;grid-template-columns:1fr}
   @media(min-width:940px){.og-hero-in{grid-template-columns:1.05fr .95fr;align-items:center}}
-  .og-hero h1{font-family:var(--cit-font-display);font-size:clamp(38px,5.6vw,66px);margin-bottom:20px}
+  .og-hero h1{font-family:var(--cit-font-display);font-size:min(clamp(38px,5.6vw,66px),var(--cit-hero-cap,999px));margin-bottom:20px}
   .og-hero h1 em{font-style:italic;color:var(--cit-accent)}
   .og-hero p{max-width:480px;color:var(--cit-muted);margin-bottom:30px}
   .og-hero-visual{position:relative;min-height:420px}
@@ -247,7 +247,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="og-hero-grad"></div>
     <div class="og-wrap og-hero-in">
       <div>
-        <h1>${accented(h1, heroCopy.accent)}</h1>
+        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div>
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -495,6 +495,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   ${renderSkinVars(skin, data.palette?.accent)}
 ${ORGANIC_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

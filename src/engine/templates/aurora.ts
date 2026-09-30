@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -92,7 +92,7 @@ const AURORA_CSS = `
   .au-hero{padding:48px 0 60px}
   .au-herogrid{display:grid;gap:22px;grid-template-columns:1fr}
   @media(min-width:960px){.au-herogrid.au-has-widgets{grid-template-columns:1.1fr .9fr;align-items:center}}
-  .au-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(36px,5.6vw,62px);line-height:1.12;letter-spacing:-.02em;margin-bottom:18px}
+  .au-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:min(clamp(36px,5.6vw,62px),var(--cit-hero-cap,999px));line-height:1.12;letter-spacing:-.02em;margin-bottom:18px}
   .au-hero h1 em{font-style:italic;color:var(--cit-accent)}
   .au-herosub{color:var(--cit-muted);max-width:480px;margin-bottom:28px}
   .au-heroctas{display:flex;gap:12px;flex-wrap:wrap}
@@ -302,7 +302,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     <div class="au-wrap">
       <div class="au-herogrid${hasWidgets ? " au-has-widgets" : ""}">
         <div>
-          <h1>${accented(h1, heroCopy.accent)}</h1>
+          <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
           ${sub ? `<p class="au-herosub">${esc(sub)}</p>` : ""}
           <div class="au-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -514,6 +514,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   ${renderSkinVars(skin, data.palette?.accent)}
 ${AURORA_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

@@ -11,6 +11,11 @@ Utolsó frissítés: 2026-09-29 (📱 **Telefonos kör koordinátor ZÁRVA — a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-30 — Mock hős-cím tipográfia, koordináló `cit66a15e89`, ADR-XXXX) — LANDOLVA, élesre a deployjal
+- A tulaj: „a szöveg kinyírja az oldalt” — mérve: 150%-os laptop (~1320×570) a hiba, a h1 clamp-je csak a szélességet nézte.
+- Egy közös szabály (`templateKit.ts` `heroFit`/`HERO_FIT_CSS`: hossz-sáv → magasság-plafon), 14 sablon bekötve + ráúszó-fejléces skinek alacsony asztalon fejléc a folyásban; mind a 47 éles mock (teszt-lead 19 + 28 másik) lemérve 4 méretben: előtte 23 hibás, utána 1 (watercolor, elrendezés).
+- Őr: `scripts/hero-fit-check.mts` (pre-commit, negatív kontrollal). Deploy után: `rerender-mock.mts` a már legenerált mockokra. Jegyzet: `_planning/memory/2026-09-30_mock_hos_cim_tipografia.md`.
+
 ## Párhuzamos szál (2026-09-30 — SUB i18nart: a 7 `{Art}`-os angol string) — LANDOLVA
 
 A deploy GATE 5 élesen 7 UI-stringet hiányolt: a fordító a placeholder-sértőt újrapróba nélkül eldobta. Most 2 újrapróba-kör

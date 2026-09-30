@@ -10,7 +10,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -72,7 +72,7 @@ ${centredModsecCss("fullbleed")}
      photo (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check). */
   .t-herobg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,8,6,.55) 0%,rgba(10,8,6,.2) 30%,rgba(10,8,6,.6) 62%,rgba(10,8,6,.95) 100%)}
   .t-heroin{position:relative;z-index:2;padding:0 24px 84px;max-width:900px}
-  .t-hero h1{font-family:var(--cit-font-display);font-weight:500;font-size:clamp(38px,5vw,64px);line-height:1.07;margin:0 auto 16px;max-width:18ch}
+  .t-hero h1{font-family:var(--cit-font-display);font-weight:500;font-size:min(clamp(38px,5vw,64px),var(--cit-hero-cap,999px));line-height:1.07;margin:0 auto 16px;max-width:18ch}
   .t-hero h1 em{font-style:italic;color:color-mix(in srgb, var(--cit-accent) 55%, #fff)}
   @media(max-width:700px){.t-hero h1{font-size:32px;max-width:100%}}
   /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
@@ -257,7 +257,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ${heroBg}
     ${mast}
     <div class="t-heroin">
-      <h1>${accented(h1, heroCopy.accent)}</h1>
+      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -442,6 +442,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${FULLBLEED_CSS}
 ${mastheadCss("overlay")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

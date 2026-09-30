@@ -21,6 +21,8 @@ import {
   ctaLabel,
   esc,
   firstSentence,
+  heroFit,
+  HERO_FIT_CSS,
   honestStarCount,
   mastheadCss,
   mastheadHtml,
@@ -68,7 +70,7 @@ const DOPAMINE_CSS = `
   /* hero — sunburst gradient built from the skin accent (no fixed neon palette) */
   .t-hero{position:relative;overflow:hidden;text-align:center;color:var(--cit-on-accent);padding:78px 0 0;border-bottom:3px solid var(--cit-ink);background:radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--cit-accent) 28%, #fff) 0%, var(--cit-accent) 46%, color-mix(in srgb, var(--cit-accent) 48%, var(--cit-ink)) 82%)}
   .t-hero--flat{padding-bottom:92px}
-  .t-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(42px,8.5vw,100px);line-height:1.05;text-shadow:4px 4px 0 var(--cit-ink);max-width:16ch;margin:0 auto}
+  .t-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:min(clamp(42px,8.5vw,100px),var(--cit-hero-cap,999px));line-height:1.05;text-shadow:4px 4px 0 var(--cit-ink);max-width:16ch;margin:0 auto}
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 18%, #fff)}
   /* LANDSCAPE PHONE, the headline itself (844×390, owner: „a nyitottakat még javítsd”, 2026-09-27): the
      hero copy was placed right on the previous round, but the desktop-sized headline still ran under
@@ -249,7 +251,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hero = `<header class="t-hero${heroPhoto ? "" : " t-hero--flat"}" id="top">
     ${heroPhoto ? "" : stickers}
     <div class="t-wrap">
-      <h1>${accented(h1, heroCopy.accent)}</h1>
+      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>` : ""}
       ${heroPhoto ? `<div class="t-heroimgwrap">
@@ -413,6 +415,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   ${renderSkinVars(skin, data.palette?.accent)}
 ${DOPAMINE_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
   </style>
 </head>
 <body class="cit-tpl-dopamine">

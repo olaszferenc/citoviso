@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const SCRAPBOOK_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -77,7 +77,7 @@ const SCRAPBOOK_CSS = `
   .sb-hero{padding:44px 0 40px;overflow:hidden}
   .sb-herogrid{display:grid;gap:40px;grid-template-columns:1fr;align-items:center}
   @media(min-width:940px){.sb-herogrid{grid-template-columns:1fr 1fr}}
-  .sb-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(38px,6vw,64px);line-height:1.1;margin:2px 0 18px}
+  .sb-hero h1{font-family:var(--cit-font-display);font-weight:800;font-size:min(clamp(38px,6vw,64px),var(--cit-hero-cap,999px));line-height:1.1;margin:2px 0 18px}
   .sb-hero p{max-width:460px;margin-bottom:26px;color:color-mix(in srgb, var(--cit-ink) 88%, transparent)}
   .sb-heroctas{display:flex;flex-wrap:wrap;gap:12px}
   .sb-scrap{position:relative;min-height:420px}
@@ -256,7 +256,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="sb-wrap">
       <div class="sb-herogrid">
         <div>
-          <h1>${accented(h1, heroCopy.accent)}</h1>
+          <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
           ${sub ? `<p>${esc(sub)}</p>` : ""}
           <div class="sb-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szobát foglalnék")}</a>` : ""}
@@ -467,6 +467,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   ${renderSkinVars(skin, data.palette?.accent)}
 ${SCRAPBOOK_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

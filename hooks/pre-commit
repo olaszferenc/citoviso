@@ -1798,6 +1798,16 @@ if [ -f scripts/hero-contrast-check.mts ] && \
   echo "[pre-commit] hero-contrast-check (hero-cím olvasható világos fotón)…"
   npx tsx scripts/hero-contrast-check.mts
 fi
+# Hero title FIT gate (2026-09-30, templateKit.ts HERO TITLE FIT): the hero <h1> — the
+# lead's long unique sentence — must not cross the masthead, leave the page or eat more
+# than 60% of the first screen, at a 150%-scaled laptop (1320×570), 1366×650, 1920×960 and
+# a phone. Carries its own negative control (the pre-fix sizing must fail). ~90s headless,
+# so only when a template, the shared kit or the renderer is staged.
+if [ -f scripts/hero-fit-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|templateKit\.ts|skins\.ts|render\.ts)|^scripts/hero-fit-check'; then
+  echo "[pre-commit] hero-fit-check (a hős-cím nem veri szét az oldalt: fejléc · képernyő-arány · sorok)…"
+  npx tsx scripts/hero-fit-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Configurator sell-gate (2026-08-21): the itemised switches must be open on panel
 # open and the monthly total must stay on screen AND move with every flip — measured
 # in a real browser at desktop + phone width. Headless render (~15s), so it runs only

@@ -17,7 +17,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const TRANSIT_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -65,7 +65,7 @@ const TRANSIT_CSS = `
   @media(min-width:960px){.tb-hgrid{grid-template-columns:1.05fr .95fr}}
   .tb-hl{padding:56px 0 50px}
   @media(min-width:960px){.tb-hl{padding-right:46px}}
-  .tb-hero h1{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:clamp(40px,7.2vw,84px);line-height:1.04;margin-bottom:16px}
+  .tb-hero h1{font-family:var(--cit-font-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;font-size:min(clamp(40px,7.2vw,84px),var(--cit-hero-cap,999px));line-height:1.04;margin-bottom:16px}
   /* phone: the 40px tracked caps ran to 7 lines at 390px (Tihany, FK-009) — the board's
      display voice stays, the size steps down so the headline holds in ≤5 lines */
   @media(max-width:560px){.tb-hero h1{font-size:32px;letter-spacing:.01em}}
@@ -252,7 +252,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const hero = `<header class="tb-hero" id="top">
     <div class="tb-wrap tb-hgrid">
       <div class="tb-hl">
-        <h1>${accented(h1, heroCopy.accent)}</h1>
+        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div class="tb-heroctas">
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
@@ -477,6 +477,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   ${renderSkinVars(skin, data.palette?.accent)}
 ${TRANSIT_CSS}
 ${mastheadCss("flow")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>

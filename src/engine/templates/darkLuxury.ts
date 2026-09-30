@@ -13,7 +13,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const DARK_LUXURY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -75,6 +75,14 @@ const DARK_LUXURY_CSS = `
      vanishes when --cit-bg is light). Contract: design-refs/engine/hero-contrast. */
   .t-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 20%,rgba(0,0,0,.52) 58%,rgba(0,0,0,.8) 100%),linear-gradient(180deg,color-mix(in srgb,var(--cit-bg) 62%,transparent) 0%,color-mix(in srgb,var(--cit-bg) 18%,transparent) 38%,color-mix(in srgb,var(--cit-bg) 92%,transparent) 92%)}
   .t-heroin{position:relative;z-index:2;padding-bottom:130px}
+  /* short DESKTOP too (a 150%-scaled laptop is ~1320×570, 2026-09-30): the bottom-anchored copy
+     outgrew the space under the overlay masthead and ran into the nav even with a 3-row title.
+     Same geometry as the landscape-phone rule — the masthead joins the flow, the hero grows with
+     its content — but the copy stays bottom-anchored and the type keeps its desktop size. */
+  @media(min-width:701px) and (min-height:501px) and (max-height:760px){
+    .t-hero{height:auto;min-height:max(100svh,640px);flex-direction:column;align-items:stretch;justify-content:space-between}
+    body.cit-tpl-dark-luxury .cit-mast{position:relative;inset:auto}
+  }
 
   /* masthead dialect (owner contract 2026-08-30): spaced-caps luxury voice in page ink */
   .cit-mast{--mast-ink:var(--cit-ink);--mast-sub:color-mix(in srgb,var(--cit-ink) 72%,transparent);
@@ -84,7 +92,7 @@ const DARK_LUXURY_CSS = `
     --mast-hotline:var(--cit-accent);--mast-track:4px;--mast-weight:400}
   body.cit-tpl-dark-luxury .cit-mast-name{text-transform:uppercase}
   body.cit-tpl-dark-luxury .cit-mast-links{max-width:860px}
-  .t-hero h1{font-size:clamp(42px,7vw,86px);max-width:14ch;margin-bottom:22px}
+  .t-hero h1{font-size:min(clamp(42px,7vw,86px),var(--cit-hero-cap,999px));max-width:var(--cit-hero-measure,14ch);margin-bottom:22px}
   .t-herosub{max-width:520px;color:color-mix(in srgb,var(--cit-ink) 72%,var(--cit-muted));margin-bottom:34px}
   .t-heroctas{display:flex;gap:16px;flex-wrap:wrap}
   @media(max-width:700px){.t-heroin{padding-bottom:96px}}
@@ -283,7 +291,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ${heroBg}
     ${mast}
     <div class="t-wrap t-heroin">
-      <h1>${accented(h1, heroCopy.accent)}</h1>
+      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
@@ -492,6 +500,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   ${renderSkinVars(skin, data.palette?.accent)}
 ${DARK_LUXURY_CSS}
 ${mastheadCss("overlay")}
+${HERO_FIT_CSS}
 ${MOBCTA_CSS}
   </style>
 </head>
