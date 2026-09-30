@@ -19,6 +19,7 @@
 
 import { db } from "../db/client.js";
 import { alertHouse } from "../console/houseAlert.js";
+import { mmsPullBlocks } from "../sms/sendWindow.js";
 
 /** A 'sending' row older than this is a relay that died mid-send (a send is ≤180 s). */
 export const MMS_STALE_MS = 10 * 60_000;
@@ -91,9 +92,12 @@ async function alertRow(id: string, headline: string, detail: string): Promise<v
 
 /**
  * Pull: settle stale 'sending' rows as 'unknown' (+ alert), then hand out the OLDEST
- * queued row, marked 'sending' with one attempt spent. At most one message.
+ * queued row, marked 'sending' with one attempt spent. At most one message — and none
+ * outside the MMS window (src/sms/sendWindow.ts: before 19:30 Budapest and only while
+ * the companion SMS's gate is open); the row stays 'queued' for the morning.
+ * `windowAt` is the guard's seam: the window is judged at that instant, the rest at `now`.
  */
-export async function pullMms(now: Date = new Date()): Promise<PulledMms[]> {
+export async function pullMms(now: Date = new Date(), windowAt: Date = now): Promise<PulledMms[]> {
   const stale = await db
     .updateTable("mms_outbox")
     .set({ status: "unknown", last_error: "a relay nem nyugtázta 10 percen belül — a kimenet ismeretlen" })
@@ -110,6 +114,7 @@ export async function pullMms(now: Date = new Date()): Promise<PulledMms[]> {
         "Ha a relay helyi naplójában ott van, a következő futása utólag nyugtázza.",
     );
   }
+  if (mmsPullBlocks(windowAt)) return [];
   // Claim-then-read in ONE statement: two overlapping pulls cannot get the same row.
   const claimed = await db
     .updateTable("mms_outbox")

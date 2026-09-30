@@ -57,3 +57,13 @@ automatikus újraküldés beragadt sorra (dupla fizetős hideg MMS).
 **Deploy utáni teendők (NEM a land része):** élesen `MMS_PROVIDER=queue` az .env-be; a dev gépen
 a `citoviso-mms-relay.timer` telepítése + engedélyezése a fő fából. Őr: `scripts/mms-relay-check.mts`
 (mock modem, valódi DB, eldobható fixture) + `scripts/mms-preview-gate-check.mts` ⑨ (sharp).
+
+**Kiegészítés (2026-09-30, tulaj: „ok a javaslat”) — esti tiltás:** ha az MMS 20:00 után ér ki, a
+kísérő link-SMS-t az ablak-kapu megfogja, a pár törött marad, élesen pedig nincs `pair-repair`. Ezért a
+`pullMms` **19:30 (Europe/Budapest) után és 8:00 előtt nem ad ki MMS-t**, és akkor sem, ha a kísérő SMS
+kapuja (`SEND_WINDOW`, a folyamat helyi óráján) épp zárva van — a sor `queued` marad, kísérlet nem fogy,
+reggel megy. Egy szabály, egy helyen: `src/sms/sendWindow.ts` (`mmsPullBlocks`; a `SEND_WINDOW` konstans
+is ide költözött, az SMS-kapu viselkedése változatlan). Az SMS-relay-t nem érinti. ⚠️ Mérve: az éles
+folyamat UTC-ben fut (nincs `TZ`), ezért az SMS-kapu élesen valójában 10:00–22:00 (nyáron; télen
+9:00–21:00) budapesti idő szerint enged — az MMS reggeli indulása ehhez igazodik, nem korábbi.
+Őr: `scripts/mms-relay-check.mts` ⑫ (19:29 húz, 19:31 nem; nyár/tél, Budapest- és UTC-folyamaton).

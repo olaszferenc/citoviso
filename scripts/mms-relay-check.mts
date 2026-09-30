@@ -20,6 +20,9 @@
 //   ⑨ lost ack: the journal keeps the send; the next tick re-acks → 'sent' (even from 'unknown')
 //   ⑩ a non-JPEG image in the row is converted (sharp) before the modem sees it
 //   ⑪ pairJobState reads the queue row: pending → mms, unknown/failed → failed with the reason
+//   ⑫ evening stop (ADR-0282 addendum): 19:29 Budapest pulls, 19:31 does not (the row stays
+//      'queued', no attempt spent); DST-correct, and on a UTC process (prod) the morning
+//      start follows the companion SMS's gate — never earlier
 //
 // Usage: npx tsx scripts/mms-relay-check.mts
 
@@ -35,6 +38,7 @@ const { db } = await import("../src/db/client.js");
 const { sendMms, toMmsJpeg, isJpeg, MMS_MAX_BYTES } = await import("../src/mms/sender.js");
 const { pullMms, ackMms, setMmsRelayDeps, MMS_MAX_ATTEMPTS } = await import("../src/mms/relayQueue.js");
 const { runMmsRelayOnce } = await import("../src/mms/relayClient.js");
+const { mmsPullBlocks } = await import("../src/sms/sendWindow.js");
 const { pairJobState } = await import("../src/outreach/sendOutreachPair.js");
 type MmsMessage = import("../src/mms/sender.js").MmsMessage;
 type MmsSendResult = import("../src/mms/sender.js").MmsSendResult;
@@ -50,6 +54,7 @@ const say = (ok: boolean, what: string, detail = ""): void => {
 };
 
 const PHONE = "+36301234567";
+const MIDDAY = new Date("2026-09-30T10:00:00Z"); // 12:00 CEST, 10:00 UTC
 const ids: { defId?: string; runId?: string; leadId?: string; p1?: string; p2?: string; p3?: string } = {};
 const tmp = await mkdtemp(path.join(tmpdir(), "cit-mms-relay-check-"));
 const journalPath = path.join(tmp, "journal.json");
@@ -71,7 +76,9 @@ let apiDown = false;
 const api = async (pathname: string, body: unknown): Promise<Record<string, unknown>> => {
   if (apiDown) throw new Error(`${pathname} → HTTP 502`);
   const b = JSON.parse(JSON.stringify(body)) as { results?: unknown[] };
-  if (pathname === "/api/mms-relay/pull") return JSON.parse(JSON.stringify({ messages: await pullMms() }));
+  // ①–⑪ must not depend on the hour the guard runs: the window is judged at a fixed
+  // midday that is open in every TZ (⑫ tests the window itself).
+  if (pathname === "/api/mms-relay/pull") return JSON.parse(JSON.stringify({ messages: await pullMms(new Date(), MIDDAY) }));
   if (pathname === "/api/mms-relay/ack") {
     return JSON.parse(JSON.stringify({ ok: true, sent: await ackMms((b.results ?? []) as never) }));
   }
@@ -292,12 +299,53 @@ try {
     );
     await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
   }
+
+  // ── ⑫ evening stop: 19:30 Budapest, TZ-correct ──────────────────────────
+  {
+    const origTz = process.env.TZ;
+    const at = (tz: string, iso: string): string | null => {
+      process.env.TZ = tz;
+      return mmsPullBlocks(new Date(iso));
+    };
+    try {
+      // Summer (CEST, UTC+2) and winter (CET, UTC+1), on a Budapest AND on a UTC process.
+      for (const tz of ["Europe/Budapest", "UTC"]) {
+        say(at(tz, "2026-09-30T17:29:00Z") === null, `⑫ [${tz}] nyáron 19:29 (Budapest) → húz`);
+        say(at(tz, "2026-09-30T17:31:00Z") !== null, `⑫ [${tz}] nyáron 19:31 (Budapest) → NEM húz`);
+        say(at(tz, "2026-12-01T18:29:00Z") === null, `⑫ [${tz}] télen 19:29 (Budapest) → húz`);
+        say(at(tz, "2026-12-01T18:31:00Z") !== null, `⑫ [${tz}] télen 19:31 (Budapest) → NEM húz`);
+        say(at(tz, "2026-09-30T05:59:00Z") !== null, `⑫ [${tz}] 07:59 (Budapest) → NEM húz`);
+      }
+      // Morning: the MMS never starts before the companion SMS's gate opens.
+      say(at("Europe/Budapest", "2026-09-30T06:00:00Z") === null, "⑫ [Europe/Budapest] 08:00 (Budapest) → húz (az SMS-kapu nyitva)");
+      say(
+        at("UTC", "2026-09-30T06:30:00Z") !== null && at("UTC", "2026-09-30T08:00:00Z") === null,
+        "⑫ [UTC] 08:30 (Budapest) még NEM húz, mert az SMS-kapu a szerver óráján 8:00 UTC-kor nyit; 10:00-kor húz",
+      );
+    } finally {
+      if (origTz === undefined) delete process.env.TZ;
+      else process.env.TZ = origTz;
+    }
+    // End to end on the queue: 19:31 leaves the row alone, 19:29 hands it out.
+    const img = await sharp({ create: { width: 64, height: 64, channels: 3, background: { r: 10, g: 120, b: 200 } } }).jpeg().toBuffer();
+    const ins = await db
+      .insertInto("mms_outbox")
+      .values({ to_phone: PHONE, subject: "Teszt 12", image: img })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const late = await pullMms(new Date(), new Date("2026-09-30T17:31:00Z"));
+    const r1 = await row(ins.id);
+    say(late.length === 0 && r1.status === "queued" && r1.attempts === 0, "⑫ 19:31-kor a sor 'queued' marad, kísérlet nem fogy", JSON.stringify({ late: late.length, r1 }));
+    const ok = await pullMms(new Date(), new Date("2026-09-30T17:29:00Z"));
+    say(ok.length === 1 && ok[0]!.id === ins.id, "⑫ 19:29-kor ugyanez a sor kimegy", JSON.stringify(ok.map((m) => m.id)));
+    await db.deleteFrom("mms_outbox").where("id", "=", ins.id).execute();
+  }
 } catch (e) {
   failed++;
   console.error(`  ❌ az őr nem futott végig: ${(e as Error).stack ?? e}`);
 } finally {
   setMmsRelayDeps(null);
-  await db.deleteFrom("mms_outbox").where("subject", "in", ["Teszt 4", "PNG"]).where("prospect_id", "is", null).execute();
+  await db.deleteFrom("mms_outbox").where("subject", "in", ["Teszt 4", "PNG", "Teszt 12"]).where("prospect_id", "is", null).execute();
   if (ids.leadId) {
     await db.deleteFrom("prospect").where("lead_id", "=", ids.leadId).execute(); // cascades mms_outbox
     await db.deleteFrom("lead").where("id", "=", ids.leadId).execute();

@@ -35,6 +35,7 @@ import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
+import { SEND_WINDOW } from "../sms/sendWindow.js";
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
@@ -50,10 +51,6 @@ const no = (message: string): { readonly ok: false; readonly message: string } =
   message,
 });
 
-/** Local hours in which a cold SMS may go out. A marketing SMS at 23:00 lands on a
- *  private phone and turns a lead into a complaint; the mail has no such problem,
- *  so this gate exists only on this channel (jog/provenance-őr finding). */
-const SEND_WINDOW = { fromHour: 8, toHour: 20 } as const;
 
 /**
  * ALLOWLIST (owner decision 2026-08-29): the path is fully live, but while the SIM
