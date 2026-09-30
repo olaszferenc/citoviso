@@ -290,7 +290,7 @@ Tudatosan NEM a nagy deploy része — ne kérd számon, ne blokkolja:
 - **GDPR érintetti kérelem** kiszolgálása (hozzáférés/törlés folyamat);
 - **CSRF-token** az űrlapokon;
 - **idegen nyelvű jogi oldalak** (országonkénti jogi csomag, §B.18);
-- ~~**`x-forwarded-for` hamisíthatósága** (a rate-limit kulcsa)~~ — **KÉSZ 2026-09-30 (ADR-XXXX):** a foglalási és a
+- ~~**`x-forwarded-for` hamisíthatósága** (a rate-limit kulcsa)~~ — **KÉSZ 2026-09-30 (ADR-0280):** a foglalási és a
   belépési fék is a `clientIp()`-re kulcsol (nginx által felülírt `X-Real-IP`; Cloudflare-él mögött a csak élről
   elfogadott `CF-Connecting-IP`; proxy nélkül a socket-cím);
 - **napi éles `pg_dump`-időzítő + off-site mentés** — addig a GATE 3 és a §2 kézi lehúzása a mentés.

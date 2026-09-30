@@ -10,7 +10,7 @@ SUB-szál (koordinátor: „Deploy-készenlét felderítés”, `cit92d2a67e`) �
 - `src/i18n/catalog.json` újragenerálva (`extract-i18n`), `i18n-lint` zöld.
 - Súgó: a mondatot sem a KB-szöveg, sem kép nem mutatja (a kb-shot Árazás-fixture-jében nincs dátumos alapár) → kb-shot nem kellett.
 
-## 2. Fojtás IP-je (ADR-XXXX)
+## 2. Fojtás IP-je (ADR-0280)
 - `src/server/clientIp.ts` (új): X-Real-IP (nginx felülírja) → különben socket; ha a társ Cloudflare-él → `CF-Connecting-IP`.
   XFF-et nem olvas. `public.ts` `throttled` és `loginGuard.ts` erre áll (a loginGuard saját másolata törölve).
 - ⚠️ A brief premisszája élesen hiányos volt: az éles forgalom CF-en át jön, nginx-ben nincs `set_real_ip_from` → a puszta
@@ -34,7 +34,7 @@ SUB-szál (koordinátor: „Deploy-készenlét felderítés”, `cit92d2a67e`) �
   mondata; élesi őrködés e-mail+SMS — a MAI riasztók táblája (houseAlert / payLinkAlert / aamAlert / registryConfirmWatch /
   keyGuard) és az 5 hiányzó tétel (SMS a houseAlert-hez, megakadt `pending` fizetés, domain-bukás a háznak, számla-bukás,
   401/403 API-kulcs-halál).
-- §5 „x-forwarded-for hamisíthatósága” sor → KÉSZ (ADR-XXXX).
+- §5 „x-forwarded-for hamisíthatósága” sor → KÉSZ (ADR-0280).
 
 ## Nyitott
 - DÖNTÉS: élesen az nginx `real_ip` (CF-tartományok) beállítása tisztább lenne — élesi konfig-írás, külön engedély.

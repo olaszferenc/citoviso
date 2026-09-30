@@ -7,7 +7,7 @@
 //   ② Failed-login throttle: LOGIN_FAIL_LIMIT wrong passwords from one IP → the next
 //      POST /login is a 429 with the throttle message, BEFORE the password is checked;
 //      another IP and the other realm are untouched. Unknown usernames only — no DB write.
-//   ③ The brakes key on `clientIp()` (ADR-XXXX): X-Real-IP (nginx OVERWRITES it), else the
+//   ③ The brakes key on `clientIp()` (ADR-0280): X-Real-IP (nginx OVERWRITES it), else the
 //      socket address; behind a Cloudflare edge CF-Connecting-IP (trusted only from an
 //      edge) — NEVER X-Forwarded-For (nginx APPENDS to the client's value). Negative
 //      control: a fresh X-Forwarded-For on every request must NOT reset the login brake nor
@@ -130,7 +130,7 @@ for (const { name, port, ipA, ipB } of [
 }
 guard.resetLoginThrottle();
 
-// ── ③ The key: X-Real-IP / socket, never X-Forwarded-For (ADR-XXXX) ─────────────
+// ── ③ The key: X-Real-IP / socket, never X-Forwarded-For (ADR-0280) ─────────────
 console.log("\n── ③ A fék kulcsa: X-Real-IP / socket, SOHA nem az X-Forwarded-For ──");
 // A client-invented X-Forwarded-For, fresh on every request (what nginx would pass on
 // in front of its own appended address).
@@ -286,7 +286,7 @@ server.close();
 consoleServer.close();
 await db.destroy();
 if (failed) {
-  console.error(`\n⛔ login-hardening-check: ${failed} ellenőrzés bukott (ADR-0277, ADR-XXXX).`);
+  console.error(`\n⛔ login-hardening-check: ${failed} ellenőrzés bukott (ADR-0277, ADR-0280).`);
   process.exit(1);
 }
 console.log("\n✅ login-hardening-check: Secure süti csak HTTPS-en, belépési fék mindkét birodalomban.");

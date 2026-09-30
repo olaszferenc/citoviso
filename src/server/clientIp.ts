@@ -1,4 +1,4 @@
-// The client address the per-IP brakes key on (ADR-XXXX): the booking/enquiry/review
+// The client address the per-IP brakes key on (ADR-0280): the booking/enquiry/review
 // throttle in public.ts and the failed-login throttle in src/auth/loginGuard.ts.
 // ONE rule, one copy — two copies drifting apart would let one brake be dodged.
 import { BlockList, isIPv6 } from "node:net";

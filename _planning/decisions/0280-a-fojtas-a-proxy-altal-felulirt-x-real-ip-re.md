@@ -1,4 +1,4 @@
-## ADR-XXXX — A fojtás a proxy által felülírt X-Real-IP-re kulcsol (Cloudflare mögött a CF-Connecting-IP-re) (2026-09-30)
+## ADR-0280 — A fojtás a proxy által felülírt X-Real-IP-re kulcsol (Cloudflare mögött a CF-Connecting-IP-re) (2026-09-30)
 
 - **Kiváltó:** a deploy-készenlét felderítés (koordinátor: `cit92d2a67e`, brief: `~/rc-briefs/dk2-arazas-igeret-ip-kbpaths.md`,
   tulaj: „javaslatot elfogadom”). A foglalási/érdeklődési/vélemény-fék (`src/server/public.ts` `throttled`) és a belépési

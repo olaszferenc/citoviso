@@ -632,7 +632,7 @@ function tenantCanonicalHost(site: TenantHostSite): string | null {
  *  the ranking equity accrued on the slug would be lost at the domain upsell). */
 /** Crude per-IP throttle for the public booking endpoints — a guest form is an open
  *  door, and a booking row is cheap to create but expensive to clean up. Keyed on
- *  `clientIp()` (ADR-XXXX) — the same rule as the login brake. */
+ *  `clientIp()` (ADR-0280) — the same rule as the login brake. */
 const bookingHits = new Map<string, { n: number; until: number }>();
 function throttled(req: http.IncomingMessage, limit: number, windowMs: number): boolean {
   const ip = clientIp(req);
