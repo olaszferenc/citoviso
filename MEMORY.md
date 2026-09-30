@@ -11,6 +11,22 @@ Utolsó frissítés: 2026-09-29 (📱 **Telefonos kör koordinátor ZÁRVA — a
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-09-29/30 — Deploy-készenlét felderítés, koordinátor `cit92d2a67e`) — 2. kör fut
+
+**Kérdés: „minden deploy-kritériumot teljesítünk-e; miről feledkeztünk meg?” → 5 deploy előtti ❌ mérve, 6 SUB egy éjjel, mind
+landolt.** Új ADR-ek: 0276 (a ház riasztást kap: OnFailure a 6 prod service-en → `citoviso-alert@` → alert_email; mailSafe + Barion-webhook
+riaszt), 0277 (`Secure` süti csak https mögött, `/login` 10 hibás/10 perc → 429, ÁSZF §9 zárolás → **ÁSZF 1.3**), 0278 (a levél-link hostja
+CSAK a `Host`-ból — az `X-Forwarded-Host`-ot az éles nginx nem írta felül, hamis fejléccel a tulaj levelébe idegen domainre mutató
+action_token-es link kerülhetett; a mai élesben is). + súgó-javítás (ADR-0256 második kérdése), időutazó őr (ajánlat-lejárat + dátumos ár),
+`DEPLOY-READY.md` újraírva (vészterv parancsokkal, füst-próba, **9 hiányzó éles .env-kulcs**: regisztrátor/DNS/Websupport/Cloudflare/
+Maps-böngésző — CSAK devben vannak, élesen mock regisztrátor; tulaj: **„deployjal együtt”** írjuk be). Éles dump visszatöltés dev
+scratch-DB-n kipróbálva. Száraz deploy az új HEAD-en a GATE 6-ig zöld; a tudasbazis-or PASS-tokenje rögzítve (24 h, tartományhoz kötve —
+ha a main mozdul, újra kell). Élesen 0 valódi fizető bérlő. **2. kör (tulaj-döntések 2026-09-30):** ① Árazás-lap halott emlékeztető-ígérete ki
+(§B.17) + ② fojtás IP-je X-Real-IP-re + ⑥ KB-útvonallista kódból + „Deploy UTÁNI teendők” (lejárat előtti értesítő, ahogy ígérjük; élesi
+őrködés + SMS megakadt fizetés/domain/számlázás/API-kulcs) → SUB `arazasigeret`; ④ public/console unit a repóba OnFailure-rel + ⑤ nem éles
+riasztás `[TESZT]` tárggyal → SUB `unitrepo`; ③ ÁSZF jogi átnézés: skip. Pilot utánra: vélemény-kérő job (NEM létezik), vendég-ÁSZF, GDPR-export,
+CSRF, idegen nyelvű jogi oldalak. Jegyzet: `_planning/memory/2026-09-29_deploy_keszenlet_felderites_koordinator.md`.
+
 ## Párhuzamos szál (2026-09-28/29 — A telefonos kör koordinátora) — LEZÁRVA
 
 **A telefonos kör deploy-kész: tenant, lead és szállásvendég oldalon, mobil és asztali nézetben végigjárva; akadályozó
