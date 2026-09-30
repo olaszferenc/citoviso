@@ -77,8 +77,9 @@ nem járt le. Egy kiküldött tervre az ajánlat egyszer jár.
   csomagár-példával.
 - Ha egy mező üres, nem egész szám, vagy a tartományon kívül esik, a hibás mező pirosan keretezett, alatta ott az
   ok. Két mező egymáshoz képest is lehet hibás: ha a döntés-segítő kedvezmény nem nagyobb a bemutatkozónál, vagy
-  az emlékeztető nem korábbi a lejáratnál, mindkét mező piros lesz, bármelyiket javíthatod. A bemutatkozó
-  kedvezményt kikapcsolt döntés-segítőnél is a tárolt döntés-segítő kedvezményhez méri.
+  az emlékeztető nem korábbi a lejáratnál, mindkét mező piros lesz, bármelyiket javíthatod. Kikapcsolt
+  döntés-segítőnél a bemutatkozó kedvezményt a tárolt döntés-segítő kedvezményhez méri. Ilyenkor csak a bemutatkozó
+  mező lesz piros: vagy csökkented, vagy visszakapcsolod a döntés-segítőt, és ott emeled a kedvezményt.
 - Hiba esetén az **„Árazás mentése”** gomb nem nyomható meg. A gomb a lap alján van, mellette ez áll: „A mentés
   addig nem megy, amíg a jelölt mező hibás.” Ha több mező hibás, a szám is ott áll, pl. „A mentés addig nem megy,
   amíg a 2 jelölt mező hibás.” A javítandó mezőt a piros keret mutatja fent, a „Lead-ajánlatok” szekcióban.
@@ -86,8 +87,11 @@ nem járt le. Egy kiküldött tervre az ajánlat egyszer jár.
 
 **Mi történik a már futó ajánlatokkal?**
 
-- A már kiadott döntés-segítő ajánlat megtartja a saját kedvezményét és lejáratát. Ha átállítasz valamit,
-  miközben ilyen ajánlatok futnak, a mezők alatt megjelenik, hány darab fut és hány százalékkal.
+- A már kiadott döntés-segítő ajánlat megtartja a saját kedvezményét és lejáratát. Ha a kapcsolót, a
+  megnyitás-számot, a kedvezményt vagy az érvényességet átállítod, miközben ilyen ajánlatok futnak, a mezők alatt
+  megjelenik, hány darab fut és hány százalékkal.
+- Ha a bemutatkozó kedvezményt állítod át, ott az jelenik meg, hogy a már kiküldött levelek a bennük ígért
+  kedvezményt tartják.
 - Az emlékeztető késleltetése viszont a már futó ajánlatokra is hat: minden reggeli küldés a kiadás óta eltelt
   időből számol. Ha az ajánlat addigra lejár, nem megy ki emlékeztető. A felület ezt is kiírja, ha a késleltetést
   átállítod.
