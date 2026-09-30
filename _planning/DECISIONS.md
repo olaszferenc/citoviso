@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-bukott-szamla-riaszt-es-ujrakibocsathato.md) — A bukott számla riaszt és újrakibocsátható (2026-09-30)
+- [ADR-0283](decisions/0283-a-bukott-szamla-riaszt-es-ujrakibocsathato-2026.md) — A bukott számla riaszt és újrakibocsátható (2026-09-30)
 - [ADR-0282](decisions/0282-az-mms-is-relay-en-megy-a-dev-gep-modemjere-a.md) — Az MMS is relay-en megy a dev gép modemjére; a kép-előkészítés sharp
 - [ADR-0281](decisions/0281-a-magyar-nevelo-placeholder-art-art-art2-nem.md) — A magyar névelő-placeholder ({art}/{Art}/{art2}) nem-magyar nyelven üres; a fordító újrapróbál (2026-09-30)
 - [ADR-0280](decisions/0280-a-fojtas-a-proxy-altal-felulirt-x-real-ip-re.md) — A fojtás a proxy által felülírt X-Real-IP-re kulcsol (Cloudflare mögött a CF-Connecting-IP-re) (2026-09-30)

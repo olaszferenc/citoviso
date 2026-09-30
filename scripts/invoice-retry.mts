@@ -1,4 +1,4 @@
-// Re-issue ONE payment's failed invoice now (ADR-XXXX) — the operator's manual way back
+// Re-issue ONE payment's failed invoice now (ADR-0283) — the operator's manual way back
 // (a console button follows once its design is approved, §2b).
 //
 //   npx tsx scripts/invoice-retry.mts <payment.id | CIT-XXXXXXXX>

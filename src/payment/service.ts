@@ -1208,7 +1208,7 @@ export type InvoiceOutcome =
   | { readonly status: "no-payment" };
 
 /**
- * Who asked for this attempt (ADR-XXXX). "payment" = the paid path (webhook, capture,
+ * Who asked for this attempt (ADR-0283). "payment" = the paid path (webhook, capture,
  * renewal), "auto-retry" = the daily billing tick, "console" = the operator's manual
  * re-issue (scripts/invoice-retry.mts) — the operator reads the answer right there, so
  * only the attempt that spends the automatic budget mails.
@@ -1216,7 +1216,7 @@ export type InvoiceOutcome =
 export type InvoiceTrigger = "payment" | "auto-retry" | "console";
 
 /**
- * Issue the invoice for a paid payment, ONCE (ADR-XXXX).
+ * Issue the invoice for a paid payment, ONCE (ADR-0283).
  *
  * Serialised per payment with a Postgres advisory lock held on a dedicated
  * connection: the webhook, the billing tick (another process) and a manual
@@ -1401,7 +1401,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     paymentMethod: "Bankkártya",
     paid: true,
     comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount),
-    // ADR-XXXX: provider-side idempotency — a retry can never mint a second document.
+    // ADR-0283: provider-side idempotency — a retry can never mint a second document.
     externalId: `citoviso-payment-${paymentId}`,
     orderNumber: publicPaymentRef(paymentId) ?? undefined,
   };

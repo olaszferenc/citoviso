@@ -1,6 +1,6 @@
 # Bukott számla: riasztás, napi újrapróba, kézi újrakiadás, Számlázz-oldali idempotencia; a konzol-gomb §2b-re vár (2026-09-30)
 
-SUB-szál (koordinátor: „Deploy-koordinátor”, `citc4db0d86`) · brief: `~/rc-briefs/invoice-failure-retry.md` · ADR-XXXX.
+SUB-szál (koordinátor: „Deploy-koordinátor”, `citc4db0d86`) · brief: `~/rc-briefs/invoice-failure-retry.md` · ADR-0283.
 
 ## Kiindulás (élesen mérve, a brief szerint)
 A 100 Ft-os éles próbavásárlás fizetve (`payment` `acadc176-1a82-4877-93d8-ac1358de22fd`), a számla

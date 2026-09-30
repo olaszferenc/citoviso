@@ -118,7 +118,7 @@ export class SzamlazzAgent implements InvoiceProvider {
       // handed to an accountant. The response PDF lands in InvoiceResult.pdfBase64.
       t("szamlaLetoltes", "true") +
       t("valaszVerzio", "2") +
-      // ADR-XXXX: the provider-side idempotency key — a retry with the same key
+      // ADR-0283: the provider-side idempotency key — a retry with the same key
       // returns the already-issued document instead of a second one.
       (input.externalId ? t("szamlaKulsoAzon", input.externalId) : "") +
       "</beallitasok>" +

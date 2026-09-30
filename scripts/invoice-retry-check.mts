@@ -1,4 +1,4 @@
-// GUARD (ADR-XXXX): a failed invoice mails the house and can be re-issued — never twice.
+// GUARD (ADR-0283): a failed invoice mails the house and can be re-issued — never twice.
 //
 //   npx tsx scripts/invoice-retry-check.mts
 //

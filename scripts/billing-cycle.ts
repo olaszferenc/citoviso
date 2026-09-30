@@ -45,7 +45,7 @@ try {
   console.error("aam-alert HIBA:", e);
   sideStepFailed = true;
 }
-// ADR-XXXX: a failed invoice is re-issued once a day, at most INVOICE_AUTO_RETRY_LIMIT
+// ADR-0283: a failed invoice is re-issued once a day, at most INVOICE_AUTO_RETRY_LIMIT
 // times — the buyer paid; a fixed Számlázz account must reach them without a human.
 try {
   const i = await retryFailedInvoices(now);

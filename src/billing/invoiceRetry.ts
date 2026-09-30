@@ -1,4 +1,4 @@
-// FAILED INVOICE → RE-ISSUE (ADR-XXXX).
+// FAILED INVOICE → RE-ISSUE (ADR-0283).
 //
 // Measured on prod 2026-09-30: the 100 Ft test purchase was paid, the Számlázz call
 // answered „error 378: … össze kell kötnöd fiókodat a NAV Online Számla rendszerével”,

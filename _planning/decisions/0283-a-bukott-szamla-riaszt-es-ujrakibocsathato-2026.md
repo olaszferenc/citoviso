@@ -1,4 +1,4 @@
-## ADR-XXXX — A bukott számla riaszt és újrakibocsátható (2026-09-30)
+## ADR-0283 — A bukott számla riaszt és újrakibocsátható (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (deploy-készenléti SUB, koordinátor: „Deploy-koordinátor”;
 brief: `~/rc-briefs/invoice-failure-retry.md`) · **Kapcsolódó:** ADR-0276 (a ház riasztási csatornája,

@@ -131,7 +131,7 @@ export function alertWebhookFailure(a: {
 export const INVOICE_AUTO_RETRY_LIMIT = 3;
 
 /**
- * ④ A paid payment got NO invoice (ADR-XXXX). Measured on prod 2026-09-30: the 100 Ft
+ * ④ A paid payment got NO invoice (ADR-0283). Measured on prod 2026-09-30: the 100 Ft
  * test purchase was paid, the Számlázz call answered error 378, and the only trace was
  * a 'failed' row + a console.error — the buyer paid and got no bizonylat, nobody knew.
  */

@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 
 import type { InvoiceInput, InvoiceProvider, InvoiceResult } from "./invoice.js";
 
-// ADR-XXXX: the real provider answers a repeated `szamlaKulsoAzon` with the FIRST
+// ADR-0283: the real provider answers a repeated `szamlaKulsoAzon` with the FIRST
 // document (measured on the Számlázz demo account, 2026-09-30) — the mock does the
 // same, so a local retry is exactly as idempotent as a live one, not more.
 const issuedByExternalId = new Map<string, InvoiceResult>();
