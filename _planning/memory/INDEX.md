@@ -8,6 +8,7 @@
 
 - [2026-09-30_szamla_bukas_riasztas_ujra.md](2026-09-30_szamla_bukas_riasztas_ujra.md) — Bukott számla: riasztás, napi újrapróba, kézi újrakiadás, Számlázz-oldali idempotencia; a konzol-gomb §2b-re vár (2026-09-30)
 - [2026-09-30_public_console_unit_repo_teszt_riasztas.md](2026-09-30_public_console_unit_repo_teszt_riasztas.md) — 2026-09-30 — public/console unit a repóban OnFailure-rel + [TESZT] riasztás-tárgy (ADR-0279)
+- [2026-09-30_nagy_deploy.md](2026-09-30_nagy_deploy.md) — 2026-09-30 — A nagy deploy végrehajtása (koordinátor, citc4db0d86)
 - [2026-09-30_mock_hos_cim_tipografia.md](2026-09-30_mock_hos_cim_tipografia.md) — 2026-09-30 — Mock hős-cím tipográfia: a hosszú mondat nem veri szét az oldalt (ADR-0284)
 - [2026-09-30_mms_relay.md](2026-09-30_mms_relay.md) — MMS élesről relay-en a dev gép modemjére; a kép-előkészítés sharp (2026-09-30)
 - [2026-09-30_i18n_art_ujraproba.md](2026-09-30_i18n_art_ujraproba.md) — 2026-09-30 — A 7 `{Art}`-os angol UI-string: a fordító újrapróbál, a magyar névelő nem szivárog (SUB i18nart)
