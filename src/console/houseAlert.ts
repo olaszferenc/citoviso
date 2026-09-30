@@ -17,8 +17,14 @@
 // fire-and-forget, and the unit-failure template carries no OnFailure= of its own.
 //
 // Internal operator text — outside the §B.18 customer-facing i18n scope.
+//
+// ADR-XXXX: off the live host every subject starts with "[TESZT] " — dev still SENDS
+// (the owner tests with it), but a test alert must never read like a production one.
+// "Live" has ONE definition: isLiveHost(config.publicBaseUrl) (src/invoicing/keyGuard.ts).
 
+import { config } from "../config.js";
 import { getEmailSender, type EmailMessage } from "../email/sender.js";
+import { isLiveHost } from "../invoicing/keyGuard.js";
 import { getAlertRecipients } from "./appSettings.js";
 
 export interface HouseAlert {
@@ -32,12 +38,20 @@ export interface HouseAlert {
 export interface HouseAlertDeps {
   recipientEmail(): Promise<string | null>;
   send(msg: EmailMessage): Promise<unknown>;
+  /** The base URL the live-host verdict is made from (config.publicBaseUrl by default). */
+  publicBaseUrl?(): string;
 }
 
 const realDeps: HouseAlertDeps = {
   recipientEmail: async () => (await getAlertRecipients()).email,
   send: (msg) => getEmailSender().send(msg),
+  publicBaseUrl: () => config.publicBaseUrl,
 };
+
+/** The subject as sent: "[TESZT] " in front of it unless this process serves the live host. */
+export function alertSubject(subject: string, publicBaseUrl: string): string {
+  return isLiveHost(publicBaseUrl) ? subject : `[TESZT] ${subject}`;
+}
 let deps: HouseAlertDeps = realDeps;
 
 /** Test seam: swap the recipient lookup + the sender; `null` restores the real ones. */
@@ -49,8 +63,9 @@ export function setHouseAlertDeps(d: HouseAlertDeps | null): void {
  * Mail the house. Returns true when the mail went out. Never throws: every caller is
  * already on a failure path, and an alert must not turn that into a second failure.
  */
-export async function alertHouse(a: HouseAlert): Promise<boolean> {
+export async function alertHouse(input: HouseAlert): Promise<boolean> {
   try {
+    const a = { ...input, subject: alertSubject(input.subject, (deps.publicBaseUrl ?? realDeps.publicBaseUrl!)()) };
     const to = await deps.recipientEmail();
     if (!to) {
       // The missing-recipient branch fails VISIBLY — a silent "nobody to tell" would
@@ -66,7 +81,7 @@ export async function alertHouse(a: HouseAlert): Promise<boolean> {
     return true;
   } catch (e) {
     // ⛔ Log only — never alert about a failed alert (that is the loop).
-    console.error(`[house-alert:${a.tag}] a riasztó levél maga is elhasalt (${a.subject}):`, e);
+    console.error(`[house-alert:${input.tag}] a riasztó levél maga is elhasalt (${input.subject}):`, e);
     return false;
   }
 }
@@ -112,8 +127,47 @@ export function alertWebhookFailure(a: {
   });
 }
 
+/** What `systemctl show <unit>` says at the moment OnFailure= fired. */
+export interface UnitState {
+  /** "auto-restart" = Restart= will bring it back; anything else = it stays down. */
+  readonly subState: string;
+  /** Automatic restarts since the last manual start (0 at the first crash). */
+  readonly nRestarts: number;
+}
+
+/**
+ * Whether this OnFailure= firing deserves a mail. Measured 2026-09-30 on systemd 257
+ * (RestartMode=normal): a Restart=always service passes through "failed" on EVERY
+ * crash, so OnFailure= fires every time — the default start limit (5 / 10 s) never trips
+ * with RestartSec=3, so a crash-looping public server would mail every ~4 s, forever.
+ * During such a loop only the 1st, 11th, 101st, 1001st… crash is mailed (nRestarts 0 or
+ * a power of ten ≥ 10). A unit that stays down (a failed timer tick) is always mailed.
+ */
+export function unitAlertDue(s: UnitState): boolean {
+  if (s.subState !== "auto-restart") return true;
+  let n = s.nRestarts;
+  if (n === 0) return true;
+  if (n < 10 || !Number.isInteger(n)) return false;
+  while (n % 10 === 0) n /= 10;
+  return n === 1;
+}
+
 /** ① A systemd unit entered the failed state (citoviso-alert@.service → scripts/unit-failure-alert.mts). */
-export function alertUnitFailure(unit: string, journal: string): Promise<boolean> {
+export function alertUnitFailure(unit: string, journal: string, state?: UnitState): Promise<boolean> {
+  if (state?.subState === "auto-restart") {
+    const crash = state.nRestarts + 1;
+    return alertHouse({
+      tag: "unit",
+      subject: `Citoviso: szolgáltatás összeomlott, újraindul — ${unit} (${crash}. összeomlás)`,
+      text:
+        `A(z) ${unit} systemd-egység összeomlott; a systemd automatikusan újraindítja (Restart=always). ` +
+        `Ez a(z) ${crash}. összeomlás a legutóbbi kézi indítás (deploy) óta.\n\n` +
+        `Utolsó naplósorok (journalctl -u ${unit}):\n\n${journal || "(a napló nem olvasható)"}\n\n` +
+        `Ha újra és újra összeomlik, nem kapsz minden alkalommal levelet: a következő az ` +
+        `1., 11., 101., 1001. … összeomlásnál jön.\n` +
+        `Teendő: journalctl -u ${unit} -n 200 --no-pager a gépen; systemctl status ${unit}.`,
+    });
+  }
   return alertHouse({
     tag: "unit",
     subject: `Citoviso: időzített feladat elhasalt — ${unit}`,

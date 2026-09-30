@@ -77,6 +77,11 @@ export function checkUnits(manifest: Manifest, files: Record<string, string>): s
       const out = renderProd(files[u]!);
       if (/\/home\//.test(out)) problems.push(`${u}: az éles alakban dev útvonal maradt (/home/…)`);
       if (!/^WorkingDirectory=\/opt\/citoviso\/app$/m.test(out)) problems.push(`${u}: az éles alakban nincs WorkingDirectory=${PROD_DIR}`);
+      // The long-running servers (public/console) too: a crash nobody hears about is the
+      // same blind spot as a failed tick. Only the alert template itself is exempt (loop).
+      if (u !== ALERT_UNIT && !out.split("\n").includes(ON_FAILURE_LINE)) {
+        problems.push(`${u}: prod service „${ON_FAILURE_LINE}” nélkül — ha elhasal, senki nem tud róla (ADR-0276)`);
+      }
     }
   }
   const hasProdTimer = Object.values(manifest.timers).some((e) => e.target === "prod");
@@ -190,6 +195,20 @@ function selfTest(): number {
   ok(
     checkUnits(m({ "a.timer": { target: "prod" } }), { ...base, "lonely.service": svc(PROD_DIR) }).some((p) => p.includes("lonely.service")),
     "timer-less service not in the manifest → RED",
+  );
+  ok(
+    checkUnits(m({ "a.timer": { target: "prod" } }, { ...alertDecl, "srv.service": { target: "prod" } }), {
+      ...base,
+      "srv.service": svc(PROD_DIR),
+    }).length === 0,
+    "timer-less prod service WITH OnFailure= passes",
+  );
+  ok(
+    checkUnits(m({ "a.timer": { target: "prod" } }, { ...alertDecl, "srv.service": { target: "prod" } }), {
+      ...base,
+      "srv.service": svc(PROD_DIR).replace(ON_FAILURE_LINE + "\n", ""),
+    }).some((p) => p.startsWith("srv.service") && p.includes("OnFailure")),
+    "timer-less prod service (e.g. public/console) without OnFailure= → RED",
   );
   ok(checkUnits(m({}), base).some((p) => p.includes("NINCS a targets.json")), "unlisted timer → RED");
   ok(checkUnits(m({ "a.timer": { target: "dev" } }), base).some((p) => p.includes("indoklás")), "dev without why → RED");

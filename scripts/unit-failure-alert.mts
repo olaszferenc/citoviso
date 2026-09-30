@@ -7,11 +7,15 @@
 //
 //   npx tsx scripts/unit-failure-alert.mts citoviso-billing.service
 //
+// A crash-looping Restart=always service (public/console) fires OnFailure= on EVERY crash
+// (measured, systemd 257): unitAlertDue() mails the 1st, 11th, 101st… only — the rest
+// is logged here and the unit exits 0.
+//
 // ⛔ A failed alert is only logged (exit 1 → visible in the journal of THIS unit, which
 // carries no OnFailure= of its own — no loop).
 
 import { execFileSync } from "node:child_process";
-import { alertUnitFailure } from "../src/console/houseAlert.js";
+import { alertUnitFailure, unitAlertDue, type UnitState } from "../src/console/houseAlert.js";
 import { db } from "../src/db/client.js";
 
 const JOURNAL_LINES = 40;
@@ -34,6 +38,25 @@ try {
   journal = `(a journal nem olvasható: ${e instanceof Error ? e.message : String(e)})`;
 }
 
-const sent = await alertUnitFailure(unit, journal);
+// `systemctl show` prints the properties in its OWN order, not the -p order — parse by key.
+// Unreadable → state unknown → mail (fail open: an extra mail beats a missed crash).
+let state: UnitState | undefined;
+try {
+  const props = new Map(
+    execFileSync("systemctl", ["show", unit, "-p", "SubState", "-p", "NRestarts"], { encoding: "utf8", timeout: 10_000 })
+      .split("\n")
+      .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)] as const),
+  );
+  const n = Number(props.get("NRestarts"));
+  if (props.has("SubState") && Number.isInteger(n)) state = { subState: props.get("SubState")!, nRestarts: n };
+} catch (e) {
+  console.error(`[unit-failure-alert] a(z) ${unit} állapota nem olvasható (${e instanceof Error ? e.message : String(e)}) — küldöm a levelet`);
+}
+if (state && !unitAlertDue(state)) {
+  console.log(`[unit-failure-alert] ${unit}: ${state.nRestarts + 1}. összeomlás crash-hurokban (${state.subState}) — levél most nem megy (1., 11., 101. …)`);
+  process.exit(0);
+}
+
+const sent = await alertUnitFailure(unit, journal, state);
 await db.destroy();
 process.exit(sent ? 0 : 1);

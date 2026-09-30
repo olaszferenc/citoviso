@@ -26,6 +26,42 @@ Minden prod service `[Unit]`-jában `OnFailure=citoviso-alert@%n.service`. Ha az
 ⛔ A sablonnak nincs és nem lehet saját `OnFailure=`-je (hurok); a `systemd-units check` ezt, és a
 prod service-ekből hiányzó sort is pirosra méri. A dev gépen a sablon nincs telepítve.
 
+## `citoviso-public` / `citoviso-console` — a két hosszan futó szerver is a repóból (ADR-XXXX)
+
+2026-09-30-ig a két szervert kézzel telepítették a VPS-re, ezért nem kaptak `OnFailure=`-t. Most a
+`targets.json` `services` listáján `prod`-ként állnak: a GATE 6 a többivel együtt telepíti (csak ha a
+sha eltér), `daemon-reload`, és sha-val visszaméri; NEM engedélyezi újra (a `WantedBy=multi-user.target`
+alatt már engedélyezve vannak). A daemon-reload UTÁN jön a kanári-sorrendű restart (console → :4600 →
+public → :4800), vagyis a restart már az új unit-fájlt veszi fel.
+
+**Bájtra az éles + 1 sor.** A repó-fájl dev-alakú (`/home/citoviso/citoviso`, `node_modules/.bin/tsx`);
+a `render-prod` éles alakja a VPS mai unitjával BÁJTRA egyezik, kivéve az új
+`OnFailure=citoviso-alert@%n.service` sort. A kiolvasott éles fájl a `prod-snapshot/`-ban van (a sha-ját a
+VPS-en mértük, 2026-09-30: public `281f9012…7710`, console `9f6bd77a…4e`); a `house-alert-check` ④ ága ezt
+méri, negatív kontrollal. ⛔ Ezért a két unitban NINCS komment — egy komment-sor is eltörné az egyezést.
+⚠️ A dev gép saját public/console unitja MÁS (`tsx watch`, naplófájl) — nem ebből a fájlból települ.
+
+**Mikor jön levél? — mérve (systemd 257, `RestartMode=normal`, 2026-09-30).** Egy `Restart=always`
+szolgáltatás MINDEN összeomlásnál átmegy a `failed` állapoton, tehát az `OnFailure=` MINDEN crash-nél
+elsül — nem csak a start-limit kimerülése után. (A mérés: 1 mp után kilépő próba-unit `RestartSec=3`-mal,
+20 mp alatt 5 elsülés, az `NRestarts` 0→4.) A start-limit (alapérték: 5 indítás / 10 mp) `RestartSec=3`
+mellett gyakorlatilag SOHA nem merül ki (egy kör ≥ 3 mp), így a szerver nem adja fel, újraindul örökké.
+Emiatt a levelezést a `scripts/unit-failure-alert.mts` ritkítja (`unitAlertDue`, `houseAlert.ts`):
+- **leállva maradt egység** (egy elhasalt időzítő-tick, `SubState≠auto-restart`) → mindig levél;
+- **újrainduló szerver** (`SubState=auto-restart`) → az 1., 11., 101., 1001. … összeomlásnál levél
+  („szolgáltatás összeomlott, újraindul — … (N. összeomlás)”), a köztesek csak a riasztó naplójába.
+  Az `NRestarts` a legutóbbi kézi indítás (deploy-restart) óta számol.
+- **Szabályos stop/restart** (deploy) NEM riaszt: élesen „Deactivated successfully” (journal, 2026-09-22/24).
+- `StartLimit*`: élesen nincs beállítva (alapérték). Szándékosan így maradt — lásd az ADR „DÖNTÉS KELL” pontját:
+  egy `StartLimitIntervalSec=300` / `StartLimitBurst=5` a publikus oldalt 5 összeomlás után VÉGLEG leállítaná
+  (kézi `reset-failed`-ig), cserébe egyetlen levelet adna.
+
+## `[TESZT]` a riasztás tárgyában, ha nem az éles hoston fut (ADR-XXXX)
+
+`alertHouse` minden tárgy elé `[TESZT] `-et tesz, ha `isLiveHost(config.publicBaseUrl)` hamis
+(`src/invoicing/keyGuard.ts` — az „éles” egyetlen definíciója). A dev NINCS némítva: küld, csak jelölve.
+Az `OnFailure`-levél (`unit-failure-alert.mts`) ugyanezen az úton megy.
+
 Az alábbi „Telepítés" receptek a **dev gépre** vonatkoznak (ott nincs deploy-kapu).
 
 ## `citoviso-domain-resume` (ADR-0071)

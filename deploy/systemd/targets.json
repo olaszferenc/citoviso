@@ -25,7 +25,10 @@
     }
   },
   "_services_doc": "Every *.service WITHOUT a timer of its own MUST be listed here (same prod/dev rule). ADR-0276: citoviso-alert@.service is the OnFailure= target of every prod service — a failed tick mails app_setting.alert_email; the template is installed by GATE 6 like any prod unit (not enabled: OnFailure starts it).",
+  "_services_doc_long_running": "citoviso-public/console: the two long-running servers (Restart=always). Until 2026-09-30 they were installed on the VPS BY HAND and so had no OnFailure=; the repo file renders BYTE-EXACTLY to the live unit plus the one OnFailure= line (fixture: prod-snapshot/, guard: house-alert-check). No comments inside them on purpose — a comment would break that byte equality. The dev machine's own units (tsx watch) are NOT installed from these files.",
   "services": {
-    "citoviso-alert@.service": { "target": "prod" }
+    "citoviso-alert@.service": { "target": "prod" },
+    "citoviso-public.service": { "target": "prod" },
+    "citoviso-console.service": { "target": "prod" }
   }
 }

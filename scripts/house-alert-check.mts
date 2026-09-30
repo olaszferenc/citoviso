@@ -14,9 +14,15 @@
 //              unknown paid payment → 400 + alert; malformed body → 400 + alert; a DB error
 //              → 500 + alert; unknown FAILED payment (the harmless orphan) → 200, NO alert;
 //              the same 400 again → deduped, no second mail.
+// ④ servers  — ADR-XXXX: citoviso-public/console are prod units in the repo WITH OnFailure=,
+//              their prod render equals the live unit (deploy/systemd/prod-snapshot/, sha
+//              measured on the VPS 2026-09-30) plus exactly that one line; a crash loop mails
+//              the 1st, 11th, 101st… crash only.
+// ⑤ [TESZT]  — off the live host (isLiveHost) every alert subject starts with "[TESZT] ".
 //
 // Every expectation is counted; a check that could not run is a failure, not a skip.
 
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -28,8 +34,8 @@ process.env.PAYMENT_GATEWAY = "mock";
 process.env.CIT_SHOT = "1";
 process.env.CONSOLE_PORT = "0";
 
-const { setHouseAlertDeps, alertUnitFailure } = await import("../src/console/houseAlert.js");
-const { checkUnits, ALERT_UNIT, ON_FAILURE_LINE } = await import("./systemd-units.mts");
+const { setHouseAlertDeps, alertUnitFailure, unitAlertDue } = await import("../src/console/houseAlert.js");
+const { checkUnits, renderProd, ALERT_UNIT, ON_FAILURE_LINE } = await import("./systemd-units.mts");
 type Mail = { to: string; subject: string; text: string };
 
 let fails = 0;
@@ -41,7 +47,9 @@ const ok = (c: boolean, m: string) => {
 const outbox: Mail[] = [];
 let sendThrows = false;
 let sendCalls = 0;
+let baseUrl = "https://citoviso.com";
 setHouseAlertDeps({
+  publicBaseUrl: () => baseUrl,
   recipientEmail: async () => "haz@example.test",
   send: async (m) => {
     sendCalls++;
@@ -83,6 +91,67 @@ console.log("① időzítő → OnFailure → riasztás");
   const m = drain();
   ok(m.length === 1 && m[0]!.to === "haz@example.test", "egy levél ment, az alert_email címre");
   ok(m[0]?.subject.includes("citoviso-billing.service") === true && m[0]!.text.includes("billing-cycle HIBA: x"), "a levél viszi az egység nevét és a journal-sorokat");
+}
+
+// ── ④ long-running servers ───────────────────────────────────────────────────────
+console.log("④ public/console a repóból, OnFailure-rel; az éles alak = a mai éles + 1 sor");
+{
+  const dir = "deploy/systemd";
+  const manifest = JSON.parse(readFileSync(path.join(dir, "targets.json"), "utf8"));
+  // The live units as read from the VPS on 2026-09-30 (sha256sum /etc/systemd/system/…).
+  const LIVE_SHA: Record<string, string> = {
+    "citoviso-public.service": "281f9012549232fc2de8fdfd067dc0f386f0b1ae30e809413fd79b8d7b667710",
+    "citoviso-console.service": "9f6bd77a920101d24ea6e486e9be02d51c13c3d95ff9ac3d21871d9dd4f0d84e",
+  };
+  // Prod render minus the one allowed line must equal the live snapshot, byte for byte.
+  const matchesLive = (repo: string, live: string): boolean => {
+    const out = renderProd(repo).split("\n");
+    const i = out.indexOf(ON_FAILURE_LINE);
+    if (i < 0 || out.lastIndexOf(ON_FAILURE_LINE) !== i) return false;
+    out.splice(i, 1);
+    return out.join("\n") === live;
+  };
+  for (const [u, sha] of Object.entries(LIVE_SHA)) {
+    ok(manifest.services?.[u]?.target === "prod", `${u}: a targets.json-ban prod`);
+    const repo = readFileSync(path.join(dir, u), "utf8");
+    ok(renderProd(repo).split("\n").includes(ON_FAILURE_LINE), `${u}: az éles alakban ott az ${ON_FAILURE_LINE}`);
+    const live = readFileSync(path.join(dir, "prod-snapshot", u), "utf8");
+    ok(createHash("sha256").update(live).digest("hex") === sha, `${u}: a prod-snapshot a VPS-en mért sha-val egyezik`);
+    ok(matchesLive(repo, live), `${u}: az éles render = a mai éles unit + pontosan 1 sor (OnFailure=)`);
+    ok(!matchesLive(repo.replace("RestartSec=3", "RestartSec=5"), live), `NEGATÍV: ${u} egy további eltéréssel → nem egyezik`);
+    ok(!matchesLive(repo.replace(ON_FAILURE_LINE + "\n", ""), live), `NEGATÍV: ${u} OnFailure nélkül → nem egyezik`);
+    const files: Record<string, string> = {};
+    for (const f of readdirSync(dir)) if (/\.(timer|service)$/.test(f)) files[f] = readFileSync(path.join(dir, f), "utf8");
+    ok(
+      checkUnits(manifest, { ...files, [u]: repo.replace(ON_FAILURE_LINE + "\n", "") }).some((p: string) => p.startsWith(u) && p.includes("OnFailure")),
+      `NEGATÍV: ${u} OnFailure nélkül → a systemd-units check piros`,
+    );
+  }
+  const due = (n: number) => unitAlertDue({ subState: "auto-restart", nRestarts: n });
+  ok([0, 10, 100, 1000, 10000].every(due), "crash-hurok: az 1., 11., 101., 1001., 10001. összeomlás levelet kap");
+  ok(![1, 2, 9, 11, 99, 101, 500, 1001].some(due), "NEGATÍV: a köztes összeomlások nem kapnak levelet");
+  ok(unitAlertDue({ subState: "failed", nRestarts: 7 }), "leállva maradt egység (időzítő-tick) → mindig levél");
+  drain();
+  await alertUnitFailure("citoviso-public.service", "szept 30 07:00 public HIBA: y", { subState: "auto-restart", nRestarts: 10 });
+  const m = drain();
+  ok(m.length === 1 && m[0]!.subject.includes("újraindul") && m[0]!.subject.includes("11. összeomlás"), "újrainduló szerver → „újraindul … 11. összeomlás” tárgy");
+  ok(!m[0]?.subject.includes("időzített") && m[0]!.text.includes("public HIBA: y"), "a szerver-levél nem „időzített feladatnak” hívja, és viszi a naplót");
+}
+
+// ── ⑤ [TESZT] ────────────────────────────────────────────────────────────────────
+console.log("⑤ nem éles hoston a riasztás tárgya [TESZT]-tel kezdődik");
+{
+  drain();
+  baseUrl = "https://mineral.tail3a89f.ts.net:8443";
+  await alertUnitFailure("citoviso-billing.service", "x");
+  baseUrl = "http://localhost:4800";
+  await alertUnitFailure("citoviso-billing.service", "x");
+  baseUrl = "https://citoviso.com";
+  await alertUnitFailure("citoviso-billing.service", "x");
+  const m = drain();
+  ok(m.length === 3, `mindhárom levél elment — a dev NINCS némítva (mérve: ${m.length})`);
+  ok(m[0]?.subject.startsWith("[TESZT] Citoviso:") === true && m[1]?.subject.startsWith("[TESZT] ") === true, "nem éles base URL → „[TESZT] ” előtag");
+  ok(m[2]?.subject.startsWith("Citoviso:") === true, "NEGATÍV: https://citoviso.com → nincs előtag");
 }
 
 // ── ② booking mail ───────────────────────────────────────────────────────────────

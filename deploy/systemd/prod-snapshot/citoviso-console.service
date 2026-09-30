@@ -1,0 +1,15 @@
+[Unit]
+Description=Citoviso operator console (:4600, internal)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=citoviso
+WorkingDirectory=/opt/citoviso/app
+ExecStart=/usr/bin/npx tsx src/console/server.ts
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
