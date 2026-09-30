@@ -127,6 +127,59 @@ export function alertWebhookFailure(a: {
   });
 }
 
+/** How many AUTOMATIC re-issues a failed invoice gets (daily, in the billing tick). */
+export const INVOICE_AUTO_RETRY_LIMIT = 3;
+
+/**
+ * ④ A paid payment got NO invoice (ADR-XXXX). Measured on prod 2026-09-30: the 100 Ft
+ * test purchase was paid, the Számlázz call answered error 378, and the only trace was
+ * a 'failed' row + a console.error — the buyer paid and got no bizonylat, nobody knew.
+ */
+export function alertInvoiceFailure(a: {
+  readonly paymentId: string;
+  readonly paymentRef: string | null;
+  readonly amount: number;
+  readonly currency: string;
+  readonly buyerName: string | null;
+  readonly buyerEmail: string | null;
+  readonly leadId: string | null;
+  readonly error: string;
+  /** Failed attempts for this payment so far, this one included. */
+  readonly attempts: number;
+  /** false → the automatic retries are used up (or there are none for this failure). */
+  readonly willRetry: boolean;
+  /** No checkout declaration: a retry cannot help, the invoice is issued by hand. */
+  readonly manualOnly: boolean;
+}): Promise<boolean> {
+  const lead = a.leadId
+    ? `${config.consoleUrl ? config.consoleUrl.replace(/\/$/, "") : ""}/lead/${a.leadId}#ls-orders`
+    : "—";
+  const next = a.manualOnly
+    ? `Teendő: a számlát KÉZZEL kell kiállítani (nincs számlázási nyilatkozat, automatikus ` +
+      `újrapróba ennél nem segít).`
+    : a.willRetry
+      ? `Az automatikus újrapróba naponta egyszer, a reggeli számlázási tickben fut ` +
+        `(összesen legfeljebb ${INVOICE_AUTO_RETRY_LIMIT}-szer). Ha a hiba oka a Számlázz-fiók ` +
+        `beállítása, javítsd, és azonnal kiadhatod: npx tsx scripts/invoice-retry.mts ${a.paymentId}`
+      : `Az automatikus újrapróbák ELFOGYTAK — magától többet NEM próbálkozunk. A hiba ` +
+        `elhárítása után így adhatod ki: npx tsx scripts/invoice-retry.mts ${a.paymentId}`;
+  return alertHouse({
+    tag: "invoice",
+    subject:
+      `Citoviso: a számla NEM készült el — ${a.paymentRef ?? a.paymentId}` +
+      (a.willRetry || a.manualOnly ? "" : " (újrapróbák elfogytak)"),
+    text:
+      `Egy kifizetett rendeléshez NEM készült számla. A vevő fizetett, a bizonylatot nem kapta meg.\n\n` +
+      `Fizetés: ${a.paymentRef ?? "—"} (payment.id: ${a.paymentId})\n` +
+      `Összeg: ${a.amount} ${a.currency}\n` +
+      `Vevő: ${a.buyerName ?? "—"}${a.buyerEmail ? ` <${a.buyerEmail}>` : ""}\n` +
+      `Sikertelen kísérlet: ${a.attempts}\n` +
+      `Konzol: ${lead}\n\n` +
+      `A számlázó válasza:\n${a.error}\n\n` +
+      next,
+  });
+}
+
 /** What `systemctl show <unit>` says at the moment OnFailure= fired. */
 export interface UnitState {
   /** "auto-restart" = Restart= will bring it back; anything else = it stays down. */

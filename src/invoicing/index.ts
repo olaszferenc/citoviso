@@ -9,6 +9,11 @@ import { SzamlazzAgent } from "./szamlazz.js";
 
 let cached: InvoiceProvider | null = null;
 
+/** Test seam (scripts/invoice-retry-check.mts): a scripted provider; `null` restores the env choice. */
+export function setInvoiceProvider(p: InvoiceProvider | null): void {
+  cached = p;
+}
+
 export function getInvoiceProvider(): InvoiceProvider {
   if (cached) return cached;
   const which = (process.env.INVOICE_PROVIDER ?? "mock").toLowerCase();

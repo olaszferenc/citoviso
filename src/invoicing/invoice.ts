@@ -52,6 +52,15 @@ export interface InvoiceInput {
   /** Already-paid flag → the invoice is marked settled. */
   readonly paid: boolean;
   readonly comment?: string;
+  /**
+   * Our idempotency key at the provider (Számlázz.hu `szamlaKulsoAzon`). Measured on
+   * the demo account 2026-09-30: a second issue with the same key issues NOTHING and
+   * answers with the FIRST document's number (TST-2026-819 twice). This is what makes
+   * a retry safe when the first call's answer was lost (timeout after issuance).
+   */
+  readonly externalId?: string;
+  /** Human-readable order reference printed on the invoice (`rendelesSzam`). */
+  readonly orderNumber?: string;
 }
 
 export interface InvoiceResult {

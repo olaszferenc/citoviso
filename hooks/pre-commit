@@ -715,6 +715,14 @@ if [ -f scripts/house-alert-check.mts ] && \
   echo "[pre-commit] house-alert-check (időzítő / foglalási levél / webhook → a ház riasztást kap)…"
   npx tsx scripts/house-alert-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A bukott számla riaszt és újrakiadható — sosem kétszer. Mérve élesen 2026-09-30: a fizetett
+# 97 Ft-os rendelés számlája „Számlázz error 378”-cal elbukott, és csak egy failed sor maradt.
+# Mock számlázó (a Számlázz szamlaKulsoAzon-viselkedésével), saját fixtúra, a tick a saját id-kra szűkítve.
+if [ -f scripts/invoice-retry-check.mts ] && \
+   changed_files | grep -qE '^src/payment/service\.ts$|^src/billing/invoiceRetry\.ts$|^src/invoicing/|^src/console/houseAlert\.ts$|^scripts/(billing-cycle\.ts|invoice-retry(-check)?\.mts)$'; then
+  echo "[pre-commit] invoice-retry-check (bukott számla → riasztás, újrapróba, nincs dupla)…"
+  npx tsx scripts/invoice-retry-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0059: one content type appears ONCE, inside the template's native section —
 # module data weaves in, the shared block carries only the measured leftover; the
 # mock's sample rooms wear real photos and its booking slot is a clickable demo.

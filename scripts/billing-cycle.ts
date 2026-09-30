@@ -6,6 +6,7 @@
 import { runBillingCycle } from "../src/payment/billing.js";
 import { sendEscalationFollowups } from "../src/outreach/escalationFollowup.js";
 import { checkAamAlert } from "../src/console/aamAlert.js";
+import { retryFailedInvoices } from "../src/billing/invoiceRetry.js";
 import { db } from "../src/db/client.js";
 
 const nowArg = process.argv.find((a) => a.startsWith("--now="));
@@ -42,6 +43,15 @@ try {
   console.log(`aam-alert @ ${now.toISOString()}:`, JSON.stringify(a));
 } catch (e) {
   console.error("aam-alert HIBA:", e);
+  sideStepFailed = true;
+}
+// ADR-XXXX: a failed invoice is re-issued once a day, at most INVOICE_AUTO_RETRY_LIMIT
+// times — the buyer paid; a fixed Számlázz account must reach them without a human.
+try {
+  const i = await retryFailedInvoices(now);
+  console.log(`invoice-retry @ ${now.toISOString()}:`, JSON.stringify(i));
+} catch (e) {
+  console.error("invoice-retry HIBA:", e);
   sideStepFailed = true;
 }
 await db.destroy();

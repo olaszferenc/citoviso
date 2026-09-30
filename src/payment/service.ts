@@ -8,7 +8,7 @@
 // public hosting (custom domain + TLS) is the deferred hosting slice — here it means
 // the DB state + the existing /site/<token> snapshot. Idempotent on the gateway ref.
 
-import { db } from "../db/client.js";
+import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { convertLead } from "../conversion/provision.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
@@ -27,6 +27,8 @@ import {
   startOrderDomainProvisioning,
 } from "../domains/provisionDomain.js";
 import { deliverInvoiceEmail } from "../billing/invoiceDelivery.js";
+import { alertInvoiceFailure, INVOICE_AUTO_RETRY_LIMIT } from "../console/houseAlert.js";
+import { publicPaymentRef } from "./publicRef.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
 import { computeAnnual, computeMonthly } from "../pricing.js";
@@ -1198,14 +1200,60 @@ export function buildInvoiceItems(
     : [subscriptionLine];
 }
 
-export async function issueInvoiceFor(paymentId: string): Promise<void> {
+/** What one issuance attempt ended in — the console action shows it to the operator. */
+export type InvoiceOutcome =
+  | { readonly status: "issued"; readonly invoiceNumber: string }
+  | { readonly status: "already-issued"; readonly invoiceNumber: string | null }
+  | { readonly status: "failed"; readonly error: string; readonly attempts: number }
+  | { readonly status: "no-payment" };
+
+/**
+ * Who asked for this attempt (ADR-XXXX). "payment" = the paid path (webhook, capture,
+ * renewal), "auto-retry" = the daily billing tick, "console" = the operator's manual
+ * re-issue (scripts/invoice-retry.mts) — the operator reads the answer right there, so
+ * only the attempt that spends the automatic budget mails.
+ */
+export type InvoiceTrigger = "payment" | "auto-retry" | "console";
+
+/**
+ * Issue the invoice for a paid payment, ONCE (ADR-XXXX).
+ *
+ * Serialised per payment with a Postgres advisory lock held on a dedicated
+ * connection: the webhook, the billing tick (another process) and a manual
+ * re-issue may meet on the same payment, and the second one must WAIT and then see
+ * the first one's 'issued' row — never call the provider a second time. The
+ * provider-side key (szamlaKulsoAzon = our payment id) is the second belt: even a
+ * call whose answer got lost cannot mint a second document.
+ *
+ * A failure is recorded as a 'failed' row (one per attempt — the row count IS the
+ * attempt count) and mails the house (ADR-0276 channel) — before this, a failed
+ * invoice was a console.error: the buyer paid, got no bizonylat, and nobody knew.
+ */
+export async function issueInvoiceFor(
+  paymentId: string,
+  opts: { readonly trigger?: InvoiceTrigger } = {},
+): Promise<InvoiceOutcome> {
+  const lock = await pool.connect();
+  try {
+    await lock.query("SELECT pg_advisory_lock(hashtext($1))", [`citoviso-invoice:${paymentId}`]);
+    try {
+      return await issueInvoiceLocked(paymentId, opts.trigger ?? "payment");
+    } finally {
+      await lock.query("SELECT pg_advisory_unlock(hashtext($1))", [`citoviso-invoice:${paymentId}`]);
+    }
+  } finally {
+    lock.release();
+  }
+}
+
+async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): Promise<InvoiceOutcome> {
   const already = await db
     .selectFrom("invoice")
-    .select("id")
+    .select(["id", "invoice_number"])
     .where("payment_id", "=", paymentId)
     .where("status", "=", "issued")
     .executeTakeFirst();
-  if (already) return;
+  if (already) return { status: "already-issued", invoiceNumber: already.invoice_number };
 
   const p = await db
     .selectFrom("payment")
@@ -1244,20 +1292,16 @@ export async function issueInvoiceFor(paymentId: string): Promise<void> {
       // 33 %-os kuponból „32 %"-ot csinálhatna a számlán, és egy számla nem tippelhet.
       "offer.percent as offerPercent",
       "prospect.contact_email as email",
+      "prospect.lead_id as leadId",
     ])
     .where("payment.id", "=", paymentId)
     .executeTakeFirst();
-  if (!p) return;
+  if (!p) return { status: "no-payment" };
 
   const provider = getInvoiceProvider();
 
-  // NO DECLARATION ⇒ NO GUESS. Pre-0029 orders (and any path that skipped the
-  // checkout gate) get a recorded failure the operator can act on, never an
-  // invoice built from marketing data.
-  if (!p.buyerType || !p.buyerName) {
-    const reason =
-      "Nincs számlázási nyilatkozat az orderen (0029 előtti rendelés) — a számlát kézzel kell kiállítani; " +
-      "vevő-adatot a lead marketing-nevéből SOSEM fabrikálunk.";
+  // Record the failed attempt and tell the house. Every failure path goes through here.
+  const recordFailure = async (error: string, manualOnly: boolean): Promise<InvoiceOutcome> => {
     await db
       .insertInto("invoice")
       .values({
@@ -1269,11 +1313,53 @@ export async function issueInvoiceFor(paymentId: string): Promise<void> {
         gross: p.amount,
         currency: p.currency,
         status: "failed",
-        error: reason,
+        error,
       })
       .execute();
+    const n = await db
+      .selectFrom("invoice")
+      .select(({ fn }) => fn.countAll<string>().as("n"))
+      .where("payment_id", "=", paymentId)
+      .where("status", "=", "failed")
+      .executeTakeFirstOrThrow();
+    const attempts = Number(n.n);
+    // The first attempt counts as the original, the next INVOICE_AUTO_RETRY_LIMIT are
+    // the automatic re-issues (retryFailedInvoices).
+    const willRetry = !manualOnly && attempts <= INVOICE_AUTO_RETRY_LIMIT;
+    // Mail on the FIRST failure and ONCE when the automatic budget runs out — not on every
+    // daily retry in between (three identical mails teach the reader to skip them). The
+    // budget counts EVERY failed row, console clicks included, so the exhaustion mail goes
+    // out whoever spent the last attempt; later console clicks stay quiet (the operator
+    // reads the answer on screen).
+    const firstFailure = attempts === 1 && trigger !== "console";
+    const budgetJustSpent = !manualOnly && attempts === INVOICE_AUTO_RETRY_LIMIT + 1;
+    if (firstFailure || budgetJustSpent) {
+      await alertInvoiceFailure({
+        paymentId,
+        paymentRef: publicPaymentRef(paymentId),
+        amount: p.amount,
+        currency: p.currency,
+        buyerName: p.buyerName,
+        buyerEmail: p.buyerEmail ?? p.email,
+        leadId: p.leadId,
+        error,
+        attempts,
+        willRetry,
+        manualOnly,
+      });
+    }
+    return { status: "failed", error, attempts };
+  };
+
+  // NO DECLARATION ⇒ NO GUESS. Pre-0029 orders (and any path that skipped the
+  // checkout gate) get a recorded failure the operator can act on, never an
+  // invoice built from marketing data.
+  if (!p.buyerType || !p.buyerName) {
+    const reason =
+      "Nincs számlázási nyilatkozat az orderen (0029 előtti rendelés) — a számlát kézzel kell kiállítani; " +
+      "vevő-adatot a lead marketing-nevéből SOSEM fabrikálunk.";
     console.error(`[invoice] KIHAGYVA (${paymentId}): ${reason}`);
-    return;
+    return recordFailure(reason, true);
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -1315,6 +1401,9 @@ export async function issueInvoiceFor(paymentId: string): Promise<void> {
     paymentMethod: "Bankkártya",
     paid: true,
     comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount),
+    // ADR-XXXX: provider-side idempotency — a retry can never mint a second document.
+    externalId: `citoviso-payment-${paymentId}`,
+    orderNumber: publicPaymentRef(paymentId) ?? undefined,
   };
 
   try {
@@ -1361,22 +1450,11 @@ export async function issueInvoiceFor(paymentId: string): Promise<void> {
       buyerIsPerson: p.buyerType === "individual",
       buyerEmail: p.buyerEmail ?? p.email,
     });
+    return { status: "issued", invoiceNumber: res.invoiceNumber };
   } catch (e) {
-    await db
-      .insertInto("invoice")
-      .values({
-        payment_id: paymentId,
-        provider: provider.name,
-        vat_key: "AAM",
-        vat_rate: 0,
-        net: p.amount,
-        gross: p.amount,
-        currency: p.currency,
-        status: "failed",
-        error: (e as Error).message,
-      })
-      .execute();
-    console.error(`[invoice] hiba: ${(e as Error).message}`);
+    const error = (e as Error).message;
+    console.error(`[invoice] hiba (${paymentId}): ${error}`);
+    return recordFailure(error, false);
   }
 }
 

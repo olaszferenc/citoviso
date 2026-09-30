@@ -6,6 +6,11 @@ import { randomBytes } from "node:crypto";
 
 import type { InvoiceInput, InvoiceProvider, InvoiceResult } from "./invoice.js";
 
+// ADR-XXXX: the real provider answers a repeated `szamlaKulsoAzon` with the FIRST
+// document (measured on the Számlázz demo account, 2026-09-30) — the mock does the
+// same, so a local retry is exactly as idempotent as a live one, not more.
+const issuedByExternalId = new Map<string, InvoiceResult>();
+
 export class MockInvoiceProvider implements InvoiceProvider {
   readonly name = "mock";
 
@@ -25,6 +30,8 @@ export class MockInvoiceProvider implements InvoiceProvider {
           "(Számlázási nyilatkozat nélkül számlát nem állítunk ki.)",
       );
     }
+    const prior = input.externalId ? issuedByExternalId.get(input.externalId) : undefined;
+    if (prior) return prior;
     const net = input.items.reduce((s, i) => s + i.net, 0);
     const gross = input.items.reduce((s, i) => s + i.gross, 0);
     const suffix = randomBytes(3).toString("hex").toUpperCase();
@@ -35,10 +42,12 @@ export class MockInvoiceProvider implements InvoiceProvider {
         `adószám: ${b.taxNumber ?? b.euVatNumber ?? "nincs (magánszemély)"} · ` +
         `áfakulcs: ${input.items[0]?.vatKey ?? "?"}`,
     );
-    return {
+    const res: InvoiceResult = {
       invoiceNumber: `MOCK-${input.issueDate.slice(0, 4)}-${suffix}`,
       net,
       gross,
     };
+    if (input.externalId) issuedByExternalId.set(input.externalId, res);
+    return res;
   }
 }

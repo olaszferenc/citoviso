@@ -255,7 +255,7 @@ van-e időtlen alapár).
 
 | Riasztó | Mit fed | Csatorna |
 |---|---|---|
-| `src/console/houseAlert.ts` (ADR-0276) | elbukott `citoviso-*` időzítő (OnFailure=), bukott foglalási levél, elutasított/elbukott Barion-webhook | csak e-mail (`app_setting.alert_email`) |
+| `src/console/houseAlert.ts` (ADR-0276, ADR-XXXX) | elbukott `citoviso-*` időzítő (OnFailure=), bukott foglalási levél, elutasított/elbukott Barion-webhook, bukott számla | csak e-mail (`app_setting.alert_email`) |
 | `src/console/payLinkAlert.ts` | a vevő leadta a rendelést, de fizetési linket NEM kapott (megrekedt rendelés) | e-mail + SMS |
 | `src/console/aamAlert.ts` (ADR-0098) | AAM-keret 80% / 100% | e-mail + SMS |
 | `src/domains/registryConfirmWatch.ts` | `.hu` Nyilvántartó megerősítő levele megérkezett, kattintásra vár | e-mail + SMS |
@@ -273,8 +273,10 @@ csatornájának bővítéseként — egy szabály, egy példány):
 3. **Domain-regisztráció bukása:** a `provisionDomain.ts` `failed` ága a TENANT-ot értesíti (`notifyTenant`) és a
    foglalást feloldja, de a HÁZ nem kap jelzést. Ugyanígy a hosszan `pending`/félúton álló provisioning (a vevő
    fizetett és vár).
-4. **Számlázás bukása:** az `issueInvoiceFor` (`src/payment/service.ts`) hibánál `failed` számla-sort ír +
-   `console.error` — riasztás és újrapróba nincs. A vevő fizetett, számlát nem kap, senki nem tud róla.
+4. ~~**Számlázás bukása**~~ — **KÉSZ (ADR-XXXX, 2026-09-30):** a bukott számla a `houseAlert`-en riaszt (első
+   bukás + a keret kimerülése), a napi `citoviso-billing` tick legfeljebb 3-szor újrapróbálja, kézzel `scripts/invoice-retry.mts`
+   (a konzol-gomb §2b-jóváhagyásra vár); duplikáció ellen advisory lock + Számlázz
+   `szamlaKulsoAzon`. Az SMS-ág az 1. ponttal együtt jön (a `houseAlert` bővítéseként).
 5. **API-kulcs halála (401/403):** a hívók egy része már OSZTÁLYOZZA az auth-hibát (`scraper/sources/googleMaps.ts`
    `"auth"`, `webSearch.ts`, `generator/images.ts`, `console/photoProxy.ts`), de riasztás sehol. Hiányzik a
    Barion, Számlázz, Websupport (regisztrátor/DNS), Places és Anthropic hívások 401/403-ának egységes jelzése a

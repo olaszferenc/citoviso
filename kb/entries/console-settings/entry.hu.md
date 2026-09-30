@@ -4,7 +4,7 @@ title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
 category: system
 anchors: console.settings
-updated: 2026-09-13
+updated: 2026-09-30
 ---
 
 A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
@@ -29,6 +29,15 @@ Itt adod meg, **hova szóljon a rendszer, ha baj van**. Ugyanez a két címzett 
 - a **.hu Nyilvántartó megerősítő linkje**;
 - a **kifizetett, de többszöri automatikus próbálkozás után sem elkészült
   modul-generálás** — ilyenkor a vevő fizetett, a termék pedig nincs meg;
+- a **kifizetett rendelés, amihez NEM készült számla** — a vevő fizetett, a számlázó
+  (Számlázz.hu) viszont elutasította a kiállítást (például mert a fiók nincs összekötve a
+  NAV Online Számlával). Az első bukáskor jön egy levél; utána a rendszer naponta egyszer
+  (a reggeli számlázási futásban) magától újrapróbálja, összesen legfeljebb háromszor, és
+  amikor a keret elfogy, még egy levél jön „újrapróbák elfogytak” jelöléssel. A levél
+  megírja a számlázó hibaszövegét és a teendőt: ha a hiba a Számlázz.hu fiók beállításáról
+  szól, azt ott kell rendbe tenni; a számlát utána azonnal is ki lehet adni a levélben
+  szereplő paranccsal (a sikertelen kézi próba is fogyasztja a hármas keretet). Két számla
+  ebből nem lesz: a már kiállított számlát a rendszer nem adja ki újra;
 - a **megrekedt rendelés** — a vevő végigment a konfigurátoron és megrendelt, de fizetési
   linket nem tudtunk kiadni neki (például mert a mockját a kurátor elutasította, vagy a
   fizetési szolgáltató hibázott). A rendelés rögzült, a pénz nem.
