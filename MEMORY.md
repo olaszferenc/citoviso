@@ -25,7 +25,7 @@ a régi (rögzítés nélküli) kiküldés a konstans 25-öt kapja. Az emlékezt
 ⮕ **3. kör:** MINDEN kimenő ablak és határidő Budapest szerint (ADR-0288): az SMS-kapu, a mobil-pár határa, az MMS-relé és az
 emlékeztető ugyanazt a `sendWindowOpen`-t használja (élesen UTC-n eddig 10–22 lett volna); az emlékeztető-levél határideje is.
 Őr: `send-window-tz-check` (3 zóna × nyár/tél).
-⮕ **4. kör:** a tulaj/vevő/partner felé mutatott idők is Budapest szerint (ADR-XXXX): közös `src/text/budapestTime.ts`
+⮕ **4. kör:** a tulaj/vevő/partner felé mutatott idők is Budapest szerint (ADR-0289): közös `src/text/budapestTime.ts`
 (a `sendWindow.ts` innen), fizetési bélyeg, „Utoljára frissült”, forgalmi jelentés + havi levél, ma/tegnap, AAM-adóév, év-csempe.
 ⚠️ NYITOTT (tulaj-döntés): a foglalási/árazási „ma” ~20 helyen UTC-nap (00–02 Budapest között a tegnap) — egy söpréssel javasolt. Őr: `escalation-config-check` ⑥⑦⑧.
 Jegyzet: `_planning/memory/2026-09-30_lead_ajanlatok_idozites.md`.

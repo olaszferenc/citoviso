@@ -129,7 +129,7 @@ export function paidStateOf(
 }
 
 /** Budapest wall-clock stamp the buyer can match against their bank statement
- *  (ADR-XXXX: the process zone is UTC on prod — the stamp read 1–2 hours early). */
+ *  (ADR-0289: the process zone is UTC on prod — the stamp read 1–2 hours early). */
 export function fmtStamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
   const z = budapestParts(d);

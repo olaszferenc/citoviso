@@ -29,7 +29,7 @@ export interface TrafficMailResult {
   readonly failed: number;
 }
 
-/** „augusztus" — a lezárt hónap neve a címzett nyelvén, BUDAPEST szerinti hónap (ADR-XXXX). */
+/** „augusztus" — a lezárt hónap neve a címzett nyelvén, BUDAPEST szerinti hónap (ADR-0289). */
 export function monthLabel(d: Date, lang: string): string {
   try {
     return d.toLocaleDateString(lang, { month: "long", timeZone: APP_TZ });
@@ -63,7 +63,7 @@ export async function sendMonthlyTrafficMails(now = new Date()): Promise<Traffic
         .select("id")
         .where("tenant_id", "=", t.tenantId)
         .where("kind", "=", "traffic")
-        // The month starts at Budapest midnight (ADR-XXXX) — not in the DB session's zone.
+        // The month starts at Budapest midnight (ADR-0289) — not in the DB session's zone.
         .where(
           sql<boolean>`sent_at >= (date_trunc('month', ${now}::timestamptz AT TIME ZONE ${sql.lit(APP_TZ)}) AT TIME ZONE ${sql.lit(APP_TZ)})`,
         )

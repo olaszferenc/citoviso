@@ -105,7 +105,7 @@ export function normaliseMonth(input: string | null | undefined): string {
     const mm = Number(input.slice(5, 7));
     if (mm >= 1 && mm <= 12) return input;
   }
-  // The owner's current month — on the Budapest clock (ADR-XXXX), not the server's.
+  // The owner's current month — on the Budapest clock (ADR-0289), not the server's.
   const now = budapestParts(new Date());
   return `${now.year}-${String(now.month).padStart(2, "0")}`;
 }
@@ -256,7 +256,7 @@ export async function getMonthAvailability(unitId: string, month: string): Promi
   const monthIdx = Number(m.slice(5, 7)) - 1;
   const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
   // "Today" stays on the booking domain's ONE convention — the UTC calendar day, like
-  // the ~20 other booking/price "today"s (ADR-XXXX lists moving them to Budapest together).
+  // the ~20 other booking/price "today"s (ADR-0289 lists moving them to Budapest together).
   const todayIso = new Date().toISOString().slice(0, 10);
 
   // ADR-0114: the month shows what is REALLY unavailable here — including the nights

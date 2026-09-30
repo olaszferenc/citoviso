@@ -57,7 +57,7 @@ export interface TrafficReport {
   readonly isEmpty: boolean;
 }
 
-/** Az időszak kezdete: N nappal ezelőtt, a nap elejétől — BUDAPESTI éjféltől (ADR-XXXX:
+/** Az időszak kezdete: N nappal ezelőtt, a nap elejétől — BUDAPESTI éjféltől (ADR-0289:
  *  az éles gép UTC-ben fut, a helyi éjfél ott 1–2 órával később van; DST-napon is helyes). */
 export function since(days: number, now: Date = new Date()): Date {
   return budapestDayStart(days, now);

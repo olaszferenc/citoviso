@@ -58,7 +58,7 @@ kártyájától 1–2 órával eltért). A `mms-relay-check` ⑫ a HIBÁT rögz�
 Fájlok: `src/sms/sendWindow.ts`, `src/outreach/sendOutreachSms.ts`, `src/outreach/escalationFollowup.ts`,
 `scripts/send-window-tz-check.mts` (új), `scripts/mms-relay-check.mts`, `hooks/pre-commit`, ADR, MEMORY.
 
-## 4. kör (2026-09-30 este) — a tulaj/vevő-felé mutatott idők Budapest szerint (ADR-XXXX)
+## 4. kör (2026-09-30 este) — a tulaj/vevő-felé mutatott idők Budapest szerint (ADR-0289)
 Közös zóna-segéd `src/text/budapestTime.ts` (a `sendWindow.ts` innen re-exportál). Javítva: `multilangCard fmtStamp`,
 `moduleConfigViews` „Utoljára frissült”, `trafficReport since()` + sparkline (SQL `AT TIME ZONE`), `trafficMail monthLabel` +
 havi határ, `adminViews relDay/fmtDate/fmtDateTime/éves mérő`, `availability` aktuális hónap, `documents` év, `wallet` pillanat-napok,

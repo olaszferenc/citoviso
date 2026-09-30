@@ -1,4 +1,4 @@
-## ADR-XXXX — A tulaj, a vevő és a partner felé mutatott idők Budapest szerint; egy közös zóna-segéd (2026-09-30)
+## ADR-0289 — A tulaj, a vevő és a partner felé mutatott idők Budapest szerint; egy közös zóna-segéd (2026-09-30)
 
 **Dátum:** 2026-09-30 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; brief: `~/rc-briefs/helyi-oras-maradek.md`) ·
 **Kapcsolódó:** ADR-0288 (a kimenő ablakok; ez az ott felsorolt négy maradékot és a rokonaikat zárja), ADR-0287.

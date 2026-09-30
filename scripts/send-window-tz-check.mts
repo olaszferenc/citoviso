@@ -10,7 +10,7 @@
 //   ③ the follow-up window (followupWindowBlocks) is the same rule;
 //   ④ the follow-up mail prints its deadline on the Budapest clock (like the page's card);
 //   ⑤ STRUCTURE: no outbound file reads the process-local clock (getHours/setHours/…);
-//   ⑥ ADR-XXXX the shared clock (src/text/budapestTime.ts) and what owners/buyers see: the
+//   ⑥ ADR-0289 the shared clock (src/text/budapestTime.ts) and what owners/buyers see: the
 //      buyer's payment stamp, the traffic report's day start (Budapest midnight, 23/25-hour
 //      DST days), the monthly mail's month name — right around midnight, where UTC and
 //      Budapest disagree;

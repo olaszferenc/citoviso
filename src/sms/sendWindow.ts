@@ -31,7 +31,7 @@ export const SEND_WINDOW_TZ = APP_TZ;
 /** The last minute an MMS may be pulled, Budapest wall-clock (exclusive). */
 export const MMS_PULL_CUTOFF = { hour: 19, minute: 30, timeZone: SEND_WINDOW_TZ } as const;
 
-// The Budapest clock readers live in ONE module (ADR-XXXX); re-exported for the
+// The Budapest clock readers live in ONE module (ADR-0289); re-exported for the
 // existing callers of this file.
 export { budapestHhmm, budapestMinutes };
 

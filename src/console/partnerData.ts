@@ -342,7 +342,7 @@ export const AAM_ANNUAL_LIMIT_HUF = 18_000_000;
  *  Exported: the dashboard chip AND the daily SMS alert (aamAlert.ts) read the
  *  SAME number — two meters would drift. */
 export async function getAamYearNet(): Promise<{ netHuf: number; fxDocs: number }> {
-  // The tax year starts at Budapest midnight, whatever the server's zone (ADR-XXXX).
+  // The tax year starts at Budapest midnight, whatever the server's zone (ADR-0289).
   const yearStart = budapestMidnight(`${budapestYear(new Date())}-01-01`);
   const sys = await db
     .selectFrom("invoice")

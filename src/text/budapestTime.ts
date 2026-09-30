@@ -1,4 +1,4 @@
-// The ONE place that knows which wall clock the product lives on (ADR-XXXX).
+// The ONE place that knows which wall clock the product lives on (ADR-0289).
 //
 // The live VPS runs in UTC, the dev box in Europe/Budapest. Every Date getter that is
 // not UTC-suffixed (getHours, getDate, getFullYear…) and every Intl/toLocale call

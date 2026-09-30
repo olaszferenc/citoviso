@@ -1709,7 +1709,7 @@ async function serveAdmin(
       // used to print the wrong one as if it were the other (Elek FK-007: it read
       // "2 foglalás" with nothing left standing). The headline is what EXISTS now;
       // the cancellations are named next to it, not folded into it or dropped.
-      // Budapest midnight of 1 January (ADR-XXXX) — the same year bookingViews counts in.
+      // Budapest midnight of 1 January (ADR-0289) — the same year bookingViews counts in.
       const yearStart = budapestMidnight(`${budapestYear(new Date())}-01-01`);
       const countYear = async (status: "accepted" | "cancelled"): Promise<number> => {
         const row = await db

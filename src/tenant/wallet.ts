@@ -66,7 +66,7 @@ export interface WalletAdminData {
 }
 
 /** A Postgres `date` VALUE (current_period_end) → 'YYYY-MM-DD'. Instants (timestamptz)
- *  go through budapestIsoDay instead (ADR-XXXX). */
+ *  go through budapestIsoDay instead (ADR-0289). */
 function isoDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");

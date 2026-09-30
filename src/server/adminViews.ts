@@ -484,7 +484,7 @@ function subscriptionCard(
   let meter: string;
   let line: string;
   if (sum.billingPeriod === "annual") {
-    // `start` is a calendar day (periodStart); `now` is read on the Budapest clock (ADR-XXXX).
+    // `start` is a calendar day (periodStart); `now` is read on the Budapest clock (ADR-0289).
     const z = budapestParts(now);
     let k = (z.year - start.getFullYear()) * 12 + (z.month - 1 - start.getMonth());
     if (z.day < start.getDate()) k -= 1;
@@ -3970,7 +3970,7 @@ export interface OverviewData {
 
 /** „ma" / „tegnap" / a short date — the message widget's right column. */
 function relDay(d: Date, lang: string, now: Date = new Date()): string {
-  // Budapest calendar days (ADR-XXXX): on the UTC server a 00:30 message was "tegnap".
+  // Budapest calendar days (ADR-0289): on the UTC server a 00:30 message was "tegnap".
   const diff = isoDayDiff(budapestIsoDay(d), budapestIsoDay(now));
   if (diff <= 0) return T(lang, "ma");
   if (diff === 1) return T(lang, "tegnap");
@@ -4315,7 +4315,7 @@ function fmtDate(d: Date, lang: string): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    timeZone: APP_TZ, // ADR-XXXX — the owner's clock, not the server's (UTC on prod)
+    timeZone: APP_TZ, // ADR-0289 — the owner's clock, not the server's (UTC on prod)
   }).format(d);
 }
 
@@ -4328,7 +4328,7 @@ function fmtDateTime(d: Date, lang: string): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: APP_TZ, // ADR-XXXX — the owner's clock, not the server's (UTC on prod)
+    timeZone: APP_TZ, // ADR-0289 — the owner's clock, not the server's (UTC on prod)
   }).format(d);
 }
 

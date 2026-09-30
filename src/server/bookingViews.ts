@@ -570,7 +570,7 @@ function tilePanel(d: BookingsTabData, pend: InboxItem[], arrivals: InboxItem[],
   }
   // year — the panel must ADD UP to the tile, otherwise tapping it contradicts it
   // (Elek FK-007: tile "2 foglalás", panel "Idén még nincs visszaigazolt foglalás").
-  // Budapest calendar year on both sides (ADR-XXXX) — must match the year tile's yearStart.
+  // Budapest calendar year on both sides (ADR-0289) — must match the year tile's yearStart.
   const yearNow = budapestYear(new Date());
   const thisYear = (r: InboxItem): boolean =>
     Boolean(r.decidedAt) && budapestYear(r.decidedAt!) === yearNow;
