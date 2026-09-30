@@ -1403,7 +1403,6 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount),
     // ADR-0283: provider-side idempotency — a retry can never mint a second document.
     externalId: `citoviso-payment-${paymentId}`,
-    orderNumber: publicPaymentRef(paymentId) ?? undefined,
   };
 
   try {

@@ -23,7 +23,7 @@
 //                   pending payment → the manual re-issue refuses, no provider call.
 //   ⑨ manually spent budget — failed manual attempts count too; the one that spends the
 //                   last attempt still sends the exhaustion mail, later ones stay quiet.
-//   ⑧ wire        — the Számlázz XML carries szamlaKulsoAzon + rendelesSzam where the
+//   ⑧ wire        — the Számlázz XML carries szamlaKulsoAzon (and NO rendelesSzam — error 8 on the live plan) where the
 //                   XSD sequence puts them; the error header becomes a readable sentence.
 //
 // ⚠️ The DB is the SHARED dev DB: every tick runs scoped to this run's payment ids
@@ -258,7 +258,7 @@ try {
   ok(l2.status === "issued" && held.length === 1, "az újrapróba UGYANAZT a bizonylatot kapja, nem újat", `${JSON.stringify(l2)} · tárolt: ${held.length}`);
   ok(l2.status === "issued" && l2.invoiceNumber === held[0]?.invoiceNumber, "a mentett számlaszám a szolgáltatónál élő bizonylaté");
   const inC = seenInputs.filter((i) => i.externalId === `citoviso-payment-${C}`);
-  ok(inC.length === 2 && inC.every((i) => /^CIT-[0-9A-F]{8}$/.test(i.orderNumber ?? "")), "minden hívás viszi a külső azonosítót és a rendelésszámot");
+  ok(inC.length === 2 && inC.every((i) => i.externalId === `citoviso-payment-${C}`), "minden hívás viszi a külső azonosítót");
 
   // ⑦ negative controls
   console.log("⑦ negatív kontrollok");
@@ -305,7 +305,8 @@ try {
   const xml: string = (agent as unknown as { buildXml(i: InvoiceInput): string }).buildXml(inC.at(-1)!);
   const pos = (tag: string) => xml.indexOf(`<${tag}>`);
   ok(pos("szamlaKulsoAzon") > pos("valaszVerzio") && pos("szamlaKulsoAzon") < xml.indexOf("</beallitasok>"), "szamlaKulsoAzon a <beallitasok>-ban, a valaszVerzio után");
-  ok(pos("rendelesSzam") > pos("penznem") && pos("rendelesSzam") < pos("fizetve"), "rendelesSzam a <fejlec>-ben, a fizetve előtt (XSD-sorrend)");
+  // Élesen a CITO-csomag a <rendelesSzam>-ot error 8-cal elutasítja (2026-09-30) — a kérés NEM viheti.
+  ok(pos("rendelesSzam") === -1, "a kérésben NINCS <rendelesSzam> (az éles díjcsomag error 8-cal elutasítja)");
   ok(xml.includes(`<szamlaKulsoAzon>citoviso-payment-${C}</szamlaKulsoAzon>`), "a külső azonosító a payment.id-ból képződik");
   // The header as prod sent it on 2026-09-30 (form-encoded, with HTML) → a readable sentence.
   const logged =

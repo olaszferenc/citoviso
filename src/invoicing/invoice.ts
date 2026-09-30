@@ -59,8 +59,6 @@ export interface InvoiceInput {
    * a retry safe when the first call's answer was lost (timeout after issuance).
    */
   readonly externalId?: string;
-  /** Human-readable order reference printed on the invoice (`rendelesSzam`). */
-  readonly orderNumber?: string;
 }
 
 export interface InvoiceResult {

@@ -151,7 +151,9 @@ export class SzamlazzAgent implements InvoiceProvider {
       t("penznem", input.currency) +
       t("szamlaNyelve", "hu") +
       (input.comment ? t("megjegyzes", input.comment) : "") +
-      (input.orderNumber ? t("rendelesSzam", input.orderNumber) : "") +
+      // ⛔ NO <rendelesSzam>: on the live CITO plan Számlázz rejects it (error 8, „Nincs jogosultságod vagy megfelelő
+      // díjcsomagod … (rendelésszám)”, measured 2026-09-30 on a paid 97 Ft order); the demo account accepted it.
+      // Idempotency rides on szamlaKulsoAzon alone (ADR-0283).
       t("fizetve", input.paid ? "true" : "false") +
       "</fejlec>" +
       "<elado></elado>" +
