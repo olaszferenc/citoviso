@@ -398,7 +398,7 @@ if [ -f scripts/kb-translation-coverage-check.mts ] && \
   echo "[pre-commit] kb-translation-coverage --self-test (az őr változott; a fordítás a deploy kapuja)…"
   npx tsx scripts/kb-translation-coverage-check.mts --self-test >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX: a UI-fordító az eldobott (placeholder-sértő) stringet ÚJRAKÉRI, a végleges bukás
+# A UI-fordító az eldobott (placeholder-sértő) stringet ÚJRAKÉRI, a végleges bukás
 # hangos, és a magyar névelő ({art}/{Art}) nem-magyar nyelven üres. Mérve 2026-09-30: élesen 7
 # string esett ki újrapróba nélkül, a deploy GATE 5-je elbukott. Hermetikus: mock modell, nincs DB-írás.
 if [ -f scripts/i18n-retry-check.mts ] && \
