@@ -88,6 +88,23 @@ Naplók: `~/rc-briefs/reports/deploy-keszenlet/deploy-dry-20260930-080453.log`, 
 - ⚠️ A tulaj ELŐRE engedélyezte a 98%-os `campaign` ajánlat beírását a `e629826b…` teszt-lead ELSŐ prospectjére; a figyelő ezzel a
   sessionnel leáll — az új tölcsér-kör koordinátora írja be (mint a 7. pontban: `kind=campaign, percent=98, scope=initial, expires 24 h`).
 
+## Folytatás (este, `561cbb96`, átadás után) — számla + SMS/MMS + takarítás
+- 18:17 UTC: a rossz címzettű (`+36301200971` = a modem SIM-je) várakozó MMS `907a2c29…` → `failed` (tulaj: „nem jó a címzett”;
+  a lead-szám nem default a kódban, csak a teszt-lead adata volt). Éles `.env` += `MOBILE_SEND_WINDOW_OFF=1`
+  (mentés `/opt/citoviso/backups/env-pre-mobilewindow-20260930-181736`) — **⚠️ MÉG BENT VAN**, a teszt végén ki + restart.
+- 18:20 UTC deploy `448a7480` (`prod/20260930-2020`; minden kapu zöld). Számla újra: **`CITO-2026-1` kiállítva** (97 Ft, Számlázz),
+  levél a vevő-címre. A `szamlaKulsoAzon` nem okozott díjcsomag-hibát.
+- Új teszt-lead: **„[TESZT] Lovász apartman”** `18905305-4551-4916-ab15-149506ea8c89` (10 fotó, 8 forrássor; e-mail a tulajé,
+  telefon NINCS — a valódi szállás-szám kivéve, a tulaj írja be).
+- 18:34 UTC a tulaj kérésére törölve (mentés `/opt/citoviso/backups/purchases-test-20260930-183442.json`): a `[TESZT] Muschel Panzió`
+  bérlő + a Visa-tokenes havi előfizetés, 4 Barion order_intent/payment (97 paid + számlasor, 97 failed, 3 900 és 7 040 failed).
+  Élesen 0 tokenes előfizetés maradt. A partner-sor marad (tenant_id → NULL).
+
+## Nyitott (a folytatásból)
+- `MOBILE_SEND_WINDOW_OFF=1` ki az éles `.env`-ből + restart, a tulaj szavára.
+- Ferenc Ház (éves, számlás, mock-fizetés) és Nyugalom (domain_upgrade fizetés nélkül) bérlő: törlés vagy demó — tulaj-döntés.
+- `CITO-2026-1` valódi számla a Számlázz/NAV-ban; a DB-sora törölve — sztornó a Számlázz felületén, ha a tulaj kéri.
+
 ## Nyitott / következő
 - Új deploy (MMS + i18n + számla): utomunka3 land → száraz → `--go` → éles `.env` `MMS_PROVIDER=queue` → dev `citoviso-mms-relay.timer` →
   `i18n-article-refresh --go` élesen → a tulaj új tölcsér-kör az `e629826b…` teszt-leaden (mock → kiküldés → 98% ajánlat → vásárlás → SZÁMLA).
