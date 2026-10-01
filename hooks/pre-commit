@@ -1810,7 +1810,7 @@ if [ -f scripts/photo-rights-edit-check.mts ] && \
   echo "[pre-commit] photo-rights-edit-check (§A.2: a vízjel-jelölés túléli a szerkesztést)…"
   npx tsx scripts/photo-rights-edit-check.mts
 fi
-# ⛔ Places cost (ADR-XXXX, 2026-10-01): the console lead page reloaded every 6–8 s and each
+# ⛔ Places cost (lead_places_cache, 2026-10-01): the console lead page reloaded every 6–8 s and each
 # load bought a Text Search + up to 6 Photo Media calls (one lead 126×, ~600 $/week). The
 # lead page must never pay, and one lead pays once (lead_places_cache). Fetch-stubbed, no
 # network; a fixture lead in the local DB, so scoped to the Places/photo path.
