@@ -353,11 +353,13 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         placeholder: "Késői érkezés előre egyeztetve lehetséges",
       },
     ],
-    defaults: { checkInFrom: "14:00", checkInTo: "20:00", checkOutUntil: "10:00", note: "" },
-    industryDefaults: {
-      // A restaurant has no check-in/out; the module degrades to opening hours.
-      restaurant: { checkInFrom: "11:00", checkInTo: "22:00", checkOutUntil: "22:00" },
-    },
+    // ⛔ EMPTY on purpose (T-2, Elek live 2026-10-01): these are FACTS about the place,
+    // not settings. The old 14:00–20:00 / 10:00 (and the restaurant 11:00–22:00 layer)
+    // merged into the live projection as if the owner had typed them, so a live page
+    // stated arrival times nobody gave (§B.17). Untouched = no section on the live page;
+    // the mock still shows the clearly labelled sample (hoursSampleBlock).
+    // Guard: module-config-check, "Érintetlen modul → nincs kitalált tény".
+    defaults: { checkInFrom: "", checkInTo: "", checkOutUntil: "", note: "" },
     validate: (c) => {
       const errs: string[] = [];
       const from = String(c.checkInFrom ?? "");

@@ -11,7 +11,7 @@
 
 import { db } from "../src/db/client.js";
 import { pool } from "../src/db/client.js";
-import { effectiveModuleConfig } from "../src/moduleConfig.js";
+import { effectiveModuleConfig, MODULE_CONFIG_REGISTRY } from "../src/moduleConfig.js";
 import {
   getBlockedDaysFrom,
   getMonthAvailability,
@@ -20,7 +20,7 @@ import {
 } from "../src/tenant/availability.js";
 import { createUnit, ensureUnits, getUnits, isMultiUnit, setUnitSeasonalOnly } from "../src/tenant/units.js";
 import { getTenantModules, setTenantModules } from "../src/tenant/modules.js";
-import { renderableModules } from "../src/modules.js";
+import { MODULE_CATALOG, renderableModules } from "../src/modules.js";
 import { bookingSlot } from "../src/engine/templateKit.js";
 // ADR-0062: a teljes foglalás-widget a modul-szekciók közt él, nem a sávban — a mérésnek
 // a KISZÁLLÍTOTT felületet kell néznie, nem a sáv felét.
@@ -53,15 +53,16 @@ console.log("Alapérték-rétegek (tiszta függvények):");
   const d = effectiveModuleConfig("booking", null, null);
   check("érintetlen modul is teljes konfigot ad", d.minNights === 1 && d.horizonMonths === 12, d);
 
+  // T-2: arrival/departure times are facts about the place — no layer may invent them.
   const hu = effectiveModuleConfig("hours", null, null);
-  check("hours katalógus-alapérték", hu.checkInFrom === "14:00", hu);
+  check("⭐ hours: nincs kitalált katalógus-időpont", hu.checkInFrom === "" && hu.checkOutUntil === "", hu);
 
   const rest = effectiveModuleConfig("hours", null, "restaurant");
-  check("iparág-réteg felülírja a katalógust", rest.checkInFrom === "11:00", rest);
+  check("⭐ hours: az iparág-réteg sem talál ki időpontot", rest.checkInFrom === "" && rest.checkOutUntil === "", rest);
 
   const saved = effectiveModuleConfig("hours", { checkInFrom: "16:00" }, "restaurant");
-  check("a tulaj mentett értéke nyer az iparág felett", saved.checkInFrom === "16:00", saved);
-  check("a nem mentett mező az iparág-rétegből jön", saved.checkOutUntil === "22:00", saved);
+  check("a tulaj mentett értéke nyer", saved.checkInFrom === "16:00", saved);
+  check("a nem mentett mező üres marad", saved.checkOutUntil === "", saved);
 }
 
 // ── database round trip on a throwaway site ────────────────────────────────
@@ -119,12 +120,50 @@ try {
 
   const siteId = site.id;
 
+  // ── T-2 (Elek, live 2026-10-01): an untouched module puts NO fact on the live page ──
+  // The hours module shipped catalog defaults (14:00–20:00 / 10:00) that the merge
+  // layer handed to the live projection as if the owner had typed them: the live page
+  // stated arrival times nobody gave (§B.17). DIFFERENTIAL measure, so it covers every
+  // module, today's and tomorrow's: project the page data once for an UNTOUCHED site,
+  // once with every free-text/time/list field saved EMPTY. Anything that differs came
+  // from a default, not from the owner. Behaviour settings (numbers, toggles, selects)
+  // are not blanked: they are enforced by the system, so they are true as stated.
+  // Retired modules are left off: they are not sold and render nothing (newsletterBlock).
+  console.log("\nÉrintetlen modul → nincs kitalált tény az élő oldalon (T-2):");
+  {
+    const liveIds = MODULE_CATALOG.filter((m) => !m.retired).map((m) => m.id);
+    await setTenantModules(tenant.id, liveIds);
+    const untouched = (await moduleContentFor(tenant.id, siteId)).data as Record<string, unknown>;
+    for (const [moduleId, def] of Object.entries(MODULE_CONFIG_REGISTRY)) {
+      const empty: Record<string, unknown> = {};
+      for (const f of def.fields) {
+        if (f.type === "lines") empty[f.key] = [];
+        else if (f.type === "text" || f.type === "textarea" || f.type === "time") empty[f.key] = "";
+      }
+      if (!Object.keys(empty).length) continue;
+      await setSiteModuleConfig(siteId, moduleId, empty, "test");
+    }
+    const owned = (await moduleContentFor(tenant.id, siteId)).data as Record<string, unknown>;
+    const keys = new Set([...Object.keys(untouched), ...Object.keys(owned)]);
+    const leaks = [...keys].filter((k) => JSON.stringify(untouched[k]) !== JSON.stringify(owned[k]));
+    check(
+      "⭐ az érintetlen modulok oldal-adata = az üresre mentetteké (minden érték a tulajtól jön)",
+      leaks.length === 0,
+      Object.fromEntries(leaks.map((k) => [k, untouched[k]])),
+    );
+    check("⭐ érintetlen nyitvatartás → nincs „Érkezés és távozás” adat", untouched.hours === undefined, untouched.hours);
+    // Reset: the round-trip checks below start from an untouched site.
+    await db.deleteFrom("site_module_config_history").where("site_id", "=", siteId).execute();
+    await db.deleteFrom("site_module_config").where("site_id", "=", siteId).execute();
+    await setTenantModules(tenant.id, []);
+  }
+
   const industry = await getSiteIndustry(siteId);
   check("az iparág feloldódik a lead láncán", industry === "restaurant", industry);
 
   const fresh = await getSiteModuleConfig(siteId, "hours");
   check("mentés előtt: customized=false", fresh.customized === false, fresh);
-  check("mentés előtt: iparág-alapérték jön", fresh.config.checkInFrom === "11:00", fresh.config);
+  check("mentés előtt: nincs kitalált időpont", fresh.config.checkInFrom === "", fresh.config);
 
   const saved = await setSiteModuleConfig(
     siteId,
@@ -138,7 +177,7 @@ try {
   check("mentés után visszaolvasható", after.config.checkInFrom === "15:00", after.config);
   check("mentés után: customized=true", after.customized === true, after);
   check("ismeretlen mező NEM tárolódott", !("ismeretlenMezo" in after.config), after.config);
-  check("nem mentett mező az iparág-rétegből jön", after.config.checkOutUntil === "22:00", after.config);
+  check("nem mentett mező üres marad", after.config.checkOutUntil === "", after.config);
 
   const bad = await setSiteModuleConfig(siteId, "hours", { checkInFrom: "20:00", checkInTo: "08:00" }, "test");
   check("érvénytelen bemenet elutasítva", bad.ok === false && bad.errors.length > 0, bad);
