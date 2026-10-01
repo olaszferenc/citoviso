@@ -25,13 +25,27 @@ import { ownedSiteForLead, type OwnedSite } from "../conversion/owned.js";
 
 export type PayEntryDecision =
   | { readonly kind: "redirect"; readonly url: string; readonly reissued: boolean }
+  /** GET only: the link is dead and a NEW payment would be needed — the buyer presses for it. */
+  | { readonly kind: "renew" }
   | { readonly kind: "unknown" }
   | { readonly kind: "owned"; readonly owned: OwnedSite }
   | { readonly kind: "unavailable"; readonly orderIntentId: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function resolvePayEntry(paymentId: string): Promise<PayEntryDecision> {
+/**
+ * `reissue: false` is the mail link's GET (ADR-0291, extended 2026-10-01): mail-link
+ * scanners (Outlook Safe Links, Gmail prefetch, antivirus) open every link without a
+ * click, and a dead link used to START a new gateway payment and alert the house
+ * ("the buyer wanted to pay") for a visit no person made. The GET now stops at
+ * `renew` and shows a button; only the POST behind it reissues. The gateway state
+ * refresh below stays on both: it syncs our record to what already happened at the
+ * gateway (the same idempotent path /pay/done runs on GET), it decides nothing.
+ */
+export async function resolvePayEntry(
+  paymentId: string,
+  opts: { readonly reissue: boolean },
+): Promise<PayEntryDecision> {
   if (!UUID.test(paymentId)) return { kind: "unknown" };
   const row = await db
     .selectFrom("payment")
@@ -91,6 +105,8 @@ export async function resolvePayEntry(paymentId: string): Promise<PayEntryDecisi
     const owned = await ownedSiteForLead(kind.leadId);
     if (owned) return { kind: "owned", owned };
   }
+
+  if (!opts.reissue) return { kind: "renew" };
 
   // Dead link: a fresh payment for the same order. requestPayment re-applies every
   // gate (already-a-customer, approved mock, market) and reuses another live

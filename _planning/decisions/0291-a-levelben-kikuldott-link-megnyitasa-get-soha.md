@@ -24,9 +24,15 @@ korábbi „idempotens, mert a levelezők előtöltenek” védekezés csak a M�
 4. **Őr:** `scripts/mail-link-get-safe-check.mts` — a `MAIL_LINK_ROUTES` minden sorára saját fixtúrán GET, teljes
    állapot-összevetés; POST-kontroll; a konzol leiratkozás-linkje is. Új levél-link próba nélkül = piros. A régi kódon
    mérve piros volt (3 GET-mutáció, 3× POST 405).
-5. **Tudatos kivételek (jelentve, nem javítva — tulajdonosi döntés kell):** `GET /p/<t>` (a hideg levél mock-linkje
-   mérést ír és az n-edik látogatásnál eszkalációs ajánlatot vereti) és `GET /pay/go/<id>` (lejárt ablaknál új fizetést
-   indít, és a házat riaszthatja). Az őr fejléce kimondja őket.
+5. **Tudatos kivételek (2026-10-01, első kör):** `GET /p/<t>` és `GET /pay/go/<id>` — a koordinátor ugyanazon a napon
+   mindkettő javítását kérte (6. és 7. pont).
+6. **Kiterjesztés — tartós fizetési link (2026-10-01):** a `GET /pay/go/<id>` lejárt fizetési ablaknál eddig ÚJ fizetést
+   indított (és ha nem lehetett, riasztotta a házat). Most a GET `resolvePayEntry(id, { reissue: false })` → `renew`:
+   egy „A fizetési link lejárt” lap a **„Tovább a fizetéshez”** gombbal; csak a gomb POST-ja indít új fizetést, és csak
+   az riaszt. Ami változatlan GET-en: kifizetett rendelés → eredmény-lap; élő fizetés → tovább a kapura; már vásárolt
+   lead → „már az Öné”; az átjáró-állapot frissítése (szinkron, nem döntés — ugyanaz, amit a `/pay/done` GET-je fut).
+   Őr: a `mail-link-get-safe-check` ⑤ pontja (mutációval piros) + `pay-entry-check` ②a.
+7. **`GET /p/<t>`:** lásd a következő kiegészítést (a látogatás-számlálás áthelyezése a böngészőbe).
 
 **Következmény.** A tulajnak egy koppintással több a levélből döntés; cserébe gép nem dönthet helyette. A súgó
 (admin-bookings, admin-modules-booking, admin-modules-reviews) a megerősítő lépést írja le.

@@ -2372,6 +2372,24 @@ export function payLinkUnavailablePage(supportEmail: string | null): string {
 }
 
 /**
+ * The stable pay-link's payment window has closed (ADR-0291, extended 2026-10-01).
+ * Nothing was started: mail-link scanners open every link without a click, so a NEW
+ * payment (and, if it cannot be started, the house alert) waits for this button —
+ * a POST to the same URL. Says what is true: no charge, one press continues.
+ */
+export function payLinkRenewPage(paymentId: string): string {
+  const lang = consoleLang();
+  const body = `<div class="panel" style="max-width:560px;margin:48px auto">
+    <h2 style="margin-top:0">${T(lang, "A fizetési link lejárt")}</h2>
+    <p style="margin:0">${T(lang, "A korábbi fizetési ablak lezárult, ezért ugyanarra a rendelésre új fizetést indítunk. Eddig semmit nem terheltünk.")}</p>
+    <div class="row" style="margin-top:18px"><form method="post" action="/pay/go/${esc(paymentId)}">
+      <button type="submit" class="btn">${T(lang, "Tovább a fizetéshez")}</button>
+    </form></div>
+  </div>`;
+  return layout(T(lang, "A fizetési link lejárt"), body, { chrome: false });
+}
+
+/**
  * Buyer returned from the gateway before the final payment state landed (Barion
  * may still report InProgress for a few seconds). Auto-refresh until /pay/done
  * can render the real outcome — never leave the buyer on a dead screen.

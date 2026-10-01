@@ -108,6 +108,7 @@ import {
   payResultPage,
   payUnknownRefPage,
   payLinkUnavailablePage,
+  payLinkRenewPage,
   payAlreadyOwnedPage,
 } from "./views.js";
 import { checkSubdomainAvailable, convertLead } from "../conversion/provision.js";
@@ -3368,10 +3369,15 @@ async function handle(
   // A raw gateway link dies after its payment window (Barion: 30 min); this one
   // decides at click time — paid → result page, live → on to it, dead → a fresh
   // payment for the same order (src/payment/payEntry.ts).
+  //
+  // ⛔ ADR-0291 (extended 2026-10-01): the GET only SHOWS. Mail-link scanners open
+  // every link without a click; a dead link used to start a new payment and alert the
+  // house on such a visit. The GET now offers a button (renew), the POST reissues.
   const payGoMatch = /^\/pay\/go\/([0-9a-f-]{36})$/i.exec(path);
-  if (method === "GET" && payGoMatch) {
-    const d = await resolvePayEntry(payGoMatch[1]!);
+  if ((method === "GET" || method === "POST") && payGoMatch) {
+    const d = await resolvePayEntry(payGoMatch[1]!, { reissue: method === "POST" });
     if (d.kind === "redirect") return redirect(res, d.url);
+    if (d.kind === "renew") return send(res, 200, payLinkRenewPage(payGoMatch[1]!));
     if (d.kind === "unknown") return send(res, 404, payUnknownRefPage(payGoMatch[1]!, config.supportEmail || null));
     // Already theirs: nothing to fix, nobody to alert — say so and show the way in.
     if (d.kind === "owned") return send(res, 200, payAlreadyOwnedPage(d.owned.siteUrl, d.owned.loginUrl));

@@ -9,6 +9,7 @@
 //   A) BEHAVIOUR — /pay/go/<payment id> (resolvePayEntry), on a throwaway order
 //      with the mock gateway:
 //        live payment        → on to it (no new payment)
+//        dead payment, GET   → "renew" (a button), NO new payment (ADR-0291)
 //        dead payment        → a NEW payment for the same order, and on to it
 //        clicked again       → the SAME new payment (no third one)
 //        order already paid  → the result page, never a second charge
@@ -49,7 +50,9 @@ async function naiveResolve(paymentId: string): Promise<PayEntryDecision> {
   const r = await db.selectFrom("payment").select("pay_url").where("id", "=", paymentId).executeTakeFirst();
   return r?.pay_url ? { kind: "redirect", url: r.pay_url, reissued: false } : { kind: "unknown" };
 }
-const resolve = SELF_TEST ? naiveResolve : resolvePayEntry;
+// The behaviour steps below are the button's POST (reissue); ②a measures the mail link's GET.
+const resolve = (id: string): Promise<PayEntryDecision> =>
+  SELF_TEST ? naiveResolve(id) : resolvePayEntry(id, { reissue: true });
 
 async function payments(orderIntentId: string) {
   return db
@@ -121,6 +124,13 @@ async function run(): Promise<void> {
 
     // ② the gateway window passed (what Barion's Expired → 'failed' leaves behind)
     await db.updateTable("payment").set({ status: "failed" }).where("id", "=", first.paymentId).execute();
+    // ②a ADR-0291: the mail link's GET (a scanner, or the buyer before pressing) only
+    //    SHOWS — "renew", no new payment. Only the button's POST below reissues.
+    if (!SELF_TEST) {
+      const g = await resolvePayEntry(first.paymentId, { reissue: false });
+      check(g.kind === "renew", `lejárt fizetés GET-re → „renew” (gomb), nem új fizetés (mért: ${g.kind})`);
+      check((await payments(s.orderIntentId)).length === 1, "a GET NEM indít új fizetést");
+    }
     const d2 = await resolve(first.paymentId);
     const afterDead = await payments(s.orderIntentId);
     const second = afterDead.find((p) => p.id !== first.paymentId && p.status === "pending");
@@ -184,8 +194,8 @@ async function run(): Promise<void> {
     check((await payments(stale.orderIntentId)).length === 1, "már vásárolt leadnél NEM indul új fizetés");
 
     // ⑤ unknown / malformed
-    check((await resolvePayEntry("00000000-0000-4000-8000-000000000000")).kind === "unknown", "ismeretlen azonosító → unknown");
-    check((await resolvePayEntry("nem-uuid")).kind === "unknown", "hibás azonosító → unknown (nem omlik össze)");
+    check((await resolvePayEntry("00000000-0000-4000-8000-000000000000", { reissue: true })).kind === "unknown", "ismeretlen azonosító → unknown");
+    check((await resolvePayEntry("nem-uuid", { reissue: true })).kind === "unknown", "hibás azonosító → unknown (nem omlik össze)");
   } finally {
     await db.deleteFrom("lead").where("id", "=", s.leadId).execute();
   }

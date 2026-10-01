@@ -20,13 +20,13 @@
 //      zöld lenne — a mérés látja a mutációt, és a régi levelek linkje továbbra is működik).
 //   ④ A konzol `/p/<t>/unsubscribe` GET-je (2026-09-26 óta megerősítő lap) nem iratkoztat le,
 //      a POST igen.
+//   ⑤ A tartós fizetési link (`/pay/go/<id>`, minden fizetés-levélben) lejárt ablaknál GET-re NEM
+//      indít új fizetést és nem riaszt (gomb-lap), a POST igen (ADR-0291 kiterjesztése, 2026-10-01).
 //
 // ⚠️ TUDATOS KIVÉTELEK (nem mutáció-mentesek GET-re, és ezt itt kimondjuk, nem elhallgatjuk):
 //   · `GET /p/<t>` — a hideg levél mock-linkje mérést ír (mock_view) és a beállított n-edik
 //     látogatásnál eszkalációs ajánlatot vereti (ADR-0088/0285). Ez a TERMÉK mérése, nem döntés;
 //     a link-ellenőrző látogatása így látogatásnak számít (lásd a V-1 jelentést).
-//   · `GET /pay/go/<id>` — lejárt fizetési ablaknál ÚJ fizetést indít ugyanarra a rendelésre
-//     (terhelés nincs, a vevő a kapun fizet). Lásd a V-1 jelentést.
 // Mutációval igazolva: a régi (GET-re döntő) kódon ② a két tulaj-linkre PIROS.
 process.env.CIT_SHOT = "1";
 process.env.PUBLIC_PORT = "0";
@@ -35,6 +35,8 @@ process.env.DATABASE_URL = "";
 // A POST-kontroll levelet küld (a vendégnek, a tulajnak): a mock postafiókba menjen, ne a
 // hálózatra. ⚠️ CSAK azért hat, mert alább minden projekt-modul DINAMIKUSAN töltődik be.
 process.env.EMAIL_PROVIDER = "mock";
+// The pay-link probe starts gateway payments on its POST control: the mock gateway, never Barion.
+process.env.PAYMENT_GATEWAY = "mock";
 
 import http from "node:http";
 import { once } from "node:events";
@@ -179,6 +181,55 @@ async function main(): Promise<void> {
     .executeTakeFirstOrThrow();
   const review = await mkReview();
   const review2 = await mkReview();
+  // ⑤ a lejárt fizetési link: saját lead + jóváhagyott terv + rendelés + egy LEJÁRT (failed) fizetés.
+  const payLead = await db
+    .insertInto("lead")
+    .values({ scrape_run_id: parent.runId, name: "GET-őr fizetés", raw: sql`'{}'::jsonb` } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const payArt = await db
+    .insertInto("mock_artifact")
+    .values({ lead_id: payLead.id, path: null, status: "approved", inputs: sql`'{}'::jsonb` } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const { validateBuyer } = await import("../src/billing/buyer.js");
+  const { recordOrderIntent } = await import("../src/console/data.js");
+  const { requestPayment } = await import("../src/payment/service.js");
+  const buyer = await validateBuyer(
+    {
+      buyer_type: "individual",
+      buyer_name: "Próba Vevő",
+      buyer_country: "HU",
+      buyer_zip: "8360",
+      buyer_city: "Keszthely",
+      buyer_address: "Fő utca 1.",
+      buyer_email: "getsafe-vevo@example.com",
+      withdrawal_waiver: true,
+      terms_accepted: true,
+    },
+    { requireTerms: false },
+  );
+  if (!buyer.ok) throw new Error("a fixtúra vevő-adata érvénytelen");
+  const order = await recordOrderIntent({
+    artifactId: payArt.id,
+    modules: [],
+    billingPeriod: "monthly",
+    price: 7240,
+    domainType: "citoviso_sub",
+    domainName: null,
+    commitmentMonths: null,
+    photoRightsDeclared: true,
+    recurringConsent: true,
+    buyer: buyer.value,
+  });
+  if (!order) throw new Error("a fixtúra-rendelés nem jött létre");
+  const deadPay = await requestPayment(order.orderIntentId);
+  if (!deadPay) throw new Error("a fixtúra-rendelésre nem jött fizetés");
+  // What Barion's Expired leaves behind: the window closed, the letter still links here.
+  await db.updateTable("payment").set({ status: "failed" }).where("id", "=", deadPay.paymentId).execute();
+  const orderPayments = () =>
+    db.selectFrom("payment").selectAll().where("order_intent_id", "=", order.orderIntentId).orderBy("id").execute();
+
   const prospectToken = tok();
   await db
     .insertInto("prospect")
@@ -187,13 +238,14 @@ async function main(): Promise<void> {
 
   /** Everything a mail link could change, as one comparable string. */
   const snapshot = async (): Promise<string> => {
-    const [reqs, days, revs, pros] = await Promise.all([
+    const [reqs, days, revs, pros, pays] = await Promise.all([
       db.selectFrom("booking_request").selectAll().where("site_id", "=", siteId).orderBy("id").execute(),
       db.selectFrom("availability_day").selectAll().where("unit_id", "=", unit.id).orderBy("day").execute(),
       db.selectFrom("site_review").selectAll().where("site_id", "=", siteId).orderBy("id").execute(),
       db.selectFrom("prospect").selectAll().where("lead_id", "=", leadId).execute(),
+      orderPayments(),
     ]);
-    return JSON.stringify({ reqs, days, revs, pros });
+    return JSON.stringify({ reqs, days, revs, pros, pays });
   };
 
   // Every GET a mail-link scanner could make. `re` ties the probe to the route list.
@@ -210,6 +262,7 @@ async function main(): Promise<void> {
     { label: "tulaj: vélemény kiteszem", path: `/velemeny/${review.action_token}/kiteszem`, server: pub },
     { label: "tulaj: vélemény nem-teszem-ki", path: `/velemeny/${review2.action_token}/nem-teszem-ki`, server: pub },
     { label: "lead: leiratkozás", path: `/p/${prospectToken}/unsubscribe`, server: con },
+    { label: "vevő: lejárt fizetési link", path: `/pay/go/${deadPay.paymentId}`, server: con },
   ];
 
   console.log("① lefedettség: minden levél-link útvonalnak van próbája");
@@ -225,7 +278,7 @@ async function main(): Promise<void> {
     const after = await snapshot();
     check(`${p.label}: GET ${p.path.replace(/\/[A-Za-z0-9_-]{16,}/, "/<t>")}`, after === before, `${r.status}${r.location ? ` → ${r.location}` : ""}${after === before ? "" : " · ÁLLAPOT VÁLTOZOTT"}`);
     // The confirm page must carry the ONE way to decide: a POST form to the very same URL.
-    if ((RE_OWNER_DECIDE.test(p.path) || RE_OWNER_REVIEW.test(p.path)) && r.status === 200) {
+    if ((RE_OWNER_DECIDE.test(p.path) || RE_OWNER_REVIEW.test(p.path) || p.path.startsWith("/pay/go/")) && r.status === 200) {
       check(`${p.label}: a lap POST-űrlapja ugyanerre az URL-re`, r.body.includes(`<form method="post" action="${p.path}"`));
     }
     // A mutating probe must not poison the next one's baseline: the next GET is measured
@@ -254,6 +307,13 @@ async function main(): Promise<void> {
   const u = await call(con, "POST", `/p/${prospectToken}/unsubscribe`);
   const pr = await db.selectFrom("prospect").select("unsubscribed_at").where("token", "=", prospectToken).executeTakeFirstOrThrow();
   check("POST leiratkozás → unsubscribed_at", pr.unsubscribed_at !== null, `${u.status}`);
+  const pg = await call(con, "POST", `/pay/go/${deadPay.paymentId}`);
+  const fresh = (await orderPayments()).filter((x) => x.status === "pending");
+  check(
+    "POST lejárt fizetési link → ÚJ fizetés, és oda visz",
+    (pg.status === 302 || pg.status === 303) && fresh.length === 1 && pg.location === fresh[0]!.pay_url,
+    `${pg.status} → ${pg.location || "–"} · ${fresh.length} élő fizetés`,
+  );
   check("az ajánlat (offered) érintetlen", (await status(offered.id)) === "offered");
 }
 
