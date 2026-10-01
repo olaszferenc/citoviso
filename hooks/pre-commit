@@ -1054,6 +1054,16 @@ if [ -f scripts/guest-link-host-check.mts ] && \
   echo "[pre-commit] guest-link-host-check (a levél-linkek a tenant hoston is élnek)…"
   npx tsx scripts/guest-link-host-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A levélben kiküldött link MEGNYITÁSA (GET) semmit nem változtat (Elek V-1, élesen mérve
+# 2026-10-01: a tulaj „Elfogadom / Nem szabad” és a vélemény „Kiteszem” linkje GET-re
+# döntött — a levelezők link-ellenőrzője kattintás nélkül dönthetett). Az őr a mailLinkRoutes.ts
+# EGY listájának minden sorára saját fixtúrán GET-el, a teljes állapotot összeveti, és a
+# POST-kontrollal igazolja, hogy a döntés tényleg ott történik.
+if [ -f scripts/mail-link-get-safe-check.mts ] && \
+   changed_files | grep -qE '^src/server/(public|mailLinkRoutes|moduleConfigViews|offerViews)\.ts|^src/booking/requests\.ts|^src/reviews/reviews\.ts|^src/console/(server|data)\.ts|^scripts/mail-link-get-safe-check'; then
+  echo "[pre-commit] mail-link-get-safe-check (a levél-link megnyitása nem dönt)…"
+  npx tsx scripts/mail-link-get-safe-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADR-0119 ① — a fenti KÉT őr a 13 fülből EGYET mér (mindkettő a modulesSection()
 # kimenetén dolgozik). A tulaj viszont az `attekintes` fülre LÉP BE, és ott mérve
 # (2026-09-14) a fagyás alatt 0× tartozás / 0× összeg / 0× fizetés-gomb volt, a

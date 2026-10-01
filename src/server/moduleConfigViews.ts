@@ -3939,8 +3939,140 @@ export function bookingVerdictPage(r: {
     `<div class="citui-card">` +
     `<h1 style="font-size:1.5rem;color:${color};margin-top:0">${esc(m.title)}</h1>` +
     `<p style="font-size:1.02rem;line-height:1.7">${m.body}</p>` +
-    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=modulok&m=booking">${T(lang, "Foglalások megnyitása")}</a></p>` +
+    `<p style="margin-top:26px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=foglalasok">${T(lang, "Foglalások megnyitása")}</a></p>` +
     `</div></div></body></html>`
+  );
+}
+
+/* ── Owner verdict CONFIRM screens (Elek V-1, 2026-10-01) ────────────────────
+   ⛔ Measured live: the owner's one-tap mail links decided on GET, and mail-link
+   scanners (Outlook Safe Links, Gmail prefetch, antivirus) open every link without
+   a click. The GET now shows the request and ONE button; the POST to the same URL
+   decides — the guest-cancel pattern below. Old mails keep working: same URL. */
+
+/** Shared shell for the owner's mail-link pages: same card as bookingVerdictPage. */
+function ownerLinkShell(title: string, inner: string, adminHref: string, adminLabel: string): string {
+  return (
+    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<meta name="robots" content="noindex">` +
+    `<link rel="stylesheet" href="/assets/ui/citui.css">` +
+    `<title>${esc(title)}</title></head><body>` +
+    `<div class="citui-container" style="max-width:500px;padding:48px 20px">` +
+    `<div class="citui-card">${inner}` +
+    `<p style="margin:18px 0 0"><a class="citui-btn citui-btn--ghost" href="${esc(adminHref)}" style="text-decoration:none">${adminLabel}</a></p>` +
+    `</div></div></body></html>`
+  );
+}
+
+/** One fact row of the confirm card: label left, value right, wraps on a phone. */
+function factRow(label: string, value: string): string {
+  return (
+    `<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 14px;padding:7px 0;` +
+    `border-bottom:1px solid var(--citui-line)">` +
+    `<span style="color:var(--citui-muted)">${label}</span><b style="text-align:right">${value}</b></div>`
+  );
+}
+
+/** The decide button: the accept is the primary action, the refusal carries the "bad" tone. */
+function decideForm(action: string, label: string, tone: "ok" | "bad"): string {
+  const cls = tone === "ok" ? "citui-btn citui-btn--primary" : "citui-btn";
+  const fill =
+    tone === "bad" ? "background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-on-bad);" : "";
+  return (
+    `<form method="post" action="${esc(action)}" style="margin:16px 0 0">` +
+    `<button type="submit" class="${cls}" style="${fill}width:100%">${label}</button></form>`
+  );
+}
+
+/** GET /foglalas/<token>/elfogadom|elutasitom — nothing has happened yet. */
+export function bookingDecideConfirmPage(
+  v: {
+    outcome: string;
+    guestName?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    lang?: string;
+    unitName?: string;
+    guests?: number;
+    ref?: string;
+    quotedTotal?: number;
+    currency?: string;
+  },
+  token: string,
+  verdict: "accepted" | "declined",
+): string {
+  // Already decided / dead link: the same page the one-tap flow ended on.
+  if (v.outcome !== "confirm") return bookingVerdictPage({ ok: false, ...v });
+  const lang = v.lang ?? "hu";
+  const accept = verdict === "accepted";
+  const nightsN = Math.round((Date.parse(`${v.dateTo}T00:00:00Z`) - Date.parse(`${v.dateFrom}T00:00:00Z`)) / 86_400_000);
+  const title = accept ? T(lang, "Elfogadja ezt a foglalást?") : T(lang, "Elutasítja ezt a kérést?");
+  const facts =
+    factRow(T(lang, "Vendég:"), esc(v.guestName ?? "")) +
+    factRow(
+      T(lang, "Időszak:"),
+      // Each date unbreakable: on a phone the row wraps between them, never inside one.
+      `<span style="white-space:nowrap">${esc(huDay(v.dateFrom!))} —</span> ` +
+        `<span style="white-space:nowrap">${esc(huDay(v.dateTo!))}</span>`,
+    ) +
+    factRow(T(lang, "Éjszakák:"), T(lang, "{n} éj", { n: nightsN })) +
+    (v.unitName ? factRow(T(lang, "Egység:"), esc(v.unitName)) : "") +
+    (v.guests ? factRow(T(lang, "Létszám:"), T(lang, "{n} fő", { n: v.guests })) : "") +
+    (v.quotedTotal ? factRow(T(lang, "Ár összesen:"), esc(formatMoney(v.quotedTotal, v.currency ?? "HUF", lang))) : "") +
+    (v.ref ? factRow(T(lang, "Hivatkozás:"), esc(v.ref)) : "");
+  const what = accept
+    ? T(lang, "Ha elfogadja, a vendég e-mailben visszaigazolást kap, és a napok foglalttá válnak a naptárban. Ha erre az időszakra más kérés is érkezett, azt a rendszer automatikusan elutasítja.")
+    : T(lang, "Ha elutasítja, a vendég e-mailt kap, hogy a kért időpont nem szabad. A naptár nem változik.");
+  return ownerLinkShell(
+    title,
+    `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${title}</h1>` +
+      `<div style="font-size:.95rem;margin:12px 0 14px">${facts}</div>` +
+      `<p style="font-size:.95rem;line-height:1.65;margin:0">${what}</p>` +
+      decideForm(
+        `/foglalas/${token}/${accept ? "elfogadom" : "elutasitom"}`,
+        accept ? T(lang, "Igen, elfogadom") : T(lang, "Igen, elutasítom"),
+        accept ? "ok" : "bad",
+      ) +
+      `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin:12px 0 0">${T(lang, "Amíg nem nyomja meg a gombot, semmi nem változik — a kérés döntésre vár.")}</p>`,
+    "/admin?tab=foglalasok",
+    T(lang, "Foglalások megnyitása"),
+  );
+}
+
+/** GET /velemeny/<token>/kiteszem|nem-teszem-ki — nothing has happened yet. */
+export function reviewDecideConfirmPage(
+  v: { outcome: string; authorName?: string; lang?: string; rating?: number; body?: string; unitName?: string | null },
+  token: string,
+  verdict: "published" | "rejected",
+): string {
+  if (v.outcome !== "confirm") return reviewVerdictPage({ ok: false, ...v });
+  const lang = v.lang ?? "hu";
+  const publish = verdict === "published";
+  const title = publish ? T(lang, "Kiteszi ezt a véleményt?") : T(lang, "Elrejti ezt a véleményt?");
+  const quote =
+    `<div style="background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:13px;` +
+    `padding:12px 14px;margin:12px 0 14px;font-size:.95rem;line-height:1.6">` +
+    `<b>${esc(v.authorName ?? "")}</b>` +
+    (v.rating ? ` · ${T(lang, "{n}/5 csillag", { n: v.rating })}` : "") +
+    (v.unitName ? ` · ${esc(v.unitName)}` : "") +
+    `<br>${esc(v.body ?? "")}</div>`;
+  const what = publish
+    ? T(lang, "Ha kiteszi, a vélemény megjelenik az oldalán. Ha a vendég megadta az e-mail címét, értesítjük róla.")
+    : T(lang, "Ha elrejti, a vélemény nem jelenik meg az oldalán. A vendég erről nem kap értesítést.");
+  return ownerLinkShell(
+    title,
+    `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${title}</h1>` +
+      quote +
+      `<p style="font-size:.95rem;line-height:1.65;margin:0">${what}</p>` +
+      decideForm(
+        `/velemeny/${token}/${publish ? "kiteszem" : "nem-teszem-ki"}`,
+        publish ? T(lang, "Igen, kiteszem") : T(lang, "Igen, nem teszem ki"),
+        publish ? "ok" : "bad",
+      ) +
+      `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin:12px 0 0">${T(lang, "Amíg nem nyomja meg a gombot, semmi nem változik — a vélemény döntésre vár.")}</p>`,
+    "/admin?tab=modulok&m=reviews",
+    T(lang, "Vélemények megnyitása"),
   );
 }
 

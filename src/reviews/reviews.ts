@@ -264,6 +264,37 @@ export interface DecisionResult {
   readonly thanked?: boolean;
 }
 
+/** What the owner's review-verdict link shows before anything is decided (V-1). */
+export interface ReviewDecisionView extends DecisionResult {
+  readonly rating?: number;
+  readonly body?: string;
+  readonly unitName?: string | null;
+}
+
+/**
+ * READ-ONLY twin of decideReview for the mail link's GET (Elek V-1, 2026-10-01): mail-link
+ * scanners open every link without a click, and the GET used to publish the review. The
+ * GET now shows this; the POST decides. 'confirm' = pending, the verdict can be applied.
+ */
+export async function peekReviewDecision(
+  token: string,
+  verdict: "published" | "rejected",
+): Promise<ReviewDecisionView> {
+  const rev = await loadReview({ token });
+  if (!rev) return { ok: false, outcome: "unknown" };
+  const base = {
+    authorName: rev.author_name,
+    lang: await prepareMailLang(await langForSite(rev.site_id)),
+    rating: rev.rating,
+    body: rev.body,
+    unitName: rev.unit_name ?? null,
+  };
+  if (rev.status !== "pending") {
+    return { ok: true, outcome: rev.status === verdict ? "already" : rev.status, ...base };
+  }
+  return { ok: true, outcome: "confirm", ...base };
+}
+
 /**
  * Apply the owner's verdict. Idempotent for the same reason booking is: e-mail
  * clients prefetch links and owners double-tap, so the second visit must report

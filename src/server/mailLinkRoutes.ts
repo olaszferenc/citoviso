@@ -22,9 +22,9 @@ export const RE_GUEST_CANCEL = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/lemondom$/;
 export const RE_GUEST_OFFER = /^\/ajanlat\/([A-Za-z0-9_-]{16,80})(?:\/(elfogadom|nem-kerem))?$/;
 /** Booking-offer ④: the owner's offer page — the owner's key (action_token). */
 export const RE_OWNER_OFFER = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/ajanlat$/;
-/** The owner's one-tap verdict on a request, from the notification mail. */
+/** The owner's verdict on a request, from the notification mail: GET confirms, POST decides (V-1). */
 export const RE_OWNER_DECIDE = /^\/foglalas\/([A-Za-z0-9_-]{16,80})\/(elfogadom|elutasitom)$/;
-/** The owner's one-tap verdict on a guest review, from the notification mail. */
+/** The owner's verdict on a guest review, from the notification mail: GET confirms, POST decides (V-1). */
 export const RE_OWNER_REVIEW = /^\/velemeny\/([A-Za-z0-9_-]{16,80})\/(kiteszem|nem-teszem-ki)$/;
 
 /**

@@ -1108,6 +1108,45 @@ export async function decideRequest(
   return acceptCore(req, "owner", "pending", decisionNote, publicBaseUrl, base);
 }
 
+/** What the owner's verdict link shows BEFORE anything is decided (V-1, 2026-10-01). */
+export interface DecisionView extends DecisionResult {
+  readonly unitName?: string;
+  readonly guests?: number;
+  readonly ref?: string;
+  readonly quotedTotal?: number;
+  readonly currency?: string;
+}
+
+/**
+ * READ-ONLY twin of decideRequest for the mail link's GET. ⛔ Measured live (Elek V-1,
+ * 2026-10-01): the GET used to decide, and mail-link scanners (Outlook Safe Links, Gmail
+ * prefetch, antivirus) open every link in a mail without a click — a machine could confirm
+ * or refuse a guest's booking. The GET now shows this; the POST decides.
+ *
+ * Outcomes mirror decideRequest so one page renders both: 'confirm' (pending, the verdict
+ * can be applied), 'needs_offer' (accept on a request with no price — the caller sends the
+ * owner to the offer page, exactly as before), or the already-decided / unknown states.
+ */
+export async function peekDecision(token: string, verdict: "accepted" | "declined"): Promise<DecisionView> {
+  const req = await loadRequest({ token });
+  if (!req) return { ok: false, outcome: "unknown" };
+  const base = {
+    guestName: req.guest_name,
+    dateFrom: dayStr(req.date_from),
+    dateTo: dayStr(req.date_to),
+    lang: await prepareMailLang(await langForSite(req.site_id)),
+    unitName: req.unit_name,
+    guests: req.guests,
+    ref: bookingRef(req.id),
+    ...(req.quoted_total ? { quotedTotal: req.quoted_total, currency: req.quoted_currency ?? "HUF" } : {}),
+  };
+  if (req.status !== "pending") {
+    return { ok: true, outcome: req.status === verdict ? "already" : req.status, ...base };
+  }
+  if (verdict === "accepted" && !req.quoted_total) return { ok: false, outcome: "needs_offer", ...base };
+  return { ok: true, outcome: "confirm", ...base };
+}
+
 class AcceptRaceLost extends Error {}
 
 /**

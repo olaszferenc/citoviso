@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-level-link-get-nem-dont.md) — A levélben kiküldött link megnyitása (GET) soha nem dönt; a döntés POST (2026-10-01)
 - [ADR-0290](decisions/0290-szallas-idozona-minden-szallas-a-sajat.md) — Szállás-időzóna: minden szállás a saját időzónájában él; egyetlen „ma” (2026-09-30)
 - [ADR-0289](decisions/0289-a-tulaj-a-vevo-es-a-partner-fele-mutatott-idok.md) — A tulaj, a vevő és a partner felé mutatott idők Budapest szerint; egy közös zóna-segéd (2026-09-30)
 - [ADR-0288](decisions/0288-minden-kimeno-kuldesi-ablak-es-kimeno-hatarido.md) — Minden kimenő küldési ablak és kimenő határidő Budapest-idő szerint számol, a szerver zónájától függetlenül (2026-09-30)

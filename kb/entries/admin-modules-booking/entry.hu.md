@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-09-25
+updated: 2026-10-01
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -16,8 +16,9 @@ el. Itt a naptárát, a kiadott szobáit és az értesítési címeit kezeli.
 
 A beérkezett kérések a **„Foglalások”** fülön várják — ott igazolja vissza vagy utasítja el őket,
 üzenettel a vendégnek. Ha ezen a képernyőn kérés vár döntésre, egy sáv jelzi, és a
-**„Foglalások megnyitása”** gomb odaviszi. A döntést a kérésről kapott e-mailből is elintézheti
-egy koppintással, belépés nélkül — a vendég csak azután kap választ, hogy Ön döntött.
+**„Foglalások megnyitása”** gomb odaviszi. A döntést a kérésről kapott e-mailből is elintézheti,
+belépés nélkül: a levél **„Gyors döntés innen is:”** sorának linkje egy megerősítő lapot nyit, és
+ott az **„Igen, elfogadom”** vagy az **„Igen, elutasítom”** gombbal dönt — a vendég csak azután kap választ, hogy Ön döntött.
 
 ## Hová érkezzenek az értesítések?
 

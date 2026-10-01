@@ -4,7 +4,7 @@ title: Vendégvélemények — mi kerüljön ki az oldalára
 audience: tenant
 category: bookings
 anchors: admin.modules.reviews
-updated: 2026-09-23
+updated: 2026-10-01
 ---
 
 A vendégei az oldalán, egy űrlapon írhatnak véleményt: nevet, egy–öt csillagot és pár mondatot.
@@ -16,7 +16,9 @@ dönt róla.
 ## Döntés a levélből — belépés nélkül
 
 Minden új véleményről e-mailt kap. A levélben két gomb van: „Kiteszem az oldalra” és
-„Nem teszem ki”. Egy koppintás elég, belépni nem kell.
+„Nem teszem ki”. Belépni nem kell: a gomb egy megerősítő lapot nyit a vélemény szövegével, és
+ott az **„Igen, kiteszem”** vagy az **„Igen, nem teszem ki”** gombbal dönt. Amíg ezt meg nem
+nyomja, semmi nem változik — így a levelezőprogram link-ellenőrzője sem dönthet Ön helyett.
 
 A levél gombjai egyszer döntenek: ha később mégis meggondolja magát, azt már itt, a vélemény-képernyőn
 teheti meg (lásd lent).

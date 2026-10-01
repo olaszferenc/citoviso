@@ -4,7 +4,7 @@ title: Foglalások fül — kérések elfogadása, naptár, lemondás
 audience: tenant
 category: bookings
 anchors: admin.bookings
-updated: 2026-09-29
+updated: 2026-10-01
 ---
 
 A **„Foglalások”** fülön válaszol a vendégek foglalási kéréseire, és itt látja a naptárát is.
@@ -48,7 +48,12 @@ Két lehetőség közül választ:
 Amíg a megerősítés nyitva van, az ellentétes döntés gombja nem látszik — így nem koppinthat
 véletlenül rá.
 
-Ugyanezt a döntést a kérésről kapott e-mailből is elintézheti, belépés nélkül. Az **„Üzenetek”**
+Ugyanezt a döntést a kérésről kapott e-mailből is elintézheti, belépés nélkül: a levél
+**„Foglalások megnyitása”** gombja alatt, a **„Gyors döntés innen is:”** sorban az **„Elfogadom”** vagy
+a **„Nem szabad”** linkre koppintva egy megerősítő lap nyílik a kérés adataival (vendég, időszak,
+és ha van, az ár), és ott az **„Igen, elfogadom”** vagy az **„Igen, elutasítom”** gombbal dönt.
+Amíg ezt meg nem nyomja, semmi nem változik — így a levelezőprogram link-ellenőrzője sem dönthet
+Ön helyett. (Árajánlat-kérésnél az első link **„Ajánlatot küldök”**: az az ajánlat-lapot nyitja.) Az **„Üzenetek”**
 fülön a megnyitott levél tetején a **„Foglalások megnyitása”** gomb egyenesen erre a kérésre
 visz; alatta a **„Gyors döntés innen is:”** gombok előbb rákérdeznek (a vendég nevével), és ott
 is van **„Mégsem”**. A levélben a vendég telefonszáma is koppintható.

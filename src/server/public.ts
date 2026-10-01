@@ -122,6 +122,7 @@ import { payEntryUrl } from "../payment/payEntryUrl.js";
 import { isMockDomainProvisioning, provisionOrderDomain } from "../domains/provisionDomain.js";
 import {
   bookingVerdictPage,
+  bookingDecideConfirmPage,
   guestCancelConfirmPage,
   guestCancelDonePage,
   hasSettingsScreen,
@@ -129,8 +130,9 @@ import {
   type NewUnitView,
   reviewThanksPage,
   reviewVerdictPage,
+  reviewDecideConfirmPage,
 } from "./moduleConfigViews.js";
-import { createReview, decideReview, getReviews } from "../reviews/reviews.js";
+import { createReview, decideReview, getReviews, peekReviewDecision } from "../reviews/reviews.js";
 import { getPlaceRating } from "../reviews/placeRating.js";
 import {
   createUnit,
@@ -156,6 +158,7 @@ import {
   cancelRequest,
   createBookingRequest,
   decideRequest,
+  peekDecision,
   getRequests,
   loadOfferView,
   markRequestsSeen,
@@ -3238,6 +3241,32 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     return send(res, r.outcome === "unknown" ? 404 : 200, guestCancelDonePage(r));
   }
 
+  // POST /foglalas/<token>/elfogadom|elutasitom — the owner's verdict, from the confirm
+  // page the mail link opens (Elek V-1, 2026-10-01: the GET only shows). No login: the
+  // single-use token from the notification mail IS the authorization.
+  const ownerDecide = req.method === "POST" && RE_OWNER_DECIDE.exec(pathname);
+  if (ownerDecide) {
+    const verdict = ownerDecide[2] === "elfogadom" ? "accepted" : "declined";
+    const r = await decideRequest(ownerDecide[1]!, verdict, publicBaseUrl(req));
+    // Booking-offer ②: a request with NO price is answered with an offer, not a verdict.
+    if (r.outcome === "needs_offer") return redirect(res, `/foglalas/${ownerDecide[1]!}/ajanlat`);
+    return send(res, r.outcome === "unknown" ? 404 : 200, bookingVerdictPage(r));
+  }
+
+  // POST /velemeny/<token>/kiteszem|nem-teszem-ki — the owner's review verdict, from the
+  // confirm page the mail link opens (Elek V-1). Idempotent: owners double-tap.
+  const ownerReview = req.method === "POST" && RE_OWNER_REVIEW.exec(pathname);
+  if (ownerReview) {
+    const verdict = ownerReview[2] === "kiteszem" ? "published" : "rejected";
+    const r = await decideReview(ownerReview[1]!, verdict, publicBaseUrl(req));
+    // A published verdict changes what the page shows, and the page is a STATIC
+    // file — without this rebuild the owner taps "Kiteszem" and nothing appears.
+    if (r.ok && r.outcome === "published" && r.tenantId) {
+      await rerenderTenantSnapshot(r.tenantId);
+    }
+    return send(res, r.outcome === "unknown" ? 404 : 200, reviewVerdictPage(r));
+  }
+
   // POST /admin/booking/decide — the same verdict as the e-mail links, from the admin,
   // plus the owner's word to the guest (approved plan ⑤: the note is quoted in the mail).
   if (req.method === "POST" && pathname === "/admin/booking/decide") {
@@ -3660,17 +3689,18 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return;
     }
 
-    // GET /foglalas/<token>/elfogadom|elutasitom — the owner's one-tap verdict
-    // straight from the notification e-mail, with no login. This is what keeps the
-    // module alive for an owner who will never open an admin to approve a booking.
+    // GET /foglalas/<token>/elfogadom|elutasitom — the owner's verdict link straight
+    // from the notification e-mail, with no login. ⛔ GET only CONFIRMS (Elek V-1,
+    // measured live 2026-10-01): mail-link scanners open every link without a click, and
+    // this GET used to confirm or refuse a guest's booking. The POST above decides.
     const decideMatch = RE_OWNER_DECIDE.exec(pathname);
     if (decideMatch) {
       const verdict = decideMatch[2] === "elfogadom" ? "accepted" : "declined";
-      const r = await decideRequest(decideMatch[1]!, verdict, publicBaseUrl(req));
-      // Booking-offer ②: an old mail's one-tap accept on a request with NO price does
-      // not confirm — it opens the offer page, where the price is set first.
-      if (r.outcome === "needs_offer") return redirect(res, `/foglalas/${decideMatch[1]!}/ajanlat`);
-      return send(res, r.outcome === "unknown" ? 404 : 200, bookingVerdictPage(r));
+      const v = await peekDecision(decideMatch[1]!, verdict);
+      // Booking-offer ②: an old mail's accept on a request with NO price does not
+      // confirm — it opens the offer page, where the price is set first.
+      if (v.outcome === "needs_offer") return redirect(res, `/foglalas/${decideMatch[1]!}/ajanlat`);
+      return send(res, v.outcome === "unknown" ? 404 : 200, bookingDecideConfirmPage(v, decideMatch[1]!, verdict));
     }
 
     // GET /foglalas/<token>/ajanlat — the owner's offer page (booking-offer ④).
@@ -3701,19 +3731,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       );
     }
 
-    // GET /velemeny/<token>/kiteszem|nem-teszem-ki — the owner's one-tap verdict on a
-    // review, straight from the e-mail with no login (ADR-0046). Idempotent, because
-    // mail clients prefetch links and owners double-tap.
+    // GET /velemeny/<token>/kiteszem|nem-teszem-ki — the owner's verdict link on a
+    // review, straight from the e-mail with no login (ADR-0046). ⛔ GET only CONFIRMS
+    // (Elek V-1): a scanner's visit used to publish the review. The POST above decides.
     const revMatch = RE_OWNER_REVIEW.exec(pathname);
     if (revMatch) {
       const verdict = revMatch[2] === "kiteszem" ? "published" : "rejected";
-      const r = await decideReview(revMatch[1]!, verdict, publicBaseUrl(req));
-      // A published verdict changes what the page shows, and the page is a STATIC
-      // file — without this rebuild the owner taps "Kiteszem" and nothing appears.
-      if (r.ok && r.outcome === "published" && r.tenantId) {
-        await rerenderTenantSnapshot(r.tenantId);
-      }
-      return send(res, r.outcome === "unknown" ? 404 : 200, reviewVerdictPage(r));
+      const v = await peekReviewDecision(revMatch[1]!, verdict);
+      return send(res, v.outcome === "unknown" ? 404 : 200, reviewDecideConfirmPage(v, revMatch[1]!, verdict));
     }
 
     // ADR-0067: /login lives on the platform host with NO tenant context, so the
