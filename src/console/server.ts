@@ -119,7 +119,7 @@ import { normalizeCustomDomain, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
-import { renderSite } from "../engine/render.js";
+import { renderTemplatePreview } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import {
   computeAnnual,
@@ -2739,8 +2739,7 @@ async function handle(
   const tplPrevMatch = /^\/lead\/([0-9a-f-]{36})\/tpl-preview$/i.exec(path);
   if (method === "GET" && tplPrevMatch) {
     const tplId = url.searchParams.get("tpl") ?? "";
-    const tpl = TEMPLATES[tplId];
-    if (!tpl) return send(res, 404, "ismeretlen sablon", "text/plain");
+    if (!TEMPLATES[tplId]) return send(res, 404, "ismeretlen sablon", "text/plain");
     const row = await db
       .selectFrom("mock_artifact")
       .select("inputs")
@@ -2751,17 +2750,13 @@ async function handle(
     if (!inputs.recipe || !inputs.siteData) {
       return send(res, 409, "nincs pillanatkép", "text/plain");
     }
-    // A sablon SAJÁT skinjével nézzük: egy kinézetet azzal a bőrrel ítélünk meg, amire
-    // tervezték (ugyanaz a szabály, mint a template-preview.mts-ben).
-    const recipe: Recipe = {
-      ...inputs.recipe,
-      template: tplId,
-      skin: tpl.skins[0] ?? inputs.recipe.skin,
-    };
-    const html = renderSite(recipe, inputs.siteData, {
-      phase: "mock",
-      sampleDeny: sampleDenyKeys(await getDisabledModules()),
-    });
+    // The mock's twin — runtime included (H-1); see renderTemplatePreview().
+    const html = await renderTemplatePreview(
+      { recipe: inputs.recipe, siteData: inputs.siteData },
+      tplId,
+      sampleDenyKeys(await getDisabledModules()),
+    );
+    if (html === null) return send(res, 404, "ismeretlen sablon", "text/plain");
     return send(res, 200, html);
   }
   // GET /photo?u=<url>&s=<hmac> — a konzol KÉP-PROXYJA (FK-003b ①).

@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-01_v1_level_link_get_nem_dont.md](2026-10-01_v1_level_link_get_nem_dont.md) — 2026-10-01 — Elek V-1: a levél-link megnyitása (GET) nem dönt
+- [2026-10-01_t1_terkep_modul_es_elonezet_tu.md](2026-10-01_t1_terkep_modul_es_elonezet_tu.md) — T-1: a megvett Térkép-modul hiányzott az élő oldalról; H-1 óriás előnézeti tű; L-5 nem hiba (2026-10-01)
 - [2026-09-30_szamla_bukas_riasztas_ujra.md](2026-09-30_szamla_bukas_riasztas_ujra.md) — Bukott számla: riasztás, napi újrapróba, kézi újrakiadás, Számlázz-oldali idempotencia; a konzol-gomb §2b-re vár (2026-09-30)
 - [2026-09-30_public_console_unit_repo_teszt_riasztas.md](2026-09-30_public_console_unit_repo_teszt_riasztas.md) — 2026-09-30 — public/console unit a repóban OnFailure-rel + [TESZT] riasztás-tárgy (ADR-0279)
 - [2026-09-30_nav_online_szamla_osszekotes.md](2026-09-30_nav_online_szamla_osszekotes.md) — 2026-09-30 — A CITO Számlázz.hu fiók összekötve a NAV Online Számlával (az éles számlázás eddig 378-cal bukott)

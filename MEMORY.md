@@ -11,6 +11,14 @@ Utolsó frissítés: 2026-10-01 (🔒 **Elek V-1 — a levél-link megnyitása (
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-01 — SUB T-1: megvett Térkép-modul hiányzott az élő lapról; H-1 előnézeti óriás-tű) — LANDOLVA, élesítés + élő rerender a koordinátoré
+
+Gyökér: `moduleContentFor()` a `location`-t csak megközelítés/parkolás-szöveg mellett adta át → friss vásárlásnál (nincs
+config-sor) a térkép NÉMÁN hiányzott (élesen olvasva megerősítve). Javítva + új mátrix-őr (`paid-module-anchor-check`:
+megvett modul = horog az élő lapon ∨ „kifizette, de üres”, 19 sablon) — ez a `usp` horog-hiányát is megfogta
+(card-sidebar, dopamine), javítva. H-1: a konzol `tpl-preview` runtime nélkül ment ki → `tplPreview.ts` + böngészős őr.
+L-5 nem hiba (lazy iframe + teljes-lapos kép). Jegyzet: `_planning/memory/2026-10-01_t1_terkep_modul_es_elonezet_tu.md`.
+
 ## Párhuzamos szál (2026-09-30 — SUB cit782078ba: lead-ajánlatok időzítése + bemutatkozó % állítható, ADR-0286) — LANDOLVA, élesítés a koordinátoré
 
 A tulaj kérése: a 72 h érvényesség, a 24 h emlékeztető és a −25% bemutatkozó kedvezmény is a /pricing

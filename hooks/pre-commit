@@ -316,6 +316,27 @@ if [ -f scripts/amenities-house-list-check.mts ] && \
   echo "[pre-commit] amenities-house-list (ADR-0209: két külön lista)…"
   npx tsx scripts/amenities-house-list-check.mts >"$GATE_LOG" || gate_failed
 fi
+# MINDEN MEGVETT MODUL vagy LÁTSZIK az élő lapon, vagy „kifizette, de üres” sort kap (T-1,
+# Elek élesi tesztje 2026-10-01): a megvett Térkép-modul config-sor nélkül (friss vásárlás) és
+# „csak térkép” beállítással NÉMÁN hiányzott az élő HTML-ből — a module-render-check zöld volt,
+# mert kézzel épített SiteData-val indul, a hibás réteg UTÁN. Ez a jogosultság + config-sor
+# felől indul, ugyanazon az összerakáson át, amiből az élő pillanatkép készül, mind a 19
+# sablonon; negatív kontrollal (a kikapcsolt térkép eltűnik) és piros önteszttel.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/paid-module-anchor-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(editor|modules)\.ts$|^src/modules\.ts$|^src/engine/templates/.*\.ts$|^src/engine/(render|moduleSections|primitives)\.ts$|^scripts/paid-module-anchor-check\.mts$'; then
+  echo "[pre-commit] paid-module-anchor (megvett modul: horog az élő lapon VAGY „kifizette, de üres”)…"
+  npx tsx scripts/paid-module-anchor-check.mts >"$GATE_LOG" || gate_failed
+fi
+# A KONZOL KINÉZET-ELŐNÉZETE A MOCK IKERTESTVÉRE (H-1, 2026-10-01): a /lead/:id/tpl-preview
+# runtime nélkül ment ki, így a térkép-tű stílus nélkül ~300 px-es fekete folt lett MINDEN
+# kinézeten — pont azon a képen, amin a kurátor dönt. Böngészőben mért tű-méret, 19 sablon.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/tpl-preview-runtime-check.mts ] && \
+   changed_files | grep -qE '^src/console/(tplPreview|server)\.ts$|^src/generator/runtime\.ts$|^assets/runtime/cit-modules\.css$|^src/engine/moduleSections\.ts$|^scripts/tpl-preview-runtime-check\.mts$'; then
+  echo "[pre-commit] tpl-preview-runtime (kinézet-előnézet: a modul-szakaszok stílusa megvan)…"
+  npx tsx scripts/tpl-preview-runtime-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A systemd-időzítők nyilvántartása: minden deploy/systemd/*.timer vagy prod (a deploy GATE 6
 # telepíti, engedélyezi és visszaméri), vagy indokolt dev. Egy új időzítő nyilvántartás nélkül
 # nem commitolható — különben élesen csendben sosem futna (a programajánló két időzítője

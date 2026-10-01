@@ -487,13 +487,18 @@ export async function moduleContentFor(
     // section from the page entirely, and the Áttekintés then told him "kifizette, de
     // üres" about a list he had filled in (ADR-0192 ⑧.4, measured 2026-09-22).
   }
+  // ⛔ ALWAYS handed over while the module is on — the map switch IS content (T-1,
+  // measured live 2026-10-01): it used to travel only next to a typed note, so a fresh
+  // purchase (no config row) or a "map only" setting reached the renderer as "no
+  // location", and locationBlock() read that as "map off" — the paid section vanished
+  // from the live page while the paid-empty predicate kept promising it always renders.
+  // The renderer still drops it honestly when there is no address/geo to point at.
   if (on("location")) {
-    const l = {
+    out.location = {
       showMap: cfg("location").showMap !== false,
       approachNote: text("location", "approachNote"),
       parkingNote: text("location", "parkingNote"),
     };
-    if (l.approachNote || l.parkingNote) out.location = l;
   }
   if (on("newsletter")) {
     const n = { title: text("newsletter", "title"), subtitle: text("newsletter", "subtitle") };

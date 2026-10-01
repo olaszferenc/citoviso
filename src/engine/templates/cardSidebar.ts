@@ -300,8 +300,11 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
     : "";
 
   // -- amenity list (real highlights only; the icon is decorative dressing) --
+  // This block IS the native selling-points section, so it carries the usp anchor
+  // itself: the template builds its blocks from <div>s, and render.ts'
+  // stampSellingPointsAnchor() only ever looks for an enclosing <section>.
   const amenities = data.highlights.length
-    ? `<div class="blk" id="amenities">
+    ? `<div class="blk" id="amenities" data-cit-module="usp">
           <h2>${T(data, "Amit ez a hely kínál")}</h2>
           <div class="amen-grid">
             ${data.highlights

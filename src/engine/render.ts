@@ -244,15 +244,23 @@ function demoModuleSamples(
  */
 function stampSellingPointsAnchor(html: string, data: SiteData): string {
   if (!data.highlights.length || /data-cit-module="usp"/.test(html)) return html;
-  const at = html.indexOf(escapeForCompare(data.highlights[0]!));
-  if (at < 0) return html;
-  const open = html.lastIndexOf("<section", at);
-  if (open < 0) return html;
-  const close = html.indexOf(">", open);
-  if (close < 0) return html;
-  const tag = html.slice(open, close);
-  if (tag.includes("data-cit-module=")) return html; // already a module's surface
-  return html.slice(0, close) + ` data-cit-module="usp"` + html.slice(close);
+  const needle = escapeForCompare(data.highlights[0]!);
+  // Walk EVERY occurrence, not just the first (T-1 matrix, 2026-10-01): `dopamine`
+  // prints the first highlight as a hero sticker outside any <section>, and stopping
+  // there left the paid usp module without an anchor on every dopamine page. An
+  // occurrence counts only when a <section> actually ENCLOSES it — the nearest
+  // preceding one may already be closed, and stamping that would mark a stranger.
+  for (let at = html.indexOf(needle); at >= 0; at = html.indexOf(needle, at + needle.length)) {
+    const open = html.lastIndexOf("<section", at);
+    if (open < 0) continue;
+    if (html.lastIndexOf("</section", at) > open) continue; // that section ended before us
+    const close = html.indexOf(">", open);
+    if (close < 0 || close > at) continue;
+    const tag = html.slice(open, close);
+    if (tag.includes("data-cit-module=")) return html; // already a module's surface
+    return html.slice(0, close) + ` data-cit-module="usp"` + html.slice(close);
+  }
+  return html;
 }
 
 /**
