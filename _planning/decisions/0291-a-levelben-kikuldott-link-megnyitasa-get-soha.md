@@ -1,4 +1,4 @@
-## ADR-XXXX — A levélben kiküldött link megnyitása (GET) soha nem dönt; a döntés POST (2026-10-01)
+## ADR-0291 — A levélben kiküldött link megnyitása (GET) soha nem dönt; a döntés POST (2026-10-01)
 
 **Dátum:** 2026-10-01 · **Státusz:** elfogadva (SUB, koordinátor: CIT „élesi teszt” fő session; brief:
 `~/rc-briefs/javitas-elek-0930/v1-get-dontes.md`, Elek élesi lelete V-1, MAGAS) · **Kapcsolódó:** ADR-0046 (vélemény

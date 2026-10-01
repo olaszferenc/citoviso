@@ -1,6 +1,6 @@
 # 2026-10-01 — Elek V-1: a levél-link megnyitása (GET) nem dönt
 
-**Szál:** SUB a CIT „élesi teszt” koordinátor alatt; brief `~/rc-briefs/javitas-elek-0930/v1-get-dontes.md`. Döntés: ADR-XXXX.
+**Szál:** SUB a CIT „élesi teszt” koordinátor alatt; brief `~/rc-briefs/javitas-elek-0930/v1-get-dontes.md`. Döntés: ADR-0291.
 
 ## Lelet (élesen mérve, Elek)
 A tulaj foglalás-értesítőjének `GET /foglalas/<t>/elfogadom|elutasitom` linkje megnyitáskor döntött; egy levelező

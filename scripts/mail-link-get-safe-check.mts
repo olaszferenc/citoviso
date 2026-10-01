@@ -1,4 +1,4 @@
-// LEVÉL-LINK GET-ŐR — a levélben kiküldött link MEGNYITÁSA (GET) semmit nem változtat (ADR-XXXX).
+// LEVÉL-LINK GET-ŐR — a levélben kiküldött link MEGNYITÁSA (GET) semmit nem változtat (ADR-0291).
 //
 //   npx tsx scripts/mail-link-get-safe-check.mts
 //
