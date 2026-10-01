@@ -8,7 +8,7 @@ A mock programajánló-mintája a platform mai napjától (`todayIn(APP_TZ)`) sz
 (`--import` preload, ami a `Date`-et rögzíti): 2026-10-01T22:30Z-n a régi piros, az új zöld; 23:59Z, DST-váltás,
 újév, nappal mind zöld.
 
-## 2) run.ts — store-dedup a fizetős dúsítás ELŐTT (ADR-XXXX)
+## 2) run.ts — store-dedup a fizetős dúsítás ELŐTT (ADR-0296)
 - `src/scraper/enrichChain.ts` (új): `enrichLeads(base, region, mark)` — a teljes dúsító-lánc, változatlan sorrendben.
 - `src/scraper/run.ts`: `partitionNewLeads` a kör-szűrés után → csak `fresh` megy a láncba; `players` = fresh+ismert;
   `knownBeforeEnrichment` a stats-ban.

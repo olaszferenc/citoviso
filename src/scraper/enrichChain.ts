@@ -4,7 +4,7 @@
 //
 // Most of these steps cost money per lead (Places Text Search / Details / Photos,
 // Street View metadata, paid web search). The caller feeds ONLY leads that are not
-// in the store yet (partitionNewLeads before this, ADR-XXXX): a known lead was
+// in the store yet (partitionNewLeads before this, ADR-0296): a known lead was
 // dropped by the store-dedup at the end of the run anyway, so enriching it was paid
 // work thrown away (62 and 130 known leads per run on 2026-09-27/28).
 // Guard: scripts/scrape-known-skip-check.mts.

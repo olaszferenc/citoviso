@@ -258,7 +258,7 @@ export async function completeScrapeRun(
   const finalStats = {
     ...stats,
     newLeads: fresh.length,
-    // run.ts drops the known leads BEFORE the paid enrichment (ADR-XXXX) and reports
+    // run.ts drops the known leads BEFORE the paid enrichment (ADR-0296) and reports
     // them as knownBeforeEnrichment; the stat keeps meaning "all known ones this run".
     dedupedAgainstStore:
       duplicates.length +

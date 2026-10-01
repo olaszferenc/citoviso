@@ -145,7 +145,7 @@ async function main(): Promise<void> {
         );
       }
     }
-    // Store-dedup FIRST (ADR-XXXX): a lead already in the store is never inserted
+    // Store-dedup FIRST (ADR-0296): a lead already in the store is never inserted
     // again, so every paid enrichment step spent on it was wasted. Only the new ones
     // go on; the count still lands in the run's stats (dedupedAgainstStore).
     const { fresh, duplicates: known } = partitionNewLeads(base, await storedLeadIdentities());

@@ -11,7 +11,7 @@ Utolsó frissítés: 2026-10-01 (🗣️ **Elek SZ — vendég-kritikus a mock-s
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB: Places-költség E rész + éjszakai UTC-kapu, ADR-XXXX) — LANDOLVA
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség E rész + éjszakai UTC-kapu, ADR-0296) — LANDOLVA
 
 ① `module-render-check` a programajánló „holnapját” UTC-ben számolta → 00–02 CEST között minden land bukott; most
 Budapest szerint (külön land). ② A scrape a store-ban már meglévő leadeket a fizetős dúsítás ELŐTT ejti ki

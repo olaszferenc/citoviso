@@ -1,4 +1,4 @@
-## ADR-XXXX — Az ismert lead nem megy át a scrape fizetős dúsításán (store-dedup a dúsítás ELŐTT) (2026-10-02)
+## ADR-0296 — Az ismert lead nem megy át a scrape fizetős dúsításán (store-dedup a dúsítás ELŐTT) (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (SUB „E rész”, koordinátor: CIT „Places API 600 $” fő session; brief:
 `~/rc-briefs/places-e-ismert-lead-es-utc-kapu.md`) · **Kapcsolódó:** ADR-0293 (`lead_places_cache`), ADR-0294 ③

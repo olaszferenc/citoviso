@@ -1,4 +1,4 @@
-// ⛔ ISMERT LEAD NEM FIZET (ADR-XXXX, 2026-10-02): a scrape a store-ban már meglévő
+// ⛔ ISMERT LEAD NEM FIZET (ADR-0296, 2026-10-02): a scrape a store-ban már meglévő
 // leadeket NEM viszi végig a fizetős dúsításon.
 //
 // A MÉRT LELET. A src/scraper/run.ts a DB-ben már meglévő leadeket is végigvitte a
