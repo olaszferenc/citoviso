@@ -20,14 +20,13 @@
 //      zöld lenne — a mérés látja a mutációt, és a régi levelek linkje továbbra is működik).
 //   ④ A konzol `/p/<t>/unsubscribe` GET-je (2026-09-26 óta megerősítő lap) nem iratkoztat le,
 //      a POST igen.
+//   ⑥ A hideg levél mock-linkje (`/p/<t>`, sluggal is) GET-re NEM rögzít látogatást és NEM veret
+//      eszkalációs ajánlatot — a küszöbnél többször megnyitva sem; a lap saját `POST /p/<t>/view`
+//      hívása igen (tulaj-döntés B, 2026-10-01).
 //   ⑤ A tartós fizetési link (`/pay/go/<id>`, minden fizetés-levélben) lejárt ablaknál GET-re NEM
 //      indít új fizetést és nem riaszt (gomb-lap), a POST igen (ADR-0291 kiterjesztése, 2026-10-01).
 //
-// ⚠️ TUDATOS KIVÉTELEK (nem mutáció-mentesek GET-re, és ezt itt kimondjuk, nem elhallgatjuk):
-//   · `GET /p/<t>` — a hideg levél mock-linkje mérést ír (mock_view) és a beállított n-edik
-//     látogatásnál eszkalációs ajánlatot vereti (ADR-0088/0285). Ez a TERMÉK mérése, nem döntés;
-//     a link-ellenőrző látogatása így látogatásnak számít (lásd a V-1 jelentést).
-// Mutációval igazolva: a régi (GET-re döntő) kódon ② a két tulaj-linkre PIROS.
+// Mutációval igazolva: a régi kódon ② PIROS a tulaj-linkekre, a lejárt fizetési linkre és a mock-linkre.
 process.env.CIT_SHOT = "1";
 process.env.PUBLIC_PORT = "0";
 process.env.CONSOLE_PORT = "0";
@@ -41,6 +40,9 @@ process.env.PAYMENT_GATEWAY = "mock";
 import http from "node:http";
 import { once } from "node:events";
 import { randomBytes } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 const { MAIL_LINK_ROUTES, RE_OWNER_DECIDE, RE_OWNER_REVIEW } = await import("../src/server/mailLinkRoutes.js");
 const { server: pub } = (await import("../src/server/public.js")) as { server: http.Server };
@@ -97,6 +99,8 @@ const parent = await createFixtureParent(db as never, "getsafe");
 let siteId = "";
 let tenantId = "";
 let leadId = "";
+let prospectLeadId = "";
+let mockDir = "";
 
 async function main(): Promise<void> {
   // ── fixtúra: saját lead → tenant → site (élő) → egységek, kérések, vélemény, prospect ──
@@ -230,22 +234,49 @@ async function main(): Promise<void> {
   const orderPayments = () =>
     db.selectFrom("payment").selectAll().where("order_intent_id", "=", order.orderIntentId).orderBy("id").execute();
 
+  // ⑥ the cold letter's mock link: its OWN lead (no tenant — a bought lead takes the "owned"
+  // branch, which records nothing on the old code either, and would pass blind), a real mock
+  // file (a missing one takes the 404 branch — same blindness), and sent_at (the escalation
+  // offer is outreach-only, so without it the nth visit could not mint anything to catch).
+  const pLead = await db
+    .insertInto("lead")
+    .values({ scrape_run_id: parent.runId, name: "GET-őr prospect", raw: sql`'{}'::jsonb` } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  prospectLeadId = pLead.id;
+  mockDir = await mkdtemp(path.join(os.tmpdir(), "getsafe-"));
+  const mockFile = path.join(mockDir, "mock.html");
+  await writeFile(mockFile, "<!doctype html><html><head><title>GET-őr</title></head><body><h1>GET-őr mock</h1></body></html>");
+  const pArt = await db
+    .insertInto("mock_artifact")
+    .values({ lead_id: pLead.id, path: mockFile, status: "approved", inputs: sql`'{}'::jsonb` } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
   const prospectToken = tok();
-  await db
+  const prospect = await db
     .insertInto("prospect")
-    .values({ lead_id: lead.id, token: prospectToken } as never)
-    .execute();
+    .values({ lead_id: pLead.id, token: prospectToken, mock_artifact_id: pArt.id, sent_at: new Date() } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  const { getEscalationConfig, ensureOutreachOffer } = await import("../src/payment/offers.js");
+  const esc = await getEscalationConfig();
+  // A send since ADR-0286 stamps its intro offer row together with sent_at; materialise it
+  // now, as the send would. (Left out, the first read's lazy legacy materialisation —
+  // idempotent, visit-independent: the letter already promised it — would read as a change.)
+  await ensureOutreachOffer(prospect.id);
 
   /** Everything a mail link could change, as one comparable string. */
   const snapshot = async (): Promise<string> => {
-    const [reqs, days, revs, pros, pays] = await Promise.all([
+    const [reqs, days, revs, pros, pays, views, offers] = await Promise.all([
       db.selectFrom("booking_request").selectAll().where("site_id", "=", siteId).orderBy("id").execute(),
       db.selectFrom("availability_day").selectAll().where("unit_id", "=", unit.id).orderBy("day").execute(),
       db.selectFrom("site_review").selectAll().where("site_id", "=", siteId).orderBy("id").execute(),
-      db.selectFrom("prospect").selectAll().where("lead_id", "=", leadId).execute(),
+      db.selectFrom("prospect").selectAll().where("id", "=", prospect.id).execute(),
       orderPayments(),
+      db.selectFrom("mock_view").selectAll().where("prospect_id", "=", prospect.id).orderBy("id").execute(),
+      db.selectFrom("offer").selectAll().where("prospect_id", "=", prospect.id).orderBy("id").execute(),
     ]);
-    return JSON.stringify({ reqs, days, revs, pros, pays });
+    return JSON.stringify({ reqs, days, revs, pros, pays, views, offers });
   };
 
   // Every GET a mail-link scanner could make. `re` ties the probe to the route list.
@@ -262,6 +293,13 @@ async function main(): Promise<void> {
     { label: "tulaj: vélemény kiteszem", path: `/velemeny/${review.action_token}/kiteszem`, server: pub },
     { label: "tulaj: vélemény nem-teszem-ki", path: `/velemeny/${review2.action_token}/nem-teszem-ki`, server: pub },
     { label: "lead: leiratkozás", path: `/p/${prospectToken}/unsubscribe`, server: con },
+    // ⑥ ADR-0291 (owner's ruling B): the mock link's GET records no visit and mints no offer —
+    // opened more times than the escalation threshold, so a GET-side counter WOULD mint.
+    ...Array.from({ length: esc.threshold + 1 }, (_, i) => ({
+      label: `lead: hideg levél mock-linkje #${i + 1}`,
+      path: i % 2 ? `/p/get-or-teszt/${prospectToken}` : `/p/${prospectToken}`,
+      server: con,
+    })),
     { label: "vevő: lejárt fizetési link", path: `/pay/go/${deadPay.paymentId}`, server: con },
   ];
 
@@ -304,6 +342,25 @@ async function main(): Promise<void> {
   const rv = await call(pub, "POST", `/velemeny/${review.action_token}/nem-teszem-ki`);
   const revStatus = (await db.selectFrom("site_review").select("status").where("id", "=", review.id).executeTakeFirstOrThrow()).status;
   check("POST vélemény nem-teszem-ki → rejected", revStatus === "rejected", `${rv.status}`);
+  // ⑥ positive control: the page's own visit call DOES record, and the nth one mints the offer.
+  let lastView: { viewId?: string; offer?: { kind?: string } | null } = {};
+  for (let i = 0; i < esc.threshold; i++) {
+    const v = await call(con, "POST", `/p/${prospectToken}/view`, "{}");
+    lastView = v.status === 200 ? (JSON.parse(v.body) as typeof lastView) : {};
+  }
+  const viewRows = await db.selectFrom("mock_view").select("id").where("prospect_id", "=", prospect.id).execute();
+  check(
+    `POST /p/<t>/view ×${esc.threshold} → ${esc.threshold} látogatás, viewId a válaszban`,
+    viewRows.length === esc.threshold && !!lastView.viewId,
+    `${viewRows.length} látogatás`,
+  );
+  if (esc.enabled) {
+    check(
+      `a(z) ${esc.threshold}. látogatás-hívás az eszkalációs ajánlatot adja vissza`,
+      lastView.offer?.kind === "escalation",
+      JSON.stringify(lastView.offer ?? null),
+    );
+  }
   const u = await call(con, "POST", `/p/${prospectToken}/unsubscribe`);
   const pr = await db.selectFrom("prospect").select("unsubscribed_at").where("token", "=", prospectToken).executeTakeFirstOrThrow();
   check("POST leiratkozás → unsubscribed_at", pr.unsubscribed_at !== null, `${u.status}`);
@@ -329,6 +386,8 @@ try {
     await db.deleteFrom("site").where("id", "=", siteId).execute();
   }
   if (tenantId) await db.deleteFrom("tenant").where("id", "=", tenantId).execute();
+  if (prospectLeadId) await db.deleteFrom("lead").where("id", "=", prospectLeadId).execute();
+  if (mockDir) await rm(mockDir, { recursive: true, force: true });
   await parent.drop();
   pub.close();
   con.close();

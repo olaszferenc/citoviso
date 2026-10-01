@@ -4,7 +4,7 @@ title: Megkeresés-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
 category: lead-path
 anchors: console.outreach_draft
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 A **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
@@ -261,3 +261,12 @@ A felső összefoglaló két dolgot KÜLÖN mond ki, mert két külön tény:
 
 A *Megnyitások* sor a megnyitások számát, a *Rögzített események* sor az események számát
 mutatja — két külön sorban, mert két külön mennyiség.
+
+**Mi számít megnyitásnak?** Az, amikor a látogató a lapon görget, koppint, kattint vagy
+billentyűt üt, vagy amikor a lap összesen 5 másodpercig látható a képernyőn. A puszta letöltés nem
+számít: a levelezőprogramok link-ellenőrzője és a link-előnézet a linket ember nélkül is megnyitja,
+és 2026. október 1. óta ezek többsége nem számít megnyitásnak. ⚠️ Teljesen nem zárható ki: egy
+olyan gépi ellenőrző, amely valódi böngészőben, látható lapon 5 másodpercig futtatja az oldalt,
+továbbra is megnyitásnak számíthat. Az eszkalációs ajánlat („hányadik megnyitásnál kapja”) is
+ebből a számból dolgozik, és egy régebben kiküldött linknél a 2026. október 1. előtt rögzített
+megnyitások (köztük a gépiek) is beleszámítanak.

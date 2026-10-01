@@ -28,7 +28,16 @@ link-ellenőrzője (Safe Links, Gmail-előtöltés, vírusirtó) kattintás nél
   A `guest-link-host-check`, `booking-offer-check`, `consent-style-check` zöld.
 - KB: admin-bookings, admin-modules-booking, admin-modules-reviews — a megerősítő lépés leírva.
 
-## Nyitott (tulaj-döntés)
-- `GET /p/<t>`: link-ellenőrző látogatása látogatásnak számít, és az n-edik után eszkalációs ajánlatot veret.
-- `GET /pay/go/<id>`: lejárt fizetési ablaknál egy ellenőrző új fizetést indíthat és riaszthatja a házat.
-  Javaslat mindkettőre: GET csak mutat, az írás egy gombnyomásra (vagy a mérés JS-beaconra) kerül.
+## Második kör (koordinátor/tulaj-döntés, 2026-10-01) — a két kivétel is javítva
+- `GET /pay/go/<id>`: lejárt ablaknál „A fizetési link lejárt” lap + „Tovább a fizetéshez” gomb; új fizetés és
+  házriasztás csak a POST-ra (`resolvePayEntry(id, { reissue })`). Landolva: ed952b6a.
+- `GET /p/<t>`: a GET nem ír semmit; a lap `POST /p/<t>/view`-t küld az első görgetés/kerék/érintés/egér/billentyű
+  jelére vagy 5 mp látható fül után (tulaj: „B”). Ez rögzíti a megnyitást és veri az eszkalációs ajánlatot; a kártya
+  és a kedvezményes ár a válasz után jelenik meg. Élesen mérve előtte: egy `curl` lekérés is látogatásnak számított.
+- Őr: `mail-link-get-safe-check` ⑤ (/pay/go) és ⑥ (/p, a küszöbnél többször megnyitva) — mindkettő a régi kódon PIROS.
+  Valódi böngészőben (Playwright) ellenőrizve: interakció nélkül 2,5 mp → 0 megnyitás; görgetés → 1, a sorban álló
+  scroll-esemény hozzá kerül; 5 mp látható fül → rögzül; a küszöb-látogatáson a kártya megjelenik (mobil+asztal); JS-hiba 0.
+- Súgó: console-outreach-draft „Mi számít megnyitásnak?”. ADR-0291 6–7. pont.
+
+## Nyitott
+- Nincs. (A /p-nél tudatos: aki 5 mp-en belül, érintés nélkül zár, nem számít megnyitásnak.)

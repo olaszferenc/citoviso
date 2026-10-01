@@ -2504,6 +2504,46 @@ async function handle(
     if (oneClick) return send(res, 200, "OK", "text/plain; charset=utf-8");
     return send(res, 200, unsubscribedPage());
   }
+  // POST /p/:token/view — the VISIT, sent by the page on the first human sign (scroll,
+  // touch, pointer, key) or after 5 s of a visible tab (ADR-0291, owner's ruling B,
+  // 2026-10-01). The GET records nothing: scanners fetch it without a person. Records
+  // the view (+ funnel 'opened'), mints the nth-visit escalation offer (ADR-0088 §4,
+  // ADR-0285), and answers the viewId the event beacon uses plus the offer the page
+  // must now show. Never for an opted-out visitor or one who already bought.
+  const pViewMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/view$/.exec(pPath);
+  if (method === "POST" && pViewMatch) {
+    const p = await getProspectByToken(pViewMatch[1]);
+    if (!p || p.unsubscribed || (await ownedSiteForProspectToken(pViewMatch[1]))) return send(res, 204, "");
+    const body = (await readJson(req)) as { referrer?: unknown };
+    const viewId = await recordView(
+      p.id,
+      (req.headers["user-agent"] as string | undefined) ?? null,
+      typeof body.referrer === "string" && body.referrer ? body.referrer.slice(0, 500) : null,
+    );
+    const escalation = await ensureEscalationOffer(p.id);
+    if (escalation) {
+      console.log(
+        `[offer] eszkalációs ajánlat (−${escalation.percent}%, ` +
+          `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
+      );
+    }
+    const offer = await bestActiveOfferForProspect(p.id);
+    return send(
+      res,
+      200,
+      JSON.stringify({
+        viewId,
+        offer: offer
+          ? {
+              kind: offer.kind,
+              percent: offer.percent,
+              expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null,
+            }
+          : null,
+      }),
+      "application/json",
+    );
+  }
   // POST /p/:token/event — engagement/configurator event beacon.
   const pEventMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/event$/.exec(pPath);
   if (method === "POST" && pEventMatch) {
@@ -2581,24 +2621,11 @@ async function handle(
           injectOwnedNotice(injectOwnedBanner(disableIntroAnimation(html), owned), owned),
         );
       }
-      const viewId = tracked
-        ? await recordView(
-            p.id,
-            (req.headers["user-agent"] as string | undefined) ?? null,
-            (req.headers.referer as string | undefined) ?? null,
-          )
-        : null;
-      // ADR-0088 §4: the operator-set nth visit (ADR-0285, /pricing; default 3)
-      // without a purchase mints the one-time, deadline-bound decision-helper offer — BEFORE resolution, so this very view
-      // already renders the decision card. Never for an opted-out visitor: that
-      // is the "push" half, and they asked us to stop.
-      const escalation = tracked ? await ensureEscalationOffer(p.id) : null;
-      if (escalation) {
-        console.log(
-          `[offer] eszkalációs ajánlat (−${escalation.percent}%, ` +
-            `lejárat ${escalation.expiresAt?.toISOString() ?? "?"}) · prospect ${p.id}`,
-        );
-      }
+      // ⛔ ADR-0291 (owner's ruling B, 2026-10-01): this GET RECORDS NOTHING. Mail-link
+      // scanners and link previews fetch it without a person (measured live: a curl hit
+      // counted as a visit), and the nth "visit" minted the escalation offer. The visit is
+      // recorded by the page itself — POST /p/<t>/view, sent on the first scroll / touch /
+      // pointer / key, or after 5 s of a visible tab — and THAT call mints the offer.
       // ⛔ The offer is resolved for BOTH branches (ADR-0112, amended 2026-09-25).
       // It used to be `tracked ? … : null`: an opted-out visitor saw the LIST
       // price while handleOrderRequest charged the discounted one — the page and
@@ -2627,7 +2654,7 @@ async function handle(
         renewalLeadId: pf?.leadId ?? null,
         // No beacon for an opted-out visitor — the absence of `track` is what
         // actually stops the client-side event stream, not just the DB write.
-        ...(viewId ? { track: { url: `/p/${pMatch[1]}/event`, viewId } } : {}),
+        ...(tracked ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: `/p/${pMatch[1]}/view` } } : {}),
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(
           pf?.leadAddress ?? null,

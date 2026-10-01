@@ -37,10 +37,20 @@
   // Fire-and-forget beacons; measurement must never break the page. No cookies:
   // the identity is the outreach token, the session is the server-issued viewId.
   var TRACK = CFG.track || null;
+  // ADR-0291 (owner's ruling B, 2026-10-01): the server-side GET records NOTHING — mail-link
+  // scanners and link previews fetch the page without a person. The visit is recorded HERE,
+  // on the first human sign (scroll, wheel, touch, pointer, key) or after 5 s of a visible
+  // tab; until the server answers with the viewId, events wait in a small queue.
+  var VIEW_ID = null;
+  var pending = [];
   function track(type, payload) {
     if (!TRACK) return;
+    if (!VIEW_ID) {
+      if (pending.length < 50) pending.push([type, payload]);
+      return;
+    }
     try {
-      var body = JSON.stringify({ viewId: TRACK.viewId, type: type, payload: payload || {} });
+      var body = JSON.stringify({ viewId: VIEW_ID, type: type, payload: payload || {} });
       if (navigator.sendBeacon) {
         navigator.sendBeacon(TRACK.url, new Blob([body], { type: "application/json" }));
       } else {
@@ -55,7 +65,61 @@
       /* measurement must never break the page */
     }
   }
+  var viewSent = false;
+  var mounted = false;
+  function registerView() {
+    if (!TRACK || viewSent) return;
+    viewSent = true;
+    try {
+      fetch(TRACK.viewUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ referrer: document.referrer || "" }),
+        keepalive: true,
+      })
+        .then(function (r) {
+          return r.status === 200 ? r.json() : null;
+        })
+        .then(function (j) {
+          if (!j || !j.viewId) return;
+          VIEW_ID = j.viewId;
+          var q = pending;
+          pending = [];
+          q.forEach(function (e) {
+            track(e[0], e[1]);
+          });
+          // The nth visit may have just minted the escalation offer (the server decides):
+          // show it now — the same card and price the old server-side render showed.
+          if (j.offer && !sameOffer(OFFER, j.offer)) {
+            OFFER = j.offer;
+            if (mounted) {
+              updateSummary();
+              mountEscalationCard();
+            }
+          }
+        })
+        .catch(function () {});
+    } catch (e) {
+      /* measurement must never break the page */
+    }
+  }
+  function sameOffer(a, b) {
+    return !!a && !!b && a.kind === b.kind && a.percent === b.percent && a.expiresAt === b.expiresAt;
+  }
   if (TRACK) {
+    ["scroll", "wheel", "touchstart", "pointerdown", "keydown"].forEach(function (ev) {
+      window.addEventListener(ev, registerView, { passive: true, once: true });
+    });
+    var visibleSec = 0;
+    var visTimer = setInterval(function () {
+      if (viewSent) return clearInterval(visTimer);
+      if (document.visibilityState !== "visible") return;
+      visibleSec += 1;
+      if (visibleSec >= 5) {
+        clearInterval(visTimer);
+        registerView();
+      }
+    }, 1000);
     // Scroll-depth milestones (each fired once) — the engagement signal.
     var fired = {};
     window.addEventListener(
@@ -3554,13 +3618,16 @@
   // offer-ui). Centered on desktop, bottom-anchored on mobile; live countdown;
   // the CTA opens the panel, the dismiss only hides the card — the offer itself
   // stays alive (the server row governs) and keeps showing in the price card.
+  var escMounted = false;
   function mountEscalationCard() {
+    if (escMounted) return;
     if (!OFFER || OFFER.kind !== "escalation") return;
     // ADR-0112: an opted-out visitor sees the price the server will charge, but
     // we do not push — no decision card over the page they came back to by choice.
     if (PRICING.offerQuiet) return;
     var dl = offerDeadline();
     if (!dl || dl.getTime() <= Date.now()) return;
+    escMounted = true;
     var veil = el('<div class="cit-cfg-escveil"></div>');
     var card = el(
       '<div class="cit-cfg-esccard" role="dialog" aria-label="' + tr("Döntés-segítő ajánlat") + '">' +
@@ -3908,6 +3975,7 @@
     document.body.appendChild(panel);
     document.body.appendChild(launch);
     mountEscalationCard();
+    mounted = true;
     // Barion Pixel (Full): ez a lap TERMÉK-lap — az ajánlat a saját csomagjával
     // itt áll a vevő előtt. A `contentView` a `cit-consent.js`-ből lap-szinten is
     // elmegy (contentType: "Page"); ez a TERMÉKET nevezi meg, a Barion kötelező

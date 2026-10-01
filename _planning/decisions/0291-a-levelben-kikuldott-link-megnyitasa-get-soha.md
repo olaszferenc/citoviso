@@ -24,7 +24,7 @@ korábbi „idempotens, mert a levelezők előtöltenek” védekezés csak a M�
 4. **Őr:** `scripts/mail-link-get-safe-check.mts` — a `MAIL_LINK_ROUTES` minden sorára saját fixtúrán GET, teljes
    állapot-összevetés; POST-kontroll; a konzol leiratkozás-linkje is. Új levél-link próba nélkül = piros. A régi kódon
    mérve piros volt (3 GET-mutáció, 3× POST 405).
-5. **Tudatos kivételek (2026-10-01, első kör):** `GET /p/<t>` és `GET /pay/go/<id>` — a koordinátor ugyanazon a napon
+5. **Az első körben kivételként jelentve (2026-10-01):** `GET /p/<t>` és `GET /pay/go/<id>` — a koordinátor ugyanazon a napon
    mindkettő javítását kérte (6. és 7. pont).
 6. **Kiterjesztés — tartós fizetési link (2026-10-01):** a `GET /pay/go/<id>` lejárt fizetési ablaknál eddig ÚJ fizetést
    indított (és ha nem lehetett, riasztotta a házat). Most a GET `resolvePayEntry(id, { reissue: false })` → `renew`:
@@ -32,7 +32,16 @@ korábbi „idempotens, mert a levelezők előtöltenek” védekezés csak a M�
    az riaszt. Ami változatlan GET-en: kifizetett rendelés → eredmény-lap; élő fizetés → tovább a kapura; már vásárolt
    lead → „már az Öné”; az átjáró-állapot frissítése (szinkron, nem döntés — ugyanaz, amit a `/pay/done` GET-je fut).
    Őr: a `mail-link-get-safe-check` ⑤ pontja (mutációval piros) + `pay-entry-check` ②a.
-7. **`GET /p/<t>`:** lásd a következő kiegészítést (a látogatás-számlálás áthelyezése a böngészőbe).
+7. **Kiterjesztés — a hideg levél mock-linkje (2026-10-01, tulaj-döntés „B”):** élesen mérve egy `curl` lekérés
+   látogatásnak számított, és a mérő-tesztek headless lekérései az eszkalációs ajánlatot is kiváltották. Most a
+   `GET /p/<t>` SEMMIT nem ír (nincs `mock_view`, nincs „opened” státusz, nincs eszkalációs ajánlat). A látogatást a lap
+   maga rögzíti: `POST /p/<t>/view` az első görgetéskor / kerékkor / érintéskor / egér-lenyomáskor / billentyűkor, vagy
+   5 mp látható fül után (`assets/runtime/cit-configurator.js`, `registerView`). A válasz adja a `viewId`-t (addig az
+   események sorban várnak) és az aktuális ajánlatot; ha ez a látogatás verte az eszkalációs ajánlatot, a kártya és a
+   kedvezményes ár ekkor jelenik meg. Leiratkozottnál és már vásárlónál a `/view` semmit nem ír. Látható következmény:
+   a konzol megnyitás-számlálója csak emberi jelet adó látogatást számol; aki 5 mp-en belül, érintés nélkül zár, nem
+   számít. Őr: `mail-link-get-safe-check` ⑥ (a küszöbnél többször megnyitva sem ír; a régi kódon piros), az
+   `optout-carrier-check` mintái a `/view` ágra igazítva. Súgó: console-outreach-draft („Mi számít megnyitásnak?”).
 
 **Következmény.** A tulajnak egy koppintással több a levélből döntés; cserébe gép nem dönthet helyette. A súgó
 (admin-bookings, admin-modules-booking, admin-modules-reviews) a megerősítő lépést írja le.

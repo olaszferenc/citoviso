@@ -182,7 +182,11 @@ export interface ConfiguratorManifest {
   };
   /** Tracked-outreach instrumentation (/p/<token>, PILOT.md §3); absent on the
    *  operator-facing /configure route (no prospect → nothing to measure). */
-  readonly track?: { readonly url: string; readonly viewId: string };
+  readonly track?: {
+    readonly url: string;
+    /** ADR-0291: the page records its own visit here (first human sign or 5 s visible). */
+    readonly viewUrl: string;
+  };
   /** Domain step (ADR-0020): platform subdomain default + custom-domain upsell. */
   readonly domain: {
     /** The default host under the platform domain (e.g. "sissi.citoviso.com"). */
@@ -256,7 +260,11 @@ export interface ConfiguratorOpts {
   /** Override the order-submit endpoint (e.g. /p/<token>/request). */
   readonly requestUrl?: string;
   /** Event-beacon config; present only on the tracked prospect route. */
-  readonly track?: { readonly url: string; readonly viewId: string };
+  readonly track?: {
+    readonly url: string;
+    /** ADR-0291: the page records its own visit here (first human sign or 5 s visible). */
+    readonly viewUrl: string;
+  };
   /** ADR-0036: buyer language for the configurator UI; absent/hu → empty i18n map. */
   readonly lang?: string;
   /**

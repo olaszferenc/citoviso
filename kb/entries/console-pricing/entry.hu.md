@@ -4,7 +4,7 @@ title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdet�
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
@@ -41,7 +41,9 @@ bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése men
 
 Hogyan működik: a kiküldött levél egy bemutatkozó kedvezményt ígér, ez az első megnyitástól határidő nélkül él. Ha
 a lead a tervet a megadott számú alkalommal megnyitja, és még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat
-neki: nagyobb kedvezményt az első díjból, a megadott ideig. Ha addig sem rendel, a megadott késleltetés után
+neki: nagyobb kedvezményt az első díjból, a megadott ideig. Megnyitásnak az számít, amikor a lead a lapon görget,
+koppint, kattint vagy billentyűt üt, vagy a lap 5 másodpercig látható; ezért a döntés-segítő ajánlat is ekkor, menet
+közben jelenik meg, nem a lap betöltésekor (a részletek a Megkeresés-piszkozat súgójában, „Mi számít megnyitásnak?”). Ha addig sem rendel, a megadott késleltetés után
 e-mailben is emlékeztetjük rá, ha van e-mail címe, nem iratkozott le, és az ajánlat még nem járt le. Az emlékeztetőt
 óránként küldjük, reggel 8 és este 8 óra között: az éjjel esedékes emlékeztető reggel 8 után megy ki. Egy ajánlatra
 legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer jár.

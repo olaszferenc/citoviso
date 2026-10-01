@@ -227,14 +227,18 @@ if (optedOut.indexOf("Leiratkozott, ezért nem keressük") > optedOut.indexOf("<
 // …and the route must actually turn the machinery OFF for that visitor.
 for (const [needle, why] of [
   ["const tracked = !p.unsubscribed", "a leiratkozott/követett ág megkülönböztetése"],
-  ["tracked\n        ? await recordView(", "látogatás-rögzítés KIHAGYÁSA leiratkozottnál"],
-  ["tracked ? await ensureEscalationOffer", "eszkalációs ajánlat NEM keletkezhet leiratkozottnál"],
+  // ADR-0291 (tulaj-döntés B, 2026-10-01): a látogatást és az eszkalációs ajánlatot a lap saját
+  // POST /p/<t>/view hívása rögzíti — és az a leiratkozottnál (meg a már vásárlónál) semmit nem ír.
+  [
+    "if (!p || p.unsubscribed || (await ownedSiteForProspectToken(pViewMatch[1]))) return send(res, 204, \"\");",
+    "látogatás-rögzítés és eszkalációs ajánlat KIHAGYÁSA leiratkozottnál (/view)",
+  ],
   // ADR-0112, módosítva 2026-09-25 (tulaj): az ÁR mindkét ágon ugyanazt az ajánlatot
   // követi, amit a rendelés terhel — különben a lap listaárat mutat, a szerver pedig
   // kedvezményeset von le. A leiratkozás a NYOMÁST kapcsolja ki (offerQuiet).
   ["const offer = await bestActiveOfferForProspect(p.id);", "a lap ára = a terhelt ár (ajánlat mindkét ágon)"],
   ["...(tracked ? {} : { offerQuiet: true })", "döntés-segítő kártya NEM jelenhet meg leiratkozottnál"],
-  ["viewId ? { track:", "az esemény-beacon KIMARAD leiratkozottnál"],
+  ["...(tracked ? { track:", "a látogatás-hívás és az esemény-beacon KIMARAD leiratkozottnál"],
 ] as const) {
   if (!src.includes(needle)) {
     problems.push(`A /p/ route-ból eltűnt: ${why} (keresett minta: \`${needle}\`) — ADR-0112.`);
