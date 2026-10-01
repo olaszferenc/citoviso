@@ -23,7 +23,7 @@ export const GUARD_VERDICT_KEYS = [
   "demoFraming",
   "factVerdict",
   "marketVerdict",
-  // ADR-XXXX: the guest-critic's verdict on the wording. Absent on older artifacts and
+  // ADR-0292: the guest-critic's verdict on the wording. Absent on older artifacts and
   // on non-Hungarian pages (the critic does not run there) — absence passes, as for all keys.
   "guestCriticVerdict",
 ] as const;

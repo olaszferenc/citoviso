@@ -1,4 +1,4 @@
-// Guard for the GUEST-CRITIC (src/generator/guestCritic.ts, ADR-XXXX).
+// Guard for the GUEST-CRITIC (src/generator/guestCritic.ts, ADR-0292).
 //
 // Why this exists (Elek, live funnel 2026-10-01): the Muschel mock promised "bérelhető
 // kerékpárok", a "főtt reggeli" and a "bőséges saját parkoló" — each one a review

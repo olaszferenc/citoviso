@@ -501,7 +501,7 @@ async function generateEngineMockInner(
     console.warn(`  [engine] marketing-őr kihagyva: ${(mErr as Error).message}`);
   }
 
-  // GUEST-CRITIC (ADR-XXXX): the last word on the wording, AFTER the market retry (which
+  // GUEST-CRITIC (ADR-0292): the last word on the wording, AFTER the market retry (which
   // regenerates from scratch and would otherwise bypass it). It reads the copy as a
   // demanding Hungarian guest would — calques, a review anecdote turned into a service,
   // a claim larger than its quote, tegezés on a magázó page — and has the writer fix
@@ -733,7 +733,7 @@ async function generateEngineMockInner(
       marketAmenityTotal: groupAmenities(sourcedAmenities).length,
       marketFactsNamed: market?.factsNamed ?? [],
       marketMissed: market?.missed ?? [],
-      // Guest-critic verdict + what it still says about the shipped copy (ADR-XXXX).
+      // Guest-critic verdict + what it still says about the shipped copy (ADR-0292).
       ...criticInputs,
       factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
       factCandidates: factCheck?.candidates.length ?? 0,

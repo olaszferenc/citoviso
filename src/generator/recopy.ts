@@ -224,7 +224,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     console.warn(`  [recopy] marketing-őr kihagyva: ${(err as Error).message}`);
   }
 
-  // Guest-critic (ADR-XXXX) — same last word as the full path: new words are new risk.
+  // Guest-critic (ADR-0292) — same last word as the full path: new words are new risk.
   // Facts: the listing set used above, plus the first generation's review-backed facts
   // (sourcePanel) so a review quote is still recognised as a REVIEW (ruling B) here.
   let criticInputs: Record<string, unknown> = {};

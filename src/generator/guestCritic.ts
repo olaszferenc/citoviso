@@ -1,4 +1,4 @@
-// GUEST-CRITIC gate (vendég-kritikus) — owner ruling 2026-10-01, plan stage (ADR-XXXX).
+// GUEST-CRITIC gate (vendég-kritikus) — owner ruling 2026-10-01, plan stage (ADR-0292).
 //
 // WHY THIS EXISTS. Every existing copy gate asks a question a machine can answer from the
 // source list: is the fact sourced (factCheck), does the copy NAME a sourced fact

@@ -1,4 +1,4 @@
-## ADR-XXXX — Vendég-kritikus: a mock-szöveg valódisága; véleményből nem lesz ajánlat, a vendég-oldal magáz (2026-10-01)
+## ADR-0292 — Vendég-kritikus: a mock-szöveg valódisága; véleményből nem lesz ajánlat, a vendég-oldal magáz (2026-10-01)
 
 **Dátum:** 2026-10-01 · **Státusz:** elfogadva (SUB, koordinátor: CIT „élesi teszt” fő session; brief:
 `~/rc-briefs/javitas-elek-0930/sz-szoveg-valodisag.md`; Elek élesi leletei SZ-1, SZ-2, SZ-3 MAGAS/KÖZEPES) ·

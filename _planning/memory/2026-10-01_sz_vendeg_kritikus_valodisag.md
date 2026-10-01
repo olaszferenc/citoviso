@@ -1,7 +1,7 @@
 # 2026-10-01 — Elek SZ: a mock-szöveg valódisága — vendég-kritikus, véleményből nem lesz ajánlat, magázás
 
 **Szál:** SUB a CIT „élesi teszt” koordinátor alatt; brief `~/rc-briefs/javitas-elek-0930/sz-szoveg-valodisag.md`.
-Döntés: ADR-XXXX (vendég-kritikus). Tulaj-döntések: véleményből jövő szolgáltatás = **B (középút)**; vendég-oldal **MAGÁZ**.
+Döntés: ADR-0292 (vendég-kritikus). Tulaj-döntések: véleményből jövő szolgáltatás = **B (középút)**; vendég-oldal **MAGÁZ**.
 
 ## Lelet (élesen mérve, csak olvasva)
 A Muschel „bérelhető kerékpár / főtt reggeli / bőséges saját parkoló” NEM kitalálás: a forrás-panelben mindhárom egy angol
