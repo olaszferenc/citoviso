@@ -19,6 +19,11 @@
 //      hazugság lenne) — a hiba osztályozva jut el a hívóig (scope: day)
 //   ⑤ KÖLTSÉG-FEGYELEM: a hívás-keret kimerülése HANGOS (a néma plafon ugyanez a
 //      hiba lenne új ruhában)
+//   ⑥ INGYENES BEJÁRÁS (ADR-XXXX, 2026-10-01): a felderítő Text Search maszkja CSAK
+//      azonosítót kér („Text Search Essentials (IDs Only)” — korlátlan ingyenes); egy
+//      Pro/Enterprise mező a maszkban minden lapot fizetőssé tesz (35 $/1000)
+//   ⑦ FIZETŐS ADATLAP CSAK AZ ÚJ HELYRE: a DB-ben már ismert place id 0 Place
+//      Details hívás; egy teljesen ismert terület újra-bejárása 0 fizetős hívás
 //
 //   npx tsx scripts/scrape-coverage-check.mts
 //   npx tsx scripts/scrape-coverage-check.mts --self-test
@@ -81,6 +86,9 @@ for (let i = 0; i < 180; i++) {
 
 // ── Mock Places API ──────────────────────────────────────────────────────────
 let searchCalls = 0;
+let detailCalls = 0;
+/** Discovery masks seen (the per-lead lookup asks by NAME, so it is excluded). */
+const discoveryMasks = new Set<string>();
 let minuteQuotaTrips = 0;
 /** Hívás-sorszámok, amikre perc-429-et adunk (a retry-útvonal próbája). */
 let minute429at = new Set<number>();
@@ -102,8 +110,27 @@ interface SearchBody {
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
   const u = String(url);
+  const mask = String((init?.headers as Record<string, string> | undefined)?.["X-Goog-FieldMask"] ?? "");
+  const detail = /places\.googleapis\.com\/v1\/places\/([^/?:]+)$/.exec(u);
+  if (detail) {
+    // Place Details — the PAID step of the discovery. Answer from the world.
+    detailCalls++;
+    const p = WORLD.find((w) => w.id === decodeURIComponent(detail[1]));
+    if (!p) return new Response(JSON.stringify({ error: { code: 404 } }), { status: 404 });
+    return new Response(
+      JSON.stringify({
+        id: p.id,
+        displayName: { text: p.name },
+        formattedAddress: `Tesztfalu, ${p.name} u. 1.`,
+        location: { latitude: p.lat, longitude: p.lon },
+        photos: [],
+      }),
+      { status: 200 },
+    );
+  }
   if (!u.includes("places.googleapis.com/v1/places:searchText")) {
-    return realFetch(url, init);
+    // ⛔ The guard must never reach the real network (or Google's bill).
+    throw new Error(`őr: váratlan hálózati hívás: ${u}`);
   }
   searchCalls++;
   if (alwaysDay429) {
@@ -136,6 +163,7 @@ globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
   const body = JSON.parse(String(init?.body ?? "{}")) as SearchBody;
   const r = body.locationRestriction.rectangle;
   const kw = body.textQuery;
+  if (KINDS.includes(kw)) discoveryMasks.add(mask);
   // Kétféle kérdés jön ide: a FELDERÍTÉS fajtára kérdez („hotel"), a PER-LEAD
   // lookup a hely NEVÉRE („hotel teszthely 7"). A fajta-kérdés csak a saját
   // fajtáját adja vissza (ez teszi az egy-kulcsszavas bejárást szerkezetileg
@@ -158,13 +186,18 @@ globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     served < matched.length && served < 60 ? String(served) : undefined;
   return new Response(
     JSON.stringify({
-      places: page.map((p) => ({
-        id: p.id,
-        displayName: { text: p.name },
-        formattedAddress: `Tesztfalu, ${p.name} u. 1.`,
-        location: { latitude: p.lat, longitude: p.lon },
-        photos: [],
-      })),
+      // Like the real API: only what the mask asks for comes back.
+      places: page.map((p) =>
+        /displayName/.test(mask)
+          ? {
+              id: p.id,
+              displayName: { text: p.name },
+              formattedAddress: `Tesztfalu, ${p.name} u. 1.`,
+              location: { latitude: p.lat, longitude: p.lon },
+              photos: [],
+            }
+          : { id: p.id },
+      ),
       ...(nextPageToken ? { nextPageToken } : {}),
     }),
     { status: 200 },
@@ -189,8 +222,17 @@ try {
       : "\nscrape-lefedettség őr — szintetikus Places-világ (180 hely):",
   );
 
+  // The DB stand-in: the ids "already stored on a lead". Starts empty (a virgin
+  // area), so the first run is the full-coverage + full-Details case.
+  const stored = new Map<string, Record<string, unknown>>();
+  const knownResolver = async (ids: string[]) => {
+    const m = new Map();
+    for (const id of ids) if (stored.has(id)) m.set(id, stored.get(id));
+    return m;
+  };
+
   // ① + ② + ⑤ — lefedettség a tiszta világon
-  const src = new GoogleMapsSource();
+  const src = new GoogleMapsSource(knownResolver);
   const found = await src.fetch({ region, industry: "accommodation" } as never);
   const coverage = found.length / WORLD.length;
   const covOk = coverage >= 0.95;
@@ -214,6 +256,47 @@ try {
       "① nincs duplikátum (place id szerint egyedi)",
       new Set(found.map((f) => f.sourceId)).size === found.length,
     );
+    check(
+      "① az új helyek adatlapja megjött (név + koordináta a Details-ből)",
+      found.every((f) => f.name && f.lat != null && f.lon != null),
+    );
+
+    // ⑥ — a felderítő keresés maszkja csak azonosító (az ingyenes SKU)
+    const paidField = [...discoveryMasks].flatMap((m) =>
+      m.split(",").filter((f) => !["places.id", "places.name", "nextPageToken"].includes(f.trim())),
+    );
+    check(
+      "⑥ a bejárás ingyenes: a Text Search maszkja CSAK places.id + nextPageToken",
+      discoveryMasks.size > 0 && paidField.length === 0,
+      `fizetős mező(k) a maszkban: ${[...new Set(paidField)].join(", ")}`,
+    );
+    check(
+      "⑦ szűz terület: pontosan egy fizetős adatlap helyenként (nem keresési lapanként)",
+      detailCalls === found.length,
+      `adatlap-hívás: ${detailCalls} · hely: ${found.length}`,
+    );
+
+    // ⑦ — ugyanaz a terület, most már mind ismert: 0 fizetős hívás
+    for (const f of found) stored.set(f.sourceId, { ...f });
+    detailCalls = 0;
+    searchCalls = 0;
+    const again = await src.fetch({ region, industry: "accommodation" } as never);
+    check(
+      "⑦ ismert terület újra-bejárása: 0 fizetős adatlap, a lefedettség változatlan",
+      detailCalls === 0 && again.length === found.length,
+      `adatlap-hívás: ${detailCalls} · talált: ${again.length}/${found.length}`,
+    );
+    // ⑦ — vegyes: a felét „felejtsük el” → csak azokra jár adatlap
+    const forgotten = found.filter((_, i) => i % 2 === 0).map((f) => f.sourceId);
+    for (const id of forgotten) stored.delete(id);
+    detailCalls = 0;
+    await src.fetch({ region, industry: "accommodation" } as never);
+    check(
+      "⑦ vegyes terület: adatlap CSAK a DB-ben ismeretlen helyekre",
+      detailCalls === forgotten.length,
+      `adatlap-hívás: ${detailCalls} · ismeretlen: ${forgotten.length}`,
+    );
+    for (const f of found) stored.set(f.sourceId, { ...f });
 
     // ③ — perc-kvóta: a következő futás első néhány hívása 429 'per minute'
     searchCalls = 0;
@@ -268,5 +351,5 @@ if (failures.length) {
 console.log(
   SELF_TEST
     ? "\n✅ ÖNTESZT: az egy-hívásos (régi) viselkedésen a lefedettség-mérés pirosra vált — az őr a szabályt méri."
-    : "\n✅ A felderítés lapoz, csempéz, több kulcsszóval kérdez, a perc-kvótát kivárja, a napit kimondja.",
+    : "\n✅ A felderítés lapoz, csempéz, több kulcsszóval kérdez, a perc-kvótát kivárja, a napit kimondja — ingyenes ID-bejárással, fizetős adatlap csak az új helyre.",
 );

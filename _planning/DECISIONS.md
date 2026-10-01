@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-places-felderites-ingyenes-id-bejaras.md) — A Places-felderítés ingyenes ID-bejárással megy; fizetős adatlap csak a DB-ben még nem ismert helyre (2026-10-01)
 - [ADR-0294](decisions/0294-portal-elobb-mindenkinek-a-portal-olvasas-60-as.md) — Portál előbb, mindenkinek: a portál-olvasás 60-as plafonja ki, a fizetős felfedezés kereten belül (2026-10-01)
 - [ADR-0293](decisions/0293-places-eredmeny-leadenkent-egyszer-fizetve.md) — Places-eredmény leadenként EGYSZER fizetve, lejárat nélkül tárolva; a lead-lap soha nem fizet (2026-10-01)
 - [ADR-0292](decisions/0292-vendeg-kritikus-a-mock-szoveg-valodisaga.md) — Vendég-kritikus: a mock-szöveg valódisága; véleményből nem lesz ajánlat, a vendég-oldal magáz (2026-10-01)

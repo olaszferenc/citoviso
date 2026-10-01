@@ -8,18 +8,35 @@ import { GENERIC_NAME_WORD, PLACES_TRADE_WORD } from "../genericWords.js";
 // A Playwright-based Maps-scrape adapter can be added later behind the same interface.
 const PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
 
-// Field mask: request exactly the fields we map to RawLead (keeps cost/response small).
-// addressComponents is what carries the structured country/city (the filter facets);
-// formattedAddress alone is a human string we cannot reliably split.
-const FIELD_MASK = [
-  "places.id",
-  "places.displayName",
-  "places.formattedAddress",
-  "places.addressComponents",
-  "places.location",
-  "places.websiteUri",
-  "places.nationalPhoneNumber",
-  "places.photos", // enrichment material — photo count for the mock
+// ── Discovery is TWO-STEP (2026-10-01, ADR-XXXX) ─────────────────────────────
+// Google bills a Text Search by the HIGHEST field tier in its mask, per request
+// (≤20 places). Asking for phone + website made every discovery page "Text Search
+// Enterprise" ($35/1000 requests, checked on the official price list 2026-10-01),
+// although most of those places were already in our DB from an earlier run and
+// were thrown away at the store-dedup. Now:
+//   1. the traversal asks for IDs ONLY — "Text Search Essentials (IDs Only)",
+//      unlimited free usage; pagination and locationRestriction work the same;
+//   2. a place id already stored on a lead (raw.sourceRefs.google_places) is
+//      rebuilt from the DB for free — it flows on exactly as before (OSM merge,
+//      store-dedup), it just no longer costs anything;
+//   3. only a place id NEW to us gets one Place Details call with the fields we
+//      map to RawLead ("Place Details Enterprise", $20/1000).
+const DISCOVERY_ID_MASK = "places.id,nextPageToken";
+
+// Field mask of the per-new-place Details call: exactly the fields we map to
+// RawLead. addressComponents carries the structured country/city (the filter
+// facets); formattedAddress alone is a human string we cannot reliably split.
+// websiteUri + nationalPhoneNumber make this the Enterprise tier — they decide the
+// lead's website status and contact channel, so they are worth the price.
+const DETAILS_MASK = [
+  "id",
+  "displayName",
+  "formattedAddress",
+  "addressComponents",
+  "location",
+  "websiteUri",
+  "nationalPhoneNumber",
+  "photos", // enrichment material — photo count for the mock
 ].join(",");
 
 /** One Google Places address component (as returned under `addressComponents`). */
@@ -72,6 +89,20 @@ const QUERY_RESULT_CEILING = 60;
  *  to full, saturation-free coverage; a 32 km circle is ~16× the area but far
  *  sparser outside the town cores. */
 const DISCOVERY_MAX_CALLS = Number(process.env.PLACES_DISCOVERY_MAX_CALLS ?? 600);
+/** Hard per-run cap on the PAID step: Place Details for ids new to our DB. Sized
+ *  above the largest measured run (2026-09-27/28: 2 589 new leads over two runs);
+ *  at $20/1000 the cap bounds one run at ~$80. Hitting it is LOUD. */
+const DETAILS_MAX_CALLS = Number(process.env.PLACES_DETAILS_MAX_CALLS ?? 4000);
+/** Parallel Details requests — the throttle still bounds the rate. */
+const DETAILS_CONCURRENCY = 8;
+
+/** place ids → RawLead rebuilt from our own store, for the ids we already know. */
+export type KnownPlacesResolver = (placeIds: string[]) => Promise<Map<string, RawLead>>;
+
+// Lazy: the DB module is loaded only when a discovery actually runs, so importing
+// this file (console, generator, guards) never opens a pool.
+const defaultKnownPlaces: KnownPlacesResolver = async (placeIds) =>
+  (await import("../knownPlaces.js")).knownPlacesFromDb(placeIds);
 /** Tiles are not split below this side (~550 m lat). Measured on Badacsony (real
  *  API): at 0.02° two tiles were still saturated (>60 apartman-hits in 2.2 km) and
  *  the source found 258; at 0.005° zero saturation and 310. Resort villages pack
@@ -185,51 +216,53 @@ const RETRY_BASE_MS = Number(process.env.PLACES_RETRY_BASE_MS ?? 20_000);
 const RETRY_ATTEMPTS = 3;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const callTimes: number[] = [];
 
-async function throttle(): Promise<void> {
-  for (;;) {
-    const now = Date.now();
-    while (callTimes.length && now - callTimes[0] > 60_000) callTimes.shift();
-    if (callTimes.length < MAX_RPM) {
-      callTimes.push(now);
-      return;
+/** A sliding one-minute call window. Text Search and Place Details have SEPARATE
+ *  project quotas, so each gets its own window. */
+function makeThrottle(maxRpm: number): () => Promise<void> {
+  const callTimes: number[] = [];
+  return async () => {
+    for (;;) {
+      const now = Date.now();
+      while (callTimes.length && now - callTimes[0] > 60_000) callTimes.shift();
+      if (callTimes.length < maxRpm) {
+        callTimes.push(now);
+        return;
+      }
+      await sleep(500);
     }
-    await sleep(500);
-  }
+  };
 }
+const searchThrottle = makeThrottle(MAX_RPM);
+/** Place Details calls per minute (the discovery's new-place details fetch). */
+const DETAILS_MAX_RPM = Number(process.env.PLACES_DETAILS_MAX_RPM ?? 300);
+const detailsThrottle = makeThrottle(DETAILS_MAX_RPM);
 
 /**
- * One Text Search request with pacing and self-healing. A per-minute 429 heals by
+ * One Places request with pacing and self-healing. A per-minute 429 heals by
  * itself in 60 s: wait and retry (bounded), because aborting a whole run on it
  * threw away the enrichment of 924 leads over one minute of patience (measured
  * 2026-09-13, live). A daily quota or auth failure escapes immediately — waiting
  * cannot fix those, and pretending otherwise would just burn the rate budget.
+ * `null` = HTTP 404 when `notFoundIsNull` (a place id that no longer exists).
  */
-export async function placesSearchText(
-  body: Record<string, unknown>,
-  apiKey: string,
-  fieldMask: string,
-): Promise<PlacesResponse> {
+async function placesRequest<T>(
+  url: string,
+  init: RequestInit,
+  throttle: () => Promise<void>,
+  notFoundIsNull = false,
+): Promise<T | null> {
   for (let attempt = 0; ; attempt++) {
     await throttle();
     let res: Response;
     try {
-      res = await fetch(PLACES_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": fieldMask,
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15_000),
-      });
+      res = await fetch(url, { ...init, signal: AbortSignal.timeout(15_000) });
     } catch (e) {
       throw new PlacesUnavailableError("network", undefined, (e as Error).message);
     }
-    if (res.ok) return (await res.json()) as PlacesResponse;
+    if (res.ok) return (await res.json()) as T;
     const errBody = await res.text().catch(() => "");
+    if (notFoundIsNull && res.status === 404) return null;
     const failure = classifyFailure(res.status, errBody);
     const scope = failure === "quota" ? quotaScopeOf(errBody) : undefined;
     if (failure === "quota" && scope === "minute" && attempt < RETRY_ATTEMPTS) {
@@ -242,6 +275,47 @@ export async function placesSearchText(
     }
     throw new PlacesUnavailableError(failure, res.status, errBody.slice(0, 300), scope);
   }
+}
+
+/** One Text Search request through the shared paced, self-healing transport. */
+export async function placesSearchText(
+  body: Record<string, unknown>,
+  apiKey: string,
+  fieldMask: string,
+): Promise<PlacesResponse> {
+  const data = await placesRequest<PlacesResponse>(
+    PLACES_ENDPOINT,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": fieldMask,
+      },
+      body: JSON.stringify(body),
+    },
+    searchThrottle,
+  );
+  return data ?? {};
+}
+
+type PlaceRecord = NonNullable<PlacesResponse["places"]>[number];
+
+/** One Place Details (GET /v1/places/{id}) request through the same transport.
+ *  `null` = the id no longer exists (404). The mask has NO `places.` prefix here. */
+export async function placesGetPlace(
+  placeId: string,
+  apiKey: string,
+  fieldMask: string,
+): Promise<PlaceRecord | null> {
+  return placesRequest<PlaceRecord>(
+    `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+    {
+      headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": fieldMask },
+    },
+    detailsThrottle,
+    true,
+  );
 }
 
 // ~half-degree box side used to hard-restrict the per-lead lookup to the lead's
@@ -609,9 +683,17 @@ type Bbox = readonly [number, number, number, number]; // [S, W, N, E]
  * API will show for one query — so the tile is quartered and asked again, down to
  * ~2 km tiles. Results merge on place id. The call budget is hard-capped and
  * hitting the cap is LOUD (a silent cap would be this same bug in a new suit).
+ *
+ * Cost: the traversal itself is free (IDs only); see DISCOVERY_ID_MASK for the
+ * two-step design. Known place ids come back from the DB, new ones cost one Place
+ * Details call each, hard-capped by DETAILS_MAX_CALLS (loud when hit).
  */
 export class GoogleMapsSource implements LeadSource {
   readonly name = "google_places";
+
+  /** place ids → the RawLead rebuilt from our DB, for ids we already store.
+   *  Injectable so the guard runs without a database; the default reads `lead`. */
+  constructor(private readonly knownPlaces: KnownPlacesResolver = defaultKnownPlaces) {}
 
   async fetch(query: ScrapeQuery): Promise<RawLead[]> {
     const key = config.googleMapsApiKey;
@@ -622,7 +704,7 @@ export class GoogleMapsSource implements LeadSource {
       return [];
     }
     const keywords = TEXT_QUERIES[query.industry];
-    const byId = new Map<string, RawLead>();
+    const ids = new Set<string>();
     let calls = 0;
     let budgetHit = false;
     let saturatedFloor = 0;
@@ -654,28 +736,12 @@ export class GoogleMapsSource implements LeadSource {
             ...(pageToken ? { pageToken } : {}),
           },
           key,
-          // nextPageToken is outside the places.* namespace — ask for it explicitly.
-          `${FIELD_MASK},nextPageToken`,
+          // IDs only = the free SKU. nextPageToken is outside the places.*
+          // namespace, so the mask names it explicitly.
+          DISCOVERY_ID_MASK,
         );
         returned += (data.places ?? []).length;
-        for (const p of data.places ?? []) {
-          const name = p.displayName?.text;
-          if (!name || byId.has(p.id)) continue;
-          const { country, city } = localityFromComponents(p.addressComponents);
-          byId.set(p.id, {
-            source: this.name,
-            sourceId: p.id,
-            name,
-            lat: p.location?.latitude,
-            lon: p.location?.longitude,
-            address: p.formattedAddress,
-            country,
-            city,
-            phone: p.nationalPhoneNumber,
-            website: p.websiteUri,
-            photoCount: p.photos?.length ?? 0,
-          });
-        }
+        for (const p of data.places ?? []) if (p.id) ids.add(p.id);
         pageToken = data.nextPageToken;
       } while (pageToken);
       return returned;
@@ -715,8 +781,59 @@ export class GoogleMapsSource implements LeadSource {
         `[google_places] ⚠️ HÍVÁS-KERET ELFOGYOTT (${DISCOVERY_MAX_CALLS}) — a lefedettség RÉSZLEGES. Emeld a PLACES_DISCOVERY_MAX_CALLS-t, vagy szűkítsd a területet.`,
       );
     }
+
+    // Step 2: what we already know costs nothing; only new ids get Details.
+    const known = await this.knownPlaces([...ids]);
+    const byId = new Map<string, RawLead>();
+    const fresh: string[] = [];
+    for (const id of ids) {
+      const k = known.get(id);
+      if (k) byId.set(id, k);
+      else fresh.push(id);
+    }
+    const detailIds = fresh.slice(0, DETAILS_MAX_CALLS);
+    if (fresh.length > detailIds.length) {
+      console.warn(
+        `[google_places] ⚠️ ADATLAP-KERET ELFOGYOTT (${DETAILS_MAX_CALLS}) — ${fresh.length - detailIds.length} új hely adatlap nélkül KIMARADT. Emeld a PLACES_DETAILS_MAX_CALLS-t, vagy szűkítsd a területet.`,
+      );
+    }
+    let detailCalls = 0;
+    let gone = 0;
+    let next = 0;
+    const worker = async (): Promise<void> => {
+      while (next < detailIds.length) {
+        const id = detailIds[next++];
+        detailCalls++;
+        const p = await placesGetPlace(id, key, DETAILS_MASK);
+        const name = p?.displayName?.text;
+        if (!p || !name) {
+          gone++;
+          continue;
+        }
+        const { country, city } = localityFromComponents(p.addressComponents);
+        byId.set(id, {
+          source: this.name,
+          sourceId: id,
+          name,
+          lat: p.location?.latitude,
+          lon: p.location?.longitude,
+          address: p.formattedAddress,
+          country,
+          city,
+          phone: p.nationalPhoneNumber,
+          website: p.websiteUri,
+          photoCount: p.photos?.length ?? 0,
+        });
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(DETAILS_CONCURRENCY, detailIds.length) }, () => worker()),
+    );
+
     console.log(
-      `  [google_places] ${byId.size} hely · ${calls} hívás · ${keywords.length} kulcsszó` +
+      `  [google_places] ${byId.size} hely · ${calls} ingyenes ID-keresés · ${keywords.length} kulcsszó` +
+        ` · ${known.size} már ismert (DB, 0 Ft) · ${detailCalls} fizetős adatlap az új helyekre` +
+        (gone ? ` · ${gone} megszűnt/név nélküli` : "") +
         (saturatedFloor ? ` · ${saturatedFloor} telített mini-csempe` : ""),
     );
     return [...byId.values()];
