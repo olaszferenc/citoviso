@@ -1823,9 +1823,18 @@ fi
 # KNOWN listings are read — the old 60-per-run ceiling must not come back — while the PAID
 # web-search discovery stays inside its budget. Hermetic (fetch stub), ~8 s, never pays.
 if [ -f scripts/portal-uncapped-check.mts ] && \
-   changed_files | grep -qE '^src/scraper/(enrichPortal|run)\.ts$|^src/scraper/sources/portalListing\.ts$|^scripts/portal-uncapped-check'; then
+   changed_files | grep -qE '^src/scraper/(enrichPortal|enrichChain|run)\.ts$|^src/scraper/sources/portalListing\.ts$|^scripts/portal-uncapped-check'; then
   echo "[pre-commit] portal-uncapped-check (minden kontaktálható lead ismert adatlapja olvasva, a keresés kereten belül)…"
   npx tsx scripts/portal-uncapped-check.mts
+fi
+# A KNOWN lead does not pay (ADR-XXXX, 2026-10-02): run.ts drops the leads already in the
+# store BEFORE the paid enrichment chain (Places search/Details, Street View, paid web
+# search) — they were dropped at the save anyway (62 and 130 per run on 09-27/28).
+# Hermetic (fetch stub, no DB write), never pays.
+if [ -f scripts/scrape-known-skip-check.mts ] && \
+   changed_files | grep -qE '^src/scraper/(run|enrichChain|persist|dedupe|enrich[A-Za-z]+)\.ts$|^scripts/scrape-known-skip-check'; then
+  echo "[pre-commit] scrape-known-skip-check (az ismert lead nem megy át a fizetős dúsításon)…"
+  npx tsx scripts/scrape-known-skip-check.mts
 fi
 # A lead carrying portal data must be PERSISTABLE (2026-08-21). A bare URL in the JSONB
 # matched_entity column rolled back a whole 554-lead run; the type said `string | null`,

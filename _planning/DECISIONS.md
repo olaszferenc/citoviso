@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-ismert-lead-nem-megy-at-a-fizetos-dusitason.md) — Az ismert lead nem megy át a scrape fizetős dúsításán (store-dedup a dúsítás ELŐTT) (2026-10-02)
 - [ADR-0295](decisions/0295-a-places-felderites-ingyenes-id-bejarassal-megy.md) — A Places-felderítés ingyenes ID-bejárással megy; fizetős adatlap csak a DB-ben még nem ismert helyre (2026-10-01)
 - [ADR-0294](decisions/0294-portal-elobb-mindenkinek-a-portal-olvasas-60-as.md) — Portál előbb, mindenkinek: a portál-olvasás 60-as plafonja ki, a fizetős felfedezés kereten belül (2026-10-01)
 - [ADR-0293](decisions/0293-places-eredmeny-leadenkent-egyszer-fizetve.md) — Places-eredmény leadenként EGYSZER fizetve, lejárat nélkül tárolva; a lead-lap soha nem fizet (2026-10-01)

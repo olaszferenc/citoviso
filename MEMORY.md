@@ -11,6 +11,13 @@ Utolsó frissítés: 2026-10-01 (🗣️ **Elek SZ — vendég-kritikus a mock-s
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség E rész + éjszakai UTC-kapu, ADR-XXXX) — LANDOLVA
+
+① `module-render-check` a programajánló „holnapját” UTC-ben számolta → 00–02 CEST között minden land bukott; most
+Budapest szerint (külön land). ② A scrape a store-ban már meglévő leadeket a fizetős dúsítás ELŐTT ejti ki
+(`src/scraper/enrichChain.ts` + `run.ts`), fixture-ön 54 → 24 fizetős hívás; őr: `scrape-known-skip-check`.
+Nyitott: a `--cap` a költséget sosem korlátozta (a dúsítás után vág). Jegyzet: `_planning/memory/2026-10-02_e_ismert_lead_nem_fizet_es_utc_kapu.md`.
+
 ## Párhuzamos szál (2026-10-01 — SUB cit807c5225: Elek SZ, a mock-szöveg valódisága, ADR-0292) — LANDOLVA, élesítés a koordinátoré
 
 Vendég-kritikus (`src/generator/guestCritic.ts`): egy második AI-szerep vendég- és szerkesztő-szemmel tételes kifogás-listát ad,

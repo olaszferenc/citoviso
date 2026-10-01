@@ -4,7 +4,6 @@
 // summary, and writes the qualified leads as JSON.
 
 import { writeFile } from "node:fs/promises";
-import { config } from "../config.js";
 import { db } from "../db/client.js";
 import {
   beatScrapeRun,
@@ -16,17 +15,7 @@ import {
   storedLeadIdentities,
 } from "./persist.js";
 import { dedupeAndQualify, partitionNewLeads } from "./dedupe.js";
-import { enrichContact } from "./enrichContact.js";
-import { enrichGeo } from "./enrichGeo.js";
-import { enrichGuestReviews } from "./enrichGuestReviews.js";
-import { enrichMaterial } from "./enrichMaterial.js";
-import { enrichOutdated } from "./enrichOutdated.js";
-import { enrichPlaces } from "./enrichPlaces.js";
-import { enrichPortal } from "./enrichPortal.js";
-import { enrichPresence } from "./enrichPresence.js";
-import { enrichSiteSearch } from "./enrichSiteSearch.js";
-import { webSearchBackend } from "./sources/webSearch.js";
-import { enrichWebSearch } from "./enrichWebSearch.js";
+import { enrichLeads } from "./enrichChain.js";
 import { distanceKm, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
@@ -156,84 +145,16 @@ async function main(): Promise<void> {
         );
       }
     }
-    mark(
-      `\nPer-lead Places lookup (contact + photos for OSM-only leads) — ${base.length} lead…`,
-    );
-    const enriched = await enrichPlaces(base, config.googleMapsApiKey);
-    const noSiteBefore = enriched.filter(
-      (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
-    ).length;
-    mark(
-      `Presence-check: verifying ${noSiteBefore} "no own site" leads (domain-guess + geo-verify)…`,
-    );
-    const withPresence = await enrichPresence(enriched, region);
-    const noSiteAfter = withPresence.filter(
-      (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
-    ).length;
-    console.log(
-      `  → ${noSiteBefore - noSiteAfter} had a hidden own site (reclassified has_own)`,
-    );
-    // 2nd presence pass: the domain guess only finds sites named after the business.
-    // Ask the open web for the rest — a lead with a real site must never be
-    // contacted as "you have no website" (§F, credibility).
-    const stillNone = withPresence.filter(
-      (l) => l.websiteStatus === "none" || l.websiteStatus === "portal_only",
-    ).length;
-    mark(
-      `Webes honlap-keresés (${webSearchBackend()}): ${stillNone} lead ellenőrzése kereséssel…`,
-    );
-    const withSearch = await enrichSiteSearch(
-      withPresence,
-      config.googleMapsApiKey,
-      config.googleCseId,
-      region,
-    );
-    const ownCount = withSearch.filter(
-      (l) => l.websiteStatus === "has_own",
-    ).length;
-    mark(`Assessing ${ownCount} own websites for outdatedness…`);
-    const assessed = await enrichOutdated(withSearch, region);
-    // Portal listings: the only free source of ROOMS, PRICES, AMENITIES and a
-    // real description — Places gives none of those. Runs before the material
-    // measurement so the portal photos count towards the lead's material.
-    // EVERY contactable NEW lead is read (owner ruling 2026-10-01). A lead already
-    // in the store is dropped by the store-dedup at the end of the run, so reading
-    // its portals here would be an hour of somebody else's server for nothing —
-    // the stored ones are covered by scripts/portal-backfill.mts instead.
-    const { fresh: newLeads } = partitionNewLeads(assessed, await storedLeadIdentities());
-    mark(
-      `Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal) — ` +
-        `${newLeads.filter((l) => l.isLead).length} új kontaktálható lead…`,
-    );
-    const portalRead = new Map(
-      (await enrichPortal(newLeads, region)).map((l, i) => [newLeads[i]!, l] as const),
-    );
-    const withPortal = assessed.map((l) => portalRead.get(l) ?? l);
-    // Guest voice (ADR-0106): the review TEXTS for the leads we would contact —
-    // the only source that already speaks the guest's language. One-off per
-    // lead, 30-day freshness, A4-gated by the place id's presence.
-    mark("Vendég-vélemények olvasása (Google Places, ADR-0106)…");
-    const withReviews = await enrichGuestReviews(withPortal, config.googleMapsApiKey);
-    mark(
-      "Measuring enrichment material (Places photos, Street View, site images, portal photos)…",
-    );
-    const withMaterial = await enrichMaterial(withReviews, config.googleMapsApiKey);
-    if (webSearchBackend() !== "none") {
-      mark(
-        `Web-search enrichment (${webSearchBackend()}) — contact for email-poor no-site leads…`,
+    // Store-dedup FIRST (ADR-XXXX): a lead already in the store is never inserted
+    // again, so every paid enrichment step spent on it was wasted. Only the new ones
+    // go on; the count still lands in the run's stats (dedupedAgainstStore).
+    const { fresh, duplicates: known } = partitionNewLeads(base, await storedLeadIdentities());
+    if (known.length) {
+      console.log(
+        `Store-dedup: ${known.length} lead már szerepel (átfedő régió / újra-scrape) → dúsítás nélkül kihagyva; ${fresh.length} új.`,
       );
     }
-    const withWeb = await enrichWebSearch(
-      withMaterial,
-      config.googleMapsApiKey,
-      config.googleCseId,
-      region,
-    );
-    // Geo facets (ADR-0040): no lead leaves without a country. Source tags won
-    // upstream; reverse-geocode fills the rest from coordinates; the region's
-    // country closes the coordinate-less tail.
-    const withGeo = await enrichGeo(enrichContact(withWeb), region.country);
-    let leads = withGeo;
+    let leads = await enrichLeads(fresh, region, mark);
     if (cap && leads.length > cap) {
       // Keep the most valuable (actual leads) first, then cap the volume.
       leads = [...leads]
@@ -308,13 +229,16 @@ async function main(): Promise<void> {
 
     // Persist to the DB — now the source of truth (the JSON is a replay artifact).
     const stats = {
-      players: leads.length,
+      // The players this run FOUND, the known ones included (as before the early
+      // store-dedup) — the console's "felmért szereplő" column reads this.
+      players: leads.length + known.length,
       leads: mvpLeads.length,
       noSite: noSite.length,
       outdatedOwn: outdatedOwn.length,
       unreachable: unreachable.length,
       byStatus,
       contactChannels: channelBreakdown(leads),
+      knownBeforeEnrichment: known.length,
     };
     mark(`Mentés az adatbázisba — ${leads.length} szereplő…`);
     const { inserted, deduped } = await completeScrapeRun(runId, leads, stats);
