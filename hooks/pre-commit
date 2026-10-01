@@ -1819,7 +1819,7 @@ if [ -f scripts/places-cache-check.mts ] && \
   echo "[pre-commit] places-cache-check (a lead-lap nem fizet, egy lead egyszer fizet)…"
   npx tsx scripts/places-cache-check.mts
 fi
-# Portal first, for everyone (owner ruling 2026-10-01, ADR-XXXX): every contactable lead's
+# Portal first, for everyone (owner ruling 2026-10-01, ~/rc-briefs/places-portal-mindenkinek.md): every contactable lead's
 # KNOWN listings are read — the old 60-per-run ceiling must not come back — while the PAID
 # web-search discovery stays inside its budget. Hermetic (fetch stub), ~8 s, never pays.
 if [ -f scripts/portal-uncapped-check.mts ] && \
