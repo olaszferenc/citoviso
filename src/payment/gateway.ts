@@ -83,7 +83,13 @@ export interface CardInfo {
 
 export interface WebhookResult {
   readonly gatewayRef: string;
-  readonly status: "paid" | "failed";
+  /**
+   * `cancelled` = the BUYER stepped back on the gateway's page (Barion "Canceled"):
+   * no charge, nothing refused. Kept apart from `failed` (declined / expired / error)
+   * because the buyer's screen must not call their own back-out a decline — measured
+   * live 2026-10-01 (Elek F-2): a Canceled payment showed "Fizetés elutasítva".
+   */
+  readonly status: "paid" | "failed" | "cancelled";
   /** 0040: card-scheme TraceId of a paid, token-initiating payment (Barion). */
   readonly traceId?: string | null;
   /** ADR-0226: the paying card's mask, when the gateway reports one. */

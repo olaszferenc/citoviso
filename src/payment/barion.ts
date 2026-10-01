@@ -29,6 +29,9 @@ const PAY = (process.env.BARION_PAY_URL ?? "https://secure.barion.com").replace(
 /** Barion PaymentStatus values (docs: PaymentStatus). */
 const SUCCEEDED = "Succeeded";
 const FAILED_STATES = new Set(["Canceled", "Expired", "Failed", "Rejected"]);
+/** The buyer aborted on Barion's page (docs: "Canceled — the payment was cancelled
+ *  by the user"). Still a no-money end state, but NOT a decline (Elek F-2). */
+const CANCELED = "Canceled";
 /** Known in-flight states: the callback arrived fine, the outcome is still open.
  *  Listed explicitly — an UNKNOWN status string stays "state unknown" (400). */
 const IN_FLIGHT_STATES = new Set([
@@ -312,6 +315,7 @@ export class BarionGateway implements PaymentGateway {
           : null;
       return { gatewayRef: paymentId, status: "paid", traceId: data.TraceId ?? null, card };
     }
+    if (status === CANCELED) return { gatewayRef: paymentId, status: "cancelled" };
     if (FAILED_STATES.has(status)) return { gatewayRef: paymentId, status: "failed" };
     // Mid-flight: received fine, nothing to settle yet. Answering 400 here made
     // Barion count every in-flight callback as a CallbackFailed (and e-mail us).

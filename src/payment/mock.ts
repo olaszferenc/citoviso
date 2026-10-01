@@ -44,7 +44,7 @@ export class MockGateway implements PaymentGateway {
 
   async parseWebhook(params: Record<string, unknown>): Promise<WebhookResult | null> {
     if (typeof params.gatewayRef !== "string") return null;
-    if (params.status !== "paid" && params.status !== "failed") return null;
+    if (params.status !== "paid" && params.status !== "failed" && params.status !== "cancelled") return null;
     // ADR-0226: the mock pay page lets the tester pick WHICH test card paid, so the
     // Pénztárca's card mask and the "másik kártya" swap run locally end to end.
     const card = typeof params.card === "string" ? mockCard(params.card) : null;

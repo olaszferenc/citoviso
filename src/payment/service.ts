@@ -329,7 +329,7 @@ export async function handleWebhook(
   // receiving side can tell the harmless case apart. An unknown SUCCEEDED payment
   // (money arrived, no row) still falls through to applyWebhookResult → 400 → Barion
   // retries and mails us: that is the alarm worth keeping.
-  if (res.status === "failed") {
+  if (res.status !== "paid") {
     const known = await db
       .selectFrom("payment")
       .select("id")
@@ -343,6 +343,32 @@ export async function handleWebhook(
     }
   }
   return applyWebhookResult(res);
+}
+
+/**
+ * The journal line of a payment that ended WITHOUT money (Elek F-2). Exported for
+ * the gate: the words are the operator's only trace of an abandoned purchase.
+ */
+export function paymentEndLogLine(
+  status: "failed" | "cancelled",
+  p: {
+    readonly paymentId: string;
+    readonly orderIntentId: string;
+    readonly gatewayRef: string;
+    readonly amount: number | null;
+    readonly currency: string | null;
+    readonly kind: string | null;
+  },
+): string {
+  const what =
+    status === "cancelled"
+      ? "a vevő MEGSZAKÍTOTTA a fizetést (visszalépett a fizetőoldalon)"
+      : "a fizetés SIKERTELEN (elutasítva / lejárt / hiba)";
+  const sum = p.amount != null ? `${p.amount} ${p.currency ?? "HUF"}` : "? HUF";
+  return (
+    `[payment] ${what} — terhelés nem történt · payment ${p.paymentId} · order ${p.orderIntentId}` +
+    ` (${p.kind ?? "?"}) · ${sum} · ref ${p.gatewayRef}`
+  );
 }
 
 /**
@@ -384,8 +410,28 @@ export async function applyWebhookResult(
     return { ok: true, activated: redelivered, alreadySettled: true };
   }
 
-  if (res.status === "failed") {
-    await db.updateTable("payment").set({ status: "failed" }).where("id", "=", payment.id).execute();
+  if (res.status === "failed" || res.status === "cancelled") {
+    // ⛔ Never silent (Elek F-2, 2026-10-01): a success writes six journal lines, the
+    // buyer's Canceled payment wrote NONE — nobody could tell from the log that a
+    // purchase had been abandoned. One line per end state, with what the console
+    // needs to find it again (payment, order, amount, what the gateway said).
+    if (payment.status !== res.status) {
+      const info = await db
+        .selectFrom("payment")
+        .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+        .select(["payment.amount as amount", "payment.currency as currency", "order_intent.kind as kind"])
+        .where("payment.id", "=", payment.id)
+        .executeTakeFirst();
+      console.warn(paymentEndLogLine(res.status, {
+        paymentId: payment.id,
+        orderIntentId: payment.order_intent_id,
+        gatewayRef: res.gatewayRef,
+        amount: info?.amount ?? null,
+        currency: info?.currency ?? null,
+        kind: info?.kind ?? null,
+      }));
+    }
+    await db.updateTable("payment").set({ status: res.status }).where("id", "=", payment.id).execute();
     return { ok: true, activated: false };
   }
 
@@ -968,7 +1014,10 @@ async function applyDomainReservationResult(
   res: import("./gateway.js").WebhookResult,
 ): Promise<{ ok: boolean; activated?: boolean; alreadySettled?: boolean }> {
   if (payment.status === "paid") return { ok: true, activated: true, alreadySettled: true };
-  if (res.status === "failed") {
+  // A buyer who backs out of the hold is, for the domain order, the same as a lapse:
+  // nothing is held, nothing is registered. The row keeps the plain `failed` the
+  // Webcím tab already reads.
+  if (res.status !== "paid") {
     if (payment.status === "reserved") {
       // The hold lapsed or was cancelled at the gateway before we finished it: the
       // money went back by itself. If the name WAS registered meanwhile, we paid

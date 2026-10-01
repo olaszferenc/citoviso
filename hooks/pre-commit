@@ -1583,6 +1583,14 @@ if [ -f scripts/entitlement-paid-check.mts ] && \
   echo "[pre-commit] entitlement-paid-check (ADR-0072: azt kapja, amiért fizetett)…"
   npx tsx scripts/entitlement-paid-check.mts
 fi
+# Elek F-2 (2026-10-01): a payment that ended without money says WHY (the buyer's
+# own back-out is not a decline) and never ends silently in the journal. Real
+# Barion adapter on a stubbed GetPaymentState + real settlement on a scratch DB.
+if [ -f scripts/payment-outcome-truth-check.mts ] && \
+   changed_files | grep -qE '^src/payment/(service|barion|mock|gateway)\.ts|^scripts/payment-outcome-truth-check'; then
+  echo "[pre-commit] payment-outcome-truth-check (megszakított ≠ elutasított; nincs néma bukás)…"
+  npx tsx scripts/payment-outcome-truth-check.mts
+fi
 # ADR-0100: the domain's 2nd+ year fee rides the anchor renewal whose period holds
 # the anniversary (before this, nobody billed it while the registrar bills US).
 # Spins up a scratch DB (~20s), so only when the renewal/pricing path changes.

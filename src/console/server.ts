@@ -3739,9 +3739,11 @@ async function handle(
       { "cache-control": "no-store, no-cache, must-revalidate", pragma: "no-cache" },
     );
   }
-  // POST /pay/mock/:ref/(paid|failed) — the mock pay page's buttons drive the
-  // same webhook path the real gateway will (constructs the webhook body).
-  const mockPayDoMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)\/(paid|failed)$/i.exec(path);
+  // POST /pay/mock/:ref/(paid|failed|cancelled) — the mock pay page's buttons drive
+  // the same webhook path the real gateway will (constructs the webhook body).
+  // `cancelled` = "Mégsem fizetek most", the buyer's own back-out — Barion's
+  // "Canceled", which is NOT a decline (Elek F-2); `failed` = the bank refused.
+  const mockPayDoMatch = /^\/pay\/mock\/(mock_[0-9a-f-]+)\/(paid|failed|cancelled)$/i.exec(path);
   if (method === "POST" && mockPayDoMatch) {
     // A mock_ ref is by definition the mock gateway's — apply it directly. Routing
     // it through the CONFIGURED gateway's parser dropped it on a Barion-configured
@@ -3752,7 +3754,8 @@ async function handle(
     const pickedCard = mockCard(body.get("card") ?? "") ?? mockCard("visa4242");
     const r = await applyWebhookResult({
       gatewayRef: mockPayDoMatch[1],
-      status: mockPayDoMatch[2] === "paid" ? "paid" : "failed",
+      status:
+        mockPayDoMatch[2] === "paid" ? "paid" : mockPayDoMatch[2] === "cancelled" ? "cancelled" : "failed",
       ...(mockPayDoMatch[2] === "paid" && pickedCard ? { card: pickedCard } : {}),
     });
     if (!r.ok) {
