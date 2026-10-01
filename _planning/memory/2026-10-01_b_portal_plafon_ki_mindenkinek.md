@@ -1,7 +1,7 @@
 # Portál előbb, mindenkinek — a 60-as plafon ki, a tárolt park backfill-szkriptet kapott (B rész)
 
 **Dátum:** 2026-10-01 · **Szál:** SUB „B rész” a Places-költség briefből (koordinátor: CIT „Places API 600 $”) ·
-**Döntés:** ADR-XXXX (portál előbb, mindenkinek)
+**Döntés:** ADR-0294 (portál előbb, mindenkinek)
 
 ## Elvégezve
 - `enrichPortal`: minden kontaktálható lead ISMERT adatlapja olvasva (plafon nélkül); a fizetős webes felfedezés

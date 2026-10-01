@@ -1,4 +1,4 @@
-## ADR-XXXX — Portál előbb, mindenkinek: a portál-olvasás 60-as plafonja ki, a fizetős felfedezés kereten belül (2026-10-01)
+## ADR-0294 — Portál előbb, mindenkinek: a portál-olvasás 60-as plafonja ki, a fizetős felfedezés kereten belül (2026-10-01)
 
 **Dátum:** 2026-10-01 · **Státusz:** elfogadva (SUB „B rész”, koordinátor: CIT „Places API 600 $” fő session; brief:
 `~/rc-briefs/places-portal-mindenkinek.md`) · **Tulajdonosi döntés (2026-10-01):** „a scrape MINDEN kontaktálható
