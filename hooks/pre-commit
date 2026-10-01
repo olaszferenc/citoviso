@@ -1827,7 +1827,7 @@ if [ -f scripts/portal-uncapped-check.mts ] && \
   echo "[pre-commit] portal-uncapped-check (minden kontaktálható lead ismert adatlapja olvasva, a keresés kereten belül)…"
   npx tsx scripts/portal-uncapped-check.mts
 fi
-# A KNOWN lead does not pay (ADR-XXXX, 2026-10-02): run.ts drops the leads already in the
+# A KNOWN lead does not pay (2026-10-02, the "E part" of the Places-cost brief): run.ts drops the leads already in the
 # store BEFORE the paid enrichment chain (Places search/Details, Street View, paid web
 # search) — they were dropped at the save anyway (62 and 130 per run on 09-27/28).
 # Hermetic (fetch stub, no DB write), never pays.
