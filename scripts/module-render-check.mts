@@ -26,6 +26,7 @@ import { SKINS } from "../src/engine/skins.js";
 import { SAMPLE_REVIEWS } from "../src/engine/primitives.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import { decorateWithLanguages } from "../src/tenant/multilangCore.js";
+import { APP_TZ, addIsoDays, todayIn } from "../src/text/zoneTime.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
 let failures = 0;
@@ -370,7 +371,9 @@ for (const id of priced) {
 // from the render day onwards (the runtime moves them to the viewing day).
 {
   const lead = { ...BASE, place: { city: "Zamárdi" } } as unknown as SiteData;
-  const tomorrow = new Date(Date.now() + 864e5).getUTCDate();
+  // The sample counts from the PLATFORM's today (Budapest), exactly as programsSampleBlock
+  // does — a UTC "tomorrow" failed every land between 00:00 and 02:00 CEST.
+  const tomorrow = Number(addIsoDays(todayIn(APP_TZ), 1).slice(8, 10));
   const bad: string[] = [];
   for (const t of templateIds) {
     const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, lead, { phase: "mock" });
