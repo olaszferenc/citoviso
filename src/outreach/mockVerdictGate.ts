@@ -23,6 +23,9 @@ export const GUARD_VERDICT_KEYS = [
   "demoFraming",
   "factVerdict",
   "marketVerdict",
+  // ADR-XXXX: the guest-critic's verdict on the wording. Absent on older artifacts and
+  // on non-Hungarian pages (the critic does not run there) — absence passes, as for all keys.
+  "guestCriticVerdict",
 ] as const;
 export type GuardVerdictKey = (typeof GUARD_VERDICT_KEYS)[number];
 
@@ -32,6 +35,7 @@ const REASON_KEY: Record<GuardVerdictKey, string> = {
   demoFraming: "demoFramingReason",
   factVerdict: "factUnsourced",
   marketVerdict: "marketReason",
+  guestCriticVerdict: "guestCriticReason",
 };
 
 /**
@@ -48,6 +52,7 @@ export const VERDICT_LABEL: Record<GuardVerdictKey, string> = {
   demoFraming: "Demó-keretezés",
   factVerdict: "Tényhűség-kapu",
   marketVerdict: "Piac-kapu",
+  guestCriticVerdict: "Vendég-kritikus",
 };
 
 export interface BlockingVerdict {

@@ -1385,6 +1385,14 @@ if [ -f scripts/verdict-gate-check.mts ] && \
   echo "[pre-commit] verdict-gate (a vállalás a LÁTOTT leletre szól)…"
   npx tsx scripts/verdict-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ②b Vendég-kritikus (a vendég-kritikus ADR-je, guestCritic.ts fejléce): a sablon vendég-szövege magáz, a véleményből nem lesz
+#     ajánlat, és mindkét generálási út lefuttatja + perzisztálja a kritikust, a küldés-kapu
+#     pedig blokkol a FLAG-jén. Determinisztikus — nincs AI-hívás, nincs DB.
+if [ -f scripts/guest-critic-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(guestCritic|generateEngine|recopy)\.ts$|^src/engine/templates/|^src/outreach/mockVerdictGate\.ts$|^src/console/views\.ts$|^scripts/guest-critic-check\.mts$'; then
+  echo "[pre-commit] guest-critic-check (vendég-kritikus: magázás, vélemény ≠ ajánlat, bekötés)…"
+  npx tsx scripts/guest-critic-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ③ A küldés-megerősítő felugró a SAJÁT csatornájára POST-oljon, és vigye a
 #    confirmVerdicts mezőt — a kép erre a kérdésre nem tud válaszolni, a DOM igen.
 if [ -f scripts/verdict-dialog-dom-check.mts ] && \

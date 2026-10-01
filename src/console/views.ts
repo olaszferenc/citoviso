@@ -4316,6 +4316,10 @@ function mockInputLabel(key: string, lang = "hu"): string {
     case "factCandidates": return T(lang, "Vizsgált tény-jelöltek");
     case "guestReviewCount": return T(lang, "Felhasznált vendég-vélemény");
     case "marketReason": return T(lang, "Piac-kapu indoklása");
+    // ADR-XXXX. ⛔ A kapu neve BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
+    case "guestCriticVerdict": return T(lang, "Vendég-kritikus");
+    case "guestCriticReason": return T(lang, "Vendég-kritikus indoklása");
+    case "guestCriticRounds": return T(lang, "Vendég-kritikus körei");
     default: return key.replace(/_/g, " ");
   }
 }

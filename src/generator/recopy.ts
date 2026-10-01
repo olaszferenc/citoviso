@@ -32,6 +32,7 @@ import { db } from "../db/client.js";
 import type { PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langName } from "../i18n/lang.js";
 import { explainAiFailure, generateBriefAndCopy } from "./brief.js";
+import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
@@ -223,6 +224,37 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     console.warn(`  [recopy] marketing-őr kihagyva: ${(err as Error).message}`);
   }
 
+  // Guest-critic (ADR-XXXX) — same last word as the full path: new words are new risk.
+  // Facts: the listing set used above, plus the first generation's review-backed facts
+  // (sourcePanel) so a review quote is still recognised as a REVIEW (ruling B) here.
+  let criticInputs: Record<string, unknown> = {};
+  if (lang === DEFAULT_LANG) {
+    const panel = ((inputs.sourcePanel as { facts?: { label: string; source: string; quote?: string }[] } | undefined)
+      ?.facts ?? []);
+    const facts = [
+      ...amenities.map((label) => {
+        const sp = sellingPoints.find((x) => x.label.toLowerCase() === label.toLowerCase());
+        return { label, source: "description", ...(sp ? { quote: sp.quote } : {}) };
+      }),
+      ...panel.filter((f) => f.source === "google_places"),
+    ];
+    const critic = await applyGuestCritic(
+      { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
+      criticSourceOf({
+        name: lead.name,
+        town: lead.city ?? null,
+        address: lead.address,
+        rating: siteData.rating ? { value: siteData.rating.value, count: siteData.rating.count ?? null } : null,
+        facts,
+        descriptions,
+        reviews: [],
+      }),
+    );
+    brief = { ...brief, tagline: critic.copy.tagline, intro: critic.copy.intro, highlights: [...critic.copy.highlights] };
+    editorial = critic.copy.editorial;
+    criticInputs = critic.inputs;
+  }
+
   // Only the WORDS change; photos, palette, rooms, stats and the section order stay.
   const nextData: SiteData = {
     ...siteData,
@@ -277,6 +309,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
         marketReason: market?.reason ?? null,
         marketFactsNamed: market?.factsNamed ?? [],
         marketMissed: market?.missed ?? [],
+        ...criticInputs,
         aiUsage: usageForArtifact(currentAiUsage()),
         // Audit trail: what the curator asked for on THIS rewrite.
         ...(curatorPrompt?.trim() ? { recopyPrompt: curatorPrompt.trim() } : {}),
@@ -285,11 +318,12 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     .where("id", "=", artifactId)
     .execute();
 
-  const blocked = market?.verdict === "flag" || factCheck?.verdict === "flag";
+  const criticBlocked = criticInputs.guestCriticVerdict === "flag" || criticInputs.guestCriticVerdict === "error";
+  const blocked = market?.verdict === "flag" || factCheck?.verdict === "flag" || criticBlocked;
   return {
     ok: true,
     message: blocked
-      ? `Új szöveg elkészült, de egy őr fennakadt rajta (${market?.verdict === "flag" ? "marketing" : "tényhűség"}) — nézd át, kiküldeni így nem lehet.`
+      ? `Új szöveg elkészült, de egy őr fennakadt rajta (${market?.verdict === "flag" ? "marketing" : factCheck?.verdict === "flag" ? "tényhűség" : "vendég-kritikus"}) — nézd át, kiküldeni így nem lehet.`
       : "Új szöveg elkészült — a kinézet, a fotók és az elrendezés változatlan.",
   };
 }

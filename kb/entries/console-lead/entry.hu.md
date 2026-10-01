@@ -322,6 +322,11 @@ A felugró **többet tud, mint a négy jelvény**:
 - van egy megállító kapu, aminek **nincs jelvénye a kártyán**: a **„Demó-keretezés”** (rajta
   van-e a kiküldendő lapon az „előzetes terv” keretezés, és nem állítja-e a lap magáról, hogy
   már élő, hivatalos oldal). A felugró ezen a néven nevezi meg;
+- ugyanígy jelvény nélkül állít meg a **„Vendég-kritikus”**: egy szállóvendég szemével olvassa
+  a generált szöveget (tükörfordítás, tegezés, vendég-véleményből lett ígéret, például
+  „bérelhető kerékpár” abból, hogy a házigazda egyszer kölcsönadta a biciklijét). Amit talál,
+  azt generáláskor az író már kijavítja; a felugró csak akkor nevezi meg, ha két javító kör után
+  is maradt blokkoló kifogás, és felsorolja a kifogásolt szövegrészeket;
 - a **képek állapotát** sem a jelvények mutatják. Ha a kiszállított lapon törött kép van vagy
   egyetlen szállás-fotó sincs, azt is a felugró mondja meg — **„A kiszállított lap képeivel baj
   van — kiküldöd mégis?”** címmel akkor, ha közben az őrök nem találtak semmit; ha van őr-lelet

@@ -29,6 +29,7 @@ import type { GuestReview, PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBriefAndCopy } from "./brief.js";
+import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
@@ -500,6 +501,37 @@ async function generateEngineMockInner(
     console.warn(`  [engine] marketing-őr kihagyva: ${(mErr as Error).message}`);
   }
 
+  // GUEST-CRITIC (ADR-XXXX): the last word on the wording, AFTER the market retry (which
+  // regenerates from scratch and would otherwise bypass it). It reads the copy as a
+  // demanding Hungarian guest would — calques, a review anecdote turned into a service,
+  // a claim larger than its quote, tegezés on a magázó page — and has the writer fix
+  // exactly that. Hungarian only: the critic's language knowledge is the point, and a
+  // translated page gets no verdict rather than a meaningless one.
+  let criticInputs: Record<string, unknown> = {};
+  if (brief && lang === DEFAULT_LANG) {
+    const critic = await applyGuestCritic(
+      { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
+      criticSourceOf({
+        name: lead.name,
+        town: lead.city ?? null,
+        address: lead.address,
+        rating: rating != null ? { value: rating, count: userRatingCount ?? null } : null,
+        facts: panelFacts,
+        descriptions: sourcedDescriptions,
+        reviews: guestVoice.map((v) => v.text),
+      }),
+    );
+    brief = {
+      ...brief,
+      tagline: critic.copy.tagline,
+      intro: critic.copy.intro,
+      highlights: [...critic.copy.highlights],
+    };
+    editorial = critic.copy.editorial;
+    criticInputs = critic.inputs;
+    console.log(`  vendég-kritikus: ${String(critic.inputs.guestCriticVerdict).toUpperCase()} · ${critic.inputs.guestCriticReason}`); // i18n-exempt: operator log
+  }
+
   const siteData: SiteData = {
     ...(lang !== DEFAULT_LANG ? { lang } : {}),
     ...leadToSiteData(lead, {
@@ -701,6 +733,8 @@ async function generateEngineMockInner(
       marketAmenityTotal: groupAmenities(sourcedAmenities).length,
       marketFactsNamed: market?.factsNamed ?? [],
       marketMissed: market?.missed ?? [],
+      // Guest-critic verdict + what it still says about the shipped copy (ADR-XXXX).
+      ...criticInputs,
       factUnsourced: factCheck ? factCheck.facts.filter((f) => !f.sourced).map((f) => f.fact) : [],
       factCandidates: factCheck?.candidates.length ?? 0,
       // Guest-voice audit trail (ADR-0106): what the writer was grounded on —

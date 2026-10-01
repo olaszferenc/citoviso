@@ -363,7 +363,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="e-dest" id="e-contact">
     <div>
       ${sectionHead(++sectionNo, T(data, "Írjon nekünk"))}
-      <p class="e-intro">${T(data, "Kérdés, egyedi kérés, csoportos érkezés? A foglalási szelvényen vagy az alábbi elérhetőségeken várjuk a leveled.")}</p>
+      <p class="e-intro">${T(data, "Kérdés, egyedi kérés, csoportos érkezés? A foglalási szelvényen vagy az alábbi elérhetőségeken várjuk levelét.")}</p>
       ${contactLines}
       ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási szelvényhez")}</a>` : ""}
     </div>
