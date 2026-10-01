@@ -566,7 +566,7 @@ export async function placesDetailsMatch(
   leadCity?: string,
 ): Promise<PlacesMatch | null> {
   for (let attempt = 0; ; attempt++) {
-    await throttle();
+    await detailsThrottle();
     let res: Response;
     try {
       res = await fetch(
