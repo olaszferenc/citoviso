@@ -88,7 +88,7 @@ async function main() {
   console.log(`  kvalifikáció: ${lead.websiteStatus} · régió: ${region.label}`);
 
   // A4 confidence-gated real photos (shared trust rule); Street View fallback for grounding.
-  const { photos, matchBand } = await resolveGatedPhotos(lead);
+  const { photos, matchBand } = await resolveGatedPhotos(lead, undefined, { places: "auto" });
   const hero =
     photos[0] ?? (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");
   const groundImages = photos.length ? photos : hero ? [hero] : [];

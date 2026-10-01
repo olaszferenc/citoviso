@@ -1175,6 +1175,14 @@ export interface LeadHeroOverrideTable {
   created_at: Generated<Timestamp>;
 }
 
+/** 0083: the lead's Places answer, paid for ONCE and kept without expiry (owner ruling,
+ *  2026-10-01). Shape and re-ask rule: src/generator/placesCache.ts. */
+export interface LeadPlacesCacheTable {
+  lead_id: string;
+  result: JSONColumnType<Record<string, unknown>>;
+  fetched_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 /** First-party guest reviews — ours to store, moderate and display (0027). */
 export interface SiteReviewTable {
   id: Generated<string>;
@@ -1484,6 +1492,7 @@ export interface Database {
   event_gather_run: EventGatherRunTable;
   local_event: LocalEventTable;
   lead_hero_override: LeadHeroOverrideTable;
+  lead_places_cache: LeadPlacesCacheTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;
   partner_bank_account: PartnerBankAccountTable;

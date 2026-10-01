@@ -469,6 +469,72 @@ export async function placesLookup(
   };
 }
 
+/** Place Details field mask for a known place id — the same signals `placesLookup`
+ *  reads, minus website/phone (the photo gate never used them). */
+const DETAILS_FIELD_MASK =
+  "id,displayName,location,addressComponents,photos,rating,userRatingCount,types";
+
+/**
+ * The lead's match by its STORED place id (`sourceRefs.google_places`) — one Place
+ * Details call instead of a Text Search (owner ruling, 2026-10-01: "ne keress újra, ha
+ * már van"). Scored on the same signals as `placesLookup`, so the A4 gate decides
+ * exactly as it would on a fresh search; the id only saves the SEARCH, not the judgement.
+ *
+ * null = the id no longer resolves (404/400: the place was removed or merged) — the
+ * caller falls back to a Text Search. Quota/key/network THROW, as in `placesLookup`.
+ */
+export async function placesDetailsMatch(
+  placeId: string,
+  name: string,
+  lat: number,
+  lon: number,
+  apiKey: string,
+  leadCity?: string,
+): Promise<PlacesMatch | null> {
+  for (let attempt = 0; ; attempt++) {
+    await throttle();
+    let res: Response;
+    try {
+      res = await fetch(
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+        {
+          headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": DETAILS_FIELD_MASK },
+          signal: AbortSignal.timeout(15_000),
+        },
+      );
+    } catch (e) {
+      throw new PlacesUnavailableError("network", undefined, (e as Error).message);
+    }
+    if (res.status === 404 || res.status === 400) return null;
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      const failure = classifyFailure(res.status, errBody);
+      const scope = failure === "quota" ? quotaScopeOf(errBody) : undefined;
+      if (failure === "quota" && scope === "minute" && attempt < RETRY_ATTEMPTS) {
+        await sleep(RETRY_BASE_MS * 2 ** attempt);
+        continue;
+      }
+      throw new PlacesUnavailableError(failure, res.status, errBody.slice(0, 300), scope);
+    }
+    const p = (await res.json()) as NonNullable<PlacesResponse["places"]>[number];
+    if (!p.location) return null;
+    const placeName = p.displayName?.text ?? name;
+    const { country, city } = localityFromComponents(p.addressComponents);
+    return {
+      placeId: p.id ?? placeId,
+      placeName,
+      distanceMeters: metersBetween(lat, lon, p.location.latitude, p.location.longitude),
+      nameSimilarity: nameSimilarity(name, placeName, leadCity),
+      rating: p.rating,
+      userRatingCount: p.userRatingCount,
+      photoRefs: (p.photos ?? []).map((ph) => ph.name).filter((n): n is string => Boolean(n)),
+      country,
+      city,
+      kind: placeKindOf(p.types),
+    };
+  }
+}
+
 /** One Google Places review, verbatim (ADR-0106 guest-voice source). */
 export interface PlaceReview {
   readonly text: string;

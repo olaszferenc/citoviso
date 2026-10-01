@@ -1810,6 +1810,15 @@ if [ -f scripts/photo-rights-edit-check.mts ] && \
   echo "[pre-commit] photo-rights-edit-check (§A.2: a vízjel-jelölés túléli a szerkesztést)…"
   npx tsx scripts/photo-rights-edit-check.mts
 fi
+# ⛔ Places cost (ADR-XXXX, 2026-10-01): the console lead page reloaded every 6–8 s and each
+# load bought a Text Search + up to 6 Photo Media calls (one lead 126×, ~600 $/week). The
+# lead page must never pay, and one lead pays once (lead_places_cache). Fetch-stubbed, no
+# network; a fixture lead in the local DB, so scoped to the Places/photo path.
+if [ -f scripts/places-cache-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(generate|generateEngine|placesCache|images)\.ts|^src/scraper/sources/googleMaps\.ts|^src/console/server\.ts|^scripts/places-cache-check'; then
+  echo "[pre-commit] places-cache-check (a lead-lap nem fizet, egy lead egyszer fizet)…"
+  npx tsx scripts/places-cache-check.mts
+fi
 # A lead carrying portal data must be PERSISTABLE (2026-08-21). A bare URL in the JSONB
 # matched_entity column rolled back a whole 554-lead run; the type said `string | null`,
 # so tsc saw nothing. Needs the local DB, so it runs only when persist code is staged.

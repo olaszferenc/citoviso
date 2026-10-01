@@ -240,7 +240,7 @@ async function generateEngineMockInner(
   // confidence-gated Places set. Fall back to a Street View baseline for grounding the
   // copy when the lead has no photos at all.
   opts.onStage?.("photos");
-  const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead, leadId);
+  const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead, leadId, { places: "auto" });
   const hero =
     photos[0]?.url ??
     (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");

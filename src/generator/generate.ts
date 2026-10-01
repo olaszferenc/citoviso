@@ -13,6 +13,7 @@ import { config } from "../config.js";
 import { scoreMatch } from "../scraper/confidence.js";
 import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
 import {
+  placesDetailsMatch,
   placesLookup,
   PlacesUnavailableError,
   type PlacesFailure,
@@ -55,6 +56,14 @@ import { render, type MockData, type MockFeature } from "./render.js";
 // A halott fotó ki sem kerül a halmazba (a kiküldés-kapu, ADR-0134, az AJTÓBAN fog —
 // ez a réteg azt intézi, hogy ilyen lap elő se álljon). Ugyanaz a lekérő, ugyanaz a cache.
 import { dropDeadPhotos } from "./photoLiveness.js";
+import {
+  placesIdentityOf,
+  readPlacesCache,
+  sameIdentity,
+  writePlacesCache,
+  type CachedPlaces,
+  type PlacesIdentity,
+} from "./placesCache.js";
 
 interface RegionContext {
   label: string;
@@ -217,6 +226,35 @@ export interface GatedMedia {
    * need no API, are still returned alongside it: a partial answer stays a real answer.
    */
   readonly placesUnavailable?: PlacesFailure;
+  /** Where the Places half stands for this lead (ADR-XXXX) — the console words it. */
+  readonly places: PlacesStatus;
+}
+
+/**
+ * WHO MAY PAY for a Places answer (ADR-XXXX, owner ruling 2026-10-01: "Places-fotót a
+ * rendszer magától NEM kér"). A stored answer is always used, whatever the policy; the
+ * policy only decides whether a MISSING (or stale) answer may be bought.
+ *   · "cached"  — never pays. The console lead page: it is opened and reloaded at will
+ *                 (every 6–8 s while a generation runs), so it may only READ.
+ *   · "auto"    — the generation: pays ONCE, and only when the lead has no live portal
+ *                 photo at all (otherwise the mock would be empty).
+ *   · "curator" — the curator judged the portal photos weak and asked for Places on the
+ *                 lead page (a paid action the surface says out loud).
+ */
+export type PlacesPolicy = "cached" | "auto" | "curator";
+
+export interface PlacesStatus {
+  /**
+   * stored    — an answer is on file (paid earlier), used as is
+   * fetched   — paid for in THIS call, and now on file
+   * not_asked — nothing on file and this caller may not pay (or chose not to)
+   * stale     — on file, but for a changed name/position/town or with a measured dead
+   *             photo link; this caller may not re-ask, so it is not used
+   * no_coords — the lead has no position: Places is never asked
+   */
+  readonly state: "stored" | "fetched" | "not_asked" | "stale" | "no_coords";
+  readonly fetchedAt?: string;
+  readonly staleReason?: "identity" | "dead_links";
 }
 
 /**
@@ -267,6 +305,57 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
   return out;
 }
 
+/** The lead's stored Google place id (sourceRefs.google_places), when the scraper kept one. */
+function storedPlaceId(lead: QualifiedLead): string | null {
+  const id = lead.sourceRefs?.google_places;
+  return typeof id === "string" && id.trim() ? id : null;
+}
+
+/**
+ * Buy ONE Places answer for the lead: by its stored place id when there is one (a Place
+ * Details call — no search), else a box-restricted Text Search. The match is scored on
+ * the spot and the photos are resolved only for a non-low band: we do not pay for photos
+ * the A4 gate would throw away. Quota/key/network failures THROW (PlacesUnavailableError)
+ * and are never stored — they are not a fact about the lead.
+ */
+async function askPlaces(lead: QualifiedLead, identity: PlacesIdentity): Promise<CachedPlaces> {
+  const key = config.googleMapsApiKey;
+  const id = storedPlaceId(lead);
+  let via: CachedPlaces["via"] = "text_search";
+  let m = id
+    ? await placesDetailsMatch(id, lead.name, identity.lat, identity.lon, key, lead.city)
+    : null;
+  if (m) via = "details";
+  else m = await placesLookup(lead.name, identity.lat, identity.lon, key, lead.city);
+  if (!m) return { v: 1, identity, via, match: null };
+  const conf = scoreMatch({
+    distanceMeters: m.distanceMeters,
+    nameSimilarity: m.nameSimilarity,
+    corroboratedByOsm: lead.sources.includes("osm"),
+    placeKind: m.kind,
+  });
+  const low = conf.band === "low";
+  const photoUrls = low ? [] : await resolvePhotos(m.photoRefs, PLACES_PHOTO_CAP);
+  return {
+    v: 1,
+    identity,
+    via,
+    match: {
+      ...(m.placeId ? { placeId: m.placeId } : {}),
+      placeName: m.placeName,
+      distanceMeters: Math.round(m.distanceMeters),
+      nameSimilarity: Number(m.nameSimilarity.toFixed(2)),
+      score: Number(conf.score.toFixed(3)),
+      band: conf.band,
+      reasons: conf.reasons,
+      // Rating rides the SAME gate as photos — attributed only for a non-low match.
+      ...(!low && m.rating != null ? { rating: m.rating } : {}),
+      ...(!low && m.userRatingCount != null ? { userRatingCount: m.userRatingCount } : {}),
+      photoUrls,
+    },
+  };
+}
+
 export async function resolveGatedPhotos(
   lead: QualifiedLead,
   /** A lead sora — enélkül az operátori nyitókép-választás (0061) nem olvasható ki.
@@ -281,7 +370,7 @@ export async function resolveGatedPhotos(
    * ⛔ TERMÉK-HÍVÓ EZT SOSEM ADHATJA MEG: a `photo-liveness-check` szerkezeti állítása
    * megbukik, ha `src/**` alatt bárki kikapcsolja.
    */
-  opts: { checkLiveness?: boolean } = {},
+  opts: { checkLiveness?: boolean; places?: PlacesPolicy } = {},
 ): Promise<GatedMedia> {
   // Collect BOTH sources, then order best-first so the SHARPEST image is the hero
   // (owner ruling, 2026-08-23): a 1200px Places shot beats a 574px portal thumbnail,
@@ -295,64 +384,77 @@ export async function resolveGatedPhotos(
   let userRatingCount: number | undefined;
   let placeId: string | undefined;
   let placesUnavailable: PlacesFailure | undefined;
-  if (lead.lat != null && lead.lon != null && config.googleMapsApiKey) {
-    try {
-      const m = await placesLookup(
-        lead.name,
-        lead.lat,
-        lead.lon,
-        config.googleMapsApiKey,
-        lead.city,
-      );
-      if (m) {
-        const conf = scoreMatch({
-          distanceMeters: m.distanceMeters,
-          nameSimilarity: m.nameSimilarity,
-          corroboratedByOsm: lead.sources.includes("osm"),
-          placeKind: m.kind,
-        });
-        matchBand = conf.band;
-        placeId = m.placeId;
-        const stars = m.rating
-          ? ` ${m.rating}★/${m.userRatingCount ?? "?"}`
-          : "";
-        console.log(
-          `  match: "${m.placeName}"${stars} · konfidencia ${conf.score.toFixed(2)} [${conf.band}] · ${conf.reasons.join(" · ")}`,
-        );
-        if (conf.band === "low") {
+  let places: PlacesStatus = { state: "no_coords" };
+  const policy: PlacesPolicy = opts.places ?? "cached";
+  const identity = placesIdentityOf(lead);
+  if (identity) {
+    // ① What is on file. A stored answer for a DIFFERENT identity is someone else's;
+    //   one whose photo link is measured dead (permanent failure, photoLiveness) no
+    //   longer delivers what it was paid for. Both may be re-asked — by a caller that
+    //   may pay at all.
+    const stored = leadId ? await readPlacesCache(leadId).catch(() => null) : null;
+    let staleReason: PlacesStatus["staleReason"];
+    if (stored && !sameIdentity(stored.identity, identity)) staleReason = "identity";
+    else if (stored && opts.checkLiveness !== false && stored.match?.photoUrls.length) {
+      const live = await livePhotosOnly(stored.match.photoUrls.map((url) => ({ url })));
+      if (live.length < stored.match.photoUrls.length) staleReason = "dead_links";
+    }
+    let answer: CachedPlaces | null = stored && !staleReason ? stored : null;
+    if (answer) {
+      places = { state: "stored", fetchedAt: stored!.fetchedAt.toISOString() };
+    } else {
+      places = staleReason ? { state: "stale", staleReason } : { state: "not_asked" };
+      // ② May THIS caller pay? (ADR-XXXX) The generation only when the lead has no
+      //   live portal photo at all; the curator on request; the lead page never.
+      let mayPay = policy === "curator";
+      if (policy === "auto") {
+        const livePortal =
+          opts.checkLiveness === false ? portal : await livePhotosOnly(portal);
+        mayPay = livePortal.length === 0;
+      }
+      if (mayPay && config.googleMapsApiKey) {
+        try {
+          answer = await askPlaces(lead, identity);
+          const at = leadId ? await writePlacesCache(leadId, answer) : new Date();
+          places = { state: "fetched", fetchedAt: at.toISOString() };
           console.log(
-            "  ⛔ ALACSONY konfidencia → Places-fotók ELHAGYVA (biztonságos fallback)",
+            `  Places lekérve és eltárolva (${answer.via === "details" ? "tárolt place id" : "Text Search"}, ${policy})`,
           );
-        } else {
-          // Resolve Places REGARDLESS of how many portal photos we hold: the hero must
-          // be able to pick the highest-resolution image, and Places serves ~1200px
-          // where the open portals cap near 574px. Paid, so still bounded by the cap.
-          const seen = new Set(photos.map((p) => photoKey(p.url)));
-          const places = await resolvePhotos(m.photoRefs, PLACES_PHOTO_CAP);
-          for (const url of places) {
-            if (seen.has(photoKey(url))) continue;
-            seen.add(photoKey(url));
-            photos.push({
-              url,
-              provenance: "places",
-              longEdge: PLACES_NOMINAL_LONG_EDGE,
-            });
-          }
-          // Rating rides the SAME gate as photos — attributed only for a non-low match.
-          rating = m.rating;
-          userRatingCount = m.userRatingCount;
-          if (conf.band === "medium") {
-            console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
-          }
+        } catch (e) {
+          // A generation must NOT die because Google is unreachable — the portal photos
+          // we already hold are still a valid (partial) answer. But the caller is TOLD,
+          // so the console can name the real reason instead of blaming the lead.
+          if (!(e instanceof PlacesUnavailableError)) throw e;
+          placesUnavailable = e.failure;
+          console.warn(`  ⛔ Places nem elérhető [${e.failure}] — ${e.message}`);
         }
       }
-    } catch (e) {
-      // A generation must NOT die because Google is unreachable — the portal photos
-      // we already hold are still a valid (partial) answer. But the caller is TOLD,
-      // so the console can name the real reason instead of blaming the lead.
-      if (!(e instanceof PlacesUnavailableError)) throw e;
-      placesUnavailable = e.failure;
-      console.warn(`  ⛔ Places nem elérhető [${e.failure}] — ${e.message}`);
+    }
+    const m = answer?.match;
+    if (m) {
+      matchBand = m.band;
+      placeId = m.placeId;
+      const stars = m.rating ? ` ${m.rating}★/${m.userRatingCount ?? "?"}` : "";
+      console.log(
+        `  match: "${m.placeName}"${stars} · konfidencia ${m.score.toFixed(2)} [${m.band}] · ${m.reasons.join(" · ")}`,
+      );
+      if (m.band === "low") {
+        console.log("  ⛔ ALACSONY konfidencia → Places-fotók ELHAGYVA (biztonságos fallback)");
+      } else {
+        // Both sources stay in the set: the hero must be able to pick the sharpest
+        // image, and Places serves ~1200px where the open portals cap near 574px.
+        const seen = new Set(photos.map((p) => photoKey(p.url)));
+        for (const url of m.photoUrls) {
+          if (seen.has(photoKey(url))) continue;
+          seen.add(photoKey(url));
+          photos.push({ url, provenance: "places", longEdge: PLACES_NOMINAL_LONG_EDGE });
+        }
+        rating = m.rating;
+        userRatingCount = m.userRatingCount;
+        if (m.band === "medium") {
+          console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
+        }
+      }
     }
   }
   // A hero SORRENDJE (heroPick.ts). A méret-szerinti "best-first" rendezés 2026-09-09-ig
@@ -430,7 +532,19 @@ export async function resolveGatedPhotos(
     userRatingCount,
     placeId,
     placesUnavailable,
+    places,
   };
+}
+
+/**
+ * The photos that are not MEASURED permanently dead — the same probe (and cache) as the
+ * main liveness pass. Used by the Places rules (ADR-XXXX) before the main pass runs:
+ * "does the lead have a live portal photo at all?" and "is a stored Places link dead?".
+ * Defined after resolveGatedPhotos on purpose: photo-liveness-check pins the FIRST
+ * dropDeadPhotos call in this file as the main pass.
+ */
+async function livePhotosOnly<T extends { url: string }>(photos: readonly T[]): Promise<T[]> {
+  return (await dropDeadPhotos(photos)).kept;
 }
 
 /**
@@ -464,7 +578,7 @@ async function generateMockInner(
   };
 
   // A4 confidence-gated photos (trust alapkő) — shared with the engine path.
-  const { photos, matchBand, heroVerdict } = await resolveGatedPhotos(lead, leadId);
+  const { photos, matchBand, heroVerdict } = await resolveGatedPhotos(lead, leadId, { places: "auto" });
 
   const hero =
     photos[0]?.url ??

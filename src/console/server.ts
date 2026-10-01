@@ -2882,14 +2882,18 @@ async function handle(
       "application/json",
     );
   }
-  // GET /lead/:id/photos — the lead's REAL photos, resolved on demand (a Places
-  // lookup costs money, so it runs only when an operator opens the lead).
+  // GET /lead/:id/photos — the lead's REAL photos. ⛔ This route NEVER pays for Places
+  // (ADR-XXXX): it is opened and reloaded at will — every 6–8 s while a generation runs —
+  // and until 2026-10-01 each of those reloads bought a fresh Text Search + up to 6 Photo
+  // Media calls (one lead 126× in the dev log). It shows the answer ON FILE
+  // (lead_places_cache); paying is the generation's or the curator's decision.
+  // Guard: scripts/places-cache-check.mts.
   const photosMatch = /^\/lead\/([0-9a-f-]{36})\/photos$/i.exec(path);
   if (method === "GET" && photosMatch) {
     try {
       const loaded = await loadLead(photosMatch[1]!);
-      const media = await resolveGatedPhotos(loaded.lead, photosMatch[1]!);
-      // The lookup we just paid for IS a source of this lead's data — record it,
+      const media = await resolveGatedPhotos(loaded.lead, photosMatch[1]!, { places: "cached" });
+      // The stored Places answer IS a source of this lead's data — record it,
       // so "Források" stops claiming OSM-only while showing Places photos.
       // Low-band matches are not attributed to the lead (A4), so not recorded.
       if (media.placeId && media.matchBand && media.matchBand !== "low") {
@@ -2912,6 +2916,9 @@ async function handle(
           // an exhausted quota rendered as "this lead has no photos" — a claim about
           // the LEAD, when the failure was ours (measured 2026-09-09, HTTP 429).
           unavailable: media.placesUnavailable ?? null,
+          // Where the Places half stands (stored | not_asked | stale | no_coords) —
+          // what the curator's paid "ask Places" action will need to show.
+          places: media.places,
         }),
         "application/json",
       );

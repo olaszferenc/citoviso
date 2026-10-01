@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-places-eredmeny-leadenkent-egyszer-fizetve.md) — Places-eredmény leadenként EGYSZER fizetve, lejárat nélkül tárolva; a lead-lap soha nem fizet (2026-10-01)
 - [ADR-0292](decisions/0292-vendeg-kritikus-a-mock-szoveg-valodisaga.md) — Vendég-kritikus: a mock-szöveg valódisága; véleményből nem lesz ajánlat, a vendég-oldal magáz (2026-10-01)
 - [ADR-0291](decisions/0291-a-levelben-kikuldott-link-megnyitasa-get-soha.md) — A levélben kiküldött link megnyitása (GET) soha nem dönt; a döntés POST (2026-10-01)
 - [ADR-0290](decisions/0290-szallas-idozona-minden-szallas-a-sajat.md) — Szállás-időzóna: minden szállás a saját időzónájában él; egyetlen „ma” (2026-09-30)
