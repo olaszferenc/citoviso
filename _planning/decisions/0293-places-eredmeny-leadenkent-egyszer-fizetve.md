@@ -1,4 +1,4 @@
-## ADR-XXXX — Places-eredmény leadenként EGYSZER fizetve, lejárat nélkül tárolva; a lead-lap soha nem fizet (2026-10-01)
+## ADR-0293 — Places-eredmény leadenként EGYSZER fizetve, lejárat nélkül tárolva; a lead-lap soha nem fizet (2026-10-01)
 
 **Dátum:** 2026-10-01 · **Státusz:** elfogadva — A) rész landolva (SUB, koordinátor: CIT „Places API 600 $” session;
 brief: `~/rc-briefs/places-koltseg-portal-elobb.md`) · **Kapcsolódó:** A4 (konfidencia-kapu, `resolveGatedPhotos`),

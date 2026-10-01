@@ -1,4 +1,4 @@
--- PLACES-EREDMÉNY TÁROLÓ LEADENKÉNT (ADR-XXXX; tulajdonosi döntés 2026-10-01: „Új tábla",
+-- PLACES-EREDMÉNY TÁROLÓ LEADENKÉNT (ADR-0293; tulajdonosi döntés 2026-10-01: „Új tábla",
 -- „Eredmény tárolásának idejét nem korlátozzuk").
 --
 -- MIÉRT KELL. A konzol lead-lapja minden betöltéskor fizetős Places-lookupot csinált (1 Text

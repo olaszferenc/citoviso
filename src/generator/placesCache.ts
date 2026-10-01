@@ -1,4 +1,4 @@
-// THE LEAD'S PLACES ANSWER, PAID FOR ONCE (ADR-XXXX; owner ruling 2026-10-01).
+// THE LEAD'S PLACES ANSWER, PAID FOR ONCE (ADR-0293; owner ruling 2026-10-01).
 //
 // Until now every open of a console lead page bought a fresh Places answer (1 Text
 // Search with Enterprise fields + up to 6 Photo Media calls), with no cache — and a

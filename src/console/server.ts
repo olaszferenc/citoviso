@@ -2883,7 +2883,7 @@ async function handle(
     );
   }
   // GET /lead/:id/photos — the lead's REAL photos. ⛔ This route NEVER pays for Places
-  // (ADR-XXXX): it is opened and reloaded at will — every 6–8 s while a generation runs —
+  // (ADR-0293): it is opened and reloaded at will — every 6–8 s while a generation runs —
   // and until 2026-10-01 each of those reloads bought a fresh Text Search + up to 6 Photo
   // Media calls (one lead 126× in the dev log). It shows the answer ON FILE
   // (lead_places_cache); paying is the generation's or the curator's decision.

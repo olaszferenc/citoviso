@@ -226,12 +226,12 @@ export interface GatedMedia {
    * need no API, are still returned alongside it: a partial answer stays a real answer.
    */
   readonly placesUnavailable?: PlacesFailure;
-  /** Where the Places half stands for this lead (ADR-XXXX) — the console words it. */
+  /** Where the Places half stands for this lead (ADR-0293) — the console words it. */
   readonly places: PlacesStatus;
 }
 
 /**
- * WHO MAY PAY for a Places answer (ADR-XXXX, owner ruling 2026-10-01: "Places-fotót a
+ * WHO MAY PAY for a Places answer (ADR-0293, owner ruling 2026-10-01: "Places-fotót a
  * rendszer magától NEM kér"). A stored answer is always used, whatever the policy; the
  * policy only decides whether a MISSING (or stale) answer may be bought.
  *   · "cached"  — never pays. The console lead page: it is opened and reloaded at will
@@ -404,7 +404,7 @@ export async function resolveGatedPhotos(
       places = { state: "stored", fetchedAt: stored!.fetchedAt.toISOString() };
     } else {
       places = staleReason ? { state: "stale", staleReason } : { state: "not_asked" };
-      // ② May THIS caller pay? (ADR-XXXX) The generation only when the lead has no
+      // ② May THIS caller pay? (ADR-0293) The generation only when the lead has no
       //   live portal photo at all; the curator on request; the lead page never.
       let mayPay = policy === "curator";
       if (policy === "auto") {
@@ -538,7 +538,7 @@ export async function resolveGatedPhotos(
 
 /**
  * The photos that are not MEASURED permanently dead — the same probe (and cache) as the
- * main liveness pass. Used by the Places rules (ADR-XXXX) before the main pass runs:
+ * main liveness pass. Used by the Places rules (ADR-0293) before the main pass runs:
  * "does the lead have a live portal photo at all?" and "is a stored Places link dead?".
  * Defined after resolveGatedPhotos on purpose: photo-liveness-check pins the FIRST
  * dropDeadPhotos call in this file as the main pass.

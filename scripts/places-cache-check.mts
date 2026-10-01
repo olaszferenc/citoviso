@@ -1,4 +1,4 @@
-// ⛔ PLACES-KÖLTSÉG ŐR (ADR-XXXX, 2026-10-01): a lead-lap nem fizet, és egy leadre a
+// ⛔ PLACES-KÖLTSÉG ŐR (ADR-0293, 2026-10-01): a lead-lap nem fizet, és egy leadre a
 // Places-válasz EGYSZER kerül pénzbe.
 //
 // A MÉRT LELET. A konzol lead-lapja (GET /lead/:id/photos) minden megnyitáskor 1 Text
@@ -215,7 +215,7 @@ try {
 }
 
 if (failed) {
-  console.error(`⛔ ${failed} eset megbukott — a Places-költség szabálya (ADR-XXXX) sérült.`);
+  console.error(`⛔ ${failed} eset megbukott — a Places-költség szabálya (ADR-0293) sérült.`);
   process.exit(1);
 }
-console.log("✅ Places-tároló: a lead-lap nem fizet, egy lead egyszer fizet (ADR-XXXX).");
+console.log("✅ Places-tároló: a lead-lap nem fizet, egy lead egyszer fizet (ADR-0293).");
