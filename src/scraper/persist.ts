@@ -224,6 +224,16 @@ export async function interruptScrapeRun(
 }
 
 /**
+ * The identity (name + position) of every stored lead, any lifecycle — the set a
+ * fresh scrape is deduped against. Exported so the run can skip the slow portal
+ * pass for leads the store-dedup is going to drop anyway.
+ */
+export async function storedLeadIdentities(): Promise<LeadIdentity[]> {
+  const rows = await db.selectFrom("lead").select(["name", "lat", "lng"]).execute();
+  return rows.map((e) => ({ name: e.name, lat: e.lat, lon: e.lng }));
+}
+
+/**
  * Persist the qualified leads and close the run as completed. Leads and their
  * provenance go in one transaction so a run is all-or-nothing; the run row is
  * closed afterwards with the summary stats.
@@ -239,13 +249,7 @@ export async function completeScrapeRun(
   // EVERY existing lead (any lifecycle) by name + ~250 m proximity; only insert the
   // genuinely new ones. Disqualified players are matched too, so they are not
   // resurrected. Loaded once, before the write transaction (a plain read).
-  const existingRows = await db.selectFrom("lead").select(["name", "lat", "lng"]).execute();
-  const existing: LeadIdentity[] = existingRows.map((e) => ({
-    name: e.name,
-    lat: e.lat,
-    lon: e.lng,
-  }));
-  const { fresh, duplicates } = partitionNewLeads(leads, existing);
+  const { fresh, duplicates } = partitionNewLeads(leads, await storedLeadIdentities());
   if (duplicates.length) {
     console.log(
       `  Store-dedup: ${duplicates.length} lead már szerepel (átfedő régió / újra-scrape) → kihagyva; ${fresh.length} új.`,

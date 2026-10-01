@@ -9,23 +9,35 @@
 // business itself published it, on the very portals whose commission we are
 // selling against.
 //
-// Targeting: the leads we would actually contact (isLead) with a distinctive
-// name, poorest-material-first, under an explicit budget. Portals are somebody
-// else's servers; there is no version of this that hammers them.
+// Targeting (owner ruling 2026-10-01, "portál előbb, mindenkinek"): EVERY lead we
+// would contact (isLead) gets its already-known listings read — those reads are
+// free, and they are what keeps the mock off paid Places photos. Only the
+// DISCOVERY of new listings costs money (one web search per lead), so that part
+// alone stays under a per-run budget, poorest-material-first. Portals are
+// somebody else's servers; politeness.ts keeps every host strictly serial with a
+// gap, so more leads means a longer run, never a faster hammer.
 
 import { isBusinessEmail, isCorroboratedEmail } from "./enrichWebSearch.js";
-import { portalLookup } from "./sources/portalListing.js";
+import { findPortalCandidates, portalLookup } from "./sources/portalListing.js";
 import { webSearchAvailable } from "./sources/webSearch.js";
 import type { PortalListing, PortalProfile, QualifiedLead, Region } from "./types.js";
 
-/** Different HOSTS in parallel; the same host stays serialised in politeness.ts. */
-const CONCURRENCY = 2;
-/** Default per-run ceiling on how many leads get a portal lookup. */
-const DEFAULT_MAX_LEADS = 60;
+/**
+ * Different HOSTS in parallel; the same host stays serialised in politeness.ts.
+ * Measured 2026-10-01 on the 1 057 prod leads with a known listing: 2 → ~100 min,
+ * 4 → ~78 min, beyond that nothing (the floor is one host read serially).
+ */
+const CONCURRENCY = 4;
+/** Per-run budget of leads that may run a PAID web search for new listings. */
+const DEFAULT_MAX_SEARCH_LEADS = 60;
+/** Progress line cadence for the (now hour-long) full pass. */
+const PROGRESS_EVERY = 100;
 
 export interface PortalEnrichOptions {
-  /** Max leads to look up in this run (cost + politeness budget). */
+  /** Optional hard cap on looked-up leads in this run (default: no cap). */
   readonly maxLeads?: number;
+  /** Leads that may run a paid web search for NEW listings (default 60; 0 = never). */
+  readonly maxSearchLeads?: number;
   /** Max accepted listings per lead. */
   readonly maxProfilesPerLead?: number;
   /** Log every dropped candidate with its reason (manual runs / debugging). */
@@ -82,37 +94,51 @@ export async function enrichPortal(
   region: Region,
   opts: PortalEnrichOptions = {},
 ): Promise<QualifiedLead[]> {
-  const maxLeads = opts.maxLeads ?? DEFAULT_MAX_LEADS;
-
-  // Candidates: the leads we would contact. A lead with an own site already has
-  // a page of its own to work from, and is not the segment this pass serves.
-  const candidates = leads
+  const ordered = leads
     .filter((l) => l.isLead)
-    .filter((l) => (l.listings?.length ?? 0) > 0 || webSearchAvailable())
     .sort((a, b) => materialScore(a) - materialScore(b))
-    .slice(0, maxLeads);
+    .slice(0, opts.maxLeads ?? Number.POSITIVE_INFINITY);
 
-  if (!candidates.length) return leads;
+  // What each lead can be read from WITHOUT paying: the listings already tied to
+  // it. Refresh mode reads exactly the profiles it holds; otherwise the stored
+  // listings (and a portal_only lead's own listing URL), no search.
+  const plan: { lead: QualifiedLead; urls: string[]; search: boolean }[] = [];
+  let searchLeft = opts.knownUrlsOnly || !webSearchAvailable()
+    ? 0
+    : (opts.maxSearchLeads ?? DEFAULT_MAX_SEARCH_LEADS);
+  for (const lead of ordered) {
+    const urls = opts.knownUrlsOnly
+      ? [...new Set((lead.portalProfiles ?? []).map((p) => p.url))]
+      : await findPortalCandidates(lead, region, 6, false);
+    // A paid search only where it can still add a candidate (portalLookup reads
+    // at most 6), poorest-material-first until the budget is spent.
+    const search = searchLeft > 0 && urls.length < 6;
+    if (search) searchLeft--;
+    if (!urls.length && !search) continue; // nothing to read, and no budget to look
+    plan.push({ lead, urls, search });
+  }
+  const candidates = plan.map((p) => p.lead);
+  if (!plan.length) return leads;
 
   const found = new Map<QualifiedLead, PortalProfile[]>();
   let accepted = 0;
   let photos = 0;
+  let done = 0;
+  const lookedUpAt = new Date().toISOString();
 
   let next = 0;
   async function worker(): Promise<void> {
-    while (next < candidates.length) {
-      const lead = candidates[next++]!;
+    while (next < plan.length) {
+      const { lead, urls, search } = plan[next++]!;
       // ADR-0106 ④: default follows portalLookup's own ceiling (the full
       // host-deduped candidate list) instead of stopping at 2 accepted reads.
-      // Frissítés-mód: a MÁR HOZZÁKÖTÖTT adatlapokat olvassuk újra, keresés nélkül.
-      const knownUrls = opts.knownUrlsOnly
-        ? [...new Set((lead.portalProfiles ?? []).map((p) => p.url))]
-        : null;
-      if (knownUrls && !knownUrls.length) continue; // nincs mit frissíteni
       const { profiles, attempts } = await portalLookup(lead, region, {
         ...(opts.maxProfilesPerLead ? { maxProfiles: opts.maxProfilesPerLead } : {}),
-        ...(knownUrls ? { urls: knownUrls } : {}),
+        ...(search ? { search: true } : { urls }),
       });
+      if (++done % PROGRESS_EVERY === 0) {
+        console.log(`  … portál-olvasás: ${done}/${plan.length} lead, eddig ${found.size} találat`);
+      }
       if (opts.verbose) {
         for (const a of attempts) {
           if (a.profile) {
@@ -132,12 +158,13 @@ export async function enrichPortal(
     }
   }
   await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, candidates.length) }, () => worker()),
+    Array.from({ length: Math.min(CONCURRENCY, plan.length) }, () => worker()),
   );
 
   console.log(
     `  → ${found.size}/${candidates.length} leadhez találtunk portál-adatlapot · ` +
-      `${accepted} adatlap · ${photos} portál-fotó (jogállás: portal)`,
+      `${accepted} adatlap · ${photos} portál-fotó (jogállás: portal) · ` +
+      `${plan.filter((p) => p.search).length} fizetős webes keresés`,
   );
 
   // SHARED-CONTACT GUARD (the tourinform lesson, enrichWebSearch): one phone
@@ -189,14 +216,16 @@ export async function enrichPortal(
     return digits.startsWith(expected) || digits.startsWith(`00${expected}`);
   };
 
+  const lookedUp = new Set(candidates);
   return leads.map((l) => {
     const profiles = found.get(l);
-    if (!profiles?.length) return l;
+    if (!profiles?.length) return lookedUp.has(l) ? { ...l, portalLookupAt: lookedUpAt } : l;
     const merged = mergeProfiles(l.portalProfiles, profiles);
     const email = contactFrom(profiles, (p) => p.email, emailUses);
     const phone = contactFrom(profiles, (p) => p.phone, phoneUses);
     return {
       ...l,
+      portalLookupAt: lookedUpAt,
       portalProfiles: merged,
       listings: mergeListings(l.listings, profiles),
       // A portal listing is a legitimate contact source (the business put its

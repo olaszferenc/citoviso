@@ -11,6 +11,7 @@
 - [2026-10-01_sz_vendeg_kritikus_valodisag.md](2026-10-01_sz_vendeg_kritikus_valodisag.md) — 2026-10-01 — Elek SZ: a mock-szöveg valódisága — vendég-kritikus, véleményből nem lesz ajánlat, magázás
 - [2026-10-01_eszkalacio_idozona_koordinator.md](2026-10-01_eszkalacio_idozona_koordinator.md) — 2026-10-01 — Eszkalációs ajánlat időzítése → szállás-időzóna: koordinálás és élesítés (koordinátor cit94bb80e7)
 - [2026-10-01_elek_eles_teljes_tolcser_jelentes.md](2026-10-01_elek_eles_teljes_tolcser_jelentes.md) — Elek — éles teljes tölcsér · JELENTÉS (KÉSZ — mindhárom szerep végigment)
+- [2026-10-01_b_portal_plafon_ki_mindenkinek.md](2026-10-01_b_portal_plafon_ki_mindenkinek.md) — Portál előbb, mindenkinek — a 60-as plafon ki, a tárolt park backfill-szkriptet kapott (B rész)
 - [2026-09-30_szamla_bukas_riasztas_ujra.md](2026-09-30_szamla_bukas_riasztas_ujra.md) — Bukott számla: riasztás, napi újrapróba, kézi újrakiadás, Számlázz-oldali idempotencia; a konzol-gomb §2b-re vár (2026-09-30)
 - [2026-09-30_public_console_unit_repo_teszt_riasztas.md](2026-09-30_public_console_unit_repo_teszt_riasztas.md) — 2026-09-30 — public/console unit a repóban OnFailure-rel + [TESZT] riasztás-tárgy (ADR-0279)
 - [2026-09-30_nav_online_szamla_osszekotes.md](2026-09-30_nav_online_szamla_osszekotes.md) — 2026-09-30 — A CITO Számlázz.hu fiók összekötve a NAV Online Számlával (az éles számlázás eddig 378-cal bukott)

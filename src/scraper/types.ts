@@ -176,6 +176,12 @@ export interface QualifiedLead {
    */
   readonly portalProfiles?: readonly PortalProfile[];
   /**
+   * When the portal pass last READ this lead's listings — set even when nothing
+   * matched, so an empty answer is a finished answer and the backfill
+   * (scripts/portal-backfill.mts) can resume without re-reading the same leads.
+   */
+  readonly portalLookupAt?: string;
+  /**
    * Full contact ledger: every address/number seen, with source and verdict.
    * `email`/`phone` above remain the CHOSEN ones; this is the evidence behind
    * the choice and the raw material for later, measured ranking rules.

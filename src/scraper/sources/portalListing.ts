@@ -476,6 +476,8 @@ export async function findPortalCandidates(
   lead: Pick<QualifiedLead, "name" | "city" | "website" | "websiteStatus" | "listings">,
   region: Region,
   maxCandidates = 6,
+  /** false = only the listings we already know (free); no paid web search. */
+  search = true,
 ): Promise<string[]> {
   const ordered: string[] = [];
   const seenHosts = new Set<string>();
@@ -514,7 +516,7 @@ export async function findPortalCandidates(
   }
   for (const l of lead.listings ?? []) consider(l.url);
 
-  if (ordered.length < maxCandidates && webSearchAvailable()) {
+  if (search && ordered.length < maxCandidates && webSearchAvailable()) {
     // The lead's own town, not the region label (ADR-0043): "Tekergő keszthely
     // és környéke" returns portals about a different place entirely.
     const results = await webSearch(
@@ -543,7 +545,13 @@ export async function findPortalCandidates(
 export async function portalLookup(
   lead: LeadFacts & Pick<QualifiedLead, "listings">,
   region: Region,
-  opts: { maxProfiles?: number; maxCandidates?: number; urls?: readonly string[] } = {},
+  opts: {
+    maxProfiles?: number;
+    maxCandidates?: number;
+    urls?: readonly string[];
+    /** false = read only the already-known listings, never a paid web search. */
+    search?: boolean;
+  } = {},
 ): Promise<{ profiles: PortalProfile[]; attempts: PortalReadResult[] }> {
   // ADR-0106 ④: read the WHOLE host-deduped candidate list (was 2 — the run
   // found a lead on 4-5 portals and then read only two of them, leaving the
@@ -552,7 +560,7 @@ export async function portalLookup(
   const maxProfiles = opts.maxProfiles ?? 6;
   const candidates = opts.urls
     ? [...opts.urls]
-    : await findPortalCandidates(lead, region, opts.maxCandidates ?? 6);
+    : await findPortalCandidates(lead, region, opts.maxCandidates ?? 6, opts.search ?? true);
 
   const profiles: PortalProfile[] = [];
   const attempts: PortalReadResult[] = [];

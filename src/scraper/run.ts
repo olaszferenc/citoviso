@@ -13,8 +13,9 @@ import {
   failScrapeRun,
   interruptScrapeRun,
   startScrapeRun,
+  storedLeadIdentities,
 } from "./persist.js";
-import { dedupeAndQualify } from "./dedupe.js";
+import { dedupeAndQualify, partitionNewLeads } from "./dedupe.js";
 import { enrichContact } from "./enrichContact.js";
 import { enrichGeo } from "./enrichGeo.js";
 import { enrichGuestReviews } from "./enrichGuestReviews.js";
@@ -195,10 +196,19 @@ async function main(): Promise<void> {
     // Portal listings: the only free source of ROOMS, PRICES, AMENITIES and a
     // real description — Places gives none of those. Runs before the material
     // measurement so the portal photos count towards the lead's material.
+    // EVERY contactable NEW lead is read (owner ruling 2026-10-01). A lead already
+    // in the store is dropped by the store-dedup at the end of the run, so reading
+    // its portals here would be an hour of somebody else's server for nothing —
+    // the stored ones are covered by scripts/portal-backfill.mts instead.
+    const { fresh: newLeads } = partitionNewLeads(assessed, await storedLeadIdentities());
     mark(
-      "Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal)…",
+      `Portál-adatlapok olvasása (szobák, árak, felszereltség, fotók — jogállás: portal) — ` +
+        `${newLeads.filter((l) => l.isLead).length} új kontaktálható lead…`,
     );
-    const withPortal = await enrichPortal(assessed, region);
+    const portalRead = new Map(
+      (await enrichPortal(newLeads, region)).map((l, i) => [newLeads[i]!, l] as const),
+    );
+    const withPortal = assessed.map((l) => portalRead.get(l) ?? l);
     // Guest voice (ADR-0106): the review TEXTS for the leads we would contact —
     // the only source that already speaks the guest's language. One-off per
     // lead, 30-day freshness, A4-gated by the place id's presence.
