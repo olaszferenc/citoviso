@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JÓVÁHAGYOTT terv (B) — Places-fotók kurátori gombja · Citoviso konzol</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-300:#8fdcec; --citui-white:#fff;
+    --citui-ink:#10243a; --citui-ink-inverse:#fff; --citui-muted:#60748b;
+    --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-panel:#fff;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-warn-ink:#8a5a00;
+    --citui-bad:#e5484d; --citui-bad-ink:#b4232a;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--citui-navy-950);font-family:var(--citui-font-text);color:var(--citui-ink)}
+
+  /* ── mock control bar (not part of the design) ── */
+  .bar{position:sticky;top:0;z-index:9;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+       padding:10px 14px;background:var(--citui-navy-900);color:#eaf3f8;font-size:13px}
+  .bar b{font-family:var(--citui-font-display);font-weight:600;margin-right:auto}
+  .bar .grp{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .bar .grp span{opacity:.7;font-size:12px}
+  .bar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#eaf3f8;
+       padding:6px 12px;border-radius:var(--citui-radius-pill);cursor:pointer;font:inherit;font-size:12px;min-height:32px}
+  .bar button[aria-pressed="true"]{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:#04222c;font-weight:600}
+  .bar select{font:inherit;font-size:12px;border-radius:var(--citui-radius-pill);padding:6px 10px;min-height:32px;
+       background:var(--citui-navy-800);color:#eaf3f8;border:1px solid rgba(255,255,255,.25);max-width:100%}
+
+  .stage{padding:18px;display:flex;justify-content:center}
+  .frame{width:100%;max-width:1180px;container-type:inline-size;background:var(--citui-surface);
+         border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm);transition:max-width var(--citui-transition)}
+  .frame.mobile{max-width:390px}
+  .wrap{padding:18px}
+  .vh{font-family:var(--citui-font-display);font-size:18px;margin:0 0 4px}
+  .sub{color:var(--citui-muted);font-size:13px;margin:0 0 14px;line-height:1.5}
+
+  /* ── lead page frame (real console structure, simplified) ── */
+  .lp{display:grid;gap:14px}
+  @container (min-width:900px){ .lp{grid-template-columns:1fr 1fr} .lp .wide{grid-column:1 / -1} }
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:16px}
+  .panel h2{font-family:var(--citui-font-display);font-size:16px;margin:0 0 10px}
+  .ghostpanel{opacity:.55}
+  .ghostpanel p{margin:0;font-size:13px;color:var(--citui-muted)}
+  .mut{color:var(--citui-muted)} .small{font-size:12.5px;line-height:1.5}
+  .con-warn{color:var(--citui-warn-ink)}
+
+  button.btn,button.ghost,button.paid{font:inherit;font-size:13px;font-weight:600;border-radius:var(--citui-radius-pill);
+    padding:8px 15px;min-height:38px;border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .btn{background:var(--citui-cyan-500);color:#04222c}
+  .ghost{background:transparent;color:var(--citui-navy-800);border-color:var(--citui-line-strong)!important}
+  .paid{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .paid:hover{background:var(--citui-navy-800)}
+  button[disabled]{opacity:.55;cursor:not-allowed}
+  .fee{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:var(--citui-radius-pill);
+    background:color-mix(in srgb, var(--citui-warn) 22%, var(--citui-white));color:var(--citui-warn-ink)}
+  .paid .fee{background:color-mix(in srgb, var(--citui-warn) 85%, var(--citui-white));color:#2b1d00}
+  .spin{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:sp 0.8s linear infinite;display:inline-block}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  svg.ic{width:15px;height:15px;flex:none}
+
+  /* ── photo grid: the console's .lead-photos / .hp-* classes ── */
+  .lead-photos{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));max-height:420px;overflow-y:auto}
+  .lead-photos img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;border-radius:8px;border:1px solid var(--citui-line);background:var(--citui-surface-2)}
+  .hp-cell{position:relative;margin:0}
+  /* The real strip scrolls INSIDE the panel (max-height 420px). Without a cue the cut row
+     looks like a rendering bug, so: fade the bottom edge and say how many are below. */
+  .lead-photos.more{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 56px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 56px),transparent)}
+  .lp-more{margin:6px 0 0;font-size:12px;font-weight:600;color:var(--citui-navy-800);display:flex;align-items:center;gap:6px}
+  .lp-more[hidden]{display:none}
+  .hp-sc{position:absolute;right:4px;top:4px;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:var(--citui-radius-pill);
+    color:var(--citui-ink-inverse);background:color-mix(in srgb, var(--citui-navy-950) 78%, transparent)}
+  .hp-sc.low{background:var(--citui-bad-ink)}
+  .hp-src{position:absolute;left:4px;top:4px;font-size:.58rem;font-weight:700;padding:2px 6px;border-radius:var(--citui-radius-pill);
+    background:color-mix(in srgb, var(--citui-white) 88%, transparent);color:var(--citui-navy-900)}
+  .hp-src.pl{background:color-mix(in srgb, var(--citui-warn) 80%, var(--citui-white));color:#2b1d00}
+  .hp-meta{font-size:.7rem;color:var(--citui-muted);line-height:1.4;padding:5px 2px 0}
+  .hp-pick{width:100%;margin-top:5px;border:1px solid var(--citui-line);background:var(--citui-surface-2);border-radius:var(--citui-radius-sm);
+    font:inherit;font-size:.72rem;font-weight:600;padding:6px 4px;cursor:pointer;color:var(--citui-ink)}
+  .hp-pick:hover{background:var(--citui-cyan-300)}
+  .hp-pick[disabled]{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:var(--citui-navy-900);cursor:default;opacity:1}
+  .hp-cell.hero img{outline:2px solid var(--citui-cyan-500);outline-offset:-2px}
+  .hp-cell.fresh img{animation:fadein .6s ease}
+  @keyframes fadein{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+
+  /* ── the Places state box (shared by all variants) ── */
+  .pk{margin-top:12px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius);padding:12px 14px;background:var(--citui-surface)}
+  .pk.dash{border-style:dashed}
+  .pk-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;margin:0}
+  .pk p{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--citui-navy-800)}
+  .pk .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .pk.ok{background:var(--citui-ok-soft);border-color:color-mix(in srgb, var(--citui-ok) 35%, transparent)}
+  .pk.ok .pk-head{color:#14532d}
+  .pk.warn{background:color-mix(in srgb, var(--citui-warn) 9%, var(--citui-white));border-color:color-mix(in srgb, var(--citui-warn) 42%, transparent)}
+  .pk.warn .pk-head{color:var(--citui-warn-ink)}
+  .pk.busy{background:color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-white));border-color:color-mix(in srgb, var(--citui-cyan-500) 40%, transparent)}
+  .pk.quiet{background:transparent;border:0;padding:0;margin-top:10px}
+  .pk.quiet p{margin:0;color:var(--citui-muted)}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:var(--citui-radius-pill);
+    border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-navy-800);white-space:nowrap}
+  .lane h3 .chip{text-transform:none;letter-spacing:0}
+  .chip.ok{border-color:color-mix(in srgb, var(--citui-ok) 45%, transparent);color:#14532d;background:var(--citui-ok-soft)}
+  .chip.warn{border-color:color-mix(in srgb, var(--citui-warn) 50%, transparent);color:var(--citui-warn-ink)}
+  .chip.busy{border-color:var(--citui-cyan-500);color:var(--citui-navy-900)}
+
+  /* Variant A: one row under the grid; desktop puts text left, button right */
+  @container (min-width:700px){ .vA .pk:not(.quiet){display:grid;grid-template-columns:1fr auto;gap:4px 18px;align-items:center}
+    .vA .pk:not(.quiet) .row{margin-top:0;grid-column:2;grid-row:1 / span 2} }
+  @container (max-width:699px){ .vA .pk .row button.paid{width:100%;justify-content:center} }
+
+  /* Variant B: two source lanes; desktop = side by side */
+  .lanes{display:grid;gap:14px}
+  @container (min-width:900px){ .lanes{grid-template-columns:1fr 1fr} }
+  .lane h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .lane .pk{margin-top:0}
+  .lane .pk.dash{min-height:150px;display:flex;flex-direction:column;justify-content:center}
+  @container (max-width:699px){ .vB .pk .row button{width:100%;justify-content:center} }
+
+  /* Variant C: header button + confirmation */
+  .phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .phead h2{margin:0;margin-right:auto}
+  @container (max-width:699px){ .vC .phead .paid{width:100%;justify-content:center;order:3} }
+  .confirm{margin:0 0 12px;border:1px solid color-mix(in srgb, var(--citui-warn) 42%, transparent);background:color-mix(in srgb, var(--citui-warn) 9%, var(--citui-white));
+    border-radius:var(--citui-radius);padding:12px 14px;font-size:12.5px;line-height:1.5}
+  .confirm b{font-size:13.5px}
+  .confirm ul{margin:6px 0 0;padding-left:18px}
+  .confirm .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .rescrape{margin-top:14px;padding-top:12px;border-top:1px solid var(--citui-line)}
+  .rescrape p{margin:6px 0 0}
+
+  .notes{margin-top:16px;font-size:12.5px;line-height:1.55;color:var(--citui-navy-800);background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:12px 16px}
+  .notes h3{font-family:var(--citui-font-display);font-size:14px;margin:0 0 4px}
+  .notes ul{margin:4px 0 0;padding-left:18px}
+  .notes[hidden]{display:none}
+  body.shot .bar{display:none}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Places-fotók kurátori gombja · JÓVÁHAGYOTT terv (B · két forrás-sáv, 2026-10-02)</b>
+  <div class="grp" id="vSw" hidden><button data-v="B" aria-pressed="true">B</button></div>
+  <div class="grp" id="sSw"><span>Méret</span>
+    <button data-s="mobile" aria-pressed="false">Mobil 390px</button>
+    <button data-s="desktop" aria-pressed="true">Asztali</button>
+  </div>
+  <div class="grp"><span>Lead</span>
+    <select id="scn" aria-label="Lead-eset">
+      <option value="portal">Van portál-fotó · Places még nincs lekérve</option>
+      <option value="portalStored">Van portál-fotó · Places korábban lekérve (tárolva)</option>
+      <option value="noPortal">Nincs portál-fotó · automatikusan lekérve</option>
+      <option value="noPortalFail">Nincs portál-fotó · az automatikus lekérés elbukott</option>
+    </select>
+  </div>
+  <div class="grp"><span>A következő lekérés</span>
+    <select id="outc" aria-label="A következő lekérés eredménye">
+      <option value="ok">sikerül (6 fotó)</option>
+      <option value="quota">Places nem elérhető (kvóta)</option>
+      <option value="auth">Places nem elérhető (kulcs)</option>
+      <option value="nomatch">a Google nem talál fotót</option>
+    </select>
+  </div>
+</div>
+
+<div class="stage"><div class="frame" id="frame"><div class="wrap">
+  <p class="vh" id="vTitle"></p>
+  <p class="sub" id="vSub"></p>
+  <div class="lp">
+    <div class="panel ghostpanel"><h2>Lead-adatok</h2><p>Rubin Villa · Balatonfüred · kontaktálható</p></div>
+    <div class="panel ghostpanel"><h2>Mock</h2><p>utolsó generálás: 2026-09-30 · v3</p></div>
+    <div class="panel wide" id="photoPanel"></div>
+  </div>
+  <div class="notes" id="notes"></div>
+</div></div></div>
+
+<script>
+(function () {
+  // ── sample data ──────────────────────────────────────────────────────────
+  var PORTAL = [
+    { u: 'img/p1.jpg', sc: 72, subj: 'kert / terasz', why: 'fedett kiülő, nappali fény' },
+    { u: 'img/p2.jpg', sc: 58, subj: 'kert / terasz', why: 'medence, szűk kivágás' },
+    { u: 'img/p3.jpg', sc: 66, subj: 'kilátás', why: 'tópart, borús ég' },
+    { u: 'img/p4.jpg', sc: 81, subj: 'épület kívülről', why: 'teljes homlokzat, éles' },
+    { u: 'img/p5.jpg', sc: 63, subj: 'kert / terasz', why: 'medence, erős fény' },
+    { u: 'img/p6.jpg', sc: 47, subj: 'belső tér', why: 'sötét szoba, kis felbontás' },
+    { u: 'img/p7.jpg', sc: 54, subj: 'részlet', why: 'udvar, szűk látószög' },
+    { u: 'img/p8.jpg', sc: 69, subj: 'kert / terasz', why: 'kerti kiülő, napos' }
+  ];
+  var PLACES = [
+    { u: 'img/p10.jpg', sc: 77, subj: 'kert / terasz', why: 'pavilon, jó fény' },
+    { u: 'img/p11.jpg', sc: 62, subj: 'kert / terasz', why: 'árnyas kert' },
+    { u: 'img/p12.jpg', sc: 84, subj: 'épület kívülről', why: 'éles, széles látószög' },
+    { u: 'img/p13.jpg', sc: 50, subj: 'étkező', why: 'vendégfotó, ételközeli' },
+    { u: 'img/p14.jpg', sc: 59, subj: 'étkező', why: 'terasz-étterem, zsúfolt' },
+    { u: 'img/p9.jpg', sc: 31, subj: 'egyéb', why: 'nem a szállás látszik rajta' }
+  ];
+  // Real console wording (placesOutageText in views.ts) — the same cause table.
+  var CAUSE = { quota: 'a napi kvótánk kimerült', auth: 'elutasította a kulcsunkat (kulcs vagy számlázás)' };
+  var COST = '1 hely-lekérdezés + legfeljebb 6 fotó';
+
+  // ── state ────────────────────────────────────────────────────────────────
+  var S = { v: 'B', scn: 'portal', st: 'idle', fetchedAt: null, auto: false, cause: '', confirm: false, hero: 0, heroSrc: 'portal' };
+  function resetScenario() {
+    S.confirm = false; S.hero = 0;
+    if (S.scn === 'portal') { S.st = 'idle'; S.fetchedAt = null; S.auto = false; S.heroSrc = 'portal'; }
+    if (S.scn === 'portalStored') { S.st = 'done'; S.fetchedAt = '2026-09-16 14:02'; S.auto = false; S.heroSrc = 'portal'; }
+    if (S.scn === 'noPortal') { S.st = 'done'; S.fetchedAt = '2026-10-01 09:41'; S.auto = true; S.heroSrc = 'places'; }
+    if (S.scn === 'noPortalFail') { S.st = 'outage'; S.cause = CAUSE.quota; S.fetchedAt = null; S.auto = true; S.heroSrc = 'places'; }
+  }
+  function portal() { return (S.scn === 'noPortal' || S.scn === 'noPortalFail') ? [] : PORTAL; }
+  function places() { return S.st === 'done' ? PLACES : []; }
+  var timer = null;
+  function startFetch() {
+    S.confirm = false; S.st = 'busy'; render();
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      var o = document.getElementById('outc').value;
+      if (o === 'ok') { S.st = 'done'; S.fetchedAt = '2026-10-01 23:40'; S.justFetched = true; }
+      else if (o === 'nomatch') { S.st = 'nomatch'; S.fetchedAt = '2026-10-01 23:40'; }
+      else { S.st = 'outage'; S.cause = CAUSE[o]; }
+      render(); S.justFetched = false;
+    }, 1800);
+  }
+
+  // ── pieces ───────────────────────────────────────────────────────────────
+  var IC_PLACES = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  var IC_SCRAPE = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>';
+  function cell(p, k, src) {
+    var isHero = S.heroSrc === src && S.hero === k;
+    return '<figure class="hp-cell' + (isHero ? ' hero' : '') + (src === 'places' && S.justFetched ? ' fresh' : '') + '">'
+      + '<img src="' + p.u + '" alt="">'
+      + '<span class="hp-src' + (src === 'places' ? ' pl' : '') + '">' + (src === 'places' ? 'Places' : 'portál') + '</span>'
+      + '<span class="hp-sc' + (p.sc < 55 ? ' low' : '') + '">' + p.sc + '</span>'
+      + '<figcaption class="hp-meta">' + p.subj + ' — ' + p.why + '</figcaption>'
+      + '<button class="hp-pick" data-src="' + src + '" data-k="' + k + '"' + (isHero ? ' disabled' : '') + '>'
+      + (isHero ? 'ez a nyitókép' : 'Legyen ez a nyitókép') + '</button></figure>';
+  }
+  function grid(list, src) { return list.map(function (p, k) { return cell(p, k, src); }).join(''); }
+  function paidBtn(label) {
+    return '<button type="button" class="paid" data-act="fetch">' + IC_PLACES + (label || 'Places-fotók lekérése') + ' <span class="fee">fizetős</span></button>';
+  }
+  function countLine() {
+    var np = portal().length, nl = places().length, n = np + nl;
+    if (!n) return '';
+    var t = n + ' fotó' + (np ? ' (' + np + ' portál-adatlapról' + (nl ? ', ' + nl + ' Google Places' : '') + ')' : ' (Google Places)');
+    if (nl) t += ' · Google-értékelés: 4,6★ (212) · match: biztos';
+    return '<p class="mut small" style="margin:10px 0 0">' + t + '</p>';
+  }
+  function rescrape() {
+    return '<div class="rescrape"><button type="button" class="ghost" data-act="noop">' + IC_SCRAPE + 'Portál-fotók újragyűjtése</button>'
+      + '<p class="mut small">Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.</p></div>';
+  }
+  function storedWhen() { return S.fetchedAt.replace(' ', ', '); }
+
+  // The state box: what the Places half of the panel says in each state.
+  function stateBox(mode) {
+    var np = portal().length;
+    if (S.st === 'idle') {
+      return '<div class="pk' + (mode === 'lane' ? ' dash' : '') + '">'
+        + '<p class="pk-head">' + IC_PLACES + 'Google Places-fotók — még nincs lekérve</p>'
+        + '<p>Ha a portál-képek gyengék, kérhetsz Google Places-fotót ehhez a leadhez. <b>Fizetős Google-lekérés</b> (' + COST + '), '
+        + 'leadenként <b>egyszer</b>: az eredményt tároljuk, újra nem fizetünk érte.</p>'
+        + '<div class="row">' + paidBtn() + '</div></div>';
+    }
+    if (S.st === 'busy') {
+      return '<div class="pk busy"><p class="pk-head"><span class="spin"></span>Places-fotók lekérése folyamatban…</p>'
+        + '<p>Ez az egyetlen fizetős lekérés erre a leadre. Ne frissítsd a lapot — a képek ide érkeznek.</p></div>';
+    }
+    if (S.st === 'done') {
+      var why = S.auto
+        ? 'Ennek a leadnek nincs portál-fotója, ezért a rendszer <b>egyszer, automatikusan</b> lekérte a Google Places-fotókat'
+        : 'Google Places-fotók lekérve';
+      return '<div class="pk ' + (mode === 'quiet' ? 'quiet' : 'ok') + '">'
+        + (mode === 'quiet' ? '' : '<p class="pk-head">' + IC_PLACES + (S.auto ? 'Places-fotók — automatikusan lekérve' : 'Places-fotók lekérve') + '</p>')
+        + '<p>' + why + ' (' + storedWhen() + ') — ' + PLACES.length + ' fotó. <b>Tárolva, újra nem fizetünk érte</b>; '
+        + 'újra csak akkor kérjük le, ha a lead neve vagy helye megváltozik, vagy a tárolt képek elérhetetlenné válnak.</p></div>';
+    }
+    if (S.st === 'nomatch') {
+      return '<div class="pk' + (mode === 'lane' ? ' dash' : '') + '"><p class="pk-head">' + IC_PLACES + 'A Google nem talált fotót ehhez a leadhez</p>'
+        + '<p>A lekérés lefutott (' + storedWhen() + '); az üres eredményt is tároljuk, így nem fizetünk érte újra. '
+        + (np ? 'A mock a portál-képekkel készül.' : 'A mock kép nélkül készül — a kiküldés előtt a kép-kapu megállít.') + '</p></div>';
+    }
+    // outage
+    return '<div class="pk warn"><p class="pk-head">' + IC_PLACES + 'Places nem elérhető</p>'
+      + '<p>A Google Places ' + S.cause + ' — '
+      + (np ? 'csak a portál-adatlap fotói látszanak, a Places-képek hiányoznak.' : 'a fotók emiatt nem tölthetők be.')
+      + ' Ez a mi korlátunk, nem a lead hibája. Ezért a lekérésért nem fizettünk, és semmi nem tárolódott.'
+      + (np ? '' : ' A következő generálás magától újrapróbálja; most kézzel is megteheted.') + '</p>'
+      + (mode === 'nobtn' ? '' : '<div class="row">' + paidBtn('Újrapróbálom') + '</div>') + '</div>';
+  }
+  function chip() {
+    if (S.st === 'idle') return '<span class="chip">Places: nincs lekérve</span>';
+    if (S.st === 'busy') return '<span class="chip busy"><span class="spin"></span>Places: lekérés…</span>';
+    if (S.st === 'done') return '<span class="chip ok">Places: ' + (S.auto ? 'auto-lekérve' : 'lekérve') + ' · tárolva</span>';
+    if (S.st === 'nomatch') return '<span class="chip">Places: nincs fotó · tárolva</span>';
+    return '<span class="chip warn">Places nem elérhető</span>';
+  }
+  function emptyPortal() {
+    return '<p class="mut small" style="margin:0">Ehhez a leadhez nincs portál-fotó.</p>';
+  }
+
+  // ── variants ─────────────────────────────────────────────────────────────
+  var V = {
+    A: {
+      title: 'A · Sor a rács alatt',
+      sub: 'A Places-képek ugyanabba a rácsba érkeznek, forrás-címkével. A gomb a rács alatti dobozban él; lekérés után egy csendes sorrá zsugorodik.',
+      render: function () {
+        var all = grid(portal(), 'portal') + grid(places(), 'places');
+        var box = (S.st === 'done') ? stateBox('quiet') : stateBox();
+        return '<h2>Fotók</h2>'
+          + (all ? '<div class="lead-photos">' + all + '</div>' : emptyPortal())
+          + countLine() + box + rescrape();
+      }
+    },
+    B: {
+      title: 'B · Két forrás-sáv',
+      sub: 'A portál- és a Places-képek külön sávban, egymás mellett (asztalin) — a kurátor a két forrást közvetlenül összeveti. A Places-sáv üres helyén áll a gomb.',
+      render: function () {
+        var np = portal().length;
+        var plLane = places().length
+          ? '<div class="lead-photos">' + grid(places(), 'places') + '</div>' + stateBox('quiet')
+          : stateBox('lane');
+        return '<h2>Fotók</h2><div class="lanes">'
+          + '<div class="lane"><h3>Portál-adatlap · ' + np + '</h3>'
+          + (np ? '<div class="lead-photos">' + grid(portal(), 'portal') + '</div>' : emptyPortal()) + '</div>'
+          + '<div class="lane"><h3>Google Places · ' + places().length + ' ' + chip() + '</h3>' + plLane + '</div>'
+          + '</div>' + countLine() + rescrape();
+      }
+    },
+    C: {
+      title: 'C · Fejléc-gomb + megerősítés',
+      sub: 'Kompakt: a gomb és az állapot a panel fejlécében. A fizetős lekérés két lépés — előbb egy megerősítő doboz mondja ki, mibe kerül, és csak az „Igen” indítja.',
+      render: function () {
+        var all = grid(portal(), 'portal') + grid(places(), 'places');
+        var head = '<div class="phead"><h2>Fotók</h2>' + chip()
+          + (S.st === 'idle' ? '<button type="button" class="paid" data-act="ask">' + IC_PLACES + 'Places-fotók <span class="fee">fizetős</span></button>' : '')
+          + (S.st === 'outage' ? '<button type="button" class="paid" data-act="ask">' + IC_PLACES + 'Újrapróbálom <span class="fee">fizetős</span></button>' : '')
+          + '</div>';
+        var conf = S.confirm
+          ? '<div class="confirm"><b>Lekérjük a Google Places-fotókat?</b><ul>'
+            + '<li><b>Fizetős</b> Google-lekérés: ' + COST + '.</li>'
+            + '<li>Leadenként <b>egyszer</b> — az eredményt tároljuk, újra nem fizetünk érte.</li>'
+            + '<li>A mostani mockot nem írja át; a képek itt jelennek meg, és a nyitókép-választóban választhatók.</li></ul>'
+            + '<div class="row"><button type="button" class="paid" data-act="fetch">Igen, lekérem <span class="fee">fizetős</span></button>'
+            + '<button type="button" class="ghost" data-act="cancel">Mégsem</button></div></div>'
+          : '';
+        var line = '';
+        if (S.st === 'busy' || S.st === 'nomatch') line = stateBox();
+        if (S.st === 'outage') line = stateBox('nobtn');
+        if (S.st === 'done') line = stateBox('quiet');
+        return head + conf + (all ? '<div class="lead-photos">' + all + '</div>' : emptyPortal()) + countLine() + line + rescrape();
+      }
+    }
+  };
+
+  var NOTES = '<h3>A jóváhagyott terv (B) — mit köt</h3><ul>'
+    + '<li><b>Két forrás-sáv:</b> balra a portál-adatlap képei, jobbra a Google Places-é; asztalin egymás mellett, mobilon egymás alatt. A gomb a Places-sáv üres helyén áll.</li>'
+    + '<li><b>Fizetős, és ezt kimondja:</b> a gombon „fizetős” címke + egy mondat: leadenként egyszer fizetünk, utána tárolva.</li>'
+    + '<li><b>Portál-fotó nélküli lead</b> („Lead” választó, 3–4. eset): nincs gomb, mert a rendszer egyszer magától lekérte; csak kimondjuk, hogy ez történt és tárolva van. Ha az automatikus lekérés elbukott, „Újrapróbálom” gomb jelenik meg.</li>'
+    + '<li><b>A lap betöltése soha nem fizet:</b> a lekérés kizárólag a gombra (és a portál nélküli lead egyszeri automatikus lekérésére) történik.</li>'
+    + '<li>A „Legyen ez a nyitókép” és a forrás-címkék kattinthatók; a lekérés eredményét a sáv „A következő lekérés” választója állítja (siker / Places-hiba / nincs találat).</li></ul>';
+
+  // ── render & wiring ──────────────────────────────────────────────────────
+  function render() {
+    var v = V[S.v];
+    document.getElementById('vTitle').textContent = v.title;
+    document.getElementById('vSub').textContent = v.sub;
+    document.getElementById('photoPanel').className = 'panel wide v' + S.v;
+    document.getElementById('photoPanel').innerHTML = v.render();
+    document.getElementById('notes').innerHTML = NOTES;
+    scrollCues();
+  }
+  // Every strip gets a "N more below" line while it still has hidden rows.
+  function scrollCues() {
+    document.querySelectorAll('#photoPanel .lead-photos').forEach(function (g) {
+      var hint = document.createElement('p'); hint.className = 'lp-more';
+      g.parentNode.insertBefore(hint, g.nextSibling);
+      function upd() {
+        var gr = g.getBoundingClientRect(), below = 0;
+        g.querySelectorAll('.hp-cell').forEach(function (c) { if (c.getBoundingClientRect().top >= gr.bottom - 40) below++; });
+        var more = g.scrollHeight - g.scrollTop - g.clientHeight > 4;
+        g.classList.toggle('more', more);
+        hint.hidden = !more;
+        hint.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>'
+          + (below ? 'még ' + below + ' kép lent — görgess a rácsban' : 'görgess a rácsban a többi képért');
+      }
+      g.addEventListener('scroll', upd); upd();
+    });
+  }
+  // The size switch animates the frame width: recount once it has settled.
+  window.addEventListener('resize', function () { render(); });
+  document.getElementById('frame').addEventListener('transitionend', function (e) { if (e.target.id === 'frame') render(); });
+  document.getElementById('photoPanel').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var a = b.dataset.act;
+    if (a === 'fetch') startFetch();
+    else if (a === 'ask') { S.confirm = true; render(); }
+    else if (a === 'cancel') { S.confirm = false; render(); }
+    else if (b.classList.contains('hp-pick') && !b.disabled) { S.heroSrc = b.dataset.src; S.hero = +b.dataset.k; render(); }
+  });
+  function press(groupId, attr, val) {
+    document.querySelectorAll('#' + groupId + ' button').forEach(function (x) { x.setAttribute('aria-pressed', String(x.dataset[attr] === val)); });
+  }
+  document.getElementById('vSw').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    S.v = b.dataset.v; press('vSw', 'v', S.v); clearTimeout(timer); resetScenario(); render();
+  });
+  function setSize(s) { document.getElementById('frame').classList.toggle('mobile', s === 'mobile'); press('sSw', 's', s); }
+  document.getElementById('sSw').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) setSize(b.dataset.s); });
+  document.getElementById('scn').addEventListener('change', function (e) { S.scn = e.target.value; clearTimeout(timer); resetScenario(); render(); });
+
+  // URL hooks for screenshots: ?v=B&s=mobile&scn=noPortal&st=busy
+  var q = new URLSearchParams(location.search);
+  if (q.get('shot')) document.body.classList.add('shot');
+  if (q.get('v')) { S.v = q.get('v'); press('vSw', 'v', S.v); }
+  if (q.get('scn')) { S.scn = q.get('scn'); document.getElementById('scn').value = S.scn; }
+  resetScenario();
+  if (q.get('st')) { S.st = q.get('st'); if (S.st === 'outage') S.cause = CAUSE.quota; if (S.st === 'done' || S.st === 'nomatch') S.fetchedAt = S.fetchedAt || '2026-10-01 23:40'; }
+  if (q.get('confirm')) S.confirm = true;
+  setSize(q.get('s') || (window.innerWidth < 600 ? 'mobile' : 'desktop'));
+  render();
+})();
+</script>
+</body>
+</html>

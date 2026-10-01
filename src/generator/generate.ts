@@ -255,6 +255,8 @@ export interface PlacesStatus {
   readonly state: "stored" | "fetched" | "not_asked" | "stale" | "no_coords";
   readonly fetchedAt?: string;
   readonly staleReason?: "identity" | "dead_links";
+  /** Who paid for the answer on file (stored | fetched); absent on rows older than the field. */
+  readonly askedBy?: "auto" | "curator";
 }
 
 /**
@@ -401,7 +403,11 @@ export async function resolveGatedPhotos(
     }
     let answer: CachedPlaces | null = stored && !staleReason ? stored : null;
     if (answer) {
-      places = { state: "stored", fetchedAt: stored!.fetchedAt.toISOString() };
+      places = {
+        state: "stored",
+        fetchedAt: stored!.fetchedAt.toISOString(),
+        ...(stored!.askedBy ? { askedBy: stored!.askedBy } : {}),
+      };
     } else {
       places = staleReason ? { state: "stale", staleReason } : { state: "not_asked" };
       // ② May THIS caller pay? (ADR-0293) The generation only when the lead has no
@@ -414,9 +420,10 @@ export async function resolveGatedPhotos(
       }
       if (mayPay && config.googleMapsApiKey) {
         try {
-          answer = await askPlaces(lead, identity);
+          const askedBy = policy === "curator" ? "curator" : "auto";
+          answer = { ...(await askPlaces(lead, identity)), askedBy };
           const at = leadId ? await writePlacesCache(leadId, answer) : new Date();
-          places = { state: "fetched", fetchedAt: at.toISOString() };
+          places = { state: "fetched", fetchedAt: at.toISOString(), askedBy };
           console.log(
             `  Places lekérve és eltárolva (${answer.via === "details" ? "tárolt place id" : "Text Search"}, ${policy})`,
           );

@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-02_places_kurator_gomb_b.md](2026-10-02_places_kurator_gomb_b.md) — 2026-10-02 — Places-fotók kurátori gombja: két forrás-sáv a Fotók fülön (C rész, terv „B”)
 - [2026-10-01_v1_level_link_get_nem_dont.md](2026-10-01_v1_level_link_get_nem_dont.md) — 2026-10-01 — Elek V-1: a levél-link megnyitása (GET) nem dönt
 - [2026-10-01_t1_terkep_modul_es_elonezet_tu.md](2026-10-01_t1_terkep_modul_es_elonezet_tu.md) — T-1: a megvett Térkép-modul hiányzott az élő oldalról; H-1 óriás előnézeti tű; L-5 nem hiba (2026-10-01)
 - [2026-10-01_sz_vendeg_kritikus_valodisag.md](2026-10-01_sz_vendeg_kritikus_valodisag.md) — 2026-10-01 — Elek SZ: a mock-szöveg valódisága — vendég-kritikus, véleményből nem lesz ajánlat, magázás

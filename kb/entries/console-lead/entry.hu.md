@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-09-30
+updated: 2026-10-02
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -213,6 +213,54 @@ csempéje halványan ott marad — a felirata **„kizárva”**, és megnevezi,
 ⚠️ **A „nem találtunk fotót” a LEADRŐL szól, nem rólunk.** Ha nálunk akad el valami (például
 elfogy a kép-forrás napi kerete), azt a panel külön mondja meg — olyankor a lead ártatlan, és
 érdemes később újrapróbálni.
+
+## A Fotók fül — portál-képek és Google Places-képek
+
+A Fotók fül **két sávban** mutatja a lead képeit: balra a **„Portál-adatlap”** képeit (amit a
+foglaló-portálon a szállásadó maga tett ki), jobbra a **„Google Places”** képeit (ezek többnyire
+vendégek fotói). Asztali gépen a két sáv egymás mellett áll, telefonon egymás alatt — így a
+kettőt közvetlenül össze tudod vetni.
+
+**A Google Places-kép pénzbe kerül, ezért a rendszer magától nem kéri le.** A lap megnyitása
+és frissítése soha nem fizet: a Places-sáv csak azt mutatja, ami már el van tárolva. Két eset
+van, amikor mégis lekérjük:
+
+- **Neked kell döntened:** ha a portál-képeket gyengének látod, a Places-sávban a
+  **„Places-fotók lekérése”** gombbal kérhetsz Google-fotót. A gombon ott a **„fizetős”**
+  címke: ez egy fizetős Google-lekérés (1 hely-lekérdezés + legfeljebb 6 fotó), de
+  **leadenként csak egyszer** — az eredményt eltároljuk, és újra nem fizetünk érte.
+- **Ha a leadnek egyáltalán nincs portál-fotója**, a generálás egyszer magától lekéri a
+  Places-fotókat (különben üres lenne a mock). A sáv ezt ki is írja: *„Ennek a leadnek nincs
+  portál-fotója, ezért a rendszer egyszer, automatikusan lekérte a Google Places-fotókat”*.
+
+A Places-sáv fejlécén egy címke mondja meg, hol tart a Places-rész:
+
+- **„Places: nincs lekérve”** — ez a kiinduló állapot: még senki nem fizetett érte. Itt áll a
+  **„Places-fotók lekérése”** gomb.
+- **„Places: lekérés…”** — a lekérés folyamatban van. Ne frissítsd a lapot, a képek ugyanide
+  érkeznek; ilyenkor nincs gomb, így kétszer sem kérheted.
+- **„Places: lekérve · tárolva”** — megvannak a képek; újra csak akkor kérjük le, ha a lead
+  neve vagy helye megváltozik, vagy a tárolt képek elérhetetlenné válnak.
+- **„Places: auto-lekérve · tárolva”** — ugyanez, csak a képeket a generálás kérte le magától,
+  mert a leadnek nem volt portál-fotója.
+- **„Places: nincs fotó · tárolva”** — a Google nem talált fotót (vagy talált egy helyet, de
+  nem biztos, hogy ez a szállás, ezért a képeit nem használjuk). Ez is eredmény, el van
+  tárolva — ugyanezért nem fizetünk újra.
+- **„Places: elavult”** — a tárolt eredmény egy korábbi névre vagy helyre szól, vagy a képei
+  elérhetetlenné váltak. A **„Places-fotók újrakérése”** gombbal kérheted újra (ez is fizetős).
+- **„Places: nincs hely-adat”** — a leadnek nincs helykoordinátája, ezért a Google Places nem
+  kérdezhető, és gomb sincs.
+- **„Places nem elérhető”** — a Google-tól nem kaptunk választ: elfogyott a napi kvótánk, a
+  Google elutasította a kulcsunkat, hálózati hiba volt, vagy ezen a gépen nincs beállítva
+  API-kulcs. A doboz megnevezi, melyik történt. Ez a mi korlátunk, nem a lead hibája;
+  **ezért a lekérésért nem fizettünk**, és semmi nem tárolódott. Az **„Újrapróbálom”** gombbal
+  később újra megpróbálhatod — ez ugyanúgy **fizetős** lekérés, mint az első.
+- **„Places: frissítsd a lapot”** — a mi kérésünk szakadt meg útközben (például elment a
+  hálózat), ezért nem tudjuk, lefutott-e a lekérés. Frissítsd a lapot: ha lefutott, az
+  eredmény már tárolva van, és nem fizetünk érte újra; ha nem, a sáv újra a gombot mutatja.
+
+Ha egy sávban több kép van, mint amennyi elfér, a sáv a dobozon belül görgethető: alatta a
+*„még N kép lent — görgess a rácsban”* sor jelzi, hogy van még kép.
 
 ## „A mock szövege” — a szöveg-panel
 

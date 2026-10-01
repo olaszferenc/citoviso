@@ -116,6 +116,13 @@ const withPortal = (over: Record<string, unknown> = {}) =>
     /resolveGatedPhotos\([^)]*places:\s*"cached"/.test(route),
     "különben minden megnyitás/reload fizetős Places-lookup (mérve: egy lead 126×)",
   );
+  const askAt = server.indexOf("const placesAskMatch = ");
+  const ask = askAt < 0 ? "" : server.slice(askAt, askAt + 1500);
+  check(
+    "a kurátori POST /places-photos `places: \"curator\"` politikával hív",
+    /resolveGatedPhotos\([^)]*places:\s*"curator"/.test(ask),
+    "a fizetős gomb az egyetlen felületi út, ami Places-ért fizethet (places-kurator terv)",
+  );
   const { execSync } = await import("node:child_process");
   const calls = execSync("grep -rn 'resolveGatedPhotos(' src --include=*.ts", { encoding: "utf8" })
     .split("\n")
@@ -149,7 +156,7 @@ try {
   const gen1 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
   check("generálás portál-fotó nélkül: egyszer fizet (1 Text Search + fotók) és eltárol",
     hits.filter((h) => h.kind === "search").length === 1 && gen1.places.state === "fetched" &&
-      gen1.photos.filter((p) => p.provenance === "places").length === 2,
+      gen1.photos.filter((p) => p.provenance === "places").length === 2 && gen1.places.askedBy === "auto",
     `hívások: ${paid().map((h) => h.kind).join(",")} · állapot: ${gen1.places.state} · places-kép: ${gen1.photos.length}`);
   reset();
   const gen2 = await resolveGatedPhotos(lead(), id, { ...HERMETIC, places: "auto" });
@@ -206,6 +213,11 @@ try {
   check("kurátori kérés portál-fotó mellett: egyszer fizet, másodszor 0",
     firstCost > 0 && cur1.places.state === "fetched" && paid().length === 0 && cur2.places.state === "stored" && cur2.photos.length === 3,
     `1.: ${firstCost} hívás · 2.: ${paid().length} hívás · kép: ${cur2.photos.length}`);
+  // ⑨ who paid is remembered: the lead page says "automatikusan lekérve" only when it was
+  // the generation, never for the curator's own click (approved plan places-kurator "B").
+  check("a tárolt eredmény megjegyzi, ki fizetett (kurátor)",
+    cur1.places.askedBy === "curator" && cur2.places.askedBy === "curator",
+    `1.: ${cur1.places.askedBy} · 2.: ${cur2.places.askedBy}`);
 } finally {
   globalThis.fetch = realFetch;
   if (ids.leadId) await db.deleteFrom("lead").where("id", "=", ids.leadId).execute();

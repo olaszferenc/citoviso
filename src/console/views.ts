@@ -3960,6 +3960,8 @@ function placesOutageText(lang: string): {
       auth: T(lang, "elutasította a kulcsunkat (kulcs vagy számlázás)"),
       network: T(lang, "nem válaszolt (hálózati hiba)"),
       upstream: T(lang, "hibát adott"),
+      // The curator's button on a machine without a Places key: nothing could be asked.
+      nokey: T(lang, "nincs beállítva ezen a gépen (hiányzó API-kulcs)"),
     },
     /** Nothing at all came back. */
     none: T(
@@ -4004,8 +4006,14 @@ function heroSubjectLabel(subject: string, lang: string): string {
   }
 }
 
-/** The lead's real photos, loaded on demand (a Places lookup costs money, so it
- *  happens only when an operator actually opens the lead). */
+/**
+ * The lead's photos in TWO SOURCE LANES (approved plan "B", 2026-10-02:
+ * assets/design-refs/console/places-kurator/): the portal listing on one side, Google
+ * Places on the other, so the curator compares the two sources directly.
+ * ⛔ Opening (or reloading) this panel never pays for Places (ADR-0293): the GET reads the
+ * answer on file. Places is bought only by the curator's paid button here — or once,
+ * automatically, by the generation for a lead without any portal photo.
+ */
 function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroUrl?: string): string {
   const lang = consoleLang();
   // ⚠️ A rács az ÉLŐ fotólistát kéri le, a mock viszont egy PILLANATKÉP: a kettő sorrendje
@@ -4014,9 +4022,74 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
   // Fotók fül mást állítana, mint a mock-panel. Egy igazság, két felület.
   const heroKey = (currentHeroUrl ?? "").split("?")[0]!.toLowerCase();
   const outage = placesOutageText(lang);
-  return `<div class="panel">
+  // Every word the Places lane can say, worded here (i18n) and handed to the client.
+  const S = {
+    portalLane: T(lang, "Portál-adatlap"),
+    placesLane: T(lang, "Google Places"),
+    noPortal: T(lang, "Ehhez a leadhez nincs portál-fotó."),
+    fee: T(lang, "fizetős"),
+    ask: T(lang, "Places-fotók lekérése"),
+    reask: T(lang, "Places-fotók újrakérése"),
+    retry: T(lang, "Újrapróbálom"),
+    chipIdle: T(lang, "Places: nincs lekérve"),
+    chipBusy: T(lang, "Places: lekérés…"),
+    chipStored: T(lang, "Places: lekérve · tárolva"),
+    chipAuto: T(lang, "Places: auto-lekérve · tárolva"),
+    chipEmpty: T(lang, "Places: nincs fotó · tárolva"),
+    chipStale: T(lang, "Places: elavult"),
+    chipNoCoords: T(lang, "Places: nincs hely-adat"),
+    chipDown: T(lang, "Places nem elérhető"),
+    chipLost: T(lang, "Places: frissítsd a lapot"),
+    lostHead: T(lang, "A kérés nem ért vissza"),
+    idleHead: T(lang, "Google Places-fotók — még nincs lekérve"),
+    idleWhy: T(lang, "Ha a portál-képek gyengék, kérhetsz Google Places-fotót ehhez a leadhez."),
+    idleWhyNoPortal: T(
+      lang,
+      "Ennek a leadnek nincs portál-fotója, ezért a generálás egyszer automatikusan lekéri a Google Places-fotókat — vagy most is lekérheted.",
+    ),
+    idleCost: T(
+      lang,
+      "Fizetős Google-lekérés (1 hely-lekérdezés + legfeljebb 6 fotó), leadenként egyszer: az eredményt tároljuk, újra nem fizetünk érte.",
+    ),
+    busyHead: T(lang, "Places-fotók lekérése folyamatban…"),
+    busyBody: T(lang, "Ez az egyetlen fizetős lekérés erre a leadre. Ne frissítsd a lapot — a képek ide érkeznek."),
+    doneManual: T(lang, "Google Places-fotók lekérve ({when}) — {n} fotó."),
+    doneAuto: T(
+      lang,
+      "Ennek a leadnek nincs portál-fotója, ezért a rendszer egyszer, automatikusan lekérte a Google Places-fotókat ({when}) — {n} fotó.",
+    ),
+    stored: T(
+      lang,
+      "Tárolva, újra nem fizetünk érte; újra csak akkor kérjük le, ha a lead neve vagy helye megváltozik, vagy a tárolt képek elérhetetlenné válnak.",
+    ),
+    emptyHead: T(lang, "A Google nem talált fotót ehhez a leadhez"),
+    emptyBody: T(lang, "A lekérés lefutott ({when}); az üres eredményt is tároljuk, így nem fizetünk érte újra."),
+    lowHead: T(lang, "A Google talált egy helyet, de nem biztos, hogy ez a szállás"),
+    lowBody: T(lang, "A képeit ezért nem használjuk. A lekérés lefutott ({when}), az eredményt tároljuk, újra nem fizetünk érte."),
+    mockPortal: T(lang, "A mock a portál-képekkel készül."),
+    mockNone: T(lang, "A mock kép nélkül készül — a kiküldés előtt a kép-kapu megállít."),
+    staleHead: T(lang, "A tárolt Places-eredmény elavult"),
+    staleIdentity: T(lang, "Egy korábbi névre vagy helyre szól — a lead adatai azóta megváltoztak."),
+    staleDead: T(lang, "A tárolt Places-képek közül legalább egy elérhetetlenné vált."),
+    staleCost: T(lang, "Az újrakérés fizetős; az új eredményt ugyanígy tároljuk."),
+    noCoords: T(lang, "Ehhez a leadhez nincs helykoordináta, ezért a Google Places nem kérdezhető."),
+    downHead: T(lang, "Places nem elérhető"),
+    ours: T(lang, "Ez a mi korlátunk, nem a lead hibája."),
+    notPaid: T(lang, "Ezért a lekérésért nem fizettünk, és semmi nem tárolódott."),
+    autoRetry: T(lang, "A következő generálás magától újrapróbálja; most kézzel is megteheted."),
+    lost: T(
+      lang,
+      "Frissítsd a lapot: ha a lekérés közben lefutott, az eredmény már tárolva van, és nem fizetünk érte újra.",
+    ),
+    moreN: T(lang, "még {n} kép lent — görgess a rácsban"),
+    more: T(lang, "görgess a rácsban a többi képért"),
+    loadFailed: T(lang, "A fotók betöltése nem sikerült."),
+  };
+  const pinIc = ic("pin", 15);
+  const downIc = ic("chevron-down", 14);
+  return `<div class="panel lp-panel">
       <h2>${T(lang, "Fotók")}</h2>
-      <div id="leadPhotos" class="lead-photos"></div>
+      <div id="leadPhotos" class="lp-lanes"></div>
       <p id="photoMsg" class="mut small" style="margin:10px 0 0">${T(lang, "Fotók betöltése…")}</p>
       <div id="hpWarnB"></div>
       <form method="post" action="/lead/${esc(leadId)}/hero" id="hpFormB" style="display:none">
@@ -4030,110 +4103,202 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
         <p class="mut small" style="margin:6px 0 0">${T(lang, "Újra beolvassa a portál-adatlap fotóit; a már kiküldött mockot nem írja felül.")}</p>
       </form>
       <script>
-        fetch('/lead/${esc(leadId)}/photos')
+      (function () {
+        var LEAD = '${esc(leadId)}';
+        var S = ${JSON.stringify(S)};
+        var PIN = ${JSON.stringify(pinIc)};
+        var DOWN = ${JSON.stringify(downIc)};
+        // An OUTAGE is not a finding about the lead — say which one happened, and
+        // whether it took the WHOLE strip or only the Places half of it.
+        var OUTAGE = ${JSON.stringify(outage)};
+        var SUBJ = ${JSON.stringify(heroSubjectLabels(lang))};
+        var NEVER = ['toilet','bathroom','parking','sign_map','people_doc','ad_banner'];
+        var HERO_KEY = ${JSON.stringify(heroKey)};
+        // The source is part of what the operator judges (a portal listing image is
+        // the owner's own marketing shot; a Places one is usually a guest snapshot),
+        // so the rights class rides along into the caption.
+        var srcLabel = { portal: 'portál-adatlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
+        var box = document.getElementById('leadPhotos');
+        var msg = document.getElementById('photoMsg');
+        var last = null;
+        var keyOf = function (u) { return String(u).split('?')[0].toLowerCase(); };
+        function fill(t, v) { return t.replace(/\\{(\\w+)\\}/g, function (_, k) { return v[k] == null ? '' : v[k]; }); }
+        function when(iso) {
+          var d = new Date(iso); if (isNaN(d)) return '';
+          var p = function (n) { return (n < 10 ? '0' : '') + n; };
+          return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+        }
+        function cell(p, k) {
+          var isHero = HERO_KEY ? keyOf(p.url) === HERO_KEY : k === 0;
+          var sc = (p.score === null || p.score === undefined) ? null : p.score;
+          return '<figure class="hp-cell" style="margin:0">'
+            + '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
+            + ' title="${T(lang, "' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz")}">'
+            + '<img src="' + (p.proxy || p.url) + '" loading="lazy" alt=""'
+            + (isHero ? ' style="outline:2px solid var(--citui-cyan-500);outline-offset:-2px"' : '') + '></a>'
+            + (sc === null ? '' : '<span class="hp-sc' + (sc < 55 ? ' low' : '') + '">' + sc + '</span>')
+            + '<figcaption class="hp-meta">' + (sc === null
+                ? '${jsStr(T(lang, "erről a képről nincs ítéletünk"))}'
+                : (SUBJ[p.subject] || p.subject) + ' — ' + (p.reason || ''))
+            + '</figcaption>'
+            + '<button class="hp-pick" data-url="' + encodeURIComponent(p.url) + '"'
+            + ' data-subject="' + (p.subject || '') + '" data-score="' + (sc === null ? '' : sc) + '"'
+            + ' data-reason="' + String(p.reason || '').replace(/"/g, '&quot;') + '"'
+            + (isHero ? ' disabled' : '') + '>'
+            + (isHero ? '${jsStr(T(lang, "ez a nyitókép"))}' : '${jsStr(T(lang, "Legyen ez a nyitókép"))}')
+            + '</button></figure>';
+        }
+        function grid(items) {
+          return '<div class="lead-photos">' + items.map(function (it) { return cell(it.p, it.k); }).join('') + '</div>';
+        }
+        function paidBtn(label) {
+          return '<button type="button" class="lp-paid" data-places-ask>' + PIN + ' ' + label
+            + ' <span class="lp-fee">' + S.fee + '</span></button>';
+        }
+        // The Places lane: one state, one box (the approved plan's state list).
+        function placesLane(d, nPortal, nPlaces) {
+          var pl = d.places || { state: 'no_coords' };
+          var at = pl.fetchedAt ? when(pl.fetchedAt) : '';
+          if (d.busy) return { chip: '<span class="lp-chip busy"><span class="lp-spin"></span>' + S.chipBusy + '</span>',
+            body: '<div class="lp-box busy"><p class="lp-head"><span class="lp-spin"></span>' + S.busyHead + '</p><p>' + S.busyBody + '</p></div>' };
+          // OUR request broke (connection, reload): Google may have answered and the answer
+          // may be on file already — so this is not called a Places outage, and the only
+          // honest next step is a reload (the GET is free and shows what is stored).
+          if (d.unavailable === 'lost') return { chip: '<span class="lp-chip warn">' + S.chipLost + '</span>',
+            body: '<div class="lp-box warn"><p class="lp-head">' + PIN + S.lostHead + '</p><p>' + S.lost + '</p></div>' };
+          if (d.unavailable && d.unavailable !== 'upstream-load') {
+            var cause = OUTAGE.cause[d.unavailable] || OUTAGE.cause.upstream;
+            var frame = nPortal ? OUTAGE.partial : OUTAGE.none;
+            var text = frame.replace('{cause}', cause) + (nPortal ? ' ' + S.ours : '') + ' ' + S.notPaid + (nPortal ? '' : ' ' + S.autoRetry);
+            return { chip: '<span class="lp-chip warn">' + S.chipDown + '</span>',
+              body: '<div class="lp-box warn"><p class="lp-head">' + PIN + S.downHead + '</p><p>' + text + '</p>'
+                + '<div class="lp-row">' + paidBtn(S.retry) + '</div></div>' };
+          }
+          if (pl.state === 'stored' || pl.state === 'fetched') {
+            if (nPlaces) {
+              var auto = pl.askedBy === 'auto';
+              return { chip: '<span class="lp-chip ok">' + (auto ? S.chipAuto : S.chipStored) + '</span>',
+                body: '<p class="lp-quiet">' + fill(auto ? S.doneAuto : S.doneManual, { when: at, n: nPlaces }) + ' <b>' + S.stored + '</b></p>' };
+            }
+            var low = d.band === 'low';
+            return { chip: '<span class="lp-chip">' + S.chipEmpty + '</span>',
+              body: '<div class="lp-box dash"><p class="lp-head">' + PIN + (low ? S.lowHead : S.emptyHead) + '</p><p>'
+                + fill(low ? S.lowBody : S.emptyBody, { when: at }) + ' ' + (nPortal ? S.mockPortal : S.mockNone) + '</p></div>' };
+          }
+          if (pl.state === 'stale') {
+            return { chip: '<span class="lp-chip warn">' + S.chipStale + '</span>',
+              body: '<div class="lp-box dash"><p class="lp-head">' + PIN + S.staleHead + '</p><p>'
+                + (pl.staleReason === 'identity' ? S.staleIdentity : S.staleDead) + ' ' + S.staleCost + '</p>'
+                + '<div class="lp-row">' + paidBtn(S.reask) + '</div></div>' };
+          }
+          if (pl.state === 'no_coords') {
+            return { chip: '<span class="lp-chip">' + S.chipNoCoords + '</span>',
+              body: '<p class="lp-quiet">' + S.noCoords + '</p>' };
+          }
+          return { chip: '<span class="lp-chip">' + S.chipIdle + '</span>',
+            body: '<div class="lp-box dash"><p class="lp-head">' + PIN + S.idleHead + '</p><p>'
+              + (nPortal ? S.idleWhy : S.idleWhyNoPortal) + ' <b>' + S.idleCost + '</b></p>'
+              + '<div class="lp-row">' + paidBtn(S.ask) + '</div></div>' };
+        }
+        function render(d) {
+          last = d;
+          var photos = d.photos || [];
+          // The photos are a SET the operator compares (is this really their
+          // place? is there a usable hero shot?) — so they open as a gallery,
+          // not as separate tabs that lose the set.
+          // A nagyítás is a proxyn át tölt: ha a forrás halott, a lightbox is a
+          // MAGYARÁZATOT mutatja, nem egy üres fekete dobozt (FK-003b ①).
+          window.citLeadPhotos = photos.map(function (p, k) {
+            return { src: p.proxy || p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
+          });
+          var portal = [], places = [];
+          photos.forEach(function (p, k) { (p.provenance === 'places' ? places : portal).push({ p: p, k: k }); });
+          var lane = placesLane(d, portal.length, places.length);
+          box.innerHTML = '<section class="lp-lane"><h3>' + S.portalLane + ' · ' + portal.length + '</h3>'
+            + (portal.length ? grid(portal) : '<p class="mut small" style="margin:0">' + S.noPortal + '</p>') + '</section>'
+            + '<section class="lp-lane"><h3>' + S.placesLane + ' · ' + places.length + ' ' + lane.chip + '</h3>'
+            + (places.length ? grid(places) : '') + lane.body + '</section>';
+          // Nyitókép-választó (jóváhagyott terv "B" változata, 0060): kizárt tárgyú vagy
+          // gyenge képnél megerősítést kérünk — de nem tiltunk. Az ember dönt.
+          box.querySelectorAll('.hp-pick').forEach(function (b) {
+            if (b.disabled) return;
+            b.addEventListener('click', function () {
+              var sc = parseInt(b.dataset.score, 10);
+              var risky = NEVER.indexOf(b.dataset.subject) >= 0 || (isFinite(sc) && sc < 55);
+              if (risky && !confirmBox(b)) return;
+              submitHero(decodeURIComponent(b.dataset.url));
+            });
+          });
+          box.querySelectorAll('[data-places-ask]').forEach(function (b) { b.addEventListener('click', askPlaces); });
+          scrollCues();
+          if (!photos.length && d.unavailable === 'upstream-load') { msg.textContent = S.loadFailed; return; }
+          var nPortal = portal.length;
+          msg.textContent = photos.length
+            ? photos.length + ' fotó'
+              + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
+              + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '')
+              + (d.band ? ' · match: ' + d.band : '')
+            : '${jsStr(T(lang, "Ehhez a leadhez nem találtunk fotót."))}';
+        }
+        // The strip scrolls INSIDE the panel (max 420 px): without a cue the cut row
+        // reads as a rendering bug (owner's mock review, 2026-10-02) — so fade the edge
+        // and say how many photos are below.
+        function scrollCues() {
+          box.querySelectorAll('.lead-photos').forEach(function (g) {
+            var hint = document.createElement('p'); hint.className = 'lp-more';
+            g.parentNode.insertBefore(hint, g.nextSibling);
+            function upd() {
+              var gr = g.getBoundingClientRect(), below = 0;
+              g.querySelectorAll('.hp-cell').forEach(function (c) { if (c.getBoundingClientRect().top >= gr.bottom - 40) below++; });
+              var more = g.scrollHeight - g.scrollTop - g.clientHeight > 4;
+              g.classList.toggle('more', more);
+              hint.hidden = !more;
+              hint.innerHTML = DOWN + ' ' + (below ? fill(S.moreN, { n: below }) : S.more);
+            }
+            g.addEventListener('scroll', upd); upd();
+          });
+        }
+        // The curator's PAID request. The same JSON comes back as from the free GET, so
+        // the panel redraws in place; a failure of OUR request is not called a Google one.
+        function askPlaces() {
+          var d = last || { photos: [] };
+          render(Object.assign({}, d, { busy: true, unavailable: null }));
+          fetch('/lead/' + LEAD + '/places-photos', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (nd) { render(nd.photos && nd.photos.length || nd.places ? nd : Object.assign({}, d, { unavailable: nd.unavailable || 'upstream' })); })
+            .catch(function () { render(Object.assign({}, d, { busy: false, unavailable: 'lost' })); });
+        }
+        function confirmBox(b) {
+          var box2 = document.getElementById('hpWarnB');
+          box2.innerHTML = '<div class="hp-warnbox"><b>${jsStr(T(lang, "Biztos ez legyen a lap teteje?"))}</b><br>'
+            + (SUBJ[b.dataset.subject] || b.dataset.subject) + ' · ' + (b.dataset.score || '?') + '/100 — ' + b.dataset.reason
+            + '<div class="hp-warnrow"><button type="button" class="btn" id="hpYesB">${jsStr(T(lang, "Igen, ez legyen"))}</button>'
+            + '<button type="button" class="ghost" id="hpNoB">${jsStr(T(lang, "Mégsem"))}</button></div></div>';
+          document.getElementById('hpYesB').onclick = function () {
+            box2.innerHTML = ''; submitHero(decodeURIComponent(b.dataset.url));
+          };
+          document.getElementById('hpNoB').onclick = function () { box2.innerHTML = ''; };
+          return false;
+        }
+        // A mentés nem publikálás: a szerver a választás után ÚJRARENDERELI a mockot,
+        // és amíg fut, ezt a felület kimondja.
+        function submitHero(url) {
+          document.getElementById('hpWarnB').innerHTML =
+            '<p class="small mut">${jsStr(T(lang, "Újrarenderelem a mockot az új nyitóképpel…"))}</p>';
+          var f = document.getElementById('hpFormB');
+          f.querySelector('input[name=url]').value = url;
+          f.submit();
+        }
+        fetch('/lead/' + LEAD + '/photos')
           .then(function (r) { return r.json(); })
           .then(function (d) {
-            var box = document.getElementById('leadPhotos');
-            var msg = document.getElementById('photoMsg');
-            // An OUTAGE is not a finding about the lead — say which one happened, and
-            // whether it took the WHOLE strip or only the Places half of it.
-            var OUTAGE = ${JSON.stringify(outage)};
-            var cause = d.unavailable ? (OUTAGE.cause[d.unavailable] || OUTAGE.cause.upstream) : '';
-            function outageText(frame) { return frame.replace('{cause}', cause); }
-            if (!d.photos || !d.photos.length) {
-              msg.textContent = cause
-                ? outageText(OUTAGE.none)
-                : '${jsStr(T(lang, "Ehhez a leadhez nem találtunk fotót."))}';
-              if (cause) msg.className = 'small con-warn';
-              return;
-            }
-            // The photos are a SET the operator compares (is this really their
-            // place? is there a usable hero shot?) — so they open as a gallery,
-            // not as separate tabs that lose the set.
-            // The source is part of what the operator judges (a portal listing image is
-            // the owner's own marketing shot; a Places one is usually a guest snapshot),
-            // so the rights class rides along into the caption.
-            var srcLabel = { portal: 'portál-adatlap', places: 'Google Places', streetview: 'Street View', owner: 'tulaj', guest: 'vendég', generated: 'generált' };
-            // A nagyítás is a proxyn át tölt: ha a forrás halott, a lightbox is a
-            // MAGYARÁZATOT mutatja, nem egy üres fekete dobozt (FK-003b ①).
-            window.citLeadPhotos = d.photos.map(function (p, k) {
-              return { src: p.proxy || p.url, cap: 'Fotó ' + (k + 1) + ' · ' + (srcLabel[p.provenance] || p.provenance || 'ismeretlen forrás') };
-            });
-            // Nyitókép-választó (jóváhagyott terv "B" változata): a pontszám ÉS az
-            // indoklás a képen, alatta a gomb. Az első fotó a mock nyitóképe — a
-            // motor sorrendje már ezt hozza —, ezért az kiemelt kerettel áll.
-            var SUBJ = ${JSON.stringify(heroSubjectLabels(lang))};
-            var NEVER = ['toilet','bathroom','parking','sign_map','people_doc','ad_banner'];
-            var HERO_KEY = ${JSON.stringify(heroKey)};
-            var keyOf = function (u) { return String(u).split('?')[0].toLowerCase(); };
-            box.innerHTML = d.photos.map(function (p, k) {
-              var isHero = HERO_KEY ? keyOf(p.url) === HERO_KEY : k === 0;
-              var sc = (p.score === null || p.score === undefined) ? null : p.score;
-              return '<figure class="hp-cell" style="margin:0">'
-                + '<a href="' + p.url + '" onclick="event.preventDefault();citLb.open(window.citLeadPhotos,' + k + ')"'
-                + ' title="${T(lang, "' + (srcLabel[p.provenance] || 'ismeretlen forrás') + ' — nagyban megnézem, nyilakkal léphetsz")}">'
-                + '<img src="' + (p.proxy || p.url) + '" loading="lazy" alt=""'
-                + (isHero ? ' style="outline:2px solid var(--citui-cyan-500);outline-offset:-2px"' : '') + '></a>'
-                + (sc === null ? '' : '<span class="hp-sc' + (sc < 55 ? ' low' : '') + '">' + sc + '</span>')
-                + '<figcaption class="hp-meta">' + (sc === null
-                    ? '${jsStr(T(lang, "erről a képről nincs ítéletünk"))}'
-                    : (SUBJ[p.subject] || p.subject) + ' — ' + (p.reason || ''))
-                + '</figcaption>'
-                + '<button class="hp-pick" data-url="' + encodeURIComponent(p.url) + '"'
-                + ' data-subject="' + (p.subject || '') + '" data-score="' + (sc === null ? '' : sc) + '"'
-                + ' data-reason="' + String(p.reason || '').replace(/"/g, '&quot;') + '"'
-                + (isHero ? ' disabled' : '') + '>'
-                + (isHero ? '${jsStr(T(lang, "ez a nyitókép"))}' : '${jsStr(T(lang, "Legyen ez a nyitókép"))}')
-                + '</button></figure>';
-            }).join('');
-            // Ugyanaz a szabály, mint az A változatban: kizárt tárgyú vagy gyenge képnél
-            // megerősítést kérünk — de nem tiltunk. Az ember dönt, csak tudja, mit választ.
-            box.querySelectorAll('.hp-pick').forEach(function (b) {
-              if (b.disabled) return;
-              b.addEventListener('click', function () {
-                var sc = parseInt(b.dataset.score, 10);
-                var risky = NEVER.indexOf(b.dataset.subject) >= 0 || (isFinite(sc) && sc < 55);
-                if (risky && !confirmBox(b)) return;
-                submitHero(decodeURIComponent(b.dataset.url));
-              });
-            });
-            function confirmBox(b) {
-              var box2 = document.getElementById('hpWarnB');
-              box2.innerHTML = '<div class="hp-warnbox"><b>${jsStr(T(lang, "Biztos ez legyen a lap teteje?"))}</b><br>'
-                + (SUBJ[b.dataset.subject] || b.dataset.subject) + ' · ' + (b.dataset.score || '?') + '/100 — ' + b.dataset.reason
-                + '<div class="hp-warnrow"><button type="button" class="btn" id="hpYesB">${jsStr(T(lang, "Igen, ez legyen"))}</button>'
-                + '<button type="button" class="ghost" id="hpNoB">${jsStr(T(lang, "Mégsem"))}</button></div></div>';
-              document.getElementById('hpYesB').onclick = function () {
-                box2.innerHTML = ''; submitHero(decodeURIComponent(b.dataset.url));
-              };
-              document.getElementById('hpNoB').onclick = function () { box2.innerHTML = ''; };
-              return false;
-            }
-            // A mentés nem publikálás: a szerver a választás után ÚJRARENDERELI a mockot,
-            // és amíg fut, ezt a felület kimondja.
-            function submitHero(url) {
-              document.getElementById('hpWarnB').innerHTML =
-                '<p class="small mut">${jsStr(T(lang, "Újrarenderelem a mockot az új nyitóképpel…"))}</p>';
-              var f = document.getElementById('hpFormB');
-              f.querySelector('input[name=url]').value = url;
-              f.submit();
-            }
-            var nPortal = d.photos.filter(function (p) { return p.provenance === 'portal'; }).length;
-            msg.textContent = d.photos.length + ' fotó'
-              + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
-              + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '') +
-              (d.band ? ' · match: ' + d.band : '');
-            // PARTIAL answer: the portal photos arrived, the Places ones could not.
-            // Saying only "N fotó" would present an incomplete set as the complete one.
-            if (cause) {
-              var warn = document.createElement('p');
-              warn.className = 'small con-warn';
-              warn.style.margin = '6px 0 0';
-              warn.textContent = outageText(OUTAGE.partial);
-              msg.parentNode.insertBefore(warn, msg.nextSibling);
-            }
+            // The GET never asks Places, so an "unavailable" from it means the LOAD
+            // itself broke (the route's catch) — not a Google outage.
+            if (d.unavailable && !d.places) d.unavailable = 'upstream-load';
+            render(d);
           })
-          .catch(function () { document.getElementById('photoMsg').textContent = 'A fotók betöltése nem sikerült.'; });
+          .catch(function () { msg.textContent = S.loadFailed; });
+      })();
       </script>
     </div>`;
 }

@@ -48,6 +48,9 @@ export interface CachedPlaces {
   readonly identity: PlacesIdentity;
   /** How the match was found: by the stored place id, or by a Text Search. */
   readonly via: "details" | "text_search";
+  /** Who decided to pay: the generation (lead without portal photos) or the curator's
+   *  paid button. The lead page words it ("automatikusan lekérve"); older rows lack it. */
+  readonly askedBy?: "auto" | "curator";
   /** null = asked and nothing in the area matches — a paid answer too. */
   readonly match: CachedPlacesMatch | null;
 }

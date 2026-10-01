@@ -2752,6 +2752,37 @@ async function handle(
       };
     });
   }
+  // The Fotók panel's JSON — one shape for the free read (GET /photos) and the curator's
+  // paid request (POST /places-photos), so the panel redraws from either the same way.
+  async function leadPhotosPayload(
+    leadId: string,
+    media: Awaited<ReturnType<typeof resolveGatedPhotos>>,
+  ): Promise<Record<string, unknown>> {
+    // The stored Places answer IS a source of this lead's data — record it,
+    // so "Források" stops claiming OSM-only while showing Places photos.
+    // Low-band matches are not attributed to the lead (A4), so not recorded.
+    if (media.placeId && media.matchBand && media.matchBand !== "low") {
+      await markPlacesSource(leadId, media.placeId).catch(() => {});
+    }
+    return {
+      // {url, provenance} per photo — the operator must be able to tell a portal
+      // listing image from a Places one when judging "is this really their place?".
+      photos: await withHeroScores(media.photos ?? []),
+      // Az operátor saját választása (0061) — a rács ezt jelöli meg kiemelt kerettel.
+      pinnedBy: (await getHeroPin(leadId))?.actor ?? null,
+      rating: media.rating ?? null,
+      ratingCount: media.userRatingCount ?? null,
+      band: media.matchBand ?? null,
+      // WHY the Places half is missing, when it is (quota | auth | network |
+      // upstream). A machine code, not a caption: the view words it. Without it
+      // an exhausted quota rendered as "this lead has no photos" — a claim about
+      // the LEAD, when the failure was ours (measured 2026-09-09, HTTP 429).
+      unavailable: media.placesUnavailable ?? null,
+      // Where the Places half stands (stored | fetched | not_asked | stale | no_coords)
+      // and who paid for it — the panel's Places lane is drawn from this.
+      places: media.places,
+    };
+  }
   // GET /lead/:id/tpl-preview?tpl=<templateId> — a kiválasztott kinézet ENNEK A LEADNEK
   // az adatával (FK-003b ④).
   //
@@ -2893,35 +2924,7 @@ async function handle(
     try {
       const loaded = await loadLead(photosMatch[1]!);
       const media = await resolveGatedPhotos(loaded.lead, photosMatch[1]!, { places: "cached" });
-      // The stored Places answer IS a source of this lead's data — record it,
-      // so "Források" stops claiming OSM-only while showing Places photos.
-      // Low-band matches are not attributed to the lead (A4), so not recorded.
-      if (media.placeId && media.matchBand && media.matchBand !== "low") {
-        await markPlacesSource(photosMatch[1]!, media.placeId).catch(() => {});
-      }
-      return send(
-        res,
-        200,
-        JSON.stringify({
-          // {url, provenance} per photo — the operator must be able to tell a portal
-          // listing image from a Places one when judging "is this really their place?".
-          photos: await withHeroScores(media.photos ?? []),
-          // Az operátor saját választása (0061) — a rács ezt jelöli meg kiemelt kerettel.
-          pinnedBy: (await getHeroPin(photosMatch[1]!))?.actor ?? null,
-          rating: media.rating ?? null,
-          ratingCount: media.userRatingCount ?? null,
-          band: media.matchBand ?? null,
-          // WHY the Places half is missing, when it is (quota | auth | network |
-          // upstream). A machine code, not a caption: the view words it. Without it
-          // an exhausted quota rendered as "this lead has no photos" — a claim about
-          // the LEAD, when the failure was ours (measured 2026-09-09, HTTP 429).
-          unavailable: media.placesUnavailable ?? null,
-          // Where the Places half stands (stored | not_asked | stale | no_coords) —
-          // what the curator's paid "ask Places" action will need to show.
-          places: media.places,
-        }),
-        "application/json",
-      );
+      return send(res, 200, JSON.stringify(await leadPhotosPayload(photosMatch[1]!, media)), "application/json");
     } catch (e) {
       // Loading/rendering itself broke. Still not silent: an empty strip with no
       // reason is the exact defect this route is being fixed for.
@@ -2932,6 +2935,30 @@ async function handle(
         JSON.stringify({ photos: [], unavailable: "upstream" }),
         "application/json",
       );
+    }
+  }
+  // POST /lead/:id/places-photos — the CURATOR's paid Places request (ADR-0293, the
+  // approved "B" plan: assets/design-refs/console/places-kurator/). The curator judged the
+  // portal photos weak and asked for Places on purpose; the button says it is paid. A
+  // stored answer is reused (the curator policy never pays twice); a quota/key/network
+  // failure is not stored, so a retry is a real retry. Answers with the same JSON as the
+  // GET, so the Fotók panel redraws in place without a reload.
+  const placesAskMatch = /^\/lead\/([0-9a-f-]{36})\/places-photos$/i.exec(path);
+  if (method === "POST" && placesAskMatch) {
+    try {
+      const loaded = await loadLead(placesAskMatch[1]!);
+      // No key on this machine: nothing could be asked. Saying so beats a silent
+      // "nincs lekérve" that would look as if the button had done nothing.
+      if (!config.googleMapsApiKey) {
+        const media = await resolveGatedPhotos(loaded.lead, placesAskMatch[1]!, { places: "cached" });
+        const body = { ...(await leadPhotosPayload(placesAskMatch[1]!, media)), unavailable: "nokey" };
+        return send(res, 200, JSON.stringify(body), "application/json");
+      }
+      const media = await resolveGatedPhotos(loaded.lead, placesAskMatch[1]!, { places: "curator" });
+      return send(res, 200, JSON.stringify(await leadPhotosPayload(placesAskMatch[1]!, media)), "application/json");
+    } catch (e) {
+      console.error(`[lead-places-ask] ${placesAskMatch[1]}: ${(e as Error).message}`);
+      return send(res, 200, JSON.stringify({ photos: [], unavailable: "upstream" }), "application/json");
     }
   }
   // POST /lead/:id/hero — az operátor kijelöli a nyitóképet (üres url = vissza a gépire).

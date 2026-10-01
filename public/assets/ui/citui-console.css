@@ -2010,6 +2010,50 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .lead-photos .hp-pick[disabled] { background: var(--citui-navy-900); color: var(--citui-ink-inverse);
   border-color: var(--citui-navy-900); cursor: default; }
 
+/* Fotók panel in TWO SOURCE LANES (approved plan "B", 2026-10-02 —
+   assets/design-refs/console/places-kurator/): portal on one side, Google Places on the
+   other; side by side when the panel is wide, stacked on a phone. The Places lane holds
+   the curator's PAID button, and says so ("fizetős") on the button itself. */
+.lp-panel { container-type: inline-size; }
+.lp-lanes { display: grid; gap: 14px; }
+@container (min-width: 760px) { .lp-lanes { grid-template-columns: 1fr 1fr; align-items: start; } }
+.lp-lane h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px;
+  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--citui-muted); }
+.lp-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0; text-transform: none; padding: 2px 9px; border-radius: var(--citui-radius-pill);
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-ink); white-space: nowrap; }
+.lp-chip.ok { border-color: color-mix(in srgb, var(--citui-ok) 45%, transparent); background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
+.lp-chip.warn { border-color: color-mix(in srgb, var(--citui-warn) 50%, transparent); color: var(--citui-warn-ink); }
+.lp-chip.busy { border-color: var(--citui-cyan-500); }
+.lp-box { border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius); padding: 12px 14px;
+  background: var(--citui-surface); font-size: 0.8rem; line-height: 1.5; }
+.lp-box.dash { border-style: dashed; min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
+.lp-box p { margin: 6px 0 0; }
+.lp-box .lp-head { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 700; font-size: 0.85rem; }
+.lp-box.busy { border-color: color-mix(in srgb, var(--citui-cyan-500) 40%, transparent);
+  background: color-mix(in srgb, var(--citui-cyan-500) 7%, var(--citui-panel)); }
+.lp-box.warn { border-color: color-mix(in srgb, var(--citui-warn) 42%, transparent);
+  background: color-mix(in srgb, var(--citui-warn) 9%, var(--citui-panel)); }
+.lp-box.warn .lp-head { color: var(--citui-warn-ink); }
+.lp-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.con .lp-paid { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 8px 15px;
+  border: 0; border-radius: var(--citui-radius-pill); background: var(--citui-ink); color: var(--citui-panel);
+  font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.con .lp-paid:hover { background: var(--citui-navy-700); color: var(--citui-ink-inverse); }
+.lp-fee { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: var(--citui-radius-pill);
+  background: color-mix(in srgb, var(--citui-warn) 85%, var(--citui-white)); color: var(--citui-navy-950); }
+.lp-quiet { margin: 10px 0 0; font-size: 0.78rem; line-height: 1.5; color: var(--citui-muted); }
+.lp-spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid currentColor;
+  border-right-color: transparent; display: inline-block; animation: lp-spin 0.8s linear infinite; }
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+@container (max-width: 520px) { .con .lp-paid { width: 100%; justify-content: center; } }
+/* The strip scrolls inside the panel: fade the cut row and say how many are below. */
+.con .lead-photos.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 56px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 56px), transparent); }
+.lp-more { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 0.75rem; font-weight: 600; color: var(--citui-ink); }
+.lp-more[hidden] { display: none; }
+
 @container (min-width: 720px) {
   .hp-row { grid-template-columns: 230px 1fr; align-items: start; }
 }
