@@ -8,7 +8,7 @@ import { GENERIC_NAME_WORD, PLACES_TRADE_WORD } from "../genericWords.js";
 // A Playwright-based Maps-scrape adapter can be added later behind the same interface.
 const PLACES_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
 
-// ── Discovery is TWO-STEP (2026-10-01, ADR-XXXX) ─────────────────────────────
+// ── Discovery is TWO-STEP (2026-10-01, ADR-0295) ─────────────────────────────
 // Google bills a Text Search by the HIGHEST field tier in its mask, per request
 // (≤20 places). Asking for phone + website made every discovery page "Text Search
 // Enterprise" ($35/1000 requests, checked on the official price list 2026-10-01),

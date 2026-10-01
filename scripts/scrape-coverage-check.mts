@@ -19,7 +19,7 @@
 //      hazugság lenne) — a hiba osztályozva jut el a hívóig (scope: day)
 //   ⑤ KÖLTSÉG-FEGYELEM: a hívás-keret kimerülése HANGOS (a néma plafon ugyanez a
 //      hiba lenne új ruhában)
-//   ⑥ INGYENES BEJÁRÁS (ADR-XXXX, 2026-10-01): a felderítő Text Search maszkja CSAK
+//   ⑥ INGYENES BEJÁRÁS (ADR-0295, 2026-10-01): a felderítő Text Search maszkja CSAK
 //      azonosítót kér („Text Search Essentials (IDs Only)” — korlátlan ingyenes); egy
 //      Pro/Enterprise mező a maszkban minden lapot fizetőssé tesz (35 $/1000)
 //   ⑦ FIZETŐS ADATLAP CSAK AZ ÚJ HELYRE: a DB-ben már ismert place id 0 Place

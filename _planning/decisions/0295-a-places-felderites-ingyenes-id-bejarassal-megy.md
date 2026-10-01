@@ -1,4 +1,4 @@
-## ADR-XXXX — A Places-felderítés ingyenes ID-bejárással megy; fizetős adatlap csak a DB-ben még nem ismert helyre (2026-10-01)
+## ADR-0295 — A Places-felderítés ingyenes ID-bejárással megy; fizetős adatlap csak a DB-ben még nem ismert helyre (2026-10-01)
 
 **Dátum:** 2026-10-01 · **Státusz:** elfogadva (SUB, D rész; koordinátor: CIT „Places API 600 $” session;
 brief: `~/rc-briefs/places-scrape-olcsobb.md`) · **Visszafordíthatóság:** 🔄 olcsó (egy fájl: `src/scraper/sources/googleMaps.ts`)

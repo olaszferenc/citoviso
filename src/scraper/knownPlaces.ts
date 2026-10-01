@@ -1,4 +1,4 @@
-// Known Google places → RawLead, rebuilt from our own store (ADR-XXXX).
+// Known Google places → RawLead, rebuilt from our own store (ADR-0295).
 //
 // The Places discovery traversal asks Google for place IDs only (free). An id that
 // a stored lead already carries (raw.sourceRefs.google_places) is rebuilt here
