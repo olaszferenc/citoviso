@@ -325,8 +325,11 @@ A felugró **többet tud, mint a négy jelvény**:
 - ugyanígy jelvény nélkül állít meg a **„Vendég-kritikus”**: egy szállóvendég szemével olvassa
   a generált szöveget (tükörfordítás, tegezés, vendég-véleményből lett ígéret, például
   „bérelhető kerékpár” abból, hogy a házigazda egyszer kölcsönadta a biciklijét). Amit talál,
-  azt generáláskor az író már kijavítja; a felugró csak akkor nevezi meg, ha két javító kör után
-  is maradt blokkoló kifogás, és felsorolja a kifogásolt szövegrészeket;
+  azt generáláskor az író már kijavítja. A felugró két esetben nevezi meg: ha két javító kör után
+  is maradt blokkoló kifogás (ilyenkor felsorolja a kifogásolt szövegrészeket), vagy ha a
+  vendég-kritikus nem tudott ítélni (például nem válaszolt az AI) — ekkor azt írja, hogy az őr nem
+  tudta ellenőrizni a mockot, és a küldés ugyanúgy megáll. Generáld újra a mockot, hogy az őr
+  lefusson. A vendég-kritikus csak magyar nyelvű lapon fut; idegen nyelvű lapon nem állít meg;
 - a **képek állapotát** sem a jelvények mutatják. Ha a kiszállított lapon törött kép van vagy
   egyetlen szállás-fotó sincs, azt is a felugró mondja meg — **„A kiszállított lap képeivel baj
   van — kiküldöd mégis?”** címmel akkor, ha közben az őrök nem találtak semmit; ha van őr-lelet
