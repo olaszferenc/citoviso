@@ -85,7 +85,6 @@ const SCRAPBOOK_CSS = `
   .sb-ph{position:absolute;background:var(--cit-surface);border:1px solid color-mix(in srgb, var(--cit-ink) 20%, transparent);padding:10px 10px 34px;box-shadow:0 10px 26px color-mix(in srgb, var(--cit-ink) 18%, transparent)}
   .sb-ph figure{overflow:hidden;background:color-mix(in srgb, var(--cit-ink) 10%, var(--cit-surface))}
   .sb-ph img{width:100%;height:100%;object-fit:cover}
-  .sb-ph .sb-cap{font-family:'Caveat',cursive;font-size:19px;text-align:center;padding-top:8px;color:var(--cit-muted)}
   .sb-ph1{width:60%;top:0;left:2%;transform:rotate(-4deg);z-index:1}
   .sb-ph1 figure{aspect-ratio:4/3}
   .sb-ph2{width:46%;bottom:4%;right:0;transform:rotate(3.5deg);z-index:2}
@@ -230,9 +229,9 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // sticky nav had no scroll-condensing behavior, so the masthead IS the header.
   const mastLinks: MastheadLink[] = [
     ...(roomsData ? [{ label: roomsLabel(data), href: "#sb-rooms" }] : []),
-    ...(data.highlights.length ? [{ label: T(data, "A kamra"), href: "#sb-services" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#sb-services" }] : []),
     ...(photos.length ? [{ label: T(data, "Fotóalbum"), href: "#sb-gallery" }] : []),
-    ...(reviewsData ? [{ label: T(data, "Vendégkönyv"), href: "#sb-reviews" }] : []),
+    ...(reviewsData ? [{ label: T(data, "Vélemények"), href: "#sb-reviews" }] : []),
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#sb-contact" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
   ];
@@ -242,12 +241,12 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   let heroScrap: string;
   if (heroPhoto && heroPhoto2) {
     heroScrap = `<div class="sb-scrap">
-        <div class="sb-ph sb-ph1 sb-tape"><figure><img src="${esc(heroPhoto)}" alt="${esc(data.name)}"></figure><p class="sb-cap">${T(data, "otthon")}</p></div>
-        <div class="sb-ph sb-ph2 sb-pin"><figure><img src="${esc(heroPhoto2)}" alt="${esc(data.name)}"></figure><p class="sb-cap">${T(data, "nálunk")}</p></div>
+        <div class="sb-ph sb-ph1 sb-tape"><figure><img src="${esc(heroPhoto)}" alt="${esc(data.name)}"></figure></div>
+        <div class="sb-ph sb-ph2 sb-pin"><figure><img src="${esc(heroPhoto2)}" alt="${esc(data.name)}"></figure></div>
       </div>`;
   } else if (heroPhoto) {
     heroScrap = `<div class="sb-scrap sb-scrap--solo">
-        <div class="sb-solo sb-ph sb-tape"><figure><img src="${esc(heroPhoto)}" alt="${esc(data.name)}"></figure><p class="sb-cap">${T(data, "otthon")}</p></div>
+        <div class="sb-solo sb-ph sb-tape"><figure><img src="${esc(heroPhoto)}" alt="${esc(data.name)}"></figure></div>
       </div>`;
   } else {
     heroScrap = `<div class="sb-scrap sb-scrap--solo"><div class="sb-flat"></div></div>`;
@@ -299,7 +298,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           <div class="sb-ft">
             ${r.price ? `<span class="sb-pr">${esc(r.price)}</span>` : "<span></span>"}
             <button class="cit-rmbtn" type="button" data-cit-room="${i}">${T(data, "Részletek")}</button>
-            ${hasContact && !r.presentation ? `<a class="sb-cta" href="#cit-enquiry">${T(data, "Ezt kérjük")}</a>` : ""}
+            ${hasContact && !r.presentation ? `<a class="sb-cta" href="#cit-enquiry">${T(data, "Kiválasztom")}</a>` : ""}
           </div>
           ${roomDetails(data, r, i)}
         </article>`,
@@ -315,8 +314,8 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const amen = data.highlights.length
     ? `<section class="sb-sec" id="sb-services" style="padding-top:24px">
     <div class="sb-wrap">
-      <span class="sb-eyebrow">${T(data, "a kamra polcáról")}</span>
-      <h2>${T(data, "Ami nálunk jár")}</h2>
+      <span class="sb-eyebrow">${T(data, "Szolgáltatások")}</span>
+      <h2>${T(data, "Amit nálunk talál")}</h2>
       <div class="sb-kamra">
         ${data.highlights
           .slice(0, 8)
@@ -331,7 +330,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const gallery = photos.length
     ? `<section class="sb-sec" id="sb-gallery" style="padding-top:24px">
     <div class="sb-wrap">
-      ${galCopy.eyebrow ? `<span class="sb-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "lapozzon bele")}</span>`}
+      ${galCopy.eyebrow ? `<span class="sb-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Képek")}</span>`}
       <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Fotóalbum")}</h2>
       <div class="sb-album" data-cit-module="gallery">
         ${photos
@@ -348,8 +347,8 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const reviews = reviewsData
     ? `<div class="sb-gbwrap"><section class="sb-sec" id="sb-reviews" data-cit-module="reviews" style="padding-top:64px;padding-bottom:64px">
     <div class="sb-wrap">
-      ${revCopy.eyebrow ? `<span class="sb-eyebrow">${esc(revCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "a vendégkönyvből")}</span>`}
-      <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Ide írtak nekünk")}</h2>
+      ${revCopy.eyebrow ? `<span class="sb-eyebrow">${esc(revCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Vélemények")}</span>`}
+      <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink írták")}</h2>
       ${ratingStat ? `<div class="sb-revscore"><b>${esc(ratingStat.value)}</b>${stars5}<span>${esc(ratingStat.label)}</span></div>` : ""}
       <div class="sb-gbook">
         ${reviewsData
@@ -368,7 +367,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const faq = faqsData
     ? `<section class="sb-sec" id="sb-faq" style="padding-top:64px">
     <div class="sb-wrap">
-      <span class="sb-eyebrow">${T(data, "felragasztott cetlik")}</span>
+      <span class="sb-eyebrow">${T(data, "Tudnivalók")}</span>
       <h2>${T(data, "Jó, ha tudja")}</h2>
       <div class="sb-faq">
         ${faqsData
@@ -430,10 +429,10 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>${T(data, "Lapozó")}</h4>
+          <h4>${T(data, "Oldal")}</h4>
           ${roomsData ? `<a href="#sb-rooms">${roomsLabel(data)}</a>` : ""}
           ${photos.length ? `<a href="#sb-gallery">${T(data, "Fotóalbum")}</a>` : ""}
-          ${reviewsData ? `<a href="#sb-reviews">${T(data, "Vendégkönyv")}</a>` : ""}
+          ${reviewsData ? `<a href="#sb-reviews">${T(data, "Vélemények")}</a>` : ""}
         </div>
         <div>
           <h4>${T(data, "Tudnivalók")}</h4>

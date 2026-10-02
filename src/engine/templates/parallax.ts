@@ -356,7 +356,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
       ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
+      <h2>${galCopy.title && galCopy.title !== bandAText ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="t-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 6)

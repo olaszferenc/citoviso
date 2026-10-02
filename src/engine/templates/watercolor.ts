@@ -140,7 +140,6 @@ const WATERCOLOR_CSS = `
   .wc-day{margin-top:44px;display:grid;gap:24px;grid-template-columns:1fr}
   @media(min-width:880px){.wc-day{grid-template-columns:repeat(4,1fr)}}
   .wc-dy{background:var(--cit-surface);border-radius:24px;padding:24px;box-shadow:var(--cit-shadow)}
-  .wc-dy .wc-no{font-family:var(--cit-font-display);font-style:italic;font-size:19px;color:var(--cit-accent);display:block;margin-bottom:8px}
   .wc-dy strong{display:block;font-family:var(--cit-font-display);font-size:17px;color:var(--cit-ink)}
 
   /* gallery — blob-radius frames (signature c) */
@@ -255,7 +254,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const mastLinks: MastheadLink[] = [
     ...(roomsData ? [{ label: roomsLabel(data), href: "#wc-rooms" }] : []),
     ...(amenItems0.length ? [{ label: T(data, "Szolgáltatások"), href: "#wc-services" }] : []),
-    ...(dayRenders0 ? [{ label: T(data, "Egy nap nálunk"), href: "#wc-day" }] : []),
+    ...(dayRenders0 ? [{ label: T(data, "Szolgáltatások"), href: "#wc-day" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#wc-gallery" }] : []),
     ...(faqsData ? [{ label: T(data, "Kérdések"), href: "#wc-faq" }] : []),
     ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
@@ -342,7 +341,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <section class="wc-sec" id="wc-services">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${T(data, "Ami jár")}</span>
+        <span class="wc-eyebrow">${T(data, "Szolgáltatások")}</span>
         <h2>${T(data, "Amiért érdemes betérni")}</h2>
       </div>
       <div class="wc-am">
@@ -359,13 +358,13 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <section class="wc-sec wc-surf" id="wc-day">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${T(data, "Egy nap nálunk")}</span>
-        <h2>${T(data, "Így telik majd")}</h2>
+        <span class="wc-eyebrow">${T(data, "Szolgáltatások")}</span>
+        <h2>${T(data, "Amit nálunk talál")}</h2>
       </div>
       <div class="wc-day">
         ${dayItems
           .map(
-            (h, i) => `<div class="wc-dy"><span class="wc-no">${String(i + 1).padStart(2, "0")}</span><strong>${esc(h)}</strong></div>`,
+            (h, i) => `<div class="wc-dy"><strong>${esc(h)}</strong></div>`,
           )
           .join("\n        ")}
       </div>
@@ -380,7 +379,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     <div class="wc-wrap">
       <div class="wc-sechead">
         <span class="wc-eyebrow">${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Galéria")}</span>
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a nyárból")}</h2>
+        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="wc-gal" data-cit-module="gallery">
         ${photos
@@ -409,7 +408,8 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${reviewsData
           .map(
             (r) =>
-              `<div class="wc-rv">${stars5 ? `<div class="wc-st">${starIcon().repeat(starCount)}</div>` : ""}<p>${esc(r.quote)}</p><footer>— ${esc(r.author)}${r.meta ? ` · ${esc(r.meta)}` : ""}</footer></div>`,
+              // A review carries no stars of its own: the average's row stays in the heading, once (M4).
+              `<div class="wc-rv"><p>${esc(r.quote)}</p><footer>— ${esc(r.author)}${r.meta ? ` · ${esc(r.meta)}` : ""}</footer></div>`,
           )
           .join("\n        ")}
       </div>
@@ -482,9 +482,9 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
-          <h4>${T(data, "Nálunk")}</h4>
+          <h4>${T(data, "Oldal")}</h4>
           ${roomsData ? `<a href="#wc-rooms">${roomsLabel(data)}</a>` : ""}
-          ${amenItems.length ? `<a href="#wc-services">${T(data, "Ami jár")}</a>` : ""}
+          ${amenItems.length ? `<a href="#wc-services">${T(data, "Szolgáltatások")}</a>` : ""}
           ${photos.length ? `<a href="#wc-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>
         <div>

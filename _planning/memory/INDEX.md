@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-10-02_places_kurator_gomb_b.md](2026-10-02_places_kurator_gomb_b.md) — 2026-10-02 — Places-fotók kurátori gombja: két forrás-sáv a Fotók fülön (C rész, terv „B”)
+- [2026-10-02_m4_sablon_szovegek.md](2026-10-02_m4_sablon_szovegek.md) — M4 — sablon-szövegek, vélemény-csillagsor, arch-frames cím, lake-balaton UA, tegező alak-szabály (2026-10-02)
 - [2026-10-02_m3_editorial_programminta_felirat_tenyhuseg.md](2026-10-02_m3_editorial_programminta_felirat_tenyhuseg.md) — 2026-10-02 — M3: editorial szállás-szöveg, dátum nélküli program-minta, beszélő fotó-felirat, tényhűség-lista (ADR-0300)
 - [2026-10-02_m1_elek_foglalas_admin.md](2026-10-02_m1_elek_foglalas_admin.md) — 2026-10-02 · M1 — Elek élesi leletei: tenant-admin és foglalás (T-2 · A-1 · A-2 · V-2 · V-3 · A-3 · A-4)
 - [2026-10-02_h_riport_valos_szamla.md](2026-10-02_h_riport_valos_szamla.md) — 2026-10-02 — Places-költség H rész: a napi Google-riport a VALÓS számlát mutatja (BigQuery billing export) (SUB)

@@ -370,7 +370,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="cn-wrap">
       <div class="cn-sechead">
         <div class="cn-eyebrow">${T(data, "Szolgáltatások")}</div>
-        <h2>${T(data, "Több, mint egy szoba")}</h2>
+        <h2>${T(data, "Amit nálunk talál")}</h2>
       </div>
       <div class="cn-exp">
         ${data.highlights
@@ -388,7 +388,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="cn-wrap">
       <div class="cn-sechead">
         ${galCopy.eyebrow ? `<div class="cn-eyebrow">${esc(galCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Galéria")}</div>`}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Minden ablak egy mozivászon")}</h2>
+        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="cn-mosaic" data-cit-module="gallery">
         ${photos

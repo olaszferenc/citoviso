@@ -365,7 +365,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           }</div>
           <div>
             <span class="w-spark">${SPARK}</span>
-            <h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Képek"))}</h2>
+            <h2 ${mo("up")}>${T(data, "Képek")}</h2>
             ${
               (galCopy.eyebrow ?? data.tagline)
                 ? `<p ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`

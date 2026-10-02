@@ -360,7 +360,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const feature = `<section class="t-split dark">
     <div class="ph">${featurePhoto ? `<img ${parallax(0.8)} src="${esc(featurePhoto.url)}" alt="${esc(featurePhoto.alt)}" loading="lazy">` : photoFill(data.name)}</div>
     <div class="tx">
-      <div class="t-kick" ${mo("in")}>${esc(featCopy.eyebrow ?? T(data, "Ami csak itt van"))}</div>
+      <div class="t-kick" ${mo("in")}>${esc(featCopy.eyebrow ?? T(data, "Szolgáltatások"))}</div>
       ${
         // ⛔ Nincs szöveg → nincs elem (mérve: 512×32px üres címsor). A `data.tagline`
         // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — a korpusz

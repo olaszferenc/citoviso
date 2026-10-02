@@ -109,8 +109,10 @@ const PLANTED: { tpl: string; why: string; plant: (html: string) => string; expe
   },
   {
     tpl: "organic",
-    why: "③ a vélemény-kártyák sora rejtve (visibility:hidden)",
-    plant: (h) => h.replace("</head>", "<style>footer .og-st{visibility:hidden}</style></head>"),
+    // The review CARDS carry no star row since 2026-10-02 (template-copy-check ①) — the planted
+    // fault hides the reviews HEADING row instead; the rule under test (hidden ⇒ red) is the same.
+    why: "③ a vélemény-fejléc sora rejtve (visibility:hidden)",
+    plant: (h) => h.replace("</head>", "<style>.og-revscore .og-st{visibility:hidden}</style></head>"),
     expect: /rejtett/,
   },
   {

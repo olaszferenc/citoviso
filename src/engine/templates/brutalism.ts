@@ -139,7 +139,6 @@ const BRUTALISM_CSS = `
   @media(min-width:680px){.b-fac{grid-template-columns:repeat(2,1fr)}}
   .b-fc{padding:24px 22px;border-right:3px solid var(--cit-ink);border-bottom:3px solid var(--cit-ink);transition:background .15s}
   .b-fc:hover{background:color-mix(in srgb, var(--cit-accent) 14%, var(--cit-surface))}
-  .b-fc .b-fc-n{display:block;font-family:${MONO};font-size:11px;color:var(--cit-muted);margin-bottom:10px}
   .b-fc svg{width:28px;height:28px;color:var(--cit-accent);margin-bottom:12px}
   .b-fc p{font-size:15px;line-height:1.5}
 
@@ -163,8 +162,8 @@ const BRUTALISM_CSS = `
   .b-rev{display:grid;gap:28px;grid-template-columns:1fr;margin-top:42px}
   @media(min-width:860px){.b-rev{grid-template-columns:repeat(3,1fr)}}
   .b-rv{background:var(--cit-surface);border:3px solid var(--cit-ink);padding:24px;box-shadow:8px 8px 0 var(--cit-ink)}
-  .b-rv .cit-stars{display:inline-flex;gap:3px;color:var(--cit-accent);margin-bottom:14px}
-  .b-rv .cit-stars svg{width:15px;height:15px}
+  .b-score-stamp .cit-stars{display:flex;gap:3px;color:var(--cit-on-accent);margin-bottom:8px}
+  .b-score-stamp .cit-stars svg{width:14px;height:14px}
   .b-rv p{font-size:14.5px;margin-bottom:16px}
   .b-rv footer{font-family:${MONO};font-size:12px;text-transform:uppercase;color:var(--cit-muted)}
   .b-sample{margin-top:30px;font-family:${MONO};font-size:12px;color:var(--cit-muted)}
@@ -307,12 +306,12 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const hero = `<header class="b-hero" id="top">
     <div class="b-hero-grid">
       <div class="b-hero-l">
-        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}<em>.</em></h1>
+        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
         ${sub ? `<p class="b-hero-sub">${esc(sub)}</p>` : ""}
         ${tags ? `<div class="b-tags">${tags}</div>` : ""}
         <div class="b-ctas">
           <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási igény")}</a>
-          ${hasGallery ? `<a class="cit-btn cit-btn--alt" href="#b-gallery">${T(data, "Mi van bent?")}</a>` : ""}
+          ${hasGallery ? `<a class="cit-btn cit-btn--alt" href="#b-gallery">${T(data, "Képek")}</a>` : ""}
         </div>
       </div>
       <div class="b-hero-r">
@@ -325,21 +324,20 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- booking: industrial console band (canonical hydrated slot inside) ----
   const console_ = `<div class="b-console">
     <div class="b-wrap">
-      <p class="b-console-label">&gt;&gt; ${T(data, "Foglalási konzol // közvetlen kapcsolat, közvetítő nélkül")}</p>
+      <p class="b-console-label">${T(data, "Foglalás")}</p>
       ${bookingSlot(data, phase)}
     </div>
   </div>`;
 
   // -- numbered section tags (sequential over the sections actually shown) --
-  let secNo = 0;
   const secTag = (label: string): string =>
-    `<span class="b-sectag">${String(++secNo).padStart(2, "0")} / ${esc(label)}</span>`;
+    `<span class="b-sectag">${esc(label)}</span>`;
 
   // -- features: intro lead + amenity cell grid (real highlights only) ------
   const facCells = data.highlights
     .map(
       (h, i) =>
-        `<div class="b-fc"><span class="b-fc-n">${String(i + 1).padStart(2, "0")}</span>${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`,
+        `<div class="b-fc">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`,
     )
     .join("\n        ");
   const features = hasFeatures
@@ -357,7 +355,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const gallery = hasGallery
     ? `<section class="b-sec" id="b-gallery">
     <div class="b-wrap">
-      ${secTag(galCopy.eyebrow ?? T(data, "A fal"))}
+      ${secTag(galCopy.eyebrow ?? T(data, "Képek"))}
       <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a helyszínről")}</h2>
       <div class="b-gal" data-cit-module="gallery">
         ${photos
@@ -376,7 +374,9 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     : "";
 
   // -- reviews: stamped cards; score stamp ONLY from the real rating (§B.17) --
-  const cardStars = stars ? starRow(stars) : "";
+  // The average's star row sits on the score stamp, ONCE — a review carries no stars of its own,
+  // and the average repeated on every card read as if each guest had given it (M4, 2026-10-02).
+  const scoreStars = stars ? starRow(stars) : "";
   const reviews = reviewsData
     ? `<section class="b-sec" id="b-reviews" data-cit-module="reviews">
     <div class="b-wrap">
@@ -385,13 +385,13 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${secTag(revCopy.eyebrow ?? T(data, "Vendégek mondták"))}
           <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégek mondták")}</h2>
         </div>
-        ${rating ? `<div class="b-score-stamp">${esc(rating.label)}<strong>${esc(rating.value)} / ${ratingScale(data)}</strong></div>` : ""}
+        ${rating ? `<div class="b-score-stamp">${scoreStars}${esc(rating.label)}<strong>${esc(rating.value)} / ${ratingScale(data)}</strong></div>` : ""}
       </div>
       <div class="b-rev">
         ${reviewsData
           .map(
             (r) =>
-              `<div class="b-rv">${cardStars}<p>„${esc(r.quote)}"</p><footer>— ${esc(r.author)}${r.meta ? `, ${esc(r.meta)}` : ""}</footer></div>`,
+              `<div class="b-rv"><p>„${esc(r.quote)}"</p><footer>— ${esc(r.author)}${r.meta ? `, ${esc(r.meta)}` : ""}</footer></div>`,
           )
           .join("\n        ")}
       </div>

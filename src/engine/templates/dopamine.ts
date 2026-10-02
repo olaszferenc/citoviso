@@ -231,7 +231,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
     { label: T(data, "Vélemények"), href: "#t-reviews" },
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }] : []),
-    ...(hasContact ? [{ label: T(data, "Foglalnék!"), href: "#cit-enquiry", hot: true }] : []),
+    ...(hasContact ? [{ label: T(data, "Foglalás"), href: "#cit-enquiry", hot: true }] : []),
   ];
   const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
@@ -243,7 +243,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // only, so the same text never shows twice on the first screen.
   const regionText = data.highlights[0] || "";
   const sticker2 = regionText
-    ? `<span class="t-sticker t-s2">${iconSvg("location")} ${esc(regionText)}</span>`
+    ? `<span class="t-sticker t-s2">${amenityIconSvg(regionText, data.amenityIconMap)} ${esc(regionText)}</span>`
     : "";
 
   // -- hero -----------------------------------------------------------------
@@ -253,7 +253,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     <div class="t-wrap">
       <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
-      ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>` : ""}
+      ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       ${heroPhoto ? `<div class="t-heroimgwrap">
       ${stickers}
       <div class="t-heroimg"><img src="${esc(heroPhoto)}" alt="${esc(photos[0]?.alt ?? data.name)}"></div>
@@ -320,8 +320,9 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         ${reviewsData
           .map(
             (r) =>
+              // A review carries no stars of its own: the average's row stays in the heading, once (M4).
               `<div>
-          <div class="t-bub">${stars}<p>„${esc(r.quote)}"</p></div>
+          <div class="t-bub"><p>„${esc(r.quote)}"</p></div>
           <div class="t-bubwho">${esc(r.author)}${r.meta ? `<span>${esc(r.meta)}</span>` : ""}</div>
         </div>`,
           )
@@ -354,7 +355,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="t-congrid">
         <div class="t-concard">
           ${contactLines}
-          ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>` : ""}
+          ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
         ${contactPhoto ? `<div class="t-conphoto"><img src="${esc(contactPhoto)}" alt="${T(data, "{name} környezete", { name: esc(data.name) })}"></div>` : ""}
       </div>
@@ -399,7 +400,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const mobcta = hasContact
     ? `<div class="t-mobcta" data-cit-mobbar>
     <span>${ratingStat ? `${starIcon()} <b>${esc(ratingStat.value)}</b>` : esc(data.name)}</span>
-    <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalnék!")}</a>
+    <a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>
   </div>`
     : "";
 

@@ -302,7 +302,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   // -- booking "porta" ------------------------------------------------------
   const bookbar = `<div class="ad-desk">
     <div class="ad-wrap">
-      <p class="ad-desktitle">${T(data, "A porta")}</p>
+      <p class="ad-desktitle">${T(data, "Foglalás")}</p>
       <p class="ad-desksub">${T(data, "Kérjük, adja meg utazásának adatait")}</p>
       ${bookingSlot(data, phase)}
     </div>
@@ -354,7 +354,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="ad-sec" id="ad-services" style="padding-top:0">
     <div class="ad-wrap">
       <div class="ad-sechead">
-        <div class="ad-eyebrow">${T(data, "A ház szolgálata")}</div>
+        <div class="ad-eyebrow">${T(data, "Szolgáltatások")}</div>
         <h2>${T(data, "Ami magától értetődő")}</h2>
         ${decoRule}
       </div>
@@ -377,7 +377,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="ad-wrap">
       <div class="ad-sechead">
         ${galCopy.eyebrow ? `<div class="ad-eyebrow">${esc(galCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Képek")}</div>`}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "A ház arcai")}</h2>
+        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
         ${decoRule}
       </div>
       <div class="ad-gal" data-cit-module="gallery">
@@ -446,7 +446,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="ad-wrap">
       <div class="ad-sechead">
         <div class="ad-eyebrow">${T(data, "Tudnivaló")}</div>
-        <h2>${T(data, "Kérdések a portához")}</h2>
+        <h2>${T(data, "Gyakori kérdések")}</h2>
         ${decoRule}
       </div>
       <div class="ad-faq">
@@ -494,7 +494,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           </div>
         </div></div>
         <div class="ad-frame ad-cform">
-          <h3>${T(data, "Üzenet a portának")}</h3>
+          <h3>${T(data, "Írjon nekünk")}</h3>
           ${decoRule}
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}

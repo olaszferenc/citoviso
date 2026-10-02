@@ -550,9 +550,9 @@ export const SAMPLE_REVIEWS: readonly Review[] = [
 // Generic FAQ prompts (NOT answered with a fabricated policy about THIS property; the sample
 // answers are illustrative placeholders the owner replaces with real ones before go-live).
 export const SAMPLE_FAQS: readonly Faq[] = [
-  { q: "Mikor lehet becsekkolni és kicsekkolni?", a: "Ide kerül a tényleges érkezési és távozási időpont — a saját házirended szerint." },
+  { q: "Mikor lehet becsekkolni és kicsekkolni?", a: "Ide kerül a tényleges érkezési és távozási időpont — a saját házirendje szerint." },
   { q: "Van parkolási lehetőség?", a: "Ide kerül a parkolásra vonatkozó valós információ (helyszín, díj, kapacitás)." },
-  { q: "Hozhatunk kisállatot?", a: "Ide kerül a kisállat-politikád — hogy fogadtok-e, milyen feltételekkel." },
+  { q: "Hozhatunk kisállatot?", a: "Ide kerül a kisállatokra vonatkozó szabálya — fogadja-e őket, és milyen feltételekkel." },
   { q: "Tartalmaz reggelit a foglalás?", a: "Ide kerül az étkezésre vonatkozó valós tájékoztatás." },
 ];
 
@@ -1125,7 +1125,7 @@ function locationSection(d: SiteData, copy?: SectionCopy): string {
   return `<section class="cit-location">
       <div class="cit-section-inner">
         <div class="cit-sec-head">
-          ${sectionHead("Ide gyere", "Megközelítés és kapcsolat", copy)}
+          ${sectionHead("Így talál ide", "Megközelítés és kapcsolat", copy)}
         </div>
         <div class="cit-location-grid">
           <div class="cit-location-map" data-cit-module="map" data-cit-query="${esc(query)}">

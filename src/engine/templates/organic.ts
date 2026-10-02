@@ -227,7 +227,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   // Masthead lockup (owner contract 2026-08-30): same link set the old pill nav carried.
   const mastLinks: MastheadLink[] = [
     ...(roomsData ? [{ label: roomsLabel(data), href: "#og-rooms" }] : []),
-    ...(data.highlights.length ? [{ label: T(data, "A birtok élete"), href: "#og-rhythm" }] : []),
+    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#og-rhythm" }] : []),
     ...(photos.length ? [{ label: T(data, "Galéria"), href: "#og-gallery" }] : []),
     ...(reviewsData ? [{ label: T(data, "Vendégeink"), href: "#og-reviews" }] : []),
     ...(hasContact ? [{ label: T(data, "Kapcsolat"), href: "#og-contact" }] : []),
@@ -251,7 +251,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${sub ? `<p>${esc(sub)}</p>` : ""}
         <div>
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-          ${data.highlights.length ? `<a class="cit-btn cit-btn-ghost" href="#og-rhythm">${T(data, "A birtok élete")}</a>` : ""}
+          ${data.highlights.length ? `<a class="cit-btn cit-btn-ghost" href="#og-rhythm">${T(data, "Szolgáltatások")}</a>` : ""}
         </div>
       </div>
       ${heroVisual}
@@ -306,9 +306,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const rhythm = data.highlights.length
     ? `<section class="og-sec og-sec--tint" id="og-rhythm">
     <div class="og-wrap">
-      <span class="og-eyeb">${T(data, "A birtok élete")}</span>
-      <h2>${T(data, "Egy nap nálunk")}</h2>
-      <p class="og-lead">${T(data, "Semmi sem kötelező — de minden kipróbálható.")}</p>
+      <span class="og-eyeb">${T(data, "Szolgáltatások")}</span>
+      <h2>${T(data, "Amit nálunk talál")}</h2>
       <div class="og-rhythm">
         ${data.highlights
           .slice(0, 6)
@@ -330,8 +329,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const chips = chipItems.length
     ? `<section class="og-sec">
     <div class="og-wrap">
-      <span class="og-eyeb">${T(data, "Ami jár")}</span>
-      <h2>${T(data, "A kényelem itt sem hiányzik")}</h2>
+      <span class="og-eyeb">${T(data, "Szolgáltatások")}</span>
+      <h2>${T(data, "Amit még kínálunk")}</h2>
       <div class="og-chips">
         ${chipItems
           .map((h) => `<div class="og-chip">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></div>`)
@@ -351,7 +350,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       ? `<section class="og-sec" id="og-gallery" style="padding-top:0">
     <div class="og-wrap">
       ${galCopy.eyebrow ? `<span class="og-eyeb">${esc(galCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Galéria")}</span>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Évszakról évszakra")}</h2>
+      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       <div class="og-gal" data-cit-module="gallery" data-cit-gstrip>
         <div class="og-gtrack" data-cit-gtrack>
         ${ordered
@@ -382,7 +381,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${reviewsData
           .map(
             (r) =>
-              `<div class="og-note"><span class="og-q">&ldquo;</span><p>${esc(r.quote)}</p><footer>— ${esc(r.author)}${r.meta ? ` · ${esc(r.meta)}` : ""}${starCount ? `<div class="og-st">${starIcon().repeat(starCount)}</div>` : ""}</footer></div>`,
+              // A review carries no stars of its own: the average's row stays in the heading, once (M4).
+              `<div class="og-note"><span class="og-q">&ldquo;</span><p>${esc(r.quote)}</p><footer>— ${esc(r.author)}${r.meta ? ` · ${esc(r.meta)}` : ""}</footer></div>`,
           )
           .join("\n        ")}
       </div>
@@ -457,7 +457,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         <div>
           <h4>${T(data, "Felfedezés")}</h4>
           ${roomsData ? `<a href="#og-rooms">${roomsLabel(data)}</a>` : ""}
-          ${data.highlights.length ? `<a href="#og-rhythm">${T(data, "A birtok élete")}</a>` : ""}
+          ${data.highlights.length ? `<a href="#og-rhythm">${T(data, "Szolgáltatások")}</a>` : ""}
           ${photos.length ? `<a href="#og-gallery">${T(data, "Galéria")}</a>` : ""}
         </div>
         <div>

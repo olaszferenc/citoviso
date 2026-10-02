@@ -73,7 +73,6 @@ const AURORA_CSS = `
   .au-scrolled .au-nv{background:color-mix(in srgb, var(--cit-surface) 62%, transparent)}
   .au-nv{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 10px 20px;border-radius:16px}
   .au-brand{font-family:var(--cit-font-display);font-weight:800;font-size:18px;letter-spacing:-.02em;color:var(--cit-ink)}
-  .au-brand span{color:var(--cit-accent)}
   .au-menu{display:none;gap:4px;align-items:center}
   @media(min-width:920px){.au-menu{display:flex}}
   .au-menu a{color:var(--cit-muted);font-size:13.5px;font-weight:600;padding:9px 15px;border-radius:10px;transition:.2s}
@@ -106,8 +105,6 @@ const AURORA_CSS = `
   .au-widget .au-wv{font-family:var(--cit-font-display);font-size:22px;font-weight:800;display:flex;align-items:baseline;gap:8px}
   .au-widget .au-wv small{font-size:12px;color:var(--cit-muted);font-weight:600}
   .au-widget .au-wv svg{width:20px;height:20px;color:var(--cit-accent);align-self:center}
-  .au-widget .au-bar{height:6px;border-radius:3px;background:color-mix(in srgb, var(--cit-ink) 10%, transparent);margin-top:10px;overflow:hidden}
-  .au-widget .au-bar i{display:block;height:100%;background:var(--cit-accent)}
 
   /* BOOKING — glass app bar */
   .au-book{padding:0 0 26px;margin-top:-30px}
@@ -257,7 +254,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const nav = `<nav class="au-nav">
     <div class="au-wrap">
       <div class="au-glass au-nv">
-        <a class="au-brand" href="#top">${esc(data.name)}<span>.</span></a>
+        <a class="au-brand" href="#top">${esc(data.name)}</a>
         <div class="au-menu">
           ${navLinks}
         </div>
@@ -289,7 +286,6 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
               (s) => `<div class="au-glass au-widget">
             <p class="au-wl">${esc(s.label)}</p>
             <p class="au-wv">${s.icon === "star" ? starIcon() : ""}${esc(s.value)}</p>
-            <div class="au-bar"><i></i></div>
           </div>`,
             )
             .join("\n          ")}
@@ -472,7 +468,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     <div class="au-wrap">
       <div class="au-fg">
         <div>
-          <span class="au-brand">${esc(data.name)}<span>.</span></span>
+          <span class="au-brand">${esc(data.name)}</span>
           ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>

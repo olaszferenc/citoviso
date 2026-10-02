@@ -247,6 +247,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const roomsCopy = copyOf(recipe, "rooms");
   const featCopy = copyOf(recipe, "features");
   const galCopy = copyOf(recipe, "gallery");
+  const revCopy = copyOf(recipe, "reviews");
   const place = data.place?.city ?? "";
   const lede = firstSentence(data.intro, 200) || data.tagline;
   // What is LEFT of the intro after the lede — printing the whole intro again
@@ -389,7 +390,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     ordered.length
       ? `<section class="a-gal" data-cit-module="gallery">
     <div class="a-wrap">
-      <div class="a-title"><h2 ${mo("up")}>${T(data, "Képek a portáról")}</h2></div>
+      <div class="a-title"><h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Képek"))}</h2></div>
       <div class="a-gstrip" data-cit-gstrip>
         <div class="a-gtrack" data-cit-gtrack>${ordered
           .map((p) => `<div class="a-frame a-arch"><img src="${esc(p.url)}" alt="${esc(p.alt || data.name)}" loading="lazy"></div>`)
@@ -412,12 +413,14 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
         .join("")}</div>`
     : "";
 
+  // The reviews heading is the REVIEWS copy — it used to wear the gallery's title, so a line
+  // about the garden stood over the guests' words (M4, 2026-10-02).
   const rating = data.rating;
   const review =
     rating || quoteBlock
       ? `<section class="a-rev">
       <div class="a-wrap">
-        <div class="a-title"><h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Vendégeink"))}</h2></div>
+        <div class="a-title"><h2 ${mo("up")}>${esc(revCopy.title ?? T(data, "Vendégeink"))}</h2></div>
         ${
           rating
             ? `<div class="a-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(honestStarCount(data))}</div>

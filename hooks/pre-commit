@@ -331,10 +331,13 @@ fi
 # M3 · SZ-3 (Elek 2026-10-01; döntés: a sablon-szöveg ADR-je, design-refs/public-site/sablon-szoveg-feliratok) — EGY őr a sablon-szövegre (M3 + M4 szakasz): az editorial újság-KINÉZETŰ, de a szövege egy szállásé —
 # nincs „Szerkesztőség”, „Képes krónika”, „No. 1”, „Foglalási szelvény”, idézőjeles főcím, díszbetű
 # (az „A Muschel…” „AMuschel”-lé olvadt), és „A ház számokban” nem áll egyetlen szám fölött.
+# M4 (2026-10-02, ugyanez az őr): a többi 18 sablon — nincs átlag-csillag a vélemény-kártyán, az
+# arch-frames vélemény-címe a sajátja, tiltott „játék-szöveg” (renderelve + forrásban), a galéria-cím
+# egyszer, nincs ál-jelölés, a minta-GYIK magáz (kontraktus: design-refs/tenant-site/sablon-szovegek).
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/template-copy-check.mts ] && \
-   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(render|templateKit|icons)\.ts$|^scripts/template-copy-check\.mts$'; then
-  echo "[pre-commit] template-copy-check (sablon-szöveg tiltólista: szállás-szöveg, nincs átlag-csillag a vélemény-kártyán)…"
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(render|templateKit|icons|rating|recipe|primitives)\.ts$|^src/generator/addressRegister\.ts$|^scripts/template-copy-check\.mts$'; then
+  echo "[pre-commit] template-copy-check (M3 editorial + M4: csillagsor · vélemény-cím · tiltott sablon-szöveg · ál-jelölés · minta magáz)…"
   npx tsx scripts/template-copy-check.mts >"$GATE_LOG" || gate_failed
 fi
 # M3 · L-3 (Elek 2026-10-01): a gépi „‹név› — N. kép” a nyitókép alsó negyedén ült mobilon. A

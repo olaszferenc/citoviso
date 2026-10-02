@@ -115,7 +115,6 @@ ${centredModsecCss("horizontal")}
   .h-house .h-im{aspect-ratio:16/9;position:relative;overflow:hidden;background:color-mix(in srgb, var(--cit-ink) 12%, var(--cit-surface))}
   .h-house .h-im img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
   .h-house:hover .h-im img{transform:scale(1.05)}
-  .h-house .h-no{position:absolute;top:14px;left:14px;font-family:var(--cit-font-display);font-style:italic;font-size:14px;background:color-mix(in srgb, var(--cit-bg) 80%, transparent);border:1px solid var(--cit-line);border-radius:100px;padding:6px 14px}
   .h-house .h-bd{padding:24px}
   .h-house h3{font-family:var(--cit-font-display);font-size:25px;margin-bottom:4px}
   .h-house .h-mt{font-size:13px;color:var(--cit-accent);margin-bottom:12px}
@@ -300,7 +299,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         r,
         i,
         "h-houselink",
-        `<div class="h-im"><span class="h-no">${T(data, "{n}. fejezet", { n: String(i + 1) })}</span>${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${roomHint(data, r)}</div>
+        `<div class="h-im">${r.photo?.url ? `<img src="${esc(r.photo.url)}" alt="${esc(r.photo.alt || r.name)}">` : photoFill(r.name)}${roomHint(data, r)}</div>
       <div class="h-bd">
         <h3>${esc(r.name)}</h3>
         ${r.capacity ? `<p class="h-mt">${esc(r.capacity)}</p>` : ""}
@@ -354,7 +353,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     <div class="h-wrap">
       <div class="h-sechead">
         ${galCopy.eyebrow ? `<div class="h-eyebrow">${esc(galCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Galéria")}</div>`}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a magasból")}</h2>
+        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="h-mosaic" data-cit-module="gallery">
         ${photos

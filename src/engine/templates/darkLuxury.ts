@@ -136,7 +136,6 @@ const DARK_LUXURY_CSS = `
   .t-card .t-im img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
   .t-card:hover .t-im img{transform:scale(1.06)}
   .t-card figcaption{padding:22px 24px;display:flex;gap:16px;align-items:center;border-top:1px solid var(--cit-line)}
-  .t-card .t-no{font-family:var(--cit-font-display);color:var(--cit-accent);font-size:14px;letter-spacing:2px;flex:none}
   .t-card figcaption p{font-size:14.5px;color:var(--cit-muted);line-height:1.55}
   .t-card .t-rule{flex:1;height:1px;background:linear-gradient(90deg,var(--cit-accent),var(--cit-line))}
 
@@ -214,9 +213,6 @@ const DARK_LUXURY_JS = `
   (function(){var n=document.querySelector('.t-nav');if(!n)return;
   addEventListener('scroll',function(){n.classList.toggle('t-solid',scrollY>60)},{passive:true});})();
 `;
-
-/** Roman numerals for the ritual board markers (max 6 highlights). */
-const ROMAN = ["I", "II", "III", "IV", "V", "VI"] as const;
 
 const CONTACT_ICONS = {
   phone: iconSvg("phone"),
@@ -330,12 +326,12 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       stripPhotos.length
         ? `<div class="t-strip">
       ${stripPhotos
-        .map((p, i) => {
+        .map((p) => {
           // A generated ("<name> — N. kép") or name-echo alt is a11y-only filler (ADR-0300,
-          // L-3) — the visible caption then stays a quiet numbered marker with a brass rule.
+          // L-3) — the visible caption then stays a quiet brass rule (no "01" marker: M4).
           const text = photoCaption(data, p);
           const cap = text ? `<p>${esc(text)}</p>` : `<span class="t-rule"></span>`;
-          return `<figure class="t-card"><div class="t-im"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></div><figcaption><span class="t-no">0${i + 1}</span>${cap}</figcaption></figure>`;
+          return `<figure class="t-card"><div class="t-im"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></div><figcaption>${cap}</figcaption></figure>`;
         })
         .join("\n      ")}
     </div>`
@@ -355,7 +351,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${highlights
           .map(
             (h, i) =>
-              `<div class="t-rit"><p class="t-no"><span>${ROMAN[i] ?? ""}.</span>${amenityIconSvg(h, data.amenityIconMap)}</p><h3>${esc(h)}</h3></div>`,
+              `<div class="t-rit"><p class="t-no">${amenityIconSvg(h, data.amenityIconMap)}</p><h3>${esc(h)}</h3></div>`,
           )
           .join("\n        ")}
       </div>

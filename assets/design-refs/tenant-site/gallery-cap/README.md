@@ -35,7 +35,7 @@ A tulaj: „Ez egy nagy hiba, de látni kell mit okoz a mockbann”.
 
 ## arch-frames — B · Lapozható ív-sáv (KÖT)
 
-- **Új szakasz** a széles képsáv UTÁN (a sablonnak eddig nem volt galériája): cím **„Képek a portáról”**,
+- **Új szakasz** a széles képsáv UTÁN (a sablonnak eddig nem volt galériája): cím a galéria saját címe, tartalékként „Képek” (⚠️ a korábbi „Képek a portáról” felirat FELÜLÍRVA — tulaj, 2026-10-02, `../sablon-szovegek/`: élesen a tulaj saját képei állnak ott),
   alatta **egy sornyi, vízszintesen húzható ív-keretes** kép (a sablon ívei), asztalin nyilakkal is,
   „1 / N” számlálóval; az elején a „‹”, a sáv végén a „›” tiltott.
 - Ív-szélesség: asztalin ~250 px, mobilon a képernyő ~62%-a (a következő ív kilóg → jelzi, hogy húzható).

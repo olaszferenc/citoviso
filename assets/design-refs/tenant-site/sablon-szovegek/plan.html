@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sablon-szövegek terv</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--ink:#14202b;--muted:#5b6774;--line:#dde2e8;--acc:#0b7a8a;--bad:#b42318}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11161c;--panel:#19212a;--ink:#e6edf3;--muted:#9aa7b4;--line:#2c3742;--acc:#4cc3d3;--bad:#ff8a7a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+header{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{font-size:15px;margin:0 auto 0 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:none;color:var(--ink);padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;min-height:36px}
+.seg button[aria-pressed=true]{background:var(--acc);color:#fff}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 14px}
+.row h2{font-size:16px;margin:0 0 6px}
+.old{color:var(--bad);text-decoration:line-through}.new{color:var(--acc);font-weight:600}
+.imgs{display:grid;gap:10px;margin-top:8px}
+.imgs img{width:100%;height:auto;border:1px solid var(--line);border-radius:8px}
+body[data-w="390"] .imgs img{max-width:390px}
+</style>
+</head>
+<body data-w="1280">
+<header><h1>Sablon-szövegek — jóváhagyott terv (2026-10-02)</h1>
+<span class="seg" id="size"><button data-w="390" aria-pressed="false">Mobil 390px</button><button data-w="1280" aria-pressed="true">Asztali</button></span></header>
+<main id="main"></main>
+<script>
+var ROWS = [
+  ["scrapbook", "A kamra · Vendégkönyv · Ide írtak nekünk · Lapozó · felragasztott cetlik · Ezt kérjük · „otthon / nálunk”", "Szolgáltatások · Vélemények · Vendégeink írták · Oldal · Tudnivalók · Kiválasztom", null],
+  ["organic", "A birtok élete · Egy nap nálunk · Semmi sem kötelező… · Ami jár · A kényelem itt sem hiányzik", "Szolgáltatások · Amit nálunk talál · Amit még kínálunk", "organic"],
+  ["watercolor", "Egy nap nálunk · Így telik majd + 01–04 · Képek a nyárból · Ami jár · Nálunk", "Szolgáltatások · Amit nálunk talál · Képek · Oldal", "watercolor"],
+  ["horizontal", "{n}. fejezet · Képek a magasból", "(elmarad) · Képek", null],
+  ["cinematic", "Minden ablak egy mozivászon · Több, mint egy szoba", "Képek · Amit nálunk talál", null],
+  ["claymorphism", "Wellness · Puha landolás minden este", "Szolgáltatások · Szobáink / A szállás", null],
+  ["brutalism", ">> Foglalási konzol // … · 01 / · 01–04 · A fal · Mi van bent? · pont a főcímen · csillagsor a kártyákon", "Foglalás · számok nélkül · Képek · csillagsor a pontszám-bélyegen, egyszer", "brutalism"],
+  ["dopamine", "tű-ikon a szolgáltatás-matricán · Foglalnék!", "a szolgáltatás ikonja · Foglalás / Szabad időpontot kérek", "dopamine"],
+  ["artdeco", "A porta · A ház szolgálata · A ház arcai · Kérdések a portához · Üzenet a portának", "Foglalás · Szolgáltatások · Képek · Gyakori kérdések · Írjon nekünk", null],
+  ["dark-luxury", "I., II. … · 01–04 a képeken", "(elmarad)", null],
+  ["aurora", "mindig teli sáv · pont a név után", "(elmarad)", null],
+  ["arch-frames", "Képek a portáról · vélemény-cím = galéria-cím", "a galéria saját címe / Képek · a vélemények saját címe", null],
+  ["tilted-gallery", "Ami csak itt van", "Szolgáltatások", null],
+  ["wordmark-grow · parallax", "a galéria címe kétszer", "egyszer", null],
+  ["közös minta", "…a saját házirended szerint · kisállat-politikád — fogadtok-e · Ide gyere", "…a saját házirendje szerint · magázó kisállat-minta · Így talál ide", null],
+];
+var W = "1280";
+function render() {
+  var m = document.getElementById("main"); m.innerHTML = "";
+  ROWS.forEach(function (r) {
+    var d = document.createElement("div"); d.className = "row";
+    d.innerHTML = "<h2>" + r[0] + "</h2><div><span class=\"old\">" + r[1] + "</span></div><div>→ <span class=\"new\">" + r[2] + "</span></div>";
+    if (r[3]) {
+      var g = document.createElement("div"); g.className = "imgs";
+      var img = document.createElement("img"); img.alt = r[0]; img.src = r[3] + "-" + (W === "390" ? "mobil" : "asztali") + ".png";
+      g.appendChild(img); d.appendChild(g);
+    }
+    m.appendChild(d);
+  });
+}
+document.getElementById("size").addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  W = b.dataset.w; document.body.dataset.w = W;
+  this.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+  render();
+});
+if (matchMedia("(max-width: 600px)").matches) { W = "390"; document.body.dataset.w = W; document.querySelectorAll("#size button").forEach(function (x) { x.setAttribute("aria-pressed", String(x.dataset.w === "390")); }); }
+render();
+</script>
+</body>
+</html>
