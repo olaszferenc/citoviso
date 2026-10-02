@@ -356,7 +356,18 @@ export async function bestActiveOfferForProspectToken(
 export async function bestActiveCouponForTenant(
   tenantId: string,
 ): Promise<ActiveOffer | null> {
-  const row = await db
+  return (await livePurchaseOffersForTenant(tenantId))[0] ?? null;
+}
+
+/**
+ * EVERY live purchase-scope offer of a tenant, best first — the ranking
+ * bestActiveCouponForTenant() takes the head of. Only the applied one is burnt
+ * (redeemOfferForOrder), so the rest SURVIVE a purchase; the Modulok shop says so
+ * (Elek ADM-2, 2026-10-02: a 98% campaign hid the 25% welcome coupon, and the owner
+ * could not tell whether it was still there).
+ */
+export async function livePurchaseOffersForTenant(tenantId: string): Promise<ActiveOffer[]> {
+  const rows = await db
     .selectFrom("offer")
     .select(["id", "kind", "percent", "expires_at"])
     .where("tenant_id", "=", tenantId)
@@ -366,9 +377,9 @@ export async function bestActiveCouponForTenant(
     )
     .whereRef("used_count", "<", "max_uses")
     .orderBy("percent", "desc")
-    .limit(1)
-    .executeTakeFirst();
-  return row ? toActive(row) : null;
+    .orderBy("created_at", "asc")
+    .execute();
+  return rows.map(toActive);
 }
 
 // ── ADR-0286: THE LETTER'S PERCENT BINDS. The intro percent is operator-set, so the

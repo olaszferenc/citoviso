@@ -2265,6 +2265,48 @@ export function modulesSection(
     })
     .join("");
 
+  // ADR-0088 ⑨ coupon card (contract mandate-coupon: percent, where it came from,
+  // until when, no stacking). Elek ADM-2 (2026-10-02): the card printed "kupon" and
+  // "Az induló előfizetéséért kapta" for ANY purchase offer, so a 98% campaign wore
+  // the welcome coupon's name and reason (ADR-0303 ②: one offer, one name — offerLabel),
+  // while the real 25% coupon vanished from the page. The welcome coupon keeps its
+  // contract-bound literal; any other kind is named by offerLabel, and every other
+  // live offer is said to SURVIVE the purchase (only the applied one is burnt).
+  const couponBanner = (
+    best: NonNullable<SubscriptionAdminData["coupon"]>,
+    kept: SubscriptionAdminData["keptOffers"],
+  ): string => {
+    const until = (d: string | null): string =>
+      d ? T(lang, " — érvényes {date}-ig", { date: esc(d) }) : "";
+    const head =
+      best.kind === "coupon"
+        ? `<b>${T(lang, "−{p}% kupon", { p: String(best.percent) })}</b>` +
+          `<span>` +
+          T(lang, "Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
+            until: until(best.expiresAt),
+          }) +
+          `</span>`
+        : `<b>−${esc(String(best.percent))}% · ${esc(offerLabel(lang, best.kind))}</b>` +
+          `<span>` +
+          T(lang, "A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
+            until: until(best.expiresAt),
+          }) +
+          `</span>`;
+    const keptLines = kept
+      .map(
+        (o) =>
+          `<span class="adm-coupon__kept">` +
+          T(lang, "{name} (−{p}%{until}) megmarad — ez a vásárlás nem használja fel.", {
+            name: esc(offerLabel(lang, o.kind)),
+            p: String(o.percent),
+            until: o.expiresAt ? T(lang, ", érvényes {date}-ig", { date: esc(o.expiresAt) }) : "",
+          }) +
+          `</span>`,
+      )
+      .join("");
+    return `<div class="adm-coupon">${head}${keptLines}</div>`;
+  };
+
   // The section NEVER vanishes: the page intro promises it ("amit még hozzáadhat,
   // azt alább"), and after an ALL-IN purchase it disappeared without a trace
   // (Elek FK-002 H1). No stock left → honest empty state.
@@ -2279,14 +2321,7 @@ export function modulesSection(
         (frozen
           ? `<p class="adm-lead">${T(lang, "A honlapja felfüggesztése alatt új modult nem tud felvenni — előbb a rendezetlen díjat kell rendezni a lap tetején. Addig is megnézheti, mit kínálunk, és a meglévő moduljait le tudja mondani.")}</p>`
           : `<p class="adm-lead">${T(lang, "Mindegyiket megnézheti a saját oldalán, mielőtt dönt — a kapcsolók itt még nem élesítenek.")}</p>`) +
-        (coupon && !frozen
-          ? `<div class="adm-coupon"><b>${T(lang, "−{p}% kupon", { p: String(coupon.percent) })}</b>` +
-            `<span>` +
-            T(lang, "Az induló előfizetéséért kapta. A következő vásárlásánál magától levonjuk{until}. Kedvezmények nem adódnak össze; mindig a nagyobb érvényesül.", {
-              until: coupon.expiresAt ? T(lang, " — érvényes {date}-ig", { date: esc(coupon.expiresAt) }) : "",
-            }) +
-            `</span></div>`
-          : "") +
+        (coupon && !frozen ? couponBanner(coupon, sub?.keptOffers ?? []) : "") +
         shopBlocks
       : `<p class="adm-lead">${T(lang, "Minden elérhető modult megvett — jelenleg nincs több bővíthető elem. Az egyszeri szolgáltatásokat (például a többnyelvű honlapot) lentebb találja.")}</p>`) +
     `</section>`;

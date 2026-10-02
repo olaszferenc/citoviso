@@ -8,7 +8,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing } from "../pricing.js";
 import { addMonths } from "../payment/subscription.js";
 import { DUNNING_CANCEL_OFFSET_DAYS } from "../payment/billing.js";
-import { bestActiveCouponForTenant } from "../payment/offers.js";
+import { livePurchaseOffersForTenant, type ActiveOffer } from "../payment/offers.js";
 import { isBilledModule, type TenantModuleView } from "./modules.js";
 
 export interface NextInvoiceItem {
@@ -95,8 +95,19 @@ export interface SubscriptionAdminData {
   /** ADR-0226: the stored card named for the plan bar ("Visa ····4242");
    *  null without a mandate — or on a pre-0076 token whose mask is unknown yet. */
   readonly cardLabel: string | null;
-  /** The tenant's live welcome/campaign coupon for their NEXT purchase. */
-  readonly coupon: { readonly percent: number; readonly expiresAt: string | null } | null;
+  /** The tenant's best live purchase offer for their NEXT purchase. `kind` names it
+   *  (offerLabel, ADR-0303): a campaign is not the welcome coupon (Elek ADM-2). */
+  readonly coupon: {
+    readonly percent: number;
+    readonly expiresAt: string | null;
+    readonly kind: ActiveOffer["kind"];
+  } | null;
+  /** The OTHER live purchase offers — not used by the next purchase, kept for a later one. */
+  readonly keptOffers: readonly {
+    readonly percent: number;
+    readonly expiresAt: string | null;
+    readonly kind: ActiveOffer["kind"];
+  }[];
 }
 
 /** How long the "your site is back" confirmation stays on the screen (0063).
@@ -257,7 +268,12 @@ export async function getSubscriptionAdmin(
   // ADR-0088 ⑨: a mandate counts only with a token we could actually charge —
   // 'token' without one would advertise an automation that silently falls back.
   const autoCharge = sub.payment_method === "token" && !!sub.recurrence_token;
-  const coupon = await bestActiveCouponForTenant(tenantId);
+  const [coupon, ...kept] = await livePurchaseOffersForTenant(tenantId);
+  const offerView = (o: ActiveOffer) => ({
+    percent: o.percent,
+    expiresAt: o.expiresAt ? isoDate(o.expiresAt) : null,
+    kind: o.kind,
+  });
 
   return {
     status: sub.status,
@@ -280,12 +296,8 @@ export async function getSubscriptionAdmin(
     annualFreeMonths: freeMonths,
     autoCharge,
     cardLabel: autoCharge && sub.card_last4 ? `${sub.card_brand ?? ""} ····${sub.card_last4}`.trim() : null,
-    coupon: coupon
-      ? {
-          percent: coupon.percent,
-          expiresAt: coupon.expiresAt ? isoDate(coupon.expiresAt) : null,
-        }
-      : null,
+    coupon: coupon ? offerView(coupon) : null,
+    keptOffers: kept.map(offerView),
   };
 }
 

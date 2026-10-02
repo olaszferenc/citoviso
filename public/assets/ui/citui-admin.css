@@ -1355,6 +1355,7 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   border-radius:var(--citui-radius-sm);padding:14px 16px}
 .adm-coupon b{display:block;font:700 17px/1.2 var(--citui-font-display);color:color-mix(in srgb,var(--citui-warn) 78%,var(--citui-ink))}
 .adm-coupon span{font-size:11px;color:var(--citui-muted)}
+.adm-coupon .adm-coupon__kept{display:block;margin-top:6px;padding-top:6px;border-top:1px dashed color-mix(in srgb,var(--citui-warn) 45%,transparent)}
 .adm-chip--coupon s{color:var(--citui-muted);font-weight:600;margin-right:5px;text-decoration-color:var(--citui-bad)}
 .adm-shop__card{position:relative;isolation:isolate}
 .adm-shop__coupon{position:absolute;top:-9px;right:10px;z-index:2;
