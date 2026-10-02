@@ -1,4 +1,4 @@
-## ADR-XXXX — Szoba-törlés megerősítéssel, nyitott kérésnél tiltva; az IFA a foglalási kérésen befagyasztva (2026-10-02)
+## ADR-0299 — Szoba-törlés megerősítéssel, nyitott kérésnél tiltva; az IFA a foglalási kérésen befagyasztva (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (tulaj a koordinátoron át, „egyetértek”; SUB M1, koordinátor: CIT
 „élesi teszt” fő session; brief: `~/rc-briefs/javitas-elek-0930/m1-foglalas-admin.md`) · **Forrás:** Elek élesi
