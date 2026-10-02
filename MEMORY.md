@@ -18,7 +18,7 @@ listaáras BECSLÉS, összevetés a 7 napos átlaggal, `[FIGYELEM]` küszöb (20
 vagy a Monitoring bukik. Semmit nem korlátoz. Ártábla egy helyen: `src/ops/googleCostReport.ts`. Őr: `google-cost-report-check`.
 Az első riport (10-01, ~11,68 $) kiment. Jegyzet: `_planning/memory/2026-10-02_g_napi_google_koltseg_riport.md`.
 
-## Párhuzamos szál (2026-10-02 — SUB: Places-költség F rész — nincs cap + portál-gyorsítás, ADR-XXXX) — LANDOLVA
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség F rész — nincs cap + portál-gyorsítás, ADR-0298) — LANDOLVA
 
 ① A konzol „Cap” felirata igazul: a mentett ÚJ leadek számát vágja, a Places-költséget NEM (KB + 2 súgó-kép).
 ② `PLACES_DETAILS_MAX_CALLS` és `PLACES_DISCOVERY_MAX_CALLS` → figyelmeztetési szint (`…_WARN_CALLS`), a hívások / a bejárás mennek; a figyelmeztetés a

@@ -241,7 +241,7 @@ async function main(): Promise<void> {
       byStatus,
       contactChannels: channelBreakdown(leads),
       knownBeforeEnrichment: known.length,
-      // Loud source warnings (ADR-XXXX) — kept with the run, not only in the live log.
+      // Loud source warnings (ADR-0298) — kept with the run, not only in the live log.
       ...(sourceWarnings.length ? { warnings: sourceWarnings } : {}),
     };
     mark(`Mentés az adatbázisba — ${leads.length} szereplő…`);

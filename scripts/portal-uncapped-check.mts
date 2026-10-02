@@ -8,7 +8,7 @@
  *      → pontosan N Brave-hívás, `0` → egy sem (a backfill így fut).
  *   3. A nem kontaktálható lead (isLead=false) nem olvasódik, és minden olvasott lead `portalLookupAt`
  *      jelet kap (üres eredménnyel is — a backfill erre folytat).
- *   4. A `challenge_protected` host (booking.com, ADR-XXXX) adatlapja nem olvasódik — a mellette álló
+ *   4. A `challenge_protected` host (booking.com, ADR-0298) adatlapja nem olvasódik — a mellette álló
  *      nyitott adatlap igen.
  *
  * Futtatás: npx tsx scripts/portal-uncapped-check.mts
@@ -79,7 +79,7 @@ await enrichPortal(Array.from({ length: 12 }, (_, i) => lead(200 + i)), region, 
 check(searches === 5, `maxSearchLeads: 5 → ${searches} fizetős keresés (elvárt: 5)`);
 check(pageHits.size === 12, `a kereten kívüli leadek ismert adatlapja is olvasva (${pageHits.size}/12)`);
 
-// 4: a challenge_protected host (booking.com, ADR-XXXX) is never fetched — its AWS WAF page
+// 4: a challenge_protected host (booking.com, ADR-0298) is never fetched — its AWS WAF page
 //    carries no data, so reading it only burned the run's time (~426 URLs a full pass).
 pageHits.clear();
 const walled = {

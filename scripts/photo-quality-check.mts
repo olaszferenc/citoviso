@@ -290,11 +290,11 @@ check(
     hovamenjek?.largestPhotoUrl?.(
       "https://hovamenjek.hu/upload/places/2360_x/187x187/x.jpg",
     ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/x.jpg" &&
-    // a stored `main` URL (pre-ADR-XXXX reads) upgrades too — main is 404 for numbered files
+    // a stored `main` URL (pre-ADR-0298 reads) upgrades too — main is 404 for numbered files
     hovamenjek?.largestPhotoUrl?.(
       "https://hovamenjek.hu/upload/places/2360_x/main/balatonfoldvar-10.jpg",
     ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/balatonfoldvar-10.jpg",
-  "a méret-szegmens a legnagyobb derivatívára (fullHd, ADR-XXXX) cserélődik",
+  "a méret-szegmens a legnagyobb derivatívára (fullHd, ADR-0298) cserélődik",
 );
 check(
   "hovamenjek.largestPhotoUrl: idegen alakra NO-OP (nem gyárt 404-et)",

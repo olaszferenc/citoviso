@@ -1,4 +1,4 @@
-## ADR-XXXX — Nincs költség-plafon a scrape-ben: a Details- és a bejárás-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
+## ADR-0298 — Nincs költség-plafon a scrape-ben: a Details- és a bejárás-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (SUB „F rész”, koordinátor: CIT „Places API 600 $” fő session; brief:
 `~/rc-briefs/places-f-nincs-cap-es-portal-gyorsitas.md`) · **Kapcsolódó:** ADR-0294 (mellékleletek a/b), ADR-0295 ③

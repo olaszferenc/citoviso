@@ -1,7 +1,7 @@
 # 2026-10-02 — Places F (SUB): nincs költség-cap, booking.com kihagyva, hovamenjek fullHd
 
 **Brief:** `~/rc-briefs/places-f-nincs-cap-es-portal-gyorsitas.md` · koordinátor: CIT „Places API 600 $” (`~/wt/citddb048b5`)
-· döntés: ADR-XXXX (`_planning/decisions/XXXX-nincs-koltseg-plafon-a-scrape-ben.md`).
+· döntés: ADR-0298 (`_planning/decisions/XXXX-nincs-koltseg-plafon-a-scrape-ben.md`).
 
 ## Elvégezve
 1. **Cap-felirat** (`src/console/views.ts`, KB `console-scrape` két helyen, `screen.png` + `runs.png` újragyártva

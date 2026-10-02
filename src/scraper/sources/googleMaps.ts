@@ -84,7 +84,7 @@ const TEXT_QUERIES: Record<Industry, string[]> = {
 // show for one query, so the tile must be split and asked again in quarters.
 const PAGE_SIZE = 20;
 const QUERY_RESULT_CEILING = 60;
-/** Per-run WARNING line on the discovery traversal — NOT a cap (ADR-XXXX, owner
+/** Per-run WARNING line on the discovery traversal — NOT a cap (ADR-0298, owner
  *  2026-10-02: "Saját magunkat korlátozzuk be"; the calls are the free IDs-only
  *  SKU anyway). The walk always finishes — its depth is bounded by MIN_TILE_DEG —
  *  and crossing the line is LOUD in the log and in the run's stats.
@@ -99,7 +99,7 @@ const DISCOVERY_WARN_CALLS = Number(
  *  every new place still gets its Details call; crossing the line is LOUD in the
  *  log and in the run's stats. Sized above the largest measured run (2026-09-27/28:
  *  2 589 new leads over two runs); at $20/1000 the line sits at ~$80/run.
- *  PLACES_DETAILS_MAX_CALLS is the pre-ADR-XXXX name, still honoured. */
+ *  PLACES_DETAILS_MAX_CALLS is the pre-ADR-0298 name, still honoured. */
 const DETAILS_WARN_CALLS = Number(
   process.env.PLACES_DETAILS_WARN_CALLS ?? process.env.PLACES_DETAILS_MAX_CALLS ?? 4000,
 );
@@ -691,7 +691,7 @@ type Bbox = readonly [number, number, number, number]; // [S, W, N, E]
  * Traversal: every keyword runs against the region box; any (tile × keyword) query
  * that returns the 60-result ceiling is SATURATED — the area holds more than the
  * API will show for one query — so the tile is quartered and asked again, down to
- * ~2 km tiles. Results merge on place id. There is no call cap (ADR-XXXX) — a cap
+ * ~2 km tiles. Results merge on place id. There is no call cap (ADR-0298) — a cap
  * would cut coverage, which is this same bug in a new suit; over the warning line
  * the run says so, loudly.
  *
@@ -802,7 +802,7 @@ export class GoogleMapsSource implements LeadSource {
       if (k) byId.set(id, k);
       else fresh.push(id);
     }
-    // No cap (ADR-XXXX): every new place gets its Details call. Over the warning
+    // No cap (ADR-0298): every new place gets its Details call. Over the warning
     // line the run says so up front — the calls are known before they are made.
     const detailIds = fresh;
     if (detailIds.length > DETAILS_WARN_CALLS) {

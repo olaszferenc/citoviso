@@ -113,7 +113,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
     // /upload/places/<placeId>/<SIZE>/<file> — the grid serves galleryMiddle (≤483px)
     // and gallery (80px); the lightbox's data-src names `fullHd` (1080px on the long
     // edge), served for EVERY gallery image. Swap the size segment to `fullHd`; a URL
-    // that does not fit the shape is returned untouched. (ADR-XXXX, measured
+    // that does not fit the shape is returned untouched. (ADR-0298, measured
     // 2026-10-02: the earlier target `main` (~574px) exists for the NAMED files only —
     // 151 of 321 probes on 9 listings were 404s, 140.7 s of the host's 149 s request
     // time; `fullHd` answered 206 for named and numbered files alike in ~0.2 s.)
@@ -182,7 +182,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
       "AWS WAF-kihívás fogadja a gépi klienst (HTTP 202, ~4 KB 'challenge' oldal, adat " +
       "nélkül) — mérve 2026-10-01: 6/6 minta, 2026-10-02: 2/2. Teljes körben ~426 jelölt-URL " +
       "~10 perc haszontalan olvasás volt (ADR-0294 melléklet a). NEM kerüljük meg; nincs " +
-      "nyílt iker-domain. A jogtiszta út a Booking partner-API (tulaj-döntés, ADR-XXXX).",
+      "nyílt iker-domain. A jogtiszta út a Booking partner-API (tulaj-döntés, ADR-0298).",
   },
   {
     id: "kali_hu",

@@ -38,7 +38,7 @@ const LIMIT = limitArg > 0 ? Number(process.argv[limitArg + 1]) : Number.POSITIV
 /** Leads per save point — a crash loses at most one batch of reads. */
 const BATCH = 100;
 /**
- * Wall seconds per lead, measured 2026-10-02 (ADR-XXXX): 40 random prod leads read for real at the
+ * Wall seconds per lead, measured 2026-10-02 (ADR-0298): 40 random prod leads read for real at the
  * pass' concurrency 4, after booking.com went challenge_protected and hovamenjek moved to fullHd —
  * 49.3 s / 49.5 s (before: 98.2 s / 63.8 s). The 2026-10-01 model (78.5 min for 1 057) did not
  * reproduce with the old code either (1.6–2.5 s/lead).

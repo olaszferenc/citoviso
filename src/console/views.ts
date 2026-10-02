@@ -7645,7 +7645,7 @@ export function scrapePage(
                 ? ` · ${T(lang, "életjel: {time}", { time: consoleTime(r.heartbeatAt, lang) })}`
                 : ""
             }`
-          : // A finished run's loud warnings (ADR-XXXX: e.g. paid Details calls over
+          : // A finished run's loud warnings (ADR-0298: e.g. paid Details calls over
             // the warning line) stay readable here after the live log is gone.
             [r.error, ...(Array.isArray(s.warnings) ? s.warnings.map((w) => `⚠️ ${w}`) : [])]
               .filter(Boolean)

@@ -17,7 +17,7 @@
 //      várnia és folytatnia kell, nem meghalnia; a lefedettség így is ≥95%
 //   ④ NAPI KVÓTA: „per day" 429-re viszont AZONNAL fel kell adni (a várakozás ott
 //      hazugság lenne) — a hiba osztályozva jut el a hívóig (scope: day)
-//   ⑤ NINCS BEJÁRÁS-PLAFON (ADR-XXXX, tulaj 2026-10-02): a figyelmeztetési szint
+//   ⑤ NINCS BEJÁRÁS-PLAFON (ADR-0298, tulaj 2026-10-02): a figyelmeztetési szint
 //      (itt 5 hívás) fölött a bejárás VÉGIGMEGY (lefedettség ≥95%), és HANGOS
 //      figyelmeztetést ad (`warnings()` → a futás statja) — a plafon a lefedettséget
 //      vágná, ami ugyanez a hiba lenne új ruhában
@@ -26,7 +26,7 @@
 //      Pro/Enterprise mező a maszkban minden lapot fizetőssé tesz (35 $/1000)
 //   ⑦ FIZETŐS ADATLAP CSAK AZ ÚJ HELYRE: a DB-ben már ismert place id 0 Place
 //      Details hívás; egy teljesen ismert terület újra-bejárása 0 fizetős hívás
-//   ⑧ NINCS CAP (ADR-XXXX, tulaj 2026-10-02): a Details-figyelmeztetési szint (itt 5)
+//   ⑧ NINCS CAP (ADR-0298, tulaj 2026-10-02): a Details-figyelmeztetési szint (itt 5)
 //      fölött is MINDEN új hely megkapja az adatlapját, a forrás pedig HANGOS
 //      figyelmeztetést ad (`warnings()` → a futás statja); a szint alatt csendes
 //
@@ -35,7 +35,7 @@
 //     ⛔ NEGATÍV FUTÁS: a mock-világ csak az ELSŐ keresésre válaszol (= a régi,
 //     egy-hívásos viselkedés) → a lefedettség-mérésnek PIROSRA kell váltania. Ha
 //     zölden marad, az őr nem a szabályt méri. (Korábban a hívás-keretet szorította
-//     1-re; keret ma nincs, ADR-XXXX.)
+//     1-re; keret ma nincs, ADR-0298.)
 //
 // ⚠️ Az env-t a MODUL BETÖLTÉSE ELŐTT kell beállítani (a knobok import-időben
 // olvasódnak) → dinamikus import (reference_env_assignment_loses_to_esm_imports).
