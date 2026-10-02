@@ -328,6 +328,16 @@ if [ -f scripts/paid-module-anchor-check.mts ] && \
   echo "[pre-commit] paid-module-anchor (megvett modul: horog az élő lapon VAGY „kifizette, de üres”)…"
   npx tsx scripts/paid-module-anchor-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADM-1 (M5, Elek élesi tesztje 2026-10-02; kontraktus: design-refs/console/modules-cart-dependency, tulaj „3. B”)
+# — ha a „Kosárba teszem” más fizetős modult is behoz, a tulaj a kattintáskor a kártyán ÉS a kosárban
+# megtudja, mit, miért, mennyiért. Mérve: 742 Ft helyett 1 627 Ft, három lapos kosársor, indoklás nélkül.
+# A valódi modulesSection()-t kattintja végig böngészőben (390 + 1280 px); önteszt: a javítás előtti
+# adminViews.ts-en bukik. ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/admin-cart-dependency-check.mts ] && \
+   changed_files | grep -qE '^src/server/adminViews\.ts$|^src/modules\.ts$|^public/assets/ui/citui-admin\.css$|^assets/runtime/cit-coupon\.cjs$|^scripts/admin-cart-dependency-check\.mts$'; then
+  echo "[pre-commit] admin-cart-dependency (a kosár kimondja, mit miért hozott be)…"
+  npx tsx scripts/admin-cart-dependency-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ADM-2 (M5, Elek élesi tesztje 2026-10-02) — a Modulok-bolt kedvezmény-kártyája az ajánlatot az EGY
 # nevén mondja (offerLabel, ADR-0303 ②): egy 98%-os kampány „−98% kupon — Az induló előfizetéséért
 # kapta” volt, és a valódi 25%-os üdvözlő kupon eltűnt a kártyáról. A valódi modulesSection()-t

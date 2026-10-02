@@ -2244,7 +2244,12 @@ export function modulesSection(
               ? `<span class="adm-shop__coupon">−${coupon.percent}%</span>`
               : "") +
             thumb +
-            `<div class="adm-shop__body"><h3>${esc(T(lang, m.label))}</h3>${desc}` +
+            // ⭐ APPROVED CONTRACT (modules-cart-dependency, owner „3. B”, 2026-10-02): the shop
+            // card is where buying happens since the 09-28 cart, so the module-dependency
+            // pill + rail live here too (markDeps() fills them from data-modrow), and the
+            // card that BROUGHT others in says so at the click (paintNote()).
+            `<div class="adm-shop__body"><h3>${esc(T(lang, m.label))}` +
+            `<span class="dep-tag">${ic("link", 14)}<span>${T(lang, "együtt jár")}</span></span></h3>${desc}` +
             `<div class="adm-shop__foot">${shopPriceChip(m)}` +
             look +
             // ADR-0119 ⑥: the shop is CLOSED while the site is suspended for
@@ -2257,7 +2262,10 @@ export function modulesSection(
               : `<label class="citui-btn citui-btn--primary adm-shop__add">${cb(m, false)}` +
                 `<span class="adm-when-off">${T(lang, "Kosárba teszem")}</span>` +
                 `<span class="adm-when-on">${T(lang, "Kiveszem a kosárból")}</span></label>`) +
-            `</div></div></article>`
+            `</div>` +
+            `<span class="dep-rail">${ic("link", 14)}<span data-dep-why></span></span>` +
+            `<div class="adm-shop__notice" data-dep-notice hidden></div>` +
+            `</div></article>`
           );
         })
         .join("");
@@ -2545,11 +2553,23 @@ export function modulesSection(
     `if(pill){pill.hidden=!any;pillN.textContent=String(add.length+rem.length);` +
     `pillT.textContent=payNow>0?PILLPAY.replace("\\u007f",HUF(payNow)):"${T(lang, "Kosár")}"}` +
     `if(!any)cartClose();` +
-    `rows.innerHTML=add.map(function(c){var p=+c.dataset.price;` +
+    // ⭐ modules-cart-dependency ②: the cart GROUPS — a driver line, its brought-in
+    // modules as indented „ehhez jár” lines (each quoting ITS OWN edge's catalogue
+    // sentence), then one summary sentence with the monthly and the now figure.
+    // Every line carries data-line-now; they add up to „Fizetendő most” exactly.
+    `var lineOf=function(c,via){var p=+c.dataset.price;` +
     `var what=c.dataset.rejoin?"${T(lang, "visszakapcsolás — ki van fizetve {date}-ig", { date: esc(renewDateS) })}"` +
     `:p>0?"${T(lang, "fizetés most:")} <b>"+HUF(fcLine(c))+"</b> ("+FCM+" ${T(lang, "hónap a fordulónapig")})"` +
     `:"${T(lang, "azonnal él — díjmentes")}";` +
-    `return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>'}).join("")+` +
+    `var na=' data-line-now="'+(c.dataset.rejoin?0:fcLine(c))+'"';` +
+    `if(!via)return '<div class="adm-planbar__row"'+na+'><span><span class="adm-planbar__tag adm-planbar__tag--add">+ ${T(lang, "bekapcsol")}</span> · '+c.dataset.label+'</span><span>'+what+'</span></div>';` +
+    `var r=((REQ||{})[via.value]||[]).filter(function(x){return x.id===c.value})[0];` +
+    `return '<div class="adm-planbar__row adm-planbar__row--sub"'+na+'><span>${T(lang, "ehhez jár:")} <b>'+c.dataset.label+'</b>` +
+    `<small class="adm-planbar__why">'+via.dataset.label+' → '+c.dataset.label+': '+(r?r.why:"")+'</small></span>` +
+    // The driver line already says what the first charge covers; a sub-line repeating
+    // „fizetés most: … (1 hónap a fordulónapig)” squeezed the desktop column (measured).
+    `<span class="adm-planbar__amt"><b>'+(c.dataset.rejoin?"—":HUF(fcLine(c)))+'</b><small>'+HUF(p)+'${T(lang, "/hó")}</small></span></div>'};` +
+    `rows.innerHTML=groupRows(add,lineOf)+` +
     `rem.map(function(c){return '<div class="adm-planbar__row"><span><span class="adm-planbar__tag adm-planbar__tag--del">− ${T(lang, "lemond")}</span> · '+c.dataset.label+'</span><span>${T(lang, "{date}-ig aktív maradna", { date: esc(renewDateS) })}</span></div>'}).join("");` +
     `if(paybox){paybox.hidden=payNow<=0;if(paysum)paysum.textContent=HUF(payNow)}` +
     // modules-cart ④: the card choice lives on the confirm card now, so the cart's
@@ -2586,6 +2606,37 @@ export function modulesSection(
     // ⛔ A szerver-oldali kapu (applyModuleChange) ettől még áll: ez az elsődleges
     // ÚT, nem az egyetlen védelem.
     `var REQ={};cbs.forEach(function(c){try{REQ[c.value]=JSON.parse(c.dataset.requires||"[]")}catch(e){REQ[c.value]=[]}});` +
+    // ── modules-cart-dependency (owner „3. B”, 2026-10-02 — Elek ADM-1) ──────────
+    `var SUMG=${JSON.stringify(T(lang, "{list} — együtt +{monthly}/hó, most {now}.", { list: "\u0001", monthly: "\u0002", now: "\u0003" }))};` +
+    `var NT1=${JSON.stringify(T(lang, "{module}: ehhez {list} modul is kell — ez is a kosárba került. Együtt most {now}, a havidíj {monthly}.", { module: "\u0001", list: "\u0002", now: "\u0003", monthly: "\u0004" }))};` +
+    `var NT2=${JSON.stringify(T(lang, "{module}: ehhez {list} modul is kell — ezek is a kosárba kerültek. Együtt most {now}, a havidíj {monthly}.", { module: "\u0001", list: "\u0002", now: "\u0003", monthly: "\u0004" }))};` +
+    `var AND=${JSON.stringify(" " + T(lang, "és") + " ")},WHYL=${JSON.stringify(T(lang, "Mit miért? — a kosárban"))};` +
+    // The basket in groups: a root is the owner's own pick (or anything nothing in the
+    // basket drives); under it, recursively, what it brought in.
+    `function groupRows(add,lineOf){var R=REQ||{},done={},html="";` +
+    `function inAdd(id){return add.some(function(c){return c.value===id})}` +
+    `function walk(c,via,g){done[c.value]=1;g.push(c);html+=lineOf(c,via);` +
+    `(R[c.value]||[]).forEach(function(r){var b=cbFor(r.id);if(b&&inAdd(r.id)&&!done[r.id]&&b.dataset.self!=="1")walk(b,c,g)})}` +
+    `function root(c){var g=[];walk(c,null,g);if(g.length<2)return;var mon=0,now=0;` +
+    `g.forEach(function(x){mon+=+x.dataset.price;now+=x.dataset.rejoin?0:fcLine(x)});` +
+    `html+='<div class="adm-planbar__sum">'+SUMG.replace("\u0001",g.map(function(x){return x.dataset.label}).join(" + "))` +
+    `.replace("\u0002",HUF(mon)).replace("\u0003",HUF(now))+'</div>'}` +
+    `add.filter(function(c){return c.dataset.self==="1"||!add.some(function(x){return x!==c&&(R[x.value]||[]).some(function(r){return r.id===c.value})})})` +
+    `.forEach(function(c){if(!done[c.value])root(c)});` +
+    `add.forEach(function(c){if(!done[c.value])root(c)});return html}` +
+    // The click notice (B): on the card that brought others in, at the moment of the click.
+    `var NOTE=null;` +
+    `function paintNote(){[].forEach.call(document.querySelectorAll("[data-dep-notice]"),function(n){n.hidden=true;n.innerHTML=""});` +
+    `if(!NOTE)return;var d=cbFor(NOTE.id);if(!d||!d.checked){NOTE=null;return}` +
+    `var br=NOTE.br.filter(function(id){var b=cbFor(id);return b&&b.checked&&b.dataset.committed!=="1"});if(!br.length)return;` +
+    `var now=fcLine(d),mon=+d.dataset.price;br.forEach(function(id){var b=cbFor(id);now+=fcLine(b);mon+=+b.dataset.price});` +
+    `var row=d.closest("[data-modrow]"),n=row&&row.querySelector("[data-dep-notice]");if(!n)return;` +
+    `n.innerHTML=(br.length>1?NT2:NT1).replace("\u0001","<b>"+labOf(NOTE.id)+"</b>")` +
+    `.replace("\u0002",br.map(function(id){return art(id)+labOf(id)}).join(AND))` +
+    `.replace("\u0003","<b>"+HUF(now)+"</b>").replace("\u0004","<b>+"+HUF(mon)+"</b>")` +
+    `+'<button type="button" class="adm-shop__why" data-cart-open>'+WHYL+'</button>';n.hidden=false}` +
+    `document.addEventListener("click",function(e){var t=e.target&&e.target.closest?e.target.closest("[data-cart-open]"):null;` +
+    `if(!t)return;e.preventDefault();cartOpen();if(window.innerWidth>=900&&bar.scrollIntoView)bar.scrollIntoView({block:"nearest"})});` +
     `function cbFor(id){return f.querySelector('input[name="module"][value="'+id+'"][data-committed]')}` +
     `function labOf(id){var b=cbFor(id);return b?b.dataset.label:id}` +
     // A zárvány: fix-pont, hogy a lánc (booking → pricing → rooms) végig lefusson.
@@ -2613,8 +2664,9 @@ export function modulesSection(
     `w.textContent=labOf(d)+${JSON.stringify(" — " + T(lang, "ehhez jár.") + " ")}+(r?r.why:"")}})}` +
     `cbs.forEach(function(c){c.addEventListener("change",function(){` +
     `if(c.checked){c.dataset.self="1";` +
-    `closure([c.value]).forEach(function(id){var b=cbFor(id);if(b&&!b.checked){b.checked=true;b.dataset.self="0"}});` +
-    `}else{var bl=blockers(c.value);` +
+    `var br=[];closure([c.value]).forEach(function(id){var b=cbFor(id);if(b&&!b.checked){b.checked=true;b.dataset.self="0";br.push(id)}});` +
+    `if(br.length)NOTE={id:c.value,br:br};` +
+    `}else{if(NOTE&&NOTE.id===c.value)NOTE=null;var bl=blockers(c.value);` +
     `if(bl.length){c.checked=true;depOpen(c.value,removalClosure(c.value));return}` +
     // Visszavesszük, amit ez hozott be: KEEP = a kifizetett + a kézzel pipált
     // modulok zárványa. Ami ezen kívül esik, azért a tulaj nem fizethet.
@@ -2649,7 +2701,7 @@ export function modulesSection(
     `dm.querySelector("[data-dep-all]").addEventListener("click",function(){` +
     `if(!depGone)return;depGone.forEach(function(id){var b=cbFor(id);if(b){b.checked=false;b.dataset.self="0"}});` +
     `depClose();sync()})}` +
-    `var _sync0=sync;sync=function(){_sync0();markDeps()};` +
+    `var _sync0=sync;sync=function(){_sync0();markDeps();paintNote()};` +
     `cbs.forEach(function(c){c.addEventListener("change",sync)});` +
     `[].forEach.call(f.querySelectorAll('input[name="card"]'),function(r){r.addEventListener("change",fcPaint)});` +
     `var rst=document.getElementById("adm-plan-reset");if(rst)rst.addEventListener("click",function(){` +

@@ -38,6 +38,10 @@ csak nem ő az elsődleges út.
   („ehhez jár: …"), majd egy összegző mondat: `X + Y + Z — együtt 2 170 Ft / hó.`
 - ⛔ **Az indoklás CSAK EGYSZER hangzik el** (a sorban). A sávban NEM ismétlődik — a C állítása
   pont az, hogy nem mondja kétszer ugyanazt egy képernyőn.
+  ⚠️ **FELÜLÍRVA a tulaj Modulok fülén (2026-10-02, tulaj: „3. B”):** a 09-28-i kosár óta a vásárlás a
+  kirakat-kártyán történik és a tulaj a kosarat nézi, ezért ott az indoklás a behozott kártyán ÉS a kosárban
+  is áll, a kattintott kártyán pedig azonnali tájékoztatás jelenik meg. Kontraktus:
+  `assets/design-refs/console/modules-cart-dependency/` (Elek ADM-1). A lead-oldali konfigurátorra ez a pont változatlan.
 
 ### 3. Az indoklás a KATALÓGUSBÓL jön, egy forrásból
 

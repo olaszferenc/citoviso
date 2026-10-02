@@ -1165,6 +1165,28 @@ summary.adm-kb-ghead:hover{color:var(--citui-ink)}
   letter-spacing:.03em;color:var(--citui-accent-ink);background:var(--citui-cyan-400);
   border-radius:var(--citui-radius-pill);padding:5px 10px}
 .adm-mine__row.is-dep .adm-mine__t .dep-tag{display:inline-flex}
+/* modules-cart-dependency (owner „3. B”, 2026-10-02): the SHOP card carries the same
+   pill + rail (buying happens here since the 09-28 cart), plus the click notice. */
+.adm-shop__body h3 .dep-tag{display:none;align-items:center;gap:5px;margin-left:7px;
+  vertical-align:1px;font:700 10px/1 var(--citui-font-text);text-transform:uppercase;
+  letter-spacing:.03em;color:var(--citui-accent-ink);background:var(--citui-cyan-400);
+  border-radius:var(--citui-radius-pill);padding:4px 9px}
+.adm-shop__card.is-dep h3 .dep-tag{display:inline-flex}
+.adm-shop__card .dep-rail{margin:0}
+.adm-shop__card.is-dep .dep-rail{display:flex}
+.adm-shop__notice{padding:9px 12px;border-left:3px solid var(--citui-cyan-500);
+  border-radius:0 var(--citui-radius-sm) var(--citui-radius-sm) 0;
+  background:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent);
+  font-size:11px;line-height:1.5;color:var(--citui-ink)}
+.adm-shop__notice[hidden]{display:none}
+.adm-shop__why{display:block;margin-top:5px;padding:0;border:0;background:none;cursor:pointer;
+  font:700 11px/1.4 var(--citui-font-text);color:var(--citui-navy-700);text-decoration:underline}
+.adm-planbar__row--sub{margin-left:12px;padding-left:9px;border-left:3px solid var(--citui-cyan-400)}
+.adm-planbar__why{display:block;font-size:10px;line-height:1.4;opacity:.8;margin-top:2px}
+.adm-planbar__amt{flex:0 0 auto;text-align:right;white-space:nowrap}
+.adm-planbar__amt small{display:block;font-size:10px;opacity:.75}
+.adm-planbar__sum{margin:6px 0 2px;padding:7px 9px;border-radius:8px;font-size:11px;line-height:1.45;
+  background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent)}
 .adm-mine__row:last-child{border-bottom:0}
 .adm-mine__row.is-dirty{background:color-mix(in srgb,var(--citui-cyan-500) 7%,transparent);
   border-radius:var(--citui-radius-sm)}

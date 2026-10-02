@@ -89,11 +89,20 @@ szokásos módon működik.
 Van modul, amelyik csak egy másikkal együtt tud működni — például mert annak az adataira épül.
 Ilyenkor a lap ezt Ön helyett kezeli, és mindig ki is mondja, mit miért tett:
 
-- **Bekapcsoláskor a szükséges társ magától a kosarába kerül.** A sora megjelölve látszik: a
+- **Bekapcsoláskor a szükséges társ magától a kosarába kerül.** A sora (vagy a még meg nem vett modulnál a kártyája) megjelölve látszik: a
   neve mellett egy **„együtt jár”** címke áll, alatta pedig egy magyarázó sor megnevezi,
   melyik modul hozta magával („… — ehhez jár.”), és hogy miért van rá szükség. A társ modul
   díja ugyanúgy számít: a kosár és a fejléc összege azonnal az együttes árat
   mutatja — még a véglegesítés előtt, ahogy minden más kapcsolásnál.
+- **A kattintás pillanatában szólunk.** Ha a **„Kosárba teszem”** gomb más fizetős modult is
+  magával hoz, a kártyán, amire kattintott, azonnal megjelenik egy rövid tájékoztatás: melyik
+  modulok kerültek még a kosárba, mennyit fizet most együtt, és mennyivel nő a havidíj. Alatta a
+  **„Mit miért? — a kosárban”** link kinyitja a kosarat (telefonon a kosár addig csukva van).
+- **A kosár csoportosítva mutatja.** A saját választása sora alatt behúzva állnak az **„ehhez
+  jár:”** sorok — mindegyik a saját összegével, a havi árával és azzal a mondattal, hogy miért kell.
+  Alattuk egy összegző mondat mondja ki a teljes hatást: mennyivel nő együtt a havidíj, és mennyit
+  fizet most. (Például az „Online foglalás” mellé az „Árak, szezonok” kell, ahhoz pedig több szoba esetén a
+  „Szobák, apartmanok”.)
 - **Ha visszaveszi, amit bekapcsolt, a magával hozott társ is visszakerül** — azért a
   modulért, ami csak a másikat szolgálta ki, nem marad fizetnivalója. Amit viszont Ön maga is
   bepipált, vagy ami már kifizetett modulja, az természetesen a helyén marad.
