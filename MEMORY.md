@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB M2 cit93d29d1b: Elek fizetés/számla/belépés/konzol, ADR-XXXX) — LANDOLVA, élesítés a koordinátoré
+## Párhuzamos szál (2026-10-02 — SUB M2 cit93d29d1b: Elek fizetés/számla/belépés/konzol, ADR-0303) — LANDOLVA, élesítés a koordinátoré
 
 Tulaj-jóváhagyás a koordinátoron át (terv: `assets/design-refs/console/elek-m2/`). ① **F-2** Barion „Canceled” → saját
 `cancelled` állapot + „Megszakította a fizetést” lap, minden pénz nélküli zárás naplóz. ② **L-2/F-3** az ajánlat neve

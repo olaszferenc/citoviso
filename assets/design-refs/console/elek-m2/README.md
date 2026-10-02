@@ -8,7 +8,7 @@ a kampány neve az **A** változat, a belépésnél a **B** változat.
 - Terv: `plan.html` (önhordó, kattintható, öt fül, mobil/asztali váltó; a mezők és gombok működnek).
 - A terv képei: `plan-<fül>-mobil.png`, `plan-<fül>-asztali.png` (f2 · l2 · f1 · t3 · k1).
 - A leszállított felület: `shipped-*.png` (a valódi, exportált nézet-függvényekből renderelve, a valódi stíluslappal).
-- Forrás-lelet: Elek élesi jelentése, 2026-10-01 (F-2, L-2, F-3, F-1, T-4, T-3, K-1). ADR: **ADR-XXXX**.
+- Forrás-lelet: Elek élesi jelentése, 2026-10-01 (F-2, L-2, F-3, F-1, T-4, T-3, K-1). ADR: **ADR-0303**.
 
 ---
 

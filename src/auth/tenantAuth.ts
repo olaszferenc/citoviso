@@ -97,7 +97,7 @@ export function safeAdminNext(raw: string | null | undefined): string | null {
 }
 
 /**
- * Elek T-3 (ADR-XXXX): the cookie carries its ISSUE TIME, signed with the id —
+ * Elek T-3 (ADR-0303): the cookie carries its ISSUE TIME, signed with the id —
  * `<id>.<iat ms>.<hmac(id.iat)>`. A password set (tenant_user.password_set_at)
  * after `iat` ends that session: setting a password logs out every older one.
  */

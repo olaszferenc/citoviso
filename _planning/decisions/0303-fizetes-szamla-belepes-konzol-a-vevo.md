@@ -1,4 +1,4 @@
-## ADR-XXXX — Fizetés, számla, belépés, konzol: a vevő visszalépése nem elutasítás, egy ajánlat egy név, a számlacím a vevőé, jelszó nem jár levélben (Elek M2) (2026-10-02)
+## ADR-0303 — Fizetés, számla, belépés, konzol: a vevő visszalépése nem elutasítás, egy ajánlat egy név, a számlacím a vevőé, jelszó nem jár levélben (Elek M2) (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (tulaj, a koordinátoron át: „egyetértek”; kampány-név = A, belépés = B) ·
 **Forrás:** Elek élesi teljes tölcsére (2026-10-01): F-2, L-2, F-3, F-1, T-4, T-3, K-1 · **Terv:**

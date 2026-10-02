@@ -1,4 +1,4 @@
-# 2026-10-02 — Elek M2: fizetés, számla, belépés, konzol (ADR-XXXX)
+# 2026-10-02 — Elek M2: fizetés, számla, belépés, konzol (ADR-0303)
 
 **Szál:** SUB `cit93d29d1b` · brief `~/rc-briefs/javitas-elek-0930/m2-fizetes-szamla-konzol.md` · koordinátor: CIT
 „élesi teszt” (`~/wt/cit87d3f275`). Élesítés a koordinátoré, a többivel egyben.

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-fizetes-szamla-belepes-konzol-elek-m2.md) — Fizetés, számla, belépés, konzol: a vevő visszalépése nem elutasítás, egy ajánlat egy név, a számlacím a vevőé, jelszó nem jár levélben (Elek M2) (2026-10-02)
+- [ADR-0303](decisions/0303-fizetes-szamla-belepes-konzol-a-vevo.md) — Fizetés, számla, belépés, konzol: a vevő visszalépése nem elutasítás, egy ajánlat egy név, a számlacím a vevőé, jelszó nem jár levélben (Elek M2) (2026-10-02)
 - [ADR-0302](decisions/0302-a-sablon-szovege-egy-valodi-szallas-honlapjae.md) — A sablon szövege egy valódi szállás honlapjáé: nincs „játék-szöveg”, ál-jelölés és kártyánkénti átlag-csillag (2026-10-02)
 - [ADR-0301](decisions/0301-a-napi-google-riport-valos-szamlat-mutat-a.md) — A napi Google-riport VALÓS számlát mutat a Cloud Billing BigQuery-exportjából; amíg a nap nem teljes, a becslés vezet és kimondja, miért (2026-10-02)
 - [ADR-0300](decisions/0300-szallas-szoveg-ujsag-kinezetben-datum-nelkuli.md) — Szállás-szöveg újság-kinézetben, dátum nélküli program-minta, csak beszélő fotó-felirat, a tényhűség-jelvény kinyitja a listát (2026-10-02)

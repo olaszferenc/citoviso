@@ -1,4 +1,4 @@
--- 0085 one-time password-setting links (Elek T-3, owner-approved 2026-10-02, ADR-XXXX).
+-- 0085 one-time password-setting links (Elek T-3, owner-approved 2026-10-02, ADR-0303).
 --
 -- The credentials mail used to carry the password in plain text. Now it carries a
 -- single-use link (login_token, kept since 0011/0012 "for a future self-serve reset";

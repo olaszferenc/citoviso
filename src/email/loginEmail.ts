@@ -1,7 +1,7 @@
 // Credentials email (ADR-0023) — tells the owner their login name and hands them a
 // one-time link to SET their own password. Clear, single call to action.
 //
-// ⛔ Elek T-3 (owner-approved 2026-10-02, ADR-XXXX): NO PASSWORD IN THE MAIL. The
+// ⛔ Elek T-3 (owner-approved 2026-10-02, ADR-0303): NO PASSWORD IN THE MAIL. The
 // old letter printed it in plain text ("Jelszó: …") and said "if you forget it,
 // reply to this mail" — every mailbox and every forward to the accountant held a
 // working password. Now the letter carries a link: single use, 7 days, and

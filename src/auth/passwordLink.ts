@@ -1,5 +1,5 @@
 // One-time password-setting links for the tenant owner (Elek T-3, owner-approved
-// 2026-10-02, variant B; ADR-XXXX).
+// 2026-10-02, variant B; ADR-0303).
 //
 // WHY. The credentials mail carried the password in plain text ("Jelszó: …") and
 // said "if you forget it, reply to this mail" — no self-service reset at all, and a

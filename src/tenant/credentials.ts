@@ -1,7 +1,7 @@
 // Issue / reset a tenant login (ADR-0023). The login identifier is a stable USERNAME
 // we generate from the business name; the email is a changeable communication address.
 //
-// ⛔ Elek T-3 (owner-approved 2026-10-02, ADR-XXXX): the owner SETS their password
+// ⛔ Elek T-3 (owner-approved 2026-10-02, ADR-0303): the owner SETS their password
 // through a one-time link; the mail carries NO password. The hash stored here is a
 // random placeholder nobody is ever told (a dev demo may ask for a memorable one it
 // prints itself). A password the owner has set (password_set_at) is never overwritten.
