@@ -1,4 +1,4 @@
-// LANDLORD-EYED CRITIC for the cold letter + SMS (owner's ruling 2026-10-02, ADR-XXXX).
+// LANDLORD-EYED CRITIC for the cold letter + SMS (owner's ruling 2026-10-02, ADR-0306).
 //
 // The guest critic (src/generator/guestCritic.ts) reads a mock page as a GUEST would. The
 // cold letter has a different reader: a Hungarian landlord who never asked to hear from us.

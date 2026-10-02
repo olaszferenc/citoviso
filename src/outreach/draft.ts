@@ -337,7 +337,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     // from two drafts. „Mi" is also the truthful voice: the plan is produced by our
     // system, not hand-drawn by the signer (§B.17 binds us about ourselves too), and it
     // matches the SMS channel's „A Citoviso csapata" sign-off (ADR-0112).
-    // Wording: owner's pick B, 2026-10-02 (ADR-XXXX) — guarded by outreach-letter-truth-check.
+    // Wording: owner's pick B, 2026-10-02 (ADR-0306) — guarded by outreach-letter-truth-check.
     p1: offerText(d),
     p2: T(
       d.lang,

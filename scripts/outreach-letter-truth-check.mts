@@ -1,4 +1,4 @@
-// OUTREACH LETTER TRUTH guard — Elek SZ-5 / H-3, owner's rulings 2026-10-02 (ADR-XXXX).
+// OUTREACH LETTER TRUTH guard — Elek SZ-5 / H-3, owner's rulings 2026-10-02 (ADR-0306).
 //
 // WHY THIS EXISTS. The cold letter and its SMS are a FIXED template: per lead only the name,
 // the Google rating and the segment branch change. Every gate before this one judged ONE

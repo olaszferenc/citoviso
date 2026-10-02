@@ -1,4 +1,4 @@
-## ADR-XXXX — A megkereső levél csak a mértet állítja: mérés-alapú szegmens-mondat, 4,0 ★ küszöb, szállásadó-szemű kritikus sablon-változáskor (2026-10-02)
+## ADR-0306 — A megkereső levél csak a mértet állítja: mérés-alapú szegmens-mondat, 4,0 ★ küszöb, szállásadó-szemű kritikus sablon-változáskor (2026-10-02)
 
 **Státusz:** elfogadva (tulaj-döntés a koordinátoron át; SUB, brief `~/rc-briefs/javitas-elek-0930/l1-megkereso-level.md`) ·
 **Lokál, nem élesítve** (§0) · **Kontraktus:** `assets/design-refs/console/outreach-letter-l1/` ·

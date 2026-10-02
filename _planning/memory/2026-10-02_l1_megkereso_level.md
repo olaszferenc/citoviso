@@ -1,7 +1,7 @@
 # L1 — a megkereső levél és SMS valódisága + saját-fotó nyomás kivezetése (2026-10-02)
 
 SUB-szál (koordinátor: CIT „élesi teszt”, `~/wt/cit87d3f275`) · brief: `~/rc-briefs/javitas-elek-0930/l1-megkereso-level.md` ·
-ADR-0305 (saját-fotó nyomás), ADR-XXXX (levél) · kontraktus: `assets/design-refs/console/outreach-letter-l1/`.
+ADR-0305 (saját-fotó nyomás), ADR-0306 (levél) · kontraktus: `assets/design-refs/console/outreach-letter-l1/`.
 
 ## Elvégezve
 - **Saját-fotó nyomás ki** (landolva `3e4eb7ac`): tenant-admin sáv/gomb/teendő, modul-leírás, mock-kérő levél, KB, nyitólap;

@@ -1,4 +1,4 @@
-# Megkereső levél és SMS — valódiság (L1) — kontraktus (ADR-XXXX)
+# Megkereső levél és SMS — valódiság (L1) — kontraktus (ADR-0306)
 
 **Tulajdonosi jóváhagyás:** 2026-10-02, a koordinátoron át: **B változat** (a hibás mondatok javítása + csiszolás),
 **4,0 csillag alatt nincs értékelés-idézet**, a szállásadó-szemű **LLM-kritikus a sablon változásakor** fut.

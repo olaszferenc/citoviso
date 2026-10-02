@@ -1,5 +1,5 @@
 // Run the landlord-eyed critic over every branch of the cold letter + SMS and record the
-// verdict against the template fingerprint (src/outreach/letterCritic.ts, ADR-XXXX).
+// verdict against the template fingerprint (src/outreach/letterCritic.ts, ADR-0306).
 //
 // Usage:
 //   npx tsx scripts/outreach-letter-critic.mts         → status only (no AI call)
