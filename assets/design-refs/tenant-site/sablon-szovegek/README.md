@@ -49,6 +49,7 @@ minden vélemény-kártyára kirajzolta. Az editorial az M3 szál kontraktusa.
 | arch-frames | Képek a portáról · a vélemény-cím = galéria-cím | a galéria saját címe / „Képek” · a vélemények saját címe |
 | tilted-gallery | Ami csak itt van | Szolgáltatások |
 | wordmark-grow · parallax | a galéria címe kétszer | egyszer (lásd KÖT 5) |
+| kompozíciós ág (`primitives.ts`, tulaj 2026-10-02, 2. kör) | Vendégkönyv · Levelek a vendégkönyvből · I., II. … a szolgáltatás-paneleken | Vélemények · Vendégeink írták · (számozás nélkül) |
 | közös minta | „…a saját házirended szerint” · „kisállat-politikád — hogy fogadtok-e” · „Ide gyere” | magázó alak · „Így talál ide” |
 
 A fotó-feliratok és a díszbetű szabálya az M3 szál kontraktusa; ez a kontraktus nem érinti.

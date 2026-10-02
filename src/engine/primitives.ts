@@ -744,15 +744,12 @@ const ROOMS_SUITES_CSS = `  .cit-rooms--suites .cit-suites-head { padding-bottom
   .cit-suite-foot a { color: var(--cit-ink); font-size: .76rem; letter-spacing: .14em;
     text-transform: uppercase; text-decoration: none; border-bottom: 1px solid var(--cit-accent); }`;
 
-/** Numbered RITUAL grid features (the dark-luxury reference treatment): a 1px-gap grid of
- *  numbered panels — the highlights as a considered "menu", not chip cards. */
+/** RITUAL grid features (the dark-luxury reference treatment): a 1px-gap grid of panels — the
+ *  highlights as a considered "menu", not chip cards. No roman numerals: a numbered list of
+ *  services reads as a fake catalogue on a guesthouse page (tulaj, 2026-10-02, ADR-0302). */
 function featuresRituals(d: SiteData, copy?: SectionCopy): string {
-  const roman = ["I.", "II.", "III.", "IV.", "V.", "VI.", "VII.", "VIII.", "IX.", "X.", "XI.", "XII."];
   const items = d.highlights
-    .map(
-      (h, i) =>
-        `<div class="cit-rit"><p class="cit-rit-no">${roman[i] ?? `${i + 1}.`}</p><h3>${esc(h)}</h3></div>`,
-    )
+    .map((h) => `<div class="cit-rit"><h3>${esc(h)}</h3></div>`)
     .join("\n          ");
   return `<section class="cit-features cit-features--rituals">
       <div class="cit-section-inner">
@@ -830,8 +827,6 @@ const FEATURES_RITUALS_CSS = `  .cit-rituals { display: grid; gap: 1px; backgrou
   @media (min-width: 760px) { .cit-rituals { grid-template-columns: repeat(3, 1fr); } }
   .cit-rit { background: var(--cit-bg); padding: 2.2rem 1.9rem; transition: background .3s; }
   .cit-rit:hover { background: var(--cit-surface); }
-  .cit-rit-no { font-family: var(--cit-font-display); color: var(--cit-accent);
-    font-size: .95rem; letter-spacing: .15em; margin: 0 0 .9rem; }
   .cit-rit h3 { font-family: var(--cit-font-display); font-size: 1.25rem; margin: 0; color: var(--cit-ink); }`;
 
 /** Offset portrait gallery (the dark-luxury reference treatment): 3:4 tiles, every second
@@ -944,7 +939,7 @@ function reviewsLetters(d: SiteData, copy?: SectionCopy): string {
     .join("\n          ");
   return `<section class="cit-reviews cit-reviews--letters">
       <div class="cit-section-inner">
-        ${sectionHead("Vendégkönyv", "Levelek a vendégkönyvből", copy)}
+        ${sectionHead("Vélemények", "Vendégeink írták", copy)}
         ${note}
         <div class="cit-letters">
           ${letters}

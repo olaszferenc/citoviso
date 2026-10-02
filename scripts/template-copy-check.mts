@@ -377,13 +377,24 @@ for (const q of SAMPLE_FAQS) {
   const fam = familiarForms(`${q.q} ${q.a}`).filter((h) => h.rule !== "pronoun" || h.quote.toLowerCase() !== "te");
   if (fam.length) fails.push(`SAMPLE_FAQS: tegező alak („${fam.map((h) => h.quote).join(", ")}”) — a minta is magáz (ADR-0292)`);
 }
-if (/sectionHead\("Ide gyere"/.test(readFileSync("src/engine/primitives.ts", "utf8"))) fails.push(`primitives.ts: „Ide gyere” tartalék-felcím`);
+// The compositional (non-template) path lives in primitives.ts: its section heads and numbered
+// panels follow the same approved rule (tulaj, 2026-10-02: „Vendégkönyv” → „Vélemények · Vendégeink
+// írták”, no numbering). Source-level: sectionHead() literals + the ritual-panel number marker.
+{
+  let prim = readFileSync("src/engine/primitives.ts", "utf8");
+  // OLD source (self-test): the guestbook head and the roman-numbered ritual panel put back.
+  if (SELF_TEST) prim += `\nsectionHead("Vendégkönyv", "Levelek a vendégkönyvből", copy)\n<p class="cit-rit-no">\${roman[i]}</p>\n`;
+  for (const m of prim.matchAll(/sectionHead\(\s*"([^"]*)"\s*,\s*"([^"]*)"/g)) {
+    for (const lit of [m[1]!, m[2]!]) for (const re of BANNED) if (re.test(lit)) fails.push(`primitives.ts: tiltott tartalék-fejléc „${lit}”`);
+  }
+  if (/class="cit-rit-no"|const roman = \[/.test(prim)) fails.push(`primitives.ts: római/sorszám a kompozíciós szolgáltatás-paneleken (cit-rit-no)`);
+}
 if (judgedBanned < BANNED_SCOPE.length * 4) fails.push(`③ a mérés vak: ${judgedBanned} lap`);
 
 if (judgedStars !== Object.keys(TEMPLATES).length) fails.push(`a mérés vak: ${judgedStars} sablon mérve`);
 
 if (SELF_TEST) {
-  const expected = [...OLD_CARD_STARS, ...OLD_REV_TITLE, ...Object.keys(OLD_TEXT), ...OLD_TWICE];
+  const expected = [...OLD_CARD_STARS, ...OLD_REV_TITLE, ...Object.keys(OLD_TEXT), ...OLD_TWICE, "primitives.ts"];
   const missing = expected.filter((id) => !fails.some((f) => f.startsWith(`${id}:`)));
   const extra = fails.filter((f) => !expected.some((id) => f.startsWith(`${id}:`)));
   if (missing.length || extra.length || m3Failures) {
