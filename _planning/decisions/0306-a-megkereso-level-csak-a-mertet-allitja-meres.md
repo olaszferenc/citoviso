@@ -24,4 +24,14 @@ kiválasztotta; egy 1,0 ★-os lead „1 csillagos” dicséretet kapott volna.
 ### Elvetett
 - Küldésenkénti LLM-kritikus: ugyanazt a ~8 ágat bírálná újra és újra, pénzért, új információ nélkül.
 
+### Kiegészítés — tulaj-döntés a kritikus javaslatairól (2026-10-02)
+- **Személynév sehol nem kerül fixen a kódba/sablonba:** „nem lesz az sms-ben meg sehol sem a nevem hardcode. Citoviso.”
+  Az SMS aláírása „A Citoviso csapata” marad; a levél aláírása a konfigból (`config.outreachSender`) jön. A kritikus
+  „személynév, Citoviso” aláírás-javaslata ELUTASÍTVA, és a rögzített ítéletből törölve.
+- **„kötelezettségmentesen” marad** (a tulaj saját SMS-szövege, ADR-0112).
+- **Őr:** a tulaj-döntések a kritikus szabályai között állnak (`OWNER_RULINGS`), egy determinisztikus szűrő
+  (`proposesPersonalName`) kidobja a személynevet javasló kifogást, és az `outreach-letter-truth-check` ⑥ pontja bukik, ha
+  a sablon-literálokban a küldő neve áll, ha az SMS nem a márkával zár, ha a szabály kikerül a promptból, vagy ha a
+  rögzített ítéletben személynév-javaslat van (mutációval igazolva).
+
 **Visszafordíthatóság:** 🔄 olcsó (szöveg + őr).

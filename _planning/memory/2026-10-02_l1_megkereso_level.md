@@ -15,6 +15,6 @@ ADR-0305 (saját-fotó nyomás), ADR-0306 (levél) · kontraktus: `assets/design
 ## Nyitott (a koordinátornak jelezve)
 - A besoroló aggregátor-oldalt „saját modern oldalnak” vesz (élesen: bluepillow.com 361, freecancellations 42, vio 38 lead…)
   → ezek nem célpontok, pedig nincs saját oldaluk. Scraper-szál kell.
-- A kritikus két javítandót hagyott az SMS-en (ADR-0112 tulaj-szöveg): „kötelezettségmentesen”, „A Citoviso csapata” →
-  „Olasz Ferenc, Citoviso”. Tulaj-döntés, nem nyúltam hozzá.
+- ✅ ELDŐLT: a kritikus SMS-javaslatai elutasítva — személynév sehol nem fix („…Citoviso.”), „kötelezettségmentesen” marad;
+  rögzítve a kritikus szabályaiban (`OWNER_RULINGS`) + szűrő + őr ⑥ (ADR-0306 kiegészítés).
 - `src/email/orderEmail.ts` (rendelés utáni levél) is „élesítjük”-öt ír — nem megkereső levél, nem nyúltam hozzá.

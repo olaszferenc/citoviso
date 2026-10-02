@@ -46,7 +46,7 @@ besorolásnak mond ellent, ami kiválasztotta.
   (nem „forinttól az Öné”). Az emlékeztető-levélben ugyanígy („Döntés-segítő ajánlatként …”).
 - **„Ha tetszik, elindítjuk az oldalt. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.”** — „élesít” informatikus szó.
 - Lábjegyzet: **„A kedvezmény az első díjra szól, a hosszabbítás már listaáras.”** (nem „listaáron megy”).
-- SMS-aláírás: „A Citoviso csapata” (nem angolos „Csapata”). Az SMS többi szövege a tulaj saját mondata (ADR-0112) — változatlan.
+- SMS-aláírás: „A Citoviso csapata” (nem angolos „Csapata”). ⛔ Tulaj-döntés: személynév sehol nem kerül fixen a sablonba („nem lesz az sms-ben meg sehol sem a nevem hardcode. Citoviso.”); a levél aláírása a konfigból jön. Az SMS többi szövege a tulaj saját mondata (ADR-0112) — változatlan.
 
 ## 5. Őr és kritikus
 

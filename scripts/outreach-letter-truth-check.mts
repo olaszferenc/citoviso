@@ -29,7 +29,8 @@ import { loadPricing } from "../src/pricing.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 import * as draft from "../src/outreach/draft.js";
 import { db } from "../src/db/client.js";
-import { letterTemplateFingerprint } from "../src/outreach/letterCritic.js";
+import { LETTER_CRITIC_SYSTEM, OWNER_RULINGS, letterTemplateFingerprint, letterTemplateStrings, proposesPersonalName } from "../src/outreach/letterCritic.js";
+import { config } from "../src/config.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 let failures = 0;
@@ -136,6 +137,23 @@ try {
 check("⑤ a levél-sablon ujjlenyomatára rögzített PASS van (szállásadó-szemű kritikus)",
   rec.fingerprint === fp() && rec.verdict === "PASS",
   { recorded: rec.fingerprint ?? null, verdict: rec.verdict ?? null, current: fp() });
+
+// ⑥ owner's standing rulings (2026-10-02): „nem lesz az sms-ben meg sehol sem a nevem hardcode. Citoviso.”
+const sender = (config.outreachSender.name ?? "").trim();
+check("⑥ a sablon-literálokban nincs fix személynév (az aláírás a konfigból jön)",
+  !sender || letterTemplateStrings().every((t) => !t.includes(sender)),
+  letterTemplateStrings().find((t) => sender && t.includes(sender)));
+check("⑥ az SMS a márkával zár, személynév nélkül",
+  bodies.filter((b) => b.key.startsWith("sms:") || b.key.startsWith("pair:")).every((b) => /A Citoviso csapata/u.test(b.body) && (!sender || !b.body.includes(sender))));
+check("⑥ a kritikus szabályai tartalmazzák a tulaj-döntéseket (nem javasolhat személynevet; „kötelezettségmentesen” marad)",
+  OWNER_RULINGS.length >= 2 && OWNER_RULINGS.every((r) => LETTER_CRITIC_SYSTEM.includes(r)));
+const NAME_FIX = [{ fix: "Kiss Anna, Citoviso" }, { fix: "Citoviso — Nagy Péter" }, ...(sender ? [{ fix: `${sender}, Citoviso` }] : [])];
+const BRAND_FIX = [{ fix: "A Citoviso csapata" }, { fix: "hagyd ki" }, { fix: "Citoviso" }];
+check("⑥ a személynév-szűrő elkapja a névvel aláíró javaslatot, a márkát átengedi",
+  NAME_FIX.every((o) => proposesPersonalName(o, sender)) && BRAND_FIX.every((o) => !proposesPersonalName(o, sender)));
+const recObj = (rec as { objections?: { fix: string }[] }).objections ?? [];
+check("⑥ a rögzített ítéletben nincs személynevet javasló kifogás",
+  recObj.every((o) => !proposesPersonalName(o, sender)), recObj.find((o) => proposesPersonalName(o, sender)));
 
 await db.destroy();
 if (failures) {

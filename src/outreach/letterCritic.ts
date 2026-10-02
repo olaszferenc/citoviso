@@ -58,7 +58,21 @@ const KINDS = [
   "ellentmondas", "tulzas", "nyelvtan", "megszolitas", "tolakodo",
 ] as const;
 
-const SYSTEM = `Igényes magyar szállásadó vagy (egy balatoni panzió tulajdonosa, 58 éves), és a postafiókodban egy KÉRETLEN megkereső levelet, illetve SMS-t olvasol egy honlap-készítő cégtől. Melletted ül egy igényes magyar szövegszerkesztő.
+/**
+ * OWNER'S STANDING RULINGS the critic must not re-litigate (2026-10-02). Each was raised by a
+ * critic run and REJECTED by the owner; the deterministic filter below enforces the first
+ * one even if the model ignores the prompt, and the truth gate checks both are in the prompt.
+ *   ① „nem lesz az sms-ben meg sehol sem a nevem hardcode. Citoviso.” — the SMS is signed by
+ *     the brand; no personal name is ever fixed in a template (the letter's signature comes
+ *     from config.outreachSender).
+ *   ② „kötelezettségmentesen” stays (the owner's own SMS wording, ADR-0112).
+ */
+export const OWNER_RULINGS: readonly string[] = [
+  "Az aláírás a márka („Citoviso”, SMS-ben „A Citoviso csapata”). SOHA ne javasolj személynevet aláírásnak vagy a szövegbe — tulaj-döntés: személynév nem kerülhet fixen a sablonba.",
+  "A „kötelezettségmentesen” szó a tulaj saját SMS-szövege — NEM kifogásolható.",
+];
+
+export const LETTER_CRITIC_SYSTEM = `Igényes magyar szállásadó vagy (egy balatoni panzió tulajdonosa, 58 éves), és a postafiókodban egy KÉRETLEN megkereső levelet, illetve SMS-t olvasol egy honlap-készítő cégtől. Melletted ül egy igényes magyar szövegszerkesztő.
 Mindketten minden mondatra ezt kérdezitek: „kiírná-e EZT egy normális magyar vállalkozó egy másik vállalkozónak?”
 
 Ugyanannak a sablonnak TÖBB ÁGÁT kapod: mindegyik ág fölött áll, milyen helyzetű szállásadó kapja. Az ág-címke a VALÓSÁG (amit a cég mért); a levél nem állíthat annál többet.
@@ -79,6 +93,7 @@ Szabályok:
 - A „quote” SZÓ SZERINT a szövegből (a gép visszakeresi). A „branch” az ág-címke, ahogy kaptad.
 - A „fix” konkrét új megfogalmazás vagy „hagyd ki”.
 - A kötelező jogi lábléc (leiratkozás, jogalap, cégazonosítás, adatkezelési link), a linkek, az árak SZÁMAI és a megszólítás formája („Tisztelt <név>!” — tulaj-döntés) NEM kifogásolható.
+${OWNER_RULINGS.map((r) => `- ${r}`).join("\n")}
 - Ami jó, arról ne írj. Ha nincs kifogás, az üres lista a helyes válasz — ne gyárts kifogást.
 - Előbb a „plan” mezőbe írd le röviden (3–6 mondat), mit néztél meg; utána a lista.`;
 
@@ -107,13 +122,24 @@ const SCHEMA = {
 } as const;
 
 /** One critic pass over all branches. A quote not found in its branch is dropped (not evidence). */
+/**
+ * Does this objection propose a PERSON's name (signature or otherwise)? Rejected by the owner
+ * (OWNER_RULINGS ①). A two-word capitalised Hungarian name, or the configured sender's name.
+ */
+export function proposesPersonalName(o: Pick<LetterObjection, "fix">, senderName = ""): boolean {
+  const name = senderName.trim();
+  if (name && o.fix.includes(name)) return true;
+  // „Kiss Anna, Citoviso” / „Citoviso — Nagy Péter”: a Surname Forename pair next to the brand.
+  return /\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}+\s*[,—–-]\s*Citoviso|Citoviso\s*[,—–-]\s*\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}+/u.test(o.fix);
+}
+
 export async function critiqueLetter(branches: readonly LetterBranch[]): Promise<{ plan: string; objections: LetterObjection[] }> {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const c: AnthropicNS = new Anthropic();
   const res = await c.messages.create({
     model: MODEL,
     max_tokens: 4000,
-    system: SYSTEM,
+    system: LETTER_CRITIC_SYSTEM,
     messages: [
       {
         role: "user",
@@ -127,7 +153,9 @@ export async function critiqueLetter(branches: readonly LetterBranch[]): Promise
   if (!block || block.type !== "text") throw new Error("letterCritic: empty response");
   const parsed = JSON.parse(block.text) as { plan: string; objections: LetterObjection[] };
   const squeeze = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const { config } = await import("../config.js");
   const objections = parsed.objections.filter((o) => {
+    if (proposesPersonalName(o, config.outreachSender.name ?? "")) return false; // OWNER_RULINGS ①
     const b = branches.find((x) => x.label === o.branch);
     const hay = squeeze(b ? b.text : branches.map((x) => x.text).join("\n"));
     return hay.includes(squeeze(o.quote));

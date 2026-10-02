@@ -16,7 +16,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 ## Párhuzamos szál (2026-10-02 — SUB L1 `cit42887439`: megkereső levél + SMS valódisága, saját-fotó nyomás, ADR-0305 + ADR-0306) — LANDOLVA, élesítés a koordinátoré
 - Levél: a szegmens-mondat csak a honlap-mérést mondja ki; 4,0 ★ alatt nincs értékelés-idézet; „Ezért” csak hiány után; B-csiszolás (levél + emlékeztető), SMS „csapata”.
 - Őrök: `outreach-letter-truth-check` (300 ág) · `own-photo-pressure-check`. LLM-kritikus: `npx tsx scripts/outreach-letter-critic.mts --run` sablon-változáskor.
-- Nyitott: aggregátor-oldal „modern saját oldalnak” besorolva (bluepillow 361 …) — scraper-szál; SMS két javítandója tulaj-döntésre vár.
+- Nyitott: aggregátor-oldal „modern saját oldalnak” besorolva (bluepillow 361 …) — scraper-szál. ✅ SMS: személynév sehol nem fix, „Citoviso” (tulaj); a kritikus ezt nem javasolhatja (őr ⑥).
 
 ## Párhuzamos szál (2026-10-02 — SUB M2 cit93d29d1b: Elek fizetés/számla/belépés/konzol, ADR-0303) — LANDOLVA, élesítés a koordinátoré
 

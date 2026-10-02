@@ -5,20 +5,17 @@
   "at": "2026-10-02T12:32:26.191Z",
   "branches": 9,
   "plan": "Végignéztem minden ágat: az ág-címke valóságát összevetettem a levél állításaival (ellentmondás, túlzás), figyeltem a tükörfordításokat, csonka mondatokat, gépies/körlevél-fordulatokat, szakzsargont, reklámpózt, megszólítás-váltást, központozást. Az SMS-ek aláírását és a reklámfordulatokat külön néztem. Az emlékeztető-levél mondatait a sablonszöveg szintjén vizsgáltam. A jogi láblécet, linkeket, árszámokat és a 'Tisztelt' megszólítást nem kifogásoltam.",
-  "objections": [
+  "objections": [],
+  "ownerRulings": [
     {
-      "branch": "SMS — önálló megkeresés",
-      "quote": "A Citoviso csapata",
-      "kind": "gepies",
-      "fix": "Olasz Ferenc, Citoviso",
-      "severity": "javitando"
+      "at": "2026-10-02",
+      "rejected": "SMS-aláírás személynévvel („<személynév>, Citoviso”) — 2 javítandó kifogás törölve",
+      "ruling": "„nem lesz az sms-ben meg sehol sem a nevem hardcode. Citoviso.”"
     },
     {
-      "branch": "SMS — az MMS-kép után érkező párja",
-      "quote": "A Citoviso csapata",
-      "kind": "gepies",
-      "fix": "Olasz Ferenc, Citoviso",
-      "severity": "javitando"
+      "at": "2026-10-02",
+      "kept": "„kötelezettségmentesen”",
+      "ruling": "maradhat (a tulaj saját SMS-szövege)"
     }
   ]
 }
