@@ -202,7 +202,7 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
 
       const html = withLegalStrip(
         await injectRuntime(
-          renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery }),
+          renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery, hideAnchors: site.hideAnchors }),
           lang,
         ),
         legalWho,
@@ -225,7 +225,7 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
           if (!pageData) continue;
           const page = withLegalStrip(
             await injectRuntime(
-              renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery }),
+              renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery, hideAnchors: site.hideAnchors }),
               lang,
             ),
             legalWho,

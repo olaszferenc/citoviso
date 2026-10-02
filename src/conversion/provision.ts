@@ -20,6 +20,7 @@ import { slugify } from "../domains.js";
 import { defaultTimeZoneForCountry } from "../text/zoneTime.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
+import { renderableModules, unboughtPageAnchors } from "../modules.js";
 import { dropNeverShown, photoUrlKey, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 
@@ -42,10 +43,14 @@ export interface ConversionResult {
  * deterministic output as the approved mock (mock=live), not a stale HTML copy. Legacy
  * AI-HTML artifacts fall back to copying their rendered snapshot (backward compatible).
  */
-async function renderSnapshotHtml(artifact: {
-  path: string | null;
-  inputs: Record<string, unknown>;
-}): Promise<{ html: string; source: "engine" | "copy" }> {
+async function renderSnapshotHtml(
+  artifact: {
+    path: string | null;
+    inputs: Record<string, unknown>;
+  },
+  /** Entitled module ids — the preview shows only what was bought (LV-1). */
+  modules: readonly string[],
+): Promise<{ html: string; source: "engine" | "copy" }> {
   const inputs = artifact.inputs ?? {};
   if (inputs.engine === "composition" && inputs.recipe && inputs.siteData) {
     const recipe = inputs.recipe as unknown as Recipe;
@@ -78,7 +83,17 @@ async function renderSnapshotHtml(artifact: {
     const siteData: SiteData = { ...stored, photos: shown.kept };
     // LIVE phase: sample-capable modules (rooms/reviews) with no real data are dropped —
     // marked sample content never reaches a live tenant page (§B.17).
-    return { html: await injectRuntime(renderSite(recipe, siteData, { phase: "live" }), siteData.lang), source: "engine" };
+    // LV-1: and nothing the buyer did not order — the same cut the tenant snapshot makes.
+    const renders = new Set(renderableModules(modules));
+    const hideAnchors = unboughtPageAnchors((id) => renders.has(id));
+    const hideGallery = !renders.has("gallery");
+    return {
+      html: await injectRuntime(
+        renderSite(recipe, siteData, { phase: "live", hideAnchors, hideGallery }),
+        siteData.lang,
+      ),
+      source: "engine",
+    };
   }
   if (!artifact.path) throw new Error("legacy artifact has no rendered path to provision");
   const copied = await readFile(path.resolve(process.cwd(), artifact.path), "utf8");
@@ -238,7 +253,8 @@ export async function convertLead(
   // 3. Render the private preview snapshot into the tenant's isolated namespace.
   //    ENGINE artifacts are re-rendered from persisted recipe+data (mock=live); legacy
   //    AI-HTML artifacts copy their snapshot.
-  const { html: srcHtml, source: renderSource } = await renderSnapshotHtml(artifact);
+  const wanted = [...new Set(modules.map((m) => m.trim()).filter(Boolean))];
+  const { html: srcHtml, source: renderSource } = await renderSnapshotHtml(artifact, wanted);
   const relDir = path.join("sites", tenantId);
   const relPath = path.join(relDir, "index.html");
   await mkdir(path.resolve(process.cwd(), relDir), { recursive: true });
@@ -249,7 +265,6 @@ export async function convertLead(
   );
 
   // 4. Entitlements + site + lifecycle — one transaction.
-  const wanted = [...new Set(modules.map((m) => m.trim()).filter(Boolean))];
   const site = await db.transaction().execute(async (trx) => {
     for (const module of wanted) {
       await trx

@@ -328,6 +328,18 @@ if [ -f scripts/paid-module-anchor-check.mts ] && \
   echo "[pre-commit] paid-module-anchor (megvett modul: horog az élő lapon VAGY „kifizette, de üres”)…"
   npx tsx scripts/paid-module-anchor-check.mts >"$GATE_LOG" || gate_failed
 fi
+# LV-1 (M5, Elek élesi tesztje 2026-10-02) — a paid-module-anchor fordítottja: az élő lapon NINCS
+# olyan modul-szekció, amit a bérlő nem vett meg (a gerincen kívül). Mérve: 3 modulos rendelés
+# mellett a vélemény-blokk 20/20, a kiemelés-szekció (usp) 15/20 sablonon kint volt, miközben az
+# admin „Még nem vette meg” alatt sorolta őket. Valódi jogosultság-sorok, az élő összerakáson át,
+# minden sablonon; pozitív kontrollal (megvéve visszajön), mellékkár-ággal (név, bevezető, gerinc
+# marad) és piros önteszttel (vágás nélkül bukik).
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/unbought-module-leak-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/(editor|modules|multilangGenerate)\.ts$|^src/modules\.ts$|^src/conversion/provision\.ts$|^src/engine/templates/.*\.ts$|^src/engine/(render|moduleSections|primitives)\.ts$|^scripts/unbought-module-leak-check\.mts$'; then
+  echo "[pre-commit] unbought-module-leak (nem megvett modul nem látszik az élő lapon)…"
+  npx tsx scripts/unbought-module-leak-check.mts >"$GATE_LOG" || gate_failed
+fi
 # M3 · SZ-3 (Elek 2026-10-01; döntés: a sablon-szöveg ADR-je, design-refs/public-site/sablon-szoveg-feliratok) — EGY őr a sablon-szövegre (M3 + M4 szakasz): az editorial újság-KINÉZETŰ, de a szövege egy szállásé —
 # nincs „Szerkesztőség”, „Képes krónika”, „No. 1”, „Foglalási szelvény”, idézőjeles főcím, díszbetű
 # (az „A Muschel…” „AMuschel”-lé olvadt), és „A ház számokban” nem áll egyetlen szám fölött.

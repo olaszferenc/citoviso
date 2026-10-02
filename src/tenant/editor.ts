@@ -35,7 +35,7 @@ import {
   notifyMultilangStale,
   reconcileMultilangState,
 } from "./multilangCore.js";
-import { renderableModules } from "../modules.js";
+import { renderableModules, unboughtPageAnchors } from "../modules.js";
 import { applyContactEdits, effectiveContact, type ContactEdits, type ContactErrorKey, type ContactFacts } from "./contact.js";
 import { programsOnPage, siteOwnSettlement, siteProgramPool } from "../events/picks.js";
 import { todayForTenant } from "./timeZone.js";
@@ -169,6 +169,9 @@ export interface ModuleContent {
    * all — a paid switch that moves nothing is indistinguishable from a con (§I).
    */
   readonly hideGallery?: boolean;
+  /** LV-1 — page anchors of the modules NOT bought (unboughtPageAnchors): the render
+   *  cuts their sections, so the page never shows what the admin lists as not bought. */
+  readonly hideAnchors?: readonly string[];
   /** The site's units (when any module needed them) — the subpage builder reuses them. */
   readonly units?: readonly {
     id: string;
@@ -596,6 +599,7 @@ export async function moduleContentFor(
     data: out as Partial<SiteData>,
     ...(photoCap ? { photoCap } : {}),
     ...(galleryOn ? {} : { hideGallery: true }),
+    hideAnchors: unboughtPageAnchors(on),
     ...(units.length ? { units } : {}),
   };
 }
@@ -657,6 +661,8 @@ export interface EffectiveSiteContent {
   readonly units: NonNullable<ModuleContent["units"]>;
   /** ADR-0089 ⑦: render without the gallery section (module not paid for). */
   readonly hideGallery: boolean;
+  /** LV-1: anchors of the not-bought modules, cut from the page at render. */
+  readonly hideAnchors: readonly string[];
 }
 
 async function assembleEffective(
@@ -706,6 +712,7 @@ async function assembleEffective(
     effective,
     units: moduleContent.units ?? [],
     hideGallery: Boolean(moduleContent.hideGallery),
+    hideAnchors: moduleContent.hideAnchors ?? [],
   };
 }
 
@@ -758,14 +765,14 @@ export async function renderTenantModulePreview(
   const s = await loadSiteForEdit(tenantId);
   if (!s) return null;
   const renderable = new Set(renderableModules(activeIds));
-  const { effective, hideGallery } = await assembleEffective(s, s.overrides, s.status, renderable);
+  const { effective, hideGallery, hideAnchors } = await assembleEffective(s, s.overrides, s.status, renderable);
   const sampleAllow = new Set<string>();
   for (const id of renderable) {
     const key = SAMPLE_KEY_OF[id];
     if (key) sampleAllow.add(key);
   }
   const html = await injectRuntime(
-    renderSite(s.recipe, effective, { phase: "live", sampleAllow, demoForms: true, hideGallery }),
+    renderSite(s.recipe, effective, { phase: "live", sampleAllow, demoForms: true, hideGallery, hideAnchors }),
     effective.lang,
   );
   // Never indexable, always marked as a preview — even though it is only ever
@@ -781,7 +788,7 @@ async function renderAndPersist(
   asStatus: string = s.status,
 ): Promise<boolean> {
   if (!s.path) return false;
-  const { effective, units: contentUnits, hideGallery } = await assembleEffective(s, overrides, asStatus);
+  const { effective, units: contentUnits, hideGallery, hideAnchors } = await assembleEffective(s, overrides, asStatus);
   // ADR-0063 §4: THE stale choke point — every content-affecting save re-renders through
   // here, so comparing the translatable-content hash with the PAID one catches every
   // change. A mismatch flips the translations to 'stale' + notifies the tenant ONCE.
@@ -794,7 +801,7 @@ async function renderAndPersist(
     );
   }
   let html = await injectRuntime(
-    renderSite(s.recipe, effective, { phase: "live", hideGallery }),
+    renderSite(s.recipe, effective, { phase: "live", hideGallery, hideAnchors }),
     effective.lang,
   );
   // ADR-0063 §6: with paid translations the primary carries the language switcher +
@@ -855,7 +862,7 @@ async function renderAndPersist(
       const data = unitPageData(effective, u, byUnit.get(u.id) ?? [], s.canonicalUrl);
       if (!data) continue; // too thin to deserve a URL
       const page = withLegalStrip(
-        await injectRuntime(renderSite(s.recipe, data, { phase: "live", hideGallery }), data.lang),
+        await injectRuntime(renderSite(s.recipe, data, { phase: "live", hideGallery, hideAnchors }), data.lang),
         legal.who,
       );
       await writeFile(

@@ -380,6 +380,33 @@ export function renderableModules(activeIds: Iterable<string>): string[] {
   return active.filter((id) => supersederOf(id, active) === null);
 }
 
+/**
+ * The page anchors (`data-cit-module` values) of every module that must NOT show on a
+ * tenant page, given which modules render there (LV-1, Elek live test 2026-10-02).
+ *
+ * MEASURED: a 3-module order (gallery, enquiry, location) went live with the usp
+ * highlights section and the reviews-pending block on the page — 20/20 templates carry
+ * the reviews block, 15/20 the stamped usp section — while the admin listed both as
+ * "Még nem vette meg" and the cold mock's configurator hid them when unticked. The live
+ * render simply never asked which modules were bought; the data these sections draw on
+ * (the lead's highlights, the Google rating) exists whether or not the module does.
+ *
+ * Derived from the catalog, not a hand list, so a new page module is covered on day one.
+ * Left out on purpose:
+ *  · the spine — included in every package;
+ *  · `gallery` — its own path (ADR-0089 ⑦) keeps the header photo when the section goes;
+ *  · a superseding module (`booking`) — its section is the shared slot that carries the
+ *    spine's enquiry form when the module itself is not bought.
+ */
+export function unboughtPageAnchors(renders: (id: string) => boolean): string[] {
+  const out: string[] = [];
+  for (const m of MODULE_CATALOG) {
+    if (m.spine || m.id === "gallery" || m.supersedes?.length || renders(m.id)) continue;
+    for (const a of [m.domType, ...(m.domTypesAlso ?? [])]) if (a) out.push(a);
+  }
+  return out;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Module dependencies (ADR-0192). ⭐ ONE rule, ONE source: the cart, the cancel
 // gate, the renewal sweep, the lint and the behaviour guard all decide through

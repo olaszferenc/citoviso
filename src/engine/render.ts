@@ -258,6 +258,44 @@ function stampSellingPointsAnchor(html: string, data: SiteData): string {
     if (close < 0 || close > at) continue;
     const tag = html.slice(open, close);
     if (tag.includes("data-cit-module=")) return html; // already a module's surface
+    // The section may hold MORE than the highlights (LV-1, measured on wordmark-grow:
+    // the about section carries the intro AND the highlight chips). Stamping it would
+    // make the intro part of the paid usp surface — the configurator toggle hid it in
+    // the mock, and the not-bought cut took it off the live page. Then the anchor goes
+    // on the innermost element that holds every highlight and not the intro.
+    const secEnd = elementEnd(html, open, "section");
+    const lede = data.intro ? escapeForCompare(data.intro.slice(0, 30)) : "";
+    if (lede && secEnd > 0 && html.slice(open, secEnd).includes(lede)) {
+      return stampInnermostHighlightBox(html, data, open, at, secEnd, lede);
+    }
+    return html.slice(0, close) + ` data-cit-module="usp"` + html.slice(close);
+  }
+  return html;
+}
+
+/** See stampSellingPointsAnchor: the narrowest element around all highlights inside
+ *  [secOpen, secEnd) that does not also hold the intro. No such element → no anchor
+ *  (an unanchored list is what the 5 templates without a section already have). */
+function stampInnermostHighlightBox(
+  html: string,
+  data: SiteData,
+  secOpen: number,
+  first: number,
+  secEnd: number,
+  lede: string,
+): string {
+  const lastNeedle = escapeForCompare(data.highlights[data.highlights.length - 1]!);
+  const last = html.indexOf(lastNeedle, first);
+  if (last < 0 || last > secEnd) return html;
+  const lastEnd = last + lastNeedle.length;
+  for (let cur = html.lastIndexOf("<", first); cur > secOpen; cur = html.lastIndexOf("<", cur - 1)) {
+    const name = /^<([a-zA-Z][a-zA-Z0-9]*)/.exec(html.slice(cur, cur + 40))?.[1];
+    if (!name) continue; // a closing tag or a comment
+    const end = elementEnd(html, cur, name);
+    if (end < lastEnd) continue; // closes before the last highlight
+    const box = html.slice(cur, end);
+    if (box.includes(lede) || box.includes("data-cit-module=")) return html;
+    const close = html.indexOf(">", cur);
     return html.slice(0, close) + ` data-cit-module="usp"` + html.slice(close);
   }
   return html;
@@ -458,13 +496,26 @@ function hasSubstance(html: string): boolean {
  * if anything but the gallery disappears.
  */
 function stripGallerySections(html: string): string {
+  return stripModuleAnchor(html, "gallery");
+}
+
+/**
+ * Remove every element carrying `data-cit-module="<anchor>"` — and its enclosing
+ * <section> when nothing else of substance is left in it — plus the nav links that
+ * pointed into the removed markup. The gallery's ADR-0089 ⑦ cut, generalised for the
+ * not-bought modules (LV-1): one measured cut, not a branch in every template.
+ */
+function stripModuleAnchor(html: string, anchor: string): string {
   let out = html;
+  // The attribute INSIDE an opening tag — never the `[data-cit-module="usp"]` selector
+  // in a <style> block, which a bare indexOf finds first and which would take the
+  // whole stylesheet with it.
+  const re = new RegExp(`<([a-zA-Z][a-zA-Z0-9]*)\\b[^<>]*\\sdata-cit-module="${anchor}"`);
   for (let guard = 0; guard < 12; guard++) {
-    const at = out.indexOf('data-cit-module="gallery"');
-    if (at < 0) break;
-    const open = out.lastIndexOf("<", at);
-    const tag = /^<([a-zA-Z][a-zA-Z0-9]*)/.exec(out.slice(open, at))?.[1];
-    if (!tag) break;
+    const hit = re.exec(out);
+    if (!hit) break;
+    const open = hit.index;
+    const tag = hit[1]!;
     const end = elementEnd(out, open, tag);
     if (end < 0) break;
     // Would the enclosing <section> be left as a heading over nothing? Then it goes
@@ -561,12 +612,16 @@ export function renderSite(
     /** ADR-0089 ⑦: the gallery module is not paid for — drop the gallery SECTION,
      *  keep the header photo (a picture-less page is barred outright). */
     hideGallery?: boolean;
+    /** LV-1: `data-cit-module` anchors of modules the tenant has NOT bought — their
+     *  sections are cut from the page (see unboughtPageAnchors in src/modules.ts). */
+    hideAnchors?: readonly string[];
   } = {},
 ): string {
   const phase: RenderPhase = opts.phase ?? "mock";
   const modOpts = { sampleAllow: opts.sampleAllow, sampleDeny: opts.sampleDeny, demoForms: opts.demoForms };
   const finish = (page: string): string => {
-    const out = responsiveGooglePhotos(opts.hideGallery ? withoutGallery(page, recipe, data, opts) : page);
+    const bought = (opts.hideAnchors ?? []).reduce(stripModuleAnchor, page);
+    const out = responsiveGooglePhotos(opts.hideGallery ? withoutGallery(bought, recipe, data, opts) : bought);
     // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
     // tenant site and meaningless on a mock (no legal data about the lead, no such
     // page on the preview host). Cut here, once, for both render paths.
