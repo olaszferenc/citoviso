@@ -60,3 +60,27 @@ saját honlapot”. Ezért a kódban (`qualify.ts`):
 **Őr:** `aggregator-host-check` + fájl-link, rövid link, „az (a) csak jelöl” állítások; további 3 mutáció piros.
 **Nyitott:** a maradék (a)-jelöltek (kb. 35 host, pl. balatonakali.hu, marcali.hu, balatonbereny.hu, vonyarcvashegy.hu települési
 oldalak) (b) mérése — a lista a `requalify-websites.mts` kimenetében.
+
+### Kiegészítés 2 (2026-10-02, koordinátor: „mérd le a maradék (a)-jelölteket is”)
+**A B-szabály mért határa:** PORTÁL az a nyitólap, amely MÁS szállásadók szállásait listázza (település, turisztikai szerv, közvetítő:
+„Szállást ad ki? Legyen a partnerünk!”); SAJÁT az egyetlen szállás oldala, ÉS az üzemeltető / lánc / intézmény SAJÁT egységeit
+listázó oldal (Hunguest, Danubius, Balatontourist, Honvéd Üdülő, a Tihanyi Apátság, a Nemzeti Park, a Bakonyerdő, „Családias panzióink”).
+**Útvonal-szűkítés:** ahol a település saját intézménye ugyanazon a hoston él (polgármesteri hivatal, községi strand), ott csak a
+szálláslista-ág portál (`"marcali.hu/index.php/elet-a-varosban/turizmus-m"` alakú bejegyzés a `PORTAL_DOMAINS`-ben).
+
+**A 35 jelölt verdiktje:**
+- **Portál (4):** balatonakali.hu (Turizmus › Szálláshelyek — útvonal), marcali.hu (turizmus › szálláshelyek — útvonal),
+  vonyarcvashegy.hu (a település ajánlatkérő űrlapja a szállásadóknak — egész host), zenefalu.hu (a turisztikai egyesület
+  szálláslistája; nem elérhető, az útvonala alapján — útvonal).
+- **Saját (30):** bakonyerdo.hu, balatonbereny.hu (az önkormányzat saját tábora), balatonfoldvariszallas.hu (a See Haus saját oldala), balatonhotelsiofok.hu,
+  balatontourist.hu, bfnp.hu, danubiushotels.com/.hu, famkovacs1.hu, furedikiadohazak.hu (egy tulaj 2 háza), h-r-camping-balaton.de,
+  honvedudulo.hu, hunguesthotels.hu, kksz.hu, kristalyfurdo.hu, lambert.hu, linktr.ee, lschotel.hu, mgapartmanok.hu,
+  olcsoszallasbalatonzamardi.com, panzioheviz.hu, siofokpanzio.hu, sites.google.com (építő), szallassiofokon.hu, tengerdi.hu,
+  tihanyiapatsag.hu, tutelakft.hu, vadoctanya.hu, wellnesskastely.hu; balatonlelleapartment.com nem elérhető → a biztonságos irány (saját).
+- tinyurl.com: az átirányítás-követés kezeli (→ booking.com). Dev-only: hotel-family.hu („Family” / „Hotel Family”, ugyanaz) → a jelölő
+  javítva: a csak általános szavakból álló nevek nem bizonyítanak két külön szállást.
+
+`MEASURED_OWN_HOSTS` (`qualify.ts`) rögzíti a mért saját verdikteket, hogy a jelölő ne hozza fel őket újra; besorolási bemenet NEM.
+**Éles hatás (száraz):** 667 lead (621 `modern → no_site`, 45 `outdated → no_site`, 1 `activation` kézi) — a 2. körből +5
+(vonyarcvashegy 2, zenefalu 3; a marcali/balatonakali szállásai már portálon voltak). A-jelölt: 0 (éles és dev). Dev-en +1.
+**Őr:** +4 portál- és +5 saját-fixture, „mért saját host nem lehet portál”, „csak-általános név nem két szállás”; 2 újabb mutáció piros.

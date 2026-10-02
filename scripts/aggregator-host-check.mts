@@ -30,10 +30,18 @@
 //   · danubiushotels.com listed (rule A auto-applied to a chain) → 3 failures;
 //   · drive.google.com dropped from the file-link hosts → "fájl-link nem „nincs saját oldal”";
 //   · visty.site dropped from the catalogue → its measured fixture reported has_own.
+// Round 2 (same day): marcali.hu listed host-wide instead of path-scoped → the mayor's
+// office reported as a portal; honvedudulo.hu added to the catalogue → "ellentmondó
+// mérés" + own-site control red.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { classifyWebsite, isShortLink, sharedHostCandidates } from "../src/scraper/qualify.js";
+import {
+  classifyWebsite,
+  isShortLink,
+  MEASURED_OWN_HOSTS,
+  sharedHostCandidates,
+} from "../src/scraper/qualify.js";
 import { PORTAL_ADAPTERS } from "../src/scraper/sources/portals/registry.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -91,6 +99,11 @@ const AGGREGATOR_URLS: readonly string[] = [
   "https://siofokszallas.info/",
   "https://visty.site/wandavend",
   "https://www.balatonhost.com/golden-relax/",
+  // Round 2 — municipal / tourism-body lodging lists (rule B).
+  "https://vonyarcvashegy.hu/laszlo-apartmanhaz",
+  "https://www.marcali.hu/index.php/elet-a-varosban/turizmus-m/szallashelyek",
+  "http://zenefalu.hu/facebook_pages/szallasok.html",
+  "https://www.balatonakali.hu/Turizmus/Szallashelyek/Myrna-haza",
   // Pre-existing catalogue entries — they must keep working too.
   "https://www.booking.com/hotel/hu/example.html",
   "https://kali.hu/szallas/egyed/",
@@ -114,6 +127,12 @@ const OWN_SITE_URLS: readonly string[] = [
   "https://marcaliszallas.hu/",
   "https://aracsafarm.humtour.com/",
   "https://sites.google.com/view/jutasi-apartman/f%C5%91oldal",
+  // Round 2: the town's OWN pages beside its lodging list, and chains' own units.
+  "https://www.marcali.hu/index.php/hivatal-m/elerhetosegek",
+  "https://www.balatonakali.hu/Turizmus/Strand",
+  "https://honvedudulo.hu/szallas/hotel-aranyhid/",
+  "https://www.hunguesthotels.hu/hu/hotel/heviz/hunguest_hotel_panorama/",
+  "http://www.siofokpanzio.hu/",
 ];
 
 const failures: string[] = [];
@@ -145,13 +164,27 @@ const stock = [
   ...["Fehér", "Kék", "Zöld"].map((c) => ({ name: `Abbázia Club Hotel ${c}`, website: "https://abbazia-clubhotel.hu/" })),
   { name: "Ensana Thermal Aqua", website: "https://www.danubiushotels.com/" },
   { name: "All Inclusive Hotel Marina", website: "https://www.danubiushotels.com/" },
+  { name: "Hotel Aranyfény", website: "https://example-chain.hu/" },
+  { name: "Hotel Ezüstpart", website: "https://example-chain.hu/" },
   { name: "Sissi Panzió", website: "https://example-farm.site/sissipanzi" },
   { name: "Rozmaring Apartman", website: "https://example-farm.site/rozmarinapar" },
 ];
+stock.push(
+  { name: "Family", website: "http://example-family.hu/" },
+  { name: "Hotel Family", website: "http://example-family.hu/" },
+);
 const cand = sharedHostCandidates(stock);
+if (cand.has("example-family.hu")) failures.push("A-szabály: két csak-általános nevű rekord két különböző szállásnak számít");
 if (cand.has("abbazia-clubhotel.hu")) failures.push("A-szabály: a név a hostban van (Abbázia), mégis jelölt");
 if (!cand.has("example-farm.site")) failures.push("A-szabály: 2 különböző szállás egy idegen hoston, mégsem jelölt");
-if (!cand.has("danubiushotels.com")) failures.push("A-szabály: a lánc-host nem jelölt (a mérés szerint annak kell lennie)");
+if (!cand.has("example-chain.hu")) failures.push("A-szabály: a még nem mért lánc-host nem jelölt (a mérés szerint annak kell lennie)");
+if (cand.has("danubiushotels.com")) failures.push("A-szabály: a mért saját host (danubiushotels.com) újra jelölt");
+
+// Measured-own hosts stay has_own, and no host is measured both ways.
+for (const h of MEASURED_OWN_HOSTS) {
+  if (classifyWebsite(`https://${h}/`) !== "has_own")
+    failures.push(`mért SAJÁT host a katalógus szerint portál (ellentmondó mérés): ${h}`);
+}
 if (classifyWebsite("https://www.danubiushotels.com/") !== "has_own")
   failures.push("A-szabály automatikusan döntött: a lánc saját oldala nem has_own");
 

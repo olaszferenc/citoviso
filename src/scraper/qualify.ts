@@ -138,6 +138,19 @@ const PORTAL_DOMAINS = [
   // 13 DIFFERENT lodgings with no common owner or brand, each on a garbled path
   // slug (visty.site/kagylkkk, /balatonapar3) — no chain explains that sharing.
   "visty.site",
+  // RULE B, round 2 (2026-10-02, the remaining rule-A candidates): a MUNICIPAL or
+  // tourism-body page that lists other people's lodgings is a portal —
+  // balatonakali.hu (Turizmus › Szálláshelyek), marcali.hu (turizmus › szálláshelyek),
+  // vonyarcvashegy.hu (inquiry form "a választott szállásnak küldjük"), zenefalu.hu
+  // (the tourism association's szallasok.html; unreachable, measured by its path).
+  // PATH-SCOPED where the town's own institutions live on the same host: the
+  // mayor's office (marcali.hu/…/hivatal-m) and the municipal beach
+  // (balatonakali.hu/Turizmus/Strand) ARE the town's own pages — only the lodging
+  // list is someone else's roof. vonyarcvashegy.hu carries only lodgings here.
+  "balatonakali.hu/turizmus/szallashelyek",
+  "marcali.hu/index.php/elet-a-varosban/turizmus-m",
+  "zenefalu.hu/facebook_pages/szallasok",
+  "vonyarcvashegy.hu",
   // Company registries: a firm-data page is not a website either.
   "ceginformacio.hu",
   "197.eu",
@@ -149,10 +162,11 @@ const PORTAL_DOMAINS = [
  * the hotel chain's OWN site, and misfiling it as a portal turns a real customer
  * into a "no website" lead (a credibility bug, see §F).
  *
- * List entries are read three ways:
+ * List entries are read four ways:
  *   "booking.com"   exact domain → host is it, or a subdomain of it
  *   "airbnb."       any TLD      → the label "airbnb" followed by a dot
  *   "zimmerinfo"    brand word   → appears inside a host LABEL (not the whole URL)
+ *   "marcali.hu/…"  host + path  → only that listing branch of the host
  */
 /**
  * Listing PATHS: a directory entry on someone else's site (typically a town's
@@ -185,6 +199,12 @@ function isPortalHost(url: string): boolean {
   const labels = host.split(".");
   return PORTAL_DOMAINS.some((entry) => {
     const d = entry.toLowerCase();
+    // "host/path" → a listing BRANCH of a site whose other pages are someone's own.
+    const slash = d.indexOf("/");
+    if (slash > 0) {
+      const h = d.slice(0, slash);
+      return (host === h || host.endsWith(`.${h}`)) && pathname.startsWith(d.slice(slash));
+    }
     if (d.endsWith(".")) {
       const brand = d.slice(0, -1);
       return labels.includes(brand);
@@ -270,6 +290,31 @@ export function nameInHost(name: string, website: string): boolean {
 }
 
 /**
+ * MEASURED OWN under rule B (2026-10-02): rule-A candidates whose front page is the
+ * business's OWN — a single lodging, or one operator's / chain's / institution's own
+ * units (Hunguest, Danubius, Balatontourist, the Honvéd resort, an abbey, a national
+ * park, a forestry, "Családias panzióink" …). Rule B's measured line: a page that lists
+ * OTHER PEOPLE's lodgings (a town, a tourism body, an agency "Szállást ad ki? Legyen a
+ * partnerünk!") is a portal; a page listing the owner's own units is not. Recorded so
+ * the candidate detector stops re-raising a settled host; NOT a classification input
+ * (classifyWebsite already says has_own for them — the guard checks that stays so).
+ */
+export const MEASURED_OWN_HOSTS: readonly string[] = [
+  "bakonyerdo.hu", "balatonbereny.hu", "balatonfoldvariszallas.hu", "balatonhotelsiofok.hu",
+  "balatontourist.hu", "bfnp.hu", "danubiushotels.com", "danubiushotels.hu", "famkovacs1.hu",
+  "furedikiadohazak.hu", "h-r-camping-balaton.de", "honvedudulo.hu", "hunguesthotels.hu",
+  "kksz.hu", "kristalyfurdo.hu", "lambert.hu", "linktr.ee", "lschotel.hu", "mgapartmanok.hu",
+  "olcsoszallasbalatonzamardi.com", "panzioheviz.hu", "siofokpanzio.hu", "sites.google.com",
+  "szallassiofokon.hu", "tengerdi.hu", "tihanyiapatsag.hu", "tutelakft.hu", "vadoctanya.hu",
+  "wellnesskastely.hu",
+  // Unreachable from dev AND prod — no rule-B evidence, so the safe verdict (has_own):
+  // a false "no site" insults a real customer, a missed portal only delays a target.
+  "balatonlelleapartment.com",
+  // Round 1 (see the RULE B block in PORTAL_DOMAINS).
+  "hotelizator.com", "marcaliszallas.hu", "humtour.com", "hotel.hu",
+];
+
+/**
  * Rule-A CANDIDATES of a lead stock: hosts that ≥2 different businesses reach through a
  * foreign link and that the catalogue does not already call a portal. To be verified by
  * rule B (front page), never auto-applied — see the measurement above.
@@ -283,13 +328,24 @@ export function sharedHostCandidates(
     if (!l.website || nameInHost(l.name, l.website)) continue;
     const host = hostOfUrl(l.website);
     if (!host) continue;
-    const business = nameTokens(l.name).join(" ") || l.name.toLowerCase();
+    // A name made only of generic words ("Family" / "Hotel Family") carries no
+    // identity, so such records cannot prove two DIFFERENT businesses — one key.
+    const business = nameTokens(l.name).join(" ") || "(generic name)";
     if (!byHost.has(host)) byHost.set(host, new Set());
     byHost.get(host)!.add(business);
   }
   return new Set(
     [...byHost]
-      .filter(([h, b]) => b.size >= minBusinesses && !isPortalHost(`https://${h}/`))
+      .filter(
+        ([h, b]) =>
+          b.size >= minBusinesses &&
+          !isPortalHost(`https://${h}/`) &&
+          // a host with a measured listing BRANCH is settled too (its other pages are own)
+          !PORTAL_DOMAINS.some((d) => d.includes("/") && hostMatches(h, [d.slice(0, d.indexOf("/"))])) &&
+          !hostMatches(h, MEASURED_OWN_HOSTS) &&
+          !hostMatches(h, SHORTENER_HOSTS) &&
+          !hostMatches(h, FILE_LINK_HOSTS),
+      )
       .map(([h]) => h),
   );
 }
