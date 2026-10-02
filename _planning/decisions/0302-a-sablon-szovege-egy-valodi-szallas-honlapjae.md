@@ -1,4 +1,4 @@
-## ADR-XXXX — A sablon szövege egy valódi szállás honlapjáé: nincs „játék-szöveg”, ál-jelölés és kártyánkénti átlag-csillag (2026-10-02)
+## ADR-0302 — A sablon szövege egy valódi szállás honlapjáé: nincs „játék-szöveg”, ál-jelölés és kártyánkénti átlag-csillag (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva — a tulaj (a koordinátoron át, szó szerint: „mind igen”) · M4 SUB
 (koordinátor: CIT „élesi teszt” fő session; brief: `~/rc-briefs/javitas-elek-0930/m4-sablon-szovegek.md`) ·

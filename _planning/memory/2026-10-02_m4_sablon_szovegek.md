@@ -1,7 +1,7 @@
 # M4 — sablon-szövegek, vélemény-csillagsor, arch-frames cím, lake-balaton UA, tegező alak-szabály (2026-10-02)
 
 SUB-szál (koordinátor: CIT „élesi teszt”, `~/wt/cit87d3f275`) · brief: `~/rc-briefs/javitas-elek-0930/m4-sablon-szovegek.md` ·
-ADR-XXXX (sablon szövege) · kontraktus: `assets/design-refs/tenant-site/sablon-szovegek/`.
+ADR-0302 (sablon szövege) · kontraktus: `assets/design-refs/tenant-site/sablon-szovegek/`.
 
 ## Elvégezve
 - **Vélemény-kártya csillagsor** (brutalism, organic, watercolor, dopamine, claymorphism): kártyáról le, fejlécben egyszer
