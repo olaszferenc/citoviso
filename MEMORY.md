@@ -13,6 +13,15 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-01/02 — KOORDINÁTOR: Places-költség ~600 $/hét → 0, 8 SUB, ADR-0293…0298, 0301) — LANDOLVA, élesre semmi
+
+A konzol lead-lapja minden betöltéskor (és generálás alatt 6–8 mp-enként) fizetős Places-lookupot csinált → 96% ismétlés.
+Javítva: A tárolt, egyszer fizetett eredmény (`lead_places_cache`) · B portál előbb, mindenkinek · C kurátori fizetős gomb
+(B terv) · D ID-only felderítés · E ismert lead nem dúsul + UTC-kapu · F nincs cap, csak figyelmeztetés · G napi
+költség-riport 07:10 · H valós számla (BigQuery). Places-hívás 10-01 21:31 óta 0. **Nyitott:** billing export bekapcsolása
+a Console-ban (tulaj) · éles portál-backfill a nagy deploy UTÁN (~22 perc, engedéllyel). Jegyzet:
+`_planning/memory/2026-10-02_places_koltseg_koordinator.md`.
+
 ## Párhuzamos szál (2026-10-02 — SUB L1 `cit42887439`: megkereső levél + SMS valódisága, saját-fotó nyomás, ADR-0305 + ADR-0306) — LANDOLVA, élesítés a koordinátoré
 - Levél: a szegmens-mondat csak a honlap-mérést mondja ki; 4,0 ★ alatt nincs értékelés-idézet; „Ezért” csak hiány után; B-csiszolás (levél + emlékeztető), SMS „csapata”.
 - Őrök: `outreach-letter-truth-check` (300 ág) · `own-photo-pressure-check`. LLM-kritikus: `npx tsx scripts/outreach-letter-critic.mts --run` sablon-változáskor.
