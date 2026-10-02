@@ -1,0 +1,22 @@
+[Unit]
+# Napi Google API költség-riport e-mailben a tulajnak (a Places-költség brief G része).
+# Csak SZÓL, semmit nem korlátoz. Ha a token vagy a Monitoring elbukik, a levél AKKOR IS
+# kimegy, és kimondja, hogy nincs adat és miért; nem-nulla kilépés csak akkor, ha maga a
+# levél nem ment ki (az a naplóba kerül).
+Description=Citoviso napi Google API költség-riport (listaáras becslés)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Rövid, magától kilépő futás: a oneshot + alapértelmezett KillMode=control-group itt a
+# HELYES (a gcloud gyerekfolyamatot is elpakolja). Az rc-watchdog tanulsága (a tick végén
+# megölt tmux-ok) csak hosszan élő gyereket indító szolgáltatásra áll — ez nem indít ilyet.
+Type=oneshot
+User=citoviso
+# A FŐ FÁBÓL fut, nem worktree-ből: a worktree-k jönnek-mennek (ADR-0052).
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/google-cost-report.mts
+# Token-kérés + Monitoring + SMTP: mindegyiknek van saját időkorlátja, ez a végső fék.
+TimeoutStartSec=300
+StandardOutput=append:/home/citoviso/.claude/citoviso-google-cost-report.log
+StandardError=append:/home/citoviso/.claude/citoviso-google-cost-report.log

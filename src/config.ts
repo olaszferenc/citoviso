@@ -137,6 +137,18 @@ export const config = {
    */
   ownerAlertPhone: env("OWNER_ALERT_PHONE"),
   /**
+   * Daily Google API cost report (ADR-XXXX, scripts/google-cost-report.mts). Reports,
+   * never limits. Project = the Cloud project whose Monitoring is read (shared with MR).
+   * Recipient: empty = the console's alert e-mail list (/settings, app_setting alert_email).
+   * Threshold: the day is flagged when its list-price estimate exceeds it (USD).
+   * Item minimum: a ≥2× item is flagged only from this estimated daily cost (USD).
+   */
+  googleCostProject: env("GOOGLE_COST_PROJECT", "mineralcrm"),
+  googleCostReportTo: env("GOOGLE_COST_REPORT_TO"),
+  googleCostDailyThresholdUsd: Number(env("GOOGLE_COST_DAILY_THRESHOLD_USD", "20")),
+  googleCostItemMinUsd: Number(env("GOOGLE_COST_ITEM_MIN_USD", "1")),
+  gcloudBin: env("GCLOUD_BIN", `${env("HOME", "/home/citoviso")}/google-cloud-sdk/bin/gcloud`),
+  /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the
    * machine actually sends while the pilot runs (owner request, 2026-08-26).
    * Empty = off, which is the post-pilot state.

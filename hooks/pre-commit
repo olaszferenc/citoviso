@@ -1836,6 +1836,14 @@ if [ -f scripts/scrape-known-skip-check.mts ] && \
   echo "[pre-commit] scrape-known-skip-check (az ismert lead nem megy át a fizetős dúsításon)…"
   npx tsx scripts/scrape-known-skip-check.mts
 fi
+# The daily Google API cost report (2026-10-02, the "G part" of the Places-cost brief): price × count, the threshold and the ≥2×
+# highlight, the Budapest day (DST) and the no-data branch (a failed token/Monitoring still mails,
+# saying why). Hermetic (fetch stub, global fetch throws), no DB, no mail.
+if [ -f scripts/google-cost-report-check.mts ] && \
+   changed_files | grep -qE '^src/ops/googleCostReport\.ts$|^scripts/google-cost-report'; then
+  echo "[pre-commit] google-cost-report-check (napi Google-költség riport számolása)…"
+  npx tsx scripts/google-cost-report-check.mts
+fi
 # A lead carrying portal data must be PERSISTABLE (2026-08-21). A bare URL in the JSONB
 # matched_entity column rolled back a whole 554-lead run; the type said `string | null`,
 # so tsc saw nothing. Needs the local DB, so it runs only when persist code is staged.

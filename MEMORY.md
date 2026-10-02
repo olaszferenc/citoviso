@@ -11,6 +11,13 @@ Utolsó frissítés: 2026-10-01 (🗣️ **Elek SZ — vendég-kritikus a mock-s
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség G rész, napi Google API költség-riport, ADR-XXXX) — LANDOLVA
+
+Reggel 07:10-kor (dev-időzítő `citoviso-google-cost-report.timer`) levél a tegnapi Google API hívásokról: service × method,
+listaáras BECSLÉS, összevetés a 7 napos átlaggal, `[FIGYELEM]` küszöb (20 $) / ≥2× tétel esetén, `[NINCS ADAT]` ha a token
+vagy a Monitoring bukik. Semmit nem korlátoz. Ártábla egy helyen: `src/ops/googleCostReport.ts`. Őr: `google-cost-report-check`.
+Az első riport (10-01, ~11,68 $) kiment. Jegyzet: `_planning/memory/2026-10-02_g_napi_google_koltseg_riport.md`.
+
 ## Párhuzamos szál (2026-10-02 — SUB: Places-költség E rész + éjszakai UTC-kapu, ADR-0296) — LANDOLVA
 
 ① `module-render-check` a programajánló „holnapját” UTC-ben számolta → 00–02 CEST között minden land bukott; most

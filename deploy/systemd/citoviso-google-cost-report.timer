@@ -1,0 +1,11 @@
+[Unit]
+Description=Citoviso napi Google API költség-riport — reggel 07:10
+
+[Timer]
+# 07:10: a billing-tick (07:00) után, a KB-söprés (07:20) előtt. A tegnapi nap Monitoring-
+# adata ekkorra teljes. Persistent: ha a gép reggel nem futott, bekapcsoláskor pótolja.
+OnCalendar=*-*-* 07:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
