@@ -303,7 +303,7 @@ html{scroll-padding-bottom:calc(var(--citui-consent-bottom,0px) + var(--citui-co
 
 /* ═══ 6. PHOTOS: notice · drop bar · toolbar · grid / list · bulk · lightbox ═════ */
 .adm-notice{display:flex;gap:10px;align-items:flex-start;border-radius:8px;padding:11px 14px;font-size:.9em;line-height:1.45;margin-bottom:14px;border:1px solid transparent}
-.adm-notice--demo{background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 25%,transparent)}
+.adm-notice--demo{background:var(--citui-surface-2);color:var(--citui-ink);border-color:var(--citui-line)}
 .adm-notice--own{background:color-mix(in srgb,var(--citui-ok) 12%,var(--citui-panel));color:var(--citui-ok-ink);border-color:color-mix(in srgb,var(--citui-ok) 25%,transparent)}
 .adm-notice b{color:inherit}
 .adm-notice svg{flex:0 0 auto;margin-top:1px}

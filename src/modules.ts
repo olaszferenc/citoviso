@@ -144,7 +144,7 @@ export interface ModuleDef {
 // Pricing model (tulaj): subscription = BASE + Σ(selected module priceMonthly);
 // annual = 2 months free.
 export const MODULE_CATALOG: readonly ModuleDef[] = [
-  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", publicDesc: "Nagy, minőségi fotógaléria a szállásról — élesítéskor az Ön saját képeivel töltjük fel.", group: "offer", domType: "gallery", priceMonthly: 490 },
+  { id: "gallery", label: "Galéria (valós fotók)", publicLabel: "Képek a szállásról", publicDesc: "Nagy, minőségi fotógaléria a szállásról.", group: "offer", domType: "gallery", priceMonthly: 490 },
   { id: "rooms", label: "Szobák / apartmanok", publicLabel: "Szobák, apartmanok", publicDesc: "A szobák, apartmanok külön kártyákon: fotó, férőhely, rövid leírás — a vendég pontosan látja, mit kap.", group: "offer", domType: "rooms", priceMonthly: 690 },
   { id: "amenities", label: "Felszereltség", publicLabel: "Amit kínál (felszereltség)", publicDesc: "Áttekinthető lista arról, amit a vendég Önnél kap: Wi‑Fi, parkolás, reggeli, klíma és a többi.", group: "offer", domType: "amenities", priceMonthly: 490 },
   { id: "pricing", label: "Árak / szezonok", publicLabel: "Árak, szezonok", publicDesc: "Árak és szezonok áttekinthető táblázatban — az árakat Ön adja meg, és bármikor módosíthatja.", group: "offer", domType: "pricing", priceMonthly: 490, requires: [{ id: "rooms", when: "multiUnit", strength: "hard", why: "Több szoba vagy apartman esetén az ár mindig ahhoz tartozik, amit a vendég kivesz — a Szobák modul mondja meg, mire vonatkozik az összeg." }] },

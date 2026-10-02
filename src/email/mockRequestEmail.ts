@@ -28,7 +28,7 @@ export function buildMockReadyEmail(input: {
     `\n\n${previewUrl}\n\n` +
     T(
       lang,
-      "Ez egy bemutató előnézet, kötelezettség nélkül. Ha tetszik, néhány lépésben élesíthető, és a saját képeivel, szövegeivel véglegesítjük — csak akkor fizet, ha valóban szeretné.",
+      "Ez egy bemutató előnézet, kötelezettség nélkül. Ha tetszik, néhány lépésben élesíthető — csak akkor fizet, ha valóban szeretné.",
     ) +
     `\n\n` +
     T(lang, "Ha kérdése van vagy szeretné élesben, egyszerűen válaszoljon erre a levélre.") +
@@ -48,7 +48,7 @@ export function buildMockReadyEmail(input: {
     `<p style="margin:0 0 24px"><a href="${previewUrl}" ` +
     `style="display:inline-block;background:#1fb6d6;color:#0e2a47;font-weight:bold;` +
     `text-decoration:none;padding:14px 22px;border-radius:12px">${T(lang, "Megnézem az előnézetem")}</a></p>` +
-    `<p style="margin:0 0 16px;color:#60748b;font-size:14px">${T(lang, "Ez egy bemutató előnézet, kötelezettség nélkül. Ha tetszik, a saját képeivel és szövegeivel véglegesítjük, és élesíthető — csak akkor fizet, ha valóban szeretné.")}</p>` +
+    `<p style="margin:0 0 16px;color:#60748b;font-size:14px">${T(lang, "Ez egy bemutató előnézet, kötelezettség nélkül. Ha tetszik, néhány lépésben élesíthető — csak akkor fizet, ha valóban szeretné.")}</p>` +
     `<p style="margin:0 0 16px;color:#60748b;font-size:14px">${T(lang, "Kérdése van? Egyszerűen válaszoljon erre a levélre.")}</p>` +
     `<p style="margin:24px 0 0;color:#8a95a1;font-size:13px">${T(lang, "Üdvözlettel,")}<br>${T(lang, "a Citoviso csapata")}</p>` +
     `</div></body></html>`;

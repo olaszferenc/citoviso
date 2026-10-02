@@ -636,7 +636,9 @@ function photosCard(
   const n = photos.length;
   const notice = own
     ? `<div class="adm-notice adm-notice--own">${ic("checkc", 18)}<span>${T(lang, "A saját fotói láthatók az oldalán.")} ${T(lang, "{n} / 24 kép a könyvtárban.", { n })}</span></div>`
-    : `<div class="adm-notice adm-notice--demo">${ic("alert", 18)}<span><b>${T(lang, "Bemutató képek láthatók.")}</b> ${T(lang, "Az élesítéshez a saját, jogtiszta fotói kellenek — az első feltöltés {b} a {n} bemutató képet.", { b: `<b>${T(lang, "lecseréli")}</b>`, n })}</span></div>`;
+    : // Owner's ruling 2026-10-02: the buyer DECLARED the photos at checkout (src/legal.ts),
+      // so this bar may only offer, never demand or warn (own-photo-pressure-check).
+      `<div class="adm-notice adm-notice--demo">${ic("photos", 18)}<span><b>${T(lang, "Ha szeretné, feltölthet saját képeket.")}</b> ${T(lang, "Az első saját feltöltés {b} a mostani {n} képet.", { b: `<b>${T(lang, "lecseréli")}</b>`, n })}</span></div>`;
   // README ⑦: the rules ARE /admin/photos's (ADR-0198) — the bar states them verbatim.
   const drop =
     `<div class="adm-drop" id="adm-drop"><b>${T(lang, "Húzza ide a fotóit")}</b>` +
@@ -4278,14 +4280,8 @@ function overviewSection(
     pendingRows +
     paidEmptyRows +
     priceGapRow +
-    todoItem(
-      content.usingOwnPhotos,
-      content.usingOwnPhotos
-        ? T(lang, "A saját fotói fent vannak")
-        : `<strong>${T(lang, "Töltsön fel saját fotókat")}</strong> ${T(lang, "— jelenleg bemutató képek láthatók")}`,
-      "fotok",
-      true,
-    ) +
+    // No photo row (owner's ruling 2026-10-02): an „Élesítés előtt” to-do that only an
+    // own upload could close made the declared photos look insufficient.
     todoItem(
       introDone,
       introDone
@@ -4308,7 +4304,7 @@ function overviewSection(
     );
   const openCount =
     pendingItems.length +
-    paidEmpty.length + (priceGaps.length ? 1 : 0) + (content.usingOwnPhotos ? 0 : 1) + (introDone ? 0 : 1) + (live ? 0 : 1);
+    paidEmpty.length + (priceGaps.length ? 1 : 0) + (introDone ? 0 : 1) + (live ? 0 : 1);
   // ── the three widgets (README ⑤) ────────────────────────────────────────────
   const statusTag =
     content.status === "live"
@@ -4359,11 +4355,9 @@ function overviewSection(
       `<div class="adm-covc__b"><div><b>${esc(content.name)}</b><span>${
         own
           ? T(lang, "A saját fotói láthatók az oldalán — így látja a vendég az oldal tetején.")
-          : T(lang, "Jelenleg bemutató képek — az élesítéshez a saját, jogtiszta fotói kellenek.")
+          : T(lang, "Ha szeretné, feltölthet saját képeket.")
       }</span></div><div class="adm-covc__acts">` +
-      (own
-        ? `<a class="adm-btn adm-btn--sm" href="/admin?tab=fotok">${ic("photos", 14)}${T(lang, "Fotók kezelése")}</a>`
-        : `<a class="adm-btn adm-btn--sm adm-btn--p" href="/admin?tab=fotok">${ic("upload", 14)}${T(lang, "Cserélje sajátra")}</a>`) +
+      `<a class="adm-btn adm-btn--sm" href="/admin?tab=fotok">${ic("photos", 14)}${T(lang, "Fotók kezelése")}</a>` +
       `<button type="button" class="adm-btn adm-btn--sm" data-lb="0">${ic("preview", 14)}${T(lang, "Nagyítás")}</button>` +
       `</div></div></div>`
     : "";

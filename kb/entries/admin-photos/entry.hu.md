@@ -4,13 +4,13 @@ title: Fotók kezelése — feltöltés, sorrend, nyitókép
 audience: tenant
 category: my-site
 anchors: admin.photos
-updated: 2026-09-24
+updated: 2026-10-02
 ---
 
-A **„Fotók”** lapon kezeli az oldalán megjelenő képeket. Amíg nem tölt fel sajátot, bemutató képek
-láthatók — a lap tetején a sárga sáv mondja ki: **„Bemutató képek láthatók.”** Amint feltölti az
-első saját fotóit, az oldal azokra vált át, és a sáv zöldre vált: **„A saját fotói láthatók az
-oldalán.”**
+A **„Fotók”** lapon kezeli az oldalán megjelenő képeket. Az oldala az induláskor kapott képekkel
+működik; a lap tetején a sáv ezt kínálja: **„Ha szeretné, feltölthet saját képeket.”** Amint
+feltölti az első saját fotóit, az oldal azokra vált át, és a sáv zöldre vált: **„A saját fotói
+láthatók az oldalán.”**
 
 A cím alatti sor mindig megmondja, hány képe van, és emlékeztet a két szabályra: az első a
 nyitókép, a sorrend húzással rendezhető.
@@ -30,7 +30,7 @@ nyitókép, a sorrend húzással rendezhető.
    szabályoknak (nem kép, túl nagy, vagy tele a könyvtár), a sora piros, és megmondja az okot — a
    többi kép ettől még felmegy. A végén az oldal frissül, és a képei megjelennek a rácsban.
 
-Az első saját feltöltés **lecseréli** a bemutató képeket: azokat nem kell törölnie.
+Az első saját feltöltés **lecseréli** az induláskor kapott képeket: azokat nem kell törölnie.
 
 ## Rács vagy lista
 

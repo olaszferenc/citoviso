@@ -68,14 +68,15 @@ tud visszalépni… ez nem képgaléria… a fájlok kiválasztása gomb 1995”
 5. **Áttekintés:** cím + egy mondat; **3 widget** (**„Állapot”** + cím · **„Látogatók · 7 nap”** — **„egyedi látogató, robotok nélkül”** —
    + szikra-diagram · **„Üzenetek”**, a 3 legutóbbi, olvasatlan pöttyel); alatta a
    **nyitókép-mutató**: a `photos[0]` képe, bal fent **„Bemutató nyitókép”** / **„Saját nyitókép”**
-   címke, jobb fent „N kép”, alul a szállás neve + állapot-mondat + **„Cserélje sajátra”**
-   (bemutató esetén, a Fotókra visz) vagy **„Fotók kezelése”** + **„Nagyítás”**; alatta a **Teendők**
+   címke, jobb fent „N kép”, alul a szállás neve + állapot-mondat + **„Fotók kezelése”**
+   (mindig, a Fotókra visz) + **„Nagyítás”** — ⛔ tulaj-döntés 2026-10-02: cserére sürgető gomb/mondat nincs,
+   bemutató képeknél legfeljebb **„Ha szeretné, feltölthet saját képeket.”**; alatta a **Teendők**
    lista (nyitott: szaggatott kör + **„Élesítés előtt”** chip; kész: zöld pötty + áthúzva; jobbra
    a fül neve), fejlécében „N nyitott” és „N modul · K számlázott”. ⛔ Foglalási kérés NINCS
    a widgetek között, amíg 0 (a mock-ban sem szerepel — az első körben kitalált „1 új kérés”
    HIBA volt).
 6. **Fotók:** cím + „N kép · az első a nyitókép · húzással rendezhető”; bemutató/saját sáv
-   (borostyán/zöld); **vékony húzza-ide sáv** (szöveg + korlátok + **„Fotók választása”**, mobilon
+   (semleges felajánlás / zöld — 2026-10-02 óta nem borostyán figyelmeztetés); **vékony húzza-ide sáv** (szöveg + korlátok + **„Fotók választása”**, mobilon
    **„Fényképezés”** is, `capture=environment`); **„Rács”** / **„Lista”** váltó; rács 6 oszlop (mobil 3),
    négyzetes csempék, sorszám, nyitókép-címke, a műveletek (★ nyitókép, ‹ ›, törlés) **hoverre
    a csempén**; lista: fogantyú, bélyegkép, aláírás-mező a sorban, **„Nyitókép”** / **„Legyen nyitókép”**,

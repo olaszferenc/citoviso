@@ -1448,6 +1448,18 @@ if [ -f scripts/guest-critic-check.mts ] && \
   echo "[pre-commit] guest-critic-check (vendég-kritikus: magázás, vélemény ≠ ajánlat, bekötés)…"
   npx tsx scripts/guest-critic-check.mts >"$GATE_LOG" || gate_failed
 fi
+# SAJÁT-FOTÓ NYOMÁS (tulaj-döntés 2026-10-02, Elek L1 ⑤): a vevő a képekről nyilatkozott
+# (src/legal.ts) — semmilyen felület/levél/KB/kontraktus nem kötheti az élesítést saját fotóhoz,
+# és nem sürgethet cserét („Cserélje sajátra”, „jogtiszta fotói kellenek”). MINDIG fut (szöveg-őr,
+# ~1 s); a saját változásakor a piros önteszt is.
+if [ -f scripts/own-photo-pressure-check.mts ]; then
+  if changed_files | grep -qE '^scripts/own-photo-pressure-check\.mts$'; then
+    echo "[pre-commit] own-photo-pressure-check --self-test (az őr elkapja-e a bejelentett mondatokat)…"
+    npx tsx scripts/own-photo-pressure-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] own-photo-pressure-check (nincs saját-fotóhoz kötött élesítés, nincs cserére sürgetés)…"
+  npx tsx scripts/own-photo-pressure-check.mts >"$GATE_LOG" || gate_failed
+fi
 # TEGEZŐ ALAK-SZABÁLLYAL (M4, 2026-10-02): a vendég-kritikus kódalapú tegező-felismerése zárt
 # szólista volt („kapsz”-ot fogta, „kaphatsz”, „érezd”, „töltsd”, „pihenj”, „foglald”, „jársz”,
 # „nálad” átment). Most szabály-családok (addressRegister.ts); tegező korpusz, magázó/T3 csapdák,

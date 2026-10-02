@@ -171,7 +171,9 @@ for (const size of SIZES) {
     ok(`${tag}: a téma a gyökéren áll (${theme})`, (await page.getAttribute("html", "data-citui-theme")) === theme || (theme === "light" && !(await page.getAttribute("html", "data-citui-theme"))));
     ok(`${tag}: 3 widget az Áttekintésen`, (await page.locator(".adm-w [data-widget]").count()) === 3);
     ok(`${tag}: nyitókép-mutató jelen`, (await page.locator(".adm-covc img").count()) === 1);
-    ok(`${tag}: teendő-lista jelen (fejléc + sorok)`, (await page.locator(".adm-todobox .adm-todo__h").count()) === 1 && (await page.locator(".adm-todo > li").count()) >= 3);
+    // ≥2 since 2026-10-02: the „Töltsön fel saját fotókat” row is gone (owner's ruling — the
+    // buyer declared the photos; own-photo-pressure-check). Intro + go-live rows remain.
+    ok(`${tag}: teendő-lista jelen (fejléc + sorok)`, (await page.locator(".adm-todobox .adm-todo__h").count()) === 1 && (await page.locator(".adm-todo > li").count()) >= 2);
     const backHiddenOv = await page.evaluate(() => {
       const b = document.querySelector<HTMLElement>(".adm-back");
       if (!b) return "missing";

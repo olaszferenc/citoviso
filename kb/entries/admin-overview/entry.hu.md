@@ -4,7 +4,7 @@ title: Áttekintés — az oldala állapota egy pillantásra
 audience: tenant
 category: my-site
 anchors: admin.overview
-updated: 2026-09-25
+updated: 2026-10-02
 ---
 
 Az **„Áttekintés”** lap a kezelőfelület nyitóoldala: itt látja egyben, milyen állapotban van az
@@ -48,9 +48,8 @@ Az Áttekintés tetején három csempe áll:
 
 A csempék alatt a **nyitókép-mutató** azt a képet mutatja, amit a vendég az oldal tetején lát —
 a sarkában az áll, hogy ez **„Bemutató nyitókép”** vagy **„Saját nyitókép”**, és hogy összesen hány
-képe van. Amíg bemutató képek vannak fent, a **„Cserélje sajátra”** gomb a Fotók lapra visz;
-saját képeknél a **„Fotók kezelése”** gomb teszi ugyanezt. A **„Nagyítás”** teljes képernyőn
-mutatja a képet.
+képe van. A **„Fotók kezelése”** gomb a Fotók lapra visz — ha szeretné, ott feltölthet saját
+képeket. A **„Nagyítás”** teljes képernyőn mutatja a képet.
 
 ## Előfizetés-kártya
 
@@ -72,15 +71,14 @@ moduljaim”** lista alján lévő összegzőben látja; a tételes bontást ped
 A lista magától frissül: a zöld pötty és az áthúzott szöveg azt jelzi, hogy egy lépés kész, a
 szaggatott kör azt, hogy még hátravan. Minden sor jobb szélén annak a lapnak a neve áll, ahol a
 teendőt elintézheti — rákoppintva oda jut. Amíg az oldal nincs élesítve, a nyitott sorokon az
-**„Élesítés előtt”** címke áll. A két legfontosabb teendő az induláskor:
+**„Élesítés előtt”** címke áll. A legfontosabb teendő az induláskor:
 
-1. **„Töltsön fel saját fotókat”** — amíg nem tölt fel sajátot, bemutató képek láthatók az
-   oldalán. Ha megvan, a sor átvált erre: **„A saját fotói fent vannak”**.
-2. **„Írja meg a bemutatkozó szöveget”** — ez a szöveg fogadja a vendégeit az oldal elején.
-   Ha megvan, a sor így szól: **„A bemutatkozó szövege kész”**.
+- **„Írja meg a bemutatkozó szöveget”** — ez a szöveg fogadja a vendégeit az oldal elején.
+  Ha megvan, a sor így szól: **„A bemutatkozó szövege kész”**.
 
-Ha mindkettő kész, és a csomagja rendezett, a Citoviso élesíti az oldalt — Önnek ehhez nincs
-külön teendője.
+Ha ez kész, és a csomagja rendezett, a Citoviso élesíti az oldalt — Önnek ehhez nincs
+külön teendője. Saját fotó nem feltétele az élesítésnek: ha szeretné, a Fotók lapon bármikor
+feltölthet saját képeket.
 
 ## „Kifizette, de üres” — ha egy modul nem látszik az oldalán
 
