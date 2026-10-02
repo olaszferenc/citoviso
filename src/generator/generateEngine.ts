@@ -530,6 +530,19 @@ async function generateEngineMockInner(
     editorial = critic.copy.editorial;
     criticInputs = critic.inputs;
     console.log(`  vendég-kritikus: ${String(critic.inputs.guestCriticVerdict).toUpperCase()} · ${critic.inputs.guestCriticReason}`); // i18n-exempt: operator log
+    // The market verdict must describe the SHIPPED copy (OP-1, Elek 2026-10-02): judged
+    // before the critic, the Muschel card cited „bérelhető bicikli” as the reason the copy
+    // sells — a phrase the critic had already removed. No regeneration here: the critic's
+    // copy is final, the verdict follows it (a flag goes to the curator like any other).
+    if (market) {
+      try {
+        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: groundImages });
+        console.log(`  marketing-őr a kiszállított szövegen: ${market.verdict.toUpperCase()} · ${market.reason}`); // i18n-exempt: operator log
+      } catch (mErr) {
+        // Never keep the stale verdict, and never drop it silently: unverifiable → error.
+        market = { verdict: "error", layer: "judge", factsNamed: [], missed: [], reason: `a kiszállított szöveg nem ítélhető: ${(mErr as Error).message}` }; // i18n-exempt: operator-facing verdict reason (console)
+      }
+    }
   }
 
   const siteData: SiteData = {

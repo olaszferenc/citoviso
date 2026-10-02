@@ -253,6 +253,15 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     brief = { ...brief, tagline: critic.copy.tagline, intro: critic.copy.intro, highlights: [...critic.copy.highlights] };
     editorial = critic.copy.editorial;
     criticInputs = critic.inputs;
+    // The market verdict follows the SHIPPED copy, not the pre-critic one (OP-1) — same
+    // rule as generateEngine: re-judged, never regenerated; a failure is an error verdict.
+    if (market) {
+      try {
+        market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls });
+      } catch (err) {
+        market = { verdict: "error", layer: "judge", factsNamed: [], missed: [], reason: `a kiszállított szöveg nem ítélhető: ${(err as Error).message}` }; // i18n-exempt: operator-facing verdict reason (console)
+      }
+    }
   }
 
   // Only the WORDS change; photos, palette, rooms, stats and the section order stay.

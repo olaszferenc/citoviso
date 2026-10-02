@@ -13,6 +13,11 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-02 — SUB K2 `cit35b7088c`: Elek 2. kör — SZ2-1 · OP-1 (ADR-XXXX) LANDOLVA; S-1 terv-kapun VÁR)
+- **SZ2-1:** a vendég-kritikus átengedte a hozzátett részletet („grillezés a FEDETT teraszon”, „reggeli a TERASZON”). Gépi szabály `lintAddedDetail` (szolgáltatás + hely/minőség csak EGY forrás-mondat együttállásával; kétnyelvű tövek), `normalizeSeverity` (a mindig-blokkoló fajták „javítandó”-ja blokkoló; a megszólítás nem), `minorTail` (a kiment javítandók az indoklásban). Mérve 6 mockon előtte/utána (`assets/design-refs/_drafts/k2-kritikus/`). Ismert határ: „kerttel … reggelit szolgál fel” egy mondatban → a gépi szabály nem fogja meg (a modell igen).
+- **OP-1:** csak a piac-őr futott a kritikus előtt (tényhűség, dizájn a renderen, utána) → mindkét úton újraítél a kiszállított szövegen; hibánál `error`. Őr: `scripts/guest-critic-check.mts` ⑦–⑨, 7 mutáció piros.
+- **S-1 (NYITVA):** a Séta elmaradása a konzolon néma. §2b terv kész (`assets/design-refs/_drafts/k2-seta/seta-jelzes.html`, A: figyelmeztet / B: kiszürkít), a tulaj döntésére vár. Jegyzet: `_planning/memory/2026-10-02_k2_kritikus_seta_indoklas.md`.
+
 ## Párhuzamos szál (2026-10-02 — SUB M5 `cit4db98e6b`: Elek 2. kör — LV-1 · ADM-2 · ADM-1, ADR-0308) — LANDOLVA, élesítés + élő rerender a koordinátoré
 - **LV-1:** nem megvett modul szekciója nem látszik az élő lapon (usp 15/20, vélemény 20/20 sablonon szivárgott; egyik sem gerinc) — `unboughtPageAnchors()` + `renderSite({ hideAnchors })`, minden élő render-út; a usp-horgony nem foglalja le a bevezetőt (wordmark-grow). Őr: `scripts/unbought-module-leak-check.mts`. ⚠️ Élesítés után a meglévő tenant-lapok csak **rerender** után tisztulnak (`rerenderTenantSnapshot`).
 - **ADM-2:** a bolt kedvezmény-kártyája az ajánlat saját nevén („−98% · Egyedi ajánlat”), a megmaradó üdvözlő kupon kimondva — `livePurchaseOffersForTenant()`. Őr: `scripts/shop-offer-banner-check.mts`.

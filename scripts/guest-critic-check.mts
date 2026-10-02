@@ -15,7 +15,12 @@
 //   ④ the critic's photo-only objections are dropped, service objections are kept;
 //   ⑤ the loop ships the best critiqued round, not blindly the last one;
 //   ⑥ the wiring: both generation paths run the critic and persist its verdict, and the
-//     send gate blocks on it.
+//     send gate blocks on it;
+//   ⑦ SZ2-1 (Elek round 2, 2026-10-02): a place / quality detail the source does not say
+//     („grillezés a FEDETT teraszon”, „reggeli a TERASZON”) is a BLOCKING lint finding, and
+//     the critic's own "javítandó" on an always-blocking kind is raised to blocking;
+//   ⑧ what still ships as "javítandó" is NAMED in the verdict reason (not silently dropped);
+//   ⑨ OP-1: the market verdict is judged on the SHIPPED (post-critic) copy on both paths.
 //
 // Run: npx tsx scripts/guest-critic-check.mts
 import { readdirSync, readFileSync } from "node:fs";
@@ -24,8 +29,11 @@ import {
   criticSourceOf,
   dropPhotoOnlyObjections,
   HOUSE_REGISTER,
+  lintAddedDetail,
   lintCopy,
   lintOffers,
+  minorTail,
+  normalizeSeverity,
   type CopySurface,
   type CriticRound,
   type Objection,
@@ -181,6 +189,79 @@ const kinds = (c: CopySurface) => lintCopy(c, "magaz").map((o) => o.kind);
   }
   const views = read("src/console/views.ts");
   check("A konzol néven nevezi a vendég-kritikust", /case "guestCriticVerdict": return T\(lang, "Vendég-kritikus"\)/.test(views), "nincs névcímke");
+}
+
+// ── ⑦ SZ2-1: an added place / quality detail blocks ─────────────────────────────
+{
+  // The Muschel source, verbatim (live mock 0dbcdc91, 2026-10-02).
+  const muschel = criticSourceOf({
+    name: "Muschel Panzió",
+    facts: [
+      { label: "grillezési lehetőség", source: "google_places", quote: "cozy terrace where there are also barbecue facilities" },
+      { label: "tágas, tiszta szobák", source: "google_places", quote: "Great place with spaceous, very clean rooms, breakfast and a pool." },
+      { label: "elegendő parkolóhely", source: "google_places", quote: "Sufficient parking spaces available." },
+    ],
+    descriptions: [],
+    reviews: ["Very well maintained guest house with pool and cozy terrace where there are also barbecue facilities."],
+  });
+  const hits = (c: CopySurface) => lintAddedDetail(c, muschel).map((o) => o.quote);
+  const blocks = (label: string, c: CopySurface, quote: string) => {
+    const h = lintAddedDetail(c, muschel);
+    check(`⛔ ${label} BLOKKOL`, h.some((o) => o.quote === quote && o.severity === "blokkolo"), JSON.stringify(h.map((o) => o.quote)));
+  };
+  blocks("„Grillezési lehetőség a fedett teraszon” (a forrás: cozy terrace … barbecue)", surf({ highlights: ["Grillezési lehetőség a fedett teraszon"] }), "Grillezési lehetőség a fedett teraszon");
+  blocks("„a fedett terasz alatt grillezési lehetőséggel”", surf({ intro: "A kertben medence van, a fedett terasz alatt grillezési lehetőséggel." }), "a fedett terasz alatt grillezési lehetőséggel");
+  blocks("„reggeli a teraszon” (a reggeli helyéről nincs forrás)", surf({ lead: "Medence a kertben, reggeli a teraszon" }), "reggeli a teraszon");
+  blocks("„Bőséges saját parkoló” (a forrás: sufficient parking)", surf({ highlights: ["Bőséges saját parkoló"] }), "Bőséges saját parkoló");
+  blocks("Forrás nélküli, fotón nem látható minőség („Fűtött medence”)", surf({ highlights: ["Fűtött medence"] }), "Fűtött medence");
+  check("A forrás erejéig álló „Grillezős terasz” NEM blokkol", hits(surf({ highlights: ["Grillezős terasz"] })).length === 0, JSON.stringify(hits(surf({ highlights: ["Grillezős terasz"] }))));
+  check("Szolgáltatás nélküli fizikai adottság („Fedett medence”) a fotó-őré, NEM blokkol", hits(surf({ highlights: ["Fedett medence"] })).length === 0, "hamisan jelzett");
+  check("„Medence a kertben” (nem étel-szolgáltatás) NEM blokkol", hits(surf({ lead: "Medence a kertben" })).length === 0, "hamisan jelzett");
+  check("„pihenjen a saját tempójában” nem minőség-állítás, NEM blokkol", hits(surf({ intro: "Pihenjen a saját tempójában." })).length === 0, "hamisan jelzett");
+  const listed = criticSourceOf({
+    name: "Három Huszár",
+    facts: [{ label: "Saját parkoló", source: "lake-balaton.com", quote: "A vendégház a helyszínen privát parkolót biztosít." }],
+    descriptions: [],
+    reviews: [],
+  });
+  check("A SAJÁT hirdetésben álló „Saját parkoló” NEM blokkol", lintAddedDetail(surf({ highlights: ["Saját parkoló a vendégeknek"] }), listed).filter((o) => o.field === "highlights[0]").length === 0, "hamisan jelzett");
+
+  const ai = (kind: Objection["kind"], quote: string): Objection => ({ field: "x", quote, kind, severity: "javitando", guestReaction: "", fix: "", by: "ai" });
+  check("⛔ A kritikus „javítandó” forrástalan ígérete BLOKKOLÓ lesz (Muschel: így ment ki)", normalizeSeverity(ai("forrastalan_igeret", "Grillezési lehetőség a fedett teraszon")).severity === "blokkolo", "javítandó maradt");
+  check("⛔ Szolgáltatást felfújó túlzás BLOKKOLÓ", normalizeSeverity(ai("tulzas_a_forrashoz", "friss kávéval")).severity === "blokkolo", "javítandó maradt");
+  check("Hangulati jelző túlzása javítandó MARAD", normalizeSeverity(ai("tulzas_a_forrashoz", "nyugodt, árnyas")).severity === "javitando", "felemelte");
+  check("A modell megszólítás-ítélete NEM emelkedik (a lint dönt; „Amit itt kap” magázó)", normalizeSeverity(ai("megszolitas", "Amit itt kap")).severity === "javitando", "felemelte");
+  check("Az AI-sablon javítandó MARAD", normalizeSeverity(ai("ai_sablon", "Amit itt kap")).severity === "javitando", "felemelte");
+
+  const crit = read("src/generator/guestCritic.ts");
+  check("A kritikus minden körben futtatja a részlet-szabályt", /\.\.\.lintAddedDetail\(copy, source\)/.test(crit), "a lintAddedDetail nincs a kifogás-listában");
+  check("A kritikus kifogásai a szabálykönyv szerint súlyozódnak", /normalizeSeverity\(\{ \.\.\.o, by: "ai"/.test(crit), "a normalizeSeverity nincs bekötve");
+}
+
+// ── ⑧ the minor objections that ship are named ─────────────────────────────────
+{
+  const r: CriticRound = {
+    copy: surf({}), verdict: "pass", summary: "",
+    objections: [{ field: "features.eyebrow", quote: "Amit itt kap", kind: "ai_sablon", severity: "javitando", guestReaction: "", fix: "", by: "ai" }],
+  };
+  check("A kiszállított javítandó kifogás az indoklásban áll", minorTail(r).includes("1 javítandó maradt") && minorTail(r).includes("Amit itt kap"), minorTail(r));
+  check("Kifogás nélkül nincs farok", minorTail({ ...r, objections: [] }) === "", minorTail({ ...r, objections: [] }));
+  check("A verdikt-indoklás hozzáfűzi", /\+ minorTail\(best\)/.test(read("src/generator/guestCritic.ts")), "a runGuestCritic nem fűzi hozzá");
+}
+
+// ── ⑨ OP-1: the market verdict describes the SHIPPED copy ───────────────────────
+for (const path of ["src/generator/generateEngine.ts", "src/generator/recopy.ts"]) {
+  const src = read(path);
+  const critic = src.indexOf("await applyGuestCritic(");
+  const lastMarket = src.lastIndexOf("await verifyMarketRelevance(");
+  const persisted = src.indexOf("marketReason: market?.reason");
+  check(
+    `⛔ ${path}: a piac-őr UTOLSÓ ítélete a kritikus UTÁN fut (a kiszállított szövegről szól)`,
+    critic > 0 && lastMarket > critic,
+    `kritikus @${critic}, utolsó piac-ítélet @${lastMarket}`,
+  );
+  check(`${path}: a perzisztált piac-indoklás az utolsó ítélet`, persisted > lastMarket, `perzisztálás @${persisted}`);
+  check(`${path}: a kritikus utáni piac-hiba nem hagyja ott az elavult verdiktet`, /verdict: "error", layer: "judge"/.test(src), "nincs error-ág");
 }
 
 for (const f of failures) console.error(`❌ ${f}`);

@@ -210,6 +210,110 @@ export function lintOffers(c: CopySurface, source: CriticSource): Objection[] {
   return out;
 }
 
+/**
+ * ADDED DETAIL (Elek, live round 2, 2026-10-02 — SZ2-1). The Muschel mock shipped
+ * „Grillezési lehetőség a FEDETT teraszon” and „reggeli a TERASZON”: the review said only
+ * „cozy terrace where there are also barbecue facilities” and „breakfast”. The service was
+ * true; the place / quality attached to it was invented — and the critic graded it
+ * "javítandó", so it neither blocked nor got fixed. A guest holds the page to exactly that
+ * detail on arrival. This twin is the rule: a SERVICE named together with a place or quality
+ * detail needs ONE source sentence that says both; a non-photographable quality (heated,
+ * private, guarded) needs a source at all. Bilingual stems: most guest reviews are English.
+ */
+const look = (src: string) => new RegExp(`(?<![\\p{L}])(?:${src})`, "iu");
+const SERVICE_TERMS: readonly { name: string; food?: true; re: RegExp }[] = [
+  { name: "grillezés", re: look("grill|barbecue|bbq|bogrács") },
+  { name: "reggeli", food: true, re: look("reggeli|breakfast|frühstück") },
+  { name: "vacsora", food: true, re: look("vacsor|félpanzió|dinner|half[- ]board|abendessen|halbpension") },
+  { name: "kávé", food: true, re: look("kávé|coffee|kaffee") },
+  { name: "parkoló", re: look("parkol|parking|parkplatz") },
+  { name: "kerékpár", re: look("kerékpár|bicikli|bicycl|bike|fahrrad") },
+  { name: "wifi", re: look("wi-?fi|internet|wlan") },
+];
+/** `foodOnly`: a garden is photographable as a place, but WHERE a meal is served is not
+ *  (measured: „Kontinentális reggeli a kertben”, Három Huszár, ADR-0304 ⑥). */
+const DETAIL_TERMS: readonly { name: string; re: RegExp; foodOnly?: true; quality?: true }[] = [
+  { name: "fedett", re: look("fedett|covered|roofed|überdacht") },
+  { name: "terasz", re: look("terasz|terrace|terrass|patio") },
+  { name: "kert", foodOnly: true, re: look("kert|garden|garten|udvar(?!ias)|yard") },
+  { name: "kilátás", re: look("kilát|panorám|view|aussicht|blick") },
+  { name: "saját", quality: true, re: look("saját|privát|private|own(?![\\p{L}])|eigen") },
+  { name: "fűtött", quality: true, re: look("fűtött|fűthető|heated|beheizt") },
+  { name: "őrzött", quality: true, re: look("őrzött|zárt|guarded|secured|gated|bewacht") },
+  { name: "svédasztalos", re: look("svédasztal|buffet") },
+];
+const CLAUSE_SPLIT = /[,;.:!?()\n–—]|\s(?:és|valamint|illetve|vagy)\s/iu;
+
+/** Every source sentence as one unit: a detail is backed only where the SAME sentence says it. */
+function sourceUnits(source: CriticSource): string[] {
+  const sentences = (t: string) => t.split(/(?<=[.!?])\s+|\n+/u).filter((x) => x.trim());
+  return [
+    // A review fact's LABEL is the machine's translation (it once read „bérelhető kerékpárok”),
+    // so only the listing's own label counts as evidence; the quote always does.
+    ...source.facts.map((f) => (f.kind === "listing" ? `${f.label} — ${f.quote ?? ""}` : (f.quote ?? ""))),
+    ...(source.descriptions ?? []).flatMap(sentences),
+    ...(source.reviews ?? []).flatMap(sentences),
+  ].filter((u) => u.trim());
+}
+
+export function lintAddedDetail(c: CopySurface, source: CriticSource): Objection[] {
+  const units = sourceUnits(source);
+  const out: Objection[] = [];
+  for (const { field, text } of surfaceLines(c)) {
+    for (const clause of text.split(CLAUSE_SPLIT).map((x) => x.trim()).filter(Boolean)) {
+      const services = SERVICE_TERMS.filter((s) => s.re.test(clause));
+      for (const d of DETAIL_TERMS) {
+        if (!d.re.test(clause)) continue;
+        let unbacked: string | null = null;
+        // „a saját tempójában” is not a claim: the quality rule needs a thing it qualifies.
+        const qualifiesThing = services.length > 0 || PHYSICAL.test(clause);
+        if (d.quality && qualifiesThing && !units.some((u) => d.re.test(u))) unbacked = d.name;
+        for (const s of services) {
+          if (unbacked) break;
+          if (d.foodOnly && !s.food) continue;
+          if (!units.some((u) => s.re.test(u) && d.re.test(u))) unbacked = `${s.name} + ${d.name}`;
+        }
+        if (!unbacked) continue;
+        out.push({
+          field,
+          quote: clause,
+          kind: "tulzas_a_forrashoz",
+          severity: "blokkolo",
+          guestReaction: `„${clause}” — ezt a részletet (${unbacked}) számon kérem érkezéskor, de a szállás sehol nem mondja.`,
+          fix: `hagyd el a(z) „${d.name}” részletet; csak annyit állíts, amennyit EGY forrás-mondat együtt mond`,
+          by: "lint",
+        });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The critic's own grading, made consistent with its rulebook. The prompt calls these kinds
+ * BLOCKING without exception, yet the model graded „Grillezési lehetőség a fedett teraszon”
+ * (forrastalan_igeret) "javítandó" and the loop shipped it with a PASS (SZ2-1). An overstatement
+ * is blocking when it inflates a service or a place/quality detail — the prompt's own line.
+ */
+const ALWAYS_BLOCKING: ReadonlySet<ObjectionKind> = new Set([
+  "forrastalan_igeret",
+  "velemeny_mint_szolgaltatas",
+  "nem_letezo_fogalom",
+  "al_idezet",
+]);
+// NOT "megszolitas": the register is the lint twin's call (addressRegister.ts) — measured
+// 2026-10-02, the model graded the magázó „Amit itt kap” a register error; raising its own
+// mistake to blocking would send a correct page to the curator queue.
+export function normalizeSeverity(o: Objection): Objection {
+  if (o.severity === "blokkolo") return o;
+  const blocking =
+    ALWAYS_BLOCKING.has(o.kind) ||
+    (o.kind === "tulzas_a_forrashoz" &&
+      (SERVICE_TERMS.some((s) => s.re.test(o.quote)) || DETAIL_TERMS.some((d) => d.re.test(o.quote))));
+  return blocking ? { ...o, severity: "blokkolo" } : o;
+}
+
 // ── the critic ───────────────────────────────────────────────────────────────────────────
 
 function registerRule(r: Register): string {
@@ -227,7 +331,7 @@ A feladatod NEM az újraírás, hanem a TÉTELES KIFOGÁS-LISTA. Minden kifogás
 Mit keresel (a „kind” értékei):
 - velemeny_mint_szolgaltatas — egy vendég-vélemény EGYSZERI élményéből vagy szívességéből SZOLGÁLTATÁS-ÍGÉRET lett, vagy a véleményből „bérelhető / kölcsönözhető / foglalható / ingyenes” ajánlat. Példa: a vélemény szerint a házigazda „kölcsönadta a biciklijét” → az oldalon „bérelhető kerékpárok”. A vendég ezt számon kéri érkezéskor. BLOKKOLÓ.
   ⚖️ A HATÁR (a ház szabálya): ha a vélemény egy ÁLLANDÓ adottságot ír le („van reggeli”, „grillezési lehetőség a teraszon”, „elegendő parkolóhely”, „van klíma”), az a vélemény erejéig ÁLLÍTHATÓ — hűen fordítva, felfújás nélkül. Ezt NE kifogásold csak azért, mert véleményből jön. Csak a szívességet, az egyszeri élményt és a felfújást kifogásold.
-- tulzas_a_forrashoz — az állítás TÖBBET mond, mint a forrás: „elegendő parkoló” → „bőséges saját parkoló”; „csendes környék” → „a nyugodt Nádas közben” forrás nélküli jelzővel; TÁVOLSÁG felfújása („800 méterre” → „pár lépésre”, „karnyújtásnyira”) — a vendég lemérte a térképen. Vesd össze a FORRÁS idézettel betűre. BLOKKOLÓ, ha szolgáltatást vagy adottságot fúj fel; JAVÍTANDÓ, ha csak hangulati jelző.
+- tulzas_a_forrashoz — az állítás TÖBBET mond, mint a forrás: „elegendő parkoló” → „bőséges saját parkoló”; HOZZÁTETT HELY- VAGY MINŐSÉG-RÉSZLET egy szolgáltatáshoz vagy adottsághoz, amit a forrás nem mond („barbecue facilities” → „grillezés a FEDETT teraszon”; „breakfast” → „reggeli a TERASZON / a kertben”; „kilátással”, „saját”, „fűtött”, „ingyenes” forrás nélkül) — ez MINDIG BLOKKOLÓ, mert a vendég épp ezt a részletet kéri számon; „csendes környék” → „a nyugodt Nádas közben” forrás nélküli jelzővel; TÁVOLSÁG felfújása („800 méterre” → „pár lépésre”, „karnyújtásnyira”) — a vendég lemérte a térképen. Vesd össze a FORRÁS idézettel betűre. BLOKKOLÓ, ha szolgáltatást vagy adottságot fúj fel; JAVÍTANDÓ, ha csak hangulati jelző.
 - forrastalan_igeret — szolgáltatás (amit a ház AD: reggeli, kölcsönzés, transzfer, parkoló, program, grill-használat), amihez nincs forrás. ⚠️ Fizikai tárgyat, berendezést vagy adottságot (medence, napozóágy, kert, terasz, kilátás, szobabútor) SOHA NE kifogásolj forrás miatt — a fotókat te nem látod, azt a fotó-őr ellenőrzi. Szolgáltatásra viszont a fotó SOHA nem forrás. BLOKKOLÓ.
 - nem_letezo_fogalom — olyan magyar kifejezés, ami nincs a köznyelvben, vagy mást jelent („főtt reggeli” = főtt étel, nem meleg reggeli). BLOKKOLÓ.
 - tukorforditas — angol szerkezet magyar szavakkal („cooked breakfast” → „főtt reggeli”, „nincs a képben”). BLOKKOLÓ, ha félreérthető.
@@ -349,7 +453,7 @@ export async function critiqueCopy(
   /** The version before the last rewrite: anything the rewrite ADDED is judged hardest. */
   previous?: CopySurface,
 ): Promise<{ objections: Objection[]; summary: string }> {
-  const lint = [...lintCopy(copy, register), ...lintOffers(copy, source)];
+  const lint = [...lintCopy(copy, register), ...lintOffers(copy, source), ...lintAddedDetail(copy, source)];
   const c = await client();
   const res = await c.messages.create({
     model: MODEL,
@@ -383,7 +487,7 @@ export async function critiqueCopy(
   const hay = describeCopy(copy).toLowerCase();
   const ai = parsed.objections
     .filter((o) => hay.includes(o.quote.toLowerCase().replace(/\s+/g, " ").trim()))
-    .map((o) => ({ ...o, by: "ai" as const }));
+    .map((o) => normalizeSeverity({ ...o, by: "ai" as const }));
   // The deterministic finding WINS a duplicate: the critic once graded the same quote
   // "javítandó" that the offer rule calls blocking, and keeping the critic's copy would
   // have let the softer grade through.
@@ -550,14 +654,27 @@ export async function runGuestCritic(
     final: best.copy,
     verdict: best.verdict,
     reason:
-      best.verdict === "pass"
+      (best.verdict === "pass"
         ? `${rounds.length} kör, blokkoló kifogás nincs`
         : `${rounds.length} kör után is ${nBlocking} blokkoló kifogás → kurátor-sor: ` +
           best.objections
             .filter((o) => o.severity === "blokkolo")
             .map((o) => `„${o.quote}” (${o.kind})`)
-            .join(" · "),
+            .join(" · ")) + minorTail(best),
   };
+}
+
+/**
+ * The minor objections the SHIPPED version still carries, named in the verdict reason. The
+ * Muschel card read „3 kör, blokkoló kifogás nincs” while two of them stood on the page
+ * (SZ2-1): a remark nobody fixes and nobody sees has no effect at all.
+ */
+export function minorTail(r: CriticRound): string {
+  const minor = r.objections.filter((o) => o.severity === "javitando");
+  return minor.length
+    ? ` · ${minor.length} javítandó maradt (nem blokkol, nézd át): ` +
+        minor.map((o) => `„${o.quote}” (${o.kind})`).join(" · ")
+    : "";
 }
 
 /**

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-vendeg-kritikus-hozzatett-reszlet-blokkol-piac-or-a-kiszallitott-szovegen.md) — Vendég-kritikus: a forrásban nem álló hely-/minőség-részlet blokkol; a piac-őr a kiszállított szövegről ítél (2026-10-02)
 - [ADR-0308](decisions/0308-a-nem-megvett-modul-szekcioja-nem-latszik-az.md) — A nem megvett modul szekciója nem látszik az élő lapon; az adat léte nem modul
 - [ADR-0307](decisions/0307-foglalasi-aggregator-portal-host-soha-nem-sajat.md) — Foglalási aggregátor / portál-host soha nem „saját modern honlap”: egy lista (qualify.ts), visszamenőleges újrabesorolás a prospect-szegmenssel együtt (2026-10-02)
 - [ADR-0306](decisions/0306-a-megkereso-level-csak-a-mertet-allitja-meres.md) — A megkereső levél csak a mértet állítja: mérés-alapú szegmens-mondat, 4,0 ★ küszöb, szállásadó-szemű kritikus sablon-változáskor (2026-10-02)
