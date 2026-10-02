@@ -1,4 +1,4 @@
-## ADR-XXXX — Vendég-kritikus: a forrásban nem álló hely-/minőség-részlet blokkol; a piac-őr a kiszállított szövegről ítél (2026-10-02)
+## ADR-0309 — Vendég-kritikus: a forrásban nem álló hely-/minőség-részlet blokkol; a piac-őr a kiszállított szövegről ítél (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (hibajavítás, mérés alapján; SUB, koordinátor: CIT „élesi teszt” fő session;
 brief `~/rc-briefs/javitas-elek-0930/k2-kritikus-seta-indoklas.md`) · **Forrás:** Elek 2. élesi köre, SZ2-1 (MAGAS) és OP-1 (KÖZEPES) ·

@@ -1,7 +1,7 @@
 # 2026-10-02 — K2: vendég-kritikus hozzátett részlet (SZ2-1), piac-indoklás a kiszállított szövegről (OP-1), Séta-némaság (S-1)
 
 **Szál:** SUB a CIT „élesi teszt” koordinátor alatt (`~/wt/cit87d3f275`); brief `~/rc-briefs/javitas-elek-0930/k2-kritikus-seta-indoklas.md`.
-Döntés: ADR-XXXX.
+Döntés: ADR-0309.
 
 ## Lelet (élesen csak olvasva)
 - Muschel editorial (0dbcdc91) és séta (333a78ad) mock: a kritikus „fedett” kifogása javítandó volt → PASS; mindkét kártyán
