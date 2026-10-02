@@ -15,7 +15,10 @@
 //   2. negative controls: real own sites (incl. look-alikes such as
 //      danubiushotels.com ⊃ "hotels.com", kolping.hotel.hu, webnode/wix sites)
 //      stay has_own — the fix must not invert the credibility bug;
-//   3. ONE source of truth: no other src/ file carries a host list of its own
+//   3. rules A+B (coordinator, 2026-10-02): file links are "none", short links are
+//      decided by their target, and rule A only NAMES candidates — it never flips
+//      a chain's own site (measured: ~25 of ~70 rule-A hosts were own sites);
+//   4. ONE source of truth: no other src/ file carries a host list of its own
 //      (≥3 of these hosts in one file = a second catalogue that will drift), and
 //      every host the portal-adapter registry reads is classified as a portal by
 //      qualify.ts (the registry deliberately does not re-answer that question).
@@ -24,10 +27,13 @@
 //   · qualify.ts reverted to the pre-A1 list → 48 aggregator fixtures reported has_own;
 //   · a second host list dropped into src/scraper/ → "második portál-lista";
 //   · "vio.com" loosened to the brand word "vio" → violavendeghaz.hu misfiled as portal.
+//   · danubiushotels.com listed (rule A auto-applied to a chain) → 3 failures;
+//   · drive.google.com dropped from the file-link hosts → "fájl-link nem „nincs saját oldal”";
+//   · visty.site dropped from the catalogue → its measured fixture reported has_own.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { classifyWebsite } from "../src/scraper/qualify.js";
+import { classifyWebsite, isShortLink, sharedHostCandidates } from "../src/scraper/qualify.js";
 import { PORTAL_ADAPTERS } from "../src/scraper/sources/portals/registry.js";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -81,6 +87,10 @@ const AGGREGATOR_URLS: readonly string[] = [
   "https://www.kerteszetturul.eu/profile-18393-gardener-s-cottage-farm",
   "https://www.ceginformacio.hu/cr9317293996",
   "https://www.197.eu/ceg/forras-panzio-14046",
+  // Measured under the coordinator's rules A+B (2026-10-02).
+  "https://siofokszallas.info/",
+  "https://visty.site/wandavend",
+  "https://www.balatonhost.com/golden-relax/",
   // Pre-existing catalogue entries — they must keep working too.
   "https://www.booking.com/hotel/hu/example.html",
   "https://kali.hu/szallas/egyed/",
@@ -100,6 +110,10 @@ const OWN_SITE_URLS: readonly string[] = [
   "http://www.violavendeghaz.hu/",
   "https://www.annaapartmankeszthely.hu/",
   "https://balatonszemes.otphotel.hu/",
+  // Measured OWN under rules A+B (2026-10-02).
+  "https://marcaliszallas.hu/",
+  "https://aracsafarm.humtour.com/",
+  "https://sites.google.com/view/jutasi-apartman/f%C5%91oldal",
 ];
 
 const failures: string[] = [];
@@ -112,6 +126,34 @@ for (const url of OWN_SITE_URLS) {
   const st = classifyWebsite(url);
   if (st !== "has_own") failures.push(`valódi saját oldal portálnak sorolva (${st}): ${url}`);
 }
+
+// A file link is not a website at all: "none", not has_own (and not a portal).
+for (const url of [
+  "https://drive.google.com/file/d/1_5fpNy5bBC71Yp6FlahK2H0JTZ2gWIih/view?usp=drivesdk",
+  "https://docs.google.com/document/d/x/edit",
+]) {
+  const st = classifyWebsite(url);
+  if (st !== "none") failures.push(`fájl-link nem „nincs saját oldal” (${st}): ${url}`);
+}
+
+// Short links are decided by their redirect TARGET, which only a fetching caller knows.
+if (!isShortLink("https://tinyurl.com/3fzd2tet")) failures.push("a tinyurl.com nem rövid link a qualify.ts szerint");
+if (isShortLink("https://piroshotel.hu/")) failures.push("saját oldal rövid linknek sorolva");
+
+// Rule A names CANDIDATES only — a chain's own site must never be auto-flipped.
+const stock = [
+  ...["Fehér", "Kék", "Zöld"].map((c) => ({ name: `Abbázia Club Hotel ${c}`, website: "https://abbazia-clubhotel.hu/" })),
+  { name: "Ensana Thermal Aqua", website: "https://www.danubiushotels.com/" },
+  { name: "All Inclusive Hotel Marina", website: "https://www.danubiushotels.com/" },
+  { name: "Sissi Panzió", website: "https://example-farm.site/sissipanzi" },
+  { name: "Rozmaring Apartman", website: "https://example-farm.site/rozmarinapar" },
+];
+const cand = sharedHostCandidates(stock);
+if (cand.has("abbazia-clubhotel.hu")) failures.push("A-szabály: a név a hostban van (Abbázia), mégis jelölt");
+if (!cand.has("example-farm.site")) failures.push("A-szabály: 2 különböző szállás egy idegen hoston, mégsem jelölt");
+if (!cand.has("danubiushotels.com")) failures.push("A-szabály: a lánc-host nem jelölt (a mérés szerint annak kell lennie)");
+if (classifyWebsite("https://www.danubiushotels.com/") !== "has_own")
+  failures.push("A-szabály automatikusan döntött: a lánc saját oldala nem has_own");
 
 // The registry's hosts must be portals in qualify.ts too — two lists, one verdict.
 for (const a of PORTAL_ADAPTERS) {

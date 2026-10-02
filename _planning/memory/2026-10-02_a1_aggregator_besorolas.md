@@ -15,7 +15,9 @@
 
 ## Nyitott
 - ÉLES újrabesorolás: `cd /opt/citoviso/app && npx tsx scripts/requalify-websites.mts` (száraz) → tulaj-engedéllyel `--apply` —
-  CSAK a kód élesítése UTÁN (a régi éles kód nem ismeri a hostokat). Várható: ~640 lead.
-- Kétes, NEM listázott hostok (tulaj/koordinátor dönthet): hotel.hu / hotelizator.com aldomainek, siofokszallas.info (5 lead
-  ugyanarra a gyökérre), marcaliszallas.hu, balatonhost.com, humtour.com, visty.site, tinyurl.com, drive.google.com.
+  CSAK a kód élesítése UTÁN (a régi éles kód nem ismeri a hostokat). Várható: 662 lead (620 modern→no_site, 41 outdated→no_site, 1 activation kézi).
+- ✅ Kétes hostok MÉRÉSSEL eldöntve (koordinátor szabálya, 2. kör): portál: siofokszallas.info, visty.site, balatonhost.com, tinyurl
+  (→ booking.com); none: drive.google.com; saját: hotelizator.com, marcaliszallas.hu, humtour.com, hotel.hu. Az (a) szabály CSAK
+  jelöl (kb. 25 lánc/több egységes saját oldal hamis találat lenne) → `sharedHostCandidates()`, a (b) dönt. Éles: 662 lead (+22).
+- Maradék (a)-jelöltek (b) mérése: kb. 35 host, a `requalify-websites.mts` kiírja (települési portálok: balatonakali, marcali, balatonbereny, vonyarcvashegy …).
 - A `portal_only` aggregátor-link még nem portál-FOTÓFORRÁS (nincs adapter a regiszterben; a bluepillow/vio linkek keresés-redirectek).

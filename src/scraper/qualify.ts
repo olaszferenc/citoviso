@@ -102,9 +102,8 @@ const PORTAL_DOMAINS = [
   // muschel-panzio.hotels-in-hungary.net was Elek's H-3 finding. The .com.es /
   // .org.es hosts are a generated farm of the same kind (garbled slugs such as
   // z-nka-v-zparti-d-l-h-zak.org.es); these second-level zones are matched as a
-  // whole, which is safe for a Hungarian lead stock. Deliberately NOT listed:
-  // hotel.hu / hotelizator.com subdomains — hotel-built sites live there too
-  // (kolping.hotel.hu), and a false "no site" insults a real customer.
+  // whole, which is safe for a Hungarian lead stock. hotel.hu / hotelizator.com
+  // are NOT listed — measured under rules A+B, see the RULE B block below.
   "hotels-in-hungary.net",
   "bedsandhotels.com",
   "worhot.com",
@@ -127,6 +126,18 @@ const PORTAL_DOMAINS = [
   "keszthely.hu",
   "orvenyes.hu",
   "kerteszetturul.eu",
+  // RULE B, measured 2026-10-02 (front page lists several lodgings / runs them as
+  // an intermediary): balatonhost.com — a property manager, "Kiadó szállások",
+  // 25 lodgings; siofokszallas.info — 7 lodgings under one roof (also rule A).
+  // Measured and kept OWN: hotelizator.com (builds and runs the hotel's OWN site),
+  // marcaliszallas.hu (one property's own site), humtour.com (the farm's own
+  // booking site on a subdomain), hotel.hu (unreachable; only Kolping, by name).
+  "balatonhost.com",
+  "siofokszallas.info",
+  // RULE A without a usable rule B (front page unreachable from dev AND prod):
+  // 13 DIFFERENT lodgings with no common owner or brand, each on a garbled path
+  // slug (visty.site/kagylkkk, /balatonapar3) — no chain explains that sharing.
+  "visty.site",
   // Company registries: a firm-data page is not a website either.
   "ceginformacio.hu",
   "197.eu",
@@ -183,9 +194,111 @@ function isPortalHost(url: string): boolean {
   });
 }
 
+// FILE LINKS (A1, 2026-10-02): a shared document is not a website at all — the
+// lead has no site of its own ("none", not a portal). sites.google.com is a real
+// site builder and stays out of this list.
+const FILE_LINK_HOSTS = ["drive.google.com", "docs.google.com", "dropbox.com", "onedrive.live.com"];
+
+// URL SHORTENERS / redirectors: the host says nothing about whose page it is — the
+// redirect TARGET does. classifyWebsite cannot fetch (it is pure), so callers that
+// can follow redirects do so first (resolveShortLink in requalify-websites.mts);
+// unresolved, a short link stays a has_own candidate (the safe direction, see above).
+const SHORTENER_HOSTS = ["tinyurl.com", "bit.ly", "goo.gl", "t.ly", "rb.gy", "is.gd", "cutt.ly", "redirect.viglink.com"];
+
+function hostMatches(host: string, list: readonly string[]): boolean {
+  return list.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+function hostOfUrl(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+/** Is this a link shortener / redirector whose target decides the verdict? */
+export function isShortLink(website: string): boolean {
+  const host = hostOfUrl(website);
+  return host !== null && hostMatches(host, SHORTENER_HOSTS);
+}
+
+/**
+ * RULE A — SHARED HOST, a CANDIDATE detector (A1, measured on prod 2026-10-02; owner
+ * rule via the coordinator: "a host is a portal if several DIFFERENT leads point at
+ * it, or its front page lists several lodgings / is a booking intermediary").
+ *
+ * Measured, rule A cannot DECIDE on its own: over the 2 360 prod leads it flagged ~70
+ * hosts, and about 25 of them are one owner's or one chain's OWN site with several
+ * units (danubiushotels.com, hunguesthotels.hu, balatontourist.hu, honvedudulo.hu,
+ * lschotel.hu = "Luxury Spa Conference", tihanyiapatsag.hu, two "Princess" records on
+ * szallassiofokon.hu …). Auto-flipping them would tell a chain hotel "we found no
+ * site of yours" — the credibility bug in the other direction. So rule A only names
+ * the CANDIDATES (requalify-websites.mts lists them); rule B — the front page,
+ * measured — decides, and its verdict is recorded in PORTAL_DOMAINS with evidence.
+ *
+ * Name test: a lead's link is FOREIGN when no distinctive word of its name appears
+ * in the host (abbazia-clubhotel.hu carries 7 buildings, all named "Abbázia" → not
+ * foreign); a host is a candidate when ≥2 different businesses reach it that way.
+ */
+const GENERIC_NAME_WORDS = new Set([
+  "hotel", "hotels", "szallo", "szalloda", "apartman", "apartmanok", "apartmanhaz", "apartment",
+  "apartments", "panzio", "pension", "vendeghaz", "vendeghazak", "guest", "house", "guesthouse",
+  "haz", "hazak", "villa", "nyaralo", "nyaralohaz", "szallas", "szallasok", "resort", "camping",
+  "kemping", "spa", "wellness", "etterem", "restaurant", "and", "es", "the", "family", "club",
+  "boutique", "lake", "balaton", "room", "rooms", "studio", "holiday", "home", "bed", "breakfast",
+]);
+
+function nameTokens(name: string): string[] {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 2 && !GENERIC_NAME_WORDS.has(t));
+}
+
+/** Does a distinctive word of the business name appear in the host? */
+export function nameInHost(name: string, website: string): boolean {
+  const host = hostOfUrl(website);
+  if (!host) return false;
+  const labels = host.split(".");
+  const flat = labels.join("").replace(/-/g, "");
+  return nameTokens(name).some((t) =>
+    t.length >= 3 ? flat.includes(t) : labels.some((l) => l.startsWith(t)),
+  );
+}
+
+/**
+ * Rule-A CANDIDATES of a lead stock: hosts that ≥2 different businesses reach through a
+ * foreign link and that the catalogue does not already call a portal. To be verified by
+ * rule B (front page), never auto-applied — see the measurement above.
+ */
+export function sharedHostCandidates(
+  stock: readonly { readonly name: string; readonly website?: string | null }[],
+  minBusinesses = 2,
+): Set<string> {
+  const byHost = new Map<string, Set<string>>();
+  for (const l of stock) {
+    if (!l.website || nameInHost(l.name, l.website)) continue;
+    const host = hostOfUrl(l.website);
+    if (!host) continue;
+    const business = nameTokens(l.name).join(" ") || l.name.toLowerCase();
+    if (!byHost.has(host)) byHost.set(host, new Set());
+    byHost.get(host)!.add(business);
+  }
+  return new Set(
+    [...byHost]
+      .filter(([h, b]) => b.size >= minBusinesses && !isPortalHost(`https://${h}/`))
+      .map(([h]) => h),
+  );
+}
+
 export function classifyWebsite(website?: string): WebsiteStatus {
   if (!website) return "none";
   const url = website.toLowerCase();
+  const host = hostOfUrl(url);
+  if (host && hostMatches(host, FILE_LINK_HOSTS)) return "none";
   if (isPortalHost(url)) return "portal_only";
   return "has_own";
 }

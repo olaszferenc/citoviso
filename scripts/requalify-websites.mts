@@ -27,7 +27,12 @@
 
 import { sql } from "kysely";
 import { db } from "../src/db/client.js";
-import { classifyWebsite, isMvpLead } from "../src/scraper/qualify.js";
+import {
+  classifyWebsite,
+  isMvpLead,
+  isShortLink,
+  sharedHostCandidates,
+} from "../src/scraper/qualify.js";
 import { qualificationOf } from "../src/scraper/persist.js";
 import { segmentFromQualification } from "../src/console/data.js";
 import type { QualifiedLead } from "../src/scraper/types.js";
@@ -65,10 +70,37 @@ const hostOf = (url: string): string => {
   }
 };
 
+/**
+ * Follow a short link's redirects (no body, at most 5 hops) to the page it really
+ * opens: tinyurl.com/3fzd2tet → redirect.viglink.com → admin.booking.com (measured
+ * 2026-10-02). Unresolvable → null, and the link keeps its host verdict.
+ */
+async function resolveShortLink(url: string): Promise<string | null> {
+  let cur = url;
+  for (let hop = 0; hop < 5 && isShortLink(cur); hop++) {
+    try {
+      const res = await fetch(cur, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(10_000) });
+      const loc = res.headers.get("location");
+      if (!loc) return null;
+      cur = new URL(loc, cur).toString();
+    } catch {
+      return null;
+    }
+  }
+  return isShortLink(cur) ? null : cur;
+}
+
+const resolvedLines: string[] = [];
 for (const r of rows) {
   const raw = (typeof r.raw === "string" ? JSON.parse(r.raw) : r.raw) as QualifiedLead;
   if (!raw.website) continue;
-  const status = classifyWebsite(raw.website);
+  let verdictUrl = raw.website;
+  if (isShortLink(raw.website)) {
+    const target = await resolveShortLink(raw.website);
+    resolvedLines.push(`  ${r.name}: ${raw.website} → ${target ?? "(nem oldható fel — a host szerint marad)"}`);
+    if (target) verdictUrl = target;
+  }
+  const status = classifyWebsite(verdictUrl);
   if (status === raw.websiteStatus) continue; // verdict unchanged
 
   const next: QualifiedLead = { ...raw, websiteStatus: status };
@@ -127,6 +159,27 @@ console.log(
     (skipped ? ` · ${skipped} outreach után — kézi átnézésre jelölve` : "") +
     ` · ${prospectsFollowed} ki nem küldött link szegmense ${apply ? "követte" : "követné"} a leadet`,
 );
+if (resolvedLines.length) {
+  console.log("\nRövidített linkek (a célhost szerint sorolva):");
+  console.log(resolvedLines.join("\n"));
+}
+// RULE A candidates (qualify.ts): hosts several DIFFERENT businesses reach without
+// their name in the host. Listed for a rule-B check (front page), NEVER auto-applied —
+// measured, about a third of them are a chain's or a multi-unit owner's own site.
+const stock = rows.map((r) => {
+  const raw = (typeof r.raw === "string" ? JSON.parse(r.raw) : r.raw) as QualifiedLead;
+  return { name: r.name, website: raw.website };
+});
+const candidates = [...sharedHostCandidates(stock)].filter(
+  (h) => classifyWebsite(`https://${h}/`) === "has_own",
+);
+if (candidates.length) {
+  console.log(
+    `\nA-szabály jelöltjei (${candidates.length} host, ≥2 különböző szállás, nevük nincs a hostban) — ` +
+      "a nyitólap (B-szabály) dönt, a mért verdikt a qualify.ts listájába kerül:",
+  );
+  console.log("  " + candidates.sort().join(" · "));
+}
 if (transitions.size) {
   const sorted = (m: Map<string, number>) => [...m].sort((a, b) => b[1] - a[1]);
   console.log("\nÁtmenetek (régi → új szegmens):");
