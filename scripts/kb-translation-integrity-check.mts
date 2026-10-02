@@ -51,6 +51,27 @@ console.log("\n① A sortörés NEM tartalmi eltérés (a mért hiba):");
     "## Nadpis\n\nTlačidlom **„Lemondom a\n  foglalást”** ukončíte, tlačidlom\n" +
     "**„Visszaigazolom — a\ntöbbit elutasítom”** rozhodnete.\n";
   check("a fordított irány (forrás egy sorban, jelölt tördelve) is átmegy", kbTranslationValid(src, wrapped));
+
+  // ⛔ MÉRT (2026-10-02, élesen 3/3): idézetblokkban a tördelt felirat folytatósora
+  // `> `-rel kezdődik — ez a blokk jelölője, nem a felirat része.
+  const quoteSrc =
+    "## Cím\n\n> Külön figyelmeztet:\n> **„A lemondása ettől függetlenül érvénybe lép — akkor is, ha ez a fizetés nem megy végbe.”**\n";
+  const quoteWrapped =
+    "## Heading\n\n> It warns separately:\n> **„A lemondása ettől függetlenül érvénybe lép — akkor is, ha ez a fizetés nem megy\n> végbe.”**\n";
+  check(
+    "⭐⭐ idézetblokkban tördelt felirat (a folytatósor `> `-rel kezd) ÁTMEGY",
+    kbTranslationValid(quoteSrc, quoteWrapped),
+  );
+  const quoteChanged =
+    "## Heading\n\n> It warns separately:\n> **„A lemondása ettől függetlenül érvénybe lép — akkor is, ha a fizetés nem megy\n> végbe.”**\n";
+  check(
+    "⭐ idézetblokkban is bukik a megváltoztatott felirat (a `>` elengedése nem nyit kaput)",
+    !kbTranslationValid(quoteSrc, quoteChanged),
+  );
+  check(
+    "⭐ a felirat BELSEJÉBEN álló `>` (nem sor eleji) megmarad, és eltérésnek számít",
+    !kbTranslationValid("## C\n\n**„Tovább > Mentés”**\n", "## C\n\n**„Tovább Mentés”**\n"),
+  );
 }
 
 /* ══ ② A SZIGORÚSÁG MEGMARAD — ez a fontosabb fele ═════════════════════════ */

@@ -37,10 +37,15 @@ export function kbSourceHash(entry: Pick<KbEntry, "title" | "body">): string {
  * A felirat az, amit a tulaj a GOMBON olvas — abban soha nincs sortörés. A tördelés
  * tipográfia, nem tartalom: az ellenőrzés a feliratot mérje, ne a sortörést. A
  * szigorúság megmarad — egy lefordított vagy megváltoztatott felirat továbbra is bukik.
+ *
+ * ⛔ MÉRT HIBA (2026-10-02, deploy 132a21a8, élesen 3/3 bukás): idézetblokkban
+ * (`> **„A lemondása ettől függetlenül … nem megy végbe.”**`) a fordítás két sorba
+ * tördelte a feliratot, a második sor pedig — markdownban helyesen — `> `-rel kezdődik.
+ * A `>` a blokk jelölője, nem a felirat része: a sortöréssel együtt el kell engedni.
  */
 const labelsOf = (md: string): string[] =>
   [...md.matchAll(/\*\*„([^”]+)”\*\*/g)]
-    .map((m) => m[1]!.replace(/\s+/g, " ").trim())
+    .map((m) => m[1]!.replace(/\n[ \t]*(?:>[ \t]*)+/g, " ").replace(/\s+/g, " ").trim())
     .sort();
 const imagesOf = (md: string): string[] =>
   [...md.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]!).sort();
