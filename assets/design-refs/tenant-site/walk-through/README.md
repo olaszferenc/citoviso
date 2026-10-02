@@ -7,7 +7,7 @@ Citoviso-n generálható típusként”). A koordináló session briefje hozta (
 **A tulaj képernyőképe:** `tulaj-jovahagyas-asztali.webp` (asztali hős) ·
 **Képek:** `terv-mobil.png`, `terv-asztali.png` (az elfogadott terv első képernyője) ·
 **Hatókör:** `src/engine/templates/walkThrough.ts` · `src/engine/motion.ts` · `src/engine/skins.ts` · `src/engine/recipe.ts` · `src/generator/heroPick.ts` · `src/engine/siteData.ts` · `src/console/tplPreview.ts`
-(a sablon; a görgetés-történet motorja; a `gravel-grotesque` skin; a `Photo.subject` mező és útja) · Döntés: ADR-XXXX.
+(a sablon; a görgetés-történet motorja; a `gravel-grotesque` skin; a `Photo.subject` mező és útja) · Döntés: ADR-0304.
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.** A kész sablont ehhez mérjük.
 

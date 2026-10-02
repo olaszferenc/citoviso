@@ -32,7 +32,7 @@ export async function renderTemplatePreview(
   // The snapshot's photos pass the same single verdict point every render path uses
   // (dropNeverShown): banners stay out, and each photo gets its vision `subject` — an
   // older snapshot has none stored, and the walk-through template's photo walk is built
-  // from it (ADR-XXXX). Cache-only read: free, no network.
+  // from it (ADR-0304). Cache-only read: free, no network.
   const stored = base.siteData.photos ?? [];
   const photos = dropNeverShown(stored, await readCachedScores(stored.map((p) => p.url))).kept;
   const siteData: SiteData = { ...base.siteData, photos };

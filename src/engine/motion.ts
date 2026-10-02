@@ -148,7 +148,7 @@ export function words(escapedText: string): string {
 }
 
 /**
- * SCROLL STORY (ADR-XXXX, the walk-through template's „séta”): a sticky photo panel beside
+ * SCROLL STORY (ADR-0304, the walk-through template's „séta”): a sticky photo panel beside
  * (desktop) or behind (phone) a list of steps; as the guest scrolls, the panel's pictures
  * dissolve into each other and a thin rail fills. Declarative like the rest of this layer:
  *

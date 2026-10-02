@@ -425,7 +425,7 @@ export const SKINS: Readonly<Record<string, Skin>> = {
     fonts: ["Libre+Caslon+Text:wght@400;700", "Public+Sans:wght@300;400;500;600;700"],
   },
 
-  // walk-through (ADR-XXXX) — the owner-approved „Séta a kapun át” mock (Három Huszár,
+  // walk-through (ADR-0304) — the owner-approved „Séta a kapun át” mock (Három Huszár,
   // Köveskál, 2026-10-02): gravel-grey ground, arbour-leaf green, a big characterful
   // grotesque for the headlines. Tokens taken over from the approved mock unchanged.
   "gravel-grotesque": {

@@ -1,6 +1,6 @@
 # 2026-10-02 — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon
 
-**Szál:** SUB a CIT koordinátor alatt; brief `~/rc-briefs/seta-sablon.md`. Döntés: ADR-XXXX.
+**Szál:** SUB a CIT koordinátor alatt; brief `~/rc-briefs/seta-sablon.md`. Döntés: ADR-0304.
 Kontraktus: `assets/design-refs/tenant-site/walk-through/` (az elfogadott `plan.html`, `img/`, a tulaj képernyőképe, README).
 
 ## Elvégezve

@@ -174,7 +174,7 @@ export function dropNeverShown<T extends OrderablePhoto>(
     // A bélyeg NEM dob el képet itt: a MOCK/DEMO fázisban a vízjeles kép megengedett, a
     // kizárás az ÉLES kapué (§A.2 fázis-mátrix). Itt csak a tudást visszük tovább.
     //
-    // A TÁRGY (`subject`) ugyanezen az egy ponton utazik tovább (ADR-XXXX): a walk-through
+    // A TÁRGY (`subject`) ugyanezen az egy ponton utazik tovább (ADR-0304): a walk-through
     // sablon sétája ebből rakja össze a lépéseit (kívülről → kert → kilátás → asztal → belül).
     // Ugyanaz az érv, mint a bélyegnél: a négy renderelő út mind ezt hívja, így a tárgy
     // mindegyiken ott van, verdikt nélkül pedig nincs — a sablon akkor nem találgat.

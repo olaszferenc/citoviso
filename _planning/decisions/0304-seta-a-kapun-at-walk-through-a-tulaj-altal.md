@@ -1,4 +1,4 @@
-## ADR-XXXX — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon; a séta a fotók vision-tárgyából épül (2026-10-02)
+## ADR-0304 — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon; a séta a fotók vision-tárgyából épül (2026-10-02)
 
 **Státusz:** elfogadva (SUB; koordinátor: CIT fő session; brief `~/rc-briefs/seta-sablon.md`) · **Lokál, nem élesítve** (§0) ·
 **Kontraktus:** `assets/design-refs/tenant-site/walk-through/` (az elfogadott `plan.html` + README) ·

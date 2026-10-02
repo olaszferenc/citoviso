@@ -69,7 +69,7 @@ export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string
     // `photoPolicy.isLiveSafePhoto` unreachable again — the exact dead-code state this
     // whole change exists to end. Only ever set, never cleared (same shape as provenance).
     ...(p.watermarked ? { watermarked: true } : {}),
-    // The vision subject rides along for the walk-through template's photo walk (ADR-XXXX).
+    // The vision subject rides along for the walk-through template's photo walk (ADR-0304).
     ...(p.subject ? { subject: p.subject } : {}),
   }));
 }

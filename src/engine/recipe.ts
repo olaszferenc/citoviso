@@ -97,7 +97,7 @@ export interface Photo {
    * exterior · pool_garden · view · dining · interior · bathroom · …). Attached at the
    * same single point as `watermarked` (dropNeverShown), so every render path carries it.
    * Absent = no verdict (owner upload, older snapshot) — a template must then not guess.
-   * Read by the walk-through template's photo walk (ADR-XXXX); never rendered as text.
+   * Read by the walk-through template's photo walk (ADR-0304); never rendered as text.
    */
   readonly subject?: string;
 }

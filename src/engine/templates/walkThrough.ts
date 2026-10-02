@@ -1,4 +1,4 @@
-// "walk-through" art template (ADR-XXXX) — the owner-approved „Séta a kapun át” mock.
+// "walk-through" art template (ADR-0304) — the owner-approved „Séta a kapun át” mock.
 //
 // Origin: the 2026-10-02 mock contest on a real lead (Három Huszár Apartments, Köveskál).
 // The owner opened variant B and wrote: „annyira jó lett, hogy hozzuk létre a Citoviso-n
