@@ -84,11 +84,16 @@ const TEXT_QUERIES: Record<Industry, string[]> = {
 // show for one query, so the tile must be split and asked again in quarters.
 const PAGE_SIZE = 20;
 const QUERY_RESULT_CEILING = 60;
-/** Hard per-run call budget — cost discipline. Hitting it is LOUD, never silent.
+/** Per-run WARNING line on the discovery traversal — NOT a cap (ADR-XXXX, owner
+ *  2026-10-02: "Saját magunkat korlátozzuk be"; the calls are the free IDs-only
+ *  SKU anyway). The walk always finishes — its depth is bounded by MIN_TILE_DEG —
+ *  and crossing the line is LOUD in the log and in the run's stats.
  *  Sizing (measured 2026-09-13, real API): the small Badacsony box took 160 calls
  *  to full, saturation-free coverage; a 32 km circle is ~16× the area but far
- *  sparser outside the town cores. */
-const DISCOVERY_MAX_CALLS = Number(process.env.PLACES_DISCOVERY_MAX_CALLS ?? 600);
+ *  sparser outside the town cores. PLACES_DISCOVERY_MAX_CALLS is the old name. */
+const DISCOVERY_WARN_CALLS = Number(
+  process.env.PLACES_DISCOVERY_WARN_CALLS ?? process.env.PLACES_DISCOVERY_MAX_CALLS ?? 600,
+);
 /** Per-run WARNING line on the PAID step: Place Details for ids new to our DB.
  *  NOT a cap (owner, 2026-10-02: "Nincsen cap. Saját magunkat korlátozzuk be.") —
  *  every new place still gets its Details call; crossing the line is LOUD in the
@@ -686,8 +691,9 @@ type Bbox = readonly [number, number, number, number]; // [S, W, N, E]
  * Traversal: every keyword runs against the region box; any (tile × keyword) query
  * that returns the 60-result ceiling is SATURATED — the area holds more than the
  * API will show for one query — so the tile is quartered and asked again, down to
- * ~2 km tiles. Results merge on place id. The call budget is hard-capped and
- * hitting the cap is LOUD (a silent cap would be this same bug in a new suit).
+ * ~2 km tiles. Results merge on place id. There is no call cap (ADR-XXXX) — a cap
+ * would cut coverage, which is this same bug in a new suit; over the warning line
+ * the run says so, loudly.
  *
  * Cost: the traversal itself is free (IDs only); see DISCOVERY_ID_MASK for the
  * two-step design. Known place ids come back from the DB, new ones cost one Place
@@ -718,7 +724,6 @@ export class GoogleMapsSource implements LeadSource {
     const keywords = TEXT_QUERIES[query.industry];
     const ids = new Set<string>();
     let calls = 0;
-    let budgetHit = false;
     let saturatedFloor = 0;
 
     /** All pages of one (tile × keyword) query. Returns how many results the API
@@ -730,10 +735,6 @@ export class GoogleMapsSource implements LeadSource {
       let pageToken: string | undefined;
       let returned = 0;
       do {
-        if (calls >= DISCOVERY_MAX_CALLS) {
-          budgetHit = true;
-          return returned;
-        }
         calls++;
         const data = await placesSearchText(
           {
@@ -761,12 +762,10 @@ export class GoogleMapsSource implements LeadSource {
 
     /** Depth-first: query the tile with every keyword; split if any hits the ceiling. */
     const walk = async (tile: Bbox): Promise<void> => {
-      if (budgetHit) return;
       let saturated = false;
       for (const kw of keywords) {
         const got = await runQuery(tile, kw);
         if (got >= QUERY_RESULT_CEILING) saturated = true;
-        if (budgetHit) return;
       }
       const [s, w, n, e] = tile;
       const sideDeg = Math.min(n - s, e - w);
@@ -788,8 +787,8 @@ export class GoogleMapsSource implements LeadSource {
 
     await walk(query.region.bbox);
 
-    if (budgetHit) {
-      const msg = `Google-bejárás: a hívás-keret elfogyott (${DISCOVERY_MAX_CALLS}) — a lefedettség RÉSZLEGES. Emeld a PLACES_DISCOVERY_MAX_CALLS-t, vagy szűkítsd a területet.`;
+    if (calls > DISCOVERY_WARN_CALLS) {
+      const msg = `Google-bejárás: ${calls} ingyenes ID-keresés ebben a futásban — a figyelmeztetési szint ${DISCOVERY_WARN_CALLS}. A bejárás VÉGIGMENT, nincs vágás; ha ez sok, szűkítsd a területet.`;
       this.lastWarnings.push(msg);
       console.warn(`[google_places] ⚠️ ${msg}`);
     }

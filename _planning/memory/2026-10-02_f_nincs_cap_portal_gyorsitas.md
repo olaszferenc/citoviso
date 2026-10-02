@@ -20,8 +20,10 @@
 - éles 40 lead (2 pár, lokális olvasás, DB-írás nélkül): wall 98,2 / 63,8 s → 49,3 / 49,5 s; ≥800 px 230 → 340.
 - A régi 78 perces becslés a régi kóddal ma sem reprodukálódott (1,6–2,5 s/lead).
 
+5. **2. kör (koordinátor):** a `PLACES_DISCOVERY_MAX_CALLS` is figyelmeztetési szint lett (`PLACES_DISCOVERY_WARN_CALLS`),
+   a bejárás végigmegy; őr `scrape-coverage-check` ⑤ (mutációval 4 piros). Külön commitban a main pirosát is javítottam:
+   `src/ops/googleCostReport.ts` a közös `formatNumber`-rel csoportosít (`money-format-check` ⑤).
+
 ## Nyitott (a koordinátornak)
-- A `PLACES_DISCOVERY_MAX_CALLS` (600) ma is megállítja a bejárást — ingyenes hívások, lefedettség-korlát, nem költség;
-  a „nincs cap” döntés erre is vonatkozik-e?
 - A memória `project_after_deploy_portal_backfill` „~78 perc”-et ír — a mérés szerint ~20–45 perc várható.
 - A tárolt hovamenjek `main` URL-ek (régi olvasások) a következő újraolvasáskor `fullHd`-re cserélődnek.

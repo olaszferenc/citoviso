@@ -21,7 +21,7 @@ Az első riport (10-01, ~11,68 $) kiment. Jegyzet: `_planning/memory/2026-10-02_
 ## Párhuzamos szál (2026-10-02 — SUB: Places-költség F rész — nincs cap + portál-gyorsítás, ADR-XXXX) — LANDOLVA
 
 ① A konzol „Cap” felirata igazul: a mentett ÚJ leadek számát vágja, a Places-költséget NEM (KB + 2 súgó-kép).
-② `PLACES_DETAILS_MAX_CALLS` → figyelmeztetési szint (`PLACES_DETAILS_WARN_CALLS`), a hívások mennek; a figyelmeztetés a
+② `PLACES_DETAILS_MAX_CALLS` és `PLACES_DISCOVERY_MAX_CALLS` → figyelmeztetési szint (`…_WARN_CALLS`), a hívások / a bejárás mennek; a figyelmeztetés a
 `scrape_run.stats.warnings`-ba és a konzol futás-sorába kerül. ③ booking.com `challenge_protected` (AWS WAF, mérve).
 ④ hovamenjek: kép-cache helyett `main` → `fullHd` (a `main` számozott fájlra 404 volt): éles 40-es mintán a backfill
 98/64 s → 49/50 s, ≥800 px portál-fotó 230 → 340. Jegyzet: `_planning/memory/2026-10-02_f_nincs_cap_portal_gyorsitas.md`.

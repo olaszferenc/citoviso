@@ -17,8 +17,10 @@
 //      várnia és folytatnia kell, nem meghalnia; a lefedettség így is ≥95%
 //   ④ NAPI KVÓTA: „per day" 429-re viszont AZONNAL fel kell adni (a várakozás ott
 //      hazugság lenne) — a hiba osztályozva jut el a hívóig (scope: day)
-//   ⑤ KÖLTSÉG-FEGYELEM: a hívás-keret kimerülése HANGOS (a néma plafon ugyanez a
-//      hiba lenne új ruhában)
+//   ⑤ NINCS BEJÁRÁS-PLAFON (ADR-XXXX, tulaj 2026-10-02): a figyelmeztetési szint
+//      (itt 5 hívás) fölött a bejárás VÉGIGMEGY (lefedettség ≥95%), és HANGOS
+//      figyelmeztetést ad (`warnings()` → a futás statja) — a plafon a lefedettséget
+//      vágná, ami ugyanez a hiba lenne új ruhában
 //   ⑥ INGYENES BEJÁRÁS (ADR-0295, 2026-10-01): a felderítő Text Search maszkja CSAK
 //      azonosítót kér („Text Search Essentials (IDs Only)” — korlátlan ingyenes); egy
 //      Pro/Enterprise mező a maszkban minden lapot fizetőssé tesz (35 $/1000)
@@ -30,9 +32,10 @@
 //
 //   npx tsx scripts/scrape-coverage-check.mts
 //   npx tsx scripts/scrape-coverage-check.mts --self-test
-//     ⛔ NEGATÍV FUTÁS: a hívás-keretet 1-re szorítja (= a régi, egy-hívásos
-//     viselkedés) → a lefedettség-mérésnek PIROSRA kell váltania. Ha zölden marad,
-//     az őr nem a szabályt méri.
+//     ⛔ NEGATÍV FUTÁS: a mock-világ csak az ELSŐ keresésre válaszol (= a régi,
+//     egy-hívásos viselkedés) → a lefedettség-mérésnek PIROSRA kell váltania. Ha
+//     zölden marad, az őr nem a szabályt méri. (Korábban a hívás-keretet szorította
+//     1-re; keret ma nincs, ADR-XXXX.)
 //
 // ⚠️ Az env-t a MODUL BETÖLTÉSE ELŐTT kell beállítani (a knobok import-időben
 // olvasódnak) → dinamikus import (reference_env_assignment_loses_to_esm_imports).
@@ -41,7 +44,7 @@ const SELF_TEST = process.argv.includes("--self-test");
 
 process.env.PLACES_RETRY_BASE_MS = "10"; // a perc-kvóta próba ne várjon perceket
 process.env.PLACES_MAX_RPM = "100000"; // a throttle ne lassítsa a tesztet
-process.env.PLACES_DISCOVERY_MAX_CALLS = SELF_TEST ? "1" : "400";
+process.env.PLACES_DISCOVERY_WARN_CALLS = "5"; // ⑤: below the 12-call full walk
 process.env.PLACES_DETAILS_WARN_CALLS = "5"; // ⑧: far below the 180-place world
 
 const { GoogleMapsSource, placesLookup, PlacesUnavailableError } = await import(
@@ -165,6 +168,10 @@ globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     );
   }
   const body = JSON.parse(String(init?.body ?? "{}")) as SearchBody;
+  // Self-test: the old one-call source — only the first discovery query is answered.
+  if (SELF_TEST && KINDS.includes(body.textQuery) && searchCalls > 1) {
+    return new Response(JSON.stringify({ places: [] }), { status: 200 });
+  }
   const r = body.locationRestriction.rectangle;
   const kw = body.textQuery;
   if (KINDS.includes(kw)) discoveryMasks.add(mask);
@@ -222,7 +229,7 @@ const region = {
 try {
   console.log(
     SELF_TEST
-      ? "\nÖNTESZT — hívás-keret = 1 (a régi, egy-hívásos viselkedés szimulációja):"
+      ? "\nÖNTESZT — csak az első keresés kap választ (a régi, egy-hívásos viselkedés szimulációja):"
       : "\nscrape-lefedettség őr — szintetikus Places-világ (180 hely):",
   );
 
@@ -255,6 +262,12 @@ try {
       "② a bejárás lapozott ÉS csempézett (több hívás, mint kulcsszó)",
       searchCalls > KINDS.length,
       `hívások: ${searchCalls}`,
+    );
+    check(
+      "⑤ nincs bejárás-plafon: a szint (5) fölött is végigment, és HANGOSAN kimondta",
+      searchCalls > 5 &&
+        src.warnings().some((w) => w.includes("Google-bejárás") && w.includes(String(searchCalls))),
+      `hívások: ${searchCalls} · warnings: ${JSON.stringify(src.warnings())}`,
     );
     check(
       "① nincs duplikátum (place id szerint egyedi)",

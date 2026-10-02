@@ -1,4 +1,4 @@
-## ADR-XXXX — Nincs költség-plafon a scrape-ben: a Details-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
+## ADR-XXXX — Nincs költség-plafon a scrape-ben: a Details- és a bejárás-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (SUB „F rész”, koordinátor: CIT „Places API 600 $” fő session; brief:
 `~/rc-briefs/places-f-nincs-cap-es-portal-gyorsitas.md`) · **Kapcsolódó:** ADR-0294 (mellékleletek a/b), ADR-0295 ③
@@ -17,8 +17,11 @@ ami megállítja a munkát; a B-SUB két gyorsítása mehet („3. Ok”).
    adatlapot; ha a futás hívásszáma a szint fölött van (`PLACES_DETAILS_WARN_CALLS`, a régi név is él, alap 4 000 ≈ 80 $),
    HANGOS figyelmeztetés megy a naplóba ÉS a futás statjába (`scrape_run.stats.warnings`) — előre, a hívások előtt,
    mert a szám akkor már ismert. A forrás-interfész új, opcionális `warnings()`-a hordozza; a konzol a lefutott futás
-   sora alatt mutatja (ugyanaz a sor, ahol a hibaüzenet áll). A felderítő bejárás `PLACES_DISCOVERY_MAX_CALLS`
-   kerete (ingyenes ID-hívások, lefedettség-korlát) változatlan, de a figyelmeztetése szintén a statba kerül.
+   sora alatt mutatja (ugyanaz a sor, ahol a hibaüzenet áll).
+2b. **`PLACES_DISCOVERY_MAX_CALLS` → szintén figyelmeztetési szint** (koordinátor/tulaj, 2026-10-02: a „nincs cap” erre
+   is vonatkozik; ráadásul ingyenes ID-hívások). A bejárás mindig végigmegy — a mélységét a `MIN_TILE_DEG` csempe-padló
+   korlátozza —, a szint (`PLACES_DISCOVERY_WARN_CALLS`, régi név is él, alap 600) fölött hangos figyelmeztetés a
+   naplóba és a statba. A régi plafon a LEFEDETTSÉGET vágta (a 2026-09-13-i „20 hely egy régióra” hiba új ruhában).
 3. **booking.com = `challenge_protected`.** A meglévő registry-mechanizmus (szallas.hu óta): a jelölt-gyűjtés
    eldobja, a beolvasás le sem kéri, és a felszabadult jelölt-helyre más portál jöhet. Mérve: AWS WAF-kihívás
    (HTTP 202, ~4 KB, adat nélkül) — 2026-10-01: 6/6, 2026-10-02: 2/2 minta; dev-parkon 486 jelöltből 40 (8%),
@@ -52,10 +55,12 @@ reprodukálni (1,6–2,5 s/lead → 28–43 perc), tehát a 78 → 40 perces cé
 A mellékhatás viszont nagy: a hovamenjek galériája 574 px helyett 1080 px-ben jön, így átmegy a 800 px-es küszöbön
 (a ≥ 800 px-es portál-fotók száma a mintán +86%).
 
-**Őr.** `scripts/scrape-coverage-check.mts` ⑧ (szint 5 mellett 180 új hely → 180 adatlap + figyelmeztetés; szint alatt
+**Őr.** `scripts/scrape-coverage-check.mts` ⑤ (bejárás-szint 5 mellett a 12 hívásos teljes bejárás végigmegy +
+figyelmeztet; mutáció: vágás a szintnél → 4 állítás piros; az önteszt az egy-hívásos régi viselkedést most a mock-világban
+szimulálja, nem a kerettel) és ⑧ (szint 5 mellett 180 új hely → 180 adatlap + figyelmeztetés; szint alatt
 csend) — mutáció: a régi `slice` → 6 állítás piros. `scripts/portal-uncapped-check.mts` 4. (booking.com nem olvasódik, a
 mellette álló nyitott adatlap igen; pre-commit trigger a `portals/registry.ts`-re is) — mutáció: `access: "open"` → piros.
 `scripts/photo-quality-check.mts` (a `largestPhotoUrl` → `fullHd`, a tárolt `main` URL is átíródik).
 
-**Visszafordíthatóság:** 🔄 olcsó (felirat, egy konstans jelentése, két registry-sor).
+**Visszafordíthatóság:** 🔄 olcsó (felirat, két konstans jelentése, két registry-sor).
 **Elvetett:** kép-méret-cache (lásd 4.); a Details-plafon megtartása magasabb értékkel (a tulaj nem akar plafont).
