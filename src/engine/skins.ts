@@ -447,6 +447,29 @@ export const SKINS: Readonly<Record<string, Skin>> = {
     },
     fonts: ["Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700", "Figtree:wght@400;500;600"],
   },
+
+  // gate-opening (ADR-XXXX) — the owner-approved „Kapunyitás” mock (Kimi B, Három Huszár,
+  // Köveskál, 2026-10-02): warm charcoal ground, a deep honey „lantern light” accent that is
+  // never text on the dark; Archivo (800/900) display + Inter. Tokens taken over unchanged.
+  "lantern-charcoal": {
+    id: "lantern-charcoal",
+    label: "Lámpásfény — meleg szén, mézszín akcent",
+    hint: "esti kert lámpásfénnyel: sötét, meleg szén alap, mély mézszín akcent; nagy, vastag groteszk címek, hajszálvonalak kártyák helyett.",
+    tokens: {
+      "--cit-accent": "#96501a",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#f3ede2",
+      "--cit-muted": "#a89c8c",
+      "--cit-bg": "#191512",
+      "--cit-surface": "#221c18",
+      "--cit-line": "#3a322b",
+      "--cit-radius": "2px",
+      "--cit-font-display": "'Archivo', system-ui, -apple-system, sans-serif",
+      "--cit-font-body": "'Inter', system-ui, -apple-system, sans-serif",
+      "--cit-shadow": "0 30px 70px -32px rgba(0,0,0,.6)",
+    },
+    fonts: ["Archivo:wght@500;600;700;800;900", "Inter:wght@400;500;600"],
+  },
 };
 
 /** Render a skin's tokens as a `:root { ... }` block. An optional photo-derived accent (§B.6)

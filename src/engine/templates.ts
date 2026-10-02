@@ -15,6 +15,7 @@ import { DARK_LUXURY } from "./templates/darkLuxury.js";
 import { DOPAMINE } from "./templates/dopamine.js";
 import { EDITORIAL } from "./templates/editorial.js";
 import { FULLBLEED } from "./templates/fullbleed.js";
+import { GATE_OPENING } from "./templates/gateOpening.js";
 import { HORIZONTAL } from "./templates/horizontal.js";
 import { ORGANIC } from "./templates/organic.js";
 import { PARALLAX } from "./templates/parallax.js";
@@ -49,4 +50,5 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [ARCH_FRAMES.id]: ARCH_FRAMES,
   [WORDMARK_GROW.id]: WORDMARK_GROW,
   [WALK_THROUGH.id]: WALK_THROUGH,
+  [GATE_OPENING.id]: GATE_OPENING,
 };

@@ -13,6 +13,11 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-02 — SUB `citc2b44eea`: „Kapunyitás” sablon (`gate-opening`, a 21.) a Kimi B mockból, ADR-XXXX) — LANDOLVA, élesre semmi
+- Új sablon `src/engine/templates/gateOpening.ts` + skin `lantern-charcoal`; kontraktus `assets/design-refs/tenant-site/gate-opening/`. A kapu a hős fotó maga, tompítva — vision-tárgyként nincs „kapu/bejárat”, egy fotó sem mondható kapunak. Funkciók a közös modulokból, telefonos fejléc ADR-0253 szerint.
+- Mérve 390/1440 végiggörgetve: Három Huszár, Lidó, Kemencés, Nyugalom (mock + élő), gazdag teszt-eset. Őrök: jog PASS; tényhűség FLAG csak a sablon előtti rétegből; dizájn FLAG → javítva. Gépies sablon-őrök zöldek.
+- **Nyitott (koordinátor):** kapu forrása (A hős · B másik kültéri fotó · C új `entrance` vision-tárgy), a nagybetűs hős-felirat, fusson-e a kapu kiküldött mockon. Döntési anyag a fa `_drafts/kapunyitas/` mappájában. Jegyzet: `_planning/memory/2026-10-02_gate_opening_sablon.md`.
+
 ## Párhuzamos szál (2026-10-02 — SUB K2 `cit35b7088c`: Elek 2. kör — SZ2-1 · OP-1 (ADR-0309) + S-1 (ADR-0310, tulaj „A”) LANDOLVA, élesítés a koordinátoré)
 - **SZ2-1:** a vendég-kritikus átengedte a hozzátett részletet („grillezés a FEDETT teraszon”, „reggeli a TERASZON”). Gépi szabály `lintAddedDetail` (szolgáltatás + hely/minőség csak EGY forrás-mondat együttállásával; kétnyelvű tövek), `normalizeSeverity` (a mindig-blokkoló fajták „javítandó”-ja blokkoló; a megszólítás nem), `minorTail` (a kiment javítandók az indoklásban). Mérve 6 mockon előtte/utána (`assets/design-refs/_drafts/k2-kritikus/`). Ismert határ: „kerttel … reggelit szolgál fel” egy mondatban → a gépi szabály nem fogja meg (a modell igen).
 - **OP-1:** csak a piac-őr futott a kritikus előtt (tényhűség, dizájn a renderen, utána) → mindkét úton újraítél a kiszállított szövegen; hibánál `error`. Őr: `scripts/guest-critic-check.mts` ⑦–⑨, 7 mutáció piros.

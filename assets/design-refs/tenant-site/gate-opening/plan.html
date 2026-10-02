@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Három Huszár Apartments — vendégház Köveskálon, a Káli-medencében</title>
+<meta name="description" content="Nádtetős, meszelt falú vendégház Köveskálon, a Káli-medencében. Szobák, képek, árak, házirend és ajánlatkérés.">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ Tokenek ============ */
+:root{
+  --cit-accent:#96501a;
+  --cit-on-accent:#ffffff;
+  --cit-ink:#f3ede2;
+  --cit-muted:#a89c8c;
+  --cit-bg:#191512;
+  --cit-surface:#221c18;
+  --cit-line:#3a322b;
+  --cit-radius:2px;
+  --cit-font-display:"Archivo", system-ui, -apple-system, sans-serif;
+  --cit-font-body:"Inter", system-ui, -apple-system, sans-serif;
+  --cit-shadow:0 30px 70px -32px rgb(0 0 0 / .6);
+  color-scheme:dark;
+}
+/* ============ Alap ============ */
+*,*::before,*::after{box-sizing:border-box}
+html{overflow-x:clip;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;overflow-x:clip;background:var(--cit-bg);color:var(--cit-ink);
+  font-family:var(--cit-font-body);font-size:1.0625rem;line-height:1.6}
+img{max-width:100%;height:auto}
+h1,h2,h3{margin:0}
+p{margin:0 0 1em}
+ul{margin:0;padding:0;list-style:none}
+[hidden]{display:none!important}
+[id]{scroll-margin-top:92px}
+::selection{background:color-mix(in srgb, var(--cit-accent) 60%, transparent);color:var(--cit-on-accent)}
+a{color:var(--cit-ink)}
+:focus-visible{outline:3px solid color-mix(in srgb, var(--cit-accent) 85%, var(--cit-ink));outline-offset:2px;border-radius:2px}
+.csomag{width:min(1200px, calc(100% - clamp(32px, 7vw, 80px)));margin-inline:auto}
+.szakasz{padding-block:clamp(64px, 9vw, 112px)}
+.ic{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic-teljes{fill:currentColor;stroke:none}
+.fejsor{max-width:720px;margin-bottom:clamp(34px, 5vw, 56px)}
+.fejsor h2,.bemutat-intro h2,.ajanlat-intro h2{font-family:var(--cit-font-display);font-weight:800;
+  font-size:clamp(1.9rem, 4.2vw, 2.7rem);line-height:1.06;letter-spacing:-.01em;margin-bottom:.45em;text-wrap:balance}
+.alc{color:var(--cit-muted);font-size:1.05rem;max-width:62ch}
+/* ============ Gombok ============ */
+.gomb{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;min-height:48px;
+  padding:.68rem 1.35rem;border-radius:var(--cit-radius);font-weight:600;font-size:1rem;
+  text-decoration:none;cursor:pointer;border:0;font-family:var(--cit-font-body);
+  transition:transform .25s ease, background-color .25s ease, border-color .25s ease, color .25s ease}
+.gomb .ic{width:20px;height:20px}
+.gomb-fo{background:var(--cit-accent);color:var(--cit-on-accent);
+  box-shadow:0 14px 30px -16px color-mix(in srgb, var(--cit-accent) 90%, transparent)}
+.gomb-fo:hover{background:color-mix(in srgb, var(--cit-accent) 85%, var(--cit-ink));transform:translateY(-2px)}
+.gomb-fo:active{transform:translateY(0) scale(.98)}
+.gomb-szel{background:transparent;color:var(--cit-ink);border:1.5px solid color-mix(in srgb, var(--cit-ink) 42%, transparent)}
+.gomb-szel:hover{border-color:var(--cit-accent);transform:translateY(-2px)}
+.szoveg-link{font-weight:600;color:var(--cit-ink);text-decoration:none;border-bottom:2px solid var(--cit-accent);
+  padding-bottom:2px;text-underline-offset:4px}
+/* ============ Fejléc ============ */
+.fej{position:fixed;inset:0 0 auto 0;z-index:70;display:flex;align-items:center;gap:clamp(12px, 2.5vw, 28px);
+  min-height:66px;padding:9px clamp(16px, 4vw, 44px);
+  background:color-mix(in srgb, var(--cit-bg) 80%, transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid color-mix(in srgb, var(--cit-line) 80%, transparent)}
+.mark{display:flex;flex-direction:column;line-height:1.14;text-decoration:none;color:var(--cit-ink);flex:none}
+.mark strong{font-family:var(--cit-font-display);font-weight:800;font-size:1.14rem;letter-spacing:.005em}
+.mark span{font-size:.74rem;color:var(--cit-muted)}
+.fo-nav{display:none;align-items:center;gap:clamp(18px, 2.2vw, 28px)}
+.fo-nav a{position:relative;color:var(--cit-ink);text-decoration:none;font-weight:500;font-size:.96rem;
+  min-height:44px;display:inline-flex;align-items:center}
+.fo-nav a::after{content:"";position:absolute;left:0;right:0;bottom:7px;height:2px;background:var(--cit-accent);
+  transform:scaleX(0);transform-origin:left;transition:transform .3s ease}
+.fo-nav a:hover::after{transform:scaleX(1)}
+.fej-cta{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tel-link{display:none;align-items:center;gap:9px;color:var(--cit-ink);text-decoration:none;font-weight:600;
+  min-height:44px;font-size:.95rem}
+.tel-link .ic{width:19px;height:19px;color:var(--cit-accent)}
+.gomb-fej{padding:.55rem 1rem;font-size:.95rem}
+.mobil-menu{position:relative}
+.mobil-menu summary{list-style:none;cursor:pointer;display:grid;place-items:center;
+  width:44px;height:44px;border:1.5px solid var(--cit-line);border-radius:var(--cit-radius);
+  color:var(--cit-ink);background:transparent}
+.mobil-menu summary::-webkit-details-marker{display:none}
+.mobil-menu .ic-x{display:none}
+.mobil-menu[open] .ic-menu{display:none}
+.mobil-menu[open] .ic-x{display:block}
+.mobil-menu .panel{position:absolute;right:0;top:calc(100% + 10px);width:min(300px, calc(100vw - 32px));
+  background:var(--cit-surface);border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);box-shadow:var(--cit-shadow);padding:8px;display:grid;gap:2px}
+.mobil-menu .panel a{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--cit-radius);
+  text-decoration:none;color:var(--cit-ink);font-weight:500;min-height:46px}
+.mobil-menu .panel a:hover{background:color-mix(in srgb, var(--cit-accent) 12%, var(--cit-surface))}
+.mobil-menu .panel-fo{background:var(--cit-accent);color:var(--cit-on-accent);justify-content:center;margin-top:6px;font-weight:600}
+.mobil-menu .panel-fo:hover{background:color-mix(in srgb, var(--cit-accent) 85%, var(--cit-ink))}
+.mobil-menu .panel-tel{color:var(--cit-muted);font-size:.93rem}
+.lathatatlan{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+/* ============ Hero ============ */
+.hero{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;
+  min-height:100svh;overflow:hidden}
+.hero-alap{position:absolute;inset:0;z-index:-2}
+.hero-alap img{width:100%;height:100%;object-fit:cover;display:block}
+.js .hero-alap img{animation:heroKep 2.2s .1s cubic-bezier(.2,.6,.2,1) both}
+@keyframes heroKep{from{transform:scale(1.07)}to{transform:scale(1)}}
+.kapu{display:none}
+.js .kapu{position:absolute;inset:0;z-index:0;display:flex;overflow:hidden;pointer-events:none}
+.kapu-fel{position:relative;width:50.15%;height:100%;overflow:hidden}
+.kapu-fel img{position:absolute;top:0;width:200%;height:100%;max-width:none;object-fit:cover}
+.kapu-bal img{left:0}
+.kapu-jobb img{right:0}
+.kapu-fel::after{content:"";position:absolute;top:0;bottom:0;width:3px;background:var(--cit-accent)}
+.kapu-bal::after{right:0}
+.kapu-jobb::after{left:0}
+.js .kapu-bal{animation:kapuBal 1.05s .18s cubic-bezier(.76,0,.24,1) both}
+.js .kapu-jobb{animation:kapuJobb 1.05s .18s cubic-bezier(.76,0,.24,1) both}
+@keyframes kapuBal{to{transform:translateX(-103%)}}
+@keyframes kapuJobb{to{transform:translateX(103%)}}
+.hero-arny{position:absolute;inset:0;z-index:1;background:linear-gradient(to top,
+  color-mix(in srgb, var(--cit-bg) 90%, transparent) 0%,
+  color-mix(in srgb, var(--cit-bg) 45%, transparent) 42%,
+  color-mix(in srgb, var(--cit-bg) 12%, transparent) 66%, transparent 86%)}
+.hero-fade{position:relative;z-index:2}
+.hero-tartalom{padding-top:120px}
+.hero-szalag{font-weight:600;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--cit-ink);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.hero-szalag::before{content:"";width:34px;height:2px;background:var(--cit-accent)}
+.js .hero-szalag{opacity:0;animation:felUszik .8s .3s ease forwards}
+.hero h1{font-family:var(--cit-font-display);font-weight:900;text-transform:uppercase;
+  line-height:.95;letter-spacing:-.015em;font-size:clamp(2.5rem, 10.5vw, 7rem);
+  margin-bottom:20px;text-wrap:balance}
+.hero .sor{display:block;overflow:hidden;padding-bottom:.09em;margin-bottom:-.09em}
+.hero .sor>span{display:block}
+.js .hero .sor>span{transform:translateY(112%);animation:sorFel .85s cubic-bezier(.19,.7,.18,1) forwards;
+  animation-delay:var(--d,0s)}
+@keyframes sorFel{to{transform:translateY(0)}}
+.hero-alc{font-size:clamp(1.02rem, 2.1vw, 1.2rem);line-height:1.55;max-width:34em;
+  color:color-mix(in srgb, var(--cit-ink) 94%, transparent);margin-bottom:0}
+.js .hero-alc{opacity:0;animation:felUszik .8s .5s ease forwards}
+.hero-gombok{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.js .hero-gombok{opacity:0;animation:felUszik .8s .62s ease forwards}
+@keyframes felUszik{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.hero-meta{display:flex;align-items:center;gap:14px 26px;flex-wrap:wrap;
+  border-top:1px solid color-mix(in srgb, var(--cit-ink) 24%, transparent);
+  margin-top:36px;padding:15px 0 20px;font-size:.92rem;
+  color:color-mix(in srgb, var(--cit-ink) 90%, transparent)}
+.hero-meta span{display:inline-flex;align-items:center;gap:10px}
+.hero-meta .ikon-hatter{width:34px;height:34px;flex:none;display:grid;place-items:center;
+  background:color-mix(in srgb, var(--cit-bg) 68%, transparent);border-radius:var(--cit-radius)}
+.hero-meta .ic{width:18px;height:18px;color:var(--cit-accent)}
+.gorgetes{margin-left:auto;display:inline-flex;align-items:center;gap:11px;color:inherit;
+  text-decoration:none;min-height:44px;font-weight:500}
+.gorgetes .gyuru{width:38px;height:38px;border:1.5px solid color-mix(in srgb, var(--cit-ink) 48%, transparent);
+  border-radius:50%;display:grid;place-items:center}
+.gorgetes .ic{width:18px;height:18px}
+.js .gorgetes .gyuru{animation:uszik 2.2s ease-in-out infinite}
+@keyframes uszik{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@supports (animation-timeline: view()){
+  .js .hero-fade{animation:heroHalvany linear both;animation-timeline:view();animation-range:exit 8% exit 92%}
+}
+@keyframes heroHalvany{to{opacity:0;transform:translateY(-36px)}}
+/* ============ Számsáv ============ */
+.statisztika{border-block:1px solid var(--cit-line);background:color-mix(in srgb, var(--cit-surface) 55%, var(--cit-bg))}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr}
+.stat{padding:22px 18px 22px 0}
+.stat:nth-child(odd){border-right:1px solid var(--cit-line);padding-right:18px}
+.stat:nth-child(even){padding-left:18px}
+.stat:nth-child(n+3){border-top:1px solid var(--cit-line)}
+.st-num{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(1.5rem, 4.6vw, 2.3rem);
+  line-height:1.05;color:var(--cit-ink);margin:0}
+.st-per{font-size:.55em;color:var(--cit-muted);font-weight:600}
+.st-cim{color:var(--cit-muted);font-size:.88rem;margin:5px 0 0}
+/* ============ A ház és a kert ============ */
+.bemutat-grid{display:grid;gap:clamp(30px, 4vw, 48px)}
+.bemutat-intro .haz-link{display:inline-flex;align-items:center;gap:9px;margin-top:18px;font-weight:600;
+  color:var(--cit-ink);text-decoration:none;border-bottom:2px solid var(--cit-accent);padding-bottom:3px;min-height:44px}
+.bemutat-intro .haz-link .ic{width:19px;height:19px;transition:transform .3s ease}
+.bemutat-intro .haz-link:hover .ic{transform:translateX(4px)}
+.tetel-lista{display:grid}
+.tetel{display:flex;gap:18px;padding:22px 0;border-top:1px solid var(--cit-line)}
+.tetel:last-child{border-bottom:1px solid var(--cit-line)}
+.tetel-ikon{width:46px;height:46px;flex:none;display:grid;place-items:center;
+  border:1px solid var(--cit-line);border-radius:var(--cit-radius);color:var(--cit-accent);
+  transition:background-color .3s ease, color .3s ease, border-color .3s ease, transform .3s ease}
+.tetel-ikon .ic{width:22px;height:22px}
+.tetel:hover .tetel-ikon{background:var(--cit-accent);color:var(--cit-on-accent);border-color:transparent;transform:translateY(-2px)}
+.tetel h3{font-family:var(--cit-font-display);font-weight:800;font-size:1.14rem;margin:0 0 4px}
+.tetel p{margin:0;color:var(--cit-muted);font-size:.96rem}
+/* ============ Szobák ============ */
+.szoba-sor{display:grid;gap:24px;padding-block:clamp(28px, 4vw, 44px);border-top:1px solid var(--cit-line)}
+.szoba-sor:last-of-type{border-bottom:1px solid var(--cit-line)}
+.szoba-kep{display:block;overflow:hidden;border-radius:var(--cit-radius);border:1px solid var(--cit-line)}
+.szoba-kep img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;transition:transform .6s ease}
+.szoba-sor:hover .szoba-kep img{transform:scale(1.045)}
+.szoba-info{display:flex;flex-direction:column;gap:13px;align-items:flex-start}
+.szoba-info h3{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(1.45rem, 2.6vw, 1.95rem);line-height:1.12}
+.szoba-meta{display:flex;flex-wrap:wrap;gap:8px 22px;color:var(--cit-muted);font-size:.95rem}
+.szoba-meta span{display:inline-flex;align-items:center;gap:8px}
+.szoba-meta .ic{width:19px;height:19px;color:var(--cit-accent)}
+.szoba-info>p{margin:0;color:var(--cit-muted);font-size:.97rem;max-width:52ch}
+.ar-sor{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:10px}
+.ar{font-family:var(--cit-font-display);font-weight:900;font-size:clamp(1.6rem, 3vw, 2rem)}
+.ar-per{color:var(--cit-muted);font-weight:600}
+.ar-megj{font-size:.83rem;color:var(--cit-muted)}
+.szoba-cta{display:inline-flex;align-items:center;gap:9px;font-weight:600;color:var(--cit-ink);
+  text-decoration:none;border-bottom:2px solid var(--cit-accent);padding-bottom:3px;min-height:44px;margin-top:2px}
+.szoba-cta .ic{width:19px;height:19px;transition:transform .3s ease}
+.szoba-cta:hover .ic{transform:translateX(5px)}
+.kozos-note{margin:30px 0 0;display:flex;gap:13px;align-items:flex-start;
+  background:color-mix(in srgb, var(--cit-accent) 7%, var(--cit-surface));
+  border:1px dashed color-mix(in srgb, var(--cit-accent) 55%, var(--cit-line));
+  border-radius:var(--cit-radius);padding:17px 20px;color:var(--cit-muted);font-size:.95rem}
+.kozos-note .ic{width:21px;height:21px;color:var(--cit-accent);margin-top:2px}
+.kozos-note p{margin:0}
+/* ============ Galéria ============ */
+.galeria-racs{display:grid;grid-template-columns:repeat(2, 1fr);gap:10px}
+.kep{display:block;margin:0;overflow:hidden;border-radius:var(--cit-radius);
+  border:1px solid var(--cit-line);position:relative;background:var(--cit-surface)}
+.kep img{width:100%;height:100%;aspect-ratio:4/3;object-fit:cover;display:block;transition:transform .55s ease}
+.kep.allo img{aspect-ratio:3/4}
+.kep:hover img,.kep:focus-visible img{transform:scale(1.05)}
+/* ============ Értékelések ============ */
+.ert-grid{display:grid;border-block:1px solid var(--cit-line)}
+.ert-fel{padding:clamp(26px, 4vw, 44px) 0;display:grid;gap:4px;justify-items:start;align-content:start}
+.ert-fel+.ert-fel{border-top:1px solid var(--cit-line)}
+.ert-forras{font-weight:600;color:var(--cit-muted);font-size:.92rem;margin-bottom:12px;
+  display:flex;align-items:center;gap:10px}
+.ert-forras::before{content:"";width:26px;height:2px;background:var(--cit-accent)}
+.ert-sor{display:flex;align-items:baseline;gap:12px}
+.ert-szam{font-family:var(--cit-font-display);font-weight:900;font-size:clamp(3.2rem, 8vw, 5rem);line-height:1}
+.ert-skala{color:var(--cit-muted);font-weight:600;font-size:1.15rem}
+.csillagok{display:block;margin:8px 0 10px;color:var(--cit-accent)}
+.csillagok .cs-vaz{fill:none;stroke:color-mix(in srgb, var(--cit-accent) 50%, var(--cit-bg));stroke-width:1.5}
+.csillagok .cs-telj{fill:currentColor;stroke:none}
+.ert-darab{color:var(--cit-muted);font-size:.95rem;margin:0 0 14px}
+.ert-link{display:inline-flex;align-items:center;gap:9px;font-weight:600;color:var(--cit-ink);
+  text-decoration:none;border-bottom:2px solid var(--cit-accent);padding-bottom:3px;min-height:44px}
+.ert-link .ic{width:18px;height:18px;transition:transform .3s ease}
+.ert-link:hover .ic{transform:translate(3px,-3px)}
+/* ============ GYIK ============ */
+.gyik-elem{border-top:1px solid var(--cit-line)}
+.gyik-elem:last-of-type{border-bottom:1px solid var(--cit-line)}
+.gyik-elem summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  gap:18px;padding:20px 2px;font-weight:600;font-size:1.04rem;min-height:52px;color:var(--cit-ink)}
+.gyik-elem summary::-webkit-details-marker{display:none}
+.gyik-jel{flex:none;width:40px;height:40px;display:grid;place-items:center;
+  border:1.5px solid var(--cit-line);border-radius:var(--cit-radius);color:var(--cit-accent);
+  transition:transform .35s ease, background-color .35s ease, color .35s ease, border-color .35s ease}
+.gyik-jel .ic{width:18px;height:18px}
+.gyik-elem[open] .gyik-jel{transform:rotate(45deg);background:var(--cit-accent);
+  color:var(--cit-on-accent);border-color:transparent}
+.gyik-valasz{padding:0 58px 20px 2px;color:var(--cit-muted);margin:0;max-width:64ch}
+/* ============ Házirend ============ */
+.szabaly-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px 20px}
+.szabaly{border-top:2px solid var(--cit-accent);padding-top:14px;display:grid;gap:4px;justify-items:start}
+.szabaly .ic{width:25px;height:25px;color:var(--cit-accent);margin-bottom:6px}
+.szabaly-dcim{color:var(--cit-muted);font-size:.85rem;margin:0}
+.szabaly-ertek{font-weight:700;font-size:1.03rem;margin:0}
+.ar-megjegyzes{margin:38px 0 0;display:flex;gap:13px;align-items:flex-start;
+  background:var(--cit-surface);border:1px solid var(--cit-line);border-left:3px solid var(--cit-accent);
+  border-radius:var(--cit-radius);padding:17px 20px;color:var(--cit-muted);font-size:.95rem}
+.ar-megjegyzes .ic{width:21px;height:21px;color:var(--cit-accent);margin-top:2px}
+.ar-megjegyzes p{margin:0}
+/* ============ Elhelyezkedés ============ */
+.terkep-grid{display:grid;gap:clamp(26px, 4vw, 42px)}
+.terkep{position:relative;border:1px solid var(--cit-line);border-radius:var(--cit-radius);
+  overflow:hidden;background:var(--cit-surface);aspect-ratio:4/3}
+.terkep-rajz{position:absolute;inset:0;width:100%;height:100%;display:block}
+.terkep-rajz .mez{fill:color-mix(in srgb, var(--cit-accent) 10%, transparent)}
+.terkep-rajz .mez2{fill:color-mix(in srgb, var(--cit-accent) 6%, transparent)}
+.terkep-rajz .ut{stroke:var(--cit-line);fill:none;stroke-width:10;stroke-linecap:round}
+.terkep-rajz .finom{stroke-width:4}
+.terkep-rajz .felirat{font-family:var(--cit-font-body);font-size:11px;letter-spacing:.08em;
+  fill:var(--cit-muted);text-transform:uppercase}
+.jelolo-szin{color:var(--cit-accent)}
+.jelolo-halo{fill:none;stroke:var(--cit-accent);opacity:.5;transform-box:fill-box;transform-origin:center}
+.js .jelolo-halo{animation:rezeg 2.6s ease-out infinite}
+@keyframes rezeg{from{transform:scale(.4);opacity:.55}to{transform:scale(1.7);opacity:0}}
+.terkep-alja{display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:16px}
+.terkep-cim{display:inline-flex;align-items:center;gap:10px;font-weight:700}
+.terkep-cim .ic{width:21px;height:21px;color:var(--cit-accent)}
+.utvonal{margin-left:auto}
+.kornyek-lista{display:grid;align-content:start;border-top:1px solid var(--cit-line)}
+.kornyek-elem{display:flex;align-items:center;gap:14px;padding:15px 2px;border-bottom:1px solid var(--cit-line)}
+.kornyek-elem .ic{width:20px;height:20px;color:var(--cit-accent);flex:none}
+.hely{font-weight:600}
+.tav{margin-left:auto;color:var(--cit-muted);font-size:.92rem;text-align:right;white-space:nowrap}
+/* ============ Űrlap ============ */
+.ajanlat-grid{display:grid;gap:clamp(30px, 5vw, 60px)}
+.ajanlat-intro a{color:var(--cit-ink);font-weight:600;text-decoration:none;
+  border-bottom:2px solid var(--cit-accent);white-space:nowrap}
+#ajanlat-form{background:var(--cit-surface);border:1px solid var(--cit-line);border-radius:var(--cit-radius);
+  padding:clamp(22px, 3.4vw, 38px);display:grid;gap:18px}
+.mezo-sor{display:grid;gap:18px}
+.mezo{display:grid;gap:7px}
+.mezo>label,.mezo>span.cimke{font-weight:600;font-size:.92rem}
+.opcio{font-weight:400;color:var(--cit-muted)}
+.mezo input,.mezo select,.mezo textarea{font:inherit;font-size:16px;line-height:1.4;color:var(--cit-ink);
+  padding:11px 13px;border:1.5px solid var(--cit-line);border-radius:var(--cit-radius);
+  background:var(--cit-bg);min-height:48px;width:100%}
+.mezo textarea{min-height:110px;resize:vertical}
+.mezo input:focus,.mezo select:focus,.mezo textarea:focus{border-color:var(--cit-accent);
+  outline:3px solid color-mix(in srgb, var(--cit-accent) 32%, transparent);outline-offset:1px}
+.hiba{display:flex;align-items:center;gap:8px;margin:0;font-size:.9rem;font-weight:600;
+  color:color-mix(in srgb, var(--cit-ink) 94%, transparent)}
+.hiba::before{content:"";width:7px;height:7px;flex:none;border-radius:50%;background:var(--cit-accent)}
+.seged{margin:0;font-size:.85rem;color:var(--cit-muted)}
+.becsles{border:1px dashed color-mix(in srgb, var(--cit-accent) 60%, var(--cit-line));
+  border-radius:var(--cit-radius);padding:16px 18px;display:grid;gap:3px;
+  background:color-mix(in srgb, var(--cit-accent) 8%, var(--cit-surface))}
+.becsles-felirat{margin:0;font-size:.85rem;font-weight:700;color:var(--cit-muted)}
+.becsles-osszeg{font-family:var(--cit-font-display);font-weight:900;font-size:1.8rem;margin:0}
+.becsles-megj{margin:0;font-size:.85rem;color:var(--cit-muted)}
+.aszf-sor{display:flex;gap:13px;align-items:flex-start}
+.aszf-sor input[type=checkbox]{width:23px;height:23px;min-height:0;flex:none;margin:2px 0 0;
+  accent-color:var(--cit-accent);cursor:pointer}
+.aszf-sor .aszf-label{font-weight:400;font-size:.95rem;display:block}
+.aszf-sor a{font-weight:600;color:var(--cit-ink);text-decoration-color:var(--cit-accent)}
+.kuldes{width:100%;min-height:54px;font-size:1.03rem}
+.koszonjuk{background:var(--cit-surface);border:1px solid var(--cit-line);border-radius:var(--cit-radius);
+  padding:clamp(36px, 5vw, 58px) clamp(24px, 4vw, 44px);display:grid;gap:13px;justify-items:center;text-align:center}
+.pipa{width:60px;height:60px;border-radius:50%;background:var(--cit-accent);color:var(--cit-on-accent);
+  display:grid;place-items:center;margin-bottom:4px}
+.pipa .ic{width:28px;height:28px;stroke-width:2.2}
+.koszonjuk h2{font-family:var(--cit-font-display);font-weight:800;font-size:1.9rem;margin:0}
+.koszonjuk p{color:var(--cit-muted);max-width:44ch;margin:0 0 8px}
+/* ============ Lábléc ============ */
+.lablec{background:color-mix(in srgb, var(--cit-bg) 72%, var(--cit-accent));
+  border-top:1px solid var(--cit-line);padding:clamp(48px, 7vw, 80px) 0 0}
+.lablec-grid{display:grid;gap:36px;padding-bottom:clamp(36px, 5vw, 56px)}
+.lablec-cim{font-family:var(--cit-font-display);font-weight:800;font-size:1.5rem;margin:0 0 8px}
+.lablec p{margin:0 0 12px;font-size:.97rem;color:var(--cit-muted)}
+.lablec a{color:var(--cit-ink);text-decoration-color:color-mix(in srgb, var(--cit-ink) 35%, transparent);
+  text-underline-offset:3px}
+.lablec a:hover{text-decoration-color:var(--cit-ink)}
+.lablec-tel{display:inline-flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;
+  min-height:44px;font-size:1.05rem}
+.lablec-tel .ic{width:20px;height:20px;color:var(--cit-accent)}
+.lablec-fej{font-weight:700;margin:0 0 8px;font-size:1rem;color:var(--cit-ink)}
+.lablec-lista a{display:inline-flex;align-items:center;min-height:42px;text-decoration:none}
+.alja{border-top:1px solid color-mix(in srgb, var(--cit-ink) 16%, transparent);
+  padding:20px 0 24px;font-size:.88rem;color:var(--cit-muted)}
+/* ============ Képnézegető ============ */
+#nagykep{border:0;padding:0;background:transparent;max-width:min(94vw,1120px)}
+#nagykep::backdrop{background:color-mix(in srgb, var(--cit-bg) 90%, transparent)}
+#nagykep figure{margin:0;background:var(--cit-surface);border:1px solid var(--cit-line);
+  border-radius:var(--cit-radius);overflow:hidden;box-shadow:var(--cit-shadow)}
+#nagykep[open] figure{animation:lapNagy .35s cubic-bezier(.2,.7,.2,1)}
+@keyframes lapNagy{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+#nagykep img{display:block;max-width:94vw;max-height:76vh;width:auto;height:auto;margin-inline:auto}
+#nagykep figcaption{padding:13px 18px;font-size:.92rem;color:var(--cit-muted);display:flex;
+  justify-content:space-between;gap:14px;align-items:center}
+.nk-szam{white-space:nowrap}
+.nk-bezar{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;border:0;
+  background:var(--cit-accent);color:var(--cit-on-accent);display:grid;place-items:center;cursor:pointer}
+.nk-bezar .ic{width:20px;height:20px}
+/* ============ Belépő animációk ============ */
+.js [data-reveal]{opacity:0;transform:var(--rv-t, translateY(26px));
+  transition:opacity .7s ease var(--rv-d, 0s), transform .8s cubic-bezier(.2,.7,.2,1) var(--rv-d, 0s)}
+.js [data-reveal].bejott{opacity:1;transform:none}
+.js [data-reveal="x-bal"]{--rv-t:translateX(-30px)}
+.js [data-reveal="x-jobb"]{--rv-t:translateX(30px)}
+.js [data-reveal="zoom"]{--rv-t:scale(.94)}
+/* ============ Nagyobb képernyő ============ */
+@media (min-width:560px){
+  .mark span{display:block}
+}
+@media (min-width:600px){
+  .mezo-sor{grid-template-columns:1fr 1fr}
+}
+@media (min-width:900px){
+  .tel-link{display:inline-flex}
+}
+@media (min-width:1024px){
+  .fo-nav{display:flex}
+  .mobil-menu{display:none}
+  .hero-tartalom{padding-top:150px}
+  .stat-grid{grid-template-columns:repeat(4, 1fr)}
+  .stat{padding:28px 28px 28px 0}
+  .stat:nth-child(odd){border-right:0;padding-right:0}
+  .stat:nth-child(n+3){border-top:0}
+  .stat:nth-child(even){padding-left:0}
+  .stat:nth-child(n+2){border-left:1px solid var(--cit-line);padding-left:28px}
+  .bemutat-grid{grid-template-columns:5fr 7fr;gap:clamp(36px, 6vw, 84px)}
+  .bemutat-intro{position:sticky;top:104px;align-self:start}
+  .tetel-lista{grid-template-columns:1fr 1fr;gap:0 clamp(28px, 4vw, 52px)}
+  .szoba-sor{grid-template-columns:7fr 5fr;gap:clamp(28px, 4vw, 56px);align-items:center}
+  .szoba-sor.forditva .szoba-kep{order:2}
+  .galeria-racs{grid-template-columns:repeat(6, 1fr);gap:14px}
+  .kep.s2{grid-column:span 2}
+  .kep.s3{grid-column:span 3}
+  .kep.s4{grid-column:span 4}
+  .ert-grid{grid-template-columns:1fr 1fr}
+  .ert-fel{padding:clamp(30px, 4vw, 48px)}
+  .ert-fel:first-child{padding-left:0;padding-right:clamp(28px, 4vw, 48px)}
+  .ert-fel+.ert-fel{border-top:0;border-left:1px solid var(--cit-line);padding-left:clamp(28px, 4vw, 48px)}
+  .szabaly-grid{grid-template-columns:repeat(4, 1fr)}
+  .terkep-grid{grid-template-columns:7fr 5fr}
+  .ajanlat-grid{grid-template-columns:4fr 8fr;gap:clamp(40px, 5vw, 72px)}
+  .ajanlat-intro{position:sticky;top:104px;align-self:start}
+  .lablec-grid{grid-template-columns:1.25fr 1fr 1fr;gap:clamp(30px, 4vw, 60px)}
+  .alja{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+}
+/* ============ Csökkentett mozgás ============ */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .js .kapu{display:none}
+  .js [data-reveal],.js .hero .sor>span,.js .hero-szalag,.js .hero-alc,.js .hero-gombok{
+    opacity:1!important;transform:none!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<defs>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-nyil" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+<symbol id="i-kulso" viewBox="0 0 24 24"><path d="M7.5 16.5l9-9"/><path d="M9 7.5h7.5V15"/></symbol>
+<symbol id="i-plusz" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-pipa" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-le" viewBox="0 0 24 24"><path d="M6.5 9.5l5.5 5.5 5.5-5.5"/></symbol>
+<symbol id="i-telefon" viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.5 4-2.1 1.6a12.5 12.5 0 0 0 6 6l1.6-2.1 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2.1-2.2z"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.5-6.5-10.2A6.5 6.5 0 0 1 12 4.3a6.5 6.5 0 0 1 6.5 6.5C18.5 15.5 12 21 12 21z"/><circle cx="12" cy="10.8" r="2.3"/></symbol>
+<symbol id="i-fa" viewBox="0 0 24 24"><circle cx="12" cy="9.3" r="5.4"/><path d="M12 14.7V21"/></symbol>
+<symbol id="i-kandallo" viewBox="0 0 24 24"><path d="M4.5 20h15"/><path d="M6.5 20v-6.2c0-3.3 2.4-5.6 5.5-5.6s5.5 2.3 5.5 5.6V20"/><path d="M12 16.7c-1.2 0-2.1-.8-2.1-1.9 0-.9.5-1.6 1.1-2.2.1.7.4 1.1.9 1.2-.2-1.1-.5-2.2.3-3.1.8.9 2.1 1.6 2.1 3.2 0 1-.8 1.8-2.3 1.8z"/></symbol>
+<symbol id="i-bogre" viewBox="0 0 24 24"><path d="M5 9.5h10.5V15a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M15.5 10.7h1.2a2.4 2.4 0 0 1 0 4.8h-1.3"/><path d="M8.7 4c-.7.7-.7 1.5 0 2.2M12.2 4c-.7.7-.7 1.5 0 2.2"/></symbol>
+<symbol id="i-auto" viewBox="0 0 24 24"><path d="M4.5 15.5v-2l2-5h11l2 5v2"/><path d="M4.5 15.5h15"/><path d="M7.5 15.5v1.8M16.5 15.5v1.8"/><path d="M7.4 11.5h9.2"/></symbol>
+<symbol id="i-agy" viewBox="0 0 24 24"><path d="M3.5 18.5v-8"/><path d="M3.5 15.5h17v3"/><path d="M3.5 18.5h17"/><path d="M3.5 13h7.5a1.5 1.5 0 0 1 1.5 1.5v1"/></symbol>
+<symbol id="i-fo" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 19.5c0-3.3 2.9-5.2 6.5-5.2s6.5 1.9 6.5 5.2"/></symbol>
+<symbol id="i-be" viewBox="0 0 24 24"><path d="M14 4.5h4A1.5 1.5 0 0 1 19.5 6v12a1.5 1.5 0 0 1-1.5 1.5h-4"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h10"/></symbol>
+<symbol id="i-ki" viewBox="0 0 24 24"><path d="M10 4.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h4"/><path d="M14 8l4 4-4 4"/><path d="M18 12H8"/></symbol>
+<symbol id="i-manocs" viewBox="0 0 24 24"><circle cx="8.2" cy="10" r="1.5"/><circle cx="10.6" cy="7.4" r="1.5"/><circle cx="13.4" cy="7.4" r="1.5"/><circle cx="15.8" cy="10" r="1.5"/><ellipse cx="12" cy="13.9" rx="3" ry="3.4"/><path d="M4.5 4.5l15 15"/></symbol>
+<symbol id="i-tiltas" viewBox="0 0 24 24"><rect x="3.5" y="13.6" width="12" height="3.4" rx="1"/><path d="M19.8 13.6h.7"/><path d="M4.5 4.5l15 15"/></symbol>
+<symbol id="i-seta" viewBox="0 0 24 24"><circle cx="13" cy="4.8" r="1.9"/><path d="M13 8.2v4.4l-2.6 6M13 12.6l2.8 6M13 9.8l-3.8 1.3M13 9.8l3.8 1.3"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><path d="M12 7.8h.01"/></symbol>
+<symbol id="i-csillag" viewBox="0 0 24 24"><path d="M12 3l2.7 5.7 6.3.8-4.6 4.3 1.2 6.2L12 16.9 6.4 20l1.2-6.2L3 9.5l6.3-.8z"/></symbol>
+</defs>
+</svg>
+
+<header class="fej">
+  <a class="mark" href="#szallas">
+    <strong>Három Huszár</strong>
+    <span>Apartmanok · Köveskál</span>
+  </a>
+  <nav class="fo-nav" aria-label="Fő navigáció">
+    <a href="#szobak">Szobák</a>
+    <a href="#galeria">Galéria</a>
+    <a href="#ertekelesek">Értékelések</a>
+    <a href="#gyik">Gyakori kérdések</a>
+    <a href="#elhelyezkedes">Elhelyezkedés</a>
+  </nav>
+  <div class="fej-cta">
+    <a class="tel-link" href="tel:+36703644977">
+      <svg class="ic" aria-hidden="true"><use href="#i-telefon"/></svg>
+      06 70 364 4977
+    </a>
+    <a class="gomb gomb-fo gomb-fej" href="#ajanlat">Ajánlatkérés</a>
+    <details class="mobil-menu">
+      <summary>
+        <svg class="ic ic-menu" aria-hidden="true"><use href="#i-menu"/></svg>
+        <svg class="ic ic-x" aria-hidden="true"><use href="#i-x"/></svg>
+        <span class="lathatatlan">Menü</span>
+      </summary>
+      <nav class="panel" aria-label="Mobil navigáció">
+        <a href="#szobak">Szobák</a>
+        <a href="#galeria">Galéria</a>
+        <a href="#ertekelesek">Értékelések</a>
+        <a href="#gyik">Gyakori kérdések</a>
+        <a href="#hazirend">Házirend</a>
+        <a href="#elhelyezkedes">Elhelyezkedés</a>
+        <a href="#ajanlat" class="panel-fo">Ajánlatkérés</a>
+        <a class="panel-tel" href="tel:+36703644977">
+          <svg class="ic" aria-hidden="true"><use href="#i-telefon"/></svg>
+          06 70 364 4977
+        </a>
+      </nav>
+    </details>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="szallas" data-cit-section="hero">
+    <div class="hero-alap">
+      <img src="img/01.jpg" width="1400" height="1050" fetchpriority="high" alt="Nádtetős, fehérre meszelt parasztház a kertből, nyugágyakkal, kék éggel">
+    </div>
+    <div class="kapu" aria-hidden="true">
+      <div class="kapu-fel kapu-bal"><img src="img/06.jpg" width="1024" height="768" alt=""></div>
+      <div class="kapu-fel kapu-jobb"><img src="img/06.jpg" width="1024" height="768" alt=""></div>
+    </div>
+    <div class="hero-arny" aria-hidden="true"></div>
+    <div class="csomag hero-fade">
+      <div class="hero-tartalom">
+        <p class="hero-szalag">Vendégház · Köveskál, Káli-medence</p>
+        <h1>
+          <span class="sor"><span style="--d:.12s">Három Huszár</span></span>
+          <span class="sor"><span style="--d:.26s">Apartments</span></span>
+        </h1>
+        <p class="hero-alc">Nádtetős, meszelt falú ház kavicsos udvarral és lugassal — 5 perc séta a faluközpontig.</p>
+        <div class="hero-gombok">
+          <a class="gomb gomb-fo" href="#ajanlat">Ajánlatkérés</a>
+          <a class="gomb gomb-szel" href="#szobak">Szobák és árak</a>
+        </div>
+      </div>
+      <div class="hero-meta">
+        <span><span class="ikon-hatter"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></span>8274 Köveskál, Fő utca 24.</span>
+        <span><span class="ikon-hatter"><svg class="ic ic-teljes" aria-hidden="true"><use href="#i-csillag"/></svg></span>4,9 / 5 · Google-értékelés</span>
+        <a class="gorgetes" href="#bemutatkozas">
+          Görgessen tovább
+          <span class="gyuru"><svg class="ic" aria-hidden="true"><use href="#i-le"/></svg></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="statisztika" data-cit-section="stats" aria-label="Legfontosabb adatok">
+    <div class="csomag">
+      <div class="stat-grid">
+        <div class="stat" data-reveal>
+          <p class="st-num">4,9 / 5</p>
+          <p class="st-cim">Google-értékelés · 56 értékelés</p>
+        </div>
+        <div class="stat" data-reveal style="--rv-d:.08s">
+          <p class="st-num">9,4 / 10</p>
+          <p class="st-cim">lake-balaton.com · 170 értékelés</p>
+        </div>
+        <div class="stat" data-reveal style="--rv-d:.16s">
+          <p class="st-num">21&#160;440 Ft-tól <span class="st-per">/ éj</span></p>
+          <p class="st-cim">tájékoztató kiinduló ár</p>
+        </div>
+        <div class="stat" data-reveal style="--rv-d:.24s">
+          <p class="st-num">5 perc</p>
+          <p class="st-cim">séta a faluközpontig</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="szakasz" id="bemutatkozas" data-cit-section="features">
+    <div class="csomag bemutat-grid">
+      <div class="bemutat-intro" data-reveal>
+        <h2>A ház és a kert</h2>
+        <p class="alc">A Három Huszár nádtetős, meszelt falú vendégház Köveskálon, a Káli-medencében. A kavicsos belső udvaron lugas és kerti asztalok állnak, a nagy kertben pedig piknikezőhely és játszótér is várja a vendégeket. Reggelente kontinentális reggelit szolgálunk fel.</p>
+        <a class="haz-link" href="#galeria">Megnézem a képeket <svg class="ic" aria-hidden="true"><use href="#i-nyil"/></svg></a>
+      </div>
+      <div class="tetel-lista">
+        <article class="tetel" data-reveal>
+          <div class="tetel-ikon"><svg class="ic" aria-hidden="true"><use href="#i-fa"/></svg></div>
+          <div>
+            <h3>Belső udvar és kert</h3>
+            <p>Kavicsos udvar lugassal; piknikezőhely és játszótér a kertben.</p>
+          </div>
+        </article>
+        <article class="tetel" data-reveal style="--rv-d:.08s">
+          <div class="tetel-ikon"><svg class="ic" aria-hidden="true"><use href="#i-kandallo"/></svg></div>
+          <div>
+            <h3>Kőkandalló és klíma</h3>
+            <p>Egyes szobákban; tornác vagy terasz is tartozhat a szobához.</p>
+          </div>
+        </article>
+        <article class="tetel" data-reveal style="--rv-d:.16s">
+          <div class="tetel-ikon"><svg class="ic" aria-hidden="true"><use href="#i-bogre"/></svg></div>
+          <div>
+            <h3>Kontinentális reggeli</h3>
+            <p>Reggelente kontinentális reggelit szolgálunk fel.</p>
+          </div>
+        </article>
+        <article class="tetel" data-reveal style="--rv-d:.24s">
+          <div class="tetel-ikon"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></div>
+          <div>
+            <h3>Saját parkoló és Wi-Fi</h3>
+            <p>Privát parkoló a helyszínen, Wi-Fi a nyilvános helyeken.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="szakasz" id="szobak" data-cit-section="rooms">
+    <div class="csomag">
+      <div class="fejsor" data-reveal>
+        <h2>Szobák</h2>
+        <p class="alc">Két szobatípusban fogadjuk a vendégeinket — mindkettő két fős, nagy franciaággyal.</p>
+      </div>
+      <article class="szoba-sor">
+        <div class="szoba-kep" data-reveal="x-bal">
+          <img src="img/12.jpg" width="1024" height="768" loading="lazy" alt="Hálószoba fehér, meszelt kőfallal, kis mélyablakokkal">
+        </div>
+        <div class="szoba-info" data-reveal="x-jobb">
+          <h3>Franciaágyas szoba saját fürdőszobával</h3>
+          <div class="szoba-meta">
+            <span><svg class="ic" aria-hidden="true"><use href="#i-fo"/></svg>2 fő</span>
+            <span><svg class="ic" aria-hidden="true"><use href="#i-agy"/></svg>1 nagy franciaágy</span>
+          </div>
+          <p>Minden szoba saját fürdőszobás, külön WC-vel és zuhanyzóval.</p>
+          <div class="ar-sor">
+            <span class="ar">21&#160;440 Ft-tól</span>
+            <span class="ar-per">/ éj</span>
+            <span class="ar-megj">tájékoztató kiinduló ár</span>
+          </div>
+          <a class="szoba-cta" href="#ajanlat" data-szoba="franciaagyas">Ezt a szobát kérem <svg class="ic" aria-hidden="true"><use href="#i-nyil"/></svg></a>
+        </div>
+      </article>
+      <article class="szoba-sor forditva">
+        <div class="szoba-kep" data-reveal="x-jobb">
+          <img src="img/13.jpg" width="1024" height="768" loading="lazy" alt="Hálószoba csupasz téglafallal, kovácsoltvas franciaággyal">
+        </div>
+        <div class="szoba-info" data-reveal="x-bal">
+          <h3>Standard stúdió</h3>
+          <div class="szoba-meta">
+            <span><svg class="ic" aria-hidden="true"><use href="#i-fo"/></svg>2 fő</span>
+            <span><svg class="ic" aria-hidden="true"><use href="#i-agy"/></svg>1 nagy franciaágy</span>
+          </div>
+          <p>Minden szoba saját fürdőszobás, külön WC-vel és zuhanyzóval.</p>
+          <div class="ar-sor">
+            <span class="ar">21&#160;440 Ft-tól</span>
+            <span class="ar-per">/ éj</span>
+            <span class="ar-megj">tájékoztató kiinduló ár</span>
+          </div>
+          <a class="szoba-cta" href="#ajanlat" data-szoba="studio">Ezt a szobát kérem <svg class="ic" aria-hidden="true"><use href="#i-nyil"/></svg></a>
+        </div>
+      </article>
+      <p class="kozos-note" data-reveal>
+        <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
+        <span>Egyes szobákban kőkandalló és klíma, tornác vagy terasz; elektromos vízforraló, hűtő és sütő a legtöbb szobában. A tágas hálószobákhoz szekrény tartozik.</span>
+      </p>
+    </div>
+  </section>
+
+  <section class="szakasz" id="galeria" data-cit-section="gallery">
+    <div class="csomag">
+      <div class="fejsor" data-reveal>
+        <h2>Képekben</h2>
+        <p class="alc">Nézzen körül a házban és a kertben — a képekre kattintva nagyítva is megnézheti őket.</p>
+      </div>
+      <ul class="galeria-racs" data-cit-module="gallery">
+        <li><a class="kep s3" href="img/02.jpg" data-reveal="zoom"><img src="img/02.jpg" width="1024" height="768" loading="lazy" alt="Bejárat a nádtető alatt, kék ajtó, cserepes növények"></a></li>
+        <li><a class="kep s3" href="img/03.jpg" data-reveal="zoom" style="--rv-d:.06s"><img src="img/03.jpg" width="1205" height="900" loading="lazy" alt="Belső udvar napernyővel és asztalokkal, piros cseréptetős épületszárny"></a></li>
+        <li><a class="kep s4" href="img/04.jpg" data-reveal="zoom" style="--rv-d:.12s"><img src="img/04.jpg" width="1400" height="1050" loading="lazy" alt="Füves kert nagy, terebélyes fával, napfényben"></a></li>
+        <li><a class="kep s2" href="img/05.jpg" data-reveal="zoom" style="--rv-d:.18s"><img src="img/05.jpg" width="1024" height="768" loading="lazy" alt="Kavicsos ösvény terméskő fal mellett, a háttérben a ház"></a></li>
+        <li><a class="kep s2" href="img/07.jpg" data-reveal="zoom"><img src="img/07.jpg" width="1024" height="768" loading="lazy" alt="Kőoszlopos tornác a kertben"></a></li>
+        <li><a class="kep s2" href="img/08.jpg" data-reveal="zoom" style="--rv-d:.06s"><img src="img/08.jpg" width="1024" height="768" loading="lazy" alt="Kerti mozaikasztal kovácsoltvas székekkel, kavicsos udvaron"></a></li>
+        <li><a class="kep s2" href="img/09.jpg" data-reveal="zoom" style="--rv-d:.12s"><img src="img/09.jpg" width="1205" height="900" loading="lazy" alt="Lugas alatti hosszú étkezőasztal az udvaron"></a></li>
+        <li><a class="kep s2 allo" href="img/10.jpg" data-reveal="zoom" style="--rv-d:.18s"><img src="img/10.jpg" width="576" height="768" loading="lazy" alt="Reggeli: sajt, felvágott, zöldség tálakon (álló kép)"></a></li>
+        <li><a class="kep s3" href="img/11.jpg" data-reveal="zoom"><img src="img/11.jpg" width="1024" height="768" loading="lazy" alt="Világos étkező fehér székekkel, terített asztalokkal"></a></li>
+        <li><a class="kep s3" href="img/14.jpg" data-reveal="zoom" style="--rv-d:.06s"><img src="img/14.jpg" width="1200" height="900" loading="lazy" alt="Nappali konyhasarokkal, téglafallal, bőrkanapéval"></a></li>
+        <li><a class="kep s3" href="img/15.jpg" data-reveal="zoom" style="--rv-d:.12s"><img src="img/15.jpg" width="1024" height="768" loading="lazy" alt="Szoba két különálló fémkeretes ággyal, gerendás mennyezettel"></a></li>
+        <li><a class="kep s3" href="img/16.jpg" data-reveal="zoom" style="--rv-d:.18s"><img src="img/16.jpg" width="1024" height="768" loading="lazy" alt="Boltíves szoba ülősarokkal, tányérokkal a falon"></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="szakasz" id="ertekelesek" data-cit-section="reviews">
+    <div class="csomag">
+      <div class="fejsor" data-reveal>
+        <h2>Értékelések</h2>
+        <p class="alc">A vendégek a Google-on és a lake-balaton.com-on is értékelték a szállást.</p>
+      </div>
+      <div class="ert-grid" data-cit-module="reviews">
+        <article class="ert-fel" data-reveal="x-bal">
+          <p class="ert-forras">Google</p>
+          <div class="ert-sor"><span class="ert-szam">4,9</span><span class="ert-skala">/ 5</span></div>
+          <svg class="csillagok" viewBox="0 0 120 24" width="132" height="26" role="img" aria-label="4,9 a 5 csillagból">
+            <defs><clipPath id="cs-49"><rect width="117.6" height="24"/></clipPath></defs>
+            <g class="cs-vaz">
+              <use href="#i-csillag" width="24" height="24" x="0"/><use href="#i-csillag" width="24" height="24" x="24"/><use href="#i-csillag" width="24" height="24" x="48"/><use href="#i-csillag" width="24" height="24" x="72"/><use href="#i-csillag" width="24" height="24" x="96"/>
+            </g>
+            <g class="cs-telj" clip-path="url(#cs-49)">
+              <use href="#i-csillag" width="24" height="24" x="0"/><use href="#i-csillag" width="24" height="24" x="24"/><use href="#i-csillag" width="24" height="24" x="48"/><use href="#i-csillag" width="24" height="24" x="72"/><use href="#i-csillag" width="24" height="24" x="96"/>
+            </g>
+          </svg>
+          <p class="ert-darab">56 értékelés alapján</p>
+          <a class="ert-link" href="https://search.google.com/local/reviews?placeid=ChIJw-uExMSnaUcRrPZjenesfSo" target="_blank" rel="noopener">Megnyitás a Google-on <svg class="ic" aria-hidden="true"><use href="#i-kulso"/></svg></a>
+        </article>
+        <article class="ert-fel" data-reveal="x-jobb">
+          <p class="ert-forras">lake-balaton.com</p>
+          <div class="ert-sor"><span class="ert-szam">9,4</span><span class="ert-skala">/ 10</span></div>
+          <svg class="csillagok" viewBox="0 0 240 24" width="168" height="17" role="img" aria-label="9,4 a 10 csillagból">
+            <defs><clipPath id="cs-94"><rect width="225.6" height="24"/></clipPath></defs>
+            <g class="cs-vaz">
+              <use href="#i-csillag" width="24" height="24" x="0"/><use href="#i-csillag" width="24" height="24" x="24"/><use href="#i-csillag" width="24" height="24" x="48"/><use href="#i-csillag" width="24" height="24" x="72"/><use href="#i-csillag" width="24" height="24" x="96"/><use href="#i-csillag" width="24" height="24" x="120"/><use href="#i-csillag" width="24" height="24" x="144"/><use href="#i-csillag" width="24" height="24" x="168"/><use href="#i-csillag" width="24" height="24" x="192"/><use href="#i-csillag" width="24" height="24" x="216"/>
+            </g>
+            <g class="cs-telj" clip-path="url(#cs-94)">
+              <use href="#i-csillag" width="24" height="24" x="0"/><use href="#i-csillag" width="24" height="24" x="24"/><use href="#i-csillag" width="24" height="24" x="48"/><use href="#i-csillag" width="24" height="24" x="72"/><use href="#i-csillag" width="24" height="24" x="96"/><use href="#i-csillag" width="24" height="24" x="120"/><use href="#i-csillag" width="24" height="24" x="144"/><use href="#i-csillag" width="24" height="24" x="168"/><use href="#i-csillag" width="24" height="24" x="192"/><use href="#i-csillag" width="24" height="24" x="216"/>
+            </g>
+          </svg>
+          <p class="ert-darab">170 értékelés alapján</p>
+          <a class="ert-link" href="https://harom-huszar-guest-house.lake-balaton.com/hu/" target="_blank" rel="noopener">Megnyitás a lake-balaton.com-on <svg class="ic" aria-hidden="true"><use href="#i-kulso"/></svg></a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="szakasz" id="gyik" data-cit-section="faq">
+    <div class="csomag">
+      <div class="fejsor" data-reveal>
+        <h2>Gyakori kérdések</h2>
+      </div>
+      <details class="gyik-elem" data-reveal>
+        <summary>Mikor lehet érkezni és távozni?<span class="gyik-jel"><svg class="ic" aria-hidden="true"><use href="#i-plusz"/></svg></span></summary>
+        <p class="gyik-valasz">Érkezni 15:00 és 21:00 között, távozni 8:00 és 11:00 között lehet.</p>
+      </details>
+      <details class="gyik-elem" data-reveal style="--rv-d:.06s">
+        <summary>Van reggeli?<span class="gyik-jel"><svg class="ic" aria-hidden="true"><use href="#i-plusz"/></svg></span></summary>
+        <p class="gyik-valasz">Igen, reggelente kontinentális reggelit szolgálunk fel.</p>
+      </details>
+      <details class="gyik-elem" data-reveal style="--rv-d:.12s">
+        <summary>Hol lehet parkolni?<span class="gyik-jel"><svg class="ic" aria-hidden="true"><use href="#i-plusz"/></svg></span></summary>
+        <p class="gyik-valasz">A szálláson saját parkoló van.</p>
+      </details>
+      <details class="gyik-elem" data-reveal style="--rv-d:.18s">
+        <summary>Hozhatok kisállatot?<span class="gyik-jel"><svg class="ic" aria-hidden="true"><use href="#i-plusz"/></svg></span></summary>
+        <p class="gyik-valasz">Háziállatot sajnos nem tudunk fogadni.</p>
+      </details>
+      <details class="gyik-elem" data-reveal style="--rv-d:.24s">
+        <summary>Van internet?<span class="gyik-jel"><svg class="ic" aria-hidden="true"><use href="#i-plusz"/></svg></span></summary>
+        <p class="gyik-valasz">Igen, Wi-Fi elérhető.</p>
+      </details>
+    </div>
+  </section>
+
+  <section class="szakasz" id="hazirend" data-cit-section="rules">
+    <div class="csomag">
+      <div class="fejsor" data-reveal>
+        <h2>Házirend</h2>
+      </div>
+      <div class="szabaly-grid">
+        <div class="szabaly" data-reveal>
+          <svg class="ic" aria-hidden="true"><use href="#i-be"/></svg>
+          <p class="szabaly-dcim">Érkezés</p>
+          <p class="szabaly-ertek">15:00–21:00</p>
+        </div>
+        <div class="szabaly" data-reveal style="--rv-d:.08s">
+          <svg class="ic" aria-hidden="true"><use href="#i-ki"/></svg>
+          <p class="szabaly-dcim">Távozás</p>
+          <p class="szabaly-ertek">08:00–11:00</p>
+        </div>
+        <div class="szabaly" data-reveal style="--rv-d:.16s">
+          <svg class="ic" aria-hidden="true"><use href="#i-manocs"/></svg>
+          <p class="szabaly-dcim">Háziállat</p>
+          <p class="szabaly-ertek">Nem engedélyezett</p>
+        </div>
+        <div class="szabaly" data-reveal style="--rv-d:.24s">
+          <svg class="ic" aria-hidden="true"><use href="#i-tiltas"/></svg>
+          <p class="szabaly-dcim">Dohányzás</p>
+          <p class="szabaly-ertek">Nemdohányzó szállás</p>
+        </div>
+      </div>
+      <p class="ar-megjegyzes" data-reveal>
+        <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
+        <span>A feltüntetett 21&#160;440 Ft-tól / éj összeg tájékoztató kiinduló ár — a pontos árat a szállásadó adja meg.</span>
+      </p>
+    </div>
+  </section>
+
+  <section class="szakasz" id="elhelyezkedes" data-cit-section="location">
+    <div class="csomag">
+      <div class="fejsor" data-reveal>
+        <h2>Elhelyezkedés</h2>
+        <p class="alc">Köveskálban, a Káli-medencében, a Balaton-felvidéken. A közelben kilátók, a Hegyestű geológiai bemutatóhely és a Theodora-forrás is várja.</p>
+      </div>
+      <div class="terkep-grid">
+        <div data-reveal="x-bal">
+          <div class="terkep" data-cit-module="map" role="img" aria-label="Vázlatos térkép a szálláshely környékéről, a Fő utcával és a környező zöldterületekkel">
+            <svg class="terkep-rajz" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect class="mez" x="16" y="16" width="118" height="84" rx="12"/>
+              <rect class="mez2" x="252" y="152" width="132" height="122" rx="12"/>
+              <rect class="mez2" x="38" y="182" width="112" height="98" rx="12"/>
+              <path class="ut" d="M-10 130 C 90 106, 200 150, 300 128 S 420 104, 430 108"/>
+              <path class="ut" d="M160 -10 C 170 90, 138 200, 178 310"/>
+              <path class="ut finom" d="M-10 240 C 110 222, 250 256, 420 230"/>
+              <path class="ut finom" d="M270 -10 C 260 80, 300 170, 270 310"/>
+              <text class="felirat" x="42" y="112">Fő utca</text>
+              <g class="jelolo-szin">
+                <circle class="jelolo-halo" cx="218" cy="130" r="13"/>
+                <path d="M218 147c0 0-15-12-15-22.5a15 15 0 1 1 30 0c0 10.5-15 22.5-15 22.5z" fill="currentColor"/>
+                <circle cx="218" cy="124" r="5.6" fill="var(--cit-surface)"/>
+              </g>
+            </svg>
+          </div>
+          <div class="terkep-alja">
+            <span class="terkep-cim"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>8274 Köveskál, Fő utca 24.</span>
+            <a class="gomb gomb-fo utvonal" href="https://www.google.com/maps/dir/?api=1&amp;destination=8274%20K%C3%B6vesk%C3%A1l%2C%20F%C5%91%20utca%2024." target="_blank" rel="noopener">Útvonalterv <svg class="ic" aria-hidden="true"><use href="#i-kulso"/></svg></a>
+          </div>
+        </div>
+        <ul class="kornyek-lista" data-reveal="x-jobb">
+          <li class="kornyek-elem">
+            <svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg>
+            <span class="hely">Köveskál központja</span>
+            <span class="tav">5 perc séta</span>
+          </li>
+          <li class="kornyek-elem">
+            <svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>
+            <span class="hely">Eötvös Károly-kilátó</span>
+            <span class="tav">kb. 2 km</span>
+          </li>
+          <li class="kornyek-elem">
+            <svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg>
+            <span class="hely">Hegyestű kilátó</span>
+            <span class="tav">kb. 3 km, autóval 10 perc</span>
+          </li>
+          <li class="kornyek-elem">
+            <svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg>
+            <span class="hely">Hegyestű Geológiai Bemutatóhely</span>
+            <span class="tav">autóval kb. 15 perc</span>
+          </li>
+          <li class="kornyek-elem">
+            <svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>
+            <span class="hely">Theodora-forrás</span>
+            <span class="tav">kb. 3 km</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="szakasz" id="ajanlat" data-cit-section="enquiry">
+    <div class="csomag ajanlat-grid">
+      <div class="ajanlat-intro" data-reveal>
+        <h2>Ajánlatkérés</h2>
+        <p class="alc">Adja meg az érkezés és a távozás időpontját, válasszon szobát, és küldje el az ajánlatkérést. Kérdés esetén hívjon minket: <a href="tel:+36703644977">06 70 364 4977</a>.</p>
+      </div>
+      <div class="urlap-doboz" data-reveal style="--rv-d:.1s">
+        <form id="ajanlat-form" data-cit-module="booking" method="post" action="#koszonjuk">
+          <div class="mezo-sor">
+            <div class="mezo">
+              <label for="erkezes">Érkezés</label>
+              <input type="date" id="erkezes" name="erkezes" required>
+            </div>
+            <div class="mezo">
+              <label for="tavozas">Távozás</label>
+              <input type="date" id="tavozas" name="tavozas" required>
+              <p class="hiba" id="hiba-tavozas" hidden>A távozás nem lehet korábbi az érkezésnél.</p>
+            </div>
+          </div>
+          <div class="mezo-sor">
+            <div class="mezo">
+              <label for="szoba">Szoba</label>
+              <select id="szoba" name="szoba">
+                <option value="" selected>Válasszon szobát</option>
+                <option value="franciaagyas" data-fo="2">Franciaágyas szoba saját fürdőszobával</option>
+                <option value="studio" data-fo="2">Standard stúdió</option>
+              </select>
+            </div>
+            <div class="mezo">
+              <label for="vendegek">Vendégek száma</label>
+              <input type="number" id="vendegek" name="vendegek" min="1" inputmode="numeric">
+              <p class="seged" id="fo-seg" hidden></p>
+            </div>
+          </div>
+          <div class="mezo">
+            <label for="nev">Név</label>
+            <input type="text" id="nev" name="nev" autocomplete="name" required>
+          </div>
+          <div class="mezo-sor">
+            <div class="mezo">
+              <label for="email">E-mail-cím</label>
+              <input type="email" id="email" name="email" autocomplete="email" required>
+            </div>
+            <div class="mezo">
+              <label for="telefon">Telefonszám</label>
+              <input type="tel" id="telefon" name="telefon" autocomplete="tel" required>
+            </div>
+          </div>
+          <div class="mezo">
+            <label for="uzenet">Üzenet <span class="opcio">(nem kötelező)</span></label>
+            <textarea id="uzenet" name="uzenet" rows="4"></textarea>
+          </div>
+          <div class="becsles" id="becsles" aria-live="polite" hidden>
+            <p class="becsles-felirat">Becsült összeg</p>
+            <p class="becsles-osszeg" id="becsles-osszeg"></p>
+            <p class="becsles-megj" id="becsles-megj"></p>
+          </div>
+          <div class="mezo aszf-sor">
+            <input type="checkbox" id="aszf" name="aszf" required>
+            <label class="aszf-label" for="aszf">Elolvastam és elfogadom az <a href="#aszf">Általános Szerződési Feltételeket</a>.</label>
+          </div>
+          <button class="gomb gomb-fo kuldes" type="submit">Ajánlatkérés elküldése</button>
+        </form>
+        <div class="koszonjuk" id="koszonjuk" hidden>
+          <span class="pipa"><svg class="ic" aria-hidden="true"><use href="#i-pipa"/></svg></span>
+          <h2>Köszönjük megkeresését!</h2>
+          <p>Ajánlatkérését rögzítettük. A szállásadó a megadott elérhetőségeken veszi fel Önnel a kapcsolatot.</p>
+          <button class="gomb gomb-szel" id="vissza-gomb" type="button">Új ajánlatkérés készítése</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="lablec">
+  <div class="csomag lablec-grid">
+    <div>
+      <p class="lablec-cim">Három Huszár Apartments</p>
+      <p>Vendégház Köveskálon,<br>a Káli-medencében</p>
+      <p>8274 Köveskál, Fő utca 24.</p>
+      <a class="lablec-tel" href="tel:+36703644977">
+        <svg class="ic" aria-hidden="true"><use href="#i-telefon"/></svg>
+        06 70 364 4977
+      </a>
+    </div>
+    <nav aria-label="Lábléc-navigáció">
+      <p class="lablec-fej">Az oldalon</p>
+      <ul class="lablec-lista">
+        <li><a href="#szobak">Szobák</a></li>
+        <li><a href="#galeria">Galéria</a></li>
+        <li><a href="#ertekelesek">Értékelések</a></li>
+        <li><a href="#gyik">Gyakori kérdések</a></li>
+        <li><a href="#elhelyezkedes">Elhelyezkedés</a></li>
+        <li><a href="#ajanlat">Ajánlatkérés</a></li>
+      </ul>
+    </nav>
+    <div>
+      <p class="lablec-fej">Jogi információk</p>
+      <ul class="lablec-lista">
+        <li><a href="#aszf">Általános szerződési feltételek</a></li>
+        <li><a href="#adatkezeles">Adatkezelési tájékoztató</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="csomag alja">
+    <p>Előnézet — nyilvános adatokból készült demó, a Citoviso készítette</p>
+  </div>
+</footer>
+
+<dialog id="nagykep" aria-label="Kép nagyított nézete">
+  <figure>
+    <img id="nagykep-img" src="" alt="">
+    <figcaption>
+      <span id="nagykep-szoveg"></span>
+      <span class="nk-szam" id="nagykep-szam"></span>
+    </figcaption>
+  </figure>
+  <button class="nk-bezar" type="button" aria-label="Bezárás">
+    <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg>
+  </button>
+</dialog>
+
+<script>
+(function(){
+  "use strict";
+
+  /* Belépő animációk */
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function(bejaratok){
+      bejaratok.forEach(function(b){
+        if (b.isIntersecting) { b.target.classList.add("bejott"); io.unobserve(b.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    document.querySelectorAll("[data-reveal]").forEach(function(el){ io.observe(el); });
+  } else {
+    document.querySelectorAll("[data-reveal]").forEach(function(el){ el.classList.add("bejott"); });
+  }
+
+  /* Mobil menü: hivatkozásra csukódik */
+  var menu = document.querySelector(".mobil-menu");
+  if (menu) {
+    menu.querySelectorAll("a").forEach(function(a){
+      a.addEventListener("click", function(){ menu.open = false; });
+    });
+  }
+
+  /* Galéria nagyított nézete */
+  var dlg = document.getElementById("nagykep");
+  if (dlg && typeof dlg.showModal === "function") {
+    var dlgImg = document.getElementById("nagykep-img");
+    var dlgSzoveg = document.getElementById("nagykep-szoveg");
+    var dlgSzam = document.getElementById("nagykep-szam");
+    var kepek = Array.prototype.slice.call(document.querySelectorAll(".galeria-racs .kep"));
+    kepek.forEach(function(a, i){
+      a.addEventListener("click", function(e){
+        e.preventDefault();
+        var img = a.querySelector("img");
+        dlgImg.src = a.getAttribute("href");
+        dlgImg.alt = img.alt;
+        dlgSzoveg.textContent = img.alt;
+        dlgSzam.textContent = (i + 1) + " / " + kepek.length;
+        dlg.showModal();
+      });
+    });
+    dlg.querySelector(".nk-bezar").addEventListener("click", function(){ dlg.close(); });
+    dlg.addEventListener("click", function(e){ if (e.target === dlg) { dlg.close(); } });
+  }
+
+  /* Ajánlatkérő űrlap */
+  var form = document.getElementById("ajanlat-form");
+  if (!form) { return; }
+  var erk = form.querySelector("[name=erkezes]");
+  var tav = form.querySelector("[name=tavozas]");
+  var szoba = form.querySelector("[name=szoba]");
+  var vend = form.querySelector("[name=vendegek]");
+  var hiba = document.getElementById("hiba-tavozas");
+  var foSeg = document.getElementById("fo-seg");
+  var becsles = document.getElementById("becsles");
+  var becslesOsszeg = document.getElementById("becsles-osszeg");
+  var becslesMegj = document.getElementById("becsles-megj");
+  var koszonjuk = document.getElementById("koszonjuk");
+  var AR = 21440;
+
+  var maDatum = new Date();
+  var ma = maDatum.getFullYear() + "-" +
+    String(maDatum.getMonth() + 1).padStart(2, "0") + "-" +
+    String(maDatum.getDate()).padStart(2, "0");
+  erk.min = ma;
+  tav.min = ma;
+
+  function ejszakak() {
+    if (!erk.value || !tav.value) { return 0; }
+    var a = new Date(erk.value), b = new Date(tav.value);
+    var n = Math.round((b - a) / 86400000);
+    return (isFinite(n) && n > 0) ? n : 0;
+  }
+  function ft(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft";
+  }
+  function osszegFrissit() {
+    var n = ejszakak();
+    if (n > 0) {
+      becsles.hidden = false;
+      becslesOsszeg.textContent = ft(n * AR);
+      becslesMegj.textContent = n + " éjszaka × 21 440 Ft — a kiinduló ár alapján, tájékoztató jellegű.";
+    } else {
+      becsles.hidden = true;
+    }
+  }
+  function datumEllenoriz() {
+    if (erk.value) { tav.min = erk.value; }
+    var n = ejszakak();
+    if (erk.value && tav.value && n <= 0) {
+      hiba.hidden = false;
+      tav.setCustomValidity("A távozás nem lehet korábbi az érkezésnél.");
+    } else {
+      hiba.hidden = true;
+      tav.setCustomValidity("");
+    }
+    osszegFrissit();
+  }
+  erk.addEventListener("change", datumEllenoriz);
+  erk.addEventListener("input", datumEllenoriz);
+  tav.addEventListener("change", datumEllenoriz);
+  tav.addEventListener("input", datumEllenoriz);
+
+  /* Szobaválasztás korlátozza a vendégszámot */
+  function szobaValt() {
+    var opt = szoba.selectedOptions[0];
+    var fo = (opt && opt.getAttribute("data-fo")) ? Number(opt.getAttribute("data-fo")) : 0;
+    if (fo) {
+      vend.max = fo;
+      foSeg.hidden = false;
+      foSeg.textContent = "Ehhez a szobához legfeljebb " + fo + " fő választható.";
+      if (Number(vend.value) > fo) { vend.value = fo; }
+    } else {
+      vend.removeAttribute("max");
+      foSeg.hidden = true;
+    }
+    osszegFrissit();
+  }
+  szoba.addEventListener("change", szobaValt);
+  vend.addEventListener("input", osszegFrissit);
+
+  /* Szobakártyák előválasztják a szobát az űrlapon */
+  document.querySelectorAll("[data-szoba]").forEach(function(a){
+    a.addEventListener("click", function(){
+      szoba.value = a.getAttribute("data-szoba");
+      szoba.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+
+  /* Küldés: nincs újratöltés, köszönő állapot */
+  var csokkentettMozgas = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    datumEllenoriz();
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    form.hidden = true;
+    koszonjuk.hidden = false;
+    koszonjuk.scrollIntoView({ behavior: csokkentettMozgas ? "auto" : "smooth", block: "center" });
+  });
+  var vissza = document.getElementById("vissza-gomb");
+  if (vissza) {
+    vissza.addEventListener("click", function(){
+      koszonjuk.hidden = true;
+      form.hidden = false;
+      form.reset();
+      szobaValt();
+      datumEllenoriz();
+    });
+  }
+})();
+</script>
+</body>
+</html>

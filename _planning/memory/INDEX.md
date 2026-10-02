@@ -16,6 +16,7 @@
 - [2026-10-02_l1_megkereso_level.md](2026-10-02_l1_megkereso_level.md) — L1 — a megkereső levél és SMS valódisága + saját-fotó nyomás kivezetése (2026-10-02)
 - [2026-10-02_k2_kritikus_seta_indoklas.md](2026-10-02_k2_kritikus_seta_indoklas.md) — 2026-10-02 — K2: vendég-kritikus hozzátett részlet (SZ2-1), piac-indoklás a kiszállított szövegről (OP-1), Séta-némaság (S-1)
 - [2026-10-02_h_riport_valos_szamla.md](2026-10-02_h_riport_valos_szamla.md) — 2026-10-02 — Places-költség H rész: a napi Google-riport a VALÓS számlát mutatja (BigQuery billing export) (SUB)
+- [2026-10-02_gate_opening_sablon.md](2026-10-02_gate_opening_sablon.md) — 2026-10-02 — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon
 - [2026-10-02_g_napi_google_koltseg_riport.md](2026-10-02_g_napi_google_koltseg_riport.md) — 2026-10-02 — Places-költség G rész: napi Google API költség-riport e-mailben (SUB)
 - [2026-10-02_f_nincs_cap_portal_gyorsitas.md](2026-10-02_f_nincs_cap_portal_gyorsitas.md) — 2026-10-02 — Places F (SUB): nincs költség-cap, booking.com kihagyva, hovamenjek fullHd
 - [2026-10-02_elek_m2_fizetes_szamla_belepes_konzol.md](2026-10-02_elek_m2_fizetes_szamla_belepes_konzol.md) — 2026-10-02 — Elek M2: fizetés, számla, belépés, konzol (ADR-0303)
