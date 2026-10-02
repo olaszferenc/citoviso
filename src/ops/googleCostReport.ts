@@ -15,6 +15,7 @@
 // (scripts/google-cost-report-check.mts) drives it with a fetch stub.
 
 import { addIsoDays, budapestIsoDay, budapestMidnight } from "../text/budapestTime.js";
+import { formatNumber } from "../text/money.js";
 
 // ---------------------------------------------------------------------------
 // Price list — the ONE copy. Google Maps Platform list prices, 0–100k tier,
@@ -250,10 +251,8 @@ function usd(calls: number, price: MethodPrice | null): number {
 }
 
 const fmtUsd = (n: number): string => `${n.toFixed(2).replace(".", ",")} $`;
-const fmtInt = (n: number): string =>
-  Math.round(n)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+// One grouping rule for every number we print (ADR-0162): the shared formatter.
+const fmtInt = (n: number): string => formatNumber(n);
 const shortMethod = (m: string): string => m.replace(/^google\.(maps\.)?(places\.v1\.)?/, "");
 
 export function buildReport(points: readonly UsagePoint[], o: ReportOptions): Report {
