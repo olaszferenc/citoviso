@@ -10,6 +10,7 @@ import { chromium } from "playwright-core";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { config } from "../config.js";
+import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 
 export interface SectionBand {
   tag: string;
@@ -105,7 +106,9 @@ export async function auditAiriness(
   try {
     const reports: WidthReport[] = [];
     for (const width of widths) {
-      const page = await browser.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: 1 });
+      // Own UA: a "HeadlessChrome" token gets 429 from lake-balaton.com — the page would be
+      // measured without its photos (2026-10-02).
+      const page = await browser.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: 1, userAgent: PORTAL_USER_AGENT });
       try {
         if (url) await page.goto(url, { waitUntil: "networkidle" }).catch(() => {});
         else await page.setContent(target, { waitUntil: "networkidle" }).catch(() => {});

@@ -36,6 +36,7 @@ import { chromium, type Browser, type BrowserContext, type Locator, type Page } 
 import { parseFk, findScenario, type FkScenario, type FkStep } from "../../src/elek/fkParse.js";
 import { classifyStepNoise, noiseErrorText } from "../../src/elek/stepVerdict.js";
 import { config } from "../../src/config.js";
+import { PORTAL_USER_AGENT } from "../../src/scraper/sources/portals/politeness.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 
@@ -673,6 +674,10 @@ async function contextFor(user: string): Promise<BrowserContext> {
     // :hover semantics) — the guest's real browser. Only in `nézet: telefon` runs.
     ...(PHONE_MODE ? { isMobile: true, hasTouch: true } : {}),
     reducedMotion: "reduce",
+    // Own UA, not "HeadlessChrome": lake-balaton.com answers that token with 429, and the
+    // run reported live portal photos as broken (measured 2026-10-02). siteVisit counts both
+    // as bots, so no figure the run checks changes.
+    userAgent: PORTAL_USER_AGENT,
   });
   const cookie = await sessionCookie(user);
   if (cookie) {

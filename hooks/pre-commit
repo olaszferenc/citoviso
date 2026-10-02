@@ -784,6 +784,15 @@ if [ -f scripts/rating-scale-check.mts ] && \
   echo "[pre-commit] rating-scale-check (a kiírt skála a forrásé)…"
   npx tsx scripts/rating-scale-check.mts >"$GATE_LOG" || gate_failed
 fi
+# SAJÁT BOT-UA A KÉPERNYŐKÉPEN (M4, 2026-10-02): a lake-balaton.com a „HeadlessChrome” UA-ra 429-et
+# ad → az alap-UA-s headless kép (siteShot, qaAiriness, Elek-futó) élő fotót mutatott töröttnek.
+# Statikus: minden newPage/newContext a hatókörben `userAgent: PORTAL_USER_AGENT`-tel. <1 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/shot-user-agent-check.mts ] && \
+   changed_files | grep -qE '^src/.*\.ts$|^elek/bin/.*\.mts$|^scripts/ui-shot\.mts$|^scripts/shot-user-agent-check\.mts$'; then
+  echo "[pre-commit] shot-user-agent-check (a képernyőkép a saját bot-UA-val kér)…"
+  npx tsx scripts/shot-user-agent-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ÉLŐ LAPON NINCS „MINTA” SZOBAKÉP (§B.17, 2026-09-29, Myrna Haus): a trió élőn is a
 # roomsForMock()-ot hívta → a tulaj három szobája „Minta — <szoba>” galéria-képet viselt.
 # Egy predikátum (roomsFor) mind a 19 sablonon; élő ÉS mock irányban ítélve, + a trió

@@ -16,6 +16,7 @@ import { access, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
 import { config } from "../config.js";
+import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { db } from "../db/client.js";
 import { SITE_SHOT_VIEWPORT } from "./shotSize.js";
 
@@ -120,7 +121,14 @@ async function renderSiteShot(tenantId: string): Promise<SiteShotResult> {
     const browser = await chromium.launch({ executablePath: config.chromiumPath });
     try {
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-        const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SCALE });
+        const page = await browser.newPage({
+          viewport: VIEWPORT,
+          deviceScaleFactor: SCALE,
+          // Our own, identifiable name (as heroShot): lake-balaton.com answers 429 to the
+          // literal "HeadlessChrome" UA token, so the buyer's portal photos came out broken
+          // and the shot fell back to the hero photo (measured 2026-10-02).
+          userAgent: PORTAL_USER_AGENT,
+        });
         try {
           // ⛔ CSS BACKGROUNDS TOO. The first version only inspected <img> elements
           // and cheerfully cached a shot whose HERO WAS MISSING: most templates
