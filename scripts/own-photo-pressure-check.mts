@@ -10,7 +10,8 @@
 // At most a NEUTRAL option may remain: „Ha szeretné, feltölthet saját képeket.”
 //
 // WHAT IT MEASURES. Every customer-facing text source — product code (src/**), the i18n
-// catalog, the KB entries and the approved design contracts (their README binds labels,
+// catalog, the public pages (public/**/*.html, incl. the tegező landing), the KB entries
+// and the approved design contracts (their README binds labels,
 // ADR-0076) — is scanned for sentences that make going live depend on own photos or
 // push a replacement. src/legal.ts is the declaration ITSELF and is exempt by name.
 //
@@ -29,7 +30,10 @@ const FORBIDDEN: readonly [RegExp, string][] = [
   [/jogtiszta\s+fotói\s+kellenek/iu, "az élesítést saját, jogtiszta fotókhoz köti"],
   [/élesítés\p{L}*\s+(?:előtt|ehhez|hez)?[^.!?\n]{0,40}saját[^.!?\n]{0,20}(?:fotó|kép)/iu, "élesítés ↔ saját fotó feltétel"],
   [/élesítéskor\s+az\s+Ön\s+saját\s+képeivel/iu, "élesítéskor saját képekkel töltjük fel"],
-  [/saját\s+képeivel[^.!?\n]{0,40}(?:véglegesítjük|töltjük)/iu, "a véglegesítést saját képekhez köti"],
+  [/saját\s+(?:képeivel|képeiddel|fotóival|fotóiddal)[^.!?\n]{0,40}(?:véglegesítjük|töltjük)/iu, "a véglegesítést saját képekhez köti"],
+  // The platform landing page speaks tegező (owner's ruling 2026-10-02: it is in scope too).
+  [/Saját\s+képeid,\s+szöveged/iu, "a saját képet az ígéret részévé teszi"],
+  [/éles\s+oldal\p{L}*[^.!?\n]{0,40}(?:saját\s+fotóid|saját\s+képeid|te\s+anyagaid)/iu, "az éles oldalt saját anyaghoz köti"],
   [/Cserélje\s+sajátra/iu, "cserére sürget"],
   [/Töltsön\s+fel\s+saját\s+fotókat/iu, "teendőként sürgeti a saját fotót"],
 ];
@@ -65,6 +69,10 @@ if (process.argv.includes("--self-test")) {
     "Nagy, minőségi fotógaléria a szállásról — élesítéskor az Ön saját képeivel töltjük fel.",
     "Ha tetszik, a saját képeivel és szövegeivel véglegesítjük, és élesíthető.",
     "Ha tetszik, néhány lépésben élesíthető, és a saját képeivel, szövegeivel véglegesítjük.",
+    "Elkészítjük az előnézetet. Ha tetszik, a saját képeiddel, szövegeddel közösen véglegesítjük.",
+    "Saját képeid, szöveged",
+    "Az éles oldalon a te anyagaid szerepelnek, a te hangodon.",
+    "A mintához elég a vállalkozásod neve és a helye. Az éles oldalhoz jól jönnek a saját fotóid és pár mondat rólad.",
   ];
   const NEUTRAL = [
     "Ha szeretné, feltölthet saját képeket.",
@@ -72,6 +80,9 @@ if (process.argv.includes("--self-test")) {
     "A saját fotói láthatók az oldalán.",
     "Nagy, minőségi fotógaléria a szállásról.",
     "Ha tetszik, néhány lépésben élesíthető — csak akkor fizet, ha valóban szeretné.",
+    "Elkészítjük az előnézetet. Ha tetszik, közösen véglegesítjük.",
+    "Ha szeretnéd, saját képeket is feltölthetsz.",
+    "A mintához elég a vállalkozásod neve és a helye — minden mást mi intézünk.",
   ];
   const missed = REPORTED.filter((s) => hits(s).length === 0);
   const falsePos = NEUTRAL.filter((s) => hits(s).length > 0);
@@ -87,6 +98,7 @@ const files = [
   ...walk(join(ROOT, "src"), (p) => /\.(ts|json)$/.test(p)),
   ...walk(join(ROOT, "kb"), (p) => p.endsWith(".md")),
   ...walk(join(ROOT, "assets/design-refs"), (p) => p.endsWith("README.md")),
+  ...walk(join(ROOT, "public"), (p) => p.endsWith(".html")),
 ];
 let bad = 0;
 for (const f of files) {

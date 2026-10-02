@@ -19,8 +19,9 @@ képeivel töltjük fel”) és a mock-kérő levél („a saját képeivel … 
 3. **Őr:** `scripts/own-photo-pressure-check.mts` (pre-commit, mindig fut; önteszt a bejelentett mondatokkal és a
    semleges utódokkal). A `src/legal.ts` maga a nyilatkozat — név szerint kivétel.
 
-### Nyitva (a koordinátornak jelezve)
-A platform nyitólapja (`public/index.html`, tegező marketing) is így ír: „a saját képeiddel, szövegeddel közösen
-véglegesítjük”, „Saját képeid, szöveged”. Nem tenant-admin/levél, ezért nem nyúltam hozzá — tulaj-döntés kell.
+### Nyitólap (a koordinátor továbbította, tulaj-döntés 2026-10-02)
+A platform nyitólapja (`public/index.html`, tegező) sem köti a véglegesítést/élesítést saját képhez: kikerült „a saját
+képeiddel, szövegeddel közösen véglegesítjük”, a „Saját képeid, szöveged” kártya („A te adataidból” lett) és a GYIK
+„az éles oldalhoz jól jönnek a saját fotóid” mondata. Az őr hatóköre a `public/**/*.html`-re bővült (tegező alakokkal).
 
 **Visszafordíthatóság:** 🔄 olcsó (szöveg + egy teendő-sor).
