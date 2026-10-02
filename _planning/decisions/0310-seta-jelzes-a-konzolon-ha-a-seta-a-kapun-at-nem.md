@@ -1,4 +1,4 @@
-## ADR-XXXX — Séta-jelzés a konzolon: ha a „Séta a kapun át” nem sétál, a választó, az előnézet és a mock-kártya kimondja; a sablon választható marad (2026-10-02)
+## ADR-0310 — Séta-jelzés a konzolon: ha a „Séta a kapun át” nem sétál, a választó, az előnézet és a mock-kártya kimondja; a sablon választható marad (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (tulajdonosi döntés: „A”, a koordinátoron át; SUB K2) · **Forrás:** Elek 2. élesi köre, S-1 (KÖZEPES) ·
 **Kontraktus:** `assets/design-refs/console/walk-readiness/` (plan.html + README) ·

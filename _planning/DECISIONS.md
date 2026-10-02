@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-seta-jelzes-a-konzolon-a-sablon-valaszthato-marad.md) — Séta-jelzés a konzolon: ha a „Séta a kapun át” nem sétál, a választó, az előnézet és a mock-kártya kimondja; a sablon választható marad (2026-10-02)
+- [ADR-0310](decisions/0310-seta-jelzes-a-konzolon-ha-a-seta-a-kapun-at-nem.md) — Séta-jelzés a konzolon: ha a „Séta a kapun át” nem sétál, a választó, az előnézet és a mock-kártya kimondja; a sablon választható marad (2026-10-02)
 - [ADR-0309](decisions/0309-vendeg-kritikus-a-forrasban-nem-allo-hely.md) — Vendég-kritikus: a forrásban nem álló hely-/minőség-részlet blokkol; a piac-őr a kiszállított szövegről ítél (2026-10-02)
 - [ADR-0308](decisions/0308-a-nem-megvett-modul-szekcioja-nem-latszik-az.md) — A nem megvett modul szekciója nem látszik az élő lapon; az adat léte nem modul
 - [ADR-0307](decisions/0307-foglalasi-aggregator-portal-host-soha-nem-sajat.md) — Foglalási aggregátor / portál-host soha nem „saját modern honlap”: egy lista (qualify.ts), visszamenőleges újrabesorolás a prospect-szegmenssel együtt (2026-10-02)
