@@ -21,6 +21,7 @@ import { PARALLAX } from "./templates/parallax.js";
 import { SCRAPBOOK } from "./templates/scrapbook.js";
 import { TILTED_GALLERY } from "./templates/tiltedGallery.js";
 import { TRANSIT } from "./templates/transit.js";
+import { WALK_THROUGH } from "./templates/walkThrough.js";
 import { WATERCOLOR } from "./templates/watercolor.js";
 import { WORDMARK_GROW } from "./templates/wordmarkGrow.js";
 
@@ -47,4 +48,5 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [TILTED_GALLERY.id]: TILTED_GALLERY,
   [ARCH_FRAMES.id]: ARCH_FRAMES,
   [WORDMARK_GROW.id]: WORDMARK_GROW,
+  [WALK_THROUGH.id]: WALK_THROUGH,
 };

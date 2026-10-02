@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-walk-through-sablon.md) — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon; a séta a fotók vision-tárgyából épül (2026-10-02)
 - [ADR-0303](decisions/0303-fizetes-szamla-belepes-konzol-a-vevo.md) — Fizetés, számla, belépés, konzol: a vevő visszalépése nem elutasítás, egy ajánlat egy név, a számlacím a vevőé, jelszó nem jár levélben (Elek M2) (2026-10-02)
 - [ADR-0302](decisions/0302-a-sablon-szovege-egy-valodi-szallas-honlapjae.md) — A sablon szövege egy valódi szállás honlapjáé: nincs „játék-szöveg”, ál-jelölés és kártyánkénti átlag-csillag (2026-10-02)
 - [ADR-0301](decisions/0301-a-napi-google-riport-valos-szamlat-mutat-a.md) — A napi Google-riport VALÓS számlát mutat a Cloud Billing BigQuery-exportjából; amíg a nap nem teljes, a becslés vezet és kimondja, miért (2026-10-02)

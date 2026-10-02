@@ -31,12 +31,14 @@ const demo: SiteData = {
     "E-bike bérlés",
   ],
   photos: [
+    // `subject` = the vision verdict a real lead carries (heroPick.ts); the walk-through
+    // template builds its photo walk from it — every other template ignores it.
     { url: "https://picsum.photos/seed/cit-hero/1600/1000", alt: "A vendégház", provenance: "owner" },
     { url: "https://picsum.photos/seed/cit-2/900/1100", alt: "Szoba", provenance: "owner" },
     { url: "https://picsum.photos/seed/cit-3/900/700", alt: "Terasz", provenance: "owner" },
-    { url: "https://picsum.photos/seed/cit-4/900/700", alt: "Étterem", provenance: "owner" },
-    { url: "https://picsum.photos/seed/cit-5/900/700", alt: "Wellness", provenance: "owner" },
-    { url: "https://picsum.photos/seed/cit-6/900/700", alt: "Borpince", provenance: "owner" },
+    { url: "https://picsum.photos/seed/cit-4/900/700", alt: "Étterem", provenance: "owner", subject: "dining" },
+    { url: "https://picsum.photos/seed/cit-5/900/700", alt: "Wellness", provenance: "owner", subject: "interior" },
+    { url: "https://picsum.photos/seed/cit-6/900/700", alt: "Borpince", provenance: "owner", subject: "exterior" },
   ],
   contact: { email: "foglalas@fortunavendeghaz.hu", phone: "+36 30 000 0000", address: "3300 Példaváros, Vár utca 2." },
   rooms: [

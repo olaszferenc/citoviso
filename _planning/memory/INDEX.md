@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-02_walk_through_sablon.md](2026-10-02_walk_through_sablon.md) — 2026-10-02 — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon
 - [2026-10-02_places_kurator_gomb_b.md](2026-10-02_places_kurator_gomb_b.md) — 2026-10-02 — Places-fotók kurátori gombja: két forrás-sáv a Fotók fülön (C rész, terv „B”)
 - [2026-10-02_m4_sablon_szovegek.md](2026-10-02_m4_sablon_szovegek.md) — M4 — sablon-szövegek, vélemény-csillagsor, arch-frames cím, lake-balaton UA, tegező alak-szabály (2026-10-02)
 - [2026-10-02_m3_editorial_programminta_felirat_tenyhuseg.md](2026-10-02_m3_editorial_programminta_felirat_tenyhuseg.md) — 2026-10-02 — M3: editorial szállás-szöveg, dátum nélküli program-minta, beszélő fotó-felirat, tényhűség-lista (ADR-0300)

@@ -424,6 +424,29 @@ export const SKINS: Readonly<Record<string, Skin>> = {
     },
     fonts: ["Libre+Caslon+Text:wght@400;700", "Public+Sans:wght@300;400;500;600;700"],
   },
+
+  // walk-through (ADR-XXXX) — the owner-approved „Séta a kapun át” mock (Három Huszár,
+  // Köveskál, 2026-10-02): gravel-grey ground, arbour-leaf green, a big characterful
+  // grotesque for the headlines. Tokens taken over from the approved mock unchanged.
+  "gravel-grotesque": {
+    id: "gravel-grotesque",
+    label: "Kavics — groteszk címek, lombzöld",
+    hint: "falusi udvar, kavics és lomb: hideg kavics-szürke alap, lombzöld akcent; nagy, karakteres groteszk címek, lekerekített fotók.",
+    tokens: {
+      "--cit-accent": "#4a6b34",
+      "--cit-on-accent": "#ffffff",
+      "--cit-ink": "#20231d",
+      "--cit-muted": "#565a50",
+      "--cit-bg": "#e9eae4",
+      "--cit-surface": "#f7f7f3",
+      "--cit-line": "#c9cbc0",
+      "--cit-radius": "22px",
+      "--cit-font-display": "'Bricolage Grotesque', 'Arial Narrow', system-ui, sans-serif",
+      "--cit-font-body": "'Figtree', system-ui, sans-serif",
+      "--cit-shadow": "0 1px 0 rgba(32,35,29,.14), 0 12px 28px -18px rgba(32,35,29,.4)",
+    },
+    fonts: ["Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700", "Figtree:wght@400;500;600"],
+  },
 };
 
 /** Render a skin's tokens as a `:root { ... }` block. An optional photo-derived accent (§B.6)

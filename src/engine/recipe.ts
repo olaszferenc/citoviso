@@ -92,6 +92,14 @@ export interface Photo {
   readonly provenance?: PhotoProvenance;
   /** Watermarked photos never go live regardless of provenance (§A.1/b). */
   readonly watermarked?: boolean;
+  /**
+   * What the photo SHOWS, from the purchased vision verdict (heroPick.ts `subject`:
+   * exterior · pool_garden · view · dining · interior · bathroom · …). Attached at the
+   * same single point as `watermarked` (dropNeverShown), so every render path carries it.
+   * Absent = no verdict (owner upload, older snapshot) — a template must then not guess.
+   * Read by the walk-through template's photo walk (ADR-XXXX); never rendered as text.
+   */
+  readonly subject?: string;
 }
 
 /** One amenity ON a unit: the owner's stored label plus the catalogue's icon markup. */

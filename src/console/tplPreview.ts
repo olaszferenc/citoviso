@@ -11,6 +11,7 @@
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { TEMPLATES } from "../engine/templates.js";
+import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
 
 /** null = unknown template id. */
@@ -28,6 +29,13 @@ export async function renderTemplatePreview(
     template: tplId,
     skin: tpl.skins[0] ?? base.recipe.skin,
   };
-  const html = renderSite(recipe, base.siteData, { phase: "mock", sampleDeny });
-  return injectRuntime(html, base.siteData.lang);
+  // The snapshot's photos pass the same single verdict point every render path uses
+  // (dropNeverShown): banners stay out, and each photo gets its vision `subject` — an
+  // older snapshot has none stored, and the walk-through template's photo walk is built
+  // from it (ADR-XXXX). Cache-only read: free, no network.
+  const stored = base.siteData.photos ?? [];
+  const photos = dropNeverShown(stored, await readCachedScores(stored.map((p) => p.url))).kept;
+  const siteData: SiteData = { ...base.siteData, photos };
+  const html = renderSite(recipe, siteData, { phase: "mock", sampleDeny });
+  return injectRuntime(html, siteData.lang);
 }

@@ -148,6 +148,61 @@ export function words(escapedText: string): string {
 }
 
 /**
+ * SCROLL STORY (ADR-XXXX, the walk-through template's „séta”): a sticky photo panel beside
+ * (desktop) or behind (phone) a list of steps; as the guest scrolls, the panel's pictures
+ * dissolve into each other and a thin rail fills. Declarative like the rest of this layer:
+ *
+ *   [data-cit-story]          the wrapper — gets `cit-story` when the story mode runs
+ *   [data-cit-story-stage]    the (empty) sticky panel the step photos are cloned into
+ *   [data-cit-story-rail]     the progress bar (scaleY)
+ *   [data-cit-story-step]     one step: its own <figure> (the photo) + its text
+ *
+ * Fail-safe, by the rules above: without JS, under reduced motion, with data-cit-no-motion
+ * (tooling) or without IntersectionObserver NOTHING changes — the steps stay photo+text
+ * pairs, every picture visible (rule 1/2/9). Only transform/opacity animate; no scroll
+ * listener (an observer per step). The active step/shot carries `cit-on`; a step's own
+ * figure is hidden by the TEMPLATE's CSS under `.cit-story` once its clone is on stage.
+ * Cloned images lose loading="lazy": a stacked, transparent shot never "scrolls into view"
+ * and would otherwise never load (rule 10's cousin).
+ */
+export function storyCss(): string {
+  return `
+[data-cit-story] [data-cit-story-stage]{pointer-events:none}`;
+}
+
+export function storyJs(): string {
+  return `(function(){
+  var root=document.documentElement;
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){return;}
+  if(root.hasAttribute('data-cit-no-motion')||!('IntersectionObserver' in window)){return;}
+  [].forEach.call(document.querySelectorAll('[data-cit-story]'),function(box){
+    var stage=box.querySelector('[data-cit-story-stage]'),rail=box.querySelector('[data-cit-story-rail]');
+    var steps=[].slice.call(box.querySelectorAll('[data-cit-story-step]'));
+    if(!stage||steps.length<2)return;
+    var shots=steps.map(function(st,i){
+      var f=st.querySelector('figure');if(!f)return null;
+      var c=f.cloneNode(true),im=c.querySelector('img');
+      if(im)im.removeAttribute('loading');
+      if(i===0)c.classList.add('cit-on');
+      stage.appendChild(c);
+      return c;
+    });
+    box.classList.add('cit-story');
+    steps[0].classList.add('cit-on');
+    function show(k){
+      steps.forEach(function(s,j){s.classList.toggle('cit-on',j===k);if(shots[j])shots[j].classList.toggle('cit-on',j===k);});
+      if(rail)rail.style.transform='scaleY('+((k+1)/steps.length)+')';
+    }
+    show(0);
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting)show(steps.indexOf(e.target));});
+    },{rootMargin:'-45% 0px -45% 0px',threshold:0});
+    steps.forEach(function(s){io.observe(s);});
+  });
+})();`;
+}
+
+/**
  * The intro sequence (owner's pick, thebendclub.com direction): the wordmark
  * draws in with a small photo frame set INSIDE it, photos cycle in that frame,
  * then the frame grows into the hero and the name appears over the finished photo.

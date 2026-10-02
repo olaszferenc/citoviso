@@ -18,6 +18,7 @@ import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { checkDesign } from "../src/generator/designCheck.js";
+import { dropNeverShown, readCachedScores } from "../src/generator/heroPick.js";
 
 const args = process.argv.slice(2);
 const tplId = args.find((a) => !a.startsWith("--")) ?? "";
@@ -46,7 +47,17 @@ if (!row) {
   process.exit(1);
 }
 
-const inputs = row.inputs as { recipe: Recipe; siteData: SiteData };
+const stored = row.inputs as { recipe: Recipe; siteData: SiteData };
+// The same single verdict point as every render path: banners out, vision `subject` in
+// (the walk-through template builds its photo walk from it; older snapshots store none).
+const storedPhotos = stored.siteData.photos ?? [];
+const inputs = {
+  ...stored,
+  siteData: {
+    ...stored.siteData,
+    photos: dropNeverShown(storedPhotos, await readCachedScores(storedPhotos.map((p) => p.url))).kept,
+  },
+};
 const tpl = TEMPLATES[tplId]!;
 // The template's own curated skin rail wins over the stored one: a template is
 // judged with the skins it was designed for.
