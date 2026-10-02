@@ -402,12 +402,22 @@ A felugró **többet tud, mint a négy jelvény**:
   már élő, hivatalos oldal). A felugró ezen a néven nevezi meg;
 - ugyanígy jelvény nélkül állít meg a **„Vendég-kritikus”**: egy szállóvendég szemével olvassa
   a generált szöveget (tükörfordítás, tegezés, vendég-véleményből lett ígéret, például
-  „bérelhető kerékpár” abból, hogy a házigazda egyszer kölcsönadta a biciklijét). Amit talál,
+  „bérelhető kerékpár” abból, hogy a házigazda egyszer kölcsönadta a biciklijét). Mindig
+  megállító kifogás az is, ha a szöveg a forrásban nem álló hely- vagy minőség-részletet tesz
+  hozzá egy valódi tényhez — például „grillezés a fedett teraszon”, amikor a forrás csak grillt
+  említ, vagy „saját”, „fűtött”, „őrzött” jelzőt, amit semmi nem igazol. Amit talál,
   azt generáláskor az író már kijavítja. A felugró két esetben nevezi meg: ha két javító kör után
   is maradt blokkoló kifogás (ilyenkor felsorolja a kifogásolt szövegrészeket), vagy ha a
   vendég-kritikus nem tudott ítélni (például nem válaszolt az AI) — ekkor azt írja, hogy az őr nem
   tudta ellenőrizni a mockot, és a küldés ugyanúgy megáll. Generáld újra a mockot, hogy az őr
   lefusson. A vendég-kritikus csak magyar nyelvű lapon fut; idegen nyelvű lapon nem állít meg;
+- a kártyán a vendég-kritikus indoklása a nem blokkoló, csak **javítandó** kifogásokat is
+  felsorolja („… javítandó maradt (nem blokkol, nézd át)”). Ezek nem állítják meg a küldést;
+  olvasd el őket, és ha valamelyik zavar, írasd újra a szöveget az **Új mock generálása, forrás
+  és szöveg-újraírás** panelen; ha nem zavar, a mock így is kimehet;
+- a **Piac** kapu a vendég-kritikus javítása **után**, a ténylegesen kiküldendő szövegen ítél.
+  Ha ott nem tud ítélni, az indoklása az, hogy a kiszállított szöveg nem ítélhető, és a felugró
+  a **Piac-kapu** néven állítja meg a küldést. Ilyenkor is a mock újragenerálása a teendő;
 - a **képek állapotát** sem a jelvények mutatják. Ha a kiszállított lapon törött kép van vagy
   egyetlen szállás-fotó sincs, azt is a felugró mondja meg — **„A kiszállított lap képeivel baj
   van — kiküldöd mégis?”** címmel akkor, ha közben az őrök nem találtak semmit; ha van őr-lelet
