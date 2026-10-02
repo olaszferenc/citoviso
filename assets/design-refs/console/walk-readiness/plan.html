@@ -1,0 +1,297 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K2 · Séta-jelzés terv</title>
+<style>
+:root{--bg:#eef1f4;--ink:#0f2233;--mut:#5b6b7a;--line:#d5dce3;--acc:#0e7490}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1720;--ink:#e6edf3;--mut:#9fb0bf;--line:#2a3846;--acc:#22d3ee}}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,sans-serif}
+.top{padding:14px 16px;max-width:1100px;margin:0 auto}
+.top h1{font-size:18px;margin:0 0 4px} .top p{margin:4px 0;color:var(--mut)}
+.sw{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.sw button{font:inherit;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.sw button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+.v{border-left:3px solid var(--acc);padding:4px 10px;margin:6px 0;color:var(--ink)}
+.stage{display:flex;justify-content:center;padding:0 0 30px}
+iframe{border:1px solid var(--line);background:#fff;height:2600px;width:1280px;max-width:100%;transition:width .2s}
+</style></head><body>
+<div class="top">
+<h1>Séta-jelzés a konzolon — JÓVÁHAGYOTT TERV (tulaj, 2026-10-02: „A”)</h1>
+<p>Tulaj-döntés (2026-10-02): kevés tárgynál a séta <b>elmarad</b> — ez nem változik. A hiba a <b>némaság</b>. A terv három helyen szól: ① a kinézet-választóban (a kártyán és alatta), ② a kinézet-előnézet alatt, ③ a kész mock kártyáján („Séta” sor). A „Lead adata” választóval kipróbálható a három eset (elmarad / előre nem tudható / rendben) — a számok a dev valós adatai.</p>
+<div class="v" id="vdesc"></div>
+<div class="sw" role="group" aria-label="Méret">
+<button type="button" data-w="390" aria-pressed="false">Mobil 390px</button>
+<button type="button" data-w="1280" aria-pressed="true">Asztali</button>
+</div></div>
+<div class="stage"><iframe id="f" title="Konzol-terv" srcdoc="&lt;!doctype html&gt;&lt;html lang=&quot;hu&quot; class=&quot; con-tabs-js&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;../../../../public/assets/ui/citui.css&quot;&gt;&lt;link rel=&quot;stylesheet&quot; href=&quot;../../../../public/assets/ui/citui-console.css&quot;&gt;&lt;link rel=&quot;stylesheet&quot; href=&quot;../../../../public/assets/ui/citui-console-table.css&quot;&gt;&lt;style&gt;
+.con .tpl-card__walk{position:absolute;left:6px;top:68px;z-index:2;display:inline-flex;align-items:center;gap:4px;
+  font-size:10.5px;font-weight:700;line-height:1.2;padding:3px 7px;border-radius:var(--citui-radius-pill);
+  background:color-mix(in srgb,var(--citui-warn) 22%,var(--citui-panel));color:var(--citui-warn-ink);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--citui-warn) 40%,transparent)}
+.con .tpl-card__walk[data-k=&quot;unknown&quot;]{background:var(--citui-surface-2);color:var(--citui-muted);box-shadow:0 0 0 1px var(--citui-line)}
+.con .tpl-card.k2-off{opacity:.5;filter:grayscale(.7);cursor:not-allowed}
+.con .tpl-card.k2-off:hover{transform:none;border-color:var(--citui-line)}
+.con .k2-note{margin:10px 0 4px;padding:10px 12px;font-size:13px;line-height:1.5;border:1px solid var(--citui-line);
+  border-left:3px solid var(--citui-warn);border-radius:var(--citui-radius-sm);background:var(--citui-panel);color:var(--citui-ink)}
+.con .k2-note[data-k=&quot;unknown&quot;]{border-left-color:var(--citui-line-strong)}
+.con .k2-note b{font-weight:700}
+.con .k2-note__h{display:flex;gap:6px;align-items:center;font-weight:700;color:var(--citui-warn-ink);margin-bottom:3px}
+.con .k2-note[data-k=&quot;unknown&quot;] .k2-note__h{color:var(--citui-muted)}
+.con .k2-note__steps{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 2px;padding:0;list-style:none}
+.con .k2-note__steps li{font-size:11.5px;padding:2px 8px;border-radius:var(--citui-radius-pill);border:1px dashed var(--citui-line-strong);color:var(--citui-muted)}
+.con .k2-note__steps li.have{border-style:solid;border-color:var(--citui-ok);background:var(--citui-ok-soft);color:var(--citui-ok-ink);font-weight:600}
+.con .k2-note__steps li.coll{text-decoration:line-through}
+.con .k2-note button{margin-top:8px;font:inherit;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:var(--citui-radius-pill);
+  border:1px solid var(--citui-line-strong);background:var(--citui-surface);color:var(--citui-ink);cursor:pointer}
+.con .k2-prevbox{flex:1;min-height:380px;max-height:1100px;overflow:auto;border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);background:var(--citui-surface)}
+.con .k2-prevbox img{display:block;width:100%;height:auto}
+@media (max-width:760px){.con .k2-prevbox{flex:none;height:380px;min-height:0}}
+.con .k2-note__legend{font-size:11px;color:var(--citui-muted);margin-bottom:4px}
+.con .k2-prevwarn{display:flex;gap:6px;align-items:flex-start;margin-top:6px;font-size:12.5px;line-height:1.45;color:var(--citui-warn-ink)}
+.con .k2-prevwarn[hidden],.con .k2-note[hidden]{display:none}
+.con .k2-walkfact dd .con-mk__gate{margin:0}
+.k2-bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;
+  font:12.5px/1.3 Inter,system-ui,sans-serif;background:var(--citui-ink);color:var(--citui-ink-inverse)}
+.k2-bar select{font:inherit;padding:3px 6px;border-radius:6px}
+.k2-bar b{font-weight:700}
+&lt;/style&gt;&lt;/head&gt;
+&lt;body class=&quot;con&quot;&gt;
+&lt;div class=&quot;k2-bar&quot;&gt;&lt;span&gt;&lt;b&gt;MOCK-VEZÉRLŐ&lt;/b&gt; (nem része a tervnek)&lt;/span&gt;
+&lt;label&gt;Lead adata: &lt;select id=&quot;k2-sc&quot;&gt;
+&lt;option value=&quot;short&quot;&gt;Camping Carina — 1 tárgy marad (séta elmarad)&lt;/option&gt;
+&lt;option value=&quot;unknown&quot;&gt;Nyugalom Vendégház — a fotóknak nincs tárgy-ítélete&lt;/option&gt;
+&lt;option value=&quot;ok&quot;&gt;Három Huszár — 3 lépés (rendben)&lt;/option&gt;
+&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;
+&lt;main class=&quot;con-main&quot;&gt;&lt;div class=&quot;con-main__in&quot;&gt;
+&lt;h3 style=&quot;margin:14px 0 6px;font:600 15px/1.3 &#x27;Space Grotesk&#x27;,sans-serif&quot;&gt;① Generálás: kinézet-választó + ② kinézet-előnézet&lt;/h3&gt;
+&lt;div class=&quot;panel&quot;&gt;
+&lt;h2&gt;Mock újragenerálása&lt;/h2&gt;
+&lt;form action=&quot;#&quot; method=&quot;post&quot;&gt;
+&lt;div class=&quot;gen-2col&quot;&gt;
+&lt;div class=&quot;gen-controls&quot;&gt;
+&lt;label class=&quot;small mut&quot; style=&quot;display:block;margin-bottom:6px&quot;&gt;Kinézet-típus — a kurátor dönt: válaszd ki, melyik elrendezésekre generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül&lt;/label&gt;
+&lt;div aria-label=&quot;Kinézet-típus&quot; class=&quot;tpl-cards&quot; role=&quot;group&quot;&gt;
+&lt;label class=&quot;tpl-card&quot; title=&quot;Fullbleed — teljes-képernyős hero, üveg foglaló-sáv (referencia 01)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;fullbleed&quot;/&gt;
+&lt;img alt=&quot;Fullbleed&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-fullbleed.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Fullbleed — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Fullbleed&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Sötét luxus — cinematic, brass akcent (referencia 03)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;dark-luxury&quot;/&gt;
+&lt;img alt=&quot;Sötét luxus&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-dark-luxury.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Sötét luxus — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Sötét luxus&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Kártyás — foto-mozaik fejléc, ragadós foglaló-kártya (referencia 04)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;card-sidebar&quot;/&gt;
+&lt;img alt=&quot;Kártyás&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-card-sidebar.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Kártyás — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Kártyás&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Szerkesztői — masthead, kupon-foglaló, kontakt-lap galéria (referencia 05)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;editorial&quot;/&gt;
+&lt;img alt=&quot;Szerkesztői&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-editorial.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Szerkesztői — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Szerkesztői&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Parallax — immerzív panelek, pont-nav, stat-sáv (referencia 06)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;parallax&quot;/&gt;
+&lt;img alt=&quot;Parallax&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-parallax.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Parallax — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Parallax&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Brutalizmus — vastag keretek, acid akcent, marquee (referencia 08)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;brutalism&quot;/&gt;
+&lt;img alt=&quot;Brutalizmus&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-brutalism.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Brutalizmus — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Brutalizmus&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Dopamin — élénk, játékos, sticker-stílus (referencia 10)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;dopamine&quot;/&gt;
+&lt;img alt=&quot;Dopamin&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-dopamine.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Dopamin — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Dopamin&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Fejezetes — vízszintes görgethető szoba-sín, sötét irodalmi (referencia 17)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;horizontal&quot;/&gt;
+&lt;img alt=&quot;Fejezetes&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-horizontal.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Fejezetes — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Fejezetes&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Filmes — Ken-Burns crossfade hero + ragadós foglaló-dokk, világos szerkesztőségi (referencia 12)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;cinematic&quot;/&gt;
+&lt;img alt=&quot;Filmes&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-cinematic.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Filmes — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Filmes&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Indulási-tábla — sötét kiosk, egységek táblázatban (referencia 20)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;transit&quot;/&gt;
+&lt;img alt=&quot;Indulási-tábla&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-transit.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Indulási-tábla — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Indulási-tábla&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Organikus — antigrid szórt kártyák, világos agyag-moha-len, blob-formák (referencia 07)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;organic&quot;/&gt;
+&lt;img alt=&quot;Organikus&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-organic.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Organikus — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Organikus&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Art-deco — központi poszter-hero, éjkék-réz sepia, deco-keret ornamensek (referencia 19)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;artdeco&quot;/&gt;
+&lt;img alt=&quot;Art-deco&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-artdeco.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Art-deco — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Art-deco&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Scrapbook — papír-emlékkönyv, ragasztott polaroidok, kézzel írt (referencia 15)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;scrapbook&quot;/&gt;
+&lt;img alt=&quot;Scrapbook&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-scrapbook.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Scrapbook — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Scrapbook&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Akvarell — lágy vízkék-korall, hullám-elválasztók, világos nyári (referencia 21)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;watercolor&quot;/&gt;
+&lt;img alt=&quot;Akvarell&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-watercolor.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Akvarell — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Akvarell&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Aurora — sötét üveg app, animált aurora háttér + hero-dashboard (referencia 14)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;aurora&quot;/&gt;
+&lt;img alt=&quot;Aurora&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-aurora.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Aurora — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Aurora&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Agyag — neumorf clay felület, puha wellness (referencia 18)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;claymorphism&quot;/&gt;
+&lt;img alt=&quot;Agyag&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-claymorphism.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Agyag — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Agyag&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Döntött galéria — szórt fotó-sor, mozgó intro (referencia: Lasala)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;tilted-gallery&quot;/&gt;
+&lt;img alt=&quot;Döntött galéria&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-tilted-gallery.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Döntött galéria — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Döntött galéria&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Boltíves keretek — palazzo-ritmus, akvarell címek (referencia: Palazzo Sogni)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;arch-frames&quot;/&gt;
+&lt;img alt=&quot;Boltíves keretek&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-arch-frames.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Boltíves keretek — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Boltíves keretek&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Névből növő — csendes kártyák, szavankénti felfedés (referencia: The Bend Club)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;wordmark-grow&quot;/&gt;
+&lt;img alt=&quot;Névből növő&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-wordmark-grow.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Névből növő — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Névből növő&lt;/span&gt;
+&lt;/label&gt;&lt;label class=&quot;tpl-card&quot; title=&quot;Séta a kapun át — szöveg-elsős hős, ragadós séta-jelenet a fotókból (tulaj által választott mock)&quot;&gt;
+&lt;input name=&quot;template&quot; type=&quot;checkbox&quot; value=&quot;walk-through&quot;/&gt;
+&lt;img alt=&quot;Séta a kapun át&quot; loading=&quot;lazy&quot; src=&quot;../../../../public/assets/ui/tpl-walk-through.jpg&quot;/&gt;
+&lt;button aria-label=&quot;Séta a kapun át — nagyban megnézem&quot; class=&quot;tpl-card__zoom&quot; title=&quot;Nagyban megnézem — nyilakkal léphetsz a többire&quot; type=&quot;button&quot;&gt;&lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;15&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;15&quot;&gt;&lt;circle cx=&quot;10.6&quot; cy=&quot;10.6&quot; r=&quot;6.6&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;M15.4 15.4 20.5 20.5M10.6 7.9v5.4M7.9 10.6h5.4&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/button&gt;
+&lt;span class=&quot;tpl-card__name&quot;&gt;Séta a kapun át&lt;/span&gt;
+&lt;/label&gt;
+&lt;/div&gt;
+&lt;label class=&quot;small mut&quot; for=&quot;gen-cp-in&quot; style=&quot;display:block;margin:12px 0 4px&quot;&gt;Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)&lt;/label&gt;
+&lt;textarea id=&quot;gen-cp-in&quot; maxlength=&quot;600&quot; name=&quot;curatorPrompt&quot; placeholder=&quot;pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki&quot; rows=&quot;4&quot; style=&quot;width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px&quot;&gt;&lt;/textarea&gt;
+&lt;button class=&quot;gen-go&quot; type=&quot;submit&quot;&gt;Mock újragenerálása&lt;/button&gt;
+&lt;/div&gt;
+&lt;figure class=&quot;tpl-prev--live&quot; id=&quot;tpl-prev&quot;&gt;
+&lt;div class=&quot;k2-prevbox&quot;&gt;&lt;img alt=&quot;előnézet&quot; src=&quot;walk-preview.jpg&quot;/&gt;&lt;/div&gt;
+&lt;figcaption class=&quot;small mut&quot; style=&quot;margin-top:4px&quot;&gt;Camping Carina SAJÁT adata a kijelölt kinézeten — a szöveg a legutóbbi mockból való, nem újragenerált.&lt;/figcaption&gt;
+&lt;/figure&gt;
+&lt;/div&gt;
+&lt;/form&gt;
+&lt;/div&gt;
+&lt;h3 style=&quot;margin:22px 0 6px;font:600 15px/1.3 &#x27;Space Grotesk&#x27;,sans-serif&quot;&gt;③ A kész mock kártyája&lt;/h3&gt;
+&lt;div class=&quot;con-mkgrid&quot; style=&quot;max-width:360px;grid-template-columns:1fr&quot;&gt;&lt;article class=&quot;con-mk&quot; data-mk-state=&quot;generated&quot; id=&quot;a-ae57d01c-053b-4694-8fb6-3382281ab89f&quot;&gt;
+&lt;div class=&quot;con-mk__shot&quot; data-mk-shot=&quot;ae57d01c-053b-4694-8fb6-3382281ab89f&quot; data-shot-state=&quot;ready&quot;&gt;
+&lt;span class=&quot;pill generated con-mk__badge&quot;&gt;legenerálva&lt;/span&gt;
+&lt;img alt=&quot;A mock nyitóképernyője&quot; loading=&quot;lazy&quot; src=&quot;walk-preview.jpg&quot;/&gt;
+&lt;span class=&quot;con-mk__links&quot;&gt;
+&lt;a href=&quot;/mock/ae57d01c-053b-4694-8fb6-3382281ab89f&quot; target=&quot;_blank&quot;&gt;előnézet ▸&lt;/a&gt;
+&lt;a href=&quot;/configure/ae57d01c-053b-4694-8fb6-3382281ab89f&quot; target=&quot;_blank&quot;&gt;prospect-konfigurátor ▸&lt;/a&gt;
+&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;con-mk__hd&quot;&gt;
+&lt;b title=&quot;aurora&quot;&gt;Séta a kapun át&lt;/b&gt;
+&lt;span class=&quot;con-mk__sub&quot;&gt;Séta a kapun át · Kavics · sablon-recept · 2026-10-02 11:45&lt;/span&gt;
+&lt;/div&gt;
+&lt;dl class=&quot;con-mk__facts&quot;&gt;
+&lt;div&gt;&lt;dt&gt;Képek a lapon&lt;/dt&gt;&lt;dd&gt;6&lt;/dd&gt;&lt;/div&gt;
+&lt;div&gt;&lt;dt&gt;Nyitókép pontszáma&lt;/dt&gt;&lt;dd&gt;88&lt;span class=&quot;con-mk__u&quot;&gt;kilátás&lt;/span&gt;&lt;/dd&gt;&lt;/div&gt;
+&lt;div class=&quot;k2-walkfact&quot; id=&quot;k2-walkfact&quot;&gt;&lt;/div&gt;&lt;div class=&quot;con-mk__wide&quot;&gt;&lt;dt&gt;Kapuk&lt;/dt&gt;&lt;dd&gt;&lt;button aria-controls=&quot;flist-ae57d01c-053b-4694-8fb6-3382281ab89f&quot; aria-expanded=&quot;false&quot; class=&quot;con-mk__gate&quot; data-mk-flist=&quot;flist-ae57d01c-053b-4694-8fb6-3382281ab89f&quot; data-verdict=&quot;flag&quot; title=&quot;Tényhűség-kapu: megjelölve&quot; type=&quot;button&quot;&gt;Tényhűség: 7 forrás nélküli &lt;span aria-hidden=&quot;true&quot;&gt;▾&lt;/span&gt;&lt;/button&gt;&lt;span class=&quot;con-mk__gate&quot; data-verdict=&quot;pass&quot; title=&quot;Piac-kapu: átment&quot;&gt;Piac &lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;11&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;11&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;8.4&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;m8.6 12.3 2.3 2.3 4.6-4.9&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/span&gt;&lt;span class=&quot;con-mk__gate&quot; data-verdict=&quot;pass&quot; title=&quot;Dizájn-kapu: átment&quot;&gt;Dizájn &lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;11&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;11&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;8.4&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;m8.6 12.3 2.3 2.3 4.6-4.9&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/span&gt;&lt;span class=&quot;con-mk__gate&quot; data-verdict=&quot;pass&quot; title=&quot;Nyitókép-kapu: átment&quot;&gt;Nyitókép &lt;svg aria-hidden=&quot;true&quot; fill=&quot;none&quot; height=&quot;11&quot; stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;1.9&quot; viewbox=&quot;0 0 24 24&quot; width=&quot;11&quot;&gt;&lt;circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;8.4&quot;&gt;&lt;/circle&gt;&lt;path d=&quot;m8.6 12.3 2.3 2.3 4.6-4.9&quot;&gt;&lt;/path&gt;&lt;/svg&gt;&lt;/span&gt;&lt;/dd&gt;&lt;/div&gt;
+&lt;/dl&gt;
+&lt;div class=&quot;con-mk__flist&quot; hidden=&quot;&quot; id=&quot;flist-ae57d01c-053b-4694-8fb6-3382281ab89f&quot;&gt;
+&lt;b&gt;A tényhűség-őr ezekre nem talált forrást:&lt;/b&gt;
+&lt;ul&gt;&lt;li&gt;Balatongyörök 30 km-es körzetében&lt;/li&gt;&lt;li&gt;Ingyenes wifi&lt;/li&gt;&lt;li&gt;Klíma&lt;/li&gt;&lt;li&gt;Parkolás&lt;/li&gt;&lt;li&gt;Reggeli&lt;/li&gt;&lt;li&gt;Kisállat&lt;/li&gt;&lt;li&gt;Érkezés 14:00–20:00, távozás 10:00&lt;/li&gt;&lt;/ul&gt;
+&lt;p&gt;Küldés előtt javítsd a szöveget — vagy küldéskor a felugróban vállald („Kiküldöm mégis”).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;con-mk__act&quot;&gt;
+&lt;span class=&quot;con-mk__decide&quot; data-photo-gate-row=&quot;ae57d01c-053b-4694-8fb6-3382281ab89f&quot;&gt;
+&lt;form action=&quot;/artifact/ae57d01c-053b-4694-8fb6-3382281ab89f/curate&quot; method=&quot;post&quot;&gt;
+&lt;input name=&quot;decision&quot; type=&quot;hidden&quot; value=&quot;approve&quot;/&gt;
+&lt;button class=&quot;ok&quot; type=&quot;submit&quot;&gt;Jóváhagyás&lt;/button&gt;&lt;/form&gt;
+&lt;form action=&quot;/artifact/ae57d01c-053b-4694-8fb6-3382281ab89f/curate&quot; method=&quot;post&quot;&gt;
+&lt;input name=&quot;decision&quot; type=&quot;hidden&quot; value=&quot;reject&quot;/&gt;
+&lt;button class=&quot;bad&quot; type=&quot;submit&quot;&gt;Elutasítás&lt;/button&gt;&lt;/form&gt;
+&lt;span class=&quot;pg-pre&quot; data-photo-gate-pre=&quot;ae57d01c-053b-4694-8fb6-3382281ab89f&quot; hidden=&quot;&quot;&gt;&lt;/span&gt;
+&lt;/span&gt;
+&lt;button aria-controls=&quot;det-ae57d01c-053b-4694-8fb6-3382281ab89f&quot; aria-expanded=&quot;false&quot; class=&quot;con-mk__more&quot; data-mk-more=&quot;ae57d01c-053b-4694-8fb6-3382281ab89f&quot; type=&quot;button&quot;&gt;Részletek ▾&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;div class=&quot;con-mk__det&quot; hidden=&quot;&quot; id=&quot;det-ae57d01c-053b-4694-8fb6-3382281ab89f&quot;&gt;
+&lt;dl class=&quot;con-recipe&quot;&gt;&lt;div&gt;&lt;dt&gt;Arculat&lt;/dt&gt;&lt;dd&gt;aurora-indigo&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Motor&lt;/dt&gt;&lt;dd&gt;composition&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Gyűjtési terület&lt;/dt&gt;&lt;dd&gt;Balaton&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Elrendezés&lt;/dt&gt;&lt;dd&gt;stacked&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Nyitókép indoklása&lt;/dt&gt;&lt;dd&gt;Gyönyörű tengerparti panoráma, tiszta vízzel, strandolók, hegyvidék háttérben – wow kép, kiváló nyitó.&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Piac-kapu indoklása&lt;/dt&gt;&lt;dd&gt;A főcím konkrét, kézzelfogható előnyöket nevez meg (árnyas füves parcellák + strand-közelség), amit a képek is alátámasztanak; nem rámásolható bármely másik szállásra. A szolgáltatások (házigazdák, mosdók, tágas parcellák, strand) mind megjelennek.&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Recept forrása&lt;/dt&gt;&lt;dd&gt;template&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Vizsgált tény-jelöltek&lt;/dt&gt;&lt;dd&gt;4&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Felhasznált vendég-vélemény&lt;/dt&gt;&lt;dd&gt;5&lt;/dd&gt;&lt;/div&gt;&lt;div&gt;&lt;dt&gt;Ismert tételek száma&lt;/dt&gt;&lt;dd&gt;6&lt;/dd&gt;&lt;/div&gt;&lt;/dl&gt;
+&lt;div class=&quot;small mut&quot; style=&quot;margin-top:4px&quot; title=&quot;briefAndCopy: $0.1974 (2×) · verifyMarketRelevance: $0.0806 (2×) · verifyFactuality: $0.0747 (1×)&quot;&gt;AI-költség: 5 hívás · 54 935 be / 3123 ki token · $0.3528&lt;/div&gt;
+&lt;details class=&quot;con-rawmeta&quot;&gt;&lt;summary&gt;Fejlesztői adatok (nyers)&lt;/summary&gt;&lt;pre&gt;skin=aurora-indigo · engine=composition · photos=6 · region=Balaton · template=aurora · archetype=stacked · heroScore=88 · heroReason=Gyönyörű tengerparti panoráma, tiszta vízzel, strandolók, hegyvidék háttérben – wow kép, kiváló nyitó. · factVerdict=flag · heroSubject=view · heroVerdict=pass · marketReason=A főcím konkrét, kézzelfogható előnyöket nevez meg (árnyas füves parcellák + strand-közelség), amit a képek is alátámasztanak; nem rámásolható bármely másik szállásra. A szolgáltatások (házigazdák, mosdók, tágas parcellák, strand) mind megjelennek. · recipeSource=template · designVerdict=pass · marketVerdict=pass · factCandidates=4 · guestReviewCount=5 · marketAmenityTotal=6&lt;/pre&gt;&lt;/details&gt;
+&lt;/div&gt;
+&lt;/article&gt;&lt;/div&gt;
+&lt;/div&gt;&lt;/main&gt;
+&lt;script&gt;
+var WARN_SVG=&#x27;&lt;svg aria-hidden=&quot;true&quot; width=&quot;15&quot; height=&quot;15&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.9&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;&gt;&lt;path d=&quot;M12 3.6 2.8 19.4h18.4z&quot;/&gt;&lt;path d=&quot;M12 10v4.2M12 16.9v.1&quot;/&gt;&lt;/svg&gt;&#x27;;
+var ORDER=[&quot;A ház kívülről&quot;,&quot;Kert és udvar&quot;,&quot;A kilátás&quot;,&quot;Asztalnál&quot;,&quot;Odabent&quot;];
+var SC={
+  short:{k:&quot;short&quot;,have:[&quot;A ház kívülről&quot;],coll:[&quot;A kilátás&quot;,&quot;Kert és udvar&quot;],photos:6},
+  unknown:{k:&quot;unknown&quot;,have:[],coll:[],photos:3},
+  ok:{k:&quot;ok&quot;,have:[&quot;A ház kívülről&quot;,&quot;Kert és udvar&quot;,&quot;Asztalnál&quot;],coll:[],photos:24}
+};
+var variant=&quot;A&quot;, sc=SC.short, forced=false;
+var card=document.querySelector(&#x27;.tpl-card input[value=&quot;walk-through&quot;]&#x27;).closest(&#x27;.tpl-card&#x27;);
+var cards=document.querySelector(&#x27;.tpl-cards&#x27;);
+var note=document.createElement(&#x27;div&#x27;); note.className=&#x27;k2-note&#x27;; note.hidden=true; cards.after(note);
+var cap=document.querySelector(&#x27;#tpl-prev figcaption&#x27;);
+var pw=document.createElement(&#x27;div&#x27;); pw.className=&#x27;k2-prevwarn&#x27;; pw.hidden=true; cap.after(pw);
+function stepsHtml(){return &#x27;&lt;ul class=&quot;k2-note__steps&quot;&gt;&#x27;+ORDER.map(function(s){
+  var c=sc.have.indexOf(s)&gt;=0?&#x27;have&#x27;:(sc.coll.indexOf(s)&gt;=0?&#x27;coll&#x27;:&#x27;&#x27;);
+  return &#x27;&lt;li class=&quot;&#x27;+c+&#x27;&quot; title=&quot;&#x27;+(c===&#x27;have&#x27;?&#x27;van rá fotó&#x27;:c===&#x27;coll&#x27;?&#x27;csak a nyitó-kollázsban van — a séta nem ismétli&#x27;:&#x27;nincs rá fotó&#x27;)+&#x27;&quot;&gt;&#x27;+s+&#x27;&lt;/li&gt;&#x27;;}).join(&#x27;&#x27;)+&#x27;&lt;/ul&gt;&#x27;;}
+function noteHtml(){
+  if(sc.k===&#x27;short&#x27;) return &#x27;&lt;div class=&quot;k2-note__h&quot;&gt;&#x27;+WARN_SVG+&#x27;Ennél a leadnél a séta nem áll össze&lt;/div&gt;&#x27;+
+    &#x27;A „Séta a kapun át” lépései különböző tárgyú fotók, és &lt;b&gt;legalább 3 kell&lt;/b&gt;. A nyitó-kollázs 3 képe után &lt;b&gt;&#x27;+sc.have.length+&#x27; tárgy marad&lt;/b&gt;:&#x27;+stepsHtml()+&#x27;&lt;div class=&quot;k2-note__legend&quot;&gt;zöld = van rá fotó · áthúzott = csak a nyitó-kollázsban van (a séta nem ismétli) · halvány = nincs rá fotó&lt;/div&gt;&#x27;+
+    &#x27;Ha mégis ezt választod, &lt;b&gt;séta nélküli, egyhasábos lapot&lt;/b&gt; kapsz ezen a néven.&#x27;+
+    (variant===&#x27;B&#x27;&amp;&amp;!forced?&#x27;&lt;br&gt;&lt;button type=&quot;button&quot; id=&quot;k2-force&quot;&gt;Mégis kérem, séta nélkül&lt;/button&gt;&#x27;:&#x27;&#x27;);
+  if(sc.k===&#x27;unknown&#x27;) return &#x27;&lt;div class=&quot;k2-note__h&quot;&gt;&#x27;+WARN_SVG+&#x27;Előre nem tudható, összeáll-e a séta&lt;/div&gt;&#x27;+
+    &#x27;A fotók tárgyát a rendszer még nem mérte meg — ezt a generálás méri. Ha 3-nál kevesebb különböző tárgy jön ki, a séta elmarad, és a kész mock kártyája ezt kimondja.&#x27;;
+  return &#x27;&#x27;;}
+function render(){
+  var tag=card.querySelector(&#x27;.tpl-card__walk&#x27;); if(tag) tag.remove();
+  card.classList.remove(&#x27;k2-off&#x27;); card.querySelector(&#x27;input&#x27;).disabled=false;
+  if(sc.k!==&#x27;ok&#x27;){
+    var t=document.createElement(&#x27;span&#x27;); t.className=&#x27;tpl-card__walk&#x27;; t.dataset.k=sc.k;
+    t.innerHTML=WARN_SVG+(sc.k===&#x27;short&#x27;?&#x27;Séta: nem áll össze (&#x27;+sc.have.length+&#x27;/3)&#x27;:&#x27;Séta: előre nem tudható&#x27;);
+    card.appendChild(t);
+    if(variant===&#x27;B&#x27;&amp;&amp;sc.k===&#x27;short&#x27;&amp;&amp;!forced){card.classList.add(&#x27;k2-off&#x27;);var i=card.querySelector(&#x27;input&#x27;);i.checked=false;i.disabled=true;card.classList.remove(&#x27;on&#x27;);}
+  }
+  var on=card.querySelector(&#x27;input&#x27;).checked;
+  var showNote = sc.k!==&#x27;ok&#x27; &amp;&amp; (on || (variant===&#x27;B&#x27; &amp;&amp; sc.k===&#x27;short&#x27;));
+  note.dataset.k=sc.k; note.innerHTML=noteHtml(); note.hidden=!showNote;
+  var f=document.getElementById(&#x27;k2-force&#x27;); if(f) f.onclick=function(){forced=true;render();};
+  pw.hidden=!(on &amp;&amp; !card.classList.contains(&#x27;k2-off&#x27;) &amp;&amp; sc.k===&#x27;short&#x27;);
+  pw.innerHTML=WARN_SVG+&#x27;&lt;span&gt;Ez az előnézet ennél a leadnél &lt;b&gt;séta nélkül&lt;/b&gt; áll össze (&#x27;+sc.have.length+&#x27; fotó-tárgy, 3 kell) — a görgetés lent nem sétál.&lt;/span&gt;&#x27;;
+  var wf=document.getElementById(&#x27;k2-walkfact&#x27;);
+  wf.innerHTML = sc.k===&#x27;ok&#x27;
+    ? &#x27;&lt;dt&gt;Séta&lt;/dt&gt;&lt;dd&gt;&lt;span class=&quot;con-mk__gate&quot; data-verdict=&quot;pass&quot;&gt;&#x27;+sc.have.length+&#x27; lépés&lt;/span&gt;&lt;span class=&quot;con-mk__u&quot;&gt;&#x27;+sc.have.join(&#x27; · &#x27;)+&#x27;&lt;/span&gt;&lt;/dd&gt;&#x27;
+    : sc.k===&#x27;short&#x27;
+      ? &#x27;&lt;dt&gt;Séta&lt;/dt&gt;&lt;dd&gt;&lt;span class=&quot;con-mk__gate&quot; data-verdict=&quot;flag&quot; title=&quot;A séta nem állt össze — séta nélküli lap készült&quot;&gt;elmaradt&lt;/span&gt;&lt;span class=&quot;con-mk__u&quot;&gt;&#x27;+sc.have.length+&#x27; fotó-tárgy, 3 kell&lt;/span&gt;&lt;/dd&gt;&#x27;
+      : &#x27;&lt;dt&gt;Séta&lt;/dt&gt;&lt;dd&gt;&lt;span class=&quot;con-mk__gate&quot; data-verdict=&quot;flag&quot;&gt;elmaradt&lt;/span&gt;&lt;span class=&quot;con-mk__u&quot;&gt;0 fotó-tárgy (nincs ítélet), 3 kell&lt;/span&gt;&lt;/dd&gt;&#x27;;
+}
+document.querySelectorAll(&#x27;.tpl-card input&#x27;).forEach(function(i){i.addEventListener(&#x27;change&#x27;,function(){
+  i.closest(&#x27;.tpl-card&#x27;).classList.toggle(&#x27;on&#x27;,i.checked); render();});});
+card.addEventListener(&#x27;click&#x27;,function(e){ if(card.classList.contains(&#x27;k2-off&#x27;)){e.preventDefault(); note.hidden=false;} });
+document.getElementById(&#x27;k2-sc&#x27;).onchange=function(e){sc=SC[e.target.value];forced=false;render();};
+window.k2SetVariant=function(v){variant=v;forced=false;render();};
+// walk-through pre-selected so the first screen shows the case
+card.querySelector(&#x27;input&#x27;).checked=true; card.classList.add(&#x27;on&#x27;); render();
+&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></div>
+<script>
+var D={A:"A — a „Séta a kapun át” kártyán sárga címke („Séta: nem áll össze (1/3)”), kijelöléskor alatta a magyarázat: hány tárgy van, mennyi kell, melyik hiányzik. A kurátor választhatja (pl. ha éppen az egyhasábos lapot akarja), de tudja, mit kap.",
+B:"B — ugyanaz a címke, de a kártya KISZÜRKÜLVE, nem jelölhető; a magyarázat mindig látszik, és egy „Mégis kérem, séta nélkül” gomb oldja fel. Erősebb: véletlenül nem választható. Az ③ kártya-sor és a ② előnézet-figyelmeztetés mindkét változatban azonos."};
+var f=document.getElementById('f');
+[].forEach(function(b){b.onclick=function(){
+  [].forEach(function(x){x.setAttribute('aria-pressed',x===b)});
+  document.getElementById('vdesc').textContent=D[b.dataset.v]; f.contentWindow.k2SetVariant(b.dataset.v);}});
+document.querySelectorAll('[data-w]').forEach(function(b){b.onclick=function(){
+  document.querySelectorAll('[data-w]').forEach(function(x){x.setAttribute('aria-pressed',x===b)});
+  f.style.width=b.dataset.w+'px';}});
+document.getElementById('vdesc').textContent=D.A;
+if(window.innerWidth<700){f.style.width='390px';document.querySelector('[data-w="390"]').setAttribute('aria-pressed','true');document.querySelector('[data-w="1280"]').setAttribute('aria-pressed','false');}
+</script></body></html>

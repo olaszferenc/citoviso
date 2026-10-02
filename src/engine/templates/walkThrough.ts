@@ -83,7 +83,7 @@ function ico(name: string, size = 22): string {
  *  (bathroom, toilet, parking, detail, sign_map, people_doc, other): a walk does not
  *  stop at the toilet. */
 const WALK_ORDER = ["exterior", "pool_garden", "view", "dining", "interior"] as const;
-type WalkSubject = (typeof WALK_ORDER)[number];
+export type WalkSubject = (typeof WALK_ORDER)[number];
 
 /** The step heading — names the photo's SUBJECT, which the vision verdict established.
  *  A literal per subject (the i18n extractor collects double-quoted T() literals). */
@@ -119,8 +119,53 @@ export function walkSteps(photos: readonly Photo[], skip: ReadonlySet<string>): 
     if ((WALK_ORDER as readonly string[]).includes(s) && !first.has(s)) first.set(s, p);
   }
   const subjects = WALK_ORDER.filter((s) => first.has(s));
-  if (subjects.length < 3) return [];
+  if (subjects.length < WALK_MIN_STEPS) return [];
   return subjects.map((s) => ({ subject: s, photo: first.get(s)! }));
+}
+
+/** The fewest steps that still make a walk (ADR-0304 ③: below this, no walk at all). */
+export const WALK_MIN_STEPS = 3;
+
+/** The hero collage — the photos the walk never repeats. ONE definition for the render
+ *  and for the console's readiness read-out, so the two can never disagree. */
+export function walkCollage(photos: readonly Photo[]): Photo[] {
+  return photos.slice(0, 3);
+}
+
+/** A step heading in a given language — the console names the missing subjects with
+ *  exactly the words the page would print. */
+export function walkSubjectLabel(lang: string | undefined, s: WalkSubject): string {
+  return walkLabel({ lang } as SiteData, s);
+}
+
+export const WALK_SUBJECTS: readonly WalkSubject[] = WALK_ORDER;
+
+/**
+ * Will this photo set walk? (K2 / S-1, Elek 2026-10-02.) The owner ruled that with too few
+ * subjects the walk is simply left out — but the console said nothing, and the curator got
+ * a plain one-column page named „Séta a kapun át”. `unknown` = no photo carries a vision
+ * subject yet (the generation measures it), so nobody can tell in advance.
+ */
+export interface WalkReadiness {
+  readonly state: "ok" | "short" | "unknown";
+  /** Walk subjects that have a photo outside the collage, in walk order. */
+  readonly have: readonly WalkSubject[];
+  /** Walk subjects shown ONLY in the collage (the walk does not repeat them). */
+  readonly collageOnly: readonly WalkSubject[];
+  readonly steps: number;
+  readonly need: number;
+}
+export function walkReadiness(photos: readonly Photo[]): WalkReadiness {
+  const collage = walkCollage(photos);
+  const steps = walkSteps(photos, new Set(collage.map((p) => p.url)));
+  const subj = (ps: readonly Photo[]) =>
+    new Set(ps.map((p) => p.subject).filter((x): x is string => Boolean(x)));
+  const rest = subj(photos.slice(collage.length));
+  const inCollage = subj(collage);
+  const have = WALK_ORDER.filter((s) => rest.has(s));
+  const collageOnly = WALK_ORDER.filter((s) => inCollage.has(s) && !rest.has(s));
+  const state = steps.length ? "ok" : photos.some((p) => p.subject) ? "short" : "unknown";
+  return { state, have, collageOnly, steps: steps.length, need: WALK_MIN_STEPS };
 }
 
 const WALK_CSS = `
@@ -427,7 +472,7 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const walkLede = heroCopy.lead ? lede : data.tagline !== heroLine ? data.tagline : "";
 
   // ── hero collage: up to three photos, photos[0] (the chosen cover) leads ──
-  const collage = photos.slice(0, 3);
+  const collage = walkCollage(photos);
   const collageSet = new Set(collage.map((p) => p.url));
 
   // ── the walk ──

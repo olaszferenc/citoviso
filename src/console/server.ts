@@ -121,7 +121,7 @@ import { normalizeCustomDomain, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
 import { MODULE_CATALOG, missingRequiredModules, modulesForConversion } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
-import { renderTemplatePreview } from "./tplPreview.js";
+import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import {
   computeAnnual,
@@ -2041,7 +2041,10 @@ async function handle(
             states.set(aid, { kind: "running" });
           }
           return states;
-        })()),
+        })(),
+        // K2 / S-1: does the walk-through template walk on this lead (picker, preview, card)?
+        await walkReadinessView(d.artifacts),
+      ),
     );
   }
   // POST /lead/:id/generate — fire-and-forget; generation runs ~1-2 min in the

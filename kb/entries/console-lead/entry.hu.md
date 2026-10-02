@@ -137,6 +137,31 @@ jelölsz be, a keret azonnal átvált rá.
 **MÁSIK szállás** mintája látszik ezen a kinézeten, és a kép alatti felirat ezt ki is mondja.
 Az első mock után a saját lapja kerül a helyére.
 
+### A „Séta a kapun át” kinézet: összeáll-e a séta ennél a leadnél
+
+Ez a kinézet a szállás fotóiból „sétát” épít: a görgetés közben egymás után jönnek a
+különböző tárgyú képek (**A ház kívülről**, **Kert és udvar**, **A kilátás**, **Asztalnál**,
+**Odabent**). Ehhez **legalább 3 különböző tárgy** kell, és a nyitó-kollázs képei nem
+számítanak bele (a séta nem ismétli őket). Ha kevesebb van, a séta **elmarad** — a lap
+ekkor egy egyszerű, egyhasábos oldal lesz, ugyanezen a néven. Ez szándékos, nem hiba.
+
+Hogy ne érjen meglepetés, a konzol előre szól:
+
+- A kinézet-kártyán egy sárga címke áll: **„Séta: nem áll össze”** és mellette, hány tárgy
+  van a szükséges háromból (például „1/3”). Ha a fotók tárgyát a rendszer még nem mérte meg,
+  szürke címke áll: **„Séta: előre nem tudható”** — ezt a generálás méri meg.
+- Ha bejelölöd a kártyát, alatta megnyílik a magyarázat: **„Ennél a leadnél a séta nem áll
+  össze”**, és felsorolja az öt tárgyat — zölddel, amire van fotó, áthúzva, ami csak a
+  nyitó-kollázsban van, halványan, amire nincs.
+- A jobb oldali előnézet alatt is ott a figyelmeztetés: ennél a leadnél a lap **séta nélkül**
+  áll össze.
+- A kész mock kártyáján a **„Séta”** sor mondja meg az eredményt: **„elmaradt”** (sárga, a
+  tárgyak számával), vagy zölden, hány lépésből áll a séta.
+
+A kártya ilyenkor is választható — ha épp az egyszerű lapot szeretnéd ezen a kinézeten,
+nyugodtan generáld; csak tudd, mit kapsz. Ha sétát szeretnél, válassz olyan leadet, ahol
+több fotó van, vagy gyűjts friss képeket.
+
 ## A nyitókép felülbírálása
 
 A rendszer maga választ nyitóképet — **a legjobbat, nem a legnagyobbat** —, és minden képnél

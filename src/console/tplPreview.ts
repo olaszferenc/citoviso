@@ -13,6 +13,8 @@ import { renderSite } from "../engine/render.js";
 import { TEMPLATES } from "../engine/templates.js";
 import { dropNeverShown, readCachedScores } from "../generator/heroPick.js";
 import { injectRuntime } from "../generator/runtime.js";
+import { walkReadiness, type WalkReadiness } from "../engine/templates/walkThrough.js";
+import type { WalkPageView } from "./views.js";
 
 /** null = unknown template id. */
 export async function renderTemplatePreview(
@@ -38,4 +40,23 @@ export async function renderTemplatePreview(
   const siteData: SiteData = { ...base.siteData, photos };
   const html = renderSite(recipe, siteData, { phase: "mock", sampleDeny });
   return injectRuntime(html, siteData.lang);
+}
+
+/**
+ * K2 / S-1: will the walk-through template walk on this lead? Read from the SAME photo set
+ * the preview renders (the snapshot through dropNeverShown, cache-only — free, no network),
+ * so the warning and the picture can never disagree. Per artifact for the walk-through
+ * mocks' cards; the newest snapshot for the picker + preview. No photos → null (unknown).
+ */
+export async function walkReadinessView(
+  artifacts: readonly { readonly id: string; readonly inputs: Record<string, unknown> }[],
+): Promise<WalkPageView> {
+  const of = async (inputs: Record<string, unknown> | undefined): Promise<WalkReadiness | null> => {
+    const stored = (inputs?.siteData as SiteData | undefined)?.photos ?? [];
+    if (!stored.length) return null;
+    return walkReadiness(dropNeverShown(stored, await readCachedScores(stored.map((p) => p.url))).kept);
+  };
+  const byArtifact = new Map<string, WalkReadiness | null>();
+  for (const a of artifacts) if (a.inputs.template === "walk-through") byArtifact.set(a.id, await of(a.inputs));
+  return { lead: await of(artifacts[0]?.inputs), byArtifact };
 }

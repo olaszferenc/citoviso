@@ -1480,6 +1480,14 @@ if [ -f scripts/guest-critic-check.mts ] && \
   echo "[pre-commit] guest-critic-check (vendég-kritikus: magázás, vélemény ≠ ajánlat, bekötés)…"
   npx tsx scripts/guest-critic-check.mts >"$GATE_LOG" || gate_failed
 fi
+# SÉTA-JELZÉS (K2 / S-1, tulaj „A” 2026-10-02): ha a „Séta a kapun át” ennél a leadnél nem sétál,
+#     a konzol a választón, az előnézeten és a kész mock kártyáján kimondja — ugyanabból a
+#     walkReadiness-ből, amiből a sablon rajzol. Determinisztikus — nincs DB, nincs böngésző.
+if [ -f scripts/walk-readiness-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/walkThrough\.ts$|^src/console/(views|server|tplPreview)\.ts$|^scripts/walk-readiness-check\.mts$'; then
+  echo "[pre-commit] walk-readiness-check (séta-jelzés a konzolon)…"
+  npx tsx scripts/walk-readiness-check.mts >"$GATE_LOG" || gate_failed
+fi
 # MEGKERESŐ LEVÉL IGAZSÁGA (Elek SZ-5/H-3, tulaj-döntés 2026-10-02): a hideg levél, az SMS és az
 # emlékeztető MINDEN ágát kirendereli (szegmens × honlap-mérés × csillag-sáv): tiltott fordulat nincs,
 # a szegmens-mondat csak a mértet állítja, 4,0 ★ alatt nincs értékelés-idézet, „Ezért” csak hiány után,

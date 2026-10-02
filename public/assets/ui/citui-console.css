@@ -2588,3 +2588,29 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .tzp__warn { margin-top: 6px; font-size: 12px; color: var(--citui-warn-ink); }
 .tzp__warn:empty { display: none; }
 .tzp__reset { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--citui-navy-700); text-decoration: underline; font: inherit; font-size: 12px; cursor: pointer; }
+
+/* K2 / S-1 — the walk read-out (approved plan „A”: assets/design-refs/console/walk-readiness/) */
+.con .tpl-card__walk {
+  position: absolute; left: 6px; top: 68px; z-index: 2; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; line-height: 1.2; padding: 3px 7px; border-radius: var(--citui-radius-pill);
+  background: color-mix(in srgb, var(--citui-warn) 22%, var(--citui-panel)); color: var(--citui-warn-ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--citui-warn) 40%, transparent);
+}
+.con .tpl-card__walk[data-k="unknown"] { background: var(--citui-surface-2); color: var(--citui-muted); box-shadow: 0 0 0 1px var(--citui-line); }
+.con .tpl-walk-note {
+  margin: 10px 0 4px; padding: 10px 12px; font-size: 13px; line-height: 1.5; border: 1px solid var(--citui-line);
+  border-left: 3px solid var(--citui-warn); border-radius: var(--citui-radius-sm); background: var(--citui-panel); color: var(--citui-ink);
+}
+.con .tpl-walk-note[hidden], .con .tpl-walk-prev[hidden] { display: none; }
+.con .tpl-walk-note[data-k="unknown"] { border-left-color: var(--citui-line-strong); }
+.con .tpl-walk-note__h { display: flex; gap: 6px; align-items: center; font-weight: 700; color: var(--citui-warn-ink); margin-bottom: 3px; }
+.con .tpl-walk-note[data-k="unknown"] .tpl-walk-note__h { color: var(--citui-muted); }
+.con .tpl-walk-note__steps { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; padding: 0; list-style: none; }
+.con .tpl-walk-note__steps li {
+  font-size: 11.5px; padding: 2px 8px; border-radius: var(--citui-radius-pill);
+  border: 1px dashed var(--citui-line-strong); color: var(--citui-muted);
+}
+.con .tpl-walk-note__steps li.have { border-style: solid; border-color: var(--citui-ok); background: var(--citui-ok-soft); color: var(--citui-ok-ink); font-weight: 600; }
+.con .tpl-walk-note__steps li.coll { text-decoration: line-through; }
+.con .tpl-walk-note__legend { font-size: 11px; color: var(--citui-muted); margin-bottom: 4px; }
+.con .tpl-walk-prev { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--citui-warn-ink); }

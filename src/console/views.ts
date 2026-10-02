@@ -53,6 +53,7 @@ function fmtHuf(n: number): string {
 // never drift on module ids (they feed module_entitlement).
 export { MODULE_CATALOG } from "../modules.js";
 import { TEMPLATES } from "../engine/templates.js";
+import { walkSubjectLabel, WALK_MIN_STEPS, WALK_SUBJECTS, type WalkReadiness } from "../engine/templates/walkThrough.js";
 import { copyNames, groupAmenities, normForCopyMatch } from "../generator/marketCheck.js";
 import { patternSummary, type PatternInputs } from "../generator/patternBadge.js";
 import {
@@ -4485,7 +4486,7 @@ function disqualifyPanel(d: LeadDetail): string {
  * a kijelölt sablonon — AI nélkül, a `/lead/:id/tpl-preview` route-on. Ha nincs, marad a
  * minta-kép, de a felirat KIMONDJA, hogy idegen szállás mintája.
  */
-function tplPreview(d: LeadDetail, lang: string): string {
+function tplPreview(d: LeadDetail, lang: string, walk: WalkReadiness | null = null): string {
   const hasSnapshot = d.artifacts.some((a) => {
     const i = a.inputs as { recipe?: unknown; siteData?: unknown };
     return Boolean(i?.recipe && i?.siteData);
@@ -4507,10 +4508,79 @@ function tplPreview(d: LeadDetail, lang: string): string {
         "{name} SAJÁT adata a kijelölt kinézeten — a szöveg a legutóbbi mockból való, nem újragenerált.",
         { name: esc(d.name) },
       )}</figcaption>
+      ${walkPreviewWarn(walk, lang)}
     </figure>`;
 }
 
-function templateCards(selected = ""): string {
+/**
+ * A SÉTA-JELZÉS (K2 / S-1, jóváhagyott terv „A”: `assets/design-refs/console/walk-readiness/`).
+ *
+ * A „Séta a kapun át” kevés fotó-tárgynál séta nélkül készül (ADR-0304 — tulajdonosi döntés,
+ * nem változik). A hiba a NÉMASÁG volt: a kurátor egy egyhasábos lapot kapott ezen a néven,
+ * és erről semmi nem szólt. Négy helyen szól, ugyanabból a `walkReadiness`-ből, amiből a
+ * sablon rajzol — és a hiányzó tárgyakat a lap SAJÁT lépés-címeivel nevezi meg.
+ * `null` = nincs pillanatkép (nincs fotó) → előre nem tudható.
+ */
+const WALK_TPL = "walk-through";
+export interface WalkPageView {
+  readonly lead: WalkReadiness | null;
+  readonly byArtifact: ReadonlyMap<string, WalkReadiness | null>;
+}
+const walkState = (r: WalkReadiness | null) => r?.state ?? "unknown";
+
+export function walkPickerTag(r: WalkReadiness | null, lang = "hu"): string {
+  const st = walkState(r);
+  if (st === "ok") return "";
+  const label =
+    st === "short"
+      ? `${T(lang, "Séta: nem áll össze")} (${r!.have.length}/${r!.need})`
+      : T(lang, "Séta: előre nem tudható");
+  return `<span class="tpl-card__walk" data-k="${st}">${ic("alert", 13)}${esc(label)}</span>`;
+}
+
+export function walkPickerNote(r: WalkReadiness | null, lang = "hu"): string {
+  const st = walkState(r);
+  if (st === "ok") return "";
+  const body =
+    st === "short"
+      ? `<div class="tpl-walk-note__h">${ic("alert", 14)}${T(lang, "Ennél a leadnél a séta nem áll össze")}</div>
+         ${T(lang, "A „Séta a kapun át” lépései különböző tárgyú fotók, és legalább {need} kell. A nyitó-kollázs képei után {n} tárgy marad:", { need: r!.need, n: r!.have.length })}
+         <ul class="tpl-walk-note__steps">${WALK_SUBJECTS.map((s) => {
+           const c = r!.have.includes(s) ? "have" : r!.collageOnly.includes(s) ? "coll" : "";
+           return `<li${c ? ` class="${c}"` : ""}>${esc(walkSubjectLabel(lang, s))}</li>`;
+         }).join("")}</ul>
+         <div class="tpl-walk-note__legend">${T(lang, "zöld = van rá fotó · áthúzott = csak a nyitó-kollázsban van (a séta nem ismétli) · halvány = nincs rá fotó")}</div>
+         ${T(lang, "Ha mégis ezt választod, séta nélküli, egyhasábos lapot kapsz ezen a néven.")}`
+      : `<div class="tpl-walk-note__h">${ic("alert", 14)}${T(lang, "Előre nem tudható, összeáll-e a séta")}</div>
+         ${T(lang, "A fotók tárgyát a rendszer még nem mérte meg — ezt a generálás méri. Ha 3-nál kevesebb különböző tárgy jön ki, a séta elmarad, és a kész mock kártyája ezt kimondja.")}`;
+  return `<div class="tpl-walk-note" id="tpl-walk-note" data-k="${st}" hidden>${body}</div>`;
+}
+
+export function walkPreviewWarn(r: WalkReadiness | null, lang = "hu"): string {
+  if (walkState(r) !== "short") return "";
+  return `<div class="tpl-walk-prev" id="tpl-walk-prev" hidden>${ic("alert", 13)}<span>${T(
+    lang,
+    "Ez az előnézet ennél a leadnél séta nélkül áll össze ({n} fotó-tárgy, {need} kell) — a görgetés lent nem sétál.",
+    { n: r!.have.length, need: r!.need },
+  )}</span></div>`;
+}
+
+export function walkCardFact(r: WalkReadiness | null, lang = "hu"): string {
+  const st = walkState(r);
+  const dd =
+    st === "ok"
+      ? `<span class="con-mk__gate" data-verdict="pass">${esc(T(lang, "{n} lépés", { n: r!.steps }))}</span><span class="con-mk__u">${esc(
+          r!.have.slice(0, r!.steps).map((s) => walkSubjectLabel(lang, s)).join(" · "),
+        )}</span>`
+      : `<span class="con-mk__gate" data-verdict="flag" title="${esc(T(lang, "A séta nem állt össze — séta nélküli lap készült"))}">${T(lang, "elmaradt")}</span><span class="con-mk__u">${esc(
+          st === "short"
+            ? T(lang, "{n} fotó-tárgy, {need} kell", { n: r!.have.length, need: r!.need })
+            : T(lang, "0 fotó-tárgy (nincs ítélet), {need} kell", { need: WALK_MIN_STEPS }),
+        )}</span>`;
+  return `<div><dt>${T(lang, "Séta")}</dt><dd>${dd}</dd></div>`;
+}
+
+function templateCards(selected = "", walk: WalkReadiness | null = null): string {
   // ⛔ NOTHING is pre-checked. These are checkboxes (one mock per ticked template);
   // a pre-checked default silently added a second, unwanted mock to every run and
   // made the picker look broken ("kiválasztom X-et, ugyanazt gyártja le").
@@ -4531,6 +4601,7 @@ function templateCards(selected = ""): string {
                 aria-label="${esc(short)} ${T(lang, "— nagyban megnézem")}"
                 onclick="event.preventDefault();event.stopPropagation();citTplGallery('${esc(t.id)}')">${ic("zoom", 15)}</button>
         <span class="tpl-card__name">${esc(short)}</span>
+        ${t.id === WALK_TPL ? walkPickerTag(walk, lang) : ""}
       </label>`;
     })
     .join("");
@@ -5002,6 +5073,11 @@ export function leadPage(
    * kérte senki", nem „nincs".
    */
   shots: ReadonlyMap<string, HeroShotState> = new Map(),
+  /**
+   * K2 / S-1: összeáll-e a séta — a legutóbbi pillanatképre (választó + előnézet) és
+   * artefaktumonként (a Séta-mock kártyája). A szerver méri (cache-olvasás, I/O), a nézet szinkron.
+   */
+  walk: WalkPageView = { lead: null, byArtifact: new Map() },
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -5203,6 +5279,7 @@ export function leadPage(
                     }</dd></div>`
                   : ""
               }
+              ${tplId === WALK_TPL ? walkCardFact(walk.byArtifact.get(a.id) ?? null, lang) : ""}
               ${
                 gateChips
                   ? `<div class="con-mk__wide"><dt>${T(lang, "Kapuk")}</dt><dd>${gateChips}</dd></div>`
@@ -6414,15 +6491,16 @@ function cpScript(prefix: string): string {
                  <div class="gen-controls">
                    <label class="small mut" style="display:block;margin-bottom:6px">${T(lang, "Kinézet-típus — a kurátor dönt: válaszd ki, melyik elrendezésekre generáljuk a mockot — többet is jelölhetsz, mindegyikre külön mock készül")}</label>
                    <div class="tpl-cards" role="group" aria-label="${T(lang, "Kinézet-típus")}">
-                     ${templateCards()}
+                     ${templateCards("", walk.lead)}
                    </div>
+                   ${walkPickerNote(walk.lead, lang)}
                    <label class="small mut" for="gen-cp-in" style="display:block;margin:12px 0 4px">${T(lang, "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)")}</label>
                    <textarea id="gen-cp-in" name="curatorPrompt" rows="4" maxlength="600"
                      placeholder="${T(lang, "pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki")}"
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
                    <button class="gen-go" type="submit">Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
                  </div>
-                 ${tplPreview(d, lang)}
+                 ${tplPreview(d, lang, walk.lead)}
                </div>
              </form>`
       }
@@ -6807,6 +6885,12 @@ function galleryScript(): string {
       function citTplPick(inp){
         // Multi-select: toggle ONLY this card; the preview follows the last one turned on.
         var lab=inp.closest('.tpl-card');if(lab)lab.classList.toggle('on',inp.checked);
+        // K2 / S-1: the walk read-out opens with the walk template's tick; the preview
+        // warning follows the template the preview is showing.
+        var wn=document.getElementById('tpl-walk-note');
+        if(wn&&inp.value==='walk-through')wn.hidden=!inp.checked;
+        var wp=document.getElementById('tpl-walk-prev');
+        if(wp&&inp.checked)wp.hidden=inp.value!=='walk-through';
         if(inp.checked){
           // Élő keret: a lead SAJÁT adata fut át a kijelölt sablonon (FK-003b ④).
           // Pillanatkép nélkül marad a minta-kép — és a felirat is azt mondja.
