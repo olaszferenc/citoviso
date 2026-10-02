@@ -7622,7 +7622,7 @@ export function scrapePage(
         <label>${T(lang, "Régió")} <select name="region">${regionOpts}</select></label>
         <label>Cap <input type="number" name="cap" min="1" placeholder="pl. 40" style="width:90px"></label>
         <button type="submit">${T(lang, "Scrape indítása")}</button>
-        <span class="small mut">${T(lang, "A futás Google Places API-hívásokkal jár (költség) — a cap ezt korlátozza.")}</span>
+        <span class="small mut">${T(lang, "A cap a mentett új leadek számát vágja (a kontaktálhatók előre). A Google Places-költséget nem csökkenti: a dúsítás előtte már lefutott.")}</span>
       </form>`;
   const logBlock = job.log.length
     ? `<div style="margin-top:12px"><label class="small mut">${T(lang, "Napló")}${job.running ? T(lang, " (élő)") : job.exitCode === 0 ? T(lang, " — ✅ sikeres futás") : T(lang, " — ⛔ exit {code}", { code: job.exitCode ?? "?" })}</label>
@@ -7630,7 +7630,7 @@ export function scrapePage(
     : "";
   const runRows = runs
     .map((r) => {
-      const s = r.stats as { players?: number; leads?: number; phase?: string };
+      const s = r.stats as { players?: number; leads?: number; phase?: string; warnings?: string[] };
       const st = scrapeStatusLabel(r, lang);
       // The sentence the row owes the operator — WHERE a running scrape stands, or
       // WHY a stopped one stopped. It lives in a full-width line UNDER the row, not
@@ -7645,7 +7645,11 @@ export function scrapePage(
                 ? ` · ${T(lang, "életjel: {time}", { time: consoleTime(r.heartbeatAt, lang) })}`
                 : ""
             }`
-          : (r.error ?? "");
+          : // A finished run's loud warnings (ADR-XXXX: e.g. paid Details calls over
+            // the warning line) stay readable here after the live log is gone.
+            [r.error, ...(Array.isArray(s.warnings) ? s.warnings.map((w) => `⚠️ ${w}`) : [])]
+              .filter(Boolean)
+              .join(" · ");
       const noteRow = note
         ? `<tr><td colspan="5" class="small mut rownote"><span>${esc(note)}</span></td></tr>`
         : "";

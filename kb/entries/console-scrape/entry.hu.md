@@ -4,7 +4,7 @@ title: Scrape — új régió felmérése, térkép, területek
 audience: operator
 category: lead-path
 anchors: console.scrape
-updated: 2026-09-13
+updated: 2026-10-02
 ---
 
 A Scrape képernyőn indítod egy régió felmérését, és itt követed a futást élő naplóval.
@@ -17,8 +17,10 @@ Három fül: **„Indítás”**, **„Térkép”** és **„Területek”**.
 A **„Scrape indítása”** panelben:
 
 1. Válaszd ki a **„Régió”** listából a felmérendő területet.
-2. A **„Cap”** mezőbe írhatsz felső korlátot (pl. 40) — a futás Google Places API-hívásokkal jár
-   (költség), a cap ezt fogja vissza. Üresen hagyva a teljes régiót felméri.
+2. A **„Cap”** mezőbe írhatsz felső korlátot (pl. 40) — ennyi ÚJ leadet ment el a futás, a
+   kontaktálhatókat előre véve. ⚠️ A Google Places-költséget a cap NEM fogja vissza: a vágás a
+   dúsítás után történik, addigra minden új szereplő adatát lekérte a futás. Üresen hagyva
+   minden új leadet elment.
 3. Koppints a **„Scrape indítása”** gombra. Futás közben az oldal 3 másodpercenként magától
    frissül, és a napló élőben mutatja, mit talál.
 
@@ -43,15 +45,18 @@ A státusz négyféle lehet:
   az a sor, amit a napló is ír — részben angol, fejlesztői szöveg), és mikor adott utoljára
   életjelet: a futás percenként jelez.
 - **„lefutott”** — végigment; a szereplő- és lead-szám ennek a sornak a jobb szélén áll
-  (telefonon oldalra húzva látod).
+  (telefonon oldalra húzva látod). Ha a futás figyelmeztetett — például több fizetős Google-
+  adatlapot kért, mint a figyelmeztetési szint (alapból 4 000, ~80 $) —, a mondat ⚠️ jellel a
+  sor alatt marad. A futás ettől NEM áll meg: plafon nincs, a figyelmeztetés neked szól.
 - **„megszakadt”** — a futás nem a saját hibájából állt meg: egyszerűen elhallgatott. Szinte
   mindig azért, mert kívülről leállították — a scrape a konzolhoz tapad, így a konzol
   újraindulása (élesítés, szerver-újraindítás, összeomlás) magával viszi. A sor alatti mondat
   megmondja, melyik lépésnél érte a leállítás.
   **Teendő: indítsd el újra.** ⚠️ A leadek a futás VÉGÉN kerülnek be, egyetlen lépésben —
   egy megszakadt futásból tehát semmi nem mentődött el (nulla lead), és az újraindítás a
-  Google Places-hívásokat is újra kifizetteti. Erre való a **„Cap”**. Ami korábban már bekerült,
-  azt a duplikátum-védelem nem hozza be még egyszer.
+  Google Places-hívásokat is újra kifizetteti (a **„Cap”** ezen nem segít — csak a mentett
+  leadek számát vágja). Ami korábban már bekerült, azt a duplikátum-védelem nem hozza be még
+  egyszer, és fizetős lekérést sem indít rá.
 - **„hibára futott”** — a futás magától elhasalt; a sor alatti hibaüzenet mondja meg, min.
   Itt az újraindítás önmagában rendszerint nem elég: előbb a hibaokot kell megszüntetni.
 

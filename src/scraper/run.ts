@@ -126,6 +126,8 @@ async function main(): Promise<void> {
     }
   }
 
+  const sourceWarnings = sources.flatMap((s) => s.warnings?.() ?? []);
+
   try {
     let base = dedupeAndQualify(raw, INDUSTRY, region.id);
     // Circular area (0019): the sources fetched the enclosing rectangle, so drop
@@ -239,6 +241,8 @@ async function main(): Promise<void> {
       byStatus,
       contactChannels: channelBreakdown(leads),
       knownBeforeEnrichment: known.length,
+      // Loud source warnings (ADR-XXXX) — kept with the run, not only in the live log.
+      ...(sourceWarnings.length ? { warnings: sourceWarnings } : {}),
     };
     mark(`Mentés az adatbázisba — ${leads.length} szereplő…`);
     const { inserted, deduped } = await completeScrapeRun(runId, leads, stats);

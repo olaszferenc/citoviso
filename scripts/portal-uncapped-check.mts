@@ -8,6 +8,8 @@
  *      → pontosan N Brave-hívás, `0` → egy sem (a backfill így fut).
  *   3. A nem kontaktálható lead (isLead=false) nem olvasódik, és minden olvasott lead `portalLookupAt`
  *      jelet kap (üres eredménnyel is — a backfill erre folytat).
+ *   4. A `challenge_protected` host (booking.com, ADR-XXXX) adatlapja nem olvasódik — a mellette álló
+ *      nyitott adatlap igen.
  *
  * Futtatás: npx tsx scripts/portal-uncapped-check.mts
  */
@@ -76,6 +78,24 @@ searches = 0;
 await enrichPortal(Array.from({ length: 12 }, (_, i) => lead(200 + i)), region, { maxSearchLeads: 5 });
 check(searches === 5, `maxSearchLeads: 5 → ${searches} fizetős keresés (elvárt: 5)`);
 check(pageHits.size === 12, `a kereten kívüli leadek ismert adatlapja is olvasva (${pageHits.size}/12)`);
+
+// 4: a challenge_protected host (booking.com, ADR-XXXX) is never fetched — its AWS WAF page
+//    carries no data, so reading it only burned the run's time (~426 URLs a full pass).
+pageHits.clear();
+const walled = {
+  ...lead(300),
+  listings: [
+    { url: "https://www.booking.com/hotel/hu/napfeny300-vendeghaz.hu.html", title: "Napfény300", verified: true },
+    { url: "https://napfeny300.booked.hu/", title: "Napfény300", verified: true },
+  ],
+} as unknown as Lead;
+const onlyWalled = {
+  ...lead(301),
+  listings: [{ url: "https://www.booking.com/hotel/hu/napfeny301.hu.html", title: "Napfény301", verified: true }],
+} as unknown as Lead;
+await enrichPortal([walled, onlyWalled], region, { maxSearchLeads: 0 });
+check(!pageHits.has("www.booking.com"), "a booking.com adatlap NEM olvasódik (challenge_protected)");
+check(pageHits.has("napfeny300.booked.hu"), "a booking.com mellett a nyitott adatlap olvasódik");
 
 if (failed) {
   console.error(`portal-uncapped-check: ${failed} állítás bukott`);

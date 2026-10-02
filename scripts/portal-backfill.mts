@@ -38,11 +38,12 @@ const LIMIT = limitArg > 0 ? Number(process.argv[limitArg + 1]) : Number.POSITIV
 /** Leads per save point — a crash loses at most one batch of reads. */
 const BATCH = 100;
 /**
- * Wall seconds per lead, measured 2026-10-01: 40 random prod leads read for real (97 listings,
- * 158.7 s at concurrency 2), replayed over all 1 057 prod leads with per-host serialisation at the
- * pass' concurrency 4 → 78.5 min.
+ * Wall seconds per lead, measured 2026-10-02 (ADR-XXXX): 40 random prod leads read for real at the
+ * pass' concurrency 4, after booking.com went challenge_protected and hovamenjek moved to fullHd —
+ * 49.3 s / 49.5 s (before: 98.2 s / 63.8 s). The 2026-10-01 model (78.5 min for 1 057) did not
+ * reproduce with the old code either (1.6–2.5 s/lead).
  */
-const MEASURED_SEC_PER_LEAD = (78.5 * 60) / 1057;
+const MEASURED_SEC_PER_LEAD = 49.4 / 40;
 
 const rows = await db
   .selectFrom("lead")
@@ -94,7 +95,7 @@ console.log(
 );
 console.log(
   `Becsült futásidő: ~${Math.round((run.length * MEASURED_SEC_PER_LEAD) / 60)} perc ` +
-    `(mérve 2026-10-01; a padló a leglassabb host soros olvasása — hovamenjek.hu ~18 mp/adatlap).`,
+    `(mérve 2026-10-02, 40 éles leaden; a padló a leglassabb host soros olvasása — ma a hovamenjek.hu).`,
 );
 if (!GO) {
   console.log("Szárazfutás — íráshoz: --go");

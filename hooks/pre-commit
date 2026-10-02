@@ -1832,7 +1832,7 @@ fi
 # KNOWN listings are read — the old 60-per-run ceiling must not come back — while the PAID
 # web-search discovery stays inside its budget. Hermetic (fetch stub), ~8 s, never pays.
 if [ -f scripts/portal-uncapped-check.mts ] && \
-   changed_files | grep -qE '^src/scraper/(enrichPortal|enrichChain|run)\.ts$|^src/scraper/sources/portalListing\.ts$|^scripts/portal-uncapped-check'; then
+   changed_files | grep -qE '^src/scraper/(enrichPortal|enrichChain|run)\.ts$|^src/scraper/sources/(portalListing|portals/registry)\.ts$|^scripts/portal-uncapped-check'; then
   echo "[pre-commit] portal-uncapped-check (minden kontaktálható lead ismert adatlapja olvasva, a keresés kereten belül)…"
   npx tsx scripts/portal-uncapped-check.mts
 fi

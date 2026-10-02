@@ -89,10 +89,15 @@ const QUERY_RESULT_CEILING = 60;
  *  to full, saturation-free coverage; a 32 km circle is ~16× the area but far
  *  sparser outside the town cores. */
 const DISCOVERY_MAX_CALLS = Number(process.env.PLACES_DISCOVERY_MAX_CALLS ?? 600);
-/** Hard per-run cap on the PAID step: Place Details for ids new to our DB. Sized
- *  above the largest measured run (2026-09-27/28: 2 589 new leads over two runs);
- *  at $20/1000 the cap bounds one run at ~$80. Hitting it is LOUD. */
-const DETAILS_MAX_CALLS = Number(process.env.PLACES_DETAILS_MAX_CALLS ?? 4000);
+/** Per-run WARNING line on the PAID step: Place Details for ids new to our DB.
+ *  NOT a cap (owner, 2026-10-02: "Nincsen cap. Saját magunkat korlátozzuk be.") —
+ *  every new place still gets its Details call; crossing the line is LOUD in the
+ *  log and in the run's stats. Sized above the largest measured run (2026-09-27/28:
+ *  2 589 new leads over two runs); at $20/1000 the line sits at ~$80/run.
+ *  PLACES_DETAILS_MAX_CALLS is the pre-ADR-XXXX name, still honoured. */
+const DETAILS_WARN_CALLS = Number(
+  process.env.PLACES_DETAILS_WARN_CALLS ?? process.env.PLACES_DETAILS_MAX_CALLS ?? 4000,
+);
 /** Parallel Details requests — the throttle still bounds the rate. */
 const DETAILS_CONCURRENCY = 8;
 
@@ -686,7 +691,7 @@ type Bbox = readonly [number, number, number, number]; // [S, W, N, E]
  *
  * Cost: the traversal itself is free (IDs only); see DISCOVERY_ID_MASK for the
  * two-step design. Known place ids come back from the DB, new ones cost one Place
- * Details call each, hard-capped by DETAILS_MAX_CALLS (loud when hit).
+ * Details call each — never cut; over DETAILS_WARN_CALLS the run says so, loudly.
  */
 export class GoogleMapsSource implements LeadSource {
   readonly name = "google_places";
@@ -695,7 +700,14 @@ export class GoogleMapsSource implements LeadSource {
    *  Injectable so the guard runs without a database; the default reads `lead`. */
   constructor(private readonly knownPlaces: KnownPlacesResolver = defaultKnownPlaces) {}
 
+  private lastWarnings: string[] = [];
+
+  warnings(): string[] {
+    return [...this.lastWarnings];
+  }
+
   async fetch(query: ScrapeQuery): Promise<RawLead[]> {
+    this.lastWarnings = [];
     const key = config.googleMapsApiKey;
     if (!key) {
       console.warn(
@@ -777,9 +789,9 @@ export class GoogleMapsSource implements LeadSource {
     await walk(query.region.bbox);
 
     if (budgetHit) {
-      console.warn(
-        `[google_places] ⚠️ HÍVÁS-KERET ELFOGYOTT (${DISCOVERY_MAX_CALLS}) — a lefedettség RÉSZLEGES. Emeld a PLACES_DISCOVERY_MAX_CALLS-t, vagy szűkítsd a területet.`,
-      );
+      const msg = `Google-bejárás: a hívás-keret elfogyott (${DISCOVERY_MAX_CALLS}) — a lefedettség RÉSZLEGES. Emeld a PLACES_DISCOVERY_MAX_CALLS-t, vagy szűkítsd a területet.`;
+      this.lastWarnings.push(msg);
+      console.warn(`[google_places] ⚠️ ${msg}`);
     }
 
     // Step 2: what we already know costs nothing; only new ids get Details.
@@ -791,11 +803,13 @@ export class GoogleMapsSource implements LeadSource {
       if (k) byId.set(id, k);
       else fresh.push(id);
     }
-    const detailIds = fresh.slice(0, DETAILS_MAX_CALLS);
-    if (fresh.length > detailIds.length) {
-      console.warn(
-        `[google_places] ⚠️ ADATLAP-KERET ELFOGYOTT (${DETAILS_MAX_CALLS}) — ${fresh.length - detailIds.length} új hely adatlap nélkül KIMARADT. Emeld a PLACES_DETAILS_MAX_CALLS-t, vagy szűkítsd a területet.`,
-      );
+    // No cap (ADR-XXXX): every new place gets its Details call. Over the warning
+    // line the run says so up front — the calls are known before they are made.
+    const detailIds = fresh;
+    if (detailIds.length > DETAILS_WARN_CALLS) {
+      const msg = `Google-adatlap: ${detailIds.length} fizetős Place Details hívás ebben a futásban (~${Math.round(detailIds.length * 0.02)} $ listaáron, 20 $/1000) — a figyelmeztetési szint ${DETAILS_WARN_CALLS}. A hívások MENNEK, nincs vágás; ha ez sok, szűkítsd a területet.`;
+      this.lastWarnings.push(msg);
+      console.warn(`[google_places] ⚠️ ${msg}`);
     }
     let detailCalls = 0;
     let gone = 0;

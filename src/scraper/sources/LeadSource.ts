@@ -12,4 +12,10 @@ export interface LeadSource {
    * for "no results" (return []); may throw on hard failures (network/auth).
    */
   fetch(query: ScrapeQuery): Promise<RawLead[]>;
+  /**
+   * Loud, operator-facing warnings from the LAST fetch (a coverage limit hit, a
+   * paid-call volume over the warning line…). The run copies them into its stats,
+   * so they survive the live log. Optional: a source with nothing to say omits it.
+   */
+  warnings?(): string[];
 }

@@ -283,23 +283,27 @@ check(
 const { PORTAL_ADAPTERS } = await import("../src/scraper/sources/portals/registry.js");
 const hovamenjek = PORTAL_ADAPTERS.find((a) => a.id === "hovamenjek");
 check(
-  "hovamenjek.largestPhotoUrl: galleryMiddle/gallery → main",
+  "hovamenjek.largestPhotoUrl: galleryMiddle/gallery/main → fullHd",
   hovamenjek?.largestPhotoUrl?.(
     "https://hovamenjek.hu/upload/places/2360_x/galleryMiddle/balatonfoldvar-villa-rubin-balatonfoldvar4.jpg",
-  ) === "https://hovamenjek.hu/upload/places/2360_x/main/balatonfoldvar-villa-rubin-balatonfoldvar4.jpg" &&
+  ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/balatonfoldvar-villa-rubin-balatonfoldvar4.jpg" &&
     hovamenjek?.largestPhotoUrl?.(
       "https://hovamenjek.hu/upload/places/2360_x/187x187/x.jpg",
-    ) === "https://hovamenjek.hu/upload/places/2360_x/main/x.jpg",
-  "a méret-szegmens a legnagyobb derivatívára (main) cserélődik",
+    ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/x.jpg" &&
+    // a stored `main` URL (pre-ADR-XXXX reads) upgrades too — main is 404 for numbered files
+    hovamenjek?.largestPhotoUrl?.(
+      "https://hovamenjek.hu/upload/places/2360_x/main/balatonfoldvar-10.jpg",
+    ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/balatonfoldvar-10.jpg",
+  "a méret-szegmens a legnagyobb derivatívára (fullHd, ADR-XXXX) cserélődik",
 );
 check(
   "hovamenjek.largestPhotoUrl: idegen alakra NO-OP (nem gyárt 404-et)",
   hovamenjek?.largestPhotoUrl?.("https://hovamenjek.hu/logo.png") ===
     "https://hovamenjek.hu/logo.png" &&
     hovamenjek?.largestPhotoUrl?.(
-      "https://hovamenjek.hu/upload/places/2360_x/main/already.jpg",
-    ) === "https://hovamenjek.hu/upload/places/2360_x/main/already.jpg",
-  "a szabályba nem illő URL változatlan; a már-main is önmaga",
+      "https://hovamenjek.hu/upload/places/2360_x/fullHd/already.jpg",
+    ) === "https://hovamenjek.hu/upload/places/2360_x/fullHd/already.jpg",
+  "a szabályba nem illő URL változatlan; a már-fullHd is önmaga",
 );
 
 if (failed) {

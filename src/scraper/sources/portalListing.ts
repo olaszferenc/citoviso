@@ -367,8 +367,8 @@ export async function readPortalListing(
   // through — a partner listing on the same page names a different slug and stays out.
   const vouchable = confidence.band === "high";
   // Upgrade each image to the portal's LARGEST derivative, but VERIFY it resolves: some
-  // portals expose the big size for SOME images only (hovamenjek serves /main/ for its
-  // NAMED files but 404s the numbered ones). A blind rewrite would store a broken URL,
+  // portals expose the big size for SOME images only (hovamenjek's /main/ existed for
+  // its NAMED files only — ADR-XXXX moved it to fullHd). A blind rewrite would store a broken URL,
   // so probe the upgraded variant and fall back to the original when it is missing. The
   // probe's size rides along, so keepUsablePhotos need not measure it a second time.
   const upgrade = adapter.largestPhotoUrl;

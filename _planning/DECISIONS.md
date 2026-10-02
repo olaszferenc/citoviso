@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-nincs-koltseg-plafon-a-scrape-ben.md) — Nincs költség-plafon a scrape-ben: a Details-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
 - [ADR-0297](decisions/0297-napi-google-api-koltseg-riport-e-mailben.md) — Napi Google API költség-riport e-mailben: listaáras becslés a Monitoring hívásszámaiból, csak szól, nem korlátoz (2026-10-02)
 - [ADR-0296](decisions/0296-az-ismert-lead-nem-megy-at-a-scrape-fizetos.md) — Az ismert lead nem megy át a scrape fizetős dúsításán (store-dedup a dúsítás ELŐTT) (2026-10-02)
 - [ADR-0295](decisions/0295-a-places-felderites-ingyenes-id-bejarassal-megy.md) — A Places-felderítés ingyenes ID-bejárással megy; fizetős adatlap csak a DB-ben még nem ismert helyre (2026-10-01)

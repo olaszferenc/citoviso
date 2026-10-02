@@ -24,6 +24,9 @@
 //      Pro/Enterprise mező a maszkban minden lapot fizetőssé tesz (35 $/1000)
 //   ⑦ FIZETŐS ADATLAP CSAK AZ ÚJ HELYRE: a DB-ben már ismert place id 0 Place
 //      Details hívás; egy teljesen ismert terület újra-bejárása 0 fizetős hívás
+//   ⑧ NINCS CAP (ADR-XXXX, tulaj 2026-10-02): a Details-figyelmeztetési szint (itt 5)
+//      fölött is MINDEN új hely megkapja az adatlapját, a forrás pedig HANGOS
+//      figyelmeztetést ad (`warnings()` → a futás statja); a szint alatt csendes
 //
 //   npx tsx scripts/scrape-coverage-check.mts
 //   npx tsx scripts/scrape-coverage-check.mts --self-test
@@ -39,6 +42,7 @@ const SELF_TEST = process.argv.includes("--self-test");
 process.env.PLACES_RETRY_BASE_MS = "10"; // a perc-kvóta próba ne várjon perceket
 process.env.PLACES_MAX_RPM = "100000"; // a throttle ne lassítsa a tesztet
 process.env.PLACES_DISCOVERY_MAX_CALLS = SELF_TEST ? "1" : "400";
+process.env.PLACES_DETAILS_WARN_CALLS = "5"; // ⑧: far below the 180-place world
 
 const { GoogleMapsSource, placesLookup, PlacesUnavailableError } = await import(
   "../src/scraper/sources/googleMaps.js"
@@ -275,6 +279,17 @@ try {
       detailCalls === found.length,
       `adatlap-hívás: ${detailCalls} · hely: ${found.length}`,
     );
+    const firstWarnings = src.warnings();
+    check(
+      "⑧ nincs cap: a figyelmeztetési szint (5) fölött is minden új hely adatlapot kap",
+      detailCalls === found.length && detailCalls > 5,
+      `adatlap-hívás: ${detailCalls} · hely: ${found.length}`,
+    );
+    check(
+      "⑧ a szint átlépése HANGOS: a forrás warnings()-a kimondja (→ a futás statja)",
+      firstWarnings.some((w) => w.includes("Place Details") && w.includes(String(detailCalls))),
+      `warnings: ${JSON.stringify(firstWarnings)}`,
+    );
 
     // ⑦ — ugyanaz a terület, most már mind ismert: 0 fizetős hívás
     for (const f of found) stored.set(f.sourceId, { ...f });
@@ -285,6 +300,11 @@ try {
       "⑦ ismert terület újra-bejárása: 0 fizetős adatlap, a lefedettség változatlan",
       detailCalls === 0 && again.length === found.length,
       `adatlap-hívás: ${detailCalls} · talált: ${again.length}/${found.length}`,
+    );
+    check(
+      "⑧ a szint alatt nincs figyelmeztetés (a warnings() futásonként nullázódik)",
+      !src.warnings().some((w) => w.includes("Place Details")),
+      `warnings: ${JSON.stringify(src.warnings())}`,
     );
     // ⑦ — vegyes: a felét „felejtsük el” → csak azokra jár adatlap
     const forgotten = found.filter((_, i) => i % 2 === 0).map((f) => f.sourceId);

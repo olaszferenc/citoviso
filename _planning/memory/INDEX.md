@@ -8,6 +8,7 @@
 
 - [2026-10-02_places_kurator_gomb_b.md](2026-10-02_places_kurator_gomb_b.md) — 2026-10-02 — Places-fotók kurátori gombja: két forrás-sáv a Fotók fülön (C rész, terv „B”)
 - [2026-10-02_g_napi_google_koltseg_riport.md](2026-10-02_g_napi_google_koltseg_riport.md) — 2026-10-02 — Places-költség G rész: napi Google API költség-riport e-mailben (SUB)
+- [2026-10-02_f_nincs_cap_portal_gyorsitas.md](2026-10-02_f_nincs_cap_portal_gyorsitas.md) — 2026-10-02 — Places F (SUB): nincs költség-cap, booking.com kihagyva, hovamenjek fullHd
 - [2026-10-02_e_ismert_lead_nem_fizet_es_utc_kapu.md](2026-10-02_e_ismert_lead_nem_fizet_es_utc_kapu.md) — 2026-10-02 — Places-költség E rész: az ismert lead nem fizet + a module-render-check UTC-hibája (SUB)
 - [2026-10-01_v1_level_link_get_nem_dont.md](2026-10-01_v1_level_link_get_nem_dont.md) — 2026-10-01 — Elek V-1: a levél-link megnyitása (GET) nem dönt
 - [2026-10-01_t1_terkep_modul_es_elonezet_tu.md](2026-10-01_t1_terkep_modul_es_elonezet_tu.md) — T-1: a megvett Térkép-modul hiányzott az élő oldalról; H-1 óriás előnézeti tű; L-5 nem hiba (2026-10-01)

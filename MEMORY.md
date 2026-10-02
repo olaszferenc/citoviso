@@ -11,12 +11,22 @@ Utolsó frissítés: 2026-10-01 (🗣️ **Elek SZ — vendég-kritikus a mock-s
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+<<<<<<< HEAD
 ## Párhuzamos szál (2026-10-02 — SUB: Places-költség G rész, napi Google API költség-riport, ADR-0297) — LANDOLVA
 
 Reggel 07:10-kor (dev-időzítő `citoviso-google-cost-report.timer`) levél a tegnapi Google API hívásokról: service × method,
 listaáras BECSLÉS, összevetés a 7 napos átlaggal, `[FIGYELEM]` küszöb (20 $) / ≥2× tétel esetén, `[NINCS ADAT]` ha a token
 vagy a Monitoring bukik. Semmit nem korlátoz. Ártábla egy helyen: `src/ops/googleCostReport.ts`. Őr: `google-cost-report-check`.
 Az első riport (10-01, ~11,68 $) kiment. Jegyzet: `_planning/memory/2026-10-02_g_napi_google_koltseg_riport.md`.
+=======
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség F rész — nincs cap + portál-gyorsítás, ADR-XXXX) — LANDOLVA
+
+① A konzol „Cap” felirata igazul: a mentett ÚJ leadek számát vágja, a Places-költséget NEM (KB + 2 súgó-kép).
+② `PLACES_DETAILS_MAX_CALLS` → figyelmeztetési szint (`PLACES_DETAILS_WARN_CALLS`), a hívások mennek; a figyelmeztetés a
+`scrape_run.stats.warnings`-ba és a konzol futás-sorába kerül. ③ booking.com `challenge_protected` (AWS WAF, mérve).
+④ hovamenjek: kép-cache helyett `main` → `fullHd` (a `main` számozott fájlra 404 volt): éles 40-es mintán a backfill
+98/64 s → 49/50 s, ≥800 px portál-fotó 230 → 340. Jegyzet: `_planning/memory/2026-10-02_f_nincs_cap_portal_gyorsitas.md`.
+>>>>>>> 35a9dc13 (feat(scrape): nincs költség-cap — a Details-keret figyelmeztet; igaz cap-felirat; booking.com kihagyva; hovamenjek fullHd (ADR-XXXX))
 
 ## Párhuzamos szál (2026-10-02 — SUB: Places-költség E rész + éjszakai UTC-kapu, ADR-0296) — LANDOLVA
 
