@@ -1,4 +1,4 @@
-## ADR-XXXX — A nem megvett modul szekciója nem látszik az élő lapon; az adat léte nem modul
+## ADR-0308 — A nem megvett modul szekciója nem látszik az élő lapon; az adat léte nem modul
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (hibajavítás, mérés alapján) · **Forrás:** Elek 2. élesi köre, LV-1
 **Kapcsolódó:** ADR-0059 (usp a sablon natív kiemelés-szekciójába), ADR-0089 ⑦ (galéria nem megvéve → szekció le), T-1 `paid-module-anchor-check` (a fordított irány)

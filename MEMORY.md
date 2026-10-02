@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB M5 `cit4db98e6b`: Elek 2. kör — LV-1 · ADM-2 · ADM-1, ADR-XXXX) — LANDOLVA, élesítés + élő rerender a koordinátoré
+## Párhuzamos szál (2026-10-02 — SUB M5 `cit4db98e6b`: Elek 2. kör — LV-1 · ADM-2 · ADM-1, ADR-0308) — LANDOLVA, élesítés + élő rerender a koordinátoré
 - **LV-1:** nem megvett modul szekciója nem látszik az élő lapon (usp 15/20, vélemény 20/20 sablonon szivárgott; egyik sem gerinc) — `unboughtPageAnchors()` + `renderSite({ hideAnchors })`, minden élő render-út; a usp-horgony nem foglalja le a bevezetőt (wordmark-grow). Őr: `scripts/unbought-module-leak-check.mts`. ⚠️ Élesítés után a meglévő tenant-lapok csak **rerender** után tisztulnak (`rerenderTenantSnapshot`).
 - **ADM-2:** a bolt kedvezmény-kártyája az ajánlat saját nevén („−98% · Egyedi ajánlat”), a megmaradó üdvözlő kupon kimondva — `livePurchaseOffersForTenant()`. Őr: `scripts/shop-offer-banner-check.mts`.
 - **ADM-1 (tulaj „3. B”):** a „Kosárba teszem” függőség-behozása a kártyán (azonnali tájékoztatás) ÉS a kosárban (csoportosítva, saját indoklással, összegző mondattal) — kontraktus `assets/design-refs/console/modules-cart-dependency/`; a module-dependency §2 „egyszer” pontja a tulaj Modulok fülén felülírva. Őr: `scripts/admin-cart-dependency-check.mts`.
