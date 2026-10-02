@@ -2072,6 +2072,18 @@
   color: #ff9b90;
 }
 .cit-cfg-err:empty { display: none; }
+/* Elek F-1: the "this looks like a tax number" question under the address. */
+.cit-cfg-taxhint {
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  margin: -2px 0 4px; padding: 9px 11px; border-radius: 9px;
+  background: #3a2f12; border: 1px solid #8a6d1f; color: #ffe2a0;
+  font: 500 12.5px/1.4 system-ui, sans-serif;
+}
+.cit-cfg-taxhint[hidden] { display: none; }
+.cit-cfg-taxmove {
+  min-height: 36px; padding: 7px 12px; border: 0; border-radius: 8px; cursor: pointer;
+  background: #f5c96b; color: #2a1f05; font: 700 13px/1 system-ui, sans-serif;
+}
 .cit-cfg-consent {
   display: flex;
   gap: 8px;

@@ -31,6 +31,7 @@ import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
+import { buildBillingPrefill } from "../src/billing/prefill.js";
 import { validateBuyer } from "../src/billing/buyer.js";
 import { huTaxNumberProblem, vatTreatmentFor } from "../src/billing/taxId.js";
 
@@ -161,7 +162,9 @@ async function buildPreview(): Promise<void> {
     await injectRuntime(renderSite(recipe, demo)),
     ARTIFACT_ID,
     demo.name,
-    { billingPrefill: { zip: "8360", city: "Keszthely", email: "elo@pelda.hu", country: "HU" } },
+    // Elek F-1: the prefill the SERVER really builds from a lead with an address —
+    // not a hand-made one, or a regression in the builder would never reach here.
+    { billingPrefill: buildBillingPrefill({ address: "Keszthely, Ady Endre u. 1, 8360 Hungary", city: "Keszthely", country: "HU" }, "elo@pelda.hu") },
   );
   if (SELF_TEST) {
     // Deliberate regression: the company branch stops revealing the adószám field
@@ -287,11 +290,32 @@ async function auditBuyerReality(page: Page): Promise<void> {
   });
   check(overflow <= 1, `390px: a számlázási lépés nem lóg ki vízszintesen (${overflow}px)`);
 
-  // Prefill must actually land — that is what keeps this step from costing sales.
+  // ⛔ Elek F-1 (owner-approved 2026-10-02): the lead's address is the GUESTHOUSE's.
+  // Prefilled, it went to NAV half-overwritten ("8360 Keszthely, <buyer's street>").
+  // The address fields start EMPTY; the owner's e-mail still lands.
   check(
-    (await page.locator('.cit-cfg-i[data-f="buyer_zip"]').inputValue()) === "8360",
-    "az irányítószám ELŐRE KITÖLTVE érkezik (megerősítés, nem gépelés)",
+    (await page.locator('.cit-cfg-i[data-f="buyer_zip"]').inputValue()) === "" &&
+      (await page.locator('.cit-cfg-i[data-f="buyer_city"]').inputValue()) === "",
+    "a szállás címe NEM töltődik a számlázási címbe (irsz + település üres)",
   );
+  check(
+    (await page.locator('.cit-cfg-i[data-f="buyer_email"]').inputValue()) === "elo@pelda.hu",
+    "a tulaj e-mail címe előtöltve érkezik",
+  );
+  // An adószám typed into the street: the page ASKS, and one tap moves it.
+  await page.locator('.cit-cfg-bt[data-btype="individual"]').click();
+  await page.locator('.cit-cfg-i[data-f="buyer_country"]').selectOption("HU");
+  await page.locator('.cit-cfg-i[data-f="buyer_address"]').fill("Ráckevei út 083/2 hrsz. 24393470213");
+  check(await page.locator("[data-taxhint]").isVisible(), "adószám az utca mezőben → a lap rákérdez");
+  await page.locator(".cit-cfg-taxmove").click();
+  await page.waitForTimeout(150);
+  check(
+    (await page.locator('.cit-cfg-i[data-f="buyer_tax_number"]').inputValue()) === "24393470-2-13" &&
+      (await page.locator('.cit-cfg-i[data-f="buyer_address"]').inputValue()) === "Ráckevei út 083/2 hrsz." &&
+      (await page.locator('.cit-cfg-bt[data-btype="business"]').getAttribute("aria-checked")) === "true",
+    "„Áthelyezem” → az adószám a helyén, az utca tiszta, a vevő-típus vállalkozó",
+  );
+  check(!(await page.locator("[data-taxhint]").isVisible()), "áthelyezés után a kérdés eltűnik");
 
   check(errors.length === 0, `nincs JS-hiba a lépcsőn (${errors.slice(0, 2).join(" | ")})`);
 }

@@ -92,6 +92,7 @@ import { resolvePayEntry } from "../payment/payEntry.js";
 import {
   applyOffer,
   bestActiveOfferForProspect,
+  offerForPage,
   bestActiveOfferForProspectToken,
   ensureEscalationOffer,
   escalationConfigErrors,
@@ -2533,13 +2534,7 @@ async function handle(
       200,
       JSON.stringify({
         viewId,
-        offer: offer
-          ? {
-              kind: offer.kind,
-              percent: offer.percent,
-              expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null,
-            }
-          : null,
+        offer: offer ? offerForPage(offer, p.lang ?? "hu") : null,
       }),
       "application/json",
     );
@@ -2663,11 +2658,7 @@ async function handle(
         ),
         ...(offer
           ? {
-              offer: {
-                kind: offer.kind,
-                percent: offer.percent,
-                expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null,
-              },
+              offer: offerForPage(offer, p.lang ?? "hu"),
               ...(tracked ? {} : { offerQuiet: true }),
             }
           : {}),
@@ -3393,19 +3384,23 @@ async function handle(
     // renders above the tabs and #ls-orders would scroll it out of view.
     return redirect(res, `/lead/${leadId}${flash}${flash ? "" : "#ls-orders"}`);
   }
-  // POST /lead/:id/request-payment — issue a pay-link for the lead's latest
-  // submitted order intent (pilot: per-cycle pay-link, non-pay → deactivate).
+  // POST /lead/:id/request-payment — issue a pay-link for THE order intent whose
+  // row the button sits on (K-1, Elek 2026-10-01): the route used to pick the
+  // lead's NEWEST submitted order, so the button next to an old, cancelled attempt
+  // asked about the already-paid one (and requestPayment refused it). The order
+  // must belong to this lead; no orderId (an old cached form) → the newest, as before.
   const reqPayMatch = /^\/lead\/([0-9a-f-]{36})\/request-payment$/i.exec(path);
   if (method === "POST" && reqPayMatch) {
     const id = reqPayMatch[1];
-    const oi = await db
+    const wanted = ((await readBody(req)).get("orderId") ?? "").trim();
+    let q = db
       .selectFrom("order_intent")
       .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
       .select("order_intent.id as id")
       .where("prospect.lead_id", "=", id)
-      .where("order_intent.status", "=", "submitted")
-      .orderBy("order_intent.created_at", "desc")
-      .executeTakeFirst();
+      .where("order_intent.status", "=", "submitted");
+    if (/^[0-9a-f-]{36}$/i.test(wanted)) q = q.where("order_intent.id", "=", wanted);
+    const oi = await q.orderBy("order_intent.created_at", "desc").executeTakeFirst();
     if (oi) {
       // Owner's decision, 2026-09-25: the issued link goes to the buyer by mail —
       // before this it existed only in our DB until someone copied it out by hand.
@@ -3620,6 +3615,8 @@ async function handle(
         // customer they were in a test (FK-006b HIBA-3, payment/publicRef.ts).
         ref: publicPaymentRef(p.id),
         retryUrl: p.payUrl ?? null,
+        // Elek F-2: the buyer's own back-out has its own screen, not the decline's.
+        outcome: p.status === "cancelled" ? "cancelled" : null,
         // ⛔ The buyer-facing "write to us" address comes from the CONFIG — the
         // same source the tenant admin prints. Hardcoded on the page it was
         // `info@citoviso.com`, a literal that existed nowhere in the setup, so a

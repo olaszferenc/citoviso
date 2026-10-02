@@ -17,6 +17,7 @@
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
 import { couponRule } from "./couponRule.js";
+import { T } from "../i18n/mail.js";
 
 // ── Tunable parameters (ADR-0088: percentages/deadlines are parameters, not law).
 /**
@@ -243,6 +244,41 @@ export async function liveEscalationOffers(): Promise<{ count: number; percents:
   return {
     count: rows.length,
     percents: [...new Set(rows.map((r) => r.percent))].sort((a, b) => a - b),
+  };
+}
+
+/**
+ * THE name of an offer, everywhere it is shown (Elek L-2/F-3, owner-approved
+ * 2026-10-02). Measured live: one −50% escalation offer was called "Bemutatkozó
+ * ajánlat a levélből" on the left of the pay page and "Döntés-segítő ajánlat" on
+ * the right, and a 98% campaign went onto the invoice as "Üdvözlő kedvezmény" —
+ * three surfaces, three hand-written names, two of them blind to the kind.
+ * ⛔ Every surface (pay page both sides, invoice comment, tenant receipt) reads
+ * the name from HERE; none spells one of its own.
+ */
+export function offerLabel(lang: string, kind: ActiveOffer["kind"]): string {
+  switch (kind) {
+    case "outreach":
+      return T(lang, "Bemutatkozó ajánlat a levélből");
+    case "escalation":
+      return T(lang, "Döntés-segítő ajánlat");
+    case "campaign":
+      return T(lang, "Egyedi ajánlat");
+    case "coupon":
+      return T(lang, "Üdvözlő kedvezmény");
+  }
+}
+
+/** The offer as the configurator page receives it — WITH its one name. */
+export function offerForPage(
+  offer: ActiveOffer,
+  lang: string,
+): { kind: ActiveOffer["kind"]; percent: number; expiresAt: string | null; label: string } {
+  return {
+    kind: offer.kind,
+    percent: offer.percent,
+    expiresAt: offer.expiresAt ? offer.expiresAt.toISOString() : null,
+    label: offerLabel(lang, offer.kind),
   };
 }
 

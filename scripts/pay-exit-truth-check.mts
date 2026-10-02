@@ -213,7 +213,7 @@ const SHAPE = `(function () {
   // The first version counted ALL buttons as a proxy, and went red the moment a
   // perfectly legitimate non-charging control (the copy button) appeared. A proxy
   // that breaks on a correct change was asking a different question than its label.
-  out.chargeForms = document.querySelectorAll('form[action*="/paid"], form[action*="/failed"]').length;
+  out.chargeForms = document.querySelectorAll('form[action*="/paid"], form[action*="/failed"], form[action*="/cancelled"]').length;
   out.submits = document.querySelectorAll('button[type="submit"]').length;
   // ⑤ the hierarchy — measured in SIZE, WEIGHT and PAINT, never in hue alone.
   function btn(sel) {

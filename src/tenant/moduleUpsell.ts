@@ -57,6 +57,8 @@ export interface FirstChargeOrder {
   readonly months: number;
   /** Percent of the applied coupon, when one discounted the price. */
   readonly offerPercent: number | null;
+  /** Elek F-3: which offer the discount came from — the receipt names it by kind. */
+  readonly offerKind: "outreach" | "escalation" | "coupon" | "campaign" | null;
 }
 
 /**
@@ -175,6 +177,7 @@ export async function createFirstChargeOrder(
     listPrice,
     months,
     offerPercent: coupon?.percent ?? null,
+    offerKind: coupon?.kind ?? null,
   };
 }
 

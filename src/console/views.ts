@@ -2054,8 +2054,46 @@ function convertForm(
     </form>`;
 }
 
+/**
+ * K-1 (Elek, owner-approved 2026-10-02): what an order intent IS, read from its
+ * payments — `order_intent.status` never moves past `submitted`, so the raw value
+ * said "submitted" (in green) on a PAID order and on a back-out alike, and offered
+ * "Fizetési kérés küldése" next to an attempt a later paid order had replaced.
+ *
+ *   paid      → "fizetve"                                   (no request)
+ *   pending   → "fizetésre vár"                             (no request)
+ *   replaced  → "lezárva — egy későbbi rendelés fizetve"    (no request)
+ *   cancelled → "megszakítva" · failed → "sikertelen"       (request offered)
+ *   nothing   → "beküldve — még nincs fizetés"              (request offered)
+ *
+ * "Replaced" = a LATER order of the SAME kind has a paid payment: the buyer came
+ * back and bought. Pure, exported for the gate.
+ */
+export function orderIntentState(
+  o: Pick<OrderIntentView, "id" | "kind" | "status" | "createdAt">,
+  payments: readonly Pick<PaymentView, "orderIntentId" | "status" | "createdAt">[],
+  orders: readonly Pick<OrderIntentView, "id" | "kind" | "createdAt">[],
+): { readonly key: "paid" | "pending" | "replaced" | "cancelled" | "failed" | "abandoned" | "submitted"; readonly canRequest: boolean } {
+  const pays = payments.filter((p) => p.orderIntentId === o.id);
+  if (pays.some((p) => p.status === "paid")) return { key: "paid", canRequest: false };
+  if (pays.some((p) => p.status === "pending")) return { key: "pending", canRequest: false };
+  const replaced = orders.some(
+    (x) =>
+      x.id !== o.id &&
+      x.kind === o.kind &&
+      x.createdAt > o.createdAt &&
+      payments.some((p) => p.orderIntentId === x.id && p.status === "paid"),
+  );
+  if (replaced) return { key: "replaced", canRequest: false };
+  if (o.status === "abandoned") return { key: "abandoned", canRequest: false };
+  const last = [...pays].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+  if (last?.status === "cancelled") return { key: "cancelled", canRequest: o.status === "submitted" };
+  if (last?.status === "failed") return { key: "failed", canRequest: o.status === "submitted" };
+  return { key: "submitted", canRequest: o.status === "submitted" };
+}
+
 /** Prospect order intents + payment state (pricing/payment slice) for the operator. */
-function orderIntentsPanel(
+export function orderIntentsPanel(
   orders: OrderIntentView[],
   payments: PaymentView[],
   leadId: string,
@@ -2071,6 +2109,23 @@ function orderIntentsPanel(
         ? pays
             .map((p) => {
               const cls = p.status === "paid" ? "approved" : p.status === "failed" ? "rejected" : "generated";
+              // K-1: words, not the raw DB token; a back-out says what the buyer did.
+              const payWord =
+                p.status === "paid"
+                  ? T(lang, "sikeres")
+                  : p.status === "failed"
+                    ? T(lang, "sikertelen")
+                    : p.status === "cancelled"
+                      ? T(lang, "megszakítva")
+                      : p.status === "pending"
+                        ? T(lang, "fizetésre vár")
+                        : p.status;
+              const backOut =
+                p.status === "cancelled"
+                  ? ` <span class="mut small">${T(lang, "a vevő visszalépett a fizetőoldalon · {time}", {
+                      time: esc(p.createdAt.slice(11, 16)),
+                    })}</span>`
+                  : "";
               const link =
                 p.status === "pending" && p.payUrl
                   ? ` <a class="small" href="${esc(p.payUrl)}" target="_blank">${T(lang, "fizetőoldal ▸")}</a>`
@@ -2089,25 +2144,38 @@ function orderIntentsPanel(
                        <form method="post" action="/payment/${esc(p.paymentId)}/invoice-retry" style="display:inline;margin-left:6px">
                          <button type="submit">${T(lang, "Számla újra ▸")}</button></form></div>`
                   : "";
-              return `<span class="pill ${cls}">${T(lang, "fizetés: {status}", { status: esc(p.status) })}</span>${link}${inv}${invFail}`;
+              return `<span class="pill ${cls}">${T(lang, "fizetés: {status}", { status: esc(payWord) })}</span>${backOut}${link}${inv}${invFail}`;
             })
             .join(" ")
         : "";
-      const paid = pays.some((p) => p.status === "paid");
-      const hasPending = pays.some((p) => p.status === "pending");
-      const payBtn =
-        o.status === "submitted" && !paid && !hasPending
-          ? `<form method="post" action="/lead/${esc(leadId)}/request-payment">
+      const st = orderIntentState(o, payments, orders);
+      // ⛔ K-1: the button names ITS order — the route used to pick the lead's
+      // NEWEST submitted order, so the button on an old row asked about another one.
+      const payBtn = st.canRequest
+        ? `<form method="post" action="/lead/${esc(leadId)}/request-payment">
+               <input type="hidden" name="orderId" value="${esc(o.id)}">
                <button class="ok" type="submit">${T(lang, "Fizetési kérés küldése ▸")}</button></form>`
-          : "";
+        : "";
+      const stateWord = {
+        paid: T(lang, "fizetve"),
+        pending: T(lang, "fizetésre vár"),
+        replaced: T(lang, "lezárva — egy későbbi rendelés fizetve"),
+        cancelled: T(lang, "megszakítva"),
+        failed: T(lang, "sikertelen"),
+        abandoned: T(lang, "lezárva"),
+        submitted: T(lang, "beküldve — még nincs fizetés"),
+      }[st.key];
+      const stateCls = st.key === "paid" ? "approved" : st.key === "failed" ? "rejected" : st.key === "pending" || st.key === "submitted" ? "generated" : "";
       return `<div style="padding:8px 0;border-bottom:1px solid var(--citui-line)">
         <div class="row" style="justify-content:space-between;margin-top:0">
           <span><b style="font-size:16px">${o.price != null ? fmtHuf(o.price) : "?"}</b>
             <span class="mut">/ ${per}</span>
-            <span class="pill ${o.status === "submitted" ? "approved" : ""}" style="margin-left:6px">${esc(o.status)}</span></span>
+            <span class="pill ${stateCls}" style="margin-left:6px">${esc(stateWord)}</span></span>
           <span class="mut small">${esc(when)}</span>
         </div>
-        <div class="mut small" style="margin-top:4px">${o.modules.length} modul: ${o.modules.map((m) => esc(m)).join(", ") || "–"}</div>
+        <div class="mut small" style="margin-top:4px">${o.modules.length} modul: ${
+          o.modules.map((m) => esc(MODULE_CATALOG.find((c) => c.id === m)?.label ?? m)).join(" · ") || "–"
+        }</div>
         <div class="mut small" style="margin-top:4px">Domain: ${
           o.domainType === "citoviso_registered"
             ? `<b>${T(lang, "egyedi (rajtunk keresztül)")}</b> — ${esc(o.domainName ?? "?")}${o.commitmentMonths ? ` · min. ${o.commitmentMonths} hó elköteleződés` : ""}`
@@ -2120,7 +2188,7 @@ function orderIntentsPanel(
     })
     .join("");
   return `<div class="panel"><h2>${T(lang, "Csomag-igények ({n})", { n: orders.length })}</h2>${rows}
-    <div class="mut small" style="margin-top:8px">${T(lang, "Pilot fizetés: pay-link (Barion helyén mock) → fizetéskor a site élesedik; nem-fizet → deaktiválás. Auto-terhelés (MIT) = 2. fázis.")}</div></div>`;
+    <div class="mut small" style="margin-top:8px">${T(lang, "Fizetés: Barion fizetőoldal; a sikeres fizetéskor az oldal élesedik, és a kártyát elmentjük (a vevő hozzájárulásával). A megújítást a mentett kártyáról automatikusan terheljük; ha az nem sikerül, a tulaj fizetési linket kap e-mailben.")}</div></div>`;
 }
 
 /** MOCK hosted pay page — stands in for the real Barion pay-link (Slice 2). */
@@ -2229,7 +2297,7 @@ export function payMockPage(
           ? `${T(lang, "Megerősítem a kártyát")} — ${T(lang, "{sum}, azonnal visszautalva", { sum: fmtHuf(amount) })}`
           : `${T(lang, "Fizetek")} — ${fmtHuf(amount)}`
       }</button></form>
-      <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/failed"><button type="submit">${
+      <form class="pay-act__quiet" method="post" action="/pay/mock/${esc(ref)}/${wallet?.verification ? "failed" : "cancelled"}"><button type="submit">${
         wallet?.verification ? T(lang, "A bank elutasítja (próba)") : T(lang, "Mégsem fizetek most")
       }</button></form>
     </div>`
@@ -2248,22 +2316,29 @@ export function payMockPage(
           // a small fix — it is written up for the plan round instead.
           `<p class="q-good" style="margin-top:18px"><b>${T(lang, "Ez a fizetés már rendezve van")}</b> — ${T(lang, "új terhelés nem indítható rajta.")}</p>`
         : `<div class="pay-act">
-      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button type="submit">${T(lang, "Újra próbálom — Fizetek")} ${fmtHuf(amount)}</button></form>
+      <form method="post" action="/pay/mock/${esc(ref)}/paid"><button type="submit">${
+        status === "cancelled" ? T(lang, "Folytatom — Fizetek") : T(lang, "Újra próbálom — Fizetek")
+      } ${fmtHuf(amount)}</button></form>
     </div>`;
   // ⛔ THE STATE MUST BE VISIBLE, not spelled in a raw DB token (Elek FK-005b H4,
   // 2026-09-11): stepping BACK after a decline gave a screen byte-identical to the
   // one before it — "pending" in 11px grey. A buyer cannot tell from that whether
   // their card was refused. (The other half of that defect was caching: the GET
   // handler now sends no-store so "back" re-reads the real state.)
+  // Elek F-2: "Mégsem fizetek most" is the buyer's back-out, not a decline.
   const banner =
     status === "failed"
       ? `<p class="q-bad" style="margin:12px 0"><b>${T(lang, "A fizetés elutasítva")}</b> — ${T(lang, "terhelés nem történt.")}</p>`
+      : status === "cancelled"
+        ? `<p style="margin:12px 0"><b>${T(lang, "A fizetést megszakította")}</b> — ${T(lang, "terhelés nem történt.")}</p>`
       : status === "paid"
         ? `<p class="q-good" style="margin:12px 0"><b>${T(lang, "Ez a fizetés rendezve van.")}</b></p>`
         : `<p class="mut" style="margin:12px 0">${T(lang, "Ez a fizetés még nem indult el.")}</p>`;
   const statusWord =
     status === "failed"
       ? T(lang, "elutasítva")
+      : status === "cancelled"
+        ? T(lang, "megszakítva")
       : status === "paid"
         ? T(lang, "rendezve")
         : T(lang, "fizetésre vár");
@@ -2906,6 +2981,12 @@ export function payResultPage(
      * the markup carries the box. The page never fetches, probes or waits.
      */
     preview?: { readonly shotUrl?: string | null; readonly photoUrl?: string | null } | null;
+    /**
+     * Elek F-2 (approved 2026-10-02): the buyer stepped BACK on the gateway's page
+     * (Barion "Canceled"). Not a decline — the screen says what the buyer did, in a
+     * neutral state, and offers to continue. Absent = a real decline / lapse / error.
+     */
+    outcome?: "cancelled" | null;
   },
 ): string {
   const lang = consoleLang();
@@ -2996,9 +3077,37 @@ export function payResultPage(
     if (support) exits.push(`<a href="mailto:${esc(support)}">${T(lang, "Írok egy munkatársnak")}</a>`);
     // ⛔ No empty rail: with nothing to offer we do not draw a divider under a void.
     const exitRow = exits.length ? `<div class="pay-exits">${exits.join("")}</div>` : "";
+    // ⛔ Elek F-2: a buyer who stepped back was told "Fizetés elutasítva — A fizetés
+    // nem sikerült". Their own choice, read back to them as a bank's refusal. The
+    // back-out gets its own screen: a NEUTRAL state band (not the red of a fault),
+    // the words for what actually happened, and a "continue" — not a "retry",
+    // because nothing failed. "Másik kártyát adok meg" is dropped here: the card
+    // was never the problem.
+    if (info?.outcome === "cancelled") {
+      const go = info?.retryUrl
+        ? `<p style="margin:0 0 14px"><a class="citui-btn citui-btn--primary" href="${esc(info.retryUrl)}">${T(lang, "Folytatom a fizetést")}</a></p>`
+        : "";
+      const calmExits: string[] = [];
+      if (info?.adminUrl) calmExits.push(`<a href="${esc(info.adminUrl)}">${T(lang, "Vissza a kezelőfelületre")}</a>`);
+      if (support) calmExits.push(`<a href="mailto:${esc(support)}">${T(lang, "Írok egy munkatársnak")}</a>`);
+      const calmRow = calmExits.length ? `<div class="pay-exits">${calmExits.join("")}</div>` : "";
+      return layout(
+        T(lang, "Fizetés megszakítva"),
+        `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center">
+        <span class="pay-state pay-state--neutral">${T(lang, "Fizetés megszakítva")}</span>
+        <h2>${T(lang, "Megszakította a fizetést")}</h2>
+        <p style="margin:0 0 14px"><b>${T(lang, "Nem terheltünk semmit.")}</b> ${T(lang, "A megrendelése megmaradt — amikor szeretné, innen folytathatja.")}</p>
+        ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount))}` : "" }))}
+        ${go}
+        ${refLine}
+        ${calmRow}</div>`,
+        { chrome: false, head: payCopyScript(lang) },
+      );
+    }
     return layout(
       T(lang, "Fizetés elutasítva"),
       `<div class="panel" style="max-width:520px;margin:48px auto;text-align:center">
+        <span class="pay-state pay-state--bad">${T(lang, "Fizetés elutasítva")}</span>
         <h2 class="q-bad">${T(lang, "A fizetés nem sikerült")}</h2>
         <p style="margin:0 0 14px"><b>${T(lang, "Nem történt terhelés.")}</b> ${T(lang, "A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.")}</p>
         ${payItemLine(lang, info?.productName, T(lang, "Citoviso honlap{amount}", { amount: info?.amount ? ` — ${esc(fmtHuf(info.amount))}` : "" }))}

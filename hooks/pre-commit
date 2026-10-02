@@ -1591,6 +1591,27 @@ if [ -f scripts/payment-outcome-truth-check.mts ] && \
   echo "[pre-commit] payment-outcome-truth-check (megszakított ≠ elutasított; nincs néma bukás)…"
   npx tsx scripts/payment-outcome-truth-check.mts
 fi
+# Elek L-2/F-3 (2026-10-02): an offer has ONE name (offerLabel), on the pay page's
+# both sides, the invoice comment and the tenant receipt.
+if [ -f scripts/offer-name-one-source-check.mts ] && \
+   changed_files | grep -qE '^src/payment/(offers|service)\.ts|^assets/runtime/cit-configurator\.js|^src/console/(server|views)\.ts|^src/server/(adminViews|public)\.ts|^src/tenant/moduleUpsell\.ts|^scripts/offer-name-one-source-check'; then
+  echo "[pre-commit] offer-name-one-source-check (egy ajánlat — egy név)…"
+  npx tsx scripts/offer-name-one-source-check.mts
+fi
+# Elek F-1 (2026-10-02): the invoice address is the BUYER's (no lead-address prefill)
+# and an adószám never rides inside it; the browser finder mirrors the server's.
+if [ -f scripts/billing-taxid-in-address-check.mts ] && \
+   changed_files | grep -qE '^src/billing/(prefill|buyer|taxId)\.ts|^assets/runtime/cit-configurator\.js|^scripts/billing-taxid-in-address-check'; then
+  echo "[pre-commit] billing-taxid-in-address-check (a számlázási cím a vevőé, adószám nem kerül bele)…"
+  npx tsx scripts/billing-taxid-in-address-check.mts
+fi
+# Elek K-1 (2026-10-02): the console's order panel states each order's truth from its
+# payments; the pay-request button asks about ITS order.
+if [ -f scripts/order-intent-state-check.mts ] && \
+   changed_files | grep -qE '^src/console/(views|server|data)\.ts|^scripts/order-intent-state-check'; then
+  echo "[pre-commit] order-intent-state-check (a csomag-igény állapota a fizetéseiből)…"
+  npx tsx scripts/order-intent-state-check.mts
+fi
 # ADR-0100: the domain's 2nd+ year fee rides the anchor renewal whose period holds
 # the anniversary (before this, nobody billed it while the registrar bills US).
 # Spins up a scratch DB (~20s), so only when the renewal/pricing path changes.

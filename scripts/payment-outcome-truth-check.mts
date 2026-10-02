@@ -40,6 +40,37 @@ function ok(cond: boolean, label: string, detail = ""): void {
   console.log(`${cond ? "✓" : "✗ FAIL"}  ${label}${cond ? "" : `\n     ↳ ${detail}`}`);
 }
 
+// ── 0. SCRATCH DB FIRST — before ANY import that opens the db client ──────────
+// ⛔ Measured 2026-10-02 on this very gate: the view import (1b) ran BEFORE this
+// block, the db client bound to the SHARED dev DB, and the fixtures below landed
+// there (a lead "Teszt", a prospect, two orders, two payments — removed by hand).
+// So the scratch DB is set up first, and the gate proves where it writes.
+async function admin(q: string): Promise<void> {
+  const c = new pg.Client({ ...PG, database: "postgres" });
+  await c.connect();
+  await c.query(q);
+  await c.end();
+}
+await sweepStaleScratchDbs(PG, SCRATCH_BASE);
+registerScratchDrop(PG, SCRATCH);
+await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);
+await admin(`CREATE DATABASE ${SCRATCH}`);
+execFileSync("npx", ["tsx", "src/db/migrate.ts"], {
+  env: { ...process.env, PGDATABASE: SCRATCH, DATABASE_URL: "" },
+  stdio: "pipe",
+});
+process.env.PGDATABASE = SCRATCH;
+process.env.DATABASE_URL = "";
+const { db } = await import("../src/db/client.js");
+const { sql } = await import("kysely");
+{
+  const where = await sql<{ db: string }>`select current_database() as db`.execute(db);
+  if (where.rows[0]?.db !== SCRATCH) {
+    console.error(`⛔ a kapu NEM a saját scratch-DB-jébe írna (${where.rows[0]?.db}) — leáll`);
+    process.exit(1);
+  }
+}
+
 // ── 1. ADAPTER — the real BarionGateway, the real response shape ─────────────
 process.env.BARION_POSKEY ||= "gate-poskey";
 process.env.BARION_PAYEE ||= "gate@example.invalid";
@@ -69,25 +100,35 @@ for (const s of ["Expired", "Failed", "Rejected"]) {
 ok((await barionSays("Succeeded")) === "paid", "Barion „Succeeded” → paid (változatlan)");
 ok((await barionSays("Started")) === "pending", "Barion „Started” → pending (változatlan)");
 
-// ── 2. SETTLEMENT — scratch DB, the real applyWebhookResult ──────────────────
-async function admin(q: string): Promise<void> {
-  const c = new pg.Client({ ...PG, database: "postgres" });
-  await c.connect();
-  await c.query(q);
-  await c.end();
+// ── 1b. THE BUYER'S SCREEN — the real exported views (approved 2026-10-02) ────
+{
+  const { payResultPage, payMockPage } = await import("../src/console/views.js");
+  const { readFileSync } = await import("node:fs");
+  const text = (h: string) => h.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const base = { amount: 97, ref: "CIT-548E31CD", retryUrl: "https://pay.example/x", supportEmail: "info@example.invalid", productName: "Muschel" };
+  // Self-test: the back-out rendered without its outcome = the old decline screen.
+  const cancelled = text(payResultPage(false, false, { ...base, outcome: SELF_TEST ? null : "cancelled" }));
+  for (const w of ["Fizetés megszakítva", "Megszakította a fizetést", "Nem terheltünk semmit.", "Folytatom a fizetést"]) {
+    ok(cancelled.includes(w), `megszakítás-lap: „${w}”`, cancelled.slice(0, 300));
+  }
+  for (const w of ["elutasítva", "A fizetés nem sikerült", "Másik kártyát adok meg"]) {
+    ok(!cancelled.includes(w), `megszakítás-lap: NINCS „${w}”`, cancelled.slice(0, 300));
+  }
+  const declined = text(payResultPage(false, false, base));
+  for (const w of ["Fizetés elutasítva", "A fizetés nem sikerült", "Nem történt terhelés.", "Újra próbálom a fizetést"]) {
+    ok(declined.includes(w), `valódi elutasítás lapja változatlanul: „${w}”`);
+  }
+  const pendingMock = payMockPage("mock_1", 97, "monthly", "pending", "Muschel");
+  ok(/class="pay-act__quiet"[^>]*action="\/pay\/mock\/mock_1\/cancelled"/.test(pendingMock),
+    "próba-fizetőlap: a „Mégsem fizetek most” a MEGSZAKÍTÁS útja (/cancelled), nem az elutasításé");
+  const cancelledMock = text(payMockPage("mock_1", 97, "monthly", "cancelled", "Muschel"));
+  ok(cancelledMock.includes("A fizetést megszakította") && !cancelledMock.includes("elutasítva"),
+    "próba-fizetőlap megszakítás után: „A fizetést megszakította”, nem „elutasítva”", cancelledMock.slice(0, 300));
+  const consoleSrc = readFileSync("src/console/" + "server.ts", "utf8");
+  ok(/outcome:\s*p\.status === "cancelled" \? "cancelled"/.test(consoleSrc), "/pay/done átadja a megszakítás-állapotot a lapnak");
 }
-await sweepStaleScratchDbs(PG, SCRATCH_BASE);
-registerScratchDrop(PG, SCRATCH);
-await admin(`DROP DATABASE IF EXISTS ${SCRATCH}`);
-await admin(`CREATE DATABASE ${SCRATCH}`);
-execFileSync("npx", ["tsx", "src/db/migrate.ts"], {
-  env: { ...process.env, PGDATABASE: SCRATCH, DATABASE_URL: "" },
-  stdio: "pipe",
-});
-process.env.PGDATABASE = SCRATCH;
-process.env.DATABASE_URL = "";
-const { db } = await import("../src/db/client.js");
-const { sql } = await import("kysely");
+
+// ── 2. SETTLEMENT — scratch DB, the real applyWebhookResult ──────────────────
 const { applyWebhookResult } = await import("../src/payment/service.js");
 
 const def = await db.insertInto("scraper_definition")

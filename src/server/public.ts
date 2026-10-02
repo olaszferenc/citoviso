@@ -1636,6 +1636,9 @@ async function serveAdmin(
         // kedvezményt íratna ki a saját visszaigazolására.
         chargedListPrice: Math.max(0, Number(q.get("mlist")) || 0),
         chargedOfferPercent: Math.min(100, Math.max(0, Number(q.get("mpct")) || 0)),
+        // Elek F-3: the offer's KIND, whitelisted (it rides the address bar) — the
+        // receipt names the discount by it instead of always "Üdvözlő kedvezmény".
+        chargedOfferKind: (["outreach", "escalation", "coupon", "campaign"] as const).find((k) => k === q.get("mkind")) ?? null,
         chargePending: q.get("mpending") === "1",
       };
     }
@@ -2324,7 +2327,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
           // „−0 Ft" sort írna arra, aki teljes áron vett.
           const discount =
             order.offerPercent && order.listPrice > order.price
-              ? `&mlist=${order.listPrice}&mpct=${order.offerPercent}`
+              ? `&mlist=${order.listPrice}&mpct=${order.offerPercent}${order.offerKind ? `&mkind=${order.offerKind}` : ""}`
               : "";
           return redirect(
             res,

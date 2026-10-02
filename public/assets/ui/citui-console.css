@@ -2495,6 +2495,19 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .pay-ref button.is-done { border-color: var(--citui-ok); color: var(--citui-ok-ink); }
 
 /* Minden lapról vezessen tovább nevesített út — néma zsákutca nincs (ADR-0129 ③). */
+/* Elek F-2 (approved 2026-10-02): the outcome band above the payment headline.
+   NEUTRAL for the buyer's own back-out, BAD for a real decline — never colour alone:
+   the band's words carry the state too. */
+.con .pay-state {
+  display: inline-block; margin: 0 0 10px; padding: 4px 10px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 600; border: 1px solid var(--citui-line-strong);
+}
+.con .pay-state--neutral { background: var(--citui-surface-2); color: var(--citui-navy-900); }
+.con .pay-state--bad {
+  background: color-mix(in srgb, var(--citui-bad) 10%, var(--citui-surface));
+  border-color: color-mix(in srgb, var(--citui-bad) 35%, var(--citui-surface));
+  color: var(--citui-bad-ink);
+}
 .con .pay-exits {
   margin: 16px 0 0; padding-top: 13px; border-top: 1px solid var(--citui-line);
   display: flex; gap: 10px 14px; flex-wrap: wrap; justify-content: center; align-items: center;

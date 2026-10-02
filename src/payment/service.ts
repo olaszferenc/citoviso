@@ -37,7 +37,7 @@ import { getGateway } from "./index.js";
 import { MockGateway } from "./mock.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
 import { applyRenewalPaid, ensureSubscriptionForOrder, nextChargeDate } from "./subscription.js";
-import { grantNewSubscriberCouponForOrder, redeemOfferForOrder } from "./offers.js";
+import { grantNewSubscriberCouponForOrder, offerLabel, redeemOfferForOrder, type ActiveOffer } from "./offers.js";
 import { startSiteShot } from "./siteShot.js";
 
 export interface RequestPaymentResult {
@@ -1191,13 +1191,15 @@ export function invoiceComment(
   offerPercent: number | null | undefined,
   listPrice: number | null | undefined,
   amount: number,
+  /** Elek F-3: WHICH offer — its one name (offerLabel). Absent → the plain word. */
+  offerKind?: ActiveOffer["kind"] | null,
 ): string {
   const legal = reverse
     ? "A szolgáltatás teljesítési helye a megrendelő tagállama — fordított adózás (Áfa tv. 37. §). Reverse charge."
     : "Alanyi adómentes (AAM).";
   if (!offerPercent || !listPrice || listPrice <= amount) return legal;
   return (
-    `${legal} Üdvözlő kedvezmény: a ${listPrice.toLocaleString("hu-HU")} Ft-os díjból ` +
+    `${legal} ${offerKind ? offerLabel("hu", offerKind) : "Kedvezmény"}: a ${listPrice.toLocaleString("hu-HU")} Ft-os díjból ` +
     `−${offerPercent}%, így a fizetendő ${amount.toLocaleString("hu-HU")} Ft.`
   );
 }
@@ -1341,6 +1343,9 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       // A százalék a KUPONBÓL jön, nem a két összeg hányadosából: a kerekítés egy
       // 33 %-os kuponból „32 %"-ot csinálhatna a számlán, és egy számla nem tippelhet.
       "offer.percent as offerPercent",
+      // Elek F-3: the NAME on the invoice follows the offer's kind — a 98% campaign
+      // was printed as "Üdvözlő kedvezmény" (the welcome coupon is another offer).
+      "offer.kind as offerKind",
       "prospect.contact_email as email",
       "prospect.lead_id as leadId",
     ])
@@ -1452,7 +1457,7 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
     dueDate: today,
     paymentMethod: "Bankkártya",
     paid: true,
-    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount),
+    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, p.offerKind),
     // ADR-0283: provider-side idempotency — a retry can never mint a second document.
     externalId: `citoviso-payment-${paymentId}`,
   };

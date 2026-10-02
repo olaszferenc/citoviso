@@ -104,6 +104,20 @@ export function huTaxNumberProblem(raw: string): string | null {
   return null;
 }
 
+/**
+ * A VALID Hungarian adószám hiding in free text (an address, a city, a name) —
+ * normalised, or null. Elek F-1 (measured live 2026-10-01): a sole trader who
+ * stayed on "Magánszemélyként" had no tax field, typed `24393470213` after the
+ * street, and NAV received it as part of the address. Only a number that passes
+ * the full check counts, so a house number or a lot number never trips it.
+ */
+export function findHuTaxNumberInText(text: string): string | null {
+  for (const m of (text ?? "").matchAll(/(?<!\d)\d{8}-?\d-?\d{2}(?!\d)/g)) {
+    if (huTaxNumberProblem(m[0]) === null) return normalizeHuTaxNumber(m[0]);
+  }
+  return null;
+}
+
 export function isValidHuTaxNumber(raw: string): boolean {
   return huTaxNumberProblem(raw) === null;
 }

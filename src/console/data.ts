@@ -838,6 +838,9 @@ export async function getConversion(leadId: string): Promise<ConversionView | nu
 
 export interface OrderIntentView {
   readonly id: string;
+  /** initial | upsell | renewal | … — K-1: a paid LATER order of the SAME kind
+   *  closes an unpaid earlier one (the buyer came back and bought). */
+  readonly kind: string;
   readonly price: number | null;
   readonly billingPeriod: string;
   readonly modules: string[];
@@ -1000,6 +1003,7 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
     .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
     .select([
       "order_intent.id as id",
+      "order_intent.kind as kind",
       "order_intent.price as price",
       "order_intent.billing_period as billingPeriod",
       "order_intent.modules as modules",
@@ -1015,6 +1019,7 @@ export async function getOrderIntents(leadId: string): Promise<OrderIntentView[]
     .execute();
   return rows.map((r) => ({
     id: r.id,
+    kind: r.kind,
     price: r.price,
     billingPeriod: r.billingPeriod,
     modules: (r.modules as unknown as string[]) ?? [],

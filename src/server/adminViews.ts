@@ -38,6 +38,7 @@ import { flagSvg } from "../ui/flags.js";
 // ADR-0067: the tenant admin is a CUSTOMER surface — every label reads from the
 // language pack. `lang` is the site's own language, threaded from the content.
 import { T, langNameLocalized, langRegionName, multilangTierName } from "../i18n/mail.js";
+import { offerLabel } from "../payment/offers.js";
 import { foldIncludes } from "../text/fold.js";
 import { huArticle, huArticleLower } from "../hu.js";
 // A vevőnek mutatott support-cím EGY forrása (a hívók is ezt adják át).
@@ -886,6 +887,9 @@ export interface ModuleAppliedFlash {
    */
   readonly chargedListPrice?: number;
   readonly chargedOfferPercent?: number;
+  /** Elek F-3: which offer it was — named via offerLabel. Absent/coupon = the
+   *  welcome coupon, the only purchase-scope offer minted automatically. */
+  readonly chargedOfferKind?: "outreach" | "escalation" | "coupon" | "campaign" | null;
   /** ADR-0113: the MIT charge is in flight — the callback will activate. */
   readonly chargePending?: boolean;
   /** ADR-0094 ④: the change was refused — it would sink below the domain
@@ -1241,7 +1245,11 @@ function chargedNotice(
     `<div class="adm-rcpt">` +
     row(T(lang, "{n} modul a fordulónapig", { n: String((applied.charged ?? []).length) }), esc(huf(listPrice))) +
     row(
-      T(lang, "Üdvözlő kedvezmény ({pct}%)", { pct: String(pct) }),
+      // ⚠️ The coupon keeps its contract-bound literal (coupon-visible); any OTHER
+      // offer is named by offerLabel — the same words as the pay page and invoice.
+      !applied.chargedOfferKind || applied.chargedOfferKind === "coupon"
+        ? T(lang, "Üdvözlő kedvezmény ({pct}%)", { pct: String(pct) })
+        : T(lang, "{name} ({pct}%)", { name: offerLabel(lang, applied.chargedOfferKind), pct: String(pct) }),
       `−${esc(huf(listPrice - paid))}`,
       "adm-rcpt__row--neg",
     ) +

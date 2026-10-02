@@ -1028,11 +1028,12 @@ export async function getPartnerTimeline(partnerId: string): Promise<TimelineEve
           detail: money(pay.amount, pay.currency),
           href: null,
         });
-      else if (pay.status === "failed")
+      else if (pay.status === "failed" || pay.status === "cancelled")
         ev.push({
           at: iso(pay.created_at),
           kind: "fizetés",
-          title: "Fizetés sikertelen",
+          // Elek F-2: the buyer's back-out is not a failure.
+          title: pay.status === "cancelled" ? "Fizetés megszakítva (a vevő visszalépett)" : "Fizetés sikertelen",
           detail: money(pay.amount, pay.currency),
           href: null,
         });

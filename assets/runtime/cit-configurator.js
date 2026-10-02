@@ -692,6 +692,11 @@
   // stacked). Display-only here — the server recomputes and stamps the charged
   // amount; but what we SHOW must equal what will be charged (§B.17).
   var OFFER = PRICING.offer || null;
+  /** The offer's one name, as the server resolved it (offerLabel). A missing label
+   *  (an old cached page) says only what is certain — never a guessed origin. */
+  function offerName() {
+    return OFFER && OFFER.label ? OFFER.label : tr("Kedvezmény");
+  }
   // Mirrors src/payment/offers.ts applyOffer(): floor, never overcharge.
   function offerPrice(n) {
     return OFFER ? Math.floor((n * (100 - OFFER.percent)) / 100) : n;
@@ -1886,11 +1891,15 @@
       '<button class="cit-cfg-bt cit-cfg-bt--on" type="button" data-btype="individual" role="radio" aria-checked="true">' +
       tr("Magánszemélyként") + "</button>" +
       '<button class="cit-cfg-bt" type="button" data-btype="business" role="radio" aria-checked="false">' +
-      tr("Cégként, vállalkozásként") + "</button>" +
+      tr("Cégként vagy egyéni vállalkozóként") + "</button>" +
       "</div>" +
       '<em class="cit-cfg-err" data-e="buyer_type"></em>' +
       '<div class="cit-cfg-bgrid">' +
-      bField("buyer_name", tr("Teljes név"), { auto: "name", cls: "cit-cfg-f--wide" }) +
+      // T-4: the example shows the Hungarian order — the greeting uses the name
+      // exactly as typed, so the hint is where the order gets decided.
+      bField("buyer_name", tr("Teljes név"), {
+        auto: "name", cls: "cit-cfg-f--wide", placeholder: tr("pl. Olasz-Balogh Viktória"),
+      }) +
       '<label class="cit-cfg-f cit-cfg-f--wide" data-fw="buyer_country"><span>' + tr("Ország") + "</span>" +
       '<select class="cit-cfg-i" data-f="buyer_country">' + opts + "</select>" +
       '<em class="cit-cfg-err" data-e="buyer_country"></em></label>' +
@@ -1905,6 +1914,9 @@
       bField("buyer_address", tr("Utca, házszám"), {
         value: pf.address, auto: "street-address", cls: "cit-cfg-f--wide",
       }) +
+      // Elek F-1: an adószám typed into the address/city/name field — asked about
+      // and moved with one tap (the server refuses it there anyway).
+      '<div class="cit-cfg-taxhint cit-cfg-f--wide" data-taxhint hidden></div>' +
       bField("buyer_email", tr("Számlázási e-mail"), {
         value: pf.email, type: "email", auto: "email", cls: "cit-cfg-f--wide",
       }) +
@@ -2261,7 +2273,7 @@
     showField("buyer_eu_vat_number", isBusiness && country !== "HU");
     var nameLabel = panel.querySelector('[data-fw="buyer_name"] span');
     if (nameLabel) {
-      nameLabel.textContent = isBusiness ? tr("Cég teljes, hivatalos neve") : tr("Teljes név");
+      nameLabel.textContent = isBusiness ? tr("Cégnév vagy egyéni vállalkozó neve") : tr("Teljes név");
     }
     // Only a consumer has a withdrawal right to waive.
     var consent = panel.querySelector('[data-c="withdrawal"]');
@@ -2291,6 +2303,71 @@
     syncConsents();
     syncScrollHint();
   }
+
+  /**
+   * Elek F-1: a VALID Hungarian adószám inside free text. MIRRORS
+   * src/billing/taxId.ts findHuTaxNumberInText — the server is the authority (it
+   * refuses the order); this copy only lets us ASK before the buyer submits. Kept
+   * in step by scripts/billing-taxid-in-address-check.mts (parity on vectors).
+   */
+  function huTaxInText(text) {
+    var re = /(?<!\d)\d{8}-?\d-?\d{2}(?!\d)/g, m;
+    while ((m = re.exec(String(text || "")))) {
+      var d = m[0].replace(/\D/g, "");
+      var w = [9, 7, 3, 1, 9, 7, 3], s = 0;
+      for (var i = 0; i < 7; i++) s += Number(d[i]) * w[i];
+      var county = Number(d.slice(9, 11));
+      if ((10 - (s % 10)) % 10 === Number(d[7]) && "12345".indexOf(d[8]) > -1 &&
+          ((county >= 2 && county <= 44) || county === 51)) {
+        return { raw: m[0], norm: d.slice(0, 8) + "-" + d.slice(8, 9) + "-" + d.slice(9, 11) };
+      }
+    }
+    return null;
+  }
+  function selectBuyerType(t) {
+    var btn = panel.querySelector('.cit-cfg-bt[data-btype="' + t + '"]');
+    if (btn && btn.getAttribute("aria-checked") !== "true") btn.click();
+  }
+  function syncTaxHint() {
+    var box = panel.querySelector("[data-taxhint]");
+    if (!box) return;
+    var country = (bInput("buyer_country") || {}).value || "HU";
+    var keys = ["buyer_address", "buyer_city", "buyer_name"], hit = null;
+    if (country === "HU") {
+      for (var i = 0; i < keys.length && !hit; i++) {
+        var f = bInput(keys[i]);
+        hit = f ? huTaxInText(f.value) : null;
+      }
+    }
+    if (!hit) {
+      box.setAttribute("hidden", "");
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML =
+      "<span>" + esc(tr("Ez egy adószámnak tűnik: {tax}. A címbe nem kerülhet, mert így a számlán is a címben állna.").replace("{tax}", hit.norm)) + "</span>" +
+      '<button type="button" class="cit-cfg-taxmove">' + esc(tr("Áthelyezem az Adószám mezőbe")) + "</button>";
+    box.removeAttribute("hidden");
+    box.querySelector(".cit-cfg-taxmove").addEventListener("click", function () {
+      keys.forEach(function (k) {
+        var f = bInput(k);
+        if (f) f.value = f.value.split(hit.raw).join("").replace(/\s{2,}/g, " ").replace(/[\s,;]+$/, "").trim();
+      });
+      selectBuyerType("business");
+      var tax = bInput("buyer_tax_number");
+      if (tax) {
+        tax.value = hit.norm;
+        tax.focus();
+      }
+      syncTaxHint();
+      track("tax_moved_from_address", {});
+    });
+  }
+  // Delegated: the billing fields may be (re)built after this runs.
+  panel.addEventListener("input", function (e) {
+    var k = e.target && e.target.getAttribute && e.target.getAttribute("data-f");
+    if (k === "buyer_address" || k === "buyer_city" || k === "buyer_name") syncTaxHint();
+  });
 
   panel.querySelectorAll(".cit-cfg-bt").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -2859,13 +2936,11 @@
    * (design-refs/configurator/domain-monthly) always had it in the total.
    */
   function offerCardHtml(listAmount, perLabel, permoHtml, flatAmount) {
-    var l3;
-    if (OFFER.kind === "escalation") {
-      l3 =
-        tr("Döntés-segítő ajánlat: −{p}% az első díjból").replace("{p}", String(OFFER.percent)) +
-        (offerDeadline() ? " · " + tr("érvényes {d}-ig").replace("{d}", offerDeadlineText()) : "");
-    } else {
-      l3 = tr("Bemutatkozó ajánlat a levélből: −{p}% az első díjból").replace("{p}", String(OFFER.percent));
+    // Elek L-2: the name comes from the SERVER (offerLabel, one place) — the left
+    // item block and this card print the same words for the same offer.
+    var l3 = offerName() + ": " + tr("−{p}% az első díjból").replace("{p}", String(OFFER.percent));
+    if (OFFER.kind === "escalation" && offerDeadline()) {
+      l3 += " · " + tr("érvényes {d}-ig").replace("{d}", offerDeadlineText());
     }
     var flat = flatAmount || 0;
     var firstCharge = offerPrice(listAmount) + flat;
@@ -3019,8 +3094,7 @@
     var discEl = panel.querySelector(".cit-cfg-item-disc");
     var off = list - offerPrice(list);
     if (OFFER && off > 0) {
-      discEl.children[0].textContent = tr("Bemutatkozó ajánlat a levélből (−{p}%)")
-        .replace("{p}", String(OFFER.percent));
+      discEl.children[0].textContent = offerName() + " (−" + String(OFFER.percent) + "%)";
       discEl.children[1].textContent = "−" + fmt(off);
       discEl.removeAttribute("hidden");
     } else {

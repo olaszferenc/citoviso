@@ -9,6 +9,7 @@
 import {
   checkVies,
   huTaxNumberProblem,
+  findHuTaxNumberInText,
   normalizeHuTaxNumber,
   parseEuVat,
   vatTreatmentFor,
@@ -173,6 +174,18 @@ export async function validateBuyer(
 
   const buyerAddress = str(raw.buyer_address);
   if (!buyerAddress) errors.buyer_address = "Adja meg az utcát és házszámot.";
+
+  // ⛔ Elek F-1: an adószám typed into the address/city/name field went to NAV as
+  // part of the invoice ADDRESS. Refuse it with the way out, never store it.
+  if (buyerCountry === "HU") {
+    for (const [key, value] of [["buyer_address", buyerAddress], ["buyer_city", buyerCity], ["buyer_name", buyerName]] as const) {
+      const tax = findHuTaxNumberInText(value);
+      if (tax && !errors[key]) {
+        errors[key] =
+          `Ebben a mezőben egy adószám áll (${tax}). Ha vállalkozóként rendel, válassza a „Cégként vagy egyéni vállalkozóként” lehetőséget, és az adószámot az Adószám mezőbe írja.`;
+      }
+    }
+  }
 
   const buyerEmail = str(raw.buyer_email, 254).toLowerCase();
   if (!buyerEmail) errors.buyer_email = "Adja meg a számlázási e-mail címet.";

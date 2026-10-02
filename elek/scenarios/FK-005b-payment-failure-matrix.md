@@ -28,35 +28,36 @@ kontraktus: kb/entries/admin-multilang/entry.hu.md
 - [ ] A fizetés elindul a mock-fizetőoldalra
   tedd: kattints "Fizetés és generálás"
   tedd: várj "Próba-fizetés" 30
-  várd: látható "Elutasítom"
+  várd: látható "Mégsem fizetek most"
   várd: látható "Ez a fizetés még nem indult el"
   adat: ELEK-TESZT egyszeri fizetés (Többnyelvű honlap, mock)
 
 - [ ] A fizetés közbeni oldal-újratöltés nem terhel és nem veszít el semmit
   tedd: újratöltés
   várd: látható "Próba-fizetés"
-  várd: látható "Elutasítom"
+  várd: látható "Mégsem fizetek most"
   várd: látható "Ez a fizetés még nem indult el"
 
-- [ ] Az elutasítás nem terhel, és ezt ki is mondja
-  tedd: kattints "Elutasítom"
-  várd: látható "A fizetés nem sikerült"
-  várd: látható "Nem történt terhelés"
+- [ ] A visszalépés nem terhel, és nem elutasításnak mondja magát (Elek F-2)
+  tedd: kattints "Mégsem fizetek most"
+  várd: látható "Megszakította a fizetést"
+  várd: látható "Nem terheltünk semmit"
+  várd: nem látható "A fizetés nem sikerült"
 
 - [ ] A bukás-oldalon van mivel továbbmenni, és van mit idézni
-  várd: látható "Újra próbálom a fizetést"
+  várd: látható "Folytatom a fizetést"
   várd: látható "Hivatkozási azonosító"
 
 ## Vissza-gomb és újrapróbálkozás
 
 - [ ] A vevő visszalép a fizetőoldalra — az állapot őszinte
   tedd: vissza
-  várd: látható "A fizetés elutasítva"
+  várd: látható "A fizetést megszakította"
   várd: nem látható "Ez a fizetés még nem indult el"
   kézi: a fizetőoldal státusz-sora az elutasítás után képről is ítélendő
 
 - [ ] Az elutasított fizetés újrapróbálható, és most sikerül
-  tedd: kattints "Újra próbálom — Fizetek ▸"
+  tedd: kattints "Folytatom — Fizetek"
   tedd: várj "Sikeres fizetés" 60
   várd: látható "Sikeres fizetés"
   adat: ELEK-TESZT sikeres fizetés (újrapróba az elutasítás után)
@@ -72,7 +73,7 @@ kontraktus: kb/entries/admin-multilang/entry.hu.md
 - [ ] A vevő visszalép és MÉG EGYSZER fizetne — nem történhet második terhelés
   tedd: vissza
   várd: látható "Ez a fizetés rendezve van"
-  várd: nem látható "Elutasítom"
+  várd: nem látható "Mégsem fizetek most"
   kézi: a felület válasza képről ítélendő — dupla-terhelésre utaló jel NEM lehet
 
 ## Az eredmény a tenant-adminban

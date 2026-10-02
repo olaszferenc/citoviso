@@ -32,7 +32,18 @@ export function splitAddressForPrefill(raw: string | null | undefined): {
 }
 
 /**
- * Build the checkout prefill for a lead. NB: the lead NAME is deliberately NOT
+ * Build the checkout prefill for a lead.
+ *
+ * ⛔⛔ NO ADDRESS (Elek F-1, owner-approved 2026-10-02). The lead's address is the
+ * ACCOMMODATION's, not the buyer's billing address — and "a wrong guess is a field
+ * the buyer corrects in two seconds" turned out false: measured live, the buyer
+ * overwrote only the street, and "8360 Keszthely" (the guesthouse) + their own
+ * street went to NAV on a real invoice. A half-right address is worse than an empty
+ * one, because it LOOKS confirmed. Zip, city and street therefore start empty;
+ * the e-mail (the owner's own outreach address) and the country stay.
+ * `splitAddressForPrefill` remains for reading a lead address, never for billing.
+ *
+ * NB: the lead NAME is deliberately NOT
  * prefilled into the legal-name field — lead.name is the Google Maps marketing
  * name ("Ferenc Ház"), and pre-filling it invites the buyer to accept it as
  * their legal name, which is exactly the defect this slice removes. They must
@@ -43,22 +54,10 @@ export function buildBillingPrefill(lead: {
   country?: string | null;
   city?: string | null;
 }, contactEmail?: string | null): BillingPrefill {
-  const split = splitAddressForPrefill(lead.address);
   const out: {
-    zip?: string;
-    city?: string;
-    address?: string;
     email?: string;
     country?: string;
   } = {};
-  if (split.zip) out.zip = split.zip;
-  // The lead's own city facet is more reliable than the address split.
-  const city = lead.city ?? split.city;
-  if (city) out.city = city;
-  // When the split yields the same token for both (a one-part Maps address like
-  // "Balatonföldvár"), it carries no street information — leaving it in both
-  // fields just makes the buyer delete it.
-  if (split.street && split.street !== city) out.address = split.street;
   if (contactEmail) out.email = contactEmail;
   out.country = (lead.country ?? "HU").toUpperCase();
   return out;

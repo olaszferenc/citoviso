@@ -129,6 +129,9 @@ export interface ConfiguratorManifest {
       readonly percent: number;
       /** ISO timestamp; null = no deadline (the intro offer). */
       readonly expiresAt: string | null;
+      /** The offer's ONE name (offerLabel), translated server-side — both sides of
+       *  the pay page print exactly this (Elek L-2). */
+      readonly label?: string;
     };
     /** ADR-0112 (amended 2026-09-25): the visitor opted out — the PRICE still
      *  follows the offer (the server charges it), but nothing pushes: no
@@ -281,6 +284,7 @@ export interface ConfiguratorOpts {
     readonly kind: "outreach" | "escalation" | "coupon" | "campaign";
     readonly percent: number;
     readonly expiresAt: string | null;
+    readonly label?: string;
   };
   /** ADR-0112: opted-out visitor — show the offer's price, never its push card. */
   readonly offerQuiet?: boolean;
