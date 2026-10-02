@@ -1419,6 +1419,16 @@ if [ -f scripts/guest-critic-check.mts ] && \
   echo "[pre-commit] guest-critic-check (vendég-kritikus: magázás, vélemény ≠ ajánlat, bekötés)…"
   npx tsx scripts/guest-critic-check.mts >"$GATE_LOG" || gate_failed
 fi
+# TEGEZŐ ALAK-SZABÁLLYAL (M4, 2026-10-02): a vendég-kritikus kódalapú tegező-felismerése zárt
+# szólista volt („kapsz”-ot fogta, „kaphatsz”, „érezd”, „töltsd”, „pihenj”, „foglald”, „jársz”,
+# „nálad” átment). Most szabály-családok (addressRegister.ts); tegező korpusz, magázó/T3 csapdák,
+# a teljes i18n-katalógus mint ellenpróba, a kritikus lintje, + 10 mutáns önteszt. ~2 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/address-register-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(addressRegister|guestCritic)\.ts$|^src/i18n/catalog\.json$|^scripts/address-register-check\.mts$'; then
+  echo "[pre-commit] address-register-check (tegező alak-szabály · hamis-pozitív ellenpróba)…"
+  npx tsx scripts/address-register-check.mts >"$GATE_LOG" || gate_failed
+fi
 # ③ A küldés-megerősítő felugró a SAJÁT csatornájára POST-oljon, és vigye a
 #    confirmVerdicts mezőt — a kép erre a kérdésre nem tud válaszolni, a DOM igen.
 if [ -f scripts/verdict-dialog-dom-check.mts ] && \

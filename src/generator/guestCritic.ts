@@ -28,6 +28,7 @@ import { recordAiUsage } from "../ai/usage.js";
 import { config } from "../config.js";
 import type { EditorialCopy } from "../engine/copywriter.js";
 import type { SectionCopy } from "../engine/recipe.js";
+import { familiarForms } from "./addressRegister.js";
 
 const MODEL = "claude-opus-4-8";
 /** Rewrite rounds after the first critique. Not a loop to convergence: if two targeted
@@ -127,10 +128,9 @@ export function surfaceLines(c: CopySurface): { field: string; text: string }[] 
   return out;
 }
 
-// Second-person singular verb/possessive endings that only exist in the familiar register.
-// Word-boundary matching on whole forms, not suffixes: "kapsz" is tegező, "kapszula" is not.
-const TEGEZO =
-  /(?<![\p{L}])(kapsz|leszel|érkezel|pihensz|szeretnél|találsz|foglalj|írj|nézd|gyere|várunk|neked|téged|leveled|szobád|foglalásod|élvezd|fedezd|próbáld|válassz|kérdezz)(?![\p{L}])/giu;
+// The familiar register is detected by RULE (endings, pronouns, stems × suffixes) in
+// addressRegister.ts — the closed word list that lived here let „kaphatsz”, „érezd”, „töltsd”,
+// „pihenj”, „foglald”, „jársz”, „nálad” through (measured 2026-10-02, M4).
 const MAGAZO =
   /(?<![\p{L}])(Ön|Önt|Önnek|Önök|Öné|kapja|érkezik|pihenhet|szeretne|talál|foglaljon|írjon|nézze|jöjjön|várjuk|válasszon|kérdezzen|élvezze|fedezze)(?![\p{L}])/gu;
 
@@ -147,11 +147,14 @@ const BANNED: readonly { re: RegExp; kind: ObjectionKind; fix: string }[] = [
 export function lintCopy(c: CopySurface, register: Register): Objection[] {
   const out: Objection[] = [];
   for (const { field, text } of surfaceLines(c)) {
-    const wrong = register === "magaz" ? TEGEZO : MAGAZO;
-    for (const m of text.matchAll(wrong)) {
+    const wrong =
+      register === "magaz"
+        ? familiarForms(text).map((h) => h.quote)
+        : [...text.matchAll(MAGAZO)].map((m) => m[0]);
+    for (const quote of wrong) {
       out.push({
         field,
-        quote: m[0],
+        quote,
         kind: "megszolitas",
         severity: "blokkolo",
         guestReaction:
