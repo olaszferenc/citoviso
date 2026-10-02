@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB A1 `cit6445ff62`: aggregátor-oldal mint „saját modern honlap”, ADR-XXXX) — LANDOLVA, élesítés + éles újrabesorolás a koordinátoré
+## Párhuzamos szál (2026-10-02 — SUB A1 `cit6445ff62`: aggregátor-oldal mint „saját modern honlap”, ADR-0307) — LANDOLVA, élesítés + éles újrabesorolás a koordinátoré
 - A `qualify.ts` `PORTAL_DOMAINS` (az EGYETLEN lista) +~50 mért aggregátor/portál-host (bluepillow 361, freecancellations 43, vio 41,
   hotels-in-hungary.net 35 …); élesen ~640 lead vált `modern/outdated → no_site`-ra a futtatás után.
 - `scripts/requalify-websites.mts` (száraz alapból, `--apply` ír; a ki nem küldött link auto-szegmense követi) — dev-en lefutott (34).

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-aggregator-host-nem-sajat-honlap.md) — Foglalási aggregátor / portál-host soha nem „saját modern honlap”: egy lista (qualify.ts), visszamenőleges újrabesorolás a prospect-szegmenssel együtt (2026-10-02)
+- [ADR-0307](decisions/0307-foglalasi-aggregator-portal-host-soha-nem-sajat.md) — Foglalási aggregátor / portál-host soha nem „saját modern honlap”: egy lista (qualify.ts), visszamenőleges újrabesorolás a prospect-szegmenssel együtt (2026-10-02)
 - [ADR-0306](decisions/0306-a-megkereso-level-csak-a-mertet-allitja-meres.md) — A megkereső levél csak a mértet állítja: mérés-alapú szegmens-mondat, 4,0 ★ küszöb, szállásadó-szemű kritikus sablon-változáskor (2026-10-02)
 - [ADR-0305](decisions/0305-nincs-sajat-foto-nyomas-a-vevo-a-kepekrol.md) — Nincs saját-fotó nyomás: a vevő a képekről nyilatkozott, az élesítés nem függ saját fotótól (2026-10-02)
 - [ADR-0304](decisions/0304-seta-a-kapun-at-walk-through-a-tulaj-altal.md) — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon; a séta a fotók vision-tárgyából épül (2026-10-02)

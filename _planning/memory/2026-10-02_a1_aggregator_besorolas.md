@@ -1,6 +1,6 @@
 # 2026-10-02 — A1: aggregátor-oldal mint „saját modern honlap” — ~640 lead téves besorolása
 
-**Szál:** SUB a CIT „élesi teszt” koordinátor alatt; brief `~/rc-briefs/javitas-elek-0930/a1-aggregator-besorolas.md`. Döntés: ADR-XXXX.
+**Szál:** SUB a CIT „élesi teszt” koordinátor alatt; brief `~/rc-briefs/javitas-elek-0930/a1-aggregator-besorolas.md`. Döntés: ADR-0307.
 
 ## Elvégezve
 - Mérés élesen (csak olvasás): a `lead.qualification` ← `qualificationOf(raw.websiteStatus)` ← `classifyWebsite(raw.website)`;

@@ -1,4 +1,4 @@
-## ADR-XXXX — Foglalási aggregátor / portál-host soha nem „saját modern honlap”: egy lista (qualify.ts), visszamenőleges újrabesorolás a prospect-szegmenssel együtt (2026-10-02)
+## ADR-0307 — Foglalási aggregátor / portál-host soha nem „saját modern honlap”: egy lista (qualify.ts), visszamenőleges újrabesorolás a prospect-szegmenssel együtt (2026-10-02)
 
 **Státusz:** elfogadva (tulaj: „igen indítsd arra is”, a koordinátoron át; SUB, brief `~/rc-briefs/javitas-elek-0930/a1-aggregator-besorolas.md`) ·
 **Lokál, nem élesítve** (§0) · **Kapcsolódó:** ADR-0037 (portál-katalógus mint platform-regiszter), ADR-0306 (a levél szegmens-mondata), Elek H-3.
