@@ -1,4 +1,4 @@
-// A TÉNYHŰSÉG-JELVÉNY MEGMONDJA, MIT JELÖLT MEG (ADR-XXXX, H-2 — tulajdonosi döntés 2026-10-02, „1”).
+// A TÉNYHŰSÉG-JELVÉNY MEGMONDJA, MIT JELÖLT MEG (ADR-0300, H-2 — tulajdonosi döntés 2026-10-02, „1”).
 //
 // Mérve (Elek, 2026-10-01): a mock-kártyán csak a „Tényhűség: megjelölve” pirula állt, és a
 // „Részletek ▾” sem sorolta fel, MIT talált az őr — a lista csak a piszkozat-lapon és a

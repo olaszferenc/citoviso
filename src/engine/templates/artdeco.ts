@@ -385,7 +385,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           .slice(0, 8)
           .map(
             (p) => {
-              // ADR-XXXX (L-3): the alt stays on the img; a caption only when it says something
+              // ADR-0300 (L-3): the alt stays on the img; a caption only when it says something
               const cap = photoCaption(data, p);
               return `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
             },

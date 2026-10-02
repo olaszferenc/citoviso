@@ -1,4 +1,4 @@
-# 2026-10-02 — M3: editorial szállás-szöveg, dátum nélküli program-minta, beszélő fotó-felirat, tényhűség-lista (ADR-XXXX)
+# 2026-10-02 — M3: editorial szállás-szöveg, dátum nélküli program-minta, beszélő fotó-felirat, tényhűség-lista (ADR-0300)
 
 **Szál:** SUB M3 (`~/wt/cit2a60616f`), koordinátor: CIT „élesi teszt” fő session (`~/wt/cit87d3f275`).
 **Brief:** `~/rc-briefs/javitas-elek-0930/m3-editorial-programok.md`. **Forrás:** Elek élesi jelentése (SZ-3, SZ-4, L-3, H-2).

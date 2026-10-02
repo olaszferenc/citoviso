@@ -92,7 +92,7 @@ async function measureTemplate(t: string, page: Page) {
   const absent = OFFERED_SURFACES.filter(([, re]) => !re.test(bare)).map(([n]) => n);
   const missingT = absent.length ? `${t}(${absent.join(",")})` : null;
   // The §B.17 marking lives ON the sampled sections: hours + pricing + poi at least.
-  // The program sample carries its own Minta pill since ADR-XXXX (was: lead sentence only).
+  // The program sample carries its own Minta pill since ADR-0300 (was: lead sentence only).
   const pills = bare.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;
   const poiMarked = /data-cit-module="poi"[^>]*>(?:(?!<\/section>)[\s\S])*<span class="cit-modsec__minta"/.test(bare);
   const unmarkedT = pills < 2 || !poiMarked ? `${t}(${pills}${poiMarked ? "" : ",poi jelöletlen"})` : null;

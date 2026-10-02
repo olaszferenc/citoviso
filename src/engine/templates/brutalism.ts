@@ -364,7 +364,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           .slice(0, 6)
           .map(
             (p) => {
-              // ADR-XXXX (L-3): the alt stays on the img; a caption only when it says something
+              // ADR-0300 (L-3): the alt stays on the img; a caption only when it says something
               const cap = photoCaption(data, p);
               return `<div class="b-tp"><figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</div>`;
             },

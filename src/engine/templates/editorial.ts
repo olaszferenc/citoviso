@@ -6,7 +6,7 @@
 // double-rule footer. All styling dresses from the 11 --cit-* tokens (+ color-mix
 // derivations) — see templateKit.ts for contracts.
 //
-// ⛔ The look is a newspaper, the WORDS are a guesthouse's (ADR-XXXX, owner's decision
+// ⛔ The look is a newspaper, the WORDS are a guesthouse's (ADR-0300, owner's decision
 // 2026-10-02, SZ-3 "A"): no "Szerkesztőség", "Képes krónika", "No. 1", "Foglalási szelvény",
 // "Nyomtatva a világhálón", no quotation marks around a headline nobody said, no drop-cap
 // (its ::first-letter float merged "A Muschel" into "AMuschel" for readers and copy).
@@ -80,7 +80,7 @@ const EDITORIAL_CSS = `
   .e-leadfig{position:relative;margin-top:36px;border:1px solid var(--cit-ink);padding:10px;background:var(--cit-surface)}
   .e-leadfig .e-in{position:relative;overflow:hidden}
   .e-leadfig img{width:100%;aspect-ratio:16/8;object-fit:cover}
-  /* ADR-XXXX (L-3): a caption sits BELOW the photo, never over its bottom quarter */
+  /* ADR-0300 (L-3): a caption sits BELOW the photo, never over its bottom quarter */
   .e-leadfig figcaption{font-family:var(--cit-font-display);font-style:italic;font-size:13px;color:var(--cit-muted);padding:10px 4px 2px}
 
   /* lead article — pull-quote headline + dropcap body + fact box */
@@ -188,7 +188,7 @@ const CONTACT_ICONS = {
   location: iconSvg("location"),
 };
 
-/** Editorial section head ("Heading ————"). No "No. 1" numbering (ADR-XXXX). */
+/** Editorial section head ("Heading ————"). No "No. 1" numbering (ADR-0300). */
 function sectionHead(title: string, accent?: string): string {
   return `<div class="e-sech"><h2>${accented(title, accent)}</h2></div>`;
 }
@@ -263,7 +263,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   // -- lead article: big headline (hero lead, NOT quoted — nobody said it) + intro
   const quoteLine = heroCopy.lead || data.tagline;
-  // "A ház számokban" promises a table — over ONE number it is an empty promise (ADR-XXXX).
+  // "A ház számokban" promises a table — over ONE number it is an empty promise (ADR-0300).
   const factRows = data.stats?.length
     ? `<div class="e-facts">
         ${data.stats.length >= 2 ? `<h3>${T(data, "A ház számokban")}</h3>` : ""}
@@ -340,7 +340,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- reviews: real quotes, no per-card stars --------------------------------
   // A Review carries no rating of its own — the AVERAGE's star row on every card read as if each
   // guest had given the average (a two-star review got five). The average's row stands ONCE, under
-  // the section head, next to the REAL rating (ADR-XXXX; guard: scripts/template-copy-check.mts).
+  // the section head, next to the REAL rating (ADR-0300; guard: scripts/template-copy-check.mts).
   const stars = honestStarCount(data);
   const scoreLine =
     stars && ratingStat

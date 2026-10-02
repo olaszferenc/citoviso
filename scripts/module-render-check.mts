@@ -364,7 +364,7 @@ for (const id of priced) {
   );
 }
 
-// ── The mock's program sample (ADR-XXXX, owner's decision 2026-10-02 — overrides
+// ── The mock's program sample (ADR-0300, owner's decision 2026-10-02 — overrides
 // ADR-0218 ②③): the lead sees program TYPES with NO date and NO weekday, so nothing on
 // the page reads as an event someone could turn up to; the section carries the same
 // "Minta" pill as every other sample section. Still no invented place, distance or

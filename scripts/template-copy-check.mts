@@ -1,4 +1,4 @@
-// ŐR: a sablon-szöveg egy VALÓDI szállás honlapjához illik (sablon-szöveg tiltólista, ADR-XXXX).
+// ŐR: a sablon-szöveg egy VALÓDI szállás honlapjához illik (sablon-szöveg tiltólista, ADR-0300).
 //
 // ⚠️ EGY ŐR a sablon-szövegre (koordinátori döntés, 2026-10-02): az M3 (editorial) és az M4
 // (a többi sablon: csillagsor, archFrames vélemény-cím) tételei IDE kerülnek, nem külön őrbe —

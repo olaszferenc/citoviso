@@ -1,4 +1,4 @@
-// A photo caption says something, and never sits ON the photo (ADR-XXXX, L-3).
+// A photo caption says something, and never sits ON the photo (ADR-0300, L-3).
 //
 // Measured on the live Muschel mock (Elek, 2026-10-01): "[TESZT] Muschel Panzió — 1. kép"
 // covered the bottom quarter of the cover photo on a phone, and the same generated alt was

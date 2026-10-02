@@ -2300,7 +2300,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-mk__gate[data-verdict="fail"] {
   background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink);
 }
-/* H-2 (ADR-XXXX): the flagged fact badge is a button that opens the list ON the card */
+/* H-2 (ADR-0300): the flagged fact badge is a button that opens the list ON the card */
 .con button.con-mk__gate { font-family: inherit; line-height: inherit; padding: 4px 9px; cursor: pointer; }
 .con button.con-mk__gate:focus-visible { outline: 2px solid var(--citui-warn); outline-offset: 2px; }
 .con .con-mk__flist {

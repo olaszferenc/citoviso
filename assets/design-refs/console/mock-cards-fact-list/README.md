@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-10-02 (tulajdonosi döntés a koordinátoron át: „egyetértek”), §2b terv-kapu, 0 / **1** / 2 változatból.
 **Ez a fájl KONTRAKTUS, nem stílus-javaslat.** A kártya alap-terve a `../mock-cards/` (A); ez a fájl azt köti,
-amiben a megjelölt tényhűség-jelvény eltér tőle. Döntés: ADR-XXXX. Forrás-lelet: Elek élesi jelentése (2026-10-01), H-2.
+amiben a megjelölt tényhűség-jelvény eltér tőle. Döntés: ADR-0300. Forrás-lelet: Elek élesi jelentése (2026-10-01), H-2.
 
 | fájl | mi ez |
 |---|---|

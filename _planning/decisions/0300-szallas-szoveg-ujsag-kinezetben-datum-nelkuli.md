@@ -1,4 +1,4 @@
-## ADR-XXXX — Szállás-szöveg újság-kinézetben, dátum nélküli program-minta, csak beszélő fotó-felirat, a tényhűség-jelvény kinyitja a listát (2026-10-02)
+## ADR-0300 — Szállás-szöveg újság-kinézetben, dátum nélküli program-minta, csak beszélő fotó-felirat, a tényhűség-jelvény kinyitja a listát (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (SUB „M3”, koordinátor: CIT „élesi teszt” fő session; brief:
 `~/rc-briefs/javitas-elek-0930/m3-editorial-programok.md`) · **Módosítja:** ADR-0218 ② és ④ ·

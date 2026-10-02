@@ -331,7 +331,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ? `<div class="t-strip">
       ${stripPhotos
         .map((p, i) => {
-          // A generated ("<name> — N. kép") or name-echo alt is a11y-only filler (ADR-XXXX,
+          // A generated ("<name> — N. kép") or name-echo alt is a11y-only filler (ADR-0300,
           // L-3) — the visible caption then stays a quiet numbered marker with a brass rule.
           const text = photoCaption(data, p);
           const cap = text ? `<p>${esc(text)}</p>` : `<span class="t-rule"></span>`;

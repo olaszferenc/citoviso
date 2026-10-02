@@ -165,7 +165,7 @@ const CSS = `<style data-cit-modsec>
 .cit-ev__minta{color:var(--cit-ink)}
 .cit-ev__list{list-style:none;margin:0;padding:0;display:grid}
 .cit-ev__row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--cit-line)}
-/* ADR-XXXX: the mock sample lists program TYPES — no date tile, one column */
+/* ADR-0300: the mock sample lists program TYPES — no date tile, one column */
 .cit-ev__row--type{grid-template-columns:1fr;padding:10px 0}
 .cit-ev__date{text-align:center;border:1px solid var(--cit-line);border-radius:var(--_card-radius);padding:6px 0;
   background:var(--cit-surface,var(--_card-bg));align-self:start}
@@ -544,7 +544,7 @@ function programsBlock(d: SiteData): string {
  * The mock's "Heti programajánló" — the approved A block, filled with program TYPES
  * (design-refs/public-site/programajanlo/minta/, ADR-0218 ①).
  *
- * ADR-XXXX (owner's decision 2026-10-02, overrides ADR-0218 ②③): NO date and NO
+ * ADR-0300 (owner's decision 2026-10-02, overrides ADR-0218 ②③): NO date and NO
  * weekday. A typed row with a real date ("okt. 3. Borkóstoló est") read as an event
  * that exists, and a lead-sentence label was too weak to undo it. The section now
  * carries the same "Minta" pill as every other sample section (ADR-0061). Still no

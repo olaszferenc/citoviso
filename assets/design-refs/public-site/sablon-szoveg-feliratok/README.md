@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-10-02 (tulajdonosi döntés a koordinátoron át: „egyetértek”), §2b terv-kapu.
 Változatok: SZ-3 0 / **A** / B / C, L-3 0 / 1 / **2**, a valódi Muschel (élesről olvasva) és Három Huszár mockon.
-**Ez a fájl KONTRAKTUS, nem stílus-javaslat.** Döntés: ADR-XXXX. Forrás-lelet: Elek élesi jelentése (2026-10-01), SZ-3, SZ-6, L-3.
+**Ez a fájl KONTRAKTUS, nem stílus-javaslat.** Döntés: ADR-0300. Forrás-lelet: Elek élesi jelentése (2026-10-01), SZ-3, SZ-6, L-3.
 
 A tulaj mércéje: „Hol írnám ki ilyet egy honlapra? Nincs normális ember, aki ilyet kiír.” — egy valódi panzió oldala.
 

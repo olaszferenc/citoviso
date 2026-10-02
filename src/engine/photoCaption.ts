@@ -1,4 +1,4 @@
-// The VISIBLE caption of a photo (ADR-XXXX, L-3 — owner's decision 2026-10-02).
+// The VISIBLE caption of a photo (ADR-0300, L-3 — owner's decision 2026-10-02).
 //
 // A photo's `alt` is always kept (accessibility), but it is NOT always a caption. Two
 // kinds of alt say nothing when printed under a photo:

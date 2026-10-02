@@ -4974,7 +4974,7 @@ export function leadPage(
           // mock-cards ④: a négy kapu egyetlen jelvény-sorban. ⛔ Ha a verdikt NEM
           // „átment", a szó ki is van írva — egy piros pötty önmagában nem mondja meg,
           // hogy megjelölve vagy elbukott, és pont ott számít a különbség.
-          // H-2 (ADR-XXXX, owner's decision 2026-10-02): a flagged fact gate names WHAT it
+          // H-2 (ADR-0300, owner's decision 2026-10-02): a flagged fact gate names WHAT it
           // flagged — the badge carries the COUNT and opens the stored list ON the card.
           // ⛔ No stored list (older artifacts) → the old "megjelölve" pill: never an empty
           // list, never an invented number. Guard: scripts/mock-card-fact-list-check.mts.

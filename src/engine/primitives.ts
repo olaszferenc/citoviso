@@ -868,7 +868,7 @@ function galleryContactSheet(d: SiteData, copy?: SectionCopy): string {
   const shots = d.photos
     .map((p, i) => {
       const r = SHEET_ROTATIONS[i % SHEET_ROTATIONS.length];
-      // ADR-XXXX (L-3): the alt stays on the img; a caption only when it says something
+      // ADR-0300 (L-3): the alt stays on the img; a caption only when it says something
       const cap = photoCaption(d, p);
       return `<div class="cit-shot" style="--cit-r:${r}"><figure><img src="${esc(p.url)}" alt="${esc(
         p.alt,
@@ -897,7 +897,7 @@ const GALLERY_SHEET_CSS = `  .cit-contact-sheet { display: grid; grid-template-c
 /** PARALLAX PANELS gallery (the immersive-parallax reference treatment): each photo is a
  *  full-bleed 60svh band with fixed background (parallax on desktop; scroll-attached on
  *  mobile/reduced-motion). The alt rides on aria-label only: a full-bleed band has no
- *  "below", and a caption never sits ON a photo (ADR-XXXX, L-3). */
+ *  "below", and a caption never sits ON a photo (ADR-0300, L-3). */
 function galleryPanels(d: SiteData, copy?: SectionCopy): string {
   const head = copy?.title || copy?.eyebrow
     ? `<div class="cit-section-inner cit-panels-head">${sectionHead("", copy?.title ?? "", copy)}</div>\n      `
