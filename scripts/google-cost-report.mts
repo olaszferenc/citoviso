@@ -2,8 +2,10 @@
 // citoviso-google-cost-report.timer from the MAIN tree, on the dev box only.
 //
 // Reads yesterday's (Budapest) request counts from Cloud Monitoring, prices them at
-// list price (src/ops/googleCostReport.ts holds the ONE price table) and mails the
-// owner. When the token or Monitoring fails, the mail STILL goes out and says there
+// list price (src/ops/googleCostReport.ts holds the ONE price table), reads the REAL
+// cost of the day from the Cloud Billing export in BigQuery (ADR-XXXX; read-only
+// query — while the export has not delivered the day, the estimate leads and the mail
+// says why) and mails the owner. When the token or Monitoring fails, the mail STILL goes out and says there
 // is no data and why — a silent failure is what let ~600 $/week pass unnoticed.
 // It never limits or stops anything.
 //
@@ -45,6 +47,9 @@ const report = await runDailyReport({
   project: config.googleCostProject,
   thresholdUsd: config.googleCostDailyThresholdUsd,
   itemMinUsd: config.googleCostItemMinUsd,
+  realThresholds: { HUF: config.googleCostDailyThresholdHuf, EUR: config.googleCostDailyThresholdEur },
+  billingTable: config.googleBillingExportTable,
+  billingLocation: config.googleBillingExportLocation,
   getToken,
   fetchImpl: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(60_000) }),
 });
@@ -52,6 +57,7 @@ const report = await runDailyReport({
 const stamp = new Date().toISOString();
 console.log(
   `[${stamp}] google-cost-report ${day}: ${report.hasData ? `~${report.totalUsd.toFixed(2)} $` : "NINCS ADAT"}` +
+    ` · számla: ${report.billing?.status ?? "-"}` +
     (report.flags.length ? ` · ${report.flags.length} kiemelés` : ""),
 );
 

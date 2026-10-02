@@ -147,6 +147,24 @@ export const config = {
   googleCostReportTo: env("GOOGLE_COST_REPORT_TO"),
   googleCostDailyThresholdUsd: Number(env("GOOGLE_COST_DAILY_THRESHOLD_USD", "20")),
   googleCostItemMinUsd: Number(env("GOOGLE_COST_ITEM_MIN_USD", "1")),
+  /**
+   * The REAL cost (ADR-XXXX): the Cloud Billing standard usage cost export in BigQuery
+   * (billing account 012AB6-FB8C94-04076D → mineralcrm.billing_export). Empty = the
+   * real branch is off, and the report says so. Read-only query, job runs in
+   * `googleCostProject`.
+   */
+  googleBillingExportTable: env(
+    "GOOGLE_BILLING_EXPORT_TABLE",
+    "mineralcrm.billing_export.gcp_billing_export_v1_012AB6_FB8C94_04076D",
+  ),
+  googleBillingExportLocation: env("GOOGLE_BILLING_EXPORT_LOCATION", "EU"),
+  /**
+   * Daily threshold of the REAL cost in the export's currency (USD uses
+   * GOOGLE_COST_DAILY_THRESHOLD_USD). Set in the currency itself — no exchange rate
+   * is applied anywhere. The defaults are ~20 $ at ~350 Ft / ~0,9 € per dollar.
+   */
+  googleCostDailyThresholdHuf: Number(env("GOOGLE_COST_DAILY_THRESHOLD_HUF", "7000")),
+  googleCostDailyThresholdEur: Number(env("GOOGLE_COST_DAILY_THRESHOLD_EUR", "18")),
   gcloudBin: env("GCLOUD_BIN", `${env("HOME", "/home/citoviso")}/google-cloud-sdk/bin/gcloud`),
   /**
    * Pilot BCC: blind-copy every PLATFORM mail here, so the owner sees what the

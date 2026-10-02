@@ -13,11 +13,22 @@
 //   ⑧ ár nélküli Maps-metódus megjelenik („NINCS ÁR”), a nem-Maps API nem kerül a költségbe
 //   ⑨ a lekérés órás igazítással, a hónap eleje / előző 7 nap kezdetétől kér
 //   ⑩ a szöveg kimondja: listaáras BECSLÉS, Billing → Reports, MR is használja
+//   ⑪ VALÓS ág (BigQuery billing export, ADR-XXXX): költség + jóváírás projektenként × szolgáltatás × SKU,
+//      a valós a fő szám, a becslés mellette; a lekérés paraméterei (budapesti nap, location, tábla)
+//   ⑫ valós küszöb: a valós összeg a SAJÁT pénznemű küszöbbel; ilyenkor a becslés-küszöb nem dönt
+//   ⑬ pénznem: HUF egész forint, EUR/USD centtel a közös formázóból; küszöb nélküli pénznem nem
+//      hasonlítódik a USD-hez (kimondja, és a becslés-küszöb fut)
+//   ⑭ nincs-tábla / üres tábla / export a nap után indul / HTTP-hiba / kivétel → becslés + kimondott ok
+//   ⑮ késő adat: a nap még nem teljes → becslés a fő szám, a részleges valós csak tájékoztat
+//   ⑯ Monitoring-hiba + kész számla → valós riport; mindkettő hiányzik → NINCS ADAT mindkét okkal
+//   ⑰ BigQuery-lapozás, DST-nap (25 óra) a lekérésben
 //
 //   npx tsx scripts/google-cost-report-check.mts
 
 import {
   METHOD_PRICES,
+  billingSql,
+  fmtCost,
   runDailyReport,
   type FetchLike,
   type Report,
@@ -211,6 +222,175 @@ console.log("⑩ a szöveg őszinte");
 inv("„BECSLÉS” + Billing → Reports", r1.text.includes("BECSLÉS") && r1.text.includes("Billing → Reports"));
 inv("kimondja, hogy MR is használja a projektet", r1.text.includes("Minereal (MR)"));
 inv("kimondja, hogy semmit nem korlátoz", r1.text.includes("semmit nem korlátoz"));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VALÓS ág — BigQuery billing export (ADR-XXXX)
+// ─────────────────────────────────────────────────────────────────────────────
+const TABLE = "testproj.billing_export.gcp_billing_export_v1_X";
+type Line = [project: string | null, service: string, sku: string, currency: string, cost: number, credits: number];
+interface Bq {
+  n?: number;
+  firstMs?: number;
+  latestMs?: number;
+  exportMs?: number;
+  lines?: Line[];
+  status?: number;
+  error?: unknown;
+  throws?: string;
+  /** Split the rows over this many pages (pageToken). */
+  pages?: number;
+}
+interface Seen {
+  url: string;
+  method?: string;
+  body?: string;
+  headers: Record<string, string>;
+}
+
+const dayStart = budapestMidnight(DAY).getTime();
+const dayEnd = budapestMidnight(addIsoDays(DAY, 1)).getTime();
+
+/** Monitoring (scenario) + BigQuery (bq) behind one fetch. */
+function both(bq: Bq, monitoring: FetchLike = stub([scenario]), seenBq: Seen[] = []): FetchLike {
+  return async (url, init) => {
+    if (!url.startsWith("https://bigquery.googleapis.com/")) return monitoring(url, init);
+    seenBq.push({ url, method: init.method, body: init.body, headers: init.headers });
+    if (bq.throws) throw new Error(bq.throws);
+    if (bq.status && bq.status !== 200) {
+      return { ok: false, status: bq.status, text: async () => JSON.stringify(bq.error ?? {}) };
+    }
+    const head = [bq.n ?? 10, bq.firstMs ?? dayStart - 86_400_000, bq.latestMs ?? dayEnd + 3_600_000, bq.exportMs ?? dayEnd + 7_200_000];
+    const cell = (v: unknown) => ({ v: v === null || v === undefined ? null : String(v) });
+    const lines = bq.lines ?? [];
+    const rows = (lines.length ? lines : [null]).map((l) =>
+      ({ f: [...head, ...(l ?? [null, null, null, null, null, null])].map(cell) }),
+    );
+    const pages = bq.pages ?? 1;
+    const tok = new URL(url).searchParams.get("pageToken");
+    const i = tok ? Number(tok) : 0;
+    const per = Math.ceil(rows.length / pages);
+    const body = {
+      jobComplete: true,
+      jobReference: { jobId: "job_1", location: "EU" },
+      rows: rows.slice(i * per, (i + 1) * per),
+      ...(i + 1 < pages ? { pageToken: String(i + 1) } : {}),
+    };
+    return { ok: true, status: 200, text: async () => JSON.stringify(body) };
+  };
+}
+
+const realBase = { ...base, billingTable: TABLE, billingLocation: "EU", realThresholds: { HUF: 7000, EUR: 18 } };
+const HUF_LINES: Line[] = [
+  ["testproj", "Places API", "Text Search Enterprise", "HUF", 4000, -500],
+  ["testproj", "Places API", "Place Details Photos", "HUF", 1500, 0],
+  ["testproj", "Maps JavaScript API", "Dynamic Maps", "HUF", 0, 0],
+  ["mr-proj", "Cloud Run", "CPU Allocation Time", "HUF", 300, -300],
+  [null, "Support", "Basic", "HUF", 50, 0],
+];
+
+console.log("⑪ VALÓS ág");
+const seenBq: Seen[] = [];
+const r11 = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ lines: HUF_LINES }, stub([scenario]), seenBq) });
+inv("a nap teljes → billing.status = ok", r11.billing?.status === "ok", String(r11.billing?.status) + " " + r11.billing?.reason);
+inv("valós nettó = (4000−500)+1500+0+(300−300)+50 = 5 050 Ft", near(r11.realTotals?.HUF ?? -1, 5050), JSON.stringify(r11.realTotals));
+inv("a tárgy a valós számot vezeti, a becslés mellette", /— 5 050 Ft \(számla\) · becslés ~49,50 \$$/.test(r11.subject), r11.subject);
+inv("a szöveg: VALÓS költség … 5 050 Ft, bruttó és jóváírás", /VALÓS költség .*: 5 050 Ft\n  bruttó 5 850 Ft, jóváírás −800 Ft/.test(r11.text), r11.text.slice(0, 400));
+inv("a becslés is ott van mellette", r11.text.includes("Becsült költség (listaár): 49,50 $"));
+inv("projektenként bont, és kimondja (3 projekt: testproj, mr-proj, nincs projekt)", /a számlázási fiók 3 projektje/.test(r11.text) && /\n  testproj: 5 000 Ft  ← a Citoviso projektje/.test(r11.text) && /\n  mr-proj: 0 Ft/.test(r11.text) && /\n  \(nincs projekt\): 50 Ft/.test(r11.text));
+inv("service × SKU sor bruttóval és jóváírással", r11.text.includes("Places API · Text Search Enterprise: 3 500 Ft (bruttó 4 000 Ft, jóváírás −500 Ft)"));
+inv("a 0 költségű tétel nem sor, hanem darabszám", r11.text.includes("+ 1 díjmentes tétel") && !r11.text.includes("Dynamic Maps: 0 Ft"));
+const call = seenBq[0];
+const req = JSON.parse(call?.body ?? "{}") as { query?: string; location?: string; queryParameters?: Array<{ name: string; parameterValue: { value: string } }> };
+const param = (n: string) => req.queryParameters?.find((x) => x.name === n)?.parameterValue.value;
+inv("POST a jobs.query-re, a job-projekt x-goog-user-project-tel", call?.method === "POST" && call.url.endsWith("/projects/testproj/queries") && call.headers["x-goog-user-project"] === "testproj");
+inv("a lekérés a megadott táblát kérdezi, location = EU", (req.query ?? "").includes(`\`${TABLE}\``) && req.location === "EU");
+inv("@start/@end = a budapesti nap határai", param("start") === new Date(dayStart).toISOString() && param("end") === new Date(dayEnd).toISOString(), `${param("start")} ${param("end")}`);
+inv("a SQL csak olvas (SELECT, nincs DDL/DML)", /^WITH /.test(req.query ?? "") && !/\b(INSERT|UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE)\b/i.test(req.query ?? ""));
+inv("a SQL költség + jóváírás (UNNEST(credits)) összegét kéri", /SUM\(cost\)/.test(req.query ?? "") && /UNNEST\(credits\)/.test(req.query ?? ""));
+let badName = false;
+try {
+  billingSql("x`; DROP TABLE y; --");
+} catch {
+  badName = true;
+}
+inv("hibás táblanév → dob (nem fűz SQL-be)", badName);
+inv("a szöveg kimondja: a valós a Billing exportból, utólag pontosulhat", r11.text.includes("Cloud Billing exportból") && r11.text.includes("utólag is pontosíthat"));
+
+console.log("⑫ valós küszöb");
+const big: Line[] = [["testproj", "Places API", "Text Search Enterprise", "HUF", 8000, 0]];
+const r12hi = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ lines: big }) });
+inv("8 000 Ft > 7 000 Ft valós küszöb → [FIGYELEM], VALÓS", r12hi.subject.startsWith("[FIGYELEM]") && r12hi.flags.some((f) => f.includes("VALÓS költség 8 000 Ft — a küszöb 7 000 Ft")), r12hi.flags.join(" | "));
+// estimate 49,5 $ > 20 $, but the real 5 050 Ft < 7 000 Ft decides
+const r12lo = await runDailyReport({ ...realBase, thresholdUsd: 20, fetchImpl: both({ lines: HUF_LINES }) });
+inv("valós 5 050 Ft < 7 000 Ft → nincs küszöb-kiemelés, bár a becslés 49,5 $ > 20 $", !r12lo.flags.some((f) => f.includes("küszöb")), r12lo.flags.join(" | "));
+inv("a ≥2× tétel-kiemelés (Monitoring) a valós ág mellett is él", r12lo.flags.some((f) => f.startsWith("Places.SearchText")));
+inv("csendes napon a szöveg a VALÓS összegre hivatkozik", r11.text.includes("a napi valós összeg a küszöb alatt") || r11.flags.length > 0);
+
+console.log("⑬ pénznem");
+inv("HUF egész forint, csoportosítva", fmtCost(1234.6, "HUF") === "1 235 Ft", fmtCost(1234.6, "HUF"));
+inv("EUR centtel", fmtCost(1234.5, "EUR") === "1 234,50 €", fmtCost(1234.5, "EUR"));
+inv("USD centtel, kód-jellel", fmtCost(12.345, "USD") === "12,35 USD" || fmtCost(12.345, "USD") === "12,34 USD", fmtCost(12.345, "USD"));
+inv("negatív (jóváírás) mínuszjellel", fmtCost(-0.5, "EUR") === "−0,50 €", fmtCost(-0.5, "EUR"));
+inv("negatív forint is mínuszjellel, csoportosítva", fmtCost(-1234, "HUF") === "−1 234 Ft", fmtCost(-1234, "HUF"));
+inv("a −0,2 Ft nem „−0 Ft”", fmtCost(-0.2, "HUF") === "0 Ft", fmtCost(-0.2, "HUF"));
+const eur = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ lines: [["testproj", "Places API", "X", "EUR", 20.25, -1] as Line] }) });
+inv("EUR-számla: 19,25 € > 18 € küszöb → kiemelés EUR-ban", eur.flags.some((f) => f.includes("19,25 € — a küszöb 18,00 €")), eur.flags.join(" | "));
+const usdReal = await runDailyReport({ ...realBase, thresholdUsd: 10, fetchImpl: both({ lines: [["testproj", "Places API", "X", "USD", 12, 0] as Line] }) });
+inv("USD-számla: a USD-küszöb (10) dönt a valós 12-re", usdReal.flags.some((f) => f.includes("VALÓS költség 12,00 USD")), usdReal.flags.join(" | "));
+const ron = await runDailyReport({ ...realBase, thresholdUsd: 20, fetchImpl: both({ lines: [["testproj", "Places API", "X", "RON", 999999, 0] as Line] }) });
+inv("RON (nincs küszöb): NEM hasonlítja a USD-hez — nincs VALÓS kiemelés", !ron.flags.some((f) => f.includes("VALÓS")), ron.flags.join(" | "));
+inv("RON: kimondja, hogy nincs küszöb ebben a pénznemben, és a becslés-küszöb fut", ron.text.includes("nincs küszöb RON pénznemben") && ron.flags.some((f) => f.includes("becsült költség 49,50 $")));
+
+console.log("⑭ nincs-tábla / üres / korai nap / hiba");
+const nf = await runDailyReport({
+  ...realBase,
+  thresholdUsd: 1000,
+  fetchImpl: both({ status: 404, error: { error: { code: 404, message: "Not found: Table x", errors: [{ reason: "notFound" }] } } }),
+});
+inv("404 notFound → missing, a becslés a fő szám", nf.hasData && nf.billing?.status === "missing" && nf.realTotals === undefined);
+inv("404: kimondja, hogy a tábla még nem létezik", nf.text.includes("Valós költség: NINCS MÉG") && nf.text.includes("még nem létezik") && nf.text.includes("A fő szám ezért a becslés"));
+inv("404: a tárgy jelzi, hogy becslés és a számla még nincs", nf.subject.endsWith("~49,50 $ (becslés; a számla-adat még nincs meg)"), nf.subject);
+const emptyT = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ n: 0, firstMs: undefined, lines: [] }) });
+inv("üres tábla → missing, „üres”", emptyT.billing?.status === "missing" && emptyT.text.includes("táblája üres"), emptyT.billing?.reason);
+const early = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ firstMs: dayStart + 3_600_000 }) });
+inv("az export a nap UTÁN indul → missing, nem részleges számla", early.billing?.status === "missing" && early.text.includes("csak 2026-10-01"), early.billing?.reason);
+const e403 = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ status: 403, error: { error: { message: "Access Denied" } } }) });
+inv("403 → error, HTTP-kóddal és üzenettel; a tárgy: számla-lekérdezés hibás", e403.billing?.status === "error" && e403.text.includes("BigQuery HTTP 403: Access Denied") && e403.subject.includes("számla-lekérdezés hibás"));
+const ex = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ throws: "ETIMEDOUT" }) });
+inv("hálózati kivétel → error, nem dob, a becslés kimegy", ex.hasData && ex.billing?.status === "error" && ex.text.includes("ETIMEDOUT"));
+const off = await runDailyReport({ ...base, thresholdUsd: 1000, fetchImpl: both({}) });
+inv("nincs tábla megadva → off, kimondja (nem néma)", off.billing?.status === "off" && off.text.includes("GOOGLE_BILLING_EXPORT_TABLE üres"));
+
+console.log("⑮ késő adat");
+const late = await runDailyReport({
+  ...realBase,
+  thresholdUsd: 1000,
+  fetchImpl: both({ latestMs: dayEnd - 5 * 3_600_000, lines: big }),
+});
+inv("a nap még nem teljes → late, a becslés a fő szám", late.billing?.status === "late" && late.realTotals === undefined && late.subject.includes("(becslés; a számla-adat még nincs meg)"), late.subject);
+inv("kimondja a késést és az utolsó beérkezett használatot", late.text.includes("még nem érkezett meg teljesen") && late.text.includes("2026-10-01 19:00"), late.billing?.reason);
+inv("a részleges összeg tájékoztat, de RÉSZLEGES-ként", late.text.includes("eddig beérkezett (RÉSZLEGES, nem a nap egésze): 8 000 Ft"));
+inv("a részleges 8 000 Ft nem vált ki valós küszöb-kiemelést", !late.flags.some((f) => f.includes("VALÓS")));
+
+console.log("⑯ egyik vagy másik forrás hiányzik");
+const monFail: FetchLike = async () => ({ ok: false, status: 500, text: async () => "boom" });
+const onlyReal = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ lines: HUF_LINES }, monFail) });
+inv("Monitoring-hiba + kész számla → riport a valós számmal", onlyReal.hasData && near(onlyReal.realTotals?.HUF ?? -1, 5050) && onlyReal.subject.endsWith("5 050 Ft (számla)"), onlyReal.subject);
+inv("… és kimondja, miért nincs becslés", onlyReal.text.includes("Becsült költség (listaár): NINCS — a Cloud Monitoring lekérdezés elbukott (Cloud Monitoring HTTP 500"));
+const neither = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ latestMs: dayStart }, monFail) });
+inv("Monitoring-hiba + késő számla → NINCS ADAT, mindkét okkal", !neither.hasData && neither.text.includes("HTTP 500") && neither.text.includes("Valós költség (számla-export): nincs — a nap számla-adata még nem érkezett meg"));
+
+console.log("⑰ BigQuery-lapozás, DST");
+const seenPg: Seen[] = [];
+const pg = await runDailyReport({ ...realBase, thresholdUsd: 1000, fetchImpl: both({ lines: HUF_LINES, pages: 3 }, stub([scenario]), seenPg) });
+inv("három lap összeadódik (5 050 Ft)", near(pg.realTotals?.HUF ?? -1, 5050), JSON.stringify(pg.realTotals));
+inv("a további lapok a job getQueryResults-ával, location-nel jönnek", seenPg.length === 3 && seenPg[1]!.url.includes("/queries/job_1?") && seenPg[1]!.url.includes("location=EU"));
+const seenDst: Seen[] = [];
+await runDailyReport({ ...realBase, day: DST, thresholdUsd: 1000, fetchImpl: both({}, stub([dstPts]), seenDst) });
+const dq = JSON.parse(seenDst[0]?.body ?? "{}") as typeof req;
+const dStart = Date.parse(dq.queryParameters?.find((x) => x.name === "start")?.parameterValue.value ?? "");
+const dEnd = Date.parse(dq.queryParameters?.find((x) => x.name === "end")?.parameterValue.value ?? "");
+inv("a 10-25 számla-lekérése 25 órát fog át", dEnd - dStart === 25 * 3600_000, String((dEnd - dStart) / 3600_000));
 
 if (failures.length) {
   console.log(`\n⛔ google-cost-report-check: ${failures.length} bukás`);

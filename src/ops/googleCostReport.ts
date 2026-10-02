@@ -9,13 +9,19 @@
 // (resource.type="consumed_api") — request COUNTS, not money. The cost is a
 // LIST-PRICE ESTIMATE: Monitoring does not see the field mask, so a method maps to
 // one assumed SKU (the most expensive one our code uses for it), and the monthly
-// free allowances are NOT subtracted. The real figure is Billing → Reports.
+// free allowances are NOT subtracted.
+//
+// The REAL figure (ADR-XXXX) comes from the Cloud Billing export in BigQuery: the
+// day's cost + credits per project × service × SKU, in the account's currency. The
+// export lags (hours, sometimes >24 h); until the day is complete the estimate stays
+// the headline and the report says why. When both exist the real one leads and the
+// estimate stands next to it — the gap between them is information too.
 //
 // Pure except for `runDailyReport`'s injected token/fetch: the gate
 // (scripts/google-cost-report-check.mts) drives it with a fetch stub.
 
 import { addIsoDays, budapestIsoDay, budapestMidnight } from "../text/budapestTime.js";
-import { formatNumber } from "../text/money.js";
+import { currencySign, formatMoney, formatNumber } from "../text/money.js";
 
 // ---------------------------------------------------------------------------
 // Price list — the ONE copy. Google Maps Platform list prices, 0–100k tier,
@@ -116,7 +122,10 @@ export interface UsagePoint {
   readonly count: number;
 }
 
-export type FetchLike = (url: string, init: { headers: Record<string, string> }) => Promise<{
+export type FetchLike = (
+  url: string,
+  init: { headers: Record<string, string>; method?: string; body?: string },
+) => Promise<{
   ok: boolean;
   status: number;
   text(): Promise<string>;
@@ -196,6 +205,231 @@ export async function fetchUsage(q: MonitoringQuery): Promise<UsagePoint[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Billing export (BigQuery) — the real cost
+// ---------------------------------------------------------------------------
+
+/** One project × service × SKU line of the reported day, in the export's currency. */
+export interface BillingLine {
+  readonly projectId: string;
+  readonly service: string;
+  readonly sku: string;
+  readonly currency: string;
+  /** Gross cost (list price after tiers), before credits. */
+  readonly cost: number;
+  /** Sum of the credits (free tier, promotions …) — normally ≤ 0. */
+  readonly credits: number;
+}
+
+/**
+ * What the export says about the day.
+ *  ok      — the export has moved past the day's end: `lines` is the day (may be empty = 0 spend)
+ *  late    — the table has data, but not yet up to the day's end: `lines` is partial
+ *  missing — no table / empty table / the export starts after the day
+ *  error   — the query itself failed (HTTP, network, timeout)
+ *  off     — no table configured
+ */
+export interface BillingDay {
+  readonly status: "ok" | "late" | "missing" | "error" | "off";
+  /** Human-readable why, for every status but "ok". */
+  readonly reason: string;
+  readonly lines: readonly BillingLine[];
+  /** End of the newest usage row in the whole table (null = none). */
+  readonly latestUsageEnd: Date | null;
+  readonly lastExport: Date | null;
+}
+
+export interface BillingQuery {
+  /** Job project (quota + x-goog-user-project). */
+  readonly project: string;
+  /** `project.dataset.table` of the standard usage cost export. */
+  readonly table: string;
+  readonly location: string;
+  readonly token: string;
+  readonly day: string;
+  readonly fetchImpl: FetchLike;
+}
+
+/**
+ * The ONE query: whole-table freshness (row count, first usage start, newest usage
+ * end, newest export) LEFT JOINed to the day's lines, so an empty day still returns
+ * the freshness row. The day is [Budapest midnight, next Budapest midnight) on
+ * usage_start_time — export rows are hourly, so the DST day (23/25 h) splits cleanly.
+ */
+export function billingSql(table: string): string {
+  if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+$/.test(table)) {
+    throw new Error(`hibás számla-export tábla név: ${table}`);
+  }
+  const t = `\`${table}\``;
+  return [
+    "WITH s AS (",
+    "  SELECT COUNT(*) AS n, UNIX_MILLIS(MIN(usage_start_time)) AS first_ms,",
+    "    UNIX_MILLIS(MAX(usage_end_time)) AS latest_ms, UNIX_MILLIS(MAX(export_time)) AS export_ms",
+    `  FROM ${t}`,
+    "), d AS (",
+    "  SELECT project.id AS project_id, service.description AS service, sku.description AS sku, currency,",
+    "    SUM(cost) AS cost, SUM(IFNULL((SELECT SUM(c.amount) FROM UNNEST(credits) AS c), 0)) AS credits",
+    `  FROM ${t}`,
+    "  WHERE usage_start_time >= @start AND usage_start_time < @end",
+    "  GROUP BY 1, 2, 3, 4",
+    ")",
+    "SELECT s.n, s.first_ms, s.latest_ms, s.export_ms, d.project_id, d.service, d.sku, d.currency, d.cost, d.credits",
+    "FROM s LEFT JOIN d ON TRUE",
+    "ORDER BY d.project_id, d.service, d.sku",
+  ].join("\n");
+}
+
+type BqCell = { v: string | null };
+interface BqResponse {
+  jobComplete?: boolean;
+  jobReference?: { jobId?: string; location?: string };
+  rows?: Array<{ f: BqCell[] }>;
+  pageToken?: string;
+  error?: { code?: number; message?: string; errors?: Array<{ reason?: string }> };
+}
+
+const msDate = (v: string | null): Date | null => (v === null || v === "" ? null : new Date(Number(v)));
+
+/** Reads the day from the billing export. Never throws: a failure is status "error". */
+export async function fetchBillingDay(q: BillingQuery): Promise<BillingDay> {
+  const base = `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(q.project)}/queries`;
+  const headers = {
+    Authorization: `Bearer ${q.token}`,
+    "x-goog-user-project": q.project,
+    "Content-Type": "application/json",
+  };
+  const start = budapestMidnight(q.day);
+  const end = budapestMidnight(addIsoDays(q.day, 1));
+  const none = (status: BillingDay["status"], reason: string): BillingDay => ({
+    status,
+    reason,
+    lines: [],
+    latestUsageEnd: null,
+    lastExport: null,
+  });
+  try {
+    const rows: BqCell[][] = [];
+    const ts = (name: string, d: Date) => ({
+      name,
+      parameterType: { type: "TIMESTAMP" },
+      parameterValue: { value: d.toISOString() },
+    });
+    let res = await q.fetchImpl(base, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        query: billingSql(q.table),
+        useLegacySql: false,
+        location: q.location,
+        parameterMode: "NAMED",
+        queryParameters: [ts("start", start), ts("end", end)],
+        timeoutMs: 60_000,
+        maxResults: 10_000,
+      }),
+    });
+    for (let page = 0; page < 50; page++) {
+      const body = await res.text();
+      let json: BqResponse = {};
+      try {
+        json = JSON.parse(body) as BqResponse;
+      } catch {
+        // a non-JSON body is reported with its status below
+      }
+      if (!res.ok) {
+        const notFound =
+          res.status === 404 || (json.error?.errors ?? []).some((e) => e.reason === "notFound");
+        if (notFound) {
+          return none(
+            "missing",
+            `a számla-export táblája (${q.table}) még nem létezik — az exportot a Google Cloud Console → Billing → ` +
+              "Billing export oldalon kell bekapcsolni, az első adat órák–1 nap múlva érkezik",
+          );
+        }
+        return none("error", `BigQuery HTTP ${res.status}: ${(json.error?.message ?? body).slice(0, 300)}`);
+      }
+      if (json.jobComplete === false) {
+        return none("error", "a BigQuery lekérdezés 60 mp alatt nem fejeződött be");
+      }
+      for (const r of json.rows ?? []) rows.push(r.f);
+      if (!json.pageToken) break;
+      const jobId = json.jobReference?.jobId ?? "";
+      const p = new URLSearchParams({ pageToken: json.pageToken, location: q.location, maxResults: "10000" });
+      res = await q.fetchImpl(`${base}/${encodeURIComponent(jobId)}?${p.toString()}`, { headers });
+    }
+    const head = rows[0];
+    if (!head) return none("error", "a BigQuery válasz egyetlen sort sem tartalmazott (a frissességi sor is hiányzik)");
+    const n = Number(head[0]?.v ?? 0);
+    const firstUsage = msDate(head[1]?.v ?? null);
+    const latestUsageEnd = msDate(head[2]?.v ?? null);
+    const lastExport = msDate(head[3]?.v ?? null);
+    const lines: BillingLine[] = [];
+    for (const f of rows) {
+      // The LEFT JOIN's empty-day row. (A null project alone is a real line: account-level charges have none.)
+      if (f[5]?.v == null && f[8]?.v == null) continue;
+      lines.push({
+        projectId: f[4]?.v ?? "(nincs projekt)",
+        service: f[5]?.v ?? "?",
+        sku: f[6]?.v ?? "?",
+        currency: f[7]?.v ?? "",
+        cost: Number(f[8]?.v ?? 0),
+        credits: Number(f[9]?.v ?? 0),
+      });
+    }
+    const fresh = { lines, latestUsageEnd, lastExport };
+    if (n === 0) {
+      return { ...fresh, status: "missing", reason: "a számla-export táblája üres — az első adat még nem érkezett meg" };
+    }
+    if (firstUsage && firstUsage.getTime() > start.getTime()) {
+      return {
+        ...fresh,
+        status: "missing",
+        reason: `a számla-export csak ${budapestStamp(firstUsage)}-tól tartalmaz használatot — erről a napról nincs (teljes) számla-adat`,
+      };
+    }
+    if (!latestUsageEnd || latestUsageEnd.getTime() < end.getTime()) {
+      return {
+        ...fresh,
+        status: "late",
+        reason:
+          "a nap számla-adata még nem érkezett meg teljesen (a Google exportja órákat, néha >24 órát késik) — " +
+          `a legutolsó beérkezett használat vége: ${latestUsageEnd ? budapestStamp(latestUsageEnd) : "nincs"}`,
+      };
+    }
+    return { ...fresh, status: "ok", reason: "" };
+  } catch (e) {
+    return none("error", `a BigQuery lekérdezés elbukott (${errText(e)})`);
+  }
+}
+
+/** "2026-10-02 07:10" in Budapest time. */
+function budapestStamp(d: Date): string {
+  const hm = new Intl.DateTimeFormat("hu-HU", {
+    timeZone: "Europe/Budapest",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+  return `${budapestIsoDay(d)} ${hm}`;
+}
+
+/**
+ * An amount in the export's currency, through the shared money rule (ADR-0162):
+ * forint as whole forints ("1 234 Ft"); any other currency with cents, the integer
+ * part grouped by the shared formatter and the sign from `currencySign`.
+ */
+export function fmtCost(amount: number, currency: string): string {
+  const huf = currencySign(currency) === currencySign("HUF");
+  const abs = Math.abs(amount);
+  // A credit is negative; the minus sign is ours (U+2212), never a lost "-0".
+  const minus = amount < 0 && Math.round(abs * (huf ? 1 : 100)) > 0 ? "−" : "";
+  if (huf) return `${minus}${formatMoney(abs, "HUF")}`;
+  const cents = Math.round(abs * 100);
+  const whole = formatNumber(Math.floor(cents / 100));
+  const frac = String(cents % 100).padStart(2, "0");
+  const sign = currencySign(currency);
+  return `${minus}${whole},${frac}${sign ? ` ${sign}` : ""}`;
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
@@ -207,6 +441,13 @@ export interface ReportOptions {
   readonly thresholdUsd: number;
   /** A ≥2× item is flagged only from this estimated daily cost (USD) — no noise from cents. */
   readonly itemMinUsd: number;
+  /**
+   * Daily threshold for the REAL cost, per export currency ("HUF" → 7000). USD falls
+   * back to `thresholdUsd`. A currency without an entry is never compared to the USD
+   * threshold (no silent exchange rate) — the report says so, and the day threshold
+   * then runs on the estimate.
+   */
+  readonly realThresholds?: Readonly<Record<string, number>>;
 }
 
 export interface ReportRow {
@@ -226,6 +467,10 @@ export interface Report {
   readonly text: string;
   /** True = there was data (the no-data branch is false). */
   readonly hasData: boolean;
+  /** The real (billing export) day, when it was asked for. */
+  readonly billing?: BillingDay;
+  /** Net real cost per currency — only when the export's day is complete ("ok"). */
+  readonly realTotals?: Readonly<Record<string, number>>;
   readonly totalUsd: number;
   readonly avg7Usd: number;
   /** Human-readable reasons the day is highlighted (empty = quiet day). */
@@ -255,7 +500,59 @@ const fmtUsd = (n: number): string => `${n.toFixed(2).replace(".", ",")} $`;
 const fmtInt = (n: number): string => formatNumber(n);
 const shortMethod = (m: string): string => m.replace(/^google\.(maps\.)?(places\.v1\.)?/, "");
 
-export function buildReport(points: readonly UsagePoint[], o: ReportOptions): Report {
+/** Net (cost + credits) per currency. */
+function totalsByCurrency(lines: readonly BillingLine[]): Map<string, { net: number; cost: number; credits: number }> {
+  const m = new Map<string, { net: number; cost: number; credits: number }>();
+  for (const l of lines) {
+    const t = m.get(l.currency) ?? { net: 0, cost: 0, credits: 0 };
+    t.net += l.cost + l.credits;
+    t.cost += l.cost;
+    t.credits += l.credits;
+    m.set(l.currency, t);
+  }
+  return m;
+}
+
+const joinCosts = (m: Map<string, { net: number }>): string =>
+  [...m.entries()].map(([c, t]) => fmtCost(t.net, c)).join(" + ") || "0";
+
+/** The per-project × service × SKU block of the real cost. */
+function billingLinesText(lines: readonly BillingLine[], project: string): string[] {
+  const L: string[] = [];
+  const byProject = new Map<string, BillingLine[]>();
+  for (const l of lines) byProject.set(l.projectId, [...(byProject.get(l.projectId) ?? []), l]);
+  const projects = [...byProject.entries()]
+    .map(([id, ls]) => ({ id, ls, net: ls.reduce((s, l) => s + l.cost + l.credits, 0) }))
+    .sort((a, b) => b.net - a.net);
+  L.push(
+    `Valós költség projektenként (a számlázási fiók ${projects.length} projektje — a fiók alatt az MR projektjei is lehetnek):`,
+  );
+  for (const p of projects) {
+    const mark = p.id === project ? `  ← a Citoviso projektje (az MR is használja)` : "";
+    L.push(`  ${p.id}: ${joinCosts(totalsByCurrency(p.ls))}${mark}`);
+    const paid = p.ls.filter((l) => l.cost !== 0 || l.credits !== 0);
+    paid.sort((a, b) => b.cost + b.credits - (a.cost + a.credits));
+    for (const l of paid) {
+      const credit = l.credits !== 0 ? ` (bruttó ${fmtCost(l.cost, l.currency)}, jóváírás ${fmtCost(l.credits, l.currency)})` : "";
+      L.push(`      ${l.service} · ${l.sku}: ${fmtCost(l.cost + l.credits, l.currency)}${credit}`);
+    }
+    const free = p.ls.length - paid.length;
+    if (free > 0) L.push(`      + ${fmtInt(free)} díjmentes tétel (0 költség)`);
+  }
+  return L;
+}
+
+/**
+ * The report. `billing` is the real day from the export (omitted = not asked);
+ * `estimateMissing` is set when Monitoring failed but the export answered — the
+ * report then stands on the real figure alone and says why the estimate is absent.
+ */
+export function buildReport(
+  points: readonly UsagePoint[],
+  o: ReportOptions,
+  billing?: BillingDay,
+  estimateMissing?: string,
+): Report {
   const weekDays = new Set(Array.from({ length: 7 }, (_, i) => addIsoDays(o.day, -7 + i)));
   const monthPrefix = o.day.slice(0, 8);
 
@@ -315,8 +612,23 @@ export function buildReport(points: readonly UsagePoint[], o: ReportOptions): Re
 
   const totalUsd = rows.reduce((s, r) => s + r.usd, 0);
   const avg7Usd = rows.reduce((s, r) => s + r.avg7Usd, 0);
+
+  // The real figure leads only when the export has the WHOLE day.
+  const realOk = billing?.status === "ok";
+  const real = realOk ? totalsByCurrency(billing.lines) : null;
+  const realTotals = real ? Object.fromEntries([...real.entries()].map(([c, t]) => [c, t.net])) : undefined;
+  const thresholds: Record<string, number> = { USD: o.thresholdUsd, ...(o.realThresholds ?? {}) };
+  // Real currencies that cannot be compared (no threshold in that currency).
+  const unthresholded = real ? [...real.keys()].filter((c) => !Number.isFinite(thresholds[c.toUpperCase()])) : [];
+  const realDecides = real !== null && real.size > 0 && unthresholded.length === 0;
+
   const flags: string[] = [];
-  if (totalUsd > o.thresholdUsd) {
+  if (realDecides && real) {
+    for (const [c, t] of real) {
+      const lim = thresholds[c.toUpperCase()];
+      if (t.net > lim) flags.push(`a napi VALÓS költség ${fmtCost(t.net, c)} — a küszöb ${fmtCost(lim, c)}`);
+    }
+  } else if (!estimateMissing && totalUsd > o.thresholdUsd) {
     flags.push(`a napi becsült költség ${fmtUsd(totalUsd)} — a küszöb ${fmtUsd(o.thresholdUsd)}`);
   }
   for (const r of rows.filter((x) => x.flagged)) {
@@ -330,16 +642,48 @@ export function buildReport(points: readonly UsagePoint[], o: ReportOptions): Re
   const L: string[] = [];
   L.push(`Google API napi riport — ${o.day} (budapesti nap), projekt: ${o.project}`);
   L.push("");
-  L.push(`Becsült költség (listaár): ${fmtUsd(totalUsd)}   ·   előző 7 nap átlaga: ${fmtUsd(avg7Usd)}/nap`);
+  const estimateLine = estimateMissing
+    ? `Becsült költség (listaár): NINCS — ${estimateMissing}`
+    : `Becsült költség (listaár): ${fmtUsd(totalUsd)}   ·   előző 7 nap átlaga: ${fmtUsd(avg7Usd)}/nap`;
+  if (real && billing) {
+    const gross = [...real.entries()].map(([c, t]) => fmtCost(t.cost, c)).join(" + ");
+    const cred = [...real.entries()].map(([c, t]) => fmtCost(t.credits, c)).join(" + ");
+    L.push(`VALÓS költség (Cloud Billing export, a fiók minden projektje): ${joinCosts(real)}`);
+    L.push(`  bruttó ${gross}, jóváírás ${cred} · az export frissessége: ${billing.lastExport ? budapestStamp(billing.lastExport) : "?"}`);
+    L.push(estimateLine);
+    if (unthresholded.length) {
+      L.push(
+        `A valós összegre nincs küszöb ${unthresholded.join(", ")} pénznemben ` +
+          `(GOOGLE_COST_DAILY_THRESHOLD_${unthresholded[0]!.toUpperCase()}) — árfolyam nélkül nem hasonlítom a USD-küszöbhöz, ` +
+          "a napi küszöb ezért a becslésen fut.",
+      );
+    }
+  } else {
+    L.push(estimateLine);
+    if (billing) {
+      L.push(`Valós költség: ${billing.status === "off" ? "nincs bekötve" : "NINCS MÉG"} — ${billing.reason}. A fő szám ezért a becslés.`);
+      if (billing.status === "late" && billing.lines.length) {
+        L.push(`  eddig beérkezett (RÉSZLEGES, nem a nap egésze): ${joinCosts(totalsByCurrency(billing.lines))}`);
+      }
+    }
+  }
   L.push("");
   if (flags.length) {
     L.push("FIGYELEM:");
     for (const f of flags) L.push(`  - ${f}`);
   } else {
-    L.push("Nincs kiugrás (egy tétel sem ≥2× az átlagnak, a napi összeg a küszöb alatt).");
+    L.push(
+      `Nincs kiugrás (egy tétel sem ≥2× az átlagnak, a napi ${realDecides ? "valós" : "becsült"} összeg a küszöb alatt).`,
+    );
   }
-  L.push("");
-  L.push("Tételek (Maps Platform), tegnapi becsült költség szerint:");
+  if (real && billing) {
+    L.push("");
+    L.push(...billingLinesText(billing.lines, o.project));
+  }
+  if (!estimateMissing) {
+    L.push("");
+    L.push("Tételek (Maps Platform), tegnapi becsült költség szerint:");
+  }
   for (const r of rows.filter((x) => x.calls > 0 || x.avg7 > 0)) {
     const mark = r.flagged ? "  <<< KIUGRÁS" : "";
     const sku = r.price ? `${r.price.sku}, ${String(r.price.usdPer1000).replace(".", ",")} $/1000` : "NINCS ÁR";
@@ -380,17 +724,31 @@ export function buildReport(points: readonly UsagePoint[], o: ReportOptions): Re
     );
   }
   L.push("");
-  L.push(...disclaimer(o.project));
+  L.push(...disclaimer(o.project, realOk));
 
-  const subject =
-    `${flags.length ? "[FIGYELEM] " : ""}Google API napi riport ${o.day} — ~${fmtUsd(totalUsd)} (becslés)`;
-  return { subject, text: L.join("\n"), hasData: true, totalUsd, avg7Usd, flags, rows };
+  const why =
+    billing === undefined || billing.status === "off"
+      ? "(becslés)"
+      : billing.status === "error"
+        ? "(becslés; a számla-lekérdezés hibás)"
+        : "(becslés; a számla-adat még nincs meg)";
+  const headline = real
+    ? `${joinCosts(real)} (számla)${estimateMissing ? "" : ` · becslés ~${fmtUsd(totalUsd)}`}`
+    : `~${fmtUsd(totalUsd)} ${why}`;
+  const subject = `${flags.length ? "[FIGYELEM] " : ""}Google API napi riport ${o.day} — ${headline}`;
+  return { subject, text: L.join("\n"), hasData: true, billing, realTotals, totalUsd, avg7Usd, flags, rows };
 }
 
-function disclaimer(project: string): string[] {
+function disclaimer(project: string, realOk = false): string[] {
   return [
     "---",
-    "Ez listaáras BECSLÉS, nem számla: a Monitoring a hívások SZÁMÁT adja, a mező-maszkot nem látja,",
+    ...(realOk
+      ? [
+          "A VALÓS szám a Cloud Billing exportból (BigQuery) jön: a számlázási fiók minden projektjének a budapesti",
+          "napra eső költsége + jóváírása, a fiók pénznemében. A Google napokig utólag is pontosíthat.",
+        ]
+      : []),
+    "A becslés listaáras BECSLÉS, nem számla: a Monitoring a hívások SZÁMÁT adja, a mező-maszkot nem látja,",
     "ezért metódusonként egy feltételezett SKU-val számol (a kódunk legdrágább használatával), és a havi",
     "ingyenes kereteket NEM vonja le. A valós költség: Google Cloud Console → Billing → Reports.",
     `A projektet (${project}) a Minereal (MR) is használja ugyanazzal a kulccsal — a számok a projekt EGÉSZÉT mutatják.`,
@@ -399,13 +757,14 @@ function disclaimer(project: string): string[] {
 }
 
 /** The mail that goes out when there is NO data — a silent failure is not an option. */
-export function buildNoDataReport(day: string, project: string, reason: string): Report {
+export function buildNoDataReport(day: string, project: string, reason: string, billing?: BillingDay): Report {
   const text = [
     `Google API napi riport — ${day} (budapesti nap), projekt: ${project}`,
     "",
     "NINCS ADAT — a mai riport nem készült el.",
     "",
     `Ok: ${reason}`,
+    ...(billing ? [`Valós költség (számla-export): nincs — ${billing.reason || "a nap adata nem teljes"}`] : []),
     "",
     "Teendő: a dev gépen `~/google-cloud-sdk/bin/gcloud auth login` (ha a token járt le), majd kézzel:",
     "  npx tsx scripts/google-cost-report.mts --day " + day,
@@ -417,6 +776,7 @@ export function buildNoDataReport(day: string, project: string, reason: string):
     subject: `[NINCS ADAT] Google API napi riport ${day}`,
     text,
     hasData: false,
+    billing,
     totalUsd: 0,
     avg7Usd: 0,
     flags: [`nincs adat: ${reason}`],
@@ -428,9 +788,16 @@ export interface RunOptions extends ReportOptions {
   /** Returns a Bearer token; throws on failure (the reason goes into the mail). */
   readonly getToken: () => Promise<string>;
   readonly fetchImpl: FetchLike;
+  /** `project.dataset.table` of the billing export; empty/omitted = the real branch is off (and said so). */
+  readonly billingTable?: string;
+  /** BigQuery location of the export dataset (e.g. "EU"). */
+  readonly billingLocation?: string;
 }
 
-/** Token → Monitoring → report. Never throws: every failure becomes the no-data report. */
+/**
+ * Token → Monitoring + billing export → report. Never throws: when NEITHER source
+ * answers, the no-data report goes out with both reasons.
+ */
 export async function runDailyReport(o: RunOptions): Promise<Report> {
   let token: string;
   try {
@@ -439,22 +806,37 @@ export async function runDailyReport(o: RunOptions): Promise<Report> {
   } catch (e) {
     return buildNoDataReport(o.day, o.project, `a Google hozzáférési token nem kérhető le (${errText(e)})`);
   }
+  const table = (o.billingTable ?? "").trim();
+  const billing: BillingDay = table
+    ? await fetchBillingDay({
+        project: o.project,
+        table,
+        location: o.billingLocation || "EU",
+        token,
+        day: o.day,
+        fetchImpl: o.fetchImpl,
+      })
+    : {
+        status: "off",
+        reason: "a számla-export tábla nincs megadva (GOOGLE_BILLING_EXPORT_TABLE üres)",
+        lines: [],
+        latestUsageEnd: null,
+        lastExport: null,
+      };
+  let monitoringFailure: string;
   try {
     const { start, end } = reportWindow(o.day);
     const points = await fetchUsage({ project: o.project, token, start, end, fetchImpl: o.fetchImpl });
     // Not one call in 8+ days (Drive/Sheets included) is not a quiet week — it is a
     // wrong project, a wrong filter or a broken metric. Say so instead of reporting 0 $.
-    if (points.length === 0) {
-      return buildNoDataReport(
-        o.day,
-        o.project,
-        "a Cloud Monitoring a teljes időablakra (hónap eleje / előző 7 nap → tegnap) üres választ adott",
-      );
-    }
-    return buildReport(points, o);
+    if (points.length > 0) return buildReport(points, o, billing);
+    monitoringFailure =
+      "a Cloud Monitoring a teljes időablakra (hónap eleje / előző 7 nap → tegnap) üres választ adott";
   } catch (e) {
-    return buildNoDataReport(o.day, o.project, `a Cloud Monitoring lekérdezés elbukott (${errText(e)})`);
+    monitoringFailure = `a Cloud Monitoring lekérdezés elbukott (${errText(e)})`;
   }
+  if (billing.status === "ok") return buildReport([], o, billing, monitoringFailure);
+  return buildNoDataReport(o.day, o.project, monitoringFailure, billing);
 }
 
 function errText(e: unknown): string {

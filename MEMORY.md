@@ -13,6 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+<<<<<<< HEAD
 ## Párhuzamos szál (2026-10-02 — SUB M3 `cit2a60616f`: editorial-szöveg, program-minta, fotó-felirat, tényhűség-lista, ADR-0300) — LANDOLVA, élesítés a koordinátoré
 
 Elek SZ-3/SZ-4/L-3/H-2, §2b terv-kör után tulaj-döntés („egyetértek”): ① editorial = újság-kinézet, szállás-szöveg
@@ -22,6 +23,15 @@ editorial, brutalism, artdeco, dark-luxury, primitívek); ④ a konzol tényhűs
 listát. Őrök: `template-copy-check`, `photo-caption-check`, `mock-card-fact-list-check` + átírt `module-render-check`.
 ⚠️ A KIKÜLDÖTT mockok statikusak: a régi szöveg/dátum bennük marad, amíg nem renderelődnek újra.
 Jegyzet: `_planning/memory/2026-10-02_m3_editorial_programminta_felirat_tenyhuseg.md`.
+=======
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség H rész, a napi riport VALÓS számlával, ADR-XXXX) — LANDOLVA
+
+A 07:10-es Google-riport a Cloud Billing BigQuery-exportjából (`mineralcrm.billing_export`) a tegnapi VALÓS költséget is
+mutatja: projekt × szolgáltatás × SKU, költség + jóváírás, a tábla pénznemében; a valós a fő szám, a becslés mellette. Amíg
+a nap nem teljes / nincs tábla / hiba: a becslés vezet, és a levél kimondja, miért. Valós küszöb a saját pénznemben
+(`GOOGLE_COST_DAILY_THRESHOLD_HUF` 7 000, `_EUR` 18). ⚠️ A tábla 10-02 reggel még nem létezett → **a valós ág élesen még
+nem mért**. Jegyzet: `_planning/memory/2026-10-02_h_riport_valos_szamla.md`.
+>>>>>>> fd5fcb77 (feat(ops): a napi Google-riport a VALÓS számlát is mutatja (BigQuery billing export); késő/hiányzó adatnál a becslés vezet és kimondja, miért (ADR-XXXX))
 
 ## Párhuzamos szál (2026-10-02 — SUB: Places-költség G rész, napi Google API költség-riport, ADR-0297) — LANDOLVA
 
