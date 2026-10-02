@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB: Places-költség H rész, a napi riport VALÓS számlával, ADR-XXXX) — LANDOLVA
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség H rész, a napi riport VALÓS számlával, ADR-0301) — LANDOLVA
 
 A 07:10-es Google-riport a Cloud Billing BigQuery-exportjából (`mineralcrm.billing_export`) a tegnapi VALÓS költséget is
 mutatja: projekt × szolgáltatás × SKU, költség + jóváírás, a tábla pénznemében; a valós a fő szám, a becslés mellette. Amíg

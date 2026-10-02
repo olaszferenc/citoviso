@@ -11,7 +11,7 @@
 // one assumed SKU (the most expensive one our code uses for it), and the monthly
 // free allowances are NOT subtracted.
 //
-// The REAL figure (ADR-XXXX) comes from the Cloud Billing export in BigQuery: the
+// The REAL figure (ADR-0301) comes from the Cloud Billing export in BigQuery: the
 // day's cost + credits per project × service × SKU, in the account's currency. The
 // export lags (hours, sometimes >24 h); until the day is complete the estimate stays
 // the headline and the report says why. When both exist the real one leads and the

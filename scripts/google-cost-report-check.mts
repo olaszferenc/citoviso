@@ -13,7 +13,7 @@
 //   ⑧ ár nélküli Maps-metódus megjelenik („NINCS ÁR”), a nem-Maps API nem kerül a költségbe
 //   ⑨ a lekérés órás igazítással, a hónap eleje / előző 7 nap kezdetétől kér
 //   ⑩ a szöveg kimondja: listaáras BECSLÉS, Billing → Reports, MR is használja
-//   ⑪ VALÓS ág (BigQuery billing export, ADR-XXXX): költség + jóváírás projektenként × szolgáltatás × SKU,
+//   ⑪ VALÓS ág (BigQuery billing export, ADR-0301): költség + jóváírás projektenként × szolgáltatás × SKU,
 //      a valós a fő szám, a becslés mellette; a lekérés paraméterei (budapesti nap, location, tábla)
 //   ⑫ valós küszöb: a valós összeg a SAJÁT pénznemű küszöbbel; ilyenkor a becslés-küszöb nem dönt
 //   ⑬ pénznem: HUF egész forint, EUR/USD centtel a közös formázóból; küszöb nélküli pénznem nem
@@ -224,7 +224,7 @@ inv("kimondja, hogy MR is használja a projektet", r1.text.includes("Minereal (M
 inv("kimondja, hogy semmit nem korlátoz", r1.text.includes("semmit nem korlátoz"));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VALÓS ág — BigQuery billing export (ADR-XXXX)
+// VALÓS ág — BigQuery billing export (ADR-0301)
 // ─────────────────────────────────────────────────────────────────────────────
 const TABLE = "testproj.billing_export.gcp_billing_export_v1_X";
 type Line = [project: string | null, service: string, sku: string, currency: string, cost: number, credits: number];

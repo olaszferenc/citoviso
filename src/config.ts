@@ -148,7 +148,7 @@ export const config = {
   googleCostDailyThresholdUsd: Number(env("GOOGLE_COST_DAILY_THRESHOLD_USD", "20")),
   googleCostItemMinUsd: Number(env("GOOGLE_COST_ITEM_MIN_USD", "1")),
   /**
-   * The REAL cost (ADR-XXXX): the Cloud Billing standard usage cost export in BigQuery
+   * The REAL cost (ADR-0301): the Cloud Billing standard usage cost export in BigQuery
    * (billing account 012AB6-FB8C94-04076D → mineralcrm.billing_export). Empty = the
    * real branch is off, and the report says so. Read-only query, job runs in
    * `googleCostProject`.

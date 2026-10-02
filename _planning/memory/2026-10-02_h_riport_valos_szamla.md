@@ -1,6 +1,6 @@
 # 2026-10-02 — Places-költség H rész: a napi Google-riport a VALÓS számlát mutatja (BigQuery billing export) (SUB)
 
-Koordinátor: CIT „Places API 600 $” (`~/wt/citddb048b5`). Brief: `~/rc-briefs/places-h-riport-valos-szamla.md`. ADR-XXXX.
+Koordinátor: CIT „Places API 600 $” (`~/wt/citddb048b5`). Brief: `~/rc-briefs/places-h-riport-valos-szamla.md`. ADR-0301.
 
 ## Elkészült
 - `src/ops/googleCostReport.ts` — `fetchBillingDay` (BigQuery jobs.query, egy olvasó SQL: frissesség LEFT JOIN a nap

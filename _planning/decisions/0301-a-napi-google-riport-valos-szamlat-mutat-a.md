@@ -1,4 +1,4 @@
-## ADR-XXXX — A napi Google-riport VALÓS számlát mutat a Cloud Billing BigQuery-exportjából; amíg a nap nem teljes, a becslés vezet és kimondja, miért (2026-10-02)
+## ADR-0301 — A napi Google-riport VALÓS számlát mutat a Cloud Billing BigQuery-exportjából; amíg a nap nem teljes, a becslés vezet és kimondja, miért (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (SUB „H rész”, koordinátor: CIT „Places API 600 $” fő session; brief:
 `~/rc-briefs/places-h-riport-valos-szamla.md`; tulaj: „2. igen” — Billing export BigQuery-be) · **Visszafordíthatóság:**

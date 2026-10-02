@@ -3,7 +3,7 @@
 //
 // Reads yesterday's (Budapest) request counts from Cloud Monitoring, prices them at
 // list price (src/ops/googleCostReport.ts holds the ONE price table), reads the REAL
-// cost of the day from the Cloud Billing export in BigQuery (ADR-XXXX; read-only
+// cost of the day from the Cloud Billing export in BigQuery (ADR-0301; read-only
 // query — while the export has not delivered the day, the estimate leads and the mail
 // says why) and mails the owner. When the token or Monitoring fails, the mail STILL goes out and says there
 // is no data and why — a silent failure is what let ~600 $/week pass unnoticed.

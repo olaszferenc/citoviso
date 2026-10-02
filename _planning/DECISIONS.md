@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-napi-google-riport-valos-szamla-billing-exportbol.md) — A napi Google-riport VALÓS számlát mutat a Cloud Billing BigQuery-exportjából; amíg a nap nem teljes, a becslés vezet és kimondja, miért (2026-10-02)
+- [ADR-0301](decisions/0301-a-napi-google-riport-valos-szamlat-mutat-a.md) — A napi Google-riport VALÓS számlát mutat a Cloud Billing BigQuery-exportjából; amíg a nap nem teljes, a becslés vezet és kimondja, miért (2026-10-02)
 - [ADR-0300](decisions/0300-szallas-szoveg-ujsag-kinezetben-datum-nelkuli.md) — Szállás-szöveg újság-kinézetben, dátum nélküli program-minta, csak beszélő fotó-felirat, a tényhűség-jelvény kinyitja a listát (2026-10-02)
 - [ADR-0299](decisions/0299-szoba-torles-megerositessel-nyitott-keresnel.md) — Szoba-törlés megerősítéssel, nyitott kérésnél tiltva; az IFA a foglalási kérésen befagyasztva (2026-10-02)
 - [ADR-0298](decisions/0298-nincs-koltseg-plafon-a-scrape-ben-a-details-es.md) — Nincs költség-plafon a scrape-ben: a Details- és a bejárás-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
