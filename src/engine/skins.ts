@@ -448,7 +448,7 @@ export const SKINS: Readonly<Record<string, Skin>> = {
     fonts: ["Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700", "Figtree:wght@400;500;600"],
   },
 
-  // gate-opening (ADR-XXXX) — the owner-approved „Kapunyitás” mock (Kimi B, Három Huszár,
+  // gate-opening (ADR-0311) — the owner-approved „Kapunyitás” mock (Kimi B, Három Huszár,
   // Köveskál, 2026-10-02): warm charcoal ground, a deep honey „lantern light” accent that is
   // never text on the dark; Archivo (800/900) display + Inter. Tokens taken over unchanged.
   "lantern-charcoal": {

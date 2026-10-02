@@ -6,7 +6,7 @@ abból is egy sablont.” A koordináló session briefje hozta (`~/rc-briefs/kap
 **Terv:** `plan.html` (az elfogadott, önhordó mock, képei az `img/` alatt) · `terv.md` (a Kimi dizájnterve, B) ·
 **Képek:** `terv-mobil.jpg`, `terv-asztali.jpg` (az elfogadott terv első képernyője) ·
 **Hatókör:** `src/engine/templates/gateOpening.ts` · `src/engine/skins.ts` · `src/engine/templates.ts`
-(a sablon; a `lantern-charcoal` skin; a regisztráció) · Döntés: ADR-XXXX. Precedens: `walk-through` (ADR-0304).
+(a sablon; a `lantern-charcoal` skin; a regisztráció) · Döntés: ADR-0311. Precedens: `walk-through` (ADR-0304).
 
 ⚠️ **Ez a fájl a megvalósítás SZERZŐDÉSE, nem stílus-javaslat.** A kész sablont ehhez mérjük.
 

@@ -1,6 +1,6 @@
 # 2026-10-02 — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon
 
-**Szál:** SUB a CIT koordinátor alatt; brief `~/rc-briefs/kapunyitas-sablon.md`. Döntés: ADR-XXXX.
+**Szál:** SUB a CIT koordinátor alatt; brief `~/rc-briefs/kapunyitas-sablon.md`. Döntés: ADR-0311.
 Kontraktus: `assets/design-refs/tenant-site/gate-opening/` (az elfogadott `plan.html`, `img/`, `terv.md`, első képernyők, README).
 
 ## Elvégezve

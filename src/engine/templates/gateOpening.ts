@@ -1,4 +1,4 @@
-// "gate-opening" art template (ADR-XXXX) — the owner-approved „Kapunyitás” mock.
+// "gate-opening" art template (ADR-0311) — the owner-approved „Kapunyitás” mock.
 //
 // Origin: the 2026-10-02 mock contest on a real lead (Három Huszár Apartments, Köveskál),
 // Claude against Kimi, seven mocks in all. Of Kimi's variant B the owner wrote: „A Kimi B

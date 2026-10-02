@@ -1,4 +1,4 @@
-## ADR-XXXX — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon; a kapu a hős fotó maga, mert egy fotó sem nevezhető kapunak (2026-10-02)
+## ADR-0311 — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon; a kapu a hős fotó maga, mert egy fotó sem nevezhető kapunak (2026-10-02)
 
 **Státusz:** elfogadva (SUB; koordinátor: CIT fő session; brief `~/rc-briefs/kapunyitas-sablon.md`) · **Lokál, nem élesítve** (§0) ·
 **Kontraktus:** `assets/design-refs/tenant-site/gate-opening/` (az elfogadott `plan.html` + README) ·

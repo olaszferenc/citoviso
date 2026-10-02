@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB `citc2b44eea`: „Kapunyitás” sablon (`gate-opening`, a 21.) a Kimi B mockból, ADR-XXXX) — LANDOLVA, élesre semmi
+## Párhuzamos szál (2026-10-02 — SUB `citc2b44eea`: „Kapunyitás” sablon (`gate-opening`, a 21.) a Kimi B mockból, ADR-0311) — LANDOLVA, élesre semmi
 - Új sablon `src/engine/templates/gateOpening.ts` + skin `lantern-charcoal`; kontraktus `assets/design-refs/tenant-site/gate-opening/`. A kapu a hős fotó maga, tompítva — vision-tárgyként nincs „kapu/bejárat”, egy fotó sem mondható kapunak. Funkciók a közös modulokból, telefonos fejléc ADR-0253 szerint.
 - Mérve 390/1440 végiggörgetve: Három Huszár, Lidó, Kemencés, Nyugalom (mock + élő), gazdag teszt-eset. Őrök: jog PASS; tényhűség FLAG csak a sablon előtti rétegből; dizájn FLAG → javítva. Gépies sablon-őrök zöldek.
 - **Nyitott (koordinátor):** kapu forrása (A hős · B másik kültéri fotó · C új `entrance` vision-tárgy), a nagybetűs hős-felirat, fusson-e a kapu kiküldött mockon. Döntési anyag a fa `_drafts/kapunyitas/` mappájában. Jegyzet: `_planning/memory/2026-10-02_gate_opening_sablon.md`.

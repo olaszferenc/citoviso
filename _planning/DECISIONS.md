@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-gate-opening-sablon.md) — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon; a kapu a hős fotó maga, mert egy fotó sem nevezhető kapunak (2026-10-02)
+- [ADR-0311](decisions/0311-kapunyitas-gate-opening-a-tulaj-altal.md) — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon; a kapu a hős fotó maga, mert egy fotó sem nevezhető kapunak (2026-10-02)
 - [ADR-0310](decisions/0310-seta-jelzes-a-konzolon-ha-a-seta-a-kapun-at-nem.md) — Séta-jelzés a konzolon: ha a „Séta a kapun át” nem sétál, a választó, az előnézet és a mock-kártya kimondja; a sablon választható marad (2026-10-02)
 - [ADR-0309](decisions/0309-vendeg-kritikus-a-forrasban-nem-allo-hely.md) — Vendég-kritikus: a forrásban nem álló hely-/minőség-részlet blokkol; a piac-őr a kiszállított szövegről ítél (2026-10-02)
 - [ADR-0308](decisions/0308-a-nem-megvett-modul-szekcioja-nem-latszik-az.md) — A nem megvett modul szekciója nem látszik az élő lapon; az adat léte nem modul
