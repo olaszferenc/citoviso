@@ -17,7 +17,6 @@
 // from the skin's --cit-* contract, so the block inherits whatever template it
 // lands in instead of fighting it.
 
-import { APP_TZ, todayIn } from "../text/zoneTime.js";
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
@@ -166,6 +165,8 @@ const CSS = `<style data-cit-modsec>
 .cit-ev__minta{color:var(--cit-ink)}
 .cit-ev__list{list-style:none;margin:0;padding:0;display:grid}
 .cit-ev__row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--cit-line)}
+/* ADR-XXXX: the mock sample lists program TYPES — no date tile, one column */
+.cit-ev__row--type{grid-template-columns:1fr;padding:10px 0}
 .cit-ev__date{text-align:center;border:1px solid var(--cit-line);border-radius:var(--_card-radius);padding:6px 0;
   background:var(--cit-surface,var(--_card-bg));align-self:start}
 .cit-ev__date b{display:block;font-family:var(--cit-font-display,inherit);font-size:1.6rem;line-height:1;color:var(--cit-ink)}
@@ -540,74 +541,50 @@ function programsBlock(d: SiteData): string {
 }
 
 /**
- * The mock's "Heti programajánló" (owner's choice C, 2026-09-23 —
- * design-refs/public-site/programajanlo/minta/): the approved A block, filled with
- * program TYPES. No invented place, distance or source (§B.17 / ADR-0061): the
- * where-slot says "a környéken", the source line is absent. The marking lives in
- * the lead sentence, not a pill — the owner's call, so the block reads as finished.
+ * The mock's "Heti programajánló" — the approved A block, filled with program TYPES
+ * (design-refs/public-site/programajanlo/minta/, ADR-0218 ①).
  *
- * Dates are offsets from the day the page is VIEWED (a lead opens the mock weeks
- * later; an expired date is the worst first impression): the server prints them
- * from the render day, the runtime (shiftSampleDates) moves them to today. Without
- * JS the render-day dates stay — still a marked sample. The types are season-neutral
- * because of exactly that shift (a harvest festival would land in February).
+ * ADR-XXXX (owner's decision 2026-10-02, overrides ADR-0218 ②③): NO date and NO
+ * weekday. A typed row with a real date ("okt. 3. Borkóstoló est") read as an event
+ * that exists, and a lead-sentence label was too weak to undo it. The section now
+ * carries the same "Minta" pill as every other sample section (ADR-0061). Still no
+ * invented place, distance or source (§B.17): the where-slot says "a környéken".
+ *
+ * ⚠️ The runtime's shiftSampleDates() stays: mocks already SENT carry dated rows
+ * (data-cit-ev-shift) and load the shared runtime — removing it would freeze their dates.
  */
 function programsSampleBlock(d: SiteData): string {
-  const items: { title: string; d: number; len?: number }[] = [
-    { title: T(d, "Termelői piac"), d: 1 },
-    { title: T(d, "Borkóstoló est"), d: 2 },
-    { title: T(d, "Kézműves vásár"), d: 3, len: 2 },
-    { title: T(d, "Esti koncert"), d: 4 },
-    { title: T(d, "Családi nap"), d: 6 },
-    { title: T(d, "Vezetett túra"), d: 7 },
-    { title: T(d, "Színházi előadás"), d: 8 },
-    { title: T(d, "Gasztronap"), d: 10, len: 1 },
-    { title: T(d, "Táncház"), d: 11 },
-    { title: T(d, "Kiállítás-megnyitó"), d: 13 },
+  const titles = [
+    T(d, "Termelői piac"),
+    T(d, "Borkóstoló est"),
+    T(d, "Kézműves vásár"),
+    T(d, "Esti koncert"),
+    T(d, "Családi nap"),
+    T(d, "Vezetett túra"),
+    T(d, "Színházi előadás"),
+    T(d, "Gasztronap"),
+    T(d, "Táncház"),
+    T(d, "Kiállítás-megnyitó"),
   ];
-  const lang = d.lang || "hu";
-  const fmt = (o: Intl.DateTimeFormatOptions) => {
-    try {
-      return new Intl.DateTimeFormat(lang, { ...o, timeZone: "UTC" });
-    } catch {
-      return new Intl.DateTimeFormat("hu", { ...o, timeZone: "UTC" });
-    }
-  };
-  const mon = fmt({ month: "short" });
-  const dm = fmt({ month: "short", day: "numeric" });
-  const wd = fmt({ weekday: "long" });
-  // A DEMO sample (platform content, ADR-0290): its dates count from the platform's today.
-  const today = todayIn(APP_TZ);
-  const at = (n: number) => {
-    const x = new Date(`${today}T12:00:00Z`);
-    x.setUTCDate(x.getUTCDate() + n);
-    return x;
-  };
-  const rows = items
-    .map((e, i) => {
-      const s = at(e.d);
-      const when = e.len ? `${dm.format(s)} – ${dm.format(at(e.d + e.len))}` : wd.format(s);
-      return (
-        `<li class="cit-ev__row${i >= PROGRAMS_MOBILE_FIRST ? " is-more" : ""}" data-d="${e.d}"` +
-        `${e.len ? ` data-len="${e.len}"` : ""}>` +
-        `<div class="cit-ev__date"><b>${s.getUTCDate()}</b><span>${esc(mon.format(s))}</span></div>` +
-        `<div><h3>${esc(e.title)}</h3>` +
-        `<p class="cit-ev__meta"><span class="cit-ev__where">${ICON_PIN}${T(d, "a környéken")}</span>` +
-        `<span class="cit-ev__when">${esc(when)}</span></p></div></li>`
-      );
-    })
+  const rows = titles
+    .map(
+      (title, i) =>
+        `<li class="cit-ev__row cit-ev__row--type${i >= PROGRAMS_MOBILE_FIRST ? " is-more" : ""}">` +
+        `<div><h3>${esc(title)}</h3>` +
+        `<p class="cit-ev__meta"><span class="cit-ev__where">${ICON_PIN}${T(d, "a környéken")}</span></p></div></li>`,
+    )
     .join("");
   const city = d.place?.city;
   const lead = city
-    ? T(d, "Élesben itt a következő két hét valós programjai állnak, {area} 30 km-es körzetéből, forrással.", {
+    ? T(d, "Ilyen programokat mutat itt az éles oldal: a következő két hét valós eseményeit {area} 30 km-es körzetéből, dátummal és forrással.", {
         area: esc(city),
       })
-    : T(d, "Élesben itt a következő két hét valós programjai állnak a környékről, forrással.");
-  const rest = items.length - PROGRAMS_MOBILE_FIRST;
+    : T(d, "Ilyen programokat mutat itt az éles oldal: a következő két hét valós eseményeit a környékről, dátummal és forrással.");
+  const rest = titles.length - PROGRAMS_MOBILE_FIRST;
   return (
-    `<section class="cit-modsec cit-ev" data-cit-module="poi" data-cit-ev-shift><div class="cit-modsec__in">` +
-    `<h2>${T(d, "Programok a környéken")}</h2>` +
-    `<p class="cit-ev__lead"><b class="cit-ev__minta">${T(d, "Minta-napirend.")}</b> ${lead}</p>` +
+    `<section class="cit-modsec cit-ev" data-cit-module="poi"><div class="cit-modsec__in">` +
+    `<h2>${T(d, "Programok a környéken")}<span class="cit-modsec__minta">${T(d, "Minta")}</span></h2>` +
+    `<p class="cit-ev__lead">${lead}</p>` +
     `<input type="checkbox" id="cit-ev-more" class="cit-ev__toggle">` +
     `<ol class="cit-ev__list">${rows}</ol>` +
     `<label for="cit-ev-more" class="cit-ev__more">${T(d, "Még {n} program", { n: String(rest) })}</label>` +

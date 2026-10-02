@@ -12,6 +12,7 @@ import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
@@ -383,8 +384,11 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${photos
           .slice(0, 8)
           .map(
-            (p) =>
-              `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}">${p.alt ? `<figcaption>${esc(p.alt)}</figcaption>` : ""}</figure>`,
+            (p) => {
+              // ADR-XXXX (L-3): the alt stays on the img; a caption only when it says something
+              const cap = photoCaption(data, p);
+              return `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
+            },
           )
           .join("\n        ")}
       </div>

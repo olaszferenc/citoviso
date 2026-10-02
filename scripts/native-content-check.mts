@@ -260,10 +260,9 @@ console.log("\nADR-0061 — mock all-in modulok natívan; élesre semmi minta ne
     const absent = LIVE_SURFACES.filter(([, re]) => !re.test(mock)).map(([n]) => n);
     if (absent.length) missing.push(`${t}(${absent.join(",")})`);
     // The §B.17 label lives ON the sampled sections (hours+pricing+poi at least). The
-    // program sample carries it in its lead sentence (owner's choice C, 2026-09-23),
-    // not as a pill — so the poi section is asked by name, not counted into the pills.
+    // poi section is asked by NAME for its own pill (ADR-XXXX), not counted into the pills.
     const pills = mock.match(/<span class="cit-modsec__minta"/g)?.length ?? 0;
-    const poiMarked = /data-cit-module="poi"[^>]*>(?:(?!<\/section>)[\s\S])*class="cit-ev__minta"/.test(mock);
+    const poiMarked = /data-cit-module="poi"[^>]*>(?:(?!<\/section>)[\s\S])*<span class="cit-modsec__minta"/.test(mock);
     if (pills < 2 || !poiMarked) unmarked.push(`${t}(${pills}${poiMarked ? "" : ",poi jelöletlen"})`);
     // The LIVE phase must carry NO sample fill at all: no pill, no demo form, and
     // none of the sample-only sections for a tenant who configured nothing.

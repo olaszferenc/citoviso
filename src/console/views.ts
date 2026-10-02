@@ -4974,11 +4974,35 @@ export function leadPage(
           // mock-cards ④: a négy kapu egyetlen jelvény-sorban. ⛔ Ha a verdikt NEM
           // „átment", a szó ki is van írva — egy piros pötty önmagában nem mondja meg,
           // hogy megjelölve vagy elbukott, és pont ott számít a különbség.
+          // H-2 (ADR-XXXX, owner's decision 2026-10-02): a flagged fact gate names WHAT it
+          // flagged — the badge carries the COUNT and opens the stored list ON the card.
+          // ⛔ No stored list (older artifacts) → the old "megjelölve" pill: never an empty
+          // list, never an invented number. Guard: scripts/mock-card-fact-list-check.mts.
+          const factItems = Array.isArray(a.inputs.factUnsourced)
+            ? (a.inputs.factUnsourced as unknown[]).filter((x): x is string => typeof x === "string" && x !== "")
+            : [];
+          const factListId = `flist-${a.id}`;
+          const factList =
+            a.inputs.factVerdict !== "pass" && factItems.length
+              ? `<div class="con-mk__flist" id="${esc(factListId)}" hidden>
+                <b>${T(lang, "A tényhűség-őr ezekre nem talált forrást:")}</b>
+                <ul>${factItems.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+                <p>${T(lang, "Küldés előtt javítsd a szöveget — vagy küldéskor a felugróban vállald („Kiküldöm mégis”).")}</p>
+              </div>`
+              : "";
           const gateChips = (["factVerdict", "marketVerdict", "designVerdict", "heroVerdict"] as const)
             .filter((k) => typeof a.inputs[k] === "string")
             .map((k) => {
               const word = mockInputValue(k, a.inputs[k], lang);
               const pass = a.inputs[k] === "pass";
+              if (k === "factVerdict" && factList) {
+                const count = T(lang, "{n} forrás nélküli", { n: String(factItems.length) });
+                return `<button type="button" class="con-mk__gate" data-verdict="${esc(String(a.inputs[k]))}" data-mk-flist="${esc(
+                  factListId,
+                )}" aria-expanded="false" aria-controls="${esc(factListId)}" title="${esc(
+                  `${mockInputLabel(k, lang)}: ${word}`,
+                )}">${esc(gateShortLabel(k, lang))}: ${esc(count)} <span aria-hidden="true">▾</span></button>`;
+              }
               return `<span class="con-mk__gate" data-verdict="${esc(String(a.inputs[k]))}" title="${esc(
                 `${mockInputLabel(k, lang)}: ${word}`,
               )}">${esc(gateShortLabel(k, lang))}${pass ? ` ${ic("check", 11)}` : `: ${esc(word)}`}</span>`;
@@ -5047,6 +5071,7 @@ export function leadPage(
                   : ""
               }
             </dl>
+            ${factList}
             ${noPhotos}
             ${gateOpen ? photoGateBox(photoGate!, a.id) : ""}
             <div class="con-mk__act">
@@ -5211,6 +5236,15 @@ export function leadPage(
    */
   const mockGridScript = `(function(){
     document.addEventListener('click',function(e){
+      // H-2: the fact badge opens ITS card's list (one handler for the whole grid)
+      var f=e.target.closest('[data-mk-flist]');
+      if(f){
+        var l=document.getElementById(f.getAttribute('data-mk-flist')); if(!l) return;
+        var on=l.hidden; l.hidden=!on;
+        f.setAttribute('aria-expanded',String(on));
+        var ar=f.querySelector('span[aria-hidden]'); if(ar) ar.textContent=on?'▴':'▾';
+        return;
+      }
       var b=e.target.closest('[data-mk-more]'); if(!b) return;
       var card=b.closest('.con-mk'); if(!card) return;
       var det=card.querySelector('.con-mk__det'); if(!det) return;

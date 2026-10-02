@@ -12,6 +12,7 @@ import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { ratingScale } from "../rating.js";
+import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
@@ -362,8 +363,11 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
         ${photos
           .slice(0, 6)
           .map(
-            (p) =>
-              `<div class="b-tp"><figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure><figcaption>${esc(p.alt)}</figcaption></div>`,
+            (p) => {
+              // ADR-XXXX (L-3): the alt stays on the img; a caption only when it says something
+              const cap = photoCaption(data, p);
+              return `<div class="b-tp"><figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</div>`;
+            },
           )
           .join("\n        ")}
       </div>

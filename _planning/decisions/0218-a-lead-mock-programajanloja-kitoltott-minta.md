@@ -25,3 +25,6 @@ hetekkel később nyitja meg: valós programok addigra lejárnának.
 kitalált forrás/távolság, a bevezető a lead települését viszi. `native-content-check` és
 `configurator-placement-check`: a poi szekciót NÉV szerint kérdezik a jelölésről (negatív
 kontrollal: a jelölés kivétele mindkettőt pirosra viszi); élesre a minta-jelölés nem szivároghat.
+
+**Módosítás (2026-10-02):** a ② (jelölés csak a bevezetőben, pirula nélkül) és a ④ (a nézés napjához igazított dátumok)
+pontot az ADR-XXXX felülírta: a minta dátum és nap NÉLKÜL áll, a címen „Minta” pirulával. Az ① és a ③ érvényes.

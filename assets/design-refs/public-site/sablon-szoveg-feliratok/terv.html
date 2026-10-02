@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sablon-szöveg és feliratok</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--ink:#14202b;--muted:#5b6774;--line:#dde2e8;--acc:#0b7a8a;--acc-soft:#e3f3f5;--warn:#9a5b00;--warn-soft:#fff4e0;--r:12px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11161c;--panel:#19212a;--ink:#e6edf3;--muted:#9aa7b4;--line:#2c3742;--acc:#4cc3d3;--acc-soft:#14323a;--warn:#f0b35a;--warn-soft:#33270f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header.top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+header.top h1{font-size:15px;margin:0 auto 0 0}
+@media (max-width:600px){header.top{padding:6px 10px;gap:6px}header.top h1{flex-basis:100%;font-size:14px}.seg button{padding:5px 10px;min-height:38px;font-size:12.5px}label.hl{font-size:12px}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:none;color:var(--ink);padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;min-height:36px}
+.seg button[aria-pressed=true]{background:var(--acc);color:#fff}
+label.hl{font-size:13px;display:inline-flex;gap:6px;align-items:center}
+main{max-width:1180px;margin:0 auto;padding:16px}
+section.q{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:0 0 22px}
+section.q h2{margin:0 0 4px;font-size:19px}
+.find{color:var(--muted);margin:0 0 10px}
+.vars{display:grid;gap:8px;margin:10px 0 12px}
+.var{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;background:none;color:var(--ink);font:inherit;text-align:left;width:100%}
+.var[aria-pressed=true]{border-color:var(--acc);background:var(--acc-soft)}
+.var b.k{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-size:13px}
+.var[aria-pressed=true] b.k{background:var(--acc);color:#fff;border-color:var(--acc)}
+.var small{display:block;color:var(--muted)}
+.rec{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--acc);margin-left:6px}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;font-size:13px}
+.jump button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer;min-height:32px}
+.stage{overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--bg);position:relative}
+.stage iframe{border:0;transform-origin:0 0;display:block;background:#fff}
+.note{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--warn-soft);color:var(--ink);font-size:14px}
+.note b{color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.tw{overflow-x:auto}
+.h{color:#b42318;font-weight:700}.m{color:var(--warn);font-weight:700}
+@media (prefers-color-scheme: dark){.h{color:#ff8a7a}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Sablon-szöveg és fotó-feliratok — jóváhagyott terv</h1>
+  <span class="seg" id="size"><button data-w="390" aria-pressed="false">Mobil 390px</button><button data-w="1280" aria-pressed="true">Asztali</button></span>
+  <span class="seg" id="lead"><button data-l="huszar" aria-pressed="true">Három Huszár</button></span>
+  <label class="hl"><input type="checkbox" id="hl" checked> változások kiemelve</label>
+</header>
+<main>
+<p class="find" style="margin:0 0 14px">A tulaj 2026-10-02-én az 1-es pontban az <b>A</b>, a 3-asban a <b>2</b> változatot hagyta jóvá (ADR-XXXX). Minden változat a VALÓDI Három Huszár mockon fut; a szaggatott keret jelöli, mi változott. A kontraktus a mellette álló README.md.</p>
+
+<section class="q" data-q="e">
+  <h2>1 · Az editorial-sablon „újság-játéka” (SZ-3)</h2>
+  <p class="find">Elek: „Szerkesztőség” mint kapcsolat-rovat, „Nyomtatva a világhálón”, „Képes krónika”, „No. 1/2/3”, „Foglalási szelvény”, kitalált idézet-főcím, egyetlen szám a „A ház számokban” alatt, és a díszbetű miatt „AMuschel” egybeolvad. A tulaj mércéje: mit írna ki egy valódi panzió?</p>
+  <div class="vars">
+    <button class="var" data-v="0"><b class="k">0</b><span>Ahogy ma<small>A kiküldött mock változatlanul.</small></span></button>
+    <button class="var" data-v="A"><b class="k">A</b><span>Csak a szavak változnak <span class="rec">javaslat</span><small>Az újság-kinézet marad (vonalak, polaroidok, szaggatott foglaló-keret). Menü: Képek · Szolgáltatások · Vélemények; „No.” számok nincsenek; a főcím idézőjel nélkül; „Szabad szoba kérése”; lábléc: „Elérhetőség”, a „Nyomtatva…” sor törölve; egy számnál nincs „számokban” cím; a díszbetű kimarad, ha az első szó egybetűs („A”, „Ó”).</small></span></button>
+    <button class="var" data-v="B"><b class="k">B</b><span>Szavak + visszafogottabb díszítés<small>Mint az A, és a díszbetű mindig elmarad, a polaroidok egyenesek, a foglaló-keret sima vonal. Kevésbé „újság”, több „honlap”.</small></span></button>
+  </div>
+  <div class="jump" data-for="e"><button data-to="#top">Fejléc + menü</button><button data-to="#e-story">Főcím + bevezető</button><button data-to=".e-coupon">Foglalás</button><button data-to="#e-ads">Szakasz-fejléc</button><button data-to=".e-colo">Lábléc</button></div>
+  <div class="stage"><iframe title="editorial változat" loading="lazy"></iframe></div>
+  <p class="note"><b>C út is van, mock nélkül:</b> az editorial-sablon kikerül a lead-mockok sablonjai közül. Ezt nem javaslom, mert a kinézet nem hibás, csak a szövege.</p>
+</section>
+
+
+
+<section class="q" data-q="g">
+  <h2>3 · Fotó-feliratok (L-3)</h2>
+  <p class="find">„[TESZT] Muschel Panzió — 1. kép” a fotón, mobilon a nyitókép alját takarja; a galéria 6 képén ugyanez. A Három Huszárnál a portál „feliratai” „Három Huszár Köveskal 3*”, „… Köveskál”: ezek sem mondanak semmit.</p>
+  <div class="vars">
+    <button class="var" data-v="0"><b class="k">0</b><span>Ahogy ma<small>Minden kép alatt vagy fölött az alt-szöveg.</small></span></button>
+    <button class="var" data-v="1"><b class="k">1</b><span>A gépi „— N. kép” felirat eltűnik<small>A képek akadálymentes leírása (alt) megmarad, csak látható feliratként nem jelenik meg. A forrás saját felirata marad, akkor is, ha csak a nevet ismétli.</small></span></button>
+    <button class="var" data-v="2"><b class="k">2</b><span>Csak a valódi felirat látszik, és sosem a képen <span class="rec">javaslat</span><small>Az 1, és a csak a nevet, a települést, a típust vagy a csillagot ismétlő felirat („Három Huszár Köveskal 3*”) is elmarad. Ha marad felirat, a nyitóképen a kép ALATT áll, nem a kép alsó negyedén. Ugyanez a szabály a többi sablonra is (brutalism, artdeco, darkLuxury is kiírja az alt-szöveget).</small></span></button>
+  </div>
+  <div class="jump" data-for="g"><button data-to=".e-leadfig">Nyitókép</button><button data-to="#e-story">Mellék-kép</button><button data-to="#e-gallery">Galéria</button></div>
+  <div class="stage"><iframe title="feliratok változat" loading="lazy"></iframe></div>
+</section>
+
+
+
+
+</main>
+<script>
+(function () {
+  var W = 1280, LEAD = "huszar";
+  var state = { e: "A", g: "2" };
+  var to = { e: "#e-story", g: ".e-leadfig", p: ".cit-ev" };
+  try { var s = JSON.parse(localStorage.getItem("m3-hub") || "null"); if (s) { W = s.W || W; LEAD = s.L || LEAD; } } catch (e) {}
+  if (!localStorage.getItem || matchMedia("(max-width: 600px)").matches) W = 390;
+  function save() { try { localStorage.setItem("m3-hub", JSON.stringify({ W: W, L: LEAD })); } catch (e) {} }
+  function srcOf(q) {
+    var hl = document.getElementById("hl").checked ? "&hl=1" : "";
+    if (q === "k") return "card.html?k=" + state.k;
+    return LEAD + ".html?" + q + "=" + state[q] + hl + "&to=" + encodeURIComponent(to[q]);
+  }
+  function fit(stage) {
+    var f = stage.querySelector("iframe");
+    var avail = stage.clientWidth, sc = Math.min(1, avail / W), H = W === 390 ? 760 : 820;
+    f.style.width = W + "px"; f.style.height = H + "px"; f.style.transform = "scale(" + sc + ")";
+    stage.style.height = Math.round(H * sc) + "px";
+  }
+  function load(q) {
+    var sec = document.querySelector('section.q[data-q="' + q + '"]');
+    sec.querySelectorAll(".var").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === state[q])); });
+    var st = sec.querySelector(".stage"); fit(st);
+    st.querySelector("iframe").src = srcOf(q);
+  }
+  function all() { ["e", "g"].forEach(load); }
+  document.querySelectorAll("section.q[data-q]").forEach(function (sec) {
+    var q = sec.dataset.q;
+    sec.querySelectorAll(".var").forEach(function (b) { b.addEventListener("click", function () { state[q] = b.dataset.v; load(q); }); });
+    sec.querySelectorAll(".jump button").forEach(function (b) { b.addEventListener("click", function () { to[q] = b.dataset.to; load(q); }); });
+  });
+  function seg(id, attr, set) {
+    var el = document.getElementById(id);
+    el.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { set(b.dataset[attr]); mark(); save(); all(); });
+    });
+    return el;
+  }
+  function mark() {
+    document.querySelectorAll("#size button").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.w === W)); });
+    document.querySelectorAll("#lead button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.l === LEAD)); });
+  }
+  seg("size", "w", function (v) { W = +v; });
+  seg("lead", "l", function (v) { LEAD = v; });
+  document.getElementById("hl").addEventListener("change", all);
+  addEventListener("resize", function () { document.querySelectorAll(".stage").forEach(fit); });
+  mark(); all();
+})();
+</script>
+</body>
+</html>

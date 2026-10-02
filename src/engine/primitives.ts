@@ -8,6 +8,7 @@
 // a photo exists, a tall typographic hero otherwise). Module hooks (data-cit-module) let the
 // runtime (06-UI-CONTRACT) hydrate the enquiry into the interactive booking widget.
 
+import { photoCaption } from "./photoCaption.js";
 import { iconSvg, matchIcon, starIcon, starRow } from "./icons.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { ratingScale } from "./rating.js";
@@ -867,9 +868,11 @@ function galleryContactSheet(d: SiteData, copy?: SectionCopy): string {
   const shots = d.photos
     .map((p, i) => {
       const r = SHEET_ROTATIONS[i % SHEET_ROTATIONS.length];
+      // ADR-XXXX (L-3): the alt stays on the img; a caption only when it says something
+      const cap = photoCaption(d, p);
       return `<div class="cit-shot" style="--cit-r:${r}"><figure><img src="${esc(p.url)}" alt="${esc(
         p.alt,
-      )}" loading="lazy"></figure><figcaption>${esc(p.alt)}</figcaption></div>`;
+      )}" loading="lazy"></figure>${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</div>`;
     })
     .join("\n          ");
   return `<section class="cit-gallery cit-gallery--sheet" data-cit-module="gallery">
@@ -893,7 +896,8 @@ const GALLERY_SHEET_CSS = `  .cit-contact-sheet { display: grid; grid-template-c
 
 /** PARALLAX PANELS gallery (the immersive-parallax reference treatment): each photo is a
  *  full-bleed 60svh band with fixed background (parallax on desktop; scroll-attached on
- *  mobile/reduced-motion). The photo alt rides as a quiet bottom-left caption. */
+ *  mobile/reduced-motion). The alt rides on aria-label only: a full-bleed band has no
+ *  "below", and a caption never sits ON a photo (ADR-XXXX, L-3). */
 function galleryPanels(d: SiteData, copy?: SectionCopy): string {
   const head = copy?.title || copy?.eyebrow
     ? `<div class="cit-section-inner cit-panels-head">${sectionHead("", copy?.title ?? "", copy)}</div>\n      `
@@ -903,7 +907,7 @@ function galleryPanels(d: SiteData, copy?: SectionCopy): string {
       (p) =>
         `<div class="cit-panel" style="background-image:url('${esc(p.url)}')" role="img" aria-label="${esc(
           p.alt,
-        )}"><span class="cit-panel-cap">${esc(p.alt)}</span></div>`,
+        )}"></div>`,
     )
     .join("\n        ");
   return `<section class="cit-gallery cit-gallery--panels" data-cit-module="gallery">
@@ -917,9 +921,6 @@ const GALLERY_PANELS_CSS = `  .cit-panels-head { padding-bottom: 0; }
   .cit-panels { display: grid; }
   .cit-panel { min-height: 60svh; background-size: cover; background-position: center;
     position: relative; }
-  .cit-panel-cap { position: absolute; left: clamp(1rem, 4vw, 2.5rem); bottom: 1.2rem;
-    color: #fff; font-size: .78rem; letter-spacing: .16em; text-transform: uppercase;
-    text-shadow: 0 1px 10px rgba(0,0,0,.6); opacity: .85; }
   @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
     .cit-panel { background-attachment: fixed; }
   }`;

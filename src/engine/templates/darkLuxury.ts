@@ -11,6 +11,7 @@ import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
@@ -330,10 +331,10 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ? `<div class="t-strip">
       ${stripPhotos
         .map((p, i) => {
-          // A scraper-generated alt ("<name> — N. kép") is a11y-only filler — the visible
-          // caption then stays a quiet numbered marker with a brass rule (no noise text).
-          const meaningful = !/—\s*\d+\.\s*kép\s*$/.test(p.alt);
-          const cap = meaningful ? `<p>${esc(p.alt)}</p>` : `<span class="t-rule"></span>`;
+          // A generated ("<name> — N. kép") or name-echo alt is a11y-only filler (ADR-XXXX,
+          // L-3) — the visible caption then stays a quiet numbered marker with a brass rule.
+          const text = photoCaption(data, p);
+          const cap = text ? `<p>${esc(text)}</p>` : `<span class="t-rule"></span>`;
           return `<figure class="t-card"><div class="t-im"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></div><figcaption><span class="t-no">0${i + 1}</span>${cap}</figcaption></figure>`;
         })
         .join("\n      ")}

@@ -354,6 +354,11 @@ A kártyán rövid nevekkel látod a mock legenerálásakor futott gépi ellenő
 | **Dizájn** | a generált oldal viseli-e a kötelező szerkezeti szabályokat (ikonok, tokenek, modul-horgonyok) |
 | **Nyitókép** | a lap tetejére került fotó elérte-e a minőségi küszöböt (a pontszám és a téma külön is ott áll a kártyán) |
 
+**Mit talált a Tényhűség?** Ha a jelvény sárga, a **leletek számát** is mutatja (például
+„6 forrás nélküli”, a végén egy ▾ nyíllal). Koppints rá: a kártyán kinyílik a lista, amire az őr nem
+talált forrást, alatta a teendő. Újra koppintva becsukódik. Régebbi mockon, ahol a lista nem
+volt eltárolva, a jelvényen továbbra is csak **„megjelölve”** áll.
+
 **A jelvény színe:** zöld = rendben · **sárga = lelet van**. Ha egy kapu lefutott, de nem tudott
 ítélni, a jelvényen a nyers `error` szó áll — zöld alapon; ez **nem** azt jelenti, hogy rendben
 van, hanem hogy nincs ítélet. Ha egy kapu egyáltalán nem futott, a jelvénye meg sem jelenik.

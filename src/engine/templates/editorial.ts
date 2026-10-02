@@ -1,15 +1,22 @@
 // "editorial" art template (ADR-0027) — the 05-editorial reference direction (Kékfestő Porta).
-// Newspaper craft: a masthead between thin rules (giant serif nameplate, factual dateline row),
+// Newspaper LOOK: a masthead between thin rules (giant serif nameplate, factual dateline row),
 // a sticky pill nav, a BIG lead photograph right under the masthead (the old engine's failure
-// was a photo-less masthead — never again), a dropcap lead article with a pull-quote, a
-// dashed-frame coupon booking box, classified-ads amenity columns, a contact-sheet polaroid
-// gallery, "letters to the editor" reviews and a colophon footer. All styling dresses from the
-// 11 --cit-* tokens (+ color-mix derivations) — see templateKit.ts for contracts.
+// was a photo-less masthead — never again), a big-headline lead article, a dashed-frame
+// booking box, ruled amenity columns, a contact-sheet polaroid gallery, review cards and a
+// double-rule footer. All styling dresses from the 11 --cit-* tokens (+ color-mix
+// derivations) — see templateKit.ts for contracts.
+//
+// ⛔ The look is a newspaper, the WORDS are a guesthouse's (ADR-XXXX, owner's decision
+// 2026-10-02, SZ-3 "A"): no "Szerkesztőség", "Képes krónika", "No. 1", "Foglalási szelvény",
+// "Nyomtatva a világhálón", no quotation marks around a headline nobody said, no drop-cap
+// (its ::first-letter float merged "A Muschel" into "AMuschel" for readers and copy).
+// Guard: scripts/template-copy-check.mts.
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
@@ -73,7 +80,8 @@ const EDITORIAL_CSS = `
   .e-leadfig{position:relative;margin-top:36px;border:1px solid var(--cit-ink);padding:10px;background:var(--cit-surface)}
   .e-leadfig .e-in{position:relative;overflow:hidden}
   .e-leadfig img{width:100%;aspect-ratio:16/8;object-fit:cover}
-  .e-leadfig figcaption{position:absolute;left:0;bottom:0;background:color-mix(in srgb, var(--cit-ink) 92%, black);color:var(--cit-bg);font-size:12px;letter-spacing:1px;padding:8px 14px}
+  /* ADR-XXXX (L-3): a caption sits BELOW the photo, never over its bottom quarter */
+  .e-leadfig figcaption{font-family:var(--cit-font-display);font-style:italic;font-size:13px;color:var(--cit-muted);padding:10px 4px 2px}
 
   /* lead article — pull-quote headline + dropcap body + fact box */
   .e-story{display:grid;gap:44px;grid-template-columns:1fr;padding:46px 0 56px}
@@ -82,7 +90,6 @@ const EDITORIAL_CSS = `
   .e-quote{font-size:clamp(28px,3.8vw,44px);margin-bottom:20px}
   .e-quote em{font-style:italic;color:var(--cit-accent)}
   .e-story p{margin-bottom:14px}
-  .e-dropcap::first-letter{font-family:var(--cit-font-display);font-size:56px;float:left;line-height:.85;padding-right:10px;color:var(--cit-accent)}
   .e-story .cit-btn{margin-top:8px}
   .e-aside figure{border:1px solid var(--cit-ink);padding:8px;background:var(--cit-surface)}
   .e-aside img{width:100%;aspect-ratio:4/5;object-fit:cover}
@@ -99,14 +106,14 @@ const EDITORIAL_CSS = `
   .e-coupon .e-sub{font-size:13px;color:var(--cit-muted);margin:4px 0 16px;letter-spacing:1px;text-transform:uppercase}
   .e-coupon .cit-book{background:none;border:0;box-shadow:none}
   .e-coupon .cit-enquiry-bar-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
-  .e-coupon .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-size:1.2rem}
+  /* the box heading already names it — the slot's own "Foglalás" title would be the third */
+  .e-coupon .cit-enquiry-bar-title{display:none}
 
-  /* section heads — numbered, with a rule running to the margin */
+  /* section heads — a rule running to the margin */
   .e-sech{display:flex;align-items:center;gap:18px;margin:0 0 34px}
   .e-sech h2{font-size:clamp(24px,3vw,34px)}
   .e-sech h2 em{font-style:italic;color:var(--cit-accent)}
   .e-sech::after{content:"";flex:1;border-top:1px solid var(--cit-ink);min-width:40px}
-  .e-sech .e-no{font-family:var(--cit-font-display);font-style:italic;color:var(--cit-accent);font-size:20px;flex:none}
 
   /* amenities — classified-ads columns with rules between */
   .e-ads{column-count:1;column-gap:34px;column-rule:1px solid var(--cit-line);margin-bottom:70px}
@@ -129,8 +136,10 @@ const EDITORIAL_CSS = `
   .e-letters{display:grid;gap:26px;grid-template-columns:1fr;margin-bottom:8px}
   @media(min-width:820px){.e-letters{grid-template-columns:repeat(3,1fr)}}
   .e-letter{background:var(--cit-surface);border-top:4px solid var(--cit-accent);box-shadow:var(--cit-shadow);padding:24px;font-size:14.5px}
-  .e-letter .e-st{display:flex;gap:3px;color:var(--cit-accent);margin-bottom:12px}
-  .e-letter .e-st svg{width:15px;height:15px}
+  .e-score{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:-18px 0 26px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--cit-muted)}
+  .e-score b{font-family:var(--cit-font-display);font-size:22px;color:var(--cit-ink);letter-spacing:0}
+  .e-score .e-st{display:inline-flex;gap:3px;color:var(--cit-accent)}
+  .e-score .e-st svg{width:16px;height:16px}
   .e-letter p{font-family:var(--cit-font-display);font-style:italic;margin-bottom:16px}
   .e-letter footer{font-size:12.5px;letter-spacing:1px;text-transform:uppercase;color:var(--cit-muted)}
   .e-sample{text-align:center;font-size:12.5px;color:var(--cit-muted);letter-spacing:.5px;margin-bottom:62px;padding-top:18px}
@@ -179,9 +188,9 @@ const CONTACT_ICONS = {
   location: iconSvg("location"),
 };
 
-/** Numbered editorial section head ("No. 1 · Heading ————"). */
-function sectionHead(no: number, title: string, accent?: string): string {
-  return `<div class="e-sech"><span class="e-no">No. ${no}</span><h2>${accented(title, accent)}</h2></div>`;
+/** Editorial section head ("Heading ————"). No "No. 1" numbering (ADR-XXXX). */
+function sectionHead(title: string, accent?: string): string {
+  return `<div class="e-sech"><h2>${accented(title, accent)}</h2></div>`;
 }
 
 function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
@@ -198,7 +207,6 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   const hasContact = Boolean(data.contact.email || data.contact.phone);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
-  const stars = honestStarCount(data);
 
   // §B.17: reviews — real data first; mock with none → clearly marked sample; live → dropped.
   const realReviews = data.reviews && data.reviews.length ? data.reviews : null;
@@ -228,9 +236,9 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   const navLinks = [
     `<a href="#e-story">${T(data, "A ház")}</a>`,
-    data.highlights.length ? `<a href="#e-ads">${T(data, "Ami jár")}</a>` : "",
-    photos.length ? `<a href="#e-gallery">${T(data, "Képes krónika")}</a>` : "",
-    reviewsData ? `<a href="#e-letters">${T(data, "Vendégkönyv")}</a>` : "",
+    data.highlights.length ? `<a href="#e-ads">${T(data, "Szolgáltatások")}</a>` : "",
+    photos.length ? `<a href="#e-gallery">${T(data, "Képek")}</a>` : "",
+    reviewsData ? `<a href="#e-letters">${T(data, "Vélemények")}</a>` : "",
     hasContact ? `<a href="#e-contact">${T(data, "Kapcsolat")}</a>` : "",
     `<a href="#cit-enquiry" class="e-hot">${T(data, "Foglalás")}</a>`,
   ]
@@ -243,20 +251,22 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </nav>`;
 
   // -- lead photograph (the anti-lesson: never a photo-less masthead) -------
+  const leadCap = leadPhoto ? photoCaption(data, leadPhoto) : "";
   const leadFig = leadPhoto
     ? `<figure class="e-leadfig">
     <div class="e-in">
       <img src="${esc(leadPhoto.url)}" alt="${esc(leadPhoto.alt)}">
-      <figcaption>${esc(leadPhoto.alt)}</figcaption>
     </div>
+    ${leadCap ? `<figcaption>${esc(leadCap)}</figcaption>` : ""}
   </figure>`
     : "";
 
-  // -- lead article: pull-quote headline (hero lead) + dropcap intro --------
+  // -- lead article: big headline (hero lead, NOT quoted — nobody said it) + intro
   const quoteLine = heroCopy.lead || data.tagline;
+  // "A ház számokban" promises a table — over ONE number it is an empty promise (ADR-XXXX).
   const factRows = data.stats?.length
     ? `<div class="e-facts">
-        <h3>${T(data, "A ház számokban")}</h3>
+        ${data.stats.length >= 2 ? `<h3>${T(data, "A ház számokban")}</h3>` : ""}
         ${data.stats
           .map(
             (s) =>
@@ -265,10 +275,11 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           .join("\n        ")}
       </div>`
     : "";
+  const asideCap = asidePhoto ? photoCaption(data, asidePhoto) : "";
   const aside =
     asidePhoto || factRows
       ? `<aside class="e-aside">
-      ${asidePhoto ? `<figure><img src="${esc(asidePhoto.url)}" alt="${esc(asidePhoto.alt)}"><figcaption>${esc(asidePhoto.alt)}</figcaption></figure>` : ""}
+      ${asidePhoto ? `<figure><img src="${esc(asidePhoto.url)}" alt="${esc(asidePhoto.alt)}">${asideCap ? `<figcaption>${esc(asideCap)}</figcaption>` : ""}</figure>` : ""}
       ${factRows}
     </aside>`
       : "";
@@ -276,33 +287,30 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     quoteLine || data.intro
       ? `<div class="e-story" id="e-story">
     <div>
-      <p class="e-kicker">${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "Vezércikk")}</p>
-      ${quoteLine ? `<h2 class="e-quote">„${accented(quoteLine, heroCopy.accent)}${"”"}</h2>` : ""}
-      ${data.intro ? `<p class="e-dropcap">${esc(data.intro)}</p>` : ""}
+      <p class="e-kicker">${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "A házról")}</p>
+      ${quoteLine ? `<h2 class="e-quote">${accented(quoteLine, heroCopy.accent)}</h2>` : ""}
+      ${data.intro ? `<p>${esc(data.intro)}</p>` : ""}
       ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad szobát kérek")}</a>` : ""}
     </div>
     ${aside}
   </div>`
       : "";
 
-  // -- coupon booking (canonical hydrated slot inside the dashed frame) -----
+  // -- booking box (canonical hydrated slot inside the dashed frame) --------
   const coupon = `<div class="e-coupon">
-    <h3>${T(data, "Foglalási szelvény")}</h3>
+    <h3>${T(data, "Szabad szoba kérése")}</h3>
     <p class="e-sub">${
       hasBookingSurface(data, phase)
-        ? T(data, "Foglalás — a szállás hamarosan visszajelez")
+        ? T(data, "Válasszon időpontot — a szállás hamarosan visszajelez")
         : T(data, "Érdeklődés — a szállás hamarosan visszajelez")
     }</p>
     ${bookingSlot(data, phase)}
   </div>`;
 
-  // -- numbered sections (sequential over what actually renders) ------------
-  let sectionNo = 0;
-
   // -- amenities: classified-ads columns (real highlights only) -------------
   const ads = data.highlights.length
     ? `<section id="e-ads">
-    ${sectionHead(++sectionNo, featCopy.title || T(data, "Mi jár a szobához"), featCopy.accent)}
+    ${sectionHead(featCopy.title || T(data, "Mi jár a szobához"), featCopy.accent)}
     <div class="e-ads">
       ${data.highlights
         .map((h) => `<div class="e-ad"><h3>${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></h3></div>`)
@@ -311,32 +319,42 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </section>`
     : "";
 
-  // -- gallery: contact sheet of polaroids, caption from the real alt -------
+  // -- gallery: contact sheet of polaroids; a caption only when it says something (L-3)
   const sheet = photos.length
     ? `<section id="e-gallery">
-    ${sectionHead(++sectionNo, galCopy.title || T(data, "Képes krónika"), galCopy.accent)}
+    ${sectionHead(galCopy.title || T(data, "Képek a házról"), galCopy.accent)}
     <div class="e-sheet" data-cit-module="gallery">
       ${photos
         .slice(0, 6)
         .map(
-          (p, i) =>
-            `<div class="e-shot" style="--r:${SHOT_TILTS[i % SHOT_TILTS.length]}"><figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure><figcaption>${esc(p.alt)}</figcaption></div>`,
+          (p, i) => {
+            const cap = photoCaption(data, p);
+            return `<div class="e-shot" style="--r:${SHOT_TILTS[i % SHOT_TILTS.length]}"><figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</div>`;
+          },
         )
         .join("\n      ")}
     </div>
   </section>`
     : "";
 
-  // -- reviews: letters to the editor (star row mirrors the REAL rating) ----
-  const starRowHtml = stars ? `<div class="e-st">${starIcon().repeat(stars)}</div>` : "";
+  // -- reviews: real quotes, no per-card stars --------------------------------
+  // A Review carries no rating of its own — the AVERAGE's star row on every card read as if each
+  // guest had given the average (a two-star review got five). The average's row stands ONCE, under
+  // the section head, next to the REAL rating (ADR-XXXX; guard: scripts/template-copy-check.mts).
+  const stars = honestStarCount(data);
+  const scoreLine =
+    stars && ratingStat
+      ? `<p class="e-score"><span class="e-st">${starIcon().repeat(stars)}</span><b>${esc(ratingStat.value)}</b><span>${esc(ratingStat.label)}</span></p>`
+      : "";
   const letters = reviewsData
     ? `<section id="e-letters" data-cit-module="reviews">
-    ${sectionHead(++sectionNo, revCopy.title || T(data, "Levelek a vendégkönyvből"), revCopy.accent)}
+    ${sectionHead(revCopy.title || T(data, "Vendégek véleménye"), revCopy.accent)}
+    ${scoreLine}
     <div class="e-letters${realReviews ? " e-letters-end" : ""}">
       ${reviewsData
         .map(
           (r) =>
-            `<div class="e-letter">${starRowHtml}<p>„${esc(r.quote)}${"”"}</p><footer>— ${esc(r.author)}${r.meta ? `, ${esc(r.meta)}` : ""}</footer></div>`,
+            `<div class="e-letter"><p>„${esc(r.quote)}${"”"}</p><footer>— ${esc(r.author)}${r.meta ? `, ${esc(r.meta)}` : ""}</footer></div>`,
         )
         .join("\n      ")}
     </div>
@@ -344,7 +362,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </section>`
     : "";
 
-  // -- contact: the editor's desk + framed environs photo -------------------
+  // -- contact + framed environs photo ---------------------------------------
   const c = data.contact;
   const contactLines = [
     c.phone
@@ -362,10 +380,10 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const contact = contactLines
     ? `<section class="e-dest" id="e-contact">
     <div>
-      ${sectionHead(++sectionNo, T(data, "Írjon nekünk"))}
-      <p class="e-intro">${T(data, "Kérdés, egyedi kérés, csoportos érkezés? A foglalási szelvényen vagy az alábbi elérhetőségeken várjuk levelét.")}</p>
+      ${sectionHead(T(data, "Írjon nekünk"))}
+      <p class="e-intro">${T(data, "Kérdés, egyedi kérés, csoportos érkezés? A foglalási űrlapon vagy az alábbi elérhetőségeken várjuk levelét.")}</p>
       ${contactLines}
-      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási szelvényhez")}</a>` : ""}
+      ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad szobát kérek")}</a>` : ""}
     </div>
     ${
       contactPhoto
@@ -380,7 +398,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </section>`
     : "";
 
-  // -- colophon -------------------------------------------------------------
+  // -- footer ---------------------------------------------------------------
   const footTag = data.tagline || firstSentence(data.intro);
   const colophon = `<footer class="e-colo">
     <div class="e-wrap">
@@ -390,14 +408,14 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
           ${footTag ? `<p>${esc(footTag)}</p>` : ""}
         </div>
         <div>
-          <h4>${T(data, "Rovatok")}</h4>
+          <h4>${T(data, "Az oldalon")}</h4>
           <a href="#e-story">${T(data, "A ház")}</a>
-          ${data.highlights.length ? `<a href="#e-ads">${T(data, "Ami jár")}</a>` : ""}
-          ${photos.length ? `<a href="#e-gallery">${T(data, "Képes krónika")}</a>` : ""}
-          ${reviewsData ? `<a href="#e-letters">${T(data, "Vendégkönyv")}</a>` : ""}
+          ${data.highlights.length ? `<a href="#e-ads">${T(data, "Szolgáltatások")}</a>` : ""}
+          ${photos.length ? `<a href="#e-gallery">${T(data, "Képek")}</a>` : ""}
+          ${reviewsData ? `<a href="#e-letters">${T(data, "Vélemények")}</a>` : ""}
         </div>
         <div>
-          <h4>${T(data, "Szerkesztőség")}</h4>
+          <h4>${T(data, "Elérhetőség")}</h4>
           ${c.phone ? `<a href="tel:${esc(c.phone.replace(/\s+/g, ""))}">${esc(c.phone)}</a>` : ""}
           ${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}
           <a href="#cit-enquiry">${T(data, "Foglalás")}</a>
@@ -406,7 +424,6 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       </div>
       <div class="e-colo-legal">
         <span>© ${esc(data.name)} — ${T(data, "Minden jog fenntartva.")}</span>
-        <span>${T(data, "Nyomtatva a világhálón")}</span>
       </div>
     </div>
   </footer>`;

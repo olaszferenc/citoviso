@@ -26,7 +26,6 @@ import { SKINS } from "../src/engine/skins.js";
 import { SAMPLE_REVIEWS } from "../src/engine/primitives.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import { decorateWithLanguages } from "../src/tenant/multilangCore.js";
-import { APP_TZ, addIsoDays, todayIn } from "../src/text/zoneTime.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
 let failures = 0;
@@ -365,15 +364,14 @@ for (const id of priced) {
   );
 }
 
-// ── The mock's program sample (owner's choice C, 2026-09-23) ────────────────
-// The lead sees the approved A block FILLED — with program types, never an invented
-// place, distance or source (§B.17 / ADR-0061), marked in its lead sentence, dated
-// from the render day onwards (the runtime moves them to the viewing day).
+// ── The mock's program sample (ADR-XXXX, owner's decision 2026-10-02 — overrides
+// ADR-0218 ②③): the lead sees program TYPES with NO date and NO weekday, so nothing on
+// the page reads as an event someone could turn up to; the section carries the same
+// "Minta" pill as every other sample section. Still no invented place, distance or
+// source (§B.17 / ADR-0061), and the lead sentence names the lead's real town.
 {
   const lead = { ...BASE, place: { city: "Zamárdi" } } as unknown as SiteData;
-  // The sample counts from the PLATFORM's today (Budapest), exactly as programsSampleBlock
-  // does — a UTC "tomorrow" failed every land between 00:00 and 02:00 CEST.
-  const tomorrow = Number(addIsoDays(todayIn(APP_TZ), 1).slice(8, 10));
+  const DATEY = /\b(jan|febr?|márc|ápr|máj|jún|júl|aug|szept|okt|nov|dec)\.|hétfő|kedd|szerda|csütörtök|péntek|szombat|vasárnap/i;
   const bad: string[] = [];
   for (const t of templateIds) {
     const html = renderSite({ template: t, skin: "", archetype: "", sections: [] }, lead, { phase: "mock" });
@@ -385,16 +383,16 @@ for (const id of priced) {
     const why = [
       !sec && "nincs poi-szekció",
       (sec.match(/class="cit-ev__row/g)?.length ?? 0) !== 10 && "nem 10 sor",
-      !/class="cit-ev__minta"/.test(sec) && "jelöletlen",
-      !/data-cit-ev-shift/.test(sec) && "nincs dátum-tolás horgony",
+      !/<h2>[^<]*<span class="cit-modsec__minta">/.test(sec) && "nincs Minta-pirula a címen",
+      /class="cit-ev__(date|when)"|data-cit-ev-shift|data-d="/.test(sec) && "dátum a mintán",
+      DATEY.test(rowsText) && "hónap/nap a sorokban",
       /Forrás|Helyben|\d\s*km\b/.test(rowsText + text.replace(/\d+ km-es körzet/, "")) && "kitalált forrás/távolság",
       !text.includes("Zamárdi 30 km-es") && "hiányzik a lead települése a bevezetőből",
-      !new RegExp(`<div class="cit-ev__date"><b>${tomorrow}</b>`).test(sec) && "az első dátum nem holnap",
     ].filter(Boolean);
     if (why.length) bad.push(`${t}(${why.join(",")})`);
   }
   check(
-    "⭐⭐ a mock programajánló-mintája kitöltött, jelölt, és NEM talál ki helyet/távolságot/forrást",
+    "⭐⭐ a mock programajánló-mintája kitöltött, Minta-pirulás, DÁTUM NÉLKÜLI, és NEM talál ki helyet/távolságot/forrást",
     bad.length === 0,
     bad.slice(0, 4).join(" · "),
   );

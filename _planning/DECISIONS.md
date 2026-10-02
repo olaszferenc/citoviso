@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-szallas-szoveg-ujsag-kinezetben-datum-nelkuli-programminta-beszelo-felirat.md) — Szállás-szöveg újság-kinézetben, dátum nélküli program-minta, csak beszélő fotó-felirat, a tényhűség-jelvény kinyitja a listát (2026-10-02)
 - [ADR-0299](decisions/0299-szoba-torles-megerositessel-nyitott-keresnel.md) — Szoba-törlés megerősítéssel, nyitott kérésnél tiltva; az IFA a foglalási kérésen befagyasztva (2026-10-02)
 - [ADR-0298](decisions/0298-nincs-koltseg-plafon-a-scrape-ben-a-details-es.md) — Nincs költség-plafon a scrape-ben: a Details- és a bejárás-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
 - [ADR-0297](decisions/0297-napi-google-api-koltseg-riport-e-mailben.md) — Napi Google API költség-riport e-mailben: listaáras becslés a Monitoring hívásszámaiból, csak szól, nem korlátoz (2026-10-02)

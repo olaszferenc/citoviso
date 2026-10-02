@@ -328,6 +328,32 @@ if [ -f scripts/paid-module-anchor-check.mts ] && \
   echo "[pre-commit] paid-module-anchor (megvett modul: horog az élő lapon VAGY „kifizette, de üres”)…"
   npx tsx scripts/paid-module-anchor-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX (SZ-3, Elek 2026-10-01) — EGY őr a sablon-szövegre (M3 + M4 szakasz): az editorial újság-KINÉZETŰ, de a szövege egy szállásé —
+# nincs „Szerkesztőség”, „Képes krónika”, „No. 1”, „Foglalási szelvény”, idézőjeles főcím, díszbetű
+# (az „A Muschel…” „AMuschel”-lé olvadt), és „A ház számokban” nem áll egyetlen szám fölött.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/template-copy-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(render|templateKit|icons)\.ts$|^scripts/template-copy-check\.mts$'; then
+  echo "[pre-commit] template-copy-check (sablon-szöveg tiltólista: szállás-szöveg, nincs átlag-csillag a vélemény-kártyán)…"
+  npx tsx scripts/template-copy-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX (L-3, Elek 2026-10-01): a gépi „‹név› — N. kép” a nyitókép alsó negyedén ült mobilon. A
+# látható fotó-felirat csak akkor van, ha mond valamit, és sosem a képen — 19 sablon + primitív
+# galériák, Chromiumban mért dobozokkal.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/photo-caption-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(render|primitives|photoCaption|siteData|templateKit)\.ts$|^scripts/photo-caption-check\.mts$'; then
+  echo "[pre-commit] photo-caption-check (a fotó-felirat mond valamit, és nem a képen ül)…"
+  npx tsx scripts/photo-caption-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX (H-2, Elek 2026-10-01): a „Tényhűség: megjelölve” jelvény nem mondta meg, MIT jelölt meg.
+# A jelvény a leletek számát viseli, és a kártyán nyitja a tárolt listát (valódi stíluslap, Chromium).
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/mock-card-fact-list-check.mts ] && \
+   changed_files | grep -qE '^src/console/views\.ts$|^public/assets/ui/citui-console\.css$|^scripts/mock-card-fact-list-check\.mts$'; then
+  echo "[pre-commit] mock-card-fact-list-check (a tényhűség-jelvény kinyitja a listát a kártyán)…"
+  npx tsx scripts/mock-card-fact-list-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A KONZOL KINÉZET-ELŐNÉZETE A MOCK IKERTESTVÉRE (H-1, 2026-10-01): a /lead/:id/tpl-preview
 # runtime nélkül ment ki, így a térkép-tű stílus nélkül ~300 px-es fekete folt lett MINDEN
 # kinézeten — pont azon a képen, amin a kurátor dönt. Böngészőben mért tű-méret, 19 sablon.
