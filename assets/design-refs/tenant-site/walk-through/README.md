@@ -46,9 +46,11 @@ Citoviso-n generálható típusként”). A koordináló session briefje hozta (
   kiemelések maradnak); nincs értékelés → nincs accent sáv és nincs szám-cella; nincs valódi GYIK →
   nincs GYIK; élesen szoba nélkül → nincs szoba-szakasz. Üres doboz sehol.
 
-## Ami a terv szerint NEM dőlt el (a koordinátornak átadva, lásd a session-jegyzetet)
+## A tulaj döntései a nyitott kérdésekben (koordinátor, 2026-10-02 — ADR-0304 kiegészítés)
 
-- a séta 3-nál kevesebb tárgyú leadeken (pl. csupa belső fotós apartman) — ma: elmarad;
-- az accent szín: a sablon a többi sablonhoz hasonlóan a fotókból vett akcentust használja, ami a
-  Három Huszár-on terrakotta, nem a mock lombzöldje;
-- a foglalási szakasz a közös modul űrlapja (naptár), nem a mock kétlépcsős ajánlatkérője.
+- Kevés tárgyú leadnél a séta **elmarad**; a hős-kollázs képei nem lépések.
+- A kiemelőszín a fotókból vett (mint minden sablonnál).
+- A lépés alatt **csak a lépés neve**, leírás nincs.
+- A foglalás a közös modul (ADR-0048).
+- **Felirat soha nem ül más tárgyú fotón:** mobilon csak az aktív lépés kártyája látszik; asztalon a szöveg a panel
+  mellett áll, az aktív cím mindig a színpadon lévő fotóé.

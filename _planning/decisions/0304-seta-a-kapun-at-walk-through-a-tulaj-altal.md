@@ -47,3 +47,21 @@ Aranykagyló 36 (23 fotó, nincs értékelés, 5 lépés).
 - A Három Huszár pillanatkép (2026-09-26) két kiemelése forrás nélküli („Saját, ingyenes parkoló”, „Reggeli a virágos
   kertben”) — a copywriter régi kimenete, nem a sablon terméke; újragenerálás a mai (ADR-0292) kritikussal javítja.
 - A foglalás a közös naptáras modul, nem a mock kétlépcsős ajánlatkérője (összesítő a becsült összeggel).
+
+### Kiegészítés — a tulaj döntései (koordinátor, 2026-10-02)
+1. **Kevés tárgyú leadnél a séta elmarad (A);** a hős-kollázs képei NEM lépések.
+2. **A kiemelőszín a fotókból vett** marad, mint minden sablonnál.
+3. **A lépés alatt csak a lépés neve** áll, leírás nincs.
+4. **A foglalás a közös modul** marad (ADR-0048).
+5. **Felirat soha nem ül más tárgyú fotón — mérve, javítva.** A koordinátor gyanúja (a B-képeken „Kert és udvar” a konyhán)
+   valódi elcsúszás volt, nem átúszás-pillanat: mobilon a középre tett kártya a képernyő szélén még látszott, amikor a
+   szomszéd lépés már a középvonalon állt (Három Huszár 8/126 · Bánó Porta 8/127 · Aranykagyló 11/168 látható állás).
+   Javítás: mobilon csak az AKTÍV lépés kártyája látszik (a többi elhalványul); asztalon a szöveg a panel MELLETT áll, a
+   jóváhagyott tompított cím-sor marad, és ott az aktív cím mindig a színpadon lévő fotóé. Utána: Három Huszár 0/59
+   (mobil) · 0/61 (asztal) eltérés.
+6. **Három Huszár újragenerálva** (dev, `walk-through`, a mai tényhűség-láncon): a „Saját, ingyenes parkoló” „Saját
+   parkoló”-vá vált (forrásolt). ⚠️ Megmaradt egy túlfordítás: „Kontinentális reggeli **a kertben**” — a forrásban a kert a
+   szállásé, nem a reggeli helye; a generátor saját tényhűség-kapuja átengedte (`factVerdict: pass`), a tényhűség-őr
+   agent FLAG-elte. Ez a szöveg-pipeline hibája, nem a sablon terméke. Places-lookup nem történt (24 élő portál-fotó →
+   ADR-0293 szerint a generálás nem fizet); ennek következménye, hogy a leadnek most nincs Google-értékelése az adatban,
+   ezért a számok- és az értékelés-sáv helyesen elmarad.

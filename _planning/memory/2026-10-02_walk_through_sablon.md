@@ -34,3 +34,12 @@ Kontraktus: `assets/design-refs/tenant-site/walk-through/` (az elfogadott `plan.
 3. Lépés alatti bekezdés (csak fotónként megerősített leírásból lehetne).
 4. A Három Huszár pillanatkép két forrás nélküli kiemelése (copywriter, 09-26) — újragenerálás javítja.
 5. Foglalás: a közös naptáras modul, nem a mock kétlépcsős ajánlatkérője.
+
+## 2. kör (a tulaj döntései után, 2026-10-02)
+- Döntések: séta kevés tárgynál elmarad (A) · fotó-akcentus · lépés alatt csak a név · foglalás közös modul.
+- Felirat-elcsúszás MÉRVE (nem átúszás): mobilon 6–7% látható kártya-állás a szomszéd fotóján → csak az aktív kártya
+  látszik mobilon; utána 0 eltérés (Három Huszár 390/1440). Mérő: görgetés 40 px-enként, kártya-cím vs. színpad-felirat.
+- Három Huszár újragenerálva (dev, $0,62, Places-lookup nélkül): „ingyenes” eltűnt; „Kontinentális reggeli a kertben”
+  forrás nélküli „a kertben”-je MARADT (a generátor tényhűség-kapuja átengedte) → szöveg-pipeline tétel.
+  Nincs Google-értékelés (nincs tárolt Places-válasz, ADR-0293) → számok/értékelés-sáv elmarad.
+  Gyanús lead-cím: „Ráckevei út 083/2 hrsz., 24393470213” (a portál szerint Fő u. 24.) → lead-adat tétel.

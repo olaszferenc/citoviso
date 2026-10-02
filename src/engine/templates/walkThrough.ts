@@ -255,11 +255,15 @@ p{margin:0 0 1em}
 /* The card sits in the MIDDLE of its step, not at the bottom (the approved mock): the stage
    switches photos when a step crosses the screen's centre line, so a bottom-anchored card spent
    the upper half of its journey over the NEXT step's photo — „Kert és udvar” over a kitchen
-   (measured at 390px). Centred, it rides over its own photo through the middle of the screen. */
+   (measured at 390px). Centred, it rides over its own photo through the middle of the screen —
+   and only the ACTIVE step's card is shown: a centred card still reached the screen's edge while
+   the neighbouring step held the centre line, and stood over that step's photo in 8 of 126
+   measured positions (Három Huszár). Desktop keeps the approved muted look: there the text sits
+   BESIDE the panel, never on a photo. */
 .cit-story .wk-step{min-height:calc(100svh - var(--wk-head));display:flex;align-items:center;padding:0}
 .cit-story .wk-step .wk-txt{background:var(--cit-surface);border-radius:var(--cit-radius);padding:20px 20px 22px;box-shadow:var(--cit-shadow);
   transition:transform .6s var(--wk-ease),opacity .6s}
-.cit-story .wk-step:not(.cit-on) .wk-txt{transform:scale(.97)}
+.cit-story .wk-step:not(.cit-on) .wk-txt{transform:scale(.97);opacity:0}
 .cit-story .wk-step:not(.cit-on) h3{color:var(--cit-muted)}
 .cit-story .wk-step > figure{display:none}
 
@@ -380,7 +384,7 @@ p{margin:0 0 1em}
   .cit-story .wk-step .wk-txt{background:none;box-shadow:none;padding:0}
   .cit-story .wk-step h3{font-size:2.4rem;letter-spacing:-.025em;margin-bottom:12px}
   .cit-story .wk-step p{font-size:1.15rem}
-  .cit-story .wk-step:not(.cit-on) .wk-txt{transform:translateY(12px)}
+  .cit-story .wk-step:not(.cit-on) .wk-txt{transform:translateY(12px);opacity:1}
   .wk-feat{grid-template-columns:repeat(4,1fr);gap:0 28px;margin-top:72px}
   .wk-rooms-top{display:grid;grid-template-columns:5fr 7fr;gap:64px;align-items:end}
   .wk-roomlink{grid-template-columns:minmax(0,3fr) minmax(0,5fr) minmax(0,3fr);padding:32px 0}
