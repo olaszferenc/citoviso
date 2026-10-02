@@ -36,7 +36,9 @@ export function sessionCookieAttrs(req: http.IncomingMessage | undefined, maxAge
 export const LOGIN_FAIL_LIMIT = 10;
 export const LOGIN_FAIL_WINDOW_MS = 10 * 60_000;
 
-export type LoginRealm = "tenant" | "operator";
+/** `pwreset` (Elek T-3): "Elfelejtett jelszó?" requests per IP — each request counts,
+ *  so the form cannot be used to flood a mailbox or probe accounts. */
+export type LoginRealm = "tenant" | "operator" | "pwreset";
 
 const failures = new Map<string, { n: number; until: number }>();
 

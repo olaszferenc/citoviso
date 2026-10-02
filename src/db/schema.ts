@@ -699,6 +699,9 @@ export interface TenantUserTable {
   password_hash: string | null;
   created_at: Generated<Timestamp>;
   last_login_at: Timestamp | null;
+  /** 0085 (Elek T-3): when the OWNER chose their password; NULL = only the unsent
+   *  placeholder. A session cookie issued before it is refused (tenantAuth). */
+  password_set_at: Timestamp | null;
 }
 
 /** Control-plane (internal console) login — separate realm from tenant_user (ADR-0021). */
@@ -720,6 +723,7 @@ export interface OperatorUserTable {
 export interface LoginTokenTable {
   id: Generated<string>;
   tenant_user_id: string;
+  /** 0085: SHA-256 hex of the one-time password-link token (never the token). */
   token: string;
   expires_at: Timestamp;
   used_at: Timestamp | null;

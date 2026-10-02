@@ -96,8 +96,14 @@ export function safeAdminNext(raw: string | null | undefined): string | null {
   return v;
 }
 
+/**
+ * Elek T-3 (ADR-XXXX): the cookie carries its ISSUE TIME, signed with the id —
+ * `<id>.<iat ms>.<hmac(id.iat)>`. A password set (tenant_user.password_set_at)
+ * after `iat` ends that session: setting a password logs out every older one.
+ */
 export function setSession(res: http.ServerResponse, tenantUserId: string): void {
-  setCookie(res, `${tenantUserId}.${signValue(tenantUserId)}`, SESSION_TTL_DAYS * 86_400);
+  const v = `${tenantUserId}.${Date.now()}`;
+  setCookie(res, `${v}.${signValue(v)}`, SESSION_TTL_DAYS * 86_400);
 }
 
 export function clearSession(res: http.ServerResponse): void {
@@ -116,18 +122,26 @@ export function mintTenantCookieValue(tenantUserId: string): string {
   return `${tenantUserId}.${signValue(tenantUserId)}`;
 }
 
-export function readSession(req: http.IncomingMessage): string | null {
+/**
+ * The signed session: the user id and the cookie's issue time (ms). A LEGACY cookie
+ * (`<id>.<hmac(id)>`, before T-3) reads as issued at 0 — still valid, until the
+ * owner sets a password, which then ends it like any other older session.
+ */
+export function readSession(req: http.IncomingMessage): { id: string; iat: number } | null {
   const raw = req.headers.cookie ?? "";
   const c = raw.split(/;\s*/).find((x) => x.startsWith(`${COOKIE}=`));
   if (!c) return null;
   const val = c.slice(COOKIE.length + 1);
   const dot = val.lastIndexOf(".");
   if (dot < 1) return null;
-  const id = val.slice(0, dot);
+  const signed = val.slice(0, dot);
   const a = Buffer.from(val.slice(dot + 1));
-  const b = Buffer.from(signValue(id));
+  const b = Buffer.from(signValue(signed));
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  return id;
+  const parts = signed.split(".");
+  if (parts.length === 1) return { id: parts[0]!, iat: 0 };
+  if (parts.length === 2 && /^\d{1,15}$/.test(parts[1]!)) return { id: parts[0]!, iat: Number(parts[1]) };
+  return null;
 }
 
 export interface TenantSession {
@@ -139,8 +153,9 @@ export interface TenantSession {
 }
 
 export async function currentTenant(req: http.IncomingMessage): Promise<TenantSession | null> {
-  const tenantUserId = readSession(req);
-  if (!tenantUserId) return null;
+  const session = readSession(req);
+  if (!session) return null;
+  const tenantUserId = session.id;
   const row = await db
     .selectFrom("tenant_user")
     .innerJoin("tenant", "tenant.id", "tenant_user.tenant_id")
@@ -150,12 +165,17 @@ export async function currentTenant(req: http.IncomingMessage): Promise<TenantSe
       "tenant_user.contact_email as contactEmail",
       "tenant.id as tenantId",
       "tenant.display_name as displayName",
+      "tenant_user.password_set_at as passwordSetAt",
     ])
     .where("tenant_user.id", "=", tenantUserId)
     .executeTakeFirst();
+  // T-3: a session older than the owner's last password set is over.
+  if (row?.passwordSetAt && new Date(row.passwordSetAt as unknown as string).getTime() > session.iat) return null;
   // ADR-0290: the request's views format times in THIS accommodation's zone.
-  if (row) setViewZone(await tenantTimeZone(row.tenantId));
-  return row ?? null;
+  if (!row) return null;
+  setViewZone(await tenantTimeZone(row.tenantId));
+  const { passwordSetAt: _set, ...tenant } = row;
+  return tenant;
 }
 
 /**
@@ -181,7 +201,10 @@ export async function changeTenantPassword(
   const user = u;
   await db
     .updateTable("tenant_user")
-    .set({ password_hash: hashPassword(next) })
+    // T-3: the owner's own password — a re-run activation must never overwrite it,
+    // and every OTHER session opened before this moment ends (the caller re-issues
+    // the cookie of the session that made the change).
+    .set({ password_hash: hashPassword(next), password_set_at: new Date() })
     .where("id", "=", tenantUserId)
     .execute();
   return null;

@@ -1612,6 +1612,14 @@ if [ -f scripts/order-intent-state-check.mts ] && \
   echo "[pre-commit] order-intent-state-check (a csomag-igény állapota a fizetéseiből)…"
   npx tsx scripts/order-intent-state-check.mts
 fi
+# Elek T-3 (2026-10-02): no password travels by mail — a one-time link sets it,
+# "Elfelejtett jelszó?" works without us, a password set ends older sessions.
+# Spins up a scratch DB (~20s), so only when the login path changes.
+if [ -f scripts/password-link-check.mts ] && \
+   changed_files | grep -qE '^src/auth/(passwordLink|tenantAuth|loginGuard)\.ts|^src/email/loginEmail\.ts|^src/tenant/credentials\.ts|^src/server/(public|adminViews)\.ts|^migrations/0085_tenant_password|^scripts/password-link-check'; then
+  echo "[pre-commit] password-link-check (jelszó nem jár levélben; egyszeri link; régi munkamenetek véget érnek)…"
+  npx tsx scripts/password-link-check.mts
+fi
 # ADR-0100: the domain's 2nd+ year fee rides the anchor renewal whose period holds
 # the anniversary (before this, nobody billed it while the registrar bills US).
 # Spins up a scratch DB (~20s), so only when the renewal/pricing path changes.

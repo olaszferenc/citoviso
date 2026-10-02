@@ -4,7 +4,7 @@ title: Árazás és értékesítés — valós árak, eladhatóság, ár-hirdet�
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 Az **„Árazás és értékesítés”** képernyőn állítod be a valós árakat régiónként, és itt döntöd el
@@ -47,6 +47,11 @@ közben jelenik meg, nem a lap betöltésekor (a részletek a Megkeresés-piszko
 e-mailben is emlékeztetjük rá, ha van e-mail címe, nem iratkozott le, és az ajánlat még nem járt le. Az emlékeztetőt
 óránként küldjük, reggel 8 és este 8 óra között: az éjjel esedékes emlékeztető reggel 8 után megy ki. Egy ajánlatra
 legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer jár.
+
+**Az ajánlat neve a vevőnél.** A vevő minden felületen (a fizetési lap mindkét oldalán, a számla megjegyzésében
+és a tulaj-admin nyugtáján) ugyanazt a nevet látja, és ezt az ajánlat fajtája adja: a levél ajánlata
+„Bemutatkozó ajánlat a levélből”, az eszkaláció „Döntés-segítő ajánlat”, a kézzel adott kampány
+„Egyedi ajánlat”, a megrendelés utáni kupon „Üdvözlő kedvezmény”.
 
 **Bemutatkozó ajánlat**
 

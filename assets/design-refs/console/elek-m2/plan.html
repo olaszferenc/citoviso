@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M2 — fizetés, számla, belépés, konzol · TERV</title>
+<style>
+/* Console + configurator tokens copied from public/assets/ui/citui.css so the draft
+   is self-contained; the built version reads the real tokens. */
+:root{
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#3fd0ea; --citui-navy-900:#0e2a47; --citui-navy-950:#0a1f36;
+  --citui-ink:#16202c; --citui-muted:#5b6a7d; --citui-line:#dbe3ee; --citui-line-strong:#c9d5e4;
+  --citui-surface:#ffffff; --citui-surface-2:#f2f7fe; --citui-good:#14803c; --citui-bad:#c8332f;
+  --citui-warn:#b7791f; --citui-radius:14px;
+  --cfg-bg:#13171c; --cfg-panel:#1b2129; --cfg-line:#2c3540; --cfg-ink:#e8edf3; --cfg-mut:#9aa7b6;
+  --cfg-blue:#3b82f6; --cfg-gold:#f5c96b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef1f6;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--citui-ink)}
+.wrap{max-width:1400px;margin:0 auto;padding:16px}
+h1{font-size:19px;margin:0 0 4px}
+.lead{margin:0 0 10px;color:#4a5568;font-size:13.5px;max-width:90ch}
+.bar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.bar button{min-height:40px;padding:8px 14px;border:1px solid #c3ccd9;border-radius:9px;background:#fff;color:#25313f;font:600 13px/1.2 system-ui,sans-serif;cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-ink);border-color:var(--citui-ink);color:#fff}
+.bar .sep{flex-basis:100%;height:0}
+.why{margin:6px 0 12px;padding:10px 12px;border-left:3px solid #f0b429;background:#fffaf0;border-radius:0 8px 8px 0;font-size:13px;color:#5d4a12;max-width:100ch}
+.why b{color:#3b2f0b}
+.dec{margin:6px 0 12px;padding:10px 12px;border-left:3px solid var(--citui-cyan-500);background:#effafd;border-radius:0 8px 8px 0;font-size:13px;max-width:100ch}
+.stage{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.frame{container-type:inline-size;background:#f4f7fb;border:9px solid #202832;border-radius:20px;overflow:auto;box-shadow:0 14px 40px rgba(16,24,40,.2)}
+body[data-size="mobile"] .frame{width:390px;max-width:100%;min-height:700px}
+body[data-size="desktop"] .frame{width:1180px;max-width:100%;min-height:640px}
+.cap{text-align:center;font:600 12px/1.3 system-ui,sans-serif;color:var(--citui-muted);margin:6px 0 0}
+section.tab{display:none} section.tab.on{display:block}
+.col{display:flex;flex-direction:column;align-items:center}
+
+/* ── console-like page chrome ── */
+.ctop{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#fff;border-bottom:1px solid var(--citui-line)}
+.ctop .mk{width:20px;height:20px;border-radius:50%;border:3px solid var(--citui-cyan-500);border-right-color:transparent}
+.ctop b{font:700 16px/1 system-ui,sans-serif;color:var(--citui-navy-900)}
+.cpage{padding:28px 14px}
+.panel{max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:20px 18px;text-align:center}
+.panel h2{margin:0 0 10px;font-size:18px}
+.panel p{margin:0 0 12px}
+.state{display:inline-block;margin:0 0 10px;padding:4px 10px;border-radius:999px;font:600 12px/1.3 system-ui,sans-serif}
+.state--neutral{background:var(--citui-surface-2);color:var(--citui-navy-900);border:1px solid var(--citui-line-strong)}
+.state--bad{background:color-mix(in srgb,var(--citui-bad) 10%,#fff);color:var(--citui-bad);border:1px solid color-mix(in srgb,var(--citui-bad) 35%,#fff)}
+.item{background:var(--citui-surface-2);border:1px solid var(--citui-line-strong);border-radius:12px;padding:10px 12px;text-align:left;margin:0 0 14px}
+.item b{display:block;font-size:16px}
+.item span{color:var(--citui-muted);font-size:13px}
+.btnp{display:inline-block;border:0;border-radius:10px;padding:14px 22px;font:700 14px/1 system-ui,sans-serif;color:var(--citui-navy-950);background:linear-gradient(90deg,var(--citui-cyan-500),var(--citui-cyan-400));cursor:pointer;box-shadow:0 8px 24px color-mix(in srgb,var(--citui-cyan-500) 35%,transparent)}
+.ref{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;color:var(--citui-muted);font-size:13px;margin:14px 0 4px}
+.ref code{background:var(--citui-surface-2);padding:3px 6px;border-radius:6px;color:var(--citui-ink)}
+.ref button{border:1px solid var(--citui-line-strong);background:#fff;border-radius:8px;padding:6px 10px;font:600 13px/1 system-ui,sans-serif;cursor:pointer}
+.mut{color:var(--citui-muted)} .small{font-size:12.5px}
+.exits{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;border-top:1px solid var(--citui-line);margin-top:14px;padding-top:12px}
+.exits a{color:#0e6b7c;font-weight:600;text-decoration:none}
+.toast{margin-top:12px;font-size:13px;color:var(--citui-good);min-height:1.2em}
+
+/* ── configurator-like dark checkout ── */
+.cfg{background:var(--cfg-bg);color:var(--cfg-ink);padding:16px;min-height:100%}
+.cfg h3{margin:0 0 8px;font-size:15px}
+.cfg .grid{display:grid;grid-template-columns:1fr;gap:16px}
+@container (min-width:820px){ .cfg .grid{grid-template-columns:1.25fr 1fr} }
+.cfg .box{background:var(--cfg-panel);border:1px solid var(--cfg-line);border-radius:12px;padding:12px 14px}
+.cfg .k{font:600 11px/1 system-ui;letter-spacing:.08em;color:var(--cfg-mut);text-transform:uppercase}
+.cfg .row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;margin-top:6px}
+.cfg .disc{color:#8ab4ff}
+.cfg .big{font:700 24px/1.2 system-ui}
+.cfg .gold{color:var(--cfg-gold);font-size:13px}
+.cfg .strike{text-decoration:line-through;color:#c76a6a;font-size:13px}
+.bt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px}
+.bt button{min-height:46px;border-radius:10px;border:1px solid var(--cfg-line);background:#232b35;color:var(--cfg-ink);font:600 13.5px/1.25 system-ui;cursor:pointer;padding:6px}
+.bt button[aria-checked="true"]{background:var(--cfg-blue);border-color:var(--cfg-blue)}
+.f{display:flex;flex-direction:column;gap:4px;margin:0 0 10px}
+.f>span{font:600 12.5px/1 system-ui;color:#c4cdd8}
+.f input,.f select{min-width:0;width:100%;min-height:42px;border-radius:8px;border:1px solid var(--cfg-line);background:#1b2129;color:var(--cfg-ink);padding:8px 10px;font:15px system-ui}
+.f input:focus{outline:2px solid var(--cfg-blue)}
+.f em{font-style:normal;font-size:12.5px;color:#ff8a80;min-height:0}
+.f .hint{font-size:12px;color:var(--cfg-mut)}
+.two{display:grid;grid-template-columns:1fr 1.6fr;gap:10px}
+.warnbox{background:#3a2f12;border:1px solid #8a6d1f;color:#ffe2a0;border-radius:8px;padding:8px 10px;font-size:13px;margin:4px 0 0}
+.warnbox button{margin-top:6px;border:0;border-radius:7px;background:var(--cfg-gold);color:#2a1f05;font:700 13px/1 system-ui;padding:8px 10px;cursor:pointer}
+.okline{font-size:12.5px;color:#7ee2a8}
+.hidden{display:none!important}
+.pay{width:100%;min-height:48px;border:0;border-radius:10px;background:var(--cfg-blue);color:#fff;font:700 15px/1 system-ui;cursor:pointer;margin-top:6px}
+.result{margin-top:10px;font:12.5px/1.45 ui-monospace,monospace;background:#0d1116;border:1px solid var(--cfg-line);border-radius:8px;padding:8px;white-space:pre-wrap;color:#b9f6ca}
+
+/* ── tables ── */
+table.t{border-collapse:collapse;width:100%;background:#fff;font-size:13.5px}
+.t th,.t td{border:1px solid var(--citui-line);padding:8px;text-align:left;vertical-align:top}
+.t th{background:var(--citui-surface-2)}
+.t .bad{color:var(--citui-bad)} .t .good{color:var(--citui-good)}
+.paper{background:#fff;color:#111;border:1px solid #ccc;border-radius:4px;padding:14px;font:13px/1.45 Georgia,serif;max-width:640px;margin:0 auto}
+
+/* ── mail ── */
+.mail{max-width:560px;margin:0 auto;background:#fff;border:1px solid var(--citui-line);border-radius:12px;overflow:hidden}
+.mail .mh{background:var(--citui-navy-900);color:#fff;padding:12px 16px;font-weight:700}
+.mail .mb{padding:16px}
+.mail .kv{background:var(--citui-surface-2);border-radius:8px;padding:10px 12px;margin:10px 0}
+.lnk{color:#0e6b7c;text-decoration:underline;cursor:pointer;background:none;border:0;font:inherit;padding:0}
+.formc{max-width:420px;margin:0 auto;background:#fff;border:1px solid var(--citui-line);border-radius:14px;padding:20px}
+.formc h2{margin:0 0 6px;font-size:19px}
+.lf{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.lf span{font:600 13px/1 system-ui}
+.lf input{min-height:44px;border:1px solid var(--citui-line-strong);border-radius:9px;padding:8px 10px;font:15px system-ui}
+.lf em{font-style:normal;color:var(--citui-bad);font-size:12.5px}
+.meter{height:6px;border-radius:4px;background:var(--citui-line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--citui-bad);transition:width .2s}
+.flow{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.flow button{min-height:36px;padding:6px 10px;border:1px solid var(--citui-line-strong);border-radius:8px;background:#fff;font:600 12.5px/1.2 system-ui;cursor:pointer}
+.flow button[aria-pressed="true"]{background:var(--citui-navy-900);color:#fff}
+
+/* ── console orders ── */
+.ord{background:#fff;border:1px solid var(--citui-line);border-radius:12px;padding:14px 16px;max-width:1060px;margin:0 auto}
+.ord h3{margin:0 0 10px;font-size:15px}
+.oi{border-top:1px solid var(--citui-line);padding:10px 0}
+.oi:first-of-type{border-top:0}
+.oi .hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font:600 12px/1.5 system-ui;margin-left:6px}
+.pill.ok{background:#e3f6ea;color:#11652f} .pill.bad{background:#fde8e7;color:#a22622} .pill.neu{background:#eef2f7;color:#3b4a5c} .pill.wait{background:#fff4dc;color:#7a5410}
+.obtn{border:1px solid var(--citui-good);color:var(--citui-good);background:#fff;border-radius:999px;padding:6px 14px;font:600 13px/1 system-ui;cursor:pointer;margin-left:6px}
+.help{border-top:1px solid var(--citui-line);margin-top:8px;padding-top:8px;font-size:12.5px;color:var(--citui-muted)}
+.cmp{display:grid;grid-template-columns:1fr;gap:12px}
+@container (min-width:820px){ .cmp{grid-template-columns:1fr 1fr} }
+.lbl{font:700 12px/1 system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);margin:0 0 6px}
+</style>
+</head>
+<body data-size="mobile">
+<div class="wrap">
+<h1>M2 — fizetés, számla, belépés, konzol · TERV (Elek élesi leletei)</h1>
+<p class="lead">Öt fül, mindegyik egy döntés. Minden fül működik: a gombok, mezők és állapotváltók azt csinálják, amit a kész változat fog.
+A szabályok a valódiak (adószám-ellenőrzés: ugyanaz, mint a <code>taxId.ts</code>-ben). Fent a méret-váltó: mobil 390 px / asztali.</p>
+<div class="bar" id="tabs">
+  <button data-tab="f2" aria-pressed="true">① Megszakított fizetés (F-2)</button>
+  <button data-tab="l2" aria-pressed="false">② Ajánlat-nevek (L-2 / F-3)</button>
+  <button data-tab="f1" aria-pressed="false">③ Számlázási adatok (F-1, T-4)</button>
+  <button data-tab="t3" aria-pressed="false">④ Belépés jelszó nélküli levéllel (T-3)</button>
+  <button data-tab="k1" aria-pressed="false">⑤ Konzol: csomag-igények (K-1)</button>
+  <span class="sep"></span>
+  <button data-size="mobile" aria-pressed="true">Mobil 390px</button>
+  <button data-size="desktop" aria-pressed="false">Asztali</button>
+</div>
+
+<!-- ① F-2 -->
+<section class="tab on" id="tab-f2">
+  <div class="why"><b>Mi történt élesen:</b> a tulaj a Barion-oldalon visszalépett (bővebb csomagot akart választani). A Barion ezt „Canceled”-nek hívja. Nálunk ebből „<b>Fizetés elutasítva — A fizetés nem sikerült</b>” lett, és a naplóba egy sor sem került.
+  <br><b>Már kész (nem felület, nincs benne döntés):</b> a visszalépés külön állapot (<code>cancelled</code>), és minden bukás és megszakítás egy naplósort ír. Ezt egy őr méri, ami a régi kódon pirosat ad.</div>
+  <div class="dec"><b>Döntés:</b> a visszalépett vevő a bal oldali lapot kapja. A visszalépést semleges szürke sáv jelzi, nem piros: ez nem hiba, a vevő döntött így. A jobb oldali lap marad a valódi elutasításra (a bank nem engedte). Kattintható: „Másolom”, „Folytatom a fizetést”.</div>
+  <div class="stage">
+    <div class="col"><div class="frame"><div class="ctop"><span class="mk"></span><b>citoviso</b></div><div class="cpage">
+      <div class="panel">
+        <span class="state state--neutral">Fizetés megszakítva</span>
+        <h2>Megszakította a fizetést</h2>
+        <p><b>Nem terheltünk semmit.</b> A megrendelése megmaradt — amikor szeretné, innen folytathatja.</p>
+        <div class="item"><b>[TESZT] Muschel Panzió</b><span>Citoviso honlap — havi előfizetés — 97 Ft</span></div>
+        <button class="btnp" data-act="cont">Folytatom a fizetést</button>
+        <div class="toast" data-toast></div>
+        <div class="ref">Hivatkozási azonosító: <code>CIT-548E31CD</code> <button data-copy>Másolom</button></div>
+        <p class="mut small">Ha ír nekünk, kérjük idézze ezt az azonosítót.</p>
+        <div class="exits"><a href="#" data-act="mail">Írok egy munkatársnak</a></div>
+      </div></div></div><p class="cap">ÚJ — a vevő visszalépett (Barion „Canceled”)</p></div>
+    <div class="col"><div class="frame"><div class="ctop"><span class="mk"></span><b>citoviso</b></div><div class="cpage">
+      <div class="panel">
+        <span class="state state--bad">Fizetés elutasítva</span>
+        <h2>A fizetés nem sikerült</h2>
+        <p><b>Nem történt terhelés.</b> A megrendelése megmaradt — ugyanezen a linken újrapróbálhatja.</p>
+        <div class="item"><b>[TESZT] Muschel Panzió</b><span>Citoviso honlap — havi előfizetés — 97 Ft</span></div>
+        <button class="btnp" data-act="retry">Újra próbálom a fizetést</button>
+        <div class="toast" data-toast></div>
+        <div class="ref">Hivatkozási azonosító: <code>CIT-548E31CD</code> <button data-copy>Másolom</button></div>
+        <p class="mut small">Ha ír nekünk, kérjük idézze ezt az azonosítót.</p>
+        <div class="exits"><a href="#" data-act="card">Másik kártyát adok meg</a><a href="#" data-act="mail">Írok egy munkatársnak</a></div>
+      </div></div></div><p class="cap">MARAD — valódi elutasítás / lejárat / hiba (a szövege változatlan)</p></div>
+  </div>
+  <p class="lead" style="margin-top:12px">A mi tesztelésre használt próba-fizetőlapunkon a „Mégsem fizetek most” is ezt a megszakítás-utat járja végig. A konzol fizetés-sora „fizetés: megszakítva” feliratot kap, szürkén (a ⑤ fülön látszik).</p>
+</section>
+
+<!-- ② L-2 / F-3 -->
+<section class="tab" id="tab-l2">
+  <div class="why"><b>Mi történt élesen:</b> ugyanazt a −50%-ot a fizetési lap bal oldala „<b>Bemutatkozó ajánlat a levélből</b>” néven írta ki, a jobb oldala „<b>Döntés-segítő ajánlat</b>” néven, holott a levél 25%-ot ígért. A számlán a 98%-os kampány „<b>Üdvözlő kedvezmény</b>” néven szerepelt, pedig az üdvözlő kupon egy külön, 25%-os ajánlat.
+  Az ok: a nevet három helyen három külön kód írja, és kettő közülük nem nézi meg, melyik ajánlatról van szó.</div>
+  <div class="dec"><b>Döntés:</b> az ajánlat neve EGY helyen dől el, az ajánlat fajtájából. A fizetési lap mindkét oldala, a számla megjegyzése, a tulaj-admin nyugtája és a levelek ugyanezt a nevet kapják. <b>Kérdés:</b> mi legyen a kampány neve, amit az operátor kézzel ír be (élesen a 98%)? Lent váltható.</div>
+  <div class="bar" id="kindbar">
+    <button data-kind="outreach" aria-pressed="false">a levél ajánlata (25%)</button>
+    <button data-kind="escalation" aria-pressed="true">döntés-segítő (50%)</button>
+    <button data-kind="campaign" aria-pressed="false">kampány (98%)</button>
+    <button data-kind="coupon" aria-pressed="false">üdvözlő kupon (25%, modul-vásárlás)</button>
+    <span class="sep"></span>
+    <span class="mut small" style="align-self:center">Kampány neve:</span>
+    <button data-camp="Egyedi ajánlat" aria-pressed="true">A · „Egyedi ajánlat” (javasolt)</button>
+    <button data-camp="Kampány-ajánlat" aria-pressed="false">B · „Kampány-ajánlat”</button>
+    <button data-camp="Különleges ajánlat" aria-pressed="false">C · „Különleges ajánlat”</button>
+  </div>
+  <div class="stage"><div class="col"><div class="frame"><div class="cfg">
+    <div class="grid">
+      <div class="box"><div class="k">Amit megrendel</div>
+        <b style="display:block;margin-top:4px">[TESZT] Muschel Panzió</b>
+        <span style="color:var(--cfg-mut);font-size:13px">Citoviso honlap — havi előfizetés</span>
+        <div class="row"><span>Havi listaár</span><span>9 300 Ft / hó</span></div>
+        <div class="row"><span data-l2="left"></span><span class="disc" data-l2="leftsum"></span></div>
+      </div>
+      <div class="box"><div class="row" style="margin:0"><span class="k">Most fizetendő</span><span class="strike">9 300 Ft</span></div>
+        <div class="big" data-l2="total"></div>
+        <div class="gold" data-l2="right"></div>
+      </div>
+    </div>
+    <div class="box" style="margin-top:14px;background:#fff;color:#111">
+      <div class="k" style="color:#555">A számla megjegyzése (Számlázz.hu)</div>
+      <div style="font:13px/1.45 Georgia,serif;margin-top:6px" data-l2="inv"></div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <div class="k">Ugyanez a név mindenhol</div>
+      <table class="t" style="margin-top:8px;color:#111"><thead><tr><th>Felület</th><th>Ma</th><th>Javaslat</th></tr></thead><tbody data-l2="table"></tbody></table>
+    </div>
+  </div></div><p class="cap">Fizetési lap, számla-megjegyzés, felület-táblázat — az ajánlat fajtája fent váltható</p></div></div>
+</section>
+
+<!-- ③ F-1 -->
+<section class="tab" id="tab-f1">
+  <div class="why"><b>Mi történt élesen:</b> az űrlap az irányítószámot és a várost a SZÁLLÁS címéből töltötte elő (8360 Keszthely). A tulaj csak az utcát írta be, így a NAV-hoz beküldött számlán ez a cím szerepel: „8360 Keszthely, Ráckevei út 083/2 hrsz.”. Ugyanebben a mezőben volt egy 11 jegyű szám is, a <b>24393470213</b>. Ez <b>érvényes magyar adószám</b> (ellenőrző jegy, ÁFA-kód és Pest megyei kód is stimmel). Az Adószám mező viszont csak a „Cégként” választásnál jelenik meg. Egy egyéni vállalkozó, aki a „Magánszemélyként” gombon marad, sehová máshová nem tudja beírni.</div>
+  <div class="dec"><b>Döntés:</b> ① a szállás címe NEM töltődik a számlázási címbe (az e-mail igen, az a tulajé). ② A második gomb neve „<b>Cégként vagy egyéni vállalkozóként</b>” lesz. ③ Ha egy cím- vagy névmezőben érvényes adószám áll, az űrlap rákérdez, és egy gombnyomással átteszi az Adószám mezőbe. A szerver ugyanezt elutasítja, így adószám nem kerülhet a címbe. ④ (T-4) A név mező mintája „pl. Olasz-Balogh Viktória”. A megszólítás a beírt nevet használja; a mintából látszik a magyar sorrend.
+  <br>Próbáld ki: írd az Utca mezőbe „Ráckevei út 083/2 hrsz. 24393470213”, majd nyomd meg a „Fizetek” gombot.</div>
+  <div class="stage"><div class="col"><div class="frame"><div class="cfg">
+    <h3>Kinek állítsuk ki a számlát?</h3>
+    <div class="bt" role="radiogroup">
+      <button type="button" data-bt="individual" role="radio" aria-checked="true">Magánszemélyként</button>
+      <button type="button" data-bt="business" role="radio" aria-checked="false">Cégként vagy egyéni vállalkozóként</button>
+    </div>
+    <label class="f"><span data-namelabel>Teljes név</span><input data-f="name" placeholder="pl. Olasz-Balogh Viktória" autocomplete="name"><em data-e="name"></em></label>
+    <label class="f hidden" data-fw="tax"><span>Adószám</span><input data-f="tax" inputmode="numeric" placeholder="12345678-2-41"><em data-e="tax"></em><span class="okline" data-ok="tax"></span></label>
+    <div class="two">
+      <label class="f"><span>Irányítószám</span><input data-f="zip" inputmode="numeric" autocomplete="postal-code"><em data-e="zip"></em></label>
+      <label class="f"><span>Település</span><input data-f="city" autocomplete="address-level2"><em data-e="city"></em></label>
+    </div>
+    <label class="f"><span>Utca, házszám</span><input data-f="street" autocomplete="street-address"><em data-e="street"></em><div data-w="street"></div></label>
+    <label class="f"><span>Számlázási e-mail</span><input data-f="email" value="olasz.ferenc@citoviso.com"><span class="hint">Ezt a megkereséskor megadott címből töltöttük ki — átírhatja.</span></label>
+    <button class="pay" data-pay>Fizetek — 4 650 Ft</button>
+    <div class="result hidden" data-result></div>
+  </div></div><p class="cap">Számlázási lépés — üres címmezők, működő ellenőrzés</p></div></div>
+</section>
+
+<!-- ④ T-3 -->
+<section class="tab" id="tab-t3">
+  <div class="why"><b>Mi történt élesen:</b> a „Belépési adatai” levél nyílt szövegben tartalmazza a jelszót. A levél így szól: „Ha elfelejtené, válaszoljon erre a levélre”, tehát nincs önkiszolgáló jelszó-visszaállítás. A jelszó két szóból és egy számból áll (kb. 50 000 lehetőség).
+  A „Elfelejtett jelszó?” link már ott van a belépő lapon, de csak annyit ír: „hamarosan elérhető”. Az egyszer használható belépő-tokenek táblája (<code>login_token</code>) már létezik, eddig semmi nem használta.</div>
+  <div class="dec"><b>Döntés (A javasolt):</b> a levélben jelszó helyett egy <b>„Jelszó beállítása”</b> gomb van. A link egyszer használható és <b>7 napig</b> érvényes. Ha lejárt, a lap egy gombbal újat küld. A belépő lapon az „Elfelejtett jelszó?” ugyanilyen linket küld a fiók e-mail címére. Nem árulja el, létezik-e a fiók. A jelszó beállítása után a régi jelszóval nyitott munkamenetek megszűnnek.
+  <b>B változat:</b> mint az A, de a sikeres fizetés lapján a vevő azonnal beállíthatja a jelszavát (hiszen éppen ott van). A levél ilyenkor csak tartalék.
+  <br>Kattints végig: levél → beállító lap → kész; illetve belépő lap → Elfelejtett jelszó → „elküldtük”; és a lejárt link.</div>
+  <div class="flow" id="t3flow">
+    <button data-step="mail" aria-pressed="true">1 · A levél</button>
+    <button data-step="set" aria-pressed="false">2 · Jelszó beállítása</button>
+    <button data-step="done" aria-pressed="false">3 · Kész</button>
+    <button data-step="login" aria-pressed="false">Belépő lap</button>
+    <button data-step="forgot" aria-pressed="false">Elfelejtett jelszó</button>
+    <button data-step="sent" aria-pressed="false">… elküldtük</button>
+    <button data-step="expired" aria-pressed="false">Lejárt link</button>
+    <button data-step="paydone" aria-pressed="false">B · fizetés-siker lap</button>
+  </div>
+  <div class="stage"><div class="col"><div class="frame"><div class="ctop"><span class="mk"></span><b>citoviso</b></div><div class="cpage" id="t3">
+    <div data-s="mail" class="mail"><div class="mh">Belépési adatai – [TESZT] Muschel Panzió</div><div class="mb">
+      <p>Kedves Olasz-Balogh Viktória!</p>
+      <p>Elkészült a [TESZT] Muschel Panzió oldalának szerkesztő felülete. Az első belépéshez állítson be egy saját jelszót.</p>
+      <div class="kv">Felhasználónév: <b>teszt-muschel-panzio</b></div>
+      <p style="text-align:center"><button class="btnp" data-go="set">Jelszó beállítása</button></p>
+      <p class="mut small">A gomb 7 napig érvényes, és egyszer használható. Ha lejárt, a belépő lapon az „Elfelejtett jelszó?” linkre kattintva bármikor kérhet újat. Jelszót e-mailben nem küldünk.</p>
+    </div></div>
+    <div data-s="set" class="formc hidden">
+      <h2>Jelszó beállítása</h2>
+      <p class="mut small" style="margin:0 0 6px">Fiók: <b>teszt-muschel-panzio</b> · [TESZT] Muschel Panzió</p>
+      <label class="lf"><span>Új jelszó</span><input type="password" data-p1 autocomplete="new-password"><div class="meter"><i data-meter></i></div><em data-pe1></em></label>
+      <label class="lf"><span>Új jelszó még egyszer</span><input type="password" data-p2 autocomplete="new-password"><em data-pe2></em></label>
+      <label class="small"><input type="checkbox" data-show> Jelszó megjelenítése</label>
+      <p style="margin:14px 0 0"><button class="btnp" data-save>Beállítom és belépek</button></p>
+      <p class="mut small">Legalább 8 karakter. Egy hosszabb mondat is jó (pl. „kilátás a balatonra 2026”).</p>
+    </div>
+    <div data-s="done" class="formc hidden" style="text-align:center">
+      <h2>Kész — beléptetjük</h2>
+      <p>A jelszava beállítva. Mostantól a felhasználónevével és ezzel a jelszóval léphet be.</p>
+      <p class="mut small">Biztonsági okból a korábban megnyitott belépések megszűntek.</p>
+      <p><button class="btnp">Tovább a szerkesztőbe</button></p>
+    </div>
+    <div data-s="login" class="formc hidden">
+      <h2>Belépés</h2>
+      <label class="lf"><span>Felhasználónév</span><input value="teszt-muschel-panzio"></label>
+      <label class="lf"><span>Jelszó</span><input type="password"></label>
+      <p><button class="btnp">Belépés</button></p>
+      <p><button class="lnk" data-go="forgot">Elfelejtett jelszó?</button></p>
+    </div>
+    <div data-s="forgot" class="formc hidden">
+      <h2>Elfelejtett jelszó</h2>
+      <p class="mut small">Írja be a felhasználónevét vagy a fiókhoz tartozó e-mail címet. Küldünk egy linket, amellyel új jelszót állíthat be.</p>
+      <label class="lf"><span>Felhasználónév vagy e-mail</span><input data-fid><em data-fe></em></label>
+      <p><button class="btnp" data-forgot>Küldjék a linket</button></p>
+    </div>
+    <div data-s="sent" class="formc hidden">
+      <h2>Ha van ilyen fiók, elküldtük</h2>
+      <p>Ha a megadott adat egy fiókhoz tartozik, néhány percen belül levelet kap a fiók e-mail címére. A levélben lévő link 7 napig érvényes, egyszer használható.</p>
+      <p class="mut small">Nem jött meg? Nézze meg a levélszemét mappát is, vagy írjon nekünk: olasz.ferenc@citoviso.com</p>
+    </div>
+    <div data-s="expired" class="formc hidden">
+      <h2>Ez a link már nem érvényes</h2>
+      <p>A jelszó-beállító link lejárt, vagy már felhasználták. Biztonsági okból minden link csak egyszer használható.</p>
+      <p><button class="btnp" data-resend>Új linket kérek</button></p>
+      <div class="toast" data-rtoast></div>
+    </div>
+    <div data-s="paydone" class="formc hidden" style="max-width:520px">
+      <span class="state state--neutral" style="background:#e3f6ea;color:#11652f;border-color:#bfe6cc">Sikeres fizetés</span>
+      <h2>Sikeres fizetés — köszönjük!</h2>
+      <p>Az oldala él: <b>teszt-muschel-panzio.citoviso.com</b></p>
+      <div class="item"><b>Állítsa be most a jelszavát</b><span>Felhasználónév: teszt-muschel-panzio</span>
+        <label class="lf"><span>Új jelszó</span><input type="password" data-bp1></label>
+        <p style="margin:6px 0 0"><button class="btnp" data-bsave>Beállítom és belépek</button></p>
+        <div class="toast" data-btoast></div>
+      </div>
+      <p class="mut small">Ha most nem ér rá: a jelszó-beállító linket e-mailben is elküldtük.</p>
+    </div>
+  </div></div><p class="cap">Belépés: levél → beállítás → kész · elfelejtett jelszó · lejárt link · (B) fizetés-siker lap</p></div></div>
+</section>
+
+<!-- ⑤ K-1 -->
+<section class="tab" id="tab-k1">
+  <div class="why"><b>Mi történt élesen:</b> a lead-lapon mindkét csomag-igény „submitted” maradt, a kifizetett is. A megszakított 97 Ft-os mellett ott áll a „Fizetési kérés küldése ▸” gomb, ami ráadásul a LEGÚJABB, már fizetett igényre küldene kérést, és azt a rendszer el is utasítja. A lap alján ez a súgószöveg áll: „Pilot fizetés: pay-link (Barion helyén mock) … Auto-terhelés (MIT) = 2. fázis”. Ez nem igaz: élesen valódi Barion fut, és a kártyát elmentjük.</div>
+  <div class="dec"><b>Döntés:</b> a csomag-igény állapotát a fizetései adják: fizetve · fizetésre vár · megszakítva · sikertelen · beküldve. Ha a leadnek már van fizetett rendelése, a régi, nem fizetett igény „lezárva — egy későbbi rendelés fizetve” lesz, és nem kap gombot. Ha mégis kap gombot, a kérés AHHOZ az igényhez megy, amelyik mellett a gomb áll. A súgó új szövege lent látható. Váltható: a mai lap ↔ a javasolt lap; illetve egy lead, akinek még nincs fizetett rendelése.</div>
+  <div class="bar" id="k1bar">
+    <button data-k="new" aria-pressed="true">Javasolt</button>
+    <button data-k="old" aria-pressed="false">Mai lap</button>
+    <button data-k="unpaid" aria-pressed="false">Javasolt — még nem fizetett lead</button>
+  </div>
+  <div class="stage"><div class="col"><div class="frame"><div class="cpage" style="padding:18px 12px"><div class="ord" id="k1"></div></div></div><p class="cap">Konzol · lead-lap · Csomag-igények</p></div></div>
+</section>
+</div>
+
+<script>
+(function(){
+  var B=document.body;
+  function press(bar,attr,val){bar.querySelectorAll("["+attr+"]").forEach(function(b){b.setAttribute("aria-pressed",String(b.getAttribute(attr)===val))})}
+  var tabs=document.getElementById("tabs");
+  tabs.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+    if(b.dataset.tab){press(tabs,"data-tab",b.dataset.tab);document.querySelectorAll("section.tab").forEach(function(s){s.classList.toggle("on",s.id==="tab-"+b.dataset.tab)})}
+    if(b.dataset.size){press(tabs,"data-size",b.dataset.size);B.dataset.size=b.dataset.size}});
+  if(window.matchMedia("(min-width:900px)").matches){B.dataset.size="desktop";press(tabs,"data-size","desktop")}
+
+  // ① copy + continue
+  document.querySelectorAll("[data-copy]").forEach(function(b){b.addEventListener("click",function(){
+    try{navigator.clipboard&&navigator.clipboard.writeText("CIT-548E31CD").catch(function(){})}catch(_){}
+    b.textContent="Másolva ✓";setTimeout(function(){b.textContent="Másolom"},1600)})});
+  document.querySelectorAll("#tab-f2 [data-act]").forEach(function(a){a.addEventListener("click",function(e){e.preventDefault();
+    var t=a.closest(".panel").querySelector("[data-toast]");
+    t.textContent={cont:"→ Ugyanez a megrendelés nyílik meg újra a Barion fizetőoldalán (új fizetési kísérlet, ugyanaz az összeg).",retry:"→ Újra a Barion fizetőoldala, ugyanerre a megrendelésre.",card:"→ A Barion lapján másik kártyát adhat meg.",mail:"→ Levél nyílik a munkatársunknak, benne a hivatkozási azonosító."}[a.dataset.act]})});
+
+  // ② offer naming — ONE mapping
+  var camp="Egyedi ajánlat", kind="escalation";
+  var PCT={outreach:25,escalation:50,campaign:98,coupon:25};
+  function name(k){return {outreach:"Bemutatkozó ajánlat a levélből",escalation:"Döntés-segítő ajánlat",campaign:camp,coupon:"Üdvözlő kedvezmény"}[k]}
+  function fmt(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ")}
+  function l2(){var p=PCT[kind],list=9300,paid=Math.floor(list*(100-p)/100),q=function(s){return document.querySelector('[data-l2="'+s+'"]')};
+    q("left").textContent=name(kind)+" (−"+p+"%)";q("leftsum").textContent="−"+fmt(list-paid)+" Ft";
+    q("total").innerHTML=fmt(paid)+" Ft <span style='font-size:14px;font-weight:400'>/ hó</span>";
+    q("right").textContent=name(kind)+": −"+p+"% az első díjból"+(kind==="escalation"?" · érvényes okt. 4. 08:39-ig":"");
+    q("inv").textContent="Alanyi adómentes (AAM). "+name(kind)+": a "+fmt(list)+" Ft-os díjból −"+p+"%, fizetett összeg "+fmt(paid)+" Ft. A kedvezmény egyszeri; a következő számla a teljes díjjal készül.";
+    var rows=[
+      ["Fizetési lap — bal (tétel)","„Bemutatkozó ajánlat a levélből” — MINDIG, fajtától függetlenül"],
+      ["Fizetési lap — jobb (ár-kártya)",kind==="escalation"?"„Döntés-segítő ajánlat” ✓":"„Bemutatkozó ajánlat a levélből” (a kampány és a kupon is)"],
+      ["Számla megjegyzése","„Üdvözlő kedvezmény” — MINDIG"],
+      ["Tulaj-admin modul-nyugta","„Üdvözlő kedvezmény (…%)” — MINDIG"],
+      ["Levél (megkereső / eszkalációs)",kind==="outreach"?"„Bemutatkozó ajánlat” ✓":kind==="escalation"?"„Döntés-segítő ajánlat” ✓":"— (nincs levele)"]];
+    q("table").innerHTML=rows.map(function(r){var bad=/MINDIG|kampány és/.test(r[1]);return "<tr><td>"+r[0]+"</td><td class='"+(bad?"bad":"")+"'>"+r[1]+"</td><td class='good'>„"+name(kind)+"”</td></tr>"}).join("")}
+  var kb=document.getElementById("kindbar");
+  kb.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+    if(b.dataset.kind){kind=b.dataset.kind;press(kb,"data-kind",kind)}
+    if(b.dataset.camp){camp=b.dataset.camp;press(kb,"data-camp",camp);kind="campaign";press(kb,"data-kind",kind)}
+    l2()});
+  l2();
+
+  // ③ billing — mirrors src/billing/taxId.ts
+  function taxProblem(raw){var d=(raw||"").replace(/\D/g,"");if(!d)return"Adja meg az adószámot.";
+    if(d.length!==11)return"Az adószám 11 számjegyű (pl. 12345678-2-41) — ez "+d.length+" számjegy.";
+    var w=[9,7,3,1,9,7,3],s=0;for(var i=0;i<7;i++)s+=Number(d[i])*w[i];if((10-s%10)%10!==Number(d[7]))return"Az adószám első 8 jegye nem érvényes — valószínűleg elgépelés.";
+    if("12345".indexOf(d[8])<0)return"Az adószám 9. jegye (ÁFA-kód) csak 1 és 5 közötti lehet.";
+    var c=Number(d.slice(9,11));if(!((c>=2&&c<=44)||c===51))return"Az adószám utolsó két jegye (megyekód) nem érvényes.";return null}
+  function norm(raw){var d=raw.replace(/\D/g,"");return d.slice(0,8)+"-"+d.slice(8,9)+"-"+d.slice(9,11)}
+  /** A valid adószám hiding inside free text (with or without dashes). */
+  function taxInText(v){var m=(v||"").match(/\b\d{8}-?\d-?\d{2}\b/g)||[];for(var i=0;i<m.length;i++){if(!taxProblem(m[i]))return m[i]}return null}
+  var F=document.getElementById("tab-f1"),btype="individual";
+  function fld(n){return F.querySelector('[data-f="'+n+'"]')} function err(n,t){F.querySelector('[data-e="'+n+'"]').textContent=t||""}
+  function setType(t){btype=t;F.querySelectorAll("[data-bt]").forEach(function(b){b.setAttribute("aria-checked",String(b.dataset.bt===t))});
+    F.querySelector('[data-fw="tax"]').classList.toggle("hidden",t!=="business");
+    F.querySelector("[data-namelabel]").textContent=t==="business"?"Cégnév vagy egyéni vállalkozó neve":"Teljes név"}
+  F.querySelectorAll("[data-bt]").forEach(function(b){b.addEventListener("click",function(){setType(b.dataset.bt)})});
+  function streetWarn(){var box=F.querySelector('[data-w="street"]'),hit=taxInText(fld("street").value)||taxInText(fld("city").value)||taxInText(fld("name").value);
+    if(!hit){box.innerHTML="";return null}
+    box.innerHTML='<div class="warnbox">Ez egy adószámnak tűnik: <b>'+norm(hit)+'</b>. A címbe nem kerülhet, mert így a számlára is a címbe kerülne.<br><button type="button" data-move>Áthelyezem az Adószám mezőbe</button></div>';
+    box.querySelector("[data-move]").addEventListener("click",function(){
+      ["street","city","name"].forEach(function(n){var el=fld(n);el.value=el.value.replace(hit,"").replace(/\s{2,}/g," ").trim()});
+      setType("business");fld("tax").value=norm(hit);checkTax();streetWarn();fld("tax").focus()});
+    return hit}
+  function checkTax(){var p=taxProblem(fld("tax").value);err("tax",fld("tax").value?p:"");F.querySelector('[data-ok="tax"]').textContent=fld("tax").value&&!p?"✓ érvényes: "+norm(fld("tax").value):""}
+  ["street","city","name"].forEach(function(n){fld(n).addEventListener("input",streetWarn)});
+  fld("tax").addEventListener("input",checkTax);
+  F.querySelector("[data-pay]").addEventListener("click",function(){
+    var bad=0;["name","zip","city","street","tax"].forEach(function(n){err(n,"")});
+    if(!fld("name").value.trim()){err("name","Adja meg a nevet.");bad++}
+    if(!/^\d{4}$/.test(fld("zip").value.trim())){err("zip","4 számjegy.");bad++}
+    if(!fld("city").value.trim()){err("city","Adja meg a települést.");bad++}
+    if(!fld("street").value.trim()){err("street","Adja meg az utcát, házszámot.");bad++}
+    if(streetWarn()){err("street","Ebben a mezőben adószám áll — tegye át az Adószám mezőbe (gomb fent).");bad++}
+    if(btype==="business"){var p=taxProblem(fld("tax").value);if(p){err("tax",p);bad++}}
+    var r=F.querySelector("[data-result]");r.classList.remove("hidden");
+    r.textContent=bad?"Nem megy tovább — "+bad+" mező javítandó (a szerver ugyanezt elutasítja: billing_details_invalid).":
+      "→ A számlára ez kerül:\n  vevő: "+fld("name").value.trim()+"\n  cím: "+fld("zip").value.trim()+" "+fld("city").value.trim()+", "+fld("street").value.trim()+(btype==="business"?"\n  adószám: "+norm(fld("tax").value):"\n  adószám: — (magánszemély)")+"\n→ tovább a Barion fizetőoldalára"});
+
+  // ④ T-3 flow
+  var T=document.getElementById("t3"),fl=document.getElementById("t3flow");
+  function step(s){press(fl,"data-step",s);T.querySelectorAll("[data-s]").forEach(function(d){d.classList.toggle("hidden",d.dataset.s!==s)})}
+  fl.addEventListener("click",function(e){var b=e.target.closest("button");if(b&&b.dataset.step)step(b.dataset.step)});
+  T.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){step(b.dataset.go)})});
+  var p1=T.querySelector("[data-p1]"),p2=T.querySelector("[data-p2]");
+  p1.addEventListener("input",function(){var l=p1.value.length,m=T.querySelector("[data-meter]");m.style.width=Math.min(100,l*7)+"%";m.style.background=l<8?"var(--citui-bad)":l<14?"var(--citui-warn)":"var(--citui-good)";T.querySelector("[data-pe1]").textContent=l&&l<8?"Még "+(8-l)+" karakter kell.":""});
+  T.querySelector("[data-show]").addEventListener("change",function(e){p1.type=p2.type=e.target.checked?"text":"password"});
+  T.querySelector("[data-save]").addEventListener("click",function(){var e1="",e2="";
+    if(p1.value.length<8)e1="Legalább 8 karakter.";if(p1.value!==p2.value)e2="A két jelszó nem egyezik.";
+    T.querySelector("[data-pe1]").textContent=e1;T.querySelector("[data-pe2]").textContent=e2;if(!e1&&!e2)step("done")});
+  T.querySelector("[data-forgot]").addEventListener("click",function(){var v=T.querySelector("[data-fid]").value.trim();
+    T.querySelector("[data-fe]").textContent=v?"":"Írja be a felhasználónevet vagy az e-mail címet.";if(v)step("sent")});
+  T.querySelector("[data-resend]").addEventListener("click",function(){step("forgot")});
+  T.querySelector("[data-bsave]").addEventListener("click",function(){var v=T.querySelector("[data-bp1]").value;
+    T.querySelector("[data-btoast]").textContent=v.length<8?"Legalább 8 karakter.":"✓ Beállítva — tovább a szerkesztőbe."});
+
+  // ⑤ K-1
+  var K=document.getElementById("k1"),kb2=document.getElementById("k1bar");
+  var mods11="11 modul: Galéria · Szobák · Felszereltség · Árak · Ajánlatkérés · Térkép · Nyitvatartás · Miért mi · Vélemények · Környék · Foglalás";
+  function oi(sum,pill,pcls,mods,pays,btn,when){return '<div class="oi"><div class="hd"><div><b style="font-size:16px">'+sum+'</b> <span class="mut">/ hó</span><span class="pill '+pcls+'">'+pill+'</span></div><span class="mut small">'+when+'</span></div><div class="small mut" style="margin-top:4px">'+mods+'</div><div class="small mut">Domain: citoviso-aldomain</div><div style="margin-top:6px">'+pays+(btn?'<button class="obtn" data-req>Fizetési kérés küldése ▸</button>':'')+'</div></div>'}
+  function k1(m){press(kb2,"data-k",m);var h='<h3>Csomag-igények (2)</h3>';
+    if(m==="old"){h+=oi("186 Ft","submitted","ok","11 modul: gallery, rooms, amenities, pricing, enquiry, location, hours, usp, reviews, poi, booking",'<span class="pill ok" style="margin:0">fizetés: paid</span> <span class="small mut">2026-10-01 10:29 · számla: CITO-2026-2</span>',false,"2026-10-01 10:29")+
+      oi("97 Ft","submitted","ok","3 modul: gallery, enquiry, location",'<span class="pill bad" style="margin:0">fizetés: failed</span>',true,"2026-10-01 10:28")+
+      '<div class="help">Pilot fizetés: pay-link (Barion helyén mock) → fizetéskor a site élesedik; nem-fizet → deaktiválás. Auto-terhelés (MIT) = 2. fázis.</div>'}
+    else if(m==="new"){h+=oi("186 Ft","fizetve","ok",mods11,'<span class="pill ok" style="margin:0">fizetés: sikeres</span> <span class="small mut">2026-10-01 10:29 · számla: CITO-2026-2</span>',false,"2026-10-01 10:29")+
+      oi("97 Ft","lezárva — egy későbbi rendelés fizetve","neu","3 modul: Galéria · Ajánlatkérés · Térkép",'<span class="pill neu" style="margin:0">fizetés: megszakítva</span> <span class="small mut">a vevő visszalépett a fizetőoldalon · 10:28</span>',false,"2026-10-01 10:28")+
+      '<div class="help">Fizetés: Barion fizetőoldal; a sikeres fizetéskor az oldal élesedik, és a kártyát elmentjük (a vevő hozzájárulásával). A megújítást a mentett kártyáról automatikusan terheljük; ha az nem sikerül, a tulaj fizetési linket kap e-mailben.</div>'}
+    else{h+=oi("97 Ft","megszakítva","neu","3 modul: Galéria · Ajánlatkérés · Térkép",'<span class="pill neu" style="margin:0">fizetés: megszakítva</span> <span class="small mut">a vevő visszalépett a fizetőoldalon · 10:28</span>',true,"2026-10-01 10:28")+
+      oi("4 650 Ft","beküldve — még nincs fizetés","wait",mods11,'<span class="small mut">fizetési kísérlet még nem volt</span>',true,"2026-10-01 10:31")+
+      '<div class="help">Fizetés: Barion fizetőoldal; a sikeres fizetéskor az oldal élesedik, és a kártyát elmentjük (a vevő hozzájárulásával). A megújítást a mentett kártyáról automatikusan terheljük; ha az nem sikerül, a tulaj fizetési linket kap e-mailben.</div>'}
+    K.innerHTML=h;K.querySelectorAll("[data-req]").forEach(function(b){b.addEventListener("click",function(){var row=b.closest(".oi");var s=document.createElement("div");s.className="small";s.style.color="var(--citui-good)";s.style.marginTop="6px";
+      s.textContent=m==="old"?"→ (mai hiba) a kérés a LEGÚJABB igényre megy, amit a rendszer elutasít: „MÁR VÁSÁROLT” — nem történik semmi.":"→ Fizetési link e-mailben, ERRE az igényre ("+row.querySelector("b").textContent+").";row.appendChild(s);b.disabled=true})})}
+  kb2.addEventListener("click",function(e){var b=e.target.closest("button");if(b&&b.dataset.k)k1(b.dataset.k)});
+  k1("new");
+})();
+</script>
+</body>
+</html>

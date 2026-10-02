@@ -4,7 +4,7 @@ title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
 category: system
 anchors: console.settings
-updated: 2026-09-30
+updated: 2026-10-02
 ---
 
 A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
@@ -79,8 +79,16 @@ teljesíthető: keresd meg a vevőt és mondd meg neki.
 
 **Ha a gomb nem látszik és a rendelés már ki van fizetve** — ilyenkor nincs is dolgod.
 
+**Mit mond a rendelés sora?** A csomag-igény állapotát a fizetései adják:
+**„fizetve”**, **„fizetésre vár”**, **„megszakítva”** (a vevő visszalépett a fizetőoldalon),
+**„sikertelen”** (a bank elutasította), **„beküldve — még nincs fizetés”**, **„lezárva”** (a rendelést
+lezártuk), és **„lezárva — egy későbbi rendelés fizetve”**. Az utóbbi azt jelenti, hogy a vevő visszajött, és egy
+újabb rendelését már kifizette. Gomb csak a „beküldve — még nincs fizetés”, a „megszakítva” és a
+„sikertelen” sor mellett áll; a többinél nincs, mert ott nincs mit kérni.
+A **„Fizetési kérés küldése ▸”** mindig annak a sornak a rendelésére kér fizetést, amelyik mellett áll.
+
 ⚠️ Ha megnyomtad a gombot, **a felület nem ír vissza semmit**: az eredményt onnan látod,
-hogy a rendelés sorában megjelenik egy fizetés-sor (`fizetés: pending`) a link-kel.
+hogy a rendelés sorában megjelenik egy fizetés-sor („fizetés: fizetésre vár”) a link-kel.
 
 > 🔧 **Ismert korlát (2026-09-13).** A megrekedt rendelés helyreállítása ma két ponton
 > hiányos: a függőben ragadt fizetés-sor eltünteti az egyetlen gombot, és az elutasított

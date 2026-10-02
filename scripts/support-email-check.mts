@@ -27,7 +27,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { config } from "../src/config.js";
-import { loginHelpPage, modulesSection } from "../src/server/adminViews.js";
+import { forgotPasswordSentPage, modulesSection } from "../src/server/adminViews.js";
 import { MODULE_CATALOG } from "../src/modules.js";
 import { getAnnualFreeMonths, getBaseMonthly } from "../src/pricing.js";
 import type { TenantModuleView } from "../src/tenant/modules.js";
@@ -170,7 +170,9 @@ const addressesOf = (html: string): string[] => [
     [...html.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)].map((m) => m[0]),
   ),
 ];
-const loginMails = addressesOf(loginHelpPage(effSupport, "hu"));
+// Elek T-3 (2026-10-02): the "write to us" help page became the self-service reset;
+// the support address now stands on its "we sent it" page — as a link.
+const loginMails = addressesOf(forgotPasswordSentPage(effSupport, "hu"));
 // A fizetés-lapok ugyanabból a konstansból élnek; a forrás-szintű ① már igazolta,
 // hogy nincs bennük beégetett cím, itt a KÖZÖS ÉRTÉKET nézzük.
 // ⚠️ 2026-09-15: egy PÁRHUZAMOS szál ugyanezt a hibát javította, szigorúbban —
@@ -188,8 +190,8 @@ const payOmitsWhenEmpty = /const helpLine[\s\S]{0,400}:\s*""/.test(consoleSrc);
 check(tabMails.length === 1, `a Modulok fül EGY címet ír ki (${tabMails.join(", ") || "—"})`);
 check(loginMails.length === 1, `a belépési súgó EGY címet ír ki (${loginMails.join(", ") || "—"})`);
 check(
-  !/mailto:/.test(loginHelpPage(effSupport, "hu")),
-  "ℹ️ a belépési súgón a cím SZÖVEG, nem kattintható link — rögzített lelet, külön döntés",
+  /mailto:/.test(forgotPasswordSentPage(effSupport, "hu")),
+  "a jelszó-visszaállítás lapján a support-cím kattintható link (a régi „csak szöveg” lelet lezárva, T-3)",
 );
 check(
   payFromSupport,

@@ -4,7 +4,7 @@ title: Fiók — e-mail-cím és jelszó kezelése
 audience: tenant
 category: account
 anchors: admin.account
-updated: 2026-09-30
+updated: 2026-10-02
 ---
 
 A **Fiók** fülön kezeli a belépési adatait, azt, hogy hová küldjünk értesítést, a szállása
@@ -16,6 +16,33 @@ időzónáját, és — a lap alján — a honlapján közzétett jogi adatait (
 
 A **„Felhasználónév (belépéshez)”** mező csak tájékoztató: ezzel a névvel lép be a
 kezelőfelületre. Ez nem módosítható — ha gondja van vele, írjon nekünk.
+
+## Első belépés: a jelszó beállítása
+
+Jelszót e-mailben nem küldünk. A megrendelés után két helyen állíthatja be a sajátját:
+
+1. **Rögtön a sikeres fizetés lapján.** Az „Állítsa be most a jelszavát” részben írja be kétszer az új
+   jelszót, és koppintson a „Beállítom és belépek” gombra. Ez a lehetőség csak a fizetés utáni két órában él.
+2. **A „Belépési adatai” levélből.** A levélben a felhasználóneve és egy **„Jelszó beállítása”** gomb áll.
+   A gomb 7 napig érvényes, és egyszer használható. A megnyíló lapon írja be kétszer az új jelszót (legalább
+   8 karakter), majd koppintson a **„Beállítom és belépek”** gombra.
+
+A beállítás után a rendszer azonnal beléptet. Biztonsági okból a korábban megnyitott belépések megszűnnek,
+más eszközön tehát újra be kell lépnie.
+
+## Elfelejtett jelszó
+
+1. A belépő lapon koppintson az **„Elfelejtett jelszó?”** linkre.
+2. Írja be a **„Felhasználónév vagy e-mail”** mezőbe a felhasználónevét, vagy azt az e-mail címet, amelyet a
+   **„Kommunikációs e-mail (ide küldünk értesítést)”** mezőben adott meg (a levelet is oda küldjük),
+   majd koppintson a **„Küldjék a linket”** gombra.
+3. A lap mindig ugyanazt írja: **„Ha van ilyen fiók, elküldtük”**. Ez szándékos, így senki nem tudja kipróbálni,
+   kinek van fiókja nálunk. Ha a cím egy fiókhoz tartozik, néhány percen belül megjön a levél egy **„Jelszó
+   beállítása”** gombbal (7 napig érvényes, egyszer használható).
+4. Ha a link lejárt vagy már felhasználták, a lap ezt írja: **„Ez a link már nem érvényes”**. Az **„Új linket
+   kérek”** gombbal kérhet újat.
+
+Ha nem Ön kérte a linket, nincs teendője: a jelenlegi jelszava változatlan marad.
 
 ## Kommunikációs e-mail
 
@@ -32,6 +59,7 @@ A **„Jelszó módosítása”** részben cserélheti le a jelszavát:
    de más nem talál ki — például három, egymáshoz nem kapcsolódó szó egybeírva.
 3. Ismételje meg az **„Új jelszó még egyszer”** mezőben — ez véd az elgépeléstől.
 4. Koppintson a **„Jelszó módosítása”** gombra. A következő belépéskor már az új jelszót használja.
+   Ezen az eszközön belépve marad, a többi eszközön viszont a csere után újra be kell lépnie.
 
 ## Szállás időzónája
 

@@ -78,6 +78,7 @@ import { reenrichOne } from "../scraper/reenrichOne.js";
 import { rescrapePhotos } from "../scraper/rescrapePhotos.js";
 import { validateBuyer, type BuyerInput } from "../billing/buyer.js";
 import { buildBillingPrefill } from "../billing/prefill.js";
+import { payDonePasswordUrl } from "../auth/passwordLink.js";
 import { leadIdOfPayment, retryInvoice } from "../billing/invoiceRetry.js";
 import type { BillingPrefill } from "../generator/configurator.js";
 import { publicPaymentRef } from "../payment/publicRef.js";
@@ -3597,6 +3598,14 @@ async function handle(
     // "Activated" for the buyer = credentials/site exist (webhook may have run
     // earlier, so handleWebhook's own flag can be a stale false here).
     const activated = Boolean(summary?.siteUrl ?? summary?.username);
+    // Elek T-3 (B): the password can be set right here, right after paying.
+    const passwordSetUrl =
+      paid && activated && summary?.username
+        ? await payDonePasswordUrl(ref, summary.username).catch((e) => {
+            console.error(`[pay/done] jelszó-link kiadása sikertelen (${ref}):`, e);
+            return null;
+          })
+        : null;
     // The tenant login lives on the PUBLIC server; this page is served by the
     // console, so the URL must be absolute or the buyer lands on OUR sign-in.
     return send(
@@ -3617,6 +3626,7 @@ async function handle(
         retryUrl: p.payUrl ?? null,
         // Elek F-2: the buyer's own back-out has its own screen, not the decline's.
         outcome: p.status === "cancelled" ? "cancelled" : null,
+        passwordSetUrl,
         // ⛔ The buyer-facing "write to us" address comes from the CONFIG — the
         // same source the tenant admin prints. Hardcoded on the page it was
         // `info@citoviso.com`, a literal that existed nowhere in the setup, so a

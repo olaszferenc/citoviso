@@ -53,6 +53,8 @@ export const I18N_SOURCES = [
   // contact card, step indicator) — the GUEST reads it in the site's language.
   "src/email/bookingLayout.ts",
   "src/email/loginEmail.ts",
+  // Elek T-3: the masked mail copy logged to the owner's Üzenetek tab.
+  "src/tenant/credentials.ts",
   "src/email/invoiceEmail.ts",
   // Elek FK-001 E1: a SZÁMLA-TÉTEL neve. EGY regiszter szolgálja ki a tenant-admin
   // Dokumentumok sorát ÉS a számla-levél tárgyát — a címke ezért ITT él, nem

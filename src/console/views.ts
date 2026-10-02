@@ -2108,7 +2108,7 @@ export function orderIntentsPanel(
       const payHtml = pays.length
         ? pays
             .map((p) => {
-              const cls = p.status === "paid" ? "approved" : p.status === "failed" ? "rejected" : "generated";
+              const cls = p.status === "paid" ? "approved" : p.status === "failed" ? "rejected" : p.status === "cancelled" ? "" : "generated";
               // K-1: words, not the raw DB token; a back-out says what the buyer did.
               const payWord =
                 p.status === "paid"
@@ -2768,6 +2768,11 @@ function payDarkStyles(): string {
     background:linear-gradient(120deg, var(--citui-cyan-500), var(--citui-cyan-400));
     color:var(--citui-navy-900);box-shadow:0 10px 24px color-mix(in srgb, var(--citui-cyan-500) 30%, transparent)}
   .pd-cta:hover{text-decoration:none}
+  /* Elek T-3 (B): set the password right here — label above field, full width. */
+  .pd-pwset{display:flex;flex-direction:column;gap:6px}
+  .pd-pwset label,.pd-pwset .pd-soft{font-size:12.5px;color:var(--citui-muted)}
+  .pd-pwset .citui-input{width:100%;min-height:44px;padding:9px 11px;border:1px solid var(--citui-line-strong);
+    border-radius:9px;font:15px var(--citui-font-text)}
   .pd-refline{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:14px 0 0;font-size:12.5px;color:var(--citui-muted)}
   .pd-refline code{background:var(--citui-surface-2);border:1px solid var(--citui-line);border-radius:7px;
     padding:5px 8px;font:600 12.5px/1 ui-monospace,Menlo,monospace;color:var(--citui-ink)}
@@ -2987,6 +2992,13 @@ export function payResultPage(
      * neutral state, and offers to continue. Absent = a real decline / lapse / error.
      */
     outcome?: "cancelled" | null;
+    /**
+     * Elek T-3 (approved 2026-10-02, B): a SHORT-lived one-time link (absolute, on
+     * the public host) — the buyer sets the password right here, right after paying;
+     * the mailed link stays the fallback. Absent = the owner already set one, or the
+     * window passed: the page then points at the mail.
+     */
+    passwordSetUrl?: string | null;
   },
 ): string {
   const lang = consoleLang();
@@ -3152,12 +3164,27 @@ export function payResultPage(
   const mailNote = info?.contactEmail
     ? T(lang, "Elküldtük a belépési adatait ide: {email}.", { email: `<b>${esc(info.contactEmail)}</b>` })
     : T(lang, "A belépési adatait e-mailben küldtük el.");
+  // ⛔ Elek T-3: no password travels by mail any more — the line says where it IS set.
+  const setUrl = /^https?:\/\//.test(info?.passwordSetUrl ?? "") ? info!.passwordSetUrl! : null;
   const userLine = info?.username
     ? payRow(
         T(lang, "Felhasználónév"),
-        `${esc(info.username)} <span class="pd-soft">${T(lang, "(a jelszó az e-mailben)")}</span>`,
+        `${esc(info.username)} <span class="pd-soft">${
+          setUrl ? T(lang, "(a jelszót most, itt állíthatja be)") : T(lang, "(a jelszó-beállító link az e-mailben)")
+        }</span>`,
       )
-    : payRow(T(lang, "Felhasználónév"), T(lang, "A felhasználónevet és a jelszót e-mailben küldtük."));
+    : payRow(T(lang, "Felhasználónév"), T(lang, "A felhasználónevet és a jelszó-beállító linket e-mailben küldtük."));
+  const setForm = setUrl
+    ? `<form class="pd-pwset" method="post" action="${esc(setUrl)}">
+        <p class="pd-sect" style="margin-top:12px">${T(lang, "Állítsa be most a jelszavát")}</p>
+        <label class="pd-soft" for="pdPw1">${T(lang, "Új jelszó")}</label>
+        <input class="citui-input" id="pdPw1" name="password" type="password" required minlength="8" autocomplete="new-password">
+        <label class="pd-soft" for="pdPw2">${T(lang, "Új jelszó még egyszer")}</label>
+        <input class="citui-input" id="pdPw2" name="password2" type="password" required minlength="8" autocomplete="new-password">
+        <button class="pd-cta" type="submit">${T(lang, "Beállítom és belépek")}</button>
+        <p class="pd-soft" style="margin:8px 0 0;font-size:12.5px">${T(lang, "Ha most nem ér rá: a jelszó-beállító linket e-mailben is elküldtük.")}</p>
+      </form>`
+    : "";
   // The link the buyer must be able to click: their OWN admin, never ours.
   //
   // ⛔ NO bare "/login" fallback any more. Measured on the confirmation screen:
@@ -3210,9 +3237,11 @@ export function payResultPage(
       )}
       <p class="pd-soft" style="margin:10px 0 0;font-size:12.5px">${mailNote}</p>
       ${
-        loginHref
-          ? `<a class="pd-cta" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a>`
-          : ""
+        setForm
+          ? setForm
+          : loginHref
+            ? `<a class="pd-cta" href="${esc(loginHref)}">${T(lang, "Belépek és szerkesztem")}</a>`
+            : ""
       }
       ${refBlock}`,
     pixel: pixelPurchase,

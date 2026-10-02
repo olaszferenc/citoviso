@@ -13,6 +13,20 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-02 — SUB M2 cit93d29d1b: Elek fizetés/számla/belépés/konzol, ADR-XXXX) — LANDOLVA, élesítés a koordinátoré
+
+Tulaj-jóváhagyás a koordinátoron át (terv: `assets/design-refs/console/elek-m2/`). ① **F-2** Barion „Canceled” → saját
+`cancelled` állapot + „Megszakította a fizetést” lap, minden pénz nélküli zárás naplóz. ② **L-2/F-3** az ajánlat neve
+EGY helyen (`offerLabel`, kampány = „Egyedi ajánlat”): fizetési lap mindkét oldala, számla, nyugta. ③ **F-1/T-4** nincs
+cím-előtöltés a leadből, „Cégként vagy egyéni vállalkozóként”, adószám a címben → rákérdez/átteszi, szerver elutasítja.
+④ **T-3 (B)** jelszó nem jár levélben: egyszeri 7 napos link (hash a `login_token`-ben), „Elfelejtett jelszó?”
+önkiszolgáló, a fizetés-siker lapon 2 órán át azonnal beállítható; jelszó-beállítás lezárja a régebbi munkameneteket
+(süti-iat vs `tenant_user.password_set_at`, **migráció 0085**). ⑤ **K-1** konzol: a csomag-igény állapota a fizetéseiből,
+a gomb a saját sorára kér, igaz súgó. F-4 nem hiba (a kupon modul-vásárlásra szól, nem a megújításra).
+⚠️ Saját hiba, javítva: a `payment-outcome-truth-check` első változata a közös dev DB-be írt (a DB-kliens a scratch-DB
+beállítása ELŐTT nyílt) — a sorokat kézzel töröltem, az őr most ellenőrzi, hova ír. Jegyzet:
+`_planning/memory/2026-10-02_elek_m2_fizetes_szamla_belepes_konzol.md`.
+
 ## Párhuzamos szál (2026-10-02 — SUB: Places-költség H rész, a napi riport VALÓS számlával, ADR-0301) — LANDOLVA
 
 A 07:10-es Google-riport a Cloud Billing BigQuery-exportjából (`mineralcrm.billing_export`) a tegnapi VALÓS költséget is

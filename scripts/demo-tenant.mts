@@ -191,7 +191,7 @@ try {
   await setTenantPhotoUnits(tenant.id, siteData.photos[2]!.url, [u[2]!.id]);
 
   const rendered = await rerenderTenantSnapshot(tenant.id, { as: "live" });
-  const login = await issueTenantLogin(tenant.id, NAME, "info@nyugalom.example");
+  const login = await issueTenantLogin(tenant.id, NAME, "info@nyugalom.example", { memorable: true });
 
   const port = process.env.PUBLIC_PORT ?? "4800";
   console.log(`\n✅ Demó-bérlő kész${rendered ? " (oldal kirenderelve)" : " — a render nem futott le"}.\n`);

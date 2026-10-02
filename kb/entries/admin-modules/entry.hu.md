@@ -4,7 +4,7 @@ title: Modulok — szolgáltatások be- és kikapcsolása, beállítása
 audience: tenant
 category: modules
 anchors: admin.modules
-updated: 2026-09-28
+updated: 2026-10-02
 ---
 
 A **Modulok** fülön dönti el, milyen szolgáltatások legyenek az oldalán — például szoba-bemutató,
@@ -241,6 +241,9 @@ Amit ez jelent — és amit érdemes tudni, mert a sáv nem fér ki mindenre:
 Megbízás nélkül (vagy a kézi fizetés útján) a fizetőoldalon dől el a dolog. A képernyő mindig
 megmondja, mi történt — és **soha nem hagyja teendő nélkül**:
 
+- „Megszakította a fizetést” — Ön lépett vissza a fizetőoldalon (például mert mégis más csomagot
+  választana). A sáv felirata „Fizetés megszakítva”, a lap első kiemelt mondata *„Nem terheltünk
+  semmit.”* A megrendelése megmaradt: a „Folytatom a fizetést” gombbal ugyanott folytathatja.
 - „A fizetés nem sikerült” — a bank elutasította a kártyát. A lap első, kiemelt mondata az,
   ami ilyenkor a legjobban érdekli: *„Nem történt terhelés.”* Vagyis pénz **nem mozdult**, és
   a megrendelése sem veszett el — ugyanezen a linken újrapróbálhatja. A lapon egy

@@ -805,7 +805,7 @@ export function loginPage(
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card">` +
       `<h1 style="font-size:1.5rem;text-align:center">${T(lang, "Ügyfél-belépés")}</h1>` +
-      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapja kezeléséhez adja meg a felhasználónevét és a kapott jelszót.")}</p>` +
+      `<p class="citui-hint" style="text-align:center;margin-bottom:18px">${T(lang, "A honlapja kezeléséhez adja meg a felhasználónevét és a jelszavát.")}</p>` +
       `<form method="POST" action="/login">` +
       // A mail link to one admin card: the path rides in `next`; the #card part never
       // reaches the server, so the page adds it from its own address before posting.
@@ -818,7 +818,7 @@ export function loginPage(
       `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" autofocus placeholder="pl. napfeny-panzio"></div>` +
       `<div class="citui-field"><label class="citui-label" for="password">${T(lang, "Jelszó")}</label>` +
       `<div style="display:flex;gap:8px;align-items:center">` +
-      `<input class="citui-input" id="password" name="password" type="password" required placeholder="${T(lang, "a kapott jelszó")}" style="flex:1">` +
+      `<input class="citui-input" id="password" name="password" type="password" required placeholder="${T(lang, "a jelszava")}" style="flex:1">` +
       `<button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" onclick="citPwT('password',this)">mutat</button></div></div>` +
       `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Belépés")}</button>` +
       `</form>${note}` +
@@ -832,16 +832,106 @@ export function loginPage(
   );
 }
 
-/** Tenant password-recovery help — honest path until the sending domain is live. */
-export function loginHelpPage(contactEmail: string, lang = "hu"): string {
+/**
+ * Elek T-3 (owner-approved 2026-10-02, B; contract: design-refs/tenant-admin/password-link):
+ * the owner SETS their password through a one-time link — the credentials mail no
+ * longer carries one. ⛔ The GET of this page spends nothing; only the POST does.
+ */
+export function setPasswordPage(
+  v: { readonly token: string; readonly username: string; readonly siteName: string },
+  lang = "hu",
+  error: "short" | "mismatch" | null = null,
+): string {
+  const err =
+    error === "short"
+      ? T(lang, "Legalább 8 karakter.")
+      : error === "mismatch"
+        ? T(lang, "A két jelszó nem egyezik.")
+        : "";
+  return shell(
+    T(lang, "Jelszó beállítása"),
+    `<div class="citui-container" style="max-width:420px;padding:64px 0">` +
+      `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
+      `<div class="citui-card">` +
+      `<h1 style="font-size:1.4rem">${T(lang, "Jelszó beállítása")}</h1>` +
+      `<p class="citui-hint">${T(lang, "Fiók:")} <b>${esc(v.username)}</b> · ${esc(v.siteName)}</p>` +
+      `<form method="POST" action="/login/jelszo/${esc(v.token)}" data-pwset>` +
+      `<div class="citui-field"><label class="citui-label" for="pw1">${T(lang, "Új jelszó")}</label>` +
+      `<input class="citui-input" id="pw1" name="password" type="password" required minlength="8" autocomplete="new-password"></div>` +
+      `<div class="citui-field"><label class="citui-label" for="pw2">${T(lang, "Új jelszó még egyszer")}</label>` +
+      `<input class="citui-input" id="pw2" name="password2" type="password" required minlength="8" autocomplete="new-password"></div>` +
+      `<label class="citui-hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pwshow> ${T(lang, "Jelszó megjelenítése")}</label>` +
+      (err ? `<p class="citui-hint" role="alert" style="color:var(--citui-bad)">${esc(err)}</p>` : "") +
+      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%;margin-top:10px">${T(lang, "Beállítom és belépek")}</button>` +
+      `</form>` +
+      `<p class="citui-hint" style="margin-top:12px">${T(lang, "Legalább 8 karakter. Egy hosszabb mondat is jó (pl. „kilátás a balatonra 2026”).")}</p>` +
+      `</div></div>` +
+      `<script>(function(){var c=document.querySelector("[data-pwshow]");if(!c)return;c.addEventListener("change",function(){` +
+      `["pw1","pw2"].forEach(function(id){var i=document.getElementById(id);if(i)i.type=c.checked?"text":"password"})})})();</script>`,
+    lang,
+  );
+}
+
+/** After a successful set: the session is live, every older one ended. */
+export function passwordSetDonePage(lang = "hu"): string {
+  return shell(
+    T(lang, "Jelszó beállítva"),
+    `<div class="citui-container" style="max-width:420px;padding:64px 0;text-align:center">` +
+      `<div style="margin-bottom:24px">${LOGO}</div>` +
+      `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Kész — beléptetjük")}</h1>` +
+      `<p class="citui-hint">${T(lang, "A jelszava beállítva. Mostantól a felhasználónevével és ezzel a jelszóval léphet be.")}</p>` +
+      `<p class="citui-hint">${T(lang, "Biztonsági okból a korábban megnyitott belépések megszűntek.")}</p>` +
+      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/admin">${T(lang, "Tovább a szerkesztőbe")}</a></p>` +
+      `</div></div>`,
+    lang,
+  );
+}
+
+/** A used / expired / unknown link — one honest page, one way on. */
+export function passwordLinkDeadPage(lang = "hu"): string {
+  return shell(
+    T(lang, "Ez a link már nem érvényes"),
+    `<div class="citui-container" style="max-width:420px;padding:64px 0;text-align:center">` +
+      `<div style="margin-bottom:24px">${LOGO}</div>` +
+      `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Ez a link már nem érvényes")}</h1>` +
+      `<p class="citui-hint">${T(lang, "A jelszó-beállító link lejárt, vagy már felhasználták. Biztonsági okból minden link csak egyszer használható.")}</p>` +
+      `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/login/help">${T(lang, "Új linket kérek")}</a></p>` +
+      `</div></div>`,
+    lang,
+  );
+}
+
+/** "Elfelejtett jelszó?" — the request form (replaces the old "write to us" page). */
+export function forgotPasswordPage(lang = "hu", error = false): string {
   return shell(
     T(lang, "Elfelejtett jelszó"),
-    `<div class="citui-container" style="max-width:480px;padding:64px 0">` +
+    `<div class="citui-container" style="max-width:420px;padding:64px 0">` +
       `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
       `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Elfelejtett jelszó")}</h1>` +
-      `<p class="citui-hint">${T(lang, "A belépési adatait az aktiváláskor e-mailben küldtük el — érdemes először ott keresni („Citoviso belépési adatok”).")}</p>` +
-      `<p class="citui-hint">${T(lang, "Ha nincs meg, írjon nekünk {art}", { art: huArticleLower(contactEmail) })} <strong>${esc(contactEmail)}</strong> ${T(lang, "címre a vállalkozása nevével, és új jelszót adunk ki. Az önkiszolgáló visszaállítás hamarosan elérhető lesz.")}</p>` +
-      `<p class="citui-hint">${T(lang, "Belépés után a jelszavát a Kezelőfelület „Fiók” részében bármikor megváltoztathatja.")}</p>` +
+      `<p class="citui-hint">${T(lang, "Írja be a felhasználónevét vagy a fiókhoz tartozó e-mail címet. Küldünk egy linket, amellyel új jelszót állíthat be.")}</p>` +
+      `<form method="POST" action="/login/help">` +
+      `<div class="citui-field"><label class="citui-label" for="ident">${T(lang, "Felhasználónév vagy e-mail")}</label>` +
+      `<input class="citui-input" id="ident" name="identifier" required autocapitalize="none" autocorrect="off" autocomplete="username"></div>` +
+      (error ? `<p class="citui-hint" role="alert" style="color:var(--citui-bad)">${T(lang, "Írja be a felhasználónevet vagy az e-mail címet.")}</p>` : "") +
+      `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Küldjék a linket")}</button>` +
+      `</form>` +
+      `<p class="citui-hint" style="margin-top:14px"><a href="/login">${T(lang, "← Vissza a belépéshez")}</a></p>` +
+      `</div></div>`,
+    lang,
+  );
+}
+
+/** The same answer whether or not the account exists (no enumeration). */
+export function forgotPasswordSentPage(supportEmail: string, lang = "hu"): string {
+  return shell(
+    T(lang, "Ha van ilyen fiók, elküldtük"),
+    `<div class="citui-container" style="max-width:420px;padding:64px 0">` +
+      `<div style="text-align:center;margin-bottom:24px">${LOGO}</div>` +
+      `<div class="citui-card"><h1 style="font-size:1.4rem">${T(lang, "Ha van ilyen fiók, elküldtük")}</h1>` +
+      `<p class="citui-hint">${T(lang, "Ha a megadott adat egy fiókhoz tartozik, néhány percen belül levelet kap a fiók e-mail címére. A levélben lévő link 7 napig érvényes, egyszer használható.")}</p>` +
+      (supportEmail
+        ? `<p class="citui-hint">${T(lang, "Nem jött meg? Nézze meg a levélszemét mappát is, vagy írjon nekünk:")} <a href="mailto:${esc(supportEmail)}">${esc(supportEmail)}</a></p>`
+        : "") +
       `<p style="margin-top:14px"><a class="citui-btn citui-btn--primary" href="/login">${T(lang, "← Vissza a belépéshez")}</a></p>` +
       `</div></div>`,
     lang,

@@ -72,7 +72,11 @@ import {
   chargeRetryAnchor,
   DECLINED_NOTE_ANCHOR,
   domainSettlementSection,
-  loginHelpPage,
+  forgotPasswordPage,
+  forgotPasswordSentPage,
+  passwordLinkDeadPage,
+  passwordSetDonePage,
+  setPasswordPage,
   loginPage,
 } from "./adminViews.js";
 import { calendarFocus, pendingInOrder } from "./bookingViews.js";
@@ -98,6 +102,8 @@ import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../paym
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { peekPasswordToken, setPasswordWithToken } from "../auth/passwordLink.js";
+import { sendPasswordResetLinks } from "../tenant/credentials.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { getMultilang } from "../tenant/multilangCore.js";
 import { multilangCardData } from "../tenant/multilangCard.js";
@@ -2148,6 +2154,46 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // Back to where the link pointed (only ever inside /admin — safeAdminNext).
     return redirect(res, next ?? "/admin");
   }
+  // Elek T-3: "Elfelejtett jelszó?" — mail a fresh link. The SAME answer whether or
+  // not the account exists; every request counts against the per-IP limit.
+  if (req.method === "POST" && pathname === "/login/help") {
+    const form = await readFormBody(req);
+    const lang = await prepareMailLang(
+      uiLangs().includes(form.get("lang") ?? "") ? (form.get("lang") as string) : DEFAULT_LANG,
+    );
+    const ident = (form.get("identifier") ?? "").trim();
+    if (!ident) return send(res, 400, forgotPasswordPage(lang, true));
+    if (loginLocked("pwreset", req)) return send(res, 429, forgotPasswordSentPage(config.supportEmail, lang));
+    recordLoginFailure("pwreset", req);
+    try {
+      const n = await sendPasswordResetLinks(ident);
+      console.log(`[auth] jelszó-link kérés · ${n} levél ment ki`);
+    } catch (e) {
+      // Loud in the log, identical on the page — the answer must not reveal anything.
+      console.error(`[auth] jelszó-link kiküldése SIKERTELEN: ${(e as Error).message}`);
+    }
+    return send(res, 200, forgotPasswordSentPage(config.supportEmail, lang));
+  }
+  // Elek T-3: spend the one-time link — set the password, end every older session,
+  // open a fresh one.
+  {
+    const pwLinkPost = /^\/login\/jelszo\/([A-Za-z0-9_-]{20,100})$/.exec(pathname);
+    if (req.method === "POST" && pwLinkPost) {
+      const form = await readFormBody(req);
+      const token = pwLinkPost[1]!;
+      const v = await peekPasswordToken(token);
+      const lang = await prepareMailLang(v.ok ? await langForTenant(v.tenantId) : DEFAULT_LANG);
+      if (!v.ok) return send(res, 410, passwordLinkDeadPage(lang));
+      const r = await setPasswordWithToken(token, form.get("password") ?? "", form.get("password2") ?? "");
+      if (!r.ok) {
+        if (r.error === "link") return send(res, 410, passwordLinkDeadPage(lang));
+        return send(res, 400, setPasswordPage({ token, username: v.username, siteName: v.siteName }, lang, r.error));
+      }
+      setSession(res, r.tenantUserId);
+      console.log(`[auth] jelszó beállítva egyszeri linkkel · ${v.username}`);
+      return send(res, 200, passwordSetDonePage(lang));
+    }
+  }
   // POST /admin/password — tenant password change (Fiók card).
   if (req.method === "POST" && pathname === "/admin/password") {
     const session = await currentTenant(req);
@@ -2158,6 +2204,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       next !== (form.get("next2") ?? "")
         ? "A két új jelszó nem egyezik."
         : await changeTenantPassword(session.tenantUserId, form.get("current") ?? "", next);
+    // T-3: the change ended every older session — THIS one gets a fresh cookie.
+    if (!err) setSession(res, session.tenantUserId);
     return redirect(res, err ? `/admin?pw=${encodeURIComponent(err)}` : "/admin?saved=1");
   }
   // ADR-0084: a tenant SAJÁT számlájának PDF-je. A tenant-azonosító a WHERE része
@@ -3770,12 +3818,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         loginPage(undefined, consoleLoginUrl(req), loginLang, safeAdminNext(url.searchParams.get("next"))),
       );
     }
+    // Elek T-3: "Elfelejtett jelszó?" — the self-service request form.
     if (pathname === "/login/help") {
-      return send(
-        res,
-        200,
-        loginHelpPage(config.supportEmail, loginLang),
-      );
+      return send(res, 200, forgotPasswordPage(loginLang));
+    }
+    // Elek T-3: the one-time password link. ⛔ The GET only LOOKS (mail scanners
+    // open links): a valid link shows the form; only its POST spends the token.
+    const pwLinkGet = /^\/login\/jelszo\/([A-Za-z0-9_-]{20,100})$/.exec(pathname);
+    if (pwLinkGet) {
+      const v = await peekPasswordToken(pwLinkGet[1]!);
+      if (!v.ok) return send(res, 410, passwordLinkDeadPage(loginLang));
+      return send(res, 200, setPasswordPage({ token: pwLinkGet[1]!, username: v.username, siteName: v.siteName }, loginLang));
     }
     // GDPR Art. 13/14 notice. /adatvedelem is the canonical Hungarian path the
     // footers link to; /privacy stays a live alias because outreach mails have
