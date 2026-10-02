@@ -1,4 +1,4 @@
-// ŐR — a napi Google-költség riport (ADR-XXXX) számolása. Hermetikus: fetch-csonk,
+// ŐR — a napi Google-költség riport (ADR-0297) számolása. Hermetikus: fetch-csonk,
 // a globális fetch dob (egy hálózati hívás = piros), DB és levél nincs.
 //
 // Amit mér:

@@ -1,4 +1,4 @@
-## ADR-XXXX — Napi Google API költség-riport e-mailben: listaáras becslés a Monitoring hívásszámaiból, csak szól, nem korlátoz (2026-10-02)
+## ADR-0297 — Napi Google API költség-riport e-mailben: listaáras becslés a Monitoring hívásszámaiból, csak szól, nem korlátoz (2026-10-02)
 
 **Dátum:** 2026-10-02 · **Státusz:** elfogadva (SUB, G rész; koordinátor: CIT „Places API 600 $” session;
 brief: `~/rc-briefs/places-g-napi-koltseg-riport.md`; tulaj: „Napi reportot kérek.”) · **Visszafordíthatóság:** 🔄 olcsó

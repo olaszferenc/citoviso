@@ -11,7 +11,7 @@ Utolsó frissítés: 2026-10-01 (🗣️ **Elek SZ — vendég-kritikus a mock-s
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-02 — SUB: Places-költség G rész, napi Google API költség-riport, ADR-XXXX) — LANDOLVA
+## Párhuzamos szál (2026-10-02 — SUB: Places-költség G rész, napi Google API költség-riport, ADR-0297) — LANDOLVA
 
 Reggel 07:10-kor (dev-időzítő `citoviso-google-cost-report.timer`) levél a tegnapi Google API hívásokról: service × method,
 listaáras BECSLÉS, összevetés a 7 napos átlaggal, `[FIGYELEM]` küszöb (20 $) / ≥2× tétel esetén, `[NINCS ADAT]` ha a token

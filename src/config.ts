@@ -137,7 +137,7 @@ export const config = {
    */
   ownerAlertPhone: env("OWNER_ALERT_PHONE"),
   /**
-   * Daily Google API cost report (ADR-XXXX, scripts/google-cost-report.mts). Reports,
+   * Daily Google API cost report (ADR-0297, scripts/google-cost-report.mts). Reports,
    * never limits. Project = the Cloud project whose Monitoring is read (shared with MR).
    * Recipient: empty = the console's alert e-mail list (/settings, app_setting alert_email).
    * Threshold: the day is flagged when its list-price estimate exceeds it (USD).

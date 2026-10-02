@@ -1,6 +1,6 @@
 # 2026-10-02 — Places-költség G rész: napi Google API költség-riport e-mailben (SUB)
 
-Koordinátor: CIT „Places API 600 $” (`~/wt/citddb048b5`). Brief: `~/rc-briefs/places-g-napi-koltseg-riport.md`. ADR-XXXX.
+Koordinátor: CIT „Places API 600 $” (`~/wt/citddb048b5`). Brief: `~/rc-briefs/places-g-napi-koltseg-riport.md`. ADR-0297.
 
 ## Elkészült
 - `src/ops/googleCostReport.ts` — Monitoring-lekérés (órás, lapozás), ártábla (`METHOD_PRICES`, az EGYETLEN példány),

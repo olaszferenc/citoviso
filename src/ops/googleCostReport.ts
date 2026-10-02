@@ -1,4 +1,4 @@
-// Daily Google API cost report (ADR-XXXX) — the owner's morning view of what the
+// Daily Google API cost report (ADR-0297) — the owner's morning view of what the
 // Google Cloud project spent YESTERDAY (Budapest day), per service × method.
 //
 // Why it exists: the Places bill ran at ~600 $/week (2026-09-23 … 10-01) and nobody

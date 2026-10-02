@@ -1,4 +1,4 @@
-// Daily Google API cost report (ADR-XXXX) — run every morning by
+// Daily Google API cost report (ADR-0297) — run every morning by
 // citoviso-google-cost-report.timer from the MAIN tree, on the dev box only.
 //
 // Reads yesterday's (Budapest) request counts from Cloud Monitoring, prices them at
