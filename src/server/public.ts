@@ -137,6 +137,7 @@ import { getPlaceRating } from "../reviews/placeRating.js";
 import {
   createUnit,
   deleteUnit,
+  unitDeletionImpacts,
   ensureUnits,
   setUnitAmenities,
   setUnitSeasonalOnly,
@@ -1257,9 +1258,14 @@ async function serveAdmin(
           (unitId && units.find((u) => u.id === unitId && bookable.has(u.id))) ||
           units.find((u) => bookable.has(u.id)) ||
           units[0]!;
+        const deletion = await unitDeletionImpacts(site.id);
         booking = {
           month: await getMonthAvailability(unit.id, normaliseMonth(month, viewZone())),
           units: units.map((u) => ({
+            // Elek A-1: the delete confirmation says what goes with the unit; A-2: only a
+            // unit that stands for the whole place is asked about it when a second is added.
+            deletion: deletion.get(u.id),
+            representsWhole: u.representsWhole,
             id: u.id,
             name: u.name,
             capacity: u.capacity,
@@ -1289,8 +1295,13 @@ async function serveAdmin(
         const list = adminUnitOrder(await ensureUnits(site.id));
         const libraryPhotos = ((await getTenantContent(session.tenantId))?.photos ?? []) as never;
         const assigned = photosByUnit(libraryPhotos);
+        const deletion = await unitDeletionImpacts(site.id);
         units = list.map((u) => ({
           id: u.id,
+          // Elek A-1: the delete confirmation says what goes with the unit; A-2: only a
+          // unit that stands for the whole place is asked about it when a second is added.
+          deletion: deletion.get(u.id),
+          representsWhole: u.representsWhole,
           name: u.name,
           capacity: u.capacity,
           description: u.description,

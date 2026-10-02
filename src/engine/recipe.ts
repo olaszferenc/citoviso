@@ -397,6 +397,10 @@ export interface SiteData {
       /** ADR-0257 — the place is let ONLY as one and this is it: the widget names it
        *  ("Amit foglal") instead of a hidden field — the guest sees WHAT he books. */
       readonly wholeOnly?: boolean;
+      /** Elek V-2 — this unit IS the whole place (ADR-0114). The price sentence says
+       *  "a TELJES SZÁLLÁSRA" only for it; a room's price is the room's (approved plan
+       *  design-refs/tenant-admin/m1-elek-javitasok ③). */
+      readonly whole?: boolean;
     }[];
     readonly minNights: number;
     readonly maxNights: number;

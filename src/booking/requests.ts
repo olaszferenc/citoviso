@@ -108,6 +108,10 @@ export interface BookingSummary {
   }[];
   /** Hours the owner has to answer (0 = the module has no deadline). */
   readonly expireHours: number;
+  /** Elek V-3: on-site tourist tax per person per night, PRESENT only when the owner
+   *  declared it (0 = "nincs IFA"). Absent = not given: the receipt says IFA is due on
+   *  site but names no amount (§B.17). */
+  readonly touristTaxPerPersonNight?: number;
 }
 
 export interface CreateResult {
@@ -200,6 +204,56 @@ export async function seasonRulesFor(
 }
 
 /** The unit's booking rules, with defaults applied (an unset module still works). */
+/**
+ * The owner's tourist-tax answer, THREE states (the same split editor.ts makes for the
+ * page): a number ≥ 0 when declared (0 = "nálam nincs IFA"), null when left empty.
+ */
+function declaredTouristTax(rules: Record<string, unknown>): number | null {
+  const v = rules.touristTaxPerPersonNight;
+  if (v === "" || v === null || v === undefined || !Number.isFinite(Number(v))) return null;
+  return Math.max(0, Math.round(Number(v)));
+}
+
+/**
+ * Elek V-3 (approved plan m1-elek-javitasok ④): the on-site tax row of a GUEST letter —
+ * the panel said it before sending, the letters dropped it. The amount frozen on the
+ * request wins; an older/undeclared row asks the module's current setting. Declared 0
+ * → no row (an IFA-free place must not be told it levies one); not given → the fact
+ * without a number. Only next to a priced stay, like the panel.
+ */
+async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailRow[]> {
+  if (!req.quoted_total) return [];
+  const tax = req.quoted_tax_per_person_night ?? declaredTouristTax(await bookingRules(req.site_id));
+  if (tax === 0) return [];
+  if (tax === null) {
+    return [
+      {
+        label: T(lang, "Helyszínen fizetendő"),
+        value: T(lang, "idegenforgalmi adó — az összegéről a szállásadó tájékoztatja"),
+        rule: true,
+      },
+    ];
+  }
+  const n = nights(dayStr(req.date_from), dayStr(req.date_to));
+  const cur = req.quoted_currency ?? "HUF";
+  return [
+    {
+      label: T(lang, "Helyszínen fizetendő: idegenforgalmi adó ({per} / fő / éj × {g} fő × {n} éj)", {
+        per: formatAmount(tax, cur),
+        g: req.guests,
+        n,
+      }),
+      value: formatAmount(tax * req.guests * n, cur),
+      rule: true,
+    },
+  ];
+}
+
+/** The same tax rows as plain text for the letter's text part. */
+function onSiteTaxText(rows: readonly MailDetailRow[]): string {
+  return rows.map((r) => `${r.label}: ${r.value}\n`).join("");
+}
+
 async function bookingRules(siteId: string): Promise<Record<string, unknown>> {
   const row = await db
     .selectFrom("site_module_config")
@@ -622,6 +676,8 @@ export async function createBookingRequest(
             ),
           }
         : {}),
+      // Elek V-3: the tax the panel showed is frozen with the price it sat next to.
+      quoted_tax_per_person_night: declaredTouristTax(rules),
     })
     .returning("id")
     .executeTakeFirstOrThrow();
@@ -660,6 +716,7 @@ export async function createBookingRequest(
         sum: l.sum,
       })),
       expireHours: Math.max(0, Number(rules.autoDeclineHours ?? 48)),
+      ...(declaredTouristTax(rules) !== null ? { touristTaxPerPersonNight: declaredTouristTax(rules)! } : {}),
     },
     errors: [],
   };
@@ -678,6 +735,7 @@ async function sendGuestAck(id: string): Promise<void> {
   // Booking-offer ⑭: no frozen price = the guest asked for a QUOTE (the page said so,
   // ADR-0208). The letter must say the same thing the page did, not "foglalási kérés".
   const isQuote = !req.quoted_total;
+  const tax = await onSiteTaxRows(req, lang);
   const body =
     T(lang, "Kedves {name}!", { name: req.guest_name }) +
     `\n\n` +
@@ -705,6 +763,7 @@ async function sendGuestAck(id: string): Promise<void> {
     `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
     `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
     quoteBlock(req, lang) +
+    onSiteTaxText(tax) +
     `\n` +
     T(lang, "Ha addig kérdése van, válaszoljon erre a levélre — közvetlenül a szállásadónak ír.") +
     `\n\n${ctx.hostName}\n`;
@@ -765,6 +824,7 @@ async function sendGuestAck(id: string): Promise<void> {
                 },
               ]
             : []),
+          ...tax,
         ]),
         mailContactCard(lang, await hostContact(req.site_id, ctx.hostName)),
         mailNote(esc(T(lang, "Ha addig kérdése van, válaszoljon erre a levélre — közvetlenül a szállásadónak ír."))),
@@ -788,6 +848,7 @@ interface RequestRow {
   action_token: string;
   created_at: Date;
   quoted_total: number | null;
+  quoted_tax_per_person_night: number | null;
   quoted_currency: string | null;
   quoted_lines:
     | { label: string; nights: number; per_night: number; guests: number; sum: number }[]
@@ -1284,6 +1345,8 @@ async function sendGuestVerdict(
   const noteBlock = note ? [mailQuote(T(lang, "A szállásadó üzenete:"), note)] : [];
 
   if (outcome === "accepted") {
+    // Elek V-3: the on-site tax the panel showed rides into the confirmation too.
+    const tax = await onSiteTaxRows(req, lang);
     subject = T(lang, "Visszaigazolt foglalás: {from} — {to}", { from, to });
     body =
       T(lang, "Kedves {name}!", { name: req.guest_name }) +
@@ -1293,6 +1356,7 @@ async function sendGuestVerdict(
       `${T(lang, "Érkezés:")} ${from}\n${T(lang, "Távozás:")} ${to}\n` +
       `${T(lang, "Létszám:")} ${T(lang, "{n} fő", { n: req.guests })}\n` +
       quoteBlock(req, lang) +
+      onSiteTaxText(tax) +
       `\n` +
       (note ? `${T(lang, "A szállásadó üzenete:")} „${note}"\n\n` : "") +
       T(lang, "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre.") +
@@ -1314,7 +1378,7 @@ async function sendGuestVerdict(
       blocks: [
         greeting,
         mailPara(esc(T(lang, "{host} visszaigazolta a foglalását{unit}.", { host, unit: "" }))),
-        mailDetails([...stayRows(req, lang, false), ...priceRows(req, lang)]),
+        mailDetails([...stayRows(req, lang, false), ...priceRows(req, lang), ...tax]),
         ...noteBlock,
         mailPara(esc(T(lang, "A fizetés a helyszínen történik. Ha bármi változna, válaszoljon erre a levélre."))),
         mailNote(

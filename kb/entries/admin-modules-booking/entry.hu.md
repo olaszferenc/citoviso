@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -37,6 +37,12 @@ bele az árba: külön dobozban áll, „A helyszínen fizetendő ezen felül”
 **nem látszik összeg** — a vendég csak annyit lát, hogy a helyszínen idegenforgalmi adó fizetendő.
 Összeget nem találunk ki Ön helyett: egy rossz szám többet árt, mint a hiányzó. Az emlékeztető
 magától eltűnik, amint ment egy értéket.
+
+A vendég az adót a kérés elküldése **után** is látja: ugyanez a sor áll a képernyőn megjelenő
+visszaigazolásán („Elküldtük a kérését”), a „rögzítettük” levélben és a visszaigazoló levélben is.
+A levelek azt az összeget írják, ami a kérés elküldésekor érvényes volt — ha később átírja a mezőt,
+a már beérkezett kérések levelei nem változnak. Telefonon a foglalás második lépésében, az összeg
+alatt is ott áll, és a létszám változtatásával együtt frissül.
 
 **Ha Önnél nincs idegenforgalmi adó, írjon be 0-t** — és mentsen. Ez nem ugyanaz, mint üresen
 hagyni: a 0 azt jelenti, hogy Ön **kimondta**, hogy nincs, ezért a honlapja **nem is említi** az
@@ -127,5 +133,9 @@ Ezek a napok a másik szoba naptárában **csíkosan** jelennek meg. Ott nem leh
 (különben ugyanaz az éjszaka kétszer kelne el) — a napra koppintva viszont látja, ki tartja, és egy
 gombbal átválthat annak a szobának a naptárára. Ha nincs egész szállásnak jelölt szobája, a
 szobák egymástól függetlenül telnek be, és csíkos nap sincs. Bármelyik szoba törölhető a sora
-**„Törlés”** gombjával — az egész szállás is —, kivéve az utolsót és azt, amelyikhez elfogadott
-jövőbeli foglalás tartozik.
+**„Törlés”** gombjával — az egész szállás is. A gomb előbb megerősítést kér, és felsorolja, mi vész
+el a szobával (lezárt napok, árak, naptár-szinkron, korábbi foglalások); a törlés az **„Igen,
+törlöm”** gombbal történik meg. Nem törölhető az utolsó szoba, az, amelyikre egy kérés még a
+döntésére (vagy egy ajánlata a vendég válaszára) vár, és az, amelyikhez elfogadott, le nem zárult
+foglalás tartozik — ilyenkor a megerősítés helyén megjelenik, melyik kérés tartja, és a
+**„Foglalások”** gomb oda visz. A részletek a Szobák, apartmanok súgójában.

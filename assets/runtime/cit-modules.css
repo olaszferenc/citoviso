@@ -420,6 +420,8 @@
   .cit-book__sumunit { font-weight: 700; }
   /* the mirrored total line keeps the bar's own size and weight — only the amount's nowrap comes along */
   .cit-book__sum span b { font-size: inherit; font-weight: inherit; }
+  /* Elek V-3: the on-site tax line under the total — smaller, it is not part of the price */
+  .cit-book__sumtax { font-size: 0.82rem; line-height: 1.45; color: var(--cit-muted); }
   .cit-book__edit { justify-self: start; font: inherit; font-weight: 700; color: var(--cit-accent); background: none;
     border: 0; padding: 8px 0; min-height: 44px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 }

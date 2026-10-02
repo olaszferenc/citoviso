@@ -372,12 +372,105 @@ export interface DeleteUnitResult {
   readonly reason?: string;
 }
 
+/** A request still waiting for an answer — the owner's (pending) or the guest's (offered). */
+export interface OpenUnitRequest {
+  readonly id: string;
+  readonly guestName: string;
+  readonly dateFrom: string;
+  readonly dateTo: string;
+  readonly status: "pending" | "offered";
+}
+
 /**
- * Remove a unit. Refused in two cases, both stated in the owner's terms:
+ * What deleting a unit takes with it (Elek A-1, approved plan
+ * design-refs/tenant-admin/m1-elek-javitasok ①). site_unit cascades to its calendar
+ * days, prices, calendar links and EVERY booking request — so the confirmation says it
+ * in numbers, and an open request or a confirmed future stay blocks the delete.
+ */
+export interface UnitDeletionImpact {
+  /** Nights the owner closed by hand, today or later. */
+  readonly blockedDays: number;
+  readonly hasBasePrice: boolean;
+  /** Recurring seasons (a year price of a season is part of its season, not counted). */
+  readonly seasonPrices: number;
+  /** Portal names of the imported calendars ("Szallas.hu"…). */
+  readonly calendarImports: readonly string[];
+  /** Requests already closed (declined, expired, cancelled, or a past stay). */
+  readonly closedRequests: number;
+  readonly openRequests: readonly OpenUnitRequest[];
+  /** Accepted stays that have not ended yet — they block the delete. */
+  readonly futureAccepted: number;
+}
+
+const iso = (v: unknown): string => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v).slice(0, 10));
+
+export async function unitDeletionImpacts(siteId: string): Promise<Map<string, UnitDeletionImpact>> {
+  const units = await db.selectFrom("site_unit").select("id").where("site_id", "=", siteId).execute();
+  const out = new Map<string, UnitDeletionImpact>();
+  if (!units.length) return out;
+  const ids = units.map((u) => u.id);
+  const today = await todayForSite(siteId);
+  const [days, prices, links, reqs] = await Promise.all([
+    db
+      .selectFrom("availability_day")
+      .select(["unit_id", db.fn.countAll<string>().as("n")])
+      .where("unit_id", "in", ids)
+      .where("state", "=", "blocked")
+      .where("source", "=", "manual")
+      .where("day", ">=", today)
+      .groupBy("unit_id")
+      .execute(),
+    db
+      .selectFrom("unit_price")
+      .select(["unit_id", "date_from", "parent_id"])
+      .where("unit_id", "in", ids)
+      .execute(),
+    db
+      .selectFrom("calendar_link")
+      .select(["unit_id", "provider"])
+      .where("unit_id", "in", ids)
+      .where("direction", "=", "import")
+      .execute(),
+    db
+      .selectFrom("booking_request")
+      .select(["id", "unit_id", "guest_name", "date_from", "date_to", "status"])
+      .where("unit_id", "in", ids)
+      .orderBy("date_from")
+      .execute(),
+  ]);
+  for (const id of ids) {
+    const mine = reqs.filter((r) => r.unit_id === id);
+    const open = mine.filter((r) => r.status === "pending" || r.status === "offered");
+    const future = mine.filter((r) => r.status === "accepted" && iso(r.date_to) >= today);
+    const myPrices = prices.filter((p) => p.unit_id === id && !p.parent_id);
+    out.set(id, {
+      blockedDays: Number(days.find((d) => d.unit_id === id)?.n ?? 0),
+      hasBasePrice: myPrices.some((p) => !p.date_from),
+      seasonPrices: myPrices.filter((p) => p.date_from).length,
+      calendarImports: links.filter((l) => l.unit_id === id).map((l) => l.provider),
+      closedRequests: mine.length - open.length - future.length,
+      openRequests: open.map((r) => ({
+        id: r.id,
+        guestName: r.guest_name,
+        dateFrom: iso(r.date_from),
+        dateTo: iso(r.date_to),
+        status: r.status as "pending" | "offered",
+      })),
+      futureAccepted: future.length,
+    });
+  }
+  return out;
+}
+
+/**
+ * Remove a unit. Refused in three cases, all stated in the owner's terms:
  *   · it is the last one — a site with nothing bookable is not a state we allow;
  *   · it has accepted future bookings — deleting it would silently drop a guest's
  *     confirmed stay, which is exactly the kind of quiet damage this segment
- *     cannot recover from.
+ *     cannot recover from;
+ *   · it has an OPEN request (pending, or an offer the guest has not answered) —
+ *     the cascade would delete it and the guest would never hear back (Elek A-1,
+ *     owner's choice B, 2026-10-02).
  */
 export async function deleteUnit(siteId: string, unitId: string): Promise<DeleteUnitResult> {
   const units = await getUnits(siteId);
@@ -400,6 +493,18 @@ export async function deleteUnit(siteId: string, unitId: string): Promise<Delete
     return {
       ok: false,
       reason: "Ehhez a szobához még van elfogadott foglalás. Előbb azt kell rendezni.",
+    };
+  }
+  const open = await db
+    .selectFrom("booking_request")
+    .select("id")
+    .where("unit_id", "=", unitId)
+    .where("status", "in", ["pending", "offered"])
+    .executeTakeFirst();
+  if (open) {
+    return {
+      ok: false,
+      reason: "Erre a szobára még vár egy foglalási kérés. Előbb döntsön róla, utána törölheti a szobát.",
     };
   }
   await db.deleteFrom("site_unit").where("id", "=", unitId).where("site_id", "=", siteId).execute();

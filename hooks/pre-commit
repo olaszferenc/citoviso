@@ -990,6 +990,23 @@ if [ -f scripts/whole-property-choice-check.mts ] && \
   echo "[pre-commit] whole-property-choice-check (az egész szállás választható egység)…"
   npx tsx scripts/whole-property-choice-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Szoba-törlés megerősítéssel (Elek A-1 · A-2 · A-3 · A-4; jóváhagyott terv:
+# design-refs/tenant-admin/m1-elek-javitasok, tulaj 2026-10-02 „B"): a törlő gomb csak a
+# megerősítőben ül, számokkal mondja a veszteséget; nyitott kérésnél a lap ÉS a szerver megállít;
+# ismert szoba nem kap „az egész szállás" kérdést; időszak „jún. 15.", ikon a „✔" helyett.
+if [ -f scripts/unit-delete-confirm-check.mts ] && \
+   changed_files | grep -qE '^(src/tenant/units\.ts|src/server/(moduleConfigViews|bookingViews|public)\.ts)$|^scripts/unit-delete-confirm-check'; then
+  echo "[pre-commit] unit-delete-confirm-check (szoba-törlés: megerősítés, nyitott kérésnél megállít)…"
+  npx tsx scripts/unit-delete-confirm-check.mts >"$GATE_LOG" || gate_failed
+fi
+# Ár-alap a foglalt egységre + IFA a beküldés után is (Elek V-2 · V-3; terv m1-elek-javitasok
+# ③ ④): szobánál nem „a TELJES SZÁLLÁSRA"; az IFA a nyugtán, a mobil 2. lépésben és mindkét
+# vendég-levélben ott van, a kérésen befagyasztva (három állapot: összeg / 0 / kitöltetlen).
+if [ -f scripts/booking-tax-receipt-check.mts ] && \
+   changed_files | grep -qE '^(assets/runtime/cit-(runtime\.js|modules\.css)|src/booking/requests\.ts|src/tenant/editor\.ts|src/engine/(moduleSections|recipe)\.ts|src/email/platformLayout\.ts|migrations/0084_)|^scripts/booking-tax-receipt-check'; then
+  echo "[pre-commit] booking-tax-receipt-check (ár-alap a foglalt egységre, IFA a nyugtán és a levelekben)…"
+  npx tsx scripts/booking-tax-receipt-check.mts >"$GATE_LOG" || gate_failed
+fi
 # „Csak egyben adom ki" — a szobák bemutatásra (jóváhagyott terv: tenant-site/whole-only, 2026-09-28):
 # a bemutató szoba látszik, de nem foglalható, és árat SEHOL nem kérünk tőle (felvevő űrlap,
 # Árak, teendő, heti levél). Saját eldobható fixture-rel, valódi HTTP-vel, negatív kontrollal mér.

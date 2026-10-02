@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-szoba-torles-megerositessel-ifa-a-kerelmen.md) — Szoba-törlés megerősítéssel, nyitott kérésnél tiltva; az IFA a foglalási kérésen befagyasztva (2026-10-02)
 - [ADR-0298](decisions/0298-nincs-koltseg-plafon-a-scrape-ben-a-details-es.md) — Nincs költség-plafon a scrape-ben: a Details- és a bejárás-keret figyelmeztet, a cap igazul van felcímkézve; booking.com kihagyva, hovamenjek fullHd (2026-10-02)
 - [ADR-0297](decisions/0297-napi-google-api-koltseg-riport-e-mailben.md) — Napi Google API költség-riport e-mailben: listaáras becslés a Monitoring hívásszámaiból, csak szól, nem korlátoz (2026-10-02)
 - [ADR-0296](decisions/0296-az-ismert-lead-nem-megy-at-a-scrape-fizetos.md) — Az ismert lead nem megy át a scrape fizetős dúsításán (store-dedup a dúsítás ELŐTT) (2026-10-02)

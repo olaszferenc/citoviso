@@ -999,7 +999,7 @@ export function bookingsSection(d: BookingsTabData, lang = "hu"): string {
       ? pend
           .map((r) => requestCard(r, groups.get(r.id), d.expireHours, lang, r.id === d.targetId))
           .join("")
-      : `<div class="bk-empty">${T(lang, "Most nincs döntésre váró kérés.")} ✔<br>${T(lang, "Az újakról e-mailt is kap.")}</div>`) +
+      : `<div class="bk-empty">${ic("check", 16)} ${T(lang, "Most nincs döntésre váró kérés.")}<br>${T(lang, "Az újakról e-mailt is kap.")}</div>`) +
     `</div><div class="bk-cols__cal">` +
     calendarCard(d, lang) +
     `</div><div class="bk-cols__rest">` +
@@ -1588,6 +1588,7 @@ export const BOOKINGS_STYLE = `<style>
 .bk-cancel summary::-webkit-details-marker{display:none}
 .bk-cancel summary:hover{color:var(--citui-bad)}
 .bk-hist .bk-cancel form{text-align:left;min-width:230px}
+.bk-empty svg{color:var(--citui-ok);vertical-align:-3px}
 .bk-empty{text-align:center;color:var(--citui-muted);font-size:.86rem;padding:26px 10px;line-height:1.6;
   background:var(--citui-panel);border:1px dashed var(--citui-line-strong);border-radius:13px}
 /* overlap popup

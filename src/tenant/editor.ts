@@ -564,6 +564,7 @@ export async function moduleContentFor(
         // render-időben már kezében tartja a teljes `priceMap`-et.
         ...((priceMap.get(u.id) ?? []).length ? {} : { unpriced: true }),
         ...(wholeOnly && u.wholeOnly ? { wholeOnly: true } : {}),
+        ...(u.isWholeProperty ? { whole: true } : {}),
       })),
       minNights: Number(b.minNights ?? 1),
       maxNights: Number(b.maxNights ?? 30),

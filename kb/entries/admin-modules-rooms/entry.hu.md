@@ -4,7 +4,7 @@ title: Szobák, apartmanok — és saját aloldalaik
 audience: tenant
 category: bookings
 anchors: admin.modules.rooms
-updated: 2026-09-28
+updated: 2026-10-02
 ---
 
 A szoba-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -38,8 +38,11 @@ kinyílik egy kiemelt doboz, abban adja meg a nevét, a férőhelyét, és nyomj
 meglévő szobái fölötte, a kártyarácsban állnak, és azokat a kártyájukra koppintva szerkeszti. Ha csak egyben adja ki az egész szállást, elég
 egyetlen szoba — ilyenkor a vendég nem is találkozik a szobaválasztással.
 
-Amikor a **második** szobát veszi fel, ugyanebben az űrlapban, közvetlenül a **„Hozzáadás”**
+Amikor a **második** szobát veszi fel, és az eddigi egyetlen egysége az egész szállás (egy új
+fióknál ez az alap), ugyanebben az űrlapban, közvetlenül a **„Hozzáadás”**
 fölött egy kérdés vár: **„Az egész szállást is kiadja egyben?”** Három válasz közül kell választania.
+(Ha az egyetlen megmaradt egysége már egy elnevezett szoba — például egy törlés után —, a kérdés
+nem jelenik meg: lásd lejjebb, a törlésnél.)
 Ha kihagyja, a gomb alatt piros sor mondja meg, mi hiányzik, és a kérdés pirosan kiemelődik —
 válasszon, és nyomja meg újra a gombot. **„Igen, az egészet is kiadom egyben”**: az eddigi szobája marad az egész szállás, a most
 felvett szoba pedig külön naptárat kap — a kettő egymást zárja (lásd lejjebb). **„Csak egyben adom ki — a szobák bemutatásra”**: a vendég csak az egész szállást foglalhatja; a
@@ -152,6 +155,20 @@ A kártya mindig kiírja, melyik szoba az egész, és mit jelent a választott �
 nincs mit eldönteni.
 
 Bármelyik szobát törölheti a felugrója alján lévő **„Szoba törlése”** gombbal — azt is, amelyik
-az egész szállás (utána a szobák egymástól függetlenül telnek be). Két kivétel: az utolsó szoba
-nem törölhető (a gomb nem is jelenik meg), és az olyan szoba sem, amelyikhez még elfogadott
-jövőbeli foglalás tartozik — ezt a képernyő tetején egy sáv mondja meg.
+az egész szállás (utána a szobák egymástól függetlenül telnek be). A gomb nem töröl azonnal:
+alatta megnyílik egy megerősítés, ami név szerint kérdez rá a szobára, és felsorolja, mi vész el
+vele együtt: **„A szobával együtt végleg törlődik:”** a naptárából lezárt napok, az alapár és az
+időszaki árak, a naptár-szinkron (a portál nevével) és a korábbi, lezárt foglalások — mindegyik
+darabszámmal. A szoba képei a galériában maradnak. Ha biztos benne, nyomja meg az **„Igen, törlöm”**
+gombot; ha meggondolta magát, a **„Mégsem”** gombot. A törlést nem lehet visszacsinálni.
+
+Három esetben a szoba nem törölhető. Az utolsó szobánál a gomb meg sem jelenik. Ha a szobára egy
+foglalási kérés még a döntésére vár, vagy egy árajánlata a vendég válaszára, a megerősítés helyén
+egy sárga keretes jelzés áll: megmutatja a kérés hivatkozását, időszakát és a vendég nevét, és a
+**„Foglalások”** gombbal oda visz, ahol dönthet róla. Így a vendég nem marad válasz nélkül. Ugyanez
+a jelzés áll ott, ha a szobához elfogadott, még le nem zárult foglalás tartozik.
+
+Ha a törlés után egyetlen szobája marad, az a szoba **marad szoba**: ha később újat vesz fel,
+az űrlap nem kérdezi meg, hogy az egész szállást is kiadja-e egyben — a két szoba egymástól
+függetlenül telik be. Ha mégis egyben is kiadná a házat, azt a felvétel után az **„Az egész szállás
+egyben”** kártyán állíthatja be.

@@ -28,6 +28,8 @@ import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import { formatMoney, formatNumber } from "../text/money.js";
 import { MODULE_CATALOG } from "../modules.js";
 import type { MonthView } from "../tenant/availability.js";
+import type { UnitDeletionImpact } from "../tenant/units.js";
+import { bookingRef } from "../booking/requests.js";
 import type { UnitPriceStatus } from "../tenant/prices.js";
 import type { PhotoEdit } from "../tenant/editor.js";
 import { icAdmin as ic } from "../ui/icons.js";
@@ -36,7 +38,7 @@ import { SHRINK_JS } from "../tenant/photoUpload.js";
 import { CONTACT_CSS, placeCard, placeScript, saveBar, type ContactView } from "./contactViews.js";
 import { readFileSync } from "node:fs";
 import { SEASON_JS, seasonRule } from "../tenant/seasonRule.js";
-import { huArticleLower } from "../hu.js";
+import { huArticle, huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
 import { honestStars } from "../engine/rating.js";
 import { OWN_AHEAD_DAYS, OWN_PLACE_MAX, OWN_TITLE_MAX, type OwnProgram } from "../events/ownPrograms.js";
@@ -423,6 +425,7 @@ details[open] > .cal-sum .cal-sum__chev{transform:rotate(180deg)}
 .unit-new{padding:14px;border:1.5px solid var(--citui-cyan-500);border-radius:12px;background:var(--citui-accent-soft)}
 .unit-new>h3{margin:0 0 4px;font:600 1rem/1.25 var(--citui-font-display);color:var(--citui-ink);display:flex;gap:8px;align-items:center}
 .unit-new>p{margin:0 0 12px;font-size:.84rem;line-height:1.5;color:var(--citui-muted)}
+.unit-new__room{flex-basis:100%;margin:0;font-size:.84rem;line-height:1.5;color:var(--citui-muted)}
 .unit-new .unit-row{border-bottom:0;padding:0}
 .unit-new__go{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .unit-new__err{flex:1 1 100%;margin:0;display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:10px;
@@ -629,6 +632,24 @@ form:has(input[name=whole][value=csak]:checked) .unit-new__price{display:none}
 .rs-del{margin-left:auto;background:transparent;border:0;cursor:pointer;color:var(--citui-muted);
   font:600 .76rem/1 var(--citui-font-text);text-decoration:underline;text-underline-offset:3px}
 .rs-del:hover{color:var(--citui-bad)}
+/* Elek A-1 (approved plan m1-elek-javitasok ①): the delete opens a confirmation IN
+   PLACE — details/summary, so it works without JS — modelled on the booking verdict. */
+.u-delx{flex-basis:100%;order:9}
+.u-delx>summary{list-style:none;display:inline-flex;align-items:center;min-height:44px;cursor:pointer}
+.u-delx>summary::-webkit-details-marker{display:none}
+.rs-pop__foot .u-delx{flex-basis:auto;order:0;margin-left:auto}
+.rs-pop__foot .u-delx[open]{flex-basis:100%;margin-left:0}
+.rs-pop__foot .u-delx[open]>summary{margin-left:auto;display:flex;width:max-content}
+.u-delx[open]>summary{color:var(--citui-bad)}
+.u-cf{margin-top:4px;border:2px solid var(--citui-bad);border-radius:13px;padding:12px;
+  background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-panel));text-align:left}
+.u-cf--block{border-color:var(--citui-warn);background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel))}
+.u-cf__q{margin:0;font-size:.98rem;font-weight:800;line-height:1.35;color:var(--citui-ink)}
+.u-cf__c{margin:6px 0 0;font-size:.84rem;line-height:1.5;color:var(--citui-ink)}
+.u-cf ul{margin:6px 0 0;padding-left:18px;font-size:.84rem;line-height:1.55;color:var(--citui-ink)}
+.u-cf__row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:12px}
+.u-cf__row .citui-btn{min-height:44px;justify-content:center;text-align:center}
+.u-cf__yes{background:var(--citui-bad);border-color:var(--citui-bad);color:var(--citui-on-bad)}
 
 /* ── fülek: rádió-gomb + label, tehát JS nélkül is váltanak ── */
 .rs-tabin{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
@@ -1286,6 +1307,65 @@ export interface EditorUnit {
   readonly wholeOnly?: boolean;
   /** `bookableUnits` — can a guest book it? Only these get a calendar tab (undefined = yes). */
   readonly bookable?: boolean;
+  /** ADR-0256: the unit stands for the whole place (vs. a room the owner named). Elek A-2:
+   *  only such a unit is asked „mi a viszonyuk" when the second one is added. */
+  readonly representsWhole?: boolean;
+  /** Elek A-1: what deleting it takes along — the confirmation states it in numbers. */
+  readonly deletion?: UnitDeletionImpact;
+}
+
+/**
+ * Elek A-1 (approved plan design-refs/tenant-admin/m1-elek-javitasok ①, owner's choice B,
+ * 2026-10-02): the delete button no longer deletes on one tap. It opens a confirmation in
+ * place that names the room and says in numbers what goes with it (site_unit cascades to
+ * the calendar, prices, calendar sync and every request). An open request or a confirmed
+ * future stay turns the panel into a stop: the guest must get an answer first. The server
+ * refuses the same cases (deleteUnit), so a stale page cannot route around it.
+ */
+function unitDeleteControl(u: EditorUnit, label: string, summaryClass: string, lang: string): string {
+  const d = u.deletion;
+  const name = esc(u.name);
+  const no = `<button class="citui-btn citui-btn--ghost" type="button" onclick="this.closest('details').open=false">${T(lang, "Mégsem")}</button>`;
+  const head = `<details class="u-delx" data-u-del="${esc(u.id)}"><summary class="${summaryClass}">${label}</summary>`;
+  if (d && (d.openRequests.length || d.futureAccepted)) {
+    const lines = d.openRequests
+      .map((r) => {
+        const what = `<b>${esc(bookingRef(r.id))} · ${esc(dayRange(r.dateFrom, r.dateTo, lang))} · ${esc(r.guestName)}</b>`;
+        return r.status === "offered"
+          ? T(lang, "Egy árajánlata vár a vendég válaszára erre a szobára: {what}. Amíg a vendég nem dönt, vagy az ajánlat le nem jár, a szoba nem törölhető.", { what })
+          : T(lang, "Egy foglalási kérés vár a döntésére erre a szobára: {what}. Előbb igazolja vissza vagy utasítsa el, hogy a vendég választ kapjon, utána törölheti a szobát.", { what });
+      })
+      .map((t) => `<p class="u-cf__c">${t}</p>`)
+      .join("");
+    const accepted = d.futureAccepted
+      ? `<p class="u-cf__c">${T(lang, "Ehhez a szobához még van {n} elfogadott, le nem zárult foglalás. Amíg ez fennáll, a szoba nem törölhető.", { n: d.futureAccepted })}</p>`
+      : "";
+    return (
+      head +
+      `<div class="u-cf u-cf--block" role="group"><p class="u-cf__q">${T(lang, "{Art} „{name}” még nem törölhető", { Art: huArticle(u.name), name })}</p>` +
+      lines +
+      accepted +
+      `<div class="u-cf__row">${no}<a class="citui-btn citui-btn--primary" href="/admin?tab=foglalasok">${T(lang, "Foglalások")}</a></div></div></details>`
+    );
+  }
+  const items: string[] = [];
+  if (d?.blockedDays) items.push(T(lang, "a naptárából {n} lezárt nap", { n: d.blockedDays }));
+  if (d?.hasBasePrice && d.seasonPrices) items.push(T(lang, "az alapár és {n} időszaki ár", { n: d.seasonPrices }));
+  else if (d?.hasBasePrice) items.push(T(lang, "az alapár"));
+  else if (d?.seasonPrices) items.push(T(lang, "{n} időszaki ár", { n: d.seasonPrices }));
+  if (d?.calendarImports.length)
+    items.push(T(lang, "a naptár-szinkron ({names})", { names: esc(d.calendarImports.join(", ")) }));
+  if (d?.closedRequests) items.push(T(lang, "{n} korábbi (lezárt) foglalás a listából", { n: d.closedRequests }));
+  const list = items.length
+    ? `<p class="u-cf__c">${T(lang, "A szobával együtt végleg törlődik:")}</p><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul>`
+    : `<p class="u-cf__c">${T(lang, "A szobához nem tartozik lezárt nap, ár vagy foglalás.")}</p>`;
+  return (
+    head +
+    `<div class="u-cf" role="group"><p class="u-cf__q">${T(lang, "Törli {art} „{name}” szobát?", { art: huArticleLower(u.name), name })}</p>` +
+    list +
+    `<p class="u-cf__c">${T(lang, "A képei a galériában maradnak. A honlapról a szoba azonnal eltűnik. Ezt nem lehet visszacsinálni.")}</p>` +
+    `<div class="u-cf__row">${no}<button class="citui-btn u-cf__yes" type="submit" formaction="/admin/units/delete" formnovalidate>${T(lang, "Igen, törlöm")}</button></div></div></details>`
+  );
 }
 
 /**
@@ -1545,12 +1625,18 @@ function wholePropertyCard(units: readonly EditorUnit[], lang: string): string {
  * The running-bookings sentence carries the REAL count and is absent at zero.
  */
 function wholeQuestion(
-  units: readonly { id: string; name: string }[],
+  units: readonly { id: string; name: string; representsWhole?: boolean }[],
   lang: string,
   nu?: NewUnitView,
 ): string {
   if (units.length !== 1) return "";
   const first = units[0]!;
+  // Elek A-2 (approved plan m1-elek-javitasok ②, owner 2026-10-02): the question is about
+  // what the unit so far MEANS — asked only of a unit that stands for the whole place. A
+  // room the owner already named (left alone after a delete) stays a room; offering „marad
+  // az egész szállás" for it was measured live (Muschel, „Családi szoba"). Without an
+  // answer the server leaves every flag as it is, so the two rooms fill independently.
+  if (first.representsWhole === false) return "";
   const opt = (value: string, title: string, why: string): string =>
     `<label class="rs-wq__o"><input type="radio" name="whole" value="${value}" required>` +
     `<span><b>${title}</b><small>${why}</small></span></label>`;
@@ -1930,7 +2016,7 @@ function roomPopup(
     // nothing bookable is not a state we allow (deleteUnit says so).
     (units.length > 1
       ? `<input type="hidden" name="back" value="rooms">` +
-        `<button class="rs-del" type="submit" formaction="/admin/units/delete">${T(lang, "Szoba törlése")}</button>`
+        unitDeleteControl(u, T(lang, "Szoba törlése"), "rs-del", lang)
       : "") +
     `</div></form></div>`
   );
@@ -1999,11 +2085,15 @@ function newUnitDecl(nu: NewUnitView | undefined, lang: string): string {
  * `invalid` event is taken over, so the other fields' native checks still run.
  */
 function newUnitForm(
-  units: readonly { id: string; name: string; wholeOnly?: boolean }[],
+  units: readonly { id: string; name: string; wholeOnly?: boolean; representsWhole?: boolean }[],
   nu: NewUnitView | undefined,
   lang: string,
 ): string {
-  const q = wholeQuestion(units, lang, nu);
+  const q =
+    wholeQuestion(units, lang, nu) ||
+    (units.length === 1 && units[0]!.representsWhole === false
+      ? `<p class="unit-new__room">${T(lang, "Minden szobának külön naptára van, így külön telhet be. Ha az egész házat is kiadja egyben, azt a felvétel után az „Az egész szállás egyben” kártyán állíthatja be.")}</p>`
+      : "");
   // ADR-0257: the place is let only as one → the new room is presentation: no price field,
   // no "nem adok meg árat" — one sentence says why. At the second room the same happens
   // the moment "Csak egyben" is picked (CSS `:has`, works without JS; the server ignores
@@ -2357,8 +2447,7 @@ function unitsCard(booking: BookingEditorData, lang = "hu", nu?: NewUnitView): s
         `<button class="citui-btn citui-btn--ghost" type="submit">${T(lang, "Mentés")}</button>` +
         // ADR-0232: every unit is deletable while another remains — the whole place too.
         (multi
-          ? `<button class="citui-btn citui-btn--ghost unit-row__del" type="submit" ` +
-            `formaction="/admin/units/delete">${T(lang, "Törlés")}</button>`
+          ? unitDeleteControl(u, T(lang, "Törlés"), "citui-btn citui-btn--ghost unit-row__del", lang)
           : "") +
         `</form>`,
     )
@@ -2798,7 +2887,8 @@ function seasonBlock(
     head =
       `<div class="price-row">` +
       `<span class="price-row__txt"><strong>${esc(s.label)}</strong>` +
-      `<span>${esc(from)} – ${esc(to)} · ${T(lang, "minden évben")}` +
+      // Elek A-3: the same "jún. 15." the picker and the Foglalások tab say, never "06-15".
+      `<span>${esc(dayRange(`2000-${from}`, `2000-${to}`, lang))} · ${T(lang, "minden évben")}` +
       (wraps ? `<span class="wrap-tag">${T(lang, "átnyúlik az év végén")}</span>` : "") +
       `</span></span>` +
       `<span class="price-row__amt">${esc(grouped(s.amount))} ${esc(cur)}` +

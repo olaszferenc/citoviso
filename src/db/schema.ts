@@ -1055,6 +1055,9 @@ export interface BookingRequestTable {
   quoted_lines: JSONColumnType<
     { label: string; nights: number; per_night: number; guests: number; sum: number }[]
   > | null;
+  /** 0084 (Elek V-3): on-site tourist tax per person per night in force at request time;
+   *  0 = the owner declared none; null = not given (or an older row). */
+  quoted_tax_per_person_night: number | null;
   /** 0072: when the owner sent a price offer (status 'offered'); expiry derives from it. */
   offered_at: Timestamp | null;
   /** 0072: the GUEST's single-use key to accept the offer — never the owner's action_token. */

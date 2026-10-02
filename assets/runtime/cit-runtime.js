@@ -343,6 +343,26 @@
       lines.forEach(function (l) { l.sum = l.per * l.n * guests; l.guests = guests; total += l.sum; });
       return { total: total, lines: lines, perStay: false };
     }
+    /* The on-site tax box — ONE markup for the price panel and the receipt (Elek V-3,
+     * approved plan m1-elek-javitasok ④: the panel said it, the receipt dropped it).
+     * Declared 0 → nothing (an IFA-free place is not told it levies one); not declared →
+     * the fact without a number (§B.17); an amount → itemised. */
+    function onSiteHtml(declared, per, g, n, cur) {
+      if (declared && !per) return "";
+      if (!per) {
+        return '<div class="cit-book__later">' +
+          tr("A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő — az összegéről a szállásadó tájékoztatja.") +
+          "</div>";
+      }
+      return '<div class="cit-book__later"><b>' + tr("A helyszínen fizetendő ezen felül:") + "</b><br>" +
+        // escape the SENTENCE first, then drop the amount markup into its slots
+        esc(tr("Idegenforgalmi adó — {per} / fő / éj × {g} fő × {n} éj = {sum}"))
+          .replace("{per}", moneyHtml(per, cur))
+          .replace("{g}", esc(String(g)))
+          .replace("{n}", esc(String(n)))
+          .replace("{sum}", moneyHtml(per * g * n, cur)) +
+        "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") + "</div>";
+    }
     function renderQuote(a, b, n) {
       var el = form.querySelector("[data-quote]");
       if (!el) return;
@@ -401,7 +421,12 @@
         ? tr("Az ár a TELJES TARTÓZKODÁSRA szól — a létszám nem befolyásolja (jelenleg {n} fő).")
         : pricing.unit === "per_person_night"
           ? tr("Az ár SZEMÉLYENKÉNT és éjszakánként értendő — {n} fővel számolva.")
-          : tr("Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).");
+          : wholeUnit()
+            ? tr("Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).")
+            /* Elek V-2 (approved plan m1-elek-javitasok ③): a ROOM's price is the room's —
+             * "a TELJES SZÁLLÁSRA" stood under every room's quote. The unit is named. */
+            : tr("Az ár a szoba egészére szól éjszakánként („{unit}”) — a létszám nem befolyásolja (jelenleg {n} fő).")
+              .replace("{unit}", unitName());
       var included = priceIncludes
         ? '<span class="cit-book__qrow"><span>' + esc(priceIncludes) + "</span><b>" +
           tr("benne van") + "</b></span>"
@@ -415,20 +440,7 @@
         ? '<div class="cit-book__later">' +
           tr("Az éles oldalon itt jelenik meg, ami a helyszínen fizetendő (pl. idegenforgalmi adó) — az összeget Ön adja meg.") +
           "</div>"
-        : ifaDeclared && !ifaPerPersonNight
-        ? ""
-        : ifaPerPersonNight
-        ? '<div class="cit-book__later"><b>' + tr("A helyszínen fizetendő ezen felül:") + "</b><br>" +
-          // escape the SENTENCE first, then drop the amount markup into its slots
-          esc(tr("Idegenforgalmi adó — {per} / fő / éj × {g} fő × {n} éj = {sum}"))
-            .replace("{per}", moneyHtml(ifaPerPersonNight, cur))
-            .replace("{g}", esc(String(guests)))
-            .replace("{n}", esc(String(n)))
-            .replace("{sum}", moneyHtml(ifaPerPersonNight * guests * n, cur)) +
-          "<br>" + tr("Ezt a szállásadó szedi be, nem része a szállásdíjnak.") + "</div>"
-        : '<div class="cit-book__later">' +
-          tr("A szállásdíjon felül a helyszínen idegenforgalmi adó fizetendő — az összegéről a szállásadó tájékoztatja.") +
-          "</div>";
+        : onSiteHtml(ifaDeclared, ifaPerPersonNight, guests, n, cur);
       /* DEMO (§B.17): the sample figure is named as such where the number is read — the
        * heading, the total line (which the phone's step-2 summary bar mirrors verbatim) and
        * one sentence about what stands here on the live page. Not a footnote. */
@@ -476,7 +488,9 @@
         '<span class="cit-book__rrow"><span>' + tr("Hivatkozás") + "</span><b>" + esc(s.ref) + "</b></span>";
       // §B.17: an unpriced stay prints NO total — silence beats a confident zero.
       var total = s.total
-        ? rows + '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + moneyHtml(s.total, cur) + "</b></span>"
+        ? rows + '<span class="cit-book__qtotal">' + tr("Összesen:") + " <b>" + moneyHtml(s.total, cur) + "</b></span>" +
+          // Elek V-3: the on-site tax the panel showed, frozen by the server with the request.
+          onSiteHtml(s.touristTaxPerPersonNight !== undefined, s.touristTaxPerPersonNight || 0, s.guests, s.nights, cur)
         : "";
       // The deadline is the module's real setting, not a hard-coded 48.
       var when = s.expireHours
@@ -556,6 +570,13 @@
       var sel = form.querySelector('[name="unit"]');
       return sel ? sel.value : units[0].id;
     }
+    function unitObj() {
+      var id = currentUnit(), hit = units[0];
+      units.forEach(function (u) { if (u.id === id) hit = u; });
+      return hit || {};
+    }
+    function wholeUnit() { return !!unitObj().whole; }
+    function unitName() { return unitObj().name || ""; }
     /** Deterministic, clearly-marked SAMPLE availability for the demo widget: a few
      *  taken ranges relative to today, different per unit so switching units visibly
      *  changes the calendar. Never a claim about the real property (the whole widget
@@ -833,6 +854,9 @@
       var q = form.querySelector("[data-quote]");
       var ask = q && q.querySelector(".cit-book__ask");
       var tot = q && q.querySelector(".cit-book__qtotal");
+      /* Elek V-3: the on-site tax line rides into the phone's step-2 summary too, and it
+       * follows the guest stepper below it (the stepper re-renders the quote box). */
+      var later = !demo && !ask && q && q.querySelector(".cit-book__later");
       /* KONTRAKTUS ③ (booking-unit-default): with several units the summary names the one
        * the request is for — the picker is no longer on this step to say it. */
       var unitName = "";
@@ -842,6 +866,7 @@
           "<b>" + esc(huDay(a)) + " → " + esc(huDay(b)) + " · " + esc(n) + "</b>" +
           // the total line is mirrored as MARKUP (not textContent): the amount keeps its .cit-amt element
           "<span>" + (ask ? tr("Egyedi ár — a szállásadó árajánlattal válaszol") : tot ? tot.innerHTML : "") + "</span>" +
+          (later ? '<span class="cit-book__sumtax">' + later.innerHTML + "</span>" : "") +
           '<button type="button" class="cit-book__edit">' + tr("Módosítom a napokat") + "</button>"
         : "";
     }
