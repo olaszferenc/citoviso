@@ -66,6 +66,70 @@ const PORTAL_DOMAINS = [
   // by construction. Only the registrable domain identifies these as portals.
   "hungaryhotel.net",
   "com-hotel.website",
+  // BOOKING AGGREGATORS / META-SEARCH (measured on prod, 2026-10-02, A1): Google
+  // Places hands these out as the "website" of a lodging that has none, and every
+  // one of them was stored as a MODERN own site — ~600 leads (bluepillow alone
+  // 361) hidden from the funnel as "not a target", although they are the best
+  // targets we have. Search/redirect links (bluepillow/freecancellations/vio) and
+  // per-property listing pages alike: none of them is a page the business controls.
+  "bluepillow.com",
+  "freecancellations.com",
+  "vio.com",
+  "vrbo.com",
+  "holidu.",
+  "hometogo.",
+  "e-domizil.",
+  "fewo-direkt.de",
+  "fewobird.de",
+  "ferienhausmiete.de",
+  "traum-ferienwohnungen.de",
+  "kleinanzeigen.de",
+  "balaton24.de",
+  "hotel-mix.de",
+  "rentalsunited.com",
+  "bookhungaryhotels.com",
+  "hotelmania.net",
+  "hotelsmart.hu",
+  "checkinstay.eu",
+  "availabilitycheck.eu",
+  "travellone.eu",
+  "ibooked.at",
+  "happycamp.com",
+  "dogfriendlyretreats.com",
+  "incitytravel.eu",
+  // Per-property SUBDOMAIN FARMS (the hungaryhotel.net pattern above): the
+  // property name in the subdomain makes the URL look like an own site —
+  // muschel-panzio.hotels-in-hungary.net was Elek's H-3 finding. The .com.es /
+  // .org.es hosts are a generated farm of the same kind (garbled slugs such as
+  // z-nka-v-zparti-d-l-h-zak.org.es); these second-level zones are matched as a
+  // whole, which is safe for a Hungarian lead stock. Deliberately NOT listed:
+  // hotel.hu / hotelizator.com subdomains — hotel-built sites live there too
+  // (kolping.hotel.hu), and a false "no site" insults a real customer.
+  "hotels-in-hungary.net",
+  "bedsandhotels.com",
+  "worhot.com",
+  "hu-hotels.com",
+  "okhotel.top",
+  "com-resort.com",
+  "com.es",
+  "org.es",
+  // Hungarian listing portals and town/regional directories with a per-property
+  // path (nyaralo24.hu/balatonbereny/, keszthely.hu/szallas/apartman/<name>/).
+  "szallasinfo.hu",
+  "nyaralo24.hu",
+  "kiadonyaralok.hu",
+  "360szallasok.hu",
+  "balatonszallasok.hu",
+  "balatonlelleiszallasok.hu",
+  "balcsi-apartman.hu",
+  "appartman.hu",
+  "balaton.info",
+  "keszthely.hu",
+  "orvenyes.hu",
+  "kerteszetturul.eu",
+  // Company registries: a firm-data page is not a website either.
+  "ceginformacio.hu",
+  "197.eu",
 ];
 
 /**

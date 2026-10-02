@@ -2618,6 +2618,16 @@ if [ -f scripts/main-probe-check.mts ]; then
     npx tsx scripts/main-probe-check.mts >"$GATE_LOG" || gate_failed
   fi
 fi
+# AGGREGÁTOR ≠ SAJÁT HONLAP (A1, 2026-10-02): a foglalási aggregátorok (bluepillow, vio,
+# freecancellations, hotels-in-hungary.net …) linkjét a besoroló saját modern oldalnak vette —
+# élesen ~640 lead ült így a „modern” szegmensben, holott NINCS saját oldaluk. Az őr mért éles
+# URL-eken méri, hogy portal_only lesz, a valódi saját oldalak has_own maradnak, és hogy a lista
+# egyetlen forrásból (qualify.ts) jön. Mutációval igazolva (3 visszarontás → piros).
+if [ -f scripts/aggregator-host-check.mts ] && \
+   changed_files | grep -qE '^src/scraper/(qualify\.ts|sources/portals/registry\.ts)$|^scripts/aggregator-host-check\.mts$'; then
+  echo "[pre-commit] aggregator-host-check (aggregátor-host soha nem saját modern honlap)…"
+  npx tsx scripts/aggregator-host-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"
