@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-nincs-sajat-foto-nyomas-a-vevo-nyilatkozott.md) — Nincs saját-fotó nyomás: a vevő a képekről nyilatkozott, az élesítés nem függ saját fotótól (2026-10-02)
+- [ADR-0305](decisions/0305-nincs-sajat-foto-nyomas-a-vevo-a-kepekrol.md) — Nincs saját-fotó nyomás: a vevő a képekről nyilatkozott, az élesítés nem függ saját fotótól (2026-10-02)
 - [ADR-0304](decisions/0304-seta-a-kapun-at-walk-through-a-tulaj-altal.md) — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon; a séta a fotók vision-tárgyából épül (2026-10-02)
 - [ADR-0303](decisions/0303-fizetes-szamla-belepes-konzol-a-vevo.md) — Fizetés, számla, belépés, konzol: a vevő visszalépése nem elutasítás, egy ajánlat egy név, a számlacím a vevőé, jelszó nem jár levélben (Elek M2) (2026-10-02)
 - [ADR-0302](decisions/0302-a-sablon-szovege-egy-valodi-szallas-honlapjae.md) — A sablon szövege egy valódi szállás honlapjáé: nincs „játék-szöveg”, ál-jelölés és kártyánkénti átlag-csillag (2026-10-02)

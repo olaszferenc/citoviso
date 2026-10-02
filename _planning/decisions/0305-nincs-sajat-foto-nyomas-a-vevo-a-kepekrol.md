@@ -1,4 +1,4 @@
-## ADR-XXXX — Nincs saját-fotó nyomás: a vevő a képekről nyilatkozott, az élesítés nem függ saját fotótól (2026-10-02)
+## ADR-0305 — Nincs saját-fotó nyomás: a vevő a képekről nyilatkozott, az élesítés nem függ saját fotótól (2026-10-02)
 
 **Státusz:** elfogadva (tulaj-döntés; SUB, koordinátor: CIT „élesi teszt” fő session; brief `~/rc-briefs/javitas-elek-0930/l1-megkereso-level.md` ⑤) ·
 **Lokál, nem élesítve** (§0) · **Kapcsolódó:** a vásárláskori képjogi nyilatkozat (`src/legal.ts`), ADR-0224 (tenant-admin Linear),
