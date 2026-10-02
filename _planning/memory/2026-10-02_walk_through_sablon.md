@@ -10,6 +10,10 @@ Kontraktus: `assets/design-refs/tenant-site/walk-through/` (az elfogadott `plan.
 - A séta lépései a fotók vision-tárgyából (`Photo.subject`, új mező `recipe.ts`); a tárgy a `heroPick.dropNeverShown`-ban
   ragad a fotóra (ugyanott, ahol a vízjel-bélyeg) → mind a négy renderelő út viszi; `siteData.toSitePhotos` továbbadja;
   a konzol sablon-előnézete (`tplPreview.ts`) és a `template-preview.mts` a cache-ből tölti.
+- A lépés csak a tárgyat nevezi meg (cím), bekezdés nincs — a tényhűség-őr FLAG-je után (a témaszó szerinti
+  kiemelés-párosítás a képről állított: „Reggeli a virágos kertben” beltéri étkező mellett).
+- Őrök: jog/provenance PASS · dizájn-doktrína FLAG a régi Nyugalom-renderen („Séta” cím séta nélkül) → a mai kód
+  „A ház”-at ír, újrarenderelve igazolva · tényhűség FLAG → bekezdés kivéve.
 - Közös modulok helyén: foglalás (`bookingSlot` + `closing` slot sötét sávban), galéria-kontraktus (11 látszik +
   „Összes fotó”), szoba-kártya réteg, négy slot, telefonos menü/sáv a runtime-ból.
 - A mock lelete (első képernyőn hiányzó számok) javítva: a számok betöltéskor csúsznak fel.
@@ -27,4 +31,6 @@ Kontraktus: `assets/design-refs/tenant-site/walk-through/` (az elfogadott `plan.
 ## Nyitott (koordinátornak)
 1. Séta a kevés-tárgyú leadeken: A = elmarad (ma) · B = a kollázs 2–3. képe is lehet lépés (Bánó Porta 3 → 4 lépés).
 2. Accent: a fotó-akcentus (Három Huszár: terrakotta) vs. a mock lombzöldje.
-3. Foglalás: a közös naptáras modul, nem a mock kétlépcsős ajánlatkérője.
+3. Lépés alatti bekezdés (csak fotónként megerősített leírásból lehetne).
+4. A Három Huszár pillanatkép két forrás nélküli kiemelése (copywriter, 09-26) — újragenerálás javítja.
+5. Foglalás: a közös naptáras modul, nem a mock kétlépcsős ajánlatkérője.

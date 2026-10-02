@@ -24,11 +24,15 @@
 // courtyard → breakfast → garden). Here every step is a photo whose purchased vision
 // verdict (`Photo.subject`, heroPick.ts) names what it shows, taken in the order a guest
 // would meet it: outside → garden/yard → view → table → inside. One photo per subject, the
-// best-ranked one (the photo list is already hero-score ordered). The step's sentence is a
-// SOURCED one (the copywriter's highlights / intro, §B.17) whose earliest topic word belongs
-// to that subject — no sentence, no paragraph; never an invented line. Fewer than three
-// steps → no walk at all: the section keeps its heading, intro and highlights, and nothing
-// pretends to be a walk (no empty panel, no single-photo "story").
+// best-ranked one (the photo list is already hero-score ordered). The step says only what
+// the verdict established — the SUBJECT, as its heading. ⛔ No sentence under it: the first
+// build paired a sourced highlight with the photo by topic word, and the factuality guard
+// caught the pairing itself making the claim — „Reggeli a virágos kertben” beside an INDOOR
+// dining room, „Klímás szobák kőkandallóval” beside a bedroom with no fireplace. A true
+// sentence next to the wrong picture is a false statement about the picture (§B.17).
+// The highlights stay in the list under the walk. Fewer than three steps → no walk at all:
+// the section keeps its heading, intro and highlights, and nothing pretends to be a walk
+// (no empty panel, no single-photo "story").
 
 import { amenityIconSvg } from "../amenityIcon.js";
 import { iconSvg, starIcon } from "../icons.js";
@@ -81,16 +85,6 @@ function ico(name: string, size = 22): string {
 const WALK_ORDER = ["exterior", "pool_garden", "view", "dining", "interior"] as const;
 type WalkSubject = (typeof WALK_ORDER)[number];
 
-/** Topic words per subject — matched against the SOURCED sentences (highlights, intro),
- *  so a step's paragraph is always about what its photo shows. Lower-case, prefix-style. */
-const TOPIC: Readonly<Record<WalkSubject, RegExp>> = {
-  exterior: /(homlokzat|épület|nádtet|parasztház|kapu|porta|tornác|villa|ház kívül)/i,
-  pool_garden: /(kert|udvar|medenc|terasz|lugas|grill|játszótér|piknik|napoz|pázsit)/i,
-  view: /(kilátás|panorám|látkép|kilát)/i,
-  dining: /(reggeli|étkez|konyh|vacsor|ebéd|étterem|vendéglő)/i,
-  interior: /(szob|apartman|háló|nappali|kandalló|berendez|fürdő)/i,
-};
-
 /** The step heading — names the photo's SUBJECT, which the vision verdict established.
  *  A literal per subject (the i18n extractor collects double-quoted T() literals). */
 function walkLabel(d: SiteData, s: WalkSubject): string {
@@ -111,24 +105,13 @@ function walkLabel(d: SiteData, s: WalkSubject): string {
 export interface WalkStep {
   readonly subject: WalkSubject;
   readonly photo: Photo;
-  readonly text: string;
-}
-
-/** Sentences of a text, trimmed — the intro is several sentences, a step takes one. */
-function sentences(s: string): string[] {
-  return (s.match(/[^.!?]+[.!?]+/g) ?? (s.trim() ? [s] : [])).map((x) => x.trim()).filter(Boolean);
 }
 
 /**
- * The walk's steps (exported for the walk guard). `skip` = photos the page already shows
- * above the walk (the hero collage) — the walk never repeats them. `texts` = the SOURCED
- * sentences it may use, in preference order. Fewer than three steps → [] (no walk).
+ * The walk's steps (exported for tooling). `skip` = photos the page already shows above the
+ * walk (the hero collage) — the walk never repeats them. Fewer than three steps → [] (no walk).
  */
-export function walkSteps(
-  photos: readonly Photo[],
-  skip: ReadonlySet<string>,
-  texts: readonly string[],
-): WalkStep[] {
+export function walkSteps(photos: readonly Photo[], skip: ReadonlySet<string>): WalkStep[] {
   const first = new Map<WalkSubject, Photo>();
   for (const p of photos) {
     if (skip.has(p.url) || !p.subject) continue;
@@ -137,23 +120,7 @@ export function walkSteps(
   }
   const subjects = WALK_ORDER.filter((s) => first.has(s));
   if (subjects.length < 3) return [];
-  // Each sentence goes to the subject whose topic word appears EARLIEST in it ("Reggeli a
-  // virágos kertben" is about breakfast, not the garden) — and only among the subjects the
-  // walk actually has. One sentence, one step.
-  const bySubject = new Map<WalkSubject, string>();
-  for (const t of texts) {
-    let best: WalkSubject | null = null;
-    let at = Infinity;
-    for (const s of subjects) {
-      const m = TOPIC[s].exec(t);
-      if (m && m.index < at) {
-        at = m.index;
-        best = s;
-      }
-    }
-    if (best && !bySubject.has(best)) bySubject.set(best, t);
-  }
-  return subjects.map((s) => ({ subject: s, photo: first.get(s)!, text: bySubject.get(s) ?? "" }));
+  return subjects.map((s) => ({ subject: s, photo: first.get(s)! }));
 }
 
 const WALK_CSS = `
@@ -460,14 +427,8 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const collageSet = new Set(collage.map((p) => p.url));
 
   // ── the walk ──
-  // Sentences it may use: the highlights (short, fact-checked), then the intro's sentences
-  // the page does not already print above it.
-  const used = new Set([heroLine, walkLede].filter(Boolean));
-  const texts = [...data.highlights, ...sentences(data.intro)].filter((t) => !used.has(t));
-  const steps = walkSteps(photos, collageSet, texts);
-  const stepTexts = new Set(steps.map((s) => s.text).filter(Boolean));
-  // The highlights row under the walk lists what the steps did not already say.
-  const feat = data.highlights.filter((h) => !stepTexts.has(h)).slice(0, 8);
+  const steps = walkSteps(photos, collageSet);
+  const feat = data.highlights.slice(0, 8);
 
   // ── numbers band: the real rating first, then the real stats (deduplicated) ──
   const facts: { n: string; small?: string; l: string }[] = [];
@@ -556,7 +517,7 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
               const label = walkLabel(data, s.subject);
               return `<li class="wk-step" data-cit-story-step>
             <figure><img src="${esc(s.photo.url)}" alt="${esc(s.photo.alt || label)}" loading="lazy"><figcaption>${label}</figcaption></figure>
-            <div class="wk-txt"><h3>${label}</h3>${s.text ? `<p>${esc(s.text)}</p>` : ""}</div>
+            <div class="wk-txt"><h3>${label}</h3></div>
           </li>`;
             })
             .join("\n          ")}

@@ -19,9 +19,11 @@ jelentette: a kinézet és a szerkezet marad, minden adat és funkció a rendsze
    (`roomShell`/`roomHint`/`roomDetails`), értékelés/térkép/házirend/programok a négy slotból, telefonos menü és sáv a
    közös runtime-ból. A sablon a HELYÜKET és a KÜLSEJÜKET adja.
 3. **A séta adatvezérelt** — a fotók megvett vision-ítéletéből (`Photo.subject`): kívülről → kert/udvar → kilátás →
-   asztal → belül, tárgyanként a legjobb helyezésű fotó, a hős-kollázs képei nélkül. Lépés-cím = a tárgy neve;
-   bekezdés = forrásolt mondat (kiemelés / bevezető), amelynek LEGKORÁBBI témaszava a lépés tárgyáé — különben nincs
-   bekezdés. **3 lépés alatt nincs séta** (nincs üres panel, nincs egyképes „történet”).
+   asztal → belül, tárgyanként a legjobb helyezésű fotó, a hős-kollázs képei nélkül. Lépés-cím = a tárgy neve,
+   **bekezdés nincs**. ⛔ Az első változat egy forrásolt kiemelést tett a lépés alá témaszó alapján; a tényhűség-őr
+   FLAG-elte: a párosítás maga állított a képről („Reggeli a virágos kertben” egy BELTÉRI étkező mellett, „Klímás
+   szobák kőkandallóval” kandalló nélküli hálószoba mellett). Igaz mondat rossz kép mellett = hamis állítás a képről.
+   A kiemelések a séta alatti listában maradnak. **3 lépés alatt nincs séta** (nincs üres panel, nincs egyképes „történet”).
 4. **`Photo.subject` mező** (`recipe.ts`): ugyanazon az EGY ponton ragad a fotóra, ahol a vízjel-bélyeg
    (`heroPick.dropNeverShown`) — így a négy renderelő út (generate · provision · tenant/editor · heroOverride) mind viszi;
    a `toSitePhotos` továbbadja, a konzol sablon-előnézete és a `template-preview` a cache-ből tölti (régi pillanatkép).
@@ -40,4 +42,8 @@ Aranykagyló 36 (23 fotó, nincs értékelés, 5 lépés).
 ### Nyitott (a koordinátornak átadva)
 - A séta a 13 „elmaradó” leaden: maradjon-e el, vagy engedjünk tárgyon belül több lépést / a kollázs képeit is.
 - Az accent: a sablon (mint mind) a fotó-akcentust követi — Három Huszár-on terrakotta, a mock lombzöldje helyett.
+- Lépés-szöveg: kell-e bekezdés a lépés alá — csak fotónként megerősített leírásból lehetne (a vision `reason` ma angol,
+  operátori kritika, nem vendég-szöveg).
+- A Három Huszár pillanatkép (2026-09-26) két kiemelése forrás nélküli („Saját, ingyenes parkoló”, „Reggeli a virágos
+  kertben”) — a copywriter régi kimenete, nem a sablon terméke; újragenerálás a mai (ADR-0292) kritikussal javítja.
 - A foglalás a közös naptáras modul, nem a mock kétlépcsős ajánlatkérője (összesítő a becsült összeggel).

@@ -39,9 +39,9 @@ Citoviso-n generálható típusként”). A koordináló session briefje hozta (
 - **Szöveg:** a SiteData-ból és a copywriter-rétegből; minden vevő-oldali felirat `T()`-vel.
 - **A séta lépései adatvezéreltek:** a fotók vision-ítéletéből (`Photo.subject`), a vendég útjának
   sorrendjében: kívülről → kert/udvar → kilátás → asztal → belül; tárgyanként egy, a legjobb helyezésű
-  fotó; a hős-kollázs képei nem ismétlődnek. A lépés címe a tárgyat nevezi meg; a bekezdése egy
-  FORRÁSOLT mondat (kiemelés / bevezető), amelynek legkorábbi témaszava a lépés tárgyáé — ha nincs
-  ilyen, nincs bekezdés. Kitalált mondat sehol (§B.17).
+  fotó; a hős-kollázs képei nem ismétlődnek. A lépés címe a tárgyat nevezi meg, **bekezdés nincs**:
+  egy fotótól független (bár forrásolt) mondat a kép mellé téve a KÉPRŐL állítana (tényhűség-őr, 2026-10-02).
+  Kitalált mondat sehol (§B.17).
 - **Kevés adat:** három lépésnél kevesebb → nincs séta (a szakasz címe ekkor nem „séta”, a
   kiemelések maradnak); nincs értékelés → nincs accent sáv és nincs szám-cella; nincs valódi GYIK →
   nincs GYIK; élesen szoba nélkül → nincs szoba-szakasz. Üres doboz sehol.
