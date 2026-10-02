@@ -316,13 +316,22 @@ vendégek — enélkül az oldal nem hozna megkeresést.
 
 ## Mi az a kupon a Bővítés fölött?
 
-Ha kapott tőlünk kupont (például az induló előfizetéséért), azt a **Bővítés**
-rész tetején látja: mennyi a kedvezmény és meddig él. A kirakat-kártyákon ilyenkor
-az eredeti ár áthúzva jelenik meg, mellette a kedvezményes ár — ennyit fizet, ha
-most veszi meg. A levonás magától történik, nem kell kódot beírnia.
+Ha kapott tőlünk kupont vagy más kedvezményt, azt a **Bővítés** rész tetején látja: mennyi
+a kedvezmény, mi a neve és meddig él. A kártya mindig a kedvezmény saját nevén szól:
 
-**Kedvezmények nem adódnak össze:** ha többre is jogosult, mindig a nagyobb
-érvényesül.
+- az induló előfizetéséért kapott kupon „kupon” néven jelenik meg, és a kártya azt is kiírja,
+  hogy ezt az induló előfizetéséért kapta;
+- minden más kedvezmény a saját nevén: Egyedi ajánlat, Bemutatkozó ajánlat a levélből vagy
+  Döntés-segítő ajánlat.
+
+A kirakat-kártyákon ilyenkor az eredeti ár áthúzva jelenik meg, mellette a kedvezményes ár —
+ennyit fizet, ha most veszi meg. A levonás magától történik, nem kell kódot beírnia.
+
+**Kedvezmények nem adódnak össze:** ha többre is jogosult, mindig a nagyobb érvényesül. A
+kisebb viszont **nem vész el**: a kártya alatt külön sorban látja, hogy megmarad, és ez a
+vásárlás nem használja fel — egy későbbi vásárlásnál még érvényes lehet (a sor a lejáratát is
+kiírja). Ha ez a megmaradó kedvezmény az induló kupon, ebben a sorban Üdvözlő kedvezmény
+néven látja.
 
 ### Mit lát a vásárlás után?
 
