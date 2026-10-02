@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Megkereső levél — jóváhagyott terv (L1)</title>
+<style>
+:root{
+  --citui-navy-900:#0e2a47; --citui-cyan-500:#1fb6d6; --citui-white:#ffffff; --citui-ink:#10243a; --citui-muted:#5a6d82;
+  --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-ok-ink:#19733f; --citui-bad:#e5484d; --citui-bad-ink:#b3262b; --citui-warn:#d29922; --citui-warn-ink:#7d5a12;
+  --citui-radius-sm:14px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --bad-soft:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-white));
+  --warn-soft:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface-2);font-family:var(--citui-font-text);color:var(--citui-ink);font-size:15px;line-height:1.55}
+.bar{position:sticky;top:0;z-index:5;background:var(--citui-white);border-bottom:1px solid var(--citui-line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.bar b{font-size:12px;color:var(--citui-muted);text-transform:uppercase;letter-spacing:.5px;margin-right:2px}
+.bar button,.seg button{font:inherit;font-size:13px;padding:6px 11px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);cursor:pointer;color:var(--citui-ink)}
+.bar button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}
+.bar .sep{width:1px;height:22px;background:var(--citui-line-strong);margin:0 4px}
+.frame{margin:16px auto 48px;width:100%;max-width:1180px;padding:0 12px}
+.frame.phone{max-width:390px;padding:0}
+.app{container-type:inline-size;background:var(--citui-surface);border-radius:var(--citui-radius-sm);box-shadow:var(--citui-shadow-sm);overflow:hidden}
+.in{padding:18px}
+h1{font-size:21px;margin:0 0 6px}
+h2{font-size:17px;margin:26px 0 8px}
+.muted{color:var(--citui-muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.chips button{font:inherit;font-size:13px;padding:6px 11px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);cursor:pointer;color:var(--citui-ink);text-align:left}
+.chips button small{display:block;color:var(--citui-muted);font-size:11px}
+.chips button[aria-pressed="true"]{border-color:var(--citui-navy-900);box-shadow:inset 0 0 0 1px var(--citui-navy-900)}
+.facts{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.pill{max-width:100%;overflow-wrap:anywhere;font-size:12px;padding:3px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-white);border:1px solid var(--citui-line)}
+.pill.bad{background:var(--bad-soft);color:var(--citui-bad-ink);border-color:transparent}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink);border-color:transparent}
+.cols{display:grid;grid-template-columns:1fr;gap:14px}
+.seg{display:flex;gap:6px;margin:6px 0 10px}
+.col[hidden]{display:none}
+@container (min-width:760px){
+  .cols{grid-template-columns:1fr 1fr}
+  .seg{display:none}
+  .col[hidden]{display:block}
+}
+.colhead{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--citui-muted);margin:0 0 6px}
+.mail{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden}
+.mhead{padding:12px 16px;border-bottom:1px solid var(--citui-line);font-size:13px;color:var(--citui-muted)}
+.mhead .s{font-size:16px;color:var(--citui-ink);font-weight:600}
+.mbody{padding:14px 16px}
+.mbody p{margin:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mbody p.small{font-size:12px;color:var(--citui-muted)}
+.mbody p.url{font-size:12px;color:var(--citui-muted);word-break:break-all}
+mark{background:none;color:inherit}
+.old mark.chg{background:var(--bad-soft);box-shadow:inset 0 -2px 0 var(--citui-bad)}
+.new mark.chg{background:var(--citui-ok-soft);box-shadow:inset 0 -2px 0 var(--citui-ok)}
+.why{font-size:12.5px;color:var(--citui-muted);margin:-6px 0 12px;padding-left:10px;border-left:2px solid var(--citui-line-strong)}
+.sms{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:18px 18px 18px 4px;padding:10px 14px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:360px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--citui-white)}
+th,td{border-bottom:1px solid var(--citui-line);padding:7px 8px;text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--citui-muted);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw{overflow-x:auto}
+.box{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:12px 14px;margin:8px 0}
+.box h3{margin:0 0 6px;font-size:15px}
+.box ul,.box ol{margin:4px 0 0;padding-left:20px}
+.q{background:var(--warn-soft);border-radius:var(--citui-radius-sm);padding:12px 14px;margin:8px 0}
+.try{display:grid;grid-template-columns:1fr;gap:8px;margin:8px 0}
+@container (min-width:760px){.try{grid-template-columns:repeat(4,1fr)}}
+.try label{font-size:12px;color:var(--citui-muted);display:flex;flex-direction:column;gap:3px}
+.try select,.try input{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-white);color:var(--citui-ink)}
+@container (max-width:600px){
+  table,tbody,tr,td{display:block;width:100%}
+  tr:first-child{display:none}
+  tr{border-bottom:1px solid var(--citui-line);padding:8px 10px}
+  td{border:0;padding:2px 0}
+  td.n{text-align:left}
+  td.n::before{content:attr(data-l) ": ";color:var(--citui-muted);font-size:12px}
+  td:first-child{font-weight:600}
+}
+.out{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:10px 14px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Méret</b><button data-size="phone">Mobil 390px</button><button data-size="desk">Asztali</button>
+  <span class="sep"></span>
+  <b>Javítás</b><button data-mode="A" title="Csak a hibás mondatok">A — kötelező</button><button data-mode="B" title="A + a többi gépies fordulat">B — + csiszolás</button>
+</div>
+<div class="frame" id="frame"><div class="app"><div class="in">
+  <h1>Megkereső levél és SMS — jóváhagyott terv</h1>
+  <p class="muted">5 valódi lead (dev-adatbázis, a mostani <code>renderDraft</code>-tal renderelve). A link-token kitakarva. A HTML-levél ugyanezekből a bekezdésekből áll (a horog, az 1. bekezdés és a lábjegyzet ott is ugyanígy változik; az ár-mondatot a HTML a sötétkék árdobozban mutatja). A „Tisztelt &lt;név&gt;!” megszólítás marad (tulaj-döntés).</p>
+  <div class="chips" id="chips"></div>
+  <div class="facts" id="facts"></div>
+  <div class="seg" id="seg"><button data-col="old">Előtte</button><button data-col="new">Jóváhagyott</button></div>
+  <div class="cols">
+    <div class="col old" id="colOld"><p class="colhead">Előtte (2026-10-02-ig)</p><div class="mail" id="mailOld"></div></div>
+    <div class="col new" id="colNew"><p class="colhead">Jóváhagyott</p><div class="mail" id="mailNew"></div></div>
+  </div>
+  <h2>SMS (az MMS-párhoz tartozó)</h2>
+  <div class="cols">
+    <div><p class="colhead">Most</p><div class="sms old" id="smsOld"></div></div>
+    <div><p class="colhead">Jóváhagyott</p><div class="sms new" id="smsNew"></div></div>
+  </div>
+
+  <h2>Próbáld ki: melyik mondatot kapja egy lead?</h2>
+  <p class="muted">Ugyanaz a szabály, ami a fenti „Javasolt” oszlopot adja.</p>
+  <div class="try">
+    <label>Szegmens<select id="tSeg"><option value="nincs_honlap">nincs honlap</option><option value="0_labnyom">ismeretlen lábnyom</option><option value="elavult">elavult</option><option value="van_labnyom">van lábnyom (modern)</option></select></label>
+    <label>Honlap-mérés (elavultnál)<select id="tAs"><option value="noview">elérhető, nincs mobil-nézet</option><option value="unreach">nem volt elérhető</option><option value="old">mobilos, csak régi jelek</option></select></label>
+    <label>Google-csillag<input id="tVal" type="text" inputmode="decimal" value="4,6"></label>
+    <label>Értékelések száma<input id="tCnt" type="text" inputmode="numeric" value="57"></label>
+  </div>
+  <div class="out" id="tOut"></div>
+
+  <h2>Mérés — a szegmens-mondat ütközik-e a lead adataival (H-3)?</h2>
+  <p class="muted">Élesen, csak olvasással, 2026-10-02. Élő célpont = <code>isLead=true</code>.</p>
+  <div class="tw"><table>
+    <tr><th>Szegmens / mérés</th><th>Mostani mondat</th><th class="n">Élő lead</th><th class="n">ebből e-mailes</th><th>Igaz?</th></tr>
+    <tr><td>van lábnyom (modern saját oldal)</td><td>„Saját, modern oldal viszont még nincs a képben.”</td><td class="n" data-l="Élő lead">1</td><td class="n" data-l="ebből e-mailes">0</td><td><span class="pill bad">mindig ellentmond</span> — a besorolás épp azt mondja, hogy van</td></tr>
+    <tr><td>elavult · nem volt elérhető</td><td>„…telefonon nehezen boldogul.”</td><td class="n" data-l="Élő lead">211</td><td class="n" data-l="ebből e-mailes">95</td><td><span class="pill bad">nem forrásolt</span> — nem töltött be, nem tudjuk, milyen telefonon</td></tr>
+    <tr><td>elavult · mobilos, csak régi jelek</td><td>„…telefonon nehezen boldogul.”</td><td class="n" data-l="Élő lead">45</td><td class="n" data-l="ebből e-mailes">39</td><td><span class="pill bad">hamis</span> — van mobil-nézete</td></tr>
+    <tr><td>elavult · nincs mobil-nézet</td><td>„…telefonon nehezen boldogul.”</td><td class="n" data-l="Élő lead">132</td><td class="n" data-l="ebből e-mailes">86</td><td><span class="pill ok">igaz</span>, csak a megszemélyesítés („boldogul”) furcsa</td></tr>
+    <tr><td>nincs honlap</td><td>„Saját honlapot viszont nem találtunk hozzá.”</td><td class="n" data-l="Élő lead">1 028</td><td class="n" data-l="ebből e-mailes">236</td><td><span class="pill ok">igaz</span></td></tr>
+  </table></div>
+  <p class="muted">A „van lábnyom” élesen ma 1 leadet érint (Ensana Thermal Aqua), mert a modern oldalas szereplők nem célpontok — a kurátor viszont kézzel átállíthatja, és akkor a levél garantáltan ellentmond. <b>Súlyosabb az elavult ág:</b> 388-ból 256 leadnek (e-mailesből 134-nek) olyat állít, amit nem mértünk. Elek Muschel-esete fordított: ott a mondat igaz volt, a <i>besorolás</i> tévedett (portál-aldomaint „saját modern oldalnak” vett) — lásd lent.</p>
+
+  <h2>A vendég-kritikus a levélre — javaslat</h2>
+  <div class="box"><h3>Miért nem küldésenként fut az LLM</h3>
+  A levél és az SMS <b>fix sablon</b>: leadenként csak a név, a csillag/értékelésszám és a szegmens-ág változik, szabad AI-szöveg nincs benne. Küldésenkénti LLM-hívás ugyanazt a ~8 ágat bírálná újra és újra. Ezért:</div>
+  <div class="box"><h3>1 · Determinisztikus őr (minden land-on, pénz nélkül)</h3><ul>
+    <li>Kirendereli a levelet és az SMS-t <b>minden ágra</b> (4 szegmens × 3 honlap-mérés × csillag van/nincs/4,0 alatt).</li>
+    <li>Tiltott fordulatok: „nincs a képben”, csonka „… vélemény alapján.”, „Csapata”, „boldogul”, „élesítjük” (B esetén).</li>
+    <li>Szegmens-koherencia: a modern/elavult ág soha nem mondhatja, hogy „nem találtunk / nincs … oldal”; a „telefonra” állítás csak <i>elérhető + nincs mobil-nézet</i> mérés mellett; 4,0 alatti csillagot a levél nem idéz.</li>
+    <li>Mutációval igazolva: a mostani szöveg mellett piros, a javított mellett zöld.</li></ul></div>
+  <div class="box"><h3>2 · LLM-kritikus, szállásadó szemmel (csak sablon-változáskor)</h3>
+  A vendég-kritikus hurok új szereplővel: <i>„igényes magyar szállásadó, aki ezt a levelet a postafiókjában kapja”</i>. Az összes ág szövegéből ujjlenyomat; ha a sablon változik és az új ujjlenyomatra nincs rögzített PASS, a kapu bukik, és egy parancs lefuttatja a bírálatot (≈1 hívás / sablon-változás). A tulaj kitétele szerint („ha kell”): ha egyszer AI-írt, leadenként egyedi mondat kerül a levélbe, <b>akkor</b> lesz küldés előtti, leadenkénti futás.</div>
+
+  <h2>Tulaj-döntés (2026-10-02)</h2>
+  <div class="box"><ol>
+    <li><b>B változat</b> — a hibás mondatok javítása + a csiszolás („elindítjuk az oldalt”, „forinttól indul”, „már listaáras”, két rendes mondat a demó-keretezésben).</li>
+    <li><b>4,0 csillag alatt</b> a levél nem idézi az értékelést.</li>
+    <li><b>LLM-kritikus</b> szállásadó szemmel, a levél-sablon változásakor (nem küldésenként).</li>
+    <li>Megvalósításkor a kritikus egy blokkolót talált: modern oldal mellett az „új honlap-terv” cserét sugall → „másik honlap-terv, hogy össze tudja vetni a mostanival”.</li>
+  </ol></div>
+</div></div></div>
+<script>
+const LEADS=[{"name":"Artemisz Panzió","segment":"nincs_honlap","website":null,"assessment":null,"rating":{"value":4.7,"count":134},"subject":"Artemisz Panzió – honlap-terv","mail":"Tisztelt Artemisz Panzió!\n\nA Google-on 4,7 csillagos, 134 vélemény alapján. Saját honlapot viszont nem találtunk hozzá.\n\nEzért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.\n\nhttps://citoviso.com/p/artemisz-panzio/XXXXXXXXXXXXXXXXXXXXXXXX\n\nA linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.\n\nBemutatkozó ajánlat: minden csomagra 25% kedvezmény — a saját honlapja havi 3 900 forint helyett 2 925 forinttól az Öné.\n\nHa tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.\n\nÜdvözlettel,\nOlasz Ferenc\nOlasz Ferenc e.v.\nolasz.ferenc@citoviso.com\n\nA kedvezmény az első díjra szól, a hosszabbítás listaáron megy.\n\nHa nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\nhttps://citoviso.com/p/artemisz-panzio/XXXXXXXXXXXXXXXXXXXXXXXX/unsubscribe\n\nEzt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: https://citoviso.com/privacy\n\nA megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33","sms":"Artemisz Panzió – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\nhttps://citoviso.com/p/artemisz-panzio/XXXXXXXXXXXXXXXXXXXXXXXX"},{"name":"Camping Carina","segment":"elavult","website":"http://www.carinacamping.hu/","assessment":{"reachable":true,"responsive":false,"signals":["no-viewport","font-tag","center-tag","bgcolor-attr"]},"rating":{"value":4.5,"count":718},"subject":"Camping Carina – honlap-terv","mail":"Tisztelt Camping Carina!\n\nA Google-on 4,5 csillagos, 718 vélemény alapján. A mostani honlapja viszont telefonon nehezen boldogul.\n\nEzért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.\n\nhttps://citoviso.com/p/camping-carina/XXXXXXXXXXXXXXXXXXXXXXXX\n\nA linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.\n\nBemutatkozó ajánlat: minden csomagra 25% kedvezmény — a saját honlapja havi 3 900 forint helyett 2 925 forinttól az Öné.\n\nHa tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.\n\nÜdvözlettel,\nOlasz Ferenc\nOlasz Ferenc e.v.\nolasz.ferenc@citoviso.com\n\nA kedvezmény az első díjra szól, a hosszabbítás listaáron megy.\n\nHa nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\nhttps://citoviso.com/p/camping-carina/XXXXXXXXXXXXXXXXXXXXXXXX/unsubscribe\n\nEzt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: https://citoviso.com/privacy\n\nA megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33","sms":"Camping Carina – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\nhttps://citoviso.com/p/camping-carina/XXXXXXXXXXXXXXXXXXXXXXXX"},{"name":"Laguna Panzió","segment":"elavult","website":"http://www.lagunaszantod.hu/","assessment":{"reachable":false,"responsive":false,"signals":["unreachable"]},"rating":{"value":4.1,"count":182},"subject":"Laguna Panzió – honlap-terv","mail":"Tisztelt Laguna Panzió!\n\nA Google-on 4,1 csillagos, 182 vélemény alapján. A mostani honlapja viszont telefonon nehezen boldogul.\n\nEzért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.\n\nhttps://citoviso.com/p/laguna-panzio/XXXXXXXXXXXXXXXXXXXXXXXX\n\nA linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.\n\nBemutatkozó ajánlat: minden csomagra 25% kedvezmény — a saját honlapja havi 3 900 forint helyett 2 925 forinttól az Öné.\n\nHa tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.\n\nÜdvözlettel,\nOlasz Ferenc\nOlasz Ferenc e.v.\nolasz.ferenc@citoviso.com\n\nA kedvezmény az első díjra szól, a hosszabbítás listaáron megy.\n\nHa nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\nhttps://citoviso.com/p/laguna-panzio/XXXXXXXXXXXXXXXXXXXXXXXX/unsubscribe\n\nEzt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: https://citoviso.com/privacy\n\nA megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33","sms":"Laguna Panzió – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\nhttps://citoviso.com/p/laguna-panzio/XXXXXXXXXXXXXXXXXXXXXXXX"},{"name":"Eldorádó Kemping, Campsite","segment":"van_labnyom","website":"http://www.eldoradofogado.hu/","assessment":{"reachable":true,"responsive":true,"signals":[]},"rating":{"value":4.3,"count":352},"subject":"Eldorádó Kemping, Campsite – honlap-terv","mail":"Tisztelt Eldorádó Kemping, Campsite!\n\nA Google-on 4,3 csillagos, 352 vélemény alapján. Saját, modern oldal viszont még nincs a képben.\n\nEzért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.\n\nhttps://citoviso.com/p/eldorado-kemping-campsite/XXXXXXXXXXXXXXXXXXXXXXXX\n\nA linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.\n\nBemutatkozó ajánlat: minden csomagra 25% kedvezmény — a saját honlapja havi 3 900 forint helyett 2 925 forinttól az Öné.\n\nHa tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.\n\nÜdvözlettel,\nOlasz Ferenc\nOlasz Ferenc e.v.\nolasz.ferenc@citoviso.com\n\nA kedvezmény az első díjra szól, a hosszabbítás listaáron megy.\n\nHa nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\nhttps://citoviso.com/p/eldorado-kemping-campsite/XXXXXXXXXXXXXXXXXXXXXXXX/unsubscribe\n\nEzt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: https://citoviso.com/privacy\n\nA megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33","sms":"Eldorádó Kemping, Campsite – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\nhttps://citoviso.com/p/eldorado-kemping-campsite/XXXXXXXXXXXXXXXXXXXXXXXX"},{"name":"Mandula vendégház","segment":"nincs_honlap","website":"https://kiadoapartman.hu/szallas/badacsonytomaj/apt132017/1691/","assessment":null,"rating":{"value":1,"count":26},"subject":"Mandula vendégház – honlap-terv","mail":"Tisztelt Mandula vendégház!\n\nA Google-on 1 csillagos, 26 vélemény alapján. Saját honlapot viszont nem találtunk hozzá.\n\nEzért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.\n\nhttps://citoviso.com/p/mandula-vendeghaz/XXXXXXXXXXXXXXXXXXXXXXXX\n\nA linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.\n\nBemutatkozó ajánlat: minden csomagra 25% kedvezmény — a saját honlapja havi 3 900 forint helyett 2 925 forinttól az Öné.\n\nHa tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.\n\nÜdvözlettel,\nOlasz Ferenc\nOlasz Ferenc e.v.\nolasz.ferenc@citoviso.com\n\nA kedvezmény az első díjra szól, a hosszabbítás listaáron megy.\n\nHa nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\nhttps://citoviso.com/p/mandula-vendeghaz/XXXXXXXXXXXXXXXXXXXXXXXX/unsubscribe\n\nEzt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató: https://citoviso.com/privacy\n\nA megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33","sms":"Mandula vendégház – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\nhttps://citoviso.com/p/mandula-vendeghaz/XXXXXXXXXXXXXXXXXXXXXXXX"}]
+;
+// The PROPOSED rule — the same logic the draft.ts change will implement.
+const MIN_STARS = 4.0;
+function assessKind(a){ if(!a) return null; if(a.reachable===false) return "unreach"; if(a.responsive===false) return "noview"; return "old"; }
+function propose(seg, kind, rating){
+  const stars = rating && rating.count && rating.value >= MIN_STARS;
+  let gap, hasGap = true;
+  if (seg === "nincs_honlap" || seg === "0_labnyom") gap = "Saját honlapot viszont nem találtunk.";
+  else if (seg === "elavult" && kind === "unreach") gap = "A honlapját viszont nem tudtuk megnyitni, amikor megnéztük.";
+  else if (seg === "elavult" && kind === "noview") gap = "A mostani honlapja viszont nincs telefonra igazítva.";
+  else { gap = "A mostani honlapját is megnéztük."; hasGap = false; }
+  const proof = stars
+    ? "Láttuk, hogy a Google-on " + rating.count.toLocaleString("hu-HU") + " értékelés alapján " + String(rating.value).replace(".", ",") + " csillagos."
+    : "Átnéztük a nyilvánosan elérhető adatait.";
+  const why = [];
+  if (rating && rating.count && !stars) why.push("4,0 alatti csillagot nem idézünk (dicséretnek hangzana, de nem az).");
+  else if (stars) why.push("Alanyos, egész mondat; „értékelés” (a Google ezt számolja), nem „vélemény”.");
+  if (seg === "van_labnyom") why.push("Modern saját oldalas leadnél nem állítjuk, hogy nincs oldala — a mostani mondat a saját besorolásunknak mond ellent.");
+  else if (seg === "elavult" && kind === "unreach") why.push("A mérés csak azt mondja: nem töltött be. Ennyit állítunk, időponthoz kötve.");
+  else if (seg === "elavult" && kind === "noview") why.push("A mérés: nincs mobil-nézete (viewport). Ezt mondjuk ki, megszemélyesítés („boldogul”) nélkül.");
+  else if (seg === "elavult") why.push("Mobilos oldal, csak régi jelek (pl. flash, régi ©) — telefonos állítás nem forrásolt, ezért nincs hiány-mondat.");
+  else why.push("„hozzá” elhagyva: nem derül ki, mihez.");
+  return { hook: proof + " " + gap, hasGap, stars, why };
+}
+function proposedMail(L, mode){
+  const P = L.mail.split("\n\n");
+  const pr = propose(L.segment, assessKind(L.assessment), L.rating);
+  const ch = {};
+  P[1] = pr.hook; ch[1] = pr.why.join(" ");
+  if (mode === "A") {
+    if (!pr.hasGap) { P[2] = P[2].replace(/^Ezért készítettünk egy honlap-tervet\./, "Készítettünk Önnek egy másik honlap-tervet, hogy össze tudja vetni a mostanival."); ch[2] = "Hiány-mondat nélkül az „Ezért” nem következik semmiből, és az „új terv” cserét sugallna."; }
+  } else {
+    const src = pr.stars ? " a nyilvánosan elérhető adataiból" : "";
+    P[2] = (pr.hasGap ? "Ezért készítettünk Önnek egy honlap-tervet" + src + "." : "Készítettünk Önnek egy másik honlap-tervet" + src + ", hogy össze tudja vetni a mostanival.") + " Ez még csak látványterv, nem kész oldal, és semmire nem kötelezi.";
+    ch[2] = "A kettőspontos „Előzetes látványterv az Önről…” mondat helyett két rendes mondat; a demó-keretezés (látványterv, nem kész oldal) marad.";
+    P[5] = P[5].replace(/^Bemutatkozó ajánlat: minden csomagra (\d+)% kedvezmény — a saját honlapja havi (.+?) forint helyett (.+?) forinttól az Öné\.$/, "Bemutatkozó ajánlatként minden csomagra $1% kedvezményt adunk: a saját honlap havi $2 forint helyett $3 forinttól indul.");
+    ch[5] = "„forinttól az Öné” — reklámszöveg-fordulat.";
+    P[6] = P[6].replace("Ha tetszik, élesítjük.", "Ha tetszik, elindítjuk az oldalt.");
+    ch[6] = "„élesít” informatikus szakszó; egy szállásadó nem így mondja.";
+    P[8] = "A kedvezmény az első díjra szól, a hosszabbítás már listaáras.";
+    ch[8] = "„listaáron megy” — beszélt nyelvi, gépies zárás.";
+  }
+  return { P, ch };
+}
+const proposedSms = s => s.replace("A Citoviso Csapata", "A Citoviso csapata");
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function renderMail(el, subject, P, changed, notes){
+  const cls = i => i === 3 ? "url" : (i >= 8 ? "small" : "");
+  el.innerHTML = '<div class="mhead"><div class="s">' + esc(subject) + '</div>Olasz Ferenc &lt;olasz.ferenc@citoviso.com&gt;</div><div class="mbody">' +
+    P.map((p, i) => '<p class="' + cls(i) + '">' + (changed[i] ? '<mark class="chg">' + esc(p) + '</mark>' : esc(p)) + '</p>' + (notes && changed[i] ? '<div class="why">' + esc(changed[i]) + '</div>' : "")).join("") + '</div>';
+}
+let cur = 0, mode = "B", col = "new";
+function facts(L){
+  const k = assessKind(L.assessment);
+  const kl = {unreach:"honlap: nem volt elérhető", noview:"honlap: nincs mobil-nézet", old:"honlap: mobilos"}[k];
+  const seg = {nincs_honlap:"nincs honlap",elavult:"elavult","van_labnyom":"van lábnyom (modern)","0_labnyom":"ismeretlen"}[L.segment];
+  return [ "szegmens: " + seg, L.website ? "web: " + L.website.replace(/^https?:\/\//, "").replace(/\/$/, "") : null, kl,
+    L.rating ? "Google: " + String(L.rating.value).replace(".", ",") + " ★ · " + L.rating.count + " értékelés" : "nincs csillag" ].filter(Boolean)
+    .map(t => '<span class="pill' + ((t.includes("1 ★")) ? ' bad' : '') + '">' + esc(t) + '</span>').join("");
+}
+function draw(){
+  const L = LEADS[cur];
+  const { P, ch } = proposedMail(L, mode);
+  renderMail(document.getElementById("mailOld"), L.subject, L.mail.split("\n\n"), ch, false);
+  renderMail(document.getElementById("mailNew"), L.subject, P, ch, true);
+  document.getElementById("facts").innerHTML = facts(L);
+  document.getElementById("smsOld").innerHTML = esc(L.sms).replace("Csapata", '<mark class="chg">Csapata</mark>');
+  document.getElementById("smsNew").innerHTML = esc(proposedSms(L.sms)).replace("csapata", '<mark class="chg">csapata</mark>');
+  document.querySelectorAll("#chips button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === cur)));
+  document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  document.querySelectorAll("#seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.col === col)));
+  document.getElementById("colOld").hidden = col !== "old";
+  document.getElementById("colNew").hidden = col !== "new";
+}
+const LABEL = {nincs_honlap:"nincs honlap", elavult:"elavult", van_labnyom:"modern oldal"};
+document.getElementById("chips").innerHTML = LEADS.map((L, i) => '<button data-i="' + i + '">' + esc(L.name) + '<small>' + LABEL[L.segment] + (L.rating && L.rating.value < MIN_STARS ? " · " + String(L.rating.value).replace(".", ",") + " ★" : "") + (L.segment === "elavult" ? " · " + ({unreach:"nem elérhető",noview:"nincs mobil-nézet",old:"mobilos"}[assessKind(L.assessment)]) : "") + '</small></button>').join("");
+document.getElementById("chips").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { cur = +b.dataset.i; draw(); } });
+document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { mode = b.dataset.mode; draw(); }));
+document.querySelectorAll("#seg button").forEach(b => b.addEventListener("click", () => { col = b.dataset.col; draw(); }));
+function setSize(s){ document.getElementById("frame").classList.toggle("phone", s === "phone"); document.querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.size === s))); }
+document.querySelectorAll("[data-size]").forEach(b => b.addEventListener("click", () => setSize(b.dataset.size)));
+setSize(window.innerWidth < 700 ? "phone" : "desk");
+// Try-it panel
+function num(s){ const v = parseFloat(String(s).replace(",", ".").replace(/\s/g, "")); return isFinite(v) ? v : null; }
+function tryIt(){
+  const seg = document.getElementById("tSeg").value, kind = document.getElementById("tAs").value;
+  document.getElementById("tAs").disabled = seg !== "elavult";
+  const v = num(document.getElementById("tVal").value), c = num(document.getElementById("tCnt").value);
+  const out = document.getElementById("tOut");
+  if (v !== null && (v < 1 || v > 5)) { out.textContent = "A Google-csillag 1 és 5 között van."; return; }
+  if (c !== null && (c < 0 || !Number.isInteger(c))) { out.textContent = "Az értékelések száma nemnegatív egész."; return; }
+  const rating = v !== null && c ? { value: v, count: c } : null;
+  const pr = propose(seg, seg === "elavult" ? kind : null, rating);
+  out.textContent = pr.hook + "\n\n" + (pr.hasGap ? "Ezért készítettünk…" : "Készítettünk Önnek egy másik honlap-tervet…") + "\n\n— " + pr.why.join(" ");
+}
+["tSeg","tAs","tVal","tCnt"].forEach(id => document.getElementById(id).addEventListener("input", tryIt));
+draw(); tryIt();
+</script>
+</body>
+</html>

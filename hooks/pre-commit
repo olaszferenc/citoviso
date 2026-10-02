@@ -1448,6 +1448,16 @@ if [ -f scripts/guest-critic-check.mts ] && \
   echo "[pre-commit] guest-critic-check (vendég-kritikus: magázás, vélemény ≠ ajánlat, bekötés)…"
   npx tsx scripts/guest-critic-check.mts >"$GATE_LOG" || gate_failed
 fi
+# MEGKERESŐ LEVÉL IGAZSÁGA (Elek SZ-5/H-3, tulaj-döntés 2026-10-02): a hideg levél, az SMS és az
+# emlékeztető MINDEN ágát kirendereli (szegmens × honlap-mérés × csillag-sáv): tiltott fordulat nincs,
+# a szegmens-mondat csak a mértet állítja, 4,0 ★ alatt nincs értékelés-idézet, „Ezért” csak hiány után,
+# és a sablon ujjlenyomatára rögzített PASS van a szállásadó-szemű LLM-kritikustól
+# (újrafuttatás sablon-változáskor: npx tsx scripts/outreach-letter-critic.mts --run).
+if [ -f scripts/outreach-letter-truth-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/|^src/i18n/|^src/pricing\.ts$|^scripts/outreach-letter-(truth-check|critic)\.mts$'; then
+  echo "[pre-commit] outreach-letter-truth-check (a megkereső levél minden ága igaz és emberi)…"
+  npx tsx scripts/outreach-letter-truth-check.mts >"$GATE_LOG" || gate_failed
+fi
 # SAJÁT-FOTÓ NYOMÁS (tulaj-döntés 2026-10-02, Elek L1 ⑤): a vevő a képekről nyilatkozott
 # (src/legal.ts) — semmilyen felület/levél/KB/kontraktus nem kötheti az élesítést saját fotóhoz,
 # és nem sürgethet cserét („Cserélje sajátra”, „jogtiszta fotói kellenek”). MINDIG fut (szöveg-őr,

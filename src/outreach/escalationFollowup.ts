@@ -133,15 +133,15 @@ export async function sendEscalationFollowups(
       p2: T(lang, "A fenti linken a kedvezményes ár már be van állítva — egy kattintással megrendelheti."),
       p3: T(
         lang,
-        "Döntés-segítő ajánlat: {percent}% kedvezmény — a saját honlapja havi {price} forint helyett {offerPrice} forinttól az Öné.",
+        "Döntés-segítő ajánlatként {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
         { percent: String(f.percent), price: listPrice, offerPrice },
       ),
-      p4: T(lang, "Ha tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül."),
+      p4: T(lang, "Ha tetszik, elindítjuk az oldalt. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül."),
       priceList: listPrice,
       priceOffer: offerPrice,
       percent: String(f.percent),
       ...senderParts(),
-      fine: T(lang, "A kedvezmény az első havi vagy éves díjra érvényes, a hosszabbítás listaáron megy."),
+      fine: T(lang, "A kedvezmény az első havi vagy éves díjra érvényes, a hosszabbítás már listaáras."),
       unsubTxt: T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
       legal: T(
         lang,

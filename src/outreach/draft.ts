@@ -169,7 +169,35 @@ export interface DraftInput {
    * offline copy tools that render a sample lead; they get the default.
    */
   readonly offerPercent?: number;
+  /**
+   * What our own site check MEASURED about the lead's existing website (lead.raw.assessment,
+   * src/scraper/website.ts). Only an „elavult” lead has one worth quoting, and the letter may
+   * state exactly that measurement — never more (Elek H-3, measured 2026-10-02: the old
+   * blanket „telefonon nehezen boldogul” was unsupported for 256 of 388 such leads).
+   * null = not measured → no gap sentence at all.
+   */
+  readonly siteCheck?: SiteCheck | null;
 }
+
+/** The site-check outcome the letter may quote (see DraftInput.siteCheck). */
+export type SiteCheck = "unreachable" | "no_viewport" | "responsive";
+
+/** Map the scraper's stored assessment to the letter's SiteCheck. */
+export function siteCheckOf(assessment: unknown): SiteCheck | null {
+  const a = assessment as { reachable?: boolean; responsive?: boolean } | null | undefined;
+  if (!a || typeof a !== "object") return null;
+  if (a.reachable === false) return "unreachable";
+  if (a.responsive === false) return "no_viewport";
+  if (a.responsive === true) return "responsive";
+  return null;
+}
+
+/**
+ * Below this Google average the letter does not quote the rating (owner's ruling 2026-10-02).
+ * The rating sits where a compliment would — „1 csillagos” in that slot reads as mockery
+ * (Mandula vendégház, 1,0 ★ / 26, got exactly that letter).
+ */
+export const MIN_QUOTED_STARS = 4;
 
 /** The intro percent a draft quotes (and its send path must stamp). */
 export function draftOfferPercent(d: DraftInput): number {
@@ -177,62 +205,77 @@ export function draftOfferPercent(d: DraftInput): number {
 }
 
 /**
- * The SHORT, segment-specific observation — the honest, concrete thing we noticed.
+ * The SHORT, segment-specific observation — the honest, concrete thing we noticed — and
+ * whether it names a GAP (only a gap licenses the „Ezért …” that follows it).
  *
- * ⛔ Segment-aware on purpose: an 'elavult' lead DOES have a website (it is just old),
- * so a blanket "saját honlapot nem találtunk" would be a fabricated hard claim about
- * their business (§B.17). Each branch may only state what that segment actually means.
- *
- * Kept short because this sentence now opens the mail, and its first ~90 characters
- * ARE the Gmail preview line — the third and last thing a recipient sees before
- * deciding to open (feladó / tárgy / első sor).
+ * ⛔ Each branch may state only what its MEASUREMENT supports (§B.17, Elek H-3):
+ *   - nincs_honlap / 0_labnyom: we looked and did not find one — true by construction;
+ *   - elavult: only the site check's own finding (did not load / no mobile view); a
+ *     responsive site with merely old signals gets NO gap sentence;
+ *   - van_labnyom: the classification says they HAVE a modern site — saying otherwise
+ *     contradicts ourselves, so no gap sentence.
  */
-function observationSentence(d: DraftInput): string {
+function observation(d: DraftInput): { text: string; gap: boolean } {
   const seg = d.segment ?? "";
-  if (seg === "elavult") return T(d.lang, "A mostani honlapja viszont telefonon nehezen boldogul.");
-  if (seg === "van_labnyom") return T(d.lang, "Saját, modern oldal viszont még nincs a képben.");
+  if (seg === "elavult" && d.siteCheck === "unreachable")
+    return { text: T(d.lang, "A honlapját viszont nem tudtuk megnyitni, amikor megnéztük."), gap: true };
+  if (seg === "elavult" && d.siteCheck === "no_viewport")
+    return { text: T(d.lang, "A mostani honlapja viszont nincs telefonra igazítva."), gap: true };
+  if (seg === "elavult" || seg === "van_labnyom")
+    return { text: T(d.lang, "A mostani honlapját is megnéztük."), gap: false };
   // nincs_honlap / 0_labnyom — the core segment.
-  return T(d.lang, "Saját honlapot viszont nem találtunk hozzá.");
+  return { text: T(d.lang, "Saját honlapot viszont nem találtunk."), gap: true };
 }
 
-/**
- * The opening paragraph = the Gmail preview line. It leads with the PROOF (their own
- * rating, from A4-gated data) because that is the one thing only someone who actually
- * looked at their business could write; the generic "Tisztelt Vendéglátó!" greeting
- * used to sit here and burned ~21 of the ~90 visible characters on nothing.
- */
-/**
- * Hungarian definite article for a business name — the mail opened with a raw
- * "A(z) Név" for every lead, which reads as unfinished boilerplate in a letter
- * that claims to be personal (Elek FK-004 GYANÚ). Vowel → "Az", else "A";
- * leading digits resolve by how the number is READ (1→egy→az, 5→öt→az).
- */
-// Moved to ../hu.js so the console can use the SAME rule — two copies of a
-// grammar helper is how "a(z)" comes back on the screen the guard does not watch.
+/** Whether this letter quotes the lead's Google rating (MIN_QUOTED_STARS). */
+function quotesRating(d: DraftInput): boolean {
+  return Boolean(d.rating?.count) && (d.rating?.value ?? 0) >= MIN_QUOTED_STARS;
+}
+
+// Hungarian definite article for a business name lives in ../hu.js (one rule for mail AND
+// console — two copies is how "a(z)" comes back on the screen the guard does not watch).
 
 /**
  * The hook — TWO SHORT SENTENCES (ADR-0101): the lead's own proof, then the gap.
- * The previous single sentence chained both halves behind an em-dash and read as
- * machine copy; the contract calls for one thought per sentence.
  *
- * The no-rating branch may NOT invent a proof: without a rating we have no number
- * that is theirs, so the first sentence states only what WE actually did (read their
- * public data) — a true statement, not a flattering guess (§B.17).
+ * The proof sentence has a subject („Láttuk, hogy …”) — the old „A Google-on 4,8 csillagos,
+ * 145 vélemény alapján.” was a subjectless fragment (Elek SZ-5). „értékelés”, not
+ * „vélemény”: Google counts ratings, not written reviews.
  *
- * ⚠️ The NAME is deliberately absent here since 2026-09-11: the salutation now leads
- * the letter and carries it, so repeating it one line later reads as mail-merge. The
- * §C.3 personalization requirement is met by the greeting (also prose, also gated).
+ * Without a quotable rating the first sentence states only what WE did (read their public
+ * data) — a true statement, not a flattering guess (§B.17).
+ *
+ * ⚠️ The NAME is deliberately absent: the salutation one line up carries it.
  */
 function hookText(d: DraftInput): string {
-  const obs = observationSentence(d);
-  if (d.rating?.count) {
-    return T(d.lang, "A Google-on {stars} csillagos, {count} vélemény alapján. {obs}", {
-      stars: String(d.rating.value).replace(".", ","),
-      count: d.rating.count,
+  const obs = observation(d).text;
+  if (quotesRating(d)) {
+    return T(d.lang, "Láttuk, hogy a Google-on {count} értékelés alapján {stars} csillagos. {obs}", {
+      stars: String(d.rating!.value).replace(".", ","),
+      count: formatNumber(d.rating!.count),
       obs,
     });
   }
-  return T(d.lang, "Nyilvánosan elérhető adatait néztük át. {obs}", { obs });
+  return T(d.lang, "Átnéztük a nyilvánosan elérhető adatait. {obs}", { obs });
+}
+
+/**
+ * The offer + §A demo-framing. „Ezért” only after a stated gap; the source phrase only when
+ * the hook did not already say we read their public data.
+ */
+function offerText(d: DraftInput): string {
+  const gap = observation(d).gap;
+  const rated = quotesRating(d);
+  const first = gap
+    ? rated
+      ? T(d.lang, "Ezért készítettünk Önnek egy honlap-tervet a nyilvánosan elérhető adataiból.")
+      : T(d.lang, "Ezért készítettünk Önnek egy honlap-tervet.")
+    : // No gap stated → no replacement implied: a second plan to compare (landlord critic,
+      // 2026-10-02: „új honlap-terv” beside a working modern site read as a contradiction).
+      rated
+      ? T(d.lang, "Készítettünk Önnek egy másik honlap-tervet a nyilvánosan elérhető adataiból, hogy össze tudja vetni a mostanival.")
+      : T(d.lang, "Készítettünk Önnek egy másik honlap-tervet, hogy össze tudja vetni a mostanival.");
+  return `${first} ${T(d.lang, "Ez még csak látványterv, nem kész oldal, és semmire nem kötelezi.")}`;
 }
 
 /**
@@ -290,26 +333,24 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     greet: T(d.lang, "Tisztelt {name}!", { name: d.leadName }),
     hook: hookText(d),
     // ⚠️ T/1 („mi") THROUGHOUT (owner's ruling 2026-09-11). The letter used to jump
-    // person — „néztük" → „készítettem" → „mi élesítjük" — which reads as copy stitched
+    // person — „néztük" → „készítettem" → „mi indítjuk" — which reads as copy stitched
     // from two drafts. „Mi" is also the truthful voice: the plan is produced by our
     // system, not hand-drawn by the signer (§B.17 binds us about ourselves too), and it
-    // matches the SMS channel's „A Citoviso Csapata" sign-off (ADR-0112).
-    p1: T(
-      d.lang,
-      "Ezért készítettünk egy honlap-tervet. Előzetes látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem kötelezi.",
-    ),
+    // matches the SMS channel's „A Citoviso csapata" sign-off (ADR-0112).
+    // Wording: owner's pick B, 2026-10-02 (ADR-XXXX) — guarded by outreach-letter-truth-check.
+    p1: offerText(d),
     p2: T(
       d.lang,
       "A linken ki is próbálhatja: beállíthatja, mi kerüljön az oldalra, és rögtön látja az árát.",
     ),
     p3: T(
       d.lang,
-      "Bemutatkozó ajánlat: minden csomagra {percent}% kedvezmény — a saját honlapja havi {price} forint helyett {offerPrice} forinttól az Öné.",
+      "Bemutatkozó ajánlatként minden csomagra {percent}% kedvezményt adunk: a saját honlap havi {price} forint helyett {offerPrice} forinttól indul.",
       { percent, price: priceList, offerPrice: priceOffer },
     ),
     p4: T(
       d.lang,
-      "Ha tetszik, élesítjük. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
+      "Ha tetszik, elindítjuk az oldalt. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül.",
     ),
     priceList,
     priceOffer,
@@ -317,7 +358,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     ...senderParts(),
     // ADR-0088 ① — the validity sentence did not disappear, it MOVED here (out of the
     // middle of the price sentence, into the grey footnote above the opt-out).
-    fine: T(d.lang, "A kedvezmény az első díjra szól, a hosszabbítás listaáron megy."),
+    fine: T(d.lang, "A kedvezmény az első díjra szól, a hosszabbítás már listaáras."),
     unsubTxt: T(d.lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
     legal: T(
       d.lang,
@@ -409,7 +450,7 @@ export function renderSmsDraft(d: DraftInput): SmsDraft {
   // link is reachable, since it is now the sole carrier of the opt-out.
   const text = T(
     d.lang,
-    "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso Csapata\n{link}",
+    "{name} – készítettünk Önnek egy honlap-látványtervet, amit most élőben megnézhet és kipróbálhat kötelezettségmentesen! A Citoviso csapata\n{link}",
     { name: d.leadName, link },
   );
   return { text, link, unsubscribeLink };
@@ -426,7 +467,7 @@ export function renderPairSmsDraft(d: DraftInput): SmsDraft {
   const { link, unsubscribeLink } = smsDraftParts(d);
   const text = T(
     d.lang,
-    "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso Csapata\n{link}",
+    "{name} – az imént MMS-ben küldött honlap-látványtervet most élőben megnézheti és kipróbálhatja kötelezettségmentesen! A Citoviso csapata\n{link}",
     { name: d.leadName, link },
   );
   return { text, link, unsubscribeLink };
@@ -495,6 +536,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     rating,
     token: r.token,
     lang,
+    siteCheck: siteCheckOf(((r.raw ?? {}) as { assessment?: unknown }).assessment),
     offerPercent: await outreachPercentForProspect(prospectId),
   };
   // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every

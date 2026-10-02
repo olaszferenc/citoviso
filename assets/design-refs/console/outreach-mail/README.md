@@ -24,13 +24,15 @@ A levél tördelt, egy-gondolat-egy-mondat. A mai egybefüggő tömbök helyett:
    érintetlen). Ez viseli a §C.3 személyre-szabási horgonyt.
 2. **Horog**: a lead saját bizonyítéka + a hiány, két rövid mondatban — **a NÉV NÉLKÜL**,
    mert azt a megszólítás egy sorral feljebb már kimondta (megismételve körlevélnek hat).
-   „A Google-on 4,7 csillagos, 91 vélemény alapján. Saját honlapot viszont nem találtunk
-   hozzá."
-3. **Ajánlat-mondat**, keretezéssel: „Ezért készítettünk egy honlap-tervet. Előzetes
-   látványterv az Önről nyilvánosan elérhető adatokból: nem kész oldal, és semmire nem
-   kötelezi." (§A demo-framing.)
+   „Láttuk, hogy a Google-on 91 értékelés alapján 4,7 csillagos. Saját honlapot viszont nem
+   találtunk." — ⚠️ a horog és az ajánlat-mondat szövegét 2026-10-02 óta az
+   `assets/design-refs/console/outreach-letter-l1/README.md` köti (ágak, 4,0 ★ küszöb, mérés-alapú
+   szegmens-mondat, tulaj-választás „B”).
+3. **Ajánlat-mondat**, keretezéssel: „Ezért készítettünk Önnek egy honlap-tervet a nyilvánosan
+   elérhető adataiból. Ez még csak látványterv, nem kész oldal, és semmire nem kötelezi."
+   (§A demo-framing; az ágankénti változatokat az `outreach-letter-l1` kontraktus köti.)
 4. Kép + gomb + nyers URL, majd három rövid bekezdés: kipróbálhatóság → ár → élesítés.
-5. **A levél VÉGIG T/1-ben beszél** („néztük" / „készítettünk" / „élesítjük") — ADR-0121 ②.
+5. **A levél VÉGIG T/1-ben beszél** („láttuk" / „készítettünk" / „elindítjuk") — ADR-0121 ②.
    ⛔ Személy-váltás a levélen belül tilos: a tulaj a „néztük → készítettem → mi élesítjük"
    ugrálást kifogásolta, és a T/1 az igaz hang is (a tervet a rendszerünk állítja elő,
    nem az aláíró rajzolja).
@@ -74,8 +76,7 @@ előnézete nem vághatja le a levél alját: a jogi vég (aláírás, apróbet�
 jogalap) épp a legfontosabb rész, és egy 560px-es keret pontosan azt takarta el.
 Őr: `scripts/outreach-preview-check.mts`.
 
-Az ADR-0088 ① érvényesség-mondata (**„A kedvezmény az első díjra szól, a hosszabbítás
-listaáron megy."**) a levélben MARAD — csak a helye változott: az ár-mondat közepéről a szürke
+Az ADR-0088 ① érvényesség-mondata (**„A kedvezmény az első díjra szól, a hosszabbítás már listaáras.”**) a levélben MARAD — csak a helye változott: az ár-mondat közepéről a szürke
 lábjegyzetbe, a leiratkozó fölé. Az `offer-ui/README.md` 5. pontja ezzel nem sérül: a mondat
 kimondva van, nem tűnt el. Ugyanígy kötelező marad a leiratkozó-link, a jogalap-sor és az
 adatkezelési tájékoztató linkje (§C1/C2), és a §C-kapu (`outreachCheck.ts`) továbbra is ítél.

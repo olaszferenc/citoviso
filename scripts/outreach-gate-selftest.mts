@@ -199,7 +199,7 @@ const BAD: readonly Bad[] = [
   },
   {
     why: "névtelen feladó (az aláírás kiesett)",
-    sms: { ...base, text: base.text.replace(/A Citoviso Csapata/g, "") },
+    sms: { ...base, text: base.text.replace(/A Citoviso csapata/g, "") },
     expect: /FELADÓ: az SMS nem azonosítja, ki ír/,
   },
   {
@@ -272,7 +272,7 @@ const BAD_MAIL: readonly BadMail[] = [
   },
   {
     why: "kész oldalt állít a levél (§A demo-framing sérül)",
-    draft: { ...mail, body: mail.body.replace(/Előzetes látványterv/u, "Elkészült az új honlapja") },
+    draft: { ...mail, body: mail.body.replace(/Ez még csak látványterv/u, "Elkészült az új honlapja") },
     expect: /FÉLREVEZETÉS: kész\/élő oldalt sugall/,
   },
   {

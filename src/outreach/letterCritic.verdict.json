@@ -1,0 +1,24 @@
+{
+  "fingerprint": "49a06c76d288070d",
+  "verdict": "PASS",
+  "model": "claude-opus-4-8",
+  "at": "2026-10-02T12:32:26.191Z",
+  "branches": 9,
+  "plan": "Végignéztem minden ágat: az ág-címke valóságát összevetettem a levél állításaival (ellentmondás, túlzás), figyeltem a tükörfordításokat, csonka mondatokat, gépies/körlevél-fordulatokat, szakzsargont, reklámpózt, megszólítás-váltást, központozást. Az SMS-ek aláírását és a reklámfordulatokat külön néztem. Az emlékeztető-levél mondatait a sablonszöveg szintjén vizsgáltam. A jogi láblécet, linkeket, árszámokat és a 'Tisztelt' megszólítást nem kifogásoltam.",
+  "objections": [
+    {
+      "branch": "SMS — önálló megkeresés",
+      "quote": "A Citoviso csapata",
+      "kind": "gepies",
+      "fix": "Olasz Ferenc, Citoviso",
+      "severity": "javitando"
+    },
+    {
+      "branch": "SMS — az MMS-kép után érkező párja",
+      "quote": "A Citoviso csapata",
+      "kind": "gepies",
+      "fix": "Olasz Ferenc, Citoviso",
+      "severity": "javitando"
+    }
+  ]
+}
