@@ -1423,9 +1423,11 @@ fi
 # szólista volt („kapsz”-ot fogta, „kaphatsz”, „érezd”, „töltsd”, „pihenj”, „foglald”, „jársz”,
 # „nálad” átment). Most szabály-családok (addressRegister.ts); tegező korpusz, magázó/T3 csapdák,
 # a teljes i18n-katalógus mint ellenpróba, a kritikus lintje, + 10 mutáns önteszt. ~2 mp.
+# A catalog.json SZÁNDÉKOSAN nincs a triggerben: egy új konzol-szöveg (a konzol tegez) ne az
+# őrön bukjon — az ellenpróba akkor kell, amikor a felismerő változik.
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/address-register-check.mts ] && \
-   changed_files | grep -qE '^src/generator/(addressRegister|guestCritic)\.ts$|^src/i18n/catalog\.json$|^scripts/address-register-check\.mts$'; then
+   changed_files | grep -qE '^src/generator/(addressRegister|guestCritic)\.ts$|^scripts/address-register-check\.mts$'; then
   echo "[pre-commit] address-register-check (tegező alak-szabály · hamis-pozitív ellenpróba)…"
   npx tsx scripts/address-register-check.mts >"$GATE_LOG" || gate_failed
 fi
