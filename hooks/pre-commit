@@ -328,7 +328,7 @@ if [ -f scripts/paid-module-anchor-check.mts ] && \
   echo "[pre-commit] paid-module-anchor (megvett modul: horog az élő lapon VAGY „kifizette, de üres”)…"
   npx tsx scripts/paid-module-anchor-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (SZ-3, Elek 2026-10-01) — EGY őr a sablon-szövegre (M3 + M4 szakasz): az editorial újság-KINÉZETŰ, de a szövege egy szállásé —
+# M3 · SZ-3 (Elek 2026-10-01; döntés: a sablon-szöveg ADR-je, design-refs/public-site/sablon-szoveg-feliratok) — EGY őr a sablon-szövegre (M3 + M4 szakasz): az editorial újság-KINÉZETŰ, de a szövege egy szállásé —
 # nincs „Szerkesztőség”, „Képes krónika”, „No. 1”, „Foglalási szelvény”, idézőjeles főcím, díszbetű
 # (az „A Muschel…” „AMuschel”-lé olvadt), és „A ház számokban” nem áll egyetlen szám fölött.
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
@@ -337,7 +337,7 @@ if [ -f scripts/template-copy-check.mts ] && \
   echo "[pre-commit] template-copy-check (sablon-szöveg tiltólista: szállás-szöveg, nincs átlag-csillag a vélemény-kártyán)…"
   npx tsx scripts/template-copy-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (L-3, Elek 2026-10-01): a gépi „‹név› — N. kép” a nyitókép alsó negyedén ült mobilon. A
+# M3 · L-3 (Elek 2026-10-01): a gépi „‹név› — N. kép” a nyitókép alsó negyedén ült mobilon. A
 # látható fotó-felirat csak akkor van, ha mond valamit, és sosem a képen — 19 sablon + primitív
 # galériák, Chromiumban mért dobozokkal.
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
@@ -346,7 +346,7 @@ if [ -f scripts/photo-caption-check.mts ] && \
   echo "[pre-commit] photo-caption-check (a fotó-felirat mond valamit, és nem a képen ül)…"
   npx tsx scripts/photo-caption-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (H-2, Elek 2026-10-01): a „Tényhűség: megjelölve” jelvény nem mondta meg, MIT jelölt meg.
+# M3 · H-2 (Elek 2026-10-01; terv: design-refs/console/mock-cards-fact-list): a „Tényhűség: megjelölve” jelvény nem mondta meg, MIT jelölt meg.
 # A jelvény a leletek számát viseli, és a kártyán nyitja a tárolt listát (valódi stíluslap, Chromium).
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/mock-card-fact-list-check.mts ] && \
