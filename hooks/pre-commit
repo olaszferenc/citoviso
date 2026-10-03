@@ -2068,6 +2068,19 @@ if [ -f scripts/mobile-chrome-check.mts ] && \
   npx tsx scripts/mobile-chrome-check.mts --selftest >"$GATE_LOG" || gate_failed
   npx tsx scripts/mobile-chrome-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Nav-target gate (2026-10-04, owner: „a sticky headerekben csak azok a modulok szerepelnek
+# amelyek elérhetőek”): on the MOCK, switching the package hides the dropped sections — and
+# must hide every link into them too (masthead, scrolled bar, side dots, phone menu). Measured
+# before the fix: "Alap" left dead links on 19 of 19 templates. The live cut is guarded by
+# unbought-module-leak-check ⑤. 21 templates × phone + desktop, ~70 s headless; --self-test
+# first (without the fix ② must go red).
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/nav-target-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/|templateKit\.ts|moduleSections\.ts|render\.ts)|^src/generator/(runtime|configurator)\.ts$|^assets/runtime/(cit-runtime|cit-configurator)\.js$|^scripts/nav-target-check\.mts$'; then
+  echo "[pre-commit] nav-target-check (a mock fejléc-linkje csak a csomagban lévő szekcióra mutat)…"
+  npx tsx scripts/nav-target-check.mts --self-test >"$GATE_LOG" || gate_failed
+  npx tsx scripts/nav-target-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Hero readability gate (2026-09-01, contract: design-refs/engine/hero-contrast): every
 # text-on-PHOTO hero headline must stay legible on a worst-case BRIGHT photo (WCAG
 # AA-large). Headless render + pixel-measure (~15s), so it runs only when engine template/

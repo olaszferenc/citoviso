@@ -523,6 +523,7 @@
       var txt = (a.textContent || "").trim();
       if (/foglal|érdeklőd/i.test(txt)) a.textContent = want.title;
     });
+    syncNavLinks();
   }
 
   function refreshSections(mod) {
@@ -531,7 +532,39 @@
       document.querySelectorAll('[data-cit-module="' + t + '"]').forEach(function (a) {
         var sec = a.closest("section") || a;
         sec.style.display = want ? "" : "none";
+        if (want) sec.removeAttribute("data-cit-cfgoff");
+        else sec.setAttribute("data-cit-cfgoff", "");
       });
+    });
+    syncNavLinks();
+  }
+
+  /**
+   * ⛔ A link may not point at a section the package does not include (owner
+   * 2026-10-04: „a sticky headerekben csak azok a modulok szerepelnek, amelyek
+   * elérhetőek”). Hiding the section left every link to it behind — the masthead,
+   * the scrolled bar, the side dots and the phone menu (which copies the masthead
+   * at boot) kept "Vélemények" / "Szobák" after the "Alap" package dropped them:
+   * measured on 19 of 19 templates. The live page cuts those links server-side
+   * (render.ts stripModuleAnchor); this is the same rule for the mock, reversible
+   * because the toggle is. Only links we hid are ever shown again.
+   */
+  function syncNavLinks() {
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      if (a.closest(".cit-cfg-panel")) return;
+      var id = (a.getAttribute("href") || "").slice(1);
+      var t = id ? document.getElementById(id) : null;
+      if (!t) return;
+      var host = a.closest("#cit-pmenu li") || a;
+      var off = !!t.closest("[data-cit-cfgoff]");
+      if (off === host.hasAttribute("data-cit-navoff")) return;
+      if (off) {
+        host.setAttribute("data-cit-navoff", host.style.display);
+        host.style.display = "none";
+      } else {
+        host.style.display = host.getAttribute("data-cit-navoff");
+        host.removeAttribute("data-cit-navoff");
+      }
     });
   }
 
@@ -3283,6 +3316,9 @@
   // default = the ALL-IN preset ("Teljes"): everything on (matches anchoring).
   setActivePreset(PRESETS.length ? PRESETS[0].id : "teljes");
   updateSummary();
+  // The phone menu is built by cit-runtime.js at ITS boot, which may come after a
+  // selection restored above — re-check the links once the page has settled.
+  window.addEventListener("load", syncNavLinks);
 
   function open() {
     revealSamples(); // first open = the "all-in" reveal (full package visible)

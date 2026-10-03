@@ -30,6 +30,11 @@
  *   ③ POSITIVE CONTROL — usp + reviews bought: their sections ARE on the page again
  *      (a guard that strips everything would pass ① and fail here)
  *   ④ end-to-end — the real snapshot writer (rerenderTenantSnapshot) writes no leak
+ *   ⑤ no DEAD LINK: every `href="#x"` left on the cut page (masthead, scrolled bar, side
+ *      dots, footer) still has an element with id="x" — the cut takes the section AND the
+ *      links into it (owner 2026-10-04: „a sticky headerekben csak azok a modulok
+ *      szerepelnek, amelyek elérhetőek”). The mock's client-side cut is measured in a
+ *      browser by scripts/nav-target-check.mts.
  *
  * --self-test: renders ① and ④-in-process WITHOUT the cut (hideAnchors dropped) and
  * requires the leak assertion to go RED. A guard never seen red proves nothing.
@@ -83,6 +88,16 @@ const anchorsInMarkup = (html: string): Set<string> => {
   return new Set([...body.matchAll(/<[a-zA-Z][^<>]*\sdata-cit-module="([^"]+)"/g)].map((m) => m[1]!));
 };
 
+/** In-page link targets (`href="#x"`) in the MARKUP that no element's id answers. */
+const deadLinks = (html: string): string[] => {
+  const body = html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "");
+  const ids = new Set([...body.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]!));
+  const hrefs = [...body.matchAll(/<a\b[^<>]*\shref="#([^"]+)"/gi)].map((m) => m[1]!);
+  return [...new Set(hrefs.filter((h) => !ids.has(h)))];
+};
+
 /** anchor → catalog module (spine excluded: its anchor is allowed everywhere). */
 const OWNER_OF = new Map<string, string>();
 for (const m of MODULE_CATALOG) {
@@ -110,6 +125,8 @@ interface Measured {
   readonly collateral: Map<string, string[]>;
   /** template → anchors present (for the positive control) */
   readonly present: Map<string, Set<string>>;
+  /** template → `#x` links with no id="x" on the page */
+  readonly dead: Map<string, string[]>;
 }
 
 const measure = async (bought: readonly string[]): Promise<Measured> => {
@@ -119,11 +136,14 @@ const measure = async (bought: readonly string[]): Promise<Measured> => {
   const leaks = new Map<string, string[]>();
   const collateral = new Map<string, string[]>();
   const present = new Map<string, Set<string>>();
+  const dead = new Map<string, string[]>();
   for (const t of Object.keys(TEMPLATES)) {
     const recipe: Recipe = { ...eff.site.recipe, template: t };
     const html = renderSite(recipe, eff.effective, { phase: "live", hideGallery: eff.hideGallery, hideAnchors });
     const anchors = anchorsInMarkup(html);
     present.set(t, anchors);
+    const d = deadLinks(html);
+    if (d.length) dead.set(t, d);
     const leaked = [...anchors]
       .map((a) => OWNER_OF.get(a))
       .filter((id): id is string => Boolean(id) && !bought.includes(id!) && id !== "booking");
@@ -134,7 +154,7 @@ const measure = async (bought: readonly string[]): Promise<Measured> => {
     if (![...anchors].some((a) => SPINE_ANCHORS.has(a))) lost.push("gerinc (érdeklődés)");
     if (lost.length) collateral.set(t, lost);
   }
-  return { leaks, collateral, present };
+  return { leaks, collateral, present, dead };
 };
 
 const describe = (m: Map<string, string[]>): string =>
@@ -209,6 +229,9 @@ try {
   console.log(`\n② A VÁGÁS CSAK A MODULT VISZI:`);
   check("név, bevezető és az érdeklődés-gerinc minden sablonon megmaradt", min.collateral.size === 0, describe(min.collateral));
 
+  console.log(`\n⑤ NINCS HALOTT LINK — a vágott lapon minden #horgony-linknek van célja:`);
+  check(`⛔ egyik sablonon sincs cél nélküli #-link (fejléc, görgetett sáv, pöttyök, lábléc)`, min.dead.size === 0, describe(min.dead));
+
   console.log(`\n③ POZITÍV KONTROLL — usp + reviews megvéve:`);
   const plus = [...MINIMAL, "usp", "reviews"];
   await setEntitlements(plus);
@@ -221,6 +244,7 @@ try {
     uspCount >= 15,
   );
   check("megvéve nincs szivárgás-jelzés (a mérés nem jelez hamisan)", full.leaks.size === 0, describe(full.leaks));
+  check("megvéve sincs cél nélküli #-link", full.dead.size === 0, describe(full.dead));
 
   console.log(`\n④ VÉGPONTIG — a valódi pillanatkép-író (rerenderTenantSnapshot) fájlja, alap csomaggal:`);
   await setEntitlements(MINIMAL);
@@ -253,9 +277,15 @@ try {
 }
 
 if (SELF_TEST) {
+  // ⑤'s measurement must SEE a dead link: a real page with one linked section's id
+  // planted away has to come back with exactly that target.
+  const page = renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as Recipe, BASE, { phase: "live" });
+  const planted = deadLinks(page.replace(' id="t-gallery"', ""));
+  const sees = planted.length === 1 && planted[0] === "t-gallery" && deadLinks(page).length === 0;
+  console.log(`  ${sees ? "✅" : "❌"} ⑤ ültetett halott link (#t-gallery cél nélkül) — a mérés ${sees ? "jelzi" : "NEM jelzi"}: ${planted.join(",")}`);
   // Without the cut, ① must go red (the leak) — and ONLY ①: ② and ③ are about the cut's
   // precision, which an absent cut cannot violate.
-  const ok = failures === 1;
+  const ok = failures === 1 && sees;
   console.log(
     ok
       ? `\n✅ ÖNTESZT: vágás nélkül a szivárgás-állítás bukott (1/1) — az őr lát\n`
