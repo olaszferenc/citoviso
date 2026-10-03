@@ -272,7 +272,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
         <span class="tb-note">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsLabel(data)}</span>
       </div>
-      <table class="tb-table" data-cit-module="rooms">
+      <table class="tb-table" data-cit-module="rooms"${roomsSample ? " data-cit-sample-block" : ""}>
         <thead>
           <tr>
             <th>${T(data, "Szoba")}</th>

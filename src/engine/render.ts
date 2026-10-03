@@ -315,12 +315,14 @@ function stampInnermostHighlightBox(
 function stampSampleRoomPhotos(html: string, data: SiteData, phase: RenderPhase): string {
   if (phase !== "mock") return html;
   let out = html;
-  // Covers both branches: numbered samples AND real rooms wearing a borrowed photo.
+  // Covers both branches: numbered samples AND real rooms wearing a borrowed photo. The VALUE
+  // tells them apart — the fact gate cuts a sample room's card, never a real room's (OP3-1).
+  const kind = data.rooms?.length ? "borrowed" : "sample";
   for (const r of roomsForMock(data)) {
     const alt = r.photo?.alt;
     if (!alt) continue;
     const needle = `alt="${escapeForCompare(alt).replace(/"/g, "&quot;")}"`;
-    out = out.replaceAll(needle, `${needle} data-cit-sample-photo="1"`);
+    out = out.replaceAll(needle, `${needle} data-cit-sample-photo="${kind}"`);
   }
   return out;
 }

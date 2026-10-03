@@ -2668,6 +2668,17 @@ if [ -f scripts/aggregator-host-check.mts ] && \
   echo "[pre-commit] aggregator-host-check (aggregátor-host soha nem saját modern honlap)…"
   npx tsx scripts/aggregator-host-check.mts >"$GATE_LOG" || gate_failed
 fi
+# MINTA ≠ TÉNY (Elek 3. kör, OP3-1, 2026-10-02): a tényhűség-kapu a lap saját MINTA-jelölt
+# blokkjait (szoba, szolgáltatás, érkezés, programok) forrástalan ténynek számolta, és a verdiktet
+# a modell mezője adta, nem a tétel-listája — az Erika Séta-mock „13 forrás nélküli” FLAG lett,
+# ugyanaz az adat Szerkesztőin PASS. Az őr MINDEN sablont mock fázisban renderel, és méri, hogy a
+# kivágás után minta nem marad, a valódi szöveg igen, a jelölt-halmaz sablonfüggetlen, és a
+# verdikt a listából jön. Se AI, se DB (~5 s). Mutációval igazolva (8 visszarontás → piros).
+if [ -f scripts/fact-sample-check.mts ] && \
+   changed_files | grep -qE '^src/generator/factCheck\.ts$|^src/engine/(templates/.*|moduleSections|primitives|render|templateKit)\.ts$|^scripts/fact-sample-check\.mts$'; then
+  echo "[pre-commit] fact-sample-check (a tényhűség-kapu a mintát nem számolja tényként, sablontól függetlenül)…"
+  npx tsx scripts/fact-sample-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

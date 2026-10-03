@@ -290,7 +290,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <p class="h-railhint">${T(data, "← húzza oldalra a sort →")}</p>
     </div>
   </div>
-  <div class="h-rail" data-cit-module="rooms">
+  <div class="h-rail" data-cit-module="rooms"${roomsSample ? " data-cit-sample-block" : ""}>
     ${roomsData
       .map(
         (r, i) => `<article class="h-house">

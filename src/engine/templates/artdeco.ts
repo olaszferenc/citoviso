@@ -435,7 +435,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
             : ""
         }
       </div>
-      ${reviewsSample ? `<p class="ad-tst" style="margin-top:34px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
+      ${reviewsSample ? `<p class="ad-tst ad-sample" style="margin-top:34px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön vendégeinek értékelései kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";
@@ -457,7 +457,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
           )
           .join("\n        ")}
       </div>
-      ${faqsSample ? `<p class="ad-tst" style="margin-top:20px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
+      ${faqsSample ? `<p class="ad-tst ad-sample" style="margin-top:20px;color:var(--cit-muted);font-size:12.5px;letter-spacing:.5px">${T(data, "Minta — ide az Ön saját válaszai kerülnek.")}</p>` : ""}
     </div>
   </section>`
     : "";

@@ -126,6 +126,85 @@ export function htmlToVisibleText(html: string): string {
     .trim();
 }
 
+/**
+ * The page's own SAMPLE markers (ADR-0061 / §B.17): the „Minta” pill on a native-styled demo
+ * section, the shared sample note (`cit-sample-note`) and every template's own `<prefix>-sample`
+ * note (`h-sample`, `cn-sample`, `t-sample` …).
+ * Content under them is illustrative by the page's own words — not a claim.
+ */
+const SAMPLE_CLASS = String.raw`class="(?:[^"]*\s)?(?:cit-modsec__minta|cit-sample-note|[a-z]+-sample)(?:\s[^"]*)?"`;
+// A sample room's photo flag counts; a REAL room wearing a borrowed gallery photo carries
+// `data-cit-sample-photo="borrowed"` (render.ts stampSampleRoomPhotos), and its claims stay
+// in front of the gate.
+const SAMPLE_MARKER = new RegExp(`${SAMPLE_CLASS}|data-cit-sample-photo="sample"`);
+/** The opening tag of an element to cut whole: a `data-cit-sample-block` container or a sample note. */
+const SAMPLE_ELEMENT = new RegExp(String.raw`<([a-z][a-z0-9]*)\b[^>]*(?:\sdata-cit-sample-block(?=[\s=>])|\s${SAMPLE_CLASS})[^>]*>`, "i");
+
+/**
+ * Cut every SAMPLE-marked section out of the page before the gate reads it (Elek round 3,
+ * OP3-1). The gate counted the sample room, facility and arrival blocks as unsourced facts —
+ * 12 of 13 on the Erika walk mock („Ingyenes Wi-Fi (1. szoba)”, „Érkezés 14:00 – 20:00”) — and
+ * the walk page was stuck at the send gate for content it labels as a sample itself. The cut is
+ * the INNERMOST <section> holding a marker, so a real section around it survives; templates mark
+ * samples through the shared helpers, so this is one rule for every template.
+ */
+export function stripSampleSections(html: string): string {
+  const spans: { start: number; end: number; depth: number }[] = [];
+  const stack: { start: number; depth: number }[] = [];
+  for (const m of html.matchAll(/<section\b|<\/section\s*>/gi)) {
+    if (m[0].startsWith("</")) {
+      const open = stack.pop();
+      if (open) spans.push({ start: open.start, end: m.index! + m[0].length, depth: open.depth });
+    } else stack.push({ start: m.index!, depth: stack.length });
+  }
+  const marked = spans.filter((sp) => SAMPLE_MARKER.test(html.slice(sp.start, sp.end)));
+  // Innermost only: a marked span with a marked span inside it keeps its own real content.
+  const cut = marked.filter((sp) => !marked.some((o) => o !== sp && o.start > sp.start && o.end < sp.end));
+  let out = html;
+  for (const sp of cut.sort((a, b) => b.start - a.start)) out = out.slice(0, sp.start) + " " + out.slice(sp.end);
+  return stripSampleElements(out);
+}
+
+/**
+ * A sample block that is not inside its own <section> (the horizontal rooms rail, the transit
+ * departure board) carries `data-cit-sample-block` on its container; the whole element goes, and so
+ * does every sample note left standing outside a cut section.
+ */
+function stripSampleElements(html: string): string {
+  let out = html;
+  for (;;) {
+    const open = SAMPLE_ELEMENT.exec(out);
+    if (!open) return out;
+    const tag = open[1]!.toLowerCase();
+    const re = new RegExp(`<${tag}\\b[^>]*>|</${tag}\\s*>`, "gi");
+    re.lastIndex = open.index + open[0].length;
+    let depth = 1;
+    let end = out.length;
+    for (let m = re.exec(out); m; m = re.exec(out)) {
+      depth += m[0].startsWith("</") ? -1 : 1;
+      if (depth === 0) {
+        end = m.index + m[0].length;
+        break;
+      }
+    }
+    out = out.slice(0, open.index) + " " + out.slice(end);
+  }
+}
+
+/**
+ * ONE rule for the verdict: flag when the verifier marked at least one fact unsourced, pass when
+ * it named facts and all are sourced. The model's own `verdict` field disagreed with its list —
+ * the Erika editorial mock carried 5 unsourced facts and still read „pass” — so the list decides.
+ * A flag with no fact behind it is not a finding anyone can act on: it is "error" (unverifiable).
+ */
+export function verdictOfFacts(
+  modelVerdict: "pass" | "flag",
+  facts: readonly HardFactVerdict[],
+): FactCheckVerdict["verdict"] {
+  if (facts.some((f) => !f.sourced)) return "flag";
+  return modelVerdict === "flag" ? "error" : "pass";
+}
+
 /** Deterministic pre-filter: unique HARD-fact-shaped tokens in the visible text. */
 export function extractHardFactCandidates(visibleText: string): string[] {
   const hits = new Set<string>();
@@ -180,7 +259,7 @@ export async function verifyFactuality(input: {
   lead: FactSource;
   photos: string[];
 }): Promise<FactCheckVerdict> {
-  const visible = htmlToVisibleText(input.html);
+  const visible = htmlToVisibleText(stripSampleSections(input.html));
   const candidates = extractHardFactCandidates(visible);
   // The deterministic pre-filter is a HINT list, not the gate: a fabrication may be
   // spelled-out/number-less and slip the regex. So the LLM verifier ALWAYS runs for
@@ -267,11 +346,16 @@ export async function verifyFactuality(input: {
       facts: HardFactVerdict[];
       reason: string;
     };
+    const facts = parsed.facts ?? [];
+    const verdict = verdictOfFacts(parsed.verdict, facts);
     return {
-      verdict: parsed.verdict,
+      verdict,
       candidates,
-      facts: parsed.facts ?? [],
-      reason: parsed.reason,
+      facts,
+      reason:
+        verdict === "error"
+          ? `a verifier megjelölte, de egyetlen forrástalan tényt sem nevezett meg: ${parsed.reason}`
+          : parsed.reason,
     };
   } catch (err) {
     return { verdict: "error", candidates, facts: [], reason: `verifier hiba: ${(err as Error).message}` };
