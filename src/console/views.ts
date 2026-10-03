@@ -5439,9 +5439,12 @@ export function leadPage(
     })
     .join("");
   const compareTable = d.artifacts.length > 1
-    ? `<div class="panel" data-cit-mockcompare="1">
-         <h2>${T(lang, "Mock-artefaktumok — mi a különbség köztük?")}</h2>
-         <div class="tblwrap"><table class="con-arttbl">
+    ? // Folded by default (owner request, 2026-10-03): with 17 mocks the table pushed the
+      // cards — where the actions live — a full screen down. One click opens it; no JS.
+      `<details class="panel" data-cit-mockcompare="1">
+         <summary style="cursor:pointer"><h2 style="display:inline">${T(lang, "Mock-artefaktumok — mi a különbség köztük?")}</h2>
+           <span class="small mut">(${T(lang, "{n} sor", { n: String(d.artifacts.length) })})</span></summary>
+         <div class="tblwrap" style="margin-top:10px"><table class="con-arttbl">
            <thead><tr>
              <th>${T(lang, "Készült")}</th><th>${T(lang, "Sablon / arculat")}</th>
              <th class="num">${T(lang, "Kép")}</th><th>${T(lang, "Nyitókép")}</th>
@@ -5453,7 +5456,7 @@ export function leadPage(
            lang,
            "A sorok a KÜLÖNBSÉGET mutatják (készült · sablon · képszám · nyitókép) — azonos sablonból készült mockok így sem olvadnak össze. A dátumra koppintva a mock saját kártyájához ugrasz, ahol a műveletek vannak.",
          )}</p>
-       </div>`
+       </details>`
     : "";
   /**
    * A KÁRTYA-RÁCS — jóváhagyott terv (`assets/design-refs/console/mock-cards/`, 2026-09-20).
