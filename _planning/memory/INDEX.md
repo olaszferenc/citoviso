@@ -20,7 +20,9 @@
 - [2026-10-02_gate_opening_sablon.md](2026-10-02_gate_opening_sablon.md) — 2026-10-02 — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon
 - [2026-10-02_g_napi_google_koltseg_riport.md](2026-10-02_g_napi_google_koltseg_riport.md) — 2026-10-02 — Places-költség G rész: napi Google API költség-riport e-mailben (SUB)
 - [2026-10-02_f_nincs_cap_portal_gyorsitas.md](2026-10-02_f_nincs_cap_portal_gyorsitas.md) — 2026-10-02 — Places F (SUB): nincs költség-cap, booking.com kihagyva, hovamenjek fullHd
+- [2026-10-02_elek_masodik_eles_kor_jelentes.md](2026-10-02_elek_masodik_eles_kor_jelentes.md) — Elek — második élesi kör · JELENTÉS (KÉSZ — mindhárom szerep végigment)
 - [2026-10-02_elek_m2_fizetes_szamla_belepes_konzol.md](2026-10-02_elek_m2_fizetes_szamla_belepes_konzol.md) — 2026-10-02 — Elek M2: fizetés, számla, belépés, konzol (ADR-0303)
+- [2026-10-02_elek_harmadik_celzott_kor_jelentes.md](2026-10-02_elek_harmadik_celzott_kor_jelentes.md) — Elek — harmadik, célzott élesi kör · JELENTÉS (KÉSZ — mind a három feladat lefutott, fizetés nélkül)
 - [2026-10-02_e_ismert_lead_nem_fizet_es_utc_kapu.md](2026-10-02_e_ismert_lead_nem_fizet_es_utc_kapu.md) — 2026-10-02 — Places-költség E rész: az ismert lead nem fizet + a module-render-check UTC-hibája (SUB)
 - [2026-10-02_a1_aggregator_besorolas.md](2026-10-02_a1_aggregator_besorolas.md) — 2026-10-02 — A1: aggregátor-oldal mint „saját modern honlap” — ~640 lead téves besorolása
 - [2026-10-01_v1_level_link_get_nem_dont.md](2026-10-01_v1_level_link_get_nem_dont.md) — 2026-10-01 — Elek V-1: a levél-link megnyitása (GET) nem dönt
