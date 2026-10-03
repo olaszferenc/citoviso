@@ -512,6 +512,7 @@ ${MOBCTA_CSS}
 
 export const CLAYMORPHISM: ArtTemplate = {
   id: "claymorphism",
+  retired: true, // owner 2026-10-04: not offered for new mocks
   label: "Agyag — neumorf clay felület, puha wellness (referencia 18)", // i18n-exempt: operator-facing (console template picker)
   skins: ["clay-soft", "coastal-fresh", "watercolor-lake"],
   render: renderClaymorphism,

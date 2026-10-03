@@ -4602,6 +4602,7 @@ function templateCards(selected = "", walk: WalkReadiness | null = null): string
   // made the picker look broken ("kiválasztom X-et, ugyanazt gyártja le").
   const lang = consoleLang();
   return Object.values(TEMPLATES)
+    .filter((t) => !t.retired)
     .map((t) => {
       // Short name = the label's first segment before an em-dash/colon (the registry label is
       // "Név — hosszú leírás (referencia N)"); fall back to the id.

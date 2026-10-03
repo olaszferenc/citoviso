@@ -30,6 +30,9 @@ export interface ArtTemplate {
   /** Curated skins this template renders well with — the deterministic diversity rail.
    *  The generator spreads leads across this list (UUID-hash), killing the monoculture. */
   readonly skins: readonly string[];
+  /** Retired by the owner: no longer offered for NEW mocks (picker + generate route), but
+   *  still renders — existing mocks/sites built on it must keep working. */
+  readonly retired?: true;
   render(recipe: Recipe, data: SiteData, phase: RenderPhase): string;
 }
 

@@ -496,6 +496,7 @@ ${MOBCTA_CSS}
 
 export const BRUTALISM: ArtTemplate = {
   id: "brutalism",
+  retired: true, // owner 2026-10-04: not offered for new mocks
   label: "Brutalizmus — vastag keretek, acid akcent, marquee (referencia 08)", // i18n-exempt: operator-facing (console template picker)
   // Light skins with a punchy accent — the brutal character (thick ink borders, hard
   // shadows, mono tags) comes from this template's CSS; the skin supplies the palette.

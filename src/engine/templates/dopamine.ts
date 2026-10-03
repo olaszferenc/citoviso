@@ -439,6 +439,7 @@ ${HERO_FIT_CSS}
 
 export const DOPAMINE: ArtTemplate = {
   id: "dopamine",
+  retired: true, // owner 2026-10-04: not offered for new mocks
   label: "Dopamin — élénk, játékos, sticker-stílus (referencia 10)", // i18n-exempt: operator-facing (console template picker)
   // Light, cheerful skins only: the dopamine character (thick outlines, hard shadows, pills,
   // accent-derived sunburst/pastels) needs a bright base + a punchy accent. Dark skins would

@@ -492,6 +492,7 @@ ${MOBCTA_CSS}
 
 export const SCRAPBOOK: ArtTemplate = {
   id: "scrapbook",
+  retired: true, // owner 2026-10-04: not offered for new mocks
   label: "Scrapbook — papír-emlékkönyv, ragasztott polaroidok, kézzel írt (referencia 15)", // i18n-exempt: operator-facing (console template picker)
   skins: ["scrapbook-paper", "sand-cream-airy", "watercolor-lake"],
   render: renderScrapbook,

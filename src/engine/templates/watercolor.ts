@@ -547,6 +547,7 @@ ${MOBCTA_CSS}
 
 export const WATERCOLOR: ArtTemplate = {
   id: "watercolor",
+  retired: true, // owner 2026-10-04: not offered for new mocks
   label: "Akvarell — lágy vízkék-korall, hullám-elválasztók, világos nyári (referencia 21)", // i18n-exempt: operator-facing (console template picker)
   skins: ["watercolor-lake", "coastal-fresh", "sand-cream-airy"],
   render: renderWatercolor,

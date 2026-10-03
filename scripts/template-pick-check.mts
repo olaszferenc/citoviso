@@ -55,9 +55,14 @@ ok(
 );
 
 const missingCards = Object.keys(TEMPLATES).filter(
-  (id) => !html.includes(`name="template" value="${id}"`),
+  (id) => !TEMPLATES[id]!.retired && !html.includes(`name="template" value="${id}"`),
 );
-ok(missingCards.length === 0, "minden sablonnak van kártyája a választóban", missingCards.join(", "));
+ok(missingCards.length === 0, "minden aktív sablonnak van kártyája a választóban", missingCards.join(", "));
+
+const retiredCards = Object.keys(TEMPLATES).filter(
+  (id) => TEMPLATES[id]!.retired && html.includes(`name="template" value="${id}"`),
+);
+ok(retiredCards.length === 0, "passzivált sablon nem kerül a választóba", retiredCards.join(", "));
 
 const root = path.resolve(import.meta.dirname, "..");
 const missingShots = Object.keys(TEMPLATES).filter(

@@ -465,6 +465,7 @@ ${EDITORIAL_CSS}
 
 export const EDITORIAL: ArtTemplate = {
   id: "editorial",
+  retired: true, // owner 2026-10-04: not offered for new mocks
   label: "Szerkesztői — masthead, kupon-foglaló, kontakt-lap galéria (referencia 05)", // i18n-exempt: operator-facing (console template picker)
   // Paper-toned LIGHT skins only — the newsprint character needs a light page.
   skins: ["editorial-magazine", "stone-masonry", "editorial-warm"],

@@ -7,7 +7,7 @@ import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
-import { TEMPLATES } from "../engine/templates.js";
+import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock, type GenStageKey } from "../generator/generateEngine.js";
 import { recopyArtifact } from "../generator/recopy.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
@@ -2059,7 +2059,7 @@ async function handle(
       // selection → a single default-template mock.
       const form = await readBody(req);
       const templates = [...new Set(form.getAll("template").map((t) => t.trim()))].filter(
-        (t) => t && TEMPLATES[t],
+        (t) => t && isPickableTemplate(t),
       );
       const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
       const picks: (string | undefined)[] = templates.length ? templates : [undefined];

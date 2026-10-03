@@ -52,3 +52,9 @@ export const TEMPLATES: Readonly<Record<string, ArtTemplate>> = {
   [WALK_THROUGH.id]: WALK_THROUGH,
   [GATE_OPENING.id]: GATE_OPENING,
 };
+
+/** Templates the curator may pick for a NEW mock (retired ones still render, see ArtTemplate). */
+export function isPickableTemplate(id: string): boolean {
+  const t = TEMPLATES[id];
+  return Boolean(t && !t.retired);
+}
