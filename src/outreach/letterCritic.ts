@@ -126,8 +126,23 @@ const SCHEMA = {
  * Does this objection propose a PERSON's name (signature or otherwise)? Rejected by the owner
  * (OWNER_RULINGS ①). A two-word capitalised Hungarian name, or the configured sender's name.
  */
+/**
+ * The PERSONAL part of the configured sender name — the brand is not a person. Owner's
+ * ruling (K3, 2026-10-03): the letter signs „Citoviso”, so OUTREACH_SENDER_NAME may hold the
+ * brand. Read as a personal name it turned every brand signature into a „named” one (the
+ * SMS „A Citoviso csapata” among them) and the name filter dropped the critic's
+ * „sign with the brand” fix — the exact rule it exists to protect. „Olasz Ferenc, Citoviso”
+ * → „Olasz Ferenc”; „Citoviso” / „citoviso.com” / „A Citoviso csapata” → "".
+ */
+export function personalSenderName(senderName: string | null | undefined): string {
+  return (senderName ?? "")
+    .replace(/(?<![\p{L}])(?:a\s+)?citoviso(?:\.com)?(?:\s+csapat(?:a)?)?(?![\p{L}])/giu, " ")
+    .replace(/[\s,;·—–-]+/gu, " ")
+    .trim();
+}
+
 export function proposesPersonalName(o: Pick<LetterObjection, "fix">, senderName = ""): boolean {
-  const name = senderName.trim();
+  const name = personalSenderName(senderName);
   if (name && o.fix.includes(name)) return true;
   // „Kiss Anna, Citoviso” / „Citoviso — Nagy Péter”: a Surname Forename pair next to the brand.
   return /\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}+\s*[,—–-]\s*Citoviso|Citoviso\s*[,—–-]\s*\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}+/u.test(o.fix);
