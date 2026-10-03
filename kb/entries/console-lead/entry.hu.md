@@ -74,6 +74,19 @@ a mentett érték a következő mock-generáláskor már érvényes. Azt, hogy m
 lenyíló táblázat mutatja. Ha az adat hiányos vagy gyanús, az **„Adatok újragyűjtése”** gomb
 friss webes keresést futtat erre az egy leadre.
 
+⚠️ **A mentés mindent vagy semmit.** A szállás címe minden mockon és honlapon megjelenik, ezért a
+rendszer nem enged bele vevő-számlázási adatot (a böngésző automatikus kitöltése könnyen a saját
+számlázási adatainkat írja ide — ha egy mező magától kitöltődött, mentés előtt nézd át):
+
+- a **cím** mezőben nem állhat érvényes magyar adószám, sem 10–12 jegyű, telefonszám-formájú szám
+  (a szóközzel vagy kötőjellel tagolt számot is egyben vizsgálja);
+- az **ország** mezőbe kétbetűs kód kell (például HU); a „Magyarország” és a „Hungary” alakot a
+  rendszer magától HU-ra alakítja.
+
+Ha bármelyik mező hibás, **semmi nem mentődik** — a többi mezőbe írt változtatás sem (például a
+tulaj-bemutatkozás) —, és a lap tetején piros sáv jelenik meg, „Nem mentettem:” kezdettel, utána
+a hiba okával. Javítsd a jelzett mezőt, és írd be újra a többi változtatást is.
+
 ## Mock-generálás
 
 ⚠️ **Ha ezen a leaden már van mock, a generáló panel CSUKVA van.** A mock-kártyák állnak elöl,
