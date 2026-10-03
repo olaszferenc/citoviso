@@ -1,4 +1,4 @@
-## ADR-XXXX — Tényhűség: két forrásolt tényből nem lesz harmadik (összevont hely-állítás); a Google-értékelés egy szabállyal, ≥ 0,7 (2026-10-03)
+## ADR-0317 — Tényhűség: két forrásolt tényből nem lesz harmadik (összevont hely-állítás); a Google-értékelés egy szabállyal, ≥ 0,7 (2026-10-03)
 
 **Dátum:** 2026-10-03 · **Státusz:** elfogadva (hibajavítás mérés alapján; SUB, brief `~/rc-briefs/fix-tenyhuseg-szoveg-ertekeles.md`) ·
 **Forrás:** a 2026-10-02-i sablon-munka (Séta és Kapunyitás SUB) tényhűség-őr agentjének két FLAG-je ·

@@ -1,6 +1,6 @@
 # 2026-10-03 — Tényhűség: összevont hely-állítás + a Google-értékelés egy szabállyal
 
-**Szál:** SUB (brief `~/rc-briefs/fix-tenyhuseg-szoveg-ertekeles.md`), a 2026-10-02-i Séta / Kapunyitás SUB tényhűség-őr FLAG-jeiből. Döntés: ADR-XXXX.
+**Szál:** SUB (brief `~/rc-briefs/fix-tenyhuseg-szoveg-ertekeles.md`), a 2026-10-02-i Séta / Kapunyitás SUB tényhűség-őr FLAG-jeiből. Döntés: ADR-0317.
 
 ## Elvégezve
 - **A) Összevont hely-állítás** („két külön tény egy mondattá kötve új állítássá”): `guestCritic.ts` `placedClaims` / `lintPlacedClaim` — szolgáltatás

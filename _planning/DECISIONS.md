@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-tenyhuseg-osszevont-hely-es-ertekeles-egy-szabaly.md) — Tényhűség: két forrásolt tényből nem lesz harmadik (összevont hely-állítás); a Google-értékelés egy szabállyal, ≥ 0,7 (2026-10-03)
+- [ADR-0317](decisions/0317-tenyhuseg-ket-forrasolt-tenybol-nem-lesz.md) — Tényhűség: két forrásolt tényből nem lesz harmadik (összevont hely-állítás); a Google-értékelés egy szabállyal, ≥ 0,7 (2026-10-03)
 - [ADR-0316](decisions/0316-a-lead-nyilvanos-cime-orszaga-nem-lehet-vevo.md) — A lead nyilvános címe/országa nem lehet vevő-számlázási adat; a kurátori űrlap nem kap böngésző-kitöltést (2026-10-03)
 - [ADR-0315](decisions/0315-elek-3-kor-alacsony-tetelei-modulonkenti-szamla.md) — Elek 3. kör alacsony tételei: modulonkénti számla-sor pontos összeggel, kupon az első díjra, egy megtakarítás, „Ez még nem fizetés.” (2026-10-03)
 - [ADR-0314](decisions/0314-a-google-ertekeles-a-lapon-egyszer-all-a-forras.md) — A Google-értékelés a lapon EGYSZER áll a forrás-linkjével: a sablon saját linkes kártyája mellől a közös jelvény kimarad
