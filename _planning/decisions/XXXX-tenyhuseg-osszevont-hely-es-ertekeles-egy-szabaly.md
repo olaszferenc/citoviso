@@ -30,8 +30,8 @@ nevezte meg az ADR-0309 „ismert határa”); a generátor tényhűség-kapuja 
      véleményből forrásolt hely-állítás ott hamisan bukna).
 2. **Promptok.** A szövegíró (brief) „JÓ” példái közül kikerül a „Saját parkoló az udvarban” és a „Kerti grillezés lehetősége” — a modell
    ezt másolta (37 tárolt mockban „Saját parkoló az udvarban”, ebből az Alig-vár Tanyánál és a Lagunánál parkoló-forrás SEM volt). Mindhárom
-   AI-szerep (szövegíró, kritikus, tényhűség-verifier) néven nevezi az összevonást a Három Huszár példájával. Az editorial-prompt
-   (`engine/copywriter.ts`) felület-kapus fájl (§2b), nem változott — a herón álló szöveget a kritikus és a kapu ugyanúgy méri.
+   AI-szerep (szövegíró + editorial, kritikus, tényhűség-verifier) néven nevezi az összevonást a Három Huszár példájával. Az
+   editorial-prompt (`engine/copywriter.ts`) felület-kapus fájl (§2b): a változás a tulaj kivételével ment be (2026-10-03, koordinátoron át).
 
 **Mérés** (dev DB, 172 tárolt mock, a tárolt forrásokból újraépítve). Szövegben 45 mock / 11 lead, 58 előfordulás; a renderelt lapon 46 mock,
 62 előfordulás (a sablon fix szövege nem ad hamis találatot). Megoszlás: parkoló@udvar 37 · jakuzzi@kert/terasz 6 · grillezés@kert 4 ·

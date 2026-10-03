@@ -7,7 +7,7 @@
   vagy létesítmény + helyhatározó csak viszonyt mondó forrás-egységgel; a „kerttel / kertes / kertre néző / teraszos / with a garden” nem viszony.
   Ugyanez a generátor-kapuban: `factCheck.ts` `placedClaimsOnPage` (blokkonként, minta nélkül, kulcs nélkül és verifier-hibánál is FLAG).
   A `recopy` kapuja megkapja a vélemény-idézeteket. Promptok: szövegíró (a „Saját parkoló az udvarban” / „Kerti grillezés lehetősége”
-  JÓ-példa ki), kritikus, tényhűség-verifier (az editorial-prompt felület-kapus fájl, nem változott).
+  JÓ-példa ki), kritikus, tényhűség-verifier + editorial-prompt (`src/engine/copywriter.ts`, felület-kapu: tulaj-kivétel 2026-10-03).
 - **B) Értékelés:** `scraper/confidence.ts` `ratingAttributable` (≥ 0,7) — `generate.ts` `attributedRating` és `reviews/placeRating.ts` is ezt hívja.
   A kurátor fotó-panelje a párosítás számát továbbra is látja (`matchRating`).
 - Őrök: `scripts/placed-claim-check.mts`, `scripts/rating-attribution-check.mts` (pre-commit, önteszttel — a régi szabályon pirosak).
@@ -20,7 +20,7 @@
   „Uszoda … a helyszínen” kiesik, az író „a villában”-ra cserélte → felvéve a szabályba.
 
 ## Módosított fájlok
-`src/generator/guestCritic.ts`, `src/generator/factCheck.ts`, `src/generator/brief.ts`, `src/generator/recopy.ts`,
+`src/generator/guestCritic.ts`, `src/generator/factCheck.ts`, `src/generator/brief.ts`, `src/engine/copywriter.ts`, `src/generator/recopy.ts`,
 `src/generator/generate.ts`, `src/scraper/confidence.ts`, `src/reviews/placeRating.ts`, `src/console/server.ts`, `src/outreach/draft.ts` (komment),
 `scripts/placed-claim-check.mts`, `scripts/rating-attribution-check.mts`, `hooks/pre-commit`, `_planning/DOMAIN/03-INVARIANTS.md`, az ADR, `MEMORY.md`.
 

@@ -25,9 +25,8 @@
 //   ④ bekötés: a kritikus minden körben futtatja, a kapu a verdiktbe számítja (kulcs nélkül és
 //     verifier-hibánál is), a súly blokkoló;
 //   ⑤ a promptok: a szövegíró már nem kap „Saját parkoló az udvarban” JÓ-példát, és mindhárom AI-szerep
-//     (szövegíró, kritikus, tényhűség-verifier) kimondja az összevonás tilalmát. (Az editorial-prompt
-//     `src/engine/copywriter.ts` felület-kapus fájl, nem változott: a herón álló szöveget a kritikus és a
-//     kapu ugyanúgy méri.)
+//     (szövegíró, kritikus, tényhűség-verifier) kimondja az összevonás tilalmát. Az editorial-prompt
+//     (`src/engine/copywriter.ts`) is — felület-kapus fájl, a tulaj kivételével (2026-10-03).
 //
 //   npx tsx scripts/placed-claim-check.mts              # zöld futás
 //   npx tsx scripts/placed-claim-check.mts --self-test  # PIROS kontroll: a régi szabálykészlet (a helyes-
@@ -195,6 +194,7 @@ const lido = criticSourceOf({
   const brief = read("src/generator/brief.ts");
   check("A szövegíró nem kap „Saját parkoló az udvarban” JÓ-példát (37 tárolt mockban így ment ki)", !/JÓ:[^\n]*Saját parkoló az udvarban/.test(brief) && !/Kerti grillezés lehetősége/.test(brief), "a példa él");
   check("A szövegíró promptja kimondja: két tényből nem lesz harmadik", /KÉT TÉNYBŐL NE CSINÁLJ HARMADIKAT/.test(brief), "nincs szabály");
+  check("Az editorial szövegíró is (tulaj-kivétel a felület-kapun, 2026-10-03)", /SZOLGÁLTATÁS HELYÉT/.test(read("src/engine/copywriter.ts")), "nincs szabály");
   check("A kritikus promptja néven nevezi az összevonást", /ÖSSZEVONÁS: két forrásolt tény egy új viszonnyá kötve/.test(read("src/generator/guestCritic.ts")), "nincs");
   check("A tényhűség-verifier promptja is", /ÖSSZEVONT ÁLLÍTÁS is forrás nélküli/.test(read("src/generator/factCheck.ts")), "nincs");
 }

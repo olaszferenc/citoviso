@@ -101,6 +101,10 @@ SZIGORÚ SZABÁLYOK (kötelező):
    ment ki — a vendég a VÍZPARTRA keresett volna rá, és mi a parkolót adtuk el neki.)
    JÓ: "Kert, grill és kerékpárok várnak" · "Medence és játszótér a kertben" ·
    "Saját parkoló, 5 percre a strandtól" · "Saját strand és stég a vízparton".
+   ⛔ SZOLGÁLTATÁS HELYÉT (reggeli, parkoló, grillezés, jakuzzi, szauna, uszoda, wellness:
+   „a kertben”, „kerti”, „a teraszon”, „az udvarban”, „a helyszínen”) csak akkor írd ki, ha egy
+   forrás-mondat a kettőt viszonyként mondja — két külön tény egy mondatban NEM viszony.
+   (Megtörtént kár: „kerttel … reggelit szolgál fel” → „Kontinentális reggeli a kertben”.)
    ROSSZ: "Fenyőillatú csend" · "Ahol az idő lassabban jár" · "A pihenés szigete".
    NEM a szállás neve, és NEM közhely ("Üdvözöljük").
 3. Az "accent" a cím/lead egy PONTOS részlánca (szó szerint benne van), amit dőlten kiemelünk.
