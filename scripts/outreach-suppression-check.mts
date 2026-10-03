@@ -13,8 +13,10 @@
 //
 // WHAT THIS GUARD MEASURES
 //   ① the normaliser itself, including what it must NOT fold (the scope is a decision,
-//      so it is pinned — silently starting to fold plus-addresses would be a new rule
-//      about third-party mailboxes that nobody measured);
+//      so it is pinned): the STORED form keeps a plus-tag; the RECIPIENT key folds it
+//      (owner ruling 2026-10-03, Elek round 3 — `olasz.ferenc+erika@` got a second cold
+//      mail because the lock read it as a new address); Gmail dots are never folded;
+//   ①b the SQL twin of the recipient key folds exactly like the TS one (read-only query);
 //   ② STRUCTURAL twin: no suppression/one-shot comparison may go back to raw string
 //      equality on contact_email. A behavioural check alone would pass the day someone
 //      adds a fourth comparison site and forgets the rule
@@ -24,12 +26,14 @@
 //      address-wide revocation — with exact restore. Kept behind a flag because the dev
 //      DB is SHARED by every worktree: a guard that writes fixtures on every commit
 //      corrupts a colleague's measurement.
+//   ⑤ read-only DB round-trip: for an address we HAVE mailed, its `+tag` variant is locked
+//      (no second cold mail), and an opted-out address's `+tag` variant is suppressed.
 //
 // Usage: npx tsx scripts/outreach-suppression-check.mts [--live]
 
 import { readFileSync } from "node:fs";
 
-import { normalizeEmail, sameMailbox } from "../src/email/address.js";
+import { normalizeEmail, recipientKey, recipientKeySql, sameMailbox } from "../src/email/address.js";
 
 const LIVE = process.argv.includes("--live");
 const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
@@ -55,8 +59,12 @@ say(!sameMailbox("a@b.hu", "a@c.hu"), "különböző domain = különböző post
 // ⛔ The SCOPE is a decision, pinned so it cannot drift silently. Folding these would
 // be a claim about third-party mailbox semantics we have not measured — and dot-folding
 // is simply false outside Gmail, where it would block a DIFFERENT human.
-say(!sameMailbox("a+tag@b.hu", "a@b.hu"), "plus-alcímzést NEM von össze (mért döntés, nem feledékenység)");
-say(!sameMailbox("j.doe@gmail.com", "jdoe@gmail.com"), "Gmail-pontot NEM von össze (más szolgáltatónál más ember)");
+say(normalizeEmail("A+Tag@B.hu") === "a+tag@b.hu", "a TÁROLT alak megtartja a plus-címkét (a cím úgy marad, ahogy beírták)");
+say(recipientKey("Olasz.Ferenc+Erika@Citoviso.com ") === "olasz.ferenc@citoviso.com", "⛔ a CÍMZETT-kulcs összevonja a plus-alcímet (tulaj-döntés 2026-10-03)");
+say(recipientKey("a+x+y@b.hu") === "a@b.hu", "több plus-jel: a címke az első +-tól a @-ig tart");
+say(recipientKey("a@b+c.hu") === "a@b+c.hu", "a domainben álló + nem címke");
+say(recipientKey("") === "" && recipientKey(null) === "", "üres be → üres ki");
+say(recipientKey("j.doe@gmail.com") !== recipientKey("jdoe@gmail.com"), "Gmail-pontot NEM von össze (más szolgáltatónál más ember)");
 
 // ── ② Structural twin: no raw comparison may come back. ──────────────────────
 console.log("\n── Szerkezeti iker: nincs nyers összehasonlítás ───────────────────");
@@ -69,6 +77,8 @@ const RAW_PATTERNS: Array<{ re: RegExp; what: string }> = [
   { re: /\.where\(\s*["']contact_email["']\s*,\s*["']=["']/g, what: `.where("contact_email", "=", …)` },
   { re: /whereRef\(\s*["'][\w.]*contact_email["']\s*,\s*["']=["']/g, what: "whereRef(…contact_email, '=', …)" },
   { re: /where\s+[\w.]*contact_email\s*=\s*(?!lower)/g, what: "SQL: contact_email = … (lower/trim nélkül)" },
+  // The one-shot and the opt-out compare the PERSON: lower(trim()) alone misses `+tag`.
+  { re: /lower\(trim\([\w.]*contact_email\)\)\s*=/g, what: "lower(trim(contact_email)) = … (recipientKeySql nélkül: a +címke kimarad)" },
 ];
 for (const rel of SITES) {
   const src = readFileSync(`${ROOT}/${rel}`, "utf8");
@@ -84,9 +94,45 @@ for (const rel of SITES) {
 // The detector must be able to fail, or it is decoration.
 const canFail = RAW_PATTERNS[0]!.re.test(`.where("contact_email", "=", email)`);
 say(canFail, "önteszt: a nyers-összehasonlítás detektor a mintát ELKAPJA");
+RAW_PATTERNS[3]!.re.lastIndex = 0;
+say(RAW_PATTERNS[3]!.re.test("where lower(trim(mailed.contact_email)) = lower(trim(prospect.contact_email))"), "önteszt: a régi, +címkét kihagyó összehasonlítást is ELKAPJA");
+{
+  const sb = readFileSync(`${ROOT}/src/outreach/sendBatch.ts`, "utf8");
+  for (const fn of ["isEmailSuppressed", "emailAlreadyMailed"]) {
+    const body = sb.slice(sb.indexOf(`export async function ${fn}`), sb.indexOf("\n}\n", sb.indexOf(`export async function ${fn}`)));
+    say(/const key = recipientKey\(email\)/.test(body), `${fn}: a CÍMZETT-kulccsal hasonlít (plus-alcím összevonva)`);
+  }
+  say(/const addressKey = recipientKey\(p\.contactEmail\)/.test(sb), "az atomi küldés-foglalás (advisory lock) is a címzett-kulcson zár");
+}
 
 // ── ③ + ④ DB. ───────────────────────────────────────────────────────────────
 const { db } = await import("../src/db/client.js");
+
+console.log("\n── A címzett-kulcs SQL-ikre ugyanúgy von össze ─────────────────────");
+{
+  const { sql } = await import("kysely");
+  const probes = ["Olasz.Ferenc+Erika@Citoviso.com", " a+x+y@b.hu ", "a@b+c.hu", "plain@x.hu", "j.doe@gmail.com"];
+  const rows = await sql<{ e: string; k: string }>`select t.e, ${recipientKeySql("t.e")} as k from (values ${sql.join(probes.map((p) => sql`(${p})`))}) as t(e)`.execute(db);
+  const bad = rows.rows.filter((r) => r.k !== recipientKey(r.e));
+  say(rows.rows.length === probes.length && bad.length === 0, "recipientKeySql ≡ recipientKey (5 minta)", bad.map((r) => `${r.e}: SQL ${r.k} ≠ TS ${recipientKey(r.e)}`).join("\n     "));
+}
+
+console.log("\n── Plus-alcímre nem megy második hideg levél (csak olvasás) ────────");
+{
+  const { emailAlreadyMailed, isEmailSuppressed } = await import("../src/outreach/sendBatch.js");
+  const plus = (e: string) => e.replace("@", "+k3probe@");
+  const mailed = await db.selectFrom("prospect").select("contact_email").where("email_sent_at", "is not", null).where("contact_email", "is not", null).limit(1).executeTakeFirst();
+  if (!mailed?.contact_email) {
+    say(false, "NEM ÉRTELMEZHETŐ: nincs megkeresett cím a DB-ben — a zár nem mérhető (ez nem zöld)");
+  } else {
+    say(await emailAlreadyMailed(plus(mailed.contact_email)), `⛔ a megkeresett cím +címkés alakja ZÁRVA (…+k3probe@${mailed.contact_email.split("@")[1]})`);
+    const never = `k3-never-mailed-${Date.now()}+x@example.invalid`;
+    say(!(await emailAlreadyMailed(never)), "egy sosem megkeresett cím nem zárt (a zár nem mindig igaz)");
+  }
+  const opted = await db.selectFrom("prospect").select("contact_email").where("unsubscribed_at", "is not", null).where("contact_email", "is not", null).limit(1).executeTakeFirst();
+  if (opted?.contact_email) say(await isEmailSuppressed(plus(opted.contact_email)), "⛔ a leiratkozott cím +címkés alakja is tiltott");
+  else console.log("⚠️  nincs leiratkozott cím a DB-ben — a tiltás +címkés ága most nem mérhető");
+}
 
 console.log("\n── A tárolt adat kanonikus alakban áll ────────────────────────────");
 const dirty = await db

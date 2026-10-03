@@ -1,3 +1,5 @@
+import { sql, type RawBuilder } from "kysely";
+
 // ONE canonical form for an e-mail address — the mirror of `normalizePhone()`.
 //
 // Why this file exists (measured 2026-09-12). The opt-out is PERSON-level by design
@@ -14,13 +16,17 @@
 // recorded as `info@panzio.hu`, and we would mail someone who said stop. That is the
 // field FK-004 itself types into.
 //
-// ⛔ SCOPE — what this deliberately does NOT do. No plus-subaddress folding
-// (`a+tag@x.com` → `a@x.com`), no Gmail dot-folding. Both are claims about THIRD-PARTY
-// mailbox semantics that we have not measured, and dot-folding is simply false outside
-// Gmail — it would block a different human. Measured on our data: 0 of 397 lead
-// addresses and 0 of 4 prospect rows use plus-addressing, so the rule would be
-// untestable complexity today. If a plus-address ever appears, decide it THEN, with the
-// case in hand.
+// ⛔ SCOPE — what `normalizeEmail` deliberately does NOT do: no plus-subaddress folding,
+// no Gmail dot-folding. It is the STORED form, and an address is stored as typed.
+// Dot-folding is false outside Gmail (it would block a different human) and stays out.
+//
+// PLUS-SUBADDRESS — decided with the case in hand (Elek round 3, owner ruling 2026-10-03):
+// `olasz.ferenc+erika@citoviso.com` was mailed a second cold letter, because the one-shot
+// lock read it as a new address. `name+tag@domain` is the same person as `name@domain` at
+// every provider that supports subaddressing, and over-matching costs one unsent cold mail
+// while under-matching mails a person twice (or after an opt-out). So the RECIPIENT key —
+// what the one-cold-mail lock and the opt-out compare — folds the tag: `recipientKey()` and
+// its SQL twin `recipientKeySql()`. The stored address keeps its tag.
 
 /**
  * Canonical comparison form: trimmed and lowercased.
@@ -39,4 +45,18 @@ export function normalizeEmail(email: string | null | undefined): string {
 export function sameMailbox(a: string | null | undefined, b: string | null | undefined): boolean {
   const x = normalizeEmail(a);
   return x.length > 0 && x === normalizeEmail(b);
+}
+
+/**
+ * The PERSON a cold mail reaches: the canonical form with the plus-subaddress tag dropped
+ * (`Name+Erika@X.com` → `name@x.com`). Used by the one-cold-mail lock and the opt-out —
+ * never to rewrite the stored address. Empty in, empty out.
+ */
+export function recipientKey(email: string | null | undefined): string {
+  return normalizeEmail(email).replace(/\+[^@]*(?=@)/u, "");
+}
+
+/** `recipientKey()` in SQL, for a column — the two must fold exactly the same way. */
+export function recipientKeySql(column: string): RawBuilder<string> {
+  return sql<string>`regexp_replace(lower(trim(${sql.ref(column)})), '\\+[^@]*@', '@')`;
 }

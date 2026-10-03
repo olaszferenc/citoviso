@@ -21,7 +21,7 @@ import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
-import { normalizeEmail } from "../email/address.js";
+import { normalizeEmail, recipientKey, recipientKeySql } from "../email/address.js";
 import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offers.js";
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
@@ -1730,7 +1730,9 @@ export async function resubscribeProspect(
   if (!target || !target.unsubscribed_at) {
     return { ok: false, message: "Ez a prospect nem leiratkozott — nincs mit visszavonni." };
   }
-  const key = normalizeEmail(target.contact_email);
+  // The same PERSON key the opt-out check reads (plus-tag folded) — or a lifted row would
+  // stay blocked by its own `+tag` twin.
+  const key = recipientKey(target.contact_email);
   // No address on the row → there is no person-level key to follow; lift just this row.
   const lifted = await db
     .updateTable("prospect")
@@ -1740,7 +1742,7 @@ export async function resubscribeProspect(
       key
         ? eb.or([
             eb("id", "=", prospectId),
-            sql<boolean>`lower(trim(contact_email)) = ${key}`,
+            sql<boolean>`${recipientKeySql("contact_email")} = ${key}`,
           ])
         : eb("id", "=", prospectId),
     )

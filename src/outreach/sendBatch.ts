@@ -22,7 +22,7 @@ import {
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
 import { sql } from "kysely";
-import { normalizeEmail } from "../email/address.js";
+import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
 import { huArticleLower } from "../hu.js";
@@ -44,7 +44,8 @@ export interface SendableProspect {
  * same recipient must never re-mail them. Guard-agent finding, 2026-08-01.
  */
 export async function isEmailSuppressed(email: string): Promise<boolean> {
-  const key = normalizeEmail(email);
+  // The PERSON, not the spelling: `name+tag@` said stop for `name@` too (recipientKey).
+  const key = recipientKey(email);
   if (!key) return false;
   const hit = await db
     .selectFrom("prospect")
@@ -56,7 +57,7 @@ export async function isEmailSuppressed(email: string): Promise<boolean> {
     // `info@panzio.hu`, and we would have mailed someone who said stop. The mobile
     // channel has compared normalised values since day one (isPhoneSuppressed) —
     // this is its twin. See src/email/address.ts for what the rule does NOT fold.
-    .where(sql<boolean>`lower(trim(contact_email)) = ${key}`)
+    .where(sql<boolean>`${recipientKeySql("contact_email")} = ${key}`)
     .where("unsubscribed_at", "is not", null)
     .limit(1)
     .executeTakeFirst();
@@ -74,18 +75,19 @@ export async function isEmailSuppressed(email: string): Promise<boolean> {
  * letter with the same subject. Measured 2026-09-11 on the test park: two prospect
  * rows, one address, two sendable mails.
  *
- * Normalised comparison (`normalizeEmail`): the promise is about the human being
+ * Normalised comparison (`recipientKey`: trimmed, lowercased, plus-tag folded): the promise is about the human being
  * written to, and `Elek@…` / `elek@…` is the same mailbox at every provider we can
  * reach. Since 2026-09-12 `isEmailSuppressed` uses the SAME rule — the opt-out and the
  * one-shot may not disagree about who the recipient is.
  */
 export async function emailAlreadyMailed(email: string): Promise<boolean> {
-  const key = normalizeEmail(email);
+  // Plus-subaddress folded (owner ruling 2026-10-03): `name+tag@` and `name@` are one person.
+  const key = recipientKey(email);
   if (!key) return false;
   const hit = await db
     .selectFrom("prospect")
     .select("id")
-    .where(sql<boolean>`lower(trim(contact_email)) = ${key}`)
+    .where(sql<boolean>`${recipientKeySql("contact_email")} = ${key}`)
     .where("email_sent_at", "is not", null)
     .limit(1)
     .executeTakeFirst();
@@ -130,7 +132,7 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     .where(
       sql<boolean>`not exists (
         select 1 from prospect unsub
-        where lower(trim(unsub.contact_email)) = lower(trim(prospect.contact_email))
+        where ${recipientKeySql("unsub.contact_email")} = ${recipientKeySql("prospect.contact_email")}
           and unsub.unsubscribed_at is not null
       )`,
     )
@@ -140,7 +142,7 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     .where(
       sql<boolean>`not exists (
         select 1 from prospect mailed
-        where lower(trim(mailed.contact_email)) = lower(trim(prospect.contact_email))
+        where ${recipientKeySql("mailed.contact_email")} = ${recipientKeySql("prospect.contact_email")}
           and mailed.email_sent_at is not null
       )`,
     )
@@ -149,8 +151,8 @@ export async function listSendableProspects(): Promise<SendableProspect[]> {
     // — but the list an operator reads as "ennyi megy ki" would count the same person
     // twice, and a run would report a skip that looks like a failure. The rule and what
     // the screen says about it have to be the same rule.
-    .distinctOn(sql`lower(trim(prospect.contact_email))`)
-    .orderBy(sql`lower(trim(prospect.contact_email))`)
+    .distinctOn(recipientKeySql("prospect.contact_email"))
+    .orderBy(recipientKeySql("prospect.contact_email"))
     .orderBy("prospect.created_at", "asc")
     .execute();
   return rows
@@ -580,13 +582,13 @@ export async function sendOutreachMail(
   // transactions read "nobody has mailed this address" under READ COMMITTED and both
   // proceed — the exact race the row-level claim was written to prevent, one level up.
   const now = new Date();
-  const addressKey = normalizeEmail(p.contactEmail);
+  const addressKey = recipientKey(p.contactEmail);
   const claimed = await db.transaction().execute(async (trx) => {
     await sql`select pg_advisory_xact_lock(hashtext(${addressKey}))`.execute(trx);
     const already = await trx
       .selectFrom("prospect")
       .select("id")
-      .where(sql<boolean>`lower(trim(contact_email)) = ${addressKey}`)
+      .where(sql<boolean>`${recipientKeySql("contact_email")} = ${addressKey}`)
       .where("email_sent_at", "is not", null)
       .limit(1)
       .executeTakeFirst();
