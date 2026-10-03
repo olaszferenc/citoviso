@@ -23,7 +23,7 @@
 // after the hero) opening onto the hero — the mock's "one picture of the place opens onto
 // another". Without a second outdoor photo the hero itself is split and dimmed like a closed
 // door at dusk ("A"). Either way the leaves are decorative and claim nothing (see gateSource).
-// The gate also plays on the mock we SEND (owner, 2026-10-03): ~1,2 s inside the hero, it
+// The gate also plays on the mock we SEND (owner, 2026-10-03): ~1,7 s inside the hero, it
 // hides nothing — the 2026-09-14 ban on full-screen opening intros does not cover it, so it
 // does not listen to data-cit-no-intro.
 //
@@ -272,8 +272,9 @@ p{margin:0 0 1em}
 /* load choreography — only under .ko-anim (set in <head>, before first paint: JS on,
    motion allowed, not tooling). Without it everything simply stands there. */
 .ko-anim .ko-gate{position:absolute;inset:0;z-index:0;display:flex;overflow:hidden;pointer-events:none}
-.ko-anim .ko-leaf.l{animation:koGateL 1.05s .18s cubic-bezier(.76,0,.24,1) both}
-.ko-anim .ko-leaf.r{animation:koGateR 1.05s .18s cubic-bezier(.76,0,.24,1) both}
+/* 1.5s = the first 1.05s slowed by 30% (owner, 2026-10-03: it opened too fast) */
+.ko-anim .ko-leaf.l{animation:koGateL 1.5s .18s cubic-bezier(.76,0,.24,1) both}
+.ko-anim .ko-leaf.r{animation:koGateR 1.5s .18s cubic-bezier(.76,0,.24,1) both}
 @keyframes koGateL{to{transform:translateX(-103%)}}
 @keyframes koGateR{to{transform:translateX(103%)}}
 .ko-anim .ko-hero-bg img{animation:koSettle 2.2s .1s cubic-bezier(.2,.6,.2,1) both}
