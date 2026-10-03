@@ -133,7 +133,7 @@ function injectHeadGuards(html: string): string {
 // Citoviso credit strip — a subtle, clickable "made by" line under the page footer, on both
 // the mock and the live tenant site (growth + attribution). Skin-agnostic neutral colors so it
 // reads on any background; a real anchor to citoviso.com (openable, as requested).
-// MOCK: off unless MOCK_CITOVISO_CREDIT=1 (owner, 2026-10-04, ADR-XXXX); LIVE: always on.
+// MOCK: off unless MOCK_CITOVISO_CREDIT=1 (owner, 2026-10-04, ADR-0318); LIVE: always on.
 const CIT_CREDIT =
   `<div data-cit-runtime style="font:400 13px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;` +
   `text-align:center;padding:16px 20px;color:#8a8a8a;border-top:1px solid rgba(128,128,128,.22)">` +

@@ -131,7 +131,7 @@ export const config = {
    */
   mobileSendWindowOff: env("MOBILE_SEND_WINDOW_OFF", "") === "1",
   /**
-   * The "Ezt az oldalt a Citoviso készítette" credit strip on GENERATED MOCKS (ADR-XXXX).
+   * The "Ezt az oldalt a Citoviso készítette" credit strip on GENERATED MOCKS (ADR-0318).
    * Owner, 2026-10-04: "a mockok ne generáljanak egyelőre citoviso-s reklámot" — off by
    * default; "1" brings it back. Live tenant pages keep the strip regardless (ADR-0032 ④);
    * the legal demo framing / "Készítette:" identification is NOT this strip and stays.

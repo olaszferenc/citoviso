@@ -1,4 +1,4 @@
-## ADR-XXXX — A generált mock egyelőre nem visz Citoviso-reklámot: a kredit-sáv kapcsolható, alapból KI (2026-10-04)
+## ADR-0318 — A generált mock egyelőre nem visz Citoviso-reklámot: a kredit-sáv kapcsolható, alapból KI (2026-10-04)
 
 **Dátum:** 2026-10-04 · **Státusz:** elfogadva (tulajdonosi kérés; SUB, brief `~/rc-briefs/mock-citoviso-reklam-ki.md`) ·
 **Kapcsolódó:** ADR-0032 ④ (a Citoviso-kredit bevezetése — ezt szűkíti a mockra), §A demó-jelölés (`demoFrame.ts`,
