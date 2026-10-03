@@ -774,6 +774,7 @@ export async function renderTenantModulePreview(
   const html = await injectRuntime(
     renderSite(s.recipe, effective, { phase: "live", sampleAllow, demoForms: true, hideGallery, hideAnchors }),
     effective.lang,
+    "live",
   );
   // Never indexable, always marked as a preview — even though it is only ever
   // served behind the tenant session.
@@ -803,6 +804,7 @@ async function renderAndPersist(
   let html = await injectRuntime(
     renderSite(s.recipe, effective, { phase: "live", hideGallery, hideAnchors }),
     effective.lang,
+    "live",
   );
   // ADR-0063 §6: with paid translations the primary carries the language switcher +
   // hreflang alternates (URL production, ADR-0041). Absolute hreflang needs the live host.
@@ -862,7 +864,7 @@ async function renderAndPersist(
       const data = unitPageData(effective, u, byUnit.get(u.id) ?? [], s.canonicalUrl);
       if (!data) continue; // too thin to deserve a URL
       const page = withLegalStrip(
-        await injectRuntime(renderSite(s.recipe, data, { phase: "live", hideGallery, hideAnchors }), data.lang),
+        await injectRuntime(renderSite(s.recipe, data, { phase: "live", hideGallery, hideAnchors }), data.lang, "live"),
         legal.who,
       );
       await writeFile(

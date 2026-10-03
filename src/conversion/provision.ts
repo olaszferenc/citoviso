@@ -91,6 +91,7 @@ async function renderSnapshotHtml(
       html: await injectRuntime(
         renderSite(recipe, siteData, { phase: "live", hideAnchors, hideGallery }),
         siteData.lang,
+        "live",
       ),
       source: "engine",
     };

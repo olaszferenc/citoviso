@@ -204,6 +204,7 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
         await injectRuntime(
           renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery, hideAnchors: site.hideAnchors }),
           lang,
+          "live",
         ),
         legalWho,
       );
@@ -227,6 +228,7 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
             await injectRuntime(
               renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery, hideAnchors: site.hideAnchors }),
               lang,
+              "live",
             ),
             legalWho,
           );

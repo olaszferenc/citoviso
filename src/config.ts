@@ -131,6 +131,13 @@ export const config = {
    */
   mobileSendWindowOff: env("MOBILE_SEND_WINDOW_OFF", "") === "1",
   /**
+   * The "Ezt az oldalt a Citoviso készítette" credit strip on GENERATED MOCKS (ADR-XXXX).
+   * Owner, 2026-10-04: "a mockok ne generáljanak egyelőre citoviso-s reklámot" — off by
+   * default; "1" brings it back. Live tenant pages keep the strip regardless (ADR-0032 ④);
+   * the legal demo framing / "Készítette:" identification is NOT this strip and stays.
+   */
+  mockCitovisoCredit: env("MOCK_CITOVISO_CREDIT", "") === "1",
+  /**
    * The owner's personal number for INTERNAL alerts (ADR-0098: AAM-cap SMS).
    * ⚠️ NOT the modem's own SIM — self-loopback measurably never arrives
    * (ADR-0095 finding). Empty = the alert logs loudly instead of sending.

@@ -6,6 +6,8 @@
 
 import { readFile } from "node:fs/promises";
 
+import { config } from "../config.js";
+import type { RenderPhase } from "../engine/recipe.js";
 import { huArticleLower } from "../hu.js";
 import { packForClientAsync } from "../i18n/packs.js";
 import path from "node:path";
@@ -131,6 +133,7 @@ function injectHeadGuards(html: string): string {
 // Citoviso credit strip — a subtle, clickable "made by" line under the page footer, on both
 // the mock and the live tenant site (growth + attribution). Skin-agnostic neutral colors so it
 // reads on any background; a real anchor to citoviso.com (openable, as requested).
+// MOCK: off unless MOCK_CITOVISO_CREDIT=1 (owner, 2026-10-04, ADR-XXXX); LIVE: always on.
 const CIT_CREDIT =
   `<div data-cit-runtime style="font:400 13px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;` +
   `text-align:center;padding:16px 20px;color:#8a8a8a;border-top:1px solid rgba(128,128,128,.22)">` +
@@ -140,11 +143,17 @@ const CIT_CREDIT =
 
 /**
  * Inline the module runtime (CSS+JS) before </body>, seed no-JS fallbacks, add the head
- * guards, and append the Citoviso credit strip. No-op if already processed.
+ * guards, and append the Citoviso credit strip (live always; mock only when
+ * config.mockCitovisoCredit is on — an unmarked caller counts as a mock, so a forgotten
+ * phase can never put the ad back on a lead's preview). No-op if already processed.
  * `lang` (ADR-0036): non-Hungarian pages get a window.CIT_I18N map injected BEFORE the
  * runtime script, so the client widgets (booking, lightbox) resolve their labels via tr().
  */
-export async function injectRuntime(html: string, lang?: string): Promise<string> {
+export async function injectRuntime(
+  html: string,
+  lang?: string,
+  phase: RenderPhase = "mock",
+): Promise<string> {
   if (html.includes("data-cit-runtime")) return html; // already injected
   let out = fillBookingFallback(html);
   out = injectHeadGuards(out);
@@ -153,7 +162,8 @@ export async function injectRuntime(html: string, lang?: string): Promise<string
     lang && lang !== "hu"
       ? `<script data-cit-runtime>window.CIT_I18N=${JSON.stringify(await packForClientAsync(lang)).replaceAll("</", "<\\/")}</script>\n`
       : "";
-  const tail = `${CIT_CREDIT}\n${i18n}${block}`;
+  const credit = phase === "live" || config.mockCitovisoCredit ? `${CIT_CREDIT}\n` : "";
+  const tail = `${credit}${i18n}${block}`;
   if (/<\/body>/i.test(out)) return out.replace(/<\/body>/i, `${tail}</body>`);
   return out + "\n" + tail; // no </body> — append as a safe fallback
 }
