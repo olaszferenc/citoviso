@@ -22,6 +22,7 @@ import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
 import { normalizeEmail, recipientKey, recipientKeySql } from "../email/address.js";
+import { checkLeadContact, normalizeCountry } from "./leadContactRules.js";
 import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offers.js";
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
@@ -45,19 +46,9 @@ export interface ArtifactView {
   }[];
 }
 
-/**
- * Scrape-time country values arrive in mixed shapes ("HU", "MAGYARORSZÁG",
- * "Hungary") — one lead list showed all of them side by side (Elek lelet,
- * FK-003). Normalized HERE, in the data layer, so the column, the filter
- * buckets and the identity band all agree; the stored raw stays untouched.
- */
-export function normalizeCountry(c: string | undefined | null): string | null {
-  if (!c) return null;
-  const up = c.trim().toUpperCase();
-  if (!up) return null;
-  if (["HU", "MAGYARORSZÁG", "MAGYARORSZAG", "HUNGARY"].includes(up)) return "HU";
-  return c.trim();
-}
+// The country normalizer lives with the lead-contact rules (one alias table for the
+// list facet AND the curator-edit check, ADR-XXXX); re-exported for existing callers.
+export { normalizeCountry } from "./leadContactRules.js";
 
 export interface LeadListRow {
   readonly id: string;
@@ -729,8 +720,19 @@ export interface LeadEdits {
  * contact under `raw.scrapedContact` for audit, and stamps `raw.curatorEditedAt`. The
  * lead's `address`/`name` columns are kept in sync so the list/detail header matches.
  * Non-destructive to the rest of the scrape payload. `now` is passed in (no Date in engine).
+ *
+ * ⛔ ALL-OR-NOTHING against the lead-contact rules (ADR-XXXX): a billing id in the
+ * address or a non-ISO country refuses the WHOLE save and nothing is written — these
+ * fields are printed on every mock and site, and a half-applied autofill is still a
+ * stranger's data on the property's page.
  */
-export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Promise<void> {
+export async function saveLeadEdits(
+  id: string,
+  edits: LeadEdits,
+  now: Date,
+): Promise<{ readonly ok: true } | { readonly ok: false; readonly problems: readonly string[] }> {
+  const verdict = checkLeadContact({ address: edits.address, country: edits.country });
+  if (!verdict.ok) return { ok: false, problems: verdict.problems };
   const row = await db.selectFrom("lead").select(["raw", "name"]).where("id", "=", id).executeTakeFirst();
   if (!row) throw new Error(`no lead ${id}`);
   const raw = { ...((row.raw ?? {}) as Record<string, unknown>) };
@@ -759,7 +761,8 @@ export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Pr
   };
   (["phone", "email", "website", "address", "country", "city", "ownerIntro"] as const).forEach(apply);
   // ISO-2 is what the sources write and what the facet filter groups on.
-  if (typeof raw.country === "string") raw.country = raw.country.toUpperCase();
+  if (verdict.country) raw.country = verdict.country;
+  else if (typeof raw.country === "string") raw.country = normalizeCountry(raw.country)?.toUpperCase() ?? raw.country;
   raw.curatorEditedAt = now.toISOString();
 
   const nameEdit = edits.name?.trim();
@@ -772,6 +775,7 @@ export async function saveLeadEdits(id: string, edits: LeadEdits, now: Date): Pr
     })
     .where("id", "=", id)
     .execute();
+  return { ok: true };
 }
 
 // --- Conversion (ADR-0014): the Mock→Site provisioning read side. ---

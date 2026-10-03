@@ -430,6 +430,14 @@ if [ -f scripts/contact-edit-check.mts ] && \
   echo "[pre-commit] contact-edit (Elérhetőség + Térkép-hely kontraktusa)…"
   npx tsx scripts/contact-edit-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A lead NYILVÁNOS címe/országa nem lehet vevő-számlázási adat (ADR-XXXX): a konzol „Adatok"
+# űrlapját a böngésző autofill a tesztelő saját címével + adószámával töltötte, és ez minden
+# mockra kiment. Szabály + mindent-vagy-semmit mentés saját fixture-ön. Böngésző nélkül, gyors.
+if [ -f scripts/lead-contact-guard-check.mts ] && \
+   changed_files | grep -qE '^src/console/(leadContactRules|data|server)\.ts$|^src/markets\.ts$|^scripts/lead-contact-guard-check'; then
+  echo "[pre-commit] lead-contact-guard (szállás-cím ≠ számlázási adat)…"
+  npx tsx scripts/lead-contact-guard-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A kapott kedvezmény LÁTSZIK — és közben egy fillér sem mozdul. A tulaj 14 775 Ft-ot
 # fizetett, és nem tudta eldönteni, jó-e a szám: jó volt (19 700 Ft − 25 %), csak sehol
 # nem mondtuk ki. ⛔ A döntő állítás nem a szöveg, hanem a PÉNZ: a Számlázz.hu összeadja

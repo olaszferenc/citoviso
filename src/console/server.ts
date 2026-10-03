@@ -2162,7 +2162,7 @@ async function handle(
   const dataMatch = /^\/lead\/([0-9a-f-]{36})\/data$/i.exec(path);
   if (method === "POST" && dataMatch) {
     const form = await readBody(req);
-    await saveLeadEdits(
+    const saved = await saveLeadEdits(
       dataMatch[1],
       {
         name: form.get("name") ?? undefined,
@@ -2176,6 +2176,14 @@ async function handle(
       },
       new Date(),
     );
+    // A refused save (ADR-XXXX: billing id in the address, non-ISO country) wrote NOTHING
+    // and says why on the page — a silent redirect would read as "saved".
+    if (!saved.ok) {
+      return redirect(
+        res,
+        `/lead/${dataMatch[1]}?flash=${encodeURIComponent(`Nem mentettem: ${saved.problems.join(" ")}`)}&flashKind=bad#ls-data`,
+      );
+    }
     // Az adat-űrlap az „Adatok" fülön él, ami egyben az ELSŐ fül — a horgony nélküli
     // visszatérés tehát ma is jó helyre ér. Kiírjuk mégis: így a helyes cél SZÁNDÉK, nem
     // a fülsorrend véletlene, és egy átrendezés nem törné el némán.

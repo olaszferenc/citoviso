@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-03_lead_elerhetoseg_szamlazasi_adat.md](2026-10-03_lead_elerhetoseg_szamlazasi_adat.md) — 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
 - [2026-10-03_google_jelveny_dupla.md](2026-10-03_google_jelveny_dupla.md) — 2026-10-03 — A Google-értékelés kétszer: a sablon saját linkes kártyája + a közös jelvény (walk-through, gate-opening)
 - [2026-10-02_walk_through_sablon.md](2026-10-02_walk_through_sablon.md) — 2026-10-02 — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon
 - [2026-10-02_places_kurator_gomb_b.md](2026-10-02_places_kurator_gomb_b.md) — 2026-10-02 — Places-fotók kurátori gombja: két forrás-sáv a Fotók fülön (C rész, terv „B”)
