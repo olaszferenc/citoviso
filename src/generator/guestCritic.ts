@@ -226,7 +226,7 @@ const SERVICE_TERMS: readonly { name: string; food?: true; re: RegExp }[] = [
   { name: "reggeli", food: true, re: look("reggeli|breakfast|frühstück") },
   { name: "vacsora", food: true, re: look("vacsor|félpanzió|dinner|half[- ]board|abendessen|halbpension") },
   { name: "kávé", food: true, re: look("kávé|coffee|kaffee") },
-  { name: "parkoló", re: look("parkol|parking|parkplatz") },
+  { name: "parkoló", re: look("parkol|parking|parkplatz|beálló|garázs|garage") },
   { name: "kerékpár", re: look("kerékpár|bicikli|bicycl|bike|fahrrad") },
   { name: "wifi", re: look("wi-?fi|internet|wlan") },
 ];
@@ -349,6 +349,142 @@ export function lintAddedObject(c: CopySurface, source: CriticSource): Objection
 }
 
 /**
+ * PLACED CLAIM (2026-10-03 — the known limit ADR-0309 named). Two TRUE facts tied into one NEW
+ * claim by a place adverbial. Három Huszár's listing says „A szállás kerttel reggelente
+ * kontinentális reggelit szolgál fel”: the garden belongs to the house, the breakfast is served —
+ * nowhere is breakfast served IN the garden. The copy said „Kontinentális reggeli a kertben”, and
+ * lintAddedDetail let it through, because its evidence is co-occurrence: both words stand in the
+ * one source sentence. Lidó's listing has „Uszoda” in a flat service list next to „Nightclub”,
+ * „Vitorlázás” and „Hajózás” (things NEAR the house); the copy made it „Uszoda … a helyszínen”.
+ *
+ * The rule: when a clause PUTS a service, an outdoor object or a facility at a place (a
+ * locative: „a kertben”, „kerti”, „a teraszon”, „az udvarban”, „a helyszínen”, „in the garden”,
+ * „on site”), a source unit must name the thing AND the place in a form that can relate them. A
+ * place word in an ATTRIBUTE form of the house — „kerttel” (with a garden), „kertes”, „kertre
+ * néző”, „teraszos”, „with a garden” — relates nothing and does not count. The scope is the
+ * clause up to punctuation, not up to „és”: „Medence, reggeli és kerékpárok a tó körül” puts
+ * everything in the list at the place, and that is how a guest reads it (ADR-0292 ai_sablon).
+ * A structure the photo shows (medence, kert, terasz itself) is not a thing here — where the
+ * pool is stays the photo's call (ADR-0312).
+ */
+export const PLACES: readonly { name: string; at: RegExp; noun: RegExp; attr: RegExp }[] = [
+  {
+    name: "kert",
+    at: look("kert(?:ben|jében|jeiben|ünkben|i)(?![\\p{L}])|in the garden|in the yard|im garten"),
+    // „Kinti sütögetés”, „outdoor breakfast”: outdoors IS the garden's side of the house.
+    noun: look("kert|garden|garten|yard|kint|szabad(?:ban|téri)|kültéri|outdoor|outside|draußen|im freien"),
+    attr: /(?<![\p{L}])(?:kert(?:tel|es\p{L}*|re|ekre|jére)(?![\p{L}])|(?:with|and) (?:a |an |its |the )?(?:\p{L}+ )?(?:garden|yard)|garden[- ]view|view (?:of|over) the garden|mit (?:einem )?garten)/giu,
+  },
+  {
+    name: "terasz",
+    at: look("(?:napozó)?terasz(?:on|án|unkon|ain|okon)(?![\\p{L}])|on the (?:terrace|patio|deck)|auf der terrasse"),
+    noun: look("(?:napozó)?terasz|terrace|patio|deck|terrasse"),
+    attr: /(?<![\p{L}])(?:(?:napozó)?(?:terasszal|teraszos\p{L}*|teraszra)(?![\p{L}])|(?:with|and) (?:a |an |its |the )?(?:\p{L}+ )?(?:terrace|patio)|mit (?:einer )?terrasse)/giu,
+  },
+  {
+    name: "udvar",
+    at: look("udvar(?:on|ban|án|ában|unkban|i)(?![\\p{L}])|in the courtyard|im hof"),
+    noun: look("udvar(?!ias)|courtyard|hof(?![\\p{L}])|kint|szabad(?:ban|téri)|kültéri|outdoor|outside"),
+    attr: /(?<![\p{L}])(?:udvar(?:ral|os\p{L}*|ra)(?![\p{L}])|(?:with|and) (?:a |an |its |the )?(?:\p{L}+ )?courtyard)/giu,
+  },
+  {
+    name: "erkély",
+    at: look("erkély(?:en|ünkön|ein)(?![\\p{L}])|on the balcony|auf dem balkon"),
+    noun: look("erkély|balcon|balkon"),
+    attr: /(?<![\p{L}])(?:erkéllyel|erkélyes\p{L}*|(?:with|and) (?:a |an |its |the )?balcony)/giu,
+  },
+  {
+    name: "helyszín",
+    // „a villában / a házban”: measured 2026-10-03 — the rewrite turned „Uszoda a helyszínen” into
+    // „Uszoda a villában”, and only the model caught it.
+    at: look("helyszín(?:en|i)(?![\\p{L}])|on[- ]site|on the premises|vor ort|a szállás(?:on| területén)|a ház területén|(?:a |az )(?:vill|panzió|vendégház|apartmanház|ház)(?:ában|ban|ánkban|unkban)(?![\\p{L}])"),
+    // „Saját / privát X” on the house's own listing places X at the house.
+    noun: look("helyszín|on[- ]site|premises|vor ort|területén|saját|privát|private"),
+    attr: /$^/gu,
+  },
+];
+/**
+ * What a placed claim is about: where a SERVICE happens (breakfast served in the garden, parking
+ * in the yard, wifi in the room) and where a FACILITY is whose place no photo settles (a hot tub,
+ * a sauna, an indoor pool, a spa). NOT the fixed outdoor structures — a terrace, a pavilion, a
+ * playground, a jetty, an oven stand where they stand, the photo shows it; whether they exist at
+ * all is lintAddedObject's question.
+ */
+const FACILITY_TERMS: readonly { name: string; re: RegExp }[] = [
+  ...OBJECT_TERMS.filter((o) => o.name === "jakuzzi" || o.name === "szauna"),
+  { name: "uszoda", re: look("uszod|swimming hall|indoor pool|hallenbad") },
+  { name: "wellness", re: look("wellness|spa(?![\\p{L}])|fitness|edzőterem|gym(?![\\p{L}])") },
+];
+const PLACE_SPLIT = /[,;.:!?()\n–—]/u;
+/** „kerti / udvari / helyszíni X” — an adjective binds the NEXT words, not the whole clause. */
+const ADJECTIVAL = /(?:kerti|udvari|helyszíni)$/iu;
+/** „a kertben KIALAKÍTOTT kemence”, „a kertben ÁLLÓ pavilon” — a participle binds its own noun. */
+const PARTICIPLE = /^(?:\p{L}+(?:ott|ett|ött|tt|ó|ő)|található)$/u;
+
+/** The words a place adverbial actually places: its noun phrase, or the clause around it. */
+function placedScope(clause: string, at: RegExpExecArray): string {
+  const after = clause.slice(at.index + at[0].length).trim().split(/\s+/u).filter(Boolean);
+  if (ADJECTIVAL.test(at[0])) return after.slice(0, 2).join(" ");
+  if (after[0] && PARTICIPLE.test(after[0])) return after.slice(1, 3).join(" ");
+  return clause.slice(0, at.index) + " " + clause.slice(at.index + at[0].length);
+}
+
+export interface PlacedClaim {
+  readonly clause: string;
+  readonly thing: string;
+  readonly place: string;
+}
+
+/**
+ * The deterministic core, shared with the generator's fact gate (factCheck.ts) so the copy and
+ * the rendered page are judged by the same rule. `units` are source sentences/labels; `name` the
+ * property's own name (never a claim: „Lidó Wellness és Bor Villa” promises no spa).
+ */
+export function placedClaims(text: string, units: readonly string[], name: string): PlacedClaim[] {
+  const own = name.replace(/^\[TESZT\]\s*/u, "").trim().toLowerCase();
+  // A source unit with the house's attribute forms struck out: what is left can relate a place.
+  const relating = units.map((u) => PLACES.reduce((acc, p) => acc.replace(p.attr, " "), u.toLowerCase()));
+  const out: PlacedClaim[] = [];
+  for (const raw of text.split(PLACE_SPLIT).map((x) => x.trim()).filter(Boolean)) {
+    const clause = own ? raw.toLowerCase().split(own).join(" ") : raw.toLowerCase();
+    for (const p of PLACES) {
+      const hit = p.at.exec(clause);
+      if (!hit) continue;
+      // The place word itself is not the thing placed („a teraszon” is no terrace claim).
+      const scope = placedScope(clause, hit);
+      const things = [...SERVICE_TERMS, ...FACILITY_TERMS];
+      const unbacked = things.find(
+        (t) => t.re.test(scope) && !relating.some((u) => t.re.test(u) && p.noun.test(u)),
+      );
+      if (unbacked) {
+        out.push({ clause: raw, thing: unbacked.name, place: p.name });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+export function lintPlacedClaim(c: CopySurface, source: CriticSource): Objection[] {
+  const units = sourceUnits(source);
+  const out: Objection[] = [];
+  for (const { field, text } of surfaceLines(c)) {
+    for (const h of placedClaims(text, units, source.name)) {
+      out.push({
+        field,
+        quote: h.clause,
+        kind: "tulzas_a_forrashoz",
+        severity: "blokkolo",
+        guestReaction: `„${h.clause}” — a(z) ${h.thing} és a(z) ${h.place} külön-külön igaz lehet, de hogy a(z) ${h.thing} OTT van, azt a szállás sehol nem mondja; érkezéskor ott keresem.`,
+        fix: `hagyd el a helyhatározót (${h.place}); a két tényt külön állítsd, vagy csak annyit, amennyit EGY forrás-mondat együtt, viszonyként mond`,
+        by: "lint",
+      });
+    }
+  }
+  return out;
+}
+
+/**
  * The critic's own grading, made consistent with its rulebook. The prompt calls these kinds
  * BLOCKING without exception, yet the model graded „Grillezési lehetőség a fedett teraszon”
  * (forrastalan_igeret) "javítandó" and the loop shipped it with a PASS (SZ2-1). An overstatement
@@ -391,7 +527,7 @@ A feladatod NEM az újraírás, hanem a TÉTELES KIFOGÁS-LISTA. Minden kifogás
 Mit keresel (a „kind” értékei):
 - velemeny_mint_szolgaltatas — egy vendég-vélemény EGYSZERI élményéből vagy szívességéből SZOLGÁLTATÁS-ÍGÉRET lett, vagy a véleményből „bérelhető / kölcsönözhető / foglalható / ingyenes” ajánlat. Példa: a vélemény szerint a házigazda „kölcsönadta a biciklijét” → az oldalon „bérelhető kerékpárok”. A vendég ezt számon kéri érkezéskor. BLOKKOLÓ.
   ⚖️ A HATÁR (a ház szabálya): ha a vélemény egy ÁLLANDÓ adottságot ír le („van reggeli”, „grillezési lehetőség a teraszon”, „elegendő parkolóhely”, „van klíma”), az a vélemény erejéig ÁLLÍTHATÓ — hűen fordítva, felfújás nélkül. Ezt NE kifogásold csak azért, mert véleményből jön. Csak a szívességet, az egyszeri élményt és a felfújást kifogásold.
-- tulzas_a_forrashoz — az állítás TÖBBET mond, mint a forrás: „elegendő parkoló” → „bőséges saját parkoló”; HOZZÁTETT HELY- VAGY MINŐSÉG-RÉSZLET egy szolgáltatáshoz vagy adottsághoz, amit a forrás nem mond („barbecue facilities” → „grillezés a FEDETT teraszon”; „breakfast” → „reggeli a TERASZON / a kertben”; „kilátással”, „saját”, „fűtött”, „ingyenes” forrás nélkül) — ez MINDIG BLOKKOLÓ, mert a vendég épp ezt a részletet kéri számon; „csendes környék” → „a nyugodt Nádas közben” forrás nélküli jelzővel; TÁVOLSÁG felfújása („800 méterre” → „pár lépésre”, „karnyújtásnyira”) — a vendég lemérte a térképen. Vesd össze a FORRÁS idézettel betűre. BLOKKOLÓ, ha szolgáltatást vagy adottságot fúj fel; JAVÍTANDÓ, ha csak hangulati jelző.
+- tulzas_a_forrashoz — az állítás TÖBBET mond, mint a forrás: „elegendő parkoló” → „bőséges saját parkoló”; HOZZÁTETT HELY- VAGY MINŐSÉG-RÉSZLET egy szolgáltatáshoz vagy adottsághoz, amit a forrás nem mond („barbecue facilities” → „grillezés a FEDETT teraszon”; „breakfast” → „reggeli a TERASZON / a kertben”; „kilátással”, „saját”, „fűtött”, „ingyenes” forrás nélkül) — ez MINDIG BLOKKOLÓ, mert a vendég épp ezt a részletet kéri számon; ÖSSZEVONÁS: két forrásolt tény egy új viszonnyá kötve — „A szállás KERTTEL reggelente kontinentális reggelit szolgál fel” → „Kontinentális reggeli A KERTBEN” (a kert a házé, a reggeli helye nincs kimondva; a két szó együttállása a forrás-mondatban NEM bizonyíték), „Uszoda” egy szolgáltatás-listán → „Uszoda A HELYSZÍNEN”, „Saját parkoló” → „Saját parkoló AZ UDVARBAN” — BLOKKOLÓ; „csendes környék” → „a nyugodt Nádas közben” forrás nélküli jelzővel; TÁVOLSÁG felfújása („800 méterre” → „pár lépésre”, „karnyújtásnyira”) — a vendég lemérte a térképen. Vesd össze a FORRÁS idézettel betűre. BLOKKOLÓ, ha szolgáltatást vagy adottságot fúj fel; JAVÍTANDÓ, ha csak hangulati jelző.
 - forrastalan_igeret — szolgáltatás (amit a ház AD: reggeli, kölcsönzés, transzfer, parkoló, program, grill-használat), amihez nincs forrás. ⚠️ Fotón egyértelműen látható SZERKEZETET vagy adottságot (medence, napozóágy, kert, udvar, erkély, kilátás, szobabútor) SOHA NE kifogásolj forrás miatt — a fotókat te nem látod, azt a fotó-őr ellenőrzi. Szolgáltatásra viszont a fotó SOHA nem forrás. BLOKKOLÓ.
   ⛔ KIVÉTEL — HOZZÁTETT KÜLTÉRI OBJEKTUM: terasz, kerti bútor / „bútorozott”, kerti pihenő / pihenősarok, grill, bogrács, kemence, jakuzzi / dézsa, szauna, játszótér / hinta / trambulin, függőágy, stég. Ezt a vendég HASZNÁLNI akarja és számon kéri, a szövegíró pedig a fotóból könnyen kikövetkezteti (egy pergolából „bútorozott terasz”, egy erkélyen álló székből „kerti pihenő” lesz). Ha a FORRÁSOK egyike sem nevezi meg a tárgyat, az forrastalan_igeret, BLOKKOLÓ.
 - nem_letezo_fogalom — olyan magyar kifejezés, ami nincs a köznyelvben, vagy mást jelent („főtt reggeli” = főtt étel, nem meleg reggeli). BLOKKOLÓ.
@@ -521,6 +657,7 @@ export async function critiqueCopy(
     ...lintOffers(copy, source),
     ...lintAddedDetail(copy, source),
     ...lintAddedObject(copy, source),
+    ...lintPlacedClaim(copy, source),
   ];
   const c = await client();
   const res = await c.messages.create({

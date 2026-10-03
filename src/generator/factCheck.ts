@@ -13,6 +13,7 @@
 import { recordAiUsage } from "../ai/usage.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
+import { placedClaims, type PlacedClaim } from "./guestCritic.js";
 import { toImageBlocks } from "./images.js";
 
 /**
@@ -127,6 +128,58 @@ export function htmlToVisibleText(html: string): string {
 }
 
 /**
+ * Visible text as BLOCKS — one per paragraph, heading, list item or cell. A clause rule
+ * (placedClaims) must not glue a heading to the paragraph under it: „Reggeli” over „A kertben
+ * játszótér van” is not a claim that breakfast is in the garden. A </span> counts as a break
+ * only when another element follows it (a highlight chip row), not inside running text (an
+ * accent word: „Medence és <span>játszótér</span> a kertben” stays one sentence).
+ */
+export function htmlToVisibleBlocks(html: string): string[] {
+  const BREAK = "\u2063";
+  const marked = html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<\/(?:p|h[1-6]|li|div|section|header|footer|article|aside|nav|figcaption|blockquote|dt|dd|td|th|button|a|label|summary)\s*>|<br\s*\/?>|<\/span\s*>(?=\s*<)|<(?:p|h[1-6]|li|div|section|figcaption|blockquote|dt|dd|td|th)\b[^>]*>/gi, BREAK);
+  return htmlToVisibleText(marked)
+    .split(BREAK)
+    .map((b) => b.trim())
+    .filter(Boolean);
+}
+
+/**
+ * PLACED CLAIMS on the rendered page (2026-10-03): two true facts joined into a new one by a
+ * place adverbial — „Kontinentális reggeli a kertben” from „a szállás kerttel … reggelit
+ * szolgál fel”. The verifier model passed it (each word is in the source); the rule is the one
+ * the guest critic applies to the copy (guestCritic.ts placedClaims), so the page and the copy
+ * cannot be judged differently. Source units: the listing's labels and its prose, sentence by
+ * sentence (the prose here also carries the guest voice the copy was written from).
+ */
+export function placedClaimsOnPage(html: string, lead: FactSource): PlacedClaim[] {
+  const sentences = (t: string) => t.split(/(?<=[.!?])\s+|\n+/u).filter((x) => x.trim());
+  const units = [...(lead.amenities ?? []), ...(lead.descriptions ?? []).flatMap(sentences)];
+  const seen = new Set<string>();
+  const out: PlacedClaim[] = [];
+  for (const block of htmlToVisibleBlocks(stripSampleSections(html))) {
+    for (const h of placedClaims(block, units, lead.name)) {
+      const key = h.clause.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(h);
+    }
+  }
+  return out;
+}
+
+/** A placed claim as the gate's own unsourced fact — it decides the verdict like any other. */
+function placedFact(h: PlacedClaim): HardFactVerdict {
+  return {
+    fact: `„${h.clause}” — összevont hely: ${h.thing} + ${h.place} (a forrás külön mondja, viszonyként nem)`,
+    sourced: false,
+    source: "",
+  };
+}
+
+/**
  * The page's own SAMPLE markers (ADR-0061 / §B.17): the „Minta” pill on a native-styled demo
  * section, the shared sample note (`cit-sample-note`) and every template's own `<prefix>-sample`
  * note (`h-sample`, `cn-sample`, `t-sample` …).
@@ -223,6 +276,7 @@ const VERIFY_SYSTEM = `Te a Citoviso TÉNYHŰSÉG-őre vagy: adverzariális veri
 - Az EGYETLEN megengedett igazságforrás HARD tényhez: (a) egy megadott strukturált mező, VAGY (b) a képeken EGYÉRTELMŰEN LÁTHATÓ jellemző ("image#N"). A prózában "hihetően hangzik" NEM forrás.
 - KIZÁRÓLAG a felsorolt forrás-mezők léteznek. Ami nincs köztük és a képeken sem látható, az forrás nélküli — ár/m² mező SOSEM létezik, ilyen szám mindig fabrikált.
 - Minden jelölthöz döntsd el: sourced=true (add meg a source-ot: mező-név / "image#N" / "soft") vagy sourced=false (source="").
+- ÖSSZEVONT ÁLLÍTÁS is forrás nélküli: ha az oldal két forrásolt tényt egy ÚJ viszonnyal köt össze (helyhatározó, „kerti”, „a helyszínen”), a viszony maga a tény. Példa: a forrás „a szállás kerttel reggelente kontinentális reggelit szolgál fel” — a kert a szállásé, a reggeli létezik, de „Kontinentális reggeli a kertben” forrás nélküli; egy szolgáltatás-listában álló „Uszoda” mellé írt „a helyszínen” szintén. A forrás-mondatban a két szó EGYÜTTÁLLÁSA nem bizonyítja a viszonyt.
 - verdict="flag", ha BÁRMELY HARD tény forrás nélküli; különben "pass". Bizonytalanság esetén flag (a kockázat aszimmetrikus).`;
 
 const SCHEMA = {
@@ -261,10 +315,15 @@ export async function verifyFactuality(input: {
 }): Promise<FactCheckVerdict> {
   const visible = htmlToVisibleText(stripSampleSections(input.html));
   const candidates = extractHardFactCandidates(visible);
+  // Deterministic, and not negotiable by the model: a placed claim is unsourced as written.
+  const placed = placedClaimsOnPage(input.html, input.lead).map(placedFact);
   // The deterministic pre-filter is a HINT list, not the gate: a fabrication may be
   // spelled-out/number-less and slip the regex. So the LLM verifier ALWAYS runs for
   // an AI mock (when a key exists), instructed to also catch unlisted HARD facts.
   if (!config.anthropicApiKey) {
+    if (placed.length) {
+      return { verdict: "flag", candidates, facts: placed, reason: "összevont hely-állítás a forrás viszonya nélkül" };
+    }
     return candidates.length
       ? { verdict: "error", candidates, facts: [], reason: "nincs ANTHROPIC_API_KEY — a jelöltek nem verifikálhatók" }
       : { verdict: "pass", candidates, facts: [], reason: "nincs jelölt és nincs API key" };
@@ -346,7 +405,7 @@ export async function verifyFactuality(input: {
       facts: HardFactVerdict[];
       reason: string;
     };
-    const facts = parsed.facts ?? [];
+    const facts = [...(parsed.facts ?? []), ...placed];
     const verdict = verdictOfFacts(parsed.verdict, facts);
     return {
       verdict,
@@ -358,6 +417,10 @@ export async function verifyFactuality(input: {
           : parsed.reason,
     };
   } catch (err) {
+    // The deterministic finding stands even when the model could not be asked.
+    if (placed.length) {
+      return { verdict: "flag", candidates, facts: placed, reason: `összevont hely-állítás (a verifier nem futott: ${(err as Error).message})` };
+    }
     return { verdict: "error", candidates, facts: [], reason: `verifier hiba: ${(err as Error).message}` };
   }
 }

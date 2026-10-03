@@ -280,6 +280,9 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   await writeFile(row.path, html, "utf8");
 
   const design = checkDesign(html);
+  const reviewQuotes = ((inputs.sourcePanel as { facts?: { source: string; quote?: string }[] } | undefined)?.facts ?? [])
+    .filter((f) => f.source === "google_places" && f.quote)
+    .map((f) => f.quote!);
   let factCheck: FactCheckVerdict | null = null;
   try {
     factCheck = await verifyFactuality({
@@ -294,7 +297,11 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
           ? { rating: { value: siteData.rating.value, count: siteData.rating.count ?? null } }
           : {}),
         ...(amenities.length ? { amenities } : {}),
-        ...(descriptions.length ? { descriptions } : {}),
+        // The first generation's review quotes ground the copy here as they did for the
+        // critic above — the gate's placed-claim rule must weigh the same evidence.
+        ...(descriptions.length || reviewQuotes.length
+          ? { descriptions: [...descriptions, ...reviewQuotes] }
+          : {}),
       },
       photos: photoUrls,
     });

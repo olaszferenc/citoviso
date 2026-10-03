@@ -88,9 +88,17 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
   a burkolat, a falszín, az ágynemű, a padló, a homlokzat, a dekoráció SENKIT nem érdekel.
   ROSSZ: "Bézs csempés fürdőszoba üvegkabinos zuhannyal" · "Világos szobák kék-zöld
   ágyneművel és laminált padlóval" · "Napsütötte sárga homlokzat" · "Cserepes növényekkel
-  díszített bejárat".  JÓ: "Kültéri medence napozóterasszal" · "Saját parkoló az udvarban" ·
-  "Légkondicionált szobák" · "Kutyabarát szállás" · "Kerti grillezés lehetősége".
+  díszített bejárat".  JÓ: "Kültéri medence napozóterasszal" · "Saját parkoló" ·
+  "Légkondicionált szobák" · "Kutyabarát szállás" · "Grillezési lehetőség".
   Ha egy képről nem olvasható ki vendég-érték, inkább HAGYD KI — kevesebb, de erős.
+- ⛔ KÉT TÉNYBŐL NE CSINÁLJ HARMADIKAT. Szolgáltatás vagy létesítmény (reggeli, vacsora, parkoló,
+  grillezés, wifi, kerékpár, jakuzzi, szauna, uszoda, wellness) mellé HELYHATÁROZÓT („a kertben”,
+  „kerti”, „a teraszon”, „az udvarban”, „a helyszínen”) CSAK akkor írj, ha a forrás a kettőt
+  VISZONYKÉNT mondja („a reggelit a teraszon szolgáljuk fel”). Ha a forrás csak egymás mellett
+  említi őket, az nem viszony. (Megtörtént kár: „A szállás kerttel reggelente kontinentális
+  reggelit szolgál fel” → „Kontinentális reggeli a kertben”; egy szolgáltatás-listában álló
+  „Uszoda” → „Uszoda a helyszínen”; a „Saját parkoló” → „Saját parkoló az udvarban”.) Felsorolás
+  végére se tegyél helyhatározót: „Reggeli és grillezés a kertben” a reggelit is a kertbe teszi.
 - A "Régió" mező KERESÉSI TERÜLET címkéje, NEM a szállás elhelyezkedése — földrajzi pozíciót
   (pl. melyik parton/oldalon fekszik) SOHA ne állíts belőle. (Megtörtént kár: a "Balaton
   északi part" sweep-címkéből "az északi parton" tagline lett egy DÉLI parti szállásról.)
