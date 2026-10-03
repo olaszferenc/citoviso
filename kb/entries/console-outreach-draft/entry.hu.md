@@ -268,5 +268,7 @@ számít: a levelezőprogramok link-ellenőrzője és a link-előnézet a linket
 és 2026. október 1. óta ezek többsége nem számít megnyitásnak. ⚠️ Teljesen nem zárható ki: egy
 olyan gépi ellenőrző, amely valódi böngészőben, látható lapon 5 másodpercig futtatja az oldalt,
 továbbra is megnyitásnak számíthat. Az eszkalációs ajánlat („hányadik megnyitásnál kapja”) is
-ebből a számból dolgozik, és egy régebben kiküldött linknél a 2026. október 1. előtt rögzített
+ebből a számból dolgozik — alapbeállításban a megnyitások NAPJAIT számolja (egy napon belül akárhány
+megnyitás egynek számít; az Árazás lapon a „Csak a különböző napokon történt megnyitások számítanak”
+jelölőnégyzettel állítható) —, és egy régebben kiküldött linknél a 2026. október 1. előtt rögzített
 megnyitások (köztük a gépiek) is beleszámítanak.

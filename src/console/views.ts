@@ -1001,6 +1001,9 @@ function escalationSection(
     fCross: T(lang, "Kevesebb kell, mint az ajánlat érvényessége ({h} óra): különben az emlékeztető lejárt ajánlatról szólna.", { h: "{h}" }),
     fHint: T(lang, "Utána legfeljebb még {r} óra marad a döntésre.", { r: "{r}" }),
     fTight: T(lang, "Az emlékeztetőt {from} és {to} óra között küldjük: ha a késleltetés után legfeljebb {g} óra marad a lejáratig, egy éjszakára eső lead nem kapja meg.", { from: s(SEND_WINDOW.fromHour), to: s(SEND_WINDOW.toHour), g: s(24 - (SEND_WINDOW.toHour - SEND_WINDOW.fromHour)) }),
+    daysOn: T(lang, "Csak a különböző napokon történt megnyitások számítanak: egy napon belül akárhány megnyitás egynek számít (telefon + gép ugyanaznap = 1)."),
+    daysOff: T(lang, "Minden megnyitás számít — egy napon belül is (így a telefonos és a gépes megnyitás már kettő)."),
+    onDays: T(lang, "Így fut: az ezután kiküldött levél −{o}% bemutatkozó kedvezményt ígér. A lead a {n}. (különböző napon történt) megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára; ha {f} óra múlva sem vásárolt, egy emlékeztető levél megy ki ugyanerről (óránként küldjük, {from} és {to} óra között — az éjjel esedékes reggel {from} után megy).", { o: "{o}", n: "{n}", p: "{p}", h: "{h}", f: "{f}", from: s(SEND_WINDOW.fromHour), to: s(SEND_WINDOW.toHour) }),
     off: T(lang, "Kikapcsolva: nem keletkezik új döntés-segítő ajánlat. A lead a levelében ígért bemutatkozó kedvezménynél marad, bárhányszor nyitja meg."),
     on: T(lang, "Így fut: az ezután kiküldött levél −{o}% bemutatkozó kedvezményt ígér. A lead a {n}. megnyitáskor (ha még nem vásárolt) −{p}% döntés-segítő ajánlatot kap az első díjból, {h} órára; ha {f} óra múlva sem vásárolt, egy emlékeztető levél megy ki ugyanerről (óránként küldjük, {from} és {to} óra között — az éjjel esedékes reggel {from} után megy).", { o: "{o}", n: "{n}", p: "{p}", h: "{h}", f: "{f}", from: s(SEND_WINDOW.fromHour), to: s(SEND_WINDOW.toHour) }),
     example: T(lang, "Példa — {tier} csomag: {list} helyett {price} az első hónapra, utána listaáron.", { tier: "{tier}", list: "{list}", price: "{price}" }),
@@ -1033,7 +1036,7 @@ function escalationSection(
     label: string,
     value: number,
     unit: string,
-    opts: { gated: boolean; hint?: boolean },
+    opts: { gated: boolean; hint?: boolean; extra?: string },
   ): string =>
     `<div class="pr-field" id="f_${id}">
       <label class="pr-field__l" for="${id}">${esc(label)}</label>
@@ -1041,8 +1044,13 @@ function escalationSection(
         <input id="${id}" name="${name}" inputmode="numeric" value="${esc(value)}"${opts.gated && !cfg.enabled ? " disabled" : ""}>
         <span class="pr-input__u">${esc(unit)}</span>
       </div>
-      <div class="pr-ferr" id="e_${id}" role="alert"></div>${opts.hint ? `\n      <div class="pr-hint" id="h_${id}"></div>` : ""}
+      <div class="pr-ferr" id="e_${id}" role="alert"></div>${opts.extra ?? ""}${opts.hint ? `\n      <div class="pr-hint" id="h_${id}"></div>` : ""}
     </div>`;
+  // L3-1 „C” (frozen plan, README ④): the distinct-days switch under the threshold. Its own
+  // marker is NOT disabled, so the POST can tell "unticked" from "an older tab without it".
+  const daysSwitch =
+    `\n      <input type="hidden" name="esc_days_present" value="1">` +
+    `\n      <label class="pr-esc__days small"><input type="checkbox" id="esc_days" name="esc_days"${cfg.distinctDays ? " checked" : ""}${cfg.enabled ? "" : " disabled"}> ${T(lang, "Csak a különböző napokon történt megnyitások számítanak")}</label>`;
   return `
         <section class="pr-esc${cfg.enabled ? "" : " is-off"}" id="pr-esc">
           <h3 style="margin-top:22px">${T(lang, "Lead-ajánlatok")}</h3>
@@ -1059,7 +1067,7 @@ function escalationSection(
           </label>
           <div class="pr-esc__gated">
             <div class="con-edit-grid" style="margin-top:10px">
-              ${field("esc_n", "esc_threshold", T(lang, "Hányadik megnyitásnál kapja"), cfg.threshold, T(lang, ". megnyitás"), { gated: true })}
+              ${field("esc_n", "esc_threshold", T(lang, "Hányadik megnyitásnál kapja"), cfg.threshold, T(lang, ". megnyitás"), { gated: true, hint: true, extra: daysSwitch })}
               ${field("esc_p", "esc_percent", T(lang, "Kedvezmény az első díjból"), cfg.percent, "%", { gated: true })}
               ${field("esc_h", "esc_hours", T(lang, "Az ajánlat érvényessége"), cfg.offerHours, T(lang, "óra"), { gated: true, hint: true })}
             </div>
@@ -1093,7 +1101,7 @@ const ESCALATION_SECTION_JS = `(function(){
   function init(){
   var D = JSON.parse(document.getElementById("esc_data").textContent), M = D.msgs, S = D.saved;
   var sec = document.getElementById("pr-esc"), form = sec.closest("form");
-  var on = document.getElementById("esc_on");
+  var on = document.getElementById("esc_on"), days = document.getElementById("esc_days");
   var IN = {o: "out_p", n: "esc_n", p: "esc_p", h: "esc_h", f: "esc_f"};
   Object.keys(IN).forEach(function(k){ IN[k] = document.getElementById(IN[k]); });
   var GATED = ["n", "p", "h", "f"];
@@ -1113,7 +1121,8 @@ const ESCALATION_SECTION_JS = `(function(){
   function price(p){ return D.example ? fmt(Math.floor(D.example.list * (100 - p) / 100)) : ""; }
   function render(){
     var en = on.checked;
-    GATED.forEach(function(k){ IN[k].disabled = !en; }); sec.classList.toggle("is-off", !en);
+    GATED.forEach(function(k){ IN[k].disabled = !en; }); days.disabled = !en; sec.classList.toggle("is-off", !en);
+    $("h_esc_n").textContent = en ? (days.checked ? M.daysOn : M.daysOff) : "";
     var r = {}; Object.keys(IN).forEach(function(k){ r[k] = num(IN[k].value); });
     var e = {};
     e.o = chk(r.o, D.oMin, D.oMax, [M.oEmpty, M.oNan, M.oLow, M.oHigh]);
@@ -1148,15 +1157,15 @@ const ESCALATION_SECTION_JS = `(function(){
     else if (bad) { prev.className = "pr-esc__preview is-off"; prev.textContent = M.bad; }
     else {
       prev.className = "pr-esc__preview";
-      var t = fill(M.on, {o: r.o.v, n: r.n.v, p: r.p.v, h: r.h.v, f: r.f.v});
+      var t = fill(days.checked ? M.onDays : M.on, {o: r.o.v, n: r.n.v, p: r.p.v, h: r.h.v, f: r.f.v});
       if (D.example) t += " " + fill(M.example, {tier: D.example.tier, list: nb(D.example.fmtList), price: price(r.p.v)});
       prev.textContent = t;
     }
     // What a save does to promises already made — only for the values that changed.
     var lines = [];
     if (ok("o") && r.o.v !== S.outreachPercent) lines.push(fill(M.liveOut, {o: r.o.v}));
-    var escChanged = en !== S.enabled || (en && ["n", "p", "h"].some(function(k){
-      return ok(k) && r[k].v !== S[{n: "threshold", p: "percent", h: "offerHours"}[k]]; }));
+    var escChanged = en !== S.enabled || (en && (days.checked !== S.distinctDays || ["n", "p", "h"].some(function(k){
+      return ok(k) && r[k].v !== S[{n: "threshold", p: "percent", h: "offerHours"}[k]]; })));
     if (D.live.count > 0 && escChanged) lines.push(fill(M.live, {count: D.live.count, pcts: D.live.pcts}));
     if (D.live.count > 0 && en && ok("f") && r.f.v !== S.followupHours) lines.push(M.liveF);
     live.hidden = lines.length === 0;
@@ -1164,7 +1173,7 @@ const ESCALATION_SECTION_JS = `(function(){
     lines.forEach(function(l){ var p = document.createElement("p"); p.textContent = l; live.appendChild(p); });
   }
   function tidy(el){ var x = num(el.value); if (!x.err) el.value = x.v; render(); }
-  on.addEventListener("change", render);
+  on.addEventListener("change", render); days.addEventListener("change", render);
   Object.keys(IN).forEach(function(k){
     IN[k].addEventListener("input", render); IN[k].addEventListener("change", render);
     IN[k].addEventListener("blur", function(){ tidy(IN[k]); });

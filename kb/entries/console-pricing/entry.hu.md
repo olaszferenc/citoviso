@@ -40,7 +40,8 @@ aki többször is megnyitja a neki küldött tervet, de még nem rendelt. Ez a b
 bármelyik régió oldalán ugyanazt látod, és bármelyik régió mentése menti.
 
 Hogyan működik: a kiküldött levél egy bemutatkozó kedvezményt ígér, ez az első megnyitástól határidő nélkül él. Ha
-a lead a tervet a megadott számú alkalommal megnyitja, és még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat
+a lead a tervet a megadott számú alkalommal megnyitja (alapbeállításban: a megadott számú KÜLÖNBÖZŐ NAPON, lásd lent a
+2. pontot), és még nem vásárolt, a lap egy döntés-segítő ajánlatot mutat
 neki: nagyobb kedvezményt az első díjból, a megadott ideig. Megnyitásnak az számít, amikor a lead a lapon görget,
 koppint, kattint vagy billentyűt üt, vagy a lap 5 másodpercig látható; ezért a döntés-segítő ajánlat is ekkor, menet
 közben jelenik meg, nem a lap betöltésekor (a részletek a Megkeresés-piszkozat súgójában, „Mi számít megnyitásnak?”). Ha addig sem rendel, a megadott késleltetés után
@@ -66,10 +67,16 @@ legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer j�
 **Döntés-segítő (eszkalációs) ajánlat**
 
 1. A **„Döntés-segítő (eszkalációs) ajánlat”** kapcsolóval kapcsolod be vagy ki. Kikapcsolva egyetlen leadnek sem
-   születik új ajánlat, a négy mező tiltott, a legutóbb mentett számok megmaradnak, visszakapcsoláskor nem kell újra
+   születik új ajánlat, a négy mező és a napok-jelölőnégyzet tiltott, a legutóbb mentett számok megmaradnak, visszakapcsoláskor nem kell újra
    beírnod őket. A bemutatkozó kedvezményt a kapcsoló nem érinti.
 2. **„Hányadik megnyitásnál kapja”**: egész szám 2 és 10 között. Az első megnyitás maga a levél linkje, ott még a
    bemutatkozó kedvezmény a helyén, ezért legalább 2.
+   Alatta a **„Csak a különböző napokon történt megnyitások számítanak”** jelölőnégyzet, alapból bepipálva. Így a
+   lead NAPJAI számítanak: ha egy napon telefonon és gépen is megnyitja a tervet, az egy megnyitásnak számít, és a
+   döntés-segítő ajánlat legkorábban a beállított számú különböző napon jön (3-as értéknél a harmadik napon).
+   A pipát kivéve minden megnyitás számít, egy napon belül is; ekkor egy gyors egymás utáni nézegetés percek alatt
+   kiválthatja az ajánlatot. Bekapcsolt döntés-segítőnél a mező alatti sor és az előnézet („… (különböző napon
+   történt) megnyitáskor”) kimondja, melyik szabály él. A napot magyar idő szerint számoljuk.
 3. **„Kedvezmény az első díjból”**: egész százalék, nagyobb a bemutatkozó kedvezménynél, legfeljebb 90. A
    kedvezmények nem adódnak össze, mindig a legnagyobb érvényes: ha a bemutatkozóval egyenlő vagy kisebb lenne, a
    lead soha nem kapná meg.
@@ -96,7 +103,7 @@ legfeljebb egy emlékeztető megy. Egy kiküldött tervre az ajánlat egyszer j�
 **Mi történik a már futó ajánlatokkal?**
 
 - A már kiadott döntés-segítő ajánlat megtartja a saját kedvezményét és lejáratát. Ha a kapcsolót, a
-  megnyitás-számot, a kedvezményt vagy az érvényességet átállítod, miközben ilyen ajánlatok futnak, a mezők alatt
+  megnyitás-számot, a „Csak a különböző napokon …” jelölőnégyzetet, a kedvezményt vagy az érvényességet átállítod, miközben ilyen ajánlatok futnak, a mezők alatt
   megjelenik, hány darab fut és hány százalékkal.
 - Ha a bemutatkozó kedvezményt állítod át, ott az jelenik meg, hogy a már kiküldött levelek a bennük ígért
   kedvezményt tartják.

@@ -33,6 +33,14 @@ bemutatkozó %-ot idézi), `pricing-sales/` (a /pricing kötött elemei, változ
    döntés-segítő ajánlat, a négy mező halvány és tiltott, a számok megmaradnak. A már futó ajánlatok a lejáratukig élnek.
 4. **A döntés-segítő mezői:**
    - **„Hányadik megnyitásnál kapja”**: egész, 2–10, egység: „. megnyitás”.
+     Alatta kapcsoló (C változat, tulaj-döntés 2026-10-03, Elek L3-1): **„Csak a különböző napokon történt megnyitások számítanak”**,
+     alapból BEKAPCSOLVA. Bekapcsolva a küszöb a lead azon NAPJAIT számolja (Europe/Budapest naptári nap), amelyeken megnyitotta a
+     tervet; egy napon belül akárhány megnyitás egynek számít. A mező alatti sor ezt kimondja (bekapcsolva: „egy napon belül akárhány
+     megnyitás egynek számít (telefon + gép ugyanaznap = 1)”, kikapcsolva: „Minden megnyitás számít — egy napon belül is”). A kapcsoló
+     a döntés-segítő főkapcsolójával együtt tiltódik; kikapcsolt döntés-segítőnél a tárolt értéke marad. Az előnézet és a mentés-
+     visszajelzés bekapcsolva „(különböző napon történt) megnyitáskor” alakban mondja a küszöböt. A kapcsoló változása „élő ajánlat”
+     sort vált ki, mint a többi döntés-segítő mező. Ok (mérve, Elek 3. kör): a 3. megnyitás kb. 2 perccel a kiküldés után jött — egy
+     valódi tulaj telefonon és gépen is gyorsan megnyitja, és a −50% még a döntése ELŐTT ment ki.
    - **„Kedvezmény az első díjból”**: egész, a bemutatkozó %-nál nagyobb, legfeljebb 90 %.
    - **„Az ajánlat érvényessége”**: egész óra, 24–168. Alatta a napokra váltott érték (pl. „= 3 nap”).
    - **„Emlékeztető levél a kiadás után”**: egész óra, legalább 1, és kevesebb az érvényességnél. Alatta: hány óra

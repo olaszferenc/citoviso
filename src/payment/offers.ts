@@ -14,6 +14,7 @@
 // path stays at list price by structure (ADR-0088 §1). New send channels are
 // covered automatically the moment they stamp sent_at.
 
+import { sql } from "kysely";
 import { getSetting, setSetting } from "../console/appSettings.js";
 import { db } from "../db/client.js";
 import { couponRule } from "./couponRule.js";
@@ -73,6 +74,13 @@ export interface EscalationConfig {
   readonly followupHours: number;
   /** The intro percent a NEW outreach letter quotes (stamped at send, ADR-0286). */
   readonly outreachPercent: number;
+  /**
+   * „Csak a különböző napokon történt megnyitások számítanak” (owner ruling „C”, 2026-10-03,
+   * Elek L3-1): the threshold counts distinct Europe/Budapest DAYS with an opening, not page
+   * loads. Measured: the 3rd opening came ~2 minutes after the send — a real owner opens the
+   * link on the phone and on the computer at once, and got −50% before deciding anything.
+   */
+  readonly distinctDays: boolean;
 }
 
 export const ESCALATION_CONFIG_DEFAULT: EscalationConfig = {
@@ -82,6 +90,7 @@ export const ESCALATION_CONFIG_DEFAULT: EscalationConfig = {
   offerHours: ESCALATION_OFFER_HOURS,
   followupHours: ESCALATION_FOLLOWUP_HOURS,
   outreachPercent: OUTREACH_OFFER_PERCENT,
+  distinctDays: true,
 };
 
 export type EscalationFieldError =
@@ -163,6 +172,8 @@ export function parseEscalationSetting(raw: string): EscalationConfig | null {
       offerHours: n(v.offerHours, d.offerHours),
       followupHours: n(v.followupHours, d.followupHours),
       outreachPercent: n(v.outreachPercent, d.outreachPercent),
+      // Missing (a row saved before 2026-10-03) = the default, ON.
+      distinctDays: v.distinctDays !== false,
     };
     return escalationConfigErrors(c).length === 0 ? c : null;
   } catch {
@@ -185,17 +196,20 @@ export async function getEscalationConfig(): Promise<EscalationConfig> {
 export async function setEscalationConfig(c: EscalationConfig): Promise<void> {
   const errs = escalationConfigErrors(c);
   if (errs.length) throw new Error(`invalid escalation config: ${errs.join(", ")}`);
-  await setSetting(
-    ESCALATION_SETTING_KEY,
-    JSON.stringify({
-      enabled: c.enabled,
-      threshold: c.threshold,
-      percent: c.percent,
-      offerHours: c.offerHours,
-      followupHours: c.followupHours,
-      outreachPercent: c.outreachPercent,
-    }),
-  );
+  await setSetting(ESCALATION_SETTING_KEY, serializeEscalationConfig(c));
+}
+
+/** The stored row for a config — pure, so a guard can round-trip it without the shared DB. */
+export function serializeEscalationConfig(c: EscalationConfig): string {
+  return JSON.stringify({
+    enabled: c.enabled,
+    threshold: c.threshold,
+    percent: c.percent,
+    offerHours: c.offerHours,
+    followupHours: c.followupHours,
+    outreachPercent: c.outreachPercent,
+    distinctDays: c.distinctDays,
+  });
 }
 
 /**
@@ -222,13 +236,19 @@ export function escalationFromForm(
     const s = raw.trim().replace(/\s+/g, "").replace(/%$/, "").replace(",", ".");
     return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : Number.NaN;
   };
+  const enabled = form.get("esc_on") === "on";
+  // A checkbox sends nothing when unticked, so its own marker tells "unticked" from "an older
+  // tab without the switch" (keep stored); a switched-off section disables it (keep stored).
+  const distinctDays =
+    form.get("esc_days_present") === "1" && enabled ? form.get("esc_days") === "on" : current.distinctDays;
   return {
-    enabled: form.get("esc_on") === "on",
+    enabled,
     threshold: intOf("esc_threshold", current.threshold),
     percent: intOf("esc_percent", current.percent),
     offerHours: intOf("esc_hours", current.offerHours),
     followupHours: intOf("esc_followup", current.followupHours),
     outreachPercent: intOf("out_percent", current.outreachPercent),
+    distinctDays,
   };
 }
 
@@ -501,7 +521,11 @@ export async function ensureEscalationOffer(
 
   const views = await db
     .selectFrom("mock_view")
-    .select(db.fn.countAll<number>().as("n"))
+    .select(
+      cfg.distinctDays
+        ? sql<number>`count(distinct (started_at at time zone 'Europe/Budapest')::date)`.as("n")
+        : db.fn.countAll<number>().as("n"),
+    )
     .where("prospect_id", "=", prospectId)
     .executeTakeFirst();
   if (Number(views?.n ?? 0) < cfg.threshold) return null;

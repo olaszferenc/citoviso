@@ -127,7 +127,7 @@ h3{font:600 14.5px var(--citui-font-display);margin:22px 0 6px}
   .tl-dot{top:0}
 }
 </style></head><body>
-<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A, 2026-09-30, 2. kör) — „Lead-ajánlatok”: bemutatkozó sor + döntés-segítő két sorban, minden régió-oldalon</b><span>· méret:</span>
+<div class="draft-bar"><b>JÓVÁHAGYOTT TERV (A, 2026-09-30, 2. kör · + „különböző napok” kapcsoló, C változat, 2026-10-03) — „Lead-ajánlatok”: bemutatkozó sor + döntés-segítő két sorban, minden régió-oldalon</b><span>· méret:</span>
 <button id="szMob" type="button" aria-pressed="false">Mobil 390px</button><button id="szDesk" type="button" aria-pressed="true">Asztali</button>
 <span style="opacity:.7">működő vázlat — minden mező él, a validáció a javasolt szabályt futtatja; a mentés csak a lapon belül ment</span></div>
 <div id="stage">
@@ -158,7 +158,7 @@ h3{font:600 14.5px var(--citui-font-display);margin:22px 0 6px}
   <b>Döntés-segítő (eszkalációs) ajánlat</b></div></div>
  <div class="gated">
  <div class="grid3" style="margin-top:4px"><div class="pr-field" id="f_esc_n"><label class="pr-field__l" for="esc_n">Hányadik megnyitásnál kapja</label>
-   <div class="pr-input"><input id="esc_n" value="3" inputmode="numeric"><span class="pr-input__u">. megnyitás</span></div><div class="ferr" id="e_esc_n"></div></div><div class="pr-field" id="f_esc_p"><label class="pr-field__l" for="esc_p">Kedvezmény az első díjból</label>
+   <div class="pr-input"><input id="esc_n" value="3" inputmode="numeric"><span class="pr-input__u">. megnyitás</span></div><div class="ferr" id="e_esc_n"></div><label class="small days" for="esc_days" style="display:flex;margin-top:6px;gap:6px;align-items:flex-start"><input type="checkbox" id="esc_days" checked> Csak a különböző napokon történt megnyitások számítanak</label><div class="pr-hint" id="h_n"></div></div><div class="pr-field" id="f_esc_p"><label class="pr-field__l" for="esc_p">Kedvezmény az első díjból</label>
    <div class="pr-input"><input id="esc_p" value="50" inputmode="numeric"><span class="pr-input__u">%</span></div><div class="ferr" id="e_esc_p"></div></div><div class="pr-field" id="f_esc_h"><label class="pr-field__l" for="esc_h">Az ajánlat érvényessége</label>
    <div class="pr-input"><input id="esc_h" value="72" inputmode="numeric"><span class="pr-input__u">óra</span></div><div class="ferr" id="e_esc_h"></div><div class="pr-hint" id="h_h"></div></div></div>
  <div class="grid3" style="margin-top:12px"><div class="pr-field" id="f_esc_f"><label class="pr-field__l" for="esc_f">Emlékeztető levél a kiadás után</label>
@@ -176,14 +176,14 @@ var VARIANT = "A";
   var B = {outMin:5, outMax:50, nMin:2, nMax:10, pMax:90, hMin:24, hMax:168, fMin:1};
   // Dev-DB sample (2026-09-30): 1 live escalation offer.
   var SAMPLE_LIST = 7240, LIVE_ESC = 1;
-  var SAVED = {on:true, out:25, n:3, p:50, h:72, f:24};
+  var SAVED = {on:true, out:25, n:3, p:50, h:72, f:24, days:true};
   function $(id){ return document.getElementById(id); }
   var st = $("stage"), bM = $("szMob"), bD = $("szDesk");
   function setSize(m){ st.classList.toggle("mobile", m); bM.setAttribute("aria-pressed", m); bD.setAttribute("aria-pressed", !m); }
   bM.onclick = function(){ setSize(true); }; bD.onclick = function(){ setSize(false); };
   setSize(window.matchMedia("(max-width: 600px)").matches);
 
-  var on = $("esc_on"), IN = {out:$("out_p"), n:$("esc_n"), p:$("esc_p"), h:$("esc_h"), f:$("esc_f")};
+  var days = $("esc_days"), on = $("esc_on"), IN = {out:$("out_p"), n:$("esc_n"), p:$("esc_p"), h:$("esc_h"), f:$("esc_f")};
   var box = $("esc"), prev = $("preview"), live = $("live"), btn = $("save"), sum = $("sum"), note = $("notice");
   var ESC_KEYS = ["n", "p", "h", "f"];
   function fmt(x){ return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
@@ -237,7 +237,11 @@ var VARIANT = "A";
 
   function render(){
     var enabled = on.checked;
-    ESC_KEYS.forEach(function(k){ IN[k].disabled = !enabled; });
+    ESC_KEYS.forEach(function(k){ IN[k].disabled = !enabled; }); days.disabled = !enabled;
+    // C (2026-10-03): the threshold counts distinct DAYS (Europe/Budapest) with an opening, by default.
+    $("h_n").textContent = !enabled ? "" : days.checked
+      ? "Csak a különböző napokon történt megnyitások számítanak: egy napon belül akárhány megnyitás egynek számít (telefon + gép ugyanaznap = 1)."
+      : "Minden megnyitás számít — egy napon belül is (így a telefonos és a gépes megnyitás már kettő).";
     box.classList.toggle("disabled", !enabled);
     var x = errors(enabled), e = x.e, r = x.r;
     Object.keys(IN).forEach(function(k){
@@ -273,7 +277,7 @@ var VARIANT = "A";
     } else if (!bad) {
       var pOff = Math.floor(SAMPLE_LIST * (100 - r.p.v) / 100), oOff = Math.floor(SAMPLE_LIST * (100 - r.out.v) / 100);
       prev.className = "preview";
-      prev.innerHTML = "Így fut: az ezután kiküldött levél <b>−" + r.out.v + "%</b> bemutatkozó kedvezményt ígér. A lead a <b>" + r.n.v + ". megnyitáskor</b> (ha még nem vásárolt) <b>−" + r.p.v + "%</b> döntés-segítő ajánlatot kap az első díjból, <b>" + r.h.v + " órára</b>; ha legkorábban <b>" + r.f.v + " óra</b> múlva, a napi reggeli küldéskor sem vásárolt, egy emlékeztető levél megy ki ugyanerről. " +
+      prev.innerHTML = "Így fut: az ezután kiküldött levél <b>−" + r.out.v + "%</b> bemutatkozó kedvezményt ígér. A lead a <b>" + r.n.v + (days.checked ? ". (különböző napon történt) megnyitáskor" : ". megnyitáskor") + "</b> (ha még nem vásárolt) <b>−" + r.p.v + "%</b> döntés-segítő ajánlatot kap az első díjból, <b>" + r.h.v + " órára</b>; ha legkorábban <b>" + r.f.v + " óra</b> múlva, a napi reggeli küldéskor sem vásárolt, egy emlékeztető levél megy ki ugyanerről. " +
         "Példa — Ajánlott csomag: <s>" + fmt(SAMPLE_LIST) + " Ft/hó</s> → " + fmt(oOff) + " Ft/hó, a döntés-segítővel <b>" + fmt(pOff) + " Ft/hó</b> az első hónapra, utána listaáron.";
     } else {
       prev.className = "preview off";
@@ -285,7 +289,7 @@ var VARIANT = "A";
     if (ok("out") && r.out.v !== SAVED.out) {
       lines.push("A már kiküldött levelek a bennük ígért bemutatkozó kedvezményt tartják — az is, akinek a leadje még meg sem nyitotta. Az új −" + r.out.v + "% csak az ezután kiküldött levelekre vonatkozik.");
     }
-    var escChanged = enabled !== SAVED.on || (enabled && ["n", "p", "h"].some(function(k){ return ok(k) && r[k].v !== SAVED[k]; }));
+    var escChanged = enabled !== SAVED.on || (enabled && (days.checked !== SAVED.days || ["n", "p", "h"].some(function(k){ return ok(k) && r[k].v !== SAVED[k]; })));
     if (LIVE_ESC && escChanged) {
       lines.push("Most " + LIVE_ESC + " élő döntés-segítő ajánlat fut (−" + SAVED.p + "%). Az a saját kedvezményét és lejáratát tartja — a változás csak az ezután kiadott ajánlatokra hat.");
     }
@@ -295,14 +299,14 @@ var VARIANT = "A";
     live.style.display = lines.length ? "block" : "none";
     live.innerHTML = lines.map(function(l){ return "<p>" + l + "</p>"; }).join("");
   }
-  on.addEventListener("change", render);
+  on.addEventListener("change", render); days.addEventListener("change", render);
   Object.keys(IN).forEach(function(k){ IN[k].addEventListener("input", render); IN[k].addEventListener("change", render); IN[k].addEventListener("blur", render); });
   btn.onclick = function(ev){ ev.preventDefault(); if (btn.disabled) return;
     var r = errors(on.checked).r;
-    SAVED = {on:on.checked, out:r.out.v, n:on.checked ? r.n.v : SAVED.n, p:on.checked ? r.p.v : SAVED.p, h:on.checked ? r.h.v : SAVED.h, f:on.checked ? r.f.v : SAVED.f};
+    SAVED = {on:on.checked, out:r.out.v, n:on.checked ? r.n.v : SAVED.n, p:on.checked ? r.p.v : SAVED.p, h:on.checked ? r.h.v : SAVED.h, f:on.checked ? r.f.v : SAVED.f, days:on.checked ? days.checked : SAVED.days};
     note.classList.add("show");
     note.textContent = "Árazás mentve. Bemutatkozó: −" + SAVED.out + "%. " + (SAVED.on
-      ? "Döntés-segítő ajánlat: " + SAVED.n + ". megnyitás, −" + SAVED.p + "%, " + SAVED.h + " óra, emlékeztető " + SAVED.f + " óra múlva."
+      ? "Döntés-segítő ajánlat: " + SAVED.n + (SAVED.days ? ". (különböző napon történt) megnyitás, −" : ". megnyitás, −") + SAVED.p + "%, " + SAVED.h + " óra, emlékeztető " + SAVED.f + " óra múlva."
       : "Döntés-segítő ajánlat kikapcsolva.");
     render(); window.scrollTo(0, 0); };
 

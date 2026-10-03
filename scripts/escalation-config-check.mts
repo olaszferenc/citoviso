@@ -19,7 +19,12 @@
 //   ⑧ every send path that stamps prospect.sent_at also stamps the intro offer (structural);
 //   ⑨ ADR-0287 the HOURLY follow-up: nothing outside 8–20 Budapest (summer AND winter time, the
 //      live VPS runs in UTC); ONE mail per offer even when two runs overlap (atomic claim);
-//      an expired offer is never claimed; a failed send releases the claim.
+//      an expired offer is never claimed; a failed send releases the claim;
+//   ⑩ L3-1 (Elek round 3, owner ruling „C” 2026-10-03): with „Csak a különböző napokon történt
+//      megnyitások számítanak” ON (the default) the threshold counts DISTINCT Budapest days with
+//      an opening — three openings on one day are one; switched off every opening counts; the
+//      POST keeps the stored value for an old tab and for a switched-off section; the page
+//      renders the switch checked by default and disabled with the section.
 //
 // Reverting ensureEscalationOffer to the ESCALATION_VISIT_THRESHOLD / ESCALATION_OFFER_PERCENT
 // constants turns ① red (measured when this guard was written: 3 failures).
@@ -45,6 +50,7 @@ import {
   outreachPercentForProspect,
   overrideEscalationConfigInProcess,
   parseEscalationSetting,
+  serializeEscalationConfig,
   type EscalationConfig,
 } from "../src/payment/offers.js";
 import { markProspectSent } from "../src/console/data.js";
@@ -78,13 +84,14 @@ async function touchedProspect(tag: string, sent = true): Promise<string> {
   return p.id;
 }
 
-async function view(prospectId: string): Promise<void> {
-  await db.insertInto("mock_view").values({ prospect_id: prospectId }).execute();
+async function view(prospectId: string, startedAt?: Date): Promise<void> {
+  await db.insertInto("mock_view").values({ prospect_id: prospectId, ...(startedAt ? { started_at: startedAt } : {}) } as never).execute();
 }
 
 try {
   // ① configured threshold + percent reach the minted row.
-  overrideEscalationConfigInProcess(cfg({ threshold: 2, percent: 40, offerHours: 30 }));
+  // Every opening counts here (distinctDays off): the two views below happen seconds apart.
+  overrideEscalationConfigInProcess(cfg({ threshold: 2, percent: 40, offerHours: 30, distinctDays: false }));
   const a = await touchedProspect("on");
   await view(a);
   check("① 1. megnyitás (küszöb 2) → nincs ajánlat", await ensureEscalationOffer(a), null);
@@ -102,6 +109,27 @@ try {
   const b = await touchedProspect("off");
   for (let i = 0; i < 4; i++) await view(b);
   check("② kikapcsolva → 4 megnyitás után sincs ajánlat", await ensureEscalationOffer(b), null);
+
+  // ⑩ distinct days (default ON): Elek measured the 3rd opening ~2 minutes after the send.
+  overrideEscalationConfigInProcess(cfg({ threshold: 3 }));
+  const sameDay = await touchedProspect("sameday");
+  for (let i = 0; i < 5; i++) await view(sameDay);
+  check("⑩ különböző napok BE: 5 megnyitás EGY napon → nincs ajánlat (küszöb 3)", await ensureEscalationOffer(sameDay), null);
+  const spread = await touchedProspect("spread");
+  // 10:00 UTC on past UTC dates: distinct UTC dates at that hour are distinct Budapest days
+  // (11:00 / 12:00 local) — the run time of day cannot move a view across midnight.
+  const t = new Date();
+  const noonAgo = (k: number) => new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate() - k, 10));
+  await view(spread, noonAgo(3));
+  await view(spread, new Date(noonAgo(3).getTime() + 60_000));
+  await view(spread, noonAgo(2));
+  check("⑩ különböző napok BE: 3 megnyitás 2 napon → még nincs", await ensureEscalationOffer(spread), null);
+  await view(spread, noonAgo(1));
+  check("⑩ különböző napok BE: a 3. napon → ajánlat születik", (await ensureEscalationOffer(spread))?.kind ?? null, "escalation");
+  overrideEscalationConfigInProcess(cfg({ threshold: 3, distinctDays: false }));
+  const every = await touchedProspect("every");
+  for (let i = 0; i < 3; i++) await view(every);
+  check("⑩ különböző napok KI: 3 megnyitás egy napon → ajánlat (minden megnyitás számít)", (await ensureEscalationOffer(every))?.kind ?? null, "escalation");
   overrideEscalationConfigInProcess(null);
 
   // ③ the validity rule.
@@ -133,7 +161,11 @@ try {
   check("⑥ régi (ADR-0285-ös) sor: hiányzó kulcs → alapérték", parseEscalationSetting('{"enabled":true,"threshold":4,"percent":45}'),
     cfg({ threshold: 4, percent: 45 }));
   check("⑥ teljes sor", parseEscalationSetting('{"enabled":false,"threshold":4,"percent":45,"offerHours":96,"followupHours":30,"outreachPercent":20}'),
-    { enabled: false, threshold: 4, percent: 45, offerHours: 96, followupHours: 30, outreachPercent: 20 });
+    { enabled: false, threshold: 4, percent: 45, offerHours: 96, followupHours: 30, outreachPercent: 20, distinctDays: true });
+  check("⑩ a tárolt distinctDays:false megmarad", parseEscalationSetting('{"distinctDays":false}')?.distinctDays ?? null, false);
+  check("⑩ hiányzó distinctDays → alapból BEKAPCSOLVA", ESCALATION_CONFIG_DEFAULT.distinctDays, true);
+  const rt = cfg({ threshold: 4, percent: 45, distinctDays: false });
+  check("⑩ a mentett sor visszaolvasva ugyanaz (a napok-kapcsoló is tárolódik)", parseEscalationSetting(serializeEscalationConfig(rt)), rt);
   check("⑥ sérült JSON → null (alapérték jön)", parseEscalationSetting("{nem json"), null);
   check("⑥ mező-közi szabályt sértő sor → null", parseEscalationSetting('{"offerHours":48,"followupHours":48}'), null);
   check("⑥ tartományon kívüli új kulcs → null", parseEscalationSetting('{"outreachPercent":60}'), null);
@@ -151,8 +183,17 @@ try {
   check(
     "④ „ 4 ”, „40%”, „ 48 ”, „12”, „10 %” normalizálódik",
     escalationFromForm(f({ esc_present: "1", esc_on: "on", esc_threshold: " 4 ", esc_percent: "40%", esc_hours: " 48 ", esc_followup: "12", out_percent: "10 %" }), stored),
-    { enabled: true, threshold: 4, percent: 40, offerHours: 48, followupHours: 12, outreachPercent: 10 },
+    { enabled: true, threshold: 4, percent: 40, offerHours: 48, followupHours: 12, outreachPercent: 10, distinctDays: true },
   );
+  const daysOff = cfg({ ...stored, distinctDays: false });
+  check("⑩ régi fül (nincs esc_days_present) → a tárolt napok-beállítás marad",
+    escalationFromForm(f({ esc_present: "1", esc_on: "on" }), daysOff)?.distinctDays ?? null, false);
+  check("⑩ bekapcsolt szekció, a kapcsoló pipálva → be",
+    escalationFromForm(f({ esc_present: "1", esc_days_present: "1", esc_on: "on", esc_days: "on" }), daysOff)?.distinctDays ?? null, true);
+  check("⑩ bekapcsolt szekció, a kapcsoló üres (nem jön) → ki",
+    escalationFromForm(f({ esc_present: "1", esc_days_present: "1", esc_on: "on" }), stored)?.distinctDays ?? null, false);
+  check("⑩ kikapcsolt szekció (a tiltott kapcsoló nem jön) → a tárolt érték marad",
+    escalationFromForm(f({ esc_present: "1", esc_days_present: "1" }), stored)?.distinctDays ?? null, true);
   const frac = escalationFromForm(f({ esc_present: "1", esc_on: "on", esc_threshold: "2,5", esc_percent: "abc" }), stored);
   check("④ „2,5” és „abc” → a validátor elutasítja", frac && escalationConfigErrors(frac), ["threshold", "percent"]);
 
@@ -175,6 +216,9 @@ try {
     live: { count: 0, percents: [] },
   });
   check("⑤ kikapcsolt állapot: a kapcsoló üres, a mezők tiltva", /id="esc_on" name="esc_on">/.test(off) && /value="3" disabled/.test(off), true);
+  check("⑩ a napok-kapcsoló alapból pipálva, a felirata a terv szerinti", /<input type="checkbox" id="esc_days" name="esc_days" checked>/.test(html.replace(/ disabled/g, "")) && html.includes("Csak a különböző napokon történt megnyitások számítanak"), true);
+  check("⑩ az esc_days_present jelölő NEM tiltott (a POST-nak hoznia kell)", html.includes('name="esc_days_present" value="1">'), true);
+  check("⑩ kikapcsolt szekcióban a napok-kapcsoló is tiltva", /id="esc_days" name="esc_days" checked disabled>/.test(off), true);
   check("⑤ kikapcsolva a bemutatkozó-mező NEM tiltott (a POST-nak hoznia kell)", /id="out_p" name="out_percent" inputmode="numeric" value="25">/.test(off), true);
 
   // ⑥ the configured follow-up delay decides which offers are due (read at every tick).
