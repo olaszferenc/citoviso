@@ -1,4 +1,4 @@
-## ADR-XXXX — A döntés-segítő ajánlat küszöbe alapból a különböző NAPOKAT számolja, kapcsolható (2026-10-03)
+## ADR-0313 — A döntés-segítő ajánlat küszöbe alapból a különböző NAPOKAT számolja, kapcsolható (2026-10-03)
 
 **Dátum:** 2026-10-03 · **Státusz:** elfogadva (tulaj-döntés „C”, koordinátoron át; SUB, brief
 `~/rc-briefs/javitas-elek-0930/k3-elek3-leletek.md` 3. pont) · **Forrás:** Elek 3. élesi köre, L3-1 (KÖZEPES; L2-1 óta nyitott) ·
