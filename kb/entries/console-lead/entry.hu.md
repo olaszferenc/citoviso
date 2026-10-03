@@ -387,7 +387,7 @@ A kártyán rövid nevekkel látod a mock legenerálásakor futott gépi ellenő
 
 | Jelvény | Mire felel |
 |---|---|
-| **Tényhűség** | minden kemény tény (szám, ár, férőhely) forrásból származik-e — nincs-e kitalálva |
+| **Tényhűség** | minden kemény tény (szám, ár, férőhely) forrásból származik-e — nincs-e kitalálva; és nem rakott-e össze a szöveg két külön forrásolt tényből egy harmadikat (lásd lent: összevont hely) |
 | **Piac** | a szöveg megnevezi-e azt, amiért egy vendég valóban választ (a rendszer másutt **„Marketing-őr”**, a küldés-felugróban **„Piac-kapu”** néven mutatja ugyanezt). ⚠️ Ennek semmi köze a **Beállítások → „Piacok — jogi csomag”** panelhez |
 | **Dizájn** | a generált oldal viseli-e a kötelező szerkezeti szabályokat (ikonok, tokenek, modul-horgonyok) |
 | **Nyitókép** | a lap tetejére került fotó elérte-e a minőségi küszöböt (a pontszám és a téma külön is ott áll a kártyán) |
@@ -402,6 +402,13 @@ Tényhűség nem ellenőrzi: azok nem állítanak tényt, ezért nem lehetnek fo
 így ugyanaz az adat minden kinézeten ugyanazt az ítéletet kapja. A jelvény ítéletét a talált
 tételek listája adja: ha az őr megjelölné a mockot, de egyetlen forrás nélküli tényt sem nevez
 meg, a jelvényen `error` áll (nincs ítélet), nem sárga.
+
+**Összevont hely.** Két forrásban álló szó egymás mellett még nem bizonyítja a viszonyukat. Ha a
+forrás külön mondja, hogy van kert és hogy van reggeli, a szöveg nem írhatja, hogy „reggeli a
+kertben”; ha egy szolgáltatás-listán „Uszoda” áll, nem írhatja, hogy „uszoda a villában”. Ezt a
+Tényhűség gépiesen is megjelöli (a jelvény ilyenkor sárga, AI nélkül is), a vendég-kritikus pedig
+megállító kifogásnak veszi. A „kerttel”, „kertes”, „teraszos” alak nem számít helyviszonynak. A
+javítás: a helyhatározó elhagyása, vagy a két tény külön mondatban.
 
 **A jelvény színe:** zöld = rendben · **sárga = lelet van**. Ha egy kapu lefutott, de nem tudott
 ítélni, a jelvényen a nyers `error` szó áll — zöld alapon; ez **nem** azt jelenti, hogy rendben
@@ -428,8 +435,10 @@ A felugró **többet tud, mint a négy jelvény**:
   forrásban nem álló kültéri TÁRGY akkor is, ha nem egy tényhez toldották (például terasz, kerti
   bútor, kerti pihenő, grill, bogrács, kemence, jakuzzi, szauna, játszótér, függőágy, stég). Forrásnak
   az adatlap, a leírás vagy a vendég-vélemény számít, a fotó NEM: egy fotón jól látszó teraszt is
-  meg kell neveznie valamelyik szöveges forrásnak. A kertre, erkélyre, medencére a szabály nem
-  vonatkozik. Amit talál,
+  meg kell neveznie valamelyik szöveges forrásnak. A kertre, erkélyre, medencére ez a tárgy-szabály
+  nem vonatkozik — de a velük összevont hely-állításra igen: ha a forrás külön mondja a kertet és a
+  reggelit, a „reggeli a kertben” megállító kifogás (a felugróban „tulzas_a_forrashoz” jelöléssel),
+  mert a forrás a kettő viszonyát nem mondja ki (lásd fent: Összevont hely). Amit talál,
   azt generáláskor az író már kijavítja. A felugró két esetben nevezi meg: ha két javító kör után
   is maradt blokkoló kifogás (ilyenkor felsorolja a kifogásolt szövegrészeket), vagy ha a
   vendég-kritikus nem tudott ítélni (például nem válaszolt az AI) — ekkor azt írja, hogy az őr nem
