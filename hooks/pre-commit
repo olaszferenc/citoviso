@@ -2719,6 +2719,34 @@ if [ -f scripts/order-step1-offer-check.mts ] && \
   echo "[pre-commit] order-step1-offer-check (egy ajánlat, egy megtakarítás; „Ez még nem fizetés.”)…"
   npx tsx scripts/order-step1-offer-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ÖSSZEVONT HELY-ÁLLÍTÁS (2026-10-03, brief „tényhűség-szöveg”): két forrásolt tényből nem lesz
+#     harmadik — „Kontinentális reggeli a kertben” a „kerttel … reggelit szolgál fel” forrásból (Három
+#     Huszár), „Uszoda … a helyszínen” egy lapos szolgáltatás-listából (Lidó). Egy szabály
+#     (guestCritic.ts placedClaims) a kritikusban ÉS a generátor tényhűség-kapujában; a becsületes
+#     ikrek (forrás-viszony, a fotó dolga, a szállás neve) zöldek. Se AI, se DB. Önteszt: a régi
+#     szabálykészlet mindkét mért esetet átengedi → piros.
+if [ -f scripts/placed-claim-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(guestCritic|factCheck|brief|generateEngine|recopy)\.ts$|^src/engine/copywriter\.ts$|^scripts/placed-claim-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/placed-claim-check\.mts$'; then
+    echo "[pre-commit] placed-claim-check --self-test (az összevonás-őr pirosra tud-e menni)…"
+    npx tsx scripts/placed-claim-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] placed-claim-check (két forrásolt tényből nem lesz harmadik: hely-összevonás)…"
+  npx tsx scripts/placed-claim-check.mts >"$GATE_LOG" || gate_failed
+fi
+# GOOGLE-ÉRTÉKELÉS EGY SZABÁLLYAL (2026-10-03): a ★-átlag és a darabszám ≥ 0,7-es párosításon
+#     kerül ki (§B.17, 03-INVARIANTS 7.) — a generátor és az élő jelvény ugyanazt a függvényt
+#     kérdezi (scraper/confidence.ts ratingAttributable). Mért lelet: Lidó, 0,605-ön kint volt.
+#     Önteszt: a régi szabály (band != low) a Lidón számot ad → piros.
+if [ -f scripts/rating-attribution-check.mts ] && \
+   changed_files | grep -qE '^src/(scraper/confidence|generator/generate|reviews/placeRating|console/server)\.ts$|^scripts/rating-attribution-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/rating-attribution-check\.mts$'; then
+    echo "[pre-commit] rating-attribution-check --self-test (az értékelés-őr pirosra tud-e menni)…"
+    npx tsx scripts/rating-attribution-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] rating-attribution-check (a Google-értékelés egy szabállyal, ≥ 0,7)…"
+  npx tsx scripts/rating-attribution-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

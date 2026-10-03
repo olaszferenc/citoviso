@@ -512,7 +512,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
   const phoneRaw = ((r.raw ?? {}) as { phone?: string }).phone;
   const phone = phoneRaw && phoneRaw.trim() ? phoneRaw.trim() : null;
   // Rating ONLY from the artifact's persisted SiteData — it passed the A4 gate at
-  // generation time (resolveGatedPhotos: non-low match band), and it is exactly
+  // generation time (resolveGatedPhotos: ratingAttributable, ≥ 0,7), and it is exactly
   // what the linked mock shows (§I: the mail claims what the mock claims).
   const inputs = (r.artifactInputs ?? {}) as {
     siteData?: { rating?: { value?: number; count?: number } };

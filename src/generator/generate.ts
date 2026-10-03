@@ -10,7 +10,7 @@ import {
 } from "../ai/usage.js";
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
-import { scoreMatch } from "../scraper/confidence.js";
+import { ratingAttributable, scoreMatch } from "../scraper/confidence.js";
 import { REGIONS as GEO_REGIONS } from "../scraper/regions.js";
 import {
   placesDetailsMatch,
@@ -212,10 +212,15 @@ export interface GatedMedia {
    *  overrule — why this picture ended up at the top of the page. */
   readonly heroVerdict: HeroVerdict;
   readonly matchBand?: string;
-  /** Real Google rating from the same gated match — only when band != low (mirrors the photo
-   *  gate; a low-confidence match's rating must not be attributed). A real fact, never invented. */
+  /** Real Google rating of the matched place — only when the match clears the rating rule
+   *  (`ratingAttributable`, §B.17: ≥ 0,7). Stricter than the photo gate on purpose: a medium
+   *  match's photos go to the curator, its stars would go out as a fact. Never invented. */
   readonly rating?: number;
   readonly userRatingCount?: number;
+  /** The MATCHED place's own rating, whatever its score (non-low band) — for the curator
+   *  judging "is this really their place?" on the lead page (a 4,6★/5 next to a lead with
+   *  1,0★/27 elsewhere is the tell). Never rendered on a page or a letter. */
+  readonly matchRating?: { readonly value: number; readonly count?: number };
   /** Place id of the gated match, so the caller can record Places as a SOURCE of
    *  this lead's data. Without it the lead page claimed "Források: OpenStreetMap"
    *  while every photo beside it had come from Places. */
@@ -358,6 +363,21 @@ async function askPlaces(lead: QualifiedLead, identity: PlacesIdentity): Promise
   };
 }
 
+/**
+ * The rating the PAGE may print for a stored Places match — §B.17's one rule
+ * (`ratingAttributable`, ≥ 0,7), the same the live badge asks (reviews/placeRating.ts).
+ * Until 2026-10-03 this rode the photo gate (band != low, ≥ 0,45): Lidó Wellness és Bor
+ * Villa's 0,605 match put "4,8 · 25 vélemény" on the mock as the property's own.
+ */
+export function attributedRating(m: {
+  readonly score: number;
+  readonly rating?: number;
+  readonly userRatingCount?: number;
+}): { rating?: number; userRatingCount?: number } {
+  if (m.rating == null || !ratingAttributable(m.score)) return {};
+  return { rating: m.rating, ...(m.userRatingCount != null ? { userRatingCount: m.userRatingCount } : {}) };
+}
+
 export async function resolveGatedPhotos(
   lead: QualifiedLead,
   /** A lead sora — enélkül az operátori nyitókép-választás (0061) nem olvasható ki.
@@ -384,6 +404,7 @@ export async function resolveGatedPhotos(
   let matchBand: string | undefined;
   let rating: number | undefined;
   let userRatingCount: number | undefined;
+  let matchRating: GatedMedia["matchRating"];
   let placeId: string | undefined;
   let placesUnavailable: PlacesFailure | undefined;
   let places: PlacesStatus = { state: "no_coords" };
@@ -456,8 +477,14 @@ export async function resolveGatedPhotos(
           seen.add(photoKey(url));
           photos.push({ url, provenance: "places", longEdge: PLACES_NOMINAL_LONG_EDGE });
         }
-        rating = m.rating;
-        userRatingCount = m.userRatingCount;
+        if (m.rating != null) {
+          matchRating = { value: m.rating, ...(m.userRatingCount != null ? { count: m.userRatingCount } : {}) };
+        }
+        // The number rides its OWN rule, not the photo band (one rule with the live badge).
+        ({ rating, userRatingCount } = attributedRating(m));
+        if (rating == null && m.rating != null) {
+          console.log(`  ⚠️ A Google-értékelés ELHAGYVA: a párosítás ${m.score.toFixed(2)} < 0,70 — más szállásé lehet`);
+        }
         if (m.band === "medium") {
           console.log("  ⚠️ KÖZEPES konfidencia → kurátor-review ajánlott");
         }
@@ -537,6 +564,7 @@ export async function resolveGatedPhotos(
     matchBand,
     rating,
     userRatingCount,
+    ...(matchRating ? { matchRating } : {}),
     placeId,
     placesUnavailable,
     places,

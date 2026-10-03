@@ -2773,8 +2773,10 @@ async function handle(
       photos: await withHeroScores(media.photos ?? []),
       // Az operátor saját választása (0061) — a rács ezt jelöli meg kiemelt kerettel.
       pinnedBy: (await getHeroPin(leadId))?.actor ?? null,
-      rating: media.rating ?? null,
-      ratingCount: media.userRatingCount ?? null,
+      // The MATCHED place's number, shown beside the band so the curator can judge the
+      // match — not the page's rating (that one is gated by ratingAttributable).
+      rating: media.matchRating?.value ?? null,
+      ratingCount: media.matchRating?.count ?? null,
       band: media.matchBand ?? null,
       // WHY the Places half is missing, when it is (quota | auth | network |
       // upstream). A machine code, not a caption: the view words it. Without it

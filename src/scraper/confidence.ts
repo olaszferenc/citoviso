@@ -34,6 +34,22 @@ export interface MatchConfidence {
 const HIGH = 0.7;
 const MEDIUM = 0.45;
 
+/**
+ * §B.17 / 03-INVARIANTS point 7 — the ONE rule for printing a matched place's Google rating
+ * (★-average + count) as THIS property's. A photo of a medium-band match is something the
+ * curator can look at and reject; a number is not: a false match prints the NEIGHBOUR's
+ * stars as a fact about this house (the Piroska case: 1,0★/27 real vs 4,6★/5 wrong).
+ * Measured 2026-10-02: Lidó Wellness és Bor Villa's rating rode a 0,605 match onto the mock,
+ * because the generator dropped only the LOW band (< 0,45) while the live badge
+ * (reviews/placeRating.ts) demanded 0,7 — two rules for one fact. Both now ask this.
+ * Unknown confidence is NOT good enough: an unverified match is exactly the one that lies.
+ */
+export const RATING_MIN_CONFIDENCE = HIGH;
+
+export function ratingAttributable(score: number | null | undefined): boolean {
+  return typeof score === "number" && Number.isFinite(score) && score >= RATING_MIN_CONFIDENCE;
+}
+
 export function scoreMatch(s: MatchSignals): MatchConfidence {
   // Distance: 0m → 1.0, 300m → 0.0 (linear).
   const distScore = Math.max(0, 1 - s.distanceMeters / 300);

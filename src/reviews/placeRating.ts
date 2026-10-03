@@ -16,9 +16,7 @@
 
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-
-/** Same band threshold the A4 matcher calls "high" (scraper/confidence.ts). */
-const MIN_CONFIDENCE = 0.7;
+import { ratingAttributable } from "../scraper/confidence.js";
 
 /** Mirrors the 30-day window Google itself allows for coordinate caching. */
 const MAX_AGE_DAYS = 30;
@@ -60,9 +58,9 @@ export async function getPlaceRating(siteId: string): Promise<PlaceRating | null
   const count = row.user_rating_count;
   if (rating === null || !count) return null;
 
-  // Gate 1 — the match must be in the high band. Unknown confidence is NOT
-  // treated as good: an unverified match is exactly the case that goes wrong.
-  if (row.match_confidence === null || row.match_confidence < MIN_CONFIDENCE) return null;
+  // Gate 1 — the match must be strong enough to attribute a number (one rule with the
+  // generator: scraper/confidence.ts ratingAttributable). Unknown confidence fails it.
+  if (!ratingAttributable(row.match_confidence)) return null;
 
   // Gate 2 — freshness.
   const ageDays = (Date.now() - new Date(row.fetched_at as unknown as string).getTime()) / 86_400_000;
