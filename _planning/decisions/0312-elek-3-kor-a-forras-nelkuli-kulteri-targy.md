@@ -1,4 +1,4 @@
-## ADR-XXXX — Elek 3. kör: a forrás nélküli kültéri tárgy blokkol, a MINTA nem tény, a plus-alcím egy címzett, a márka nem személynév (2026-10-03)
+## ADR-0312 — Elek 3. kör: a forrás nélküli kültéri tárgy blokkol, a MINTA nem tény, a plus-alcím egy címzett, a márka nem személynév (2026-10-03)
 
 **Dátum:** 2026-10-03 · **Státusz:** elfogadva (hibajavítás mérés alapján + tulaj-döntések „1 igen · 2 Citoviso · 3 igen”;
 SUB, koordinátor: CIT „élesi teszt” fő session; brief `~/rc-briefs/javitas-elek-0930/k3-elek3-leletek.md`) ·

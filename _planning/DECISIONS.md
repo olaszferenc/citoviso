@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-elek-harmadik-kor-kulteri-targy-minta-nem-teny-plus-alcim-marka-kuldo.md) — Elek 3. kör: a forrás nélküli kültéri tárgy blokkol, a MINTA nem tény, a plus-alcím egy címzett, a márka nem személynév (2026-10-03)
+- [ADR-0312](decisions/0312-elek-3-kor-a-forras-nelkuli-kulteri-targy.md) — Elek 3. kör: a forrás nélküli kültéri tárgy blokkol, a MINTA nem tény, a plus-alcím egy címzett, a márka nem személynév (2026-10-03)
 - [ADR-0311](decisions/0311-kapunyitas-gate-opening-a-tulaj-altal.md) — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon; a kapu a hős fotó maga, mert egy fotó sem nevezhető kapunak (2026-10-02)
 - [ADR-0310](decisions/0310-seta-jelzes-a-konzolon-ha-a-seta-a-kapun-at-nem.md) — Séta-jelzés a konzolon: ha a „Séta a kapun át” nem sétál, a választó, az előnézet és a mock-kártya kimondja; a sablon választható marad (2026-10-02)
 - [ADR-0309](decisions/0309-vendeg-kritikus-a-forrasban-nem-allo-hely.md) — Vendég-kritikus: a forrásban nem álló hely-/minőség-részlet blokkol; a piac-őr a kiszállított szövegről ítél (2026-10-02)
