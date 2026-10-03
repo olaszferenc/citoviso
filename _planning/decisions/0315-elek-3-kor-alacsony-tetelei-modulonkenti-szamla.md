@@ -1,4 +1,4 @@
-## ADR-XXXX — Elek 3. kör alacsony tételei: modulonkénti számla-sor pontos összeggel, kupon az első díjra, egy megtakarítás, „Ez még nem fizetés.” (2026-10-03)
+## ADR-0315 — Elek 3. kör alacsony tételei: modulonkénti számla-sor pontos összeggel, kupon az első díjra, egy megtakarítás, „Ez még nem fizetés.” (2026-10-03)
 
 **Dátum:** 2026-10-03 · **Státusz:** elfogadva (tulaj-döntések koordinátoron át: „L3/s: B · ADM3-1: A · INV-1: B”, majd „L-6 = A”;
 SUB, brief `~/rc-briefs/javitas-elek-0930/k3-elek3-leletek.md` 6. pont) · **Forrás:** Elek 3. élesi köre ·
