@@ -1,4 +1,4 @@
-## ADR-XXXX — A Google-értékelés a lapon EGYSZER áll a forrás-linkjével: a sablon saját linkes kártyája mellől a közös jelvény kimarad
+## ADR-0314 — A Google-értékelés a lapon EGYSZER áll a forrás-linkjével: a sablon saját linkes kártyája mellől a közös jelvény kimarad
 
 - **Kiváltó (2026-10-02, a Kapunyitás-sablon mellék-lelete, ADR-0311):** „a Google-jelvény (ADR-0046, `trust` slot) a
   sablon saját értékelés-szakasza alatt is kiírja ugyanazt a számot — minden sablonon így van”. Brief:

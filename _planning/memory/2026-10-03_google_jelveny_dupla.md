@@ -1,6 +1,6 @@
 # 2026-10-03 — A Google-értékelés kétszer: a sablon saját linkes kártyája + a közös jelvény (walk-through, gate-opening)
 
-**Szál:** SUB a CIT koordinátor alatt; brief `~/rc-briefs/fix-google-jelveny-dupla.md`. Döntés: ADR-XXXX.
+**Szál:** SUB a CIT koordinátor alatt; brief `~/rc-briefs/fix-google-jelveny-dupla.md`. Döntés: ADR-0314.
 
 ## Elvégezve
 - Mérés böngészőben: 21 sablon × mock / élő+modul / élő+modul+vélemény × 390 px / 1366 px, a dev-DB valós mock-adatának

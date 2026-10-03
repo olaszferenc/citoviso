@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-03 — SUB `cit3f812b94`: a Google-értékelés kétszer — walk-through/gate-opening, ADR-XXXX) — LANDOLVA, élesre semmi
+## Párhuzamos szál (2026-10-03 — SUB `cit3f812b94`: a Google-értékelés kétszer — walk-through/gate-opening, ADR-0314) — LANDOLVA, élesre semmi
 - A sablon saját linkes értékelés-kártyája alatt a közös jelvény (`reviews-pending` / `google-rating`) kimarad — a kimeneten mérve (`render.ts` `ratingAlreadyLinked`). A 19 régi sablon hős-stat + jelvény párja ADR-0057 ② szerint marad.
 - Őr `scripts/rating-once-check.mts` (régi kódon 6 piros). Nyitott kinézeti kérdések a koordinátornál; jegyzet `_planning/memory/2026-10-03_google_jelveny_dupla.md`.
 
