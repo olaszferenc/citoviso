@@ -49,6 +49,8 @@ export interface CollectedPhoto {
   readonly watermarked?: boolean;
   /** What the photo shows — the same purchased verdict (heroPick.ts), see Photo.subject. */
   readonly subject?: string;
+  /** Perceptual fingerprint, see Photo.dhash. */
+  readonly dhash?: string;
 }
 
 /**
@@ -71,6 +73,8 @@ export function toSitePhotos(photos: readonly CollectedPhoto[], leadName: string
     ...(p.watermarked ? { watermarked: true } : {}),
     // The vision subject rides along for the walk-through template's photo walk (ADR-0304).
     ...(p.subject ? { subject: p.subject } : {}),
+    // The fingerprint lets a template tell a republished copy from another photo (gate-opening).
+    ...(p.dhash ? { dhash: p.dhash } : {}),
   }));
 }
 

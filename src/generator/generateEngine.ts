@@ -36,6 +36,8 @@ import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { decisionWeightDesc, descriptionSellingPoints, groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
+import { fingerprintCandidates } from "./photoHash.js";
+import { GATE_OPENING, GATE_SUBJECTS } from "../engine/templates/gateOpening.js";
 import { reviewsUrlFor } from "../reviews/placeRating.js";
 import {
   loadLead,
@@ -240,7 +242,15 @@ async function generateEngineMockInner(
   // confidence-gated Places set. Fall back to a Street View baseline for grounding the
   // copy when the lead has no photos at all.
   opts.onStage?.("photos");
-  const { photos, rating, userRatingCount, heroVerdict } = await resolveGatedPhotos(lead, leadId, { places: "auto" });
+  const gated = await resolveGatedPhotos(lead, leadId, { places: "auto" });
+  const { rating, userRatingCount, heroVerdict } = gated;
+  // gate-opening picks ANOTHER outdoor photo for its leaves; a portal's republished copy of
+  // the hero has another URL but is the same picture (owner, 2026-10-03). Fingerprint the
+  // hero + the outdoor candidates — only for this template: nobody else reads the hash.
+  const photos =
+    opts.template === GATE_OPENING.id
+      ? await fingerprintCandidates(gated.photos, GATE_SUBJECTS)
+      : gated.photos;
   const hero =
     photos[0]?.url ??
     (lead.lat != null && lead.lon != null ? streetViewUrl(lead.lat, lead.lon) : "");

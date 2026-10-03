@@ -100,6 +100,13 @@ export interface Photo {
    * Read by the walk-through template's photo walk (ADR-0304); never rendered as text.
    */
   readonly subject?: string;
+  /**
+   * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
+   * for the hero and the outdoor photos only. Answers "is this the SAME picture under
+   * another URL?" (portals republish each other's photos) via engine/samePicture.ts.
+   * Absent = not measured — never read as "different" or "same".
+   */
+  readonly dhash?: string;
 }
 
 /** One amenity ON a unit: the owner's stored label plus the catalogue's icon markup. */

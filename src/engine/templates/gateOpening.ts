@@ -38,6 +38,7 @@
 import { amenityIconSvg } from "../amenityIcon.js";
 import { iconSvg, starIcon } from "../icons.js";
 import { mo, motionCss, motionJs } from "../motion.js";
+import { isSamePicture } from "../samePicture.js";
 import { slotMarker } from "../moduleSections.js";
 import { ratingScale } from "../rating.js";
 import type { Photo, Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -93,7 +94,8 @@ export const GATE_MODE: GateMode = "photo";
 export type EyebrowCase = "caps" | "normal";
 export const EYEBROW_CASE: EyebrowCase = "caps";
 
-const GATE_SUBJECTS: ReadonlySet<string> = new Set(["exterior", "pool_garden", "view"]);
+/** Vision subjects a gate leaf may show. Exported: generation fingerprints exactly these. */
+export const GATE_SUBJECTS: ReadonlySet<string> = new Set(["exterior", "pool_garden", "view"]);
 
 /** The photo the gate's leaves show, and whether it is the hero itself. Exported for tooling. */
 export function gateSource(
@@ -103,7 +105,18 @@ export function gateSource(
   const hero = photos[0];
   if (!hero) return null;
   if (mode === "photo") {
-    const other = photos.slice(1).find((p) => p.url !== hero.url && p.subject && GATE_SUBJECTS.has(p.subject));
+    // ⛔ A different URL is not a different picture: portals republish each other's photos,
+    // and the Lovász apartman's gate opened the hero onto ITSELF (owner, 2026-10-03). The
+    // fingerprint (Photo.dhash) skips the copy; without one we cannot tell, and keep the URL test.
+    const other = photos
+      .slice(1)
+      .find(
+        (p) =>
+          p.url !== hero.url &&
+          p.subject &&
+          GATE_SUBJECTS.has(p.subject) &&
+          !isSamePicture(p.dhash, hero.dhash),
+      );
     if (other) return { photo: other, self: false };
   }
   return { photo: hero, self: true };
