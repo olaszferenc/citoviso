@@ -31,3 +31,10 @@ Kontraktus: `assets/design-refs/tenant-site/gate-opening/` (az elfogadott `plan.
 2. A hős fölötti nagybetűs felirat: marad / normál.
 3. Kiküldött mockon fusson-e a kapu (`data-cit-no-intro`).
 4. Lead-adat: a Három Huszár címe ma is „Ráckevei út 083/2 hrsz., 24393470213” (a portál szerint Fő u. 24.) — nem sablon-tétel.
+
+## 2. kör — a tulaj döntései (2026-10-03)
+- Kapu: **B** (másik kültéri fotó nyílik a hősre), visszaesés **A**-ra (a hős maga), ha nincs második kültéri fotó. Felirat
+  nagybetűs marad. A kapu a kiküldött mockon is fut (ADR-0311 kiegészítés: nem esik a 09-14-i teljes képernyős tiltás alá).
+- Javítás közben: a B-kapu képe a galéria-sorrendben „már látottnak” számított volna → a hős markupjából a kaput kivéve számol.
+- A land a `_drafts/`-ot törli (ADR-0077): a döntési anyag a fa gyökerében élt (`kapunyitas-dontes/`), a végleges képek
+  `kapunyitas-vegleges/` alatt (követetlen, nem commitolt).

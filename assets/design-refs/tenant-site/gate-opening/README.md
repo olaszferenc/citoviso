@@ -45,9 +45,13 @@ abból is egy sablont.” A koordináló session briefje hozta (`~/rc-briefs/kap
   sáv csak félúton. A mock ragadós ajánlatkérő bevezetője elmarad: a foglalási blokk mellett nincs ragadó foglalás-gomb.
 - **Szöveg:** a SiteData-ból és a copywriter-rétegből; minden vevő-oldali felirat `T()`-vel.
 - **A kapu adatból, és nem állít semmit:** egyetlen vision-tárgy sem mondja, hogy „kapu” vagy „bejárat”, ezért
-  egy fotó sem nevezhető kapunak, és a lap nem sugallhatja, hogy a szálláson kapu van. A kapu két fele a hős fotó
-  maga, tompítva (mint egy csukott ajtó alkonyatkor) — kinyílva ugyanarra a fotóra, kivilágítva. Dekoratív
-  (`alt=""`, `aria-hidden`), nincs külön letöltés. (A koordinátor elé vitt alternatíva: egy másik kültéri fotó.)
+  egy fotó sem nevezhető kapunak, és a lap nem sugallhatja, hogy a szálláson kapu van. A tulaj döntése (2026-10-03, „B”):
+  a kapu két fele a szállás egy MÁSIK kültéri fotója (a hős utáni legjobb `exterior` / `pool_garden` / `view`), és a hős
+  fotóra nyílik; ha nincs második kültéri fotó, a hős fotó maga, tompítva („A”). Mindkét esetben dekoratív (`alt=""`,
+  `aria-hidden`), és a galéria sorrendjében nem számít „már látott” képnek.
+- **A kiküldött mockon is fut** (tulaj, 2026-10-03): ~1,2 mp, a hősön belül, semmit nem takar ki — a 2026-09-14-i
+  tiltás (teljes képernyős, több másodperces nyitó-animáció a kiküldött mockon) nem vonatkozik rá.
+- **A hős fölötti felirat nagybetűs marad** (tulaj, 2026-10-03). **A kiemelőszín a fotókból vett**, mint minden sablonnál.
 - **Kevés adat:** nincs értékelés és stat → nincs számsáv, nincs értékelés-szakasz és nincs értékelés a meta-sorban;
   élesen szoba nélkül → nincs szoba-szakasz (és a hős második gombja a képekre visz); nincs valódi GYIK → nincs GYIK;
   nincs leírás és kiemelés → nincs „A ház”. Üres doboz sehol.

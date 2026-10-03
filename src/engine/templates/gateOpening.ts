@@ -18,11 +18,14 @@
 // THE GATE IS DATA-DRIVEN, AND HONEST. The mock's gate was hand-picked (a stone gate photo
 // opening onto the house). No vision subject says „gate” or „entrance” (heroPick.ts knows
 // exterior · pool_garden · view · dining · interior · …), so no photo can be TOLD to be a
-// gate, and the page may not suggest the place has one. The gate is therefore the hero
-// photo itself, split down the middle and dimmed like a closed door at dusk: it opens onto
-// the same photo, lit. It claims nothing about the property and costs no extra download.
-// (GATE_MODE "photo" — another outdoor photo as the leaves — is the alternative put to the
-// coordinator; see gateSource.)
+// gate, and the page may not suggest the place has one. Owner's ruling (2026-10-03, „B”): the
+// leaves are ANOTHER outdoor photo of the place (the best-ranked exterior / garden / view
+// after the hero) opening onto the hero — the mock's "one picture of the place opens onto
+// another". Without a second outdoor photo the hero itself is split and dimmed like a closed
+// door at dusk ("A"). Either way the leaves are decorative and claim nothing (see gateSource).
+// The gate also plays on the mock we SEND (owner, 2026-10-03): ~1,2 s inside the hero, it
+// hides nothing — the 2026-09-14 ban on full-screen opening intros does not cover it, so it
+// does not listen to data-cit-no-intro.
 //
 // What is NOT taken from the mock but from the system (the brief's rule): booking, the
 // lightbox, the review/map/hours blocks are the SHARED modules (data-cit-module hooks,
@@ -78,15 +81,15 @@ function ico(name: string, size = 22): string {
 
 /**
  * Where the gate's two leaves come from.
- *   "self"  — the hero photo itself, dimmed (default: true for every lead, claims nothing).
  *   "photo" — the best-ranked OTHER outdoor photo (vision subject exterior / pool_garden /
- *             view); falls back to "self" when there is none. Coordinator's choice.
+ *             view); falls back to "self" when there is none. Owner's pick („B”, 2026-10-03).
+ *   "self"  — the hero photo itself, dimmed (claims nothing; the fallback, „A”).
  */
 export type GateMode = "self" | "photo";
-export const GATE_MODE: GateMode = "self";
+export const GATE_MODE: GateMode = "photo";
 
-/** The eyebrow over the name: the approved mock's small caps (the mock-brief's avoid-list
- *  names them), or normal case. Kept as approved until the coordinator rules. */
+/** The eyebrow over the name: the approved mock's small caps. Owner's ruling (2026-10-03):
+ *  it stays in capitals. */
 export type EyebrowCase = "caps" | "normal";
 export const EYEBROW_CASE: EyebrowCase = "caps";
 
@@ -525,20 +528,19 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const lines = nameLines(data.name);
   const longest = Math.max(...data.name.split(/\s+/).map((w) => w.length), 1);
   const firstAfterHero = feat.length || aboutText ? "#ko-about" : rooms ? "#cit-rooms" : photos.length ? "#ko-gallery" : "#cit-enquiry";
+  const gateHtml = gate
+    ? `<div class="ko-gate${gate.self ? " self" : ""}" aria-hidden="true">
+      <div class="ko-leaf l"><img src="${esc(gate.photo.url)}" alt="" loading="eager"></div>
+      <div class="ko-leaf r"><img src="${esc(gate.photo.url)}" alt="" loading="eager"></div>
+    </div>`
+    : "";
   const heroBlock = `<section class="ko-hero" id="top">
     <div class="ko-hero-bg">${
       hero
         ? `<img src="${esc(hero.url)}" alt="${esc(hero.alt || data.name)}" fetchpriority="high" loading="eager">`
         : photoFill(data.name)
     }</div>
-    ${
-      gate
-        ? `<div class="ko-gate${gate.self ? " self" : ""}" aria-hidden="true">
-      <div class="ko-leaf l"><img src="${esc(gate.photo.url)}" alt="" loading="eager"></div>
-      <div class="ko-leaf r"><img src="${esc(gate.photo.url)}" alt="" loading="eager"></div>
-    </div>`
-        : ""
-    }
+    ${gateHtml}
     <div class="ko-shade" aria-hidden="true"></div>
     <div class="ko-wrap ko-hero-fade">
       <div class="ko-hero-copy">
@@ -753,7 +755,11 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   </div>`;
 
   // The gallery leads with the photos the page does not show elsewhere (contract gallery-cap).
-  const gallery = galleryOf(galleryOrder(photos, [heroBlock, aboutBlock, roomsBlock, footer].join("")));
+  // The gate's photo is seen for ~1 s while it opens: it does not count as "already on the page"
+  // (otherwise the B gate photo would be pushed to the back of the gallery).
+  const gallery = galleryOf(
+    galleryOrder(photos, [heroBlock.replace(gateHtml, ""), aboutBlock, roomsBlock, footer].join("")),
+  );
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

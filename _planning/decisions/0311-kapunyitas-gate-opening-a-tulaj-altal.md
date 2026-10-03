@@ -61,3 +61,17 @@ Vendégház (3 fotó; mock és ÉLŐ — élesen szoba nélkül nincs szoba-szak
 - **Kiküldött mockon is fusson-e a kapu?** A 2026-09-14-i tulaj-döntés (prospectNotice `disableIntroAnimation`) a
   több másodperces, teljes képernyős nyitó-animációkat tiltja a kiküldött mockon; a kapu ~1,2 mp, a hősön belül, a tartalmat
   nem takarja ki — ezért ma nem kapcsol ki a `data-cit-no-intro`-ra.
+
+### Kiegészítés — a tulaj döntései (koordinátor, 2026-10-03)
+1. **A kapu forrása: B.** A két kapuszárny a szállás egy MÁSIK kültéri fotója (a hős utáni legjobb helyezésű `exterior` /
+   `pool_garden` / `view` tárgyú kép), és a hős fotóra nyílik — a mock „a hely egyik képe nyílik a másikra” mozzanata.
+   Ha a leadnek nincs második kültéri fotója (vagy a fotóknak még nincs vision-ítélete), **A**: a hős fotó maga, tompítva.
+   `GATE_MODE = "photo"`, a visszaesés a `gateSource`-ban. A szárnyak dekoratívak és nem állítanak semmit; a kapu képe
+   a galéria sorrendjében nem számít „már látottnak” (~1 mp-ig látszik nyitás közben), így nem kerül a galéria végére.
+2. **A hős fölötti felirat nagybetűs marad.**
+3. **A kapunyitás a kiküldött mockon is fut.** A 2026-09-14-i tulaj-döntés (`prospectNotice.disableIntroAnimation`,
+   `data-cit-no-intro`) a TELJES KÉPERNYŐS, több másodperces nyitó-animációt tiltja a kiküldött mockon, mert az a keretező
+   sávot és a lapot takarta (arch-frames ~4,7 s, wordmark-grow > 6 s). A kapu ~1,2 mp, a hősön BELÜL fut, a keretezést és a
+   tartalmat nem takarja ki, és nem zárja le a görgetést — ezért nem esik a tiltás alá, és nem figyel a `data-cit-no-intro`-ra.
+   A `prospect-framing-check` zöld.
+4. **A kiemelőszín a fotókból vett** marad, mint minden sablonnál.
