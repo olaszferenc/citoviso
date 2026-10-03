@@ -75,8 +75,8 @@ lenyíló táblázat mutatja. Ha az adat hiányos vagy gyanús, az **„Adatok �
 friss webes keresést futtat erre az egy leadre.
 
 ⚠️ **A mentés mindent vagy semmit.** A szállás címe minden mockon és honlapon megjelenik, ezért a
-rendszer nem enged bele vevő-számlázási adatot (a böngésző automatikus kitöltése könnyen a saját
-számlázási adatainkat írja ide — ha egy mező magától kitöltődött, mentés előtt nézd át):
+rendszer nem enged bele vevő-számlázási adatot. Az űrlapon a böngésző automatikus kitöltése ki
+van kapcsolva (az a saját számlázási adatainkat írná ide); a biztos védelem mégis ez a szabály:
 
 - a **cím** mezőben nem állhat érvényes magyar adószám, sem 10–12 jegyű, telefonszám-formájú szám
   (a szóközzel vagy kötőjellel tagolt számot is egyben vizsgálja);
