@@ -20,7 +20,11 @@
 //     („grillezés a FEDETT teraszon”, „reggeli a TERASZON”) is a BLOCKING lint finding, and
 //     the critic's own "javítandó" on an always-blocking kind is raised to blocking;
 //   ⑧ what still ships as "javítandó" is NAMED in the verdict reason (not silently dropped);
-//   ⑨ OP-1: the market verdict is judged on the SHIPPED (post-critic) copy on both paths.
+//   ⑨ OP-1: the market verdict is judged on the SHIPPED (post-critic) copy on both paths;
+//   ⑩ SZ3-1 (Elek round 3, 2026-10-02): an outdoor amenity OBJECT no source names („kerti
+//     pihenő és bútorozott terasz”, Erika villa) is a BLOCKING lint finding, the critic's own
+//     objection to it is neither dropped as photo-only nor left "javítandó", and the writer's
+//     prompt forbids inferring such objects from a photo.
 //
 // Run: npx tsx scripts/guest-critic-check.mts
 import { readdirSync, readFileSync } from "node:fs";
@@ -30,6 +34,7 @@ import {
   dropPhotoOnlyObjections,
   HOUSE_REGISTER,
   lintAddedDetail,
+  lintAddedObject,
   lintCopy,
   lintOffers,
   minorTail,
@@ -262,6 +267,96 @@ for (const path of ["src/generator/generateEngine.ts", "src/generator/recopy.ts"
   );
   check(`${path}: a perzisztált piac-indoklás az utolsó ítélet`, persisted > lastMarket, `perzisztálás @${persisted}`);
   check(`${path}: a kritikus utáni piac-hiba nem hagyja ott az elavult verdiktet`, /verdict: "error", layer: "judge"/.test(src), "nincs error-ág");
+}
+
+// ── ⑩ SZ3-1: an added outdoor OBJECT blocks ─────────────────────────────────────
+{
+  // The Erika villa source panel, verbatim (live mock, Elek round 3, 2026-10-02).
+  const erika = criticSourceOf({
+    name: "[TESZT] Erika villa",
+    facts: [
+      { label: "strand közelsége", source: "google_places", quote: "A szabadstrand kb 5 perc sétára van, a szállás szomszédságában van egy Spar is." },
+      { label: "ingyenes strandolás", source: "google_places", quote: "Close to the lake, at this place it is also not paid to go to the lake." },
+      { label: "csendes környék", source: "google_places", quote: "Nagyon nyugodt, csendes környék, jól lehetett pihenni, semmi zaj nem volt, ami Siófokon nem feltétlenül jellemző." },
+      { label: "segítőkész házigazdák", source: "google_places", quote: "A házigazdák kedvesek, barátságosak és végtelenül segítőkészek!" },
+      { label: "tiszta, felszerelt szoba", source: "google_places", quote: "A szoba és fürdőszoba nagyon hangulatos, szépen berendezett, patyolattiszta és mindennel felszerelt." },
+      { label: "tágas szobák", source: "google_places", quote: "The house itself also has enough room for a good price, i would recommend it!" },
+    ],
+    descriptions: [],
+    reviews: [],
+  });
+  // The shipped copy, verbatim: the three places the object stood.
+  const shipped: CopySurface = {
+    tagline: "Csendes környék Siófokon, kb. 5 perc sétára a szabadstrandtól.",
+    intro:
+      "Az Erika villa meghitt, családias hangulatú szállás Siófok csendes, nyugodt környékén. A szobák világosak, szépen berendezettek és mindennel felszereltek, a házhoz kerti pihenő és bútorozott terasz tartozik. A szabadstrand kb. 5 perc sétára, a szomszédban élelmiszerbolt.",
+    highlights: ["Szabadstrand kb. 5 perc sétára", "Tiszta, mindennel felszerelt szobák", "Csendes, nyugodt környék", "Kerti pihenő, bútorozott terasz"],
+    editorial: { hero: { lead: "Csendes környék és kerti pihenő" } as never },
+  };
+  const found = lintAddedObject(shipped, erika);
+  const at = (field: string) => found.filter((o) => o.field === field && o.severity === "blokkolo").map((o) => o.quote);
+  check("⛔ Erika: „kerti pihenő” a főcímben BLOKKOL", at("hero.lead").some((q) => /kerti pihenő/.test(q)), JSON.stringify(found.map((o) => [o.field, o.quote])));
+  check("⛔ Erika: a kiemelés mindkét tárgya BLOKKOL („Kerti pihenő” · „bútorozott terasz”)", at("highlights[3]").length === 2, JSON.stringify(at("highlights[3]")));
+  check("⛔ Erika: a bemutatkozó „kerti pihenő és bútorozott terasz” BLOKKOL", at("intro").some((q) => /pihenő/.test(q)) && at("intro").some((q) => /bútorozott terasz/.test(q)), JSON.stringify(at("intro")));
+  check(
+    "Erika: a forrásolt sorok (strand, csendes környék, felszerelt szobák) NEM blokkolnak",
+    ["tagline", "highlights[0]", "highlights[1]", "highlights[2]"].every((f) => at(f).length === 0),
+    JSON.stringify(found.map((o) => [o.field, o.quote])),
+  );
+  check("„jól lehetett pihenni” a forrásban NEM igazol kerti pihenőt", at("hero.lead").length === 1, JSON.stringify(at("hero.lead")));
+
+  // Honest twins — the rule must not eat what the source or the photo carries.
+  const muschel = criticSourceOf({
+    name: "Muschel Panzió",
+    facts: [{ label: "grillezési lehetőség", source: "google_places", quote: "cozy terrace where there are also barbecue facilities" }],
+    descriptions: [],
+    reviews: ["Very well maintained guest house with pool and cozy terrace where there are also barbecue facilities."],
+  });
+  const clean = (label: string, c: CopySurface, src = muschel) => {
+    const h = lintAddedObject(c, src);
+    check(label, h.length === 0, JSON.stringify(h.map((o) => o.quote)));
+  };
+  const one = (line: string): CopySurface => ({ tagline: "", intro: "", highlights: [line], editorial: {} });
+  clean("A forrás erejéig álló „Grillezős terasz” (Muschel) NEM blokkol", one("Grillezős terasz"));
+  clean("A fotón látható „Kültéri medence napozóágyakkal” NEM blokkol (szerkezet, a fotó-őré)", one("Kültéri medence napozóágyakkal"));
+  clean("„Rendezett kert” NEM blokkol (szerkezet)", one("Rendezett kert a ház előtt"), erika);
+  clean("„Szépen berendezett, bútorozott szobák” NEM blokkol (szoba, nem kültéri)", one("Szépen berendezett, bútorozott szobák"), erika);
+  clean("„Pihenjen nyugodtan” NEM tárgy, NEM blokkol", one("Pihenjen nyugodtan a csendes környéken"), erika);
+  const dencs = criticSourceOf({
+    name: "Dencs Apartmanház",
+    facts: [{ label: "Játszótér", source: "szallas.hu" }, { label: "Kerti bútor", source: "szallas.hu" }],
+    descriptions: ["A kertben gyerekjátszótér és kerti bútorokkal berendezett terasz várja a pihenni vágyókat."],
+    reviews: [],
+  });
+  clean("A hirdetésben álló játszótér, kerti bútor és terasz NEM blokkol", one("Játszótér, kerti bútorokkal berendezett terasz"), dencs);
+  clean("A szállás NEVE nem állítás („A Kemencés Vendégház …”)", one("A Kemencés Vendégház egy meszelt falú parasztház"), criticSourceOf({ name: "Kemencés Vendégház", facts: [], descriptions: [], reviews: [] }));
+  clean("„falusi pihenőt kínál” / „ideális pihenőhely” átvitt értelem, NEM blokkol", one("Igazi falusi pihenőt kínál, ideális pihenőhely a strandok közelében"), erika);
+  clean("„tornácos főépület” építészet (a homlokzat-fotón), NEM blokkol", one("A tornácos főépület mögött rendezvénytér"), erika);
+  clean("A szobabútor NEM kültéri, ha a terasz egy másik tagmondatban áll", { tagline: "", intro: "A szobák tömör fa bútorokkal, a nappaliból a teraszra lehet kilépni.", highlights: [], editorial: {} }, muschel);
+  clean(
+    "A „kerti kiülők” forrás igazolja az árnyékolt teraszt (Myrna Haus)",
+    one("Árnyékolt teraszok"),
+    criticSourceOf({ name: "Myrna Haus", facts: [{ label: "kerti kiülők", source: "szallas.hu" }], descriptions: [], reviews: [] }),
+  );
+  const mustBlock = (label: string, line: string) => {
+    const h = lintAddedObject(one(line), erika);
+    check(`⛔ ${label} BLOKKOL`, h.some((o) => o.severity === "blokkolo"), JSON.stringify(h.map((o) => o.quote)));
+  };
+  for (const line of ["Jakuzzi a kertben", "Finn szauna", "Bográcsozó a kertben", "Játszótér a gyerekeknek", "Függőágy a fák alatt", "Saját stég"])
+    mustBlock(`Forrás nélkül „${line}”`, line);
+
+  const ai = (kind: Objection["kind"], quote: string, severity: Objection["severity"] = "javitando"): Objection => ({ field: "x", quote, kind, severity, guestReaction: "", fix: "", by: "ai" });
+  check(
+    "⛔ A kritikus kifogása a „kerti pihenő és bútorozott terasz”-ra NEM esik ki fotó-ügyként",
+    dropPhotoOnlyObjections([ai("forrastalan_igeret", "kerti pihenő és bútorozott terasz", "blokkolo")]).length === 1,
+    "kiesett",
+  );
+  check("⛔ A tárgyat felfújó túlzás „javítandó”-ja BLOKKOLÓ lesz", normalizeSeverity(ai("tulzas_a_forrashoz", "pihenősarok jakuzzival")).severity === "blokkolo", "javítandó maradt");
+
+  const crit = read("src/generator/guestCritic.ts");
+  check("A kritikus minden körben futtatja a tárgy-szabályt", /\.\.\.lintAddedObject\(copy, source\)/.test(crit), "a lintAddedObject nincs a kifogás-listában");
+  check("A kritikus promptja kimondja a hozzátett kültéri objektumot", /HOZZÁTETT KÜLTÉRI OBJEKTUM/.test(crit), "hiányzik a prompt-sor");
+  check("A szövegíró promptja tiltja a tárgy kikövetkeztetését a fotóból", /KÜLTÉRI OBJEKTUMOT[\s\S]{0,400}A fotóból NEM következtetsz ki ilyet/.test(read("src/generator/brief.ts")), "hiányzik a brief.ts-ből");
 }
 
 for (const f of failures) console.error(`❌ ${f}`);

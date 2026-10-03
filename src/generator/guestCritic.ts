@@ -291,6 +291,64 @@ export function lintAddedDetail(c: CopySurface, source: CriticSource): Objection
 }
 
 /**
+ * ADDED OBJECT (Elek, live round 3, 2026-10-02 — SZ3-1). The Erika villa mock shipped „a házhoz
+ * KERTI PIHENŐ és BÚTOROZOTT TERASZ tartozik” three times over (intro, highlight, heading). No
+ * source says terrace or garden furniture; the photos show a tidy garden, a pergola and a balcony
+ * with one plastic chair. lintAddedDetail did not fire — there was no SERVICE in the clause — and
+ * the critic is told not to object to physical things, so the object itself went unchecked.
+ * A structure a photo shows plainly (pool, garden, yard, balcony, view) stays the photo's call;
+ * an outdoor AMENITY a guest plans to USE (terrace, garden furniture, a seating corner, grill,
+ * hot tub, sauna, playground…) is exactly what they hold the page to, and needs a source unit
+ * that names it. `outdoor`: furniture only counts as a claim next to an outdoor word („szépen
+ * berendezett szobák” is a room, and the room is on the photo).
+ */
+const OUTDOOR = look("terasz|terrace|terrass|patio|kert|garden|garten|udvar(?!ias)|yard|erkély|balcon|balkon|outdoor|kültéri|szabadtéri");
+export const OBJECT_TERMS: readonly { name: string; re: RegExp; outdoor?: true }[] = [
+  // Not „tornác”: a porch is the building's architecture, on the facade photo (Artemisz, Bánó Porta).
+  { name: "terasz", re: look("terasz|terrace|terrass|patio|veranda|kiülő") },
+  { name: "kerti bútor", outdoor: true, re: look("bútor|furnitur|furnished|möbel|möbliert") },
+  // Not a bare „pihenő”: „falusi pihenőt kínál”, „ideális pihenőhely” mean a holiday, not a thing.
+  { name: "kerti pihenő", re: look("kerti pihenő|fedett pihenő|pihenősar|pihenőkert|ülősar|kiülő|sitting area|seating|lounge area|sitzecke|sitzbereich|lugas|gazebo|pavilon") },
+  { name: "grill", re: look("grill|barbecue|bbq") },
+  { name: "bogrács", re: look("bogrács|kemenc|tűzrakó|fire ?pit|feuerstelle|pizza ?oven") },
+  { name: "jakuzzi", re: look("jakuzzi|jacuzzi|pezsgőfürdő|hot ?tub|whirlpool|dézsa") },
+  { name: "szauna", re: look("szaun|sauna") },
+  { name: "játszótér", re: look("játszótér|játszóház|playground|spielplatz|hinta|swing|schaukel|trambulin|trampolin|csúszd|slide") },
+  { name: "függőágy", re: look("függőágy|hammock|hängematte") },
+  { name: "stég", re: look("stég|jetty|pier|steg(?![\\p{L}])") },
+];
+
+export function lintAddedObject(c: CopySurface, source: CriticSource): Objection[] {
+  const units = sourceUnits(source);
+  // The property's own name is not a claim („A Kemencés Vendégház …” promises no oven).
+  const name = source.name.replace(/^\[TESZT\]\s*/u, "").trim().toLowerCase();
+  const out: Objection[] = [];
+  for (const { field, text } of surfaceLines(c)) {
+    for (const clause of text.split(CLAUSE_SPLIT).map((x) => x.trim()).filter(Boolean)) {
+      const probe = name ? clause.toLowerCase().split(name).join(" ") : clause;
+      for (const o of OBJECT_TERMS) {
+        if (!o.re.test(probe)) continue;
+        // Furniture needs its outdoor noun in the SAME clause: „tömör fa bútorokkal” is the room
+        // even when the sentence goes on to a terrace (Rozé Fogadó).
+        if (o.outdoor && !OUTDOOR.test(probe)) continue;
+        if (units.some((u) => o.re.test(u) && (!o.outdoor || OUTDOOR.test(u)))) continue;
+        out.push({
+          field,
+          quote: clause,
+          kind: "tulzas_a_forrashoz",
+          severity: "blokkolo",
+          guestReaction: `„${clause}” — erre (${o.name}) készülök, és érkezéskor keresem, de a szállás sehol nem mondja, hogy van.`,
+          fix: `hagyd ki a(z) „${o.name}” tárgyat; a fotón látott kert, pergola vagy erkély nem ${o.name}`,
+          by: "lint",
+        });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * The critic's own grading, made consistent with its rulebook. The prompt calls these kinds
  * BLOCKING without exception, yet the model graded „Grillezési lehetőség a fedett teraszon”
  * (forrastalan_igeret) "javítandó" and the loop shipped it with a PASS (SZ2-1). An overstatement
@@ -310,7 +368,9 @@ export function normalizeSeverity(o: Objection): Objection {
   const blocking =
     ALWAYS_BLOCKING.has(o.kind) ||
     (o.kind === "tulzas_a_forrashoz" &&
-      (SERVICE_TERMS.some((s) => s.re.test(o.quote)) || DETAIL_TERMS.some((d) => d.re.test(o.quote))));
+      (SERVICE_TERMS.some((s) => s.re.test(o.quote)) ||
+        DETAIL_TERMS.some((d) => d.re.test(o.quote)) ||
+        OBJECT_TERMS.some((t) => t.re.test(o.quote))));
   return blocking ? { ...o, severity: "blokkolo" } : o;
 }
 
@@ -332,7 +392,8 @@ Mit keresel (a „kind” értékei):
 - velemeny_mint_szolgaltatas — egy vendég-vélemény EGYSZERI élményéből vagy szívességéből SZOLGÁLTATÁS-ÍGÉRET lett, vagy a véleményből „bérelhető / kölcsönözhető / foglalható / ingyenes” ajánlat. Példa: a vélemény szerint a házigazda „kölcsönadta a biciklijét” → az oldalon „bérelhető kerékpárok”. A vendég ezt számon kéri érkezéskor. BLOKKOLÓ.
   ⚖️ A HATÁR (a ház szabálya): ha a vélemény egy ÁLLANDÓ adottságot ír le („van reggeli”, „grillezési lehetőség a teraszon”, „elegendő parkolóhely”, „van klíma”), az a vélemény erejéig ÁLLÍTHATÓ — hűen fordítva, felfújás nélkül. Ezt NE kifogásold csak azért, mert véleményből jön. Csak a szívességet, az egyszeri élményt és a felfújást kifogásold.
 - tulzas_a_forrashoz — az állítás TÖBBET mond, mint a forrás: „elegendő parkoló” → „bőséges saját parkoló”; HOZZÁTETT HELY- VAGY MINŐSÉG-RÉSZLET egy szolgáltatáshoz vagy adottsághoz, amit a forrás nem mond („barbecue facilities” → „grillezés a FEDETT teraszon”; „breakfast” → „reggeli a TERASZON / a kertben”; „kilátással”, „saját”, „fűtött”, „ingyenes” forrás nélkül) — ez MINDIG BLOKKOLÓ, mert a vendég épp ezt a részletet kéri számon; „csendes környék” → „a nyugodt Nádas közben” forrás nélküli jelzővel; TÁVOLSÁG felfújása („800 méterre” → „pár lépésre”, „karnyújtásnyira”) — a vendég lemérte a térképen. Vesd össze a FORRÁS idézettel betűre. BLOKKOLÓ, ha szolgáltatást vagy adottságot fúj fel; JAVÍTANDÓ, ha csak hangulati jelző.
-- forrastalan_igeret — szolgáltatás (amit a ház AD: reggeli, kölcsönzés, transzfer, parkoló, program, grill-használat), amihez nincs forrás. ⚠️ Fizikai tárgyat, berendezést vagy adottságot (medence, napozóágy, kert, terasz, kilátás, szobabútor) SOHA NE kifogásolj forrás miatt — a fotókat te nem látod, azt a fotó-őr ellenőrzi. Szolgáltatásra viszont a fotó SOHA nem forrás. BLOKKOLÓ.
+- forrastalan_igeret — szolgáltatás (amit a ház AD: reggeli, kölcsönzés, transzfer, parkoló, program, grill-használat), amihez nincs forrás. ⚠️ Fotón egyértelműen látható SZERKEZETET vagy adottságot (medence, napozóágy, kert, udvar, erkély, kilátás, szobabútor) SOHA NE kifogásolj forrás miatt — a fotókat te nem látod, azt a fotó-őr ellenőrzi. Szolgáltatásra viszont a fotó SOHA nem forrás. BLOKKOLÓ.
+  ⛔ KIVÉTEL — HOZZÁTETT KÜLTÉRI OBJEKTUM: terasz, kerti bútor / „bútorozott”, kerti pihenő / pihenősarok, grill, bogrács, kemence, jakuzzi / dézsa, szauna, játszótér / hinta / trambulin, függőágy, stég. Ezt a vendég HASZNÁLNI akarja és számon kéri, a szövegíró pedig a fotóból könnyen kikövetkezteti (egy pergolából „bútorozott terasz”, egy erkélyen álló székből „kerti pihenő” lesz). Ha a FORRÁSOK egyike sem nevezi meg a tárgyat, az forrastalan_igeret, BLOKKOLÓ.
 - nem_letezo_fogalom — olyan magyar kifejezés, ami nincs a köznyelvben, vagy mást jelent („főtt reggeli” = főtt étel, nem meleg reggeli). BLOKKOLÓ.
 - tukorforditas — angol szerkezet magyar szavakkal („cooked breakfast” → „főtt reggeli”, „nincs a képben”). BLOKKOLÓ, ha félreérthető.
 - megszolitas — a ház megszólítási szabályától eltérő alak. BLOKKOLÓ.
@@ -424,7 +485,9 @@ export function dropPhotoOnlyObjections(objections: readonly Objection[]): Objec
         o.by === "ai" &&
         (o.kind === "forrastalan_igeret" || o.kind === "tulzas_a_forrashoz") &&
         PHYSICAL.test(o.quote) &&
-        !SERVICE.test(o.quote)
+        !SERVICE.test(o.quote) &&
+        // An outdoor amenity a guest plans to use is source-bound (SZ3-1), even next to a garden.
+        !OBJECT_TERMS.some((t) => t.re.test(o.quote))
       ),
   );
 }
@@ -453,7 +516,12 @@ export async function critiqueCopy(
   /** The version before the last rewrite: anything the rewrite ADDED is judged hardest. */
   previous?: CopySurface,
 ): Promise<{ objections: Objection[]; summary: string }> {
-  const lint = [...lintCopy(copy, register), ...lintOffers(copy, source), ...lintAddedDetail(copy, source)];
+  const lint = [
+    ...lintCopy(copy, register),
+    ...lintOffers(copy, source),
+    ...lintAddedDetail(copy, source),
+    ...lintAddedObject(copy, source),
+  ];
   const c = await client();
   const res = await c.messages.create({
     model: MODEL,

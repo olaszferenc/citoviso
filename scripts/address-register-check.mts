@@ -106,6 +106,8 @@ const CONSOLE_FAMILIAR = new Set([
   "válassz", "léphetsz", "látod", "javíthatod", "nézd", "megteheted", "láttad", "adj", "te",
   "lekérheted", "generálj", "várunk", "kérhetsz", "megadod", "keress", "kérj", "válaszd",
   "jelölhetsz", "kérheted", "indíthatod", "keresel", "találtál", "próbáld", "tudod",
+  // The walk selector (ADR-0310): „Ha mégis ezt választod, … lapot kapsz ezen a néven.”
+  "választod", "kapsz",
 ]);
 
 /** The seven measured eyebrows, as the critic's lint sees them (features.eyebrow). */
