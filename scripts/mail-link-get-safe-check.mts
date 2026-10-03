@@ -344,9 +344,21 @@ async function main(): Promise<void> {
   check("POST vélemény nem-teszem-ki → rejected", revStatus === "rejected", `${rv.status}`);
   // ⑥ positive control: the page's own visit call DOES record, and the nth one mints the offer.
   let lastView: { viewId?: string; offer?: { kind?: string } | null } = {};
+  // ADR-0313: the threshold counts DISTINCT Budapest days by default — every visit but the last is
+  // moved to its own past day (10:00 UTC on a past UTC date = a distinct Budapest day, midnight-safe),
+  // so the nth call is also the nth day. Harmless when the switch is off (every visit counts then).
+  const t0 = new Date();
   for (let i = 0; i < esc.threshold; i++) {
     const v = await call(con, "POST", `/p/${prospectToken}/view`, "{}");
     lastView = v.status === 200 ? (JSON.parse(v.body) as typeof lastView) : {};
+    if (i < esc.threshold - 1 && lastView.viewId) {
+      const daysAgo = esc.threshold - 1 - i;
+      await db
+        .updateTable("mock_view")
+        .set({ started_at: new Date(Date.UTC(t0.getUTCFullYear(), t0.getUTCMonth(), t0.getUTCDate() - daysAgo, 10)) })
+        .where("id", "=", lastView.viewId)
+        .execute();
+    }
   }
   const viewRows = await db.selectFrom("mock_view").select("id").where("prospect_id", "=", prospect.id).execute();
   check(
