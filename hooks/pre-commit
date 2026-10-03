@@ -2690,6 +2690,27 @@ if [ -f scripts/fact-sample-check.mts ] && \
   echo "[pre-commit] fact-sample-check (a tényhűség-kapu a mintát nem számolja tényként, sablontól függetlenül)…"
   npx tsx scripts/fact-sample-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ELEK 3. KÖR ALACSONY TÉTELEK (tulaj-döntés 2026-10-03). INV-1: a modul-vásárlás számlája modulonként
+# külön sort kap, a sorok összege BETŰRE a terhelt összeg (a Számlázz.hu összeadja a tételeket) — 0/1/sok
+# modul, 98%-os és kupon nélküli eset, a Számlázz-XML is. Se DB, se hálózat (~3 s).
+if [ -f scripts/invoice-module-lines-check.mts ] && \
+   changed_files | grep -qE '^src/payment/service\.ts$|^src/invoicing/szamlazz\.ts$|^src/modules\.ts$|^scripts/invoice-module-lines-check\.mts$'; then
+  echo "[pre-commit] invoice-module-lines-check (modulonkénti számla-sor, pontos összeg)…"
+  npx tsx scripts/invoice-module-lines-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADM3-1: a modul-kártya kupon-ára az első díjra szól, a tartós díj mellette (~2 s).
+if [ -f scripts/module-card-coupon-check.mts ] && \
+   changed_files | grep -qE '^src/server/adminViews\.ts$|^scripts/module-card-coupon-check\.mts$'; then
+  echo "[pre-commit] module-card-coupon-check (kupon csak az első díjra)…"
+  npx tsx scripts/module-card-coupon-check.mts >"$GATE_LOG" || gate_failed
+fi
+# L3-2 + L-6: a konfigurátor 1. lépése ugyanazt a megtakarítást mondja, mint a 2.; a 2. lépés jegyzete
+# „Ez még nem fizetés.” — valódi böngészőben, 390 px és asztal (~25 s).
+if [ -f scripts/order-step1-offer-check.mts ] && \
+   changed_files | grep -qE '^assets/runtime/cit-configurator\.js$|^src/generator/configurator\.ts$|^scripts/order-step1-offer-check\.mts$'; then
+  echo "[pre-commit] order-step1-offer-check (egy ajánlat, egy megtakarítás; „Ez még nem fizetés.”)…"
+  npx tsx scripts/order-step1-offer-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"

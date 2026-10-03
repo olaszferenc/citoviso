@@ -1,0 +1,43 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L-6 · „Nem kötelező.” a kötelező pipa mellett</title><link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+body{margin:0;background:var(--citui-bg);color:var(--citui-ink);font-family:var(--citui-font-text)}
+.bar{position:sticky;top:0;z-index:9;background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 14px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar b{margin-right:6px} .bar button{font:inherit;border-radius:999px;padding:3px 10px;border:1px solid var(--citui-cyan-400);background:transparent;color:var(--citui-ink-inverse);cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--citui-cyan-400);color:var(--citui-navy-900);font-weight:700}
+.bar .sub{flex-basis:100%;opacity:.8;font-size:12px}
+#stage{container-type:inline-size;max-width:1180px;margin:18px auto;padding:0 16px;box-sizing:border-box}
+#stage.mobile{max-width:390px;padding:0}
+.why{font-size:13px;color:var(--citui-muted);margin:0 0 14px}
+.cfg{max-width:520px;background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-radius:var(--citui-radius-lg);padding:18px}
+.req{display:flex;gap:8px;font-size:14px;margin-bottom:14px} .req em{font-style:normal;color:var(--citui-cyan-300);font-size:12px;margin-left:4px}
+.go{font:inherit;font-weight:700;width:100%;padding:12px;border:0;border-radius:var(--citui-radius);background:var(--citui-cyan-400);color:var(--citui-navy-900);cursor:pointer}
+.go:disabled{opacity:.45;cursor:not-allowed}
+.note{font-size:12.5px;opacity:.8;margin:10px 0 0} .done{font-size:12px;color:var(--citui-cyan-300)}
+</style></head><body>
+<div class="bar"><b>JÓVÁHAGYOTT TERV (tulaj, 2026-10-03, A változat) — L-6 · „Nem kötelező.” a kötelező pipa mellett</b><span>„Ez még nem fizetés.”</span><span>· méret:</span><button type="button" id="szM" aria-pressed="false">Mobil 390px</button><button type="button" id="szD" aria-pressed="true">Asztali</button><span class="sub">A konfigurátor 2. lépésének alja. Ma a gomb alatt: „Nem kötelező. A következő lépésben megadja…” — a kötelező képjogi pipa mellett úgy olvasható, mintha a pipa volna nem kötelező — működő vázlat: a gombok, pipák és összegek élnek; semmi nem kerül elküldésre.</span></div>
+<div id="stage"><p class="why">Próbálja: a gomb a kötelező pipa nélkül nem nyomható; figyelje, mit mond a gomb alatti sor.</p>
+<section class="cfg">
+ <label class="req"><input type="checkbox" id="rights"> <span><b>Kijelentem</b>, hogy a fotók felhasználására jogosult vagyok. <em>kötelező</em></span></label>
+ <button type="button" id="go" class="go" disabled>Tovább a számlázási adatokhoz ›</button>
+ <p class="note" id="note"></p>
+ <p class="done" id="done" hidden>(vázlat: itt nyílna a számlázási lap)</p>
+</section></div>
+<script>
+(function(){
+  var st=document.getElementById("stage"),M=document.getElementById("szM"),D=document.getElementById("szD");
+  function sz(m){st.classList.toggle("mobile",m);M.setAttribute("aria-pressed",m);D.setAttribute("aria-pressed",!m);}
+  M.onclick=function(){sz(true)};D.onclick=function(){sz(false)};sz(window.matchMedia("(max-width:600px)").matches);
+  window.V="A";
+  document.querySelectorAll(".vb").forEach(function(b){b.onclick=function(){V=b.dataset.v;document.querySelectorAll(".vb").forEach(function(x){x.setAttribute("aria-pressed",x===b)});window.render&&render();};});
+})();
+
+var REST="A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.";
+document.getElementById("rights").onchange=function(){document.getElementById("go").disabled=!this.checked};
+document.getElementById("go").onclick=function(){document.getElementById("done").hidden=false};
+function render(){
+  var first=V==="A"?"Ez még nem fizetés. ":V==="B"?"Ezzel még nem rendel meg semmit. ":"";
+  document.getElementById("note").textContent=first+REST;
+}
+render();
+</script></body></html>

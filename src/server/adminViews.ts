@@ -1271,6 +1271,29 @@ function annualMultiplier(sub: SubscriptionAdminData | null): number {
  * different divisors on one owner's two screens — the same annual account reading
  * 4 900 Ft/év under Modulok and 490 Ft/hó under Áttekintés for the very same module.
  */
+/**
+ * A shop card's price under a live coupon (ADM3-1, owner ruling „A” 2026-10-03; contract:
+ * assets/design-refs/tenant-admin/coupon-first-month/). The coupon is ONE-OFF: the card read
+ * „áthúzott 490 Ft, +367 Ft/hó”, which promised a standing monthly fee the next invoice does
+ * not carry. So the discounted figure stands for the FIRST fee only, and the standing fee is
+ * named next to it. Same floor math as the server (applyOffer); same period as modulePriceForm.
+ */
+export function couponCardPrice(monthly: number, percent: number, annualMult: number, lang: string): string {
+  const per = annualMult > 0 ? annualMult : 1;
+  const list = monthly * per;
+  const first = Math.floor((monthly * (100 - percent)) / 100) * per;
+  const price = esc(hufAmount(list));
+  return (
+    `<span class="adm-price adm-price--coupon">` +
+    `<s>${esc(hufAmount(list))}</s> ` +
+    `<b class="adm-price__lead">+${esc(hufAmount(first))}</b> ` +
+    (annualMult > 0 ? T(lang, "az első évben") : T(lang, "az első hónapban")) +
+    `<em class="adm-price__alt">` +
+    (annualMult > 0 ? T(lang, "utána +{price}/év", { price }) : T(lang, "utána +{price}/hó", { price })) +
+    `</em></span>`
+  );
+}
+
 function modulePriceForm(monthly: number, plus: boolean, annualMult: number, lang: string): string {
   const yearly = esc(hufAmount(monthly * annualMult));
   const price = esc(hufAmount(monthly));
@@ -1927,15 +1950,10 @@ export function modulesSection(
     // (modules-quiet-list §6). Only the owned list drops it.
     if (!coupon || m.priceMonthly <= 0)
       return `<span class="adm-price">${priceForm(m.priceMonthly, true)}</span>`;
-    const discounted = Math.floor((m.priceMonthly * (100 - coupon.percent)) / 100);
-    return (
-      `<span class="adm-price adm-price--coupon">` +
-      `<s>${esc(huf(m.priceMonthly))}</s> ` +
-      // The coupon price rides the SAME period form — a discounted monthly figure
-      // with no annual conversion would re-open the very gap this closes.
-      priceForm(discounted, true) +
-      `</span>`
-    );
+    // ADM3-1: the discounted figure is the FIRST fee, the standing fee is named beside it —
+    // in the SAME period form as every other card (a monthly figure on an annual account
+    // would re-open the gap modulePriceForm closes).
+    return couponCardPrice(m.priceMonthly, coupon.percent, annualMult, lang);
   };
 
   // ① Owned modules — the work surface.

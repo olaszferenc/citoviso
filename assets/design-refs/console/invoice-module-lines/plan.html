@@ -1,0 +1,62 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>INV-1 · a modul-vásárlás számla-tétele</title><link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+body{margin:0;background:var(--citui-bg);color:var(--citui-ink);font-family:var(--citui-font-text)}
+.bar{position:sticky;top:0;z-index:9;background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 14px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar b{margin-right:6px} .bar button{font:inherit;border-radius:999px;padding:3px 10px;border:1px solid var(--citui-cyan-400);background:transparent;color:var(--citui-ink-inverse);cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--citui-cyan-400);color:var(--citui-navy-900);font-weight:700}
+.bar .sub{flex-basis:100%;opacity:.8;font-size:12px}
+#stage{container-type:inline-size;max-width:1180px;margin:18px auto;padding:0 16px;box-sizing:border-box}
+#stage.mobile{max-width:390px;padding:0}
+.why{font-size:13px;color:var(--citui-muted);margin:0 0 14px}
+.mods{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;margin-bottom:14px}
+.inv{width:100%;border-collapse:collapse;background:var(--citui-panel);font-size:14px}
+.inv th,.inv td{border-bottom:1px solid var(--citui-line);padding:8px;text-align:left;vertical-align:top} .inv td:nth-child(3),.inv th:nth-child(3){text-align:right;white-space:nowrap}
+.inv tfoot td{font-weight:700} .now{font-size:12.5px;color:var(--citui-muted)}
+</style></head><body>
+<div class="bar"><b>JÓVÁHAGYOTT TERV (tulaj, 2026-10-03, B változat) — INV-1 · a modul-vásárlás számla-tétele</b><span>modulonként külön sor</span><span>· méret:</span><button type="button" id="szM" aria-pressed="false">Mobil 390px</button><button type="button" id="szD" aria-pressed="true">Asztali</button><span class="sub">A tenant modul-vásárlása (order kind „upsell”) után kiállított számla tételsora. Ma: „Citoviso előfizetés (havi, 3 modul) — 25% kedvezménnyel” — nem mondja, hogy modul-bővítés, és melyek — működő vázlat: a gombok, pipák és összegek élnek; semmi nem kerül elküldésre.</span></div>
+<div id="stage"><p class="why">Jelölje, mely modulokat vette meg: a tételsor ennek megfelelően íródik. A végösszeg minden változatban ugyanaz (a Számlázz.hu összeadja a tételeket — kedvezmény-sor nincs, ADR-0205).</p>
+<div class="mods">
+ <label><input type="checkbox" data-m="Vendégek véleménye" data-p="690" checked> Vendégek véleménye</label>
+ <label><input type="checkbox" data-m="Térkép, megközelítés" data-p="490" checked> Térkép, megközelítés</label>
+ <label><input type="checkbox" data-m="Árak, szezonok" data-p="490" checked> Árak, szezonok</label>
+ <label><input type="checkbox" id="cpn" checked> −25% kupon érvényes</label>
+</div>
+<table class="inv"><thead><tr><th>Megnevezés</th><th>Menny.</th><th>Bruttó</th></tr></thead><tbody id="rows"></tbody>
+<tfoot><tr><td>Összesen</td><td></td><td id="tot"></td></tr></tfoot></table>
+<p class="now">Ma: <span id="today"></span></p></div>
+<script>
+(function(){
+  var st=document.getElementById("stage"),M=document.getElementById("szM"),D=document.getElementById("szD");
+  function sz(m){st.classList.toggle("mobile",m);M.setAttribute("aria-pressed",m);D.setAttribute("aria-pressed",!m);}
+  M.onclick=function(){sz(true)};D.onclick=function(){sz(false)};sz(window.matchMedia("(max-width:600px)").matches);
+  window.V="B";
+  document.querySelectorAll(".vb").forEach(function(b){b.onclick=function(){V=b.dataset.v;document.querySelectorAll(".vb").forEach(function(x){x.setAttribute("aria-pressed",x===b)});window.render&&render();};});
+})();
+function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,"\u00a0")+"\u00a0Ft"}
+document.querySelectorAll(".mods input").forEach(function(i){i.onchange=render});
+function render(){
+  var ms=[].slice.call(document.querySelectorAll(".mods input[data-m]:checked")).map(function(i){return {n:i.dataset.m,p:+i.dataset.p}});
+  var cpn=document.getElementById("cpn").checked, f=cpn?0.75:1, rows=[];
+  var tot=ms.reduce(function(s,m){return s+Math.floor(m.p*f)},0), names=ms.map(function(m){return m.n}).join(", ");
+  var k=cpn?" — 25% kedvezménnyel":"";
+  if(!ms.length){rows=[["(nincs kiválasztott modul)",0]];}
+  else if(V==="A") rows=[["Citoviso modul-bővítés (havi): "+names+k,tot]];
+  else if(V==="B"){
+    // The rule the invoice uses (splitInvoiceAmount): every line >= 1 Ft, the rest by monthly
+    // price (floor), the whole remainder on the largest-price line (first on a tie).
+    if(tot<ms.length){ rows=[["Citoviso modul-bővítés (havi): "+names+k,tot]]; }
+    else {
+      var W=ms.reduce(function(s,m){return s+m.p},0), rest=tot-ms.length, sh=ms.map(function(m){return 1+Math.floor(rest*m.p/W)});
+      var used=sh.reduce(function(a,b){return a+b},0), big=0; ms.forEach(function(m,i){if(m.p>ms[big].p)big=i});
+      sh[big]+=tot-used;
+      rows=ms.map(function(m,i){return ["Citoviso modul: "+m.n+" (havi)"+k,sh[i]]});
+    }
+  }
+  else rows=[["Citoviso modul-bővítés (havi, "+ms.length+" modul: "+names+"; időarányosan a 2026. 11. 02-i fordulónapig)"+k,tot]];
+  document.getElementById("rows").innerHTML=rows.map(function(r){return "<tr><td>"+r[0]+"</td><td>1</td><td>"+huf(r[1])+"</td></tr>"}).join("");
+  document.getElementById("tot").textContent=huf(tot);
+  document.getElementById("today").textContent="Citoviso előfizetés (havi, "+ms.length+" modul)"+k+" — "+huf(tot);
+}
+render();
+</script></body></html>

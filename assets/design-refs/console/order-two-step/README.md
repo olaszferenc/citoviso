@@ -18,6 +18,9 @@ kitöltötte. A csomag/modul-listából EGY sor látszott.
    Mobilon a lista a lap legalább felét kapja (mérve 390×844-en).
    A futó összeg UGYANAZ a szám, mint a 2. lépés kártyájának nagy száma, vagyis amit elsőre
    terhelünk. Ajánlatnál alatta áll: „−{p}% az első díjból · érvényes {d}-ig”.
+   ⚠️ **Módosítva 2026-10-03 (`console/order-step1-offer`, L3-2, B változat):** ajánlatnál a futó összeg előtt áthúzva a
+   listaár, alatta „<ajánlat neve> (−{p}%) −<Ft> az első díjból · érvényes {d}-ig” — a 2. lépés összegével; ajánlatnál
+   nincs változás-csip.
 2. **A „Tovább” után a 2. lépés.** A lista eltűnik, és a lap a pénzügyi döntést mutatja. Mobilon
    a lap 92vh-ig nőhet. Sorrend: „Vissza a csomagokhoz” → a választott csomag neve és
    szekció-száma → **„Milyen gyakran fizet?”** → **a Havi/Éves kártya-pár (a 2. lépés első

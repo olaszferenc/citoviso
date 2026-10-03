@@ -1,0 +1,69 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>L3-2 · egy ajánlat, egy megtakarítás</title><link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+body{margin:0;background:var(--citui-bg);color:var(--citui-ink);font-family:var(--citui-font-text)}
+.bar{position:sticky;top:0;z-index:9;background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 14px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar b{margin-right:6px} .bar button{font:inherit;border-radius:999px;padding:3px 10px;border:1px solid var(--citui-cyan-400);background:transparent;color:var(--citui-ink-inverse);cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--citui-cyan-400);color:var(--citui-navy-900);font-weight:700}
+.bar .sub{flex-basis:100%;opacity:.8;font-size:12px}
+#stage{container-type:inline-size;max-width:1180px;margin:18px auto;padding:0 16px;box-sizing:border-box}
+#stage.mobile{max-width:390px;padding:0}
+.why{font-size:13px;color:var(--citui-muted);margin:0 0 14px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr 1fr} @container (max-width:600px){.grid{grid-template-columns:1fr}}
+.cfg{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-radius:var(--citui-radius-lg);padding:16px}
+.cfg h3{margin:0 0 10px;font-size:15px;color:inherit}
+.pk{display:flex;justify-content:space-between;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius);padding:10px 12px;margin:6px 0;cursor:pointer}
+.pk.on{border-color:var(--citui-cyan-400);background:color-mix(in srgb,var(--citui-cyan-400) 12%,transparent)}
+.tog{display:flex;gap:8px;font-size:13px;margin:12px 0}
+.mini{border-top:1px solid var(--citui-line-strong);padding-top:10px} .mini small{opacity:.75}
+.amt{font-size:22px;font-weight:700} .amt small{font-size:13px;font-weight:400;opacity:.8} .amt s{font-size:15px;font-weight:400;opacity:.65}
+.off{color:var(--citui-cyan-300);font-size:13px;margin-top:4px}
+.chip{font-size:12px;border-radius:999px;padding:2px 8px;font-weight:600}
+.chip.neutral{background:color-mix(in srgb,var(--citui-ink-inverse) 14%,transparent)}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--citui-line-strong);font-size:14px} .row.tot{font-weight:700;border-bottom:0}
+</style></head><body>
+<div class="bar"><b>JÓVÁHAGYOTT TERV (tulaj, 2026-10-03, B változat) — L3-2 · egy ajánlat, egy megtakarítás</b><span>áthúzott listaár, mint a 2. lépésen</span><span>· méret:</span><button type="button" id="szM" aria-pressed="false">Mobil 390px</button><button type="button" id="szD" aria-pressed="true">Asztali</button><span class="sub">A konfigurátor 1. lépésének összesítője vs. a 2. lépés. Ma: lent zöld „−2 325 Ft/hó” (a VÁLTOZÁS-jelző: 6 975 → 4 650), a 2. lépésen „−4 650 Ft” (a listaárhoz mérve) — működő vázlat: a gombok, pipák és összegek élnek; semmi nem kerül elküldésre.</span></div>
+<div id="stage"><p class="why">Válasszon csomagot, és kapcsolja be a döntés-segítő ajánlatot (ahogy a lead az ablakban elfogadja): figyelje, mit mutat az 1. lépés alja és a 2. lépés ugyanarra.</p>
+<div class="grid">
+ <section class="cfg"><h3>1. lépés — „Milyen legyen az oldala?”</h3>
+  <div class="pk" data-p="9300"><b>Teljes</b><span>9 300 Ft/hó</span></div>
+  <div class="pk" data-p="7040"><b>Ajánlott</b><span>7 040 Ft/hó</span></div>
+  <div class="pk" data-p="4880"><b>Alap</b><span>4 880 Ft/hó</span></div>
+  <label class="tog"><input type="checkbox" id="esc" checked> a lead elfogadta a −50%-os döntés-segítő ajánlatot (bemutatkozó −25% helyett)</label>
+  <div class="mini"><small>Összesen</small><div class="amt" id="amt"></div><div class="off" id="off"></div></div>
+ </section>
+ <section class="cfg"><h3>2. lépés — számlázási lap (ma is így)</h3>
+  <div class="row"><span>Havi listaár</span><b id="s2list"></b></div>
+  <div class="row"><span id="s2name"></span><b id="s2disc"></b></div>
+  <div class="row tot"><span>Fizetendő most</span><b id="s2pay"></b></div>
+ </section>
+</div></div>
+<script>
+(function(){
+  var st=document.getElementById("stage"),M=document.getElementById("szM"),D=document.getElementById("szD");
+  function sz(m){st.classList.toggle("mobile",m);M.setAttribute("aria-pressed",m);D.setAttribute("aria-pressed",!m);}
+  M.onclick=function(){sz(true)};D.onclick=function(){sz(false)};sz(window.matchMedia("(max-width:600px)").matches);
+  window.V="B";
+  document.querySelectorAll(".vb").forEach(function(b){b.onclick=function(){V=b.dataset.v;document.querySelectorAll(".vb").forEach(function(x){x.setAttribute("aria-pressed",x===b)});window.render&&render();};});
+})();
+function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,"\u00a0")+"\u00a0Ft"}
+var P=9300,prevCharge=null;
+document.querySelectorAll(".pk").forEach(function(e){e.onclick=function(){P=+e.dataset.p;render(true)}});
+document.getElementById("esc").onchange=function(){render(true)};
+function render(changed){
+  var esc=document.getElementById("esc").checked, pct=esc?50:25, charge=Math.floor(P*(100-pct)/100), save=P-charge;
+  document.querySelectorAll(".pk").forEach(function(e){e.classList.toggle("on",+e.dataset.p===P)});
+  var diff=prevCharge==null||!changed?0:charge-prevCharge; prevCharge=charge;
+  var a=huf(charge)+' <small>/ hó</small>', o="";
+  var name=esc?"Döntés-segítő ajánlat":"Bemutatkozó ajánlat";
+  if(V==="A"){ o="−"+pct+"% az első díjból: −"+huf(save)+" · érvényes okt. 5. 23:26-ig"; }
+  if(V==="B"){ a='<s>'+huf(P)+'</s> '+a; o=name+" (−"+pct+"%) −"+huf(save)+" az első díjból · érvényes okt. 5. 23:26-ig"; }
+  if(V==="C"){ if(diff) a+=' <span class="chip neutral">változott: '+(diff<0?"−":"+")+huf(Math.abs(diff))+'</span>'; o="−"+pct+"% az első díjból: −"+huf(save)+" · érvényes okt. 5. 23:26-ig"; }
+  document.getElementById("amt").innerHTML=a; document.getElementById("off").textContent=o;
+  document.getElementById("s2list").textContent=huf(P)+" / hó";
+  document.getElementById("s2name").textContent=name+" (−"+pct+"%)";
+  document.getElementById("s2disc").textContent="−"+huf(save);
+  document.getElementById("s2pay").textContent=huf(charge);
+}
+render(false);
+</script></body></html>

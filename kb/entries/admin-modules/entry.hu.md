@@ -324,8 +324,11 @@ a kedvezmény, mi a neve és meddig él. A kártya mindig a kedvezmény saját n
 - minden más kedvezmény a saját nevén: Egyedi ajánlat, Bemutatkozó ajánlat a levélből vagy
   Döntés-segítő ajánlat.
 
-A kirakat-kártyákon ilyenkor az eredeti ár áthúzva jelenik meg, mellette a kedvezményes ár —
-ennyit fizet, ha most veszi meg. A levonás magától történik, nem kell kódot beírnia.
+A kirakat-kártyákon ilyenkor az eredeti ár áthúzva jelenik meg, mellette a kedvezményes ár
+„az első hónapban” (éves fióknál „az első évben”), alatta pedig a tartós díj: „utána +490 Ft/hó”.
+A kedvezmény ugyanis csak az első díjra szól — a következő számlán már a teljes havidíj szerepel,
+ahogy a kosár „Következő számla így” sora is mutatja. A levonás magától történik, nem kell kódot
+beírnia.
 
 **Kedvezmények nem adódnak össze:** ha többre is jogosult, mindig a nagyobb érvényesül. A
 kisebb viszont **nem vész el**: a kártya alatt külön sorban látja, hogy megmarad, és ez a

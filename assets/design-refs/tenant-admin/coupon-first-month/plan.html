@@ -1,0 +1,50 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ADM3-1 · a kupon csak az első díjra szól</title><link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+body{margin:0;background:var(--citui-bg);color:var(--citui-ink);font-family:var(--citui-font-text)}
+.bar{position:sticky;top:0;z-index:9;background:var(--citui-navy-900);color:var(--citui-ink-inverse);padding:10px 14px;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bar b{margin-right:6px} .bar button{font:inherit;border-radius:999px;padding:3px 10px;border:1px solid var(--citui-cyan-400);background:transparent;color:var(--citui-ink-inverse);cursor:pointer}
+.bar button[aria-pressed=true]{background:var(--citui-cyan-400);color:var(--citui-navy-900);font-weight:700}
+.bar .sub{flex-basis:100%;opacity:.8;font-size:12px}
+#stage{container-type:inline-size;max-width:1180px;margin:18px auto;padding:0 16px;box-sizing:border-box}
+#stage.mobile{max-width:390px;padding:0}
+.why{font-size:13px;color:var(--citui-muted);margin:0 0 14px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr 1fr;align-items:start} @container (max-width:600px){.grid{grid-template-columns:1fr}}
+.card{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius-lg);padding:16px}
+.mh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start} .mh span{text-align:right;font-size:14px} .mh s{color:var(--citui-muted)}
+.cp{color:var(--citui-ok-ink)} .desc{font-size:13px;color:var(--citui-muted)}
+.btn{font:inherit;border:1px solid var(--citui-line-strong);background:var(--citui-bg);border-radius:var(--citui-radius);padding:8px 12px;cursor:pointer}
+.cartbox p{font-size:14px;margin:8px 0}
+</style></head><body>
+<div class="bar"><b>JÓVÁHAGYOTT TERV (tulaj, 2026-10-03, A változat) — ADM3-1 · a kupon csak az első díjra szól</b><span>az első hónap és az utána szám külön</span><span>· méret:</span><button type="button" id="szM" aria-pressed="false">Mobil 390px</button><button type="button" id="szD" aria-pressed="true">Asztali</button><span class="sub">Tenant-admin, Modulok fül, a meg nem vett modul kártyája. Ma: „áthúzott 490 Ft, mellette +367 Ft/hó” — a „/hó” tartós havidíjat ígér, holott a −25% kupon egyszeri; a kosár helyesen „+490 Ft”-ot mond — működő vázlat: a gombok, pipák és összegek élnek; semmi nem kerül elküldésre.</span></div>
+<div id="stage"><p class="why">Tegye kosárba a modult: a kártya és a kosár ugyanazt kell mondja a havidíjról.</p>
+<div class="grid">
+ <section class="card"><div class="mh"><b>Vendégek véleménye</b><span id="price"></span></div>
+  <p class="desc">Valódi vendégértékelések az oldalon — a bizalom a legerősebb érv egy új vendégnek.</p>
+  <button type="button" id="cart" class="btn">Kosárba teszem</button></section>
+ <section class="card cartbox" id="cartbox" hidden><b>Kosár</b>
+  <p>+ bekapcsol · Vendégek véleménye · fizetés most: <b>367 Ft</b> (1 hónap a fordulónapig)</p>
+  <p>Következő számla így: <b>7 540 Ft</b> (+490 Ft a mostanihoz képest)</p></section>
+</div></div>
+<script>
+(function(){
+  var st=document.getElementById("stage"),M=document.getElementById("szM"),D=document.getElementById("szD");
+  function sz(m){st.classList.toggle("mobile",m);M.setAttribute("aria-pressed",m);D.setAttribute("aria-pressed",!m);}
+  M.onclick=function(){sz(true)};D.onclick=function(){sz(false)};sz(window.matchMedia("(max-width:600px)").matches);
+  window.V="A";
+  document.querySelectorAll(".vb").forEach(function(b){b.onclick=function(){V=b.dataset.v;document.querySelectorAll(".vb").forEach(function(x){x.setAttribute("aria-pressed",x===b)});window.render&&render();};});
+})();
+function huf(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,"\u00a0")+"\u00a0Ft"}
+var L=490,c=Math.floor(L*0.75),inCart=false;
+document.getElementById("cart").onclick=function(){inCart=!inCart;render()};
+function render(){
+  var h="";
+  if(V==="A") h='<s>'+huf(L)+'</s> <b>+'+huf(c)+'</b> az első hónapban<br><small>utána +'+huf(L)+'/hó</small>';
+  if(V==="B") h='<b>+'+huf(L)+'/hó</b><br><small class="cp">első díj −25% kuponnal: '+huf(c)+'</small>';
+  if(V==="C") h='<b>+'+huf(L)+'/hó</b><br><small class="cp">−25% kupon az első díjra</small>';
+  document.getElementById("price").innerHTML=h;
+  document.getElementById("cart").textContent=inCart?"Kiveszem a kosárból":"Kosárba teszem";
+  document.getElementById("cartbox").hidden=!inCart;
+}
+render();
+</script></body></html>

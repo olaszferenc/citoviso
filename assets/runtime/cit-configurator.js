@@ -1786,7 +1786,7 @@
       "</div>" + // /.cit-cfg-s1bar
       '<div class="cit-cfg-step2" hidden>' +
       '<button class="cit-cfg-submit" type="button" disabled>' + tr("Tovább a számlázási adatokhoz") + I.chevR + "</button>" +
-      '<p class="cit-cfg-note">' + tr("Nem kötelező. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
+      '<p class="cit-cfg-note">' + tr("Ez még nem fizetés. A következő lépésben megadja a számlázási adatokat, majd a biztonságos fizetéshez visszük; a fizetés után az oldalt automatikusan élesítjük, és e-mailben elküldjük a belépőt.") + "</p>" +
       "</div>" +
       billingStepHtml() +
       "</div>" +
@@ -2964,6 +2964,12 @@
    * Mirrors the amount posted as `price` in the order payload below (offer-priced
    * service + the never-discounted domain fee for the whole cycle, ADR-0109 ⑥).
    */
+  /** currentCharge() at list price — the amount the step-2 card strikes through. */
+  function listCharge() {
+    var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
+    var domMonthly = domOn ? domainFeeMonthly() : 0;
+    return period === "annual" ? annualTotal() + domMonthly * 12 : monthlyTotal() + domMonthly;
+  }
   function currentCharge() {
     var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
     var domMonthly = domOn ? domainFeeMonthly() : 0;
@@ -2984,9 +2990,13 @@
   var miniDeltaTimer = null;
   function syncMini(diff) {
     if (!miniAmt) return;
+    // L3-2 (contract order-step1-offer, owner „B” 2026-10-03): with an offer, step 1 strikes the
+    // SAME list amount the step-2 card strikes, so the two steps cannot name two savings.
     miniAmt.innerHTML =
+      (OFFER ? "<s>" + esc(fmt(listCharge())) + "</s> " : "") +
       esc(fmt(currentCharge())) + " <small>" + esc(period === "annual" ? tr("/ év") : tr("/ hó")) + "</small>";
-    if (diff) {
+    // No change chip under an offer: its green „−2 325 Ft/hó” read as the saving (Elek L3-2).
+    if (diff && !OFFER) {
       miniAmt.innerHTML += deltaHtml(diff);
       if (miniDeltaTimer) clearTimeout(miniDeltaTimer);
       miniDeltaTimer = setTimeout(function () {
@@ -2996,7 +3006,10 @@
     }
     if (miniOffer) {
       miniOffer.textContent = OFFER
-        ? tr("−{p}% az első díjból").replace("{p}", String(OFFER.percent)) +
+        ? tr("{name} (−{p}%) −{amount} az első díjból")
+            .replace("{name}", offerName())
+            .replace("{p}", String(OFFER.percent))
+            .replace("{amount}", fmt(listCharge() - currentCharge())) +
           (offerDeadline() ? " · " + tr("érvényes {d}-ig").replace("{d}", offerDeadlineText()) : "")
         : "";
     }

@@ -32,7 +32,8 @@ import { alertInvoiceFailure, INVOICE_AUTO_RETRY_LIMIT } from "../console/houseA
 import { publicPaymentRef } from "./publicRef.js";
 import { markMultilangPaid } from "../tenant/multilangOrder.js";
 import { runMultilangGeneration } from "../tenant/multilangGenerate.js";
-import { computeAnnual, computeMonthly } from "../pricing.js";
+import { computeAnnual, computeMonthly, getModulePrice, loadPricing } from "../pricing.js";
+import { MODULE_CATALOG } from "../modules.js";
 import { getGateway } from "./index.js";
 import { MockGateway } from "./mock.js";
 import { domainFeeForRenewal, renewableModuleIds } from "./billing.js";
@@ -1204,6 +1205,37 @@ export function invoiceComment(
   );
 }
 
+/**
+ * Split a charged amount into one whole-forint share per module (INV-1, owner ruling „B”,
+ * 2026-10-03; contract: assets/design-refs/console/invoice-module-lines/). Számlázz.hu ADDS
+ * the lines, so they must sum to the charged amount EXACTLY: every line gets 1 Ft first (no
+ * zero-forint line on a legal invoice), the rest goes by monthly price (floor), and the whole
+ * rounding remainder lands on ONE deterministic line — the largest price, the first on a tie.
+ * null when there is nothing to split per module (no modules, or less money than modules):
+ * the caller then writes one combined line.
+ */
+export function splitInvoiceAmount(amount: number, weights: readonly number[]): number[] | null {
+  const n = weights.length;
+  if (n === 0 || !Number.isInteger(amount) || amount < n) return null;
+  const w = weights.map((x) => Math.max(0, x));
+  const total = w.reduce((a, b) => a + b, 0);
+  const share = (i: number) => (total > 0 ? w[i]! / total : 1 / n);
+  const rest = amount - n;
+  const lines = w.map((_, i) => 1 + Math.floor(rest * share(i)));
+  let big = 0;
+  for (let i = 1; i < n; i++) if (w[i]! > w[big]!) big = i;
+  lines[big]! += amount - lines.reduce((a, b) => a + b, 0);
+  return lines;
+}
+
+/** The bought modules as invoice lines: the guest-facing name + the weight of the split. */
+export function invoiceModuleLines(moduleIds: readonly string[]): { label: string; weight: number }[] {
+  return moduleIds.map((id) => {
+    const def = MODULE_CATALOG.find((m) => m.id === id);
+    return { label: def?.publicLabel ?? def?.label ?? id, weight: getModulePrice(id) };
+  });
+}
+
 export function buildInvoiceItems(
   p: {
     amount: number;
@@ -1213,6 +1245,8 @@ export function buildInvoiceItems(
     domainName: string | null;
     /** ADR-0205: a kupon százaléka, ha volt — a tétel neve mondja ki. */
     offerPercent?: number | null;
+    /** INV-1: a megvett modulok ('upsell'), sorrendben — modulonként egy számla-sor. */
+    moduleLines?: readonly { label: string; weight: number }[];
   },
   cadence: "monthly" | "annual" | "once",
   periodLabel: string,
@@ -1242,6 +1276,23 @@ export function buildInvoiceItems(
   // kedvezmény-SORT nem veszünk fel: a Számlázz.hu összeadja a tételeket, tehát egy
   // −4 925 Ft-os sor a 14 775 Ft-os végösszeget 9 850-re vinné — vagyis rosszul
   // számláznánk. A név bővítése az összegekhez nem nyúl.
+  const kedv = p.offerPercent ? ` — ${p.offerPercent}% kedvezménnyel` : "";
+  const domainLines = p.domainFee && p.domainFee > 0 ? [line(domainLabel, p.domainFee)] : [];
+  if (p.kind === "upsell") {
+    // INV-1: a module purchase is named as one — one line per bought module, summing exactly.
+    const mods = p.moduleLines ?? [];
+    const base = p.amount - (p.domainFee ?? 0);
+    const split = splitInvoiceAmount(base, mods.map((m) => m.weight));
+    const moduleItems = split
+      ? mods.map((m, i) => line(`Citoviso modul: ${m.label} (${periodLabel})${kedv}`, split[i]!))
+      : [
+          line(
+            `Citoviso modul-bővítés (${periodLabel})${mods.length ? `: ${mods.map((m) => m.label).join(", ")}` : ""}${kedv}`,
+            base,
+          ),
+        ];
+    return [...moduleItems, ...domainLines];
+  }
   const subscriptionLine = line(
     `Citoviso előfizetés (${periodLabel}, ${modCount} modul)` +
       (p.offerPercent ? ` — ${p.offerPercent}% kedvezménnyel` : ""),
@@ -1434,6 +1485,8 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
   // covering E-MAIL is what ADR-0067 localizes.
   const periodLabel = cadence === "once" ? "egyszeri" : cadence === "annual" ? "éves" : "havi";
   const modCount = ((p.modules as unknown as string[]) ?? []).length;
+  // INV-1: the per-module split weighs by module price — make sure the price table is loaded.
+  if (p.kind === "upsell") await loadPricing();
   // Reverse charge (Áfa tv. 37. §) is decided at order time against a VIES-verified
   // VAT number; everything else is AAM. The DB constraint guarantees the pairing.
   const reverse = p.vatTreatment === "reverse_charge";
@@ -1450,7 +1503,18 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       euVatNumber: p.euVatNumber,
       country: p.country,
     },
-    items: buildInvoiceItems(p, cadence, periodLabel, modCount, vatKey),
+    items: buildInvoiceItems(
+      {
+        ...p,
+        ...(p.kind === "upsell"
+          ? { moduleLines: invoiceModuleLines((p.modules as unknown as string[]) ?? []) }
+          : {}),
+      },
+      cadence,
+      periodLabel,
+      modCount,
+      vatKey,
+    ),
     currency: p.currency,
     issueDate: today,
     fulfillmentDate: today,
