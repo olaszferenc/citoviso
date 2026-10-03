@@ -8,6 +8,7 @@
 
 - [2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md](2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md) — 2026-10-03 — Tényhűség: összevont hely-állítás + a Google-értékelés egy szabállyal
 - [2026-10-03_lead_elerhetoseg_szamlazasi_adat.md](2026-10-03_lead_elerhetoseg_szamlazasi_adat.md) — 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
+- [2026-10-03_k3_elek3_leletek.md](2026-10-03_k3_elek3_leletek.md) — K3 — Elek 3. kör leletei: kültéri tárgy, MINTA nem tény, napok-küszöb, plus-alcím, Citoviso-aláírás, alacsony tételek (2026-10-03)
 - [2026-10-03_google_jelveny_dupla.md](2026-10-03_google_jelveny_dupla.md) — 2026-10-03 — A Google-értékelés kétszer: a sablon saját linkes kártyája + a közös jelvény (walk-through, gate-opening)
 - [2026-10-02_walk_through_sablon.md](2026-10-02_walk_through_sablon.md) — 2026-10-02 — „Séta a kapun át” (`walk-through`): a tulaj által választott mockból generálható sablon
 - [2026-10-02_places_kurator_gomb_b.md](2026-10-02_places_kurator_gomb_b.md) — 2026-10-02 — Places-fotók kurátori gombja: két forrás-sáv a Fotók fülön (C rész, terv „B”)
