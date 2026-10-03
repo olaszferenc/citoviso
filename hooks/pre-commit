@@ -430,7 +430,7 @@ if [ -f scripts/contact-edit-check.mts ] && \
   echo "[pre-commit] contact-edit (Elérhetőség + Térkép-hely kontraktusa)…"
   npx tsx scripts/contact-edit-check.mts >"$GATE_LOG" || gate_failed
 fi
-# A lead NYILVÁNOS címe/országa nem lehet vevő-számlázási adat (ADR-XXXX): a konzol „Adatok"
+# A lead NYILVÁNOS címe/országa nem lehet vevő-számlázási adat (ADR: _planning/decisions/*-lead-nyilvanos-elerhetoseg-*): a konzol „Adatok"
 # űrlapját a böngésző autofill a tesztelő saját címével + adószámával töltötte, és ez minden
 # mockra kiment. Szabály + mindent-vagy-semmit mentés saját fixture-ön. Böngésző nélkül, gyors.
 if [ -f scripts/lead-contact-guard-check.mts ] && \
