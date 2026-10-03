@@ -384,6 +384,12 @@ A kártyán rövid nevekkel látod a mock legenerálásakor futott gépi ellenő
 talált forrást, alatta a teendő. Újra koppintva becsukódik. Régebbi mockon, ahol a lista nem
 volt eltárolva, a jelvényen továbbra is csak **„megjelölve”** áll.
 
+A lap **MINTA-jelölt** szakaszait (minta-szobák, minta-szolgáltatások, minta-programok) a
+Tényhűség nem ellenőrzi: azok nem állítanak tényt, ezért nem lehetnek forrás nélküli leletek —
+így ugyanaz az adat minden kinézeten ugyanazt az ítéletet kapja. A jelvény ítéletét a talált
+tételek listája adja: ha az őr megjelölné a mockot, de egyetlen forrás nélküli tényt sem nevez
+meg, a jelvényen `error` áll (nincs ítélet), nem sárga.
+
 **A jelvény színe:** zöld = rendben · **sárga = lelet van**. Ha egy kapu lefutott, de nem tudott
 ítélni, a jelvényen a nyers `error` szó áll — zöld alapon; ez **nem** azt jelenti, hogy rendben
 van, hanem hogy nincs ítélet. Ha egy kapu egyáltalán nem futott, a jelvénye meg sem jelenik.
@@ -405,7 +411,12 @@ A felugró **többet tud, mint a négy jelvény**:
   „bérelhető kerékpár” abból, hogy a házigazda egyszer kölcsönadta a biciklijét). Mindig
   megállító kifogás az is, ha a szöveg a forrásban nem álló hely- vagy minőség-részletet tesz
   hozzá egy valódi tényhez — például „grillezés a fedett teraszon”, amikor a forrás csak grillt
-  említ, vagy „saját”, „fűtött”, „őrzött” jelzőt, amit semmi nem igazol. Amit talál,
+  említ, vagy „saját”, „fűtött”, „őrzött” jelzőt, amit semmi nem igazol. Ugyanígy megállít a
+  forrásban nem álló kültéri TÁRGY akkor is, ha nem egy tényhez toldották (például terasz, kerti
+  bútor, kerti pihenő, grill, bogrács, kemence, jakuzzi, szauna, játszótér, függőágy, stég). Forrásnak
+  az adatlap, a leírás vagy a vendég-vélemény számít, a fotó NEM: egy fotón jól látszó teraszt is
+  meg kell neveznie valamelyik szöveges forrásnak. A kertre, erkélyre, medencére a szabály nem
+  vonatkozik. Amit talál,
   azt generáláskor az író már kijavítja. A felugró két esetben nevezi meg: ha két javító kör után
   is maradt blokkoló kifogás (ilyenkor felsorolja a kifogásolt szövegrészeket), vagy ha a
   vendég-kritikus nem tudott ítélni (például nem válaszolt az AI) — ekkor azt írja, hogy az őr nem
@@ -464,7 +475,8 @@ hivatkozva.
 
 ⚠️ **Egy leiratkozás több sort is némává tehet.** A tiltás nem a linkhez tartozik, hanem a
 SZEMÉLYHEZ: ha ugyanaz az e-mail-cím vagy telefonszám bárhol máshol leiratkozott, a rendszer
-oda sem küld. Ezért fordulhat elő, hogy egyetlen kattintás után több leadnél is elakad a küldés
+oda sem küld. Az e-mail-címnél a `+` utáni címke nem számít: a `nev+valami@domain` és a
+`nev@domain` ugyanaz a személy, a tiltás és a visszavonás mindkettőre érvényes. Ezért fordulhat elő, hogy egyetlen kattintás után több leadnél is elakad a küldés
 — ilyenkor azt a sort kell megkeresni, ahol a piros címke áll.
 
 ### A leiratkozás visszavonása

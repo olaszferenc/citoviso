@@ -175,6 +175,10 @@ készül (pl. új mock miatt), a második NEM küld újabb levelet ugyanarra az 
 a rendszer azt írja ki, hogy erre a címre már ment hideg megkeresés. Ez szándékos — a
 címzett akkor is egy ember, ha nálunk két sorban szerepel.
 
+Ugyanez a címke-változatra is áll: a `nev+valami@domain` és a `nev@domain` címet a rendszer
+EGY címzettnek veszi, ezért ha az egyikre már ment hideg megkeresés, a másikra sem megy ki.
+A tárolt cím nem változik, csak az összevetés hagyja figyelmen kívül a `+` utáni részt.
+
 ## Mit lát a lead, amikor megnyitja a linket
 
 A lap **legtetején** mindig áll egy diszkrét sáv — de **három különböző**, attól függően, ki
