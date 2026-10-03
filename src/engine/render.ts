@@ -11,7 +11,7 @@ import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
-import { roomsForMock, sampleRooms } from "./templateKit.js";
+import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
 
 /** Templates escape their text, so compare against the escaped form. */
 function escapeForCompare(s: string): string {
@@ -372,8 +372,16 @@ function withModuleSections(
   const sellingLeftover = (data.usp ?? []).filter(
     (item) => !html.includes(escapeForCompare(item)),
   );
+  // One rating, stated once, with its source link (ADR-0046 ③ + ADR-0057 ②). A template
+  // whose OWN review section already links the Google number (walk-through, gate-opening)
+  // has said it — the shared badge right below it would be the same number a second
+  // time. Measured on the template's output (an href to the reviews page), not a
+  // template list, so template no. 22 is judged the same way.
+  const ratingUrl = data.googleRating?.url ?? data.rating?.url;
+  const ratingAlreadyLinked = ratingUrl ? html.includes(`href="${esc(ratingUrl)}"`) : false;
   const { css, groups } = moduleSectionGroups(data, {
     roomsAlreadyShown,
+    ratingAlreadyLinked,
     sellingLeftover,
     // ADR-0061 mock all-in: absent module data renders as a MARKED native sample
     // section, and every mock form is try-able without submitting anywhere.

@@ -13,6 +13,10 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-03 — SUB `cit3f812b94`: a Google-értékelés kétszer — walk-through/gate-opening, ADR-XXXX) — LANDOLVA, élesre semmi
+- A sablon saját linkes értékelés-kártyája alatt a közös jelvény (`reviews-pending` / `google-rating`) kimarad — a kimeneten mérve (`render.ts` `ratingAlreadyLinked`). A 19 régi sablon hős-stat + jelvény párja ADR-0057 ② szerint marad.
+- Őr `scripts/rating-once-check.mts` (régi kódon 6 piros). Nyitott kinézeti kérdések a koordinátornál; jegyzet `_planning/memory/2026-10-03_google_jelveny_dupla.md`.
+
 ## Párhuzamos szál (2026-10-02 — SUB `citc2b44eea`: „Kapunyitás” sablon (`gate-opening`, a 21.) a Kimi B mockból, ADR-0311) — LANDOLVA, élesre semmi
 - Új sablon `src/engine/templates/gateOpening.ts` + skin `lantern-charcoal`; kontraktus `assets/design-refs/tenant-site/gate-opening/`. A kapu a hős fotó maga, tompítva — vision-tárgyként nincs „kapu/bejárat”, egy fotó sem mondható kapunak. Funkciók a közös modulokból, telefonos fejléc ADR-0253 szerint.
 - Mérve 390/1440 végiggörgetve: Három Huszár, Lidó, Kemencés, Nyugalom (mock + élő), gazdag teszt-eset. Őrök: jog PASS; tényhűség FLAG csak a sablon előtti rétegből; dizájn FLAG → javítva. Gépies sablon-őrök zöldek.

@@ -845,6 +845,17 @@ if [ -f scripts/rating-scale-check.mts ] && \
   echo "[pre-commit] rating-scale-check (a kiírt skála a forrásé)…"
   npx tsx scripts/rating-scale-check.mts >"$GATE_LOG" || gate_failed
 fi
+# A GOOGLE-ÉRTÉKELÉS EGYSZER, A FORRÁS-LINKKEL (ADR-0046 ③ + ADR-0057 ②, 2026-10-03): a walk-through
+# és a gate-opening saját, linkes értékelés-kártyája alatt a közös trust-slot jelvénye (reviews-pending /
+# google-rating modul) ugyanazt a számot ugyanazzal a linkkel még egyszer kiírta. 21 sablon × 3 alany
+# (mock · élő+modul · élő+modul+vélemény): a vélemény-oldal linkje pontosan 1 (a 0 is piros). <5 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/rating-once-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(templateKit|render|moduleSections|recipe)\.ts$|^scripts/rating-once-check\.mts$'; then
+  echo "[pre-commit] rating-once-check (a Google-értékelés linkje pontosan egyszer)…"
+  npx tsx scripts/rating-once-check.mts --self-test >"$GATE_LOG" || gate_failed
+  npx tsx scripts/rating-once-check.mts >"$GATE_LOG" || gate_failed
+fi
 # SAJÁT BOT-UA A KÉPERNYŐKÉPEN (M4, 2026-10-02): a lake-balaton.com a „HeadlessChrome” UA-ra 429-et
 # ad → az alap-UA-s headless kép (siteShot, qaAiriness, Elek-futó) élő fotót mutatott töröttnek.
 # Statikus: minden newPage/newContext a hatókörben `userAgent: PORTAL_USER_AGENT`-tel. <1 mp.

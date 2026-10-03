@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-google-ertekeles-egyszer-a-forras-linkkel.md) — A Google-értékelés a lapon EGYSZER áll a forrás-linkjével: a sablon saját linkes kártyája mellől a közös jelvény kimarad
 - [ADR-0313](decisions/0313-a-dontes-segito-ajanlat-kuszobe-alapbol-a.md) — A döntés-segítő ajánlat küszöbe alapból a különböző NAPOKAT számolja, kapcsolható (2026-10-03)
 - [ADR-0312](decisions/0312-elek-3-kor-a-forras-nelkuli-kulteri-targy.md) — Elek 3. kör: a forrás nélküli kültéri tárgy blokkol, a MINTA nem tény, a plus-alcím egy címzett, a márka nem személynév (2026-10-03)
 - [ADR-0311](decisions/0311-kapunyitas-gate-opening-a-tulaj-altal.md) — „Kapunyitás” (`gate-opening`): a tulaj által választott Kimi-mockból generálható sablon; a kapu a hős fotó maga, mert egy fotó sem nevezhető kapunak (2026-10-02)

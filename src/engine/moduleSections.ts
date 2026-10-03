@@ -948,9 +948,10 @@ function reviewFormBlock(d: SiteData, opts: { demo?: boolean; sample?: boolean }
  * Only renders when the data layer already applied both gates (match confidence +
  * freshness) — a badge is a factual claim about this business (§B.17).
  */
-function googleRatingBlock(d: SiteData): string {
+function googleRatingBlock(d: SiteData, ratingAlreadyLinked = false): string {
   const g = d.googleRating;
-  if (!g) return "";
+  // The template's own review section already shows this number with the same link.
+  if (!g || ratingAlreadyLinked) return "";
   const value = g.value.toLocaleString("hu-HU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   return (
     `<section class="cit-modsec" data-cit-module="google-rating">` +
@@ -1003,7 +1004,7 @@ export function slotMarker(slot: ModuleSlot): string {
  * (§B.17). What replaces it is stronger anyway: the owner's ACTUAL Google rating,
  * plus a plain sentence about what the section will hold.
  */
-function reviewsPendingBlock(d: SiteData): string {
+function reviewsPendingBlock(d: SiteData, ratingAlreadyLinked = false): string {
   if (d.reviews?.length) return ""; // real words — nothing to stand in for
   // Either source is the SAME real Google number: `googleRating` on a live tenant
   // page (gated on match confidence + freshness), `rating` on a mock built from the
@@ -1027,7 +1028,9 @@ function reviewsPendingBlock(d: SiteData): string {
     `<span class="cit-grat__meta">${T(d, "{count} Google-értékelés", { count: g?.count ?? 0 })}` +
     (url ? `<em>${T(d, "Megnézem a Google-on")}</em>` : "") +
     `</span>`;
-  const badge = !g || d.googleRating
+  // …and skipped when the TEMPLATE's own review section, right above the trust slot,
+  // already states the number with the link to Google (walk-through, gate-opening).
+  const badge = !g || d.googleRating || ratingAlreadyLinked
     ? ""
     : url
       ? `<a class="cit-grat" href="${esc(url)}" target="_blank" rel="noopener nofollow" ` +
@@ -1136,6 +1139,9 @@ export function moduleSectionGroups(
   d: SiteData,
   opts: {
     roomsAlreadyShown?: boolean;
+    /** The template's own output already links the Google rating (measured in render.ts):
+     *  the shared badge would state the same number twice (ADR-0057 ②). */
+    ratingAlreadyLinked?: boolean;
     sellingLeftover?: readonly string[];
     /** ADR-0061: module ids to render as MARKED, native-styled sample sections
      *  when the data is absent (mock all-in). Never overrides real data. */
@@ -1181,8 +1187,8 @@ export function moduleSectionGroups(
     ],
     // Why they should believe it — next to the template's own review section.
     trust: [
-      googleRatingBlock(d),
-      reviewsPendingBlock(d),
+      googleRatingBlock(d, opts.ratingAlreadyLinked),
+      reviewsPendingBlock(d, opts.ratingAlreadyLinked),
       reviewFormBlock(d, { demo: opts.demo, sample: s.has("review-form") }),
     ],
     // Practicalities they check before deciding.
