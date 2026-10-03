@@ -16,9 +16,11 @@
  *     (hrsz.-szal, irányítószámmal, házszámmal) átmennek, az ország ISO-2-re fordul;
  *   ② mentés (saveLeadEdits, saját fixture-lead): az autofill-csomag MINDENT-VAGY-SEMMIT
  *     elutasítva — a DB-ben semmi nem változik; egy jó mentés átmegy, az ország „HU"-ként áll.
- *   (Az űrlap autofill-tiltása §2b-jóváhagyásra vár — ADR-0316; ha bejön, ide a ③ réteg.)
+ *   ③ az űrlap (leadPage): a form `autocomplete="off"`, és a cím/ország/telefon/e-mail/város mező
+ *     nem szabványos autocomplete-tokent visel (a Chrome ezt nem tölti; tulaj-engedély 2026-10-03).
  *
- * Negatív kontroll: a régi kódon a ② piros (a mentés elfogadta és beírta az autofill-csomagot).
+ * Negatív kontroll: a régi kódon a ② piros (a mentés elfogadta és beírta az autofill-csomagot),
+ * a ③ piros (nincs autocomplete-tiltás).
  *
  *   npx tsx scripts/lead-contact-guard-check.mts
  */
@@ -28,6 +30,7 @@ process.env.CIT_SHOT = "1";
 const { db, pool } = await import("../src/db/client.js");
 const { saveLeadEdits } = await import("../src/console/data.js");
 const { checkLeadContact } = await import("../src/console/leadContactRules.js");
+const { leadPage } = await import("../src/console/views.js");
 const { createFixtureParent } = await import("./lib/fixture-parent.mts");
 
 let fails = 0;
@@ -112,6 +115,34 @@ try {
   ok(raw2.country === "HU", "az ország ISO-2-ként áll (nem „MAGYARORSZÁG”)", String(raw2.country));
 } finally {
   await parent.drop();
+}
+
+// ── ③ az űrlap ───────────────────────────────────────────────────────────────
+console.log("③ „Adatok” űrlap — nincs böngésző-kitöltés");
+{
+  const html = leadPage({
+    id: "11111111-2222-3333-4444-555555555555",
+    name: "Őr-teszt Vendégház",
+    qualification: null,
+    lifecycle: "new",
+    matchConfidence: 0.9,
+    address: "Teszt utca 1.",
+    region: "teszt",
+    raw: {},
+    provenance: [],
+    artifacts: [],
+    heroScores: {},
+  } as unknown as Parameters<typeof leadPage>[0]);
+  const form = /<form[^>]*action="\/lead\/[^"]+\/data"[^>]*>([\s\S]*?)<\/form>/u.exec(html);
+  ok(Boolean(form), "az adat-űrlap a lapon van (különben a mérés üres halmazon állna)");
+  const tag = form ? form[0].slice(0, form[0].indexOf(">") + 1) : "";
+  ok(/\bautocomplete="off"/u.test(tag), "a form autocomplete=\"off\"", tag);
+  const STANDARD = /^(on|name|email|tel|tel-national|street-address|address-line\d|country|country-name|postal-code|address-level\d|organization|url)$/u;
+  for (const f of ["address", "country", "phone", "email", "city"]) {
+    const input = new RegExp(`<input[^>]*\\bname="${f}"[^>]*>`, "u").exec(form?.[1] ?? "")?.[0] ?? "";
+    const ac = /\bautocomplete="([^"]*)"/u.exec(input)?.[1];
+    ok(Boolean(input) && Boolean(ac) && !STANDARD.test(ac ?? ""), `„${f}” mező: nem szabványos autocomplete-token`, input || "nincs mező");
+  }
 }
 
 await pool.end();

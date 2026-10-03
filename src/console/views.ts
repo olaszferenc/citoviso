@@ -3874,11 +3874,18 @@ function leadDataPanel(d: LeadDetail): string {
     edited && edited[k] != null && edited[k] !== ""
       ? `<span class="con-fld__src">${T(lang, "adatgyűjtésből")}: ${esc(edited[k])}</span>`
       : "";
+  // ⛔ NO BROWSER AUTOFILL (ADR-0316). These are the PROPERTY's facts, printed on every
+  // mock and site — but `name="address|country|phone|email"` is exactly what the
+  // address-autofill fills from the OPERATOR's own profile: 7 dev leads carried the
+  // operator's billing street + tax number and "MAGYARORSZÁG" this way. `off` on the
+  // form covers Firefox/Safari; Chrome ignores `off` for addresses but does not autofill
+  // a field whose token it does not recognise, hence the per-field `cit-lead-*`.
+  // The server-side rule (leadContactRules.ts) is the real guarantee.
   const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = 1) =>
     `<div class="con-fld"${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
        <label class="con-fld__l" for="ed-${name}">${esc(label)}</label>
        <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
-              placeholder="${esc(ph)}">
+              placeholder="${esc(ph)}" autocomplete="cit-lead-${name}">
        ${orig(name)}
      </div>`;
 
@@ -3901,7 +3908,7 @@ function leadDataPanel(d: LeadDetail): string {
       <h2>${T(lang, "Begyűjtött adatok — szerkeszthető")}${rawAny.curatorEditedAt ? ` <span class="pill">${T(lang, "szerkesztve")}</span>` : ""}</h2>
       <p class="small mut" style="margin:4px 0 14px">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.
         A <b>${T(lang, "város")}</b> ${T(lang, "egyben a honlap-ellenőrzés horgonya — javítsd, ha rossz, és az újragyűjtés pontosabban talál.")}</p>
-      <form method="post" action="/lead/${esc(d.id)}/data"
+      <form method="post" action="/lead/${esc(d.id)}/data" autocomplete="off" data-cit-lead-edit
             onsubmit="${esc(`var b=this.querySelector('button[type=submit]');b.disabled=true;b.textContent='${jsStr(T(lang, "Mentés…"))}'`)}">
         <div class="con-edit-grid">
           ${fld("name", T(lang, "Név"), d.name)}

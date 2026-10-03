@@ -13,8 +13,8 @@ Dev: 7 lead (2 adószámos címmel, 5 „…hrsz. 083/2”-vel), mind `curatorEd
 ## Javítás
 `src/console/leadContactRules.ts` (adószám/telefonszám a címben → elutasítás, ország ISO-2), `saveLeadEdits` mindent-vagy-semmit,
 flash a lapon. Őr: `scripts/lead-contact-guard-check.mts` (pre-commit; régi kódon 6 piros).
-Az űrlap autofill-tiltása (views.ts) a §2b felület-kapun megállt — a kivételt csak a tulaj adhatja (ADR-0068); kész patch:
-`~/rc-briefs/patches/lead-edit-autofill-off.patch`.
+Az űrlap autofill-tiltása (views.ts): először a §2b felület-kapun megállt (a kivételt csak a tulaj adhatja, ADR-0068), majd a
+tulaj 2026-10-03-án engedélyezte → bekerült, az őr ③ rétege méri (régi kódon 6 piros).
 Dev adat: 7 lead javítva, `raw.contactRepair` audit.
 
 ## F-1
@@ -25,11 +25,11 @@ Ugyanaz a forrás (a tesztelő autofill-profilja), de a MÁSIK irány (szállás
 - src/console/leadContactRules.ts (új)
 - src/console/data.ts
 - src/console/server.ts
+- src/console/views.ts
 - scripts/lead-contact-guard-check.mts (új)
 - hooks/pre-commit
 - _planning/decisions/XXXX-lead-nyilvanos-elerhetoseg-nem-szamlazasi-adat.md (új)
 
 ## Nyitott
-- Autofill-tiltás patch (`~/rc-briefs/patches/lead-edit-autofill-off.patch`) — tulaj §2b-kivétel kell.
-- Mobil tesztcímzés prospect-szinten (tulaj-döntés) — ma a lead nyilvános telefonja a tesztszám.
+- Mobil teszt-szám prospect-szinten — tulaj 2026-10-03: MOST NEM, külön feladat lesz (ADR-0316 nyitott tétel).
 - A Három Huszár 10-02-i artefaktuma (`fc728903…`) még a régi kontaktot hordja → új generálás kell a sablon-mintához.
