@@ -2,7 +2,7 @@
 //   ↑ ÍGÉRET (ADR-0229): ez a kapu CSAK a saját, futásonként bélyegzett fixture-ét írja és olvassa
 //   vissza. A park mérése (hány lead érintett) NEM ennek a kapunak a dolga — az ADR-ben rögzítve.
 /**
- * A LEAD NYILVÁNOS ELÉRHETŐSÉGÉNEK ŐRE (ADR-XXXX): a szállás címe/országa nem lehet egy vevő
+ * A LEAD NYILVÁNOS ELÉRHETŐSÉGÉNEK ŐRE (ADR-0316): a szállás címe/országa nem lehet egy vevő
  * számlázási adata.
  *
  * ⛔ MIÉRT (mérve 2026-10-03, dev park): 7 lead `raw.address`-ében a tesztelő SAJÁT számlázási
@@ -16,7 +16,7 @@
  *     (hrsz.-szal, irányítószámmal, házszámmal) átmennek, az ország ISO-2-re fordul;
  *   ② mentés (saveLeadEdits, saját fixture-lead): az autofill-csomag MINDENT-VAGY-SEMMIT
  *     elutasítva — a DB-ben semmi nem változik; egy jó mentés átmegy, az ország „HU"-ként áll.
- *   (Az űrlap autofill-tiltása §2b-jóváhagyásra vár — ADR-XXXX; ha bejön, ide a ③ réteg.)
+ *   (Az űrlap autofill-tiltása §2b-jóváhagyásra vár — ADR-0316; ha bejön, ide a ③ réteg.)
  *
  * Negatív kontroll: a régi kódon a ② piros (a mentés elfogadta és beírta az autofill-csomagot).
  *

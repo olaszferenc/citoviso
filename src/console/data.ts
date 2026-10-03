@@ -47,7 +47,7 @@ export interface ArtifactView {
 }
 
 // The country normalizer lives with the lead-contact rules (one alias table for the
-// list facet AND the curator-edit check, ADR-XXXX); re-exported for existing callers.
+// list facet AND the curator-edit check, ADR-0316); re-exported for existing callers.
 export { normalizeCountry } from "./leadContactRules.js";
 
 export interface LeadListRow {
@@ -721,7 +721,7 @@ export interface LeadEdits {
  * lead's `address`/`name` columns are kept in sync so the list/detail header matches.
  * Non-destructive to the rest of the scrape payload. `now` is passed in (no Date in engine).
  *
- * ⛔ ALL-OR-NOTHING against the lead-contact rules (ADR-XXXX): a billing id in the
+ * ⛔ ALL-OR-NOTHING against the lead-contact rules (ADR-0316): a billing id in the
  * address or a non-ISO country refuses the WHOLE save and nothing is written — these
  * fields are printed on every mock and site, and a half-applied autofill is still a
  * stranger's data on the property's page.

@@ -2176,7 +2176,7 @@ async function handle(
       },
       new Date(),
     );
-    // A refused save (ADR-XXXX: billing id in the address, non-ISO country) wrote NOTHING
+    // A refused save (ADR-0316: billing id in the address, non-ISO country) wrote NOTHING
     // and says why on the page — a silent redirect would read as "saved".
     if (!saved.ok) {
       return redirect(

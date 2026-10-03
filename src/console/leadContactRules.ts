@@ -1,4 +1,4 @@
-// What may stand in a lead's PUBLIC contact fields (ADR-XXXX).
+// What may stand in a lead's PUBLIC contact fields (ADR-0316).
 //
 // The lead's `raw.address` / `raw.country` / `raw.phone` / `raw.email` are the
 // PROPERTY's facts: the generator prints them on every mock and tenant site (hero,

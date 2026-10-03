@@ -1,6 +1,6 @@
 # 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
 
-SUB (brief `~/rc-briefs/fix-lead-elerhetoseg.md`), ADR-XXXX.
+SUB (brief `~/rc-briefs/fix-lead-elerhetoseg.md`), ADR-0316.
 
 ## Ok
 A konzol „Adatok” űrlapja (`saveLeadEdits`) — böngésző cím-autofill a tesztelő profiljából, egy tesztkiküldés előkészítésekor.

@@ -1,4 +1,4 @@
-## ADR-XXXX — A lead nyilvános címe/országa nem lehet vevő-számlázási adat; a kurátori űrlap nem kap böngésző-kitöltést (2026-10-03)
+## ADR-0316 — A lead nyilvános címe/országa nem lehet vevő-számlázási adat; a kurátori űrlap nem kap böngésző-kitöltést (2026-10-03)
 
 **Dátum:** 2026-10-03 · **Státusz:** elfogadva (hibajavítás mérés alapján; SUB, brief `~/rc-briefs/fix-lead-elerhetoseg.md`) ·
 **Kapcsolódó:** ADR-0029 (kurátor-szerkeszthető lead-adat), ADR-0241 (tenant Elérhetőség — mindent-vagy-semmit minta),
