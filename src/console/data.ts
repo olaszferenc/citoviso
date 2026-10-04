@@ -961,10 +961,13 @@ export async function recordOrderIntent(input: {
       .returning("id")
       .executeTakeFirstOrThrow();
   } else {
+    // The funnel never steps back (ADR-0167): a converted buyer's second order must not
+    // demote them to "order_intent" (mérés-SUB lelet, 2026-10-04).
     await db
       .updateTable("prospect")
       .set({ status: "order_intent" })
       .where("id", "=", prospect.id)
+      .where("status", "!=", "converted")
       .execute();
   }
 

@@ -422,8 +422,12 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
   }
   const viewsByProspect = new Map<string, Visit[]>();
   for (const v of views) {
+    // A bot-classified view (headless test, link scanner that passed the human gate) is
+    // kept in the table but never counted — ADR-0108's rule, applied to the mock side too.
+    const device = deviceOf(v);
+    if (device === "bot") continue;
     const evs = eventsByView.get(v.id) ?? [];
-    const visit = foldVisit(v.id, toDate(v.started_at)!, deviceOf(v), evs);
+    const visit = foldVisit(v.id, toDate(v.started_at)!, device, evs);
     const list = viewsByProspect.get(v.prospect_id) ?? [];
     list.push(visit);
     viewsByProspect.set(v.prospect_id, list);
