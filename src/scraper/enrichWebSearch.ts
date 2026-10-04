@@ -6,7 +6,7 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
-import { mergeContacts } from "./contactLedger.js";
+import { FOREIGN_DOMAIN_REASON, FREEMAIL, mergeContacts } from "./contactLedger.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import type { ContactCandidate, PortalListing, QualifiedLead, Region } from "./types.js";
@@ -69,10 +69,6 @@ function firstBusinessEmail(text: string): string | undefined {
   return undefined;
 }
 
-// Freemail providers carry no brand signal — a guesthouse run by one person
-// legitimately uses gmail, so these pass on the operator's judgement.
-const FREEMAIL =
-  /@(gmail|googlemail|freemail|citromail|indamail|vipmail|hotmail|outlook|yahoo|t-online|invitel|upcmail)\./i;
 
 /**
  * CORROBORATION (§F, the tourinform lesson generalized): a snippet-fished
@@ -250,7 +246,7 @@ export async function enrichWebSearch(
           const why = !isBusinessEmail(v)
             ? "nem üzleti cím (iroda / sablon / gépi)"
             : !isCorroboratedEmail(v, lead)
-              ? "nem köthető ehhez a vállalkozáshoz (idegen domain)"
+              ? FOREIGN_DOMAIN_REASON
               : undefined;
           seen.push({ kind: "email", value: v, source, sourceUrl, accepted: !why, rejectedReason: why });
         };
@@ -393,7 +389,7 @@ export async function enrichWebSearch(
         source: "korábbi adat",
         accepted: !storedIsWeak,
         rejectedReason: storedIsWeak
-          ? "nem köthető ehhez a vállalkozáshoz (idegen domain)"
+          ? FOREIGN_DOMAIN_REASON
           : undefined,
       });
     }

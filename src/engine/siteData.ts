@@ -8,6 +8,7 @@
 // the lead. This function makes NO network/AI/DB call: it is a plain transform, so the same
 // inputs always yield the same SiteData — a precondition of the mock=live guarantee.
 
+import { guestVisibleContact } from "../scraper/contactLedger.js";
 import type { Industry, QualifiedLead } from "../scraper/types.js";
 import type { Photo, SiteData } from "./recipe.js";
 
@@ -86,8 +87,12 @@ export function leadToSiteData(
 
   // Contact — structured facts off the lead; only include what actually exists.
   const contact: { email?: string; phone?: string; address?: string } = {};
-  if (clean(lead.email)) contact.email = clean(lead.email);
-  if (clean(lead.phone)) contact.phone = clean(lead.phone);
+  // A value the contact ledger REJECTED is not this business's contact (a mayor's or a
+  // tourinform address measured on prod) — never printed to guests. See guestVisibleContact.
+  if (clean(lead.email) && guestVisibleContact(lead.contacts, "email", clean(lead.email)))
+    contact.email = clean(lead.email);
+  if (clean(lead.phone) && guestVisibleContact(lead.contacts, "phone", clean(lead.phone)))
+    contact.phone = clean(lead.phone);
   if (clean(lead.address)) contact.address = clean(lead.address);
 
   // ADR-0041 locality facets (ADR-0038/0040 fills them on the lead) — NAP fields for the

@@ -23,6 +23,22 @@ export function phoneKey(v: string): string {
   return d;
 }
 
+/**
+ * Freemail and ISP mailbox providers carry no brand signal — a guesthouse run by one person
+ * legitimately uses gmail, so these pass on the operator's judgement. Lives here (a pure
+ * module) so the guest-facing contact filter re-applies the SAME rule the enricher used.
+ *
+ * axelero / t-email / gmx / web.de added 2026-10-04: measured on prod, four leads' only
+ * e-mail (Kerekerdő `kuci01@axelero.hu`, the former Matáv ISP mailbox that became t-online)
+ * was ledgered "idegen domain" although `t-online`/`invitel`/`upcmail` already passed —
+ * a personal mailbox is not a foreign business.
+ */
+export const FREEMAIL =
+  /@((gmail|googlemail|freemail|citromail|indamail|vipmail|hotmail|outlook|yahoo|t-online|invitel|upcmail|digikabel|chello|axelero|t-email|gmx)\.|web\.de$)/i;
+
+/** The verdict the corroboration rule writes for a domain not tied to the lead. */
+export const FOREIGN_DOMAIN_REASON = "nem köthető ehhez a vállalkozáshoz (idegen domain)";
+
 function key(c: { kind: string; value: string }): string {
   return c.kind === "phone"
     ? `phone:${phoneKey(c.value)}`
@@ -68,4 +84,26 @@ export function mergeContacts(
     });
   }
   return [...out.values()];
+}
+
+/**
+ * May this contact be shown to GUESTS (mock / site)? The ledger's verdict decides: a value
+ * the ledger rejected is not this business's contact — measured 2026-10-04 on prod, 17 leads
+ * carried a rejected address as their current e-mail, among them a town mayor
+ * (`mpolgarmester@keszthely.hu` on Rozé Fogadó) and a tourinform office. The pipeline keeps
+ * such a value as the lead's best guess for the CURATOR; the guest page must not print it.
+ *
+ * One re-evaluation: a "foreign domain" verdict on a freemail/ISP mailbox is re-judged with
+ * today's FREEMAIL list, so widening the list fixes stored verdicts without a re-scrape.
+ * A value with no ledger row (older leads, Places phone) is shown — the ledger only rules
+ * where it has spoken.
+ */
+export function guestVisibleContact(
+  contacts: readonly ContactCandidate[] | undefined,
+  kind: "email" | "phone",
+  value: string,
+): boolean {
+  const row = (contacts ?? []).find((c) => key(c) === key({ kind, value }));
+  if (!row || row.accepted) return true;
+  return kind === "email" && row.rejectedReason === FOREIGN_DOMAIN_REASON && FREEMAIL.test(value);
 }

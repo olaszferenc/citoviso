@@ -1859,6 +1859,15 @@ if [ -f scripts/region-phrase-drop-check.mts ] && \
   echo "[pre-commit] region-phrase-drop-check (nincs terület-név → nincs régió-fordulat)…"
   npx tsx scripts/region-phrase-drop-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Guest contact gate (2026-10-04, Kerekerdő): a value the contact LEDGER rejected (a mayor's,
+# a tourinform office's address — 17 prod leads) never reaches the guest page; an ISP mailbox
+# (axelero, t-email, gmx, web.de) is not a "foreign domain". ⚠️ ÖN-TRIGGER: own file in the
+# pattern. Se AI, se hálózat, se DB (~2s).
+if [ -f scripts/guest-contact-check.mts ] && \
+   changed_files | grep -qE '^src/engine/siteData\.ts$|^src/scraper/(contactLedger|enrichWebSearch)\.ts$|^scripts/guest-contact-check\.mts$'; then
+  echo "[pre-commit] guest-contact-check (elutasított kontakt nem kerül a vendég elé)…"
+  npx tsx scripts/guest-contact-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
 # lies. Measures the shipped sentence against the cells of the column it names, plus the
