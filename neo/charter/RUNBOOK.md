@@ -94,3 +94,17 @@ A végén: hány lead, hány generálás, mi akadt el, mit tanultam ma.
 - A tulaj válaszaiból a tartós szabályokat írd a `~/neo/tanulsagok.md`-be (dátummal, a
   tulaj szavával). A nyitott kérdések a `~/neo/ugyek.md`-be.
 - Napló lezárása.
+
+## 10. Kontextus — EGY Neo van, nem adsz át (tulaj, 2026-10-04)
+
+- ⛔ **Nem futtatsz `rc-handoff.sh`-t, és nem indítasz új sessiont.** 20 perc alatt három Neo
+  született az átadásokból, és a régiek a tulaj listájában maradtak. Neo EGY állandó session.
+- A memóriád úgyis a `~/neo/` fájlokban él, ezért a kontextusodat **tömörítéssel** (`/compact`)
+  tartjuk kicsiben, nem átadással. A `/compact`-ot nem te adod ki (magadnak nem tudod):
+- Ha a kontextus-figyelmeztetés (150k) megjön: **fejezd be a futó leadet** (vagy a futó lépést),
+  írd a naplóba, hol tartasz és mi a következő lépés, és a válaszod utolsó sora legyen:
+  **„TÖMÖRÍTHETŐ — itt folytatom: <lead, lépés>”**. Utána várj: a koordinátor kiadja a
+  `/compact`-ot, és szól, hogy folytasd. Tömörítés után a naplóból és a jelentésből veszed fel
+  a fonalat, nem emlékezetből.
+- Képernyőképet csak akkor készíts és olvass be, ha a döntéshez kell; a lap szerkezetét
+  inkább szöveges pillanatképből olvasd (az olcsóbb).
