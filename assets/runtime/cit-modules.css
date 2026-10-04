@@ -1259,7 +1259,7 @@ html .cit-away { visibility: hidden !important; opacity: 0 !important; pointer-e
 #cit-booking h2 ~ [data-cit-module="booking"] form.cit-book--request > .cit-book__title { display: none; }
 
 /* ── gallery: every photo reachable (contract design-refs/tenant-site/gallery-cap) ──
-   The pager under a swipe strip / card deck is born [hidden]; the runtime unhides it when
+   The pager under a swipe strip is born [hidden]; the runtime unhides it when
    it wires it — without JS the row is swiped natively and no dead arrow is drawn. The
    in-place expander hides its extra cards ONLY with JS on — no JS = every card shown. */
 .cit-gpager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 12px;

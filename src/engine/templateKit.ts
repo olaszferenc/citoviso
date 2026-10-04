@@ -317,7 +317,7 @@ const GPAGER_PREV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const GPAGER_NEXT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
 
 /**
- * Prev · „1 / N” · next — the pager of a swipeable gallery strip or card deck (contract:
+ * Prev · „1 / N” · next — the pager of a swipeable gallery strip (contract:
  * design-refs/tenant-site/gallery-cap). Born `hidden`: only the runtime that wires it takes
  * the attribute off, so a page without JS — or rendered without the runtime at all — never
  * shows dead arrows, and the strip stays a native swipe row.

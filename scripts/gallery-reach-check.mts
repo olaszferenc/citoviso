@@ -1,22 +1,23 @@
 // ŐR: a tulaj MINDEN fotója elérhető a vendég-oldal galériájából, és a galéria a lapon
 // még NEM LÁTOTT képekkel indul — arch-frames (ív-sáv), wordmark-grow (4:3 sáv, asztalin 3 egyszerre —
-// 2026-10-04 óta, kontraktus: design-refs/tenant-site/wordmark-grow-b; előtte kártyapakli),
+// 2026-10-04 óta, kontraktus: design-refs/tenant-site/wordmark-grow-b; előtte kártyapakli, amelynek
+// runtime-kódja 2026-10-04-én törölve — tulaj: „igen töröljük”),
 // organic (blob-sáv), claymorphism (4 + helyben kinyíló). Kontraktus: assets/design-refs/tenant-site/gallery-cap/.
 //
 // A LELET (2026-09-28/29): 6 feltöltésből az organic és a claymorphism 4-et mutatott
 // (`slice(0, 4)`), a wordmark-grow 3-at; az élő Kemences Vendégház (wordmark-grow, 12 fotó)
 // vendége 3 fotót látott, a nagyítóban sem többet — az csak a galéria-slot képein lapoz.
 //
-// ⛔ MIÉRT BÖNGÉSZŐBEN, JS-SEL ÉS JS NÉLKÜL: az „elérhető” a runtime-tól függ (a pakli és a
-// sáv lapozója, a helyben kinyitás), a no-JS lap pedig a saját ígérete (§B): ott a sáv natív
+// ⛔ MIÉRT BÖNGÉSZŐBEN, JS-SEL ÉS JS NÉLKÜL: az „elérhető” a runtime-tól függ (a sáv
+// lapozója, a helyben kinyitás), a no-JS lap pedig a saját ígérete (§B): ott a sáv natív
 // húzható sor, és a claymorphism minden kártyát mutat. Ezért minden alany két méretben
 // (1280 · 390 px telefon) és két állapotban (runtime-mal · runtime nélkül) fut:
 //   ① a galéria-slot MINDEN fotót <img>-ként hordoz, és a nagyító „1 / N”-nel nyílik;
 //   ② a galéria első képei közül egy sem látható máshol a lapon, sorrendjük a tulajé;
-//   ③ JS-sel: a sáv lapoz (számláló + tiltott nyíl a szélén), a pakli körbe lapoz,
+//   ③ JS-sel: a sáv lapoz (számláló + tiltott nyíl a szélén),
 //      a claymorphism 4 → N → 4 (felirat „Kevesebb fotó”); JS nélkül: nincs lapozó és nincs
-//      gomb, a claymorphism mind az N kártyát mutatja, a sáv/pakli minden kártyája doboz > 0;
-//   ④ kis adat: 3 fotónál a claymorphism gomb nélkül; 1 fotónál a pakli lapozó nélkül.
+//      gomb, a claymorphism mind az N kártyát mutatja, a sáv minden kártyája doboz > 0;
+//   ④ kis adat: 3 fotónál a claymorphism gomb nélkül; 1 fotónál a sáv lapozó nélkül.
 //
 //   npx tsx scripts/gallery-reach-check.mts              # zöld futás
 //   npx tsx scripts/gallery-reach-check.mts --self-test  # PIROS kontroll (2 visszarontás)
@@ -117,16 +118,16 @@ try {
         page.on("pageerror", (e) => errs.push(e.message));
         await open(page, mode === "nyers" ? bare : withJs);
         const p = (await page.evaluate(PROBE_JS)) as Probe;
-        // ⓪ the gallery never widens a phone's layout viewport (the deck's peeking cards did:
+        // ⓪ the gallery never widens a phone's layout viewport (the former card deck's peeking cards did:
         // 390 → 417 px) — `innerWidth` IS the truth on a phone, scrollWidth alone reads 0 overflow.
         const vw = (await page.evaluate("({ iw: innerWidth, sw: document.documentElement.scrollWidth })")) as { iw: number; sw: number };
         const want = (ctxOpts as { viewport: { width: number } }).viewport.width;
         ok(vw.iw === want && vw.sw <= want, `${label}: a lap nem szélesedik ki (innerWidth ${vw.iw}, scrollWidth ${vw.sw} / ${want})`);
         // …and no card BOX reaches past the screen edge either, clipped or not (guest-mobile-check ⑧
-        // counts the box: the deck's turned peek card read 397 px at 390). The strip's own track is
+        // counts the box: the former deck's turned peek card read 397 px at 390). The strip's own track is
         // a scroller — its off-screen cards are the design, so the track's children are exempt.
         const over = (await page.evaluate(`[...document.querySelectorAll('[data-cit-module="gallery"] *')].filter((e) => {
-          if (e.closest('[data-cit-gtrack]') || (e.closest('[data-cit-gcards]') && !e.closest('[data-on]'))) return false;
+          if (e.closest('[data-cit-gtrack]')) return false;
           const r = e.getBoundingClientRect(); return r.width > 0 && r.right > innerWidth + 0.5; }).map((e) => e.className + ' ' + Math.round(e.getBoundingClientRect().right))`)) as string[];
         ok(over.length === 0, `${label}: galéria-elem nem lóg ki a képernyőből${over.length ? " — " + over.slice(0, 3).join(" | ") : ""}`);
         // ① every photo in the slot

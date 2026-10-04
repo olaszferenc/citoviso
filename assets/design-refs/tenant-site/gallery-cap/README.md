@@ -29,7 +29,7 @@ A tulaj: „Ez egy nagy hiba, de látni kell mit okoz a mockbann”.
 4. **Nincs új szöveg a tulajnak/vendégnek, csak ami jóvá lett hagyva:** **„Összes fotó ({n})”** ·
    **„Kevesebb fotó”** (claymorphism); a lapozó „1 / N” számláló (szám, nem szöveg); a nyilak
    akadálymentes neve a meglévő „Előző kép” / „Következő kép”.
-5. **JS nélkül is minden fotó elérhető** (§B no-JS): a sáv és a pakli natív, ujjal húzható sor, a
+5. **JS nélkül is minden fotó elérhető** (§B no-JS): a sáv natív, ujjal húzható sor, a
    lapozó rejtve; a claymorphism mind a 12 kártyát mutatja, a gomb rejtve. A runtime a `data-on`
    attribútummal kapcsolja be a JS-es viselkedést.
 
@@ -45,7 +45,9 @@ A tulaj: „Ez egy nagy hiba, de látni kell mit okoz a mockbann”.
 ## wordmark-grow — A · Kártyapakli (KÖT)
 
 > ⛔ **FELÜLÍRVA 2026-10-04** (tulaj, „Névből növő B”): a pakli helyén fekvő 4:3 húzható sáv, asztalin 3 kép
-> egyszerre — kontraktus: `../wordmark-grow-b/`. Az alábbi pont TÖRTÉNETI.
+> egyszerre — kontraktus: `../wordmark-grow-b/`. Az alábbi pont TÖRTÉNETI. A pakli runtime-kódja
+> (`mountGalleryDeck`, `data-cit-gdeck`/`data-cit-gcards` horog) 2026-10-04-én TÖRÖLVE (tulaj: „igen töröljük”);
+> a már kiküldött mockok nem törnek el, mert a runtime-ot beágyazva hordozzák. A `plan-wordmark-grow.html` emlék.
 
 - A „Képek” szakasz egyetlen kártyája helyén **pakli**: a legfelső kártya mögött **legfeljebb kettő**
   kilóg (eltolva, enyhén elforgatva), a többi rejtve.
