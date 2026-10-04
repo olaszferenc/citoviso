@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-mock-szoveg-kezi-atirasa.md) — A mock szövege kézzel átírható: mezős űrlap a kártyán (A) ÉS helyben szerkesztés az előnézeten (B), egy mentési úttal
 - [ADR-0322](decisions/0322-riport-modul-a-pilothoz-tolcser-viselkedes-a.md) — Riport-modul a pilothoz: tölcsér + viselkedés a mért linkekből, kétrétegű kilépés-ok, csomag-besorolás, mérés-egységesítés (2026-10-04)
 - [ADR-0321](decisions/0321-egy-leadnek-tobb-e-mail-cime-lehet-elsodleges.md) — Egy leadnek több e-mail-címe lehet: elsődleges + további; a hideg levél egy címre megy; a kurátor címét az újragyűjtés nem írja felül (2026-10-04)
 - [ADR-0320](decisions/0320-fejlec-link-csak-meglevo-szekciora-egy-vagasi.md) — Fejléc-link csak meglévő szekcióra; egy vágási szabály a mocknak és az élő lapnak; Parallax görgetett menüsáv (2026-10-04)

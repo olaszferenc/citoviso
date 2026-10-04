@@ -55,7 +55,9 @@ import {
   heroFit,
   HERO_FIT_CSS,
   heroPhoto,
+  highlightHook,
   honestStarCount,
+  hookPick,
   photoFill,
   roomDetails,
   roomHint,
@@ -558,11 +560,11 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     <div class="ko-shade" aria-hidden="true"></div>
     <div class="ko-wrap ko-hero-fade">
       <div class="ko-hero-copy">
-        ${eyebrow ? `<p class="ko-eyebrow${EYEBROW_CASE === "caps" ? " caps" : ""}">${esc(eyebrow)}</p>` : ""}
+        ${eyebrow ? `<p class="ko-eyebrow${EYEBROW_CASE === "caps" ? " caps" : ""}"${hookPick(["hero.eyebrow", heroCopy.eyebrow])}>${esc(eyebrow)}</p>` : ""}
         <h1 ${heroFit(data.name)} style="--ko-lw:${longest}">${lines
           .map((l, i) => `<span class="ko-line"><span style="--d:${(0.12 + i * 0.14).toFixed(2)}s">${esc(l)}</span></span>`)
           .join("")}</h1>
-        ${lede ? `<p class="ko-hero-lede">${accented(lede, heroCopy.accent)}</p>` : ""}
+        ${lede ? `<p class="ko-hero-lede"${hookPick(["hero.lead", heroCopy.lead], ["intro", firstSentence(data.intro, 200), { part: "first-sentence" }], ["tagline", data.tagline])}>${accented(lede, heroCopy.accent)}</p>` : ""}
         <div class="ko-hero-cta">
           <a class="ko-btn ko-btn-acc" href="#cit-enquiry">${cta}</a>
           ${
@@ -606,14 +608,14 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       ? `<section id="ko-about" class="ko-sec">
     <div class="ko-wrap ko-about">
       <div class="ko-about-intro" ${mo("up")}>
-        <h2>${accented(aboutTitle, featCopy.accent)}</h2>
-        ${aboutText ? `<p class="ko-lead">${esc(aboutText)}</p>` : ""}
+        <h2${hookPick(["features.title", featCopy.title])}>${accented(aboutTitle, featCopy.accent)}</h2>
+        ${aboutText ? `<p class="ko-lead"${hookPick(["intro", data.intro], ["tagline", data.tagline])}>${esc(aboutText)}</p>` : ""}
         ${photos.length > 1 ? `<a class="ko-link" href="#ko-gallery" style="margin-top:18px">${T(data, "Megnézem a képeket")}${ARROW}</a>` : ""}
       </div>
       ${
         feat.length
           ? `<ul class="ko-items" aria-label="${esc(T(data, "Kiemelések"))}">${feat
-              .map((h, i) => `<li class="ko-item" ${mo("up", (i % 2) * 80)}><i>${amenityIconSvg(h, data.amenityIconMap)}</i><h3>${esc(h)}</h3></li>`)
+              .map((h, i) => `<li class="ko-item" ${mo("up", (i % 2) * 80)}><i>${amenityIconSvg(h, data.amenityIconMap)}</i><h3${highlightHook(data, i)}>${esc(h)}</h3></li>`)
               .join("")}</ul>`
           : ""
       }
@@ -664,7 +666,7 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     return `<section id="ko-gallery" class="ko-sec">
     <div class="ko-wrap">
       <div class="ko-head" ${mo("up")}>
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="ko-gal" id="ko-galgrid" data-cit-module="gallery" data-cit-gexpandable>
         ${ordered

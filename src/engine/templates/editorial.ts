@@ -22,10 +22,13 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  copyHook,
   copyOf,
   esc,
   firstSentence,
   hasBookingSurface,
+  highlightHook,
+  hookPick,
   honestStarCount,
   T,
   type ArtTemplate,
@@ -189,8 +192,9 @@ const CONTACT_ICONS = {
 };
 
 /** Editorial section head ("Heading ————"). No "No. 1" numbering (ADR-0300). */
-function sectionHead(title: string, accent?: string): string {
-  return `<div class="e-sech"><h2>${accented(title, accent)}</h2></div>`;
+// `titleHook`: preview-editor copy hook (hookPick output, "" = none).
+function sectionHead(title: string, accent?: string, titleHook = ""): string {
+  return `<div class="e-sech"><h2${titleHook}>${accented(title, accent)}</h2></div>`;
 }
 
 function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
@@ -216,7 +220,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // Dateline row: REAL facts only (region eyebrow, real rating, real phone) — never a
   // fabricated date, issue number or founding year (§B.17).
   const mastTopItems = [
-    heroCopy.eyebrow ? `<span>${esc(heroCopy.eyebrow)}</span>` : "",
+    heroCopy.eyebrow ? `<span${copyHook("hero.eyebrow")}>${esc(heroCopy.eyebrow)}</span>` : "",
     ratingStat
       ? `<span>${starIcon()} ${esc(ratingStat.value)} · ${esc(ratingStat.label)}</span>`
       : "",
@@ -229,7 +233,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       ${mastTopItems ? `<div class="e-mast-top">${mastTopItems}</div>` : ""}
       <div class="e-mast-mid">
         <h1>${esc(data.name)}</h1>
-        ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+        ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
       </div>
     </div>
   </header>`;
@@ -287,9 +291,9 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     quoteLine || data.intro
       ? `<div class="e-story" id="e-story">
     <div>
-      <p class="e-kicker">${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "A házról")}</p>
-      ${quoteLine ? `<h2 class="e-quote">${accented(quoteLine, heroCopy.accent)}</h2>` : ""}
-      ${data.intro ? `<p>${esc(data.intro)}</p>` : ""}
+      <p class="e-kicker"${hookPick(["features.eyebrow", featCopy.eyebrow])}>${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "A házról")}</p>
+      ${quoteLine ? `<h2 class="e-quote"${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])}>${accented(quoteLine, heroCopy.accent)}</h2>` : ""}
+      ${data.intro ? `<p${copyHook("intro")}>${esc(data.intro)}</p>` : ""}
       ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad szobát kérek")}</a>` : ""}
     </div>
     ${aside}
@@ -310,10 +314,10 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- amenities: classified-ads columns (real highlights only) -------------
   const ads = data.highlights.length
     ? `<section id="e-ads">
-    ${sectionHead(featCopy.title || T(data, "Mi jár a szobához"), featCopy.accent)}
+    ${sectionHead(featCopy.title || T(data, "Mi jár a szobához"), featCopy.accent, hookPick(["features.title", featCopy.title]))}
     <div class="e-ads">
       ${data.highlights
-        .map((h) => `<div class="e-ad"><h3>${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></h3></div>`)
+        .map((h, i) => `<div class="e-ad"><h3>${amenityIconSvg(h, data.amenityIconMap)}<span${highlightHook(data, i)}>${esc(h)}</span></h3></div>`)
         .join("\n      ")}
     </div>
   </section>`
@@ -322,7 +326,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   // -- gallery: contact sheet of polaroids; a caption only when it says something (L-3)
   const sheet = photos.length
     ? `<section id="e-gallery">
-    ${sectionHead(galCopy.title || T(data, "Képek a házról"), galCopy.accent)}
+    ${sectionHead(galCopy.title || T(data, "Képek a házról"), galCopy.accent, hookPick(["gallery.title", galCopy.title]))}
     <div class="e-sheet" data-cit-module="gallery">
       ${photos
         .slice(0, 6)
@@ -348,7 +352,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       : "";
   const letters = reviewsData
     ? `<section id="e-letters" data-cit-module="reviews">
-    ${sectionHead(revCopy.title || T(data, "Vendégek véleménye"), revCopy.accent)}
+    ${sectionHead(revCopy.title || T(data, "Vendégek véleménye"), revCopy.accent, hookPick(["reviews.title", revCopy.title]))}
     ${scoreLine}
     <div class="e-letters${realReviews ? " e-letters-end" : ""}">
       ${reviewsData
@@ -405,7 +409,7 @@ function renderEditorial(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="e-colo-grid">
         <div>
           <span class="e-brand">${esc(data.name)}</span>
-          ${footTag ? `<p>${esc(footTag)}</p>` : ""}
+          ${footTag ? `<p${hookPick(["tagline", data.tagline], ["intro", firstSentence(data.intro), { part: "first-sentence" }])}>${esc(footTag)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Az oldalon")}</h4>

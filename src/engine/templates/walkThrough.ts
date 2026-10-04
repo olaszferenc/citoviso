@@ -45,6 +45,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  copyHook,
   copyOf,
   ctaLabel,
   esc,
@@ -53,6 +54,8 @@ import {
   heroFit,
   HERO_FIT_CSS,
   heroPhoto,
+  highlightHook,
+  hookPick,
   honestStarCount,
   photoFill,
   roomDetails,
@@ -530,9 +533,9 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const heroBlock = `<section class="wk-hero" id="top">
     <div class="wk-wrap wk-hero-grid">
       <div>
-        ${where ? `<p class="wk-where">${ico("location", 20)}${esc(where)}</p>` : ""}
+        ${where ? `<p class="wk-where"${hookPick(["hero.eyebrow", heroCopy.eyebrow])}>${ico("location", 20)}${esc(where)}</p>` : ""}
         <h1 ${heroFit(data.name)}>${esc(data.name)}</h1>
-        ${heroLine ? `<p class="wk-intro">${accented(heroLine, heroCopy.accent)}</p>` : ""}
+        ${heroLine ? `<p class="wk-intro"${hookPick(["hero.lead", heroCopy.lead], ["intro", firstSentence(data.intro, 220), { part: "first-sentence" }], ["tagline", data.tagline])}>${accented(heroLine, heroCopy.accent)}</p>` : ""}
         <div class="wk-cta">
           <a class="wk-btn wk-btn-acc" href="#cit-enquiry">${cta}${ARROW}</a>
           ${steps.length ? `<a class="wk-btn wk-btn-line" href="#wk-walk">${T(data, "Körbenézek")}</a>` : ""}
@@ -575,7 +578,7 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     : "";
   const featHtml = feat.length
     ? `<ul class="wk-feat" aria-label="${esc(T(data, "Kiemelések"))}">${feat
-        .map((h) => `<li>${amenityIconSvg(h, data.amenityIconMap)}${esc(h)}</li>`)
+        .map((h, i) => `<li${highlightHook(data, i)}>${amenityIconSvg(h, data.amenityIconMap)}${esc(h)}</li>`)
         .join("")}</ul>`
     : "";
   // ⛔ Nothing to say → no section (no heading over an empty band, §B no-empty-band).
@@ -584,8 +587,8 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       ? `<section id="wk-walk" class="wk-sec wk-walk">
     <div class="wk-wrap">
       <div class="wk-walk-head">
-        <h2 ${mo("up")}>${accented(walkTitle, featCopy.accent)}</h2>
-        ${walkLede ? `<p class="wk-kicker">${esc(walkLede)}</p>` : ""}
+        <h2${hookPick(["features.title", featCopy.title])} ${mo("up")}>${accented(walkTitle, featCopy.accent)}</h2>
+        ${walkLede ? `<p class="wk-kicker"${heroCopy.lead ? hookPick(["intro", firstSentence(data.intro, 220), { part: "first-sentence" }], ["tagline", data.tagline]) : copyHook("tagline")}>${esc(walkLede)}</p>` : ""}
       </div>
       ${stepsHtml}
       ${featHtml}
@@ -633,7 +636,7 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     ordered.length
       ? `<section id="wk-gallery" class="wk-sec">
     <div class="wk-wrap">
-      <h2 ${mo("up")}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+      <h2${hookPick(["gallery.title", galCopy.title])} ${mo("up")}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       <div class="wk-gal" id="wk-galgrid" data-cit-module="gallery" data-cit-gexpandable>
         ${ordered
           .map(

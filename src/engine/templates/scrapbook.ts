@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const SCRAPBOOK_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -255,8 +255,8 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="sb-wrap">
       <div class="sb-herogrid">
         <div>
-          <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-          ${sub ? `<p>${esc(sub)}</p>` : ""}
+          <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+          ${sub ? `<p${sub === data.tagline ? copyHook("tagline") : copyHook("intro", { part: "first-sentence" })}>${esc(sub)}</p>` : ""}
           <div class="sb-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szobát foglalnék")}</a>` : ""}
             ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#sb-gallery">${T(data, "Fotóalbum")}</a>` : ""}
@@ -280,8 +280,8 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const rooms = roomsData
     ? `<section class="sb-sec" id="sb-rooms">
     <div class="sb-wrap">
-      ${roomCopy.eyebrow ? `<span class="sb-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${roomsLabel(data)}</span>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
+      ${roomCopy.eyebrow ? `<span class="sb-eyebrow"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${roomsLabel(data)}</span>`}
+      <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       <div class="sb-rooms" data-cit-module="rooms">
         ${roomsData
           .map(
@@ -319,7 +319,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="sb-kamra">
         ${data.highlights
           .slice(0, 8)
-          .map((h, i) => `<div class="sb-jar" style="--r:${tilt(i)}">${amenityIconSvg(h, data.amenityIconMap)}<b>${esc(h)}</b></div>`)
+          .map((h, i) => `<div class="sb-jar" style="--r:${tilt(i)}">${amenityIconSvg(h, data.amenityIconMap)}<b${highlightHook(data, i)}>${esc(h)}</b></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -330,8 +330,8 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const gallery = photos.length
     ? `<section class="sb-sec" id="sb-gallery" style="padding-top:24px">
     <div class="sb-wrap">
-      ${galCopy.eyebrow ? `<span class="sb-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Képek")}</span>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Fotóalbum")}</h2>
+      ${galCopy.eyebrow ? `<span class="sb-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Képek")}</span>`}
+      <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Fotóalbum")}</h2>
       <div class="sb-album" data-cit-module="gallery">
         ${photos
           .slice(0, 8)
@@ -347,8 +347,8 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const reviews = reviewsData
     ? `<div class="sb-gbwrap"><section class="sb-sec" id="sb-reviews" data-cit-module="reviews" style="padding-top:64px;padding-bottom:64px">
     <div class="sb-wrap">
-      ${revCopy.eyebrow ? `<span class="sb-eyebrow">${esc(revCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Vélemények")}</span>`}
-      <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink írták")}</h2>
+      ${revCopy.eyebrow ? `<span class="sb-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</span>` : `<span class="sb-eyebrow">${T(data, "Vélemények")}</span>`}
+      <h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink írták")}</h2>
       ${ratingStat ? `<div class="sb-revscore"><b>${esc(ratingStat.value)}</b>${stars5}<span>${esc(ratingStat.label)}</span></div>` : ""}
       <div class="sb-gbook">
         ${reviewsData
@@ -426,7 +426,7 @@ function renderScrapbook(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="sb-fg">
         <div>
           <span class="sb-brand sb-hand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>

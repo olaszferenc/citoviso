@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, highlightHook, hookPick, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, galleryOrder, galleryPager, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const ORGANIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -247,8 +247,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     <div class="og-hero-grad"></div>
     <div class="og-wrap og-hero-in">
       <div>
-        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-        ${sub ? `<p>${esc(sub)}</p>` : ""}
+        <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+        ${sub ? `<p${data.tagline && data.tagline !== h1 ? copyHook("tagline") : copyHook("intro", { part: "first-sentence" })}>${esc(sub)}</p>` : ""}
         <div>
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
           ${data.highlights.length ? `<a class="cit-btn cit-btn-ghost" href="#og-rhythm">${T(data, "Szolgáltatások")}</a>` : ""}
@@ -267,9 +267,9 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const rooms = roomsData
     ? `<section class="og-sec" id="og-rooms" style="padding-top:60px">
     <div class="og-wrap">
-      ${roomCopy.eyebrow ? `<span class="og-eyeb">${esc(roomCopy.eyebrow)}</span>` : `<span class="og-eyeb">${roomsHeading(data)}</span>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
-      ${data.tagline ? `<p class="og-lead">${esc(data.tagline)}</p>` : ""}
+      ${roomCopy.eyebrow ? `<span class="og-eyeb"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</span>` : `<span class="og-eyeb">${roomsHeading(data)}</span>`}
+      <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
+      ${data.tagline ? `<p class="og-lead"${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
       <div class="og-stays" data-cit-module="rooms">
         ${roomsData
           .map(
@@ -312,8 +312,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${data.highlights
           .slice(0, 6)
           .map(
-            (h) =>
-              `<div class="og-beat"><h3>${amenityIconSvg(h, data.amenityIconMap)}${esc(h)}</h3></div>`,
+            (h, i) =>
+              `<div class="og-beat"><h3${highlightHook(data, i)}>${amenityIconSvg(h, data.amenityIconMap)}${esc(h)}</h3></div>`,
           )
           .join("\n        ")}
       </div>
@@ -333,7 +333,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <h2>${T(data, "Amit még kínálunk")}</h2>
       <div class="og-chips">
         ${chipItems
-          .map((h) => `<div class="og-chip">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></div>`)
+          .map((h, i) => `<div class="og-chip">${amenityIconSvg(h, data.amenityIconMap)}<span${highlightHook(data, 6 + i)}>${esc(h)}</span></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -349,8 +349,8 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ordered.length
       ? `<section class="og-sec" id="og-gallery" style="padding-top:0">
     <div class="og-wrap">
-      ${galCopy.eyebrow ? `<span class="og-eyeb">${esc(galCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Galéria")}</span>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+      ${galCopy.eyebrow ? `<span class="og-eyeb"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Galéria")}</span>`}
+      <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       <div class="og-gal" data-cit-module="gallery" data-cit-gstrip>
         <div class="og-gtrack" data-cit-gtrack>
         ${ordered
@@ -371,11 +371,11 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const reviews = reviewsData
     ? `<section class="og-sec" id="og-reviews" style="padding-top:0" data-cit-module="reviews">
     <div class="og-wrap">
-      ${revCopy.eyebrow ? `<span class="og-eyeb">${esc(revCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Vendégeink írták")}</span>`}
+      ${revCopy.eyebrow ? `<span class="og-eyeb"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</span>` : `<span class="og-eyeb">${T(data, "Vendégeink írták")}</span>`}
       ${
         ratingStat
           ? `<div class="og-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-          : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
+          : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
       }
       <div class="og-notes">
         ${reviewsData
@@ -452,7 +452,7 @@ function renderOrganic(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="og-fg">
         <div>
           <span class="og-brand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>

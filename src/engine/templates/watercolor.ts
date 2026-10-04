@@ -13,7 +13,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const WATERCOLOR_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -272,8 +272,8 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="wc-hgrid">
         <div>
           ${data.contact.address ? `<span class="wc-k">${esc(data.contact.address)}</span>` : ""}
-          <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-          ${sub ? `<p class="wc-herosub">${esc(sub)}</p>` : ""}
+          <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+          ${sub ? `<p class="wc-herosub"${sub === data.tagline ? copyHook("tagline") : copyHook("intro", { part: "first-sentence" })}>${esc(sub)}</p>` : ""}
           <div class="wc-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
             ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#wc-rooms">${roomsHeading(data)}</a>` : ""}
@@ -296,8 +296,8 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <section class="wc-sec wc-surf" id="wc-rooms">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsHeading(data)}</span>
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
+        <span class="wc-eyebrow"${hookPick(["rooms.eyebrow", roomCopy.eyebrow])}>${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsHeading(data)}</span>
+        <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       </div>
       <div class="wc-rooms" data-cit-module="rooms">
         ${roomsData
@@ -336,6 +336,8 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   // day" section renders the first four, the circles show only the remainder.
   const dayItems = dayItems0;
   const amenItems = amenItems0;
+  // Index of the first circle in data.highlights (the timeline takes 0–3 when it renders).
+  const amenOffset = dayRenders0 ? 4 : 0;
   const amen = amenItems.length
     ? `${roomsData ? WAVE_UP : ""}
   <section class="wc-sec" id="wc-services">
@@ -346,7 +348,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       </div>
       <div class="wc-am">
         ${amenItems
-          .map((h) => `<div class="wc-a"><div class="wc-ic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong>${esc(h)}</strong></div>`)
+          .map((h, i) => `<div class="wc-a"><div class="wc-ic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong${highlightHook(data, amenOffset + i)}>${esc(h)}</strong></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -364,7 +366,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="wc-day">
         ${dayItems
           .map(
-            (h, i) => `<div class="wc-dy"><strong>${esc(h)}</strong></div>`,
+            (h, i) => `<div class="wc-dy"><strong${highlightHook(data, i)}>${esc(h)}</strong></div>`,
           )
           .join("\n        ")}
       </div>
@@ -378,8 +380,8 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   <section class="wc-sec${day ? "" : " wc-surf"}" id="wc-gallery">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Galéria")}</span>
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+        <span class="wc-eyebrow"${hookPick(["gallery.eyebrow", galCopy.eyebrow])}>${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Galéria")}</span>
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="wc-gal" data-cit-module="gallery">
         ${photos
@@ -397,11 +399,11 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ? `<section class="wc-sec wc-surf" id="wc-reviews" data-cit-module="reviews">
     <div class="wc-wrap">
       <div class="wc-sechead">
-        <span class="wc-eyebrow">${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendégeink")}</span>
+        <span class="wc-eyebrow"${hookPick(["reviews.eyebrow", revCopy.eyebrow])}>${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendégeink")}</span>
         ${
           ratingStat
             ? `<div class="wc-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-            : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`
+            : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`
         }
       </div>
       <div class="wc-revs">
@@ -463,7 +465,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       </div>
       <div class="wc-loc">
         <div>
-          ${data.tagline ? `<p class="wc-lead" style="margin-bottom:6px">${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p class="wc-lead" style="margin-bottom:6px"${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" style="margin-top:22px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
@@ -479,7 +481,7 @@ function renderWatercolor(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="wc-fg">
         <div>
           <a class="wc-lg" href="#top">${LOGO_SVG}${esc(data.name)}</a>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>

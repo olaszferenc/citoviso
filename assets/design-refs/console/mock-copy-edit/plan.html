@@ -1,0 +1,358 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mock szövegének kézi átírása — jóváhagyott terv (A + B)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dfeaf1;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.wrap{max-width:1280px;margin:0 auto;padding:14px 12px 60px}
+.intro{background:var(--citui-white);border-radius:var(--citui-radius);padding:16px 18px;box-shadow:var(--citui-shadow-sm);margin-bottom:14px}
+.intro h1{font-family:var(--citui-font-display);font-size:1.15rem;margin:0 0 6px}
+.intro p{margin:6px 0;font-size:.88rem;line-height:1.55;color:var(--citui-muted)}
+.intro b{color:var(--citui-ink)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+.bar button{font:600 13px/1 var(--citui-font-text);padding:9px 14px;border-radius:var(--citui-radius-pill);
+  border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-navy-900);color:#fff;border-color:var(--citui-navy-900)}
+.bar .lbl{font-size:12px;color:var(--citui-muted);min-width:70px}
+.bar label{font-size:13px;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.stage{margin:12px auto 0;transition:width .2s ease;container-type:inline-size;container-name:con}
+.stage[data-size="mobile"]{width:390px;max-width:100%}
+.stage[data-size="desktop"]{width:100%}
+.variant{display:none}.variant.on{display:block}
+
+/* console shell */
+.con{background:var(--citui-surface);border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm)}
+.con-top{background:linear-gradient(90deg,var(--citui-navy-900),var(--citui-navy-800));color:#eaf3f8;padding:10px 14px;font-weight:600;font-size:.9rem;display:flex;gap:10px;align-items:center}
+.con-top .dot{width:9px;height:9px;border-radius:50%;background:var(--citui-cyan-400)}
+.tabs{display:flex;gap:2px;background:var(--citui-navy-900);padding:0 8px;overflow-x:auto}
+.tabs span{color:#a9c2d6;font-size:.82rem;padding:10px 12px;white-space:nowrap}
+.tabs span.on{background:var(--citui-surface);color:var(--citui-ink);font-weight:600;border-radius:10px 10px 0 0}
+.body{padding:12px}
+
+/* card */
+.c{background:var(--citui-white);border:1px solid var(--citui-cyan-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 14%,transparent);
+  border-radius:var(--citui-radius-sm);overflow:hidden}
+.c-head{display:grid;grid-template-columns:1fr;gap:0}
+@container con (min-width:820px){.c-head{grid-template-columns:300px 1fr}}
+.shot{position:relative;aspect-ratio:16/10;background:var(--citui-surface-2);overflow:hidden}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.c-meta{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.c-meta .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.c-meta .hd b{font-family:var(--citui-font-display);font-size:1rem}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);color:var(--citui-ink)}
+.pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.pill.bad{background:color-mix(in srgb,var(--citui-bad) 12%,#fff);color:var(--citui-bad-ink)}
+.pill.run{background:color-mix(in srgb,var(--citui-cyan-500) 14%,#fff);color:var(--citui-link-ink)}
+.pill.hand{background:color-mix(in srgb,var(--citui-warn) 18%,#fff);color:var(--citui-warn-ink)}
+.pill[hidden]{display:none}
+.mut{color:var(--citui-muted)}.small{font-size:12px}
+.btn{font:600 13px/1 var(--citui-font-text);padding:9px 13px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn.solid{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.lnk{background:none;border:0;padding:0;font:600 12px/1.2 var(--citui-font-text);color:var(--citui-link-ink);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.lnk[disabled]{color:var(--citui-muted);text-decoration:none;cursor:default}
+.det{border-top:1px solid var(--citui-line);padding:12px 14px 16px}
+.det h3{font-family:var(--citui-font-display);font-size:.95rem;margin:0 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.det .lede{font-size:12.5px;color:var(--citui-muted);margin:0 0 12px;line-height:1.5}
+.recipe-stub{font-size:12px;color:var(--citui-muted);background:var(--citui-surface-2);border-radius:10px;padding:8px 10px;margin-bottom:12px}
+
+/* A: field form */
+.grp{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:var(--citui-white)}
+.grp > summary{cursor:pointer;font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center;list-style:none}
+.grp > summary::-webkit-details-marker{display:none}
+.grp > summary .chev{transition:transform .15s}
+.grp[open] > summary .chev{transform:rotate(90deg)}
+.grp > summary .cnt{margin-left:auto}
+.fgrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+@container con (min-width:820px){.fgrid.two{grid-template-columns:1fr 1fr}}
+.f{display:flex;flex-direction:column;gap:5px}
+.f .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.f label{font-size:12px;font-weight:700;letter-spacing:.02em}
+.f .where{font-size:11.5px;color:var(--citui-muted)}
+.f textarea,.f input{width:100%;font:14px/1.45 var(--citui-font-text);padding:8px 10px;border:1px solid var(--citui-line-strong);border-radius:10px;color:var(--citui-ink);background:var(--citui-white);resize:vertical}
+.f textarea:focus,.f input:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px;border-color:transparent}
+.f.changed textarea,.f.changed input{border-color:var(--citui-warn);background:color-mix(in srgb,var(--citui-warn) 5%,#fff)}
+.f.err textarea,.f.err input{border-color:var(--citui-bad);background:color-mix(in srgb,var(--citui-bad) 5%,#fff)}
+.f .foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px}
+.f .foot .n{margin-left:auto;color:var(--citui-muted)}
+.f .foot .n.over{color:var(--citui-bad-ink);font-weight:700}
+.f .msg{font-size:12px;font-weight:600}
+.f .msg.bad{color:var(--citui-bad-ink)}.f .msg.warn{color:var(--citui-warn-ink)}
+.f .orig{font-size:12px;color:var(--citui-muted);background:var(--citui-surface-2);border-radius:8px;padding:6px 8px;display:none}
+.f.changed .orig{display:block}
+.f .live{font-size:15px;font-family:var(--citui-font-display);padding:6px 0 0}
+.f .live em{color:var(--citui-link-ink)}
+.f.hidden-on-tpl{opacity:.75}
+.hl-row{display:flex;gap:6px;align-items:center}
+.hl-row input{flex:1}
+.icon-btn{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:10px;width:36px;height:36px;display:inline-grid;place-items:center;cursor:pointer;color:var(--citui-muted);flex:none}
+.icon-btn:hover{color:var(--citui-bad-ink);border-color:var(--citui-bad)}
+.savebar{position:sticky;bottom:0;background:var(--citui-white);border:1px solid var(--citui-line-strong);border-radius:12px;padding:10px 12px;margin-top:12px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(14,42,71,.08)}
+.savebar .sum{flex:1 1 220px;font-size:13px;min-width:0}
+.gates{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.gates .why{flex-basis:100%;font-size:12px;color:var(--citui-bad-ink)}
+.gates .sim{flex-basis:100%;font-size:11px;color:var(--citui-muted)}
+.frozen{display:none;background:color-mix(in srgb,var(--citui-warn) 12%,#fff);color:var(--citui-warn-ink);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px;gap:8px;align-items:flex-start}
+.is-frozen .frozen{display:flex}
+.ai-note{font-size:12px;color:var(--citui-muted);border-left:3px solid var(--citui-line-strong);padding:4px 10px;margin:12px 0 0}
+.genpanel{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:12px 14px;margin-top:14px}
+.genpanel summary{cursor:pointer;font-weight:600;font-size:.9rem}
+
+/* B frame */
+.bframe-wrap{background:var(--citui-white);border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-sm);padding:10px}
+.bframe-wrap p{font-size:12.5px;color:var(--citui-muted);margin:2px 4px 10px;line-height:1.5}
+.bframe{display:block;border:1px solid var(--citui-line-strong);border-radius:12px;width:100%;height:860px;margin:0 auto;background:#fff}
+.stage[data-size="mobile"] .bframe{width:390px;max-width:100%;height:780px}
+</style></head><body>
+<div class="wrap">
+  <div class="intro">
+    <h1>A mock szövegének kézi átírása — jóváhagyott terv: A ÉS B együtt (2026-10-04)</h1>
+    <p>Valós adat: <b>Bánó Porta Köveskál</b>, a mai legutóbbi mockja (tilted-gallery sablon). A tulaj kérése: <b>„a mockoknál lehessen manuálisan újraírni a szöveget”</b>. Ma a lead-lapon csak AI-újraírás van („Szöveg újragenerálása” utasítással) — kézzel egy betűt sem lehet javítani.</p>
+    <p><b>A — Mezős űrlap a kártyán.</b> A „Részletek” alatt minden szöveg-mező egy listában: a sablonon nem látszó mezők is (jelölve). Pontos, mindenre kiterjed; a kurátor viszont nem a lapon látja, mit ír át.<br>
+       <b>B — Helyben, az előnézeten.</b> A mock-előnézet tetején „Szöveg szerkesztése” kapcsoló; a szövegre kattintva ott helyben írja át. Azonnal látja a hatást (tördelés, hossz), de csak azt írhatja át, ami az adott sablonon látszik.</p>
+    <p>Mindkettőben ugyanaz a viselkedés: a változott mező <b>„kézzel átírva”</b> jelölést kap, mezőnként és egyben is visszaállítható az eredeti AI-szövegre, a mentés után az őrök (tényhűség, marketing, vendég-kritikus) újra lefutnak. <b>A kapu-eredmény a mockban szimulált</b> (szólista + számjegy) — próbálja ki: írja be valahová, hogy „medence”.</p>
+    <div class="bar"><span class="lbl">Változat</span>
+      <button type="button" data-variant="A" aria-pressed="true">A — mezős űrlap</button>
+      <button type="button" data-variant="B" aria-pressed="false">B — helyben szerkesztés</button></div>
+    <div class="bar"><span class="lbl">Méret</span>
+      <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+      <button type="button" data-size="desktop" aria-pressed="true">Asztali</button></div>
+    <div class="bar"><span class="lbl">Állapot</span>
+      <label><input type="checkbox" id="frozen-toggle"> Már kiajánlott (befagyott) mock</label></div>
+  </div>
+
+  <div class="stage" id="stage" data-size="desktop">
+    <!-- ===================== A ===================== -->
+    <div class="variant on" id="vA">
+      <div class="con">
+        <div class="con-top"><span class="dot"></span>Bánó Porta Köveskál · lead</div>
+        <div class="tabs"><span>Áttekintés</span><span class="on">Mock és generálás</span><span>Kiküldés</span><span>Napló</span></div>
+        <div class="body">
+          <div class="c" id="cardA">
+            <div class="c-head">
+              <div class="shot"><img src="card.jpg" alt="Bánó Porta — a mock nyitóoldala"></div>
+              <div class="c-meta">
+                <div class="hd"><b>Mock · tilted-gallery</b>
+                  <span class="pill ok"><span class="d"></span>jóváhagyva</span>
+                  <span class="pill hand" id="A-handpill" hidden><span class="d"></span><span id="A-handtxt">kézzel átírva</span></span></div>
+                <div class="small mut">Generálva 2026-09-30 07:37 · 4 fotó · szövegőrök: <span id="A-gatesum">mind átment</span></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button">Megnyitás</button><button class="btn solid" type="button" aria-expanded="true">Bezárom</button></div>
+              </div>
+            </div>
+            <div class="det" id="detA">
+              <div class="recipe-stub">… recept, nyitókép- és piac-kapu indoklása, AI-költség (változatlan, itt rövidítve) …</div>
+              <h3><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg>A mock szövege — kézi átírás</h3>
+              <p class="lede">Írja át, ami nem tetszik; a többi marad. A mentés csak a szöveget cseréli — kinézet, fotók, elrendezés változatlan. Amit kézzel ír, azért Ön felel: a tényhűség-kapu arra is lefut.</p>
+              <div class="frozen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>
+                <span>Ez a mock már ki lett ajánlva a leadnek — a szövege befagyott, nem írjuk át alatta. Generáljon új mockot, ha más szöveggel ajánlaná.</span></div>
+              <div id="A-form"></div>
+              <div class="savebar">
+                <div class="sum" id="A-sum">Nincs változás.</div>
+                <button class="btn" type="button" id="A-discard" disabled>Elvetem a változásokat</button>
+                <button class="btn" type="button" id="A-revert-all">Minden mező vissza az eredetire</button>
+                <button class="btn solid" type="button" id="A-save" disabled>Mentés</button>
+              </div>
+              <div class="gates" id="A-gates"></div>
+              <p class="ai-note">Az alatta lévő „Szöveg újragenerálása” (AI) a kézzel átírt mezőket <b id="A-ainote">nem írja felül</b> — azok rögzítve maradnak, az AI csak a többit írja újra.</p>
+            </div>
+          </div>
+          <details class="genpanel"><summary>Új mock generálása, forrás és szöveg-újraírás</summary><p class="small mut">(a mai panel, változatlan)</p></details>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== B ===================== -->
+    <div class="variant" id="vB">
+      <div class="bframe-wrap">
+        <p>A kártya „szöveg szerkesztése ▸” linkje a kurátornak szerkeszthető előnézetet nyit (a lead a sáv nélküli, sima oldalt kapja — a /mock/ link változatlan). Kapcsolja be a <b>„Szöveg szerkesztése”</b> gombot a felső sávban, majd kattintson egy szaggatott keretes szövegre. Enter = kész, Esc = elveti; a főcímben kijelöléssel + „Dőlt” gombbal állítható a kiemelés.</p>
+        <iframe class="bframe" id="bframe" src="b-preview.html" title="B változat — mock-előnézet szerkesztő sávval"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  // ---- switches ----
+  var stage=document.getElementById('stage');
+  document.querySelectorAll('[data-variant]').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('[data-variant]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+    document.getElementById('vA').classList.toggle('on',b.dataset.variant==='A');
+    document.getElementById('vB').classList.toggle('on',b.dataset.variant==='B');
+  });});
+  function setSize(s){stage.dataset.size=s;document.querySelectorAll('[data-size]').forEach(function(x){if(x.tagName==='BUTTON')x.setAttribute('aria-pressed',x.dataset.size===s?'true':'false');});}
+  document.querySelectorAll('button[data-size]').forEach(function(b){b.addEventListener('click',function(){setSize(b.dataset.size);});});
+  if(window.matchMedia('(max-width:600px)').matches) setSize('mobile');
+  var q=new URLSearchParams(location.search); if(q.get('v')==='B') document.querySelector('[data-variant="B"]').click(); if(q.get('size')) setSize(q.get('size'));
+
+  // ---- A: the real field set of this artifact (mock_artifact.inputs) ----
+  var GROUPS=[
+    {title:'Nyitó rész',open:true,fields:[
+      {key:'hero.lead',label:'Főcím',where:'a nyitókép fölött, a lap legolvasottabb sora',max:140,required:true,rows:2,accentOf:'hero.accent',
+        val:'Házi reggeli, kemencés sütés és házias vacsora egy csendes köveskáli portán'},
+      {key:'hero.accent',label:'Dőlt kiemelés a főcímben',where:'a főcím egy szó szerinti része; üresen hagyva nincs dőlt rész',max:60,input:true,accentFor:'hero.lead',val:'kemencés sütés'},
+      {key:'tagline',label:'Alcím',where:'a főcím alatt + a láblécben + a Google-találat leírásában',max:160,required:true,rows:2,
+        val:'Erzsike és Gábor portáján a házi lekvár, a kemence és a rendezett udvar teszi otthonossá a köveskáli napokat.'},
+      {key:'hero.eyebrow',label:'Felső sor',where:'ezen a sablonon NEM látszik (más sablonra váltva megjelenhet)',hidden:true,max:60,input:true,val:'Köveskál, Balaton-felvidék'}
+    ]},
+    {title:'Bemutatkozás',open:true,fields:[
+      {key:'intro',label:'Bemutatkozó bekezdés',where:'a második képsáv mellett',max:600,required:true,rows:5,
+        val:'A Bánó Porta egy fehérre meszelt, boltíves tornácú falusi ház Köveskálon, ahol a virágos kert és a gondozott udvar fogadja a vendéget. A tetőteres szobák meleg, faburkolatos tetővel kényelmes megpihenést kínálnak, a vendégek pedig visszatérően a házigazdák szívélyességét és a házias vendéglátást dicsérik.'}
+    ]},
+    {title:'Kiemelések',open:true,list:true,key:'highlights',max:80,maxItems:6,where:'címkék a vendéglátás-szakaszban; az üres sor kimarad',
+      val:['Házi reggeli és Erzsike házi lekvárai','Kerti kemence sütéshez, főzéshez','Házias vacsora igény szerint','Csendes, rendezett, virágos udvar']},
+    {title:'Szakasz-címek',open:false,fields:[
+      {key:'features.eyebrow',label:'Vendéglátás — felső sor',where:'látszik',max:60,input:true,val:'A porta vendéglátása'},
+      {key:'features.title',label:'Vendéglátás — cím',where:'látszik · az Enter sortörés a címben',max:90,rows:2,val:'Erzsike lekvárja és\na kemence melege'},
+      {key:'gallery.eyebrow',label:'Galéria — felső sor',where:'ezen a sablonon NEM látszik',hidden:true,max:60,input:true,val:'Kert és tornác'},
+      {key:'gallery.title',label:'Galéria — mondat',where:'látszik, a képpár mellett',max:90,rows:2,val:'Virágos udvar,\nboltíves tornác'},
+      {key:'reviews.eyebrow',label:'Vélemények — felső sor',where:'ezen a sablonon NEM látszik',hidden:true,max:60,input:true,val:'Amit a vendégek mondanak'},
+      {key:'reviews.title',label:'Vélemények — cím',where:'ezen a sablonon NEM látszik',hidden:true,max:90,rows:2,val:'A nyugalom szigete\nErzsike és Gábor portáján'}
+    ]}
+  ];
+  var UNSOURCED=['medence','szauna','jakuzzi','wellness','strand','klíma','légkondi','ingyenes reggeli','michelin','díjnyertes','tóparti','vízparti','panorámás'];
+  var form=document.getElementById('A-form');
+  var state={}; // key -> {orig, saved, cur}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var pen='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg>';
+  var chev='<svg class="chev" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>';
+  var xIco='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+  function fieldHTML(f){
+    var ctl=f.input?'<input id="in-'+f.key+'" data-k="'+f.key+'" value="'+esc(f.val)+'">'
+                   :'<textarea id="in-'+f.key+'" data-k="'+f.key+'" rows="'+(f.rows||2)+'">'+esc(f.val)+'</textarea>';
+    return '<div class="f'+(f.hidden?' hidden-on-tpl':'')+'" data-f="'+f.key+'">'+
+      '<div class="top"><label for="in-'+f.key+'">'+esc(f.label)+'</label><span class="pill hand" hidden>'+pen+'kézzel átírva</span></div>'+
+      '<div class="where">'+esc(f.where)+'</div>'+ctl+
+      (f.accentOf?'<div class="live" aria-live="polite"></div>':'')+
+      '<div class="orig">Eredeti (AI): „'+esc(f.val)+'”</div>'+
+      '<div class="msg"></div>'+
+      '<div class="foot"><button type="button" class="lnk" data-revert="'+f.key+'" disabled>Eredeti visszaállítása</button><span class="n"></span></div></div>';
+  }
+  var html='';
+  GROUPS.forEach(function(g){
+    html+='<details class="grp"'+(g.open?' open':'')+'><summary>'+chev+esc(g.title)+'<span class="pill hand cnt" hidden></span></summary>';
+    if(g.list){
+      state[g.key]={orig:g.val.slice(),saved:g.val.slice(),cur:g.val.slice(),max:g.max,list:true};
+      html+='<div class="f" data-f="'+g.key+'"><div class="top"><span class="pill hand" hidden>'+pen+'kézzel átírva</span></div><div class="where">'+esc(g.where)+'</div><div id="hl-list" style="display:flex;flex-direction:column;gap:6px"></div>'+
+        '<div class="orig">Eredeti (AI): '+g.val.map(function(v){return '„'+esc(v)+'”';}).join(' · ')+'</div><div class="msg"></div>'+
+        '<div class="foot"><button type="button" class="btn" id="hl-add">+ Új kiemelés</button><button type="button" class="lnk" data-revert="'+g.key+'" disabled>Eredeti visszaállítása</button><span class="n"></span></div></div>';
+    } else {
+      html+='<div class="fgrid'+(g.fields.length>2?' two':'')+'">'+g.fields.map(fieldHTML).join('')+'</div>';
+      g.fields.forEach(function(f){state[f.key]={orig:f.val,saved:f.val,cur:f.val,f:f};});
+    }
+    html+='</details>';
+  });
+  form.innerHTML=html;
+
+  function renderHL(){
+    var s=state.highlights, box=document.getElementById('hl-list');
+    box.innerHTML=s.cur.map(function(v,i){return '<div class="hl-row"><input data-hl="'+i+'" value="'+esc(v)+'" aria-label="Kiemelés '+(i+1)+'"><button type="button" class="icon-btn" data-hldel="'+i+'" aria-label="Kiemelés törlése">'+xIco+'</button></div>';}).join('');
+    document.getElementById('hl-add').disabled=s.cur.length>=6||frozen;
+    box.querySelectorAll('input,button').forEach(function(x){x.disabled=frozen;});
+  }
+  var frozen=false;
+  renderHL();
+  document.getElementById('hl-list').addEventListener('input',function(e){var i=e.target.dataset.hl;if(i==null)return;state.highlights.cur[+i]=e.target.value;validate();});
+  document.getElementById('hl-list').addEventListener('click',function(e){var b=e.target.closest('[data-hldel]');if(!b)return;state.highlights.cur.splice(+b.dataset.hldel,1);renderHL();validate();});
+  document.getElementById('hl-add').addEventListener('click',function(){state.highlights.cur.push('');renderHL();validate();var ins=document.querySelectorAll('#hl-list input');ins[ins.length-1].focus();});
+
+  form.addEventListener('input',function(e){var k=e.target.dataset.k;if(!k)return;state[k].cur=e.target.value;validate();});
+  form.addEventListener('click',function(e){var b=e.target.closest('[data-revert]');if(!b)return;var k=b.dataset.revert;var s=state[k];
+    if(s.list){s.cur=s.orig.slice();renderHL();} else {s.cur=s.orig;document.getElementById('in-'+k).value=s.orig;}
+    validate();});
+
+  function norm(v){return v.replace(/[ \t]+/g,' ').trim();}
+  function hlClean(a){return a.map(norm).filter(function(x){return x.length>0;});}
+  function same(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+  function isChanged(k){var s=state[k];return s.list?!same(hlClean(s.cur),hlClean(s.orig)):norm(s.cur)!==norm(s.orig);}
+  function isDirty(k){var s=state[k];return s.list?!same(hlClean(s.cur),hlClean(s.saved)):norm(s.cur)!==norm(s.saved);}
+  function validate(){
+    var errors=0;
+    Object.keys(state).forEach(function(k){
+      var s=state[k], box=form.querySelector('[data-f="'+k+'"]'); if(!box) return;
+      var msg='',kind='';
+      if(s.list){
+        var over=s.cur.some(function(v){return norm(v).length>s.max;});
+        var empties=s.cur.filter(function(v){return !norm(v);}).length;
+        if(over){msg='Egy kiemelés legfeljebb '+s.max+' karakter.';kind='bad';}
+        else if(empties){msg=empties+' üres sor mentéskor kimarad.';kind='warn';}
+        if(!hlClean(s.cur).length){msg='Legalább egy kiemelés kell.';kind='bad';}
+        box.querySelector('.n').textContent=hlClean(s.cur).length+' / 6 kiemelés';
+      } else {
+        var v=norm(s.cur), f=s.f, n=box.querySelector('.n');
+        n.textContent=v.length+' / '+f.max; n.classList.toggle('over',v.length>f.max);
+        if(f.required && !v){msg='Ez a mező nem lehet üres.';kind='bad';}
+        else if(v.length>f.max){msg='Túl hosszú: legfeljebb '+f.max+' karakter fér el ezen a helyen.';kind='bad';}
+        if(f.accentFor){var lead=norm(state[f.accentFor].cur);
+          if(v && lead.indexOf(v)<0){msg='Nincs benne szó szerint a főcímben — így dőlt rész nélkül jelenik meg.';kind='warn';}}
+        if(f.accentOf){var acc=norm(state[f.accentOf].cur), live=box.querySelector('.live');
+          var i=acc?v.indexOf(acc):-1;
+          live.innerHTML='Így jelenik meg: '+(i>=0?esc(v.slice(0,i))+'<em>'+esc(acc)+'</em>'+esc(v.slice(i+acc.length)):esc(v));}
+      }
+      var m=box.querySelector('.msg'); m.textContent=msg; m.className='msg '+kind;
+      box.classList.toggle('err',kind==='bad'); if(kind==='bad') errors++;
+      var ch=isChanged(k); box.classList.toggle('changed',ch);
+      box.querySelector('.top .pill.hand').hidden=!ch;
+      box.querySelector('[data-revert]').disabled=!ch||frozen;
+    });
+    form.querySelectorAll('details.grp').forEach(function(g){
+      var n=[].filter.call(g.querySelectorAll('[data-f]'),function(b){return isChanged(b.dataset.f);}).length;
+      var p=g.querySelector('summary .cnt'); p.hidden=!n; p.textContent=n+' átírva';
+    });
+    var changed=Object.keys(state).filter(isChanged), dirty=Object.keys(state).filter(isDirty);
+    var sum=document.getElementById('A-sum');
+    sum.innerHTML=frozen?'<span class="mut">Befagyott mock — nem szerkeszthető.</span>':
+      (!changed.length&&!dirty.length?'Nincs változás — minden mező az eredeti AI-szöveg.':!changed.length?'Minden mező az eredeti AI-szöveg · <b>mentés kell</b>, hogy a mockon is visszaálljon.':
+      '<b>'+changed.length+' mező kézzel átírva</b>'+(dirty.length?' · <b>'+dirty.length+' nem mentett</b>':' · minden mentve')+(errors?' · <span style="color:var(--citui-bad-ink)">'+errors+' hiba — így nem menthető</span>':''));
+    document.getElementById('A-save').disabled=frozen||!dirty.length||errors>0;
+    document.getElementById('A-discard').disabled=frozen||!dirty.length;
+    document.getElementById('A-revert-all').disabled=frozen||!changed.length;
+    var savedChanged=Object.keys(state).filter(function(k){var s=state[k];return s.list?!same(hlClean(s.saved),hlClean(s.orig)):norm(s.saved)!==norm(s.orig);});
+    var hp=document.getElementById('A-handpill'); hp.hidden=!savedChanged.length;
+    document.getElementById('A-handtxt').textContent='kézzel átírva · '+savedChanged.length+' mező';
+  }
+  document.getElementById('A-discard').addEventListener('click',function(){
+    Object.keys(state).forEach(function(k){var s=state[k];if(s.list){s.cur=s.saved.slice();}else{s.cur=s.saved;document.getElementById('in-'+k).value=s.saved;}});renderHL();validate();});
+  document.getElementById('A-revert-all').addEventListener('click',function(){
+    if(!confirm('Minden kézzel átírt mező visszaáll az eredeti AI-szövegre. Folytatja?')) return;
+    Object.keys(state).forEach(function(k){var s=state[k];if(s.list){s.cur=s.orig.slice();}else{s.cur=s.orig;document.getElementById('in-'+k).value=s.orig;}});renderHL();validate();});
+  document.getElementById('A-save').addEventListener('click',function(){
+    Object.keys(state).forEach(function(k){var s=state[k];if(s.list){s.cur=hlClean(s.cur);s.saved=s.cur.slice();}else{s.cur=norm(s.cur).replace(/ ?\n ?/g,'\n');s.saved=s.cur;}});
+    renderHL(); validate();
+    var g=document.getElementById('A-gates'), gs=document.getElementById('A-gatesum');
+    g.innerHTML='<span class="pill run"><span class="d"></span>Tényhűség: fut…</span><span class="pill run"><span class="d"></span>Marketing-őr: fut…</span><span class="pill run"><span class="d"></span>Vendég-kritikus: fut…</span>';
+    gs.textContent='futnak…';
+    setTimeout(function(){
+      var txt=Object.keys(state).filter(isChanged).map(function(k){var s=state[k];return s.list?s.cur.join(' '):s.cur;}).join(' ');
+      var low=txt.toLowerCase(), hits=UNSOURCED.filter(function(w){return low.indexOf(w)>=0;});
+      if(/\d/.test(txt)) hits.push('szám a kézi szövegben');
+      g.innerHTML='<span class="pill '+(hits.length?'bad':'ok')+'"><span class="d"></span>Tényhűség: '+(hits.length?'fennakadt':'átment')+'</span>'+
+        '<span class="pill ok"><span class="d"></span>Marketing-őr: átment</span><span class="pill ok"><span class="d"></span>Vendég-kritikus: átment (nem írt át)</span>'+
+        (hits.length?'<div class="why">Forrás nélküli állítás a kézi szövegben: '+esc(hits.join(', '))+' — így nem küldhető ki; javítsa, vagy nyugtázza a kiküldésnél.</div>':'')+
+        '<div class="sim">A mockban a kapu-eredmény SZIMULÁLT (szólista + számjegy). Élesben a valódi tényhűség-kapu fut a mentett szövegre.</div>';
+      gs.textContent=hits.length?'tényhűség fennakadt':'mind átment';
+    },1400);
+  });
+  document.getElementById('frozen-toggle').addEventListener('change',function(e){
+    frozen=e.target.checked; document.getElementById('detA').classList.toggle('is-frozen',frozen);
+    form.querySelectorAll('input,textarea').forEach(function(x){x.readOnly=frozen;});
+    renderHL(); validate();
+    try{document.getElementById('bframe').contentWindow.postMessage({ced:'frozen',on:frozen},'*');}catch(_){}
+  });
+  validate();
+})();
+</script>
+</body></html>

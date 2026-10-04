@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsLead, roomsFor, T, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const CINEMATIC_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -244,6 +244,12 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
+  // Copy hooks for the preview editor: mirror the h1/sub fallback chains above.
+  const h1Hook = hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline]);
+  const subHook =
+    data.tagline && data.tagline !== h1
+      ? copyHook("tagline")
+      : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }]);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
   const starCount = honestStarCount(data);
 
@@ -308,8 +314,8 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ${slides}
     ${mast}
     <div class="cn-wrap cn-cinein">
-      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-      ${sub ? `<p class="cn-cinesub">${esc(sub)}</p>` : ""}
+      <h1${h1Hook} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      ${sub ? `<p class="cn-cinesub"${subHook}>${esc(sub)}</p>` : ""}
       <div class="cn-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#cn-rooms">${roomsHeading(data)}</a>` : ""}
@@ -328,8 +334,8 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="cn-sec" id="cn-rooms">
     <div class="cn-wrap">
       <div class="cn-sechead">
-        ${roomCopy.eyebrow ? `<div class="cn-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${roomsLabel(data)}</div>`}
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
+        ${roomCopy.eyebrow ? `<div class="cn-eyebrow"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${roomsLabel(data)}</div>`}
+        <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
         ${roomCopy.title || !roomsLead(data) ? "" : `<p>${roomsLead(data)}</p>`}
       </div>
       <div class="cn-rooms" data-cit-module="rooms">
@@ -375,7 +381,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="cn-exp">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="cn-ex">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
+          .map((h, i) => `<div class="cn-ex">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -387,8 +393,8 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="cn-sec" id="cn-gallery" style="padding-top:0">
     <div class="cn-wrap">
       <div class="cn-sechead">
-        ${galCopy.eyebrow ? `<div class="cn-eyebrow">${esc(galCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Galéria")}</div>`}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+        ${galCopy.eyebrow ? `<div class="cn-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Galéria")}</div>`}
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="cn-mosaic" data-cit-module="gallery">
         ${photos
@@ -406,11 +412,11 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="cn-sec cn-rev" id="cn-reviews" data-cit-module="reviews">
     <div class="cn-wrap">
       <div class="cn-sechead">
-        ${revCopy.eyebrow ? `<div class="cn-eyebrow">${esc(revCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Vélemények")}</div>`}
+        ${revCopy.eyebrow ? `<div class="cn-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</div>` : `<div class="cn-eyebrow">${T(data, "Vélemények")}</div>`}
         ${
           ratingStat
             ? `<h2>${T(data, "Ne nekünk higgyen — nekik")}</h2><div class="cn-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-            : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
+            : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
         }
       </div>
       <div class="cn-rev3">
@@ -471,7 +477,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       </div>
       <div class="cn-cwrap">
         <div>
-          ${data.tagline ? `<p style="color:var(--cit-muted);font-size:16px;margin-bottom:6px">${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p style="color:var(--cit-muted);font-size:16px;margin-bottom:6px"${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
           ${contactLines}
           ${hasContact ? `<a class="cit-btn" style="margin-top:24px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         </div>
@@ -487,7 +493,7 @@ function renderCinematic(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="cn-footgrid">
         <div>
           <span class="cn-brand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>

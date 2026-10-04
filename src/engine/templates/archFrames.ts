@@ -25,7 +25,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -259,6 +259,9 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   // What is LEFT of the intro after the lede — printing the whole intro again
   // repeats the same sentence when the intro is short (measured).
   const rest = data.intro.startsWith(lede) ? data.intro.slice(lede.length).trim() : data.intro;
+  // Copy hooks: when lede + rest together ARE the intro, the body holds exactly the intro;
+  // otherwise the lede is a first-sentence/tagline view and `rest` is the whole intro.
+  const introWhole = !!lede && data.intro.startsWith(lede);
 
   const framed = (p: { url: string; alt: string } | undefined, alt: string, delay = 0) =>
     `<div class="a-frame a-arch" ${mo("arch", delay)}>${
@@ -299,7 +302,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     <div class="a-hero-copy" data-cit-hero-copy>
       ${place ? `<div class="a-hero-kick" ${mo("in", 100)}>${esc(place)}</div>` : ""}
       <div class="a-hero-name" ${mo("up", 200)}>${esc(data.name)}</div>
-      ${heroCopy.lead ? `<div class="a-hero-line" ${mo("up", 320)}>${accented(heroCopy.lead, heroCopy.accent)}</div>` : ""}
+      ${heroCopy.lead ? `<div class="a-hero-line"${copyHook("hero.lead")} ${mo("up", 320)}>${accented(heroCopy.lead, heroCopy.accent)}</div>` : ""}
     </div>
     <div class="a-scroll">${T(data, "görgessen")}</div>
   </header>`;
@@ -307,12 +310,12 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const about = `<section id="cit-about">
     <div class="a-sprig r">${SPRIG}</div>
     <div class="a-wrap">
-      <div class="a-title"><h1 ${mo("up")}>${esc(heroCopy.lead ?? T(data, "Üdvözöljük"))}</h1></div>
+      <div class="a-title"><h1${hookPick(["hero.lead", heroCopy.lead])} ${mo("up")}>${esc(heroCopy.lead ?? T(data, "Üdvözöljük"))}</h1></div>
       <div class="a-story">
         <div class="a-fig">${framed(photos[1] ?? hero, data.name)}</div>
-        <div class="a-body" ${mo("up", 90)}>
-          <p class="a-lead">${accented(lede, heroCopy.accent)}</p>
-          ${rest ? `<p>${esc(rest)}</p>` : ""}
+        <div class="a-body"${introWhole ? copyHook("intro") : ""} ${mo("up", 90)}>
+          <p class="a-lead"${introWhole ? "" : hookPick(["intro", firstSentence(data.intro, 200), { part: "first-sentence" }], ["tagline", data.tagline])}>${accented(lede, heroCopy.accent)}</p>
+          ${rest ? `<p${introWhole ? "" : copyHook("intro")}>${esc(rest)}</p>` : ""}
         </div>
       </div>
       ${
@@ -328,7 +331,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const roomsBlock = rooms
     ? `<section id="cit-rooms" data-cit-module="rooms" style="padding-top:0">
     <div class="a-wrap">
-      <div class="a-title"><h2 ${mo("up")}>${esc(roomsCopy.title ?? T(data, "Szobák"))}</h2></div>
+      <div class="a-title"><h2${hookPick(["rooms.title", roomsCopy.title])} ${mo("up")}>${esc(roomsCopy.title ?? T(data, "Szobák"))}</h2></div>
       <div class="a-trio">
         ${rooms
           // EVERY room, never the first three: the 3-column grid wraps. Measured 2026-09-28
@@ -359,7 +362,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const feature = `<section${photos.length ? "" : ' data-cit-module="gallery"'} style="padding-top:0">
     <div class="a-sprig l">${SPRIG}</div>
     <div class="a-wrap">
-      <div class="a-title"><h2 ${mo("up")}>${esc(featCopy.title ?? T(data, "A ház"))}</h2></div>
+      <div class="a-title"><h2${hookPick(["features.title", featCopy.title])} ${mo("up")}>${esc(featCopy.title ?? T(data, "A ház"))}</h2></div>
       <div class="a-story rev">
         <div class="a-body" ${mo("up", 90)}>
           ${
@@ -367,12 +370,12 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
             // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — a korpusz
             // 89%-án. Ugyanaz az őrzés, amit a fájl többi feltételes blokkja használ.
             (featCopy.eyebrow ?? data.tagline)
-              ? `<p class="a-lead">${esc(featCopy.eyebrow ?? data.tagline)}</p>`
+              ? `<p class="a-lead"${hookPick(["features.eyebrow", featCopy.eyebrow], ["tagline", data.tagline])}>${esc(featCopy.eyebrow ?? data.tagline)}</p>`
               : ""
           }
           ${
             highlights.length
-              ? `<ul class="a-amen">${highlights.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>`
+              ? `<ul class="a-amen">${highlights.map((h, i) => `<li${highlightHook(data, i)}>${esc(h)}</li>`).join("")}</ul>`
               : ""
           }
         </div>
@@ -396,7 +399,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     ordered.length
       ? `<section class="a-gal" data-cit-module="gallery">
     <div class="a-wrap">
-      <div class="a-title"><h2 ${mo("up")}>${esc(galCopy.title ?? T(data, "Képek"))}</h2></div>
+      <div class="a-title"><h2${hookPick(["gallery.title", galCopy.title])} ${mo("up")}>${esc(galCopy.title ?? T(data, "Képek"))}</h2></div>
       <div class="a-gstrip" data-cit-gstrip>
         <div class="a-gtrack" data-cit-gtrack>${ordered
           .map((p) => `<div class="a-frame a-arch"><img src="${esc(p.url)}" alt="${esc(p.alt || data.name)}" loading="lazy"></div>`)
@@ -426,7 +429,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     rating || quoteBlock
       ? `<section class="a-rev">
       <div class="a-wrap">
-        <div class="a-title"><h2 ${mo("up")}>${esc(revCopy.title ?? T(data, "Vendégeink"))}</h2></div>
+        <div class="a-title"><h2${hookPick(["reviews.title", revCopy.title])} ${mo("up")}>${esc(revCopy.title ?? T(data, "Vendégeink"))}</h2></div>
         ${
           rating
             ? `<div class="a-stars" ${mo("in")} aria-hidden="true">${starIcon().repeat(honestStarCount(data))}</div>
@@ -453,7 +456,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       <div class="a-fgrid">
         <div>
           <div class="a-brand">${esc(data.name)}</div>
-          ${data.tagline ? `<p style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")} style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>` : ""}
         </div>
         ${c.address ? `<div><div class="a-lead" style="color:var(--cit-muted)">${T(data, "Cím")}</div><p>${esc(c.address)}</p></div>` : ""}
         <div><div class="a-lead" style="color:var(--cit-muted)">${T(data, "Kapcsolat")}</div>

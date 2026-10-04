@@ -59,7 +59,9 @@ function visible(html: string): string {
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ");
 }
-const headline = (html: string) => /<h2 class="e-quote">([\s\S]*?)<\/h2>/.exec(html)?.[1] ?? "";
+// `[^>]*`: the element may carry further attributes (the copy-editor hook, ADR-XXXX) — an
+// exact `">` made the headline vanish and the assertion read an empty string.
+const headline = (html: string) => /<h2 class="e-quote"[^>]*>([\s\S]*?)<\/h2>/.exec(html)?.[1] ?? "";
 
 // The detectors, as functions — so the red twins run the SAME code as the real assertions.
 const hasGame = (html: string) => GAME.test(visible(html)) || GAME.test(html.replace(/<style[\s\S]*?<\/style>/g, ""));
@@ -352,7 +354,7 @@ for (const id of BANNED_SCOPE) {
     // ⑤ fake markers
     const MARKERS: [RegExp, string][] = [
       [/class="(?:wc-no|b-fc-n|h-no|au-bar)"/, "ál-sorszám / mindig teli sáv"],
-      [/<span class="b-sectag">\d+ \//, "„01 /” szakasz-szám"],
+      [/<span class="b-sectag"[^>]*>\d+ \//, "„01 /” szakasz-szám"], // [^>]*: a hooked tag must not hide the marker
       [/class="t-no"><span>[IVX]+\.<\/span>/, "római szám a tételen"],
       [/<span class="t-no">0\d<\/span>/, "„01” a képen"],
       [/<span>\.<\/span><\/(?:a|span)>|<em>\.<\/em><\/h1>/, "pont a név / főcím végén"],

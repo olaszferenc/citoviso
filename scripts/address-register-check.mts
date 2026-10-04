@@ -108,6 +108,9 @@ const CONSOLE_FAMILIAR = new Set([
   "jelölhetsz", "kérheted", "indíthatod", "keresel", "találtál", "próbáld", "tudod",
   // The walk selector (ADR-0310): „Ha mégis ezt választod, … lapot kapsz ezen a néven.”
   "választod", "kapsz",
+  // Több e-mail-cím egy leadhez (ADR-0321): „… a megkeresés címzettjének ezt írd” ·
+  // „Több címet egyszerre is beilleszthetsz …” — the Adatok tab addresses the operator.
+  "írd", "beilleszthetsz",
 ]);
 
 /** The seven measured eyebrows, as the critic's lint sees them (features.eyebrow). */

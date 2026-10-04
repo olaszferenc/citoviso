@@ -17,7 +17,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const TRANSIT_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -262,8 +262,8 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const hero = `<header class="tb-hero" id="top">
     <div class="tb-wrap tb-hgrid">
       <div class="tb-hl">
-        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-        ${sub ? `<p>${esc(sub)}</p>` : ""}
+        <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+        ${sub ? `<p${sub === data.tagline ? copyHook("tagline") : copyHook("intro", { part: "first-sentence" })}>${esc(sub)}</p>` : ""}
         <div class="tb-heroctas">
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
           ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#tb-rooms">${roomsHeading(data)}</a>` : ""}
@@ -279,8 +279,8 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<div class="tb-board" id="tb-rooms">
     <div class="tb-wrap">
       <div class="tb-boardhead">
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
-        <span class="tb-note">${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsLabel(data)}</span>
+        <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
+        <span class="tb-note"${hookPick(["rooms.eyebrow", roomCopy.eyebrow])}>${roomCopy.eyebrow ? esc(roomCopy.eyebrow) : roomsLabel(data)}</span>
       </div>
       <table class="tb-table" data-cit-module="rooms"${roomsSample ? " data-cit-sample-block" : ""}>
         <thead>
@@ -339,7 +339,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="tb-pict">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="tb-pi">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
+          .map((h, i) => `<div class="tb-pi">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -351,8 +351,8 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="tb-sec" id="tb-gallery">
     <div class="tb-wrap">
       <div class="tb-shead">
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
-        <span class="tb-note">${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Nézze meg")}</span>
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
+        <span class="tb-note"${hookPick(["gallery.eyebrow", galCopy.eyebrow])}>${galCopy.eyebrow ? esc(galCopy.eyebrow) : T(data, "Nézze meg")}</span>
       </div>
       <div class="tb-gal" data-cit-module="gallery">
         ${photos
@@ -373,9 +373,9 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${
           ratingStat
             ? `<div class="tb-revscore"><b class="tb-num">${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-            : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vélemények")}</h2>`
+            : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vélemények")}</h2>`
         }
-        <span class="tb-note">${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendégeink")}</span>
+        <span class="tb-note"${hookPick(["reviews.eyebrow", revCopy.eyebrow])}>${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendégeink")}</span>
       </div>
       <div class="tb-revgrid">
         ${reviewsData
@@ -432,7 +432,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="tb-concopy">
         <div class="tb-eyebrow">${T(data, "Kapcsolat")}</div>
         <h2>${T(data, "Megközelítés és kapcsolat")}</h2>
-        ${data.tagline ? `<p style="color:var(--cit-muted);font-size:16px;margin-bottom:6px">${esc(data.tagline)}</p>` : ""}
+        ${data.tagline ? `<p style="color:var(--cit-muted);font-size:16px;margin-bottom:6px"${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:24px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       </div>
@@ -447,7 +447,7 @@ function renderTransit(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="tb-footgrid">
         <div>
           <span class="tb-brand"><b>${esc(data.name)}</b></span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>

@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-10-02
+updated: 2026-10-04
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -354,6 +354,48 @@ abban a pillanatban fagy be, amikor a Megkeresés fülön megnyomod a
 írjuk át a címzett alatt. ⚠️ **Ez a küldés ELŐTT történik** — hiába nem ment még ki levél,
 a link elkészítése után már elutasítást kapsz. Ilyenkor a kiút: **generálj új mockot**, ha
 másik ajánlatot akarsz adni.
+
+### Kézzel átírni — mezőnként vagy a mock-előnézeten
+
+Ha csak egy szó, egy elírás vagy egy túl hosszú alcím zavar, nem kell az egész szöveget
+újraíratni az AI-val: a mock szövegét **kézzel is átírhatod**. Két út van, ugyanazt az adatot
+írják, és ugyanúgy mentődnek.
+
+**A) Mezőnként, a mock-kártyán.** Nyisd ki a kártyát (**„Részletek ▾”**), és nyisd ki
+**„A mock szövege — kézi átírás”** blokkot. A kártya ilyenkor a teljes sort kapja. Benne minden
+mező: főcím, dőlt kiemelés, alcím, felső sor, bemutatkozás, kiemelések, szakasz-címek. Mezőnként
+ott áll, hol jelenik meg — ami az adott sablonon nem látszik, annál ez:
+**„ezen a sablonon NEM látszik”** (attól még átírhatod; másik sablonon látszhat).
+
+- Az átírt mező **„kézzel átírva”** jelet kap, alatta az eredeti AI-szöveg.
+- **„Eredeti visszaállítása”** — csak azt az egy mezőt.
+- **„Minden mező vissza az eredetire”** — mindet (megerősítés után; utána **„Mentés”**).
+- **„Elvetem a változásokat”** — a még nem mentett gépelést dobja el, a legutóbb mentett
+  állapotra áll vissza.
+- Kiemelést a **„+ Új kiemelés”** gombbal adsz hozzá, a sor melletti × törli.
+
+**B) Helyben, a mock-előnézeten.** A kártya képén a **„szöveg szerkesztése ▸”** link a mockot
+egy kurátori előnézetben nyitja (a lead ezt soha nem látja; a sima előnézet-link változatlan).
+Felül nyomd meg a **„Szöveg szerkesztése”** gombot: a szerkeszthető szövegek szaggatott keretet
+kapnak. Kattints rá, és írd át ott, ahol áll — **Enter** = kész, **Esc** = elveti. A főcímben
+jelölj ki egy részt, és a **„Dőlt”** gombbal az lesz a dőlt kiemelés. Alul a sáv mutatja, hány
+mezőt írtál át; telefonon a **„Részletek”** nyitja a listát és az őrök eredményét.
+Itt csak azt írhatod át, ami az adott sablonon látszik — a többit a sáv megnevezi, azt az A)
+úton írd át. Ha a sablon a bemutatkozónak csak az első mondatát mutatja, az átírás csak azt a
+mondatot cseréli, a bekezdés többi része marad.
+
+**Mentéskor** csak a szöveg cserél (kinézet, fotók, elrendezés marad), és az őrök **újra
+lefutnak** a mentett szövegen (~1 perc): tényhűség, marketing-őr, vendég-kritikus. A
+vendég-kritikus a kézi szöveget nem írja át, csak ítél. Amit kézzel írsz, azért te felelsz: ha
+egy őr fennakad (pl. olyan szolgáltatást írtál be, amire nincs forrás), a mock csak a
+kiküldéskori nyugtázással mehet ki — és a korábbi nyugtázás a szöveg-cserével érvényét veszti.
+Korlátok: főcím 140, alcím 160, bemutatkozás 600, szakasz-cím 90 karakter, legfeljebb 6
+kiemelés (egyenként 80 karakter); a főcím, az alcím és a bemutatkozás nem lehet üres.
+
+⚠️ A **„Szöveg újragenerálása”** (AI) a kézzel átírt mezőket **nem írja felül** — azok
+rögzítve maradnak, az AI csak a többit írja újra. Teljesen **új mock** generálásakor viszont a
+kézi szöveg nem vándorol át. A befagyás szabálya ugyanaz, mint fent: kiajánlott mock szövegét
+kézzel sem lehet átírni.
 
 ## „Honnan tudjuk?” — a szöveg forrásai
 

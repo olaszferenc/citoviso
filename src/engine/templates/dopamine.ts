@@ -17,12 +17,15 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  copyHook,
   copyOf,
   ctaLabel,
   esc,
   firstSentence,
   heroFit,
   HERO_FIT_CSS,
+  highlightHook,
+  hookPick,
   honestStarCount,
   mastheadCss,
   mastheadHtml,
@@ -199,9 +202,10 @@ const CONTACT_ICONS = {
 const TILTS: readonly string[] = ["-2deg", "1.6deg", "-1.2deg", "2deg", "-1.8deg", "1.3deg", "-1.5deg", "1.9deg"];
 
 /** Outlined pill badge with an SVG marker (never emoji) + chunky display heading. */
-function sectionHead(icon: string, badge: string, title: string, accent?: string): string {
-  return `<span class="t-badge">${iconSvg(icon)} ${esc(badge)}</span>
-      <h2 class="t-h2">${accented(title, accent)}</h2>`;
+// `badgeHook` / `titleHook`: preview-editor copy hooks (copyHook/hookPick output, "" = none).
+function sectionHead(icon: string, badge: string, title: string, accent?: string, badgeHook = "", titleHook = ""): string {
+  return `<span class="t-badge"${badgeHook}>${iconSvg(icon)} ${esc(badge)}</span>
+      <h2 class="t-h2"${titleHook}>${accented(title, accent)}</h2>`;
 }
 
 function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
@@ -218,6 +222,12 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
+  // Copy hooks for the preview editor: mirror the h1/sub fallback chains above.
+  const h1Hook = hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline]);
+  const subHook =
+    data.tagline && data.tagline !== h1
+      ? copyHook("tagline")
+      : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }]);
   const hasContact = Boolean(data.contact.email || data.contact.phone);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
   const starCount = honestStarCount(data);
@@ -243,7 +253,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // only, so the same text never shows twice on the first screen.
   const regionText = data.highlights[0] || "";
   const sticker2 = regionText
-    ? `<span class="t-sticker t-s2">${amenityIconSvg(regionText, data.amenityIconMap)} ${esc(regionText)}</span>`
+    ? `<span class="t-sticker t-s2"${highlightHook(data, 0)}>${amenityIconSvg(regionText, data.amenityIconMap)} ${esc(regionText)}</span>`
     : "";
 
   // -- hero -----------------------------------------------------------------
@@ -251,8 +261,8 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hero = `<header class="t-hero${heroPhoto ? "" : " t-hero--flat"}" id="top">
     ${heroPhoto ? "" : stickers}
     <div class="t-wrap">
-      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-      ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
+      <h1${h1Hook} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      ${sub ? `<p class="t-herosub"${subHook}>${esc(sub)}</p>` : ""}
       ${hasContact ? `<a class="cit-btn t-herocta" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       ${heroPhoto ? `<div class="t-heroimgwrap">
       ${stickers}
@@ -274,12 +284,12 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const fun = data.highlights.length
     ? `<section class="t-sec" id="t-fun">
     <div class="t-wrap">
-      ${sectionHead("check", featCopy.eyebrow || T(data, "Szolgáltatások"), featCopy.title || T(data, "Amit nálunk talál"), featCopy.accent)}
-      ${data.intro ? `<p class="t-lead">${esc(data.intro)}</p>` : ""}
+      ${sectionHead("check", featCopy.eyebrow || T(data, "Szolgáltatások"), featCopy.title || T(data, "Amit nálunk talál"), featCopy.accent, hookPick(["features.eyebrow", featCopy.eyebrow]), hookPick(["features.title", featCopy.title]))}
+      ${data.intro ? `<p class="t-lead"${copyHook("intro")}>${esc(data.intro)}</p>` : ""}
       <div class="t-fungrid">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="t-fn">${amenityIconSvg(h, data.amenityIconMap)}<strong>${esc(h)}</strong></div>`)
+          .map((h, i) => `<div class="t-fn">${amenityIconSvg(h, data.amenityIconMap)}<strong${highlightHook(data, i)}>${esc(h)}</strong></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -290,7 +300,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const gallery = photos.length
     ? `<section class="t-sec" id="t-gallery" style="padding-top:0">
     <div class="t-wrap">
-      ${sectionHead("view", galCopy.eyebrow || T(data, "Galéria"), galCopy.title || T(data, "Nézzen be hozzánk"), galCopy.accent)}
+      ${sectionHead("view", galCopy.eyebrow || T(data, "Galéria"), galCopy.title || T(data, "Nézzen be hozzánk"), galCopy.accent, hookPick(["gallery.eyebrow", galCopy.eyebrow]), hookPick(["gallery.title", galCopy.title]))}
       <div class="t-coll" data-cit-module="gallery">
         ${photos
           .slice(0, 8)
@@ -310,11 +320,11 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const revHead = ratingStat
     ? `<h2 class="t-h2">${esc(ratingStat.value)} ${stars}</h2>
       <p class="t-lead">${esc(ratingStat.label)}</p>`
-    : `<h2 class="t-h2">${accented(revCopy.title || T(data, "Vendéghangok"), revCopy.accent)}</h2>`;
+    : `<h2 class="t-h2"${hookPick(["reviews.title", revCopy.title])}>${accented(revCopy.title || T(data, "Vendéghangok"), revCopy.accent)}</h2>`;
   const reviews = reviewsData
     ? `<section class="t-sec t-rev" id="t-reviews" data-cit-module="reviews">
     <div class="t-wrap">
-      <span class="t-badge">${starIcon()} ${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendéghangok")}</span>
+      <span class="t-badge"${hookPick(["reviews.eyebrow", revCopy.eyebrow])}>${starIcon()} ${revCopy.eyebrow ? esc(revCopy.eyebrow) : T(data, "Vendéghangok")}</span>
       ${revHead}
       <div class="t-bubbles">
         ${reviewsData
@@ -351,7 +361,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const contact = contactLines
     ? `<section class="t-sec" id="t-contact">
     <div class="t-wrap">
-      ${sectionHead("location", locCopy.eyebrow || T(data, "Itt vagyunk"), locCopy.title || T(data, "Várjuk szeretettel"), locCopy.accent)}
+      ${sectionHead("location", locCopy.eyebrow || T(data, "Itt vagyunk"), locCopy.title || T(data, "Várjuk szeretettel"), locCopy.accent, hookPick(["location.eyebrow", locCopy.eyebrow]), hookPick(["location.title", locCopy.title]))}
       <div class="t-congrid">
         <div class="t-concard">
           ${contactLines}
@@ -369,7 +379,7 @@ function renderDopamine(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="t-footgrid">
         <div>
           <h4>${esc(data.name)}</h4>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Ugrás")}</h4>

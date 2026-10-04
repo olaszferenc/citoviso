@@ -29,23 +29,16 @@ import type { Recipe, RecipeSection, SiteData } from "../engine/recipe.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
 import { renderSite } from "../engine/render.js";
 import { db } from "../db/client.js";
-import type { PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langName } from "../i18n/lang.js";
+import { applyManualCopy, applyManualToSurface, manualCopyOf } from "../engine/copyFields.js";
+import { factLeadOf, loadCopySources, marketSourceOf, reviewFactsOf } from "./copySources.js";
 import { explainAiFailure, generateBriefAndCopy } from "./brief.js";
 import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import {
-  decisionWeightDesc,
-  descriptionSellingPoints,
-  verifyMarketRelevance,
-  type MarketVerdict,
-  type SalesSurface,
-} from "./marketCheck.js";
-import { getRegionContext, resolveRegion } from "./generate.js";
+import { verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { injectRuntime } from "./runtime.js";
-import { loadLead } from "./persist.js";
 
 export interface RecopyResult {
   readonly ok: boolean;
@@ -125,32 +118,12 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     };
   }
 
-  const { lead } = await loadLead(row.lead_id);
-  const region = resolveRegion(inputs.regionId as string | undefined, lead.lat, lead.lon);
-  const ctx = getRegionContext(region.id, region.label);
-  const lang = siteData.lang ?? DEFAULT_LANG;
-
-  // The SAME sourced-fact set the first generation used (amenities from high-band
-  // listings + the strong claims lifted out of the listing prose).
-  const profiles =
-    (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? [];
-  const high = profiles.filter((p) => p.matchBand === "high");
-  const descriptions = high
-    .map((p) => p.description?.trim())
-    .filter((d): d is string => Boolean(d && d.length >= 120))
-    .map((d) => d.slice(0, 1500));
-  // Same source set as generateEngine (guard-scope twin): the curator-pasted
-  // owner self-introduction leads, when present — see generateEngine.ts.
-  const ownerIntro = (lead as unknown as { ownerIntro?: string }).ownerIntro?.trim();
-  if (ownerIntro && ownerIntro.length >= 40) descriptions.unshift(ownerIntro.slice(0, 1500));
-  const amenities = [...new Set(high.flatMap((p) => p.amenities))].filter((a) => a.trim().length > 1);
-  for (const f of descriptionSellingPoints(descriptions)) {
-    if (!amenities.some((a) => a.toLowerCase() === f.toLowerCase())) amenities.push(f);
-  }
-  // Strongest first — the ranked-list contract the prompt states (see generateEngine).
-  amenities.sort(decisionWeightDesc);
-
-  const photoUrls = siteData.photos.slice(0, 4).map((p) => p.url);
+  // One source assembly for both post-generation paths (copySources.ts).
+  const sources = await loadCopySources(row.lead_id, inputs, siteData);
+  const { lead, region, ctx, lang, descriptions, amenities, photoUrls } = sources;
+  // D3 (ADR-XXXX): the curator's hand-written fields are FIXED — the rewrite fills only the
+  // rest, and every guard below judges the overlaid text, i.e. what will actually ship.
+  const manual = manualCopyOf(inputs);
   const briefInput = {
     name: lead.name,
     // Same rule as the first generation (generateEngine): no `region` record → no area
@@ -173,6 +146,13 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   };
 
   let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
+  const withManual = (): void => {
+    if (!brief) return;
+    const o = applyManualToSurface({ ...brief, editorial: { ...editorial } as Record<string, never> }, manual);
+    brief = { ...brief, tagline: o.tagline, intro: o.intro, highlights: [...o.highlights] };
+    editorial = o.editorial as EditorialCopy;
+  };
+  withManual();
   if (!brief) {
     // Say WHAT went wrong, not just THAT it did (2026-09-07): three of the owner's
     // requests died on an empty API credit balance while the screen stayed silent.
@@ -189,13 +169,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     if (!amenities.some((a) => a.toLowerCase() === sp.label.toLowerCase())) amenities.push(sp.label);
   }
 
-  const marketSource = {
-    name: lead.name,
-    town: lead.city ?? null,
-    amenities,
-    ...(descriptions.length ? { descriptions } : {}),
-    ...(siteData.rating ? { rating: { value: siteData.rating.value, count: siteData.rating.count ?? null } } : {}),
-  };
+  const marketSource = marketSourceOf(sources, siteData);
   const salesOf = (): SalesSurface => ({
     ...(editorial.hero?.lead ? { heroLead: editorial.hero.lead } : {}),
     ...(editorial.hero?.eyebrow ? { heroEyebrow: editorial.hero.eyebrow } : {}),
@@ -217,6 +191,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
       if (retry.brief) {
         brief = retry.brief;
         editorial = retry.editorial;
+        withManual();
         market = await verifyMarketRelevance({ sales: salesOf(), source: marketSource, photos: photoUrls });
       }
     }
@@ -229,14 +204,13 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // (sourcePanel) so a review quote is still recognised as a REVIEW (ruling B) here.
   let criticInputs: Record<string, unknown> = {};
   if (lang === DEFAULT_LANG) {
-    const panel = ((inputs.sourcePanel as { facts?: { label: string; source: string; quote?: string }[] } | undefined)
-      ?.facts ?? []);
+    const panel = reviewFactsOf(inputs);
     const facts = [
       ...amenities.map((label) => {
         const sp = sellingPoints.find((x) => x.label.toLowerCase() === label.toLowerCase());
         return { label, source: "description", ...(sp ? { quote: sp.quote } : {}) };
       }),
-      ...panel.filter((f) => f.source === "google_places"),
+      ...panel,
     ];
     const critic = await applyGuestCritic(
       { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
@@ -252,6 +226,8 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     );
     brief = { ...brief, tagline: critic.copy.tagline, intro: critic.copy.intro, highlights: [...critic.copy.highlights] };
     editorial = critic.copy.editorial;
+    // The critic may have rewritten a hand-written field — the curator's words win (D2/D3).
+    withManual();
     criticInputs = critic.inputs;
     // The market verdict follows the SHIPPED copy, not the pre-critic one (OP-1) — same
     // rule as generateEngine: re-judged, never regenerated; a failure is an error verdict.
@@ -271,38 +247,22 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     intro: fixHomoglyphs(brief.intro),
     highlights: guestValueHighlights(brief.highlights.map(fixHomoglyphs)),
   };
-  const nextRecipe = reCopyRecipe(recipe, editorial);
+  const overlaid = applyManualCopy(reCopyRecipe(recipe, editorial), nextData, manual);
+  const nextRecipe = overlaid.recipe;
+  const nextSiteData = overlaid.data;
   // Module-sales switch: the re-copied mock obeys the same sample deny as generation.
   const html = await injectRuntime(
-    renderSite(nextRecipe, nextData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
+    renderSite(nextRecipe, nextSiteData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
     lang,
   );
   await writeFile(row.path, html, "utf8");
 
   const design = checkDesign(html);
-  const reviewQuotes = ((inputs.sourcePanel as { facts?: { source: string; quote?: string }[] } | undefined)?.facts ?? [])
-    .filter((f) => f.source === "google_places" && f.quote)
-    .map((f) => f.quote!);
   let factCheck: FactCheckVerdict | null = null;
   try {
     factCheck = await verifyFactuality({
       html,
-      lead: {
-        name: lead.name,
-        ...(region.known ? { region: region.label } : {}),
-        address: lead.address,
-        phone: lead.phone,
-        email: lead.email,
-        ...(siteData.rating
-          ? { rating: { value: siteData.rating.value, count: siteData.rating.count ?? null } }
-          : {}),
-        ...(amenities.length ? { amenities } : {}),
-        // The first generation's review quotes ground the copy here as they did for the
-        // critic above — the gate's placed-claim rule must weigh the same evidence.
-        ...(descriptions.length || reviewQuotes.length
-          ? { descriptions: [...descriptions, ...reviewQuotes] }
-          : {}),
-      },
+      lead: factLeadOf(sources, siteData, inputs),
       photos: photoUrls,
     });
   } catch (err) {
@@ -315,7 +275,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
       inputs: {
         ...inputs,
         recipe: nextRecipe as unknown as Record<string, unknown>,
-        siteData: nextData as unknown as Record<string, unknown>,
+        siteData: nextSiteData as unknown as Record<string, unknown>,
         designVerdict: design.verdict,
         designReason: design.reason ?? null,
         factVerdict: factCheck?.verdict ?? null,

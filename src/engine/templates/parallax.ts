@@ -13,7 +13,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, hasBookingSurface, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingSlot, hasBookingSurface, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -297,8 +297,8 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hero = `${heroPanelOpen}
     ${mast}
     <div class="t-wrap t-parin t-hero">
-      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-      ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
+      <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      ${sub ? `<p class="t-herosub"${hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }], ["tagline", data.tagline])}>${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
@@ -333,9 +333,9 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     data.intro || featCopy.title || statBand
       ? `<section class="t-sec" id="t-about">
     <div class="t-wrap">
-      ${featCopy.eyebrow ? `<p class="t-eyebrow">${esc(featCopy.eyebrow)}</p>` : ""}
-      ${featCopy.title ? `<h2>${accented(featCopy.title, featCopy.accent)}</h2>` : ""}
-      ${data.intro ? `<p class="t-lead">${esc(data.intro)}</p>` : ""}
+      ${featCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("features.eyebrow")}>${esc(featCopy.eyebrow)}</p>` : ""}
+      ${featCopy.title ? `<h2${copyHook("features.title")}>${accented(featCopy.title, featCopy.accent)}</h2>` : ""}
+      ${data.intro ? `<p class="t-lead"${copyHook("intro")}>${esc(data.intro)}</p>` : ""}
       ${statBand}
     </div>
   </section>`
@@ -349,7 +349,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const bandA =
     photos.length || bandAText
       ? `<section class="t-par t-par--band${bandAUrl ? "" : " t-par--flat"}"${bandAUrl ? ` style="background-image:url('${esc(bandAUrl)}')"` : ""}>
-    <div class="t-wrap t-parin">${bandAText ? `<p class="t-quote">${esc(bandAText)}</p>` : ""}</div>
+    <div class="t-wrap t-parin">${bandAText ? `<p class="t-quote"${data.tagline && bandAText === data.tagline ? copyHook("tagline") : copyHook("gallery.title")}>${esc(bandAText)}</p>` : ""}</div>
   </section>`
       : "";
 
@@ -362,7 +362,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
         <div class="t-rowimg"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></div>
         <div class="t-rowbody">
           ${amenityIconSvg(h, data.amenityIconMap)}
-          <h3>${esc(h)}</h3>
+          <h3${highlightHook(data, i)}>${esc(h)}</h3>
           ${hasContact ? `<a href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         </div>
       </div>`;
@@ -386,7 +386,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="t-amen">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
+          .map((h, i) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -397,7 +397,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const bandB =
     photos.length >= 2
       ? `<section class="t-par t-par--band${bandBUrl ? "" : " t-par--flat"}"${bandBUrl ? ` style="background-image:url('${esc(bandBUrl)}')"` : ""}>
-    <div class="t-wrap t-parin">${revCopy.title ? `<p class="t-quote">${esc(revCopy.title)}</p>` : ""}</div>
+    <div class="t-wrap t-parin">${revCopy.title ? `<p class="t-quote"${copyHook("reviews.title")}>${esc(revCopy.title)}</p>` : ""}</div>
   </section>`
       : "";
 
@@ -405,8 +405,8 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const gallery = photos.length
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
-      ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
-      <h2>${galCopy.title && galCopy.title !== bandAText ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
+      ${galCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
+      <h2${hookPick(["gallery.title", galCopy.title && galCopy.title !== bandAText ? galCopy.title : ""])}>${galCopy.title && galCopy.title !== bandAText ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="t-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 6)
@@ -425,11 +425,11 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const reviews = reviewsData
     ? `<section class="t-sec t-rev" id="t-reviews" data-cit-module="reviews">
     <div class="t-wrap">
-      ${revCopy.eyebrow ? `<p class="t-eyebrow">${esc(revCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Vendégeink")}</p>`}
+      ${revCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Vendégeink")}</p>`}
       ${
         ratingStat
           ? `<div class="t-revscore"><b>${esc(ratingStat.value)}</b><div>${starRowHtml}<span>${esc(ratingStat.label)}</span></div></div>`
-          : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`
+          : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`
       }
       <div class="t-revgrid">
         ${reviewsData
@@ -481,7 +481,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="t-footgrid">
         <div>
           <span class="t-fbrand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>

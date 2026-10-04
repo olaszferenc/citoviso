@@ -14,7 +14,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const DARK_LUXURY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -237,6 +237,12 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
+  // Copy hooks for the preview editor: mirror the h1/sub fallback chains above.
+  const h1Hook = hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline]);
+  const subHook =
+    data.tagline && data.tagline !== h1
+      ? copyHook("tagline")
+      : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }]);
   const hasContact = Boolean(data.contact.email || data.contact.phone);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
   const highlights = data.highlights.slice(0, 6);
@@ -288,8 +294,8 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ${heroBg}
     ${mast}
     <div class="t-wrap t-heroin">
-      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-      ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
+      <h1${h1Hook} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      ${sub ? `<p class="t-herosub"${subHook}>${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${ctaLabel(data, phase)}</a>` : ""}
         ${galPhotos.length ? `<a class="cit-btn t-btn-ghost" href="#t-gallery">${T(data, "Fedezze fel")}</a>` : ""}
@@ -317,9 +323,9 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     stripPhotos.length || data.intro
       ? `<section class="t-sec" id="t-showcase" style="padding-bottom:60px">
     <div class="t-wrap">
-      <p class="t-eyebrow">${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "Betekintés")}</p>
-      <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : esc(data.name)}</h2>
-      ${data.intro ? `<p class="t-lead">${esc(data.intro)}</p>` : ""}
+      <p class="t-eyebrow"${hookPick(["features.eyebrow", featCopy.eyebrow])}>${featCopy.eyebrow ? esc(featCopy.eyebrow) : T(data, "Betekintés")}</p>
+      <h2${hookPick(["features.title", featCopy.title])}>${featCopy.title ? accented(featCopy.title, featCopy.accent) : esc(data.name)}</h2>
+      ${data.intro ? `<p class="t-lead"${copyHook("intro")}>${esc(data.intro)}</p>` : ""}
       ${statRow}
     </div>
     ${
@@ -351,7 +357,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
         ${highlights
           .map(
             (h, i) =>
-              `<div class="t-rit"><p class="t-no">${amenityIconSvg(h, data.amenityIconMap)}</p><h3>${esc(h)}</h3></div>`,
+              `<div class="t-rit"><p class="t-no">${amenityIconSvg(h, data.amenityIconMap)}</p><h3${highlightHook(data, i)}>${esc(h)}</h3></div>`,
           )
           .join("\n        ")}
       </div>
@@ -366,7 +372,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     reviewsData && lead
       ? `<section class="t-sec t-quote" id="t-reviews" data-cit-module="reviews">
     <div class="t-wrap">
-      ${revCopy.eyebrow ? `<p class="t-eyebrow">${esc(revCopy.eyebrow)}</p>` : ""}
+      ${revCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</p>` : ""}
       ${starCount ? `<div class="t-qstars">${starIcon().repeat(starCount)}</div>` : ""}
       ${ratingStat ? `<p class="t-qscore">${esc(ratingStat.value)} · ${esc(ratingStat.label)}</p>` : ""}
       <blockquote>„${esc(lead.quote)}"</blockquote>
@@ -392,8 +398,8 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const gallery = galPhotos.length
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
-      ${galCopy.eyebrow ? `<p class="t-eyebrow">${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
+      ${galCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
+      <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
       <div class="t-gal" data-cit-module="gallery">
         ${galPhotos
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
@@ -457,7 +463,7 @@ function renderDarkLuxury(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="t-fgrid">
         <div>
           <span class="t-brand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>

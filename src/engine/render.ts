@@ -12,6 +12,7 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, roomsForMock, sampleRooms } from "./templateKit.js";
+import { setHighlightSources } from "./copyFields.js";
 
 /** Templates escape their text, so compare against the escaped form. */
 function escapeForCompare(s: string): string {
@@ -37,10 +38,13 @@ function weaveSellingPoints(data: SiteData): SiteData {
   if (!data.usp?.length) return data;
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const seen = new Set<string>();
-  const merged = [...data.usp, ...data.highlights].filter(
-    (s) => !seen.has(norm(s)) && Boolean(seen.add(norm(s))),
+  const tagged = [...data.usp.map((s) => [s, -1] as const), ...data.highlights.map((s, i) => [s, i] as const)].filter(
+    ([s]) => !seen.has(norm(s)) && Boolean(seen.add(norm(s))),
   );
-  return { ...data, highlights: merged };
+  const woven = { ...data, highlights: tagged.map(([s]) => s) };
+  // The preview editor's highlight hooks must name the FIELD's index, not the list's.
+  setHighlightSources(woven.highlights, tagged.map(([, i]) => i));
+  return woven;
 }
 
 /**

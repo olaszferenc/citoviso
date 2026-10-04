@@ -95,6 +95,7 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
+import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
@@ -5365,6 +5366,12 @@ export function leadPage(
             ? `<span class="con-mk__links">
                  <a href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>
                  <a href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>
+                 ${
+                   // ADR-XXXX ② B: the curator preview with the copy editor (never on /mock/).
+                   a.inputs.recipe
+                     ? `<a href="/artifact/${esc(a.id)}/edit" target="_blank">${T(lang, "szöveg szerkesztése ▸")}</a>`
+                     : ""
+                 }
                </span>`
             : "";
           // ⛔ AZ AKTÍV KÉP-KAPU TELJES SORT KAP. A megtagadás doboza megnevezi a hibás
@@ -5383,6 +5390,7 @@ export function leadPage(
                   ? `${esc(patternSummary(a.inputs as PatternInputs))} · `
                   : ""
               }${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
+              ${copyEditPill(a.inputs, lang)}
             </div>
             <dl class="con-mk__facts">
               ${
@@ -5433,6 +5441,11 @@ export function leadPage(
             </div>
             ${curated ? "" : `<script>${photoGatePreScript(d.id, a.id)}</script>`}
             <div class="con-mk__det" id="det-${esc(a.id)}" hidden>
+              ${
+                // ADR-XXXX ① A: the hand edit of THIS mock's copy. Frozen once a prospect
+                // link exists for it (§I) — the same line the AI rewrite draws.
+                mockCopyEditBlock(a.id, a.inputs, prospects.some((p) => p.artifactId === a.id), lang)
+              }
               ${namedMeta ? `<dl class="con-recipe">${namedMeta}</dl>` : ""}
               ${renderAiCost(a.inputs.aiUsage)}
               ${
@@ -5666,7 +5679,7 @@ export function leadPage(
        <div class="con-mkgrid" data-cit-mockcards="1">${[...active, ...rejected]
          .map(renderArtifact)
          .join("")}</div>
-       <script>${mockGridScript}${shotPollScript}</script>`
+       <script>${mockGridScript}${shotPollScript}${mockCopyEditScript()}</script>`
     : `<div class="panel"><p class="mut">${T(lang, "Még nincs generált mock ehhez a leadhez.")}</p></div>`;
 
   // IDENTITY BAND — everything the operator must know BEFORE choosing a tab: who is this,

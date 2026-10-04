@@ -14,10 +14,13 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
   accented,
   bookingSlot,
+  copyHook,
   copyOf,
   ctaLabel,
   esc,
   firstSentence,
+  highlightHook,
+  hookPick,
   honestStarCount,
   T,
   type ArtTemplate,
@@ -281,9 +284,9 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
         ? `${ratingStat.value} · ${ratingStat.label}`
         : "";
   const titleRow = `<div class="title-row">
-      ${heroCopy.eyebrow ? `<div class="eyebrow">${esc(heroCopy.eyebrow)}</div>` : ""}
+      ${heroCopy.eyebrow ? `<div class="eyebrow"${copyHook("hero.eyebrow")}>${esc(heroCopy.eyebrow)}</div>` : ""}
       <h1>${esc(data.name)}</h1>
-      ${sub && sub !== data.name ? `<p class="sub">${esc(sub)}</p>` : ""}
+      ${sub && sub !== data.name ? `<p class="sub"${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline], ["intro", firstSentence(data.intro), { part: "first-sentence" }])}>${esc(sub)}</p>` : ""}
       <div class="meta-row">
         ${rateText ? `<span class="rate">${stars}${esc(rateText)}</span>` : ""}
         ${c.address ? `<span class="addr">${CONTACT_ICONS.location}${esc(c.address)}</span>` : ""}
@@ -293,9 +296,9 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
   // -- left column: dropcap intro -------------------------------------------
   const intro = data.intro
     ? `<div class="blk" id="about">
-          ${featCopy.eyebrow ? `<div class="eyebrow">${esc(featCopy.eyebrow)}</div>` : ""}
-          <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Bemutatkozás")}</h2>
-          <p class="intro-copy">${esc(data.intro)}</p>
+          ${featCopy.eyebrow ? `<div class="eyebrow"${copyHook("features.eyebrow")}>${esc(featCopy.eyebrow)}</div>` : ""}
+          <h2${hookPick(["features.title", featCopy.title])}>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Bemutatkozás")}</h2>
+          <p class="intro-copy"${copyHook("intro")}>${esc(data.intro)}</p>
         </div>`
     : "";
 
@@ -308,7 +311,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
           <h2>${T(data, "Amit ez a hely kínál")}</h2>
           <div class="amen-grid">
             ${data.highlights
-              .map((h) => `<div class="amen-i">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></div>`)
+              .map((h, i) => `<div class="amen-i">${amenityIconSvg(h, data.amenityIconMap)}<span${highlightHook(data, i)}>${esc(h)}</span></div>`)
               .join("\n            ")}
           </div>
         </div>`
@@ -319,10 +322,10 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
     ? `<div class="rev-head">${stars}<b>${esc(ratingValue)}</b><span>· ${
         ratingCount ? T(data, "{n} értékelés", { n: ratingCount }) : esc(ratingStat?.label ?? "")
       }</span></div>`
-    : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`;
+    : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink mondták")}</h2>`;
   const reviews = reviewsData
     ? `<div class="blk" id="reviews" data-cit-module="reviews">
-          ${revCopy.eyebrow ? `<div class="eyebrow">${esc(revCopy.eyebrow)}</div>` : ""}
+          ${revCopy.eyebrow ? `<div class="eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</div>` : ""}
           ${revHead}
           <div class="rev-grid">
             ${reviewsData
@@ -423,7 +426,7 @@ function renderCardSidebar(recipe: Recipe, data: SiteData, phase: RenderPhase): 
       <div class="f-grid">
         <div>
           <span class="f-brand"><span class="mark">${BRAND_MARK}</span>${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>

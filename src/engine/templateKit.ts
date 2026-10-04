@@ -8,6 +8,9 @@ import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
+// Copy hooks for the preview editor (ADR-XXXX) — every template marks the copy it shows.
+import { copyHook } from "./copyFields.js";
+export { copyHook, highlightHook, hookPick } from "./copyFields.js";
 
 /** ADR-0036 UI-string translation: the KEY is the Hungarian source string itself. Templates
  *  wrap every static customer-facing literal: `T(d, "Galéria")`. Optional {var} interpolation
@@ -537,8 +540,10 @@ export function mastheadHtml(
         `<a${l.hot ? ` class="cit-mast-hot"` : ""} href="${esc(l.href)}">${esc(l.label)}</a>`,
     )
     .join("");
+  // Every caller passes the hero eyebrow here (`place: heroCopy.eyebrow`) — so the span
+  // carries that field's hook for the preview editor (copy-hook-check measures it).
   const place = o.place
-    ? `<div class="cit-mast-place"><span>${esc(o.place)}</span></div>`
+    ? `<div class="cit-mast-place"><span${copyHook("hero.eyebrow")}>${esc(o.place)}</span></div>`
     : "";
   return `<header class="cit-mast"${o.phoneBar ? " data-cit-mast-bar" : ""}>
     <a class="cit-mast-name" href="#top">${esc(d.name)}</a>

@@ -184,8 +184,14 @@ const lido = criticSourceOf({
   check("API-kulcs nélkül is FLAG (nem „pass, nincs jelölt”)", /if \(placed\.length\) \{\s*return \{ verdict: "flag"/.test(noKey), "kulcs nélkül átengedné");
   const onError = fc.slice(fc.lastIndexOf("} catch (err) {"));
   check("Verifier-hibánál a gépi lelet áll (flag, nem error)", /if \(placed\.length\) \{\s*return \{ verdict: "flag"/.test(onError), "hibánál elveszne");
-  for (const path of ["src/generator/generateEngine.ts", "src/generator/recopy.ts"]) {
+  // The post-generation paths (AI rewrite + the curator's hand edit, ADR-XXXX) build the gate's
+  // source in ONE place — copySources.ts — so the rule follows it there, and both callers must
+  // actually hand that block to the gate.
+  for (const path of ["src/generator/generateEngine.ts", "src/generator/copySources.ts"]) {
     check(`${path}: a kapu megkapja a forrás-prózát (különben minden hely-állítás piros lenne)`, /descriptions: \[\.\.\.(sourcedDescriptions|descriptions), \.\.\.(guestVoice\.map\(\(v\) => v\.text\)|reviewQuotes)\]/.test(read(path)), "a kapu forrás nélkül ítélne");
+  }
+  for (const path of ["src/generator/recopy.ts", "src/generator/copyManual.ts"]) {
+    check(`${path}: a tényhűség-kapu a közös forrás-blokkot kapja (factLeadOf)`, /verifyFactuality\(\{[\s\S]{0,80}lead: factLeadOf\(/.test(read(path)), "a kapu forrás nélkül ítélne");
   }
 }
 

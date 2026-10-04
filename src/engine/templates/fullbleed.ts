@@ -10,7 +10,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyHook, copyOf, highlightHook, hookPick, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 const FULLBLEED_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -257,8 +257,8 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ${heroBg}
     ${mast}
     <div class="t-heroin">
-      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-      ${sub ? `<p class="t-herosub">${esc(sub)}</p>` : ""}
+      <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      ${sub ? `<p class="t-herosub"${data.tagline && data.tagline !== h1 ? copyHook("tagline") : copyHook("intro", { part: "first-sentence" })}>${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">${T(data, "Nézzen körül")}</a>` : ""}
@@ -287,9 +287,9 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       ? `<section class="t-sec t-intro">
     <div class="t-wrap t-introgrid">
       <div class="t-introcopy">
-        ${featCopy.eyebrow ? `<div class="t-eyebrow">${esc(featCopy.eyebrow)}</div>` : ""}
-        ${featCopy.title ? `<h2>${accented(featCopy.title, featCopy.accent)}</h2>` : ""}
-        ${data.intro ? `<p>${esc(data.intro)}</p>` : ""}
+        ${featCopy.eyebrow ? `<div class="t-eyebrow"${copyHook("features.eyebrow")}>${esc(featCopy.eyebrow)}</div>` : ""}
+        ${featCopy.title ? `<h2${copyHook("features.title")}>${accented(featCopy.title, featCopy.accent)}</h2>` : ""}
+        ${data.intro ? `<p${copyHook("intro")}>${esc(data.intro)}</p>` : ""}
         ${statRow}
       </div>
       ${introPhoto ? `<div class="t-introphoto"><img src="${esc(introPhoto)}" alt="${esc(data.name)}"></div>` : ""}
@@ -308,7 +308,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="t-amengrid">
         ${data.highlights
           .slice(0, 4)
-          .map((h) => `<div class="t-amencard">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
+          .map((h, i) => `<div class="t-amencard">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -320,8 +320,8 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
       <div class="t-sechead">
-        ${galCopy.eyebrow ? `<div class="t-eyebrow">${esc(galCopy.eyebrow)}</div>` : ""}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
+        ${galCopy.eyebrow ? `<div class="t-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</div>` : ""}
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Galéria")}</h2>
       </div>
       <div class="t-mosaic" data-cit-module="gallery">
         ${photos
@@ -343,12 +343,12 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     ? `<section class="t-sec t-rev" id="t-reviews" data-cit-module="reviews">
     <div class="t-wrap">
       <div class="t-revhead">
-        ${revCopy.eyebrow ? `<div class="t-eyebrow">${esc(revCopy.eyebrow)}</div>` : ""}
+        ${revCopy.eyebrow ? `<div class="t-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</div>` : ""}
         ${
           ratingStat
             ? `<div class="t-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
             : revCopy.title
-              ? `<h2 style="font-family:var(--cit-font-display);font-weight:500;font-size:clamp(30px,4.5vw,50px);line-height:1.12;margin-top:14px">${accented(revCopy.title, revCopy.accent)}</h2>`
+              ? `<h2${copyHook("reviews.title")} style="font-family:var(--cit-font-display);font-weight:500;font-size:clamp(30px,4.5vw,50px);line-height:1.12;margin-top:14px">${accented(revCopy.title, revCopy.accent)}</h2>`
               : ""
         }
       </div>
@@ -386,7 +386,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="t-concopy">
         <div class="t-eyebrow">${T(data, "Kapcsolat")}</div>
         <h2>${T(data, "Megközelítés és kapcsolat")}</h2>
-        ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+        ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:26px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       </div>
@@ -401,7 +401,7 @@ function renderFullbleed(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="t-footgrid">
         <div>
           <span class="t-brand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>

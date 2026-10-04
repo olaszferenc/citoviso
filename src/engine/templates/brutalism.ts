@@ -15,7 +15,7 @@ import { ratingScale } from "../rating.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 // Monospace stack for the "industrial" voice (labels, tags, marquee). System fonts only —
 // the skin decides the display/body families; the mono accent is template character.
@@ -306,8 +306,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const hero = `<header class="b-hero" id="top">
     <div class="b-hero-grid">
       <div class="b-hero-l">
-        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-        ${sub ? `<p class="b-hero-sub">${esc(sub)}</p>` : ""}
+        <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+        ${sub ? `<p class="b-hero-sub"${data.tagline && data.tagline !== h1 ? copyHook("tagline") : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }])}>${esc(sub)}</p>` : ""}
         ${tags ? `<div class="b-tags">${tags}</div>` : ""}
         <div class="b-ctas">
           <a class="cit-btn" href="#cit-enquiry">${T(data, "Foglalási igény")}</a>
@@ -330,22 +330,23 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   </div>`;
 
   // -- numbered section tags (sequential over the sections actually shown) --
-  const secTag = (label: string): string =>
-    `<span class="b-sectag">${esc(label)}</span>`;
+  // `hook`: the copy-field hook when the label IS that field (not the generic fallback).
+  const secTag = (label: string, hook = ""): string =>
+    `<span class="b-sectag"${hook}>${esc(label)}</span>`;
 
   // -- features: intro lead + amenity cell grid (real highlights only) ------
   const facCells = data.highlights
     .map(
       (h, i) =>
-        `<div class="b-fc">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`,
+        `<div class="b-fc">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`,
     )
     .join("\n        ");
   const features = hasFeatures
     ? `<section class="b-sec" id="b-features">
     <div class="b-wrap">
-      ${secTag(featCopy.eyebrow ?? T(data, "Adottságok"))}
-      <h2>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Amit itt talál")}</h2>
-      ${data.intro ? `<p class="b-lead">${esc(data.intro)}</p>` : ""}
+      ${secTag(featCopy.eyebrow ?? T(data, "Adottságok"), hookPick(["features.eyebrow", featCopy.eyebrow]))}
+      <h2${hookPick(["features.title", featCopy.title])}>${featCopy.title ? accented(featCopy.title, featCopy.accent) : T(data, "Amit itt talál")}</h2>
+      ${data.intro ? `<p class="b-lead"${copyHook("intro")}>${esc(data.intro)}</p>` : ""}
       ${facCells ? `<div class="b-fac">${facCells}</div>` : ""}
     </div>
   </section>`
@@ -355,8 +356,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const gallery = hasGallery
     ? `<section class="b-sec" id="b-gallery">
     <div class="b-wrap">
-      ${secTag(galCopy.eyebrow ?? T(data, "Képek"))}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a helyszínről")}</h2>
+      ${secTag(galCopy.eyebrow ?? T(data, "Képek"), hookPick(["gallery.eyebrow", galCopy.eyebrow]))}
+      <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek a helyszínről")}</h2>
       <div class="b-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 6)
@@ -382,8 +383,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
     <div class="b-wrap">
       <div class="b-revhead">
         <div>
-          ${secTag(revCopy.eyebrow ?? T(data, "Vendégek mondták"))}
-          <h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégek mondták")}</h2>
+          ${secTag(revCopy.eyebrow ?? T(data, "Vendégek mondták"), hookPick(["reviews.eyebrow", revCopy.eyebrow]))}
+          <h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégek mondták")}</h2>
         </div>
         ${rating ? `<div class="b-score-stamp">${scoreStars}${esc(rating.label)}<strong>${esc(rating.value)} / ${ratingScale(data)}</strong></div>` : ""}
       </div>
@@ -404,8 +405,8 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
   const contact = contactLines
     ? `<section class="b-sec" id="b-contact">
     <div class="b-wrap">
-      ${secTag(locCopy.eyebrow ?? T(data, "Infó"))}
-      <h2>${locCopy.title ? accented(locCopy.title, locCopy.accent) : T(data, "Kapcsolat és elérés")}</h2>
+      ${secTag(locCopy.eyebrow ?? T(data, "Infó"), hookPick(["location.eyebrow", locCopy.eyebrow]))}
+      <h2${hookPick(["location.title", locCopy.title])}>${locCopy.title ? accented(locCopy.title, locCopy.accent) : T(data, "Kapcsolat és elérés")}</h2>
       <div class="b-loc">
         <div class="b-conlines">
           ${contactLines}
@@ -423,7 +424,7 @@ function renderBrutalism(recipe: Recipe, data: SiteData, phase: RenderPhase): st
       <div class="b-fg">
         <div>
           <span class="b-brand"><span class="b-sq"></span>${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Menü")}</h4>

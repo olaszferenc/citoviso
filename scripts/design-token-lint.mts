@@ -37,6 +37,8 @@ const FILES = [
   "src/console/prospectNotice.ts",
   "src/console/photoProxy.ts",
   "src/generator/patternBadge.ts",
+  // ADR-XXXX: the mock copy editor (A form + the B bar injected into the mock preview).
+  "src/console/copyEditViews.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",
   "src/ui/icons.ts",
@@ -71,6 +73,14 @@ const ALLOW: Record<string, { values: string[]; reason: string }> = {
     values: ["#0a1f36", "#0e2a47", "#35c4e0", "#eaf3f8"],
     reason:
       "az operátori minta-jelölő IDEGEN dokumentumba (a generált mock) injektálódik, ahol a citui.css nincs betöltve és a :root a mock skinjéé — a dizájn-mag négy tokenje ezért a badge gyökerén, scope-olva tükröződik (--pb-*), nem globálisan; értékben a citui.css-szel szinkronban tartandó",
+  },
+  "src/console/copyEditViews.ts": {
+    values: [
+      "#0a1f36", "#0e2a47", "#1fb6d6", "#10243a", "#60748b", "#d29922", "#7d5a12", "#e5484d",
+      "#b3262b", "#19733f", "#e7f8ef", "#eef7fa", "#10697a", "#2b1d00", "rgba(14,42,71,.28)", "rgba(14,42,71,.14)",
+    ],
+    reason:
+      "a B szöveg-szerkesztő sáv IDEGEN dokumentumba (a generált mock) injektálódik, ahol a citui.css nincs betöltve és a :root a mock skinjéé — a dizájn-mag tokenjei ezért a sáv gyökerén (.cit-ced), scope-olva tükröződnek, ugyanúgy, mint a patternBadge-nél; értékben a citui.css-szel szinkronban tartandó. A #2b1d00 a „kézzel átírva” címke sötét tintája a --citui-warn borostyánon (kontraszt), a két rgba a sáv árnyéka",
   },
   "src/console/photoProxy.ts": {
     values: ["#eef7fa", "#e5484d", "#5a6d82"],

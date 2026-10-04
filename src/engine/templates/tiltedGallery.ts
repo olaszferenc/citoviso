@@ -21,7 +21,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 const TILTED_CSS = `
 /* shared module sections (.cit-modsec) dressed to this template's rhythm (ADR-0057):
@@ -296,12 +296,12 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       <h1 ${mo("up", 200)}>${esc(data.name)}</h1>
       ${
         heroCopy.lead
-          ? `<div class="t-lead-line" ${mo("up", 320)}>${accented(heroCopy.lead, heroCopy.accent)}</div>`
+          ? `<div class="t-lead-line"${copyHook("hero.lead")} ${mo("up", 320)}>${accented(heroCopy.lead, heroCopy.accent)}</div>`
           : ""
       }
       ${
         data.tagline
-          ? `<div class="t-sub${data.tagline.length > 48 ? " t-sub-long" : ""}" ${mo("in", 420)}>${esc(
+          ? `<div class="t-sub${data.tagline.length > 48 ? " t-sub-long" : ""}"${copyHook("tagline")} ${mo("in", 420)}>${esc(
               data.tagline,
             )}</div>`
           : ""
@@ -314,7 +314,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     <div class="t-band-ph">
       ${bandPhoto ? `<img ${parallax(1)} src="${esc(bandPhoto.url)}" alt="${esc(bandPhoto.alt)}" loading="lazy">` : ""}
       <div class="t-band-tx">
-        <div class="t-lede" ${mo("up", 80)}>${accented(lede, heroCopy.accent)}</div>
+        <div class="t-lede"${hookPick(["intro", firstSentence(data.intro, 220), { part: "first-sentence" }], ["tagline", data.tagline])} ${mo("up", 80)}>${accented(lede, heroCopy.accent)}</div>
       </div>
     </div>
   </section>`;
@@ -331,7 +331,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     ? `<section class="t-rooms" id="cit-rooms" data-cit-module="rooms" style="padding-bottom:0">
     <div class="t-wrap" style="text-align:center">
       <div class="t-kick" ${mo("in")}>${T(data, "Szobák")}</div>
-      <h2 style="font-size:clamp(25px,4.2vw,40px);margin-top:.4em" ${mo("up", 90)}>${esc(
+      <h2 style="font-size:clamp(25px,4.2vw,40px);margin-top:.4em"${hookPick(["rooms.title", roomsCopy.title])} ${mo("up", 90)}>${esc(
         roomsCopy.title ?? T(data, "Ahol megszáll"),
       )}</h2>
     </div>
@@ -360,16 +360,16 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const feature = `<section class="t-split dark">
     <div class="ph">${featurePhoto ? `<img ${parallax(0.8)} src="${esc(featurePhoto.url)}" alt="${esc(featurePhoto.alt)}" loading="lazy">` : photoFill(data.name)}</div>
     <div class="tx">
-      <div class="t-kick" ${mo("in")}>${esc(featCopy.eyebrow ?? T(data, "Szolgáltatások"))}</div>
+      <div class="t-kick"${hookPick(["features.eyebrow", featCopy.eyebrow])} ${mo("in")}>${esc(featCopy.eyebrow ?? T(data, "Szolgáltatások"))}</div>
       ${
         // ⛔ Nincs szöveg → nincs elem (mérve: 512×32px üres címsor). A `data.tagline`
         // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — a korpusz
         // 89%-án. Ugyanaz az őrzés, mint a `highlights`-nál egy sorral lejjebb.
         (featCopy.title ?? data.tagline)
-          ? `<h2 ${mo("up", 90)}>${esc(featCopy.title ?? data.tagline)}</h2>`
+          ? `<h2${hookPick(["features.title", featCopy.title], ["tagline", data.tagline])} ${mo("up", 90)}>${esc(featCopy.title ?? data.tagline)}</h2>`
           : ""
       }
-      ${highlights.length ? `<div class="t-chips" ${mo("up", 200)}>${highlights.map((h) => `<span>${esc(h)}</span>`).join("")}</div>` : ""}
+      ${highlights.length ? `<div class="t-chips" ${mo("up", 200)}>${highlights.map((h, i) => `<span${highlightHook(data, i)}>${esc(h)}</span>`).join("")}</div>` : ""}
     </div>
   </section>`;
 
@@ -387,7 +387,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
           // A `t-say` doboz EGYETLEN tartalma ez a mondat — szöveg nélkül üres doboz
           // maradna a galéria alatt, saját térközzel.
           (galCopy.title ?? data.tagline)
-            ? `<div class="t-say"><p ${mo("up", 220)}>${esc(galCopy.title ?? data.tagline)}</p></div>`
+            ? `<div class="t-say"><p${hookPick(["gallery.title", galCopy.title], ["tagline", data.tagline])} ${mo("up", 220)}>${esc(galCopy.title ?? data.tagline)}</p></div>`
             : ""
         }
       </div>

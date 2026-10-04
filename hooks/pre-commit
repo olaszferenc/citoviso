@@ -389,6 +389,23 @@ if [ -f scripts/mock-card-fact-list-check.mts ] && \
   echo "[pre-commit] mock-card-fact-list-check (a tényhűség-jelvény kinyitja a listát a kártyán)…"
   npx tsx scripts/mock-card-fact-list-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX (tulaj 2026-10-04, terv: design-refs/console/mock-copy-edit): a mock szövege KÉZZEL átírható —
+# a B (helyben szerkesztés) a sablonok `data-cit-copy` horgain él. Egy horog nélkül kirajzolt mező
+# NÉMÁN nem kattintható, egy csomagoló-elemre tett horog pedig ROSSZ szöveget mentene. 21 sablon, Chromium.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/copy-hook-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/.*\.ts$|^src/engine/(render|templateKit|copyFields)\.ts$|^scripts/copy-hook-check\.mts$'; then
+  echo "[pre-commit] copy-hook-check (minden kirajzolt szöveg-mező horgolt, a horog szövege = a mező)…"
+  npx tsx scripts/copy-hook-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-XXXX: a kézi átírás szabályai — a beágyazott szerkesztő-szkriptek PARSE-olnak (mérve: egy
+# escape-hiba a teljes B szerkesztőt némán megölte), a mentési terv, és a D3: az AI-újraírás a kézi
+# mezőt nem írja felül. ⚠️ ÖN-TRIGGER: a minta az őr saját fájlját is tartalmazza.
+if [ -f scripts/copy-manual-check.mts ] && \
+   changed_files | grep -qE '^src/console/copyEditViews\.ts$|^src/engine/copyFields\.ts$|^src/generator/(copyManual|recopy)\.ts$|^scripts/copy-manual-check\.mts$'; then
+  echo "[pre-commit] copy-manual-check (a kézi szöveg-átírás szabályai)…"
+  npx tsx scripts/copy-manual-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A KONZOL KINÉZET-ELŐNÉZETE A MOCK IKERTESTVÉRE (H-1, 2026-10-01): a /lead/:id/tpl-preview
 # runtime nélkül ment ki, így a térkép-tű stílus nélkül ~300 px-es fekete folt lett MINDEN
 # kinézeten — pont azon a képen, amin a kurátor dönt. Böngészőben mért tű-méret, 19 sablon.

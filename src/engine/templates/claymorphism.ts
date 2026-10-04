@@ -15,7 +15,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, T, galleryOrder, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, T, galleryOrder, highlightHook, hookPick, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const CLAY_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -218,6 +218,12 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   const sub = data.tagline && data.tagline !== h1 ? data.tagline : firstSentence(data.intro);
+  // Copy hooks for the preview editor: mirror the h1/sub fallback chains above.
+  const h1Hook = hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline]);
+  const subHook =
+    data.tagline && data.tagline !== h1
+      ? copyHook("tagline")
+      : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }]);
   const ratingStat = data.stats?.find((s) => s.icon === "star");
   const starCount = honestStarCount(data);
 
@@ -268,8 +274,8 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const hero = `<header class="cl-hero" id="top"><div class="cl-wrap">
     <div class="cl-hgrid">
       <div>
-        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-        ${sub ? `<p>${esc(sub)}</p>` : ""}
+        <h1${h1Hook} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+        ${sub ? `<p${subHook}>${esc(sub)}</p>` : ""}
         <div>
           ${hasContact ? `<a class="cl-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
           ${data.highlights.length ? `<a class="cl-btn cl-btn-soft" href="#cl-wellness">${T(data, "Szolgáltatások")}</a>` : ""}
@@ -288,8 +294,8 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   // -- rooms ----------------------------------------------------------------
   const rooms = roomsData
     ? `<section class="cl-sec" id="cl-rooms"><div class="cl-wrap">
-      ${roomCopy.eyebrow ? `<span class="cl-eyebrow">${esc(roomCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${roomsLabel(data)}</span>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
+      ${roomCopy.eyebrow ? `<span class="cl-eyebrow"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${roomsLabel(data)}</span>`}
+      <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : roomsHeading(data)}</h2>
       ${roomCopy.lead ? `<p class="cl-lead">${esc(roomCopy.lead)}</p>` : ""}
       <div class="cl-rooms" data-cit-module="rooms">
         ${roomsData
@@ -332,14 +338,14 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   // -- wellness bubble grid (real highlights only) -------------------------
   const wellness = data.highlights.length
     ? `<section class="cl-sec" id="cl-wellness" style="padding-top:0"><div class="cl-wrap">
-      ${wellCopy.eyebrow ? `<span class="cl-eyebrow">${esc(wellCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Szolgáltatások")}</span>`}
-      <h2>${wellCopy.title ? accented(wellCopy.title, wellCopy.accent) : T(data, "Amiért érdemes betérni")}</h2>
+      ${wellCopy.eyebrow ? `<span class="cl-eyebrow"${copyHook("features.eyebrow")}>${esc(wellCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Szolgáltatások")}</span>`}
+      <h2${hookPick(["features.title", wellCopy.title])}>${wellCopy.title ? accented(wellCopy.title, wellCopy.accent) : T(data, "Amiért érdemes betérni")}</h2>
       <div class="cl-bubbles">
         ${data.highlights
           .slice(0, 8)
           .map(
-            (h) =>
-              `<div class="cl-clay cl-bu"><div class="cl-buic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong>${esc(h)}</strong></div>`,
+            (h, i) =>
+              `<div class="cl-clay cl-bu"><div class="cl-buic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong${highlightHook(data, i)}>${esc(h)}</strong></div>`,
           )
           .join("\n        ")}
       </div>
@@ -354,8 +360,8 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const galleryOf = (ordered: readonly { url: string; alt: string }[]): string =>
     ordered.length
       ? `<section class="cl-sec" id="cl-gallery" style="padding-top:0"><div class="cl-wrap">
-      ${galCopy.eyebrow ? `<span class="cl-eyebrow">${esc(galCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Galéria")}</span>`}
-      <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül nálunk")}</h2>
+      ${galCopy.eyebrow ? `<span class="cl-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Galéria")}</span>`}
+      <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül nálunk")}</h2>
       <div class="cl-gal" id="cl-galgrid" data-cit-module="gallery" data-cit-gexpandable>
         ${ordered
           .map((p, i) => `<figure${i >= 4 ? " data-cit-gextra" : ""}><img src="${esc(p.url)}" alt="${esc(p.alt)}" loading="lazy"></figure>`)
@@ -373,11 +379,11 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
   const stars5 = starCount ? `<span class="cl-st">${starIcon().repeat(starCount)}</span>` : "";
   const reviews = reviewsData
     ? `<section class="cl-sec" id="cl-reviews" style="padding-top:0" data-cit-module="reviews"><div class="cl-wrap">
-      ${revCopy.eyebrow ? `<span class="cl-eyebrow">${esc(revCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Vélemények")}</span>`}
+      ${revCopy.eyebrow ? `<span class="cl-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</span>` : `<span class="cl-eyebrow">${T(data, "Vélemények")}</span>`}
       ${
         ratingStat
           ? `<h2>${T(data, "Vendégeink")}</h2><div class="cl-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-          : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
+          : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
       }
       <div class="cl-revs">
         ${reviewsData
@@ -425,7 +431,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
     .filter(Boolean)
     .join("\n        ");
   const mapOverlay = c.address
-    ? `<div class="cl-ov">${CONTACT_ICONS.location}<b>${esc(c.address)}</b>${data.tagline ? `<span>${esc(data.tagline)}</span>` : ""}</div>`
+    ? `<div class="cl-ov">${CONTACT_ICONS.location}<b>${esc(c.address)}</b>${data.tagline ? `<span${copyHook("tagline")}>${esc(data.tagline)}</span>` : ""}</div>`
     : `<div class="cl-ov"><b>${esc(data.name)}</b></div>`;
   const contact =
     contactLines || c.address
@@ -448,7 +454,7 @@ function renderClaymorphism(recipe: Recipe, data: SiteData, phase: RenderPhase):
     <div class="cl-fg">
       <div>
         <a class="cl-lg" href="#top"><i></i>${esc(data.name)}</a>
-        ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+        ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
       </div>
       <div>
         <h4>${T(data, "Oldal")}</h4>

@@ -13,6 +13,7 @@
 - [2026-10-04_parallax_potty_nav_aktiv.md](2026-10-04_parallax_potty_nav_aktiv.md) — 2026-10-04 — Parallax pötty-nav: görgetéskor a képen lévő szakasz pöttye világít
 - [2026-10-04_pakli_galeria_torles.md](2026-10-04_pakli_galeria_torles.md) — 2026-10-04 — A kártyapakli-galéria runtime-kódjának törlése
 - [2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md](2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md) — 2026-10-04 — Névből növő B: húzható 4:3 Képek-sáv, Foglalás-kártya a Képek után, nagyobb és lassabb nyitány
+- [2026-10-04_mock_szoveg_kezi_atiras.md](2026-10-04_mock_szoveg_kezi_atiras.md) — 2026-10-04 — A mock szövege kézzel átírható (A + B, ADR-XXXX)
 - [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
 - [2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md](2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md) — 2026-10-04 — Lead-lista MOCK oszlop: a legerősebb mock-állapot + „✓ kiküldve” szűrő
 - [2026-10-04_js_honlap_renderelt_igazolas.md](2026-10-04_js_honlap_renderelt_igazolas.md) — 2026-10-04 — A JS-sel épülő saját honlap is igazolható (Dalma panzió)

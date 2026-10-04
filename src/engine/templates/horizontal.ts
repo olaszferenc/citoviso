@@ -12,7 +12,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, centredModsecCss, copyHook, copyOf, highlightHook, hookPick, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const HORIZONTAL_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -272,8 +272,8 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ${heroBg}
     ${mast}
     <div class="h-wrap h-heroin">
-      <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-      ${sub ? `<p class="h-herosub">${esc(sub)}</p>` : ""}
+      <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      ${sub ? `<p class="h-herosub"${data.tagline && data.tagline !== h1 ? copyHook("tagline") : copyHook("intro", { part: "first-sentence" })}>${esc(sub)}</p>` : ""}
       <div class="h-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
         ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#h-rooms">${roomsHeading(data)}</a>` : ""}
@@ -285,8 +285,8 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
   const rail = roomsData
     ? `<div class="h-railhead" id="h-rooms">
     <div class="h-wrap">
-      ${roomCopy.eyebrow ? `<div class="h-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${roomsLabel(data)}</div>`}
-      <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
+      ${roomCopy.eyebrow ? `<div class="h-eyebrow"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${roomsLabel(data)}</div>`}
+      <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
       <p class="h-railhint">${T(data, "← húzza oldalra a sort →")}</p>
     </div>
   </div>
@@ -340,7 +340,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="h-amengrid">
         ${data.highlights
           .slice(0, 8)
-          .map((h) => `<div class="h-amencard">${amenityIconSvg(h, data.amenityIconMap)}<p>${esc(h)}</p></div>`)
+          .map((h, i) => `<div class="h-amencard">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
@@ -352,8 +352,8 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ? `<section class="h-sec" id="h-gallery">
     <div class="h-wrap">
       <div class="h-sechead">
-        ${galCopy.eyebrow ? `<div class="h-eyebrow">${esc(galCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Galéria")}</div>`}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+        ${galCopy.eyebrow ? `<div class="h-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Galéria")}</div>`}
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
       </div>
       <div class="h-mosaic" data-cit-module="gallery">
         ${photos
@@ -371,11 +371,11 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
     ? `<section class="h-sec h-rev" id="h-reviews" data-cit-module="reviews">
     <div class="h-wrap">
       <div class="h-sechead">
-        ${revCopy.eyebrow ? `<div class="h-eyebrow">${esc(revCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Vélemények")}</div>`}
+        ${revCopy.eyebrow ? `<div class="h-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</div>` : `<div class="h-eyebrow">${T(data, "Vélemények")}</div>`}
         ${
           ratingStat
             ? `<div class="h-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-            : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
+            : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
         }
       </div>
       <div class="h-revgrid">
@@ -433,7 +433,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="h-concopy">
         <div class="h-eyebrow">${T(data, "Kapcsolat")}</div>
         <h2>${T(data, "Megközelítés és kapcsolat")}</h2>
-        ${data.tagline ? `<p style="color:var(--cit-muted);font-size:16px;margin-bottom:6px">${esc(data.tagline)}</p>` : ""}
+        ${data.tagline ? `<p${copyHook("tagline")} style="color:var(--cit-muted);font-size:16px;margin-bottom:6px">${esc(data.tagline)}</p>` : ""}
         ${contactLines}
         ${hasContact ? `<a class="cit-btn" style="margin-top:24px" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
       </div>
@@ -448,7 +448,7 @@ function renderHorizontal(recipe: Recipe, data: SiteData, phase: RenderPhase): s
       <div class="h-footgrid">
         <div>
           <span class="h-brand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Oldal")}</h4>

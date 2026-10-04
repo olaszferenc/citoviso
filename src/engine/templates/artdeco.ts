@@ -15,7 +15,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -286,10 +286,10 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const hero = `<header class="ad-hero" id="top">
     <div class="ad-wrap">
       <div class="ad-frame ad-poster">
-        <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-        ${sub ? `<p class="ad-sub">${esc(sub)}</p>` : ""}
+        <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+        ${sub ? `<p class="ad-sub"${data.tagline && data.tagline !== h1 ? copyHook("tagline") : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }])}>${esc(sub)}</p>` : ""}
         ${decoRule}
-        ${intro ? `<p class="ad-intro">${esc(intro)}</p>` : ""}
+        ${intro ? `<p class="ad-intro"${copyHook("intro", { part: "first-sentence" })}>${esc(intro)}</p>` : ""}
         <div class="ad-heroctas">
           ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szoba lefoglalása")}</a>` : ""}
           ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#ad-rooms">${T(data, "A szobák")}</a>` : ""}
@@ -313,8 +313,8 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="ad-sec" id="ad-rooms">
     <div class="ad-wrap">
       <div class="ad-sechead">
-        ${roomCopy.eyebrow ? `<div class="ad-eyebrow">${esc(roomCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${roomsHeading(data)}</div>`}
-        <h2>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
+        ${roomCopy.eyebrow ? `<div class="ad-eyebrow"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${roomsHeading(data)}</div>`}
+        <h2${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Ahol megszállhat")}</h2>
         ${decoRule.replace("ad-rule", "ad-rule")}
       </div>
       <div class="ad-rooms" data-cit-module="rooms">
@@ -362,8 +362,8 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
         ${data.highlights
           .slice(0, 10)
           .map(
-            (h) =>
-              `<div class="ad-sv"><span class="ad-svlabel">${amenityIconSvg(h, data.amenityIconMap)}<span>${esc(h)}</span></span></div>`,
+            (h, i) =>
+              `<div class="ad-sv"><span class="ad-svlabel">${amenityIconSvg(h, data.amenityIconMap)}<span${highlightHook(data, i)}>${esc(h)}</span></span></div>`,
           )
           .join("\n        ")}
       </div>
@@ -376,8 +376,8 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="ad-sec" id="ad-gallery" style="padding-top:0">
     <div class="ad-wrap">
       <div class="ad-sechead">
-        ${galCopy.eyebrow ? `<div class="ad-eyebrow">${esc(galCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Képek")}</div>`}
-        <h2>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
+        ${galCopy.eyebrow ? `<div class="ad-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Képek")}</div>`}
+        <h2${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Képek")}</h2>
         ${decoRule}
       </div>
       <div class="ad-gal" data-cit-module="gallery">
@@ -413,11 +413,11 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
     ? `<section class="ad-sec ad-rev" id="ad-reviews" data-cit-module="reviews">
     <div class="ad-wrap">
       <div class="ad-sechead">
-        ${revCopy.eyebrow ? `<div class="ad-eyebrow">${esc(revCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Vendégeink")}</div>`}
+        ${revCopy.eyebrow ? `<div class="ad-eyebrow"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</div>` : `<div class="ad-eyebrow">${T(data, "Vendégeink")}</div>`}
         ${
           ratingStat
             ? `<div class="ad-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div>`
-            : `<h2>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
+            : `<h2${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
         }
         ${decoRule}
       </div>
@@ -510,7 +510,7 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
       <div class="ad-footgrid">
         <div>
           <span class="ad-brand">${esc(data.name)}${rhombus}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "A ház")}</h4>

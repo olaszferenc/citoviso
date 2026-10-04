@@ -973,3 +973,49 @@ export async function applyGuestCritic(
     },
   };
 }
+
+/**
+ * JUDGE ONLY — the curator's hand-written copy (ADR-XXXX, D2). The critic reads it and
+ * grades it exactly as it grades a generated round, but NEVER rewrites it: the curator
+ * answers for those words, and a machine silently "fixing" them would put text on the page
+ * that nobody wrote. Same persisted keys as applyGuestCritic, so the send gate reads it.
+ */
+export async function judgeGuestCopy(copy: CopySurface, source: CriticSource): Promise<Record<string, unknown>> {
+  if (!config.anthropicApiKey) {
+    return { guestCriticVerdict: "error", guestCriticReason: "nincs AI-kulcs", guestCriticRounds: 0, guestCriticObjections: [] };
+  }
+  try {
+    const { objections, summary } = await critiqueCopy(copy, source, HOUSE_REGISTER);
+    const round: CriticRound = {
+      copy,
+      objections,
+      verdict: objections.some((o) => o.severity === "blokkolo") ? "flag" : "pass",
+      summary,
+    };
+    const blocking = objections.filter((o) => o.severity === "blokkolo");
+    return {
+      guestCriticVerdict: round.verdict,
+      guestCriticReason:
+        (round.verdict === "pass"
+          ? "kézi szöveg: blokkoló kifogás nincs"
+          : `kézi szöveg: ${blocking.length} blokkoló kifogás → ` +
+            blocking.map((o) => `„${o.quote}” (${o.kind})`).join(" · ")) + minorTail(round),
+      guestCriticRounds: 1,
+      guestCriticObjections: objections.map((o) => ({
+        field: o.field,
+        quote: o.quote,
+        kind: o.kind,
+        severity: o.severity,
+        guestReaction: o.guestReaction,
+        by: o.by,
+      })),
+    };
+  } catch (err) {
+    return {
+      guestCriticVerdict: "error",
+      guestCriticReason: `a kézi szöveg nem ítélhető: ${(err as Error).message}`, // i18n-exempt: operator-facing verdict reason (console)
+      guestCriticRounds: 0,
+      guestCriticObjections: [],
+    };
+  }
+}

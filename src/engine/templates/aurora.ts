@@ -14,7 +14,7 @@ import { SAMPLE_FAQS } from "../primitives.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomsHeading, roomShell, roomsLabel, roomsFor, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const AURORA_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -298,8 +298,8 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     <div class="au-wrap">
       <div class="au-herogrid${hasWidgets ? " au-has-widgets" : ""}">
         <div>
-          <h1 ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
-          ${sub ? `<p class="au-herosub">${esc(sub)}</p>` : ""}
+          <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+          ${sub ? `<p class="au-herosub"${data.tagline && data.tagline !== h1 ? copyHook("tagline") : hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }])}>${esc(sub)}</p>` : ""}
           <div class="au-heroctas">
             ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
             ${roomsData ? `<a class="cit-btn cit-btn-ghost" href="#au-rooms">${roomsHeading(data)}</a>` : ""}
@@ -323,8 +323,8 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const rooms = roomsData
     ? `<section class="au-sec" id="au-rooms">
     <div class="au-wrap">
-      ${roomCopy.eyebrow ? `<span class="au-k">${esc(roomCopy.eyebrow)}</span>` : `<span class="au-k">${roomsLabel(data)}</span>`}
-      <h2 class="au-h2">${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassza ki, hol szeretne megszállni")}</h2>
+      ${roomCopy.eyebrow ? `<span class="au-k"${copyHook("rooms.eyebrow")}>${esc(roomCopy.eyebrow)}</span>` : `<span class="au-k">${roomsLabel(data)}</span>`}
+      <h2 class="au-h2"${hookPick(["rooms.title", roomCopy.title])}>${roomCopy.title ? accented(roomCopy.title, roomCopy.accent) : T(data, "Válassza ki, hol szeretne megszállni")}</h2>
       <div class="au-apts" data-cit-module="rooms">
         ${roomsData
           .map(
@@ -364,8 +364,8 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
         ${data.highlights
           .slice(0, 8)
           .map(
-            (h) =>
-              `<div class="au-glass au-sv"><div class="au-ic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong>${esc(h)}</strong></div>`,
+            (h, i) =>
+              `<div class="au-glass au-sv"><div class="au-ic">${amenityIconSvg(h, data.amenityIconMap)}</div><strong${highlightHook(data, i)}>${esc(h)}</strong></div>`,
           )
           .join("\n        ")}
       </div>
@@ -377,8 +377,8 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const gallery = photos.length
     ? `<section class="au-sec" id="au-gallery">
     <div class="au-wrap">
-      ${galCopy.eyebrow ? `<span class="au-k">${esc(galCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Galéria")}</span>`}
-      <h2 class="au-h2">${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
+      ${galCopy.eyebrow ? `<span class="au-k"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Galéria")}</span>`}
+      <h2 class="au-h2"${hookPick(["gallery.title", galCopy.title])}>${galCopy.title ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="au-gal" data-cit-module="gallery">
         ${photos
           .slice(0, 8)
@@ -394,11 +394,11 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
   const reviews = reviewsData
     ? `<section class="au-sec" id="au-reviews" data-cit-module="reviews">
     <div class="au-wrap">
-      ${revCopy.eyebrow ? `<span class="au-k">${esc(revCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Vélemények")}</span>`}
+      ${revCopy.eyebrow ? `<span class="au-k"${copyHook("reviews.eyebrow")}>${esc(revCopy.eyebrow)}</span>` : `<span class="au-k">${T(data, "Vélemények")}</span>`}
       ${
         ratingStat
           ? `<div class="au-revhead"><div class="au-revscore"><b>${esc(ratingStat.value)}</b><div>${stars5}<span>${esc(ratingStat.label)}</span></div></div></div>`
-          : `<h2 class="au-h2">${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
+          : `<h2 class="au-h2"${hookPick(["reviews.title", revCopy.title])}>${revCopy.title ? accented(revCopy.title, revCopy.accent) : T(data, "Vendégeink")}</h2>`
       }
       <div class="au-revs">
         ${reviewsData
@@ -469,7 +469,7 @@ function renderAurora(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
       <div class="au-fg">
         <div>
           <span class="au-brand">${esc(data.name)}</span>
-          ${data.tagline ? `<p>${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         <div>
           <h4>${T(data, "Felfedezés")}</h4>

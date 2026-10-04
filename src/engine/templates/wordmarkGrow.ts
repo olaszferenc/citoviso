@@ -31,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -271,7 +271,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     <div class="w-hero-copy cit-words" data-cit-hero-copy ${mo("in", 100)}>
       ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
       <h1>${esc(data.name)}</h1>
-      ${heroCopy.lead ? `<p class="w-hero-line">${accented(heroCopy.lead, heroCopy.accent)}</p>` : ""}
+      ${heroCopy.lead ? `<p class="w-hero-line"${copyHook("hero.lead")}>${accented(heroCopy.lead, heroCopy.accent)}</p>` : ""}
     </div>
   </header>`;
 
@@ -288,16 +288,16 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
             // üres, valahányszor nincs AI-szöveg és a régió-tartalék is üres — ami a
             // korpusz 89%-án igaz. Ugyanaz az őrzés, mint a `rest`-nél két sorral lejjebb.
             (featCopy.title ?? data.tagline)
-              ? `<h2 ${mo("up")}>${esc(featCopy.title ?? data.tagline)}</h2>`
+              ? `<h2${hookPick(["features.title", featCopy.title], ["tagline", data.tagline])} ${mo("up")}>${esc(featCopy.title ?? data.tagline)}</h2>`
               : ""
           }
-          <p ${mo("up", 90)}>${accented(lede, heroCopy.accent)}</p>
-          ${rest ? `<p ${mo("up", 150)}>${esc(rest)}</p>` : ""}
+          <p${hookPick(["intro", firstSentence(data.intro, 200), { part: "first-sentence" }], ["tagline", data.tagline])} ${mo("up", 90)}>${accented(lede, heroCopy.accent)}</p>
+          ${rest ? `<p${rest === data.intro ? copyHook("intro") : ""} ${mo("up", 150)}>${esc(rest)}</p>` : ""}
           ${
             data.highlights.length
               ? `<div class="w-chips" ${mo("up", 210)}>${data.highlights
                   .slice(0, 8)
-                  .map((h) => `<span>${esc(h)}</span>`)
+                  .map((h, i) => `<span${highlightHook(data, i)}>${esc(h)}</span>`)
                   .join("")}</div>`
               : ""
           }
@@ -317,7 +317,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ? `<section id="cit-rooms" data-cit-module="rooms" style="padding-top:0">
     <div class="w-wrap">
       <span class="w-spark">${SPARK}</span>
-      <h2 style="font-size:clamp(26px,4vw,46px)" ${mo("up")}>${esc(
+      <h2 style="font-size:clamp(26px,4vw,46px)"${hookPick(["rooms.title", roomsCopy.title])} ${mo("up")}>${esc(
         roomsCopy.title ?? T(data, "Szobák"),
       )}</h2>
       <div class="w-rooms">
@@ -357,7 +357,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
           <h2 ${mo("up")}>${T(data, "Képek")}</h2>
           ${
             (galCopy.eyebrow ?? data.tagline)
-              ? `<p ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`
+              ? `<p${hookPick(["gallery.eyebrow", galCopy.eyebrow], ["tagline", data.tagline])} ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`
               : ""
           }
         </div>
@@ -380,7 +380,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const sayText = galCopy.title ?? data.tagline;
   const say = sayText
     ? `<section class="w-say"><div class="w-wrap">
-    <p class="cit-words" ${mo("in")}>${words(esc(sayText))}</p>
+    <p class="cit-words"${hookPick(["gallery.title", galCopy.title], ["tagline", data.tagline])} ${mo("in")}>${words(esc(sayText))}</p>
   </div></section>`
     : "";
 
@@ -425,7 +425,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <div class="w-fgrid">
         <div>
           <div class="w-brand">${esc(data.name)}</div>
-          ${data.tagline ? `<p style="color:var(--cit-muted);max-width:34ch">${esc(data.tagline)}</p>` : ""}
+          ${data.tagline ? `<p style="color:var(--cit-muted);max-width:34ch"${copyHook("tagline")}>${esc(data.tagline)}</p>` : ""}
         </div>
         ${c.address ? `<div><div class="w-kick">${T(data, "Cím")}</div><p>${esc(c.address)}</p></div>` : ""}
         <div><div class="w-kick">${T(data, "Kapcsolat")}</div>

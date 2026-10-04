@@ -10,6 +10,11 @@ import http from "node:http";
 import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock, type GenStageKey } from "../generator/generateEngine.js";
 import { recopyArtifact } from "../generator/recopy.js";
+import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
+import { isCopyKey, type CopyKey, type CopyValue } from "../engine/copyFields.js";
+import { renderSite } from "../engine/render.js";
+import { injectRuntime } from "../generator/runtime.js";
+import { copyEditorOverlay } from "./copyEditViews.js";
 import { resolveGatedPhotos } from "../generator/generate.js";
 import { clearHeroPin, getHeroPin, repointHero, setHeroPin } from "../generator/heroOverride.js";
 import { photoUrlKey } from "../generator/heroPick.js";
@@ -393,6 +398,9 @@ function lastGenerateOutcome(
  * entry now EXPIRES, and a wedged/finished run can never mute the button forever.
  */
 const recopying = new Map<string, number>();
+/** Hand-edit saves in flight (ADR-XXXX) — one save per mock at a time, and never while an
+ *  AI rewrite of the same mock runs: the two would write the same words over each other. */
+const copySaving = new Set<string>();
 /** A rewrite takes ~40-60s; past this the entry is treated as dead, not as running. */
 const RECOPY_TTL_MS = 5 * 60_000;
 
@@ -2360,6 +2368,90 @@ async function handle(
     }
     const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
     return redirect(res, `${back}?flash=${encodeURIComponent(flash)}#ls-mocks`);
+  }
+  // POST /artifact/:id/copy — the curator's HAND edit of a mock's copy (ADR-XXXX; approved
+  // plan assets/design-refs/console/mock-copy-edit/). ONE path for both surfaces: the field
+  // form on the mock card (a plain form POST → redirect back with the outcome) and the
+  // preview editor (fetch, Accept: application/json → JSON). Synchronous on purpose: the
+  // guards re-judge the new words BEFORE they are written, so there is no window in which
+  // a mock carries new text under the old "pass" verdicts.
+  const copyMatch = /^\/artifact\/([0-9a-f-]{36})\/copy$/i.exec(path);
+  if (method === "POST" && copyMatch) {
+    const id = copyMatch[1]!;
+    const form = await readBody(req);
+    const wantsJson = (req.headers.accept ?? "").includes("application/json");
+    const edits: Partial<Record<CopyKey, CopyValue>> = {};
+    for (const name of new Set(form.keys())) {
+      const key = name.startsWith("c.") ? name.slice(2) : "";
+      if (!isCopyKey(key)) continue;
+      edits[key] = key === "highlights" ? form.getAll(name).filter((x) => x.trim()) : (form.get(name) ?? "");
+    }
+    const op = await currentOperator(req);
+    const actor = op?.displayName || op?.username || "operátor";
+    let result: Awaited<ReturnType<typeof saveManualCopy>>;
+    if (copySaving.has(id)) {
+      result = { ok: false, message: "Ehhez a mockhoz már fut egy mentés — várd meg, és frissíts." };
+    } else if (recopyInFlight(id)) {
+      result = { ok: false, message: "Ehhez a mockhoz épp AI szöveg-újraírás fut — várd meg (~1 perc), utána írj át kézzel." };
+    } else {
+      copySaving.add(id);
+      try {
+        result = await saveManualCopy(id, edits, actor);
+      } catch (err) {
+        console.error(`[console] copy ${id} hiba:`, err); // i18n-exempt: operator log
+        result = { ok: false, message: `A mentés elszállt: ${(err as Error).message.slice(0, 200)}` };
+      } finally {
+        copySaving.delete(id);
+      }
+    }
+    console.log(`[console] copy ${id} (${actor}): ${result.message}`); // i18n-exempt: operator log
+    if (wantsJson) {
+      const row = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", id).executeTakeFirst();
+      const manualKeys = Object.keys(((row?.inputs ?? {}) as { copyManual?: object }).copyManual ?? {});
+      return send(res, result.ok ? 200 : 422, JSON.stringify({ ...result, manualKeys }), "application/json");
+    }
+    const errs = result.errors ? Object.values(result.errors).join(" ") : "";
+    const flash = encodeURIComponent(errs ? `${result.message} ${errs}` : result.message);
+    const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
+    return redirect(res, `${back}?flash=${flash}${result.ok ? "" : "&flashKind=bad"}#copy-${id}`);
+  }
+  // GET /artifact/:id/edit — the CURATOR preview with the copy editor (ADR-XXXX ② B). A
+  // FRESH render of the stored recipe (so the template hooks are always there, and the page
+  // is exactly what a save will write); the stored file stays pure, and the /mock/ link —
+  // which the lead may receive — never carries the editor.
+  const copyEditMatch = /^\/artifact\/([0-9a-f-]{36})\/edit$/i.exec(path);
+  if (method === "GET" && copyEditMatch) {
+    const id = copyEditMatch[1]!;
+    const a = await db
+      .selectFrom("mock_artifact")
+      .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+      .select(["mock_artifact.inputs as inputs", "lead.name as leadName", "lead.id as leadId"])
+      .where("mock_artifact.id", "=", id)
+      .executeTakeFirst();
+    const inputs = (a?.inputs ?? {}) as Record<string, unknown>;
+    const recipe = inputs.recipe as Parameters<typeof renderSite>[0] | undefined;
+    const siteData = inputs.siteData as Parameters<typeof renderSite>[1] | undefined;
+    if (!a || !recipe || !siteData) {
+      return send(res, 404, layout("404", "<p>Ehhez a mockhoz nincs eltárolt recept — a szövege itt nem írható át.</p>"));
+    }
+    const html = await injectRuntime(
+      renderSite(recipe, siteData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
+      siteData.lang ?? "hu",
+    );
+    const tplId = typeof recipe.template === "string" ? recipe.template : "";
+    const overlay = copyEditorOverlay(
+      id,
+      inputs,
+      {
+        frozen: await isCopyFrozen(id),
+        leadName: a.leadName,
+        templateLabel: ((TEMPLATES[tplId]?.label.split(/[—:(]/)[0] ?? tplId).trim() || tplId),
+        backHref: `/lead/${a.leadId}#copy-${id}`,
+      },
+      consoleLang(),
+    );
+    const at = html.lastIndexOf("</body>");
+    return send(res, 200, at >= 0 ? `${html.slice(0, at)}${overlay}${html.slice(at)}` : html + overlay);
   }
   // POST /artifact/:id/delete — remove an approved-but-not-yet-sent mock (house-side
   // cleanup). Guarded server-side by deleteArtifact (a sent/converted mock is a no-op).
