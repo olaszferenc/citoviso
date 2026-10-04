@@ -3,7 +3,7 @@
 **Hatókör:** `src/console/views.ts` · `public/assets/ui/citui-console.css`
 
 Tulaj-jóváhagyás: 2026-10-04 („1. A · 2. Nem · 3. Igen · 4. Nem autofill ha van több email. · 5. ne legyen”).
-Ez a terv a megvalósítás KONTRAKTUSA — elvárt viselkedés, nem stílus-javaslat. Döntés: ADR-XXXX.
+Ez a terv a megvalósítás KONTRAKTUSA — elvárt viselkedés, nem stílus-javaslat. Döntés: ADR-0321.
 
 ## A hiány, ami kikényszerítette
 
@@ -34,7 +34,7 @@ dobott, nem lehetett menteni. A tulaj végül egy címet mentett, a másik elves
 8. **Nincs gyűjtött-cím ajánlás / automatikus kitöltés** (tulaj 4.). Az elvetett vázlatban az
    „Az adatgyűjtés ezt is találta” sor szerepelt; kikerült.
 
-## Ami NEM a felület része, de a terv része (ADR-XXXX)
+## Ami NEM a felület része, de a terv része (ADR-0321)
 
 - Tárolás: `raw.email` = elsődleges (jelentése változatlan), `raw.otherEmails` = a többi.
 - A mock és a honlap CSAK az elsődleges címet mutatja. A további címekre a rendszer soha nem küld

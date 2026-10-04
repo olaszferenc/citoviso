@@ -130,7 +130,7 @@ for (let i = 0; i < run.length; i += BATCH) {
         listings: next.listings ?? [],
       };
       if (next.phone && next.phone !== before.phone) patch.phone = next.phone;
-      // A curator-saved (or curator-cleared) address stays (ADR-XXXX ③).
+      // A curator-saved (or curator-cleared) address stays (ADR-0321 ③).
       if (next.email && next.email !== before.email && !curatorOwnsEmail(before)) patch.email = next.email;
       if (before.material) {
         // Same sum as enrichMaterial's buildMaterial, from the stored components (not the stored

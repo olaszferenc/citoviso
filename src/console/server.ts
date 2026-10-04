@@ -623,7 +623,7 @@ function redirect(res: http.ServerResponse, to: string): void {
 }
 
 /**
- * The „Adatok” form's e-mail rows (ADR-XXXX): every `email` field in row order, the row
+ * The „Adatok” form's e-mail rows (ADR-0321): every `email` field in row order, the row
  * whose „Megkeresés ide” radio (`emailPrimary` = row index) is checked moved to the front.
  * The page script already keeps the primary on top; the index makes a no-JS submit right
  * too. No `email` field at all = the form did not edit e-mail (undefined, not "clear").

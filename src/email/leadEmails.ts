@@ -1,6 +1,6 @@
 import { recipientKey } from "./address.js";
 
-// A LEAD'S E-MAIL ADDRESSES — one primary plus further ones (ADR-XXXX, owner 2026-10-04:
+// A LEAD'S E-MAIL ADDRESSES — one primary plus further ones (ADR-0321, owner 2026-10-04:
 // „lehessen több emailcímet menteni!”).
 //
 // Storage (lead.raw jsonb, no schema change):

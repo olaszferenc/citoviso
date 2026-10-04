@@ -698,7 +698,7 @@ export async function deleteArtifact(artifactId: string): Promise<boolean> {
 export interface LeadEdits {
   readonly name?: string;
   readonly phone?: string;
-  /** The lead's e-mail addresses, PRIMARY FIRST (ADR-XXXX): [0] → `raw.email`, the rest →
+  /** The lead's e-mail addresses, PRIMARY FIRST (ADR-0321): [0] → `raw.email`, the rest →
    *  `raw.otherEmails`. An empty list clears both; omitted = untouched. */
   readonly emails?: readonly string[];
   readonly website?: string;
@@ -763,7 +763,7 @@ export async function saveLeadEdits(
     else delete raw[key];
   };
   (["phone", "website", "address", "country", "city", "ownerIntro"] as const).forEach(apply);
-  // E-mail list (ADR-XXXX): the primary stays in `raw.email` (every existing reader keeps
+  // E-mail list (ADR-0321): the primary stays in `raw.email` (every existing reader keeps
   // meaning "the" address), the rest go to `raw.otherEmails` — never the primary twice.
   if (verdict.emails) {
     // A CHANGED list is a curator decision about e-mail — stamped, so a later re-enrich

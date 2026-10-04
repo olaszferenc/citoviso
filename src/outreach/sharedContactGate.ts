@@ -44,7 +44,7 @@ function keyOf(kind: ContactKind, value: string): string | null {
 }
 
 /** Every e-mail/phone this lead is known by: the primaries (all of the lead's e-mail
- *  addresses, ADR-XXXX) plus the ACCEPTED ledger entries. */
+ *  addresses, ADR-0321) plus the ACCEPTED ledger entries. */
 function contactKeysOf(raw: QualifiedLead, kind: ContactKind): Set<string> {
   const out = new Set<string>();
   const primaries = kind === "email" ? leadEmails(raw) : raw.phone ? [raw.phone] : [];

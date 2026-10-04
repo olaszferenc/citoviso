@@ -36,7 +36,7 @@ export interface DupLead {
   readonly city?: string;
   readonly website?: string;
   readonly email?: string;
-  /** The lead's further addresses (ADR-XXXX) — matched like the primary. */
+  /** The lead's further addresses (ADR-0321) — matched like the primary. */
   readonly otherEmails?: readonly string[];
   readonly phone?: string;
   readonly qualification: string;
@@ -340,7 +340,7 @@ export async function ruleOnPair(input: {
       const merged: QualifiedLead = {
         ...k,
         // Gaps only — a curated value on the kept lead always wins. The e-mail LIST is
-        // one unit (ADR-XXXX): the kept lead's, or — when it has none — the absorbed one's.
+        // one unit (ADR-0321): the kept lead's, or — when it has none — the absorbed one's.
         // Not a union: nobody chose the absorbed lead's addresses for this lead (the
         // absorbed addresses still land in the ledger below, as before).
         email: k.email ?? l.email,

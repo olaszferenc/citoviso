@@ -1,4 +1,4 @@
-## ADR-XXXX — Egy leadnek több e-mail-címe lehet: elsődleges + további; a hideg levél egy címre megy; a kurátor címét az újragyűjtés nem írja felül (2026-10-04)
+## ADR-0321 — Egy leadnek több e-mail-címe lehet: elsődleges + további; a hideg levél egy címre megy; a kurátor címét az újragyűjtés nem írja felül (2026-10-04)
 
 **Dátum:** 2026-10-04 · **Státusz:** elfogadva (tulaj-döntés: „1. A · 2. Nem · 3. Igen · 4. Nem autofill ha van több email. · 5. ne legyen”;
 SUB, brief `~/rc-briefs/tobb-email-cim.md`) · **Terv:** `assets/design-refs/console/lead-multi-email/` (A változat) ·

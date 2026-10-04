@@ -1,6 +1,6 @@
 # 2026-10-04 — Több e-mail-cím egy leadhez (Adatok fül, A változat) + a kurátor e-mailje a kurátoré
 
-**Szál:** SUB (brief `~/rc-briefs/tobb-email-cim.md`), koordinátor: „mock-összehasonlító / Kapunyitás” session. Döntés: ADR-XXXX.
+**Szál:** SUB (brief `~/rc-briefs/tobb-email-cim.md`), koordinátor: „mock-összehasonlító / Kapunyitás” session. Döntés: ADR-0321.
 Tulaj-döntések (2026-10-04): „1. A · 2. Nem · 3. Igen · 4. Nem autofill ha van több email. · 5. ne legyen”.
 
 ## Elvégezve

@@ -28,7 +28,7 @@ const rows = await db
 const dirty: { id: string; name: string; email: string; raw: QualifiedLead; stage: string }[] = [];
 for (const r of rows) {
   const raw = (typeof r.raw === "string" ? JSON.parse(r.raw) : r.raw) as QualifiedLead;
-  // A curator-saved address is the curator's (ADR-XXXX ③) — reported nowhere, touched never.
+  // A curator-saved address is the curator's (ADR-0321 ③) — reported nowhere, touched never.
   if (raw.email && !isBusinessEmail(raw.email) && !curatorOwnsEmail(raw)) {
     dirty.push({ id: r.id, name: r.name, email: raw.email, raw, stage: r.lifecycle_status });
   }

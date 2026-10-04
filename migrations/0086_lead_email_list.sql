@@ -1,4 +1,4 @@
--- 0086 TÖBB E-MAIL-CÍM EGY LEADNEK — a már tárolt többcímes `raw.email` szétbontása (ADR-XXXX).
+-- 0086 TÖBB E-MAIL-CÍM EGY LEADNEK — a már tárolt többcímes `raw.email` szétbontása (ADR-0321).
 --
 -- ADATMODELL (séma-változás NINCS, a cím a lead.raw jsonb-ben él):
 --   · raw.email        — az ELSŐDLEGES cím, jelentése változatlan (mock/honlap ezt mutatja,

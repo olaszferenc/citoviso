@@ -126,7 +126,7 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
   // Curator edits and the audit trail live on `raw` outside the QualifiedLead
   // shape — carry them across verbatim so a re-enrich never erases them.
   // …and a curator-saved e-mail is not the web search's to swap or the scrub's to drop
-  // (ADR-XXXX ③) — this button promises „Nem ír felül kurátori adatot”.
+  // (ADR-0321 ③) — this button promises „Nem ír felül kurátori adatot”.
   const merged = keepCuratorEmail(before as unknown as Record<string, unknown>, {
     ...(before as unknown as Record<string, unknown>),
     ...(after as unknown as Record<string, unknown>),

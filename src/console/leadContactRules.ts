@@ -62,7 +62,7 @@ function joinDigitGroups(s: string): string {
 export interface LeadContactInput {
   readonly address?: string;
   readonly country?: string;
-  /** The lead's e-mail addresses, primary first (ADR-XXXX). Omitted = not edited. */
+  /** The lead's e-mail addresses, primary first (ADR-0321). Omitted = not edited. */
   readonly emails?: readonly string[];
 }
 
@@ -100,7 +100,7 @@ export function checkLeadContact(input: LeadContactInput): LeadContactVerdict {
     else problems.push(`Az ország kétbetűs kód legyen (pl. HU), nem „${rawCountry}”.`);
   }
   // E-mail: today's format rule (the browser's type=email, now also checked here because a
-  // list no longer fits one browser-validated field) + one mailbox once. ADR-XXXX.
+  // list no longer fits one browser-validated field) + one mailbox once. ADR-0321.
   let emails: readonly string[] | undefined;
   if (input.emails !== undefined) {
     const v = checkEmailList(input.emails);

@@ -4063,7 +4063,7 @@ function contactLedgerBlock(
 ): string {
   const lang = consoleLang();
   if (!contacts?.length) return "";
-  // The lead's own list (ADR-XXXX): same MAILBOX counts (case, +tag), not the same string.
+  // The lead's own list (ADR-0321): same MAILBOX counts (case, +tag), not the same string.
   const isListed = (c: ContactCandidate): boolean =>
     c.kind === "email" && (otherEmails ?? []).some((o) => recipientKey(o) === recipientKey(c.value));
   const order = (c: ContactCandidate): number =>
@@ -6947,7 +6947,7 @@ function galleryScript(): string {
         return { open: open, close: close };
       })();
 
-      /* E-MAIL ROWS on the „Adatok” form (ADR-XXXX, approved plan lead-multi-email A).
+      /* E-MAIL ROWS on the „Adatok” form (ADR-0321, approved plan lead-multi-email A).
          Row 1 is always the primary: promoting a row moves it to the top. A pasted list
          splits into rows; the same mailbox (case and +tag folded — the opt-out's key) is
          skipped and the note says so. The server re-checks everything (all-or-nothing). */

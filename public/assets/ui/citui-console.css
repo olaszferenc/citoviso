@@ -552,7 +552,7 @@
 .con-edit-site .con-open { margin-top: 25px; width: 38px; height: 38px; }
 @media (max-width: 900px) { .con-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .con-edit-grid { grid-template-columns: minmax(0, 1fr); } }
-/* E-mail list (ADR-XXXX, approved plan design-refs/console/lead-multi-email, variant A).
+/* E-mail list (ADR-0321, approved plan design-refs/console/lead-multi-email, variant A).
    The address field spans two columns so the row above stays a clean 3 + (1+2); the
    e-mail list gets its own full-width row: one line per address — address · „Megkeresés
    ide” · delete. On a phone the radio and the delete button drop under the address so

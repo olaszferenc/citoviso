@@ -1,6 +1,6 @@
 import { normalizeEmail } from "../email/address.js";
 
-// A CURATOR'S E-MAIL IS NOT THE SCRAPER'S TO REWRITE (ADR-XXXX ③, owner 2026-10-04: „Igen”).
+// A CURATOR'S E-MAIL IS NOT THE SCRAPER'S TO REWRITE (ADR-0321 ③, owner 2026-10-04: „Igen”).
 //
 // Measured 2026-10-04: no re-enrich or backfill path read `raw.curatorEditedAt`. The web
 // search replaced a stored address it judged "uncorroborated" with what it found

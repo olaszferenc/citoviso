@@ -156,7 +156,7 @@ async function main(): Promise<void> {
     // Scrub known-bad stored contacts first (the pre-filter era stored the
     // tourist office's address on some leads) — otherwise "has an email"
     // makes the contact search skip exactly the leads that need it.
-    // A curator-saved address is exempt (ADR-XXXX ③): the owner's gmail fails
+    // A curator-saved address is exempt (ADR-0321 ③): the owner's gmail fails
     // isBusinessEmail and is still the right address.
     const scrubbed = before.map((l) =>
       l.email && !isBusinessEmail(l.email) && !curatorOwnsEmail(l) ? { ...l, email: undefined } : l,

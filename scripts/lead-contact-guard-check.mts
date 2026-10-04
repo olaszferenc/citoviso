@@ -19,7 +19,7 @@
  *   ③ az űrlap (leadPage): a form `autocomplete="off"`, és a cím/ország/telefon/e-mail/város mező
  *     nem szabványos autocomplete-tokent visel (a Chrome ezt nem tölti; tulaj-engedély 2026-10-03).
  *
- * TÖBB E-MAIL-CÍM (ADR-XXXX, tulaj 2026-10-04: „lehessen több emailcímet menteni!”):
+ * TÖBB E-MAIL-CÍM (ADR-0321, tulaj 2026-10-04: „lehessen több emailcímet menteni!”):
  *   ④ szabály (leadEmails.ts): a tulaj sora („a; b”) két címre bomlik; ugyanaz a postafiók
  *     (kis/nagybetű, +címke) kétszer elutasítva; a mai formátum marad (pont nélküli domain
  *     ÁTMEGY — tulaj: „ne legyen” szigorúbb); szemét elutasítva; entitás nem vág ketté;
@@ -125,7 +125,7 @@ try {
   ok(after2.address === "8274 Köveskál, Fő u. 24." && raw2.address === "8274 Köveskál, Fő u. 24.", "a cím oszlopban és raw-ban is", JSON.stringify(after2));
   ok(raw2.country === "HU", "az ország ISO-2-ként áll (nem „MAGYARORSZÁG”)", String(raw2.country));
 
-  // ⑤ e-mail list (ADR-XXXX)
+  // ⑤ e-mail list (ADR-0321)
   console.log("⑤ e-mail-lista mentése — elsődleges + további, mindent-vagy-semmit");
   const r3 = await saveLeadEdits(lead.id, { emails: ["agrogere@gmail.com", "ezustnyar@outlook.hu; info@ezustnyar.hu"] }, new Date());
   const raw3 = (await read()).raw as Record<string, unknown>;

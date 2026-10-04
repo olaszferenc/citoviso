@@ -127,7 +127,7 @@ export interface QualifiedLead {
   readonly phone?: string;
   /** The PRIMARY address: shown on the mock/site, the one a cold mail may go to. */
   readonly email?: string;
-  /** Further addresses (ADR-XXXX): the lead's data, never a cold-mail recipient.
+  /** Further addresses (ADR-0321): the lead's data, never a cold-mail recipient.
    *  Never repeats `email`. Read both through `leadEmails()` (src/email/leadEmails.ts). */
   readonly otherEmails?: readonly string[];
   readonly website?: string;
