@@ -1,4 +1,4 @@
-// LYRICAL OPENING — the rule for the hero headline, the subtitle and the intro (ADR-XXXX).
+// LYRICAL OPENING — the rule for the hero headline, the subtitle and the intro (ADR-0324).
 //
 // Owner, 2026-10-04: „valahogy el kellene érni, hogy ilyen nem vendégcsalogató szövegeket
 // generáljon a rendszer. 9/10 esetben ez van…” and „le kellene tiltani a nyitórésznél azt, hogy

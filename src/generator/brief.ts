@@ -109,7 +109,7 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
   (pl. melyik parton/oldalon fekszik) SOHA ne állíts belőle. (Megtörtént kár: a "Balaton
   északi part" sweep-címkéből "az északi parton" tagline lett egy DÉLI parti szállásról.)
 - ⛔⛔ A NYITÓRÉSZ (tagline + intro, és az editorial hero főcíme) LÍRAI, NEM LEÍRÓ (tulaj, 2026-10-04:
-  „le kellene tiltani a nyitórésznél, hogy leíró módban menjen… Lírai szöveg kell”; ADR-XXXX). A hely
+  „le kellene tiltani a nyitórésznél, hogy leíró módban menjen… Lírai szöveg kell”; ADR-0324). A hely
   ÉRZETÉT adja: táj, fekvés, évszak, mit él át ott a vendég, kinek való.
   ⛔ LEÍRÓ MÓD TILOS a nyitórészben: felület, szín, anyag, tető, homlokzat, burkolat, bútor, méret,
   felszereltség-felsorolás. Megtörtént kár (tulaj: „sötétre pácolt???? komolyan????”):
@@ -304,7 +304,7 @@ export async function generateBriefAndCopy(input: {
   regionContext?: string;
   address?: string | null;
   /** The lead's OWN town — the place fact the copy may always name. The scrape area's name is
-   *  not one (ADR-XXXX): a 32 km search circle called "Balaton-Kelet" also covers the Bakony. */
+   *  not one (ADR-0324): a 32 km search circle called "Balaton-Kelet" also covers the Bakony. */
   town?: string | null;
   /** REAL numbers the editorial may use verbatim (e.g. the A4-gated Google rating). */
   realStats?: readonly { value: string; label: string }[];
@@ -364,7 +364,7 @@ export async function generateBriefAndCopy(input: {
             `forrásolt tények, és ezek mondják meg, MIÉRT választja a vendég ezt a helyet.\n` +
             `⛔ Ez a lista a KIEMELÉSEK ("highlights") forrása. A nyitórész (főcím, alcím, intro) NEM\n` +
             `ennek a felsorolása: az lírai, a hely érzetét adja; belőle legfeljebb EGY adottság kerülhet\n` +
-            `a főcímbe, élménybe ágyazva (ADR-XXXX).\n` +
+            `a főcímbe, élménybe ágyazva (ADR-0324).\n` +
             `A "highlights" ELSŐSORBAN ezekből épüljön; a fotó a hangulaté és a palettáé.\n` +
             `⛔ RANGSOR: ha a tények közt VÍZPARTI FEKVÉS, saját strand, stég, medence vagy\n` +
             `panoráma szerepel, a nyitórész lírai képe és az első kiemelés EZT vigye — a kert, a parkoló, a\n` +

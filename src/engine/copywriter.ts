@@ -77,7 +77,7 @@ SZIGORÚ SZABÁLYOK (kötelező):
 1. TÉNYHŰSÉG (§B.17): SOHA ne találj ki számot, díjat, csillagot, díjazást, méretet vagy konkrét jellemzőt.
    Számot CSAK akkor írhatsz, ha a megadott tények között PONTOSAN szerepel. Ha nincs ilyen adat, ne írj számot.
 2. ⛔⛔ A hero "lead" A LAP LEGOLVASOTTABB SORA — LÍRAI sor, ami megmutatja, MIÉRT JÖN IDE A
-   VENDÉG (tulaj, 2026-10-04: „Lírai szöveg kell”; ADR-XXXX). A hely ÉRZETÉT adja egy FORRÁSBÓL
+   VENDÉG (tulaj, 2026-10-04: „Lírai szöveg kell”; ADR-0324). A hely ÉRZETÉT adja egy FORRÁSBÓL
    ismert képpel: táj, fekvés, közelség, évszak, program, kinek való (pár, család, baráti kör,
    kutyás). Forrás: a szállás saját bemutatkozása, a vendég-vélemények, az igazolt tények, a
    település.

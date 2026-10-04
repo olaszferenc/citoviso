@@ -15,7 +15,7 @@
 - [2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md](2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md) — 2026-10-04 — Névből növő B: húzható 4:3 Képek-sáv, Foglalás-kártya a Képek után, nagyobb és lassabb nyitány
 - [2026-10-04_mock_szoveg_kezi_atiras.md](2026-10-04_mock_szoveg_kezi_atiras.md) — 2026-10-04 — A mock szövege kézzel átírható (A + B, ADR-0323)
 - [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
-- [2026-10-04_lirai_nyitoresz.md](2026-10-04_lirai_nyitoresz.md) — 2026-10-04 — Lírai nyitórész: a leltár-főcím és a leíró intro vége; a gyűjtési terület nem lead-tény (ADR-XXXX)
+- [2026-10-04_lirai_nyitoresz.md](2026-10-04_lirai_nyitoresz.md) — 2026-10-04 — Lírai nyitórész: a leltár-főcím és a leíró intro vége; a gyűjtési terület nem lead-tény (ADR-0324)
 - [2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md](2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md) — 2026-10-04 — Lead-lista MOCK oszlop: a legerősebb mock-állapot + „✓ kiküldve” szűrő
 - [2026-10-04_js_honlap_renderelt_igazolas.md](2026-10-04_js_honlap_renderelt_igazolas.md) — 2026-10-04 — A JS-sel épülő saját honlap is igazolható (Dalma panzió)
 - [2026-10-04_foglalas_sav_kozos_kartya.md](2026-10-04_foglalas_sav_kozos_kartya.md) — 2026-10-04 — Foglalás-sáv kártyaként, egy közös szabállyal (arch-frames · tilted-gallery · wordmark-grow)

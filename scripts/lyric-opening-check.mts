@@ -1,4 +1,4 @@
-// LYRIC-OPENING GATE — „a nyitórész LÍRAI, nem leíró és nem leltár” (ADR-XXXX, tulaj 2026-10-04).
+// LYRIC-OPENING GATE — „a nyitórész LÍRAI, nem leíró és nem leltár” (ADR-0324, tulaj 2026-10-04).
 //
 // A SZABÁLY: a hero főcím, az alcím és az intro a hely érzetét adja, FORRÁSBÓL; leíró mód
 // (felület, anyag, szín, bútor) és felszereltség-lista tilos, a főcímben legfeljebb EGY adottság
@@ -36,7 +36,7 @@ const check = (cond: boolean, m: string) => (cond ? oks.push(m) : fails.push(m))
 type Line = { field: string; text: string };
 type Src = { name: string; town?: string | null; texts: string[]; reviews: string[] };
 
-/** The shipped behaviour before ADR-XXXX: no opening lint at all. */
+/** The shipped behaviour before ADR-0324: no opening lint at all. */
 const lint = (lines: Line[], src: Src) => (SELF_TEST ? [] : lintOpening(lines, src));
 
 // The shipped market rule: a headline naming no amenity is flagged — the rule that made the
@@ -166,7 +166,7 @@ if (SELF_TEST) {
   process.exit(1);
 }
 if (fails.length) {
-  console.log("⛔ a nyitórész-szabály sérült (ADR-XXXX)");
+  console.log("⛔ a nyitórész-szabály sérült (ADR-0324)");
   process.exit(1);
 }
 console.log("✅ a nyitórész lírai: leíró mód és leltár blokkolva, a forrásolt líra átmegy, a régi kötelezés eltűnt");

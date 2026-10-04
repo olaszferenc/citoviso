@@ -1,4 +1,4 @@
-# 2026-10-04 — Lírai nyitórész: a leltár-főcím és a leíró intro vége; a gyűjtési terület nem lead-tény (ADR-XXXX)
+# 2026-10-04 — Lírai nyitórész: a leltár-főcím és a leíró intro vége; a gyűjtési terület nem lead-tény (ADR-0324)
 
 **Szál:** SUB (koordinátor: CIT „mock-összehasonlító / Kapunyitás”, `wt/citcad90429`), brief
 `~/rc-briefs/vendegcsalogato-hos-szoveg.md`. Tulaj: „9/10 esetben ez van”, „sötétre pácolt???? komolyan????”,

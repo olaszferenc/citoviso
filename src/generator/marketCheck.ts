@@ -470,7 +470,7 @@ export async function verifyMarketRelevance(input: {
     };
   }
 
-  // ⛔ INVERTED 2026-10-04 (ADR-XXXX). Until then this layer flagged every headline that named
+  // ⛔ INVERTED 2026-10-04 (ADR-0324). Until then this layer flagged every headline that named
   // no amenity, and together with the prompt (ADR-0091 ④, ADR-0097 ④) it made the inventory
   // headline MANDATORY: 49 of the last 50 mocks led with one („Bekerített kert tűzrakóval és
   // saját parkoló Hárskúton”), and the owner's verdict was „9/10 esetben ez van”. The rule is

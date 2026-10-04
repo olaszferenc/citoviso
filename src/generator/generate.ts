@@ -147,7 +147,7 @@ export function resolveRegion(
   lon: number | null | undefined,
 ): { id: string; label: string; known: boolean } {
   // ⛔ A COLLECTION AREA'S NAME IS NOT A FACT ABOUT THE LEAD (ADR-0143's rule, carried into the
-  // generator — ADR-XXXX). A scrape area is a search circle; its name is true for the circle at
+  // generator — ADR-0324). A scrape area is a search circle; its name is true for the circle at
   // best. Measured 2026-10-04: "Balaton-Kelet" is a 32 km circle that reaches into the Bakony,
   // and Hárskút (Kerekerdő vendégház) was handed to the copywriter AND to the fact gate's
   // licence as a "Balaton-Kelet" property. So `known` is true only where a hand-authored

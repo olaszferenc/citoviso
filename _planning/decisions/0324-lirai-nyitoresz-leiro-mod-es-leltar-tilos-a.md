@@ -1,4 +1,4 @@
-## ADR-XXXX — Lírai nyitórész: leíró mód és leltár tilos, a líra is forrásból; a gyűjtési terület neve nem lead-tény (2026-10-04)
+## ADR-0324 — Lírai nyitórész: leíró mód és leltár tilos, a líra is forrásból; a gyűjtési terület neve nem lead-tény (2026-10-04)
 
 **Dátum:** 2026-10-04 · **Státusz:** elfogadva — a tulaj a koordinátoron át (SUB, brief
 `~/rc-briefs/vendegcsalogato-hos-szoveg.md`) · **Felülírja:** ADR-0091 ④ („a hero lead önmagában nevezzen

@@ -497,7 +497,7 @@ const ALWAYS_BLOCKING: ReadonlySet<ObjectionKind> = new Set([
   "velemeny_mint_szolgaltatas",
   "nem_letezo_fogalom",
   "al_idezet",
-  // ADR-XXXX: the opening rules. A descriptive or inventory opening is the owner's „9/10”
+  // ADR-0324: the opening rules. A descriptive or inventory opening is the owner's „9/10”
   // complaint itself; grading it "javítandó" would ship it with a PASS.
   "leiro_nyitas",
   "leltar_nyitas",
@@ -519,7 +519,7 @@ export function normalizeSeverity(o: Objection): Objection {
 }
 
 /**
- * The lyrical-opening rules (lyricOpening.ts, ADR-XXXX) as blocking objections. Evidence is
+ * The lyrical-opening rules (lyricOpening.ts, ADR-0324) as blocking objections. Evidence is
  * the same unit set the other source rules read: listing labels + quotes, the prose, reviews.
  */
 export function lintOpeningCopy(c: CopySurface, source: CriticSource): Objection[] {

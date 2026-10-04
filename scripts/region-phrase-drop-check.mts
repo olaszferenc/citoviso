@@ -56,7 +56,7 @@ const S = SELF_TEST ? OLD.regionSourceLine : regionSourceLine;
 // A dev-korpuszon MÉRT kulcsok, és hogy melyikük mögött van `region` rekord.
 // A `Balaton` szándékosan itt van: VALÓDI helynévnek látszik, de gyűjtő-definíció kulcsa —
 // ezért nem szó-feketelista az őr, hanem a `known` zászlót méri.
-// ADR-XXXX (2026-10-04): a GYŰJTÉSI terület neve (`balaton-north`, a DB-ben `balaton-kelet`,
+// ADR-0324 (2026-10-04): a GYŰJTÉSI terület neve (`balaton-north`, a DB-ben `balaton-kelet`,
 // `keszthely-es-kornyeke`) NEM a lead földrajza — egy 32 km-es keresési kör a Bakonyba is
 // belelóg (mérve: Hárskút „Balaton-Kelet” lett). Lead-tény csak a kézzel írt, a helyért
 // kezeskedő kontextus (REGIONS: `badacsony`) neve.
