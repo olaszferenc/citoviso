@@ -389,7 +389,7 @@ if [ -f scripts/mock-card-fact-list-check.mts ] && \
   echo "[pre-commit] mock-card-fact-list-check (a tényhűség-jelvény kinyitja a listát a kártyán)…"
   npx tsx scripts/mock-card-fact-list-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (tulaj 2026-10-04, terv: design-refs/console/mock-copy-edit): a mock szövege KÉZZEL átírható —
+# A mock kézi szöveg-átírása (tulaj 2026-10-04, terv: design-refs/console/mock-copy-edit): a mock szövege KÉZZEL átírható —
 # a B (helyben szerkesztés) a sablonok `data-cit-copy` horgain él. Egy horog nélkül kirajzolt mező
 # NÉMÁN nem kattintható, egy csomagoló-elemre tett horog pedig ROSSZ szöveget mentene. 21 sablon, Chromium.
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
@@ -398,7 +398,7 @@ if [ -f scripts/copy-hook-check.mts ] && \
   echo "[pre-commit] copy-hook-check (minden kirajzolt szöveg-mező horgolt, a horog szövege = a mező)…"
   npx tsx scripts/copy-hook-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX: a kézi átírás szabályai — a beágyazott szerkesztő-szkriptek PARSE-olnak (mérve: egy
+# A mock kézi szöveg-átírása: a szabályok — a beágyazott szerkesztő-szkriptek PARSE-olnak (mérve: egy
 # escape-hiba a teljes B szerkesztőt némán megölte), a mentési terv, és a D3: az AI-újraírás a kézi
 # mezőt nem írja felül. ⚠️ ÖN-TRIGGER: a minta az őr saját fájlját is tartalmazza.
 if [ -f scripts/copy-manual-check.mts ] && \
