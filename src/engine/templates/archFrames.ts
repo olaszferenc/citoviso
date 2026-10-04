@@ -25,7 +25,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn sprig — inline SVG, never an emoji (§B.4). Dresses from currentColor. */
 const SPRIG = `<svg viewBox="0 0 60 160" width="56" height="150" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
@@ -471,6 +471,11 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
 
   const gallery = galleryOf(galleryOrder(photos, [heroBlock, about, roomsBlock, feature, band, review, footer].join("")));
 
+  // contract booking-card: with a booking surface the slim band is a card right after the
+  // photos — at the end it sat directly above the full calendar, repeating its „Foglalás”
+  // heading and jumping to the section right below it. The enquiry bar keeps its old place.
+  const bandMid = hasBookingSurface(data, phase);
+
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -484,6 +489,7 @@ function renderArch(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
 
 ${ARCH_CSS}
 ${centredModsecCss("arch-frames")}
+${bookingCardCss("arch-frames", "clamp(56px,8vh,104px) 0")}
 ${motionCss("calm")}
 ${fadeIntroCss()}
   </style>
@@ -496,10 +502,11 @@ ${fadeIntroCss()}
   ${feature}
   ${band}
   ${gallery}
+  ${bandMid ? bookingSlot(data, phase) : ""}
   ${slotMarker("trust")}
   ${review}
   ${slotMarker("practical")}
-  ${bookingSlot(data, phase)}
+  ${bandMid ? "" : bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
   ${fadeIntroHtml({ name: esc(data.name), place: esc(place) })}

@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-04 (🌐 **JS-es saját honlap igazolása** — renderelt második nézet a `verify()`-hoz, Dalma panzió; jegyzet `_planning/memory/2026-10-04_js_honlap_renderelt_igazolas.md`) · (📧 **Több e-mail-cím egy leadhez** (ADR-0321, tulaj „A”): az Adatok fülön soronként egy cím, „Megkeresés ide” = elsődleges (`raw.email`), a többi `raw.otherEmails` (sosem címzett, nyilvánosan nem látszik); mindent-vagy-semmit, mai formátum-szabály; az újragyűjtés a kurátor e-mailjét nem írja felül (`curatorEmail.ts`, `raw.emailCuratedAt`); OSM „a;b” bontva; migráció 0086 (élesen a nagy deployjal); nyitott: egycímes leadnél előtöltse-e a követett link címzettjét; jegyzet `_planning/memory/2026-10-04_tobb_email_cim_egy_leadhez.md`)
+Utolsó frissítés: 2026-10-04 (🗂️ **Foglalás-sáv kártyaként, EGY közös szabállyal** (tulaj „A”) — arch-frames + tilted-gallery: a formázatlan, x=0-n tapadó sáv a Képek után kártya; `templateKit bookingCardCss()`, a Névből növő is erre állt át (bájtra azonos); őr `booking-card-check`; kontraktus `design-refs/tenant-site/booking-card/`; jegyzet `_planning/memory/2026-10-04_foglalas_sav_kozos_kartya.md`) · (🌐 **JS-es saját honlap igazolása** — renderelt második nézet a `verify()`-hoz, Dalma panzió; jegyzet `_planning/memory/2026-10-04_js_honlap_renderelt_igazolas.md`) · (📧 **Több e-mail-cím egy leadhez** (ADR-0321, tulaj „A”): az Adatok fülön soronként egy cím, „Megkeresés ide” = elsődleges (`raw.email`), a többi `raw.otherEmails` (sosem címzett, nyilvánosan nem látszik); mindent-vagy-semmit, mai formátum-szabály; az újragyűjtés a kurátor e-mailjét nem írja felül (`curatorEmail.ts`, `raw.emailCuratedAt`); OSM „a;b” bontva; migráció 0086 (élesen a nagy deployjal); nyitott: egycímes leadnél előtöltse-e a követett link címzettjét; jegyzet `_planning/memory/2026-10-04_tobb_email_cim_egy_leadhez.md`)
 
 Utolsó frissítés: 2026-10-04 (📧 **Több e-mail-cím egy leadhez** (ADR-0321, tulaj „A”): az Adatok fülön soronként egy cím, „Megkeresés ide” = elsődleges (`raw.email`), a többi `raw.otherEmails` (sosem címzett, nyilvánosan nem látszik); mindent-vagy-semmit, mai formátum-szabály; az újragyűjtés a kurátor e-mailjét nem írja felül (`curatorEmail.ts`, `raw.emailCuratedAt`); OSM „a;b” bontva; migráció 0086 (élesen a nagy deployjal); követett link címzettje: egycímes leadnél előtöltve, többcímesnél üres („igen töltse elő”); jegyzet `_planning/memory/2026-10-04_tobb_email_cim_egy_leadhez.md`)
 
@@ -16,6 +16,12 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > ez a teljes éles kör egyetlen bizonyítéka: terhelés → webhook → élesítés → **valódi számla**.
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
+
+## Párhuzamos szál (2026-10-04 — SUB `cit61465bce`: Foglalás-sáv közös kártya — arch-frames · tilted-gallery · wordmark-grow) — LANDOLVA, élesre csak a nagy deployjal
+Mérve 21 sablonon: csak az arch-frames és a tilted-gallery sávja volt formázatlan (a közös sáv-stílus nem jut beléjük; x=0, a naptár fölött).
+Tulaj „A”: a Névből növő B kártyája EGY közös szabályként (`templateKit.ts bookingCardCss()`), a Képek után; a Névből növő is erre állt
+(számított stílus 390/1440 bájtra azonos). Őr `scripts/booking-card-check.mts`. Nem nyúlt: walk-through/artdeco dupla „Foglalás” cím,
+menü-link (a kártyára visz). Részletek: `_planning/memory/2026-10-04_foglalas_sav_kozos_kartya.md`.
 
 ## Párhuzamos szál (2026-10-04 — `citb4fcc361`: JS-sel épülő saját honlap igazolása, Dalma panzió) — LANDOLVA (`c9bd29a9`), élesre csak a nagy deployjal
 

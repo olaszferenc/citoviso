@@ -21,7 +21,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingCardCss, bookingSlot, centredModsecCss, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 const TILTED_CSS = `
 /* shared module sections (.cit-modsec) dressed to this template's rhythm (ADR-0057):
@@ -445,6 +445,11 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
     </div>
   </footer>`;
 
+  // contract booking-card: with a booking surface the slim band is a card right after the
+  // photos — at the end it sat directly above the full calendar, repeating its „Foglalás”
+  // heading and jumping to the section right below it. The enquiry bar keeps its old place.
+  const bandMid = hasBookingSurface(data, phase);
+
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">
 <head>
@@ -458,6 +463,7 @@ function renderTilted(recipe: Recipe, data: SiteData, phase: RenderPhase): strin
 
 ${TILTED_CSS}
 ${centredModsecCss("tilted-gallery")}
+${bookingCardCss("tilted-gallery", "clamp(56px,8vh,104px) 0")}
 ${motionCss("calm")}
   </style>
 </head>
@@ -470,9 +476,10 @@ ${motionCss("calm")}
   ${feature}
   ${slotMarker("trust")}
   ${moodBlock}
+  ${bandMid ? bookingSlot(data, phase) : ""}
   ${slotMarker("practical")}
   ${review}
-  ${bookingSlot(data, phase)}
+  ${bandMid ? "" : bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
   <div class="t-book" data-cit-mobbar>

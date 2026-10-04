@@ -31,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -162,20 +162,6 @@ section{padding:clamp(70px,10vh,124px) 0}
   box-shadow:0 18px 26px -20px color-mix(in srgb,var(--cit-ink) 55%,transparent)}
 .w-gstrip .cit-gpager{margin-top:22px}
 @media(max-width:860px){.w-gtrack{gap:14px}.w-gtrack .w-gcard{flex-basis:86%}}
-/* the booking band (contract wordmark-grow-b): a card right after the photos, the full
-   calendar stays in the closing booking section. Only the "cta" band — the enquiry bar
-   hydrates into a mini-form and keeps the shared layout. */
-.cit-enquiry--bar[data-cit-variant="cta"]{padding:0 0 clamp(70px,10vh,124px)}
-[data-cit-variant="cta"] .cit-enquiry-bar-inner{width:min(1140px,88vw);margin-inline:auto;display:flex;
-  align-items:center;justify-content:space-between;gap:24px;padding:34px 40px;border-radius:20px;
-  background:var(--cit-surface);border:1px solid var(--cit-line);
-  box-shadow:0 30px 64px -44px color-mix(in srgb,var(--cit-ink) 66%,transparent)}
-[data-cit-variant="cta"] .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);
-  font-size:clamp(24px,3vw,34px);color:var(--cit-ink)}
-[data-cit-variant="cta"] .cit-btn{flex:none}
-@media(max-width:640px){[data-cit-variant="cta"] .cit-enquiry-bar-inner{flex-direction:column;
-  align-items:stretch;text-align:center;padding:26px 22px}
-  [data-cit-variant="cta"] .cit-btn{text-align:center}}
 .w-row h2{font-size:clamp(26px,4vw,46px);line-height:1.16;margin-bottom:.5em}
 .w-row p{margin:0 0 1em;max-width:44ch;color:color-mix(in srgb,var(--cit-ink) 86%,transparent)}
 @media(max-width:860px){.w-row,.w-row.rev{grid-template-columns:1fr;gap:30px}
@@ -485,6 +471,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   ${renderSkinVars(skin, data.palette?.accent)}
 
 ${WORD_CSS}
+${bookingCardCss("wordmark-grow", "0 0 clamp(70px,10vh,124px)")}
 ${motionCss("calm")}
 ${intro.photos.length ? introCss() : ""}
   </style>

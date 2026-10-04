@@ -908,6 +908,15 @@ if [ -f scripts/gallery-reach-check.mts ] && \
   echo "[pre-commit] gallery-reach-check (minden fotó elérhető, a még nem látottal indul)…"
   npx tsx scripts/gallery-reach-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Foglalás-sáv = KÁRTYA a Képek után (kontraktus design-refs/tenant-site/booking-card, tulaj „A”
+# 2026-10-04): az arch-frames és a tilted-gallery sávja formázatlanul x=0-n tapadt, a naptár
+# fölött. Asztal + telefon, a gomb a naptárhoz visz, érdeklődés-sáv a régi helyén. ~30 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/booking-card-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/(archFrames|tiltedGallery|wordmarkGrow)\.ts$|^src/engine/(templateKit|render|primitives)\.ts$|^assets/runtime/(cit-runtime\.js|cit-modules\.css)$|^src/generator/runtime\.ts$|^scripts/booking-card-check\.mts$'; then
+  echo "[pre-commit] booking-card-check (foglalás-sáv kártyaként a Képek után)…"
+  npx tsx scripts/booking-card-check.mts >"$GATE_LOG" || gate_failed
+fi
 # §B.17 a KIKÜLDÖTT mockon: a vélemény-űrlap — az egyetlen, ami nevet, e-mailt és
 # hozzájárulást kér — jelöletlen volt, és közzétételt ígért egy űrlapról, ami sehova
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt

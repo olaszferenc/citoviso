@@ -586,6 +586,35 @@ export function centredModsecCss(tpl: string): string {
     ${s} [data-cit-module="usp"] .cit-modsec__grid > *{flex:1 1 100%}}`;
 }
 
+/**
+ * The slim booking band ("cta" variant of bookingSlot) as a designed CARD — contract
+ * assets/design-refs/tenant-site/booking-card/ (owner ruling „A”, 2026-10-04).
+ *
+ * The shared band style (ENQUIRY_BAR_CSS) only reaches the legacy primitive templates;
+ * the art templates that place bookingSlot() bare got an unstyled title + button glued
+ * to the left edge (measured on arch-frames and tilted-gallery, 390 + 1440). The card
+ * was first designed in wordmark-grow (contract wordmark-grow-b); it lives here ONCE so
+ * every template that needs it draws the same card in its own skin (tokens only).
+ *
+ * Only the "cta" band — the enquiry bar hydrates into a mini-form and keeps the shared
+ * layout. `sectionPad` is the band's own spacing, which depends on what sits around it.
+ */
+export function bookingCardCss(tpl: string, sectionPad: string): string {
+  const s = `.cit-tpl-${tpl}`;
+  return `
+  ${s} .cit-enquiry--bar[data-cit-variant="cta"]{padding:${sectionPad}}
+  ${s} [data-cit-variant="cta"] .cit-enquiry-bar-inner{width:min(1140px,88vw);margin-inline:auto;display:flex;
+    align-items:center;justify-content:space-between;gap:24px;padding:34px 40px;border-radius:20px;
+    background:var(--cit-surface);border:1px solid var(--cit-line);
+    box-shadow:0 30px 64px -44px color-mix(in srgb,var(--cit-ink) 66%,transparent)}
+  ${s} [data-cit-variant="cta"] .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);
+    font-size:clamp(24px,3vw,34px);color:var(--cit-ink)}
+  ${s} [data-cit-variant="cta"] .cit-btn{flex:none}
+  @media(max-width:640px){${s} [data-cit-variant="cta"] .cit-enquiry-bar-inner{flex-direction:column;
+    align-items:stretch;text-align:center;padding:26px 22px}
+    ${s} [data-cit-variant="cta"] .cit-btn{text-align:center}}`;
+}
+
 /** Base masthead CSS. `overlay` (default) floats over a photo hero in light ink;
  *  `flow` sits in the document flow above a solid-background top in page ink. */
 export function mastheadCss(mode: "overlay" | "flow" = "overlay"): string {

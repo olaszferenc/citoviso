@@ -42,6 +42,8 @@ TELJES ablakra nőtt, majd egy képkocka alatt a menü alatti, kisebb hős-doboz
 3. A teljes naptár a lap végén, a saját „Foglalás” szakaszában marad.
 4. Foglalási felület nélkül (érdeklődés-sáv) a sáv a régi helyén és a közös elrendezésben marad — ezt a
    kontraktus nem érinti.
+5. 2026-10-04 óta a kártya CSS-e a közös `templateKit.ts` → `bookingCardCss()`-ben él (kontraktus `../booking-card/`,
+   tulaj „A”); a Névből növő látványa ettől nem változott.
 
 ## KÖT — nyitány (intro; csak ez a sablon viszi, ADR-0115 ②)
 
