@@ -3,6 +3,7 @@
 // gallery style, section order. Three hero archetypes × three gallery styles ×
 // six palettes × five font pairs × orderings → hundreds of distinct looks.
 
+import { config } from "../config.js";
 import type { MockData, MockFeature } from "./render.js";
 import type { Theme } from "./theme.js";
 
@@ -243,7 +244,7 @@ ${middle}
 ${contactSection(d)}
 <footer><div class="wrap">
   ${esc(d.name)} · ${esc(d.region)}<br>
-  <span class="demo-badge">Előzetes terv — ${esc(t.palette.name)} · ${t.mood ? esc(t.mood) + " · " : ""}készült a Citoviso motorral</span>
+  <span class="demo-badge">Előzetes terv — ${esc(t.palette.name)}${t.mood ? " · " + esc(t.mood) : ""}${config.mockCitovisoCredit ? " · készült a Citoviso motorral" : ""}</span>
 </div></footer>
 </body></html>`;
 }

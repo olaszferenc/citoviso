@@ -144,6 +144,8 @@ export const config = {
    * Owner, 2026-10-04: "a mockok ne generáljanak egyelőre citoviso-s reklámot" — off by
    * default; "1" brings it back. Live tenant pages keep the strip regardless (ADR-0032 ④);
    * the legal demo framing / "Készítette:" identification is NOT this strip and stays.
+   * Same switch: the legacy generator paths' "— készült a Citoviso motorral" footer tail
+   * (render.ts, renderVaried.ts, aiMock/mockFromCorpus prompts); "Előzetes terv" stays.
    */
   mockCitovisoCredit: env("MOCK_CITOVISO_CREDIT", "") === "1",
   /**

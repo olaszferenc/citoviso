@@ -206,7 +206,7 @@ KÉPEK:
 BRAND:
 - NINCS emoji. Ikon = inline SVG vonalrajz (stroke=currentColor).
 - Magyar szöveg: meleg, konkrét, a látható RELEVÁNS részletekre építve; tényt sosem kitalálva.
-- A láblécben: "Előzetes terv — készült a Citoviso motorral".
+- A láblécben: "${config.mockCitovisoCredit ? "Előzetes terv — készült a Citoviso motorral" : "Előzetes terv"}".${config.mockCitovisoCredit ? "" : "\n- A blueprint láblécének Citoviso-jelölését (\"Referencia-dizájn — Citoviso korpusz\") NE vedd át: a mockon Citoviso-említés nincs."}
 
 KIMENET:
 - Az ELSŐ sor PONTOSAN egy HTML-komment: <!--CIT {"archetype":"<a blueprint archetípusa>","environment":"<env>","tier":"<tier>","corpusId":"<a kapott korpusz-id>","style":"<pár szó>"}-->

@@ -72,7 +72,7 @@ KÉPEK:
 BRAND:
 - NINCS emoji sehol. Ikon = inline SVG vonalrajz (stroke=currentColor).
 - Magyar szöveg: meleg, konkrét, NEM generikus, a látható RELEVÁNS részletekre építve; tényt sosem kitalálva.
-- A láblécben jelöld: "Előzetes terv — készült a Citoviso motorral".
+- A láblécben jelöld: "${config.mockCitovisoCredit ? "Előzetes terv — készült a Citoviso motorral" : "Előzetes terv"}".
 
 KIMENET:
 - Az ELSŐ sor PONTOSAN egy HTML-komment: <!--CIT {"archetype":"<katalógus-név vagy 'uj:<rövid>'>","environment":"<tópart|borvidek|videki|termeszet|hegyi|tengerparti|varosi|nagyvarosi|horgasz>","tier":"<luxus|premium|kozep|egyszeru>","style":"<pár szó>"}-->

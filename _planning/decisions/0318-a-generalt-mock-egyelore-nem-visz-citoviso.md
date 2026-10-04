@@ -21,7 +21,7 @@ NEM reklám, nem nyúltunk hozzá (a termék működése vagy jogi kötelezetts�
   azonosítása (Grt./GDPR), leiratkozás, adatkezelési link.
 - `render.ts` / `renderVaried.ts` „Előzetes terv — … készült a Citoviso motorral” demo-badge és az AI-promptok
   (`aiMock.ts`, `mockFromCorpus.ts`, `corpus.ts`) ugyanilyen lábléc-kérése — a régi (nem motoros) generátor-utak
-  demó-jelölése. KÉRDÉS a tulajnak, ha ezeket is reklámnak tekinti; most érintetlen.
+  demó-jelölése. → a tulaj döntése lent, a Kiegészítésben (5. pont).
 
 ### Döntés
 1. `config.mockCitovisoCredit` (`MOCK_CITOVISO_CREDIT=1` env) — alapból KI. Bekapcsolva a mock újra kapja a sávot.
@@ -30,3 +30,16 @@ NEM reklám, nem nyúltunk hozzá (a termék működése vagy jogi kötelezetts�
    A hat élő hívó (provision, tenant editor ×3, multilang ×2) kifejezetten `"live"`-ot ad — az élő tenant-oldal
    viselkedése VÁLTOZATLAN (ADR-0032 ④ ott él tovább).
 3. Visszafordíthatóság: 🔄 triviális — egy env-sor.
+
+
+### Kiegészítés (2026-10-04, tulaj-döntés a két KÉRDÉSRE)
+Tulaj, szó szerint: „reklám: csak a készült a citoviso motorral a reklám és a régiekről nem kell levenni”.
+4. **A már legenerált / kiküldött mockokról NEM vesszük le** a beégett sávot — kiszolgáláskori szűrés nincs.
+5. **A „készült a Citoviso motorral” szövegrész REKLÁM** → ugyanaz a kapcsoló (`MOCK_CITOVISO_CREDIT`) vezérli, alapból KI:
+   `render.ts` és `renderVaried.ts` demo-badge-e (az „Előzetes terv — paletta · hangulat” rész marad), valamint az
+   `aiMock.ts` és `mockFromCorpus.ts` prompt lábléc-kérése (KI állásban: „Előzetes terv”, és a corpus-adaptáló prompt
+   kifejezetten tiltja a blueprint „Referencia-dizájn — Citoviso korpusz” láblécének átvételét).
+   **Az „Előzetes terv” demó-jelölés MARAD** (§A; a `provenanceCheck` FRAMING_MARKERS bármelyik jelölőt elfogadja —
+   mérve: a kapcsoló nélküli render és renderVaried kimenete `checkDemoFraming` → pass).
+   A `corpus.ts` saját prompt-sora („Referencia-dizájn — Citoviso korpusz”) a belső korpusz-referencia jelölése, nem
+   a mocké; a tulaj szava szerint csak a „motorral” szöveg reklám, ezért érintetlen.

@@ -3,6 +3,8 @@
 // icons), a clean palette, one genuinely regional "mag". Palette-from-photo and
 // AI copy are later slices; this proves the render pipeline + design quality.
 
+import { config } from "../config.js";
+
 export interface MockFeature {
   icon: "location" | "wifi" | "parking" | "coffee" | "view" | "key";
   label: string;
@@ -209,7 +211,7 @@ ${contactRows}
 
 <footer><div class="wrap">
   ${esc(d.name)} · ${esc(d.region)}<br>
-  <span class="demo-badge">Előzetes terv — készült a Citoviso motorral</span>
+  <span class="demo-badge">Előzetes terv${config.mockCitovisoCredit ? " — készült a Citoviso motorral" : ""}</span>
 </div></footer>
 </body>
 </html>`;
