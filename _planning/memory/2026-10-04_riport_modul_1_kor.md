@@ -35,10 +35,20 @@ mérés-egységesítés (UA → kinyert mezők, referrer → host, ADR-0108).
 - `scripts/` nincs típus-ellenőrizve: egy törölt export (reportPage) csak a pszeudo-őr futásakor derült ki.
 - Token-őr: csak a `citui.css` magban definiált token fogadható el — riport-árnyalat = `color-mix()` a használat helyén.
 
+## SUB zárva (13:47, watchdog HANDOFF-RETIRE) — minden IGAZOLTAN FENT
+`ead4e4a9` UA-kinyerés + backfill (dev: 685 sor, 253 bot) · `9560bc1e` section_seen / dwell_end{last_section,last_step} /
+client_error / converted+lost / order_intent.preset / mikro-kérdőív három ponton (configurator-kártya, leiratkozó lap,
+`/p/<t>/why` a levélből; POST dönt) · `5914d145` **pay_go ejtve (0088)** — koordinátor-döntés A: a `/pay/go` levél-link
+GET-je nem számlál (ADR-0291 B, szkennerek), a kapu-átadást a `checkout_redirect` event méri · `65bab642` bot-látogatás
+nem számít a riportban + a converted prospect 2. rendelése nem lép vissza. A kérdőív-képek: `_from-sub/ba3ddd8c/…`.
+
 ## Nyitott / következő
-- SUB 2–5. lépés landja → a kilépési térkép és a „Kimondott" nézet élettel telik; a lead-lapon a
-  „valószínű ok" címke (exitReason) még nincs kitéve (README ⑮ második fele).
-- Ítélet-célok operátor-állítása (report_target szerkesztő-felület) — a kontraktus szerint konfig, UI később.
+- ⛔ **Deploy-feltétel:** `npx tsx scripts/mock-view-backfill-ua.mts --go` élesen, visszaellenőrzés 0 nyers UA (jog-őr).
+- **Meglévő mobil-hiba (nem a riporté):** a késleltetett süti-sáv az eszkalációs kártya „Most még gondolkodom" gombjára
+  úszik és elnyeli a kattintást — pilot előtt javítandó, külön szál.
+- Kicsik: `resubscribeProspect` a `lost`-ot nem állítja vissza; iPadOS 13+ Safari asztalinak látszik (szerver-oldalon nem
+  különíthető el); a tenant-oldal device-a marad mobile|desktop.
+- A lead-lapon a „valószínű ok" címke (exitReason) még nincs kitéve (README ⑮ második fele); ítélet-célok szerkesztő UI.
 - **2. kör:** Pénzügy + csomag-lap (ADR-0322 ⑤, ⑦ digest) — ÚJ §2b terv kell (mock, tulaj-jóváhagyás).
 - **3. kör:** tenant_activity + site_visit útvonallal + GBP-pillanatképek — új §2b terv.
-- Élesítés: a nagy deployjal, nem külön (tulaj-szabály); élesen a backfill (`scripts/mock-view-backfill-ua.mts`) futtatandó a deploy után.
+- Élesítés: a nagy deployjal, nem külön (tulaj-szabály).
