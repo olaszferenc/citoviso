@@ -16,6 +16,13 @@
 // megelőző sáv belseje rejtve (a #cit-enquiry horgony marad); art-deco „porta” és brutalism
 // „konzol” — a konténer saját „Foglalás” címe marad, a foglalás-sáv címe rejtve (cta-változat).
 //
+// BŐVÍTÉS (tulaj: „ok javítsd.”, 2026-10-04) — a foglalási blokk két mondata igazat mondjon a helyén:
+//   ⓐ art-deco: a „Kérjük, adja meg utazásának adatait” alcím CSAK űrlap fölött áll (érdeklődés-sáv);
+//      foglalási felülettel alatta egy ugró gomb van, nincs mit megadni → az alcím elmarad;
+//   ⓑ walk-through: a „Telefonon is kereshető” sor foglalási felülettel KÖZVETLENÜL a naptár
+//      „Foglalás” címe alatt áll (a blokk része, nem fölötte lebeg); foglalás nélkül az
+//      érdeklődés-sáv alatt marad.
+//
 //   npx tsx scripts/booking-title-stutter-check.mts              # zöld futás
 //   npx tsx scripts/booking-title-stutter-check.mts --self-test  # PIROS kontroll (visszarontás)
 
@@ -29,7 +36,8 @@ import { injectRuntime } from "../src/generator/runtime.js";
 const SELF_TEST = process.argv.includes("--self-test");
 const VERBOSE = process.argv.includes("--verbose");
 // the self-test only needs the template it breaks
-const ONLY = process.argv.find((a) => a.startsWith("--only="))?.slice(7) ?? (SELF_TEST ? "walk-through" : undefined);
+const ONLY_ARG = process.argv.find((a) => a.startsWith("--only="))?.slice(7);
+const ONLY = ONLY_ARG ? [ONLY_ARG] : SELF_TEST ? ["walk-through", "artdeco"] : undefined;
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGNoaGjAihhGJQYTAAC5BH+BUz5VbQAAAABJRU5ErkJggg==",
@@ -66,11 +74,37 @@ const STATES = [
   { tag: "élő foglalás nélkül", data: base, phase: "live" as const },
 ];
 
-// ⛔ PIROS KONTROLL: the 2026-10-04 stutter put back — a „Foglalás” heading right above the band.
+// ⛔ PIROS KONTROLLOK: the 2026-10-04 defects put back.
 function breakIt(t: string, html: string): string {
-  if (!SELF_TEST || t !== "walk-through") return html;
-  return html.replace(/(<section id="cit-enquiry")/, `<h2 class="x-stutter">Foglalás</h2>$1`);
+  if (!SELF_TEST) return html;
+  if (t === "walk-through") {
+    // ① a „Foglalás” heading right above the band; ② the phone line back above the booking heading
+    const lead = /<p [^>]*data-cit-booking-lead[^>]*>[\s\S]*?<\/p>/.exec(html);
+    const at = /<section class="cit-modsec" id="cit-booking"/;
+    const h = lead && at.test(html) ? html.replace(lead[0], "").replace(at, (m) => lead[0] + m) : html;
+    return h.replace(/(<section id="cit-enquiry")/, `<h2 class="x-stutter">Foglalás</h2>$1`);
+  }
+  // ③ art-deco: the travel-data subtitle back above a lone jump button
+  if (t === "artdeco" && html.includes('data-cit-variant="cta"') && !html.includes('class="ad-desksub"'))
+    return html.replace(/(<section id="cit-enquiry")/, `<p class="ad-desksub">Kérjük, adja meg utazásának adatait</p>$1`);
+  return html;
 }
+
+const COPY_PROBE = `(() => {
+  const vis = (e) => !!e && e.getBoundingClientRect().height > 0 && getComputedStyle(e).display !== "none";
+  const enq = document.getElementById("cit-enquiry");
+  const sub = document.querySelector(".ad-desksub");
+  const lead = document.querySelector("[data-cit-booking-lead]");
+  const bk = document.getElementById("cit-booking");
+  const h2 = bk && bk.querySelector("h2");
+  const widget = bk && bk.querySelector('[data-cit-module="booking"]');
+  return { variant: enq && enq.dataset.citVariant, sub: vis(sub), lead: !!lead, leadVis: vis(lead), booking: !!bk,
+    afterH2: !!(lead && h2 && h2.nextElementSibling === lead),
+    between: !!(lead && h2 && widget && lead.getBoundingClientRect().top >= h2.getBoundingClientRect().bottom - 1
+      && lead.getBoundingClientRect().bottom <= widget.getBoundingClientRect().top + 1),
+    underBand: !!(lead && enq && enq.compareDocumentPosition(lead) & Node.DOCUMENT_POSITION_FOLLOWING && !(bk && bk.contains(lead))) };
+})()`;
+type C = { variant?: string; sub: boolean; lead: boolean; leadVis: boolean; booking: boolean; afterH2: boolean; between: boolean; underBand: boolean };
 
 const PROBE = (VERBOSE: boolean) => `(() => {
   const VERBOSE = ${VERBOSE};
@@ -131,7 +165,7 @@ const browser = await chromium.launch();
 try {
   const pages = new Map<string, Page>();
   for (const [vtag, opts] of VIEWPORTS) pages.set(vtag, await newPage(browser, opts));
-  const tpls = Object.keys(TEMPLATES).filter((t) => !ONLY || t === ONLY);
+  const tpls = Object.keys(TEMPLATES).filter((t) => !ONLY || ONLY.includes(t));
   for (const t of tpls) {
     for (const s of STATES) {
       const html = await injectRuntime(breakIt(t, renderSite(recipe(t), s.data, { phase: s.phase })), "hu", s.phase);
@@ -149,6 +183,21 @@ try {
         } else {
           console.log(`  ✓ ${label}: ${r.titles.length} „Foglalás” cím, egyik sem dadog`);
         }
+        if (t === "artdeco" || t === "walk-through") {
+          const c = (await page.evaluate(COPY_PROBE)) as C;
+          const check = (cond: boolean, m: string) => {
+            if (!cond) fails.push(`${label}: ${m}`);
+            console.log(`  ${cond ? "✓" : "✗"} ${label}: ${m}`);
+          };
+          if (t === "artdeco") {
+            check(c.variant === "bar" ? c.sub : !c.sub,
+              `ⓐ az „adja meg utazásának adatait” alcím ${c.sub ? "LÁTSZIK" : "nincs"} — a sáv ${c.variant === "bar" ? "űrlap" : "egy ugró gomb"}`);
+          } else if (c.booking) {
+            check(c.leadVis && c.afterH2 && c.between, `ⓑ a „Telefonon is kereshető” sor közvetlenül a „Foglalás” cím alatt, a naptár fölött (utána-h2: ${c.afterH2}, köztük: ${c.between})`);
+          } else {
+            check(c.leadVis && c.underBand, `ⓑ foglalás nélkül a „Telefonon is kereshető” sor az érdeklődés-sáv alatt`);
+          }
+        }
       }
     }
   }
@@ -157,8 +206,13 @@ try {
 }
 
 if (SELF_TEST) {
-  const red = fails.some((f) => f.startsWith("walk-through") && f.includes("h2.x-stutter"));
-  console.log(red ? "\n✅ ÖNTESZT: a visszarontás PIROS" : "\n❌ ÖNTESZT: a visszarontást nem fogta meg");
+  const reds = [
+    fails.some((f) => f.startsWith("walk-through") && f.includes("h2.x-stutter")),
+    fails.some((f) => f.startsWith("walk-through") && f.includes("ⓑ") && f.includes("közvetlenül")),
+    fails.some((f) => f.startsWith("artdeco") && f.includes("ⓐ")),
+  ];
+  const red = reds.every(Boolean);
+  console.log(red ? "\n✅ ÖNTESZT: mindhárom visszarontás PIROS" : `\n❌ ÖNTESZT: nem minden visszarontást fogott meg (${reds})`);
   process.exit(red ? 0 : 1);
 }
 console.log(fails.length ? `\n❌ ${fails.length} BUKÁS` : "\n✅ booking-title-stutter-check ZÖLD");

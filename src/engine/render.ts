@@ -175,6 +175,21 @@ function injectImgFallback(html: string): string {
 }
 
 /**
+ * A template may hand the closing booking section a one-line lead (walk-through: the
+ * „Telefonon is kereshető” line): it marks a <p data-cit-booking-lead> anywhere, and the
+ * line is moved right under the section's „Foglalás” heading, so it belongs to the booking
+ * block instead of floating above it (owner: „ok javítsd.”, 2026-10-04). Without a booking
+ * section the line stays where the template put it.
+ */
+function placeBookingLead(html: string): string {
+  const lead = /<p [^>]*data-cit-booking-lead[^>]*>[\s\S]*?<\/p>/.exec(html);
+  if (!lead) return html;
+  const rest = html.replace(lead[0], "");
+  const head = /<section class="cit-modsec" id="cit-booking"[^>]*><div class="cit-modsec__in"><h2>[\s\S]*?<\/h2>/.exec(rest);
+  return head ? rest.replace(head[0], () => head[0] + lead[0]) : html;
+}
+
+/**
  * Weave the tenant-set module sections into a rendered page (ADR-0047).
  *
  * PREFERRED PATH — the template names the places: it plants `data-cit-slot` markers
@@ -397,7 +412,8 @@ function withModuleSections(
   // ADR-0062: with the full booking surface living in the closing section, every
   // "Foglalás" button on the page (nav, hero, sticky bar — they all target the
   // template slot) jumps straight to the decision point instead of the slim band.
-  const retarget = (h: string): string => {
+  const retarget = (raw: string): string => {
+    const h = placeBookingLead(raw);
     const jumped =
       data.booking || samples.has("booking")
         ? h.replaceAll('href="#cit-enquiry"', 'href="#cit-booking"')

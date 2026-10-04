@@ -51,6 +51,11 @@ Minden más doboz (kártya, felirat, gomb) pixelre egyezik a tervvel.
   szabálya); artdeco és (a 21-es mérésből) brutalism — a konténer címe marad, a sáv címe rejtve. Őr:
   `scripts/booking-title-stutter-check.mts` (mind a 21 sablon; két egymást követő „Foglalás” cím = piros).
   Képek a javítás után: `dupla-cim-javitva-{walk-through,artdeco,brutalism}-{asztali,mobil}.png`.
+- ✅ **Javítva 2026-10-04, második kör** (tulaj: „ok javítsd.”): **artdeco** — a „Kérjük, adja meg utazásának
+  adatait” alcím csak az érdeklődés-űrlap fölött áll; foglalási felülettel (egy ugró gomb) elmarad, új szöveg nélkül.
+  **walk-through** — a „Telefonon is kereshető” sor foglalási felülettel közvetlenül a naptár „Foglalás” címe alá
+  kerül (render: `data-cit-booking-lead`), foglalás nélkül az érdeklődés-sáv alatt marad. Őr: ugyanaz (ⓐ ⓑ).
+  Képek: `blokk-szoveg-{walk-through,artdeco}-{foglalassal,foglalas-nelkul}-{asztali,mobil}.png`.
 - **gate-opening** szándékosan rejti a sávot a naptár előtt (`:has(#cit-booking)`) — helyes.
 
 ## Mérés

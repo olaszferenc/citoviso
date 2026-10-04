@@ -15,7 +15,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { photoCaption } from "../photoCaption.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { T, accented, bookingSlot, centredModsecCss, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { T, accented, bookingSlot, centredModsecCss, hasBookingSurface, copyHook, copyOf, esc, firstSentence, highlightHook, hookPick, honestStarCount, mastheadCss, mastheadHtml, photoFill, roomDetails, roomHint, roomShell, roomsHeading, roomsLabel, roomsFor, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const ARTDECO_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -305,7 +305,11 @@ function renderArtdeco(recipe: Recipe, data: SiteData, phase: RenderPhase): stri
   const bookbar = `<div class="ad-desk">
     <div class="ad-wrap">
       <p class="ad-desktitle">${T(data, "Foglalás")}</p>
-      <p class="ad-desksub">${T(data, "Kérjük, adja meg utazásának adatait")}</p>
+      ${
+        // the subtitle asks for travel data — only true above the enquiry mini-form; with a
+        // booking surface the slot below is a single jump button, so the line stays out
+        hasBookingSurface(data, phase) ? "" : `<p class="ad-desksub">${T(data, "Kérjük, adja meg utazásának adatait")}</p>`
+      }
       ${bookingSlot(data, phase)}
     </div>
   </div>`;

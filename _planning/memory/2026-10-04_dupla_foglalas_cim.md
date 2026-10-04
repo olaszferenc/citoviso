@@ -21,10 +21,13 @@ SUB (koordináló: „mock-összehasonlító / Kapunyitás”, wt/citcad90429). 
 változásra) — két látható, nem-link „Foglalás” cím között ≤ 80 karakter nem-link szöveg és < 360 px = piros.
 Negatív kontroll: a három javítás visszavonásával 4–4–4 piros; `--self-test` a walk-through-ba visszatett dadogást fogja.
 
-## Nyitott (nem javítva, a koordinátornak)
-- artdeco: a panel alcíme „Kérjük, adja meg utazásának adatait”, de foglalás-modullal alatta csak egy gomb áll, nincs mit megadni.
-- walk-through: a „Telefonon is kereshető” sor most a „Foglalás” cím FÖLÖTT áll, egyedül a sötét sáv tetején.
+## Második kör (tulaj: „ok javítsd.”, a koordinátor hozta)
+- artdeco: a „Kérjük, adja meg utazásának adatait” alcím csak űrlap fölött (`hasBookingSurface` → elmarad; új szöveg nincs).
+- walk-through: a „Telefonon is kereshető” sor `data-cit-booking-lead` jelet kap; a `render.ts` `placeBookingLead()`
+  közvetlenül a `#cit-booking` „Foglalás” `<h2>`-je alá teszi. Foglalás nélkül a helyén marad (a sáv alatt).
+- Őr-bővítés: `booking-title-stutter-check` ⓐ ⓑ; `--self-test` mindhárom visszarontást (dupla cím, telefonsor
+  vissza a cím fölé, alcím vissza a gomb fölé) pirosnak méri.
 
 ## Fájlok
-src/engine/templates/{walkThrough,artdeco,brutalism}.ts · scripts/booking-title-stutter-check.mts · hooks/pre-commit ·
+src/engine/templates/{walkThrough,artdeco,brutalism}.ts · src/engine/render.ts · scripts/booking-title-stutter-check.mts · hooks/pre-commit ·
 assets/design-refs/tenant-site/booking-card/README.md · MEMORY.md

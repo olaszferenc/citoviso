@@ -382,6 +382,8 @@ p{margin:0 0 1em}
 .wk-enq .cit-enquiry-bar-title{margin:0;color:var(--cit-surface);font:700 1.5rem/1.1 var(--cit-font-display);letter-spacing:-.02em}
 .wk-enq .cit-modsec{background:transparent;color:var(--cit-surface);--cit-modsec-py:40px}
 .wk-enq .cit-modsec h2{color:var(--cit-surface)}
+/* the phone line moved under the booking heading (render: data-cit-booking-lead) */
+.wk-enq .cit-modsec [data-cit-booking-lead]{margin:-4px 0 20px!important}
 .wk-enq .cit-modsec [data-cit-module="booking"],
 .wk-enq .cit-modsec form{background:var(--cit-surface);color:var(--cit-ink);border-radius:var(--cit-radius);padding:22px 18px}
 .wk-enq .cit-modsec__note{color:color-mix(in srgb,var(--cit-surface) 82%,var(--cit-ink))}
@@ -716,7 +718,7 @@ function renderWalk(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       ${bookingSlot(data, phase)}
       ${
         c.phone
-          ? `<p class="wk-kicker" style="margin-top:14px">${T(data, "Telefonon is kereshető:")} <a href="${tel}">${esc(c.phone)}</a></p>`
+          ? `<p class="wk-kicker" data-cit-booking-lead style="margin-top:14px">${T(data, "Telefonon is kereshető:")} <a href="${tel}">${esc(c.phone)}</a></p>`
           : ""
       }
     </div>
