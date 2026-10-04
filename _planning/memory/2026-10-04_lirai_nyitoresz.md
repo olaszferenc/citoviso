@@ -35,7 +35,16 @@ marad. Javítsuk Kerekerdő MOK-ot, és mehet a javaslat.”
   „pár lépésre” a forrás 100 m-ével szemben; Három Huszár egy régi ál-idézet miatt. A kritikus 3 köre nem mindig javít.
 - Döntési anyag: `assets/design-refs/_drafts/vendegcsalogato/elotte-utana-valodi.html` (+ `JELENTES.md`, A/B: `elotte-utana.html`).
 
-## Nyitott
+## Utószál — a két nyitott pont javítva (tulaj-döntés, ugyanaznap)
+- A piaci bíró csak forrás-tényt hiányolhat (`applyJudgeVerdict`, `isSourcedMiss`); csak-3.-szabályos, forrásolt hiány nélküli
+  bukás → PASS. ⚠️ Helyesbítés: a Rozé „víz-közelsége” részben forrásolt volt („Hajózás”, „Vizibicikli kölcsönzés” a
+  balaton.hu listán — ékezetes „víz”-keresésem nem találta); a kitalált hiány a „strandközelség” volt.
+- Tautológia (`ismetles_nyitas`) blokkol a kritikusban; a javító kör rontása így nem nyerhet.
+- Újramérés (Rozé + Kerekerdő, 0,82 USD): Rozé piaci PASS + kritikus PASS; Kerekerdő kritikus PASS, a bíró üres hangulatnak ítélte
+  a főcímet (szór — kurátor-sor). Megfigyelés: a Rozé új introja „a Balaton partján” áll — a település tudásából, nem forrásból;
+  a régió-szabály promptja tiltja, gépi ikre nincs.
+
+## Nyitott (régi, javítva — lásd fent)
 - A piaci bíró a Rozénál a „víz közelségét” hiányolja, ami a forrásban nincs — a bíró még leltár/ajánlat-irányba húz vékony
   forrásnál. Figyelni a következő mockoknál.
 - A kritikus javító köre néha ront (első Kerekerdő-futás: tautológia-főcím). Ha a kurátor-sor arány tartósan magas, a

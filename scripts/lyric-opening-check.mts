@@ -26,8 +26,8 @@ process.env.ANTHROPIC_API_KEY = ""; // the market gate must decide on its struct
 
 const SELF_TEST = process.argv.includes("--self-test");
 const ROOT = path.resolve(import.meta.dirname, "..");
-const { lintOpening } = await import("../src/generator/lyricOpening.js");
-const { verifyMarketRelevance } = await import("../src/generator/marketCheck.js");
+const { lintOpening, tautology: tautologyNow } = await import("../src/generator/lyricOpening.js");
+const { verifyMarketRelevance, applyJudgeVerdict: applyNow } = await import("../src/generator/marketCheck.js");
 
 const fails: string[] = [];
 const oks: string[] = [];
@@ -136,6 +136,67 @@ for (const c of HONEST) {
   check((await marketFlag("Esték a medence partján, pár lépésre a Libás strandtól", { name: "Strand Apartman Keszthely", town: "Keszthely", amenities: ["Kültéri medence", "Saját parkoló"], descriptions: ["Közel a Libás strandhoz."] })) === "pass", "EGY adottság élménybe ágyazva átmegy (tulaj-döntés ①)");
 }
 
+// ── ④ TAUTOLÓGIA a nyitórészben (tulaj, 2026-10-04 — a javító kör rontása) ───────────────
+{
+  const taut = (h: string, t: string) => (SELF_TEST ? null : tautologyNow(h, t));
+  const BAD: [string, string, string][] = [
+    ["a kritikus javító köre (Kerekerdő, mérve)", "Erdők és hegyek ölelte határban, ahol erdők és hegyek ölelik a faházakat", "Erdők és hegyek határolta faházak azoknak, akik önellátó pihenésre vágynak"],
+    ["főcím = alcím (Kerekerdő, lírai pilot)", "Ahol a falu véget ér, és kezdődik a Bakony-széli rét", "Ahol a falu véget ér, és a Bakony-széli rét kezdődik"],
+    ["főcím ≈ alcím (Három Huszár, mai prompt)", "Játszótér a kertben, árnyas pihenő és saját parkoló a csendes udvarban", "Köveskáli csendes udvar, ahol a gyerekeknek játszótér, a felnőtteknek árnyas pihenő jut."],
+  ];
+  // Isolated branches — each case is caught by ONE rule only (a mutation of that rule must go red):
+  BAD.push(["① csak önismétlés (alcím nélkül)", "Erdők és hegyek ölelte határban, ahol erdők és hegyek ölelik a faházakat", ""]);
+  BAD.push(["② csak közös szófutam (a tő-arány 3/8 alatt marad)", "Két faház Hárskút szélén, pár lépésre a falu végétől, erdők és hegyek között", "Kirándulóknak és családoknak, pár lépésre a falu végétől"]);
+  for (const [label, h, t] of BAD) check(taut(h, t) !== null, `[${label}] tautológia → blokkol`);
+  // Negative controls: the real post-change openings (re-measured 2026-10-04) stay clean.
+  const GOOD: [string, string, string][] = [
+    ["Kerekerdő (utána)", "Erdők és hegyek ölelésében, a Magas-Bakony határában, pár lépésre a falu szélétől.", "Kirándulóknak, nagy családoknak és baráti köröknek, akik a bakonyi erdők határában, puritán egyszerűségben töltenék a napjaikat."],
+    ["Bánó (utána)", "A Káli-medence egyik csendes falujában lassabban telnek a napok.", "Pároknak, családoknak és baráti köröknek, akik a Káli-medence lassú ritmusára vágynak."],
+    ["Strand (utána)", "A Libás Strand közelében, egy nyugodt keszthelyi utcában.", "Családoknak és baráti társaságoknak, akik a strand közelében, saját kerttel körülvett otthonból indulnának felfedezni Keszthelyt."],
+    ["Rozé (utána)", "Kerékpáros nap után hazatérni a révfülöpi utcák közé", "Nyaralók ritmusára hangolt fogadó Révfülöpön, pároknak és kerékpárosoknak."],
+  ];
+  for (const [label, h, t] of GOOD) check(!SELF_TEST && tautologyNow(h, t) === null, `[${label}] nem tautológia (kapott: ${SELF_TEST ? "—" : tautologyNow(h, t) ?? "semmi"})`);
+  const viaLint = lint([{ field: "hero.lead", text: BAD[0]![1] }, { field: "tagline", text: BAD[0]![2] }], KEREKERDO).map((f) => f.kind);
+  check(viaLint.includes("ismetles_nyitas" as never), `a kritikus lintje is fogja (kind: ismetles_nyitas; kapott: ${viaLint.join(", ") || "semmi"})`);
+}
+
+// ── ⑤ PIACI BÍRÓ: csak forrás-tény hiányolható (tulaj, 2026-10-04 — Rozé) ──────────────
+{
+  type J = Parameters<typeof applyNow>[0];
+  // The shipped mapping: the judge's verdict and misses passed through untouched.
+  const apply = SELF_TEST
+    ? (p: J, ctx: Parameters<typeof applyNow>[1]) => ({ verdict: p.verdict, missed: [...p.missed, ...ctx.missedRanked] })
+    : applyNow;
+  // The REAL Rozé source (dev lead, balaton.hu high-band profile): prose = one word, the flat
+  // amenity list carries „Hajózás” and „Vizibicikli kölcsönzés” — and no beach proximity.
+  const roze = {
+    name: "Rozé Fogadó",
+    town: "Révfülöp",
+    amenities: ["Parkoló a közelben", "Lovaglás", "Wifi a közösségi terekben", "Kávézó", "Kerthelyiség", "Bár", "Hajózás", "Kerékpárkölcsönzés", "Strandröplabda", "Vizibicikli kölcsönzés", "Túra lehetőségek", "Hűtőszekrény", "WIFI", "Légkondícionálás"],
+    descriptions: ["Révfülöp"],
+  };
+  const ctx = { named: ["Kerékpárkölcsönzés"], missedRanked: [], source: roze };
+  // The judge's measured answer (2026-10-04): two sourced misses, one inferred from the town.
+  const measured: J = {
+    verdict: "flag",
+    reason: "A főcím Révfülöpöt megnevezi, de a legerősebb balatoni adottságok (hajózás, vízibicikli, strandközelség) kimaradnak.",
+    missed: ["hajózás", "vízibicikli", "strandközelség"],
+    rules: ["3"],
+    critique: "Emeld be a víz közelségét.",
+  };
+  const v1 = apply(measured, ctx);
+  check(v1.verdict === "flag", `[Rozé, mért bíró-válasz] a forrásolt hiány (hajózás, vízibicikli) miatt a bukás ÁLL (kapott: ${v1.verdict})`);
+  check(v1.missed.includes("hajózás") && v1.missed.includes("vízibicikli"), "a forrásolt hiányok a listán maradnak („vízibicikli” ↔ „Vizibicikli kölcsönzés”)");
+  check(!v1.missed.includes("strandközelség"), "a település fekvéséből kikövetkeztetett „strandközelség” kiesik (a „Strandröplabda” nem bizonyíték)");
+  const v2 = apply({ ...measured, missed: ["strandközelség", "vízparti fekvés"] }, ctx);
+  check(v2.verdict === "pass", `csak kitalált hiány miatt (3. szabály) NEM bukik (kapott: ${v2.verdict})`);
+  check(!v2.missed.some((m) => ["strandközelség", "vízparti fekvés"].includes(m)), "a kitalált hiány a kurátor-panelre sem kerül");
+  const v3 = apply({ ...measured, missed: ["strandközelség"], rules: ["1", "3"] }, ctx);
+  check(v3.verdict === "flag", "ha MÁS szabályon is bukik (1: üres/leltár főcím), a bukás áll");
+  const v4 = apply({ ...measured, missed: ["központ"] }, { ...ctx, source: { ...roze, descriptions: ["A szállás Révfülöp központjában áll."] } });
+  check(v4.verdict === "flag", "a bemutatkozásban szó szerint álló hiány is forrásolt");
+}
+
 // ── ③ BEKÖTÉS — forrás-szinten ───────────────────────────────────────────────────────
 {
   const read = (rel: string) => (SELF_TEST ? "" : readFileSync(path.join(ROOT, rel), "utf8"));
@@ -152,6 +213,9 @@ for (const c of HONEST) {
   check(/LÍRAI/.test(brief) && /LÍRAI/.test(writer), "mindkét prompt kimondja a lírai nyitórészt");
   const market = read("src/generator/marketCheck.ts");
   check(!/egyetlen konkrét szolgáltatást sem nevez meg/.test(market), "a piaci kapu már nem buktatja a szolgáltatás nélküli főcímet");
+  check(/return applyJudgeVerdict\(parsed,/.test(market), "a bíró válasza a forrás-szűrőn át lesz verdikt");
+  check(/required: \["verdict", "reason", "missed", "rules", "critique"\]/.test(market), "a bíró megnevezi, melyik szabályon bukott");
+  check(/"ismetles_nyitas",\n\]\);/.test(critic), "a kritikus a tautológiát MINDIG blokkolónak tartja");
 }
 
 for (const m of oks) console.log(`  ✓ ${m}`);

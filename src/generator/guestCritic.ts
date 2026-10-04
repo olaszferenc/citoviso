@@ -503,6 +503,7 @@ const ALWAYS_BLOCKING: ReadonlySet<ObjectionKind> = new Set([
   "leltar_nyitas",
   "minta_masolas",
   "hangulat_forras_nelkul",
+  "ismetles_nyitas",
 ]);
 // NOT "megszolitas": the register is the lint twin's call (addressRegister.ts) — measured
 // 2026-10-02, the model graded the magázó „Amit itt kap” a register error; raising its own
@@ -567,6 +568,7 @@ A NYITÓRÉSZ (hero.lead, tagline, intro) LÍRAI: a hely érzetét adja (táj, f
 - leiro_nyitas — a nyitórész a ház KINÉZETÉT írja le: felület, anyag, szín, tető, homlokzat, bútor („sötétre pácolt faház”, „cseréptetős épület”, „kerti bútor található”). BLOKKOLÓ.
 - leltar_nyitas — a nyitórész felszereltséget SOROL (a főcímben és az alcímben legfeljebb EGY adottság állhat, élménybe ágyazva). BLOKKOLÓ.
 - minta_masolas — a főcím egy ismert minta-mondat keretét ismétli. BLOKKOLÓ.
+- ismetles_nyitas — a főcím önmagát ismétli („Erdők és hegyek ölelte határban, ahol erdők és hegyek ölelik…”), vagy a főcím és az alcím ugyanazt mondja. BLOKKOLÓ.
 - hangulat_forras_nelkul — hangulati vagy érzéki TÉNY (csend, nyugalom, madárszó, illat, ropogó tűz, csillagos ég, tájegység), amit sem a leírás, sem egy vélemény nem mond; vagy csend/nyugalom, miközben egy vélemény zajra panaszkodik; vagy EGYETLEN vendég egyszeri élményéből („elaludtam a tornácon”) általános állítás („a vendégek mesélik”) vagy főcím. BLOKKOLÓ.
 
 Szabályok:
@@ -579,7 +581,7 @@ Szabályok:
 const OBJECTION_KINDS: readonly ObjectionKind[] = [
   "forrastalan_igeret", "tulzas_a_forrashoz", "velemeny_mint_szolgaltatas", "nem_letezo_fogalom",
   "tukorforditas", "megszolitas", "ai_sablon", "al_idezet", "nyelvtan", "ismetles", "ures_kituntetes",
-  "leiro_nyitas", "leltar_nyitas", "minta_masolas", "hangulat_forras_nelkul",
+  "leiro_nyitas", "leltar_nyitas", "minta_masolas", "hangulat_forras_nelkul", "ismetles_nyitas",
 ];
 
 const CRITIC_SCHEMA = {

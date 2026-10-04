@@ -71,7 +71,51 @@ const MOOD_CLAIMS: readonly { name: string; re: RegExp; evidence: RegExp; quiet?
 /** A guest complaint about noise makes every quiet claim false, whatever else is said. */
 const NOISE = /(?<![\p{L}])(?:zaj|zajos|hangos|munkazaj|építkez|forgalmas|lárm)/iu;
 
-export type OpeningKind = "leiro_nyitas" | "leltar_nyitas" | "minta_masolas" | "hangulat_forras_nelkul";
+export type OpeningKind =
+  | "leiro_nyitas"
+  | "leltar_nyitas"
+  | "minta_masolas"
+  | "hangulat_forras_nelkul"
+  | "ismetles_nyitas";
+
+/** Function words: they repeat in any sentence and say nothing about the place. */
+const FUNCTION_WORDS = new Set([
+  "ahol", "amely", "amelyben", "akik", "akinek", "hogy", "egy", "egyik", "mint", "pedig", "csak",
+  "vagy", "valamint", "illetve", "között", "mellett", "után", "alatt", "felett", "előtt", "közel",
+  "közelében", "minden", "nagy", "kicsi", "vannak", "van", "lesz", "itt", "ott", "ide", "oda",
+]);
+
+/** The 5-letter stems of a line's content words (≥4 letters, not a function word). */
+function contentStems(text: string): string[] {
+  return words(text)
+    .filter((w) => w.length >= 4 && !FUNCTION_WORDS.has(w))
+    .map((w) => w.slice(0, 5));
+}
+
+/**
+ * TAUTOLOGY in the opening (owner, 2026-10-04). Measured: the critic's rewrite round turned a
+ * sound headline into „Erdők és hegyek ölelte határban, ahol erdők és hegyek ölelik a faházakat”,
+ * and a lyrical draft shipped the same sentence as headline AND subtitle. Two rules:
+ *   ① the headline repeats ITSELF — two or more content stems occur twice;
+ *   ② headline and subtitle are the same line — a shared run of 4+ words, or 60%+ of the
+ *     headline's content stems reappear in the subtitle.
+ * Exported for the guard.
+ */
+export function tautology(hero: string, tagline: string): string | null {
+  const stems = contentStems(hero);
+  const counts = new Map<string, number>();
+  for (const st of stems) counts.set(st, (counts.get(st) ?? 0) + 1);
+  const repeated = [...counts].filter(([, n]) => n >= 2).map(([st]) => st);
+  if (repeated.length >= 2) return `a főcím önmagát ismétli (${repeated.join(", ")}…)`;
+  if (!tagline.trim()) return null;
+  if (sharedRun(hero, tagline) >= 4) return "a főcím és az alcím ugyanazt a mondatot mondja";
+  const uniq = [...new Set(stems)];
+  const inTag = new Set(contentStems(tagline));
+  const shared = uniq.filter((st) => inTag.has(st));
+  if (uniq.length >= 3 && shared.length / uniq.length >= 0.6)
+    return `a főcím és az alcím ugyanazt mondja (${shared.join(", ")}…)`;
+  return null;
+}
 
 export interface OpeningFinding {
   readonly field: string;
@@ -188,6 +232,20 @@ export function lintOpening(lines: readonly { field: string; text: string }[], s
           kind: "minta_masolas",
           guestReaction: "Ezt a mondatot már láttam egy másik szállásnál.",
           fix: `ne a prompt példáját („${copied}”) kövesd — saját, erre a helyre igaz mondat`,
+        });
+      }
+    }
+
+    if (field === "hero.lead") {
+      const tagline = lines.find((l) => l.field === "tagline")?.text ?? "";
+      const why = tautology(raw, tagline);
+      if (why) {
+        out.push({
+          field,
+          quote: raw,
+          kind: "ismetles_nyitas",
+          guestReaction: "Ezt a mondatot kétszer olvastam el — mintha nem lenne mit mondani a helyről.",
+          fix: `${why}: egyetlen, nem ismétlődő lírai mondat; az alcím a MÁSODIK réteget viszi (kinek való, mit él át)`,
         });
       }
     }

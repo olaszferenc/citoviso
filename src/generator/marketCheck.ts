@@ -293,6 +293,12 @@ BUKTASD (verdict="flag"), ha bármelyik igaz:
 3. A legerősebb eladási pont (medence, játszótér, strand-közelség, saját parkoló,
    panoráma, kisállat-barát) megvan az adatok között, de a KIEMELÉSEKBŐL és az alcímből/intróból
    is HIÁNYZIK, vagy elsikkad valami jelentéktelen mögött. (Hogy a főcímben nincs ott, az NEM hiba.)
+   ⛔ CSAK FORRÁS-TÉNY HIÁNYOLHATÓ: a „BIZONYÍTOTTAN TUDUNK” listán vagy a bemutatkozásban álló tény.
+   Amit a település fekvéséből vagy a saját tudásodból következtetnél ki (pl. „Balaton-parti
+   település → strand-közelség, hajózás”), az NEM hiány — a szöveg nem is állíthatja (4. szabály).
+   Mért eset (2026-10-04, Rozé Fogadó): a bíró a „hajózást”, a „vízibiciklit” és a
+   „strandközelséget” hiányolta. Az első kettő a listán állt („Hajózás”, „Vizibicikli kölcsönzés”),
+   a strandközelség viszont sehol — azt a település fekvéséből következtette ki.
 4. A szöveg olyat ÁLLÍT a helyről, amit az adatok nem támasztanak alá, és ami a
    vendéget FÉLREVEZETI — kiemelten a földrajzi helyzet ("a tóparton", "a vízparton",
    "a strand mellett"), ha semmi nem igazolja. Ez foglalás után csalódás lesz.
@@ -316,7 +322,14 @@ const JUDGE_SCHEMA = {
     missed: {
       type: "array",
       items: { type: "string" },
-      description: "Az adatokban meglévő, de a szövegből hiányzó erős eladási pontok.",
+      description:
+        "A szövegből hiányzó erős eladási pontok — SZÓ SZERINT a „BIZONYÍTOTTAN TUDUNK” listából vagy a " +
+        "bemutatkozásból másolva. Ami ott nem áll, az nem hiány.",
+    },
+    rules: {
+      type: "array",
+      items: { type: "string", enum: ["1", "1b", "2", "3", "4", "5"] },
+      description: "Bukásnál: melyik szabály(ok)on bukott. Üres, ha pass.",
     },
     critique: {
       type: "string",
@@ -324,7 +337,7 @@ const JUDGE_SCHEMA = {
         "Konkrét utasítás a szövegírónak egy újragenerálásra: mit emeljen be, mit dobjon ki. Üres, ha pass.",
     },
   },
-  required: ["verdict", "reason", "missed", "critique"],
+  required: ["verdict", "reason", "missed", "rules", "critique"],
 } as const;
 
 /** Flatten the sales surface into one comparable blob (hero + tagline + intro + highlights). */
@@ -339,6 +352,71 @@ function salesBlob(s: SalesSurface): string {
  * stay. Best-effort like the other gates: a judge failure returns "error" (→ curation),
  * never throws. The STRUCTURAL layer needs no API key and always runs.
  */
+/** The marketing judge's structured answer. */
+export interface JudgeResponse {
+  readonly verdict: "pass" | "flag";
+  readonly reason: string;
+  readonly missed: readonly string[];
+  /** Which rules a flag rests on ("1", "1b", "2", "3", "4", "5"). */
+  readonly rules?: readonly string[];
+  readonly critique: string;
+}
+
+/**
+ * Is a „missed” item one of OUR facts? Deterministic: it must be a sourced fact label (equal, or
+ * one contains the other: „vízibicikli” ↔ „Vizibicikli kölcsönzés”), or stand verbatim in the
+ * property's own prose. The judge may not ask the writer for a fact nobody gave us — measured
+ * 2026-10-04 (Rozé Fogadó): of „hajózás, vízibicikli, strandközelség” the first two were on the
+ * listing, „strandközelség” was inferred from the town, and that critique would have been fed back
+ * to the writer as an order to invent. (No 6-letter stem match here, on purpose: „strand…” would
+ * then count „Strandröplabda” as evidence of a beach nearby.)
+ */
+export function isSourcedMiss(item: string, source: MarketSource): boolean {
+  const m = norm(item);
+  if (m.length < 4) return false;
+  const label = (a: string) => {
+    const n = norm(a);
+    return n === m || (m.length >= 5 && n.includes(m)) || (n.length >= 5 && m.includes(n));
+  };
+  if ((source.amenities ?? []).some(label)) return true;
+  return (source.descriptions ?? []).some((d) => norm(d).includes(m));
+}
+
+/**
+ * The judge's answer → the verdict, with its unsourced misses removed. A flag that rests ONLY on
+ * rule 3 („the strongest point is missing”) and has no sourced miss left is not a finding: it
+ * passes, and says why. Every other flag stands. Exported for the guard (no API needed).
+ */
+export function applyJudgeVerdict(
+  parsed: JudgeResponse,
+  ctx: { named: readonly string[]; missedRanked: readonly string[]; source: MarketSource },
+): MarketVerdict {
+  const judgeMissed = (parsed.missed ?? []).filter((m) => isSourcedMiss(m, ctx.source));
+  const dropped = (parsed.missed ?? []).filter((m) => !isSourcedMiss(m, ctx.source));
+  const rules = parsed.rules ?? [];
+  const onlyMissing = parsed.verdict === "flag" && rules.length > 0 && rules.every((r) => r === "3");
+  if (onlyMissing && judgeMissed.length === 0) {
+    return {
+      verdict: "pass",
+      layer: "judge",
+      factsNamed: [...ctx.named],
+      missed: [...ctx.missedRanked],
+      reason:
+        `a bíró csak forrásban nem álló tény hiányát kifogásolta (${dropped.join(", ") || "—"}) — ` +
+        `ilyet a szöveg nem is állíthat, ezért nem bukás (eredeti indoklás: ${parsed.reason})`,
+    };
+  }
+  return {
+    verdict: parsed.verdict,
+    layer: "judge",
+    factsNamed: [...ctx.named],
+    // The judge may name a SOURCED miss the ranking table has no word for; keep both views.
+    missed: [...new Set([...judgeMissed, ...ctx.missedRanked])],
+    reason: parsed.reason,
+    ...(parsed.verdict === "flag" && parsed.critique ? { critique: parsed.critique } : {}),
+  };
+}
+
 /** Lyrical words that carry no place: they cannot ground a headline on their own. */
 const MOOD_ONLY = [
   "csend", "nyugal", "nyugod", "pihen", "kenyelm", "vendeg", "szallas", "csalad", "barati",
@@ -600,7 +678,7 @@ export async function verifyMarketRelevance(input: {
         reason: "marketing-őr üres válasz",
       };
     }
-    let parsed: { verdict: "pass" | "flag"; reason: string; missed: string[]; critique: string };
+    let parsed: JudgeResponse;
     try {
       parsed = JSON.parse(block.text);
     } catch (parseErr) {
@@ -626,15 +704,7 @@ export async function verifyMarketRelevance(input: {
             }),
       };
     }
-    return {
-      verdict: parsed.verdict,
-      layer: "judge",
-      factsNamed: named,
-      // The judge may name a miss the ranking table has no word for; keep both views.
-      missed: [...new Set([...(parsed.missed ?? []), ...missedRanked])],
-      reason: parsed.reason,
-      ...(parsed.verdict === "flag" && parsed.critique ? { critique: parsed.critique } : {}),
-    };
+    return applyJudgeVerdict(parsed, { named, missedRanked, source: input.source });
   } catch (err) {
     return {
       verdict: "error",

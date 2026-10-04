@@ -69,3 +69,24 @@ semmi nem rendereli. A Kerekerdő mockja a nagy deploy után újragenerálva kap
 
 **Visszafordíthatóság:** 🔄 — prompt-szöveg, egy lint-modul, egy kapu-ág és egy feltétel a `resolveRegion`-ben;
 tárolt adat nem változott.
+
+### Utószál (2026-10-04, tulaj: „a két nyitott pontodat IS javítsd”)
+1. **A piaci bíró csak forrás-tényt hiányolhat.** A válasz megnevezi, melyik szabályon bukik (`rules`), a `missed`-listából
+   determinisztikusan kiesik minden, ami nem forrás-tény (`isSourcedMiss`: tény-címke egyezés vagy tartalmazás, ill. szó
+   szerint a bemutatkozásban; 6 betűs tő-egyezés szándékosan NINCS — a „Strandröplabda” nem bizonyítja a strand közelségét).
+   Ha a bukás CSAK a 3. szabályon állt, és forrásolt hiány nem maradt, a verdikt PASS, indoklással (`applyJudgeVerdict`).
+   ⚠️ **Helyesbítés:** a fenti mérésnél azt írtam, hogy a Rozé forrásában „a víz közelsége nincs”. A bemutatkozás valóban
+   egy szó („Révfülöp”), de a balaton.hu szolgáltatás-listáján áll a „Hajózás” és a „Vizibicikli kölcsönzés” (az ékezetes
+   „víz” keresésem nem találta). A bíró három hiánya közül tehát kettő forrásolt volt; a kitalált a „strandközelség”.
+   (Hogy ez a lapos lista a ház vagy a környék kínálata, az az ADR-0317 „ismert határa” — scraper-kérdés.)
+2. **Tautológia a nyitórészben blokkol** (`ismetles_nyitas`, `lyricOpening.ts` `tautology`): a főcím önmagát ismétli
+   (≥ 2 tartalmi tő kétszer), vagy a főcím és az alcím ugyanaz (≥ 4 szavas közös futam, vagy a főcím tartalmi tövei ≥ 60 %-ban
+   az alcímben). Mérve: a kritikus javító köre „Erdők és hegyek ölelte határban, ahol erdők és hegyek ölelik a faházakat”-ot
+   csinált; a 17 eddig mért nyitórészen a szabály ezt, a pilot főcím = alcím esetét és két régi (mai promptos) ismétlést fog,
+   a jó kimeneteken nem jelez. A `bestRound` a blokkoló kifogás nélküli kört választja, így a rontó javítás nem nyerhet.
+
+**Őr:** a `lyric-opening-check` bővítve (55 zöld; önteszt 46 piros). Mutációval: a forrás-szűrő kiiktatása, a részszó-egyezés
+kiiktatása, a csak-3.-szabály felmentés kiiktatása, a 6 betűs tő-egyezés, és a tautológia mindhárom ága (izolált esetekkel)
+egyenként pirosra viszi. **Újramérés** (valódi kód, Rozé + Kerekerdő, 0,82 USD): Rozé — piaci PASS, kritikus PASS; Kerekerdő —
+nincs tautológia, kritikus PASS, a bíró viszont a főcímet („Erdők és hegyek ölelte határban, Hárskút mellett”) üres hangulatnak
+ítélte (az első ítélete ugyanerre a szövegtípusra PASS volt — a bíró szór; kurátor-sor).
