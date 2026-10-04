@@ -25,6 +25,7 @@
 
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { recordAiUsage } from "../ai/usage.js";
+import { cachedSystem, EPHEMERAL } from "../ai/promptCache.js";
 import { config } from "../config.js";
 import type { EditorialCopy } from "../engine/copywriter.js";
 import type { SectionCopy } from "../engine/recipe.js";
@@ -693,26 +694,32 @@ export async function critiqueCopy(
     ...lintPlacedClaim(copy, source),
     ...lintOpeningCopy(copy, source),
   ];
+  // Identical on every critic round of one mock → cached prefix; only the copy under
+  // judgement (`judged`) changes between rounds.
+  const stable =
+    `MEGSZÓLÍTÁS (a ház szabálya): ${registerRule(register)}\n\n` +
+    `═══ FORRÁSOK ═══\n${describeSource(source)}\n\n`;
+  const judged =
+    (previous
+      ? `═══ AZ ELŐZŐ VÁLTOZAT (az író ezt javította) ═══\n${describeCopy(previous)}\n\n` +
+        `⛔ Az író most javított. Amit az ELŐZŐHÖZ képest ÚJ állításként vagy új viszonyként\n` +
+        `hozott be (pl. „reggeli a kertben”), és a forrás nem mondja, az BLOKKOLÓ.\n` +
+        `Az író által ÚJONNAN behozott szavak (gépi lista — MINDEGYIKET vesd össze a forrással;\n` +
+        `ha egy új szó szolgáltatást, ajánlatot vagy tényt állít, ami a forrásban nincs, BLOKKOLÓ):\n` +
+        `${newWords(copy, previous).join(", ") || "nincs"}\n\n`
+      : "") + `═══ A BÍRÁLANDÓ SZÖVEG (mező: szöveg) ═══\n${describeCopy(copy)}`;
   const c = await client();
   const res = await c.messages.create({
     model: MODEL,
     max_tokens: 3000,
-    system: CRITIC_SYSTEM,
+    system: cachedSystem(CRITIC_SYSTEM),
     messages: [
       {
         role: "user",
-        content:
-          `MEGSZÓLÍTÁS (a ház szabálya): ${registerRule(register)}\n\n` +
-          `═══ FORRÁSOK ═══\n${describeSource(source)}\n\n` +
-          (previous
-            ? `═══ AZ ELŐZŐ VÁLTOZAT (az író ezt javította) ═══\n${describeCopy(previous)}\n\n` +
-              `⛔ Az író most javított. Amit az ELŐZŐHÖZ képest ÚJ állításként vagy új viszonyként\n` +
-              `hozott be (pl. „reggeli a kertben”), és a forrás nem mondja, az BLOKKOLÓ.\n` +
-              `Az író által ÚJONNAN behozott szavak (gépi lista — MINDEGYIKET vesd össze a forrással;\n` +
-              `ha egy új szó szolgáltatást, ajánlatot vagy tényt állít, ami a forrásban nincs, BLOKKOLÓ):\n` +
-              `${newWords(copy, previous).join(", ") || "nincs"}\n\n`
-            : "") +
-          `═══ A BÍRÁLANDÓ SZÖVEG (mező: szöveg) ═══\n${describeCopy(copy)}`,
+        content: [
+          { type: "text", text: stable, cache_control: EPHEMERAL },
+          { type: "text", text: judged },
+        ],
       },
     ],
     output_config: { format: { type: "json_schema", schema: CRITIC_SCHEMA } },
@@ -814,7 +821,7 @@ export async function rewriteCopy(
   const res = await c.messages.create({
     model: MODEL,
     max_tokens: 4000,
-    system: REWRITE_SYSTEM,
+    system: cachedSystem(REWRITE_SYSTEM),
     messages: [
       {
         role: "user",

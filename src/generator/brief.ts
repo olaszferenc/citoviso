@@ -5,6 +5,7 @@
 // applies it within safe rails. Falls back to null (→ seeded theme) without a key.
 
 import { recordAiUsage } from "../ai/usage.js";
+import { cachedSystem } from "../ai/promptCache.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
@@ -413,7 +414,7 @@ export async function generateBriefAndCopy(input: {
     const res = await client.messages.create({
       model: "claude-opus-4-8",
       max_tokens: 2000,
-      system: MERGED_SYSTEM,
+      system: cachedSystem(MERGED_SYSTEM),
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: MERGED_SCHEMA } },
     });

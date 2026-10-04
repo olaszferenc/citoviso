@@ -30,6 +30,7 @@
 // at the curator instead of landing in a stranger's mailbox.
 
 import { recordAiUsage } from "../ai/usage.js";
+import { cachedSystem, EPHEMERAL } from "../ai/promptCache.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { deaccent } from "../scraper/enrichPresence.js";
@@ -625,6 +626,10 @@ export async function verifyMarketRelevance(input: {
     for (const block of await toImageBlocks((input.photos ?? []).slice(0, 3))) {
       content.push(block as AnthropicNS.ContentBlockParam);
     }
+    // The photos are the bulk of the input and identical on every re-judge of one mock →
+    // cache up to the last photo; the text after it (the copy under judgement) may vary.
+    const lastImage = content[content.length - 1];
+    if (lastImage) (lastImage as AnthropicNS.ImageBlockParam).cache_control = EPHEMERAL;
     content.push({
       type: "text",
       text:
@@ -666,7 +671,7 @@ export async function verifyMarketRelevance(input: {
       // whole guard reached the owner's screen. `reason` + `missed[]` + a concrete `critique`
       // is simply more than 900 tokens of Hungarian.
       max_tokens: 2500,
-      system: JUDGE_SYSTEM,
+      system: cachedSystem(JUDGE_SYSTEM),
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: JUDGE_SCHEMA } },
     } as AnthropicNS.MessageCreateParamsNonStreaming);

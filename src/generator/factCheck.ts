@@ -11,6 +11,7 @@
 // a FLAG routes the mock to the curation queue (never auto-outreach) — §G.20.
 
 import { recordAiUsage } from "../ai/usage.js";
+import { cachedSystem } from "../ai/promptCache.js";
 import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { placedClaims, type PlacedClaim } from "./guestCritic.js";
@@ -391,7 +392,7 @@ export async function verifyFactuality(input: {
     const res = await client.messages.create({
       model: "claude-opus-4-8",
       max_tokens: 1500,
-      system: VERIFY_SYSTEM,
+      system: cachedSystem(VERIFY_SYSTEM),
       messages: [{ role: "user", content }],
       output_config: { format: { type: "json_schema", schema: SCHEMA } },
     } as AnthropicNS.MessageCreateParamsNonStreaming);
