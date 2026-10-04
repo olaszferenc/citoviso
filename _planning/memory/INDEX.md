@@ -8,6 +8,7 @@
 
 - [2026-10-04_tulaj_teszt_szama_mentesites.md](2026-10-04_tulaj_teszt_szama_mentesites.md) — 2026-10-04 — SMS/MMS nem küldhető: a tulaj teszt-száma csak [TESZT] leaden mentes
 - [2026-10-04_tobb_email_cim_egy_leadhez.md](2026-10-04_tobb_email_cim_egy_leadhez.md) — 2026-10-04 — Több e-mail-cím egy leadhez (Adatok fül, A változat) + a kurátor e-mailje a kurátoré
+- [2026-10-04_rc_lista_sorrend_nem_allithato.md](2026-10-04_rc_lista_sorrend_nem_allithato.md) — 2026-10-04 — RC-sessionlista: a SUB-ok nem rendezhetők a koordinátoruk alá
 - [2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md](2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md) — 2026-10-04 — Névből növő B: húzható 4:3 Képek-sáv, Foglalás-kártya a Képek után, nagyobb és lassabb nyitány
 - [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
 - [2026-10-04_fejlec_link_csomag_parallax_menusav.md](2026-10-04_fejlec_link_csomag_parallax_menusav.md) — 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)
