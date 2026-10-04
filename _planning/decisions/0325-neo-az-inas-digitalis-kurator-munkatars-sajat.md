@@ -1,4 +1,4 @@
-## ADR-XXXX — Neo az Inas: digitális kurátor-munkatárs saját Chrome-mal; a sablont indoklással ő választja (ADR-0028 módosítása)
+## ADR-0325 — Neo az Inas: digitális kurátor-munkatárs saját Chrome-mal; a sablont indoklással ő választja (ADR-0028 módosítása)
 
 - **Tulaj-döntés (2026-10-04):** „Nem lehet olyan munkatársat készíteni, mint amilyen Marika a
   MineRealban, akinek a fő célja az lenne, hogy kurátori előkészítői feladatokat lásson el a

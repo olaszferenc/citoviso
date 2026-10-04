@@ -16,4 +16,4 @@
 - **Visszafordíthatóság:** 🔄 könnyű — a select/prompt additív form-mező; AI-választó később
   a gyűlt adat alapján bekapcsolható a kurátor felülbírálási jogával.
 - **Státusz:** ELFOGADVA (tulaj, 2026-08-08). Implementálva ebben a sessionben.
-- **Módosítva:** ADR-XXXX (2026-10-04) — a digitális kurátor-munkatárs (Neo az Inas) is választhat sablont, kötelező indoklással; a tulaj felülbírálhatja.
+- **Módosítva:** ADR-0325 (2026-10-04) — a digitális kurátor-munkatárs (Neo az Inas) is választhat sablont, kötelező indoklással; a tulaj felülbírálhatja.
