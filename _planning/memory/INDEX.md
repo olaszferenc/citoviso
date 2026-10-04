@@ -13,6 +13,7 @@
 - [2026-10-04_parallax_potty_nav_aktiv.md](2026-10-04_parallax_potty_nav_aktiv.md) — 2026-10-04 — Parallax pötty-nav: görgetéskor a képen lévő szakasz pöttye világít
 - [2026-10-04_pakli_galeria_torles.md](2026-10-04_pakli_galeria_torles.md) — 2026-10-04 — A kártyapakli-galéria runtime-kódjának törlése
 - [2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md](2026-10-04_nevbol_novo_b_kepek_foglalas_intro.md) — 2026-10-04 — Névből növő B: húzható 4:3 Képek-sáv, Foglalás-kártya a Képek után, nagyobb és lassabb nyitány
+- [2026-10-04_neo_az_inas.md](2026-10-04_neo_az_inas.md) — 2026-10-04 — Neo az Inas: digitális kurátor-munkatárs (ADR-XXXX)
 - [2026-10-04_mock_szoveg_kezi_atiras.md](2026-10-04_mock_szoveg_kezi_atiras.md) — 2026-10-04 — A mock szövege kézzel átírható (A + B, ADR-0323)
 - [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
 - [2026-10-04_lirai_nyitoresz.md](2026-10-04_lirai_nyitoresz.md) — 2026-10-04 — Lírai nyitórész: a leltár-főcím és a leíró intro vége; a gyűjtési terület nem lead-tény (ADR-0324)

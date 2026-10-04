@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-neo-az-inas-digitalis-kurator.md) — Neo az Inas: digitális kurátor-munkatárs saját Chrome-mal; a sablont indoklással ő választja (ADR-0028 módosítása)
 - [ADR-0324](decisions/0324-lirai-nyitoresz-leiro-mod-es-leltar-tilos-a.md) — Lírai nyitórész: leíró mód és leltár tilos, a líra is forrásból; a gyűjtési terület neve nem lead-tény (2026-10-04)
 - [ADR-0323](decisions/0323-a-mock-szovege-kezzel-atirhato-mezos-urlap-a.md) — A mock szövege kézzel átírható: mezős űrlap a kártyán (A) ÉS helyben szerkesztés az előnézeten (B), egy mentési úttal
 - [ADR-0322](decisions/0322-riport-modul-a-pilothoz-tolcser-viselkedes-a.md) — Riport-modul a pilothoz: tölcsér + viselkedés a mért linkekből, kétrétegű kilépés-ok, csomag-besorolás, mérés-egységesítés (2026-10-04)
