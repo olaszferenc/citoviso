@@ -103,6 +103,16 @@ const TRANSIT_CSS = `
   .tb-table td.tb-u .cit-wmwrap{width:66px;height:46px;flex:none}
   .tb-table td.tb-u>span:last-child{white-space:nowrap}
   @media(max-width:620px){.tb-thumb,.tb-table td.tb-u .cit-wmwrap{width:50px;height:36px}.tb-table td.tb-u{font-size:17px;gap:9px}}
+  /* The 50×36 phone thumbnail is shorter than the MINTA pill (16px) and the magnifier (21px)
+     stacked: every corner clashed, the runtime kept bottom-right, and the magnifier covered
+     "TA" (owner report 2026-10-04, owner said fix it). Pill pinned top-left and a notch
+     tighter, magnifier a notch smaller → 1px clear between them; the 66×46 desktop thumb
+     already fits both and is untouched. */
+  @media(max-width:620px){
+    .tb-table td.tb-u .cit-wm{top:1px;left:2px;right:auto;bottom:auto;padding:1px 4px}
+    .tb-table td.tb-u .cit-rmhint--sm{padding:2px}
+    .tb-table td.tb-u .cit-rmhint--sm svg{width:11px;height:11px}
+  }
   /* On a phone the timetable row is a CARD: a four-column table with a real room name, a
      capacity and a price was 410px wide at 390px and the browser zoomed the page out; the
      stacked cells keep every fact readable and the two controls thumb-sized. */
