@@ -42,8 +42,16 @@ client_error / converted+lost / order_intent.preset / mikro-kérdőív három po
 GET-je nem számlál (ADR-0291 B, szkennerek), a kapu-átadást a `checkout_redirect` event méri · `65bab642` bot-látogatás
 nem számít a riportban + a converted prospect 2. rendelése nem lép vissza. A kérdőív-képek: `_from-sub/ba3ddd8c/…`.
 
+## ÉLESÍTVE (2026-10-04 15:16, tulaj „megadom", a backfillre „igen mehet")
+`33e1b3fc` = `prod/20261004-1516` (előtte `0b1ee61f`); 217 fájl, migrációk 0086–0088 (pg_dump előtte), kanári 303/200,
+`journalctl -p err` üres. A deploy előtt két kapu bukott, mindkettő MÁS szál elmaradása: a lead-lista `legend.png`
+(kétszer — a 25b68545 landolása után újra) és a KB-őr FLAG-je a kézi szöveg-átírás B-útjának mobil-gesztusain —
+mindkettőt én javítottam (`861f4106`, `09cf3689`, `33e1b3fc`). Backfill élesen: 14 sor, 0 nyers maradt (10 bot · 3 iOS
+Safari · 1 Windows Chrome). Élesen 5 kiküldött link: 2 valódi (ma 10:00, még nincs emberi megnyitás) + 3 `[TESZT]`;
+a riport a teszt-leadeket NEM szűri — ha a tulaj kéri, „teszt-leadek nélkül" kapcsoló a szűrősorba.
+
 ## Nyitott / következő
-- ⛔ **Deploy-feltétel:** `npx tsx scripts/mock-view-backfill-ua.mts --go` élesen, visszaellenőrzés 0 nyers UA (jog-őr).
+- ✅ Backfill élesen lefutott (lásd fent).
 - **Meglévő mobil-hiba (nem a riporté):** a késleltetett süti-sáv az eszkalációs kártya „Most még gondolkodom" gombjára
   úszik és elnyeli a kattintást — pilot előtt javítandó, külön szál.
 - Kicsik: `resubscribeProspect` a `lost`-ot nem állítja vissza; iPadOS 13+ Safari asztalinak látszik (szerver-oldalon nem
