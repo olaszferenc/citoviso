@@ -1,4 +1,4 @@
-## ADR-XXXX — Fejléc-link csak meglévő szekcióra; egy vágási szabály a mocknak és az élő lapnak; Parallax görgetett menüsáv (2026-10-04)
+## ADR-0320 — Fejléc-link csak meglévő szekcióra; egy vágási szabály a mocknak és az élő lapnak; Parallax görgetett menüsáv (2026-10-04)
 
 **Dátum:** 2026-10-04 · **Státusz:** elfogadva (tulaj: „A”, „Parallax: javítsd!”; SUB, brief `~/rc-briefs/sticky-header-modulok.md`) ·
 **Kontraktus:** `assets/design-refs/tenant-site/parallax-menusav/` · **Őr:** `scripts/nav-target-check.mts`,

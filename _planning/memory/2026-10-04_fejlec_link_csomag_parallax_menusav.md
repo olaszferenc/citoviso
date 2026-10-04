@@ -1,6 +1,6 @@
 # 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)
 
-**Szál:** SUB a „mock-összehasonlító / Kapunyitás” koordinátor alatt, brief `~/rc-briefs/sticky-header-modulok.md`. Döntés: ADR-XXXX.
+**Szál:** SUB a „mock-összehasonlító / Kapunyitás” koordinátor alatt, brief `~/rc-briefs/sticky-header-modulok.md`. Döntés: ADR-0320.
 
 ## Elvégezve
 - Audit 21 sablon × (mock Teljes / mock Alap / élő alap) × 390/1440 px: élesen 0 halott link; mockban „Alap” után 21/21

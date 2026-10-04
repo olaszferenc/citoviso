@@ -13,7 +13,7 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
-## Párhuzamos szál (2026-10-04 — SUB `cit935ba417`: fejléc-link csak meglévő szekcióra · egy vágási szabály mock = élő · Parallax görgetett menüsáv, ADR-XXXX) — LANDOLVA, élesre semmi
+## Párhuzamos szál (2026-10-04 — SUB `cit935ba417`: fejléc-link csak meglévő szekcióra · egy vágási szabály mock = élő · Parallax görgetett menüsáv, ADR-0320) — LANDOLVA, élesre semmi
 A mock „Alap” csomagja 21/21 sablonon hagyott fejléc-linket elrejtett szekcióra → a konfigurátor a linket is rejti. A vágás EGY szabály
 (`render.ts stampCutScope` → `data-cit-cut="self"`, a konfigurátor ugyanezt olvassa): élesen eltűnt az üres organic/art-deco szobák-fejléc,
 a mockban megmarad a bevezetős „A ház”. Parallax (tulaj „A”): asztalon görgetett menüsáv, a dokk nem ragad, az érdeklődés-űrlap olvasható.
