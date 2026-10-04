@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-04 (🗺️ **Lírai nyitórész: földrajz csak forrásból** (ADR-0324 kiegészítés, tulaj „általános lírai szöveg”): a település ismerete — és a neve — nem forrás; mérve leadenként dev 11/25, éles 2/13 nyitórész állított forrás nélküli földrajzi tényt („Balaton-parti” a „Balatongyörök” névből, „Káli-medence”, „dombok és mezők”); `lyricOpening.ts` `GEO_CLAIMS` a `hangulat_forras_nelkul` blokkoló kifogás kiterjesztéseként, prompt mindhárom helyen; őr `lyric-opening-check` ⑥ (71 zöld, önteszt 62 piros); újramérés 5 leaden 1,67 USD: vázlat 2/5 → szállított 0/5; jegyzet `_planning/memory/2026-10-04_lirai_nyitoresz.md`; nem élesítve)
+Utolsó frissítés: 2026-10-04 (🧭 **Koordinátor — Éles hibák javítása** (`cad90429`): 16 tulaj-kérés, 18 SUB, mind landolva és retire-ölve; saját: mock-összehasonlító tábla csukva, Kapunyitás 1,5 s + dHash a hős-másolat ellen; lemez 25 GB-ra felszabadítva (régi `elek/runs`); deploy-koordinátor fő sessionként indítva; jegyzet `_planning/memory/2026-10-04_koordinator_eles_hibak_javitasa.md`) · (🗺️ **Lírai nyitórész: földrajz csak forrásból** (ADR-0324 kiegészítés, tulaj „általános lírai szöveg”): a település ismerete — és a neve — nem forrás; mérve leadenként dev 11/25, éles 2/13 nyitórész állított forrás nélküli földrajzi tényt („Balaton-parti” a „Balatongyörök” névből, „Káli-medence”, „dombok és mezők”); `lyricOpening.ts` `GEO_CLAIMS` a `hangulat_forras_nelkul` blokkoló kifogás kiterjesztéseként, prompt mindhárom helyen; őr `lyric-opening-check` ⑥ (71 zöld, önteszt 62 piros); újramérés 5 leaden 1,67 USD: vázlat 2/5 → szállított 0/5; jegyzet `_planning/memory/2026-10-04_lirai_nyitoresz.md`; nem élesítve)
 
 Utolsó frissítés: 2026-10-04 (🖼️ **Fotó-darabszám igaz** (tulaj brief: „nem annyi fotó jelenik meg, mint amennyi ki van írva”, The Boys 129 vs 21): a Fotók fül-mondata a kirajzolt rácsot számolja; host-független portál-kép azonosság (`src/scraper/portalPhotos.ts` — portál-hálózat ugyanazt a fájlt több hoston adja, élesen 9 lead/145 pár), bekötve számlálóba, galériába, lead-fejlécbe (129 → 70); a „nem került a mockba” a valós okokat sorolja; nyitott: tárolt material-backfill a 9 leadre deploy után; jegyzet `_planning/memory/2026-10-04_foto_darabszam_duplikat_portal.md`)
 
@@ -32,6 +32,13 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > ez a teljes éles kör egyetlen bizonyítéka: terhelés → webhook → élesítés → **valódi számla**.
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
+
+## Koordinátor (2026-10-04 — `citcad90429`: Éles hibák javítása) — LANDOLVA; élesítés a „CIT ➕ Deploy-koordinátor: minden élesbe” sessioné
+- Saját: `ece2b5e4` mock-összehasonlító tábla csukva · `7eaa2d1a` Kapunyitás 1,5 s · `90c7dfc2` hős-másolat dHash-sel kiszűrve (`photoHash.ts`, `samePicture.ts`).
+- SUB-ok (landolva): ADR-0318 kredit ki · ADR-0319 teszt-szám · Névből növő B · Boltíves/transit MINTA · ADR-0320 Parallax + fejléc-link · pötty-nav · ADR-0321 több e-mail · pakli törölve · booking-card · dupla Foglalás · ADR-0323 kézi szöveg · lead MOCK-állapot + kiküldve-szűrő · ADR-0324 lírai nyitórész + földrajz.
+- Élesítéskor (külön engedély): `OUTREACH_TEST_PHONES=06305161631` az éles `.env`-be + restart; Kerekerdő mock újragenerálás.
+- Nyitva: dev teszt-szám (Éden leiratkozás visszavonása); a földrajz-szólista bővítése deploy után.
+- Jegyzet: `_planning/memory/2026-10-04_koordinator_eles_hibak_javitasa.md`.
 
 ## Párhuzamos szál (2026-10-04 — SUB `cit61465bce`: Foglalás-sáv közös kártya — arch-frames · tilted-gallery · wordmark-grow) — LANDOLVA, élesre csak a nagy deployjal
 Mérve 21 sablonon: csak az arch-frames és a tilted-gallery sávja volt formázatlan (a közös sáv-stílus nem jut beléjük; x=0, a naptár fölött).
