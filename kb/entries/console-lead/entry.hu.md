@@ -376,11 +376,17 @@ ott áll, hol jelenik meg — ami az adott sablonon nem látszik, annál ez:
 - Kiemelést a **„+ Új kiemelés”** gombbal adsz hozzá, a sor melletti × törli.
 
 **B) Helyben, a mock-előnézeten.** A kártya képén a **„szöveg szerkesztése ▸”** link a mockot
-egy kurátori előnézetben nyitja (a lead ezt soha nem látja; a sima előnézet-link változatlan).
-Felül nyomd meg a **„Szöveg szerkesztése”** gombot: a szerkeszthető szövegek szaggatott keretet
-kapnak. Kattints rá, és írd át ott, ahol áll — **Enter** = kész, **Esc** = elveti. A főcímben
-jelölj ki egy részt, és a **„Dőlt”** gombbal az lesz a dőlt kiemelés. Alul a sáv mutatja, hány
-mezőt írtál át; telefonon a **„Részletek”** nyitja a listát és az őrök eredményét.
+egy kurátori előnézetben nyitja — **új fülön** (a lead-lap a régi fülön marad; a lead ezt soha
+nem látja, a sima előnézet-link változatlan). Felül nyomd meg a **„Szöveg szerkesztése”** gombot:
+a szerkeszthető szövegek szaggatott keretet kapnak. Gépen kattints rá, és írd át ott, ahol áll —
+**Enter** = kész, **Esc** = elveti. Telefonon a lap ezt írja: **„Koppintson egy keretes
+szövegre”** — a koppintásra a szöveg szerkeszthető lesz, és a **„Kész”** gombbal zárod le (Esc
+telefonon nincs). A főcímben jelölj ki egy részt, és a **„Dőlt”** gombbal az lesz a dőlt
+kiemelés. Alul a sáv mutatja, hány mezőt írtál át; telefonon a **„Részletek”** nyitja a listát
+és az őrök eredményét. A sáv **„Elvetem a változásokat”** gombja itt is a még nem mentett
+átírásokat dobja el; a **„Vissza a leadhez”** gombbal jutsz vissza a lead-lapra (vagy zárd be
+a fület). Üresen nem hagyható a főcím, az alcím és a bemutatkozás, és **legalább egy kiemelés**
+kell — a lap ezt mondja: **„Legalább egy kiemelés kell.”**
 Itt csak azt írhatod át, ami az adott sablonon látszik — a többit a sáv megnevezi, azt az A)
 úton írd át. Ha a sablon a bemutatkozónak csak az első mondatát mutatja, az átírás csak azt a
 mondatot cseréli, a bekezdés többi része marad.
