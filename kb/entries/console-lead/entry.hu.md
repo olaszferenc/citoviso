@@ -100,7 +100,10 @@ Egy leadnek több e-mail-címe is lehet. Az **„E-mail-címek”** részben min
   listán van:”**, mögötte a kihagyott címmel.
 - A **„Megkeresés ide”** jelölésű cím az **elsődleges**: ez jelenik meg a mockon és a honlapon.
   Ha egy másik sorban jelölöd be, az a sor a lista elejére kerül. A megkeresés címzettjét a
-  **Megkeresés** fülön, a követett link készítésekor továbbra is te írod be — oda ezt a címet írd.
+  **Megkeresés** fülön, a **„Követett link készítése”** gomb melletti mezőben adod meg:
+  - ha a leadnek **egy** e-mail-címe van, a mezőben már ott áll — ellenőrizd, és ha kell, írd át;
+  - ha **több** címe van, a mező üres: te döntöd el, melyikre menjen a levél (általában az
+    elsődlegesre), és azt írd be.
   A többi cím a lead adata: a rendszer **nem küld rá levelet**, és sehol nem jelenik meg
   nyilvánosan.
 - A lap tetején az **E-mail** mellett a további címek száma látszik (például „+2”). Gépen, ha

@@ -27,6 +27,9 @@
  *     SEMMI nem íródik (a többi mező sem); üres lista mindkettőt törli; az űrlap soronként mutatja;
  *   ⑥ kurátori e-mail (curatorEmail.ts): az újragyűjtés nem írja felül / nem törli / nem tölti
  *     újra a kurátor címét, a soha nem szerkesztett hiányt viszont pótolhatja; az OSM „a;b” bontva.
+ *   ⑦ „Követett link készítése” (tulaj 2026-10-04: „igen töltse elő”, 4.: „Nem autofill ha van több
+ *     email”): egycímes leadnél a címzett-mező az elsődleges címmel indul, többcímesnél és cím
+ *     nélkül ÜRES — a renderelt lead-lapon mérve.
  *
  * Negatív kontroll: a régi kódon a ② piros (a mentés elfogadta és beírta az autofill-csomagot),
  * a ③ piros (nincs autocomplete-tiltás).
@@ -187,6 +190,31 @@ console.log("⑥ az újragyűjtés nem írja felül a kurátori e-mailt (curator
   // KB-őr lelete (2026-10-04): cím nélkül gyűjtött lead, a kurátor beírt, majd kiürített egy címet.
   const clearedLater = { curatorEditedAt: "2026-10-04T00:00:00Z", emailCuratedAt: "2026-10-04T01:00:00Z", scrapedContact: { email: null } };
   ok(keepCuratorEmail(clearedLater, { ...clearedLater, email: "talalt@x.hu" }).email === undefined, "a kurátor kiürítése (eredetileg cím nélküli lead) sem töltődik vissza");
+}
+
+// ── ⑦ követett link: előtöltés csak egycímes leadnél ───────────────────────────
+console.log("⑦ „Követett link készítése” — előtöltés csak egycímes leadnél");
+{
+  const page = (raw: Record<string, unknown>) =>
+    leadPage({
+      id: "11111111-2222-3333-4444-555555555555", name: "Őr-teszt Vendégház", qualification: "no_site",
+      lifecycle: "mock_curation", matchConfidence: 0.9, address: null, region: "teszt", raw, provenance: [],
+      artifacts: [{ id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", status: "approved", path: null, inputs: {}, generatedAt: "2026-10-04T08:00:00Z", decisions: [] }],
+      heroScores: {},
+    } as unknown as Parameters<typeof leadPage>[0]);
+  const recipient = (html: string): string | null => {
+    const form = /<form[^>]*action="\/lead\/[^"]+\/prospect"[^>]*>([\s\S]*?)<\/form>/u.exec(html);
+    if (!form) return null;
+    const input = /<input[^>]*\bname="email"[^>]*>/u.exec(form[1] ?? "")?.[0] ?? "";
+    return /\bvalue="([^"]*)"/u.exec(input)?.[1] ?? "";
+  };
+  const one = recipient(page({ email: "tulaj@ezustnyar.hu" }));
+  ok(one !== null, "a követett-link űrlap a lapon van (különben a mérés üres halmazon állna)");
+  ok(one === "tulaj@ezustnyar.hu", "egycímes lead: a címzett ELŐTÖLTVE az elsődlegessel", String(one));
+  const many = recipient(page({ email: "tulaj@ezustnyar.hu", otherEmails: ["foglalas@ezustnyar.hu"] }));
+  ok(many === "", "többcímes lead: a címzett ÜRES (az operátor választ)", String(many));
+  const none = recipient(page({}));
+  ok(none === "", "cím nélküli lead: a címzett üres", String(none));
 }
 
 // ── ③ az űrlap ───────────────────────────────────────────────────────────────

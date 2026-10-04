@@ -104,3 +104,15 @@ export function checkEmailList(entries: readonly string[]): EmailListVerdict {
   }
   return { ok: problems.length === 0, problems, emails };
 }
+
+/**
+ * What the „Követett link készítése” recipient field starts with (owner 2026-10-04: „igen töltse
+ * elő”, with decision 4 „Nem autofill ha van több email”): the lead's ONLY address, or nothing.
+ * With several addresses the operator chooses — a prefilled pick would be the system choosing
+ * whom a cold mail reaches. Only a starting value: the field stays editable and is still sent
+ * through the same create path (trimmed there, opt-out/one-shot checked at send).
+ */
+export function outreachPrefill(raw: EmailRaw | null | undefined): string {
+  const all = leadEmails(raw);
+  return all.length === 1 ? all[0]! : "";
+}

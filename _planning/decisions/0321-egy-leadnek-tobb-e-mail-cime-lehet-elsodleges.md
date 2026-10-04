@@ -33,8 +33,10 @@ SUB, brief `~/rc-briefs/tobb-email-cim.md`) · **Terv:** `assets/design-refs/con
    ne legyen). Ugyanaz a postafiók (`recipientKey`: kisbetű, `+címke` le) kétszer = elutasítás. Az egész mentés
    mindent-vagy-semmit (ADR-0316).
 3. **Hideg levél: EGY megkeresés EGY címre** (ADR-0082/0122 változatlan). A további címek a lead adatai, nem címzettek: a
-   rendszer rájuk soha nem küld. A megkeresés címzettjét (`prospect.contact_email`) ma is az operátor adja meg. Előtöltés
-   NINCS (tulaj 4. „Nem autofill ha van több email”) — a pontos szabály (egycímes leadnél előtöltés?) nyitott kérdés.
+   rendszer rájuk soha nem küld. A megkeresés címzettjét (`prospect.contact_email`) az operátor adja meg a
+   „Követett link készítése” mezőben. **Előtöltés (tulaj 2026-10-04: „igen töltse elő”):** egycímes leadnél a mező az
+   egyetlen címmel indul (átírható); többcímes leadnél ÜRES, az operátor választ (tulaj 4.: „Nem autofill ha van több
+   email”). Szabály: `outreachPrefill()` (`src/email/leadEmails.ts`), őr: `lead-contact-guard-check` ⑦.
 4. **Nyilvános megjelenés:** a mock és a honlap kizárólag az elsődleges címet mutatja.
 5. **Leiratkozás:** címenként, személy-szintű — VÁLTOZATLAN. Egy cím leiratkozása NEM tiltja a lead többi címét (tulaj 2.).
 6. **A kurátor e-mailje a kurátoré** (tulaj 3., `src/scraper/curatorEmail.ts`). Egy kurátori mentés után a scrape-utak a

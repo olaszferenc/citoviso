@@ -37,8 +37,8 @@ Tulaj-döntések (2026-10-04): „1. A · 2. Nem · 3. Igen · 4. Nem autofill h
 - A mock végigkattintása két mock-hibát fogott (késői blur, Mentés alól lecsúszó gomb). Mindkettő javítva, az élesben is.
 
 ## Nyitott
-- **Előtöltés (tulaj 4. pontja nem fedte le egyértelműen):** a „Követett link készítése” címzett-mezője ma sem töltődik
-  elő. Kérdés: egycímes leadnél előtöltsön-e az elsődlegessel? Jelenleg NINCS előtöltés.
+- ~~Előtöltés~~ → **eldöntve** (tulaj 2026-10-04: „igen töltse elő”): egycímes leadnél a „Követett link készítése”
+  címzett-mezője az egyetlen címmel indul, többcímesnél üres (`outreachPrefill`, őr ⑦, negatív kontroll: mindig/soha → piros).
 - **Élesen a 0086 a nagy deployjal fut le** (5 sor). Élesre semmi nem ment.
 
 ## Módosított fájlok

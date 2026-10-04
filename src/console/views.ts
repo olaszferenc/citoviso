@@ -3,7 +3,7 @@
 // doctrine). Every dynamic value goes through esc().
 
 import { recipientKey } from "../email/address.js";
-import { leadEmails } from "../email/leadEmails.js";
+import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { APP_TZ } from "../text/zoneTime.js";
 import { nowInLabel, zoneLabel, zonePickerHtml } from "../tenant/zonePicker.js";
 import type {
@@ -3601,7 +3601,7 @@ function prospectsPanel(
           (s) =>
             `<option value="${esc(s.id)}"${d.qualification === "no_site" && s.id === "nincs_honlap" ? " selected" : ""}${d.qualification === "outdated" && s.id === "elavult" ? " selected" : ""}${d.qualification === "modern" && s.id === "van_labnyom" ? " selected" : ""}>${esc(s.label)}</option>`,
         ).join("")}</select>
-        <input type="email" name="email" placeholder="${T(lang, "címzett e-mail címe")}" style="min-width:220px">
+        <input type="email" name="email" value="${esc(outreachPrefill(d.raw as { email?: string; otherEmails?: string[] }))}" placeholder="${T(lang, "címzett e-mail címe")}" style="min-width:220px">
         <button type="submit">${T(lang, "Követett link készítése")}</button>
       </form>
       ${
