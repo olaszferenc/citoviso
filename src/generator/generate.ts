@@ -18,6 +18,7 @@ import {
   PlacesUnavailableError,
   type PlacesFailure,
 } from "../scraper/sources/googleMaps.js";
+import { portalPhotoIdentity } from "../scraper/portalPhotos.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import type { PhotoProvenance } from "../engine/recipe.js";
 import { isUsablePropertyPhoto } from "../scraper/sources/portals/photoQuality.js";
@@ -296,7 +297,9 @@ function collectPortalPhotos(lead: QualifiedLead): GatedPhoto[] {
   for (const profile of lead.portalProfiles ?? []) {
     if (profile.needsReview) continue;
     for (const p of profile.photos) {
-      const key = photoKey(p.url);
+      // Host-independent: a portal network serves the same file from several hosts
+      // (scraper/portalPhotos.ts) — a full-URL key put the same picture twice in the gallery.
+      const key = portalPhotoIdentity(p.url);
       if (!p.url || seen.has(key)) continue;
       // Ingest filters and measures (portalListing.ts), but leads scraped BEFORE that
       // gate existed still carry flags, ad banners and article thumbnails. Re-applying

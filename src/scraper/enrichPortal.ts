@@ -19,6 +19,7 @@
 
 import { isBusinessEmail, isCorroboratedEmail } from "./enrichWebSearch.js";
 import { findPortalCandidates, portalLookup } from "./sources/portalListing.js";
+import { distinctPortalPhotos } from "./portalPhotos.js";
 import { webSearchAvailable } from "./sources/webSearch.js";
 import type { PortalListing, PortalProfile, QualifiedLead, Region } from "./types.js";
 
@@ -154,7 +155,7 @@ export async function enrichPortal(
       if (!profiles.length) continue;
       found.set(lead, profiles);
       accepted += profiles.length;
-      photos += profiles.reduce((s, p) => s + p.photos.length, 0);
+      photos += distinctPortalPhotos(profiles).length;
     }
   }
   await Promise.all(
@@ -241,7 +242,8 @@ export async function enrichPortal(
   });
 }
 
-/** All photos from accepted profiles — every one of them provenance "portal". */
+/** All DISTINCT photos from accepted profiles — every one of them provenance "portal".
+ *  Distinct across hosts: a portal network repeats the same file (scraper/portalPhotos.ts). */
 export function portalPhotosOf(lead: QualifiedLead): readonly { url: string; provenance: "portal" }[] {
-  return (lead.portalProfiles ?? []).flatMap((p) => p.photos);
+  return distinctPortalPhotos(lead.portalProfiles ?? []);
 }

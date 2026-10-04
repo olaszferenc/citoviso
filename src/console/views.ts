@@ -41,7 +41,8 @@ import {
   summariseMocks,
   unknownRegionLabel,
 } from "./leadFilters.js";
-import type { ContactCandidate, PortalListing } from "../scraper/types.js";
+import { portalPhotoCount } from "../scraper/portalPhotos.js";
+import type { ContactCandidate, PortalListing, QualifiedLead } from "../scraper/types.js";
 import { formatMoney } from "../text/money.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -4998,11 +4999,19 @@ function imageBreakdown(
   mat: { totalImages?: number; placesPhotos?: number; websiteImages?: number; streetView?: boolean },
   lang: string,
 ): string {
-  const portal = (mat as { portalPhotos?: number }).portalPhotos ?? 0;
+  // ⛔ MÉRT HIBA (2026-10-04, The Boys apartman): a tárolt portál-szám 118 volt — ugyanaz
+  // az 59 kép két host alatt (hotels-in-hungary.net + lake-balaton.com, egy portál-hálózat),
+  // és a lap „129 kép”-et írt. A portál-darabot a tárolt profilokból, a KÖZÖS azonosság-
+  // szabállyal számoljuk (scraper/portalPhotos.ts), és az összeget a duplikátum-többlettel
+  // korrigáljuk — így a régi gyűjtésű leadek is jó számot mutatnak újragyűjtés nélkül.
+  const storedPortal = (mat as { portalPhotos?: number }).portalPhotos ?? 0;
+  const profiles = ((d.raw ?? {}) as Pick<QualifiedLead, "portalProfiles">).portalProfiles;
+  const portal = Array.isArray(profiles) ? portalPhotoCount({ portalProfiles: profiles }) : storedPortal;
   const places = mat.placesPhotos ?? 0;
   const web = mat.websiteImages ?? 0;
   const sv = mat.streetView ? 1 : 0;
-  const total = mat.totalImages ?? places + portal + web + sv;
+  const total =
+    mat.totalImages != null ? mat.totalImages - Math.max(0, storedPortal - portal) : places + portal + web + sv;
   const parts = places + portal + web + sv;
   const latest = d.artifacts[0];
   const inMock = typeof latest?.inputs?.photos === "number" ? latest.inputs.photos : null;
@@ -5028,14 +5037,31 @@ function imageBreakdown(
           { p: String(parts), t: String(total) },
         )}</div>`
       : "";
-  const dropped =
+  // ⛔ MÉRT HIBA (2026-10-04): a különbséget egészében a fotó-kapunak tulajdonította, és a
+  // Fotók fülre küldött, ahol a kiejtett képek NEM látszanak. A valós okok szerkezetiek
+  // (generator/generate.ts → resolveGatedPhotos): a honlap képeit a mock nem használja, a
+  // Street View csak kép nélküli leadnél tartalék, a Google Places-ből csak lekérés után és
+  // legfeljebb 6 kép jön, a mock összesen legfeljebb 24 képet visz, és a nem elérhető
+  // linkű képet kihagyja. Csak azt soroljuk fel, ami ENNÉL a leadnél fennáll.
+  const reasons =
     inMock != null && inMock < total
-      ? `<div class="con-imgwarn">${ic("alert", 13)} ${T(
-          lang,
-          "{n} kép nem került a mockba — a fotó-kapu ejtette (méret vagy jogállás). A Fotók fülön látod, melyik.",
-          { n: String(total - inMock) },
-        )}</div>`
-      : "";
+      ? [
+          web ? T(lang, "{n} kép a talált honlapról — ezeket a mock nem használja.", { n: String(web) }) : "",
+          sv && inMock > 0 ? T(lang, "A Street View-felvétel csak kép nélküli leadnél kerül a mockba.") : "",
+          places
+            ? T(lang, "A Google Places-ből a gyűjtés {n} képet számolt — a mockba csak lekérés után, legfeljebb 6 kerül.", {
+                n: String(places),
+              })
+            : "",
+          portal + Math.min(places, 6) > 24 ? T(lang, "A mock legfeljebb 24 képet használ.") : "",
+          T(lang, "A nem elérhető linkű képeket a mock kihagyja."),
+        ].filter(Boolean)
+      : [];
+  const dropped = reasons.length
+    ? `<div class="con-imgwarn">${ic("alert", 13)} <div>${T(lang, "{n} kép nem került a mockba:", {
+        n: String(total - inMock!),
+      })}<ul style="margin:2px 0 0;padding-left:16px">${reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div></div>`
+    : "";
 
   return `<span data-cit-images="${total}/${inMock ?? ""}">${head}</span>
     <details class="con-imgdet"><summary>${T(lang, "Honnan jön ez a szám?")}</summary>

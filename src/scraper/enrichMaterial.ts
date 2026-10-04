@@ -1,3 +1,4 @@
+import { portalPhotoCount } from "./portalPhotos.js";
 import { hasStreetView } from "./streetview.js";
 import type { LeadMaterial, QualifiedLead } from "./types.js";
 
@@ -12,10 +13,9 @@ function buildMaterial(lead: QualifiedLead, streetView: boolean): LeadMaterial {
   const websiteImages = lead.assessment?.imageCount ?? 0;
   // Portal photos come from ACCEPTED listings only (the medium band returns
   // none), so counting them here cannot inflate the material of a weak match.
-  const portalPhotos = (lead.portalProfiles ?? []).reduce(
-    (sum, p) => sum + p.photos.length,
-    0,
-  );
+  // DISTINCT across profiles: two hosts of one portal network carry the same files
+  // (measured 2026-10-04: 2×59 counted as 118 — see portalPhotos.ts).
+  const portalPhotos = portalPhotoCount(lead);
   const totalImages =
     placesPhotos + websiteImages + portalPhotos + (streetView ? 1 : 0);
   return {
