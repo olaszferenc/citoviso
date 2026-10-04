@@ -29,6 +29,7 @@
 - [2026-10-04_eles_teszt_vasarlas_torlese.md](2026-10-04_eles_teszt_vasarlas_torlese.md) — 2026-10-04 — Éles teszt-vásárlás ([TESZT] Muschel Panzió) törlése
 - [2026-10-04_dupla_foglalas_cim.md](2026-10-04_dupla_foglalas_cim.md) — 2026-10-04 — Dupla „Foglalás” cím: walk-through, artdeco, brutalism
 - [2026-10-04_deploy_koordinator_bc222e7f.md](2026-10-04_deploy_koordinator_bc222e7f.md) — 2026-10-04 — Deploy-koordinátor: bc222e7f élesítve (prod/20261004-1728), OUTREACH_TEST_PHONES, Kerekerdő újragenerálva → 3 generátor-hiba SUB-ba
+- [2026-10-04_ai_koltsegplafon_es_prompt_cache.md](2026-10-04_ai_koltsegplafon_es_prompt_cache.md) — 2026-10-04 — AI-költségplafon (napi $20, env) + prompt-cache a mock-generáláson (SUB)
 - [2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md](2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md) — 2026-10-03 — Tényhűség: összevont hely-állítás + a Google-értékelés egy szabállyal
 - [2026-10-03_lead_elerhetoseg_szamlazasi_adat.md](2026-10-03_lead_elerhetoseg_szamlazasi_adat.md) — 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
 - [2026-10-03_k3_elek3_leletek.md](2026-10-03_k3_elek3_leletek.md) — K3 — Elek 3. kör leletei: kültéri tárgy, MINTA nem tény, napok-küszöb, plus-alcím, Citoviso-aláírás, alacsony tételek (2026-10-03)
