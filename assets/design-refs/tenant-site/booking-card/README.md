@@ -47,6 +47,10 @@ Minden más doboz (kártya, felirat, gomb) pixelre egyezik a tervvel.
 
 - **walk-through:** a formázott sáv közvetlenül a nagy „Foglalás” cím fölött áll (a cím kétszer).
 - **artdeco:** a konténer címe és a sáv címe is „Foglalás”.
+- ✅ **Javítva 2026-10-04** (tulaj: „javítsuk”): walk-through — a naptár előtti sáv belseje rejtve (a gate-opening
+  szabálya); artdeco és (a 21-es mérésből) brutalism — a konténer címe marad, a sáv címe rejtve. Őr:
+  `scripts/booking-title-stutter-check.mts` (mind a 21 sablon; két egymást követő „Foglalás” cím = piros).
+  Képek a javítás után: `dupla-cim-javitva-{walk-through,artdeco,brutalism}-{asztali,mobil}.png`.
 - **gate-opening** szándékosan rejti a sávot a naptár előtt (`:has(#cit-booking)`) — helyes.
 
 ## Mérés

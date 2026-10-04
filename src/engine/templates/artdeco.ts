@@ -108,6 +108,8 @@ ${centredModsecCss("artdeco")}
   .ad-desk .ad-desksub{text-align:center;font-style:italic;color:var(--cit-muted);margin-bottom:24px}
   .ad-desk .cit-enquiry-bar-inner{max-width:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:1.4rem}
   .ad-desk .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-size:1.3rem;letter-spacing:.06em;color:var(--cit-ink)}
+  /* the panel already says „Foglalás”; the booking band's own title would repeat it */
+  .ad-desk [data-cit-variant="cta"] .cit-enquiry-bar-title{display:none}
 
   /* SECTIONS */
   section.ad-sec{padding:92px 0}

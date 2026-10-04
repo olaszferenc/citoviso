@@ -125,6 +125,8 @@ const BRUTALISM_CSS = `
   .b-console .cit-book__note{color:color-mix(in srgb, var(--cit-bg) 65%, transparent)}
   .b-console .cit-enquiry-bar-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
   .b-console .cit-enquiry-bar-title{font-family:${MONO};font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--cit-bg);margin:0}
+  /* the console label already says „Foglalás”; the booking band's own title would repeat it */
+  .b-console [data-cit-variant="cta"] .cit-enquiry-bar-title{display:none}
   .b-console .cit-btn{background:${ACC_LIGHT};color:var(--cit-ink);border-color:var(--cit-ink);box-shadow:4px 4px 0 color-mix(in srgb, var(--cit-bg) 35%, transparent)}
 
   /* sections — numbered tags, thick band rules */

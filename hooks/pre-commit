@@ -934,6 +934,15 @@ if [ -f scripts/booking-card-check.mts ] && \
   echo "[pre-commit] booking-card-check (foglalás-sáv kártyaként a Képek után)…"
   npx tsx scripts/booking-card-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Két egymást követő „Foglalás” cím nem állhat (tulaj „javítsuk”, 2026-10-04): a walk-through-ban
+# a sáv a naptár „Foglalás” <h2>-je fölött, az art-deco/brutalism konténer-címe alatt a sáv címe
+# ismételte. Mind a 21 sablon × mock / élő+foglalás / élő foglalás nélkül × 1280 / 390. ~30 mp.
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/booking-title-stutter-check.mts ] && \
+   changed_files | grep -qE '^src/engine/templates/[A-Za-z]+\.ts$|^src/engine/(templateKit|render|primitives|moduleSections|templates)\.ts$|^assets/runtime/(cit-runtime\.js|cit-modules\.css)$|^src/generator/runtime\.ts$|^scripts/booking-title-stutter-check\.mts$'; then
+  echo "[pre-commit] booking-title-stutter-check (nincs két egymást követő „Foglalás” cím)…"
+  npx tsx scripts/booking-title-stutter-check.mts >"$GATE_LOG" || gate_failed
+fi
 # §B.17 a KIKÜLDÖTT mockon: a vélemény-űrlap — az egyetlen, ami nevet, e-mailt és
 # hozzájárulást kér — jelöletlen volt, és közzétételt ígért egy űrlapról, ami sehova
 # nem posztol; a cáfolat csak BEKÜLDÉS UTÁN érkezett. Böngészős geometria (együtt

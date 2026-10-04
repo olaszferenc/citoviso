@@ -374,6 +374,10 @@ p{margin:0 0 1em}
 .wk-enq .wk-kicker{color:color-mix(in srgb,var(--cit-surface) 82%,var(--cit-ink));margin:0}
 .wk-enq .wk-kicker a{color:var(--cit-surface)}
 .wk-enq .cit-enquiry{margin:22px 0 0}
+/* the full booking section follows right below with its own „Foglalás” heading: the band's
+   title + jump button would only repeat it (measured: „Foglalás / Foglalás”, the gate-opening
+   rule). The band itself stays — it is #cit-enquiry, the anchor the booking buttons point at. */
+.wk-enq:has(#cit-booking) .cit-enquiry-bar-inner{display:none}
 .wk-enq .cit-enquiry-bar-inner{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin:0}
 .wk-enq .cit-enquiry-bar-title{margin:0;color:var(--cit-surface);font:700 1.5rem/1.1 var(--cit-font-display);letter-spacing:-.02em}
 .wk-enq .cit-modsec{background:transparent;color:var(--cit-surface);--cit-modsec-py:40px}
