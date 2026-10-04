@@ -2377,7 +2377,7 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-mk__det .con-recipe { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-top: 0; }
 
 /* ═══ A MOCK SZÖVEGE — KÉZI ÁTÍRÁS (A) — jóváhagyott terv: assets/design-refs/console/mock-copy-edit/
-   (A + B, tulajdonosi döntés 2026-10-04, ADR-XXXX). Az űrlap egy harmad-szélességű kártyába nem
+   (A + B, tulajdonosi döntés 2026-10-04, ADR-0323). Az űrlap egy harmad-szélességű kártyába nem
    fér: kinyitva a kártya a TELJES sort kapja (①), ahogy az aktív kép-kapué is. */
 .con .con-mk:has(.con-mkcopy[open]) { grid-column: 1 / -1; }
 .con .con-mkcopy__pill {

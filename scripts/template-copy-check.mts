@@ -59,7 +59,7 @@ function visible(html: string): string {
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ");
 }
-// `[^>]*`: the element may carry further attributes (the copy-editor hook, ADR-XXXX) — an
+// `[^>]*`: the element may carry further attributes (the copy-editor hook, ADR-0323) — an
 // exact `">` made the headline vanish and the assertion read an empty string.
 const headline = (html: string) => /<h2 class="e-quote"[^>]*>([\s\S]*?)<\/h2>/.exec(html)?.[1] ?? "";
 

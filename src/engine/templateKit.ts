@@ -8,7 +8,7 @@ import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
-// Copy hooks for the preview editor (ADR-XXXX) — every template marks the copy it shows.
+// Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
 export { copyHook, highlightHook, hookPick } from "./copyFields.js";
 

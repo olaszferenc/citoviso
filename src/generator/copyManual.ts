@@ -1,5 +1,5 @@
 // THE CURATOR'S HAND EDIT of a mock's copy (owner request 2026-10-04: „a mockoknál lehessen
-// manuálisan újraírni a szöveget”; ADR-XXXX, approved plan: assets/design-refs/console/
+// manuálisan újraírni a szöveget”; ADR-0323, approved plan: assets/design-refs/console/
 // mock-copy-edit/). One save path for both surfaces — the field form on the mock card (A)
 // and the in-place preview editor (B).
 //

@@ -1,4 +1,4 @@
-// MOCK COPY — HAND EDIT (owner request 2026-10-04, ADR-XXXX). Approved plan, the contract:
+// MOCK COPY — HAND EDIT (owner request 2026-10-04, ADR-0323). Approved plan, the contract:
 // assets/design-refs/console/mock-copy-edit/ (A + B together, one save path).
 //
 //   A — the field form on the mock card ("A mock szövege — kézi átírás"): EVERY field,

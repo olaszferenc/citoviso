@@ -184,7 +184,7 @@ const lido = criticSourceOf({
   check("API-kulcs nélkül is FLAG (nem „pass, nincs jelölt”)", /if \(placed\.length\) \{\s*return \{ verdict: "flag"/.test(noKey), "kulcs nélkül átengedné");
   const onError = fc.slice(fc.lastIndexOf("} catch (err) {"));
   check("Verifier-hibánál a gépi lelet áll (flag, nem error)", /if \(placed\.length\) \{\s*return \{ verdict: "flag"/.test(onError), "hibánál elveszne");
-  // The post-generation paths (AI rewrite + the curator's hand edit, ADR-XXXX) build the gate's
+  // The post-generation paths (AI rewrite + the curator's hand edit, ADR-0323) build the gate's
   // source in ONE place — copySources.ts — so the rule follows it there, and both callers must
   // actually hand that block to the gate.
   for (const path of ["src/generator/generateEngine.ts", "src/generator/copySources.ts"]) {

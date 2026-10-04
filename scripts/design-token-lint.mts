@@ -37,7 +37,7 @@ const FILES = [
   "src/console/prospectNotice.ts",
   "src/console/photoProxy.ts",
   "src/generator/patternBadge.ts",
-  // ADR-XXXX: the mock copy editor (A form + the B bar injected into the mock preview).
+  // ADR-0323: the mock copy editor (A form + the B bar injected into the mock preview).
   "src/console/copyEditViews.ts",
   "src/server/adminViews.ts",
   "src/server/public.ts",

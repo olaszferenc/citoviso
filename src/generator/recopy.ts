@@ -121,7 +121,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // One source assembly for both post-generation paths (copySources.ts).
   const sources = await loadCopySources(row.lead_id, inputs, siteData);
   const { lead, region, ctx, lang, descriptions, amenities, photoUrls } = sources;
-  // D3 (ADR-XXXX): the curator's hand-written fields are FIXED — the rewrite fills only the
+  // D3 (ADR-0323): the curator's hand-written fields are FIXED — the rewrite fills only the
   // rest, and every guard below judges the overlaid text, i.e. what will actually ship.
   const manual = manualCopyOf(inputs);
   const briefInput = {

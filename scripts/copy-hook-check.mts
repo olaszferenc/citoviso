@@ -1,4 +1,4 @@
-// COPY-HOOK GUARD — every template marks every copy field it shows (ADR-XXXX, approved
+// COPY-HOOK GUARD — every template marks every copy field it shows (ADR-0323, approved
 // plan: assets/design-refs/console/mock-copy-edit/, ② B — in-place editing).
 //
 // WHY. The preview editor finds a field ONLY by its `data-cit-copy` hook. A template that

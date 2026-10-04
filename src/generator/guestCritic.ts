@@ -975,7 +975,7 @@ export async function applyGuestCritic(
 }
 
 /**
- * JUDGE ONLY — the curator's hand-written copy (ADR-XXXX, D2). The critic reads it and
+ * JUDGE ONLY — the curator's hand-written copy (ADR-0323, D2). The critic reads it and
  * grades it exactly as it grades a generated round, but NEVER rewrites it: the curator
  * answers for those words, and a machine silently "fixing" them would put text on the page
  * that nobody wrote. Same persisted keys as applyGuestCritic, so the send gate reads it.

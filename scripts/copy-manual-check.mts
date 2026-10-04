@@ -1,4 +1,4 @@
-// COPY-MANUAL GUARD — the rules of the curator's hand edit of a mock's copy (ADR-XXXX;
+// COPY-MANUAL GUARD — the rules of the curator's hand edit of a mock's copy (ADR-0323;
 // contract: assets/design-refs/console/mock-copy-edit/README.md). Deterministic, no DB/AI.
 //
 //   ① the inline scripts (A form handlers, B preview editor) PARSE. Measured 2026-10-04: one

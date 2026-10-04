@@ -398,7 +398,7 @@ function lastGenerateOutcome(
  * entry now EXPIRES, and a wedged/finished run can never mute the button forever.
  */
 const recopying = new Map<string, number>();
-/** Hand-edit saves in flight (ADR-XXXX) — one save per mock at a time, and never while an
+/** Hand-edit saves in flight (ADR-0323) — one save per mock at a time, and never while an
  *  AI rewrite of the same mock runs: the two would write the same words over each other. */
 const copySaving = new Set<string>();
 /** A rewrite takes ~40-60s; past this the entry is treated as dead, not as running. */
@@ -2369,7 +2369,7 @@ async function handle(
     const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
     return redirect(res, `${back}?flash=${encodeURIComponent(flash)}#ls-mocks`);
   }
-  // POST /artifact/:id/copy — the curator's HAND edit of a mock's copy (ADR-XXXX; approved
+  // POST /artifact/:id/copy — the curator's HAND edit of a mock's copy (ADR-0323; approved
   // plan assets/design-refs/console/mock-copy-edit/). ONE path for both surfaces: the field
   // form on the mock card (a plain form POST → redirect back with the outcome) and the
   // preview editor (fetch, Accept: application/json → JSON). Synchronous on purpose: the
@@ -2415,7 +2415,7 @@ async function handle(
     const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
     return redirect(res, `${back}?flash=${flash}${result.ok ? "" : "&flashKind=bad"}#copy-${id}`);
   }
-  // GET /artifact/:id/edit — the CURATOR preview with the copy editor (ADR-XXXX ② B). A
+  // GET /artifact/:id/edit — the CURATOR preview with the copy editor (ADR-0323 ② B). A
   // FRESH render of the stored recipe (so the template hooks are always there, and the page
   // is exactly what a save will write); the stored file stays pure, and the /mock/ link —
   // which the lead may receive — never carries the editor.

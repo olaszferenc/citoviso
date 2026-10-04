@@ -1,5 +1,5 @@
 // THE MOCK'S EDITABLE COPY — one field model for the console form (A), the in-place
-// preview editor (B), the save path and the templates' hooks (ADR-XXXX; approved plan:
+// preview editor (B), the save path and the templates' hooks (ADR-0323; approved plan:
 // assets/design-refs/console/mock-copy-edit/).
 //
 // WHY ONE MODULE. The same field is written from two surfaces, judged by the same gates

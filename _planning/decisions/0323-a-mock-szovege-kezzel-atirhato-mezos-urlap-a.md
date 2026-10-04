@@ -1,4 +1,4 @@
-## ADR-XXXX — A mock szövege kézzel átírható: mezős űrlap a kártyán (A) ÉS helyben szerkesztés az előnézeten (B), egy mentési úttal
+## ADR-0323 — A mock szövege kézzel átírható: mezős űrlap a kártyán (A) ÉS helyben szerkesztés az előnézeten (B), egy mentési úttal
 
 **Dátum:** 2026-10-04
 **Státusz:** elfogadva (lokál; élesre csak a nagy deployjal)

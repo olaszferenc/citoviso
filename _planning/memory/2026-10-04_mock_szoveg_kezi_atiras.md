@@ -1,4 +1,4 @@
-# 2026-10-04 — A mock szövege kézzel átírható (A + B, ADR-XXXX)
+# 2026-10-04 — A mock szövege kézzel átírható (A + B, ADR-0323)
 
 **Kérés (tulaj):** „a mockoknál lehessen manuálisan újraírni a szöveget”.
 **Döntés (koordinátoron át):** „Előnézet és mező” → A ÉS B; D2–D5 a javaslat szerint.

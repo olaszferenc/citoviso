@@ -5367,7 +5367,7 @@ export function leadPage(
                  <a href="/mock/${esc(a.id)}" target="_blank">${T(lang, "előnézet ▸")}</a>
                  <a href="/configure/${esc(a.id)}" target="_blank">${T(lang, "prospect-konfigurátor ▸")}</a>
                  ${
-                   // ADR-XXXX ② B: the curator preview with the copy editor (never on /mock/).
+                   // ADR-0323 ② B: the curator preview with the copy editor (never on /mock/).
                    a.inputs.recipe
                      ? `<a href="/artifact/${esc(a.id)}/edit" target="_blank">${T(lang, "szöveg szerkesztése ▸")}</a>`
                      : ""
@@ -5442,7 +5442,7 @@ export function leadPage(
             ${curated ? "" : `<script>${photoGatePreScript(d.id, a.id)}</script>`}
             <div class="con-mk__det" id="det-${esc(a.id)}" hidden>
               ${
-                // ADR-XXXX ① A: the hand edit of THIS mock's copy. Frozen once a prospect
+                // ADR-0323 ① A: the hand edit of THIS mock's copy. Frozen once a prospect
                 // link exists for it (§I) — the same line the AI rewrite draws.
                 mockCopyEditBlock(a.id, a.inputs, prospects.some((p) => p.artifactId === a.id), lang)
               }
