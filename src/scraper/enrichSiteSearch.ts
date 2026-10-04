@@ -23,7 +23,7 @@ import {
   geoTerms,
   searchPlace,
   tokens,
-  verify,
+  verifyOrRender,
 } from "./enrichPresence.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
@@ -188,7 +188,8 @@ export async function findOwnSite(
     // else's domain passes both the geo anchor and verify(), so this is the
     // only thing standing between us and a town portal or a blog post.
     if (!domainCarriesBrand(page.finalUrl, lead.name, terms)) continue;
-    if (!verify(lead.name, terms, page.html)) continue;
+    // JavaScript-built sites show the town only after rendering (Dalma panzió).
+    if (!(await verifyOrRender(lead.name, terms, page))) continue;
     // A search hit that resolves to a portal is not an own site.
     if (classifyWebsite(page.finalUrl) === "has_own") return page.finalUrl;
   }

@@ -1,4 +1,6 @@
+import { config } from "../config.js";
 import { classifyWebsite } from "./qualify.js";
+import { PORTAL_USER_AGENT } from "./sources/portals/politeness.js";
 import type { QualifiedLead, Region } from "./types.js";
 
 // Presence layer (§F invariants): the "no own site" verdict must be PROVEN, not
@@ -184,6 +186,73 @@ export function verify(name: string, terms: string[], html: string): boolean {
   return brandHit && geoHit; // §F.14 — brand-only is a collision, not a hit
 }
 
+/**
+ * Headless render of ONE page. Some own sites are built entirely by JavaScript
+ * (booking-engine site builders such as previoweb.app, Wix): the static HTML
+ * carries the <title> and nothing else — no address, no town, no phone.
+ * Measured 2026-10-04 on "Dalma panzió" / Balatonvilágos: Brave ranked
+ * www.dalmapanzio.hu/hu/ as hit #1, both the domain guess and the search pass
+ * fetched it, and verify() rejected it because "Balatonvilágos" only exists in
+ * the rendered DOM. The lead was then shown as "nincs honlap".
+ */
+export function renderHtml(
+  url: string,
+): Promise<{ finalUrl: string; html: string } | null> {
+  // The domain guess hits the same site under several names (bare/www, .hu
+  // redirecting to /hu/) and the search pass fetches it again — render once.
+  let pending = renderCache.get(url);
+  if (!pending) {
+    pending = renderUncached(url);
+    renderCache.set(url, pending);
+  }
+  return pending;
+}
+
+const renderCache = new Map<string, Promise<{ finalUrl: string; html: string } | null>>();
+
+async function renderUncached(
+  url: string,
+): Promise<{ finalUrl: string; html: string } | null> {
+  const { chromium } = await import("playwright-core");
+  let browser;
+  try {
+    browser = await chromium.launch({ executablePath: config.chromiumPath });
+    const context = await browser.newContext({ userAgent: PORTAL_USER_AGENT, locale: "hu-HU" });
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20_000 });
+    await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
+    const html = await page.content();
+    const finalUrl = page.url();
+    await context.close();
+    return { finalUrl, html };
+  } catch {
+    return null;
+  } finally {
+    await browser?.close().catch(() => {});
+  }
+}
+
+/**
+ * verify(), with a rendered second look for JavaScript-built sites. The render
+ * runs ONLY when the static HTML already names the brand (typically just the
+ * <title>) but not the place — a browser costs ~100x a fetch, so pages that do
+ * not even carry the brand never get one. The geo rule itself is unchanged:
+ * the rendered page must still name the lead's town (§F.14).
+ */
+export async function verifyOrRender(
+  name: string,
+  terms: string[],
+  page: { finalUrl: string; html: string },
+): Promise<boolean> {
+  if (verify(name, terms, page.html)) return true;
+  const text = deaccent(page.html.toLowerCase());
+  if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
+  const core = tokens(name).filter((w) => !TYPE_WORDS.has(w));
+  if (!core.some((w) => w.length >= 4 && text.includes(w))) return false;
+  const rendered = await renderHtml(page.finalUrl);
+  return Boolean(rendered && verify(name, terms, rendered.html));
+}
+
 async function probeLead(
   lead: QualifiedLead,
   region: Region,
@@ -191,7 +260,7 @@ async function probeLead(
   const terms = geoTerms(lead, region);
   for (const url of urlCandidates(lead.name, region)) {
     const r = await fetchHtml(url);
-    if (r && verify(lead.name, terms, r.html)) return r.finalUrl;
+    if (r && (await verifyOrRender(lead.name, terms, r))) return r.finalUrl;
   }
   return null;
 }
