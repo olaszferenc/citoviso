@@ -1603,7 +1603,7 @@ if [ -f scripts/shared-contact-gate-check.mts ] && \
   echo "[pre-commit] shared-contact-gate-check (szomszéd elérhetőségére nem megy mock)…"
   npx tsx scripts/shared-contact-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
-# ADR-XXXX (tulaj, 2026-10-04): a tulaj teszt-száma (OUTREACH_TEST_PHONES) CSAK [TESZT]
+# Tulaj-döntés 2026-10-04 (ADR: az őr fejléce): a tulaj teszt-száma (OUTREACH_TEST_PHONES) CSAK [TESZT]
 # leaden mentes a közös-elérhetőség és (élesen kívül) a szám-szintű leiratkozás alól;
 # valódi lead ugyanazzal a számmal továbbra is tiltott (negatív kontroll). ~3 s.
 if [ -f scripts/owner-test-phone-check.mts ] && \
