@@ -21,6 +21,7 @@
 - [2026-10-04_lead_lap_mock_pirula_kikuldve_jel.md](2026-10-04_lead_lap_mock_pirula_kikuldve_jel.md) — 2026-10-04 — Lead-lap mock-pirula = lista szabálya; „✓ kiküldve” = bármelyik csatorna
 - [2026-10-04_koordinator_eles_hibak_javitasa.md](2026-10-04_koordinator_eles_hibak_javitasa.md) — Koordinátor — Éles hibák javítása: 16 tulaj-kérés, 18 SUB, minden landolva (2026-10-04)
 - [2026-10-04_js_honlap_renderelt_igazolas.md](2026-10-04_js_honlap_renderelt_igazolas.md) — 2026-10-04 — A JS-sel épülő saját honlap is igazolható (Dalma panzió)
+- [2026-10-04_generator_tenyhuseg_3hiba.md](2026-10-04_generator_tenyhuseg_3hiba.md) — 2026-10-04 — Generátor-tényhűség: 3 hiba a Kerekerdő-újragenerálásból (SUB)
 - [2026-10-04_foto_darabszam_duplikat_portal.md](2026-10-04_foto_darabszam_duplikat_portal.md) — 2026-10-04 — Fotó-darabszám: a fül-mondat és a lead-fejléc a valós képszámot mondja; portál-hálózati duplikátum
 - [2026-10-04_foglalas_sav_kozos_kartya.md](2026-10-04_foglalas_sav_kozos_kartya.md) — 2026-10-04 — Foglalás-sáv kártyaként, egy közös szabállyal (arch-frames · tilted-gallery · wordmark-grow)
 - [2026-10-04_fejlec_link_csomag_parallax_menusav.md](2026-10-04_fejlec_link_csomag_parallax_menusav.md) — 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)
