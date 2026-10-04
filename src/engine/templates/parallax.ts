@@ -13,7 +13,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
+import { accented, bookingSlot, hasBookingSurface, copyOf, ctaLabel, esc, firstSentence, honestStarCount, mastheadCss, mastheadHtml, T, type ArtTemplate, type MastheadLink, mobCtaStat, MOBCTA_CSS, heroFit, HERO_FIT_CSS } from "../templateKit.js";
 
 const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -220,15 +220,25 @@ const PARALLAX_CSS = `
 
 // Tiny behavior layer: the side dot-nav gets its active state marked while scrolling.
 // Progressive enhancement only — the dots are plain anchors and work without it.
+// The active dot is the section under a line 40% down the screen (the last one whose top
+// has passed it) — by position, not by IntersectionObserver ratio: a 2 000 px section
+// never reached a 40% ratio, and a section LEAVING the screen also fired as intersecting,
+// so the first dot stayed lit down to the booking block (owner 2026-10-04). At the very
+// bottom the last section on screen wins (a short closing section never reaches the line).
 const PARALLAX_JS = `
   (function(){
-    var dots=[].slice.call(document.querySelectorAll('.t-dots a'));if(!dots.length||!('IntersectionObserver' in window))return;
-    var secs=dots.map(function(a){return document.querySelector(a.getAttribute('href'))}).filter(Boolean);
-    var io=new IntersectionObserver(function(es){es.forEach(function(e){
-      if(e.isIntersecting){var i=secs.indexOf(e.target);
-        dots.forEach(function(d,j){d.classList.toggle('on',j===i)});}
-    })},{threshold:.4});
-    secs.forEach(function(s){io.observe(s)});
+    var dots=[].slice.call(document.querySelectorAll('.t-dots a'));if(!dots.length)return;
+    var pairs=dots.map(function(a){return [a,document.querySelector(a.getAttribute('href'))]}).filter(function(p){return p[1]});
+    var queued=false;
+    function mark(){
+      queued=false;var line=innerHeight*.4,end=scrollY+innerHeight>=document.documentElement.scrollHeight-2,on=null;
+      pairs.forEach(function(p){var r=p[1].getBoundingClientRect();if(!r.height)return;
+        if(r.top<=line||(end&&r.top<innerHeight))on=p[0];});
+      if(!on&&pairs.length)on=pairs[0][0];
+      dots.forEach(function(d){d.classList.toggle('on',d===on)});
+    }
+    function queue(){if(!queued){queued=true;requestAnimationFrame(mark)}}
+    addEventListener('scroll',queue,{passive:true});addEventListener('resize',queue);mark();
   })();
   // The scrolled menu bar: on once the hero (and its masthead menu) has left the screen.
   // Without JS the bar never shows — the masthead and the side dots still navigate.
@@ -503,8 +513,11 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ["#t-gallery", T(data, "Galéria"), gallery],
     ["#t-reviews", T(data, "Vélemények"), reviews],
     ["#t-contact", T(data, "Kapcsolat"), contact],
+    // the closing booking section (moduleSections, #cit-booking) — rendered whenever the
+    // booking surface is; the live cut and the configurator drop this link with it
+    ["#cit-booking", T(data, "Foglalás"), hasBookingSurface(data, phase) ? "booking" : ""],
   ];
-  const dots = `<nav class="t-dots" aria-label="${T(data, "Szekciók")}">
+  const dots = `<nav class="t-dots" data-cit-secnav aria-label="${T(data, "Szekciók")}">
     ${dotTargets
       .filter(([, , html]) => Boolean(html))
       .map(([href, label], i) => `<a href="${href}"${i === 0 ? ` class="on"` : ""} aria-label="${esc(label)}"></a>`)

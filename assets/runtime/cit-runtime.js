@@ -2068,7 +2068,9 @@
       var as = document.querySelectorAll('a[href="#cit-booking"], a[href="#cit-enquiry"]');
       for (var i = 0; i < as.length; i++) {
         var a = as[i];
-        if (a.closest("form, #cit-booking, #cit-pmenu")) continue;
+        // [data-cit-secnav]: a section index (Parallax side dots) — its booking dot is the
+        // place in the list, not a button, and must stay at the block it marks.
+        if (a.closest("form, #cit-booking, #cit-pmenu, [data-cit-secnav]")) continue;
         var p = positioned(a);
         if (!p) continue;
         // A sticky enquiry DOCK hides as a whole (an empty band would remain otherwise);

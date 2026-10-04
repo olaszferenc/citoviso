@@ -141,7 +141,9 @@ const PROBE = `(() => { ${LIB}
   const blockIn = br.bottom > 0 && br.top < H;
   const bad = [];
   for (const el of document.querySelectorAll('a, button')) {
-    if (block.contains(el) || el.closest('form, #cit-pmenu')) continue;
+    // [data-cit-secnav]: a section index (Parallax side dots, label-less) — its booking dot
+    // marks WHERE the guest is, it is not a button; the runtime exempts it the same way.
+    if (block.contains(el) || el.closest('form, #cit-pmenu, [data-cit-secnav]')) continue;
     const href = el.getAttribute('href') || '';
     const t = (el.textContent || '').trim().replace(/\\s+/g, ' ');
     if (!(href === '#cit-booking' || href === '#cit-enquiry' || (t.length < 45 && BOOK_RE.test(t)))) continue;

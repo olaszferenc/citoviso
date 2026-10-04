@@ -2098,6 +2098,18 @@ if [ -f scripts/nav-target-check.mts ] && \
   npx tsx scripts/nav-target-check.mts --self-test >"$GATE_LOG" || gate_failed
   npx tsx scripts/nav-target-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Parallax dot-nav gate (2026-10-04, owner: „a foglalási blokknál az első pöttyöt mutatja
+# aktívnak” → „igen javítsuk”): wheel-scrolled top to bottom (mock / live ± booking, two
+# desktop sizes), the lit side dot is the section on screen. Measured before the fix: the
+# IntersectionObserver lit a leaving section's dot; the booking section had none. ~25 s;
+# --self-test first (the old observer put back, ② must go red).
+# ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/parallax-dots-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(templates/parallax\.ts|templateKit\.ts|moduleSections\.ts|render\.ts)$|^src/generator/runtime\.ts$|^assets/runtime/cit-runtime\.js$|^scripts/parallax-dots-check\.mts$'; then
+  echo "[pre-commit] parallax-dots-check (görgetéskor a képen lévő szakasz pöttye világít)…"
+  npx tsx scripts/parallax-dots-check.mts --self-test >"$GATE_LOG" || gate_failed
+  npx tsx scripts/parallax-dots-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Hero readability gate (2026-09-01, contract: design-refs/engine/hero-contrast): every
 # text-on-PHOTO hero headline must stay legible on a worst-case BRIGHT photo (WCAG
 # AA-large). Headless render + pixel-measure (~15s), so it runs only when engine template/
