@@ -155,6 +155,12 @@ section{padding:clamp(66px,9vh,110px) 0;position:relative}
 .a-arch img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
 .a-arch::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   border:1px solid color-mix(in srgb,var(--cit-line) 90%,transparent)}
+/* The runtime's MINTA pill defaults to the top-left corner — which on an arch lies OUTSIDE
+   the curve: overflow:hidden + the arch radius cut it to "…TA" or to nothing (owner report
+   2026-10-04, Lovász apartman). The runtime's free-corner measurement cannot see the curve,
+   so on the arch the pill is pinned to the crown, top-centre, whatever corner class it got
+   (owner's pick B, 2026-10-04). The crown is flat enough there for the pill's width. */
+.a-arch .cit-wm{top:14px;bottom:auto;left:50%;right:auto;transform:translateX(-50%)}
 .a-frame{position:relative;aspect-ratio:3/4}
 /* gallery strip — contract design-refs/tenant-site/gallery-cap (B): one swipeable row of arches */
 .a-gal{padding:clamp(64px,9vw,120px) 0}
