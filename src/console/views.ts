@@ -4214,7 +4214,12 @@ function heroSubjectLabel(subject: string, lang: string): string {
  * answer on file. Places is bought only by the curator's paid button here — or once,
  * automatically, by the generation for a lead without any portal photo.
  */
-function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroUrl?: string): string {
+function leadPhotosPanel(
+  leadId: string,
+  latestArtifactId?: string,
+  currentHeroUrl?: string,
+  mockPhotoCount: number | null = null,
+): string {
   const lang = consoleLang();
   // ⚠️ A rács az ÉLŐ fotólistát kéri le, a mock viszont egy PILLANATKÉP: a kettő sorrendje
   // eltérhet (időközben új pontszám született, más Places-URL jött vissza). Ezért a
@@ -4284,7 +4289,13 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
     moreN: T(lang, "még {n} kép lent — görgess a rácsban"),
     more: T(lang, "görgess a rácsban a többi képért"),
     loadFailed: T(lang, "A fotók betöltése nem sikerült."),
+    // The tab sentence (approved plan ③: "what is ON the open tab") — counted from the
+    // grid actually drawn, not from the scrape's raw tally (see the ls-photos tab).
+    sayShown: T(lang, "{n} kép ezen a fülön — {p} a portál-adatlapról, {q} a Google Places-ből."),
+    sayInMock: T(lang, "Ebből {m} van a legutóbbi mockban."),
+    sayNone: T(lang, "Ezen a fülön nincs kép erről a szállásról."),
   };
+  const mockN = mockPhotoCount;
   const pinIc = ic("pin", 15);
   const downIc = ic("chevron-down", 14);
   return `<div class="panel lp-panel">
@@ -4314,6 +4325,7 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
         var SUBJ = ${JSON.stringify(heroSubjectLabels(lang))};
         var NEVER = ['toilet','bathroom','parking','sign_map','people_doc','ad_banner'];
         var HERO_KEY = ${JSON.stringify(heroKey)};
+        var MOCK_N = ${JSON.stringify(mockN)};
         // The source is part of what the operator judges (a portal listing image is
         // the owner's own marketing shot; a Places one is usually a guest snapshot),
         // so the rights class rides along into the caption.
@@ -4433,12 +4445,26 @@ function leadPhotosPanel(leadId: string, latestArtifactId?: string, currentHeroU
           scrollCues();
           if (!photos.length && d.unavailable === 'upstream-load') { msg.textContent = S.loadFailed; return; }
           var nPortal = portal.length;
+          tabSay(photos.length
+            ? fill(S.sayShown, { n: photos.length, p: nPortal, q: places.length })
+              + (MOCK_N === null ? '' : ' ' + fill(S.sayInMock, { m: MOCK_N }))
+            : S.sayNone);
           msg.textContent = photos.length
             ? photos.length + ' fotó'
               + (nPortal ? ' (' + nPortal + ' portál-adatlapról)' : '')
               + (d.rating ? ' · Google-értékelés: ' + d.rating + '★' + (d.ratingCount ? ' (' + d.ratingCount + ')' : '') : '')
               + (d.band ? ' · match: ' + d.band : '')
             : '${jsStr(T(lang, "Ehhez a leadhez nem találtunk fotót."))}';
+        }
+        // The tab strip's sentence for this tab: rewritten from the drawn grid, in the
+        // say-store (tab switches read it from there) and on screen if this tab is open.
+        function tabSay(text) {
+          var src = document.querySelector('[data-say-for="ls-photos"]');
+          if (!src) return;
+          src.textContent = text;
+          var pane = document.getElementById('ls-photos');
+          var say = document.querySelector('[data-cit-tabsay]');
+          if (say && pane && pane.classList.contains('on')) say.textContent = text;
         }
         // The strip scrolls INSIDE the panel (max 420 px): without a cue the cut row
         // reads as a rendering bug (owner's mock review, 2026-10-02) — so fade the edge
@@ -6598,7 +6624,6 @@ function cpScript(prefix: string): string {
   // ⛔ SZÁMLÁLÓ HELYETT MONDAT (jóváhagyott terv ③): minden fül KIMONDJA, mit talál rajta a
   // kurátor — a „Fotók" is, aminek eddig egyetlen száma sem volt, és ezért „üres"-nek
   // olvasódott. A mondat a fül-váltást követi (lásd `leadTabs` szkriptje).
-  const photoCount = ((d.raw ?? {}) as { material?: { totalImages?: number } }).material?.totalImages ?? 0;
   const mockPhotoCount = typeof latestMock?.inputs?.photos === "number" ? latestMock.inputs.photos : null;
   const tabs: LeadTab[] = [
     {
@@ -6655,10 +6680,14 @@ function cpScript(prefix: string): string {
       id: "ls-photos",
       label: T(lang, "Fotók"),
       // ⛔ EZ A FÜL EDDIG SEMMIT NEM MONDOTT MAGÁRÓL (se szám, se szöveg).
-      say: mockPhotoCount != null
-        ? T(lang, "{n} összegyűjtött kép · ebből {m} van a legutóbbi mockban.", { n: photoCount, m: mockPhotoCount })
-        : T(lang, "{n} összegyűjtött kép erről a szállásról.", { n: photoCount }),
-      body: leadPhotosPanel(d.id, latestMock?.id, latestMockHeroUrl),
+      // ⛔⛔ MÉRT HIBA (2026-10-04, The Boys apartman): a mondat a gyűjtés NYERS számlálóját
+      // (`material.totalImages`) írta ki — „129 összegyűjtött kép”, a fülön 21 állt. A 129-ben
+      // ugyanaz az 59 portál-kép kétszer (két portál-profil), 10 soha le nem kért Places-kép
+      // és 1 Street View ült; a rács ezt duplikáció-szűrve, 24-es plafonnal, a halott linkek
+      // nélkül mutatja. A terv ③ szerint a mondat azt mondja, ami a FÜLÖN van, ezért a
+      // rács kirajzolása írja át (leadPhotosPanel → tabSay); addig a betöltést mondja.
+      say: T(lang, "Képek betöltése…"),
+      body: leadPhotosPanel(d.id, latestMock?.id, latestMockHeroUrl, mockPhotoCount),
     },
     {
       id: "ls-contacts",
