@@ -8,6 +8,7 @@
 
 - [2026-10-04_tulaj_teszt_szama_mentesites.md](2026-10-04_tulaj_teszt_szama_mentesites.md) — 2026-10-04 — SMS/MMS nem küldhető: a tulaj teszt-száma csak [TESZT] leaden mentes
 - [2026-10-04_tobb_email_cim_egy_leadhez.md](2026-10-04_tobb_email_cim_egy_leadhez.md) — 2026-10-04 — Több e-mail-cím egy leadhez (Adatok fül, A változat) + a kurátor e-mailje a kurátoré
+- [2026-10-04_riport_modul_1_kor.md](2026-10-04_riport_modul_1_kor.md) — Riport-modul a pilothoz — 1. kör: Tölcsér (B) + Viselkedés, kétrétegű kilépés-ok (2026-10-04)
 - [2026-10-04_rc_lista_sorrend_nem_allithato.md](2026-10-04_rc_lista_sorrend_nem_allithato.md) — 2026-10-04 — RC-sessionlista: a SUB-ok nem rendezhetők a koordinátoruk alá
 - [2026-10-04_parallax_potty_nav_aktiv.md](2026-10-04_parallax_potty_nav_aktiv.md) — 2026-10-04 — Parallax pötty-nav: görgetéskor a képen lévő szakasz pöttye világít
 - [2026-10-04_pakli_galeria_torles.md](2026-10-04_pakli_galeria_torles.md) — 2026-10-04 — A kártyapakli-galéria runtime-kódjának törlése
