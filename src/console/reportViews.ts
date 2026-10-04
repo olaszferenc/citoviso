@@ -107,10 +107,10 @@ export const STATED_LABEL = (lang: string): Readonly<Record<StatedReason, string
 const SECTION_LABEL = (lang: string): Readonly<Record<ExitSection, string>> => ({
   hero: T(lang, "Hős / főcím"),
   gallery: T(lang, "Galéria"),
-  rooms: T(lang, "Szobák"),
+  rooms: T(lang, "Szobák / bemutatkozás"),
   amenities: T(lang, "Szolgáltatások"),
   reviews: T(lang, "Vélemények"),
-  map: T(lang, "Térkép"),
+  map: T(lang, "Térkép / kapcsolat / foglalás"),
   panel: T(lang, "Ár-panel"),
   billing: T(lang, "Számlázás"),
   payment: T(lang, "Fizetés (Barion)"),

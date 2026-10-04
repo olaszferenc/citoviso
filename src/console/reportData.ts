@@ -270,9 +270,40 @@ function styleOf(inputs: Record<string, unknown> | null | undefined): string {
   return typeof t === "string" && t ? t : "ismeretlen";
 }
 
+/**
+ * Template section ids → the exit map's rows. The templates name their sections freely
+ * (`t-services`, `t-features`, `t-about`, `t-showcase`, `data-cit-module="map"`…; the
+ * beacon strips the `t-`), so every id is folded onto one of the nine canonical rows.
+ * An unknown id counts as nothing (-1), never as a wrong row.
+ */
+const SECTION_ALIAS: Readonly<Record<string, ExitSection>> = {
+  hero: "hero",
+  gallery: "gallery",
+  showcase: "gallery",
+  rooms: "rooms",
+  about: "rooms",
+  amenities: "amenities",
+  services: "amenities",
+  features: "amenities",
+  fun: "amenities",
+  usp: "amenities",
+  hours: "amenities",
+  poi: "amenities",
+  pricing: "amenities",
+  reviews: "reviews",
+  map: "map",
+  location: "map",
+  contact: "map",
+  book: "map",
+  booking: "map",
+  enquiry: "map",
+  panel: "panel",
+  billing: "billing",
+  payment: "payment",
+};
 const sectionIndex = (id: unknown): number => {
-  const i = EXIT_SECTIONS.indexOf(String(id ?? "") as ExitSection);
-  return i;
+  const canon = SECTION_ALIAS[String(id ?? "").replace(/^t-/, "")];
+  return canon ? EXIT_SECTIONS.indexOf(canon) : -1;
 };
 
 /** Fold one view's events into a Visit. */
@@ -361,7 +392,7 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
 
   const views = await db
     .selectFrom("mock_view")
-    .select(["id", "prospect_id", "started_at", "user_agent"])
+    .select(["id", "prospect_id", "started_at", "user_agent", "device"])
     .where("prospect_id", "in", ids)
     .orderBy("started_at", "asc")
     .execute();
@@ -451,13 +482,12 @@ export async function loadProspectFacts(): Promise<ProspectFacts[]> {
 }
 
 /**
- * Device of a view. Until the measurement migration lands (`mock_view.device`, SUB
- * „Riport mérés") the raw user agent is classified here; after it the column wins and
- * this fallback only serves rows the backfill has not reached.
+ * Device of a view: the extracted `mock_view.device` column (migration 0087). Rows the
+ * backfill has not reached yet still carry a raw user agent — those are classified here
+ * with the same coarse rule, so the report never shows "unknown" for a measurable visit.
  */
-function deviceOf(v: { user_agent: string | null } & Record<string, unknown>): Device {
-  const col = v["device"];
-  if (typeof col === "string" && col) return col as Device;
+function deviceOf(v: { user_agent: string | null; device: string | null }): Device {
+  if (v.device) return v.device as Device;
   const ua = v.user_agent ?? "";
   if (!ua) return "unknown";
   if (/bot|crawl|spider|slurp|preview|scanner|monitor/i.test(ua)) return "bot";
@@ -466,65 +496,36 @@ function deviceOf(v: { user_agent: string | null } & Record<string, unknown>): D
   return "desktop";
 }
 
-/** Stated reasons (prospect_feedback) — the table arrives with the measurement migration. */
+/** Stated reasons (prospect_feedback): the FIRST answer per prospect counts. */
 async function loadFeedback(ids: readonly string[]): Promise<Map<string, StatedReason>> {
   const out = new Map<string, StatedReason>();
-  if (!(await tableExists("prospect_feedback"))) return out;
   const rows = await db
-    .selectFrom("prospect_feedback" as never)
-    .select(["prospect_id", "reason", "created_at"] as never)
-    .where("prospect_id" as never, "in", ids as never)
-    .orderBy("created_at" as never, "asc")
+    .selectFrom("prospect_feedback")
+    .select(["prospect_id", "reason"])
+    .where("prospect_id", "in", ids)
+    .orderBy("created_at", "asc")
     .execute();
-  for (const r of rows as unknown as { prospect_id: string; reason: string }[]) {
-    if ((STATED_REASONS as readonly string[]).includes(r.reason)) out.set(r.prospect_id, r.reason as StatedReason);
+  for (const r of rows) {
+    if (!out.has(r.prospect_id) && (STATED_REASONS as readonly string[]).includes(r.reason)) out.set(r.prospect_id, r.reason as StatedReason);
   }
   return out;
 }
 
-const tableCache = new Map<string, boolean>();
-async function tableExists(name: string): Promise<boolean> {
-  const hit = tableCache.get(name);
-  if (hit !== undefined) return hit;
-  const r = await db
-    .selectFrom("information_schema.tables" as never)
-    .select("table_name" as never)
-    .where("table_schema" as never, "=", "public" as never)
-    .where("table_name" as never, "=", name as never)
-    .executeTakeFirst();
-  const ok = Boolean(r);
-  tableCache.set(name, ok);
-  return ok;
-}
-
+/** Operator-set targets (report_target); the defaults fill any missing metric. */
 export async function loadTargets(): Promise<Record<Hypothesis["key"], number>> {
   const t = { ...DEFAULT_TARGETS };
-  if (!(await tableExists("report_target"))) return t;
-  const rows = (await db
-    .selectFrom("report_target" as never)
-    .select(["metric", "target"] as never)
-    .execute()) as unknown as { metric: string; target: unknown }[];
+  const rows = await db.selectFrom("report_target").select(["metric", "target"]).execute();
   for (const r of rows) if (r.metric in t) t[r.metric as Hypothesis["key"]] = Number(r.target);
   return t;
 }
 
 export async function loadNotes(): Promise<ReportNote[]> {
-  if (!(await tableExists("report_note"))) return [];
-  const rows = (await db
-    .selectFrom("report_note" as never)
-    .select(["id", "day", "text"] as never)
-    .orderBy("day" as never, "asc")
-    .execute()) as unknown as { id: string; day: string; text: string }[];
+  const rows = await db.selectFrom("report_note").select(["id", "day", "text"]).orderBy("day", "asc").execute();
   return rows.map((r) => ({ id: r.id, day: String(r.day).slice(0, 10), text: r.text }));
 }
 
-export async function addNote(day: string, text: string, createdBy: string): Promise<boolean> {
-  if (!(await tableExists("report_note"))) return false;
-  await db
-    .insertInto("report_note" as never)
-    .values({ day, text: text.slice(0, 80), created_by: createdBy } as never)
-    .execute();
-  return true;
+export async function addNote(day: string, text: string, createdBy: string): Promise<void> {
+  await db.insertInto("report_note").values({ day, text: text.slice(0, 80), created_by: createdBy }).execute();
 }
 
 // ── the fold ────────────────────────────────────────────────────────────────
