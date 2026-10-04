@@ -1,4 +1,4 @@
-// OWNER TEST PHONE exemption (ADR-XXXX, owner decision 2026-10-04).
+// OWNER TEST PHONE exemption (ADR-0319, owner decision 2026-10-04).
 //
 // The owner tests the mobile channel with their own phone, and that number sits on
 // several "[TESZT]" leads by design. Two person-level gates read it as a real

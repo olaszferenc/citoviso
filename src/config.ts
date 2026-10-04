@@ -124,7 +124,7 @@ export const config = {
    */
   outreachSmsAllowlist: env("OUTREACH_SMS_ALLOWLIST", ""),
   /**
-   * OWNER TEST PHONES (ADR-XXXX, owner decision 2026-10-04). Comma-separated numbers
+   * OWNER TEST PHONES (ADR-0319, owner decision 2026-10-04). Comma-separated numbers
    * the owner tests the mobile channel with. On a lead whose name starts with
    * "[TESZT]" such a number is exempt from the shared-contact gate (it sits on several
    * test leads by design), and OFF the live host also from the number-level opt-out.

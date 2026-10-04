@@ -145,7 +145,7 @@ export async function isPhoneSuppressed(phoneE164: string): Promise<boolean> {
 /**
  * The two PERSON-level checks of the mobile chain: number-level opt-out, then the
  * shared-contact gate. Returns the operator-facing reason, or null. Split out so the
- * owner-test-phone exemption (ADR-XXXX) is measured on the real code path, not on a
+ * owner-test-phone exemption (ADR-0319) is measured on the real code path, not on a
  * copy of it.
  *
  * Exemption: a number listed in OUTREACH_TEST_PHONES on a "[TESZT]" lead skips the

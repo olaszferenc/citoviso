@@ -1,6 +1,6 @@
 # 2026-10-04 — SMS/MMS nem küldhető: a tulaj teszt-száma csak [TESZT] leaden mentes
 
-**Szál:** SUB (brief `~/rc-briefs/sms-mms-nem-kuldheto.md`), koordinátor: „mock-összehasonlító / Kapunyitás”. Döntés: ADR-XXXX.
+**Szál:** SUB (brief `~/rc-briefs/sms-mms-nem-kuldheto.md`), koordinátor: „mock-összehasonlító / Kapunyitás”. Döntés: ADR-0319.
 
 ## Diagnózis (mindkét kapu helyesen tiltott)
 - **Éles:** [TESZT] Lovász ↔ [TESZT] Muschel ugyanazon a számon (+36305161631), nincs `lead_link`; élesen nincs

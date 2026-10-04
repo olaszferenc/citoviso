@@ -157,7 +157,7 @@ try {
   ok(!reasonAfter.includes("másik szálláshoz"), "⑪ az ítélet után a levél-út továbbenged (a következő kapuig)", reasonAfter);
 
   const smsSrc = readFileSync("src/outreach/sendOutreachSms.ts", "utf8");
-  // Since ADR-XXXX the call lives in phoneContactBlocks(), which the chain calls with
+  // Since ADR-0319 the call lives in phoneContactBlocks(), which the chain calls with
   // the normalised number; its behaviour is measured by owner-test-phone-check.mts.
   ok(
     /phoneContactBlocks\(p\.leadId, p\.leadName, to\)/.test(smsSrc) &&

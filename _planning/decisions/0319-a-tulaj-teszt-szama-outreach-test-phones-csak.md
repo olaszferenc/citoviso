@@ -1,4 +1,4 @@
-## ADR-XXXX — A tulaj teszt-száma (OUTREACH_TEST_PHONES) csak [TESZT] leaden mentes a közös-elérhetőség és a szám-szintű leiratkozás alól
+## ADR-0319 — A tulaj teszt-száma (OUTREACH_TEST_PHONES) csak [TESZT] leaden mentes a közös-elérhetőség és a szám-szintű leiratkozás alól
 
 **Dátum:** 2026-10-04 · **Státusz:** elfogadva (lokál; az éles env beállítása külön élesi művelet) ·
 **Kiegészíti:** ADR-0258 (közös elérhetőség = küldési kapu), ADR-0082 (SMS-engedélylista) ·

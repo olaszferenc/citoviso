@@ -1,6 +1,6 @@
 // Gate: the owner's test phone (OUTREACH_TEST_PHONES) is exempt ONLY on "[TESZT]"
 // leads — a real lead carrying the same number is gated exactly as before
-// (ADR-XXXX, owner decision 2026-10-04: "3: igen", with a negative control).
+// (ADR-0319, owner decision 2026-10-04: "3: igen", with a negative control).
 //
 // Why it exists: the owner's test number sat on several test leads, so the
 // shared-contact gate refused it on the live host ([TESZT] Lovász ↔ [TESZT] Muschel)
