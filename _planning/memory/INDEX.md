@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
 - [2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md](2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md) — 2026-10-03 — Tényhűség: összevont hely-állítás + a Google-értékelés egy szabállyal
 - [2026-10-03_lead_elerhetoseg_szamlazasi_adat.md](2026-10-03_lead_elerhetoseg_szamlazasi_adat.md) — 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
 - [2026-10-03_k3_elek3_leletek.md](2026-10-03_k3_elek3_leletek.md) — K3 — Elek 3. kör leletei: kültéri tárgy, MINTA nem tény, napok-küszöb, plus-alcím, Citoviso-aláírás, alacsony tételek (2026-10-03)
