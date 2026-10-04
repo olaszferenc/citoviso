@@ -22,6 +22,7 @@
 - [2026-10-04_foglalas_sav_kozos_kartya.md](2026-10-04_foglalas_sav_kozos_kartya.md) — 2026-10-04 — Foglalás-sáv kártyaként, egy közös szabállyal (arch-frames · tilted-gallery · wordmark-grow)
 - [2026-10-04_fejlec_link_csomag_parallax_menusav.md](2026-10-04_fejlec_link_csomag_parallax_menusav.md) — 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)
 - [2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md](2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md) — Élesítés 0b1ee61f + éles feladó „Citoviso” (koordinátor, 2026-10-03/04)
+- [2026-10-04_eles_teszt_vasarlas_torlese.md](2026-10-04_eles_teszt_vasarlas_torlese.md) — 2026-10-04 — Éles teszt-vásárlás ([TESZT] Muschel Panzió) törlése
 - [2026-10-04_dupla_foglalas_cim.md](2026-10-04_dupla_foglalas_cim.md) — 2026-10-04 — Dupla „Foglalás” cím: walk-through, artdeco, brutalism
 - [2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md](2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md) — 2026-10-03 — Tényhűség: összevont hely-állítás + a Google-értékelés egy szabállyal
 - [2026-10-03_lead_elerhetoseg_szamlazasi_adat.md](2026-10-03_lead_elerhetoseg_szamlazasi_adat.md) — 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
