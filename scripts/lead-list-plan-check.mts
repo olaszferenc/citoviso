@@ -71,6 +71,7 @@ function row(i: number, over: Partial<LeadListRow> = {}): LeadListRow {
     lifecycle: "new",
     mockArtifact: null,
     outreachSentAt: null,
+    outreachChannels: [],
     ...over,
   };
 }
@@ -90,6 +91,7 @@ const FIXTURE: LeadListRow[] = [
       material: 8,
       mockArtifact: { id: `art-${i}`, status, path: `/tmp/a${i}.html` } as LeadListRow["mockArtifact"],
       outreachSentAt: i === 0 ? "2026-09-04T10:12:00.000Z" : null,
+      outreachChannels: i === 0 ? ["email"] : [],
     }),
   ),
   // HOSSZÚ NÉV — a kétsoros vágás és az egyenletes sormagasság ezen dől el.

@@ -20,7 +20,7 @@ import { circleToBbox } from "../scraper/regions.js";
 import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
-import { applyLeadFilters, compareSortKeys, effectiveLeadSort, pickShownMock, sortCell } from "./leadFilters.js";
+import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell, summariseMocks } from "./leadFilters.js";
 import { normalizeEmail, recipientKey, recipientKeySql } from "../email/address.js";
 import { checkLeadContact, normalizeCountry } from "./leadContactRules.js";
 import { leadEmails } from "../email/leadEmails.js";
@@ -51,6 +51,9 @@ export interface ArtifactView {
 // The country normalizer lives with the lead-contact rules (one alias table for the
 // list facet AND the curator-edit check, ADR-0316); re-exported for existing callers.
 export { normalizeCountry } from "./leadContactRules.js";
+
+/** A channel a lead's outreach has left on (per-channel stamps, ADR-0082/0083). */
+export type SentChannel = "email" | "sms" | "mms";
 
 export interface LeadListRow {
   readonly id: string;
@@ -89,8 +92,14 @@ export interface LeadListRow {
    * the cell can say what else exists ("4 mockból: 1 jóváhagyva, 3 elutasítva").
    */
   readonly mockArtifact: { id: string; status: string; byStatus?: Readonly<Record<string, number>> } | null;
-  /** When the outreach mail was actually sent to any prospect of this lead (ISO), else null. */
+  /**
+   * FIRST outreach to any prospect of this lead, on ANY channel (`prospect.sent_at`, the
+   * first-touch stamp — e-mail, SMS or MMS), ISO; null when nothing went out yet.
+   */
   readonly outreachSentAt: string | null;
+  /** The channels that carried it — read from the per-channel stamps (ADR-0082/0083),
+   *  in the fixed order email → sms → mms; empty when only `sent_at` is set. */
+  readonly outreachChannels: readonly SentChannel[];
 }
 
 export interface LeadDetail {
@@ -257,23 +266,32 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
   }
   const mockByLead = new Map<string, NonNullable<LeadListRow["mockArtifact"]>>();
   for (const [leadId, list] of artifactsByLead) {
-    const shown = pickShownMock(list);
-    if (!shown) continue;
-    const byStatus: Record<string, number> = {};
-    for (const a of list) byStatus[a.status] = (byStatus[a.status] ?? 0) + 1;
-    mockByLead.set(leadId, { ...shown, byStatus });
+    const sum = summariseMocks(list);
+    if (sum) mockByLead.set(leadId, { ...sum.shown, byStatus: sum.byStatus });
   }
 
-  // Outreach-sent marker for the list (was the mail actually sent to any prospect of the lead).
+  // Outreach-sent marker for the list: did ANY channel reach any prospect of the lead.
+  // `sent_at` is the first touch on any channel (not the e-mail stamp), so the mark and
+  // its legend say "bármelyik csatornán"; the channel list comes from the per-channel stamps.
   const sentRows = await db
     .selectFrom("prospect")
-    .select(["lead_id", "sent_at"])
+    .select(["lead_id", "sent_at", "email_sent_at", "sms_sent_at", "mms_sent_at"])
     .where("sent_at", "is not", null)
     .execute();
   const sentByLead = new Map<string, string>();
+  const channelsByLead = new Map<string, Set<SentChannel>>();
   for (const s of sentRows) {
-    if (s.sent_at) sentByLead.set(s.lead_id, toIso(s.sent_at));
+    if (!s.sent_at) continue;
+    const at = toIso(s.sent_at);
+    const prev = sentByLead.get(s.lead_id);
+    if (!prev || at < prev) sentByLead.set(s.lead_id, at);
+    const ch = channelsByLead.get(s.lead_id) ?? new Set<SentChannel>();
+    if (s.email_sent_at) ch.add("email");
+    if (s.sms_sent_at) ch.add("sms");
+    if (s.mms_sent_at) ch.add("mms");
+    channelsByLead.set(s.lead_id, ch);
   }
+  const CHANNEL_ORDER: readonly SentChannel[] = ["email", "sms", "mms"];
 
   // Scrape-area labels: the list shows the human name of the area, not its id.
   const areaLabels = new Map(
@@ -315,6 +333,7 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       lifecycle: String(l.lifecycle),
       mockArtifact: mockByLead.get(l.id) ?? null,
       outreachSentAt: sentByLead.get(l.id) ?? null,
+      outreachChannels: CHANNEL_ORDER.filter((c) => channelsByLead.get(l.id)?.has(c)),
     };
   });
 

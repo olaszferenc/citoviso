@@ -52,9 +52,12 @@ kontraktus: kb/entries/console-lead/entry.hu.md
   várd: darab "[data-cit-mockstate='running']" == 1
   várd: darab "[data-cit-mockstate='approved']" == 0
 
-- [ ] A generálás befejeződik, a mock-állapot a fejlécben átfordul (~1-2 perc)
-  tedd: várj "mock: legenerálva" 240
-  várd: látható "mock: legenerálva"
+- [ ] A generálás befejeződik, a fejléc kilép a futó állapotból (~1-2 perc)
+  # ⚠️ NEM „mock: legenerálva”-ra várunk: 2026-10-04 óta a pirula a LEGERŐSEBB állapotot
+  # írja (a lead-listával egyezően), és a meleg parkban az ELEK-TESZT leadnek már van
+  # jóváhagyott mockja → a kész generálás után is „mock: jóváhagyva” áll ott.
+  tedd: várj "Megnézem a mockot" 240
+  várd: darab "[data-cit-mockstate='running']" == 0
 
 ## Kuráció
 

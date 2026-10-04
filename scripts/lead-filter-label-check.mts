@@ -79,6 +79,7 @@ function row(i: number, over: Partial<LeadListRow> = {}): LeadListRow {
     lifecycle: "new",
     mockArtifact: null,
     outreachSentAt: null,
+    outreachChannels: [],
     ...over,
   };
 }
@@ -138,6 +139,7 @@ const FIXTURE: LeadListRow[] = [
       material: 4,
       mockArtifact: { id: `art-${i}`, status, byStatus: { [status]: 1, rejected: 2 } },
       outreachSentAt: i < 2 ? "2026-10-04T10:00:55.000Z" : null,
+      outreachChannels: i === 0 ? ["email"] : i === 1 ? ["sms", "mms"] : [],
     }),
   ),
 ];
@@ -360,6 +362,27 @@ await assertSummaryMatchesCells("kézi szűrő: Kvalifikáció");
   check(want > 0 && got === want, `Mock = kiküldve: pontosan a kiküldött leadek maradnak (várt ${want}, mért ${got})`);
   const opt = await page.$eval(`#leadFilters [name="mock"][value="${MOCK_SENT_CODE}"]`, (el) => !!el).catch(() => false);
   check(opt, "a MOCK szűrő kínál „✓ kiküldve” opciót");
+
+  // The mark reads `prospect.sent_at` — the first touch on ANY channel — so its legend
+  // must not say "e-mail" (tulaj, 2026-10-04: it did, while an SMS-only lead carried it),
+  // and its title names the channels from the per-channel stamps, never an invented one.
+  const legend = await page.$$eval(".con-leads-legend, dl, ul, p", (els) =>
+    els.map((e) => e.textContent ?? "").filter((t) => t.includes("✓ kiküldve")).join(" | "),
+  );
+  check(/bármelyik csatornán/.test(legend), "a „✓ kiküldve” jelmagyarázata: bármelyik csatorna");
+  check(!/megkereső e-mail már elment/.test(legend), "a jelmagyarázat NEM állítja, hogy e-mail ment ki");
+  const titles = await page.$$eval('tbody td[data-col="mock"] .pill[title^="Első kiküldés"]', (els) =>
+    els.map((e) => e.getAttribute("title") ?? ""),
+  );
+  const smsRow = FIXTURE.find((r) => r.outreachChannels.includes("sms"));
+  check(
+    titles.some((t) => /csatorna: SMS, MMS$/.test(t)) && !!smsRow,
+    `a jel elemleírása a VALÓS csatornát mondja (SMS-es fixture → „SMS, MMS”; mért: ${titles.join(" / ") || "nincs"})`,
+  );
+  check(
+    titles.some((t) => /csatorna: e-mail$/.test(t)),
+    `…és az e-mailes sornál „e-mail”-t (mért: ${titles.join(" / ") || "nincs"})`,
+  );
 
   await open(render({ mock: ["approved"] }));
   await assertSummaryMatchesCells("kézi szűrő: Mock = jóváhagyva");

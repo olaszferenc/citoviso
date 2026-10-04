@@ -1510,6 +1510,7 @@ const leadRow = (
   lifecycle: "qualified",
   mockArtifact: artifact,
   outreachSentAt: artifact?.status === "approved" ? "2026-08-20T09:00:00Z" : null,
+  outreachChannels: artifact?.status === "approved" ? ["email"] : [],
   // A FELMÉRVE oszlop a lista rendezésének alapja („legutóbb felmért elöl"), ezért a
   // fixture NEM adhat minden sorra azonos dátumot: a képen épp az a bizonyítandó, hogy
   // a sorrend látszik. Az id-ből származtatjuk, hogy stabil legyen (se Date.now, se

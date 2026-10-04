@@ -17,6 +17,7 @@
 - [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
 - [2026-10-04_lirai_nyitoresz.md](2026-10-04_lirai_nyitoresz.md) — 2026-10-04 — Lírai nyitórész: a leltár-főcím és a leíró intro vége; a gyűjtési terület nem lead-tény (ADR-0324)
 - [2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md](2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md) — 2026-10-04 — Lead-lista MOCK oszlop: a legerősebb mock-állapot + „✓ kiküldve” szűrő
+- [2026-10-04_lead_lap_mock_pirula_kikuldve_jel.md](2026-10-04_lead_lap_mock_pirula_kikuldve_jel.md) — 2026-10-04 — Lead-lap mock-pirula = lista szabálya; „✓ kiküldve” = bármelyik csatorna
 - [2026-10-04_js_honlap_renderelt_igazolas.md](2026-10-04_js_honlap_renderelt_igazolas.md) — 2026-10-04 — A JS-sel épülő saját honlap is igazolható (Dalma panzió)
 - [2026-10-04_foglalas_sav_kozos_kartya.md](2026-10-04_foglalas_sav_kozos_kartya.md) — 2026-10-04 — Foglalás-sáv kártyaként, egy közös szabállyal (arch-frames · tilted-gallery · wordmark-grow)
 - [2026-10-04_fejlec_link_csomag_parallax_menusav.md](2026-10-04_fejlec_link_csomag_parallax_menusav.md) — 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)

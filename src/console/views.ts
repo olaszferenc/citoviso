@@ -35,8 +35,10 @@ import {
   MOCK_STATE_PRECEDENCE,
   mockOptionLabel,
   mockSentLabel,
+  outreachSentTitle,
   mockStatusLabel,
   PLACES_PHOTO_CAP,
+  summariseMocks,
   unknownRegionLabel,
 } from "./leadFilters.js";
 import type { ContactCandidate, PortalListing } from "../scraper/types.js";
@@ -1810,7 +1812,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
               : `<span class="mut small">${esc(mockStatusLabel("none", lang))}</span>`
           }${
             r.outreachSentAt
-              ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${esc(mockSentLabel(lang))}</span>`
+              ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${esc(outreachSentTitle(r.outreachSentAt, r.outreachChannels, lang))}">${esc(mockSentLabel(lang))}</span>`
               : ""
           }`,
         )}</tr>`,
@@ -5504,6 +5506,9 @@ export function leadPage(
   /** A leadhez tartozó JÓVÁHAGYOTT mock (0064 óta legfeljebb egy) — ez dönti el, hogy a
    *  megkeresés kimehet-e, ezért a sáv akkor is kimondja, ha nem ez a legutóbbi. */
   const approvedMock = d.artifacts.find((a) => a.status === "approved");
+  /** The header pill's mock — the SAME summary the lead-list MOCK cell prints
+   *  (`summariseMocks`), so list and page cannot disagree about one lead. */
+  const mockSummary = summariseMocks(d.artifacts);
   /**
    * ÖSSZEHASONLÍTÓ MOCK-TÁBLA — jóváhagyott terv ④
    * (`assets/design-refs/console/lead-page/`, tulajdonosi döntés 2026-09-14).
@@ -5804,24 +5809,28 @@ export function leadPage(
           gen.running
             ? `<span class="pill generated con-run-pill" data-cit-mockstate="running"><span class="dot"></span>${T(lang, "mock: generálás fut")}
                  <b class="con-run-t" data-cit-elapsed="${gen.startedAt ?? ""}">0:00</b></span>`
-            : latestMock
+            : mockSummary
               ? // ⛔ A SZÓ a közös regiszterből (`mockStatusLabel`), nem a nyers enumból:
                 // a lista „jóváhagyva"-t ír, a fejléc nem mondhat „approved"-ot ugyanarról
                 // az állapotról (tulajdonosi döntés, 2026-09-14). A GÉPI horog
                 // (`data-cit-mockstate`) változatlanul a nyers érték — arra mérnek a
                 // forgatókönyvek, és azt egy átfogalmazás nem mozdítja.
-                `<span class="pill ${esc(latestMock.status)}" data-cit-mockstate="${esc(latestMock.status)}">mock: ${esc(mockStatusLabel(latestMock.status, lang))}</span>`
+                // ⛔ Az ÁLLAPOT a LEGERŐSEBB mocké, nem a legutóbbié (tulaj, 2026-10-04):
+                // ugyanaz a függvény, ami a lista MOCK celláját adja — Boróka ház
+                // (1 jóváhagyott + 2 újabb elutasított) a listán „jóváhagyva”, itt
+                // „elutasítva” volt. A többi mock a title-ben („3 mockból: …”).
+                `<span class="pill ${esc(mockSummary.shown.status)}" data-cit-mockstate="${esc(mockSummary.shown.status)}"${mockBreakdownTitle(mockSummary.byStatus, lang)}>mock: ${esc(mockStatusLabel(mockSummary.shown.status, lang))}</span>`
               : `<span class="pill" data-cit-mockstate="none">${T(lang, "nincs mock")}</span>`
         }
         ${
-          // ⛔ A JELÖLÉS A LEGUTÓBBI mock állapotát mondja — az operátor kérdése viszont az,
-          // hogy VAN-E JÓVÁHAGYOTT mock (a megkeresés ugyanis AZ alapján mehet ki). A kettő
-          // szétválik, amint egy újabb generálás születik a jóváhagyott mellé: 2026-09-12-én
-          // az Elek FK-004 emiatt bukott el, miközben a leadnek VOLT jóváhagyott mockja és a
-          // levél kiküldhető lett volna. Ezért a sáv MINDKETTŐT kimondja.
+          // ⛔ A megkeresés a JÓVÁHAGYOTT mock alapján mehet ki — ezt a sáv mindig kimondja
+          // (Elek FK-004, 2026-09-12: egy újabb generálás eltakarta a meglévő jóváhagyottat).
+          // 2026-10-04 óta a pirula maga a legerősebb állapotot írja, tehát jóváhagyott mock
+          // mellett „mock: jóváhagyva”-t — a külön jelölés így CSAK futó generálás alatt kell,
+          // amikor a pirula „mock: generálás fut”-ot mond.
           // ⚠️ A felirat szándékosan NEM tartalmazza a „mock: approved" alakot: arra a
           // generálás-közbeni forgatókönyv NEM-látható állítást mér.
-          approvedMock && latestMock && latestMock.status !== "approved"
+          approvedMock && (gen.running || mockSummary?.shown.status !== "approved")
             ? `<span class="pill approved" data-cit-approved-shown="1">${T(lang, "van jóváhagyott mock")}</span>`
             : ""
         }

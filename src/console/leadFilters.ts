@@ -184,7 +184,7 @@ export function columnMeaning(key: LeadColumnKey, lang = "hu"): string {
       // cella vagy a szűrő másképp ír (jóváhagyott terv ③).
       return T(
         lang,
-        "A lead mock-állapota: {approved}, ha van jóváhagyott mockja; különben {generated}, ha van döntésre váró; {rejected}, ha mind elutasított; {none}, ha még nincs mockja. A „{sent}” jel alatta: a megkeresés elment.",
+        "A lead mock-állapota: {approved}, ha van jóváhagyott mockja; különben {generated}, ha van döntésre váró; {rejected}, ha mind elutasított; {none}, ha még nincs mockja. A „{sent}” jel alatta: a megkeresés elment (bármelyik csatornán).",
         {
           approved: mockStatusLabel("approved", lang),
           generated: mockStatusLabel("generated", lang),
@@ -260,6 +260,25 @@ export function mockSentLabel(lang = "hu"): string {
 /** A MOCK oszlop szűrőjének MINDEN opciója: a négy állapot + a „✓ kiküldve” jel. */
 export const MOCK_FILTER_OPTIONS: readonly string[] = [...MOCK_STATUSES, MOCK_SENT_CODE];
 
+/** A csatorna neve a „✓ kiküldve” jel elemleírásában. */
+export function outreachChannelLabel(c: string, lang = "hu"): string {
+  return c === "email" ? T(lang, "e-mail") : c === "sms" ? T(lang, "SMS") : c === "mms" ? T(lang, "MMS") : c;
+}
+
+/**
+ * A „✓ kiküldve” jel elemleírása: az ELSŐ kiküldés ideje és a csatorna(k), valós adatból
+ * (a csatornánkénti bélyegekből). Bélyeg nélkül csak az idő — nem talál ki csatornát.
+ */
+export function outreachSentTitle(sentAt: string, channels: readonly string[], lang = "hu"): string {
+  const date = sentAt.slice(0, 16).replace("T", " ");
+  return channels.length
+    ? T(lang, "Első kiküldés {date} · csatorna: {list}", {
+        date,
+        list: channels.map((c) => outreachChannelLabel(c, lang)).join(", "),
+      })
+    : T(lang, "Első kiküldés {date}", { date });
+}
+
 /** A MOCK szűrő-opció felirata (állapot VAGY a kiküldve-jel). */
 export function mockOptionLabel(code: string, lang = "hu"): string {
   return code === MOCK_SENT_CODE ? mockSentLabel(lang) : mockStatusLabel(code, lang);
@@ -292,6 +311,24 @@ export function pickShownMock<A extends { status: string }>(artifacts: readonly 
   let best: A | null = null;
   for (const a of artifacts) if (best === null || rank(a.status) < rank(best.status)) best = a;
   return best;
+}
+
+/**
+ * The ONE summary both mock surfaces print — the lead-list MOCK cell and the lead-page
+ * "mock: …" pill: the shown mock (`pickShownMock`) plus how many mocks the lead has in each
+ * state (for the "4 mockból: …" breakdown). ⛔ One function, not two copies: the page used
+ * to show the NEWEST mock while the list showed the strongest, so the same lead read
+ * „jóváhagyva” in the list and „elutasítva” on its own page (Boróka ház, 2026-10-04).
+ * `artifacts` must arrive NEWEST FIRST.
+ */
+export function summariseMocks<A extends { status: string }>(
+  artifacts: readonly A[],
+): { shown: A; byStatus: Readonly<Record<string, number>> } | null {
+  const shown = pickShownMock(artifacts);
+  if (!shown) return null;
+  const byStatus: Record<string, number> = {};
+  for (const a of artifacts) byStatus[a.status] = (byStatus[a.status] ?? 0) + 1;
+  return { shown, byStatus };
 }
 
 /**
@@ -350,7 +387,12 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
     },
     {
       mark: mockSentLabel(lang),
-      meaning: T(lang, "A megkereső e-mail már elment a leadhez tartozó prospectnek."),
+      // ⛔ ANY channel, not "e-mail": the mark reads `prospect.sent_at`, the first touch on
+      // e-mail, SMS or MMS alike (tulaj, 2026-10-04 — the legend used to say "e-mail").
+      meaning: T(
+        lang,
+        "A megkeresés már elment a leadhez tartozó prospectnek — bármelyik csatornán (e-mail, SMS vagy MMS). Melyiken és mikor, azt a jel elemleírása mondja.",
+      ),
     },
     {
       // Wrapped, like every other visible text: an unmarked literal would be the

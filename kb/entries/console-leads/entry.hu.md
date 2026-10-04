@@ -158,7 +158,9 @@ Felmérve szerint, és felülről olvasd a listát.
 Cellán belüli jelölések:
 
 - **SV** a Fotók mellett — Street View-felvétel is elérhető a címről (tartalék nyitókép).
-- **„✓ kiküldve”** a Mock oszlopban — a megkereső e-mail már elment ehhez a leadhez.
+- **„✓ kiküldve”** a Mock oszlopban — a megkeresés már elment ehhez a leadhez, **bármelyik
+  csatornán** (e-mail, SMS vagy MMS). A jelre mutatva az elemleírás megmondja, mikor ment ki
+  először és melyik csatornán.
   **Szűrni is lehet rá:** a Mock oszlop tölcsérében a **„✓ kiküldve”** opció csak a
   kiküldött leadeket hagyja meg, bármi a mockjuk állapota. Egy állapottal együtt pipálva
   „vagy”-ként működik (pl. „elutasítva vagy ✓ kiküldve”).
