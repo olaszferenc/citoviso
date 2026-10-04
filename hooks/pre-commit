@@ -2800,7 +2800,7 @@ if [ -f scripts/placed-claim-check.mts ] && \
   echo "[pre-commit] placed-claim-check (két forrásolt tényből nem lesz harmadik: hely-összevonás)…"
   npx tsx scripts/placed-claim-check.mts >"$GATE_LOG" || gate_failed
 fi
-# LÍRAI NYITÓRÉSZ (2026-10-04, tulaj: „9/10 esetben ez van” + „Lírai szöveg kell”; ADR-XXXX): a főcím,
+# LÍRAI NYITÓRÉSZ (2026-10-04, tulaj: „9/10 esetben ez van” + „Lírai szöveg kell”; ADR: _planning/decisions/*-lirai-nyitoresz-*.md): a főcím,
 #     az alcím és az intro a hely érzetét adja forrásból — leíró mód (felület/anyag/szín/bútor) és
 #     felszereltség-lista blokkolva, a főcímben legfeljebb EGY adottság élményként, hangulati tény csak
 #     forrással (csend nem, ha egy vélemény zajról szól), a prompt-példa nem másolható. A piaci kapu a
