@@ -1,0 +1,513 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Riport — 1. kör: Tölcsér + Viselkedés (JÓVÁHAGYOTT: B)</title>
+<style>
+  :root{
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-ink-brand:var(--citui-navy-900);
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d; --citui-info:var(--citui-cyan-500);
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px; --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+    /* Chart roles — every value is a brand token or a color-mix of tokens (ADR-0021).
+       Emphasis form by default: ONE hue + de-emphasis gray. Categorical only where the
+       series ARE the subject (device: 3 classes, direct-labelled). */
+    --viz-1:var(--citui-link-ink); --viz-2:var(--citui-cyan-500); --viz-3:var(--citui-navy-700);
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel));
+    --viz-grid:color-mix(in srgb, var(--citui-muted) 18%, transparent);
+    --ramp-1:var(--citui-cyan-400); --ramp-2:color-mix(in srgb, var(--citui-cyan-500) 55%, var(--citui-link-ink));
+    --ramp-3:var(--citui-link-ink); --ramp-4:color-mix(in srgb, var(--citui-link-ink) 55%, var(--citui-navy-900)); --ramp-5:var(--citui-navy-900);
+  }
+  *{box-sizing:border-box} body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink)}
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px} .bar .sp{flex:1}
+  .bar button{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 14px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .bar .grp{display:flex;gap:4px;align-items:center} .bar .grp span{font-size:11px;opacity:.7;margin-right:4px}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1100px;transition:max-width .25s;padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+
+  /* console shell bits (citui-console.css vocabulary) */
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink);font-weight:600}
+  h1{font:600 20px/1.2 var(--citui-font-text);letter-spacing:-.01em;margin:0 2px 10px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);margin:0 0 12px;overflow-x:auto}
+  .tabs button{appearance:none;border:0;background:none;padding:9px 14px;font:600 13px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs button.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+  .panel h2{margin:0 0 10px;font:600 15px/1.3 var(--citui-font-text);letter-spacing:-.01em;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .panel h2 .q{font-weight:500;color:var(--citui-muted);font-size:12.5px}
+  .mut{color:var(--citui-muted)} .small{font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--citui-radius-pill);font-size:11px;font-weight:600;border:1px solid var(--citui-line);background:var(--citui-surface-2);color:var(--citui-ink)}
+  .pill.ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft);border-color:color-mix(in srgb,var(--citui-ok) 30%,transparent)}
+  .pill.warn{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 12%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-warn) 40%,transparent)}
+  .pill.bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 10%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-bad) 35%,transparent)}
+  .pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+  /* filter row — one row above every chart (dataviz: filters in one row) */
+  .filt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel)}
+  .chips button{appearance:none;border:0;background:none;padding:7px 12px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:32px}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .filt select{min-height:32px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:0 12px;font:600 12px var(--citui-font-text);background:var(--citui-panel);color:var(--citui-ink)}
+  .filt .n{font-size:12px;color:var(--citui-muted);margin-left:auto}
+
+  /* KPI strip */
+  .kstrip{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}
+  .kbox{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;background:var(--citui-panel);min-width:0}
+  .kbox__t{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .kbox__v{font-family:var(--citui-font-display);font-weight:700;font-size:1.35rem;color:var(--citui-ink-brand);line-height:1.1;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kbox__s{font-size:11.5px;color:var(--citui-muted);margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .delta{font-weight:700} .delta.up{color:var(--citui-ok-ink)} .delta.dn{color:var(--citui-bad-ink)} .delta.flat{color:var(--citui-muted)}
+  .spark{display:block;width:100%;height:26px;margin-top:6px}
+
+  .grid2{display:grid;grid-template-columns:1fr;gap:12px} .grid3{display:grid;grid-template-columns:1fr;gap:12px}
+  @container (min-width: 720px){
+    .kstrip{grid-template-columns:repeat(4,1fr)} .kstrip.k6{grid-template-columns:repeat(6,1fr)}
+    .grid2{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr 1fr}
+    .grid2 > .panel, .grid3 > .panel{margin:0}
+    .funnel-wrap{display:grid;grid-template-columns:3fr 2fr;gap:18px;align-items:start}
+    .hyp{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .exitmap{grid-template-columns:150px 1fr 150px}
+    .buyers{grid-template-columns:1fr 1fr}
+  }
+  @container (min-width: 980px){ .hyp{grid-template-columns:repeat(3,1fr)} }
+
+  /* horizontal funnel bars */
+  .fun{display:grid;gap:7px;margin:4px 0}
+  .fun .row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;cursor:default}
+  .fun .lab{font-size:12.5px;font-weight:600;line-height:1.2} .fun .lab small{display:block;font-weight:500;color:var(--citui-muted);font-size:11px}
+  .fun .trk{position:relative;height:28px;background:var(--viz-ghost);border-radius:4px;overflow:hidden}
+  .fun .trk i{position:absolute;inset:0 auto 0 0;border-radius:4px 0 0 4px;transition:width var(--citui-transition)}
+  .fun .trk b{position:absolute;left:8px;top:0;line-height:28px;font-size:12px;color:var(--citui-ink-inverse);font-variant-numeric:tabular-nums}
+  .fun .trk b.out{color:var(--citui-ink);left:auto;right:8px}
+  .fun .rate{position:absolute;right:6px;top:5px;line-height:18px;padding:0 6px;border-radius:9px;background:color-mix(in srgb,var(--citui-panel) 88%,transparent);font-size:11px;color:var(--citui-ink);font-variant-numeric:tabular-nums}
+  .fun .row:hover .trk{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .times{width:100%;border-collapse:collapse;font-size:12.5px} .times th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:4px 6px;border-bottom:1px solid var(--citui-line)}
+  .times td{padding:7px 6px;border-bottom:1px solid var(--citui-line);font-variant-numeric:tabular-nums} .times td.num{text-align:right;font-weight:600}
+  .times tr:last-child td{border-bottom:0}
+
+  /* tables */
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px} .tbl th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:6px;border-bottom:1px solid var(--citui-line);white-space:nowrap}
+  .tbl td{padding:7px 6px;border-bottom:1px solid var(--citui-line);font-variant-numeric:tabular-nums;vertical-align:middle} .tbl td.num{text-align:right} .tbl tr:last-child td{border-bottom:0}
+  .tbl tr.tot td{font-weight:700;background:var(--citui-surface)}
+  .tbl a{color:var(--citui-link-ink);text-decoration:none;font-weight:600} .tbl a:hover{text-decoration:underline}
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .mini{display:inline-block;height:9px;border-radius:3px;background:var(--viz-2);vertical-align:middle;margin-right:6px;min-width:2px}
+  .heat{display:inline-block;min-width:54px;padding:3px 7px;border-radius:5px;text-align:right;font-weight:600}
+
+  /* line chart */
+  .chart{position:relative} .chart svg{display:block;width:100%;height:auto}
+  .tip{position:absolute;pointer-events:none;background:var(--citui-navy-900);color:var(--citui-ink-inverse);font-size:11.5px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-110%);opacity:0;transition:opacity .12s;z-index:5;box-shadow:var(--citui-shadow-sm)}
+  .tip.on{opacity:1} .tip b{color:var(--citui-cyan-300)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--citui-muted);margin:6px 0 0}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+  .legend i.ln{height:2px;width:14px;border-radius:1px;vertical-align:3px}
+  .notes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .notes input{flex:1;min-width:160px;min-height:34px;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);padding:0 12px;font:13px var(--citui-font-text)}
+  .btn{appearance:none;min-height:34px;border-radius:var(--citui-radius-pill);padding:0 14px;font:600 12.5px var(--citui-font-text);cursor:pointer;border:1px solid var(--citui-navy-900);background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .btn.ghost{background:var(--citui-panel);color:var(--citui-ink-brand);border-color:var(--citui-line-strong)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .ok-msg{font-size:12px;color:var(--citui-ok-ink);font-weight:600}
+
+  /* hypothesis cards (variant B) */
+  .hyp{display:grid;gap:10px;margin:0 0 12px}
+  .hcard{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;background:var(--citui-panel);display:grid;gap:6px}
+  .hcard .hq{font-weight:600;font-size:13.5px;line-height:1.3} .hcard .hmeas{font-size:11.5px;color:var(--citui-muted)}
+  .hcard .hv{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap} .hcard .hv b{font-family:var(--citui-font-display);font-size:1.5rem;color:var(--citui-ink-brand);font-variant-numeric:tabular-nums}
+  .meter{position:relative;height:8px;background:var(--viz-ghost);border-radius:4px;overflow:visible;margin:2px 0}
+  .meter i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--viz-1)} .meter em{position:absolute;top:-4px;width:2px;height:16px;background:var(--citui-ink);opacity:.55}
+  .meter em::after{content:attr(data-l);position:absolute;top:16px;left:-14px;font-size:10px;font-style:normal;color:var(--citui-muted);white-space:nowrap}
+
+  /* exit map */
+  .exitmap{display:grid;grid-template-columns:1fr;gap:6px;align-items:center}
+  .ex{display:grid;grid-template-columns:120px 1fr 56px;gap:8px;align-items:center;font-size:12.5px;padding:3px 0;cursor:default}
+  .ex .sec{font-weight:600;line-height:1.2} .ex .sec small{display:block;font-weight:500;color:var(--citui-muted);font-size:10.5px}
+  .ex .trk{position:relative;height:18px;background:var(--viz-ghost);border-radius:4px}
+  .ex .trk .reach{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--viz-1) 22%,var(--citui-panel));border-radius:4px}
+  .ex .trk .exit{position:absolute;left:0;top:4px;bottom:4px;background:var(--viz-1);border-radius:3px}
+  .ex .pc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums} .ex .pc small{display:block;font-weight:500;color:var(--citui-muted);font-size:10.5px}
+  .ex:hover .trk{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .ex.hot .pc{color:var(--citui-bad-ink)}
+
+  /* reasons */
+  .rs{display:grid;gap:6px} .rr{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;font-size:12.5px}
+  .rr .l{display:flex;gap:8px;align-items:center;min-width:0} .rr .l b{white-space:nowrap}
+  .rr .trk{flex:1;height:14px;background:var(--viz-ghost);border-radius:4px;position:relative;min-width:40px}
+  .rr .trk i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--viz-1)}
+  .rr .trk i.said{background:var(--viz-2)}
+  .rr .v{font-weight:700;font-variant-numeric:tabular-nums;min-width:64px;text-align:right} .rr .v small{color:var(--citui-muted);font-weight:500}
+  .conf{font-size:10.5px;color:var(--citui-muted)}
+  .calib td.hit{background:color-mix(in srgb,var(--citui-ok) 16%,var(--citui-panel));font-weight:700;color:var(--citui-ok-ink)}
+  .calib td.miss{color:var(--citui-muted)}
+
+  /* buyers */
+  .buyers{display:grid;grid-template-columns:1fr;gap:10px}
+  .bprof{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px;background:var(--citui-surface)}
+  .bprof h3{margin:0 0 6px;font:600 13.5px var(--citui-font-text)} .bprof dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:12.5px}
+  .bprof dt{color:var(--citui-muted)} .bprof dd{margin:0;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* heatmap */
+  .hm{display:grid;grid-template-columns:34px repeat(17,1fr);gap:2px;font-size:10px;color:var(--citui-muted)}
+  .hm .c{aspect-ratio:1;border-radius:3px;background:var(--viz-ghost)} .hm .h{text-align:center} .hm .d{line-height:1;display:flex;align-items:center}
+
+  /* device bars */
+  .dev{display:grid;gap:8px} .dr{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;font-size:12.5px}
+  .dr .trk{position:relative;height:26px;background:var(--viz-ghost);border-radius:4px}
+  .dr .trk i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+  .dr .trk b{position:absolute;left:8px;line-height:26px;font-size:12px;color:var(--citui-ink-inverse)}
+  .dr .trk span{position:absolute;right:8px;line-height:26px;font-size:11.5px;color:var(--citui-muted)}
+
+  /* micro survey preview */
+  .survey{border:1px solid var(--citui-line);border-radius:14px;padding:14px 16px;background:var(--citui-surface);max-width:420px}
+  .survey p{margin:0 0 10px;font-size:13.5px;font-weight:600} .survey .opts{display:grid;gap:6px}
+  .survey .opts button{appearance:none;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);min-height:38px;padding:0 14px;font:500 13px var(--citui-font-text);color:var(--citui-ink);cursor:pointer;text-align:left}
+  .survey .opts button:hover{border-color:var(--citui-cyan-500)} .survey .opts button[aria-pressed="true"]{background:var(--citui-navy-900);color:var(--citui-ink-inverse);border-color:var(--citui-navy-900)}
+  .survey textarea{width:100%;min-height:56px;border:1px solid var(--citui-line);border-radius:10px;padding:8px 10px;font:13px var(--citui-font-text);margin-top:6px;display:none}
+  .survey textarea.on{display:block}
+  .survey .foot{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap} .survey .thanks{display:none;font-size:13px;color:var(--citui-ok-ink);font-weight:600}
+  .survey.done .opts,.survey.done .foot,.survey.done textarea{display:none} .survey.done .thanks{display:block}
+  .hide{display:none!important}
+  .vb{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-link-ink);margin:14px 2px 6px}
+</style></head><body>
+<div class="bar"><b>Riport — 1. kör vázlat</b>
+  <div class="grp"><span>Méret</span><button id="szM">Mobil 390px</button><button id="szD" class="on">Asztali</button></div>
+  <div class="grp"><span>Változat</span><button id="vA">A — elvetve</button><button id="vB" class="on">B — kérdés-első (KÖT)</button></div>
+  <div class="sp"></div></div>
+<p class="note"><b>Tulajdonosi jóváhagyás 2026-10-04: „B Mehet”.</b> A B változat KÖT, az A elvetve (összehasonlításra itt marad).  A = a tölcsér-lap teteje KPI-sor + sáv-tölcsér (irányítópult-logika). B = a mai /report H1–H5 kérdései kártyákként, cél-jelzővel és ítélettel (kérdés-logika). A többi panel (kohorsz, bontás, napló, Viselkedés lap) azonos. Minden szám a szűrőre számolódik — próbáld az időszakot és a bontást.</p>
+
+<div class="stage" id="stage">
+  <div class="crumb">Riport › <b>Megkeresés-tölcsér</b></div>
+  <h1>Megkeresés-riport</h1>
+  <div class="tabs"><button class="on" data-tab="fun">Tölcsér</button><button data-tab="beh">Viselkedés</button><button disabled title="2. kör">Pénzügy</button><button disabled title="3. kör">Tenantok</button></div>
+
+  <div class="filt">
+    <div class="chips" id="range"><button data-d="7">7 nap</button><button data-d="30" class="on">30 nap</button><button data-d="90">90 nap</button><button data-d="0">Összes</button></div>
+    <select id="dim"><option value="segment">Bontás: szegmens</option><option value="channel">Bontás: csatorna</option><option value="device">Bontás: eszköz</option><option value="style">Bontás: mock-stílus</option><option value="hour">Bontás: küldési óra</option></select>
+    <span class="n" id="fnote"></span>
+  </div>
+
+  <!-- ═══ TÖLCSÉR LAP ═══ -->
+  <section id="tab-fun">
+    <div id="varA" class="hide">
+      <div class="kstrip k6" id="kpis"></div>
+      <div class="panel"><h2>Tölcsér <span class="q">— hol akadnak el (a szám: LEGALÁBB eddig eljutott)</span></h2>
+        <div class="funnel-wrap">
+          <div class="fun" id="funnel"></div>
+          <div><table class="times"><thead><tr><th>Átmenet</th><th style="text-align:right">Medián</th><th style="text-align:right">p90</th></tr></thead><tbody id="times"></tbody></table>
+            <p class="mut small" style="margin:8px 0 0">Mediánt nézünk, nem átlagot: egy 9 napos kivétel az átlagot elvinné.</p></div>
+        </div>
+      </div>
+    </div>
+    <div id="varB">
+      <div class="hyp" id="hyp"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel"><h2>Visszatérés <span class="q">— hányadik látogatásnál születik a rendelés</span></h2>
+        <div class="fun" id="returns"></div>
+        <p class="mut small" id="escnote" style="margin:8px 0 0"></p>
+      </div>
+      <div class="panel"><h2>Bontás <span class="q" id="dimtitle"></span></h2>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th id="dimhead">Szegmens</th><th class="num">Kiküldve</th><th class="num">Megnyitva</th><th class="num">Elmélyült</th><th class="num">Rendelés</th><th class="num">Fizetve</th></tr></thead><tbody id="dimrows"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px"><h2>Kohorsz <span class="q">— küldési hét szerint: javul-e a kör, nem csak az összeg</span></h2>
+      <div class="tblwrap"><table class="tbl"><thead><tr><th>Küldés hete</th><th class="num">Kiküldve</th><th class="num">Megnyitás 7 n.</th><th class="num">Rendelés 14 n.</th><th class="num">Fizetve 30 n.</th><th>1. megnyitás</th></tr></thead><tbody id="cohort"></tbody></table></div>
+      <p class="mut small" style="margin:8px 0 0">A friss hetek ablaka még nyitott — a sor jelzi, ha a 30 nap nem telt le.</p>
+    </div>
+
+    <div class="panel"><h2>Pilot-napló <span class="q">— mi történt, és mi változott utána</span></h2>
+      <div class="chart" id="tl"></div>
+      <div class="legend"><span><i style="background:var(--viz-ghost)"></i>kiküldés / nap</span><span><i class="ln" style="background:var(--viz-1)"></i>megnyitás / nap</span><span><i class="ln" style="background:var(--citui-warn)"></i>jegyzet (a te megjegyzésed)</span></div>
+      <div class="notes"><input id="noteIn" placeholder="Jegyzet a mai napra, pl. „Tárgymező csere: személyes megszólítás”" maxlength="80"><button class="btn ghost" id="noteBtn">Jegyzet hozzáadása</button><span class="ok-msg" id="noteOk"></span></div>
+    </div>
+  </section>
+
+  <!-- ═══ VISELKEDÉS LAP ═══ -->
+  <section id="tab-beh" class="hide">
+    <div class="kstrip k6" id="bkpis"></div>
+    <div class="grid2">
+      <div class="panel"><h2>Eszköz <span class="q">— mivel nézik, és melyiken vesznek</span></h2>
+        <div class="dev" id="dev"></div>
+        <p class="mut small" id="devnote" style="margin:8px 0 0"></p>
+      </div>
+      <div class="panel"><h2>Kilépési térkép <span class="q">— a mock szekciói: ki jut el ide, ki lép itt ki</span></h2>
+        <div class="exitmap" id="exitmap"></div>
+        <div class="legend"><span><i style="background:color-mix(in srgb,var(--viz-1) 22%,var(--citui-panel))"></i>eljutott ide</span><span><i style="background:var(--viz-1)"></i>itt lépett ki</span></div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:12px">
+      <div class="panel"><h2>Miért lépett ki <span class="q">— következtetett ok (minden látogatás) és kimondott ok (kérdőív)</span></h2>
+        <div class="chips" id="rsmode" style="margin-bottom:10px"><button data-m="inf" class="on">Következtetett</button><button data-m="said">Kimondott</button><button data-m="both">Egymás mellett</button></div>
+        <div class="rs" id="reasons"></div>
+        <p class="mut small" id="rsnote" style="margin:8px 0 0"></p>
+      </div>
+      <div class="panel"><h2>Kalibráció <span class="q">— ahol kimondták, mit tippelt a gép</span></h2>
+        <div class="tblwrap"><table class="tbl calib" id="calib"></table></div>
+        <p class="mut small" id="calibnote" style="margin:8px 0 0"></p>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:12px">
+      <div class="panel"><h2>A vevők elmélyülése <span class="q">— gyors vevő vs. mély vevő</span></h2>
+        <div class="buyers" id="buyers"></div>
+      </div>
+      <div class="panel"><h2>Mikor nyitják <span class="q">— nap × óra, Budapest-idő</span></h2>
+        <div class="hm" id="hm"></div>
+        <p class="mut small" id="hmnote" style="margin:8px 0 0"></p>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px"><h2>A mikro-kérdőív <span class="q">— így jelenik meg a mock-oldalon, az eszkalációs ajánlat elvetése után</span></h2>
+      <div class="survey" id="survey">
+        <p>Mi tartotta vissza? Egy koppintás, segít jobbat kínálnunk.</p>
+        <div class="opts">
+          <button data-r="Drága">Drágának találom</button>
+          <button data-r="Nem időszerű">Most nem időszerű</button>
+          <button data-r="Nem bízom / nem értem">Nem bízom benne, vagy nem értem</button>
+          <button data-r="Van honlapom">Van már honlapom, nem kell</button>
+          <button data-r="Más">Más…</button>
+        </div>
+        <textarea id="svtext" placeholder="Írja le röviden (nem kötelező)" maxlength="300"></textarea>
+        <div class="foot"><button class="btn" id="svSend" disabled>Elküldöm</button><button class="btn ghost" id="svSkip">Inkább nem</button></div>
+        <div class="thanks">Köszönjük — a válasz csak ehhez a megkereséshez kapcsolódik, nevet nem kérünk.</div>
+      </div>
+      <p class="mut small" style="margin:10px 0 0">Ugyanez a kérdés a leiratkozó lapon (a visszaigazolás UTÁN, semleges) és az emlékeztető levél linkjéből megnyíló megerősítő lapon (gomb + POST dönt, levél-szkenner nem válaszol helyettünk).</p>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ───────── sample data: pilot-shaped, seeded (same numbers every load) ───────── */
+let seed = 20261004; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+const pick = (a) => a[Math.floor(rnd() * a.length)];
+const DAY = 86400000, NOW = new Date("2026-11-20T12:00:00").getTime(); // pretend: ~7 weeks into the pilot
+const SEGS = ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult"], SEGL = { nincs_honlap: "Nincs honlap", "0_labnyom": "0 lábnyom", van_labnyom: "Van lábnyom", elavult: "Elavult honlap" };
+const CHL = ["E-mail", "SMS", "MMS", "E-mail + SMS"], DEVS = ["Mobil", "Tablet", "Asztali"], STY = ["Egyszerű", "Közép", "Prémium", "Luxus"];
+const SECTIONS = ["Hős / főcím", "Galéria", "Szobák", "Szolgáltatások", "Vélemények", "Térkép", "Ár-panel", "Számlázás", "Fizetés (Barion)"];
+const REASONS = ["Nem fogta meg", "Nézelődött, nem lépett", "Konfigurált, nem vette komolyan", "Ár-sokk", "Számlázási súrlódás", "Domain-kapu", "Modul-függőség", "Fizetés-elakadás", "Eszkaláció elvetve", "Technikai"];
+const SAID = ["Drága", "Nem időszerű", "Nem bízom / nem értem", "Van honlapom", "Más"];
+// inference → likely stated reason (used only to shape the sample so the calibration table has structure)
+const INF2SAID = { "Ár-sokk": "Drága", "Nem fogta meg": "Nem időszerű", "Nézelődött, nem lépett": "Nem időszerű", "Konfigurált, nem vette komolyan": "Nem bízom / nem értem", "Számlázási súrlódás": "Más", "Domain-kapu": "Van honlapom", "Modul-függőség": "Más", "Fizetés-elakadás": "Nem bízom / nem értem", "Eszkaláció elvetve": "Drága", "Technikai": "Más" };
+
+const P = [];
+for (let i = 0; i < 168; i++) {
+  const age = Math.floor(rnd() * 49); // sent 0..48 days ago
+  const sentAt = NOW - age * DAY - Math.floor(rnd() * 10) * 3600000 + 8 * 3600000;
+  const segment = pick(SEGS), channel = pick(CHL), style = pick(STY);
+  const device = rnd() < 0.61 ? "Mobil" : rnd() < 0.2 ? "Tablet" : "Asztali";
+  const segBoost = { nincs_honlap: 1.25, "0_labnyom": 1.1, van_labnyom: 0.8, elavult: 0.7 }[segment];
+  const openP = Math.min(0.9, 0.46 * segBoost * (channel === "E-mail + SMS" ? 1.25 : channel === "MMS" ? 1.1 : 1));
+  const p = { id: i, sentAt, segment, channel, style, device, hour: new Date(sentAt).getHours(), visits: 0, opened: null, deep: null, order: null, paid: null, scroll: 0, dwell: 0, modules: 0, presets: 0, lastSection: 0, reason: null, said: null, escShown: false, escDismiss: false, escCta: false, unsub: false };
+  if (rnd() < openP) {
+    const hrs = rnd() < 0.55 ? rnd() * 6 : rnd() < 0.7 ? 6 + rnd() * 30 : 36 + rnd() * 120;
+    p.opened = sentAt + hrs * 3600000; { const d = new Date(p.opened); d.setHours(pick([8, 9, 10, 10, 10, 10, 11, 12, 13, 14, 14, 15, 16, 16, 16, 17, 18, 20, 21]), Math.floor(rnd() * 60)); p.opened = d.getTime(); }
+    p.visits = 1 + (rnd() < 0.42 ? 1 : 0) + (rnd() < 0.22 ? 1 : 0) + (rnd() < 0.1 ? 2 : 0);
+    p.scroll = pick([25, 25, 50, 50, 75, 75, 100, 100, 100]);
+    p.dwell = Math.round(8 + rnd() * rnd() * 400);
+    const deepP = 0.5 * (device === "Asztali" ? 1.15 : 1) * segBoost;
+    if (rnd() < deepP) { p.deep = p.opened + rnd() * 20 * 60000 + (p.visits > 1 ? DAY * rnd() * 3 : 0); p.modules = 1 + Math.floor(rnd() * 4); p.presets = Math.floor(rnd() * 3); p.scroll = pick([50, 75, 75, 100, 100]); p.dwell = Math.max(p.dwell, 60 + Math.round(rnd() * 400)); }
+    p.lastSection = p.deep ? 6 + Math.floor(rnd() * 3) : Math.min(8, Math.floor(p.scroll / 100 * 6));
+    if (p.visits >= 3) { p.escShown = true; if (rnd() < 0.3) p.escCta = true; else if (rnd() < 0.5) p.escDismiss = true; }
+    const orderP = p.deep ? (device === "Mobil" ? 0.26 : 0.36) * (p.escCta ? 1.6 : 1) : 0.03;
+    if (rnd() < orderP) { p.order = (p.deep || p.opened) + (rnd() < 0.4 ? rnd() * 2 * 3600000 : rnd() * 48 * 3600000); p.lastSection = 7 + Math.floor(rnd() * 2); if (rnd() < (device === "Mobil" ? 0.7 : 0.82)) { p.paid = p.order + (rnd() < 0.5 ? rnd() * 3600000 : rnd() * 20 * 3600000); p.lastSection = 8; } }
+    if (!p.paid) {
+      if (p.order) p.reason = rnd() < 0.7 ? "Fizetés-elakadás" : "Számlázási súrlódás";
+      else if (p.escDismiss) p.reason = "Eszkaláció elvetve";
+      else if (p.deep) p.reason = pick(["Ár-sokk", "Ár-sokk", "Ár-sokk", "Konfigurált, nem vette komolyan", "Konfigurált, nem vette komolyan", "Domain-kapu", "Modul-függőség", "Számlázási súrlódás", "Technikai"]);
+      else if (p.dwell < 12 && p.scroll <= 25) p.reason = "Nem fogta meg";
+      else p.reason = rnd() < 0.8 ? "Nézelődött, nem lépett" : "Nem fogta meg";
+      if (rnd() < 0.09) { p.said = rnd() < 0.68 ? INF2SAID[p.reason] : pick(SAID); }
+    }
+  }
+  if (!p.paid && rnd() < 0.035) { p.unsub = true; if (rnd() < 0.5) p.said = p.said || pick(["Van honlapom", "Nem időszerű", "Más"]); }
+  P.push(p);
+}
+const NOTES = [{ day: 31, text: "Tárgymező csere: személyes megszólítás" }, { day: 17, text: "MMS-kör indult a csak-mobilos leadeknek" }];
+
+/* ───────── state + helpers ───────── */
+const S = { days: 30, dim: "segment", tab: "fun", variant: "B", rsmode: "inf" };
+const $ = (s) => document.querySelector(s);
+const pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "–");
+const pct1 = (a, b) => (b ? (Math.round((a / b) * 1000) / 10).toLocaleString("hu-HU") + "%" : "–");
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtH = (h) => (h == null || isNaN(h) ? "–" : h < 1 ? Math.round(h * 60) + " perc" : h < 48 ? (Math.round(h * 10) / 10).toLocaleString("hu-HU") + " óra" : (Math.round(h / 24 * 10) / 10).toLocaleString("hu-HU") + " nap");
+const fmtS = (s) => (s < 60 ? s + " mp" : Math.floor(s / 60) + " p " + (s % 60) + " mp");
+const med = (a, q = 0.5) => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
+const dateL = (t) => { const d = new Date(t); return d.getMonth() + 1 + ". " + d.getDate() + "."; };
+const filtered = () => (S.days ? P.filter((p) => p.sentAt >= NOW - S.days * DAY) : P);
+const prev = () => (S.days ? P.filter((p) => p.sentAt < NOW - S.days * DAY && p.sentAt >= NOW - 2 * S.days * DAY) : []);
+const counts = (a) => ({ sent: a.length, opened: a.filter((p) => p.opened).length, deep: a.filter((p) => p.deep).length, order: a.filter((p) => p.order).length, paid: a.filter((p) => p.paid).length, unsub: a.filter((p) => p.unsub).length });
+const DIML = { segment: "Szegmens", channel: "Csatorna", device: "Eszköz", style: "Mock-stílus", hour: "Küldési óra" };
+const dimKey = (p) => (S.dim === "segment" ? SEGL[p.segment] : S.dim === "hour" ? String(p.hour).padStart(2, "0") + ":00" : p[S.dim]);
+const delta = (cur, prv, invert = false) => { if (prv == null || isNaN(prv) || !S.days) return '<span class="delta flat">—</span>'; const d = cur - prv; if (Math.abs(d) < 0.5) return '<span class="delta flat">± 0</span>'; const up = invert ? d < 0 : d > 0; return `<span class="delta ${up ? "up" : "dn"}">${d > 0 ? "+" : "−"}${Math.abs(Math.round(d * 10) / 10).toLocaleString("hu-HU")}</span>`; };
+const rate = (a, b) => (b ? (a / b) * 100 : NaN);
+
+function sparkline(vals, color) {
+  const w = 120, h = 26, mx = Math.max(1, ...vals), n = vals.length;
+  const pts = vals.map((v, i) => `${(i / (n - 1)) * w},${h - 2 - (v / mx) * (h - 4)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+}
+function weekly(fn) { // last 6 weekly buckets of the filtered window (or of all time)
+  const out = []; for (let w = 5; w >= 0; w--) { const a = P.filter((p) => p.sentAt >= NOW - (w + 1) * 7 * DAY && p.sentAt < NOW - w * 7 * DAY); out.push(fn(a)); } return out;
+}
+
+/* ───────── funnel tab ───────── */
+function renderKpis(a) {
+  const c = counts(a), pc = counts(prev());
+  const firstOpen = a.filter((p) => p.opened).map((p) => (p.opened - p.sentAt) / 3600000);
+  const open2order = a.filter((p) => p.order).map((p) => (p.order - p.opened) / 3600000);
+  const pFirst = prev().filter((p) => p.opened).map((p) => (p.opened - p.sentAt) / 3600000);
+  const box = (t, v, sub, spark) => `<div class="kbox"><div class="kbox__t">${t}</div><div class="kbox__v">${v}</div><div class="kbox__s">${sub}</div>${spark || ""}</div>`;
+  $("#kpis").innerHTML =
+    box("Kiküldve", c.sent, `${delta(c.sent, pc.sent)} <span>db, előző időszak</span>`, sparkline(weekly((x) => x.length), "var(--viz-1)")) +
+    box("Megnyitva", pct(c.opened, c.sent), `${delta(rate(c.opened, c.sent), rate(pc.opened, pc.sent))} <span>pont · ${c.opened} db</span>`, sparkline(weekly((x) => rate(counts(x).opened, x.length) || 0), "var(--viz-1)")) +
+    box("Elmélyült", pct(c.deep, c.opened), `${delta(rate(c.deep, c.opened), rate(pc.deep, pc.opened))} <span>a megnyitókból · ${c.deep} db</span>`, sparkline(weekly((x) => rate(counts(x).deep, counts(x).opened) || 0), "var(--viz-1)")) +
+    box("Rendelés", pct1(c.order, c.sent), `${delta(rate(c.order, c.sent), rate(pc.order, pc.sent))} <span>a kiküldöttből · ${c.order} db</span>`, sparkline(weekly((x) => rate(counts(x).order, x.length) || 0), "var(--viz-1)")) +
+    box("Fizetve", pct1(c.paid, c.sent), `${delta(rate(c.paid, c.sent), rate(pc.paid, pc.sent))} <span>a kiküldöttből · ${c.paid} db</span>`, sparkline(weekly((x) => rate(counts(x).paid, x.length) || 0), "var(--viz-1)")) +
+    box("Küldés → 1. megnyitás", fmtH(med(firstOpen)), `${delta(med(pFirst), med(firstOpen), true)} <span>óra · medián; megnyitás → rendelés: ${fmtH(med(open2order))}</span>`);
+}
+function renderFunnel(a) {
+  const c = counts(a);
+  const st = [["Kiküldve", "követett link, bármely csatornán", c.sent, c.sent], ["Megnyitva", "emberi jel a lapon (nem szkenner)", c.opened, c.sent], ["Elmélyült", "modul / preset / ≥50% görgetés", c.deep, c.opened], ["Rendelés", "rendelést elküldte", c.order, c.deep], ["Fizetve", "Barion: fizetve", c.paid, c.order]];
+  $("#funnel").innerHTML = st.map(([l, s, v, base], i) => { const w = c.sent ? Math.max(1.5, (v / c.sent) * 100) : 0; const inside = w > 18;
+    return `<div class="row" title="${l}: ${v} db · ${pct(v, base)} az előző lépcsőhöz · ${pct(v, c.sent)} a kiküldötthez"><div class="lab">${l}<small>${s}</small></div><div class="trk"><i style="width:${w}%;background:var(--ramp-${i + 1})"></i><b class="${inside ? "" : "out"}" style="${inside ? "" : `left:calc(${w}% + 8px)`}">${v}</b>${i ? `<span class="rate">${pct(v, base)} ↘ · ${pct(v, c.sent)} össz</span>` : `<span class="rate">100%</span>`}</div></div>`; }).join("");
+  const tr = [["Küldés → 1. megnyitás", a.filter((p) => p.opened).map((p) => (p.opened - p.sentAt) / 3600000)], ["Megnyitás → elmélyülés", a.filter((p) => p.deep).map((p) => (p.deep - p.opened) / 3600000)], ["Megnyitás → rendelés", a.filter((p) => p.order).map((p) => (p.order - p.opened) / 3600000)], ["Rendelés → fizetés", a.filter((p) => p.paid).map((p) => (p.paid - p.order) / 3600000)], ["Küldés → fizetés", a.filter((p) => p.paid).map((p) => (p.paid - p.sentAt) / 3600000)]];
+  $("#times").innerHTML = tr.map(([l, v]) => `<tr><td>${l}<br><span class="mut small">${v.length} db</span></td><td class="num">${fmtH(med(v))}</td><td class="num">${fmtH(med(v, 0.9))}</td></tr>`).join("");
+}
+function renderHyp(a) {
+  const c = counts(a), ret = a.filter((p) => p.visits > 1).length;
+  const H = [
+    ["Megfogja-e a levél?", "megnyitás / kiküldött", rate(c.opened, c.sent), 40, `${c.opened} / ${c.sent}`, weekly((x) => rate(counts(x).opened, x.length) || 0)],
+    ["Visszatér-e?", "visszatérő / megnyitó", rate(ret, c.opened), 30, `${ret} / ${c.opened}`, weekly((x) => rate(x.filter((p) => p.visits > 1).length, counts(x).opened) || 0)],
+    ["Belenyúl-e a modulokba?", "elmélyülő / megnyitó", rate(c.deep, c.opened), 20, `${c.deep} / ${c.opened}`, weekly((x) => rate(counts(x).deep, counts(x).opened) || 0)],
+    ["Megrendeli-e?", "rendelés / kiküldött", rate(c.order, c.sent), 4, `${c.order} / ${c.sent}`, weekly((x) => rate(counts(x).order, x.length) || 0)],
+    ["Ki is fizeti?", "fizetve / rendelés", rate(c.paid, c.order), 75, `${c.paid} / ${c.order}`, weekly((x) => rate(counts(x).paid, counts(x).order) || 0)],
+    ["Gyorsan reagál-e?", "medián küldés → 1. megnyitás", med(a.filter((p) => p.opened).map((p) => (p.opened - p.sentAt) / 3600000)), 24, "óra · kisebb a jobb", weekly((x) => med(x.filter((p) => p.opened).map((p) => (p.opened - p.sentAt) / 3600000)) || 0), true],
+  ];
+  $("#hyp").innerHTML = H.map(([q, m, v, goal, sub, wk, lower]) => { const ok = lower ? v <= goal : v >= goal; const near = lower ? v <= goal * 1.3 : v >= goal * 0.7; const cls = isNaN(v) ? "" : ok ? "ok" : near ? "warn" : "bad"; const lab = isNaN(v) ? "nincs adat" : ok ? "cél felett" : near ? "közelít" : "cél alatt";
+    const mx = lower ? Math.max(goal * 2, v) : 100, fill = isNaN(v) ? 0 : Math.min(100, (v / mx) * 100), mark = Math.min(100, (goal / mx) * 100);
+    return `<div class="hcard"><div class="hq">${q}</div><div class="hmeas">${m}</div><div class="hv"><b>${isNaN(v) ? "–" : lower ? fmtH(v) : pct1(v, 100)}</b><span class="pill ${cls}"><i class="d"></i>${lab}</span></div><div class="meter"><i style="width:${fill}%"></i><em style="left:${mark}%" data-l="cél ${lower ? goal + " ó" : goal + "%"}"></em></div><div class="hmeas" style="margin-top:14px">${sub}</div>${sparkline(wk, "var(--viz-1)")}</div>`; }).join("");
+}
+function renderReturns(a) {
+  const op = a.filter((p) => p.opened); const b = [["1 látogatás", op.filter((p) => p.visits === 1)], ["2 látogatás", op.filter((p) => p.visits === 2)], ["3+ látogatás", op.filter((p) => p.visits >= 3)]];
+  $("#returns").innerHTML = b.map(([l, g], i) => { const w = op.length ? Math.max(1.5, (g.length / op.length) * 100) : 0; const o = g.filter((p) => p.order).length; return `<div class="row" title="${l}: ${g.length} lead, ebből rendelt ${o}"><div class="lab">${l}<small>${o} rendelés</small></div><div class="trk"><i style="width:${w}%;background:var(--ramp-${i + 2})"></i><b class="${w > 18 ? "" : "out"}" style="${w > 18 ? "" : `left:calc(${w}% + 8px)`}">${g.length}</b><span class="rate">rendel: ${pct(o, g.length)}</span></div></div>`; }).join("");
+  const shown = a.filter((p) => p.escShown), cta = shown.filter((p) => p.escCta), ord = cta.filter((p) => p.order);
+  $("#escnote").textContent = shown.length ? `Eszkalációs ajánlat (3. látogatás, −50%): ${shown.length} leadnek jelent meg, ${cta.length} kattintott rá (${pct(cta.length, shown.length)}), ${ord.length} rendelt belőlük. Elvetette: ${shown.filter((p) => p.escDismiss).length}.` : "Eszkalációs ajánlat ebben az időszakban még nem jelent meg senkinek.";
+}
+function renderDim(a) {
+  $("#dimhead").textContent = DIML[S.dim]; $("#dimtitle").textContent = "— " + DIML[S.dim].toLowerCase() + " szerint";
+  const g = {}; for (const p of a) (g[dimKey(p)] ||= []).push(p);
+  const keys = Object.keys(g).sort((x, y) => (S.dim === "hour" ? x.localeCompare(y) : g[y].length - g[x].length));
+  const row = (k, arr, tot) => { const c = counts(arr); const mx = Math.max(1, ...Object.values(g).map((x) => x.length)); return `<tr class="${tot ? "tot" : ""}"><td>${esc(k)}</td><td class="num"><span class="mini" style="width:${(c.sent / mx) * 48}px"></span>${c.sent}</td><td class="num">${pct(c.opened, c.sent)}</td><td class="num">${pct(c.deep, c.opened)}</td><td class="num">${pct1(c.order, c.sent)}</td><td class="num">${pct1(c.paid, c.sent)}</td></tr>`; };
+  $("#dimrows").innerHTML = row("ÖSSZES", a, true) + keys.map((k) => row(k, g[k])).join("");
+}
+function renderCohort() {
+  const rows = []; for (let w = 6; w >= 0; w--) { const from = NOW - (w + 1) * 7 * DAY, to = NOW - w * 7 * DAY; const a = P.filter((p) => p.sentAt >= from && p.sentAt < to); if (!a.length) continue;
+    const o7 = a.filter((p) => p.opened && p.opened - p.sentAt <= 7 * DAY).length, r14 = a.filter((p) => p.order && p.order - p.sentAt <= 14 * DAY).length, p30 = a.filter((p) => p.paid && p.paid - p.sentAt <= 30 * DAY).length;
+    const openWin = NOW - to < 30 * DAY; const fo = med(a.filter((p) => p.opened).map((p) => (p.opened - p.sentAt) / 3600000));
+    rows.push({ l: dateL(from) + " – " + dateL(to - DAY), n: a.length, o7, r14, p30, openWin, fo }); }
+  const heat = (v, n, maxPct) => { const r = n ? v / n : 0; const a = Math.min(1, r / maxPct); return `<span class="heat" style="background:color-mix(in srgb,var(--viz-1) ${Math.round(a * 70)}%,var(--citui-panel));color:${a > 0.55 ? "var(--citui-ink-inverse)" : "var(--citui-ink)"}">${pct(v, n)}</span>`; };
+  $("#cohort").innerHTML = rows.map((r) => `<tr><td>${r.l}${r.openWin ? ' <span class="pill warn" title="A 30 napos ablak még nem telt le" style="padding:1px 7px">nyitott</span>' : ""}</td><td class="num">${r.n}</td><td class="num">${heat(r.o7, r.n, 0.7)}</td><td class="num">${heat(r.r14, r.n, 0.12)}</td><td class="num">${heat(r.p30, r.n, 0.1)}</td><td>${fmtH(r.fo)}</td></tr>`).join("");
+}
+function renderTimeline() {
+  const days = S.days || 49, W = Math.max(320, Math.min(720, $("#tl").clientWidth || 720)), H = 150, padL = 26, padB = 20, narrow = W < 520, iw = W - padL - 6, ih = H - padB - 8;
+  const sent = [], opened = []; for (let d = days - 1; d >= 0; d--) { const from = NOW - (d + 1) * DAY, to = NOW - d * DAY; sent.push(P.filter((p) => p.sentAt >= from && p.sentAt < to).length); opened.push(P.filter((p) => p.opened && p.opened >= from && p.opened < to).length); }
+  const mx = Math.max(2, ...sent, ...opened), bw = iw / days, y = (v) => 8 + ih - (v / mx) * ih;
+  const bars = sent.map((v, i) => `<rect x="${(padL + i * bw + 1).toFixed(1)}" y="${y(v).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${(ih + 8 - y(v)).toFixed(1)}" rx="2" fill="var(--viz-ghost)"/>`).join("");
+  const line = opened.map((v, i) => `${(padL + i * bw + bw / 2).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const grid = [0, 0.5, 1].map((f) => `<line x1="${padL}" x2="${W - 6}" y1="${y(mx * f).toFixed(1)}" y2="${y(mx * f).toFixed(1)}" stroke="var(--viz-grid)" stroke-width="1"/><text x="${padL - 4}" y="${(y(mx * f) + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--citui-muted)">${Math.round(mx * f)}</text>`).join("");
+  const labs = []; for (let i = 0; i < days; i += Math.ceil(days / (narrow ? 4 : 7))) labs.push(`<text x="${(padL + i * bw + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="var(--citui-muted)">${dateL(NOW - (days - i) * DAY)}</text>`);
+  const notes = NOTES.filter((n) => n.day < days).map((n) => { const x = padL + (days - n.day - 0.5) * bw; return `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="6" y2="${ih + 8}" stroke="var(--citui-warn)" stroke-width="2" stroke-dasharray="3 3"/><text x="${(x + 4).toFixed(1)}" y="14" font-size="9" fill="var(--citui-warn-ink)">${esc(n.text.length > 34 ? n.text.slice(0, 33) + "…" : n.text)}</text>`; }).join("");
+  const hit = sent.map((v, i) => `<rect data-i="${i}" x="${(padL + i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" fill="transparent"/>`).join("");
+  $("#tl").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kiküldés és megnyitás naponta">${grid}${bars}<polyline points="${line}" fill="none" stroke="var(--viz-1)" stroke-width="2" stroke-linejoin="round"/>${notes}${labs.join("")}<g id="hit">${hit}</g><line id="xh" x1="0" x2="0" y1="6" y2="${ih + 8}" stroke="var(--citui-ink)" stroke-width="1" opacity="0"/></svg><div class="tip" id="tltip"></div>`;
+  const svg = $("#tl svg"), tip = $("#tltip"), xh = $("#xh");
+  svg.addEventListener("pointermove", (e) => { const t = e.target.closest("rect[data-i]"); if (!t) return; const i = +t.dataset.i; const r = svg.getBoundingClientRect(); const x = r.left + ((padL + i * bw + bw / 2) / W) * r.width; const pr = $("#tl").getBoundingClientRect();
+    tip.innerHTML = `${dateL(NOW - (days - i) * DAY)} · kiküldve <b>${sent[i]}</b> · megnyitás <b>${opened[i]}</b>`; tip.style.left = x - pr.left + "px"; tip.style.top = r.top - pr.top + 20 + "px"; tip.classList.add("on"); xh.setAttribute("x1", padL + i * bw + bw / 2); xh.setAttribute("x2", padL + i * bw + bw / 2); xh.setAttribute("opacity", ".6"); });
+  svg.addEventListener("pointerleave", () => { tip.classList.remove("on"); xh.setAttribute("opacity", "0"); });
+}
+
+/* ───────── behaviour tab ───────── */
+function renderBeh(a) {
+  const op = a.filter((p) => p.opened), c = counts(a);
+  const box = (t, v, sub) => `<div class="kbox"><div class="kbox__t">${t}</div><div class="kbox__v">${v}</div><div class="kbox__s">${sub}</div></div>`;
+  const panel = op.filter((p) => p.lastSection >= 6).length, payExit = op.filter((p) => p.order && !p.paid).length;
+  $("#bkpis").innerHTML = box("Medián időtöltés", fmtS(med(op.map((p) => p.dwell)) || 0), `p90: ${fmtS(med(op.map((p) => p.dwell), 0.9) || 0)}`) + box("Medián görgetés", (med(op.map((p) => p.scroll)) || 0) + "%", `${pct(op.filter((p) => p.scroll >= 75).length, op.length)} ért a lap aljáig`) + box("Mobilról", pct(op.filter((p) => p.device === "Mobil").length, op.length), `tablet ${pct(op.filter((p) => p.device === "Tablet").length, op.length)} · asztali ${pct(op.filter((p) => p.device === "Asztali").length, op.length)}`) + box("Ár-panelig jutott", pct(panel, op.length), `${panel} megnyitóból`) + box("Fizetésnél elakadt", payExit, `rendelt, de nem fizetett · ${pct(payExit, c.order)}`) + box("Kimondott ok", a.filter((p) => p.said).length, `kérdőív-válasz · ${pct(a.filter((p) => p.said).length, op.filter((p) => !p.paid).length)} a nem vásárlókból`);
+
+  // device: 3 classes, direct-labelled, conversion per class
+  const colors = ["var(--viz-1)", "var(--viz-2)", "var(--viz-3)"];
+  $("#dev").innerHTML = DEVS.map((d, i) => { const g = op.filter((p) => p.device === d), o = g.filter((p) => p.paid).length; const w = op.length ? Math.max(2, (g.length / op.length) * 100) : 0; return `<div class="dr" title="${d}: ${g.length} megnyitó, fizetett ${o}"><div>${d}</div><div class="trk"><i style="width:${w}%;background:${colors[i]}"></i><b style="${w < 22 ? `color:var(--citui-ink);left:calc(${w}% + 8px)` : ""}">${g.length}</b><span>fizet: ${pct1(o, g.length)}</span></div></div>`; }).join("");
+  const mob = op.filter((p) => p.device === "Mobil"), dsk = op.filter((p) => p.device === "Asztali");
+  $("#devnote").textContent = `A mobil hozza a megnyitások ${pct(mob.length, op.length)}-át, de a fizetésig ${pct1(mob.filter((p) => p.paid).length, mob.length)} jut el, asztalin ${pct1(dsk.filter((p) => p.paid).length, dsk.length)} — ha a különbség tartós, a mobil checkout a gyanús.`;
+
+  // exit map
+  const reach = SECTIONS.map((_, i) => op.filter((p) => p.lastSection >= i).length), exit = SECTIONS.map((_, i) => op.filter((p) => p.lastSection === i && !p.paid).length);
+  const mxExit = Math.max(1, ...exit);
+  $("#exitmap").innerHTML = SECTIONS.map((s, i) => `<div class="ex ${exit[i] === mxExit ? "hot" : ""}" title="${s}: ide eljutott ${reach[i]} (${pct(reach[i], op.length)}), itt lépett ki ${exit[i]}"><div class="sec">${s}<small>${i === 8 ? "a Barion oldalán" : i >= 6 ? "konfigurátor" : "mock-szekció"}</small></div><div class="trk"><div class="reach" style="width:${(reach[i] / Math.max(1, op.length)) * 100}%"></div><div class="exit" style="width:${(exit[i] / Math.max(1, op.length)) * 100}%"></div></div><div class="pc">${pct(exit[i], op.length)}<small>${reach[i]} ért ide</small></div></div>`).join("");
+
+  // reasons
+  const non = op.filter((p) => !p.paid), inf = {}, said = {}; for (const p of non) { inf[p.reason] = (inf[p.reason] || 0) + 1; if (p.said) said[p.said] = (said[p.said] || 0) + 1; }
+  for (const p of a) if (p.unsub && p.said && !p.opened) said[p.said] = (said[p.said] || 0) + 1;
+  const nSaid = Object.values(said).reduce((x, y) => x + y, 0);
+  const CONF = { "Nem fogta meg": "biztos", "Nézelődött, nem lépett": "közepes", "Konfigurált, nem vette komolyan": "közepes", "Ár-sokk": "közepes", "Számlázási súrlódás": "biztos", "Domain-kapu": "biztos", "Modul-függőség": "biztos", "Fizetés-elakadás": "biztos", "Eszkaláció elvetve": "biztos", "Technikai": "biztos" };
+  const rowR = (l, v, base, cls, extra) => `<div class="rr"><div class="l"><b>${l}</b><div class="trk"><i class="${cls}" style="width:${base ? (v / base) * 100 : 0}%"></i></div></div><div class="v">${v} <small>${pct(v, base)}</small>${extra || ""}</div></div>`;
+  if (S.rsmode === "inf") { $("#reasons").innerHTML = REASONS.map((r) => rowR(r, inf[r] || 0, non.length, "", `<div class="conf">${CONF[r]} jel</div>`)).join(""); $("#rsnote").textContent = `${non.length} nem vásárló megnyitó, mindegyik kap egy címkét a lapon hagyott jelekből (görgetés, idő, panel, lépés, hiba). A „biztos” jel egy konkrét eseményhez kötött, a „közepes” időzítésből következtet.`; }
+  else if (S.rsmode === "said") { $("#reasons").innerHTML = SAID.map((r) => rowR(r, said[r] || 0, nSaid, "said")).join(""); $("#rsnote").textContent = `${nSaid} kimondott ok (eszkaláció elvetése, leiratkozó lap, emlékeztető-link). Kevés, de ez az egyetlen, amit nem mi találtunk ki.`; }
+  else { $("#reasons").innerHTML = SAID.map((r) => { const infSum = Object.entries(INF2SAID).filter(([, s]) => s === r).reduce((x, [k]) => x + (inf[k] || 0), 0); return `<div class="rr"><div class="l"><b>${r}</b><div class="trk" style="height:8px"><i style="width:${non.length ? (infSum / non.length) * 100 : 0}%"></i></div></div><div class="v">${pct(infSum, non.length)} <small>gép</small></div></div><div class="rr" style="margin-top:-2px"><div class="l"><b style="visibility:hidden">${r}</b><div class="trk" style="height:8px"><i class="said" style="width:${nSaid ? ((said[r] || 0) / nSaid) * 100 : 0}%"></i></div></div><div class="v">${pct(said[r] || 0, nSaid)} <small>vendég</small></div></div>`; }).join(""); $("#rsnote").textContent = "A gépi címkék a kimondott kategóriákra vetítve (ár-sokk + eszkaláció → „Drága” stb.) — ha a két oszlop széttart, a szabályok küszöbeit hangoljuk."; }
+
+  // calibration
+  const both = non.filter((p) => p.said); const M = {}; for (const p of both) { M[p.said] ||= {}; M[p.said][p.reason] = (M[p.said][p.reason] || 0) + 1; }
+  let hits = 0; for (const p of both) if (INF2SAID[p.reason] === p.said) hits++;
+  const infCols = REASONS.filter((r) => both.some((p) => p.reason === r));
+  $("#calib").innerHTML = `<thead><tr><th>Kimondta ↓ / gép tippje →</th>${infCols.map((r) => `<th class="num">${r}</th>`).join("")}</tr></thead><tbody>${SAID.filter((s) => M[s]).map((s) => `<tr><td><b>${s}</b> <span class="mut">(${Object.values(M[s]).reduce((x, y) => x + y, 0)})</span></td>${infCols.map((r) => { const v = M[s][r] || 0; return `<td class="num ${v && INF2SAID[r] === s ? "hit" : v ? "" : "miss"}">${v || "·"}</td>`; }).join("")}</tr>`).join("")}</tbody>`;
+  $("#calibnote").textContent = both.length ? `${both.length} látogatásnál van kimondott ok is: a gép ${hits}-ben (${pct(hits, both.length)}) ugyanazt tippelte (zöld cella). Ami nem egyezik, azon a szabályon kell tekerni — pl. ha a „Drága” sorban a gép „nézelődött”-et mondott, az ár-sokk küszöbe (20 mp) túl szoros.` : "Még nincs olyan látogatás, ahol kimondott ok is lenne — a kalibráció a kérdőív első válaszaival indul.";
+
+  // buyers
+  const buyers = a.filter((p) => p.paid); const fast = buyers.filter((p) => p.paid - p.opened <= 6 * 3600000), deep = buyers.filter((p) => p.paid - p.opened > 6 * 3600000);
+  const prof = (t, g, sub) => `<div class="bprof"><h3>${t} <span class="mut" style="font-weight:500">· ${g.length} vevő</span></h3><p class="mut small" style="margin:0 0 8px">${sub}</p><dl><dt>Látogatás a fizetésig</dt><dd>${g.length ? (Math.round(g.reduce((x, p) => x + p.visits, 0) / g.length * 10) / 10).toLocaleString("hu-HU") : "–"}</dd><dt>Időtöltés (medián)</dt><dd>${g.length ? fmtS(med(g.map((p) => p.dwell))) : "–"}</dd><dt>Modul-érintés</dt><dd>${g.length ? (Math.round(g.reduce((x, p) => x + p.modules, 0) / g.length * 10) / 10).toLocaleString("hu-HU") : "–"}</dd><dt>Preset-váltás</dt><dd>${g.length ? (Math.round(g.reduce((x, p) => x + p.presets, 0) / g.length * 10) / 10).toLocaleString("hu-HU") : "–"}</dd><dt>Megnyitás → fizetés</dt><dd>${g.length ? fmtH(med(g.map((p) => (p.paid - p.opened) / 3600000))) : "–"}</dd><dt>Mobilról</dt><dd>${pct(g.filter((p) => p.device === "Mobil").length, g.length)}</dd></dl></div>`;
+  $("#buyers").innerHTML = prof("Gyors vevő", fast, "6 órán belül fizet az első megnyitástól — a levél és a mock együtt adta el.") + prof("Mély vevő", deep, "Visszajön, végigpróbálja a modulokat — nála a konfigurátor ad el.");
+
+  // heatmap: day × hour of opens (Budapest)
+  const DN = ["H", "K", "Sze", "Cs", "P", "Szo", "V"], HRS = Array.from({ length: 17 }, (_, i) => i + 7), grid = Array.from({ length: 7 }, () => Array(17).fill(0)); let mxh = 1;
+  for (const p of op) { const d = new Date(p.opened); const dow = (d.getDay() + 6) % 7, h = d.getHours(); if (h >= 7 && h <= 23) { grid[dow][h - 7]++; mxh = Math.max(mxh, grid[dow][h - 7]); } }
+  let best = { v: 0 }; grid.forEach((r, di) => r.forEach((v, hi) => { if (v > best.v) best = { v, d: DN[di], h: HRS[hi] }; }));
+  $("#hm").innerHTML = `<div></div>${HRS.map((h) => `<div class="h">${h}</div>`).join("")}` + grid.map((r, di) => `<div class="d">${DN[di]}</div>` + r.map((v, hi) => `<div class="c" title="${DN[di]} ${HRS[hi]}:00 — ${v} megnyitás" style="background:color-mix(in srgb,var(--viz-1) ${Math.round((v / mxh) * 85)}%,var(--citui-panel))"></div>`).join("")).join("");
+  $("#hmnote").textContent = best.v ? `Legtöbb megnyitás: ${best.d} ${best.h}:00 körül (${best.v}). A küldési ablakot ehhez igazítjuk, nem a magunk szokásához.` : "Még nincs megnyitás az időszakban.";
+}
+
+/* ───────── render all + wiring ───────── */
+function renderAll() {
+  const a = filtered(); $("#fnote").textContent = `${a.length} követett link az időszakban · csak KIKÜLDÖTT linkek (saját megnyitás, teszt nem számít)`;
+  if (S.tab === "fun") { if (S.variant === "A") { renderKpis(a); renderFunnel(a); } else renderHyp(a); renderReturns(a); renderDim(a); renderCohort(); renderTimeline(); }
+  else renderBeh(a);
+}
+$("#range").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.days = +b.dataset.d; [...$("#range").children].forEach((x) => x.classList.toggle("on", x === b)); renderAll(); });
+$("#dim").addEventListener("change", (e) => { S.dim = e.target.value; renderAll(); });
+document.querySelector(".tabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-tab]"); if (!b) return; S.tab = b.dataset.tab; [...document.querySelectorAll(".tabs button")].forEach((x) => x.classList.toggle("on", x === b)); $("#tab-fun").classList.toggle("hide", S.tab !== "fun"); $("#tab-beh").classList.toggle("hide", S.tab !== "beh"); renderAll(); });
+$("#rsmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.rsmode = b.dataset.m; [...$("#rsmode").children].forEach((x) => x.classList.toggle("on", x === b)); renderAll(); });
+const setVar = (v) => { S.variant = v; $("#vA").classList.toggle("on", v === "A"); $("#vB").classList.toggle("on", v === "B"); $("#varA").classList.toggle("hide", v !== "A"); $("#varB").classList.toggle("hide", v !== "B"); renderAll(); };
+$("#vA").onclick = () => setVar("A"); $("#vB").onclick = () => setVar("B");
+const stage = $("#stage"); const setSize = (m) => { stage.classList.toggle("m", m); $("#szM").classList.toggle("on", m); $("#szD").classList.toggle("on", !m); renderAll(); };
+$("#szM").onclick = () => setSize(true); $("#szD").onclick = () => setSize(false);
+if (innerWidth < 700) setSize(true);
+// notes: add a marker for today
+$("#noteBtn").onclick = () => { const t = $("#noteIn").value.trim(); if (!t) { $("#noteIn").focus(); return; } NOTES.push({ day: 0, text: t }); $("#noteIn").value = ""; $("#noteOk").textContent = "Jegyzet felvéve a mai napra."; renderTimeline(); setTimeout(() => ($("#noteOk").textContent = ""), 2500); };
+$("#noteIn").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#noteBtn").click(); });
+// survey preview
+const sv = $("#survey"); let svPick = null;
+sv.querySelector(".opts").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; svPick = b.dataset.r; [...sv.querySelectorAll(".opts button")].forEach((x) => x.setAttribute("aria-pressed", x === b)); $("#svtext").classList.toggle("on", svPick === "Más"); $("#svSend").disabled = false; });
+$("#svSend").onclick = () => { sv.classList.add("done"); };
+$("#svSkip").onclick = () => { sv.classList.add("done"); sv.querySelector(".thanks").textContent = "Rendben, nem kérdezzük többet."; };
+renderAll();
+</script>
+</body></html>

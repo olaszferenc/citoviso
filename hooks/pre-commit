@@ -2193,6 +2193,12 @@ if [ -f scripts/contract-drift-check.mts ] && \
   npx tsx scripts/contract-drift-check.mts
 fi
 
+if [ -f scripts/exit-reason-check.mts ] && \
+   changed_files | grep -qE '^src/analytics/exitReason\.ts$|^scripts/exit-reason-check\.mts$'; then
+  echo "[pre-commit] exit-reason-check (a kilépés-ok szabályai a rögzített látogatásokat ugyanúgy címkézik)…"
+  npx tsx scripts/exit-reason-check.mts >"$GATE_LOG" || gate_failed
+fi
+
 if [ -f scripts/configurator-price-check.mts ] && \
    changed_files | grep -qE '^assets/runtime/cit-configurator\.(js|css)$|^src/generator/configurator\.ts$|^src/modules\.ts$|^src/pricing\.ts$|^scripts/configurator-price-check'; then
   echo "[pre-commit] configurator-price-check (nyitott lista + követhető ár)…"
