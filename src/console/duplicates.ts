@@ -17,6 +17,7 @@ import { db } from "../db/client.js";
 import { deaccent, tokens } from "../scraper/enrichPresence.js";
 import { distanceKm } from "../scraper/regions.js";
 import type { ContactCandidate, PortalListing, QualifiedLead } from "../scraper/types.js";
+import { leadEmails } from "../email/leadEmails.js";
 
 export type DupSignal = "website" | "phone" | "email" | "proximity";
 export type DupVerdict = "duplicate" | "same_owner" | "unrelated";
@@ -35,6 +36,8 @@ export interface DupLead {
   readonly city?: string;
   readonly website?: string;
   readonly email?: string;
+  /** The lead's further addresses (ADR-XXXX) — matched like the primary. */
+  readonly otherEmails?: readonly string[];
   readonly phone?: string;
   readonly qualification: string;
   readonly lifecycle: string;
@@ -104,6 +107,7 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
       city: raw.city,
       website: raw.website,
       email: raw.email,
+      otherEmails: raw.otherEmails,
       phone: raw.phone,
       qualification: r.qualification ?? "unknown",
       lifecycle: r.lifecycle_status,
@@ -146,7 +150,7 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
     for (const c of [
       ...(l.contacts ?? []),
       ...(l.phone ? [{ kind: "phone", value: l.phone } as ContactCandidate] : []),
-      ...(l.email ? [{ kind: "email", value: l.email } as ContactCandidate] : []),
+      ...leadEmails(l).map((value) => ({ kind: "email", value }) as ContactCandidate),
     ]) {
       if (c.kind === "phone") {
         const k = phoneKey(c.value);
@@ -335,8 +339,12 @@ export async function ruleOnPair(input: {
       }
       const merged: QualifiedLead = {
         ...k,
-        // Gaps only — a curated value on the kept lead always wins.
+        // Gaps only — a curated value on the kept lead always wins. The e-mail LIST is
+        // one unit (ADR-XXXX): the kept lead's, or — when it has none — the absorbed one's.
+        // Not a union: nobody chose the absorbed lead's addresses for this lead (the
+        // absorbed addresses still land in the ledger below, as before).
         email: k.email ?? l.email,
+        otherEmails: k.email ? k.otherEmails : l.otherEmails,
         phone: k.phone ?? l.phone,
         website: k.website ?? l.website,
         city: k.city ?? l.city,

@@ -22,6 +22,7 @@
 
 import { findHuTaxNumberInText } from "../billing/taxId.js";
 import { normalizeCountryCode } from "../markets.js";
+import { checkEmailList } from "../email/leadEmails.js";
 
 /** Country names that mean an ISO-2 code (scrape output, browser autofill, typed). */
 const COUNTRY_ALIASES: Readonly<Record<string, string>> = {
@@ -61,6 +62,8 @@ function joinDigitGroups(s: string): string {
 export interface LeadContactInput {
   readonly address?: string;
   readonly country?: string;
+  /** The lead's e-mail addresses, primary first (ADR-XXXX). Omitted = not edited. */
+  readonly emails?: readonly string[];
 }
 
 export interface LeadContactVerdict {
@@ -69,6 +72,8 @@ export interface LeadContactVerdict {
   readonly problems: readonly string[];
   /** The country as it must be stored (ISO-2), when one was given and is valid. */
   readonly country?: string;
+  /** The e-mail list as it must be stored (primary first), when one was given. */
+  readonly emails?: readonly string[];
 }
 
 /** Judge a curator edit of the lead's public contact fields. Pure. */
@@ -94,5 +99,19 @@ export function checkLeadContact(input: LeadContactInput): LeadContactVerdict {
     if (iso) country = iso;
     else problems.push(`Az ország kétbetűs kód legyen (pl. HU), nem „${rawCountry}”.`);
   }
-  return { ok: problems.length === 0, problems, ...(country ? { country } : {}) };
+  // E-mail: today's format rule (the browser's type=email, now also checked here because a
+  // list no longer fits one browser-validated field) + one mailbox once. ADR-XXXX.
+  let emails: readonly string[] | undefined;
+  if (input.emails !== undefined) {
+    const v = checkEmailList(input.emails);
+    for (const pr of v.problems) {
+      problems.push(
+        pr.kind === "invalid"
+          ? `„${pr.addr}” nem érvényes e-mail-cím.`
+          : `„${pr.addr}” ugyanaz a postafiók, mint „${pr.sameAs}” — egy cím csak egyszer szerepelhet.`,
+      );
+    }
+    emails = v.emails;
+  }
+  return { ok: problems.length === 0, problems, ...(country ? { country } : {}), ...(emails ? { emails } : {}) };
 }

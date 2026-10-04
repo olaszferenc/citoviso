@@ -26,6 +26,7 @@ import { qualificationOf } from "./persist.js";
 import { getRegion, loadRegions } from "./regions.js";
 import { webSearchAvailable, webSearchBackend } from "./sources/webSearch.js";
 import type { QualifiedLead } from "./types.js";
+import { curatorOwnsEmail, keepCuratorEmail } from "./curatorEmail.js";
 
 /** Lifecycle stages where a silent requalification is safe (nothing sent yet). */
 const UPDATABLE_LIFECYCLES = ["qualified", "mock_curation"];
@@ -155,8 +156,10 @@ async function main(): Promise<void> {
     // Scrub known-bad stored contacts first (the pre-filter era stored the
     // tourist office's address on some leads) — otherwise "has an email"
     // makes the contact search skip exactly the leads that need it.
+    // A curator-saved address is exempt (ADR-XXXX ③): the owner's gmail fails
+    // isBusinessEmail and is still the right address.
     const scrubbed = before.map((l) =>
-      l.email && !isBusinessEmail(l.email) ? { ...l, email: undefined } : l,
+      l.email && !isBusinessEmail(l.email) && !curatorOwnsEmail(l) ? { ...l, email: undefined } : l,
     );
     const withSearch = await enrichSiteSearch(
       scrubbed,
@@ -171,7 +174,7 @@ async function main(): Promise<void> {
       config.googleCseId,
       region,
     );
-    const after = enrichContact(withWeb);
+    const after = enrichContact(withWeb).map((l, i) => keepCuratorEmail(before[i]!, l));
 
     for (let i = 0; i < group.length; i++) {
       const row = group[i]!;

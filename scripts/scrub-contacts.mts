@@ -16,6 +16,7 @@ import { db } from "../src/db/client.js";
 import { isBusinessEmail } from "../src/scraper/enrichWebSearch.js";
 import { resolveChannel } from "../src/scraper/enrichContact.js";
 import type { QualifiedLead } from "../src/scraper/types.js";
+import { curatorOwnsEmail } from "../src/scraper/curatorEmail.js";
 
 const apply = process.argv.slice(2).includes("--apply");
 
@@ -27,7 +28,8 @@ const rows = await db
 const dirty: { id: string; name: string; email: string; raw: QualifiedLead; stage: string }[] = [];
 for (const r of rows) {
   const raw = (typeof r.raw === "string" ? JSON.parse(r.raw) : r.raw) as QualifiedLead;
-  if (raw.email && !isBusinessEmail(raw.email)) {
+  // A curator-saved address is the curator's (ADR-XXXX ③) — reported nowhere, touched never.
+  if (raw.email && !isBusinessEmail(raw.email) && !curatorOwnsEmail(raw)) {
     dirty.push({ id: r.id, name: r.name, email: raw.email, raw, stage: r.lifecycle_status });
   }
 }

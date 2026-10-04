@@ -30,6 +30,7 @@ import { enrichPortal, portalPhotosOf } from "../src/scraper/enrichPortal.js";
 import { getRegion, loadRegions } from "../src/scraper/regions.js";
 import { findPortalCandidates } from "../src/scraper/sources/portalListing.js";
 import type { QualifiedLead, Region } from "../src/scraper/types.js";
+import { curatorOwnsEmail } from "../src/scraper/curatorEmail.js";
 
 const GO = process.argv.includes("--go");
 const REDO = process.argv.includes("--redo");
@@ -129,7 +130,8 @@ for (let i = 0; i < run.length; i += BATCH) {
         listings: next.listings ?? [],
       };
       if (next.phone && next.phone !== before.phone) patch.phone = next.phone;
-      if (next.email && next.email !== before.email) patch.email = next.email;
+      // A curator-saved (or curator-cleared) address stays (ADR-XXXX ③).
+      if (next.email && next.email !== before.email && !curatorOwnsEmail(before)) patch.email = next.email;
       if (before.material) {
         // Same sum as enrichMaterial's buildMaterial, from the stored components (not the stored
         // total — older rows carry totalImages: null) and without its Street View call.

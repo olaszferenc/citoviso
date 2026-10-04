@@ -81,11 +81,36 @@ van kapcsolva (az a saját számlázási adatainkat írná ide); a biztos védel
 - a **cím** mezőben nem állhat érvényes magyar adószám, sem 10–12 jegyű, telefonszám-formájú szám
   (a szóközzel vagy kötőjellel tagolt számot is egyben vizsgálja);
 - az **ország** mezőbe kétbetűs kód kell (például HU); a „Magyarország” és a „Hungary” alakot a
-  rendszer magától HU-ra alakítja.
+  rendszer magától HU-ra alakítja;
+- az **e-mail-címek** mindegyike érvényes cím legyen, és ugyanaz a postafiók csak egyszer
+  szerepelhet (a kis- és nagybetű, valamint a `+` utáni címke nem számít).
 
 Ha bármelyik mező hibás, **semmi nem mentődik** — a többi mezőbe írt változtatás sem (például a
 tulaj-bemutatkozás) —, és a lap tetején piros sáv jelenik meg, „Nem mentettem:” kezdettel, utána
 a hiba okával. Javítsd a jelzett mezőt, és írd be újra a többi változtatást is.
+
+### Több e-mail-cím
+
+Egy leadnek több e-mail-címe is lehet. Az **„E-mail-címek”** részben minden cím külön sorban áll:
+
+- Új címet a **„További e-mail”** linkkel adsz hozzá; a sor végén lévő **×** törli a címet.
+- Több címet egyszerre is beilleszthetsz egy sorba (például `info@szallas.hu; tulaj@gmail.com`) —
+  a „;”, a „,” és a szóköz mentén külön sorokra bomlik. Ha egy cím már szerepel a listán, nem
+  kerül be még egyszer, és a lista alatt ez áll: **„Kihagyva, mert ugyanaz a postafiók már a
+  listán van:”**, mögötte a kihagyott címmel.
+- A **„Megkeresés ide”** jelölésű cím az **elsődleges**: ez jelenik meg a mockon és a honlapon.
+  Ha egy másik sorban jelölöd be, az a sor a lista elejére kerül. A megkeresés címzettjét a
+  **Megkeresés** fülön, a követett link készítésekor továbbra is te írod be — oda ezt a címet írd.
+  A többi cím a lead adata: a rendszer **nem küld rá levelet**, és sehol nem jelenik meg
+  nyilvánosan.
+- A lap tetején az **E-mail** mellett a további címek száma látszik (például „+2”). Gépen, ha
+  föléviszed az egeret, megmutatja a címeket; telefonon az **Adatok** fülön látod mindet.
+- Ha minden sort kiürítesz és mentesz, a leadnek nem lesz e-mail-címe.
+
+Az **„Adatok újragyűjtése”** a mentett e-mail-címeidet nem írja felül, nem törli, és az általad
+törölt címet sem tölti vissza; az újonnan talált címek csak az **Elérhetőségek** fülre kerülnek,
+a listádba nem. Ha a gyűjtés olyan címet talált, ami a listádon további címként szerepel, ott
+**„további”** jelölést kap. A kézzel beírt, de a gyűjtés által nem talált cím ott nem jelenik meg.
 
 ## Mock-generálás
 

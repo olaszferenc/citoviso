@@ -2,6 +2,8 @@
 // same approach as the mock render.ts). No framework, no emoji icons (design
 // doctrine). Every dynamic value goes through esc().
 
+import { recipientKey } from "../email/address.js";
+import { leadEmails } from "../email/leadEmails.js";
 import { APP_TZ } from "../text/zoneTime.js";
 import { nowInLabel, zoneLabel, zonePickerHtml } from "../tenant/zonePicker.js";
 import type {
@@ -3881,13 +3883,49 @@ function leadDataPanel(d: LeadDetail): string {
   // form covers Firefox/Safari; Chrome ignores `off` for addresses but does not autofill
   // a field whose token it does not recognise, hence the per-field `cit-lead-*`.
   // The server-side rule (leadContactRules.ts) is the real guarantee.
-  const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = 1) =>
-    `<div class="con-fld"${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
+  const fld = (name: string, label: string, value: unknown, type = "text", ph = "", span = 1, cls = "") =>
+    `<div class="con-fld${cls ? ` ${cls}` : ""}"${span > 1 ? ` style="grid-column:span ${span}"` : ""}>
        <label class="con-fld__l" for="ed-${name}">${esc(label)}</label>
        <input id="ed-${name}" name="${name}" type="${type}" value="${value ? esc(value) : ""}"
               placeholder="${esc(ph)}" autocomplete="cit-lead-${name}">
        ${orig(name)}
      </div>`;
+
+  // E-MAIL ADDRESSES — one row each (approved plan assets/design-refs/console/lead-multi-email,
+  // variant A, owner 2026-10-04). Row 1 is the PRIMARY (`raw.email`): the address shown on the
+  // mock/site and the one the „Megkeresés ide” radio names; the rest are `raw.otherEmails`.
+  // type=text (not email): a pasted „a; b” must reach the page script to be split into rows,
+  // and the server checks every address with the same WHATWG rule the browser used to.
+  const emailRow = (value: string, i: number) =>
+    `<div class="con-emails__row${i === 0 ? " is-prim" : ""}">
+       <div class="con-emails__in">
+         <input name="email" type="text" inputmode="email" spellcheck="false" value="${esc(value)}"
+                placeholder="${esc(i === 0 ? "pl. info@szallas.hu" : T(lang, "további cím"))}"
+                aria-label="E-mail ${i + 1}" autocomplete="cit-lead-email">
+       </div>
+       <label class="con-emails__prim" title="${T(lang, "Elsődleges cím: ez látszik a mockon és a honlapon — a megkeresés címzettjének ezt írd")}">
+         <input type="radio" name="emailPrimary" value="${i}"${i === 0 ? " checked" : ""}>
+         <span>${T(lang, "Megkeresés ide")}</span>
+       </label>
+       <button type="button" class="con-emails__del" aria-label="${T(lang, "Cím törlése")}" title="${T(lang, "Cím törlése")}">${ic("close", 16)}</button>
+     </div>`;
+  const emailRows = () => {
+    const list = leadEmails(raw as { email?: string; otherEmails?: string[] });
+    const rows = (list.length ? list : [""]).map(emailRow).join("");
+    return `<div class="con-fld con-emails" style="grid-column:1/-1" data-cit-emails
+         data-msg-at="${T(lang, "Hiányzik a „@”.")}"
+         data-msg-bad="${T(lang, "Nem érvényes e-mail-cím.")}"
+         data-msg-dup="${T(lang, "Ugyanaz a postafiók, mint:")}"
+         data-msg-skip="${T(lang, "Kihagyva, mert ugyanaz a postafiók már a listán van:")}">
+       <span class="con-fld__l">${T(lang, "E-mail-címek")}</span>
+       <div class="con-emails__list">${rows}</div>
+       <template>${emailRow("", 1)}</template>
+       <button type="button" class="con-emails__add">+ ${T(lang, "További e-mail")}</button>
+       <span class="con-emails__note" role="status"></span>
+       <span class="con-emails__hint">${T(lang, "Több címet egyszerre is beilleszthetsz („;”, „,” vagy szóköz választja el) — sorokra bomlik. A kijelölt cím az elsődleges (ez látszik a mockon és a honlapon); a többi a lead adata, a rendszer nem küld rá levelet.")}</span>
+       ${orig("email")}
+     </div>`;
+  };
 
   // The website field carries an open-in-new-tab affordance: judging "is this
   // really their site?" means LOOKING at it, and retyping the URL is friction
@@ -3913,10 +3951,10 @@ function leadDataPanel(d: LeadDetail): string {
         <div class="con-edit-grid">
           ${fld("name", T(lang, "Név"), d.name)}
           ${fld("phone", "Telefon", raw.phone, "text", "+36 …")}
-          ${fld("email", "E-mail", raw.email, "email", "pl. info@szallas.hu")}
           ${fld("country", T(lang, "Ország"), raw.country, "text", "HU")}
           ${fld("city", T(lang, "Város"), raw.city, "text", T(lang, "pl. Balatonberény"))}
-          ${fld("address", T(lang, "Cím"), d.address ?? (raw as { address?: string }).address, "text", T(lang, "irsz., utca, házszám"))}
+          ${fld("address", T(lang, "Cím"), d.address ?? (raw as { address?: string }).address, "text", T(lang, "irsz., utca, házszám"), 1, "con-fld--addr")}
+          ${emailRows()}
           <div class="con-edit-site" style="grid-column:1/-1">
             ${fld("website", "Honlap", raw.website, "url", "https://…")}
             ${openSite}
@@ -3989,11 +4027,12 @@ function leadContactsPanel(d: LeadDetail): string {
   const lang = consoleLang();
   const raw = (d.raw ?? {}) as {
     email?: string;
+    otherEmails?: string[];
     phone?: string;
     contacts?: ContactCandidate[];
     listings?: PortalListing[];
   };
-  const ledger = contactLedgerBlock(raw.contacts, raw.email, raw.phone);
+  const ledger = contactLedgerBlock(raw.contacts, raw.email, raw.phone, raw.otherEmails);
   const listings = listingsBlock(raw.listings);
   return `<div class="panel">
       <h2>${T(lang, "Elérhetőségek és források")}</h2>
@@ -4020,18 +4059,24 @@ function contactLedgerBlock(
   contacts: readonly ContactCandidate[] | undefined,
   primaryEmail?: string,
   primaryPhone?: string,
+  otherEmails?: readonly string[],
 ): string {
   const lang = consoleLang();
   if (!contacts?.length) return "";
+  // The lead's own list (ADR-XXXX): same MAILBOX counts (case, +tag), not the same string.
+  const isListed = (c: ContactCandidate): boolean =>
+    c.kind === "email" && (otherEmails ?? []).some((o) => recipientKey(o) === recipientKey(c.value));
   const order = (c: ContactCandidate): number =>
-    (c.value === primaryEmail || c.value === primaryPhone ? 0 : c.accepted ? 1 : 2);
+    (c.value === primaryEmail || c.value === primaryPhone ? 0 : isListed(c) ? 1 : c.accepted ? 2 : 3);
   const rows = [...contacts]
     .sort((a, b) => order(a) - order(b) || a.kind.localeCompare(b.kind))
     .map((c) => {
       const isPrimary = c.value === primaryEmail || c.value === primaryPhone;
       const mark = isPrimary
         ? `<span class="pill con-ledger__use" title="${T(lang, "Ezt használjuk megkereséskor")}">${T(lang, "használt")}</span>`
-        : c.accepted
+        : isListed(c)
+          ? `<span class="pill con-ledger__use" title="${T(lang, "A lead további e-mail-címe — nem kap megkeresést")}">${T(lang, "további")}</span>`
+          : c.accepted
           ? `<span class="pill con-ledger__ok" title="${T(lang, "Átment a minőség-ellenőrzésen, tartalék")}">rendben</span>`
           : `<span class="pill con-ledger__no" title="${esc(c.rejectedReason ?? "elvetve")}">elvetve</span>`;
       const href =
@@ -5582,7 +5627,10 @@ export function leadPage(
     website?: string;
     phone?: string;
     email?: string;
+    otherEmails?: string[];
   };
+  // The primary is THE address (mailto); the further ones only count, their list in the title.
+  const moreEmails = leadEmails(head).slice(1);
   /**
    * The identity line under the name: WHERE the place is, then WHICH scrape area brought
    * it in — and the second one NAMES ITSELF.
@@ -5757,7 +5805,13 @@ export function leadPage(
           head.phone ? `<a href="tel:${esc(head.phone.replace(/\s/g, ""))}">${esc(head.phone)}</a>` : `<span class="mut">–</span>`
         }</dd></div>
         <div><dt>E-mail</dt><dd>${
-          head.email ? `<a href="mailto:${esc(head.email)}">${esc(head.email)}</a>` : `<span class="mut">–</span>`
+          head.email
+            ? `<a href="mailto:${esc(head.email)}">${esc(head.email)}</a>${
+                moreEmails.length
+                  ? ` <span class="pill con-band-more" title="${esc(moreEmails.join(", "))}">+${moreEmails.length}</span>`
+                  : ""
+              }`
+            : `<span class="mut">–</span>`
         }</dd></div>
       </dl>
     </div>`;
@@ -6891,6 +6945,107 @@ function galleryScript(): string {
           else if (e.key === 'ArrowRight') step(1);
         });
         return { open: open, close: close };
+      })();
+
+      /* E-MAIL ROWS on the „Adatok” form (ADR-XXXX, approved plan lead-multi-email A).
+         Row 1 is always the primary: promoting a row moves it to the top. A pasted list
+         splits into rows; the same mailbox (case and +tag folded — the opt-out's key) is
+         skipped and the note says so. The server re-checks everything (all-or-nothing). */
+      (function () {
+        var RE = /^[a-zA-Z0-9.!#$%&'*+\\/=?^_\`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+        function key(v) { return String(v || '').trim().toLowerCase().replace(/\\+[^@]*(?=@)/, ''); }
+        function split(s) {
+          return String(s || '').replace(/mailto:/gi, ' ').split(/[;,\\s]+/)
+            .map(function (t) { return t.replace(/^[<("']+|[>)"'.]+$/g, '').trim(); })
+            .filter(Boolean);
+        }
+        function init(box) {
+          var list = box.querySelector('.con-emails__list');
+          var tpl = box.querySelector('template');
+          var note = box.querySelector('.con-emails__note');
+          function rows() { return Array.prototype.slice.call(list.querySelectorAll('.con-emails__row')); }
+          function renumber() {
+            rows().forEach(function (r, i) {
+              var rad = r.querySelector('input[type=radio]');
+              rad.value = String(i); rad.checked = i === 0;
+              r.classList.toggle('is-prim', i === 0);
+              r.querySelector('input[name=email]').setAttribute('aria-label', 'E-mail ' + (i + 1));
+            });
+          }
+          function check(r) {
+            var inp = r.querySelector('input[name=email]'), v = inp.value.trim(), msg = '';
+            if (v) {
+              if (v.indexOf('@') < 0) msg = box.dataset.msgAt;
+              else if (!RE.test(v)) msg = box.dataset.msgBad;
+              else {
+                var k = key(v), dup = rows().filter(function (o) { return o !== r && key(o.querySelector('input[name=email]').value) === k; })[0];
+                if (dup && rows().indexOf(dup) < rows().indexOf(r)) msg = box.dataset.msgDup + ' ' + dup.querySelector('input[name=email]').value.trim();
+              }
+            }
+            var old = r.querySelector('.con-emails__err'); if (old) old.remove();
+            r.classList.toggle('is-bad', Boolean(msg));
+            if (msg) { var e = document.createElement('span'); e.className = 'con-emails__err'; e.textContent = msg; r.querySelector('.con-emails__in').appendChild(e); }
+          }
+          function newRow(v) {
+            var r = tpl.content.firstElementChild.cloneNode(true);
+            r.querySelector('input[name=email]').value = v || '';
+            bind(r); return r;
+          }
+          /* Replace row r by one row per token (existing mailboxes skipped). */
+          function spread(r, tokens) {
+            var taken = {}, skipped = [], after = r;
+            rows().forEach(function (o) { if (o !== r) { var v = o.querySelector('input[name=email]').value.trim(); if (v) taken[key(v)] = v; } });
+            var fresh = [];
+            tokens.forEach(function (t) {
+              if (RE.test(t) && taken[key(t)] !== undefined) { skipped.push(t + ' (' + taken[key(t)] + ')'); return; }
+              taken[key(t)] = t; fresh.push(t);
+            });
+            if (!fresh.length) fresh.push('');
+            r.querySelector('input[name=email]').value = fresh[0];
+            fresh.slice(1).forEach(function (t) { var n = newRow(t); after.after(n); after = n; });
+            renumber();
+            rows().forEach(check);
+            note.textContent = skipped.length ? box.dataset.msgSkip + ' ' + skipped.join('; ') : '';
+            return after;
+          }
+          function bind(r) {
+            var inp = r.querySelector('input[name=email]');
+            inp.addEventListener('paste', function (e) {
+              var txt = (e.clipboardData || window.clipboardData).getData('text');
+              var toks = split(txt);
+              if (toks.length < 2) return;
+              e.preventDefault();
+              var head = (inp.value.slice(0, inp.selectionStart) + inp.value.slice(inp.selectionEnd)).trim();
+              var last = spread(r, (head ? [head] : []).concat(toks));
+              last.querySelector('input[name=email]').focus();
+            });
+            inp.addEventListener('blur', function (e) {
+              if (!r.isConnected) return;
+              var toks = split(inp.value);
+              if (toks.length > 1) { spread(r, toks); return; }
+              /* Focus going to Save: an inserted error line would push the button from
+                 under the pointer and the click would miss — the server says it instead. */
+              if (e.relatedTarget && e.relatedTarget.type === 'submit') return;
+              check(r);
+            });
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+            r.querySelector('input[type=radio]').addEventListener('change', function () { list.prepend(r); renumber(); });
+            r.querySelector('.con-emails__del').addEventListener('click', function () {
+              r.remove();
+              if (!rows().length) list.appendChild(newRow(''));
+              renumber(); rows().forEach(check); note.textContent = '';
+            });
+          }
+          rows().forEach(bind);
+          box.querySelector('.con-emails__add').addEventListener('click', function () {
+            var empty = rows().filter(function (o) { return !o.querySelector('input[name=email]').value.trim(); })[0];
+            if (!empty) { empty = newRow(''); list.appendChild(empty); renumber(); }
+            empty.querySelector('input[name=email]').focus();
+          });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('[data-cit-emails]'), init);
+        });
       })();
 
       /** Open whatever the website field currently holds (typed or saved). */

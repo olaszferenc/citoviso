@@ -40,6 +40,7 @@ import {
   placesSearchText,
 } from "../src/scraper/sources/googleMaps.js";
 import type { ContactCandidate, QualifiedLead } from "../src/scraper/types.js";
+import { keepCuratorEmail } from "../src/scraper/curatorEmail.js";
 
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
@@ -238,7 +239,7 @@ for (const r of rows) {
     }
   }
   const websiteStatus = website ? raw.websiteStatus : classifyWebsite(undefined);
-  const next: QualifiedLead = {
+  const next: QualifiedLead = keepCuratorEmail(raw, {
     ...raw,
     phone,
     website,
@@ -248,11 +249,11 @@ for (const r of rows) {
     contactChannel: resolveChannel(email, phone),
     contacts,
     placesMatch: { ...evidence, ...held },
-  } as QualifiedLead;
+  } as QualifiedLead);
   console.log(
     `  ⚠ ${r.name} ⇐ „${oldName}” ${oldDist ?? "?"} m (új szabály: ${neu ? `„${neuName}” ${conf!.band}` : "nincs találat"})` +
       ` → le: ${phoneIsOld ? `telefon ${raw.phone}` : ""}${phoneIsOld && siteIsOld ? " + " : ""}${siteIsOld ? `honlap ${host(raw.website)}` : ""}` +
-      `${phone ? ` · marad: ${phone}` : ""}${raw.email !== email ? ` · e-mail: ${raw.email ?? "—"} → ${email ?? "—"}` : ""}`,
+      `${phone ? ` · marad: ${phone}` : ""}${raw.email !== next.email ? ` · e-mail: ${raw.email ?? "—"} → ${next.email ?? "—"}` : ""}`,
   );
   if (APPLY) {
     backup.push({ id: r.id, raw });

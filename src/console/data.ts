@@ -23,6 +23,7 @@ import { getHeroPin } from "../generator/heroOverride.js";
 import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
 import { normalizeEmail, recipientKey, recipientKeySql } from "../email/address.js";
 import { checkLeadContact, normalizeCountry } from "./leadContactRules.js";
+import { leadEmails } from "../email/leadEmails.js";
 import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offers.js";
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
@@ -697,7 +698,9 @@ export async function deleteArtifact(artifactId: string): Promise<boolean> {
 export interface LeadEdits {
   readonly name?: string;
   readonly phone?: string;
-  readonly email?: string;
+  /** The lead's e-mail addresses, PRIMARY FIRST (ADR-XXXX): [0] → `raw.email`, the rest →
+   *  `raw.otherEmails`. An empty list clears both; omitted = untouched. */
+  readonly emails?: readonly string[];
   readonly website?: string;
   readonly address?: string;
   /** ISO-2 country (ADR-0040 facet) — also the list filter, so a fix here fixes both. */
@@ -731,7 +734,7 @@ export async function saveLeadEdits(
   edits: LeadEdits,
   now: Date,
 ): Promise<{ readonly ok: true } | { readonly ok: false; readonly problems: readonly string[] }> {
-  const verdict = checkLeadContact({ address: edits.address, country: edits.country });
+  const verdict = checkLeadContact({ address: edits.address, country: edits.country, emails: edits.emails });
   if (!verdict.ok) return { ok: false, problems: verdict.problems };
   const row = await db.selectFrom("lead").select(["raw", "name"]).where("id", "=", id).executeTakeFirst();
   if (!row) throw new Error(`no lead ${id}`);
@@ -752,14 +755,27 @@ export async function saveLeadEdits(
 
   // Apply each provided field: a non-empty value sets it, an empty string clears it, and an
   // omitted field is left untouched (partial edits are fine).
-  const apply = (key: keyof LeadEdits) => {
+  const apply = (key: Exclude<keyof LeadEdits, "emails">) => {
     const v = edits[key];
     if (v === undefined) return;
     const t = v.trim();
     if (t) raw[key] = t;
     else delete raw[key];
   };
-  (["phone", "email", "website", "address", "country", "city", "ownerIntro"] as const).forEach(apply);
+  (["phone", "website", "address", "country", "city", "ownerIntro"] as const).forEach(apply);
+  // E-mail list (ADR-XXXX): the primary stays in `raw.email` (every existing reader keeps
+  // meaning "the" address), the rest go to `raw.otherEmails` — never the primary twice.
+  if (verdict.emails) {
+    // A CHANGED list is a curator decision about e-mail — stamped, so a later re-enrich
+    // never undoes it, not even a clearing on a lead the scrape never found an address for
+    // (curatorEmail.ts). An untouched field is no decision: the gap stays fillable.
+    if (JSON.stringify(verdict.emails) !== JSON.stringify(leadEmails(raw))) raw.emailCuratedAt = now.toISOString();
+    const [primary, ...rest] = verdict.emails;
+    if (primary) raw.email = primary;
+    else delete raw.email;
+    if (rest.length) raw.otherEmails = rest;
+    else delete raw.otherEmails;
+  }
   // ISO-2 is what the sources write and what the facet filter groups on.
   if (verdict.country) raw.country = verdict.country;
   else if (typeof raw.country === "string") raw.country = normalizeCountry(raw.country)?.toUpperCase() ?? raw.country;

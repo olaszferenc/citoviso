@@ -24,6 +24,7 @@ import { normalizeEmail } from "../email/address.js";
 import { ELEK_EMAIL } from "../elek/park.js";
 import { phoneKey } from "../scraper/contactLedger.js";
 import type { QualifiedLead } from "../scraper/types.js";
+import { leadEmails } from "../email/leadEmails.js";
 
 /** Leads that no longer receive anything — their contacts cannot collide. */
 const INACTIVE = ["terminated", "disqualified"] as const;
@@ -42,12 +43,13 @@ function keyOf(kind: ContactKind, value: string): string | null {
   return p.length >= 8 ? p : null;
 }
 
-/** Every e-mail/phone this lead is known by: the primaries plus the ACCEPTED ledger entries. */
+/** Every e-mail/phone this lead is known by: the primaries (all of the lead's e-mail
+ *  addresses, ADR-XXXX) plus the ACCEPTED ledger entries. */
 function contactKeysOf(raw: QualifiedLead, kind: ContactKind): Set<string> {
   const out = new Set<string>();
-  const primary = kind === "email" ? raw.email : raw.phone;
+  const primaries = kind === "email" ? leadEmails(raw) : raw.phone ? [raw.phone] : [];
   const values = [
-    ...(primary ? [primary] : []),
+    ...primaries,
     ...(raw.contacts ?? []).filter((c) => c.kind === kind && c.accepted).map((c) => c.value),
   ];
   for (const v of values) {

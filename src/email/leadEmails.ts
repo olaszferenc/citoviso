@@ -1,0 +1,106 @@
+import { recipientKey } from "./address.js";
+
+// A LEAD'S E-MAIL ADDRESSES — one primary plus further ones (ADR-XXXX, owner 2026-10-04:
+// „lehessen több emailcímet menteni!”).
+//
+// Storage (lead.raw jsonb, no schema change):
+//   · `raw.email`        — the PRIMARY, unchanged meaning. Every existing reader (generator,
+//                          templates, gates, scripts) keeps reading it and keeps being right:
+//                          the public site shows ONE contact, the cold mail goes to ONE address.
+//   · `raw.otherEmails`  — the further addresses, in the curator's order. NOT recipients: no
+//                          cold mail is ever sent to them; they are the lead's data (and the
+//                          duplicate / shared-contact checks look at them).
+// The primary lives ONLY in `raw.email` and never repeats in `raw.otherEmails` — two fields,
+// not two copies.
+//
+// Format rule = TODAY'S rule, unchanged (owner 2026-10-04: no stricter format): the WHATWG
+// "valid e-mail address" that the form's type=email field has always enforced in the browser.
+// What is new is that the SERVER checks it too, per address, because a list no longer fits
+// one browser-validated field.
+
+/** The WHATWG "valid e-mail address" (HTML Living Standard, input type=email). */
+const WHATWG_EMAIL =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/u;
+
+export function isValidEmail(s: string): boolean {
+  return WHATWG_EMAIL.test(s.trim());
+}
+
+/**
+ * A pasted/typed list → address tokens. Separators: `;` `,` whitespace (the OSM `email` tag
+ * joins multiple values with `;`; a copied mail header uses `,`). `mailto:` and the brackets
+ * of "Név <cím>" are unwrapped; an HTML entity scraped along (`…hu&quot;`) is decoded first,
+ * or its `;` would split the address. Mirrored once in migrations/0086 — keep them alike.
+ */
+export function splitEmailList(s: string | null | undefined): string[] {
+  return String(s ?? "")
+    .replace(/&quot;/gu, '"')
+    .replace(/&amp;/gu, "&")
+    .replace(/mailto:/giu, " ")
+    .split(/[;,\s]+/u)
+    .map((t) => t.replace(/^[<("']+|[>)"'.]+$/gu, "").trim())
+    .filter(Boolean);
+}
+
+interface EmailRaw {
+  readonly email?: string | null;
+  readonly otherEmails?: readonly string[] | null;
+}
+
+/** All addresses of a lead, primary first. Empty-safe; never repeats a mailbox. */
+export function leadEmails(raw: EmailRaw | null | undefined): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const v of [raw?.email, ...(raw?.otherEmails ?? [])]) {
+    const t = typeof v === "string" ? v.trim() : "";
+    const k = recipientKey(t);
+    if (!t || seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
+  }
+  return out;
+}
+
+/** One refused address. Structured, not prose: this module is imported by the scrapers and
+ *  reaches the mail adapters, so the operator-facing wording lives with the console rule
+ *  (leadContactRules.ts), not here (i18n-scope, ADR-0070). */
+export type EmailProblem =
+  | { readonly kind: "invalid"; readonly addr: string }
+  | { readonly kind: "duplicate"; readonly addr: string; readonly sameAs: string };
+
+export interface EmailListVerdict {
+  readonly ok: boolean;
+  /** One per refused address. */
+  readonly problems: readonly EmailProblem[];
+  /** The list as it must be stored: trimmed, as typed, primary first, empties dropped. */
+  readonly emails: readonly string[];
+}
+
+/**
+ * Judge a curator-entered address list. Pure. Each entry may itself be a pasted list
+ * ("a; b") — it is split first, so a no-JS submit of the old single field still works.
+ * A repeated MAILBOX (same `recipientKey`: case and +tag folded, the opt-out's own key)
+ * is refused rather than silently dropped: the operator typed it twice for a reason
+ * (usually a typo in one of them), and a save that quietly writes less than was on the
+ * screen reads as data loss.
+ */
+export function checkEmailList(entries: readonly string[]): EmailListVerdict {
+  const problems: EmailProblem[] = [];
+  const emails: string[] = [];
+  const firstOf = new Map<string, string>();
+  for (const addr of entries.flatMap((e) => splitEmailList(e))) {
+    if (!isValidEmail(addr)) {
+      problems.push({ kind: "invalid", addr });
+      continue;
+    }
+    const k = recipientKey(addr);
+    const prev = firstOf.get(k);
+    if (prev !== undefined) {
+      problems.push({ kind: "duplicate", addr, sameAs: prev });
+      continue;
+    }
+    firstOf.set(k, addr);
+    emails.push(addr);
+  }
+  return { ok: problems.length === 0, problems, emails };
+}

@@ -552,6 +552,45 @@
 .con-edit-site .con-open { margin-top: 25px; width: 38px; height: 38px; }
 @media (max-width: 900px) { .con-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .con-edit-grid { grid-template-columns: minmax(0, 1fr); } }
+/* E-mail list (ADR-XXXX, approved plan design-refs/console/lead-multi-email, variant A).
+   The address field spans two columns so the row above stays a clean 3 + (1+2); the
+   e-mail list gets its own full-width row: one line per address — address · „Megkeresés
+   ide” · delete. On a phone the radio and the delete button drop under the address so
+   the address keeps the full width. */
+@media (min-width: 561px) { .con-edit-grid .con-fld--addr { grid-column: span 2; } }
+.con-emails__list { display: grid; gap: 8px; }
+.con-emails__row { display: flex; gap: 8px; align-items: flex-start; }
+.con-emails__in { flex: 1 1 auto; min-width: 0; }
+.con-emails__row.is-bad .con-emails__in input { border-color: var(--citui-bad); }
+.con-emails__err { display: block; margin-top: 3px; font-size: 0.74rem; color: var(--citui-bad-ink); }
+.con-emails__prim {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box;
+  width: 150px; height: 36px; padding: 0 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel);
+  font-size: 0.78rem; color: var(--citui-muted);
+}
+.con-fld .con-emails__prim input { width: auto; margin: 0; padding: 0; accent-color: var(--citui-navy-900); }
+.con-emails__row.is-prim .con-emails__prim { border-color: var(--citui-ink); color: var(--citui-ink); font-weight: 600; }
+/* `.con` prefix: the console styles every bare <button> as a pill (`.con button`). */
+.con .con-emails__del {
+  flex: none; min-height: 0; width: 36px; height: 36px; padding: 0; border-radius: 8px; cursor: pointer;
+  display: inline-grid; place-items: center;
+  border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-muted);
+}
+.con .con-emails__del:hover { color: var(--citui-ink); border-color: var(--citui-ink); }
+.con .con-emails__add {
+  border: 0; border-radius: 0; min-height: 0; background: none; padding: 6px 0 2px; font: inherit; font-size: 0.84rem; font-weight: 600;
+  color: var(--citui-link-ink); cursor: pointer;
+}
+.con-emails__note:empty { display: none; }
+.con-emails__note { display: block; margin-top: 4px; font-size: 0.74rem; color: var(--citui-ok-ink); }
+.con-emails__hint { display: block; margin-top: 4px; font-size: 0.74rem; color: var(--citui-muted); line-height: 1.45; }
+@media (max-width: 560px) {
+  .con-emails__row { flex-wrap: wrap; }
+  .con-emails__in { flex-basis: 100%; }
+  .con-emails__prim { flex: 1 1 auto; width: auto; }
+}
+.con-band-more { font-size: 0.72rem; padding: 0 7px; vertical-align: 1px; }
 
 /* Facts below the form: a real multi-column grid. The old 130px-label <dl> put
    every value in one narrow column and left the right half of the card empty. */

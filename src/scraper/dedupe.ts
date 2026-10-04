@@ -1,5 +1,6 @@
 import { classifyWebsite, isMvpLead } from "./qualify.js";
 import type { Industry, QualifiedLead, RawLead } from "./types.js";
+import { leadEmails } from "../email/leadEmails.js";
 
 // Deduplicate raw leads across sources and qualify them. Two raw leads are the
 // same player when their normalized names match AND they are within ~250 m (or
@@ -40,6 +41,13 @@ function firstDefined<T>(...vals: (T | undefined)[]): T | undefined {
   return undefined;
 }
 
+function otherEmailsOf(leads: RawLead[]): { otherEmails?: string[] } {
+  const src = leads.find((l) => l.email);
+  if (!src?.otherEmails?.length) return {};
+  const rest = leadEmails(src).slice(1);
+  return rest.length ? { otherEmails: rest } : {};
+}
+
 function merge(
   leads: RawLead[],
   industry: Industry,
@@ -64,6 +72,8 @@ function merge(
     city: firstDefined(...leads.map((l) => l.city)),
     phone: firstDefined(...leads.map((l) => l.phone)),
     email: firstDefined(...leads.map((l) => l.email)),
+    // The further addresses travel WITH their primary: the same source's list.
+    ...otherEmailsOf(leads),
     website,
     websiteStatus: status,
     sources: [...new Set(leads.map((l) => l.source))],

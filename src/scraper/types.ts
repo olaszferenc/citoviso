@@ -53,6 +53,8 @@ export interface RawLead {
   readonly city?: string;
   readonly phone?: string;
   readonly email?: string;
+  /** Further addresses the source listed beside `email` (OSM joins several with `;`). */
+  readonly otherEmails?: readonly string[];
   readonly website?: string;
   /** Photos available on this source (e.g. Google Places photo count). */
   readonly photoCount?: number;
@@ -123,7 +125,11 @@ export interface QualifiedLead {
   /** City/locality/town, from OSM/Places structured address. Filter facet. */
   readonly city?: string;
   readonly phone?: string;
+  /** The PRIMARY address: shown on the mock/site, the one a cold mail may go to. */
   readonly email?: string;
+  /** Further addresses (ADR-XXXX): the lead's data, never a cold-mail recipient.
+   *  Never repeats `email`. Read both through `leadEmails()` (src/email/leadEmails.ts). */
+  readonly otherEmails?: readonly string[];
   readonly website?: string;
   readonly websiteStatus: WebsiteStatus;
   /** Which adapters found this player — the seed of the digital-footprint profile. */

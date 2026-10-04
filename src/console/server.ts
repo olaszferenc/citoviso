@@ -622,6 +622,20 @@ function redirect(res: http.ServerResponse, to: string): void {
   res.end();
 }
 
+/**
+ * The „Adatok” form's e-mail rows (ADR-XXXX): every `email` field in row order, the row
+ * whose „Megkeresés ide” radio (`emailPrimary` = row index) is checked moved to the front.
+ * The page script already keeps the primary on top; the index makes a no-JS submit right
+ * too. No `email` field at all = the form did not edit e-mail (undefined, not "clear").
+ */
+function emailListFromForm(form: URLSearchParams): string[] | undefined {
+  if (!form.has("email")) return undefined;
+  const rows = form.getAll("email");
+  const p = Number(form.get("emailPrimary") ?? "0");
+  if (Number.isInteger(p) && p > 0 && p < rows.length) rows.unshift(...rows.splice(p, 1));
+  return rows;
+}
+
 async function readBody(req: http.IncomingMessage): Promise<URLSearchParams> {
   const chunks: Buffer[] = [];
   for await (const c of req) chunks.push(c as Buffer);
@@ -2167,7 +2181,7 @@ async function handle(
       {
         name: form.get("name") ?? undefined,
         phone: form.get("phone") ?? undefined,
-        email: form.get("email") ?? undefined,
+        emails: emailListFromForm(form),
         website: form.get("website") ?? undefined,
         address: form.get("address") ?? undefined,
         country: form.get("country") ?? undefined,

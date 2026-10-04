@@ -35,6 +35,7 @@ import { getRegion, loadRegions } from "./regions.js";
 import type { PlacesFailure } from "./sources/googleMaps.js";
 import type { QualifiedLead } from "./types.js";
 import { huArticleLower } from "../hu.js";
+import { keepCuratorEmail } from "./curatorEmail.js";
 
 /** Lifecycle stages where a silent requalification is safe (nothing sent yet). */
 const UPDATABLE_LIFECYCLES = ["qualified", "mock_curation"];
@@ -124,10 +125,12 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
   const after = leads[0];
   // Curator edits and the audit trail live on `raw` outside the QualifiedLead
   // shape — carry them across verbatim so a re-enrich never erases them.
-  const merged = {
+  // …and a curator-saved e-mail is not the web search's to swap or the scrub's to drop
+  // (ADR-XXXX ③) — this button promises „Nem ír felül kurátori adatot”.
+  const merged = keepCuratorEmail(before as unknown as Record<string, unknown>, {
     ...(before as unknown as Record<string, unknown>),
     ...(after as unknown as Record<string, unknown>),
-  };
+  });
 
   await db
     .updateTable("lead")
@@ -141,7 +144,8 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
 
   return {
     ok: !placesOutage,
-    message: describeChanges(before, after) + placesOutageNote(placesOutage),
+    // Described from what was WRITTEN — a kept curator e-mail is not "found".
+    message: describeChanges(before, merged as unknown as QualifiedLead) + placesOutageNote(placesOutage),
   };
 }
 

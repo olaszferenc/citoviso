@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terv — Több e-mail-cím egy leadhez (Adatok fül)</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<link rel="stylesheet" href="../../../../public/assets/ui/citui-console.css">
+<style>
+  /* Draft chrome only — NOT part of the proposal. The frames use a CONTAINER query
+     (not @media): the size switcher narrows a div, and a media query keys on the
+     window, so it would shrink without ever re-laying out. */
+  body { margin: 0; background: var(--citui-surface-2); font-family: var(--citui-font-text); color: var(--citui-ink); }
+  [hidden] { display: none !important; }
+  .d-wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 60px; }
+  .d-wrap h1 { font-size: 1.3rem; margin: 6px 0 6px; }
+  .d-note { color: var(--citui-muted); font-size: 0.9rem; margin: 0 0 14px; max-width: 86ch; line-height: 1.55; }
+  .d-note b { color: var(--citui-ink); }
+  .d-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 18px; }
+  .d-bar span { font-size: .8rem; font-weight: 600; color: var(--citui-muted); margin-right: 2px; }
+  .d-bar button {
+    padding: 7px 14px; border-radius: var(--citui-radius-pill); font: inherit; font-size: .86rem; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--citui-line-strong); background: var(--citui-panel); color: var(--citui-ink);
+  }
+  .d-bar button[aria-pressed="true"] { background: var(--citui-navy-900); color: var(--citui-ink-inverse); border-color: var(--citui-navy-900); }
+  .d-sep { width: 1px; height: 24px; background: var(--citui-line-strong); margin: 0 6px; }
+  .d-variant { margin: 0 0 34px; }
+  .d-variant > h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .d-variant > p { margin: 0 0 12px; color: var(--citui-muted); font-size: .88rem; max-width: 90ch; line-height: 1.5; }
+  .d-frame { margin: 0 auto; transition: max-width var(--citui-transition); max-width: 1180px; }
+  .d-frame.is-mobile { max-width: 390px; }
+  .d-frame-in { container-type: inline-size; background: var(--citui-bg); border: 1px solid var(--citui-line); border-radius: 12px; overflow: hidden; }
+
+  /* ── Proposal: lead header band (only the contact strip) ── */
+  .m-band { display: flex; flex-wrap: wrap; gap: 14px 28px; padding: 14px 18px; border-bottom: 1px solid var(--citui-line); background: var(--citui-panel); }
+  .m-band__k { display: block; font-size: .68rem; letter-spacing: .06em; font-weight: 700; color: var(--citui-muted); text-transform: uppercase; margin-bottom: 3px; }
+  .m-band__v { font-weight: 600; color: var(--citui-link-ink); overflow-wrap: anywhere; }
+  .m-band__more { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: var(--citui-radius-pill); background: var(--citui-accent-soft); color: var(--citui-ink); font-size: .74rem; font-weight: 700; }
+
+  .m-panel { padding: 16px 18px 20px; background: var(--citui-panel); }
+  .m-panel h3 { margin: 0 0 4px; font-size: 1rem; }
+  .m-panel .m-lede { margin: 0 0 14px; font-size: .8rem; color: var(--citui-muted); line-height: 1.5; }
+  .m-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 18px; }
+  @container (max-width: 900px) { .m-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @container (max-width: 560px) { .m-grid { grid-template-columns: minmax(0, 1fr); } }
+  .m-span-all { grid-column: 1 / -1; }
+  .a-addr { grid-column: span 2; }
+  @container (max-width: 560px) { .a-addr { grid-column: auto; } }
+
+  /* flash (mirrors the console's flash band) */
+  .m-flash { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; font-size: .86rem; line-height: 1.45; border: 1px solid; }
+  .m-flash--bad { background: color-mix(in srgb, var(--citui-bad) 9%, var(--citui-panel)); border-color: color-mix(in srgb, var(--citui-bad) 40%, transparent); color: var(--citui-bad-ink); }
+  .m-flash--ok { background: var(--citui-ok-soft); border-color: color-mix(in srgb, var(--citui-ok) 40%, transparent); color: var(--citui-ok-ink); }
+  .m-flash ul { margin: 4px 0 0 18px; padding: 0; }
+
+  /* ── shared e-mail list bits ── */
+  .m-err { display: block; margin-top: 3px; font-size: .74rem; color: var(--citui-bad-ink); }
+  .m-hint { display: block; margin-top: 4px; font-size: .74rem; color: var(--citui-muted); line-height: 1.45; }
+  .m-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--citui-radius-pill); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+  .m-tag--prim { background: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+  .m-tag--opt { background: color-mix(in srgb, var(--citui-bad) 12%, transparent); color: var(--citui-bad-ink); }
+  .m-iconbtn {
+    flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--citui-line-strong);
+    background: var(--citui-panel); color: var(--citui-muted); cursor: pointer; display: inline-grid; place-items: center; padding: 0;
+  }
+  .m-iconbtn:hover { color: var(--citui-ink); border-color: var(--citui-ink); }
+  .m-iconbtn svg { width: 16px; height: 16px; }
+  .m-linkbtn { border: 0; background: none; padding: 4px 0; font: inherit; font-size: .84rem; font-weight: 600; color: var(--citui-link-ink); cursor: pointer; }
+  .m-sugg { margin-top: 8px; padding: 8px 10px; border: 1px dashed var(--citui-line-strong); border-radius: 8px; font-size: .78rem; color: var(--citui-muted); }
+  .m-sugg__row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .m-sugg button {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--citui-radius-pill);
+    border: 1px solid var(--citui-line-strong); background: var(--citui-field); color: var(--citui-ink); font: inherit; font-size: .78rem; cursor: pointer;
+  }
+  .m-sugg button small { color: var(--citui-muted); }
+
+  /* ── Variant A: one row per address ── */
+  .a-list { display: grid; gap: 8px; }
+  .a-row { display: flex; gap: 8px; align-items: flex-start; }
+  .a-row .a-in { flex: 1 1 auto; min-width: 0; }
+  .a-row input[type=text] {
+    width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: .92rem;
+    border: 1px solid var(--citui-line-strong); border-radius: 8px; background: var(--citui-surface); color: var(--citui-ink); font-family: inherit;
+  }
+  .a-row input[type=text]:focus { outline: none; border-color: var(--citui-cyan-500); }
+  .a-row.is-bad input[type=text] { border-color: var(--citui-bad); }
+  .a-prim { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--citui-line-strong); font-size: .78rem; cursor: pointer; white-space: nowrap; color: var(--citui-muted); background: var(--citui-panel); }
+  .a-prim input { margin: 0; width: auto; padding: 0; accent-color: var(--citui-navy-900); }
+  .a-prim { width: 150px; box-sizing: border-box; justify-content: flex-start; }
+  .a-row.is-prim .a-prim { border-color: var(--citui-navy-900); color: var(--citui-ink); font-weight: 600; }
+  /* desktop: the list leaves the 3-col cell and gets its own full-width row; each
+     address row is a line (address · "Megkeresés ide" · delete). Phone: the radio
+     text shortens to a star-only pill so the address keeps the width. */
+  @container (max-width: 560px) {
+    .a-row { flex-wrap: wrap; }
+    .a-row .a-in { flex-basis: 100%; }
+    .a-prim { flex: 1 1 auto; width: auto; }
+  }
+
+  /* ── Variant B: chips inside one field ── */
+  .b-box {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 40px; box-sizing: border-box;
+    padding: 5px 6px; border: 1px solid var(--citui-line-strong); border-radius: 8px; background: var(--citui-surface); cursor: text;
+  }
+  .b-box:focus-within { border-color: var(--citui-cyan-500); }
+  .b-box.is-bad { border-color: var(--citui-bad); }
+  .b-chip {
+    display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-width: 0;
+    padding: 2px 2px 2px 4px; border-radius: var(--citui-radius-pill); background: var(--citui-panel);
+    border: 1px solid var(--citui-line-strong); font-size: .84rem;
+  }
+  .b-chip.is-prim { border-color: var(--citui-navy-900); background: color-mix(in srgb, var(--citui-navy-900) 7%, var(--citui-panel)); }
+  .b-chip.is-bad { border-color: var(--citui-bad); background: color-mix(in srgb, var(--citui-bad) 8%, var(--citui-panel)); color: var(--citui-bad-ink); }
+  .b-chip__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; cursor: pointer; }
+  .b-chip button { border: 0; background: none; width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; cursor: pointer; color: var(--citui-muted); padding: 0; flex: none; }
+  .b-chip button:hover { background: var(--citui-hover); color: var(--citui-ink); }
+  .b-chip button svg { width: 14px; height: 14px; }
+  .b-chip.is-prim .b-star { color: var(--citui-navy-900); }
+  .b-box input { flex: 1 1 140px; min-width: 120px; border: 0; outline: none; background: transparent; padding: 5px 4px; font: inherit; font-size: .92rem; color: var(--citui-ink); }
+  .b-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: .74rem; color: var(--citui-muted); }
+  .b-legend > span { display: inline-flex; align-items: center; gap: 4px; }
+  .b-legend svg { width: 12px; height: 12px; flex: none; }
+
+  .m-save { margin-top: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .m-save button { padding: 9px 16px; border-radius: var(--citui-radius-pill); border: 0; background: var(--citui-navy-900); color: var(--citui-ink-inverse); font: inherit; font-weight: 700; font-size: .86rem; cursor: pointer; }
+  .m-saved { font-size: .78rem; color: var(--citui-muted); }
+  .m-saved code { font-size: .76rem; }
+</style>
+</head>
+<body>
+<div class="d-wrap">
+  <p class="small mut" style="margin:0">JÓVÁHAGYOTT TERV (A változat, tulaj 2026-10-04) · működő mock (a mentés itt nem ír DB-t, de ugyanazt dönti el, amit a szerver)</p>
+  <h1>Több e-mail-cím egy leadhez — Adatok fül</h1>
+  <p class="d-note">A tulaj kérése (2026-10-04): <b>„lehessen több emailcímet menteni!”</b> Ma az E-mail egyetlen <code>type=email</code> mező:
+    az <code>ezustnyar@outlook.hu; agrogere@gmail.com</code> beírásra a böngésző hibát dob, nem menthető.
+    A terv tudja: <b>több cím</b>, <b>„;” / „,” / szóköz / új sor szerint beillesztett lista szétbontása</b>,
+    <b>címenkénti hibaüzenet</b>, <b>ugyanaz a postafiók kétszer nem kerül be</b> (nagybetű és <code>+címke</code> nem számít — a meglévő leiratkozás-szabály),
+    és <b>egy cím az elsődleges</b>: a hideg megkeresés EGY levél, oda megy. A mentés <b>mindent-vagy-semmit</b> (ADR-0316): egy hibás cím = semmi nem íródik.
+    Próbáld: illeszd be a fenti sort, írj egy hibás címet, és nyomd meg a Mentést.</p>
+  <div class="d-bar" role="group" aria-label="Nézet">
+    <span>Méret</span>
+    <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+    <button type="button" data-size="desktop" aria-pressed="true">Asztali</button>
+  </div>
+
+  <section class="d-variant" id="varA">
+    <h2>Soronként egy cím</h2>
+    <p>Minden cím saját mező; a „Megkeresés ide” rádió jelöli az elsődlegeset, × törli, „+ További e-mail” újat ad.
+      Asztalon a lista kikerül a 3 hasábos rácsból egy teljes szélességű sorba (különben a Név/Telefon sor alja szétcsúszna); mobilon a „Megkeresés ide” és a × a cím alá kerül, hogy a cím kiférjen.</p>
+    <div class="d-frame"><div class="d-frame-in" data-variant="A"></div></div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Real rules, mirrored ────────────────────────────────────────────────────
+  // Syntax: the WHATWG "valid e-mail address" — exactly what today's type=email
+  // field enforces in the browser (the server only trims). The proposal moves the
+  // same rule to the server, per address.
+  var EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  // src/email/address.ts: normalizeEmail = trim + lowercase; recipientKey also drops
+  // the +subaddress tag. Stored form stays as typed (trimmed).
+  function recipientKey(s) { return String(s || "").trim().toLowerCase().replace(/\+[^@]*(?=@)/, ""); }
+  // Paste/typed list → tokens. Also unwraps "Név <cím>" and "mailto:".
+  function splitList(s) {
+    return String(s || "")
+      .replace(/mailto:/gi, " ")
+      .split(/[;,\s]+/)
+      .map(function (t) { return t.replace(/^[<("']+|[>)"'.]+$/g, "").trim(); })
+      .filter(Boolean);
+  }
+  function problemOf(addr) {
+    var a = addr.trim();
+    if (!a) return null;
+    var at = a.split("@").length - 1;
+    if (at === 0) return "Hiányzik a „@”.";
+    if (at > 1) return "Egy címben csak egy „@” lehet.";
+    var parts = a.split("@");
+    if (!parts[0]) return "Hiányzik a „@” előtti rész.";
+    if (!parts[1]) return "Hiányzik a „@” utáni rész.";
+    if (!EMAIL_RE.test(a)) return "Nem érvényes e-mail-cím (nem megengedett karakter a „@” után vagy előtt).";
+    return null;
+  }
+
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var ICON_STAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
+  var ICON_STAR_ON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
+
+  // Real sample data. Ezüst Nyár: the owner's screenshot (prod, 2026-10-04) — no
+  // scrape candidates. Artemisz Panzió: dev park, raw.contacts has two accepted
+  // e-mail candidates (web_snippet); only the first is in raw.email today.
+  var LEADS = {
+    ezust: { name: "Ezüst Nyár", phone: "06309310244", phoneSrc: "068808021", country: "HU", city: "Balatonudvari", address: "",
+             website: "http://www.ezustnyar.hu/", emails: ["ezustnyar@outlook.hu"], emailSrc: "", candidates: [], optedOut: [] },
+    artemisz: { name: "Artemisz Panzió", phone: "+36302163678", phoneSrc: "", country: "HU", city: "Tapolca", address: "",
+             website: "", emails: ["panzioartemisz@gmail.com"], emailSrc: "",
+             candidates: [{ v: "artemiszetterem@gmail.com", src: "webes találat" }], optedOut: [] }
+  };
+  var leadKey = "ezust";
+
+  function fieldHtml(name, label, value, ph, src) {
+    return '<div class="con-fld"><label class="con-fld__l">' + esc(label) + '</label>' +
+      '<input name="' + name + '" type="text" value="' + esc(value || "") + '" placeholder="' + esc(ph || "") + '" autocomplete="off">' +
+      (src ? '<span class="con-fld__src">adatgyűjtésből: ' + esc(src) + '</span>' : "") + '</div>';
+  }
+
+  // One frame = one independent instance (both variants can be tried side by side).
+  function Frame(root, variant) {
+    this.root = root; this.variant = variant; this.reset();
+  }
+  Frame.prototype.reset = function () {
+    var L = LEADS[leadKey];
+    this.lead = L;
+    this.saved = L.emails.slice();
+    this.items = L.emails.map(function (v) { return { v: v, err: null }; }); // index 0 = primary
+    if (this.variant === "A" && !this.items.length) this.items.push({ v: "", err: null });
+    this.pending = "";       // B: text in the input not yet a chip
+    this.flash = null;
+    this.render();
+  };
+  Frame.prototype.keys = function (exceptIdx) {
+    var ks = {};
+    this.items.forEach(function (it, i) { if (i !== exceptIdx && it.v.trim()) ks[recipientKey(it.v)] = it.v; });
+    return ks;
+  };
+  // Insert tokens at position; skip a mailbox already on the list (and say so).
+  Frame.prototype.addTokens = function (tokens, at) {
+    var self = this, skipped = [], added = 0;
+    tokens.forEach(function (t) {
+      var ks = self.keys(-1);
+      if (ks[recipientKey(t)] !== undefined && !problemOf(t)) { skipped.push(t + " (már szerepel: " + ks[recipientKey(t)] + ")"); return; }
+      self.items.splice(at + added, 0, { v: t, err: problemOf(t) });
+      added++;
+    });
+    return { added: added, skipped: skipped };
+  };
+  Frame.prototype.note = function (res) {
+    if (res.skipped.length) this.flash = { kind: "ok", html: "Kihagyva, mert ugyanaz a postafiók már a listán van: " + res.skipped.map(esc).join("; ") + "." };
+  };
+  Frame.prototype.validateAll = function () {
+    var self = this, seen = {};
+    this.items.forEach(function (it) {
+      it.err = problemOf(it.v);
+      var k = recipientKey(it.v);
+      if (!it.err && it.v.trim()) {
+        if (seen[k] !== undefined) it.err = "Ugyanaz a postafiók, mint: " + seen[k] + ".";
+        else seen[k] = it.v.trim();
+      }
+    });
+  };
+  Frame.prototype.save = function () {
+    if (this.variant === "B" && this.pending.trim()) { var r = this.addTokens(splitList(this.pending), this.items.length); this.pending = ""; this.note(r); }
+    this.validateAll();
+    var bad = this.items.filter(function (it) { return it.err && it.v.trim(); });
+    if (bad.length) {
+      this.flash = { kind: "bad", html: "<b>Nem mentettem semmit</b> — egy hibás cím az egész mentést megállítja (a többi mező sem íródott át). Javítsd:" +
+        "<ul>" + bad.map(function (it) { return "<li><code>" + esc(it.v) + "</code> — " + esc(it.err) + "</li>"; }).join("") + "</ul>" };
+    } else {
+      this.items = this.items.filter(function (it) { return it.v.trim(); }).map(function (it) { return { v: it.v.trim(), err: null }; });
+      this.saved = this.items.map(function (it) { return it.v; });
+      if (this.variant === "A" && !this.items.length) this.items.push({ v: "", err: null });
+      this.flash = { kind: "ok", html: this.saved.length
+        ? "Mentve. A megkeresés ide megy: <b>" + esc(this.saved[0]) + "</b>" + (this.saved.length > 1 ? "; további " + (this.saved.length - 1) + " cím a lead adatai között." : ".")
+        : "Mentve. A leadnek nincs e-mail-címe — e-mailes megkeresés nem indítható." };
+    }
+    this.render();
+  };
+  Frame.prototype.makePrimary = function (i) {
+    var it = this.items.splice(i, 1)[0]; this.items.unshift(it); this.render();
+  };
+  Frame.prototype.remove = function (i) {
+    this.items.splice(i, 1);
+    if (this.variant === "A" && !this.items.length) this.items.push({ v: "", err: null });
+    this.render();
+  };
+
+  Frame.prototype.bandHtml = function () {
+    var s = this.saved;
+    return '<div class="m-band">' +
+      '<div><span class="m-band__k">Ország</span><span>' + esc(this.lead.country) + '</span></div>' +
+      '<div><span class="m-band__k">Város</span><span>' + esc(this.lead.city) + '</span></div>' +
+      '<div><span class="m-band__k">Telefon</span><span class="m-band__v">' + esc(this.lead.phone) + '</span></div>' +
+      '<div style="min-width:0"><span class="m-band__k">E-mail</span>' +
+        (s.length ? '<span class="m-band__v">' + esc(s[0]) + '</span>' + (s.length > 1 ? '<span class="m-band__more" title="' + esc(s.slice(1).join(", ")) + '">+' + (s.length - 1) + '</span>' : "")
+                  : '<span class="mut">–</span>') + '</div>' +
+      '</div>';
+  };
+  Frame.prototype.suggHtml = function () {
+    var ks = this.keys(-1);
+    var c = this.lead.candidates.filter(function (x) { return ks[recipientKey(x.v)] === undefined; });
+    if (!c.length) return "";
+    return '<div class="m-sugg">Az adatgyűjtés ezt is találta, még nincs a listán:<div class="m-sugg__row">' +
+      c.map(function (x) { return '<button type="button" data-act="sugg" data-v="' + esc(x.v) + '">+ ' + esc(x.v) + ' <small>(' + esc(x.src) + ')</small></button>'; }).join("") +
+      '</div></div>';
+  };
+
+  Frame.prototype.emailA = function () {
+    var self = this;
+    var rows = this.items.map(function (it, i) {
+      var prim = i === 0;
+      return '<div class="a-row' + (prim ? " is-prim" : "") + (it.err && it.v.trim() ? " is-bad" : "") + '" data-i="' + i + '">' +
+        '<div class="a-in"><input type="text" inputmode="email" autocomplete="off" spellcheck="false" aria-label="E-mail ' + (i + 1) + '" value="' + esc(it.v) + '" placeholder="' + (i === 0 ? "pl. info@szallas.hu" : "további cím") + '">' +
+        (it.err && it.v.trim() ? '<span class="m-err">' + esc(it.err) + '</span>' : "") + '</div>' +
+        '<label class="a-prim" title="Elsődleges cím: ez látszik a mockon és a honlapon — a megkeresés címzettjének ezt írd"><input type="radio" name="prim-' + self.uid + '"' + (prim ? " checked" : "") + ' data-act="prim">' +
+          '<span class="a-prim__txt">Megkeresés ide</span>' + (prim ? "" : "") + '</label>' +
+        '<button type="button" class="m-iconbtn" data-act="del" aria-label="Cím törlése" title="Cím törlése">' + ICON_X + '</button>' +
+        '</div>';
+    }).join("");
+    return '<div class="con-fld m-span-all"><label class="con-fld__l">E-mail-címek</label>' +
+      '<div class="a-list">' + rows + '</div>' +
+      '<button type="button" class="m-linkbtn" data-act="add">+ További e-mail</button>' +
+      '<span class="m-hint">Több címet egyszerre is beilleszthetsz („;”, „,” vagy szóköz választja el) — sorokra bomlik. A kijelölt cím az elsődleges (ez látszik a mockon és a honlapon); a többi a lead adata, a rendszer nem küld rá levelet.</span>' +
+      (this.lead.emailSrc ? '<span class="con-fld__src">adatgyűjtésből: ' + esc(this.lead.emailSrc) + '</span>' : "") +
+      '</div>';
+  };
+
+  Frame.prototype.emailB = function () {
+    var chips = this.items.map(function (it, i) {
+      var prim = i === 0, bad = !!it.err;
+      return '<span class="b-chip' + (prim ? " is-prim" : "") + (bad ? " is-bad" : "") + '" data-i="' + i + '">' +
+        '<button type="button" class="b-star" data-act="prim" aria-label="' + (prim ? "Elsődleges (megkeresés ide)" : "Legyen ez az elsődleges") + '" title="' + (prim ? "Elsődleges — a megkeresés ide megy" : "Legyen ez az elsődleges") + '">' + (prim ? ICON_STAR_ON : ICON_STAR) + '</button>' +
+        '<span class="b-chip__t" data-act="edit" title="' + esc(it.v) + ' — kattints a szerkesztéshez">' + esc(it.v) + '</span>' +
+        '<button type="button" data-act="del" aria-label="Cím törlése" title="Cím törlése">' + ICON_X + '</button></span>';
+    }).join("");
+    var errs = this.items.filter(function (it) { return it.err; });
+    return '<div class="con-fld"><label class="con-fld__l">E-mail</label>' +
+      '<div class="b-box' + (errs.length ? " is-bad" : "") + '">' + chips +
+        '<input type="text" inputmode="email" autocomplete="off" spellcheck="false" aria-label="E-mail-cím hozzáadása" value="' + esc(this.pending) + '" placeholder="' + (this.items.length ? "további cím…" : "pl. info@szallas.hu") + '"></div>' +
+      errs.map(function (it) { return '<span class="m-err"><code>' + esc(it.v) + '</code> — ' + esc(it.err) + '</span>'; }).join("") +
+      '<span class="b-legend"><span>' + ICON_STAR_ON + ' = a megkeresés ide megy</span><span>„;” „,” szóköz vagy Enter = új cím</span></span>' +
+      this.suggHtml() + '</div>';
+  };
+
+  var uidSeq = 0;
+  Frame.prototype.render = function () {
+    if (!this.uid) this.uid = ++uidSeq;
+    var L = this.lead, A = this.variant === "A";
+    var flash = this.flash ? '<div class="m-flash m-flash--' + this.flash.kind + '" role="status">' + this.flash.html + '</div>' : "";
+    var grid = fieldHtml("name", "Név", L.name, "", "") +
+      fieldHtml("phone", "Telefon", L.phone, "+36 …", L.phoneSrc) +
+      (A ? fieldHtml("country", "Ország", L.country, "HU", "") : this.emailB()) +
+      (A ? fieldHtml("city", "Város", L.city, "pl. Balatonberény", "") : fieldHtml("country", "Ország", L.country, "HU", "")) +
+      (A ? fieldHtml("address", "Cím", L.address, "irsz., utca, házszám", "").replace('class="con-fld"', 'class="con-fld a-addr"') : fieldHtml("city", "Város", L.city, "pl. Balatonberény", "")) +
+      (A ? this.emailA() : fieldHtml("address", "Cím", L.address, "irsz., utca, házszám", "")) +
+      '<div class="m-span-all">' + fieldHtml("website", "Honlap", L.website, "https://…", "") + '</div>';
+    this.gen = (this.gen || 0) + 1;
+    this.root.innerHTML = this.bandHtml() +
+      '<div class="m-panel"><h3>Begyűjtött adatok — szerkeszthető</h3>' +
+      '<p class="m-lede">Pótolható a hiányzó ÉS javítható a meglévő; a mentett érték a következő mock-generáláskor érvényesül. Üres mező = törlés.</p>' +
+      flash + '<div class="m-grid">' + grid + '</div>' +
+      '<div class="m-save"><button type="button" data-act="save">Adatok mentése</button>' +
+      '<span class="m-saved">Mentett lista: <code>' + (this.saved.length ? this.saved.map(esc).join(", ") : "–") + '</code></span></div></div>';
+    this.bind();
+  };
+
+  Frame.prototype.bind = function () {
+    var self = this, root = this.root, gen = this.gen;
+    root.querySelector('[data-act="save"]').onclick = function () { self.save(); };
+    root.querySelectorAll('[data-act="sugg"]').forEach(function (b) {
+      b.onclick = function () { self.flash = null; var r = self.addTokens([b.getAttribute("data-v")], self.items.filter(function (it) { return it.v.trim(); }).length);
+        if (self.variant === "A") self.items = self.items.filter(function (it, i) { return it.v.trim() || i === 0 && self.items.length === 1; });
+        self.note(r); self.render(); };
+    });
+    if (this.variant === "A") {
+      root.querySelectorAll(".a-row").forEach(function (row) {
+        var i = +row.getAttribute("data-i"), inp = row.querySelector("input[type=text]");
+        inp.addEventListener("paste", function (e) {
+          var txt = (e.clipboardData || window.clipboardData).getData("text");
+          var toks = splitList(txt);
+          if (toks.length < 2) return;
+          e.preventDefault();
+          self.flash = null;
+          var head = inp.value.slice(0, inp.selectionStart) + inp.value.slice(inp.selectionEnd);
+          if (head.trim()) toks.unshift(head.trim());
+          self.items.splice(i, 1);
+          var r = self.addTokens(toks, i);
+          if (!self.items.length) self.items.push({ v: "", err: null });
+          self.note(r); self.render();
+          var rows = self.root.querySelectorAll(".a-row input[type=text]");
+          if (rows[i + r.added - 1]) rows[i + r.added - 1].focus();
+        });
+        inp.addEventListener("input", function () { self.items[i].v = inp.value; });
+        inp.addEventListener("blur", function (e) {
+          // A re-render removes this input while it has focus, and Chrome fires its blur
+          // BEFORE detaching it — that late blur must not write the stale value back.
+          if (gen !== self.gen) return;
+          // Focus going to Save: do not insert the error line now — it would push the
+          // button down under the pointer and the click would miss. Save validates all.
+          if (e.relatedTarget && e.relatedTarget.matches && e.relatedTarget.matches('[data-act="save"]')) { self.items[i].v = inp.value; return; }
+          // A typed (not pasted) list in one row also splits on leaving the field.
+          var toks = splitList(inp.value);
+          if (toks.length > 1) { self.items.splice(i, 1); var r = self.addTokens(toks, i); self.note(r); self.render(); return; }
+          self.items[i].v = inp.value.trim();
+          var dupOf = self.items[i].v && self.keys(i)[recipientKey(self.items[i].v)];
+          self.items[i].err = problemOf(self.items[i].v) || (dupOf ? "Ugyanaz a postafiók, mint: " + dupOf + "." : null);
+          var cur = row.querySelector(".m-err");
+          row.classList.toggle("is-bad", !!(self.items[i].err && self.items[i].v));
+          if (cur) cur.remove();
+          if (self.items[i].err && self.items[i].v) row.querySelector(".a-in").insertAdjacentHTML("beforeend", '<span class="m-err">' + esc(self.items[i].err) + '</span>');
+        });
+        inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+        row.querySelector('[data-act="prim"]').onchange = function () { self.makePrimary(i); };
+        row.querySelector('[data-act="del"]').onclick = function () { self.remove(i); };
+      });
+      root.querySelector('[data-act="add"]').onclick = function () {
+        var empty = self.items.findIndex(function (it) { return !it.v.trim(); });
+        if (empty < 0) { self.items.push({ v: "", err: null }); empty = self.items.length - 1; self.render(); }
+        self.root.querySelectorAll(".a-row input[type=text]")[empty].focus();
+      };
+    } else {
+      var box = root.querySelector(".b-box"), inp = box.querySelector("input");
+      var commit = function (text, keepFocus) {
+        var toks = splitList(text);
+        self.pending = "";
+        if (toks.length) { self.flash = null; var r = self.addTokens(toks, self.items.length); self.note(r); }
+        self.render();
+        if (keepFocus) self.root.querySelector(".b-box input").focus();
+      };
+      box.addEventListener("click", function (e) { if (e.target === box) inp.focus(); });
+      inp.addEventListener("input", function () {
+        self.pending = inp.value;
+        if (/[;,\s]/.test(inp.value)) commit(inp.value, true);
+      });
+      inp.addEventListener("paste", function (e) {
+        var txt = (e.clipboardData || window.clipboardData).getData("text");
+        e.preventDefault(); commit(inp.value + " " + txt, true);
+      });
+      inp.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); commit(inp.value, true); }
+        else if (e.key === "Backspace" && !inp.value && self.items.length) {
+          var last = self.items.pop(); self.pending = last.v; self.render();
+          var ni = self.root.querySelector(".b-box input"); ni.focus(); ni.setSelectionRange(ni.value.length, ni.value.length);
+        }
+      });
+      inp.addEventListener("blur", function (e) {
+        if (gen !== self.gen) return;
+        // Leaving the field turns what is typed into a chip — unless the click went to a
+        // chip button / Save (those handle the pending text themselves).
+        if (inp.value.trim() && !(e.relatedTarget && root.contains(e.relatedTarget) && e.relatedTarget.closest(".b-box, .m-save"))) commit(inp.value, false);
+      });
+      root.querySelectorAll(".b-chip").forEach(function (chip) {
+        var i = +chip.getAttribute("data-i");
+        chip.querySelector('[data-act="prim"]').onclick = function () { self.makePrimary(i); };
+        chip.querySelector('[data-act="del"]').onclick = function () { self.remove(i); };
+        chip.querySelector('[data-act="edit"]').onclick = function () {
+          var it = self.items.splice(i, 1)[0];
+          if (self.pending.trim()) self.addTokens(splitList(self.pending), self.items.length);
+          self.pending = it.v; self.render();
+          var ni = self.root.querySelector(".b-box input"); ni.focus(); ni.select();
+        };
+      });
+    }
+  };
+
+  var frames = [];
+  document.querySelectorAll(".d-frame-in").forEach(function (el) { frames.push(new Frame(el, el.getAttribute("data-variant"))); });
+
+  function setSize(sz) {
+    document.querySelectorAll("[data-size]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-size") === sz)); });
+    document.querySelectorAll(".d-frame").forEach(function (f) { f.classList.toggle("is-mobile", sz === "mobile"); });
+  }
+  document.querySelectorAll("[data-size]").forEach(function (b) { b.onclick = function () { setSize(b.getAttribute("data-size")); }; });
+  document.querySelectorAll("[data-lead]").forEach(function (b) {
+    b.onclick = function () {
+      leadKey = b.getAttribute("data-lead");
+      document.querySelectorAll("[data-lead]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      frames.forEach(function (f) { f.reset(); });
+    };
+  });
+  // Phones open in phone mode (the owner mostly looks on mobile).
+  if (window.matchMedia && window.matchMedia("(max-width: 600px)").matches) setSize("mobile");
+  window.__frames = frames; // Playwright hook
+})();
+</script>
+</body>
+</html>

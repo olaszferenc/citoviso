@@ -1,5 +1,6 @@
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
+import { isValidEmail, splitEmailList } from "../../email/leadEmails.js";
 
 // OpenStreetMap via the Overpass API. Free, open data, legally clean — and it
 // carries the `website` tag, which is exactly our qualification signal.
@@ -42,6 +43,19 @@ function buildQuery(query: ScrapeQuery): string {
     ");",
     "out center tags;",
   ].join("\n");
+}
+
+/**
+ * OSM joins several values of one key with `;` ("info@a.hu;foglalas@a.hu"). Taken raw,
+ * that string became ONE "address" on 2 live leads (2026-10-04): a broken mailto on the
+ * mock, and a key no single address matches in the duplicate/shared-contact checks. Split:
+ * the first valid address is the primary, the rest are further addresses; junk (a JS
+ * fragment was measured in one tag) is dropped.
+ */
+function osmEmails(tag: string | undefined): { email?: string; otherEmails?: string[] } {
+  const all = splitEmailList(tag).filter(isValidEmail);
+  const [email, ...rest] = all;
+  return { ...(email ? { email } : {}), ...(rest.length ? { otherEmails: rest } : {}) };
 }
 
 function firstTag(
@@ -137,7 +151,7 @@ export class OsmSource implements LeadSource {
         country,
         city,
         phone: firstTag(tags, ["phone", "contact:phone"]),
-        email: firstTag(tags, ["email", "contact:email"]),
+        ...osmEmails(firstTag(tags, ["email", "contact:email"])),
         website: firstTag(tags, ["website", "contact:website", "url"]),
       });
     }
