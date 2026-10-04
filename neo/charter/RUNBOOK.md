@@ -5,7 +5,7 @@
 
 ## 0. Nap eleje
 
-1. Olvasd el: `neo/charter/CHARTER.md`, ezt a fájlt, `~/neo/tanulsagok.md`, `~/neo/ugyek.md`,
+1. Olvasd el: `neo/charter/CHARTER.md`, ezt a fájlt, `neo/charter/ONTOLOGIA.md`, `~/neo/tanulsagok.md`, `~/neo/ugyek.md`,
    és a tegnapi `~/neo/jelentesek/` fájlt (mit válaszolt rá a tulaj?).
 2. Nyisd meg a Chrome-odat, lépj be a konzolba (ha a profil már be van lépve, nem kell).
 3. Írd a naplóba: kezdés, a mai keret (hány lead).

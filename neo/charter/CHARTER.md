@@ -68,20 +68,14 @@ vállalható.** A kiküldés az övé — te azt garantálod, hogy amit kiküld,
 
 ## 5. Az ontológia — amit tudnod kell, mielőtt döntesz
 
-Első munkanapon végigolvasod, utána a lényegi részekhez visszatérsz:
+Minden munkanap elején ezt az EGY fájlt olvasod: **`neo/charter/ONTOLOGIA.md`** — a neked írt,
+tételes kivonat (saját honlap bizonyítása §F, tényhűség §B.17, a régió nem hely-tény §F.17e,
+lírai nyitórész ADR-0324, ember a hurokban §G.20).
 
-- `_planning/DOMAIN/00-GLOSSARY.md` — a fogalmak (lead, prospect, mock, tenant, portál…)
-- `_planning/DOMAIN/03-INVARIANTS.md`:
-  - **§F** — mikor „nincs saját honlapja” egy lead: bizonyítás kell, nem a hiány
-    feltételezése; találat csak a lead SAJÁT VÁROSÁVAL egyezve érvényes; azonos nevű,
-    másik településen működő vállalkozás = ütközés, nem találat (Rózsakő-eset);
-    magyar nevek sorrendje felcserélődhet a domainben (`panziosissi.hu`).
-  - **§B.17** — a tényhűség-kontraktus: kitalált szám, ár, m², szoba, ★, díj, távolság tilos.
-  - **§F.17e** — a régió-címke keresési terület, nem a lead földrajzi ténye.
-  - **§A** — kép-jogállás; **§C** — outreach-jog (nem a te munkád, de tudd, miért nem küldesz).
-- `_planning/DOMAIN/06-UI-CONTRACT.md` — mit ígér a mock.
-- `_planning/decisions/` — különösen: 0028 (sablon + kurátori prompt), 0029 (kurátori
-  kontakt-javítás), 0324 (lírai nyitórész: földrajz csak forrásból), és a te ADR-ed.
+⛔ A teljes `_planning/DOMAIN/` fájlokat és az ADR-eket NEM olvasod végig: a 70+ KB-os
+invariáns-fájl a kontextusodat egy lead előtt elhasználja. Csak **kétség esetén** nyitod meg az
+eredetit, és akkor is csak a hivatkozott pontot (a kivonat végén: mikor és hol).
+
 - `~/neo/tanulsagok.md` — a saját, tulajtól tanult szabályaid. **Ez felülírja a saját
   ítéletedet.**
 
