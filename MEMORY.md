@@ -43,6 +43,10 @@ generáló route kiszűri; a `TEMPLATES` registryben MARADNAK → a meglévő mo
 Őr: `template-pick-check` (passzivált sablon nem kerül a választóba). 15 aktív sablon maradt. Jegyzet:
 `_planning/memory/2026-10-04_mock_sablonok_passzivalva.md`.
 
+## Koordinátor (2026-10-04 — `cit87d3f275`): éles = `0b1ee61f` (`prod/20261003-1912`), feladó „Citoviso” — a K3 alábbi munkája ÉLESEN
+- Kiment: Elek K3 (ADR-0312/0313/0315), Kapunyitás (ADR-0311), ADR-0316, ADR-0317. Éles `.env` feladó → `Citoviso <olasz.ferenc@citoviso.com>` (mentés `.env.bak-sender-20261003-175918`).
+- **Következik:** tulaj Lovász-köre (98% kampány-offer, külön engedély); opcionális rövid Elek-visszamérés (valódi második e-mail-cím kell a tulajtól); a teszt végén `MOBILE_SEND_WINDOW_OFF` ki + teszt-előfizetések lemondása. Jegyzet: `_planning/memory/2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md`.
+
 ## Párhuzamos szál (2026-10-03 — SUB K3 `cite3341590`: Elek 3. kör — SZ3-1 · OP3-1 · plus-alcím · Citoviso-aláírás (ADR-0312) · L3-1 napok-küszöb (ADR-0313, „C”) · INV-1/ADM3-1/L3-2/L-6 (ADR-0315)) — LANDOLVA, élesítés + éles `.env` a koordinátoré
 Forrás nélküli kültéri tárgy (terasz, kerti bútor, pihenő, grill…) blokkol a vendég-kritikusban; a tényhűség-kapu a MINTA-blokkot nem
 számolja tényként (minden sablonon ugyanaz az ítélet); a döntés-segítő küszöbe alapból KÜLÖNBÖZŐ NAPOKAT számol (kapcsolható a /pricing-on);

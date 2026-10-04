@@ -14,6 +14,7 @@
 - [2026-10-04_mock_sablonok_passzivalva.md](2026-10-04_mock_sablonok_passzivalva.md) — 2026-10-04 — Hat mock-sablon passziválva (Dopamin, Scrapbook, Agyag, Akvarell, Szerkesztői, Brutalizmus)
 - [2026-10-04_js_honlap_renderelt_igazolas.md](2026-10-04_js_honlap_renderelt_igazolas.md) — 2026-10-04 — A JS-sel épülő saját honlap is igazolható (Dalma panzió)
 - [2026-10-04_fejlec_link_csomag_parallax_menusav.md](2026-10-04_fejlec_link_csomag_parallax_menusav.md) — 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)
+- [2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md](2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md) — Élesítés 0b1ee61f + éles feladó „Citoviso” (koordinátor, 2026-10-03/04)
 - [2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md](2026-10-03_tenyhuseg_osszevont_hely_ertekeles.md) — 2026-10-03 — Tényhűség: összevont hely-állítás + a Google-értékelés egy szabállyal
 - [2026-10-03_lead_elerhetoseg_szamlazasi_adat.md](2026-10-03_lead_elerhetoseg_szamlazasi_adat.md) — 2026-10-03 — Lead-elérhetőség: számlázási cím a szállás adataiban (Három Huszár) — eredet + javítás
 - [2026-10-03_k3_elek3_leletek.md](2026-10-03_k3_elek3_leletek.md) — K3 — Elek 3. kör leletei: kültéri tárgy, MINTA nem tény, napok-küszöb, plus-alcím, Citoviso-aláírás, alacsony tételek (2026-10-03)
