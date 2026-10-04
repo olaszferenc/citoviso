@@ -8107,50 +8107,6 @@ export function scrapePage(
   return layout("Scrape", body, { active: "/scrape" }).replace("</head>", `${refresh}</head>`);
 }
 
-function pct(num: number, den: number): string {
-  if (!den) return `<span class="mut">–</span>`;
-  return `${((num / den) * 100).toFixed(1)}%`;
-}
-
-function funnelRow(label: string, c: FunnelCounts): string {
-  return `<tr><td>${esc(label)}</td>
-    <td>${c.prospects}</td><td>${c.sent}</td>
-    <td>${c.opened} <span class="small mut">(${pct(c.openedOfSent, c.sent)})</span></td>
-    <td>${c.returned} <span class="small mut">(${pct(c.returned, c.opened)})</span></td>
-    <td>${c.moduleTouched} <span class="small mut">(${pct(c.moduleTouched, c.opened)})</span></td>
-    <td>${c.orderIntent} <span class="small mut">(${pct(c.orderIntentOfSent, c.sent)})</span></td>
-    <td>${c.converted}</td><td>${c.unsubscribed}</td></tr>`;
-}
-
-/** Pilot funnel report: H1–H5 with thresholds + segment breakdown. */
-export function reportPage(r: FunnelReport): string {
-  const lang = consoleLang();
-  const t = r.total;
-  const hyp = `<table style="margin-top:8px">
-    <thead><tr><th>${T(lang, "Kérdés")}</th><th>${T(lang, "Mérőszám")}</th><th>${T(lang, "Cél")}</th><th>${T(lang, "Most")}</th></tr></thead>
-    <tbody>
-      <tr><td>${T(lang, "Megfogja-e a levél")}</td><td>${T(lang, "megnyitás / kiküldött")}</td><td>${T(lang, "érdemben magasabb a sima szövegnél")}</td><td>${pct(t.openedOfSent, t.sent)} (${t.openedOfSent}/${t.sent})</td></tr>
-      <tr><td>${T(lang, "Visszatér-e")}</td><td>${T(lang, "visszatérő / megnyitó")}</td><td>${T(lang, "> ~30%")}</td><td>${pct(t.returned, t.opened)} (${t.returned}/${t.opened})</td></tr>
-      <tr><td>${T(lang, "Belenyúl-e a modulokba")}</td><td>${T(lang, "modul-hozzáadó / megnyitó")}</td><td>${T(lang, "> ~20%")}</td><td>${pct(t.moduleTouched, t.opened)} (${t.moduleTouched}/${t.opened})</td></tr>
-      <tr><td>${T(lang, "Melyik körnél működik")}</td><td>${T(lang, "rendelni kezdők aránya szegmensenként")}</td><td>${T(lang, "a „nincs honlap” és a „0 lábnyom” körnek magasabb")}</td><td>${T(lang, "lásd lenti bontás")}</td></tr>
-      <tr><td>${T(lang, "Megrendeli-e")}</td><td>${T(lang, "rendelni kezdők / kiküldött")}</td><td>${T(lang, "> ~3–5%")}</td><td>${pct(t.orderIntentOfSent, t.sent)} (${t.orderIntentOfSent}/${t.sent})</td></tr>
-    </tbody></table>`;
-  const segRows = r.segments.map((s) => funnelRow(s.segment, s)).join("");
-  const head = `<thead><tr><th>${T(lang, "Szegmens")}</th><th>${T(lang, "Követett link")}</th><th>${T(lang, "Kiküldve")}</th><th>${T(lang, "Megnyitva")}</th><th>${T(lang, "Visszatért")}</th><th>${T(lang, "Modult próbált")}</th><th>${T(lang, "Rendelni kezdett")}</th><th>${T(lang, "Konvertált")}</th><th>${T(lang, "Leiratk.")}</th></tr></thead>`;
-  const body = `
-    <div class="panel">
-      <h2>${T(lang, "Megkeresés-tölcsér — hol akadnak el")} ${helpLink("console.report")}</h2>
-      <p class="mut small">${T(lang, "Alap-készlet: {players} felmért szereplő · {leads} kvalifikált lead · {mocks} mock ({approved} jóváhagyott) · {prospects} követett link.", { players: r.leadTotals.players, leads: r.leadTotals.leads, mocks: r.leadTotals.mocks, approved: r.leadTotals.approved, prospects: t.prospects })}</p>
-      <div class="tblwrap">${hyp}</div>
-    </div>
-    <div class="panel">
-      <h2>${T(lang, "Szegmens-bontás — melyik körnél működik")}</h2>
-      <div class="tblwrap"><table>${head}<tbody>${funnelRow(T(lang, "ÖSSZES"), t)}${segRows}</tbody></table></div>
-      <p class="mut small">${T(lang, "A tölcsér sosem lép vissza: a szám azt jelenti, hogy a lead LEGALÁBB eddig eljutott.")}</p>
-    </div>`;
-  return layout(T(lang, "Megkeresés-riport"), body, { active: "/report" });
-}
-
 /** Live counts for the hub's finance card + attention chips. */
 export interface FinanceCounts {
   readonly docs: number;

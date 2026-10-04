@@ -66,6 +66,7 @@ const ROUTES = [
   partner ? `/partner/${partner.id}` : null,
   "/partners/new",
   "/report",
+  "/report/behaviour",
   "/settings",
   "/help",
   "/test-log",

@@ -23,10 +23,11 @@ import {
   leadsPage,
   operatorLoginHelpPage,
   operatorLoginPage,
-  reportPage,
   settingsPage,
 } from "../src/console/views.js";
 import { buildLeadListResult } from "../src/console/data.js";
+import { reportBehaviourPage, reportFunnelPage } from "../src/console/reportViews.js";
+import { DEFAULT_TARGETS, foldReport } from "../src/console/reportData.js";
 import { adminDashboard } from "../src/server/adminViews.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
@@ -113,25 +114,9 @@ const multilang = {
  */
 const CONSOLE_SURFACES: readonly { name: string; html: string }[] = runWithConsoleLang(() => {
   setConsoleLang(PSEUDO);
-  // Every FunnelCounts field, so the report renders real "0" cells instead of
-  // "undefined" (an undefined would look like a leak and hide a real one).
-  const zero = {
-    prospects: 0,
-    sent: 0,
-    opened: 0,
-    returned: 0,
-    moduleTouched: 0,
-    orderIntent: 0,
-    converted: 0,
-    unsubscribed: 0,
-    openedOfSent: 0,
-    orderIntentOfSent: 0,
-  };
-  const emptyReport = {
-    total: zero,
-    segments: [],
-    leadTotals: { players: 0, leads: 0, mocks: 0, approved: 0 },
-  } as unknown as Parameters<typeof reportPage>[0];
+  // The Riport pages over ZERO facts: every panel renders its empty state ("nincs adat",
+  // the calibration's "még nincs…" sentence), so a leak would show as raw Hungarian.
+  const emptyReport = foldReport([], DEFAULT_TARGETS, [], 30, "segment", new Date("2026-10-04T10:00:00Z"));
   return [
     { name: "console:chrome", html: layout("Citoviso", "<p>Citoviso</p>", { active: "/" }) },
     { name: "console:login", html: operatorLoginPage(null, "") },
@@ -141,7 +126,8 @@ const CONSOLE_SURFACES: readonly { name: string; html: string }[] = runWithConso
       name: "console:settings",
       html: settingsPage({ username: "op", displayName: "Op", role: "superadmin" }),
     },
-    { name: "console:report", html: reportPage(emptyReport) },
+    { name: "console:report", html: reportFunnelPage(emptyReport, "2026-10-04") },
+    { name: "console:report-behaviour", html: reportBehaviourPage(emptyReport, "inf") },
   ];
 });
 

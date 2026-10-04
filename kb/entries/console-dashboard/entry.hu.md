@@ -82,8 +82,7 @@ egy-egy sorban, a darabszámmal vagy jelvénnyel, ahogy a menüben is.
 - **„Pénzügy”** — bizonylatok és partnerek: **„Bizonylat keresése”**, **„Új bizonylat rögzítése”**,
   **„Nyitott tételek”**, **„Partnerek”**, **„Új partner rögzítése”**. Az árazás 2026-09-06 óta
   **nem itt** van, hanem a CRM-ben — értékesítési döntés lett belőle.
-- **„Riport”** — **„Megkeresés-tölcsér — hol akadnak el”**, **„Kiküldött megkeresések”**,
-  **„Megkezdett rendelések”**.
+- **„Riport”** — **„Megkeresés-tölcsér — hol akadnak el”**, **„Viselkedés — eszköz, kilépés, miért”**.
 - **„Rendszer”** — **„Beállítások”** (fiók, jelszó, működési beállítások).
 
 ## Súgó

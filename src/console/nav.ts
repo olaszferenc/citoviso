@@ -131,8 +131,7 @@ export function navTree(lang = "hu"): readonly NavNode[] {
       href: `${HUB_PREFIX}report`,
       children: [
         { kind: "leaf", id: "funnel", label: T(lang, "Megkeresés-tölcsér — hol akadnak el"), short: T(lang, "Megkeresés-tölcsér"), href: "/report" },
-        { kind: "leaf", id: "sent", label: T(lang, "Kiküldött megkeresések"), href: "/report#sent" },
-        { kind: "leaf", id: "orders", label: T(lang, "Megkezdett rendelések"), href: "/report#orders" },
+        { kind: "leaf", id: "behaviour", label: T(lang, "Viselkedés — eszköz, kilépés, miért"), short: T(lang, "Viselkedés"), href: "/report/behaviour" },
       ],
     },
     {

@@ -57,13 +57,15 @@ import {
   leadsPage,
   outreachDraftPage,
   pricingPage,
-  reportPage,
   scrapePage,
   settingsPage,
 } from "../src/console/views.js";
 import { testLogPage } from "../src/console/testLogViews.js";
 import { findScenario } from "../src/elek/fkParse.js";
 import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
+import { reportBehaviourPage, reportFunnelPage } from "../src/console/reportViews.js";
+import { DEFAULT_TARGETS, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
+import { inferExitReason, signalsFromEvents } from "../src/analytics/exitReason.js";
 import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
 import type { PricingSnapshot } from "../src/pricing.js";
 import { effectiveModuleConfig } from "../src/moduleConfig.js";
@@ -1947,7 +1949,48 @@ await shootConsole(
   ".panel:nth-of-type(2)",
 );
 await shootConsole(duplicatesPage(dupClusters), conOut("console-duplicates"));
-await shootConsole(reportPage(funnel), conOut("console-report"));
+// Riport (ADR-0322): synthetic, pilot-shaped facts → the SAME fold the live page uses, so the
+// handbook image shows the real cards (six questions, verdict pills, cohorts, diary).
+const rpNow = new Date("2026-10-04T10:00:00Z");
+const rpSeed = { v: 20261004 };
+const rnd = (): number => (rpSeed.v = (rpSeed.v * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+const rpVisit = (id: string, at: Date, device: Visit["device"], deep: boolean, panel: boolean, last: number): Visit => {
+  const events = [{ type: "open", payload: {}, occurredAt: at }, { type: "scroll", payload: { pct: deep ? 100 : 25 }, occurredAt: new Date(at.getTime() + 20_000) }];
+  if (deep) events.push({ type: "module_add", payload: { module: "reviews" }, occurredAt: new Date(at.getTime() + 60_000) });
+  if (panel) events.push({ type: "panel_open", payload: {}, occurredAt: new Date(at.getTime() + 90_000) });
+  events.push({ type: "dwell_end", payload: { seconds: deep ? 240 : 8 }, occurredAt: new Date(at.getTime() + (deep ? 240_000 : 8_000)) });
+  return { id, startedAt: at, device, dwellSeconds: deep ? 240 : 8, maxScroll: deep ? 100 : 25, moduleTouched: deep, presetChanges: deep ? 1 : 0, moduleChanges: deep ? 2 : 0, panelOpened: panel, lastSection: last, events };
+};
+const rpFacts: ProspectFacts[] = Array.from({ length: 72 }, (_, i) => {
+  const sentAt = new Date(rpNow.getTime() - Math.floor(rnd() * 42) * 86_400_000 - 9 * 3_600_000);
+  const device = rnd() < 0.62 ? "mobile" : rnd() < 0.2 ? "tablet" : "desktop";
+  const opened = rnd() < 0.55;
+  const deep = opened && rnd() < 0.5;
+  const ordered = deep && rnd() < 0.3;
+  const paid = ordered && rnd() < 0.8;
+  const openedAt = opened ? new Date(sentAt.getTime() + rnd() * 30 * 3_600_000) : null;
+  const visits: Visit[] = openedAt ? [rpVisit(`v${i}a`, openedAt, device, deep, deep && rnd() < 0.7, deep ? 6 : 2)] : [];
+  if (openedAt && rnd() < 0.4) visits.push(rpVisit(`v${i}b`, new Date(openedAt.getTime() + 86_400_000), device, deep, deep, deep ? 7 : 3));
+  const orderedAt = ordered ? new Date(openedAt!.getTime() + rnd() * 48 * 3_600_000) : null;
+  const paidAt = paid ? new Date(orderedAt!.getTime() + rnd() * 6 * 3_600_000) : null;
+  const last = visits[visits.length - 1];
+  const verdict = paidAt || !last ? null : inferExitReason(signalsFromEvents(last.events, false));
+  return {
+    id: `p${i}`, leadName: `Minta Vendégház ${i + 1}`, segment: ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult"][i % 4]!,
+    channel: ["email", "sms", "email_sms", "mms"][i % 4] as ProspectFacts["channel"], style: "coastal-fresh", sentAt, sentHour: 9,
+    visits, openedAt, deepAt: deep ? openedAt : null, orderedAt, paidAt, unsubscribedAt: null,
+    escalationShown: visits.length >= 2 && rnd() < 0.5, escalationCta: false, escalationDismiss: false,
+    device, exitReason: verdict?.reason ?? null, exitConfidence: verdict?.confidence ?? null,
+    stated: !paidAt && opened && rnd() < 0.1 ? "expensive" : null,
+  };
+});
+const rpNotes = [{ id: "n1", day: "2026-09-18", text: "Tárgymező csere: személyes megszólítás" }];
+const rpData = foldReport(rpFacts, DEFAULT_TARGETS, rpNotes, 30, "segment", rpNow);
+await shootConsole(reportFunnelPage(rpData, "2026-10-04"), conOut("console-report"));
+await shootConsole(
+  reportBehaviourPage(rpData, "inf"),
+  path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "behaviour.png"),
+);
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.
 await shootConsole(

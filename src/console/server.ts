@@ -43,6 +43,9 @@ import {
   resolveDocType,
 } from "./partnerData.js";
 import { documentNewPage } from "./partnerViews.js";
+import { reportFunnelPage, reportBehaviourPage, type ReasonMode } from "./reportViews.js";
+import { addNote, getReportData, REPORT_DIMS, type ReportDays, type ReportDim } from "./reportData.js";
+import { todayIn, APP_TZ } from "../text/zoneTime.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
 import {
@@ -265,7 +268,7 @@ import {
 } from "../markets.js";
 import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
-import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage, reportPage } from "./views.js";
+import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage } from "./views.js";
 import type { PhotoGateView } from "./views.js";
 import { dashboardPage, modulePage, operatorLoginPage, operatorLoginHelpPage, settingsPage, type HubData } from "./views.js";
 import { getTreeFreshness } from "./treeFreshness.js";
@@ -1962,9 +1965,28 @@ async function handle(
     await loadRegions(true);
     return redirect(res, "/scrape/regions?ok=Ter%C3%BClet%20kivonva");
   }
-  // GET /report — pilot funnel report (H1–H5 + segment breakdown).
-  if (method === "GET" && path === "/report") {
-    return send(res, 200, reportPage(await getFunnelReport()));
+  // Riport module (frozen plan: assets/design-refs/console/riport/) — Tölcsér + Viselkedés.
+  // The filters are query params (links, no JS): days ∈ {7,30,90,0}, dim ∈ REPORT_DIMS.
+  if (method === "GET" && (path === "/report" || path === "/report/behaviour")) {
+    const daysRaw = Number(url.searchParams.get("days") ?? "30");
+    const days = ([7, 30, 90, 0] as const).includes(daysRaw as ReportDays) ? (daysRaw as ReportDays) : 30;
+    const dimRaw = url.searchParams.get("dim") ?? "segment";
+    const dim = (REPORT_DIMS as readonly string[]).includes(dimRaw) ? (dimRaw as ReportDim) : "segment";
+    const d = await getReportData(days, dim);
+    if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
+    const rsRaw = url.searchParams.get("rs") ?? "inf";
+    const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";
+    return send(res, 200, reportBehaviourPage(d, rs));
+  }
+  // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.
+  if (method === "POST" && path === "/report/note") {
+    const body = await readBody(req);
+    const day = body.get("day") ?? "";
+    const text = (body.get("text") ?? "").trim();
+    const op = await currentOperator(req);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day) && text) await addNote(day, text, op?.displayName || op?.username || "operátor");
+    const back = new URLSearchParams({ days: body.get("days") ?? "30", dim: body.get("dim") ?? "segment" });
+    return redirect(res, `/report?${back.toString()}`);
   }
   // GET /lead/:id
   const leadMatch = /^\/lead\/([0-9a-f-]{36})$/i.exec(path);

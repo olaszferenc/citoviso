@@ -9,6 +9,7 @@
 export const SCOPE = [
   "src/console/views.ts",
   "src/console/partnerViews.ts",
+  "src/console/reportViews.ts",
   "src/server/adminViews.ts",
   "src/server/legalViews.ts",
   "src/server/moduleConfigViews.ts",

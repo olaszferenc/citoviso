@@ -5,7 +5,7 @@ a **B** köt, az A elvetve), képek: `ui-riport-B-tolcser-{desktop,mobile}.png` 
 `ui-riport-viselkedes-{desktop,mobile}.png` (Viselkedés lap). **Ez a terv KÖT** — elvárt viselkedés,
 nem stílus-javaslat. A számok a vázlatban pilot-alakú MINTA (168 kiküldés), nem valós adat.
 
-**Hatókör:** `src/console/views.ts` · `src/console/data.ts` · `assets/runtime/cit-configurator.js`
+**Hatókör:** `src/console/reportViews.ts` · `src/console/reportData.ts` · `src/analytics/exitReason.ts` · `assets/runtime/cit-configurator.js`
 
 ## Miért létezik
 
@@ -48,8 +48,8 @@ nem elég, kérdez (mikro-kérdőív), majd a kettőt egymáshoz kalibrálja.
    kiküldött, cél 40%) · „Visszatér-e?" (visszatérő / megnyitó, 30%) · „Belenyúl-e a modulokba?"
    (elmélyülő / megnyitó, 20%) · „Megrendeli-e?" (rendelés / kiküldött, 4%) · „Ki is fizeti?"
    (fizetve / rendelés, 75%) · „Gyorsan reagál-e?" (medián küldés→1. megnyitás, cél ≤ 24 óra).
-   Kártyánként: a kérdés, a mérőszám neve, a NAGY érték, ítélet-pill („cél felett" · „közelít"
-   · „cél alatt" · „nincs adat"), mérő a cél-jelölővel, a tört (N / M), 6 heti szikra-vonal.
+   Kártyánként: a kérdés, a mérőszám neve, a NAGY érték, ítélet-pill (**„cél felett"** · **„közelít"**
+   · **„cél alatt"** · **„nincs adat"**), mérő a cél-jelölővel, a tört (N / M), 6 heti szikra-vonal.
    A célok a `/pricing`-hoz hasonlóan operátor-állíthatók (nem beégetett szám) — első kör: konfig.
 8. **Visszatérés-panel:** 1 / 2 / 3+ látogatás → db + „rendel: X%", és az eszkalációs ajánlat
    tényállása egy mondatban (megjelent N-nek, kattintott K, rendelt R, elvetette E).
