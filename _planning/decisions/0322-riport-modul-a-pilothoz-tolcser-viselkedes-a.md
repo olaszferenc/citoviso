@@ -1,4 +1,4 @@
-## ADR-XXXX — Riport-modul a pilothoz: tölcsér + viselkedés a mért linkekből, kétrétegű kilépés-ok, csomag-besorolás, mérés-egységesítés (2026-10-04)
+## ADR-0322 — Riport-modul a pilothoz: tölcsér + viselkedés a mért linkekből, kétrétegű kilépés-ok, csomag-besorolás, mérés-egységesítés (2026-10-04)
 
 **Dátum:** 2026-10-04 · **Státusz:** elfogadva (tulajdonosi egyeztetés + jóváhagyott terv:
 `assets/design-refs/console/riport/`, „B Mehet") · **Kapcsolódó:** ADR-0108 (tenant-forgalom: szerver-oldali,

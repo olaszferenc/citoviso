@@ -1,4 +1,4 @@
-# Riport — 1. kör: Megkeresés-tölcsér + Viselkedés (ADR-XXXX — „B: kérdés-első")
+# Riport — 1. kör: Megkeresés-tölcsér + Viselkedés (ADR-0322 — „B: kérdés-első")
 
 Tulajdonosi jóváhagyás: 2026-10-04 („B Mehet"). A vázlat `riport-1kor.html` (A/B egy fájlban;
 a **B** köt, az A elvetve), képek: `ui-riport-B-tolcser-{desktop,mobile}.png` (Tölcsér lap),
