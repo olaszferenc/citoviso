@@ -195,8 +195,52 @@ export interface MockViewTable {
   id: Generated<string>;
   prospect_id: string;
   started_at: Generated<Timestamp>;
+  /** LEGACY raw User-Agent. ADR-0322 ③ (0087): new writes leave it NULL; the
+   *  backfill extracts device/os/browser from it once, then clears it. */
   user_agent: string | null;
+  /** LEGACY full referrer. ADR-0322 ③ (0087): new writes leave it NULL —
+   *  only `referrer_host` is stored (ADR-0108 shape). */
   referrer: string | null;
+  /** ADR-0322 ③ (0087): device class extracted from the UA (src/analytics/userAgent.ts). */
+  device: "mobile" | "tablet" | "desktop" | "bot" | "unknown" | null;
+  /** iOS | Android | Windows | macOS | Linux | egyéb */
+  os: string | null;
+  /** Safari | Chrome | Firefox | Edge | Samsung | egyéb */
+  browser: string | null;
+  /** Referrer hostname only (ADR-0108), never the path or query. */
+  referrer_host: string | null;
+}
+
+/** ADR-0322 ④/B (0087): the SPOKEN exit reason — one-tap micro-survey answer.
+ *  One answer per view per source (enforced in the app). */
+export interface ProspectFeedbackTable {
+  id: Generated<string>;
+  prospect_id: string;
+  mock_view_id: string | null;
+  source: "escalation_dismiss" | "unsubscribe" | "reminder_link";
+  reason: "expensive" | "not_now" | "distrust" | "have_site" | "other";
+  /** Free text, only with reason 'other'; ≤300 chars. */
+  text: string | null;
+  created_at: Generated<Timestamp>;
+}
+
+/** ADR-0322 (0087): the owner's pilot-log note — a dated marker on the report chart. */
+export interface ReportNoteTable {
+  id: Generated<string>;
+  day: ColumnType<Date, Date | string, Date | string>;
+  /** ≤80 chars, non-empty. */
+  text: string;
+  created_by: string | null;
+  created_at: Generated<Timestamp>;
+}
+
+/** ADR-0322 ⑧ (0087): verdict targets, operator-editable. Seeded: open_rate 40,
+ *  return_rate 30, deep_rate 20, order_rate 4, paid_rate 75, first_open_hours 24.
+ *  `target` is numeric → node-postgres reads it as a STRING. */
+export interface ReportTargetTable {
+  metric: string;
+  target: ColumnType<string, number | string, number | string>;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface MockEventTable {
@@ -239,6 +283,9 @@ export interface OrderIntentTable {
   status: Generated<"started" | "submitted" | "abandoned">;
   created_at: Generated<Timestamp>;
   submitted_at: Timestamp | null;
+  /** ADR-0322 ⑤ (0087): the preset chosen at submit; 'egyedi' = the module list
+   *  matches no preset. NULL = order captured before 0087 or not a configurator order. */
+  preset: "alap" | "ajanlott" | "teljes" | "egyedi" | null;
   /** Domain choice (0008, ADR-0020). Default = platform subdomain. */
   domain_type: Generated<"citoviso_sub" | "citoviso_registered" | "own">;
   /** Chosen host: full domain (custom/own) or the subdomain host. */
@@ -752,6 +799,10 @@ export interface PaymentTable {
   initiates_recurrence: Generated<boolean>;
   created_at: Generated<Timestamp>;
   paid_at: Timestamp | null;
+  /** ADR-0322 ② (0087): FIRST opening of /pay/go/:id. Counting only — the GET never pays (ADR-0291). */
+  pay_go_at: Timestamp | null;
+  /** ADR-0322 ② (0087): how many times /pay/go/:id was opened. */
+  pay_go_count: Generated<number>;
 }
 
 /** ADR-0226 (0076): a tenant's former stored cards (mask only) — replaced or
@@ -1455,6 +1506,9 @@ export interface Database {
   prospect_optout_log: ProspectOptoutLogTable;
   mock_view: MockViewTable;
   mock_event: MockEventTable;
+  prospect_feedback: ProspectFeedbackTable;
+  report_note: ReportNoteTable;
+  report_target: ReportTargetTable;
   site_visit: SiteVisitTable;
   order_intent: OrderIntentTable;
   offer: OfferTable;
