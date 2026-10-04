@@ -48,7 +48,9 @@ nem számít a riportban + a converted prospect 2. rendelése nem lép vissza. A
 (kétszer — a 25b68545 landolása után újra) és a KB-őr FLAG-je a kézi szöveg-átírás B-útjának mobil-gesztusain —
 mindkettőt én javítottam (`861f4106`, `09cf3689`, `33e1b3fc`). Backfill élesen: 14 sor, 0 nyers maradt (10 bot · 3 iOS
 Safari · 1 Windows Chrome). Élesen 5 kiküldött link: 2 valódi (ma 10:00, még nincs emberi megnyitás) + 3 `[TESZT]`;
-a riport a teszt-leadeket NEM szűri — ha a tulaj kéri, „teszt-leadek nélkül" kapcsoló a szűrősorba.
+a tulaj kapcsoló helyett törlést kért: a két `[TESZT]` lead élesen törölve 14:15 (kaszkáddal: 2 prospect, 19 mock, 7 látogatás,
+34 event; 21 mock-fájl a mentési mappába; teljes JSON-mentés `/opt/citoviso/backups/teszt-leads-20261004-141535/`;
+előtte ellenőrizve: nincs tenant/rendelés/fizetés/számla rajtuk). A Muschel Panzió nem `[TESZT]`-nevű, maradt.
 
 ## Nyitott / következő
 - ✅ Backfill élesen lefutott (lásd fent).
