@@ -799,10 +799,6 @@ export interface PaymentTable {
   initiates_recurrence: Generated<boolean>;
   created_at: Generated<Timestamp>;
   paid_at: Timestamp | null;
-  /** ADR-0322 ② (0087): FIRST opening of /pay/go/:id. Counting only — the GET never pays (ADR-0291). */
-  pay_go_at: Timestamp | null;
-  /** ADR-0322 ② (0087): how many times /pay/go/:id was opened. */
-  pay_go_count: Generated<number>;
 }
 
 /** ADR-0226 (0076): a tenant's former stored cards (mask only) — replaced or

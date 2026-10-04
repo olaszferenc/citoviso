@@ -26,6 +26,8 @@ számolja. Nevesített csomag nincs (alapdíj + modulok; a presetek egymásba á
    `data-cit-module`/szekció-horgokon), `dwell_end {seconds, last_section, last_step}`, `client_error`, és a `/pay/go`
    megnyitás naplózása (`pay_go`). A `prospect.status` fizetéskor `converted`, leiratkozáskor `lost` lesz (a tölcsér
    „Fizetve" oszlopa ettől függetlenül a `payment`-ből számol).
+   Módosítás 2026-10-04 (SUB, koordinátor-döntés A): a /pay/go megnyitása NEM számlálódik — ADR-0291 B; a
+   kapu-átadást a `checkout_redirect` esemény méri. (A 0087-ben felvett `payment.pay_go_*` oszlopokat a 0088 ejti.)
 3. **Mérés-egységesítés (ADR-0108 kiterjesztése a mock-oldalra):** a `mock_view` a nyers `user_agent` helyett kinyert
    mezőket tárol (`device` mobil/tablet/asztali · `os` · `browser`), a `referrer` host-only. Egy szabály, két hely helyett.
    Visszamenőleg: a meglévő sorokból a kinyerés egyszer lefut, utána a nyers oszlopok ürülnek.
