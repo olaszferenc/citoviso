@@ -127,7 +127,7 @@ import { injectConfigurator } from "../generator/configurator.js";
 import { injectPatternBadge, type PatternInputs } from "../generator/patternBadge.js";
 import { normalizeCustomDomain, suggestDomains } from "../domains.js";
 import { checkWebcimAvailability } from "../domains/availability.js";
-import { MODULE_CATALOG, missingRequiredModules, modulesForConversion } from "../modules.js";
+import { MODULE_CATALOG, missingRequiredModules, modulesForConversion, orderPresetId } from "../modules.js";
 import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../moduleSales.js";
 import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
@@ -194,6 +194,16 @@ import {
   type BlockingVerdict,
 } from "../outreach/mockVerdictGate.js";
 import { outreachDraftPage, privacyPage, prospectActivityPage } from "./views.js";
+import {
+  cleanFeedbackText,
+  feedbackDoneHtml,
+  feedbackFormHtml,
+  feedbackLang,
+  feedbackWhyPageBody,
+  isFeedbackReason,
+  isFeedbackSource,
+  recordProspectFeedback,
+} from "./prospectFeedback.js";
 import {
   adatfeldolgozasPage,
   aszfPage,
@@ -828,6 +838,8 @@ async function handleOrderRequest(
   }
   const body = (await readJson(req)) as {
     modules?: unknown;
+    /** ADR-0322 ⑤: the preset card that was on at submit (a claim, re-checked). */
+    preset?: unknown;
     billing_period?: unknown;
     price?: unknown;
     domain_type?: unknown;
@@ -1004,6 +1016,7 @@ async function handleOrderRequest(
     photoRightsDeclared: true,
     recurringConsent: true,
     buyer,
+    preset: orderPresetId(modules, body.preset),
     ...(prospectToken ? { prospectToken } : {}),
     ...(offer ? { offerId: offer.id, listPrice } : {}),
   });
@@ -1077,14 +1090,17 @@ async function handleOrderRequest(
   );
 }
 
-/** Neutral page after unsubscribe (no tracking, no sell). */
-function unsubscribedPage(): string {
+/** Neutral page after unsubscribe (no tracking, no sell). ADR-0322 ④/B: UNDER the
+ *  confirmation, the same one-tap question as everywhere — a plain POST form (works
+ *  without JS), optional, no beacon, no offer. */
+function unsubscribedPage(token: string, lang: string): string {
   return layout(
     "Leiratkozva",
     `<div class="panel" style="max-width:480px;margin:48px auto;text-align:center">
        <h2>Leiratkozott</h2>
        <p class="mut">Nem keressük többé ezzel az ajánlattal, és a megtekintési adatok rögzítését
-       leállítottuk. Ha mégis érdekli a saját weboldala, írjon nekünk bátran.</p></div>`,
+       leállítottuk. Ha mégis érdekli a saját weboldala, írjon nekünk bátran.</p>
+       ${feedbackFormHtml(token, "unsubscribe", lang)}</div>`,
     { chrome: false },
   );
 }
@@ -2643,7 +2659,8 @@ async function handle(
       body.get("List-Unsubscribe") === "One-Click" ||
       !/text\/html/i.test(String(req.headers.accept ?? ""));
     if (oneClick) return send(res, 200, "OK", "text/plain; charset=utf-8");
-    return send(res, 200, unsubscribedPage());
+    const up = await getProspectByToken(unsubMatch[1]);
+    return send(res, 200, unsubscribedPage(unsubMatch[1], await feedbackLang(up?.lang ?? null)));
   }
   // POST /p/:token/view — the VISIT, sent by the page on the first human sign (scroll,
   // touch, pointer, key) or after 5 s of a visible tab (ADR-0291, owner's ruling B,
@@ -2678,6 +2695,50 @@ async function handle(
       }),
       "application/json",
     );
+  }
+  // ADR-0322 ④/B — the micro-survey answer. ONE endpoint for all three places: JSON from
+  // the mock page (→ 204), a plain form from the unsubscribe / reminder-link page (→ a
+  // thank-you page). Token-checked like the event beacon; one answer per view per source
+  // (a repeat is a 204 / the same thank-you, never a second row). An opted-out visitor
+  // MAY answer: this is a reply they choose to give, not measurement.
+  const pFeedbackMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/feedback$/.exec(pPath);
+  if (method === "POST" && pFeedbackMatch) {
+    const p = await getProspectByToken(pFeedbackMatch[1]);
+    const isJson = /application\/json/i.test(String(req.headers["content-type"] ?? ""));
+    let src: unknown, reason: unknown, text: unknown, view: unknown, skip = false;
+    if (isJson) {
+      const b = (await readJson(req)) as { source?: unknown; reason?: unknown; text?: unknown; view?: unknown };
+      ({ source: src, reason, text, view } = b);
+    } else {
+      const f = await readBody(req);
+      src = f.get("source");
+      reason = f.get("reason");
+      text = f.get("text");
+      skip = f.get("skip") === "1";
+    }
+    const lang = await feedbackLang(p?.lang ?? null);
+    if (p && !skip && isFeedbackSource(src) && isFeedbackReason(reason)) {
+      const viewId = typeof view === "string" && /^[0-9a-f-]{36}$/i.test(view) ? view : null;
+      await recordProspectFeedback({
+        prospectId: p.id,
+        source: src,
+        reason,
+        text: cleanFeedbackText(reason, text),
+        viewId,
+      });
+    }
+    if (isJson) return send(res, 204, "");
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    return send(res, 200, layout("Köszönjük", feedbackDoneHtml(lang, skip), { chrome: false }));
+  }
+  // GET /p/:token/why — the reminder mail's "Nem aktuális?" link. SHOWS the question and
+  // records nothing (ADR-0291: a mail scanner's GET must not answer for the person).
+  const pWhyMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/why$/.exec(pPath);
+  if (method === "GET" && pWhyMatch) {
+    const p = await getProspectByToken(pWhyMatch[1]);
+    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    const lang = await feedbackLang(p.lang);
+    return send(res, 200, layout("Nem aktuális?", feedbackWhyPageBody(pWhyMatch[1], lang), { chrome: false }));
   }
   // POST /p/:token/event — engagement/configurator event beacon.
   const pEventMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/event$/.exec(pPath);
@@ -2789,7 +2850,8 @@ async function handle(
         renewalLeadId: pf?.leadId ?? null,
         // No beacon for an opted-out visitor — the absence of `track` is what
         // actually stops the client-side event stream, not just the DB write.
-        ...(tracked ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: `/p/${pMatch[1]}/view` } } : {}),
+        // ADR-0322 ④/B: feedbackUrl rides with the beacon — no survey for an opted-out visitor either.
+        ...(tracked ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: `/p/${pMatch[1]}/view`, feedbackUrl: `/p/${pMatch[1]}/feedback` } } : {}),
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(
           pf?.leadAddress ?? null,

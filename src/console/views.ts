@@ -7894,8 +7894,13 @@ export function privacyPage(sender: {
         adatait (név, cím, elérhetőség, fotók, értékelések) gyűjtöttük össze nyilvános forrásokból
         (Google Térkép, szállás-portálok, saját weboldal) — GDPR 14. cikk szerinti, nem az érintettől
         származó adatgyűjtés. Emellett a megkeresésünkben küldött előnézeti link megnyitásakor
-        <b>${T(lang, "megtekintési adatokat")}</b> rögzítünk: megnyitás ténye és ideje, görgetés, a kipróbált
-        elemek, böngésző-azonosító (user-agent). Sütit nem használunk.</p>
+        <b>${T(lang, "megtekintési adatokat")}</b> rögzítünk: megnyitás ténye, ideje és időtartama, görgetés, mely részeket
+        látta és hol hagyta el az oldalt, a kipróbált elemek, ha az oldal hibát jelez, egy rövid technikai
+        hibaüzenet, az eszköz típusa (mobil, tablet vagy asztali
+        gép), az operációs rendszer és a böngésző neve, valamint annak az oldalnak a domainje, ahonnan
+        érkezett — a teljes böngésző-azonosítót és a teljes hivatkozó címet nem tároljuk. Ha a rövid
+        „Mi tartotta vissza?" kérdésre önként válaszol (leiratkozás után is megteheti), a választott okot (és ha ír, a szöveget) a megkereséshez
+        kötve rögzítjük; nevet nem kérünk. Sütit nem használunk.</p>
 
         <p><b>${T(lang, "3. Cél és jogalap.")}</b> Cél: személyre szabott üzleti ajánlat (honlap-látványterv) készítése
         és bemutatása, valamint az érdeklődés mérése az ajánlat igényekhez igazításához. Jogalap:

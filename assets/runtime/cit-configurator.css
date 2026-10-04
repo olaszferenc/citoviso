@@ -2663,3 +2663,129 @@
   pointer-events: none;
 }
 .cit-cfg-paylogos svg { display: block; width: 100%; height: auto; }
+
+/* ── ADR-0322 ④/B micro-survey card (riport README 19) ────────────────────────
+ * Shown after the escalation offer is dismissed. NON-blocking: no veil, the page
+ * stays usable under it. Desktop: a small card bottom-left (the order pill lives
+ * bottom-right). Mobile: full-width above the bottom edge. Colours: the mock's
+ * own --cit-* theme tokens, so it sits in the property's skin. */
+.cit-cfg-fb {
+  position: fixed;
+  z-index: 2147483100;
+  left: 18px;
+  bottom: 18px;
+  width: min(92vw, 380px);
+  box-sizing: border-box;
+  background: var(--cit-surface);
+  color: var(--cit-ink);
+  border: 1px solid var(--cit-line);
+  border-radius: var(--cit-radius);
+  padding: 14px 16px;
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--cit-ink) 22%, transparent);
+  font: 14px/1.45 var(--cit-font-body);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.cit-cfg-fb.cit-cfg-on {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.cit-cfg-fb__q {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.cit-cfg-fb__opts {
+  display: grid;
+  gap: 6px;
+}
+.cit-cfg-fb__opts button {
+  appearance: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--cit-line);
+  border-radius: 999px;
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  font: 500 13px var(--cit-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+.cit-cfg-fb__opts button:hover {
+  border-color: var(--cit-accent);
+}
+.cit-cfg-fb__opts button[aria-pressed="true"] {
+  background: var(--cit-accent);
+  border-color: var(--cit-accent);
+  color: var(--cit-on-accent);
+}
+.cit-cfg-fb__txt {
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 56px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--cit-line);
+  border-radius: 10px;
+  background: var(--cit-bg);
+  color: var(--cit-ink);
+  font: 13px var(--cit-font-body);
+}
+.cit-cfg-fb--other .cit-cfg-fb__txt {
+  display: block;
+}
+.cit-cfg-fb__foot {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.cit-cfg-fb__send,
+.cit-cfg-fb__skip {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font: 600 13px var(--cit-font-body);
+  cursor: pointer;
+}
+.cit-cfg-fb__send {
+  border: none;
+  background: var(--cit-accent);
+  color: var(--cit-on-accent);
+}
+.cit-cfg-fb__send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cit-cfg-fb__skip {
+  border: none;
+  background: transparent;
+  color: var(--cit-muted);
+}
+.cit-cfg-fb__done {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cit-cfg-fb--done .cit-cfg-fb__q,
+.cit-cfg-fb--done .cit-cfg-fb__opts,
+.cit-cfg-fb--done .cit-cfg-fb__txt,
+.cit-cfg-fb--done .cit-cfg-fb__foot {
+  display: none;
+}
+@media (max-width: 560px) {
+  .cit-cfg-fb {
+    left: 50%;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+    transform: translate(-50%, 10px);
+  }
+  .cit-cfg-fb.cit-cfg-on {
+    transform: translate(-50%, 0);
+  }
+}

@@ -306,6 +306,24 @@ export const PRESETS: readonly Preset[] = [
 ];
 
 /**
+ * ADR-0322 ⑤: the preset an order is filed under. The buyer's claimed preset counts
+ * only when its module list is EXACTLY the ordered one; otherwise a preset whose list
+ * matches exactly; otherwise "egyedi". So the stored value never contradicts the
+ * modules on the same row, whatever the client sent.
+ */
+export function orderPresetId(
+  modules: readonly string[],
+  claimed: unknown,
+): "alap" | "ajanlott" | "teljes" | "egyedi" {
+  const want = new Set(modules);
+  const same = (p: Preset): boolean => p.modules.length === want.size && p.modules.every((m) => want.has(m));
+  const byClaim = PRESETS.find((p) => p.id === claimed);
+  if (byClaim && same(byClaim)) return byClaim.id as "alap" | "ajanlott" | "teljes";
+  const hit = PRESETS.find(same);
+  return hit ? (hit.id as "alap" | "ajanlott" | "teljes") : "egyedi";
+}
+
+/**
  * The tiers ordered SMALLEST → LARGEST. The console renders them this way (each
  * one "everything from the previous, plus…"), and the nesting guard walks them
  * in this order. One source, so the screen and the guard cannot disagree.

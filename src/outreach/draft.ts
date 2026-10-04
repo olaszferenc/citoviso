@@ -94,6 +94,12 @@ export interface OutreachParts {
    * rejects, exactly like the sender block above.
    */
   readonly identity: string;
+  /**
+   * ADR-0322 ④/B: the reminder mail's one-line invitation to say WHY it is not for them
+   * ("Nem aktuális? …") — followed by the /p/<token>/why link. Optional: only the
+   * reminder (escalation follow-up) carries it; the cold letter does not ask.
+   */
+  readonly why?: string;
 }
 
 /**
@@ -142,6 +148,8 @@ export interface OutreachDraft {
   readonly unsubscribeLink: string;
   /** The absolute privacy-notice link (GDPR Art. 13/14 page). */
   readonly privacyLink: string;
+  /** ADR-0322 ④/B: the absolute /p/<token>/why link — present only with `parts.why`. */
+  readonly whyLink?: string;
 }
 
 export interface DraftInput {
@@ -382,7 +390,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
  */
 export function composeBody(
   t: OutreachParts,
-  l: { cta: string; unsub: string; privacy: string },
+  l: { cta: string; unsub: string; privacy: string; why?: string },
   lang: string,
 ): string {
   return [
@@ -408,6 +416,7 @@ export function composeBody(
     "",
     t.fine,
     "",
+    ...(t.why && l.why ? [`${t.why}\n${l.why}`, ""] : []),
     `${t.unsubTxt}\n${l.unsub}`,
     "",
     `${t.legal} ${l.privacy}`,

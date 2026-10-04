@@ -106,6 +106,21 @@
   function sameOffer(a, b) {
     return !!a && !!b && a.kind === b.kind && a.percent === b.percent && a.expiresAt === b.expiresAt;
   }
+  // ── ADR-0322 ②: section bookkeeping shared by the observer and the checkout ────
+  var seenSec = {};
+  var lastSection = null;
+  var SEC_TAIL = 0; // the panel/checkout steps are indexed after the page's sections
+  function sectionSeen(id, idx) {
+    if (!TRACK || !id) return;
+    lastSection = id;
+    if (seenSec[id]) return;
+    seenSec[id] = true;
+    track("section_seen", { id: id, idx: idx });
+  }
+  // Set by the panel wiring below; null until then (and on pages without a panel).
+  var checkoutStep = function () {
+    return null;
+  };
   if (TRACK) {
     ["scroll", "wheel", "touchstart", "pointerdown", "keydown"].forEach(function (ev) {
       window.addEventListener(ev, registerView, { passive: true, once: true });
@@ -146,9 +161,63 @@
       track("dwell", { seconds: dwell });
       if (dwell >= 600) clearInterval(beat);
     }, 15000);
-    // Final dwell on leave (sendBeacon survives unload).
+    // Final dwell on leave (sendBeacon survives unload). ADR-0322 ②: it also carries
+    // WHERE the visit ended — the last section seen and, with the panel open, the
+    // checkout step — which is what the report's exit map reads.
     window.addEventListener("pagehide", function () {
-      track("dwell_end", { seconds: dwell });
+      track("dwell_end", { seconds: dwell, last_section: lastSection, last_step: checkoutStep() });
+    });
+    // ADR-0322 ②: section visibility — each section ONCE per visit, at 50 % in view.
+    // A section = the hero, every top-level `data-cit-module` hook and every template
+    // section with a `t-…` id; the order index is the DOM order. The panel and the
+    // two checkout steps report themselves (sectionSeen below) when they open.
+    if (typeof IntersectionObserver === "function") {
+      try {
+        var secEls = [];
+        document.querySelectorAll("#top, [data-cit-module], section[id^='t-']").forEach(function (n) {
+          // Nested hooks (a CTA bar inside a section) are part of their section.
+          var up = n.parentElement && n.parentElement.closest("[data-cit-module], section[id^='t-'], #top");
+          if (!up) secEls.push(n);
+        });
+        var secIo = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (en) {
+              if (!en.isIntersecting) return;
+              var n = en.target;
+              sectionSeen(n.getAttribute("data-cit-sec"), Number(n.getAttribute("data-cit-sec-idx")));
+              secIo.unobserve(n);
+            });
+          },
+          { threshold: 0.5 },
+        );
+        secEls.forEach(function (n, i) {
+          var id =
+            n.id === "top"
+              ? "hero"
+              : n.getAttribute("data-cit-module") || String(n.id || "").replace(/^t-/, "") || "section";
+          n.setAttribute("data-cit-sec", id);
+          n.setAttribute("data-cit-sec-idx", String(i));
+          secIo.observe(n);
+        });
+        SEC_TAIL = secEls.length;
+      } catch (e) {
+        /* measurement must never break the page */
+      }
+    }
+    // ADR-0322 ②: one client_error per visit — the message only (≤120 chars), never
+    // the page content, the URL or anything the visitor typed.
+    var errSent = false;
+    function clientError(msg) {
+      if (errSent) return;
+      errSent = true;
+      track("client_error", { msg: String(msg || "error").replace(/\s+/g, " ").slice(0, 120) });
+    }
+    window.addEventListener("error", function (e) {
+      clientError(e && e.message);
+    });
+    window.addEventListener("unhandledrejection", function (e) {
+      var r = e && e.reason;
+      clientError(r && r.message ? r.message : "unhandledrejection");
     });
   }
 
@@ -2156,6 +2225,17 @@
 
   // ── step 3 state + wiring (0029) ────────────────────────────────────────────
   var step3El = panel.querySelector(".cit-cfg-step3");
+  // ADR-0322 ②: the checkout step the visitor is on, for dwell_end — null while the
+  // panel is closed. package = step 1, choose = step 2, billing = step 3, payment =
+  // handed off to the gateway.
+  var redirectingToPay = false;
+  checkoutStep = function () {
+    if (redirectingToPay) return "payment";
+    if (!panel.classList.contains("cit-cfg-open")) return null;
+    if (step3El && !step3El.hasAttribute("hidden")) return "billing";
+    if (panel.classList.contains("cit-cfg-panel--s2")) return "choose";
+    return "package";
+  };
   var buyerType = "individual";
   var waiverBox = panel.querySelector(".cit-cfg-waiver");
   var termsBox = panel.querySelector(".cit-cfg-terms");
@@ -3380,6 +3460,7 @@
     scrim.classList.add("cit-cfg-open");
     launch.hidden = true;
     track("panel_open", {});
+    sectionSeen("panel", SEC_TAIL);
     // The body only has measurable geometry once the panel is on stage.
     setTimeout(syncMoreCue, 340);
   }
@@ -3498,6 +3579,7 @@
     // step 2 left it.
     panel.scrollTop = 0;
     track("billing_step_open", {});
+    sectionSeen("billing", SEC_TAIL + 1);
     var firstEmpty = ["buyer_name", "buyer_zip", "buyer_city", "buyer_address", "buyer_email"]
       .map(bInput)
       .filter(function (i) {
@@ -3565,6 +3647,12 @@
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         modules: chosen,
+        // ADR-0322 ⑤: the preset card that is on (null = none matches → "egyedi"
+        // server-side, which re-derives it from the module list anyway).
+        preset: (function () {
+          var on = panel.querySelector(".cit-cfg-preset--on");
+          return on ? on.getAttribute("data-preset") : null;
+        })(),
         billing_period: period,
         // Display-only figure for the tamper check; with an offer the payable
         // (discounted) amount is what the buyer saw (ADR-0088). The domain fee
@@ -3602,6 +3690,8 @@
         // order, so the buyer goes straight to payment (pay → webhook → go-live).
         if (data && data.payUrl) {
           track("checkout_redirect", { period: period });
+          redirectingToPay = true;
+          sectionSeen("payment", SEC_TAIL + 2);
           // Barion Pixel (Full): a fizetési mód kiválasztva, átadás a kapunak.
           // ⚠️ A `paymentMethod` GÉPI érték, nem felirat. Innen már a Barion
           // oldala jön: ez az UTOLSÓ esemény, amit a mi lapunk küldeni tud.
@@ -3841,6 +3931,7 @@
     card.querySelector(".cit-cfg-esclater").addEventListener("click", function () {
       track("escalation_dismiss", {});
       hide();
+      mountFeedbackCard("escalation_dismiss");
     });
     card.querySelector(".cit-cfg-escgo").addEventListener("click", function () {
       track("escalation_cta", {});
@@ -3858,6 +3949,93 @@
       card.classList.add("cit-cfg-on");
       track("escalation_shown", {});
     }, 1400);
+  }
+
+  /**
+   * ADR-0322 ④/B — the one-tap micro-survey (riport README 19), shown AFTER the
+   * escalation offer is dismissed. A small, NON-blocking card (no veil): the page stays
+   * usable under it. "Elküldöm" is disabled until an option is chosen; the text field
+   * opens only for "Más…". The answer goes to /p/:token/feedback with the viewId; the
+   * server keeps one answer per view per source.
+   */
+  var fbMounted = false;
+  function mountFeedbackCard(source) {
+    if (fbMounted || !TRACK || !TRACK.feedbackUrl || !VIEW_ID) return;
+    fbMounted = true;
+    var opts = [
+      ["expensive", tr("Drágának találom")],
+      ["not_now", tr("Most nem időszerű")],
+      ["distrust", tr("Nem bízom benne, vagy nem értem")],
+      ["have_site", tr("Van már honlapom, nem kell")],
+      ["other", tr("Más…")],
+    ];
+    var card = el(
+      '<div class="cit-cfg-fb" role="region" aria-label="' + esc(tr("Mi tartotta vissza?")) + '">' +
+        '<p class="cit-cfg-fb__q">' + esc(tr("Mi tartotta vissza? Egy koppintás, segít jobbat kínálnunk.")) + "</p>" +
+        '<div class="cit-cfg-fb__opts">' +
+        opts
+          .map(function (o) {
+            return '<button type="button" aria-pressed="false" data-r="' + o[0] + '">' + esc(o[1]) + "</button>";
+          })
+          .join("") +
+        "</div>" +
+        '<textarea class="cit-cfg-fb__txt" maxlength="300" placeholder="' +
+        esc(tr("Írja le röviden (nem kötelező)")) + '" aria-label="' + esc(tr("Más…")) + '"></textarea>' +
+        '<div class="cit-cfg-fb__foot">' +
+        '<button type="button" class="cit-cfg-fb__send" disabled>' + esc(tr("Elküldöm")) + "</button>" +
+        '<button type="button" class="cit-cfg-fb__skip">' + esc(tr("Inkább nem")) + "</button>" +
+        "</div>" +
+        '<p class="cit-cfg-fb__done" hidden></p>' +
+      "</div>",
+    );
+    var pick = null;
+    var txt = card.querySelector(".cit-cfg-fb__txt");
+    var send = card.querySelector(".cit-cfg-fb__send");
+    card.querySelector(".cit-cfg-fb__opts").addEventListener("click", function (e) {
+      var b = e.target && e.target.closest ? e.target.closest("button") : null;
+      if (!b) return;
+      pick = b.getAttribute("data-r");
+      card.querySelectorAll(".cit-cfg-fb__opts button").forEach(function (x) {
+        x.setAttribute("aria-pressed", x === b ? "true" : "false");
+      });
+      card.classList.toggle("cit-cfg-fb--other", pick === "other");
+      send.disabled = false;
+    });
+    function finish(msg) {
+      card.classList.add("cit-cfg-fb--done");
+      var d = card.querySelector(".cit-cfg-fb__done");
+      d.textContent = msg;
+      d.removeAttribute("hidden");
+      setTimeout(function () {
+        card.classList.remove("cit-cfg-on");
+      }, 4000);
+    }
+    send.addEventListener("click", function () {
+      if (!pick) return;
+      try {
+        fetch(TRACK.feedbackUrl, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            source: source,
+            reason: pick,
+            text: pick === "other" ? txt.value : null,
+            view: VIEW_ID,
+          }),
+          keepalive: true,
+        }).catch(function () {});
+      } catch (e) {
+        /* the answer is a courtesy — it must never break the page */
+      }
+      finish(tr("Köszönjük — a válasz csak ehhez a megkereséshez kapcsolódik, nevet nem kérünk."));
+    });
+    card.querySelector(".cit-cfg-fb__skip").addEventListener("click", function () {
+      finish(tr("Rendben, nem kérdezzük többet."));
+    });
+    document.body.appendChild(card);
+    setTimeout(function () {
+      card.classList.add("cit-cfg-on");
+    }, 450);
   }
 
   /**

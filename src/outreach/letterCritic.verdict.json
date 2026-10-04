@@ -1,21 +1,17 @@
 {
-  "fingerprint": "49a06c76d288070d",
+  "fingerprint": "28dde2a9657998ef",
   "verdict": "PASS",
   "model": "claude-opus-4-8",
-  "at": "2026-10-02T12:32:26.191Z",
+  "at": "2026-10-04T10:37:56.270Z",
   "branches": 9,
-  "plan": "Végignéztem minden ágat: az ág-címke valóságát összevetettem a levél állításaival (ellentmondás, túlzás), figyeltem a tükörfordításokat, csonka mondatokat, gépies/körlevél-fordulatokat, szakzsargont, reklámpózt, megszólítás-váltást, központozást. Az SMS-ek aláírását és a reklámfordulatokat külön néztem. Az emlékeztető-levél mondatait a sablonszöveg szintjén vizsgáltam. A jogi láblécet, linkeket, árszámokat és a 'Tisztelt' megszólítást nem kifogásoltam.",
-  "objections": [],
-  "ownerRulings": [
+  "plan": "Minden ágat átnéztem: a levél-ágak törzse szinte azonos, ezért a közös fordulatokat ellenőriztem (élesítés-szakzsargon, reklámfordulat, ellentmondás az ág-címkével). Külön figyeltem, hogy az ág-valóság egyezik-e a mondattal (pl. 'nincs honlapja' vs. 'nem tudtuk megnyitni'). Az SMS-eket és az emlékeztetőt is néztem csonka/gépies/szakzsargon szempontból. Az árak számai, a jogi lábléc, a megszólítás és a 'kötelezettségmentesen' nem kifogásolható. Az emlékeztető {placeholder}-es sablonszövegét tartalmilag néztem.",
+  "objections": [
     {
-      "at": "2026-10-02",
-      "rejected": "SMS-aláírás személynévvel („<személynév>, Citoviso”) — 2 javítandó kifogás törölve",
-      "ruling": "„nem lesz az sms-ben meg sehol sem a nevem hardcode. Citoviso.”"
-    },
-    {
-      "at": "2026-10-02",
-      "kept": "„kötelezettségmentesen”",
-      "ruling": "maradhat (a tulaj saját SMS-szövege)"
+      "branch": "LEVÉL — van modern saját honlapja; Google 4,3 ★ / 352",
+      "quote": "A mostani honlapját is megnéztük.",
+      "kind": "ellentmondas",
+      "fix": "A szöveg érdemben rendben van, de az ág szerint modern, jó honlapja van – a 'másik honlap-tervet, hogy össze tudja vetni a mostanival' felvetés korrekt. Ha az üzenet mégis azt sugallná, hogy a mostanival baj van, pontosítsd: 'A mostani honlapja mellé készítettünk egy alternatív tervet, összevetésre.'",
+      "severity": "javitando"
     }
   ]
 }

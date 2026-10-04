@@ -1588,6 +1588,7 @@ async function activate(orderIntentId: string): Promise<boolean> {
       "order_intent.photo_rights_declared_at as photoRightsAt",
       "order_intent.domain_type as domainType",
       "order_intent.domain_name as domainName",
+      "prospect.id as prospectId",
       "prospect.lead_id as leadId",
       "prospect.mock_artifact_id as artifactId",
       "prospect.contact_email as contactEmail",
@@ -1599,6 +1600,18 @@ async function activate(orderIntentId: string): Promise<boolean> {
     ])
     .where("order_intent.id", "=", orderIntentId)
     .executeTakeFirst();
+  // ADR-0322 ②: the payment is a FACT before any of the refusals below — the funnel
+  // status follows it (the report's "Konvertált" column was always 0, nobody wrote it).
+  // Forward only: 'converted' is never overwritten; an opted-out ('lost') prospect who
+  // pays anyway IS converted (ADR-0112: opting out never forbade buying).
+  if (oi) {
+    await db
+      .updateTable("prospect")
+      .set({ status: "converted" })
+      .where("id", "=", oi.prospectId)
+      .where("status", "!=", "converted")
+      .execute();
+  }
   // The ONLY refusal here that used to be silent. Every other `return false`
   // below logs; this one just vanished — the buyer paid, saw "we are finalising
   // your site", and nobody knew. A paid activation that stops must always say so.

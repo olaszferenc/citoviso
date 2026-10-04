@@ -142,6 +142,11 @@ export async function sendEscalationFollowups(
       percent: String(f.percent),
       ...senderParts(),
       fine: T(lang, "A kedvezmény az első havi vagy éves díjra érvényes, a hosszabbítás már listaáras."),
+      // ADR-0322 ④/B: one optional line — the link opens a page with five buttons, and
+      // only the POST there answers (ADR-0291), so a mail scanner says nothing for them.
+      // ⚖️ It SAYS it is not an opt-out (jog-őr FLAG 2026-10-04): it sits right above the
+      // unsubscribe line, and someone who wants out must not take the wrong door.
+      why: T(lang, "Nem aktuális? Jelezze egy koppintással, miért (ez nem leiratkozás):"),
       unsubTxt: T(lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
       legal: T(
         lang,
@@ -150,13 +155,15 @@ export async function sendEscalationFollowups(
       // §C.2 advertiser identification — the follow-up is an advertising message too.
       identity: advertiserIdentity(lang),
     };
+    // The why-link is the unsubscribe link's sibling (same slug + token path).
+    const whyLink = base.draft.unsubscribeLink.replace(/\/unsubscribe$/, "/why");
     const body = composeBody(
       parts,
-      { cta: base.draft.link, unsub: base.draft.unsubscribeLink, privacy: base.draft.privacyLink },
+      { cta: base.draft.link, unsub: base.draft.unsubscribeLink, privacy: base.draft.privacyLink, why: whyLink },
       lang,
     );
 
-    const draft = { ...base.draft, subject, body, parts };
+    const draft = { ...base.draft, subject, body, parts, whyLink };
     // §C DETERMINISTIC GATE on the REPLACED text (guard-scope lesson: a new send
     // path must run the same judge as the old one, incl. the ADR-0036 country
     // gate) — a FLAGged follow-up is skipped and reported, never sent.

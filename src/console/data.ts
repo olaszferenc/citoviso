@@ -919,6 +919,8 @@ export async function recordOrderIntent(input: {
   buyer?: BuyerDeclaration;
   /** Tracked-outreach flow (/p/<token>): bind the order to THIS prospect. */
   prospectToken?: string;
+  /** ADR-0322 ⑤: the preset the order is filed under (orderPresetId). */
+  preset?: "alap" | "ajanlott" | "teljes" | "egyedi";
   /** ADR-0088: the offer this order's price was discounted by, and the
    *  undiscounted total it was measured against. Absent = list-price order. */
   offerId?: string;
@@ -980,6 +982,7 @@ export async function recordOrderIntent(input: {
       commitment_months: input.commitmentMonths,
       committed_min_monthly: input.committedMinMonthly ?? null,
       domain_fee: input.domainFee ?? null,
+      preset: input.preset ?? null,
       ...(input.offerId
         ? { offer_id: input.offerId, list_price: input.listPrice ?? null }
         : {}),
@@ -1698,6 +1701,13 @@ export async function unsubscribeProspect(token: string): Promise<boolean> {
   await db
     .insertInto("prospect_optout_log")
     .values({ prospect_id: r.id, action: "unsubscribe", actor: "lead", reason: null })
+    .execute();
+  // ADR-0322 ②: the funnel status follows the opt-out — 'lost', unless they already bought.
+  await db
+    .updateTable("prospect")
+    .set({ status: "lost" })
+    .where("id", "=", r.id)
+    .where("status", "!=", "converted")
     .execute();
   return true;
 }

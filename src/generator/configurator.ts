@@ -189,6 +189,8 @@ export interface ConfiguratorManifest {
     readonly url: string;
     /** ADR-0291: the page records its own visit here (first human sign or 5 s visible). */
     readonly viewUrl: string;
+    /** ADR-0322 ④/B: the micro-survey answer endpoint (/p/<token>/feedback). */
+    readonly feedbackUrl?: string;
   };
   /** Domain step (ADR-0020): platform subdomain default + custom-domain upsell. */
   readonly domain: {
@@ -267,6 +269,8 @@ export interface ConfiguratorOpts {
     readonly url: string;
     /** ADR-0291: the page records its own visit here (first human sign or 5 s visible). */
     readonly viewUrl: string;
+    /** ADR-0322 ④/B: the micro-survey answer endpoint (/p/<token>/feedback). */
+    readonly feedbackUrl?: string;
   };
   /** ADR-0036: buyer language for the configurator UI; absent/hu → empty i18n map. */
   readonly lang?: string;

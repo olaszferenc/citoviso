@@ -68,6 +68,8 @@ interface MailLinks {
   readonly cta: string;
   readonly unsub: string;
   readonly privacy: string;
+  /** ADR-0322 ④/B: the reminder's "why" link (only with `parts.why`). */
+  readonly why?: string;
 }
 
 /**
@@ -146,6 +148,9 @@ function buildMail(
     `<tr><td style="padding:18px ${PAD}px 22px">` +
     `<div style="padding-top:14px;border-top:1px solid ${LINE};font-family:${FONT};font-size:12px;line-height:1.6;color:${FOOT}">` +
     `<p style="margin:0 0 8px">${esc(t.fine)}</p>` +
+    (t.why && l.why
+      ? `<p style="margin:0 0 8px">${esc(t.why)}<br><a href="${esc(l.why)}" style="color:${FOOT}">${esc(l.why)}</a></p>`
+      : "") +
     `<p style="margin:0 0 8px">${esc(t.unsubTxt)}<br><a href="${esc(l.unsub)}" style="color:${FOOT}">${esc(l.unsub)}</a></p>` +
     `<p style="margin:0 0 8px">${esc(t.legal)} <a href="${esc(l.privacy)}" style="color:${FOOT}">${esc(l.privacy)}</a></p>` +
     // §C.2 advertiser identification by REGISTRY DATA — the brand word in the
@@ -226,7 +231,12 @@ export function buildOutreachEmail(
   const inner = buildMail(
     hasShot ? `cid:${HERO_CID}` : null,
     draft.parts,
-    { cta: draft.link, unsub: draft.unsubscribeLink, privacy: draft.privacyLink },
+    {
+      cta: draft.link,
+      unsub: draft.unsubscribeLink,
+      privacy: draft.privacyLink,
+      ...(draft.whyLink ? { why: draft.whyLink } : {}),
+    },
     opts.lang,
     brand.html,
   );
