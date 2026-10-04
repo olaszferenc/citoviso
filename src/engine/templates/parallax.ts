@@ -2,7 +2,8 @@
 // Full-height fixed-background photo panels (scroll fallback on mobile/touch), a side dot-nav,
 // loud uppercase display type, an accent-ruled stat band (REAL stats only), alternating
 // photo+highlight feature rows, an amenity grid, a dark review band, the booking slot embedded
-// in a sticky dark dock, and a rich dark footer. All styling dresses from the 11 --cit-* tokens
+// in a dark dock under the hero, a scrolled menu bar (desktop), and a rich dark footer.
+// All styling dresses from the 11 --cit-* tokens
 // (+ color-mix derivations) — see templateKit.ts for contracts. Neutral blacks/whites are used
 // only for the photo scrims (skin-agnostic legibility, same convention as fullbleed).
 
@@ -96,14 +97,37 @@ const PARALLAX_CSS = `
   .t-herosub{max-width:540px;font-size:18px;margin-bottom:34px;opacity:.92}
   .t-heroctas{display:inline-flex;gap:14px;flex-wrap:wrap}
 
-  /* STICKY BOOKING DOCK — the canonical booking slot lives inside this dark bar */
-  .t-dock{position:sticky;top:0;z-index:60;background:color-mix(in srgb, var(--cit-ink) 92%, black);box-shadow:0 8px 24px rgba(10,12,14,.25)}
+  /* BOOKING DOCK — the canonical booking slot lives inside this dark band (in flow under the hero;
+     the scrolled menu bar below carries the booking button once the hero is gone) */
+  .t-dock{position:relative;z-index:60;background:color-mix(in srgb, var(--cit-ink) 92%, black);box-shadow:0 8px 24px rgba(10,12,14,.25)}
   .t-dock .cit-book{background:none;border:0;box-shadow:none}
+  /* the hydrated enquiry form (no booking module) sits on this DARK band: the shared form is
+     inked for a light card, so its title read dark-on-dark (measured rgb(13,27,36) on the dock,
+     2026-10-04) — re-ink it for the dark ground, the brutalism console's way */
+  .t-dock .cit-book{color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
+  .t-dock .cit-book__title{color:inherit;font-family:var(--cit-font-display);text-transform:uppercase;letter-spacing:2px}
+  .t-dock .cit-book__label{color:color-mix(in srgb, var(--cit-bg) 72%, transparent)}
+  .t-dock .cit-book__note,.t-dock .cit-book__note a{color:color-mix(in srgb, var(--cit-bg) 65%, transparent)}
   .t-dock .cit-enquiry-bar-inner{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.05rem 28px}
   .t-dock .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
-  /* landscape phone too: the 79px dock pinned on a 390px screen is 20% of it (⑤tapadó-sáv, 2026-09-27) */
-  @media(max-width:700px),(max-height:500px){.t-dock{position:static}}
 
+  /* SCROLLED MENU BAR (owner pick „A”, 2026-10-04): the masthead scrolls away with the hero, so
+     on a desktop this slim bar slides in after it — name · the masthead's section links · booking.
+     The dock no longer sticks: in the enquiry state it is a 227px form, too tall to pin. A phone
+     keeps the shared menu button + bottom bar (ADR-0253), so the bar is never shown there. */
+  .t-bar{position:fixed;top:0;left:0;right:0;z-index:65;background:color-mix(in srgb, var(--cit-ink) 92%, black);
+    box-shadow:0 8px 24px rgba(10,12,14,.25);transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .3s,opacity .3s}
+  .t-bar.t-on{transform:none;opacity:1;pointer-events:auto}
+  .t-barin{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:28px;padding:12px 28px}
+  .t-barname{min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--cit-font-display);
+    font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
+  .t-barlinks{display:flex;gap:24px;margin-left:auto}
+  .t-barlinks a{color:color-mix(in srgb, var(--cit-bg) 72%, transparent);font-size:12px;font-weight:600;text-transform:uppercase;
+    letter-spacing:2px;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center;transition:color .2s}
+  .t-barlinks a:hover{color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  .t-barcta{flex:none;display:inline-flex;align-items:center;padding:10px 22px}
+  @media(max-width:960px){.t-barlinks{gap:16px}.t-barlinks a{letter-spacing:1px}}
+  @media(max-width:700px),(max-height:500px){.t-bar{display:none}}
   /* QUOTE / IMAGE BANDS between sections */
   .t-quote{font-family:var(--cit-font-display);font-weight:800;font-size:clamp(22px,3.6vw,40px);text-transform:uppercase;max-width:22ch;text-align:center;margin:0 auto;line-height:1.15}
 
@@ -206,6 +230,13 @@ const PARALLAX_JS = `
     })},{threshold:.4});
     secs.forEach(function(s){io.observe(s)});
   })();
+  // The scrolled menu bar: on once the hero (and its masthead menu) has left the screen.
+  // Without JS the bar never shows — the masthead and the side dots still navigate.
+  (function(){
+    var bar=document.querySelector('.t-bar'),hero=document.getElementById('top');
+    if(!bar||!hero||!('IntersectionObserver' in window))return;
+    new IntersectionObserver(function(es){bar.classList.toggle('t-on',!es[es.length-1].isIntersecting)},{rootMargin:'-80px 0px 0px 0px'}).observe(hero);
+  })();
 `;
 
 const CONTACT_ICONS = {
@@ -265,10 +296,19 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     </div>
   </header>`;
 
-  // -- sticky booking dock (the canonical hydrated slot, dressed dark) --------
+  // -- booking dock (the canonical hydrated slot, dressed dark) + scrolled menu bar --
+  const barLinks = mastLinks
+    .filter((l) => !l.hot)
+    .map((l) => `<a href="${esc(l.href)}">${esc(l.label)}</a>`)
+    .join("");
   const dock = `<div class="t-dock" id="t-book">
     ${bookingSlot(data, phase)}
   </div>`;
+  const bar = `<nav class="t-bar" aria-label="${T(data, "Menü")}"><div class="t-barin">
+    <a class="t-barname" href="#top">${esc(data.name)}</a>
+    <div class="t-barlinks">${barLinks}</div>
+    ${hasContact ? `<a class="cit-btn t-barcta" href="#cit-enquiry">${T(data, "Foglalás")}</a>` : ""}
+  </div></nav>`;
 
   // -- intro + real-stat band -------------------------------------------------
   const statBand = data.stats?.length
@@ -496,6 +536,7 @@ ${MOBCTA_CSS}
 </head>
 <body class="cit-tpl-parallax">
     ${dots}
+    ${bar}
     ${hero}
     ${dock}
     ${intro}

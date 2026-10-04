@@ -13,6 +13,12 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 > Amíg ez nem futott le, éles vevőt nem érdemes ráengedni. Utána az előfizetést le kell mondani
 > (a megújítás listaáron menne).
 
+## Párhuzamos szál (2026-10-04 — SUB `cit935ba417`: fejléc-link csak meglévő szekcióra · egy vágási szabály mock = élő · Parallax görgetett menüsáv, ADR-XXXX) — LANDOLVA, élesre semmi
+A mock „Alap” csomagja 21/21 sablonon hagyott fejléc-linket elrejtett szekcióra → a konfigurátor a linket is rejti. A vágás EGY szabály
+(`render.ts stampCutScope` → `data-cit-cut="self"`, a konfigurátor ugyanezt olvassa): élesen eltűnt az üres organic/art-deco szobák-fejléc,
+a mockban megmarad a bevezetős „A ház”. Parallax (tulaj „A”): asztalon görgetett menüsáv, a dokk nem ragad, az érdeklődés-űrlap olvasható.
+Őr: `scripts/nav-target-check.mts` + `unbought-module-leak-check` ⑤. Részletek: `_planning/memory/2026-10-04_fejlec_link_csomag_parallax_menusav.md`.
+
 ## Párhuzamos szál (2026-10-04 — `citb829e5a3`: 6 mock-sablon passziválva) — LANDOLVA (`cebd57a0`), élesre csak a nagy deployjal
 
 Tulaj: „Dopamin, Scrapbook, Agyag, akvarell, szerkesztői, Brutalizmus — ezek nem jók, passziváljuk.” `ArtTemplate.retired`

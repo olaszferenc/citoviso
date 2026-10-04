@@ -479,19 +479,70 @@ function elementEnd(html: string, open: number, tag: string): number {
 }
 
 /**
- * Does the gallery's enclosing section still show the guest anything?
+ * Does a section show the guest anything of its OWN once its module surfaces are gone?
  *
- * Asked ONLY about the section the gallery lived in. Headings and eyebrow/section-
- * number decorations deliberately do NOT count: "No. 1 — Képes krónika" over
- * nothing is exactly the empty band the design doctrine forbids, and a text-based
- * test kept it (measured 2026-08-31). Real content announces itself with a
- * paragraph, a list, a table or media.
+ * Headings, eyebrows, icons and a one-line lede deliberately do NOT count: "No. 1 —
+ * Képes krónika" over nothing is the empty band the design doctrine forbids (measured
+ * 2026-08-31), and so is "A szállás — Ahol megszállhat — <tagline>" over a cut room
+ * list. Until 2026-10-04 any <p> or <svg> counted: organic and art-deco kept that very
+ * heading (with the "Szobák" link pointing at it) on a live page without the rooms
+ * module. Real content is media, a form, a list item, a table, the page's <h1>, or
+ * a paragraph with something to say (≥ 60 characters — a tagline is ~30, an intro
+ * is longer).
  */
-function hasSubstance(html: string): boolean {
+const OWN_CONTENT_RE = /<(img|figure|iframe|form|input|video|table|li|dl|h1)\b/i;
+const MODULE_TAG_RE = /<([a-zA-Z][a-zA-Z0-9]*)\b[^<>]*\sdata-cit-module="[^"]+"[^<>]*>/g;
+function hasOwnContent(html: string): boolean {
   const body = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ");
-  return /<(img|figure|svg|iframe|form|input|video|table|p|li|ul|ol|dl|blockquote)\b/i.test(body);
+  if (OWN_CONTENT_RE.test(body)) return true;
+  for (const m of body.matchAll(/<(p|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/gi)) {
+    if (m[2]!.replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/gi, " ").replace(/\s+/g, " ").trim().length >= 60) return true;
+  }
+  return false;
+}
+
+/** The section's markup with every module surface inside it taken out. */
+function withoutModules(section: string): string {
+  let out = section;
+  for (let guard = 0; guard < 40; guard++) {
+    MODULE_TAG_RE.lastIndex = 1; // never the section's own opening tag
+    const m = MODULE_TAG_RE.exec(out);
+    if (!m) break;
+    const end = elementEnd(out, m.index, m[1]!);
+    if (end < 0) break;
+    out = out.slice(0, m.index) + out.slice(end);
+  }
+  return out;
+}
+
+/**
+ * ONE cut rule for the live page AND the mock (owner 2026-10-04, „egységesítsd”): a
+ * module surface nested in a <section> that has content of its OWN is stamped
+ * `data-cit-cut="self"` — cutting the module then takes only that element, and the
+ * section (and every link into it) stays. Unstamped surfaces take their section
+ * along unless another module still lives in it. stripModuleAnchor (live) and the
+ * configurator's toggle (cit-configurator.js cutSurface) both READ this stamp, so
+ * neither carries its own copy of the content test. Measured before: the mock took
+ * the whole about section on gate-opening / walk-through ("A ház" vanished with the
+ * usp box), the live page kept it.
+ */
+function stampCutScope(html: string): string {
+  const marks: number[] = [];
+  for (const m of html.matchAll(MODULE_TAG_RE)) {
+    const open = m.index!;
+    if (/\sdata-cit-cut="/.test(m[0])) continue;
+    const end = elementEnd(html, open, m[1]!);
+    const secOpen = html.lastIndexOf("<section", open);
+    if (end < 0 || secOpen < 0 || secOpen === open) continue;
+    const secEnd = elementEnd(html, secOpen, "section");
+    if (secEnd < end) continue;
+    if (hasOwnContent(withoutModules(html.slice(secOpen, secEnd)))) marks.push(open + m[1]!.length + 1);
+  }
+  let out = html;
+  for (const at of marks.reverse()) out = out.slice(0, at) + ` data-cit-cut="self"` + out.slice(at);
+  return out;
 }
 
 /**
@@ -529,17 +580,19 @@ function stripModuleAnchor(html: string, anchor: string): string {
     const end = elementEnd(out, open, tag);
     if (end < 0) break;
     // Would the enclosing <section> be left as a heading over nothing? Then it goes
-    // too — an empty band is the very thing the design doctrine forbids. But only
-    // if it holds nothing else: on a collage hero the gallery lives INSIDE the
-    // header, and taking the section would take the headline with it.
+    // too — an empty band is the very thing the design doctrine forbids. It stays when
+    // it has content of its own (stamped by stampCutScope) or another module still
+    // lives in it. On a collage hero the gallery lives INSIDE the header, not a
+    // section, and the headline stays untouched.
     let start = open;
     let stop = end;
-    const secOpen = out.lastIndexOf("<section", open);
+    const own = /\sdata-cit-cut="self"/.test(out.slice(open, out.indexOf(">", open)));
+    const secOpen = own ? -1 : out.lastIndexOf("<section", open);
     if (secOpen >= 0) {
       const secEnd = elementEnd(out, secOpen, "section");
       if (secEnd >= end) {
         const rest = out.slice(secOpen, open) + out.slice(end, secEnd);
-        if (!hasSubstance(rest)) {
+        if (!/\sdata-cit-module="/.test(rest.replace(/<style[\s\S]*?<\/style>/gi, ""))) {
           start = secOpen;
           stop = secEnd;
         }
@@ -630,7 +683,7 @@ export function renderSite(
   const phase: RenderPhase = opts.phase ?? "mock";
   const modOpts = { sampleAllow: opts.sampleAllow, sampleDeny: opts.sampleDeny, demoForms: opts.demoForms };
   const finish = (page: string): string => {
-    const bought = (opts.hideAnchors ?? []).reduce(stripModuleAnchor, page);
+    const bought = (opts.hideAnchors ?? []).reduce(stripModuleAnchor, stampCutScope(page));
     const out = responsiveGooglePhotos(opts.hideGallery ? withoutGallery(bought, recipe, data, opts) : bought);
     // ADR-0110 ⑦: the footer's /adatvedelem + /impresszum links are real on a live
     // tenant site and meaningless on a mock (no legal data about the lead, no such

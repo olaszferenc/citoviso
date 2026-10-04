@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-fejlec-link-csak-meglevo-szekciora-egy-vagasi-szabaly.md) — Fejléc-link csak meglévő szekcióra; egy vágási szabály a mocknak és az élő lapnak; Parallax görgetett menüsáv (2026-10-04)
 - [ADR-0319](decisions/0319-a-tulaj-teszt-szama-outreach-test-phones-csak.md) — A tulaj teszt-száma (OUTREACH_TEST_PHONES) csak [TESZT] leaden mentes a közös-elérhetőség és a szám-szintű leiratkozás alól
 - [ADR-0318](decisions/0318-a-generalt-mock-egyelore-nem-visz-citoviso.md) — A generált mock egyelőre nem visz Citoviso-reklámot: a kredit-sáv kapcsolható, alapból KI (2026-10-04)
 - [ADR-0317](decisions/0317-tenyhuseg-ket-forrasolt-tenybol-nem-lesz.md) — Tényhűség: két forrásolt tényből nem lesz harmadik (összevont hely-állítás); a Google-értékelés egy szabállyal, ≥ 0,7 (2026-10-03)

@@ -13,8 +13,8 @@
  * section when its module is switched off — `refreshSections()` sets display:none — but
  * left every link INTO it: the masthead, the scrolled bar, the side dots and the phone
  * menu (cit-runtime.js copies the masthead at boot). Picking the "Alap" package left
- * "Vélemények", "Szobák", "Szolgáltatások" pointing at nothing on 19 of 19 templates with
- * such a link (before the fix, 2026-10-04). The live page never had it: render.ts
+ * "Vélemények", "Szobák", "Szolgáltatások" pointing at nothing on 21 of 21 templates with
+ * such a link (before the fix, 2026-10-04; the first count, 19, read a truncated log). The live page never had it: render.ts
  * `stripModuleAnchor` cuts the section AND the links server-side.
  *
  * Per template, phone (390) and desktop (1440), ONE page driven through the packages:
@@ -23,12 +23,18 @@
  *   ③ POSITIVE CONTROL — back to "Teljes": the hidden links come back (a guard that hid
  *      every link would pass ② and fail here)
  *   ④ no JS error
+ *   ⑤ MOCK = LIVE: "Alap" takes the links to exactly the sections the live cut takes for the
+ *      same package (compared as what the cut REMOVES — mock-only samples such as the FAQ
+ *      differ by phase, §B.17, not by package) (render.ts stampCutScope is the one cut rule both read; measured
+ *      before it: gate-opening's "A ház" vanished on the mock, stayed live — owner 2026-10-04
+ *      „egységesítsd”)
  * Links measured: every `a[href^="#"]` outside the configurator panel and forms — header,
  * masthead, scrolled/sticky bars, side dots, phone menu rows (a row counts as shown unless
  * its <li> is display:none: the menu itself is closed while measuring), and in-page CTAs.
  *
- * --self-test: the same run with the fix taken out of the page (every `syncNavLinks();`
- * call removed) — ② must go RED on at least one template and ①/③/④ stay green.
+ * --self-test: the same run with both fixes taken out of the mock — every `syncNavLinks();`
+ * call and every `data-cit-cut="self"` stamp removed (the old whole-section cut) — ② and ⑤
+ * must go RED on at least one template and ①/③/④ stay green.
  * A guard never seen red proves nothing.
  */
 import { chromium, type Page } from "playwright-core";
@@ -40,6 +46,7 @@ import { renderSite } from "../src/engine/render.js";
 import { TEMPLATES } from "../src/engine/templates.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
 import { injectRuntime } from "../src/generator/runtime.js";
+import { PRESETS, unboughtPageAnchors } from "../src/modules.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 const ONLY = (process.argv.find((a) => a.startsWith("--only=")) ?? "").slice(7).split(",").filter(Boolean);
@@ -91,6 +98,15 @@ const MEASURE = `(() => {
   return out;
 })()`;
 
+/** Distinct in-page link targets left after the cut, CSS visibility aside (desktop or phone). */
+const KEPT = `(() => [...new Set([...document.querySelectorAll('a[href^="#"]')]
+  .filter((a) => !a.closest('.cit-cfg-panel, form, #cit-pmenu, [data-cit-cfgoff], [data-cit-navoff], [data-cit-sample]') && !a.hasAttribute('data-cit-navoff'))
+  .map((a) => a.getAttribute('href')).filter((h) => h.length > 1))].sort())()`;
+const keptLive = (html: string): string[] => {
+  const body = html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "");
+  return [...new Set([...body.matchAll(/<a\b[^<>]*\shref="(#[^"]+)"/gi)].map((m) => m[1]!))].sort();
+};
+
 const pick = async (page: Page, preset: string): Promise<boolean> => {
   const hit = await page.evaluate((p) => {
     const b = document.querySelector(`.cit-cfg-preset[data-preset="${p}"]`) as HTMLElement | null;
@@ -112,7 +128,9 @@ const check = (label: string, pass: boolean, detail = ""): void => {
 
 const ids = ONLY.length ? ONLY : Object.keys(TEMPLATES);
 const browser = await chromium.launch({ executablePath: config.chromiumPath });
-const bad: Record<"teljes" | "alap" | "restored" | "js", string[]> = { teljes: [], alap: [], restored: [], js: [] };
+const bad: Record<"teljes" | "alap" | "restored" | "js" | "parity", string[]> = { teljes: [], alap: [], restored: [], js: [], parity: [] };
+const ALAP = new Set(PRESETS.find((p) => p.id === "alap")!.modules);
+const hideAlap = unboughtPageAnchors((id) => ALAP.has(id));
 let dropped = 0;
 try {
   for (const id of ids) {
@@ -124,7 +142,10 @@ try {
       "00000000-0000-0000-0000-000000000000",
       DATA.name,
     );
-    if (SELF_TEST) html = html.replaceAll("syncNavLinks();", "");
+    if (SELF_TEST) html = html.replaceAll("syncNavLinks();", "").replaceAll(' data-cit-cut="self"', "");
+    const liveFull = keptLive(renderSite(recipe, DATA, { phase: "live" }));
+    const liveCut = keptLive(renderSite(recipe, DATA, { phase: "live", hideAnchors: hideAlap }));
+    const liveGone = liveFull.filter((h) => !liveCut.includes(h));
     for (const width of [390, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors: string[] = [];
@@ -133,6 +154,7 @@ try {
       await page.setContent(html, { waitUntil: "load" });
       const where = `${id}@${width}`;
       const full = (await page.evaluate(MEASURE)) as Link[];
+      const keptFull = (await page.evaluate(KEPT)) as string[];
       const fullBad = full.filter((l) => l.target !== "ok");
       if (fullBad.length) bad.teljes.push(`${where}: ${fmt(fullBad)}`);
       if (!(await pick(page, "alap"))) throw new Error(`${where}: nincs „alap” csomag-kártya a konfigurátorban`);
@@ -140,6 +162,17 @@ try {
       const alapBad = alap.filter((l) => l.target !== "ok");
       if (alapBad.length) bad.alap.push(`${where}: ${fmt(alapBad)}`);
       dropped += full.length - alap.length;
+      if (width === 1440) {
+        // the booking jump differs by design (mock: the enquiry band, live: the same) — compare sections
+        const keptAlap = (await page.evaluate(KEPT)) as string[];
+        const sect = (h: string): boolean => !/^#cit-(booking|enquiry)$/.test(h);
+        const mockGone = keptFull.filter((h) => !keptAlap.includes(h)).filter(sect);
+        const want = liveGone.filter(sect);
+        const onlyMock = mockGone.filter((h) => !want.includes(h));
+        const onlyLive = want.filter((h) => !mockGone.includes(h));
+        if (onlyMock.length || onlyLive.length)
+          bad.parity.push(`${id}: csak a mock viszi el ${onlyMock.join(",") || "—"} · csak az élő ${onlyLive.join(",") || "—"}`);
+      }
       await pick(page, "teljes");
       const back = (await page.evaluate(MEASURE)) as Link[];
       if (back.length !== full.length) {
@@ -175,10 +208,16 @@ check(`③ vissza „Teljes”-re: az elrejtett linkek visszajönnek (váltásko
 // Without a single dropped link ② would pass on a page where "Alap" changed nothing at all.
 if (!SELF_TEST) check("③ az „Alap” váltás ténylegesen vitt el linket (a mérés nem üresjárat)", dropped > 0);
 check("④ nincs JS-hiba", bad.js.length === 0, list(bad.js));
+const parityOk = bad.parity.length === 0;
+if (SELF_TEST) {
+  console.log(`  ${parityOk ? "❌" : "✅"} ⑤ (öntesztben PIROS kell) mock = élő — a pecsét nélkül ${parityOk ? "NEM jelzett" : `jelzett: ${list(bad.parity)}`}`);
+} else {
+  check("⑤ mock „Alap” = élő alap: a csomag ugyanazokat a link-célokat viszi el", parityOk, list(bad.parity));
+}
 
 if (SELF_TEST) {
-  const ok = !alapOk && failures === 0;
-  console.log(ok ? "\n✅ ÖNTESZT: a javítás nélkül a ② bukott — az őr lát\n" : "\n❌ ÖNTESZT: az őr nem a javítást méri\n");
+  const ok = !alapOk && !parityOk && failures === 0;
+  console.log(ok ? "\n✅ ÖNTESZT: a javítások nélkül a ② és az ⑤ bukott — az őr lát\n" : "\n❌ ÖNTESZT: az őr nem a javítást méri\n");
   process.exit(ok ? 0 : 1);
 }
 console.log(failures ? `\n❌ ${failures} állítás bukott\n` : "\n✅ minden állítás teljesült\n");

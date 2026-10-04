@@ -526,14 +526,66 @@
     syncNavLinks();
   }
 
+  /**
+   * What a switched-off module takes with it — the SAME rule as the live cut (render.ts
+   * stampCutScope + stripModuleAnchor), read from the server's stamp, never re-derived
+   * here: an element stamped `data-cit-cut="self"` sits in a section with content of its
+   * own, so it goes alone; otherwise its <section> goes too, unless another (still shown)
+   * module lives in it. The mock used to take the whole section every time: on
+   * gate-opening / walk-through "Alap" hid the intro and its "A ház" link with the usp
+   * box, while the live page kept both (owner 2026-10-04: „egységesítsd”).
+   */
+  function cutSurface(a, t) {
+    var sec = a.closest("section");
+    if (!sec || sec === a || a.getAttribute("data-cit-cut") === "self") return a;
+    var own = sec.getAttribute("data-cit-module");
+    if (own && own !== t) return a;
+    var others = sec.querySelectorAll("[data-cit-module]");
+    for (var i = 0; i < others.length; i++) {
+      var o = others[i];
+      if (o === a || a.contains(o) || o.contains(a)) continue;
+      if (o.getAttribute("data-cit-module") === t) continue; // goes with this toggle
+      if (!o.closest("[data-cit-cfgoff]")) return a;
+    }
+    return sec;
+  }
+  function setOff(el, off) {
+    el.style.display = off ? "none" : "";
+    if (off) el.setAttribute("data-cit-cfgoff", "");
+    else el.removeAttribute("data-cit-cfgoff");
+  }
+
   function refreshSections(mod) {
     anchorsOf(mod).forEach(function (t) {
       var want = anchorWanted(t);
       document.querySelectorAll('[data-cit-module="' + t + '"]').forEach(function (a) {
-        var sec = a.closest("section") || a;
-        sec.style.display = want ? "" : "none";
-        if (want) sec.removeAttribute("data-cit-cfgoff");
-        else sec.setAttribute("data-cit-cfgoff", "");
+        if (!want) {
+          if (a.__citCut) return; // already off
+          a.__citCut = cutSurface(a, t);
+          setOff(a.__citCut, true);
+          return;
+        }
+        if (a.__citCut) setOff(a.__citCut, false);
+        a.__citCut = null;
+        // The section may have gone with ANOTHER module's cut (it was the last one shown
+        // in it): it comes back with this one, and that other module goes back to
+        // leaving alone.
+        // Only a section cut by a NESTED module's toggle comes back: one hidden as the
+        // surface of its own module (booking's #cit-booking, holding the enquiry form)
+        // stays with that module.
+        var sec = a.closest("section");
+        if (sec && sec !== a && sec.hasAttribute("data-cit-cfgoff") && sec.__citCut !== sec) {
+          var by = [].filter.call(sec.querySelectorAll("[data-cit-module]"), function (o) {
+            return o.__citCut === sec;
+          });
+          if (by.length) {
+            setOff(sec, false);
+            by.forEach(function (o) {
+              o.__citCut = o;
+              setOff(o, true);
+            });
+          }
+        }
       });
     });
     syncNavLinks();
@@ -545,7 +597,7 @@
    * elérhetőek”). Hiding the section left every link to it behind — the masthead,
    * the scrolled bar, the side dots and the phone menu (which copies the masthead
    * at boot) kept "Vélemények" / "Szobák" after the "Alap" package dropped them:
-   * measured on 19 of 19 templates. The live page cuts those links server-side
+   * measured on 21 of 21 templates. The live page cuts those links server-side
    * (render.ts stripModuleAnchor); this is the same rule for the mock, reversible
    * because the toggle is. Only links we hid are ever shown again.
    */
