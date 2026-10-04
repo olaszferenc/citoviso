@@ -19,6 +19,7 @@
 - [2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md](2026-10-04_leadlista_mock_oszlop_kikuldve_szuro.md) — 2026-10-04 — Lead-lista MOCK oszlop: a legerősebb mock-állapot + „✓ kiküldve” szűrő
 - [2026-10-04_lead_lap_mock_pirula_kikuldve_jel.md](2026-10-04_lead_lap_mock_pirula_kikuldve_jel.md) — 2026-10-04 — Lead-lap mock-pirula = lista szabálya; „✓ kiküldve” = bármelyik csatorna
 - [2026-10-04_js_honlap_renderelt_igazolas.md](2026-10-04_js_honlap_renderelt_igazolas.md) — 2026-10-04 — A JS-sel épülő saját honlap is igazolható (Dalma panzió)
+- [2026-10-04_foto_darabszam_duplikat_portal.md](2026-10-04_foto_darabszam_duplikat_portal.md) — 2026-10-04 — Fotó-darabszám: a fül-mondat és a lead-fejléc a valós képszámot mondja; portál-hálózati duplikátum
 - [2026-10-04_foglalas_sav_kozos_kartya.md](2026-10-04_foglalas_sav_kozos_kartya.md) — 2026-10-04 — Foglalás-sáv kártyaként, egy közös szabállyal (arch-frames · tilted-gallery · wordmark-grow)
 - [2026-10-04_fejlec_link_csomag_parallax_menusav.md](2026-10-04_fejlec_link_csomag_parallax_menusav.md) — 2026-10-04 — Fejléc-linkek × megvett modulok; Parallax görgetett menüsáv (SUB)
 - [2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md](2026-10-04_elesites_0b1ee61f_kuldo_citoviso.md) — Élesítés 0b1ee61f + éles feladó „Citoviso” (koordinátor, 2026-10-03/04)
