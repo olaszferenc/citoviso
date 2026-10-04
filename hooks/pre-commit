@@ -1868,6 +1868,14 @@ if [ -f scripts/guest-contact-check.mts ] && \
   echo "[pre-commit] guest-contact-check (elutasított kontakt nem kerül a vendég elé)…"
   npx tsx scripts/guest-contact-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Description fact-label gate (2026-10-04, Kerekerdő): a machine label lifted from listing
+# prose may not claim more than the sentence ("zárt parkoló" ≠ "Saját parkoló", ADR-0292).
+# ⚠️ ÖN-TRIGGER: own file in the pattern. Se AI, se hálózat, se DB (~2s).
+if [ -f scripts/description-fact-label-check.mts ] && \
+   changed_files | grep -qE '^src/generator/marketCheck\.ts$|^scripts/description-fact-label-check\.mts$'; then
+  echo "[pre-commit] description-fact-label-check (a tény-címke nem állít többet a forrásnál)…"
+  npx tsx scripts/description-fact-label-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
 # lies. Measures the shipped sentence against the cells of the column it names, plus the

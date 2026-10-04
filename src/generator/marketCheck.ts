@@ -192,7 +192,10 @@ const DESCRIPTION_FACT_LABELS: readonly (readonly [string, string])[] = [
   ["jatszoter", "Játszótér"], ["kutyabarat", "Kisállat-barát"], ["haziallat", "Kisállat-barát"],
   ["reggeli", "Reggeli"], ["etterem", "Étterem"],
   ["klima", "Klíma"], ["legkondicion", "Klíma"],
-  ["parkol", "Saját parkoló"], ["garazs", "Garázs"],
+  // ⛔ "parkoló" ≠ "saját parkoló" (ADR-0292): the label may not claim more than the prose.
+  // Measured 2026-10-04, Kerekerdő: "zárt parkoló biztosított" became "Saját parkoló" here and
+  // "Saját zárt parkoló" on the page. "saját" only when the source says it.
+  ["sajat parkol", "Saját parkoló"], ["parkol", "Parkoló"], ["garazs", "Garázs"],
   ["kert", "Kert"], ["terasz", "Terasz"], ["erkely", "Erkély"],
   ["grill", "Grill"], ["bogracs", "Bográcsozás"],
 ];
@@ -204,7 +207,8 @@ export function descriptionSellingPoints(descriptions: readonly string[]): strin
   for (const [needle, label] of DESCRIPTION_FACT_LABELS) {
     if (hay.includes(needle) && !out.includes(label)) out.push(label);
   }
-  return out;
+  // The narrower claim already covers the plain one (one fact, one chip).
+  return out.includes("Saját parkoló") ? out.filter((l) => l !== "Parkoló") : out;
 }
 
 /** Collapse a raw amenity list into countable, human-readable groups. */
