@@ -216,7 +216,7 @@ export interface IntroOptions {
   readonly photos: readonly string[];
   /**
    * Playback speed. The owner picked 0.6 after comparing 1 / 0.8 / 0.6 / 0.4:
-   * the whole sequence then runs ~5.8 s.
+   * the whole sequence then ran ~5.8 s; since the slower grow (2026-10-03) ~7.5 s.
    */
   readonly speed?: number;
 }
@@ -295,9 +295,13 @@ export function introHtml(o: IntroOptions): string {
   // The wordmark is one non-wrapping line, so the type size must follow the NAME
   // LENGTH — measured: "FORTUNA VENDÉGHÁZ" ran off both edges at a fixed clamp().
   const chars = upper.length + 1; // + the photo slot
+  // On a portrait screen the two halves stack around the frame (owner, 2026-10-03: the
+  // frame was "nagyon kicsi" — 14×18 px in one line on a phone), so there the type
+  // follows the LONGER half.
+  const half = Math.max(cut, upper.length - cut, 1);
   return `<div class="cit-intro" id="cit-intro" aria-hidden="true">
   <div class="cit-intro-word" id="cit-intro-word">
-    <div class="cit-intro-name" style="--cit-intro-chars:${chars}"><span class="cit-il">${letters(upper.slice(0, cut))}</span><span class="cit-slot" id="cit-slot"></span><span class="cit-il">${letters(upper.slice(cut))}</span></div>
+    <div class="cit-intro-name" style="--cit-intro-chars:${chars};--cit-intro-half:${half}"><span class="cit-il">${letters(upper.slice(0, cut))}</span><span class="cit-slot" id="cit-slot"></span><span class="cit-il">${letters(upper.slice(cut))}</span></div>
     <div class="cit-intro-sub">${o.place}</div>
   </div>
   <div class="cit-grow" id="cit-grow" hidden></div>
@@ -313,16 +317,26 @@ export function introCss(): string {
 .cit-intro[hidden],.cit-grow[hidden]{display:none !important}
 .cit-intro-word{position:absolute;inset:0;display:grid;place-items:center;
   background:var(--cit-bg);padding:0 18px;z-index:1}
-.cit-intro-name{font-family:var(--cit-font-display);
-  font-size:min(clamp(26px,9.5vw,116px),calc(88vw / var(--cit-intro-chars,10) * 1.5));
+/* The frame the photo grows from is sized by the SCREEN, not by a letter (owner,
+   2026-10-03: "nagyon kicsi a kép amiből kinő" — measured 70×86 px on a 1440×900
+   desktop, 14×18 px on a 390 phone). The type shrinks to leave it room on the line. */
+.cit-intro-name{--cit-slot-h:min(34vh,24vw);font-family:var(--cit-font-display);
+  font-size:min(clamp(26px,9.5vw,116px),calc((88vw - var(--cit-slot-h) * .8) / var(--cit-intro-chars,10) * 1.5));
   line-height:1;letter-spacing:.02em;color:var(--cit-ink);display:flex;align-items:center;
   justify-content:center;white-space:nowrap}
 .cit-il{display:inline-flex}
 .cit-il span{display:inline-block;opacity:0;transform:translateY(.16em);
   transition:opacity .5s ease,transform .6s cubic-bezier(.22,.61,.36,1)}
 .cit-intro.cit-on .cit-il span{opacity:1;transform:none}
-.cit-slot{display:inline-block;width:.66em;height:.82em;margin:0 .05em;vertical-align:middle;
-  opacity:0;transition:opacity .45s ease}
+.cit-slot{display:inline-block;flex:none;width:calc(var(--cit-slot-h) * .8);height:var(--cit-slot-h);
+  margin:0 .16em;vertical-align:middle;opacity:0;transition:opacity .45s ease}
+/* portrait: name half / frame / name half, stacked — one line left no room for a frame */
+@media (max-aspect-ratio:4/5){
+  .cit-intro-name{--cit-slot-h:min(56vw,40vh);flex-direction:column;gap:.22em;
+    font-size:min(clamp(26px,9.5vw,116px),calc(88vw / var(--cit-intro-half,10) * 1.5))}
+  .cit-slot{margin:0}
+  .cit-il:empty{display:none}
+}
 .cit-intro.cit-on .cit-slot{opacity:1}
 .cit-intro-sub{position:absolute;left:0;right:0;bottom:16%;text-align:center;
   font-size:clamp(9px,1.2vw,12px);letter-spacing:.42em;text-transform:uppercase;
@@ -396,22 +410,32 @@ export function introJs(o: IntroOptions): string {
       var name=word.querySelector('.cit-intro-name'),sub=word.querySelector('.cit-intro-sub');
       name.style.transition=sub.style.transition='opacity '+(.45*K)+'s ease';
       name.style.opacity=sub.style.opacity='0';
-      var t=(1.15*K)+'s cubic-bezier(.62,.02,.2,1)';
+      // Owner, 2026-10-03: "a transition a fix képpé túl gyors". The grow was 1.15
+      // (1.9 s at 0.6×) and ended on the FULL WINDOW, so removing the overlay snapped
+      // the picture into the smaller hero box under the nav. Now: 1.8 (3.0 s), and
+      // the frame grows into the hero's OWN box, then the overlay fades instead of
+      // vanishing — the photo never jumps.
+      var heroImg=document.querySelector('[data-cit-hero-img]');
+      var box=heroImg&&heroImg.parentElement?heroImg.parentElement.getBoundingClientRect():null;
+      if(!box||box.height<40)box={left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+      var t=(1.8*K)+'s cubic-bezier(.62,.02,.2,1)';
       grow.style.transition='left '+t+',top '+t+',width '+t+',height '+t+',border-radius '+t;
-      grow.style.left='0px';grow.style.top='0px';
-      grow.style.width=window.innerWidth+'px';
-      grow.style.height=window.innerHeight+'px';
+      grow.style.left=(box.left-intro.clientLeft)+'px';grow.style.top=(box.top-intro.clientTop)+'px';
+      grow.style.width=box.width+'px';
+      grow.style.height=box.height+'px';
       grow.style.borderRadius='0px';
     });
 
-    at(3500,function(){
+    at(4050,function(){
       document.documentElement.style.overflow='';
-      // hand the grown photo over to the hero BEFORE removing the overlay
+      // hand the grown photo over to the hero BEFORE the overlay fades
       var heroImg=document.querySelector('[data-cit-hero-img]');
       if(heroImg&&cur&&cur.src)heroImg.src=cur.src;
-      if(intro.parentNode)intro.parentNode.removeChild(intro);
       var h=document.querySelector('[data-cit-hero-copy]');
       if(h)h.classList.add('cit-in');
+      intro.style.transition='opacity '+(.45*K)+'s ease';
+      intro.style.opacity='0';
+      at(450,function(){if(intro.parentNode)intro.parentNode.removeChild(intro);});
     });
   });
 })();`;

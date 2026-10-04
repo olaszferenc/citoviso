@@ -31,7 +31,7 @@ import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, type ArtTemplate } from "../templateKit.js";
+import { accented, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -147,22 +147,35 @@ section{padding:clamp(70px,10vh,124px) 0}
 .w-card{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:20px;
   box-shadow:0 30px 64px -38px color-mix(in srgb,var(--cit-ink) 66%,transparent)}
 .w-card img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
-/* gallery deck — contract design-refs/tenant-site/gallery-cap (A). No JS: a native swipe row
-   (every card reachable); the runtime sets [data-on] and stacks it into the deck. */
-.w-deckcards{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
-.w-deckcards::-webkit-scrollbar{display:none}
-.w-deckcards .w-dcard{flex:0 0 82%;scroll-snap-align:start}
-/* the peeking cards reach ~50px right of the top card (28px shift + the 6.4° turn's box):
-   leave them that room — a phone widens the layout viewport on an overhang (measured
-   390 → 417 px), and the guest-mobile gate flags a card box past the screen edge even
-   when clipped (397 px). clip-x stays as the backstop. */
-.w-deck[data-on]{overflow-x:clip;overflow-y:visible;padding-bottom:6px}
-.w-deck[data-on] .w-deckcards{display:block;position:relative;overflow:visible;aspect-ratio:4/5;width:min(440px,calc(100% - 72px));margin-inline:auto}
-.w-deck[data-on] .cit-gpager{margin-top:26px}
-.w-deck[data-on] .w-dcard{position:absolute;inset:0;transition:transform .35s ease,opacity .35s ease;
-  box-shadow:0 14px 34px color-mix(in srgb,var(--cit-ink) 22%,transparent);background:var(--cit-surface)}
-.w-deck[data-on] .w-dcard[aria-hidden="true"]{pointer-events:none}
-@media (prefers-reduced-motion:reduce){.w-deck[data-on] .w-dcard{transition:none}}
+/* gallery strip — contract design-refs/tenant-site/wordmark-grow-b (owner, 2026-10-04; it
+   replaced the gallery-cap deck): ONE swipeable row of landscape 4:3 cards, three at once on a
+   desktop, one + the next peeking on a phone; the shared runtime (data-cit-gstrip) adds the
+   „1 / N” pager. Without JS it stays a native swipe row. The track pads its foot so the cards'
+   shadow is not clipped by the scroller (measured: a grey band under the row). */
+.w-gal-head{max-width:44ch;margin-bottom:34px}
+.w-gal-head h2{font-size:clamp(26px,4vw,46px);line-height:1.16;margin:0 0 .3em}
+.w-gal-head p{margin:0;color:color-mix(in srgb,var(--cit-ink) 86%,transparent)}
+.w-gtrack{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;padding:4px 0 30px;margin-bottom:-22px}
+.w-gtrack::-webkit-scrollbar{display:none}
+.w-gtrack .w-gcard{flex:0 0 calc((100% - 40px) / 3);aspect-ratio:4/3;scroll-snap-align:start;
+  box-shadow:0 18px 26px -20px color-mix(in srgb,var(--cit-ink) 55%,transparent)}
+.w-gstrip .cit-gpager{margin-top:22px}
+@media(max-width:860px){.w-gtrack{gap:14px}.w-gtrack .w-gcard{flex-basis:86%}}
+/* the booking band (contract wordmark-grow-b): a card right after the photos, the full
+   calendar stays in the closing booking section. Only the "cta" band — the enquiry bar
+   hydrates into a mini-form and keeps the shared layout. */
+.cit-enquiry--bar[data-cit-variant="cta"]{padding:0 0 clamp(70px,10vh,124px)}
+[data-cit-variant="cta"] .cit-enquiry-bar-inner{width:min(1140px,88vw);margin-inline:auto;display:flex;
+  align-items:center;justify-content:space-between;gap:24px;padding:34px 40px;border-radius:20px;
+  background:var(--cit-surface);border:1px solid var(--cit-line);
+  box-shadow:0 30px 64px -44px color-mix(in srgb,var(--cit-ink) 66%,transparent)}
+[data-cit-variant="cta"] .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);
+  font-size:clamp(24px,3vw,34px);color:var(--cit-ink)}
+[data-cit-variant="cta"] .cit-btn{flex:none}
+@media(max-width:640px){[data-cit-variant="cta"] .cit-enquiry-bar-inner{flex-direction:column;
+  align-items:stretch;text-align:center;padding:26px 22px}
+  [data-cit-variant="cta"] .cit-btn{text-align:center}}
 .w-row h2{font-size:clamp(26px,4vw,46px);line-height:1.16;margin-bottom:.5em}
 .w-row p{margin:0 0 1em;max-width:44ch;color:color-mix(in srgb,var(--cit-ink) 86%,transparent)}
 @media(max-width:860px){.w-row,.w-row.rev{grid-template-columns:1fr;gap:30px}
@@ -344,34 +357,33 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   </section>`
     : "";
 
-  // Contract: assets/design-refs/tenant-site/gallery-cap (A) — the single card became a
-  // DECK holding EVERY photo (the shared lightbox pages through all), a „1 / N” pager
-  // under it. Order: photos the page does not show elsewhere first (`galleryOrder`,
-  // called below once the other sections exist). The section ALWAYS renders — with no
-  // photo a designed fill card — or the module hook would vanish on a data-poor lead
-  // (measured by configurator-placement-check).
+  // Contract: assets/design-refs/tenant-site/wordmark-grow-b (owner, 2026-10-04 — „a Képek
+  // résznél asztali nézeten látszódjon 3 kép egyszerre. Mobilon lehessen a képeket oldal
+  // irányba pöckölni”; it replaced the gallery-cap deck). ONE swipeable row holding EVERY photo
+  // (the shared lightbox pages through all), a „1 / N” pager under it. Order: photos the page
+  // does not show elsewhere first (`galleryOrder`, called below once the other sections
+  // exist). The section ALWAYS renders — with no photo a designed fill card — or the module
+  // hook would vanish on a data-poor lead (measured by configurator-placement-check).
   const galleryOf = (ordered: readonly { url: string; alt: string }[]): string => `<section data-cit-module="gallery" style="padding-top:0">
       <div class="w-wrap">
-        <div class="w-row rev">
-          <div class="w-fig">${
+        <div class="w-gal-head">
+          <span class="w-spark">${SPARK}</span>
+          <h2 ${mo("up")}>${T(data, "Képek")}</h2>
+          ${
+            (galCopy.eyebrow ?? data.tagline)
+              ? `<p ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`
+              : ""
+          }
+        </div>
+        <div class="w-gstrip" data-cit-gstrip>
+          <div class="w-gtrack" data-cit-gtrack>${
             ordered.length
-              ? `<div class="w-deck" data-cit-gdeck>
-            <div class="w-deckcards" data-cit-gcards>${ordered
-              .map((p) => `<div class="w-card w-dcard"><img src="${esc(p.url)}" alt="${esc(p.alt || data.name)}" loading="lazy"></div>`)
-              .join("")}</div>
-            ${galleryPager(data, ordered.length)}
-          </div>`
-              : card(undefined, data.name, 80)
+              ? ordered
+                  .map((p) => `<div class="w-card w-gcard"><img src="${esc(p.url)}" alt="${esc(p.alt || data.name)}" loading="lazy"></div>`)
+                  .join("")
+              : `<div class="w-card w-gcard">${photoFill(data.name)}</div>`
           }</div>
-          <div>
-            <span class="w-spark">${SPARK}</span>
-            <h2 ${mo("up")}>${T(data, "Képek")}</h2>
-            ${
-              (galCopy.eyebrow ?? data.tagline)
-                ? `<p ${mo("up", 90)}>${esc(galCopy.eyebrow ?? data.tagline)}</p>`
-                : ""
-            }
-          </div>
+          ${ordered.length ? galleryPager(data, ordered.length) : ""}
         </div>
       </div>
     </section>`;
@@ -446,6 +458,10 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // The one-shot intro flash is NOT "shown on the page" — it is gone after two seconds.
   const gallery = galleryOf(galleryOrder(photos, [heroBlock, about, roomsBlock, review, footer].join("")));
 
+  // Contract wordmark-grow-b: with a booking surface the slim band sits right after the
+  // photos (the full calendar closes the page); the enquiry bar keeps its old place.
+  const bandMid = hasBookingSurface(data, phase);
+
   const intro = {
     name: esc(data.name),
     place: esc(place || data.tagline),
@@ -479,11 +495,12 @@ ${intro.photos.length ? introCss() : ""}
   ${roomsBlock}
   ${slotMarker("showcase")}
   ${gallery}
+  ${bandMid ? bookingSlot(data, phase) : ""}
   ${say}
   ${slotMarker("trust")}
   ${review}
   ${slotMarker("practical")}
-  ${bookingSlot(data, phase)}
+  ${bandMid ? "" : bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
   ${intro.photos.length ? introHtml(intro) : ""}

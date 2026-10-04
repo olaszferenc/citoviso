@@ -1,5 +1,6 @@
 // ŐR: a tulaj MINDEN fotója elérhető a vendég-oldal galériájából, és a galéria a lapon
-// még NEM LÁTOTT képekkel indul — arch-frames (ív-sáv), wordmark-grow (kártyapakli),
+// még NEM LÁTOTT képekkel indul — arch-frames (ív-sáv), wordmark-grow (4:3 sáv, asztalin 3 egyszerre —
+// 2026-10-04 óta, kontraktus: design-refs/tenant-site/wordmark-grow-b; előtte kártyapakli),
 // organic (blob-sáv), claymorphism (4 + helyben kinyíló). Kontraktus: assets/design-refs/tenant-site/gallery-cap/.
 //
 // A LELET (2026-09-28/29): 6 feltöltésből az organic és a claymorphism 4-et mutatott
@@ -28,7 +29,7 @@ import { injectRuntime } from "../src/generator/runtime.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 const TPLS = ["arch-frames", "wordmark-grow", "organic", "claymorphism"] as const;
-const STRIP: readonly string[] = ["arch-frames", "organic"];
+const STRIP: readonly string[] = ["arch-frames", "organic", "wordmark-grow"];
 
 const url = (i: number) => `https://gallery-reach.test/photo-${i}.png`;
 const PNG = Buffer.from(
@@ -153,15 +154,11 @@ try {
             const c1 = nxDis ? c0 : await page.textContent("[data-cit-gcount]");
             ok(c0 === `1 / ${N}` && pvDis0 && c1 !== c0, `${label}: a sáv lapoz („${c0}” → „${c1}”, a „‹” az elején tiltott)`);
           }
-          if (t === "wordmark-grow") {
-            const topOf = () => page.evaluate(`[...document.querySelectorAll('[data-cit-gcards] > *')].findIndex(c => c.getAttribute('aria-hidden') === 'false')`) as Promise<number>;
-            const peek = (await page.evaluate(`[...document.querySelectorAll('[data-cit-gcards] > *')].filter(c => getComputedStyle(c).opacity !== '0').length`)) as number;
-            const t0 = await topOf();
-            await page.click("[data-cit-gprev]");
-            await page.waitForTimeout(100);
-            const t1 = await topOf();
-            ok(t0 === 0 && t1 === N - 1 && peek === 3 && (await page.textContent("[data-cit-gcount]")) === `${N} / ${N}`,
-              `${label}: a pakli körbe lapoz (felső ${t0} → ${t1}, látható ${peek} kártya)`);
+          if (t === "wordmark-grow" && tag === "asztali") {
+            // contract wordmark-grow-b: three photos at once on a desktop
+            const full = (await page.evaluate(`(() => { const tr = document.querySelector('[data-cit-gtrack]'), t = tr.getBoundingClientRect();
+              return [...tr.children].filter((c) => { const r = c.getBoundingClientRect(); return r.left >= t.left - 1 && r.right <= t.right + 1; }).length; })()`)) as number;
+            ok(full === 3, `${label}: asztalon egyszerre 3 kép látszik (${full})`);
           }
           if (t === "claymorphism") {
             const v0 = await visCount(page, "[data-cit-module=gallery] figure");

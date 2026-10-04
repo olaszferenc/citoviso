@@ -44,6 +44,9 @@ A tulaj: „Ez egy nagy hiba, de látni kell mit okoz a mockbann”.
 
 ## wordmark-grow — A · Kártyapakli (KÖT)
 
+> ⛔ **FELÜLÍRVA 2026-10-04** (tulaj, „Névből növő B”): a pakli helyén fekvő 4:3 húzható sáv, asztalin 3 kép
+> egyszerre — kontraktus: `../wordmark-grow-b/`. Az alábbi pont TÖRTÉNETI.
+
 - A „Képek” szakasz egyetlen kártyája helyén **pakli**: a legfelső kártya mögött **legfeljebb kettő**
   kilóg (eltolva, enyhén elforgatva), a többi rejtve.
 - Alatta lapozó: **‹ · „1 / 12” · ›**; a nyilak körbe lapoznak (a 12. után az 1.).
