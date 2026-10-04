@@ -131,6 +131,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     // that re-introduced it would undo the fix on the very next "szöveg újraírása".
     ...(region.known ? { region: region.label, regionContext: ctx.tagline } : {}),
     address: lead.address,
+    town: lead.city ?? null,
     realStats: (siteData.stats ?? []).map((s) => ({ value: s.value, label: s.label })),
     ...(amenities.length || descriptions.length
       ? {

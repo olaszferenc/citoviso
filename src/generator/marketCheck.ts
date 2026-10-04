@@ -34,6 +34,7 @@ import type AnthropicNS from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { deaccent } from "../scraper/enrichPresence.js";
 import { MATERIAL_WORDS } from "./highlightValue.js";
+import { amenityStems } from "./lyricOpening.js";
 import { toImageBlocks } from "./images.js";
 
 /** The copy that does the SELLING — the part a lead reads before deciding. */
@@ -273,20 +274,25 @@ fogja megnyitni, és 5 másodperc alatt eldönti, értjük-e, mije van. A giccs 
 hangulatozás itt nem semleges, hanem KÁR.
 
 BUKTASD (verdict="flag"), ha bármelyik igaz:
-1. ⛔⛔ A HERO FŐCÍM ÖNMAGÁBAN nem nevez meg semmit, amit a vendég KAP vagy HASZNÁL.
-   A főcímet KÜLÖN ítéld meg — a jó kiemelések NEM mentik meg: a lead a főcím után dönti
-   el, hogy továbbolvas-e. Ha a főcím rámásolható BÁRMELY MÁSIK szállásra ugyanabban a
+1. ⛔⛔ A HERO FŐCÍM ÖNMAGÁBAN nem mutatja meg, MIÉRT JÖNNE IDE a vendég — vagy azért, mert
+   üres hangulat (semmi valós helyet, tájat, közelséget nem mond), vagy azért, mert
+   felszereltség-LELTÁR (kert, parkoló, grill felsorolva). A főcímet KÜLÖN ítéld meg — a jó
+   kiemelések NEM mentik meg. Ha a főcím rámásolható BÁRMELY MÁSIK szállásra ugyanabban a
    régióban, akkor bukott.
-   Megtörtént bukók: "Fenyőillatú csend a tető alatt" · "Fából ácsolt csend, ahol az idő
-   lassabban jár" · "Faillatú csend a Balatonnál" — mindhárom ugyanarra a családi
-   apartmanházra, aminek játszótere, kertje, saját parkolója és teljes babafelszerelése van.
+   ⚖️ A főcím LÍRAI (tulaj, 2026-10-04): a hely érzetét adja egy forrásból ismert képpel (táj,
+   fekvés, közelség, kinek való), legfeljebb EGY adottsággal élménybe ágyazva. Ez JÓ főcím, akkor
+   is, ha nem sorol szolgáltatást — a szolgáltatás a kiemelések dolga. Ne buktasd azért, mert
+   „nem nevez meg semmit, amit a vendég KAP”.
+   Megtörtént bukók: üres hangulat — "Fenyőillatú csend a tető alatt" · "Faillatú csend a
+   Balatonnál"; leltár — "Bekerített kert tűzrakóval és saját parkoló Hárskúton" · "Zárt udvar
+   tekepályával, ping-ponggal és gyerekjátékokkal".
 1b. A főcím KITALÁLT összetett szót használ, vagy nem élő magyar ("faillatú", "fenyőillatú
    csend"). Amit egy ember nem mondana ki, azt ne is írjuk le.
 2. A szöveg a BERENDEZÉST vagy a FELÜLETEKET árulja a szolgáltatás helyett
    (könyvespolc, csempe, ágynemű, padló, falszín). Ezt senki nem keres.
 3. A legerősebb eladási pont (medence, játszótér, strand-közelség, saját parkoló,
-   panoráma, kisállat-barát) megvan az adatok között, de a szövegből HIÁNYZIK
-   vagy elsikkad valami jelentéktelen mögött.
+   panoráma, kisállat-barát) megvan az adatok között, de a KIEMELÉSEKBŐL és az alcímből/intróból
+   is HIÁNYZIK, vagy elsikkad valami jelentéktelen mögött. (Hogy a főcímben nincs ott, az NEM hiba.)
 4. A szöveg olyat ÁLLÍT a helyről, amit az adatok nem támasztanak alá, és ami a
    vendéget FÉLREVEZETI — kiemelten a földrajzi helyzet ("a tóparton", "a vízparton",
    "a strand mellett"), ha semmi nem igazolja. Ez foglalás után csalódás lesz.
@@ -333,6 +339,32 @@ function salesBlob(s: SalesSurface): string {
  * stay. Best-effort like the other gates: a judge failure returns "error" (→ curation),
  * never throws. The STRUCTURAL layer needs no API key and always runs.
  */
+/** Lyrical words that carry no place: they cannot ground a headline on their own. */
+const MOOD_ONLY = [
+  "csend", "nyugal", "nyugod", "pihen", "kenyelm", "vendeg", "szallas", "csalad", "barati",
+  "otthon", "termes", "lassab", "lassu", "idill", "hangul", "meghit", "varazs", "elmeny",
+];
+
+/** Normalise a headline with the property's own name and town cut out („Balatonudvari” ≠ yard). */
+function deaccentFree(text: string, proper: readonly string[]): string {
+  let t = text;
+  for (const p of proper.filter((x) => x.trim().length >= 3)) t = t.split(p).join(" ");
+  return t;
+}
+
+/**
+ * Content words of the (normalised) headline that the property's OWN sources also use — the
+ * evidence that a lyrical line names a real place („Bakony”, „Káli-medence”, „Libás strand”)
+ * rather than a mood. 6-letter stems, so Hungarian suffixes do not hide a match. Exported for
+ * the guard.
+ */
+export function sourcedPlaceWords(heroNorm: string, source: MarketSource): string[] {
+  const hay = norm([...(source.descriptions ?? []), ...(source.amenities ?? [])].join(" \n "));
+  return [...new Set(heroNorm.split(/[^a-z0-9]+/).filter((w) => w.length >= 5))]
+    .filter((w) => !MOOD_ONLY.some((m) => w.startsWith(m)))
+    .filter((w) => hay.includes(w.slice(0, 6)));
+}
+
 export async function verifyMarketRelevance(input: {
   sales: SalesSurface;
   source: MarketSource;
@@ -438,9 +470,41 @@ export async function verifyMarketRelevance(input: {
     };
   }
 
-  if (strongHeld.length && heroText) {
-    const heroNames = amenities.filter((a) => copyNames(a, heroText));
-    if (!heroNames.length) {
+  // ⛔ INVERTED 2026-10-04 (ADR-XXXX). Until then this layer flagged every headline that named
+  // no amenity, and together with the prompt (ADR-0091 ④, ADR-0097 ④) it made the inventory
+  // headline MANDATORY: 49 of the last 50 mocks led with one („Bekerített kert tűzrakóval és
+  // saját parkoló Hárskúton”), and the owner's verdict was „9/10 esetben ez van”. The rule is
+  // now the owner's: the opening is LYRICAL, with at most ONE amenity woven into it.
+  // Two ways it still fails, both structural:
+  //   ① INVENTORY — more than one amenity in the headline;
+  //   ② EMPTY — not one sourced place word, town or amenity: the 2026-08-31 „Fenyőillatú
+  //     csend a tető alatt” failure, which a lyrical rule must keep catching.
+  if (heroText) {
+    const stripped = [input.source.name, input.source.town ?? ""]
+      .filter((p) => p.trim().length >= 3)
+      .reduce((t, p) => t.split(norm(p)).join(" "), heroText);
+    const stems = amenityStems(deaccentFree(input.sales.heroLead ?? "", [input.source.name, input.source.town ?? ""]));
+    if (stems.length > 1) {
+      return {
+        verdict: "flag",
+        layer: "structural",
+        factsNamed: named,
+        missed: missedRanked,
+        reason:
+          `a HERO FŐCÍM ("${input.sales.heroLead}") felszereltség-LELTÁR (${stems.join(", ")}) — ` +
+          `nem ok arra, hogy a vendég idejöjjön; a nyitórész lírai, legfeljebb egy adottsággal`,
+        critique:
+          `A HERO FŐCÍMET írd újra LÍRAI sorrá: a hely érzete egy forrásból ismert képpel (táj, ` +
+          `fekvés, közelség, kinek való), legfeljebb EGY adottság élménybe ágyazva. A felszereltséget ` +
+          `(${stems.join(", ")}) a kiemelések viszik.`,
+      };
+    }
+    const town = input.source.town ? norm(input.source.town) : "";
+    const grounded =
+      amenities.some((a) => copyNames(a, heroText)) ||
+      (town.length >= 3 && heroText.includes(town.slice(0, Math.min(town.length, 6)))) ||
+      sourcedPlaceWords(stripped, input.source).length > 0;
+    if (!grounded) {
       const best = missedRanked.length ? missedRanked : amenities;
       return {
         verdict: "flag",
@@ -448,16 +512,13 @@ export async function verifyMarketRelevance(input: {
         factsNamed: named,
         missed: missedRanked,
         reason:
-          `a HERO FŐCÍM ("${input.sales.heroLead}") egyetlen konkrét szolgáltatást sem nevez meg — ` +
-          `tiszta hangulat a lap legolvasottabb sorában, pedig ${strongHeld.length} igazolt ` +
-          `eladási pont áll rendelkezésre. A kiemelések jósága ezt NEM pótolja: a vendég a ` +
-          `főcím után dönti el, hogy továbbolvas-e`,
+          `a HERO FŐCÍM ("${input.sales.heroLead}") üres hangulat: egyetlen forrásolt helyet, ` +
+          `települést vagy adottságot sem nevez meg — bármelyik másik szállásra ráillene`,
         critique:
-          `A HERO FŐCÍMET írd újra. Jelenleg tiszta hangulat ("${input.sales.heroLead}"), ` +
-          `ami bármelyik másik szállásra ráillene. Nevezzen meg KONKRÉTAN legalább egy dolgot, ` +
-          `amit a vendég itt kap — a legerősebbekkel kezdve: ${best.slice(0, 4).join(", ")}. ` +
-          `Természetes magyar szavakkal; kitalált összetett szót ("faillatú") ne gyárts. ` +
-          `A többi szöveg maradhat, ha jó.`,
+          `A HERO FŐCÍM maradjon lírai, de VALÓS képpel: a szállás saját bemutatkozásából vagy a ` +
+          `véleményekből ismert táj, fekvés, közelség, a település, vagy legfeljebb EGY adottság ` +
+          `élményként${best.length ? ` (pl. ${best.slice(0, 3).join(", ")})` : ""}. ` +
+          `Kitalált összetett szót ("faillatú") ne gyárts. A többi szöveg maradhat, ha jó.`,
       };
     }
   }

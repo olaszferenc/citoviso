@@ -391,6 +391,7 @@ async function generateEngineMockInner(
     // (owner's rule, 2026-09-14 — "hagyja el a régió-fordulatot").
     ...(region.known ? { region: region.label, regionContext: ctx.tagline } : {}),
     address: lead.address,
+    town: lead.city ?? null,
     realStats: stats.map((s) => ({ value: s.value, label: s.label })),
     ...(sourcedAmenities.length || sourcedDescriptions.length || guestVoice.length
       ? {

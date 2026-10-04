@@ -10,6 +10,7 @@ import type AnthropicSdk from "@anthropic-ai/sdk";
 
 import { config } from "../config.js";
 import { toImageBlocks } from "../generator/images.js";
+import { OPENING_BAD_EXAMPLES } from "../generator/lyricOpening.js";
 import type { SectionCopy, SiteData } from "./recipe.js";
 
 /** Per-section editorial copy the planner attaches to the recipe. All sections optional. */
@@ -41,9 +42,9 @@ const HERO_COPY_SCHEMA = {
     lead: {
       type: "string",
       description:
-        "A hero vezércíme: rövid mondat, ami MEGNEVEZ legalább egy konkrét dolgot, amit a vendég " +
-        "itt KAP (az igazolt tényekből). NEM a szállás neve, NEM tiszta hangulat, és TILOS benne " +
-        "építőanyag/szerkezet (fenyőgerendás, tetőtér, lambéria, beton…) — arra senki nem keres.",
+        "A hero vezércíme: rövid, LÍRAI mondat, ami a hely érzetét adja egy FORRÁSBÓL ismert képpel " +
+        "(táj, fekvés, közelség, évszak, kinek való). Legfeljebb EGY adottság, élménybe ágyazva — " +
+        "felsorolás, felület, anyag, szín TILOS. NEM a szállás neve, NEM üres hangulat-szó.",
     },
     accent: { type: "string", description: "A lead EGY pontos részlánca, amit kiemelünk (dőlt akcent)." },
   },
@@ -75,32 +76,28 @@ a hero KÖLTŐI vezércíme + néhány szekció rövid, hangulatos címe. NEM í
 SZIGORÚ SZABÁLYOK (kötelező):
 1. TÉNYHŰSÉG (§B.17): SOHA ne találj ki számot, díjat, csillagot, díjazást, méretet vagy konkrét jellemzőt.
    Számot CSAK akkor írhatsz, ha a megadott tények között PONTOSAN szerepel. Ha nincs ilyen adat, ne írj számot.
-2. ⛔⛔ A hero "lead" A LAP LEGOLVASOTTABB SORA — ITT DŐL EL, HOGY A VENDÉG TOVÁBBOLVAS-E.
-   Ezért KÖTELEZŐEN meg kell neveznie legalább EGY KONKRÉT dolgot, amit a vendég itt KAP
-   (medence, játszótér, kert, saját parkoló, panoráma, strand-közelség, grill, szauna,
-   kisállat-barát, babafelszerelés…) — abból, amit a megadott IGAZOLT tények felsorolnak.
-   A hangulat SZÍNEZHETI a mondatot, de NEM LÉPHET A TARTALOM HELYÉBE.
-   ⛔ TILOS a tisztán hangulati főcím. Megtörtént kár, a tulaj szava szerint "orbitális
-   perverz faszság": "Fenyőillatú csend a tető alatt", "Fából ácsolt csend, ahol az idő
-   lassabban jár", "Faillatú csend a Balatonnál" — egy játszótérrel, kerttel, saját
-   parkolóval és teljes babafelszereléssel hirdetett családi apartmanházra. Ezek semmit
-   nem mondanak, és a "Faillatú" nem is magyar szó.
-   ⛔ TILOS kitalált összetett szót gyártani ("faillatú", "fenyőillatú csend"). Csak
-   természetes, élő magyar szavakat használj — amit egy ember ki is mondana.
-   ⛔⛔ TILOS ÉPÍTŐANYAG vagy SZERKEZET a főcímben: fenyőgerendás, lambériás, fából
-   ácsolt, tetőtér, nádfedeles, tégla, beton, faburkolat, cserép… A szálláskereső NEM
-   erre keres. Tulajdonosi szó (2026-08-31), miután kiment a "Kert, grill és bérelhető
-   kerékpárok a FENYŐGERENDÁS TETŐTÉR ALATT": "Miért nem írjuk bele, hogy XC30/37
-   betonból, harminchatos betonszivattyúval pumpálva?" — a ház anyaga pontosan
-   ennyire érdekli a vendéget. A hangulatot a FOTÓK viszik; a főcím a vendég-értéké.
-   ⛔ PRÓBA, amin át kell mennie: ha a főcím rámásolható BÁRMELY MÁSIK szállásra
-   ugyanabban a régióban, akkor rossz. Olyat írj, ami CSAK erre a helyre igaz.
-   ⛔ RANGSOR a főcímen belül: a LEGERŐSEBB igazolt adottság vezet. Vízparti fekvés,
-   saját strand, stég, medence, panoráma > kert, terasz > parkoló, wifi. (Megtörtént
-   kár: közvetlen vízparti, saját strandos villára "tágas kert és saját parkoló" főcím
-   ment ki — a vendég a VÍZPARTRA keresett volna rá, és mi a parkolót adtuk el neki.)
-   JÓ: "Kert, grill és kerékpárok várnak" · "Medence és játszótér a kertben" ·
-   "Saját parkoló, 5 percre a strandtól" · "Saját strand és stég a vízparton".
+2. ⛔⛔ A hero "lead" A LAP LEGOLVASOTTABB SORA — LÍRAI sor, ami megmutatja, MIÉRT JÖN IDE A
+   VENDÉG (tulaj, 2026-10-04: „Lírai szöveg kell”; ADR-XXXX). A hely ÉRZETÉT adja egy FORRÁSBÓL
+   ismert képpel: táj, fekvés, közelség, évszak, program, kinek való (pár, család, baráti kör,
+   kutyás). Forrás: a szállás saját bemutatkozása, a vendég-vélemények, az igazolt tények, a
+   település.
+   ⛔ LELTÁR ÉS LEÍRÁS TILOS a főcímben. Felszereltség-felsorolás (kert, udvar, parkoló, grill,
+   terasz, wifi, játékok) NEM ok arra, hogy valaki idejöjjön — az a kiemelésekbe való. Legfeljebb
+   EGY adottság állhat benne, és csak ÉLMÉNYBE ágyazva (nem tárgyként, nem listában). Felület,
+   anyag, szín, szerkezet (pácolt, gerendás, cseréptetős, lambériás, tetőtér) SOHA.
+   ⛔ A LÍRA NEM ÜRES HANGULAT. A tulaj 2026-08-31-én kitiltotta az üres hangulat-főcímet — a
+   hibája nem a líra volt, hanem hogy SEMMI valósat nem mondott a helyről, és bármelyik házra
+   ráillett. A lírai főcím egy VALÓS, megnevezett képet visz.
+   ⛔ PRÓBA: ha a főcím rámásolható bármely MÁSIK szállásra ugyanabban a régióban, rossz.
+   ⛔ TÉNYHŰSÉG: a kép minden eleme forrásból. Tájegységet, hegyet, erdőt, vizet a saját
+   tudásodból NEM adsz hozzá; érzéki részletet (madárszó, illat, ropogó tűz, csillagos ég) csak ha
+   a forrás kimondja; „csend” / „nyugalom” TILOS, ha bármelyik vélemény zajra panaszkodik; EGY
+   vendég egyszeri élményéből nem lesz főcím és nem lesz „a vendégek mesélik”.
+   ⛔ VÉKONY FORRÁS (nincs forrásolt táj- vagy helykép): a líra a TELEPÜLÉSBŐL és a CÉLKÖZÖNSÉGBŐL
+   épül, általános marad — tájat, utcaképet, vizet NE találj ki.
+   ⛔ Kitalált összetett szó („faillatú”) tilos; élő, természetes magyar mondat. Ne másold a
+   lenti példák szerkezetét sem — minden szállás saját mondatot kap.
+   ROSSZ (valóban kiment, a tulaj elutasította): ${OPENING_BAD_EXAMPLES.slice(0, 5).map((e) => `„${e}”`).join(" · ")}.
    ⛔ SZOLGÁLTATÁS HELYÉT (reggeli, parkoló, grillezés, jakuzzi, szauna, uszoda, wellness:
    „a kertben”, „kerti”, „a teraszon”, „az udvarban”, „a helyszínen”) csak akkor írd ki, ha egy
    forrás-mondat a kettőt viszonyként mondja — két külön tény egy mondatban NEM viszony.

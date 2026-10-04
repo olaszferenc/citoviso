@@ -56,25 +56,41 @@ const S = SELF_TEST ? OLD.regionSourceLine : regionSourceLine;
 // A dev-korpuszon MÉRT kulcsok, és hogy melyikük mögött van `region` rekord.
 // A `Balaton` szándékosan itt van: VALÓDI helynévnek látszik, de gyűjtő-definíció kulcsa —
 // ezért nem szó-feketelista az őr, hanem a `known` zászlót méri.
-const REGISTERED = ["balaton-north", "badacsony"] as const;
+// ADR-XXXX (2026-10-04): a GYŰJTÉSI terület neve (`balaton-north`, a DB-ben `balaton-kelet`,
+// `keszthely-es-kornyeke`) NEM a lead földrajza — egy 32 km-es keresési kör a Bakonyba is
+// belelóg (mérve: Hárskút „Balaton-Kelet” lett). Lead-tény csak a kézzel írt, a helyért
+// kezeskedő kontextus (REGIONS: `badacsony`) neve.
+const REGISTERED = ["badacsony"] as const;
+const COLLECTION_AREAS = ["balaton-north"] as const;
 const UNREGISTERED = ["bs", "_test", "Balaton"] as const;
 
 // ── ① A forrás megkülönbözteti a NEVET a KULCSTÓL ────────────────────────────
 for (const id of REGISTERED) {
   const r = R(id);
-  check(r.known === true, `[${id}] bejegyzett terület → known=true (kapott: ${r.known})`);
+  check(r.known === true, `[${id}] kontextussal bejegyzett terület → known=true (kapott: ${r.known})`);
   check(
     r.known && r.label !== id,
     `[${id}] a címke a terület NEVE, nem a kulcs visszhangja („${r.label}")`,
   );
+}
+for (const id of COLLECTION_AREAS) {
+  const r = R(id);
+  check(r.known === false, `[${id}] gyűjtési terület → known=false, a neve nem lead-tény (kapott: ${r.known})`);
+  check(r.id === id, `[${id}] az azonosító attól még megmarad (nyelv, ütközés-kerülés)`);
+}
+{
+  // Koordinátás ág: Hárskút (Kerekerdő vendégház) a `balaton-north` dobozán kívül, de egy
+  // dobozon BELÜLI, nem parti pont (Tapolca) sem kaphat „Balaton” nevet.
+  const tapolca = SELF_TEST ? OLD.resolveRegion("balaton-north") : resolveRegion(undefined, 46.882, 17.441);
+  check(tapolca.known === false, `koordinátából talált gyűjtési doboz (Tapolca → ${tapolca.id}) neve sem lead-tény (kapott: ${tapolca.known})`);
 }
 for (const id of UNREGISTERED) {
   const r = R(id);
   check(r.known === false, `[${id}] nincs terület-rekord → known=false (kapott: ${r.known})`);
 }
 check(
-  UNREGISTERED.length >= 3 && REGISTERED.length >= 2,
-  `a minta TÉNYLEG tartalmaz mindkét esetet (${REGISTERED.length} bejegyzett / ${UNREGISTERED.length} nem) — enélkül az őr fél halmazt mérne`,
+  UNREGISTERED.length >= 3 && REGISTERED.length >= 1 && COLLECTION_AREAS.length >= 1,
+  `a minta TÉNYLEG tartalmaz mindhárom esetet (${REGISTERED.length} kontextus / ${COLLECTION_AREAS.length} gyűjtési / ${UNREGISTERED.length} nem) — enélkül az őr fél halmazt mérne`,
 );
 
 // ── ② A COPYWRITER promptja: elhagyja a fordulatot, és KIMONDJA, hogy nincs ──

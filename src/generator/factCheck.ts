@@ -28,7 +28,8 @@ export function regionSourceLine(region?: string): string {
   return region
     ? `region: ${region}`
     : "region: NINCS ADAT — a szálláshoz nem tartozik megnevezett terület, ezért BÁRMILYEN " +
-        "régióra/tájegységre/partoldalra utaló állítás MEGALAPOZATLAN";
+        "régióra/tájegységre/partoldalra utaló állítás MEGALAPOZATLAN, hacsak a szállás saját " +
+        "leírása vagy egy vendég-vélemény szó szerint ki nem mondja";
 }
 
 /** The only source facts a HARD claim may be grounded on (besides visible photos). */

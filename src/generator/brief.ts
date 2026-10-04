@@ -10,6 +10,7 @@ import { config } from "../config.js";
 import { toImageBlocks } from "./images.js";
 import type { ThemeBrief } from "./theme.js";
 import { COPY_SCHEMA, EDITORIAL_SYSTEM, type EditorialCopy } from "../engine/copywriter.js";
+import { OPENING_BAD_EXAMPLES } from "./lyricOpening.js";
 
 export interface GeneratedBrief {
   tagline: string;
@@ -31,10 +32,15 @@ const SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    tagline: { type: "string", description: "Hívogató hero-alcím, egyetlen evokatív magyar mondat." },
+    tagline: {
+      type: "string",
+      description: "LÍRAI hero-alcím, egyetlen magyar mondat: kinek való a hely és mit él át ott — forrásból, felsorolás nélkül.",
+    },
     intro: {
       type: "string",
-      description: "2-3 mondatos magyar bemutatkozó. Ha kaptál képeket, a rajtuk VALÓBAN LÁTHATÓ jellemzőket fűzd bele.",
+      description:
+        "2-3 mondatos LÍRAI magyar bemutatkozó: a hely érzete, fekvése, mit él át ott a vendég és kinek való — FORRÁSBÓL. " +
+        "NEM a fotók leírása: épület, szín, felület, anyag, bútor TILOS; felszereltség legfeljebb a végén, egy félmondatban.",
     },
     highlights: {
       type: "array",
@@ -102,6 +108,19 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
 - A "Régió" mező KERESÉSI TERÜLET címkéje, NEM a szállás elhelyezkedése — földrajzi pozíciót
   (pl. melyik parton/oldalon fekszik) SOHA ne állíts belőle. (Megtörtént kár: a "Balaton
   északi part" sweep-címkéből "az északi parton" tagline lett egy DÉLI parti szállásról.)
+- ⛔⛔ A NYITÓRÉSZ (tagline + intro, és az editorial hero főcíme) LÍRAI, NEM LEÍRÓ (tulaj, 2026-10-04:
+  „le kellene tiltani a nyitórésznél, hogy leíró módban menjen… Lírai szöveg kell”; ADR-XXXX). A hely
+  ÉRZETÉT adja: táj, fekvés, évszak, mit él át ott a vendég, kinek való.
+  ⛔ LEÍRÓ MÓD TILOS a nyitórészben: felület, szín, anyag, tető, homlokzat, burkolat, bútor, méret,
+  felszereltség-felsorolás. Megtörtént kár (tulaj: „sötétre pácolt???? komolyan????”):
+  ${OPENING_BAD_EXAMPLES.slice(5).map((e) => `„${e}…”`).join(", ")}, „a kertben ülősarok és kerti bútor
+  található”. A fotóból a palettát és a hangulatot veszed, nem mondatot. A felszereltség a "highlights"-ba
+  való; az intro legfeljebb a végén, egy félmondatban utalhat rá, mit kap a vendég.
+  ⛔ A LÍRAI KÉP IS FORRÁSBÓL: tájat, fekvést, csendet, évszakot a szállás saját bemutatkozása, a
+  vendég-vélemények vagy az igazolt tények mondják. Kitalált hangulati TÉNY nincs: érzéki részlet
+  (madárszó, illat, ropogó tűz, csillagos ég) csak ha a forrás kimondja; „csend” / „nyugalom” TILOS, ha
+  BÁRMELYIK vélemény zajra panaszkodik; EGY vendég egyszeri élményéből nem lesz „a vendégek mesélik”.
+  Vékony forrásnál a település és a célközönség adja a képet — tájat, utcaképet, vizet ne találj ki.
 - Nincs emoji, nincs klisé.`;
 
 /**
@@ -118,9 +137,10 @@ export function regionLines(region?: string, regionContext?: string): string {
   if (!region) {
     return (
       "Régió: NINCS ADAT — ehhez a szálláshoz nem tartozik megnevezett terület.\n" +
-      "Ezért régiót, tájegységet, partoldalt vagy környéket SEMMILYEN formában NE említs:\n" +
-      "se a taglineben, se az introban, se a kiemelésekben. A szöveg a szállás SAJÁT\n" +
-      "adottságairól szóljon. Ne találd ki a helyet a képekből.\n"
+      "Ezért régiót, tájegységet, partoldalt vagy környéket a saját tudásodból NE említs:\n" +
+      "se a taglineben, se az introban, se a kiemelésekben. Tájat, tájegységet CSAK akkor\n" +
+      "nevezhetsz meg, ha a szállás SAJÁT bemutatkozása vagy egy vendég-vélemény kimondja;\n" +
+      "a település a Település/Cím sorból jön. Ne találd ki a helyet a képekből.\n"
     );
   }
   return `Régió: ${region}\nKontextus: ${regionContext ?? ""}\n`;
@@ -236,8 +256,8 @@ const MERGED_SYSTEM =
   `A "brief.tagline" és az "editorial.hero.lead" EGYÜTT jelenik meg a herón: a lead a H1,\n` +
   `a tagline közvetlenül alatta az alcím. ⛔ A tagline NEM ismételheti meg a lead által már\n` +
   `megnevezett szolgáltatásokat — ami a főcímben már ott van, arra az alcím sorát elkölteni\n` +
-  `nulla új információ. Az alcím a MÁSODIK réteget viszi: MÁSIK igazolt adottság, a település-\n` +
-  `kontextus, vagy hogy KINEK való a hely (család, baráti kör, elvonulás). (Mért kár,\n` +
+  `nulla új információ. Az alcím a MÁSODIK réteget viszi, UGYANÚGY LÍRAI hangon: KINEK való a\n` +
+  `hely és mit él át ott (család, baráti kör, elvonulás) — forrásból, felsorolás nélkül. (Mért kár,\n` +
   `2026-09-06: a "Medence, dézsafürdő és grillezős kert…" főcím alá "Medence, dézsafürdő és\n` +
   `csendes kert…" alcím ment — ugyanaz a sor kétszer.)\n` +
   `\n═══ HARMADIK FELADAT — TÉNY-KINYERÉS IDÉZETTEL ═══\n` +
@@ -283,6 +303,9 @@ export async function generateBriefAndCopy(input: {
   region?: string;
   regionContext?: string;
   address?: string | null;
+  /** The lead's OWN town — the place fact the copy may always name. The scrape area's name is
+   *  not one (ADR-XXXX): a 32 km search circle called "Balaton-Kelet" also covers the Bakony. */
+  town?: string | null;
   /** REAL numbers the editorial may use verbatim (e.g. the A4-gated Google rating). */
   realStats?: readonly { value: string; label: string }[];
   /**
@@ -330,6 +353,7 @@ export async function generateBriefAndCopy(input: {
       type: "text",
       text:
         `Szállás: ${input.name}\n${regionLines(input.region, input.regionContext)}` +
+        (input.town ? `Település: ${input.town}\n` : "") +
         (input.address ? `Cím: ${input.address}\n` : "") +
         (input.realStats?.length
           ? `Valós számok (CSAK ezeket használhatod számként): ${input.realStats.map((s) => `${s.value} ${s.label}`).join(" · ")}\n`
@@ -338,11 +362,12 @@ export async function generateBriefAndCopy(input: {
           ? `\nIGAZOLT SZOLGÁLTATÁSOK — a szállás SAJÁT, ellenőrzött hirdetéséből, EROSSÉG SZERINT\n` +
             `CSÖKKENŐ sorrendben (a lista ELEJE a legerősebb vendég-döntési tény). Ezek VALÓS,\n` +
             `forrásolt tények, és ezek mondják meg, MIÉRT választja a vendég ezt a helyet.\n` +
-            `⛔ A hero főcím a lista ELEJÉRŐL nevezzen meg 1–3 tényt — a lista végéről főcímet\n` +
-            `építeni (parkoló, wifi) a legerősebb adottság elhallgatása.\n` +
+            `⛔ Ez a lista a KIEMELÉSEK ("highlights") forrása. A nyitórész (főcím, alcím, intro) NEM\n` +
+            `ennek a felsorolása: az lírai, a hely érzetét adja; belőle legfeljebb EGY adottság kerülhet\n` +
+            `a főcímbe, élménybe ágyazva (ADR-XXXX).\n` +
             `A "highlights" ELSŐSORBAN ezekből épüljön; a fotó a hangulaté és a palettáé.\n` +
             `⛔ RANGSOR: ha a tények közt VÍZPARTI FEKVÉS, saját strand, stég, medence vagy\n` +
-            `panoráma szerepel, a tagline és az első kiemelés EZT vigye — a kert, a parkoló, a\n` +
+            `panoráma szerepel, a nyitórész lírai képe és az első kiemelés EZT vigye — a kert, a parkoló, a\n` +
             `terasz ezek MÖGÉ sorolódik. (Megtörtént kár: egy közvetlen vízparti, saját strandos,\n` +
             `stéges villát "tágas kert, teraszos étkező és saját parkoló" főcímmel adtunk el.)\n` +
             input.sourcedFacts.amenities.map((a) => `- ${a}`).join("\n") +

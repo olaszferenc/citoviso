@@ -29,6 +29,7 @@ import { config } from "../config.js";
 import type { EditorialCopy } from "../engine/copywriter.js";
 import type { SectionCopy } from "../engine/recipe.js";
 import { familiarForms } from "./addressRegister.js";
+import { lintOpening, type OpeningKind } from "./lyricOpening.js";
 
 const MODEL = "claude-opus-4-8";
 /** Rewrite rounds after the first critique. Not a loop to convergence: if two targeted
@@ -80,7 +81,8 @@ export type ObjectionKind =
   | "al_idezet"
   | "nyelvtan"
   | "ismetles"
-  | "ures_kituntetes";
+  | "ures_kituntetes"
+  | OpeningKind;
 
 export interface Objection {
   readonly field: string;
@@ -495,6 +497,12 @@ const ALWAYS_BLOCKING: ReadonlySet<ObjectionKind> = new Set([
   "velemeny_mint_szolgaltatas",
   "nem_letezo_fogalom",
   "al_idezet",
+  // ADR-XXXX: the opening rules. A descriptive or inventory opening is the owner's „9/10”
+  // complaint itself; grading it "javítandó" would ship it with a PASS.
+  "leiro_nyitas",
+  "leltar_nyitas",
+  "minta_masolas",
+  "hangulat_forras_nelkul",
 ]);
 // NOT "megszolitas": the register is the lint twin's call (addressRegister.ts) — measured
 // 2026-10-02, the model graded the magázó „Amit itt kap” a register error; raising its own
@@ -508,6 +516,23 @@ export function normalizeSeverity(o: Objection): Objection {
         DETAIL_TERMS.some((d) => d.re.test(o.quote)) ||
         OBJECT_TERMS.some((t) => t.re.test(o.quote))));
   return blocking ? { ...o, severity: "blokkolo" } : o;
+}
+
+/**
+ * The lyrical-opening rules (lyricOpening.ts, ADR-XXXX) as blocking objections. Evidence is
+ * the same unit set the other source rules read: listing labels + quotes, the prose, reviews.
+ */
+export function lintOpeningCopy(c: CopySurface, source: CriticSource): Objection[] {
+  const reviews = [
+    ...(source.reviews ?? []),
+    ...source.facts.filter((f) => f.kind === "review").map((f) => f.quote ?? ""),
+  ].filter((t) => t.trim());
+  return lintOpening(surfaceLines(c), {
+    name: source.name,
+    town: source.town ?? null,
+    texts: sourceUnits(source),
+    reviews,
+  }).map((f) => ({ ...f, severity: "blokkolo" as const, by: "lint" as const }));
 }
 
 // ── the critic ───────────────────────────────────────────────────────────────────────────
@@ -538,6 +563,11 @@ Mit keresel (a „kind” értékei):
 - nyelvtan — rossz vonzat, értelmetlen szerkezet („biciklik a Balatonhoz”), egyeztetés. BLOKKOLÓ, ha a főcímben áll.
 - ismetles — a főcím, az alcím és a kiemelések ugyanazt mondják. JAVÍTANDÓ.
 - ures_kituntetes — üres vagy önjelölt dicséret („kiváló kávé”, „tökéletes választás”) forrás nélkül. JAVÍTANDÓ.
+A NYITÓRÉSZ (hero.lead, tagline, intro) LÍRAI: a hely érzetét adja (táj, fekvés, évszak, kinek való), FORRÁSBÓL.
+- leiro_nyitas — a nyitórész a ház KINÉZETÉT írja le: felület, anyag, szín, tető, homlokzat, bútor („sötétre pácolt faház”, „cseréptetős épület”, „kerti bútor található”). BLOKKOLÓ.
+- leltar_nyitas — a nyitórész felszereltséget SOROL (a főcímben és az alcímben legfeljebb EGY adottság állhat, élménybe ágyazva). BLOKKOLÓ.
+- minta_masolas — a főcím egy ismert minta-mondat keretét ismétli. BLOKKOLÓ.
+- hangulat_forras_nelkul — hangulati vagy érzéki TÉNY (csend, nyugalom, madárszó, illat, ropogó tűz, csillagos ég, tájegység), amit sem a leírás, sem egy vélemény nem mond; vagy csend/nyugalom, miközben egy vélemény zajra panaszkodik; vagy EGYETLEN vendég egyszeri élményéből („elaludtam a tornácon”) általános állítás („a vendégek mesélik”) vagy főcím. BLOKKOLÓ.
 
 Szabályok:
 - A „quote” a szövegből SZÓ SZERINT kimásolt részlet legyen (a gép visszakeresi).
@@ -549,6 +579,7 @@ Szabályok:
 const OBJECTION_KINDS: readonly ObjectionKind[] = [
   "forrastalan_igeret", "tulzas_a_forrashoz", "velemeny_mint_szolgaltatas", "nem_letezo_fogalom",
   "tukorforditas", "megszolitas", "ai_sablon", "al_idezet", "nyelvtan", "ismetles", "ures_kituntetes",
+  "leiro_nyitas", "leltar_nyitas", "minta_masolas", "hangulat_forras_nelkul",
 ];
 
 const CRITIC_SCHEMA = {
@@ -658,6 +689,7 @@ export async function critiqueCopy(
     ...lintAddedDetail(copy, source),
     ...lintAddedObject(copy, source),
     ...lintPlacedClaim(copy, source),
+    ...lintOpeningCopy(copy, source),
   ];
   const c = await client();
   const res = await c.messages.create({
@@ -710,7 +742,7 @@ Szabályok:
 3. VENDÉG-VÉLEMÉNYBŐL JÖVŐ TÉNY: ha a vélemény ÁLLANDÓ adottságot ír le (van reggeli, grillezési lehetőség, elegendő parkolóhely, klíma), az állítható — de pontosan a vélemény erejéig: „sufficient” = elegendő, nem bőséges; „parking” ≠ saját parkoló. Egy vendég EGYSZERI élménye vagy a házigazda szívessége (pl. kölcsönadta a biciklijét) SOHA nem lesz szolgáltatás, és véleményből nem lesz „bérelhető / ingyenes / foglalható” ajánlat — ezeket hagyd ki.
 4. Úgy írj, ahogy egy jó ízlésű magyar szállásadó írná a saját honlapjára: egyszerű, természetes mondatok, élő magyar szavak. Nincs „X várja a vendégeket”, nincs ál-idézet, nincs jelzőhalmozás, nincs tükörfordítás.
 5. A megszólítás a ház szabálya szerinti, végig egységesen.
-6. A szerkezet marad: ugyanazok a mezők (a kulcsban "_" áll a pont helyett: hero_lead = hero.lead). A hero_lead MEGNEVEZ legalább egy konkrét dolgot, amit a vendég itt kap. Egy "_title" lehet kétsoros (\\n). Ami a jelenlegi szövegben nincs, azt a mezőt hagyd ki; ami kifogás nélküli, azt add vissza VÁLTOZATLANUL.
+6. A szerkezet marad: ugyanazok a mezők (a kulcsban "_" áll a pont helyett: hero_lead = hero.lead). A nyitórész (hero_lead, tagline, intro) LÍRAI: a hely érzetét adja forrásból (táj, fekvés, évszak, kinek való); a főcímben és az alcímben legfeljebb EGY adottság, élménybe ágyazva; a ház kinézete (felület, anyag, szín, bútor) és a felszereltség-lista NEM a nyitórészbe való. Vékony forrásnál a település és a célközönség adja a képet — tájat ne találj ki. Egy "_title" lehet kétsoros (\\n). Ami a jelenlegi szövegben nincs, azt a mezőt hagyd ki; ami kifogás nélküli, azt add vissza VÁLTOZATLANUL.
 7. Ami nem kapott kifogást, azt NE írd át.
 8. Nincs emoji, nincs szám, ami a forrásban nincs.
 9. Tényeket NE kapcsolj össze új viszonnyal: ne tegyél helyhatározót, időt vagy célt egy tény mellé, ha a forrás nem mondja (ROSSZ: „medence és reggeli a kertben” — a reggeli nem a kertben van). Fizikai adottságot (medence, napozóágy, kert, terasz, kilátás) csak akkor hagyj ki, ha a kifogás KIFEJEZETTEN arra szól.
