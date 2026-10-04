@@ -21,7 +21,8 @@
 // page under a prospect who has the link is exactly the bait-and-switch the §I
 // invariant forbids — what we showed them is what they get.
 
-import { currentAiUsage, formatUsage, usageForArtifact, withAiUsage } from "../ai/usage.js";
+import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
+import { AiDailyCapError, withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
 
 import type { EditorialCopy } from "../engine/copywriter.js";
@@ -79,9 +80,16 @@ export async function recopyArtifact(
   artifactId: string,
   curatorPrompt?: string,
 ): Promise<RecopyResult> {
-  const { result, usage } = await withAiUsage(() => recopyInner(artifactId, curatorPrompt));
-  console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log
-  return result;
+  let run;
+  try {
+    run = await withMockBudget(() => recopyInner(artifactId, curatorPrompt));
+  } catch (err) {
+    // The daily AI ceiling is a refusal, not a crash — this function never throws.
+    if (err instanceof AiDailyCapError) return { ok: false, message: err.message };
+    throw err;
+  }
+  console.log(`  ${formatUsage(run.usage)}`); // i18n-exempt: operator log
+  return run.result;
 }
 
 async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<RecopyResult> {

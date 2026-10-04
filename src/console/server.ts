@@ -10,6 +10,7 @@ import http from "node:http";
 import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock, type GenStageKey } from "../generator/generateEngine.js";
 import { recopyArtifact } from "../generator/recopy.js";
+import { capReachedMessage, mockSpendToday } from "../ai/dailyCap.js";
 import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
 import { isCopyKey, type CopyKey, type CopyValue } from "../engine/copyFields.js";
 import { renderSite } from "../engine/render.js";
@@ -2112,7 +2113,19 @@ async function handle(
   const genMatch = /^\/lead\/([0-9a-f-]{36})\/generate$/i.exec(path);
   if (method === "POST" && genMatch) {
     const id = genMatch[1];
-    if (!generateInFlight(id)) {
+    // Daily AI ceiling (src/ai/dailyCap.ts): refuse BEFORE the run starts, on the same
+    // outcome line the curator (or Neo) watches — not as a run that flashes and dies.
+    // The engine re-checks it itself, so a path that skips this still cannot spend.
+    const spend = generateInFlight(id) ? null : await mockSpendToday();
+    if (spend?.blocked) {
+      generateOutcome.set(id, {
+        ok: false,
+        message: capReachedMessage(spend),
+        at: Date.now(),
+        durationMs: 0,
+        artifactId: null,
+      });
+    } else if (!generateInFlight(id)) {
       // ADR-0027: the CURATOR picks the art template(s) + may steer the voice with a free-text
       // prompt (the §B.17 fact contract still governs downstream). The picker is multi-select:
       // each chosen template yields its OWN mock (distinct file + artifact row). Unknown/empty
@@ -2360,8 +2373,13 @@ async function handle(
     // back identical, and nothing on screen distinguished "started" from
     // "dropped". A background job the user cannot see is a job they cannot trust.
     let flash: string;
+    const spend = recopyInFlight(id) ? null : await mockSpendToday();
     if (recopyInFlight(id)) {
       flash = "Ehhez a mockhoz MÁR fut egy szöveg-újragenerálás — várd meg (~1 perc), és frissíts.";
+    } else if (spend?.blocked) {
+      // Daily AI ceiling: say it now, not "készül…" followed by a refusal a minute later.
+      flash = capReachedMessage(spend);
+      recopyOutcome.set(id, { ok: false, message: flash, at: Date.now() });
     } else {
       recopying.set(id, Date.now());
       console.log(`[console] recopy ${id} indul${prompt ? ` · utasítás: ${prompt}` : ""}`); // i18n-exempt: operator log
@@ -2383,7 +2401,8 @@ async function handle(
       flash = "Új szöveg készül (~1 perc) — az oldal magától frissül, amint kész.";
     }
     const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
-    return redirect(res, `${back}?flash=${encodeURIComponent(flash)}#ls-mocks`);
+    const kind = spend?.blocked ? "&flashKind=bad" : "";
+    return redirect(res, `${back}?flash=${encodeURIComponent(flash)}${kind}#ls-mocks`);
   }
   // POST /artifact/:id/copy — the curator's HAND edit of a mock's copy (ADR-0323; approved
   // plan assets/design-refs/console/mock-copy-edit/). ONE path for both surfaces: the field

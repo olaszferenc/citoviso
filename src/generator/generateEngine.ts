@@ -8,7 +8,8 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
-import { currentAiUsage, formatUsage, usageForArtifact, withAiUsage } from "../ai/usage.js";
+import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
+import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
 
 import type { EditorialCopy } from "../engine/copywriter.js";
@@ -211,7 +212,7 @@ export async function generateEngineMock(
   regionId?: string,
   opts: GenerateOpts = {},
 ): Promise<EngineGenerateResult> {
-  const { result, usage } = await withAiUsage(() => generateEngineMockInner(loaded, regionId, opts));
+  const { result, usage } = await withMockBudget(() => generateEngineMockInner(loaded, regionId, opts));
   console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log
   return result;
 }

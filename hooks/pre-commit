@@ -625,6 +625,14 @@ if [ -f scripts/ai-usage-lint.mts ]; then
   echo "[pre-commit] ai-usage-lint (minden AI-hívás mérve)…"
   npx tsx scripts/ai-usage-lint.mts
 fi
+# Daily AI cost ceiling (owner ruling 2026-10-04): every mock-generating run starts through
+# withMockBudget(), which refuses at/above AI_DAILY_CAP_USD before any AI call; the console
+# routes ask BEFORE starting. ⚠️ ÖN-TRIGGER: own file in the pattern. Se AI, se hálózat; DB: olvasás (~3s).
+if [ -f scripts/ai-daily-cap-check.mts ] && \
+   changed_files | grep -qE '^src/ai/|^src/generator/(generate|generateEngine|recopy)\.ts$|^src/console/server\.ts$|^src/config\.ts$|^scripts/ai-daily-cap-check\.mts$'; then
+  echo "[pre-commit] ai-daily-cap-check (napi AI-plafon minden mock-futás előtt)…"
+  npx tsx scripts/ai-daily-cap-check.mts >"$GATE_LOG" || gate_failed
+fi
 # The gates below this line run the REAL flows with the REAL Zoho credentials from
 # .env, and their fixtures write to fictional guests at example.com — a Null MX
 # domain (RFC 7505), so every commit bounced "556 5.7.27" into the owner's inbox and

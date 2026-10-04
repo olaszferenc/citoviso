@@ -6,8 +6,8 @@ import {
   currentAiUsage,
   formatUsage,
   usageForArtifact,
-  withAiUsage,
 } from "../ai/usage.js";
+import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { ratingAttributable, scoreMatch } from "../scraper/confidence.js";
@@ -613,7 +613,7 @@ export async function generateMock(
   loaded: LoadedLead,
   regionId?: string,
 ): Promise<GenerateResult> {
-  const { result, usage } = await withAiUsage(() =>
+  const { result, usage } = await withMockBudget(() =>
     generateMockInner(loaded, regionId),
   );
   console.log(`  ${formatUsage(usage)}`); // i18n-exempt: operator log

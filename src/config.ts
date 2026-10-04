@@ -161,6 +161,14 @@ export const config = {
    * Threshold: the day is flagged when its list-price estimate exceeds it (USD).
    * Item minimum: a ≥2× item is flagged only from this estimated daily cost (USD).
    */
+  /**
+   * HARD daily ceiling on mock-generation AI spend, USD (owner ruling 2026-10-04). Sums
+   * `mock_artifact.inputs.aiUsage.costUsd` for today's Europe/Budapest day; at or above it
+   * every generation entry point refuses (src/ai/dailyCap.ts). Env-only on purpose — not
+   * an app_setting, not editable from the console. Kept as the RAW string: a typo must
+   * not parse to NaN and silently disable the cap (dailyCap.ts validates it).
+   */
+  aiDailyCapUsdRaw: env("AI_DAILY_CAP_USD", "20"),
   googleCostProject: env("GOOGLE_COST_PROJECT", "mineralcrm"),
   googleCostReportTo: env("GOOGLE_COST_REPORT_TO"),
   googleCostDailyThresholdUsd: Number(env("GOOGLE_COST_DAILY_THRESHOLD_USD", "20")),
