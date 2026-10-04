@@ -124,6 +124,15 @@ export const config = {
    */
   outreachSmsAllowlist: env("OUTREACH_SMS_ALLOWLIST", ""),
   /**
+   * OWNER TEST PHONES (ADR-XXXX, owner decision 2026-10-04). Comma-separated numbers
+   * the owner tests the mobile channel with. On a lead whose name starts with
+   * "[TESZT]" such a number is exempt from the shared-contact gate (it sits on several
+   * test leads by design), and OFF the live host also from the number-level opt-out.
+   * A real lead carrying the same number gets NO exemption. Unlike the allowlist this
+   * restricts nothing — it is safe to set on the live host.
+   */
+  outreachTestPhones: env("OUTREACH_TEST_PHONES", ""),
+  /**
    * TEMPORARY owner switch (2026-09-30, live funnel test): "1" lifts the mobile send
    * windows — the 8–20 SMS window, the pair head-room rule and the 19:30 MMS pull
    * cutoff — for EVERY number. E-mail windows (escalation reminder) are untouched.

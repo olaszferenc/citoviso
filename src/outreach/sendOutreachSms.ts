@@ -46,6 +46,8 @@ import {
 import { config } from "../config.js";
 import { huArticleLower } from "../hu.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
+import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
+import { isLiveHost } from "../invoicing/keyGuard.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -138,6 +140,34 @@ export async function isPhoneSuppressed(phoneE164: string): Promise<boolean> {
     if (raw.phone && normalizePhone(raw.phone) === phoneE164) return true;
   }
   return false;
+}
+
+/**
+ * The two PERSON-level checks of the mobile chain: number-level opt-out, then the
+ * shared-contact gate. Returns the operator-facing reason, or null. Split out so the
+ * owner-test-phone exemption (ADR-XXXX) is measured on the real code path, not on a
+ * copy of it.
+ *
+ * Exemption: a number listed in OUTREACH_TEST_PHONES on a "[TESZT]" lead skips the
+ * shared-contact gate everywhere, and the opt-out OFF the live host only. A real lead
+ * with the same number is gated exactly as before.
+ */
+export async function phoneContactBlocks(
+  leadId: string,
+  leadName: string,
+  to: string,
+  live: boolean = isLiveHost(config.publicBaseUrl),
+): Promise<string | null> {
+  const testExempt = ownerTestPhoneExempt(leadName, to);
+
+  // PERSON-level opt-out (mirror of the mail's address-level suppression).
+  if (!(testExempt && !live) && (await isPhoneSuppressed(to))) {
+    return "erre a telefonszámra korábban leiratkoztak (szám-szintű suppression) — küldés tilos";
+  }
+
+  // SHARED-CONTACT gate (2026-09-28) — same rule as the mail path, one module. The
+  // owner's test phone sits on several test leads by design.
+  return sharedContactBlocks(leadId, "phone", to, isAllowlistedTestNumber(to) || testExempt);
 }
 
 /** What the shared gate chain yields when every check passed. */
@@ -260,15 +290,8 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     );
   }
 
-  // PERSON-level opt-out (mirror of the mail's address-level suppression).
-  if (await isPhoneSuppressed(to)) {
-    return no("erre a telefonszámra korábban leiratkoztak (szám-szintű suppression) — küldés tilos");
-  }
-
-  // SHARED-CONTACT gate (2026-09-28) — same rule as the mail path, one module. The
-  // owner's allowlisted test phone sits on several test leads by design.
-  const shared = await sharedContactBlocks(p.leadId, "phone", to, isAllowlistedTestNumber(to));
-  if (shared) return no(shared);
+  const contactBlock = await phoneContactBlocks(p.leadId, p.leadName, to);
+  if (contactBlock) return no(contactBlock);
 
   const blocked = smsAllowlistBlocks(to);
   if (blocked) return no(blocked);

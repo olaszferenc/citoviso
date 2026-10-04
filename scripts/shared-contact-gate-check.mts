@@ -157,7 +157,13 @@ try {
   ok(!reasonAfter.includes("másik szálláshoz"), "⑪ az ítélet után a levél-út továbbenged (a következő kapuig)", reasonAfter);
 
   const smsSrc = readFileSync("src/outreach/sendOutreachSms.ts", "utf8");
-  ok(/sharedContactBlocks\(p\.leadId, "phone", to,/.test(smsSrc), "⑪ a mobil-út a normalizált számmal hívja a kaput");
+  // Since ADR-XXXX the call lives in phoneContactBlocks(), which the chain calls with
+  // the normalised number; its behaviour is measured by owner-test-phone-check.mts.
+  ok(
+    /phoneContactBlocks\(p\.leadId, p\.leadName, to\)/.test(smsSrc) &&
+      /sharedContactBlocks\(leadId, "phone", to,/.test(smsSrc),
+    "⑪ a mobil-út a normalizált számmal hívja a kaput",
+  );
 } finally {
   if (ids.leads.length) {
     await db.deleteFrom("prospect").where("lead_id", "in", ids.leads).execute();

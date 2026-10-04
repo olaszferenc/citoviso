@@ -1603,6 +1603,14 @@ if [ -f scripts/shared-contact-gate-check.mts ] && \
   echo "[pre-commit] shared-contact-gate-check (szomszéd elérhetőségére nem megy mock)…"
   npx tsx scripts/shared-contact-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ADR-XXXX (tulaj, 2026-10-04): a tulaj teszt-száma (OUTREACH_TEST_PHONES) CSAK [TESZT]
+# leaden mentes a közös-elérhetőség és (élesen kívül) a szám-szintű leiratkozás alól;
+# valódi lead ugyanazzal a számmal továbbra is tiltott (negatív kontroll). ~3 s.
+if [ -f scripts/owner-test-phone-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(ownerTestPhone|sharedContactGate|sendOutreachSms)\.ts$|^src/config\.ts$|^scripts/owner-test-phone-check'; then
+  echo "[pre-commit] owner-test-phone-check (teszt-szám csak [TESZT] leaden mentes)…"
+  npx tsx scripts/owner-test-phone-check.mts >"$GATE_LOG" || gate_failed
+fi
 # 2026-09-28: a Places-párosítás ne adja a szomszéd telefonját/honlapját a leadnek
 # (szakszó nem párosít; közepes sávból nem lesz elérhetőség). Tiszta, hálózat nélkül.
 if [ -f scripts/places-match-check.mts ] && \
