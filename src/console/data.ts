@@ -27,6 +27,7 @@ import { leadEmails } from "../email/leadEmails.js";
 import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offers.js";
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
+import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -1623,9 +1624,18 @@ export async function recordView(
   userAgent: string | null,
   referrer: string | null,
 ): Promise<string> {
+  // ADR-0322 ③ (ADR-0108 shape): only what the report needs is stored — the device
+  // class, OS, browser and the referrer HOST. The raw UA and the full referrer are not.
+  const ua = parseUserAgent(userAgent);
   const view = await db
     .insertInto("mock_view")
-    .values({ prospect_id: prospectId, user_agent: userAgent, referrer })
+    .values({
+      prospect_id: prospectId,
+      device: ua.device,
+      os: ua.os,
+      browser: ua.browser,
+      referrer_host: referrerHost(referrer),
+    })
     .returning("id")
     .executeTakeFirstOrThrow();
   await db

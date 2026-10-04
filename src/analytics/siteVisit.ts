@@ -21,25 +21,9 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { db } from "../db/client.js";
-
-/**
- * Known crawler/monitor signatures. Deliberately broad substrings: a bot counted as
- * a guest inflates the number we show the paying customer, which is the failure that
- * matters here — while a guest miscounted as a bot only costs us a data point.
- */
-const BOT_PATTERN =
-  /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora link preview|showyoubot|outbrain|pinterest|vkshare|w3c_validator|whatsapp|flipboard|tumblr|telegram|discord|slack|preview|monitor|uptime|pingdom|lighthouse|headless|curl|wget|python-requests|axios|go-http-client|java\/|okhttp/i;
-
-/** Bare hostname of the referrer ("google.com"), never the full URL. */
-function referrerHost(raw: string | undefined): string | null {
-  if (!raw) return null;
-  try {
-    const h = new URL(raw).hostname.replace(/^www\./, "");
-    return h || null;
-  } catch {
-    return null;
-  }
-}
+// ADR-0322 ③: the bot list and the referrer→host rule live in ONE place, shared with
+// the mock link (mock_view) — one rule, not two copies.
+import { BOT_PATTERN, referrerHost } from "./userAgent.js";
 
 function deviceOf(ua: string): "mobile" | "desktop" {
   return /mobile|android|iphone|ipad|ipod|windows phone/i.test(ua) ? "mobile" : "desktop";
