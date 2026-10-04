@@ -1855,7 +1855,7 @@ fi
 # ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 # Se AI, se hálózat, se DB (~2s).
 if [ -f scripts/region-phrase-drop-check.mts ] && \
-   changed_files | grep -qE '^src/generator/(generate|generateEngine|recopy|brief|factCheck)\.ts$|^src/scraper/regions\.ts$|^scripts/region-phrase-drop-check\.mts$'; then
+   changed_files | grep -qE '^src/generator/(generate|generateEngine|recopy|copySources|brief|factCheck)\.ts$|^src/scraper/regions\.ts$|^scripts/region-phrase-drop-check\.mts$'; then
   echo "[pre-commit] region-phrase-drop-check (nincs terület-név → nincs régió-fordulat)…"
   npx tsx scripts/region-phrase-drop-check.mts >"$GATE_LOG" || gate_failed
 fi

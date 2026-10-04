@@ -6,6 +6,7 @@
 
 import type { SiteData } from "../engine/recipe.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
+import { loadRegions } from "../scraper/regions.js";
 import type { PortalProfile } from "../scraper/types.js";
 import { getRegionContext, resolveRegion } from "./generate.js";
 import { decisionWeightDesc, descriptionSellingPoints } from "./marketCheck.js";
@@ -32,8 +33,9 @@ export async function loadCopySources(
   siteData: SiteData,
 ): Promise<CopySources> {
   const { lead } = await loadLead(leadId);
+  await loadRegions(); // same snapshot as generateEngine (see there)
   const region = resolveRegion(inputs.regionId as string | undefined, lead.lat, lead.lon);
-  const ctx = getRegionContext(region.id, region.label);
+  const ctx = getRegionContext(region);
   const lang = siteData.lang ?? DEFAULT_LANG;
 
   // The SAME sourced-fact set the first generation used (amenities from high-band

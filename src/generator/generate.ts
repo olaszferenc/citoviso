@@ -153,26 +153,39 @@ export function resolveRegion(
   // and Hárskút (Kerekerdő vendégház) was handed to the copywriter AND to the fact gate's
   // licence as a "Balaton-Kelet" property. So `known` is true only where a hand-authored
   // context vouches for the place (REGIONS below); the id still travels (language, anti-collision).
+  const hasCoords = lat != null && lon != null;
+  const inside = (bbox: readonly [number, number, number, number]) => {
+    const [s, w, n, e] = bbox;
+    return lat != null && lon != null && lat >= s && lat <= n && lon >= w && lon <= e;
+  };
   if (regionId && GEO_REGIONS[regionId]) {
-    return { id: regionId, label: GEO_REGIONS[regionId].label, known: REGIONS[regionId] !== undefined };
+    // A hand-authored context vouches for the PLACE, so it holds only for a lead that is
+    // in it: an explicit id is a caller's (or a stored artifact's) claim, not a measurement.
+    const vouched = REGIONS[regionId] !== undefined && (!hasCoords || inside(GEO_REGIONS[regionId].bbox));
+    return { id: regionId, label: GEO_REGIONS[regionId].label, known: vouched };
   }
-  if (lat != null && lon != null) {
+  if (hasCoords) {
     for (const r of Object.values(GEO_REGIONS)) {
-      const [s, w, n, e] = r.bbox;
-      if (lat >= s && lat <= n && lon >= w && lon <= e) {
+      if (inside(r.bbox)) {
         return { id: r.id, label: r.label, known: REGIONS[r.id] !== undefined };
       }
     }
   }
+  // ⛔ A FALLBACK IS NOT A PLACE. Measured 2026-10-04 (Kerekerdő, Hárskút): the console had not
+  // loaded the DB areas, no built-in box held the lead, and this line returned
+  // `badacsony, known: true` — the copywriter and the fact gate's licence got Badacsony as a
+  // verified fact about a Bakony guesthouse. The id still travels (language, anti-collision);
+  // the name never does.
   const id = regionId ?? "badacsony";
-  const known = REGIONS[id] !== undefined;
-  return { id, label: known ? REGIONS[id]!.label : id, known };
+  return { id, label: id, known: false };
 }
 
-/** Regional "mag" context for an id, or a neutral fallback carrying the display label.
+/** Regional "mag" context for a resolved region, or a neutral fallback carrying the display
+ *  label. An unvouched region (`known: false`) gets the neutral one even when its id has a
+ *  context: the Badacsony tagline is not a fact about a lead outside Badacsony.
  *  Exported so the engine path (generateEngine.ts) shares the exact same context. */
-export function getRegionContext(id: string, label: string): RegionContext {
-  return REGIONS[id] ?? { label, tagline: "", introBase: "", features: [] };
+export function getRegionContext(region: { id: string; label: string; known: boolean }): RegionContext {
+  return (region.known ? REGIONS[region.id] : undefined) ?? { label: region.label, tagline: "", introBase: "", features: [] };
 }
 
 /**

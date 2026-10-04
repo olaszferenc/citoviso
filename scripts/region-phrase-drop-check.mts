@@ -30,7 +30,7 @@ import path from "node:path";
 
 import { regionLines } from "../src/generator/brief.js";
 import { regionSourceLine } from "../src/generator/factCheck.js";
-import { resolveRegion } from "../src/generator/generate.js";
+import { getRegionContext, resolveRegion } from "../src/generator/generate.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -48,6 +48,9 @@ const OLD = {
   resolveRegion: (id: string) => ({ id, label: id, known: true }),
   regionLines: (region?: string, ctx?: string) => `Régió: ${region}\nKontextus: ${ctx ?? ""}\n`,
   regionSourceLine: (region?: string) => `region: ${region}`,
+  // A 2026-10-04-ig kiszállított fallback: `regionId ?? "badacsony"`, known = van-e kontextusa.
+  fallback: () => ({ id: "badacsony", label: "Badacsony (Badacsonytomaj környéke)", known: true }),
+  regionContext: (_r: { id: string; label: string; known: boolean }) => ({ tagline: "Badacsony tagline" }),
 };
 const R = SELF_TEST ? OLD.resolveRegion : (id: string) => resolveRegion(id, null, null);
 const L = SELF_TEST ? OLD.regionLines : regionLines;
@@ -83,6 +86,25 @@ for (const id of COLLECTION_AREAS) {
   // dobozon BELÜLI, nem parti pont (Tapolca) sem kaphat „Balaton” nevet.
   const tapolca = SELF_TEST ? OLD.resolveRegion("balaton-north") : resolveRegion(undefined, 46.882, 17.441);
   check(tapolca.known === false, `koordinátából talált gyűjtési doboz (Tapolca → ${tapolca.id}) neve sem lead-tény (kapott: ${tapolca.known})`);
+}
+{
+  // A FALLBACK NEM HELY (2026-10-04, Kerekerdő élesen): a konzol nem töltötte be a DB-területeket,
+  // Hárskút (47.183, 17.815) egyik beépített dobozba sem esett, és a fallback `badacsony`-t adott
+  // known=true-val → a szövegíró és a tény-kapu licence badacsonyi tájat kapott egy bakonyi házhoz.
+  const harskut = SELF_TEST ? OLD.fallback() : resolveRegion(undefined, 47.1830183, 17.8151913);
+  check(harskut.known === false, `dobozon kívüli lead (Hárskút) fallbackja → known=false (kapott: ${harskut.id}, ${harskut.known})`);
+  const noCoords = SELF_TEST ? OLD.fallback() : resolveRegion(undefined, null, null);
+  check(noCoords.known === false, `koordináta és terület nélkül → known=false (kapott: ${noCoords.known})`);
+  // Explicit (tárolt / hívó adta) kontextus-id csak a HELYEN BELÜL kezeskedik.
+  const storedOutside = SELF_TEST ? OLD.resolveRegion("badacsony") : resolveRegion("badacsony", 47.1830183, 17.8151913);
+  check(storedOutside.known === false, `explicit „badacsony” a dobozán KÍVÜLI leadre → known=false (kapott: ${storedOutside.known})`);
+  const storedInside = resolveRegion("badacsony", 46.79, 17.52);
+  check(storedInside.known === true, `explicit „badacsony” a dobozán BELÜLI leadre → known=true (pozitív kontroll, kapott: ${storedInside.known})`);
+  // A kontextus (tagline!) sem szivároghat: a siteData alcím-fallbackje ebből él.
+  const ctx = SELF_TEST ? OLD.regionContext(harskut) : getRegionContext(harskut);
+  check(ctx.tagline === "", `nem kezeskedett régió kontextusa üres taglinet ad (kapott: „${ctx.tagline}”)`);
+  const ctxKnown = getRegionContext(storedInside);
+  check(ctxKnown.tagline !== "", "kezeskedett régió kontextusa megmarad (pozitív kontroll)");
 }
 for (const id of UNREGISTERED) {
   const r = R(id);
@@ -161,6 +183,17 @@ check(
       );
     }
   }
+}
+
+// ── ⑤ A területek betöltése a GENERÁTOR dolga, nem a /scrape oldalé ─────────────
+// Különben ugyanaz a lead a konzol-újraindítás után másképp oldódik fel, mint előtte.
+for (const rel of ["src/generator/generateEngine.ts", "src/generator/copySources.ts"]) {
+  const src = SELF_TEST
+    ? "  const region = resolveRegion(regionId, lead.lat, lead.lon);\n"
+    : readFileSync(path.join(ROOT, rel), "utf8");
+  const load = src.search(/await loadRegions\(/);
+  const use = src.search(/resolveRegion\(/);
+  check(load >= 0 && use > load, `[${rel}] a resolveRegion ELŐTT betölti a DB-területeket (loadRegions)`);
 }
 
 // ── Verdikt ─────────────────────────────────────────────────────────────────

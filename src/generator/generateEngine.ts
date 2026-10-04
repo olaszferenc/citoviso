@@ -25,6 +25,7 @@ import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
 import { fetchPlaceReviews } from "../scraper/sources/googleMaps.js";
+import { loadRegions } from "../scraper/regions.js";
 import type { GuestReview, PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
@@ -222,8 +223,12 @@ async function generateEngineMockInner(
 ): Promise<EngineGenerateResult> {
   opts.onStage?.("load");
   const { id: leadId, lead } = loaded;
+  // The region snapshot starts as the built-ins and only the scrape pages refreshed it, so the
+  // SAME lead resolved differently before and after someone opened /scrape (measured
+  // 2026-10-04: Kerekerdő → "Balaton-Kelet" one day, the fallback the next). Load it here.
+  await loadRegions();
   const region = resolveRegion(regionId, lead.lat, lead.lon);
-  const ctx = getRegionContext(region.id, region.label);
+  const ctx = getRegionContext(region);
 
   // ADR-0036: language derives from the region's country; a new language area auto-provisions
   // its UI-string pack here (one-time per language, deterministic afterwards). A failed/partial

@@ -83,7 +83,7 @@ async function main() {
   const arg = process.argv[2];
   const { id, lead } = await loadLead(arg);
   const region = resolveRegion(undefined, lead.lat, lead.lon);
-  const ctx = getRegionContext(region.id, region.label);
+  const ctx = getRegionContext(region);
   console.log(`\n  lead: ${lead.name}  (${id})`);
   console.log(`  kvalifikáció: ${lead.websiteStatus} · régió: ${region.label}`);
 
