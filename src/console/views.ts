@@ -31,7 +31,10 @@ import {
   isMatchBaseValue,
   LEAD_COLUMNS,
   LEAD_FILTERS,
-  MOCK_STATUSES,
+  MOCK_FILTER_OPTIONS,
+  MOCK_STATE_PRECEDENCE,
+  mockOptionLabel,
+  mockSentLabel,
   mockStatusLabel,
   PLACES_PHOTO_CAP,
   unknownRegionLabel,
@@ -1521,8 +1524,25 @@ function leadOptionLabel(
   }
   // A MOCK oszlop szava a REGISZTERBŐL — se a cella, se a szűrő-opció, se a szűrő-mondat
   // nem írhat nyers adatbázis-értéket (jóváhagyott terv ③).
-  if (column === "mock") return mockStatusLabel(code, lang);
+  if (column === "mock") return mockOptionLabel(code, lang);
   return code;
+}
+
+/**
+ * ` title="4 mockból: 1 jóváhagyva, 3 elutasítva"` — only when the lead has more than one
+ * mock. The cell prints the strongest state; this says what else exists, so a rejected
+ * sibling is not hidden, just not the headline.
+ */
+function mockBreakdownTitle(byStatus: Readonly<Record<string, number>> | undefined, lang: string): string {
+  if (!byStatus) return "";
+  const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
+  if (total < 2) return "";
+  const order = [...MOCK_STATE_PRECEDENCE, ...Object.keys(byStatus).filter((s) => !MOCK_STATE_PRECEDENCE.includes(s))];
+  const parts = order
+    .filter((s) => byStatus[s])
+    .map((s) => `${byStatus[s]} ${mockStatusLabel(s, lang)}`)
+    .join(", ");
+  return ` title="${esc(T(lang, "{n} mockból: {list}", { n: total, list: parts }))}"`;
 }
 
 export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
@@ -1553,7 +1573,10 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
   const cityCounts = countBy((r) => r.city ?? "");
   const qualCounts = countBy((r) => r.qualification ?? "unknown");
   const contactCounts = countBy((r) => r.contact);
-  const mockCounts = countBy((r) => (r.latestArtifact ? r.latestArtifact.status : "none"));
+  // Counted over every mark the MOCK cell prints (state + „✓ kiküldve”), the same set
+  // its filter tests — a sent lead counts under its state AND under „kiküldve”.
+  const mockCounts = new Map<string, number>();
+  for (const r of rows) for (const t of LEAD_COLUMNS.mock.tags!(r)) mockCounts.set(t, (mockCounts.get(t) ?? 0) + 1);
   const opt = (
     values: [string, string][],
     counts: Map<string, number>,
@@ -1739,7 +1762,7 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
         // ⛔ A felirat a REGISZTERBŐL jön, nem kézzel újraírt listából: a szűrő így
         // szerkezetileg nem tud olyan állapotot megnevezni, amit a cella másképp ír.
         opt(
-          MOCK_STATUSES.map((s) => [s, mockStatusLabel(s, lang)] as [string, string]),
+          MOCK_FILTER_OPTIONS.map((s) => [s, mockOptionLabel(s, lang)] as [string, string]),
           mockCounts,
         ),
         q.mock ?? [],
@@ -1750,8 +1773,14 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
 
   // Cells carry `data-col` and the RAW comparable value they stand for, so "does the
   // filter's promise hold for the column it names" is measurable on the real page.
-  const td = (key: LeadColumnKey, r: LeadListRow, cls: string, inner: string) =>
-    `<td data-col="${key}" data-v="${esc(String(LEAD_COLUMNS[key].cell(r)))}"${cls ? ` class="${cls}"` : ""}>${inner}</td>`;
+  // `data-tags` = every mark a multi-mark cell prints (MOCK: state + „kiküldve”) — what
+  // its filter tests, so the guard measures the same set.
+  const td = (key: LeadColumnKey, r: LeadListRow, cls: string, inner: string) => {
+    const tags = LEAD_COLUMNS[key].tags;
+    return `<td data-col="${key}" data-v="${esc(String(LEAD_COLUMNS[key].cell(r)))}"${
+      tags ? ` data-tags="${esc(tags(r).join(" "))}"` : ""
+    }${cls ? ` class="${cls}"` : ""}>${inner}</td>`;
+  };
 
   const bodyRows = listRows.length
     ? listRows
@@ -1772,14 +1801,15 @@ export function leadsPage(result: LeadListResult, q: LeadQuery = {}): string {
           r,
           "",
           `${
-            r.latestArtifact
+            r.mockArtifact
               ? // A SZÍN az adatbázis-értékből (osztálynév), a SZÖVEG a regiszterből —
                 // a gépi horog megmarad, az operátor magyarul olvas (jóváhagyott terv ③).
-                `<span class="pill ${esc(r.latestArtifact.status)}">${esc(mockStatusLabel(r.latestArtifact.status, lang))}</span>`
+                // Több mocknál az elemleírás kimondja, mi van még (a cella a legerősebbet írja).
+                `<span class="pill ${esc(r.mockArtifact.status)}"${mockBreakdownTitle(r.mockArtifact.byStatus, lang)}>${esc(mockStatusLabel(r.mockArtifact.status, lang))}</span>`
               : `<span class="mut small">${esc(mockStatusLabel("none", lang))}</span>`
           }${
             r.outreachSentAt
-              ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${T(lang, "✓ kiküldve")}</span>`
+              ? `<br><span class="pill approved" style="margin-top:4px;display:inline-block" title="${T(lang, "E-mail kiküldve {date}", { date: esc(r.outreachSentAt.slice(0, 16).replace("T", " ")) })}">${esc(mockSentLabel(lang))}</span>`
               : ""
           }`,
         )}</tr>`,

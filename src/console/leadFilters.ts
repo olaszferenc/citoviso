@@ -45,6 +45,13 @@ export interface LeadColumnDef {
   readonly sortBy?: (r: LeadListRow) => string | number;
   /** True where the column holds a number (the "legalább" filters live on these). */
   readonly numeric?: boolean;
+  /**
+   * Every value the cell DISPLAYS, where that is more than one. The MOCK cell shows the
+   * mock state AND, below it, the "✓ kiküldve" mark — two facts, one cell. A multi
+   * filter on such a column passes a row when ANY of these is selected, so the filter
+   * can offer exactly the marks the cell prints and nothing it does not.
+   */
+  readonly tags?: (r: LeadListRow) => readonly string[];
 }
 
 export const LEAD_COLUMNS: Record<LeadColumnKey, LeadColumnDef> = {
@@ -76,7 +83,17 @@ export const LEAD_COLUMNS: Record<LeadColumnKey, LeadColumnDef> = {
   material: { key: "material", cell: (r) => r.material, numeric: true },
   match: { key: "match", cell: (r) => r.matchConfidence ?? -1, numeric: true },
   contact: { key: "contact", cell: (r) => r.contact },
-  mock: { key: "mock", cell: (r) => (r.latestArtifact ? r.latestArtifact.status : "none") },
+  // ⛔ NOT the newest mock's state: the cell stands for the mock the lead is BEST
+  // served by (`pickShownMock`) — see there for the measured bug.
+  mock: {
+    key: "mock",
+    cell: (r) => (r.mockArtifact ? r.mockArtifact.status : "none"),
+    // Sorted by the WORD the cell prints, not the enum: `approved` < `none` < `rejected`
+    // put „nincs” between „jóváhagyva” and „elutasítva” — an order nobody reading down
+    // the column can follow (same class as the Terület sort above).
+    sortBy: (r) => mockStatusLabel(r.mockArtifact ? r.mockArtifact.status : "none", consoleLang()),
+    tags: (r) => [r.mockArtifact ? r.mockArtifact.status : "none", ...(r.outreachSentAt ? [MOCK_SENT_CODE] : [])],
+  },
 };
 
 /** Every column the header offers as a sort — i.e. all of them. */
@@ -165,9 +182,17 @@ export function columnMeaning(key: LeadColumnKey, lang = "hu"): string {
     case "mock":
       // A szavak a REGISZTERBŐL — így a jelmagyarázat nem tud olyat felsorolni, amit a
       // cella vagy a szűrő másképp ír (jóváhagyott terv ③).
-      return T(lang, "A legutóbbi mock állapota: {list}.", {
-        list: MOCK_STATUSES.map((s) => mockStatusLabel(s, lang)).join(" / "),
-      });
+      return T(
+        lang,
+        "A lead mock-állapota: {approved}, ha van jóváhagyott mockja; különben {generated}, ha van döntésre váró; {rejected}, ha mind elutasított; {none}, ha még nincs mockja. A „{sent}” jel alatta: a megkeresés elment.",
+        {
+          approved: mockStatusLabel("approved", lang),
+          generated: mockStatusLabel("generated", lang),
+          rejected: mockStatusLabel("rejected", lang),
+          none: mockStatusLabel("none", lang),
+          sent: mockSentLabel(lang),
+        },
+      );
   }
 }
 
@@ -219,6 +244,55 @@ export function mockStatusLabel(status: string | null | undefined, lang = "hu"):
 
 /** A MOCK oszlop szűrő-opciói — a kód és a felirat EGY helyen, a cella szavával. */
 export const MOCK_STATUSES: readonly string[] = ["none", "generated", "approved", "rejected"];
+
+/**
+ * A „✓ kiküldve” jel KÓDJA a MOCK oszlop szűrőjében. Nem mock-állapot (a mock_artifact
+ * `sent` értékével nem keverhető), hanem a cella második jelölése: a lead valamelyik
+ * követett linkje már kiment.
+ */
+export const MOCK_SENT_CODE = "sent_out";
+
+/** A „✓ kiküldve” jel szava — a cella, a jelmagyarázat és a szűrő-opció EZT írja. */
+export function mockSentLabel(lang = "hu"): string {
+  return T(lang, "✓ kiküldve");
+}
+
+/** A MOCK oszlop szűrőjének MINDEN opciója: a négy állapot + a „✓ kiküldve” jel. */
+export const MOCK_FILTER_OPTIONS: readonly string[] = [...MOCK_STATUSES, MOCK_SENT_CODE];
+
+/** A MOCK szűrő-opció felirata (állapot VAGY a kiküldve-jel). */
+export function mockOptionLabel(code: string, lang = "hu"): string {
+  return code === MOCK_SENT_CODE ? mockSentLabel(lang) : mockStatusLabel(code, lang);
+}
+
+/**
+ * Which mock state wins when a lead has several. Earlier = stronger.
+ *
+ * ⛔ Mért hiba (tulaj, 2026-10-04, éles „The Boys apartman house”): négy változat készült
+ * egy percen belül, a tulaj egyet jóváhagyott és KIKÜLDÖTT, hármat elutasított — a lista
+ * mégis „elutasítva”-t írt, mert a LEGKÉSŐBB GENERÁLT mock állapotát mutatta, és az egy
+ * elutasított volt. Élesen 13 mockos leadből 2-nél hazudott így (egy „elutasítva”, egy
+ * „legenerálva” a meglévő jóváhagyott mellett). A kérdés, amit az operátor a cellától
+ * kérdez, nem „mi készült utoljára”, hanem „van-e küldhető mockja”, ezért a jóváhagyott
+ * nyer; döntésre váró még nyer az elutasított felett (van mit eldönteni).
+ * `sent` (mock_artifact enum, ma 0 sor) a jóváhagyott mellett áll: kiküldésre került.
+ */
+export const MOCK_STATE_PRECEDENCE: readonly string[] = ["approved", "sent", "generated", "rejected"];
+
+/**
+ * The mock the MOCK column stands for: the strongest state per `MOCK_STATE_PRECEDENCE`,
+ * newest within that state. `artifacts` must arrive NEWEST FIRST. An unknown state ranks
+ * last (shown only when nothing else exists — truthfully, never renamed).
+ */
+export function pickShownMock<A extends { status: string }>(artifacts: readonly A[]): A | null {
+  const rank = (s: string) => {
+    const i = MOCK_STATE_PRECEDENCE.indexOf(s);
+    return i === -1 ? MOCK_STATE_PRECEDENCE.length : i;
+  };
+  let best: A | null = null;
+  for (const a of artifacts) if (best === null || rank(a.status) < rank(best.status)) best = a;
+  return best;
+}
 
 /**
  * A szám a felület NYELVÉN.
@@ -275,7 +349,7 @@ export function cellMarkMeanings(lang = "hu"): { mark: string; meaning: string }
       ),
     },
     {
-      mark: T(lang, "✓ kiküldve"),
+      mark: mockSentLabel(lang),
       meaning: T(lang, "A megkereső e-mail már elment a leadhez tartozó prospectnek."),
     },
     {
@@ -360,9 +434,13 @@ export function filterValue(q: LeadQuery, f: LeadFilterDef): string | string[] |
 
 /** Does a row pass this filter? Reads the COLUMN CELL — never the row field. */
 export function passes(f: LeadFilterDef, value: string | string[] | number, r: LeadListRow): boolean {
-  const cell = LEAD_COLUMNS[f.column].cell(r);
+  const col = LEAD_COLUMNS[f.column];
+  const cell = col.cell(r);
   if (f.kind === "min") return Number(cell) >= Number(value);
-  if (f.kind === "multi") return (value as string[]).includes(String(cell));
+  if (f.kind === "multi") {
+    const shown = col.tags ? col.tags(r) : [String(cell)];
+    return shown.some((t) => (value as string[]).includes(t));
+  }
   return String(cell).toLowerCase().includes(String(value).toLowerCase());
 }
 

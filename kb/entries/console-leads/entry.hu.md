@@ -139,8 +139,12 @@ szerint — két kivétellel: a **„Név”** oszlopban keresel (nem pipálsz),
 oszlopnak pedig nincs szűrője, csak rendezése. Ha időszakra akarsz szűkíteni, rendezz a
 Felmérve szerint, és felülről olvasd a listát.
 - **„Kontakt”** — a legjobb csatorna a megkereséshez (e-mail / SMS / telefon / nincs).
-- **„Mock”** — a legutóbbi mock állapota: **nincs / legenerálva / jóváhagyva / elutasítva**.
-  (2026-09-14 óta magyarul — korábban az adatbázis angol értéke látszott.)
+- **„Mock”** — a lead mock-állapota: **jóváhagyva**, ha van jóváhagyott mockja (akkor is,
+  ha később készült elutasított változat); különben **legenerálva**, ha van döntésre váró;
+  **elutasítva**, ha mind elutasított; **nincs**, ha még nem készült mock. Több mocknál a
+  pirulára mutatva látod, mi van még (pl. „4 mockból: 1 jóváhagyva, 3 elutasítva”).
+  (2026-10-04 előtt a LEGKÉSŐBB készült mock állapota látszott — egy kiküldött, jóváhagyott
+  mock mellett is állhatott ott „elutasítva”.)
 - **„Felmérve”** — mikor vette fel a gyűjtés a szereplőt. **Alapból ez a lista sorrendje**
   (a legutóbb felmért áll elöl), ezért a fejlécén nyíl mutatja az irányt. A cellában a dátum
   áll, a pontos időpontot az elemleírás (rámutatás) adja.
@@ -155,6 +159,9 @@ Cellán belüli jelölések:
 
 - **SV** a Fotók mellett — Street View-felvétel is elérhető a címről (tartalék nyitókép).
 - **„✓ kiküldve”** a Mock oszlopban — a megkereső e-mail már elment ehhez a leadhez.
+  **Szűrni is lehet rá:** a Mock oszlop tölcsérében a **„✓ kiküldve”** opció csak a
+  kiküldött leadeket hagyja meg, bármi a mockjuk állapota. Egy állapottal együtt pipálva
+  „vagy”-ként működik (pl. „elutasítva vagy ✓ kiküldve”).
 - **„nincs besorolás”** a Terület oszlopban — a gyűjtési körhöz nincs felvett terület-rekord,
   ezért a területnek nincs neve.
 - **Szín** a Fotók és a Kontakt oszlopban — zöld = jó (3+ fotó, illetve e-mail), sárga = gyenge,

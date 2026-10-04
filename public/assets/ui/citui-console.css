@@ -1195,6 +1195,10 @@
 /* A date never breaks („2026-09-/04”): measured 2026-09-25 beside the sidebar, the squeezed
    column wrapped SOME rows to two lines — 57 vs 62 px rows, ⑨ of the lead-list plan. */
 .con .con-leadtbl td[data-col="surveyed"] { white-space: nowrap; }
+/* The MOCK column is the last one, and its pills (state + „✓ kiküldve”) set its width:
+   at the default 10px side padding the table overran its box by 2px at 1280 (rail),
+   measured by lead-filter-label-check once the fixture carried real mock states. */
+.con .con-leadtbl td[data-col="mock"] .pill { padding-left: 8px; padding-right: 8px; }
 
 /* ── Jóváhagyott terv: `assets/design-refs/console/lead-list/` ───────────────────────
    ⑨ EGYENLETES SORMAGASSÁG. A fenti törhetőség (indokolt, marad) 1 és 3 soros sorokat

@@ -20,7 +20,7 @@ import { circleToBbox } from "../scraper/regions.js";
 import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
-import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell } from "./leadFilters.js";
+import { applyLeadFilters, compareSortKeys, effectiveLeadSort, pickShownMock, sortCell } from "./leadFilters.js";
 import { normalizeEmail, recipientKey, recipientKeySql } from "../email/address.js";
 import { checkLeadContact, normalizeCountry } from "./leadContactRules.js";
 import { leadEmails } from "../email/leadEmails.js";
@@ -82,7 +82,12 @@ export interface LeadListRow {
   /** Best reachable outreach channel: email | sms | voice | none. */
   readonly contact: string;
   readonly lifecycle: string;
-  readonly latestArtifact: { id: string; status: string } | null;
+  /**
+   * The mock the MOCK column stands for — the STRONGEST state among the lead's mocks
+   * (`pickShownMock`), not the newest one. `byStatus` counts every mock of the lead, so
+   * the cell can say what else exists ("4 mockból: 1 jóváhagyva, 3 elutasítva").
+   */
+  readonly mockArtifact: { id: string; status: string; byStatus?: Readonly<Record<string, number>> } | null;
   /** When the outreach mail was actually sent to any prospect of this lead (ISO), else null. */
   readonly outreachSentAt: string | null;
 }
@@ -241,11 +246,21 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
     .select(["id", "lead_id", "status", "generated_at"])
     .orderBy("generated_at", "desc")
     .execute();
-  const latestByLead = new Map<string, { id: string; status: string }>();
+  // Grouped newest-first (the query order), then summarised per lead: the shown mock is
+  // the strongest state, not the newest row (`pickShownMock`).
+  const artifactsByLead = new Map<string, { id: string; status: string }[]>();
   for (const a of artifacts) {
-    if (!latestByLead.has(a.lead_id)) {
-      latestByLead.set(a.lead_id, { id: a.id, status: a.status });
-    }
+    const list = artifactsByLead.get(a.lead_id) ?? [];
+    list.push({ id: a.id, status: a.status });
+    artifactsByLead.set(a.lead_id, list);
+  }
+  const mockByLead = new Map<string, NonNullable<LeadListRow["mockArtifact"]>>();
+  for (const [leadId, list] of artifactsByLead) {
+    const shown = pickShownMock(list);
+    if (!shown) continue;
+    const byStatus: Record<string, number> = {};
+    for (const a of list) byStatus[a.status] = (byStatus[a.status] ?? 0) + 1;
+    mockByLead.set(leadId, { ...shown, byStatus });
   }
 
   // Outreach-sent marker for the list (was the mail actually sent to any prospect of the lead).
@@ -297,7 +312,7 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
       material: mat.totalImages ?? 0,
       contact: raw.contactChannel ?? "none",
       lifecycle: String(l.lifecycle),
-      latestArtifact: latestByLead.get(l.id) ?? null,
+      mockArtifact: mockByLead.get(l.id) ?? null,
       outreachSentAt: sentByLead.get(l.id) ?? null,
     };
   });

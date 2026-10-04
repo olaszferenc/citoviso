@@ -1508,7 +1508,7 @@ const leadRow = (
   material: photos + 1,
   contact,
   lifecycle: "qualified",
-  latestArtifact: artifact,
+  mockArtifact: artifact,
   outreachSentAt: artifact?.status === "approved" ? "2026-08-20T09:00:00Z" : null,
   // A FELMÉRVE oszlop a lista rendezésének alapja („legutóbb felmért elöl"), ezért a
   // fixture NEM adhat minden sorra azonos dátumot: a képen épp az a bizonyítandó, hogy

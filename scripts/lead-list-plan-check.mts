@@ -69,7 +69,7 @@ function row(i: number, over: Partial<LeadListRow> = {}): LeadListRow {
     material: 7,
     contact: "email",
     lifecycle: "new",
-    latestArtifact: null,
+    mockArtifact: null,
     outreachSentAt: null,
     ...over,
   };
@@ -88,7 +88,7 @@ const FIXTURE: LeadListRow[] = [
   ...MOCK_STATUSES.filter((s) => s !== "none").map((status, i) =>
     row(400 + i, {
       material: 8,
-      latestArtifact: { id: `art-${i}`, status, path: `/tmp/a${i}.html` } as LeadListRow["latestArtifact"],
+      mockArtifact: { id: `art-${i}`, status, path: `/tmp/a${i}.html` } as LeadListRow["mockArtifact"],
       outreachSentAt: i === 0 ? "2026-09-04T10:12:00.000Z" : null,
     }),
   ),

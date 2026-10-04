@@ -35,6 +35,9 @@ import {
   effectiveLeadSort,
   LEAD_COLUMNS,
   LEAD_FILTERS,
+  MOCK_SENT_CODE,
+  mockOptionLabel,
+  pickShownMock,
   SORTABLE_COLUMNS,
   unknownRegionLabel,
   type LeadColumnKey,
@@ -74,7 +77,7 @@ function row(i: number, over: Partial<LeadListRow> = {}): LeadListRow {
     material: 7,
     contact: "email",
     lifecycle: "new",
-    latestArtifact: null,
+    mockArtifact: null,
     outreachSentAt: null,
     ...over,
   };
@@ -128,6 +131,15 @@ const FIXTURE: LeadListRow[] = [
   ...Array.from({ length: 9 }, (_, i) => row(600 + i, { matchConfidence: null, material: 4 })),
   // Low-confidence matches: the reason the filter exists at all.
   ...Array.from({ length: 7 }, (_, i) => row(700 + i, { matchConfidence: 0.3 + i * 0.05, material: 4 })),
+  // MOCK states, incl. leads whose outreach went out — the „✓ kiküldve” filter must
+  // keep exactly these, whatever their mock state (tulaj, 2026-10-04: no such filter).
+  ...(["approved", "approved", "generated", "rejected"] as const).map((status, i) =>
+    row(1100 + i, {
+      material: 4,
+      mockArtifact: { id: `art-${i}`, status, byStatus: { [status]: 1, rejected: 2 } },
+      outreachSentAt: i < 2 ? "2026-10-04T10:00:55.000Z" : null,
+    }),
+  ),
 ];
 
 const render = (q: LeadQuery): string =>
@@ -260,7 +272,13 @@ async function assertSummaryMatchesCells(label: string): Promise<void> {
     return;
   }
   const cells = await page.$$eval("tbody td[data-col]", (tds) =>
-    tds.map((td) => ({ col: td.getAttribute("data-col") ?? "", v: td.getAttribute("data-v") ?? "" })),
+    tds.map((td) => ({
+      col: td.getAttribute("data-col") ?? "",
+      v: td.getAttribute("data-v") ?? "",
+      // A multi-mark cell (MOCK: state + „kiküldve”) satisfies "A vagy B" when ANY mark
+      // it prints is named — the same rule its filter runs (`passes`).
+      tags: (td.getAttribute("data-tags") ?? "").split(" ").filter(Boolean),
+    })),
   );
   if (!cells.length) {
     check(false, `${label}: nincs mérhető sor a lapon`);
@@ -298,7 +316,9 @@ async function assertSummaryMatchesCells(label: string): Promise<void> {
     const wanted = cond!.split(" vagy ").map((s) => s.trim().replace(/^„|”$/g, ""));
     const codeOf = new Map<string, string>();
     for (const c of colCells) codeOf.set(c.v, c.v);
-    const violating = colCells.filter((c) => !wanted.some((w) => optionMatches(key, c.v, w)));
+    const violating = colCells.filter(
+      (c) => !wanted.some((w) => (c.tags.length ? c.tags : [c.v]).some((t) => optionMatches(key, t, w))),
+    );
     check(
       violating.length === 0,
       `${label}: „${seg}” — a «${colName}» oszlop minden cellája a felsorolt értékek egyike (sértő: ${violating.length}${
@@ -313,9 +333,9 @@ function optionMatches(key: LeadColumnKey, raw: string, wording: string): boolea
   const map: Record<string, Record<string, string>> = {
     qualification: { no_site: "nincs honlap", outdated: "elavult", modern: "modern", unknown: "ismeretlen" },
     contact: { email: "e-mail", sms: "SMS", voice: "telefon", none: "nincs" },
-    mock: { none: "nincs" },
   };
-  const printed = map[key]?.[raw] ?? raw;
+  // MOCK: the register itself (state words + „✓ kiküldve”), not a hand-kept copy.
+  const printed = key === "mock" ? mockOptionLabel(raw, "hu") : (map[key]?.[raw] ?? raw);
   return printed.toLowerCase() === wording.toLowerCase();
 }
 
@@ -327,6 +347,41 @@ await assertSummaryMatchesCells("kézi szűrő: Fotók ≥ 3");
 
 await open(render({ qualification: ["no_site"] }));
 await assertSummaryMatchesCells("kézi szűrő: Kvalifikáció");
+
+// ── MOCK: „✓ kiküldve” szűrő + a cella a LEGERŐSEBB mockot írja (tulaj, 2026-10-04) ──
+// The filter keeps exactly the leads whose outreach went out — whatever their state —
+// and its sentence names the mark the cell prints.
+{
+  const sentQ: LeadQuery = { mock: [MOCK_SENT_CODE] };
+  await open(render(sentQ));
+  await assertSummaryMatchesCells("kézi szűrő: Mock = kiküldve");
+  const want = FIXTURE.filter((r) => r.lifecycle !== "disqualified" && r.outreachSentAt).length;
+  const got = await page.$$eval("tbody td[data-col=\"mock\"]", (tds) => tds.length);
+  check(want > 0 && got === want, `Mock = kiküldve: pontosan a kiküldött leadek maradnak (várt ${want}, mért ${got})`);
+  const opt = await page.$eval(`#leadFilters [name="mock"][value="${MOCK_SENT_CODE}"]`, (el) => !!el).catch(() => false);
+  check(opt, "a MOCK szűrő kínál „✓ kiküldve” opciót");
+
+  await open(render({ mock: ["approved"] }));
+  await assertSummaryMatchesCells("kézi szűrő: Mock = jóváhagyva");
+
+  // Which mock the cell stands for. Real case (éles, The Boys apartman house): four
+  // variants, newest first rejected · approved (sent) · rejected · rejected.
+  const pick = SELF_TEST
+    ? // RED CONTROL — the shipped rule: the newest mock, whatever its state.
+      <A extends { status: string }>(list: readonly A[]) => list[0] ?? null
+    : pickShownMock;
+  const cases: [string, string[], string | null][] = [
+    ["jóváhagyott + újabb elutasítottak", ["rejected", "approved", "rejected", "rejected"], "approved"],
+    ["jóváhagyott + újabb döntésre váró", ["generated", "approved"], "approved"],
+    ["döntésre váró + újabb elutasított", ["rejected", "generated"], "generated"],
+    ["csak elutasított", ["rejected", "rejected"], "rejected"],
+    ["nincs mock", [], null],
+  ];
+  for (const [name, statuses, want2] of cases) {
+    const got2 = pick(statuses.map((status, i) => ({ id: `m${i}`, status })))?.status ?? null;
+    check(got2 === want2, `MOCK-cella szabálya — ${name}: „${want2 ?? "nincs"}” (mért: „${got2 ?? "nincs"}”)`);
+  }
+}
 
 // Match is a SCORE, not a count, and the column prints "–" where there is no portal
 // hit — the one column where "does the promise hold for every cell" is not obvious.
@@ -836,6 +891,11 @@ for (const o of oks) console.log(`  ✅ ${o}`);
 for (const f of fails) console.log(`  ❌ ${f}`);
 
 if (SELF_TEST) {
+  // The mock-rule control must be caught ON ITS OWN — another red must not cover for it.
+  if (!fails.some((f) => f.startsWith("MOCK-cella szabálya"))) {
+    console.error("\n⛔ ÖNTESZT BUKOTT: a „legutóbbi mock” szabály (a hiba) ZÖLDET kapott a MOCK-cella mérésén.");
+    process.exit(1);
+  }
   if (fails.length) {
     console.log(
       `\n✅ ÖNTESZT (piros kontroll): a felirat-eltolódást, a nyers terület-azonosítót ÉS a\n` +
