@@ -4,6 +4,8 @@
 // (felület, anyag, szín, bútor) és felszereltség-lista tilos, a főcímben legfeljebb EGY adottság
 // élménybe ágyazva; hangulati/érzéki tény csak forrással, csend nem, ha egy vélemény zajról szól;
 // a prompt példa-mondatát lemásolni tilos. Vékony forrásnál a település + célközönség elég.
+// FÖLDRAJZ (kiegészítés, tulaj 2026-10-04: „általános lírai szöveg”): táj/fekvés-szó csak a szállás
+// saját forrásából; a település ismerete — és a neve — nem forrás.
 //
 // MÉRT ALAP: az utolsó 50 mock főcíméből 49-et leltár vezetett, 27 lead introjából 16 felületet
 // írt le (16/16 valódi találat). Az ok a MI kérésünk volt: négy hely KÖTELEZTE a leltár-főcímet,
@@ -100,10 +102,10 @@ const HONEST: { lines: Line[]; src: Src; label: string }[] = [
   { label: "vékony forrás: település + célközönség (tulaj-döntés ②)", src: { name: "Rozé Fogadó", town: "Révfülöp", texts: ["Révfülöp"], reviews: [] }, lines: [
     { field: "hero.lead", text: "Nyári napok Révfülöpön, pároknak és baráti társaságoknak" },
   ] },
-  { label: "forrásolt csend, zaj-panasz nélkül", src: { name: "Bánó Porta Köveskál", town: "Köveskál", texts: ["Köveskálon található csendes, nyugodt lakó-pihenő övezetben"], reviews: [] }, lines: [
+  { label: "forrásolt csend, zaj-panasz nélkül", src: { name: "Bánó Porta Köveskál", town: "Köveskál", texts: ["Köveskálon található csendes, nyugodt lakó-pihenő övezetben", "Balaton északi részén, 8 km-re Révfülöp fölött, a Káli medencében található Köveskál."], reviews: [] }, lines: [
     { field: "hero.lead", text: "A Káli-medence csendje Köveskálon, családoknak és baráti köröknek" },
   ] },
-  { label: "helynév nem adottság („Balatonudvari” ≠ udvar), camping ≠ ping", src: { name: "Mini Camping Örvényes", town: "Balatonudvari", texts: [], reviews: [] }, lines: [
+  { label: "helynév nem adottság („Balatonudvari” ≠ udvar), camping ≠ ping", src: { name: "Mini Camping Örvényes", town: "Balatonudvari", texts: ["Balaton közelében — The place is located in a good location close by to balaton"], reviews: [] }, lines: [
     { field: "hero.lead", text: "Esték a medence partján Balatonudvariban, kempingezőknek" },
     { field: "tagline", text: "Sátorral a Mini Camping Örvényes fái alatt, pár perc a parttól" },
   ] },
@@ -197,6 +199,63 @@ for (const c of HONEST) {
   check(v4.verdict === "flag", "a bemutatkozásban szó szerint álló hiány is forrásolt");
 }
 
+// ── ⑥ FÖLDRAJZ: a település ismerete nem forrás (tulaj, 2026-10-04: „általános lírai szöveg”) ──
+// Korpusz (dev + éles, csak olvasva): a leadenkénti legutóbbi mock nyitórészéből dev 11/25, éles 2/13
+// állított forrás nélküli földrajzi tényt. A piros esetek valódi kiment sorok, a forrásuk a valódi
+// forrás lényege; a zöldek ugyanazok a szavak, forrással.
+{
+  const geoQuotes = (lines: Line[], src: Src) => lint(lines, src).filter((f) => /földrajzi/.test(f.fix)).map((f) => f.quote);
+  const RED: { label: string; lines: Line[]; src: Src; want: string }[] = [
+    { label: "„a Balaton partján” forrás nélkül (Rozé intro, újramérés)", want: "partján",
+      lines: [{ field: "intro", text: "Révfülöpön, a Balaton partján várja a vendégeket a Rozé Fogadó." }],
+      src: { name: "Rozé Fogadó", town: "Révfülöp", texts: ["Révfülöp", "Kerékpárkölcsönzés — Hajózás"], reviews: [] } },
+    { label: "a település NEVE nem bizonyíték (Camping Carina, Balatongyörök)", want: "Balaton-parti",
+      lines: [{ field: "hero.lead", text: "Árnyas füves parcellák, néhány perces sétára a Balaton-parti strandtól" }],
+      src: { name: "Camping Carina", town: "Balatongyörök", texts: ["8313 Balatongyörök, Kossuth utca", "tiszta strand a közelben — The area is quiet and peaceful"], reviews: [] } },
+    { label: "tájegység a falu fekvéséből (Kemencés, Szentbékkálla)", want: "Káli-medence",
+      lines: [{ field: "tagline", text: "A Káli-medence szívében, ahol a Kék túra útvonala az ajtó előtt halad el." }],
+      src: { name: "Kemencés Vendégház", town: "Szentbékkálla", texts: ["Kéktúra útvonalán fekszik a ház."], reviews: [] } },
+    { label: "kitalált táj a forrás mellé (Kerekerdő intro, éles)", want: "dombok",
+      lines: [{ field: "intro", text: "A fűves, bekerített kertből nyílik a környező dombok és mezők látványa." }], src: KEREKERDO },
+    { label: "erdő forrás nélkül (Artemisz, Tapolca)", want: "erdőszéli",
+      lines: [{ field: "tagline", text: "Esküvők és családi ünnepek Tapolca szomszédságában, erdőszéli környezetben." }],
+      src: { name: "Artemisz Panzió", town: "Tapolca", texts: ["Tiszta, igényes szobák saját mosdóval"], reviews: [] } },
+    { label: "melyik part — égtáj forrás nélkül (Balaton van, „déli” nincs)", want: "déli partján",
+      lines: [{ field: "tagline", text: "Nyaralás a Balaton déli partján, családoknak." }],
+      src: { name: "Teszt ház", town: "Fonyód", texts: ["A ház a Balaton közelében áll."], reviews: [] } },
+    { label: "egy tájnév nem igazol egy másikat („Bakony” ≠ „Badacsony”)", want: "Badacsony",
+      lines: [{ field: "intro", text: "A Badacsony lábánál, a szőlők felett." }],
+      src: { name: "Teszt ház", town: "Hárskút", texts: ["A Bakonyban, szőlők között."], reviews: [] } },
+  ];
+  for (const c of RED) {
+    const got = geoQuotes(c.lines, c.src);
+    check(got.includes(c.want), `[${c.label}] → földrajzi állítás forrás nélkül: „${c.want}” (kapott: ${got.join(", ") || "semmi"})`);
+  }
+  const GREEN: { label: string; lines: Line[]; src: Src }[] = [
+    { label: "„a Balaton partján” a forrás kimondja", lines: [{ field: "intro", text: "Révfülöpön, a Balaton partján várja a vendégeket." }],
+      src: { name: "Rozé Fogadó", town: "Révfülöp", texts: ["A fogadó a Balaton partján, a révfülöpi strand mellett áll."], reviews: [] } },
+    { label: "a víz-család egymást igazolja (Éden: „saját balatoni partszakasz” → „a víz közelsége”)",
+      lines: [{ field: "intro", text: "Kutyabarát, családias hely azoknak, akik a víz közelségét keresik." }],
+      src: { name: "Éden üdülőház", town: "Fonyód", texts: ["saját balatoni partszakasz — Külön plusz pont a Balaton melletti saját partszakaszért"], reviews: [] } },
+    { label: "angol vélemény is forrás (Eldorádó: „The main beach…”)", lines: [{ field: "tagline", text: "Tóparti kemping családoknak, a strand a szomszédban." }],
+      src: { name: "Eldorádó Kemping", town: "Vonyarcvashegy", texts: ["The main beach is next door, lovely lake view from the pitch"], reviews: [] } },
+    { label: "a strand igazolja a partot (Platán)", lines: [{ field: "hero.lead", text: "Medence és játszótér, kb. 20 perc sétára a parttól" }],
+      src: { name: "Platán Apartmanház", town: "Balatongyörök", texts: ["Strand hozzáférés — Privát strand"], reviews: [] } },
+    { label: "öböl és égtáj a forrásból (Strand Apartman Keszthely)", lines: [{ field: "intro", text: "Keszthely a Balaton nyugati öblében fekszik, a Libás Strand közelében." }],
+      src: { name: "Strand Apartman Keszthely", town: "Keszthely", texts: ["Keszthely a Balaton nyugati csücskében, a Keszthelyi-öböl partján fekszik.", "Közel a Libás strandhoz."], reviews: [] } },
+    { label: "„a medence partján” nem vízpart", lines: [{ field: "tagline", text: "Nyári esték a medence partján, családoknak" }],
+      src: { name: "Myrna Haus", town: "Balatonakali", texts: [], reviews: [] } },
+    { label: "„szőlőlugas” terasz, nem szőlőhegy (Alig-vár)", lines: [{ field: "intro", text: "Lombos kert, szőlőlugassal befuttatott nyári terasz a fák alatt." }],
+      src: { name: "Alig-vár Tanya", town: "Salföld", texts: [], reviews: [] } },
+    { label: "kötőjel nélküli forrás-alak („Káli medencében”)", lines: [{ field: "tagline", text: "A Káli-medence egyik csendes falujában." }],
+      src: { name: "Bánó Porta", town: "Köveskál", texts: ["8 km-re Révfülöp fölött, a Káli medencében található Köveskál, csendes falu."], reviews: [] } },
+  ];
+  for (const c of GREEN) {
+    const got = geoQuotes(c.lines, c.src);
+    check(!SELF_TEST && got.length === 0, `[${c.label}] tiszta marad (kapott: ${got.join(", ") || "semmi"})`);
+  }
+}
+
 // ── ③ BEKÖTÉS — forrás-szinten ───────────────────────────────────────────────────────
 {
   const read = (rel: string) => (SELF_TEST ? "" : readFileSync(path.join(ROOT, rel), "utf8"));
@@ -211,6 +270,8 @@ for (const c of HONEST) {
   check(!/KÖTELEZŐEN meg kell neveznie/.test(writer), "a szövegíró már nem köteles adottságot nevezni a főcímben");
   check(!/VALÓBAN LÁTHATÓ jellemzőket fűzd bele/.test(brief), "az intro sémája már nem kéri a fotók leírását");
   check(/LÍRAI/.test(brief) && /LÍRAI/.test(writer), "mindkét prompt kimondja a lírai nyitórészt");
+  check(/település ISMERETE nem forrás/i.test(brief) && /TELEPÜLÉS ISMERETE NEM FORRÁS/.test(writer) && /település ismerete[^"]*NEM forrás/.test(critic),
+    "a szövegíró, a brief és a kritikus újraírója kimondja: a település ismerete nem forrás (földrajz)");
   const market = read("src/generator/marketCheck.ts");
   check(!/egyetlen konkrét szolgáltatást sem nevez meg/.test(market), "a piaci kapu már nem buktatja a szolgáltatás nélküli főcímet");
   check(/return applyJudgeVerdict\(parsed,/.test(market), "a bíró válasza a forrás-szűrőn át lesz verdikt");

@@ -49,3 +49,16 @@ marad. Javítsuk Kerekerdő MOK-ot, és mehet a javaslat.”
   forrásnál. Figyelni a következő mockoknál.
 - A kritikus javító köre néha ront (első Kerekerdő-futás: tautológia-főcím). Ha a kurátor-sor arány tartósan magas, a
   javító-prompt finomítása a következő lépés.
+
+## Kiegészítés — földrajzi állítás csak forrásból (SUB, brief `~/rc-briefs/lirai-foldrajzi-allitas.md`)
+Tulaj: „általános lírai szöveg” — ha a forrás nem mondja, a nyitórész nem állít földrajzi tényt a település ismeretéből.
+- **Mérés** (dev + éles, csak olvasva, a valódi lint a korpuszon): leadenként dev 11/25, éles 2/13; mockonként dev 74/174, éles 4/43.
+  Kézi átnézés: a maradék találatok valódiak; két hamis pozitív a mérés előtt javítva (szőlőlugas; angol/német vélemény-szó).
+  Mérő: `assets/design-refs/_drafts/foldrajz/measure.mts` + `corpus.sql`, kimenet `meres-elotte.txt`.
+- **Kód:** `src/generator/lyricOpening.ts` `GEO_CLAIMS` (a `hangulat_forras_nelkul` kiterjesztése; név + település a bizonyítékból
+  is kivágva; víz-család; tájnevek egyenként; égtájas part; öböl). Prompt: `copywriter.ts`, `brief.ts`, `guestCritic.ts`
+  (újraíró + kifogás-leírás).
+- **Őr:** `scripts/lyric-opening-check.mts` ⑥ — 7 piros / 8 zöld eset + bekötés; 71 zöld, önteszt 62 piros; 9 mutáció mind piros.
+- **Újramérés** (5 lead, valódi kód, 1,67 USD; harness `_drafts/foldrajz/rerun.mts`, kimenet `rerun-out.json`): vázlatban 2/5
+  (Kerekerdő „dombok”, Rozé „tó”), szállítva 0/5. Kerekerdő és Strand kurátor-sor, nem földrajzi okból.
+- **Ismert határ:** explicit szólista — új tájnév addig nem jelez, amíg fel nem kerül.

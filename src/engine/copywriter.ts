@@ -95,6 +95,10 @@ SZIGORÚ SZABÁLYOK (kötelező):
    vendég egyszeri élményéből nem lesz főcím és nem lesz „a vendégek mesélik”.
    ⛔ VÉKONY FORRÁS (nincs forrásolt táj- vagy helykép): a líra a TELEPÜLÉSBŐL és a CÉLKÖZÖNSÉGBŐL
    épül, általános marad — tájat, utcaképet, vizet NE találj ki.
+   ⛔ A TELEPÜLÉS ISMERETE NEM FORRÁS (tulaj, 2026-10-04: „általános lírai szöveg”): hogy a falu
+   a Balaton partján, hegy alatt, erdő vagy szőlők között fekszik, vagy hova nyílik kilátás, azt
+   CSAK akkor írd, ha a szállás saját szövege vagy egy vélemény kimondja. A település NEVE sem
+   bizonyíték („Balaton…” kezdetű név ≠ vízpart). Ha a forrás hallgat, a nyitórész általános líra.
    ⛔ Kitalált összetett szó („faillatú”) tilos; élő, természetes magyar mondat. Ne másold a
    lenti példák szerkezetét sem — minden szállás saját mondatot kap.
    ROSSZ (valóban kiment, a tulaj elutasította): ${OPENING_BAD_EXAMPLES.slice(0, 5).map((e) => `„${e}”`).join(" · ")}.

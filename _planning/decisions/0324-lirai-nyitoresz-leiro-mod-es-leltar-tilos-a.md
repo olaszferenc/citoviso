@@ -90,3 +90,42 @@ kiiktatása, a csak-3.-szabály felmentés kiiktatása, a 6 betűs tő-egyezés,
 egyenként pirosra viszi. **Újramérés** (valódi kód, Rozé + Kerekerdő, 0,82 USD): Rozé — piaci PASS, kritikus PASS; Kerekerdő —
 nincs tautológia, kritikus PASS, a bíró viszont a főcímet („Erdők és hegyek ölelte határban, Hárskút mellett”) üres hangulatnak
 ítélte (az első ítélete ugyanerre a szövegtípusra PASS volt — a bíró szór; kurátor-sor).
+
+### Kiegészítés — földrajzi állítás csak forrásból; a település ismerete nem forrás (2026-10-04)
+**Tulaj** (a koordinátoron át, brief `~/rc-briefs/lirai-foldrajzi-allitas.md`): „Kell-e gépi szabály arra, ha a szöveg csak a
+település ismeretéből állít földrajzi tényt (pl. »a Balaton partján«)?” → **„általános lírai szöveg.”**
+
+**Mérés (dev + éles, csak olvasva; a valódi lint a korpuszon, kézzel átnézve).** Leadenként a legutóbbi mock nyitórészéből
+**dev 11/25, éles 2/13** állított forrás nélküli földrajzi tényt (mockonként dev 74/174, éles 4/43). Példák: Camping Carina
+„Balaton-parti” (a forrásban a „Balaton” csak a település nevében áll), Kemencés „Káli-medence” + „Balaton-felvidék”, Artemisz
+„erdőszéli”, Aranykagyló „domboldal és a szőlők”, Kerekerdő „dombok és mezők” (a forrás „erdők és hegyek”-et mond), Agrosz
+(üres forrás) tanúhegyek/panoráma/Badacsony. Kézi átnézésből két hamis pozitív javítva a mérés előtt: a „szőlőlugas” terasz,
+nem szőlőhegy; az angol/német vélemény („main beach”, „lake view”) is forrás.
+
+**Döntés.**
+1. A nyitórész (főcím, alcím, intro) földrajzi/táj-szava — Balaton, part, víz, tó, strand, öböl, hegy, domb, erdő, völgy,
+   mező, szőlő/borvidék, panoráma/kilátás, nádas, folyó/patak, megnevezett tájegység (Bakony, Káli-medence, Balaton-felvidék,
+   Badacsony…), égtájas parti fekvés („déli partján”) — csak akkor állhat, ha a szállás saját forrásában (leírás, tény-idézet,
+   vélemény) van rá szó. A szállás neve és a település a BIZONYÍTÉKBÓL is kivágódik: „Balatongyörök” nem igazolja
+   a „Balaton-partot”. A víz-család egymást igazolja (part/strand/tó/Balaton ↔ „a víz közelsége”); egy tájnév nem igazol
+   egy másikat („Bakony” ≠ „Badacsony”).
+2. Gépi iker: `lyricOpening.ts` `GEO_CLAIMS`, a meglévő `hangulat_forras_nelkul` kifogás kiterjesztéseként (MINDIG blokkoló);
+   a javító utasítás: „általános lírai szöveg kell: a település és a célközönség, legfeljebb egy forrásolt adottság élményként”.
+3. Prompt: a szövegíró, a brief és a kritikus újraírója kimondja, hogy a település ismerete — és a NEVE — nem forrás;
+   kitölthető példa-keret nincs (ADR-0317).
+
+**Őr:** `lyric-opening-check` ⑥ szakasz — 7 piros eset valódi kiment sorokból (Rozé „a Balaton partján”, Carina település-név,
+Kemencés tájegység, Kerekerdő dombok, Artemisz erdő, „déli partján”, Bakony ≠ Badacsony), 8 zöld forrással (víz-család,
+angol vélemény, strand → part, szőlőlugas, „medence partján”, kötőjel nélküli „Káli medencében”, öböl + égtáj forrásból);
+bekötés: mindhárom prompt. 71 zöld, önteszt 62 piros. Mutációval: a település kivágása a bizonyítékból, a medence-kivétel,
+a szőlőlugas-kivétel, a víz-család, az angol bizonyíték, a kötőjel-opcionális alak, a tájnevek, az égtáj-ág és az egész
+földrajz-ág kiiktatása egyenként pirosra viszi.
+
+**Újramérés** (ugyanaz az 5 lead, valódi kód: brief+copy hívás + vendég-kritikus, DB-írás nélkül; **1,67 USD**): a kritikus
+ELŐTTI vázlatban 2/5 földrajzi állítás forrás nélkül (Kerekerdő „erdők és dombok” — a forrás hegyeket mond; Rozé „a tó közeli
+nyaralás”), a SZÁLLÍTOTT szövegben **0/5**. A Strand „a Balaton nyugati öblében” átment — jogosan: a forrás szó szerint
+mondja („a Balaton nyugati csücskében, a Keszthelyi-öböl partján”). Kritikus: Bánó, Három Huszár, Rozé PASS; Kerekerdő és
+Strand kurátor-sor (nem földrajzi okból).
+
+**Ismert határ:** a szólista explicit (a korpuszban előforduló szavak + a fő tájegységek); egy új tájnév (pl. „Hegyhát”) addig
+nem jelez, amíg fel nem kerül. Az összetételek közül csak a felsoroltak számítanak („gyógytó” nem).

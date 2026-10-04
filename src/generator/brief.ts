@@ -121,6 +121,9 @@ const SYSTEM = `Magyar szálláshely-weboldal art-director + szövegíró vagy. 
   (madárszó, illat, ropogó tűz, csillagos ég) csak ha a forrás kimondja; „csend” / „nyugalom” TILOS, ha
   BÁRMELYIK vélemény zajra panaszkodik; EGY vendég egyszeri élményéből nem lesz „a vendégek mesélik”.
   Vékony forrásnál a település és a célközönség adja a képet — tájat, utcaképet, vizet ne találj ki.
+  ⛔ A település ISMERETE nem forrás (tulaj, 2026-10-04: „általános lírai szöveg”): Balaton-part, víz,
+  hegy, domb, erdő, szőlő, tájegység, kilátás CSAK akkor, ha a szállás saját szövege vagy egy vélemény
+  kimondja — a település neve sem bizonyíték. Ha a forrás hallgat, a nyitórész általános líra.
 - Nincs emoji, nincs klisé.`;
 
 /**

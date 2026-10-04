@@ -68,6 +68,46 @@ const MOOD_CLAIMS: readonly { name: string; re: RegExp; evidence: RegExp; quiet?
   { name: "csillagos ég", re: /csillagos (?:ég|éj)|csillagfény|csillagok/iu, evidence: /csillagos (?:ég|éj)|csillagfény|csillagok/iu },
   { name: "ropogó tűz", re: /ropog/iu, evidence: /ropog/iu },
 ];
+/**
+ * Geography and landscape — the claim the TOWN invites (owner, 2026-10-04: „általános lírai
+ * szöveg”). Measured: the Rozé intro said „a Balaton partján” from the village name alone. Each
+ * claim needs its own word in the property's sources; the name and the town are cut out of the
+ * evidence too, so „Balatonudvari” never licenses „a Balaton partján”. Claims match at a word
+ * start (or as the named compound), so „apartman” is no shore and „medence partján” no lake.
+ */
+const geo = (claim: string, evidence: string = claim) => ({
+  re: new RegExp(`(?<![\\p{L}])(?:${claim})`, "iu"),
+  evidence: new RegExp(`(?<![\\p{L}])(?:${evidence})`, "iu"),
+});
+// Water evidence is one family: a source naming the lake, its shore or a beach licenses „a víz
+// mellett” (measured: Éden, „saját balatoni partszakasz” → „a víz közelségét”). Reviews are often
+// English or German, so their words count as evidence too (Eldorádó: „The main beach is…”).
+const WATER = "(?:víz|tó|balaton-?)?part(?!ner|izán)|v[ií]z|t[óo](?![\\p{L}])|tav|strand|balaton|lake|beach|shore|water|see(?![\\p{L}])|ufer";
+const GEO_CLAIMS: readonly { name: string; re: RegExp; evidence: RegExp }[] = [
+  { name: "Balaton", ...geo("balaton") },
+  { name: "part", ...geo("(?<!medenc[eé]\\s+)(?:víz|tó|balaton-?)?part(?!ner|izán)", WATER) },
+  { name: "víz", ...geo("(?<!medenc[eé]\\s+)víz(?!ilet|melegít|forral|vezeték|költs)", WATER) },
+  { name: "tó", ...geo("(?:tó|tav(?:a|at|ak|on|ra|hoz|nál|ban|nak)?|tó(?:part\\p{L}*|ra|ba|ban|nál|hoz|tól|ról|n))(?![\\p{L}])", "t[óo](?![\\p{L}])|tav(?!asz)|tópart|balaton|lake|see(?![\\p{L}])") },
+  { name: "strand", ...geo("strand", "strand|beach") },
+  { name: "hegy", ...geo("(?:szőlő|tanú)?hegy", "(?:szőlő|tanú)?hegy|mountain|hill|berg") },
+  { name: "domb", ...geo("domb", "domb|hill|hügel") },
+  { name: "erdő", ...geo("erd(?:ő|ei)", "erd(?:ő|ei)|forest|wood|wald") },
+  { name: "völgy", ...geo("völgy", "völgy|valley|tal(?![\\p{L}])") },
+  { name: "mező", ...geo("mező(?!ny)", "mező(?!ny)|meadow|field|wiese") },
+  // „szőlőlugas” is a pergola on the terrace, not a vineyard (Alig-vár, measured).
+  { name: "szőlő", ...geo("szőlő(?!lugas)|borvidék", "szőlő(?!lugas)|borvidék|vineyard|weinberg|wine region") },
+  { name: "panoráma", ...geo("panorám|kilát", "panorám|kilát|view|aussicht|blick") },
+  { name: "nádas", ...geo("nádas", "nád|reed|schilf") },
+  { name: "folyó", ...geo("folyó|patak|duna|tisza", "folyó|patak|duna|tisza|river|stream|danube|fluss|bach") },
+  { name: "öböl", ...geo("öb(?:öl|l)", "öb(?:öl|l)|bay|bucht") },
+  // WHICH shore — the region-label lie of 2026-09 („az északi parton” about a southern house).
+  ...["észak", "dél", "kelet", "nyugat"].map((d) => ({ name: `${d}i part`, ...geo(`${d}i[\\s-]+(?:part|öb|oldal|csücs)`, d) })),
+  // Named landscapes: each needs ITS OWN name in the source („Bakony” proves no „Badacsony”).
+  ...["bakony", "balaton-felvid", "felvidék", "káli-medenc", "tapolcai-medenc", "badacsony", "somló", "mátra", "bükk",
+    "zemplén", "őrség", "börzsöny", "pilis", "mecsek", "velencei-tó", "tisza-tó", "kis-balaton", "keszthelyi-hegys"]
+    .map((t) => ({ name: t, ...geo(`(?:magas-)?${t.replace("-", "[- ]?")}`, t.replace("-", "[- ]?")) })),
+];
+
 /** A guest complaint about noise makes every quiet claim false, whatever else is said. */
 const NOISE = /(?<![\p{L}])(?:zaj|zajos|hangos|munkazaj|építkez|forgalmas|lárm)/iu;
 
@@ -195,11 +235,14 @@ export function lintOpening(lines: readonly { field: string; text: string }[], s
   const hay = source.texts.join(" \n ");
   const noisy = source.reviews.some((r) => NOISE.test(r));
   const proper = [source.name, source.town ?? ""].filter((p) => p.trim().length >= 3);
+  // Proper names carry no claim: strip them (and their suffixed forms) before measuring.
+  const stripProper = (t: string) =>
+    proper.reduce((s, p) => s.replace(new RegExp(`${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\p{L}*`, "giu"), " "), t);
+  // Knowing the town is not a source: its name is no evidence of a landscape either.
+  const geoHay = stripProper(hay);
   for (const { field, text: raw } of lines) {
     if (!OPENING_FIELDS.has(field) || !raw.trim()) continue;
-    // Proper names carry no claim: strip them (and their suffixed forms) before measuring.
-    let text = raw;
-    for (const p of proper) text = text.replace(new RegExp(`${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\p{L}*`, "giu"), " ");
+    const text = stripProper(raw);
 
     for (const w of surfaceWords(text)) {
       out.push({
@@ -270,6 +313,28 @@ export function lintOpening(lines: readonly { field: string; text: string }[], s
         fix: contradicted
           ? `hagyd ki a(z) „${m.name}” állítást: egy vendég-vélemény zajról szól`
           : `hagyd ki a(z) „${m.name}” képet, vagy csak forrásból (a bemutatkozás vagy egy vélemény mondja ki)`,
+      });
+    }
+
+    // One finding per word: „vízparti” is one claim, even if both „víz” and „part” match it.
+    const geoHits = new Map<string, string[]>();
+    for (const g of GEO_CLAIMS) {
+      const hit = g.re.exec(text);
+      if (!hit || g.evidence.test(geoHay)) continue;
+      let a = hit.index;
+      let b = hit.index + hit[0].length;
+      while (a > 0 && /[\p{L}-]/u.test(text[a - 1]!)) a--;
+      while (b < text.length && /[\p{L}-]/u.test(text[b]!)) b++;
+      const quote = text.slice(a, b);
+      geoHits.set(quote, [...(geoHits.get(quote) ?? []), g.name]);
+    }
+    for (const [quote, names] of geoHits) {
+      out.push({
+        field,
+        quote,
+        kind: "hangulat_forras_nelkul",
+        guestReaction: "Ezt a fekvést a szállás sehol nem állítja — a térképen megnézem, és ha nem igaz, nem hiszek a többinek sem.",
+        fix: `hagyd ki a(z) „${names.join("/")}” földrajzi képet: a forrás nem mondja, a település ismerete nem forrás. Általános lírai szöveg kell: a település és a célközönség, legfeljebb egy forrásolt adottság élményként`,
       });
     }
   }
