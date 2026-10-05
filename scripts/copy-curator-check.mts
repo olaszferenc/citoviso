@@ -1,4 +1,4 @@
-// COPY-CURATOR GUARD — „generálás kurátori szöveggel” (ADR-XXXX, Poe; plan: szovegkurator/
+// COPY-CURATOR GUARD — „generálás kurátori szöveggel” (ADR-0326, Poe; plan: szovegkurator/
 // TERV.md §6 item 8). Deterministic, no DB/AI.
 //
 //   ① the pack validator: a good pack passes; every red control fails (over-limit, unknown

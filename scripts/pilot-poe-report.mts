@@ -1,4 +1,4 @@
-// Poe pilot report (ADR-XXXX, D5) — the two generation modes side by side, from measured data.
+// Poe pilot report (ADR-0326, D5) — the two generation modes side by side, from measured data.
 //
 //   ág „AI-szöveg”  : inputs.copyOrigin absent  (briefAndCopy writes, critic may rewrite)
 //   ág „Poe-szöveg” : inputs.copyOrigin = "curator" (Poe writes, the guards judge once)

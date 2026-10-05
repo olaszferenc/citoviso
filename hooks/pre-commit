@@ -406,7 +406,7 @@ if [ -f scripts/copy-manual-check.mts ] && \
   echo "[pre-commit] copy-manual-check (a kézi szöveg-átírás szabályai)…"
   npx tsx scripts/copy-manual-check.mts >"$GATE_LOG" || gate_failed
 fi
-# „Generálás kurátori szöveggel” (Poe, ADR-XXXX): a szöveg-csomag ugyanazzal a mező-szabállyal és
+# „Generálás kurátori szöveggel” (Poe, ADR-0326): a szöveg-csomag ugyanazzal a mező-szabállyal és
 # idézet-kapuval validálódik, mint a kézi és az AI-szöveg; kurátori módban nincs író-hívás, nincs piaci
 # újragenerálás, a kritikus csak ítél, és mindhárom ítélet + a provenance perszisztálódik.
 # ⚠️ ÖN-TRIGGER: a minta az őr saját fájlját is tartalmazza.

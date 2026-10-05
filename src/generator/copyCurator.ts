@@ -1,4 +1,4 @@
-// THE CURATOR'S COPY PACK — "generálás kurátori szöveggel" (ADR-XXXX, Poe; plan:
+// THE CURATOR'S COPY PACK — "generálás kurátori szöveggel" (ADR-0326, Poe; plan:
 // szovegkurator/TERV.md §6 items 1–4). A persona (Poe) writes the mock's words himself;
 // the engine then skips the copywriter call, the market regeneration and the critic's
 // rewrite loop, and the three guards judge the shipped text ONCE (owner ruling D1 = A).

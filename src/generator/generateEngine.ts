@@ -190,7 +190,7 @@ export interface GenerateOpts {
   template?: string;
   curatorPrompt?: string;
   /**
-   * „Generálás kurátori szöveggel” (ADR-XXXX): the words come from the curator persona (Poe),
+   * „Generálás kurátori szöveggel” (ADR-0326): the words come from the curator persona (Poe),
    * not from the copywriter call. No briefAndCopy, no market regeneration, no critic rewrite —
    * the three guards judge the shipped text once (D1 = A). Validated by copyCurator.ts.
    */
