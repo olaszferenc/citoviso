@@ -722,7 +722,7 @@ if [ -f scripts/check-prospect-path.mts ]; then
   echo "[pre-commit] check-prospect-path (régi + új /p/ linkalak)…"
   npx tsx scripts/check-prospect-path.mts
 fi
-# ADR-XXXX: the lead's own preview subdomain (https://<label>.citoviso.com) — label
+# The lead's own preview subdomain (decisions/*-a-lead-sajat-aldomainje-*) (https://<label>.citoviso.com) — label
 # minting, the platform-only link, and the ?sajat=1 own-view marker on the new shape
 # (without it the owner's pilot copy counts as the lead's visit again).
 if [ -f scripts/check-preview-label.mts ]; then
