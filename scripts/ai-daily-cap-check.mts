@@ -75,7 +75,8 @@ for (const [rel, fn] of Object.entries(ENTRY)) {
     ["recopy", "const recopyMatch ="],
   ] as const) {
     const at = server.indexOf(marker);
-    const block = at < 0 ? "" : server.slice(at, at + 2000);
+    // Window sized to the route body (the staggered-batch comment pushed the call past 2000).
+    const block = at < 0 ? "" : server.slice(at, at + 4000);
     const ask = block.indexOf("mockSpendToday()");
     const run = block.indexOf(route === "generate" ? "generateEngineMock(" : "recopyArtifact(");
     if (ask < 0 || run < 0 || ask > run) {

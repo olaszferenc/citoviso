@@ -311,6 +311,7 @@ import path_mod from "node:path";
 import { consoleLang, runWithConsoleLang, setConsoleAi, setConsoleLang, setConsoleNav } from "./i18nCtx.js";
 import { getNavNumbers } from "./navCounts.js";
 import { getAiSpend } from "./aiSpend.js";
+import { runStaggered } from "./staggeredBatch.js";
 import { HUB_PREFIX } from "./nav.js";
 import { uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
@@ -2145,25 +2146,27 @@ async function handle(
       void loadLead(id)
         .then((loaded) =>
           // One mock per picked template; allSettled so one failure does not sink the rest.
-          Promise.allSettled(
-            picks.map((template) =>
-              generateEngineMock(loaded, undefined, {
-                ...(template ? { template } : {}),
-                ...(curatorPrompt ? { curatorPrompt } : {}),
-                // A VALÓS szakasz — a motor jelenti, nem a felület találja ki.
-                onStage: (stage) => {
-                  const run = generating.get(id);
-                  if (run) run.stage = stage;
-                },
-              })
-                // Elkészült sablonok számlálása: TÖBB sablonnál ez a becsületes jel,
-                // mert a szakaszok párhuzamosan futnak, és nincs egyetlen „hol tart".
-                .then((r) => {
-                  const run = generating.get(id);
-                  if (run) run.done += 1;
-                  return r;
-                }),
-            ),
+          // STAGGERED (src/console/staggeredBatch.ts): the first template runs alone through
+          // its "copy" stage (brief + guards = the cache-writing calls), the rest start when
+          // it reaches "render" — so they read its prompt cache instead of all writing their own.
+          runStaggered(picks.length, (i, warm) =>
+            generateEngineMock(loaded, undefined, {
+              ...(picks[i] ? { template: picks[i] } : {}),
+              ...(curatorPrompt ? { curatorPrompt } : {}),
+              // A VALÓS szakasz — a motor jelenti, nem a felület találja ki.
+              onStage: (stage) => {
+                const run = generating.get(id);
+                if (run) run.stage = stage;
+                if (stage === "render") warm();
+              },
+            })
+              // Elkészült sablonok számlálása: TÖBB sablonnál ez a becsületes jel,
+              // mert a szakaszok párhuzamosan futnak, és nincs egyetlen „hol tart".
+              .then((r) => {
+                const run = generating.get(id);
+                if (run) run.done += 1;
+                return r;
+              }),
           ).then((results) => {
             // A KIMENET a képernyőre megy, nem csak a logba. Részleges bukásnál is:
             // „2-ből 1 kész" mellett a MEGBUKOTT ág oka is odakerül — különben a

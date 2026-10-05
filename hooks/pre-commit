@@ -633,6 +633,13 @@ if [ -f scripts/ai-daily-cap-check.mts ] && \
   echo "[pre-commit] ai-daily-cap-check (napi AI-plafon minden mock-futás előtt)…"
   npx tsx scripts/ai-daily-cap-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Multi-template batch STAGGERED (2026-10-05): the first template runs alone through its
+# cache-writing calls, the rest read its prompt cache. ⚠️ ÖN-TRIGGER. Se AI, se hálózat, se DB (~1s).
+if [ -f scripts/batch-stagger-check.mts ] && \
+   changed_files | grep -qE '^src/console/(server|staggeredBatch)\.ts$|^scripts/batch-stagger-check\.mts$'; then
+  echo "[pre-commit] batch-stagger-check (a sablon-köteg lépcsőzve, egy prompt-cache-en)…"
+  npx tsx scripts/batch-stagger-check.mts >"$GATE_LOG" || gate_failed
+fi
 # The gates below this line run the REAL flows with the REAL Zoho credentials from
 # .env, and their fixtures write to fictional guests at example.com — a Null MX
 # domain (RFC 7505), so every commit bounced "556 5.7.27" into the owner's inbox and
