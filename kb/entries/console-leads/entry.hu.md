@@ -4,7 +4,7 @@ title: Lead-lista — szűrés, rendezés, számok, diszkvalifikáltak
 audience: operator
 category: lead-path
 anchors: console.leads
-updated: 2026-09-20
+updated: 2026-10-05
 ---
 
 A lead-lista két nézetből áll: az **„Aktív leadek”** a munka-lista, a
@@ -164,6 +164,11 @@ Cellán belüli jelölések:
   **Szűrni is lehet rá:** a Mock oszlop tölcsérében a **„✓ kiküldve”** opció csak a
   kiküldött leadeket hagyja meg, bármi a mockjuk állapota. Egy állapottal együtt pipálva
   „vagy”-ként működik (pl. „elutasítva vagy ✓ kiküldve”).
+  **Küldésre váró leadek:** a **„jóváhagyva, nincs kiküldve”** opció azokat hagyja meg,
+  akiknek van jóváhagyott mockja, de még egy csatornán sem ment ki hozzájuk megkeresés. A
+  döntésre váró leadeket a **„legenerálva”** opció adja (van mockja, de egy sincs jóváhagyva).
+  Mindkettő az Irányítópult CRM-kártyájáról is egy koppintás. Mock szerint rendezve a
+  kiküldött sorok a nem kiküldöttek mögött (növekvő) / előtt (csökkenő) állnak.
 - **„nincs besorolás”** a Terület oszlopban — a gyűjtési körhöz nincs felvett terület-rekord,
   ezért a területnek nincs neve.
 - **Szín** a Fotók és a Kontakt oszlopban — zöld = jó (3+ fotó, illetve e-mail), sárga = gyenge,

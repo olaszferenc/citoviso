@@ -8524,12 +8524,24 @@ function hubWidget(groupId: string, d: HubData, lang: string): string {
     `<div class="con-w__v">${esc(big)}</div><div class="con-w__s">${esc(sub)}</div>${kv(rows)}</div>`;
   const t = d.r.leadTotals;
   switch (groupId) {
-    case "crm":
+    case "crm": {
+      // The two mock queues, counted per ACTIVE lead by the same predicates the MOCK filter
+      // runs (countMockQueues) — the number and the list its link opens agree (tulaj, 2026-10-05).
+      const nav = consoleNav();
+      const queues: ReadonlyArray<readonly [string, string, string]> = nav
+        ? [
+            [T(lang, "Generált, jóvá nem hagyott mock (lead)"), String(nav.awaitingApproval), "/leads?mock=generated"],
+            [T(lang, "Jóváhagyott, ki nem küldött mock (lead)"), String(nav.approvedUnsent), "/leads?mock=approved_unsent"],
+          ]
+        : [];
       return w("leads", "CRM", String(t.players), T(lang, "felmért szereplő, a diszkvalifikáltakkal együtt"), [
         [T(lang, "Kvalifikált lead"), String(t.leads), "/leads"],
+        ...queues.slice(0, 1),
         [T(lang, "Jóváhagyott mock"), String(t.approved), "/leads?mock=approved"],
+        ...queues.slice(1),
         [T(lang, "Eladó modul"), `${d.sales.on} / ${d.sales.all}`, "/pricing"],
       ]);
+    }
     case "finance": {
       const pct = Math.round((d.fin.aamYearNetHuf / d.fin.aamLimitHuf) * 100);
       return w(

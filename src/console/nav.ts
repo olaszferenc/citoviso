@@ -58,6 +58,10 @@ export interface NavNumbers {
   /** Every scraped player, disqualified ones included — what „Lead-sor" (all=1) lists. */
   readonly players: number;
   readonly approvedMocks: number;
+  /** ACTIVE leads whose shown mock still awaits a decision — what `?mock=generated` lists (CRM widget). */
+  readonly awaitingApproval: number;
+  /** ACTIVE leads with an approved mock and no outreach sent yet — what `?mock=approved_unsent` lists (CRM widget). */
+  readonly approvedUnsent: number;
   readonly documents: number;
   readonly partners: number;
   readonly sellable: number;

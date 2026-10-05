@@ -35,7 +35,9 @@ import {
   effectiveLeadSort,
   LEAD_COLUMNS,
   LEAD_FILTERS,
+  MOCK_APPROVED_UNSENT_CODE,
   MOCK_SENT_CODE,
+  isApprovedUnsent,
   mockOptionLabel,
   pickShownMock,
   SORTABLE_COLUMNS,
@@ -134,7 +136,8 @@ const FIXTURE: LeadListRow[] = [
   ...Array.from({ length: 7 }, (_, i) => row(700 + i, { matchConfidence: 0.3 + i * 0.05, material: 4 })),
   // MOCK states, incl. leads whose outreach went out — the „✓ kiküldve” filter must
   // keep exactly these, whatever their mock state (tulaj, 2026-10-04: no such filter).
-  ...(["approved", "approved", "generated", "rejected"] as const).map((status, i) =>
+  // The last „approved” is NOT sent: the send queue (`approved_unsent`) must keep it alone.
+  ...(["approved", "approved", "generated", "rejected", "approved"] as const).map((status, i) =>
     row(1100 + i, {
       material: 4,
       mockArtifact: { id: `art-${i}`, status, byStatus: { [status]: 1, rejected: 2 } },
@@ -386,6 +389,27 @@ await assertSummaryMatchesCells("kézi szűrő: Kvalifikáció");
 
   await open(render({ mock: ["approved"] }));
   await assertSummaryMatchesCells("kézi szűrő: Mock = jóváhagyva");
+
+  // ── A küldési sor (tulaj, 2026-10-05): jóváhagyott mock, de még semmi nem ment ki. Az
+  // „approved” és a „✓ kiküldve” jel VAGY-szűrő, ebből az ÉS-NEM nem rakható össze —
+  // saját kód kell, és pontosan a jóváhagyott, nem kiküldött leadeket hagyja meg.
+  await open(render({ mock: [MOCK_APPROVED_UNSENT_CODE] }));
+  await assertSummaryMatchesCells("kézi szűrő: Mock = jóváhagyva, nincs kiküldve");
+  {
+    const wantQ = FIXTURE.filter((r) => r.lifecycle !== "disqualified" && isApprovedUnsent(r)).length;
+    const gotQ = await page.$$eval('tbody td[data-col="mock"]', (tds) =>
+      tds.filter((td) => td.getAttribute("data-v") === "approved" && !(td.getAttribute("data-tags") ?? "").includes("sent_out")).length,
+    );
+    const allQ = await page.$$eval('tbody td[data-col="mock"]', (tds) => tds.length);
+    check(
+      wantQ > 0 && gotQ === wantQ && allQ === wantQ,
+      `Mock = jóváhagyva, nincs kiküldve: csak a jóváhagyott, ki nem küldött leadek (várt ${wantQ}, mért ${gotQ}/${allQ})`,
+    );
+    const optQ = await page
+      .$eval(`#leadFilters [name="mock"][value="${MOCK_APPROVED_UNSENT_CODE}"]`, (el) => !!el)
+      .catch(() => false);
+    check(optQ, "a MOCK szűrő kínál „jóváhagyva, nincs kiküldve” opciót");
+  }
 
   // Which mock the cell stands for. Real case (éles, The Boys apartman house): four
   // variants, newest first rejected · approved (sent) · rejected · rejected.

@@ -20,7 +20,16 @@ import { circleToBbox } from "../scraper/regions.js";
 import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
 import { getHeroPin } from "../generator/heroOverride.js";
-import { applyLeadFilters, compareSortKeys, effectiveLeadSort, sortCell, summariseMocks } from "./leadFilters.js";
+import {
+  applyLeadFilters,
+  compareSortKeys,
+  effectiveLeadSort,
+  isApprovedUnsent,
+  isAwaitingApproval,
+  pickShownMock,
+  sortCell,
+  summariseMocks,
+} from "./leadFilters.js";
 import { normalizeEmail, recipientKey, recipientKeySql } from "../email/address.js";
 import { checkLeadContact, normalizeCountry } from "./leadContactRules.js";
 import { leadEmails } from "../email/leadEmails.js";
@@ -338,6 +347,46 @@ export async function listLeadPage(q: LeadQuery = {}): Promise<LeadListResult> {
   });
 
   return buildLeadListResult(all, q);
+}
+
+/**
+ * The two mock queues of the ACTIVE lead list, counted per LEAD (navigation + CRM widget):
+ * awaiting approval (`?mock=generated`) and approved-but-not-sent (`?mock=approved_unsent`).
+ *
+ * ⛔ Same pool and same predicates as `listLeadPage` + the MOCK column tags — the same
+ * inner joins, disqualified leads left out, the shown mock picked by `pickShownMock`, the
+ * sent mark read from `prospect.sent_at` — so the number beside the link and the list it
+ * opens cannot disagree. Lean on purpose (no `lead.raw`): it runs on every console request
+ * behind the nav-count cache.
+ */
+export async function countMockQueues(): Promise<{ awaitingApproval: number; approvedUnsent: number }> {
+  const [leads, artifacts, sent] = await Promise.all([
+    db
+      .selectFrom("lead")
+      .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+      .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+      .select(["lead.id as id"])
+      .where("lead.lifecycle_status", "!=", "disqualified")
+      .execute(),
+    db.selectFrom("mock_artifact").select(["lead_id", "status"]).execute(),
+    db.selectFrom("prospect").select(["lead_id"]).where("sent_at", "is not", null).distinct().execute(),
+  ]);
+  const byLead = new Map<string, { status: string }[]>();
+  for (const a of artifacts) {
+    const list = byLead.get(a.lead_id) ?? [];
+    list.push({ status: a.status });
+    byLead.set(a.lead_id, list);
+  }
+  const sentLeads = new Set(sent.map((s) => s.lead_id));
+  let awaitingApproval = 0;
+  let approvedUnsent = 0;
+  for (const l of leads) {
+    const shown = pickShownMock(byLead.get(l.id) ?? []);
+    const row = { mockArtifact: shown, outreachSentAt: sentLeads.has(l.id) ? "sent" : null };
+    if (isAwaitingApproval(row)) awaitingApproval++;
+    if (isApprovedUnsent(row)) approvedUnsent++;
+  }
+  return { awaitingApproval, approvedUnsent };
 }
 
 /**

@@ -38,7 +38,7 @@ const ok = (label: string, cond: boolean, detail = ""): void => {
 };
 
 // ── fixtures (representative, never personal) ───────────────────────────────────
-const NUMBERS: NavNumbers = { players: 600, approvedMocks: 11, documents: 12, partners: 7, sellable: 13, catalog: 14 };
+const NUMBERS: NavNumbers = { players: 600, approvedMocks: 11, awaitingApproval: 9, approvedUnsent: 4, documents: 12, partners: 7, sellable: 13, catalog: 14 };
 const DATA: HubData = {
   r: {
     total: { sent: 6, orderIntent: 6 },

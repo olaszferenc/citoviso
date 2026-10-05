@@ -91,8 +91,17 @@ export const LEAD_COLUMNS: Record<LeadColumnKey, LeadColumnDef> = {
     // Sorted by the WORD the cell prints, not the enum: `approved` < `none` < `rejected`
     // put „nincs” between „jóváhagyva” and „elutasítva” — an order nobody reading down
     // the column can follow (same class as the Terület sort above).
-    sortBy: (r) => mockStatusLabel(r.mockArtifact ? r.mockArtifact.status : "none", consoleLang()),
-    tags: (r) => [r.mockArtifact ? r.mockArtifact.status : "none", ...(r.outreachSentAt ? [MOCK_SENT_CODE] : [])],
+    // The „✓ kiküldve” mark is part of what the cell prints, so it is part of the key: without
+    // it the sent and the not-yet-sent „jóváhagyva” rows tied and interleaved — the send
+    // queue (`approved_unsent`) made that difference the one the operator scans for.
+    sortBy: (r) =>
+      mockStatusLabel(r.mockArtifact ? r.mockArtifact.status : "none", consoleLang()) +
+      (r.outreachSentAt ? ` ${mockSentLabel(consoleLang())}` : ""),
+    tags: (r) => [
+      r.mockArtifact ? r.mockArtifact.status : "none",
+      ...(r.outreachSentAt ? [MOCK_SENT_CODE] : []),
+      ...(isApprovedUnsent(r) ? [MOCK_APPROVED_UNSENT_CODE] : []),
+    ],
   },
 };
 
@@ -257,8 +266,26 @@ export function mockSentLabel(lang = "hu"): string {
   return T(lang, "✓ kiküldve");
 }
 
-/** A MOCK oszlop szűrőjének MINDEN opciója: a négy állapot + a „✓ kiküldve” jel. */
-export const MOCK_FILTER_OPTIONS: readonly string[] = [...MOCK_STATUSES, MOCK_SENT_CODE];
+/**
+ * The „jóváhagyva, nincs kiküldve” code: the cell prints „jóváhagyva” WITHOUT the
+ * „✓ kiküldve” mark — the two marks the cell already shows, read together. The multi
+ * filter passes a row on ANY selected mark, so „approved AND not sent” cannot be built
+ * from the two single marks; it is its own tag (tulaj, 2026-10-05: the send queue).
+ */
+export const MOCK_APPROVED_UNSENT_CODE = "approved_unsent";
+
+/** The send queue: the lead's shown mock is approved and no outreach went out on any channel. */
+export function isApprovedUnsent(r: { mockArtifact: { status: string } | null; outreachSentAt: string | null }): boolean {
+  return r.mockArtifact?.status === "approved" && !r.outreachSentAt;
+}
+
+/** The approval queue: the lead's shown mock is still awaiting a decision (none approved yet). */
+export function isAwaitingApproval(r: { mockArtifact: { status: string } | null }): boolean {
+  return r.mockArtifact?.status === "generated";
+}
+
+/** A MOCK oszlop szűrőjének MINDEN opciója: a négy állapot + a „✓ kiküldve” jel + a küldési sor. */
+export const MOCK_FILTER_OPTIONS: readonly string[] = [...MOCK_STATUSES, MOCK_SENT_CODE, MOCK_APPROVED_UNSENT_CODE];
 
 /** A csatorna neve a „✓ kiküldve” jel elemleírásában. */
 export function outreachChannelLabel(c: string, lang = "hu"): string {
@@ -281,7 +308,9 @@ export function outreachSentTitle(sentAt: string, channels: readonly string[], l
 
 /** A MOCK szűrő-opció felirata (állapot VAGY a kiküldve-jel). */
 export function mockOptionLabel(code: string, lang = "hu"): string {
-  return code === MOCK_SENT_CODE ? mockSentLabel(lang) : mockStatusLabel(code, lang);
+  if (code === MOCK_SENT_CODE) return mockSentLabel(lang);
+  if (code === MOCK_APPROVED_UNSENT_CODE) return T(lang, "jóváhagyva, nincs kiküldve");
+  return mockStatusLabel(code, lang);
 }
 
 /**

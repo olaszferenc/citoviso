@@ -8,6 +8,7 @@
 
 - [2026-10-05_poe_szovegkurator.md](2026-10-05_poe_szovegkurator.md) — 2026-10-05 — Poe, a szövegkurátor: kód + konzol + charter + ADR (SUB-lánc, 10 session)
 - [2026-10-05_pilot_mobil_masolat.md](2026-10-05_pilot_mobil_masolat.md) — 2026-10-05 — Pilot-másolat a mobil-megkeresésről (SMS/MMS a tulajnak)
+- [2026-10-05_crm_widget_mock_sorok.md](2026-10-05_crm_widget_mock_sorok.md) — 2026-10-05 — CRM-widget: a két mock-sor (jóváhagyásra vár / kiküldésre vár) + Lead-sor szűrő
 - [2026-10-05_ai_plafon_recopy_es_koteg_cache.md](2026-10-05_ai_plafon_recopy_es_koteg_cache.md) — 2026-10-05 — AI-plafon utómunka: a recopy hozzáad + lépcsőzött sablon-köteg (SUB)
 - [2026-10-05_ai_napi_osszeg_konzol.md](2026-10-05_ai_napi_osszeg_konzol.md) — 2026-10-05 — Napi AI-összeg a konzolon (A fejléc-pirula + B generálás-panel)
 - [2026-10-04_tulaj_teszt_szama_mentesites.md](2026-10-04_tulaj_teszt_szama_mentesites.md) — 2026-10-04 — SMS/MMS nem küldhető: a tulaj teszt-száma csak [TESZT] leaden mentes

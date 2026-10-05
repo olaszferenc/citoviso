@@ -4,7 +4,7 @@ title: Irányítópult — a konzol kezdőlapja és a bal oldali menü
 audience: operator
 category: system
 anchors: console.dashboard
-updated: 2026-09-25
+updated: 2026-10-05
 ---
 
 Az **„Irányítópult”** a konzol kezdőlapja. Bal oldalt az oldalsáv a teljes szerkezetet mutatja
@@ -49,7 +49,15 @@ A menü egy fa: **„Irányítópult”**, alatta a modulok — **CRM**, **„P�
 **Egy kártya modulonként** a legfontosabb számokkal, mindegyik sor a saját listájára visz:
 
 - **CRM** — a felmért szereplők száma (a diszkvalifikáltakkal együtt), alatta a kvalifikált
-  leadek, a jóváhagyott mockok és az eladó modulok száma.
+  leadek, a jóváhagyott mockok és az eladó modulok száma, és a két mock-sor, LEADENKÉNT
+  számolva (a diszkvalifikáltak nélkül):
+  - **„Generált, jóvá nem hagyott mock (lead)”** — hány leadnek van legenerált mockja, de még
+    egy sincs jóváhagyva. Koppintva a Lead-sor a Mock oszlop **„legenerálva”** szűrőjével nyílik.
+  - **„Jóváhagyott, ki nem küldött mock (lead)”** — hány leadnek van jóváhagyott mockja, de
+    még egy csatornán sem ment ki hozzá megkeresés. Koppintva a Lead-sor a
+    **„jóváhagyva, nincs kiküldve”** szűrővel nyílik.
+
+  Mindkét szám pontosan annyi, ahány sort a link mögötti lista mutat.
 - **„Pénzügy”** — a nyitott bizonylatok száma (és hogy van-e lejárt), alatta a bizonylatok, a
   partnerek és az AAM-limit kihasználtsága százalékban.
 - **„Megkeresések”** — a kiküldött megkeresések száma, alatta a megkezdett rendelések és a
