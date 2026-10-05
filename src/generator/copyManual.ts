@@ -40,7 +40,7 @@ import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
-import { factLeadOf, loadCopySources, marketSourceOf, reviewFactsOf } from "./copySources.js";
+import { criticFactsOf, factLeadOf, loadCopySources, marketSourceOf } from "./copySources.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { criticSourceOf, judgeGuestCopy } from "./guestCritic.js";
@@ -199,7 +199,7 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
             town: sources.lead.city ?? null,
             address: sources.lead.address,
             rating: siteData.rating ? { value: siteData.rating.value, count: siteData.rating.count ?? null } : null,
-            facts: [...sources.amenities.map((label) => ({ label, source: "description" })), ...reviewFactsOf(inputs)],
+            facts: criticFactsOf(sources, inputs),
             descriptions: sources.descriptions,
             reviews: [],
           }),

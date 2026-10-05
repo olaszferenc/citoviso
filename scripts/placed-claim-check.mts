@@ -179,7 +179,9 @@ const lido = criticSourceOf({
   check("A kritikus minden körben futtatja az összevonás-szabályt", /\.\.\.lintPlacedClaim\(copy, source\),/.test(crit), "nincs a kifogás-listában");
   check("A lint és a kapu ugyanazt a magot hívja", /for \(const h of placedClaims\(text, units, source\.name\)\)/.test(crit) && /placedClaims\(block, units, lead\.name\)/.test(fc), "két külön szabály");
   check("A kapu a renderelt lapot méri (minta-blokk nélkül)", /const placed = placedClaimsOnPage\(input\.html, input\.lead\)\.map\(placedFact\);/.test(fc), "a kapu nem méri");
-  check("A modell ítéletével együtt számít (a lista dönt)", /const facts = \[\.\.\.\(parsed\.facts \?\? \[\]\), \.\.\.placed\];/.test(fc), "a gépi lelet nincs a listában");
+  // The model's list passes the photo-counter rescue first (Yorki, fact-sample-check ⑥); the
+  // placed findings are appended AFTER it, so the rescue can never wave one through.
+  check("A modell ítéletével együtt számít (a lista dönt)", /const facts = \[\.\.\.rescue\.facts, \.\.\.placed\];/.test(fc) && /const rescue = rescuePhotoCounters\(parsed\.facts \?\? \[\]/.test(fc), "a gépi lelet nincs a listában");
   const noKey = fc.slice(fc.indexOf("if (!config.anthropicApiKey) {"), fc.indexOf("try {", fc.indexOf("if (!config.anthropicApiKey) {")));
   check("API-kulcs nélkül is FLAG (nem „pass, nincs jelölt”)", /if \(placed\.length\) \{\s*return \{ verdict: "flag"/.test(noKey), "kulcs nélkül átengedné");
   const onError = fc.slice(fc.lastIndexOf("} catch (err) {"));

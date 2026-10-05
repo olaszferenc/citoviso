@@ -55,6 +55,13 @@ export async function loadCopySources(
   for (const f of descriptionSellingPoints(descriptions)) {
     if (!amenities.some((a) => a.toLowerCase() === f.toLowerCase())) amenities.push(f);
   }
+  // The generation's quote-verified selling points (brief.ts validateSellingPoints) — the
+  // twin of generateEngine's merge. Without it the SAME fact the first generation named
+  // („Balatoni panoráma”, quoted from a review) read as invented to the market guard on
+  // the hand-edit path (Yorki, 2026-10-05; feedback_one_rule_two_copies).
+  for (const f of quotedFactsOf(inputs)) {
+    if (!amenities.some((a) => a.toLowerCase() === f.label.toLowerCase())) amenities.push(f.label);
+  }
   // Strongest first — the ranked-list contract the prompt states (see generateEngine).
   amenities.sort(decisionWeightDesc);
 
@@ -71,6 +78,38 @@ export function marketSourceOf(s: CopySources, siteData: SiteData) {
     ...(s.descriptions.length ? { descriptions: s.descriptions } : {}),
     ...(siteData.rating ? { rating: { value: siteData.rating.value, count: siteData.rating.count ?? null } } : {}),
   };
+}
+
+type PanelFact = { label: string; source: string; quote?: string };
+
+/** Every fact of the first generation's source panel that carries a verified quote. */
+export function quotedFactsOf(inputs: Record<string, unknown>): PanelFact[] {
+  return ((inputs.sourcePanel as { facts?: PanelFact[] } | undefined)?.facts ?? []).filter(
+    (f) => typeof f.label === "string" && f.label.trim() && typeof f.quote === "string" && f.quote.trim(),
+  );
+}
+
+/**
+ * The guest critic's fact list for a post-generation path: every sourced label ONCE, carrying
+ * its quote + origin when the source panel (or this run's own selling points) has one —
+ * otherwise "description". A label both in `amenities` and in the panel used to appear twice,
+ * once as an unquoted "description" fact.
+ */
+export function criticFactsOf(
+  s: CopySources,
+  inputs: Record<string, unknown>,
+  extra: readonly { label: string; quote: string }[] = [],
+): PanelFact[] {
+  const panel = ((inputs.sourcePanel as { facts?: PanelFact[] } | undefined)?.facts ?? []);
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const out: PanelFact[] = s.amenities.map((label) => {
+    const sp = extra.find((x) => same(x.label, label));
+    if (sp) return { label, source: "description", quote: sp.quote };
+    const p = panel.find((x) => same(x.label, label) && x.quote);
+    return p ? { label, source: p.source, quote: p.quote } : { label, source: "description" };
+  });
+  for (const f of reviewFactsOf(inputs)) if (!out.some((o) => same(o.label, f.label))) out.push(f);
+  return out;
 }
 
 /** The first generation's review-backed facts (the source panel snapshot). */
@@ -91,6 +130,8 @@ export function factLeadOf(s: CopySources, siteData: SiteData, inputs: Record<st
     address: s.lead.address,
     phone: s.lead.phone,
     email: s.lead.email,
+    // The templates' "10 fotó / Összes fotó (10)" counter is this number (factCheck.ts).
+    photoCount: siteData.photos.length,
     ...(siteData.rating ? { rating: { value: siteData.rating.value, count: siteData.rating.count ?? null } } : {}),
     ...(s.amenities.length ? { amenities: s.amenities } : {}),
     // The placed-claim rule must weigh the same evidence the critic did (placed-claim-check ④).

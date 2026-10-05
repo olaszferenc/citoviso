@@ -17,7 +17,15 @@
 //   ③ a beágyazott valódi szakasz túléli (csak a LEGBELSŐ jelölt <section> esik ki);
 //   ④ a verdikt a tétel-listából: forrástalan tétel → flag, a modell „pass”-a ellenére; megnevezett
 //     tétel nélküli flag → error (nem ítélhető), nem csendes pass;
-//   ⑤ a bekötés: a verifyFactuality a kivágott lapot olvassa, és a verdictOfFacts dönt.
+//   ⑤ a bekötés: a verifyFactuality a kivágott lapot olvassa, és a verdictOfFacts dönt;
+//   ⑥ a sablon FOTÓ-SZÁMLÁLÓJA („10 fotó / 10 kép”, „Összes fotó (10)”) a valós fotószámon belül
+//     forrásolt („photo_count”), fölötte („12 fotó” 10 fotónál) forrástalan marad; a két hívó
+//     (generálás + kézi/recopy út) átadja a számot (Yorki, 2026-10-05: ugyanaz a számláló egyszer
+//     átment, egyszer FLAG lett, mert a verifier csak 5 képet lát és fotószámot nem kapott);
+//   ⑦ a generálás után szöveget cserélő utak (kézi szerkesztés, recopy) forráskészlete a generálás
+//     IKRE: a forrás-panel idézet-verifikált tényei (pl. vélemény-idézetből „Balatoni panoráma”)
+//     az amenities közé kerülnek, és a kritikus tény-listája címkénként EGYSZER, idézettel kapja
+//     (Yorki: a kézi úton ugyanaz a tény „nincs a bizonyítottan tudunk listán” lett).
 //
 // Futtatás: npx tsx scripts/fact-sample-check.mts
 import { readFileSync } from "node:fs";
@@ -28,9 +36,12 @@ import { TEMPLATES } from "../src/engine/templates.js";
 import {
   extractHardFactCandidates,
   htmlToVisibleText,
+  isPhotoCounterFact,
+  rescuePhotoCounters,
   stripSampleSections,
   verdictOfFacts,
 } from "../src/generator/factCheck.js";
+import { criticFactsOf, quotedFactsOf, type CopySources } from "../src/generator/copySources.js";
 
 let failures = 0;
 let pass = 0;
@@ -153,7 +164,65 @@ check("A mérés nem vak: a sablonok többsége a kivágás ELŐTT mintát mutat
 {
   const src = readFileSync(new URL("../src/generator/factCheck.ts", import.meta.url), "utf8");
   check("A verifyFactuality a minta nélküli lapot olvassa", /htmlToVisibleText\(stripSampleSections\(input\.html\)\)/.test(src), "nincs kivágás a kapu bemenetén");
-  check("A verdiktet a verdictOfFacts adja (nem a modell mezője)", /const verdict = verdictOfFacts\(parsed\.verdict, facts\)/.test(src) && !/verdict: parsed\.verdict/.test(src), "a modell verdiktje megy tovább");
+  check("A verdiktet a verdictOfFacts adja (nem a modell mezője)", /const verdict = verdictOfFacts\(onlyCounter \? "pass" : parsed\.verdict, facts\)/.test(src) && !/verdict: parsed\.verdict/.test(src), "a modell verdiktje megy tovább");
+  check("A számláló-mentés a modell listáján fut, a verdikt ELŐTT", /rescuePhotoCounters\(parsed\.facts \?\? \[\], input\.lead\.photoCount\)/.test(src), "nincs bekötve");
+  for (const f of ["generateEngine.ts", "copySources.ts"]) {
+    const caller = readFileSync(new URL(`../src/generator/${f}`, import.meta.url), "utf8");
+    check(`⛔ ${f} átadja a fotószámot a kapunak`, /photoCount: siteData\.photos\.length/.test(caller), "hiányzik");
+  }
+}
+
+// ── ⑥ the template's photo counter is the real photo count ────────────────────────
+{
+  const ten = { ...DATA, photos: Array.from({ length: 10 }, (_, i) => ({ url: `/uploads/p${i}.jpg`, alt: `${i + 1}. kép`, provenance: "owner", subject: "interior" })) } as unknown as SiteData;
+  const t = TEMPLATES["card-sidebar"];
+  if (t) {
+    const html = renderSite({ template: t.id, skin: t.skins?.[0] ?? "", archetype: "", sections: [], copy: [] } as never, ten, { phase: "mock" });
+    check("A mérés nem vak: a card-sidebar kiírja a „10 fotó” számlálót", htmlToVisibleText(html).includes("10 fotó"), "nincs számláló a lapon");
+  } else check("A card-sidebar sablon létezik", false, Object.keys(TEMPLATES));
+  for (const ok of ["10 fotó / 10 kép", "10 fotó", "Összes fotó (10)", "4 kép", "10 fotó, 10 kép"])
+    check(`„${ok}” 10 fotónál = számláló`, isPhotoCounterFact(ok, 10), "nem ismerte fel");
+  for (const bad of ["12 fotó", "10 fotó / 12 kép", "0 fotó", "10 fotó a teraszról", "10", "fotó", "10 szoba", "Összes (10)"])
+    check(`⛔ „${bad}” 10 fotónál NEM számláló`, !isPhotoCounterFact(bad, 10), "felismerte");
+  const f = (fact: string, sourced: boolean) => ({ fact, sourced, source: sourced ? "amenities" : "" });
+  const r = rescuePhotoCounters([f("10 fotó / 10 kép", false), f("Klíma", true)], 10);
+  check("A forrástalan számláló forrásolt lesz („photo_count”)", r.rescued === 1 && r.facts[0]!.sourced && r.facts[0]!.source === "photo_count", r);
+  check("Csak a számlálón álló flag → pass", verdictOfFacts(r.rescued && !r.facts.some((x) => !x.sourced) ? "pass" : "flag", r.facts) === "pass", r.facts);
+  const r2 = rescuePhotoCounters([f("12 fotó", false), f("10 fotó", false)], 10);
+  check("⛔ A „12 fotó” 10 fotónál forrástalan marad → flag", r2.rescued === 1 && verdictOfFacts("flag", r2.facts) === "flag", r2.facts);
+  check("Fotószám nélkül nincs mentés", rescuePhotoCounters([f("10 fotó", false)], undefined).rescued === 0, "mentett");
+}
+
+// ── ⑦ the post-generation source set is the generation's twin ─────────────────────
+{
+  const inputs = {
+    sourcePanel: {
+      facts: [
+        { label: "Balatoni panoráma", source: "google_places", quote: "Gyönyörű kilátás a Balatonra" },
+        { label: "Kert", source: "szallas.hu" },
+        { label: "Bőséges reggeli", source: "szallas.hu", quote: "bőséges reggelit kaptunk" },
+        { label: "Csend", source: "google_places", quote: "Spokojna i cicha okolica." },
+      ],
+    },
+  };
+  const q = quotedFactsOf(inputs).map((f) => f.label);
+  check("Csak az idézettel bíró panel-tény kerül át", q.join("|") === "Balatoni panoráma|Bőséges reggeli|Csend", q);
+  check("Panel nélkül üres", quotedFactsOf({}).length === 0, "nem üres");
+  const src = { amenities: ["Kert", "Balatoni panoráma", "Bőséges reggeli", "Csend"] } as unknown as CopySources;
+  const facts = criticFactsOf(src, inputs);
+  const labels = facts.map((f) => f.label.toLowerCase());
+  check("⛔ A kritikus tény-listájában minden címke EGYSZER", new Set(labels).size === labels.length, labels);
+  check("Az idézetes tény az idézetével és eredetével megy", facts.find((f) => f.label === "Balatoni panoráma")?.quote === "Gyönyörű kilátás a Balatonra" && facts.find((f) => f.label === "Balatoni panoráma")?.source === "google_places", facts);
+  check("Idézet nélküli tény „description”", facts.find((f) => f.label === "Kert")?.source === "description", facts);
+  const own = criticFactsOf(src, inputs, [{ label: "Kert", quote: "nagy kert a ház mögött" }]);
+  check("A futás saját idézete elsőbbséget kap", own.find((f) => f.label === "Kert")?.quote === "nagy kert a ház mögött", own);
+  const lib = readFileSync(new URL("../src/generator/copySources.ts", import.meta.url), "utf8");
+  const load = lib.slice(lib.indexOf("export async function loadCopySources"), lib.indexOf("export function marketSourceOf"));
+  check("⛔ loadCopySources a panel idézetes tényeit a rendezés ELŐTT olvasztja be", /quotedFactsOf\(inputs\)[\s\S]*amenities\.sort\(decisionWeightDesc\)/.test(load), "hiányzik vagy a rendezés után");
+  for (const f of ["copyManual.ts", "recopy.ts"]) {
+    const caller = readFileSync(new URL(`../src/generator/${f}`, import.meta.url), "utf8");
+    check(`⛔ ${f} a közös criticFactsOf-ot használja`, /criticFactsOf\(sources, inputs/.test(caller), "saját tény-lista");
+  }
 }
 
 console.log(`\nfact-sample-check: ${pass} zöld, ${failures} bukás`);

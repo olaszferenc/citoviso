@@ -65,6 +65,13 @@ export interface FactSource {
    * and call it fabricated even though the listing says so in plain words.
    */
   readonly descriptions?: readonly string[];
+  /**
+   * How many of the property's own photos the page shows. The templates print it as chrome
+   * ("10 fotó" on the card-sidebar, "{n} kép" room hints, "Összes fotó (10)") — a TRUE
+   * number the verifier cannot count, because it is handed at most five of the photos.
+   * Without this the same counter passed one run and flagged the next (Yorki, 2026-10-05).
+   */
+  readonly photoCount?: number;
 }
 
 export interface HardFactVerdict {
@@ -260,6 +267,56 @@ export function verdictOfFacts(
   return modelVerdict === "flag" ? "error" : "pass";
 }
 
+const COUNTER_WORD = /^(?:fot[óo]\p{L}*|kép\p{L}*|összes|db|darab)$/u;
+
+/**
+ * Is `fact` nothing but the template's photo counter ("10 fotó / 10 kép", "Összes fotó (10)")
+ * with every number within the photos the page really shows? Deterministic on purpose: the
+ * verifier sees five photos and no count, so its ruling on this chrome is a coin toss. A
+ * counter LARGER than the real set ("12 fotó" on 10) stays unsourced — that is a fabrication.
+ */
+export function isPhotoCounterFact(fact: string, photoCount: number): boolean {
+  const tokens = fact
+    .toLowerCase()
+    .replace(/[()[\]/·:,.\-–—]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!tokens.length || photoCount < 1) return false;
+  let numbers = 0;
+  let words = 0;
+  for (const t of tokens) {
+    if (/^\d+$/.test(t)) {
+      const n = Number(t);
+      if (n < 1 || n > photoCount) return false;
+      numbers++;
+    } else if (COUNTER_WORD.test(t)) {
+      if (t !== "összes" && t !== "db" && t !== "darab") words++;
+    } else {
+      return false;
+    }
+  }
+  return numbers > 0 && words > 0;
+}
+
+/**
+ * Apply the photo-counter rule to the verifier's list: an unsourced counter within the real
+ * photo count becomes sourced ("photo_count"). Returns how many were rescued, so the caller
+ * can tell a flag that rested ONLY on the counter from one with a real finding behind it.
+ */
+export function rescuePhotoCounters(
+  facts: readonly HardFactVerdict[],
+  photoCount: number | undefined,
+): { facts: HardFactVerdict[]; rescued: number } {
+  if (photoCount == null) return { facts: [...facts], rescued: 0 };
+  let rescued = 0;
+  const out = facts.map((f) => {
+    if (f.sourced || !isPhotoCounterFact(f.fact, photoCount)) return f;
+    rescued++;
+    return { fact: f.fact, sourced: true, source: "photo_count" };
+  });
+  return { facts: out, rescued };
+}
+
 /** Deterministic pre-filter: unique HARD-fact-shaped tokens in the visible text. */
 export function extractHardFactCandidates(visibleText: string): string[] {
   const hits = new Set<string>();
@@ -349,6 +406,12 @@ export async function verifyFactuality(input: {
       `address: ${input.lead.address ?? "nincs"}`,
       `phone: ${input.lead.phone ?? "nincs"}`,
       `email: ${input.lead.email ?? "nincs"}`,
+      ...(input.lead.photoCount != null
+        ? [
+            `photo_count: ${input.lead.photoCount} — a lapon megjelenő saját fotók száma; a ` +
+              `„${input.lead.photoCount} fotó / ${input.lead.photoCount} kép / Összes fotó (${input.lead.photoCount})” számláló ezt mutatja`,
+          ]
+        : []),
       // Structured truth the engine path legitimately renders — only when provided.
       ...(input.lead.rating
         ? [
@@ -407,8 +470,11 @@ export async function verifyFactuality(input: {
       facts: HardFactVerdict[];
       reason: string;
     };
-    const facts = [...(parsed.facts ?? []), ...placed];
-    const verdict = verdictOfFacts(parsed.verdict, facts);
+    const rescue = rescuePhotoCounters(parsed.facts ?? [], input.lead.photoCount);
+    const facts = [...rescue.facts, ...placed];
+    // A flag that rested only on the photo counter is a pass: the counter is the real count.
+    const onlyCounter = rescue.rescued > 0 && !facts.some((f) => !f.sourced);
+    const verdict = verdictOfFacts(onlyCounter ? "pass" : parsed.verdict, facts);
     return {
       verdict,
       candidates,
@@ -416,7 +482,9 @@ export async function verifyFactuality(input: {
       reason:
         verdict === "error"
           ? `a verifier megjelölte, de egyetlen forrástalan tényt sem nevezett meg: ${parsed.reason}`
-          : parsed.reason,
+          : onlyCounter
+            ? `a fotó-számláló a lap valós fotószámát mutatja (${input.lead.photoCount})`
+            : parsed.reason,
     };
   } catch (err) {
     // The deterministic finding stands even when the model could not be asked.

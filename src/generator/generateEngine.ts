@@ -688,6 +688,8 @@ async function generateEngineMockInner(
         address: lead.address,
         phone: lead.phone,
         email: lead.email,
+        // The templates' "10 fotó / Összes fotó (10)" counter is this number (factCheck.ts).
+        photoCount: siteData.photos.length,
         ...(rating != null ? { rating: { value: rating, count: userRatingCount ?? null } } : {}),
         ...(units.rooms.length
           ? { rooms: units.rooms.map((r) => ({ name: r.name, capacity: r.capacity ?? null })) }

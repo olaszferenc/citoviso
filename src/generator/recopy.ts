@@ -32,7 +32,7 @@ import { renderSite } from "../engine/render.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG, langName } from "../i18n/lang.js";
 import { applyManualCopy, applyManualToSurface, manualCopyOf } from "../engine/copyFields.js";
-import { factLeadOf, loadCopySources, marketSourceOf, reviewFactsOf } from "./copySources.js";
+import { criticFactsOf, factLeadOf, loadCopySources, marketSourceOf } from "./copySources.js";
 import { explainAiFailure, generateBriefAndCopy } from "./brief.js";
 import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
@@ -213,14 +213,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // (sourcePanel) so a review quote is still recognised as a REVIEW (ruling B) here.
   let criticInputs: Record<string, unknown> = {};
   if (lang === DEFAULT_LANG) {
-    const panel = reviewFactsOf(inputs);
-    const facts = [
-      ...amenities.map((label) => {
-        const sp = sellingPoints.find((x) => x.label.toLowerCase() === label.toLowerCase());
-        return { label, source: "description", ...(sp ? { quote: sp.quote } : {}) };
-      }),
-      ...panel,
-    ];
+    const facts = criticFactsOf(sources, inputs, sellingPoints);
     const critic = await applyGuestCritic(
       { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
       criticSourceOf({
