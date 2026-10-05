@@ -11,6 +11,16 @@ import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock, type GenerateOpts, type GenStageKey } from "../generator/generateEngine.js";
 import { POE_BY, validateCuratorCopy, type CuratorCopy } from "../generator/copyCurator.js";
 import { buildSourcePack, fieldVisibility, storedQuoteCorpus } from "./sourcePack.js";
+import {
+  decidedByOf,
+  getLeadActivity,
+  leadOfArtifact,
+  logArtifactActivity,
+  logLeadActivity,
+  logProspectActivity,
+  operatorActor,
+  type Actor,
+} from "./leadActivity.js";
 import { recopyArtifact } from "../generator/recopy.js";
 import { capReachedMessage, mockSpendToday } from "../ai/dailyCap.js";
 import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
@@ -415,6 +425,9 @@ function startGenerateRun(
   id: string,
   picks: readonly (string | undefined)[],
   extra: Pick<GenerateOpts, "curatorPrompt" | "curatorCopy">,
+  // Who asked for the run — captured at REQUEST time: the mocks are written minutes
+  // later, when the request (and its operator) is long gone (lead-lastedit plan ④).
+  actor: Actor,
 ): void {
   const startedAt = Date.now();
   generating.set(id, { startedAt, stage: null, done: 0, total: picks.length, curated: !!extra.curatorCopy });
@@ -466,6 +479,14 @@ function startGenerateRun(
         for (const r of okResults) {
           const aid = r.value.artifactId;
           if (aid) startHeroShot(aid);
+          if (aid)
+            void logLeadActivity({
+              leadId: id,
+              tab: "ls-mocks",
+              action: extra.curatorCopy ? "mock.generate_curated" : "mock.generate",
+              actor,
+              subjectId: aid,
+            });
         }
         if (!failed.length) {
           generateOutcome.set(id, {
@@ -2220,6 +2241,8 @@ async function handle(
         })(),
         // K2 / S-1: does the walk-through template walk on this lead (picker, preview, card)?
         await walkReadinessView(d.artifacts),
+        // lead-lastedit (A): who touched each tab last, and who created each mock.
+        await getLeadActivity(leadMatch[1]!),
       ),
     );
   }
@@ -2251,7 +2274,7 @@ async function handle(
       );
       const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
       const picks: (string | undefined)[] = templates.length ? templates : [undefined];
-      startGenerateRun(id, picks, curatorPrompt ? { curatorPrompt } : {});
+      startGenerateRun(id, picks, curatorPrompt ? { curatorPrompt } : {}, operatorActor(await currentOperator(req)));
     }
     // ⛔ ANCHORED, like every other post-action redirect on this page (the recopy route
     // below lands on `#ls-mocks`). Without the fragment `fromHash()` finds nothing and
@@ -2306,7 +2329,7 @@ async function handle(
     const spend = await mockSpendToday();
     if (spend.blocked)
       return send(res, 429, JSON.stringify({ ...verdict, ok: false, message: capReachedMessage(spend) }), "application/json");
-    startGenerateRun(id, templates, { curatorCopy: pack });
+    startGenerateRun(id, templates, { curatorCopy: pack }, operatorActor(op));
     return send(res, 202, JSON.stringify({ ...verdict, ok: true, redirect: `/lead/${id}#ls-mocks` }), "application/json");
   }
   // GET /lead/:id/source-pack.json — the „Forrás-csomag”: what the writer is given
@@ -2371,6 +2394,7 @@ async function handle(
         `/lead/${dataMatch[1]}?flash=${encodeURIComponent(`Nem mentettem: ${saved.problems.join(" ")}`)}&flashKind=bad#ls-data`,
       );
     }
+    await logLeadActivity({ leadId: dataMatch[1]!, tab: "ls-data", action: "data.edit", actor: operatorActor(await currentOperator(req)) });
     // Az adat-űrlap az „Adatok" fülön él, ami egyben az ELSŐ fül — a horgony nélküli
     // visszatérés tehát ma is jó helyre ér. Kiírjuk mégis: így a helyes cél SZÁNDÉK, nem
     // a fülsorrend véletlene, és egy átrendezés nem törné el némán.
@@ -2383,6 +2407,8 @@ async function handle(
   const reenrichMatch = /^\/lead\/([0-9a-f-]{36})\/reenrich$/i.exec(path);
   if (method === "POST" && reenrichMatch) {
     const result = await reenrichOne(reenrichMatch[1]);
+    if (result.ok)
+      await logLeadActivity({ leadId: reenrichMatch[1]!, tab: "ls-data", action: "data.reenrich", actor: operatorActor(await currentOperator(req)) });
     return redirect(
       res,
       `/lead/${reenrichMatch[1]}?flash=${encodeURIComponent(result.message)}` +
@@ -2396,6 +2422,8 @@ async function handle(
   const rescrapeMatch = /^\/lead\/([0-9a-f-]{36})\/rescrape-photos$/i.exec(path);
   if (method === "POST" && rescrapeMatch) {
     const result = await rescrapePhotos(rescrapeMatch[1]);
+    if (result.ok)
+      await logLeadActivity({ leadId: rescrapeMatch[1]!, tab: "ls-photos", action: "photos.rescrape", actor: operatorActor(await currentOperator(req)) });
     return redirect(
       res,
       `/lead/${rescrapeMatch[1]}?flash=${encodeURIComponent(result.message)}` +
@@ -2407,6 +2435,8 @@ async function handle(
   if (method === "POST" && curMatch) {
     const form = await readBody(req);
     const decision = form.get("decision");
+    // Plan ⑤: the decision carries the REAL operator, not the old hard-coded "console".
+    const curOp = await currentOperator(req);
     let superseded = 0;
     // ⛔⛔ KÉP-EGÉSZSÉG KAPU A JÓVÁHAGYÁSON (ADR-0134, Elek FK-003b L01).
     // A lap SAJÁT piros sávja kimondta, hogy a képek a LEADNEK kiküldött lapon is
@@ -2451,7 +2481,8 @@ async function handle(
       // kérdezni pont az a dupla kérdés lenne, amit a tulaj kifogásolt.
     }
     if (decision === "approve" || decision === "reject") {
-      ({ superseded } = await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined));
+      ({ superseded } = await curateArtifact(curMatch[1], decision, form.get("notes") ?? undefined, decidedByOf(curOp)));
+      await logArtifactActivity(curMatch[1]!, "ls-mocks", decision === "approve" ? "mock.approve" : "mock.reject", operatorActor(curOp));
     }
     // Land back at the artifacts section (not the page top) so curating a mock keeps the
     // curator's place. Strip any existing fragment off the referer before anchoring.
@@ -2496,6 +2527,7 @@ async function handle(
       recopyOutcome.set(id, { ok: false, message: flash, at: Date.now() });
     } else {
       recopying.set(id, Date.now());
+      await logArtifactActivity(id, "ls-mocks", "mock.recopy", operatorActor(await currentOperator(req)));
       console.log(`[console] recopy ${id} indul${prompt ? ` · utasítás: ${prompt}` : ""}`); // i18n-exempt: operator log
       void recopyArtifact(id, prompt)
         .then((r) => {
@@ -2585,6 +2617,7 @@ async function handle(
       }
     }
     console.log(`[console] copy ${id} (${actor}): ${result.message}`); // i18n-exempt: operator log
+    if (result.ok) await logArtifactActivity(id, "ls-mocks", "mock.copy_edit", operatorActor(op));
     if (wantsJson) {
       const row = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", id).executeTakeFirst();
       const manualKeys = Object.keys(((row?.inputs ?? {}) as { copyManual?: object }).copyManual ?? {});
@@ -2637,7 +2670,16 @@ async function handle(
   // cleanup). Guarded server-side by deleteArtifact (a sent/converted mock is a no-op).
   const delMatch = /^\/artifact\/([0-9a-f-]{36})\/delete$/i.exec(path);
   if (method === "POST" && delMatch) {
-    await deleteArtifact(delMatch[1]);
+    // The lead must be read BEFORE the row goes — afterwards nothing points back to it.
+    const delLead = await leadOfArtifact(delMatch[1]!);
+    if ((await deleteArtifact(delMatch[1])) && delLead)
+      await logLeadActivity({
+        leadId: delLead,
+        tab: "ls-mocks",
+        action: "mock.delete",
+        actor: operatorActor(await currentOperator(req)),
+        subjectId: delMatch[1]!,
+      });
     const back = (req.headers.referer ?? "/").replace(/#.*$/, "");
     return redirect(res, `${back}#mock-artifacts`);
   }
@@ -3319,6 +3361,7 @@ async function handle(
         return send(res, 200, JSON.stringify(body), "application/json");
       }
       const media = await resolveGatedPhotos(loaded.lead, placesAskMatch[1]!, { places: "curator" });
+      await logLeadActivity({ leadId: placesAskMatch[1]!, tab: "ls-photos", action: "photos.places", actor: operatorActor(await currentOperator(req)) });
       return send(res, 200, JSON.stringify(await leadPhotosPayload(placesAskMatch[1]!, media)), "application/json");
     } catch (e) {
       console.error(`[lead-places-ask] ${placesAskMatch[1]}: ${(e as Error).message}`);
@@ -3337,6 +3380,7 @@ async function handle(
     const actor = op?.displayName || op?.username || "operátor";
     if (url) await setHeroPin(heroPickMatch[1]!, url, actor);
     else await clearHeroPin(heroPickMatch[1]!);
+    await logLeadActivity({ leadId: heroPickMatch[1]!, tab: "ls-photos", action: url ? "photos.hero" : "photos.hero_clear", actor: operatorActor(op) });
     // ⛔ 2026-09-09 (tudásbázis-őr lelete): a megtagadás NÉMA volt — a `repointHero`
     // üzenete csak a szerver-naplóba ment. Egy KIKÜLDÖTT mock nyitóképére kattintva az
     // operátor azt látta, hogy a lap újratölt és NEM TÖRTÉNIK SEMMI: sem csere, sem
@@ -3362,6 +3406,7 @@ async function handle(
   if (method === "POST" && disqMatch) {
     const form = await readBody(req);
     await disqualifyLead(disqMatch[1]!, (form.get("reason") ?? "").trim() || "nincs megadva");
+    await logLeadActivity({ leadId: disqMatch[1]!, tab: "ls-admin", action: "lead.disqualify", actor: operatorActor(await currentOperator(req)) });
     // A diszkvalifikáló űrlap az „Audit" fülön ül (`disqualifyPanel`) — horgony nélkül a
     // döntés után az operátor az „Adatok" fülön találta magát, és a saját döntése
     // eredményét nem látta. Ugyanaz a hibaosztály, mint a generálásnál.
@@ -3371,6 +3416,7 @@ async function handle(
   const reqMatch = /^\/lead\/([0-9a-f-]{36})\/requalify$/i.exec(path);
   if (method === "POST" && reqMatch) {
     await requalifyLead(reqMatch[1]!);
+    await logLeadActivity({ leadId: reqMatch[1]!, tab: "ls-admin", action: "lead.requalify", actor: operatorActor(await currentOperator(req)) });
     return redirect(res, `/lead/${reqMatch[1]}#ls-admin`);
   }
   // POST /lead/:id/prospect — operator creates the tracked prospect (segment +
@@ -3408,6 +3454,7 @@ async function handle(
         segment: form.get("segment") ?? undefined,
         contactEmail: form.get("email")?.trim() || undefined,
       });
+      await logLeadActivity({ leadId: prosMatch[1]!, tab: "ls-outreach", action: "prospect.create", actor: operatorActor(await currentOperator(req)) });
     }
     return redirect(res, `/lead/${prosMatch[1]}#prospects`);
   }
@@ -3417,6 +3464,7 @@ async function handle(
   if (method === "POST" && sentMatch) {
     const form = await readBody(req);
     await markProspectSent(sentMatch[1], "email");
+    await logProspectActivity(sentMatch[1]!, "ls-outreach", "prospect.mark_sent", operatorActor(await currentOperator(req)));
     // A gomb a megkeresés-panelen ül (`#prospects` → „Megkeresés" fül) — oda vissza,
     // különben a kurátor a megjelölés után az „Adatok" fülön keresné a saját sorát.
     return redirect(res, form.get("leadId") ? `/lead/${form.get("leadId")}#prospects` : "/");
@@ -3431,6 +3479,7 @@ async function handle(
   if (method === "POST" && archMatch) {
     const form = await readBody(req);
     await setProspectArchived(archMatch[1], archMatch[2].toLowerCase() === "archive");
+    await logProspectActivity(archMatch[1]!, "ls-outreach", `prospect.${archMatch[2]!.toLowerCase()}`, operatorActor(await currentOperator(req)));
     const leadId = form.get("leadId");
     return redirect(res, leadId ? `/lead/${leadId}#prospects` : "/");
   }
@@ -3444,6 +3493,7 @@ async function handle(
     const form = await readBody(req);
     const op = await currentOperator(req);
     const r = await resubscribeProspect(resubMatch[1], op?.username ?? "ismeretlen", form.get("reason") ?? "");
+    if (r.ok) await logProspectActivity(resubMatch[1]!, "ls-outreach", "prospect.resubscribe", operatorActor(op));
     const leadId = form.get("leadId");
     return redirect(
       res,
@@ -3544,6 +3594,7 @@ async function handle(
   if (method === "POST" && cemailMatch) {
     const form = await readBody(req);
     await setProspectContactEmail(cemailMatch[1], form.get("email") ?? "");
+    await logProspectActivity(cemailMatch[1]!, "ls-outreach", "prospect.contact_email", operatorActor(await currentOperator(req)));
     return redirect(res, `/prospect/${cemailMatch[1]}/draft`);
   }
   // POST /prospect/:id/send-sms — STANDALONE SMS, kept for backcompat/CLI parity;
@@ -3551,6 +3602,7 @@ async function handle(
   const smsMatch = /^\/prospect\/([0-9a-f-]{36})\/send-sms$/i.exec(path);
   if (method === "POST" && smsMatch) {
     const r = await sendOutreachSms(smsMatch[1]);
+    if (r.ok) await logProspectActivity(smsMatch[1]!, "ls-outreach", "prospect.send_sms", operatorActor(await currentOperator(req)));
     const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${smsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
@@ -3572,6 +3624,8 @@ async function handle(
             : "dry-run";
     const pair = await startOutreachPair(allMatch[1]);
     const ok = mail.outcome.kind === "sent" && pair.ok;
+    if (mail.outcome.kind === "sent" || pair.ok)
+      await logProspectActivity(allMatch[1]!, "ls-outreach", "prospect.send_all", operatorActor(await currentOperator(req)));
     const msg = `${ok ? "ok" : "hiba"}:E-mail: ${mailMsg} · Mobil-páros: ${pair.message}`;
     return redirect(res, `/prospect/${allMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
@@ -3581,6 +3635,7 @@ async function handle(
   if (method === "POST" && pairMatch) {
     if (await heldForVerdictConfirm(res, pairMatch[1]!, await readBody(req), "send-pair")) return;
     const r = await startOutreachPair(pairMatch[1]);
+    if (r.ok) await logProspectActivity(pairMatch[1]!, "ls-outreach", "prospect.send_pair", operatorActor(await currentOperator(req)));
     const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${pairMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
@@ -3589,6 +3644,7 @@ async function handle(
   const pairSmsMatch = /^\/prospect\/([0-9a-f-]{36})\/send-pair-sms$/i.exec(path);
   if (method === "POST" && pairSmsMatch) {
     const r = await sendPairSmsHalf(pairSmsMatch[1]);
+    if (r.ok) await logProspectActivity(pairSmsMatch[1]!, "ls-outreach", "prospect.send_pair_sms", operatorActor(await currentOperator(req)));
     const msg = `${r.ok ? "ok" : "hiba"}:${r.ok ? r.message : `Nem küldhető — ${r.message}`}`;
     return redirect(res, `/prospect/${pairSmsMatch[1]}/draft?kuldes=${encodeURIComponent(msg)}`);
   }
@@ -3695,6 +3751,8 @@ async function handle(
   if (method === "POST" && sendMatch) {
     if (await heldForVerdictConfirm(res, sendMatch[1]!, await readBody(req), "send")) return;
     const r = await sendOutreachMail(sendMatch[1]);
+    if (r.outcome.kind === "sent")
+      await logProspectActivity(sendMatch[1]!, "ls-outreach", "prospect.send_mail", operatorActor(await currentOperator(req)));
     const msg =
       r.outcome.kind === "sent"
         ? `ok:Kiküldve (${r.outcome.provider}) — ${r.to}; státusz: sent`
@@ -3720,6 +3778,7 @@ async function handle(
     // The published page is a snapshot whose "today" (dated prices, programs) follows the
     // zone — re-render it, as the owner's own save does.
     await rerenderTenantSnapshot(tenant.id);
+    await logLeadActivity({ leadId: id, tab: "ls-mocks", action: "tenant.timezone", actor: operatorActor(await currentOperator(req)) });
     return redirect(res, `/lead/${id}?flash=${encodeURIComponent(`Időzóna mentve: ${tz}.`)}#ls-mocks`);
   }
   const convMatch = /^\/lead\/([0-9a-f-]{36})\/convert$/i.exec(path);
@@ -3732,6 +3791,7 @@ async function handle(
       // pick; ALL-IN when they haven't configured yet. Single source of truth.
       const orders = await getOrderIntents(id);
       await convertLead(id, artifactId, modulesForConversion(orders, await getDisabledModules()));
+      await logLeadActivity({ leadId: id!, tab: "ls-mocks", action: "lead.convert", actor: operatorActor(await currentOperator(req)), subjectId: artifactId });
     }
     // A konvertáló gomb az artefaktum-kártyán van („Mock és generálás" fül) — oda vissza.
     return redirect(res, `/lead/${id}#ls-mocks`);
@@ -3746,6 +3806,8 @@ async function handle(
     const leadId = await leadIdOfPayment(paymentId);
     if (!leadId) return redirect(res, "/");
     const ok = r.status === "issued" || r.status === "already-issued";
+    if (r.status === "issued")
+      await logLeadActivity({ leadId, tab: "ls-orders", action: "order.invoice_retry", actor: operatorActor(await currentOperator(req)) });
     const msg =
       r.status === "failed"
         ? `A számla most sem készült el (${r.attempts}. kísérlet): ${r.error}`
@@ -3780,6 +3842,8 @@ async function handle(
       // before this it existed only in our DB until someone copied it out by hand.
       const pay = await requestPayment(oi.id);
       if (pay) await sendOrderPayLinkMail(oi.id, pay.paymentId);
+      if (pay)
+        await logLeadActivity({ leadId: id!, tab: "ls-orders", action: "order.request_payment", actor: operatorActor(await currentOperator(req)), subjectId: oi.id });
     }
     // A fizetés-kérő gomb a „Csomag és fizetés" fül rendelés-panelján ül — oda vissza.
     return redirect(res, `/lead/${id}#ls-orders`);

@@ -494,6 +494,24 @@
   background: color-mix(in srgb, var(--citui-cyan-400) 22%, var(--citui-panel));
   color: var(--citui-ink-brand); border-color: transparent;
 }
+/* lead-lastedit (A, jóváhagyott terv `assets/design-refs/console/lead-lastedit/`): minden fül
+   KÉT soros — felül a név, alatta „<monogram> ferenc · ma 13:20" (nincs adat → „—"). Az aktív
+   (fehér) fülön muted, a navy sávon halvány fehér. */
+.con-ltab { flex-direction: column; align-items: flex-start; gap: 5px; padding-top: 9px; padding-bottom: 9px; }
+.con-ltab__name { display: inline-flex; align-items: center; gap: 8px; }
+.con-ltab__who {
+  display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; line-height: 1.1;
+  color: color-mix(in srgb, var(--citui-white) 70%, transparent);
+}
+.con-ltab.on .con-ltab__who { color: var(--citui-muted); }
+.con-av {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; flex: none;
+  font: 700 10.5px/1 var(--citui-font-text); color: var(--citui-white);
+  background: var(--citui-navy-700); border: 1px solid color-mix(in srgb, var(--citui-white) 35%, transparent);
+}
+.con-av[data-k="ext"] { background: var(--citui-muted); }
+.con-av[data-k="sys"] { background: var(--citui-line-strong); color: var(--citui-ink); }
+.con-ltab__who .con-av { width: 16px; height: 16px; font-size: 9px; }
 .con-ltabs__sheet {
   background: var(--citui-panel);
   border: 1px solid var(--citui-navy-900); border-top: 0;
@@ -2375,6 +2393,9 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   font-family: var(--citui-font-display); font-size: 0.92rem; display: block; line-height: 1.25;
 }
 .con .con-mk__sub { display: block; font-size: 11px; color: var(--citui-muted); margin-top: 2px; }
+/* lead-lastedit ④: „Létrehozta: <név>" a cím-alsor alatt. */
+.con .con-mk__by { display: flex; align-items: center; gap: 7px; margin: 6px 0 0; font-size: 12.5px; line-height: 1.3; color: var(--citui-muted); }
+.con .con-mk__hd .con-mk__by b { display: inline; font-family: inherit; font-size: 12.5px; font-weight: 650; color: var(--citui-ink); }
 
 /* ④ A CSUKOTT KÁRTYÁN csak az áll, ami a mockok között KÜLÖNBÖZIK. */
 .con .con-mk__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 8px 11px 10px; margin: 0; }

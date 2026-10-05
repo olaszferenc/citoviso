@@ -19,6 +19,7 @@ import type {
   TenantAdminView,
 } from "./data.js";
 import { normalizeCountry } from "./data.js";
+import { EMPTY_ACTIVITY, type LeadActivityEntry, type LeadActivityView } from "./leadActivity.js";
 import type { LeadColumnKey, LeadFilterDef } from "./leadFilters.js";
 import { ownViewHref } from "./prospectPath.js";
 import {
@@ -5396,6 +5397,8 @@ export function leadPage(
    * artefaktumonként (a Séta-mock kártyája). A szerver méri (cache-olvasás, I/O), a nézet szinkron.
    */
   walk: WalkPageView = { lead: null, byArtifact: new Map() },
+  /** lead-lastedit (A): the newest log entry per tab + who created each mock (migration 0089). */
+  activity: LeadActivityView = EMPTY_ACTIVITY,
 ): string {
   const lang = consoleLang();
   const prov = d.provenance.length
@@ -5594,6 +5597,7 @@ export function leadPage(
                   ? `${esc(patternSummary(a.inputs as PatternInputs))} · `
                   : ""
               }${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
+              ${mockCreatorLine(a, activity, lang)}
               ${a.inputs.copyOrigin === "curator" ? curatorPill(a.inputs, lang) : copyEditPill(a.inputs, lang)}
             </div>
             <dl class="con-mk__facts">
@@ -5629,7 +5633,7 @@ export function leadPage(
                       // felülíró mock MEGNEVEZÉSE áll — egy uuid nem mond semmit a kurátornak.
                       `<span class="con-decision">${T(lang, "Döntés:")} <b>${esc(decisionLabel(dec.decision, lang))}</b>
                        ${dec.notes ? `— ${esc(decisionNote(dec.notes, d.artifacts, lang))}` : ""}
-                       <span class="mut">(${esc(dec.decidedBy)}, ${esc(exactOf(dec.decidedAt))})</span></span>`
+                       <span class="mut">(${esc(deciderName(dec.decidedBy, lang))}, ${esc(exactOf(dec.decidedAt))})</span></span>`
                     : ""
                   : `<span class="con-mk__decide" data-photo-gate-row="${esc(a.id)}">
                        <form method="post" action="/artifact/${esc(a.id)}/curate">
@@ -5755,7 +5759,7 @@ export function leadPage(
         <td data-l="${T(lang, "Döntés")}">${
           dec
             ? `${esc(dec.notes ? decisionNote(dec.notes, d.artifacts, lang) : decisionLabel(dec.decision, lang))}
-               <span class="why">${esc(dec.decidedBy ?? "")} · ${esc(exactOf(dec.decidedAt))}</span>`
+               <span class="why">${esc(deciderName(dec.decidedBy, lang))} · ${esc(exactOf(dec.decidedAt))}</span>`
             : `<span class="mut">${T(lang, "még nincs döntés")}</span>`
         }</td>
       </tr>`;
@@ -6990,7 +6994,7 @@ function cpScript(prefix: string): string {
     <a class="con-back" href="/leads"><span aria-hidden="true">←</span> Vissza a leadekhez</a>
     ${heroPanel}
     ${flashBanner}
-    ${leadTabs(tabs)}
+    ${leadTabs(tabs, activity)}
     ${galleryScript()}
     ${elapsedScript()}`;
   // The tab-hiding class goes on <html> from the HEAD, before the body paints —
@@ -7051,6 +7055,70 @@ function elapsedScript(): string {
   </script>`;
 }
 
+/**
+ * LEAD-NAPLÓ a felületen — jóváhagyott terv: `assets/design-refs/console/lead-lastedit/` (A).
+ *
+ * KÖT: minden fül második sora „<név> · <mikor>"; nincs adat → „—" (soha nem üres, és soha
+ * nem hazudik szerzőt); a három szereplő-fajta (operátor / a szállás tulaja / rendszer)
+ * megkülönböztethető — a monogram-pötty `data-k` szerint színeződik.
+ */
+function actorName(e: LeadActivityEntry, lang: string): string {
+  if (e.kind === "owner") return T(lang, "a szállás tulaja");
+  if (e.kind === "system") return T(lang, "rendszer");
+  return e.label ?? T(lang, "operátor");
+}
+
+function actorDot(e: LeadActivityEntry, lang: string): string {
+  const k = e.kind === "operator" ? "op" : e.kind === "owner" ? "ext" : "sys";
+  const ch = e.kind === "operator" ? (e.label ?? "?").slice(0, 1).toUpperCase() : e.kind === "owner" ? "T" : "R";
+  return `<span class="con-av" data-k="${k}" aria-hidden="true" title="${esc(actorName(e, lang))}">${esc(ch)}</span>`;
+}
+
+/** „ma 13:20" · „tegnap 16:20" · „10.02. 10:03" — in the operator's (Budapest) wall clock. */
+function whenShort(iso: string, lang: string, now: Date = new Date()): string {
+  const fmt = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Budapest",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(d); // "2026-10-05, 13:20"
+  const [day, time] = fmt(new Date(iso)).split(", ") as [string, string];
+  const today = fmt(now).split(", ")[0];
+  const yesterday = fmt(new Date(now.getTime() - 86_400_000)).split(", ")[0];
+  if (day === today) return T(lang, "ma {t}", { t: time });
+  if (day === yesterday) return T(lang, "tegnap {t}", { t: time });
+  return `${day.slice(5).replace("-", ".")}. ${time}`;
+}
+
+function tabWhoLine(e: LeadActivityEntry | undefined, lang: string): string {
+  if (!e) return `<span class="con-ltab__who">—</span>`;
+  return `<span class="con-ltab__who">${actorDot(e, lang)}${esc(actorName(e, lang))} · ${esc(whenShort(e.at, lang))}</span>`;
+}
+
+/** Plan ④: „Létrehozta: <név>" under the card's subtitle; older mocks say so honestly. */
+function mockCreatorLine(a: ArtifactView, activity: LeadActivityView, lang: string): string {
+  const c = activity.creators.get(a.id);
+  if (c)
+    return `<span class="con-mk__by">${actorDot(c, lang)}<span>${T(lang, "Létrehozta:")} <b>${esc(actorName(c, lang))}</b>${
+      c.curated ? ` · ${T(lang, "kurátori szöveggel")}` : ""
+    }</span></span>`;
+  const beforeLog = !activity.since || a.generatedAt < activity.since;
+  return `<span class="con-mk__by">${
+    beforeLog ? T(lang, "Létrehozta: nem rögzített (a napló előtti mock)") : T(lang, "Létrehozta: nem rögzített")
+  }</span>`;
+}
+
+/** Plan ⑤: the decision's real author; the old hard-coded "console" rows are „nem rögzített". */
+function deciderName(by: string | null, lang: string): string {
+  if (!by || by === "console") return T(lang, "nem rögzített");
+  if (by === "buyer_order") return T(lang, "a szállás tulaja");
+  return by;
+}
+
 interface LeadTab {
   readonly id: string;
   readonly label: string;
@@ -7079,17 +7147,19 @@ interface LeadTab {
  * redirect-with-hash routes keep landing on the right section. The script turns
  * them into a switcher and syncs the hash both ways.
  */
-function leadTabs(tabs: readonly LeadTab[]): string {
+function leadTabs(tabs: readonly LeadTab[], activity: LeadActivityView = EMPTY_ACTIVITY): string {
   const lang = consoleLang();
   const bar = tabs
     .map(
       (t, i) =>
         `<a class="con-ltab${i === 0 ? " on" : ""}" href="#${esc(t.id)}" data-tab="${esc(t.id)}"
-            role="tab" aria-selected="${i === 0}" aria-controls="${esc(t.id)}">${esc(t.label)}` +
+            role="tab" aria-selected="${i === 0}" aria-controls="${esc(t.id)}"><span class="con-ltab__name">${esc(t.label)}` +
         // ⛔ A SZÁM KIVEZETVE a fülsorról (jóváhagyott terv ③): magyarázat nélkül nem
         // mondta meg, MIT számol, a „Fotók" fül pedig egyet sem viselt, és ezért
         // „üres"-nek olvasódott. A helyét a fülsor alatti MONDAT vette át.
-        `${t.busy ? `<span class="tabdot" title="${T(lang, "fut valami ezen a fülön")}"></span>` : ""}</a>`,
+        `${t.busy ? `<span class="tabdot" title="${T(lang, "fut valami ezen a fülön")}"></span>` : ""}</span>` +
+        // lead-lastedit (A) ①②: the second line — who touched this tab last, and when.
+        `${tabWhoLine(activity.lastByTab.get(t.id), lang)}</a>`,
     )
     .join("");
   const panes = tabs

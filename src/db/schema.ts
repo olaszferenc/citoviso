@@ -111,7 +111,8 @@ export interface CuratorDecisionTable {
   mock_artifact_id: string;
   decision: "approve" | "reject";
   notes: string | null;
-  /** Curator identity (free text for now; a real actor ref later). */
+  /** Curator identity: the operator's username since 0089 (lead-lastedit plan ⑤);
+   *  older rows hold the hard-coded "console", which the card shows as "nem rögzített". */
   decided_by: string | null;
   decided_at: Generated<Timestamp>;
 }
@@ -1229,6 +1230,32 @@ export interface LeadHeroOverrideTable {
   created_at: Generated<Timestamp>;
 }
 
+/** 0089: who did what on which tab of the lead page (approved plan:
+ *  assets/design-refs/console/lead-lastedit/). Written at REQUEST time; no back-filled rows. */
+export interface LeadActivityTable {
+  id: Generated<string>;
+  lead_id: string;
+  tab: LeadActivityTab;
+  /** Machine key, e.g. "mock.generate" — the label lives in the console (src/console/leadActivity.ts). */
+  action: string;
+  actor_kind: "operator" | "owner" | "system";
+  operator_id: string | null;
+  /** Display-name snapshot at the time of the action (an operator's username). */
+  actor_label: string | null;
+  /** mock_artifact / prospect / order_intent id, when the action has a subject. */
+  subject_id: string | null;
+  at: Generated<Timestamp>;
+}
+
+export type LeadActivityTab =
+  | "ls-data"
+  | "ls-mocks"
+  | "ls-outreach"
+  | "ls-orders"
+  | "ls-photos"
+  | "ls-contacts"
+  | "ls-admin";
+
 /** 0083: the lead's Places answer, paid for ONCE and kept without expiry (owner ruling,
  *  2026-10-01). Shape and re-ask rule: src/generator/placesCache.ts. */
 export interface LeadPlacesCacheTable {
@@ -1549,6 +1576,7 @@ export interface Database {
   event_gather_run: EventGatherRunTable;
   local_event: LocalEventTable;
   lead_hero_override: LeadHeroOverrideTable;
+  lead_activity: LeadActivityTable;
   lead_places_cache: LeadPlacesCacheTable;
   site_review: SiteReviewTable;
   legal_entity: LegalEntityTable;

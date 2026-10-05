@@ -37,6 +37,7 @@ import { outreachPercentForProspect, stampOutreachOffer } from "../payment/offer
 import { zonePickerDataFor } from "../tenant/timeZone.js";
 import type { ZonePickerData } from "../tenant/zonePicker.js";
 import { parseUserAgent, referrerHost } from "../analytics/userAgent.js";
+import { logLeadActivity, OWNER_ACTOR } from "./leadActivity.js";
 
 /** timestamptz comes back as a Date at runtime; normalize to ISO for the views. */
 function toIso(v: unknown): string {
@@ -644,7 +645,8 @@ export async function curateArtifact(
           mock_artifact_id: id,
           decision: "reject" as const,
           notes: `superseded_by:${artifactId}`,
-          decided_by: "console",
+          // The approver's own act took the old approval away — same name (lead-lastedit ⑤).
+          decided_by: decidedBy,
         })),
       )
       .execute();
@@ -1101,6 +1103,14 @@ export async function recordOrderIntent(input: {
     .returning("id")
     .executeTakeFirstOrThrow();
 
+  // The owner's own act on the lead page's „Csomag és fizetés" tab (lead-lastedit ③).
+  await logLeadActivity({
+    leadId: artifact.leadId,
+    tab: "ls-orders",
+    action: "order.request",
+    actor: OWNER_ACTOR,
+    subjectId: order.id,
+  });
   // The order id goes back to the caller so the submit handler can issue the pay-link
   // in the SAME request — order→payment is automatic, not an operator action.
   return { leadId: artifact.leadId, leadName: artifact.leadName, orderIntentId: order.id };
