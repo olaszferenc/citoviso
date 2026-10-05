@@ -61,6 +61,16 @@ kíván a közönsége. Kurátori promptot (hangvétel, hangsúly) adhatsz — *
 
 Indítsd el. Várd meg a végét (a lead-oldal mutatja a haladást); ne kattints közben ide-oda.
 
+**Ha a szöveget Poe írja** (a szövegkurátor, `poe/charter/`): nem te generálsz, hanem átadó-jegyet
+írsz neki a `~/poe/beerkezo/<ÉÉÉÉ-HH-NN>-<lead8>.md` fájlba:
+- a lead konzol-URL-je;
+- **a kurátori lap URL-je: `/lead/<id>/curate?t=a,b`** — a két választott sablon (legfeljebb 2)
+  és a választás indoka;
+- a megfigyeléseid, „nyom, nem forrás” címkével (amit a Google-ben, a fotókon, a portálon láttál).
+⛔ Forrás-anyagot a jegy NEM tartalmaz (leírást, véleményt, kimásolt szöveget): Poe a konzol
+Forrás-csomagjából dolgozik. Poe generál, és a visszajelzését a `~/neo/beerkezo/`-ba írja; a
+kész mockot utána te ellenőrzöd a §7 szerint, és felveszed a jelentésedbe.
+
 ## 7. Szöveg-ellenőrzés
 
 Nyisd meg a kész mockot **mobil és asztali** szélességben is. Olvasd végig az egészet.

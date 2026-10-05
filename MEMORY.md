@@ -1,4 +1,7 @@
 # MEMORY — Citoviso
+
+Utolsó frissítés: 2026-10-05 (✍️ **Poe, a szövegkurátor** (SUB-lánc): „generálás kurátori szöveggel” mód (`copyCurator.ts`, őr `copy-curator-check`), konzol Forrás-csomag fül + kurátori űrlap (panel + `/lead/:id/curate?t=a,b`), KB, pilot-riport (`pilot-poe-report.mts`); charter `poe/charter/` (CHARTER/RUNBOOK/ONTOLOGIA), Neo RUNBOOK §6 átadó-jegy; ADR „Szövegkurátor (Poe)” — D1=A, Lektor nincs. Élesen kell: `poe` operátor-fiók; nyitott D4 (előfizetéses keret). Jegyzet `_planning/memory/2026-10-05_poe_szovegkurator.md`)
+
 Utolsó frissítés: 2026-10-05 (📱 **Pilot-másolat a mobil-megkeresésről**: `OUTREACH_COPY_PHONE` → minden hideg outreach SMS/MMS másolata a tulajnak (`src/outreach/pilotCopy.ts`, őr `pilot-copy-check`); e-mail BCC élesen már aktív (`EMAIL_BCC`); ÉLES 2026-10-05 11:26 (`prod/20261005-1126`, env beállítva); jegyzet `_planning/memory/2026-10-05_pilot_mobil_masolat.md`)
 
 Utolsó frissítés: 2026-10-05 (💲 **AI-plafon utómunka** (SUB): a recopy HOZZÁADJA a költségét az `aiUsage`-hoz (dátumozott `runs`, a napi összeg a futás napjára számol); a konzol sablon-kötege LÉPCSŐZVE indul (`src/console/staggeredBatch.ts`) — dev: köteg $0.880 → $0.679, 2. tag $0.456 → $0.265; jegyzet `_planning/memory/2026-10-05_ai_plafon_recopy_es_koteg_cache.md`)
