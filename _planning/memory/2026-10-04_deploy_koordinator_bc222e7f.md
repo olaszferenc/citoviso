@@ -40,3 +40,19 @@ koordinátor, tulaj: „minden élesbe menjen ki”).
 ## Nyitott
 - A SUB javításai → következő deploy → Kerekerdő újragenerálás (élesen, külön engedély). Nyitott kérdés: a régi `572f7e82` maradjon-e.
 - Deploy utáni fejlesztési tételek változatlanul: lejárat előtti értesítő + élesi őrködés e-mail+SMS (DEPLOY-READY §4b).
+
+## Kiegészítés 2026-10-05 (zárás)
+- A SUB (`wt/cite4d4ef85`) landolta a három javítást: `ec96677c` régió-fallback known=false, `8203768a` elutasított kontakt nem
+  kerül a vendég elé (+ ISP-postafiók nem „idegen domain” — a Kerekerdő `kuci01@axelero.hu` valódi), `b59f0dfa` „parkol” → „Parkoló”.
+  Jegyzete: `_planning/memory/2026-10-04_generator_tenyhuseg_3hiba.md`.
+- Mindhárom ÉLES: egy MÁSIK session deployolta, `30012966` = `prod/20261005-1126` (2026-10-05 11:26). ⚠️ A tulajnak először a tegnapi
+  állapotot mondtam („nincs élesen”) újramérés nélkül — élesi állapotot MINDIG friss méréssel kell állítani.
+- Régi mock levétele (tulaj: „Legyen csak az új”) NEM sikerült: „Mock törlése” csak jóváhagyott mocknál van; a régi `572f7e82`
+  „Elutasítás” gombjára headless böngészőből kattintva nem jött navigáció, a státusz `generated` maradt (ok nem vizsgálva —
+  valószínűleg a lap szkriptje fogja el a submitot). Élesen ma is: `572f7e82` (Balaton-Kelet) + `fce091bc` (Badacsony), mindkettő `generated`.
+
+## Nyitott (2026-10-05)
+- Kerekerdő újragenerálása a javított élesen (böngészőből, kattintva) + a két régi elutasítása — tulaj-engedéllyel, új sessionben.
+- Az „Elutasítás” gomb headless kattintásra nem hatott — felület-hiba-e, vizsgálandó.
+- A SUB nyitott tételei tulaj-döntésre: „Panoráma/kilátás” címke kontextus nélkül; mellékes szöveghibák (tűzrakó+ösvény, „Bakony
+  határában”, „Erdei ösvények”); `brief.ts:97` „Saját parkoló” prompt-példa; a SUB saját §2b-kivétele (`siteData.ts`) utólagos jóváhagyásra.

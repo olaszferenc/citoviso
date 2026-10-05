@@ -1,4 +1,6 @@
 # MEMORY — Citoviso
+Utolsó frissítés: 2026-10-05 (🚀 **Deploy-koordinátor zárása**: a 3 generátor-javítás (régió-fallback, elutasított kontakt, „Parkoló”) ÉLES `30012966` = `prod/20261005-1126` (másik session deployolta); NYITOTT: Kerekerdő újragenerálás böngészőből + a két régi mock (`572f7e82`, `fce091bc`) elutasítása — az „Elutasítás” headless kattintásra nem hatott; „Panoráma” címke és mellékes szöveghibák tulaj-döntésre; jegyzet `_planning/memory/2026-10-04_deploy_koordinator_bc222e7f.md`)
+
 
 Utolsó frissítés: 2026-10-05 (✍️ **Poe, a szövegkurátor** (SUB-lánc): „generálás kurátori szöveggel” mód (`copyCurator.ts`, őr `copy-curator-check`), konzol Forrás-csomag fül + kurátori űrlap (panel + `/lead/:id/curate?t=a,b`), KB, pilot-riport (`pilot-poe-report.mts`); charter `poe/charter/` (CHARTER/RUNBOOK/ONTOLOGIA), Neo RUNBOOK §6 átadó-jegy; ADR „Szövegkurátor (Poe)” — D1=A, Lektor nincs. Élesen kell: `poe` operátor-fiók; nyitott D4 (előfizetéses keret). Jegyzet `_planning/memory/2026-10-05_poe_szovegkurator.md`)
 Utolsó frissítés: 2026-10-05 (📋 **CRM-kártya mock-sorai**: „Generált, jóvá nem hagyott mock (lead)” → `?mock=generated` és „Jóváhagyott, ki nem küldött mock (lead)” → új `?mock=approved_unsent` szűrő; számláló `countMockQueues()` = a lista predikátumai; jegyzet `_planning/memory/2026-10-05_crm_widget_mock_sorok.md`)
