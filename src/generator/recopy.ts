@@ -277,7 +277,11 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
     .updateTable("mock_artifact")
     .set({
       inputs: {
-        ...inputs,
+        // ADR-XXXX: the AI rewrote the words and its guards judged them — a review Vera gave
+        // on the previous text (or a "pending" one) no longer describes this page.
+        ...Object.fromEntries(
+          Object.entries(inputs).filter(([k]) => !["review", "reviewVerdict", "reviewReason"].includes(k)),
+        ),
         recipe: nextRecipe as unknown as Record<string, unknown>,
         siteData: nextSiteData as unknown as Record<string, unknown>,
         designVerdict: design.verdict,

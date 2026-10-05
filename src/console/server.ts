@@ -192,7 +192,10 @@ import {
 import {
   ackCoversVerdicts,
   blockingVerdicts,
+  hasPendingReview,
+  recordReview,
   recordVerdictAck,
+  reviewFormErrors,
   verdictAckOf,
   type BlockingVerdict,
 } from "../outreach/mockVerdictGate.js";
@@ -359,7 +362,7 @@ interface GenRun {
   done: number;
   /** Hány sablon indult összesen. */
   total: number;
-  /** Kurátori szöveggel fut: a „copy” szakaszban AI nem ír, csak az őrök ítélnek. */
+  /** Kurátori szöveggel fut: a „copy” szakaszban AI nem ír és nem ítél (ADR-XXXX: Vera ítél). */
   curated: boolean;
 }
 const generating = new Map<string, GenRun>();
@@ -658,7 +661,9 @@ async function heldForVerdictConfirm(
 ): Promise<boolean> {
   const need = await verdictsNeedingConfirm(prospectId);
   if (!need) return false;
-  if (form.get("confirmVerdicts") !== "1") {
+  // ADR-XXXX: a MISSING Vera review is not acknowledgeable — back to the dialog, which says
+  // so, even when the form carries confirmVerdicts=1 (nothing is recorded, nothing is sent).
+  if (form.get("confirmVerdicts") !== "1" || hasPendingReview(need.blocking)) {
     redirect(res, `/prospect/${prospectId}/draft?verdictConfirm=${action}`);
     return true;
   }
@@ -2512,6 +2517,37 @@ async function handle(
     const back = (req.headers.referer ?? "/").replace(/[#?].*$/, "");
     const kind = spend?.blocked ? "&flashKind=bad" : "";
     return redirect(res, `${back}?flash=${encodeURIComponent(flash)}${kind}#ls-mocks`);
+  }
+  // POST /artifact/:id/review — Vera's verdict on a curator mock's CURRENT text (ADR-XXXX;
+  // approved plan assets/design-refs/console/vera-review/). A plain form on the mock card —
+  // the digital colleague clicks it like a person (no back-door API). Allowed on a mock that
+  // is already offered too: it records a verdict, it does not change the words.
+  const reviewMatch = /^\/artifact\/([0-9a-f-]{36})\/review$/i.exec(path);
+  if (method === "POST" && reviewMatch) {
+    const id = reviewMatch[1]!;
+    const form = await readBody(req);
+    const verdict = form.get("verdict") ?? "";
+    const ref = form.get("ref") ?? "";
+    const note = form.get("note") ?? "";
+    const row = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", id).executeTakeFirst();
+    if (!row) return send(res, 404, layout("404", "<p>Nincs ilyen mock.</p>"));
+    const errs = reviewFormErrors({ verdict, ref, note });
+    let flash: string;
+    let bad = false;
+    if (Object.keys(errs).length) {
+      flash = `Az ítélet nincs rögzítve: ${Object.values(errs).join(" ")}`;
+      bad = true;
+    } else {
+      const op = await currentOperator(req);
+      const by = op?.displayName || op?.username || "operátor";
+      await recordReview(id, { verdict: verdict as "pass" | "flag", by, ref, note });
+      console.log(`[console] review ${id} (${by}): ${verdict} · ${ref.trim()}`); // i18n-exempt: operator log
+      flash = verdict === "pass" ? "Ítélet rögzítve: PASS." : "Ítélet rögzítve: FLAG — küldéskor megerősítést kér.";
+    }
+    return redirect(
+      res,
+      `/lead/${row.lead_id}?flash=${encodeURIComponent(flash)}${bad ? "&flashKind=bad" : ""}#a-${id}`,
+    );
   }
   // POST /artifact/:id/copy — the curator's HAND edit of a mock's copy (ADR-0323; approved
   // plan assets/design-refs/console/mock-copy-edit/). ONE path for both surfaces: the field

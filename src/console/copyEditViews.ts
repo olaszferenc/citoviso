@@ -24,6 +24,7 @@ import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { T } from "../i18n/mail.js";
 import { ic } from "../ui/icons.js";
+import { reviewStateOf } from "../outreach/mockVerdictGate.js";
 
 function esc(s: unknown): string {
   return String(s ?? "")
@@ -34,7 +35,7 @@ function esc(s: unknown): string {
 }
 
 /** JSON for an inline <script>: "</" must never close the script element. */
-function scriptJson(v: unknown): string {
+export function scriptJson(v: unknown): string {
   return JSON.stringify(v).replace(/</g, "\\u003c");
 }
 
@@ -284,6 +285,9 @@ function copyVerdictRow(inputs: Record<string, unknown>, lang: string): string {
     pill(T(lang, "Tényhűség"), inputs.factVerdict),
     pill(T(lang, "Marketing-őr"), inputs.marketVerdict),
     pill(T(lang, "Vendég-kritikus"), inputs.guestCriticVerdict),
+    reviewStateOf(inputs) === "pending"
+      ? `<span class="con-mk__gate" data-verdict="pending">${T(lang, "Vera-ellenőrzés")}: ${T(lang, "hiányzik")}</span>`
+      : pill(T(lang, "Vera-ellenőrzés"), reviewStateOf(inputs)),
   ].join("");
   return `<div class="con-mkcopy__gates"><span class="con-mkcopy__gl">${T(lang, "Az őrök a mentett szövegen:")}</span>${pills}${
     inputs.factVerdict !== "pass" && unsourced.length
@@ -468,6 +472,8 @@ export function copyEditorOverlay(
       gatesRun: T(lang, "Őrök: fut…"),
       gatesOk: T(lang, "Őrök: átment"),
       gatesBad: T(lang, "{n} őr fennakadt"),
+      // ADR-XXXX: a hand edit runs no AI guard — the save asks for Vera's review instead.
+      reviewPending: T(lang, "Vera ítélete kell a küldéshez"),
       fact: T(lang, "Tényhűség"),
       market: T(lang, "Marketing-őr"),
       critic: T(lang, "Vendég-kritikus"),
@@ -781,6 +787,7 @@ const EDITOR_JS = `(function(){
     var bad=['fact','market','critic'].filter(function(k){return v[k]&&v[k]!=='pass';}).length;
     g.innerHTML=p(t.fact,v.fact)+p(t.market,v.market)+p(t.critic,v.critic)+
       (res.factUnsourced&&res.factUnsourced.length&&v.fact!=='pass'?'<div class="cit-ced-why">'+esc(fmt(t.unsourced,{list:res.factUnsourced.join(', ')}))+'</div>':'');
+    if(v.review==='pending'){gs.hidden=false; gs.className='cit-ced-g bad'; gs.textContent=t.reviewPending; return;}
     gs.hidden=false; gs.className='cit-ced-g '+(bad?'bad':'ok'); gs.textContent=bad?fmt(t.gatesBad,{n:bad}):t.gatesOk;
   }
   $('cit-ced-save').addEventListener('click',function(){

@@ -6,9 +6,9 @@
 //   ② ONE RULE: copyCurator reuses the hand edit's limit check and the AI's quote gate — it
 //      must not grow its own copy of either (feedback_one_rule_two_copies). Same over-limit
 //      value → the same message from both paths.
-//   ③ engine wiring: curator mode makes NO copywriter call, NO market regeneration, the critic
-//      only GRADES (judgeGuestCopy), and the provenance (copyOrigin + copyManual) is persisted
-//      next to the three verdicts the send gate reads.
+//   ③ engine wiring: curator mode makes NO copywriter call, NO market regeneration, and runs
+//      NO AI guard (market, critic, fact — ADR-XXXX): the mock gets reviewVerdict "pending"
+//      (Vera's review), and the provenance (copyOrigin + copyManual) is persisted with it.
 //   ④ the send gate does not exempt curator text: a curator mock with a flag still blocks.
 //   ⑤ provenance round-trips through manualCopyOf (by = Poe, orig = "").
 //
@@ -37,9 +37,14 @@ function wiringFindings(src: string): string[] {
     bad.push("a kurátori mód nem kerüli meg az író-hívást (generateBriefAndCopy)");
   if (!/if \(!curated && market\.verdict === "flag" && market\.critique\)/.test(src))
     bad.push("a piaci újragenerálás kurátori módban is lefut");
-  if (!/if \(curated && brief && lang === DEFAULT_LANG\) \{[\s\S]{0,400}judgeGuestCopy\(/.test(src))
-    bad.push("a kritikus kurátori módban nem csak ítél (judgeGuestCopy)");
-  if (!/copyOrigin: "curator",\s*copyManual: curatorManualOf\(/.test(src))
+  // ADR-XXXX: on the curator path no AI guard runs; Vera's review replaces them ("pending").
+  for (const g of ["market = await verifyMarketRelevance({", "factCheck = await verifyFactuality({"])
+    if (!new RegExp(`if \\(!curated\\) try \\{\\s*${g.replace(/[()[\]{}.*+?^$|\\]/g, "\\$&")}`).test(src))
+      bad.push(`kurátori módban is lefut: ${g}`);
+  if (/judgeGuestCopy\(/.test(src)) bad.push("a kritikus kurátori módban is ítél (judgeGuestCopy)");
+  if (!/copyOrigin: "curator",[\s\S]{0,200}reviewVerdict: "pending",/.test(src))
+    bad.push("a kurátori mock nem kap \"pending\" Vera-ítéletet (a kapu átengedné)");
+  if (!/copyOrigin: "curator",[\s\S]{0,300}copyManual: curatorManualOf\(/.test(src))
     bad.push("a provenance (copyOrigin + copyManual) nem perszisztálódik");
   for (const key of ["factVerdict:", "marketVerdict:", "...criticInputs,"])
     if (!src.includes(key)) bad.push(`a(z) ${key} ítélet nem perszisztálódik`);
@@ -52,7 +57,9 @@ if (SELF_TEST) {
   const mutants: [string, string][] = [
     ["író-hívás mindig", engineSrc.replace(/curated\s*\?\s*\{\s*brief:\s*curated\.brief/, "false ? { brief: curated.brief")],
     ["piaci retry kurátorra is", engineSrc.replace("if (!curated && market.verdict", "if (market.verdict")],
-    ["kritikus újraír", engineSrc.replace("criticInputs = await judgeGuestCopy(", "criticInputs = await applyGuestCritic(")],
+    ["piac-őr kurátorra is", engineSrc.replace("if (!curated) try {\n    market", "try {\n    market")],
+    ["tény-őr kurátorra is", engineSrc.replace("if (!curated) try {\n    factCheck", "try {\n    factCheck")],
+    ["nincs pending", engineSrc.replace('reviewVerdict: "pending",', "")],
     ["provenance hiányzik", engineSrc.replace('copyOrigin: "curator",', "")],
     ["kritikus-ítélet nincs mentve", engineSrc.replace("...criticInputs,", "")],
   ];

@@ -99,7 +99,7 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // ADR-0067 ③: the internal console is a HUMAN surface too — prepared for a
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
-import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
+import { copyEditPill, mockCopyEditBlock, mockCopyEditScript, scriptJson } from "./copyEditViews.js";
 import { curatorForm, curatorPill, sourcePackPane } from "./curatorViews.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
@@ -117,7 +117,13 @@ import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
 import type { HeroShotState } from "../outreach/heroShot.js";
 import type { MailSendability } from "../outreach/sendBatch.js";
-import type { BlockingVerdict } from "../outreach/mockVerdictGate.js";
+import {
+  REVIEW_FLAG_NOTE_MIN,
+  REVIEW_REF_MAX,
+  reviewOf,
+  reviewStateOf,
+  type BlockingVerdict,
+} from "../outreach/mockVerdictGate.js";
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 import { pixelQueueScript } from "../server/consent.js";
 
@@ -4920,6 +4926,8 @@ function mockInputLabel(key: string, lang = "hu"): string {
     case "guestCriticVerdict": return T(lang, "Vendég-kritikus");
     case "guestCriticReason": return T(lang, "Vendég-kritikus indoklása");
     case "guestCriticRounds": return T(lang, "Vendég-kritikus körei");
+    // ADR-XXXX. ⛔ A kapu neve BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
+    case "reviewVerdict": return T(lang, "Vera-ellenőrzés");
     default: return key.replace(/_/g, " ");
   }
 }
@@ -4943,12 +4951,71 @@ function gateShortLabel(key: string, lang = "hu"): string {
   }
 }
 
+/**
+ * VERA ÍTÉLETE a kurátori mockon (ADR-XXXX; jóváhagyott terv: assets/design-refs/console/
+ * vera-review/, B változat). Ítélet nélkül a rögzítő ALAPBÓL a kártyán áll; rögzítés után egy
+ * sor marad (ítélet · ki · mikor · jelentés · megjegyzés) és az „új ítélet”, ami kinyitja.
+ * ⛔ A szerver ugyanazt ellenőrzi (`reviewFormErrors`); a szkript csak kényelem — JS nélkül a
+ * POST ugyanígy elutasít, és a hibát a visszairányított lap mondja ki.
+ */
+function mockReviewBlock(
+  artifactId: string,
+  state: "pending" | "pass" | "flag",
+  review: ReturnType<typeof reviewOf>,
+  lang: string,
+): string {
+  const fid = `vr-${artifactId}`;
+  const who =
+    state !== "pending" && review
+      ? `<p class="con-vr__who">${state === "pass" ? "PASS" : "FLAG"} · ${esc(review.by)} · ${esc(
+          review.at.slice(0, 16).replace("T", " "),
+        )} · ${esc(review.ref)}${review.note ? ` — ${esc(review.note)}` : ""} · <button type="button" class="con-vr__redo" data-vr-open="${esc(
+          fid,
+        )}">${T(lang, "új ítélet")}</button></p>`
+      : "";
+  const msgs = {
+    verdict: T(lang, "Válaszd ki az ítéletet."),
+    ref: T(lang, "Add meg a jelentés helyét — az ítélet a jelentésedre hivatkozik."),
+    refLong: T(lang, "Legfeljebb {n} karakter.", { n: String(REVIEW_REF_MAX) }),
+    note: T(lang, "FLAG-nél írd le egy mondatban, mi blokkol (legalább {n} karakter).", { n: String(REVIEW_FLAG_NOTE_MIN) }),
+  };
+  return `<div class="con-vr">
+    <form class="con-vr__box" id="${esc(fid)}" method="post" action="/artifact/${esc(artifactId)}/review"${
+      state === "pending" ? "" : " hidden"
+    } novalidate>
+      <h4>${T(lang, "Vera ítélete erre a szövegre")}</h4>
+      <div class="con-vr__seg" role="radiogroup" aria-label="${T(lang, "Ítélet")}">
+        <label><input type="radio" name="verdict" value="pass"> PASS</label><label><input type="radio" name="verdict" value="flag"> FLAG</label>
+      </div>
+      <p class="con-vr__err" data-vr-err="verdict" hidden></p>
+      <label class="con-vr__lbl" for="${esc(fid)}-ref">${T(lang, "Jelentés (fájl a jelentéseid között)")}</label>
+      <input type="text" id="${esc(fid)}-ref" name="ref" maxlength="${REVIEW_REF_MAX}" placeholder="jelentesek/2026-10-05-02dbb6c2.md">
+      <p class="con-vr__err" data-vr-err="ref" hidden></p>
+      <label class="con-vr__lbl" for="${esc(fid)}-note">${T(lang, "Megjegyzés")}<span class="con-vr__opt"> ${T(
+        lang,
+        "(nem kötelező)",
+      )}</span><span class="con-vr__req"> — <b>${T(lang, "FLAG-nél kötelező: mi blokkol?")}</b></span></label>
+      <textarea id="${esc(fid)}-note" name="note" maxlength="500"></textarea>
+      <p class="con-vr__err" data-vr-err="note" hidden></p>
+      <button class="ok" type="submit">${T(lang, "Ítélet rögzítése")}</button>
+    </form>
+    ${who}
+    <script>(function(){var f=document.getElementById(${scriptJson(fid)});if(!f)return;var m=${scriptJson(msgs)};
+      var o=document.querySelector('[data-vr-open="'+f.id+'"]');if(o)o.addEventListener('click',function(){f.hidden=false;o.parentNode.hidden=true;});
+      f.addEventListener('submit',function(ev){var v=(f.querySelector('input[name=verdict]:checked')||{}).value||'',r=f.ref.value.trim(),n=f.note.value.trim(),e={};
+        if(v!=='pass'&&v!=='flag')e.verdict=m.verdict;if(!r)e.ref=m.ref;else if(r.length>${REVIEW_REF_MAX})e.ref=m.refLong;if(v==='flag'&&n.length<${REVIEW_FLAG_NOTE_MIN})e.note=m.note;
+        f.querySelectorAll('[data-vr-err]').forEach(function(p){var t=e[p.getAttribute('data-vr-err')];p.textContent=t||'';p.hidden=!t;});
+        if(Object.keys(e).length)ev.preventDefault();});})();</script>
+  </div>`;
+}
+
 /** A kapu-verdiktek értéke is szöveg, nem `pass`/`flag` enum. */
 function mockInputValue(key: string, v: unknown, lang = "hu"): string {
   if (key.endsWith("Verdict")) {
     if (v === "pass") return T(lang, "átment");
     if (v === "flag") return T(lang, "megjelölve");
     if (v === "fail") return T(lang, "elbukott");
+    if (v === "pending") return T(lang, "hiányzik");
   }
   if (key === "template" && typeof v === "string") {
     return (TEMPLATES[v]?.label.split(/[—:(]/)[0] ?? v).trim() || v;
@@ -5431,6 +5498,7 @@ export function leadPage(
           const FRONT_KEYS = new Set([
             "template", "photos", "heroScore", "heroSubject",
             "factVerdict", "marketVerdict", "designVerdict", "heroVerdict",
+            "reviewVerdict", "reviewReason",
           ]);
           const namedMeta = scalars
             .filter(([k]) => !FRONT_KEYS.has(k))
@@ -5455,11 +5523,15 @@ export function leadPage(
                 <p>${T(lang, "Küldés előtt javítsd a szöveget — vagy küldéskor a felugróban vállald („Kiküldöm mégis”).")}</p>
               </div>`
               : "";
-          const gateChips = (["factVerdict", "marketVerdict", "designVerdict", "heroVerdict"] as const)
-            .filter((k) => typeof a.inputs[k] === "string")
+          // ADR-XXXX: the curator mock's Vera review — its EFFECTIVE state (a verdict given
+          // on other words reads "pending"), never green until a PASS is recorded.
+          const review = reviewStateOf(a.inputs);
+          const gateVal = (k: string): unknown => (k === "reviewVerdict" ? review : a.inputs[k]);
+          const gateChips = (["factVerdict", "marketVerdict", "designVerdict", "heroVerdict", "reviewVerdict"] as const)
+            .filter((k) => typeof gateVal(k) === "string")
             .map((k) => {
-              const word = mockInputValue(k, a.inputs[k], lang);
-              const pass = a.inputs[k] === "pass";
+              const word = mockInputValue(k, gateVal(k), lang);
+              const pass = gateVal(k) === "pass";
               if (k === "factVerdict" && factList) {
                 const count = T(lang, "{n} forrás nélküli", { n: String(factItems.length) });
                 return `<button type="button" class="con-mk__gate" data-verdict="${esc(String(a.inputs[k]))}" data-mk-flist="${esc(
@@ -5468,7 +5540,7 @@ export function leadPage(
                   `${mockInputLabel(k, lang)}: ${word}`,
                 )}">${esc(gateShortLabel(k, lang))}: ${esc(count)} <span aria-hidden="true">▾</span></button>`;
               }
-              return `<span class="con-mk__gate" data-verdict="${esc(String(a.inputs[k]))}" title="${esc(
+              return `<span class="con-mk__gate" data-verdict="${esc(String(gateVal(k)))}" title="${esc(
                 `${mockInputLabel(k, lang)}: ${word}`,
               )}">${esc(gateShortLabel(k, lang))}${pass ? ` ${ic("check", 11)}` : `: ${esc(word)}`}</span>`;
             })
@@ -5545,6 +5617,7 @@ export function leadPage(
               }
             </dl>
             ${factList}
+            ${review ? mockReviewBlock(a.id, review, reviewOf(a.inputs), lang) : ""}
             ${noPhotos}
             ${gateOpen ? photoGateBox(photoGate!, a.id) : ""}
             <div class="con-mk__act">
@@ -7404,11 +7477,19 @@ export interface VerdictConfirmView {
  */
 function verdictConfirmDialog(prospectId: string, v: VerdictConfirmView): string {
   const lang = consoleLang();
+  // ADR-XXXX: a missing Vera review has NO "send anyway" — the dialog says what to do instead.
+  const pending = v.blocking.some((b) => b.value === "pending");
   const items = v.blocking
     .map(
       (b) =>
         `<li><span class="pg-why">${esc(b.label)} — ${
-          b.value === "flag" ? T(lang, "az őr sértést talált") : T(lang, "az őr NEM tudta ellenőrizni")
+          b.value === "pending"
+            ? T(lang, "erre a szövegre még NINCS ellenőrző ítélet")
+            : b.key === "reviewVerdict"
+              ? T(lang, "Vera SÉRTÉST talált")
+              : b.value === "flag"
+                ? T(lang, "az őr sértést talált")
+                : T(lang, "az őr NEM tudta ellenőrizni")
         }</span>${b.reason ? `<br><span class="mut small">${esc(b.reason)}</span>` : ""}</li>`,
     )
     .join("");
@@ -7432,13 +7513,22 @@ function verdictConfirmDialog(prospectId: string, v: VerdictConfirmView): string
       <div class="pg-head">${ic("alert", 16)} ${
         // A cím arra válaszoljon, ami a leletben van: egy fotó-hiányra „az őr megjelölte"
         // más kérdésre felelne, és a kurátor a rossz dolgot keresné a mockon.
-        v.blocking.length
+        pending
+          ? T(lang, "Erre a szövegre még nincs Vera-ítélet — így nem küldhető ki")
+          : v.blocking.length
           ? T(lang, "Az őr megjelölte ezt a mockot — kiküldöd mégis?")
           : T(lang, "A kiszállított lap képeivel baj van — kiküldöd mégis?")
       }</div>
-      <p class="pg-lead">${T(lang, "Ez nem tiltás: a kiküldés a te döntésed. De a levél ezzel a tartalommal megy ki egy idegennek, és nem vonható vissza.")}</p>
+      <p class="pg-lead">${
+        pending
+          ? T(lang, "Erre a szövegre még nincs Vera-ítélet — így nem küldhető ki, megerősítéssel sem. Előbb rögzítsd az ítéletet a lead lapján, a mock kártyáján.")
+          : T(lang, "Ez nem tiltás: a kiküldés a te döntésed. De a levél ezzel a tartalommal megy ki egy idegennek, és nem vonható vissza.")
+      }</p>
       <ul class="pg-list">${items}${photoItem}</ul>
-      <form method="post" action="/prospect/${esc(prospectId)}/${esc(v.action)}" class="vg-dlg__form">
+      ${
+        pending
+          ? `<div class="vg-dlg__acts"><a class="vg-dlg__cancel" href="/prospect/${esc(prospectId)}/draft">${T(lang, "Bezárás")}</a></div>`
+          : `<form method="post" action="/prospect/${esc(prospectId)}/${esc(v.action)}" class="vg-dlg__form">
         <input type="hidden" name="confirmVerdicts" value="1">
         <label class="small mut" for="cit-vc-reason">${T(lang, "Megjegyzés a naplóba (nem kötelező)")}</label>
         <input id="cit-vc-reason" type="text" name="verdictReason" style="width:100%;padding:7px 9px;margin-top:4px"
@@ -7447,7 +7537,8 @@ function verdictConfirmDialog(prospectId: string, v: VerdictConfirmView): string
           <a class="vg-dlg__cancel" href="/prospect/${esc(prospectId)}/draft">${T(lang, "Mégsem")}</a>
           <button class="bad" type="submit">${T(lang, "Kiküldöm mégis")}</button>
         </div>
-      </form>
+      </form>`
+      }
     </dialog>
     <script>
       (function () {

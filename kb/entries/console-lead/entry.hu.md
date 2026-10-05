@@ -406,11 +406,12 @@ Itt csak azt írhatod át, ami az adott sablonon látszik — a többit a sáv m
 úton írd át. Ha a sablon a bemutatkozónak csak az első mondatát mutatja, az átírás csak azt a
 mondatot cseréli, a bekezdés többi része marad.
 
-**Mentéskor** csak a szöveg cserél (kinézet, fotók, elrendezés marad), és az őrök **újra
-lefutnak** a mentett szövegen (~1 perc): tényhűség, marketing-őr, vendég-kritikus. A
-vendég-kritikus a kézi szöveget nem írja át, csak ítél. Amit kézzel írsz, azért te felelsz: ha
-egy őr fennakad (pl. olyan szolgáltatást írtál be, amire nincs forrás), a mock csak a
-kiküldéskori nyugtázással mehet ki — és a korábbi nyugtázás a szöveg-cserével érvényét veszti.
+**Mentéskor** csak a szöveg cserél (kinézet, fotók, elrendezés marad). Gépi (AI-) őr a kézi
+szövegen **nem fut**: a mentés utáni visszajelzés (az előnézeten a sáv) azt írja, hogy **„Vera ítélete
+kell a küldéshez”**, és a
+mock kártyáján a **„Vera-ellenőrzés”** jelvény **„hiányzik”** értékre vált. Amíg erre a szövegre
+nincs ítélet, a mock nem küldhető ki (lásd lent: *Vera-ellenőrzés a kurátori mockon*). A korábbi
+ítélet és a korábbi kiküldéskori nyugtázás a szöveg-cserével érvényét veszti.
 Korlátok: főcím 140, alcím 160, bemutatkozás 600, szakasz-cím 90 karakter, legfeljebb 6
 kiemelés (egyenként 80 karakter); a főcím, az alcím és a bemutatkozás nem lehet üres.
 
@@ -506,8 +507,9 @@ sablonokat — Neo ezt az URL-t írja a jegyébe.
 4. Gépelés közben a szerver ugyanazokkal a szabályokkal ellenőriz, mint a generálás: alul
    összegző sor áll („… hiba — így nem generálható.” vagy „Generálható · … mock”), alatta a
    figyelmeztetések (például berendezés-leírásból álló kiemelés, ami kiesik).
-5. A **„Generálás ezzel a szöveggel”** gomb indít. AI-szövegíró nem fut: a gép a fotókat és a
-   kinézetet adja, a három őr egyszer ítél. A haladás-sáv a szöveg-szakaszban ezt írja:
+5. A **„Generálás ezzel a szöveggel”** gomb indít. AI-szövegíró nem fut, és gépi (AI-) őr
+   sem: a gép a fotókat és a kinézetet adja, a szöveget Vera ellenőrzi (lásd lent:
+   *Vera-ellenőrzés a kurátori mockon*). A haladás-sáv a szöveg-szakaszban ezt írja:
    **„kurátori szöveg ellenőrzése — AI nem ír”**. Ha a napi AI-keret elfogyott, a gomb tiltott.
 6. Az elkészült mock kártyáján pirula mondja ki, ki írta a szöveget (Poe-nál: „Poe írta”).
 
@@ -538,6 +540,7 @@ A kártyán rövid nevekkel látod a mock legenerálásakor futott gépi ellenő
 | **Piac** | a szöveg megnevezi-e azt, amiért egy vendég valóban választ (a rendszer másutt **„Marketing-őr”**, a küldés-felugróban **„Piac-kapu”** néven mutatja ugyanezt). ⚠️ Ennek semmi köze a **Beállítások → „Piacok — jogi csomag”** panelhez |
 | **Dizájn** | a generált oldal viseli-e a kötelező szerkezeti szabályokat (ikonok, tokenek, modul-horgonyok) |
 | **Nyitókép** | a lap tetejére került fotó elérte-e a minőségi küszöböt (a pontszám és a téma külön is ott áll a kártyán) |
+| **Vera-ellenőrzés** | csak a kurátori (Poe-) vagy kézzel átírt szövegű mockon: Vera ítélete a MOSTANI szövegre. Ilyen mockon a Tényhűség, a Piac és a vendég-kritikus nem fut, a jelvényük nem jelenik meg |
 
 **Mit talált a Tényhűség?** Ha a jelvény sárga, a **leletek számát** is mutatja (például
 „6 forrás nélküli”, a végén egy ▾ nyíllal). Koppints rá: a kártyán kinyílik a lista, amire az őr nem
@@ -557,9 +560,9 @@ Tényhűség gépiesen is megjelöli (a jelvény ilyenkor sárga, AI nélkül is
 megállító kifogásnak veszi. A „kerttel”, „kertes”, „teraszos” alak nem számít helyviszonynak. A
 javítás: a helyhatározó elhagyása, vagy a két tény külön mondatban.
 
-**A jelvény színe:** zöld = rendben · **sárga = lelet van**. Ha egy kapu lefutott, de nem tudott
-ítélni, a jelvényen a nyers `error` szó áll — zöld alapon; ez **nem** azt jelenti, hogy rendben
-van, hanem hogy nincs ítélet. Ha egy kapu egyáltalán nem futott, a jelvénye meg sem jelenik.
+**A jelvény színe:** zöld = rendben · **sárga = lelet van, vagy nincs ítélet**. Ha egy kapu
+lefutott, de nem tudott ítélni, a jelvényen a nyers `error` szó áll — sárga alapon, mert nincs
+ítélet. Ugyanígy sárga a **„Vera-ellenőrzés”** jelvény, amíg **„hiányzik”**. Ha egy kapu egyáltalán nem futott, a jelvénye meg sem jelenik.
 
 ⛔ **A jelvény nem az utolsó szó — a küldésnél derül ki, mi állít meg.** Ne a jelvények
 színéből próbáld kitalálni, kimehet-e a megkeresés: nyomd meg a küldést, és ha a rendszer
@@ -567,9 +570,9 @@ akadályt lát, **felugró áll meg elé**, ami MEGNEVEZI a kaput és leírja, m
 döntesz: **„Mégsem”**, vagy **„Kiküldöm mégis”**. A felugró mezője (**„Megjegyzés a naplóba
 (nem kötelező)”**) elhagyható — a napló üresen is rögzíti, hogy te vállaltad.
 
-A felugró **többet tud, mint a négy jelvény**:
-- a **Nyitókép** jelvény önmagában sosem állít meg — sárgán is kimegy a levél. A másik három
-  (Tényhűség · Piac · Dizájn) viszont igen;
+A felugró **többet tud, mint a kártya jelvényei**:
+- a **Nyitókép** jelvény önmagában sosem állít meg — sárgán is kimegy a levél. A Tényhűség, a Piac, a Dizájn
+  és a Vera-ellenőrzés viszont igen;
 - van egy megállító kapu, aminek **nincs jelvénye a kártyán**: a **„Demó-keretezés”** (rajta
   van-e a kiküldendő lapon az „előzetes terv” keretezés, és nem állítja-e a lap magáról, hogy
   már élő, hivatalos oldal). A felugró ezen a néven nevezi meg;
@@ -610,6 +613,34 @@ A felugró **többet tud, mint a négy jelvény**:
 ⚠️ **Két esetben NINCS „Kiküldöm mégis”** — ott a küldés nem vállalható, újat kell generálni:
 ha a mockhoz **nincs renderelt lap**, vagy ha **egy újabb generálás felülírta a lap fájlját**
 (ilyenkor a link már más tartalmat vinne, mint amit jóváhagytál).
+
+⚠️ **Hiányzó Vera-ítéletre sincs „Kiküldöm mégis”.** A felugró kimondja, hogy erre a szövegre
+még nincs ítélet, és csak **„Bezárás”** gombot ad: előbb az ítéletet kell rögzíteni a mock
+kártyáján. FLAG-ítéletnél viszont a megszokott megerősítés érvényes — a felugró a Vera által
+leírt okot és a jelentés helyét mutatja.
+
+### Vera-ellenőrzés a kurátori mockon
+
+A kurátori (Poe-) szövegű és a kézzel átírt mockon gépi őr nem fut — a szöveget Vera, a
+tényellenőr digitális munkatárs ítéli meg, a saját jelentése alapján. Az ítéletet a mock
+kártyáján rögzíti:
+
+1. Amíg nincs ítélet, a kártyán, a jelvénysor alatt nyitva áll a **„Vera ítélete erre a
+   szövegre”** doboz.
+2. Válaszd ki: **PASS** (rendben) vagy **FLAG** (sértést talált).
+3. A **„Jelentés (fájl a jelentéseid között)”** mezőbe a jelentés helyét írd (például
+   `jelentesek/2026-10-05-02dbb6c2.md`) — kötelező, legfeljebb 200 karakter. Ha nem Vera, hanem
+   te rögzíted: nyisd meg Vera jelentését a `vera/jelentesek/` mappában, és annak a fájlnevét írd
+   be — ítéletet jelentés nélkül ne rögzíts.
+4. A **„Megjegyzés”** mező FLAG-nél kötelező: egy mondat arról, mi blokkol (legalább 10
+   karakter). PASS-nál elhagyható.
+5. **„Ítélet rögzítése”**. Ha valami hiányzik, a hibát a mező alatt látod, és semmi nem mentődik.
+
+Rögzítés után a doboz eltűnik, és egy sor marad: ítélet · ki rögzítette (a bejelentkezett
+felhasználó) · mikor · jelentés · megjegyzés. A sor végén az **„új ítélet”** újra kinyitja a
+dobozt. Ha a szöveget később kézzel átírod, az ítélet elvész, és a jelvény újra **„hiányzik”** —
+az új szövegre újra ítélni kell. A **„Szöveg újragenerálása”** (AI) után a Vera-ítélet és a
+jelvény is eltűnik: az AI által írt szöveget ismét a gépi őrök ítélik meg.
 
 A felugró részletes leírása a Súgóban a **„Megkeresés-piszkozat”** témánál, a *„Kiküldöd
 mégis?”* szakaszban.

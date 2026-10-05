@@ -4,7 +4,7 @@ title: Megkeresés-piszkozat — a jogszerűségi kapu, a küldés és a mérés
 audience: operator
 category: lead-path
 anchors: console.outreach_draft
-updated: 2026-10-01
+updated: 2026-10-05
 ---
 
 A **„Megkeresés-piszkozat”** képernyőn dől el, hogy egy megkeresés kimehet-e, és innen megy is ki —
@@ -25,7 +25,8 @@ A lap legfelső sora **azt** mondja meg, amit tudni akarsz. **Három** válasza 
    küldés gomb megnyomására egy ablak megkérdezi, kiküldöd-e mégis. Ha igen, kimegy.
 3. **„E-mail: most NEM küldhető”** (piros) — itt tényleg nem megy, és a sor
    megmondja, miért: például ennek a címre már kiküldtük a hideg megkeresést, a címzett
-   leiratkozott, a mock még kurátori jóváhagyásra vár, nincs renderelt lapja, vagy a
+   leiratkozott, a mock még kurátori jóváhagyásra vár, nincs renderelt lapja, a mock
+   kurátori szövegére még nincs Vera-ítélet (a sor megmondja, hol rögzítsd), vagy a
    jogszerűségi kapu FLAG-et adott.
    Akkor is megáll, ha a cím (vagy SMS-nél a telefonszám) egy **másik szálláshoz is
    tartozik** — ilyenkor könnyen lehet, hogy a szomszédé, és a mock a konkurenshez menne.
@@ -55,6 +56,14 @@ melyik leletet vállalta. A vállalás csak **arra** a leletre szól, amit látt
 ⛔ **Két eset, ahol a gomb tényleg nem küld** — mert nem lelet, hanem hiányzó termék:
 a mockhoz **nincs renderelt lap** (a lead üres oldalra érkezne), vagy a lapját egy újabb
 generálás **felülírta** (a link más mock tartalmát vinné). Ezeket újra kell generálni.
+
+⛔ **Hiányzó Vera-ítélet sem vállalható.** A kurátori (Poe-) vagy kézzel átírt szövegű mockon
+nem gépi őr ítél, hanem Vera. Amíg a mostani szövegre nincs ítélete, az ablak a leletek között
+ezt írja: **„erre a szövegre még NINCS ellenőrző ítélet”**, a címe **„Erre a szövegre még nincs
+Vera-ítélet — így nem küldhető ki”**, és csak **„Bezárás”** gombot ad —
+**„Kiküldöm mégis”** nincs. Előbb az ítéletet kell rögzíteni a lead lapján, a mock kártyáján
+(Súgó: **Lead-lap** téma, *Vera-ellenőrzés a kurátori mockon*). Ha Vera FLAG-et adott, az a
+megszokott módon vállalható: a lelet sora **„Vera SÉRTÉST talált”**, mögötte az oka és a jelentés.
 
 ## A jogszerűségi kapu — a jogi ítélet
 

@@ -16,6 +16,7 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import {
   ackCoversVerdicts,
   blockingVerdicts,
+  hasPendingReview,
   verdictAckOf,
   verdictReasonLine,
 } from "./mockVerdictGate.js";
@@ -260,7 +261,9 @@ export async function describeMailSendability(prospectId: string): Promise<MailS
     case "flagged":
       return {
         sendable: false,
-        reason: null,
+        // ADR-XXXX: an unconfirmable verdict finding (a MISSING Vera review) has a real reason —
+        // the way out is its last line; without it the strip said „ismeretlen ok".
+        reason: r.outcome.gate === "verdict" && !r.outcome.confirmable ? (r.outcome.reasons.at(-1) ?? null) : null,
         // ⛔ ONLY the legal gate may be called a block (see MailSendability.gateBlocked).
         gateBlocked: r.outcome.gate === "legal",
         // A guard finding is a WARNING with a second click behind it — the send route
@@ -516,6 +519,8 @@ export async function sendOutreachMail(
     const ack = verdictAckOf(inputs);
     if (blocking.length && !ackCoversVerdicts(ack, blocking)) {
       const stale = ack ? " (a korábbi kurátori vállalás NEM fedi a mostani leletet)" : "";
+      // ADR-XXXX: a MISSING Vera review cannot be acknowledged — the way out is the review.
+      const pending = hasPendingReview(blocking);
       return {
         ...base,
         outcome: {
@@ -527,10 +532,12 @@ export async function sendOutreachMail(
             // kimondott kattintás kiküldi. ⚠️ Ez a mondat egy kört még a JÓVÁHAGYÁSRA
             // irányított (az előző terv maradéka): egy kiút-mondat, ami nem létező utat
             // ajánl, ugyanolyan zsákutca, mint a „kurátor-rendezésig" volt.
-            `Kiút${stale}: nyomd meg újra a küldés gombot — a felugróban látod a leletet, és a megerősítéssel kimegy. Vagy generálj új mockot.`,
+            pending
+              ? "Kiút: előbb Vera ítélete kell erre a szövegre — a lead lapján, a mock kártyáján rögzíthető. Ítélet nélkül nincs „Kiküldöm mégis”."
+              : `Kiút${stale}: nyomd meg újra a küldés gombot — a felugróban látod a leletet, és a megerősítéssel kimegy. Vagy generálj új mockot.`,
           ],
           gate: "verdict",
-          confirmable: true,
+          confirmable: !pending,
         },
       };
     }

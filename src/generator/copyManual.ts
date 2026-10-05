@@ -4,25 +4,21 @@
 // and the in-place preview editor (B).
 //
 // WHAT IT DOES: writes the changed fields into recipe/siteData, records each one in
-// `inputs.copyManual` (value + the AI original + who/when, source "curator"), re-renders
-// the SAME file in place (no AI call for the words), and re-runs the guards on the result.
+// `inputs.copyManual` (value + the AI original + who/when, source "curator") and re-renders
+// the SAME file in place. No AI call — neither for the words nor for judging them.
 //
-// ⛔ WHY THE GUARDS RE-RUN (D2). The send gate (mockVerdictGate) reads the STORED verdicts
-// and never checks that they belong to the current text. Keeping the old "pass" under
-// hand-written words would be a false green — the exact class the gate exists to stop.
-// So the fact gate and the market guard judge the new page, and the guest critic grades
-// it WITHOUT rewriting it (judgeGuestCopy): the curator answers for these words. A flag
-// blocks sending like any other; the existing acknowledgement is the way past it — and a
-// previous acknowledgement is DROPPED, because new words are a new finding.
-//
-// ⛔ The order is gates → file → DB, so a mock is never on disk with new words while its
-// stored verdicts still describe the old ones for longer than one write.
+// ⛔ WHY NO GUARD RUNS ANY MORE (ADR-XXXX, amending ADR-0323 D2). The send gate
+// (mockVerdictGate) reads STORED verdicts, so the old "pass" may never stay under new words —
+// that half of D2 stands. What changed is who judges: Vera (the digital colleague) reviews
+// every hand-written mock anyway, so the save CLEARS every AI verdict, the previous review
+// and the acknowledgement, and sets `reviewVerdict: "pending"` — the mock cannot be sent
+// until Vera records her verdict on the console card. Only the deterministic design check
+// re-runs (free, and it judges the markup, not the words).
 
 import { writeFile } from "node:fs/promises";
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
-import type { EditorialCopy } from "../engine/copywriter.js";
 import {
   copyFieldSpec,
   copyKeyApplies,
@@ -40,11 +36,7 @@ import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
-import { criticFactsOf, factLeadOf, loadCopySources, marketSourceOf } from "./copySources.js";
 import { checkDesign } from "./designCheck.js";
-import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import { criticSourceOf, judgeGuestCopy } from "./guestCritic.js";
-import { subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict } from "./marketCheck.js";
 import { injectRuntime } from "./runtime.js";
 
 export interface ManualCopyResult {
@@ -54,8 +46,8 @@ export interface ManualCopyResult {
   /** Per-field validation errors (nothing was saved when present). */
   readonly errors?: Partial<Record<CopyKey, string>>;
   readonly manualCount?: number;
-  readonly verdicts?: { fact: string | null; market: string | null; critic: string | null; design: string };
-  readonly factUnsourced?: string[];
+  /** After a save: "pending" — Vera's review is needed before sending (ADR-XXXX). */
+  readonly verdicts?: { review: "pending"; design: string };
 }
 
 /** Is this mock behind a prospect link? Then its words are frozen (§I) — same rule as recopy. */
@@ -67,6 +59,14 @@ export async function isCopyFrozen(artifactId: string): Promise<boolean> {
     .executeTakeFirst();
   return Boolean(offered);
 }
+
+/** Verdicts about the words that a hand edit makes stale (ADR-XXXX) — dropped on save. */
+export const STALE_VERDICT_KEYS = [
+  "factVerdict", "factUnsourced", "factCandidates",
+  "marketVerdict", "marketReason", "marketFactsNamed", "marketMissed",
+  "guestCriticVerdict", "guestCriticReason", "guestCriticRounds", "guestCriticObjections",
+  "review", "reviewReason", "verdictAck",
+] as const;
 
 type Edits = Partial<Record<CopyKey, CopyValue>>;
 
@@ -133,13 +133,6 @@ export function planManualEdit(
   return { errors, values, manual: next as ManualCopy, changed };
 }
 
-/** The editorial copy (per section kind) as the critic/market guard read it. */
-function editorialOf(recipe: Recipe): EditorialCopy {
-  const out: Record<string, unknown> = {};
-  for (const s of recipe.sections) if (s.copy) out[s.kind] = s.copy;
-  return out as EditorialCopy;
-}
-
 export async function saveManualCopy(artifactId: string, edits: Edits, actor: string): Promise<ManualCopyResult> {
   const row = await db
     .selectFrom("mock_artifact")
@@ -179,51 +172,6 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
   );
   const design = checkDesign(html);
 
-  // The guards judge the page that will be written — never the old one.
-  const sources = await loadCopySources(row.lead_id, inputs, siteData);
-  const editorial = editorialOf(nextRecipe);
-  const hero = editorial.hero ?? {};
-  const factP: Promise<FactCheckVerdict> = verifyFactuality({
-    html,
-    lead: factLeadOf(sources, siteData, inputs),
-    photos: sources.photoUrls,
-  }).catch((err: Error) => ({ verdict: "error" as const, candidates: [], facts: [], reason: err.message }));
-  const marketP: Promise<MarketVerdict> = verifyMarketRelevance({
-    sales: {
-      ...(hero.lead ? { heroLead: hero.lead } : {}),
-      ...(hero.eyebrow ? { heroEyebrow: hero.eyebrow } : {}),
-      ...(nextData.tagline ? { tagline: nextData.tagline } : {}),
-      ...(nextData.intro ? { intro: nextData.intro } : {}),
-      highlights: [...nextData.highlights],
-    },
-    source: marketSourceOf(sources, siteData),
-    photos: sources.photoUrls,
-  }).catch((err: Error) => ({
-    verdict: "error" as const,
-    layer: "judge" as const,
-    factsNamed: [],
-    missed: [],
-    reason: `a kézi szöveg nem ítélhető: ${err.message}`, // i18n-exempt: operator-facing verdict reason (console)
-  }));
-  const criticP: Promise<Record<string, unknown>> =
-    lang === DEFAULT_LANG
-      ? judgeGuestCopy(
-          { tagline: nextData.tagline, intro: nextData.intro, highlights: nextData.highlights, editorial },
-          criticSourceOf({
-            name: sources.lead.name,
-            town: sources.lead.city ?? null,
-            address: sources.lead.address,
-            rating: siteData.rating ? { value: siteData.rating.value, count: siteData.rating.count ?? null } : null,
-            facts: criticFactsOf(sources, inputs),
-            descriptions: sources.descriptions,
-            reviews: [],
-          }),
-        )
-      : Promise.resolve({});
-  const [fact, marketRaw, critic] = await Promise.all([factP, marketP, criticP]);
-  // The critic wins a contradiction (ADR-0328): what it objected to, the market may not demand.
-  const market = subordinateToCriticInputs(marketRaw, critic, marketSourceOf(sources, siteData));
-
   await writeFile(row.path, html, "utf8");
   const patch = {
     recipe: nextRecipe,
@@ -231,36 +179,26 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
     copyManual: plan.manual,
     designVerdict: design.verdict,
     designReason: design.reason ?? null,
-    factVerdict: fact.verdict,
-    factUnsourced: fact.facts.filter((f) => !f.sourced).map((f) => f.fact),
-    factCandidates: fact.candidates.length,
-    marketVerdict: market.verdict,
-    marketReason: market.reason ?? null,
-    marketFactsNamed: market.factsNamed ?? [],
-    marketMissed: market.missed ?? [],
-    ...critic,
+    reviewVerdict: "pending",
   };
   // MERGE, never replace the whole blob: the hero pin, the recopy and the verdict ack
-  // write the same `inputs` (mockVerdictGate.ts). The old ack goes: new words, new finding.
+  // write the same `inputs` (mockVerdictGate.ts). New words, new finding: every stored
+  // verdict about the OLD words goes, with the review and the ack (ADR-XXXX).
   await db
     .updateTable("mock_artifact")
     .set({
-      inputs: sql`(coalesce(inputs, '{}'::jsonb) - 'verdictAck') || ${JSON.stringify(patch)}::jsonb` as never,
+      inputs: sql`(coalesce(inputs, '{}'::jsonb) - ${sql.raw(
+        STALE_VERDICT_KEYS.map((k) => `'${k}'`).join(" - "),
+      )}) || ${JSON.stringify(patch)}::jsonb` as never,
     })
     .where("id", "=", artifactId)
     .execute();
 
-  const criticVerdict = typeof critic.guestCriticVerdict === "string" ? critic.guestCriticVerdict : null;
-  const blocked = fact.verdict !== "pass" || market.verdict === "flag" || market.verdict === "error" ||
-    criticVerdict === "flag" || criticVerdict === "error";
   const n = Object.keys(plan.manual).length;
   return {
     ok: true,
-    message: blocked
-      ? `Mentve (${plan.changed.length} mező) — de egy őr fennakadt rajta, így kiküldeni csak nyugtázással lehet.`
-      : `Mentve (${plan.changed.length} mező) — az őrök átengedték. A kinézet, a fotók és az elrendezés változatlan.`,
+    message: `Mentve (${plan.changed.length} mező) — Vera ítélete kell a küldéshez. A kinézet, a fotók és az elrendezés változatlan.`,
     manualCount: n,
-    verdicts: { fact: fact.verdict, market: market.verdict, critic: criticVerdict, design: design.verdict },
-    factUnsourced: patch.factUnsourced,
+    verdicts: { review: "pending", design: design.verdict },
   };
 }

@@ -22,6 +22,9 @@ import {
   VERDICT_LABEL,
   verdictAckOf,
   verdictReasonLine,
+  copyHashOf,
+  reviewFormErrors,
+  reviewStateOf,
   type BlockingVerdict,
   type VerdictAck,
 } from "../src/outreach/mockVerdictGate.js";
@@ -173,6 +176,55 @@ for (const f of ["../src/outreach/sendBatch.ts", "../src/outreach/sendOutreachSm
     "⛔ A verdikt-kapu a dry-run VISSZATÉRÉS ELŐTT fut (a próba ugyanazt méri, amit a gomb)",
     gateAt > 0 && dryAt > 0 && gateAt < dryAt,
     `verdikt-kapu@${gateAt} vs dryRun@${dryAt} — a próba nem látná a kaput`,
+  );
+}
+
+// ── ADR-XXXX: Vera's review replaces the AI guards on the curator path ──────────
+{
+  const recipe = { sections: [{ kind: "hero", copy: { lead: "Kert a part mellett" } }] };
+  const siteData = { tagline: "Csend", intro: "Bevezető", highlights: ["Kert"] };
+  const base = { recipe, siteData };
+  const hash = copyHashOf(base)!;
+  const reviewed = (verdict: "pass" | "flag", copyHash: string | null = hash) => ({
+    ...base,
+    reviewVerdict: verdict,
+    review: { verdict, by: "Vera", at: "2026-10-05T18:00:00.000Z", ref: "jelentesek/x.md", note: "A15 „Hungary”", copyHash },
+    reviewReason: verdict === "flag" ? "A15 „Hungary” (jelentesek/x.md)" : null,
+  });
+  const pend = blockingVerdicts({ ...base, reviewVerdict: "pending" });
+  check("⛔ A HIÁNYZÓ Vera-ítélet blokkol (nem úgy, mint a hiányzó kulcs)", pend.length === 1 && pend[0]!.value === "pending", JSON.stringify(pend));
+  check(
+    "⛔ A hiányzó ítélet SEMMILYEN vállalással nem nyugtázható",
+    !ackCoversVerdicts(ack({ reviewVerdict: "pending" }), pend),
+    "a pending-re adott ack átengedte",
+  );
+  check("A hiányzó ítélet sora kimondja", /NINCS ellenőrző ítélet/.test(verdictReasonLine(pend[0]!)), verdictReasonLine(pend[0]!));
+  check("A PASS átenged", blockingVerdicts(reviewed("pass")).length === 0, JSON.stringify(blockingVerdicts(reviewed("pass"))));
+  const flag = blockingVerdicts(reviewed("flag"));
+  check("A FLAG blokkol, Vera megjegyzésével", flag.length === 1 && flag[0]!.value === "flag" && flag[0]!.reason.includes("Hungary"), JSON.stringify(flag));
+  check("A FLAG a meglévő vállalással küldhető", ackCoversVerdicts(ack({ reviewVerdict: "flag" }), flag), "nem fedett");
+  // The safety belt: a verdict given on OTHER words is no verdict.
+  const changed = { ...reviewed("pass"), siteData: { ...siteData, tagline: "Más szöveg" } };
+  check("⛔ Szöveg-változás után a régi PASS „hiányzik”", reviewStateOf(changed) === "pending", String(reviewStateOf(changed)));
+  check("⛔ …és blokkol", blockingVerdicts(changed).length === 1, JSON.stringify(blockingVerdicts(changed)));
+  check("⛔ Ítélet-objektum nélküli „pass” = hiányzik", reviewStateOf({ ...base, reviewVerdict: "pass" }) === "pending", "átment");
+  check("Nem kurátori mock: nincs Vera-kapu", reviewStateOf(base) === null && blockingVerdicts(base).length === 0, "kapu jelent meg");
+  check("Az űrlap: üres mentés hibát ad", Object.keys(reviewFormErrors({ verdict: "", ref: " ", note: "" })).length === 2, "nem 2 hiba");
+  check("Az űrlap: FLAG megjegyzés nélkül hibás", !!reviewFormErrors({ verdict: "flag", ref: "j.md", note: "rövid" }).note, "elfogadta");
+  check("Az űrlap: 200 karakter fölött hibás", !!reviewFormErrors({ verdict: "pass", ref: "x".repeat(201), note: "" }).ref, "elfogadta");
+  check("Az űrlap: érvényes PASS megjegyzés nélkül", Object.keys(reviewFormErrors({ verdict: "pass", ref: "j.md", note: "" })).length === 0, "hibát adott");
+  // Wiring: the hand edit runs no AI guard and asks for a review; the AI rewrite drops it.
+  const manual = readFileSync(new URL("../src/generator/copyManual.ts", import.meta.url), "utf8");
+  check("⛔ A kézi mentés NEM futtat AI-őrt", !/verifyFactuality\(|verifyMarketRelevance\(|judgeGuestCopy\(/.test(manual), "AI-őr hívás maradt");
+  check("⛔ A kézi mentés „pending”-re állít", /reviewVerdict: "pending"/.test(manual), "nincs pending");
+  check("⛔ A kézi mentés eldobja a régi ítéletet és a vállalást", /"review", "reviewReason", "verdictAck"/.test(manual), "a régi review/ack megmarad");
+  const recopy = readFileSync(new URL("../src/generator/recopy.ts", import.meta.url), "utf8");
+  check("⛔ Az AI-újraírás eldobja a Vera-ítéletet", /\["review", "reviewVerdict", "reviewReason"\]/.test(recopy), "a review megmarad az új szöveg alatt");
+  const consoleRoutes = readFileSync(new URL("../src/console/server.ts", import.meta.url), "utf8");
+  check(
+    "⛔ A küldés-megerősítés hiányzó ítéletnél NEM rögzít vállalást",
+    /form\.get\("confirmVerdicts"\) !== "1" \|\| hasPendingReview\(need\.blocking\)/.test(consoleRoutes),
+    "a confirmVerdicts=1 átvinné",
   );
 }
 

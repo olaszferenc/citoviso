@@ -29,6 +29,7 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import {
   ackCoversVerdicts,
   blockingVerdicts,
+  hasPendingReview,
   verdictAckOf,
   verdictReasonLine,
 } from "./mockVerdictGate.js";
@@ -250,6 +251,11 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   // refusing). Both now read the same module.
   const smsBlocking = blockingVerdicts(inputs);
   if (smsBlocking.length && !ackCoversVerdicts(verdictAckOf(inputs), smsBlocking)) {
+    if (hasPendingReview(smsBlocking)) {
+      return no(
+        `${smsBlocking.map(verdictReasonLine).join(" · ")} — kiút: előbb Vera ítélete kell erre a szövegre (a lead lapján, a mock kártyáján); ítélet nélkül nincs megerősítés`,
+      );
+    }
     return no(
       `${smsBlocking.map(verdictReasonLine).join(" · ")} — kiút: nyomd meg újra a páros indítását, a felugróban látod a leletet, és a megerősítéssel elindul; vagy generálj új mockot`,
     );

@@ -33,7 +33,7 @@ import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBriefAndCopy } from "./brief.js";
 import { curatorManualOf, fixHomoglyphs, validateCuratorCopy, type CuratorCopy } from "./copyCurator.js";
-import { applyGuestCritic, criticSourceOf, judgeGuestCopy } from "./guestCritic.js";
+import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
@@ -429,7 +429,11 @@ async function generateEngineMockInner(
     highlights: brief ? guestValueHighlights(brief.highlights) : [],
   });
   let market: MarketVerdict | null = null;
-  try {
+  // ADR-XXXX: on the curator path NO AI guard runs (market, critic, fact) — Vera reviews the
+  // words and records her verdict on the console card; until then the mock is "pending" and
+  // the send gate blocks it. Measured 2026-10-05: these three were the curator path's whole
+  // API spend (~$0.12/mock), doubling a check Vera already does.
+  if (!curated) try {
     market = await verifyMarketRelevance({
       sales: salesOf(),
       source: marketSource,
@@ -484,14 +488,9 @@ async function generateEngineMockInner(
     descriptions: sourcedDescriptions,
     reviews: guestVoice.map((v) => v.text),
   });
-  if (curated && brief && lang === DEFAULT_LANG) {
-    // Curator mode: the critic GRADES, it does not rewrite (copyManual's judge-only twin) —
-    // Poe answers for these words, and the market verdict above already describes them.
-    criticInputs = await judgeGuestCopy(
-      { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
-      criticSource,
-    );
-    console.log(`  vendég-kritikus (csak ítél): ${String(criticInputs.guestCriticVerdict).toUpperCase()} · ${String(criticInputs.guestCriticReason)}`); // i18n-exempt: operator log
+  if (curated) {
+    // Curator mode: no critic either (ADR-XXXX) — Poe answers for these words, Vera judges them.
+    console.log("  kurátori szöveg: AI-őr nem fut → Vera-ítélet kell a küldéshez"); // i18n-exempt: operator log
   } else if (brief && lang === DEFAULT_LANG) {
     const critic = await applyGuestCritic(
       { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
@@ -638,7 +637,7 @@ async function generateEngineMockInner(
   // auto-outreach with no further wiring (§G.20). Best-effort: a verifier hiccup records
   // "error" (→ curation), never fails generation.
   let factCheck: FactCheckVerdict | null = null;
-  try {
+  if (!curated) try {
     factCheck = await verifyFactuality({
       html,
       lead: {
@@ -764,6 +763,8 @@ async function generateEngineMockInner(
       ...(curated
         ? {
             copyOrigin: "curator",
+            // ADR-XXXX: blocks sending until Vera records her review on the console card.
+            reviewVerdict: "pending",
             copyManual: curatorManualOf(
               (Object.keys(curated.fields) as CopyKey[]).filter((k) => copyKeyApplies(finalRecipe, k)),
               (k) => currentCopy(finalRecipe, siteData, k),

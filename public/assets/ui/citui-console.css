@@ -2393,6 +2393,39 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-mk__gate[data-verdict="flag"] {
   background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-panel)); color: var(--citui-warn-ink);
 }
+/* ADR-XXXX: a missing review (and an unjudged guard) is a WARNING, never green */
+.con .con-mk__gate[data-verdict="pending"],
+.con .con-mk__gate[data-verdict="error"] {
+  background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-panel)); color: var(--citui-warn-ink);
+}
+/* ADR-XXXX: Vera's review on the curator mock card (approved plan: design-refs/console/vera-review, B) */
+.con .con-vr { padding: 0 11px 10px; }
+.con .con-vr__box { display: block; margin: 0; padding: 10px 12px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius); background: var(--citui-panel); font-size: 13px; }
+.con .con-vr__box[hidden] { display: none; }
+.con .con-vr__box h4 { margin: 0 0 6px; font: 600 13px var(--citui-font-text); }
+.con .con-vr__seg { display: inline-flex; margin: 4px 0; border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-pill); overflow: hidden; }
+.con .con-vr__seg label { padding: 5px 12px; cursor: pointer; background: var(--citui-surface); color: var(--citui-ink); }
+.con .con-vr__seg label + label { border-left: 1px solid var(--citui-line-strong); }
+.con .con-vr__seg input { position: absolute; opacity: 0; pointer-events: none; }
+.con .con-vr__seg label:has(input[value="pass"]:checked) { background: var(--citui-ok-soft); color: var(--citui-ok-ink); }
+.con .con-vr__seg label:has(input[value="flag"]:checked) { background: var(--citui-bad); color: var(--citui-on-bad); }
+.con .con-vr__seg label:has(input:focus-visible) { outline: 2px solid var(--citui-cyan-500); outline-offset: -2px; }
+.con .con-vr__lbl { display: block; margin: 8px 0 2px; }
+.con .con-vr__req { display: none; }
+.con .con-vr__box:has(input[value="flag"]:checked) .con-vr__req { display: inline; }
+.con .con-vr__box:has(input[value="flag"]:checked) .con-vr__opt { display: none; }
+.con .con-vr__box input[type="text"], .con .con-vr__box textarea {
+  width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px;
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm); background: var(--citui-field);
+}
+.con .con-vr__box textarea { min-height: 52px; }
+.con .con-vr__box button[type="submit"] { margin-top: 8px; }
+.con .con-vr__err { color: var(--citui-bad-ink); font-size: 12px; margin: 2px 0 0; }
+.con .con-vr__err[hidden] { display: none; }
+.con .con-vr__who { font-size: 12px; color: var(--citui-muted); margin: 0; overflow-wrap: anywhere; }
+.con .con-vr__who[hidden] { display: none; }
+.con .con-vr__redo { all: unset; color: var(--citui-link-ink); text-decoration: underline; cursor: pointer; }
+.con .con-vr__redo:focus-visible { outline: 2px solid var(--citui-cyan-500); }
 .con .con-mk__gate[data-verdict="fail"] {
   background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink);
 }
