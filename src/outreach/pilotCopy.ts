@@ -8,6 +8,7 @@
 // send. No copy when the lead's number IS the copy number (owner test lead).
 
 import { config } from "../config.js";
+import { markOwnViewLinks } from "../console/prospectPath.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
 import { sendMms } from "../mms/sender.js";
 
@@ -22,9 +23,12 @@ export function pilotCopyPhone(
   return copy;
 }
 
-/** Internal operator text — outside the §B.18 customer-facing i18n scope. */
+/**
+ * Internal operator text — outside the §B.18 customer-facing i18n scope. The link is
+ * own-view marked (prospectPath.ts): the owner opening his copy is not the lead's visit.
+ */
 export function pilotCopySmsText(leadName: string, leadPhone: string, text: string): string {
-  return `[Másolat → ${leadName}, ${leadPhone}]\n${text}`;
+  return `[Másolat → ${leadName}, ${leadPhone}]\n${markOwnViewLinks(text)}`;
 }
 
 /** Copy one outreach SMS to the owner. Never throws. */

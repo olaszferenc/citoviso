@@ -276,3 +276,11 @@ ebből a számból dolgozik — alapbeállításban a megnyitások NAPJAIT szám
 megnyitás egynek számít; az Árazás lapon a „Csak a különböző napokon történt megnyitások számítanak”
 jelölőnégyzettel állítható) —, és egy régebben kiküldött linknél a 2026. október 1. előtt rögzített
 megnyitások (köztük a gépiek) is beleszámítanak.
+
+**A saját megnyitásod nem számít** (2026. október 5. óta). Ha a linket a konzolból nyitod meg (a
+lead lapján a link maga vagy a Tevékenység lap „a látott oldal ▸” linkje), a levél-előnézetből, vagy
+a pilot-másolatból (a „[Másolat → …]” kezdetű e-mail vagy SMS), a link végén `?sajat=1` áll: ugyanazt
+a lapot látod, amit a lead, de semmit nem mérünk — nem nő a számláló, nem lesz „megnyitva” az állapot,
+és eszkalációs ajánlat sem keletkezik. A „link másolása” gomb a jelöletlen címet másolja, mert azt a
+leadnek szánod. ⚠️ Ha a lead levelét a saját telefonodra továbbítod, vagy a jelöletlen linket
+magadnak küldöd el, az a megnyitás a leadé lesz.

@@ -238,7 +238,10 @@ for (const [needle, why] of [
   // kedvezményeset von le. A leiratkozás a NYOMÁST kapcsolja ki (offerQuiet).
   ["const offer = await bestActiveOfferForProspect(p.id);", "a lap ára = a terhelt ár (ajánlat mindkét ágon)"],
   ["...(tracked ? {} : { offerQuiet: true })", "döntés-segítő kártya NEM jelenhet meg leiratkozottnál"],
-  ["...(tracked ? { track:", "a látogatás-hívás és az esemény-beacon KIMARAD leiratkozottnál"],
+  // ADR-XXXX (2026-10-05): the beacon follows `measured` = `tracked` minus the owner's own
+  // view (?sajat=1) — both needles together keep "opted out → no beacon" true.
+  ["const measured = tracked && ", "a mérés a követett ágból ered (leiratkozottnál sosem mér)"],
+  ["...(measured ? { track:", "a látogatás-hívás és az esemény-beacon KIMARAD leiratkozottnál"],
 ] as const) {
   if (!src.includes(needle)) {
     problems.push(`A /p/ route-ból eltűnt: ${why} (keresett minta: \`${needle}\`) — ADR-0112.`);

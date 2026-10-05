@@ -20,6 +20,7 @@ import type {
 } from "./data.js";
 import { normalizeCountry } from "./data.js";
 import type { LeadColumnKey, LeadFilterDef } from "./leadFilters.js";
+import { ownViewHref } from "./prospectPath.js";
 import {
   cellMarkMeanings,
   columnLabel,
@@ -3772,7 +3773,7 @@ function prospectsPanel(
           <span class="mut small">${esc(p.createdAt.slice(0, 16).replace("T", " "))}</span>
         </div>
         <div class="small" style="margin-top:6px">
-          <a href="${esc(link)}" target="_blank">${esc(link)}</a>
+          <a href="${esc(ownViewHref(link))}" target="_blank">${esc(link)}</a>
           ${
             // ⛔ KÉT HIBA EGY SORBAN, mindkettőt javítva (2026-09-15):
             // ① A link alapértelmezett navigációja ELVISZI A LAPOT, ha a vágólap-hívás
@@ -8233,7 +8234,7 @@ export function prospectActivityPage(a: ProspectActivity): string {
         <span class="pill ${a.status === "order_intent" || a.status === "converted" ? "approved" : ""}">${esc(a.status)}</span>
         ${a.sentAt ? `<span class="pill approved">✓ ${T(lang, "e-mail kiküldve · {date}", { date: dmy(a.sentAt) })}</span>` : `<span class="pill">${T(lang, "e-mail még nem ment ki")}</span>`}
         <a class="small" href="/lead/${esc(a.leadId)}">◂ vissza a leadhez</a>
-        <a class="small" href="/p/${esc(a.token)}" target="_blank">${T(lang, "a látott oldal ▸")}</a>
+        <a class="small" href="${esc(ownViewHref(`/p/${a.token}`))}" target="_blank">${T(lang, "a látott oldal ▸")}</a>
       </div>
       <dl class="kv" style="margin-top:14px">${signals}</dl>
     </div>

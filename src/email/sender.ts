@@ -8,6 +8,7 @@ import path from "node:path";
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import { config } from "../config.js";
+import { hasTrackedLink, markOwnViewLinks } from "../console/prospectPath.js";
 
 export interface EmailAttachment {
   readonly filename: string;
@@ -107,12 +108,74 @@ function safeSlug(s: string): string {
  * tenant's guest confirmations and review mails, and blind-copying those would
  * hand us third-party personal data. One choke point, one rule, no exceptions.
  */
-function pilotBcc(msg: EmailMessage): string | null {
+function pilotCopyAddress(msg: EmailMessage): string | null {
   const addr = (config.emailBcc ?? "").trim();
   if (!addr) return null;
   if (msg.audience === "guest") return null;
   if (msg.to.trim().toLowerCase() === addr.toLowerCase()) return null; // no self-copy
   return addr;
+}
+
+/** True when the message carries a tracked /p/ link (cold outreach, reminders). */
+function carriesTrackedLink(msg: EmailMessage): boolean {
+  return hasTrackedLink(msg.text) || (msg.html ? hasTrackedLink(msg.html) : false);
+}
+
+/**
+ * The pilot BCC for messages WITHOUT a tracked link. A message with one gets a
+ * separate own-view copy instead (PilotOwnViewCopy below): a blind copy is the
+ * lead's message byte for byte, so the owner opening it counted as the lead's visit
+ * (measured live, 2026-10-05).
+ */
+function pilotBcc(msg: EmailMessage): string | null {
+  const addr = pilotCopyAddress(msg);
+  if (!addr || carriesTrackedLink(msg)) return null;
+  return addr;
+}
+
+/**
+ * The separate pilot copy of a message that carries a tracked link: every /p/ page
+ * link own-view marked, so the owner's open measures nothing. The List-Unsubscribe
+ * headers are dropped — the owner's mailbox offering one-click unsubscribe on the
+ * copy would opt the LEAD out. Subject marker = internal operator text, outside the
+ * §B.18 customer-facing i18n scope (twin of pilotCopySmsText).
+ */
+export function pilotOwnViewCopy(msg: EmailMessage): EmailMessage | null {
+  const addr = pilotCopyAddress(msg);
+  if (!addr || !carriesTrackedLink(msg)) return null;
+  const headers = Object.fromEntries(
+    Object.entries(msg.headers ?? {}).filter(([k]) => !/^list-unsubscribe/i.test(k)),
+  );
+  return {
+    ...msg,
+    to: addr,
+    subject: `[Másolat → ${msg.to}] ${msg.subject}`,
+    text: markOwnViewLinks(msg.text),
+    ...(msg.html ? { html: markOwnViewLinks(msg.html) } : {}),
+    headers,
+  };
+}
+
+/**
+ * Sends the own-view copy AFTER the lead's message went out (a 'blocked' send is
+ * not "went out"). A copy failure is logged and swallowed: it must never fail the
+ * real send.
+ */
+class PilotOwnViewCopy implements EmailSender {
+  constructor(private readonly inner: EmailSender) {}
+
+  async send(msg: EmailMessage): Promise<SendResult> {
+    const result = await this.inner.send(msg);
+    const copy = result.provider === "blocked" ? null : pilotOwnViewCopy(msg);
+    if (copy) {
+      try {
+        await this.inner.send(copy);
+      } catch (err) {
+        console.error(`[pilot-copy] e-mail-másolat hiba (${msg.to}):`, (err as Error).message);
+      }
+    }
+    return result;
+  }
 }
 
 /** Local adapter: writes an .eml-style file to outbox/ and logs it. */
@@ -322,10 +385,12 @@ let cached: EmailSender | null = null;
 /** The configured sender (env EMAIL_PROVIDER; defaults to the mock adapter). */
 export function getEmailSender(): EmailSender {
   if (cached) return cached;
+  // The own-view copy sits INSIDE the reserved-recipient guard: a diverted lead
+  // message never reaches it, so no copy announces a mail that did not leave.
   const base: EmailSender =
     config.emailProvider === "smtp"
-      ? new ReservedRecipientGuard(new SmtpEmailSender())
-      : new MockEmailSender();
+      ? new ReservedRecipientGuard(new PilotOwnViewCopy(new SmtpEmailSender()))
+      : new PilotOwnViewCopy(new MockEmailSender());
   // Outermost on purpose: the Elek rule wins over every provider, mock included.
   cached = process.env.ELEK_RUN === "1" ? new ElekRecipientGuard(base) : base;
   return cached;

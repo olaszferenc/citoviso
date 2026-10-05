@@ -1674,7 +1674,7 @@ fi
 # önálló SMS) másolata az OUTREACH_COPY_PHONE számra megy; az MMS-másolat prospectId nélkül,
 # a közvetlen úton a kísérő SMS UTÁN. Hálózat és DB nélkül, ~2 s.
 if [ -f scripts/pilot-copy-check.mts ] && \
-   changed_files | grep -qE '^src/outreach/(pilotCopy|sendOutreachPair|sendOutreachSms)\.ts$|^src/(sms|mms)/sender\.ts$|^src/config\.ts$|^scripts/pilot-copy-check'; then
+   changed_files | grep -qE '^src/outreach/(pilotCopy|sendOutreachPair|sendOutreachSms)\.ts$|^src/(sms|mms|email)/sender\.ts$|^src/console/prospectPath\.ts$|^src/config\.ts$|^scripts/pilot-copy-check'; then
   echo "[pre-commit] pilot-copy-check (mobil-megkeresés másolata a tulajnak)…"
   npx tsx scripts/pilot-copy-check.mts >"$GATE_LOG" || gate_failed
 fi

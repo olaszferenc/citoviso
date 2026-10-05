@@ -23,6 +23,8 @@
 //   ⑥ A hideg levél mock-linkje (`/p/<t>`, sluggal is) GET-re NEM rögzít látogatást és NEM veret
 //      eszkalációs ajánlatot — a küszöbnél többször megnyitva sem; a lap saját `POST /p/<t>/view`
 //      hívása igen (tulaj-döntés B, 2026-10-01).
+//   ⑦ A `?sajat=1` jelölésű mock-link (pilot-másolatok, konzol-link, levél-előnézet) a látogatás-hívás
+//      NÉLKÜL szolgálja ki a lapot — a tulaj saját megnyitása nem a lead látogatása (2026-10-05).
 //   ⑤ A tartós fizetési link (`/pay/go/<id>`, minden fizetés-levélben) lejárt ablaknál GET-re NEM
 //      indít új fizetést és nem riaszt (gomb-lap), a POST igen (ADR-0291 kiterjesztése, 2026-10-01).
 //
@@ -372,6 +374,17 @@ async function main(): Promise<void> {
       lastView.offer?.kind === "escalation",
       JSON.stringify(lastView.offer ?? null),
     );
+  }
+  // ⑦ own view (owner's request, 2026-10-05): ?sajat=1 — the pilot copies, the console link and
+  // the e-mail preview — serves the page WITHOUT the visit call, so the owner's open is never the
+  // lead's visit. Control: the plain link (both shapes) carries it.
+  const beacon = `/p/${prospectToken}/view`;
+  for (const pth of [`/p/${prospectToken}`, `/p/get-or-teszt/${prospectToken}`]) {
+    const plain = await call(con, "GET", pth);
+    const own = await call(con, "GET", `${pth}?sajat=1`);
+    const shape = pth.replace(prospectToken, "<t>");
+    check(`${shape}: a lap viszi a látogatás-hívást`, plain.status === 200 && plain.body.includes(beacon), `${plain.status}`);
+    check(`${shape}?sajat=1: a lap NEM viszi a látogatás-hívást (saját megnyitás)`, own.status === 200 && !own.body.includes(beacon), `${own.status}`);
   }
   const u = await call(con, "POST", `/p/${prospectToken}/unsubscribe`);
   const pr = await db.selectFrom("prospect").select("unsubscribed_at").where("token", "=", prospectToken).executeTakeFirstOrThrow();

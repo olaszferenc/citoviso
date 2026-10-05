@@ -27,3 +27,40 @@ export function normalizeProspectPath(path: string): string {
     "/p/$1",
   );
 }
+
+// ── The OWN-VIEW marker (owner's request, 2026-10-05) ─────────────────────────
+//
+// The owner opens the very links the leads get: the pilot copies (EMAIL_BCC mail,
+// OUTREACH_COPY_PHONE SMS), the console's link and the e-mail preview. Measured
+// live the same day: one of his opens (the SMS copy, 8 s after the Google Messages
+// preview) was counted as the lead's visit and moved the prospect to "opened".
+// The copies carry the SAME token as the lead's message, so the server cannot tell
+// them apart — the link itself has to say it. A marked link serves the same page
+// the lead sees, with no measurement at all (no mock_view, no events, no offer).
+//
+// The marker is not a secret: a lead who adds it only stops us measuring them.
+
+/** Query parameter that marks an owner/operator open of a tracked link. */
+export const OWN_VIEW_PARAM = "sajat";
+
+/** `?sajat=1` appended to one tracked page link (no existing query expected). */
+export function ownViewHref(link: string): string {
+  return `${link}?${OWN_VIEW_PARAM}=1`;
+}
+
+/**
+ * Mark every tracked PAGE link (/p/<token> or /p/<slug>/<token>) in a message body.
+ * Sub-routes (/unsubscribe, /feedback, …) and links that already carry a query are
+ * left alone: the lookahead refuses a following path, query or token character.
+ */
+export function markOwnViewLinks(body: string): string {
+  return body.replace(
+    new RegExp(`(/p/(?:[a-z0-9][a-z0-9-]*/)?${TOKEN})(?![A-Za-z0-9_/?#-])`, "g"),
+    `$1?${OWN_VIEW_PARAM}=1`,
+  );
+}
+
+/** True when the message carries at least one tracked page link. */
+export function hasTrackedLink(body: string): boolean {
+  return markOwnViewLinks(body) !== body;
+}

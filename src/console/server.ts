@@ -171,7 +171,7 @@ import {
   unsubscribeConfirmBody,
   deferConsentUntilEngagement,
 } from "./prospectNotice.js";
-import { normalizeProspectPath } from "./prospectPath.js";
+import { markOwnViewLinks, normalizeProspectPath, OWN_VIEW_PARAM } from "./prospectPath.js";
 import {
   ensureCardJpeg,
   ensureHeroShot,
@@ -2916,7 +2916,12 @@ async function handle(
     // out OF) — but the operator console's navigation must not be shown to whoever
     // is standing here either.
     if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    // OWN VIEW (owner's request, 2026-10-05): the pilot copies, the console link and
+    // the e-mail preview carry ?sajat=1 (prospectPath.ts). Same page and same framing
+    // the lead gets — the owner wants to see what THEY see — but nothing measured:
+    // no beacon, so no mock_view, no events, no nth-visit offer.
     const tracked = !p.unsubscribed;
+    const measured = tracked && url.searchParams.get(OWN_VIEW_PARAM) !== "1";
     // THE THIRD FRAMING STATE (2026-09-20): this lead ALREADY BOUGHT. Measured in
     // dev — the link kept serving the configurator and the checkout to a paying
     // customer, so re-opening the cold letter charged them again for nothing.
@@ -2979,7 +2984,7 @@ async function handle(
         // No beacon for an opted-out visitor — the absence of `track` is what
         // actually stops the client-side event stream, not just the DB write.
         // ADR-0322 ④/B: feedbackUrl rides with the beacon — no survey for an opted-out visitor either.
-        ...(tracked ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: `/p/${pMatch[1]}/view`, feedbackUrl: `/p/${pMatch[1]}/feedback` } } : {}),
+        ...(measured ? { track: { url: `/p/${pMatch[1]}/event`, viewUrl: `/p/${pMatch[1]}/view`, feedbackUrl: `/p/${pMatch[1]}/feedback` } } : {}),
         ...(p.lang ? { lang: p.lang } : {}),
         billingPrefill: leadBillingPrefill(
           pf?.leadAddress ?? null,
@@ -3628,7 +3633,8 @@ async function handle(
     const logoSrc = logo?.path
       ? `data:image/png;base64,${(await readFile(logo.path)).toString("base64")}`
       : "";
-    const html = (msg.html ?? msg.text)
+    // Own-view marker: a click in the preview is the operator, not the lead.
+    const html = markOwnViewLinks(msg.html ?? msg.text)
       .replaceAll(`cid:${HERO_CID}`, `/prospect/${mailPrevMatch[1]}/hero.png`)
       .replaceAll(`cid:${LOGO_CID}`, logoSrc);
     return send(res, 200, html);

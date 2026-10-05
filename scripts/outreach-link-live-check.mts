@@ -110,7 +110,8 @@ const PANEL_JS = `(() => {
     return {
       state: c.getAttribute("data-cit-link"),
       live: !!c.querySelector(".con-pill-live"),
-      token: tok ? (tok.getAttribute("href") || "").replace("/p/", "") : "",
+      // The visible link carries the own-view marker (?sajat=1, ADR-XXXX) — the token is the path.
+      token: tok ? (tok.getAttribute("href") || "").replace("/p/", "").split("?")[0] : "",
       primaries: primaries,
       inOldSection: !!c.closest("details.con-oldlinks"),
     };
