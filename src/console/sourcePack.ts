@@ -10,6 +10,11 @@
 // The pack itself is writerSources.ts — the SAME assembly the generation runs, so the view can
 // never show another set than the writer received (except the stale Google reviews, flagged).
 
+import { db } from "../db/client.js";
+import { copyFieldSpec, copyKeysFor, visibleCopyKeys, type CopyKey } from "../engine/copyFields.js";
+import type { Recipe, SiteData } from "../engine/recipe.js";
+import { renderSite } from "../engine/render.js";
+import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
 import { loadRegions } from "../scraper/regions.js";
@@ -125,5 +130,76 @@ export async function buildSourcePack(loaded: LoadedLead): Promise<SourcePack> {
     visionPhotos: Math.min(VISION_PHOTOS, media.photos.length),
     rooms: { names: rooms.rooms.map((r) => r.name), count: rooms.count },
     limits: { descriptionChars: MAX_DESCRIPTION },
+  };
+}
+
+/**
+ * "Kitöltendő mezők sablononként" — which copy field each pickable template DRAWS, measured
+ * by a trial render (the hooks of visibleCopyKeys), never assumed. The template path's recipe
+ * is fixed (hero, stats, features, gallery, reviews, location, enquiry), so rooms.* / faq.*
+ * never apply there. The lead's latest mock data is used when there is one (its reviews and
+ * photos decide what a template shows); otherwise a synthetic stand-in.
+ */
+export interface FieldVisibility {
+  readonly sections: readonly string[];
+  readonly fields: readonly { readonly key: CopyKey; readonly max: number; readonly required: boolean }[];
+  readonly templates: readonly { readonly id: string; readonly label: string; readonly shows: readonly CopyKey[] }[];
+}
+
+const TEMPLATE_SECTIONS = ["hero", "stats", "features", "gallery", "reviews", "location", "enquiry"] as const;
+const STAND_IN_PHOTO = { url: "data:image/gif;base64,R0lGODlhAQABAAAAACw=", alt: "", provenance: "portal" };
+
+export async function fieldVisibility(leadId: string, name: string): Promise<FieldVisibility> {
+  const latest = await db
+    .selectFrom("mock_artifact")
+    .select(["inputs"])
+    .where("lead_id", "=", leadId)
+    .orderBy("generated_at", "desc")
+    .limit(1)
+    .executeTakeFirst();
+  const stored = (latest?.inputs as { siteData?: SiteData } | undefined)?.siteData;
+  const data = (stored ?? {
+    name,
+    tagline: "-",
+    intro: "-. -.",
+    highlights: ["-", "-", "-"],
+    photos: Array(6).fill(STAND_IN_PHOTO),
+    rooms: [],
+    contact: { email: "a@b.hu", phone: "+36 30 000 0000", address: "-" },
+  }) as SiteData;
+  const recipeOf = (template: string): Recipe =>
+    ({
+      template,
+      skin: "",
+      archetype: "",
+      sections: TEMPLATE_SECTIONS.map((kind) =>
+        kind === "hero"
+          ? { kind, copy: { lead: "x y", accent: "y", eyebrow: "x" } }
+          : kind === "stats" || kind === "enquiry"
+            ? { kind }
+            : { kind, copy: { eyebrow: "x", title: "x" } },
+      ),
+    }) as unknown as Recipe;
+  const keys = copyKeysFor(recipeOf(""));
+  const templates = Object.values(TEMPLATES)
+    .filter((t) => isPickableTemplate(t.id))
+    .map((t) => {
+      let shows: CopyKey[] = [];
+      try {
+        const v = visibleCopyKeys(renderSite(recipeOf(t.id), data, { phase: "mock" }));
+        if (v.has("hero.lead")) v.add("hero.accent");
+        shows = keys.filter((k) => v.has(k));
+      } catch {
+        shows = [...keys]; // unmeasurable → make no "nem látszik" claim
+      }
+      return { id: t.id, label: (t.label.split(/[—:(]/)[0] ?? t.id).trim() || t.id, shows };
+    });
+  return {
+    sections: TEMPLATE_SECTIONS,
+    fields: keys.map((key) => {
+      const spec = copyFieldSpec(key);
+      return { key, max: spec.max, required: spec.required };
+    }),
+    templates,
   };
 }

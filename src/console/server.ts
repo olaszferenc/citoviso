@@ -10,7 +10,7 @@ import http from "node:http";
 import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
 import { generateEngineMock, type GenerateOpts, type GenStageKey } from "../generator/generateEngine.js";
 import { POE_BY, validateCuratorCopy, type CuratorCopy } from "../generator/copyCurator.js";
-import { buildSourcePack, storedQuoteCorpus } from "./sourcePack.js";
+import { buildSourcePack, fieldVisibility, storedQuoteCorpus } from "./sourcePack.js";
 import { recopyArtifact } from "../generator/recopy.js";
 import { capReachedMessage, mockSpendToday } from "../ai/dailyCap.js";
 import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
@@ -286,7 +286,7 @@ import {
 } from "../markets.js";
 import { getSetting, setSetting } from "./appSettings.js";
 import { db } from "../db/client.js";
-import { layout, leadPage, leadsPage, tenantAdminPage, scrapePage } from "./views.js";
+import { curatePage, layout, leadPage, leadsPage, tenantAdminPage, scrapePage } from "./views.js";
 import type { PhotoGateView } from "./views.js";
 import { dashboardPage, modulePage, operatorLoginPage, operatorLoginHelpPage, settingsPage, type HubData } from "./views.js";
 import { getTreeFreshness } from "./treeFreshness.js";
@@ -2304,15 +2304,37 @@ async function handle(
   // GET /lead/:id/source-pack.json — the „Forrás-csomag”: what the writer is given
   // (src/console/sourcePack.ts). ⛔ Never pays: stored photos (`places: "cached"`) and
   // stored reviews only; a stale review set is flagged, not re-fetched.
+  // `?part=fields` = only the per-template field model (the curator form's need; no photo lookup).
   const packMatch = /^\/lead\/([0-9a-f-]{36})\/source-pack\.json$/i.exec(path);
   if (method === "GET" && packMatch) {
     try {
-      const pack = await buildSourcePack(await loadLead(packMatch[1]!));
+      const loaded = await loadLead(packMatch[1]!);
+      const fv = await fieldVisibility(loaded.id, loaded.lead.name);
+      if (url.searchParams.get("part") === "fields")
+        return send(res, 200, JSON.stringify({ fieldVisibility: fv }), "application/json");
+      const pack = { ...(await buildSourcePack(loaded)), fieldVisibility: fv };
       return send(res, 200, JSON.stringify(pack), "application/json");
     } catch (e) {
       console.error(`[source-pack] ${packMatch[1]}: ${(e as Error).message}`);
       return send(res, 500, JSON.stringify({ message: errText(e) }), "application/json");
     }
+  }
+  // GET /lead/:id/curate — the curator form on its own page (`?t=a,b` pre-ticks Neo's templates).
+  const curateMatch = /^\/lead\/([0-9a-f-]{36})\/curate$/i.exec(path);
+  if (method === "GET" && curateMatch) {
+    const id = curateMatch[1]!;
+    let loaded: Awaited<ReturnType<typeof loadLead>>;
+    try {
+      loaded = await loadLead(id);
+    } catch {
+      return send(res, 404, layout("404", `<div class="panel"><p class="mut">${T(consoleLang(), "Nincs ilyen lead.")}</p></div>`));
+    }
+    const preselect = (url.searchParams.get("t") ?? "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => t && isPickableTemplate(t))
+      .slice(0, 2);
+    return send(res, 200, curatePage({ id, name: loaded.lead.name }, { preselect, running: generateInFlight(id) }));
   }
   // POST /lead/:id/data — curator edits lead contact/reachability (ADR-0029): add missing
   // OR correct existing (phone/email/website/address/name). Saved onto raw → next generation.

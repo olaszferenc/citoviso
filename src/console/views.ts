@@ -99,6 +99,7 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
 import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
+import { curatorForm, curatorPill, sourcePackPane } from "./curatorViews.js";
 import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
@@ -5517,7 +5518,7 @@ export function leadPage(
                   ? `${esc(patternSummary(a.inputs as PatternInputs))} · `
                   : ""
               }${esc(a.generatedAt.slice(0, 16).replace("T", " "))}</span>
-              ${copyEditPill(a.inputs, lang)}
+              ${a.inputs.copyOrigin === "curator" ? curatorPill(a.inputs, lang) : copyEditPill(a.inputs, lang)}
             </div>
             <dl class="con-mk__facts">
               ${
@@ -6790,6 +6791,19 @@ function cpScript(prefix: string): string {
              </form>`
       }
     </div>`;
+  // „Generálás kurátori szöveggel” (Poe; approved plan assets/design-refs/console/poe-curator/):
+  // the SAME form component as /lead/:id/curate — folded, its model loads when opened.
+  const curatedPanel = `
+    <details class="panel" data-cur-panel>
+      <summary style="cursor:pointer;font-weight:600">${ic("texts", 15)} ${T(lang, "Generálás kurátori szöveggel")}
+        <a class="small" href="/lead/${esc(d.id)}/curate" style="margin-left:8px;font-weight:500">${T(lang, "saját lapon")} →</a></summary>
+      <div style="margin-top:12px">${curatorForm({
+        leadId: d.id,
+        lang,
+        blockedMessage: aiSpend && aiBlocked ? capReachedMessage(aiSpend) : null,
+        running: gen.running,
+      })}</div>
+    </details>`;
   // Audit material folds away by default — it must be reachable, not in the way.
   const provPanel = `
     <details class="panel">
@@ -6833,11 +6847,18 @@ function cpScript(prefix: string): string {
            ${artifacts}
            <details class="panel con-mkgen" style="margin-top:14px">
              <summary style="cursor:pointer;font-weight:600">${T(lang, "Új mock generálása, forrás és szöveg-újraírás")}</summary>
-             <div style="margin-top:12px">${copyPanel}${sourcePanel}${generatePanel}</div>
+             <div style="margin-top:12px">${copyPanel}${sourcePanel}${generatePanel}${curatedPanel}</div>
            </details>`
-        : `<div class="con-mkgen">${copyPanel}${sourcePanel}${generatePanel}</div>
+        : `<div class="con-mkgen">${copyPanel}${sourcePanel}${generatePanel}${curatedPanel}</div>
            <h2 id="mock-artifacts" data-cit-mocksfirst="0" style="margin:14px 4px 10px">${T(lang, "Mock-artefaktumok")}</h2>
            ${artifacts}`,
+    },
+    {
+      // ① „Forrás-csomag” (Poe): what the copywriter is given — lazy, read-only, never pays.
+      id: "ls-source",
+      label: T(lang, "Forrás-csomag"),
+      say: T(lang, "Amit a szövegíró kap erről a leadről — tárolt adat, a megnyitás semmit nem hív."),
+      body: sourcePackPane(d.id, lang),
     },
     {
       id: "ls-outreach",
@@ -9117,4 +9138,25 @@ export interface DupClusterView {
     phone?: string;
     qualification: string;
   }>;
+}
+
+/**
+ * /lead/:id/curate — „Generálás kurátori szöveggel” on its own page (Poe's entrance from
+ * Neo's ticket; `?t=a,b` pre-ticks the templates). The SAME component as the lead-page panel.
+ */
+export function curatePage(
+  lead: { readonly id: string; readonly name: string },
+  opts: { readonly preselect: readonly string[]; readonly running: boolean },
+): string {
+  const lang = consoleLang();
+  const aiSpend = consoleAi();
+  const blocked = aiSpend && spendLevel(aiSpend) === "blocked" ? capReachedMessage(aiSpend) : null;
+  const body = `
+    <a class="con-back" href="/lead/${esc(lead.id)}#ls-mocks"><span aria-hidden="true">←</span> ${esc(lead.name)}</a>
+    <div class="panel">
+      <h2>${ic("texts", 18)} ${T(lang, "Generálás kurátori szöveggel")}</h2>
+      <p class="small mut" style="margin:0 0 12px"><a href="/lead/${esc(lead.id)}#ls-source">${T(lang, "Forrás-csomag")} →</a></p>
+      ${curatorForm({ leadId: lead.id, lang, blockedMessage: blocked, preselect: opts.preselect, running: opts.running })}
+    </div>`;
+  return layout(lead.name, body, { active: "/leads" });
 }

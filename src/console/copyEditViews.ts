@@ -79,7 +79,7 @@ export function copyFieldLabel(key: CopyKey, lang: string): string {
   }
 }
 
-function fieldWhere(key: CopyKey, lang: string): string {
+export function fieldWhere(key: CopyKey, lang: string): string {
   switch (key) {
     case "hero.lead":
       return T(lang, "a nyitóképen, a lap legolvasottabb sora");
