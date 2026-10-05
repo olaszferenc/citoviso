@@ -1,4 +1,6 @@
 # MEMORY — Citoviso
+Utolsó frissítés: 2026-10-05 (💲 **AI-plafon utómunka** (SUB): a recopy HOZZÁADJA a költségét az `aiUsage`-hoz (dátumozott `runs`, a napi összeg a futás napjára számol); a konzol sablon-kötege LÉPCSŐZVE indul (`src/console/staggeredBatch.ts`) — dev: köteg $0.880 → $0.679, 2. tag $0.456 → $0.265; jegyzet `_planning/memory/2026-10-05_ai_plafon_recopy_es_koteg_cache.md`)
+
 Utolsó frissítés: 2026-10-05 (💲 **Napi AI-összeg a konzolon** (SUB): A fejléc-pirula minden keretes lapon + B költség-blokk a generálás-gomb alatt (becslés, átlépés-figyelmeztetés, elérve tiltott gomb); `src/console/aiSpend.ts` 15 s cache, a szerver-tiltás változatlan; terv `assets/design-refs/console/ai-napi-osszeg/`; jegyzet `_planning/memory/2026-10-05_ai_napi_osszeg_konzol.md`)
 
 Utolsó frissítés: 2026-10-04 (💲 **AI-költségplafon + prompt-cache** (SUB, Neo-koordinátor): napi $20 KEMÉNY plafon a mock-költségre, CSAK env `AI_DAILY_CAP_USD` (`src/ai/dailyCap.ts`, `withMockBudget` fojtópont, őr `ai-daily-cap-check`); prompt-cache az őrökön + brief/copy-n — dev: $0.433 → 2. mock 5 percen belül $0.268 (−38%). A konzolos napi összeg (§2b mock-kör) átadva utódnak. Jegyzet: `_planning/memory/2026-10-04_ai_koltsegplafon_es_prompt_cache.md`)

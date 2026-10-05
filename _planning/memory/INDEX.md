@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-10-05_ai_plafon_recopy_es_koteg_cache.md](2026-10-05_ai_plafon_recopy_es_koteg_cache.md) — 2026-10-05 — AI-plafon utómunka: a recopy hozzáad + lépcsőzött sablon-köteg (SUB)
 - [2026-10-05_ai_napi_osszeg_konzol.md](2026-10-05_ai_napi_osszeg_konzol.md) — 2026-10-05 — Napi AI-összeg a konzolon (A fejléc-pirula + B generálás-panel)
 - [2026-10-04_tulaj_teszt_szama_mentesites.md](2026-10-04_tulaj_teszt_szama_mentesites.md) — 2026-10-04 — SMS/MMS nem küldhető: a tulaj teszt-száma csak [TESZT] leaden mentes
 - [2026-10-04_tobb_email_cim_egy_leadhez.md](2026-10-04_tobb_email_cim_egy_leadhez.md) — 2026-10-04 — Több e-mail-cím egy leadhez (Adatok fül, A változat) + a kurátor e-mailje a kurátoré
