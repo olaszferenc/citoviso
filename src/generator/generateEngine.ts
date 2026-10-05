@@ -520,7 +520,7 @@ async function generateEngineMockInner(
       }
     }
   }
-  // The critic wins a contradiction (ADR-XXXX): what it objected to, the market may not demand.
+  // The critic wins a contradiction (ADR-0328): what it objected to, the market may not demand.
   if (market) market = subordinateToCriticInputs(market, criticInputs, marketSource);
 
   const siteData: SiteData = {

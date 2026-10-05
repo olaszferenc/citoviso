@@ -74,7 +74,7 @@ export interface MarketVerdict {
   /** Concrete steering for ONE regeneration attempt. Empty when the verdict passed. */
   readonly critique?: string;
   /** Set when a flag rests ONLY on missing selling points (structural layer 1 or judge rule 3) —
-   *  the one kind of finding the guest critic can overrule (subordinateToCritic, ADR-XXXX). */
+   *  the one kind of finding the guest critic can overrule (subordinateToCritic, ADR-0328). */
   readonly demand?: "structural" | "judge";
 }
 
@@ -220,7 +220,7 @@ function withoutPlaceNames(text: string): string {
 }
 
 /**
- * A WORD IN THE PROSE IS NOT YET A CLAIM (ADR-XXXX). Measured 2026-10-05 in the Poe pilot: a
+ * A WORD IN THE PROSE IS NOT YET A CLAIM (ADR-0328). Measured 2026-10-05 in the Poe pilot: a
  * bare substring match turned five sentences that say something else into "verified services"
  * the market gate then demanded as selling points — and the guest critic rejected:
  *   „Garázs: nincs”                                   → Garázs    (negation)
@@ -540,7 +540,7 @@ const CRITIC_VETO_KINDS = new Set([
 ]);
 
 /**
- * THE GUEST CRITIC WINS (owner ruling 2026-10-05, ADR-XXXX). On a thin source the two gates
+ * THE GUEST CRITIC WINS (owner ruling 2026-10-05, ADR-0328). On a thin source the two gates
  * pulled the curator in opposite directions: the market gate asked for the listing's items as
  * selling points (car park ×2, baby equipment, review content) and the critic judged the very
  * lines that named them an overstatement. Truth outranks selling: a selling point the critic

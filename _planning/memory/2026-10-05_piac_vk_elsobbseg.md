@@ -1,6 +1,6 @@
 # 2026-10-05 — Piac-kapu a Vendég-kritikusnak alárendelve (SUB, Poe-pilot 1–2. ügy)
 
-**Brief:** `~/rc-briefs/piac-vk-precedence-20261005.md` · **ADR:** ADR-XXXX (`_planning/decisions/XXXX-piac-kapu-a-vendeg-kritikusnak-alarendelve.md`)
+**Brief:** `~/rc-briefs/piac-vk-precedence-20261005.md` · **ADR:** ADR-0328 (`_planning/decisions/XXXX-piac-kapu-a-vendeg-kritikusnak-alarendelve.md`)
 · **Tulaj-döntés:** vékony forrásnál a VK (tényhűség) nyer.
 
 ## Elvégezve

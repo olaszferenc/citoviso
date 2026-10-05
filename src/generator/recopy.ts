@@ -241,7 +241,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
       }
     }
   }
-  // The critic wins a contradiction (ADR-XXXX): what it objected to, the market may not demand.
+  // The critic wins a contradiction (ADR-0328): what it objected to, the market may not demand.
   if (market) market = subordinateToCriticInputs(market, criticInputs, marketSource);
 
   // Only the WORDS change; photos, palette, rooms, stats and the section order stay.

@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-05 (⚖️ **Piac-kapu a Vendég-kritikusnak alárendelve** (SUB, ADR-XXXX, tulaj: a VK nyer): a leírás szava csak állításként tény (tagadás / „reggeli után” / név-rész / közeli kilátás / ≥1 km nem), a VK által kifogásolt tételt a Piac nem kérheti, a csak-hiány Piac-FLAG ilyenkor PASS; őr `market-vk-precedence-check`; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_piac_vk_elsobbseg.md`)
+Utolsó frissítés: 2026-10-05 (⚖️ **Piac-kapu a Vendég-kritikusnak alárendelve** (SUB, ADR-0328, tulaj: a VK nyer): a leírás szava csak állításként tény (tagadás / „reggeli után” / név-rész / közeli kilátás / ≥1 km nem), a VK által kifogásolt tételt a Piac nem kérheti, a csak-hiány Piac-FLAG ilyenkor PASS; őr `market-vk-precedence-check`; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_piac_vk_elsobbseg.md`)
 
 Utolsó frissítés: 2026-10-05 (👁️ **Saját megnyitás nem számít** (`?sajat=1`, ADR-0327): a pilot-másolatok (SMS + KÜLÖN e-mail-másolat), a konzol-link és a levél-előnézet jelölt linket visz, a lap ilyenkor nem mér; élesen a Napfény tulaj-látogatása törölve; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_sajat_megnyitas_nem_szamit.md`)
 

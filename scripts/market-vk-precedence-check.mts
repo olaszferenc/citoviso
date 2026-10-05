@@ -1,4 +1,4 @@
-// PIAC ↔ VENDÉG-KRITIKUS KAPU — „vékony forrásnál a tényhűség az irányadó, nem a Piac" (ADR-XXXX).
+// PIAC ↔ VENDÉG-KRITIKUS KAPU — „vékony forrásnál a tényhűség az irányadó, nem a Piac" (ADR-0328).
 //
 // A LELET (2026-10-05, Poe-pilot, 5 lead). Két, egymásnak ellentmondó kérés ért a kurátorhoz:
 //   ① a Piac-kapu a portál-lista tételeit (parkoló ×2, babafelszerelés, vélemény-tartalom) kérte
@@ -38,7 +38,7 @@ const fails: string[] = [];
 const oks: string[] = [];
 const check = (cond: boolean, m: string) => (cond ? oks.push(m) : fails.push(m));
 
-// The rule before ADR-XXXX: any substring is a fact.
+// The rule before ADR-0328: any substring is a fact.
 const OLD = (d: readonly string[]): string[] => {
   const t = d.join(" ").toLowerCase();
   const out: string[] = [];

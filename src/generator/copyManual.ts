@@ -221,7 +221,7 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
         )
       : Promise.resolve({});
   const [fact, marketRaw, critic] = await Promise.all([factP, marketP, criticP]);
-  // The critic wins a contradiction (ADR-XXXX): what it objected to, the market may not demand.
+  // The critic wins a contradiction (ADR-0328): what it objected to, the market may not demand.
   const market = subordinateToCriticInputs(marketRaw, critic, marketSourceOf(sources, siteData));
 
   await writeFile(row.path, html, "utf8");

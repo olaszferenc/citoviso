@@ -1,4 +1,4 @@
-## ADR-XXXX — A Piac-kapu a Vendég-kritikusnak alárendelve; a leírás szava csak állításként tény (2026-10-05)
+## ADR-0328 — A Piac-kapu a Vendég-kritikusnak alárendelve; a leírás szava csak állításként tény (2026-10-05)
 
 **Dátum:** 2026-10-05 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; brief:
 `~/rc-briefs/piac-vk-precedence-20261005.md`) · **Tulajdonosi döntés (2026-10-05, a koordinátor kérdésére):**
