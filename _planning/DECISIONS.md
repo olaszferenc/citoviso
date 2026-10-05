@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-vera-review-replaces-ai-guards.md) — A kurátori és a kézi szövegen Vera ítél, nem az AI-őrök (2026-10-05)
+- [ADR-0329](decisions/0329-a-kuratori-es-a-kezi-szovegen-vera-itel-nem-az.md) — A kurátori és a kézi szövegen Vera ítél, nem az AI-őrök (2026-10-05)
 - [ADR-0328](decisions/0328-a-piac-kapu-a-vendeg-kritikusnak-alarendelve-a.md) — A Piac-kapu a Vendég-kritikusnak alárendelve; a leírás szava csak állításként tény (2026-10-05)
 - [ADR-0327](decisions/0327-a-tulaj-sajat-megnyitasa-nem-meres-sajat-1-a.md) — A tulaj saját megnyitása nem mérés: `?sajat=1` a másolatokon és a konzolban (2026-10-05)
 - [ADR-0326](decisions/0326-szovegkurator-poe-a-mock-szoveget-perszona-irja.md) — Szövegkurátor (Poe): a mock szövegét perszóna írja, az őrök egyszer, csak ítélnek

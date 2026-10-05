@@ -261,7 +261,7 @@ export async function describeMailSendability(prospectId: string): Promise<MailS
     case "flagged":
       return {
         sendable: false,
-        // ADR-XXXX: an unconfirmable verdict finding (a MISSING Vera review) has a real reason —
+        // ADR-0329: an unconfirmable verdict finding (a MISSING Vera review) has a real reason —
         // the way out is its last line; without it the strip said „ismeretlen ok".
         reason: r.outcome.gate === "verdict" && !r.outcome.confirmable ? (r.outcome.reasons.at(-1) ?? null) : null,
         // ⛔ ONLY the legal gate may be called a block (see MailSendability.gateBlocked).
@@ -519,7 +519,7 @@ export async function sendOutreachMail(
     const ack = verdictAckOf(inputs);
     if (blocking.length && !ackCoversVerdicts(ack, blocking)) {
       const stale = ack ? " (a korábbi kurátori vállalás NEM fedi a mostani leletet)" : "";
-      // ADR-XXXX: a MISSING Vera review cannot be acknowledged — the way out is the review.
+      // ADR-0329: a MISSING Vera review cannot be acknowledged — the way out is the review.
       const pending = hasPendingReview(blocking);
       return {
         ...base,

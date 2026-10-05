@@ -29,7 +29,7 @@ export const GUARD_VERDICT_KEYS = [
   // ADR-0292: the guest-critic's verdict on the wording. Absent on older artifacts and
   // on non-Hungarian pages (the critic does not run there) — absence passes, as for all keys.
   "guestCriticVerdict",
-  // ADR-XXXX: on the curator (Poe) path the three AI guards no longer run — Vera's recorded
+  // ADR-0329: on the curator (Poe) path the three AI guards no longer run — Vera's recorded
   // review is the verdict instead. "pending" = no review for the CURRENT text yet, and it
   // BLOCKS (unlike an absent key): the AI guards' absence is only safe because this replaces them.
   "reviewVerdict",
@@ -68,7 +68,7 @@ export interface BlockingVerdict {
   readonly key: GuardVerdictKey;
   /**
    * "flag" = az őr sértést talált; "error" = az őr nem tudott ítélni; "pending" = a
-   * kurátori mock MOSTANI szövegére még nincs Vera-ítélet (ADR-XXXX — nem nyugtázható).
+   * kurátori mock MOSTANI szövegére még nincs Vera-ítélet (ADR-0329 — nem nyugtázható).
    */
   readonly value: "flag" | "error" | "pending";
   /** Emberi megnevezés (pl. „Tényhűség"). */
@@ -86,7 +86,7 @@ function readReason(inputs: Record<string, unknown>, key: GuardVerdictKey): stri
   return typeof raw === "string" ? raw : "";
 }
 
-/** Vera's recorded review of a curator mock (ADR-XXXX). */
+/** Vera's recorded review of a curator mock (ADR-0329). */
 export interface MockReview {
   readonly verdict: "pass" | "flag";
   /** The logged-in operator who recorded it (displayName || username). */
@@ -143,7 +143,7 @@ export function reviewStateOf(inputs: unknown): "pending" | "pass" | "flag" | nu
 /**
  * A blokkoló verdiktek listája. A HIÁNYZÓ kulcs átmegy: a determinisztikus utak
  * jogosan nem futtatnak minden verifiert — csak a KIMONDOTT "flag"/"error" blokkol.
- * ⛔ Kivétel a `reviewVerdict` "pending" értéke (ADR-XXXX): a kurátori mockon ez helyettesíti
+ * ⛔ Kivétel a `reviewVerdict` "pending" értéke (ADR-0329): a kurátori mockon ez helyettesíti
  * a le nem futott AI-őröket, tehát a hiánya NEM mehet át.
  */
 export function blockingVerdicts(inputs: unknown): BlockingVerdict[] {
@@ -262,7 +262,7 @@ export function verdictAckOf(inputs: unknown): VerdictAck | null {
  */
 export function ackCoversVerdicts(ack: VerdictAck | null, blocking: readonly BlockingVerdict[]): boolean {
   if (!ack || blocking.length === 0) return false;
-  // ⛔ A missing review is NEVER acknowledged away (owner's ruling, ADR-XXXX): a review is
+  // ⛔ A missing review is NEVER acknowledged away (owner's ruling, ADR-0329): a review is
   // what makes the curator path safe without the AI guards — "send anyway" would skip both.
   if (hasPendingReview(blocking)) return false;
   return blocking.every((b) => ack.verdicts[b.key] === b.value);

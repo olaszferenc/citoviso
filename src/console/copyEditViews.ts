@@ -472,7 +472,7 @@ export function copyEditorOverlay(
       gatesRun: T(lang, "Őrök: fut…"),
       gatesOk: T(lang, "Őrök: átment"),
       gatesBad: T(lang, "{n} őr fennakadt"),
-      // ADR-XXXX: a hand edit runs no AI guard — the save asks for Vera's review instead.
+      // ADR-0329: a hand edit runs no AI guard — the save asks for Vera's review instead.
       reviewPending: T(lang, "Vera ítélete kell a küldéshez"),
       fact: T(lang, "Tényhűség"),
       market: T(lang, "Marketing-őr"),

@@ -7,7 +7,7 @@
 //      must not grow its own copy of either (feedback_one_rule_two_copies). Same over-limit
 //      value → the same message from both paths.
 //   ③ engine wiring: curator mode makes NO copywriter call, NO market regeneration, and runs
-//      NO AI guard (market, critic, fact — ADR-XXXX): the mock gets reviewVerdict "pending"
+//      NO AI guard (market, critic, fact — ADR-0329): the mock gets reviewVerdict "pending"
 //      (Vera's review), and the provenance (copyOrigin + copyManual) is persisted with it.
 //   ④ the send gate does not exempt curator text: a curator mock with a flag still blocks.
 //   ⑤ provenance round-trips through manualCopyOf (by = Poe, orig = "").
@@ -37,7 +37,7 @@ function wiringFindings(src: string): string[] {
     bad.push("a kurátori mód nem kerüli meg az író-hívást (generateBriefAndCopy)");
   if (!/if \(!curated && market\.verdict === "flag" && market\.critique\)/.test(src))
     bad.push("a piaci újragenerálás kurátori módban is lefut");
-  // ADR-XXXX: on the curator path no AI guard runs; Vera's review replaces them ("pending").
+  // ADR-0329: on the curator path no AI guard runs; Vera's review replaces them ("pending").
   for (const g of ["market = await verifyMarketRelevance({", "factCheck = await verifyFactuality({"])
     if (!new RegExp(`if \\(!curated\\) try \\{\\s*${g.replace(/[()[\]{}.*+?^$|\\]/g, "\\$&")}`).test(src))
       bad.push(`kurátori módban is lefut: ${g}`);

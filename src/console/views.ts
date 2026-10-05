@@ -4926,7 +4926,7 @@ function mockInputLabel(key: string, lang = "hu"): string {
     case "guestCriticVerdict": return T(lang, "Vendég-kritikus");
     case "guestCriticReason": return T(lang, "Vendég-kritikus indoklása");
     case "guestCriticRounds": return T(lang, "Vendég-kritikus körei");
-    // ADR-XXXX. ⛔ A kapu neve BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
+    // ADR-0329. ⛔ A kapu neve BÁJTRA a mockVerdictGate.VERDICT_LABEL-é (verdict-gate-check köti).
     case "reviewVerdict": return T(lang, "Vera-ellenőrzés");
     default: return key.replace(/_/g, " ");
   }
@@ -4952,7 +4952,7 @@ function gateShortLabel(key: string, lang = "hu"): string {
 }
 
 /**
- * VERA ÍTÉLETE a kurátori mockon (ADR-XXXX; jóváhagyott terv: assets/design-refs/console/
+ * VERA ÍTÉLETE a kurátori mockon (ADR-0329; jóváhagyott terv: assets/design-refs/console/
  * vera-review/, B változat). Ítélet nélkül a rögzítő ALAPBÓL a kártyán áll; rögzítés után egy
  * sor marad (ítélet · ki · mikor · jelentés · megjegyzés) és az „új ítélet”, ami kinyitja.
  * ⛔ A szerver ugyanazt ellenőrzi (`reviewFormErrors`); a szkript csak kényelem — JS nélkül a
@@ -5523,7 +5523,7 @@ export function leadPage(
                 <p>${T(lang, "Küldés előtt javítsd a szöveget — vagy küldéskor a felugróban vállald („Kiküldöm mégis”).")}</p>
               </div>`
               : "";
-          // ADR-XXXX: the curator mock's Vera review — its EFFECTIVE state (a verdict given
+          // ADR-0329: the curator mock's Vera review — its EFFECTIVE state (a verdict given
           // on other words reads "pending"), never green until a PASS is recorded.
           const review = reviewStateOf(a.inputs);
           const gateVal = (k: string): unknown => (k === "reviewVerdict" ? review : a.inputs[k]);
@@ -7477,7 +7477,7 @@ export interface VerdictConfirmView {
  */
 function verdictConfirmDialog(prospectId: string, v: VerdictConfirmView): string {
   const lang = consoleLang();
-  // ADR-XXXX: a missing Vera review has NO "send anyway" — the dialog says what to do instead.
+  // ADR-0329: a missing Vera review has NO "send anyway" — the dialog says what to do instead.
   const pending = v.blocking.some((b) => b.value === "pending");
   const items = v.blocking
     .map(

@@ -144,7 +144,7 @@ async function run(): Promise<void> {
 // ── 5. Wiring: every copy path subordinates the market verdict to the critic. ──────────
 function wiring(): void {
   if (SELF_TEST) return;
-  // ADR-XXXX: copyManual.ts runs no AI guard (Vera reviews hand edits) — nothing to subordinate there.
+  // ADR-0329: copyManual.ts runs no AI guard (Vera reviews hand edits) — nothing to subordinate there.
   for (const f of ["src/generator/generateEngine.ts", "src/generator/recopy.ts"]) {
     const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
     check(/subordinateToCriticInputs\(/.test(src.replace(/^\s*import .*$/gm, "")), `${f} alkalmazza a VK-elsőbbséget`);

@@ -192,7 +192,7 @@ const lido = criticSourceOf({
   for (const path of ["src/generator/generateEngine.ts", "src/generator/copySources.ts"]) {
     check(`${path}: a kapu megkapja a forrás-prózát (különben minden hely-állítás piros lenne)`, /descriptions: \[\.\.\.(sourcedDescriptions|descriptions), \.\.\.(guestVoice\.map\(\(v\) => v\.text\)|reviewQuotes)\]/.test(read(path)), "a kapu forrás nélkül ítélne");
   }
-  // ADR-XXXX: copyManual.ts runs no AI guard (Vera reviews hand edits) — only the AI rewrite calls the gate.
+  // ADR-0329: copyManual.ts runs no AI guard (Vera reviews hand edits) — only the AI rewrite calls the gate.
   for (const path of ["src/generator/recopy.ts"]) {
     check(`${path}: a tényhűség-kapu a közös forrás-blokkot kapja (factLeadOf)`, /verifyFactuality\(\{[\s\S]{0,80}lead: factLeadOf\(/.test(read(path)), "a kapu forrás nélkül ítélne");
   }

@@ -1,6 +1,6 @@
 # 2026-10-05 — A 3 AI-őr kiváltása Vera-ítélettel (kurátori + kézi szöveg)
 
-**Szál:** SUB-lánc `wt/cit357d058b` (két átadással), koordinátor `cita768df48-4b`. Döntés: ADR-XXXX (módosítja ADR-0323 D2).
+**Szál:** SUB-lánc `wt/cit357d058b` (két átadással), koordinátor `cita768df48-4b`. Döntés: ADR-0329 (módosítja ADR-0323 D2).
 Jóváhagyott terv (B változat): `assets/design-refs/console/vera-review/`.
 
 ## Elvégezve

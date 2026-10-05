@@ -1,4 +1,4 @@
-## ADR-XXXX — A kurátori és a kézi szövegen Vera ítél, nem az AI-őrök (2026-10-05)
+## ADR-0329 — A kurátori és a kézi szövegen Vera ítél, nem az AI-őrök (2026-10-05)
 
 **Dátum:** 2026-10-05 · **Státusz:** elfogadva (SUB, koordinátor: CIT fő session; briefek:
 `~/rc-briefs/ai-orok-kivaltasa-vera-20261005.md` + két átadó) · **Tulajdonosi döntés (2026-10-05, a koordinátoron át):**

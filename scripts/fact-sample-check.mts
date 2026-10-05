@@ -219,7 +219,7 @@ check("A mérés nem vak: a sablonok többsége a kivágás ELŐTT mintát mutat
   const lib = readFileSync(new URL("../src/generator/copySources.ts", import.meta.url), "utf8");
   const load = lib.slice(lib.indexOf("export async function loadCopySources"), lib.indexOf("export function marketSourceOf"));
   check("⛔ loadCopySources a panel idézetes tényeit a rendezés ELŐTT olvasztja be", /quotedFactsOf\(inputs\)[\s\S]*amenities\.sort\(decisionWeightDesc\)/.test(load), "hiányzik vagy a rendezés után");
-  // ADR-XXXX: copyManual.ts runs no AI guard (Vera reviews hand edits), so it builds no fact list.
+  // ADR-0329: copyManual.ts runs no AI guard (Vera reviews hand edits), so it builds no fact list.
   for (const f of ["recopy.ts"]) {
     const caller = readFileSync(new URL(`../src/generator/${f}`, import.meta.url), "utf8");
     check(`⛔ ${f} a közös criticFactsOf-ot használja`, /criticFactsOf\(sources, inputs/.test(caller), "saját tény-lista");

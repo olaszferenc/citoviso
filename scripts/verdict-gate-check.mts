@@ -179,7 +179,7 @@ for (const f of ["../src/outreach/sendBatch.ts", "../src/outreach/sendOutreachSm
   );
 }
 
-// ── ADR-XXXX: Vera's review replaces the AI guards on the curator path ──────────
+// ── ADR-0329: Vera's review replaces the AI guards on the curator path ──────────
 {
   const recipe = { sections: [{ kind: "hero", copy: { lead: "Kert a part mellett" } }] };
   const siteData = { tagline: "Csend", intro: "Bevezető", highlights: ["Kert"] };

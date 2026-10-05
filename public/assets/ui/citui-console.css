@@ -2393,12 +2393,12 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .con .con-mk__gate[data-verdict="flag"] {
   background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-panel)); color: var(--citui-warn-ink);
 }
-/* ADR-XXXX: a missing review (and an unjudged guard) is a WARNING, never green */
+/* ADR-0329: a missing review (and an unjudged guard) is a WARNING, never green */
 .con .con-mk__gate[data-verdict="pending"],
 .con .con-mk__gate[data-verdict="error"] {
   background: color-mix(in srgb, var(--citui-warn) 16%, var(--citui-panel)); color: var(--citui-warn-ink);
 }
-/* ADR-XXXX: Vera's review on the curator mock card (approved plan: design-refs/console/vera-review, B) */
+/* ADR-0329: Vera's review on the curator mock card (approved plan: design-refs/console/vera-review, B) */
 .con .con-vr { padding: 0 11px 10px; }
 .con .con-vr__box { display: block; margin: 0; padding: 10px 12px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius); background: var(--citui-panel); font-size: 13px; }
 .con .con-vr__box[hidden] { display: none; }

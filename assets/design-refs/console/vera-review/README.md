@@ -2,7 +2,7 @@
 
 **Jóváhagyva:** 2026-10-05 (tulajdonosi döntés a koordinátoron át), §2b terv-kapu, **B** változat (A: a jelvény nyitja — elvetve).
 **Ez a fájl KONTRAKTUS, nem stílus-javaslat.** A kártya alap-terve a `../mock-cards/`; ez azt köti, amiben a kurátori mock kártyája eltér tőle.
-Döntés: ADR-XXXX (az ADR-0323 D2-t módosítja).
+Döntés: ADR-0329 (az ADR-0323 D2-t módosítja).
 
 | fájl | mi ez |
 |---|---|

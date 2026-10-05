@@ -362,7 +362,7 @@ interface GenRun {
   done: number;
   /** Hány sablon indult összesen. */
   total: number;
-  /** Kurátori szöveggel fut: a „copy” szakaszban AI nem ír és nem ítél (ADR-XXXX: Vera ítél). */
+  /** Kurátori szöveggel fut: a „copy” szakaszban AI nem ír és nem ítél (ADR-0329: Vera ítél). */
   curated: boolean;
 }
 const generating = new Map<string, GenRun>();
@@ -661,7 +661,7 @@ async function heldForVerdictConfirm(
 ): Promise<boolean> {
   const need = await verdictsNeedingConfirm(prospectId);
   if (!need) return false;
-  // ADR-XXXX: a MISSING Vera review is not acknowledgeable — back to the dialog, which says
+  // ADR-0329: a MISSING Vera review is not acknowledgeable — back to the dialog, which says
   // so, even when the form carries confirmVerdicts=1 (nothing is recorded, nothing is sent).
   if (form.get("confirmVerdicts") !== "1" || hasPendingReview(need.blocking)) {
     redirect(res, `/prospect/${prospectId}/draft?verdictConfirm=${action}`);
@@ -2518,7 +2518,7 @@ async function handle(
     const kind = spend?.blocked ? "&flashKind=bad" : "";
     return redirect(res, `${back}?flash=${encodeURIComponent(flash)}${kind}#ls-mocks`);
   }
-  // POST /artifact/:id/review — Vera's verdict on a curator mock's CURRENT text (ADR-XXXX;
+  // POST /artifact/:id/review — Vera's verdict on a curator mock's CURRENT text (ADR-0329;
   // approved plan assets/design-refs/console/vera-review/). A plain form on the mock card —
   // the digital colleague clicks it like a person (no back-door API). Allowed on a mock that
   // is already offered too: it records a verdict, it does not change the words.

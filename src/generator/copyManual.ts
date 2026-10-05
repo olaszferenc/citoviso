@@ -7,7 +7,7 @@
 // `inputs.copyManual` (value + the AI original + who/when, source "curator") and re-renders
 // the SAME file in place. No AI call — neither for the words nor for judging them.
 //
-// ⛔ WHY NO GUARD RUNS ANY MORE (ADR-XXXX, amending ADR-0323 D2). The send gate
+// ⛔ WHY NO GUARD RUNS ANY MORE (ADR-0329, amending ADR-0323 D2). The send gate
 // (mockVerdictGate) reads STORED verdicts, so the old "pass" may never stay under new words —
 // that half of D2 stands. What changed is who judges: Vera (the digital colleague) reviews
 // every hand-written mock anyway, so the save CLEARS every AI verdict, the previous review
@@ -46,7 +46,7 @@ export interface ManualCopyResult {
   /** Per-field validation errors (nothing was saved when present). */
   readonly errors?: Partial<Record<CopyKey, string>>;
   readonly manualCount?: number;
-  /** After a save: "pending" — Vera's review is needed before sending (ADR-XXXX). */
+  /** After a save: "pending" — Vera's review is needed before sending (ADR-0329). */
   readonly verdicts?: { review: "pending"; design: string };
 }
 
@@ -60,7 +60,7 @@ export async function isCopyFrozen(artifactId: string): Promise<boolean> {
   return Boolean(offered);
 }
 
-/** Verdicts about the words that a hand edit makes stale (ADR-XXXX) — dropped on save. */
+/** Verdicts about the words that a hand edit makes stale (ADR-0329) — dropped on save. */
 export const STALE_VERDICT_KEYS = [
   "factVerdict", "factUnsourced", "factCandidates",
   "marketVerdict", "marketReason", "marketFactsNamed", "marketMissed",
@@ -183,7 +183,7 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
   };
   // MERGE, never replace the whole blob: the hero pin, the recopy and the verdict ack
   // write the same `inputs` (mockVerdictGate.ts). New words, new finding: every stored
-  // verdict about the OLD words goes, with the review and the ack (ADR-XXXX).
+  // verdict about the OLD words goes, with the review and the ack (ADR-0329).
   await db
     .updateTable("mock_artifact")
     .set({
