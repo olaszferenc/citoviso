@@ -176,6 +176,54 @@
 .con-k__dd a small { color: var(--citui-muted); margin-left: auto; white-space: nowrap; }
 .con-k__dd em { font-style: normal; background: var(--citui-accent-soft); border-radius: 3px; }
 .con-k__none { padding: 8px; color: var(--citui-muted); }
+/* Today's mock AI spend (approved plan: design-refs/console/ai-napi-osszeg/) — A: the top-bar
+   pill + popover on every framed page; B: the line under the generate button. Levels on
+   [data-lv]: ok (green) · near (≥ 80%, amber) · blocked (≥ cap, red). */
+.con-ai-bar { display: block; height: 6px; border-radius: var(--citui-radius-pill); background: color-mix(in srgb, var(--citui-ink) 10%, transparent); overflow: hidden; }
+.con-ai-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--citui-ok); }
+[data-lv="near"] .con-ai-bar > i { background: var(--citui-warn); }
+[data-lv="blocked"] .con-ai-bar > i { background: var(--citui-bad); }
+.con-ai-msg { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: 6px; font-size: 12.5px; line-height: 1.45; margin-top: 10px; }
+.con-ai-msg svg { flex: 0 0 auto; margin-top: 1px; }
+.con-ai-msg--warn { background: color-mix(in srgb, var(--citui-warn) 14%, var(--citui-panel)); color: var(--citui-warn-ink); }
+.con-ai-msg--bad { background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink); }
+.con-ai-msg[hidden] { display: none; }
+.con-ai { position: relative; flex: 0 0 auto; }
+.con-ai__pill {
+  display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--citui-line); background: var(--citui-panel);
+  color: var(--citui-ink); border-radius: var(--citui-radius-pill); padding: 5px 11px 5px 9px; margin: 0;
+  font: 600 12.5px/1 var(--citui-font-text); cursor: pointer; white-space: nowrap;
+}
+.con-ai__pill .num, .con-ai__big, .con-ai__kv dd, .con-gen-budget__line b { font-variant-numeric: tabular-nums; }
+.con-ai__pill .con-ai-bar { width: 46px; height: 5px; }
+.con-ai__cap { color: var(--citui-muted); font-weight: 500; }
+.con-ai[data-lv="near"] .con-ai__pill {
+  border-color: color-mix(in srgb, var(--citui-warn) 60%, transparent);
+  background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel)); color: var(--citui-warn-ink);
+}
+.con-ai[data-lv="blocked"] .con-ai__pill {
+  border-color: color-mix(in srgb, var(--citui-bad) 60%, transparent);
+  background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink);
+}
+.con-ai[data-lv] .con-ai__pill .con-ai__cap { color: inherit; opacity: 0.75; }
+.con-ai__pop {
+  position: absolute; top: calc(100% + 8px); right: 0; width: 320px; z-index: 60; background: var(--citui-panel);
+  color: var(--citui-ink); border: 1px solid var(--citui-line-strong); border-radius: 10px;
+  box-shadow: var(--citui-shadow-md); padding: 14px;
+}
+.con-ai__pop[hidden] { display: none; }
+.con .con-ai__pop h3 { margin: 0 0 2px; font-size: 13.5px; font-family: var(--citui-font-text); }
+.con-ai__sub { font-size: 12px; color: var(--citui-muted); }
+.con-ai__big { font-family: var(--citui-font-display); font-size: 24px; font-weight: 700; margin: 6px 0; }
+.con-ai__big small { font-size: 13px; color: var(--citui-muted); font-weight: 500; }
+.con-ai__kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 12.5px; margin: 10px 0 0; }
+.con-ai__kv dt { color: var(--citui-muted); margin: 0; }
+.con-ai__kv dd { margin: 0; text-align: right; font-weight: 600; }
+.con-ai__foot { margin: 10px 0 0; font-size: 11.5px; color: var(--citui-muted); line-height: 1.45; }
+.con-gen-budget { margin-top: 12px; }
+.con-gen-budget__line { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; margin-bottom: 5px; }
+.con-gen-est { font-size: 12px; color: var(--citui-muted); margin-top: 5px; }
+.con-gen-est b { color: var(--citui-ink); font-variant-numeric: tabular-nums; }
 .con-lang { display: inline-flex; gap: 4px; align-items: center; margin: 0; }
 .con-lang select {
   background: var(--citui-field); color: var(--citui-ink); border: 1px solid var(--citui-line);
@@ -217,6 +265,11 @@
   .con-top { padding: 8px 12px; gap: 6px; }
   .con-top__menu { display: inline-flex; }
   .con-k, .con-top__lang, .con-top__help { display: none; }
+  /* AI pill: amount + bar only; the popover spans the screen under the top bar. */
+  .con-ai__lbl, .con-ai__cap { display: none; }
+  .con-ai__pill { gap: 6px; padding: 5px 9px; }
+  .con-ai__pill .con-ai-bar { width: 30px; }
+  .con-ai__pop { position: fixed; top: 54px; left: 10px; right: 10px; width: auto; }
   /* The phone keeps the LAST parent + the page (`Partnerek › Vendégház…`): a four-part trail
      left one letter of the page's own name visible (measured on the partner page, 390 px).
      Children: a, svg, a, svg, …, b — the last three are „parent › page". */

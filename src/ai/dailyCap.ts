@@ -70,6 +70,28 @@ export async function mockSpendToday(): Promise<MockSpendToday> {
   return { spentUsd, mocks, capUsd, blocked: isCapReached(spentUsd, capUsd) };
 }
 
+/** From this share of the ceiling the console meter turns amber (approved plan, 2026-10-05). */
+export const AI_NEAR_RATIO = 0.8;
+
+/**
+ * Per-mock cost the console estimate uses while today has no measured mock: the prod
+ * average of 2026-10-04 ($26.96 / 41 mocks). A display estimate only — never a gate.
+ */
+export const MOCK_COST_FALLBACK_USD = 0.66;
+
+export type SpendLevel = "ok" | "near" | "blocked";
+
+/** The meter's colour band: blocked is EXACTLY isCapReached, near from AI_NEAR_RATIO. */
+export function spendLevel(s: Pick<MockSpendToday, "spentUsd" | "capUsd">): SpendLevel {
+  if (isCapReached(s.spentUsd, s.capUsd)) return "blocked";
+  return s.capUsd > 0 && s.spentUsd / s.capUsd >= AI_NEAR_RATIO ? "near" : "ok";
+}
+
+/** Estimated cost of ONE mock: today's average once there is one, else the measured fallback. */
+export function mockCostEstimateUsd(s: Pick<MockSpendToday, "spentUsd" | "mocks">): number {
+  return s.mocks > 0 && s.spentUsd > 0 ? s.spentUsd / s.mocks : MOCK_COST_FALLBACK_USD;
+}
+
 /** Operator-facing refusal. i18n-exempt: operator console, never reaches a customer. */
 export function capReachedMessage(s: Pick<MockSpendToday, "spentUsd" | "mocks" | "capUsd">): string {
   return (

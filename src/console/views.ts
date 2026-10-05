@@ -103,7 +103,13 @@ import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
 import { uiLangs } from "../i18n/lang.js";
-import { consoleLang, consoleNav } from "./i18nCtx.js";
+import { consoleAi, consoleLang, consoleNav } from "./i18nCtx.js";
+import {
+  capReachedMessage,
+  mockCostEstimateUsd,
+  spendLevel,
+  type MockSpendToday,
+} from "../ai/dailyCap.js";
 import { PRIVACY_CUSTOMER_V1 } from "../legal.js";
 import { checkOutreachLinkHost } from "../outreach/linkHost.js";
 import { identityReason, type IdentityProblem } from "../outreach/outreachCheck.js";
@@ -332,6 +338,94 @@ function drawer(trail: readonly NavNode[], tree: readonly NavNode[], counts: Nav
   );
 }
 
+/** USD as the cap message writes it ($1.11) — one format on the pill, the panel and the refusal. */
+const aiUsd = (n: number): string => `$${n.toFixed(2)}`;
+
+/** The meter's fill, clamped to the bar (spend can overshoot the cap by one batch). */
+const aiBarPct = (s: MockSpendToday): number =>
+  s.capUsd > 0 ? Math.min(100, Math.round((s.spentUsd / s.capUsd) * 1000) / 10) : 100;
+
+/** "Közel a plafonhoz" — the remainder in dollars and in mocks (today's average). */
+function aiNearMessage(s: MockSpendToday, lang: string): string {
+  const left = Math.max(0, s.capUsd - s.spentUsd);
+  return T(lang, "Közel a napi AI-plafonhoz: ma {spent} / {cap} ({pct}%). Maradt {left} ≈ {n} mock.", {
+    spent: aiUsd(s.spentUsd),
+    cap: aiUsd(s.capUsd),
+    pct: s.capUsd > 0 ? Math.round((s.spentUsd / s.capUsd) * 100) : 100,
+    left: aiUsd(left),
+    n: Math.floor(left / mockCostEstimateUsd(s)),
+  });
+}
+
+/** Amber / red notice line shared by the popover and the generation panel. */
+function aiMsg(kind: "warn" | "bad", text: string, attrs = ""): string {
+  return `<div class="con-ai-msg con-ai-msg--${kind}"${attrs}>${ic("alert", 15)}<span>${esc(text)}</span></div>`;
+}
+
+/**
+ * A · today's mock AI spend in the top bar of EVERY framed page (approved plan:
+ * assets/design-refs/console/ai-napi-osszeg/). Display only — the ceiling is env-only
+ * and has NO editor anywhere in the console. Absent when the spend could not be read.
+ */
+function aiPill(lang: string): string {
+  const s = consoleAi();
+  if (!s) return "";
+  const lv = spendLevel(s);
+  const left = Math.max(0, s.capUsd - s.spentUsd);
+  const bar = `<span class="con-ai-bar"><i style="width:${aiBarPct(s)}%"></i></span>`;
+  const foot = esc(
+    T(lang, "Csak a mockok költsége számít. A plafont az {env} env-változó adja — a konzolról nem állítható."),
+  ).replace("{env}", "<code>AI_DAILY_CAP_USD</code>");
+  return (
+    `<div class="con-ai" data-lv="${lv}">` +
+    `<button type="button" class="con-ai__pill" data-ai-pill aria-expanded="false" aria-haspopup="dialog" aria-controls="con-ai-pop" title="${esc(T(lang, "Mai AI-költség (mock-generálás)"))}">` +
+    `<span class="con-ai__lbl">${esc(T(lang, "AI ma"))}</span><span class="num">${aiUsd(s.spentUsd)}</span>` +
+    `<span class="con-ai__cap num">/ ${aiUsd(s.capUsd)}</span>${bar}</button>` +
+    `<div class="con-ai__pop" id="con-ai-pop" role="dialog" aria-label="${esc(T(lang, "Mai AI-költség"))}" hidden>` +
+    `<h3>${esc(T(lang, "Mai AI-költség — mock-generálás"))}</h3>` +
+    `<div class="con-ai__sub">${esc(T(lang, "Budapesti nap, 0:00-tól · dev és éles közös kulccsal"))}</div>` +
+    `<div class="con-ai__big num">${aiUsd(s.spentUsd)} <small>/ ${aiUsd(s.capUsd)} ${esc(T(lang, "plafon"))}</small></div>` +
+    bar +
+    `<dl class="con-ai__kv">` +
+    `<dt>${esc(T(lang, "Mai mock"))}</dt><dd>${s.mocks}</dd>` +
+    `<dt>${esc(T(lang, "Átlag / mock"))}</dt><dd>${s.mocks > 0 ? aiUsd(s.spentUsd / s.mocks) : "—"}</dd>` +
+    `<dt>${esc(T(lang, "Maradék"))}</dt><dd>${
+      lv === "blocked"
+        ? esc(T(lang, "{usd} — holnap 0:00-ig", { usd: aiUsd(0) }))
+        : esc(T(lang, "{usd} ≈ {n} mock", { usd: aiUsd(left), n: Math.floor(left / mockCostEstimateUsd(s)) }))
+    }</dd></dl>` +
+    (lv === "near" ? aiMsg("warn", aiNearMessage(s, lang)) : "") +
+    (lv === "blocked" ? aiMsg("bad", capReachedMessage(s)) : "") +
+    `<p class="con-ai__foot">${foot}</p></div></div>`
+  );
+}
+
+/**
+ * B · today's spend under the generate button + the estimate for the ticked templates
+ * (one mock per template). The texts travel as data-* templates: `citAiEst()` re-renders
+ * them on every tick. When the cap is reached the button is disabled by the caller.
+ */
+function aiGenBudget(s: MockSpendToday, lang: string): string {
+  const lv = spendLevel(s);
+  const each = mockCostEstimateUsd(s);
+  const pick =
+    s.mocks > 0 && s.spentUsd > 0
+      ? T(lang, "Jelölj ki sablont — a becslés sablononként ~{usd} (a mai átlag).", { usd: aiUsd(each) })
+      : T(lang, "Jelölj ki sablont — a becslés sablononként ~{usd} (a 10-04-i éles átlag).", { usd: aiUsd(each) });
+  const est = lv === "blocked" ? T(lang, "Új generálás holnap 0:00-tól (budapesti idő).") : pick;
+  return (
+    `<div class="con-gen-budget" data-lv="${lv}" data-ai-budget data-spent="${s.spentUsd}" data-cap="${s.capUsd}" data-each="${each}"` +
+    ` data-t-pick="${esc(pick)}" data-t-run="${esc(T(lang, "Ez a futás: {n} mock ≈ {est} (becslés) · utána ≈ {after}"))}"` +
+    ` data-t-over="${esc(T(lang, "A kijelölt {n} mock (≈ {est}) átlépheti a plafont: a futás elindul, mert az ellenőrzés az indulás előtt történik — utána minden új generálás holnapig tiltva."))}">` +
+    `<div class="con-gen-budget__line"><span>${esc(T(lang, "Mai AI-költség"))}</span>` +
+    `<b>${aiUsd(s.spentUsd)} / ${aiUsd(s.capUsd)} · ${esc(T(lang, "{n} mock", { n: s.mocks }))}</b></div>` +
+    `<span class="con-ai-bar"><i style="width:${aiBarPct(s)}%"></i></span>` +
+    `<div class="con-gen-est" data-ai-est>${esc(est)}</div></div>` +
+    (lv === "near" ? aiMsg("warn", aiNearMessage(s, lang)) : "") +
+    aiMsg("warn", "", " data-ai-over hidden")
+  );
+}
+
 /** The frame's own behaviour: theme + rail, fold, ←, the drawer and the ⌘K function search. */
 function shellScript(tree: readonly NavNode[], lang: string): string {
   // The ⌘K index: every function with its module — the tree, flattened.
@@ -361,8 +455,12 @@ function shellScript(tree: readonly NavNode[], lang: string): string {
     `else if(e.key==='Enter'){var a=dd.querySelector('a.is-hi');if(a){e.preventDefault();location.href=a.getAttribute('href')}}` +
     `else if(e.key==='Escape'){inp.value='';dd.hidden=true;inp.blur()}})});` +
     `document.addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K')){var inp=$$('[data-k]').filter(function(x){return x.offsetParent})[0];if(inp){e.preventDefault();inp.focus();inp.select()}}` +
-    `if(e.key==='Escape'){var dr=document.getElementById('con-menu');if(dr)dr.classList.remove('on')}});` +
-    `document.addEventListener('click',function(e){var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
+    `if(e.key==='Escape'){var dr=document.getElementById('con-menu');if(dr)dr.classList.remove('on');aiClose()}});` +
+    // The AI-spend popover (A): the pill toggles it, Esc and any outside click close it.
+    `function aiClose(){var p=document.getElementById('con-ai-pop');if(!p||p.hidden)return;p.hidden=true;$$('[data-ai-pill]').forEach(function(x){x.setAttribute('aria-expanded','false')})}` +
+    `document.addEventListener('click',function(e){var ap=e.target.closest('[data-ai-pill]');if(ap){var pp=document.getElementById('con-ai-pop');if(pp){pp.hidden=!pp.hidden;ap.setAttribute('aria-expanded',pp.hidden?'false':'true')}return}` +
+    `if(!e.target.closest('#con-ai-pop'))aiClose();` +
+    `var b=e.target.closest('[data-theme-toggle]');if(b){e.preventDefault();var t=theme()==='dark'?'light':'dark';d.setAttribute('data-citui-theme',t);try{localStorage.setItem('citui-theme',t)}catch(x){}paint();return}` +
     `var rb=e.target.closest('[data-rail]');if(rb){e.preventDefault();d.classList.toggle('is-rail');try{localStorage.setItem('citui-console-rail',d.classList.contains('is-rail')?'1':'0')}catch(x){}paint();return}` +
     `var f=e.target.closest('[data-fold]');if(f){e.preventDefault();var g=f.parentNode,k=g.nextElementSibling;var o=!g.classList.contains('is-open');g.classList.toggle('is-open',o);f.setAttribute('aria-expanded',o?'true':'false');if(k)k.hidden=!o;return}` +
     `var bk=e.target.closest('[data-back]');if(bk&&history.length>1&&document.referrer.indexOf(location.origin+'/')===0){e.preventDefault();history.back();return}` +
@@ -394,6 +492,7 @@ function frame(title: string, body: string, active: string | undefined, lang: st
     `<a class="con-fib con-fib--ghost con-back${isHome ? " is-hidden" : ""}" href="${esc(parent)}" data-back title="${esc(T(lang, "Vissza"))}" aria-label="${esc(T(lang, "Vissza"))}"${isHome ? ' aria-hidden="true" tabindex="-1"' : ""}>${icf("back", 18)}</a>` +
     `<div class="con-crumb">${crumbHtml(trail, active, title, lang)}</div>` +
     `<div class="con-k">${icf("search", 15)}<input type="search" data-k placeholder="${esc(T(lang, "Ugrás funkcióra…"))}" aria-label="${esc(T(lang, "Ugrás funkcióra"))}" autocomplete="off"><kbd>${esc(T(lang, "⌘K"))}</kbd><div class="con-k__dd" data-k-dd hidden></div></div>` +
+    aiPill(lang) +
     `<button type="button" class="con-fib con-fib--ghost con-top__theme" data-theme-toggle hidden title="${esc(T(lang, "Világos / sötét"))}" aria-label="${esc(T(lang, "Világos / sötét"))}"><span data-ic>${icf("moon", 16)}</span></button>` +
     `<div class="con-top__lang">${langSwitcher(lang)}</div>` +
     `<a class="con-btn con-btn--sm con-top__help" href="/help">${icf("help", 15)}<span>${esc(T(lang, "Súgó"))}</span></a>` +
@@ -6627,6 +6726,11 @@ function cpScript(prefix: string): string {
           "Ehhez a leadhez nincs match-konfidencia érték — az adat-egyezés nem mért. Generálás előtt az Adatok fülön ellenőrizd, hogy a begyűjtött adatok tényleg erről az üzletről szólnak.",
         )}</p>`
       : "";
+  // Daily AI ceiling (approved plan ai-napi-osszeg, B): the same request-cached spend the
+  // header pill shows. Blocked → the button is disabled and the refusal stands above the
+  // form; a failed earlier run saying the same thing is not drawn a second time.
+  const aiSpend = consoleAi();
+  const aiBlocked = aiSpend ? spendLevel(aiSpend) === "blocked" : false;
   const generatePanel = `
     <div class="panel">
       <h2>Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</h2>
@@ -6644,7 +6748,7 @@ function cpScript(prefix: string): string {
               // újra megnyomja. A hallgató bukás megkülönböztethetetlen a törött gombtól.
               // FK-003b L06: a SIKER is kimondja, meddig tartott és hova vezet — eddig
               // csak egy „Kész" mondat állt itt, időtartam és link nélkül.
-              gen.outcome
+              gen.outcome && !(aiBlocked && !gen.outcome.ok)
                 ? `<div class="cp-doc cp-outcome ${gen.outcome.ok ? "ok" : "bad"}" style="margin:0 0 12px">
                      ${ic(gen.outcome.ok ? "check" : "alert", 15)}<span>${esc(gen.outcome.message)}</span>${
                        // ⚠️ KÉT külön T() literállal: a katalógus-kigyűjtő a T() ELSŐ
@@ -6662,7 +6766,7 @@ function cpScript(prefix: string): string {
                      }
                    </div>`
                 : ""
-            }
+            }${aiSpend && aiBlocked ? aiMsg("bad", capReachedMessage(aiSpend), ' style="margin:0 0 12px"') : ""}
              <form method="post" action="/lead/${esc(d.id)}/generate"
                    onsubmit="${esc(`var b=this.querySelector('button.gen-go');b.disabled=true;b.textContent='${jsStr(T(lang, "Indítás…"))}'`)}">
                <div class="gen-2col">
@@ -6676,7 +6780,10 @@ function cpScript(prefix: string): string {
                    <textarea id="gen-cp-in" name="curatorPrompt" rows="4" maxlength="600"
                      placeholder="${T(lang, "pl. családias, meleg hang; a borkóstolót és a teraszt emeld ki")}"
                      style="width:100%;padding:6px 8px;margin-bottom:10px;font-family:inherit;font-size:13px"></textarea>
-                   <button class="gen-go" type="submit">Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
+                   <button class="gen-go" type="submit"${
+                     aiSpend && aiBlocked ? ` disabled title="${esc(capReachedMessage(aiSpend))}"` : ""
+                   }>Mock ${d.artifacts.length ? T(lang, "újragenerálása") : T(lang, "generálása")}</button>
+                   ${aiSpend ? aiGenBudget(aiSpend, lang) : ""}
                  </div>
                  ${tplPreview(d, lang, walk.lead)}
                </div>
@@ -7186,10 +7293,24 @@ function galleryScript(): string {
        *  multi-select, and a silent second mock is exactly what confused the curator. */
       function citTplCount(){
         var n=document.querySelectorAll('.tpl-cards input[name=template]:checked').length;
-        var b=document.querySelector('button.gen-go');if(!b)return;
+        // The generate form's OWN button: the copy panel's "Szöveg újragenerálása" is a .gen-go too.
+        var b=document.querySelector('form[action$="/generate"] button.gen-go');if(!b)return;
         var base=b.getAttribute('data-base')||b.textContent.trim();
         b.setAttribute('data-base',base);
         b.textContent = n>1 ? base+' ('+n+' típus)' : (n===1 ? base+' (1 típus)' : base);
+        citAiEst(n);
+      }
+      /** B: the ticked templates' estimated cost, and a warning when the batch would
+       *  cross the ceiling (the check runs BEFORE the start, so the run still goes). */
+      function citAiEst(n){
+        var g=document.querySelector('[data-ai-budget]');if(!g||g.getAttribute('data-lv')==='blocked')return;
+        var el=g.querySelector('[data-ai-est]'),ov=document.querySelector('[data-ai-over]');
+        var sp=+g.getAttribute('data-spent'),cap=+g.getAttribute('data-cap'),each=+g.getAttribute('data-each');
+        var usd=function(x){return '$'+x.toFixed(2)};
+        var e=function(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+        var est=n*each;
+        if(el)el.innerHTML=n>0?e(g.getAttribute('data-t-run')).replace('{n}',n).replace('{est}','<b>'+usd(est)+'</b>').replace('{after}',usd(sp+est)):e(g.getAttribute('data-t-pick'));
+        if(ov){var over=n>0&&sp+est>cap;ov.hidden=!over;if(over)ov.querySelector('span').textContent=g.getAttribute('data-t-over').replace('{n}',n).replace('{est}',usd(est));}
       }
       /** Every template opens as one gallery, starting on the clicked one — the
        *  curator is CHOOSING between layouts, so stepping beats reopening. */

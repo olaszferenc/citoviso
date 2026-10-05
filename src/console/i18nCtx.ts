@@ -19,6 +19,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { DEFAULT_LANG } from "../i18n/lang.js";
+import type { MockSpendToday } from "../ai/dailyCap.js";
 import type { NavNumbers } from "./nav.js";
 
 /** Mutable holder: the request enters the context BEFORE the operator (and thus
@@ -27,6 +28,8 @@ export interface ConsoleLangCtx {
   lang: string;
   /** Numbers beside the navigation nodes (navCounts.ts), loaded once per operator request. */
   nav?: NavNumbers;
+  /** Today's mock AI spend (aiSpend.ts) for the header pill; null when the read failed. */
+  ai?: MockSpendToday | null;
 }
 
 const store = new AsyncLocalStorage<ConsoleLangCtx>();
@@ -51,6 +54,17 @@ export function setConsoleNav(nav: NavNumbers): void {
 /** The current request's navigation numbers — null outside a request or before they load. */
 export function consoleNav(): NavNumbers | null {
   return store.getStore()?.nav ?? null;
+}
+
+/** Set today's AI spend for the CURRENT request (no-op outside one). */
+export function setConsoleAi(ai: MockSpendToday | null): void {
+  const ctx = store.getStore();
+  if (ctx) ctx.ai = ai;
+}
+
+/** The current request's AI spend — null outside a request, before it loads, or on a failed read. */
+export function consoleAi(): MockSpendToday | null {
+  return store.getStore()?.ai ?? null;
 }
 
 /**

@@ -308,8 +308,9 @@ import {
   setOperatorSession,
 } from "../auth/operatorAuth.js";
 import path_mod from "node:path";
-import { consoleLang, runWithConsoleLang, setConsoleLang, setConsoleNav } from "./i18nCtx.js";
+import { consoleLang, runWithConsoleLang, setConsoleAi, setConsoleLang, setConsoleNav } from "./i18nCtx.js";
 import { getNavNumbers } from "./navCounts.js";
+import { getAiSpend } from "./aiSpend.js";
 import { HUB_PREFIX } from "./nav.js";
 import { uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
@@ -1250,6 +1251,8 @@ async function handle(
   // The sidebar's counts (nav.ts marks) — one cached read per operator request, so
   // every screen's frame shows the same numbers the module dashboards do.
   if (!isPublicPath) setConsoleNav(await getNavNumbers());
+  // Today's mock AI spend for the header pill (display only — the generate gate reads fresh).
+  if (!isPublicPath) setConsoleAi(await getAiSpend());
   // ── KINEK SZÓL EZ A LAP (ld. src/server/consent.ts) ──────────────────────────
   // A fenti lista azt mondja meg, KI ÉRHETI EL; ez azt, KINEK SZÓL — és a kettő
   // NEM ugyanaz. A kívülről elérhető hat útvonalból három a tenant VENDÉGÉNEK

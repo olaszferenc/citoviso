@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Napi AI-költség a konzolon — A + B (jóváhagyott terv)</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+  /* Draft frame (not part of the proposal): size / theme / state switchers.
+     @container (not @media): the size switch narrows a div, not the window. */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--citui-surface-2); font-family: var(--citui-font-text); color: var(--citui-ink); }
+  .dr-top { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 14px; background: var(--citui-navy-950); color: var(--citui-white); font-size: .85rem; }
+  .dr-top b { font-family: var(--citui-font-display); margin-right: 6px; }
+  .dr-grp { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: 100%; }
+  .dr-grp span { opacity: .7; margin-right: 2px; }
+  .dr-top button { font: inherit; cursor: pointer; border-radius: var(--citui-radius-pill);
+    border: 1px solid var(--citui-cyan-500); background: transparent; color: var(--citui-white); padding: 5px 11px; white-space: nowrap; }
+  .dr-top button[aria-pressed="true"] { background: var(--citui-cyan-500); color: var(--citui-navy-950); font-weight: 700; }
+  .dr-sec { padding: 18px 14px 34px; max-width: 1220px; margin: 0 auto; }
+  .dr-h { font-family: var(--citui-font-display); font-size: 1.08rem; margin: 0 0 4px; }
+  .dr-note { margin: 0 0 6px; font-size: .88rem; color: var(--citui-muted); max-width: 78ch; line-height: 1.5; }
+  .dr-dec { margin: 0 0 12px; font-size: .86rem; max-width: 78ch; line-height: 1.5; }
+  .dr-stage { container-type: inline-size; margin: 0 auto; transition: max-width var(--citui-transition); }
+  body.is-mobile .dr-stage { max-width: 390px; }
+  body.is-desktop .dr-stage { max-width: 1180px; }
+
+  /* Mini console frame, built only from --citui-* tokens (Linear language, ADR-0233). */
+  .cf { position: relative; background: var(--citui-bg); color: var(--citui-ink); border: 1px solid var(--citui-line);
+    border-radius: var(--citui-radius-lg); overflow: hidden; font-size: 13px; line-height: 1.5;
+    display: grid; grid-template-columns: 210px 1fr; min-height: 470px; }
+  .cf-side { background: var(--citui-side); border-right: 1px solid var(--citui-line); padding: 12px 10px; }
+  .cf-logo { font-family: var(--citui-font-display); font-weight: 700; font-size: 15px; margin: 2px 6px 14px; }
+  .cf-logo i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--citui-cyan-500); margin-left: 2px; }
+  .cf-nav a { display: flex; justify-content: space-between; padding: 6px 8px; border-radius: var(--citui-radius-sm);
+    color: var(--citui-ink); text-decoration: none; }
+  .cf-nav a.on { background: var(--citui-accent-soft); font-weight: 600; }
+  .cf-nav small { color: var(--citui-muted); font-variant-numeric: tabular-nums; }
+  .cf-col { display: flex; flex-direction: column; min-width: 0; }
+  .cf-top { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--citui-line);
+    background: var(--citui-panel); min-height: 50px; position: relative; }
+  .cf-menu { display: none; width: 30px; height: 30px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm);
+    align-items: center; justify-content: center; color: var(--citui-ink); background: var(--citui-panel); }
+  .cf-crumb { color: var(--citui-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+  .cf-crumb b { color: var(--citui-ink); font-weight: 600; }
+  .cf-k { display: flex; align-items: center; gap: 6px; border: 1px solid var(--citui-line); background: var(--citui-field);
+    border-radius: var(--citui-radius-sm); padding: 5px 9px; color: var(--citui-muted); width: 210px; }
+  .cf-k kbd { margin-left: auto; font: inherit; font-size: 11px; border: 1px solid var(--citui-line); border-radius: 4px; padding: 0 4px; }
+  .cf-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--citui-line); background: var(--citui-panel);
+    color: var(--citui-ink); font: 600 12.5px/1 var(--citui-font-text); padding: 8px 11px; border-radius: var(--citui-radius-sm);
+    cursor: pointer; white-space: nowrap; }
+  .cf-btn--p { background: var(--citui-cyan-500); border-color: transparent; color: var(--citui-accent-ink); }
+  .cf-btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .cf-main { padding: 16px; min-width: 0; }
+  .cf-h1 { font-family: var(--citui-font-display); font-size: 19px; margin: 0 0 4px; }
+  .cf-sub { margin: 0 0 14px; color: var(--citui-muted); }
+  .cf-panel { background: var(--citui-panel); border: 1px solid var(--citui-line); border-radius: var(--citui-radius); padding: 14px; }
+  .cf-panel h2 { margin: 0 0 10px; font-size: 15px; }
+  .mut { color: var(--citui-muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  @container (max-width: 640px) {
+    .cf { grid-template-columns: 1fr; }
+    .cf-side { display: none; }
+    .cf-menu { display: inline-flex; }
+    .cf-k { display: none; }
+    .cf-top { padding: 8px 10px; gap: 8px; }
+    .cf-main { padding: 12px; }
+  }
+
+  /* ═══ THE PROPOSAL — shared meter (would go to citui-console.css) ═══ */
+  .ai-bar { height: 6px; border-radius: var(--citui-radius-pill); background: color-mix(in srgb, var(--citui-ink) 10%, transparent); overflow: hidden; }
+  .ai-bar > i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--citui-ok); transition: width .35s ease; }
+  [data-lv="near"] .ai-bar > i { background: var(--citui-warn); }
+  [data-lv="blocked"] .ai-bar > i { background: var(--citui-bad); }
+  .ai-msg { display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--citui-radius-sm);
+    font-size: 12.5px; line-height: 1.45; }
+  .ai-msg svg { flex: 0 0 auto; margin-top: 1px; }
+  .ai-msg--warn { background: color-mix(in srgb, var(--citui-warn) 14%, var(--citui-panel)); color: var(--citui-warn-ink); }
+  .ai-msg--bad { background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink); }
+  .ai-msg[hidden] { display: none; }
+  .ai-kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 12.5px; margin: 10px 0 0; }
+  .ai-kv span { color: var(--citui-muted); }
+  .ai-kv b { font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
+  .ai-foot { margin: 10px 0 0; font-size: 11.5px; color: var(--citui-muted); line-height: 1.45; }
+
+  /* A — header pill + popover */
+  .ai-pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--citui-line); background: var(--citui-panel);
+    color: var(--citui-ink); border-radius: var(--citui-radius-pill); padding: 5px 11px 5px 9px; font: 600 12.5px/1 var(--citui-font-text);
+    cursor: pointer; white-space: nowrap; }
+  .ai-pill .ai-bar { width: 46px; height: 5px; }
+  .ai-pill .ai-pill__cap { color: var(--citui-muted); font-weight: 500; }
+  .ai-pill[data-lv="near"] { border-color: color-mix(in srgb, var(--citui-warn) 60%, transparent);
+    background: color-mix(in srgb, var(--citui-warn) 12%, var(--citui-panel)); color: var(--citui-warn-ink); }
+  .ai-pill[data-lv="blocked"] { border-color: color-mix(in srgb, var(--citui-bad) 60%, transparent);
+    background: color-mix(in srgb, var(--citui-bad) 12%, var(--citui-panel)); color: var(--citui-bad-ink); }
+  .ai-pop { position: absolute; top: calc(100% + 6px); right: 14px; width: 320px; z-index: 5; background: var(--citui-panel);
+    border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius); box-shadow: var(--citui-shadow-md); padding: 14px; }
+  .ai-pop[hidden] { display: none; }
+  .ai-pop h3 { margin: 0 0 2px; font-size: 13.5px; }
+  .ai-big { font-family: var(--citui-font-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 6px 0 6px; }
+  .ai-big small { font-size: 13px; color: var(--citui-muted); font-weight: 500; }
+  @container (max-width: 640px) {
+    .ai-pill .ai-pill__cap, .ai-pill .ai-pill__lbl { display: none; }
+    .ai-pill .ai-bar { width: 30px; }
+    .ai-pop { left: 10px; right: 10px; width: auto; }
+  }
+
+  /* B — generation panel line */
+  .tpl-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .tpl-card { position: relative; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); overflow: hidden; cursor: pointer;
+    background: var(--citui-field); }
+  .tpl-card.on { border-color: var(--citui-cyan-500); box-shadow: 0 0 0 2px var(--citui-accent-soft); }
+  .tpl-card input { position: absolute; top: 6px; left: 6px; }
+  .tpl-card img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+  .tpl-card span { display: block; padding: 5px 7px; font-size: 12px; font-weight: 600; }
+  .gen-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+  .gen-budget { flex: 1 1 260px; min-width: 0; }
+  .gen-budget__line { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; margin-bottom: 5px; }
+  .gen-budget__line b { font-variant-numeric: tabular-nums; }
+  .gen-est { font-size: 12px; color: var(--citui-muted); margin-top: 5px; }
+  .gen-est b { color: var(--citui-ink); font-variant-numeric: tabular-nums; }
+  .cp-outcome { display: flex; gap: 8px; align-items: center; padding: 9px 11px; border-radius: var(--citui-radius-sm);
+    background: var(--citui-ok-soft); color: var(--citui-ok-ink); font-size: 12.5px; margin: 0 0 12px; }
+  .cp-outcome[hidden] { display: none; }
+  @container (max-width: 640px) {
+    .tpl-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gen-row .cf-btn--p { width: 100%; justify-content: center; order: 2; }
+    .gen-budget { order: 1; flex-basis: 100%; }
+  }
+
+</style>
+</head>
+<body class="is-mobile">
+
+<div class="dr-top">
+  <b>Napi AI-költség a konzolon</b>
+  <span class="dr-grp"><span>Méret</span>
+    <button type="button" data-size="mobile" aria-pressed="true">Mobil 390px</button>
+    <button type="button" data-size="desktop" aria-pressed="false">Asztali</button></span>
+  <span class="dr-grp"><span>Téma</span>
+    <button type="button" data-theme="light" aria-pressed="true">Világos</button>
+    <button type="button" data-theme="dark" aria-pressed="false">Sötét</button></span>
+  <span class="dr-grp"><span>Állapot</span>
+    <button type="button" data-st="dev" aria-pressed="true">Dev ma · $1.11 / 3</button>
+    <button type="button" data-st="near" aria-pressed="false">Közel · $18.40 / 28</button>
+    <button type="button" data-st="blocked" aria-pressed="false">Elérve · $20.31 / 31</button>
+    <button type="button" data-st="prod" aria-pressed="false">Éles 10-04 · $26.96 / 41</button></span>
+  <button type="button" id="plus">+1 mock (a mai átlaggal)</button>
+</div>
+
+<div class="dr-sec">
+  <p class="dr-note"><b>Adat:</b> a <code>mockSpendToday()</code> → <code>{ spentUsd, mocks, capUsd, blocked }</code>. A „Dev ma” a dev DB
+    valós mai értéke (2026-10-04 23:10: $1.111969, 3 mock); az „Éles 10-04” a mért éles nap (41 mock, $26.96 — a plafon fölött lett volna).
+    A plafon <b>$20</b>, kizárólag az <code>AI_DAILY_CAP_USD</code> env-ből — a konzolról NEM állítható, ezért egyik változatban sincs
+    rá szerkesztő. Szintek: <b>&lt; 80%</b> zöld · <b>80–99%</b> borostyán „közel” · <b>≥ 100%</b> piros, tiltva (a kód <code>spent ≥ cap</code>-ot néz).
+    A tiltó szöveg betűre a <code>capReachedMessage()</code>.</p>
+</div>
+
+<!-- ═══════════ A ═══════════ -->
+<div class="dr-sec">
+  <h2 class="dr-h">A · Fejléc-pirula a konzol MINDEN lapján</h2>
+  <p class="dr-note">A fejlécben (a ⌘K mellett) egy kis pirula: összeg + vékony sáv. Kattintásra lenyíló részletek. Mobilon csak az összeg
+    és a sáv marad, a lenyíló teljes szélességű. A lap itt a Lead-sor — bárhol ugyanez.</p>
+  <p class="dr-dec"><b>Ezt dönti el:</b> az összeg <b>mindig</b> szem előtt van (egy elszabadult köteg vagy Neo futása is
+    feltűnik, bármelyik lapon állsz) — cserébe +1 elem a már zsúfolt fejlécben.</p>
+  <div class="dr-stage"><div class="cf" data-v="A">
+    <aside class="cf-side"><div class="cf-logo">citoviso<i></i></div>
+      <nav class="cf-nav"><a href="#">Irányítópult</a><a href="#">CRM</a><a href="#" class="on">Lead-sor <small>946</small></a>
+        <a href="#">Jóváhagyott mockok <small>58</small></a><a href="#">Pénzügy</a><a href="#">Riport</a><a href="#">Rendszer</a><a href="#">Súgó</a></nav></aside>
+    <div class="cf-col">
+      <div class="cf-top">
+        <span class="cf-menu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+        <div class="cf-crumb">Konzol › CRM › <b>Lead-sor</b></div>
+        <div class="cf-k"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Ugrás funkcióra…<kbd>⌘K</kbd></div>
+        <button type="button" class="ai-pill" data-ai-pill aria-expanded="false" aria-haspopup="dialog" title="Mai AI-költség (mock-generálás)">
+          <span class="ai-pill__lbl">AI ma</span><span class="num" data-f="spent"></span><span class="ai-pill__cap num">/ <span data-f="cap"></span></span>
+          <span class="ai-bar"><i data-f="bar"></i></span></button>
+        <span class="cf-btn">Súgó</span>
+        <div class="ai-pop" data-ai-pop role="dialog" aria-label="Mai AI-költség" hidden>
+          <h3>Mai AI-költség — mock-generálás</h3>
+          <div class="mut" style="font-size:12px">Budapesti nap, 0:00-tól · dev és éles közös kulccsal</div>
+          <div class="ai-big"><span data-f="spent"></span> <small>/ <span data-f="cap"></span> plafon</small></div>
+          <div class="ai-bar"><i data-f="bar"></i></div>
+          <dl class="ai-kv" style="margin:10px 0 0">
+            <span>Mai mock</span><b data-f="mocks"></b>
+            <span>Átlag / mock</span><b data-f="avg"></b>
+            <span>Maradék</span><b data-f="left"></b>
+          </dl>
+          <div class="ai-msg ai-msg--warn" data-show="near" hidden style="margin-top:10px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span data-f="nearmsg"></span></div>
+          <div class="ai-msg ai-msg--bad" data-show="blocked" hidden style="margin-top:10px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg><span data-f="capmsg"></span></div>
+          <p class="ai-foot">Csak a mockok költsége számít. A plafont az <code>AI_DAILY_CAP_USD</code> env-változó adja — a konzolról nem állítható.</p>
+        </div>
+      </div>
+      <main class="cf-main">
+        <h1 class="cf-h1">Lead-sor</h1>
+        <p class="cf-sub">946 felmért szereplő · 412 kvalifikált lead</p>
+        <div class="cf-panel"><div class="mut">… a lead-lista változatlan …</div></div>
+      </main>
+    </div>
+  </div></div>
+</div>
+
+<!-- ═══════════ B ═══════════ -->
+<div class="dr-sec">
+  <h2 class="dr-h">B · A lead-lap generálás-paneljén, a gomb mellett</h2>
+  <p class="dr-note">Ott látszik, ahol a pénz elmegy: a „Mock generálása” gomb mellett a mai összeg + sáv, alatta a kijelölt sablonok
+    <b>becsült</b> költsége (pipáld a sablonokat — sablononként egy mock készül). A becslés a mai átlag; amíg ma nincs mock, a 10-04-i éles átlag ($0.66).
+    Elérve: a gomb letiltva, a tiltó szöveg a gomb fölött — ugyanott, ahol ma a bukás-üzenet áll.</p>
+  <p class="dr-dec"><b>Ezt dönti el:</b> a döntés pillanatában látod, belefér-e — és hogy egy több-sablonos köteg <b>átlépheti</b> a
+    plafont (a kód csak az INDULÁS előtt ellenőriz; a következő indítás tilt). Más lapon viszont nem látszik semmi.</p>
+  <div class="dr-stage"><div class="cf" data-v="B">
+    <aside class="cf-side"><div class="cf-logo">citoviso<i></i></div>
+      <nav class="cf-nav"><a href="#">Irányítópult</a><a href="#">CRM</a><a href="#" class="on">Lead-sor <small>946</small></a>
+        <a href="#">Jóváhagyott mockok <small>58</small></a><a href="#">Pénzügy</a><a href="#">Riport</a></nav></aside>
+    <div class="cf-col">
+      <div class="cf-top">
+        <span class="cf-menu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+        <div class="cf-crumb">Konzol › CRM › Lead-sor › <b>Kerekerdő Vendégház</b></div>
+        <div class="cf-k"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Ugrás funkcióra…<kbd>⌘K</kbd></div>
+        <span class="cf-btn">Súgó</span>
+      </div>
+      <main class="cf-main">
+        <div class="cf-panel">
+          <h2>Mock generálása</h2>
+          <div class="cp-outcome" data-gen-ok hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5 9-10"/></svg><span data-gen-oktext></span></div>
+          <div class="ai-msg ai-msg--bad" data-show="blocked" hidden style="margin-bottom:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg><span data-f="capmsg"></span></div>
+          <div class="mut" style="font-size:12px;margin-bottom:6px">Kinézet-típus — többet is jelölhetsz, mindegyikre külön mock készül</div>
+          <div class="tpl-cards" role="group" aria-label="Kinézet-típus">
+            <label class="tpl-card"><input type="checkbox" value="aurora"><img src="../../../../public/assets/ui/tpl-aurora.jpg" alt=""><span>Aurora</span></label>
+            <label class="tpl-card"><input type="checkbox" value="editorial"><img src="../../../../public/assets/ui/tpl-editorial.jpg" alt=""><span>Editorial</span></label>
+            <label class="tpl-card"><input type="checkbox" value="artdeco"><img src="../../../../public/assets/ui/tpl-artdeco.jpg" alt=""><span>Art Deco</span></label>
+            <label class="tpl-card"><input type="checkbox" value="brutalism"><img src="../../../../public/assets/ui/tpl-brutalism.jpg" alt=""><span>Brutalizmus</span></label>
+          </div>
+          <div class="gen-row">
+            <button type="button" class="cf-btn cf-btn--p" data-gen>Mock generálása</button>
+            <div class="gen-budget" data-lvhost>
+              <div class="gen-budget__line"><span>Mai AI-költség</span><b><span data-f="spent"></span> / <span data-f="cap"></span> · <span data-f="mocks"></span> mock</b></div>
+              <div class="ai-bar"><i data-f="bar"></i></div>
+              <div class="gen-est" data-f="est"></div>
+            </div>
+          </div>
+          <div class="ai-msg ai-msg--warn" data-show="near" hidden style="margin-top:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span data-f="nearmsg"></span></div>
+          <div class="ai-msg ai-msg--warn" data-over hidden style="margin-top:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span data-f="overmsg"></span></div>
+        </div>
+      </main>
+    </div>
+  </div></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // Same constants and wording as src/ai/dailyCap.ts — the mock must not tell a nicer story.
+  var CAP = 20;
+  var NEAR = 0.8;            // proposal: amber from 80%
+  var PROD_AVG = 26.96 / 41; // measured prod average (2026-10-04), used while today has no mock
+  var PRESETS = { dev: [1.111969, 3], near: [18.4, 28], blocked: [20.31, 31], prod: [26.96, 41] };
+  var st = { spent: PRESETS.dev[0], mocks: PRESETS.dev[1] };
+  var usd = function (n) { return "$" + n.toFixed(2); };
+
+  function capReachedMessage(s) {
+    return "Elérted a napi AI-költségplafont: ma $" + s.spent.toFixed(2) + " / $" + CAP.toFixed(2) + " (" + s.mocks + " mock). " +
+      "Új generálás holnap 0:00-tól (budapesti idő) indítható.";
+  }
+  function level() { return st.spent >= CAP ? "blocked" : st.spent / CAP >= NEAR ? "near" : "ok"; }
+  function avg() { return st.mocks > 0 && st.spent > 0 ? st.spent / st.mocks : PROD_AVG; }
+  function picked() { return document.querySelectorAll('[data-v="B"] .tpl-card input:checked').length; }
+
+  function render() {
+    var lv = level(), left = Math.max(0, CAP - st.spent), a = avg();
+    var fx = {
+      spent: usd(st.spent), cap: usd(CAP), mocks: String(st.mocks),
+      avg: st.mocks > 0 ? usd(st.spent / st.mocks) : "—",
+      left: lv === "blocked" ? "$0.00 — holnap 0:00-ig" : usd(left) + " ≈ " + Math.floor(left / a) + " mock",
+      nearmsg: "Közel a napi AI-plafonhoz: ma " + usd(st.spent) + " / " + usd(CAP) + " (" + Math.round(st.spent / CAP * 100) +
+        "%). Maradt " + usd(left) + " ≈ " + Math.floor(left / a) + " mock.",
+      capmsg: capReachedMessage(st)
+    };
+    var n = picked(), est = n * a;
+    fx.est = lv === "blocked" ? "Új generálás holnap 0:00-tól (budapesti idő)." :
+      n === 0 ? "Jelölj ki sablont — a becslés sablononként ~" + usd(a) + " (" + (st.mocks > 0 ? "a mai átlag" : "a 10-04-i éles átlag") + ")." :
+      "Ez a futás: " + n + " mock ≈ ";
+    var estEl = document.querySelector('[data-f="est"]');
+    estEl.textContent = fx.est;
+    if (lv !== "blocked" && n > 0) {
+      var b = document.createElement("b"); b.textContent = usd(est); estEl.appendChild(b);
+      estEl.appendChild(document.createTextNode(" (becslés) · utána ≈ " + usd(st.spent + est)));
+    }
+    var over = lv !== "blocked" && n > 0 && st.spent + est > CAP;
+    fx.overmsg = "A kijelölt " + n + " mock (≈ " + usd(est) + ") átlépheti a plafont: a futás elindul, mert az ellenőrzés az indulás " +
+      "előtt történik — utána minden új generálás holnapig tiltva.";
+    document.querySelector("[data-over]").hidden = !over;
+
+    document.querySelectorAll("[data-f]").forEach(function (el) {
+      var k = el.getAttribute("data-f");
+      if (k === "bar") el.style.width = Math.min(100, st.spent / CAP * 100) + "%";
+      else if (k !== "est" && fx[k] !== undefined) el.textContent = fx[k];
+    });
+    document.querySelectorAll("[data-show]").forEach(function (el) { el.hidden = el.getAttribute("data-show") !== lv; });
+    document.querySelectorAll("[data-ai-pill], [data-lvhost], .ai-pop").forEach(function (el) { el.setAttribute("data-lv", lv); });
+    var go = document.querySelector("[data-gen]");
+    go.disabled = lv === "blocked" || n === 0;
+    go.textContent = n > 1 ? "Mock generálása (" + n + ")" : "Mock generálása";
+    go.title = lv === "blocked" ? capReachedMessage(st) : n === 0 ? "Jelölj ki legalább egy sablont" : "";
+    document.querySelectorAll("[data-st]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+  }
+
+  function press(sel, attr, val) {
+    document.querySelectorAll(sel).forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute(attr) === val)); });
+  }
+  document.querySelectorAll("[data-size]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.body.className = "is-" + b.getAttribute("data-size"); press("[data-size]", "data-size", b.getAttribute("data-size"));
+    });
+  });
+  document.querySelectorAll("[data-theme]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = b.getAttribute("data-theme");
+      document.querySelectorAll(".cf").forEach(function (f) { if (t === "dark") f.setAttribute("data-citui-theme", "dark"); else f.removeAttribute("data-citui-theme"); });
+      press("[data-theme]", "data-theme", t);
+    });
+  });
+  document.querySelectorAll("[data-st]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var p = PRESETS[b.getAttribute("data-st")]; st.spent = p[0]; st.mocks = p[1];
+      document.querySelector("[data-gen-ok]").hidden = true;
+      render(); b.setAttribute("aria-pressed", "true");
+    });
+  });
+  document.getElementById("plus").addEventListener("click", function () {
+    st.spent += avg(); st.mocks += 1; render();
+  });
+  // A: popover toggle, Esc / outside click closes
+  var pill = document.querySelector("[data-ai-pill]"), pop = document.querySelector("[data-ai-pop]");
+  pill.addEventListener("click", function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; pill.setAttribute("aria-expanded", String(!pop.hidden)); });
+  document.addEventListener("click", function (e) { if (!pop.hidden && !pop.contains(e.target)) { pop.hidden = true; pill.setAttribute("aria-expanded", "false"); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { pop.hidden = true; pill.setAttribute("aria-expanded", "false"); } });
+  // B: template pick + simulated run (adds the estimate as if the run finished)
+  document.querySelectorAll('[data-v="B"] .tpl-card input').forEach(function (i) {
+    i.addEventListener("change", function () { i.parentNode.classList.toggle("on", i.checked); render(); });
+  });
+  document.querySelector("[data-gen]").addEventListener("click", function () {
+    var n = picked(); if (!n || level() === "blocked") return;
+    var cost = n * avg(); st.spent += cost; st.mocks += n;
+    document.querySelectorAll('[data-v="B"] .tpl-card input').forEach(function (i) { i.checked = false; i.parentNode.classList.remove("on"); });
+    var ok = document.querySelector("[data-gen-ok]");
+    document.querySelector("[data-gen-oktext]").textContent = "Kész: " + n + " mock (szimuláció: ≈ " + usd(cost) + " hozzáadva a mai összeghez).";
+    ok.hidden = false;
+    render();
+  });
+  if (window.matchMedia && window.matchMedia("(min-width: 900px)").matches) document.querySelector('[data-size="desktop"]').click();
+  render();
+  document.querySelector('[data-st="dev"]').setAttribute("aria-pressed", "true");
+})();
+</script>
+</body>
+</html>
