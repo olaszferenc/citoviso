@@ -4852,6 +4852,8 @@ export interface GenerateState {
   /** Elkészült / összes sablon. Több sablonnál EZ a becsületes haladás-jel. */
   readonly done?: number;
   readonly total?: number;
+  /** Kurátori szöveggel fut — a „copy” szakasz felirata ezt mondja ki, nem „szöveg generálása”. */
+  readonly curated?: boolean;
   readonly outcome?: {
     ok: boolean;
     message: string;
@@ -4863,11 +4865,12 @@ export interface GenerateState {
 }
 
 /** Szakasz-kulcs → a kurátornak mutatott felirat (a KULCS utazik, a szöveg itt születik). */
-function stageLabel(stage: GenStageKey, lang: string): string {
+function stageLabel(stage: GenStageKey, lang: string, curated = false): string {
   const L: Record<GenStageKey, string> = {
     load: T(lang, "adatok betöltése"),
     photos: T(lang, "fotók gyűjtése és szűrése"),
-    copy: T(lang, "szöveg generálása"),
+    // Curator copy: no writer call in this stage, only the guards judge the given text.
+    copy: curated ? T(lang, "kurátori szöveg ellenőrzése — AI nem ír") : T(lang, "szöveg generálása"),
     render: T(lang, "oldal renderelése"),
   };
   return L[stage];
@@ -5873,7 +5876,7 @@ export function leadPage(
   const progress = multi
     ? T(lang, "{done}/{total} mock kész", { done: String(gen.done ?? 0), total: String(gen.total ?? 0) })
     : gen.stage
-      ? `${stageLabel(gen.stage, lang)}…`
+      ? `${stageLabel(gen.stage, lang, gen.curated)}…`
       : "";
   /**
    * ⭐ A LEZÁRÓ SOR (FK-003b L06). Eddig a futás VÉGÉT semmi nem mondta ki: a sáv

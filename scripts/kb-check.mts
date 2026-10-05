@@ -64,6 +64,9 @@ const VIEW_GROUPS = {
     // enter this list, or the handbook could quote a header the console stopped
     // rendering (feedback_guard_scope_is_the_doctrine).
     "src/console/leadFilters.ts",
+    // Poe curator surface (Forrás-csomag tab + curated-copy form): its labels live HERE,
+    // the lead page only mounts it — the handbook quotes them.
+    "src/console/curatorViews.ts",
     "src/console/partnerViews.ts",
     // The document-type catalog: the "Vevői számla"/"Szállítói számla" labels the
     // views render live HERE (single source shared with the register route).

@@ -456,6 +456,61 @@ pillanatkép, ezért panel sincs — generálj újat, és megjelenik.
 4. A „csak a problémák” pipával a panel elrejti az egészséges részeket, és csak a piros
    chipes elemeket meg a figyelmeztetéseket hagyja fent — gyors ellenőrzéshez.
 
+## Forrás-csomag és generálás kurátori szöveggel (Poe)
+
+Ha a mock szövegét nem az AI-szövegíró írja, hanem egy kurátor (Poe, a digitális munkatárs, vagy
+te magad), ezt a két felületet használod. Mindkettő ugyanazt a forrás-adatot mutatja, amit a
+generálás a szövegírónak adna — se többet, se kevesebbet.
+
+### A „Forrás-csomag” fül — mit szabad állítani?
+
+A lead-lap **„Forrás-csomag”** füle (a mockok füle után) csak olvas: a megnyitása semmit nem hív
+(Places, AI), a lap alján ki is mondja: **„Tárolt adat — a lap megnyitása semmit nem hív (Places, AI).”**
+Fentről lefelé:
+
+1. **„Azonosság és hely”** — a név és a hely, amit a szöveg megnevezhet. Ha a régiónak nincs
+   adata, kimarad, és a szövegíró sem találhat ki régiót.
+2. **„Valós számok”** — szám a szövegben csak innen jöhet (például a Google-átlag). Ami itt
+   nincs (szobaszám, m², km, ár), az kitalált tény.
+3. **„Igazolt szolgáltatások”** — a portál jellemző-listája és a leírásból kiemelt tételek. A
+   „leírásból” jelölésű tétel szó-egyezés: a leírás szövegében ellenőrizd, mielőtt építesz rá.
+4. **„Portál-leírások”** — a levágott leírások (a tulaj saját bemutatkozása elöl). Idézet-alapú
+   tény csak ebből és a vendég-hangból lehet. A **„Teljes szöveg”** gomb kinyitja a levágott részt.
+5. **„Vendég-hang”** — a szövegíróhoz menő vélemények. A kiszűrtek is látszanak, áthúzva, az
+   okkal (4★ alatti, túl rövid, duplikátum, a kereten túli). Ha a tárolt Google-vélemények
+   30 napnál régebbiek, a fül nem kéri le újra őket — azt írja, hogy **„a generálás frissíti”**.
+6. **„A modell által látott fotók”** — a tárolt fotók közül csak az első négyet látja a modell.
+   Amit a szöveg a képről állít, annak ezeken kell látszania.
+7. **„Kitöltendő mezők sablononként”** — melyik szöveg-mező kerül ki a lapra az egyes
+   sablonokon („látszik” / „nem látszik”). Telefonon a táblázat oldalra görgethető.
+8. **„Szobák”** — **„a szövegíró NEM látja”**: a szobák egyenesen a szoba-szakaszba kerülnek, a
+   szövegben szobaszámot és szobanevet ne írj.
+9. **„A csomag nyersen”** — a **„Megnyitom”** gombbal a teljes csomag JSON-ban, ellenőrzéshez.
+
+### Az űrlap — „Generálás kurátori szöveggel”
+
+Két helyről éred el, és mindkettő ugyanaz az űrlap: a **„Mock és generálás”** fülön a
+**„Generálás kurátori szöveggel”** lenyíló panel, vagy a mellette álló **„saját lapon”** link
+(`/lead/<azonosító>/curate`). A saját lap címe `?t=sablon1,sablon2` résszel előre bepipálja a
+sablonokat — Neo ezt az URL-t írja a jegyébe.
+
+1. Válassz **1 vagy 2 sablont** — mindkettő ugyanazt a szöveget kapja. A harmadiknál a gomb
+   tiltott: **„Legfeljebb 2 sablon.”**
+2. Töltsd ki a mezőket. Mindegyik alatt zöld címke mutatja, melyik bepipált sablonon látszik;
+   a szürke („NEM látszik”) mező azon a sablonon nem kerül ki a lapra. A főcím, az alcím, a
+   bemutatkozó bekezdés és legalább egy kiemelés kötelező. A dőlt kiemelésnek szó szerint a
+   főcímben kell állnia — az **„Így jelenik meg:”** sor mutatja az eredményt.
+3. Kiemelést a **„+ Új kiemelés”**, idézett tényt a **„+ Új tény”** gombbal adsz hozzá. A tény
+   idézetének SZÓ SZERINT a forrásban kell lennie (portál-leírás vagy vélemény) — ha nem
+   egyezik, a tény kiesik, de a generálás nem áll meg.
+4. Gépelés közben a szerver ugyanazokkal a szabályokkal ellenőriz, mint a generálás: alul
+   összegző sor áll („… hiba — így nem generálható.” vagy „Generálható · … mock”), alatta a
+   figyelmeztetések (például berendezés-leírásból álló kiemelés, ami kiesik).
+5. A **„Generálás ezzel a szöveggel”** gomb indít. AI-szövegíró nem fut: a gép a fotókat és a
+   kinézetet adja, a három őr egyszer ítél. A haladás-sáv a szöveg-szakaszban ezt írja:
+   **„kurátori szöveg ellenőrzése — AI nem ír”**. Ha a napi AI-keret elfogyott, a gomb tiltott.
+6. Az elkészült mock kártyáján pirula mondja ki, ki írta a szöveget (Poe-nál: „Poe írta”).
+
 ## A mock-kártya pillanatképe
 
 Minden mock a saját **kártyáján** ül, és a kártya tetején egy pillanatkép mutatja, hogyan néz

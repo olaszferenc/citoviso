@@ -359,6 +359,8 @@ interface GenRun {
   done: number;
   /** Hány sablon indult összesen. */
   total: number;
+  /** Kurátori szöveggel fut: a „copy” szakaszban AI nem ír, csak az őrök ítélnek. */
+  curated: boolean;
 }
 const generating = new Map<string, GenRun>();
 /** Egy generálás ~1-2 perc; ezen túl a bejegyzés halott, nem „fut". */
@@ -412,7 +414,7 @@ function startGenerateRun(
   extra: Pick<GenerateOpts, "curatorPrompt" | "curatorCopy">,
 ): void {
   const startedAt = Date.now();
-  generating.set(id, { startedAt, stage: null, done: 0, total: picks.length });
+  generating.set(id, { startedAt, stage: null, done: 0, total: picks.length, curated: !!extra.curatorCopy });
   generateOutcome.delete(id); // az új futás nem a régi kimenete alatt fut
   void loadLead(id)
     .then((loaded) =>
@@ -2165,6 +2167,7 @@ async function handle(
           stage: generating.get(leadMatch[1]!)?.stage ?? null,
           done: generating.get(leadMatch[1]!)?.done ?? 0,
           total: generating.get(leadMatch[1]!)?.total ?? 0,
+          curated: generating.get(leadMatch[1]!)?.curated ?? false,
           outcome: lastGenerateOutcome(leadMatch[1]!),
         },
         conversion, orders, payments, prospects,

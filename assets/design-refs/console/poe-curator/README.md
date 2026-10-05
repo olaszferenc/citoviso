@@ -10,9 +10,19 @@ Tulajdonosi döntés: **2026-10-05 ~11:45**, a koordinátoron át:
 Ez a terv a megvalósítás **KONTRAKTUSA**: elvárt viselkedés, nem stílus-javaslat. A szöveget a
 kurátor (Poe, a digitális munkatárs) írja a Forrás-csomagból; a gép a fotókat és a kinézetet adja.
 
-> ⚠️ A felület-kód még NEM landolt (ez a land csak a befagyasztás + a szerver-oldal). A kötő
-> `**„…”**` feliratok a felület-landdal kerülnek ide, a **Hatókör** sorral együtt — addig a
-> `contract-drift-check` csak a szerkezetet (HTML + README + kép, a JS parse-ol) ellenőrzi.
+**Hatókör:** `src/console/curatorViews.ts` · `src/console/views.ts`
+
+Kötő feliratok (a kódban szó szerint így):
+- A lead-lap füle: **„Forrás-csomag”** · blokkok: **„Kitöltendő mezők sablononként”**, a szobák
+  jelölése **„a szövegíró NEM látja”**, az elavult Google-vélemény mellett **„a generálás frissíti”**.
+- Az űrlap: **„Generálás kurátori szöveggel”** · gombok: **„+ Új kiemelés”**, **„+ Új tény”**,
+  **„Generálás ezzel a szöveggel”**.
+- A haladás-sáv a kurátori futás szöveg-szakaszában: **„kurátori szöveg ellenőrzése — AI nem ír”**.
+- A mock-kártya pirulája a `copyManual.by` nevét viseli („Poe írta” — összerakott mondat, nem literál).
+
+Eltérés a mocktól (tudatos): a „Neo jegye” oldalkártya helyett a saját lap `?t=a,b` paramétere
+előjelöli Neo sablonjait (max 2; a jegy fájlja a konzolon kívül él); a vélemény-szűrő gombsor
+(Mind/★1–2/★4–5) helyett a kiszűrt vélemény áthúzva, okkal áll (a lista legfeljebb 10 elem).
 
 Referenciák (VALÓS adat: Mandula vendégház, Badacsonytomaj, dev-lead `ac901b05`):
 - `forras.html` — ① Forrás-csomag nézet. „Állapot” kapcsolók: elavult Google-vélemény, ismeretlen régió.
@@ -63,7 +73,7 @@ A mock JS-e a valódi szabályokat tükrözi (`normalizeCopy`, `isDecorFiller`, 
 
 ---
 
-## Szerver-oldal (ebben a landban)
+## Szerver-oldal
 
 - `src/generator/writerSources.ts` — a szövegíró forrás-csomagja, tiszta függvény (motor + nézet).
 - `POST /lead/:id/curated-check` — JSON-ból `{ ok, errors, warnings, copy }`; a lead csomagja a korpusz.

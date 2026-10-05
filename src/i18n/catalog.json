@@ -2778,6 +2778,7 @@
   "Közzétett e-mail cím",
   "Közzétett telefonszám",
   "Kurátor-prompt (opcionális — hangvétel/hangsúly; tényt nem adhat hozzá)",
+  "kurátori szöveg ellenőrzése — AI nem ír",
   "Küldés e-mailben — {email}",
   "Küldés előtt javítsd a szöveget — vagy küldéskor a felugróban vállald („Kiküldöm mégis”).",
   "Küldés folyamatban — az idővonal lent mutatja, hol tart. A lap magától frissül.",
