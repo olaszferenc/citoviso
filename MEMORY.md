@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-05 (📱 **Pilot-másolat a mobil-megkeresésről**: `OUTREACH_COPY_PHONE` → minden hideg outreach SMS/MMS másolata a tulajnak (`src/outreach/pilotCopy.ts`, őr `pilot-copy-check`); e-mail BCC élesen már aktív (`EMAIL_BCC`); élesen az env a nagy deploy után állítandó; jegyzet `_planning/memory/2026-10-05_pilot_mobil_masolat.md`)
+Utolsó frissítés: 2026-10-05 (📱 **Pilot-másolat a mobil-megkeresésről**: `OUTREACH_COPY_PHONE` → minden hideg outreach SMS/MMS másolata a tulajnak (`src/outreach/pilotCopy.ts`, őr `pilot-copy-check`); e-mail BCC élesen már aktív (`EMAIL_BCC`); ÉLES 2026-10-05 11:26 (`prod/20261005-1126`, env beállítva); jegyzet `_planning/memory/2026-10-05_pilot_mobil_masolat.md`)
 
 Utolsó frissítés: 2026-10-05 (💲 **AI-plafon utómunka** (SUB): a recopy HOZZÁADJA a költségét az `aiUsage`-hoz (dátumozott `runs`, a napi összeg a futás napjára számol); a konzol sablon-kötege LÉPCSŐZVE indul (`src/console/staggeredBatch.ts`) — dev: köteg $0.880 → $0.679, 2. tag $0.456 → $0.265; jegyzet `_planning/memory/2026-10-05_ai_plafon_recopy_es_koteg_cache.md`)
 
