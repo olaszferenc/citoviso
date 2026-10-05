@@ -21,7 +21,7 @@
 // page under a prospect who has the link is exactly the bait-and-switch the §I
 // invariant forbids — what we showed them is what they get.
 
-import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
+import { addRunToArtifactUsage, currentAiUsage, formatUsage } from "../ai/usage.js";
 import { AiDailyCapError, withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
 
@@ -95,7 +95,7 @@ export async function recopyArtifact(
 async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<RecopyResult> {
   const row = await db
     .selectFrom("mock_artifact")
-    .select(["id", "lead_id", "path", "status", "inputs"])
+    .select(["id", "lead_id", "path", "status", "inputs", "generated_at"])
     .where("id", "=", artifactId)
     .executeTakeFirst();
   if (!row) return { ok: false, message: "Nincs ilyen mock-artefaktum." };
@@ -295,7 +295,8 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
         marketFactsNamed: market?.factsNamed ?? [],
         marketMissed: market?.missed ?? [],
         ...criticInputs,
-        aiUsage: usageForArtifact(currentAiUsage()),
+        // ADDED to the generation's spend, never overwriting it (dated per run for the daily cap).
+        aiUsage: addRunToArtifactUsage(inputs.aiUsage, new Date(row.generated_at as unknown as string), currentAiUsage(), new Date()),
         // Audit trail: what the curator asked for on THIS rewrite.
         ...(curatorPrompt?.trim() ? { recopyPrompt: curatorPrompt.trim() } : {}),
       } as never,

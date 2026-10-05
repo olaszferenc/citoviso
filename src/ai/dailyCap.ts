@@ -6,8 +6,8 @@
  * spending without limit. Dev and prod share ONE API key, so either side can burn the day.
  *
  * Rules (bound by the owner, not tunable here):
- *  - Only MOCK spend counts: the sum of `mock_artifact.inputs.aiUsage.costUsd` for rows
- *    generated on today's Europe/Budapest calendar day.
+ *  - Only MOCK spend counts: `mock_artifact.inputs.aiUsage` spent on today's Europe/Budapest
+ *    calendar day — generation and every recopy, each on the day it ran (rowSpendTodaySql).
  *  - The ceiling comes ONLY from the env (`AI_DAILY_CAP_USD`, default 20) — never an
  *    app_setting, never editable from the console.
  *  - At or above the ceiling every generation entry point refuses BEFORE any AI call.
@@ -18,7 +18,7 @@
  * Known slack: parallel runs started in the same instant each see the pre-run total, so one
  * multi-template batch can cross the line by its own cost. The NEXT start is refused.
  */
-import { sql } from "kysely";
+import { type RawBuilder, sql } from "kysely";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { APP_TZ } from "../text/zoneTime.js";
@@ -57,13 +57,33 @@ export function isCapReached(spentUsd: number, capUsd: number): boolean {
   return spentUsd >= capUsd;
 }
 
+/**
+ * One row's spend on today's APP_TZ day, as a SQL expression over `inputs` / `generated_at`.
+ * A row with dated `runs` (written since recopy ADDS its cost — src/ai/usage.ts
+ * addRunToArtifactUsage) counts the runs dated today, so a recopy of yesterday's mock is
+ * today's spend and today's generation survives its own recopy. A row without `runs` is a
+ * plain generation: its total counts on its generated_at day. Exported for the guard.
+ */
+export function rowSpendTodaySql(inputs: RawBuilder<unknown>, generatedAt: RawBuilder<unknown>): RawBuilder<unknown> {
+  return sql`case
+    when jsonb_typeof(${inputs}->'aiUsage'->'runs') = 'array' then
+      (select coalesce(sum((r->>'costUsd')::numeric), 0)
+         from jsonb_array_elements(${inputs}->'aiUsage'->'runs') r
+        where ((r->>'at')::timestamptz at time zone ${APP_TZ})::date = (now() at time zone ${APP_TZ})::date)
+    when (${generatedAt} at time zone ${APP_TZ})::date = (now() at time zone ${APP_TZ})::date then
+      coalesce((${inputs}->'aiUsage'->>'costUsd')::numeric, 0)
+    else 0
+  end`;
+}
+
 /** Today's (APP_TZ) measured mock spend against the ceiling. */
 export async function mockSpendToday(): Promise<MockSpendToday> {
+  const today = sql`(generated_at at time zone ${APP_TZ})::date = (now() at time zone ${APP_TZ})::date`;
   const row = await sql<{ usd: string | null; n: string }>`
-    select coalesce(sum((inputs->'aiUsage'->>'costUsd')::numeric), 0)::text as usd,
-           count(*)::text as n
+    select coalesce(sum(${rowSpendTodaySql(sql.ref("inputs"), sql.ref("generated_at"))}), 0)::text as usd,
+           (count(*) filter (where ${today}))::text as n
       from mock_artifact
-     where (generated_at at time zone ${APP_TZ})::date = (now() at time zone ${APP_TZ})::date`.execute(db);
+     where ${today} or jsonb_typeof(inputs->'aiUsage'->'runs') = 'array'`.execute(db);
   const spentUsd = Number(row.rows[0]?.usd ?? 0);
   const mocks = Number(row.rows[0]?.n ?? 0);
   const capUsd = aiDailyCapUsd();

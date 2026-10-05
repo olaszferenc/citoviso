@@ -15,6 +15,8 @@
 //  ③ viselkedés, plafon = 0 mellett: a motor AiDailyCapError-ral utasít el MIELŐTT bármi
 //     futna, a recopy ok:false-t ad a plafon-üzenettel. Hamis API-kulccsal fut — ha a kapu
 //     elengedne, a hívás hitelesítési hibán bukna, nem költene.
+//  ④ a recopy HOZZÁADJA a költségét (nem írja felül): a nap összege = generálás + recopy,
+//     a futásokat a saját napjukra számolja (a valódi SQL-t fixture-sorokon, DB-írás nélkül).
 //
 // Se AI, se hálózat; DB: egyetlen olvasás (~2s). Futtatás: npx tsx scripts/ai-daily-cap-check.mts
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -58,6 +60,13 @@ for (const [rel, fn] of Object.entries(ENTRY)) {
   }
   const body = src.slice(start, start + 900);
   if (!/withMockBudget\s*\(/.test(body)) fail(`${rel}: a(z) ${fn} nem withMockBudget()-tel indul.`);
+}
+{
+  // ④ wiring: the recopy must ADD to the stored aiUsage, never overwrite it with its own run.
+  const src = readFileSync(join(ROOT, "src/generator/recopy.ts"), "utf8");
+  if (!/aiUsage:\s*addRunToArtifactUsage\(\s*inputs\.aiUsage/.test(src) || /usageForArtifact\(/.test(src)) {
+    fail("src/generator/recopy.ts: a recopy nem addRunToArtifactUsage(inputs.aiUsage, …)-szal írja az aiUsage-t — felülírná a generálás költségét.");
+  }
 }
 {
   const server = readFileSync(join(ROOT, "src/console/server.ts"), "utf8");
@@ -117,6 +126,58 @@ try {
       fail(`generateEngineMock nem AiDailyCapError-ral utasított el: ${(err as Error).message.slice(0, 160)}`);
     } else if (!/napi AI-költségplafon/.test(err.message)) {
       fail(`a plafon-üzenet nem mondja ki, mi történt: ${err.message}`);
+    }
+  }
+
+  // ④ recopy ADDS (2026-10-05): after a recopy the day's total = generation + recopy.
+  {
+    const { addRunToArtifactUsage, usageForArtifact } = await import("../src/ai/usage.js");
+    const call = (step: string, costUsd: number) => ({
+      step, model: "claude-opus-4-8", inputTokens: 100, outputTokens: 10, cacheReadTokens: 5, cacheWriteTokens: 0, costUsd,
+    });
+    const totals = (calls: ReturnType<typeof call>[]) => ({
+      calls: calls.length,
+      inputTokens: calls.length * 100,
+      outputTokens: calls.length * 10,
+      cacheReadTokens: calls.length * 5,
+      cacheWriteTokens: 0,
+      costUsd: calls.reduce((s, c) => s + c.costUsd, 0),
+      unpricedCalls: 0,
+      perCall: calls,
+    });
+    const gen = usageForArtifact(totals([call("brief", 0.4), call("guestCritic", 0.1)]));
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 36 * 3_600_000);
+    const merged = addRunToArtifactUsage(gen, now, totals([call("brief", 0.2)]), now) as {
+      costUsd: number; calls: number; byStep: Record<string, { costUsd: number }>; runs: { kind: string; costUsd: number }[];
+    };
+    if (Math.abs(merged.costUsd - 0.7) > 1e-9) fail(`recopy-összeadás: costUsd=${merged.costUsd}, várt 0.7 (generálás 0.5 + recopy 0.2).`);
+    if (merged.calls !== 3) fail(`recopy-összeadás: calls=${merged.calls}, várt 3.`);
+    if (merged.byStep.brief?.costUsd !== 0.4 || merged.byStep["recopy:brief"]?.costUsd !== 0.2) {
+      fail(`recopy-összeadás: a lépésbontás elveszett/összemosódott: ${JSON.stringify(merged.byStep)}`);
+    }
+    if (merged.runs.map((r) => r.kind).join(",") !== "generate,recopy") fail(`recopy-összeadás: runs=${JSON.stringify(merged.runs)}`);
+    const twice = addRunToArtifactUsage(merged, now, totals([call("brief", 0.1)]), now) as { costUsd: number; runs: unknown[] };
+    if (Math.abs(twice.costUsd - 0.8) > 1e-9 || twice.runs.length !== 3) fail(`második recopy: costUsd=${twice.costUsd}, runs=${twice.runs.length}`);
+    const legacy = addRunToArtifactUsage(undefined, now, totals([call("brief", 0.2)]), now) as { costUsd: number; runs: unknown[] };
+    if (Math.abs(legacy.costUsd - 0.2) > 1e-9 || legacy.runs.length !== 1) fail(`mérő előtti sor recopy-ja: ${JSON.stringify(legacy)}`);
+
+    // The SQL the cap really runs, over fixture rows (no DB write): it must agree.
+    const { sql } = await import("kysely");
+    const oldGenRecopiedToday = addRunToArtifactUsage(gen, yesterday, totals([call("brief", 0.2)]), now);
+    const cases: [string, unknown, Date, number][] = [
+      ["mai generálás, recopy nélkül", { inputs: { aiUsage: gen } }, now, 0.5],
+      ["mai generálás + mai recopy", { inputs: { aiUsage: merged } }, now, 0.7],
+      ["tegnapi generálás + mai recopy", { inputs: { aiUsage: oldGenRecopiedToday } }, yesterday, 0.2],
+      ["tegnapi generálás, recopy nélkül", { inputs: { aiUsage: gen } }, yesterday, 0],
+      ["mérő előtti sor", { inputs: {} }, now, 0],
+    ];
+    for (const [name, v, at, want] of cases) {
+      const inputs = sql`${JSON.stringify((v as { inputs: unknown }).inputs)}::jsonb`;
+      const genAt = sql`${at.toISOString()}::timestamptz`;
+      const r = await sql<{ usd: string }>`select (${cap.rowSpendTodaySql(inputs, genAt)})::text as usd`.execute(db);
+      const got = Number(r.rows[0]?.usd);
+      if (Math.abs(got - want) > 1e-9) fail(`rowSpendTodaySql „${name}”: ${got}, várt ${want}.`);
     }
   }
 

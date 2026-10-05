@@ -181,6 +181,74 @@ export function usageForArtifact(u: AiUsageTotals): Record<string, unknown> {
   };
 }
 
+/** One metered run on an artifact, dated — the daily cap sums these by the day they were spent. */
+export interface ArtifactUsageRun {
+  readonly kind: "generate" | "recopy";
+  /** ISO timestamp of the run. */
+  readonly at: string;
+  readonly costUsd: number;
+}
+
+/** byStep key prefix of a recopy's calls — keeps them apart from the generation's same-named steps. */
+export const RECOPY_STEP_PREFIX = "recopy:";
+
+/**
+ * A recopy ADDS its spend to the artifact's `aiUsage` instead of overwriting it (2026-10-05).
+ *
+ * WHY: the overwrite made a mock's generation cost vanish the moment it was re-copied, so
+ * the daily cap under-measured exactly the busiest mocks. Totals are summed, the recopy's
+ * steps land under `recopy:<step>` (the per-step hover stays readable), and every run is
+ * kept in `runs` with its date — a recopy of yesterday's mock is today's spend.
+ *
+ * Backward compatible: a row with no `aiUsage` (pre-meter) counts as zero; a row with a
+ * total but no `runs` gets its generation run synthesised at `prevAt` (its generated_at).
+ */
+export function addRunToArtifactUsage(
+  prev: unknown,
+  prevAt: Date,
+  add: AiUsageTotals,
+  at: Date,
+): Record<string, unknown> {
+  const p = (typeof prev === "object" && prev !== null ? prev : {}) as Record<string, unknown>;
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const next = usageForArtifact(add);
+  const nextSteps = next.byStep as Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number }>;
+
+  const byStep: Record<string, { calls: number; inputTokens: number; outputTokens: number; costUsd: number }> = {};
+  const prevSteps = typeof p.byStep === "object" && p.byStep !== null ? (p.byStep as Record<string, unknown>) : {};
+  for (const [k, v] of Object.entries(prevSteps)) {
+    const s = (typeof v === "object" && v !== null ? v : {}) as Record<string, unknown>;
+    byStep[k] = { calls: num(s.calls), inputTokens: num(s.inputTokens), outputTokens: num(s.outputTokens), costUsd: num(s.costUsd) };
+  }
+  for (const [k, s] of Object.entries(nextSteps)) {
+    const key = `${RECOPY_STEP_PREFIX}${k}`;
+    const e = (byStep[key] ??= { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 });
+    e.calls += s.calls;
+    e.inputTokens += s.inputTokens;
+    e.outputTokens += s.outputTokens;
+    e.costUsd = round6(e.costUsd + s.costUsd);
+  }
+
+  const prevRuns: ArtifactUsageRun[] = Array.isArray(p.runs)
+    ? (p.runs as ArtifactUsageRun[])
+    : typeof p.costUsd === "number"
+      ? [{ kind: "generate", at: prevAt.toISOString(), costUsd: round6(p.costUsd) }]
+      : [];
+  const runs: ArtifactUsageRun[] = [...prevRuns, { kind: "recopy", at: at.toISOString(), costUsd: round6(add.costUsd) }];
+
+  return {
+    calls: num(p.calls) + add.calls,
+    inputTokens: num(p.inputTokens) + add.inputTokens,
+    outputTokens: num(p.outputTokens) + add.outputTokens,
+    cacheReadTokens: num(p.cacheReadTokens) + add.cacheReadTokens,
+    cacheWriteTokens: num(p.cacheWriteTokens) + add.cacheWriteTokens,
+    costUsd: round6(num(p.costUsd) + add.costUsd),
+    unpricedCalls: num(p.unpricedCalls) + add.unpricedCalls,
+    byStep,
+    runs,
+  };
+}
+
 function round6(n: number): number {
   return Math.round(n * 1_000_000) / 1_000_000;
 }
