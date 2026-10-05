@@ -1,4 +1,4 @@
-## ADR-XXXX — Szövegkurátor (Poe): a mock szövegét perszóna írja, az őrök egyszer, csak ítélnek
+## ADR-0326 — Szövegkurátor (Poe): a mock szövegét perszóna írja, az őrök egyszer, csak ítélnek
 
 **Dátum:** 2026-10-05 · **Státusz:** elfogadva (lokál; élesre csak a nagy deployjal) ·
 **Kiegészíti:** ADR-0325 (Neo az Inas), ADR-0323 (kézi szöveg), ADR-0292 (vendég-kritikus) ·

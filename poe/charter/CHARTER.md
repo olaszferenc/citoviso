@@ -1,7 +1,7 @@
 # POE — munkaköri charter (digitális szövegkurátor)
 
 > Tulajdonosi megbízás: 2026-10-05 („Nem is programozó kell, hanem szövegkurátori munkatárs”).
-> Döntés: ADR-XXXX (`_planning/decisions/XXXX-szovegkurator-poe.md`). Társ: Neo, az inas
+> Döntés: ADR-0326 (`_planning/decisions/XXXX-szovegkurator-poe.md`). Társ: Neo, az inas
 > (`neo/charter/`). Minta: Neo — egy kolléga, nem egy szkript.
 > Ez a fájl MINDEN munkanapod első olvasmánya, a `RUNBOOK.md`-vel és az `ONTOLOGIA.md`-vel együtt.
 

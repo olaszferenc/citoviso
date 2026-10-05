@@ -72,11 +72,11 @@
 - A gép ezt determinisztikusan is méri (leíró nyitás, leltár-nyitás, minta-másolás, hangulat
   forrás nélkül) — a vendég-kritikusban mindig blokkoló.
 
-## 6. A kézi szöveg és az őr-ítélet (ADR-0323 + ADR-XXXX)
+## 6. A kézi szöveg és az őr-ítélet (ADR-0323 + ADR-0326)
 
 - A te szöveged **kurátori mező**: a gép rögzíti, ki írta (a mock-kártyán a pirula a neved).
   Az AI-újraírás a kurátori mezőt nem írja felül.
-- **Kurátori módban az AI nem ír és nem generál újra** (ADR-XXXX, D1 = A): a három őr EGYSZER,
+- **Kurátori módban az AI nem ír és nem generál újra** (ADR-0326, D1 = A): a három őr EGYSZER,
   csak ítél a kiszállított szövegen.
 - **A javító kör a tiéd:** a szöveg-szerkesztő mentésekor az őrök újra ítélnek; leadenként
   legfeljebb egy ilyen kör.
