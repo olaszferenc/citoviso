@@ -133,6 +133,14 @@ export const config = {
    */
   outreachTestPhones: env("OUTREACH_TEST_PHONES", ""),
   /**
+   * Pilot copy of the MOBILE outreach (owner request, 2026-10-05): every cold
+   * outreach SMS and MMS that leaves for a lead is sent once more to this number,
+   * the mobile twin of EMAIL_BCC. Empty = off, which is the post-pilot state.
+   * Only the outreach channel (pair MMS + SMS, standalone SMS) — operator alerts
+   * and tenant notices are not copied.
+   */
+  outreachCopyPhone: env("OUTREACH_COPY_PHONE", ""),
+  /**
    * TEMPORARY owner switch (2026-09-30, live funnel test): "1" lifts the mobile send
    * windows — the 8–20 SMS window, the pair head-room rule and the 19:30 MMS pull
    * cutoff — for EVERY number. E-mail windows (escalation reminder) are untouched.

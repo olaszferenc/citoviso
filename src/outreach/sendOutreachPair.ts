@@ -38,6 +38,7 @@ import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
 import { sendSms } from "../sms/sender.js";
 import { ensureMmsJpeg, sendMms } from "../mms/sender.js";
 import { config } from "../config.js";
+import { copyOutreachMms, copyOutreachSms } from "./pilotCopy.js";
 
 export interface PairJobState {
   /** mms = uploading to the modem; sms = companion text; done/failed = terminal. */
@@ -171,6 +172,8 @@ export async function startOutreachPair(
     // Enqueue only; the relay's ack claims (mms_sent_at) and starts the SMS half.
     const mms = await sendMms({ to, imagePath: jpeg, subject: asciiSubject(d.input.leadName), prospectId });
     if (!mms.ok) return { ok: false, message: `MMS-hiba: ${mms.error ?? "ismeretlen"} — semmi nem ment ki` };
+    // Pilot copy: queued right BEHIND the lead's row (the relay drains by created_at).
+    await copyOutreachMms(d.input.leadName, to, jpeg, asciiSubject(d.input.leadName));
     jobs.set(prospectId, { phase: "mms", startedAt: new Date().toISOString() });
     return { ok: true, message: "az MMS sorba került — a dev gép relay-e küldi (~1–3 perc), utána megy a kísérő SMS" };
   }
@@ -203,6 +206,9 @@ export async function startOutreachPair(
     }
     jobs.set(prospectId, { phase: "sms", startedAt: now.toISOString(), mmsMessageId: mms.messageId });
     await sendPairSmsHalf(prospectId, now);
+    // Pilot copy AFTER the companion SMS: the copy occupies the modem for ~90 s,
+    // and the lead must not wait that long for the link + opt-out.
+    await copyOutreachMms(d.input.leadName, to, jpeg, asciiSubject(d.input.leadName));
   })();
 
   return { ok: true, message: "a páros küldése elindult — az idővonal mutatja, hol tart" };
@@ -248,6 +254,7 @@ export async function sendPairSmsHalf(
     // ADR-0083: the claim STAYS (the lead saw the image); only the SMS half retries.
     return fail("a kísérő SMS elhasalt (modem/relay hiba) — a pár claimje marad, az SMS-fele újraküldhető");
   }
+  await copyOutreachSms(gate.d.input.leadName, gate.to, pairSms.text);
 
   const now = new Date();
   // ADR-0286: the intro percent binds from the first message on.

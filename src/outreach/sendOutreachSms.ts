@@ -48,6 +48,7 @@ import { huArticleLower } from "../hu.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { isLiveHost } from "../invoicing/keyGuard.js";
+import { copyOutreachSms } from "./pilotCopy.js";
 
 export interface SmsSendReport {
   readonly ok: boolean;
@@ -358,6 +359,7 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
       .execute();
     return no("az SMS küldése nem sikerült (modem/relay hiba) — a szerver-log mondja meg, miért; újra próbálható");
   }
+  await copyOutreachSms(d.input.leadName, to, d.sms.text);
 
   // ADR-0286: the intro percent binds from the first message on (the SMS quotes none,
   // but a later mail to this lead must quote — and honour — the same one).
