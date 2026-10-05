@@ -1908,6 +1908,14 @@ if [ -f scripts/description-fact-label-check.mts ] && \
   echo "[pre-commit] description-fact-label-check (a tény-címke nem állít többet a forrásnál)…"
   npx tsx scripts/description-fact-label-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Piac ↔ Vendég-kritikus (ADR-XXXX, Poe-pilot 2026-10-05): a leírás szava csak akkor tény, ha
+# ÁLLÍTJA (tagadás, „reggeli után”, név-rész, távoli látnivaló nem), és amit a VK kifogásolt, azt
+# a Piac nem kérheti eladási pontként. ⚠️ ÖN-TRIGGER. Se AI, se hálózat, se DB.
+if [ -f scripts/market-vk-precedence-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(marketCheck|generateEngine|recopy|copyManual)\.ts$|^scripts/market-vk-precedence-check\.mts$'; then
+  echo "[pre-commit] market-vk-precedence-check (a Piac a Vendég-kritikusnak alárendelve)…"
+  npx tsx scripts/market-vk-precedence-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Guest-voice star gate (2026-10-05, Mandula): only ≥4★ (or unrated) reviews reach the
 # copywriter; one chain for the engine and the source-pack view. ⚠️ ÖN-TRIGGER.
 # Se AI, se hálózat, se DB (~2s).

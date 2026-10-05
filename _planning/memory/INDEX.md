@@ -9,6 +9,7 @@
 - [2026-10-05_sajat_megnyitas_nem_szamit.md](2026-10-05_sajat_megnyitas_nem_szamit.md) — 2026-10-05 — A tulaj saját mock-megnyitása nem számít (`?sajat=1`)
 - [2026-10-05_poe_szovegkurator.md](2026-10-05_poe_szovegkurator.md) — 2026-10-05 — Poe, a szövegkurátor: kód + konzol + charter + ADR (SUB-lánc, 10 session)
 - [2026-10-05_pilot_mobil_masolat.md](2026-10-05_pilot_mobil_masolat.md) — 2026-10-05 — Pilot-másolat a mobil-megkeresésről (SMS/MMS a tulajnak)
+- [2026-10-05_piac_vk_elsobbseg.md](2026-10-05_piac_vk_elsobbseg.md) — 2026-10-05 — Piac-kapu a Vendég-kritikusnak alárendelve (SUB, Poe-pilot 1–2. ügy)
 - [2026-10-05_crm_widget_mock_sorok.md](2026-10-05_crm_widget_mock_sorok.md) — 2026-10-05 — CRM-widget: a két mock-sor (jóváhagyásra vár / kiküldésre vár) + Lead-sor szűrő
 - [2026-10-05_ai_plafon_recopy_es_koteg_cache.md](2026-10-05_ai_plafon_recopy_es_koteg_cache.md) — 2026-10-05 — AI-plafon utómunka: a recopy hozzáad + lépcsőzött sablon-köteg (SUB)
 - [2026-10-05_ai_napi_osszeg_konzol.md](2026-10-05_ai_napi_osszeg_konzol.md) — 2026-10-05 — Napi AI-összeg a konzolon (A fejléc-pirula + B generálás-panel)

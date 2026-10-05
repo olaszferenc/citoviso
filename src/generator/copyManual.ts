@@ -44,7 +44,7 @@ import { criticFactsOf, factLeadOf, loadCopySources, marketSourceOf } from "./co
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { criticSourceOf, judgeGuestCopy } from "./guestCritic.js";
-import { verifyMarketRelevance, type MarketVerdict } from "./marketCheck.js";
+import { subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict } from "./marketCheck.js";
 import { injectRuntime } from "./runtime.js";
 
 export interface ManualCopyResult {
@@ -220,7 +220,9 @@ export async function saveManualCopy(artifactId: string, edits: Edits, actor: st
           }),
         )
       : Promise.resolve({});
-  const [fact, market, critic] = await Promise.all([factP, marketP, criticP]);
+  const [fact, marketRaw, critic] = await Promise.all([factP, marketP, criticP]);
+  // The critic wins a contradiction (ADR-XXXX): what it objected to, the market may not demand.
+  const market = subordinateToCriticInputs(marketRaw, critic, marketSourceOf(sources, siteData));
 
   await writeFile(row.path, html, "utf8");
   const patch = {

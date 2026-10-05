@@ -38,7 +38,7 @@ import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import { verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { injectRuntime } from "./runtime.js";
 
 export interface RecopyResult {
@@ -241,6 +241,8 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
       }
     }
   }
+  // The critic wins a contradiction (ADR-XXXX): what it objected to, the market may not demand.
+  if (market) market = subordinateToCriticInputs(market, criticInputs, marketSource);
 
   // Only the WORDS change; photos, palette, rooms, stats and the section order stay.
   const nextData: SiteData = {

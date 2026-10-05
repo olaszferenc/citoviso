@@ -39,7 +39,7 @@ import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
 import { MIN_GUEST_STARS } from "./guestVoice.js";
 import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
-import { groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { groupAmenities, subordinateToCriticInputs, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { fingerprintCandidates } from "./photoHash.js";
@@ -520,6 +520,8 @@ async function generateEngineMockInner(
       }
     }
   }
+  // The critic wins a contradiction (ADR-XXXX): what it objected to, the market may not demand.
+  if (market) market = subordinateToCriticInputs(market, criticInputs, marketSource);
 
   const siteData: SiteData = {
     ...(lang !== DEFAULT_LANG ? { lang } : {}),

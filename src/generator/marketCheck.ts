@@ -73,6 +73,9 @@ export interface MarketVerdict {
   readonly reason?: string;
   /** Concrete steering for ONE regeneration attempt. Empty when the verdict passed. */
   readonly critique?: string;
+  /** Set when a flag rests ONLY on missing selling points (structural layer 1 or judge rule 3) —
+   *  the one kind of finding the guest critic can overrule (subordinateToCritic, ADR-XXXX). */
+  readonly demand?: "structural" | "judge";
 }
 
 /**
@@ -216,12 +219,99 @@ function withoutPlaceNames(text: string): string {
   return text.replace(GEO_BASIN_HYPHEN, " ").replace(GEO_BASIN_SPACED, " ");
 }
 
+/**
+ * A WORD IN THE PROSE IS NOT YET A CLAIM (ADR-XXXX). Measured 2026-10-05 in the Poe pilot: a
+ * bare substring match turned five sentences that say something else into "verified services"
+ * the market gate then demanded as selling points — and the guest critic rejected:
+ *   „Garázs: nincs”                                   → Garázs    (negation)
+ *   „reggeli után azonnal megmártózzon”               → Reggeli   (a time of day, not a meal served)
+ *   „3 km-re … a Kolostorökból és Kertekből”          → Kert      (part of a place NAME)
+ *   „terasz, kilátással a kertre”                     → Panoráma  (a view of the yard)
+ *   „4 km-re … az Ábrahámhegyi strandtól”             → Strand    (a sight kilometres away)
+ * One occurrence counts only when it AFFIRMS the thing about this property. The checks are
+ * per CLAUSE (comma-split), so „a homokos strandtól 700 m-re” keeps its beach even when the
+ * next clause of the sentence measures something else in kilometres.
+ */
+const DEAC_CLAUSE_SPLIT = /[.!?;,\n]+/u;
+/** Needles that must start a word: „állatkert” is a zoo, „halászkert” a restaurant. */
+const WORD_START = new Set([
+  "kert", "strand", "reggeli", "panorama", "kilatas", "garazs", "terasz", "erkely", "etterem",
+  "grill", "bogracs", "molo", "steg",
+]);
+/** „Kertváros” is a district, not a garden. */
+const NOT_THE_THING: readonly RegExp[] = [/^kertvaros/];
+/** A named beach is still a beach („Platán Strand sétatávolságra”) — distance decides there. */
+const NAME_OK = new Set(["strand"]);
+const NEGATION_AFTER = /^\p{L}*[\s:–—-]+(?:\p{L}+\s+){0,2}?(?:nincs|nincsen|nem|nelkul|tilos)(?![\p{L}])/u;
+const NEGATION_BEFORE = /(?<![\p{L}])(?:nincs|nincsen|nem|nelkul)\s+(?:\p{L}+\s+)?$/u;
+/** A meal word followed by a postposition of time is a moment of the day, not a service. */
+const TEMPORAL_AFTER = /^\p{L}*\s+(?:utan|elott|kozben|utani|elotti|idejen)(?![\p{L}])/u;
+/** A view ONTO the yard / street / car park is no panorama. */
+const NEAR_VIEW = /^\p{L}*\s+(?:a|az)\s+(?:kert|udvar|belso|utca|parkolo|medence|haz)/u;
+const FAR_KM = /(\d+(?:[.,]\d+)?)\s*km(?![\p{L}])/gu;
+const FAR_M = /(\d[\d\s]*)\s*m(?:-|\s|$)(?!\p{L})/gu;
+
+function isFar(clauseNorm: string): boolean {
+  for (const m of clauseNorm.matchAll(FAR_KM)) if (parseFloat(m[1]!.replace(",", ".")) >= 1) return true;
+  for (const m of clauseNorm.matchAll(FAR_M)) if (parseInt(m[1]!.replace(/\s/g, ""), 10) >= 1000) return true;
+  return false;
+}
+
+/**
+ * Does any clause of the prose AFFIRM `needle` (deaccented, lowercase) about this property?
+ * Exported for the guard and for isSourcedMiss — one rule for "the prose says so".
+ */
+export function proseAffirms(needle: string, descriptions: readonly string[]): boolean {
+  for (const raw of descriptions.map(withoutPlaceNames)) {
+    for (const clauseRaw of raw.split(DEAC_CLAUSE_SPLIT)) {
+      // Same length as the raw clause (deaccent maps 1:1), so case can be read off the raw text.
+      const lowered = deaccent(clauseRaw.toLowerCase());
+      if (lowered.length !== clauseRaw.length) {
+        // Defensive: if normalisation ever changes the length, fall back to case-blind checks.
+        if (affirmsIn(needle, lowered, null)) return true;
+        continue;
+      }
+      if (affirmsIn(needle, lowered, clauseRaw)) return true;
+    }
+  }
+  return false;
+}
+
+function affirmsIn(needle: string, clause: string, rawClause: string | null): boolean {
+  let from = 0;
+  for (;;) {
+    const i = clause.indexOf(needle, from);
+    if (i < 0) return false;
+    from = i + 1;
+    const wordStart = i === 0 || !/\p{L}/u.test(clause[i - 1]!);
+    if (WORD_START.has(needle) && !wordStart) continue;
+    let ws = i;
+    while (ws > 0 && /\p{L}/u.test(clause[ws - 1]!)) ws--;
+    const word = clause.slice(ws).match(/^\p{L}+/u)?.[0] ?? needle;
+    if (NOT_THE_THING.some((re) => re.test(word))) continue;
+    if (rawClause && !NAME_OK.has(needle)) {
+      // A capitalised word in mid-clause is a name („a Kolostorökból és Kertekből”).
+      const capital = /\p{Lu}/u.test(rawClause[ws]!);
+      const before = rawClause.slice(0, ws).trimEnd();
+      if (capital && /[\p{L}\d)]$/u.test(before)) continue;
+    }
+    const after = clause.slice(i);
+    const beforeText = clause.slice(0, ws);
+    if (NEGATION_AFTER.test(after) || NEGATION_BEFORE.test(beforeText)) continue;
+    if (TEMPORAL_AFTER.test(after)) continue;
+    if ((needle === "kilatas" || needle === "panorama") && NEAR_VIEW.test(after)) continue;
+    if (isFar(clause)) continue;
+    return true;
+  }
+}
+
 export function descriptionSellingPoints(descriptions: readonly string[]): string[] {
   const hay = norm(descriptions.map(withoutPlaceNames).join(" "));
   if (!hay) return [];
   const out: string[] = [];
   for (const [needle, label] of DESCRIPTION_FACT_LABELS) {
-    if (hay.includes(needle) && !out.includes(label)) out.push(label);
+    if (out.includes(label) || !hay.includes(needle)) continue;
+    if (proseAffirms(needle, descriptions)) out.push(label);
   }
   // The narrower claim already covers the plain one (one fact, one chip).
   return out.includes("Saját parkoló") ? out.filter((l) => l !== "Parkoló") : out;
@@ -244,8 +334,12 @@ export function groupAmenities(raw: readonly string[]): AmenityGroup[] {
   return [...out].map(([label, items]) => ({ label, items }));
 }
 
+/** „Háziállat nem engedélyezett” is a listing item, and the opposite of a selling point. */
+const NEGATED_LABEL = /(?<![a-z])(?:nem|nincs|nincsen|nelkul|tilos|not|no)(?![a-z])/;
+
 function weightOf(amenity: string): number {
   const a = norm(amenity);
+  if (NEGATED_LABEL.test(a)) return 0;
   let best = 0;
   for (const [needle, w] of DECISION_WEIGHT) if (a.includes(needle) && w > best) best = w;
   return best;
@@ -399,7 +493,8 @@ export function isSourcedMiss(item: string, source: MarketSource): boolean {
     return n === m || (m.length >= 5 && n.includes(m)) || (n.length >= 5 && m.includes(n));
   };
   if ((source.amenities ?? []).some(label)) return true;
-  return (source.descriptions ?? []).some((d) => norm(d).includes(m));
+  // The prose must AFFIRM it — „Garázs: nincs” contains „garázs” and proves the opposite.
+  return proseAffirms(m, source.descriptions ?? []);
 }
 
 /**
@@ -434,7 +529,67 @@ export function applyJudgeVerdict(
     missed: [...new Set([...judgeMissed, ...ctx.missedRanked])],
     reason: parsed.reason,
     ...(parsed.verdict === "flag" && parsed.critique ? { critique: parsed.critique } : {}),
+    ...(onlyMissing ? { demand: "judge" as const } : {}),
   };
+}
+
+/** The critic's findings that say „the source does not carry this” — the ones the market
+ *  gate may not answer with „then say it louder”. */
+const CRITIC_VETO_KINDS = new Set([
+  "tulzas_a_forrashoz", "forrastalan_igeret", "velemeny_mint_szolgaltatas", "hangulat_forras_nelkul",
+]);
+
+/**
+ * THE GUEST CRITIC WINS (owner ruling 2026-10-05, ADR-XXXX). On a thin source the two gates
+ * pulled the curator in opposite directions: the market gate asked for the listing's items as
+ * selling points (car park ×2, baby equipment, review content) and the critic judged the very
+ * lines that named them an overstatement. Truth outranks selling: a selling point the critic
+ * objected to in THIS copy is no longer something the market gate may demand. It leaves the
+ * `missed` list, and a flag that rested only on missing points with none left standing passes.
+ * Flags of any other kind (empty or inventory headline, building material, a misleading claim)
+ * are untouched — the critic agrees with those, it does not overrule them.
+ */
+export function subordinateToCritic(
+  market: MarketVerdict,
+  objections: readonly { quote?: unknown; kind?: unknown }[],
+  source: MarketSource,
+): MarketVerdict {
+  const quotes = objections
+    .filter((o) => typeof o.kind === "string" && CRITIC_VETO_KINDS.has(o.kind) && typeof o.quote === "string")
+    .map((o) => norm(o.quote as string));
+  if (!quotes.length) return market;
+  const pool = [...new Set([...(source.amenities ?? []), ...market.missed])];
+  // Matched on the item's DECISION word when it has one („parkol” in „Parkoló a közelben
+  // (ingyenes, …)”), so an objection to „ingyenes wifi” does not veto the car park.
+  const names = (a: string, q: string) => {
+    const key = DECISION_WEIGHT.map(([w]) => w).filter((w) => norm(a).includes(w));
+    return key.length ? key.some((w) => q.includes(w)) : copyNames(a, q);
+  };
+  const vetoed = pool.filter((a) => quotes.some((q) => names(a, q)));
+  if (!vetoed.length) return market;
+  const missed = market.missed.filter((m) => !vetoed.includes(m));
+  const tail = ` · a Vendég-kritikus nyer: ${vetoed.join(", ")} — kifogásolta, ezért a Piac nem kérheti eladási pontként`;
+  const left = market.demand === "structural" ? missed.filter((m) => weightOf(m) >= 50) : missed;
+  if (market.verdict === "flag" && market.demand && left.length === 0) {
+    return {
+      verdict: "pass",
+      layer: market.layer,
+      factsNamed: market.factsNamed,
+      missed,
+      reason: `a Piac csak hiányzó eladási pontot kért, és mindet a Vendég-kritikus kifogásolta (eredeti: ${market.reason ?? "—"})${tail}`,
+    };
+  }
+  return { ...market, missed, reason: `${market.reason ?? ""}${tail}` };
+}
+
+/** The persisted critic keys (applyGuestCritic / judgeGuestCopy) → the subordinated verdict. */
+export function subordinateToCriticInputs(
+  market: MarketVerdict,
+  criticInputs: Record<string, unknown>,
+  source: MarketSource,
+): MarketVerdict {
+  const objs = criticInputs.guestCriticObjections;
+  return Array.isArray(objs) ? subordinateToCritic(market, objs as { quote?: unknown; kind?: unknown }[], source) : market;
 }
 
 /** Lyrical words that carry no place: they cannot ground a headline on their own. */
@@ -488,6 +643,7 @@ export async function verifyMarketRelevance(input: {
     return {
       verdict: "flag",
       layer: "structural",
+      demand: "structural",
       factsNamed: [],
       missed: missedRanked,
       reason:
