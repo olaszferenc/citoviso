@@ -147,7 +147,8 @@ AI-költségplafont” kezdetű szöveg áll. Tenni nincs mit: holnap 0:00-tól 
 generálhatsz. A plafont a konzolról nem lehet átállítani.
 
 Ugyanezt minden oldal fejlécében is látod: az **„AI ma”** pirulára kattintva
-ott van a „Mai mock”, az „Átlag / mock” és a „Maradék”.
+ott van a „Mai mock”, az „Átlag / mock” és a „Maradék”. Telefonon a pirulán nincs
+felirat, csak a dollárösszeg és egy keskeny sáv látszik — arra koppints.
 
 ### Honnan tudod, hogy fut, és mikor bukott el
 
