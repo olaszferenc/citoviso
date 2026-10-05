@@ -24,7 +24,9 @@ Operátor-riasztások (pairRepair, aamAlert, payLinkAlert), tenant-értesítők,
 ezek nem megkeresések.
 
 ## Nyitott
-- Élesítés: a kód a nagy deployjal megy; utána `.env`-be `OUTREACH_COPY_PHONE=06305161631` +
-  restart (külön élesi engedéllyel).
+- Élesítés: a kód a nagy deployjal megy. Az éles `.env`-ben a sor MÁR BENNE VAN
+  (`OUTREACH_COPY_PHONE=06305161631`, 2026-10-05 08:55 UTC, tulaj-engedéllyel, restart nélkül;
+  mentés `/opt/citoviso/backups/pilot-copy-env-20261005-085532/`) → a deploy pillanatától él.
+- Pilot végén: a sort törölni az éles `.env`-ből (és az `EMAIL_BCC`-t is) + restart.
 - Sor-módban az MMS-másolat a sorba-tételkor indul: ha a lead MMS-e utóbb elbukik, a másolat ettől
   még kimehet. Minden MMS-másolat ~90 mp modemidő.
