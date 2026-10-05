@@ -13,6 +13,7 @@ import { withMockBudget } from "../ai/dailyCap.js";
 import { writeFile } from "node:fs/promises";
 
 import type { EditorialCopy } from "../engine/copywriter.js";
+import { copyKeyApplies, currentCopy, type CopyKey } from "../engine/copyFields.js";
 import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, Room, SiteData, Stat } from "../engine/recipe.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
@@ -31,7 +32,8 @@ import type { GuestReview, PortalProfile } from "../scraper/types.js";
 import { DEFAULT_LANG, langForCountry, langName } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { generateBriefAndCopy } from "./brief.js";
-import { applyGuestCritic, criticSourceOf } from "./guestCritic.js";
+import { curatorManualOf, fixHomoglyphs, validateCuratorCopy, type CuratorCopy } from "./copyCurator.js";
+import { applyGuestCritic, criticSourceOf, judgeGuestCopy } from "./guestCritic.js";
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
@@ -63,14 +65,6 @@ export interface EngineGenerateResult {
   readonly recipeSource: "template" | "ai" | "fallback";
   readonly designVerdict: "pass" | "flag";
 }
-
-// Cyrillic → Latin homoglyph map. LLM output occasionally carries lookalike Cyrillic letters
-// inside Hungarian words (e.g. "е" U+0435 in "teraszon") — invisible on screen but breaking
-// search/matching (the fact guard caught one in production). Applied to all brief-derived text.
-const HOMOGLYPHS: Readonly<Record<string, string>> = {
-  а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y", і: "i",
-  А: "A", Е: "E", О: "O", Р: "P", С: "C", Х: "X", І: "I", В: "B", Н: "H", К: "K", М: "M", Т: "T",
-};
 
 /** Words that identify no property on their own — never a self-anchor for prose. */
 const GENERIC_LEAD_WORD = new Set([
@@ -120,10 +114,6 @@ function portalRooms(
   }
   const counted = high.find((p) => p.roomCount?.value && p.roomCount.value > 0);
   return { rooms: [], count: counted?.roomCount?.value ?? null };
-}
-
-function fixHomoglyphs(s: string): string {
-  return s.replace(/[Ѐ-ӿіІ]/g, (ch) => HOMOGLYPHS[ch] ?? ch);
 }
 
 /** Attach the editorial copy to each section by kind, and prefer the editorial hero (with a
@@ -203,6 +193,12 @@ export interface GenerateOpts {
   skin?: string;
   template?: string;
   curatorPrompt?: string;
+  /**
+   * „Generálás kurátori szöveggel” (ADR-XXXX): the words come from the curator persona (Poe),
+   * not from the copywriter call. No briefAndCopy, no market regeneration, no critic rewrite —
+   * the three guards judge the shipped text once (D1 = A). Validated by copyCurator.ts.
+   */
+  curatorCopy?: CuratorCopy;
   /** A futó szakasz jelentése a hívónak — ebből tudja a konzol, hol tart a munka. */
   onStage?: (stage: GenStageKey) => void;
 }
@@ -413,7 +409,24 @@ async function generateEngineMockInner(
     ...(lang !== DEFAULT_LANG ? { languageName: langName(lang) } : {}),
   };
   opts.onStage?.("copy");
-  let { brief, editorial, sellingPoints } = await generateBriefAndCopy(briefInput);
+  // CURATOR MODE: the pack is checked against the SAME quote corpus the AI's selling points
+  // are (the prose + the guest reviews, brief.ts) — a broken pack fails the generation loudly
+  // instead of shipping half a text.
+  const curatorCheck = opts.curatorCopy
+    ? validateCuratorCopy(opts.curatorCopy, [...sourcedDescriptions, ...guestVoice.map((v) => v.text)])
+    : null;
+  if (curatorCheck && !curatorCheck.ok) {
+    const why = Object.entries(curatorCheck.errors).map(([k, m]) => `${k}: ${m}`).join(" · ");
+    throw new Error(`a kurátori szöveg hibás — ${why}`); // i18n-exempt: operator-facing error (console/CLI)
+  }
+  const curated = curatorCheck?.ok ? curatorCheck.copy : null;
+  if (curated) {
+    console.log(`  kurátori szöveg (${curated.by}): ${Object.keys(curated.fields).length} mező · nincs író-hívás`); // i18n-exempt: operator log
+    for (const w of curated.warnings) console.log(`  ⚠️ kurátori szöveg: ${w}`); // i18n-exempt: operator log
+  }
+  let { brief, editorial, sellingPoints } = curated
+    ? { brief: curated.brief, editorial: curated.editorial, sellingPoints: curated.sellingPoints }
+    : await generateBriefAndCopy(briefInput);
   // Open-vocabulary facts the model lifted out of the prose, each quote-verified
   // against the source (brief.ts). Merged BEFORE the market gate builds its source,
   // so a hook the fixed dictionary has no word for ("borkóstolás", "szarvasles")
@@ -486,7 +499,8 @@ async function generateEngineMockInner(
       source: marketSource,
       photos: groundImages,
     });
-    if (market.verdict === "flag" && market.critique) {
+    // Curator mode: no regeneration — the verdict goes to the curator, who rewrites (D1 = A).
+    if (!curated && market.verdict === "flag" && market.critique) {
       // ONE retry. Not a loop: if the writer cannot use a concrete, fact-naming critique
       // on the second attempt, the problem is not phrasing and a human should look.
       console.log(`  ⛔ marketing-őr: FLAG (${market.layer}) · ${market.reason}`); // i18n-exempt: operator log
@@ -525,18 +539,27 @@ async function generateEngineMockInner(
   // exactly that. Hungarian only: the critic's language knowledge is the point, and a
   // translated page gets no verdict rather than a meaningless one.
   let criticInputs: Record<string, unknown> = {};
-  if (brief && lang === DEFAULT_LANG) {
+  const criticSource = criticSourceOf({
+    name: lead.name,
+    town: lead.city ?? null,
+    address: lead.address,
+    rating: rating != null ? { value: rating, count: userRatingCount ?? null } : null,
+    facts: panelFacts,
+    descriptions: sourcedDescriptions,
+    reviews: guestVoice.map((v) => v.text),
+  });
+  if (curated && brief && lang === DEFAULT_LANG) {
+    // Curator mode: the critic GRADES, it does not rewrite (copyManual's judge-only twin) —
+    // Poe answers for these words, and the market verdict above already describes them.
+    criticInputs = await judgeGuestCopy(
+      { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
+      criticSource,
+    );
+    console.log(`  vendég-kritikus (csak ítél): ${String(criticInputs.guestCriticVerdict).toUpperCase()} · ${String(criticInputs.guestCriticReason)}`); // i18n-exempt: operator log
+  } else if (brief && lang === DEFAULT_LANG) {
     const critic = await applyGuestCritic(
       { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
-      criticSourceOf({
-        name: lead.name,
-        town: lead.city ?? null,
-        address: lead.address,
-        rating: rating != null ? { value: rating, count: userRatingCount ?? null } : null,
-        facts: panelFacts,
-        descriptions: sourcedDescriptions,
-        reviews: guestVoice.map((v) => v.text),
-      }),
+      criticSource,
     );
     brief = {
       ...brief,
@@ -797,6 +820,18 @@ async function generateEngineMockInner(
         facts: panelFacts,
       },
       aiUsage: usageForArtifact(currentAiUsage()),
+      // Curator mode provenance (§B.17): who wrote the words, field by field, in the hand
+      // edit's shape — so a later recopy overlays Poe's text instead of replacing it.
+      ...(curated
+        ? {
+            copyOrigin: "curator",
+            copyManual: curatorManualOf(
+              (Object.keys(curated.fields) as CopyKey[]).filter((k) => copyKeyApplies(finalRecipe, k)),
+              (k) => currentCopy(finalRecipe, siteData, k),
+              curated.by,
+            ),
+          }
+        : {}),
       // Audit trail: the curator's free-text steering that shaped this generation (if any).
       ...(opts.curatorPrompt ? { curatorPrompt: opts.curatorPrompt } : {}),
     },
@@ -820,7 +855,7 @@ async function generateEngineMockInner(
 export async function generateEngineMockFor(
   idOrName?: string,
   regionId = "badacsony",
-  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string } = {},
+  opts: { archetype?: string; skin?: string; template?: string; curatorPrompt?: string; curatorCopy?: CuratorCopy } = {},
 ): Promise<EngineGenerateResult> {
   const loaded = await loadLead(idOrName);
   return generateEngineMock(loaded, regionId, opts);

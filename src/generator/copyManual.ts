@@ -70,6 +70,32 @@ export async function isCopyFrozen(artifactId: string): Promise<boolean> {
 
 type Edits = Partial<Record<CopyKey, CopyValue>>;
 
+/** A submitted value in its stored shape: highlights become a normalized list, the rest a string. */
+export function normalizeCopyValue(key: CopyKey, raw: CopyValue): CopyValue {
+  if (key === "highlights") return normalizeHighlights(Array.isArray(raw) ? raw : String(raw).split("\n"));
+  return normalizeCopy(key, Array.isArray(raw) ? raw.join(" ") : String(raw));
+}
+
+/**
+ * The ONE limit check for a normalized value — the hand edit (here) and the curator's copy
+ * pack (copyCurator.ts) both call it, so "how long may the tagline be" has one answer
+ * (feedback_one_rule_two_copies). Operator-facing Hungarian message, or null when it fits.
+ */
+export function copyValueError(key: CopyKey, value: CopyValue): string | null {
+  const spec = copyFieldSpec(key);
+  if (key === "highlights") {
+    const list = value as readonly string[];
+    if (!list.length) return "Legalább egy kiemelés kell.";
+    if (list.length > COPY_LIMITS.highlightsMax) return `Legfeljebb ${COPY_LIMITS.highlightsMax} kiemelés fér el.`;
+    if (list.some((h) => h.length > spec.max)) return `Egy kiemelés legfeljebb ${spec.max} karakter.`;
+    return null;
+  }
+  const v = String(value);
+  if (spec.required && !v) return "Ez a mező nem lehet üres.";
+  if (v.length > spec.max) return `Túl hosszú: legfeljebb ${spec.max} karakter fér el ezen a helyen.`;
+  return null;
+}
+
 /**
  * Validate + diff the submitted fields against the stored copy. Only a CHANGED field is
  * measured against the limits: a longer AI original must not block saving another field.
@@ -90,25 +116,14 @@ export function planManualEdit(
 
   for (const [key, raw] of Object.entries(edits) as [CopyKey, CopyValue][]) {
     if (!copyKeyApplies(recipe, key)) continue;
-    const spec = copyFieldSpec(key);
     const cur = currentCopy(recipe, data, key);
-    let value: CopyValue;
-    if (key === "highlights") {
-      const list = normalizeHighlights(Array.isArray(raw) ? raw : String(raw).split("\n"));
-      if (same(list, cur)) continue;
-      if (!list.length) errors[key] = "Legalább egy kiemelés kell.";
-      else if (list.length > COPY_LIMITS.highlightsMax)
-        errors[key] = `Legfeljebb ${COPY_LIMITS.highlightsMax} kiemelés fér el.`;
-      else if (list.some((h) => h.length > spec.max)) errors[key] = `Egy kiemelés legfeljebb ${spec.max} karakter.`;
-      value = list;
-    } else {
-      const v = normalizeCopy(key, Array.isArray(raw) ? raw.join(" ") : String(raw));
-      if (v === cur) continue;
-      if (spec.required && !v) errors[key] = "Ez a mező nem lehet üres.";
-      else if (v.length > spec.max) errors[key] = `Túl hosszú: legfeljebb ${spec.max} karakter fér el ezen a helyen.`;
-      value = v;
+    const value = normalizeCopyValue(key, raw);
+    if (same(value, cur)) continue;
+    const err = copyValueError(key, value);
+    if (err) {
+      errors[key] = err;
+      continue;
     }
-    if (errors[key]) continue;
     const orig = manual[key]?.orig ?? cur;
     changed.push(key);
     values[key] = value;

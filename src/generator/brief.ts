@@ -454,7 +454,7 @@ export async function generateBriefAndCopy(input: {
  * is the structural twin that makes the instruction enforceable — a paraphrased or
  * invented "quote" silently drops the fact rather than shipping it.
  */
-function validateSellingPoints(
+export function validateSellingPoints(
   points: readonly { label?: string; quote?: string }[] | undefined,
   descriptions: readonly string[] | undefined,
 ): { label: string; quote: string }[] {
