@@ -6,6 +6,7 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
+import { splitPhones } from "../text/phone.js";
 import { FOREIGN_DOMAIN_REASON, FREEMAIL, mergeContacts } from "./contactLedger.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
@@ -31,8 +32,14 @@ const CONCURRENCY = 3;
 /** Pages fetched per lead when snippets yield nothing usable. */
 const MAX_PAGES_PER_LEAD = 3;
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+// A phone stands on its own: no digit, slash or dot right before it, no digit right
+// after. Without these bounds the pattern matched INSIDE longer digit runs and
+// filed photo ids ("…/659069/659069814/…" → "069/6590698"), upload folders
+// ("uploads/2023/06/37961736.jpg" → "06/37961736") and GPS coordinates
+// ("46.780604614546" → "0604614546") as the lead's phone — measured on 11 live
+// leads, 2026-10-05.
 const PHONE_RE =
-  /(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}/;
+  /(?<![\d/.])(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}(?!\d)/;
 
 // Snippet fishing grabs the FIRST email in the result text — which on a portal
 // listing is often the town's tourist office, not the business (the Brave trial
@@ -149,12 +156,18 @@ function isListingHost(url: string, ownWebsite?: string): boolean {
  * stored as the lead's e-mail and used for outreach). Query parameters are
  * already cut by `?`, so no legitimate mailto loses anything here.
  */
-function extractContacts(html: string): { emails: string[]; phones: string[] } {
+export function extractContacts(html: string): { emails: string[]; phones: string[] } {
   const emails: string[] = [];
   for (const m of html.matchAll(/mailto:([^"'?>\s&]+)/gi)) {
     emails.push(decodeURIComponent(m[1]!).toLowerCase());
   }
-  const text = html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ");
+  // Script/style bodies are not page text: JSON-LD and gallery configs carry the
+  // photo paths and coordinates the phone pattern used to fish numbers out of.
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ");
   for (const m of text.matchAll(EMAIL_RE)) emails.push(m[0].toLowerCase());
 
   const phones: string[] = [];
@@ -251,8 +264,13 @@ export async function enrichWebSearch(
           seen.push({ kind: "email", value: v, source, sourceUrl, accepted: !why, rejectedReason: why });
         };
         const notePhone = (v: string, source: string, sourceUrl?: string): void => {
-          const n = normalizePhone(v);
-          if (n) seen.push({ kind: "phone", value: n, source, sourceUrl, accepted: true });
+          // A portal's tel: link can glue several numbers into one
+          // ("tel:00368734269100363028317760036705331658") — file each one.
+          const many = splitPhones(v);
+          const values = many.length > 1 ? many : [normalizePhone(v)];
+          for (const n of values) {
+            if (n) seen.push({ kind: "phone", value: n, source, sourceUrl, accepted: true });
+          }
         };
 
         // PASS 1 — snippets (free).
@@ -315,9 +333,12 @@ export async function enrichWebSearch(
               );
             }
             if (!phone) {
+              // A glued tel: link is stored the way multi-number fields already are
+              // ("+36…;+36…"), so every reader splits it the same way.
+              const glued = phones.map(splitPhones).find((list) => list.length > 1);
               phone = normalizePhone(
                 phones.find((p) => PHONE_RE.test(p.replace(/\s/g, "")) || PHONE_RE.test(p)),
-              );
+              ) ?? glued?.join(";");
             }
             if (email && phone) break;
           }

@@ -720,8 +720,9 @@ const H1_RE = /<h1\b[^>]*>([\s\S]{2,200}?)<\/h1>/i;
 
 // Contact details as the pre-structured-data stock publishes them: a label and a
 // value, in a table cell ("Cím: 8261 Badacsony, Római út 200. Telefon: +36/30/…").
+// Bounded like enrichWebSearch's PHONE_RE: never a match inside a longer digit run.
 const DOM_PHONE_RE =
-  /(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}/;
+  /(?<![\d/.])(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}(?!\d)/;
 const DOM_EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 const DOM_ADDRESS_RE = /\b(?:cím|cim|address|anschrift)\s*:?\s*([^\n|]{6,120})/i;
 

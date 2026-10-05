@@ -1670,6 +1670,13 @@ if [ -f scripts/owner-test-phone-check.mts ] && \
   echo "[pre-commit] owner-test-phone-check (teszt-szám csak [TESZT] leaden mentes)…"
   npx tsx scripts/owner-test-phone-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Egy telefon-szabály szerveren és kliensen, és nincs fotó-útvonalból „kihalászott” szám
+# (2026-10-05: „06/30 …” elutasítva; „069/6590698” egy képazonosítóból). Tiszta, ~2 s.
+if [ -f scripts/phone-normalize-check.mts ] && \
+   changed_files | grep -qE '^src/text/phone\.ts$|^src/sms/sender\.ts$|^src/server/contactViews\.ts$|^src/scraper/(enrichWebSearch|sources/portals/extract)\.ts$|^scripts/phone-normalize-check'; then
+  echo "[pre-commit] phone-normalize-check (perjel, több szám, kliens-tükör, fotó-útvonal)…"
+  npx tsx scripts/phone-normalize-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Tulaj-kérés 2026-10-05: a pilot alatt minden hideg mobil-megkeresés (pár-MMS, kísérő SMS,
 # önálló SMS) másolata az OUTREACH_COPY_PHONE számra megy; az MMS-másolat prospectId nélkül,
 # a közvetlen úton a kísérő SMS UTÁN. Hálózat és DB nélkül, ~2 s.

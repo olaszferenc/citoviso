@@ -11,6 +11,7 @@
 import { T } from "../i18n/mail.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { CONTACT_ERRORS, type ContactErrorKey, type ContactFacts } from "../tenant/contact.js";
+import { PHONE_NORM_JS } from "../text/phone.js";
 
 function esc(s: unknown): string {
   return String(s ?? "")
@@ -148,7 +149,8 @@ export function contactSection(v: ContactView): string {
 
 /**
  * The client layer: pin drag/tap, address search, phone/e-mail feedback, and the
- * "what is unsaved" line. The phone rule MIRRORS src/sms/sender.ts normalizePhone()
+ * "what is unsaved" line. The phone rule is src/text/phone.ts PHONE_NORM_JS — the
+ * client mirror of normalizePhone(), kept next to it
  * + contact.ts prettyPhone() — the server re-checks, this only answers early.
  */
 export function placeScript(v: ContactView): string {
@@ -188,7 +190,7 @@ export function placeScript(v: ContactView): string {
     `var cur=S?{lat:S.lat,lng:S.lng}:null,map,marker,geocoder;` +
     `function fmt(p){return p?p.lat.toFixed(5)+', '+p.lng.toFixed(5):''}` +
     `function setStatus(s,t){var st=$('pl_status');if(!st)return;st.dataset.s=s;$('pl_state').textContent=t;$('pl_coords').textContent=fmt(cur);$('pl_undo').hidden=(s==='saved'||saved.lat===null)}` +
-    `function norm(raw){var c=String(raw||'').replace(/[\\s\\-().\\/]/g,'');if(!/^\\+?[0-9]{8,15}$/.test(c))return null;if(c.indexOf('06')===0)return '+36'+c.slice(2);if(c[0]==='+')return c;if(c.indexOf('36')===0)return '+'+c;return null}` +
+    PHONE_NORM_JS +
     `function pretty(e){if(!e||e.indexOf('+36')!==0)return e;var n=e.slice(3);if(n[0]==='1')return '+36 1 '+n.slice(1,4)+' '+n.slice(4);var r=n.slice(2);return '+36 '+n.slice(0,2)+' '+r.slice(0,3)+' '+r.slice(3)}` +
     `function watched(){return [].slice.call(form.querySelectorAll('[data-watch]'))}` +
     `function val(el){return el.type==='checkbox'?String(el.checked):el.value}` +

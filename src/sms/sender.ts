@@ -21,6 +21,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { config } from "../config.js";
+import { normalizePhone } from "../text/phone.js";
+
+// The rule lives in a pure module (shared with the scrapers and the console);
+// re-exported here because every sender caller already imports it from this file.
+export { normalizePhone };
 
 const execFileP = promisify(execFile);
 
@@ -40,18 +45,6 @@ export interface SmsMessage {
 export interface SmsSendResult {
   readonly id: string;
   readonly provider: "mock" | "gammu" | "queue" | "blocked";
-}
-
-/** Digits + leading '+' only; rejects anything that does not look like a phone. */
-export function normalizePhone(raw: string): string | null {
-  const cleaned = raw.replace(/[\s\-().]/g, "");
-  const m = /^\+?[0-9]{8,15}$/.exec(cleaned);
-  if (!m) return null;
-  // Hungarian local forms → E.164 (06 30 … → +36 30 …).
-  if (cleaned.startsWith("06")) return `+36${cleaned.slice(2)}`;
-  if (cleaned.startsWith("+")) return cleaned;
-  if (cleaned.startsWith("36")) return `+${cleaned}`;
-  return null;
 }
 
 interface SmsSender {
