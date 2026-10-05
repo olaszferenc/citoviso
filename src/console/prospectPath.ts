@@ -44,7 +44,7 @@ export function normalizeProspectPath(path: string): string {
 export const OWN_VIEW_PARAM = "sajat";
 
 /**
- * ADR-XXXX: the lead's preview host link — `https://<label>.citoviso.com`, bare (no path).
+ * ADR-0330: the lead's preview host link — `https://<label>.citoviso.com`, bare (no path).
  * Recognized by shape: a bare platform-subdomain URL. A tenant's live-site link has the
  * same shape; marking it too is harmless (the tenant host ignores the parameter).
  */

@@ -2797,7 +2797,7 @@ async function handle(
   const cfgSubMatch = /^\/configure\/([0-9a-f-]{36})\/subdomain$/i.exec(path);
   if (method === "GET" && cfgSubMatch) {
     const label = url.searchParams.get("label") ?? "";
-    // ADR-XXXX: the buyer's own preview label is free for them, taken for anyone else.
+    // ADR-0330: the buyer's own preview label is free for them, taken for anyone else.
     const art = await db
       .selectFrom("mock_artifact")
       .select("lead_id")
@@ -3062,7 +3062,7 @@ async function handle(
         .executeTakeFirst();
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
-        // ADR-XXXX: the subdomain the outreach link showed is the default they keep.
+        // ADR-0330: the subdomain the outreach link showed is the default they keep.
         subLabel: pf?.previewLabel ?? null,
         // ADR-0080 ①: if this buyer's tenant already runs a cycle, the purchase
         // JOINS it — so the checkout must promise that anniversary and that

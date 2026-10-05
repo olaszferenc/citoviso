@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-05 (🔗 **A megkeresés linkje a lead saját aldomainje** (ADR-XXXX, tulaj: „nehogy vírusnak tűnjön”): élesen `https://<címke>.citoviso.com` a tokenes `/p/…` helyett; `lead.preview_label` (0090), a public szerver a `/`-en a konzol `/p/<token>` lapját adja; vásárláskor a címke marad, ha az lett a cím, különben törlődik; `?sajat=1` ráül; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_lead_sajat_aldomain_link.md`)
+Utolsó frissítés: 2026-10-05 (🔗 **A megkeresés linkje a lead saját aldomainje** (ADR-0330, tulaj: „nehogy vírusnak tűnjön”): élesen `https://<címke>.citoviso.com` a tokenes `/p/…` helyett; `lead.preview_label` (0090), a public szerver a `/`-en a konzol `/p/<token>` lapját adja; vásárláskor a címke marad, ha az lett a cím, különben törlődik; `?sajat=1` ráül; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_lead_sajat_aldomain_link.md`)
 
 Utolsó frissítés: 2026-10-05 (🕘 **Lead-fülek „ki szerkesztette utoljára”** (A terv megvalósítva): új `lead_activity` napló (migráció 0089), minden fül alatt „<név> · <mikor>” / „—”, mock-kártyán „Létrehozta: …”, a döntésnél a valódi operátor (régi „console” → „nem rögzített”); nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_lead_lastedit_impl.md`)
 

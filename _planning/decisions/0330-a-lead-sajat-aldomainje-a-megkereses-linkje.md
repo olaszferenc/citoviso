@@ -1,4 +1,4 @@
-## ADR-XXXX — A lead SAJÁT aldomainje a megkeresés linkje (`<címke>.citoviso.com`)
+## ADR-0330 — A lead SAJÁT aldomainje a megkeresés linkje (`<címke>.citoviso.com`)
 
 - **Kiváltó (tulaj, 2026-10-05):** a kiküldött link — élesen mérve:
   `https://citoviso.com/p/vecsey-apartman/63cNoWfy448yNdmeietS2YWf` — „elijesztheti a leadet: nehogy valami

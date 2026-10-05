@@ -1,4 +1,4 @@
-# 2026-10-05 — A megkeresés linkje a lead saját aldomainje (ADR-XXXX)
+# 2026-10-05 — A megkeresés linkje a lead saját aldomainje (ADR-0330)
 
 **Kérés (brief `kik-ld-tt-linj`):** „Nem lehetne valami barátságosabb kinézetű linket küldeni? … nehogy valami vírus legyen."
 Élesen mérve a link: `https://citoviso.com/p/vecsey-apartman/63cNoWfy448yNdmeietS2YWf`.

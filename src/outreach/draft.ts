@@ -187,7 +187,7 @@ export interface DraftInput {
    */
   readonly siteCheck?: SiteCheck | null;
   /**
-   * ADR-XXXX: the lead's own preview subdomain label (lead.preview_label). On the real
+   * ADR-0330: the lead's own preview subdomain label (lead.preview_label). On the real
    * platform the tracked link becomes https://<label>.citoviso.com — no token in sight.
    * Absent, or off-platform (dev: no wildcard DNS) → the /p/<slug>/<token> link.
    */
@@ -318,7 +318,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // sent as /p/<token> keep working.
   const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
   const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
-  // ADR-XXXX (owner, 2026-10-05): even with the slug, the 24-character token after it
+  // ADR-0330 (owner, 2026-10-05): even with the slug, the 24-character token after it
   // "might scare the lead off: what if it is a virus" — so on the platform the link is
   // the lead's own subdomain. The opt-out keeps the token path (it is a legal link,
   // and it must keep working whatever happens to the subdomain).
@@ -456,7 +456,7 @@ function smsDraftParts(d: DraftInput): { link: string; unsubscribeLink: string }
   // signature we could produce. The recipient must see their own name in the URL.
   const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
   const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
-  // ADR-XXXX: the lead's own subdomain on the platform (see renderDraft).
+  // ADR-0330: the lead's own subdomain on the platform (see renderDraft).
   const link =
     previewLink(d.previewLabel, base) ??
     (base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`); // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
@@ -563,7 +563,7 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     lang,
     siteCheck: siteCheckOf(((r.raw ?? {}) as { assessment?: unknown }).assessment),
     offerPercent: await outreachPercentForProspect(prospectId),
-    // ADR-XXXX: reserved on the first draft — the console's preview and the sent
+    // ADR-0330: reserved on the first draft — the console's preview and the sent
     // message must show the same address.
     previewLabel: await ensurePreviewLabel(r.leadId),
   };

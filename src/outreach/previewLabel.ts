@@ -1,4 +1,4 @@
-// The lead's OWN preview subdomain — https://<label>.citoviso.com (ADR-XXXX).
+// The lead's OWN preview subdomain — https://<label>.citoviso.com (ADR-0330).
 //
 // Why (owner, 2026-10-05): the outreach link
 //   https://citoviso.com/p/vecsey-apartman/63cNoWfy448yNdmeietS2YWf

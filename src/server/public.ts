@@ -616,7 +616,7 @@ const PREVIEW_FORWARD_HEADERS = [
 ];
 
 /**
- * ADR-XXXX: serve the console's /p/<token> page on the lead's preview host, in place.
+ * ADR-0330: serve the console's /p/<token> page on the lead's preview host, in place.
  * The console is the ONLY renderer of that page (tracking, configurator, owned/opt-out
  * framing) — duplicating it here would be a second truth. The GET records nothing
  * (ADR-0291), so the internal hop changes no measurement.
@@ -2160,7 +2160,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   // A RESOLVED one that got here is a mail-link/asset pass-through (above) — it is
   // claimed, and the platform handler below is exactly what the mail pointed at.
-  // ADR-XXXX: a lead's OWN preview subdomain (lead.preview_label) — the outreach link.
+  // ADR-0330: a lead's OWN preview subdomain (lead.preview_label) — the outreach link.
   // "/" is the lead's live /p/<token> page, served in place by the console (the address
   // bar keeps the friendly host); every other path behaves as on citoviso.com, exactly
   // as nginx already routes it (/p/… → console, the rest → here), so the page's own

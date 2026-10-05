@@ -265,7 +265,7 @@ export interface ConfiguratorOpts {
   /** Override the order-submit endpoint (e.g. /p/<token>/request). */
   readonly requestUrl?: string;
   /**
-   * ADR-XXXX: the lead's preview subdomain label (lead.preview_label) — the address the
+   * ADR-0330: the lead's preview subdomain label (lead.preview_label) — the address the
    * outreach link already showed them, so it is the default they keep. Absent → derived
    * from the name, as before.
    */

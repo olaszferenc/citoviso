@@ -1,4 +1,4 @@
--- 0090 A LEAD SAJÁT ALDOMAINJE A MEGKERESÉSBEN — <címke>.citoviso.com (ADR-XXXX).
+-- 0090 A LEAD SAJÁT ALDOMAINJE A MEGKERESÉSBEN — <címke>.citoviso.com (ADR-0330).
 --
 -- A tulaj kérése (2026-10-05): a megkeresés linkje (`citoviso.com/p/vecsey-apartman/63cNoWfy448yNdmeietS2YWf`)
 -- „elijesztheti a leadet: nehogy valami vírus legyen". Döntés: a lead a SAJÁT aldomainjét kapja

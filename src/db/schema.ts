@@ -80,7 +80,7 @@ export interface LeadTable {
   raw: JSONColumnType<Record<string, unknown>>;
   created_at: Generated<Timestamp>;
   /**
-   * The lead's own preview subdomain label (0090, ADR-XXXX): the outreach link is
+   * The lead's own preview subdomain label (0090, ADR-0330): the outreach link is
    * `https://<label>.citoviso.com`, which opens the lead's LIVE prospect page. Assigned
    * once (it is in a sent message), released (NULL) when the buyer chooses another address.
    */

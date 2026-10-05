@@ -110,7 +110,7 @@ function makeToken(): string {
 
 /** A platform subdomain label unique across sites (case-insensitive, 0017). A `preferred`
  *  label (the buyer's free choice, ADR-0032) is honored when it normalizes cleanly, is not
- *  reserved, and is still free — otherwise the lead's own preview label (ADR-XXXX: the
+ *  reserved, and is still free — otherwise the lead's own preview label (ADR-0330: the
  *  address the outreach link already showed them), then the name-derived base.
  *  "Free" also means: not another lead's preview label (labelHeldByOther). */
 async function uniqueSiteSlug(
@@ -136,7 +136,7 @@ async function uniqueSiteSlug(
 /** Preliminary availability of a buyer-chosen subdomain label (ADR-0032). Normalizes the
  *  input, rejects too-short/reserved/taken labels. Preliminary: the DB check races with
  *  concurrent provisioning, so the final uniqueness is re-decided at provision time.
- *  ADR-XXXX: another lead's preview label is taken; the buyer's OWN one is free. */
+ *  ADR-0330: another lead's preview label is taken; the buyer's OWN one is free. */
 export async function checkSubdomainAvailable(
   label: string,
   leadId: string | null = null,
@@ -315,7 +315,7 @@ export async function convertLead(
     return row;
   });
 
-  // ADR-XXXX (owner, 2026-10-05): the preview subdomain the outreach link showed stays
+  // ADR-0330 (owner, 2026-10-05): the preview subdomain the outreach link showed stays
   // only if it became this site's address; a buyer who chose another one releases it.
   const finalSlug = await db.selectFrom("site").select("slug").where("id", "=", site.id).executeTakeFirst();
   await releasePreviewLabelUnlessKept(leadId, finalSlug?.slug ?? null);

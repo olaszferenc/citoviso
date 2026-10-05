@@ -1,4 +1,4 @@
-// ADR-XXXX — the lead's own preview subdomain (https://<label>.citoviso.com).
+// ADR-0330 — the lead's own preview subdomain (https://<label>.citoviso.com).
 //
 // Pure checks of the pieces that decide what the lead SEES in the message and what the
 // owner's copy carries: label minting, the platform-only link, and the own-view marker
