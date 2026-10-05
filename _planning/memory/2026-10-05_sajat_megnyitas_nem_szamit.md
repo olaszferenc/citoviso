@@ -11,7 +11,7 @@ Majd: „Az a jó, ha a tulajnak küldött mock-megnyitások nem számlálódnak
 - Az e-mail-másolat (Bcc) linkjére nem jött kattintás.
 
 ## Elvégezve
-- `?sajat=1` jelölés (ADR-XXXX): a lap beacon nélkül szolgálódik ki; SMS-másolat, külön e-mail-másolat
+- `?sajat=1` jelölés (ADR-0327): a lap beacon nélkül szolgálódik ki; SMS-másolat, külön e-mail-másolat
   (List-Unsubscribe nélkül), konzol-link, Tevékenység „a látott oldal ▸”, levél-előnézet jelölt; a „link másolása” jelöletlen.
 - Élesen (tulaj-engedéllyel): a Napfény 11:12-es látogatás törölve, prospect `opened` → `sent`;
   mentés `/opt/citoviso/backups/sajat-megnyitas-20261005-114606/`.

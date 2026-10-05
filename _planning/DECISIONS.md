@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-sajat-megnyitas-nem-meres.md) — A tulaj saját megnyitása nem mérés: `?sajat=1` a másolatokon és a konzolban (2026-10-05)
+- [ADR-0327](decisions/0327-a-tulaj-sajat-megnyitasa-nem-meres-sajat-1-a.md) — A tulaj saját megnyitása nem mérés: `?sajat=1` a másolatokon és a konzolban (2026-10-05)
 - [ADR-0326](decisions/0326-szovegkurator-poe-a-mock-szoveget-perszona-irja.md) — Szövegkurátor (Poe): a mock szövegét perszóna írja, az őrök egyszer, csak ítélnek
 - [ADR-0325](decisions/0325-neo-az-inas-digitalis-kurator-munkatars-sajat.md) — Neo az Inas: digitális kurátor-munkatárs saját Chrome-mal; a sablont indoklással ő választja (ADR-0028 módosítása)
 - [ADR-0324](decisions/0324-lirai-nyitoresz-leiro-mod-es-leltar-tilos-a.md) — Lírai nyitórész: leíró mód és leltár tilos, a líra is forrásból; a gyűjtési terület neve nem lead-tény (2026-10-04)

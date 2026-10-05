@@ -1,4 +1,4 @@
-## ADR-XXXX — A tulaj saját megnyitása nem mérés: `?sajat=1` a másolatokon és a konzolban (2026-10-05)
+## ADR-0327 — A tulaj saját megnyitása nem mérés: `?sajat=1` a másolatokon és a konzolban (2026-10-05)
 
 **Dátum:** 2026-10-05 · **Státusz:** elfogadva (tulaj: „Az a jó, ha a tulajnak küldött mock-megnyitások nem
 számlálódnak.” · „Elfogadom a javaslataidat.”) · **Kapcsolódó:** ADR-0291 (a `/p/<t>` GET semmit nem ír, a látogatás

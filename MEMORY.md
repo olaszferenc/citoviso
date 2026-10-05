@@ -1,5 +1,5 @@
 # MEMORY — Citoviso
-Utolsó frissítés: 2026-10-05 (👁️ **Saját megnyitás nem számít** (`?sajat=1`, ADR-XXXX): a pilot-másolatok (SMS + KÜLÖN e-mail-másolat), a konzol-link és a levél-előnézet jelölt linket visz, a lap ilyenkor nem mér; élesen a Napfény tulaj-látogatása törölve; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_sajat_megnyitas_nem_szamit.md`)
+Utolsó frissítés: 2026-10-05 (👁️ **Saját megnyitás nem számít** (`?sajat=1`, ADR-0327): a pilot-másolatok (SMS + KÜLÖN e-mail-másolat), a konzol-link és a levél-előnézet jelölt linket visz, a lap ilyenkor nem mér; élesen a Napfény tulaj-látogatása törölve; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_sajat_megnyitas_nem_szamit.md`)
 
 Utolsó frissítés: 2026-10-05 (🚀 **Deploy-koordinátor zárása**: a 3 generátor-javítás (régió-fallback, elutasított kontakt, „Parkoló”) ÉLES `30012966` = `prod/20261005-1126` (másik session deployolta); NYITOTT: Kerekerdő újragenerálás böngészőből + a két régi mock (`572f7e82`, `fce091bc`) elutasítása — az „Elutasítás” headless kattintásra nem hatott; „Panoráma” címke és mellékes szöveghibák tulaj-döntésre; jegyzet `_planning/memory/2026-10-04_deploy_koordinator_bc222e7f.md`)
 
