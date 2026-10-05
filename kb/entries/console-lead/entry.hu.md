@@ -4,7 +4,7 @@ title: Lead-lap — a munkafolyamat: adat, mock, kuráció, megkeresés, konverz
 audience: operator
 category: lead-path
 anchors: console.lead
-updated: 2026-10-04
+updated: 2026-10-05
 ---
 
 A lead-lap a napi munka szíve: itt fut végig egy szereplő a teljes láncon —
@@ -134,6 +134,20 @@ mellette). Ha még nincs kép, ugyanott találod, a magyarázó doboz sarkában.
 külön mock készül; ha egyet sem jelölsz be, egy alapértelmezett kinézettel készül el. Ezt
 érdemes tudni, mert könnyű azt hinni, hogy „nem az készült, amit kértem”, holott választás
 nélkül a rendszer maga döntött.
+
+### Napi AI-költségplafon
+
+A generáló gomb alatt a **„Mai AI-költség”** sáv mutatja, mennyit költött ma a
+mock-generálás, és mennyibe kerülnek nagyjából a kijelölt kinézetek. Ha a kijelölés
+átlépné a plafont, figyelmeztet; a futás ilyenkor még elindul, de utána aznap már
+nem indíthatsz újat.
+
+A plafon elérésekor a gomb szürke, fölötte az „Elérted a napi
+AI-költségplafont” kezdetű szöveg áll. Tenni nincs mit: holnap 0:00-tól (budapesti idő) újra
+generálhatsz. A plafont a konzolról nem lehet átállítani.
+
+Ugyanezt minden oldal fejlécében is látod: az **„AI ma”** pirulára kattintva
+ott van a „Mai mock”, az „Átlag / mock” és a „Maradék”.
 
 ### Honnan tudod, hogy fut, és mikor bukott el
 
