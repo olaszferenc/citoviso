@@ -79,6 +79,12 @@ export interface LeadTable {
   /** Full raw payload from the sources (audit + reprocessing). */
   raw: JSONColumnType<Record<string, unknown>>;
   created_at: Generated<Timestamp>;
+  /**
+   * The lead's own preview subdomain label (0090, ADR-XXXX): the outreach link is
+   * `https://<label>.citoviso.com`, which opens the lead's LIVE prospect page. Assigned
+   * once (it is in a sent message), released (NULL) when the buyer chooses another address.
+   */
+  preview_label: string | null;
 }
 
 export interface LeadProvenanceTable {

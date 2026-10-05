@@ -15,6 +15,7 @@
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
+import { ensurePreviewLabel, previewLink } from "./previewLabel.js";
 import { formatNumber } from "../text/money.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
 import { langForCountry } from "../i18n/lang.js";
@@ -185,6 +186,12 @@ export interface DraftInput {
    * null = not measured → no gap sentence at all.
    */
   readonly siteCheck?: SiteCheck | null;
+  /**
+   * ADR-XXXX: the lead's own preview subdomain label (lead.preview_label). On the real
+   * platform the tracked link becomes https://<label>.citoviso.com — no token in sight.
+   * Absent, or off-platform (dev: no wildcard DNS) → the /p/<slug>/<token> link.
+   */
+  readonly previewLabel?: string | null;
 }
 
 /** The site-check outcome the letter may quote (see DraftInput.siteCheck). */
@@ -311,7 +318,13 @@ export function renderDraft(d: DraftInput): OutreachDraft {
   // sent as /p/<token> keep working.
   const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
   const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
-  const link = base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  // ADR-XXXX (owner, 2026-10-05): even with the slug, the 24-character token after it
+  // "might scare the lead off: what if it is a virus" — so on the platform the link is
+  // the lead's own subdomain. The opt-out keeps the token path (it is a legal link,
+  // and it must keep working whatever happens to the subdomain).
+  const link =
+    previewLink(d.previewLabel, base) ??
+    (base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`); // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const unsubscribeLink = base
     ? `${base}${pathBase}/unsubscribe`
     : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
@@ -443,7 +456,10 @@ function smsDraftParts(d: DraftInput): { link: string; unsubscribeLink: string }
   // signature we could produce. The recipient must see their own name in the URL.
   const slug = slugify(d.leadName).slice(0, 40).replace(/-+$/, "");
   const pathBase = slug ? `/p/${slug}/${d.token}` : `/p/${d.token}`;
-  const link = base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  // ADR-XXXX: the lead's own subdomain on the platform (see renderDraft).
+  const link =
+    previewLink(d.previewLabel, base) ??
+    (base ? `${base}${pathBase}` : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}`); // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   const unsubscribeLink = base
     ? `${base}${pathBase}/unsubscribe`
     : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
@@ -547,6 +563,9 @@ export async function buildDraftForProspect(prospectId: string): Promise<
     lang,
     siteCheck: siteCheckOf(((r.raw ?? {}) as { assessment?: unknown }).assessment),
     offerPercent: await outreachPercentForProspect(prospectId),
+    // ADR-XXXX: reserved on the first draft — the console's preview and the sent
+    // message must show the same address.
+    previewLabel: await ensurePreviewLabel(r.leadId),
   };
   // ADR-0111 §C country gate: resolved HERE, from the scrape area's country, so every
   // send path gets the same verdict. The gate itself stays synchronous (it is a pure

@@ -10,6 +10,7 @@
 - [2026-10-05_poe_szovegkurator.md](2026-10-05_poe_szovegkurator.md) — 2026-10-05 — Poe, a szövegkurátor: kód + konzol + charter + ADR (SUB-lánc, 10 session)
 - [2026-10-05_pilot_mobil_masolat.md](2026-10-05_pilot_mobil_masolat.md) — 2026-10-05 — Pilot-másolat a mobil-megkeresésről (SMS/MMS a tulajnak)
 - [2026-10-05_piac_vk_elsobbseg.md](2026-10-05_piac_vk_elsobbseg.md) — 2026-10-05 — Piac-kapu a Vendég-kritikusnak alárendelve (SUB, Poe-pilot 1–2. ügy)
+- [2026-10-05_lead_sajat_aldomain_link.md](2026-10-05_lead_sajat_aldomain_link.md) — 2026-10-05 — A megkeresés linkje a lead saját aldomainje (ADR-XXXX)
 - [2026-10-05_lead_lastedit_impl.md](2026-10-05_lead_lastedit_impl.md) — 2026-10-05 — Lead-fülek „ki szerkesztette utoljára” (megvalósítás, A változat)
 - [2026-10-05_crm_widget_mock_sorok.md](2026-10-05_crm_widget_mock_sorok.md) — 2026-10-05 — CRM-widget: a két mock-sor (jóváhagyásra vár / kiküldésre vár) + Lead-sor szűrő
 - [2026-10-05_ai_plafon_recopy_es_koteg_cache.md](2026-10-05_ai_plafon_recopy_es_koteg_cache.md) — 2026-10-05 — AI-plafon utómunka: a recopy hozzáad + lépcsőzött sablon-köteg (SUB)

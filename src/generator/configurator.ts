@@ -264,6 +264,12 @@ export interface ConfiguratorManifest {
 export interface ConfiguratorOpts {
   /** Override the order-submit endpoint (e.g. /p/<token>/request). */
   readonly requestUrl?: string;
+  /**
+   * ADR-XXXX: the lead's preview subdomain label (lead.preview_label) — the address the
+   * outreach link already showed them, so it is the default they keep. Absent → derived
+   * from the name, as before.
+   */
+  readonly subLabel?: string | null;
   /** Event-beacon config; present only on the tracked prospect route. */
   readonly track?: {
     readonly url: string;
@@ -401,9 +407,9 @@ export async function buildManifest(
       vatNoteReverse: VAT_NOTE_REVERSE_CHARGE,
     },
     domain: {
-      sub: subdomainHost(leadName),
+      sub: opts.subLabel ? `${opts.subLabel}.citoviso.com` : subdomainHost(leadName),
       // ADR-0032: the buyer may freely CHOOSE the subdomain label; these feed the input + check.
-      subLabel: subdomainHost(leadName).split(".")[0]!,
+      subLabel: opts.subLabel || subdomainHost(leadName).split(".")[0]!,
       subBase: ".citoviso.com",
       subCheckUrl: `/configure/${artifactId}/subdomain`,
       suggestUrl: `/configure/${artifactId}/domains`,

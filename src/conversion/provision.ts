@@ -16,7 +16,8 @@ import path from "node:path";
 import { sql } from "kysely";
 
 import { db } from "../db/client.js";
-import { slugify } from "../domains.js";
+import { RESERVED_SLUGS, slugify } from "../domains.js";
+import { labelHeldByOther, releasePreviewLabelUnlessKept } from "../outreach/previewLabel.js";
 import { defaultTimeZoneForCountry } from "../text/zoneTime.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
 import { renderSite } from "../engine/render.js";
@@ -106,57 +107,45 @@ function makeToken(): string {
   return randomBytes(18).toString("base64url");
 }
 
-/** Reserved subdomain labels that must never become a tenant host (they are ours). */
-const RESERVED_SLUGS = new Set([
-  "www", "admin", "api", "app", "mail", "smtp", "imap", "console", "static",
-  "assets", "cdn", "help", "support", "status", "blog", "shop", "test", "dev",
-]);
 
 /** A platform subdomain label unique across sites (case-insensitive, 0017). A `preferred`
  *  label (the buyer's free choice, ADR-0032) is honored when it normalizes cleanly, is not
- *  reserved, and is still free — otherwise we fall back to the name-derived base. */
-async function uniqueSiteSlug(businessName: string, preferred?: string | null): Promise<string> {
-  if (preferred) {
-    const p = slugify(preferred).slice(0, 40);
-    if (p && p.length >= 3 && !RESERVED_SLUGS.has(p)) {
-      const taken = await db
-        .selectFrom("site")
-        .select("id")
-        .where(sql<boolean>`lower(slug) = ${p}`)
-        .executeTakeFirst();
-      if (!taken) return p;
-    }
+ *  reserved, and is still free — otherwise the lead's own preview label (ADR-XXXX: the
+ *  address the outreach link already showed them), then the name-derived base.
+ *  "Free" also means: not another lead's preview label (labelHeldByOther). */
+async function uniqueSiteSlug(
+  businessName: string,
+  preferred: string | null | undefined,
+  leadId: string,
+  previewLabel: string | null,
+): Promise<string> {
+  for (const wish of [preferred, previewLabel]) {
+    if (!wish) continue;
+    const p = slugify(wish).slice(0, 40);
+    if (p && p.length >= 3 && !RESERVED_SLUGS.has(p) && !(await labelHeldByOther(p, leadId))) return p;
   }
   const base = slugify(businessName).slice(0, 40) || "oldalam";
   for (let i = 0; i < 100; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`;
     if (RESERVED_SLUGS.has(candidate)) continue;
-    const taken = await db
-      .selectFrom("site")
-      .select("id")
-      .where(sql<boolean>`lower(slug) = ${candidate}`)
-      .executeTakeFirst();
-    if (!taken) return candidate;
+    if (!(await labelHeldByOther(candidate, leadId))) return candidate;
   }
   return `${base}-${randomBytes(3).toString("hex")}`;
 }
 
 /** Preliminary availability of a buyer-chosen subdomain label (ADR-0032). Normalizes the
  *  input, rejects too-short/reserved/taken labels. Preliminary: the DB check races with
- *  concurrent provisioning, so the final uniqueness is re-decided at provision time. */
+ *  concurrent provisioning, so the final uniqueness is re-decided at provision time.
+ *  ADR-XXXX: another lead's preview label is taken; the buyer's OWN one is free. */
 export async function checkSubdomainAvailable(
   label: string,
+  leadId: string | null = null,
 ): Promise<{ ok: boolean; normalized: string; reason?: string }> {
   const normalized = slugify(label).slice(0, 40);
   if (!normalized) return { ok: false, normalized: "", reason: "Adjon meg legalább egy betűt vagy számot." };
   if (normalized.length < 3) return { ok: false, normalized, reason: "Legalább 3 karakter kell." };
   if (RESERVED_SLUGS.has(normalized)) return { ok: false, normalized, reason: "Ez a név fenntartott." };
-  const taken = await db
-    .selectFrom("site")
-    .select("id")
-    .where(sql<boolean>`lower(slug) = ${normalized}`)
-    .executeTakeFirst();
-  if (taken) return { ok: false, normalized, reason: "Ez az aldomain már foglalt." };
+  if (await labelHeldByOther(normalized, leadId)) return { ok: false, normalized, reason: "Ez az aldomain már foglalt." };
   return { ok: true, normalized };
 }
 
@@ -218,7 +207,7 @@ export async function convertLead(
 
   const lead = await db
     .selectFrom("lead")
-    .select(["id", "name"])
+    .select(["id", "name", "preview_label"])
     .where("id", "=", leadId)
     .executeTakeFirst();
   if (!lead) throw new Error(`lead ${leadId} not found`);
@@ -304,7 +293,7 @@ export async function convertLead(
             preview_token: makeToken(),
             // Public host identity (0017): assigned ONCE, then stable — it is a
             // public URL, so a later rename must not move the live site.
-            slug: await uniqueSiteSlug(lead.name, preferredSlug),
+            slug: await uniqueSiteSlug(lead.name, preferredSlug, leadId, lead.preview_label),
           })
           .returning(["id", "preview_token"])
           .executeTakeFirstOrThrow();
@@ -325,6 +314,11 @@ export async function convertLead(
 
     return row;
   });
+
+  // ADR-XXXX (owner, 2026-10-05): the preview subdomain the outreach link showed stays
+  // only if it became this site's address; a buyer who chose another one releases it.
+  const finalSlug = await db.selectFrom("site").select("slug").where("id", "=", site.id).executeTakeFirst();
+  await releasePreviewLabelUnlessKept(leadId, finalSlug?.slug ?? null);
 
   return {
     tenantId,

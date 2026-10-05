@@ -2797,7 +2797,13 @@ async function handle(
   const cfgSubMatch = /^\/configure\/([0-9a-f-]{36})\/subdomain$/i.exec(path);
   if (method === "GET" && cfgSubMatch) {
     const label = url.searchParams.get("label") ?? "";
-    const r = await checkSubdomainAvailable(label);
+    // ADR-XXXX: the buyer's own preview label is free for them, taken for anyone else.
+    const art = await db
+      .selectFrom("mock_artifact")
+      .select("lead_id")
+      .where("id", "=", cfgSubMatch[1]!)
+      .executeTakeFirst();
+    const r = await checkSubdomainAvailable(label, art?.lead_id ?? null);
     return send(res, 200, JSON.stringify({ ...r, host: r.normalized ? `${r.normalized}.citoviso.com` : "" }), "application/json");
   }
   // GET /configure/:artifactId/domain-check?name=... — availability of a domain the
@@ -3049,12 +3055,15 @@ async function handle(
           "lead.id as leadId",
           "lead.address as leadAddress",
           "lead.raw as leadRaw",
+          "lead.preview_label as previewLabel",
           "prospect.contact_email as contactEmail",
         ])
         .where("prospect.token", "=", pMatch[1])
         .executeTakeFirst();
       const page = await injectConfigurator(html, p.artifactId, p.leadName, {
         requestUrl: `/p/${pMatch[1]}/request`,
+        // ADR-XXXX: the subdomain the outreach link showed is the default they keep.
+        subLabel: pf?.previewLabel ?? null,
         // ADR-0080 ①: if this buyer's tenant already runs a cycle, the purchase
         // JOINS it — so the checkout must promise that anniversary and that
         // invoice, not today+12mo over the ticked boxes (Elek FK-005a H-1).

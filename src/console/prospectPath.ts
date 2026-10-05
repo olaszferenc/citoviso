@@ -43,6 +43,13 @@ export function normalizeProspectPath(path: string): string {
 /** Query parameter that marks an owner/operator open of a tracked link. */
 export const OWN_VIEW_PARAM = "sajat";
 
+/**
+ * ADR-XXXX: the lead's preview host link — `https://<label>.citoviso.com`, bare (no path).
+ * Recognized by shape: a bare platform-subdomain URL. A tenant's live-site link has the
+ * same shape; marking it too is harmless (the tenant host ignores the parameter).
+ */
+const PREVIEW_HOST_LINK = /(https?:\/\/(?!www\.|admin\.)[a-z0-9][a-z0-9-]*\.citoviso\.com)\/?(?![A-Za-z0-9_/?#.-])/g;
+
 /** `?sajat=1` appended to one tracked page link (no existing query expected). */
 export function ownViewHref(link: string): string {
   return `${link}?${OWN_VIEW_PARAM}=1`;
@@ -54,10 +61,12 @@ export function ownViewHref(link: string): string {
  * left alone: the lookahead refuses a following path, query or token character.
  */
 export function markOwnViewLinks(body: string): string {
-  return body.replace(
-    new RegExp(`(/p/(?:[a-z0-9][a-z0-9-]*/)?${TOKEN})(?![A-Za-z0-9_/?#-])`, "g"),
-    `$1?${OWN_VIEW_PARAM}=1`,
-  );
+  return body
+    .replace(
+      new RegExp(`(/p/(?:[a-z0-9][a-z0-9-]*/)?${TOKEN})(?![A-Za-z0-9_/?#-])`, "g"),
+      `$1?${OWN_VIEW_PARAM}=1`,
+    )
+    .replace(PREVIEW_HOST_LINK, `$1/?${OWN_VIEW_PARAM}=1`);
 }
 
 /** True when the message carries at least one tracked page link. */

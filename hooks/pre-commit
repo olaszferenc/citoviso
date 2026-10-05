@@ -722,6 +722,13 @@ if [ -f scripts/check-prospect-path.mts ]; then
   echo "[pre-commit] check-prospect-path (régi + új /p/ linkalak)…"
   npx tsx scripts/check-prospect-path.mts
 fi
+# ADR-XXXX: the lead's own preview subdomain (https://<label>.citoviso.com) — label
+# minting, the platform-only link, and the ?sajat=1 own-view marker on the new shape
+# (without it the owner's pilot copy counts as the lead's visit again).
+if [ -f scripts/check-preview-label.mts ]; then
+  echo "[pre-commit] check-preview-label (a lead saját aldomain-linkje)…"
+  npx tsx scripts/check-preview-label.mts
+fi
 # A pilot-BCC (EMAIL_BCC) minden SAJÁT levelünkről másolatot küld a tulajnak — de a
 # közös adapter viszi a tenant VENDÉGEINEK szóló leveleket is (foglalás-visszaigazolás,
 # vélemény), ahol a tenant az adatkezelő. Egy elcsúszott 'audience' némán a mi

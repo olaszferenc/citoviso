@@ -45,6 +45,13 @@ export interface DomainSuggestion {
   readonly availability: DomainAvailability;
 }
 
+/** Reserved subdomain labels that must never become a tenant host or a lead's
+ *  preview host (they are ours). */
+export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
+  "www", "admin", "api", "app", "mail", "smtp", "imap", "console", "static",
+  "assets", "cdn", "help", "support", "status", "blog", "shop", "test", "dev",
+]);
+
 /** ASCII slug from a business name: accents stripped, non-alnum → hyphen. */
 export function slugify(name: string): string {
   return name

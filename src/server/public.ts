@@ -24,6 +24,7 @@ import { midnightIn, todayIn, yearIn } from "../text/zoneTime.js";
 import { config } from "../config.js";
 import { injectConsent, markAudience } from "./consent.js";
 import { isPlatformHosting, normalizeCustomDomain, PLATFORM_DOMAIN, tenantSiteUrl } from "../domains.js";
+import { prospectTokenForLabel } from "../outreach/previewLabel.js";
 import { esc, privacyPage } from "../console/views.js";
 import { renderSuspendedPage, suspendedLang } from "./suspendedPage.js";
 import { TENANT_LEGAL_PATHS } from "../engine/legalPages.js";
@@ -600,6 +601,59 @@ function isUnclaimedTenantHost(req: http.IncomingMessage): boolean {
   if (!host.endsWith(suffix)) return false;
   const label = host.slice(0, -suffix.length);
   return !!label && !label.includes(".") && !RESERVED_SUBDOMAINS.has(label);
+}
+
+/** The first label of a `<label>.citoviso.com` host (lowercase). */
+function hostLabel(req: http.IncomingMessage): string {
+  const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
+  return host.slice(0, -`.${PLATFORM_DOMAIN}`.length);
+}
+
+/** Request headers the console's /p/<token> page may read (language, device, own-view, consent). */
+const PREVIEW_FORWARD_HEADERS = [
+  "user-agent", "accept", "accept-language", "cookie", "x-real-ip",
+  "cf-connecting-ip", "cf-ipcountry", "x-forwarded-proto",
+];
+
+/**
+ * ADR-XXXX: serve the console's /p/<token> page on the lead's preview host, in place.
+ * The console is the ONLY renderer of that page (tracking, configurator, owned/opt-out
+ * framing) — duplicating it here would be a second truth. The GET records nothing
+ * (ADR-0291), so the internal hop changes no measurement.
+ */
+async function proxyPreviewPage(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  token: string,
+  search: string,
+): Promise<void> {
+  const consolePort = Number(process.env.CONSOLE_PORT ?? "4600");
+  const headers: Record<string, string> = {};
+  for (const h of PREVIEW_FORWARD_HEADERS) {
+    const v = req.headers[h];
+    if (typeof v === "string") headers[h] = v;
+  }
+  try {
+    const r = await fetch(`http://127.0.0.1:${consolePort}/p/${encodeURIComponent(token)}${search}`, {
+      headers,
+      redirect: "manual",
+    });
+    const out: Record<string, string | string[]> = {
+      "content-type": r.headers.get("content-type") ?? "text/html; charset=utf-8",
+      // A preview is never indexable, whatever the page itself says (ADR-0014).
+      "x-robots-tag": "noindex, nofollow",
+      "cache-control": "no-store",
+    };
+    const cookies = r.headers.getSetCookie();
+    if (cookies.length) out["set-cookie"] = cookies;
+    const loc = r.headers.get("location");
+    if (loc) out.location = loc;
+    res.writeHead(r.status, out);
+    res.end(Buffer.from(await r.arrayBuffer()));
+  } catch (err) {
+    console.error(`[public] preview host → console /p/ failed:`, (err as Error).message);
+    send(res, 502, "<h1>Az oldal átmenetileg nem érhető el.</h1><p>Kérjük, próbálja újra néhány perc múlva.</p>");
+  }
 }
 
 /**
@@ -2106,7 +2160,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // An unresolved tenant subdomain must NOT fall through to the landing page.
   // A RESOLVED one that got here is a mail-link/asset pass-through (above) — it is
   // claimed, and the platform handler below is exactly what the mail pointed at.
-  if (!tenantSite && isUnclaimedTenantHost(req)) {
+  // ADR-XXXX: a lead's OWN preview subdomain (lead.preview_label) — the outreach link.
+  // "/" is the lead's live /p/<token> page, served in place by the console (the address
+  // bar keeps the friendly host); every other path behaves as on citoviso.com, exactly
+  // as nginx already routes it (/p/… → console, the rest → here), so the page's own
+  // calls (/p/<token>/view, /assets, /api …) keep working on this host.
+  const previewToken =
+    !tenantSite && isUnclaimedTenantHost(req) ? await prospectTokenForLabel(hostLabel(req)) : null;
+  if (previewToken && req.method === "GET" && pathname === "/") {
+    return proxyPreviewPage(req, res, previewToken, url.search);
+  }
+  if (!tenantSite && !previewToken && isUnclaimedTenantHost(req)) {
     return send(
       res,
       404,
