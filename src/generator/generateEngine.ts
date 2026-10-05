@@ -218,6 +218,9 @@ async function generateEngineMockInner(
   regionId?: string,
   opts: GenerateOpts = {},
 ): Promise<EngineGenerateResult> {
+  // Wall-clock of the machine part, persisted as inputs.genMs — the Poe pilot (D5) compares
+  // the two generation modes in time as well as in tokens.
+  const startedAt = Date.now();
   opts.onStage?.("load");
   const { id: leadId, lead } = loaded;
   // The region snapshot starts as the built-ins and only the scrape pages refreshed it, so the
@@ -820,6 +823,7 @@ async function generateEngineMockInner(
         facts: panelFacts,
       },
       aiUsage: usageForArtifact(currentAiUsage()),
+      genMs: Date.now() - startedAt,
       // Curator mode provenance (§B.17): who wrote the words, field by field, in the hand
       // edit's shape — so a later recopy overlays Poe's text instead of replacing it.
       ...(curated
