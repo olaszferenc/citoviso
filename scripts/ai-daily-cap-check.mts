@@ -72,13 +72,15 @@ for (const [rel, fn] of Object.entries(ENTRY)) {
   const server = readFileSync(join(ROOT, "src/console/server.ts"), "utf8");
   for (const [route, marker] of [
     ["generate", "const genMatch ="],
+    ["generate-curated", "const curatedMatch ="],
     ["recopy", "const recopyMatch ="],
   ] as const) {
     const at = server.indexOf(marker);
     // Window sized to the route body (the staggered-batch comment pushed the call past 2000).
     const block = at < 0 ? "" : server.slice(at, at + 4000);
     const ask = block.indexOf("mockSpendToday()");
-    const run = block.indexOf(route === "generate" ? "generateEngineMock(" : "recopyArtifact(");
+    // Both generate routes launch through startGenerateRun (the shared background run).
+    const run = block.indexOf(route === "recopy" ? "recopyArtifact(" : "startGenerateRun(");
     if (ask < 0 || run < 0 || ask > run) {
       fail(`src/console/server.ts: a(z) ${route} útvonal nem a futás ELŐTT kérdezi a napi plafont.`);
     }

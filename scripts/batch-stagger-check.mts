@@ -80,7 +80,8 @@ if ((await runStaggered(0, () => Promise.resolve(1))).length !== 0) fail("0 tag�
 // ② wiring
 {
   const server = readFileSync(join(ROOT, "src/console/server.ts"), "utf8");
-  const at = server.indexOf("const genMatch =");
+  // Both generate routes (plain + curated) launch through startGenerateRun — the batch lives there.
+  const at = server.indexOf("function startGenerateRun(");
   const block = at < 0 ? "" : server.slice(at, at + 4000);
   if (!/runStaggered\(\s*picks\.length/.test(block)) {
     fail("src/console/server.ts: a generálás-út nem runStaggered(picks.length, …)-del indítja a köteget.");

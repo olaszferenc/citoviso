@@ -1,0 +1,221 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forrás-csomag nézet — terv (Poe, §2b ①)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dfeaf1;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.wrap{max-width:1280px;margin:0 auto;padding:14px 12px 60px}
+.intro{background:var(--citui-white);border-radius:var(--citui-radius);padding:16px 18px;box-shadow:var(--citui-shadow-sm);margin-bottom:14px}
+.intro h1{font-family:var(--citui-font-display);font-size:1.15rem;margin:0 0 6px}
+.intro p{margin:6px 0;font-size:.88rem;line-height:1.55;color:var(--citui-muted)}
+.intro b{color:var(--citui-ink)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+.bar button{font:600 13px/1 var(--citui-font-text);padding:9px 14px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-navy-900);color:#fff;border-color:var(--citui-navy-900)}
+.bar .lbl{font-size:12px;color:var(--citui-muted);min-width:70px}
+.bar label{font-size:13px;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.stage{margin:12px auto 0;transition:width .2s ease;container-type:inline-size;container-name:con}
+.stage[data-size="mobile"]{width:390px;max-width:100%}
+.stage[data-size="desktop"]{width:100%}
+.con{background:var(--citui-surface);border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm)}
+.con-top{background:linear-gradient(90deg,var(--citui-navy-900),var(--citui-navy-800));color:#eaf3f8;padding:10px 14px;font-weight:600;font-size:.9rem;display:flex;gap:10px;align-items:center}
+.con-top .dot{width:9px;height:9px;border-radius:50%;background:var(--citui-cyan-400)}
+.tabs{display:flex;gap:2px;background:var(--citui-navy-900);padding:0 8px;overflow-x:auto}
+.tabs span{color:#a9c2d6;font-size:.82rem;padding:10px 12px;white-space:nowrap}
+.tabs span.on{background:var(--citui-surface);color:var(--citui-ink);font-weight:600;border-radius:10px 10px 0 0}
+.body{padding:12px}
+.lede{font-size:13px;color:var(--citui-muted);line-height:1.55;margin:2px 2px 12px}
+.lede b{color:var(--citui-ink)}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+@container con (min-width:860px){.grid{grid-template-columns:1fr 1fr}.span2{grid-column:1/-1}}
+.blk{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:12px 14px;min-width:0}
+.blk h2{font-family:var(--citui-font-display);font-size:.95rem;margin:0 0 2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.blk .key{font:500 11px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--citui-muted)}
+.blk .why{font-size:12px;color:var(--citui-muted);margin:2px 0 10px;line-height:1.45}
+.blk.off{background:var(--citui-surface-2);border-style:dashed}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);color:var(--citui-ink);white-space:nowrap}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.pill.bad{background:color-mix(in srgb,var(--citui-bad) 12%,#fff);color:var(--citui-bad-ink)}
+.pill.warn{background:color-mix(in srgb,var(--citui-warn) 18%,#fff);color:var(--citui-warn-ink)}
+.pill.no{background:var(--citui-white);border:1px solid var(--citui-line-strong);color:var(--citui-muted)}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 12px;margin:0;font-size:13px}
+dl.kv dt{color:var(--citui-muted);font-size:12px;padding-top:1px}
+dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.na{font-weight:700;color:var(--citui-warn-ink)}
+ol.am{margin:0;padding-left:22px;font-size:13px;columns:1}
+@container con (min-width:560px){ol.am{columns:2}}
+ol.am li{padding:2px 0;break-inside:avoid}
+ol.am li .src{font-size:11px;color:var(--citui-muted)}
+.txt{font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--citui-surface);border-radius:10px;padding:8px 10px;max-height:9.5em;overflow:hidden;position:relative}
+.txt.open{max-height:none}
+.txt:not(.open)::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2.2em;background:linear-gradient(transparent,var(--citui-surface))}
+.item{border-top:1px solid var(--citui-line);padding:10px 0}
+.item:first-of-type{border-top:0;padding-top:2px}
+.item .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;margin-bottom:6px}
+.item .hd b{font-size:13px}
+.lnk{background:none;border:0;padding:4px 0 0;font:600 12px/1.2 var(--citui-font-text);color:var(--citui-link-ink);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.stars{display:inline-flex;gap:1px;vertical-align:-2px}
+.flag{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;border-radius:10px;padding:8px 10px;margin:0 0 10px}
+.flag.warn{background:color-mix(in srgb,var(--citui-warn) 12%,#fff);color:var(--citui-warn-ink)}
+.flag.bad{background:color-mix(in srgb,var(--citui-bad) 9%,#fff);color:var(--citui-bad-ink)}
+.flag svg{flex:none;margin-top:1px}
+.flag[hidden]{display:none}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@container con (min-width:860px){.photos{grid-template-columns:repeat(4,1fr)}}
+.photos figure{margin:0}
+.photos img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;display:block;background:var(--citui-surface-2)}
+.photos figcaption{font-size:11px;color:var(--citui-muted);padding-top:3px}
+table.vis{width:100%;border-collapse:collapse;font-size:12.5px}
+table.vis th,table.vis td{text-align:left;padding:6px 6px;border-top:1px solid var(--citui-line);vertical-align:top}
+table.vis th{font-size:11px;color:var(--citui-muted);font-weight:700;border-top:0}
+table.vis td.k{font:500 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--citui-muted)}
+table.vis td.c{text-align:center;white-space:nowrap}
+.yes{color:var(--citui-ok-ink);font-weight:700}.nope{color:var(--citui-muted)}
+.rooms{display:flex;flex-wrap:wrap;gap:6px}
+.rooms span{font-size:12px;border:1px dashed var(--citui-line-strong);border-radius:8px;padding:4px 8px;color:var(--citui-muted)}
+.foot{font-size:12px;color:var(--citui-muted);margin-top:12px;padding:0 2px;line-height:1.5}
+pre.json{font:11.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--citui-navy-950);color:#d7e6f0;border-radius:10px;padding:10px;max-height:360px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+</style></head><body>
+<div class="wrap">
+  <div class="intro">
+    <h1>① „Forrás-csomag” nézet a lead-lapon — terv (Poe, 2026-10-05)</h1>
+    <p>Valós adat: <b>Mandula vendégház, Badacsonytomaj</b> (dev-lead <code>ac901b05</code>). A lap <b>PONTOSAN azt mutatja, amit a generálás a szövegírónak ad</b> (a <code>briefInput</code>), ugyanabban a sorrendben, és külön jelzi, ami a kártyán más (a szobák, a régió). Csak olvas: <b>Places-t nem indít</b> — ha a tárolt vélemény elavult, kimondja („a generálás frissíti”).</p>
+    <p>Poe (a kurátor) ebből dolgozik; Neo jegye mellett ez az ő forrás-anyaga. Próbálja ki: a vélemény-szűrőt, a „Teljes szöveg” nyitást, és az „Állapot” kapcsolókat (elavult vélemény, ismeretlen régió).</p>
+    <div class="bar"><span class="lbl">Méret</span>
+      <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+      <button type="button" data-size="desktop" aria-pressed="true">Asztali</button></div>
+    <div class="bar"><span class="lbl">Állapot</span>
+      <label><input type="checkbox" id="st-stale"> A tárolt Google-vélemény 30 napnál régebbi</label>
+      <label><input type="checkbox" id="st-noregion"> A régió ismeretlen (<code>region.known</code> hamis)</label></div>
+  </div>
+
+  <div class="stage" id="stage" data-size="desktop">
+    <div class="con">
+      <div class="con-top"><span class="dot"></span><span id="t-name"></span> · lead</div>
+      <div class="tabs"><span>Áttekintés</span><span>Mock és generálás</span><span class="on">Forrás-csomag</span><span>Kiküldés</span><span>Napló</span></div>
+      <div class="body">
+        <p class="lede">Ezt kapja a szövegíró — <b>se többet, se kevesebbet</b>. Amit itt nem lát, azt a szövegben állítani sem szabad (§B.17). A sorrend is szerződés: a szolgáltatások a legerősebbtől lefelé állnak, a főcím a lista tetejéből merít.</p>
+        <div class="grid">
+          <section class="blk" id="b-id"><h2>Azonosság és hely</h2><div class="key">name · town · address · region · regionContext</div><div class="why">A szöveg csak ezt a nevet és ezt a helyet nevezheti meg.</div><dl class="kv" id="kv-id"></dl></section>
+          <section class="blk"><h2>Valós számok</h2><div class="key">realStats</div><div class="why">Szám a szövegben csak innen jöhet. Más szám (szoba, m², km, ár) = kitalált tény.</div><dl class="kv" id="kv-stats"></dl><div class="flag warn" id="stat-flag" style="margin-top:10px"></div></section>
+          <section class="blk span2"><h2>Igazolt szolgáltatások <span class="pill" id="am-n"></span></h2><div class="key">sourcedFacts.amenities — decisionWeightDesc sorrendben</div><div class="why">A portál jellemző-listája + a leírásból kiemelt tételek (<code>descriptionSellingPoints</code>), erősség szerint. A „leírásból” jelölésű tétel egy szó-egyezés eredménye — a leírás szövegében ellenőrizze.</div><ol class="am" id="am"></ol></section>
+          <section class="blk span2"><h2>Portál-leírások <span class="pill" id="d-n"></span></h2><div class="key">sourcedFacts.descriptions — ≤1500 karakter/db, a tulaj saját bemutatkozása ELSŐ</div><div class="why">A modell ezt a levágott szöveget látja, nem a teljes portál-oldalt. Az idézet-alapú tények (sellingPoints) is csak ebben + a vendég-hangban lehetnek.</div><div id="desc"></div></section>
+          <section class="blk span2" id="b-voice"><h2>Vendég-hang <span class="pill" id="v-n"></span></h2><div class="key">sourcedFacts.guestVoice — ≤10 db, ≥30 karakter, duplikátum nélkül</div><div class="why" id="v-why"></div><div class="flag bad" id="v-flag"></div><div class="flag warn" id="v-stale" hidden></div>
+            <div class="bar" style="margin:0 0 6px"><span class="lbl">Mutasd</span><button type="button" data-vf="all" aria-pressed="true">Mind</button><button type="button" data-vf="low" aria-pressed="false">★1–2</button><button type="button" data-vf="high" aria-pressed="false">★4–5</button></div>
+            <div id="voice"></div></section>
+          <section class="blk span2"><h2>A modell által látott 4 fotó <span class="pill" id="p-n"></span></h2><div class="key">imageUrls (groundImages) — a vision-hívás ezt a négyet kapja</div><div class="why" id="p-why"></div><div class="photos" id="photos"></div></section>
+          <section class="blk span2"><h2>Kitöltendő mezők sablononként</h2><div class="key">COPY_LIMITS · copyKeyApplies · visibleCopyKeys</div><div class="why">Mely szöveg-mező kerül ki a lapra az adott sablonon (a recept szakaszai: <span id="secs"></span>). A „nem látszik” mezőt is érdemes kitölteni: más sablonra váltva megjelenhet.</div>
+            <div style="overflow-x:auto"><table class="vis" id="vis"></table></div><div class="flag warn" style="margin:10px 0 0" id="vis-note"></div></section>
+          <section class="blk off span2"><h2>Szobák <span class="pill no">a szövegíró NEM látja</span></h2><div class="key">portalRooms → közvetlenül a renderbe (nem része a briefInputnak)</div><div class="why" id="r-why"></div><div class="rooms" id="rooms"></div></section>
+          <section class="blk span2"><h2>A csomag nyersen</h2><div class="why">Ugyanez gépi formában (a fejlesztőnek / a kurátor jegyzetéhez). A képek helyén itt a mock helyi fájlnevei állnak.</div><button type="button" class="lnk" id="raw-t">Megnyitom</button><pre class="json" id="raw" hidden></pre></section>
+        </div>
+        <p class="foot">Tárolt adat, a lap megnyitása semmit nem hív (Places, AI). Napi AI-keret ma: <b id="spend"></b>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="data.js"></script>
+<script>
+(function(){
+  var D=window.POE, $=function(i){return document.getElementById(i);};
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var warnIco='<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3.2M8 11.6v.2"/></svg>';
+  function stars(n){var s='';for(var i=1;i<=5;i++)s+='<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.9 4.2 4.6.4-3.5 3 1.1 4.5L8 11.2 3.9 13.6 5 9.1 1.5 6.1l4.6-.4z" fill="'+(i<=n?'currentColor':'none')+'" stroke="currentColor" stroke-width="1"/></svg>';return '<span class="stars" style="color:'+(n<=2?'var(--citui-bad-ink)':'var(--citui-warn-ink)')+'" aria-label="'+n+' csillag">'+s+'</span>';}
+  var stage=$('stage');
+  function setSize(s){stage.dataset.size=s;document.querySelectorAll('button[data-size]').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.size===s?'true':'false');});}
+  document.querySelectorAll('button[data-size]').forEach(function(b){b.addEventListener('click',function(){setSize(b.dataset.size);});});
+  if(window.matchMedia('(max-width:600px)').matches) setSize('mobile');
+  var q=new URLSearchParams(location.search); if(q.get('size')) setSize(q.get('size'));
+
+  $('t-name').textContent=D.name;
+  var st={stale:q.get('stale')==='1',noregion:q.get('noregion')==='1'};
+  $('st-stale').checked=st.stale; $('st-noregion').checked=st.noregion;
+
+  // identity — the region keys are omitted entirely when region.known is false (engine l.393)
+  function renderId(){
+    var known=D.region.known&&!st.noregion;
+    $('kv-id').innerHTML='<dt>Név</dt><dd><b>'+esc(D.name)+'</b></dd><dt>Település</dt><dd>'+esc(D.town||'')+'</dd><dt>Cím</dt><dd>'+esc(D.address)+'</dd>'+
+      '<dt>Régió</dt><dd>'+(known?esc(D.region.label):'<span class="na">NINCS ADAT</span> — a régió kimarad a csomagból, a szövegíró utasítást kap, hogy ne találjon ki régiót')+'</dd>'+
+      (known?'<dt>Régió-jellemzés</dt><dd>'+esc(D.regionContext)+' <span class="pill warn">általános, nem erről a házról</span></dd>':'');
+  }
+  $('kv-stats').innerHTML=D.realStats.map(function(s){return '<dt>'+esc(s.label)+'</dt><dd><b>'+esc(s.value)+'</b></dd>';}).join('');
+  var low=D.realStats.filter(function(s){return /Google/.test(s.label)&&parseFloat(s.value)<3.5;});
+  if(low.length){$('stat-flag').innerHTML=warnIco+'<span>A Google-átlag <b>'+esc(low[0].value)+'</b> — a mockon ez a szám megjelenik. Kurátorként ne írjon olyat, ami vele ütközik („a vendégek kedvence”).</span>';} else $('stat-flag').remove();
+
+  // amenities — rank order as sent; mark the ones lifted from prose
+  $('am-n').textContent=D.amenities.length+' tétel';
+  $('am').innerHTML=D.amenities.map(function(a){var fromDesc=D.descriptionSellingPoints.indexOf(a)>=0;
+    return '<li>'+esc(a)+(fromDesc?' <span class="src">· leírásból</span>':' <span class="src">· portál-lista</span>')+'</li>';}).join('');
+
+  // descriptions
+  $('d-n').textContent=D.descriptions.length+' db';
+  $('desc').innerHTML=(D.ownerIntro?'':'<div class="flag warn">'+warnIco+'<span>Nincs a tulaj saját bemutatkozása (ownerIntro) — mindkét szöveg portálé, harmadik személyben vagy hirdetés-hangon.</span></div>')+
+    D.descriptions.map(function(d,i){return '<div class="item"><div class="hd"><b>'+esc(d.host)+'</b><span class="pill ok">high egyezés</span><span class="mut" style="font-size:12px">'+d.d.length+' / 1500 karakter</span></div><div class="txt" id="dt'+i+'">'+esc(d.d)+'</div><button type="button" class="lnk" data-open="dt'+i+'">Teljes szöveg</button></div>';}).join('');
+
+  // guest voice — shown exactly as sent (no star filter exists in the engine: that IS the finding)
+  var vf='all';
+  function renderVoice(){
+    var all=D.guestVoice, n=all.length, lowN=all.filter(function(v){return v.rating<=2;}).length;
+    $('v-n').textContent=st.stale?'0 db (elavult)':n+' db';
+    $('v-why').innerHTML='Forrás: '+(st.stale?'—':'Google (tárolva '+esc(D.fetchedAt.slice(0,10))+', 30 napig érvényes)')+'. A modell a csillagot is látja, de a motor <b>csillag szerint nem szűr</b>.';
+    var fl=$('v-flag'); fl.hidden=st.stale||!lowN;
+    fl.innerHTML=warnIco+'<span><b>'+lowN+' / '+n+' vélemény ★1–2.</b> A szövegíró ebből veszi a vendég hangját — ebből a csomagból egy lelkes szöveg hamis, egy őszinte pedig nem eladható. Kurátorként: a vendég-hangra NE építsen; idézni (sellingPoints) a portál-leírásból lehet.</span>';
+    var sv=$('v-stale'); sv.hidden=!st.stale;
+    sv.innerHTML=warnIco+'<span>A tárolt Google-vélemények 30 napnál régebbiek, ezért <b>a csomagban most nincsenek</b>. A generálás frissíti őket (Places-hívás, költség); ez a nézet nem hívja. Ha a frissítés nem sikerül, a generálás nélkülük fut.</span>';
+    var list=st.stale?[]:all.filter(function(v){return vf==='all'||(vf==='low'?v.rating<=2:v.rating>=4);});
+    $('voice').innerHTML=list.length?list.map(function(v,i){return '<div class="item"><div class="hd">'+stars(v.rating)+'<b>'+esc(v.author||'vendég')+'</b><span class="pill">'+(v.source==='google_places'?'Google':esc(v.source))+'</span><span class="mut" style="font-size:12px">'+v.text.length+' karakter</span></div><div class="txt" id="vt'+i+'">'+esc(v.text)+'</div><button type="button" class="lnk" data-open="vt'+i+'">Teljes szöveg</button></div>';}).join('')
+      :'<p class="mut" style="font-size:13px;margin:4px 0">'+(st.stale?'A csomagban most nincs vendég-hang.':'Ebben a szűrésben nincs vélemény.')+'</p>';
+  }
+  document.querySelectorAll('[data-vf]').forEach(function(b){b.addEventListener('click',function(){vf=b.dataset.vf;document.querySelectorAll('[data-vf]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});renderVoice();});});
+
+  // photos
+  $('p-n').textContent='4 / '+D.photosTotal;
+  $('p-why').textContent='A lead '+D.photosTotal+' fotójából csak ez a 4 megy a modellnek (brief.ts: imageUrls.slice(0,4)). Amit a szöveg a képről állít, annak ezeken kell látszania.';
+  $('photos').innerHTML=D.groundImages.map(function(u,i){return '<figure><img src="'+esc(u)+'" alt="'+esc(D.name)+' — '+(i+1)+'. grounding-fotó"><figcaption>'+(i+1)+'. · portál-fotó</figcaption></figure>';}).join('');
+
+  // per-template field table
+  var KEYS=[['hero.lead','Főcím',140],['hero.accent','Dőlt kiemelés a főcímben',60],['hero.eyebrow','Felső sor',60],['tagline','Alcím',160],['intro','Bemutatkozás',600],['highlights','Kiemelések (≤6)',80],
+    ['features.eyebrow','Vendéglátás — felső sor',60],['features.title','Vendéglátás — cím',90],['gallery.eyebrow','Galéria — felső sor',60],['gallery.title','Galéria — cím',90],
+    ['reviews.eyebrow','Vélemények — felső sor',60],['reviews.title','Vélemények — cím',90],['location.eyebrow','Környék — felső sor',60],['location.title','Környék — cím',90]];
+  var T=Object.keys(D.vis);
+  $('secs').textContent=D.sections.join(' · ');
+  $('vis').innerHTML='<tr><th>Mező</th><th>max</th>'+T.map(function(t){return '<th class="c">'+esc(t)+'</th>';}).join('')+'</tr>'+
+    KEYS.map(function(k){return '<tr><td><b>'+esc(k[1])+'</b><br><span class="k" style="font:500 11px ui-monospace,monospace;color:var(--citui-muted)">'+esc(k[0])+'</span></td><td>'+k[2]+'</td>'+
+      T.map(function(t){var on=k[0]==='hero.accent'?D.vis[t].indexOf('hero.lead')>=0:D.vis[t].indexOf(k[0])>=0;
+        return '<td class="c">'+(k[0]==='hero.accent'?'<span class="yes">a főcímben dőlten</span>':on?'<span class="yes">látszik</span>':'<span class="nope">nem látszik</span>')+'</td>';}).join('')+'</tr>';}).join('');
+  $('vis-note').innerHTML=warnIco+'<span>A recept szakaszai között nincs <b>szoba</b> és <b>GYIK</b> — a <code>rooms.*</code> és <code>faq.*</code> mezőnek ennél a leadnél nincs helye, ezért nincs a listában. A dőlt kiemelés csak akkor látszik, ha szó szerint benne van a főcímben.</span>';
+
+  $('r-why').innerHTML='A portál <b>'+D.roomCount+' egységet</b> ad meg, név nélkül → a mockon számozott helyőrzők. A szobák a szoba-szakaszba kerülnek, a szövegíró nem látja őket: a szövegben szobaszámot, szobanevet ne írjon.';
+  var r='';for(var i=1;i<=Math.min(D.roomCount,10);i++)r+='<span>'+i+'. egység</span>';$('rooms').innerHTML=r;
+
+  function renderRaw(){
+    var known=D.region.known&&!st.noregion;
+    var pack={name:D.name},sf={amenities:D.amenities,descriptions:D.descriptions.map(function(d){return d.d;})};
+    if(known){pack.region=D.region.label;pack.regionContext=D.regionContext;}
+    pack.address=D.address;pack.town=D.town;pack.realStats=D.realStats;
+    if(!st.stale) sf.guestVoice=D.guestVoice.map(function(v){return {text:v.text,rating:v.rating,source:v.source};});
+    pack.sourcedFacts=sf;pack.imageUrls=D.groundImages;
+    $('raw').textContent=JSON.stringify(pack,null,2);
+  }
+  $('raw-t').addEventListener('click',function(){var r=$('raw');r.hidden=!r.hidden;this.textContent=r.hidden?'Megnyitom':'Becsukom';});
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-open]');if(!b)return;var t=$(b.dataset.open);t.classList.toggle('open');b.textContent=t.classList.contains('open')?'Kevesebb':'Teljes szöveg';});
+  $('spend').textContent='$'+D.spend.spentUsd.toFixed(2)+' / $'+D.spend.capUsd+' ('+D.spend.mocks+' mock)';
+  function all(){renderId();renderVoice();renderRaw();}
+  $('st-stale').addEventListener('change',function(e){st.stale=e.target.checked;all();});
+  $('st-noregion').addEventListener('change',function(e){st.noregion=e.target.checked;all();});
+  all();
+})();
+</script>
+</body></html>

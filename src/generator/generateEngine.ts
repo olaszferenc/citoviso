@@ -37,8 +37,9 @@ import { applyGuestCritic, criticSourceOf, judgeGuestCopy } from "./guestCritic.
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
-import { MIN_GUEST_STARS, selectGuestVoice } from "./guestVoice.js";
-import { decisionWeightDesc, descriptionSellingPoints, groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
+import { MIN_GUEST_STARS } from "./guestVoice.js";
+import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
+import { groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
 import { fingerprintCandidates } from "./photoHash.js";
@@ -67,12 +68,6 @@ export interface EngineGenerateResult {
   readonly designVerdict: "pass" | "flag";
 }
 
-/** Words that identify no property on their own — never a self-anchor for prose. */
-const GENERIC_LEAD_WORD = new Set([
-  "apartman", "apartmanhaz", "vendeghaz", "panzio", "hotel", "villa", "szallas",
-  "szallashely", "udulo", "nyaralo", "kemping", "porta", "resort", "balaton",
-]);
-
 /** The lead's Google place id, as the scraper stored it (sourceRefs.google_places). */
 function placeIdOf(lead: LoadedLead["lead"]): string | null {
   // `lead` IS the rehydrated raw record (persist.loadLead), so the refs sit on it.
@@ -93,7 +88,7 @@ function placeIdOf(lead: LoadedLead["lead"]): string | null {
  * the SHAPE of the property is true. Only `high` band feeds this: a medium match
  * may be another property (§F.17b), and a wrong room list is a §B.17 violation.
  */
-function portalRooms(
+export function portalRooms(
   lead: LoadedLead["lead"],
   // ADR-0067: the capacity label lands on the GUEST's page ("4 fő"), so it is a
   // customer-facing string, not a data value — it must speak the page's language.
@@ -275,63 +270,6 @@ async function generateEngineMockInner(
       ]
     : [];
 
-  // What the property's OWN verified listing says it offers. Until 2026-08-31 this was read
-  // only by the fact gate, never by the WRITER — so the copywriter saw the name, the region
-  // and four photos, and the prompt told it to build on what the photos show. It obeyed:
-  // measured on Dencs Apartmanház, whose listing states a playground, a garden, a private
-  // car park, a cot and a high chair, the mock led with "Fenyőillatú csend a tető alatt" and
-  // offered a bookshelf as a highlight, because a sofa was all it was given. Across the DB
-  // 46 high-band profiles carried 289 such facts and 28 real descriptions, all unused.
-  const highProfiles = (
-    (lead as unknown as { portalProfiles?: readonly PortalProfile[] }).portalProfiles ?? []
-  ).filter((p) => p.matchBand === "high");
-  const sourcedAmenities = [...new Set(highProfiles.flatMap((p) => p.amenities))].filter(
-    (a) => a.trim().length > 1,
-  );
-  // Short blurbs are portal chrome, not a self-introduction ("Gyenesdiás" was one listing's
-  // whole "description") — those carry no fact worth grounding and only add prompt noise.
-  // SELF-ANCHORED PROSE from a medium-band listing is admissible too (owner request,
-  // 2026-08-31: "scrapeljük a szöveget is információért"). The medium band exists because
-  // a page-level match may be another property — but a paragraph that NAMES this property
-  // in its own words carries its own proof: "A Dencs Család egy kétszintes apartmanházzal
-  // rendelkezik … Gyenesdiáson" cannot be about someone else. That listing scored medium
-  // only because name agreement was the single signal available, and its text was the
-  // richest thing we held about the lead. Photos stay barred at medium (a picture makes no
-  // claim about whose it is); prose that identifies itself does not need the page's vouch.
-  const brandOf = (s: string): string[] =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .split(/[^a-z0-9]+/)
-      .filter((w) => w.length >= 5 && !GENERIC_LEAD_WORD.has(w));
-  const leadBrand = brandOf(lead.name);
-  const selfAnchored = ((lead as unknown as { portalProfiles?: readonly PortalProfile[] })
-    .portalProfiles ?? [])
-    .filter((p) => p.matchBand !== "high" && p.matchConfidence >= 0.9)
-    .filter((p) => {
-      const d = p.description?.trim();
-      if (!d || d.length < 120) return false;
-      const hay = brandOf(d).join(" ");
-      return leadBrand.length > 0 && leadBrand.some((b) => hay.includes(b));
-    });
-  const sourcedDescriptions = [...highProfiles, ...selfAnchored]
-    .map((p) => p.description?.trim())
-    .filter((d): d is string => Boolean(d && d.length >= 120))
-    .map((d) => d.slice(0, 1500));
-  // The curator-pasted owner self-introduction (console lead form) goes FIRST:
-  // it is the owner's own published words — the strongest voice we can source,
-  // and often the only place the property's signature hooks live (Facebook is
-  // robots-closed to machines, so the curator's hand is the legitimate route).
-  // Floor of 40 chars, not 120: the curator saved it deliberately, a portal's
-  // boilerplate-length filter does not apply to a hand-picked text.
-  const ownerIntro = (lead as unknown as { ownerIntro?: string }).ownerIntro?.trim();
-  if (ownerIntro && ownerIntro.length >= 40) sourcedDescriptions.unshift(ownerIntro.slice(0, 1500));
-  // The prose's STRONG claims, lifted into countable facts (measured: Kati Villa's own
-  // description opens with waterfront + private beach + pier, the listing publishes ZERO
-  // amenities, and the mock sold the car park — because every consumer below only ever
-  // counted the amenity LIST). Merged before the writer, the guard and the fact gate, so
-  // "vízparti" is a fact the headline can be REQUIRED to carry.
   // GUEST VOICE (ADR-0106): the guests' own public words about THIS property —
   // the tone source that finally speaks the guest's language instead of the
   // photo's ("fehér csempés fürdőszoba"). Two channels, both attribution-gated:
@@ -339,9 +277,6 @@ async function generateEngineMockInner(
   // ride the A4-gated place id, under the 30-day freshness rule (stale stored
   // content is re-fetched, and on a failed re-fetch DROPPED, never used stale —
   // the Places policy forbids long-term caching).
-  const portalVoice = highProfiles.flatMap((p) =>
-    (p.reviews ?? []).map((r) => ({ text: r.text, rating: r.rating, source: p.portalHost })),
-  );
   const storedGoogle = lead as unknown as {
     guestReviews?: readonly GuestReview[];
     guestReviewsFetchedAt?: string;
@@ -361,25 +296,25 @@ async function generateEngineMockInner(
       console.warn(`  [engine] vendég-vélemény lekérés kihagyva: ${(err as Error).message}`);
     }
   }
-  // Star floor + length + duplicate + cap — the ONE chain the source-pack view also uses
-  // (src/generator/guestVoice.ts; owner decision 2026-10-05: only ≥4★ reaches the writer).
-  const voice = selectGuestVoice([...googleVoice, ...portalVoice]);
-  const guestVoice = voice.used;
-  const lowStars = voice.dropped.filter((d) => d.reason === "stars").length;
+  // The writer's source pack — the ONE assembly the console's "Forrás-csomag" view also
+  // shows (src/generator/writerSources.ts): listed amenities + prose facts (strongest
+  // first), self-anchored prose with the owner intro first, the ≥4★ guest voice.
+  const sources = collectWriterSources(
+    lead as unknown as WriterSourceLead,
+    googleVoice,
+  );
+  const { highProfiles, selfAnchored } = sources;
+  const ownerIntro = sources.ownerIntro;
+  const sourcedAmenities = [...sources.amenities];
+  const sourcedDescriptions = [...sources.descriptions];
+  const guestVoice = sources.voice.used;
+  const lowStars = sources.voice.dropped.filter((d) => d.reason === "stars").length;
   if (lowStars)
     console.log(`  vendég-hang: ${lowStars} vélemény kiszűrve (≥${MIN_GUEST_STARS}★ szabály)`); // i18n-exempt: operator log
   if (guestVoice.length)
     console.log(
       `  vendég-hang: ${guestVoice.length} vélemény (${[...new Set(guestVoice.map((v) => v.source))].join(", ")})`, // i18n-exempt: operator log
     );
-
-  const descriptionFacts = descriptionSellingPoints(sourcedDescriptions);
-  for (const f of descriptionFacts) {
-    if (!sourcedAmenities.some((a) => a.toLowerCase() === f.toLowerCase())) sourcedAmenities.push(f);
-  }
-  // Strongest first: the prompt states the list is ranked and the headline must draw
-  // from its top, so the ORDER is part of the contract (Kati Villa lesson).
-  sourcedAmenities.sort(decisionWeightDesc);
 
   // Brief + editorial copy in ONE vision call (measured 2026-08-29: the two separate calls
   // sent the SAME 4 photos twice, and vision input is ~99% of the mock's bill — merging
@@ -414,7 +349,7 @@ async function generateEngineMockInner(
   // are (the prose + the guest reviews, brief.ts) — a broken pack fails the generation loudly
   // instead of shipping half a text.
   const curatorCheck = opts.curatorCopy
-    ? validateCuratorCopy(opts.curatorCopy, [...sourcedDescriptions, ...guestVoice.map((v) => v.text)])
+    ? validateCuratorCopy(opts.curatorCopy, quoteCorpusOf(sources))
     : null;
   if (curatorCheck && !curatorCheck.ok) {
     const why = Object.entries(curatorCheck.errors).map(([k, m]) => `${k}: ${m}`).join(" · ");

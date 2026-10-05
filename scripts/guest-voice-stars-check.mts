@@ -57,9 +57,12 @@ const LONG = " — hosszabb vendég-vélemény, hogy átmenjen a hossz-szűrőn.
   check(r.used.length === 1 && r.used[0]!.rating === 9.2, `10-es skála: 6 kiesik, 9,2 marad (kapott: ${r.used.map((v) => v.rating).join(",")})`);
 }
 {
-  // A generálás TÉNYLEG ezt a láncot hívja (nem egy párhuzamos másolatot).
-  const src = readFileSync(new URL("../src/generator/generateEngine.ts", import.meta.url), "utf8");
-  check(/selectGuestVoice\(\[\.\.\.googleVoice, \.\.\.portalVoice\]\)/.test(src), `generateEngine a selectGuestVoice-t hívja a vendég-hangra`);
+  // A generálás TÉNYLEG ezt a láncot hívja (nem egy párhuzamos másolatot): a motor a
+  // writerSources-t (a Forrás-csomag nézettel KÖZÖS összerakást), az pedig a selectGuestVoice-t.
+  const engine = readFileSync(new URL("../src/generator/generateEngine.ts", import.meta.url), "utf8");
+  const sources = readFileSync(new URL("../src/generator/writerSources.ts", import.meta.url), "utf8");
+  check(/collectWriterSources\([\s\S]{0,80}googleVoice,?\s*\)/.test(engine) && /const guestVoice = sources\.voice\.used;/.test(engine), `generateEngine a writerSources vendég-hangját adja a szövegírónak`);
+  check(/selectGuestVoice<VoiceInput>\(\[\.\.\.googleVoice, \.\.\.portalVoiceOf\(profiles\)\]\)/.test(sources), `writerSources a selectGuestVoice-t hívja a vendég-hangra`);
 }
 
 for (const o of oks) console.log(`  ✓ ${o}`);

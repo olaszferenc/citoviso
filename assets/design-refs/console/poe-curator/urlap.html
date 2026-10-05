@@ -1,0 +1,409 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Generálás kurátori szöveggel — terv (Poe, §2b ②)</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f;
+  --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-white:#fff;
+  --citui-ink:#10243a; --citui-muted:#60748b; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+  --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+  --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#dfeaf1;font-family:var(--citui-font-text);color:var(--citui-ink)}
+.wrap{max-width:1280px;margin:0 auto;padding:14px 12px 60px}
+.intro{background:var(--citui-white);border-radius:var(--citui-radius);padding:16px 18px;box-shadow:var(--citui-shadow-sm);margin-bottom:14px}
+.intro h1{font-family:var(--citui-font-display);font-size:1.15rem;margin:0 0 6px}
+.intro p{margin:6px 0;font-size:.88rem;line-height:1.55;color:var(--citui-muted)}
+.intro b{color:var(--citui-ink)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+.bar button{font:600 13px/1 var(--citui-font-text);padding:9px 14px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer}
+.bar button[aria-pressed="true"]{background:var(--citui-navy-900);color:#fff;border-color:var(--citui-navy-900)}
+.bar .lbl{font-size:12px;color:var(--citui-muted);min-width:70px}
+.bar label{font-size:13px;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.stage{margin:12px auto 0;transition:width .2s ease;container-type:inline-size;container-name:con}
+.stage[data-size="mobile"]{width:390px;max-width:100%}
+.stage[data-size="desktop"]{width:100%}
+.con{background:var(--citui-surface);border-radius:var(--citui-radius);overflow:hidden;box-shadow:var(--citui-shadow-sm)}
+.con-top{background:linear-gradient(90deg,var(--citui-navy-900),var(--citui-navy-800));color:#eaf3f8;padding:10px 14px;font-weight:600;font-size:.9rem;display:flex;gap:10px;align-items:center}
+.con-top .dot{width:9px;height:9px;border-radius:50%;background:var(--citui-cyan-400)}
+.tabs{display:flex;gap:2px;background:var(--citui-navy-900);padding:0 8px;overflow-x:auto}
+.tabs span{color:#a9c2d6;font-size:.82rem;padding:10px 12px;white-space:nowrap}
+.tabs span.on{background:var(--citui-surface);color:var(--citui-ink);font-weight:600;border-radius:10px 10px 0 0}
+.body{padding:12px}
+.panel{background:var(--citui-white);border:1px solid var(--citui-cyan-500);box-shadow:0 0 0 3px color-mix(in srgb,var(--citui-cyan-500) 14%,transparent);border-radius:var(--citui-radius-sm);padding:12px 14px 14px}
+.panel h3{font-family:var(--citui-font-display);font-size:1rem;margin:0 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lede{font-size:12.5px;color:var(--citui-muted);margin:0 0 12px;line-height:1.5}
+.lede b{color:var(--citui-ink)}
+.lay{display:grid;grid-template-columns:1fr;gap:12px}
+@container con (min-width:900px){.lay{grid-template-columns:1fr 300px;align-items:start}.side{position:sticky;top:10px}}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 9px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);color:var(--citui-ink);white-space:nowrap}
+.pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.pill.bad{background:color-mix(in srgb,var(--citui-bad) 12%,#fff);color:var(--citui-bad-ink)}
+.pill.run{background:color-mix(in srgb,var(--citui-cyan-500) 14%,#fff);color:var(--citui-link-ink)}
+.pill.warn{background:color-mix(in srgb,var(--citui-warn) 18%,#fff);color:var(--citui-warn-ink)}
+.pill.no{background:var(--citui-white);border:1px solid var(--citui-line-strong);color:var(--citui-muted)}
+.pill.poe{background:var(--citui-navy-900);color:#fff}
+.pill[hidden]{display:none}
+.mut{color:var(--citui-muted)}.small{font-size:12px}
+.btn{font:600 13px/1 var(--citui-font-text);padding:10px 14px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn.solid{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.lnk{background:none;border:0;padding:0;font:600 12px/1.2 var(--citui-font-text);color:var(--citui-link-ink);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.tpls{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:6px}
+@container con (min-width:560px){.tpls{grid-template-columns:1fr 1fr}}
+.tpl{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--citui-line-strong);border-radius:12px;padding:10px 12px;cursor:pointer;font-size:13px}
+.tpl:has(input:checked){border-color:var(--citui-cyan-500);background:color-mix(in srgb,var(--citui-cyan-500) 6%,#fff)}
+.tpl input{margin-top:2px}
+.tpl b{font-family:var(--citui-font-display)}
+.tpl .s{font-size:12px;color:var(--citui-muted);display:block;margin-top:2px;line-height:1.4}
+.grp{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:var(--citui-white)}
+.grp > summary{cursor:pointer;font-weight:700;font-size:13px;display:flex;gap:8px;align-items:center;list-style:none}
+.grp > summary::-webkit-details-marker{display:none}
+.grp > summary .chev{transition:transform .15s}
+.grp[open] > summary .chev{transform:rotate(90deg)}
+.grp > summary .cnt{margin-left:auto}
+.fgrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+@container con (min-width:820px){.fgrid.two{grid-template-columns:1fr 1fr}}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.f label,.f .lab{font-size:12px;font-weight:700;letter-spacing:.02em}
+.f .where{font-size:11.5px;color:var(--citui-muted);display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.f .where .pill{font-size:10.5px;padding:2px 7px}
+.f textarea,.f input[type=text]{width:100%;font:14px/1.45 var(--citui-font-text);padding:8px 10px;border:1px solid var(--citui-line-strong);border-radius:10px;color:var(--citui-ink);background:var(--citui-white);resize:vertical}
+.f textarea:focus,.f input:focus{outline:2px solid var(--citui-cyan-500);outline-offset:1px;border-color:transparent}
+.f.err textarea,.f.err input[type=text],.row.err input{border-color:var(--citui-bad);background:color-mix(in srgb,var(--citui-bad) 5%,#fff)}
+.f.wrn textarea,.f.wrn input[type=text],.row.wrn input{border-color:var(--citui-warn)}
+.f .foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px}
+.f .foot .n{margin-left:auto;color:var(--citui-muted)}
+.f .foot .n.over{color:var(--citui-bad-ink);font-weight:700}
+.msg{font-size:12px;font-weight:600}
+.msg.bad{color:var(--citui-bad-ink)}.msg.warn{color:var(--citui-warn-ink)}
+.f .live{font-size:15px;font-family:var(--citui-font-display);padding:4px 0 0;line-height:1.35}
+.f .live em{color:var(--citui-link-ink)}
+.f.dim{opacity:.72}
+.row{display:flex;gap:6px;align-items:center}
+.row input{flex:1;min-width:0}
+.sp-row{border:1px solid var(--citui-line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.sp-row .row input.lab-in{flex:0 0 38%}
+@container con (max-width:560px){.sp-row .row{flex-wrap:wrap}.sp-row .row input.lab-in{flex:1 1 100%}}
+.sp-row .msg{font-weight:500}
+.icon-btn{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:10px;width:36px;height:36px;display:inline-grid;place-items:center;cursor:pointer;color:var(--citui-muted);flex:none}
+.icon-btn:hover{color:var(--citui-bad-ink);border-color:var(--citui-bad)}
+.sw{width:36px;height:36px;border-radius:10px;border:1px solid var(--citui-line-strong);flex:none;background:repeating-linear-gradient(45deg,var(--citui-surface-2) 0 6px,var(--citui-white) 6px 12px)}
+.side .card{background:var(--citui-surface);border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.5}
+.side .card h4{margin:0 0 6px;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--citui-muted)}
+.side ul{margin:0;padding-left:18px}
+.submit{position:sticky;bottom:0;background:var(--citui-white);border:1px solid var(--citui-line-strong);border-radius:12px;padding:10px 12px;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -6px 20px rgba(14,42,71,.08)}
+.submit .sum{flex:1 1 220px;font-size:13px;min-width:0}
+.cap{display:none;background:color-mix(in srgb,var(--citui-bad) 9%,#fff);color:var(--citui-bad-ink);border-radius:10px;padding:10px 12px;font-size:13px;margin:0 0 10px;gap:8px;align-items:flex-start}
+.is-cap .cap{display:flex}
+.prog{margin-top:12px;display:none}
+.prog.on{display:block}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.cards{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+@container con (min-width:820px){.cards{grid-template-columns:1fr 1fr}}
+.rc{border:1px solid var(--citui-line-strong);border-radius:12px;overflow:hidden;background:var(--citui-white)}
+.rc .shot{aspect-ratio:16/9;background:var(--citui-surface-2);position:relative;overflow:hidden}
+.rc .shot img{width:100%;height:100%;object-fit:cover;display:block;filter:brightness(.62)}
+.rc .shot .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:12px 14px;color:#fff;font-family:Georgia,serif}
+.rc .shot .ov .t{font-size:1.15rem;line-height:1.25}
+.rc .shot .ov .t em{color:var(--acc,#fff)}
+.rc .shot .ov .s{font:12px/1.4 var(--citui-font-text);opacity:.9;margin-top:4px}
+.rc .m{padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.rc .m .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rc .m .hd b{font-family:var(--citui-font-display);font-size:.95rem}
+.why{font-size:12px;color:var(--citui-bad-ink)}
+.sim{font-size:11px;color:var(--citui-muted)}
+.warnlist{margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--citui-warn-ink)}
+</style></head><body>
+<div class="wrap">
+  <div class="intro">
+    <h1>② „Generálás kurátori szöveggel” űrlap — terv (Poe, 2026-10-05)</h1>
+    <p>Valós adat: <b>Mandula vendégház, Badacsonytomaj</b>. Poe a Forrás-csomagból írja meg a szöveget; az űrlap a jóváhagyott kézi átírás (ADR-0323, „A” mezős űrlap) mezőit és viselkedését használja újra. <b>EGY szövegkészlet, 1–2 sablon</b> (Neo jegyéből); mezőnként látszik, melyik sablonon jelenik meg. A generálás AI-szövegírót NEM hív: a fotók és a render fut, a három őr <b>egyszer</b> ítél.</p>
+    <p>A validáció a valódi szabályokat tükrözi: kötelező mezők és hossz-korlátok (<code>COPY_LIMITS</code>), normalizálás (szóköz-összevonás, cím legfeljebb 2 sor), a dőlt kiemelés szó szerint a főcímben, a kiemelés-szűrő (berendezés-leírás kiesik), az idézet szó szerint a forrásban (különben a tény kiesik), az akcentszín <code>#rrggbb</code>. <b>Az őr-ítélet a mockban szimulált</b> (szólista + számjegy) — próbálja ki: írjon a főcímbe „medence”-t, vagy rontson el egy idézetet.</p>
+    <div class="bar"><span class="lbl">Méret</span>
+      <button type="button" data-size="mobile" aria-pressed="false">Mobil 390px</button>
+      <button type="button" data-size="desktop" aria-pressed="true">Asztali</button></div>
+    <div class="bar"><span class="lbl">Állapot</span>
+      <label><input type="checkbox" id="st-cap"> A napi AI-keret elfogyott</label>
+      <button type="button" id="st-empty">Üres űrlap</button>
+      <button type="button" id="st-fill">Minta-kitöltés</button></div>
+  </div>
+
+  <div class="stage" id="stage" data-size="desktop">
+    <div class="con">
+      <div class="con-top"><span class="dot"></span><span id="t-name"></span> · lead</div>
+      <div class="tabs"><span>Áttekintés</span><span class="on">Mock és generálás</span><span>Forrás-csomag</span><span>Kiküldés</span><span>Napló</span></div>
+      <div class="body">
+        <div class="panel" id="panel">
+          <h3><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 2.5l2.5 2.5L6 12.5H3.5V10z"/></svg>Generálás kurátori szöveggel <span class="pill poe">Poe</span></h3>
+          <p class="lede">A szöveget Ön írja, a gép csak a fotókat és a kinézetet adja hozzá. Amit ide ír, azért Ön felel: a tényhűség-őr erre is lefut. Forrás: a <b>Forrás-csomag</b> lap — ami ott nincs, azt itt ne állítsa.</p>
+          <div class="cap" id="cap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M4 12L12 4"/></svg><span id="cap-t"></span></div>
+          <div class="lay">
+            <div class="main">
+              <div class="grp" style="padding-bottom:12px"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Sablon <span class="mut small" style="font-weight:500">— 1 vagy 2, a jegy szerint; mindkettő ugyanazt a szöveget kapja</span></div>
+                <div class="tpls" id="tpls"></div><div class="msg" id="tpl-msg"></div></div>
+              <div id="form"></div>
+            </div>
+            <aside class="side">
+              <div class="card"><h4>Neo jegye</h4><div id="ticket"></div></div>
+              <div class="card"><h4>Kötelező</h4><ul><li>Főcím (≤140)</li><li>Alcím (≤160)</li><li>Bemutatkozás (≤600)</li><li>1–6 kiemelés (egyenként ≤80)</li></ul></div>
+              <div class="card"><h4>A csomagból</h4><div id="pack-mini"></div></div>
+            </aside>
+          </div>
+          <div class="submit">
+            <div class="sum" id="sum"></div>
+            <button class="btn solid" type="button" id="go" disabled>Generálás ezzel a szöveggel</button>
+          </div>
+          <div class="prog" id="prog"><div class="steps" id="steps"></div><div class="cards" id="cards"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="data.js"></script>
+<script>
+(function(){
+  var D=window.POE, $=function(i){return document.getElementById(i);};
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var stage=$('stage');
+  function setSize(s){stage.dataset.size=s;document.querySelectorAll('button[data-size]').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.size===s?'true':'false');});}
+  document.querySelectorAll('button[data-size]').forEach(function(b){b.addEventListener('click',function(){setSize(b.dataset.size);});});
+  if(window.matchMedia('(max-width:600px)').matches) setSize('mobile');
+  var q=new URLSearchParams(location.search); if(q.get('size')) setSize(q.get('size'));
+  $('t-name').textContent=D.name;
+
+  // ---- real rules mirrored from the code ----
+  // copyFields.ts COPY_LIMITS + copyFieldSpec
+  var L={heroLead:140,accent:60,eyebrow:60,tagline:160,intro:600,sectionTitle:90,highlight:80,highlightsMax:6};
+  // copyFields.ts normalizeCopy
+  function normalizeCopy(key,v){
+    var s=String(v).replace(/\r\n?/g,'\n');
+    if(/\.title$/.test(key)) return s.split('\n').map(function(l){return l.replace(/[ \t]+/g,' ').trim();}).filter(Boolean).slice(0,2).join('\n');
+    if(key==='intro') return s.replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    return s.replace(/\s+/g,' ').trim();
+  }
+  // highlightValue.ts isDecorFiller (VALUE / SURFACE lists verbatim)
+  var VALUE=["medence","medencé","jacuzzi","szauna","wellness","pezsgőfürdő","parkol","garázs","strand","vízpart","tópart","móló","csónak","hajó","horgász","wifi","internet","klíma","légkondicion","fűt","reggeli","étterem","étterm","büfé","konyha","grill","bogrács","kemence","tűzrakó","kert","terasz","terassz","erkély","erkélly","udvar","panoráma","kilátás","kilátó","játszótér","játszó","gyerek","családbarát","kisállat","kutyabarát","kerékpár","bicikli","túra","síterep","sípálya","pince","borkóstol","élő zene","rendezvény","konferencia","recepció","lift","akadálymentes","mosógép","mosoda","szabad strand","közel","percre","méterre","km-re"];
+  var SURFACE=["csempé","csempe","burkolat","padló","parketta","laminált","szőnyeg","homlokzat","fal ","falak","falú","falfest","festett","tapéta","vakolat","ágynemű","ágytakaró","függöny","párna","lepedő","színű","színek","sárga","kék-","zöld-","fehér csempés","bézs","barna csempés","díszít","dekor","keretezett","mintás","csíkos","virágmintás","bejárat","ablakkeret","ajtó","korlát","lépcsőház"];
+  function has(h,n){return n.some(function(x){return h.indexOf(x)>=0;});}
+  function isDecorFiller(l){var s=l.toLowerCase();if(has(s,VALUE))return false;return has(s,SURFACE);}
+  // brief.ts validateSellingPoints — corpus = descriptions + guest voice (generateEngine l.418)
+  function squeeze(s){return s.toLowerCase().replace(/\s+/g,' ').trim();}
+  var HAY=squeeze(D.descriptions.map(function(d){return d.d;}).concat(D.guestVoice.map(function(v){return v.text;})).join(' \n '));
+  function spCheck(p,seen){
+    var label=(p.label||'').trim(), quote=(p.quote||'').trim();
+    if(!label&&!quote) return {k:'empty'};
+    if(!label) return {k:'drop',m:'Nincs címke — a tény kiesik.'};
+    if(label.length>60) return {k:'drop',m:'A címke legfeljebb 60 karakter — így a tény kiesik.'};
+    if(quote.length<8) return {k:'drop',m:'Az idézet legalább 8 karakter — így a tény kiesik.'};
+    if(HAY.indexOf(squeeze(quote))<0) return {k:'drop',m:'Az idézet nincs szó szerint a forrásban (leírások + vendég-hang) — a tény kiesik.'};
+    if(seen[label.toLowerCase()]) return {k:'drop',m:'Ugyanez a címke már szerepel — a második kiesik.'};
+    seen[label.toLowerCase()]=1; return {k:'ok',m:'Szó szerint megvan a forrásban.'};
+  }
+  // engine/palette.ts parseHex
+  function parseHex(h){return /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(h.trim());}
+
+  // ---- template choice (Neo's ticket) ----
+  var TPL=[{id:'tilted-gallery',why:'döntött képsáv, sok fotóhoz; csendes'},{id:'dopamine',why:'erős színek, családos hangulat; kontraszt a másikhoz'}];
+  var sel={'tilted-gallery':true,'dopamine':true};
+  $('tpls').innerHTML=TPL.map(function(t){return '<label class="tpl"><input type="checkbox" data-tpl="'+t.id+'" checked><span><b>'+t.id+'</b><span class="s">Neo: '+esc(t.why)+'</span></span></label>';}).join('');
+  $('ticket').innerHTML='Sablonok: <b>tilted-gallery</b> + <b>dopamine</b>.<br><span class="mut">Megfigyelés (nyom, nem forrás): „családos ház, játszótér a kertben; a vélemények rosszak — ne ígérjünk vendég-élményt”.</span>';
+  $('pack-mini').innerHTML='<b>'+D.amenities.length+'</b> igazolt szolgáltatás · <b>'+D.descriptions.length+'</b> portál-leírás · <b>'+D.guestVoice.length+'</b> vélemény <span class="pill bad">mind ★1</span><br>Google-átlag a lapon: <b>'+esc(D.realStats[0].value)+'</b> ('+esc(D.realStats[0].label)+')<br><span class="mut">Szobák: '+D.roomCount+' egység név nélkül — a szövegíró nem látja.</span>';
+
+  // ---- the field set (recipe sections: hero, stats, features, gallery, reviews, location, enquiry) ----
+  var GROUPS=[
+    {title:'Nyitó rész',fields:[
+      {key:'hero.lead',label:'Főcím',max:L.heroLead,req:true,rows:2,accentOf:'hero.accent'},
+      {key:'hero.accent',label:'Dőlt kiemelés a főcímben',max:L.accent,input:true,accentFor:'hero.lead',note:'a főcím egy szó szerinti része; üresen nincs dőlt rész'},
+      {key:'tagline',label:'Alcím',max:L.tagline,req:true,rows:2,note:'a főcím alatt + a láblécben + a Google-találat leírásában'},
+      {key:'hero.eyebrow',label:'Felső sor',max:L.eyebrow,input:true}]},
+    {title:'Bemutatkozás',fields:[{key:'intro',label:'Bemutatkozó bekezdés',max:L.intro,req:true,rows:5}]},
+    {title:'Kiemelések',list:'highlights'},
+    {title:'Szakasz-címek',fields:[
+      {key:'features.eyebrow',label:'Vendéglátás — felső sor',max:L.eyebrow,input:true},
+      {key:'features.title',label:'Vendéglátás — cím',max:L.sectionTitle,rows:2,note:'Enter = sortörés (legfeljebb 2 sor)'},
+      {key:'gallery.eyebrow',label:'Galéria — felső sor',max:L.eyebrow,input:true},
+      {key:'gallery.title',label:'Galéria — cím',max:L.sectionTitle,rows:2},
+      {key:'reviews.eyebrow',label:'Vélemények — felső sor',max:L.eyebrow,input:true},
+      {key:'reviews.title',label:'Vélemények — cím',max:L.sectionTitle,rows:2},
+      {key:'location.eyebrow',label:'Környék — felső sor',max:L.eyebrow,input:true},
+      {key:'location.title',label:'Környék — cím',max:L.sectionTitle,rows:2}],
+      after:'Szoba- és GYIK-szakasz ennek a leadnek a receptjében nincs — ezért nincs <code>rooms.*</code> / <code>faq.*</code> mező.'},
+    {title:'Igazolt tények (idézettel)',sp:true},
+    {title:'Akcentszín',accent:true}
+  ];
+  var chev='<svg class="chev" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>';
+  var xIco='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+  var V={}, HL=[''], SP=[{label:'',quote:''}], ACC='';
+  var ALLKEYS=[];
+  function fieldHTML(f){
+    ALLKEYS.push(f.key); V[f.key]='';
+    var ctl=f.input?'<input type="text" id="in-'+f.key+'" data-k="'+f.key+'">':'<textarea id="in-'+f.key+'" data-k="'+f.key+'" rows="'+(f.rows||2)+'"></textarea>';
+    return '<div class="f" data-f="'+f.key+'"><div class="top"><label for="in-'+f.key+'">'+esc(f.label)+'</label>'+(f.req?'<span class="pill">kötelező</span>':'')+'</div>'+
+      '<div class="where" data-where="'+f.key+'"></div>'+(f.note?'<div class="where">'+esc(f.note)+'</div>':'')+ctl+
+      (f.accentOf?'<div class="live" aria-live="polite"></div>':'')+'<div class="msg"></div><div class="foot"><span class="n"></span></div></div>';
+  }
+  var html='';
+  GROUPS.forEach(function(g){
+    html+='<details class="grp" open><summary>'+chev+esc(g.title)+'<span class="pill cnt" hidden></span></summary>';
+    if(g.fields){html+='<div class="fgrid'+(g.fields.length>2?' two':'')+'">'+g.fields.map(fieldHTML).join('')+'</div>'+(g.after?'<p class="mut small" style="margin:10px 0 0">'+g.after+'</p>':'');}
+    else if(g.list){html+='<div class="f" data-f="highlights"><div class="where" data-where="highlights"></div><div class="where">címkék a vendéglátás-szakaszban; az üres sor kimarad; berendezés-leírás („bézs csempés fürdő”) kiesik</div><div id="hl" style="display:flex;flex-direction:column;gap:6px"></div><div class="msg"></div><div class="foot"><button type="button" class="btn" id="hl-add">+ Új kiemelés</button><span class="n"></span></div></div>';}
+    else if(g.sp){html+='<div class="f" data-f="sellingPoints"><div class="where">Opcionális. Címke + az idézet SZÓ SZERINT a forrásból (portál-leírás vagy vélemény). A „Honnan tudjuk?” panelbe kerülnek; amelyik idézet nem egyezik, az kiesik — a generálás nem áll meg miatta.</div><div id="sp" style="display:flex;flex-direction:column;gap:8px"></div><div class="msg"></div><div class="foot"><button type="button" class="btn" id="sp-add">+ Új tény</button><span class="n"></span></div></div>';}
+    else if(g.accent){html+='<div class="f" data-f="accent"><div class="where">Opcionális. Üresen a sablon-skin saját akcentje marad.</div><div class="row"><span class="sw" id="sw"></span><input type="text" id="in-accent" placeholder="#rrggbb" maxlength="9" autocomplete="off" spellcheck="false"></div><div class="msg"></div></div>';}
+    html+='</details>';
+  });
+  $('form').innerHTML=html;
+
+  function renderHL(){
+    $('hl').innerHTML=HL.map(function(v,i){return '<div class="row" data-hlrow="'+i+'"><input type="text" data-hl="'+i+'" value="'+esc(v)+'" aria-label="Kiemelés '+(i+1)+'"><button type="button" class="icon-btn" data-hldel="'+i+'" aria-label="Kiemelés törlése">'+xIco+'</button></div>';}).join('');
+    $('hl-add').disabled=HL.length>=L.highlightsMax;
+  }
+  function renderSP(){
+    $('sp').innerHTML=SP.map(function(p,i){return '<div class="sp-row" data-sprow="'+i+'"><div class="row"><input type="text" class="lab-in" data-spl="'+i+'" value="'+esc(p.label)+'" placeholder="Címke (pl. játszótér a kertben)" aria-label="Tény címkéje '+(i+1)+'"><input type="text" data-spq="'+i+'" value="'+esc(p.quote)+'" placeholder="Idézet szó szerint a forrásból" aria-label="Tény idézete '+(i+1)+'"><button type="button" class="icon-btn" data-spdel="'+i+'" aria-label="Tény törlése">'+xIco+'</button></div><div class="msg"></div></div>';}).join('');
+    $('sp-add').disabled=SP.length>=12;
+  }
+  var form=$('form');
+  form.addEventListener('input',function(e){var t=e.target;
+    if(t.dataset.k){V[t.dataset.k]=t.value;}
+    else if(t.dataset.hl!=null){HL[+t.dataset.hl]=t.value;}
+    else if(t.dataset.spl!=null){SP[+t.dataset.spl].label=t.value;}
+    else if(t.dataset.spq!=null){SP[+t.dataset.spq].quote=t.value;}
+    else if(t.id==='in-accent'){ACC=t.value;}
+    validate();});
+  form.addEventListener('click',function(e){var b;
+    if((b=e.target.closest('[data-hldel]'))){HL.splice(+b.dataset.hldel,1);if(!HL.length)HL.push('');renderHL();validate();}
+    else if((b=e.target.closest('[data-spdel]'))){SP.splice(+b.dataset.spdel,1);if(!SP.length)SP.push({label:'',quote:''});renderSP();validate();}});
+  $('hl-add').addEventListener('click',function(){HL.push('');renderHL();validate();var x=document.querySelectorAll('#hl input');x[x.length-1].focus();});
+  $('sp-add').addEventListener('click',function(){SP.push({label:'',quote:''});renderSP();validate();var x=document.querySelectorAll('#sp input.lab-in');x[x.length-1].focus();});
+  $('tpls').addEventListener('change',function(e){sel[e.target.dataset.tpl]=e.target.checked;validate();});
+
+  function visOn(t,key){return key==='hero.accent'?D.vis[t].indexOf('hero.lead')>=0:D.vis[t].indexOf(key)>=0;}
+  var lastErrors=0;
+  function validate(){
+    var errors=0, warns=[];
+    var tsel=Object.keys(sel).filter(function(t){return sel[t];});
+    var tm=$('tpl-msg'); tm.textContent=tsel.length?'':'Legalább egy sablont válasszon.'; tm.className='msg'+(tsel.length?'':' bad'); if(!tsel.length) errors++;
+    // where-chips per template
+    document.querySelectorAll('[data-where]').forEach(function(w){var k=w.dataset.where;
+      var on=tsel.filter(function(t){return visOn(t,k);});
+      w.innerHTML=tsel.map(function(t){var v=visOn(t,k);return '<span class="pill '+(v?'ok':'no')+'">'+esc(t)+': '+(k==='hero.accent'?'a főcímben dőlten':v?'látszik':'NEM látszik')+'</span>';}).join('');
+      var box=w.closest('.f'); if(box) box.classList.toggle('dim',tsel.length>0&&!on.length);
+    });
+    ALLKEYS.forEach(function(k){
+      var box=form.querySelector('[data-f="'+k+'"]'), f=GROUPS.reduce(function(a,g){return a||(g.fields||[]).filter(function(x){return x.key===k;})[0];},null);
+      var v=normalizeCopy(k,V[k]), msg='', kind='';
+      var n=box.querySelector('.n'); n.textContent=v.length+' / '+f.max; n.classList.toggle('over',v.length>f.max);
+      if(f.req&&!v){msg='Ez a mező nem lehet üres.';kind='bad';}
+      else if(v.length>f.max){msg='Túl hosszú: legfeljebb '+f.max+' karakter fér el ezen a helyen.';kind='bad';}
+      else if(/\.title$/.test(k)&&String(V[k]).split('\n').filter(function(l){return l.trim();}).length>2){msg='Legfeljebb 2 sor — a harmadik sor kimarad.';kind='warn';}
+      if(f.accentFor&&v&&!kind){var lead=normalizeCopy('hero.lead',V[f.accentFor]);
+        if(lead.indexOf(v)<0){msg='Nincs benne szó szerint a főcímben — így dőlt rész nélkül jelenik meg.';kind='warn';warns.push('a dőlt kiemelés nincs a főcímben');}}
+      if(f.accentOf){var acc=normalizeCopy('hero.accent',V[f.accentOf]), live=box.querySelector('.live'), i=acc?v.indexOf(acc):-1;
+        live.innerHTML=v?'Így jelenik meg: '+(i>=0?esc(v.slice(0,i))+'<em>'+esc(acc)+'</em>'+esc(v.slice(i+acc.length)):esc(v)):'';}
+      var m=box.querySelector('.msg'); m.textContent=msg; m.className='msg '+kind;
+      box.classList.toggle('err',kind==='bad'); box.classList.toggle('wrn',kind==='warn'); if(kind==='bad') errors++;
+    });
+    // highlights
+    var hb=form.querySelector('[data-f="highlights"]'), clean=HL.map(function(h){return normalizeCopy('highlights',h);}).filter(Boolean), hm='', hk='';
+    var over=HL.some(function(h){return normalizeCopy('highlights',h).length>L.highlight;});
+    var drop=clean.filter(isDecorFiller);
+    HL.forEach(function(h,i){var r=hb.querySelector('[data-hlrow="'+i+'"]'), c=normalizeCopy('highlights',h);
+      r.classList.toggle('err',c.length>L.highlight); r.classList.toggle('wrn',!!c&&c.length<=L.highlight&&isDecorFiller(c));});
+    if(!clean.length){hm='Legalább egy kiemelés kell.';hk='bad';}
+    else if(over){hm='Egy kiemelés legfeljebb '+L.highlight+' karakter.';hk='bad';}
+    else if(drop.length){hm='Kiesik (berendezés-leírás, nem vendég-érték): '+drop.map(function(d){return '„'+d+'”';}).join(', ');hk='warn';drop.forEach(function(d){warns.push('kiemelés kiesik: „'+d+'”');});}
+    if(hk==='bad') errors++;
+    hb.querySelector('.msg').textContent=hm; hb.querySelector('.msg').className='msg '+hk;
+    hb.querySelector('.n').textContent=clean.length+' / '+L.highlightsMax+' kiemelés';
+    // selling points
+    var seen={}, okN=0, dropN=0;
+    SP.forEach(function(p,i){var r=form.querySelector('[data-sprow="'+i+'"]'), c=spCheck(p,seen), m=r.querySelector('.msg');
+      m.textContent=c.k==='empty'?'':c.m; m.className='msg '+(c.k==='ok'?'':'warn'); if(c.k==='ok'){m.style.color='var(--citui-ok-ink)';okN++;}else m.style.color='';
+      r.classList.toggle('wrn',c.k==='drop'); if(c.k==='drop'){dropN++;warns.push('tény kiesik: „'+(p.label||'címke nélkül')+'”');}});
+    var sb=form.querySelector('[data-f="sellingPoints"]'); sb.querySelector('.n').textContent=okN+' tény megy a panelbe'+(dropN?' · '+dropN+' kiesik':'');
+    // accent
+    var ab=form.querySelector('[data-f="accent"]'), a=ACC.trim(), am=ab.querySelector('.msg');
+    if(a&&!parseHex(a)){am.textContent='Az akcentszín #rrggbb formájú HEX legyen.';am.className='msg bad';ab.classList.add('err');errors++;$('sw').style.background='';}
+    else{am.textContent=a?'':'Üres: a skin saját akcentje.';am.className='msg';ab.classList.remove('err');
+      $('sw').style.background=a?(a[0]==='#'?a:'#'+a):'';}
+    // group counters
+    form.querySelectorAll('details.grp').forEach(function(g){var n=g.querySelectorAll('.err').length, p=g.querySelector('summary .cnt');p.hidden=!n;p.className='pill bad cnt';p.textContent=n+' hiba';});
+    lastErrors=errors;
+    var capped=$('st-cap').checked;
+    $('panel').classList.toggle('is-cap',capped);
+    $('cap-t').innerHTML='A mai AI-keret elfogyott ($'+D.spend.capUsd.toFixed(2)+' / $'+D.spend.capUsd+'). A kurátori generálás is az AI-kereten fut (fotó-elemzés + a három őr), ezért ma nem indítható. A szöveg nem vész el: holnap ugyanígy elküldhető.';
+    $('sum').innerHTML=capped?'<span style="color:var(--citui-bad-ink)">Napi AI-keret elfogyott — a generálás ma nem indítható.</span>':
+      errors?'<span style="color:var(--citui-bad-ink)"><b>'+errors+' hiba</b> — így nem generálható.</span>':
+      '<b>Generálható</b> · '+tsel.length+' mock ('+tsel.join(' + ')+')'+(warns.length?' · <span style="color:var(--citui-warn-ink)">'+warns.length+' figyelmeztetés</span>':'')+'<br><span class="mut small">Ma eddig: $'+D.spend.spentUsd.toFixed(2)+' / $'+D.spend.capUsd+'</span>';
+    $('go').disabled=capped||errors>0||running;
+    return warns;
+  }
+  $('st-cap').addEventListener('change',validate);
+
+  function setAll(d){
+    ALLKEYS.forEach(function(k){V[k]=d.fields[k]||'';$('in-'+k).value=V[k];});
+    HL=d.highlights.length?d.highlights.slice():['']; SP=d.sp.length?d.sp.map(function(p){return {label:p.label,quote:p.quote};}):[{label:'',quote:''}];
+    ACC=d.accent||''; $('in-accent').value=ACC; renderHL(); renderSP(); validate();
+  }
+  // Sample: a curator text written ONLY from the pack (prose facts; no guest experience — all reviews are ★1)
+  var SAMPLE={fields:{
+      'hero.lead':'Játszótér a kertben, panoráma a Balatonra a badacsonyi domboldalon',
+      'hero.accent':'panoráma a Balatonra',
+      'hero.eyebrow':'Badacsonytomaj, Kék-túra útvonalán',
+      'tagline':'Apartmanok kerttel és terasszal a Badacsonyi borvidéken — kerékpárral, bográccsal, gyerekeknek játszótérrel.',
+      'intro':'A Mandula vendégház apartmanjai a badacsonytomaji domboldalon, a Kék-túra útvonalán állnak. Minden apartmanban konyha, fürdőszoba és wifi van, a teraszokról a Balatonra, az erkélyről a hegyekre látni. A kertben grillező és bogrács várja a sütögetést, a gyerekeket játszótér hintával, homokozóval és trambulinnal. Kerékpárt a háznál lehet kölcsönözni, borkóstolót és túrát is szerveznek.',
+      'features.eyebrow':'Amit a ház kínál','features.title':'Kert, bogrács\nés játszótér',
+      'gallery.eyebrow':'Képek a házról','gallery.title':'Domboldal,\nkilátás a tóra',
+      'reviews.eyebrow':'','reviews.title':'',
+      'location.eyebrow':'A környék','location.title':'A Badacsonyi\nborvidék lábánál'},
+    highlights:['Játszótér hintával, homokozóval, trambulinnal','Panoráma a Balatonra a teraszokról','Felszerelt konyha minden apartmanban','Kerékpárkölcsönzés a háznál'],
+    sp:D.facts.filter(function(f){return f.quote;}).slice(0,4).concat([{label:'szauna a kertben',quote:'a kertben finn szauna várja a vendégeket'}]),
+    accent:'#2f7d5b'};
+  var EMPTY={fields:{},highlights:[],sp:[],accent:''};
+  $('st-empty').addEventListener('click',function(){setAll(EMPTY);});
+  $('st-fill').addEventListener('click',function(){setAll(SAMPLE);});
+
+  // ---- submit: GEN_STAGES load→photos→copy→render, then the three guards ONCE ----
+  var running=false;
+  var STAGES=[['load','Adatok'],['photos','Fotók'],['copy','Szöveg (kurátori — AI nem ír)'],['render','Render']];
+  var UNSOURCED=['medence','szauna','jakuzzi','wellness','strand','ingyenes reggeli','michelin','díjnyertes','tóparti','vízparti','a vendégek kedvence','vendégeink imádják'];
+  $('go').addEventListener('click',function(){
+    if($('go').disabled) return;
+    var warns=validate(); running=true; $('go').disabled=true;
+    var tsel=Object.keys(sel).filter(function(t){return sel[t];});
+    form.querySelectorAll('input,textarea').forEach(function(x){x.readOnly=true;});
+    $('prog').classList.add('on'); $('cards').innerHTML='';
+    var i=0;
+    function paint(){ $('steps').innerHTML=STAGES.map(function(s,j){return '<span class="pill '+(j<i?'ok':j===i?'run':'no')+'"><span class="d"></span>'+esc(s[1])+(j===i?' …':'')+'</span>';}).join('')+(warns.length?'<ul class="warnlist">'+warns.map(function(w){return '<li>'+esc(w)+'</li>';}).join('')+'</ul>':''); }
+    paint();
+    var t=setInterval(function(){i++;paint();if(i>=STAGES.length){clearInterval(t);done();}},650);
+    function done(){
+      var txt=[V['hero.lead'],V['tagline'],V['intro']].concat(HL).concat(ALLKEYS.map(function(k){return V[k];})).join(' ');
+      var low=txt.toLowerCase(), hits=UNSOURCED.filter(function(w){return low.indexOf(w)>=0;});
+      if(/\d/.test(txt)) hits.push('szám a szövegben');
+      var lead=normalizeCopy('hero.lead',V['hero.lead']), acc=normalizeCopy('hero.accent',V['hero.accent']), k=acc?lead.indexOf(acc):-1;
+      var leadHTML=k>=0?esc(lead.slice(0,k))+'<em>'+esc(acc)+'</em>'+esc(lead.slice(k+acc.length)):esc(lead);
+      var a=ACC.trim(); a=a&&parseHex(a)?(a[0]==='#'?a:'#'+a):'';
+      $('cards').innerHTML=tsel.map(function(tp,j){return '<div class="rc" data-card="'+tp+'"><div class="shot" style="--acc:'+(a||'#ffd98a')+'"><img src="'+D.groundImages[j]+'" alt="'+esc(D.name)+' — '+esc(tp)+' mock nyitóképe"><div class="ov"><div class="t">'+leadHTML+'</div><div class="s">'+esc(normalizeCopy('tagline',V.tagline))+'</div></div></div>'+
+        '<div class="m"><div class="hd"><b>Mock · '+esc(tp)+'</b><span class="pill poe">Poe írta</span><span class="pill '+(hits.length?'bad':'ok')+'"><span class="d"></span>'+(hits.length?'fennakadt':'jóváhagyva')+'</span></div>'+
+        '<div class="small mut">Most · 4 fotó · szöveg: kurátor (copyOrigin=curator, by: Poe) · AI-szövegíró nem futott</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill '+(hits.length?'bad':'ok')+'"><span class="d"></span>Tényhűség: '+(hits.length?'fennakadt':'átment')+'</span><span class="pill ok"><span class="d"></span>Marketing-őr: átment</span><span class="pill ok"><span class="d"></span>Vendég-kritikus: átment</span></div>'+
+        (hits.length?'<div class="why">Forrás nélküli állítás: '+esc(hits.join(', '))+' — így nem küldhető ki. Az őr egyszer ítél, a kurátori szöveget nem írja át: javítsa, és generálja újra.</div>':'')+
+        '<div class="sim">Az őr-ítélet a mockban SZIMULÁLT (szólista + számjegy). Élesben a valódi három őr fut, egyszer, a kurátori szövegre.</div></div></div>';}).join('');
+      running=false; form.querySelectorAll('input,textarea').forEach(function(x){x.readOnly=false;}); validate();
+    }
+  });
+
+  renderHL(); renderSP();
+  setAll(q.get('empty')==='1'?EMPTY:SAMPLE);
+})();
+</script>
+</body></html>

@@ -8,7 +8,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
-import { generateEngineMock, type GenStageKey } from "../generator/generateEngine.js";
+import { generateEngineMock, type GenerateOpts, type GenStageKey } from "../generator/generateEngine.js";
+import { POE_BY, validateCuratorCopy, type CuratorCopy } from "../generator/copyCurator.js";
+import { buildSourcePack, storedQuoteCorpus } from "./sourcePack.js";
 import { recopyArtifact } from "../generator/recopy.js";
 import { capReachedMessage, mockSpendToday } from "../ai/dailyCap.js";
 import { isCopyFrozen, saveManualCopy } from "../generator/copyManual.js";
@@ -398,6 +400,107 @@ function lastGenerateOutcome(
   }
   return { ok: o.ok, message: o.message, durationMs: o.durationMs, artifactId: o.artifactId };
 }
+/**
+ * A háttér-generálás indítása — a sima („Mock generálása”) és a kurátori („Generálás
+ * kurátori szöveggel”) út UGYANEZT a gépezetet futtatja: haladás (`generating`), kimenet
+ * (`generateOutcome`), hős-kép, lépcsőzetes indítás. A hívó dönt a plafonról és arról,
+ * hogy fut-e már valami — ez már csak elindít.
+ */
+function startGenerateRun(
+  id: string,
+  picks: readonly (string | undefined)[],
+  extra: Pick<GenerateOpts, "curatorPrompt" | "curatorCopy">,
+): void {
+  const startedAt = Date.now();
+  generating.set(id, { startedAt, stage: null, done: 0, total: picks.length });
+  generateOutcome.delete(id); // az új futás nem a régi kimenete alatt fut
+  void loadLead(id)
+    .then((loaded) =>
+      // One mock per picked template; allSettled so one failure does not sink the rest.
+      // STAGGERED (src/console/staggeredBatch.ts): the first template runs alone through
+      // its "copy" stage (brief + guards = the cache-writing calls), the rest start when
+      // it reaches "render" — so they read its prompt cache instead of all writing their own.
+      runStaggered(picks.length, (i, warm) =>
+        generateEngineMock(loaded, undefined, {
+          ...(picks[i] ? { template: picks[i] } : {}),
+          ...extra,
+          // A VALÓS szakasz — a motor jelenti, nem a felület találja ki.
+          onStage: (stage) => {
+            const run = generating.get(id);
+            if (run) run.stage = stage;
+            if (stage === "render") warm();
+          },
+        })
+          // Elkészült sablonok számlálása: TÖBB sablonnál ez a becsületes jel,
+          // mert a szakaszok párhuzamosan futnak, és nincs egyetlen „hol tart".
+          .then((r) => {
+            const run = generating.get(id);
+            if (run) run.done += 1;
+            return r;
+          }),
+      ).then((results) => {
+        // A KIMENET a képernyőre megy, nem csak a logba. Részleges bukásnál is:
+        // „2-ből 1 kész" mellett a MEGBUKOTT ág oka is odakerül — különben a
+        // kurátor egy hiányzó mockot keresne ok nélkül.
+        const failed = results.filter((r) => r.status === "rejected");
+        for (const r of failed) console.error(`[console] generate ${id} hiba:`, r.reason);
+        const durationMs = Date.now() - startedAt;
+        // Egy sikeres ág azonosítója → a lezáró sor ODA tud vinni. Több mocknál a
+        // lead saját mock-listája a cél, ezért ott nem tűzünk ki egyet.
+        const okResults = results.filter(
+          (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof generateEngineMock>>> =>
+            r.status === "fulfilled",
+        );
+        const artifactId = okResults.length === 1 ? (okResults[0]!.value.artifactId ?? null) : null;
+        // ⛔⛔ A KÉP NEM KÜLÖN KÉRÉS (ADR-0203, felülírja az ADR-0131 „explicit kérésre"
+        // ágát). A régi indok — „egy render ~40 s Chromium" — MÉRVE hamis volt: 5,6 s az
+        // első, 2,0–2,3 s a többi, mert a forrásfotók innentől lemez-cache-ből jönnek
+        // (6/6 találat). A kurátornak viszont KÉP KELL, hogy választani tudjon a
+        // változatok közül — a kattintgatás (19 mock = 19 kattintás) pont a döntést
+        // akadályozta. Sorban futnak: a globális sorompó egyszerre egy Chromiumot enged.
+        for (const r of okResults) {
+          const aid = r.value.artifactId;
+          if (aid) startHeroShot(aid);
+        }
+        if (!failed.length) {
+          generateOutcome.set(id, {
+            ok: true,
+            message:
+              results.length > 1
+                ? `Kész: ${results.length} mock legenerálva.`
+                : "Kész: a mock legenerálva.",
+            at: Date.now(),
+            durationMs,
+            artifactId,
+          });
+          return;
+        }
+        const why = errText((failed[0] as PromiseRejectedResult).reason);
+        generateOutcome.set(id, {
+          ok: false,
+          message:
+            failed.length === results.length
+              ? `A generálás elbukott: ${why}`
+              : `${results.length - failed.length}/${results.length} mock készült el; a többi elbukott: ${why}`,
+          at: Date.now(),
+          durationMs,
+          artifactId,
+        });
+      }),
+    )
+    .catch((err) => {
+      console.error(`[console] generate ${id} hiba:`, err);
+      generateOutcome.set(id, {
+        ok: false,
+        message: `A generálás el sem indult: ${errText(err)}`,
+        at: Date.now(),
+        durationMs: Date.now() - startedAt,
+        artifactId: null,
+      });
+    })
+    .finally(() => generating.delete(id));
+}
+
 /**
  * Artifacts whose text is being rewritten right now (one at a time per artifact),
  * with the START TIME — not a bare Set.
@@ -2140,94 +2243,7 @@ async function handle(
       );
       const curatorPrompt = form.get("curatorPrompt")?.trim().slice(0, 600) || undefined;
       const picks: (string | undefined)[] = templates.length ? templates : [undefined];
-      const startedAt = Date.now();
-      generating.set(id, { startedAt, stage: null, done: 0, total: picks.length });
-      generateOutcome.delete(id); // az új futás nem a régi kimenete alatt fut
-      void loadLead(id)
-        .then((loaded) =>
-          // One mock per picked template; allSettled so one failure does not sink the rest.
-          // STAGGERED (src/console/staggeredBatch.ts): the first template runs alone through
-          // its "copy" stage (brief + guards = the cache-writing calls), the rest start when
-          // it reaches "render" — so they read its prompt cache instead of all writing their own.
-          runStaggered(picks.length, (i, warm) =>
-            generateEngineMock(loaded, undefined, {
-              ...(picks[i] ? { template: picks[i] } : {}),
-              ...(curatorPrompt ? { curatorPrompt } : {}),
-              // A VALÓS szakasz — a motor jelenti, nem a felület találja ki.
-              onStage: (stage) => {
-                const run = generating.get(id);
-                if (run) run.stage = stage;
-                if (stage === "render") warm();
-              },
-            })
-              // Elkészült sablonok számlálása: TÖBB sablonnál ez a becsületes jel,
-              // mert a szakaszok párhuzamosan futnak, és nincs egyetlen „hol tart".
-              .then((r) => {
-                const run = generating.get(id);
-                if (run) run.done += 1;
-                return r;
-              }),
-          ).then((results) => {
-            // A KIMENET a képernyőre megy, nem csak a logba. Részleges bukásnál is:
-            // „2-ből 1 kész" mellett a MEGBUKOTT ág oka is odakerül — különben a
-            // kurátor egy hiányzó mockot keresne ok nélkül.
-            const failed = results.filter((r) => r.status === "rejected");
-            for (const r of failed) console.error(`[console] generate ${id} hiba:`, r.reason);
-            const durationMs = Date.now() - startedAt;
-            // Egy sikeres ág azonosítója → a lezáró sor ODA tud vinni. Több mocknál a
-            // lead saját mock-listája a cél, ezért ott nem tűzünk ki egyet.
-            const okResults = results.filter(
-              (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof generateEngineMock>>> =>
-                r.status === "fulfilled",
-            );
-            const artifactId = okResults.length === 1 ? (okResults[0]!.value.artifactId ?? null) : null;
-            // ⛔⛔ A KÉP NEM KÜLÖN KÉRÉS (ADR-0203, felülírja az ADR-0131 „explicit kérésre"
-            // ágát). A régi indok — „egy render ~40 s Chromium" — MÉRVE hamis volt: 5,6 s az
-            // első, 2,0–2,3 s a többi, mert a forrásfotók innentől lemez-cache-ből jönnek
-            // (6/6 találat). A kurátornak viszont KÉP KELL, hogy választani tudjon a
-            // változatok közül — a kattintgatás (19 mock = 19 kattintás) pont a döntést
-            // akadályozta. Sorban futnak: a globális sorompó egyszerre egy Chromiumot enged.
-            for (const r of okResults) {
-              const aid = r.value.artifactId;
-              if (aid) startHeroShot(aid);
-            }
-            if (!failed.length) {
-              generateOutcome.set(id, {
-                ok: true,
-                message:
-                  results.length > 1
-                    ? `Kész: ${results.length} mock legenerálva.`
-                    : "Kész: a mock legenerálva.",
-                at: Date.now(),
-                durationMs,
-                artifactId,
-              });
-              return;
-            }
-            const why = errText((failed[0] as PromiseRejectedResult).reason);
-            generateOutcome.set(id, {
-              ok: false,
-              message:
-                failed.length === results.length
-                  ? `A generálás elbukott: ${why}`
-                  : `${results.length - failed.length}/${results.length} mock készült el; a többi elbukott: ${why}`,
-              at: Date.now(),
-              durationMs,
-              artifactId,
-            });
-          }),
-        )
-        .catch((err) => {
-          console.error(`[console] generate ${id} hiba:`, err);
-          generateOutcome.set(id, {
-            ok: false,
-            message: `A generálás el sem indult: ${errText(err)}`,
-            at: Date.now(),
-            durationMs: Date.now() - startedAt,
-            artifactId: null,
-          });
-        })
-        .finally(() => generating.delete(id));
+      startGenerateRun(id, picks, curatorPrompt ? { curatorPrompt } : {});
     }
     // ⛔ ANCHORED, like every other post-action redirect on this page (the recopy route
     // below lands on `#ls-mocks`). Without the fragment `fromHash()` finds nothing and
@@ -2235,6 +2251,68 @@ async function handle(
     // "Mock és generálás" tab threw the curator over to "Adatok", away from the run they
     // had just started and from the artifact list it will land in (Elek FK-003b).
     return redirect(res, `/lead/${id}#ls-mocks`);
+  }
+  // „Generálás kurátori szöveggel” (Poe; approved plan: assets/design-refs/console/poe-curator/).
+  // POST /lead/:id/curated-check — the form's LIVE validation runs the REAL rule on the server
+  // (copyCurator.validateCuratorCopy against the lead's own quote corpus), never a client copy:
+  // the form must not pass a pack the generation then rejects. Pure: no AI, no Places, no write.
+  // POST /lead/:id/generate-curated — the same check, then the SAME background run as
+  // /generate (startGenerateRun) with `curatorCopy`. JSON in, JSON out (the form is a script).
+  const curatedMatch = /^\/lead\/([0-9a-f-]{36})\/(curated-check|generate-curated)$/i.exec(path);
+  if (method === "POST" && curatedMatch) {
+    const id = curatedMatch[1]!;
+    const launch = curatedMatch[2] === "generate-curated";
+    const lang = consoleLang();
+    const body = (await readJson(req)) as { templates?: unknown; copy?: unknown };
+    let loaded: Awaited<ReturnType<typeof loadLead>>;
+    try {
+      loaded = await loadLead(id);
+    } catch (e) {
+      return send(res, 404, JSON.stringify({ ok: false, message: errText(e) }), "application/json");
+    }
+    const op = await currentOperator(req);
+    const raw = (body.copy && typeof body.copy === "object" ? body.copy : {}) as Partial<CuratorCopy>;
+    const pack: CuratorCopy = {
+      fields: raw.fields && typeof raw.fields === "object" ? raw.fields : {},
+      ...(Array.isArray(raw.sellingPoints) ? { sellingPoints: raw.sellingPoints } : {}),
+      ...(typeof raw.accent === "string" ? { accent: raw.accent } : {}),
+      // Who answers for the words = the signed-in curator (Poe signs in as `poe`).
+      by: op?.displayName || op?.username || POE_BY,
+    };
+    const check = validateCuratorCopy(pack, storedQuoteCorpus(loaded));
+    const templates = [
+      ...new Set((Array.isArray(body.templates) ? body.templates : []).map((t) => String(t).trim())),
+    ].filter((t) => t && isPickableTemplate(t));
+    const verdict = check.ok
+      ? { ok: true, errors: {}, warnings: check.copy.warnings, fields: check.copy.fields }
+      : { ok: false, errors: check.errors, warnings: [] as readonly string[] };
+    if (!launch) return send(res, 200, JSON.stringify(verdict), "application/json");
+    // 1–2 templates (Neo's ticket); each gets the SAME words.
+    if (!templates.length || templates.length > 2)
+      return send(res, 422, JSON.stringify({ ...verdict, ok: false, message: T(lang, "Válasszon 1 vagy 2 sablont.") }), "application/json");
+    if (!check.ok) return send(res, 422, JSON.stringify(verdict), "application/json");
+    if (generateInFlight(id))
+      return send(res, 409, JSON.stringify({ ...verdict, ok: false, message: T(lang, "Erre a leadre már fut egy generálás.") }), "application/json");
+    // Daily AI ceiling: refused BEFORE the run, like /generate (the curated run still spends:
+    // photos + the three guards).
+    const spend = await mockSpendToday();
+    if (spend.blocked)
+      return send(res, 429, JSON.stringify({ ...verdict, ok: false, message: capReachedMessage(spend) }), "application/json");
+    startGenerateRun(id, templates, { curatorCopy: pack });
+    return send(res, 202, JSON.stringify({ ...verdict, ok: true, redirect: `/lead/${id}#ls-mocks` }), "application/json");
+  }
+  // GET /lead/:id/source-pack.json — the „Forrás-csomag”: what the writer is given
+  // (src/console/sourcePack.ts). ⛔ Never pays: stored photos (`places: "cached"`) and
+  // stored reviews only; a stale review set is flagged, not re-fetched.
+  const packMatch = /^\/lead\/([0-9a-f-]{36})\/source-pack\.json$/i.exec(path);
+  if (method === "GET" && packMatch) {
+    try {
+      const pack = await buildSourcePack(await loadLead(packMatch[1]!));
+      return send(res, 200, JSON.stringify(pack), "application/json");
+    } catch (e) {
+      console.error(`[source-pack] ${packMatch[1]}: ${(e as Error).message}`);
+      return send(res, 500, JSON.stringify({ message: errText(e) }), "application/json");
+    }
   }
   // POST /lead/:id/data — curator edits lead contact/reachability (ADR-0029): add missing
   // OR correct existing (phone/email/website/address/name). Saved onto raw → next generation.
