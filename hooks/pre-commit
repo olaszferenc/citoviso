@@ -1908,6 +1908,14 @@ if [ -f scripts/description-fact-label-check.mts ] && \
   echo "[pre-commit] description-fact-label-check (a tény-címke nem állít többet a forrásnál)…"
   npx tsx scripts/description-fact-label-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Guest-voice star gate (2026-10-05, Mandula): only ≥4★ (or unrated) reviews reach the
+# copywriter; one chain for the engine and the source-pack view. ⚠️ ÖN-TRIGGER.
+# Se AI, se hálózat, se DB (~2s).
+if [ -f scripts/guest-voice-stars-check.mts ] && \
+   changed_files | grep -qE '^src/generator/(guestVoice|generateEngine)\.ts$|^scripts/guest-voice-stars-check\.mts$'; then
+  echo "[pre-commit] guest-voice-stars-check (csak ≥4★ vendég-hang megy a szövegírónak)…"
+  npx tsx scripts/guest-voice-stars-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Lead-list label gate (Elek FK-003, 2026-09-11): a filter that ADVERTISES one column
 # while READING another is invisible to every other gate — it works, it renders, and it
 # lies. Measures the shipped sentence against the cells of the column it names, plus the

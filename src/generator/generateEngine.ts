@@ -37,6 +37,7 @@ import { applyGuestCritic, criticSourceOf, judgeGuestCopy } from "./guestCritic.
 import { guestValueHighlights } from "./highlightValue.js";
 import { checkDesign } from "./designCheck.js";
 import { verifyFactuality, type FactCheckVerdict } from "./factCheck.js";
+import { MIN_GUEST_STARS, selectGuestVoice } from "./guestVoice.js";
 import { decisionWeightDesc, descriptionSellingPoints, groupAmenities, verifyMarketRelevance, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { streetViewUrl } from "./images.js";
@@ -360,16 +361,13 @@ async function generateEngineMockInner(
       console.warn(`  [engine] vendég-vélemény lekérés kihagyva: ${(err as Error).message}`);
     }
   }
-  const seenVoice = new Set<string>();
-  const guestVoice = [...googleVoice, ...portalVoice]
-    .filter((v) => v.text.length >= 30)
-    .filter((v) => {
-      const key = v.text.toLowerCase().replace(/\s+/g, " ").trim();
-      if (seenVoice.has(key)) return false;
-      seenVoice.add(key);
-      return true;
-    })
-    .slice(0, 10);
+  // Star floor + length + duplicate + cap — the ONE chain the source-pack view also uses
+  // (src/generator/guestVoice.ts; owner decision 2026-10-05: only ≥4★ reaches the writer).
+  const voice = selectGuestVoice([...googleVoice, ...portalVoice]);
+  const guestVoice = voice.used;
+  const lowStars = voice.dropped.filter((d) => d.reason === "stars").length;
+  if (lowStars)
+    console.log(`  vendég-hang: ${lowStars} vélemény kiszűrve (≥${MIN_GUEST_STARS}★ szabály)`); // i18n-exempt: operator log
   if (guestVoice.length)
     console.log(
       `  vendég-hang: ${guestVoice.length} vélemény (${[...new Set(guestVoice.map((v) => v.source))].join(", ")})`, // i18n-exempt: operator log

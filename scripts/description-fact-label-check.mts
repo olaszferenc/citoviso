@@ -9,6 +9,10 @@
 //   npx tsx scripts/description-fact-label-check.mts             # zöld futás
 //   npx tsx scripts/description-fact-label-check.mts --self-test # PIROS kontroll
 //
+// MÁSODIK LELET (2026-10-05, Bánó Porta, Köveskál): „a Káli medencében található" → „Medence"
+// szolgáltatás, és a ≥60-as súly miatt a rangsor ELEJÉRE került (a főcím onnan merít). A
+// földrajzi medence (tulajdonnév + medence) hely, nem úszómedence.
+//
 // Se AI, se hálózat, se DB.
 
 import { descriptionSellingPoints } from "../src/generator/marketCheck.js";
@@ -18,8 +22,12 @@ const fails: string[] = [];
 const oks: string[] = [];
 const check = (cond: boolean, m: string) => (cond ? oks.push(m) : fails.push(m));
 
-/** A 2026-10-04-ig kiszállított szabály: bármely „parkol" → „Saját parkoló". */
-const OLD = (d: readonly string[]) => (d.join(" ").toLowerCase().includes("parkol") ? ["Saját parkoló"] : []);
+/** A visszarontott szabályok: bármely „parkol" → „Saját parkoló" (2026-10-04-ig),
+ *  bármely „medenc" → „Medence" (2026-10-05-ig). */
+const OLD = (d: readonly string[]) => {
+  const t = d.join(" ").toLowerCase();
+  return [...(t.includes("parkol") ? ["Saját parkoló"] : []), ...(t.includes("medenc") ? ["Medence"] : [])];
+};
 const facts = SELF_TEST ? OLD : descriptionSellingPoints;
 
 // Valódi forrásmondatok (élesen mért leírásokból).
@@ -39,6 +47,26 @@ const OWN = "A vendégeknek saját parkoló áll rendelkezésre az udvarban.";
 {
   const f = SELF_TEST ? ["Saját parkoló"] : descriptionSellingPoints([OWN]);
   check(f.includes("Saját parkoló") && !f.includes("Parkoló"), `forrásban kimondott „saját parkoló" → „Saját parkoló", egy címke (pozitív kontroll; kapott: ${f.join(", ")})`);
+}
+
+// Földrajzi medence (valódi leírás-részletek a dev-DB-ből, 2026-10-05).
+for (const geo of [
+  "8 km-re Révfülöp fölött, a Káli medencében található Köveskál.",
+  "a Balaton-felvidéki Nemzeti Parkhoz tartozó Káli-medence egyik hangulatos faluja",
+  "Szállások a Káli-medencében, csendes környezetben.",
+  "A Kárpát-medence egyik legszebb tája.",
+]) {
+  const f = facts([geo]);
+  check(!f.includes("Medence"), `földrajzi medence → nem „Medence" („${geo.slice(0, 40)}…"; kapott: ${f.join(", ") || "—"})`);
+}
+// Pozitív kontroll: a valódi úszómedence megmarad (mondat elején nagybetűs jelzővel is).
+for (const pool of [
+  "Barátságos, család-és állatbarát szállás medencével, szaunával, kerttel.",
+  "Fűtött medence várja a vendégeket a kertben.",
+  "A kertben medence, napozóágyak. A Káli-medence közepén.",
+]) {
+  const f = facts([pool]);
+  check(f.includes("Medence"), `úszómedence → „Medence" („${pool.slice(0, 40)}…"; kapott: ${f.join(", ") || "—"})`);
 }
 
 for (const o of oks) console.log(`  ✓ ${o}`);

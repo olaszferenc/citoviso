@@ -201,8 +201,23 @@ const DESCRIPTION_FACT_LABELS: readonly (readonly [string, string])[] = [
   ["grill", "Grill"], ["bogracs", "Bográcsozás"],
 ];
 
+/**
+ * A BASIN is a place, not a pool. Measured 2026-10-05 (Bánó Porta, Köveskál): "a Káli
+ * medencében található Köveskál" became the "Medence" amenity, and as a ≥60-weight fact it
+ * sorted to the TOP of the ranked list the headline must draw from — a pool the listing never
+ * claimed (§B.17). A capitalised name glued to "medence" ("Káli-medence", "Kárpát-medencében")
+ * or a mid-sentence capitalised word before it ("a Káli medencében") is a geographic name;
+ * a sentence-initial adjective ("Fűtött medence várja…") is not, so it stays.
+ */
+const GEO_BASIN_HYPHEN = /(?<!\p{L})\p{Lu}\p{L}*-medenc\p{L}*/gu;
+const GEO_BASIN_SPACED = /(?<=[\p{L}\d,;:)]\s+)\p{Lu}\p{L}*\s+medenc\p{L}*/gu;
+
+function withoutPlaceNames(text: string): string {
+  return text.replace(GEO_BASIN_HYPHEN, " ").replace(GEO_BASIN_SPACED, " ");
+}
+
 export function descriptionSellingPoints(descriptions: readonly string[]): string[] {
-  const hay = norm(descriptions.join(" "));
+  const hay = norm(descriptions.map(withoutPlaceNames).join(" "));
   if (!hay) return [];
   const out: string[] = [];
   for (const [needle, label] of DESCRIPTION_FACT_LABELS) {
