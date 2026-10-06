@@ -7228,6 +7228,9 @@ Stack (MVP): Node/TS, Postgres (RLS+JSONB), Playwright, Claude API; build-vs-buy
 DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, önjavító).
 
 ## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
+- 2026-10-06 (lead-lastedit, `lead_activity`): a súgó (KB) bejegyzés a fülek második sorához („<név> · <mikor>”) és a mock-kártya „Létrehozta: …” sorához HIÁNYZIK — `tudasbazis-or` nem futott; tulaj: így zártunk.
+- 2026-10-06 (lead-lastedit): a nem konzolból (szkriptből/ütemezőből) készült mock nem naplóz → „Létrehozta: nem rögzített”; ha kell, a motor szintjén `system` szereplővel.
+- 2026-10-06 (lead-lastedit): a „Döntés” ideje (`exactOf`) UTC-szelet, a fülek alatti idő budapesti — 2 óra eltérés.
 - Pénzügyi séma: előfizetés / egyösszeg / kombináció — képlékeny.
 - Visszatérő érték / churn; upsell-időzítés.
 - Hotlink-kép üzemeltetési törékenysége (idegen szerver leszedi → kép eltűnik).

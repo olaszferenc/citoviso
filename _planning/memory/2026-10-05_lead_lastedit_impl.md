@@ -20,6 +20,7 @@ Szál: `cit40455c24` (rc-handoff az előd tervező sessionből). Kontraktus: `as
   Fogadón ideiglenes mintasorokkal (utána törölve).
 
 ## Nyitott
+- 2026-10-06 zárás: a súgó (KB) bejegyzés a két új sorhoz hiányzik, `tudasbazis-or` nem futott (tulaj: így zárunk).
 - A szkriptből/ütemezőből (nem konzolból) készült mock nem naplóz → „Létrehozta: nem rögzített”. Ha kell: a motor szintjén
   `system` szereplővel.
 - A „Döntés” időbélyege (`exactOf`) UTC-szelet, a fül második sora budapesti idő — régi eltérés, nem ebben a szálban.
