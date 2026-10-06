@@ -3,7 +3,7 @@
 A tulaj felvetése (2026-10-06 este): a lead számára nem egyértelmű, hogy megrendelés után
 mindent módosíthat — pl. ha a terven nem az ő szobabeosztása, férőhelyei vannak. Villogó
 fejlécet javasolt; a terv-körben a görgetés után egyszer becsúszó, bezárható sáv lett a döntés.
-Döntés: ADR-XXXX. Kattintható terv: `plan.html` (méret- és indítás-váltó, bezárás, újra).
+Döntés: ADR-0335. Kattintható terv: `plan.html` (méret- és indítás-váltó, bezárás, újra).
 
 **Hatókör:** `assets/runtime/cit-configurator.js` · `assets/runtime/cit-configurator.css`
 

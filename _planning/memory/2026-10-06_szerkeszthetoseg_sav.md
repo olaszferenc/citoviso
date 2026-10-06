@@ -1,4 +1,4 @@
-# 2026-10-06 — Szerkeszthetőség-sáv a kiküldött mockon (ADR-XXXX)
+# 2026-10-06 — Szerkeszthetőség-sáv a kiküldött mockon (ADR-0335)
 
 **Elvégezve.** A jóváhagyott terv (`assets/design-refs/prospect-page/edit-strip/`) megvalósítva a
 konfigurátor-futtatóban: görgetés után (a szobák szakasza a képernyő közepére ér, vagy 1 képernyőnyi

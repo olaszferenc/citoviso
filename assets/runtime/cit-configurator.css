@@ -2792,7 +2792,7 @@
   }
 }
 
-/* ── ADR-XXXX editability strip (assets/design-refs/prospect-page/edit-strip/) ──
+/* ── ADR-0335 editability strip (assets/design-refs/prospect-page/edit-strip/) ──
  * Slides in ONCE from the top after the visitor scrolls to the rooms (or one full
  * screen), floats over the page (never pushes it down), dismissible. Fixed colours:
  * the mock does not load citui.css — navy mirrors --citui-ink, cyan the order pill.

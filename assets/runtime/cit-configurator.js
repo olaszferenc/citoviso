@@ -4338,7 +4338,7 @@
     launch.classList.toggle("cit-cfg-launch--alt", near);
   }
 
-  // ── ADR-XXXX editability strip (assets/design-refs/prospect-page/edit-strip/) ──
+  // ── ADR-0335 editability strip (assets/design-refs/prospect-page/edit-strip/) ──
   // The lead sees sample rooms/prices and may not realise everything is theirs to
   // change after ordering. A top strip slides in ONCE — when the rooms section reaches
   // mid-screen or after one full screen of scrolling, whichever comes first — and a

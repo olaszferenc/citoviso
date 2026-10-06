@@ -1,4 +1,4 @@
-## ADR-XXXX — Szerkeszthetőség-sáv a kiküldött mockon (görgetés után, bezárható)
+## ADR-0335 — Szerkeszthetőség-sáv a kiküldött mockon (görgetés után, bezárható)
 
 **Dátum:** 2026-10-06 · **Döntött:** tulaj (terv-kör, `assets/design-refs/prospect-page/edit-strip/`)
 
