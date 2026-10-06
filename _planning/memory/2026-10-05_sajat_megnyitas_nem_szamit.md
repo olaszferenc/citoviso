@@ -23,4 +23,4 @@ Majd: „Az a jó, ha a tulajnak küldött mock-megnyitások nem számlálódnak
   kb/entries/console-outreach-draft/entry.hu.md · _planning/decisions/XXXX-sajat-megnyitas-nem-meres.md
 
 ## Nyitott
-- Élesítés a nagy deployjal (nem külön).
+- ✅ ÉLES 2026-10-06 09:16 (`prod/20261006-0916`, `c93f6d3e`, tartalmazza a `45a0de02`-t); nincs nyitott tétel. Ellenőrzés: egy SMS-másolat megnyitása után a számláló nem mozdul.

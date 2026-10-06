@@ -9,7 +9,7 @@ Utolsó frissítés: 2026-10-05 (🧾 **AI-őrök kiváltása Vera-ítélettel**
 
 Utolsó frissítés: 2026-10-05 (⚖️ **Piac-kapu a Vendég-kritikusnak alárendelve** (SUB, ADR-0328, tulaj: a VK nyer): a leírás szava csak állításként tény (tagadás / „reggeli után” / név-rész / közeli kilátás / ≥1 km nem), a VK által kifogásolt tételt a Piac nem kérheti, a csak-hiány Piac-FLAG ilyenkor PASS; őr `market-vk-precedence-check`; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_piac_vk_elsobbseg.md`)
 
-Utolsó frissítés: 2026-10-05 (👁️ **Saját megnyitás nem számít** (`?sajat=1`, ADR-0327): a pilot-másolatok (SMS + KÜLÖN e-mail-másolat), a konzol-link és a levél-előnézet jelölt linket visz, a lap ilyenkor nem mér; élesen a Napfény tulaj-látogatása törölve; nem élesítve (nagy deploy); jegyzet `_planning/memory/2026-10-05_sajat_megnyitas_nem_szamit.md`)
+Utolsó frissítés: 2026-10-05 (👁️ **Saját megnyitás nem számít** (`?sajat=1`, ADR-0327): a pilot-másolatok (SMS + KÜLÖN e-mail-másolat), a konzol-link és a levél-előnézet jelölt linket visz, a lap ilyenkor nem mér; élesen a Napfény tulaj-látogatása törölve; ÉLES 2026-10-06 (`prod/20261006-0916`); jegyzet `_planning/memory/2026-10-05_sajat_megnyitas_nem_szamit.md`)
 
 Utolsó frissítés: 2026-10-05 (🚀 **Deploy-koordinátor zárása**: a 3 generátor-javítás (régió-fallback, elutasított kontakt, „Parkoló”) ÉLES `30012966` = `prod/20261005-1126` (másik session deployolta); NYITOTT: Kerekerdő újragenerálás böngészőből + a két régi mock (`572f7e82`, `fce091bc`) elutasítása — az „Elutasítás” headless kattintásra nem hatott; „Panoráma” címke és mellékes szöveghibák tulaj-döntésre; jegyzet `_planning/memory/2026-10-04_deploy_koordinator_bc222e7f.md`)
 
