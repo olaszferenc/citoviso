@@ -29,6 +29,7 @@
 - [2026-10-06_rendeles_panel_riport.md](2026-10-06_rendeles_panel_riport.md) — 2026-10-06 — Rendelés-panel mérése + riport (A + B) megvalósítva
 - [2026-10-06_mock_kuldesi_ablak_hetkoznap_9_16.md](2026-10-06_mock_kuldesi_ablak_hetkoznap_9_16.md) — 2026-10-06 — Mock-megkeresés csak hétköznap 9–16 (Budapest) — ADR-0334
 - [2026-10-06_mms_par_modem_sav.md](2026-10-06_mms_par_modem_sav.md) — 2026-10-06 — MMS-pár egy egység: modem-sáv (ADR-0332)
+- [2026-10-06_levelezes_websupport_felmeres.md](2026-10-06_levelezes_websupport_felmeres.md) — 2026-10-06 — Levelezés Zoho → Websupport: felmérés (elhalasztva)
 - [2026-10-05_sajat_megnyitas_nem_szamit.md](2026-10-05_sajat_megnyitas_nem_szamit.md) — 2026-10-05 — A tulaj saját mock-megnyitása nem számít (`?sajat=1`)
 - [2026-10-05_poe_szovegkurator.md](2026-10-05_poe_szovegkurator.md) — 2026-10-05 — Poe, a szövegkurátor: kód + konzol + charter + ADR (SUB-lánc, 10 session)
 - [2026-10-05_pilot_mobil_masolat.md](2026-10-05_pilot_mobil_masolat.md) — 2026-10-05 — Pilot-másolat a mobil-megkeresésről (SMS/MMS a tulajnak)
